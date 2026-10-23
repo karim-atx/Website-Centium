@@ -1,20 +1,22 @@
 import { useState } from "react";
-import { EyeOff } from "lucide-react";
 import { saveListingActive } from "../../services/business-market";
 import { useMarket } from "./MarketContext";
-import { MPopup, useMarketToast } from "./kit";
+import { CentredDialog, useStrip } from "./listingParts";
 
-// The listing switch (business_profiles.active, BU3-01, live): on to off asks
-// first (MA1-044) and changes nothing until confirmed; off to on is immediate
-// (MA1-048 Turn on, MA1-001 S4). Toasts: MA1-046 and the OURS turn-on line.
+// The listing switch (business_profiles.active, BU3-01, live), now driven by
+// the Overview's ListingToggleTile (B-MA.1) and the hidden banner's Turn on:
+// on to off asks first ("Hide your business from Explore?", KEPT) and changes
+// nothing until confirmed; off to on is immediate. Owner-only and the closed
+// rule are the callers' (the tile is disabled for them). The confirm is the
+// handover's CentredDialog; the results are ConfirmationStrips.
 
 export function useListingSwitch() {
   const m = useMarket();
-  const { c, v, business, setBusiness } = m;
+  const { v, business, setBusiness } = m;
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, showToast] = useMarketToast();
+  const [strip, showStrip] = useStrip();
 
   const write = async (active: boolean) => {
     if (!business) return false;
@@ -33,29 +35,30 @@ export function useListingSwitch() {
   };
 
   const turnOn = async () => {
-    if (await write(true)) showToast("Your listing is on Explore.");
+    if (await write(true)) showStrip("Your listing is on Explore.");
   };
-  const requestOff = () => setConfirm(true);
+  const requestOff = () => {
+    setError(null);
+    setConfirm(true);
+  };
   const confirmOff = async () => {
     const ok = await write(false);
     setConfirm(false);
-    if (ok) showToast("Your listing is hidden. Turn it on any time.");
+    if (ok) showStrip("Your listing is hidden. Turn it on any time.");
   };
 
   const popup = (
-    <MPopup
+    <CentredDialog
       open={confirm}
-      icon={EyeOff}
-      disc={{ bg: c.soft, ink: c.inkSoft }}
       title="Hide your business from Explore?"
       body={v.hideBody}
+      cancel="Keep it visible"
       action="Hide listing"
-      keep="Keep it visible"
       busy={busy}
       onAction={() => void confirmOff()}
       onCancel={() => setConfirm(false)}
     />
   );
 
-  return { busy, error, toast, popup, turnOn, requestOff };
+  return { busy, error, toast: strip, popup, turnOn, requestOff };
 }

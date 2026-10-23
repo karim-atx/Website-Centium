@@ -23,17 +23,17 @@ import {
 } from "../../services/business-market";
 import { fetchBusinessPhotos, fetchStrength, fetchVenueDetails, type VenueDetails } from "../../services/business-market/listing";
 import type { BusinessPhoto, ServerStrength } from "../../services/business-market/listingLogic";
-import { useMarketPalette } from "./kit";
-import type { MarketPalette } from "./palette";
 import { vocabOf, type Vocab } from "./vocab";
+import { tabKeyOf, type MarketTabKey } from "./model";
 
-// One load for the four MA1 tabs (and the Store Products sub-tabs): the B5
+export { MARKET_TAB_KEYS, tabKeyOf, type MarketTabKey } from "./model";
+
+// One load for the four B-MA tabs (Marketplace, and the Store Products page): the B5
 // business row, the perk, the venue and its hours, the catalog hooks, the
 // class bookings, and the B13 / B7 probes. Mounted once per page so switching
 // tabs never reloads.
 
 export interface MarketData {
-  c: MarketPalette;
   kind: BizKind;
   kindKnown: boolean;
   v: Vocab;
@@ -85,7 +85,12 @@ export interface MarketData {
   returnsSet: boolean;
   /** Paths for this type: Marketplace for Classes / Gym, Products for Store. */
   base: string;
-  tabHref: (tab: "listing" | "spots" | "perf" | "promo") => string;
+  /**
+   * A tab's link (B-MA tabs: overview | showcase | offers | perf). The old
+   * MA1 keys still answer: listing and spots → Overview, promo → Offers. The
+   * result always carries a query ("?tab=…") so callers may append "&…".
+   */
+  tabHref: (tab: MarketTabKey | "listing" | "spots" | "promo") => string;
 }
 
 const Ctx = createContext<MarketData | null>(null);
@@ -98,7 +103,6 @@ export function useMarket(): MarketData {
 
 export function MarketProvider({ children, forceKind }: { children: React.ReactNode; forceKind?: BizKind }) {
   const { authUserId } = useApp();
-  const c = useMarketPalette();
   const biz = useBusiness();
   // The lane: the forced one (Store Products), else the loaded row, else the
   // navbar's answer (it never falls back to a stale onboarding type).
@@ -250,16 +254,9 @@ export function MarketProvider({ children, forceKind }: { children: React.ReactN
   }, [biz]);
 
   const base = kind === "store" ? "/app/business/products" : "/app/business/marketplace";
-  const tabHref = useCallback(
-    (tab: "listing" | "spots" | "perf" | "promo") => {
-      if (kind === "store") return `${base}?tab=${tab === "perf" ? "performance" : tab === "promo" ? "promotions" : "listing"}`;
-      return tab === "listing" ? base : `${base}?tab=${tab}`;
-    },
-    [kind, base]
-  );
+  const tabHref = useCallback((tab: MarketTabKey | "listing" | "spots" | "promo") => `${base}?tab=${tabKeyOf(tab, "overview")}`, [base]);
 
   const value: MarketData = {
-    c,
     kind,
     // Known from the forced lane, the row, the navbar's row-based answer, or
     // (no row yet) the onboarding type `kind` already falls back to. Until

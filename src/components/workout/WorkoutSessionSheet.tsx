@@ -52,6 +52,10 @@ import { useBackCloses } from "../../hooks/useBackCloses";
 import { clock12 } from "../../utils/time12";
 import { ExerciseLibrarySheet, type ExercisePick } from "./ExerciseLibrarySheet";
 import { CoachAvatar } from "./CoachAvatar";
+import { useClientShare } from "../share/client/useClientShare";
+import { ShareEntryButton } from "../share/client/ShareEntryButton";
+import { workoutCard } from "../share/client/clientCardModel";
+import { workoutFacts } from "../share/client/clientShareData";
 import { fetchConnectedProfessional } from "../../services/connected-professional";
 import { sharedWith } from "../../services/routines/programmes";
 import { readResultsSent, resolveWeights } from "../../services/workout/coach";
@@ -191,6 +195,7 @@ export const WorkoutSessionSheet: React.FC<{
     setActiveSession,
     authUserId,
     accessibility,
+    metricValues,
   } = useApp();
 
   const routineRow = routineId ? routines.find((r) => r.id === routineId) ?? null : null;
@@ -224,6 +229,11 @@ export const WorkoutSessionSheet: React.FC<{
   const [emptyFinishOpen, setEmptyFinishOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Market + Share 3.0 C-SH.1 "Workout complete": the saved session can be
+  // shared from the header until the logger closes; sharing holds it open.
+  const [savedSession, setSavedSession] = useState<WorkoutSession | null>(null);
+  const closeTimer = useRef<number | null>(null);
+  const share = useClientShare(() => onClose());
   const [coachNoteOpen, setCoachNoteOpen] = useState(false);
   // WO25: unread = a note exists and (never read, or read before it last changed).
   const noteText = routineRow?.coachNote ?? coachNote;
@@ -329,6 +339,7 @@ export const WorkoutSessionSheet: React.FC<{
       setStartedAt(new Date());
     }
     setFinished(false);
+    setSavedSession(null);
     setQuitConfirmOpen(false);
     setSwapReasons({});
     setResultsToast(null);
@@ -913,6 +924,7 @@ export const WorkoutSessionSheet: React.FC<{
     if (routineId) clearPausedSession(routineId);
     clearActive();
     setFinished(true);
+    setSavedSession({ id: "saved", ...payload });
     setRunSince(null);
     // CU1 v5 "finished, results sent": only when the database marked the
     // session sent (it tells the coach when Workout activity is shared).
@@ -924,7 +936,14 @@ export const WorkoutSessionSheet: React.FC<{
         closeAfter = 2600;
       }
     }
-    setTimeout(onClose, closeAfter);
+    // C-SH.1: long enough to reach the share button (the results toast's 2.6 s).
+    closeTimer.current = window.setTimeout(onClose, Math.max(closeAfter, 2600));
+  };
+  const shareSaved = () => {
+    if (!savedSession) return;
+    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+    share.open(workoutCard(workoutFacts(savedSession, metricValues.weight)));
   };
 
   const circle = "tap relative flex-none flex items-center justify-center rounded-full";
@@ -991,6 +1010,7 @@ export const WorkoutSessionSheet: React.FC<{
             </div>
           </div>
           <div className="flex items-center justify-end" style={{ gap: 8 }}>
+            {finished && savedSession && <ShareEntryButton label="Share your workout" onPress={shareSaved} style={{ margin: -5 }} />}
             <button
               onClick={toggleClock}
               aria-label={started ? "Pause elapsed time" : "Start elapsed time"}
@@ -1148,6 +1168,7 @@ export const WorkoutSessionSheet: React.FC<{
 
       <RPECalculator open={rpeOpen} onClose={() => setRpeOpen(false)} />
       <PlateCalculatorSheet open={plateCalcOpen} onClose={() => setPlateCalcOpen(false)} />
+      {share.sheet}
       {burst && <PrBurst key={burst.key} rect={burst.rect} onDone={() => setBurst(null)} />}
 
       {/* Set-type dropdown: tap the set number (approved decision 15). */}

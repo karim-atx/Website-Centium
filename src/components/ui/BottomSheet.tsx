@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft } from "lucide-react";
 import { linePx, textPx } from "../../theme/textSize";
@@ -113,6 +113,10 @@ interface BottomSheetProps {
 
 const EXIT_MS = 350;
 
+// The open sheets, oldest first: Escape closes only the top one (a stacked
+// Item photo sheet over Edit item closes alone).
+const openSheets: string[] = [];
+
 /**
  * The app's one bottom sheet, per handover 2026-09-29, 02 "Bottom sheet":
  * header band #F0EEFD with a 1px #7248F8 border (none at the bottom) and
@@ -129,6 +133,11 @@ const EXIT_MS = 350;
  * Dark mode swaps the chrome to the --sheet-* dark set (v5.1: sheet.header and
  * the body are the dark card #1C1F28). Mobile v5.1 R3: every sheet follows the
  * theme; there are no light islands, so a `tone` passes its dark shades too.
+ *
+ * A dialog (W3 lead decision, R1 polish): role="dialog", aria-modal, named
+ * by its title; focus moves into it on open (unless something inside already
+ * took it) and returns on close; Escape closes the top sheet, unless focus is
+ * in something on top of it (a dialog, a menu) or that handled Escape first.
  *
  * v6 props (RECONCILIATION-v6 §7 X-02…X-06): headerHeight, chrome, tone
  * "business", scrim, scrimBlur, maxHeightPct, animateExit. Defaults are the
@@ -155,6 +164,43 @@ export const BottomSheet: React.FC<BottomSheetProps> = (props) => {
   const last = useRef(props);
   if (open) last.current = props;
 
+  const sheetId = useId();
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  });
+  useEffect(() => {
+    if (!open) return;
+    openSheets.push(sheetId);
+    const prev = document.activeElement as HTMLElement | null;
+    // The panel is mounted in the same commit, so its ref is set by now.
+    const panel = panelRef.current;
+    // After the children's own focus (autoFocus, their effects and timers).
+    const t = window.setTimeout(() => {
+      if (panel && !panel.contains(document.activeElement)) panel.focus({ preventScroll: true });
+    }, 0);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (openSheets[openSheets.length - 1] !== sheetId) return;
+      const active = document.activeElement;
+      if (active && active !== document.body && panel && !panel.contains(active)) return;
+      e.preventDefault();
+      closeRef.current();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener("keydown", onKey);
+      const i = openSheets.lastIndexOf(sheetId);
+      if (i >= 0) openSheets.splice(i, 1);
+      // Focus goes back to where it was, unless the caller already moved it.
+      const active = document.activeElement;
+      const lost = !active || active === document.body || !!panel?.contains(active);
+      if (lost && prev && prev !== document.body && prev.isConnected) prev.focus?.({ preventScroll: true });
+    };
+  }, [open, sheetId]);
+
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -167,10 +213,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = (props) => {
   }, [open]);
 
   if (!open && !closing) return null;
-  return <SheetFrame {...(open ? props : last.current)} leaving={!open} />;
+  return <SheetFrame {...(open ? props : last.current)} leaving={!open} panelRef={panelRef} />;
 };
 
-const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
+const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: React.MutableRefObject<HTMLDivElement | null> }> = ({
   onClose,
   title,
   children,
@@ -198,7 +244,16 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
   swipeToClose,
   closeOnScrim = true,
   titleWrap,
+  panelRef,
 }) => {
+  const titleId = useId();
+  const dialogProps = {
+    ref: panelRef,
+    role: "dialog",
+    "aria-modal": true,
+    ...(title && !hideHeader ? { "aria-labelledby": titleId } : title ? { "aria-label": title } : null),
+    tabIndex: -1,
+  } as const;
   // Swipe down to close, from the header (WO1.3 S1).
   const [dragY, setDragY] = useState(0);
   const dragStart = useRef<{ y: number; t: number; id: number } | null>(null);
@@ -288,7 +343,8 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
       />
       {hideHeader ? (
         <div
-          className={`relative w-full max-w-[430px] bg-cream rounded-t-4xl shadow-lift flex flex-col overflow-hidden ${leaving ? "" : "animate-sheet-up"}`}
+          {...dialogProps}
+          className={`relative w-full max-w-[430px] bg-cream rounded-t-4xl shadow-lift flex flex-col overflow-hidden outline-none ${leaving ? "" : "animate-sheet-up"}`}
           style={{ maxHeight, animation: sheetAnim }}
         >
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={bodyPadding}>
@@ -302,7 +358,8 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
         </div>
       ) : (
         <div
-          className={`relative w-full max-w-[430px] rounded-t-4xl shadow-lift flex flex-col overflow-hidden ${leaving ? "" : "animate-sheet-up"}`}
+          {...dialogProps}
+          className={`relative w-full max-w-[430px] rounded-t-4xl shadow-lift flex flex-col overflow-hidden outline-none ${leaving ? "" : "animate-sheet-up"}`}
           style={{
             maxHeight,
             ...(fillHeight ? { height: maxHeight } : null),
@@ -338,6 +395,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean }> = ({
             </div>
             {title && (
               <h2
+                id={titleId}
                 className="flex-1 min-w-0 flex items-center justify-center"
                 style={{ color: titleColor, fontSize: textPx(20), fontWeight: 800, letterSpacing: "-0.015em", gap: 9, ...(titleLineHeight ? { lineHeight: linePx(titleLineHeight) } : null) }}
               >

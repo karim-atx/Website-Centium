@@ -1,42 +1,83 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CalendarPlus, CalendarRange, ChevronDown, Clock, EllipsisVertical, List, MessageCircle, Settings2, Ticket, TriangleAlert, Users } from "lucide-react";
+import { Award, CalendarRange, ChevronDown, ChevronLeft, ChevronRight, EllipsisVertical, List, MessageCircle, Settings2, Ticket, TriangleAlert } from "lucide-react";
 import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
 import { startThread } from "../../../services/messaging";
-import { time12 } from "../../../utils/time12";
+import { time12, time12Split } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
+import { useIsDark } from "../../../hooks/useIsDark";
+import type { MarketPalette } from "../../../theme/marketTokens";
+import { FOCUS_CSS, usePress } from "../../../components/market/usePress";
+import { fillUnder } from "../../../components/market/marketColor";
+import { MarketEmptyCard, MarketError, MarketOffline, MarketSkeleton } from "../../../components/market/MarketStates";
+import { StatLedger } from "../../../components/market/StatLedger";
 import { PLANS_ROUTE } from "../plans";
-import { useOps, type OpsColors } from "./opsTheme";
-import { BackRow, Bone, ErrorCard, FiguresCard, FixedCta, OpsCard, Tag } from "./parts";
+import { BackHeader, Caps, Chip, OutlineButton, useMarketColours } from "./parts";
 import { WeekGrid } from "./WeekGrid";
+import { BizShareButton } from "../../../components/share/business/BizShareButton";
+import { weekSchedule } from "../../../components/share/business/bizCardModel";
 import { takeParkedDraft, useSessionActions } from "./SessionActions";
 import { useSchedule } from "./useSchedule";
+import { useCentium } from "./useCentium";
 import {
   addDays,
-  dayHeading,
+  cardFlag,
+  centiumLine,
+  classesCount,
+  dayCaps,
+  durationText,
   figures,
   figuresLine,
+  fillPct,
+  fillText,
   findIssues,
   flagOf,
   isEnded,
-  isFull,
   isLowSoon,
   issueText,
+  mondayOf,
+  priceText,
   seriesCards,
   signed,
   sortDay,
   todayIso,
+  weekOf,
+  weekStrip,
+  weekdayLong,
   type Issue,
   type SeriesCard,
   type Session,
 } from "./scheduleModel";
 
-// Schedule (OP1-074 / 078 / 079 / 080 / 140 / 142 / 155): the Classes type's
-// Operations tab, and the Classes page a gym that runs classes opens.
-// OpsTabsV4 tab=classes, with the per-type title and no Gym / Employees /
-// Classes tabs (O1).
+// Market + Share 3.0 · B-MA.6 Weekly schedule (Business Marketplace Screens
+// `classesWeek`, markup lines 382–407, script `bizWeek` / `sessions`; HANDOVER
+// §4 "B-MA.6 Classes (gyms)"). /app/business/classes: the Overview's Gym card
+// opens it (back header "Gym" / "Classes"); for the Classes business type it
+// is the Operations tab (title "Schedule", no back).
+//
+// Drawn, top to bottom (padding 0 16 32): the week strip (7 tiles, flex 1,
+// gap 6, 62 tall radius 12, --soft / selected --segactive; "MON" 10 / 800
+// 0.6px, "12" 15 / 800, "6 classes" 9.5 / 700), the caps "Friday, October 16"
+// (month first, D-02) with "Add class" (margin-top 14), then the day's session
+// cards (margin-top 10, gap 10): radius 20 --card 1px --border padding 12 14
+// gap 12; a 52 time tile (--pale radius 12 padding 8 0: "7:00" 14 / 800, "AM"
+// 9.5 / 700 --faint), name 14 / 800 and price 12 / 700, "{instructor} ·
+// {duration}" 11.5 --faint, the 5 tall --soft bar with the --fill fill and
+// "{n} of {cap}" / "Full" 11 / 700 --ink2 (margin-top 7).
+//
+// KEPT live features (PLAN §3.4, restyled in this chrome): the List / Week
+// toggle (header, with the share button), the flags (No instructor /
+// Double-booked / Under 40% / Cancelled, + the old Open spots' Almost full and
+// Featured), the row menu (⋮ on each card: Edit, Message members, Request a
+// substitute, Stop repeating, Promote, Cancel / Delete), the capacity hints
+// (an Under 40% bar in --caution, ended / cancelled dimmed), Needs attention,
+// the week figures, repeating classes, the Class rules page and the Plans
+// link. The old Spots tab's per-class Centium line ("{n} open on Centium" /
+// "Members only" / "Listing is off"), its Today / On Centium / From Centium
+// figures and its week navigation sit on this page now; Spots on Centium and
+// Show on Explore are fields of the Edit class sheet.
 
 const VIEW_KEY = "centium-schedule-view";
 const readView = (): "list" | "week" => {
@@ -48,7 +89,7 @@ const readView = (): "list" | "week" => {
 };
 
 export default function SchedulePage() {
-  const c = useOps();
+  const m = useMarketColours();
   const api = useSchedule();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -56,7 +97,8 @@ export default function SchedulePage() {
   const now = useNow();
   const today = todayIso(now);
   const [view, setView] = useState<"list" | "week">(readView);
-  const [seeAll, setSeeAll] = useState(false);
+  const [week, setWeek] = useState(() => mondayOf(today));
+  const [day, setDay] = useState(today);
   const [naOpen, setNaOpen] = useState(false);
   const [newIds, setNewIds] = useState<string[]>([]);
   const [menuFor, setMenuFor] = useState<{ id: string; anchor: HTMLElement } | null>(null);
@@ -66,11 +108,16 @@ export default function SchedulePage() {
   const access = useConsoleAccess();
   const showPlans = classesType && access.ready && access.meets("members");
   const people = api.people;
+  const centium = useCentium(api.businessId, useMemo(() => api.classes.map((c) => c.id), [api.classes]));
 
   const actions = useSessionActions(api, {
     onCreated: (id) => {
       setNewIds((ids) => [id, ...ids]);
-      setSeeAll(true);
+      const s = api.sessions.find((x) => x.id === id);
+      if (s) {
+        setWeek(mondayOf(s.date));
+        setDay(s.date);
+      }
       window.setTimeout(() => setNewIds((ids) => ids.filter((x) => x !== id)), 6000);
       window.setTimeout(() => document.getElementById(`session-${id}`)?.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" }), 120);
     },
@@ -103,20 +150,17 @@ export default function SchedulePage() {
   // B9: the double-booked pairs are class_instructor_conflicts() when it answered.
   const issues = useMemo(() => findIssues(api.sessions, now, api.clashes), [api.sessions, now, api.clashes]);
   const fig = useMemo(() => figures(api.sessions, today), [api.sessions, today]);
-  const week = useMemo(() => api.sessions.filter((s) => s.date >= today && s.date <= addDays(today, 6)), [api.sessions, today]);
-  const days = useMemo(() => {
-    const map = new Map<string, Session[]>();
-    for (const s of week) map.set(s.date, [...(map.get(s.date) ?? []), s]);
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([day, list]) => ({ day, list: sortDay(list, newIds) }));
-  }, [week, newIds]);
-  const shownDays = seeAll ? days : days.slice(0, 2);
+  const strip = useMemo(() => weekStrip(api.sessions, week), [api.sessions, week]);
+  const dayList = useMemo(() => sortDay(api.sessions.filter((s) => s.date === day), newIds), [api.sessions, day, newIds]);
+  // B-SH.1: the Monday-to-Sunday week on the share card (cancelled sessions left out).
+  const shareWeek = useMemo(() => weekSchedule(api.sessions, today), [api.sessions, today]);
   // AN3-055 rows 1-3: one card per repeating series, next session and the count to come.
   const series = useMemo(() => seriesCards(api.sessions, api.series, now), [api.sessions, api.series, now]);
-  const later = useMemo(() => api.sessions.filter((s) => s.date > addDays(today, 6)).sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))[0], [api.sessions, today]);
 
   const noBusiness = !api.loading && !api.error && !api.businessId;
   const offline = !api.online;
   const firstLoad = api.loading && api.loadedAt === null;
+  const rowOf = (id: string) => api.classes.find((x) => x.id === id) ?? null;
 
   const menuSession = menuFor ? api.sessions.find((s) => s.id === menuFor.id) ?? null : null;
   // OP1-088 (B7 MB-02): only for a seat that may message and see who booked, and a session someone booked.
@@ -124,239 +168,260 @@ export default function SchedulePage() {
     menuSession && actions.canMessage && menuSession.booked > 0
       ? { value: "msg", label: people === "clients" ? "Message clients" : "Message members", disabled: offline, note: offline ? "You're offline" : undefined }
       : null;
-  // B9: a booked session offers Cancel session (OURS-AN3 C1, OpsTabsV4 l.447);
-  // one nobody booked keeps Delete class; a repeating one adds Stop repeating
-  // (OURS); a cancelled one has no actions (its ⋮ is not drawn).
+  const menuRow = menuSession ? rowOf(menuSession.id) : null;
+  // The old Open spots' Promote (a class under 40% within 48 hours, on Explore).
+  const promoteOption: PopupMenuOption<string> | null =
+    menuSession && !classesType && isLowSoon(menuSession, now) && menuRow?.listedOnExplore !== false && centium.listingActive !== false ? { value: "promote", label: "Promote this class" } : null;
+  // B9: a booked session offers Cancel session (OURS-AN3 C1); one nobody
+  // booked keeps Delete class; a repeating one adds Stop repeating (OURS); a
+  // cancelled one has no actions.
   const menuOptions: PopupMenuOption<string>[] = menuSession
     ? isEnded(menuSession, now)
       ? msgOption
-      ? [msgOption]
-      : []
+        ? [msgOption]
+        : []
       : [
           { value: "edit", label: "Edit" },
           ...(msgOption ? [msgOption] : []),
           { value: "sub", label: "Request a substitute" },
           ...(menuSession.seriesId ? [{ value: "end", label: "Stop repeating" }] : []),
+          ...(promoteOption ? [promoteOption] : []),
           menuSession.booked > 0 ? { value: "cancel", label: "Cancel session", destructive: true } : { value: "delete", label: "Delete class", destructive: true },
         ]
     : [];
 
-  const title = classesType ? "Schedule" : "Classes";
-  const loadedTime = api.loadedAt ? time12(`${new Date(api.loadedAt).getHours()}:${new Date(api.loadedAt).getMinutes()}`) : "";
+  const moveWeek = (n: number) => {
+    const w = addDays(week, n * 7);
+    setWeek(w);
+    setDay(w <= today && today <= addDays(w, 6) ? today : w);
+  };
+  const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate("/app/business/marketplace"));
+
+  const todayRows = api.classes.filter((x) => x.date === today && !x.cancelledAt);
+  const todaysOpen = centium.listingActive === false ? 0 : todayRows.reduce((a, x) => {
+    const s = api.sessions.find((y) => y.id === x.id);
+    if (!s || isEnded(s, now)) return a;
+    const line = centiumLine({ capacity: x.maxCapacity, booked: s.booked, centiumSpots: x.centiumSpots ?? null, listed: x.listedOnExplore !== false, listingActive: centium.listingActive, fromCentium: centium.fromCentium?.get(x.id) ?? null, ended: false, cancelled: false });
+    return a + (line?.open ?? 0);
+  }, 0);
+  const todaysFromCentium = centium.fromCentium ? todayRows.reduce((a, x) => a + (centium.fromCentium?.get(x.id) ?? 0), 0) : null;
+
+  const header = (
+    <BackHeader
+      m={m}
+      eyebrow={classesType ? undefined : "Gym"}
+      title={classesType ? "Schedule" : "Classes"}
+      onBack={classesType ? null : goBack}
+      right={
+        !firstLoad && !api.error && !noBusiness ? (
+          <>
+            <ViewToggle m={m} view={view} onChange={setViewKept} />
+            {/* Market + Share 3.0 B-SH.1: share this week's timetable (Weekly schedule card). */}
+            <BizShareButton
+              label="Share this week's schedule"
+              emptyHint={shareWeek.count === 0 ? "Nothing to share yet. Add a class to share your schedule." : null}
+              getData={() => ({ t: "schedule", d: shareWeek })}
+            />
+          </>
+        ) : undefined
+      }
+    />
+  );
 
   return (
-    <div style={{ marginTop: -2, paddingBottom: 64 }}>
-      {!classesType && api.kind !== "unknown" && <BackRow c={c} label="Front desk" to="/app/business/operations" />}
-      <h1 style={{ margin: 0, fontSize: textPx(27), fontWeight: 800, letterSpacing: "-0.022em", lineHeight: linePx(34), color: c.ink }}>{title}</h1>
-      <p style={{ margin: "4px 0 0", fontSize: textPx(13), fontWeight: 500, color: c.faint }}>Your schedule for the next 7 days</p>
-      {offline && api.loadedAt !== null && (
-        <p style={{ margin: "4px 0 0", fontSize: textPx(11.5), color: c.faint }}>Offline. Showing your schedule from {loadedTime}.</p>
-      )}
+    <div style={{ paddingBottom: 32, color: m.ink }}>
+      <style>{FOCUS_CSS}</style>
+      {header}
+      {offline && api.loadedAt !== null && <MarketOffline loaded style={{ marginBottom: 12 }} />}
 
       {firstLoad ? (
-        <FiguresCard
-          c={c}
-          boxes={[
-            { label: "Sessions this week", value: "–", dash: true },
-            { label: "Spots booked", value: "–", dash: true },
-          ]}
-        />
-      ) : api.error ? null : (
-        <FiguresCard
-          c={c}
-          boxes={[
-            {
-              label: "Sessions this week",
-              value: String(fig.sessions),
-              delta: !fig.early && !fig.empty && fig.sessionsDelta !== 0 ? signed(fig.sessionsDelta) : undefined,
-              deltaInk: fig.sessionsDelta > 0 ? c.good : c.faint,
-            },
-            {
-              label: "Spots booked",
-              value: fig.bookedPct === null ? "–" : `${fig.bookedPct}%`,
-              dash: fig.bookedPct === null,
-              delta: !fig.early && !fig.empty && fig.pctDelta ? signed(fig.pctDelta, " pts") : undefined,
-              deltaInk: (fig.pctDelta ?? 0) > 0 ? c.good : c.faint,
-            },
-          ]}
-          line={noBusiness ? undefined : figuresLine(fig, api.sessions, issues, today, now)}
-        />
-      )}
-
-      {issues.length > 0 && !api.error && (
-        <NeedsAttention
-          c={c}
-          open={naOpen}
-          onToggle={() => setNaOpen((o) => !o)}
-          issues={issues}
-          nameOf={api.nameOf}
-          people={people}
-          reduced={reduced}
-          onOpenSession={(id) => navigate(`/app/business/classes/${id}`)}
-          onAssign={(id) => actions.openSubstitute(id)}
-          onMessageMembers={actions.canMessage ? (id) => actions.openMessage(id) : null}
-          onMessageInstructor={async (pid) => {
-            const r = await startThread(pid);
-            if (r.ok) navigate("/app/messages", { state: { threadId: r.threadId } });
-            else actions.show("Couldn't open the chat. Try again.");
-          }}
-        />
-      )}
-
-      {/* List / Week + rules (OP1-074 rows 8-9) */}
-      <div className="flex items-center" style={{ gap: 10, marginTop: 18 }}>
-        <div role="tablist" aria-label="Schedule view" className="flex flex-1" style={{ gap: 4, background: c.segTrack, borderRadius: 14, padding: 4 }}>
-          {(
-            [
-              ["list", "List", <List key="i" size={14} strokeWidth={2.2} />],
-              ["week", "Week", <CalendarRange key="i" size={14} strokeWidth={2.2} />],
-            ] as const
-          ).map(([k, label, icon]) => {
-            const on = view === k;
-            return (
-              <button
-                key={k}
-                type="button"
-                role="tab"
-                aria-selected={on}
-                onClick={() => setViewKept(k)}
-                className="flex-1 flex items-center justify-center"
-                style={{ height: 36, borderRadius: 10, gap: 5, fontSize: textPx(12.5), fontWeight: 800, background: on ? c.segOn : "transparent", color: on ? c.segOnInk : c.dark ? "#B7ABDE" : "rgb(var(--th-6d50d3))" }}
-              >
-                {icon}
-                {label}
-              </button>
-            );
-          })}
+        <div aria-busy="true" aria-label="Loading your schedule">
+          <div className="flex" style={{ gap: 6 }}>
+            {Array.from({ length: 7 }, (_, i) => (
+              <span key={i} aria-hidden className="animate-skeleton-pulse" style={{ flex: 1, height: 62, borderRadius: 12, background: m.soft }} />
+            ))}
+          </div>
+          <MarketSkeleton radius={20} rows={3} count={3} gap={10} label="Loading your classes" style={{ marginTop: 66 }} />
         </div>
-        {showPlans && (
-          <button
-            type="button"
-            aria-label="Plans"
-            onClick={() => navigate(PLANS_ROUTE)}
-            className="tap flex items-center justify-center shrink-0"
-            style={{ width: 44, height: 44, borderRadius: 14, border: `1px solid ${c.border}`, color: c.inkSoft }}
-          >
-            <Ticket size={17} />
-          </button>
-        )}
-        <button
-          type="button"
-          aria-label="Waitlist and late cancels"
-          onClick={() => navigate("/app/business/classes/rules")}
-          className="tap flex items-center justify-center shrink-0"
-          style={{ width: 44, height: 44, borderRadius: 14, border: `1px solid ${c.border}`, color: c.inkSoft }}
-        >
-          <Settings2 size={17} />
-        </button>
-      </div>
-
-      {firstLoad ? (
-        <SkeletonDay c={c} />
       ) : api.error ? (
-        <ErrorCard c={c} message="Couldn't load your schedule. Check your connection and try again." onRetry={api.reload} disabled={offline} />
+        <MarketError thing="your schedule" onRetry={api.reload} />
       ) : noBusiness ? (
-        <EmptyCard c={c} title="Save your business profile first" body="Classes are scheduled under it." action={{ label: "Set up business profile", onClick: () => navigate("/app/business/profile") }} />
-      ) : view === "week" ? (
-        api.sessions.length === 0 ? (
-          <EmptyCard c={c} title="No classes scheduled yet" body={`Create your first class and ${people} can book it on Explore.`} />
-        ) : (
-          <WeekGrid c={c} sessions={api.sessions} today={today} now={now} issues={issues} onOpen={(id) => navigate(`/app/business/classes/${id}`)} onDay={(d) => {
-            setViewKept("list");
-            setSeeAll(true);
-            window.setTimeout(() => document.getElementById(`day-${d}`)?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" }), 60);
-          }} />
-        )
-      ) : days.length === 0 ? (
-        later ? (
-          <OpsCard c={c} radius={20} style={{ marginTop: 14 }}>
-            <button type="button" className="tap w-full text-left" style={{ padding: 16 }} onClick={() => navigate(`/app/business/classes/${later.id}`)}>
-              <p style={{ margin: 0, fontSize: textPx(14), fontWeight: 800, color: c.ink }}>Nothing in the next 7 days</p>
-              <p style={{ margin: "4px 0 0", fontSize: textPx(12.5), lineHeight: linePx(18), color: c.inkSoft }}>
-                Your next class is {later.title} on {dayHeading(later.date, today)} at {time12(later.startTime)}.
-              </p>
-            </button>
-          </OpsCard>
-        ) : (
-          <EmptyCard c={c} title="No classes scheduled yet" body={`Create your first class and ${people} can book it on Explore.`} />
-        )
+        <>
+          <MarketEmptyCard title="Save your business profile first" body="Classes are scheduled under it." />
+          <div style={{ marginTop: 12 }}>
+            <OutlineButton m={m} onClick={() => navigate("/app/business/profile")}>
+              Set up business profile
+            </OutlineButton>
+          </div>
+        </>
       ) : (
         <>
-          {shownDays.map(({ day, list }) => {
-            const cls = list;
-            return (
-              <section key={day} id={`day-${day}`} aria-label={dayHeading(day, today)} style={{ scrollMarginTop: 16 }}>
-                <div className="flex items-baseline justify-between flex-wrap" style={{ margin: "16px 4px 8px", columnGap: 10 }}>
-                  <p style={{ margin: 0, fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: day === today ? c.pDark : c.faint }}>
-                    {dayHeading(day, today)}
-                  </p>
-                  <p style={{ margin: 0, fontSize: textPx(11), color: c.faint }}>
-                    {cls.length} {cls.length === 1 ? "class" : "classes"} · {cls.reduce((a, s) => a + s.booked, 0)} booked
-                  </p>
-                </div>
-                <OpsCard c={c} radius={20}>
-                  {list.map((s, i) => (
-                    <SessionRow
-                      key={s.id}
-                      c={c}
-                      s={s}
-                      first={i === 0}
-                      now={now}
-                      flag={flagOf(s, issues)}
-                      isNew={newIds.includes(s.id)}
-                      who={s.professionalId ? api.nameOf(s.professionalId) : ""}
-                      people={people}
-                      onOpen={() => navigate(`/app/business/classes/${s.id}`)}
-                      onMenu={(anchor) => setMenuFor({ id: s.id, anchor })}
-                      menuDisabled={offline}
-                    />
-                  ))}
-                </OpsCard>
-              </section>
-            );
-          })}
-          {days.length > 2 || seeAll ? (
+          <WeekStrip m={m} days={strip} selected={view === "list" ? day : null} today={today} onPick={(d) => {
+            setDay(d);
+            if (view === "week") setViewKept("list");
+          }} />
+          <div className="flex items-center justify-between" style={{ marginTop: 14, gap: 10 }}>
+            <Caps m={m} as="h2">{view === "week" ? weekOf(week) : dayCaps(day)}</Caps>
+            <OutlineButton
+              m={m}
+              disabled={!api.businessId || offline}
+              onClick={() => actions.openCreate(undefined, view === "list" && day >= today ? day : undefined)}
+              icon={
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
+              }
+            >
+              Add class
+            </OutlineButton>
+          </div>
+
+          {view === "week" ? (
+            <WeekGrid
+              m={m}
+              sessions={api.sessions}
+              monday={week}
+              today={today}
+              now={now}
+              issues={issues}
+              onOpen={(id) => navigate(`/app/business/classes/${id}`)}
+              onDay={(d) => {
+                setDay(d);
+                setViewKept("list");
+              }}
+            />
+          ) : dayList.length === 0 ? (
+            <MarketEmptyCard
+              style={{ marginTop: 10 }}
+              title={api.sessions.length === 0 ? "No classes scheduled yet" : `No classes on ${weekdayLong(day)}`}
+              body={api.sessions.length === 0 ? `Create your first class and ${people} can book it on Explore.` : "Tap Add class to schedule one."}
+            />
+          ) : (
+            <div className="flex flex-col" style={{ marginTop: 10, gap: 10 }}>
+              {dayList.map((s) => {
+                const row = rowOf(s.id);
+                const ended = isEnded(s, now);
+                return (
+                  <SessionCard
+                    key={s.id}
+                    m={m}
+                    s={s}
+                    now={now}
+                    price={priceText(row?.price)}
+                    who={s.professionalId ? api.nameOf(s.professionalId) : ""}
+                    flag={cardFlag(s, flagOf(s, issues), now)}
+                    isNew={newIds.includes(s.id)}
+                    featured={centium.featured.has(s.id)}
+                    centium={centiumLine({
+                      capacity: s.maxCapacity,
+                      booked: s.booked,
+                      centiumSpots: row?.centiumSpots ?? null,
+                      listed: row?.listedOnExplore !== false,
+                      listingActive: centium.listingActive,
+                      fromCentium: centium.fromCentium ? centium.fromCentium.get(s.id) ?? 0 : null,
+                      ended,
+                      cancelled: !!s.cancelled,
+                    })}
+                    onOpen={() => navigate(`/app/business/classes/${s.id}`)}
+                    onMenu={(anchor) => setMenuFor({ id: s.id, anchor })}
+                    menuDisabled={offline}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {/* The old Open spots week navigation (OURS placement: under the cards). */}
+          <div className="flex items-center justify-between" style={{ marginTop: 12, marginLeft: -10, marginRight: -10 }}>
+            <WeekArrow m={m} label="Previous week" onClick={() => moveWeek(-1)}>
+              <ChevronLeft size={16} aria-hidden />
+            </WeekArrow>
             <button
               type="button"
-              onClick={() => setSeeAll((v) => !v)}
-              className="tap block w-full text-center"
-              style={{ marginTop: 12, minHeight: 32, fontSize: textPx(12.5), fontWeight: 800, color: c.pDark }}
+              onClick={() => {
+                setWeek(mondayOf(today));
+                setDay(today);
+              }}
+              disabled={week === mondayOf(today)}
+              className="market-focus hit"
+              aria-label={week === mondayOf(today) ? `${weekOf(week)}, this week` : `${weekOf(week)}. Back to this week`}
+              style={{ fontSize: textPx(12), fontWeight: 800, color: m.ink, background: "transparent", border: 0, minHeight: 32, borderRadius: 10 }}
+              aria-live="polite"
             >
-              {seeAll ? "Show less" : `See all ${week.length} sessions this week`}
+              {weekOf(week)}
             </button>
-          ) : null}
+            <WeekArrow m={m} label="Next week" onClick={() => moveWeek(1)}>
+              <ChevronRight size={16} aria-hidden />
+            </WeekArrow>
+          </div>
+
+          {issues.length > 0 && (
+            <NeedsAttention
+              m={m}
+              open={naOpen}
+              onToggle={() => setNaOpen((o) => !o)}
+              issues={issues}
+              nameOf={api.nameOf}
+              people={people}
+              reduced={reduced}
+              onOpenSession={(id) => navigate(`/app/business/classes/${id}`)}
+              onAssign={(id) => actions.openSubstitute(id)}
+              onMessageMembers={actions.canMessage ? (id) => actions.openMessage(id) : null}
+              onMessageInstructor={async (pid) => {
+                const r = await startThread(pid);
+                if (r.ok) navigate("/app/messages", { state: { threadId: r.threadId } });
+                else actions.show("Couldn't open the chat. Try again.");
+              }}
+            />
+          )}
+
+          <Caps m={m} style={{ marginTop: 22, marginBottom: 8 }}>
+            Next 7 days
+          </Caps>
+          <StatLedger
+            rows={[
+              { label: "Sessions this week", value: String(fig.sessions), delta: !fig.early && !fig.empty ? signed(fig.sessionsDelta) : "–" },
+              { label: "Spots booked", value: fig.bookedPct === null ? "–" : `${fig.bookedPct}%`, delta: !fig.early && !fig.empty && fig.pctDelta !== null ? signed(fig.pctDelta, " pts") : "–" },
+              { label: "Classes today", value: String(todayRows.length), delta: null },
+              { label: "Open on Centium today", value: centium.listingActive === null && !centium.fromCentium ? "–" : String(todaysOpen), delta: null },
+              { label: "Booked from Centium today", value: todaysFromCentium === null ? "–" : String(todaysFromCentium), delta: null },
+            ]}
+          />
+          <p style={{ margin: "8px 4px 0", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>{figuresLine(fig, api.sessions, issues, today, now)}</p>
+
+          {series.length > 0 && (
+            <section aria-label="Repeating classes">
+              <Caps m={m} style={{ marginTop: 22, marginBottom: 8 }}>
+                Repeating classes
+              </Caps>
+              <div className="flex flex-col" style={{ gap: 10 }}>
+                {series.map((card) => {
+                  const row = rowOf(card.next.id);
+                  return (
+                    <SeriesCardView
+                      key={card.seriesId}
+                      m={m}
+                      card={card}
+                      who={card.next.professionalId ? api.nameOf(card.next.professionalId) : ""}
+                      price={row ? priceText(row.price) : null}
+                      onOpen={() => navigate(`/app/business/classes/${card.next.id}`)}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          <Caps m={m} style={{ marginTop: 22, marginBottom: 8 }}>
+            Settings
+          </Caps>
+          <div style={{ borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, overflow: "hidden" }}>
+            <LinkRow m={m} icon={<Settings2 size={17} aria-hidden />} title="Class rules" sub="Waitlist and late cancels" onClick={() => navigate("/app/business/classes/rules")} />
+            {showPlans && <LinkRow m={m} icon={<Ticket size={17} aria-hidden />} title="Plans" sub="Memberships and class packs" onClick={() => navigate(PLANS_ROUTE)} divider />}
+          </div>
         </>
       )}
-
-      {view === "list" && !firstLoad && !api.error && !noBusiness && series.length > 0 && (
-        <section aria-label="Repeating classes">
-          <div className="flex items-baseline justify-between flex-wrap" style={{ margin: "16px 4px 8px", columnGap: 10 }}>
-            <p style={{ margin: 0, fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: c.faint }}>Repeating classes</p>
-          </div>
-          {series.map((card, i) => {
-            const row = api.classes.find((x) => x.id === card.next.id);
-            return (
-              <SeriesCardView
-                key={card.seriesId}
-                c={c}
-                card={card}
-                first={i === 0}
-                who={card.next.professionalId ? api.nameOf(card.next.professionalId) : ""}
-                price={row ? (row.price ? `${row.price} · ${row.paymentType || "Cash"}` : "Free") : null}
-                onOpen={() => navigate(`/app/business/classes/${card.next.id}`)}
-              />
-            );
-          })}
-        </section>
-      )}
-
-      <FixedCta
-        c={c}
-        label="Create class"
-        icon={<CalendarPlus size={17} strokeWidth={2.4} />}
-        onClick={() => actions.openCreate()}
-        disabled={!api.businessId || offline}
-      />
 
       <PopupMenu
         open={!!menuFor && !!menuSession}
@@ -373,15 +438,16 @@ export default function SchedulePage() {
           if (v === "delete") actions.openDelete(id);
           if (v === "cancel") actions.openCancel(id);
           if (v === "end") actions.openEndSeries(id);
+          if (v === "promote") navigate(`/app/business/marketplace?tab=offers&promote=${encodeURIComponent(id)}`);
         }}
-        width={200}
+        width={210}
       />
       {actions.elements}
     </div>
   );
 }
 
-/** The clock the rows read; ticks each minute so "ended" and "within 48 h" stay true. */
+/** The clock the cards read; ticks each minute so "ended" and "within 48 h" stay true. */
 function useNow(): Date {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -391,151 +457,233 @@ function useNow(): Date {
   return now;
 }
 
-const TIME_COL = "calc(56px + 4 * var(--text-boost, 0px))";
+/** The kept List / Week toggle (OP1-074 rows 8-9), in the header: the board's segmented track (--segtrack, radius 12, padding 2), active --segactive. */
+function ViewToggle({ m, view, onChange }: { m: MarketPalette; view: "list" | "week"; onChange: (v: "list" | "week") => void }) {
+  return (
+    <div role="tablist" aria-label="Schedule view" className="flex" style={{ gap: 2, padding: 2, borderRadius: 12, background: m.segtrack }}>
+      {(
+        [
+          ["list", "List", <List key="i" size={16} strokeWidth={2.2} aria-hidden />],
+          ["week", "Week", <CalendarRange key="i" size={16} strokeWidth={2.2} aria-hidden />],
+        ] as const
+      ).map(([k, label, icon]) => {
+        const on = view === k;
+        return (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            aria-label={`${label} view`}
+            title={`${label} view`}
+            onClick={() => onChange(k)}
+            className="market-focus hit flex items-center justify-center"
+            style={{ width: 40, height: 40, borderRadius: 10, background: on ? m.segactive : "transparent", color: on ? m.onfill : m.segink, border: 0 }}
+          >
+            {icon}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
-function SessionRow({
-  c,
+/** bizWeek (lines 385–391): 7 tiles, flex 1, gap 6, 62 tall, radius 12; selected --segactive with --onfill ink, the fill lifted to 4.5:1 under white (lead decision, R1 polish). */
+function WeekStrip({ m, days, selected, today, onPick }: { m: MarketPalette; days: ReturnType<typeof weekStrip>; selected: string | null; today: string; onPick: (day: string) => void }) {
+  return (
+    <div role="group" aria-label="Days of the week" className="flex" style={{ gap: 6 }}>
+      {days.map((d) => {
+        const on = d.day === selected;
+        const ink = on ? m.onfill : m.ink;
+        const dayInk = on ? m.onfill : m.faint;
+        return (
+          <button
+            key={d.day}
+            type="button"
+            aria-pressed={on}
+            aria-current={d.day === today ? "date" : undefined}
+            aria-label={`${weekdayLong(d.day)} ${d.n}, ${classesCount(d.count)}`}
+            onClick={() => onPick(d.day)}
+            className="market-focus flex flex-col items-center justify-center min-w-0"
+            style={{ flex: 1, minHeight: 62, borderRadius: 12, background: on ? fillUnder(m.segactive, m.onfill) : m.soft, border: 0, padding: 0, lineHeight: "normal" }}
+          >
+            <span style={{ fontSize: textPx(10), fontWeight: 800, letterSpacing: "0.6px", color: dayInk }}>{d.w}</span>
+            <span style={{ fontSize: textPx(15), fontWeight: 800, color: ink }}>{d.n}</span>
+            <span className="whitespace-nowrap" style={{ fontSize: textPx(9.5), fontWeight: 700, color: dayInk }}>{classesCount(d.count)}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function WeekArrow({ m, label, onClick, children }: { m: MarketPalette; label: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" aria-label={label} onClick={onClick} className="market-focus flex items-center justify-center" style={{ width: 44, height: 44, background: "transparent", border: 0, borderRadius: 12 }}>
+      <span style={{ width: 32, height: 32, borderRadius: 999, background: m.soft, color: m.ink2, display: "flex", alignItems: "center", justifyContent: "center" }}>{children}</span>
+    </button>
+  );
+}
+
+const TONES = (m: MarketPalette) => ({
+  high: [m.highbg, m.high],
+  caution: [m.cautionbg, m.caution],
+  good: [m.goodbg, m.good],
+});
+
+/** The drawn session card (`sessions`, lines 398–406), the whole card opening the class's Bookings page; the kept ⋮ menu at its end. */
+function SessionCard({
+  m,
   s,
-  first,
   now,
+  price,
+  who,
   flag,
   isNew,
-  who,
-  people,
+  featured,
+  centium,
   onOpen,
   onMenu,
   menuDisabled,
 }: {
-  c: OpsColors;
+  m: MarketPalette;
   s: Session;
-  first: boolean;
   now: Date;
-  flag: ReturnType<typeof flagOf>;
-  isNew: boolean;
+  price: string;
   who: string;
-  people: "clients" | "members";
+  flag: ReturnType<typeof cardFlag>;
+  isNew: boolean;
+  featured: boolean;
+  centium: ReturnType<typeof centiumLine>;
   onOpen: () => void;
   onMenu: (anchor: HTMLElement) => void;
   menuDisabled: boolean;
 }) {
+  const press = usePress();
+  const dark = useIsDark();
   const ended = isEnded(s, now);
-  const full = isFull(s);
-  const low = isLowSoon(s, now);
-  // OP1-087 row 3 / OURS-AN3 C10 (OpsTabsV4 sesRow l.441-447): a cancelled
-  // session stays as a record: struck title, "Cancelled" pill highBg / high,
-  // "Cancelled · {who} · {people} notified", no fill bar, opacity 0.75.
   const cancelled = !!s.cancelled;
-  const flagT = cancelled ? "" : flag === "noinst" ? "No instructor" : flag === "double" ? "Double-booked" : flag === "low" ? "Under 40%" : "";
-  const st = flagT || (isNew ? "New" : cancelled ? "Cancelled" : full ? "Full" : "");
-  const tagBg = flagT || cancelled ? c.highBg : isNew ? c.tealPale : c.pale;
-  const tagInk = flagT || cancelled ? c.high : isNew ? c.tealInk : c.pDark;
-  const pct = s.maxCapacity ? Math.min(100, Math.round((s.booked / s.maxCapacity) * 100)) : 0;
-  const whoText = cancelled
-    ? `Cancelled · ${who || "No instructor"} · ${people} notified`
-    : who
-      ? `With ${who}${ended ? " · ended" : ""}`
-      : "No instructor yet";
+  const low = isLowSoon(s, now);
+  const t = time12Split(s.startTime);
   const menuRef = useRef<HTMLButtonElement | null>(null);
+  const tone = flag ? TONES(m)[flag.tone] : null;
+  const whoText = who || "No instructor named";
   return (
     <div
       id={`session-${s.id}`}
-      className="grid items-center"
+      className="flex"
       style={{
-        gridTemplateColumns: `${TIME_COL} 3px minmax(0,1fr) 44px`,
-        columnGap: 10,
-        padding: "10px 6px 10px 12px",
-        borderTop: first ? "none" : `1px solid ${c.divider}`,
-        opacity: cancelled ? 0.75 : ended ? 0.6 : 1,
-        boxShadow: isNew ? `inset 0 0 0 2px ${c.teal}` : "none",
-        transition: "box-shadow .3s ease",
         position: "relative",
+        borderRadius: 20,
+        background: m.card,
+        border: `1px solid ${isNew ? m.teal : m.border}`,
+        padding: "12px 14px",
+        gap: 12,
+        opacity: cancelled ? 0.75 : ended ? 0.6 : 1,
+        lineHeight: "normal",
+        ...press.style,
       }}
     >
-      {/* The whole row opens the session (OP1-074 row 12); the ⋮ sits above it. */}
-      <button type="button" onClick={onOpen} aria-label={`${s.title}, ${time12(s.startTime)} to ${time12(s.endTime)}, ${cancelled ? "cancelled" : `${s.booked} of ${s.maxCapacity} booked`}`} className="absolute inset-0 w-full" style={{ zIndex: 0 }} />
-      <div style={{ position: "relative", pointerEvents: "none" }}>
-        <p className="tabular-nums whitespace-nowrap" style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 800, color: c.deep }}>
-          {time12(s.startTime)}
-        </p>
-        <p className="tabular-nums whitespace-nowrap" style={{ margin: 0, fontSize: textPx(10.5), color: c.faint }}>
-          {time12(s.endTime)}
-        </p>
+      {/* The whole card opens the Bookings page; the ⋮ sits above it. */}
+      <button
+        type="button"
+        onClick={onOpen}
+        {...press.handlers}
+        aria-label={`${s.title}, ${time12(s.startTime)}, ${durationText(s.startTime, s.endTime)}, ${cancelled ? "cancelled" : `${s.booked} of ${s.maxCapacity} booked`}${flag && !cancelled ? `, ${flag.label}` : ""}. Bookings`}
+        className="market-focus absolute inset-0 w-full"
+        style={{ zIndex: 0, borderRadius: 20, background: "transparent", border: 0 }}
+      />
+      <div aria-hidden className="shrink-0 text-center" style={{ width: 52, alignSelf: "center", borderRadius: 12, background: m.pale, padding: "8px 0", position: "relative", pointerEvents: "none" }}>
+        <div className="tabular-nums" style={{ fontSize: textPx(14), fontWeight: 800, color: m.ink }}>{t?.time ?? s.startTime}</div>
+        <div style={{ fontSize: textPx(9.5), fontWeight: 700, color: m.faint }}>{t?.meridiem ?? ""}</div>
       </div>
-      <span aria-hidden className="self-stretch" style={{ borderRadius: 999, background: c.primary, position: "relative", pointerEvents: "none", outline: c.hc ? `1px solid ${c.primary}` : undefined }} />
-      <div className="min-w-0" style={{ position: "relative", pointerEvents: "none" }}>
-        <p className="flex items-center flex-wrap min-w-0" style={{ margin: 0, gap: 6, rowGap: 2 }}>
-          <span className="min-w-0 truncate" style={{ fontSize: textPx(13.5), fontWeight: 800, lineHeight: linePx(17), color: c.ink, maxWidth: "100%", textDecoration: cancelled ? "line-through" : "none" }}>
-            {s.title}
+      <div className="flex-1 min-w-0" style={{ position: "relative", pointerEvents: "none" }}>
+        <div className="flex justify-between" style={{ gap: 8 }}>
+          <span className="flex items-center min-w-0" style={{ gap: 6 }}>
+            <span className="truncate" style={{ fontSize: textPx(14), fontWeight: 800, color: m.ink, textDecoration: cancelled ? "line-through" : "none" }}>{s.title}</span>
+            {flag && tone && <Chip label={flag.label} bg={tone[0]} ink={tone[1]} />}
+            {!flag && isNew && <Chip label="New" bg={m.tealbg} ink={m.tealink} />}
           </span>
-          {st && <Tag label={st} bg={tagBg} ink={tagInk} />}
-        </p>
-        <p style={{ margin: "1px 0 0", fontSize: textPx(11.5), lineHeight: linePx(15), color: who || cancelled ? c.faint : c.high }}>{whoText}</p>
-        {!cancelled && <div className="flex items-center" style={{ gap: 8, marginTop: 5 }}>
-          <div className="flex-1 overflow-hidden" style={{ height: 5, borderRadius: 999, background: c.track, border: c.hc ? `1px solid ${c.border}` : undefined }}>
-            <div style={{ height: "100%", borderRadius: 999, width: `${pct}%`, background: low ? c.caution : c.primary }} />
+          <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 700, color: m.ink }}>{price}</span>
+        </div>
+        <div style={{ fontSize: textPx(11.5), color: m.faint }}>
+          {whoText} · {durationText(s.startTime, s.endTime)}
+        </div>
+        {!cancelled && (
+          <div className="flex items-center" style={{ marginTop: 7, gap: 8 }}>
+            <div className="flex-1 overflow-hidden" style={{ height: 5, borderRadius: 999, background: m.soft, outline: dark ? `1px solid ${m.border}` : undefined }}>
+              <div style={{ height: "100%", width: `${fillPct(s)}%`, background: low ? m.caution : m.fill, borderRadius: 999 }} />
+            </div>
+            <span className="tabular-nums whitespace-nowrap" style={{ fontSize: textPx(11), fontWeight: 700, color: low ? m.caution : m.ink2 }}>{fillText(s)}</span>
           </div>
-          <span className="tabular-nums whitespace-nowrap" style={{ fontSize: textPx(11), fontWeight: 800, color: low ? c.caution : c.ink }}>
-            {s.booked}/{s.maxCapacity}
-          </span>
-        </div>}
+        )}
+        {(centium || featured) && (
+          <div className="flex items-center flex-wrap" style={{ marginTop: 6, gap: 6 }}>
+            {centium && <span style={{ fontSize: textPx(11), fontWeight: 700, color: centium.tone === "teal" ? m.tealink : m.faint }}>{centium.text}</span>}
+            {featured && <Chip label="Featured" bg={m.pale} ink={m.pdark} icon={<Award size={10} strokeWidth={2.6} aria-hidden />} />}
+          </div>
+        )}
       </div>
-      {cancelled ? (
-        <span aria-hidden style={{ width: 44, height: 44 }} />
-      ) : (
+      {!cancelled && (
         <button
           ref={menuRef}
           type="button"
           aria-label={`Actions for ${s.title} at ${time12(s.startTime)}`}
           disabled={menuDisabled}
           onClick={() => menuRef.current && onMenu(menuRef.current)}
-          className="tap flex items-center justify-center disabled:opacity-45"
-          style={{ width: 44, height: 44, color: c.faint, position: "relative", zIndex: 1 }}
+          className="market-focus hit shrink-0 flex items-center justify-center disabled:opacity-40"
+          style={{ width: 24, alignSelf: "center", height: 32, margin: "0 -6px 0 -4px", color: m.faint, position: "relative", zIndex: 1, background: "transparent", border: 0, borderRadius: 8 }}
         >
-          <EllipsisVertical size={17} />
+          <EllipsisVertical size={17} aria-hidden />
         </button>
       )}
     </div>
   );
 }
 
-/**
- * AN3-055 / AN3-053 card (ClassFlowsV7 oneClass l.33-45, series branch l.221):
- * r 24, card fill, 1px border, padding 20; title 14/600/20; type line
- * 12/500/16 pDark; when line clock 11, gap 4, 12/18 faint, margin-top 4, the
- * clock kept on the first line when it wraps (O4); capacity users 11 and
- * price 12/600, margin-top 2. No QR tile (AN3-053 row 4: the Schedule keeps
- * the app rule) and no trash (O8: a series stops from its session menu). The
- * card opens the next session.
- */
-function SeriesCardView({ c, card, first, who, price, onOpen }: { c: OpsColors; card: SeriesCard; first: boolean; who: string; price: string | null; onOpen: () => void }) {
+/** A repeating series (AN3-055), in the board's card chrome: radius 20, --card, 1px --border, padding 12 14. */
+function SeriesCardView({ m, card, who, price, onOpen }: { m: MarketPalette; card: SeriesCard; who: string; price: string | null; onOpen: () => void }) {
+  const press = usePress();
   const s = card.next;
-  const line = { display: "flex", alignItems: "flex-start", gap: 4, fontSize: textPx(12), lineHeight: linePx(18), color: c.faint } as const;
-  const icon = { flexShrink: 0, marginTop: `calc((${linePx(18)} - 11px) / 2)` } as const;
   return (
     <button
       type="button"
-      id={`series-${card.seriesId}`}
       onClick={onOpen}
-      className="tap w-full text-left block"
-      style={{ marginTop: first ? 0 : 10, background: c.card, borderRadius: 24, border: `1px solid ${c.border}`, padding: 20 }}
+      {...press.handlers}
+      className="market-focus w-full text-left block"
+      style={{ background: m.card, borderRadius: 20, border: `1px solid ${m.border}`, padding: "12px 14px", lineHeight: "normal", ...press.style }}
     >
-      <p style={{ margin: 0, fontSize: textPx(14), fontWeight: 600, lineHeight: linePx(20), color: c.ink }}>{s.title}</p>
-      <p style={{ margin: 0, fontSize: textPx(12), fontWeight: 500, lineHeight: linePx(16), color: c.pDark }}>{card.typeLine}</p>
-      <p style={{ ...line, margin: "4px 0 0" }}>
-        <Clock size={11} aria-hidden style={icon} />
-        <span className="min-w-0">{card.whenLine}</span>
-      </p>
-      <p style={{ ...line, margin: "2px 0 0" }}>
-        <Users size={11} aria-hidden style={icon} />
-        <span className="min-w-0">{`Max ${s.maxCapacity}${who ? ` · ${who}` : ""}`}</span>
-      </p>
-      {price && <p style={{ margin: "2px 0 0", fontSize: textPx(12), fontWeight: 600, lineHeight: linePx(18), color: c.ink }}>{price}</p>}
+      <span className="flex justify-between" style={{ gap: 8 }}>
+        <span className="truncate" style={{ fontSize: textPx(14), fontWeight: 800, color: m.ink }}>{s.title}</span>
+        {price && <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 700, color: m.ink }}>{price}</span>}
+      </span>
+      <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, lineHeight: linePx(17), color: m.pdark }}>{card.typeLine}</span>
+      <span className="block" style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>{card.whenLine}</span>
+      <span className="block" style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>{`Max ${s.maxCapacity}${who ? ` · ${who}` : ""}`}</span>
+    </button>
+  );
+}
+
+function LinkRow({ m, icon, title, sub, onClick, divider }: { m: MarketPalette; icon: React.ReactNode; title: string; sub: string; onClick: () => void; divider?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="market-focus w-full flex items-center text-left"
+      style={{ gap: 12, padding: "14px 16px", minHeight: 56, borderTop: divider ? `0.5px solid ${m.div}` : 0, background: "transparent", lineHeight: "normal" }}
+    >
+      <span className="shrink-0 flex items-center justify-center" style={{ width: 32, height: 32, borderRadius: 10, background: m.pale, color: m.pdark }}>{icon}</span>
+      <span className="flex-1 min-w-0">
+        <span className="block" style={{ fontSize: textPx(14), fontWeight: 700, color: m.ink }}>{title}</span>
+        <span className="block" style={{ fontSize: textPx(11.5), color: m.faint }}>{sub}</span>
+      </span>
+      <ChevronRight size={16} strokeWidth={2} style={{ color: m.faint }} aria-hidden />
     </button>
   );
 }
 
 function NeedsAttention({
-  c,
+  m,
   open,
   onToggle,
   issues,
@@ -547,7 +695,7 @@ function NeedsAttention({
   onMessageInstructor,
   onMessageMembers,
 }: {
-  c: OpsColors;
+  m: MarketPalette;
   open: boolean;
   onToggle: () => void;
   issues: Issue[];
@@ -561,177 +709,62 @@ function NeedsAttention({
   onMessageMembers: ((sessionId: string) => void) | null;
 }) {
   const count = new Set(issues.flatMap((i) => i.sessions.map((s) => s.id))).size;
-  const [tip, setTip] = useState<number | null>(null);
-  const press = useRef<number | null>(null);
-  // OP1-144 S1: a release after a long-press shows the tooltip only; it never opens the chat.
-  const longPressed = useRef(false);
-  useEffect(() => {
-    if (tip === null) return;
-    const hide = () => setTip(null);
-    window.addEventListener("scroll", hide, true);
-    return () => window.removeEventListener("scroll", hide, true);
-  }, [tip]);
   return (
-    <div style={{ marginTop: 14, borderRadius: 22, border: `1px solid ${open ? c.naBd : c.naBg}`, overflow: "hidden", background: open ? c.card : c.naBg }}>
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={onToggle}
-        className="w-full flex items-center text-left"
-        style={{ gap: 10, padding: "13px 14px 13px 16px", minHeight: 52, background: c.naBg }}
-      >
-        <TriangleAlert size={17} strokeWidth={2.2} style={{ color: c.naInk }} className="shrink-0" aria-hidden />
+    <div style={{ marginTop: 12, borderRadius: 20, border: `1px solid ${m.border}`, overflow: "hidden", background: m.card, lineHeight: "normal" }}>
+      <button type="button" aria-expanded={open} onClick={onToggle} className="market-focus w-full flex items-center text-left" style={{ gap: 10, padding: "12px 14px", minHeight: 56, background: m.highbg, border: 0 }}>
+        <TriangleAlert size={17} strokeWidth={2.2} style={{ color: m.high }} className="shrink-0" aria-hidden />
         <span className="flex-1 min-w-0">
-          <span className="block" style={{ fontSize: textPx(14), fontWeight: 800, lineHeight: linePx(18), color: c.naTitle }}>
-            Needs attention
-          </span>
-          <span className="block" style={{ fontSize: textPx(11.5), lineHeight: linePx(15), color: c.inkSoft }}>
+          <span className="block" style={{ fontSize: textPx(14), fontWeight: 800, color: m.ink }}>Needs attention</span>
+          <span className="block" style={{ fontSize: textPx(11.5), color: m.ink2 }}>
             {count} {count === 1 ? "session" : "sessions"} in the next 7 days
           </span>
         </span>
-        <span
-          className="shrink-0 flex items-center justify-center tabular-nums"
-          style={{ minWidth: 24, height: 24, padding: "0 7px", borderRadius: 999, background: c.naInk, color: c.dark && c.hc ? "#121317" : "#FFFFFF", fontSize: textPx(12), fontWeight: 800 }}
-        >
-          {count}
-        </span>
-        <ChevronDown
-          size={18}
-          strokeWidth={2.2}
-          aria-hidden
-          className="shrink-0"
-          style={{ color: c.naInk, transform: open ? "rotate(180deg)" : "none", transition: reduced ? "none" : "transform .25s cubic-bezier(0.22,1,0.36,1)" }}
-        />
+        <ChevronDown size={18} strokeWidth={2.2} aria-hidden className="shrink-0" style={{ color: m.high, transform: open ? "rotate(180deg)" : "none", transition: reduced ? "none" : "transform .25s cubic-bezier(0.22,1,0.36,1)" }} />
       </button>
-      <div style={{ display: "grid", gridTemplateRows: open ? "1fr" : "0fr", transition: reduced ? "none" : "grid-template-rows .22s cubic-bezier(0.22,1,0.36,1), opacity .22s cubic-bezier(0.22,1,0.36,1)", opacity: open ? 1 : 0 }}>
-        <div style={{ minHeight: 0, overflow: "hidden" }} aria-hidden={!open}>
-          {issues.map((is, idx) => {
-            const t = issueText(is, nameOf, people);
-            const s = is.sessions[0];
-            const col = is.kind === "low" ? c.caution : c.high;
-            const instructorMsg = is.kind === "double" && !!s.professionalId;
-            const membersMsg = !instructorMsg && !!onMessageMembers && s.booked > 0;
-            const msgOn = instructorMsg || membersMsg;
-            const msgAria = instructorMsg ? `Message ${nameOf(s.professionalId)}` : `Message the ${s.booked} booked ${people}`;
-            return (
-              <div key={is.kind} className="grid" style={{ gridTemplateColumns: "3px 30px minmax(0,1fr)", columnGap: 10, padding: "12px 14px 12px 16px", borderTop: `1px solid ${c.divider}` }}>
-                <span aria-hidden style={{ borderRadius: 999, background: col }} />
-                <span className="tabular-nums" style={{ fontSize: textPx(22), fontWeight: 800, lineHeight: linePx(24), color: col }}>
-                  {is.sessions.length}
-                </span>
-                <div className="min-w-0">
-                  <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 800, lineHeight: linePx(17), color: c.ink }}>{t.title}</p>
-                  <p style={{ margin: "2px 0 0", fontSize: textPx(12), lineHeight: linePx(17), color: c.inkSoft, textWrap: "pretty" }}>{t.body}</p>
-                  <div className="flex items-center flex-wrap" style={{ gap: 6, marginTop: 8 }}>
-                    <button
-                      type="button"
-                      tabIndex={open ? 0 : -1}
-                      onClick={() => onOpenSession(s.id)}
-                      className="tap inline-flex items-center min-w-0"
-                      style={{ minHeight: 36, padding: "0 10px", borderRadius: 10, border: `1px solid ${c.border}`, fontSize: textPx(11.5), fontWeight: 800, color: c.ink, maxWidth: "100%" }}
-                    >
-                      <span className="truncate">{t.chip}</span>
+      {open &&
+        issues.map((is) => {
+          const t = issueText(is, nameOf, people);
+          const s = is.sessions[0];
+          const col = is.kind === "low" ? m.caution : m.high;
+          const instructorMsg = is.kind === "double" && !!s.professionalId;
+          const membersMsg = !instructorMsg && !!onMessageMembers && s.booked > 0;
+          const msgOn = instructorMsg || membersMsg;
+          const msgAria = instructorMsg ? `Message ${nameOf(s.professionalId)}` : `Message the ${s.booked} booked ${people}`;
+          return (
+            <div key={is.kind} className="grid" style={{ gridTemplateColumns: "3px 28px minmax(0,1fr)", columnGap: 10, padding: "12px 14px", borderTop: `0.5px solid ${m.div}` }}>
+              <span aria-hidden style={{ borderRadius: 999, background: col }} />
+              <span className="tabular-nums" style={{ fontSize: textPx(20), fontWeight: 800, color: col }}>{is.sessions.length}</span>
+              <div className="min-w-0">
+                <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 800, color: m.ink }}>{t.title}</p>
+                <p style={{ margin: "2px 0 0", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>{t.body}</p>
+                <div className="flex items-center flex-wrap" style={{ gap: 6, marginTop: 8 }}>
+                  <button type="button" onClick={() => onOpenSession(s.id)} className="market-focus hit inline-flex items-center min-w-0" style={{ minHeight: 36, padding: "0 10px", borderRadius: 10, border: `1px solid ${m.border}`, fontSize: textPx(11.5), fontWeight: 800, color: m.ink, maxWidth: "100%", background: "transparent" }}>
+                    <span className="truncate">{t.chip}</span>
+                  </button>
+                  {is.kind !== "low" && (
+                    <button type="button" onClick={() => (is.kind === "noinst" ? onAssign(s.id) : onOpenSession(s.id))} className="market-focus hit inline-flex items-center" style={{ minHeight: 36, padding: "0 12px", borderRadius: 10, background: m.fill, color: m.onfill, fontSize: textPx(11.5), fontWeight: 800, whiteSpace: "nowrap", border: 0 }}>
+                      {is.kind === "noinst" ? "Assign" : "Fix"}
                     </button>
-                    {is.kind !== "low" && (
-                      <button
-                        type="button"
-                        tabIndex={open ? 0 : -1}
-                        onClick={() => (is.kind === "noinst" ? onAssign(s.id) : onOpenSession(s.id))}
-                        className="tap inline-flex items-center"
-                        style={{ minHeight: 36, padding: "0 12px", borderRadius: 10, background: c.fill, color: c.onFill, fontSize: textPx(11.5), fontWeight: 800, whiteSpace: "nowrap" }}
-                      >
-                        {is.kind === "noinst" ? "Assign" : "Fix"}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      tabIndex={open ? 0 : -1}
-                      aria-label={msgAria}
-                      title={msgAria}
-                      disabled={!msgOn}
-                      aria-disabled={!msgOn || undefined}
-                      onClick={() => {
-                        if (longPressed.current) {
-                          longPressed.current = false;
-                          return;
-                        }
-                        if (instructorMsg && s.professionalId) onMessageInstructor(s.professionalId);
-                        else if (membersMsg) onMessageMembers?.(s.id);
-                      }}
-                      onPointerDown={() => {
-                        longPressed.current = false;
-                        press.current = window.setTimeout(() => {
-                          longPressed.current = true;
-                          setTip(idx);
-                        }, 500);
-                      }}
-                      onPointerUp={() => {
-                        if (press.current) window.clearTimeout(press.current);
-                        if (tip === idx) window.setTimeout(() => setTip(null), 1500);
-                      }}
-                      onPointerLeave={() => press.current && window.clearTimeout(press.current)}
-                      className="tap flex items-center justify-center shrink-0"
-                      style={{ marginLeft: "auto", width: 44, height: 44, borderRadius: 12, background: c.soft, color: c.pDark, opacity: msgOn ? 1 : 0.45 }}
-                    >
-                      <MessageCircle size={17} strokeWidth={2} />
-                    </button>
-                  </div>
-                  {tip === idx && (
-                    <p
-                      role="tooltip"
-                      aria-hidden
-                      style={{ margin: "6px 0 0 auto", width: "max-content", maxWidth: 260, background: c.dark ? "#F5F3FA" : "#241F1B", color: c.dark ? "#121317" : "#FFFFFF", fontSize: textPx(11.5), fontWeight: 700, padding: "5px 9px", borderRadius: 8 }}
-                    >
-                      {msgOn ? msgAria : `${msgAria}: needs messages access`}
-                    </p>
                   )}
+                  <button
+                    type="button"
+                    aria-label={msgOn ? msgAria : `${msgAria}: needs messages access`}
+                    title={msgOn ? msgAria : `${msgAria}: needs messages access`}
+                    disabled={!msgOn}
+                    onClick={() => {
+                      if (instructorMsg && s.professionalId) onMessageInstructor(s.professionalId);
+                      else if (membersMsg) onMessageMembers?.(s.id);
+                    }}
+                    className="market-focus flex items-center justify-center shrink-0 disabled:opacity-40"
+                    style={{ marginLeft: "auto", width: 44, height: 44, borderRadius: 12, background: m.soft, color: m.pdark, border: 0 }}
+                  >
+                    <MessageCircle size={17} strokeWidth={2} aria-hidden />
+                  </button>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EmptyCard({ c, title, body, action }: { c: OpsColors; title: string; body: string; action?: { label: string; onClick: () => void } }) {
-  return (
-    <div className="text-center" style={{ marginTop: 14, background: c.card, borderRadius: 22, border: `1px dashed ${c.hc ? c.border : c.tert}`, padding: "28px 20px" }}>
-      <span className="inline-flex items-center justify-center" style={{ width: 48, height: 48, borderRadius: 16, background: c.pale, color: c.pDark }}>
-        <CalendarPlus size={22} />
-      </span>
-      <p style={{ margin: "10px 0 0", fontSize: textPx(15), fontWeight: 800, color: c.ink }}>{title}</p>
-      <p style={{ margin: "4px 0 0", fontSize: textPx(12.5), lineHeight: linePx(18), color: c.inkSoft }}>{body}</p>
-      {action && (
-        <button type="button" onClick={action.onClick} className="tap" style={{ marginTop: 12, minHeight: 40, padding: "0 14px", borderRadius: 12, border: `1px solid ${c.border}`, fontSize: textPx(12.5), fontWeight: 800, color: c.pDark }}>
-          {action.label}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function SkeletonDay({ c }: { c: OpsColors }) {
-  return (
-    <div aria-busy="true" aria-label="Loading your schedule">
-      <div style={{ margin: "16px 4px 8px" }}>
-        <Bone c={c} w={120} h={10} />
-      </div>
-      <OpsCard c={c} radius={20}>
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="grid items-center" style={{ gridTemplateColumns: `${TIME_COL} 3px minmax(0,1fr) 44px`, columnGap: 10, padding: "10px 6px 10px 12px", minHeight: 73.5, borderTop: i ? `1px solid ${c.divider}` : "none" }}>
-            <Bone c={c} w={44} h={24} />
-            <Bone c={c} w={3} h={50} r={999} />
-            <div>
-              <Bone c={c} w="60%" h={12} />
-              <Bone c={c} w="40%" h={10} style={{ marginTop: 8 }} />
             </div>
-            <span />
-          </div>
-        ))}
-      </OpsCard>
+          );
+        })}
     </div>
   );
 }
-

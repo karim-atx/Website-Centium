@@ -4,9 +4,10 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { CtaButton } from "../ui/PinnedCta";
 import { INK, NO_ICON_SCALE } from "../pro/proInk";
 import { textPx } from "../../theme/textSize";
-import { ShareCard } from "./ShareCard";
-import { drawShareCard } from "./drawShareCard";
-import type { CardPro, CardSpec, ShareFormat, ShareStyle } from "./shareCardModel";
+import { ShareCard, ShareLayerComposite } from "./ShareCard";
+import { drawShareCard, drawShareLayerCard } from "./drawShareCard";
+import type { LayerPlacement } from "./shareLayerModel";
+import { cardStyleOf, usesOverlay, type CardPro, type CardSpec, type EditorStyle, type ShareFormat } from "./shareCardModel";
 
 // Release 3 · W8 SH7 "Share options · browser fallback" and "Shared ·
 // confirmation" (source/gen/r31.js shareOpts31). Centium is a web app, so
@@ -32,13 +33,16 @@ export interface ShareOptionsSheetProps {
   spec: CardSpec;
   pro: CardPro;
   format: ShareFormat;
-  style: ShareStyle;
+  /** "Y" (P-SH.3 Your photo) draws the photo and the layer at `placement`. */
+  style: EditorStyle;
   /** The client as shown on the card ("S.R.", "Sam", "A client"). */
   client?: string;
   qr?: boolean;
   hide?: number[];
   /** The Photo style's picture, as an object URL. */
   photoUrl?: string | null;
+  /** Your photo: the overlay editor's layer and crop. */
+  placement?: LayerPlacement | null;
   /** The client's first name, for "{first} can see what you shared…" (client wins only). */
   clientFirstName?: string;
   onRecord: (format: ShareFormat) => Promise<RecordResult>;
@@ -82,14 +86,17 @@ const Tile: React.FC<{ label: string; icon: React.ReactNode; onClick: () => void
   </button>
 );
 
-export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onClose, spec, pro, format, style, client, qr, hide, photoUrl, clientFirstName, onRecord, onDone }) => {
+export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onClose, spec, pro, format, style: editorStyle, client, qr, hide, photoUrl, placement, clientFirstName, onRecord, onDone }) => {
+  // Every whole-card drawing reads Your photo as the Photo palette; the main image draws the layer instead.
+  const style = cardStyleOf(editorStyle);
+  const layered = usesOverlay(editorStyle, format) && !!photoUrl && !!placement;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stickerRef = useRef<HTMLCanvasElement | null>(null);
   const [attempt, setAttempt] = useState(0);
   const hideKey = (hide ?? []).join(",");
   // One token per drawing: the result counts only for the inputs it was drawn from.
   // eslint-disable-next-line react-hooks/exhaustive-deps -- a new token whenever any input changes
-  const drawToken = useMemo(() => ({}), [spec, pro, format, style, client, qr, hideKey, photoUrl, attempt]);
+  const drawToken = useMemo(() => ({}), [spec, pro, format, style, client, qr, hideKey, photoUrl, placement, layered, attempt]);
   const [drawn, setDrawn] = useState<{ token: object; ok: boolean } | null>(null);
   const draw: "drawing" | "ready" | "error" = drawn?.token === drawToken ? (drawn.ok ? "ready" : "error") : "drawing";
   const [busy, setBusy] = useState<Action | null>(null);
@@ -117,7 +124,8 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
         const opts = { spec, pro, style, client, qr, hide: hideKey ? hideKey.split(",").map(Number) : undefined, photo };
         // Fresh canvases, so an older drawing still in flight never paints over a newer one.
         const main = document.createElement("canvas");
-        await drawShareCard(main, { ...opts, format });
+        if (layered && photo && placement) await drawShareLayerCard(main, { ...opts, format, photo, placement });
+        else await drawShareCard(main, { ...opts, format });
         const sticker = copyable ? document.createElement("canvas") : null;
         if (sticker) await drawShareCard(sticker, { ...opts, format: "sticker" });
         if (!live) return;
@@ -131,7 +139,7 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
     return () => {
       live = false;
     };
-  }, [open, drawToken, spec, pro, format, style, client, qr, hideKey, photoUrl, copyable]);
+  }, [open, drawToken, spec, pro, format, style, client, qr, hideKey, photoUrl, placement, layered, copyable]);
 
   const ready = draw === "ready" && !busy;
   const clientLine = clientFirstName ? ` ${clientFirstName} can see what you shared in their Sharing your wins list.` : "";
@@ -253,7 +261,11 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
       ) : (
         <div aria-busy={draw === "drawing" || !!busy || undefined}>
           <div className="flex justify-center" style={{ marginBottom: 16 }}>
-            <ShareCard spec={spec} pro={pro} format={format} style={style} width={format === "post" ? 150 : 120} client={client} qr={qr} hide={hide} photoUrl={photoUrl} onChecker={format === "sticker"} />
+            {layered && photoUrl && placement ? (
+              <ShareLayerComposite spec={spec} pro={pro} client={client} qr={qr} hide={hide} photoUrl={photoUrl} placement={placement} width={format === "post" ? 150 : 120} />
+            ) : (
+              <ShareCard spec={spec} pro={pro} format={format} style={style} width={format === "post" ? 150 : 120} client={client} qr={qr} hide={hide} photoUrl={photoUrl} onChecker={format === "sticker"} />
+            )}
           </div>
           {draw === "error" ? (
             <div role="alert" className="flex items-center justify-between" style={{ gap: 10, borderRadius: 14, background: INK.hiBg, padding: "4px 4px 4px 12px", marginBottom: 12 }}>

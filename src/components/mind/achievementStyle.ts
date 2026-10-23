@@ -2,6 +2,7 @@ import { liftTo, tintOn } from "../../data/folderColors";
 import type { AchievementLevel } from "../../services/achievements";
 import { Gem, Crown, Medal, Shield, Star, type LucideIcon } from "lucide-react";
 import { formatShortDate } from "../../utils/date";
+import { clampRank, type TierRank } from "../../theme/marketTokens";
 
 // Mobile v5.1 MO1.1.3 / MO1.1.3.2: the hero card and the unlock pill take a
 // TIER (or an achievement LEVEL) colour, fixed in every theme:
@@ -9,75 +10,44 @@ import { formatShortDate } from "../../utils/date";
 // Diamond #4E6FA8. Light mode uses the handover's values as drawn (A10); dark
 // mode puts each on a dark tint of itself and lifts the ink to 4.5:1.
 
-export const TIER_HEX: Record<string, string> = {
-  Bronze: "#9C6B4A",
-  Silver: "#8A9099",
-  Gold: "#B08D3C",
-  Platinum: "#5F7F86",
-  Diamond: "#4E6FA8",
+//
+// Market + Share 3.0 W1 (PLAN §3.5): keyed by RANK (point_tiers' order,
+// marketTokens tierRank), no longer by name, so a renamed tier keeps its
+// colour; the names shown come from point_tiers. These are the Achievements
+// screen's v6 colours and icons (not redrawn by Market + Share); the market
+// screens use marketTokens' tiers.
+
+const TIER_HEX_BY_RANK: Record<TierRank, string> = {
+  1: "#9C6B4A",
+  2: "#8A9099",
+  3: "#B08D3C",
+  4: "#5F7F86",
+  5: "#4E6FA8",
 };
 
-export const TIER_ICON: Record<string, LucideIcon> = {
-  Bronze: Medal,
-  Silver: Shield,
-  Gold: Crown,
-  Platinum: Star,
-  Diamond: Gem,
+const TIER_ICON_BY_RANK: Record<TierRank, LucideIcon> = {
+  1: Medal,
+  2: Shield,
+  3: Crown,
+  4: Star,
+  5: Gem,
 };
+
+const BRONZE_HEX = TIER_HEX_BY_RANK[1];
 
 const LEVEL_HEX: Record<AchievementLevel, string> = {
-  bronze: TIER_HEX.Bronze,
-  silver: TIER_HEX.Silver,
-  gold: TIER_HEX.Gold,
+  bronze: TIER_HEX_BY_RANK[1],
+  silver: TIER_HEX_BY_RANK[2],
+  gold: TIER_HEX_BY_RANK[3],
 };
 
-/** Unknown tiers fall back to Bronze rather than to nothing. */
-export const tierHex = (name: string | null | undefined): string => (name && TIER_HEX[name]) || TIER_HEX.Bronze;
+/** A tier's colour by rank (1 to 5; anything else clamps). */
+export const tierHex = (rank: number): string => TIER_HEX_BY_RANK[clampRank(rank)];
+/** A tier's icon by rank. */
+export const tierIcon = (rank: number): LucideIcon => TIER_ICON_BY_RANK[clampRank(rank)];
 /** A badge with no level (a one-off) takes Bronze's colour; the pill hides its level chip (V6-142). */
 export const levelHex = (level: AchievementLevel | null | undefined): string =>
   (level && LEVEL_HEX[level]) || LEVEL_HEX.bronze;
-
-export interface ColourSet {
-  /** Text and icons in the colour. */
-  ink: string;
-  /** The card's fill. */
-  fill: string;
-  /** A hairline in the colour. */
-  border: string;
-  /** A filled shape (the current tier disc, the progress bar). */
-  solid: string;
-  /** Text on `solid`. */
-  onSolid: string;
-  /** An empty progress track. */
-  track: string;
-}
-
-const DARK_CARD = "#1C1F28";
-
-/** The v5.1 tier colours, still used by the Explore tier card (MO1.4). */
-export function colourSet(hex: string, dark: boolean): ColourSet {
-  if (!dark) {
-    const fill = hex === TIER_HEX.Bronze ? "#FBF7F4" : tintOn(hex, 0.05, "#FFFFFF");
-    return {
-      ink: hex,
-      fill,
-      border: `${hex}3D`, // 24%
-      solid: hex,
-      onSolid: "#FFFFFF",
-      track: tintOn(hex, 0.14, fill),
-    };
-  }
-  const fill = tintOn(hex, 0.14, DARK_CARD);
-  const solid = liftTo(hex, fill, 3);
-  return {
-    ink: liftTo(hex, fill),
-    fill,
-    border: `${hex}73`, // 45%
-    solid,
-    onSolid: "#0D0B1A",
-    track: tintOn(hex, 0.3, DARK_CARD),
-  };
-}
 
 // ---------------------------------------------------------------------------
 // v6 (MO1.1.3 #6-#19, MO1.1.3.2 #54-#61). Dark values marked * in the tables
@@ -94,7 +64,7 @@ const BRONZE_DARK_INK = "#D9A57F";
 
 /** A tier or level colour as dark-mode ink on `surface`. */
 export function darkInk(hex: string, surface: string): string {
-  return hex === TIER_HEX.Bronze ? BRONZE_DARK_INK : liftTo(hex, surface);
+  return hex === BRONZE_HEX ? BRONZE_DARK_INK : liftTo(hex, surface);
 }
 
 export interface TierCardColours {
@@ -118,7 +88,7 @@ export interface TierCardColours {
 /** MO1.1.3 #6-#19 (Bronze drawn; K6: every other tier the same recipe). */
 export function tierCardColours(hex: string, dark: boolean): TierCardColours {
   if (!dark) {
-    const fill = hex === TIER_HEX.Bronze ? "#FBF7F4" : tintOn(hex, 0.05, "#FFFFFF");
+    const fill = hex === BRONZE_HEX ? "#FBF7F4" : tintOn(hex, 0.05, "#FFFFFF");
     const track = tintOn(hex, 0.14, fill);
     return { ink: hex, fill, border: `${hex}3D`, rule: `${hex}29`, track, solid: hex, onSolid: "#FFFFFF", halo: track };
   }

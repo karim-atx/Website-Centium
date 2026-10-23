@@ -9,7 +9,9 @@ import { removeBusinessImage, uploadBusinessImage } from "../../services/busines
 import { addBusinessPhoto, deleteBusinessPhoto, reorderBusinessPhotos, replaceBusinessPhoto } from "../../services/business-market/listing";
 import { moveId, moveTo, PHOTO_LIMIT, sortPhotos, type BusinessPhoto } from "../../services/business-market/listingLogic";
 import { MarketProvider, useMarket } from "./MarketContext";
-import { lh, MBackHeader, MError, MPopup, MPrimary, MSheet, MSoonNote, px, useMarketToast } from "./kit";
+import { MarketError } from "../../components/market/MarketStates";
+import { useIsDark } from "../../hooks/useIsDark";
+import { BackHeader, CentredDialog, MasterSheet, PrimaryButton, SoonNote, lh, px, useMarketColors, useStrip } from "./listingParts";
 
 // MA1-033 / 035 / 080 / 083 / 084 / 086 / 087 / 088 / 090-095 · Photos.
 // Tile 1 is the cover (business_profiles.cover_url, MA1-033 K1): only the
@@ -39,7 +41,9 @@ const LONG_PRESS_MS = 350;
 
 function PhotosBody() {
   const m = useMarket();
-  const { c, v, kind, business } = m;
+  const c = useMarketColors();
+  const dark = useIsDark();
+  const { v, kind, business } = m;
   const { authUserId } = useApp();
   const navigate = useNavigate();
   const online = useOnline();
@@ -47,10 +51,11 @@ function PhotosBody() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [target, setTarget] = useState<Target | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Target | null>(null);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
   const [busy, setBusy] = useState(false);
   const [ups, setUps] = useState<UpRow[] | null>(null);
   const [coverUp, setCoverUp] = useState<{ name: string; state: "waiting" | "failed"; file: File; replace: boolean; message?: string } | null>(null);
-  const [toast, showToast] = useMarketToast();
+  const [toast, showToast] = useStrip();
   const [hasCamera, setHasCamera] = useState(false);
   const [drag, setDrag] = useState<{ id: string; order: string[] } | null>(null);
   const [announce, setAnnounce] = useState("");
@@ -69,9 +74,9 @@ function PhotosBody() {
     };
   }, []);
 
-  const back = () => navigate(m.tabHref("listing"));
-  const eyebrow = kind === "store" ? "Products · Listing" : "Marketplace · Listing";
-  if (m.error && !business) return <MError c={c} onRetry={m.reload} />;
+  const back = () => navigate(m.tabHref("overview"));
+  const eyebrow = kind === "store" ? "Products · Overview" : "Marketplace · Overview";
+  if (m.error && !business) return <MarketError thing="your photos" onRetry={m.reload} />;
   const cover = business?.coverUrl ?? null;
   const galleryLive = m.backend.photos === "live" && m.photos !== null;
   const gallery = sortPhotos(m.photos ?? []);
@@ -142,7 +147,7 @@ function PhotosBody() {
     setUps(rows);
     setSheet("upload");
     void uploadRows(rows);
-    if (files.length > take.length) showToast(`Only ${take.length} more fit. A listing shows up to 20 photos.`);
+    if (files.length > take.length) showToast(`Only ${take.length} more fit. A listing shows up to 20 photos.`, "neutral");
   };
 
   const runReplace = async (photo: BusinessPhoto, file: File) => {
@@ -181,14 +186,16 @@ function PhotosBody() {
       const r = await removeBusinessImage({ kind: "cover", uid: authUserId, ownerId: business.ownerId, businessId: business.id, previousPath: business.coverPath });
       setBusy(false);
       setConfirmDelete(null);
-      if (!r.ok) return showToast(r.message);
+      setDeleteStep(1);
+      if (!r.ok) return showToast(r.message, "error");
       m.setBusiness({ ...business, coverPath: null, coverUrl: null });
     } else {
       const photo = confirmDelete.photo;
       const r = await deleteBusinessPhoto({ uid: authUserId, photo });
       setBusy(false);
       setConfirmDelete(null);
-      if (!r.ok) return showToast(r.message);
+      setDeleteStep(1);
+      if (!r.ok) return showToast(r.message, "error");
       setGallery((m.photos ?? []).filter((p) => p.id !== photo.id));
     }
     m.refreshStrength();
@@ -202,7 +209,7 @@ function PhotosBody() {
     const r = await reorderBusinessPhotos(business.id, ids);
     if (!r.ok) {
       setGallery(before);
-      return showToast(r.message);
+      return showToast(r.message, "error");
     }
     showToast("Photo moved.");
   };
@@ -263,7 +270,7 @@ function PhotosBody() {
     const disabled = !replace && !canAdd;
     const name = target?.kind === "photo" ? target.photo.caption ?? "this photo" : "Cover photo";
     return (
-      <MSheet open onClose={() => setSheet(null)} title={replace ? "Replace photo" : "Add photos"}>
+      <MasterSheet open onClose={() => setSheet(null)} title={replace ? "Replace photo" : "Add photos"}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "18px 0 8px", opacity: disabled ? 0.45 : 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 22 }}>
             {hasCamera && (
@@ -272,7 +279,7 @@ function PhotosBody() {
                 aria-label="Take a photo"
                 aria-disabled={disabled}
                 onClick={() => !disabled && camRef.current?.click()}
-                style={{ width: 96, height: 96, borderRadius: 999, background: c.camBg, color: c.camInk, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 24px rgba(36,31,27,0.22)", border: 0 }}
+                style={{ width: 96, height: 96, borderRadius: 999, background: c.ink, color: c.page, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 24px rgba(36,31,27,0.22)", border: 0 }}
               >
                 <Camera size={30} strokeWidth={2} aria-hidden />
               </button>
@@ -282,7 +289,7 @@ function PhotosBody() {
               aria-label="Choose from library"
               aria-disabled={disabled}
               onClick={() => !disabled && libRef.current?.click()}
-              style={{ width: 96, height: 96, borderRadius: 999, background: c.pale, color: c.pDark, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(95,80,147,0.14)", border: 0 }}
+              style={{ width: 96, height: 96, borderRadius: 999, background: c.pale, color: c.pdark, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(95,80,147,0.14)", border: 0 }}
             >
               <Images size={26} strokeWidth={2} aria-hidden />
             </button>
@@ -290,7 +297,7 @@ function PhotosBody() {
           <p style={{ fontSize: px(20), fontWeight: 700, lineHeight: lh(26), marginBottom: 8, color: c.ink, textWrap: "balance" } as React.CSSProperties}>
             {replace ? `Replace ${name}` : limit ? "You've reached 20 photos" : "Take a photo, or choose from your library"}
           </p>
-          <p style={{ fontSize: px(13.5), lineHeight: lh(19), color: c.inkSoft, maxWidth: 280, textWrap: "pretty" } as React.CSSProperties}>
+          <p style={{ fontSize: px(13.5), lineHeight: lh(19), color: c.ink2, maxWidth: 280, textWrap: "pretty" } as React.CSSProperties}>
             {replace
               ? "The new photo keeps the same place in your gallery."
               : limit
@@ -298,13 +305,13 @@ function PhotosBody() {
                 : "Add photos of your real space. You can reorder them after."}
           </p>
         </div>
-        {disabled && !limit && !galleryLive && <MSoonNote c={c}>Adding more photos is coming soon.</MSoonNote>}
-        {disabled && !limit && galleryLive && !m.can("marketing") && <MSoonNote c={c}>You need the Marketing permission to add photos. Ask the owner.</MSoonNote>}
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 14, padding: "10px 12px", borderRadius: 12, background: c.tealPale, color: c.tealInk }}>
+        {disabled && !limit && !galleryLive && <SoonNote>Adding more photos is coming soon.</SoonNote>}
+        {disabled && !limit && galleryLive && !m.can("marketing") && <SoonNote>You need the Marketing permission to add photos. Ask the owner.</SoonNote>}
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 14, padding: "10px 12px", borderRadius: 12, background: c.tealbg, color: c.tealink }}>
           <Lightbulb size={15} strokeWidth={2.2} aria-hidden style={{ flexShrink: 0, marginTop: 1 }} />
           <p style={{ fontSize: px(12), lineHeight: lh(17) }}>Real photos of your space, in landscape and good light, get more profile opens. Up to 20 photos.</p>
         </div>
-      </MSheet>
+      </MasterSheet>
     );
   };
 
@@ -322,9 +329,9 @@ function PhotosBody() {
 
   const tileChip = (p: BusinessPhoto) =>
     p.status === "in_review" ? (
-      <span style={{ position: "absolute", right: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.caution, background: c.cautionBg, borderRadius: 999, padding: "2px 8px" }}>In review</span>
+      <span style={{ position: "absolute", right: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.caution, background: c.cautionbg, borderRadius: 999, padding: "2px 8px" }}>In review</span>
     ) : p.status === "rejected" ? (
-      <span style={{ position: "absolute", right: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.high, background: c.highBg, borderRadius: 999, padding: "2px 8px" }}>Not approved</span>
+      <span style={{ position: "absolute", right: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.high, background: c.highbg, borderRadius: 999, padding: "2px 8px" }}>Not approved</span>
     ) : null;
 
   const optionsButton = (t: Target, label: string) => (
@@ -349,12 +356,12 @@ function PhotosBody() {
 
   return (
     <div style={{ color: c.ink, marginTop: -4 }}>
-      <MBackHeader c={c} eyebrow={eyebrow} title="Photos" onBack={back} backLabel="Back to Listing" />
+      <BackHeader eyebrow={eyebrow} title="Photos" onBack={back} backLabel="Back to Overview" />
       <div style={{ borderRadius: 18, background: c.pale, padding: "12px 14px", display: "flex", gap: 10 }}>
-        <Lightbulb size={16} strokeWidth={2.2} color={c.pDark} aria-hidden style={{ flexShrink: 0, marginTop: 1 }} />
-        <p style={{ fontSize: px(12), lineHeight: lh(17), color: c.deep }}>{v.photoTip}</p>
+        <Lightbulb size={16} strokeWidth={2.2} color={c.pdark} aria-hidden style={{ flexShrink: 0, marginTop: 1 }} />
+        <p style={{ fontSize: px(12), lineHeight: lh(17), color: c.pdark }}>{v.photoTip}</p>
       </div>
-      <p style={{ fontSize: px(12), fontWeight: 700, color: c.inkSoft, margin: "14px 2px 8px" }} aria-live="polite">
+      <p style={{ fontSize: px(12), fontWeight: 700, color: c.ink2, margin: "14px 2px 8px" }} aria-live="polite">
         {countLine}
       </p>
       <span aria-live="polite" className="sr-only">
@@ -364,7 +371,7 @@ function PhotosBody() {
         {cover && (
           <div style={{ position: "relative", aspectRatio: "4 / 3", borderRadius: 16, overflow: "hidden", background: c.pale }}>
             <img src={cover} alt="Cover photo" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-            <span style={{ position: "absolute", left: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.onFill, background: c.fill, borderRadius: 999, padding: "2px 8px" }}>Cover</span>
+            <span style={{ position: "absolute", left: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.onfill, background: c.fill, borderRadius: 999, padding: "2px 8px" }}>Cover</span>
             {optionsButton({ kind: "cover" }, "Photo options, Cover photo")}
           </div>
         )}
@@ -385,7 +392,7 @@ function PhotosBody() {
                 overflow: "hidden",
                 background: c.pale,
                 transform: lifted ? "scale(1.04) rotate(-2deg)" : "none",
-                boxShadow: lifted ? (c.dark ? "0 16px 34px rgba(0,0,0,0.5)" : "0 16px 34px rgba(36,31,27,0.28)") : "none",
+                boxShadow: lifted ? (dark ? "0 16px 34px rgba(0,0,0,0.5)" : "0 16px 34px rgba(36,31,27,0.28)") : "none",
                 zIndex: lifted ? 2 : 1,
                 transition: reduced ? "none" : "transform .15s",
                 userSelect: "none",
@@ -393,7 +400,7 @@ function PhotosBody() {
               }}
             >
               <img src={p.url} alt={p.caption ?? `Photo ${n}`} draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }} />
-              {n === 1 && <span style={{ position: "absolute", left: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.onFill, background: c.fill, borderRadius: 999, padding: "2px 8px" }}>Cover</span>}
+              {n === 1 && <span style={{ position: "absolute", left: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.onfill, background: c.fill, borderRadius: 999, padding: "2px 8px" }}>Cover</span>}
               {tileChip(p)}
               {p.caption && (
                 <span style={{ position: "absolute", left: 8, bottom: 8, maxWidth: "calc(100% - 52px)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: px(10.5), fontWeight: 700, color: c.ink, background: c.card, borderRadius: 999, padding: "2px 8px" }}>
@@ -412,7 +419,7 @@ function PhotosBody() {
               setSheet("source");
             }}
             disabled={!(galleryLive ? canGallery : owner)}
-            style={{ position: "relative", aspectRatio: "4 / 3", borderRadius: 16, border: `1.5px dashed ${c.primary}`, background: "transparent", color: c.pDark, display: "flex", alignItems: "center", justifyContent: "center", opacity: (galleryLive ? canGallery : owner) ? 1 : 0.4 }}
+            style={{ position: "relative", aspectRatio: "4 / 3", borderRadius: 16, border: `1.5px dashed ${c.fill}`, background: "transparent", color: c.pdark, display: "flex", alignItems: "center", justifyContent: "center", opacity: (galleryLive ? canGallery : owner) ? 1 : 0.4 }}
           >
             <Plus size={22} strokeWidth={1.8} aria-hidden />
             <span style={{ position: "absolute", left: 8, bottom: 8, fontSize: px(10.5), fontWeight: 700, color: c.ink, background: c.card, borderRadius: 999, padding: "2px 8px" }}>Add photos</span>
@@ -426,7 +433,7 @@ function PhotosBody() {
       {sheet === "source" && source(false)}
       {sheet === "replace" && source(true)}
       {sheet === "options" && target && (
-        <MSheet open onClose={() => setSheet(null)} title="Photo options">
+        <MasterSheet open onClose={() => setSheet(null)} title="Photo options">
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
             <img src={target.kind === "cover" ? cover ?? "" : target.photo.url} alt="" style={{ width: 64, height: 48, borderRadius: 10, objectFit: "cover" }} />
             <span style={{ minWidth: 0 }}>
@@ -435,7 +442,7 @@ function PhotosBody() {
             </span>
           </div>
           {target.kind === "photo" && target.photo.status === "rejected" && (
-            <p style={{ fontSize: px(12), lineHeight: lh(17), color: c.high, background: c.highBg, borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
+            <p style={{ fontSize: px(12), lineHeight: lh(17), color: c.high, background: c.highbg, borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
               {target.photo.rejectReason ? `Not approved: ${target.photo.rejectReason}` : "Not approved. Replace it or delete it."}
             </p>
           )}
@@ -451,16 +458,16 @@ function PhotosBody() {
                 }
                 if (target.kind === "photo" && (row.k === "left" || row.k === "right")) move(target.photo, row.k === "left" ? -1 : 1);
               }}
-              style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 50, width: "100%", borderTop: i ? `1px solid ${c.divider}` : "none", borderLeft: 0, borderRight: 0, borderBottom: 0, background: "transparent", color: row.k === "delete" ? c.high : c.ink, textAlign: "left" }}
+              style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 50, width: "100%", borderTop: i ? `1px solid ${c.div}` : "none", borderLeft: 0, borderRight: 0, borderBottom: 0, background: "transparent", color: row.k === "delete" ? c.high : c.ink, textAlign: "left" }}
             >
               <row.I size={18} strokeWidth={2.1} aria-hidden />
               <span style={{ flex: 1, fontSize: px(14), fontWeight: 700 }}>{row.t}</span>
             </button>
           ))}
-        </MSheet>
+        </MasterSheet>
       )}
       {sheet === "upload" && (coverUp || ups) && (
-        <MSheet
+        <MasterSheet
           open
           onClose={() => {
             const waiting = coverUp?.state === "waiting" || ups?.some((x) => x.state === "waiting" || x.state === "uploading");
@@ -473,9 +480,7 @@ function PhotosBody() {
           title="Uploading photos"
           footer={
             coverUp?.state === "failed" || (ups && ups.some((x) => x.state === "failed") && !ups.some((x) => x.state === "waiting" || x.state === "uploading")) ? (
-              <MPrimary
-                c={c}
-                tone="quiet"
+              <PrimaryButton
                 onClick={() => {
                   setCoverUp(null);
                   setUps(null);
@@ -483,7 +488,7 @@ function PhotosBody() {
                 }}
               >
                 Done
-              </MPrimary>
+              </PrimaryButton>
             ) : undefined
           }
         >
@@ -494,17 +499,17 @@ function PhotosBody() {
             const failed = row.state === "failed";
             const done = row.state === "done";
             return (
-              <div key={row.key} style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 60, borderTop: i ? `1px solid ${c.divider}` : "none" }}>
+              <div key={row.key} style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 60, borderTop: i ? `1px solid ${c.div}` : "none" }}>
                 <span style={{ width: 44, height: 44, borderRadius: 10, background: c.pale, flexShrink: 0 }} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: px(13), fontWeight: 700 }}>
                     <span style={{ minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: c.ink }}>{row.name}</span>
-                    <span style={{ color: failed ? c.high : done ? c.good : c.inkSoft, whiteSpace: "nowrap" }}>{failed ? "Couldn't upload" : done ? "Added" : row.state === "waiting" ? "Waiting" : "Uploading"}</span>
+                    <span style={{ color: failed ? c.high : done ? c.good : c.ink2, whiteSpace: "nowrap" }}>{failed ? "Couldn't upload" : done ? "Added" : row.state === "waiting" ? "Waiting" : "Uploading"}</span>
                   </span>
-                  <span style={{ display: "block", height: 5, borderRadius: 999, background: c.track, marginTop: 7, overflow: "hidden" }}>
+                  <span style={{ display: "block", height: 5, borderRadius: 999, background: c.soft, marginTop: 7, overflow: "hidden" }}>
                     <span
                       className={row.state === "uploading" && !reduced ? "animate-skeleton-pulse" : undefined}
-                      style={{ display: "block", height: "100%", width: failed ? "38%" : done ? "100%" : row.state === "waiting" ? "0%" : "60%", borderRadius: 999, background: failed ? c.high : done ? c.good : c.primary }}
+                      style={{ display: "block", height: "100%", width: failed ? "38%" : done ? "100%" : row.state === "waiting" ? "0%" : "60%", borderRadius: 999, background: failed ? c.high : done ? c.good : c.fill }}
                     />
                   </span>
                 </span>
@@ -526,18 +531,25 @@ function PhotosBody() {
             );
           })}
           <p style={{ fontSize: px(11.5), color: c.faint, marginTop: 10 }}>{uploadLine(coverUp, ups)}</p>
-        </MSheet>
+        </MasterSheet>
       )}
-      <MPopup
+      {/* Destructive, so two steps (HANDOVER §4 CentredDialog). */}
+      <CentredDialog
         open={!!confirmDelete}
-        icon={Trash2}
-        title="Delete this photo?"
-        body={`${confirmDelete?.kind === "photo" ? confirmDelete.photo.caption ?? "This photo" : "Cover photo"} will be removed from your listing. This can't be undone.`}
-        action="Delete photo"
-        keep="Keep it"
+        title={deleteStep === 1 ? "Delete this photo?" : "Confirm delete"}
+        body={
+          deleteStep === 1
+            ? `${confirmDelete?.kind === "photo" ? confirmDelete.photo.caption ?? "This photo" : "Cover photo"} will be removed from your listing.`
+            : "This can't be undone."
+        }
+        cancel={deleteStep === 1 ? "Keep it" : "Cancel"}
+        action={deleteStep === 1 ? "Delete" : "Delete photo"}
         busy={busy}
-        onAction={() => void doDelete()}
-        onCancel={() => setConfirmDelete(null)}
+        onAction={() => (deleteStep === 1 ? setDeleteStep(2) : void doDelete())}
+        onCancel={() => {
+          setConfirmDelete(null);
+          setDeleteStep(1);
+        }}
       />
       {toast}
     </div>

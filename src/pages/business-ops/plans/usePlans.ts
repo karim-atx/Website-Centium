@@ -19,15 +19,14 @@ import {
 } from "../../../services/membership-plans";
 import { fetchPlanFigures } from "../../../services/business-analytics";
 import { todayLocal } from "../../../utils/date";
-import { sharedNames } from "./planModel";
+import { sharedNames, type CardFigures } from "./planModel";
 
-/**
- * "This period" for the plan rows' sold / used line (OP1-022 row 16, OP1-036
- * row 3). UNSPECIFIED in the handover (Q5): the calendar month to date.
- */
-export function planPeriod(today: string): { from: string; to: string } {
+/** This calendar month to date: the card's "sold this month" (bizPlans "21 sold this month"). */
+export function monthToDate(today: string): { from: string; to: string } {
   return { from: `${today.slice(0, 7)}-01`, to: today };
 }
+
+type Figure = { active: number; sold: number };
 
 /**
  * The last read, kept for this session so the plan page opens at once from the
@@ -40,19 +39,24 @@ let cache: {
   classTypes: string[] | null;
   members: Map<string, PlanMember[]> | null | undefined;
   offered: PlanKind[] | null;
-  sold: Map<string, number> | null;
+  month: Map<string, Figure> | null;
+  today: Map<string, number> | null;
 } | null = null;
 
 export type WriteOutcome = { ok: true; plan: MembershipPlanRow } | { ok: false; message: string };
 export type DeleteOutcome = { ok: true } | { ok: false; message: string; inUse?: boolean };
 
+/** One active member with the plan it holds (the list's "Active members"). */
+export type ActiveMember = PlanMember & { planName: string };
+
 /**
- * Everything the plan screens read (OP1-022 / 037 / 041): the business's
- * membership_plans rows, the plan types its business type is offered
- * (plan_types_for_business_type, V6-47), whether it runs classes (Class pack,
- * Drop-in, Includes and Limit only then),
- * its class types (the Includes menu), and the active members per plan from
- * the venue readers. A failed read keeps what is on screen.
+ * Everything the plan screens read: the business's membership_plans rows, the
+ * plan types its business type is offered (plan_types_for_business_type), its
+ * class types (whether it runs classes, the Includes menu), the active
+ * members per plan from the venue readers, and business_plan_figures (B15
+ * MB-04) for this month and today (active holders and new sales per plan id;
+ * the Day passes tab's "Sold today", PLAN §3.4). A failed read keeps what is
+ * on screen.
  */
 export function usePlans() {
   const { authUserId, profileReady } = useApp();
@@ -64,8 +68,8 @@ export function usePlans() {
   const [classTypes, setClassTypes] = useState<string[] | null>(warm?.classTypes ?? null);
   const [members, setMembers] = useState<Map<string, PlanMember[]> | null | undefined>(warm?.members);
   const [offered, setOffered] = useState<PlanKind[] | null>(warm?.offered ?? null);
-  /** B15 business_plan_figures: new sales this period by plan id; null while unknown or unreadable. */
-  const [sold, setSold] = useState<Map<string, number> | null>(warm?.sold ?? null);
+  const [month, setMonth] = useState<Map<string, Figure> | null>(warm?.month ?? null);
+  const [today, setToday] = useState<Map<string, number> | null>(warm?.today ?? null);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -87,12 +91,19 @@ export function usePlans() {
       setBusinessId(r.businessId);
       setPlans(r.plans);
       if (r.businessId) {
-        const period = planPeriod(todayLocal());
-        const [m, o, f] = await Promise.all([fetchMembersByPlanName(r.businessId), fetchOfferedPlanTypes(r.businessId), fetchPlanFigures(r.businessId, period.from, period.to)]);
+        const day = todayLocal();
+        const period = monthToDate(day);
+        const [m, o, f, t] = await Promise.all([
+          fetchMembersByPlanName(r.businessId),
+          fetchOfferedPlanTypes(r.businessId),
+          fetchPlanFigures(r.businessId, period.from, period.to),
+          fetchPlanFigures(r.businessId, day, day),
+        ]);
         if (cancelled) return;
         setMembers(m);
         setOffered(o.types);
-        if (f.ok) setSold(new Map(f.value.map((x) => [x.planId, x.sold])));
+        setMonth(f.ok ? new Map(f.value.map((x) => [x.planId, { active: x.activeNow, sold: x.sold }])) : null);
+        setToday(t.ok ? new Map(t.value.map((x) => [x.planId, x.sold])) : null);
       } else {
         setMembers(new Map());
       }
@@ -104,15 +115,15 @@ export function usePlans() {
 
   // Keep the session copy current with every change on screen.
   useEffect(() => {
-    if (authUserId && !loading) cache = { userId: authUserId, plans, businessId, classTypes, members, offered, sold };
-  }, [authUserId, loading, plans, businessId, classTypes, members, offered, sold]);
+    if (authUserId && !loading) cache = { userId: authUserId, plans, businessId, classTypes, members, offered, month, today };
+  }, [authUserId, loading, plans, businessId, classTypes, members, offered, month, today]);
 
   const reload = useCallback(() => {
     setLoading(true);
     setTick((t) => t + 1);
   }, []);
 
-  /** Active members per plan, by plan id; null while unknown or unreadable. */
+  /** Active members of one plan; null while unknown or unreadable (or when two plans share its name). */
   const membersOf = useMemo(() => {
     const dup = sharedNames(plans);
     return (plan: MembershipPlanRow): PlanMember[] | null => {
@@ -121,16 +132,27 @@ export function usePlans() {
     };
   }, [plans, members]);
 
-  /** Active member counts by plan name, for the figures line. */
-  const counts = useMemo(() => {
+  /** Every active member across the plans (venue_members), with the plan it holds; null when unreadable. */
+  const allMembers = useMemo((): ActiveMember[] | null => {
     if (!members) return null;
-    const m = new Map<string, number>();
-    for (const p of plans) {
-      const list = membersOf(p);
-      if (list) m.set(p.name, list.length);
-    }
-    return m;
-  }, [plans, members, membersOf]);
+    const out: ActiveMember[] = [];
+    for (const [planName, list] of members) for (const m of list) out.push({ ...m, planName });
+    return out;
+  }, [members]);
+
+  /** A card's figures: business_plan_figures first, the venue members as the fallback for the active count. */
+  const figuresOf = useCallback(
+    (plan: MembershipPlanRow): CardFigures => {
+      const f = month?.get(plan.id);
+      const listed = membersOf(plan);
+      return {
+        active: f ? f.active : listed ? listed.length : null,
+        soldMonth: month ? (f?.sold ?? 0) : null,
+        soldToday: today ? (today.get(plan.id) ?? 0) : null,
+      };
+    },
+    [month, today, membersOf]
+  );
 
   const add = async (draft: PlanDraft): Promise<WriteOutcome> => {
     if (!businessId) return { ok: false, message: "Save your business profile first to start adding plans." };
@@ -140,8 +162,7 @@ export function usePlans() {
     return r;
   };
 
-  // Closes only on a write that landed (kept from BusinessGymTab): the row
-  // that replaces the old one is the response, not the draft.
+  // Closes only on a write that landed: the row that replaces the old one is the response, not the draft.
   const edit = async (planId: string, draft: PlanDraft): Promise<WriteOutcome> => {
     const r = await updatePlan(planId, draft);
     if (!r.ok) return r;
@@ -160,28 +181,17 @@ export function usePlans() {
     if (r.ok) setPlans((prev) => prev.map((p) => (p.id === r.plan.id ? r.plan : p)));
     return r;
   };
-  /** Pause / resume / archive / restore (B7 status). */
+  /** Pause / resume / archive / restore (status). */
   const setStatus = async (planId: string, status: PlanDbStatus) => replace(await setPlanStatus(planId, status));
-  /** Hide from Explore / show (B7 visible_on_explore). */
+  /** Hide from Explore / show (visible_on_explore). */
   const setVisible = async (planId: string, visible: boolean) => replace(await setPlanVisible(planId, visible));
-  /** Duplicate as hidden (OP1-050). */
+  /** Duplicate as hidden. */
   const duplicate = async (plan: MembershipPlanRow): Promise<WriteOutcome> => {
     if (!businessId) return { ok: false, message: "Couldn't duplicate the plan. Try again." };
     const r = await duplicatePlan(businessId, plan);
     if (r.ok) setPlans((prev) => [...prev, r.plan]);
     return r;
   };
-
-  /** The earliest start among active members (OP1-032 early data), or null. */
-  const firstStarted = useMemo(() => {
-    if (!members) return null;
-    let min: string | null = null;
-    for (const list of members.values()) for (const m of list) if (m.startedOn && (!min || m.startedOn < min)) min = m.startedOn;
-    return min;
-  }, [members]);
-
-  const runsClasses = (classTypes?.length ?? 0) > 0;
-  const totalMembers = counts ? [...counts.values()].reduce((a, b) => a + b, 0) : null;
 
   return {
     plans,
@@ -198,14 +208,11 @@ export function usePlans() {
     /** plan_types_for_business_type for this business (null: unknown, offer every type). */
     offered,
     classTypes: classTypes ?? [],
-    runsClasses,
+    runsClasses: (classTypes?.length ?? 0) > 0,
     membersLoaded: members !== undefined,
     membersOf,
-    /** New sales this period (B15), or null when unknown. */
-    soldOf: (planId: string): number | null => (sold ? sold.get(planId) ?? 0 : null),
-    counts,
-    totalMembers,
-    firstStarted,
+    allMembers,
+    figuresOf,
   };
 }
 

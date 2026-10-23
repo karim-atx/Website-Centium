@@ -101,6 +101,30 @@ export const FORMAT_LABEL: Record<ShareFormat, string> = { story: "Story", post:
 export const STYLES: ShareStyle[] = ["L", "D", "B", "P"];
 export const FORMATS: ShareFormat[] = ["story", "post", "square", "sticker"];
 
+/**
+ * Market + Share 3.0 · P-SH.3 (ADDED, additive): the editor's fifth style,
+ * "Your photo". The card's content becomes a transparent layer over the
+ * professional's own photo, placed with the overlay editor. Story, Post and
+ * Square only: the Sticker has no Your photo (it draws as the repo sticker).
+ * Anything that draws a whole card reads it as the Photo palette.
+ */
+export type EditorStyle = ShareStyle | "Y";
+export const EDITOR_STYLES: EditorStyle[] = [...STYLES, "Y"];
+export const EDITOR_STYLE_LABEL: Record<EditorStyle, string> = { ...STYLE_LABEL, Y: "Your photo" };
+export const cardStyleOf = (s: EditorStyle): ShareStyle => (s === "Y" ? "P" : s);
+/** The editor shows the overlay (and exports the photo and layer) only for Your photo on Story, Post or Square. */
+export const usesOverlay = (style: EditorStyle, format: ShareFormat): format is "story" | "post" | "square" => style === "Y" && format !== "sticker";
+
+/**
+ * D-29: Your photo is recorded as style "photo". share_card_allowed()
+ * (20261124080000) allowlists the payload's keys but leaves `style`
+ * unconstrained, so "photo" is accepted as is; read back, it draws as the
+ * Photo style (the photo itself never leaves the device).
+ */
+export const YOUR_PHOTO_STYLE = "photo";
+export type StoredStyle = ShareStyle | typeof YOUR_PHOTO_STYLE;
+export const storedStyle = (s: EditorStyle): StoredStyle => (s === "Y" ? YOUR_PHOTO_STYLE : s);
+
 /** PAL31, verbatim. `bg` is the CSS background; the canvas reads `grad`. */
 export interface Palette {
   bg: string;
@@ -133,6 +157,9 @@ export function cardHeight(format: ShareFormat, width: number): number {
 
 /** Exports (SH1 "Type and numbers"): 1080 wide; Story 1920, Post 1350, Square 1080, Sticker a transparent 1080 × 1920. */
 export const EXPORT_WIDTH = 1080;
+
+/** The canvas font for a weight and size (drawShareCard, the layer layout, the link fit). */
+export const cardFont = (weight: number, size: number) => `${weight} ${size}px Manrope, sans-serif`;
 
 /** The profile link printed on the card (FINAL_PLAN section 3 {profile_url}): the site address + /p/{handle} (config/site); the QR opens the full link. */
 export const cardLink = (handle: string) => siteText(`/p/${handle}`);
@@ -389,7 +416,7 @@ export function clipQuote(text: string, max = 160): string {
 
 export interface CardPayload {
   format: ShareFormat;
-  style: ShareStyle;
+  style: StoredStyle;
   template: CardTemplate;
   title?: string;
   subtitle?: string;
@@ -404,7 +431,7 @@ const TEMPLATES: CardTemplate[] = ["pr", "prog", "streak", "logging", "cons", "m
  * lines go in title / subtitle with the client already filled in, and the
  * slot chips are slot_time stats. Only allowlisted keys.
  */
-export function cardPayload(spec: CardSpec, format: ShareFormat, style: ShareStyle, shownAs: string | null): CardPayload {
+export function cardPayload(spec: CardSpec, format: ShareFormat, style: EditorStyle, shownAs: string | null): CardPayload {
   const fill = (t?: string) => (t == null ? undefined : shownAs == null ? t : fillClient(t, shownAs));
   const stats: CardStat[] = [];
   if (spec.hero === "num" && spec.heroKey && spec.big != null) stats.push({ key: spec.heroKey, value: spec.big, label: spec.unit ?? "" });
@@ -413,7 +440,7 @@ export function cardPayload(spec: CardSpec, format: ShareFormat, style: ShareSty
   stats.push(...spec.stats);
   const title = spec.hero === "num" ? spec.subject : spec.hero === "quote" ? spec.quote : spec.hero === "profile" ? spec.head : spec.title;
   const subtitle = spec.hero === "num" ? spec.line : spec.hero === "quote" ? spec.by : spec.hero === "profile" ? spec.role : spec.meta;
-  const out: CardPayload = { format, style, template: spec.template, stats: stats.slice(0, 6) };
+  const out: CardPayload = { format, style: storedStyle(style), template: spec.template, stats: stats.slice(0, 6) };
   const t = fill(title);
   const s = fill(subtitle);
   if (t) out.title = t;
@@ -449,7 +476,7 @@ export function specFromPayload(raw: unknown, proFirstName: string): { spec: Car
   const template = TEMPLATES.find((t) => t === p.template);
   if (!template) return null;
   const format = FORMATS.find((f) => f === p.format) ?? "post";
-  const style = STYLES.find((s) => s === p.style) ?? "B";
+  const style = p.style === YOUR_PHOTO_STYLE ? "P" : (STYLES.find((s) => s === p.style) ?? "B");
   const stats: CardStat[] = Array.isArray(p.stats)
     ? (p.stats as unknown[])
         .filter((s): s is Record<string, unknown> => !!s && typeof s === "object")

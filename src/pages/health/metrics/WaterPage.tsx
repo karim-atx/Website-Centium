@@ -8,6 +8,9 @@ import { LogWaterSheet } from "../../../components/health/log/LogWaterSheet";
 import { logDrink } from "../../../services/health-log/waterIntakes";
 import { removeDrink, sourceName, updateDrink, useDrinks, type Drink } from "../../../services/health-metrics/b1";
 import { clock12 } from "../../../utils/time12";
+import { useClientShare } from "../../../components/share/client/useClientShare";
+import { ShareEntryButton } from "../../../components/share/client/ShareEntryButton";
+import { waterCard } from "../../../components/share/client/clientCardModel";
 import {
   CapsLabel,
   ChartCard,
@@ -89,6 +92,8 @@ export default function WaterPage() {
   const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
 
   const goal = waterGoalMl;
+  // Market + Share 3.0 C-SH.1: today's water, shareable once the goal is reached.
+  const share = useClientShare();
   // The drinks covering this range and the week before it (the stat tiles).
   const p0 = periodOf(range, anchor);
   const lastWeek0 = previousPeriod(periodOf("week", anchor));
@@ -368,10 +373,23 @@ export default function WaterPage() {
       return { hour: t.getHours() + t.getMinutes() / 60, ml: k.ml };
     });
 
+  const waterToday = byDay[today] ?? null;
+  const shareButton = (
+    <ShareEntryButton
+      label="Share your water"
+      disabledHint={waterToday === null ? "Nothing to share yet. Log your water first." : waterToday < goalOn(today) ? "Nothing to share yet. Reach your water goal first." : null}
+      onPress={() =>
+        waterToday !== null &&
+        share.open(waterCard({ date: today, ml: waterToday, goalMl: goalOn(today), drinks: drinks.filter((k) => k.day === today).length || null, unit: unit === "floz" ? "floz" : "ml" }))
+      }
+    />
+  );
+
   return (
     <MetricPage
       metric="water"
       title="Water"
+      headerAction={shareButton}
       range={range}
       onRangeChange={(r) => {
         setRange(r);
@@ -514,6 +532,7 @@ export default function WaterPage() {
         }}
       />
       <LogWaterSheet open={logOpen} onClose={() => setLogOpen(false)} onSaved={drinksRead.reload} />
+      {share.sheet}
       <Toast open={!!toast} message={toast?.message ?? ""} onUndo={toast?.undo ? () => { toast.undo?.(); setToast(null); } : undefined} onExpire={() => setToast(null)} />
     </MetricPage>
   );

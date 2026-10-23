@@ -1,7 +1,12 @@
 import { MARK_C_PATH, MARK_LEAF_PATH } from "../icons/CentiumMark";
 import { STREAK_LEAF_PATH } from "../icons/StreakLeaf";
 import { qrRows } from "./ShareQr";
-import { EXPORT_WIDTH, PALETTE, cardHeight, cardLink, cardQrValue, fillClient, fitLinkSize, type CardPro, type CardSpec, type ShareFormat, type ShareStyle } from "./shareCardModel";
+import { EXPORT_WIDTH, PALETTE, cardFont, cardHeight, cardLink, cardQrValue, fillClient, fitLinkSize, type CardPro, type CardSpec, type ShareFormat, type ShareStyle } from "./shareCardModel";
+import { photoRect, toExport } from "./overlayModel";
+import { LAYER, layoutShareLayer, type CardBox, type CardLayout, type CardMeasure, type CardOp, type Drop, type LayerInput, type LayerPlacement } from "./shareLayerModel";
+
+// The layout types live with the pure layer layout (shareLayerModel) so the tests can read them; re-exported here.
+export type { CardBox, CardLayout, CardMeasure, CardOp, Drop };
 
 // Release 3 · W8 SH1 / SH7: the share card as a PNG. A canvas port of
 // ShareCard.tsx (itself a literal port of source/gen/r31.js card31) at the
@@ -34,30 +39,6 @@ const QR_INK = "#241F1B";
 /** ShareCard inherits the app's line-height (Tailwind preflight, 1.5) wherever it sets none. */
 const INHERITED_LH = 1.5;
 
-export interface CardMeasure {
-  /** Advance width of `text` in `font` with `letterSpacing` px after every character (as CSS does). */
-  width(text: string, font: string, letterSpacing: number): number;
-  /** The font's ascent and descent in px: what a CSS line box centres. */
-  extent(font: string): { ascent: number; descent: number };
-}
-
-export interface CardBox {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-export type CardOp =
-  | { k: "text"; text: string; font: string; color: string; x: number; y: number; ls: number; shadow: boolean }
-  | { k: "mark"; box: CardBox }
-  | { k: "leaf"; box: CardBox; color: string; alpha: number; rotate: number }
-  | { k: "star"; box: CardBox; color: string }
-  | { k: "rule"; box: CardBox; color: string }
-  | { k: "chip"; box: CardBox; fill: string; border: string }
-  | { k: "avatar"; box: CardBox; fill: string; border: string; borderWidth: number }
-  | { k: "qr"; box: CardBox; pad: number; radius: number; ring: string };
-
 export interface CardLayoutInput {
   spec: CardSpec;
   pro: CardPro;
@@ -69,20 +50,8 @@ export interface CardLayoutInput {
   hide?: number[];
 }
 
-export interface CardLayout {
-  W: number;
-  H: number;
-  ops: CardOp[];
-  /** Named boxes for checking against the DOM card: head, eyebrow, big (the hero number's span), stats, qr, foot. */
-  boxes: Record<string, CardBox>;
-  /** Every font and the text drawn in it, so the faces (and their unicode ranges) load before drawing. */
-  fonts: Map<string, string>;
-  /** The text shadow, when the card has one. */
-  shadow: { color: string; offsetY: number; blur: number } | null;
-}
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
-export const cardFont = (weight: number, size: number) => `${weight} ${size}px Manrope, sans-serif`;
 
 interface TextStyle {
   weight: number;
@@ -633,10 +602,20 @@ function paintStar(ctx: CanvasRenderingContext2D, b: CardBox, color: string) {
   ctx.fill();
 }
 
-function paintOps(ctx: CanvasRenderingContext2D, L: CardLayout, qr: boolean[][] | null) {
+/**
+ * `shadowScale`: canvas shadows ignore the transform, so a layout painted
+ * under a scale (the Your photo layer) passes that scale for its drops.
+ */
+function paintOps(ctx: CanvasRenderingContext2D, L: CardLayout, qr: boolean[][] | null, shadowScale = 1) {
   const leaf = new Path2D(STREAK_LEAF_PATH);
   const markC = new Path2D(MARK_C_PATH);
   const markLeaf = new Path2D(MARK_LEAF_PATH);
+  const drop = (d: Drop | undefined) => {
+    if (!d) return;
+    ctx.shadowColor = d.color;
+    ctx.shadowOffsetY = d.y * shadowScale;
+    ctx.shadowBlur = d.blur * shadowScale;
+  };
   ctx.textBaseline = "alphabetic";
   ctx.textAlign = "left";
   for (const op of L.ops) {
@@ -645,6 +624,7 @@ function paintOps(ctx: CanvasRenderingContext2D, L: CardLayout, qr: boolean[][] 
       case "text":
         ctx.font = op.font;
         ctx.fillStyle = op.color;
+        if (op.alpha != null) ctx.globalAlpha = op.alpha;
         if (op.shadow && L.shadow) {
           ctx.shadowColor = L.shadow.color;
           ctx.shadowOffsetY = L.shadow.offsetY;
@@ -653,6 +633,7 @@ function paintOps(ctx: CanvasRenderingContext2D, L: CardLayout, qr: boolean[][] 
         fillText(ctx, op.text, op.x, op.y, op.ls);
         break;
       case "mark": {
+        drop(op.drop);
         // viewBox 279.1 180.1 687 713, xMidYMid meet.
         const s = Math.min(op.box.w / MARK_VIEW.w, op.box.h / MARK_VIEW.h);
         ctx.translate(op.box.x + (op.box.w - MARK_VIEW.w * s) / 2, op.box.y + (op.box.h - MARK_VIEW.h * s) / 2);
@@ -712,22 +693,36 @@ function paintOps(ctx: CanvasRenderingContext2D, L: CardLayout, qr: boolean[][] 
       }
       case "qr": {
         const b = op.box;
-        // box-shadow: 0 0 0 1px {line}, outside the tile only.
-        ctx.beginPath();
-        roundRectPath(ctx, { x: b.x - 1, y: b.y - 1, w: b.w + 2, h: b.h + 2 }, op.radius + 1);
-        roundRectPath(ctx, b, op.radius);
-        ctx.fillStyle = op.ring;
-        ctx.fill("evenodd");
+        if (op.ring) {
+          // box-shadow: 0 0 0 1px {line}, outside the tile only.
+          ctx.beginPath();
+          roundRectPath(ctx, { x: b.x - 1, y: b.y - 1, w: b.w + 2, h: b.h + 2 }, op.radius + 1);
+          roundRectPath(ctx, b, op.radius);
+          ctx.fillStyle = op.ring;
+          ctx.fill("evenodd");
+        }
+        ctx.save();
+        drop(op.drop);
         ctx.beginPath();
         roundRectPath(ctx, b, op.radius);
         ctx.fillStyle = "#FFFFFF";
         ctx.fill();
+        ctx.restore();
         if (qr && qr.length) {
           const n = qr.length;
           const ox = b.x + op.pad;
           const oy = b.y + op.pad;
           const cell = (b.w - 2 * op.pad) / n;
           ctx.fillStyle = QR_INK;
+          if (op.drop) {
+            // Under the layer's transform whole-pixel rounding doesn't apply:
+            // every module goes in one path, filled once, so neighbours meet
+            // without anti-aliased seams and the code stays scannable.
+            ctx.beginPath();
+            for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (qr[y][x]) ctx.rect(ox + x * cell, oy + y * cell, cell, cell);
+            ctx.fill("nonzero");
+            break;
+          }
           for (let y = 0; y < n; y++) {
             for (let x = 0; x < n; x++) {
               if (!qr[y][x]) continue;
@@ -785,4 +780,55 @@ export async function drawShareCard(canvas: HTMLCanvasElement, o: DrawShareCardO
   ctx.clearRect(0, 0, W, H);
   if (o.format !== "sticker") paintBackground(ctx, o.style, W, H, o.photo);
   paintOps(ctx, layout, qr);
+}
+
+export interface DrawShareLayerOptions extends LayerInput {
+  format: "story" | "post" | "square";
+  photo: HTMLImageElement;
+  placement: LayerPlacement;
+}
+
+/**
+ * Your photo at the export size (1080 wide; Story 1920, Post 1350, Square
+ * 1080): the photo cover-fit with the editor's crop (photoRect, so the PNG
+ * matches the DOM), then the layer at toExport(): translated to its centre,
+ * scaled, rotated, drawn at its own 100-wide layout. No scrim, no card
+ * background: only the photo and the layer. The QR keeps its white tile.
+ */
+export async function drawShareLayerCard(canvas: HTMLCanvasElement, o: DrawShareLayerOptions): Promise<void> {
+  const W = EXPORT_WIDTH;
+  const H = cardHeight(o.format, W);
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("No 2D canvas context");
+  const input: LayerInput = { spec: o.spec, pro: o.pro, client: o.client, qr: o.qr, hide: o.hide };
+  const needsQr = o.qr !== false && !!o.pro.handle;
+  const qrPromise = needsQr ? qrRows(cardQrValue(o.pro.handle!)) : Promise.resolve(null);
+
+  await document.fonts.ready;
+  const first = layoutShareLayer(input, canvasMeasure(ctx));
+  await Promise.all([...first.fonts].map(([font, text]) => document.fonts.load(font, text).catch(() => [])));
+  const layout = layoutShareLayer(input, canvasMeasure(ctx));
+  const qr = await qrPromise;
+  if (needsQr && !qr) throw new Error("QR code unavailable");
+
+  const { frame, crop, transform } = o.placement;
+  const k = W / frame.w;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#2A2B31";
+  ctx.fillRect(0, 0, W, H);
+  // The export's frame in editor px (Story 1920 / k is 391.1, not 391), so the cover reaches the last row.
+  const r = photoRect({ w: o.photo.naturalWidth || 1, h: o.photo.naturalHeight || 1 }, { w: frame.w, h: H / k }, crop);
+  ctx.drawImage(o.photo, r.x * k, r.y * k, r.w * k, r.h * k);
+
+  const t = toExport(transform, frame.w, W);
+  const layerH = o.placement.layer.h || layout.H;
+  ctx.save();
+  ctx.translate(t.x, t.y);
+  ctx.scale(t.scale, t.scale);
+  ctx.rotate((t.rotation * Math.PI) / 180);
+  ctx.translate(-layout.W / 2, -layerH / 2);
+  paintOps(ctx, { ...layout, shadow: { color: LAYER.shadow.color, offsetY: LAYER.shadow.y * t.scale, blur: LAYER.shadow.blur * t.scale } }, qr, t.scale);
+  ctx.restore();
 }

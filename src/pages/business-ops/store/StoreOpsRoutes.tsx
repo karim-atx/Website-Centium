@@ -3,6 +3,7 @@ import { useBusinessNavKind } from "../../../components/navigation/useBusinessNa
 import PhotosPage from "../../business-market/PhotosPage";
 import PreviewPage from "../../business-market/PreviewPage";
 import SeeAllPage from "../../business-market/SeeAllPage";
+import OfferEditorPage from "../../business-market/OfferEditorPage";
 import StoreOrdersPage from "./StoreOrdersPage";
 import OrderDetailPage from "./OrderDetailPage";
 import ReturnDetailPage from "./ReturnDetailPage";
@@ -39,6 +40,9 @@ export function StoreProductsRoute() {
       <Route path="photos" element={<PhotosPage />} />
       <Route path="preview" element={<PreviewPage />} />
       <Route path="performance/:which" element={<SeeAllPage />} />
+      {/* Market + Share 3.0 W3: B-MA.3 offers, as under /app/business/marketplace. */}
+      <Route path="offers/new" element={<OfferEditorPage />} />
+      <Route path="offers/:offerId" element={<OfferEditorPage />} />
       <Route path="*" element={<Navigate to="/app/business/products" replace />} />
     </Routes>
   );

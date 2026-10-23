@@ -5,7 +5,8 @@ import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import { useOnline } from "../../hooks/useOnline";
 import { markPaid } from "../../services/business-revenue";
 import { offerPromotionUsed } from "../../components/promotions/promotionUsed";
-import { useOps } from "../../pages/business-ops/classes/opsTheme";
+import { useIsDark } from "../../hooks/useIsDark";
+import { marketPalette } from "../../theme/marketTokens";
 import { linePx, textPx } from "../../theme/textSize";
 
 import { canMarkBookingPaid, type RosterEntry } from "../../services/venues/consoleLogic";
@@ -24,7 +25,8 @@ export const REFERENCE_MAX = 120;
 export function useMarkBookingPaid({ onDone }: { onDone: (entry: RosterEntry) => void }) {
   const access = useConsoleAccess();
   const online = useOnline();
-  const c = useOps();
+  // Market + Share 3.0 W3: the B-MA palette (the classes opsTheme it read is gone).
+  const m = marketPalette(useIsDark());
   const deskOk = access.ready && access.meets("front_desk");
   const [menu, setMenu] = useState<{ entry: RosterEntry; anchor: HTMLElement } | null>(null);
   const [refFor, setRefFor] = useState<RosterEntry | null>(null);
@@ -98,10 +100,10 @@ export function useMarkBookingPaid({ onDone }: { onDone: (entry: RosterEntry) =>
         animateExit
         bodyPadding={{ top: 18, right: 18, bottom: 30, left: 18 }}
       >
-        <label htmlFor="pay-ref" className="block whitespace-nowrap" style={{ margin: "0 0 6px", fontSize: textPx(12), fontWeight: 700, color: c.inkSoft }}>
+        <label htmlFor="pay-ref" className="block whitespace-nowrap" style={{ margin: "0 0 6px", fontSize: textPx(12), fontWeight: 700, color: m.ink2 }}>
           Reference (optional)
         </label>
-        <style>{`.pay-ref::placeholder { color: ${c.faint}; font-weight: 500; opacity: 1; }`}</style>
+        <style>{`.pay-ref::placeholder { color: ${m.faint}; font-weight: 500; opacity: 1; }`}</style>
         <input
           id="pay-ref"
           value={reference}
@@ -110,9 +112,9 @@ export function useMarkBookingPaid({ onDone }: { onDone: (entry: RosterEntry) =>
           onChange={(e) => setReference(e.target.value)}
           placeholder="e.g. receipt or transfer number"
           className="pay-ref w-full block focus:outline-none"
-          style={{ minHeight: 48, borderRadius: 14, background: c.input, border: `1px solid ${c.border}`, padding: "0 14px", fontSize: textPx(14), lineHeight: linePx(20), fontWeight: 600, color: c.ink, caretColor: c.pDark }}
+          style={{ minHeight: 48, borderRadius: 14, background: m.sgrey, border: `1px solid ${m.border}`, padding: "0 14px", fontSize: textPx(14), lineHeight: linePx(20), fontWeight: 600, color: m.ink, caretColor: m.pdark }}
         />
-        <p className="tabular-nums" style={{ margin: "5px 2px 14px", textAlign: "right", fontSize: textPx(11), color: c.faint }}>
+        <p className="tabular-nums" style={{ margin: "5px 2px 14px", textAlign: "right", fontSize: textPx(11), color: m.faint }}>
           {reference.length}/{REFERENCE_MAX}
         </p>
         <button
@@ -123,12 +125,12 @@ export function useMarkBookingPaid({ onDone }: { onDone: (entry: RosterEntry) =>
           }}
           disabled={busy || !online}
           className="tap w-full flex items-center justify-center"
-          style={{ minHeight: 52, borderRadius: 16, background: c.fill, color: c.onFill, fontSize: textPx(14.5), fontWeight: 800, opacity: busy || !online ? 0.45 : 1 }}
+          style={{ minHeight: 52, borderRadius: 16, background: m.fill, color: m.onfill, fontSize: textPx(14.5), fontWeight: 800, opacity: busy || !online ? 0.45 : 1 }}
         >
           {busy ? "Saving…" : "Mark as paid"}
         </button>
         {error && refFor && (
-          <p role="alert" style={{ margin: "5px 0 0", fontSize: textPx(11.5), fontWeight: 700, color: c.high }}>
+          <p role="alert" style={{ margin: "5px 0 0", fontSize: textPx(11.5), fontWeight: 700, color: m.high }}>
             {error}
           </p>
         )}

@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { checklistOrder, classFlag, daysLeft, dowTime, hoursSummary, pct, strengthItems, strengthLine, strengthPct, type StrengthInput } from "./model.ts";
+import { checklistOrder, classFlag, daysLeft, dowTime, hoursSummary, pct, strengthItems, strengthLine, strengthPct, tabKeyOf, type StrengthInput } from "./model.ts";
 import { promoText, validatePromo } from "./promoModel.ts";
 
 const base: StrengthInput = {
@@ -91,4 +91,17 @@ test("strength: B13 listing_strength flags win for photos and amenities", () => 
   const off = strengthItems({ ...base, photos: 7, photosDone: false });
   assert.equal(off.find((x) => x.key === "photos")?.sub, "7 of 6");
   assert.equal(strengthItems({ ...base, photos: 2 }).find((x) => x.key === "photos")?.sub, "2 of 6 · add 4 more");
+});
+
+test("B-MA tab keys: new keys, the old MA1 and Store Products keys, and the fallback", () => {
+  assert.equal(tabKeyOf("showcase", "overview"), "showcase");
+  assert.equal(tabKeyOf("listing", "showcase"), "overview");
+  assert.equal(tabKeyOf("spots", "overview"), "overview");
+  assert.equal(tabKeyOf("promo", "overview"), "offers");
+  assert.equal(tabKeyOf("promotions", "overview"), "offers");
+  assert.equal(tabKeyOf("performance", "overview"), "perf");
+  assert.equal(tabKeyOf("products", "overview"), "showcase");
+  assert.equal(tabKeyOf(null, "overview"), "overview");
+  assert.equal(tabKeyOf(null, "showcase"), "showcase");
+  assert.equal(tabKeyOf("nope", "overview"), "overview");
 });

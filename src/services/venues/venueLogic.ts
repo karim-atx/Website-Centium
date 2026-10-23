@@ -219,6 +219,9 @@ export function stage4Message(code: string | undefined, serverMessage: string, f
       return "You've already reviewed this gym.";
     case "ATX93":
       return "That can't be done with this review.";
+    // purchase_gym_membership: a paused or archived plan (MB-03, V6-47).
+    case "ATXC4":
+      return "This plan isn't on sale right now.";
     default:
       return fallback;
   }

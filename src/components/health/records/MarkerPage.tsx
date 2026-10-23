@@ -76,7 +76,8 @@ export const MarkerPage: React.FC<{
   isThreshold: boolean;
   remark: string | null;
   onBack: () => void;
-  onShare: () => void;
+  /** The biomarker share card; absent while D-28 locks biomarker cards (recovery-sensitive mode, under-18s). */
+  onShare?: () => void;
   onToast: (message: string) => void;
   /** Release 3 CU18: "Share with a professional" in the ⋮ menu (result_shares). Omitted: the menu is as before. */
   onShareWithProfessional?: () => void;
@@ -179,7 +180,7 @@ export const MarkerPage: React.FC<{
         onBack={onBack}
         menuWidth={onShareWithProfessional ? 220 : undefined}
         menu={[
-          { key: "share", label: "Share", icon: <Share2 size={15} />, onSelect: onShare },
+          ...(onShare ? [{ key: "share", label: "Share", icon: <Share2 size={15} />, onSelect: onShare }] : []),
           ...(onShareWithProfessional
             ? [{ key: "share-pro", label: "Share with a professional", icon: <UserRoundCheck size={15} />, onSelect: onShareWithProfessional }]
             : []),

@@ -25,6 +25,11 @@ import {
   readWinSharing,
   shareableWins,
   winsShieldLine,
+  EDITOR_STYLES,
+  EDITOR_STYLE_LABEL,
+  cardStyleOf,
+  storedStyle,
+  usesOverlay,
 } from "./shareCardModel";
 
 const win = (kind: ClientWin["kind"], value: Record<string, unknown>, occurredAt = "2026-10-14T09:00:00Z"): ClientWin => ({ winId: "w1", clientId: "c1", kind, occurredAt, value });
@@ -167,4 +172,35 @@ test("the card link shrinks only when it would not fit", () => {
   assert.equal(fitLinkSize(35.6, 992, 711), 25.5);
   assert.equal(fitLinkSize(35.6, 0, 711), 35.6);
   assert.equal(fitLinkSize(35.6, 900, 0), 0);
+});
+
+test("P-SH.3 Your photo: a fifth editor style, drawn as Photo, recorded as style photo (D-29)", () => {
+  assert.deepEqual(EDITOR_STYLES, ["L", "D", "B", "P", "Y"]);
+  assert.equal(EDITOR_STYLE_LABEL.Y, "Your photo");
+  assert.deepEqual(
+    EDITOR_STYLES.map((s) => EDITOR_STYLE_LABEL[s]),
+    ["Light", "Dark", "Brand", "Photo", "Your photo"]
+  );
+  assert.equal(cardStyleOf("Y"), "P");
+  for (const s of ["L", "D", "B", "P"] as const) {
+    assert.equal(cardStyleOf(s), s);
+    assert.equal(storedStyle(s), s);
+  }
+  assert.equal(storedStyle("Y"), "photo");
+  const spec = milestoneCard({ sessionsDelivered: 500, clientsCoached: 64, averageRating: 4.8, reviewCount: 38, yearsOnCentium: 3 });
+  const p = cardPayload(spec, "story", "Y", null);
+  assert.equal(p.style, "photo");
+  assert.ok(allowed(p));
+  // Read back (the client's views, the public card): Photo.
+  assert.equal(specFromPayload(p, "Rana")?.style, "P");
+  assert.equal(specFromPayload({ ...p, style: "P" }, "Rana")?.style, "P");
+  assert.equal(specFromPayload({ ...p, style: "nonsense" }, "Rana")?.style, "B");
+});
+
+test("the overlay shows only for Your photo on Story, Post and Square", () => {
+  assert.equal(usesOverlay("Y", "story"), true);
+  assert.equal(usesOverlay("Y", "post"), true);
+  assert.equal(usesOverlay("Y", "square"), true);
+  assert.equal(usesOverlay("Y", "sticker"), false);
+  for (const s of ["L", "D", "B", "P"] as const) for (const f of ["story", "post", "square", "sticker"] as const) assert.equal(usesOverlay(s, f), false);
 });

@@ -55,6 +55,9 @@ import { useSleepSessions } from "../../../services/health-metrics/b1";
 import { clock12, hourLabel12, rangeClock12 } from "../../../utils/time12";
 import { Toast } from "../../../components/ui/Toast";
 import { SleepHero, SleepStagesCard, hm, type StageMinutes } from "../../../components/health/metric/SleepHero";
+import { useClientShare } from "../../../components/share/client/useClientShare";
+import { ShareEntryButton } from "../../../components/share/client/ShareEntryButton";
+import { sleepCard } from "../../../components/share/client/clientCardModel";
 
 // HE1.3 Sleep (Week), HE1.3.d, HE1.3.m, HE1.3.y.
 //
@@ -159,7 +162,34 @@ export default function SleepPage() {
       : { value: "connect", label: "Connect a source", icon: <Link2 size={17} style={iconInk} />, onSelect: () => navigate("/app/settings/devices") },
     { value: "date", label: "Go to date", icon: <CalendarDays size={17} style={iconInk} />, onSelect: () => setDateOpen(true) },
   ];
+  // Market + Share 3.0 C-SH.1 (e9Disabled): last night's sleep, shareable once there is one.
+  const share = useClientShare();
+  const lastNightHours = byDay[today];
+  const shareButton = (
+    <ShareEntryButton
+      label="Share your sleep"
+      disabledHint={lastNightHours === undefined ? "Nothing to share yet. Log or sync your sleep first." : null}
+      onPress={() => {
+        if (lastNightHours === undefined) return;
+        const st = nightByDay[today]?.stages ?? null;
+        const ses = sessionByDay[today];
+        const score = ses?.score ?? nightByDay[today]?.score ?? null;
+        share.open(
+          sleepCard({
+            date: today,
+            asleepMin: Math.round(lastNightHours * 60),
+            deepMin: st?.deepMin ?? null,
+            remMin: st?.remMin ?? null,
+            score: score ?? null,
+            times: timesOf(today)?.range ?? null,
+          }),
+        );
+      }}
+    />
+  );
   const picker = (
+    <>
+    {share.sheet}
     <CalendarPickerSheet
       open={dateOpen}
       onClose={() => setDateOpen(false)}
@@ -174,6 +204,7 @@ export default function SleepPage() {
         openDay(d);
       }}
     />
+    </>
   );
 
   if (!loading && !hasAny) {
@@ -184,6 +215,7 @@ export default function SleepPage() {
         range={range}
         onRangeChange={setRange}
         menu={menu}
+        headerAction={shareButton}
         cta={{ label: "Connect a source", icon: <Link2 size={16} />, onClick: () => navigate("/app/settings/devices") }}
       >
         {metricsError ? <ErrorCard onRetry={retryMetrics} /> : <SyncedNoDevice metric="sleep" icon={Moon} bodyName="Sleep data" footName="sleep" range={range} today={today} />}
@@ -340,7 +372,7 @@ export default function SleepPage() {
     });
 
   return (
-    <MetricPage sourceTag={metricSource.tag} onSourceTag={() => navigate("/app/settings/devices")} metric="sleep" title="Sleep" range={range} onRangeChange={setRange} menu={menu}>
+    <MetricPage sourceTag={metricSource.tag} onSourceTag={() => navigate("/app/settings/devices")} metric="sleep" title="Sleep" range={range} onRangeChange={setRange} menu={menu} headerAction={shareButton}>
       <SleepHero
         value={hero.value}
         sub={hero.sub}

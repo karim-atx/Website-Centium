@@ -25,6 +25,10 @@ import { sentLine } from "../../services/workout/coachLogic";
 import { fetchConnectedProfessional } from "../../services/connected-professional";
 import type { WorkoutSession } from "../../types";
 import { linePx, textPx } from "../../theme/textSize";
+import { useClientShare } from "../../components/share/client/useClientShare";
+import { ShareGlyph } from "../../components/share/client/ShareEntryButton";
+import { workoutCard } from "../../components/share/client/clientCardModel";
+import { weightOn, workoutFacts } from "../../components/share/client/clientShareData";
 
 // WO3.1 · History as a card stack: a hero summary for the chosen period
 // (Total volume, Time taken, the comparison phrase, workouts and sets), then
@@ -50,7 +54,9 @@ const CHIP = {
 } as const;
 
 export default function HistoryTab() {
-  const { workoutSessions, routines, routineFolders, today, moveWorkoutSession, removeWorkoutSession, authUserId } = useApp();
+  const { workoutSessions, routines, routineFolders, today, moveWorkoutSession, removeWorkoutSession, authUserId, weightByDate } = useApp();
+  // Market + Share 3.0 C-SH.1: Share between Change date and Delete.
+  const share = useClientShare();
   // Release 3 · W7 (CU1 v4 "session sent to Alex"): the sessions the database
   // marked sent to a coach (results_sent_at), their swaps, and who.
   const [sent, setSent] = useState<Record<string, { swaps: number }>>({});
@@ -254,6 +260,7 @@ export default function HistoryTab() {
               onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)}
               onChangeDate={() => setMoving(s)}
               onDelete={() => setDeleting(s)}
+              onShare={() => share.open(workoutCard(workoutFacts(s, weightOn(weightByDate, s.date))))}
             />
           ))}
         </div>
@@ -329,6 +336,8 @@ export default function HistoryTab() {
         onConfirm={confirmDelete}
       />
 
+      {share.sheet}
+
       <Toast
         open={!!toast}
         message={toast?.message ?? ""}
@@ -367,9 +376,11 @@ const SessionCard: React.FC<{
   onToggle: () => void;
   onChangeDate: () => void;
   onDelete: () => void;
+  /** C-SH.1: opens the share sheet for this session. */
+  onShare?: () => void;
   /** CU1 v4: "Sent to Alex · 1 swap" when the session went to a coach. */
   sentLine?: string | null;
-}> = ({ session, family: baseFamily, expanded, onToggle, onChangeDate, onDelete, sentLine: sentText }) => {
+}> = ({ session, family: baseFamily, expanded, onToggle, onChangeDate, onDelete, onShare, sentLine: sentText }) => {
   const [showAll, setShowAll] = useState(false);
   // Mobile v5.1 R3: the folder's row tint and header shade for the current
   // mode (dark: hue tints on the dark card; headInk then picks white).
@@ -385,6 +396,8 @@ const SessionCard: React.FC<{
       radius={14}
       actions={[
         { key: "date", label: "Change date", icon: <Pencil size={16} />, onClick: onChangeDate },
+        // C-SH.1 e2History: the Share tile (#F0EDF9, the #7D6BB5 share glyph).
+        ...(onShare ? [{ key: "share", label: "Share", ariaLabel: `Share ${session.routineName}`, icon: <ShareGlyph size={15} color="currentColor" />, onClick: onShare, light: { fill: "#F0EDF9", ink: "#7D6BB5" } }] : []),
         { key: "delete", label: "Delete", icon: <Trash2 size={16} />, onClick: onDelete, destructive: true },
       ]}
     >

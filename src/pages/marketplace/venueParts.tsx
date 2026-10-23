@@ -1,26 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  Accessibility,
-  Baby,
-  Bath,
-  ChevronLeft,
-  Coffee,
-  Copy,
-  Droplet,
-  Flame,
-  Lock,
-  MapPin,
-  Navigation,
-  ParkingCircle,
-  Shirt,
-  ShowerHead,
-  Waves,
-  Wifi,
-  type LucideIcon,
-} from "lucide-react";
-import { AMENITY_LABELS, knownAmenities, type AmenityKey } from "../../services/marketplace/listingLogic";
-import { VenueImage } from "../../components/marketplace/VenueImage";
+import { ChevronLeft, Copy, MapPin, Navigation } from "lucide-react";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 
@@ -39,32 +19,21 @@ const isIOS = () => typeof navigator !== "undefined" && /iPhone|iPad|iPod/.test(
  * safe area above never moves it.
  */
 const HERO_GEOMETRY = {
-  // gym: band 91.2 tall; blocks 46.8,115.3 70.2×52.8 @35 · 171.6,160.1
-  // 101.4×8 @45 · 312,86.5 39×81.6 @30 (all end 71.9 above the foot).
-  240: {
-    band: 91.2,
+  // W2 gym detail (C-MO.4.2.1, a 180 hero): the 240 drawing scaled to 0.75
+  // tall (band 68.4; blocks end 53.9 above the foot), the widths kept.
+  180: {
+    band: 68.4,
     blocks: [
-      { left: 46.8, bottom: 71.9, width: 70.2, height: 52.8, alpha: 35 },
-      { left: 171.6, bottom: 71.9, width: 101.4, height: 8, alpha: 45 },
-      { left: 312, bottom: 71.9, width: 39, height: 81.6, alpha: 30 },
-    ],
-  },
-  // class: band 76 tall; blocks 46.8,96.1 70.2×44 @35 · 171.6,132.1
-  // 101.4×8 @45 · 312,72.1 39×68 @30 (all end 59.9 above the foot).
-  200: {
-    band: 76,
-    blocks: [
-      { left: 46.8, bottom: 59.9, width: 70.2, height: 44, alpha: 35 },
-      { left: 171.6, bottom: 59.9, width: 101.4, height: 8, alpha: 45 },
-      { left: 312, bottom: 59.9, width: 39, height: 68, alpha: 30 },
+      { left: 46.8, bottom: 53.9, width: 70.2, height: 39.6, alpha: 35 },
+      { left: 171.6, bottom: 53.9, width: 101.4, height: 6, alpha: 45 },
+      { left: 312, bottom: 53.9, width: 39, height: 61.2, alpha: 30 },
     ],
   },
 } as const;
 
 export const GYM_HERO = { base: "#5A5368", band: "#8E8496" } as const;
-export const CLASS_HERO = { base: "#6B5E57", band: "#A69389" } as const;
 
-export function HeroPlaceholder({ height, base, band }: { height: 200 | 240; base: string; band: string }) {
+export function HeroPlaceholder({ height, base, band }: { height: 180; base: string; band: string }) {
   const g = HERO_GEOMETRY[height];
   return (
     <div aria-hidden className="absolute inset-0 overflow-hidden" style={{ background: base }} data-hero-placeholder="">
@@ -86,59 +55,6 @@ export function HeroPlaceholder({ height, base, band }: { height: 200 | 240; bas
   );
 }
 
-/** Measured on MO1.4.2.1.png / MO1.4.4.png (2x): the white back disc's light shadow (the table leaves it unspecified). */
-const BACK_SHADOW = "dark:shadow-none shadow-[0_2px_6px_rgba(0,0,0,0.10)]";
-/** Measured on MO1.4.2.1.png: the logo frame's light shadow. */
-export const LOGO_SHADOW = "dark:shadow-none shadow-[0_2px_12px_rgba(0,0,0,0.12)]";
-
-/**
- * The detail page's hero at the top edge: 200 tall on a class page, 240 on a
- * gym page, with a 36 pt white back disc (ChevronLeft 18) 16 in and 16 down.
- * Stage A4: a gym page passes its cover (gyms.cover_url's public URL), drawn
- * over the whole hero; with none, or one that fails to load, the hero draws
- * its placeholder picture. The page's 24 pt top padding and the safe area are
- * cancelled so the hero starts at y 0.
- *
- * B13 (MK-03, PB-O-56): a gym page passes `photos` instead (the cover first,
- * then its approved photos): they swipe across the hero, and with two or more
- * the pager shows (MO1.4.2.1 #9-10).
- */
-export function DetailHero({
-  height,
-  onBack,
-  colors,
-  coverUrl = null,
-  photos,
-  children,
-}: {
-  height: 200 | 240;
-  onBack: () => void;
-  colors: { base: string; band: string };
-  coverUrl?: string | null;
-  /** B13: the hero's pictures in order; when given, replaces `coverUrl`. */
-  photos?: string[];
-  children?: React.ReactNode;
-}) {
-  return (
-    <div
-      className="relative -mx-4 -mt-[calc(env(safe-area-inset-top)+24px)] px-4 pt-[calc(env(safe-area-inset-top)+16px)]"
-      style={{ height: `calc(env(safe-area-inset-top) + ${height}px)` }}
-    >
-      <HeroPlaceholder height={height} base={colors.base} band={colors.band} />
-      {photos ? <HeroGallery photos={photos} /> : <VenueImage srcs={[coverUrl]} className="absolute inset-0 w-full h-full" />}
-      <button
-        type="button"
-        onClick={onBack}
-        aria-label="Back"
-        className={`tap relative w-9 h-9 rounded-full bg-cream-card text-charcoal flex items-center justify-center before:content-[''] before:absolute before:-inset-1 ${BACK_SHADOW}`}
-      >
-        <ChevronLeft size={18} strokeWidth={2} aria-hidden />
-      </button>
-      {children}
-    </div>
-  );
-}
-
 /**
  * MO1.4.2.1 #9-10 (PB-O-56, B13 MK-03): the hero's photos side by side,
  * swiped with scroll snapping, and the pager centred 12 above the hero's
@@ -148,7 +64,7 @@ export function DetailHero({
  * photo. A photo that fails to load drops out; with none left the
  * placeholder underneath shows.
  */
-function HeroGallery({ photos }: { photos: string[] }) {
+export function HeroGallery({ photos }: { photos: string[] }) {
   const [failed, setFailed] = useState<string[]>([]);
   const [index, setIndex] = useState(0);
   const list = photos.filter((u) => !failed.includes(u));
@@ -186,51 +102,6 @@ function HeroGallery({ photos }: { photos: string[] }) {
         </div>
       )}
     </>
-  );
-}
-
-/** One Lucide icon per amenity_vocabulary() key (the frame's list for showers, lockers, parking, sauna, Wi-Fi; OURS for the rest). */
-const AMENITY_ICON: Record<AmenityKey, LucideIcon> = {
-  showers: ShowerHead,
-  lockers: Lock,
-  changing_rooms: Shirt,
-  towels: Bath,
-  parking: ParkingCircle,
-  wifi: Wifi,
-  water: Droplet,
-  cafe: Coffee,
-  sauna: Flame,
-  pool: Waves,
-  childcare: Baby,
-  accessible: Accessibility,
-};
-
-/**
- * MO1.4.2.1 #35-36 (PB-O-51, B13 MK-02): the venue's amenities as chips that
- * wrap, 6 apart both ways. Chip 32 tall, pad 0 11, r10, 12/18 600 #241F1B on
- * #F7F7FA (dark #F5F3FA on #242730, the frame's dark fill * being the light
- * value, O3); icon 14 / 1.75 #7D67D9 (dark #9A8CD6) 6 before the label.
- * Nothing renders for a venue with none.
- */
-export function AmenityChips({ values, className = "" }: { values: readonly string[]; className?: string }) {
-  const keys = knownAmenities(values);
-  if (keys.length === 0) return null;
-  return (
-    <ul className={`m-0 p-0 list-none flex flex-wrap gap-1.5 ${className}`} data-amenities="">
-      {keys.map((k) => {
-        const Icon = AMENITY_ICON[k];
-        return (
-          <li
-            key={k}
-            data-amenity={k}
-            className="h-8 px-[11px] rounded-[10px] inline-flex items-center gap-1.5 text-[12px] leading-[18px] font-semibold text-charcoal bg-[#F7F7FA] dark:bg-cream-soft"
-          >
-            <Icon size={14} strokeWidth={1.75} aria-hidden className="shrink-0 text-th-7d67d9 dark:text-primary-accent" />
-            {AMENITY_LABELS[k]}
-          </li>
-        );
-      })}
-    </ul>
   );
 }
 
@@ -361,8 +232,30 @@ export function MapCard({
   address: string | null;
   onOpen?: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
-  const card = (
-    <span className="relative block h-[120px] rounded-2xl overflow-hidden bg-[#EEF1EF] dark:bg-cream-soft" data-map-card="">
+  const card = <MapDrawing className="h-[120px] rounded-2xl" />;
+  return (
+    <div className="flex flex-col gap-2">
+      {onOpen ? (
+        <button type="button" onClick={onOpen} aria-haspopup="menu" aria-label={address ? `Directions to ${address}` : "Directions"} className="tap block w-full text-start rounded-2xl">
+          {card}
+        </button>
+      ) : (
+        <div aria-hidden="true">{card}</div>
+      )}
+      {address && <p className="m-0 text-[12.5px] leading-[18.8px] text-charcoal-soft">{address}</p>}
+    </div>
+  );
+}
+
+/**
+ * MapCard's drawing on its own (the grid, the road and the pin), sized by the
+ * caller: MapCard draws it 120 tall r16; the gym page (C-MO.4.2.1) draws it
+ * 96 tall at the top of its "Location and hours" card, in place of the
+ * board's MAP placeholder (D-52).
+ */
+export function MapDrawing({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <span className={`relative block overflow-hidden bg-[#EEF1EF] dark:bg-cream-soft ${className}`} style={style} data-map-card="">
       <span
         aria-hidden
         className="absolute inset-0"
@@ -381,18 +274,6 @@ export function MapCard({
         className="absolute left-1/2 top-[38px] -translate-x-1/2 text-th-7d67d9 dark:text-primary-accent"
       />
     </span>
-  );
-  return (
-    <div className="flex flex-col gap-2">
-      {onOpen ? (
-        <button type="button" onClick={onOpen} aria-haspopup="menu" aria-label={address ? `Directions to ${address}` : "Directions"} className="tap block w-full text-start rounded-2xl">
-          {card}
-        </button>
-      ) : (
-        <div aria-hidden="true">{card}</div>
-      )}
-      {address && <p className="m-0 text-[12.5px] leading-[18.8px] text-charcoal-soft">{address}</p>}
-    </div>
   );
 }
 

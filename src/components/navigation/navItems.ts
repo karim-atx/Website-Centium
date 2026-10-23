@@ -64,6 +64,9 @@ export const PRO_MORE_PAGES = [
   "/app/settings",
   "/app/messages",
   "/app/marketplace",
+  // Market + Share 3.0 (D-39): More › Explore opens the professional's
+  // Marketplace; P-MA.1–P-MA.6 draw the bar with More lit.
+  "/app/pro/marketplace",
   "/app/forum",
   "/app/businesses",
   "/app/business",
@@ -158,7 +161,6 @@ export function businessTabs(kind: BusinessNavKind): BusinessTab[] {
 const OPERATIONS_PAGES = [
   BUSINESS_OPERATIONS_ROUTE,
   "/app/business/venue",
-  "/app/business/gym",
   "/app/business/classes",
   // v6 Batch 4: Store order / return detail and the appointment pages.
   "/app/business/orders",
@@ -184,12 +186,21 @@ export const BUSINESS_MORE_PAGES = [
   "/app/business/services",
 ];
 
+/**
+ * Pages that light Marketplace (Products for a store) though they live
+ * outside it: Memberships (B-MA.5 / B-MA.5.1) and Redeem a voucher (B-MA.4),
+ * reached from the Marketplace; the boards draw the bar with Marketplace lit
+ * (W3 lead decision, R1 polish). The front-desk routes keep Front desk lit.
+ */
+const MARKETPLACE_PAGES = ["/app/business/gym", "/app/business/redeem"];
+
 const under = (pathname: string, base: string) => pathname === base || pathname.startsWith(base + "/");
 
 export function isBusinessTabActive(tab: BusinessTab, pathname: string): boolean {
   if (tab.to === "/app") return pathname === "/app";
   if (tab.to === "/app/more") return BUSINESS_MORE_PAGES.some((p) => under(pathname, p));
   if (tab.to === BUSINESS_OPERATIONS_ROUTE) return OPERATIONS_PAGES.some((p) => under(pathname, p));
+  if (tab.to === "/app/business/marketplace" || tab.to === BUSINESS_PRODUCTS_ROUTE) return under(pathname, tab.to) || MARKETPLACE_PAGES.some((p) => under(pathname, p));
   return under(pathname, tab.to);
 }
 

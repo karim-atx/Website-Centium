@@ -136,6 +136,40 @@ export function hoursSummary(rows: GymHoursTableRow[] | null): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// The B-MA tabs (Business Marketplace Screens `topTabs`)
+
+export type MarketTabKey = "overview" | "showcase" | "offers" | "perf";
+export const MARKET_TAB_KEYS: MarketTabKey[] = ["overview", "showcase", "offers", "perf"];
+
+/**
+ * A `?tab=` value (new or old) to a B-MA tab. The MA1 Marketplace keys
+ * (listing, spots → Overview; promo → Offers) and the old Store Products keys
+ * (products → Showcase, listing → Overview, performance → Performance,
+ * promotions → Offers) keep working; anything else is `fallback`.
+ */
+export function tabKeyOf(raw: string | null | undefined, fallback: MarketTabKey): MarketTabKey {
+  switch (raw) {
+    case "overview":
+    case "showcase":
+    case "offers":
+    case "perf":
+      return raw;
+    case "listing":
+    case "spots":
+      return "overview";
+    case "promo":
+    case "promotions":
+      return "offers";
+    case "performance":
+      return "perf";
+    case "products":
+      return "showcase";
+    default:
+      return fallback;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Dates
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

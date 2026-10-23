@@ -4,6 +4,7 @@
 
 import { minutesOfDay, range12, time12 } from "../../../utils/time12";
 import { DAY_LONG, DAY_SHORT, mondayIndex } from "../../../utils/week";
+import { openOnCentium } from "../../../services/business-market/listingLogic";
 
 export interface SessionLite {
   id: string;
@@ -231,7 +232,7 @@ export function issueText(i: Issue, nameOf: (id: string | null) => string, peopl
   if (i.kind === "noinst") {
     return {
       title: "No instructor",
-      body: `${s.title} on ${when} has nobody teaching it. ${s.booked} ${people} ${s.booked === 1 ? "is" : "are"} booked.${more > 0 ? ` ${more} more ${more === 1 ? "session has" : "sessions have"} no instructor.` : ""}`,
+      body: `${s.title} on ${when} has nobody teaching it. ${s.booked} ${s.booked === 1 ? people.replace(/s$/, "") : people} ${s.booked === 1 ? "is" : "are"} booked.${more > 0 ? ` ${more} more ${more === 1 ? "session has" : "sessions have"} no instructor.` : ""}`,
       chip: `${weekdayShort(s.date)} ${time12(s.startTime)} ${s.title}`,
     };
   }
@@ -373,4 +374,178 @@ export function seriesCards(sessions: Session[], rules: SeriesRuleLite[], now: D
     cards.push({ seriesId, next, remaining: sorted.length, typeLine, whenLine });
   }
   return cards.sort((a, b) => a.next.date.localeCompare(b.next.date) || a.next.startTime.localeCompare(b.next.startTime));
+}
+
+// ---------------------------------------------------------------------------
+// Market + Share 3.0 B-MA.6 (Business Marketplace Screens `bizWeek`,
+// `sessions`, `classFields`, `roster`): the week strip, the session cards,
+// the Bookings page and the cancel dialog. Month first (D-02), 12-hour (D-03).
+
+const MONTH_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/** "Friday, October 16": the caps over the day's sessions (the board's "Friday 16 October", month first per D-02). */
+export function dayCaps(day: string): string {
+  const d = at(day);
+  return `${DAY_LONG[mondayIndex(d.getDay())]}, ${MONTH_LONG[d.getMonth()]} ${d.getDate()}`;
+}
+
+/** "Week of Oct 19" (the week navigation under the cards; the live Open spots wording). */
+export function weekOf(monday: string): string {
+  const d = at(monday);
+  return `Week of ${MONTHS[d.getMonth()]} ${d.getDate()}`;
+}
+
+/** Minutes from start to end (0 when the end is not after the start). */
+export function durationMinutes(startTime: string, endTime: string): number {
+  return Math.max(0, minutes(endTime) - minutes(startTime));
+}
+
+/** "45 min", "60 min", "90 min" (the board writes every length in minutes). */
+export function durationText(startTime: string, endTime: string): string {
+  return `${durationMinutes(startTime, endTime)} min`;
+}
+
+/** The Duration menu: 15 to 180 minutes, plus the class's own length when it is another. */
+export function durationOptions(current: number): number[] {
+  const base = [15, 20, 30, 45, 60, 75, 90, 120, 150, 180];
+  return current > 0 && !base.includes(current) ? [...base, current].sort((a, b) => a - b) : base;
+}
+
+/** "{n} classes" under a strip day ("1 class"). */
+export function classesCount(n: number): string {
+  return `${n} ${n === 1 ? "class" : "classes"}`;
+}
+
+export interface StripDay {
+  day: string;
+  /** "MON" */
+  w: string;
+  /** "12" */
+  n: string;
+  /** Sessions still running that day (cancelled ones left out). */
+  count: number;
+}
+
+/** The 7 strip tiles, Monday first (bizWeek: "MON" / "12" / "6 classes"). */
+export function weekStrip(sessions: Session[], monday: string): StripDay[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = addDays(monday, i);
+    return { day, w: DAY_SHORT[i].toUpperCase(), n: String(at(day).getDate()), count: running(sessions).filter((s) => s.date === day).length };
+  });
+}
+
+/** The card's fill word: "Full" at capacity, else "{n} of {cap}" (sessions.fill). */
+export function fillText(s: Pick<Session, "booked" | "maxCapacity">): string {
+  return s.maxCapacity > 0 && s.booked >= s.maxCapacity ? "Full" : `${s.booked} of ${s.maxCapacity}`;
+}
+
+/** The bar's width in percent, 0 to 100 (sessions.pct). */
+export function fillPct(s: Pick<Session, "booked" | "maxCapacity">): number {
+  return s.maxCapacity > 0 ? Math.min(100, Math.round((s.booked / s.maxCapacity) * 100)) : 0;
+}
+
+/**
+ * "Every Friday", "Every Mon and Wed", "Every 2 weeks on Friday", "Every day"
+ * (classFields Repeat "Every Friday"; one day reads in full as drawn, several
+ * in short).
+ */
+export function everyText(weekdays: number[], intervalWeeks = 1): string {
+  const ws = [...new Set(weekdays)].filter((w) => w >= 1 && w <= 7).sort((a, b) => a - b);
+  if (ws.length === 0) return "";
+  const days = ws.length === 1 ? DAY_LONG[ws[0] - 1] : ws.length === 7 ? "day" : joinAnd(ws.map((w) => DAY_SHORT[w - 1]));
+  return intervalWeeks > 1 ? `Every ${intervalWeeks} weeks on ${days === "day" ? "every day" : days}` : `Every ${days}`;
+}
+
+/** The Price tile's foot line: "Repeats every Friday" (classBookings), or "One-time class" for a class that doesn't repeat. */
+export function repeatsLine(rule: { weekdays: number[]; intervalWeeks: number } | null): string {
+  if (!rule) return "One-time class";
+  const e = everyText(rule.weekdays, rule.intervalWeeks);
+  return e ? `Repeats ${e.charAt(0).toLowerCase()}${e.slice(1)}` : "One-time class";
+}
+
+/** "Fri, Oct 16, 6:30 PM" (the board's "Fri 16 Oct, 6:30 PM", month first). */
+export function whenText(day: string, startTime: string): string {
+  return `${shortDate(day)}, ${time12(startTime)}`;
+}
+
+/** The cancel dialog's body: "Fri, Oct 16, 6:30 PM. The 14 bookings for this session will be cancelled." */
+export function cancelText(day: string, startTime: string, booked: number): string {
+  const head = `${whenText(day, startTime)}.`;
+  if (booked <= 0) return `${head} Nobody has booked this session yet.`;
+  return `${head} The ${booked} ${booked === 1 ? "booking" : "bookings"} for this session will be cancelled.`;
+}
+
+/**
+ * The cancel dialog's notify line (lead decision, R1 polish): the board's
+ * "Notify the {n} booked members" switch is replaced by a plain line, because
+ * cancel_class_session always tells every booked member.
+ */
+export function notifiedText(people: "clients" | "members"): string {
+  return `${people === "clients" ? "Clients" : "Members"} with a booking are notified.`;
+}
+
+/** The live waitlist / paid counts under the cancel body (cancel_class_session tells the waitlist; paid bookings stay paid). */
+export function cancelExtras(waitlist: number, paid: number): string {
+  const parts: string[] = [];
+  if (waitlist > 0) parts.push(`${waitlist} on the waitlist ${waitlist === 1 ? "is" : "are"} told too.`);
+  if (paid > 0) parts.push(`${paid} paid ${paid === 1 ? "booking stays" : "bookings stay"} paid. Record any refund in Revenue.`);
+  return parts.join(" ");
+}
+
+/**
+ * A roster row's payment word, from the live booking (venue_class_roster
+ * payment_method): "Cash", "Membership", "Class pack", ... as the data says.
+ * Payment in the app is cash at the venue, so the store and Whish methods are
+ * never named as paid methods (pre-decided): they read as nothing.
+ */
+export function payMethodText(method: string | null, priceAgreed: number | null): string {
+  const m = (method ?? "").trim().toLowerCase();
+  if (!m) return priceAgreed === 0 ? "Free" : "";
+  if (m === "whish" || m === "app_store" || m === "appstore" || m === "store" || m === "google_play") return "";
+  const known: Record<string, string> = { cash: "Cash", membership: "Membership", pass: "Pass", class_pack: "Class pack", pack: "Class pack", free: "Free", card: "Card", transfer: "Bank transfer" };
+  if (known[m]) return known[m];
+  const words = m.replace(/[_-]+/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/**
+ * The card's Centium line (the old Open spots row, PLAN §3.4; B13 MK-04):
+ * "{n} open on Centium" while the class is on Explore (spots left for
+ * Centium = the free spots, capped by centium_spots less the Centium
+ * bookings), "Members only" when the class is off Explore, "Listing is off"
+ * when the whole business is hidden. Nothing for an ended or cancelled
+ * session.
+ */
+export function centiumLine(o: {
+  capacity: number;
+  booked: number;
+  centiumSpots: number | null;
+  listed: boolean;
+  listingActive: boolean | null;
+  fromCentium: number | null;
+  ended: boolean;
+  cancelled: boolean;
+}): { text: string; tone: "teal" | "faint"; open: number } | null {
+  if (o.cancelled || o.ended) return null;
+  if (o.listingActive === false) return { text: "Listing is off", tone: "faint", open: 0 };
+  if (!o.listed) return { text: "Members only", tone: "faint", open: 0 };
+  if (o.centiumSpots !== null && o.fromCentium === null) return { text: "On Explore", tone: "teal", open: 0 };
+  const open = openOnCentium(o.capacity, o.booked, o.centiumSpots, o.fromCentium ?? 0);
+  return { text: `${open} open on Centium`, tone: "teal", open };
+}
+
+/** The card's flag chip: the live flags (OP1-074) first, then the old Open spots "Almost full" (80% or more). */
+export function cardFlag(s: Session, issue: IssueKind | null, now: Date): { label: string; tone: "high" | "caution" | "good" } | null {
+  if (s.cancelled) return { label: "Cancelled", tone: "high" };
+  if (issue === "noinst") return { label: "No instructor", tone: "high" };
+  if (issue === "double") return { label: "Double-booked", tone: "high" };
+  if (issue === "low") return { label: "Under 40%", tone: "caution" };
+  if (!isEnded(s, now) && s.maxCapacity > 0 && s.booked < s.maxCapacity && s.booked / s.maxCapacity >= 0.8) return { label: "Almost full", tone: "good" };
+  return null;
+}
+
+/** The card / Price tile's price: "$12"; a class with no price or $0 reads "Free". */
+export function priceText(price: string | null | undefined): string {
+  const p = (price ?? "").trim();
+  return !p || /^\$?0(\.0+)?$/.test(p) ? "Free" : p;
 }

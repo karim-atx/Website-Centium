@@ -32,6 +32,7 @@ import { getMyResultShares, getShareTargets, sharedWithLabel, sharesCovering, ty
 import { localIsoDay, shortDay } from "../../services/care-plan/logic";
 import type { LabResult } from "../../services/labs/results";
 import { textPx, linePx } from "../../theme/textSize";
+import { useShareLocks } from "../../components/share/client/useShareLocks";
 import type { BloodMarker, ImagingRecord, LabReport, Medication, Surgery } from "../../types";
 
 // HE1.9 · Biomarkers & imaging (docs/health-b-handover.md 614-2863): one full
@@ -115,6 +116,9 @@ export default function HealthRecords() {
   const [editReport, setEditReport] = useState<LabReport | null>(null);
   const [removeReport, setRemoveReport] = useState<LabReport | null>(null);
   const [shareMarkers, setShareMarkers] = useState<{ marker: BloodMarker | null } | null>(null);
+  // Market + Share 3.0 D-28 (R1 gate): biomarker share cards are unavailable in
+  // recovery-sensitive mode and for under-18s (no date of birth fails closed).
+  const bioCardsLocked = useShareLocks().sensitiveLocked;
   const [historyMenu, setHistoryMenu] = useState<HTMLElement | null>(null);
   const [conditionOpen, setConditionOpen] = useState(false);
   const [surgeryForm, setSurgeryForm] = useState<{ surgery: Surgery | null } | null>(null);
@@ -239,7 +243,7 @@ export default function HealthRecords() {
   const menu: HeaderMenuItem[] | undefined =
     tab === "biomarkers" || tab === "labs"
       ? [
-          { key: "share", label: "Share all", icon: <Share2 size={15} />, onSelect: () => setShareMarkers({ marker: null }) },
+          ...(bioCardsLocked ? [] : [{ key: "share", label: "Share all", icon: <Share2 size={15} />, onSelect: () => setShareMarkers({ marker: null }) }]),
           { key: "manual", label: "Add manually", icon: <PenLine size={15} />, onSelect: () => setScan({ file: null }) },
         ]
       : tab === "imaging" && imagingRecords.some((r) => r.filePath)
@@ -309,7 +313,7 @@ export default function HealthRecords() {
         onToast={setToast}
         onChanged={() => setSharesTick((x) => x + 1)}
       />
-      <ShareBiomarkerSheet open={!!shareMarkers} onClose={() => setShareMarkers(null)} marker={shareMarkers?.marker ?? null} markers={shareMarkers?.marker ? undefined : bloodMarkers} />
+      <ShareBiomarkerSheet open={!!shareMarkers && !bioCardsLocked} onClose={() => setShareMarkers(null)} marker={shareMarkers?.marker ?? null} markers={shareMarkers?.marker ? undefined : bloodMarkers} />
       <BiomarkerCaptureFlow open={!!scan} file={scan?.file ?? null} onClose={() => setScan(null)} onSaved={scanSaved} />
       <UploadChoiceSheet
         open={choice !== null}
@@ -420,7 +424,7 @@ export default function HealthRecords() {
           isThreshold={lab.isThreshold(marker)}
           remark={lab.remarkFor(marker)}
           onBack={() => setMarkerKey(null)}
-          onShare={() => setShareMarkers({ marker })}
+          onShare={bioCardsLocked ? undefined : () => setShareMarkers({ marker })}
           onToast={setToast}
           onShareWithProfessional={
             canShareWithPro

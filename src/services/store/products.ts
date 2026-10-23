@@ -30,9 +30,19 @@ export interface ProductsLoad {
 const BASE = "id, title, price, description, category, created_at";
 const B11 = ", stock, visible, image_url, category_id, product_categories(name, glyph)";
 
-async function readProducts(filter: (q: unknown) => unknown): Promise<Load<ProductsLoad>> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- loose B11 builder
-  const full = await (filter(db.from("business_offerings").select(BASE + B11)) as any).order("created_at", { ascending: false });
+/**
+ * `newest`: created_at, newest first (the analytics' order). `shelf`: the
+ * owner's order as members see it through public_showcase (Database 73ea87b):
+ * sort, then newest first, then id.
+ */
+export type ProductOrder = "newest" | "shelf";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- loose builder
+const ordered = (q: any, order: ProductOrder) =>
+  order === "shelf" ? q.order("sort", { ascending: true }).order("created_at", { ascending: false }).order("id", { ascending: true }) : q.order("created_at", { ascending: false });
+
+async function readProducts(filter: (q: unknown) => unknown, order: ProductOrder = "newest"): Promise<Load<ProductsLoad>> {
+  const full = await ordered(filter(db.from("business_offerings").select(BASE + B11)), order);
   if (!full.error) return { status: "ok", value: { products: ((full.data ?? []) as Row[]).map(toProduct), stockShipped: true } };
   if (!isMissingColumn(full.error) && full.error.code !== "PGRST200") return loadFail(full.error, "Could not read the products");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- loose builder
@@ -41,10 +51,10 @@ async function readProducts(filter: (q: unknown) => unknown): Promise<Load<Produ
   return { status: "ok", value: { products: ((base.data ?? []) as Row[]).map(toProduct), stockShipped: false } };
 }
 
-/** This store's products (owner screens; hidden ones included). */
-export function fetchStoreProducts(businessId: string): Promise<Load<ProductsLoad>> {
+/** This store's products (owner screens; hidden ones included), newest first unless `order` is "shelf". */
+export function fetchStoreProducts(businessId: string, order: ProductOrder = "newest"): Promise<Load<ProductsLoad>> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- loose builder
-  return readProducts((q) => (q as any).eq("business_id", businessId));
+  return readProducts((q) => (q as any).eq("business_id", businessId), order);
 }
 
 /** One product (customer product page). RLS hides a hidden product from the public. */
@@ -79,20 +89,23 @@ export function marketCategoryFor(businessType: string | null | undefined): Offe
 
 export interface ProductDraft {
   name: string;
-  price: number;
+  /** null = no price shown (Market + Share 3.0 W3: a gym or class business's showcase item may have none, as the old Offerings form allowed). */
+  price: number | null;
   description: string;
   /** B11 fields, sent only when `stockShipped`. stock null = not tracked. */
   stock: number | null;
   visible: boolean;
   categoryId: string | null;
   imageUrl: string | null;
+  /** The Explore category a new item is listed under (W3: a gym or class business picks it, as the old Offerings form did); unset = by business type. */
+  category?: OfferingCategory;
 }
 
 export async function createProduct(businessId: string, businessType: string | null, d: ProductDraft, stockShipped: boolean): Promise<Write<Product>> {
   const payload: Row = {
     business_id: businessId,
     title: d.name.trim(),
-    category: marketCategoryFor(businessType),
+    category: d.category ?? marketCategoryFor(businessType),
     price: d.price,
     description: d.description.trim() || null,
   };

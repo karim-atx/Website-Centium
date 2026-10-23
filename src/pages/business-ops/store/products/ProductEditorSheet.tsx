@@ -1,33 +1,58 @@
-import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ImagePlus, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { ImageIcon } from "lucide-react";
 import {
   createCategory,
   createProduct,
   deleteProduct,
   fetchCategories,
   parseStock,
-  setProductVisible,
   updateProduct,
   uploadProductPhoto,
+  type OfferingCategory,
   type Product,
   type ProductCategory,
 } from "../../../../services/store/products";
-import { parsePrice } from "../../../../utils/price";
+import { formatPrice, parsePrice } from "../../../../utils/price";
 import { useOnline } from "../../../../hooks/useOnline";
-import { KitField, KitFieldButton, KitPop, OpsSheet, TextButton } from "../opsKit";
-import { CategoryPicker, VisibleSwitch } from "./CategoryPicker";
+import { marketplaceCategories } from "../../../../data/mockProfessionals";
+import { BizShareButton } from "../../../../components/share/business/BizShareButton";
+import { productData } from "../../../../components/share/business/bizCardModel";
+import { MasterSheet, CentredDialog, PrimaryButton, SaveError, SheetBox, SheetSwitch, fieldStyle, px, useMarketColors } from "../../../business-market/listingParts";
+import { CategoryPicker } from "./CategoryPicker";
 
-// OP1-010 / OP1-011 · New product / Edit product. V6-157: the ONE product
-// editor, shared with AN11 (listings): Name, Category, Price and In stock as
-// OP1 draws them, then AN11's Photo and Description. B11 columns (stock,
-// visible, category_id, image_url): written when the database has them
-// (`stockShipped`); on a database without B11 they show "Coming soon" and
-// are never sent. Category = AN11-004's in-flow listbox (product_categories);
-// a new product has AN11-001's "Visible on Explore" switch, an existing one
-// OP1-011's Hide / Show button. Photo: product-images bucket.
+// Market + Share 3.0 · W3 · B-MA.2 "Edit item" (Business Marketplace Screens
+// lines 119–137, frame-check B-MA.2 showcaseEdit) and its stacked "Item
+// photo" sheet (lines 139–154, showcasePhoto). The ONE editor for
+// business_offerings (V6-157): the Showcase of every business type (D-17)
+// and the store's products (D-12), also opened from Analytics › Products.
+//
+// MasterBottomSheet "Edit item" / "Add item": a centred 132 × 132 image frame
+// (radius 18, --soft; the real image_url, or an empty frame with an icon,
+// never the board's "ITEM PHOTO" label) with a 26 --card camera badge
+// (shadow 0 1px 3px rgba(36,31,27,0.16), camera 14 --pdark); tapping it
+// opens "Item photo" over this sheet: Take photo · Choose from library ·
+// Remove photo, rows 52 tall radius 14 on --sgrey, 14 / 600, 18 glyphs in
+// --pdark (Remove in --high). Fields in --sgrey boxes: Name, Short
+// description, Display price; the toggle row "Show in showcase" / "Off
+// hides it from members" (business_offerings.visible); CTA "Save".
+//
+// Kept live features (PLAN §3.4 Stores; the old Offerings card): the store's
+// Category (product_categories) and In stock; a new item's Explore category
+// for a gym or class business (the old Offerings form's chips); hide in the
+// store (the toggle); Delete as a two-step CentredDialog (B-MA.5.1's
+// destructive style); the photo upload to the live product-images bucket
+// (uploadProductPhoto: JPEG / PNG / WebP up to 5 MB, metadata dropped); the
+// B-SH.1 Product spotlight share of a saved item in the header. B11 columns
+// (stock, visible, category_id, image_url) are written only when the
+// database has them (`stockShipped`); otherwise those controls are disabled
+// with "Coming soon" and never sent.
 
 const PRICE_ERROR = "Enter the price as a number, for example 25 or $25.";
 const STOCK_ERROR = "Enter a whole number, 0 or more.";
+const SOON = "Coming soon";
+
+/** The Explore categories a gym or class business can list an item under (the old Offerings form's list). */
+const LISTABLE = marketplaceCategories.filter((x) => x.id !== "gyms" && x.id !== "classes");
 
 export interface ProductEditorProps {
   open: boolean;
@@ -35,33 +60,45 @@ export interface ProductEditorProps {
   businessId: string;
   businessType: string | null;
   stockShipped: boolean;
-  /** null = New product. */
+  /** null = a new item. */
   product: Product | null;
-  /** New product prefilled (AN11 Duplicate: "{name} (copy)"); ignored when editing. */
+  /** New item prefilled (AN11 Duplicate: "{name} (copy)"); ignored when editing. */
   initial?: { name: string; price: number | null; description: string } | null;
   onSaved: (message: string) => void;
+  /**
+   * "store" (default): a store's product (Category, In stock; a price is
+   * required). "showcase": a gym or class business's showcase item (a new
+   * one picks its Explore category; the price may be empty).
+   */
+  variant?: "store" | "showcase";
 }
 
-export function ProductEditorSheet({ open, onClose, businessId, businessType, stockShipped, product, initial, onSaved }: ProductEditorProps) {
+export function ProductEditorSheet({ open, onClose, businessId, businessType, stockShipped, product, initial, onSaved, variant = "store" }: ProductEditorProps) {
+  const m = useMarketColors();
   const online = useOnline();
+  const store = variant === "store";
+  const ids = useId();
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [market, setMarket] = useState<OfferingCategory>(LISTABLE[0].id as OfferingCategory);
   const [visible, setVisible] = useState(true);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [categories, setCategories] = useState<ProductCategory[] | null>(null);
+  const [photoOpen, setPhotoOpen] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [touched, setTouched] = useState({ price: false, stock: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [del, setDel] = useState<0 | 1 | 2>(0);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const camRef = useRef<HTMLInputElement>(null);
+  const libRef = useRef<HTMLInputElement>(null);
 
-  // Prefill each time the sheet opens (OP1-011 #2; O2: no skeleton, the row's values).
+  // Prefill each time the sheet opens (the row's values; no skeleton).
   useEffect(() => {
     if (!open) return;
     const seed = product ?? initial ?? null;
@@ -70,61 +107,65 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
     setStock(product?.stock != null ? String(product.stock) : "");
     setDescription(seed?.description ?? "");
     setCategoryId(product?.categoryId ?? null);
+    setMarket(LISTABLE[0].id as OfferingCategory);
     setVisible(product?.visible ?? true);
     setImageUrl(product?.imageUrl ?? null);
     setPhotoError(null);
+    setPhotoOpen(false);
     setTouched({ price: false, stock: false });
     setError(null);
+    setDel(0);
   }, [open, product, initial, stockShipped]);
 
   // The store's categories, read each time the sheet opens.
   useEffect(() => {
-    if (!open || !stockShipped) return;
+    if (!open || !stockShipped || !store) return;
     let alive = true;
     setCategories(null);
     void fetchCategories(businessId).then((r) => alive && setCategories(r.status === "ok" ? r.value : []));
     return () => {
       alive = false;
     };
-  }, [open, stockShipped, businessId]);
+  }, [open, stockShipped, businessId, store]);
 
   const p = parsePrice(price);
-  const priceOk = p.ok && p.value !== null;
+  const priceEmpty = price.trim() === "";
+  const priceVal = p.ok ? p.value : null;
+  // A store needs a price; a showcase item may have none.
+  const priceOk = store ? p.ok && p.value !== null : priceEmpty || (p.ok && p.value !== null);
   // Empty = not tracked (stock null); otherwise a whole number 0 or more.
-  const stockVal = stockShipped && stock.trim() !== "" ? parseStock(stock) : null;
-  const stockOk = !stockShipped || stock.trim() === "" || stockVal !== null;
+  const stockVal = store && stockShipped && stock.trim() !== "" ? parseStock(stock) : null;
+  const stockOk = !store || !stockShipped || stock.trim() === "" || stockVal !== null;
   const valid = name.trim().length > 0 && priceOk && stockOk;
   const changed =
     !product ||
     name.trim() !== product.name ||
-    (priceOk && p.ok && p.value !== product.price) ||
+    (priceOk && (priceEmpty ? null : priceVal) !== product.price) ||
     description.trim() !== product.description ||
-    (stockShipped && (stockVal !== product.stock || categoryId !== product.categoryId || imageUrl !== product.imageUrl));
+    (stockShipped && (visible !== product.visible || imageUrl !== product.imageUrl || (store && (stockVal !== product.stock || categoryId !== product.categoryId))));
 
   const save = async () => {
-    if (!valid || !p.ok || p.value === null) return;
+    if (!valid || busy) return;
     setBusy(true);
     setError(null);
-    const draft = { name, price: p.value, description, stock: stockVal, visible: product ? product.visible : visible, categoryId, imageUrl };
+    const draft = {
+      name,
+      price: priceEmpty ? null : priceVal,
+      description,
+      stock: store ? stockVal : (product?.stock ?? null),
+      visible,
+      categoryId: store ? categoryId : (product?.categoryId ?? null),
+      imageUrl,
+      ...(!product && !store ? { category: market } : {}),
+    };
     const r = product ? await updateProduct(product.id, draft, stockShipped) : await createProduct(businessId, businessType, draft, stockShipped);
     setBusy(false);
     if (!r.ok) {
-      setError("Couldn't save the product. Try again.");
+      setError("Couldn't save the item. Try again.");
       return;
     }
-    onSaved(product ? "Changes saved." : stockShipped && !visible ? `${name.trim()} added. It's hidden from Explore.` : `${name.trim()} added.`);
-  };
-
-  const toggleHidden = async () => {
-    if (!product) return;
-    setBusy(true);
-    const r = await setProductVisible(product.id, !product.visible);
-    setBusy(false);
-    if (!r.ok) {
-      setError(r.pending ? "Hiding products is coming soon." : "Couldn't save the product. Try again.");
-      return;
-    }
-    onSaved(product.visible ? `${product.name} is hidden.` : `${product.name} is in the store again.`);
+    const n = name.trim();
+    onSaved(product ? "Changes saved." : stockShipped && !visible ? `${n} added. It's hidden from Explore.` : `${n} added.`);
   };
 
   const remove = async () => {
@@ -134,10 +175,10 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
     const r = await deleteProduct(product.id);
     setBusy(false);
     if (!r.ok) {
-      setDeleteError("Couldn't delete the product. Try again.");
+      setDeleteError("Couldn't delete the item. Try again.");
       return;
     }
-    setConfirmDelete(false);
+    setDel(0);
     onSaved(`${product.name} deleted.`);
   };
 
@@ -151,6 +192,7 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
 
   const pickPhoto = async (file: File | undefined) => {
     if (!file) return;
+    setPhotoOpen(false);
     setPhotoBusy(true);
     setPhotoError(null);
     const r = await uploadProductPhoto(businessId, file);
@@ -162,88 +204,254 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
     setImageUrl(r.url);
   };
 
-  const soon = "Coming soon";
+  const canPhoto = stockShipped && online && !photoBusy;
+  const share =
+    product && product.visible ? (
+      <BizShareButton label={`Share ${product.name}`} getData={() => ({ t: "product", d: productData({ id: product.id, title: product.name, price: product.price !== null ? formatPrice(product.price) : "", description: product.description }, product.imageUrl) })} />
+    ) : null;
+
+  const photoRow = (label: string, glyph: React.ReactNode, onClick: () => void, danger?: boolean) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className="market-focus"
+      style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 52, padding: "0 14px", borderRadius: 14, background: m.sgrey, border: 0, width: "100%", textAlign: "left", fontFamily: "inherit", fontSize: px(14), fontWeight: 600, color: danger ? m.high : m.ink, cursor: "pointer" }}
+    >
+      {glyph}
+      {label}
+    </button>
+  );
+
   return (
     <>
-      <OpsSheet
-        open={open && !confirmDelete}
+      <MasterSheet
+        open={open && del === 0}
         onClose={onClose}
-        title={product ? "Edit product" : "New product"}
-        button="Save"
-        onButton={save}
-        disabled={!valid || !changed || !online || photoBusy}
-        busy={busy}
-        error={error}
+        title={product ? "Edit item" : "Add item"}
+        headerAction={share}
+        footer={
+          <>
+            <PrimaryButton onClick={() => void save()} disabled={!valid || !changed || !online || photoBusy} busy={busy}>
+              {busy ? "Saving…" : "Save"}
+            </PrimaryButton>
+            {error && <SaveError>{error}</SaveError>}
+          </>
+        }
       >
-        <KitField id="product-name" label="Name" value={name} onChange={setName} placeholder="e.g. Whey Protein 2 kg" icon={Pencil} maxLength={80} />
-        {stockShipped ? (
-          <CategoryPicker categories={categories} value={categoryId} onPick={setCategoryId} onCreate={addCategory} disabled={!online} />
-        ) : (
-          <KitFieldButton id="product-category" label="Category" value={product?.category ?? null} placeholder="Choose a category" icon={ChevronDown} disabled note={soon} />
-        )}
-        <KitField
-          id="product-price"
-          label="Price"
-          value={price}
-          onChange={(v) => {
-            setPrice(v);
-            setTouched((t) => ({ ...t, price: true }));
-          }}
-          placeholder="$0.00"
-          icon={Pencil}
-          inputMode="decimal"
-          error={touched.price && price.trim() !== "" && !priceOk ? PRICE_ERROR : null}
-        />
-        <KitField
-          id="product-stock"
-          label="In stock"
-          value={stock}
-          onChange={(v) => {
-            setStock(v);
-            setTouched((t) => ({ ...t, stock: true }));
-          }}
-          placeholder="0"
-          icon={Pencil}
-          inputMode="numeric"
-          disabled={!stockShipped}
-          note={stockShipped ? "Leave empty if you don't track stock." : soon}
-          error={stockShipped && touched.stock && !stockOk ? STOCK_ERROR : null}
-        />
-        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => void pickPhoto(e.target.files?.[0] ?? undefined)} />
-        <KitFieldButton
-          id="product-photo"
-          label="Photo"
-          value={photoBusy ? "Uploading…" : imageUrl ? "Photo added · tap to change" : null}
-          placeholder="Add a photo"
-          icon={ImagePlus}
-          popup="dialog"
-          onClick={stockShipped ? () => fileRef.current?.click() : undefined}
-          disabled={!stockShipped || !online || photoBusy}
-          error={photoError}
-          note={stockShipped ? "JPEG, PNG or WebP, up to 5 MB." : soon}
-        />
-        <KitField id="product-description" label="Description" value={description} onChange={setDescription} placeholder="Optional" multiline maxLength={500} />
-        {!product && stockShipped && <VisibleSwitch on={visible} onChange={setVisible} disabled={!online} />}
-        {product && (
-          <div style={{ marginTop: 4 }}>
-            <TextButton label={product.visible ? "Hide from the store" : "Show in the store"} onClick={toggleHidden} disabled={busy || !online || !stockShipped} />
-            <TextButton tone="high" label="Delete product" onClick={() => setConfirmDelete(true)} disabled={busy || !online} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, color: m.ink, lineHeight: "normal" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingBottom: 4 }}>
+            <button
+              type="button"
+              aria-label={imageUrl ? "Change photo" : "Add a photo"}
+              aria-haspopup="dialog"
+              aria-describedby={!stockShipped ? `${ids}-photo-note` : undefined}
+              disabled={!canPhoto}
+              onClick={() => setPhotoOpen(true)}
+              className="market-focus"
+              style={{ position: "relative", width: 132, height: 132, borderRadius: 18, background: m.soft, border: 0, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: canPhoto ? "pointer" : "default", overflow: "visible" }}
+            >
+              {imageUrl ? (
+                <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18, display: "block" }} />
+              ) : (
+                <ImageIcon size={28} strokeWidth={1.6} color={m.tert} aria-hidden />
+              )}
+              {photoBusy ? <span className="animate-skeleton-pulse" aria-hidden style={{ position: "absolute", inset: 0, borderRadius: 18, background: m.soft, opacity: 0.7 }} /> : null}
+              <span
+                aria-hidden
+                style={{ position: "absolute", right: 6, bottom: 6, width: 26, height: 26, borderRadius: 999, background: m.card, display: "flex", alignItems: "center", justifyContent: "center", color: m.pdark, boxShadow: "0 1px 3px rgba(36,31,27,0.16)" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: "none" }}>
+                  <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                  <circle cx="12" cy="13" r="3" />
+                </svg>
+              </span>
+            </button>
+            {photoBusy ? <p role="status" style={{ fontSize: px(11.5), color: m.faint, marginTop: 8 }}>Uploading…</p> : null}
+            {!stockShipped ? (
+              <p id={`${ids}-photo-note`} style={{ fontSize: px(11.5), color: m.faint, marginTop: 8 }}>
+                {SOON}
+              </p>
+            ) : null}
+            {photoError ? (
+              <p role="alert" style={{ fontSize: px(11.5), fontWeight: 700, color: m.high, marginTop: 8, textAlign: "center" }}>
+                {photoError}
+              </p>
+            ) : null}
           </div>
-        )}
-      </OpsSheet>
+          <SheetBox label="Name" htmlFor={`${ids}-name`}>
+            <input id={`${ids}-name`} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder={store ? "e.g. Whey Protein 2 kg" : "e.g. 10-class pack"} style={fieldStyle(m)} />
+          </SheetBox>
+          <SheetBox label="Short description" htmlFor={`${ids}-desc`}>
+            <textarea
+              id={`${ids}-desc`}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={500}
+              rows={1}
+              placeholder="Optional"
+              style={{ ...fieldStyle(m), resize: "none", minHeight: 41, fieldSizing: "content" } as React.CSSProperties}
+            />
+          </SheetBox>
+          <SheetBox label="Display price" htmlFor={`${ids}-price`}>
+            <input
+              id={`${ids}-price`}
+              value={price}
+              onChange={(e) => {
+                setPrice(e.target.value);
+                setTouched((t) => ({ ...t, price: true }));
+              }}
+              inputMode="decimal"
+              placeholder={store ? "$0.00" : "Optional"}
+              aria-invalid={touched.price && !priceEmpty && !priceOk ? true : undefined}
+              aria-describedby={touched.price && !priceEmpty && !priceOk ? `${ids}-price-err` : undefined}
+              style={fieldStyle(m, touched.price && !priceEmpty && !priceOk)}
+            />
+            {touched.price && !priceEmpty && !priceOk ? (
+              <p id={`${ids}-price-err`} role="alert" style={{ fontSize: px(11.5), fontWeight: 700, color: m.high, marginTop: 6 }}>
+                {PRICE_ERROR}
+              </p>
+            ) : null}
+          </SheetBox>
+          {store ? (
+            <>
+              {stockShipped ? (
+                <CategoryPicker categories={categories} value={categoryId} onPick={setCategoryId} onCreate={addCategory} disabled={!online} />
+              ) : (
+                <SheetBox label="Category">
+                  <div style={{ ...fieldStyle(m), color: m.faint, opacity: 0.6 }}>{SOON}</div>
+                </SheetBox>
+              )}
+              <SheetBox label="In stock" htmlFor={`${ids}-stock`}>
+                <input
+                  id={`${ids}-stock`}
+                  value={stock}
+                  onChange={(e) => {
+                    setStock(e.target.value);
+                    setTouched((t) => ({ ...t, stock: true }));
+                  }}
+                  inputMode="numeric"
+                  placeholder="0"
+                  disabled={!stockShipped}
+                  aria-invalid={stockShipped && touched.stock && !stockOk ? true : undefined}
+                  style={{ ...fieldStyle(m, stockShipped && touched.stock && !stockOk), opacity: stockShipped ? 1 : 0.6 }}
+                />
+                <p style={{ fontSize: px(11.5), color: stockShipped && touched.stock && !stockOk ? m.high : m.faint, fontWeight: stockShipped && touched.stock && !stockOk ? 700 : 400, marginTop: 6 }}>
+                  {!stockShipped ? SOON : touched.stock && !stockOk ? STOCK_ERROR : "Leave empty if you don't track stock."}
+                </p>
+              </SheetBox>
+            </>
+          ) : !product ? (
+            <div style={{ background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
+              <p id={`${ids}-cat`} style={{ fontSize: px(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>
+                Explore category
+              </p>
+              <div role="radiogroup" aria-labelledby={`${ids}-cat`} style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {LISTABLE.map((x) => {
+                  const on = market === x.id;
+                  return (
+                    <button
+                      key={x.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setMarket(x.id as OfferingCategory)}
+                      className="tap market-focus"
+                      style={{ minHeight: 34, padding: "0 12px", borderRadius: 10, border: `1.5px solid ${on ? m.fill : "transparent"}`, background: on ? m.pale : m.card, color: on ? m.pdark : m.ink2, fontSize: px(12.5), fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
+                    >
+                      {x.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+          <div style={{ background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <div id={`${ids}-vis`} style={{ fontSize: px(14), fontWeight: 700 }}>
+                  Show in showcase
+                </div>
+                <div id={`${ids}-vis-sub`} style={{ fontSize: px(11.5), color: m.faint }}>
+                  {stockShipped ? "Off hides it from members" : SOON}
+                </div>
+              </div>
+              <SheetSwitch on={visible} onChange={setVisible} label="Show in showcase" describedBy={`${ids}-vis-sub`} disabled={!stockShipped || !online} />
+            </div>
+          </div>
+          {product ? (
+            <button
+              type="button"
+              onClick={() => {
+                setDeleteError(null);
+                setDel(1);
+              }}
+              disabled={busy || !online}
+              className="market-focus"
+              style={{ alignSelf: "center", minHeight: 44, padding: "0 12px", border: 0, background: "transparent", color: m.high, fontSize: px(14), fontWeight: 700, fontFamily: "inherit", cursor: "pointer", opacity: busy || !online ? 0.4 : 1 }}
+            >
+              Delete item
+            </button>
+          ) : null}
+        </div>
+      </MasterSheet>
+      <MasterSheet open={open && del === 0 && photoOpen} onClose={() => setPhotoOpen(false)} title="Item photo">
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingBottom: 14 }}>
+          {photoRow(
+            "Take photo",
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={m.pdark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, transform: "none" }}>
+              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+              <circle cx="12" cy="13" r="3" />
+            </svg>,
+            () => camRef.current?.click()
+          )}
+          {photoRow(
+            "Choose from library",
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={m.pdark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, transform: "none" }}>
+              <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+              <circle cx="9" cy="9" r="2" />
+              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+            </svg>,
+            () => libRef.current?.click()
+          )}
+          {imageUrl
+            ? photoRow(
+                "Remove photo",
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, transform: "none" }}>
+                  <path d="M3 6h18" />
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2" />
+                </svg>,
+                () => {
+                  setImageUrl(null);
+                  setPhotoOpen(false);
+                },
+                true
+              )
+            : null}
+        </div>
+      </MasterSheet>
+      <input ref={camRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden onChange={(e) => {
+        const f = e.target.files?.[0];
+        e.target.value = "";
+        void pickPhoto(f);
+      }} />
+      <input ref={libRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => {
+        const f = e.target.files?.[0];
+        e.target.value = "";
+        void pickPhoto(f);
+      }} />
       {product && (
-        <KitPop
-          open={confirmDelete}
-          icon={Trash2}
-          title={`Delete ${product.name}?`}
-          body="It's removed from your store. Past orders keep their details."
-          action="Delete product"
-          keep="Keep it"
+        <CentredDialog
+          open={del > 0}
+          title={del === 1 ? "Delete this item?" : "Confirm delete"}
+          body={del === 1 ? (store ? "It comes off your store. Past orders keep their details." : "It comes off your showcase on Explore.") : "This can't be undone."}
+          cancel="Cancel"
+          action={del === 1 ? "Delete" : busy ? "Deleting…" : "Delete item"}
           busy={busy}
-          error={deleteError}
-          onAction={remove}
-          onKeep={() => {
-            setConfirmDelete(false);
+          error={del === 2 ? deleteError : null}
+          onAction={() => (del === 1 ? setDel(2) : void remove())}
+          onCancel={() => {
+            setDel(0);
             setDeleteError(null);
           }}
         />

@@ -1,25 +1,44 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type React from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { BusinessClosedNote } from "../../components/marketplace/BusinessClosedNote";
 import { useBusinessStatus } from "../../hooks/useBusinessStatus";
 import { takesNewActivity } from "../../services/business-closure/logic";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Activity, CalendarCheck, CalendarDays, Check, ChevronDown, ChevronRight, CircleCheck, Clock, Store, Wallet } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useBack } from "../../hooks/useBack";
 import { useOnline } from "../../hooks/useOnline";
+import { useIsDark } from "../../hooks/useIsDark";
 import { CentredPopup } from "../../components/ui/CentredPopup";
-import { PinnedCta, PinnedSlot } from "../../components/ui/PinnedCta";
-import { CentiumMark } from "../../components/icons/CentiumMark";
-import { AvatarPlaceholder } from "../../components/icons/PartBIcons";
+import { PinnedSlot } from "../../components/ui/PinnedCta";
+import { NO_ICON_SCALE } from "../../components/pro/proInk";
 import { SUBTYPE_SINGULAR } from "../../components/professionals/subtypeLabels";
+import { InstructorCard } from "../../components/market/InstructorCard";
+import { ConfirmationStrip } from "../../components/market/ConfirmationStrip";
+import {
+  MarketEmptyCard,
+  MarketError,
+  MarketOffline,
+  MarketSkeleton,
+} from "../../components/market/MarketStates";
+import { FOCUS_CSS, usePress } from "../../components/market/usePress";
 import { useClassBooking, type BookOutcome } from "../../hooks/useClassBooking";
 import { useKnownPosition } from "../../hooks/useKnownPosition";
 import { fetchListing } from "../../services/directory";
 import { distanceKm } from "../../services/geo/distance";
-import { bookingWindowLine, distanceText, instructorRole, levelLabel, whatToBringLine } from "../../services/marketplace/classBooking";
+import {
+  bookingWindowLine,
+  distanceText,
+  instructorRole,
+  levelLabel,
+  whatToBringLine,
+} from "../../services/marketplace/classBooking";
 import { ClassTermsSheet } from "./ClassTermsSheet";
-import { RetryLine } from "../../components/marketplace/ClassCard";
-import { VenueImage } from "../../components/marketplace/VenueImage";
+import {
+  BookingDone,
+  ClassTicketSummary,
+  PurchaseSheet,
+  confirmLabel,
+} from "./PurchaseSheet";
 import {
   cancelClassBooking,
   fetchClassLive,
@@ -30,89 +49,159 @@ import {
   type ClassLive,
   type MarketplaceClass,
 } from "../../services/marketplace";
-import { cancellationLine, isLateCancellation } from "../../services/venues/venueLogic";
-import { fetchMyGymMemberships, fetchVenues } from "../../services/venues";
+import {
+  cancellationLine,
+  isLateCancellation,
+} from "../../services/venues/venueLogic";
+import {
+  fetchMyGymMemberships,
+  fetchVenue,
+  fetchVenues,
+} from "../../services/venues";
 import { recordListingEvent } from "../../services/marketplace/listingEvents";
-import { isLivePassState, parseListingSource, viewerSpotsLeft } from "../../services/marketplace/listingLogic";
-import { CLASS_HERO, CompactHeader, DetailHero, DetailLabel, DirectionsMenu, MapCard, useCompactHeader } from "./venueParts";
+import {
+  firstVisitText,
+  isLivePassState,
+  parseListingSource,
+  viewerSpotsLeft,
+} from "../../services/marketplace/listingLogic";
+import {
+  CompactHeader,
+  DirectionsMenu,
+  MapCard,
+  useCompactHeader,
+} from "./venueParts";
 import { range12, time12 } from "../../utils/time12";
-import { formatShortDate } from "../../utils/date";
+import { textPx, linePx } from "../../theme/textSize";
+import { marketPalette, type MarketPalette } from "../../theme/marketTokens";
+import {
+  doneBody,
+  doneWhen,
+  durationText,
+  longDate,
+  paymentLine,
+  seatLayout,
+  seatTone,
+  sheetPlace,
+  sheetWhen,
+  shortDate,
+  venueOf,
+} from "../../components/marketplace/classCardModel";
 
-// MO1.4.4 Class page (v6 Part B), with its states MO1.4.4.1 (booking popup),
-// .2 (booking confirmed), .3 (booked), .4 (full) and .5 (waitlist), opened by
-// a class card on Explore or the gym page's Classes tab
-// (/app/marketplace/class?id=…).
+// Market + Share 3.0 · W2 · Class detail (C-MO.4.3.1 `classDetail`,
+// `classDetailUnlisted`, `classDetailAlmost`) and Class booking (C-MO.4.3.2
+// `classSheet`, `classDone`), /app/marketplace/class?id=…. Literal values,
+// Client Explore Screens lines 275–358 and 184–202, script `cls`,
+// `seatPanel`, `seats`, `seatCols`, `pay("class")`, `done`:
+// - the page: padding 4 16 120 (the app shell gives the 16 sides; the header
+//   row sits 4 under the top inset): back 36 (chevron 18 / 2 --ink2, margin
+//   -7) and "CLASS" 10.5 / 700 0.1em --faint, gap 6; the title 24 / 30 800
+//   (margin-top 6); the venue 13 / 600 --accent (margin-top 2, opens the gym
+//   page, else the business page);
+// - the time card (margin-top 14): radius 20, 0.5px --hair, --card, padding
+//   18 16 16, centred: the date 11 / 700 0.1em caps --faint ("Friday, October
+//   16", D-02); the range 34 / 40 700 -0.02em tabular (margin-top 4), in the
+//   app's 12-hour form "6:30 to 7:15 PM" (D-03, range12: one meridiem when
+//   both ends share it, "11:30 AM to 12:30 PM" otherwise; a long range wraps
+//   to a second line); the 64% × 4 --segactive rule (margin 12 auto 0); the
+//   duration 11.5 --faint (margin-top 6);
+// - the seat panel (margin-top 18, radius 16, padding 20): #EEEAF8, or
+//   #E6F1EF with "Almost full" 13 / 700 (margin-bottom 12) when 3 or fewer are
+//   left; 17 dots (taken #AEA1DC, free #E6F1EF with 1.5px #4F8F8A) in a grid
+//   of ceil(cap / ceil(cap / 12)) columns, row gap 10, items centred; above
+//   36 places the bar (flex, gap 2, 10 tall cells radius 2, 1px border); then
+//   (margin-top 14, baseline, gap 6) "{left} of {cap}" 20 / 700 #7D67D9
+//   tabular and "spots left" 14 / 400 --ink2;
+// - the instructor (margin-top 12): the W1 InstructorCard, listed only when
+//   the class has a publicly listed instructor (D-11, the view's rule), never
+//   with "Hired via Centium" in Release 1; else "Instructor not listed";
+// - "About this class" 10.5 / 700 0.1em caps --faint (margin-top 18) and the
+//   about 13 / 19.5 --ink2 (margin-top 6);
+// - the pinned CTA "Book · $12": 52, radius 16, --fill, 15 / 800 --onfill.
+// The Book sheet is the lead's PurchaseSheet with the class ticket; the
+// confirmation is BookingDone ("You're booked", rows Class / When / Payment,
+// My bookings › Upcoming).
 //
-// v6 HERO PAGE: the hero scrolls away; once the name has passed under the top
-// edge the compact header (back + class name) fades in and stays, with its
-// hairline (no tabs on this page). The Date tile opens the class's other
-// sessions (OURS-class-other-times); the Location card opens Directions (S3).
+// Undrawn live features (PLAN §3.1 "ClassPage"), kept and drawn in the same
+// chrome: the date line opens "Other times" when the class has other
+// sessions; Level and What to bring under About (same caps label / body);
+// the free-cancellation and booking-window lines (12 / 18 --faint); Location
+// (MapCard, the address and the distance; it opens Directions); the Booked
+// block with Cancel booking (late-cancel warning in the confirmation);
+// the waitlist (join, position, leave) with Other times; the closed
+// business note; the cancelled-by-venue reason; signed out / offline (Book,
+// Cancel and the waitlist off; the offline strip); ?booked=1 (GymPage's
+// Book a class lands here confirmed) and ?src= (book_tap, once per session);
+// the venue's terms first (ClassTermsSheet, ATXE4); "Added to your calendar"
+// on the confirmation (book_class() adds it, with a 15-minute alert); the
+// compact header once the title passes under the top.
+// Not carried over: the 200 cover hero (the board draws the page without
+// one; business_classes.cover_url is no longer shown here, flagged to the
+// lead).
 //
-// WIRED TO BACKEND STAGE 4c (Database docs/HANDOVER_API.md "4c · Classes,
-// bookings, cancelling and the waitlist"): book_class() books (it copies the
-// price, records "pay at the studio" as 'cash' and adds the class to the
-// member's Calendar with a 15-minute alert, the backend's choice, V6-73);
-// cancel_class_booking() cancels (a late one is accepted and reported back as
-// not free; BR-14's window is warned before the call); "Full" is
-// class_seats_left() (it counts live waitlist offers); join / leave / my
-// position are the waitlist functions (BR-10).
-//
-// AND TO B9 ("B9 · Classes and schedule"): book_class() asks for the venue's
-// terms first (ATXE4): useClassBooking reads pending_policies(), shows them
-// (ClassTermsSheet), records each acceptance, then books. class_booking_rules()
-// gives the free-cancellation window and the booking window lines.
-// marketplace_classes supplies the class with its venue (address and
-// coordinates: PB-O-50, distance worked out on the device), about, level and
-// what to bring (PB-O-53), cover (PB-O-54) and the instructor when listed
-// publicly (PB-O-52). A cancelled class leaves that view; its page then says
-// it was cancelled (business_classes.cancelled_at, cancel_reason).
-//
-// BACKEND, NOT BUILT (pending states; nothing here is faked):
-// - PB-O-55 (B4, B9) class notifications: no UI here.
-// - The check-in QR ("Show check-in code"): no booking token exists.
-// Whish is shown as coming (X-29). A waitlist offer (the 30-minute hold)
-// isn't readable by the client, so the waitlist block can't say one is
-// waiting; confirming one is book_class(), reached from Book on this page.
+// WIRED TO BACKEND STAGE 4c and B9 (Database docs/HANDOVER_API.md): book_class
+// (terms first: pending_policies / accept, ATXE4), cancel_class_booking (a late
+// one is accepted and reported back as not free), class_seats_left (counts
+// live waitlist offers), class_booking_rules, the waitlist functions,
+// marketplace_classes (venue, about, level, what to bring, instructor when
+// listed publicly). A cancelled class leaves that view; its page then says so
+// (business_classes.cancelled_at, cancel_reason).
 
-/** "Sat, Oct 11" (Foundations copy rule 4). */
-function dayMonth(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  return formatShortDate(d, { weekday: "short", day: "numeric", month: "short" });
+/** The seat panel's literal colours (light: the board; dark: readable, D-05). */
+function seatColours(m: MarketPalette, dark: boolean) {
+  return dark
+    ? {
+        open: m.pale,
+        almost: m.tealbg,
+        taken: m.fill,
+        freeBg: m.tealbg,
+        freeRing: m.teal,
+        almostInk: m.teal,
+        fig: m.accent,
+      }
+    : // "Almost full" #4F8F8A is 3.2:1 on #E6F1EF; text takes #3A7570 (4.6:1), the lead's Q1 rule.
+      {
+        open: "#EEEAF8",
+        almost: "#E6F1EF",
+        taken: "#AEA1DC",
+        freeBg: "#E6F1EF",
+        freeRing: "#4F8F8A",
+        almostInk: "#3A7570",
+        fig: "#7D67D9",
+      };
 }
-
-const spotsText = (n: number) => (n <= 0 ? "Full" : `${n} ${n === 1 ? "spot" : "spots"}`);
-
-const PAY_OPTIONS = [
-  { key: "whish", icon: Wallet, name: "Whish Money", hint: "Coming soon" },
-  { key: "studio", icon: Store, name: "Pay at the studio", hint: "Cash or card on arrival" },
-] as const;
-type Pay = (typeof PAY_OPTIONS)[number]["key"];
 
 export function ClassPage({ classId }: { classId: string }) {
   const { authUserId, profileReady } = useApp();
   const navigate = useNavigate();
   const back = useBack("/app/marketplace");
   const online = useOnline();
+  const dark = useIsDark();
+  const m = marketPalette(dark);
+  const press = usePress();
   const [all, setAll] = useState<MarketplaceClass[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [booked, setBooked] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [sheetError, setSheetError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [params, setParams] = useSearchParams();
-  // MO1.4.2.1.1 books from the gym page and lands here confirmed (?booked=1).
-  const [popup, setPopup] = useState<"book" | "confirmed" | "cancel" | "times" | null>(params.get("booked") === "1" ? "confirmed" : null);
+  // GymPage's Book a class books and lands here confirmed (?booked=1).
+  const [done, setDone] = useState(params.get("booked") === "1");
+  const [popup, setPopup] = useState<"sheet" | "cancel" | "times" | null>(null);
   const [live, setLive] = useState<ClassLive | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [dirAnchor, setDirAnchor] = useState<HTMLButtonElement | null>(null);
   const [dirOpen, setDirOpen] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
-  // MO1.4.4.1: Whish is not available until payments exist, so the studio
-  // is the one choice that can be made today. The value stays in the form.
-  const [pay, setPay] = useState<Pay>("studio");
   const { setNameEl, setHeaderEl, shown: compactShown } = useCompactHeader();
 
   const load = useCallback(async () => {
-    const [cls, mine, detail] = await Promise.all([fetchMarketplaceClasses(), fetchMyBookedClassIds(), fetchClassLive(classId)]);
+    const [cls, mine, detail] = await Promise.all([
+      fetchMarketplaceClasses(),
+      fetchMyBookedClassIds(),
+      fetchClassLive(classId),
+    ]);
     setLive(detail);
     if (!cls.ok) {
       setLoadFailed(true);
@@ -125,8 +214,9 @@ export function ClassPage({ classId }: { classId: string }) {
   }, [classId]);
 
   useEffect(() => {
-    // Drop ?booked=1 once read, so a reload doesn't reopen the popup.
-    if (params.get("booked") === "1") setParams({ id: classId }, { replace: true });
+    // Drop ?booked=1 once read, so a reload doesn't reopen the confirmation.
+    if (params.get("booked") === "1")
+      setParams({ id: classId }, { replace: true });
   }, [params, setParams, classId]);
 
   useEffect(() => {
@@ -142,7 +232,10 @@ export function ClassPage({ classId }: { classId: string }) {
   // spots; anybody else sees the smaller of the two (as Discover's cards do).
   // Read only when the class has a Centium limit; null = not known yet (no cap).
   const capped = c?.centiumSpotsLeft != null ? c.businessId : null;
-  const [memberOf, setMemberOf] = useState<{ businessId: string; member: boolean } | null>(null);
+  const [memberOf, setMemberOf] = useState<{
+    businessId: string;
+    member: boolean;
+  } | null>(null);
   useEffect(() => {
     if (!capped || !profileReady) return;
     let alive = true;
@@ -151,86 +244,151 @@ export function ClassPage({ classId }: { classId: string }) {
         if (alive) setMemberOf({ businessId: capped, member: false });
         return;
       }
-      const [mine, gyms] = await Promise.all([fetchMyGymMemberships(), fetchVenues()]);
+      const [mine, gyms] = await Promise.all([
+        fetchMyGymMemberships(),
+        fetchVenues(),
+      ]);
       if (!alive || !mine.ok || !gyms.ok) return;
       const bizOf = new Map(gyms.value.map((g) => [g.id, g.businessId]));
-      setMemberOf({ businessId: capped, member: mine.value.some((m) => isLivePassState(m.passState) && bizOf.get(m.gymId) === capped) });
+      setMemberOf({
+        businessId: capped,
+        member: mine.value.some(
+          (m) => isLivePassState(m.passState) && bizOf.get(m.gymId) === capped,
+        ),
+      });
     })();
     return () => {
       alive = false;
     };
   }, [capped, profileReady, authUserId]);
-  const isMember = memberOf && memberOf.businessId === capped ? memberOf.member : true;
-  // B13 MK-07: Book on this page, once per session per class (the session gate).
+  const isMember =
+    memberOf && memberOf.businessId === capped ? memberOf.member : true;
+  // B13 MK-07: Book on this page records book_tap, once per session per class.
   const listingSource = parseListingSource(params.get("src"));
-  // MO1.4.4.4 "Other times" and OURS-class-other-times: the same class at the
-  // same place, straight from the list (no new read), soonest first.
-  const openOther = (id: string) => navigate(`/app/marketplace/class?id=${encodeURIComponent(id)}`, { replace: true });
+  // Other times: the same class at the same place, straight from the list (no
+  // new read), soonest first.
+  const openOther = (id: string) =>
+    navigate(`/app/marketplace/class?id=${encodeURIComponent(id)}`, {
+      replace: true,
+    });
   const sessions = useMemo(
     () =>
       c && all
         ? all
             .filter((x) => x.title === c.title && x.businessId === c.businessId)
-            .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
+            .sort(
+              (a, b) =>
+                a.date.localeCompare(b.date) ||
+                a.startTime.localeCompare(b.startTime),
+            )
         : [],
-    [all, c]
+    [all, c],
   );
-  const others = useMemo(() => sessions.filter((x) => x.classId !== classId).slice(0, 3), [sessions, classId]);
+  const others = useMemo(
+    () => sessions.filter((x) => x.classId !== classId).slice(0, 3),
+    [sessions, classId],
+  );
 
   // PB-O-50: the distance, on the device, when the device has already shared
   // its position (never prompted here).
   const here = useKnownPosition();
-  const venueCoords = c && c.venueLat != null && c.venueLng != null ? { lat: c.venueLat, lng: c.venueLng } : null;
-  const distance = here && venueCoords ? distanceText(distanceKm(here, venueCoords)) : null;
+  const venueCoords =
+    c && c.venueLat != null && c.venueLng != null
+      ? { lat: c.venueLat, lng: c.venueLng }
+      : null;
+  const distance =
+    here && venueCoords ? distanceText(distanceKm(here, venueCoords)) : null;
 
-  // PB-O-52 #20: the instructor's role from the public directory (the view
-  // gives the name and photo only, and only when they are listed).
+  // PB-O-52: the instructor's role and rating from the public directory (the
+  // view gives the name and photo only, and only when they are listed).
   const instructorId = c?.instructorId ?? null;
-  const [role, setRole] = useState<{ id: string; text: string | null } | null>(null);
+  const [listing, setListing] = useState<{
+    id: string;
+    role: string | null;
+    rating: number | null;
+    reviews: number;
+  } | null>(null);
   useEffect(() => {
     if (!instructorId) return;
     let on = true;
     void fetchListing(instructorId).then((l) => {
       if (!on) return;
       // "Personal Trainer", as the directory card's type line.
-      const type = l?.subtype ? SUBTYPE_SINGULAR[l.subtype].replace(/\b\w/g, (ch) => ch.toUpperCase()) : null;
-      setRole({ id: instructorId, text: l ? instructorRole(l.specialty, type) : null });
+      const type = l?.subtype
+        ? SUBTYPE_SINGULAR[l.subtype].replace(/\b\w/g, (ch) => ch.toUpperCase())
+        : null;
+      setListing({
+        id: instructorId,
+        role: l ? instructorRole(l.specialty, type) : null,
+        rating: l?.averageRating ?? null,
+        reviews: l?.reviewCount ?? 0,
+      });
     });
     return () => {
       on = false;
     };
   }, [instructorId]);
-  const roleText = role && role.id === instructorId ? role.text : null;
+  const instructor = listing && listing.id === instructorId ? listing : null;
 
-  // B9: Confirm booking asks for the venue's terms first when any wait
-  // (the sheet replaces the popup), then books; "Agree and book" records the
-  // acceptances and books.
-  const booking = useClassBooking({ classId: c?.classId ?? null, businessId: c?.businessId ?? null, userId: authUserId ?? null });
+  // The confirmation's first-visit line: the venue's own (gyms.first_visit).
+  const gymId = c?.gymId ?? live?.gymId ?? null;
+  const [firstVisit, setFirstVisit] = useState<{
+    gymId: string;
+    text: string | null;
+  } | null>(null);
+  useEffect(() => {
+    if (!gymId) return;
+    let on = true;
+    void fetchVenue(gymId).then((r) => {
+      if (on)
+        setFirstVisit({
+          gymId,
+          text: r.ok ? firstVisitText(r.value?.firstVisit) : null,
+        });
+    });
+    return () => {
+      on = false;
+    };
+  }, [gymId]);
+
+  // B9: Confirm asks for the venue's terms first when any wait (the terms
+  // sheet replaces the booking sheet), then books; "Agree and book" records
+  // the acceptances and books.
+  const booking = useClassBooking({
+    classId: c?.classId ?? null,
+    businessId: c?.businessId ?? null,
+    userId: authUserId ?? null,
+  });
   // CP: a closed or paused business takes no new bookings or waitlist places; a booking already made stays.
   const bizStatus = useBusinessStatus(c?.businessId);
-  const settle = async (r: BookOutcome) => {
+  const settle = async (r: BookOutcome, fromSheet: boolean) => {
     if (r.kind === "terms") {
       setPopup(null);
       return;
     }
     if (r.kind === "error") {
       if (!r.message) return;
-      setPopup(null);
-      setError(r.message);
+      // A refusal from the sheet stays in the sheet; one after the terms
+      // (the sheet is gone) shows on the page.
+      if (fromSheet) setSheetError(r.message);
+      else setError(r.message);
       await load();
       return;
     }
     setError(null);
+    setSheetError(null);
     setNote(null);
+    setPopup(null);
     await load();
-    setPopup("confirmed");
+    setDone(true);
   };
   const book = async () => {
     if (!c || !authUserId || booking.busy) return;
-    await settle(await booking.start());
+    setSheetError(null);
+    await settle(await booking.start(), true);
   };
   const agree = async () => {
-    await settle(await booking.agree());
+    await settle(await booking.agree(), false);
   };
 
   const cancel = async () => {
@@ -248,7 +406,7 @@ export function ClassPage({ classId }: { classId: string }) {
     setNote(
       r.value.wasFree
         ? "Booking cancelled. It was free to cancel."
-        : "Booking cancelled. It was inside the free-cancellation window, so the studio may charge for it."
+        : "Booking cancelled. It was inside the free-cancellation window, so the studio may charge for it.",
     );
     await load();
   };
@@ -256,7 +414,9 @@ export function ClassPage({ classId }: { classId: string }) {
   const waitlist = async (join: boolean) => {
     if (!c || busy) return;
     setBusy(true);
-    const r = join ? await joinClassWaitlist(c.classId) : await leaveClassWaitlist(c.classId);
+    const r = join
+      ? await joinClassWaitlist(c.classId)
+      : await leaveClassWaitlist(c.classId);
     setBusy(false);
     if (!r.ok) {
       setError(r.message);
@@ -272,40 +432,149 @@ export function ClassPage({ classId }: { classId: string }) {
     void load();
   };
 
-  // K11 / O-LOAD: the hero's placeholder and text skeletons (pulse 1.2 s).
+  const caps: React.CSSProperties = {
+    margin: 0,
+    fontSize: textPx(10.5),
+    fontWeight: 700,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    color: m.faint,
+  };
+  const body: React.CSSProperties = {
+    margin: "6px 0 0",
+    fontSize: textPx(13),
+    lineHeight: linePx(19.5),
+    color: m.ink2,
+    whiteSpace: "pre-wrap",
+    overflowWrap: "anywhere",
+  };
+
+  // The back row and "CLASS" (the page's own header; 4 under the top inset).
+  const header = (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        marginLeft: -7,
+        marginTop: -20,
+      }}
+    >
+      <button
+        type="button"
+        onClick={back}
+        aria-label="Back"
+        className="tap market-focus"
+        style={{
+          width: 36,
+          height: 36,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: m.ink2,
+          background: "none",
+          border: 0,
+          padding: 0,
+          borderRadius: 999,
+        }}
+      >
+        <svg
+          width={18}
+          height={18}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+          style={NO_ICON_SCALE}
+        >
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+      </button>
+      <div
+        style={{
+          fontSize: textPx(10.5),
+          fontWeight: 700,
+          letterSpacing: "0.1em",
+          color: m.faint,
+        }}
+      >
+        CLASS
+      </div>
+    </div>
+  );
+
+  // D-04 loading: the page's shapes (title, venue, time card, instructor).
   if (all === null) {
     return (
-      <div aria-busy="true">
-        <DetailHero height={200} onBack={back} colors={CLASS_HERO} />
-        <div className="flex flex-col gap-3 pt-4">
-          <div className="h-[33px] w-2/3 rounded-xl bg-cream-soft animate-skeleton-pulse" />
-          <div className="h-[74px] rounded-[14px] bg-cream-soft animate-skeleton-pulse" />
-          <div className="h-[120px] rounded-2xl bg-cream-soft animate-skeleton-pulse" />
-        </div>
+      <div style={{ lineHeight: "normal", color: m.ink }}>
+        <style>{FOCUS_CSS}</style>
+        {header}
+        <div
+          aria-hidden
+          className="animate-skeleton-pulse"
+          style={{
+            marginTop: 6,
+            height: 30,
+            width: "55%",
+            borderRadius: 10,
+            background: m.soft,
+          }}
+        />
+        <div
+          aria-hidden
+          className="animate-skeleton-pulse"
+          style={{
+            marginTop: 6,
+            height: 16,
+            width: "40%",
+            borderRadius: 8,
+            background: m.soft,
+          }}
+        />
+        <MarketSkeleton
+          radius={20}
+          height={275}
+          rows={3}
+          label="Loading the class"
+          style={{ marginTop: 14 }}
+        />
+        <MarketSkeleton
+          radius={18}
+          height={72}
+          rows={2}
+          label="Loading the instructor"
+          style={{ marginTop: 12 }}
+        />
       </div>
     );
   }
 
   if (!c) {
     return (
-      <div>
-        <DetailHero height={200} onBack={back} colors={CLASS_HERO} />
-        {loadFailed ? (
-          // K10 / O-ERR.
-          <RetryLine className="mt-6 justify-center" message={online ? "Couldn't load this class." : "You're offline. Try again when you're connected."} onRetry={retry} />
-        ) : live?.cancelledAt ? (
-          // B9 (CL-03): a cancelled class leaves marketplace_classes; its page
-          // says so, with the venue's reason when it gave one (verbatim).
-          <div className="mt-6 text-center" data-class-cancelled="">
-            <p className="m-0 text-[13px] font-bold text-charcoal">This class was cancelled by the venue.</p>
-            {live.cancelReason && (
-              <p className="mt-1 mb-0 text-[13px] text-charcoal-faint whitespace-pre-wrap [overflow-wrap:anywhere]">{live.cancelReason}</p>
-            )}
-          </div>
-        ) : (
-          // K9.
-          <p className="mt-6 text-center text-[13px] text-charcoal-faint">This class isn't available any more.</p>
-        )}
+      <div style={{ lineHeight: "normal", color: m.ink }}>
+        <style>{FOCUS_CSS}</style>
+        {header}
+        <div style={{ marginTop: 14 }}>
+          {loadFailed ? (
+            // D-04 error / offline, with Retry.
+            <MarketError thing="this class" onRetry={retry} />
+          ) : live?.cancelledAt ? (
+            // B9 (CL-03): a cancelled class leaves marketplace_classes; its
+            // page says so, with the venue's reason when it gave one (verbatim).
+            <div data-class-cancelled="">
+              <MarketEmptyCard
+                title="This class was cancelled by the venue."
+                body={live.cancelReason ?? undefined}
+                style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
+              />
+            </div>
+          ) : (
+            <MarketEmptyCard title="This class isn't available any more." />
+          )}
+        </div>
       </div>
     );
   }
@@ -313,192 +582,389 @@ export function ClassPage({ classId }: { classId: string }) {
   const mine = booked.has(c.classId);
   const free = !c.priceValue;
   const priceText = free ? "Free" : c.price;
-  // MO1.4.4.4 "Full" is class_seats_left() (it counts live waitlist offers);
-  // the view's own count is the fallback when that read failed.
-  const seatsLeft = viewerSpotsLeft(live?.seatsLeft ?? c.spotsRemaining, c.centiumSpotsLeft, isMember);
-  const isFull = seatsLeft <= 0;
+  // "Full" is class_seats_left() (it counts live waitlist offers); the view's
+  // own count is the fallback when that read failed.
+  const seatsLeft = viewerSpotsLeft(
+    live?.seatsLeft ?? c.spotsRemaining,
+    c.centiumSpotsLeft,
+    isMember,
+  );
+  const cap = Math.max(0, c.maxCapacity);
+  const left = Math.min(cap, seatsLeft);
+  const taken = cap - left;
+  const isFull = left <= 0;
   const full = isFull && !mine;
   const position = mine ? null : (live?.waitlistPosition ?? null);
   const windowHours = live?.windowHours ?? 12;
   // CL-05: "Bookings open 14 days ahead." (or the day they open), shown
   // until the member holds the booking.
-  const windowLine = live?.rules && !mine ? bookingWindowLine(live.rules, live.startsAt ?? c.startsAt ?? null) : null;
+  const windowLine =
+    live?.rules && !mine
+      ? bookingWindowLine(live.rules, live.startsAt ?? c.startsAt ?? null)
+      : null;
   const level = levelLabel(c.level);
   const bring = whatToBringLine(c.whatToBring);
   const about = c.about?.trim() || c.notes?.trim() || null;
   const address = c.venueAddress?.trim() || c.location;
-  const late = live?.startsAt ? isLateCancellation(live.startsAt, windowHours) : false;
-  const taken = c.maxCapacity - seatsLeft;
-  const when = `${dayMonth(c.date)} · ${range12(c.startTime, c.endTime)}`;
+  const late = live?.startsAt
+    ? isLateCancellation(live.startsAt, windowHours)
+    : false;
+  const range = range12(c.startTime, c.endTime);
+  const when = `${shortDate(c.date)} · ${range}`;
   const manyTimes = sessions.length > 1;
   const flash = (text: string) => {
     setCopied(text);
     setTimeout(() => setCopied(null), 1600);
   };
+  const sc = seatColours(m, dark);
+  const tone = seatTone(left);
+  const seats = seatLayout(cap, taken);
+  const listed = !!(c.instructorId && c.instructorName);
+  const venueTo = gymId
+    ? `/app/marketplace/gym?id=${encodeURIComponent(gymId)}`
+    : `/app/marketplace/business?id=${encodeURIComponent(c.businessId)}`;
 
-  // #12-15: info tiles, gap 8, r14, #F7F7FA (dark #242730, O3), pad 10 8; a
-  // 16 icon #7D67D9 / #9A8CD6 4 above the value 12/18 700, the label
-  // 10.5/15.8 400 directly under. Level (PB-O-53, B9): the third tile,
-  // Activity, three 114 wide; without a level two tiles, 175 each
-  // (O-NOLEVEL). The Date tile is a button with a
-  // ChevronDown 12 when the class has other sessions (OURS-class-other-times).
-  const tileInner = (Icon: typeof Clock, value: string, label: string, chevron = false) => (
-    <>
-      <Icon size={16} strokeWidth={1.75} className="mb-1 text-th-7d67d9 dark:text-primary-accent" aria-hidden />
-      <span className="inline-flex items-center gap-1 text-[12px] leading-[18px] font-bold text-charcoal tabular-nums">
-        {value}
-        {chevron && <ChevronDown size={12} strokeWidth={2} className="text-charcoal-faint" aria-hidden />}
-      </span>
-      <span className="text-[10.5px] leading-[15.8px] text-charcoal-faint">{label}</span>
-    </>
-  );
-  const tileClass = "rounded-[14px] bg-[#F7F7FA] dark:bg-cream-soft px-2 py-2.5 flex flex-col items-center text-center";
+  const dateLine: React.CSSProperties = {
+    fontSize: textPx(11),
+    fontWeight: 700,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    color: m.faint,
+  };
+  const dangerLink: React.CSSProperties = {
+    alignSelf: "center",
+    height: 44,
+    padding: "0 12px",
+    margin: "-6px 0",
+    background: "none",
+    border: 0,
+    font: "inherit",
+    fontSize: textPx(12.5),
+    fontWeight: 700,
+    color: m.high,
+    cursor: "pointer",
+  };
+  // Everything pinned in the CTA's place sits on one --card panel (radius 20, 0.5px --hair, padding 12, gap 10, the sheet shadow) so it reads over the page.
+  const panel: React.CSSProperties = {
+    borderRadius: 20,
+    background: m.card,
+    border: `0.5px solid ${m.hair}`,
+    padding: 12,
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+    boxShadow: "var(--shadow-sheet)",
+    lineHeight: "normal",
+  };
+  const offStyle = (off: boolean): React.CSSProperties =>
+    off ? { opacity: 0.4, cursor: "default" } : {};
 
   return (
-    <div>
-      <CompactHeader title={c.title} onBack={back} shown={compactShown} hairline headerRef={setHeaderEl} />
-
-      {/* #1-6 / PB-O-54: the class's cover (business_classes.cover_url, a
-          public class-covers URL) over the placeholder, which stays when there
-          is none or it fails to load. */}
-      <DetailHero height={200} onBack={back} colors={CLASS_HERO} coverUrl={c.coverUrl ?? null} />
-
-      {/* #9-11: 16 under the hero, the name 22/33 800 (no tracking; two lines
-          at most); the venue 13/19.5 700 #7D67D9 / #9A8CD6 (opens the gym
-          page, else the business page, K12; the venue's name when the class
-          has one), then the place 400 muted and the distance (PB-O-50). The
-          name drives the compact header. */}
-      <h1 ref={setNameEl} className="mt-4 mb-0 text-[22px] leading-[33px] font-extrabold text-charcoal line-clamp-2 [overflow-wrap:anywhere]">
+    <div style={{ lineHeight: "normal", color: m.ink }}>
+      <style>{FOCUS_CSS}</style>
+      <CompactHeader
+        title={c.title}
+        onBack={back}
+        shown={compactShown}
+        hairline
+        headerRef={setHeaderEl}
+      />
+      {header}
+      <h1
+        ref={setNameEl}
+        style={{
+          margin: "6px 0 0",
+          fontSize: textPx(24),
+          lineHeight: linePx(30),
+          fontWeight: 800,
+          overflowWrap: "anywhere",
+        }}
+      >
         {c.title}
       </h1>
-      <p className="mt-0.5 mb-0 text-[13px] leading-[19.5px] text-charcoal-faint">
-        <Link
-          to={(c.gymId ?? live?.gymId) ? `/app/marketplace/gym?id=${encodeURIComponent((c.gymId ?? live?.gymId)!)}` : `/app/marketplace/business?id=${encodeURIComponent(c.businessId)}`}
-          className="font-bold no-underline text-th-7d67d9 dark:text-primary-accent"
-        >
-          {c.venueName?.trim() || c.businessName}
-        </Link>
-        {c.location ? ` · ${c.location}` : ""}
-        {distance ? ` · ${distance}` : ""}
-      </p>
+      <Link
+        to={venueTo}
+        className="market-focus hit"
+        style={{
+          display: "block",
+          width: "fit-content",
+          marginTop: 2,
+          fontSize: textPx(13),
+          fontWeight: 600,
+          color: m.accent,
+          textDecoration: "none",
+        }}
+      >
+        {venueOf(c)}
+      </Link>
 
-      <div className={`mt-[14px] grid ${level ? "grid-cols-3" : "grid-cols-2"} gap-2`} data-info-tiles="">
+      {/* The time card and the seat panel. */}
+      <div
+        data-time-card=""
+        style={{
+          marginTop: 14,
+          borderRadius: 20,
+          border: `0.5px solid ${m.hair}`,
+          background: m.card,
+          padding: "18px 16px 16px",
+          textAlign: "center",
+        }}
+      >
         {manyTimes ? (
           <button
             type="button"
             onClick={() => setPopup("times")}
             aria-haspopup="dialog"
-            aria-label={`Date, ${dayMonth(c.date)}. Other times`}
-            className={`tap ${tileClass}`}
+            aria-label={`${longDate(c.date)}. Other times`}
+            className="tap market-focus"
+            style={{
+              ...dateLine,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              background: "none",
+              border: 0,
+              padding: 0,
+              font: "inherit",
+              fontSize: textPx(11),
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
           >
-            {tileInner(CalendarDays, dayMonth(c.date), "Date", true)}
+            {longDate(c.date)}
+            <svg
+              width={12}
+              height={12}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.4}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+              style={NO_ICON_SCALE}
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
           </button>
         ) : (
-          <div className={tileClass}>{tileInner(CalendarDays, dayMonth(c.date), "Date")}</div>
+          <div style={dateLine}>{longDate(c.date)}</div>
         )}
-        <div className={tileClass}>{tileInner(Clock, range12(c.startTime, c.endTime), "Time")}</div>
-        {level && <div className={tileClass}>{tileInner(Activity, level, "Level")}</div>}
-      </div>
-
-      {/* #16-21 / PB-O-52 (S1b): the instructor, only when the professional
-          is listed publicly (the view's instructor columns are null
-          otherwise): 358 × 61.1, pad 10 12, 14 under the tiles, r16, 0.5px
-          #241F1B@8% / #F5F3FA@8%; a 40 disc #E7E2F6 (dark primary-pale
-          #303141, O3) with the photo, else the avatar glyph; 12 to the name
-          14/21 700 and the role 12/18 600 #7D67D9 / #9A8CD6; ChevronRight 16
-          #8C8378 / #B8B3C7. The row opens their profile. */}
-      {c.instructorId && c.instructorName && (
-        <Link
-          to={`/app/professionals/${encodeURIComponent(c.instructorId)}`}
-          data-instructor-card=""
-          className="tap mt-[14px] rounded-2xl border-[0.5px] border-hair-08 px-3 py-2.5 flex items-center gap-3 no-underline"
+        <div
+          style={{
+            marginTop: 4,
+            fontSize: textPx(34),
+            lineHeight: linePx(40),
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+            fontVariantNumeric: "tabular-nums",
+            textWrap: "balance",
+          }}
         >
-          <span className="w-10 h-10 rounded-full bg-[#E7E2F6] dark:bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden" aria-hidden>
-            <VenueImage srcs={[c.instructorAvatarUrl]} className="w-full h-full" fallback={<AvatarPlaceholder size={40} />} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[14px] leading-[21px] font-bold text-charcoal truncate">{c.instructorName}</span>
-            {roleText && <span className="block text-[12px] leading-[18px] font-semibold text-th-7d67d9 dark:text-primary-accent truncate">{roleText}</span>}
-          </span>
-          <ChevronRight size={16} strokeWidth={1.75} className="shrink-0 text-charcoal-faint" aria-hidden />
-        </Link>
-      )}
-
-      {/* #22-24: "4 of 12 spots left" 13/19.5 700, 14 under the instructor
-          card (under the tiles without one, O-NOINST); a 5 tall track 6 under it, #E4F0EE
-          (dark teal-pale, O3), the fill #6F9993 / #4F8F8A; full: a muted
-          fill and the "Class full" tag (K5). */}
-      <div className="mt-[14px]">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[13px] leading-[19.5px] font-bold text-charcoal tabular-nums">
-            {isFull ? `${c.maxCapacity - seatsLeft} of ${c.maxCapacity} booked` : `${seatsLeft} of ${c.maxCapacity} spots left`}
-          </span>
-          {isFull && (
-            <span className="h-5 px-2 rounded-full bg-cream-soft text-[11px] font-bold text-charcoal-soft inline-flex items-center">Class full</span>
-          )}
+          {range}
         </div>
-        <div className="mt-1.5 h-[5px] rounded-full bg-th-e4f0ee dark:bg-teal-pale overflow-hidden" aria-hidden data-spots-track="">
+        <div
+          aria-hidden
+          style={{
+            margin: "12px auto 0",
+            width: "64%",
+            height: 4,
+            borderRadius: 999,
+            background: m.segactive,
+          }}
+        />
+        <div style={{ marginTop: 6, fontSize: textPx(11.5), color: m.faint }}>
+          {durationText(c.startTime, c.endTime)}
+        </div>
+        <div
+          data-seat-panel={tone}
+          style={{
+            marginTop: 18,
+            borderRadius: 16,
+            padding: 20,
+            background: tone === "almost" ? sc.almost : sc.open,
+          }}
+        >
+          {tone !== "open" && (
+            <div
+              style={{
+                marginBottom: 12,
+                fontSize: textPx(13),
+                fontWeight: 700,
+                color: tone === "almost" ? sc.almostInk : m.ink2,
+              }}
+            >
+              {tone === "almost" ? "Almost full" : "Class full"}
+            </div>
+          )}
+          {cap > 0 &&
+            (seats.kind === "dots" ? (
+              <div
+                aria-hidden
+                data-seats="dots"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${seats.cols},minmax(0,1fr))`,
+                  rowGap: 10,
+                  justifyItems: "center",
+                }}
+              >
+                {seats.seats.map((t, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      width: 17,
+                      height: 17,
+                      borderRadius: 999,
+                      boxSizing: "border-box",
+                      background: t ? sc.taken : sc.freeBg,
+                      border: `1.5px solid ${t ? sc.taken : sc.freeRing}`,
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div
+                aria-hidden
+                data-seats="bar"
+                style={{ display: "flex", gap: 2 }}
+              >
+                {seats.seats.map((t, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      flex: 1,
+                      height: 10,
+                      borderRadius: 2,
+                      boxSizing: "border-box",
+                      background: t ? sc.taken : sc.freeBg,
+                      border: `1px solid ${t ? sc.taken : sc.freeRing}`,
+                    }}
+                  />
+                ))}
+              </div>
+            ))}
           <div
-            className={`h-full rounded-full ${isFull ? "bg-charcoal-faint" : "bg-th-6f9993 dark:bg-teal-dark"}`}
-            style={{ width: `${c.maxCapacity > 0 ? Math.min(100, (taken / c.maxCapacity) * 100) : 0}%` }}
-          />
+            style={{
+              marginTop: 14,
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "center",
+              gap: 6,
+            }}
+          >
+            <span
+              style={{
+                fontSize: textPx(20),
+                fontWeight: 700,
+                color: sc.fig,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >{`${left} of ${cap}`}</span>
+            <span
+              style={{ fontSize: textPx(14), fontWeight: 400, color: m.ink2 }}
+            >
+              spots left
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* O-OFF: what was loaded stays; Book, Cancel and the waitlist are off. */}
-      {!online && (
-        <p role="status" className="mt-3 mb-0 text-[12px] leading-[18px] font-semibold text-charcoal-soft">
-          You're offline. Showing what was loaded.
-        </p>
+      {/* D-11 (Release 1): the listed card only for a publicly listed
+          instructor, without "Hired via Centium". */}
+      {listed ? (
+        <InstructorCard
+          listed
+          id={c.instructorId!}
+          name={c.instructorName!}
+          photoUrl={c.instructorAvatarUrl ?? null}
+          specialty={instructor?.role ?? "Instructor"}
+          rating={instructor?.rating ?? null}
+          reviewCount={instructor?.reviews ?? 0}
+          to={`/app/professionals/${encodeURIComponent(c.instructorId!)}`}
+          style={{ marginTop: 12 }}
+        />
+      ) : (
+        <InstructorCard listed={false} style={{ marginTop: 12 }} />
       )}
-      {online && loadFailed && <RetryLine className="mt-3" message="Couldn't load this class." onRetry={() => void load()} />}
+
+      {/* The page's strips: offline, a failed refresh, a refusal, a note. */}
+      <MarketOffline loaded style={{ marginTop: 12 }} />
+      {online && loadFailed && (
+        <MarketError
+          thing="this class"
+          onRetry={() => void load()}
+          style={{ marginTop: 12 }}
+        />
+      )}
       {error && (
-        <p role="alert" className="mt-3 text-[12px] font-semibold text-status-high">
-          {error}
-        </p>
+        <ConfirmationStrip
+          tone="error"
+          text={error}
+          still
+          style={{ marginTop: 12 }}
+        />
       )}
       {note && (
-        <p role="status" className="mt-3 text-[12px] font-semibold text-charcoal-soft">
-          {note}
-        </p>
+        <ConfirmationStrip
+          tone="neutral"
+          text={note}
+          style={{ marginTop: 12 }}
+        />
       )}
 
-      {/* #25-26: About this class, business_classes.about (B9, EX-01), the
-          class notes when there is none; hidden with neither. */}
       {about && (
         <>
-          <DetailLabel className="mt-[22px]">About this class</DetailLabel>
-          <p className="mt-2 mb-0 text-[14px] leading-[22.4px] text-charcoal-soft whitespace-pre-wrap [overflow-wrap:anywhere]">{about}</p>
+          <h2 style={{ ...caps, marginTop: 18 }}>About this class</h2>
+          <p style={body}>{about}</p>
         </>
       )}
-
-      {/* #25 / #27 PB-O-53: What to bring, 14/21 400, the items joined with
-          " · "; hidden when empty. */}
+      {level && (
+        <>
+          <h2 style={{ ...caps, marginTop: 18 }}>Level</h2>
+          <p style={body} data-class-level="">
+            {level}
+          </p>
+        </>
+      )}
       {bring && (
         <>
-          <DetailLabel className="mt-[22px]">What to bring</DetailLabel>
-          <p className="mt-2 mb-0 text-[14px] leading-[21px] text-charcoal-soft [overflow-wrap:anywhere]" data-what-to-bring="">
+          <h2 style={{ ...caps, marginTop: 18 }}>What to bring</h2>
+          <p style={body} data-what-to-bring="">
             {bring}
           </p>
         </>
       )}
-
-      {/* #28: BR-14's window, 12/18 400 muted, 14 under What to bring (else
-          About), from class_booking_rules() (B9). Under it, the same style,
-          the booking window (CL-05, OURS: the frame draws one line). */}
-      <p className="mt-3.5 mb-0 text-[12px] leading-[18px] text-charcoal-faint">{cancellationLine(windowHours)}</p>
+      {/* BR-14's window and the booking window (CL-05), from class_booking_rules(). */}
+      <p
+        style={{
+          margin: "14px 0 0",
+          fontSize: textPx(12),
+          lineHeight: linePx(18),
+          color: m.faint,
+        }}
+      >
+        {cancellationLine(windowHours)}
+      </p>
       {windowLine && (
-        <p className="m-0 text-[12px] leading-[18px] text-charcoal-faint" data-booking-window="">
+        <p
+          style={{
+            margin: 0,
+            fontSize: textPx(12),
+            lineHeight: linePx(18),
+            color: m.faint,
+          }}
+          data-booking-window=""
+        >
           {windowLine}
         </p>
       )}
 
-      {/* #29-33 and S3: the Location card opens Directions; the venue's street
-          address and coordinates (PB-O-50), else the business's place. */}
-      <DetailLabel className="mt-[22px]">Location</DetailLabel>
-      <div className="mt-2">
+      {/* Location: the venue's address and coordinates (PB-O-50); opens Directions. */}
+      <h2 style={{ ...caps, marginTop: 18 }}>Location</h2>
+      <div style={{ marginTop: 8 }}>
         <MapCard
-          address={address}
+          address={[address, distance].filter(Boolean).join(" · ") || null}
           onOpen={
             address || venueCoords
               ? (e) => {
@@ -510,174 +976,295 @@ export function ClassPage({ classId }: { classId: string }) {
         />
       </div>
       {copied && (
-        <p role="status" className="mt-3 text-center text-[12px] font-semibold text-charcoal-soft">
-          {copied}
-        </p>
+        <ConfirmationStrip
+          tone="teal"
+          text={copied}
+          style={{ marginTop: 12 }}
+        />
       )}
 
-      {/* Room for whatever is pinned over the bottom: the page's own 112
-          plus the CTA (60), the booked block (140) or the full row (150). */}
-      <div aria-hidden style={{ height: mine ? 160 : position !== null ? 190 : full ? 150 : 60 }} />
+      {/* Room for whatever is pinned over the bottom (the shell keeps 112 for the navbar). */}
+      <div
+        aria-hidden
+        style={{
+          height: mine ? 170 : position !== null ? 200 : full ? 160 : 68,
+        }}
+      />
 
       {mine ? (
-        // MO1.4.4.3 (K3): the teal Booked block in the CTA's place
-        // (secondary.tint, a 1 px #C1D5D2 edge, r16, padding 14): a 36 white
-        // disc with Check 17/2.4, "You're booked" 14/800, the time 12/400;
-        // under it "Cancel booking" 12.5/700 in danger and BR-14's line.
+        // Booked: a teal block in the CTA's place (--tealbg, radius 16,
+        // padding 14): a 36 --card disc with the tick, "You're booked" 14 / 800
+        // --tealink, the time 12 --ink2; then "Cancel booking" in --high and
+        // BR-14's line.
         <PinnedSlot>
-          <div className="rounded-2xl border bg-th-e7f2f0 border-th-c1d5d2 dark:bg-teal-pale dark:border-teal-dark/50 p-3.5 flex items-center gap-3">
-            <span className="w-9 h-9 rounded-full bg-cream-card flex items-center justify-center shrink-0 text-th-3c6b65 dark:text-teal-deep-text" aria-hidden>
-              <Check size={17} strokeWidth={2.4} />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[14px] font-extrabold text-th-3c6b65 dark:text-teal-deep-text">You're booked</span>
-              <span className="block text-[12px] text-charcoal-soft tabular-nums">{when}</span>
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setPopup("cancel")}
-            disabled={busy || !online}
-            className="tap self-center h-11 px-3 -my-1.5 text-[12.5px] font-bold text-status-high disabled:opacity-40"
-          >
-            Cancel booking
-          </button>
-          <p className="m-0 -mt-1.5 text-center text-[11.5px] text-charcoal-faint">{cancellationLine(windowHours)}</p>
-        </PinnedSlot>
-      ) : position !== null ? (
-        // MO1.4.4.5 (K6): Other times stay; a lavender block with a 40 white
-        // disc "#3", "You're #3 on the waitlist." then 13/400; "Leave
-        // waitlist" 12.5/700 in danger.
-        <PinnedSlot>
-          {others.length > 0 && <OtherTimes others={others} onOpen={openOther} />}
-          <div className="rounded-2xl border border-th-a79ad5/60 bg-primary-pale dark:border-primary-accent/40 p-3.5 flex items-center gap-3">
-            <span className="w-10 h-10 rounded-full bg-cream-card flex items-center justify-center shrink-0 text-[14px] font-extrabold text-th-7d67d9 dark:text-primary-accent tabular-nums">
-              #{position}
-            </span>
-            <p className="m-0 min-w-0 text-[13px] leading-[1.45] text-charcoal-soft">
-              <span className="text-[14px] font-extrabold text-th-7d67d9 dark:text-primary-accent">You're #{position} on the waitlist.</span> We'll notify you
-              if a spot opens.
+          <div style={panel}>
+            <div
+              data-booked-block=""
+              style={{
+                borderRadius: 16,
+                background: m.tealbg,
+                padding: 14,
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                lineHeight: "normal",
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 999,
+                  background: m.card,
+                  color: m.tealink,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <svg
+                  width={17}
+                  height={17}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.6}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={NO_ICON_SCALE}
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </span>
+              <span style={{ minWidth: 0 }}>
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: textPx(14),
+                    fontWeight: 800,
+                    color: m.tealink,
+                  }}
+                >
+                  You're booked
+                </span>
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: textPx(12),
+                    color: m.ink2,
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {when}
+                </span>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => !(busy || !online) && setPopup("cancel")}
+              aria-disabled={busy || !online || undefined}
+              className="market-focus"
+              style={{ ...dangerLink, ...offStyle(busy || !online) }}
+            >
+              Cancel booking
+            </button>
+            <p
+              style={{
+                margin: "-6px 0 0",
+                textAlign: "center",
+                fontSize: textPx(11.5),
+                color: m.faint,
+                lineHeight: "normal",
+              }}
+            >
+              {cancellationLine(windowHours)}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => void waitlist(false)}
-            disabled={busy || !online}
-            className="tap self-center h-11 px-3 -my-1.5 text-[12.5px] font-bold text-status-high disabled:opacity-40"
-          >
-            Leave waitlist
-          </button>
+        </PinnedSlot>
+      ) : position !== null ? (
+        // Waitlist: Other times stay; a --pale block with a 40 --card disc
+        // "#3", "You're #3 on the waitlist." 14 / 800 --accent then 13 --ink2;
+        // "Leave waitlist" in --high.
+        <PinnedSlot>
+          <div style={panel}>
+            {others.length > 0 && (
+              <OtherTimes others={others} onOpen={openOther} m={m} />
+            )}
+            <div
+              data-waitlist-block=""
+              style={{
+                borderRadius: 16,
+                background: m.pale,
+                padding: 14,
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                lineHeight: "normal",
+              }}
+            >
+              <span
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 999,
+                  background: m.card,
+                  color: m.accent,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  fontSize: textPx(14),
+                  fontWeight: 800,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                #{position}
+              </span>
+              <p
+                style={{
+                  margin: 0,
+                  minWidth: 0,
+                  fontSize: textPx(13),
+                  lineHeight: 1.45,
+                  color: m.ink2,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: textPx(14),
+                    fontWeight: 800,
+                    color: m.accent,
+                  }}
+                >
+                  You're #{position} on the waitlist.
+                </span>{" "}
+                We'll notify you if a spot opens.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => !(busy || !online) && void waitlist(false)}
+              aria-disabled={busy || !online || undefined}
+              className="market-focus"
+              style={{ ...dangerLink, ...offStyle(busy || !online) }}
+            >
+              Leave waitlist
+            </button>
+          </div>
         </PinnedSlot>
       ) : !takesNewActivity(bizStatus) ? (
         <PinnedSlot>
           <BusinessClosedNote status={bizStatus} className="" />
         </PinnedSlot>
       ) : full ? (
-        // MO1.4.4.4 (K5): "Other times" (up to three chips) and an outline
-        // "Join waitlist", join_class_waitlist() (BR-10).
+        // Full: Other times (up to three) and "Join waitlist" (BR-10), on a
+        // --card panel (radius 20, 0.5px --hair).
         <PinnedSlot>
-          <div className="rounded-2xl bg-cream-card p-3 flex flex-col gap-2.5" style={{ boxShadow: "var(--shadow-sheet)" }}>
-            {others.length > 0 && <OtherTimes others={others} onOpen={openOther} />}
+          <div style={panel}>
+            {others.length > 0 && (
+              <OtherTimes others={others} onOpen={openOther} m={m} />
+            )}
             <button
               type="button"
-              onClick={() => void waitlist(true)}
-              disabled={busy || !authUserId || !online}
-              className="tap h-12 rounded-[14px] border border-primary text-[14px] font-bold text-th-7d67d9 dark:text-primary-accent disabled:opacity-40"
+              onClick={() =>
+                !(busy || !authUserId || !online) && void waitlist(true)
+              }
+              aria-disabled={busy || !authUserId || !online || undefined}
+              className="market-focus"
+              style={{
+                height: 52,
+                borderRadius: 16,
+                border: `1.5px solid ${m.fill}`,
+                background: m.card,
+                font: "inherit",
+                fontSize: textPx(15),
+                fontWeight: 800,
+                color: m.accent,
+                cursor: "pointer",
+                ...offStyle(busy || !authUserId || !online),
+              }}
             >
               Join waitlist
             </button>
           </div>
         </PinnedSlot>
       ) : (
-        // #34: "Book · $15", 48 r14, #9A8CD6 with white (dark #A991FE with
-        // #0D0B1A); disabled signed out (K13) and offline (O-OFF).
-        <PinnedCta
-          primary={{
-            label: `Book · ${priceText}`,
-            onClick: () => {
-              recordListingEvent({ businessId: c.businessId, kind: "book_tap", source: listingSource, itemId: c.classId });
-              setPopup("book");
-            },
-            disabled: !authUserId || !online,
-            className: "!bg-fill-pinned !text-on-primary-fill",
-          }}
-        />
+        // "Book · $12": 52, radius 16, --fill, 15 / 800 --onfill; off signed
+        // out and offline.
+        <PinnedSlot>
+          <button
+            type="button"
+            data-book-cta=""
+            onClick={() => {
+              if (!authUserId || !online) return;
+              recordListingEvent({
+                businessId: c.businessId,
+                kind: "book_tap",
+                source: listingSource,
+                itemId: c.classId,
+              });
+              setSheetError(null);
+              setPopup("sheet");
+            }}
+            aria-disabled={!authUserId || !online || undefined}
+            className="market-focus"
+            {...press.handlers}
+            style={{
+              height: 52,
+              borderRadius: 16,
+              border: 0,
+              background: m.fill,
+              color: m.onfill,
+              font: "inherit",
+              fontSize: textPx(15),
+              fontWeight: 800,
+              cursor: "pointer",
+              ...(!authUserId || !online
+                ? { opacity: 0.4, cursor: "default" }
+                : press.style),
+            }}
+          >
+            {`Book · ${priceText}`}
+          </button>
+        </PinnedSlot>
       )}
 
-      {/* S3: Directions to the venue's coordinates when it has them (PB-O-50),
-          else to the address text; Copy copies the address. */}
-      <DirectionsMenu open={dirOpen} onClose={() => setDirOpen(false)} anchor={dirAnchor} address={address} coords={venueCoords} onCopied={flash} />
+      {/* S3: Directions to the venue's coordinates when it has them, else
+          to the address; Copy copies the address. */}
+      <DirectionsMenu
+        open={dirOpen}
+        onClose={() => setDirOpen(false)}
+        anchor={dirAnchor}
+        address={address}
+        coords={venueCoords}
+        onCopied={flash}
+      />
 
-      {/* MO1.4.4.1 (K1): the booking popup (no ×; outside dismisses), X-01 "ours". */}
-      <CentredPopup
-        open={popup === "book"}
+      {/* C-MO.4.3.2 classSheet: the booking sheet. */}
+      <PurchaseSheet
+        open={popup === "sheet"}
         onClose={() => setPopup(null)}
         title={`Book ${c.title}`}
-        icon={<CalendarCheck size={22} strokeWidth={1.75} />}
-        body={free ? undefined : "Choose how you'll pay"}
-        geometry="ours"
-        cta={{
-          label: free ? "Confirm booking" : `Confirm booking · ${priceText}`,
-          loading: booking.busy,
-          disabled: !online,
-          onClick: () => void book(),
-          className: "!bg-fill-pinned !text-on-primary-fill",
-        }}
-      >
-        {/* The class in a surface.soft r16 block: the time 13.5/700, the
-            place and spots 11.5/400, the price 15/800. */}
-        <div className="rounded-2xl bg-cream-soft px-4 py-3.5 flex items-center gap-3 text-start">
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13.5px] font-bold text-charcoal tabular-nums">{when}</span>
-            <span className="block text-[11.5px] text-charcoal-faint">
-              {c.businessName} · {seatsLeft} {seatsLeft === 1 ? "spot" : "spots"} left
-            </span>
-          </span>
-          <span className="text-[15px] font-extrabold text-charcoal tabular-nums shrink-0">{priceText}</span>
-        </div>
-        {!free && (
-          <div className="mt-4 text-start" role="radiogroup" aria-label="Payment">
-            <DetailLabel>Payment</DetailLabel>
-            <div className="mt-2.5 flex flex-col gap-2">
-              {PAY_OPTIONS.map((o) => {
-                const on = pay === o.key;
-                // Whish needs the payments stage: shown as coming (X-29).
-                const off = o.key === "whish";
-                return (
-                  <button
-                    key={o.key}
-                    type="button"
-                    role="radio"
-                    aria-checked={on}
-                    disabled={off}
-                    onClick={() => setPay(o.key)}
-                    className={`tap w-full rounded-[14px] px-3 py-2.5 flex items-center gap-3 text-start bg-cream-card disabled:opacity-40 ${
-                      on ? "border-[1.5px] border-th-7d6bb5 dark:border-primary-accent ring-[3px] ring-primary-pale" : "border border-charcoal/[0.10]"
-                    }`}
-                  >
-                    <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0 text-th-7d67d9 dark:text-primary-accent" aria-hidden>
-                      <o.icon size={16} strokeWidth={1.75} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[13.5px] font-bold text-charcoal">{o.name}</span>
-                      <span className="block text-[11.5px] text-charcoal-faint">{o.hint}</span>
-                    </span>
-                    <span
-                      aria-hidden
-                      className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
-                        on ? "bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill" : "border-[1.5px] border-charcoal/[0.18]"
-                      }`}
-                    >
-                      {on && <Check size={12} strokeWidth={3} />}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-        {!online && <p className="mt-3 mb-0 text-[12px] font-semibold text-charcoal-soft">You're offline.</p>}
-      </CentredPopup>
+        summary={
+          <ClassTicketSummary
+            title={c.title}
+            place={sheetPlace(c)}
+            when={sheetWhen(c)}
+            booked={`${taken} of ${cap} booked`}
+            pct={cap > 0 ? (taken / cap) * 100 : 0}
+            price={priceText}
+          />
+        }
+        cashHint={free ? null : "Pay at the front desk before class"}
+        ctaLabel={free ? "Confirm booking" : confirmLabel(priceText)}
+        busy={booking.busy}
+        disabled={!online}
+        error={sheetError}
+        note={!online ? <MarketOffline loaded /> : null}
+        onConfirm={() => void book()}
+      />
 
       {/* OURS-class-terms (B9, ATXE4): the venue's waiver, class terms and
           house rules, each agreed, then booked. */}
@@ -691,94 +1278,154 @@ export function ClassPage({ classId }: { classId: string }) {
         onClose={booking.closeTerms}
       />
 
-      {/* MO1.4.4.2 (K2): confirmed, X-01 "ours". The Centium mark (vector,
-          at the old 56 × 60 contain box); the payment line says what was
-          chosen; book_class() has already added the class to the Calendar. */}
-      <CentredPopup
-        open={popup === "confirmed"}
-        onClose={() => setPopup(null)}
+      {/* C-MO.4.3.2 classDone: the confirmation page. book_class() has
+          already added the class to the Calendar (15-minute alert). */}
+      <BookingDone
+        open={done}
         title="You're booked"
-        titleSize={21}
-        titleInk="text-th-5f5093 dark:text-primary-accent"
-        iconBare
-        geometry="ours"
-        icon={
-          <span className="flex w-14 h-[60px] items-center justify-center">
-            <CentiumMark framing="png" height={(56 * 713) / 687} />
+        body={doneBody(
+          c.title,
+          firstVisit && firstVisit.gymId === gymId ? firstVisit.text : null,
+        )}
+        rows={[
+          { k: "Class", v: c.title },
+          { k: "When", v: doneWhen(c) },
+          { k: "Payment", v: paymentLine(priceText, free) },
+        ]}
+        bookingsTab="upcoming"
+        extra={
+          <span
+            data-calendar-pill=""
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: textPx(12),
+              fontWeight: 700,
+              color: m.tealink,
+              background: m.tealbg,
+              borderRadius: 999,
+              padding: "4px 10px",
+            }}
+          >
+            <svg
+              width={13}
+              height={13}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+              style={NO_ICON_SCALE}
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M16 2v4M8 2v4M3 10h18m-12 6 2 2 4-4" />
+            </svg>
+            Added to your calendar
           </span>
         }
-        body={
-          <>
-            <span className="block text-[14px] font-bold text-charcoal">{c.title}</span>
-            <span className="block text-[12.5px] font-normal text-charcoal-soft tabular-nums">
-              {when} · {c.businessName}
-            </span>
-          </>
-        }
-      >
-        <p className="m-0 flex items-center justify-center gap-1.5 text-[12.5px] text-charcoal-soft">
-          {free ? <CalendarCheck size={13} strokeWidth={1.75} aria-hidden /> : <Store size={13} strokeWidth={1.75} aria-hidden />}
-          {free ? "Free class" : `Pay at the studio · ${priceText}`}
-        </p>
-        <p className="mt-3.5 mb-0 h-12 rounded-[14px] bg-th-e7f2f0 dark:bg-teal-pale flex items-center justify-center gap-2 text-[14px] font-bold text-th-3c6b65 dark:text-teal-deep-text">
-          <CircleCheck size={16} strokeWidth={2} aria-hidden /> Added to calendar
-        </p>
-        <button type="button" onClick={() => setPopup(null)} className="tap mt-1 w-full h-12 text-[14px] font-bold text-th-7d67d9 dark:text-primary-accent">
-          Done
-        </button>
-      </CentredPopup>
+        onDone={() => setDone(false)}
+      />
 
-      {/* MO1.4.4.3 interaction 3 (K4): "Cancel confirmation, then MO1.4.4". */}
+      {/* Cancel confirmation: BR-14 warned before cancel_class_booking(). */}
       <CentredPopup
         open={popup === "cancel"}
         onClose={() => setPopup(null)}
         title="Cancel booking?"
-        icon={<CalendarDays size={22} strokeWidth={1.75} />}
         geometry="ours"
         body={
           <>
             <span className="block">{`${c.title} · ${when}`}</span>
-            {/* BR-14, warned before cancel_class_booking() (the doc). */}
-            <span className={`mt-1.5 block ${late ? "font-semibold text-status-high" : ""}`}>
+            <span
+              className="mt-1.5 block"
+              style={late ? { fontWeight: 600, color: m.high } : undefined}
+            >
               {late
                 ? `It starts in under ${windowHours} ${windowHours === 1 ? "hour" : "hours"}, so this isn't a free cancellation. The studio may charge for it.`
                 : cancellationLine(windowHours)}
             </span>
           </>
         }
-        cta={{ label: "Cancel booking", loading: busy, disabled: !online, onClick: () => void cancel() }}
+        cta={{
+          label: "Cancel booking",
+          loading: busy,
+          disabled: !online,
+          onClick: () => void cancel(),
+        }}
       />
 
-      {/* OURS-class-other-times: every session of this class, the current one
-          marked and not tappable; a row opens that session (replace, as
-          openOther); scrim / Escape close. Six rows show, then it scrolls. */}
+      {/* Other times: every session of this class, the current one marked
+          and not tappable; a row opens that session (replace); scrim /
+          Escape close. Six rows show, then it scrolls. */}
       <CentredPopup
         open={popup === "times"}
         onClose={() => setPopup(null)}
         title="Other times"
         geometry="ours"
         bodyWeight={400}
-        body={<span className="block text-[12.5px] leading-[18.8px] text-charcoal-faint">{`${c.title} at ${c.businessName}`}</span>}
+        body={
+          <span className="block text-[12.5px] leading-[18.8px] text-charcoal-faint">{`${c.title} at ${venueOf(c)}`}</span>
+        }
       >
-        <ul className="m-0 p-0 list-none flex flex-col gap-2 overflow-y-auto max-h-[328px] text-start" data-other-times="">
+        <ul
+          className="m-0 p-0 list-none flex flex-col gap-2 overflow-y-auto max-h-[328px] text-start"
+          data-other-times=""
+        >
           {sessions.map((s) => {
             const current = s.classId === c.classId;
-            const n = current ? seatsLeft : s.spotsRemaining;
-            const label = `${dayMonth(s.date)} · ${time12(s.startTime)}`;
+            const n = current ? left : s.spotsRemaining;
             const inner = (
               <>
-                <span className="text-[13px] leading-[19.5px] font-bold text-charcoal tabular-nums truncate">{label}</span>
-                <span className={`shrink-0 text-[11px] leading-[16.5px] font-semibold ${n <= 0 ? "text-status-high" : "text-th-4f7f78 dark:text-teal-deep-text"}`}>
+                <span
+                  style={{
+                    fontSize: textPx(13),
+                    lineHeight: linePx(19.5),
+                    fontWeight: 700,
+                    color: m.ink,
+                    fontVariantNumeric: "tabular-nums",
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {`${shortDate(s.date)} · ${time12(s.startTime)}`}
+                </span>
+                <span
+                  style={{
+                    flexShrink: 0,
+                    fontSize: textPx(11),
+                    fontWeight: 600,
+                    color: n <= 0 ? m.high : m.tealink,
+                  }}
+                >
                   {spotsText(n)}
                 </span>
               </>
             );
+            const row: React.CSSProperties = {
+              width: "100%",
+              height: 48,
+              padding: "0 14px",
+              borderRadius: 14,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              boxSizing: "border-box",
+            };
             return (
               <li key={s.classId}>
                 {current ? (
                   <div
                     aria-current="true"
-                    className="h-12 px-[14px] rounded-[14px] bg-primary-pale border-[1.5px] border-th-7d67d9 dark:border-primary-accent flex items-center justify-between gap-3"
+                    style={{
+                      ...row,
+                      background: m.pale,
+                      border: `1.5px solid ${m.accent}`,
+                    }}
                   >
                     {inner}
                   </div>
@@ -789,7 +1436,15 @@ export function ClassPage({ classId }: { classId: string }) {
                       setPopup(null);
                       openOther(s.classId);
                     }}
-                    className="tap w-full h-12 px-[14px] rounded-[14px] bg-cream-card border-[0.5px] border-hair-08 flex items-center justify-between gap-3 text-start"
+                    className="tap market-focus"
+                    style={{
+                      ...row,
+                      background: m.card,
+                      border: `0.5px solid ${m.hair}`,
+                      font: "inherit",
+                      textAlign: "left",
+                      cursor: "pointer",
+                    }}
                   >
                     {inner}
                   </button>
@@ -798,7 +1453,23 @@ export function ClassPage({ classId }: { classId: string }) {
             );
           })}
         </ul>
-        <button type="button" onClick={() => setPopup(null)} className="tap mt-2 w-full h-12 text-[14px] leading-[21px] font-bold text-th-7d67d9 dark:text-primary-accent">
+        <button
+          type="button"
+          onClick={() => setPopup(null)}
+          className="market-focus"
+          style={{
+            marginTop: 8,
+            width: "100%",
+            height: 48,
+            background: "none",
+            border: 0,
+            font: "inherit",
+            fontSize: textPx(14),
+            fontWeight: 700,
+            color: m.accent,
+            cursor: "pointer",
+          }}
+        >
           Close
         </button>
       </CentredPopup>
@@ -806,24 +1477,75 @@ export function ClassPage({ classId }: { classId: string }) {
   );
 }
 
-/** MO1.4.4.4 / .5 "Other times": the label and up to three chips (the time 12/700, the spots 10.5/600 secondary.deep). */
-function OtherTimes({ others, onOpen }: { others: MarketplaceClass[]; onOpen: (id: string) => void }) {
+const spotsText = (n: number) =>
+  n <= 0 ? "Full" : `${n} ${n === 1 ? "spot" : "spots"}`;
+
+/** Other times (full / waitlist): the caps label and up to three chips (the time 12 / 700, the spots 10.5 / 600 --tealink). */
+function OtherTimes({
+  others,
+  onOpen,
+  m,
+}: {
+  others: MarketplaceClass[];
+  onOpen: (id: string) => void;
+  m: MarketPalette;
+}) {
   return (
     <>
-      <DetailLabel>Other times</DetailLabel>
-      <div className="flex gap-2">
+      <h2
+        style={{
+          margin: 0,
+          fontSize: textPx(10.5),
+          fontWeight: 700,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: m.faint,
+        }}
+      >
+        Other times
+      </h2>
+      <div style={{ display: "flex", gap: 8 }}>
         {others.map((o) => (
           <button
             key={o.classId}
             type="button"
             onClick={() => onOpen(o.classId)}
-            className="tap flex-1 min-w-0 rounded-xl border border-charcoal/[0.08] bg-cream-card py-2 flex flex-col items-center"
+            className="tap market-focus"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              minHeight: 44,
+              borderRadius: 14,
+              border: `0.5px solid ${m.hair}`,
+              background: m.card,
+              padding: "8px 4px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              font: "inherit",
+              cursor: "pointer",
+            }}
           >
-            <span className="text-[12px] font-bold text-charcoal tabular-nums">
-              {dayMonth(o.date).split(" ")[0]} {time12(o.startTime)}
+            <span
+              style={{
+                fontSize: textPx(12),
+                fontWeight: 700,
+                color: m.ink,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {shortDate(o.date).split(",")[0]} {time12(o.startTime)}
             </span>
-            <span className="text-[10.5px] font-semibold text-th-4f7f78 dark:text-teal-deep-text">
-              {o.isFull ? "Full" : `${o.spotsRemaining} ${o.spotsRemaining === 1 ? "spot" : "spots"}`}
+            <span
+              style={{
+                fontSize: textPx(10.5),
+                fontWeight: 600,
+                color: o.isFull ? m.high : m.tealink,
+              }}
+            >
+              {o.isFull
+                ? "Full"
+                : `${o.spotsRemaining} ${o.spotsRemaining === 1 ? "spot" : "spots"}`}
             </span>
           </button>
         ))}

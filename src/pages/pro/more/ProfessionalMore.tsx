@@ -399,7 +399,8 @@ export default function ProfessionalMore() {
       </p>
       <MessagesHero />
       <div className={forumAllowed ? "grid grid-cols-3" : "grid grid-cols-2"} style={{ gap: 9, marginBottom: 24 }}>
-        <Tile icon={ExploreLeafIcon as Icon} label="Explore" desc="Gyms, classes & the marketplace" onClick={() => navigate("/app/marketplace")} />
+        {/* Market + Share 3.0 D-39: Explore opens the professional Marketplace (P-MA); the live ProfessionalExplore stays reachable from its Overview ("Gyms and colleagues"). */}
+        <Tile icon={ExploreLeafIcon as Icon} label="Explore" desc="Your Showcase, offers and performance" onClick={() => navigate("/app/pro/marketplace")} />
         {forumAllowed && <Tile icon={CommunityLeafIcon as Icon} label="Community" desc="Forum discussions & fitness courses" onClick={() => navigate("/app/forum")} />}
         <Tile icon={LineChart} abs label="Practice insights" desc="Clients, sessions, retention & reviews" onClick={() => navigate("/app/more/practice-insights")} />
       </div>

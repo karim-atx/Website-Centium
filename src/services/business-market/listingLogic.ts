@@ -32,7 +32,6 @@ export function cleanAmenities(keys: readonly string[]): AmenityKey[] {
   return AMENITY_KEYS.filter((k) => set.has(k));
 }
 
-export const amenityLine = (keys: readonly string[]): string => cleanAmenities(keys).map((k) => AMENITY_LABEL[k]).join(", ");
 
 export const FIRST_VISIT_MAX = 300;
 
@@ -326,5 +325,3 @@ export function openOnCentium(capacity: number, booked: number, centiumSpots: nu
   return Math.max(0, Math.min(free, centiumSpots - centiumBooked));
 }
 
-/** The centium_spots to store so that `offered` stay open (the Spots sheet, MA1-040). */
-export const centiumSpotsFor = (offered: number, centiumBooked: number): number => Math.max(0, Math.round(offered)) + Math.max(0, centiumBooked);

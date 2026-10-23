@@ -77,6 +77,7 @@ export const ShareFlow: React.FC<{
           qr={result.qr}
           hide={result.hide}
           photoUrl={result.photoUrl}
+          placement={result.placement}
           clientFirstName={win?.consent.firstName}
           onRecord={onRecord}
           onDone={close}

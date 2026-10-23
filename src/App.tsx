@@ -46,8 +46,17 @@ import ProRoutes, { ProHomeRedirect, ProOnlyRedirect } from "./pages/pro/ProRout
 import ProMoreRoutes from "./pages/pro/more/MoreRoutes";
 import Marketplace from "./pages/marketplace/Marketplace";
 import MarketplaceCategoryPage from "./pages/marketplace/MarketplaceCategoryPage";
+import MyBookingsPage from "./pages/marketplace/MyBookingsPage";
+import MyRewardsPage from "./pages/marketplace/MyRewardsPage";
+import PointsHistoryPage from "./pages/marketplace/PointsHistoryPage";
+import HowToEarnPage from "./pages/marketplace/HowToEarnPage";
+import OfferDetailPage from "./pages/marketplace/rewards/OfferDetailPage";
+import VoucherPage from "./pages/marketplace/rewards/VoucherPage";
+import { ClientOnly } from "./pages/marketplace/ClientOnly";
+import ClientNotificationsPage from "./pages/notifications/ClientNotificationsPage";
 import AnalyticsShell from "./pages/business-analytics/AnalyticsShell";
 import MarketRoutes from "./pages/business-market/MarketRoutes";
+import RedeemVoucher from "./pages/business-market/RedeemVoucher";
 import BusinessProfilePage from "./pages/business-more/profile/BusinessProfilePage";
 import BusinessMoreRoutes from "./pages/business-more/BusinessMoreRoutes";
 import TeamRoutes from "./pages/business-team/TeamRoutes";
@@ -84,6 +93,7 @@ import InviteLanding from "./pages/public/InviteLanding";
 import PublicProfile from "./pages/public/PublicProfile";
 import PublicBooking from "./pages/public/PublicBooking";
 import SharedCard from "./pages/share/SharedCard";
+import BusinessLinkPage from "./pages/share/BusinessLinkPage";
 import { PublicReturnResume } from "./pages/public/PublicReturnResume";
 import CarePlan from "./pages/health/CarePlan";
 import { ConsoleGate } from "./components/business-console/ConsoleGate";
@@ -407,6 +417,8 @@ function AppRoutes() {
       <Route path="/p/:handle/book" element={<PublicBooking />} />
       {/* Release 3 W8: a shared card (the site address + /s/{id}); shared_item_public is anon. */}
       <Route path="/s/:id" element={<SharedCard />} />
+      {/* Market + Share 3.0 B-SH.6: a business share link (the site address + /b/{slug}[/{kind}/{item}]); resolve_share_link is anon (DB13). */}
+      <Route path="/b/:slug/*" element={<BusinessLinkPage />} />
 
       {/* The one route a recovery session may reach. Deliberately outside
           RequireOnboarded: those guards redirect INTO here, so putting it
@@ -488,10 +500,21 @@ function AppRoutes() {
         <Route path="/app/professionals/:id" element={<ProfessionalDetail />} />
         <Route path="/app/professionals/:id/reviews" element={<ProfessionalReviews />} />
         <Route path="/app/marketplace" element={<Marketplace />} />
+        {/* Market + Share 3.0 (W2, HANDOVER §13): the client Explore pages. Static
+            segments, so they win over :category. */}
+        <Route path="/app/marketplace/bookings" element={<ClientOnly><MyBookingsPage /></ClientOnly>} />
+        <Route path="/app/marketplace/rewards/mine" element={<ClientOnly><MyRewardsPage /></ClientOnly>} />
+        <Route path="/app/marketplace/rewards/:offerId" element={<ClientOnly><OfferDetailPage /></ClientOnly>} />
+        <Route path="/app/marketplace/vouchers/:id" element={<ClientOnly><VoucherPage /></ClientOnly>} />
+        <Route path="/app/marketplace/points/history" element={<ClientOnly><PointsHistoryPage /></ClientOnly>} />
+        <Route path="/app/marketplace/points/earn" element={<ClientOnly><HowToEarnPage /></ClientOnly>} />
+        <Route path="/app/notifications" element={<ClientOnly><ClientNotificationsPage /></ClientOnly>} />
         <Route path="/app/marketplace/:category" element={<MarketplaceCategoryPage />} />
         <Route path="/app/business/analytics/:section?/*" element={<AnalyticsShell />} />
         {/* B7: staff reach the console pages their permissions allow (ConsoleGate). */}
         <Route path="/app/business/marketplace/*" element={<ConsoleGate need="marketing"><MarketRoutes /></ConsoleGate>} />
+        {/* Market + Share 3.0 W3: B-MA.4 Redeem a voucher; the owner, marketing or front desk may check vouchers (D-25). */}
+        <Route path="/app/business/redeem" element={<ConsoleGate need={["marketing", "front_desk"]}><RedeemVoucher /></ConsoleGate>} />
         {/* v6 NAV-001 row 8: the Store (and Wellness appointments) Products tab.
             Batch 4: OP1 Products for store kinds (StoreProductsRoute); other
             types keep today's listings page on this address. */}

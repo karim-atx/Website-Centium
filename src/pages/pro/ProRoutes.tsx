@@ -12,6 +12,7 @@ import CalendarAvailability from "./CalendarAvailability";
 import Library from "./Library";
 import MealPlans from "./MealPlans";
 import Insights from "./Insights";
+import ProMarketplaceRoutes from "./marketplace/ProMarketplaceRoutes";
 
 /**
  * Release 3 · every /app/pro route (FINAL_PLAN W1). Professionals only:
@@ -45,6 +46,8 @@ export default function ProRoutes() {
       <Route path="calendar/availability" element={<CalendarAvailability />} />
       <Route path="library/:tab?" element={<LaneSlot area="library"><Library /></LaneSlot>} />
       <Route path="meal-plans/:tab?" element={<LaneSlot area="meal-plans"><MealPlans /></LaneSlot>} />
+      {/* Market + Share 3.0 W3: the professional Marketplace (P-MA), from More › Explore (D-39). */}
+      <Route path="marketplace/*" element={<ProMarketplaceRoutes />} />
       <Route path="insights/:tab?" element={<LaneSlot area="insights"><Insights /></LaneSlot>} />
       <Route path="*" element={<Navigate to={PRO_ROUTES.home} replace />} />
     </Routes>
