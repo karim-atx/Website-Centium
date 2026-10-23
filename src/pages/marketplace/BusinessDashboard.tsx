@@ -237,6 +237,7 @@ export default function BusinessDashboard() {
         name={business?.name || user.businessName || "Your business"}
         listed={listed}
         attentionCount={attention?.length ?? 0}
+        notificationsUnread={notifUnread}
         panelOpen={panelOpen}
         onBell={() => setPanelOpen(true)}
         onChip={openListing}

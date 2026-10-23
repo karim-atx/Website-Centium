@@ -78,6 +78,18 @@ export function parseUnreadCount(data: unknown): number {
 /** The count as shown: "99+" at the cap (the reader stops counting there). */
 export const unreadBadge = (n: number): string => (n >= UNREAD_COUNT_CAP ? `${UNREAD_COUNT_CAP}+` : String(Math.max(0, Math.floor(n))));
 
+/**
+ * The business bell's badge (Karim): the attention items plus the unread
+ * business notices. "99+" once the notices reach the reader's cap (the true
+ * total is unknown past it) or the sum passes 99; null when there is nothing.
+ */
+export function bellBadge(attention: number, unread: number | null | undefined): string | null {
+  const notices = Math.max(0, Math.floor(unread ?? 0));
+  const total = Math.max(0, Math.floor(attention)) + notices;
+  if (total === 0) return null;
+  return notices >= UNREAD_COUNT_CAP || total > UNREAD_COUNT_CAP ? `${UNREAD_COUNT_CAP}+` : String(total);
+}
+
 /** One my_notifications row. `kind` stays a string so a Release 2 kind still parses. */
 export interface MemberNotification {
   id: string;
@@ -433,7 +445,7 @@ export const BUSINESS_COPY: NotificationCopyTable = {
   hire_offer_declined: { title: "Your offer was declined", body: "You can offer the role to someone else." },
   hiring_fee_added: { title: "Hiring fee added to your Centium bill", body: "Due on your next bill." },
   voucher_redeemed: { title: "Voucher redeemed at the front desk", body: "A member used a voucher for one of your offers." },
-  offer_hidden: { title: "Offer taken down", body: "Centium hid one of your offers. Members can't see it in Rewards now." },
+  offer_hidden: { title: "Offer hidden", body: "Hidden by Centium. Contact support for details." },
   gym_review_received: { title: "New review", body: "A member left you a review." },
 };
 
@@ -469,8 +481,8 @@ const starsText = (p: Readonly<Record<string, unknown>>): string | null => {
  *   role_title): "{$25.60} for {name} · {role}. Due on your next bill.";
  * - voucher_redeemed (voucher; offer_title, points; actor = the member):
  *   "A member used a voucher for {offer_title}." (points not shown);
- * - offer_hidden (offer; offer_title, reason): "Centium hid {offer_title}.
- *   Members can't see it in Rewards now." (reason not shown);
+ * - offer_hidden (offer; offer_title, reason): "{offer_title} is hidden" /
+ *   "Hidden by Centium. Contact support for details." (Karim; reason never shown);
  * - gym_review_received (gym_review; gym_name, rating, has_body): "New review
  *   for {gym_name}" / "5 stars, with a written review." ("5 stars." without).
  */
@@ -513,7 +525,7 @@ export const BUSINESS_FILLS: NotificationFillTable = {
   },
   offer_hidden: (p) => {
     const offer = pText(p, "offer_title");
-    return offer ? { body: `Centium hid ${offer}. Members can't see it in Rewards now.` } : {};
+    return offer ? { title: `${offer} is hidden` } : {};
   },
   gym_review_received: (p) => {
     const gym = pText(p, "gym_name");

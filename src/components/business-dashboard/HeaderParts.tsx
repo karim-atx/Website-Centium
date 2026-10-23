@@ -10,7 +10,7 @@ import { Toggle } from "../ui/Toggle";
 import { PopupMenu } from "../ui/PopupMenu";
 import { linePx, textPx } from "../../theme/textSize";
 import type { MyVenue } from "../../services/venues/consoleLogic";
-import { unreadBadge } from "../../services/notifications/notificationsModel";
+import { bellBadge, unreadBadge } from "../../services/notifications/notificationsModel";
 
 // DA1-015 #2-#7 (header, bell, name row, Listed chip), S1 (Needs your
 // attention), DA2-003 (Finish setting up), OURS-DA-kept-features #1, #2, #4
@@ -23,6 +23,7 @@ export function DashHeader({
   name,
   listed,
   attentionCount,
+  notificationsUnread,
   panelOpen,
   onBell,
   onChip,
@@ -36,6 +37,8 @@ export function DashHeader({
   /** null while the listing is unknown (loading): the chip is hidden (OURS-DA-states #1). */
   listed: boolean | null;
   attentionCount: number;
+  /** Optional (Market + Share, Karim): unread business notices, counted into the badge. */
+  notificationsUnread?: number | null;
   panelOpen: boolean;
   onBell: () => void;
   onChip: () => void;
@@ -43,6 +46,10 @@ export function DashHeader({
   venueChip?: React.ReactNode;
 }) {
   const chip = listed ? { bg: c.goodTint, ink: c.good, dot: c.good, text: "Listed" } : { bg: c.soft, ink: c.faint, dot: c.tert, text: "Hidden" };
+  const badge = bellBadge(attentionCount, notificationsUnread);
+  const bellLabel = notificationsUnread
+    ? `Needs your attention, ${attentionCount} items, ${unreadBadge(notificationsUnread)} unread notifications`
+    : `Needs your attention, ${attentionCount} items`;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
@@ -58,7 +65,7 @@ export function DashHeader({
           ref={bellRef}
           type="button"
           data-bell
-          aria-label={`Needs your attention, ${attentionCount} items`}
+          aria-label={bellLabel}
           aria-haspopup="menu"
           aria-expanded={panelOpen}
           onClick={onBell}
@@ -79,7 +86,7 @@ export function DashHeader({
           }}
         >
           <Bell size={19} strokeWidth={1.8} aria-hidden />
-          {attentionCount > 0 && (
+          {badge && (
             <span
               data-badge
               style={{
@@ -101,7 +108,7 @@ export function DashHeader({
                 boxSizing: "border-box",
               }}
             >
-              {attentionCount}
+              {badge}
             </span>
           )}
         </button>

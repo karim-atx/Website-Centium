@@ -32,6 +32,7 @@ import {
   parseUnreadCount,
   RELEASE1_KINDS,
   unreadBadge,
+  bellBadge,
   unreadCount,
   UNREAD_COUNT_CAP,
 } from "./notificationsModel.ts";
@@ -293,7 +294,7 @@ test("business copy: the documented payload keys fill the board's lines; a missi
   assert.equal(c("hiring_fee_added", { amount: 30, currency: "EUR", professional_name: "Rana" }).body, "€30.00 for Rana. Due on your next bill.");
   assert.deepEqual(c("hiring_fee_added", { amount: "n/a" }), BUSINESS_COPY.hiring_fee_added);
   assert.equal(c("voucher_redeemed", { offer_title: "15% off a day pass", points: 400 }).body, "A member used a voucher for 15% off a day pass.");
-  assert.equal(c("offer_hidden", { offer_title: "Free shaker", reason: "Misleading" }).body, "Centium hid Free shaker. Members can't see it in Rewards now.");
+  assert.deepEqual(c("offer_hidden", { offer_title: "Free shaker", reason: "Misleading" }), { title: "Free shaker is hidden", body: "Hidden by Centium. Contact support for details." });
   assert.deepEqual(c("gym_review_received", { gym_name: "Friend Fitness Hamra", rating: 5, has_body: true }), { title: "New review for Friend Fitness Hamra", body: "5 stars, with a written review." });
   assert.equal(c("gym_review_received", { gym_name: "G", rating: 1, has_body: false }).body, "1 star.");
   assert.deepEqual(c("gym_review_received", { rating: 9 }), BUSINESS_COPY.gym_review_received);
@@ -355,4 +356,15 @@ test("professional targets: offers, work, the calendar day, reviews", () => {
   assert.equal(proMemberTarget({ kind: "class_cancelled", payload: { starts_at: "2026-11-06T18:00:00" } }), "/app/pro/calendar?day=2026-11-06");
   assert.equal(proMemberTarget({ kind: "class_changed", payload: {} }), "/app/pro/calendar");
   assert.equal(proMemberTarget({ kind: "instructor_review_received" }), "/app/more/reviews");
+});
+
+test("the business bell's badge: attention items plus unread business notices", () => {
+  assert.equal(bellBadge(0, 0), null);
+  assert.equal(bellBadge(0, null), null);
+  assert.equal(bellBadge(2, null), "2");
+  assert.equal(bellBadge(2, 3), "5");
+  assert.equal(bellBadge(0, 4), "4");
+  assert.equal(bellBadge(1, 99), "99+");
+  assert.equal(bellBadge(50, 60), "99+");
+  assert.equal(bellBadge(40, 59), "99");
 });
