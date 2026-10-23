@@ -1,29 +1,82 @@
 // Market + Share 3.0 · the member inbox, pure (C-MO.4.10 `notifClient`; the
 // business inbox B-MA.9 reads the same rows in Release 2).
 //
-// Contract: Database 2a5b122 (release/points-offers-and-the-public-shelf),
+// Contract: Database 33c0bf5 (release/points-offers-and-the-public-shelf),
 // migration 20261210600000_everybody_has_an_inbox.sql (no HANDOVER_API
 // section; the migration comments are the contract):
-// - my_notifications(p_before, p_limit, p_before_id) → id, kind
+// - my_notifications(p_before, p_limit, p_before_id, p_kinds) → id, kind
 //   (member_notification_kind), subject_type, subject_id, actor_id, title_key,
 //   payload (jsonb), read_at, created_at; the caller's own rows, newest first,
-//   keyset-paged on (created_at, id), p_limit clamped to 1..200.
-// - mark_notifications_read(p_ids uuid[] default null) → integer, the count
-//   that moved (null = all of the caller's unread rows).
+//   keyset-paged on (created_at, id), p_limit clamped to 1..200; p_kinds null
+//   = every kind.
+// - mark_notifications_read(p_ids uuid[] default null, p_kinds default null)
+//   → integer, the count that moved (p_ids null = all of the caller's unread
+//   rows, scoped to p_kinds when given).
+// - my_unread_notification_count(p_kinds default null) → integer, capped at 99.
 // - title_key is a KEY; the copy lives here. notify_member() writes the kind
 //   name as the key when the writer passes none.
+// - THE PAYLOAD CONTRACT (the migration's table): kind / subject_type /
+//   payload keys, interpolated by the fills below.
 //
 // The reader, the cursor and the parser are the same for every inbox; each UI
-// brings its own copy table and its own target resolver (CLIENT_COPY and
-// clientNotificationTarget here). The tones and glyphs are the screen
-// script's (`NT`, `NI`).
+// brings its own kinds, copy table, fills and target resolver (CLIENT_KINDS,
+// CLIENT_COPY, CLIENT_FILLS and clientNotificationTarget here). The tones and
+// glyphs are the screen script's (`NT`, `NI`).
 
 import { formatShortDate } from "../../utils/date";
 import { clock12 } from "../../utils/time12";
-import { rows, str } from "../market/parse";
+import { num, rows, str } from "../market/parse";
+
+/** member_notification_kind, the whole enum in its declared order (20261210600000). */
+export const MEMBER_NOTIFICATION_KINDS = [
+  "voucher_issued",
+  "voucher_redeemed",
+  "points_expiring",
+  "offer_hidden",
+  "application_received",
+  "hire_offer_received",
+  "hire_offer_accepted",
+  "hire_offer_declined",
+  "hired",
+  "classes_added",
+  "class_changed",
+  "class_cancelled",
+  "removed_from_team",
+  "gym_review_received",
+  "instructor_review_received",
+  "review_prompt",
+  "existing_team_invite",
+  "hiring_fee_added",
+] as const;
+export type MemberNotificationKind = (typeof MEMBER_NOTIFICATION_KINDS)[number];
 
 /** member_notification_kind, Release 1 (the rest of the enum is Release 2's). */
 export const RELEASE1_KINDS = ["voucher_issued", "voucher_redeemed", "points_expiring", "offer_hidden"] as const;
+
+/**
+ * The kinds addressed to a MEMBER (the client's bell and page pass these as
+ * p_kinds): the four the board's client inbox draws (C-MO.4.10: points
+ * expiring, session cancelled, review prompt, voucher ready). Everything else
+ * in the enum goes to an offer's owner / a business (voucher_redeemed,
+ * offer_hidden, application_received, hire_offer_accepted / _declined,
+ * hiring_fee_added, gym_review_received) or to a professional
+ * (hire_offer_received, hired, classes_added, class_changed,
+ * removed_from_team, existing_team_invite, instructor_review_received), so it
+ * never lights a member's bell.
+ */
+export const CLIENT_KINDS: readonly MemberNotificationKind[] = ["voucher_issued", "points_expiring", "class_cancelled", "review_prompt"];
+
+/** my_unread_notification_count's cap: the reader never counts past it. */
+export const UNREAD_COUNT_CAP = 99;
+
+/** my_unread_notification_count's integer (≥ 0, at most the cap); anything else is 0. */
+export function parseUnreadCount(data: unknown): number {
+  const n = num(data);
+  return n !== null && Number.isInteger(n) && n > 0 ? Math.min(n, UNREAD_COUNT_CAP) : 0;
+}
+
+/** The count as shown: "99+" at the cap (the reader stops counting there). */
+export const unreadBadge = (n: number): string => (n >= UNREAD_COUNT_CAP ? `${UNREAD_COUNT_CAP}+` : String(Math.max(0, Math.floor(n))));
 
 /** One my_notifications row. `kind` stays a string so a Release 2 kind still parses. */
 export interface MemberNotification {
@@ -90,14 +143,17 @@ export interface NotificationCopy {
 export type NotificationCopyTable = Readonly<Record<string, NotificationCopy>>;
 
 /**
- * The client's lines. The board's titles where they don't depend on payload
- * fields; DB6 documents no payload keys yet, so no line interpolates one.
- * voucher_redeemed and offer_hidden go to an offer's owner; they are here so a
- * member who also owns an offer never sees the generic line for them.
+ * The client's lines WITHOUT payload: the board's titles where they don't
+ * depend on a payload value, and the line shown when a documented key is
+ * missing (CLIENT_FILLS adds the values). voucher_redeemed and offer_hidden
+ * go to an offer's owner (not in CLIENT_KINDS, so the client page never
+ * reads them); they stay here because the business inbox reuses their lines.
  */
 export const CLIENT_COPY: NotificationCopyTable = {
   voucher_issued: { title: "Voucher ready", body: "Your voucher is in My rewards." },
   points_expiring: { title: "Points expire soon", body: "Some of your points expire soon. Redeem them for a reward before they lapse." },
+  class_cancelled: { title: "Class cancelled", body: "One of your booked classes is cancelled." },
+  review_prompt: { title: "Rate your instructor", body: "How was your class? Tell others what it was like." },
   voucher_redeemed: { title: "Voucher redeemed", body: "A member used a voucher for one of your offers." },
   offer_hidden: { title: "Offer taken down", body: "Centium hid one of your offers. Members can't see it in Rewards now." },
 };
@@ -105,39 +161,149 @@ export const CLIENT_COPY: NotificationCopyTable = {
 /** A key no table knows: a safe line, never the raw key. */
 export const GENERIC_COPY: NotificationCopy = { title: "New notification", body: "" };
 
-const own = (t: NotificationCopyTable, k: string): NotificationCopy | null => (Object.prototype.hasOwnProperty.call(t, k) ? t[k] : null);
+/**
+ * A line's payload values: what the documented keys say, or nothing (the
+ * table's line stays). Each part falls back on its own: a missing key keeps
+ * that part's plain line, never a half-filled sentence.
+ */
+export type NotificationFill = (payload: Readonly<Record<string, unknown>>) => Partial<NotificationCopy>;
+export type NotificationFillTable = Readonly<Record<string, NotificationFill>>;
 
-/** title_key's line, else the kind's, else the generic line. */
-export function notificationCopy(n: Pick<MemberNotification, "titleKey" | "kind">, table: NotificationCopyTable = CLIENT_COPY): NotificationCopy {
-  return own(table, n.titleKey) ?? own(table, n.kind) ?? GENERIC_COPY;
+// ---- payload readers and formats ----
+
+/** A non-blank string value, trimmed. */
+const pText = (p: Readonly<Record<string, unknown>>, k: string): string | null => {
+  const v = p[k];
+  return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
+};
+/** A positive whole number (a number or a numeric string). */
+const pCount = (p: Readonly<Record<string, unknown>>, k: string): number | null => {
+  const n = num(p[k]);
+  return n !== null && Number.isInteger(n) && n > 0 ? n : null;
+};
+/**
+ * A date or timestamp value: a bare "2026-11-30" (a `date`) is that calendar
+ * day where the member is (not UTC midnight, which reads as the day before
+ * west of Greenwich); a timestamptz is its instant.
+ */
+const pDate = (p: Readonly<Record<string, unknown>>, k: string): Date | null => {
+  const v = pText(p, k);
+  if (!v) return null;
+  const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  const d = day ? new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3])) : new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+/** "1,250". */
+export const formatCount = (n: number): string => n.toLocaleString("en-US");
+/** Month first: "Nov 30, 2026". */
+export const formatNoticeDate = (d: Date): string => formatShortDate(d, { month: "short", day: "numeric", year: "numeric" });
+/** Month first with the weekday: "Fri, Nov 6". */
+const formatNoticeDay = (d: Date): string => formatShortDate(d, { weekday: "short", month: "short", day: "numeric" });
+
+/**
+ * The client kinds' payload values (the migration's table):
+ * - voucher_issued (voucher; code, offer_title, points, expires_at):
+ *   offer_title → "Your voucher for {offer_title} is in My rewards.";
+ * - points_expiring (points; points, expires_on): points → "{n} points expire
+ *   soon" ("1 point expires soon"); expires_on → "They expire on {Nov 30,
+ *   2026}. Redeem them for a reward before then." (the board's words);
+ * - class_cancelled (class_session; business_name, class_title, starts_at,
+ *   reason): class_title → "{class_title} is cancelled"; business_name +
+ *   class_title (+ starts_at) → "{business} cancelled {class} on {Fri, Nov
+ *   6}. Your booking is cancelled.";
+ * - review_prompt (class_session; business_name, class_title,
+ *   instructor_name): class_title → "How was {class} with {instructor} at
+ *   {business}?" (either name left out when missing).
+ */
+export const CLIENT_FILLS: NotificationFillTable = {
+  voucher_issued: (p) => {
+    const offer = pText(p, "offer_title");
+    return offer ? { body: `Your voucher for ${offer} is in My rewards.` } : {};
+  },
+  points_expiring: (p) => {
+    const n = pCount(p, "points");
+    const on = pDate(p, "expires_on");
+    const out: Partial<NotificationCopy> = {};
+    if (n !== null) out.title = n === 1 ? "1 point expires soon" : `${formatCount(n)} points expire soon`;
+    if (on) {
+      const date = formatNoticeDate(on);
+      out.body =
+        n === 1
+          ? `It expires on ${date}. Redeem it for a reward before then.`
+          : n !== null
+            ? `They expire on ${date}. Redeem them for a reward before then.`
+            : `Some of your points expire on ${date}. Redeem them for a reward before then.`;
+    }
+    return out;
+  },
+  class_cancelled: (p) => {
+    const cls = pText(p, "class_title");
+    const biz = pText(p, "business_name");
+    const at = pDate(p, "starts_at");
+    const out: Partial<NotificationCopy> = {};
+    if (cls) out.title = `${cls} is cancelled`;
+    if (cls && biz) out.body = `${biz} cancelled ${cls}${at ? ` on ${formatNoticeDay(at)}` : ""}. Your booking is cancelled.`;
+    return out;
+  },
+  review_prompt: (p) => {
+    const cls = pText(p, "class_title");
+    if (!cls) return {};
+    const who = pText(p, "instructor_name");
+    const biz = pText(p, "business_name");
+    return { body: `How was ${cls}${who ? ` with ${who}` : ""}${biz ? ` at ${biz}` : ""}?` };
+  },
+};
+
+function own<T>(t: Readonly<Record<string, T>>, k: string): T | null {
+  return Object.prototype.hasOwnProperty.call(t, k) ? t[k] : null;
+}
+
+/**
+ * title_key's line, else the kind's, else the generic line; then the payload
+ * values from `fills` (by the same key) when the row carries a payload. The
+ * table's own entry comes back unchanged when nothing fills. CLIENT_COPY
+ * brings CLIENT_FILLS by default; another table brings its own (or none).
+ */
+export function notificationCopy(
+  n: Pick<MemberNotification, "titleKey" | "kind"> & { payload?: Readonly<Record<string, unknown>> },
+  table: NotificationCopyTable = CLIENT_COPY,
+  fills: NotificationFillTable | null = table === CLIENT_COPY ? CLIENT_FILLS : null
+): NotificationCopy {
+  const k = own(table, n.titleKey) ? n.titleKey : own(table, n.kind) ? n.kind : null;
+  if (k === null) return GENERIC_COPY;
+  const base = table[k];
+  const fill = fills ? own(fills, k) : null;
+  if (!fill || !n.payload) return base;
+  const f = fill(n.payload);
+  if (!f.title && !f.body) return base;
+  return { title: f.title || base.title, body: f.body || base.body };
 }
 
 // ---- where a row opens (client) ----
 
-const OWNER_KINDS = new Set(["voucher_redeemed", "offer_hidden"]);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * The client route a row opens, or null (the row only marks read).
- * voucher_issued → the voucher (subject 'voucher') or My rewards;
- * points_expiring → Points history; an owner's kind → nothing in the client
- * UI; any other kind by its subject: offer → the offer, voucher → the
- * voucher, booking → My bookings, points → Points history.
+ * The client route a row opens, or null (the row only marks read), from the
+ * documented subject per kind (the migration's table):
+ * voucher_issued (voucher) → the voucher, else My rewards;
+ * points_expiring (points) → Points history;
+ * class_cancelled (class_session) → My bookings › Upcoming;
+ * review_prompt (class_session) → My bookings › Past (the session id isn't a
+ * booking id, so the calendar's ?rate=<booking> link can't be built);
+ * any other kind (not a member's) → nothing in the client UI.
  */
 export function clientNotificationTarget(n: Pick<MemberNotification, "kind" | "subjectType" | "subjectId">): string | null {
   const id = n.subjectId && UUID.test(n.subjectId) ? n.subjectId : null;
-  if (n.kind === "voucher_issued") return n.subjectType === "voucher" && id ? `/app/marketplace/vouchers/${id}` : "/app/marketplace/rewards/mine";
-  if (n.kind === "points_expiring") return "/app/marketplace/points/history";
-  if (OWNER_KINDS.has(n.kind)) return null;
-  switch (n.subjectType) {
-    case "offer":
-      return id ? `/app/marketplace/rewards/${id}` : null;
-    case "voucher":
-      return id ? `/app/marketplace/vouchers/${id}` : "/app/marketplace/rewards/mine";
-    case "booking":
-      return "/app/marketplace/bookings";
-    case "points":
+  switch (n.kind) {
+    case "voucher_issued":
+      return n.subjectType === "voucher" && id ? `/app/marketplace/vouchers/${id}` : "/app/marketplace/rewards/mine";
+    case "points_expiring":
       return "/app/marketplace/points/history";
+    case "class_cancelled":
+      return "/app/marketplace/bookings?tab=upcoming";
+    case "review_prompt":
+      return "/app/marketplace/bookings?tab=past";
     default:
       return null;
   }

@@ -11,7 +11,7 @@ import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet"
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
 import { DobPromptCard } from "../../components/profile/DobPromptCard";
 import { ChevronRight, ArrowRight, Sparkles, Store, Crown, HeartHandshake, X, Bell } from "lucide-react";
-import { fetchMyNotifications, unreadCount } from "../../services/notifications";
+import { CLIENT_KINDS, fetchUnreadNotificationCount, unreadBadge } from "../../services/notifications";
 import { useNavigate } from "react-router-dom";
 import BusinessDashboard from "../marketplace/BusinessDashboard";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
@@ -211,20 +211,19 @@ export default function Home() {
  * opening C-MO.4.10 (/app/notifications). Not drawn: a 36 box with a 44 hit
  * area (.tap), lucide Bell 20 in the header's ink, and the board's 8 unread
  * dot #8F68F6 (C-MO.4.10's `n.dot`) when the inbox reports unread rows. It
- * reads my_notifications' newest 199 rows on mount (Home remounts on the way
- * back from the page, so rows read there clear the dot); the count goes in
- * the label, "199+" when every row of a full page is unread. No dot when the
- * read fails.
+ * reads my_unread_notification_count(CLIENT_KINDS) on mount (a member's kinds
+ * only, so an owner's or a professional's rows never light it; Home remounts
+ * on the way back from the page, so rows read there clear the dot); the
+ * count goes in the label, "99+" at the reader's cap (unreadBadge). No dot
+ * when the read fails.
  */
 function HomeBell() {
   const navigate = useNavigate();
-  const [unread, setUnread] = useState<{ n: number; plus: boolean }>({ n: 0, plus: false });
+  const [unread, setUnread] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    void fetchMyNotifications(null, 199).then((r) => {
-      if (cancelled || !r.ok) return;
-      const n = unreadCount(r.value.items);
-      setUnread({ n, plus: r.value.more && n === r.value.items.length });
+    void fetchUnreadNotificationCount(CLIENT_KINDS).then((r) => {
+      if (!cancelled && r.ok) setUnread(r.value);
     });
     return () => {
       cancelled = true;
@@ -234,11 +233,11 @@ function HomeBell() {
     <button
       type="button"
       onClick={() => navigate("/app/notifications")}
-      aria-label={unread.n > 0 ? `Notifications, ${unread.n}${unread.plus ? "+" : ""} unread` : "Notifications"}
+      aria-label={unread > 0 ? `Notifications, ${unreadBadge(unread)} unread` : "Notifications"}
       className="tap relative w-9 h-9 rounded-full flex items-center justify-center text-charcoal shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
     >
       <Bell size={20} strokeWidth={1.9} aria-hidden />
-      {unread.n > 0 && <span aria-hidden className="absolute rounded-full" style={{ top: 6, right: 7, width: 8, height: 8, background: "#8F68F6" }} />}
+      {unread > 0 && <span aria-hidden className="absolute rounded-full" style={{ top: 6, right: 7, width: 8, height: 8, background: "#8F68F6" }} />}
     </button>
   );
 }
