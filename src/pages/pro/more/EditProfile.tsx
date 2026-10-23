@@ -159,7 +159,7 @@ export default function EditProfile() {
             <SettingsRow
               icon={Store}
               title="Public listing"
-              sub={facts?.affiliatedBusinessId ? "Listed by your business" : facts?.listedPublicly ? "Listed in Explore" : "Not listed"}
+              sub={facts?.listedPublicly ? "Listed in Explore" : "Not listed"}
               onClick={() => navigate("/app/more/practice/listing")}
               last
             />

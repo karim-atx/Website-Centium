@@ -61,7 +61,8 @@ export function ExistingTeamInviteDialog({ invite, onClose, onDone }: { invite: 
     setSoon(false);
     const r = await acceptExistingTeamInvite(invite.id);
     setBusy(false);
-    // accept_existing_team_invite (Database Release 2): ATXH21 → the expired dialog; ATXC0 (the gym has no free seat) and ATX08 show their words.
+    // accept_existing_team_invite (Database Release 2): ATXH21 → the expired dialog; ATX08 shows its words. No seat
+    // refusal since Database #38 (a Team professional uses no paid seat).
     if (r.ok) return onDone(invite);
     if (r.pending) return setSoon(true);
     if (r.error === "invite_expired") return setExpired(true);

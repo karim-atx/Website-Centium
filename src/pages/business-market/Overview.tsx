@@ -50,7 +50,7 @@ import { HIRING_ROW_PENDING, hiringRowLine } from "./hiring/teamModel";
 //    with the NEW chip while there are new applicants. Studios have no Gym
 //    card (W3); since W5 (lead decision) they get the same Hiring row alone
 //    in that card's chrome under a caps "Studio", only while
-//    business_may_hire says so (gyms only in Database Release 2).
+//    business_may_hire says so (gyms and studios since Database #38).
 // Below the drawn blocks, under a caps "Listing" section, every live Listing
 // tab feature, restyled as handover cards (PLAN §3.4): Listing strength and
 // its sheets (hours, amenities, first visit, categories, policies), "Your
@@ -177,8 +177,7 @@ export function Overview() {
       ) : kind === "classes" ? (
         // Studios (W4 lead decision): the same Hiring row in the Gym card's
         // chrome, alone, ONLY when the server lets this business hire
-        // (business_may_hire: gyms only in Database Release 2, the studio
-        // widening flagged to Karim).
+        // (business_may_hire: gyms and studios since Database #38).
         <StudioHiring businessId={business.id} tick={tick} />
       ) : null}
       <ListingSection />

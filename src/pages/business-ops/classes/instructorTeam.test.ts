@@ -81,10 +81,10 @@ test("the ATXD9 line's day", () => {
   assert.equal(busyDayOf("That instructor is already teaching at that time. Choose someone else or another time."), null);
 });
 
-test("DB9 instructor_not_on_team reads as the picker note, for save, edit and assign", async () => {
+test("ATX76 (Database #38, the Team-only instructor rule) reads as the picker note, for save, edit and assign", async () => {
   const { refusalMessage } = await import("../../../services/business-classes/scheduleRules.ts");
   for (const action of ["save", "edit", "assign"] as const) {
-    assert.equal(refusalMessage(action, { code: "P0001", message: "instructor_not_on_team" }), "Only your Team can be named. Add people through Hiring.");
+    assert.equal(refusalMessage(action, { code: "ATX76", message: "a class can only name a professional on that business's team" }), "Only your Team can be named. Add people through Hiring.");
   }
   assert.match(refusalMessage("assign", { code: "ATXD9", message: "busy (2026-10-21)" }), /already teaching/);
 });

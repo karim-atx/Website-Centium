@@ -13,8 +13,10 @@
 //   business_hires (readable by any signed-in account: the fact of a hire is
 //   public), class_series / business_classes (insiders), business_employees
 //   (the granted columns), platform_settings (the fee numbers).
-// Gyms only: business_may_hire() is the server's one definition (business_type
-// 'gym'); refusals carry ATXH codes (model.ts HiringError).
+// Gyms and studios: business_may_hire() is the server's one definition
+// (business_type 'gym' or 'studio' since Database #38); refusals carry ATXH
+// codes (model.ts HiringError). Database #38 (8d3e9f3) also added
+// edit_opening, delete_opening and an optional description.
 
 import { marketDb, marketRpc, marketRpcRaw, type MarketResult } from "../market/rpc";
 import { isOffline } from "../network-error";
@@ -111,7 +113,7 @@ export function fetchHiringFeeRules(): Promise<MarketResult<HiringFeeRules>> {
   return request;
 }
 
-/** business_may_hire(p_business_id): the server's "gyms only" (business_type 'gym'). */
+/** business_may_hire(p_business_id): the server's rule (business_type 'gym' or 'studio', Database #38). */
 export function fetchMayHire(businessId: string): Promise<MarketResult<boolean>> {
   return marketRpc("business_may_hire", { p_business_id: businessId }, "Couldn't check Hiring for this business.", (d) => d === true);
 }
@@ -214,8 +216,8 @@ export async function fetchMyOpenings(businessId: string, status: OpeningStatus 
 export interface OpeningDraft {
   type: OpeningType;
   title: string;
-  /** openings.description: required by the table (10..4000 characters). */
-  description: string;
+  /** openings.description: optional since Database #38 (blank is stored as null; 1..4000 characters when given). The board's form has no field for it, so the app sends null. */
+  description: string | null;
   classSeriesIds: string[];
   classSessionId: string | null;
   /** The chosen classes in words (openings.schedule_label): a professional can't read the gym's class series. */
@@ -239,7 +241,7 @@ export function createOpening(businessId: string, d: OpeningDraft): Promise<Hiri
       p_business_id: businessId,
       p_type: d.type,
       p_title: d.title,
-      p_description: d.description,
+      p_description: d.description?.trim() ? d.description.trim() : null,
       p_pay: d.pay,
       p_pay_unit: d.payUnit,
       p_classes_per_month: perMonth(d.payUnit, d.classesPerMonth),
@@ -256,6 +258,50 @@ export function createOpening(businessId: string, d: OpeningDraft): Promise<Hiri
       return r && str(r.id) ? parseOpening(r) : null;
     },
   );
+}
+
+/**
+ * edit_opening(p_opening_id, p_title, p_description, p_pay, p_pay_unit,
+ * p_classes_per_month, p_class_series_ids, p_class_session_id,
+ * p_schedule_label, p_allow_pay_proposals, p_requirements, p_positions) →
+ * the openings row (Database #38). The `members` permission; refused while
+ * an admin has it hidden (ATXH8). THE TYPE CAN'T CHANGE (no parameter): a
+ * role and a class slot have different fee bases. Null means "leave it" for
+ * title, pay, pay unit and positions and "clear it" for the optional fields,
+ * so the editor sends the whole draft. Offers already sent keep their terms.
+ */
+export function editOpening(openingId: string, d: Omit<OpeningDraft, "type">): Promise<HiringWrite<Opening | null>> {
+  return hiringWrite(
+    "edit_opening",
+    {
+      p_opening_id: openingId,
+      p_title: d.title,
+      p_description: d.description?.trim() ? d.description.trim() : null,
+      p_pay: d.pay,
+      p_pay_unit: d.payUnit,
+      p_classes_per_month: perMonth(d.payUnit, d.classesPerMonth),
+      p_class_series_ids: d.classSeriesIds,
+      p_class_session_id: d.classSessionId,
+      p_schedule_label: d.scheduleLabel,
+      p_allow_pay_proposals: d.allowPayProposals,
+      p_requirements: d.requirements,
+      p_positions: d.positions,
+    },
+    "Couldn't save your changes. Check your connection and try again.",
+    (data) => {
+      const r = rows(data)[0];
+      return r && str(r.id) ? parseOpening(r) : null;
+    },
+  );
+}
+
+/**
+ * delete_opening(p_opening_id) → true (Database #38): only while nobody has
+ * applied (ATXH26 once somebody has: close it instead, so their applications
+ * survive); refused while an admin has it hidden (ATXH8).
+ */
+export function deleteOpening(openingId: string): Promise<HiringWrite> {
+  return hiringWrite("delete_opening", { p_opening_id: openingId }, "Couldn't delete this opening. Try again.", none);
 }
 
 /**
@@ -488,8 +534,9 @@ export function fetchHiringFees(businessId: string): Promise<MarketResult<Hiring
 /**
  * existing_team_window(p_business_id): greatest(the business's created_at,
  * platform_settings.existing_team_window_opens_at) + existing_team_window_days.
- * CLOSED, with no dates, until that start is set. "Free" means no hiring fee:
- * an existing-team addition still occupies a paid seat (ATXC0 without one).
+ * CLOSED, with no dates, until that start is set. Free: no hiring fee and,
+ * since Database #38, no paid seat (a seat binds only staff without a
+ * professional account), so add_existing_team never meets ATXC0.
  */
 export function fetchExistingTeamWindow(businessId: string): Promise<MarketResult<ExistingTeamWindow | null>> {
   return marketRpc("existing_team_window", { p_business_id: businessId }, "Couldn't load the existing-team window.", parseWindow);

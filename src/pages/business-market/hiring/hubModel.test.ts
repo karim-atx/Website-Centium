@@ -27,7 +27,8 @@ import {
   startsText,
   tabOf,
   teamButtonText,
-  openingDescription,
+  formOfOpening,
+  deleteDialogOf,
   scheduleLabelOf,
 } from "./hubModel.ts";
 import type { BusinessClassRow } from "../../../services/business-classes/types.ts";
@@ -192,17 +193,40 @@ test("live classes → series and sessions", () => {
   assert.equal(sessionOptions([row("t", "2026-10-22", "07:00", null), row("u", "2026-10-22", "18:00", null)], "2026-10-22", "09:30").length, 1, "earlier today is gone");
 });
 
-test("create_opening's schedule_label and description come from the form's own facts", () => {
+test("create_opening's schedule_label comes from the form's own facts (the description is optional, Database #38: none is sent)", () => {
   const series = [{ id: "s1", label: "Spin 45 · Sun 10:00 AM" }, { id: "s2", label: "HIIT 30 · Mon 7:00 AM" }];
   const sessions = [{ id: "c1", label: "Spin 45 · Sat, Oct 24, 9:00 AM" }];
   assert.equal(scheduleLabelOf({ type: "role", seriesIds: ["s1", "s2"], sessionId: null }, series, sessions), "Spin 45 · Sun 10:00 AM and HIIT 30 · Mon 7:00 AM");
   assert.equal(scheduleLabelOf({ type: "class_slot", seriesIds: [], sessionId: "c1" }, series, sessions), "Spin 45 · Sat, Oct 24, 9:00 AM");
   assert.equal(scheduleLabelOf({ type: "role", seriesIds: [], sessionId: null }, series, sessions), null);
-  assert.equal(
-    openingDescription({ type: "role", pay: 80, payUnit: "per_class", classesPerMonth: 4, requirements: ["First aid"] }, "Spin 45 · Sun 10:00 AM"),
-    "Role · ongoing · Spin 45 · Sun 10:00 AM · $80 per class · 4 classes a month · First aid",
-  );
-  const bare = openingDescription({ type: "role", pay: 900, payUnit: "per_month", classesPerMonth: null, requirements: [] }, null);
-  assert.equal(bare, "Role · ongoing · $900 a month");
-  assert.ok(bare.length >= 10);
+});
+
+test("the Delete dialog: delete_opening only while nobody has applied, else Pause (Database #38, ATXH26)", () => {
+  assert.deepEqual(deleteDialogOf({ title: "Sunday Spin instructor", applicantCount: 0 }), {
+    title: "Delete Sunday Spin instructor?",
+    body: "It comes off Hiring and the opportunities board. This can't be undone.",
+    action: "Delete",
+    pauseInstead: false,
+  });
+  const one = deleteDialogOf({ title: "Sunday Spin instructor", applicantCount: 1 });
+  assert.equal(one.pauseInstead, true);
+  assert.equal(one.action, "Pause");
+  assert.equal(one.title, "Pause Sunday Spin instructor instead?");
+  assert.equal(one.body, "1 person has applied, so it can't be deleted. Pausing closes it and keeps their applications. You can reopen it later.");
+  assert.match(deleteDialogOf({ title: "x", applicantCount: 3 }).body, /^3 people have applied/);
+});
+
+test("the edit sheet starts from the opening's own values (edit_opening, Database #38)", () => {
+  const role = { type: "role" as const, title: "Sunday Spin instructor", classSeriesIds: ["s1"], classSessionId: null, pay: 80, payUnit: "per_class" as const, positions: 2, classesPerMonth: 4, requirements: ["First aid"], allowPayProposals: true };
+  const f = formOfOpening(role);
+  assert.deepEqual(f, { type: "role", title: "Sunday Spin instructor", seriesIds: ["s1"], sessionId: null, pay: "80", payUnit: "per_class", positions: "2", classesPerMonth: "4", requirements: ["First aid"], allowProposals: true, startsOn: null });
+  const parsed = parseForm(f, "post", null);
+  assert.equal(parsed?.title, "Sunday Spin instructor");
+  assert.equal(parsed?.pay, 80);
+  assert.equal(formOfOpening({ ...role, payUnit: "per_month", pay: 1250.5, classesPerMonth: null }).pay, "1250.50");
+  const slot = formOfOpening({ ...role, type: "class_slot", title: "Saturday Spin 45 cover", classSeriesIds: [], classSessionId: "c1", payUnit: "per_slot", pay: 60, classesPerMonth: null });
+  assert.equal(slot.type, "class_slot");
+  assert.equal(slot.sessionId, "c1");
+  assert.equal(slot.title, "");
+  assert.equal(parseForm(slot, "post", "Saturday Spin 45 cover")?.payUnit, "per_slot");
 });

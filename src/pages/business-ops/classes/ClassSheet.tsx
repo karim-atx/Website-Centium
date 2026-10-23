@@ -63,9 +63,8 @@ import { conflictsFor, durationMinutes, durationOptions, everyText, initialOf, i
 // until then the live instructors (accepted business_employees,
 // fetchInstructors; D-35 backfills them as existing_team members). "Go to
 // Hiring" / "Post an opening" park the draft and open Hiring. The server's
-// Team check (DB9 `instructor_not_on_team`) shows under the field.
-// my_team is Database Release 2; awaiting DB stage DB9 (instructor_not_on_team: the server doesn't
-// refuse a non-Team instructor yet)
+// Team check (Database #38: save_class_series / edit_class name only a Team
+// professional, business_team_professional, ATX76) shows under the field.
 //
 // KEPT live (PLAN §3.4), in the sheet's chrome, as span-2 boxes under the
 // drawn grid: the Repeat editor (Daily / Weekly / Every 2 weeks / Custom every
@@ -178,7 +177,7 @@ function SheetBody({
   const [dateOpen, setDateOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
   const [runOpen, setRunOpen] = useState(false);
-  // DB9 instructor_not_on_team, under the Instructor field.
+  // ATX76 (the server's Team-only rule), under the Instructor field.
   const [instrErr, setInstrErr] = useState<string | null>(null);
   const [durOpen, setDurOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
@@ -295,7 +294,7 @@ function SheetBody({
     const r = await Promise.race([onSave(draftOf(form), mode === "create" ? ruleOf(form) : null), timeout]);
     setSaving(false);
     if (r.ok) return; // the page closes the sheet and shows the toast
-    // awaiting DB stage DB9: instructor_not_on_team (scheduleRules maps it to the note's words).
+    // ATX76, the Team-only instructor rule (scheduleRules maps it to the note's words).
     if (r.message === HIRING_ERROR_TEXT.instructor_not_on_team) {
       setInstrErr(r.message);
       runGroupEl?.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });

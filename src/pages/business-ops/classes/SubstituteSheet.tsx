@@ -30,10 +30,12 @@ import { useClassTeam } from "./useClassTeam";
 // them (B7 messaging) once the assignment has landed; see SessionActions.
 //
 // THE LIST SOURCE (W4, B-MA.6; lead decision D-35): the Team. Once my_team
-// (DB8) answers, the free list keeps Team members only (DB9 makes
-// instructors_free_for Team-only on the server too). Until then it is the
-// live instructors_free_for list, unchanged.
-// my_team is Database Release 2; awaiting DB stage DB9 (instructors_free_for Team only on the server)
+// (DB8) answers, the free list keeps Team members only. Until then it is the
+// live instructors_free_for list, unchanged. Database #38 made
+// assign_class_instructor refuse anyone off the Team (ATX76, read as the
+// B-MA.6 note), but instructors_free_for itself still lists every accepted
+// employment (revoked ones included), so the client filter stays.
+// awaiting DB stage DB9 (instructors_free_for Team only on the server)
 
 export function SubstituteSheet({
   open,

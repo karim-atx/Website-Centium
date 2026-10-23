@@ -6,9 +6,9 @@ import { fetchMayHire } from "../../../services/hiring";
 
 // Market + Share 3.0 · the business every Hiring page works for.
 // Hiring's rule is the server's: business_may_hire(p_business_id) (Database
-// Release 2: business_type 'gym' only; studios are flagged to Karim as one
-// word in that function). Anything else gets the pages' quiet "Hiring is for
-// gyms." state, and the server refuses its writes with ATXH0 anyway.
+// #38: business_type 'gym' or 'studio'). Anything else gets the pages' quiet
+// "Hiring is for gyms and studios." state, and the server refuses its writes
+// with ATXH0 anyway.
 
 export interface HiringBusiness {
   businessId: string | null;

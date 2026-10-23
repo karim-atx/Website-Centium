@@ -33,9 +33,9 @@ import { PRO_TYPE_CHIPS, addCta, addTitle, addedDuringWindow, addedStrip, countd
 // greatest(the business's created_at, platform_settings
 // existing_team_window_opens_at) + existing_team_window_days. CLOSED, with no
 // dates, until Karim sets the start: this page then says the window hasn't
-// started (ours; the board draws only open and closed). "Free" means no
-// hiring fee: an existing-team addition still occupies a paid seat, so a gym
-// without one is refused with ATXC0 (shown in the confirm dialog).
+// started (ours; the board draws only open and closed). Free: no hiring
+// fee and, since Database #38, no paid seat (every Team professional is
+// seat-free), so the confirm dialog never meets the seat cap.
 // Open: the countdown card on #E6F1EF ("Free for your first 30 days", "Closes
 // {date}", the days figure 34 / 800, the bar = windowUsed), the explainer;
 // search (name or specialty: search_professionals with p_existing_team);

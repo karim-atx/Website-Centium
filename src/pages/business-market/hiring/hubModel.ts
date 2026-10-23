@@ -406,17 +406,44 @@ export function scheduleLabelOf(p: Pick<ParsedForm, "type" | "seriesIds" | "sess
 }
 
 /**
- * openings.description (required by the table, 10 to 4,000 characters): the
- * board's form has no description field, so it is the form's own facts in
- * one line ("Role · ongoing · Spin 45 · Sun 10:00 AM · $80 per class · 4
- * classes a month · First aid"). Always over 10 characters (the type label
- * alone is 14).
+ * The edit sheet's starting form (B-MA.8.1 reused for Edit, Database #38
+ * edit_opening): the opening's own values. The type is shown but locked (the
+ * server can't change it). A per-slot pay reads as the slot's pay; any other
+ * unit as the role's.
  */
-export function openingDescription(p: Pick<ParsedForm, "type" | "pay" | "payUnit" | "classesPerMonth" | "requirements">, scheduleLabel: string | null): string {
-  const parts = [typeLabel(p.type), scheduleLabel, payText(p.pay, p.payUnit)];
-  if (p.payUnit === "per_class" && p.classesPerMonth) parts.push(`${plural(p.classesPerMonth, "class", "classes")} a month`);
-  parts.push(...p.requirements);
-  return parts.filter(Boolean).join(" · ").slice(0, 4000);
+export function formOfOpening(o: Pick<Opening, "type" | "title" | "classSeriesIds" | "classSessionId" | "pay" | "payUnit" | "positions" | "classesPerMonth" | "requirements" | "allowPayProposals">): OpeningFormState {
+  const amount = o.pay != null && o.pay > 0 ? (Number.isInteger(o.pay) ? String(o.pay) : o.pay.toFixed(2)) : "";
+  return {
+    type: o.type,
+    title: o.type === "role" ? o.title : "",
+    seriesIds: [...o.classSeriesIds],
+    sessionId: o.classSessionId,
+    pay: amount,
+    payUnit: o.payUnit === "per_month" ? "per_month" : "per_class",
+    positions: String(Math.max(1, o.positions)),
+    classesPerMonth: o.classesPerMonth != null ? String(o.classesPerMonth) : "",
+    requirements: [...o.requirements],
+    allowProposals: o.allowPayProposals,
+    startsOn: null,
+  };
+}
+
+/**
+ * The opening menu's Delete dialog (Database #38 delete_opening; ours, the
+ * board draws the menu row only). delete_opening refuses once somebody has
+ * applied (ATXH26: their applications would go with it), so an opening with
+ * applicants offers Pause instead (set_opening_status 'closed', reopenable).
+ */
+export function deleteDialogOf(o: Pick<Opening, "title" | "applicantCount">): { title: string; body: string; action: string; pauseInstead: boolean } {
+  if (o.applicantCount > 0) {
+    return {
+      title: `Pause ${o.title} instead?`,
+      body: `${plural(o.applicantCount, "person has", "people have")} applied, so it can't be deleted. Pausing closes it and keeps their applications. You can reopen it later.`,
+      action: "Pause",
+      pauseInstead: true,
+    };
+  }
+  return { title: `Delete ${o.title}?`, body: "It comes off Hiring and the opportunities board. This can't be undone.", action: "Delete", pauseInstead: false };
 }
 
 /** Classes a month suggested from the chosen series (sessions a week × 4), as the board's 1 weekly class → 4. */

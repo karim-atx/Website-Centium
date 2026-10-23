@@ -23,8 +23,19 @@ test("my_calendar events replace the live row of the same session: no duplicates
   const out = mergeClasses([live(), live({ id: "s9" })], hired);
   assert.deepEqual(out.map((c) => [c.sessionId, c.hired]).sort(), [["s1", true], ["s9", false]]);
   assert.equal(out.find((c) => c.sessionId === "s1")?.pay, 70);
-  // my_calendar carries no colour (D-40 not in the contract): the series' palette colour.
+  // A series with no colour of its own (colour null): the series' palette colour.
   assert.ok((CLASS_PALETTE as readonly string[]).includes(out.find((c) => c.sessionId === "s1")?.colour ?? ""));
+});
+
+test("Database #38: my_calendar's colour and role_title reach the class (D-40)", () => {
+  const [hired] = mergeClasses([], parseMyCalendar([{ class_id: "s1", class_series_id: "cs1", hire_id: "h1", business_name: "Gym A", title: "HIIT 30", event_date: "2026-11-02", start_time: "07:00", end_time: "07:30", pay_per_session: 125, colour: "#4f8f8a", role_title: "Head coach" }]));
+  assert.equal(hired.colour, "#4F8F8A");
+  assert.equal(hired.roleTitle, "Head coach");
+  assert.equal(hired.pay, 125);
+  // Not from a hire: no role on the mark, and a malformed colour falls back to the palette.
+  const [own] = mergeClasses([], parseMyCalendar([{ class_id: "s2", class_series_id: "cs2", hire_id: null, business_name: "Gym A", title: "Core", event_date: "2026-11-02", start_time: "08:00", colour: "teal", role_title: null }]));
+  assert.equal(own.roleTitle, null);
+  assert.ok((CLASS_PALETTE as readonly string[]).includes(own.colour));
 });
 
 test("an event without a hire never says Hired", () => {

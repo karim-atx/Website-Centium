@@ -189,42 +189,6 @@ export async function saveMyProfile(
   return { ok: true, profile: toProfile(inserted.data as Row) };
 }
 
-export interface Affiliation {
-  businessId: string;
-  businessName: string;
-}
-
-/**
- * Which business the caller is affiliated with, if any.
- *
- * Read from `professional_profiles.affiliated_business_id` — the trigger-
- * maintained mirror of `business_employees` — and NOT by asking
- * `professional_is_affiliated()`, which is revoked from `authenticated` and
- * cannot be called from a browser. The business name comes from
- * `business_profiles`, which is readable by anon and authenticated alike.
- *
- * This is for EXPLAINING the disabled toggle, never for deciding whether the
- * write is allowed. That decision belongs to the database, which makes it
- * again on every write regardless of what this returned.
- */
-export async function fetchMyAffiliation(businessId: string | null): Promise<Affiliation | null> {
-  if (!businessId) return null;
-
-  const { data, error } = await supabase
-    .from("business_profiles")
-    .select("id, business_name")
-    .eq("id", businessId)
-    .maybeSingle();
-
-  if (error || !data) {
-    console.error("[professional-profile] Could not read business name:", error?.message);
-    // The affiliation is real even when its name will not load, so the toggle
-    // must still be blocked — just without the name in the sentence.
-    return { businessId, businessName: "your business" };
-  }
-  return { businessId: data.id, businessName: data.business_name };
-}
-
 export type LeaveAffiliationResult = { ok: true } | { ok: false; message: string };
 
 /**
@@ -280,7 +244,6 @@ export const NEEDS_VERIFICATION = "You can be listed once your licence or certif
 
 export type SetListingResult =
   | { status: "ok"; listed: boolean }
-  | { status: "affiliated" }
   | { status: "no_profile" }
   /** ATX48: no date of birth on file. One field, then it works. */
   | { status: "needs_dob" }
@@ -292,20 +255,13 @@ export type SetListingResult =
  * Publishes or unpublishes the caller's directory listing.
  *
  * `listed_publicly` is in no UPDATE grant, so this RPC is the only write path
- * a client has. ATX03 is the database refusing because the caller is
- * affiliated with a business — mapped to its own status rather than surfaced
- * as an error string, because the UI owes that case a real explanation naming
- * the business, not a raised exception rendered verbatim.
- *
- * The UI also checks affiliation before offering the switch. This handles the
- * case that check cannot: a business adding the professional between the read
- * and the write.
+ * a client has. Database #38 retired its affiliation refusal (ATX03): every
+ * Team professional stays listed and can switch their own listing.
  */
 export async function setPublicListing(listed: boolean): Promise<SetListingResult> {
   const { data, error } = await supabase.rpc("set_public_listing", { p_listed: listed });
 
   if (error) {
-    if (error.code === "ATX03") return { status: "affiliated" };
     // ATX08 since migration 6360dc2. This used to match the message text, which
     // was the only signal there was; the code is the signal now and the regex is
     // gone rather than kept beside it, because that migration changed no wording

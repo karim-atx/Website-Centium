@@ -135,9 +135,9 @@ export function useProCalendar(clinical: boolean): ProCalendarData {
       setHired([]);
       setHiredLive(false);
     }
-    // The member inbox's calendar kinds (Database 20261210600000).
-    // remove_from_team writes removed_from_team (Release 2). awaiting DB stage DB12: nothing writes classes_added / class_changed
-    // (or class_cancelled to an instructor) yet.
+    // The member inbox's calendar kinds (Database 20261210600000). Writers (Database #38):
+    // accept_hire_offer (classes_added), the business_classes trigger (class_changed /
+    // class_cancelled, future sessions only) and remove_from_team (removed_from_team).
     if (nt.ok) setNotices(unreadNotices(nt.data));
   }, [authUserId, clinical]);
 

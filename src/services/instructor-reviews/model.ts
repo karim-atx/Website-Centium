@@ -197,12 +197,11 @@ export const REVIEW_TEXT_MAX = 2000;
  * review_instructor's refusals (HANDOVER_API Release 2 "Instructor reviews"):
  * ATXH22 (ATX94) no booking of that class; ATX10 before it has happened;
  * ATXH23 (ATX08) nobody named, or never on that gym's team; ATX91 a rating
- * outside 1–5; 22023 over 2,000 characters; ATX02 rate limited; and 23502
- * when the text is left empty: review_instructor takes p_body as optional but
- * gym_reviews.body is NOT NULL, so a stars-only review is refused (Database
- * gap, proved in r2h_proof_d) and the dialog asks for a few words.
+ * outside 1–5; 22023 over 2,000 characters; ATX02 rate limited. Stars
+ * alone are a review since Database #38 (gym_reviews.body is nullable and
+ * its CHECK allows null), so an empty text is sent as null and accepted.
  */
-export type ReviewError = "not_attended" | "not_yet" | "no_instructor" | "bad_rating" | "too_long" | "rate_limited" | "needs_text";
+export type ReviewError = "not_attended" | "not_yet" | "no_instructor" | "bad_rating" | "too_long" | "rate_limited";
 
 export function reviewErrorOf(e: { code?: string | null; message?: string | null } | null | undefined): ReviewError | null {
   if (!e) return null;
@@ -213,7 +212,6 @@ export function reviewErrorOf(e: { code?: string | null; message?: string | null
   if (e.code === "ATX91") return "bad_rating";
   if (e.code === "22023") return "too_long";
   if (e.code === "ATX02") return "rate_limited";
-  if (e.code === "23502") return "needs_text";
   return null;
 }
 
@@ -225,5 +223,4 @@ export const REVIEW_ERROR_TEXT: Record<ReviewError, string> = {
   bad_rating: "Choose from 1 to 5 stars.",
   too_long: "Keep it under 2,000 characters.",
   rate_limited: "Too many reviews in a short time. Try again later.",
-  needs_text: "Add a few words about the class, then send.",
 };

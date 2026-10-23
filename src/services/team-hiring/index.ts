@@ -3,53 +3,25 @@
 //
 // Database Release 2 (abf4b2c + ff093b7; the migration comments and function
 // definitions are the contract):
-// - functions: opportunities, apply_to_opening, my_hire_offers,
-//   accept_hire_offer, decline_hire_offer, check_conflicts (the professional
-//   asking about themselves gets titles), my_work, my_calendar,
-//   my_team_invites, accept_existing_team_invite, set_gym_work_available;
-// - tables read under their RLS: opening_applications (the applicant's own),
-//   business_hire_offers (the professional's own: application_id and the
-//   class series an offer names), openings (open, unhidden openings of a
-//   publicly visible gym; a closed or filled one is no longer readable by an
-//   applicant), business_profiles (active ones: the gym's name),
-//   professional_profiles (own row: open_to_gym_work).
-// There is no "my applications" reader: My applications is composed from
-// my_hire_offers and the caller's own opening_applications (below).
+// - functions: opportunities (+ the class times and the gym's venue-only
+//   rating since Database #38), apply_to_opening, my_applications (Database
+//   #38), my_hire_offers, accept_hire_offer, decline_hire_offer,
+//   check_conflicts (the professional asking about themselves gets titles),
+//   my_work, my_calendar, my_team_invites, accept_existing_team_invite,
+//   set_gym_work_available;
+// - tables read under their RLS: business_hire_offers (the professional's
+//   own: the class series an offer names), professional_profiles (own row:
+//   open_to_gym_work).
 
 import { currentUserId, marketDb, marketRpc, type MarketResult } from "../market/rpc";
 import { isOffline } from "../network-error";
 import { bool, num, rows, str } from "../market/parse";
 import { hiringWrite, type HiringWrite } from "../hiring";
-import { applicationStatus, hhmmOf, parseInvites, parseOpening, payUnitOf, type ApplicationStatus, type ExistingTeamInvite, type Opening, type OpeningType, type PayUnit } from "../hiring/model";
+import { hhmmOf, parseInvites, payUnitOf, type ExistingTeamInvite, type Opening, type OpeningType, type PayUnit } from "../hiring/model";
 
 export type { HiringWrite } from "../hiring";
-
-/** An opening as a professional sees it (P-MA.5.1): the gym's card on top. */
-export interface Opportunity extends Opening {
-  businessId: string;
-  businessName: string;
-  businessRating: number | null;
-  distanceKm: number | null;
-  applied: boolean;
-}
-
-/** A card on My applications: an application, or an offer (path "direct" when no application is behind it). */
-export interface MyApplication {
-  id: string;
-  offerId: string | null;
-  path: "opening" | "direct";
-  status: ApplicationStatus;
-  businessId: string;
-  businessName: string;
-  title: string;
-  type: OpeningType;
-  pay: number | null;
-  payUnit: PayUnit;
-  classesPerMonth: number | null;
-  startsOn: string | null;
-  note: string | null;
-  createdAt: string | null;
-}
+export * from "./model";
+import { composeMyApplications, parseOpportunity, type MyApplication, type Opportunity } from "./model";
 
 export interface WorkClass {
   title: string;
@@ -95,31 +67,6 @@ async function tableRows(run: () => PromiseLike<Rows>, fallback: string): Promis
   } catch (e) {
     return { ok: false, offline: isOffline(e), message: fallback };
   }
-}
-
-async function businessNames(ids: string[]): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
-  if (!ids.length) return out;
-  const r = await tableRows(() => marketDb.from("business_profiles").select("id, business_name").in("id", ids) as unknown as PromiseLike<Rows>, "names");
-  if (r.ok) for (const b of r.value) if (str(b.business_name)) out.set(String(b.id), b.business_name as string);
-  return out;
-}
-
-/**
- * One opportunities row (id, business_id, business_name, logo_url, area,
- * type, title, description, schedule_label, pay, pay_unit,
- * classes_per_month, allow_pay_proposals, requirements, positions,
- * distance_km, applicants, applied, posted_at).
- */
-export function parseOpportunity(r: Record<string, unknown>): Opportunity {
-  return {
-    ...parseOpening(r),
-    businessId: str(r.business_id) ?? "",
-    businessName: str(r.business_name) ?? "",
-    businessRating: null,
-    distanceKm: num(r.distance_km),
-    applied: bool(r.applied),
-  };
 }
 
 /**
@@ -169,91 +116,22 @@ export function applyToOpening(openingId: string, input: ApplyInput): Promise<Hi
   );
 }
 
-const OFFER_STATUS: Record<string, ApplicationStatus | null> = { pending: "OFFERED", accepted: "HIRED", declined: "DECLINED", withdrawn: null };
-
 /**
- * My applications: the caller's offers (my_hire_offers; pending first) and
- * their applications (opening_applications, own). An application shows once:
- * through its latest offer that wasn't withdrawn (OFFERED / HIRED /
- * DECLINED), else as itself with its opening's title and gym. An application
- * whose opening is no longer readable (closed or filled with no offer, or a
- * gym that paused) can't be named and is left out (Database gap).
+ * My applications (Database #38): my_applications() — the caller's own
+ * applications, offered first, each with its opening, its gym and the offer
+ * it became (hire_offer_id, offer_status), still listed after the opening
+ * closes — plus the direct offers (my_hire_offers path 'direct': no
+ * application behind them). An application's card follows its offer when
+ * the offer wasn't withdrawn (pending OFFERED, accepted HIRED, declined
+ * DECLINED; the offer's own terms and start date from my_hire_offers), else
+ * its own status with the proposed pay or the posted pay.
  */
 export async function fetchMyApplications(): Promise<MarketResult<MyApplication[]>> {
   const fallback = "Couldn't load your applications.";
-  const uid = await currentUserId();
-  if (!uid) return { ok: false, message: fallback };
-  const [offers, links, apps] = await Promise.all([
-    marketRpc("my_hire_offers", { p_status: null }, fallback, rows),
-    tableRows(() => marketDb.from("business_hire_offers").select("id, application_id").eq("professional_id", uid) as unknown as PromiseLike<Rows>, fallback),
-    tableRows(() => marketDb.from("opening_applications").select("id, opening_id, status, proposed_pay, message, created_at").eq("professional_id", uid) as unknown as PromiseLike<Rows>, fallback),
-  ]);
-  if (!offers.ok) return offers;
-  if (!links.ok) return links;
+  const [apps, offers] = await Promise.all([marketRpc("my_applications", {}, fallback, rows), marketRpc("my_hire_offers", { p_status: null }, fallback, rows)]);
   if (!apps.ok) return apps;
-  const appOf = new Map(links.value.map((l) => [String(l.id), str(l.application_id)]));
-  const out: MyApplication[] = [];
-  const covered = new Set<string>();
-  for (const o of offers.value) {
-    const status = OFFER_STATUS[String(o.status)];
-    const offerId = str(o.id);
-    if (!status || !offerId) continue;
-    const appId = appOf.get(offerId) ?? null;
-    if (appId) {
-      if (covered.has(appId)) continue; // an older offer for the same application
-      covered.add(appId);
-    }
-    const type: OpeningType = o.type === "class_slot" ? "class_slot" : "role";
-    out.push({
-      id: appId ?? offerId,
-      offerId,
-      path: o.path === "direct" ? "direct" : "opening",
-      status,
-      businessId: str(o.business_id) ?? "",
-      businessName: str(o.business_name) ?? "",
-      title: str(o.title) ?? "",
-      type,
-      pay: num(o.pay),
-      payUnit: payUnitOf(o.pay_unit, type),
-      classesPerMonth: num(o.classes_per_month),
-      startsOn: str(o.starts_on),
-      note: str(o.message),
-      createdAt: str(o.created_at),
-    });
-  }
-  const rest = apps.value.filter((a) => str(a.id) && !covered.has(a.id as string));
-  if (rest.length) {
-    const op = await tableRows(
-      () => marketDb.from("openings").select("id, business_id, type, title, pay, pay_unit, classes_per_month").in("id", uniq(rest.map((a) => str(a.opening_id)))) as unknown as PromiseLike<Rows>,
-      fallback,
-    );
-    if (!op.ok) return op;
-    const byId = new Map(op.value.map((o) => [String(o.id), o]));
-    const names = await businessNames(uniq(op.value.map((o) => str(o.business_id))));
-    for (const a of rest) {
-      const o = byId.get(String(a.opening_id));
-      if (!o) continue;
-      const type: OpeningType = o.type === "class_slot" ? "class_slot" : "role";
-      out.push({
-        id: a.id as string,
-        offerId: null,
-        path: "opening",
-        status: applicationStatus(a.status),
-        businessId: str(o.business_id) ?? "",
-        businessName: names.get(String(o.business_id)) ?? "",
-        title: str(o.title) ?? "",
-        type,
-        pay: num(a.proposed_pay) ?? num(o.pay),
-        payUnit: payUnitOf(o.pay_unit, type),
-        classesPerMonth: num(o.classes_per_month),
-        startsOn: null,
-        note: str(a.message),
-        createdAt: str(a.created_at),
-      });
-    }
-  }
-  const rank = (a: MyApplication) => (a.status === "OFFERED" ? 0 : 1);
-  return { ok: true, value: out.sort((a, b) => rank(a) - rank(b) || String(b.createdAt).localeCompare(String(a.createdAt))) };
+  if (!offers.ok) return offers;
+  return { ok: true, value: composeMyApplications(apps.value, offers.value) };
 }
 
 /** Clashes on accept: the professional sees titles and times (check_conflicts asked about themselves). */
@@ -394,23 +272,11 @@ export function fetchMyTeamInvites(): Promise<MarketResult<ExistingTeamInvite[]>
 }
 
 /**
- * The invite an existing_team_invite notification names (P-MA.7 row →
- * P-MA.5.4): invite_existing_team writes subject_type 'business' (the
- * business id) and payload invite_id, business_id, business_name,
- * expires_at. null when the row isn't one.
- */
-export function inviteFromNotification(n: { kind: string; memberKind?: string; subjectType: string | null; subjectId: string | null; payload: Record<string, unknown>; createdAt: string }): ExistingTeamInvite | null {
-  if ((n.memberKind ?? n.kind) !== "existing_team_invite") return null;
-  const p = n.payload;
-  const inv = parseInvites([{ id: p.invite_id, business_id: p.business_id ?? n.subjectId, business_name: p.business_name, sent_at: n.createdAt, expires_at: p.expires_at }])[0];
-  return inv ?? null;
-}
-
-/**
  * accept_existing_team_invite(p_invite_id) → the employment id (null when
  * already on the team). Matched on the caller's own email or phone; ATXH21
- * expired; ATX08 somebody else's / accepted / a bad id. The employment
- * occupies one of the gym's paid seats (ATXC0 when it has none).
+ * expired; ATX08 somebody else's / accepted / a bad id. Since Database #38
+ * the employment uses no paid seat (the caller is a professional), so the
+ * seat cap (ATXC0) can't refuse it.
  */
 export function acceptExistingTeamInvite(inviteId: string): Promise<HiringWrite> {
   return hiringWrite("accept_existing_team_invite", { p_invite_id: inviteId }, "Couldn't accept the invite. Try again.", () => null);

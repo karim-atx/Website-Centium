@@ -38,8 +38,9 @@ import { acceptBody, acceptRows, applicationMeta, clashBody, clashTime, hiredStr
 // (components/pro/calendar, W5). Hired → the card turns HIRED and the
 // strip "You're hired · {gym}, {role}" with "My work". Decline →
 // decline_hire_offer (one tap: the board draws no confirm).
-// Database Release 2: there is no my_applications reader, so the list is
-// my_hire_offers + the caller's own opening_applications (services/team-hiring);
+// Database #38: the list is my_applications() (the caller's applications,
+// offered first, still listed after the opening closes) + my_hire_offers for
+// the direct offers and the offers' terms (services/team-hiring);
 // accept_hire_offer (ATXH15 → the clash dialog, its rows from check_conflicts)
 // and decline_hire_offer (ATXH14 / ATX08 → "This offer is no longer open.").
 

@@ -101,9 +101,9 @@ test("class series helpers", () => {
   assert.equal(hhmmOf(null), null);
 });
 
-test("the 26 ATXH codes map by code (HANDOVER_API Release 2 Error codes)", () => {
+test("the 27 ATXH codes map by code (HANDOVER_API Release 2 Error codes)", () => {
   const cases: [string, string, string][] = [
-    ["ATXH0: hiring is for gyms", "ATX09", "not_a_gym"],
+    ["ATXH0: hiring is for gyms and studios", "ATX09", "not_a_gym"],
     ["ATXH1: this opening does not take pay proposals", "22023", "pay_locked"],
     ["ATXH2: you have already applied to this opening", "ATX10", "already_applied"],
     ["ATXH3: one of those class series is not yours", "22023", "not_your_class"],
@@ -129,6 +129,7 @@ test("the 26 ATXH codes map by code (HANDOVER_API Release 2 Error codes)", () =>
     ["ATXH23: that class had no named instructor", "ATX08", "no_instructor"],
     ["ATXH24: that hire is not yours to dispute", "42501", "not_your_hire"],
     ["ATXH25: you already have an open dispute about that hire", "ATX10", "dispute_open"],
+    ["ATXH26: 2 have applied to this opening -- close it instead, so their applications survive", "ATX10", "has_applicants"],
   ];
   for (const [message, code, name] of cases) assert.equal(hiringErrorOf({ code, message }), name, message);
   assert.equal(hiringErrorOf({ code: "22023", message: "ATXH17: add professionals to your team through Hiring", hint: "the free existing-team window for this business has closed" }), "professional_account");
@@ -138,7 +139,9 @@ test("the 26 ATXH codes map by code (HANDOVER_API Release 2 Error codes)", () =>
   assert.equal(hiringErrorOf({ code: "ATX08", message: "no such invitation" }), "invite_gone");
   assert.equal(hiringErrorOf({ code: "ATX02", message: "rate limited" }), "rate_limited");
   assert.equal(hiringErrorOf({ code: "23514", message: "new row violates check constraint \"openings_title_check\"" }), "invalid_opening");
-  assert.equal(hiringErrorOf({ code: "P0001", message: "instructor_not_on_team" }), "instructor_not_on_team");
+  // Database #38: the Team-only instructor rule is ATX76 (business_team_professional).
+  assert.equal(hiringErrorOf({ code: "ATX76", message: "a class can only name a professional on that business's team" }), "instructor_not_on_team");
+  assert.equal(hiringErrorOf({ code: "P0001", message: "instructor_not_on_team" }), null);
   assert.equal(hiringErrorOf({ message: "something else" }), null);
   assert.equal(hiringErrorOf(null), null);
   for (const k of Object.keys(HIRING_ERROR_TEXT)) assert.ok(HIRING_ERROR_TEXT[k as keyof typeof HIRING_ERROR_TEXT].length > 0);

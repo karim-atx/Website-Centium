@@ -407,8 +407,9 @@ const clean = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null
  * What a professional shows the public (OP1-132 C1, C2, C5; OP1-124 9c):
  * public_professional_directory (subtype, specialty, bio) and
  * public_professional_experience. Both views read listed_publicly
- * professionals only: an unlisted one (and affiliating with a business turns
- * listing off) answers null, and the person page leaves those rows out.
+ * professionals only: an unlisted one answers null, and the person page
+ * leaves those rows out (since Database #38 joining a team no longer unlists
+ * anybody).
  *
  * NO WEBSITE OR SOCIAL LINKS (DB7, 20261211000000): the directory no longer
  * carries website / instagram / facebook / x, and per D-27 a business does

@@ -12,7 +12,14 @@ import type { BusinessRole } from "./types";
  */
 export const roleUsesSeat = (role: BusinessRole): boolean => role === "instructor" || role === "trainer";
 
-/** A person's seat answer: the server's uses_seat when the reader returned it, else the role rule. */
+/**
+ * A person's seat answer: the server's uses_seat when the reader returned it, else the role rule.
+ * awaiting Database (#38 follow-up): business_seats_used() and the cap trigger now leave out
+ * anybody with a professional account (every Team professional is seat-free), but
+ * employee_credentials.uses_seat and my_business_seat_capacity.seats_invited still answer
+ * role_uses_seat(role) alone, so a Team professional instructor still reads "uses a seat" here.
+ * The client keeps reading the server's flag (it can't tell a professional account apart).
+ */
 export const personUsesSeat = (p: { role: BusinessRole; usesSeat?: boolean | null }): boolean =>
   typeof p.usesSeat === "boolean" ? p.usesSeat : roleUsesSeat(p.role);
 

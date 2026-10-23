@@ -20,10 +20,13 @@ export interface Opportunity {
   type: OpeningType;
   title: string;
   className: string | null;
-  /** openings.schedule_label: the gym's chosen classes in words (opportunities returns no times). */
+  /** openings.schedule_label: the gym's chosen classes in words. */
   scheduleLabel?: string | null;
   startsAt: string | null;
+  /** ISO weekdays of the series the opening names (opportunities.weekdays, Database #38). */
   weekdays: number[];
+  /** "HH:MM": the earliest start of those series (opportunities.start_time, Database #38); null for a slot or a role naming none. */
+  startTime?: string | null;
   pay: number | null;
   payUnit: PayUnit;
   classesPerMonth: number | null;
@@ -194,16 +197,17 @@ const classesAMonth = (n: number | null) => (n != null && n > 0 ? `${n} ${n === 
 
 /**
  * "Sun 10:00 AM · 4 classes a month", "Tue and Thu 7:00 PM", a slot's "Sat,
- * Oct 24 · 9:00 AM"; opportunities() returns no times, so the gym's own
+ * Oct 24 · 9:00 AM". A role's days and time are its series' (opportunities
+ * weekdays / start_time, Database #38); without them the gym's own
  * schedule_label stands in ("Spin 45 · Sun 10:00 AM · 4 classes a month");
  * null when the opening names neither.
  */
-export function scheduleLine(o: Pick<Opportunity, "type" | "weekdays" | "startsAt" | "classesPerMonth" | "scheduleLabel">): string | null {
+export function scheduleLine(o: Pick<Opportunity, "type" | "weekdays" | "startsAt" | "classesPerMonth" | "scheduleLabel" | "startTime">): string | null {
   const at = toDate(o.startsAt);
   if (!at && !o.weekdays.length && o.scheduleLabel) return [o.scheduleLabel, o.type === "role" ? classesAMonth(o.classesPerMonth) : null].filter(Boolean).join(" · ");
   if (o.type === "class_slot") return at ? `${dayDate(at)} · ${clockOf(at)}` : null;
   const days = dayList(o.weekdays);
-  const when = [days, at ? clockOf(at) : null].filter(Boolean).join(" ");
+  const when = [days, at ? clockOf(at) : clockOfTime(o.startTime)].filter(Boolean).join(" ");
   const parts = [when || null, classesAMonth(o.classesPerMonth)].filter(Boolean);
   return parts.length ? parts.join(" · ") : null;
 }
@@ -254,9 +258,10 @@ export const applyTitle = (o: Pick<Opportunity, "businessName">): string => (o.b
 export const openingSub = (o: Pick<Opportunity, "businessName" | "type">): string => [o.businessName || null, o.type === "role" ? "Role" : "Class slot"].filter(Boolean).join(" · ");
 
 /** The availability checkbox: "I'm available Sundays at 10:00 AM", "I'm available Tue and Thu at 7:00 PM", "I'm available Sat, Oct 24 at 9:00 AM". */
-export function availabilityLabel(o: Pick<Opportunity, "type" | "weekdays" | "startsAt">): string {
+export function availabilityLabel(o: Pick<Opportunity, "type" | "weekdays" | "startsAt" | "startTime">): string {
   const at = toDate(o.startsAt);
-  const time = at ? ` at ${clockOf(at)}` : "";
+  const clock = at ? clockOf(at) : clockOfTime(o.startTime);
+  const time = clock ? ` at ${clock}` : "";
   if (o.type === "class_slot") return at ? `I'm available ${dayDate(at)}${time}` : "I'm available for this class";
   const days = dayList(o.weekdays, o.weekdays.length === 1);
   if (days) return `I'm available ${days}${time}`;

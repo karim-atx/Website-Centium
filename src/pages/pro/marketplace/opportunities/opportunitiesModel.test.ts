@@ -116,6 +116,9 @@ test("gym card rows: rating · distance, pay, schedule, posted", () => {
   assert.equal(scheduleLine(opp({ weekdays: [4, 2], startsAt: at(2026, 10, 27, 19), classesPerMonth: 8 })), "Tue and Thu 7:00 PM · 8 classes a month");
   assert.equal(scheduleLine(opp({ type: "class_slot", startsAt: at(2026, 10, 24, 9) })), "Sat, Oct 24 · 9:00 AM");
   assert.equal(scheduleLine(opp({ weekdays: [], startsAt: null, classesPerMonth: null })), null);
+  // Database #38: a role's series times come with the row (weekdays + start_time), no date.
+  assert.equal(scheduleLine(opp({ weekdays: [1, 3], startsAt: null, startTime: "07:00", classesPerMonth: 8 })), "Mon and Wed 7:00 AM · 8 classes a month");
+  assert.equal(scheduleLine(opp({ weekdays: [1, 3], startsAt: null, startTime: null, scheduleLabel: "Spin 45", classesPerMonth: null })), "Mon and Wed");
   assert.equal(postedLine(at(2026, 10, 21, 8), 1, NOW), "Posted today · 1 position");
   assert.equal(postedLine(at(2026, 10, 20, 8), 2, NOW), "Posted yesterday · 2 positions");
   assert.equal(postedLine(at(2026, 10, 17, 8), 2, NOW), "Posted 4 days ago · 2 positions");
@@ -141,6 +144,7 @@ test("class ticket (classOpen): 12-hour time, place, slot line, pay stub; undocu
 
 test("apply sheet: availability, proposal hint, rate", () => {
   assert.equal(availabilityLabel(opp()), "I'm available Sundays at 10:00 AM");
+  assert.equal(availabilityLabel(opp({ weekdays: [1, 3], startsAt: null, startTime: "18:30" })), "I'm available Mon and Wed at 6:30 PM");
   assert.equal(availabilityLabel(opp({ weekdays: [6, 7], startsAt: at(2026, 10, 24, 9) })), "I'm available Sat and Sun at 9:00 AM");
   assert.equal(availabilityLabel(opp({ type: "class_slot", startsAt: at(2026, 10, 24, 9) })), "I'm available Sat, Oct 24 at 9:00 AM");
   assert.equal(availabilityLabel(opp({ weekdays: [], startsAt: null })), "I'm available for this schedule");

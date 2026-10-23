@@ -8,7 +8,7 @@ import { FOCUS_CSS } from "../../../components/market/usePress";
 import { MarketError, MarketOffline, MarketSkeleton } from "../../../components/market/MarketStates";
 import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { BackHeader, MasterSheet, PrimaryButton, SoonNote } from "../listingParts";
-import { searchProfessionals, sendHireOffer, type BusyTime, type ProCard } from "../../../services/hiring";
+import { HIRING_ERROR_TEXT, searchProfessionals, sendHireOffer, type BusyTime, type ProCard } from "../../../services/hiring";
 import { HIRING_ROUTES } from "./HiringRoutes";
 import { useHiringBusiness } from "./useHiringBusiness";
 import { BusyWarning, FeeNoticeRow, HiredLine, HiringEmpty, PersonHead, UserPlusGlyph, feeNoticeText, fixedPair, useFeeRules, useHiringRead, useHiringStrip } from "./hiringParts";
@@ -132,7 +132,7 @@ export default function DirectOfferPage() {
       {strip}
 
       {!biz.loading && !biz.canHire ? (
-        <HiringEmpty icon={<UserPlusGlyph />} title="Hiring is for gyms." />
+        <HiringEmpty icon={<UserPlusGlyph />} title={HIRING_ERROR_TEXT.not_a_gym} />
       ) : (
         <>
           <div data-search style={{ height: 48, boxSizing: "border-box", borderRadius: 14, border: `1.5px solid ${m.fill}`, display: "flex", alignItems: "center", gap: 10, padding: "0 14px", background: m.card }}>

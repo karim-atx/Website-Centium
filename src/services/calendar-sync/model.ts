@@ -17,7 +17,10 @@ export type HiredStatus = "scheduled" | "cancelled" | "completed";
  * from a hire), business_id, business_name, gym_id, location, title,
  * event_date, start_time, end_time, duration_min, recurrence_label ("Every
  * Mon and Wed", null for a one-off), booked_count, capacity,
- * pay_per_session (null without a hire), status.
+ * pay_per_session (null without a hire; since Database #38 a monthly role's
+ * pay is divided by the sessions in that month), status, and since Database
+ * #38 colour (class_series.colour, "#RRGGBB" or null: the client's palette)
+ * and role_title (the hire's role; null for a class not from a hire).
  */
 export interface HiredClassEvent {
   classSessionId: string;
@@ -32,6 +35,10 @@ export interface HiredClassEvent {
   capacity: number | null;
   payPerSession: number | null;
   status: HiredStatus;
+  /** The gym's series colour (D-40), or null (the palette picks one). */
+  colour: string | null;
+  /** The hire's role ("Head strength coach"), or null. */
+  roleTitle: string | null;
   /** Local YYYY-MM-DD, "HH:MM", "HH:MM". */
   date: string;
   start: string;
@@ -72,6 +79,8 @@ export function parseHiredEvent(r: Record<string, unknown>): HiredClassEvent | n
     capacity: num(r.capacity),
     payPerSession: num(r.pay_per_session),
     status: STATUSES.includes(r.status as HiredStatus) ? (r.status as HiredStatus) : "scheduled",
+    colour: str(r.colour),
+    roleTitle: str(r.role_title),
     date,
     start,
     end: end ?? start,
@@ -95,8 +104,8 @@ export function parseMyCalendar(data: unknown): HiredClassEvent[] {
 
 
 // ---------------------------------------------------------------------------
-// Class colour (D-40): class_series.colour when the reader sends one; until
-// then (and for live assigned classes, which have none) a fixed palette, one
+// Class colour (D-40): class_series.colour when my_calendar sends one
+// (Database #38); otherwise (and for live assigned classes) a fixed palette, one
 // colour per series, picked by a stable hash of its id so a series keeps its
 // colour on every screen and every reload. The palette is the board's hired
 // samples (Cedar #4F8F8A, Hamra #667BB1, tokens.json calendar.hiredSample)
@@ -206,8 +215,9 @@ export function payText(pay: number | null): string | null {
 // The documented subject and payload per kind:
 // - classes_added (hire; business_name, role_title, session_count,
 //   first_starts_at): the strip on hire;
-// - class_changed (class_series; business_name, class_title, starts_at,
-//   ends_at, previous_starts_at): the edit card;
+// - class_changed (class_series — the session's own id when it has no
+//   series; business_name, class_title, starts_at, ends_at,
+//   previous_starts_at, class_id): the edit card;
 // - class_cancelled (class_session; business_name, class_title, starts_at,
 //   reason): the cancel strip (the lead keeps class_cancelled a CLIENT kind
 //   for the member bell; a professional's own inbox reads it here only);
@@ -278,7 +288,7 @@ export function parseNotice(n: NotificationLike): SyncNotice | null {
     kind,
     createdAt: n.createdAt,
     hireId: subject("hire"),
-    sessionId: subject("class_session"),
+    sessionId: subject("class_session") ?? (kind === "changed" ? str(p.class_id) : null),
     seriesId: subject("class_series"),
     businessName: str(p.business_name),
     classTitle: str(p.class_title),

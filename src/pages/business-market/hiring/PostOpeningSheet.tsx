@@ -8,13 +8,13 @@ import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { todayLocal } from "../../../utils/date";
 import { MasterSheet, PrimaryButton } from "../listingParts";
-import { createOpening, type Opening, type ProCard } from "../../../services/hiring";
+import { createOpening, editOpening, type Opening, type ProCard } from "../../../services/hiring";
 import { ChipSet, FeeNoticeRow, FieldBox, FieldGrid, FieldInput, PersonRow, PickerField, ToggleBox, feeNoticeText, useFeeRules } from "./hiringParts";
 import {
   PROPOSALS_HINT,
   REQUIREMENTS,
   emptyForm,
-  openingDescription,
+  formOfOpening,
   parseForm,
   scheduleLabelOf,
   seriesOptions,
@@ -45,6 +45,14 @@ import {
 // title comes from its class ("Saturday Spin 45 cover"), the slot form has no
 // title field. Live classes are read through useBusinessClasses (read-only).
 // The direct offer's sheet (B-MA.8.6 `dOffer`) reuses these fields.
+//
+// Edit (Database #38 edit_opening; the opening menu's Edit, B-SH.1
+// `enOpening`): the same sheet, titled "Edit opening", starting from the
+// opening's values, with the Type locked to the opening's own (the server
+// can't change it: a role and a class slot have different fee bases) and the
+// CTA "Save changes" (the W3 edit-mode wording). No description is sent: the
+// board's form has none (optional since Database #38; null clears the line
+// the app used to generate).
 
 /** The business's live classes as the two choosers' options (read-only). */
 export function useLiveClasses(): { series: SeriesOption[]; sessions: SessionOption[]; loading: boolean } {
@@ -75,6 +83,7 @@ export function OpeningFormFields({
   series,
   sessions,
   person,
+  typeLocked = false,
 }: {
   form: OpeningFormState;
   set: (patch: Partial<OpeningFormState>) => void;
@@ -83,6 +92,8 @@ export function OpeningFormFields({
   sessions: SessionOption[];
   /** The direct offer's person row. */
   person?: { p: ProCard; line: string; muted: boolean };
+  /** Optional (Edit): only the opening's own type shows, and it can't change. */
+  typeLocked?: boolean;
 }) {
   const m = marketPalette(useIsDark());
   const ids = {
@@ -140,8 +151,14 @@ export function OpeningFormFields({
     <div ref={setGrid}>
       <FieldGrid>
         {person ? <PersonRow p={person.p} line={person.line} muted={person.muted} /> : null}
-        <FieldBox label="Type" labelId={ids.type}>
-          <ChipSet labelId={ids.type} kind="radio" options={TYPES} isOn={(k) => form.type === k} onToggle={(k) => set({ type: k, requirements: form.requirements.filter((r) => REQUIREMENTS[k].includes(r)) })} />
+        <FieldBox label="Type" labelId={ids.type} hint={typeLocked ? "The type can't change once posted." : undefined}>
+          <ChipSet
+            labelId={ids.type}
+            kind="radio"
+            options={typeLocked ? TYPES.filter((t) => t.key === form.type) : TYPES}
+            isOn={(k) => form.type === k}
+            onToggle={(k) => (typeLocked ? undefined : set({ type: k, requirements: form.requirements.filter((r) => REQUIREMENTS[k].includes(r)) }))}
+          />
         </FieldBox>
         {role ? (
           <>
@@ -287,12 +304,15 @@ export default function PostOpeningSheet({
   businessId,
   onClose,
   onPosted,
+  editing = null,
 }: {
   open: boolean;
   businessId: string | null;
   onClose: () => void;
-  /** Posted: the server's row when it returns one, and the title. */
+  /** Posted (or, editing, saved): the server's row when it returns one, and the title. */
   onPosted: (o: Opening | null, title: string) => void;
+  /** Optional: the opening to edit (edit_opening); the sheet posts a new one without it. */
+  editing?: Opening | null;
 }) {
   const m = marketPalette(useIsDark());
   const live = useLiveClasses();
@@ -306,7 +326,7 @@ export default function PostOpeningSheet({
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setForm(emptyForm());
+      setForm(editing ? formOfOpening(editing) : emptyForm());
       setNote(null);
       setBusy(false);
     }
@@ -316,19 +336,19 @@ export default function PostOpeningSheet({
     setNote(null);
     setForm((f) => ({ ...f, ...patch }));
   };
-  const slotTitle = live.sessions.find((s) => s.id === form.sessionId)?.slotTitle ?? null;
+  // Editing a slot whose session isn't upcoming any more keeps its own title.
+  const slotTitle = live.sessions.find((s) => s.id === form.sessionId)?.slotTitle ?? (editing && editing.type === "class_slot" && form.sessionId === editing.classSessionId ? editing.title : null);
   const parsed: ParsedForm | null = parseForm(form, "post", slotTitle);
 
   const post = async () => {
     if (!parsed || !businessId || busy) return;
     setBusy(true);
-    // create_opening (Database Release 2). The form draws no description, and the table requires one:
-    // the form's own facts in one line (openingDescription).
-    const scheduleLabel = scheduleLabelOf(parsed, live.series, live.sessions);
-    const r = await createOpening(businessId, {
-      type: parsed.type,
+    // create_opening / edit_opening (Database #38): the form draws no description, and it is
+    // optional now, so none is sent (null; edit_opening clears the line the app used to generate).
+    const scheduleLabel = scheduleLabelOf(parsed, live.series, live.sessions) ?? (editing ? editing.scheduleLabel : null);
+    const draft = {
       title: parsed.title,
-      description: openingDescription(parsed, scheduleLabel),
+      description: null,
       classSeriesIds: parsed.seriesIds,
       classSessionId: parsed.sessionId,
       scheduleLabel,
@@ -338,7 +358,8 @@ export default function PostOpeningSheet({
       allowPayProposals: parsed.allowProposals,
       requirements: parsed.requirements,
       positions: parsed.positions,
-    });
+    };
+    const r = editing ? await editOpening(editing.id, draft) : await createOpening(businessId, { type: parsed.type, ...draft });
     setBusy(false);
     if (r.ok) onPosted(r.value, parsed.title);
     else setNote({ text: r.message, tone: r.pending ? "soon" : "error" });
@@ -348,7 +369,7 @@ export default function PostOpeningSheet({
     <MasterSheet
       open={open}
       onClose={onClose}
-      title="Post opening"
+      title={editing ? "Edit opening" : "Post opening"}
       footer={
         <>
           <FeeNoticeRow text={feeNoticeText(rules)} />
@@ -358,12 +379,12 @@ export default function PostOpeningSheet({
             </p>
           ) : null}
           <PrimaryButton onClick={() => void post()} disabled={!parsed || !businessId} busy={busy}>
-            Post opening
+            {editing ? "Save changes" : "Post opening"}
           </PrimaryButton>
         </>
       }
     >
-      <OpeningFormFields form={form} set={set} mode="post" series={live.series} sessions={live.sessions} />
+      <OpeningFormFields form={form} set={set} mode="post" series={live.series} sessions={live.sessions} typeLocked={!!editing} />
     </MasterSheet>
   );
 }

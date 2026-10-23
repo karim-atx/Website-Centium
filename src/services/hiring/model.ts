@@ -368,11 +368,9 @@ export function windowUsed(daysLeft: number): number {
 // errors
 //
 // The contract raises `ATXH<n>: <sentence>` (or ATXB8) in the MESSAGE with a
-// SQLSTATE in the code. Each one maps to a name and the screen's words. The
-// names after "not in the contract" are the W4 guesses for functions that
-// haven't landed (existing team, the Team-only check, the after-window
-// invite refusal); they stay matched by name until those stages document
-// theirs.
+// SQLSTATE in the code. Each one maps to a name and the screen's words.
+// Database #38 (8d3e9f3) added ATXH26 (delete_opening once somebody has
+// applied) and the Team-only instructor rule, raised as ATX76.
 
 export type HiringError =
   | "not_a_gym" // ATXH0 · ATX09
@@ -402,13 +400,13 @@ export type HiringError =
   | "not_attended" // ATXH22 · ATX94 (review_instructor; services/instructor-reviews words it)
   | "no_instructor" // ATXH23 · ATX08 (review_instructor)
   | "not_your_hire" // ATXH24 · 42501 (raise_hiring_dispute: no caller, the board draws no dispute flow)
-  | "dispute_open" // ATXH25 · ATX10 (raise_hiring_dispute: no caller)
-  | "no_seats" // ATXC0 · 23514 (the seat cap: an existing-team addition occupies a paid seat)
+  | "dispute_open" // ATXH25 · ATX10 (raise_hiring_dispute: support's only since Database #38, no member or business caller)
+  | "has_applicants" // ATXH26 · ATX10 (delete_opening once somebody has applied: close it instead)
+  | "no_seats" // ATXC0 · 23514 (the seat cap: since Database #38 it binds only staff WITHOUT a professional account, so invite_employee only)
   | "not_your_business" // ATXB8 · 42501
   | "rate_limited" // ATX02 (check_rate_limit)
   | "invalid_opening" // 23514 (a title / description / requirements CHECK)
-  // not in the contract (awaiting DB stage DB9):
-  | "instructor_not_on_team";
+  | "instructor_not_on_team"; // ATX76 (Database #38 business_team_professional: save_class_series, edit_class, assign_class_instructor and the business_classes trigger name only a Team professional)
 
 const ATXH: Record<number, HiringError> = {
   0: "not_a_gym",
@@ -436,9 +434,8 @@ const ATXH: Record<number, HiringError> = {
   23: "no_instructor",
   24: "not_your_hire",
   25: "dispute_open",
+  26: "has_applicants",
 };
-
-const PENDING_NAMES: HiringError[] = ["instructor_not_on_team"];
 
 export function hiringErrorOf(e: { code?: string | null; message?: string | null; details?: string | null; hint?: string | null } | null | undefined): HiringError | null {
   if (!e) return null;
@@ -453,14 +450,13 @@ export function hiringErrorOf(e: { code?: string | null; message?: string | null
   if (e.code === "ATX08" && /no such offer/i.test(msg)) return "offer_closed";
   if (e.code === "ATX08" && /no such invitation/i.test(msg)) return "invite_gone";
   if (e.code === "23514") return "invalid_opening";
-  const hay = [e.code, msg, e.details, e.hint].filter(Boolean).join(" ").toLowerCase();
-  for (const k of PENDING_NAMES) if (hay.includes(k)) return k;
+  if (e.code === "ATX76") return "instructor_not_on_team";
   return null;
 }
 
 /** The board's words where it has them; ours otherwise (listed in W4.md). */
 export const HIRING_ERROR_TEXT: Record<HiringError, string> = {
-  not_a_gym: "Hiring is for gyms.",
+  not_a_gym: "Hiring is for gyms and studios.",
   pay_locked: "This opening doesn't take proposals.",
   already_applied: "You've already applied to this opening.",
   not_your_class: "One of those classes isn't yours. Choose again.",
@@ -491,6 +487,7 @@ export const HIRING_ERROR_TEXT: Record<HiringError, string> = {
   no_instructor: "This class had no named instructor on the gym's team.",
   not_your_hire: "This hire isn't yours to dispute.",
   dispute_open: "You already have an open dispute about this hire.",
+  has_applicants: "People have applied to this opening, so it can't be deleted. Pause it instead.",
   no_seats: "All seats are in use. Buy a seat block or remove somebody first.",
   instructor_not_on_team: "Only your Team can be named. Add people through Hiring.",
 };

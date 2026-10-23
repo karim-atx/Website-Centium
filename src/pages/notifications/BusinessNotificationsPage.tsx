@@ -58,10 +58,11 @@ import { NotificationRow, NotificationsEmpty } from "./ClientNotificationsPage";
 // (mark_notifications_read([id])) and opens its target; "Mark all read" is
 // mark_notifications_read(null, BUSINESS_KINDS): every unread business row,
 // loaded or not, and never the owner's other kinds.
-// Database Release 2 writes the hiring kinds (see notificationsModel). awaiting DB stage DB12: nothing writes
-// gym_review_received yet (redeem_offer and admin_set_offer_hidden write the
-// two Release 1 owner kinds); until then those rows never arrive and the page
-// shows its quiet empty state (ours: the board draws none), never sample rows.
+// Writers (see notificationsModel): redeem_offer and admin_set_offer_hidden
+// (the two Release 1 owner kinds), the hiring writers, and since Database #38
+// the gym_reviews trigger (gym_review_received, venue reviews only). With no
+// rows the page shows its quiet empty state (ours: the board draws none),
+// never sample rows.
 
 const PAGE = 30;
 const OFFLINE_NOTE = "You're offline. Try again when you're connected.";

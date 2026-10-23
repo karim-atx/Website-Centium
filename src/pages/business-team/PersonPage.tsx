@@ -34,8 +34,9 @@ import type { TeamData } from "./useTeamData";
 //
 // Specialty, jobs and bio (OP1-132 C1, C2, C5) come from what the
 // professional lists publicly (public_professional_directory /
-// public_professional_experience). An unlisted professional (affiliating
-// turns listing off) shows none of those rows: only their licences.
+// public_professional_experience). An unlisted professional (their own
+// choice; since Database #38 joining a team no longer unlists anybody) shows
+// none of those rows: only their licences.
 
 export function PersonPage({ data }: { data: TeamData }) {
   const { id = "" } = useParams();

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Building2, Check, MapPin, Store, Video } from "lucide-react";
 import { SettingsRow } from "../../../components/pro/calendar/calendarFields";
-import { SectionHead, SoftLine } from "../../../components/pro/client/kit";
+import { SectionHead } from "../../../components/pro/client/kit";
 import { CtaButton, ErrorLine, StateLine, SubPage } from "../../../components/pro/profile/kit";
 import { RADIUS_MAX_KM, WORK_TAB_TO_DB, radiusFill, workTabOf, type WorkTab } from "../../../components/pro/profile/profileModel";
 import { useProfileFacts } from "../../../components/pro/profile/useProfileFacts";
@@ -14,7 +14,7 @@ import { PinnedSlot } from "../../../components/ui/PinnedCta";
 import { SegmentedTabs } from "../../../components/ui/SegmentedTabs";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
-import { fetchMyAffiliation, fetchMyProfile, NEEDS_DOB, type Affiliation, type ProfessionalProfile } from "../../../services/professional-profile";
+import { fetchMyProfile, NEEDS_DOB, type ProfessionalProfile } from "../../../services/professional-profile";
 import { fetchEmployments, saveServiceRadius, saveWorkMode, type Employment } from "../../../services/pro/profile";
 import { textPx } from "../../../theme/textSize";
 
@@ -34,8 +34,8 @@ const TABS: { key: WorkTab; label: string }[] = [
  * - the places card (r6b listCard6): your own space, the businesses you work
  *   at (my_business_employments, accepted, read only, each opening it under
  *   Businesses) and online;
- * - "Listed by your business" when the affiliation trigger handed the listing
- *   to the business;
+ * - (Database #38 retired "Listed by your business": working at a business
+ *   no longer unlists anybody, so the listing and the map area stay theirs);
  * - Service area: the radius figure (200 high r18, a circle scaled to the
  *   radius in primary over 22% lavender, a 14 dot in primary.deep with a 3
  *   card ring), "Radius" / "{n} km", the 8 high bar (primary to the share,
@@ -51,7 +51,6 @@ export default function WhereYouWork() {
   const { facts, setFacts, error, offline, reload } = useProfileFacts();
   const [jobs, setJobs] = useState<Employment[] | null>(null);
   const [listing, setListing] = useState<ProfessionalProfile | null>(null);
-  const [affiliation, setAffiliation] = useState<Affiliation | null>(null);
   const [tab, setTab] = useState<WorkTab | null>(null);
   const [km, setKm] = useState<number | null>(null);
   const [areaTab, setAreaTab] = useState<"radius" | "areas">(pathname.endsWith("/area") ? "areas" : "radius");
@@ -64,13 +63,10 @@ export default function WhereYouWork() {
   useEffect(() => {
     if (!authUserId) return;
     let live = true;
-    void Promise.all([fetchEmployments(), fetchMyProfile(authUserId)]).then(async ([j, p]) => {
+    void Promise.all([fetchEmployments(), fetchMyProfile(authUserId)]).then(([j, p]) => {
       if (!live) return;
       setJobs(j.ok ? j.data.filter((x) => x.acceptedAt) : []);
-      const prof = p.ok ? p.profile : null;
-      setListing(prof);
-      const aff = await fetchMyAffiliation(prof?.affiliatedBusinessId ?? null);
-      if (live) setAffiliation(aff);
+      setListing(p.ok ? p.profile : null);
     });
     return () => {
       live = false;
@@ -156,12 +152,6 @@ export default function WhereYouWork() {
             <SettingsRow icon={Building2} title="Businesses" sub="Join a business or answer an invitation" onClick={() => navigate("/app/more/businesses")} last />
           )}
 
-          {affiliation && (
-            <SoftLine icon={Store}>
-              <b style={{ color: INK.ch }}>Listed by your business.</b> {affiliation.businessName} handles your listing while you work there.
-            </SoftLine>
-          )}
-
           <div ref={areaRef} style={{ scrollMarginTop: 16 }}>
             <SectionHead label="Service area" />
               {areaTab === "radius" ? (
@@ -204,8 +194,6 @@ export default function WhereYouWork() {
                     />
                   </div>
                 </>
-              ) : affiliation ? (
-                <StateLine>Your business handles your listing, including where you show on the map.</StateLine>
               ) : listing ? (
                 <div>
                   {dobAsk && (

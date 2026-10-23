@@ -90,10 +90,10 @@ export function hiredInfo(e: HiredClassEvent): ClassInfo {
     businessId: e.businessId,
     businessName: e.businessName,
     title: e.title,
-    // my_calendar carries no role title, no class colour (D-40) and no
-    // changed-fields list, so the "Updated" badge and the role on the mark
-    // stay off and the colour is the palette's (Database gap, W5.md).
-    roleTitle: null,
+    // my_calendar carries the role (role_title) and the gym's series colour
+    // (Database #38; null → the palette). It has no changed-fields list, so
+    // the "Updated" badge stays off (Database gap, W5.md).
+    roleTitle: e.hireId ? e.roleTitle : null,
     location: e.location,
     recurrence: recurrenceText(e.recurrenceLabel, []),
     booked: e.bookedCount,
@@ -102,7 +102,7 @@ export function hiredInfo(e: HiredClassEvent): ClassInfo {
     status: e.status,
     updated: false,
     notes: null,
-    colour: classColour(null, e.classSeriesId ?? e.classSessionId),
+    colour: classColour(e.colour, e.classSeriesId ?? e.classSessionId),
     date: e.date,
     start: e.start,
     end: e.end,

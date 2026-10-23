@@ -1,4 +1,4 @@
-// Market + Share 3.0 W5: the calendar sync model (P-CA, DB9 / DB12 shapes).
+// Market + Share 3.0 W5: the calendar sync model (P-CA; my_calendar and the calendar notice payloads as Database #38 documents them).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -125,6 +125,8 @@ test("notices: the documented subject and payload keys (20261210600000)", () => 
   assert.deepEqual([added.kind, added.hireId, added.businessName, added.count, added.startsOn], ["added", "h1", "Gym A", 3, "2026-11-02"]);
   const changed = parseNotice(n({ kind: "class_changed", subjectType: "class_series", subjectId: "cs1", payload: { business_name: "Gym A", class_title: "HIIT 30", starts_at: "2026-11-04T07:30:00", ends_at: "2026-11-04T08:00:00", previous_starts_at: "2026-11-04T07:00:00" } }))!;
   assert.deepEqual([changed.seriesId, changed.weekday, changed.fromTime, changed.toTime, changed.sessionId], ["cs1", 3, "07:00", "07:30", null]);
+  // Database #38's trigger also sends the session's own id (class_id).
+  assert.equal(parseNotice(n({ kind: "class_changed", subjectType: "class_series", subjectId: "cs1", payload: { business_name: "Gym A", class_title: "HIIT 30", class_id: "s7" } }))!.sessionId, "s7");
   const cancelled = parseNotice(n({ kind: "class_cancelled", subjectType: "class_session", subjectId: "s2", payload: { business_name: "Gym A", class_title: "Core 20", starts_at: "2026-11-06T18:00:00", reason: "Coach ill" } }))!;
   assert.deepEqual([cancelled.sessionId, cancelled.date, cancelled.classTitle], ["s2", "2026-11-06", "Core 20"]);
   const removed = parseNotice(n({ kind: "removed_from_team", subjectType: "business", subjectId: "b1", payload: { business_name: "Gym B", role_title: "Coach", ended_on: "2026-11-01" } }))!;

@@ -4,7 +4,6 @@ import {
   Activity,
   Banknote,
   Bell,
-  Building2,
   CalendarRange,
   CalendarX,
   ClipboardList,
@@ -47,15 +46,7 @@ import {
   type InvoiceDetails,
 } from "../../../services/pro/practice";
 import { DobInline } from "../../../components/profile/DobInline";
-import {
-  fetchMyAffiliation,
-  fetchMyProfile,
-  listingNeedsDateOfBirth,
-  NEEDS_DOB,
-  setPublicListing,
-  type Affiliation,
-  type ProfessionalProfile,
-} from "../../../services/professional-profile";
+import { fetchMyProfile, listingNeedsDateOfBirth, NEEDS_DOB, setPublicListing, type ProfessionalProfile } from "../../../services/professional-profile";
 import { fetchGoLiveStatus } from "../../../services/professional-onboarding";
 import { isRegulated, proKindOf } from "../../onboarding/pro/proModel";
 import type { LicenceStatus } from "../../../services/professional-cv";
@@ -326,9 +317,11 @@ function InvoicePage() {
 
 // ---------------------------------------------------------------------------
 // Public listing: the switch from the old listing sheet, unchanged in
-// behaviour (set_public_listing; ATX03 affiliated, ATX08 no profile, ATX47,
-// ATX48 date of birth, ATXC6 verification). The profile fields it used to
-// carry are on Edit public profile (MO14); the map area is on Where you work.
+// behaviour (set_public_listing; ATX08 no profile, ATX47, ATX48 date of
+// birth, ATXC6 verification). Database #38 retired the affiliation refusal
+// (ATX03): every Team professional stays listed and keeps their own switch.
+// The profile fields it used to carry are on Edit public profile (MO14); the
+// map area is on Where you work.
 // ---------------------------------------------------------------------------
 
 function ListingPage() {
@@ -339,7 +332,6 @@ function ListingPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfessionalProfile | null>(null);
-  const [affiliation, setAffiliation] = useState<Affiliation | null>(null);
   const [check, setCheck] = useState<LicenceStatus | null>(null);
   const [needsDob, setNeedsDob] = useState(false);
   const [dobAsk, setDobAsk] = useState<null | { retry: () => void }>(null);
@@ -357,13 +349,8 @@ function ListingPage() {
       return;
     }
     setProfile(result.profile);
-    const [goLive, aff, dob] = await Promise.all([
-      fetchGoLiveStatus(authUserId, regulated),
-      fetchMyAffiliation(result.profile?.affiliatedBusinessId ?? null),
-      listingNeedsDateOfBirth(),
-    ]);
+    const [goLive, dob] = await Promise.all([fetchGoLiveStatus(authUserId, regulated), listingNeedsDateOfBirth()]);
     setCheck(goLive.ok ? goLive.status : null);
-    setAffiliation(aff);
     setNeedsDob(dob);
     setLoading(false);
   }, [authUserId, regulated]);
@@ -379,7 +366,6 @@ function ListingPage() {
     const r = await setPublicListing(next);
     setBusy(false);
     if (r.status === "ok") return setProfile((p) => (p ? { ...p, listedPublicly: r.listed } : p));
-    if (r.status === "affiliated") return void load();
     if (r.status === "no_profile") return setError("Fill in your public profile first. There's nothing to list yet.");
     if (r.status === "needs_dob") return setDobAsk({ retry: () => void toggle(true) });
     if (r.status === "needs_verification") return setCheck((c) => (c?.kind === "verified" ? { kind: "none" } : c));
@@ -407,15 +393,6 @@ function ListingPage() {
           <ListSkeleton rows={2} />
         ) : loadError ? (
           <ProError onRetry={() => void load()} message={loadError} />
-        ) : affiliation ? (
-          <SettingsSection label="Explore">
-            <SettingsRow
-              icon={Building2}
-              title="Listed by your business"
-              subtitle={`Managed by ${affiliation.businessName}. Your listing is handled by them while you're affiliated.`}
-              toggle={{ checked: false, onChange: () => {}, disabled: true, label: "Show me in Explore" }}
-            />
-          </SettingsSection>
         ) : (
           <SettingsSection label="Explore">
             <SettingsRow

@@ -120,7 +120,8 @@ test("review_instructor's refusals map by code (HANDOVER_API Release 2)", () => 
   assert.equal(reviewErrorOf({ code: "ATX91", message: "a rating must be between 1 and 5" }), "bad_rating");
   assert.equal(reviewErrorOf({ code: "22023", message: "keep it under 2000 characters" }), "too_long");
   assert.equal(reviewErrorOf({ code: "ATX02", message: "rate limited" }), "rate_limited");
-  assert.equal(reviewErrorOf({ code: "23502", message: "null value in column \"body\" of relation \"gym_reviews\" violates not-null constraint" }), "needs_text");
+  // Database #38: stars alone are a review, so the old not-null refusal no longer has a name.
+  assert.equal(reviewErrorOf({ code: "23502", message: "null value in column \"body\" of relation \"gym_reviews\" violates not-null constraint" }), null);
   assert.equal(reviewErrorOf({ code: "P0001", message: "other" }), null);
   assert.equal(reviewErrorOf(null), null);
 });

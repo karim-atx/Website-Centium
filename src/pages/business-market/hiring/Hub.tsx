@@ -9,17 +9,17 @@ import { FOCUS_CSS } from "../../../components/market/usePress";
 import { MarketError, MarketOffline, MarketSkeleton } from "../../../components/market/MarketStates";
 import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { useBizShareSheet } from "../../../components/share/business/useBizShareSheet";
-import { BackHeader, OutlineButton } from "../listingParts";
-import { fetchExistingTeamWindow, fetchMyOpenings, fetchMyTeam, payText, setOpeningStatus, type Opening } from "../../../services/hiring";
+import { BackHeader, CentredDialog, OutlineButton } from "../listingParts";
+import { HIRING_ERROR_TEXT, deleteOpening, fetchExistingTeamWindow, fetchMyOpenings, fetchMyTeam, payText, setOpeningStatus, type Opening } from "../../../services/hiring";
 import { HIRING_ROUTES } from "./HiringRoutes";
 import { useHiringBusiness } from "./useHiringBusiness";
 import { CLOSED_OPENING_MENU, HiringEmpty, OpeningCard, OpeningMenuButton, UserPlusGlyph, fixedPair, useHiringRead, useHiringStrip, type OpeningAction } from "./hiringParts";
 import PostOpeningSheet from "./PostOpeningSheet";
-import { HUB_TABS, bannerStub, countLine, scheduleLine, tabOf, teamButtonText, typeLabel, type HubTab } from "./hubModel";
+import { HUB_TABS, bannerStub, countLine, deleteDialogOf, scheduleLine, tabOf, teamButtonText, typeLabel, type HubTab } from "./hubModel";
 
 // Market + Share 3.0 · W4 · B-MA.8 Hiring hub (Business Hiring Screens
 // `hOpen` `hPosted` `hFilled` `hClosed` `hEmpty`, markup lines 56–102),
-// gyms only (business_may_hire). Content padding 0 16 32 (the app shell's own):
+// gyms and studios (business_may_hire, Database #38). Content padding 0 16 32 (the app shell's own):
 //   back header "Gym / Hiring";
 //   the existing-team ticket banner (margin-bottom 12, radius 18, #E6F1EF;
 //     body padding 12 14: "Add your existing team" 14 / 800, the line 12 / 17
@@ -45,8 +45,11 @@ import { HUB_TABS, bannerStub, countLine, scheduleLine, tabOf, teamButtonText, t
 // the ⋮ on Open cards (B-SH.1 opening menu: Edit / Share / Pause /
 // Delete; Share is live through useBizShareSheet; Pause closes the opening
 // (Karim: set_opening_status 'closed', reopenable from Closed cards' ⋮ > Reopen);
-// Database Release 2 has no writer that edits or deletes one, so those two answer
-// a calm strip). Reads (Database Release 2): my_openings, my_team (the Team
+// Edit opens the post sheet as "Edit opening" with the type locked
+// (Database #38 edit_opening), strip "Opening updated · {title}"; Delete asks
+// first (CentredDialog, the board's `dlg` 338) and calls delete_opening, or,
+// once somebody has applied (delete_opening refuses: ATXH26), offers Pause
+// instead, strip "Opening deleted · {title}"). Reads (Database Release 2): my_openings, my_team (the Team
 // count), existing_team_window (the banner, only while it is open; closed
 // with no dates until Karim sets the start).
 
@@ -70,6 +73,10 @@ export default function HubPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [posted, setPosted] = useState<Opening[]>([]);
+  const [editing, setEditing] = useState<Opening | null>(null);
+  const [deleting, setDeleting] = useState<Opening | null>(null);
+  const [delBusy, setDelBusy] = useState(false);
+  const [delError, setDelError] = useState<string | null>(null);
   const [justPosted, setJustPosted] = useState<string | null>(null);
   const id = biz.canHire ? biz.businessId : null;
 
@@ -108,9 +115,31 @@ export default function HubPage() {
       });
       return;
     }
-    // No writer in the contract (Database gap): a calm strip, nothing changes.
-    const text = a === "edit" ? "Editing an opening is coming soon." : "Deleting an opening is coming soon.";
-    showStrip(text, { tone: "neutral" });
+    if (a === "edit") {
+      setEditing(o);
+      return;
+    }
+    setDelError(null);
+    setDeleting(o);
+  };
+
+  const confirmDelete = async () => {
+    const o = deleting;
+    if (!o || delBusy) return;
+    const dlg = deleteDialogOf(o);
+    setDelBusy(true);
+    setDelError(null);
+    const r = dlg.pauseInstead ? await setOpeningStatus(o.id, "closed") : await deleteOpening(o.id);
+    setDelBusy(false);
+    if (!r.ok) {
+      // ATXH26: somebody applied since the list was read; the dialog says so in the server's terms.
+      setDelError(r.error === "has_applicants" ? HIRING_ERROR_TEXT.has_applicants : r.message);
+      return;
+    }
+    setDeleting(null);
+    setPosted((p) => p.filter((x) => x.id !== o.id));
+    showStrip(dlg.pauseInstead ? `Opening paused · ${o.title}` : `Opening deleted · ${o.title}`);
+    openings.retry();
   };
 
   const header = <BackHeader eyebrow={biz.kind === "gym" ? "Gym" : "Marketplace"} title="Hiring" onBack={back} backLabel={biz.kind === "gym" ? "Back to Gym" : "Back to Marketplace"} />;
@@ -127,7 +156,7 @@ export default function HubPage() {
     return (
       <div style={{ color: m.ink }}>
         {header}
-        <HiringEmpty icon={<UserPlusGlyph />} title="Hiring is for gyms." />
+        <HiringEmpty icon={<UserPlusGlyph />} title={HIRING_ERROR_TEXT.not_a_gym} />
       </div>
     );
   }
@@ -251,11 +280,22 @@ export default function HubPage() {
       </button>
 
       <PostOpeningSheet
-        open={sheetOpen}
+        open={sheetOpen || !!editing}
         businessId={id}
-        onClose={() => setSheetOpen(false)}
+        editing={editing}
+        onClose={() => {
+          setSheetOpen(false);
+          setEditing(null);
+        }}
         onPosted={(o, title) => {
           setSheetOpen(false);
+          if (editing) {
+            setEditing(null);
+            if (o) setPosted((p) => p.map((x) => (x.id === o.id ? { ...x, ...o, applicantCount: x.applicantCount, shortlistedCount: x.shortlistedCount, newApplicantCount: x.newApplicantCount } : x)));
+            openings.retry();
+            showStrip(`Opening updated · ${title}`);
+            return;
+          }
           if (o) {
             setPosted((p) => [o, ...p.filter((x) => x.id !== o.id)]);
             setJustPosted(o.id);
@@ -265,6 +305,23 @@ export default function HubPage() {
           showStrip(`Opening posted · ${title}`, { action: "View", onAction: o ? () => navigate(HIRING_ROUTES.applicants(o.id), { state: { opening: o } }) : undefined });
         }}
       />
+      {deleting ? (
+        <CentredDialog
+          open
+          width={338}
+          pad="24px 22px 22px"
+          actionsTop={18}
+          title={deleteDialogOf(deleting).title}
+          body={deleteDialogOf(deleting).body}
+          cancel="Cancel"
+          action={deleteDialogOf(deleting).action}
+          tone={deleteDialogOf(deleting).pauseInstead ? "primary" : "destructive"}
+          busy={delBusy}
+          error={delError}
+          onCancel={() => !delBusy && setDeleting(null)}
+          onAction={() => void confirmDelete()}
+        />
+      ) : null}
     </div>
   );
 }
