@@ -96,8 +96,7 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
   const [step, setStep] = useState<Step>("form");
   const [showErrors, setShowErrors] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [saveNote, setSaveNote] = useState<{ text: string; quiet: boolean } | null>(null);
-  // create_offer ⟳: one request id for the life of this open form.
+  const [saveNote, setSaveNote] = useState<{ text: string; quiet: boolean } | null>(null);  // create_offer ⟳: one request id for the life of this open form.
   const [requestId] = useState(() => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`));
   const [existing, setExisting] = useState<{ kind: "loading" } | { kind: "ready"; offer: ManagedOffer } | { kind: "missing" } | { kind: "error" } | null>(isNew ? null : { kind: "loading" });
   const [tick, setTick] = useState(0);
@@ -128,7 +127,9 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isNew, ownerKey, offerId, tick]);
 
-  const errors: DraftErrors = useMemo(() => validateDraft(draft, variant), [draft, variant]);
+  // An offer that already has an end date keeps one (update_offer cannot clear it).
+  const endLocked = existing?.kind === "ready" && !!existing.offer.endsOn;
+  const errors: DraftErrors = useMemo(() => validateDraft(draft, variant, isNew, endLocked), [draft, variant, isNew, endLocked]);
   const shown: DraftErrors = showErrors ? errors : {};
   const set = <K extends keyof OfferDraft>(k: K, v: OfferDraft[K]) => {
     setSaveNote(null);
@@ -178,7 +179,7 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
       onDone(isNew ? "Offer published" : "Offer saved");
       return;
     }
-    setSaveNote({ text: r.offline ? "You're offline. Try again when you're connected." : r.message, quiet: !!r.pending });
+    setSaveNote({ text: r.offline ? "You're offline. Try again when you're connected." : r.message, quiet: !!r.offline });
   };
 
   // ---- Preview and publish (also the read-only view of an expired offer)
@@ -322,7 +323,7 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
           <DateBox id="offer-starts" value={draft.startsOn} onChange={(v) => set("startsOn", v)} error={shown.startsOn} />
         </div>
         <div data-field="endsOn">
-          <FieldLabel htmlFor="offer-ends">Ends</FieldLabel>
+          <FieldLabel htmlFor="offer-ends">{endLocked ? "Ends" : "Ends (optional)"}</FieldLabel>
           <DateBox id="offer-ends" value={draft.endsOn} min={draft.startsOn || undefined} onChange={(v) => set("endsOn", v)} error={shown.endsOn} />
         </div>
       </div>

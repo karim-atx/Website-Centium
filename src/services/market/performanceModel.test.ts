@@ -12,16 +12,20 @@ import {
   longDate,
   offerRateFraction,
   parsePerformance,
+  previousTotal,
+  proRatePt,
   proStepFraction,
   RANGE_UNIT,
+  rateOverTime,
   ratePct,
+  ratePtChange,
   rateText,
   startsLater,
 } from "./performanceModel.ts";
 
-test("parsePerformance reads the DB5 row and sorts points by date", () => {
+test("parsePerformance reads the DB5 row (the six columns) and sorts points by date", () => {
   const s = parsePerformance([
-    { range: "7D", metric: "offer_views", total: "452", delta_pct: 6, points: [{ date: "2026-10-16", value: 9 }, { date: "2026-10-15", value: "4" }], previous: null, hired: 3 },
+    { range: "7D", metric: "offer_views", total: "452", delta_pct: 6, points: [{ date: "2026-10-16", value: 9 }, { date: "2026-10-15", value: "4" }], previous: null },
   ]);
   assert.ok(s);
   assert.equal(s.range, "7D");
@@ -30,7 +34,47 @@ test("parsePerformance reads the DB5 row and sorts points by date", () => {
   assert.deepEqual(s.points.map((p) => p.date), ["2026-10-15", "2026-10-16"]);
   assert.deepEqual(s.points.map((p) => p.value), [4, 9]);
   assert.equal(s.previous, null);
-  assert.deepEqual(s.counts, { hired: 3 });
+  assert.deepEqual(Object.keys(s).sort(), ["deltaPct", "metric", "points", "previous", "range", "total"]);
+});
+
+test("the server's numeric strings (numeric columns) and its zeros-not-gaps 7D row", () => {
+  const pts = Array.from({ length: 7 }, (_, i) => ({ date: `2026-10-${String(18 + i).padStart(2, "0")}`, value: 0 }));
+  const s = parsePerformance([{ range: "7D", metric: "redemptions", total: "0", delta_pct: null, points: pts, previous: null }]);
+  assert.ok(s);
+  assert.equal(s.points.length, 7);
+  assert.equal(isEmptySeries(s), true);
+  // p_compare: previous comes back as a series.
+  const c = parsePerformance([{ range: "7D", metric: "offer_views", total: "3", delta_pct: "50.0", points: pts, previous: pts }]);
+  assert.equal(c?.deltaPct, 50);
+  assert.equal(c?.previous?.length, 7);
+});
+
+test("a rate's change in points from the server's relative delta_pct", () => {
+  // 2.4% now, +4.3% relative: before ≈ 2.301%, so about +0.1 pt.
+  assert.equal(deltaPt(ratePtChange(2.4, 4.3)), "+0.1 pt");
+  // 2.0% now, −20% relative: before 2.5%, −0.5 pt.
+  assert.equal(deltaPt(ratePtChange(2, -20)), "−0.5 pt");
+  // Null delta = the previous window was empty: nothing to compare.
+  assert.equal(ratePtChange(2.4, null), null);
+  // −100%: now 0, before unknown.
+  assert.equal(ratePtChange(0, -100), null);
+  assert.equal(previousTotal(150, 50), 100);
+  assert.equal(previousTotal(10, null), 0);
+  assert.equal(previousTotal(0, -100), null);
+});
+
+test("P-MA.6 hire rate: per bucket, and its change in points", () => {
+  const views = parsePerformance([{ range: "7D", metric: "profile_views", total: 200, delta_pct: 100, points: [{ date: "2026-10-23", value: 100 }, { date: "2026-10-24", value: 100 }, { date: "2026-10-22", value: 0 }], previous: null }]);
+  const hires = parsePerformance([{ range: "7D", metric: "hire_requests", total: 6, delta_pct: 200, points: [{ date: "2026-10-23", value: 2 }, { date: "2026-10-24", value: 4 }], previous: null }]);
+  const r = rateOverTime(hires, views);
+  assert.ok(r);
+  assert.deepEqual(r.points.map((p) => p.value), [0, 2, 4]);
+  assert.equal(r.total, 3);
+  // Before: 100 views, 2 requests = 2%; now 3%: +1.0 pt.
+  assert.equal(deltaPt(proRatePt(views, hires)), "+1.0 pt");
+  // No previous views: nothing to compare.
+  assert.equal(proRatePt({ ...views!, deltaPct: null }, hires), null);
+  assert.equal(rateOverTime(hires, null), null);
 });
 
 test("parsePerformance: empty answers and a missing range", () => {

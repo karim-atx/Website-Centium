@@ -25,7 +25,7 @@ import {
   ratingLine,
   serviceCards,
   servicesHeader,
-  setServiceShowcaseVisible,
+  setServiceVisible,
   setShelfItemVisible,
   weeklyHours,
   withoutPending,
@@ -72,9 +72,9 @@ import { ServiceEditSheet } from "./ServiceEditSheet";
 //   deferred Undo, as the dialog says "This can't be undone"). Hide / Show on
 //   a shelf item writes its `visible` (drawn at 0.5 with "Hidden"; an item
 //   Centium took down reads "Hidden by Centium" and can't be shown again);
-//   Hide on a session type or plan is still a quiet strip (no
-//   showcase_visible on those tables). A plan not offered is drawn at 0.5
-//   with "Not offered" (its live state);
+//   Hide / Show on a session type or plan writes its DB3 `visible`
+//   (Database PR #39: drawn at 0.5 with "Hidden"). A plan not offered is
+//   drawn at 0.5 with "Not offered" (its live state, which wins the chip);
 // - Availability (scAvailability): the LIVE weekly hours (own practice rows of
 //   instructor_availability, 12-hour), "Open to gym work" (DB11, Release 2:
 //   shown off and disabled with a note), "Edit hours" →
@@ -295,9 +295,12 @@ function ServicesPanel() {
       showStrip(show ? "Service shown" : "Service hidden");
       return reload();
     }
-    const r = await setServiceShowcaseVisible();
-    if (r.ok) return reload();
-    showStrip(r.pending ? "Hiding a service is coming soon." : r.message, "neutral");
+    if (!authUserId) return;
+    const show = !ref.item.visible;
+    const r = await setServiceVisible(authUserId, ref.kind, ref.item.id, show);
+    if (!r.ok) return showStrip(r.message, "error");
+    showStrip(show ? "Service shown" : "Service hidden");
+    reload();
   };
 
   let body: React.ReactNode;
@@ -380,7 +383,7 @@ function ServiceCardRow({ card, editing, canEdit, onEdit, onHide, onDelete }: { 
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
   const menu = !!anchor;
   const op = card.dim ? 0.5 : 1;
-  const shelfHidden = card.ref.kind === "shelf" && !card.ref.item.visible;
+  const hidden = !card.ref.item.visible;
   const takenDown = card.ref.kind === "shelf" && card.ref.item.hiddenByCentium;
   return (
     <li style={{ borderRadius: 20, background: c.card, border: editing ? `1.5px solid ${c.fill}` : `1px solid ${c.border}`, padding: "14px 16px" }}>
@@ -417,8 +420,8 @@ function ServiceCardRow({ card, editing, canEdit, onEdit, onHide, onDelete }: { 
         align="right"
         options={[
           { value: "edit", label: "Edit", disabled: !canEdit },
-          // A hidden shelf item reads "Show"; one Centium took down can't be shown again.
-          { value: "hide", label: shelfHidden ? "Show" : "Hide", disabled: !canEdit || takenDown },
+          // A hidden service reads "Show"; a shelf item Centium took down can't be shown again.
+          { value: "hide", label: hidden ? "Show" : "Hide", disabled: !canEdit || takenDown },
           { value: "delete", label: "Delete", destructive: true, disabled: !canEdit },
         ]}
         onSelect={(v) => {

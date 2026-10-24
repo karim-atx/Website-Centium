@@ -31,8 +31,8 @@ test("deltas are written as the board does: +, U+2212 minus, quiet dash for none
   assert.equal(heroDelta(null), null);
 });
 
-test("ledger: DB5 pending shows the quiet value, never a number", () => {
-  const rowsPending = ledgerRows({ status: "pending" }, null);
+test("ledger: not asked (no marketing), loading or failed shows the quiet value, never a number", () => {
+  const rowsPending = ledgerRows({ status: "none" }, null);
   assert.deepEqual(
     rowsPending.map((r) => [r.label, r.value, r.delta]),
     [

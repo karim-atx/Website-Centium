@@ -41,7 +41,8 @@ import { HIRING_ROW_PENDING, hiringRowLine } from "./hiring/teamModel";
 //    month change, so the sparkline is the component's flat "no series" line
 //    and the change and "Last 30 days" are left out rather than invented;
 // 3. StatLedger: Active offers · Redemptions this month · Points redeemed
-//    (DB5, awaiting; "–" while pending) and, for a gym, Active memberships ·
+//    (DB5 business_marketplace_overview, the `marketing` permission: staff
+//    without it aren't asked and see "–") and, for a gym, Active memberships ·
 //    Class bookings this week (live venue_dashboard, no change: "–");
 // 4. gym only: caps "Gym" and the card with Memberships (→ /app/business/gym)
 //    and Classes (→ /app/business/classes), live counts, and (W4, B-MA.1
@@ -72,23 +73,30 @@ export function Overview() {
 
   // Members reached (live column).
   const [reached, setReached] = useState<Loaded<number | null>>({ status: "loading" });
-  // DB5 (awaiting).
+  // DB5 business_marketplace_overview (the `marketing` permission).
+  const marketing = m.can("marketing");
   const [ov, setOv] = useState<OverviewState>({ status: "loading" });
   const [tick, setTick] = useState(0);
   const retry = useCallback(() => setTick((t) => t + 1), []);
   useEffect(() => {
     if (!businessId) return;
     let alive = true;
-    setOv({ status: "loading" });
     void fetchMembersReached(businessId).then((n) => alive && setReached({ status: "ok", value: n }));
+    if (!marketing) {
+      setOv({ status: "none" });
+      return () => {
+        alive = false;
+      };
+    }
+    setOv({ status: "loading" });
     void fetchMarketplaceOverview(businessId).then((r) => {
       if (!alive) return;
-      setOv(r.ok ? { status: "ok", value: r.value } : r.pending ? { status: "pending" } : { status: "error" });
+      setOv(r.ok ? { status: "ok", value: r.value } : { status: "error" });
     });
     return () => {
       alive = false;
     };
-  }, [businessId, tick]);
+  }, [businessId, marketing, tick]);
 
   // Gym figures (live venue_dashboard of the selected venue).
   const gymId = kind === "gym" ? (m.venue?.gymId ?? null) : null;

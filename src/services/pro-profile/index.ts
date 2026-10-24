@@ -14,9 +14,12 @@
 //   distance by BAND), keyset (rank_score desc, id). It needs a point: the
 //   area the member chose on this device, or their position when location is
 //   already allowed (never prompted here).
+// - public_offers(p_owner_kind, p_owner_id) (Database PR #39,
+//   20261214010000): the profile's live point offers (nothing for an
+//   unlisted professional, signed in only).
 // No reader in the contract for reviews with their class and gym on a
-// profile, a profile's Book / Hire services, its point offers or Teaches at
-// (Database gap): those stay empty and the screens keep their live sources.
+// profile, a profile's Book / Hire services or Teaches at (Database gap):
+// those stay empty and the screens keep their live sources.
 
 import { marketRpc, type MarketResult } from "../market/rpc";
 import { coarsePoint, type Coords } from "../geo/distance";
@@ -30,16 +33,18 @@ export function fetchWorkHistory(professionalId: string): Promise<MarketResult<W
   return marketRpc("work_history", { p_professional_id: professionalId }, "Couldn't load the work history.", parseWork);
 }
 
-/** professional_public_profile + work_history; null for an unlisted professional (no public profile). */
+/** professional_public_profile + work_history + public_offers; null for an unlisted professional (no public profile). */
 export async function fetchPublicProfile(professionalId: string): Promise<MarketResult<PublicProfile | null>> {
   const fallback = "Couldn't load this profile.";
-  const [p, w] = await Promise.all([
+  const [p, w, o] = await Promise.all([
     marketRpc("professional_public_profile", { p_professional_id: professionalId }, fallback, rows),
     marketRpc("work_history", { p_professional_id: professionalId }, fallback, rows),
+    marketRpc("public_offers", { p_owner_kind: "professional", p_owner_id: professionalId }, fallback, rows),
   ]);
   if (!p.ok) return p;
   if (!w.ok) return w;
-  return { ok: true, value: parsePublicProfile(p.value, w.value) };
+  // The offers are one block on About: a failed read leaves it out rather than failing the profile.
+  return { ok: true, value: parsePublicProfile(p.value, w.value, o.ok ? o.value : []) };
 }
 
 /** professional_rating(p_professional_id): the one rating (client + class reviews); null average when there are none. */

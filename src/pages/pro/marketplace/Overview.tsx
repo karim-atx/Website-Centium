@@ -9,7 +9,7 @@ import { MarketError, MarketOffline, MarketSkeleton } from "../../../components/
 import { FOCUS_CSS } from "../../../components/market/usePress";
 import { useApp } from "../../../context/AppContext";
 import { useOnline } from "../../../hooks/useOnline";
-import { fetchMarketplaceVisible, fetchProOverview, needsHideWarning, overviewView, setMarketplaceVisible, visibleFrom, type ProOverviewState } from "../../../services/pro-market";
+import { fetchProOverview, needsHideWarning, overviewView, setMarketplaceVisible, visibleOf, type ProOverviewState } from "../../../services/pro-market";
 import { useMyCv } from "../../../components/cv/useMyCv";
 import { licenceFacts } from "../../../components/pro/profile/profileModel";
 import { CapsLabel, CentredDialog, lh, px, useMarketColors, useStrip } from "../../business-market/listingParts";
@@ -25,9 +25,9 @@ import { offeredCount, offersSub, openingsSub, workSub } from "./opportunities/o
 // (the app column gives the 16), gap 12:
 // 1. the top row, grid minmax(0,4fr) minmax(0,1fr) gap 12: RedeemVoucherTile
 //    (→ /app/pro/marketplace/redeem) and the ListingToggleTile "Listing"
-//    Visible #3F9165 / Hidden #C0392B: the live state is the caller's
-//    professional_profiles.listed_publicly, written by set_marketplace_visible
-//    (Database 73ea87b, D-19). While the state is unknown (loading, or a
+//    Visible #3F9165 / Hidden #C0392B: the live state is professional_overview's
+//    marketplace_visible (listed_publicly, Database PR #39), written by
+//    set_marketplace_visible (Database 73ea87b, D-19). While the state is unknown (loading, or a
 //    failed read) the tile is disabled. Turning it on can be refused: the
 //    tile stays Hidden and the error strip says why (VISIBLE_REFUSALS: ATXC6
 //    licence, ATX47 under 18, ATX48 date of birth). A visible professional
@@ -40,8 +40,8 @@ import { offeredCount, offersSub, openingsSub, workSub } from "./opportunities/o
 // 3. HeroStatCard "Clients reached" + the 358 × 64 sparkline, and the
 //    StatLedger (Active offers · Redemptions this month · Points redeemed
 //    (leaf) · Active clients · Gyms working with), from DB5
-//    professional_overview() (awaiting): pending, every figure is the quiet
-//    "–" except Active clients, which the LIVE roster (AppContext
+//    professional_overview() (Database PR #39); while it loads or after a
+//    failed read every figure is the quiet "–" except Active clients, which the LIVE roster (AppContext
 //    professionalClients, active_professional_clients) answers; ovEmpty when
 //    the answer has nobody reached (zeros, the dashed flat line, "Shows once
 //    clients start finding you");
@@ -88,11 +88,11 @@ export function OverviewTab() {
   const c = useMarketColors();
   const navigate = useNavigate();
   const online = useOnline();
-  const { professionalClients, rosterLoading, rosterError, authUserId } = useApp();
+  const { professionalClients, rosterLoading, rosterError } = useApp();
   const [state, setState] = useState<ProOverviewState>({ status: "loading" });
   const [tick, setTick] = useState(0);
-  const [visible, setVisible] = useState<boolean | null>(null);
-  const [visibleKnown, setVisibleKnown] = useState(false);
+  // A switch made here, over the overview's marketplace_visible until the next read.
+  const [switched, setSwitched] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [strip, showStrip] = useStrip();
   const retry = useCallback(() => setTick((t) => t + 1), []);
@@ -103,29 +103,19 @@ export function OverviewTab() {
     let alive = true;
     void fetchProOverview().then((r) => {
       if (!alive) return;
-      setState(r.ok ? { status: "ok", value: r.value } : r.pending ? { status: "pending" } : { status: "error" });
+      setSwitched(null);
+      setState(r.ok ? { status: "ok", value: r.value } : { status: "error" });
     });
     return () => {
       alive = false;
     };
   }, [tick]);
 
-  useEffect(() => {
-    if (!authUserId) return;
-    let alive = true;
-    void fetchMarketplaceVisible(authUserId).then((v) => {
-      if (!alive) return;
-      setVisible(v);
-      setVisibleKnown(v !== null);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [authUserId, tick]);
-
   const roster = rosterLoading || rosterError ? null : professionalClients.length;
   const view = overviewView(state, roster);
-  const on = visible ?? visibleFrom(state);
+  const visible = switched ?? visibleOf(state);
+  const visibleKnown = visible !== null;
+  const on = visible ?? true;
 
   // Verified licence or certificate, from the professional's own CV (the
   // reader the Showcase's About and the public profile already use); null
@@ -146,7 +136,7 @@ export function OverviewTab() {
     const r = await setMarketplaceVisible(next);
     setBusy(false);
     if (r.ok) {
-      setVisible(r.value);
+      setSwitched(r.value);
       showStrip(r.value ? "Your Showcase is visible" : "Your Showcase is hidden");
       return;
     }

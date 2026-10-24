@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   dayText,
   parseDirectory,
+  parseProfileOffers,
   parsePublicProfile,
   parseWork,
   reviewContext,
@@ -62,11 +63,25 @@ test("public profile: professional_public_profile + work_history, never contact 
   assert.equal(p.card.area, "Hamra");
   assert.deepEqual(p.specialties, ["HIIT"]);
   assert.equal(p.workHistory.length, 1);
-  // No reader in the contract for these (Database gap): empty, never invented.
+  // No reader in the contract for these (Database gap): empty, never invented. No offers passed: none.
   assert.deepEqual([p.services, p.offers, p.reviews, p.teachesAt], [[], [], [], []]);
   const flat = JSON.stringify(p);
   for (const k of ["+961", "a@b.c", "website"]) assert.equal(flat.includes(k), false, k);
   assert.equal(parsePublicProfile([], []), null);
+});
+
+test("public profile offers: public_offers('professional', id) rows, in the server's order", () => {
+  const offers = [
+    { id: "o1", title: "Free first session", kind: "free_item", value: null, points_cost: 250, where_used: "in_person", terms: null, starts_on: "2026-10-01", ends_on: null, per_member_limit: 1, quantity_cap: null, redeemed_count: 0, category: "professionals" },
+    { id: "o2", title: "20% off a 4-pack", kind: "percent_off", value: 20, points_cost: "900", where_used: "both", terms: "x", starts_on: "2026-10-01", ends_on: "2026-12-31", per_member_limit: 1, quantity_cap: 30, redeemed_count: 2, category: "professionals" },
+    { id: "o3", title: null, points_cost: 10 },
+  ];
+  assert.deepEqual(parseProfileOffers(offers), [
+    { id: "o1", headline: "Free first session", endsOn: null, pointsCost: 250 },
+    { id: "o2", headline: "20% off a 4-pack", endsOn: "2026-12-31", pointsCost: 900 },
+  ]);
+  const p = parsePublicProfile([{ professional_id: "p1", first_name: "Rana" }], [], offers)!;
+  assert.equal(p.offers.length, 2);
 });
 
 test("professionals_ranked: the server's order, the cursor score, From $X, every row kept", () => {

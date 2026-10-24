@@ -1,12 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  END_LOCKED_NOTE,
   dayLabel,
   draftOf,
   emptyDraft,
   offerArgs,
   offerErrorOf,
   offerMeta,
+  offerWriteRefusal,
   offerStatus,
   parseManagedOffers,
   previewRows,
@@ -113,6 +115,12 @@ test("validate: points cost > 0, ends ≥ starts, value per type, limit ≥ 1", 
   assert.deepEqual(validateDraft(good({ pointsCost: "1,200" }), "business"), {});
   assert.equal(validateDraft(good({ endsOn: "2026-10-31" }), "business").endsOn, "The end date can't be before the start date.");
   assert.deepEqual(validateDraft(good({ endsOn: "2026-11-01" }), "business"), {});
+  // No end date is allowed (the server allows it; Karim)…
+  assert.deepEqual(validateDraft(good({ endsOn: "" }), "business"), {});
+  assert.deepEqual(validateDraft(good({ endsOn: "" }), "business", false), {});
+  // …except on an offer that already has one: update_offer can't clear it.
+  assert.equal(validateDraft(good({ endsOn: "" }), "business", false, true).endsOn, END_LOCKED_NOTE);
+  assert.deepEqual(validateDraft(good({ endsOn: "2027-03-01" }), "business", false, true), {});
   assert.ok(validateDraft(good({ value: "0" }), "business").value);
   assert.ok(validateDraft(good({ value: "101" }), "business").value);
   assert.ok(validateDraft(good({ type: "amount_off", value: "0" }), "business").value);
@@ -123,6 +131,8 @@ test("validate: points cost > 0, ends ≥ starts, value per type, limit ≥ 1", 
   assert.deepEqual(validateDraft(good({ quantityCap: "" }), "business"), {});
   assert.ok(validateDraft(good({ where: "in_person" }), "professional").appliesTo);
   assert.deepEqual(validateDraft(good({ where: "in_person", appliesTo: "svc1" }), "professional"), {});
+  // Editing: create_offer doesn't store p_applies_to, so an existing offer isn't asked for it again.
+  assert.deepEqual(validateDraft(good({ where: "in_person" }), "professional", false), {});
 });
 
 test("args: documented fields; free item has no value; empty cap is null", () => {
@@ -135,7 +145,14 @@ test("args: documented fields; free item has no value; empty cap is null", () =>
   assert.equal(a.p_where_used, "both");
   assert.equal(offerArgs(good({ type: "free_item", value: "9" }), "business").p_value, null);
   assert.equal(offerArgs(good({ quantityCap: "" }), "business").p_quantity_cap, null);
+  assert.equal(offerArgs(good({ endsOn: "" }), "business").p_ends_on, null);
   assert.equal(offerArgs(good({ appliesTo: "svc1" }), "professional").p_applies_to, "svc1");
+  // offers_where_check: in_person | online | both; a business's "In store" is in_person.
+  assert.equal(offerArgs(good({ where: "in_store" }), "business").p_where_used, "in_person");
+  assert.equal(offerArgs(good({ where: "online" }), "business").p_where_used, "online");
+  assert.equal(offerArgs(good({ where: "in_person", appliesTo: "svc1" }), "professional").p_where_used, "in_person");
+  // The exact argument names create_offer / update_offer take (20261214010000 asserts them).
+  assert.deepEqual(Object.keys(offerArgs(good(), "business")).sort(), ["p_applies_to", "p_ends_on", "p_headline", "p_per_member_limit", "p_points_cost", "p_quantity_cap", "p_starts_on", "p_terms", "p_type", "p_value", "p_where_used"]);
 });
 
 test("preview rows: business (Terms) and professional (Applies to, Per-client limit)", () => {
@@ -155,6 +172,9 @@ test("preview rows: business (Terms) and professional (Applies to, Per-client li
   assert.equal(p[2].v, "4-session pack · $120");
   assert.equal(p[3].v, "1,200");
   assert.equal(p[7].v, "In person");
+  // Editing a professional offer: no stored Applies to, so the row is left out.
+  assert.ok(!previewRows(good({ where: "in_person" }), "professional", null).some((r) => r.k === "Applies to"));
+  assert.equal(previewRows(good({ endsOn: "" }), "business", null).find((r) => r.k === "Dates")?.v, "From Nov 1, 2026 · No end date");
   assert.equal(previewRows(good({ quantityCap: "" }), "business", null)[3].v, "No cap");
   assert.equal(valueLabel({ type: "amount_off", value: "12.5" }), "$12.50");
   assert.equal(valueLabel({ type: "free_item", value: "" }), "Free");
@@ -174,4 +194,18 @@ test("errors: documented names map, anything else is null", () => {
   assert.equal(offerErrorOf({ message: "x", details: "invalid_dates" }), "invalid_dates");
   assert.equal(offerErrorOf({ hint: "offer_expired" }), "offer_expired");
   assert.equal(offerErrorOf({ code: "23505", message: "duplicate" }), null);
+  // The writers' own wording (22023 / ATX10 with the keyword first).
+  assert.equal(offerErrorOf({ code: "22023", message: "funding_ack_required: you fund this discount in full, and Centium does not reimburse redemptions" }), "funding_ack_required");
+  assert.equal(offerErrorOf({ code: "22023", message: "points_cost_required: an offer costs points" }), "points_cost_required");
+  assert.equal(offerErrorOf({ code: "ATX10", message: "offer_expired: this offer has ended, so it cannot be edited" }), "offer_expired");
+});
+
+test("the writers' other refusals by SQLSTATE", () => {
+  assert.equal(offerWriteRefusal({ code: "ATX09", message: "a paused or closed business cannot publish an offer" }), "Your business is paused or closed, so it can't publish offers.");
+  assert.equal(offerWriteRefusal({ code: "ATX09", message: "only a business or a professional can publish an offer" }), "Only a business or a professional can publish offers.");
+  assert.equal(offerWriteRefusal({ code: "42501", message: "this offer has been taken down" }), "Centium took this offer down. Contact support for details.");
+  assert.equal(offerWriteRefusal({ code: "42501", message: "ATXB8: that offer is not yours" }), "You don't have permission to change this offer.");
+  assert.equal(offerWriteRefusal({ code: "ATX08", message: "no such offer" }), "This offer no longer exists.");
+  assert.equal(offerWriteRefusal({ code: "ATX02", message: "Too many create_offer attempts" }), "Too many new offers in a short time. Try again later.");
+  assert.equal(offerWriteRefusal({ code: "XX000", message: "boom" }), null);
 });

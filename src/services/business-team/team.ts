@@ -41,7 +41,6 @@ import { reinviteRefusal, resendRefusal, revokeRefusal } from "./inviteRefusals"
 import { rpc } from "../pro/rpc";
 
 export { roleUsesSeat } from "./seats";
-import { seatAnswer } from "./seats";
 
 interface EmployeeRow {
   id: string;
@@ -122,23 +121,6 @@ async function payRatesFor(businessId: string): Promise<Map<string, number | nul
   return out;
 }
 
-/**
- * How each Team professional joined, from my_team (Database Release 2:
- * source existing_team | hire), for the seat answer (seatAnswer: a Centium
- * hire uses no seat). my_team needs the members permission; a refusal or a
- * failed read leaves every source unknown and the server's per-person flag
- * stands.
- */
-async function sourcesFor(businessId: string): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
-  const { data, error } = await rpc("my_team", { p_business_id: businessId });
-  if (error) return out;
-  for (const r of (data ?? []) as { professional_id: string; source: string | null }[]) {
-    if (r.source) out.set(r.professional_id, r.source);
-  }
-  return out;
-}
-
 const TEAM_COLUMNS = "id, professional_id, created_at, accepted_at, role, permissions, invite_message";
 /** Batch 2 CO: the invitation window, SELECT-granted to authenticated (migration 20261201000000). */
 const WINDOW_COLUMNS = "expires_at, revoked_at, resent_count, sent_at";
@@ -177,12 +159,7 @@ export async function fetchTeam(businessId: string): Promise<Result<TeamPerson[]
   if (rows.error && !isOffline(rows.error)) rows = await read(TEAM_COLUMNS);
   if (rows.error) return fail(rows.error, "Couldn't load your team. Check your connection and try again.");
   const list = (rows.data ?? []) as unknown as EmployeeRow[];
-  const [names, about, pay, sources] = await Promise.all([
-    namesFor(list.map((r) => r.professional_id)),
-    professionsFor(businessId),
-    payRatesFor(businessId),
-    sourcesFor(businessId),
-  ]);
+  const [names, about, pay] = await Promise.all([namesFor(list.map((r) => r.professional_id)), professionsFor(businessId), payRatesFor(businessId)]);
   return {
     ok: true,
     value: list.map((r) => ({
@@ -202,7 +179,9 @@ export async function fetchTeam(businessId: string): Promise<Result<TeamPerson[]
       subtype: about.get(r.professional_id)?.subtype ?? null,
       otherDiscipline: about.get(r.professional_id)?.otherDiscipline ?? null,
       closestGroup: about.get(r.professional_id)?.closestGroup ?? null,
-      usesSeat: seatAnswer(about.get(r.professional_id)?.usesSeat, sources.get(r.professional_id)),
+      // employee_credentials.uses_seat is business_seats_used()'s own test (Database PR #39 correction 1:
+      // source <> 'hire' and role_uses_seat(role)), so the server's flag is the answer as it stands.
+      usesSeat: about.get(r.professional_id)?.usesSeat ?? null,
     })),
   };
 }

@@ -22,6 +22,7 @@ import {
   PERF_RANGES,
   RANGE_UNIT,
   ratePct,
+  ratePtChange,
   rateText,
   startsLater,
   EXPANDED,
@@ -43,7 +44,7 @@ import { isoOf } from "./model";
 // - Header row (gap 8, centred): the offer selector (flex 1, 40 tall + its 1px
 //   border = 42 as rendered, radius 12, padding 0 10 0 12, 12.5 / 700, the
 //   14 chevron --faint 2.4) listing "All offers" and the owner's offers
-//   (my_offers, DB2), then the range control (W1 ChartRangeControl).
+//   (the owner's offers table read, DB2), then the range control (W1 ChartRangeControl).
 // - Four ChartCards: views (area line), redemptions (bars, per day for 7D /
 //   30D, per week for 90D / 12M; the tapped bar #7D6BB5), points (cumulative
 //   line; no leaf, as the business markup draws it), "How many viewers
@@ -54,9 +55,12 @@ import { isoOf } from "./model";
 //   header "Offer performance" / {title}, the same selector and range, the
 //   240-tall chart and the compare switch (`toggleCompare`, starting off as
 //   the script's `cmp` does outside the preset frame).
-// - Data: DB5 offer_performance through marketRpc (awaiting DB stage DB5).
-//   Pending, or every series zero = the board's "No data yet" card; a
-//   scheduled offer reads "This offer starts on {date}" (performanceEmpty).
+// - Data: DB5 offer_performance(p_range, p_metric, p_offer_id, p_compare,
+//   p_business_id) (Database PR #39), one call per metric. Every series zero
+//   = the board's "No data yet" card; a scheduled offer reads "This offer
+//   starts on {date}" (performanceEmpty). The rate card's change is in
+//   points ("+0.1 pt"), derived from the server's relative delta_pct
+//   (ratePtChange); nothing when the previous window was empty.
 
 const QUESTION: Record<OfferMetric, string> = {
   offer_views: "How many members saw your offers?",
@@ -71,7 +75,7 @@ const formatOf = (metric: OfferMetric) => (v: number): string =>
   metric === "offer_views" ? countOf(v, "view", "views") : metric === "redemptions" ? countOf(v, "voucher", "vouchers") : metric === "points_redeemed" ? `${fmtCount(v)} pts` : rateText(v);
 
 const totalOf = (metric: OfferMetric, s: PerfSeries | null): string => (metric === "conversion" ? rateText(s?.total ?? 0) : fmtCount(s?.total ?? 0));
-const deltaOf = (metric: OfferMetric, s: PerfSeries | null): string | null => (metric === "conversion" ? deltaPt(s?.deltaPct) : deltaText(s?.deltaPct));
+const deltaOf = (metric: OfferMetric, s: PerfSeries | null): string | null => (metric === "conversion" ? deltaPt(s ? ratePtChange(s.total, s.deltaPct) : null) : deltaText(s?.deltaPct));
 
 /** The range and offer, kept in the page's query so the expanded page and back keep them. */
 function usePerfParams(): { range: PerfRange; offerId: string | null; set: (patch: { range?: PerfRange; offer?: string | null }) => void; query: string } {
@@ -110,20 +114,19 @@ function useOfferChoices(businessId: string | null): OfferChoice[] {
   return list;
 }
 
-type Load = { state: "loading" } | { state: "pending" } | { state: "error" } | { state: "ok"; series: Record<OfferMetric, PerfSeries | null> };
+type Load = { state: "loading" } | { state: "error" } | { state: "ok"; series: Record<OfferMetric, PerfSeries | null> };
 
-function useOfferSeries(range: PerfRange, offerId: string | null, enabled: boolean): [Load, () => void] {
+function useOfferSeries(businessId: string | null, range: PerfRange, offerId: string | null, enabled: boolean): [Load, () => void] {
   const [tick, setTick] = useState(0);
-  const key = `${range}|${offerId ?? ""}|${tick}`;
+  const key = `${businessId ?? ""}|${range}|${offerId ?? ""}|${tick}`;
   const [got, setGot] = useState<{ key: string; load: Load } | null>(null);
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !businessId) return;
     let alive = true;
-    void Promise.all(OFFER_METRICS.map((mt) => fetchOfferPerformance(range, mt, offerId, false))).then((res) => {
+    void Promise.all(OFFER_METRICS.map((mt) => fetchOfferPerformance(businessId, range, mt, offerId, false))).then((res) => {
       if (!alive) return;
       let load: Load;
-      if (res.some((r) => !r.ok && r.pending)) load = { state: "pending" };
-      else if (res.some((r) => !r.ok)) load = { state: "error" };
+      if (res.some((r) => !r.ok)) load = { state: "error" };
       else {
         const series = {} as Record<OfferMetric, PerfSeries | null>;
         OFFER_METRICS.forEach((mt, k) => {
@@ -132,12 +135,12 @@ function useOfferSeries(range: PerfRange, offerId: string | null, enabled: boole
         });
         load = { state: "ok", series };
       }
-      setGot({ key: `${range}|${offerId ?? ""}|${tick}`, load });
+      setGot({ key: `${businessId}|${range}|${offerId ?? ""}|${tick}`, load });
     });
     return () => {
       alive = false;
     };
-  }, [range, offerId, tick, enabled]);
+  }, [businessId, range, offerId, tick, enabled]);
   const retry = useCallback(() => setTick((t) => t + 1), []);
   return [got?.key === key ? got.load : { state: "loading" }, retry];
 }
@@ -193,7 +196,7 @@ export function OfferPerformance() {
   const { range, offerId, set, query } = usePerfParams();
   const choices = useOfferChoices(mk.business?.id ?? null);
   const can = mk.can("marketing");
-  const [load, retry] = useOfferSeries(range, offerId, can);
+  const [load, retry] = useOfferSeries(mk.business?.id ?? null, range, offerId, can);
   const offer = choices.find((o) => o.id === offerId) ?? null;
   const unit = RANGE_UNIT[range];
   const today = isoOf(new Date());
@@ -204,7 +207,7 @@ export function OfferPerformance() {
   if (!can) body = <MarketEmptyCard title="No data yet" body="Offer performance is for the owner and staff who manage marketing." />;
   else if (load.state === "loading") body = <MarketSkeleton radius={20} rows={3} height={244} count={4} gap={12} label="Loading your offer performance" />;
   else if (load.state === "error") body = <MarketError thing="your offer performance" onRetry={retry} />;
-  else if (load.state === "pending" || OFFER_METRICS.every((mt) => isEmptySeries(load.series[mt]))) body = <EmptyCard offer={offer} today={today} />;
+  else if (OFFER_METRICS.every((mt) => isEmptySeries(load.series[mt]))) body = <EmptyCard offer={offer} today={today} />;
   else {
     const s = load.series;
     const views = s.offer_views;
@@ -273,6 +276,7 @@ export function OfferPerformanceExpanded({ segment }: { segment: string }) {
   const { range, offerId, set, query } = usePerfParams();
   const choices = useOfferChoices(mk.business?.id ?? null);
   const can = mk.can("marketing");
+  const businessId = mk.business?.id ?? null;
   const ex = EXPANDED[segment] ?? EXPANDED.views;
   const mt = ex.metric;
   const [compare, setCompare] = useState(false);
@@ -280,16 +284,16 @@ export function OfferPerformanceExpanded({ segment }: { segment: string }) {
   const key = `${range}|${offerId ?? ""}|${compare}|${mt}|${tick}`;
   const [got, setGot] = useState<{ key: string; load: Load | { state: "one"; s: PerfSeries | null } } | null>(null);
   useEffect(() => {
-    if (!can) return;
+    if (!can || !businessId) return;
     let alive = true;
-    void fetchOfferPerformance(range, mt, offerId, compare).then((r) => {
+    void fetchOfferPerformance(businessId, range, mt, offerId, compare).then((r) => {
       if (!alive) return;
-      setGot({ key: `${range}|${offerId ?? ""}|${compare}|${mt}|${tick}`, load: r.ok ? { state: "one", s: r.value } : r.pending ? { state: "pending" } : { state: "error" } });
+      setGot({ key: `${range}|${offerId ?? ""}|${compare}|${mt}|${tick}`, load: r.ok ? { state: "one", s: r.value } : { state: "error" } });
     });
     return () => {
       alive = false;
     };
-  }, [range, offerId, compare, mt, tick, can]);
+  }, [businessId, range, offerId, compare, mt, tick, can]);
   const load = got?.key === key ? got.load : { state: "loading" as const };
   // While the compare series loads, the last answer for this range and offer stays on screen (the switch doesn't blank the chart).
   const prevLoad = got?.load;

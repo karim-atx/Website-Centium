@@ -1,12 +1,13 @@
 // Market + Share 3.0 · W3 · B-MA.1 Listing Overview readers.
 //
-// - business_marketplace_overview(p_business_id): DB5 (PLAN §2.2), through
-//   marketRpc so a stage that hasn't landed answers `pending` (the ledger's
-//   quiet "–"), never an error.
+// - business_marketplace_overview(p_business_id): DB5 (Database PR #39,
+//   20261214030000), the `marketing` permission (42501 otherwise), through
+//   marketRpc.
 // - members_reached: the live business_profiles column (self-reported, owner
-//   writable). No live reader has a daily series or a month-on-month change
-//   for it (listing_performance is weekly impressions, a different figure),
-//   so the hero shows the figure alone: no sparkline series, no delta.
+//   writable). DB5's business overview carries no reach figure, series or
+//   change (only professional_overview has clients_reached + sparkline), and
+//   listing_performance is weekly impressions, a different figure, so the
+//   hero shows the figure alone: no sparkline series, no delta.
 // - reorder_showcase_items(p_ids) (Database 73ea87b, 20261211400000): `sort`
 //   becomes each id's position in the array; every id is checked before
 //   anything moves (ATX96 = one of them isn't the caller's to move: a
@@ -17,8 +18,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { marketRpc, num, type MarketResult } from "../market/rpc";
 import { parseOverview, REORDER_NOT_YOURS, type MarketplaceOverview } from "./overviewModel";
 
-export async function fetchMarketplaceOverview(businessId: string): Promise<MarketResult<MarketplaceOverview | null>> {
-  // awaiting DB stage DB5
+export function fetchMarketplaceOverview(businessId: string): Promise<MarketResult<MarketplaceOverview | null>> {
   return marketRpc("business_marketplace_overview", { p_business_id: businessId }, "Couldn't load your marketplace figures.", parseOverview);
 }
 

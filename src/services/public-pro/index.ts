@@ -15,7 +15,10 @@ export * from "./logic";
 // - professional_by_handle(p_handle): the public profile;
 // - professional_booking_allowed(p_professional): whether the caller may book;
 // - appointment_services (professional_id, active): the session types,
-//   readable signed out only when anyone may book and the link is on;
+//   readable signed out only when anyone may book and the link is on (with
+//   DB3 `visible`: a hidden one is still bookable by its link);
+// - professional_plans (id where visible is false): the plans hidden from
+//   the Showcase (professional_plans_for has no `visible`);
 // - professional_open_slots(p_professional, p_from, p_to, p_service_id): ATXG5
 //   when the caller may not book;
 // - request_professional_booking(p_service_id, p_starts_at): signed in.
@@ -151,6 +154,8 @@ export interface BookableSession {
   currency: string;
   locationKind: string | null;
   description: string | null;
+  /** DB3 Show in Showcase (Database PR #39): false = left off the profile's Services list, still bookable by its link. */
+  visible: boolean;
 }
 
 /** The professional's own active session types the caller may read (RLS decides). */
@@ -158,13 +163,13 @@ export async function fetchBookableSessions(professionalId: string): Promise<Rea
   try {
     const { data, error } = await supabase
       .from("appointment_services" as never)
-      .select("id, name, duration_min, price, currency, location_kind, description")
+      .select("id, name, duration_min, price, currency, location_kind, description, visible")
       .eq("professional_id", professionalId)
       .is("business_id", null)
       .eq("active", true)
       .order("created_at");
     if (error) return fail(error, "Couldn't load session types. Try again.");
-    type Row = { id: string; name: string; duration_min: number; price: number | string | null; currency: string | null; location_kind: string | null; description: string | null };
+    type Row = { id: string; name: string; duration_min: number; price: number | string | null; currency: string | null; location_kind: string | null; description: string | null; visible: boolean | null };
     return {
       ok: true,
       data: ((data ?? []) as unknown as Row[]).map((r) => ({
@@ -175,10 +180,28 @@ export async function fetchBookableSessions(professionalId: string): Promise<Rea
         currency: r.currency ?? "USD",
         locationKind: r.location_kind,
         description: r.description?.trim() || null,
+        visible: r.visible !== false,
       })),
     };
   } catch (e) {
     return fail(e, "Couldn't load session types. Try again.");
+  }
+}
+
+/**
+ * The plans this professional hid from their Showcase (professional_plans
+ * .visible false, DB3, Database PR #39; readable under the public policy:
+ * active plans of a listed professional). professional_plans_for() doesn't
+ * return `visible`, so the profile drops these ids from its list. Empty when
+ * the read fails (every plan shows, as before).
+ */
+export async function fetchHiddenPlanIds(professionalId: string): Promise<Set<string>> {
+  try {
+    const { data, error } = await supabase.from("professional_plans" as never).select("id").eq("professional_id", professionalId).eq("visible", false);
+    if (error) return new Set();
+    return new Set(((data ?? []) as unknown as { id: string }[]).map((r) => r.id));
+  } catch {
+    return new Set();
   }
 }
 

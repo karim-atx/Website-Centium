@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "../../../lib/supabase/client";
-import { createSessionGate, listingEventKey, type ListingEvent } from "./listingLogic";
+import { createSessionGate, listingEventKey, professionalEventKey, type ListingEvent, type ProfessionalEvent } from "./listingLogic";
 
 // B13 MK-07: record_listing_event(p_business_id, p_kind, p_source, p_item_id),
 // signed out or in. Only counts are stored, never a viewer; the server counts
@@ -12,6 +12,14 @@ import { createSessionGate, listingEventKey, type ListingEvent } from "./listing
 // item + kind goes at most once per browser-tab session (the session gate),
 // so a list re-rendering, a card scrolling back into view or a page remounting
 // after Back sends nothing more.
+//
+// DB5 (Database PR #39, 20261214020000): offer_view joins the kinds a client
+// reports (the offer as p_item_id; offer_performance counts it), and a
+// professional has their own recorder, record_professional_event(
+// p_professional_id, p_kind profile_view | offer_view, p_source, p_item_id),
+// sharing the same once-a-day dedupe; it ignores the professional's own look
+// and an unlisted professional, silently. professional_performance and
+// professional_overview count those.
 
 const gate = createSessionGate(
   (() => {
@@ -29,17 +37,21 @@ let warned = false;
 export function recordListingEvent(e: ListingEvent): void {
   if (!e.businessId) return;
   if (!gate.first(listingEventKey(e))) return;
+  fire("record_listing_event", { p_business_id: e.businessId, p_kind: e.kind, p_source: e.source, p_item_id: e.itemId ?? null });
+}
+
+/** Records one professional event (a profile or an offer seen), once per session; never throws, never blocks. */
+export function recordProfessionalEvent(e: ProfessionalEvent): void {
+  if (!e.professionalId) return;
+  if (!gate.first(professionalEventKey(e))) return;
+  fire("record_professional_event", { p_professional_id: e.professionalId, p_kind: e.kind, p_source: e.source, p_item_id: e.itemId ?? null });
+}
+
+function fire(fn: string, args: Record<string, unknown>): void {
   try {
-    // Not in the generated types (B13 is newer than the last regeneration).
+    // Not in the generated types (newer than the last regeneration).
     const rpc = (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => PromiseLike<{ error: { message: string } | null }>;
-    void Promise.resolve(
-      rpc("record_listing_event", {
-        p_business_id: e.businessId,
-        p_kind: e.kind,
-        p_source: e.source,
-        p_item_id: e.itemId ?? null,
-      })
-    ).then(
+    void Promise.resolve(rpc(fn, args)).then(
       (r) => {
         if (r?.error && !warned) {
           warned = true;

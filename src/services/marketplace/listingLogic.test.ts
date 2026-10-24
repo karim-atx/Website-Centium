@@ -11,6 +11,7 @@ import {
   isLivePassState,
   knownAmenities,
   listingEventKey,
+  professionalEventKey,
   parseListingSource,
   viewerSpotsLeft,
 } from "./listingLogic";
@@ -26,6 +27,10 @@ function fakeStorage() {
 test("the dedupe key is business + item + kind, not the source", () => {
   assert.equal(listingEventKey({ businessId: "b", kind: "impression", itemId: "c" }), "b|c|impression");
   assert.equal(listingEventKey({ businessId: "b", kind: "profile_open" }), "b||profile_open");
+  assert.equal(listingEventKey({ businessId: "b", kind: "offer_view", itemId: "o" }), "b|o|offer_view");
+  // A professional's events have their own namespace, so the same uuid as a business can't collide.
+  assert.equal(professionalEventKey({ professionalId: "p", kind: "profile_view" }), "pro:p||profile_view");
+  assert.equal(professionalEventKey({ professionalId: "p", kind: "offer_view", itemId: "o" }), "pro:p|o|offer_view");
   assert.equal(listingEventKey({ businessId: "b", kind: "profile_open", itemId: null }), "b||profile_open");
   assert.notEqual(listingEventKey({ businessId: "b", kind: "impression" }), listingEventKey({ businessId: "b", kind: "book_tap" }));
 });

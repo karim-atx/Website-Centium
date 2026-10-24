@@ -1,16 +1,20 @@
 // Market + Share 3.0 · W3 · the professional Marketplace readers and writers
 // (P-MA.1 Overview, P-MA.2 Showcase). Pure rules in ./model (tested).
 //
-// Database stages that haven't landed go through marketRpc (W2), so a missing
-// function answers `pending` and the screen shows its quiet state:
-// - professional_overview(): DB5 (PLAN §2.2, api.md GET /marketplace/overview);
-// - showcase_visible / photo_path on appointment_services and
-//   professional_plans: DB3 (73ea87b) did not add them (the professional's
-//   showcase is their own business_offerings shelf instead), so that writer
-//   still answers `pending`.
-// LANDED (Database 73ea87b, 20261211400000): set_marketplace_visible (D-19),
-// the professional's own shelf rows (fetchShelf / saveShelfItem /
-// setShelfItemVisible / deleteShelfItem) and reorder_showcase_items.
+// - professional_overview() (DB5, Database PR #39, 20261214030000): the hero
+//   and ledger figures, and marketplace_visible = professional_is_listed(),
+//   the same listed_publicly that set_marketplace_visible writes (HANDOVER_API:
+//   "There is no second column"), so the Visible tile reads it from here.
+// - Database 73ea87b (20261211400000): set_marketplace_visible (D-19), the
+//   professional's own shelf rows (fetchShelf / saveShelfItem /
+//   setShelfItemVisible / deleteShelfItem) and reorder_showcase_items.
+// - DB3 on session types and plans (Database PR #39, 20261214040000):
+//   appointment_services.image_url / visible; professional_plans.description
+//   / image_url / visible / format (in_person | online | both). SELECT,
+//   INSERT and UPDATE granted per column to authenticated (SELECT to anon
+//   too). Written directly, as everything else on these tables (no RPC).
+//   `visible` is "Show in Showcase", not `active` ("Offered"); a session
+//   type's format stays its location_kind; plans order by `position`.
 //
 // LIVE (D-18): the services are appointment_services (Book; a professional's
 // own rows, business_id null, active) and professional_plans (Hire). Writes
@@ -30,7 +34,7 @@ import { fetchServicePlans } from "../pro/profile";
 import type { Read, Write } from "../pro/clients";
 import { reorderShowcase } from "../business-market/overview";
 import { uploadProductPhoto } from "../store/products";
-import { parseProOverview, parseShelfRows, visibleRefusal, type Format, type LocationKind, type PlanService, type ProOverview, type SessionService, type ShelfItem } from "./model";
+import { PLAN_SHOWCASE_DEFAULT, parseProOverview, parseShelfRows, planShowcaseById, visibleRefusal, type Format, type LocationKind, type PlanService, type ProOverview, type SessionService, type ShelfItem } from "./model";
 
 export * from "./model";
 
@@ -41,8 +45,7 @@ const failed = (error: unknown, fallback: string): Write => ({ ok: false, messag
 // P-MA.1 Overview
 // ---------------------------------------------------------------------------
 
-export async function fetchProOverview(): Promise<MarketResult<ProOverview | null>> {
-  // awaiting DB stage DB5
+export function fetchProOverview(): Promise<MarketResult<ProOverview | null>> {
   return marketRpc("professional_overview", undefined, "Couldn't load your marketplace figures.", parseProOverview);
 }
 
@@ -61,22 +64,11 @@ export async function setMarketplaceVisible(visible: boolean): Promise<MarketRes
   return refusal ? { ...r, message: refusal } : r;
 }
 
-/** The live Visible / Hidden state: the caller's professional_profiles.listed_publicly (null when it can't be read). */
-export async function fetchMarketplaceVisible(me: string): Promise<boolean | null> {
-  try {
-    const { data, error } = await from("professional_profiles").select("listed_publicly").eq("profile_id", me).maybeSingle();
-    if (error) return null;
-    return !!(data as { listed_publicly?: boolean } | null)?.listed_publicly;
-  } catch {
-    return null;
-  }
-}
-
 // ---------------------------------------------------------------------------
 // P-MA.2 Showcase · Services (live)
 // ---------------------------------------------------------------------------
 
-const SESSION_COLUMNS = "id, name, description, duration_min, price, currency, buffer_min, colour, location_kind, created_at";
+const SESSION_COLUMNS = "id, name, description, duration_min, price, currency, buffer_min, colour, location_kind, image_url, visible, created_at";
 type SessionDbRow = {
   id: string;
   name: string;
@@ -87,18 +79,26 @@ type SessionDbRow = {
   buffer_min: number;
   colour: string | null;
   location_kind: LocationKind;
+  image_url: string | null;
+  visible: boolean | null;
   created_at: string;
 };
 
-/** The professional's own active session types and every plan (offered or not). */
+/** The plan columns DB3 added (20261214040000), read beside the shared plan read (services/pro/profile fetchServicePlans). */
+const PLAN_SHOWCASE_COLUMNS = "id, description, image_url, visible, format";
+
+/** The professional's own active session types and every plan (offered or not), with their showcase fields. */
 export async function fetchShowcaseServices(me: string): Promise<Read<{ sessions: SessionService[]; plans: PlanService[] }>> {
   try {
-    const [s, p] = await Promise.all([
+    const [s, p, x] = await Promise.all([
       from("appointment_services").select(SESSION_COLUMNS).eq("professional_id", me).is("business_id", null).eq("active", true).order("created_at"),
       fetchServicePlans(me),
+      from("professional_plans").select(PLAN_SHOWCASE_COLUMNS).eq("professional_id", me),
     ]);
     if (s.error) return { ok: false, offline: isOffline(s.error) };
     if (!p.ok) return p;
+    if (x.error) return { ok: false, offline: isOffline(x.error) };
+    const extras = planShowcaseById(x.data);
     const sessions = ((s.data ?? []) as unknown as SessionDbRow[]).map(
       (r): SessionService => ({
         id: r.id,
@@ -110,10 +110,12 @@ export async function fetchShowcaseServices(me: string): Promise<Read<{ sessions
         bufferMin: r.buffer_min,
         colour: r.colour,
         locationKind: r.location_kind,
+        imageUrl: r.image_url?.trim() || null,
+        visible: r.visible !== false,
         createdAt: r.created_at,
       })
     );
-    const plans = p.data.map((x): PlanService => ({ ...x, billing: x.billing }));
+    const plans = p.data.map((pl): PlanService => ({ ...pl, billing: pl.billing, ...(extras.get(pl.id) ?? PLAN_SHOWCASE_DEFAULT) }));
     return { ok: true, data: { sessions, plans } };
   } catch (e) {
     return { ok: false, offline: isOffline(e) };
@@ -128,6 +130,10 @@ export interface SessionDraft {
   price: number;
   colour: string;
   locationKind: LocationKind;
+  /** The service photo (product-images, the shelf's uploader); null = none. */
+  imageUrl: string | null;
+  /** Show in Showcase. */
+  visible: boolean;
 }
 
 /** Adds or edits a session type with its description (appointment_services, the calendar's own table). */
@@ -144,11 +150,38 @@ export async function saveSessionService(me: string, id: string | null, d: Sessi
     price: d.price,
     colour: d.colour,
     location_kind: d.locationKind,
+    image_url: d.imageUrl,
+    visible: d.visible,
   };
   try {
     const { error } = id
       ? await from("appointment_services").update(row as never).eq("id", id).eq("professional_id", me)
       : await from("appointment_services").insert({ ...row, professional_id: me, business_id: null } as never);
+    return error ? failed(error, "Couldn't save this service. Try again.") : { ok: true };
+  } catch (e) {
+    return failed(e, "Couldn't save this service. Try again.");
+  }
+}
+
+export interface PlanShowcaseDraft {
+  description: string;
+  imageUrl: string | null;
+  visible: boolean;
+  format: Format | null;
+}
+
+/**
+ * A plan's showcase fields (DB3, 20261214040000), after the shared savePlan
+ * wrote the rest: description (≤ 500, professional_plans_desc_len), photo,
+ * Show in Showcase, format (professional_plans_format_check).
+ */
+export async function savePlanShowcase(me: string, id: string, d: PlanShowcaseDraft): Promise<Write> {
+  if (d.description.trim().length > 500) return { ok: false, message: "Keep the description to 500 characters or fewer." };
+  try {
+    const { error } = await from("professional_plans")
+      .update({ description: d.description.trim() || null, image_url: d.imageUrl, visible: d.visible, format: d.format } as never)
+      .eq("id", id)
+      .eq("professional_id", me);
     return error ? failed(error, "Couldn't save this service. Try again.") : { ok: true };
   } catch (e) {
     return failed(e, "Couldn't save this service. Try again.");
@@ -168,14 +201,22 @@ export async function deletePlanService(id: string): Promise<Write> {
 }
 
 // ---------------------------------------------------------------------------
-// Session types and plans: no showcase_visible / photo_path
+// Session types and plans: Show in Showcase (DB3 `visible`, 20261214040000)
 // ---------------------------------------------------------------------------
 
-/** Show or hide a session type or plan in the Showcase (showcase_visible). */
-export async function setServiceShowcaseVisible(): Promise<MarketResult<null>> {
-  // awaiting DB stage DB3: no showcase_visible on appointment_services / professional_plans (73ea87b put the
-  // professional's showcase on business_offerings instead; shelf items hide through setShelfItemVisible).
-  return { ok: false, pending: true, message: "Hiding a service is coming soon." };
+/** Shows or hides a session type or plan in the Showcase (its `visible`; a hidden session type stays bookable by link). */
+export async function setServiceVisible(me: string, kind: "session" | "plan", id: string, visible: boolean): Promise<Write> {
+  const fallback = visible ? "Couldn't show this service. Try again." : "Couldn't hide this service. Try again.";
+  try {
+    // Two literal payloads so npm run audit:grants checks each table's grant.
+    const { error } =
+      kind === "session"
+        ? await from("appointment_services").update({ visible } as never).eq("id", id).eq("professional_id", me)
+        : await from("professional_plans").update({ visible } as never).eq("id", id).eq("professional_id", me);
+    return error ? failed(error, fallback) : { ok: true };
+  } catch (e) {
+    return failed(e, fallback);
+  }
 }
 
 // ---------------------------------------------------------------------------

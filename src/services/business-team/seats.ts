@@ -21,16 +21,14 @@ export const roleUsesSeat = (role: BusinessRole): boolean => role === "instructo
  * professional account. my_business_seat_capacity, business_attention, the
  * invite checks and the cap all delegate to that one function.
  *
- * Per person: employee_credentials.uses_seat answers role_uses_seat(role)
- * alone, so it can't tell a hire apart; my_team's documented `source` can.
- * A hire is never a seat; otherwise the server's flag, else the role rule.
+ * Per person: employee_credentials.uses_seat asks that same test (Database
+ * PR #39 correction 1: source <> 'hire' and role_uses_seat(role), pinned to
+ * business_seats_used() by assert_seat_rule_is_one_rule), so the client takes
+ * the server's flag as it stands (team.ts); the my_team source workaround is
+ * gone.
  */
-export function seatAnswer(serverFlag: boolean | null | undefined, source: string | null | undefined): boolean | null {
-  if (source === "hire") return false;
-  return typeof serverFlag === "boolean" ? serverFlag : null;
-}
 
-/** A person's seat answer: the server's (seatAnswer) when known, else the role rule. */
+/** A person's seat answer: the server's (employee_credentials.uses_seat) when known, else the role rule. */
 export const personUsesSeat = (p: { role: BusinessRole; usesSeat?: boolean | null }): boolean =>
   typeof p.usesSeat === "boolean" ? p.usesSeat : roleUsesSeat(p.role);
 

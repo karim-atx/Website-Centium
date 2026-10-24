@@ -31,7 +31,8 @@ import { useOverlayStrip } from "./useOverlayStrip";
 //   without the + (margin-top 6);
 // - loading MarketSkeleton (radius 20); error / offline the
 //   MarketStates strips. The list reads DB2 `offers`; Create / Edit / Pause
-//   answer "coming soon" until the Database ships owner writers (manage.ts).
+//   are the owner writers (create_offer, update_offer, set_offer_paused;
+//   Database PR #39, manage.ts).
 
 export interface OffersListProps {
   variant: "business" | "professional";
@@ -87,7 +88,7 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
     const r = await setOfferPaused(o.id, pause);
     setBusy(null);
     if (!r.ok) {
-      showStrip(r.message, r.pending || r.offline ? "neutral" : "error");
+      showStrip(r.offline ? "You're offline. Try again when you're connected." : r.message, r.offline ? "neutral" : "error");
       return;
     }
     showStrip(pause ? "Offer paused" : "Offer resumed");

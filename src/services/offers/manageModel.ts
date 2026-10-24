@@ -5,8 +5,9 @@
 // end), where_used (in_person | online | both), terms, paused_at, hidden_at /
 // hidden_reason (Centium took it down), funding_ack_at, redeemed_count,
 // created_at. The table has no applies_to column and no status: the status is
-// derived here. The form's create / update arguments stay in PLAN §2.2's shape:
-// DB2 ships no owner writer (see manage.ts).
+// derived here. The form's create / update arguments are the owner writers'
+// (Database PR #39, 20261214010000: create_offer / update_offer take exactly
+// the names offerArgs() builds; p_applies_to is accepted and not stored).
 
 import { formatShortDate } from "../../utils/date";
 import { formatPoints } from "../../components/market/pointsModel";
@@ -233,11 +234,15 @@ export const TERMS_MAX = 500;
 /**
  * The form's rules (the server checks them too): a headline; points cost a
  * whole number above 0; % off 1 to 100, amount off above 0 (cents allowed),
- * a free item has no value; a professional offer applies to one of their
- * services; per-member limit 1 or more; quantity cap empty or 1 or more;
- * both dates, the end on or after the start.
+ * a free item has no value; a NEW professional offer applies to one of their
+ * services (create_offer accepts p_applies_to and doesn't store it, so an
+ * existing offer reads it back as null and editing doesn't ask again);
+ * per-member limit 1 or more; quantity cap empty or 1 or more; a start date;
+ * the end date optional (no end date, as the server allows; Karim), on or
+ * after the start. `endLocked`: the offer already has an end date, which
+ * update_offer cannot remove (a null p_ends_on keeps the current one).
  */
-export function validateDraft(d: OfferDraft, variant: OfferVariant): DraftErrors {
+export function validateDraft(d: OfferDraft, variant: OfferVariant, isNew = true, endLocked = false): DraftErrors {
   const e: DraftErrors = {};
   const h = d.headline.trim();
   if (!h) e.headline = "Give the offer a headline.";
@@ -249,7 +254,7 @@ export function validateDraft(d: OfferDraft, variant: OfferVariant): DraftErrors
     const v = amount(d.value);
     if (v === null || v <= 0) e.value = "Enter an amount above 0.";
   }
-  if (variant === "professional" && !d.appliesTo) e.appliesTo = "Choose the service this offer applies to.";
+  if (variant === "professional" && isNew && !d.appliesTo) e.appliesTo = "Choose the service this offer applies to.";
   const cost = whole(d.pointsCost);
   if (cost === null || cost <= 0) e.pointsCost = "Set a points cost above 0.";
   if (d.quantityCap.trim() !== "") {
@@ -259,12 +264,22 @@ export function validateDraft(d: OfferDraft, variant: OfferVariant): DraftErrors
   const lim = whole(d.perMemberLimit);
   if (lim === null || lim < 1) e.perMemberLimit = "Enter 1 or more.";
   if (!d.startsOn) e.startsOn = "Choose a start date.";
-  if (!d.endsOn) e.endsOn = "Choose an end date.";
-  else if (d.startsOn && d.endsOn < d.startsOn) e.endsOn = "The end date can't be before the start date.";
+  if (!d.endsOn) {
+    if (endLocked) e.endsOn = END_LOCKED_NOTE;
+  } else if (d.startsOn && d.endsOn < d.startsOn) e.endsOn = "The end date can't be before the start date.";
   return e;
 }
 
-/** The documented create_offer / update_offer fields (PLAN §2.2 DB2), from a valid draft. */
+/** Shown when an offer that has an end date is saved without one. */
+export const END_LOCKED_NOTE = "An end date can't be removed once it's set. Choose a new date instead.";
+
+/**
+ * offers.where_used is in_person | online | both (offers_where_check): a
+ * business's "In store" is in_person, the counter (whereOf reads it back).
+ */
+export const whereUsedOf = (w: OfferWhere): "in_person" | "online" | "both" => (w === "online" || w === "both" ? w : "in_person");
+
+/** The create_offer / update_offer fields (Database PR #39, 20261214010000), from a valid draft. */
 export function offerArgs(d: OfferDraft, variant: OfferVariant): Record<string, unknown> {
   return {
     p_headline: d.headline.trim(),
@@ -275,8 +290,8 @@ export function offerArgs(d: OfferDraft, variant: OfferVariant): Record<string, 
     p_quantity_cap: d.quantityCap.trim() === "" ? null : whole(d.quantityCap),
     p_per_member_limit: whole(d.perMemberLimit) ?? 1,
     p_starts_on: d.startsOn,
-    p_ends_on: d.endsOn,
-    p_where_used: d.where,
+    p_ends_on: d.endsOn || null,
+    p_where_used: whereUsedOf(d.where),
     p_terms: d.terms.trim() || null,
   };
 }
@@ -343,13 +358,14 @@ export function previewRows(d: OfferDraft, variant: OfferVariant, appliesToLabel
     { k: "Type", v: typeLabel(d.type, variant) },
     { k: "Value", v: valueLabel(d) },
   ];
-  if (variant === "professional") out.push({ k: "Applies to", v: appliesToLabel ?? "" });
+  // An existing professional offer has no stored Applies to (p_applies_to isn't kept): the row is left out.
+  if (variant === "professional" && appliesToLabel) out.push({ k: "Applies to", v: appliesToLabel });
   const cost = whole(d.pointsCost);
   out.push({ k: "Points cost", v: cost === null ? d.pointsCost : formatPoints(cost) });
   const cap = whole(d.quantityCap);
   out.push({ k: "Quantity cap", v: d.quantityCap.trim() === "" ? "No cap" : cap === null ? d.quantityCap : formatPoints(cap) });
   out.push({ k: variant === "professional" ? "Per-client limit" : "Per-member limit", v: String(whole(d.perMemberLimit) ?? d.perMemberLimit) });
-  out.push({ k: "Dates", v: d.startsOn && d.endsOn ? `${dayLabel(d.startsOn)} to ${dayLabel(d.endsOn)}` : "" });
+  out.push({ k: "Dates", v: d.startsOn ? (d.endsOn ? `${dayLabel(d.startsOn)} to ${dayLabel(d.endsOn)}` : `From ${dayLabel(d.startsOn)} · No end date`) : "" });
   out.push({ k: "Where", v: whereLabel(d.where, variant) });
   if (variant === "business" && d.terms.trim()) out.push({ k: "Terms", v: d.terms.trim() });
   return out;
@@ -359,7 +375,11 @@ export function previewRows(d: OfferDraft, variant: OfferVariant, appliesToLabel
 export const draftCost = (d: Pick<OfferDraft, "pointsCost">): number => whole(d.pointsCost) ?? 0;
 
 // ---------------------------------------------------------------------------
-// Errors (api.md: funding_ack_required, invalid_dates, points_cost_required, offer_expired)
+// Errors. The four refusals the writers raise with their keyword in the
+// message (HANDOVER_API "The four refusals the Website matches on": sqlstate
+// 22023, offer_expired ATX10), matched on message, details and hint. The
+// writers' other refusals carry no keyword: offerWriteRefusal reads the
+// SQLSTATE.
 
 export type OfferError = "funding_ack_required" | "invalid_dates" | "points_cost_required" | "offer_expired";
 
@@ -376,3 +396,30 @@ export const OFFER_ERROR_TEXT: Record<OfferError, string> = {
   points_cost_required: "Set a points cost above 0.",
   offer_expired: "This offer has ended, so it can't be edited.",
 };
+
+/**
+ * The writers' other refusals, by SQLSTATE (20261214010000). Our words (not
+ * drawn); null = not a documented refusal (the caller's fallback):
+ * - ATX09: create_offer for a paused or closed business ("a paused or closed
+ *   business cannot publish an offer"), or a caller who is neither a business
+ *   nor a professional;
+ * - 42501: not the caller's business or offer, or an offer Centium took down
+ *   ("this offer has been taken down": update_offer, set_offer_paused);
+ * - ATX08: update_offer / set_offer_paused on an offer that doesn't exist;
+ * - ATX02: check_rate_limit('create_offer'), 20 an hour.
+ */
+export function offerWriteRefusal(e: { code?: string | null; message?: string | null }): string | null {
+  const msg = (e.message ?? "").toLowerCase();
+  switch (e.code) {
+    case "ATX09":
+      return msg.includes("paused or closed") ? "Your business is paused or closed, so it can't publish offers." : "Only a business or a professional can publish offers.";
+    case "42501":
+      return msg.includes("taken down") ? "Centium took this offer down. Contact support for details." : "You don't have permission to change this offer.";
+    case "ATX08":
+      return "This offer no longer exists.";
+    case "ATX02":
+      return "Too many new offers in a short time. Try again later.";
+    default:
+      return null;
+  }
+}

@@ -27,7 +27,7 @@ export interface TeamPerson {
   subtype: string | null;
   otherDiscipline: string | null;
   closestGroup: string | null;
-  /** The seat answer (seats.ts seatAnswer: employee_credentials.uses_seat, false for a Centium hire); null when unknown. */
+  /** The seat answer (employee_credentials.uses_seat, which is false for a Centium hire); null when unknown. */
   usesSeat: boolean | null;
   /**
    * Batch 2 CO: the invitation's window (expires_at, revoked_at, sent_at,

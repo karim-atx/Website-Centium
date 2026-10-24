@@ -14,7 +14,8 @@ import {
   ratingLine,
   serviceCards,
   servicesHeader,
-  visibleFrom,
+  planShowcaseById,
+  visibleOf,
   weeklyHours,
   withoutPending,
   type PlanService,
@@ -76,8 +77,8 @@ test("overviewView: nobody reached yet is ovEmpty (zeros, no change, the empty l
   assert.equal(v.rows[0].value, "0");
 });
 
-test("overviewView: pending, error, loading and an empty answer are quiet; Active clients comes from the live roster", () => {
-  for (const s of [{ status: "pending" }, { status: "error" }, { status: "loading" }, { status: "ok", value: null }] as const) {
+test("overviewView: error, loading and an empty answer are quiet; Active clients comes from the live roster", () => {
+  for (const s of [{ status: "error" }, { status: "loading" }, { status: "ok", value: null }] as const) {
     const v = overviewView(s, 3);
     assert.deepEqual(v.hero, { value: QUIET, delta: null, sub: null, series: null });
     assert.deepEqual(
@@ -86,17 +87,44 @@ test("overviewView: pending, error, loading and an empty answer are quiet; Activ
     );
     assert.ok(v.rows.every((r) => r.delta === QUIET));
   }
-  assert.equal(overviewView({ status: "pending" }, null).rows[3].value, QUIET);
+  assert.equal(overviewView({ status: "error" }, null).rows[3].value, QUIET);
 });
 
-test("visibleFrom: visible unless the overview says hidden (D-19)", () => {
-  assert.equal(visibleFrom({ status: "pending" }), true);
-  assert.equal(visibleFrom({ status: "ok", value: parseProOverview(ROW) }), true);
-  assert.equal(visibleFrom({ status: "ok", value: parseProOverview({ ...ROW, marketplace_visible: false }) }), false);
+test("visibleOf: professional_overview's marketplace_visible; unknown until it answers (D-19)", () => {
+  assert.equal(visibleOf({ status: "loading" }), null);
+  assert.equal(visibleOf({ status: "error" }), null);
+  assert.equal(visibleOf({ status: "ok", value: null }), null);
+  assert.equal(visibleOf({ status: "ok", value: parseProOverview({ ...ROW, marketplace_visible: true }) }), true);
+  assert.equal(visibleOf({ status: "ok", value: parseProOverview({ ...ROW, marketplace_visible: false }) }), false);
 });
 
-const S = (o: Partial<SessionService>): SessionService => ({ id: "s", name: "1:1 strength session", description: null, durationMin: 60, price: 35, currency: "USD", bufferMin: 0, colour: null, locationKind: "in_person", createdAt: "2026-01-01", ...o });
-const P = (o: Partial<PlanService>): PlanService => ({ id: "p", name: "4-session pack", price: 120, billing: "monthly", features: [], active: true, position: 0, sessionCount: 4, createdAt: "2026-01-01", ...o });
+const S = (o: Partial<SessionService>): SessionService => ({ id: "s", name: "1:1 strength session", description: null, durationMin: 60, price: 35, currency: "USD", bufferMin: 0, colour: null, locationKind: "in_person", imageUrl: null, visible: true, createdAt: "2026-01-01", ...o });
+const P = (o: Partial<PlanService>): PlanService => ({ id: "p", name: "4-session pack", price: 120, billing: "monthly", features: [], active: true, position: 0, sessionCount: 4, createdAt: "2026-01-01", description: null, imageUrl: null, visible: true, format: null, ...o });
+
+test("DB3 showcase fields: hidden services dim with Hidden; Not offered wins; a plan's own description", () => {
+  const cards = serviceCards(
+    [S({ id: "s1", visible: false })],
+    [P({ id: "p1", visible: false }), P({ id: "p2", position: 1, active: false, visible: false }), P({ id: "p3", position: 2, description: "Two sessions a week.", features: ["Ignored"] })]
+  );
+  assert.deepEqual(cards.map((c) => [c.key, c.dim, c.chip]), [
+    ["session:s1", true, "Hidden"],
+    ["plan:p1", true, "Hidden"],
+    ["plan:p2", true, "Not offered"],
+    ["plan:p3", false, null],
+  ]);
+  assert.equal(cards[3].description, "Two sessions a week.");
+});
+
+test("planShowcaseById: the four DB3 plan columns by id, defaults for blanks", () => {
+  const m = planShowcaseById([
+    { id: "a", description: "  Weekly check-ins ", image_url: "https://x/y.jpg", visible: false, format: "online" },
+    { id: "b", description: null, image_url: " ", visible: true, format: "home_visit" },
+    { description: "no id" },
+  ]);
+  assert.deepEqual(m.get("a"), { description: "Weekly check-ins", imageUrl: "https://x/y.jpg", visible: false, format: "online" });
+  assert.deepEqual(m.get("b"), { description: null, imageUrl: null, visible: true, format: null });
+  assert.equal(m.size, 2);
+});
 
 test("serviceCards: sessions by creation then plans by position; live lines and prices; a plan not offered is dimmed", () => {
   const cards = serviceCards(
