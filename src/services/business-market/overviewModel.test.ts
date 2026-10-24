@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { classesLine, countDelta, heroDelta, heroView, LAST_30, ledgerRows, membershipsLine, parseOverview, pctDelta, QUIET, sparkValues } from "./overviewModel.ts";
+import { classesLine, countDelta, heroDelta, heroView, ledgerRows, THIS_MONTH, membershipsLine, parseOverview, pctDelta, QUIET, sparkValues } from "./overviewModel.ts";
 
 test("parseOverview reads the row (array or object), the measured reach and its sparkline, and keeps null deltas", () => {
   const row = {
@@ -37,9 +37,9 @@ test("parseOverview reads the row (array or object), the measured reach and its 
   assert.deepEqual(sparkValues([1, "2", null, { value: 3 }]), [1, 2, 3]);
 });
 
-test("hero: the measured clients_reached with its change, Last 30 days and the series; quiet when not answered", () => {
+test("hero: the measured clients_reached with its change, This month so far and the series; quiet when not answered", () => {
   const base = { clientsReached: 3480, clientsReachedDeltaPct: 12, sparkline: [1, 2, 3], activeOffers: 0, activeOffersDelta: null, redemptionsThisMonth: 0, redemptionsDeltaPct: null, pointsRedeemed: 0, pointsRedeemedDeltaPct: null };
-  assert.deepEqual(heroView({ status: "ok", value: base }), { value: "3,480", delta: "+12% vs last month", sub: LAST_30, series: [1, 2, 3] });
+  assert.deepEqual(heroView({ status: "ok", value: base }), { value: "3,480", delta: "+12% vs last month", sub: THIS_MONTH, series: [1, 2, 3] });
   // Last month had nobody: no change line (null from the server), never "+0%".
   assert.equal(heroView({ status: "ok", value: { ...base, clientsReachedDeltaPct: null } }).delta, null);
   assert.equal(heroView({ status: "ok", value: { ...base, clientsReachedDeltaPct: -3.4 } }).delta, "−3% vs last month");

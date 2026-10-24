@@ -98,20 +98,23 @@ export function heroDelta(pct: number | null | undefined): string | null {
   return d === QUIET ? null : `${d} vs last month`;
 }
 
-/** The hero's "Last 30 days" line (the board's). */
+/** The hero's sub line (Karim): clients_reached counts this month so far, not a rolling 30 days. */
+export const THIS_MONTH = "This month so far";
+
+/** The board's "Last 30 days" line, still under the professional overview's hero (P-MA.1). */
 export const LAST_30 = "Last 30 days";
 
 /**
- * B-MA.1 HeroStatCard "Members reached" (the board's label) from the measured
+ * B-MA.1 HeroStatCard "Clients reached" (Karim; the board drew "Members reached") from the measured
  * clients_reached: the figure, "+12% vs last month" (left out when last month
- * had none), "Last 30 days" and the sparkline (all zeros draws the flat dashed
+ * had none), "This month so far" and the sparkline (all zeros draws the flat dashed
  * line). Not answered (loading, a failed read, staff without `marketing`):
  * the quiet "–" with no change, sub line or series.
  */
 export function heroView(ov: OverviewState): { value: string; delta: string | null; sub: string | null; series: number[] | null } {
   const v = ov.status === "ok" ? ov.value : null;
   if (!v) return { value: QUIET, delta: null, sub: null, series: null };
-  return { value: formatCount(v.clientsReached), delta: heroDelta(v.clientsReachedDeltaPct), sub: LAST_30, series: v.sparkline };
+  return { value: formatCount(v.clientsReached), delta: heroDelta(v.clientsReachedDeltaPct), sub: THIS_MONTH, series: v.sparkline };
 }
 
 /** "none": not asked, because the caller lacks the `marketing` permission the reader requires (42501). */

@@ -187,7 +187,7 @@ export type TemplateData =
   | { t: "hiring"; d: HiringData };
 
 /** Never on a card (B-SH.4): the Overview figures and anything about members, clients or money earned. */
-export const PRIVATE_FIGURES = ["Members reached", "Redemptions", "Active offers", "Revenue", "Members", "Booked", "Check-ins"] as const;
+export const PRIVATE_FIGURES = ["Members reached", "Clients reached", "Redemptions", "Active offers", "Revenue", "Members", "Booked", "Check-ins"] as const;
 
 // ---------------------------------------------------------------------------
 // Links

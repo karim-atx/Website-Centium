@@ -36,7 +36,7 @@ import { HIRING_ROW_PENDING, hiringRowLine } from "./hiring/teamModel";
 //    ListingToggleTile over business_profiles.active (useListingSwitch: the
 //    owner alone switches it, a closed business can't be listed, and hiding
 //    asks first, all KEPT);
-// 2. HeroStatCard "Members reached" (the board's label) over the measured
+// 2. HeroStatCard "Clients reached" (Karim; the board drew "Members reached") over the measured
 //    clients_reached of business_marketplace_overview (Database PR #40:
 //    profile_open + offer_view this month in the business's own days, its
 //    change against last month, the 30-day sparkline; heroView), never the
@@ -164,7 +164,7 @@ export function Overview() {
       {ov.status === "loading" ? (
         <MarketSkeleton radius={24} rows={3} height={165} label="Loading members reached" />
       ) : (
-        <HeroStatCard label="Members reached" value={hero.value} delta={hero.delta} sub={hero.sub} series={hero.series} />
+        <HeroStatCard label="Clients reached" value={hero.value} delta={hero.delta} sub={hero.sub} series={hero.series} />
       )}
       <StatLedger rows={ledgerRows(ov, gym)} />
       {ov.status === "error" ? <MarketError thing="your offer figures" onRetry={retry} /> : null}
