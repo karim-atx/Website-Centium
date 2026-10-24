@@ -21,11 +21,13 @@ export type HirePaymentStatus = "pending" | "paid" | (string & {});
 export interface Plan {
   id: string;
   name: string;
+  /** The plan's showcase description (DB3), or null. */
+  description: string | null;
   price: number;
   billing: PlanBilling;
   features: string[];
   position: number;
-  /** The caller already holds a live (pending or active) hire on this plan. */
+  /** The caller already holds a live (pending or active) hire on this plan; always false signed out. */
   isHired: boolean;
 }
 
@@ -50,10 +52,11 @@ export interface MyHire {
   cancellationMessage: string | null;
 }
 
-/** professional_plans_for() as PostgREST returns it. numeric may be a string. */
+/** professional_plans_for() as PostgREST returns it (Database PR #40 adds description, image_url, format). numeric may be a string. */
 export interface PlanRow {
   id: string;
   name: string;
+  description?: string | null;
   price: number | string;
   billing: PlanBilling;
   features: string[] | null;
@@ -83,6 +86,7 @@ export function toPlan(r: PlanRow): Plan {
   return {
     id: r.id,
     name: r.name,
+    description: typeof r.description === "string" && r.description.trim() ? r.description.trim() : null,
     price: Number(r.price),
     billing: r.billing,
     features: (r.features ?? []).filter((f) => typeof f === "string" && f.trim().length > 0),

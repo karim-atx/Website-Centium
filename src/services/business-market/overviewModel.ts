@@ -2,7 +2,9 @@
 // StatLedger and the Gym card (no Supabase import, so node:test loads it).
 //
 // The DB5 reader `business_marketplace_overview(p_business_id)` (Database PR
-// #39, 20261214030000; the `marketing` permission): active offers (live now)
+// #39, rebuilt by #40 20261215020000; the `marketing` permission): the
+// measured reach this month (clients_reached) with its change against last
+// month and a 30-day sparkline (the hero, heroView), active offers (live now)
 // with a COUNT change against a month ago, redemptions and points this month
 // with a percent change against last month (null against an empty month).
 // While it loads, fails, or for staff without marketing (not asked) the three
@@ -11,7 +13,7 @@
 // venue_dashboard, which has no previous period, so their change is "–"
 // (data honesty, as VenueFigures does).
 
-import { num, rows } from "../market/parse";
+import { num, rows, str } from "../market/parse";
 
 /** StatLedger's row (components/market/StatLedger), kept here so node:test needs no JSX. */
 export interface StatLedgerRow {
@@ -21,8 +23,14 @@ export interface StatLedgerRow {
   leaf?: boolean;
 }
 
-/** DB5 business_marketplace_overview, one row (the six columns 20261214030000 pins). */
+/** business_marketplace_overview, one row (the nine columns of 20261215020000). */
 export interface MarketplaceOverview {
+  /** Measured reach this month (profile_open + offer_view), not business_profiles.members_reached. */
+  clientsReached: number;
+  /** Against last month; null when last month had none. */
+  clientsReachedDeltaPct: number | null;
+  /** The last 30 local days, oldest first. */
+  sparkline: number[];
   activeOffers: number;
   /** A count change ("+1"); null when there is nothing to compare. */
   activeOffersDelta: number | null;
@@ -32,11 +40,27 @@ export interface MarketplaceOverview {
   pointsRedeemedDeltaPct: number | null;
 }
 
+/**
+ * A reader's 30-day sparkline ([{ date, value }], or bare numbers) as values
+ * oldest first (sorted by date when every point has one).
+ */
+export function sparkValues(v: unknown): number[] {
+  const sp = Array.isArray(v) ? (v as unknown[]) : [];
+  const points = sp
+    .map((p) => (p && typeof p === "object" ? { date: str((p as Record<string, unknown>).date) ?? "", value: num((p as Record<string, unknown>).value) } : { date: "", value: num(p) }))
+    .filter((p): p is { date: string; value: number } => p.value !== null);
+  const sorted = points.every((p) => p.date) ? points.slice().sort((a, b) => a.date.localeCompare(b.date)) : points;
+  return sorted.map((p) => p.value);
+}
+
 /** The first row of the reader's answer, or null when it answered nothing. */
 export function parseOverview(data: unknown): MarketplaceOverview | null {
   const r = rows(data)[0];
   if (!r) return null;
   return {
+    clientsReached: num(r.clients_reached) ?? 0,
+    clientsReachedDeltaPct: num(r.clients_reached_delta_pct),
+    sparkline: sparkValues(r.sparkline),
     activeOffers: num(r.active_offers) ?? 0,
     activeOffersDelta: num(r.active_offers_delta),
     redemptionsThisMonth: num(r.redemptions_this_month) ?? 0,
@@ -72,6 +96,22 @@ export function pctDelta(n: number | null | undefined): string {
 export function heroDelta(pct: number | null | undefined): string | null {
   const d = pctDelta(pct);
   return d === QUIET ? null : `${d} vs last month`;
+}
+
+/** The hero's "Last 30 days" line (the board's). */
+export const LAST_30 = "Last 30 days";
+
+/**
+ * B-MA.1 HeroStatCard "Members reached" (the board's label) from the measured
+ * clients_reached: the figure, "+12% vs last month" (left out when last month
+ * had none), "Last 30 days" and the sparkline (all zeros draws the flat dashed
+ * line). Not answered (loading, a failed read, staff without `marketing`):
+ * the quiet "–" with no change, sub line or series.
+ */
+export function heroView(ov: OverviewState): { value: string; delta: string | null; sub: string | null; series: number[] | null } {
+  const v = ov.status === "ok" ? ov.value : null;
+  if (!v) return { value: QUIET, delta: null, sub: null, series: null };
+  return { value: formatCount(v.clientsReached), delta: heroDelta(v.clientsReachedDeltaPct), sub: LAST_30, series: v.sparkline };
 }
 
 /** "none": not asked, because the caller lacks the `marketing` permission the reader requires (42501). */

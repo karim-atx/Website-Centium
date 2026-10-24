@@ -1,10 +1,26 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { classesLine, countDelta, heroDelta, ledgerRows, membershipsLine, parseOverview, pctDelta, QUIET } from "./overviewModel.ts";
+import { classesLine, countDelta, heroDelta, heroView, LAST_30, ledgerRows, membershipsLine, parseOverview, pctDelta, QUIET, sparkValues } from "./overviewModel.ts";
 
-test("parseOverview reads the DB5 row (array or object) and keeps null deltas", () => {
-  const row = { active_offers: 2, active_offers_delta: 1, redemptions_this_month: 46, redemptions_delta_pct: 15, points_redeemed: 32600, points_redeemed_delta_pct: null };
+test("parseOverview reads the row (array or object), the measured reach and its sparkline, and keeps null deltas", () => {
+  const row = {
+    clients_reached: 3480,
+    clients_reached_delta_pct: 12.4,
+    sparkline: [
+      { date: "2026-10-24", value: 7 },
+      { date: "2026-10-23", value: 5 },
+    ],
+    active_offers: 2,
+    active_offers_delta: 1,
+    redemptions_this_month: 46,
+    redemptions_delta_pct: 15,
+    points_redeemed: 32600,
+    points_redeemed_delta_pct: null,
+  };
   assert.deepEqual(parseOverview([row]), {
+    clientsReached: 3480,
+    clientsReachedDeltaPct: 12.4,
+    sparkline: [5, 7],
     activeOffers: 2,
     activeOffersDelta: 1,
     redemptionsThisMonth: 46,
@@ -16,6 +32,20 @@ test("parseOverview reads the DB5 row (array or object) and keeps null deltas", 
   assert.equal(parseOverview([]), null);
   assert.equal(parseOverview(null), null);
   assert.equal(parseOverview([{ active_offers: "3" }])?.activeOffers, 3);
+  // A row without the reach columns: zero, no change, no series.
+  assert.deepEqual([parseOverview([{}])?.clientsReached, parseOverview([{}])?.clientsReachedDeltaPct, parseOverview([{}])?.sparkline], [0, null, []]);
+  assert.deepEqual(sparkValues([1, "2", null, { value: 3 }]), [1, 2, 3]);
+});
+
+test("hero: the measured clients_reached with its change, Last 30 days and the series; quiet when not answered", () => {
+  const base = { clientsReached: 3480, clientsReachedDeltaPct: 12, sparkline: [1, 2, 3], activeOffers: 0, activeOffersDelta: null, redemptionsThisMonth: 0, redemptionsDeltaPct: null, pointsRedeemed: 0, pointsRedeemedDeltaPct: null };
+  assert.deepEqual(heroView({ status: "ok", value: base }), { value: "3,480", delta: "+12% vs last month", sub: LAST_30, series: [1, 2, 3] });
+  // Last month had nobody: no change line (null from the server), never "+0%".
+  assert.equal(heroView({ status: "ok", value: { ...base, clientsReachedDeltaPct: null } }).delta, null);
+  assert.equal(heroView({ status: "ok", value: { ...base, clientsReachedDeltaPct: -3.4 } }).delta, "−3% vs last month");
+  for (const s of [{ status: "loading" }, { status: "none" }, { status: "error" }, { status: "ok", value: null }] as const) {
+    assert.deepEqual(heroView(s), { value: QUIET, delta: null, sub: null, series: null });
+  }
 });
 
 test("deltas are written as the board does: +, U+2212 minus, quiet dash for none", () => {
@@ -47,7 +77,7 @@ test("ledger: not asked (no marketing), loading or failed shows the quiet value,
 
 test("ledger: the stage's figures, and a gym's two live rows with no change", () => {
   const ok = ledgerRows(
-    { status: "ok", value: { activeOffers: 1, activeOffersDelta: 1, redemptionsThisMonth: 12, redemptionsDeltaPct: 20, pointsRedeemed: 7200, pointsRedeemedDeltaPct: 14 } },
+    { status: "ok", value: { clientsReached: 0, clientsReachedDeltaPct: null, sparkline: [], activeOffers: 1, activeOffersDelta: 1, redemptionsThisMonth: 12, redemptionsDeltaPct: 20, pointsRedeemed: 7200, pointsRedeemedDeltaPct: 14 } },
     { activeMemberships: 182, classBookingsThisWeek: 264, sessionsThisWeek: 38, plans: 4 }
   );
   assert.deepEqual(

@@ -5,6 +5,8 @@
 //   points_paid, issued_at, expires_at, used_at, used_by_name}; state is
 //   valid | already_used | expired | void | not_valid_here | not_found (the
 //   last two as a row with everything else null, never an error);
+//   offer_title is the voucher's own snapshot (Database PR #40), the words
+//   the member is holding, not the offer's current title;
 // - mark_voucher_used(p_voucher_id) → {voucher_id, state used | already_used,
 //   already_used, used_at, used_by_name}; refusals ATX08 not found, ATX15
 //   not_valid_here, ATX16 void, ATX17 expired (the function comment).

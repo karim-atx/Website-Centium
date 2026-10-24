@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { daysLeft, howToUse, liveStatus, parseVoucherRow, parseVouchers, tabOf, voucherProfessionalIds, voucherRow } from "./vouchersModel.ts";
+import { daysLeft, howToUse, liveStatus, parseVoucherRow, parseVouchers, tabOf, voucherRow, VOUCHER_SELECT } from "./vouchersModel.ts";
 
 const NOW = new Date(2026, 9, 16, 12, 0);
-// A `vouchers` row as the member's read returns it (DB2), the offer and its business embedded.
+// A `vouchers` row as the member's read returns it: the voucher's own snapshot of its offer (Database PR #40).
 const raw = (over: Record<string, unknown> = {}) => ({
   id: "v1",
   offer_id: "o1",
@@ -13,12 +13,20 @@ const raw = (over: Record<string, unknown> = {}) => ({
   issued_at: new Date(2026, 9, 1).toISOString(),
   expires_at: new Date(2027, 0, 15, 23).toISOString(),
   used_at: null,
-  offer: { title: "15% off full-price items", owner_kind: "business", business_id: "b1", professional_id: null, where_used: "both", business: { business_name: "Outline Activewear", logo_url: null, public_website: "https://outlineactive.com/" } },
+  offer_title: "15% off full-price items",
+  offer_owner_kind: "business",
+  offer_business_id: "b1",
+  offer_professional_id: null,
+  offer_owner_name: "Outline Activewear",
+  offer_where_used: "both",
+  offer_online_url: "https://outlineactive.com/",
   ...over,
 });
 const v = (over: Record<string, unknown> = {}) => parseVouchers([raw(over)])[0];
 
-test("parse: the table row with its offer; the QR carries the code", () => {
+test("parse: the table row with its snapshot; the QR carries the code; no offer embed", () => {
+  assert.ok(!VOUCHER_SELECT.includes("offers("));
+  assert.ok(VOUCHER_SELECT.includes("offer_title") && VOUCHER_SELECT.includes("offer_online_url"));
   assert.equal(parseVouchers([{ id: "x" }]).length, 0);
   const x = v();
   assert.equal(x.code, "HWAE-PD5G-74KM");
@@ -28,24 +36,27 @@ test("parse: the table row with its offer; the QR carries the code", () => {
   assert.equal(x.where, "both");
   assert.equal(x.onlineUrl, "https://outlineactive.com/");
   assert.equal(x.pointsPaid, 900);
-  assert.equal(v({ offer: { ...raw().offer, where_used: "in_person" } }).where, "in_store");
+  assert.equal(x.ownerType, "business");
+  assert.equal(x.ownerId, "b1");
+  assert.equal(v({ offer_where_used: "in_person" }).where, "in_store");
 });
 
-test("parse: the offer no longer readable (paused / ended / hidden) → Reward, no owner", () => {
-  const x = v({ offer: null });
-  assert.equal(x.offerHeadline, "Reward");
-  assert.equal(x.ownerName, "");
-  assert.equal(x.where, null);
-});
-
-test("parse: redeem_offer's bare row (no embed) and a professional's offer", () => {
-  const bare = parseVoucherRow({ id: "v2", offer_id: "o1", code: "AAAA-BBBB-CCCC", qr_token: "ab", status: "issued", points_paid: 50, expires_at: "2026-11-23T00:00:00+00:00" });
+test("parse: the snapshot is the voucher's own words whatever happened to the offer since (no \"Reward\" fallback)", () => {
+  // The member's read carries no offer state at all: a paused, ended, hidden or renamed offer can't change these.
+  const x = v();
+  assert.equal(x.offerHeadline, "15% off full-price items");
+  // redeem_offer's row (the whole vouchers row, stamped by the trigger).
+  const bare = parseVoucherRow({ id: "v2", offer_id: "o1", code: "AAAA-BBBB-CCCC", qr_token: "ab", status: "issued", points_paid: 50, expires_at: "2026-11-23T00:00:00+00:00", offer_title: "Free shaker", offer_owner_kind: "business", offer_owner_name: "Peak", offer_where_used: "online", offer_online_url: null });
   assert.equal(bare?.code, "AAAA-BBBB-CCCC");
-  const pro = { title: "Free consult", owner_kind: "professional", business_id: null, professional_id: "p1", where_used: "in_person", business: null };
-  const p = parseVoucherRow(raw({ offer: pro }), new Map([["p1", { first: "Rana", type: "Personal trainer" }]]));
-  assert.equal(p?.ownerName, "Rana · Personal trainer");
+  assert.equal(bare?.offerHeadline, "Free shaker");
+  assert.equal(bare?.where, "online");
+  // A professional's offer: their first name at issue, in person, no website.
+  const p = parseVoucherRow(raw({ offer_title: "Free consult", offer_owner_kind: "professional", offer_business_id: null, offer_professional_id: "p1", offer_owner_name: "Rana", offer_where_used: "in_person", offer_online_url: null }));
+  assert.equal(p?.ownerType, "professional");
+  assert.equal(p?.ownerId, "p1");
+  assert.equal(p?.ownerName, "Rana");
   assert.equal(p?.where, "in_person");
-  assert.deepEqual(voucherProfessionalIds([raw({ offer: pro }), raw()]), ["p1"]);
+  assert.equal(p?.onlineUrl, null);
 });
 
 test("rows: Active / N days / Used / Expired / Void (C-MO.4.6 stub)", () => {

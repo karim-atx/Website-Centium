@@ -1,19 +1,19 @@
 // Market + Share 3.0 · W2 · point offers for clients, pure (C-MO.4.4 Rewards,
 // C-MO.4.4.1 Showcase offers, C-MO.4.4.2 Offer detail, C-MO.4.4.3 Redeem).
-// DB2 (Database 33c0bf5, 20261210800000; HANDOVER_API "Release 1 · Offers,
-// vouchers, redemption"): there is no reward_catalog or offer_detail
-// function. A signed-in member SELECTs the `offers` table under its RLS
-// (offers_select_live: not paused, not hidden, inside its dates; plus every
-// offer the caller owns, whatever its state). That policy does NOT check
-// funding_ack_at or whether the business still takes new business, which
-// offer_is_live() (the redemption gate) does, so the client applies the same
-// live rule to every row it lists (the catalogue and the detail: no reader
-// function covers every owner or one id; one owner's page reads
-// public_offers instead, live by the server's rule, parsePublicOffers).
-// quantity_left and limit_left are derived
-// here as the contract defines them (not stored). The owner card is embedded
-// from business_profiles (public while active); a professional's name comes
-// from public_professional_directory.
+// Every member read is a server reader that applies offer_is_live() (the
+// redemption gate's own rule), so no live rule runs here:
+// - offer_catalogue(p_category, p_limit, p_offset) (Database PR #40,
+//   20261215010000): every live offer, cheapest first, with its owner card
+//   (name, professional subtype, logo); an unlisted professional's offers
+//   are not listed (parseCatalogue);
+// - offer_detail(p_offer_id): one live offer with quantity_left, the
+//   caller's own limit_left and the voucher's expiry from
+//   voucher_expiry_for() (parseOfferDetail); no row = not available;
+// - public_offers(p_owner_kind, p_owner_id) (PR #39): one owner's page
+//   (parsePublicOffers).
+// The supplement rule for under-18s (and no date of birth, lead Q3) is in
+// none of them (offer_is_live has no age test; redeem_offer refuses with
+// ATX11), so forAge still hides those offers from the lists.
 
 import { formatShortDate } from "../../utils/date";
 import { num, rows, str } from "../market/parse";
@@ -56,18 +56,7 @@ export function categoryOfType(venueType: string): RewardCategory | null {
 }
 
 // ---------------------------------------------------------------------------
-// offers rows
-
-/** The columns every client offer read asks for (the business embedded through offers.business_id). */
-export const OFFER_SELECT =
-  "id,owner_kind,business_id,professional_id,title,category,points_cost,quantity_cap,per_member_limit,starts_on,ends_on,where_used,terms,paused_at,hidden_at,funding_ack_at,redeemed_count,business:business_profiles(business_name,logo_url,public_website)";
-
-/** A professional's public name and type, from public_professional_directory. */
-export interface ProName {
-  first: string;
-  /** "Personal trainer" (typeLabel), or null. */
-  type: string | null;
-}
+// offer rows
 
 export interface CatalogOffer {
   offerId: string;
@@ -90,50 +79,36 @@ export const ymdOf = (v: unknown): string | null => {
   return s && /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : null;
 };
 
-/** A PostgREST to-one embed (an object, or a one-row array). */
-export const embedded = (v: unknown): Record<string, unknown> | null => (Array.isArray(v) ? (rows(v)[0] ?? null) : v && typeof v === "object" ? (v as Record<string, unknown>) : null);
+/** The client's word for a professional subtype ("Personal trainer"); the service passes typeLabel. */
+export type SubtypeLabel = (subtype: string) => string | null;
 
 /**
- * offer_is_live() as far as the row shows it: acknowledged, not paused, not
- * hidden, started, not ended (`today` YYYY-MM-DD). A business offer also
- * needs its business row (business_profiles is readable only while active).
+ * The owner card of an offer_catalogue / offer_detail row: owner_type,
+ * owner_id, owner_name (the business name or the professional's first name),
+ * owner_professional_subtype, owner_logo_url.
  */
-export function offerRowIsLive(r: Record<string, unknown>, today: string): boolean {
-  if (str(r.paused_at) || str(r.hidden_at) || !str(r.funding_ack_at)) return false;
-  const start = ymdOf(r.starts_on);
-  const end = ymdOf(r.ends_on);
-  if (!start || start > today) return false;
-  if (end && end < today) return false;
-  if (r.owner_kind !== "professional" && !embedded(r.business)) return false;
-  return true;
-}
-
-/** The owner card of an offer row (business embed, or the directory name). */
-export function offerOwner(r: Record<string, unknown>, pros: ReadonlyMap<string, ProName>): Pick<CatalogOffer, "ownerType" | "ownerId" | "ownerName" | "ownerSubtitle" | "ownerLogoUrl"> {
-  if (r.owner_kind === "professional") {
-    const ownerId = str(r.professional_id) ?? "";
-    const p = pros.get(ownerId);
-    // Not in the directory (unlisted): the kind of owner only (ours).
-    return { ownerType: "professional", ownerId, ownerName: p?.first ?? "", ownerSubtitle: p ? (p.type ? `${p.first} · ${p.type}` : p.first) : "Professional", ownerLogoUrl: null };
+function ownerOf(r: Record<string, unknown>, label: SubtypeLabel): Pick<CatalogOffer, "ownerType" | "ownerId" | "ownerName" | "ownerSubtitle" | "ownerLogoUrl"> {
+  const name = str(r.owner_name) ?? "";
+  if (r.owner_type === "professional") {
+    const sub = str(r.owner_professional_subtype);
+    const type = sub ? label(sub) : null;
+    return { ownerType: "professional", ownerId: str(r.owner_id) ?? "", ownerName: name, ownerSubtitle: type && name ? `${name} · ${type}` : name, ownerLogoUrl: null };
   }
-  const biz = embedded(r.business);
-  const name = str(biz?.business_name) ?? "";
-  return { ownerType: "business", ownerId: str(r.business_id) ?? "", ownerName: name, ownerSubtitle: name, ownerLogoUrl: str(biz?.logo_url) };
+  return { ownerType: "business", ownerId: str(r.owner_id) ?? "", ownerName: name, ownerSubtitle: name, ownerLogoUrl: str(r.owner_logo_url) };
 }
 
-/** A live offer row → the client card, or null (not live, or a required column missing). */
-export function parseOfferRow(r: Record<string, unknown>, today: string, pros: ReadonlyMap<string, ProName> = new Map()): CatalogOffer | null {
-  const offerId = str(r.id);
-  const headline = str(r.title);
+function parseCard(r: Record<string, unknown>, label: SubtypeLabel): CatalogOffer | null {
+  const offerId = str(r.offer_id);
+  const headline = str(r.headline);
   const cost = num(r.points_cost);
-  if (!offerId || !headline || cost === null || !offerRowIsLive(r, today)) return null;
-  return { offerId, headline, category: str(r.category) ?? "", ...offerOwner(r, pros), pointsCost: cost, endsOn: ymdOf(r.ends_on) };
+  if (!offerId || !headline || cost === null) return null;
+  return { offerId, headline, category: str(r.category) ?? "", ...ownerOf(r, label), pointsCost: cost, endsOn: ymdOf(r.ends_on) };
 }
 
-/** The catalogue: the live rows, in the read's order (points_cost, then id). */
-export function parseCatalog(data: unknown, today: string, pros: ReadonlyMap<string, ProName> = new Map()): CatalogOffer[] {
+/** offer_catalogue rows, in the server's order (points_cost, then id). */
+export function parseCatalogue(data: unknown, label: SubtypeLabel = () => null): CatalogOffer[] {
   return rows(data).flatMap((r) => {
-    const o = parseOfferRow(r, today, pros);
+    const o = parseCard(r, label);
     return o ? [o] : [];
   });
 }
@@ -156,15 +131,11 @@ export function parsePublicOffers(data: unknown, ownerType: "business" | "profes
   });
 }
 
-/** The professional owners a set of offer rows needs names for. */
-export const professionalIds = (data: unknown): string[] => [
-  ...new Set(rows(data).flatMap((r) => (r.owner_kind === "professional" && str(r.professional_id) ? [str(r.professional_id) as string] : []))),
-];
-
 /**
  * No supplement offers for under-18s (Karim; lead Q3: no date of birth counts
  * as under 18 here). redeem_offer is the gate (ATX11, and it reads an unknown
- * date of birth as an adult); hiding them from the lists is the courtesy.
+ * date of birth as an adult); no list reader applies an age rule (Database
+ * PR #40), so hiding them from the lists stays here.
  */
 export function forAge<T extends { category: string }>(list: readonly T[], adult: boolean): T[] {
   return adult ? [...list] : list.filter((o) => o.category !== "supplements");
@@ -220,51 +191,37 @@ export interface OfferDetail extends CatalogOffer {
   where: OfferWhere | null;
   startsOn: string | null;
   perMemberLimit: number | null;
-  /** quantity_cap − redeemed_count (derived, HANDOVER_API); null = no cap. */
+  /** offer_detail quantity_left (cap − redeemed); null = no cap. */
   quantityLeft: number | null;
-  /** per_member_limit − this member's redemptions (derived); null = not known. */
+  /** offer_detail limit_left (per_member_limit − the caller's own redemptions); null = no limit. */
   limitLeft: number | null;
-  /** D-24: 90 days from issue, capped at the offer's end. */
+  /** D-24: 90 days from issue, capped at the offer's end (voucher_days, from voucher_expiry_for). */
   voucherDays: number;
-  /** The offer's last day when that cap applies (the voucher then runs until it). */
+  /** The offer's last day when that cap applies (voucher_capped_on). */
   voucherCappedOn: string | null;
   /** The business's website, for "Online: enter the code at checkout on …". */
   onlineUrl: string | null;
 }
 
-/** Whole calendar days from `a` to `b` (YYYY-MM-DD). */
-function daysBetween(a: string, b: string): number {
-  const t = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10)));
-  return Math.round((t(b) - t(a)) / 86400000);
-}
-
 export const VOUCHER_DAYS = 90;
 
-/**
- * One offer row (or null when it isn't live), with the member's own
- * redemption count for limit_left (null when it couldn't be read).
- */
-export function parseOfferDetail(data: unknown, today: string, pros: ReadonlyMap<string, ProName> = new Map(), mine: number | null = null): OfferDetail | null {
+/** One offer_detail row, or null (no row: the offer is gone, paused, unfunded, ended, or its owner stopped). */
+export function parseOfferDetail(data: unknown, label: SubtypeLabel = () => null): OfferDetail | null {
   const r = rows(data)[0];
   if (!r) return null;
-  const base = parseOfferRow(r, today, pros);
+  const base = parseCard(r, label);
   if (!base) return null;
-  const cap = num(r.quantity_cap);
-  const limit = num(r.per_member_limit);
-  const redeemed = num(r.redeemed_count) ?? 0;
-  // redeem_offer: expires_at = least(now + 90 days, (ends_on + 1)::timestamptz).
-  const capped = base.endsOn !== null && daysBetween(today, base.endsOn) + 1 < VOUCHER_DAYS;
   return {
     ...base,
     terms: str(r.terms),
     where: whereOf(r.where_used, base.ownerType),
     startsOn: ymdOf(r.starts_on),
-    perMemberLimit: limit,
-    quantityLeft: cap === null ? null : Math.max(0, cap - redeemed),
-    limitLeft: limit === null || mine === null ? null : Math.max(0, limit - mine),
-    voucherDays: capped && base.endsOn ? daysBetween(today, base.endsOn) + 1 : VOUCHER_DAYS,
-    voucherCappedOn: capped ? base.endsOn : null,
-    onlineUrl: base.ownerType === "business" ? str(embedded(r.business)?.public_website) : null,
+    perMemberLimit: num(r.per_member_limit),
+    quantityLeft: num(r.quantity_left),
+    limitLeft: num(r.limit_left),
+    voucherDays: num(r.voucher_days) ?? VOUCHER_DAYS,
+    voucherCappedOn: ymdOf(r.voucher_capped_on),
+    onlineUrl: base.ownerType === "business" ? str(r.online_url) : null,
   };
 }
 

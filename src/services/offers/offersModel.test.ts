@@ -8,12 +8,10 @@ import {
   forAge,
   limitLabel,
   needMoreLine,
-  offerRowIsLive,
   ownerInitials,
-  parseCatalog,
+  parseCatalogue,
   parseOfferDetail,
   parsePublicOffers,
-  professionalIds,
   redeemErrorOf,
   validRange,
   voucherExpiryLabel,
@@ -21,29 +19,41 @@ import {
   REDEEM_ERROR_TEXT,
 } from "./offersModel.ts";
 
-const TODAY = "2026-10-22";
-// An `offers` row as the table read returns it (DB2 20261210800000), the business embedded.
+// An offer_catalogue() row (Database PR #40, 20261215010000): the ten columns.
 const row = (id: string, cost: number, over: Record<string, unknown> = {}) => ({
-  id,
-  owner_kind: "business",
-  business_id: "b1",
-  professional_id: null,
-  title: `H${id}`,
+  offer_id: id,
+  headline: `H${id}`,
   category: "clothing",
+  owner_type: "business",
+  owner_id: "b1",
+  owner_name: "Outline Activewear",
+  owner_professional_subtype: null,
+  owner_logo_url: null,
   points_cost: cost,
-  quantity_cap: null,
-  per_member_limit: 1,
-  starts_on: "2026-10-01",
   ends_on: "2026-12-31",
-  where_used: "both",
-  terms: null,
-  paused_at: null,
-  hidden_at: null,
-  funding_ack_at: "2026-09-30T10:00:00Z",
-  redeemed_count: 0,
-  business: { business_name: "Outline Activewear", logo_url: null, public_website: "https://outlineactive.com/" },
   ...over,
 });
+// offer_detail(): the catalogue's card plus everything the screen draws.
+const detail = (over: Record<string, unknown> = {}) => ({
+  ...row("1", 900),
+  kind: "percent_off",
+  value: 15,
+  starts_on: "2026-10-01",
+  where_used: "both",
+  terms: null,
+  online_url: "https://outlineactive.com/",
+  applies_to: null,
+  applies_to_name: null,
+  applies_to_price: null,
+  per_member_limit: 2,
+  quantity_left: 70,
+  limit_left: 1,
+  voucher_expires_at: "2027-01-20T10:00:00+00:00",
+  voucher_days: 90,
+  voucher_capped_on: null,
+  ...over,
+});
+const label = (s: string) => (s === "trainer" ? "Personal trainer" : null);
 
 test("categories map to offers.category and to business types", () => {
   assert.equal(categoryParam("all"), null);
@@ -53,75 +63,68 @@ test("categories map to offers.category and to business types", () => {
   assert.equal(categoryOfType("gym"), null);
 });
 
-test("the live rule: offer_is_live as the row shows it", () => {
-  assert.equal(offerRowIsLive(row("1", 900), TODAY), true);
-  assert.equal(offerRowIsLive(row("1", 900, { paused_at: "2026-10-10T00:00:00Z" }), TODAY), false);
-  assert.equal(offerRowIsLive(row("1", 900, { hidden_at: "2026-10-10T00:00:00Z" }), TODAY), false);
-  // RLS doesn't check the funding acknowledgement; redeem_offer refuses it (ATX10).
-  assert.equal(offerRowIsLive(row("1", 900, { funding_ack_at: null }), TODAY), false);
-  assert.equal(offerRowIsLive(row("1", 900, { starts_on: "2026-10-23" }), TODAY), false);
-  assert.equal(offerRowIsLive(row("1", 900, { ends_on: "2026-10-21" }), TODAY), false);
-  assert.equal(offerRowIsLive(row("1", 900, { ends_on: TODAY }), TODAY), true);
-  assert.equal(offerRowIsLive(row("1", 900, { ends_on: null }), TODAY), true);
-  // A business row the member can't read (inactive / closed) drops the offer.
-  assert.equal(offerRowIsLive(row("1", 900, { business: null }), TODAY), false);
-});
-
-test("catalog rows: title, owner from the embed or the directory; dead rows dropped", () => {
-  const pro = row("3", 1200, { owner_kind: "professional", business_id: null, professional_id: "p1", business: null, category: "professionals" });
-  const list = parseCatalog([row("1", 900), { id: "2", title: "x" }, pro, row("4", 10, { paused_at: "2026-10-01T00:00:00Z" })], TODAY, new Map([["p1", { first: "Rana", type: "Personal trainer" }]]));
+test("catalogue rows: the server's owner card (business name and logo; professional first name · type); incomplete rows dropped", () => {
+  const pro = row("3", 1200, { owner_type: "professional", owner_id: "p1", owner_name: "Rana", owner_professional_subtype: "trainer", category: "professionals" });
+  const list = parseCatalogue([row("1", 900, { owner_logo_url: "https://x/logo.png" }), { offer_id: "2", headline: "x" }, pro], label);
   assert.deepEqual(
-    list.map((o) => [o.offerId, o.headline, o.ownerType, o.ownerId, o.ownerSubtitle, o.category]),
+    list.map((o) => [o.offerId, o.headline, o.ownerType, o.ownerId, o.ownerName, o.ownerSubtitle, o.ownerLogoUrl, o.category, o.pointsCost, o.endsOn]),
     [
-      ["1", "H1", "business", "b1", "Outline Activewear", "clothing"],
-      ["3", "H3", "professional", "p1", "Rana · Personal trainer", "professionals"],
+      ["1", "H1", "business", "b1", "Outline Activewear", "Outline Activewear", "https://x/logo.png", "clothing", 900, "2026-12-31"],
+      ["3", "H3", "professional", "p1", "Rana", "Rana · Personal trainer", null, "professionals", 1200, "2026-12-31"],
     ]
   );
-  // Not in the directory: the kind of owner only.
-  assert.equal(parseCatalog([pro], TODAY)[0].ownerSubtitle, "Professional");
-  assert.deepEqual(professionalIds([pro, pro, row("1", 1)]), ["p1"]);
+  // A subtype without a label, or no label function: the first name alone.
+  assert.equal(parseCatalogue([pro])[0].ownerSubtitle, "Rana");
+  // No live rule here: the server already applied offer_is_live().
+  assert.equal(parseCatalogue([row("4", 10, { ends_on: null })]).length, 1);
 });
 
 test("arrange: featured = redeemable first, then the read's order; affordable keeps what the balance reaches", () => {
-  const list = parseCatalog([row("b", 400), row("a", 900), row("c", 3000), row("d", 5000)], TODAY);
+  const list = parseCatalogue([row("b", 400), row("a", 900), row("c", 3000), row("d", 5000)]);
   assert.deepEqual(arrangeOffers(list, "featured", false, 1240).map((o) => o.offerId), ["b", "a", "c", "d"]);
-  assert.deepEqual(arrangeOffers(parseCatalog([row("c", 3000), row("b", 400)], TODAY), "featured", false, 1240).map((o) => o.offerId), ["b", "c"]);
+  assert.deepEqual(arrangeOffers(parseCatalogue([row("c", 3000), row("b", 400)]), "featured", false, 1240).map((o) => o.offerId), ["b", "c"]);
   assert.deepEqual(arrangeOffers(list, "highest", false, 1240).map((o) => o.offerId), ["d", "c", "a", "b"]);
   assert.deepEqual(arrangeOffers(list, "featured", true, 1240).map((o) => o.offerId), ["b", "a"]);
 });
 
 test("no supplement offers for under-18s (or no date of birth)", () => {
-  const list = parseCatalog([row("1", 10), row("2", 20, { category: "supplements" })], TODAY);
+  // The readers have no age rule (Database PR #40), so the client keeps it.
+  const list = parseCatalogue([row("1", 10), row("2", 20, { category: "supplements" })]);
   assert.equal(forAge(list, true).length, 2);
   assert.deepEqual(forAge(list, false).map((o) => o.offerId), ["1"]);
 });
 
-test("detail: derived quantity_left / limit_left, where, D-24 voucher days, the website", () => {
-  const d = parseOfferDetail([row("1", 900, { quantity_cap: 100, redeemed_count: 30, per_member_limit: 2, ends_on: "2027-06-30" })], TODAY, new Map(), 1);
+test("detail: offer_detail's quantity_left / limit_left / voucher expiry as sent, where, the website", () => {
+  const d = parseOfferDetail([detail()], label);
   assert.ok(d);
   assert.equal(d.quantityLeft, 70);
   assert.equal(d.limitLeft, 1);
+  assert.equal(d.perMemberLimit, 2);
+  assert.equal(d.startsOn, "2026-10-01");
   assert.equal(d.where, "both");
   assert.equal(whereLabel(d.where), "In store and online");
   assert.equal(d.voucherDays, 90);
   assert.equal(voucherExpiryLabel(d.voucherDays, d.voucherCappedOn), "90 days after it is issued");
   assert.equal(d.onlineUrl, "https://outlineactive.com/");
-  // Uncapped / unknown own count → null; a sold-out cap reads 0.
-  const u = parseOfferDetail([row("1", 900)], TODAY);
+  // No cap / no limit → null; a sold-out cap reads 0.
+  const u = parseOfferDetail([detail({ quantity_left: null, limit_left: null })]);
   assert.equal(u?.quantityLeft, null);
   assert.equal(u?.limitLeft, null);
-  assert.equal(parseOfferDetail([row("1", 900, { quantity_cap: 5, redeemed_count: 5 })], TODAY, new Map(), 0)?.quantityLeft, 0);
-  // where_used in_person: "In store" for a business, "In person" for a professional.
-  assert.equal(parseOfferDetail([row("1", 9, { where_used: "in_person" })], TODAY)?.where, "in_store");
-  assert.equal(parseOfferDetail([row("1", 9, { where_used: "in_person", owner_kind: "professional", professional_id: "p1", business: null })], TODAY)?.where, "in_person");
-  // The offer ends in 10 days: the voucher runs to its end, not 90 days.
-  const c = parseOfferDetail([row("1", 9, { ends_on: "2026-10-31" })], TODAY);
+  assert.equal(parseOfferDetail([detail({ quantity_left: 0 })])?.quantityLeft, 0);
+  // where_used in_person: "In store" for a business, "In person" for a professional (no website).
+  assert.equal(parseOfferDetail([detail({ where_used: "in_person" })])?.where, "in_store");
+  const pro = parseOfferDetail([detail({ where_used: "in_person", owner_type: "professional", owner_id: "p1", owner_name: "Rana", owner_professional_subtype: "trainer", online_url: null })], label);
+  assert.equal(pro?.where, "in_person");
+  assert.equal(pro?.ownerSubtitle, "Rana · Personal trainer");
+  assert.equal(pro?.onlineUrl, null);
+  // The offer ends first: voucher_expiry_for's capped days and day, as sent.
+  const c = parseOfferDetail([detail({ ends_on: "2026-10-31", voucher_days: 10, voucher_capped_on: "2026-10-31" })]);
   assert.equal(c?.voucherDays, 10);
   assert.equal(c?.voucherCappedOn, "2026-10-31");
   assert.equal(voucherExpiryLabel(c!.voucherDays, c!.voucherCappedOn), "Until Oct 31, 2026");
-  // Not live → null (the not-found card).
-  assert.equal(parseOfferDetail([row("1", 9, { paused_at: "2026-10-01T00:00:00Z" })], TODAY), null);
-  assert.equal(parseOfferDetail([], TODAY), null);
+  // No row (gone or not live) → null (the not-found card).
+  assert.equal(parseOfferDetail([]), null);
+  assert.equal(parseOfferDetail(null), null);
 });
 
 test("detail labels as the board's offerRows (month first)", () => {

@@ -41,7 +41,7 @@ const hireRow = (over: Partial<MyHireRow> = {}): MyHireRow => ({
 test("toPlan reads numeric strings, drops blank bullets and defaults is_hired", () => {
   assert.deepEqual(
     toPlan({ id: "a", name: "Full year", price: "1800.00", billing: "annually", features: ["Two assessments", " ", ""], position: 2, is_hired: null }),
-    { id: "a", name: "Full year", price: 1800, billing: "annually", features: ["Two assessments"], position: 2, isHired: false }
+    { id: "a", name: "Full year", description: null, price: 1800, billing: "annually", features: ["Two assessments"], position: 2, isHired: false }
   );
   assert.equal(toPlan({ id: "b", name: "x", price: 40, billing: "daily", features: null, position: null, is_hired: true }).isHired, true);
   assert.deepEqual(toPlan({ id: "b", name: "x", price: 40, billing: "daily", features: null, position: null, is_hired: true }).features, []);

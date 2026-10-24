@@ -7,6 +7,7 @@ import { goldPill } from "../../components/professionals/typeColour";
 import { CtaButton } from "../../components/pro/profile/kit";
 import { fetchListing, type DirectoryListing } from "../../services/directory";
 import { bookingAllowed, fetchPublicReviews, professionalByHandle, type HandleProfile } from "../../services/public-pro";
+import { fetchPlansFor, planPriceLabel, type Plan } from "../../services/hires";
 import type { ReviewRow } from "../../services/professional-reviews";
 import { ReviewItem } from "../../components/professionals/ReviewItem";
 import { ratingLabel, reviewCountLabel } from "../../services/professional-reviews/rules";
@@ -23,6 +24,12 @@ import { ProHero, PublicCard, PublicFrame, PublicMessage, PublicSkeleton, SignIn
  * profile (Hire, Message); signed out, Sign in / Create an account come back
  * here.
  *
+ * Plans (professional_plans_for, anon since Database PR #40): a listed
+ * professional's active plans shown in their Showcase, in their order, with
+ * the price, billing and description; hiring one happens in the app (signed
+ * out the sign-in buttons below say so). Left out when there are none or the
+ * read fails.
+ *
  * Reviews (professional_reviews_public, anon): newest first, ten at a time,
  * every reviewer shown as "A client". Removed reviews are left out and a
  * withdrawn or removed reply comes back empty, so it is simply not shown.
@@ -36,7 +43,7 @@ export default function PublicProfile() {
     | { status: "loading" }
     | { status: "missing" }
     | { status: "error"; message: string }
-    | { status: "found"; pro: HandleProfile; listing: DirectoryListing | null; canBook: boolean };
+    | { status: "found"; pro: HandleProfile; listing: DirectoryListing | null; canBook: boolean; plans: Plan[] };
   const [state, setState] = useState<State>({ status: "loading" });
   const [reload, setReload] = useState(0);
 
@@ -48,9 +55,9 @@ export default function PublicProfile() {
       if (!live) return;
       if (!r.ok) return setState({ status: "error", message: r.message });
       if (!r.data) return setState({ status: "missing" });
-      const [listing, allowed] = await Promise.all([fetchListing(r.data.profileId), bookingAllowed(r.data.profileId)]);
+      const [listing, allowed, plans] = await Promise.all([fetchListing(r.data.profileId), bookingAllowed(r.data.profileId), fetchPlansFor(r.data.profileId)]);
       if (!live) return;
-      setState({ status: "found", pro: r.data, listing, canBook: allowed.ok && allowed.data });
+      setState({ status: "found", pro: r.data, listing, canBook: allowed.ok && allowed.data, plans: plans.ok ? plans.plans : [] });
     })();
     return () => {
       live = false;
@@ -83,7 +90,7 @@ export default function PublicProfile() {
     );
   }
 
-  const { pro, listing, canBook } = state;
+  const { pro, listing, canBook, plans } = state;
   const gold = goldPill(dark);
   const rating = listing ? ratingLabel(listing.averageRating, listing.reviewCount) : null;
   const own = authUserId === pro.profileId;
@@ -121,6 +128,31 @@ export default function PublicProfile() {
           <div className="rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-4">
             <p className="text-[13px] text-charcoal-soft leading-[21.5px] whitespace-pre-line">{listing.bio.trim()}</p>
           </div>
+        </section>
+      )}
+
+      {plans.length > 0 && (
+        <section aria-label="Plans">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] px-1 mb-2 text-charcoal-faint">Plans</p>
+          <ul className="rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 px-4">
+            {plans.map((p) => (
+              <li key={p.id} className="py-3.5 border-b border-charcoal/[0.06] last:border-b-0">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="font-bold text-charcoal min-w-0" style={{ fontSize: textPx(13.5) }}>
+                    {p.name}
+                  </p>
+                  <p className="font-bold text-charcoal shrink-0 tabular-nums" style={{ fontSize: textPx(13) }}>
+                    {planPriceLabel(p.price, p.billing)}
+                  </p>
+                </div>
+                {p.description && (
+                  <p className="text-charcoal-soft leading-[1.5] mt-1 whitespace-pre-line" style={{ fontSize: textPx(12.5) }}>
+                    {p.description}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

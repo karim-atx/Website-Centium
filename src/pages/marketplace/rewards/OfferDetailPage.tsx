@@ -50,8 +50,8 @@ import { OFFER_REPORT_NOTE_MAX, OFFER_REPORT_REASONS, hasReportedOffer, reportOf
 // - pinned (gap 8): when the balance is short "You need 1,760 more points"
 //   12 / 600 --ink2 centred, and "Redeem for 900 points" 52 tall radius 16
 //   --fill 15 / 800 (opacity 0.4 and inert when locked).
-// The offer is DB2's `offers` row (fetchOfferDetail); null (no such offer,
-// or not live: RLS hides it or offer_is_live wouldn't pass) → the not-found card.
+// The offer is offer_detail(p_offer_id) (fetchOfferDetail, Database PR #40):
+// no row (gone, or not live by offer_is_live()) → the not-found card.
 // Opening a live offer records offer_view (record_listing_event for a
 // business, record_professional_event for a professional; Database PR #39).
 //
@@ -168,7 +168,7 @@ export default function OfferDetailPage() {
       <BackRow onBack={back} eyebrow="Offer" />
 
       <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12 }}>
-        <OwnerTile name={o.ownerName || o.ownerSubtitle} logoUrl={o.ownerLogoUrl} size={44} />
+        <OwnerTile name={o.ownerName} logoUrl={o.ownerLogoUrl} size={44} />
         {ownerHref ? (
           <Link to={ownerHref} className="market-focus hit" style={{ fontSize: textPx(13), fontWeight: 700, color: m.accent, textDecoration: "none", minWidth: 0 }}>
             {o.ownerSubtitle}
@@ -255,7 +255,7 @@ export default function OfferDetailPage() {
         ) : null}
       </div>
 
-      <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>This discount is provided and honoured by {o.ownerName || o.ownerSubtitle}.</p>
+      <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>This discount is provided and honoured by {o.ownerName}.</p>
 
       {authUserId && !ownOffer ? (
         reported ? (

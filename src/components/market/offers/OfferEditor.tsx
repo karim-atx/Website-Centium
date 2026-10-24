@@ -129,7 +129,7 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
 
   // An offer that already has an end date keeps one (update_offer cannot clear it).
   const endLocked = existing?.kind === "ready" && !!existing.offer.endsOn;
-  const errors: DraftErrors = useMemo(() => validateDraft(draft, variant, isNew, endLocked), [draft, variant, isNew, endLocked]);
+  const errors: DraftErrors = useMemo(() => validateDraft(draft, variant, endLocked), [draft, variant, endLocked]);
   const shown: DraftErrors = showErrors ? errors : {};
   const set = <K extends keyof OfferDraft>(k: K, v: OfferDraft[K]) => {
     setSaveNote(null);

@@ -4,10 +4,12 @@
 // points_cost, quantity_cap, per_member_limit, starts_on, ends_on (null = no
 // end), where_used (in_person | online | both), terms, paused_at, hidden_at /
 // hidden_reason (Centium took it down), funding_ack_at, redeemed_count,
-// created_at. The table has no applies_to column and no status: the status is
-// derived here. The form's create / update arguments are the owner writers'
-// (Database PR #39, 20261214010000: create_offer / update_offer take exactly
-// the names offerArgs() builds; p_applies_to is accepted and not stored).
+// created_at, applies_to (Database PR #40, 20261215010000: one of the
+// professional's own session types or plans; null for a business offer).
+// The table has no status: it is derived here. The form's create / update
+// arguments are the owner writers' (Database PR #39, 20261214010000:
+// create_offer / update_offer take exactly the names offerArgs() builds;
+// p_applies_to is stored since #40, and update_offer clears it on null).
 
 import { formatShortDate } from "../../utils/date";
 import { formatPoints } from "../../components/market/pointsModel";
@@ -21,14 +23,14 @@ export type OfferWhere = "in_store" | "online" | "both" | "in_person";
 
 /** The owner's read of their own offers. */
 export const MANAGED_OFFER_SELECT =
-  "id,owner_kind,business_id,professional_id,title,category,kind,value,points_cost,quantity_cap,per_member_limit,starts_on,ends_on,where_used,terms,paused_at,hidden_at,funding_ack_at,redeemed_count,created_at";
+  "id,owner_kind,business_id,professional_id,title,category,kind,value,points_cost,quantity_cap,per_member_limit,starts_on,ends_on,where_used,terms,paused_at,hidden_at,funding_ack_at,redeemed_count,created_at,applies_to";
 
 export interface ManagedOffer {
   id: string;
   headline: string;
   type: OfferType;
   value: number | null;
-  /** Not a DB2 column (a professional's "Applies to" service): always null from the server. */
+  /** offers.applies_to: the professional's session type or plan the offer applies to; null for a business. */
   appliesTo: string | null;
   category: string | null;
   pointsCost: number;
@@ -77,7 +79,7 @@ export function parseManagedOffer(r: unknown): ManagedOffer | null {
     headline: str(o.title) ?? "",
     type: TYPES.includes(t as OfferType) ? (t as OfferType) : "percent_off",
     value: num(o.value),
-    appliesTo: null,
+    appliesTo: str(o.applies_to),
     category: str(o.category),
     pointsCost: num(o.points_cost) ?? 0,
     quantityCap: num(o.quantity_cap),
@@ -234,15 +236,15 @@ export const TERMS_MAX = 500;
 /**
  * The form's rules (the server checks them too): a headline; points cost a
  * whole number above 0; % off 1 to 100, amount off above 0 (cents allowed),
- * a free item has no value; a NEW professional offer applies to one of their
- * services (create_offer accepts p_applies_to and doesn't store it, so an
- * existing offer reads it back as null and editing doesn't ask again);
+ * a free item has no value; a professional offer applies to one of their
+ * services, new or edited (stored since Database PR #40; an offer published
+ * before that reads back null and is asked again when edited);
  * per-member limit 1 or more; quantity cap empty or 1 or more; a start date;
  * the end date optional (no end date, as the server allows; Karim), on or
  * after the start. `endLocked`: the offer already has an end date, which
  * update_offer cannot remove (a null p_ends_on keeps the current one).
  */
-export function validateDraft(d: OfferDraft, variant: OfferVariant, isNew = true, endLocked = false): DraftErrors {
+export function validateDraft(d: OfferDraft, variant: OfferVariant, endLocked = false): DraftErrors {
   const e: DraftErrors = {};
   const h = d.headline.trim();
   if (!h) e.headline = "Give the offer a headline.";
@@ -254,7 +256,7 @@ export function validateDraft(d: OfferDraft, variant: OfferVariant, isNew = true
     const v = amount(d.value);
     if (v === null || v <= 0) e.value = "Enter an amount above 0.";
   }
-  if (variant === "professional" && isNew && !d.appliesTo) e.appliesTo = "Choose the service this offer applies to.";
+  if (variant === "professional" && !d.appliesTo) e.appliesTo = "Choose the service this offer applies to.";
   const cost = whole(d.pointsCost);
   if (cost === null || cost <= 0) e.pointsCost = "Set a points cost above 0.";
   if (d.quantityCap.trim() !== "") {
@@ -358,7 +360,7 @@ export function previewRows(d: OfferDraft, variant: OfferVariant, appliesToLabel
     { k: "Type", v: typeLabel(d.type, variant) },
     { k: "Value", v: valueLabel(d) },
   ];
-  // An existing professional offer has no stored Applies to (p_applies_to isn't kept): the row is left out.
+  // The service's label from the editor's options (null only while they load or fail).
   if (variant === "professional" && appliesToLabel) out.push({ k: "Applies to", v: appliesToLabel });
   const cost = whole(d.pointsCost);
   out.push({ k: "Points cost", v: cost === null ? d.pointsCost : formatPoints(cost) });
@@ -375,17 +377,17 @@ export function previewRows(d: OfferDraft, variant: OfferVariant, appliesToLabel
 export const draftCost = (d: Pick<OfferDraft, "pointsCost">): number => whole(d.pointsCost) ?? 0;
 
 // ---------------------------------------------------------------------------
-// Errors. The four refusals the writers raise with their keyword in the
+// Errors. The refusals the writers raise with their keyword in the
 // message (HANDOVER_API "The four refusals the Website matches on": sqlstate
-// 22023, offer_expired ATX10), matched on message, details and hint. The
+// 22023, offer_expired ATX10; applies_to_invalid 22023 since PR #40), matched on message, details and hint. The
 // writers' other refusals carry no keyword: offerWriteRefusal reads the
 // SQLSTATE.
 
-export type OfferError = "funding_ack_required" | "invalid_dates" | "points_cost_required" | "offer_expired";
+export type OfferError = "funding_ack_required" | "invalid_dates" | "points_cost_required" | "offer_expired" | "applies_to_invalid";
 
 export function offerErrorOf(e: { code?: string | null; message?: string | null; details?: string | null; hint?: string | null }): OfferError | null {
   const hay = [e.code, e.message, e.details, e.hint].filter(Boolean).join(" ").toLowerCase();
-  for (const k of ["funding_ack_required", "invalid_dates", "points_cost_required", "offer_expired"] as const) if (hay.includes(k)) return k;
+  for (const k of ["funding_ack_required", "invalid_dates", "points_cost_required", "offer_expired", "applies_to_invalid"] as const) if (hay.includes(k)) return k;
   return null;
 }
 
@@ -395,6 +397,7 @@ export const OFFER_ERROR_TEXT: Record<OfferError, string> = {
   invalid_dates: "The end date can't be before the start date.",
   points_cost_required: "Set a points cost above 0.",
   offer_expired: "This offer has ended, so it can't be edited.",
+  applies_to_invalid: "Choose one of your own services for this offer.",
 };
 
 /**
