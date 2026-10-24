@@ -57,6 +57,21 @@ test("parse: the snapshot is the voucher's own words whatever happened to the of
   assert.equal(p?.ownerName, "Rana");
   assert.equal(p?.where, "in_person");
   assert.equal(p?.onlineUrl, null);
+  // No subtype on the row (or no label passed): the first name alone.
+  assert.equal(p?.ownerSubtitle, "Rana");
+});
+
+test("owner line: a professional's type from the snapshot (offer_owner_subtype), a business's name as is", () => {
+  assert.ok(VOUCHER_SELECT.split(",").includes("offer_owner_subtype"));
+  const label = (s: string) => ({ coach_instructor: "Coach or instructor", trainer: "Personal trainer" })[s] ?? null;
+  const pro = { offer_title: "Free intro session", offer_owner_kind: "professional", offer_business_id: null, offer_professional_id: "p1", offer_owner_name: "Rami", offer_owner_subtype: "coach_instructor", offer_where_used: "in_person", offer_online_url: null };
+  assert.equal(parseVoucherRow(raw(pro), label)?.ownerSubtitle, "Rami · Coach or instructor");
+  assert.equal(parseVouchers([raw(pro)], label)[0].ownerSubtitle, "Rami · Coach or instructor");
+  assert.equal(parseVoucherRow(raw(pro), label)?.ownerName, "Rami");
+  // A business never takes a type, even if a subtype were present.
+  assert.equal(parseVoucherRow(raw({ offer_owner_subtype: "trainer" }), label)?.ownerSubtitle, "Outline Activewear");
+  // An unknown name: nothing to put the type after.
+  assert.equal(parseVoucherRow(raw({ ...pro, offer_owner_name: null }), label)?.ownerSubtitle, "");
 });
 
 test("rows: Active / N days / Used / Expired / Void (C-MO.4.6 stub)", () => {

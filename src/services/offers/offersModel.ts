@@ -11,9 +11,13 @@
 //   voucher_expiry_for() (parseOfferDetail); no row = not available;
 // - public_offers(p_owner_kind, p_owner_id) (PR #39): one owner's page
 //   (parsePublicOffers).
-// The supplement rule for under-18s (and no date of birth, lead Q3) is in
-// none of them (offer_is_live has no age test; redeem_offer refuses with
-// ATX11), so forAge still hides those offers from the lists.
+// The supplement rule for under-18s (and no date of birth, lead Q3) is the
+// SERVER'S since Database PR #40 20261215040000: offer_catalogue leaves the
+// offers out, offer_detail answers no row and redeem_offer refuses with ATX11
+// for anyone user_is_confirmed_adult() doesn't confirm (no date of birth is
+// not a yes). forAge stays as a second guard (Karim, #40) on every list and
+// on the detail page. public_offers (an owner's page) has no age rule, so
+// there forAge is the only guard (Database gap).
 
 import { formatShortDate } from "../../utils/date";
 import { num, rows, str } from "../market/parse";
@@ -133,9 +137,12 @@ export function parsePublicOffers(data: unknown, ownerType: "business" | "profes
 
 /**
  * No supplement offers for under-18s (Karim; lead Q3: no date of birth counts
- * as under 18 here). redeem_offer is the gate (ATX11, and it reads an unknown
- * date of birth as an adult); no list reader applies an age rule (Database
- * PR #40), so hiding them from the lists stays here.
+ * as under 18 here). The server applies the same rule at the shelf
+ * (offer_catalogue), the detail (offer_detail: no row) and the till
+ * (redeem_offer: ATX11) since Database PR #40 (user_is_confirmed_adult, so an
+ * unknown date of birth is refused there too); this is the app's SECOND GUARD
+ * (Karim, #40), kept on every list and on the detail page, and the only one
+ * on an owner's page (public_offers has no age rule).
  */
 export function forAge<T extends { category: string }>(list: readonly T[], adult: boolean): T[] {
   return adult ? [...list] : list.filter((o) => o.category !== "supplements");

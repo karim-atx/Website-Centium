@@ -6,9 +6,14 @@
 
 import { currentUserId, marketDb, type MarketResult } from "../market/rpc";
 import { isOffline } from "../network-error";
+import { typeLabel } from "../../components/pro/profile/typeLabel";
+import type { ProfessionalSubtype } from "../../types";
 import { VOUCHER_SELECT, parseVouchers, type Voucher } from "./vouchersModel";
 
 export * from "./vouchersModel";
+
+/** offer_owner_subtype in the client's words ("Coach or instructor"). */
+const subtypeLabel = (s: string): string => typeLabel(s as ProfessionalSubtype);
 
 async function read(filter: { id?: string }, fallback: string): Promise<MarketResult<Voucher[]>> {
   const uid = await currentUserId();
@@ -26,7 +31,7 @@ async function read(filter: { id?: string }, fallback: string): Promise<MarketRe
     console.error("[vouchers]", res.error.message);
     return { ok: false, code: res.error.code, message: fallback };
   }
-  return { ok: true, value: parseVouchers(res.data) };
+  return { ok: true, value: parseVouchers(res.data, subtypeLabel) };
 }
 
 /** Every voucher of the signed-in member, newest first (My rewards splits them into tabs). */

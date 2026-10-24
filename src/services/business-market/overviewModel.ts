@@ -98,11 +98,8 @@ export function heroDelta(pct: number | null | undefined): string | null {
   return d === QUIET ? null : `${d} vs last month`;
 }
 
-/** The hero's sub line (Karim): clients_reached counts this month so far, not a rolling 30 days. */
+/** The hero's sub line on B-MA.1 and P-MA.1 (Karim, #40): clients_reached counts this month so far, not a rolling 30 days. */
 export const THIS_MONTH = "This month so far";
-
-/** The board's "Last 30 days" line, still under the professional overview's hero (P-MA.1). */
-export const LAST_30 = "Last 30 days";
 
 /**
  * B-MA.1 HeroStatCard "Clients reached" (Karim; the board drew "Members reached") from the measured

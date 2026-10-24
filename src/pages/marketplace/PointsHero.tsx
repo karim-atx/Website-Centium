@@ -28,7 +28,8 @@ import { forumAccess } from "../../services/forum/rules";
 // ink). Every figure is the server's: my_points_summary (balance, tier,
 // earned_today of daily_cap, expiring_soon on expiring_soon_date) and
 // the cheapest live offers (the next reward, offer_catalogue(); no
-// supplement offers for an under-18, forAge).
+// supplement offers for an under-18: the reader's rule, and forAge as the
+// second guard).
 //
 // Kept from the old card (PLAN §3.1): the by-source breakdown moved to Points
 // history, the tier disc rail to How to earn "Tiers", the tap-through to

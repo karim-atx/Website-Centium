@@ -74,6 +74,6 @@ export async function redeemOffer(offerId: string, requestId: string): Promise<R
     console.error("[offers] redeem_offer:", res.error.message);
     return { ok: false, message: fallback };
   }
-  const v = parseVoucherRow(Array.isArray(res.data) ? res.data[0] : res.data);
+  const v = parseVoucherRow(Array.isArray(res.data) ? res.data[0] : res.data, subtypeLabel);
   return v ? { ok: true, voucher: v } : { ok: false, message: fallback };
 }

@@ -49,8 +49,9 @@ import { CapsLabel, OwnerTile, RowChevron } from "./rewardsParts";
 //   offer (/app/marketplace/rewards/{offerId}).
 // The offers are offer_catalogue() (fetchRewardCatalog: live by the server's
 // offer_is_live(), cheapest first, Database PR #40); supplement offers are
-// left out for an under-18 or a member without a date of birth (forAge, lead
-// Q3: the reader has no age rule).
+// left out for an under-18 or a member without a date of birth by the reader
+// itself (20261215040000) and again by forAge, the app's second guard (lead
+// Q3, Karim #40).
 //
 // D-21 (not drawn): under the offers, a "Businesses" section keeps the old
 // Businesses tab's rows (marketplace_venues kind "business") filtered by the

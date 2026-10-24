@@ -1,11 +1,11 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
+import { THIS_MONTH } from "../business-market/overviewModel.ts";
 import {
   aboutRows,
   EMPTY_SUB,
   formatOfLocation,
   initials,
-  LAST_30,
   locationOfFormat,
   overviewView,
   parseProOverview,
@@ -56,7 +56,7 @@ test("parseProOverview reads the DB5 row, sorts the sparkline by date and keeps 
 test("overviewView: answered figures (ovVisible)", () => {
   const v = overviewView({ status: "ok", value: parseProOverview({ ...ROW, active_offers_delta: 1, redemptions_delta_pct: -3 }) }, 4);
   assert.equal(v.empty, false);
-  assert.deepEqual(v.hero, { value: "1,240", delta: "+9% vs last month", sub: LAST_30, series: [10, 30] });
+  assert.deepEqual(v.hero, { value: "1,240", delta: "+9% vs last month", sub: THIS_MONTH, series: [10, 30] });
   assert.deepEqual(
     v.rows.map((r) => [r.label, r.value, r.delta, !!r.leaf]),
     [

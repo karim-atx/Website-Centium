@@ -18,7 +18,8 @@ import { CapsLabel } from "./rewardsParts";
 // 515–546:
 // - a row (space-between): "VOUCHER" 10.5 / 700 0.1em --faint and the 32
 //   close ring (1.5px --border, the X 14 stroke 2.4 --ink2);
-// - the headline (margin-top 6) 22 / 28 800; the owner 13 / 600 --accent;
+// - the headline (margin-top 6) 22 / 28 800; the owner 13 / 600 --accent
+//   (the business, or "Rami · Coach or instructor": ownerSubtitle);
 // - (margin-top 16) the W1 VoucherCard: the real QR (qr_payload), the code
 //   (tap to copy), "Valid until Jan 15, 2027" (D-02);
 // - "How to use" (margin-top 18) and (margin-top 8, gap 8, 13 / 19 --ink2)
@@ -106,7 +107,7 @@ export default function VoucherPage() {
       <style>{FOCUS_CSS}</style>
       {header}
       <h1 style={{ margin: "6px 0 0", fontSize: textPx(22), lineHeight: linePx(28), fontWeight: 800 }}>{v.offerHeadline}</h1>
-      <div style={{ fontSize: textPx(13), fontWeight: 600, color: m.accent }}>{v.ownerName}</div>
+      <div style={{ fontSize: textPx(13), fontWeight: 600, color: m.accent }}>{v.ownerSubtitle}</div>
 
       <VoucherCard code={v.code} qr={v.qrPayload} validUntil={v.expiresAt} status={status} usedAt={v.usedAt} onCopied={onCopied} style={{ marginTop: 16 }} />
 

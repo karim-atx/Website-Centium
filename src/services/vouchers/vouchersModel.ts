@@ -3,20 +3,24 @@
 // A voucher is a receipt (Database PR #40, 20261215000000): the offer's
 // title, owner and where-used are copied onto the row as it is issued
 // (offer_title, offer_owner_kind, offer_business_id, offer_professional_id,
-// offer_owner_name, offer_where_used, offer_online_url; every older voucher
-// backfilled), so pausing, ending, hiding or renaming the offer afterwards
-// changes nothing the member sees, and nothing here reads the offer. Status
-// is the voucher_status enum: issued | used | expired | void.
+// offer_owner_name, offer_owner_subtype, offer_where_used, offer_online_url;
+// every older voucher backfilled), so pausing, ending, hiding or renaming the
+// offer afterwards changes nothing the member sees, and nothing here reads
+// the offer. offer_owner_subtype (20261215000000 as amended by ebe72d6) is the
+// professional's type at issue, the enum: the services pass typeLabel, so a
+// professional's owner line reads "Rami · Coach or instructor" even after
+// they unlist. Status is the voucher_status enum: issued | used | expired |
+// void.
 
 import { formatShortDate } from "../../utils/date";
 import { rows, str } from "../market/parse";
-import { whereOf } from "../offers/offersModel";
+import { whereOf, type SubtypeLabel } from "../offers/offersModel";
 
 export type VoucherStatus = "issued" | "used" | "expired" | "void";
 
 /** The voucher read: the row and its own snapshot of the offer it was bought from. */
 export const VOUCHER_SELECT =
-  "id,offer_id,code,status,points_paid,issued_at,expires_at,used_at,offer_title,offer_owner_kind,offer_business_id,offer_professional_id,offer_owner_name,offer_where_used,offer_online_url";
+  "id,offer_id,code,status,points_paid,issued_at,expires_at,used_at,offer_title,offer_owner_kind,offer_business_id,offer_professional_id,offer_owner_name,offer_owner_subtype,offer_where_used,offer_online_url";
 
 export interface Voucher {
   id: string;
@@ -34,6 +38,12 @@ export interface Voucher {
   ownerId: string | null;
   /** The business name, or the professional's first name, at issue (offer_owner_name). */
   ownerName: string;
+  /**
+   * The owner line: the business name, or "{first name} · {type}" for a
+   * professional (offer_owner_subtype through typeLabel); the first name
+   * alone when the subtype is null.
+   */
+  ownerSubtitle: string;
   /** in_store | online | both | in_person */
   where: string | null;
   /** The business's website, for the "Online: …" how-to line. */
@@ -47,8 +57,8 @@ export interface Voucher {
 
 const STATUSES: readonly VoucherStatus[] = ["issued", "used", "expired", "void"];
 
-/** A vouchers row (redeem_offer's answer, or the member's table read). */
-export function parseVoucherRow(r: unknown): Voucher | null {
+/** A vouchers row (redeem_offer's answer, or the member's table read); `label` is typeLabel (the service passes it). */
+export function parseVoucherRow(r: unknown, label: SubtypeLabel = () => null): Voucher | null {
   if (!r || typeof r !== "object") return null;
   const o = r as Record<string, unknown>;
   const id = str(o.id);
@@ -58,6 +68,9 @@ export function parseVoucherRow(r: unknown): Voucher | null {
   const s = str(o.status);
   const ownerType = o.offer_owner_kind === "professional" ? "professional" : "business";
   const points = typeof o.points_paid === "number" ? o.points_paid : null;
+  const ownerName = str(o.offer_owner_name) ?? "";
+  const sub = ownerType === "professional" ? str(o.offer_owner_subtype) : null;
+  const type = sub ? label(sub) : null;
   return {
     id,
     code,
@@ -66,7 +79,8 @@ export function parseVoucherRow(r: unknown): Voucher | null {
     offerHeadline: str(o.offer_title) ?? "",
     ownerType,
     ownerId: str(ownerType === "professional" ? o.offer_professional_id : o.offer_business_id),
-    ownerName: str(o.offer_owner_name) ?? "",
+    ownerName,
+    ownerSubtitle: type && ownerName ? `${ownerName} · ${type}` : ownerName,
     where: whereOf(o.offer_where_used, ownerType),
     onlineUrl: ownerType === "business" ? str(o.offer_online_url) : null,
     pointsPaid: points,
@@ -76,9 +90,9 @@ export function parseVoucherRow(r: unknown): Voucher | null {
   };
 }
 
-export const parseVouchers = (data: unknown): Voucher[] =>
+export const parseVouchers = (data: unknown, label: SubtypeLabel = () => null): Voucher[] =>
   rows(data).flatMap((r) => {
-    const v = parseVoucherRow(r);
+    const v = parseVoucherRow(r, label);
     return v ? [v] : [];
   });
 

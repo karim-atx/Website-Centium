@@ -502,7 +502,10 @@ interface PreviewRow {
  * What a member code grants, before redeeming it. `value: null` = no row:
  * the code can't be used, and the server deliberately doesn't say why
  * (unknown, used, lapsed and a closed or paused business look the same).
- * Rate limited 20 per 15 minutes (ATX02). Reads only.
+ * Rate limited 20 per 15 minutes (ATX02): every call files a rate-limit
+ * row, which is why the function is VOLATILE since Database PR #40
+ * (20261215040000; it was STABLE and failed 25006 read-only under
+ * PostgREST). supabase-js rpc() POSTs, so the call needed no change.
  */
 export async function previewMemberCode(
   code: string

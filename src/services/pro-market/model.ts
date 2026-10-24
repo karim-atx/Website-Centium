@@ -17,8 +17,7 @@
 //   format; a session type's format is its location_kind (no column).
 
 import { bool, num, rows, str } from "../market/parse";
-import { countDelta, formatCount, heroDelta, LAST_30, pctDelta, QUIET, sparkValues } from "../business-market/overviewModel";
-export { LAST_30 };
+import { countDelta, formatCount, heroDelta, pctDelta, QUIET, sparkValues, THIS_MONTH } from "../business-market/overviewModel";
 import { licenceStatus, type LicenceReviewRow } from "../professional-cv/licenceStatus";
 import { monthYear, planPrice, priceLabel, sessionLine } from "../../components/pro/profile/profileModel";
 
@@ -106,7 +105,7 @@ export function overviewView(state: ProOverviewState, roster: number | null): Ov
       hero: {
         value: formatCount(v.clientsReached),
         delta: empty ? null : heroDelta(v.clientsReachedDeltaPct),
-        sub: empty ? EMPTY_SUB : LAST_30,
+        sub: empty ? EMPTY_SUB : THIS_MONTH,
         series: empty ? null : v.sparkline,
       },
       rows: [
