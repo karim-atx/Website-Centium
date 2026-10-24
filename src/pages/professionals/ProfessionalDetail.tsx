@@ -23,7 +23,6 @@ import {
   declineIsFinal,
   declineText,
   fetchBookableSessions,
-  fetchHiddenPlanIds,
   fetchOpenSlots,
   localDay,
   mondayOf,
@@ -77,9 +76,10 @@ import { averageOf, typeLabel, profileRatingLine, reviewLines, serviceRows, sess
 // DATA. The live readers keep the page working while DB10 is pending:
 // identity, about and CV from public_professional_directory / the public CV
 // views (or the invite's own readers); Services from appointment_services
-// (Book) and professional_plans_for (Hire), without the ones the professional
-// hid from their Showcase (DB3 `visible`, Database PR #39: a hidden session
-// type stays bookable by its link, so only this list drops it); Reviews from
+// (Book), without the session types the professional hid from their Showcase
+// (DB3 `visible`: a hidden one stays bookable by its link, so only this list
+// drops it), and professional_plans_for (Hire), which leaves hidden plans out
+// itself (Database PR #40); Reviews from
 // professional_reviews. professional_public_profile (DB10) adds the hired
 // count and Work history; public_offers the point offers. Opening a real
 // profile (not a preview, not one's own) records profile_view
@@ -379,7 +379,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
     if (!proId) return;
     let live = true;
     void (async () => {
-      const [allowed, plans, hiddenPlans] = await Promise.all([bookingAllowed(proId), fetchPlansFor(proId), fetchHiddenPlanIds(proId)]);
+      const [allowed, plans] = await Promise.all([bookingAllowed(proId), fetchPlansFor(proId)]);
       const sessions = allowed.ok && allowed.data ? await fetchBookableSessions(proId) : null;
       if (!live) return;
       if (!allowed.ok || (sessions && !sessions.ok)) {
@@ -396,7 +396,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
           week = days.map((d) => sessionsThatFit(by.get(localDay(d)) ?? []));
         }
       }
-      if (live) setSvc({ id: proId, data: { allowed: allowed.data, sessions: list, plans: plans.ok ? plans.plans.filter((p) => !hiddenPlans.has(p.id)) : [], week }, error: false });
+      if (live) setSvc({ id: proId, data: { allowed: allowed.data, sessions: list, plans: plans.ok ? plans.plans : [], week }, error: false });
     })();
     return () => {
       live = false;

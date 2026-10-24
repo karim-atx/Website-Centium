@@ -39,16 +39,17 @@ import {
 //   views → Hire requests → Hired, each step × 8 of the views, at least 1%,
 //   then "Rate over time"; the axis shows under it too). A range change resets
 //   the scrub / tap (`ranges[].tap`).
-// - Data: DB5 professional_performance(p_range, p_metric) (Database PR #39)
-//   for the four counted metrics (PRO_FETCHED). Every series zero = pfEmpty
-//   "No data yet". The funnel's rate is the hire rate the board draws
-//   (hire requests / profile views, per bucket for "Rate over time", its
-//   change in points from both series' delta_pct): the server's own
-//   `conversion` is vouchers over views, a different question, so it isn't
-//   asked for. "Hired" (the board's third step) has no reader: left out,
-//   never guessed.
+// - Data: professional_performance(p_range, p_metric) (Database PR #39, #40)
+//   for the five counted metrics (PRO_FETCHED), each bucket the
+//   professional's own local day. Every series zero = pfEmpty "No data yet".
+//   The funnel's third step "Hired" is the server's `hired` total
+//   (business_hires by hired_at), its bar × 8 of the views like the board's.
+//   The funnel's rate is the hire rate the board draws (hire requests /
+//   profile views, per bucket for "Rate over time", its change in points
+//   from both series' delta_pct): the server's own `conversion` is vouchers
+//   over views, a different question, so it isn't asked for.
 
-const QUESTION: Record<ProMetric, string> = {
+const QUESTION: Record<Exclude<ProMetric, "hired">, string> = {
   profile_views: "How many people viewed your profile?",
   hire_requests: "How many clients asked to hire you?",
   vouchers_redeemed: "How many vouchers were redeemed?",
@@ -103,7 +104,7 @@ export function PerformanceTab() {
     const hires = s.hire_requests;
     // The hire rate per bucket (the board's rateLine: hires / views).
     const conv = rateOverTime(hires, views);
-    const card = (mt: ProMetric) => {
+    const card = (mt: Exclude<ProMetric, "hired">) => {
       const d = mt === "conversion" ? deltaPt(proRatePt(views, hires)) : deltaText(s[mt]?.deltaPct);
       return { question: QUESTION[mt], total: mt === "conversion" ? rateText(conv?.total ?? 0) : fmtCount(s[mt]?.total ?? 0), delta: d, note: d ? undefined : null, unit, range };
     };
@@ -114,10 +115,11 @@ export function PerformanceTab() {
     const cD = chartData(conv);
     const viewsN = views?.total ?? 0;
     const hiresN = hires?.total ?? 0;
-    // The board's third step, "Hired", has no reader in the contract: left out, never guessed.
+    const hiredN = s.hired?.total ?? 0;
     const steps: FunnelStep[] = [
       { label: "Profile views", value: fmtCount(viewsN), fraction: 1 },
       { label: "Hire requests", value: fmtCount(hiresN), fraction: proStepFraction(hiresN, viewsN) },
+      { label: "Hired", value: fmtCount(hiredN), fraction: proStepFraction(hiredN, viewsN) },
     ];
     const rate = ratePct(hiresN, viewsN);
     body = (

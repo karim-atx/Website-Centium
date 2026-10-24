@@ -13,7 +13,10 @@
 //   platform_settings' weights (work history 0.4, reviews 0.4, distance 0.2,
 //   distance by BAND), keyset (rank_score desc, id). It needs a point: the
 //   area the member chose on this device, or their position when location is
-//   already allowed (never prompted here).
+//   already allowed (never prompted here). Each page files a nearby_search
+//   rate-limit row (240 an hour, ATX02), so the function is VOLATILE since
+//   Database PR #40 (20261215040000; as STABLE it failed 25006 under
+//   PostgREST and the directory fell back to the alphabetical list).
 // - public_offers(p_owner_kind, p_owner_id) (Database PR #39,
 //   20261214010000): the profile's live point offers (nothing for an
 //   unlisted professional, signed in only).

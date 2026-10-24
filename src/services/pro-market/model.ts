@@ -17,7 +17,7 @@
 //   format; a session type's format is its location_kind (no column).
 
 import { bool, num, rows, str } from "../market/parse";
-import { countDelta, formatCount, heroDelta, pctDelta, QUIET } from "../business-market/overviewModel";
+import { countDelta, formatCount, heroDelta, pctDelta, QUIET, sparkValues, THIS_MONTH } from "../business-market/overviewModel";
 import { licenceStatus, type LicenceReviewRow } from "../professional-cv/licenceStatus";
 import { monthYear, planPrice, priceLabel, sessionLine } from "../../components/pro/profile/profileModel";
 
@@ -58,15 +58,10 @@ export interface ProOverview {
 export function parseProOverview(data: unknown): ProOverview | null {
   const r = rows(data)[0];
   if (!r) return null;
-  const sp = Array.isArray(r.sparkline) ? (r.sparkline as unknown[]) : [];
-  const points = sp
-    .map((p) => (p && typeof p === "object" ? { date: str((p as Record<string, unknown>).date) ?? "", value: num((p as Record<string, unknown>).value) } : { date: "", value: num(p) }))
-    .filter((p): p is { date: string; value: number } => p.value !== null);
-  const sorted = points.every((p) => p.date) ? points.slice().sort((a, b) => a.date.localeCompare(b.date)) : points;
   return {
     clientsReached: num(r.clients_reached) ?? 0,
     clientsReachedDeltaPct: num(r.clients_reached_delta_pct),
-    sparkline: sorted.map((p) => p.value),
+    sparkline: sparkValues(r.sparkline),
     activeOffers: num(r.active_offers) ?? 0,
     activeOffersDelta: num(r.active_offers_delta),
     redemptionsThisMonth: num(r.redemptions_this_month) ?? 0,
@@ -85,7 +80,6 @@ export type ProOverviewState = { status: "loading" } | { status: "error" } | { s
 
 /** The P-MA.1 Empty line under "Clients reached" (ovEmpty). */
 export const EMPTY_SUB = "Shows once clients start finding you";
-export const LAST_30 = "Last 30 days";
 
 export interface OverviewView {
   hero: { value: string; delta: string | null; sub: string | null; series: number[] | null };
@@ -111,7 +105,7 @@ export function overviewView(state: ProOverviewState, roster: number | null): Ov
       hero: {
         value: formatCount(v.clientsReached),
         delta: empty ? null : heroDelta(v.clientsReachedDeltaPct),
-        sub: empty ? EMPTY_SUB : LAST_30,
+        sub: empty ? EMPTY_SUB : THIS_MONTH,
         series: empty ? null : v.sparkline,
       },
       rows: [

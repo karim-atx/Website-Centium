@@ -12,6 +12,7 @@ import {
   longDate,
   offerRateFraction,
   parsePerformance,
+  PRO_FETCHED,
   previousTotal,
   proRatePt,
   proStepFraction,
@@ -140,3 +141,13 @@ test("ranges and the scheduled-offer state", () => {
   assert.equal(startsLater(null, "2026-10-22"), false);
 });
 
+test("P-MA.6 asks for hired (the funnel's third step, Database PR #40) but never the server's conversion", () => {
+  assert.deepEqual([...PRO_FETCHED], ["profile_views", "hire_requests", "hired", "vouchers_redeemed", "points_spent"]);
+  const hired = parsePerformance([{ range: "30D", metric: "hired", total: 2, delta_pct: null, points: [{ date: "2026-10-24", value: 2 }], previous: null }]);
+  assert.equal(hired?.total, 2);
+  // The step is × 8 of the views like the board's, at least 1%.
+  assert.equal(proStepFraction(2, 400), 0.04);
+  assert.equal(proStepFraction(0, 400), 0.01);
+  // A bucket is the owner's local day as sent: shown as that calendar day (no time-zone shift).
+  assert.equal(chartDate("2026-10-24"), "Oct 24");
+});

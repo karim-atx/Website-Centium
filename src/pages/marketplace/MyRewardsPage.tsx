@@ -26,7 +26,8 @@ import { BackRow } from "./rewards/rewardsParts";
 //   vertical label 10.5 / 800 0.16em caps (tones from voucherRow: Active teal,
 //   a week or less left pale "3 days", used / expired muted); the body
 //   padding 12 14, gap 12: the 44 tile radius 12 --pale (initials 12.5 / 800
-//   --accent), the headline 14 / 700, the owner 12 / 600 --accent, the meta
+//   --accent), the headline 14 / 700, the owner 12 / 600 --accent (the
+//   business, or "Rami · Coach or instructor": ownerSubtitle), the meta
 //   11.5 --faint (margin-top 1). A row opens the voucher;
 // - empty (padding 56 24 0, a centred column, gap 10): the 56 tile radius 18
 //   --pale with the 24 calendar glyph (stroke 1.75, --accent), the title
@@ -130,7 +131,7 @@ export default function MyRewardsPage() {
                   tone={row.tone}
                   labelType={[10.5, "0.16em"]}
                   onPress={() => navigate(`/app/marketplace/vouchers/${encodeURIComponent(v.id)}`)}
-                  ariaLabel={`${[v.offerHeadline, v.ownerName].filter(Boolean).join(", ")}. ${row.meta}. ${row.stub}`}
+                  ariaLabel={`${[v.offerHeadline, v.ownerSubtitle].filter(Boolean).join(", ")}. ${row.meta}. ${row.stub}`}
                   className="market-focus"
                   bodyStyle={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}
                 >
@@ -139,7 +140,7 @@ export default function MyRewardsPage() {
                   </span>
                   <span style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
                     <span style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>{v.offerHeadline}</span>
-                    <span style={{ display: "block", fontSize: textPx(12), fontWeight: 600, color: m.accent }}>{v.ownerName}</span>
+                    <span style={{ display: "block", fontSize: textPx(12), fontWeight: 600, color: m.accent }}>{v.ownerSubtitle}</span>
                     <span style={{ display: "block", fontSize: textPx(11.5), color: m.faint, marginTop: 1 }}>{row.meta}</span>
                   </span>
                 </TicketStub>

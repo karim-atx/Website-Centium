@@ -1,15 +1,19 @@
-// Market + Share 3.0 · W2 · the client's vouchers (C-MO.4.4.4, C-MO.4.6), wired
-// to DB2: the `vouchers` table under vouchers_select_own, with the offer
-// embedded (vouchersModel). member_id is filtered explicitly: the same policy
-// lets an offer's owner read the vouchers issued against their offers, and a
-// professional or business owner is a client too.
+// Market + Share 3.0 · W2 · the client's vouchers (C-MO.4.4.4, C-MO.4.6): the
+// `vouchers` table under vouchers_select_own, each row carrying its own
+// snapshot of the offer (vouchersModel). member_id is filtered explicitly:
+// the same policy lets an offer's owner read the vouchers issued against
+// their offers, and a professional or business owner is a client too.
 
 import { currentUserId, marketDb, type MarketResult } from "../market/rpc";
 import { isOffline } from "../network-error";
-import { fetchProNames } from "../offers";
-import { VOUCHER_SELECT, parseVouchers, voucherProfessionalIds, type Voucher } from "./vouchersModel";
+import { typeLabel } from "../../components/pro/profile/typeLabel";
+import type { ProfessionalSubtype } from "../../types";
+import { VOUCHER_SELECT, parseVouchers, type Voucher } from "./vouchersModel";
 
 export * from "./vouchersModel";
+
+/** offer_owner_subtype in the client's words ("Coach or instructor"). */
+const subtypeLabel = (s: string): string => typeLabel(s as ProfessionalSubtype);
 
 async function read(filter: { id?: string }, fallback: string): Promise<MarketResult<Voucher[]>> {
   const uid = await currentUserId();
@@ -27,8 +31,7 @@ async function read(filter: { id?: string }, fallback: string): Promise<MarketRe
     console.error("[vouchers]", res.error.message);
     return { ok: false, code: res.error.code, message: fallback };
   }
-  const pros = await fetchProNames(voucherProfessionalIds(res.data));
-  return { ok: true, value: parseVouchers(res.data, pros) };
+  return { ok: true, value: parseVouchers(res.data, subtypeLabel) };
 }
 
 /** Every voucher of the signed-in member, newest first (My rewards splits them into tabs). */

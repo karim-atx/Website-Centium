@@ -26,7 +26,7 @@ export interface HeroStatCardProps {
   value: string;
   /** "+12% vs last month"; empty hides it (P-MA.1 Empty). */
   delta?: string | null;
-  /** "Last 30 days" or the empty line "Shows once clients start finding you". */
+  /** "This month so far" (B-MA.1, P-MA.1) or the empty line "Shows once clients start finding you". */
   sub?: string | null;
   /** The sparkline's values (30 days on the board); none draws the flat dashed line. */
   series?: readonly number[] | null;

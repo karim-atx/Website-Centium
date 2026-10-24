@@ -21,6 +21,10 @@
 //   (Business `rate.w`); the professional funnel scales its steps × 8
 //   (Professional `steps[].w`), at least 1%;
 // - dates are month first (D-02): "Oct 16".
+// Every date is the owner's own local day (Database PR #40, 20261215020000:
+// business_timezone() / user_timezone() for the window, the buckets and the
+// recorders), so a point's date is shown exactly as sent (chartDate reads it
+// as a calendar date; no client time-zone shift).
 
 import { num, rows } from "./parse";
 
@@ -34,16 +38,18 @@ export const RANGE_UNIT: Record<PerfRange, string> = { "7D": "week", "30D": "30 
 export const isPerfRange = (v: unknown): v is PerfRange => typeof v === "string" && (PERF_RANGES as readonly string[]).includes(v);
 
 export type OfferMetric = "offer_views" | "redemptions" | "points_redeemed" | "conversion";
-export type ProMetric = "profile_views" | "hire_requests" | "vouchers_redeemed" | "points_spent" | "conversion";
+export type ProMetric = "profile_views" | "hire_requests" | "hired" | "vouchers_redeemed" | "points_spent" | "conversion";
 export const OFFER_METRICS: readonly OfferMetric[] = ["offer_views", "redemptions", "points_redeemed", "conversion"];
-export const PRO_METRICS: readonly ProMetric[] = ["profile_views", "hire_requests", "vouchers_redeemed", "points_spent", "conversion"];
+export const PRO_METRICS: readonly ProMetric[] = ["profile_views", "hire_requests", "hired", "vouchers_redeemed", "points_spent", "conversion"];
 /**
- * What P-MA.6 asks professional_performance for. Not `conversion`: the
- * server's is vouchers redeemed over views, while the screen's funnel is the
- * hire rate (hire requests over views), derived here (rateOverTime, proRatePt).
+ * What P-MA.6 asks professional_performance for. `hired` (Database PR #40:
+ * business_hires by hired_at, the funnel's third step; not part of
+ * hire_requests) is the funnel's last step. Not `conversion`: the server's
+ * is vouchers redeemed over views, while the screen's funnel is the hire rate
+ * (hire requests over views), derived here (rateOverTime, proRatePt).
  */
 export type ProFetched = Exclude<ProMetric, "conversion">;
-export const PRO_FETCHED: readonly ProFetched[] = ["profile_views", "hire_requests", "vouchers_redeemed", "points_spent"];
+export const PRO_FETCHED: readonly ProFetched[] = ["profile_views", "hire_requests", "hired", "vouchers_redeemed", "points_spent"];
 
 /** B-MA.7 expanded pages (performance/{segment}): the metric and the back header's title (the script's EX[k].title). */
 export const EXPANDED: Record<string, { metric: OfferMetric; title: string }> = {

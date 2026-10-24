@@ -3,7 +3,8 @@
 // marketRpc. Both return one row { range, metric, total, delta_pct, points,
 // previous }: zeros, not gaps (an empty range is N zero points); 90D and 12M
 // bucket by week (performance_window); delta_pct is null against an empty
-// previous window; previous is null unless p_compare.
+// previous window; previous is null unless p_compare. Every day is the
+// owner's local day (Database PR #40: business_timezone / user_timezone).
 //
 // - offer_performance(p_range, p_metric, p_offer_id, p_compare,
 //   p_business_id): the `marketing` permission (42501 otherwise); metrics
@@ -13,8 +14,8 @@
 //   (p_business_id): the server's fallback is the caller's own
 //   business_profiles row, which a staff member doesn't have.
 // - professional_performance(p_range, p_metric): the caller's own (ATX09 for
-//   anyone else); metrics profile_views | hire_requests | vouchers_redeemed |
-//   points_spent | conversion. Its `conversion` is vouchers redeemed over
+//   anyone else); metrics profile_views | hire_requests | hired (Database
+//   PR #40) | vouchers_redeemed | points_spent | conversion. Its `conversion` is vouchers redeemed over
 //   profile views, NOT the hire rate P-MA.6 draws ("How many viewers asked to
 //   hire you?", the screen's rateLine = hires / views), so the screen derives
 //   that rate from the hire_requests and profile_views series itself and

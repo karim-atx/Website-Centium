@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   END_LOCKED_NOTE,
+  MANAGED_OFFER_SELECT,
+  OFFER_ERROR_TEXT,
   dayLabel,
   draftOf,
   emptyDraft,
@@ -52,6 +54,12 @@ test("parse: the table's columns; rows without an id or a start are dropped; def
   assert.equal(o.terms, "");
   assert.equal(o.where, "both");
   assert.equal(o.appliesTo, null);
+  // applies_to (Database PR #40) reads back into the form and round-trips.
+  const pro = one({ owner_kind: "professional", applies_to: "svc1" });
+  assert.equal(pro.appliesTo, "svc1");
+  assert.equal(draftOf(pro).appliesTo, "svc1");
+  assert.equal(offerArgs(draftOf(pro), "professional").p_applies_to, "svc1");
+  assert.ok(MANAGED_OFFER_SELECT.split(",").includes("applies_to"));
   assert.equal(o.fundingAckAt, "2026-09-30T10:00:00Z");
   assert.equal(one({ starts_on: "2026-10-01T00:00:00Z" }).startsOn, "2026-10-01");
   assert.equal(one({ ends_on: null }).endsOn, null);
@@ -117,10 +125,9 @@ test("validate: points cost > 0, ends ≥ starts, value per type, limit ≥ 1", 
   assert.deepEqual(validateDraft(good({ endsOn: "2026-11-01" }), "business"), {});
   // No end date is allowed (the server allows it; Karim)…
   assert.deepEqual(validateDraft(good({ endsOn: "" }), "business"), {});
-  assert.deepEqual(validateDraft(good({ endsOn: "" }), "business", false), {});
   // …except on an offer that already has one: update_offer can't clear it.
-  assert.equal(validateDraft(good({ endsOn: "" }), "business", false, true).endsOn, END_LOCKED_NOTE);
-  assert.deepEqual(validateDraft(good({ endsOn: "2027-03-01" }), "business", false, true), {});
+  assert.equal(validateDraft(good({ endsOn: "" }), "business", true).endsOn, END_LOCKED_NOTE);
+  assert.deepEqual(validateDraft(good({ endsOn: "2027-03-01" }), "business", true), {});
   assert.ok(validateDraft(good({ value: "0" }), "business").value);
   assert.ok(validateDraft(good({ value: "101" }), "business").value);
   assert.ok(validateDraft(good({ type: "amount_off", value: "0" }), "business").value);
@@ -131,8 +138,9 @@ test("validate: points cost > 0, ends ≥ starts, value per type, limit ≥ 1", 
   assert.deepEqual(validateDraft(good({ quantityCap: "" }), "business"), {});
   assert.ok(validateDraft(good({ where: "in_person" }), "professional").appliesTo);
   assert.deepEqual(validateDraft(good({ where: "in_person", appliesTo: "svc1" }), "professional"), {});
-  // Editing: create_offer doesn't store p_applies_to, so an existing offer isn't asked for it again.
-  assert.deepEqual(validateDraft(good({ where: "in_person" }), "professional", false), {});
+  // Stored since Database PR #40: editing asks for it too (an older offer reads back null).
+  assert.ok(validateDraft(good({ where: "in_person" }), "professional", true).appliesTo);
+  assert.deepEqual(validateDraft(good({ where: "in_person", appliesTo: "svc1" }), "professional", true), {});
 });
 
 test("args: documented fields; free item has no value; empty cap is null", () => {
@@ -172,7 +180,7 @@ test("preview rows: business (Terms) and professional (Applies to, Per-client li
   assert.equal(p[2].v, "4-session pack · $120");
   assert.equal(p[3].v, "1,200");
   assert.equal(p[7].v, "In person");
-  // Editing a professional offer: no stored Applies to, so the row is left out.
+  // The label isn't known yet (options loading or failed): the row is left out.
   assert.ok(!previewRows(good({ where: "in_person" }), "professional", null).some((r) => r.k === "Applies to"));
   assert.equal(previewRows(good({ endsOn: "" }), "business", null).find((r) => r.k === "Dates")?.v, "From Nov 1, 2026 · No end date");
   assert.equal(previewRows(good({ quantityCap: "" }), "business", null)[3].v, "No cap");
@@ -198,6 +206,8 @@ test("errors: documented names map, anything else is null", () => {
   assert.equal(offerErrorOf({ code: "22023", message: "funding_ack_required: you fund this discount in full, and Centium does not reimburse redemptions" }), "funding_ack_required");
   assert.equal(offerErrorOf({ code: "22023", message: "points_cost_required: an offer costs points" }), "points_cost_required");
   assert.equal(offerErrorOf({ code: "ATX10", message: "offer_expired: this offer has ended, so it cannot be edited" }), "offer_expired");
+  assert.equal(offerErrorOf({ code: "22023", message: "applies_to_invalid: that is not one of your session types or plans" }), "applies_to_invalid");
+  assert.equal(OFFER_ERROR_TEXT.applies_to_invalid, "Choose one of your own services for this offer.");
 });
 
 test("the writers' other refusals by SQLSTATE", () => {

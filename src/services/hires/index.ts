@@ -15,7 +15,7 @@ import {
 // A3 · Hiring a professional: THE ONE SERVICE for every A3 function and
 // table (a3-shared.md). Contract: "Stage A3" in ../Database/docs/HANDOVER_API.md.
 //
-//   professional_plans_for(id)   the hire sheet, MO1.2.1.5 (anon + authenticated)
+//   professional_plans_for(id)   the hire sheet, MO1.2.1.5, and the public profile (anon + authenticated)
 //   hire_professional(plan, m)   checkout, MO1.2.1.5.1 (moves no money, BR-04)
 //   my_hires()                   confirmed, MO1.2.1.5.2, and "Pending payment"
 //   cancel_hire(id, reason)      either party; was_free picks the wording
@@ -49,10 +49,11 @@ const LOAD_PLANS_FAILED = "Couldn't load the plans. Try again.";
 const LOAD_HIRES_FAILED = "Couldn't load your hires. Try again.";
 
 /**
- * professional_plans_for(): the listed professional's active plans in
- * position order, each with is_hired for the caller. An unlisted professional
- * returns zero rows (their plans are not on offer), which is the empty state,
- * not an error.
+ * professional_plans_for(): the listed professional's plans that are both
+ * active and shown in their Showcase (`visible`; Database PR #40), in
+ * position order, each with is_hired for the caller (false signed out; the
+ * function is granted to anon). An unlisted professional returns zero rows
+ * (their plans are not on offer), which is the empty state, not an error.
  */
 export async function fetchPlansFor(professionalId: string): Promise<{ ok: true; plans: Plan[] } | { ok: false; message: string }> {
   try {

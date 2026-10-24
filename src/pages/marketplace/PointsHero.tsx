@@ -27,8 +27,9 @@ import { forumAccess } from "../../services/forum/rules";
 // tall, radius 10, tier pill fill, 0.5px tier border, 12.5 / 700 tier TEXT
 // ink). Every figure is the server's: my_points_summary (balance, tier,
 // earned_today of daily_cap, expiring_soon on expiring_soon_date) and
-// the cheapest live offers (the next reward, DB2 `offers`; no supplement
-// offers for an under-18, forAge).
+// the cheapest live offers (the next reward, offer_catalogue(); no
+// supplement offers for an under-18: the reader's rule, and forAge as the
+// second guard).
 //
 // Kept from the old card (PLAN §3.1): the by-source breakdown moved to Points
 // history, the tier disc rail to How to earn "Tiers", the tap-through to
@@ -52,9 +53,9 @@ export function PointsHero() {
   }, [pointsSummary]);
   useEffect(() => {
     let cancelled = false;
-    // The live offers (DB2 `offers`); a failed read falls back to tier progress.
+    // The live offers (offer_catalogue); a failed read falls back to tier progress.
     void fetchRewardCatalog("all").then((r) => {
-      if (!cancelled) setOffers(r.ok ? r.value.map((o) => ({ ...o, ownerName: o.ownerName || o.ownerSubtitle })) : null);
+      if (!cancelled) setOffers(r.ok ? r.value : null);
     });
     return () => {
       cancelled = true;

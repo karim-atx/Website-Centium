@@ -47,9 +47,11 @@ import { CapsLabel, OwnerTile, RowChevron } from "./rewardsParts";
 //   0 1px 3px rgba(0,0,0,0.18));
 // - the offers (margin-top 12, gap 10): the W1 client OfferCard, opening the
 //   offer (/app/marketplace/rewards/{offerId}).
-// The offers are DB2's `offers` table (fetchRewardCatalog: the live rule,
-// cheapest first); supplement offers are left out for an under-18 or a
-// member without a date of birth (forAge, lead Q3).
+// The offers are offer_catalogue() (fetchRewardCatalog: live by the server's
+// offer_is_live(), cheapest first, Database PR #40); supplement offers are
+// left out for an under-18 or a member without a date of birth by the reader
+// itself (20261215040000) and again by forAge, the app's second guard (lead
+// Q3, Karim #40).
 //
 // D-21 (not drawn): under the offers, a "Businesses" section keeps the old
 // Businesses tab's rows (marketplace_venues kind "business") filtered by the
@@ -330,7 +332,7 @@ const OffersList: React.FC<{
           headline={o.headline}
           cost={o.pointsCost}
           owner={o.ownerSubtitle}
-          ownerInitials={ownerInitials(o.ownerName || o.ownerSubtitle)}
+          ownerInitials={ownerInitials(o.ownerName)}
           ownerLogoUrl={o.ownerLogoUrl}
           balance={balance}
           onPress={() => onOpen(o)}

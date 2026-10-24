@@ -15,7 +15,8 @@ import { hexAlpha, liftInk } from "../../../components/market/marketColor";
 import { formatPoints } from "../../../components/market/pointsModel";
 import { FOCUS_CSS, usePress } from "../../../components/market/usePress";
 import { DIVIDER } from "../../../components/market/SegmentedTicketStrip";
-import { fetchOfferDetail, type OfferDetail } from "../../../services/offers";
+import { fetchOfferDetail, forAge, type OfferDetail } from "../../../services/offers";
+import { forumAccess } from "../../../services/forum/rules";
 import { recordListingEvent, recordProfessionalEvent } from "../../../services/marketplace/listingEvents";
 import type { MarketResult } from "../../../services/market/rpc";
 import { offerCells, redeemGate } from "./rewardsModel";
@@ -50,8 +51,12 @@ import { OFFER_REPORT_NOTE_MAX, OFFER_REPORT_REASONS, hasReportedOffer, reportOf
 // - pinned (gap 8): when the balance is short "You need 1,760 more points"
 //   12 / 600 --ink2 centred, and "Redeem for 900 points" 52 tall radius 16
 //   --fill 15 / 800 (opacity 0.4 and inert when locked).
-// The offer is DB2's `offers` row (fetchOfferDetail); null (no such offer,
-// or not live: RLS hides it or offer_is_live wouldn't pass) → the not-found card.
+// The offer is offer_detail(p_offer_id) (fetchOfferDetail, Database PR #40):
+// no row (gone, not live by offer_is_live(), or a supplement offer and the
+// member isn't a confirmed adult, 20261215040000) → the not-found card, which
+// on purpose doesn't say which. forAge is the second guard: a supplement
+// offer for a member the app doesn't know to be 18 shows the same card.
+// A refusal at Redeem (ATX11) keeps its own line in the sheet.
 // Opening a live offer records offer_view (record_listing_event for a
 // business, record_professional_event for a professional; Database PR #39).
 //
@@ -87,7 +92,9 @@ type Load = { state: "loading" } | { state: "done"; result: MarketResult<OfferDe
 
 export default function OfferDetailPage() {
   const { offerId = "" } = useParams<{ offerId: string }>();
-  const { pointsSummary, pointTiers, refreshAchievements, authUserId } = useApp();
+  const { user, pointsSummary, pointTiers, refreshAchievements, authUserId } = useApp();
+  // The supplement rule's second guard (forAge; the server's offer_detail already answers no row).
+  const adult = forumAccess(user.dateOfBirth) === "adult";
   const dark = useIsDark();
   const m = marketPalette(dark);
   const back = useBack("/app/marketplace?tab=rewards");
@@ -113,7 +120,8 @@ export default function OfferDetailPage() {
   useEffect(() => fetchIt(), [fetchIt]);
   // DB5: an offer seen is offer_view with the offer as the item (once per
   // session here, once a day per viewer on the server, never the owner's own look).
-  const seen = load.state === "done" && load.result.ok ? load.result.value : null;
+  const fetched = load.state === "done" && load.result.ok ? load.result.value : null;
+  const seen = fetched && forAge([fetched], adult).length ? fetched : null;
   const seenId = seen?.offerId ?? null;
   const seenOwner = seen ? `${seen.ownerType}:${seen.ownerId}` : null;
   useEffect(() => {
@@ -150,7 +158,7 @@ export default function OfferDetailPage() {
   if (!r.ok) {
     return shell(<MarketError thing="this offer" onRetry={fetchIt} />);
   }
-  const o = r.value;
+  const o = r.value && forAge([r.value], adult).length ? r.value : null;
   if (!o) return shell(<MarketEmptyCard title="This offer isn't available" body="It may have ended, sold out or been removed. Other rewards are on Explore." />);
 
   const balance = pointsSummary?.balance ?? 0;
@@ -168,7 +176,7 @@ export default function OfferDetailPage() {
       <BackRow onBack={back} eyebrow="Offer" />
 
       <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12 }}>
-        <OwnerTile name={o.ownerName || o.ownerSubtitle} logoUrl={o.ownerLogoUrl} size={44} />
+        <OwnerTile name={o.ownerName} logoUrl={o.ownerLogoUrl} size={44} />
         {ownerHref ? (
           <Link to={ownerHref} className="market-focus hit" style={{ fontSize: textPx(13), fontWeight: 700, color: m.accent, textDecoration: "none", minWidth: 0 }}>
             {o.ownerSubtitle}
@@ -255,7 +263,7 @@ export default function OfferDetailPage() {
         ) : null}
       </div>
 
-      <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>This discount is provided and honoured by {o.ownerName || o.ownerSubtitle}.</p>
+      <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>This discount is provided and honoured by {o.ownerName}.</p>
 
       {authUserId && !ownOffer ? (
         reported ? (

@@ -37,7 +37,9 @@ import { offeredCount, offersSub, openingsSub, workSub } from "./opportunities/o
 //    again." · "Keep it shown" (cancels, no call) · "Hide it";
 // 2. ovHidden: the banner (radius 16, --highbg, padding 12 14, 12.5 / 18 700
 //    --high);
-// 3. HeroStatCard "Clients reached" + the 358 × 64 sparkline, and the
+// 3. HeroStatCard "Clients reached" + the 358 × 64 sparkline (sub line "This
+//    month so far", Karim #40: clients_reached is month to date; the board's
+//    "Last 30 days" is replaced, as on B-MA.1), and the
 //    StatLedger (Active offers · Redemptions this month · Points redeemed
 //    (leaf) · Active clients · Gyms working with), from DB5
 //    professional_overview() (Database PR #39); while it loads or after a

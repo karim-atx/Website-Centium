@@ -18,10 +18,13 @@
 //   (funding_ack_required); p_request_id becomes the offer's id, so a retry
 //   returns the first offer;
 // - update_offer(p_offer_id, …): the editor sends the whole draft (null
-//   clears quantity_cap and terms, leaves the rest); an ended offer refuses
+//   clears quantity_cap, terms and applies_to, leaves the rest); an ended offer refuses
 //   (offer_expired), a taken-down one too (42501);
 // - set_offer_paused(p_offer_id, p_paused).
-// Refusals: the four keywords (offerErrorOf), then the SQLSTATEs
+// p_applies_to (a professional's own session type or plan) is stored since
+// Database PR #40 and refused for a business offer or someone else's
+// service (applies_to_invalid).
+// Refusals: the five keywords (offerErrorOf), then the SQLSTATEs
 // (offerWriteRefusal).
 
 import { currentUserId, marketDb, marketRpcRaw, type MarketResult } from "../market/rpc";

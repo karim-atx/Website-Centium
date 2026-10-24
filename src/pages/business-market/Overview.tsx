@@ -13,8 +13,8 @@ import { useOnline } from "../../hooks/useOnline";
 import { fetchReviewMetrics } from "../../services/reputation";
 import { saveCategories } from "../../services/business-market";
 import { AMENITY_LABEL, isAmenityKey, photoCounts, photoLine as galleryLine, sortPhotos } from "../../services/business-market/listingLogic";
-import { fetchMarketplaceOverview, fetchMembersReached } from "../../services/business-market/overview";
-import { classesLine, formatCount, ledgerRows, membershipsLine, QUIET, type GymFigures, type OverviewState } from "../../services/business-market/overviewModel";
+import { fetchMarketplaceOverview } from "../../services/business-market/overview";
+import { classesLine, heroView, ledgerRows, membershipsLine, type GymFigures, type OverviewState } from "../../services/business-market/overviewModel";
 import { fetchVenueDashboard } from "../../services/venues/console";
 import type { VenueDashboard } from "../../services/venues/consoleLogic";
 import { useMarket } from "./MarketContext";
@@ -36,10 +36,12 @@ import { HIRING_ROW_PENDING, hiringRowLine } from "./hiring/teamModel";
 //    ListingToggleTile over business_profiles.active (useListingSwitch: the
 //    owner alone switches it, a closed business can't be listed, and hiding
 //    asks first, all KEPT);
-// 2. HeroStatCard "Members reached": the live business_profiles
-//    .members_reached. No live reader has its 30-day series or a month-on-
-//    month change, so the sparkline is the component's flat "no series" line
-//    and the change and "Last 30 days" are left out rather than invented;
+// 2. HeroStatCard "Clients reached" (Karim; the board drew "Members reached") over the measured
+//    clients_reached of business_marketplace_overview (Database PR #40:
+//    profile_open + offer_view this month in the business's own days, its
+//    change against last month, the 30-day sparkline; heroView), never the
+//    self-reported business_profiles.members_reached. Staff without
+//    `marketing` aren't asked: "–" and the flat line;
 // 3. StatLedger: Active offers · Redemptions this month · Points redeemed
 //    (DB5 business_marketplace_overview, the `marketing` permission: staff
 //    without it aren't asked and see "–") and, for a gym, Active memberships ·
@@ -60,8 +62,6 @@ import { HIRING_ROW_PENDING, hiringRowLine } from "./hiring/teamModel";
 
 export const REVIEWS_ROUTE = "/app/business/analytics/reputation";
 
-type Loaded<T> = { status: "loading" } | { status: "ok"; value: T } | { status: "error" };
-
 export function Overview() {
   const m = useMarket();
   const c = useMarketColors();
@@ -71,9 +71,7 @@ export function Overview() {
   const sw = useListingSwitch();
   const businessId = business?.id ?? null;
 
-  // Members reached (live column).
-  const [reached, setReached] = useState<Loaded<number | null>>({ status: "loading" });
-  // DB5 business_marketplace_overview (the `marketing` permission).
+  // business_marketplace_overview (the `marketing` permission): the hero and the ledger.
   const marketing = m.can("marketing");
   const [ov, setOv] = useState<OverviewState>({ status: "loading" });
   const [tick, setTick] = useState(0);
@@ -81,7 +79,6 @@ export function Overview() {
   useEffect(() => {
     if (!businessId) return;
     let alive = true;
-    void fetchMembersReached(businessId).then((n) => alive && setReached({ status: "ok", value: n }));
     if (!marketing) {
       setOv({ status: "none" });
       return () => {
@@ -146,7 +143,7 @@ export function Overview() {
   const closed = !!business.closedAt;
   const canSwitch = online && m.isOwner && !sw.busy && !closed;
   const switchNote = closed ? "Your business is closed, so it can't be listed." : !m.isOwner ? "Only the owner can show or hide your listing." : null;
-  const reachedValue = reached.status === "ok" && reached.value !== null ? formatCount(reached.value) : QUIET;
+  const hero = heroView(ov);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingBottom: 32, color: c.ink }}>
@@ -164,10 +161,10 @@ export function Overview() {
           </p>
         ) : null}
       </div>
-      {reached.status === "loading" ? (
+      {ov.status === "loading" ? (
         <MarketSkeleton radius={24} rows={3} height={165} label="Loading members reached" />
       ) : (
-        <HeroStatCard label="Members reached" value={reachedValue} />
+        <HeroStatCard label="Clients reached" value={hero.value} delta={hero.delta} sub={hero.sub} series={hero.series} />
       )}
       <StatLedger rows={ledgerRows(ov, gym)} />
       {ov.status === "error" ? <MarketError thing="your offer figures" onRetry={retry} /> : null}

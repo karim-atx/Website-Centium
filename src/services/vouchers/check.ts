@@ -4,7 +4,11 @@
 // for a business's offers, the professional for their own (the functions
 // decide; a stranger's code reads not_valid_here). A paused or hidden listing
 // or offer still validates the vouchers already issued: nothing here reads
-// the listing.
+// the listing. check_voucher files a rate-limit row on every call (240 an
+// hour, ATX02), so it is VOLATILE since Database PR #40 (20261215040000; as
+// STABLE, PostgREST served it read-only and every check failed 25006).
+// supabase-js rpc() POSTs, so no client change was needed and there is no
+// workaround here.
 
 import { marketRpcRaw } from "../market/rpc";
 import { isOffline } from "../network-error";
