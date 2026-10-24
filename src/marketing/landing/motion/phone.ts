@@ -2,7 +2,7 @@
 // from the prototype (03_motion/05-hero-dashboard-section01.md: buildPhone,
 // patchSet, setBase, runT, setOff, phonePhase, daySegs). Phases: 'intro'
 // (screen 01), 'hero' (01 to 02), 'day' (02, 03, 05, 06, 04; section 01,
-// wired by a later batch). At rest every state shows its own screenshot.
+// driven by motion/day.ts). At rest every state shows its own screenshot.
 
 import { clamp, easeInOut3, sm } from "../engine/math";
 import { BASE_SCREENS, screenBackground } from "../assets/dashboard";

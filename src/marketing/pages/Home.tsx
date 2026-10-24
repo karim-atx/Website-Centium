@@ -1,26 +1,32 @@
-import React, { useLayoutEffect, useRef, useState } from "react";
+import React, { Suspense, lazy, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useSEO } from "../useSEO";
 import { Intro } from "../landing/sections/Intro";
 import { introVals } from "../landing/sections/introVals";
+import { sectionVals } from "../landing/sections/sectionVals";
 import { PhoneStage } from "../landing/phone/PhoneStage";
-import { loaderEntryFor } from "../landing/loading/pickLoader";
+import { anchorHash, loaderEntryFor } from "../landing/loading/pickLoader";
 import { imageTask } from "../landing/loading/loader";
-import { addLoadingTask } from "../landing/state";
-import { reducedMotion } from "../landing/engine/env";
-import { scrollToSection, useMarketingNav } from "../landing/navigation";
+import { addLoadingTask, landingState } from "../landing/state";
+import { lowQuality, reducedMotion } from "../landing/engine/env";
+import type { EngineSection } from "../landing/engine/scrollEngine";
+import { ANCHOR_OFFSET, anchorTarget, scrollToSection, useMarketingNav } from "../landing/navigation";
+import { SectionHostContext, type SectionHost } from "../landing/sectionHost";
 import type { LandingMotion } from "../landing/motion";
 
 // Centium landing v29 (handover handoff-centium, prototype "Centium Site
 // v29.dc.html"). This page is the eager landing shell: the markup of the
 // intro and hero (so the intro title is on the first React frame), the phone
-// layer and the fixed canvas for the intro lines. All motion is code-split:
-// landing/motion (scroll engine, intro choreography, phone) and
-// landing/lines (canvas line engines) arrive by import() after first paint,
-// so the web app's main bundle carries none of it. The loading sequence
+// layer and the fixed canvas for the intro lines. Everything else is
+// code-split: landing/motion (scroll engine, intro choreography, phone,
+// section 01, chapter marks, bands) and landing/lines (canvas line engines)
+// arrive by import() after first paint, and the sections after the hero
+// (01 to 06, landing/sections/BelowFold) by React.lazy, so neither the first
+// paint nor the web app's main bundle carries them. The loading sequence
 // (LO1/LO2, MarketingLayout) follows their real progress.
-//
-// Sections after the hero (section 01 onwards) are added by later batches.
+
+const loadBelowFold = () => import("../landing/sections/BelowFold");
+const BelowFold = lazy(loadBelowFold);
 
 const subscribeViewport = () => ({ vw: window.innerWidth, vh: window.innerHeight });
 
@@ -32,6 +38,35 @@ export const Home: React.FC = () => {
   const motion = useRef<LandingMotion | null>(null);
   const go = useMarketingNav();
   const r = introVals(view.vw);
+  const rs = sectionVals(view.vw, view.vh);
+
+  // An #anchor arrival lands again whenever the layout is re-measured (the
+  // lazy sections mounting, the hero tail being sized, fonts), until the
+  // visitor scrolls themselves or loading has settled.
+  const pendingAnchor = useRef<string | null>(anchorHash(location.hash));
+
+  // The lazy sections reach the scroll engine through this host; sections
+  // that mount before the motion chunk has arrived wait in `queued`.
+  const queued = useRef<EngineSection[]>([]);
+  const removers = useRef(new Map<EngineSection, () => void>());
+  const host = useMemo<SectionHost>(
+    () => ({
+      rm: entry.mode === "rm" || reducedMotion(),
+      low: lowQuality(),
+      add(section) {
+        if (motion.current) removers.current.set(section, motion.current.add(section));
+        else queued.current.push(section);
+        return () => {
+          queued.current = queued.current.filter((s) => s !== section);
+          removers.current.get(section)?.();
+          removers.current.delete(section);
+        };
+      },
+      invalidate: () => motion.current?.engine.invalidate(),
+      measure: () => motion.current?.measure(),
+    }),
+    [entry],
+  );
 
   // Start the code-split motion and register the real progress the loader waits for.
   useLayoutEffect(() => {
@@ -39,23 +74,54 @@ export const Home: React.FC = () => {
     const linesChunk = import("../landing/lines/strands");
     addLoadingTask(location.key, motionChunk);
     addLoadingTask(location.key, linesChunk);
+    // Arriving on an anchor or mid-page, the loader also covers the sections
+    // below the hero, so the page is in place when it lifts.
+    if (pendingAnchor.current || entry.at != null) addLoadingTask(location.key, loadBelowFold());
     document.querySelectorAll<HTMLImageElement>("img[data-eager]").forEach((img) => addLoadingTask(location.key, imageTask(img)));
     if (window.innerWidth >= 1024) {
       document.querySelectorAll<HTMLImageElement>("#phone-food img, #phone-work img").forEach((img) => addLoadingTask(location.key, imageTask(img)));
     }
     let dead = false;
+    const removeAll = removers.current;
+    const stopAnchor = () => {
+      pendingAnchor.current = null;
+    };
+    const inputs = ["wheel", "touchstart", "keydown", "pointerdown"] as const;
+    inputs.forEach((ev) => window.addEventListener(ev, stopAnchor, { passive: true, once: true }));
+    let settle = 0;
+    const armSettle = () => {
+      if (landingState.get().loaded && !settle) settle = window.setTimeout(stopAnchor, 1500);
+    };
+    const offLoaded = landingState.subscribe(armSettle);
+    armSettle();
     motionChunk
       .then((m) => {
         if (dead) return;
-        motion.current = m.startLanding(entry);
+        const mo = m.startLanding(entry);
+        motion.current = mo;
+        queued.current.forEach((s) => removeAll.set(s, mo.add(s)));
+        queued.current = [];
+        // Keeps a pending anchor in place after every measure (added after the
+        // intro, whose measure sizes the hero tail and so moves everything).
+        mo.add({
+          measure() {
+            const id = pendingAnchor.current,
+              el = id ? anchorTarget(id) : null;
+            if (el) window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - ANCHOR_OFFSET);
+          },
+        });
       })
       .catch(() => {
         /* without the motion chunk the page stays at its readable first state */
       });
     return () => {
       dead = true;
+      inputs.forEach((ev) => window.removeEventListener(ev, stopAnchor));
+      window.clearTimeout(settle);
+      offLoaded();
       motion.current?.stop();
       motion.current = null;
+      removeAll.clear();
     };
     // Once per mount; the entry is fixed for the life of the page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -96,7 +162,7 @@ export const Home: React.FC = () => {
 
   const twY = entry.mode === "rm" ? "0%" : entry.kind === "lo1" ? "10%" : entry.kind === "lo2" ? "130%" : "0%";
   return (
-    <>
+    <SectionHostContext.Provider value={host}>
       <canvas
         id="field"
         aria-hidden="true"
@@ -112,6 +178,9 @@ export const Home: React.FC = () => {
         onContact={onContact}
         onSkip={onSkip}
       />
-    </>
+      <Suspense fallback={null}>
+        <BelowFold r={rs} vw={view.vw} onReady={() => motion.current?.measure()} />
+      </Suspense>
+    </SectionHostContext.Provider>
   );
 };

@@ -1,14 +1,19 @@
 // Centium landing v29: the code-split motion chunk. The landing page (eager)
 // imports this with import() once it has rendered, so the web app's main
 // bundle carries none of it. It wires the scroll engine, the intro/hero, the
-// dashboard phone, the navbar scroll-spy and the (separately code-split)
-// intro line field. Later sections register their own EngineSections through
-// the returned controller.
+// dashboard phone, section 01 (which drives the same phone), the chapter
+// marks, the WK1 bands, the navbar scroll-spy and the (separately
+// code-split) intro line field. The other sections (03 to 06, in the lazy
+// sections chunk) register their own EngineSections through the returned
+// controller's add().
 
 import { lowQuality, reducedMotion } from "../engine/env";
 import { ScrollEngine, type EngineSection } from "../engine/scrollEngine";
 import type { LoaderEntry } from "../loading/pickLoader";
 import { landingState, spyClick } from "../state";
+import { BandsMotion } from "./bands";
+import { ChapterMarks } from "./chapters";
+import { DayMotion } from "./day";
 import { IntroMotion } from "./intro";
 import { PhoneMotion } from "./phone";
 
@@ -50,9 +55,17 @@ export function startLanding(entry: LoaderEntry): LandingMotion {
     low = lowQuality();
   const engine = new ScrollEngine({ rm, low });
   const phone = new PhoneMotion(rm, () => engine.context.lg);
-  const intro = new IntroMotion(phone, entry, rm);
+  const day = new DayMotion(phone, rm);
+  const intro = new IntroMotion(phone, entry, rm, day);
+  // Order matters, as in the prototype's onScroll: the intro first (it sets
+  // the hero tail's height in measure, which moves everything below), then
+  // the spy, the chapter marks and section 01 (which takes the phone over from
+  // the intro a screen before its track).
   engine.add(intro);
   engine.add(spySection());
+  engine.add(new ChapterMarks(rm));
+  engine.add(day);
+  engine.add(new BandsMotion(rm, low, () => engine.measure()));
   engine.start();
   let stopped = false;
   import("../lines/strands")
@@ -70,7 +83,7 @@ export function startLanding(entry: LoaderEntry): LandingMotion {
       /* the lines are decoration: without them the intro still reads */
     });
   if (import.meta.env.DEV) {
-    (window as unknown as { __centiumLanding?: unknown }).__centiumLanding = { engine, intro, phone, state: landingState };
+    (window as unknown as { __centiumLanding?: unknown }).__centiumLanding = { engine, intro, phone, day, state: landingState };
   }
   return {
     engine,

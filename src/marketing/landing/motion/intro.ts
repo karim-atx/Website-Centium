@@ -15,6 +15,7 @@ import { landingState } from "../state";
 import { placeDot } from "../loading/title";
 import type { LoaderEntry } from "../loading/pickLoader";
 import type { PhoneMotion } from "./phone";
+import type { DayMotion } from "./day";
 import type { Strands, StrandRect, Swirl } from "../lines/strands";
 
 interface Frag {
@@ -72,11 +73,13 @@ export class IntroMotion implements EngineSection {
   private phone: PhoneMotion;
   private entry: LoaderEntry;
   private rm: boolean;
+  private day: DayMotion | null;
 
-  constructor(phone: PhoneMotion, entry: LoaderEntry, rm: boolean) {
+  constructor(phone: PhoneMotion, entry: LoaderEntry, rm: boolean, day: DayMotion | null = null) {
     this.phone = phone;
     this.entry = entry;
     this.rm = rm;
+    this.day = day;
   }
 
   /** The intro line field, once the code-split line engine has arrived. */
@@ -256,25 +259,46 @@ export class IntroMotion implements EngineSection {
     return this.rm ? 0 : 250 * (1 - sm(0.7, 0.745, p)) * sm(0.5, 0.56, p);
   }
 
-  /** Prototype `phonePose` (section 01 is not on the page yet: after the intro the phone scrolls away with it). */
+  /** Prototype `phonePose`: after the intro the phone eases from the hero pose
+   *  into section 01's (day.pose) by the time the day track starts, holds it
+   *  through the track, then scrolls away with the page. Without section 01 on
+   *  the page it scrolls away with the intro. */
   private phonePose(y: number, p: number) {
     const M = this.M!,
       rm = this.rm;
     const pIn = M.lg ? (rm ? (p > 0.57 ? 1 : 0) : sm(0.56, 0.61, p)) : rm ? (p > 0.7 ? 1 : 0) : sm(0.66, 0.72, p),
       heroK = sm(0.8, 0.93, p);
-    let dy = M.dyHero * heroK;
-    const sc = (M.sI || M.s) + (M.s - (M.sI || M.s)) * heroK,
-      op = pIn;
+    let dy = M.dyHero * heroK,
+      sc = (M.sI || M.s) + (M.s - (M.sI || M.s)) * heroK;
+    const op = pIn;
     const end = M.top + M.span,
       after = y - end;
-    if (after > 0) dy = M.dyHero - after;
+    if (after > 0) {
+      const Cd = this.day?.track,
+        D = this.day?.pose;
+      if (Cd && D) {
+        const gap = Math.max(1, Cd.t - end);
+        if (y <= Cd.t) {
+          const e = sm(0, 1, after / gap);
+          dy = M.dyHero * (1 - e) + D.dy * e;
+          sc = M.s + (D.s - M.s) * e;
+        } else if (y <= Cd.t + Cd.span) {
+          dy = D.dy;
+          sc = D.s;
+        } else {
+          dy = D.dy - (y - Cd.t - Cd.span);
+          sc = D.s;
+        }
+      } else dy = M.dyHero - after;
+    }
     return { dy, sc, op };
   }
 
-  /** Prototype `introPhone`. */
-  private introPhone(p: number) {
+  /** Prototype `introPhone` (section 01 takes the phone over a screen before its track). */
+  private introPhone(p: number, y: number) {
     const din = document.getElementById("dash-in");
     if (!din) return;
+    if (this.day && this.day.ownsPhone(y)) return;
     const o = this.rm ? (p > 0.58 ? 1 : 0) : this.M && !this.M.lg ? sm(0.66, 0.72, p) : sm(0.56, 0.62, p);
     din.style.opacity = o.toFixed(3);
     this.phone.setOff(this.introOff(p));
@@ -338,8 +362,9 @@ export class IntroMotion implements EngineSection {
       M.phone.style.transform = "translateY(" + pose.dy.toFixed(1) + "px) scale(" + pose.sc.toFixed(4) + ")";
     }
     if (M.lg) {
-      const endT = M.top + M.span,
-        exitLen = M.vh * 0.22,
+      const Cd = this.day?.track,
+        endT = M.top + M.span,
+        exitLen = Cd ? Math.max(40, Math.min(M.vh * 0.22, Cd.t + 96 - M.vh - endT)) : M.vh * 0.22,
         out = clamp((y - endT) / exitLen),
         v = (rm ? (p >= 0.86 ? 1 : 0) : sm(0.82, 0.92, p)) * (rm ? (out > 0.5 ? 0 : 1) : 1 - sm(0, 1, out)),
         e = 1 - Math.pow(1 - v, 3),
@@ -427,7 +452,7 @@ export class IntroMotion implements EngineSection {
       const tr = rm ? (p > 0.36 && p < 0.56 ? 1 : 0) : sm(0.3, 0.38, p) * (1 - sm(0.53, 0.6, p));
       [5, 6].forEach((g) => SS.set(g, { rect: M.tRect, reach: tr, alpha: 1 }));
     }
-    this.introPhone(p);
+    this.introPhone(p, y);
     this.debug.phone = this.phone.state;
     if (M.copy) {
       const u = sm(0.8, 0.88, p);
