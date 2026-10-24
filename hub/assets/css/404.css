@@ -1,0 +1,53 @@
+/* Atraxia website: the 404 page (NF1 v9). Values are the handover's
+   consolidated rules (HANDOVER.md c), which resolve the prototype's layered
+   CSS (nf404.css, -v3, -v4, -v5 and its inline head style) into one set.
+   The sky, the constellation and the comet are drawn by 404-sky.js on two
+   fixed canvases; there is no halo and no darkening shape: the star field
+   itself thins out around the copy. Layers, bottom to top: .sl-sky (z -1),
+   canvas.nf-field (z 0), canvas.nf-lost (z 0, after nf-field), main (z 1). */
+
+/* the deep-space base, under the canvases (and all that shows if 2D canvas is
+   unavailable) */
+html.page-404 .sl-sky { background: #02060C; }
+canvas.nf-field, canvas.nf-lost { position: fixed; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; z-index: 0; }
+
+/* layout: centred both ways, the content in a 760px column. As in the
+   prototype, main is pulled up under the header (which sits in the flow here)
+   by its height, --navh from core.js; the 140px top padding clears it. */
+main.nf { position: relative; z-index: 1; margin-top: calc(var(--navh, 104px) * -1); min-height: calc(100svh - 220px); display: flex; align-items: center; justify-content: center; padding: 140px 0 96px; text-align: center; line-height: normal; }
+.nf-wrap { display: flex; flex-direction: column; align-items: center; max-width: 760px; }
+
+/* the eyebrow, in the landing page's section-label style (.jr-eyebrow tokens) */
+.nf-eyebrow { display: inline-flex; align-items: center; gap: 1rem; margin: 0; }
+.nf-eyebrow .rule { flex: none; width: 38px; height: 1px; background: linear-gradient(90deg, rgb(143 216 232 / 0.1), rgb(143 216 232 / 0.75)); }
+.nf-eyebrow .label { font-size: 0.69rem; font-weight: 700; letter-spacing: 0.24em; color: #A6CDD8; white-space: nowrap; text-transform: uppercase; }
+.nf-eyebrow .label::after { content: ""; display: inline-block; width: 0; }
+
+/* the "404" (aria-hidden), in the landing display style (.hero-h1 tokens) and
+   the landing palette; no glow, no shadow, no filter */
+.nf-code {
+  margin: 20px 0 10px; font-weight: 800; font-size: clamp(5.5rem, 11.5vw, 9rem); line-height: 1; letter-spacing: -0.036em;
+  background: linear-gradient(104deg, #F4FAFC 6%, #D6EBEE 40%, #A6CDD8 66%, #8FD8E8 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  font-variant-numeric: lining-nums; user-select: none;
+}
+.nf-h { margin: 10px 0 0; font-weight: 800; font-size: clamp(1.75rem, 3.6vw, 2.6rem); line-height: 1.12; letter-spacing: -0.03em; color: #F4FAFC; text-wrap: balance; }
+.nf-lede { margin: 16px 0 0; font-size: 1.06rem; line-height: 1.6; color: #A5C0CA; max-width: 34rem; text-wrap: pretty; }
+
+/* actions: Back to home (primary), Contact us and Read our thinking (secondary) */
+.nf-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 36px; }
+.nf-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; border-radius: 999px; font-weight: 700; font-size: .9rem; text-decoration: none; transition: background-color .2s ease, border-color .2s ease, color .2s ease, transform .2s ease; }
+.nf-home { background: #F4FAFC; color: #023B4A; padding: 0 1.9rem; }
+.nf-home:hover { background: #FFFFFF; color: #023B4A; transform: translateY(-1px); }
+.nf-ghost { padding: 0 1.5rem; color: #F4FAFC; border: 1px solid rgb(255 255 255 / .22); background: rgb(255 255 255 / .04); }
+.nf-ghost:hover { color: #F4FAFC; border-color: rgb(143 216 232 / .5); background: rgb(143 216 232 / .08); transform: translateY(-1px); }
+.nf-btn:active { transform: translateY(0); }
+.nf-btn:focus { outline: none; }
+.nf-btn:focus-visible { outline: 2px solid #8FD8E8; outline-offset: 3px; }
+
+@media (max-width: 560px) {
+  main.nf { padding: 112px 0 64px; min-height: calc(100svh - 160px); }
+  .nf-code { font-size: clamp(4.75rem, 26vw, 6.25rem); margin: 14px 0 8px; }
+  .nf-lede { font-size: 1rem; }
+  .nf-actions { flex-direction: column; align-items: stretch; width: 100%; max-width: 320px; margin-top: 30px; }
+  .nf-btn { width: 100%; }
+}

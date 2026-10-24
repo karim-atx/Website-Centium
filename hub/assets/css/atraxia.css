@@ -156,15 +156,6 @@ main:focus { outline: none; }
   .nav-menu a:hover, .nav-menu a:focus-visible, .nav-menu a.is-active { color: #FFFFFF; background: rgb(255 255 255 / 0.12); }
 }
 
-/* ---------- 404 (not in the handover: a simple page on the Contact page's
-   calm backdrop, with its heading values) ---------- */
-.nf-page { min-height: 62vh; display: flex; align-items: center; padding: 4rem 0 6rem; line-height: normal; }
-.nf-head { text-align: center; max-width: 42rem; }
-.nf-head .sl-eyebrow { margin-bottom: 0; letter-spacing: .32em; }
-.nf-head h1 { margin: 1rem 0; font-size: clamp(2.3rem, 4.6vw, 3.1rem); line-height: 1.08; font-weight: 800; letter-spacing: -.025em; color: #F4FAFC; text-shadow: 0 2px 40px rgb(1 5 10 / .7); }
-.nf-head p { margin: 0 0 2rem; font-size: 1.1rem; line-height: 1.65; color: #A5C0CA; text-wrap: pretty; }
-@media (max-width: 760px) { .nf-page { min-height: 50vh; padding: 2.5rem 0 3rem; } .nf-head h1 { font-size: 2.1rem; } }
-
 /* ---------- footer ---------- */
 .site-footer { position: relative; z-index: 1; padding: 1.5rem 0 3rem; line-height: normal; overflow-x: clip; } /* the glow is 120vw wide on phones; clip it sideways only, so it still rises above the footer */
 /* the light carries on behind the footer, breathing slowly */
