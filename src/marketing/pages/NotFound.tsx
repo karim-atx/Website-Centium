@@ -10,7 +10,7 @@ import { useSEO } from "../useSEO";
  *  real site chrome, and a one-off different header here would read as
  *  inconsistent when navigating between pages. */
 export const NotFound: React.FC = () => {
-  useSEO("Page not found", "This page doesn't exist — or it moved. Your health hub is still right where you left it.");
+  useSEO("Page not found", "This page doesn't exist, or it moved. Your health hub is still right where you left it.", { noindex: true });
 
   return (
     <div className="relative overflow-hidden">

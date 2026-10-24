@@ -1,0 +1,41 @@
+# Cloudflare Pages routing for the Centium SPA.
+#
+# dist/404.html exists (vite.config.ts, plugin "centium-404-page"), so Pages no
+# longer runs in SPA mode: a path that is neither a file nor listed here gets
+# dist/404.html with HTTP 404, which still boots the app and renders the
+# marketing NotFound page. Every real route must therefore be listed below.
+# When you add a public route in src/App.tsx, add it here too.
+#
+# NEVER add a catch-all (/* /index.html 200): it would turn every 404 back
+# into a 200. "/" needs no rule (index.html is a file).
+
+# Retired marketing pages (landing v29, decision A): their content lives in
+# the landing's own sections now. The query string is kept by Pages.
+/product              /#platform    301
+/pricing              /#pricing     301
+/business             /#everyone    301
+
+# Marketing pages (the trailing-slash forms 301 to the canonical path; an
+# exact rule does not match them, and they were 200 before 404.html existed)
+/contact/             /contact        301
+/legal/               /legal          301
+/legal/privacy/       /legal/privacy  301
+/legal/terms/         /legal/terms    301
+/contact              /             200
+/legal                /             200
+/legal/privacy        /             200
+/legal/terms          /             200
+
+# Public pages that need no session
+/certificate/:serial  /             200
+/i/:code              /             200
+/p/:handle            /             200
+/p/:handle/book       /             200
+/s/:id                /             200
+/b/:slug              /             200
+/b/:slug/*            /             200
+
+# The web app: every deep link and reload under /app stays 200; unknown
+# /app/... paths keep the client redirect to "/".
+/app                  /             200
+/app/*                /             200

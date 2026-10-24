@@ -27,13 +27,22 @@ function setCanonical(href: string) {
   el.setAttribute("href", href);
 }
 
+/** The share title for a page (landing v29: no em dashes, "Centium: <title>",
+ *  e.g. "Centium: Your health, all in one place"). */
+export function shareTitle(title: string): string {
+  return title ? `${SITE_NAME}: ${title}` : SITE_NAME;
+}
+
 /** Sets per-route document title + meta description/OG tags. CSR-only, so this only helps
  *  clients that execute JS (browsers, most modern crawlers) — see index.html for the static
- *  fallback tags used by crawlers that don't. */
-export function useSEO(title: string, description: string = DEFAULT_DESCRIPTION) {
+ *  fallback tags used by crawlers that don't. `noindex` (the 404) adds
+ *  <meta name="robots" content="noindex"> while the page is shown; Cloudflare
+ *  serves unknown paths as dist/404.html, which carries the same tag statically. */
+export function useSEO(title: string, description: string = DEFAULT_DESCRIPTION, options: { noindex?: boolean } = {}) {
   const { pathname } = useLocation();
+  const noindex = !!options.noindex;
   useEffect(() => {
-    const fullTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME;
+    const fullTitle = shareTitle(title);
     // Tab title is always just "Centium" — flat across every route, no
     // per-page name or separator. og:title/twitter:title below still use
     // the per-page fullTitle, unaffected by this — those describe how the
@@ -55,4 +64,16 @@ export function useSEO(title: string, description: string = DEFAULT_DESCRIPTION)
     setMeta("og:url", url, "property");
     setMeta("twitter:url", url);
   }, [title, description, pathname]);
+
+  useEffect(() => {
+    if (!noindex) return;
+    const prev = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]')?.getAttribute("content") ?? null;
+    setMeta("robots", "noindex");
+    return () => {
+      const el = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]');
+      if (!el) return;
+      if (prev == null) el.remove();
+      else el.setAttribute("content", prev);
+    };
+  }, [noindex]);
 }

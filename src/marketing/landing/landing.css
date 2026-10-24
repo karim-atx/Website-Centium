@@ -1,0 +1,62 @@
+/* Centium landing v29: the few states inline styles cannot express (hover,
+   focus, active, a keyframe), plus the prototype's base rules scoped to the
+   marketing site. Imported once by MarketingLayout. Values stay inline on
+   each element as CSS custom properties (--hc, --hbg, ...), so the literal
+   handover values live in the markup; these classes only switch them on.
+   !important because the resting value is an inline style. No font sizes
+   here: PostCSS larger-text would rewrite them (see postcss.config.js). */
+
+/* The prototype's html{overflow-x:clip} / body{overflow-x:clip}, only while a
+   marketing page is mounted (MarketingLayout toggles the class). */
+html.centium-site-html,
+html.centium-site-html body {
+  overflow-x: clip;
+}
+
+.centium-site summary::-webkit-details-marker {
+  display: none;
+}
+
+/* pages.md accessibility: focus outlines 2px #4E3894. */
+.centium-site a:focus-visible,
+.centium-site button:focus-visible,
+.centium-site summary:focus-visible {
+  outline: 2px solid #4e3894;
+  outline-offset: 2px;
+}
+
+.centium-site .cl-hc:hover {
+  color: var(--hc) !important;
+}
+.centium-site .cl-hbg:hover {
+  background: var(--hbg) !important;
+}
+.centium-site .cl-hbd:hover {
+  border-color: var(--hbd) !important;
+}
+.centium-site .cl-lift:hover {
+  transform: translateY(-2px) !important;
+}
+.centium-site .cl-press:active {
+  transform: scale(0.96) !important;
+}
+.centium-site .cl-abg:active {
+  background: var(--abg) !important;
+}
+/* Footer and legal text links: the 1px underline grows on hover. */
+.centium-site .cl-uline:hover {
+  background-size: 100% 1px !important;
+}
+
+/* The mobile menu's entrance (the prototype's fade-slide-up, renamed: the
+   app owns a different fade-slide-up keyframe). */
+@keyframes centium-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

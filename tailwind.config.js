@@ -24,8 +24,48 @@ export default {
         // V7 (QA 7.0): switched that shared face to Manrope.
         display: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
         sans: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Centium landing v29 (01_tokens font.mono). Namespaced: the app's own
+        // font-mono stays Tailwind's default. JetBrains Mono is loaded by
+        // MarketingLayout for the marketing routes only.
+        "centium-mono": ["JetBrains Mono", "ui-monospace", "monospace"],
       },
       colors: {
+        // Centium landing v29 (handover 01_tokens/tokens.json), namespaced under
+        // centium.* so nothing collides with the app's theme-aware names
+        // (teal, primary, th, ...). Literal values, never theme tokens: the
+        // marketing site stays light whatever the app theme on <html> is.
+        centium: {
+          white: "#FFFFFF",
+          ink: "#221E1A",
+          ink2: "#3B352D",
+          body: "#5B5349",
+          muted: "#7A7168",
+          muted2: "#8C8378",
+          hair: "#EDEAE4",
+          lavender: {
+            50: "#F4F1FB",
+            100: "#EDE8FB",
+            200: "#DED4F4",
+            300: "#B9A9EE",
+            500: "#7D67D9",
+            600: "#6A54C4",
+            700: "#5C48A8",
+            800: "#4E3894",
+            900: "#3E2C80",
+            logo: "#9C7FF8",
+            surface: "#F7F5FC",
+            page: "#FAF9FE",
+          },
+          teal: {
+            50: "#EDF4F3",
+            100: "#DAEAE7",
+            300: "#8FC3BA",
+            500: "#5E9E95",
+            700: "#3F726D",
+            900: "#2F5F58",
+            leaf: "#8AC4BA",
+          },
+        },
         cream: {
           DEFAULT: "rgb(var(--c-cream) / <alpha-value>)",
           soft: "rgb(var(--c-cream-soft) / <alpha-value>)",
@@ -330,6 +370,10 @@ export default {
         "5xl": "2.5rem",
       },
       boxShadow: {
+        // Centium landing v29 (01_tokens shadow.*). Prefixed: boxShadow.card is the app's.
+        "centium-card": "0 1px 1px rgba(72,58,130,.05),0 10px 24px rgba(72,58,130,.07),0 40px 80px rgba(92,72,168,.12)",
+        "centium-card-mobile": "0 1px 2px rgba(72,58,130,.06),0 6px 14px rgba(72,58,130,.06)",
+        "centium-nav-plate": "0 6px 22px rgba(72,58,130,.10)",
         soft: "0 2px 10px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04)",
         card: "0 8px 30px rgb(0 0 0 / 0.10)",
         lift: "0 16px 40px rgb(0 0 0 / 0.20)",
@@ -344,6 +388,10 @@ export default {
         "focus-ring": "var(--shadow-focus-ring)",
         "primary-button": "var(--shadow-primary-button)",
         navbar: "var(--shadow-navbar)",
+      },
+      // Centium landing v29 (01_tokens motion.easeOut).
+      transitionTimingFunction: {
+        centium: "cubic-bezier(.22,1,.36,1)",
       },
       backgroundImage: {
         "approval-glow": "var(--gradient-approval-glow)",
@@ -483,14 +531,8 @@ export default {
           "0%": { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
           "100%": { transform: "translate(var(--confetti-drift), 100vh) rotate(var(--confetti-rotate))", opacity: 0.2 },
         },
-        // v2 Centium landing handoff: the reviews conveyor belt (duplicated
-        // card list, translated exactly -50% of its own width minus the
-        // gap so the loop seam is invisible) and the two drifting decorative
-        // orbs behind the "Beyond the Individual" ecosystem cards.
-        "mkt-belt": {
-          "0%": { transform: "translate3d(0,0,0)" },
-          "100%": { transform: "translate3d(calc(-50% - 9px),0,0)" },
-        },
+        // v2 Centium landing handoff: the two drifting decorative orbs (the
+        // marketing NotFound page uses them).
         "mkt-drift-a": {
           "0%, 100%": { transform: "translate3d(0,0,0)" },
           "50%": { transform: "translate3d(26px,-34px,0)" },
@@ -498,36 +540,6 @@ export default {
         "mkt-drift-b": {
           "0%, 100%": { transform: "translate3d(0,0,0)" },
           "50%": { transform: "translate3d(-30px,26px,0)" },
-        },
-        // The Problem section's one-shot answer-row shimmer, and the loader
-        // wordmark's identical sweep highlight — same motion, same curve.
-        "mkt-shimmer": {
-          "0%": { backgroundPosition: "-90% 0" },
-          "100%": { backgroundPosition: "190% 0" },
-        },
-        // v3 landing handoff: the solved Problem section's teal sheen — three
-        // layers (a skewed vertical wipe, a diagonal gloss crossing
-        // horizontally, and a pulsing ring on the bar itself) that fire once
-        // and are removed from the DOM at 2200ms, so the bar always rests on
-        // its flat fill rather than looping.
-        "cent-teal-wipe": {
-          "0%": { opacity: "0", transform: "translateY(-100%) skewY(-3deg)" },
-          "18%": { opacity: "1" },
-          "82%": { opacity: "1" },
-          "100%": { opacity: "0", transform: "translateY(100%) skewY(-3deg)" },
-        },
-        "cent-teal-gloss": {
-          "0%": { opacity: "0", transform: "translate3d(-120%,0,0) skewX(-18deg)" },
-          "22%": { opacity: "0.9" },
-          "70%": { opacity: "0.55" },
-          "100%": { opacity: "0", transform: "translate3d(220%,0,0) skewX(-18deg)" },
-        },
-        "cent-teal-edge": {
-          "0%": { boxShadow: "0 0 0 0 rgba(94,158,149,0)" },
-          "22%": { boxShadow: "0 0 0 5px rgba(94,158,149,.34)" },
-          "52%": { boxShadow: "0 0 0 0 rgba(94,158,149,0)" },
-          "74%": { boxShadow: "0 0 0 4px rgba(94,158,149,.26)" },
-          "100%": { boxShadow: "0 0 0 0 rgba(94,158,149,0)" },
         },
       },
       animation: {
@@ -563,13 +575,8 @@ export default {
         "calorie-flame": "calorie-flame 1.6s ease-in-out infinite",
         "calorie-glow": "calorie-glow 2.4s ease-out infinite",
         "confetti-fall": "confetti-fall 1.8s ease-in both",
-        "mkt-belt": "mkt-belt 46s linear infinite",
         "mkt-drift-a": "mkt-drift-a 22s ease-in-out infinite",
         "mkt-drift-b": "mkt-drift-b 27s ease-in-out infinite",
-        "mkt-shimmer": "mkt-shimmer 1.2s ease-in-out both",
-        "cent-teal-wipe": "cent-teal-wipe 1.5s cubic-bezier(.4,0,.3,1) .1s both",
-        "cent-teal-gloss": "cent-teal-gloss 1.35s cubic-bezier(.32,0,.24,1) .22s both",
-        "cent-teal-edge": "cent-teal-edge 1.9s ease-out .1s both",
       },
     },
   },

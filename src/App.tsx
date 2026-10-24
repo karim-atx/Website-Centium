@@ -10,9 +10,6 @@ import { hasReturnedAuthError } from "./services/auth";
 import { Layout } from "./components/navigation/Layout";
 import { MarketingLayout } from "./marketing/layouts/MarketingLayout";
 import { Home as MarketingHome } from "./marketing/pages/Home";
-import { Product as MarketingProduct } from "./marketing/pages/Product";
-import { Pricing as MarketingPricing } from "./marketing/pages/Pricing";
-import { Business as MarketingBusiness } from "./marketing/pages/Business";
 import { Contact as MarketingContact } from "./marketing/pages/Contact";
 import { Legal as MarketingLegal } from "./marketing/pages/Legal";
 import { NotFound as MarketingNotFound } from "./marketing/pages/NotFound";
@@ -378,12 +375,19 @@ function AppRoutes() {
     <ReturnedAuthErrorRoute />
     <PublicReturnResume />
     <Routes>
-      {/* Public marketing site */}
+      {/* Public marketing site.
+          EVERY public route (here and below, outside /app) must also be
+          listed in public/_redirects as a 200 rewrite: dist/404.html exists,
+          so Cloudflare Pages answers any path it does not know with a real
+          404. */}
       <Route element={<MarketingLayout />}>
         <Route path="/" element={<MarketingHome />} />
-        <Route path="/product" element={<MarketingProduct />} />
-        <Route path="/pricing" element={<MarketingPricing />} />
-        <Route path="/business" element={<MarketingBusiness />} />
+        {/* Landing v29 (decision A): the old Product / Pricing / Business
+            pages are retired into the landing's own sections. The edge
+            301s them (public/_redirects); these cover in-app navigation. */}
+        <Route path="/product" element={<Navigate to="/#platform" replace />} />
+        <Route path="/pricing" element={<Navigate to="/#pricing" replace />} />
+        <Route path="/business" element={<Navigate to="/#everyone" replace />} />
         <Route path="/contact" element={<MarketingContact />} />
         <Route path="/legal" element={<MarketingLegal />} />
         {/* v2 landing handoff consolidated the two standalone legal pages
