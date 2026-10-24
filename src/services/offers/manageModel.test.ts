@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  END_LOCKED_NOTE,
   dayLabel,
   draftOf,
   emptyDraft,
@@ -114,6 +115,12 @@ test("validate: points cost > 0, ends ≥ starts, value per type, limit ≥ 1", 
   assert.deepEqual(validateDraft(good({ pointsCost: "1,200" }), "business"), {});
   assert.equal(validateDraft(good({ endsOn: "2026-10-31" }), "business").endsOn, "The end date can't be before the start date.");
   assert.deepEqual(validateDraft(good({ endsOn: "2026-11-01" }), "business"), {});
+  // No end date is allowed (the server allows it; Karim)…
+  assert.deepEqual(validateDraft(good({ endsOn: "" }), "business"), {});
+  assert.deepEqual(validateDraft(good({ endsOn: "" }), "business", false), {});
+  // …except on an offer that already has one: update_offer can't clear it.
+  assert.equal(validateDraft(good({ endsOn: "" }), "business", false, true).endsOn, END_LOCKED_NOTE);
+  assert.deepEqual(validateDraft(good({ endsOn: "2027-03-01" }), "business", false, true), {});
   assert.ok(validateDraft(good({ value: "0" }), "business").value);
   assert.ok(validateDraft(good({ value: "101" }), "business").value);
   assert.ok(validateDraft(good({ type: "amount_off", value: "0" }), "business").value);
@@ -138,6 +145,7 @@ test("args: documented fields; free item has no value; empty cap is null", () =>
   assert.equal(a.p_where_used, "both");
   assert.equal(offerArgs(good({ type: "free_item", value: "9" }), "business").p_value, null);
   assert.equal(offerArgs(good({ quantityCap: "" }), "business").p_quantity_cap, null);
+  assert.equal(offerArgs(good({ endsOn: "" }), "business").p_ends_on, null);
   assert.equal(offerArgs(good({ appliesTo: "svc1" }), "professional").p_applies_to, "svc1");
   // offers_where_check: in_person | online | both; a business's "In store" is in_person.
   assert.equal(offerArgs(good({ where: "in_store" }), "business").p_where_used, "in_person");
@@ -166,6 +174,7 @@ test("preview rows: business (Terms) and professional (Applies to, Per-client li
   assert.equal(p[7].v, "In person");
   // Editing a professional offer: no stored Applies to, so the row is left out.
   assert.ok(!previewRows(good({ where: "in_person" }), "professional", null).some((r) => r.k === "Applies to"));
+  assert.equal(previewRows(good({ endsOn: "" }), "business", null).find((r) => r.k === "Dates")?.v, "From Nov 1, 2026 · No end date");
   assert.equal(previewRows(good({ quantityCap: "" }), "business", null)[3].v, "No cap");
   assert.equal(valueLabel({ type: "amount_off", value: "12.5" }), "$12.50");
   assert.equal(valueLabel({ type: "free_item", value: "" }), "Free");

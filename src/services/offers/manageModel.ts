@@ -237,10 +237,12 @@ export const TERMS_MAX = 500;
  * a free item has no value; a NEW professional offer applies to one of their
  * services (create_offer accepts p_applies_to and doesn't store it, so an
  * existing offer reads it back as null and editing doesn't ask again);
- * per-member limit 1 or more; quantity cap empty or 1 or more; both dates,
- * the end on or after the start.
+ * per-member limit 1 or more; quantity cap empty or 1 or more; a start date;
+ * the end date optional (no end date, as the server allows; Karim), on or
+ * after the start. `endLocked`: the offer already has an end date, which
+ * update_offer cannot remove (a null p_ends_on keeps the current one).
  */
-export function validateDraft(d: OfferDraft, variant: OfferVariant, isNew = true): DraftErrors {
+export function validateDraft(d: OfferDraft, variant: OfferVariant, isNew = true, endLocked = false): DraftErrors {
   const e: DraftErrors = {};
   const h = d.headline.trim();
   if (!h) e.headline = "Give the offer a headline.";
@@ -262,10 +264,14 @@ export function validateDraft(d: OfferDraft, variant: OfferVariant, isNew = true
   const lim = whole(d.perMemberLimit);
   if (lim === null || lim < 1) e.perMemberLimit = "Enter 1 or more.";
   if (!d.startsOn) e.startsOn = "Choose a start date.";
-  if (!d.endsOn) e.endsOn = "Choose an end date.";
-  else if (d.startsOn && d.endsOn < d.startsOn) e.endsOn = "The end date can't be before the start date.";
+  if (!d.endsOn) {
+    if (endLocked) e.endsOn = END_LOCKED_NOTE;
+  } else if (d.startsOn && d.endsOn < d.startsOn) e.endsOn = "The end date can't be before the start date.";
   return e;
 }
+
+/** Shown when an offer that has an end date is saved without one. */
+export const END_LOCKED_NOTE = "An end date can't be removed once it's set. Choose a new date instead.";
 
 /**
  * offers.where_used is in_person | online | both (offers_where_check): a
@@ -284,7 +290,7 @@ export function offerArgs(d: OfferDraft, variant: OfferVariant): Record<string, 
     p_quantity_cap: d.quantityCap.trim() === "" ? null : whole(d.quantityCap),
     p_per_member_limit: whole(d.perMemberLimit) ?? 1,
     p_starts_on: d.startsOn,
-    p_ends_on: d.endsOn,
+    p_ends_on: d.endsOn || null,
     p_where_used: whereUsedOf(d.where),
     p_terms: d.terms.trim() || null,
   };
@@ -359,7 +365,7 @@ export function previewRows(d: OfferDraft, variant: OfferVariant, appliesToLabel
   const cap = whole(d.quantityCap);
   out.push({ k: "Quantity cap", v: d.quantityCap.trim() === "" ? "No cap" : cap === null ? d.quantityCap : formatPoints(cap) });
   out.push({ k: variant === "professional" ? "Per-client limit" : "Per-member limit", v: String(whole(d.perMemberLimit) ?? d.perMemberLimit) });
-  out.push({ k: "Dates", v: d.startsOn && d.endsOn ? `${dayLabel(d.startsOn)} to ${dayLabel(d.endsOn)}` : "" });
+  out.push({ k: "Dates", v: d.startsOn ? (d.endsOn ? `${dayLabel(d.startsOn)} to ${dayLabel(d.endsOn)}` : `From ${dayLabel(d.startsOn)} · No end date`) : "" });
   out.push({ k: "Where", v: whereLabel(d.where, variant) });
   if (variant === "business" && d.terms.trim()) out.push({ k: "Terms", v: d.terms.trim() });
   return out;

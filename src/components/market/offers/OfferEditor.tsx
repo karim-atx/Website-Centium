@@ -127,7 +127,9 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isNew, ownerKey, offerId, tick]);
 
-  const errors: DraftErrors = useMemo(() => validateDraft(draft, variant, isNew), [draft, variant, isNew]);
+  // An offer that already has an end date keeps one (update_offer cannot clear it).
+  const endLocked = existing?.kind === "ready" && !!existing.offer.endsOn;
+  const errors: DraftErrors = useMemo(() => validateDraft(draft, variant, isNew, endLocked), [draft, variant, isNew, endLocked]);
   const shown: DraftErrors = showErrors ? errors : {};
   const set = <K extends keyof OfferDraft>(k: K, v: OfferDraft[K]) => {
     setSaveNote(null);
@@ -321,7 +323,7 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
           <DateBox id="offer-starts" value={draft.startsOn} onChange={(v) => set("startsOn", v)} error={shown.startsOn} />
         </div>
         <div data-field="endsOn">
-          <FieldLabel htmlFor="offer-ends">Ends</FieldLabel>
+          <FieldLabel htmlFor="offer-ends">{endLocked ? "Ends" : "Ends (optional)"}</FieldLabel>
           <DateBox id="offer-ends" value={draft.endsOn} min={draft.startsOn || undefined} onChange={(v) => set("endsOn", v)} error={shown.endsOn} />
         </div>
       </div>
