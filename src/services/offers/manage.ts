@@ -6,13 +6,23 @@
 // 'marketing'), a professional their own) AND every other owner's live offer,
 // so the read always filters on the owner's column.
 //
-// WRITES ARE A DATABASE GAP. DB2 gives owners no way to create, edit, pause
-// or publish an offer: `offers` has no INSERT / UPDATE grant or policy for
-// authenticated ("every write goes through a SECURITY DEFINER function") and
-// no owner function exists (only redeem_offer, check_voucher,
-// mark_voucher_used and the admin hide). The three writers below keep W3's
-// PLAN §2.2 calls; PostgREST answers PGRST202 and the screens show their quiet
-// "coming soon" strip until the Database ships them.
+// WRITES (Database PR #39, 20261214010000; HANDOVER_API "DB2 · An owner
+// creates, edits and pauses an offer"): `offers` has no INSERT / UPDATE grant
+// for authenticated, so every write is a SECURITY DEFINER function, each
+// returning the offers row:
+// - create_offer(p_headline, p_type, p_points_cost, p_starts_on, p_where_used,
+//   p_value, p_applies_to, p_quantity_cap, p_per_member_limit, p_ends_on,
+//   p_terms, p_business_id, p_funding_ack, p_request_id): p_business_id
+//   omitted = the caller's own offer as a professional; the category is
+//   derived on the server; p_funding_ack must be true to publish
+//   (funding_ack_required); p_request_id becomes the offer's id, so a retry
+//   returns the first offer;
+// - update_offer(p_offer_id, …): the editor sends the whole draft (null
+//   clears quantity_cap and terms, leaves the rest); an ended offer refuses
+//   (offer_expired), a taken-down one too (42501);
+// - set_offer_paused(p_offer_id, p_paused).
+// Refusals: the four keywords (offerErrorOf), then the SQLSTATEs
+// (offerWriteRefusal).
 
 import { currentUserId, marketDb, marketRpcRaw, type MarketResult } from "../market/rpc";
 import { isOffline } from "../network-error";
@@ -21,6 +31,7 @@ import {
   OFFER_ERROR_TEXT,
   offerArgs,
   offerErrorOf,
+  offerWriteRefusal,
   parseManagedOffers,
   parseOneOffer,
   type ManagedOffer,
@@ -63,18 +74,19 @@ export async function fetchMyOffer(owner: OfferOwner, offerId: string): Promise<
   return { ok: true, value: all.value.find((o) => o.id === offerId) ?? null };
 }
 
-export type OfferWrite = { ok: true; offer: ManagedOffer | null } | { ok: false; pending?: boolean; offline?: boolean; error?: OfferError; message: string };
+export type OfferWrite = { ok: true; offer: ManagedOffer | null } | { ok: false; offline?: boolean; error?: OfferError; code?: string; message: string };
 
-async function write(fn: string, args: Record<string, unknown>, fallback: string, pendingText: string): Promise<OfferWrite> {
+async function write(fn: string, args: Record<string, unknown>, fallback: string): Promise<OfferWrite> {
   const res = await marketRpcRaw(fn, args);
   if ("thrown" in res) return { ok: false, offline: isOffline(res.thrown), message: fallback };
   if (res.error) {
-    if (res.error.code === "PGRST202" || res.error.code === "42883") return { ok: false, pending: true, message: pendingText };
     if (isOffline(res.error)) return { ok: false, offline: true, message: fallback };
     const k = offerErrorOf(res.error);
-    if (k) return { ok: false, error: k, message: OFFER_ERROR_TEXT[k] };
+    if (k) return { ok: false, error: k, code: res.error.code, message: OFFER_ERROR_TEXT[k] };
+    const refusal = offerWriteRefusal(res.error);
+    if (refusal) return { ok: false, code: res.error.code, message: refusal };
     console.error(`[offers] ${fn}:`, res.error.message);
-    return { ok: false, message: fallback };
+    return { ok: false, code: res.error.code, message: fallback };
   }
   return { ok: true, offer: parseOneOffer(res.data) };
 }
@@ -86,33 +98,19 @@ async function write(fn: string, args: Record<string, unknown>, fallback: string
  */
 export function createOffer(owner: OfferOwner, draft: OfferDraft, requestId: string): Promise<OfferWrite> {
   const variant: OfferVariant = owner.variant;
-  // awaiting DB stage DB2 owner writer (gap: 33c0bf5 ships none; see the header)
   return write(
     "create_offer",
     { ...offerArgs(draft, variant), ...ownerArgs(owner), p_funding_ack: draft.fundingAck, p_request_id: requestId },
-    "Couldn't publish this offer. Try again.",
-    "Publishing offers is coming soon."
+    "Couldn't publish this offer. Try again."
   );
 }
 
-/** update_offer(p_offer_id, …): refuses offer_expired. */
+/** update_offer(p_offer_id, …): refuses offer_expired (ended) and a taken-down offer. */
 export function updateOffer(owner: OfferOwner, offerId: string, draft: OfferDraft): Promise<OfferWrite> {
-  // awaiting DB stage DB2 owner writer (gap: 33c0bf5 ships none; see the header)
-  return write(
-    "update_offer",
-    { p_offer_id: offerId, ...offerArgs(draft, owner.variant), p_funding_ack: draft.fundingAck },
-    "Couldn't save this offer. Try again.",
-    "Editing offers is coming soon."
-  );
+  return write("update_offer", { p_offer_id: offerId, ...offerArgs(draft, owner.variant), p_funding_ack: draft.fundingAck }, "Couldn't save this offer. Try again.");
 }
 
 /** set_offer_paused(p_offer_id, p_paused): Pause / Resume from the row menu. */
 export function setOfferPaused(offerId: string, paused: boolean): Promise<OfferWrite> {
-  // awaiting DB stage DB2 owner writer (gap: 33c0bf5 ships none; see the header)
-  return write(
-    "set_offer_paused",
-    { p_offer_id: offerId, p_paused: paused },
-    paused ? "Couldn't pause this offer. Try again." : "Couldn't resume this offer. Try again.",
-    "Pausing offers is coming soon."
-  );
+  return write("set_offer_paused", { p_offer_id: offerId, p_paused: paused }, paused ? "Couldn't pause this offer. Try again." : "Couldn't resume this offer. Try again.");
 }

@@ -6,12 +6,15 @@
 //   offer_is_live() states it (offersModel);
 // - limit_left reads the member's own `redemptions` (select-own RLS);
 // - redeem_offer(p_offer_id, p_request_id) is the one write.
-// - a showcase's offers are the same read filtered on the owner.
+// - one owner's offers (a business's showcase, a professional's profile) are
+//   public_offers(p_owner_kind, p_owner_id) (Database PR #39), live by the
+//   server's own rule. The catalogue (every owner) and the detail (one id)
+//   have no reader function, so they stay table reads with the client rule.
 
 import { typeLabel } from "../../components/pro/profile/typeLabel";
 import type { ProfessionalSubtype } from "../../types";
 import { todayLocal } from "../../utils/date";
-import { currentUserId, marketDb, marketRpcRaw, type MarketResult } from "../market/rpc";
+import { currentUserId, marketDb, marketRpc, marketRpcRaw, type MarketResult } from "../market/rpc";
 import { isOffline } from "../network-error";
 import { parseVoucherRow, type Voucher } from "../vouchers/vouchersModel";
 import {
@@ -20,6 +23,7 @@ import {
   categoryParam,
   parseCatalog,
   parseOfferDetail,
+  parsePublicOffers,
   professionalIds,
   redeemErrorOf,
   type CatalogOffer,
@@ -108,34 +112,16 @@ export async function fetchOfferDetail(offerId: string): Promise<MarketResult<Of
 }
 
 /**
- * The live point offers of one business or professional, for its showcase's
- * "Offers for your points" (DB2 `offers`, the catalogue's live rule). Not
- * public_showcase (DB3, 20261210900000): that returns the owner's shelf items
- * (business_offerings), never point offers.
+ * The live point offers on one owner's public page: public_offers(
+ * p_owner_kind, p_owner_id) (Database PR #39, 20261214010000), cheapest
+ * first. The server applies offer_is_live() (acknowledged, not paused or
+ * hidden, inside its dates, the business still trading) and answers nothing
+ * for a business that isn't publicly visible or a professional who isn't
+ * listed, so no client live rule runs here. Signed in only (not granted to
+ * anon). Not public_showcase: that returns the owner's shelf items.
  */
-export async function fetchShowcaseOffers(ownerType: "business" | "professional", ownerId: string): Promise<MarketResult<CatalogOffer[]>> {
-  const fallback = "Couldn't load offers.";
-  const today = todayLocal();
-  let res: ReadRes;
-  try {
-    res = (await marketDb
-      .from("offers")
-      .select(OFFER_SELECT)
-      .eq(ownerType === "business" ? "business_id" : "professional_id", ownerId)
-      .is("paused_at", null)
-      .is("hidden_at", null)
-      .not("funding_ack_at", "is", null)
-      .lte("starts_on", today)
-      .or(`ends_on.is.null,ends_on.gte.${today}`)
-      .order("points_cost", { ascending: true })
-      .order("id", { ascending: true })
-      .limit(200)) as ReadRes;
-  } catch (e) {
-    return failed(e, fallback);
-  }
-  if (res.error) return failed(res.error, fallback);
-  const pros = await fetchProNames(professionalIds(res.data));
-  return { ok: true, value: parseCatalog(res.data, today, pros) };
+export function fetchShowcaseOffers(ownerType: "business" | "professional", ownerId: string): Promise<MarketResult<CatalogOffer[]>> {
+  return marketRpc("public_offers", { p_owner_kind: ownerType, p_owner_id: ownerId }, "Couldn't load offers.", (d) => parsePublicOffers(d, ownerType, ownerId));
 }
 
 export type RedeemResult = { ok: true; voucher: Voucher } | { ok: false; offline?: boolean; error?: RedeemError; message: string };

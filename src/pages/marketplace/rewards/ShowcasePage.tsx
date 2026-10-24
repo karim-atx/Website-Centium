@@ -51,8 +51,9 @@ import { BackRow, CapsLabel, OwnerTile, QuietLine, RowChevron } from "./rewardsP
 //   radius 16, 0.5px --hair, padding 12 14, gap 12: the headline 14 / 700,
 //   "You can redeem" 11 / 700 --tealink (margin-top 3) or "N to go"; the cost
 //   15 / 700 + the 11 leaf. The rows open the offer. The offers are the
-//   business's live DB2 `offers` (fetchShowcaseOffers); with none the section
-//   stays out;
+//   business's public_offers('business', id) (fetchShowcaseOffers; live by
+//   the server's rule, nothing for a hidden or paused business); with none
+//   the section stays out;
 // - "Products" + "Display prices. Buy in store or online." (11 --faint,
 //   baseline row, margin-top 18), then (margin-top 8) a 2-column grid, gap 10:
 //   a square photo radius 16 --soft, the name 13 / 700 (margin-top 6), the
@@ -265,7 +266,7 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
         </Link>
       ) : null}
 
-      {/* Offers for your points (DB2 `offers`) */}
+      {/* Offers for your points (public_offers) */}
       <ShowcaseOffers state={offers} balance={balance} onRetry={loadOffers} onOpen={(o) => navigate(`/app/marketplace/rewards/${encodeURIComponent(o.offerId)}`)} />
 
       {/* Products */}

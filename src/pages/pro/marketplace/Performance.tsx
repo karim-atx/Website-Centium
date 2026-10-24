@@ -14,13 +14,16 @@ import {
   fmtCount,
   isEmptySeries,
   PERF_RANGES,
-  PRO_METRICS,
+  PRO_FETCHED,
+  proRatePt,
   proStepFraction,
   RANGE_UNIT,
+  rateOverTime,
   ratePct,
   rateText,
   type PerfRange,
   type PerfSeries,
+  type ProFetched,
   type ProMetric,
 } from "../../../services/market/performanceModel";
 
@@ -36,8 +39,14 @@ import {
 //   views → Hire requests → Hired, each step × 8 of the views, at least 1%,
 //   then "Rate over time"; the axis shows under it too). A range change resets
 //   the scrub / tap (`ranges[].tap`).
-// - Data: DB5 professional_performance (awaiting DB stage DB5). Pending, or
-//   every series zero = pfEmpty "No data yet".
+// - Data: DB5 professional_performance(p_range, p_metric) (Database PR #39)
+//   for the four counted metrics (PRO_FETCHED). Every series zero = pfEmpty
+//   "No data yet". The funnel's rate is the hire rate the board draws
+//   (hire requests / profile views, per bucket for "Rate over time", its
+//   change in points from both series' delta_pct): the server's own
+//   `conversion` is vouchers over views, a different question, so it isn't
+//   asked for. "Hired" (the board's third step) has no reader: left out,
+//   never guessed.
 
 const QUESTION: Record<ProMetric, string> = {
   profile_views: "How many people viewed your profile?",
@@ -47,7 +56,7 @@ const QUESTION: Record<ProMetric, string> = {
   conversion: "How many viewers asked to hire you?",
 };
 
-type Load = { state: "loading" } | { state: "pending" } | { state: "error" } | { state: "ok"; series: Record<ProMetric, PerfSeries | null> };
+type Load = { state: "loading" } | { state: "error" } | { state: "ok"; series: Record<ProFetched, PerfSeries | null> };
 
 function useProSeries(range: PerfRange): [Load, () => void] {
   const [tick, setTick] = useState(0);
@@ -55,14 +64,13 @@ function useProSeries(range: PerfRange): [Load, () => void] {
   const [got, setGot] = useState<{ key: string; load: Load } | null>(null);
   useEffect(() => {
     let alive = true;
-    void Promise.all(PRO_METRICS.map((mt) => fetchProfessionalPerformance(range, mt))).then((res) => {
+    void Promise.all(PRO_FETCHED.map((mt) => fetchProfessionalPerformance(range, mt))).then((res) => {
       if (!alive) return;
       let load: Load;
-      if (res.some((r) => !r.ok && r.pending)) load = { state: "pending" };
-      else if (res.some((r) => !r.ok)) load = { state: "error" };
+      if (res.some((r) => !r.ok)) load = { state: "error" };
       else {
-        const series = {} as Record<ProMetric, PerfSeries | null>;
-        PRO_METRICS.forEach((mt, k) => {
+        const series = {} as Record<ProFetched, PerfSeries | null>;
+        PRO_FETCHED.forEach((mt, k) => {
           const r = res[k];
           series[mt] = r.ok ? r.value : null;
         });
@@ -83,7 +91,7 @@ export function PerformanceTab() {
   const [range, setRange] = useState<PerfRange>(DEFAULT_RANGE);
   const [load, retry] = useProSeries(range);
   const unit = RANGE_UNIT[range];
-  const empty = load.state === "pending" || (load.state === "ok" && PRO_METRICS.every((mt) => isEmptySeries(load.series[mt])));
+  const empty = load.state === "ok" && PRO_FETCHED.every((mt) => isEmptySeries(load.series[mt]));
 
   let body: React.ReactNode;
   if (load.state === "loading") body = <MarketSkeleton radius={20} rows={3} height={244} count={5} gap={12} label="Loading your performance" />;
@@ -93,10 +101,11 @@ export function PerformanceTab() {
     const s = load.series;
     const views = s.profile_views;
     const hires = s.hire_requests;
-    const conv = s.conversion;
+    // The hire rate per bucket (the board's rateLine: hires / views).
+    const conv = rateOverTime(hires, views);
     const card = (mt: ProMetric) => {
-      const d = mt === "conversion" ? deltaPt(s[mt]?.deltaPct) : deltaText(s[mt]?.deltaPct);
-      return { question: QUESTION[mt], total: mt === "conversion" ? rateText(s[mt]?.total ?? 0) : fmtCount(s[mt]?.total ?? 0), delta: d, note: d ? undefined : null, unit, range };
+      const d = mt === "conversion" ? deltaPt(proRatePt(views, hires)) : deltaText(s[mt]?.deltaPct);
+      return { question: QUESTION[mt], total: mt === "conversion" ? rateText(conv?.total ?? 0) : fmtCount(s[mt]?.total ?? 0), delta: d, note: d ? undefined : null, unit, range };
     };
     const vD = chartData(views);
     const hD = chartData(hires);
@@ -105,14 +114,12 @@ export function PerformanceTab() {
     const cD = chartData(conv);
     const viewsN = views?.total ?? 0;
     const hiresN = hires?.total ?? 0;
-    // "Hired" comes only from the conversion row (DB5 documents no hired count yet): without it the step is left out, never guessed.
-    const hired = conv?.counts.hired;
+    // The board's third step, "Hired", has no reader in the contract: left out, never guessed.
     const steps: FunnelStep[] = [
       { label: "Profile views", value: fmtCount(viewsN), fraction: 1 },
       { label: "Hire requests", value: fmtCount(hiresN), fraction: proStepFraction(hiresN, viewsN) },
-      ...(hired !== undefined ? [{ label: "Hired", value: fmtCount(hired), fraction: proStepFraction(hired, viewsN) }] : []),
     ];
-    const rate = conv ? conv.total : ratePct(hiresN, viewsN);
+    const rate = ratePct(hiresN, viewsN);
     body = (
       <>
         <ChartCard kind="line" {...card("profile_views")} labels={vD.labels} series={vD.values} formatValue={(v) => countOf(v, "view", "views")} />

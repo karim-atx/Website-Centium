@@ -3,10 +3,15 @@
 // "Listing and performance", types.ts `PerformanceSeries`). No Supabase
 // import, so it runs under node:test.
 //
-// Shapes (awaiting DB stage DB5): one row
+// Shapes (Database PR #39, 20261214030000; the six column names are pinned
+// by an assertion there): one row
 //   { range, metric, total, delta_pct, points: [{ date, value }], previous }
-// where `points` are daily for 7D / 30D and weekly for 90D / 12M, and
-// `previous` is the previous period's points when p_compare is true.
+// where `points` are daily for 7D / 30D and weekly for 90D / 12M (zeros, not
+// gaps), `previous` is the previous period's points when p_compare is true
+// (else null), and delta_pct is the RELATIVE change against the previous
+// window (round(…, 1)), null when that window was empty. For a rate
+// (conversion) the board shows the change in percentage points ("+0.1 pt"),
+// which ratePtChange derives from the total and that relative change.
 //
 // The screen files' script is the spec for what the charts show:
 // - RANGES: 7D "week", 30D "30 days", 90D "90 days", 12M "12 months";
@@ -32,6 +37,13 @@ export type OfferMetric = "offer_views" | "redemptions" | "points_redeemed" | "c
 export type ProMetric = "profile_views" | "hire_requests" | "vouchers_redeemed" | "points_spent" | "conversion";
 export const OFFER_METRICS: readonly OfferMetric[] = ["offer_views", "redemptions", "points_redeemed", "conversion"];
 export const PRO_METRICS: readonly ProMetric[] = ["profile_views", "hire_requests", "vouchers_redeemed", "points_spent", "conversion"];
+/**
+ * What P-MA.6 asks professional_performance for. Not `conversion`: the
+ * server's is vouchers redeemed over views, while the screen's funnel is the
+ * hire rate (hire requests over views), derived here (rateOverTime, proRatePt).
+ */
+export type ProFetched = Exclude<ProMetric, "conversion">;
+export const PRO_FETCHED: readonly ProFetched[] = ["profile_views", "hire_requests", "vouchers_redeemed", "points_spent"];
 
 /** B-MA.7 expanded pages (performance/{segment}): the metric and the back header's title (the script's EX[k].title). */
 export const EXPANDED: Record<string, { metric: OfferMetric; title: string }> = {
@@ -54,8 +66,6 @@ export interface PerfSeries {
   deltaPct: number | null;
   points: PerfPoint[];
   previous: PerfPoint[] | null;
-  /** Optional funnel counts a conversion row may carry (views, requests, hired). */
-  counts: Record<string, number>;
 }
 
 function points(v: unknown): PerfPoint[] {
@@ -71,18 +81,10 @@ function points(v: unknown): PerfPoint[] {
   return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 
-const KNOWN = new Set(["range", "metric", "total", "delta_pct", "points", "previous"]);
-
-/** The first row of an offer_performance / professional_performance answer, or null. */
+/** The first row of an offer_performance / professional_performance answer (exactly the six columns), or null. */
 export function parsePerformance(data: unknown, fallbackRange: PerfRange = DEFAULT_RANGE): PerfSeries | null {
   const r = rows(data)[0];
   if (!r) return null;
-  const counts: Record<string, number> = {};
-  for (const [k, v] of Object.entries(r)) {
-    if (KNOWN.has(k)) continue;
-    const n = num(v);
-    if (n !== null) counts[k] = n;
-  }
   return {
     range: isPerfRange(r.range) ? r.range : fallbackRange,
     metric: typeof r.metric === "string" ? r.metric : "",
@@ -90,7 +92,6 @@ export function parsePerformance(data: unknown, fallbackRange: PerfRange = DEFAU
     deltaPct: num(r.delta_pct),
     points: points(r.points),
     previous: r.previous == null ? null : points(r.previous),
-    counts,
   };
 }
 
@@ -138,6 +139,55 @@ export const rateText = (r: number): string => `${(Number.isFinite(r) ? r : 0).t
 
 /** Redemptions over views, as a percent (0 with no views). */
 export const ratePct = (part: number, whole: number): number => (whole > 0 ? (part / whole) * 100 : 0);
+
+/**
+ * The previous window's total from this one and delta_pct: 0 when delta_pct
+ * is null (the server sends null only when that window was empty); null when
+ * it can't be known (−100%: this window is 0, so any earlier total fits).
+ */
+export function previousTotal(total: number, deltaPct: number | null | undefined): number | null {
+  if (deltaPct === null || deltaPct === undefined) return 0;
+  if (!Number.isFinite(deltaPct) || deltaPct <= -100) return null;
+  return (total * 100) / (100 + deltaPct);
+}
+
+/**
+ * A rate's change in percentage points (offer_performance 'conversion'),
+ * from its total and the server's relative delta_pct; null with nothing to
+ * compare (an empty previous window, as the server's null says).
+ */
+export function ratePtChange(rate: number, deltaPct: number | null | undefined): number | null {
+  if (deltaPct === null || deltaPct === undefined) return null;
+  const prev = previousTotal(rate, deltaPct);
+  return prev === null ? null : rate - prev;
+}
+
+/**
+ * P-MA.6's hire rate change in points: (hires / views) now minus before,
+ * each previous total derived from its own delta_pct; null without previous
+ * views to divide by.
+ */
+export function proRatePt(views: PerfSeries | null | undefined, hires: PerfSeries | null | undefined): number | null {
+  if (!views || !hires) return null;
+  const pv = previousTotal(views.total, views.deltaPct);
+  const ph = previousTotal(hires.total, hires.deltaPct);
+  if (!pv || ph === null) return null;
+  return ratePct(hires.total, views.total) - ratePct(ph, pv);
+}
+
+/** A rate per bucket, part over whole × 100 (0 where the whole is 0), on the whole's dates (the board's `vH[j] / vV[j]`). */
+export function rateOverTime(part: PerfSeries | null | undefined, whole: PerfSeries | null | undefined): PerfSeries | null {
+  if (!whole) return null;
+  const by = new Map((part?.points ?? []).map((p) => [p.date, p.value]));
+  return {
+    range: whole.range,
+    metric: "rate",
+    total: ratePct(part?.total ?? 0, whole.total),
+    deltaPct: null,
+    points: whole.points.map((p) => ({ date: p.date, value: ratePct(by.get(p.date) ?? 0, p.value) })),
+    previous: null,
+  };
+}
 
 /** The running total (the points chart, `acc += v`). */
 export function cumulative(vals: readonly number[]): number[] {

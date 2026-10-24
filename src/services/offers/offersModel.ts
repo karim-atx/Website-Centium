@@ -7,7 +7,10 @@
 // offer the caller owns, whatever its state). That policy does NOT check
 // funding_ack_at or whether the business still takes new business, which
 // offer_is_live() (the redemption gate) does, so the client applies the same
-// live rule to every row it lists. quantity_left and limit_left are derived
+// live rule to every row it lists (the catalogue and the detail: no reader
+// function covers every owner or one id; one owner's page reads
+// public_offers instead, live by the server's rule, parsePublicOffers).
+// quantity_left and limit_left are derived
 // here as the contract defines them (not stored). The owner card is embedded
 // from business_profiles (public while active); a professional's name comes
 // from public_professional_directory.
@@ -132,6 +135,24 @@ export function parseCatalog(data: unknown, today: string, pros: ReadonlyMap<str
   return rows(data).flatMap((r) => {
     const o = parseOfferRow(r, today, pros);
     return o ? [o] : [];
+  });
+}
+
+/**
+ * public_offers(p_owner_kind, p_owner_id) rows (id, title, kind, value,
+ * points_cost, where_used, terms, starts_on, ends_on, per_member_limit,
+ * quantity_cap, redeemed_count, category) as cards of the owner the page
+ * already shows: live by the server's rule (offer_is_live), in its order
+ * (points_cost, created_at desc, id). No owner columns come back, so the
+ * owner's name stays the page's own.
+ */
+export function parsePublicOffers(data: unknown, ownerType: "business" | "professional", ownerId: string): CatalogOffer[] {
+  return rows(data).flatMap((r) => {
+    const offerId = str(r.id);
+    const headline = str(r.title);
+    const cost = num(r.points_cost);
+    if (!offerId || !headline || cost === null) return [];
+    return [{ offerId, headline, category: str(r.category) ?? "", ownerType, ownerId, ownerName: "", ownerSubtitle: "", ownerLogoUrl: null, pointsCost: cost, endsOn: ymdOf(r.ends_on) }];
   });
 }
 

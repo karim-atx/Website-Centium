@@ -1,12 +1,15 @@
 // Market + Share 3.0 · W3 · B-MA.1 Listing Overview: pure rules for the
 // StatLedger and the Gym card (no Supabase import, so node:test loads it).
 //
-// The DB5 reader `business_marketplace_overview(p_business_id)` (PLAN §2.2:
-// active offers, redemptions this month, points redeemed, plus deltas) hasn't
-// landed: while it is pending the three rows show the quiet "–" value and no
-// change, never a number. The gym rows ("Active memberships", "Class bookings
-// this week") come from the live venue_dashboard, which has no previous
-// period, so their change is "–" (data honesty, as VenueFigures does).
+// The DB5 reader `business_marketplace_overview(p_business_id)` (Database PR
+// #39, 20261214030000; the `marketing` permission): active offers (live now)
+// with a COUNT change against a month ago, redemptions and points this month
+// with a percent change against last month (null against an empty month).
+// While it loads, fails, or for staff without marketing (not asked) the three
+// rows show the quiet "–" value and no change, never a number. The gym rows
+// ("Active memberships", "Class bookings this week") come from the live
+// venue_dashboard, which has no previous period, so their change is "–"
+// (data honesty, as VenueFigures does).
 
 import { num, rows } from "../market/parse";
 
@@ -18,7 +21,7 @@ export interface StatLedgerRow {
   leaf?: boolean;
 }
 
-/** DB5 business_marketplace_overview, one row (field names per PLAN §2.2 / the W3 guard's sample). */
+/** DB5 business_marketplace_overview, one row (the six columns 20261214030000 pins). */
 export interface MarketplaceOverview {
   activeOffers: number;
   /** A count change ("+1"); null when there is nothing to compare. */
@@ -46,7 +49,7 @@ export function parseOverview(data: unknown): MarketplaceOverview | null {
 /** The board's figures: "7,200". */
 export const formatCount = (n: number): string => Math.round(n).toLocaleString("en-US");
 
-/** The quiet value of a figure that has nothing to show yet (pending stage, failed read). */
+/** The quiet value of a figure that has nothing to show (loading, a failed read, not the caller's to see). */
 export const QUIET = "–";
 
 /** A count change as the board writes it: "+1", "−2" (U+2212), "0"; null is "–". */
@@ -71,7 +74,8 @@ export function heroDelta(pct: number | null | undefined): string | null {
   return d === QUIET ? null : `${d} vs last month`;
 }
 
-export type OverviewState = { status: "loading" } | { status: "pending" } | { status: "error" } | { status: "ok"; value: MarketplaceOverview | null };
+/** "none": not asked, because the caller lacks the `marketing` permission the reader requires (42501). */
+export type OverviewState = { status: "loading" } | { status: "none" } | { status: "error" } | { status: "ok"; value: MarketplaceOverview | null };
 
 /** Live gym figures for the ledger and the Gym card (venue_dashboard + membership_plans); null fields are unknown. */
 export interface GymFigures {

@@ -23,6 +23,7 @@ import {
   declineIsFinal,
   declineText,
   fetchBookableSessions,
+  fetchHiddenPlanIds,
   fetchOpenSlots,
   localDay,
   mondayOf,
@@ -33,6 +34,7 @@ import {
   weekDays,
   type BookableSession,
 } from "../../services/public-pro";
+import { recordProfessionalEvent } from "../../services/marketplace/listingEvents";
 import { getMyAccessRequests, type AccessRequest } from "../../services/access-requests";
 import { AccessRequestNotice } from "../../components/professionals/AccessRequestNotice";
 import { DataSharingSection } from "../../components/professionals/DataSharingSection";
@@ -75,9 +77,13 @@ import { averageOf, typeLabel, profileRatingLine, reviewLines, serviceRows, sess
 // DATA. The live readers keep the page working while DB10 is pending:
 // identity, about and CV from public_professional_directory / the public CV
 // views (or the invite's own readers); Services from appointment_services
-// (Book) and professional_plans_for (Hire); Reviews from professional_reviews.
-// professional_public_profile (DB10) adds the hired count, point offers
-// (DB2), Teaches at, Work history and the class reviews with the gym's name.
+// (Book) and professional_plans_for (Hire), without the ones the professional
+// hid from their Showcase (DB3 `visible`, Database PR #39: a hidden session
+// type stays bookable by its link, so only this list drops it); Reviews from
+// professional_reviews. professional_public_profile (DB10) adds the hired
+// count and Work history; public_offers the point offers. Opening a real
+// profile (not a preview, not one's own) records profile_view
+// (record_professional_event, once per session; DB5).
 //
 // KEPT LIVE FEATURES (PLAN §3.2): ?invite= banner; ?hire= deep link; "Client
 // since"; CvView, Where and Availability this week under About; Book a
@@ -179,6 +185,12 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
 
   const isReal = !!listing;
   const proId = listing?.profileId ?? null;
+
+  // DB5: a profile seen (not a preview, not one's own; the server also ignores the owner's look and an unlisted professional).
+  useEffect(() => {
+    if (!proId || isPreview || proId === authUserId) return;
+    recordProfessionalEvent({ professionalId: proId, kind: "profile_view", source: "direct" });
+  }, [proId, isPreview, authUserId]);
 
   // ---- whether the caller is this professional's client (null = not answered) ----
   const [checked, setChecked] = useState<{ id: string | null; active: boolean }>({ id: null, active: false });
@@ -341,15 +353,15 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
   }, [proId, isPreview, activeClient]);
   const pendingAsks = asks.id === proId ? asks.list : [];
 
-  // ---- DB10: professional_public_profile (DB2 for the offers) ----
+  // ---- DB10: professional_public_profile (+ public_offers for the offers) ----
   const [pub, setPub] = useState<{ id: string; r: MarketResult<PublicProfile | null> } | null>(null);
   const [pubReload, setPubReload] = useState(0);
   useEffect(() => {
     if (!proId) return;
     let cancelled = false;
-    // professional_public_profile + work_history (Database Release 2): the header's rating is
-    // professional_rating() (client and class reviews). Class-context reviews, Teaches at and point
-    // offers have no reader in the contract (Database gap): those parts keep their live sources.
+    // professional_public_profile + work_history (Database Release 2) + public_offers (Database PR #39):
+    // the header's rating is professional_rating() (client and class reviews). Class-context reviews and
+    // Teaches at have no reader in the contract (Database gap): those parts keep their live sources.
     void fetchPublicProfile(proId).then((r) => {
       if (!cancelled) setPub({ id: proId, r });
     });
@@ -367,7 +379,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
     if (!proId) return;
     let live = true;
     void (async () => {
-      const [allowed, plans] = await Promise.all([bookingAllowed(proId), fetchPlansFor(proId)]);
+      const [allowed, plans, hiddenPlans] = await Promise.all([bookingAllowed(proId), fetchPlansFor(proId), fetchHiddenPlanIds(proId)]);
       const sessions = allowed.ok && allowed.data ? await fetchBookableSessions(proId) : null;
       if (!live) return;
       if (!allowed.ok || (sessions && !sessions.ok)) {
@@ -384,7 +396,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
           week = days.map((d) => sessionsThatFit(by.get(localDay(d)) ?? []));
         }
       }
-      if (live) setSvc({ id: proId, data: { allowed: allowed.data, sessions: list, plans: plans.ok ? plans.plans : [], week }, error: false });
+      if (live) setSvc({ id: proId, data: { allowed: allowed.data, sessions: list, plans: plans.ok ? plans.plans.filter((p) => !hiddenPlans.has(p.id)) : [], week }, error: false });
     })();
     return () => {
       live = false;
@@ -470,7 +482,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
   const sv = services?.data ?? null;
   const rows = sv
     ? serviceRows(
-        sv.allowed ? sv.sessions.map((s) => ({ id: s.id, name: s.name, meta: sessionLine(s.durationMin, s.locationKind), price: priceLabel(s.price, s.currency) })) : [],
+        sv.allowed ? sv.sessions.filter((s) => s.visible).map((s) => ({ id: s.id, name: s.name, meta: sessionLine(s.durationMin, s.locationKind), price: priceLabel(s.price, s.currency) })) : [],
         sv.plans.map((p) => ({ id: p.id, name: p.name, meta: p.features[0] ?? null, price: planPriceLabel(p.price, p.billing) })),
       )
     : null;

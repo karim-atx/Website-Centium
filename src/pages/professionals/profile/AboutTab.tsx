@@ -36,8 +36,9 @@ import type { SocialLink } from "./profileModel";
 //   11.5 / 600 --accent, the chevron.
 // Times are 12-hour (D-03: "6:30 PM" with the meridiem under the time beside
 // the day), dates month first (D-02: "Ends Dec 31, 2026").
-// Pending (DB2 offers, DB10 Teaches at): the sections are left out (the
-// board draws no empty state for them), never sample rows.
+// The point offers are public_offers('professional', id) (Database PR #39);
+// with none (or Teaches at, which has no reader) the section is left out
+// (the board draws no empty state for them), never sample rows.
 //
 // KEPT LIVE FEATURES under About (PLAN §3.2): the CV (CvView: headline,
 // qualifications, experience …), Where and Availability this week (the

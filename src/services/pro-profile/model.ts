@@ -127,20 +127,32 @@ export function parseWork(data: unknown): WorkEntry[] {
     .filter((w) => w.id && w.businessName);
 }
 
+/** public_offers('professional', id) rows → About's offers (live by the server's rule, cheapest first). */
+export function parseProfileOffers(data: unknown): ProfileOffer[] {
+  return rows(data).flatMap((r) => {
+    const id = str(r.id);
+    const headline = str(r.title);
+    const pointsCost = num(r.points_cost);
+    if (!id || !headline || pointsCost === null) return [];
+    const end = str(r.ends_on);
+    return [{ id, headline, endsOn: end ? end.slice(0, 10) : null, pointsCost }];
+  });
+}
+
 /**
  * professional_public_profile (one row; none for an unlisted professional)
- * with work_history. The rest of the board's profile has no reader in the
- * contract (Database gap): reviews with their class and gym, the services
- * split Book / Hire, point offers, Teaches at — those stay empty and the
+ * with work_history and public_offers. The rest of the board's profile has no
+ * reader in the contract (Database gap): reviews with their class and gym,
+ * the services split Book / Hire, Teaches at — those stay empty and the
  * screens keep their live sources.
  */
-export function parsePublicProfile(profile: unknown, work: unknown): PublicProfile | null {
+export function parsePublicProfile(profile: unknown, work: unknown, offers: unknown = []): PublicProfile | null {
   const r = rows(profile)[0];
   if (!r) return null;
   const card = parseCard(r);
   if (!card.id) return null;
   const skills = Array.isArray(r.skills) ? (r.skills as unknown[]).map(str).filter((s): s is string => !!s) : [];
-  return { card, about: str(r.bio), specialties: skills, services: [], offers: [], workHistory: parseWork(work), reviews: [], teachesAt: [] };
+  return { card, about: str(r.bio), specialties: skills, services: [], offers: parseProfileOffers(offers), workHistory: parseWork(work), reviews: [], teachesAt: [] };
 }
 
 /** professionals_ranked rows, in the server's order (rank_score desc, id). "From $X" is the lower of the two rates. */

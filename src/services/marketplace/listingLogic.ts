@@ -2,8 +2,27 @@
 // pure rules the client side of the marketplace follows. No I/O here, so
 // node:test covers it (listingLogic.test.ts).
 
-/** What a client may send to record_listing_event() (MK-07). booking / order / pass are the server's (22023). */
-export type ListingEventKind = "impression" | "profile_open" | "map_open" | "book_tap";
+/**
+ * What a client may send to record_listing_event() (MK-07; offer_view since
+ * Database PR #39, 20261214020000, with the offer as the item). booking /
+ * order / pass are the server's (22023).
+ */
+export type ListingEventKind = "impression" | "profile_open" | "map_open" | "book_tap" | "offer_view";
+
+/** What a client may send to record_professional_event() (20261214020000): the profile, or one of their offers as the item. */
+export type ProfessionalEventKind = "profile_view" | "offer_view";
+
+export interface ProfessionalEvent {
+  professionalId: string;
+  kind: ProfessionalEventKind;
+  source: ListingSource;
+  itemId?: string | null;
+}
+
+/** The once-per-session key of a professional event (its own namespace beside a business's). */
+export function professionalEventKey(e: Pick<ProfessionalEvent, "professionalId" | "kind" | "itemId">): string {
+  return `pro:${e.professionalId}|${e.itemId ?? ""}|${e.kind}`;
+}
 /** listing_event_source. */
 export type ListingSource = "search" | "category" | "map" | "direct" | "featured";
 

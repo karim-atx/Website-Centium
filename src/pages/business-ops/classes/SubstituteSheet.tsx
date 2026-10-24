@@ -29,10 +29,13 @@ import { overlaps, running, weekdayShort, type Session, type SessionLite } from 
 // them (B7 messaging) once the assignment has landed; see SessionActions.
 //
 // THE LIST SOURCE (W4, B-MA.6; lead decision D-35): the Team, as the server
-// answers it. instructors_free_for asks business_team_professional() (Database
-// #38, 20261213190000): accepted, not revoked, a professional account. So the
-// front desk and anybody who left are never offered, and an empty list means
-// nobody else is on the Team.
+// answers it. instructors_free_for asks business_team_instructor() (Database
+// PR #39 correction 2 + 4d50539): accepted, not revoked, a professional
+// account, employed as instructor or trainer. So the front desk, a manager or
+// staff professional, and anybody who left are never offered, and an empty
+// list means nobody on the Team is employed to teach. (Naming someone keeps
+// the wider business_team_professional() rule on the server: a list may be
+// narrower than what is allowed.)
 
 export function SubstituteSheet({
   open,
@@ -218,7 +221,7 @@ export function SubstituteSheet({
               <p style={{ margin: 0, minHeight: 41, display: "flex", alignItems: "center", fontSize: textPx(14), color: m.faint }}>Finding who's free…</p>
             ) : rows.length === 0 ? (
               <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
-                Nobody else is on your team yet. Add people through Hiring.
+                No other instructor or trainer is on your team yet. Add people through Hiring.
               </p>
             ) : (
               <button

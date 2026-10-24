@@ -1,20 +1,20 @@
 // Market + Share 3.0 · W3 · the professional Marketplace (P-MA.1 Overview,
 // P-MA.2 Showcase): pure rules, no Supabase import (node:test loads this).
 //
-// - professional_overview(): DB5 (PLAN §2.2; types.ts ProfessionalOverview:
-//   clientsReached, clientsReachedDeltaPct, sparkline, activeOffers,
-//   redemptionsThisMonth, pointsRedeemed, activeClients, gymsWorkingWith).
-//   The ledger's per-row changes are not in the documented shape: they are
-//   read when the row carries them (`*_delta` / `*_delta_pct`), else "–".
-//   `marketplace_visible` is read the same way when the row carries it; the
-//   Overview reads the live flag itself (set_marketplace_visible writes
-//   professional_profiles.listed_publicly, Database 73ea87b).
+// - professional_overview(): DB5 (Database PR #39, 20261214030000; the
+//   fourteen columns pinned there): clients_reached (times reached this
+//   month, counted once per viewer a day) with its percent change and the
+//   30-day sparkline [{date, value}], then active offers / clients / gyms
+//   with COUNT changes and redemptions / points with percent changes (null
+//   against an empty month), and marketplace_visible (listed_publicly, the
+//   switch set_marketplace_visible writes; the Visible tile reads it here).
 // - The Showcase services are the professional's own shelf (business_offerings
 //   with professional_id, Database 73ea87b: what public_showcase shows members,
 //   in its order) and the LIVE appointment_services (Book, session types) and
 //   professional_plans (Hire) (D-18), sessions by created_at, then plans by
-//   position. The Database gave sessions and plans no photo, showcase flag,
-//   format or sort; those stay with the shelf rows.
+//   position. DB3 (Database PR #39, 20261214040000) gave both a photo
+//   (image_url) and Show in Showcase (visible), and plans a description and a
+//   format; a session type's format is its location_kind (no column).
 
 import { bool, num, rows, str } from "../market/parse";
 import { countDelta, formatCount, heroDelta, pctDelta, QUIET } from "../business-market/overviewModel";
@@ -50,7 +50,7 @@ export interface ProOverview {
   activeClientsDelta: number | null;
   gymsWorkingWith: number;
   gymsWorkingWithDelta: number | null;
-  /** The marketplace flag when the overview row carries it; null = not said. */
+  /** marketplace_visible (listed_publicly); null when the row doesn't carry it. */
   marketplaceVisible: boolean | null;
 }
 
@@ -81,7 +81,7 @@ export function parseProOverview(data: unknown): ProOverview | null {
   };
 }
 
-export type ProOverviewState = { status: "loading" } | { status: "pending" } | { status: "error" } | { status: "ok"; value: ProOverview | null };
+export type ProOverviewState = { status: "loading" } | { status: "error" } | { status: "ok"; value: ProOverview | null };
 
 /** The P-MA.1 Empty line under "Clients reached" (ovEmpty). */
 export const EMPTY_SUB = "Shows once clients start finding you";
@@ -97,7 +97,7 @@ export interface OverviewView {
 /**
  * The hero and ledger for a state. Answered: the DB5 figures (ovVisible), or
  * ovEmpty when nobody has been reached yet (zeros, "–" changes, the empty
- * line). Not answered (loading, the stage pending, a failed read): every
+ * line). Not answered (loading, a failed read): every
  * figure is the quiet "–", except "Active clients", which the LIVE roster
  * (active_professional_clients, `roster`) answers when it is known.
  */
@@ -136,9 +136,9 @@ export function overviewView(state: ProOverviewState, roster: number | null): Ov
   };
 }
 
-/** The tile's state before the live flag is read (or when it can't be): visible unless the overview says hidden. The tile is disabled then. */
-export function visibleFrom(state: ProOverviewState): boolean {
-  return !(state.status === "ok" && state.value?.marketplaceVisible === false);
+/** The Visible tile's live state from professional_overview's marketplace_visible; null while unknown (the tile is disabled then). */
+export function visibleOf(state: ProOverviewState): boolean | null {
+  return state.status === "ok" ? (state.value?.marketplaceVisible ?? null) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -159,11 +159,23 @@ export interface SessionService {
   colour: string | null;
   /** null = in person or online ("Both"). */
   locationKind: LocationKind;
+  /** DB3 image_url: the service photo; null = none. */
+  imageUrl: string | null;
+  /** DB3 visible: Show in Showcase (not `active`). */
+  visible: boolean;
   createdAt: string;
 }
 
+/** A plan's DB3 showcase fields (20261214040000). */
+export interface PlanShowcase {
+  description: string | null;
+  imageUrl: string | null;
+  visible: boolean;
+  format: Format | null;
+}
+
 /** A live professional_plans row (a hire plan: package or programme). */
-export interface PlanService {
+export interface PlanService extends PlanShowcase {
   id: string;
   name: string;
   price: number;
@@ -173,6 +185,20 @@ export interface PlanService {
   position: number;
   sessionCount: number | null;
   createdAt: string;
+}
+
+/** What a plan without a showcase row reads as: the columns' defaults (shown, no photo, description or format). */
+export const PLAN_SHOWCASE_DEFAULT: PlanShowcase = { description: null, imageUrl: null, visible: true, format: null };
+
+/** professional_plans (id, description, image_url, visible, format) rows by id. */
+export function planShowcaseById(data: unknown): Map<string, PlanShowcase> {
+  const out = new Map<string, PlanShowcase>();
+  for (const r of rows(data)) {
+    const id = str(r.id);
+    if (!id) continue;
+    out.set(id, { description: str(r.description)?.trim() || null, imageUrl: str(r.image_url)?.trim() || null, visible: r.visible !== false, format: parseFormat(r.format) });
+  }
+  return out;
 }
 
 /**
@@ -208,7 +234,7 @@ export interface ServiceCard {
   meta: string;
   description: string | null;
   price: string;
-  /** Drawn at 0.5 (a plan not offered; a shelf item hidden or taken down). */
+  /** Drawn at 0.5 (hidden from the Showcase; a plan not offered; a shelf item taken down). */
   dim: boolean;
   /** The chip under a dimmed card. */
   chip: string | null;
@@ -292,7 +318,7 @@ export function serviceCards(sessions: SessionService[], plans: PlanService[], s
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     .map((x): ServiceCard => {
       const ref: ServiceRef = { kind: "session", item: x };
-      return { key: serviceKey(ref), ref, name: x.name, meta: sessionLine(x.durationMin, x.locationKind), description: x.description?.trim() || null, price: priceLabel(x.price, x.currency), dim: false, chip: null };
+      return { key: serviceKey(ref), ref, name: x.name, meta: sessionLine(x.durationMin, x.locationKind), description: x.description?.trim() || null, price: priceLabel(x.price, x.currency), dim: !x.visible, chip: x.visible ? null : "Hidden" };
     });
   const p = plans
     .slice()
@@ -305,10 +331,12 @@ export function serviceCards(sessions: SessionService[], plans: PlanService[], s
         ref,
         name: x.name,
         meta: planMeta(x.sessionCount, x.billing),
-        description: included.length ? included.join(" · ") : null,
+        // The plan's own description (DB3), else what's included.
+        description: x.description ?? (included.length ? included.join(" · ") : null),
         price: planPrice(x.price, x.billing),
-        dim: !x.active,
-        chip: x.active ? null : "Not offered",
+        dim: !x.active || !x.visible,
+        // Not offered wins: a plan that isn't sold shows nowhere, shown or not.
+        chip: !x.active ? "Not offered" : x.visible ? null : "Hidden",
       };
     });
   return [...sh, ...s, ...p];
@@ -345,7 +373,7 @@ export const visibleRefusal = (code: string | null | undefined): string | null =
 /** "5 services" (the caps header), "1 service". */
 export const servicesHeader = (n: number): string => `${n} ${n === 1 ? "service" : "services"}`;
 
-/** The Format chips (a shelf item's `format`; for a session type, its live location_kind; plans have none). */
+/** The Format chips (a shelf item's and a plan's `format`; for a session type, its live location_kind). */
 export type Format = "in_person" | "online" | "both";
 export const FORMATS: { key: Format; label: string }[] = [
   { key: "in_person", label: "In person" },

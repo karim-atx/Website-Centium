@@ -16,6 +16,7 @@ import { formatPoints } from "../../../components/market/pointsModel";
 import { FOCUS_CSS, usePress } from "../../../components/market/usePress";
 import { DIVIDER } from "../../../components/market/SegmentedTicketStrip";
 import { fetchOfferDetail, type OfferDetail } from "../../../services/offers";
+import { recordListingEvent, recordProfessionalEvent } from "../../../services/marketplace/listingEvents";
 import type { MarketResult } from "../../../services/market/rpc";
 import { offerCells, redeemGate } from "./rewardsModel";
 import { BackRow, OwnerTile } from "./rewardsParts";
@@ -51,6 +52,8 @@ import { OFFER_REPORT_NOTE_MAX, OFFER_REPORT_REASONS, hasReportedOffer, reportOf
 //   --fill 15 / 800 (opacity 0.4 and inert when locked).
 // The offer is DB2's `offers` row (fetchOfferDetail); null (no such offer,
 // or not live: RLS hides it or offer_is_live wouldn't pass) → the not-found card.
+// Opening a live offer records offer_view (record_listing_event for a
+// business, record_professional_event for a professional; Database PR #39).
 //
 // Ours (the board draws no report affordance): "Report this offer" under the
 // honoured-by line opens the app's member report sheet (ReviewReportForm, as
@@ -108,6 +111,18 @@ export default function OfferDetailPage() {
     };
   }, [offerId]);
   useEffect(() => fetchIt(), [fetchIt]);
+  // DB5: an offer seen is offer_view with the offer as the item (once per
+  // session here, once a day per viewer on the server, never the owner's own look).
+  const seen = load.state === "done" && load.result.ok ? load.result.value : null;
+  const seenId = seen?.offerId ?? null;
+  const seenOwner = seen ? `${seen.ownerType}:${seen.ownerId}` : null;
+  useEffect(() => {
+    if (!seenId || !seenOwner) return;
+    const [kind, ownerId] = seenOwner.split(":");
+    if (!ownerId) return;
+    if (kind === "business") recordListingEvent({ businessId: ownerId, kind: "offer_view", source: "direct", itemId: seenId });
+    else recordProfessionalEvent({ professionalId: ownerId, kind: "offer_view", source: "direct", itemId: seenId });
+  }, [seenId, seenOwner]);
   useEffect(() => {
     if (!authUserId) return;
     let live = true;

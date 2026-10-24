@@ -8,9 +8,14 @@
 // they leave), instructor_specialty, instructor_rating,
 // instructor_review_count and instructor_hire_count. instructor_is_team
 // decides: only true names the instructor (and only when the view names
-// them: instructor_id / instructor_name are null for somebody not listed
-// publicly). Anything else, a missing column included, is "Instructor not
-// listed".
+// them). Anything else, a missing column included, is "Instructor not
+// listed". Since Database PR #39 (correction 3) the view itself nulls the
+// specialty, rating, review count and hire count, as it already did the id,
+// name and avatar, for somebody not listed publicly (instructor_is_team is
+// left as it is), and the hire count is THIS
+// gym's Centium hires only (any status), so the client's gate agrees with
+// the server: it adds only the Team rule (a listed non-Team professional the
+// view still names is not shown).
 
 import { bool, num, str } from "../market/parse";
 
@@ -45,6 +50,6 @@ export function instructorFacts(r: Record<string, unknown>): InstructorFacts {
   };
 }
 
-/** "Hired via Centium" on the listed card: a Team instructor with at least one Centium hire. */
+/** "Hired via Centium" on the listed card: a Team instructor with at least one Centium hire by THIS gym (the view's count). */
 export const hiredViaCentium = (f: { instructorIsTeam?: boolean | null; instructorHireCount?: number | null; instructorId?: string | null }): boolean =>
   !!f.instructorId && f.instructorIsTeam === true && (f.instructorHireCount ?? 0) > 0;

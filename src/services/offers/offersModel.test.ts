@@ -12,6 +12,7 @@ import {
   ownerInitials,
   parseCatalog,
   parseOfferDetail,
+  parsePublicOffers,
   professionalIds,
   redeemErrorOf,
   validRange,
@@ -143,6 +144,24 @@ test("redeem lines; refusals by the documented SQLSTATE only", () => {
   assert.equal(redeemErrorOf({ code: "P0001" }), null);
   assert.equal(redeemErrorOf({ code: "42501" }), null);
   assert.equal(REDEEM_ERROR_TEXT.not_available_to_minors, "Supplement offers are for members 18 and over.");
+});
+
+test("public_offers rows: the server's live list as cards of the page's owner (no client live rule)", () => {
+  const list = parsePublicOffers(
+    [
+      { id: "o1", title: "15% off a month pass", kind: "percent_off", value: 15, points_cost: 150, where_used: "in_person", terms: null, starts_on: "2026-10-01", ends_on: "2026-12-31", per_member_limit: 1, quantity_cap: null, redeemed_count: 3, category: "gyms" },
+      { id: "o2", title: "Free shaker", kind: "free_item", value: null, points_cost: "120", where_used: "both", terms: null, starts_on: "2026-10-01", ends_on: null, per_member_limit: 1, quantity_cap: null, redeemed_count: 0, category: "supplements" },
+      { id: "bad", title: "", points_cost: 1 },
+    ],
+    "business",
+    "b1"
+  );
+  assert.deepEqual(list.map((o) => [o.offerId, o.headline, o.pointsCost, o.category, o.endsOn, o.ownerType, o.ownerId]), [
+    ["o1", "15% off a month pass", 150, "gyms", "2026-12-31", "business", "b1"],
+    ["o2", "Free shaker", 120, "supplements", null, "business", "b1"],
+  ]);
+  // The age rule still applies on top (supplements for 18+).
+  assert.deepEqual(forAge(list, false).map((o) => o.offerId), ["o1"]);
 });
 
 test("owner initials", () => {

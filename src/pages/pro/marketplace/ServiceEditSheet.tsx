@@ -16,6 +16,7 @@ import {
   formatOfLocation,
   locationOfFormat,
   reorderShelf,
+  savePlanShowcase,
   saveSessionService,
   saveShelfItem,
   shelfMove,
@@ -25,7 +26,7 @@ import {
   type ServiceRef,
   type ShelfItem,
 } from "../../../services/pro-market";
-import { MasterSheet, PrimaryButton, SaveError, SheetBox, SheetSwitch, fieldStyle, lh, px, useMarketColors } from "../../business-market/listingParts";
+import { MasterSheet, PrimaryButton, SaveError, SheetBox, SheetSwitch, fieldStyle, px, useMarketColors } from "../../business-market/listingParts";
 
 // Market + Share 3.0 · W3 · P-MA.2 "Edit service" (Professional Marketplace
 // Screens lines 551–576 and `sheet` scServiceEdit / scServicePhoto;
@@ -35,21 +36,22 @@ import { MasterSheet, PrimaryButton, SaveError, SheetBox, SheetSwitch, fieldStyl
 //   badge (lucide camera 14 --pdark) and "Tap the photo to change it" 11.5
 //   --faint (gap 6, padding-bottom 4); tap → "Service photo" (a second
 //   MasterSheet: Take photo · Choose from library · Remove photo, rows 52 tall
-//   radius 14 --sgrey 14 / 600, Remove in --high). A shelf item's photo is
-//   its live image_url (the product-images bucket under the caller's uid;
-//   Take photo / Choose from library upload, Remove photo clears it). A
-//   session type or plan has no photo column (DB3 73ea87b added none): an
-//   empty frame (never the board's "SERVICE PHOTO") and the rows say it is
-//   coming soon;
+//   radius 14 --sgrey 14 / 600, Remove in --high). The photo is the item's
+//   live image_url for all three kinds (a shelf item since 73ea87b; a
+//   session type and a plan since DB3, Database PR #39, 20261214040000): the
+//   product-images bucket under the caller's uid; Take photo / Choose from
+//   library upload, Remove photo clears it; no photo is an empty frame
+//   (never the board's "SERVICE PHOTO");
 // - Name, Description, Price (SheetBox: --sgrey radius 14 padding 12 14, the
-//   13 / 500 --slabel label, the --sfield field radius 10 padding 11 13);
+//   13 / 500 --slabel label, the --sfield field radius 10 padding 11 13); a
+//   plan's Description is its DB3 `description` (≤ 500);
 // - Format chips In person · Online · Both (radius 8, padding 8 12, 13; on
-//   the chip fill / white 700, off --chipoffbg / --chipoffbd 500): live for a
-//   session type (location_kind; null is Both, as CA16) and a shelf item
-//   (`format`); a plan has none (shown off, disabled);
+//   the chip fill / white 700, off --chipoffbg / --chipoffbd 500): a session
+//   type's location_kind (null is Both, as CA16), a shelf item's and a plan's
+//   `format`;
 // - "Show in Showcase" / "Off hides it from clients and gyms" with the 42 × 26
-//   switch: a shelf item's live `visible`; a session type or plan has no
-//   showcase flag (shown on, disabled);
+//   switch: the item's live `visible` (not `active`, which a plan keeps as
+//   "Offered"); a hidden session type stays bookable by its link;
 // - footer (padding 8 20 34, the --srule above, gap 4): "Save" (50 tall
 //   radius 16 --fill 15 / 700) and "Delete service" (40 tall 14 / 700 --high).
 // KEPT live fields (PLAN §3.3, the Services page's ServiceSheet and the
@@ -70,7 +72,6 @@ const AUDIENCE_LABEL: Record<BookingAudience, string> = {
   clients_only: "Your clients only",
   approved_only: "People you approve",
 };
-const SOON_SHOW = "Hiding a service from your Showcase is coming soon.";
 const SHOW_SUB = "Off hides it from clients and gyms";
 const TAKEN_DOWN_SUB = "Centium took this down. Contact support for details.";
 
@@ -108,12 +109,12 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
   const isSession = kind === "session";
   const isShelf = kind === "shelf";
   const [name, setName] = useState(target?.item.name ?? "");
-  const [description, setDescription] = useState(session?.description ?? item?.description ?? "");
+  const [description, setDescription] = useState(target?.item.description ?? "");
   const [price, setPrice] = useState(target && (target.item.price ?? 0) > 0 ? String(target.item.price) : "");
-  const [format, setFormat] = useState<Format | null>(session ? formatOfLocation(session.locationKind) : item ? item.format : target ? null : "in_person");
+  const [format, setFormat] = useState<Format | null>(session ? formatOfLocation(session.locationKind) : item ? item.format : plan ? plan.format : "in_person");
   const [durationLabel, setDurationLabel] = useState(item?.durationLabel ?? "");
-  const [shown, setShown] = useState(item?.visible ?? true);
-  const [imageUrl, setImageUrl] = useState<string | null>(item?.imageUrl ?? null);
+  const [shown, setShown] = useState(target?.item.visible ?? true);
+  const [imageUrl, setImageUrl] = useState<string | null>(target?.item.imageUrl ?? null);
   /** A photo URL that failed to load: the empty frame shows instead of a broken image. */
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -129,7 +130,6 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
   const [features, setFeatures] = useState<string[]>(plan && plan.features.length ? plan.features : [""]);
   const [active, setActive] = useState(plan?.active ?? true);
   const [photoOpen, setPhotoOpen] = useState(false);
-  const [photoNote, setPhotoNote] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -168,6 +168,8 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
         price: p,
         colour,
         locationKind: locationOfFormat(format, session ? session.locationKind : "in_person"),
+        imageUrl,
+        visible: shown,
       });
       setBusy(false);
       if (!r.ok) return setError(r.message);
@@ -178,10 +180,20 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
       setBusy(false);
       return setError("Enter how many sessions the package holds.");
     }
+    if (description.trim().length > 500) {
+      setBusy(false);
+      return setError("Keep the description to 500 characters or fewer.");
+    }
     const position = plan ? plan.position : plans.reduce((mx, x) => Math.max(mx, x.position + 1), 0);
     const r = await savePlan(authUserId, plan?.id ?? null, { name, price: String(p), billing, features, active, sessionCount: count }, position);
+    if (!r.ok) {
+      setBusy(false);
+      return setError(r.message);
+    }
+    // The plan's DB3 showcase fields go in a second write (the shared savePlan writes the Services page's fields).
+    const sc = await savePlanShowcase(authUserId, r.plan.id, { description, imageUrl, visible: shown, format });
     setBusy(false);
-    if (!r.ok) return setError(r.message);
+    if (!sc.ok) return setError(sc.message);
     onSaved(editing ? "Service saved" : `${r.plan.name} added`);
   };
 
@@ -242,11 +254,6 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
       {text}
     </div>
   );
-  const hint = (text: string, id?: string) => (
-    <div id={id} style={{ fontSize: px(11.5), lineHeight: lh(16), color: m.faint, marginTop: 8 }}>
-      {text}
-    </div>
-  );
   const grey: React.CSSProperties = { background: m.sgrey, borderRadius: 14, padding: "12px 14px" };
 
   return (
@@ -279,17 +286,14 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, paddingBottom: 4 }}>
             <button
               type="button"
-              aria-label={isShelf && !imageUrl ? "Add a photo" : "Change photo"}
+              aria-label={imageUrl ? "Change photo" : "Add a photo"}
               aria-haspopup="dialog"
-              disabled={isShelf && (photoBusy || !online)}
-              onClick={() => {
-                setPhotoNote(false);
-                setPhotoOpen(true);
-              }}
+              disabled={photoBusy || !online}
+              onClick={() => setPhotoOpen(true)}
               className="market-focus"
               style={{ position: "relative", width: 132, height: 132, borderRadius: 18, background: m.soft, border: 0, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
             >
-              {isShelf && imageUrl && failedUrl !== imageUrl ? (
+              {imageUrl && failedUrl !== imageUrl ? (
                 <img src={imageUrl} alt="" onError={() => setFailedUrl(imageUrl)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18, display: "block" }} />
               ) : (
                 <ImageIcon size={28} strokeWidth={1.6} color={m.tert} aria-hidden />
@@ -329,22 +333,15 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
           </SheetBox>
 
           <SheetBox label="Description" htmlFor={`${ids}-desc`}>
-            {isSession || isShelf ? (
-              <textarea
-                id={`${ids}-desc`}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                maxLength={500}
-                rows={1}
-                placeholder="Optional"
-                style={{ ...fieldStyle(m), resize: "none", minHeight: 41, fieldSizing: "content" } as React.CSSProperties}
-              />
-            ) : (
-              <>
-                <input id={`${ids}-desc`} disabled aria-describedby={`${ids}-desc-note`} value="" placeholder="Optional" style={{ ...fieldStyle(m), opacity: 0.4 }} />
-                {hint("Descriptions for packages and programmes are coming soon. What's included shows on the card.", `${ids}-desc-note`)}
-              </>
-            )}
+            <textarea
+              id={`${ids}-desc`}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={500}
+              rows={1}
+              placeholder="Optional"
+              style={{ ...fieldStyle(m), resize: "none", minHeight: 41, fieldSizing: "content" } as React.CSSProperties}
+            />
           </SheetBox>
 
           <SheetBox label="Price" htmlFor={`${ids}-price`}>
@@ -355,27 +352,12 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
             {groupLabel(`${ids}-fmt`, "Format")}
             {chipRow(
               `${ids}-fmt`,
-              FORMATS.map((f) => {
-                const live = isSession || isShelf;
-                const on = live && format === f.key;
-                return (
-                  <button
-                    key={f.key}
-                    type="button"
-                    role="radio"
-                    aria-checked={on}
-                    aria-disabled={!live || undefined}
-                    aria-describedby={!live ? `${ids}-fmt-note` : undefined}
-                    onClick={() => live && setFormat(f.key)}
-                    className="market-focus"
-                    style={chip(on, !live)}
-                  >
-                    {f.label}
-                  </button>
-                );
-              })
+              FORMATS.map((f) => (
+                <button key={f.key} type="button" role="radio" aria-checked={format === f.key} onClick={() => setFormat(f.key)} className="market-focus" style={chip(format === f.key)}>
+                  {f.label}
+                </button>
+              ))
             )}
-            {!isSession && !isShelf ? hint("Format for packages and programmes is coming soon.", `${ids}-fmt-note`) : null}
           </div>
 
           {isShelf ? (
@@ -549,70 +531,40 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: px(14), fontWeight: 700 }}>Show in Showcase</div>
               <div id={`${ids}-vis`} style={{ fontSize: px(11.5), color: m.faint }}>
-                {isShelf ? (takenDown ? TAKEN_DOWN_SUB : SHOW_SUB) : SOON_SHOW}
+                {takenDown ? TAKEN_DOWN_SUB : SHOW_SUB}
               </div>
             </div>
-            {isShelf ? (
-              <SheetSwitch on={shown && !takenDown} onChange={setShown} label="Show in Showcase" describedBy={`${ids}-vis`} disabled={takenDown} />
-            ) : (
-              // awaiting DB stage DB3: showcase_visible on appointment_services / professional_plans (73ea87b added none); every live service shows.
-              <SheetSwitch on onChange={() => undefined} label="Show in Showcase" describedBy={`${ids}-vis`} disabled />
-            )}
+            <SheetSwitch on={shown && !takenDown} onChange={setShown} label="Show in Showcase" describedBy={`${ids}-vis`} disabled={takenDown} />
           </div>
         </div>
       </MasterSheet>
 
       <MasterSheet open={photoOpen} onClose={() => setPhotoOpen(false)} title="Service photo" footer={<span />}>
-        {isShelf ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, color: m.ink, lineHeight: "normal" }}>
-            {(["Take photo", "Choose from library", "Remove photo"] as const).map((label) => {
-              const remove = label === "Remove photo";
-              const off = remove && !imageUrl;
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => {
-                    if (label === "Take photo") camRef.current?.click();
-                    else if (label === "Choose from library") libRef.current?.click();
-                    else {
-                      setImageUrl(null);
-                      setPhotoOpen(false);
-                    }
-                  }}
-                  disabled={off}
-                  className="market-focus"
-                  style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 52, padding: "0 14px", borderRadius: 14, background: m.sgrey, border: 0, fontFamily: "inherit", fontSize: px(14), fontWeight: 600, color: remove ? m.high : m.ink, textAlign: "left", cursor: off ? "default" : "pointer", opacity: off ? 0.4 : 1 }}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10, color: m.ink, lineHeight: "normal" }}>
           {(["Take photo", "Choose from library", "Remove photo"] as const).map((label) => {
             const remove = label === "Remove photo";
+            const off = remove && !imageUrl;
             return (
               <button
                 key={label}
                 type="button"
-                // awaiting DB stage DB3: photo_path on appointment_services / professional_plans (73ea87b added none). No photo can be stored yet, so there is none to remove.
-                onClick={() => setPhotoNote(true)}
-                disabled={remove}
-                aria-describedby={`${ids}-photo-note`}
+                onClick={() => {
+                  if (label === "Take photo") camRef.current?.click();
+                  else if (label === "Choose from library") libRef.current?.click();
+                  else {
+                    setImageUrl(null);
+                    setPhotoOpen(false);
+                  }
+                }}
+                disabled={off}
                 className="market-focus"
-                style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 52, padding: "0 14px", borderRadius: 14, background: m.sgrey, border: 0, fontFamily: "inherit", fontSize: px(14), fontWeight: 600, color: remove ? m.high : m.ink, textAlign: "left", cursor: remove ? "default" : "pointer", opacity: remove ? 0.4 : 1 }}
+                style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 52, padding: "0 14px", borderRadius: 14, background: m.sgrey, border: 0, fontFamily: "inherit", fontSize: px(14), fontWeight: 600, color: remove ? m.high : m.ink, textAlign: "left", cursor: off ? "default" : "pointer", opacity: off ? 0.4 : 1 }}
               >
                 {label}
               </button>
             );
           })}
-          <p id={`${ids}-photo-note`} role={photoNote ? "status" : undefined} style={{ fontSize: px(11.5), lineHeight: lh(16), color: m.faint, textAlign: "center", margin: "4px 0 0" }}>
-            Service photos are coming soon.
-          </p>
         </div>
-        )}
       </MasterSheet>
       <input
         ref={camRef}
