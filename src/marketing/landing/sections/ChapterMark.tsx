@@ -20,3 +20,17 @@ export const ChapterMark: React.FC<{ n: string; t: string; size: string }> = ({ 
     </span>
   </div>
 );
+
+/** The page mark above the Contact and Legal titles (CT1 / LG1 data-chm
+ *  "CONTACT" / "LEGAL"): one word, centred, rolled in like a chapter number,
+ *  with an empty title part. */
+export const PageMark: React.FC<{ id: string; word: string; size: string }> = ({ id, word, size }) => (
+  <div data-chm={id} style={{ display: "flex", justifyContent: "center", fontSize: size, fontWeight: "700", lineHeight: "1.25" }}>
+    <span style={{ display: "block", overflow: "hidden" }}>
+      <span data-chn="" style={{ display: "block", color: "#6A54C4", transform: "translateY(105%)" }}>
+        {word}
+      </span>
+    </span>
+    <span data-cht="" style={{ opacity: "0" }} />
+  </div>
+);

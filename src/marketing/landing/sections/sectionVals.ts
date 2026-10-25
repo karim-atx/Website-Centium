@@ -1,6 +1,7 @@
-// Centium landing v29: the responsive values of sections 01 to 06 and the
-// bands, literally from the prototype's renderVals `r` and r12 (02_pages
-// 06-DY1, 07-WK1, 08-PR1, 09-PI1, 11-CO1, 12-WH1, 13-EC1; lg = width >= 1024,
+// Centium landing v29: the responsive values of sections 01 to 09, the
+// closing CTA and the bands, literally from the prototype's renderVals `r`
+// and r12 (02_pages 06-DY1, 07-WK1, 08-PR1, 09-PI1, 11-CO1, 12-WH1, 13-EC1,
+// 15-RV1, 16-PC1, 17-FA1, 18-CA1; lg = width >= 1024,
 // sm = width >= 640). Production renders without the prototype's QA
 // parameters, so `q.still` / `q.fith` are always unset: pinned tracks are
 // sticky on desktop and VH is 100svh.
@@ -152,6 +153,40 @@ export function sectionVals(vw: number, vh: number) {
     ecoCursor: lg ? "grab" : "auto",
     ecoTouch: lg ? "pan-y" : "auto",
     pillSh: lg ? "none" : "0 6px 18px rgba(72,58,130,.14)",
+    // 07 Reviews (rvOver / rvPadX depend on reduced motion: Reviews.tsx)
+    rvW: lg ? "380px" : "290px",
+    glowW: lg ? "220px" : "90px",
+    // 08 Pricing
+    pcY: lg ? "24px" : "16px",
+    pcCtlPos: (lg ? "relative" : "sticky") as "relative" | "sticky",
+    pcCtlTop: lg ? "0px" : "72px",
+    pcCtlM: lg ? "0" : "0 -20px",
+    pcCtlPad: lg ? "0" : "10px 20px",
+    pcCtlBg: "transparent",
+    pcCtlBd: "none",
+    audW: lg ? "480px" : "100%",
+    audF: lg ? "14px" : "13px",
+    saveBadgePos: "absolute" as const,
+    saveBadgeL: vw < 420 ? "50%" : "100%",
+    saveBadgeT: vw < 420 ? "calc(100% + 8px)" : "50%",
+    saveML: vw < 420 ? "0px" : "10px",
+    saveTX: vw < 420 ? "-50%" : "0%",
+    saveTY: vw < 420 ? "0%" : "-50%",
+    pcCardsM: lg ? "56px auto 0" : "36px -20px 0",
+    pcDisp: lg ? "grid" : "flex",
+    pcOver: (lg ? "visible" : "auto") as "visible" | "auto",
+    pcPad: lg ? "0" : "22px 20px 12px",
+    pcCardW: lg ? "auto" : "80vw",
+    priceF: lg ? "34px" : "32px",
+    // 09 FAQ
+    faqCols: lg ? ".8fr 1.2fr" : "1fr",
+    // Closing CTA
+    ctaY: lg ? "72px" : "48px",
+    ctaYb: lg ? "140px" : "88px",
+    ctaH: lg ? "clamp(52px,5.4vw,80px)" : vw < 380 ? "36px" : "40px",
+    ctaDir: (sm ? "row" : "column") as "row" | "column",
+    ctaBoxW: sm ? "auto" : "min(100%,360px)",
+    ctaW: sm ? "200px" : "100%",
   };
 }
 

@@ -4,7 +4,7 @@ import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
 import { LoadingHost } from "../landing/loading/LoadingHost";
 import { anchorHash, keepY, loaderEntryFor, pageOf } from "../landing/loading/pickLoader";
-import { ANCHOR_OFFSET, PageFadeContext, anchorTarget } from "../landing/navigation";
+import { PageFadeContext, anchorOffset, anchorTarget } from "../landing/navigation";
 import "../landing/landing.css";
 
 // Centium landing v29: the marketing shell (Nav, page, Footer, loading).
@@ -16,7 +16,8 @@ import "../landing/landing.css";
 // - html gets overscroll-behavior-y:none (mkt-no-overscroll, kept) and the
 //   prototype's overflow-x:clip (centium-site-html).
 // - Scrolling on navigation, as the prototype: a new page starts at the top
-//   (or at its #anchor, minus the 72px navbar); back/forward restores the
+//   (or at its #anchor, minus the 72px navbar, or the anchor's own larger
+//   scroll-margin-top); back/forward restores the
 //   position saved in history.state.cy; a reload restores the position saved
 //   on pagehide (centium-landing:y). Only hashes that name an element count
 //   as anchors, so an auth return (#error=..., handled by
@@ -61,7 +62,7 @@ const ScrollOnNavigate: React.FC = () => {
     const id = anchorHash(location.hash);
     const anchor = id ? anchorTarget(id) : null;
     if (anchor) {
-      window.scrollTo(0, anchor.getBoundingClientRect().top + window.scrollY - ANCHOR_OFFSET);
+      window.scrollTo(0, anchor.getBoundingClientRect().top + window.scrollY - anchorOffset(anchor));
       return;
     }
     if (first && entry.at != null) {

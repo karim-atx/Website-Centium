@@ -22,11 +22,19 @@ export function anchorTarget(id: string): HTMLElement | null {
   return document.getElementById(TRACK_FOR[id] ?? id) ?? document.getElementById(id);
 }
 
+/** How far below the top an anchor lands: the navbar, or the element's own
+ *  scroll-margin-top when it sets a larger one (the Legal page's documents
+ *  and groups: 96px, LG1), so a deep link lands where the browser's own jump
+ *  would. */
+export function anchorOffset(el: HTMLElement): number {
+  return Math.max(ANCHOR_OFFSET, parseFloat(getComputedStyle(el).scrollMarginTop) || 0);
+}
+
 /** Scroll to a landing section minus the navbar. Returns false when the section is not on this page. */
 export function scrollToSection(id: string, behavior?: ScrollBehavior): boolean {
   const el = anchorTarget(id);
   if (!el) return false;
-  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - ANCHOR_OFFSET, behavior: behavior ?? (reducedMotion() ? "auto" : "smooth") });
+  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - anchorOffset(el), behavior: behavior ?? (reducedMotion() ? "auto" : "smooth") });
   return true;
 }
 

@@ -60,3 +60,18 @@ html.centium-site-html body {
     transform: none;
   }
 }
+
+/* Focus states drawn by the handover's style-focus (literal values):
+   review cards (RV1) get a lavender ring instead of an outline; the contact
+   fields (CT1) take the lavender border and halo over any resting or
+   invalid border; the 404 buttons (NF1) sit their outline 3px off. */
+.centium-site .cl-fring:focus {
+  box-shadow: 0 0 0 3px rgba(125, 103, 217, 0.35) !important;
+}
+.centium-site .cl-ffield:focus {
+  border-color: #7d67d9 !important;
+  box-shadow: 0 0 0 4px rgba(125, 103, 217, 0.14) !important;
+}
+.centium-site .cl-fo3:focus-visible {
+  outline-offset: 3px;
+}

@@ -304,41 +304,6 @@ export default {
           DEFAULT: "rgb(var(--c-minute-hand) / <alpha-value>)",
           highlight: "rgb(var(--c-minute-hand-highlight) / <alpha-value>)",
         },
-        // Marketing-site-only premium refinement tokens (fixed values, not
-        // theme-reactive — the marketing site is intentionally a light site
-        // with dark accent bands, independent of the app's user-controlled
-        // light/dark toggle). Additive: nothing here renames or overrides
-        // the shared --c-* tokens above, so the app / shared ui components
-        // (Button, CentiumLogo, dashboards, etc.) are unaffected.
-        mkt: {
-          // Logo-only lavender (marketing site redesign) — distinct from
-          // mkt.accent: the mark/wordmark use this slightly brighter tone,
-          // buttons/active-states keep using mkt.accent as before.
-          logo: "#9C7FF8",
-          ink: "#221E1A",
-          soft: "#5B5349",
-          faint: "#8C8378",
-          line: "#EDEAE4",
-          wash: "#FBFAF8",
-          wash2: "#FAF9F7",
-          tint: "#F4F1FB",
-          // v2 landing handoff: a darker lavender tint for small emphasis
-          // blocks (e.g. the Problem section's resolved answer row) that
-          // need to read a step stronger than mkt.tint's chip/card wash.
-          "tint-deep": "#E6DFF7",
-          capsule: "#F5F3F9",
-          accent: "#7D67D9",
-          "accent-hover": "#6A54C4",
-          "accent-ring": "#C6B9EE",
-          teal: "#4F8F8A",
-          "teal-tint": "#EDF4F3",
-          dark: "#0D0B1A",
-          "dark-surface": "#17142A",
-          "dark-line": "#241F3D",
-          "dark-accent": "#A991FE",
-          "dark-ink": "#F5F3FA",
-          "dark-soft": "#B8B3C7",
-        },
       },
       // Text utilities read the ink twins (see above). Background, border,
       // ring, fill and stroke keep the colour itself.
@@ -459,12 +424,6 @@ export default {
           "0%": { opacity: 1 },
           "100%": { opacity: 0 },
         },
-        // The v6 Welcome (BU1 OB-033…050) replaced the launch rings, bloom,
-        // sweep and fade-out; only the breathing pulse stays (marketing NotFound).
-        "cent-breathe": {
-          "0%, 100%": { transform: "scale(1)" },
-          "50%": { transform: "scale(1.035)" },
-        },
         "fill-up": {
           "0%": { height: "0%" },
         },
@@ -531,16 +490,6 @@ export default {
           "0%": { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
           "100%": { transform: "translate(var(--confetti-drift), 100vh) rotate(var(--confetti-rotate))", opacity: 0.2 },
         },
-        // v2 Centium landing handoff: the two drifting decorative orbs (the
-        // marketing NotFound page uses them).
-        "mkt-drift-a": {
-          "0%, 100%": { transform: "translate3d(0,0,0)" },
-          "50%": { transform: "translate3d(26px,-34px,0)" },
-        },
-        "mkt-drift-b": {
-          "0%, 100%": { transform: "translate3d(0,0,0)" },
-          "50%": { transform: "translate3d(-30px,26px,0)" },
-        },
       },
       animation: {
         "skeleton-pulse": "skeleton-pulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
@@ -555,7 +504,6 @@ export default {
         "logo-launch-ring": "logo-launch-ring 0.85s cubic-bezier(0,0,0.2,1) both",
         "logo-launch-ring-2": "logo-launch-ring-2 0.95s cubic-bezier(0,0,0.2,1) 0.1s both",
         "welcome-fade-out": "welcome-fade-out 0.5s ease 0.15s both",
-        "cent-breathe": "cent-breathe 5s ease-in-out infinite",
         // QA 12.0: "the animation in reaching the [water] goal is
         // distracting, please reduce frequency substantially" — same pulse,
         // scoped to water only so the shared 1.6s pulse-ring (voice logger,
@@ -575,8 +523,6 @@ export default {
         "calorie-flame": "calorie-flame 1.6s ease-in-out infinite",
         "calorie-glow": "calorie-glow 2.4s ease-out infinite",
         "confetti-fall": "confetti-fall 1.8s ease-in both",
-        "mkt-drift-a": "mkt-drift-a 22s ease-in-out infinite",
-        "mkt-drift-b": "mkt-drift-b 27s ease-in-out infinite",
       },
     },
   },
