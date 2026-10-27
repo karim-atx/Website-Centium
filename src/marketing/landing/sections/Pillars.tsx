@@ -40,7 +40,10 @@ export const Pillars: React.FC<{ r: SectionVals }> = ({ r }) => (
                 <span style={{ fontSize: "11px", fontWeight: "700", letterSpacing: ".22em", color: pp.c }}>
                   {pp.n}
                 </span>
-                <div style={{ fontSize: "22px", fontWeight: "800", letterSpacing: "-.02em", marginTop: "2px" }}>
+                {/* Active state (not in the handover; added once AA left the
+                    inactive rows at .82): motion/pillars.ts sets the current
+                    title to 800 with a teal underline, the others to 600. */}
+                <div data-plt="" style={{ fontSize: "22px", fontWeight: "600", letterSpacing: "-.02em", marginTop: "2px", textDecorationLine: "none", textDecorationColor: "#4A7D76", textDecorationThickness: "2px", textUnderlineOffset: "5px" }}>
                   {pp.t}
                 </div>
                 <div style={{ fontSize: "14px", color: "#5B5349", marginTop: "2px" }}>

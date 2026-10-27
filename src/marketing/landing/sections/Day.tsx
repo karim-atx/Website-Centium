@@ -60,7 +60,9 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
                 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "11px", color: "#756D63" }}>
                   {mo.t}
                 </span>
-                <span data-rl={mo.i} style={{ fontSize: "13px", fontWeight: "700", color: "#5B5349", opacity: ".81", whiteSpace: "nowrap" }}>
+                {/* Active state: motion/day.ts sets the current moment to 800
+                    with a teal underline, the others to 600 (AA keeps them at .81). */}
+                <span data-rl={mo.i} style={{ fontSize: "13px", fontWeight: "600", color: "#5B5349", opacity: ".81", whiteSpace: "nowrap", textDecorationLine: "none", textDecorationColor: "#4A7D76", textDecorationThickness: "1.5px", textUnderlineOffset: "4px" }}>
                   {mo.label}
                 </span>
               </div>

@@ -24,6 +24,7 @@ export class PillarsMotion implements EngineSection {
   private track: Track | null = null;
   private pli: HTMLElement[] = [];
   private plf: HTMLElement[] = [];
+  private plt: HTMLElement[] = [];
   private panes: Pane[] = [];
   private car: HTMLElement | null = null;
   private dots: HTMLElement[] = [];
@@ -56,6 +57,7 @@ export class PillarsMotion implements EngineSection {
     this.track = el ? { el, t: el.getBoundingClientRect().top + window.scrollY, span: Math.max(1, el.offsetHeight - ctx.vh) } : null;
     this.pli = Array.from(document.querySelectorAll<HTMLElement>("[data-pli]"));
     this.plf = Array.from(document.querySelectorAll<HTMLElement>("[data-plf]"));
+    this.plt = Array.from(document.querySelectorAll<HTMLElement>("[data-plt]"));
     this.panes = Array.from(document.querySelectorAll<HTMLElement>("[data-pls]")).map((p) => ({ el: p, A: collect(p) }));
     this.dots = Array.from(document.querySelectorAll<HTMLElement>("[data-dot]"));
     const car = document.getElementById("pl-panes");
@@ -83,6 +85,12 @@ export class PillarsMotion implements EngineSection {
       this.pli.forEach((el, i) => {
         el.style.opacity = i === idx ? "1" : ".82";
         el.style.background = i === idx ? "#FAF9FE" : "transparent";
+      });
+      // AA keeps the other rows at .82, so the current one is marked by weight
+      // and a teal underline rather than by dimming the rest.
+      this.plt.forEach((el, i) => {
+        el.style.fontWeight = i === idx ? "800" : "600";
+        el.style.textDecorationLine = i === idx ? "underline" : "none";
       });
       this.plf.forEach((el, i) => {
         el.style.transform = "scaleY(" + (i < idx ? 1 : i === idx ? Math.min(1, fr / 0.75) : 0).toFixed(3) + ")";

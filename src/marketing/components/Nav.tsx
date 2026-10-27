@@ -39,6 +39,29 @@ const getVw = () => window.innerWidth;
 const getSpy = () => landingState.get().spy;
 const getMenuOpen = () => landingState.get().menuOpen;
 
+// The current section's link, beyond the pill (1.2:1 on the plate, so not
+// enough alone): 800 with a thin teal underline. A hidden 800 copy holds the
+// width, so the links beside it don't move as the scroll-spy changes.
+const NavLabel: React.FC<{ label: string; active: boolean }> = ({ label, active }) => (
+  <span style={{ display: "inline-grid" }}>
+    <span
+      style={{
+        gridArea: "1 / 1",
+        fontWeight: active ? 800 : 600,
+        textDecorationLine: active ? "underline" : "none",
+        textDecorationColor: "#4A7D76",
+        textDecorationThickness: "1.5px",
+        textUnderlineOffset: "4px",
+      }}
+    >
+      {label}
+    </span>
+    <span aria-hidden="true" style={{ gridArea: "1 / 1", fontWeight: 800, visibility: "hidden" }}>
+      {label}
+    </span>
+  </span>
+);
+
 const plainClick = (e: React.MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
 
 export const Nav: React.FC = () => {
@@ -221,7 +244,7 @@ export const Nav: React.FC = () => {
                     } as React.CSSProperties
                   }
                 >
-                  {l.label}
+                  <NavLabel label={l.label} active={l.active} />
                 </a>
               ))}
             </nav>
@@ -337,7 +360,7 @@ export const Nav: React.FC = () => {
                   color: l.active ? "#6A54C4" : "#5B5349",
                 }}
               >
-                {l.label}
+                <NavLabel label={l.label} active={l.active} />
               </a>
             ))}
           </nav>

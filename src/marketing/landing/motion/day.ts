@@ -121,7 +121,12 @@ export class DayMotion implements EngineSection {
       d.style.opacity = sm(0, 0.1, U[k]).toFixed(3);
     });
     C.rl.forEach((d, k) => {
-      d.style.opacity = (0.81 + 0.19 * bump(k)).toFixed(3);
+      const b = bump(k);
+      d.style.opacity = (0.81 + 0.19 * b).toFixed(3);
+      // The current moment: heavier, with a teal underline (AA keeps the
+      // others at .81, too close to tell apart by opacity alone).
+      d.style.fontWeight = b > 0.5 ? "800" : "600";
+      d.style.textDecorationLine = b > 0.5 ? "underline" : "none";
     });
     const mins = Math.round(h * 60 * 1000) / 1000,
       hh = Math.floor(mins / 60),
