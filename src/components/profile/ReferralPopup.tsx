@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { CircleAlert, CircleCheck, Copy, Check, Gift, Share, Sparkles, UserPlus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { CentredPopup } from "../ui/CentredPopup";
 import { useApp } from "../../context/AppContext";
 import {
@@ -48,6 +49,7 @@ import { appliedLine, previewOfferLine, redemptionsLine } from "../../services/r
  */
 export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colleague?: boolean }> = ({ open, onClose, colleague = false }) => {
   const { authUserId } = useApp();
+  const navigate = useNavigate();
   const [codeDraft, setCodeDraft] = useState("");
   const [copied, setCopied] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -211,7 +213,12 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
             colleague
               ? { icon: UserPlus, who: "Your colleague", what: "10% off their first plan" }
               : { icon: UserPlus, who: "Your friend", what: "10% off their subscription" },
-            { icon: Sparkles, who: "You", what: "1,500 points plus 15% off your next month" },
+            // BR (Karim, 2026-10-27): points only. No bill ever applied the
+            // "15% off your next month" (the discount columns are read by
+            // nothing; billing is in the app stores), so it is not promised
+            // until billing applies it. Server-driven rows and the ambassador
+            // terms follow Database stage B3.
+            { icon: Sparkles, who: "You", what: "1,500 points per friend who joins" },
           ].map((row, i) => (
             <div key={row.who} className={`flex items-center gap-3 py-3 ${i === 1 ? "border-t border-charcoal/[0.06]" : ""}`}>
               {/* MO1.10 (2x frame): a 32 r10 #F0EDF9 tile (x 102–165) with
@@ -304,6 +311,19 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
             size measured, not given): referral_summary's redemptions and
             points_earned, once anybody has used the code. */}
         {progressLine && <p className="mt-4 text-[13px] text-charcoal">{progressLine}</p>}
+        {/* BR (not drawn): the points history, for every account type (PLAN S4). */}
+        {progressLine && (
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              navigate("/app/marketplace/points/history");
+            }}
+            className="tap mt-1 text-[12px] font-bold text-primary-accent"
+          >
+            See points history
+          </button>
+        )}
 
         {/* MO1.10 (2x frame): the rule 16 under the block above (y 1290 →
             1330) and 14 above "Have a code?". */}

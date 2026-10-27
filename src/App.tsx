@@ -487,7 +487,10 @@ function AppRoutes() {
         <Route path="/app/marketplace/rewards/mine" element={<ClientOnly><MyRewardsPage /></ClientOnly>} />
         <Route path="/app/marketplace/rewards/:offerId" element={<ClientOnly><OfferDetailPage /></ClientOnly>} />
         <Route path="/app/marketplace/vouchers/:id" element={<ClientOnly><VoucherPage /></ClientOnly>} />
-        <Route path="/app/marketplace/points/history" element={<ClientOnly><PointsHistoryPage /></ClientOnly>} />
+        {/* BR (Karim, 2026-10-27): every account earns referral points and reads its own
+            my_points_ledger (no account-type rule on the server), so the history opens for
+            professionals and businesses too, from the Referral popup. */}
+        <Route path="/app/marketplace/points/history" element={<PointsHistoryPage />} />
         <Route path="/app/marketplace/points/earn" element={<ClientOnly><HowToEarnPage /></ClientOnly>} />
         <Route path="/app/notifications" element={<ClientOnly><ClientNotificationsPage /></ClientOnly>} />
         <Route path="/app/marketplace/:category" element={<MarketplaceCategoryPage />} />
