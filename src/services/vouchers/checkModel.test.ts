@@ -107,3 +107,26 @@ test("mark: the first answer is used, a repeat already_used (idempotent); refusa
   assert.equal(markRefusal(prev, { code: "42501" }), null);
   assert.equal(dateTimeLabel("nope"), "");
 });
+
+test("DH: the holder's first name is the Member / Client row, between Offer and Valid until", () => {
+  const withName = parseCheck([{ ...base, state: "valid", expires_at: new Date(2027, 0, 15, 23).toISOString(), member_first_name: "Maya" }])!;
+  assert.deepEqual(checkView(withName, "business").rows.map((r) => r.k), ["Offer", "Member", "Valid until"]);
+  assert.equal(checkView(withName, "business").rows[1].v, "Maya");
+  assert.equal(checkView(withName, "professional").rows[1].k, "Client");
+  // Before the stage lands: no column, no row, no note.
+  const before = checkView(parseCheck([{ ...base, state: "valid" }])!, "business");
+  assert.equal(before.rows.some((r) => r.k === "Member"), false);
+  assert.equal(before.note, undefined);
+});
+
+test("DH: an 18+ offer whose holder isn't a confirmed adult carries the check-ID note; Mark as used stays", () => {
+  const minor = checkView(parseCheck([{ ...base, state: "valid", member_first_name: "Maya", member_confirmed_adult: false }])!, "business");
+  assert.equal(minor.note, "18+ offer. Maya's age isn't confirmed on Centium. Check ID before marking it as used.");
+  assert.equal(minor.cta, "Mark as used");
+  const adult = checkView(parseCheck([{ ...base, state: "valid", member_first_name: "Maya", member_confirmed_adult: true }])!, "business");
+  assert.equal(adult.note, undefined);
+  const notRestricted = checkView(parseCheck([{ ...base, state: "valid", member_confirmed_adult: null }])!, "professional");
+  assert.equal(notRestricted.note, undefined);
+  const noName = checkView(parseCheck([{ ...base, state: "valid", member_confirmed_adult: false }])!, "professional");
+  assert.equal(noName.note, "18+ offer. The client's age isn't confirmed on Centium. Check ID before marking it as used.");
+});

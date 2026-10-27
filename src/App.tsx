@@ -494,8 +494,11 @@ function AppRoutes() {
         <Route path="/app/business/analytics/:section?/*" element={<AnalyticsShell />} />
         {/* B7: staff reach the console pages their permissions allow (ConsoleGate). */}
         <Route path="/app/business/marketplace/*" element={<ConsoleGate need="marketing"><MarketRoutes /></ConsoleGate>} />
-        {/* Market + Share 3.0 W3: B-MA.4 Redeem a voucher; the owner, marketing or front desk may check vouchers (D-25). */}
-        <Route path="/app/business/redeem" element={<ConsoleGate need={["marketing", "front_desk"]}><RedeemVoucher /></ConsoleGate>} />
+        {/* Market + Share 3.0 W3: B-MA.4 Redeem a voucher. Front desk only (Karim, 2026-10-27, DH):
+            check_voucher and mark_voucher_used need business_can(..., 'front_desk'), so marketing-only
+            staff were let in to read "Not valid at this business" on every code. They get the
+            ConsoleGate card naming the missing access instead. */}
+        <Route path="/app/business/redeem" element={<ConsoleGate need="front_desk"><RedeemVoucher /></ConsoleGate>} />
         {/* Market + Share 3.0 W4: B-MA.8 Hiring (gyms and studios; owner or members, api.md) and B-MA.9 business notifications (D-38). */}
         <Route path="/app/business/hiring/*" element={<ConsoleGate need="members"><HiringRoutes /></ConsoleGate>} />
         <Route path="/app/business/notifications" element={<BusinessNotificationsPage />} />

@@ -10,8 +10,11 @@
 // - mark_voucher_used(p_voucher_id) → {voucher_id, state used | already_used,
 //   already_used, used_at, used_by_name}; refusals ATX08 not found, ATX15
 //   not_valid_here, ATX16 void, ATX17 expired (the function comment).
-// Neither returns the member's first name, so the board's Member / Client row
-// isn't shown (Database gap, reported).
+// DH (Karim, 2026-10-27; Database Release A stage A1, requested): both append
+// member_first_name (valid / already_used only, after the not-valid-here
+// check: the Q-05 desk rule, first name only) and member_confirmed_adult
+// (filled only for an age-restricted offer). Until the stage lands neither
+// column exists, and the Member / Client row and the check-ID note stay out.
 
 import { formatShortDate } from "../../utils/date";
 import { clock12 } from "../../utils/time12";
@@ -32,6 +35,10 @@ export interface VoucherCheck {
   usedAt: string | null;
   /** The first name of the staff member (or professional) who marked it used. */
   usedBy: string | null;
+  /** The holder's first name (the board's Member / Client row). */
+  memberName: string | null;
+  /** false only for an age-restricted offer whose holder isn't a confirmed adult. */
+  memberConfirmedAdult: boolean | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -74,7 +81,7 @@ export function scanInput(raw: string): { p_code: string } | null {
 }
 
 /** What a read that isn't a code shows: the not-found result, without a server call. */
-export const notACode = (): VoucherCheck => ({ state: "not_found", voucherId: null, code: null, offerHeadline: "", expiresAt: null, usedAt: null, usedBy: null });
+export const notACode = (): VoucherCheck => ({ state: "not_found", voucherId: null, code: null, offerHeadline: "", expiresAt: null, usedAt: null, usedBy: null, memberName: null, memberConfirmedAdult: null });
 
 // ---------------------------------------------------------------------------
 // Results
@@ -95,6 +102,8 @@ export function parseCheck(data: unknown, code: string | null = null): VoucherCh
     expiresAt: str(r.expires_at),
     usedAt: str(r.used_at),
     usedBy: str(r.used_by_name),
+    memberName: str(r.member_first_name),
+    memberConfirmedAdult: typeof r.member_confirmed_adult === "boolean" ? r.member_confirmed_adult : null,
   };
 }
 
@@ -104,7 +113,7 @@ export function mergeMark(prev: VoucherCheck, data: unknown): VoucherCheck | nul
   if (!r) return null;
   const s = str(r.state);
   if (s !== "used" && s !== "already_used") return null;
-  return { ...prev, state: s, voucherId: str(r.voucher_id) ?? prev.voucherId, usedAt: str(r.used_at) ?? prev.usedAt, usedBy: str(r.used_by_name) ?? prev.usedBy };
+  return { ...prev, state: s, voucherId: str(r.voucher_id) ?? prev.voucherId, usedAt: str(r.used_at) ?? prev.usedAt, usedBy: str(r.used_by_name) ?? prev.usedBy, memberName: str(r.member_first_name) ?? prev.memberName };
 }
 
 /** mark_voucher_used's refusals → the state the sheet shows instead. */
@@ -136,6 +145,8 @@ export interface CheckView {
   title: string;
   body: string;
   rows: CheckRow[];
+  /** DH: the check-ID note on an 18+ offer whose holder isn't a confirmed adult (not drawn). */
+  note?: string;
   cta: "Mark as used" | "Scan another";
 }
 
@@ -150,6 +161,8 @@ export function checkView(c: VoucherCheck, variant: CheckVariant): CheckView {
   const who = pro ? "client" : "member";
   const offer = c.offerHeadline ? [{ k: "Offer", v: c.offerHeadline }] : [];
   const codeRow = c.code ? [{ k: "Code", v: c.code }] : [];
+  // B-MA.4 / P-MA.4 _Valid: Offer, Member (Client), Valid until.
+  const member = c.memberName ? [{ k: pro ? "Client" : "Member", v: c.memberName }] : [];
   switch (c.state) {
     case "valid":
       return {
@@ -157,7 +170,11 @@ export function checkView(c: VoucherCheck, variant: CheckVariant): CheckView {
         icon: "check",
         title: "Valid voucher",
         body: `Check the ${who}'s name, then mark the voucher as used.`,
-        rows: [...offer, ...(c.expiresAt ? [{ k: "Valid until", v: dateOf(c.expiresAt) }] : [])],
+        rows: [...offer, ...member, ...(c.expiresAt ? [{ k: "Valid until", v: dateOf(c.expiresAt) }] : [])],
+        // Staff still decide: Mark as used stays enabled.
+        ...(c.memberConfirmedAdult === false
+          ? { note: `18+ offer. ${c.memberName ? `${c.memberName}'s` : `The ${who}'s`} age isn't confirmed on Centium. Check ID before marking it as used.` }
+          : {}),
         cta: "Mark as used",
       };
     case "used":
