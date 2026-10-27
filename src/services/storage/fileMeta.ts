@@ -1,5 +1,3 @@
-import { PDFDocument } from "pdf-lib";
-
 /**
  * B2 file description for blood_panels / imaging_records (file_name,
  * file_type, file_pages, file_bytes). Descriptive only: the object is still
@@ -7,6 +5,10 @@ import { PDFDocument } from "pdf-lib";
  * on the device with pdf-lib (PDF only); a PDF that cannot be parsed simply
  * has no page count. Limits per the table CHECKs: name 1-200, bytes up to
  * 50 MB, pages 1-500.
+ *
+ * pdf-lib is loaded on demand, as in services/courses/pdf.ts: this module is
+ * reached from AppContext, so a static import put pdf-lib in the entry chunk
+ * every page (the marketing site included) downloads before its first paint.
  */
 /** A stored file_type (CHECK: null, 'pdf' or 'image') narrowed to its union. */
 export const fileTypeOf = (v: string | null | undefined): FileMeta["file_type"] | null => (v === "pdf" || v === "image" ? v : null);
@@ -23,6 +25,7 @@ export async function fileMetaOf(file: File): Promise<FileMeta> {
   let pages: number | null = null;
   if (pdf) {
     try {
+      const { PDFDocument } = await import("pdf-lib");
       const doc = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true, updateMetadata: false });
       const n = doc.getPageCount();
       pages = n >= 1 && n <= 500 ? n : null;

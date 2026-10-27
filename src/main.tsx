@@ -4,6 +4,7 @@ import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import './styles/theme-palette.css'
 import App from './App.tsx'
+import { preloadAppPages } from './appPagesLazy'
 
 // Registers the service worker that receives push notifications (src/sw.ts).
 //
@@ -27,6 +28,10 @@ registerSW({
     console.error('[pwa] Service worker registration failed:', error)
   },
 })
+
+// The web app's pages are their own chunk (appPagesLazy.ts): on an app
+// address its download starts now, alongside the session check.
+preloadAppPages()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

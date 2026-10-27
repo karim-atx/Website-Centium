@@ -1,8 +1,6 @@
-/* v6 (V6-101): Part B draws some text at 900, but Manrope has no 900: its
-   weights end at 800 (ExtraBold), and Google Fonts serves nothing for 900
-   (checked 8 Oct 2026). font-weight 900 renders with the 800 face, as it
-   does in the handover's own renders. */
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+/* Manrope (400-800) is linked from index.html, not @imported here: an @import
+   is only found once this whole stylesheet has downloaded, which chained the
+   font request (and the first paint) behind it. */
 
 @tailwind base;
 @tailwind components;
