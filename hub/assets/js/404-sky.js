@@ -14,7 +14,8 @@
      2.5%, no line fade, no twinkle, so no pointer parallax either. Redrawn
      only when the viewport size changes.
    - The comet: one at a time, the first 4s after load, then every 15 to 30s.
-     Its tail is the same arc sampled backwards from the head (v9).
+     Its tail is the same arc sampled backwards from the head (v9). On phones
+     its arc is placed clear of the copy, links and constellation (see path()).
    - Frame rate: 30fps while a comet is visible, otherwise 15fps; each frame
      request races a 100ms timer (site rule); nothing runs while hidden.
    - Reduced motion: still stars, no twinkle, no comet (redrawn once when the
@@ -58,16 +59,38 @@
     var n = document.createElement('canvas'); n.width = n.height = 96; var nx = n.getContext('2d'), id = nx.createImageData(96, 96); for (var p = 0; p < id.data.length; p += 4) { var g = Math.random() * 255; id.data[p] = id.data[p + 1] = id.data[p + 2] = g; id.data[p + 3] = 255; } nx.putImageData(id, 0, 0);
     bx.globalCompositeOperation = 'overlay'; bx.globalAlpha = .035; bx.fillStyle = bx.createPattern(n, 'repeat'); bx.fillRect(0, 0, W, H); bx.globalAlpha = 1; bx.globalCompositeOperation = 'source-over';
   }
-  /* comet path, in css px: upper left on desktop, above the copy on phones */
-  function path() { if (mob) return { a: [W * .02, 64], c: [W * .3, 88], b: [W * .58, 124], dur: 5.5 };
-    return { a: [-W * .03, H * .07], c: [W * .2, H * .1], b: [W * .44, H * .25], dur: 7.5 }; }
   function bez(P, u) { var m = 1 - u; return [m * m * P.a[0] + 2 * m * u * P.c[0] + u * u * P.b[0], m * m * P.a[1] + 2 * m * u * P.c[1] + u * u * P.b[1]]; }
+  /* comet path, in css px: upper left on desktop. On phones the prototype's short path (from W·.02, 64) runs into the
+     header, the eyebrow and the constellation, so the same arc goes to the nearest place, measured when each comet
+     starts, where it and its tail keep CLR px from the copy, every link and button, the header's and footer's marks and
+     the constellation: whole, or at .8 or .6 of its size (and of its time, so the speed and the tail's length stay). Nowhere: no comet this time. */
+  var CLR = 32; /* the tail's streaks spread up to 23px either side of the arc, plus an 8px margin and sampling slack */
+  function keepOut() {
+    var o = [];
+    document.querySelectorAll('.nf-wrap > *, a:not(.skip-link), button, header.nav .meta, .site-footer img, .site-footer small').forEach(function (el) { var r = el.getBoundingClientRect(); if (r.width && r.height) o.push([r.left, r.top, r.right, r.bottom]); });
+    if (CON.length) { var S = region(), l = 1e9, t = 1e9, r = -1e9, b = -1e9; /* its stars and the missing spot, with the spot's 9px afterglow */
+      CON.concat([MISS]).forEach(function (s) { var px = S.x + s.u * S.s, py = S.y + s.v * S.s; l = Math.min(l, px); r = Math.max(r, px); t = Math.min(t, py); b = Math.max(b, py); });
+      o.push([l - 9, t - 9, r + 9, b + 9]); }
+    return o; }
+  function fits(P, o) { for (var i = 0; i <= 64; i++) { var p = bez(P, i / 64); for (var j = 0; j < o.length; j++) { var r = o[j];
+    if (Math.hypot(Math.max(r[0] - p[0], 0, p[0] - r[2]), Math.max(r[1] - p[1], 0, p[1] - r[3])) < CLR) return false; } } return true; }
+  function mobPath(k, x0, y0) { return { a: [x0, y0], c: [x0 + W * .28 * k, y0 + 24 * k], b: [x0 + W * .56 * k, y0 + 60 * k], dur: 5.5 * k, span: .2 / k }; }
+  function path() {
+    if (!mob) return { a: [-W * .03, H * .07], c: [W * .2, H * .1], b: [W * .44, H * .25], dur: 7.5, span: .17 };
+    var o = keepOut(), ks = [1, .8, .6], P0 = mobPath(1, W * .02, 64); if (fits(P0, o)) return P0;
+    for (var n = 0; n < ks.length; n++) { var k = ks[n], best = null, bd = 1e9;
+      for (var y0 = 8; y0 + 60 * k <= H + 16; y0 += 4) for (var x0 = -W * .05; x0 + W * .56 * k <= W * 1.02; x0 += 8) {
+        var d = Math.abs(y0 - 64) + Math.abs(x0 - W * .02); if (d >= bd) continue;
+        var P = mobPath(k, x0, y0), m = bez(P, .5); if (m[0] < 24 || m[0] > W - 24 || m[1] > H - 24) continue; /* mostly on screen */
+        if (fits(P, o)) { best = P; bd = d; } }
+      if (best) return best; }
+    return null; }
   function ease(u) { return clamp(u - .06 * Math.sin(2 * Math.PI * u), 0, 1); }
   /* One path, one timing: the head sits at e(u) on the path, and the tail is the same path sampled backwards from e, the
      stretch it has just travelled. So it always starts at the nucleus and curves with the path, with no offset, lag or gap. */
-  function drawComet(u) {
-    var P = path(), e = ease(clamp(u, 0, 1)), env = Math.pow(Math.sin(Math.PI * clamp(u, 0, 1)), 1.6), sc = .85 + .25 * e; if (env <= .002) return;
-    var p = bez(P, e), span = mob ? .2 : .17, N = 40, T = [];
+  function drawComet(P, u) {
+    var e = ease(clamp(u, 0, 1)), env = Math.pow(Math.sin(Math.PI * clamp(u, 0, 1)), 1.6), sc = .85 + .25 * e; if (env <= .002) return;
+    var p = bez(P, e), span = P.span, N = 40, T = [];
     for (var i = 0; i <= N; i++) { var ee = e - span * i / N; if (ee < 0) break; T.push(bez(P, ee)); }
     x.save(); x.globalCompositeOperation = 'lighter'; x.lineCap = 'round'; x.lineJoin = 'round';
     var n = T.length; if (n > 1) {
@@ -95,8 +118,8 @@
     TW.forEach(function (s) { star(x, s.x, s.y, s.b, s.soft, s.c, red ? 1 : .9 + .1 * Math.sin(t * 2 * Math.PI / s.per + s.f)); });
     x.globalCompositeOperation = 'source-over';
     if (red) return;
-    if (!comet && now >= nextAt) comet = { t0: now, dur: path().dur * 1000 };
-    if (comet) { var u = (now - comet.t0) / comet.dur; if (u >= 1) { comet = null; nextAt = now + 15000 + Math.random() * 15000; } else drawComet(u); }
+    if (!comet && now >= nextAt) { var P = path(); if (P) comet = { t0: now, dur: P.dur * 1000, P: P }; else nextAt = now + 15000 + Math.random() * 15000; }
+    if (comet) { var u = (now - comet.t0) / comet.dur; if (u >= 1) { comet = null; nextAt = now + 15000 + Math.random() * 15000; } else drawComet(comet.P, u); }
     schedule();
   }
   /* one pending frame at a time: a requestAnimationFrame raced against a 100ms timer, whichever fires first */
@@ -173,7 +196,8 @@
     lv = document.createElement('canvas'); lv.className = 'nf-lost'; lv.setAttribute('aria-hidden', 'true');
     document.body.insertBefore(lv, document.body.firstChild); document.body.insertBefore(cv, lv);
     x = cv.getContext('2d'); lx = lv.getContext('2d'); if (!x && !lx) return; /* no 2D canvas: the plain base shows */
-    size(); var rt = 0; addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (size() && x) frame(performance.now()); }, 120); });
+    /* a comet in flight follows the new viewport's path (or, on a phone with no clear place left, ends) */
+    size(); var rt = 0; addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (size() && x) { if (comet && !(comet.P = path())) { comet = null; nextAt = performance.now() + 15000 + Math.random() * 15000; } frame(performance.now()); } }, 120); });
     if (!x) return;
     nextAt = performance.now() + 4000; frame(performance.now());
     document.addEventListener('visibilitychange', function () { if (!document.hidden) frame(performance.now()); });
