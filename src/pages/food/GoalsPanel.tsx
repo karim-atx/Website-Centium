@@ -102,9 +102,19 @@ export interface GoalsPanelPro {
   tdee: number | null;
   /** Shown in the TDEE card when tdee is null: a title and a line. */
   tdeeMissing: { title: string; line: string };
+  /**
+   * NU8 frame: the inputs the estimate used, under the figures
+   * ("82.4 kg · 180 cm · 34 · Male · Lightly active"; client_body_basics plus
+   * the latest weigh-in). Omitted, no row.
+   */
+  tdeeBasis?: string;
   /** Under the weight goal (who sees it as locked, or who set it). */
   lockNote?: React.ReactNode;
-  /** The desired weight is the client's own (set_client_nutrition_targets doesn't write it). */
+  /**
+   * The professional sets their own target weight (Release A,
+   * set_client_nutrition_targets p_desired_weight_kg). Off, the field is shown
+   * and not edited (Clinical overview).
+   */
   desiredWeightEditable?: boolean;
   /** The client's own weight goal isn't known (Progress not shared): no option is highlighted. */
   weightGoalUnknown?: boolean;
@@ -140,7 +150,10 @@ export default function GoalsPanel({
   const nutritionGoal: NutritionGoal = pro ? { ...pro.goal, planType: "custom", desiredWeightConfirmed: pro.goal.desiredWeightKg != null } : app.nutritionGoal;
   const setNutritionGoal = (g: NutritionGoal) =>
     pro ? pro.onChange({ weightGoal: g.weightGoal, weeklyRateKg: g.weeklyRateKg, targetCalories: g.targetCalories, macroSplit: g.macroSplit, desiredWeightKg: g.desiredWeightKg }) : app.setNutritionGoal(g);
-  const setWeightGoal = (g: WeightGoalType, rate: number) => (pro ? pro.onChange({ ...pro.goal, weightGoal: g, weeklyRateKg: rate }) : app.setWeightGoal(g, rate));
+  // Professional mode: a new direction clears the target weight typed for the
+  // old one, as app.setWeightGoal does for the client; the rate slider keeps it.
+  const setWeightGoal = (g: WeightGoalType, rate: number) =>
+    pro ? pro.onChange({ ...pro.goal, weightGoal: g, weeklyRateKg: rate, desiredWeightKg: g === pro.goal.weightGoal ? pro.goal.desiredWeightKg : undefined }) : app.setWeightGoal(g, rate);
   const setMacroSplit = (s: MacroSplit) => (pro ? pro.onChange({ ...pro.goal, macroSplit: s }) : app.setMacroSplit(s));
   const dark = useIsDark();
   const CARD = dark ? CARD_DARK : CARD_LIGHT;
@@ -235,15 +248,16 @@ export default function GoalsPanel({
     const kg = Number(desiredWeightDraft);
     if (!desiredWeightDraft.trim() || !kg) {
       setWeightGoalError(null);
-      setNutritionGoal({ ...nutritionGoal, desiredWeightConfirmed: false });
+      // Professional mode: cleared means no target weight is saved (the caller sends null).
+      setNutritionGoal({ ...nutritionGoal, desiredWeightConfirmed: false, ...(pro ? { desiredWeightKg: undefined } : {}) });
       return;
     }
     if (nutritionGoal.weightGoal === "lose" && currentKg !== null && kg >= currentKg) {
-      setWeightGoalError(`Desired weight must be lower than your current weight (${currentKg}kg) to lose weight.`);
+      setWeightGoalError(`Desired weight must be lower than ${pro ? "the current" : "your current"} weight (${currentKg}kg) to lose weight.`);
       return;
     }
     if (nutritionGoal.weightGoal === "gain" && currentKg !== null && kg <= currentKg) {
-      setWeightGoalError(`Desired weight must be higher than your current weight (${currentKg}kg) to gain weight.`);
+      setWeightGoalError(`Desired weight must be higher than ${pro ? "the current" : "your current"} weight (${currentKg}kg) to gain weight.`);
       return;
     }
     setWeightGoalError(null);
@@ -461,6 +475,7 @@ export default function GoalsPanel({
                   </p>
                   {useSuggestedButton}
                 </div>
+                {pro?.tdeeBasis && <p data-tdee-basis style={{ margin: "8px 0 0", paddingTop: 7, borderTop: `1px solid ${goalsColor("hairline", dark)}`, fontSize: textPx(10.5), color: "rgb(var(--c-charcoal-soft))", overflowWrap: "anywhere" }}>{pro.tdeeBasis}</p>}
                 <p style={{ margin: "6px 0 0", fontSize: textPx(8.5), color: "rgb(var(--c-charcoal-muted))" }}>Based on the Mifflin-St Jeor Formula</p>
               </>
             )}
@@ -548,6 +563,7 @@ export default function GoalsPanel({
                   </div>
                   {useSuggestedButton}
                 </div>
+                {pro?.tdeeBasis && <p data-tdee-basis style={{ margin: "10px 0 0", paddingTop: 9, borderTop: `1px solid ${goalsColor("hairline", dark)}`, fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-soft))", overflowWrap: "anywhere" }}>{pro.tdeeBasis}</p>}
                 <p style={{ margin: "8px 0 0", fontSize: textPx(8.5), color: "rgb(var(--c-charcoal-muted))" }}>Based on the Mifflin-St Jeor Formula</p>
               </>
             )}

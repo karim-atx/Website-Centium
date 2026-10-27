@@ -17,6 +17,13 @@
 //   (rows only when the caller set them and is still connected);
 //   nutrition_goals itself needs the Progress switch (the client's own weight
 //   goal and desired weight); health_metrics weight needs the Weight switch.
+// - Release A: set_client_nutrition_targets(..., p_desired_weight_kg) (the
+//   professional's own target weight, never inherited, 0 to 500 kg else
+//   22023); my_client_nutrition_targets also returns weight_goal,
+//   weekly_rate_kg and desired_weight_kg (20261216040000);
+//   client_body_basics(client): age in years (never the date of birth), sex,
+//   height and activity behind Weight or Progress, NO ROW when neither is
+//   shared (20261216030000).
 // Narrow casts at the boundary: the generated types (W1-owned) don't name
 // every DB-5 table.
 
@@ -465,6 +472,10 @@ export interface MyTargets {
   proteinPct: number;
   carbsPct: number;
   fatPct: number;
+  /** Release A: the weight goal, rate and target weight I set (never hidden from me, recovery mode or not). */
+  weightGoal: "lose" | "gain" | "maintain" | null;
+  weeklyRateKg: number | null;
+  desiredWeightKg: number | null;
   locked: boolean;
   setAt: string;
 }
@@ -473,13 +484,45 @@ export interface MyTargets {
 export async function fetchMyTargets(clientId: string): Promise<Read<MyTargets | null>> {
   const { data, error } = await rpc("my_client_nutrition_targets", { p_client_id: clientId });
   if (error) return readFail(error);
-  type Row = { goal_id: string; target_calories: unknown; protein_pct: unknown; carbs_pct: unknown; fat_pct: unknown; locked: boolean; set_at: string };
+  type Row = { goal_id: string; target_calories: unknown; protein_pct: unknown; carbs_pct: unknown; fat_pct: unknown; weight_goal: MyTargets["weightGoal"]; weekly_rate_kg: unknown; desired_weight_kg: unknown; locked: boolean; set_at: string };
   const r = ((data ?? []) as Row[])[0];
   if (!r) return { ok: true, data: null };
   return {
     ok: true,
-    data: { goalId: r.goal_id, calories: num(r.target_calories) ?? 0, proteinPct: num(r.protein_pct) ?? 0, carbsPct: num(r.carbs_pct) ?? 0, fatPct: num(r.fat_pct) ?? 0, locked: !!r.locked, setAt: r.set_at },
+    data: {
+      goalId: r.goal_id,
+      calories: num(r.target_calories) ?? 0,
+      proteinPct: num(r.protein_pct) ?? 0,
+      carbsPct: num(r.carbs_pct) ?? 0,
+      fatPct: num(r.fat_pct) ?? 0,
+      weightGoal: r.weight_goal ?? null,
+      weeklyRateKg: num(r.weekly_rate_kg),
+      desiredWeightKg: num(r.desired_weight_kg),
+      locked: !!r.locked,
+      setAt: r.set_at,
+    },
   };
+}
+
+export interface BodyBasics {
+  ageYears: number | null;
+  sex: "female" | "male" | "other" | null;
+  heightCm: number | null;
+  activityLevel: "sedentary" | "light" | "moderate" | "very_active" | "athlete" | null;
+}
+
+/**
+ * client_body_basics (Release A, W5-3c): the four TDEE inputs behind the
+ * client's Weight or Progress switch. Null when there's no row (neither is
+ * shared): never four nulls, so which ones a client filled in stays theirs.
+ */
+export async function fetchBodyBasics(clientId: string): Promise<Read<BodyBasics | null>> {
+  const { data, error } = await rpc("client_body_basics", { p_client_id: clientId });
+  if (error) return readFail(error);
+  type Row = { age_years: unknown; sex: BodyBasics["sex"]; height_cm: unknown; activity_level: BodyBasics["activityLevel"] };
+  const r = ((data ?? []) as Row[])[0];
+  if (!r) return { ok: true, data: null };
+  return { ok: true, data: { ageYears: num(r.age_years), sex: r.sex ?? null, heightCm: num(r.height_cm), activityLevel: r.activity_level ?? null } };
 }
 
 export interface ClientGoal {
@@ -545,6 +588,8 @@ export interface TargetsDraft {
   fatPct: number;
   weightGoal: "lose" | "gain" | "maintain" | null;
   weeklyRateKg: number | null;
+  /** Release A: my own target weight for the client; null sets none (the database never inherits one). */
+  desiredWeightKg: number | null;
   lock: boolean;
 }
 
@@ -559,7 +604,9 @@ export async function saveTargets(clientId: string, d: TargetsDraft): Promise<Wr
     p_weight_goal: d.weightGoal,
     p_weekly_rate_kg: d.weeklyRateKg,
     p_lock: d.lock,
+    p_desired_weight_kg: d.desiredWeightKg,
   });
+  if (error?.code === "22023") return { ok: false, message: "Enter a target weight between 1 and 500 kg." };
   if (error?.code === "ATX12") return { ok: false, message: "Nutrition coaching isn't on for this client." };
   if (error?.code === "23514") return { ok: false, message: "Protein, carbs and fat must add up to 100%." };
   return error ? failed(error, "Couldn't save the targets. Try again.") : { ok: true };

@@ -3,20 +3,26 @@
 // - form_assignments (select own: client_id = me), forms (select when
 //   assigned to me), form_questions (select through forms), form_responses
 //   (select own, drafts included);
-// - save_form_response(p_assignment_id, p_answers, p_submit) returns the
-//   form_responses row; ATXG9 once sent, 22023 "please answer: …" when a
-//   required answer is missing on submit, ATX08 when the form isn't open;
+// - save_form_response(p_assignment_id, p_answers, p_submit, p_consent)
+//   returns the form_responses row; ATXG9 once sent, 22023 "please answer: …"
+//   when a required answer is missing on submit, 22023 "consent_required: …"
+//   when a submit carries no consent (Release A, 20261216060000; a draft never
+//   sends it), ATX08 when the form isn't open;
 // - photo answers go to the private form-uploads bucket at
 //   {me}/{assignment}/{file} (images only, 10 MB);
 // - care_referrals (select own: client_id = me); answer_care_referral(
-//   p_referral_id, p_agree); ATX08 once it isn't waiting any more;
+//   p_referral_id, p_agree); ATX08 once it isn't waiting any more. Release A:
+//   once the receiver accepts, connect_from_referral(p_referral_id,
+//   p_categories) is the client's own second decision (ATX08 otherwise).
+//   decline_reason is never read here: the client isn't told why;
 // - appointments (select own) with staff_id = the professional, status booked;
 // - first names from public_profile_summary (professionals and businesses).
 // Pure rules live in ./logic.
 
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
-import type { Answers, ClientQuestion, FormKind, PendingReferral, QuestionType, TodaySession } from "./logic";
+import type { Answers, ClientQuestion, ConnectReferral, FormKind, PendingReferral, QuestionType, TodaySession } from "./logic";
+import type { AccessCategory } from "../consent";
 
 export type Read<T> = { ok: true; data: T } | { ok: false; offline: boolean };
 
@@ -135,15 +141,30 @@ export interface SavedResponse {
   submitted_at: string | null;
 }
 
-export type SaveResult = { ok: true; row: SavedResponse } | { ok: false; code: "sent" | "missing" | "closed" | "offline" | "other"; message: string; missing?: string };
+export type SaveResult = { ok: true; row: SavedResponse } | { ok: false; code: "sent" | "missing" | "consent" | "closed" | "offline" | "other"; message: string; missing?: string };
 
-/** save_form_response: p_submit false keeps a draft ("Save, come back later"), true sends it. */
-export async function saveFormResponse(assignmentId: string, answers: Answers, submit: boolean): Promise<SaveResult> {
-  const { data, error } = await rpcClient.rpc("save_form_response", { p_assignment_id: assignmentId, p_answers: answers, p_submit: submit });
+/** The consent_required refusal in the app's words: the box above Send wasn't ticked. */
+export const CONSENT_REQUIRED_MESSAGE = "Tick the box to share these answers before you send them.";
+
+/**
+ * save_form_response: p_submit false keeps a draft ("Save, come back later"),
+ * true sends it. Release A: a submit carries the client's consent (p_consent,
+ * the box above Send). A draft never sends p_consent at all: a draft is the
+ * client's own and the professional can't read it, so the database asks on
+ * submit only and stamps consent_at once.
+ */
+export async function saveFormResponse(assignmentId: string, answers: Answers, submit: false): Promise<SaveResult>;
+export async function saveFormResponse(assignmentId: string, answers: Answers, submit: true, consent: boolean): Promise<SaveResult>;
+export async function saveFormResponse(assignmentId: string, answers: Answers, submit: boolean, consent?: boolean): Promise<SaveResult> {
+  const args: Record<string, unknown> = { p_assignment_id: assignmentId, p_answers: answers, p_submit: submit };
+  if (submit) args.p_consent = consent === true;
+  const { data, error } = await rpcClient.rpc("save_form_response", args);
   if (error) {
     if (isOffline(error)) return { ok: false, code: "offline", message: OFFLINE_MESSAGE };
     if (error.code === "ATXG9") return { ok: false, code: "sent", message: "This form has already been sent." };
     if (error.code === "ATX08") return { ok: false, code: "closed", message: "This form isn't open any more." };
+    // The same SQLSTATE as a missing answer, told apart by the word the database leads with.
+    if (error.code === "22023" && error.message.startsWith("consent_required")) return { ok: false, code: "consent", message: CONSENT_REQUIRED_MESSAGE };
     if (error.code === "22023") {
       const m = /please answer: (.*)$/.exec(error.message);
       return { ok: false, code: "missing", message: "Some required answers are missing.", missing: m?.[1] };
@@ -204,6 +225,51 @@ export async function answerCareReferral(referralId: string, agree: boolean): Pr
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
   if (error.code === "ATX08") return { ok: false, message: "This referral isn't waiting for your answer any more." };
   return { ok: false, message: "Couldn't send your answer. Try again." };
+}
+
+/**
+ * Release A (20261216060000, CU23): a referral the receiving professional
+ * accepted, waiting for the client's own second decision. Accepting connects
+ * nobody: the client connects themselves with connect_from_referral and picks
+ * what to share. Waiting while there's no link to that professional made
+ * since the answer (a link made later, even if ended since, means they
+ * already decided, so an ended relationship never asks again).
+ */
+export async function fetchMyAcceptedReferrals(me: string): Promise<Read<ConnectReferral[]>> {
+  const { data, error } = await from("care_referrals").select("id, from_professional, to_professional, reason, created_at, responded_at").eq("client_id", me).eq("status", "accepted").order("responded_at", { ascending: true });
+  if (error) return readFail(error);
+  const rows = (data ?? []) as unknown as (ReferralRow & { responded_at: string | null })[];
+  if (!rows.length) return { ok: true, data: [] };
+  const links = await from("professional_clients").select("professional_id, created_at, disconnected_at").eq("client_id", me).in("professional_id", [...new Set(rows.map((r) => r.to_professional))]);
+  if (links.error) return readFail(links.error);
+  const linkRows = (links.data ?? []) as unknown as { professional_id: string; created_at: string; disconnected_at: string | null }[];
+  const waiting = rows.filter((r) => !linkRows.some((l) => l.professional_id === r.to_professional && (!l.disconnected_at || (r.responded_at !== null && Date.parse(l.created_at) >= Date.parse(r.responded_at)))));
+  const names = await namesOf([...new Set(waiting.flatMap((r) => [r.from_professional, r.to_professional]))]);
+  return {
+    ok: true,
+    data: waiting.map((r) => ({
+      id: r.id,
+      fromId: r.from_professional,
+      fromName: nameOr(names, r.from_professional, "Your professional"),
+      toId: r.to_professional,
+      toName: names.get(r.to_professional)?.first_name?.trim() || null,
+      respondedAt: r.responded_at ?? r.created_at,
+    })),
+  };
+}
+
+/**
+ * connect_from_referral(p_referral_id, p_categories): the client becomes the
+ * receiving professional's client and shares exactly the categories picked
+ * (an empty list shares nothing). ATX08 once it isn't an accepted referral
+ * of theirs any more.
+ */
+export async function connectFromReferral(referralId: string, categories: AccessCategory[]): Promise<{ ok: true } | { ok: false; message: string }> {
+  const { error } = await rpcClient.rpc("connect_from_referral", { p_referral_id: referralId, p_categories: categories });
+  if (!error) return { ok: true };
+  if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
+  if (error.code === "ATX08") return { ok: false, message: "This referral can't be used to connect any more." };
+  return { ok: false, message: "Couldn't connect. Try again." };
 }
 
 interface AppointmentRow { id: string; staff_id: string | null; service_name: string; starts_at: string; ends_at: string }

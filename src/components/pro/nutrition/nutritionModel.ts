@@ -9,7 +9,7 @@
 // Conflicts come from food_conflicts only (DB-5); nothing here matches
 // keywords or decides a severity.
 
-import { servingMultiplier, gramsInServingLabel } from "../../../services/nutrition";
+import { calculateTDEEFromParts, servingMultiplier, gramsInServingLabel } from "../../../services/nutrition";
 import type { ConflictKind } from "../proRules";
 import { DAY_LONG, DAY_SHORT, mondayIndex } from "../../../utils/week";
 
@@ -345,6 +345,59 @@ export function reachDate(today: string, current: number | null, goalKg: number 
   const weeks = Math.abs(current - goalKg) / weeklyRateKg;
   if (!(weeks > 0)) return null;
   return shiftDate(today, Math.round(weeks * 7));
+}
+
+/** client_body_basics (Release A, W5-3c), as the service returns it; null = no row (Weight and Progress both off). */
+export interface TdeeBasics {
+  ageYears: number | null;
+  sex: "female" | "male" | "other" | null;
+  heightCm: number | null;
+  activityLevel: "sedentary" | "light" | "moderate" | "very_active" | "athlete" | null;
+}
+
+/** The client's own activity words (components/profile/ActivityLevelSheet.tsx). */
+export const ACTIVITY_LABEL: Record<NonNullable<TdeeBasics["activityLevel"]>, string> = {
+  sedentary: "Sedentary",
+  light: "Lightly active",
+  moderate: "Moderately active",
+  very_active: "Very active",
+  athlete: "Athlete",
+};
+const SEX_LABEL: Record<NonNullable<TdeeBasics["sex"]>, string> = { female: "Female", male: "Male", other: "Other" };
+
+export type TdeeView =
+  | { tdee: number; basis: string }
+  | { tdee: null; title: string; line: string };
+
+/**
+ * NU8 TDEE card (HANDOVER i: Mifflin-St Jeor via calculateTDEEFromParts ×
+ * activity factor): the estimate only when all five numbers are there, the
+ * four from client_body_basics and the latest weigh-in (Weight switch).
+ * Never a stand-in body: each missing input is named instead. The basis row
+ * is the frame's "82.4 kg · 180 cm · 34 · Male · Lightly active".
+ */
+export function tdeeView(basics: TdeeBasics | null, weightKg: number | null, weightShared: boolean, first: string): TdeeView {
+  const who = first || "Your client";
+  const title = "Needs height, age, sex and activity";
+  if (!basics) return { tdee: null, title, line: `${who} doesn't share Weight or Progress with you, so their height, age, sex and activity aren't available and no maintenance estimate is made.` };
+  const { ageYears, sex, heightCm, activityLevel } = basics;
+  const missing = [heightCm === null ? "height" : null, ageYears === null ? "date of birth" : null, sex === null ? "sex" : null, activityLevel === null ? "activity level" : null].filter((x): x is string => !!x);
+  if (missing.length || ageYears === null || sex === null || heightCm === null || activityLevel === null) {
+    const list = missing.length > 1 ? `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}` : missing[0];
+    return { tdee: null, title, line: `${who} hasn't added their ${list} yet, so no maintenance estimate is made.` };
+  }
+  if (weightKg === null) {
+    return {
+      tdee: null,
+      title: "Needs a weigh-in",
+      line: weightShared ? `${who} hasn't logged a weigh-in yet. Mifflin-St Jeor needs a current weight.` : `${who}'s weigh-ins aren't shared with you. Mifflin-St Jeor needs a current weight.`,
+    };
+  }
+  const fmt = (n: number) => String(Math.round(n * 10) / 10);
+  return {
+    tdee: calculateTDEEFromParts(weightKg, heightCm, ageYears, sex, activityLevel),
+    basis: [`${fmt(weightKg)} kg`, `${fmt(heightCm)} cm`, String(ageYears), SEX_LABEL[sex], ACTIVITY_LABEL[activityLevel]].join(" · "),
+  };
 }
 
 /** The split saved must total 100 (nutrition_goals checks 99 to 101). */

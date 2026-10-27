@@ -52,6 +52,28 @@ export function sentChip(status: ReferralStatus, clientFirst: string, proFirst: 
 }
 
 export const canWithdraw = (s: ReferralStatus) => s === "awaiting_client" || s === "sent";
+/**
+ * MO7 v3 "decline, reason dropdown open": the frame's five reasons. Release A
+ * stores the reason as text (care_referrals.decline_reason, 1 to 500), so a
+ * preset saves its label and Other saves what the professional types.
+ * Optional: no reason chosen declines with none.
+ */
+export type ReferralDeclineReason = "fully_booked" | "outside_specialty" | "not_taking" | "too_far" | "other";
+export const REFERRAL_DECLINE_REASONS: { value: ReferralDeclineReason; label: string }[] = [
+  { value: "fully_booked", label: "Fully booked" },
+  { value: "outside_specialty", label: "Outside my specialty" },
+  { value: "not_taking", label: "Not taking referrals right now" },
+  { value: "too_far", label: "Too far from the client" },
+  { value: "other", label: "Other" },
+];
+
+/** The text respond_care_referral stores: the preset's label, Other's own words, or null. */
+export function declineReasonText(reason: ReferralDeclineReason | null, other: string): string | null {
+  if (!reason) return null;
+  if (reason === "other") return other.trim() || null;
+  return REFERRAL_DECLINE_REASONS.find((r) => r.value === reason)?.label ?? null;
+}
+
 /** dispute_care_referral takes sent, accepted and declined referrals (either side). */
 export const canDispute = (s: ReferralStatus) => s === "sent" || s === "accepted" || s === "declined";
 

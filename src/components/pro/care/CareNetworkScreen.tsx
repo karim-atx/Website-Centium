@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, CircleCheck, MessageCircle, Send, UserPlus, UserRound, UserX, Users, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, CircleCheck, MessageCircle, Send, UserPlus, UserRound, UserX, Users, X } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useOnline } from "../../../hooks/useOnline";
 import { useBack } from "../../../hooks/useBack";
@@ -18,7 +18,9 @@ import { ListSkeleton, OfflineLine, ProCardSkeleton, ProError } from "../states"
 import { ErrorLine } from "../library/libraryUi";
 import { TopToast } from "../forms/moKit";
 import { ReferSheet } from "./ReferSheet";
-import { canDispute, canWithdraw, firstName, receivedChip, sentChip, typeLabel, whenWord } from "./careModel";
+import { PopupMenu } from "../../ui/PopupMenu";
+import { ProField } from "../addclient/fields";
+import { canDispute, canWithdraw, declineReasonText, firstName, receivedChip, REFERRAL_DECLINE_REASONS, sentChip, typeLabel, whenWord, type ReferralDeclineReason } from "./careModel";
 import {
   REASON_MAX,
   disputeReferral,
@@ -55,11 +57,16 @@ const clock = (d: Date) => time12(`${d.getHours()}:${String(d.getMinutes()).padS
  * network"):
  * - a referral reaches the colleague only after the client agrees (CU23);
  *   until then Sent says "Waiting for {client}";
- * - accepting doesn't add the client to your roster (respond_care_referral
- *   only answers; the client still asks to work with you), so the toast
- *   says the colleague was told, not "added to your clients";
- * - a decline carries no reason (respond_care_referral has no reason), so
- *   the decline popup has no reason dropdown; the referrer is told;
+ * - accepting doesn't add the client to your roster (Release A: connecting
+ *   is the client's own second decision, connect_from_referral, where they
+ *   pick what to share), so the toast says the colleague was told, not
+ *   "added to your clients";
+ * - Release A: a decline can say why (respond_care_referral p_reason):
+ *   the frame's reason dropdown, Other with its own words (at most 500),
+ *   optional. Both professionals read it ("Declined Oct 6 · Outside my
+ *   specialty"). Not wired: the frame's "Suggest someone (optional)" (no
+ *   column) and "{client} is told the referral was not taken up" (the
+ *   client isn't told of a decline yet: W7-6), so the popup doesn't say it;
  * - nothing of the client's data is passed on, so no "shared" chips;
  * - either side can send a referral to support (dispute_care_referral);
  *   support handles it as "Care network" (never "Referral disputes").
@@ -144,7 +151,7 @@ export const CareNetworkScreen: React.FC = () => {
     const declined = st === "declined";
     const whenLine =
       st === "declined"
-        ? `Declined ${whenWord(x.respondedAt ?? x.createdAt)}`
+        ? [`Declined ${whenWord(x.respondedAt ?? x.createdAt)}`, x.declineReason].filter(Boolean).join(" · ")
         : st === "sent"
           ? `Received ${whenWord(x.clientAnsweredAt ?? x.createdAt, new Date(), clock)} · ${cFirst || "The client"} agreed to the referral`
           : `Received ${whenWord(x.clientAnsweredAt ?? x.createdAt)}`;
@@ -184,7 +191,7 @@ export const CareNetworkScreen: React.FC = () => {
             <CtaButton className="flex-1" size="base" variant="outline" icon={<UserRound size={15} />} label="Open client" onClick={() => navigate(proClientPath(x.clientId))} />
           </div>
         )}
-        {st === "accepted" && !inRoster(x.clientId) && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 6, lineHeight: 1.45 }}>{`${cFirst || "The client"} can now ask to work with you.`}</p>}
+        {st === "accepted" && !inRoster(x.clientId) && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 6, lineHeight: 1.45 }}>{`${cFirst || "The client"} chooses whether to connect with you, and what to share.`}</p>}
         {canDispute(st) && (
           <button type="button" onClick={() => setDispute(x)} className="tap relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-['']" style={{ marginTop: 10, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
             Ask support to look at this
@@ -218,7 +225,8 @@ export const CareNetworkScreen: React.FC = () => {
               key: x.id,
               icon: Send,
               title: `${cName} to ${pName}`,
-              meta: `${typeLabel(people[x.toId]?.type)} · ${x.createdAt > new Date(Date.now() - 60000).toISOString() ? "sent just now" : whenWord(x.createdAt)}`,
+              // Release A: a decline's reason is the referrer's to read.
+              meta: [typeLabel(people[x.toId]?.type), x.createdAt > new Date(Date.now() - 60000).toISOString() ? "sent just now" : whenWord(x.createdAt), x.status === "declined" ? x.declineReason : null].filter(Boolean).join(" · "),
               trailing: <Chip label={chip.label} tone={chip.tone} />,
               onClick: canWithdraw(x.status) || canDispute(x.status) ? () => setActions(x) : undefined,
             };
@@ -310,17 +318,15 @@ export const CareNetworkScreen: React.FC = () => {
       </div>
       <PinnedCta primary={{ label: "Refer a client", icon: <Send size={15} />, onClick: () => setRefer(true) }} />
 
-      <CentredPopup open={!!decline} onClose={() => setDecline(null)} title={`Decline ${decline ? clientName(decline.clientId) ?? "this referral" : ""}?`} icon={<UserX size={22} strokeWidth={2} aria-hidden />} body={`${decline ? proName(decline.fromId) ?? "Your colleague" : ""} is told you declined.`}>
-        <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
-          <CtaButton
-            size="page"
-            label="Decline referral"
-            loading={!!decline && busy === `dec-${decline.id}`}
-            onClick={() => decline && void run(`dec-${decline.id}`, () => respondReferral(decline.id, false), "Referral declined.").then((ok) => ok && setDecline(null))}
-          />
-          <CtaButton size="page" variant="secondary" label="Keep referral" onClick={() => setDecline(null)} />
-        </div>
-      </CentredPopup>
+      <DeclineReferralPopup
+        key={decline?.id ?? "none"}
+        open={!!decline}
+        clientLabel={decline ? clientName(decline.clientId) ?? "this referral" : ""}
+        fromName={decline ? proName(decline.fromId) ?? "Your colleague" : ""}
+        busy={!!decline && busy === `dec-${decline.id}`}
+        onClose={() => setDecline(null)}
+        onDecline={(why) => decline && void run(`dec-${decline.id}`, () => respondReferral(decline.id, false, why), "Referral declined.").then((ok) => ok && setDecline(null))}
+      />
 
       <BottomSheet open={!!actions} onClose={() => setActions(null)} title="Referral">
         {actions && (
@@ -359,6 +365,78 @@ export const CareNetworkScreen: React.FC = () => {
       />
       <TopToast icon={toast?.icon ?? CircleCheck} text={toast?.text ?? null} tone={toast?.icon === Send ? "pr" : "good"} onDone={() => setToast(null)} />
     </div>
+  );
+};
+
+/**
+ * MO7 v3 "decline, reason dropdown open / reason chosen" (Release A,
+ * respond_care_referral p_reason): the HO13 request-decline popup's dropdown
+ * (PopupMenu with the "Reason" heading, matched to the field) over the
+ * frame's five reasons; Other asks for the professional's own words
+ * (REASON_MAX, 500, the database's limit). The reason is optional.
+ */
+const DeclineReferralPopup: React.FC<{ open: boolean; clientLabel: string; fromName: string; busy: boolean; onClose: () => void; onDecline: (why: string | null) => void }> = ({
+  open,
+  clientLabel,
+  fromName,
+  busy,
+  onClose,
+  onDecline,
+}) => {
+  const [reason, setReason] = useState<ReferralDeclineReason | null>(null);
+  const [other, setOther] = useState("");
+  const [menu, setMenu] = useState(false);
+  const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
+  const fromFirst = firstName(fromName) || fromName;
+  const needsWords = reason === "other" && !other.trim();
+  return (
+    <CentredPopup
+      open={open}
+      onClose={onClose}
+      title={`Decline ${clientLabel}?`}
+      icon={<UserX size={22} strokeWidth={2} aria-hidden />}
+      body={reason ? `${fromName} sees your reason.` : `${fromName} is told you declined.`}
+    >
+      <div className="text-left">
+        <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
+          Reason (optional)
+        </span>
+        <button
+          ref={setTrigger}
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={menu}
+          onClick={() => setMenu((m) => !m)}
+          className="tap w-full flex items-center justify-between"
+          style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${menu ? INK.pr : INK.b10}`, padding: "0 12px", gap: 8, fontSize: textPx(14), color: reason ? INK.ch : INK.chF }}
+        >
+          <span className="min-w-0 truncate">{reason ? REFERRAL_DECLINE_REASONS.find((r) => r.value === reason)?.label : "Choose a reason"}</span>
+          {menu ? <ChevronUp size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} /> : <ChevronDown size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />}
+        </button>
+        <PopupMenu
+          open={menu}
+          onClose={() => setMenu(false)}
+          anchor={trigger}
+          matchWidth={trigger}
+          heading="Reason"
+          options={REFERRAL_DECLINE_REASONS}
+          selected={reason}
+          onSelect={(v) => {
+            setReason(v);
+            setMenu(false);
+          }}
+        />
+        {reason === "other" && (
+          <div style={{ marginTop: 12 }}>
+            <ProField label={`Tell ${fromFirst} why`} value={other} onChange={setOther} maxLength={REASON_MAX} note={`${fromFirst} sees this with the decline. Don't include health details.`} autoFocus />
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col" style={{ gap: 8, marginTop: 20 }}>
+        <CtaButton size="page" label="Decline referral" loading={busy} disabled={needsWords} onClick={() => onDecline(declineReasonText(reason, other))} />
+        <CtaButton size="page" variant="secondary" label="Keep referral" onClick={onClose} disabled={busy} />
+      </div>
+    </CentredPopup>
   );
 };
 

@@ -35,22 +35,27 @@ async function professionalNames(ids: string[]): Promise<Map<string, string>> {
 // Targets a professional set (CU3)
 // ---------------------------------------------------------------------------
 
+// my_nutrition_targets (Release A) isn't in the generated types (they read production).
+type RpcResult = { data: unknown; error: { code?: string; message: string } | null };
+const rpcUntyped = supabase as unknown as { rpc: (fn: string, args?: Record<string, unknown>) => PromiseLike<RpcResult> };
+
 /**
  * The client's current goal row when a professional set it, with whether it
  * is locked (nutrition_targets_locked: locked by a professional the client is
  * still connected to). Null when the current row is the client's own, or
  * there is none (every account without a professional).
+ *
+ * Release A (20261216040000): the targets come from my_nutrition_targets(),
+ * which returns desired_weight_kg as NULL in recovery-sensitive mode (the
+ * professional's target weight is hidden from the client, never the other
+ * way round). Reading nutrition_goals directly would show it, so the one
+ * remaining direct read is the setter's id (for the name), not the weight.
  */
 export async function fetchProfessionalTargets(userId: string): Promise<Read<ProfessionalTargets | null>> {
-  const { data, error } = await supabase
-    .from("nutrition_goals")
-    .select("id, weight_goal, weekly_rate_kg, target_calories, protein_pct, carbs_pct, fat_pct, desired_weight_kg, set_by_professional_id, locked")
-    .eq("user_id", userId)
-    .eq("is_current", true)
-    .maybeSingle();
+  const { data, error } = await rpcUntyped.rpc("my_nutrition_targets");
   if (error) return readFail(error);
-  const r = data as unknown as {
-    id: string;
+  const r = ((data ?? []) as {
+    goal_id: string;
     weight_goal: WeightGoalType;
     weekly_rate_kg: unknown;
     target_calories: unknown;
@@ -58,21 +63,25 @@ export async function fetchProfessionalTargets(userId: string): Promise<Read<Pro
     carbs_pct: unknown;
     fat_pct: unknown;
     desired_weight_kg: unknown;
-    set_by_professional_id: string | null;
+    set_by_professional: boolean;
     locked: boolean;
-  } | null;
-  if (!r || !r.set_by_professional_id) return { ok: true, data: null };
+  }[])[0];
+  if (!r || !r.set_by_professional) return { ok: true, data: null };
+  const setter = await supabase.from("nutrition_goals").select("set_by_professional_id").eq("id", r.goal_id).maybeSingle();
+  if (setter.error) return readFail(setter.error);
+  const proId = (setter.data as { set_by_professional_id: string | null } | null)?.set_by_professional_id ?? null;
+  if (!proId) return { ok: true, data: null };
   const [lockRes, names] = await Promise.all([
     supabase.rpc("nutrition_targets_locked", { p_user: userId }),
-    professionalNames([r.set_by_professional_id]),
+    professionalNames([proId]),
   ]);
   if (lockRes.error) return readFail(lockRes.error);
   return {
     ok: true,
     data: {
-      goalId: r.id,
-      professionalId: r.set_by_professional_id,
-      professionalName: names.get(r.set_by_professional_id) || null,
+      goalId: r.goal_id,
+      professionalId: proId,
+      professionalName: names.get(proId) || null,
       weightGoal: r.weight_goal,
       weeklyRateKg: num(r.weekly_rate_kg) ?? 0,
       targetCalories: Math.round(num(r.target_calories) ?? 0),
