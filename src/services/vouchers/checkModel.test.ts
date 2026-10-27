@@ -130,3 +130,16 @@ test("DH: an 18+ offer whose holder isn't a confirmed adult carries the check-ID
   const noName = checkView(parseCheck([{ ...base, state: "valid", member_confirmed_adult: false }])!, "professional");
   assert.equal(noName.note, "18+ offer. The client's age isn't confirmed on Centium. Check ID before marking it as used.");
 });
+
+test("DH: mark_voucher_used's two holder columns are kept over the check (Release A returns them too)", () => {
+  const prev = parseCheck([{ ...base, state: "valid", member_first_name: "Maya", member_confirmed_adult: false }])!;
+  const at = new Date(2026, 9, 22, 9, 5).toISOString();
+  // 20261216000000's row: voucher_id, state, already_used, used_at, used_by_name, member_first_name, member_confirmed_adult.
+  const used = mergeMark(prev, [{ voucher_id: "v1", state: "used", already_used: false, used_at: at, used_by_name: "Friend", member_first_name: "Maya", member_confirmed_adult: true }])!;
+  assert.equal(used.memberName, "Maya");
+  assert.equal(used.memberConfirmedAdult, true);
+  // Null (not an age-restricted offer) or missing keeps what the check said.
+  const keep = mergeMark(prev, [{ voucher_id: "v1", state: "already_used", already_used: true, used_at: at, used_by_name: "Friend", member_first_name: null, member_confirmed_adult: null }])!;
+  assert.equal(keep.memberName, "Maya");
+  assert.equal(keep.memberConfirmedAdult, false);
+});

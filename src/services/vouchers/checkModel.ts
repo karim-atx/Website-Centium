@@ -10,11 +10,12 @@
 // - mark_voucher_used(p_voucher_id) → {voucher_id, state used | already_used,
 //   already_used, used_at, used_by_name}; refusals ATX08 not found, ATX15
 //   not_valid_here, ATX16 void, ATX17 expired (the function comment).
-// DH (Karim, 2026-10-27; Database Release A stage A1, requested): both append
+// DH (Karim, 2026-10-27; Database Release A, 20261216000000): both return
 // member_first_name (valid / already_used only, after the not-valid-here
 // check: the Q-05 desk rule, first name only) and member_confirmed_adult
-// (filled only for an age-restricted offer). Until the stage lands neither
-// column exists, and the Member / Client row and the check-ID note stay out.
+// (filled only for an age-restricted offer, today supplements; null
+// otherwise). check_voucher also returns offer_owner_name; nothing here draws
+// it. A row without the two columns still reads (no Member row, no note).
 
 import { formatShortDate } from "../../utils/date";
 import { clock12 } from "../../utils/time12";
@@ -107,13 +108,26 @@ export function parseCheck(data: unknown, code: string | null = null): VoucherCh
   };
 }
 
-/** mark_voucher_used's answer over the check it followed: `used` the first time, `already_used` on a repeat. */
+/**
+ * mark_voucher_used's answer over the check it followed: `used` the first
+ * time, `already_used` on a repeat. DH: it returns the same two holder
+ * columns as the check, so the sheet that hands the thing over keeps knowing
+ * who it is for and whether the offer needs an ID check.
+ */
 export function mergeMark(prev: VoucherCheck, data: unknown): VoucherCheck | null {
   const r = rows(data)[0];
   if (!r) return null;
   const s = str(r.state);
   if (s !== "used" && s !== "already_used") return null;
-  return { ...prev, state: s, voucherId: str(r.voucher_id) ?? prev.voucherId, usedAt: str(r.used_at) ?? prev.usedAt, usedBy: str(r.used_by_name) ?? prev.usedBy, memberName: str(r.member_first_name) ?? prev.memberName };
+  return {
+    ...prev,
+    state: s,
+    voucherId: str(r.voucher_id) ?? prev.voucherId,
+    usedAt: str(r.used_at) ?? prev.usedAt,
+    usedBy: str(r.used_by_name) ?? prev.usedBy,
+    memberName: str(r.member_first_name) ?? prev.memberName,
+    memberConfirmedAdult: typeof r.member_confirmed_adult === "boolean" ? r.member_confirmed_adult : prev.memberConfirmedAdult,
+  };
 }
 
 /** mark_voucher_used's refusals → the state the sheet shows instead. */

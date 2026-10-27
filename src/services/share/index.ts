@@ -116,10 +116,19 @@ export async function askToShareWin(clientId: string, winId: string, card: CardP
   return { ok: true, data: toRequest(row) };
 }
 
-export type ItemKind = "win" | "profile" | "review" | "slot" | "content" | "programme" | "course" | "package" | "meal_plan";
+/**
+ * shared_items.kind. W8-3: `milestone` (the practice milestone card) since
+ * Database Release A 20261216020000; before it that card exported with no
+ * row and no public link.
+ */
+export type ItemKind = "win" | "profile" | "review" | "slot" | "content" | "programme" | "course" | "package" | "meal_plan" | "milestone";
 
-/** The log the client sees (CU30) and the public card; returns the shared item's id. */
-export async function recordSharedItem(kind: ItemKind, format: "story" | "post" | "sticker" | "link", card: CardPayload, requestId: string | null): Promise<Write<string>> {
+/**
+ * The log the client sees (CU30) and the public card; returns the shared
+ * item's id. format is the export's own: W8-4, shared_items.format takes
+ * `square` since 20261216010000 (square cards were recorded as `post`).
+ */
+export async function recordSharedItem(kind: ItemKind, format: ShareFormat | "link", card: CardPayload, requestId: string | null): Promise<Write<string>> {
   const { data, error } = await rpc("record_shared_item", { p_kind: kind, p_format: format, p_card: card, p_share_request_id: requestId, p_image_path: null });
   if (error) return { ok: false, code: codeOf(error), message: error.message ?? "", offline: isOffline(error) };
   return { ok: true, data: String(data) };

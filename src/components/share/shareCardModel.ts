@@ -505,11 +505,8 @@ export function specFromPayload(raw: unknown, proFirstName: string): { spec: Car
   return { spec, format, style };
 }
 
-/** shared_items.format is where it went: Square is a post shape. */
-export const itemFormat = (f: ShareFormat): "story" | "post" | "sticker" => (f === "square" ? "post" : f);
-
-/** shared_items.kind for a template; null where the backend has no kind (practice milestone). */
-export function itemKind(spec: CardSpec, promo?: PromoKind): "win" | "profile" | "review" | "slot" | "content" | "programme" | "course" | "package" | "meal_plan" | null {
+/** shared_items.kind for a template (a practice milestone is `milestone` since Release A 20261216020000); null only for a promo without its kind. */
+export function itemKind(spec: CardSpec, promo?: PromoKind): "win" | "profile" | "review" | "slot" | "content" | "programme" | "course" | "package" | "meal_plan" | "milestone" | null {
   switch (spec.template) {
     case "pr":
     case "prog":
@@ -529,7 +526,7 @@ export function itemKind(spec: CardSpec, promo?: PromoKind): "win" | "profile" |
     case "promo":
       return promo ?? null;
     case "mile":
-      return null;
+      return "milestone";
   }
 }
 
