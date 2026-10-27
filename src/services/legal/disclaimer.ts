@@ -3,7 +3,7 @@
  * everywhere it appears -- the Sources page, every health screen (Health,
  * Cycle and pregnancy, labs, blood pressure, the monitoring plan),
  * onboarding's final step and the Terms. The marketing site's Health &
- * Medical Disclaimer (src/marketing/pages/Legal.tsx) carries the same words.
+ * Medical Disclaimer (src/marketing/legal/text.ts INTRO.health) carries the same words.
  */
 export const HEALTH_DISCLAIMER =
   "Centium supports your health journey. It does not provide medical diagnosis or treatment.";

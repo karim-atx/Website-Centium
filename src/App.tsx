@@ -1,109 +1,62 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { HealthChecksProvider } from "./context/HealthChecksContext";
 import { Button } from "./components/ui/Button";
-import { MfaChallenge } from "./components/auth/MfaChallenge";
 import { TabIdentityNotice } from "./components/auth/TabIdentityNotice";
 import { hasReturnedAuthError } from "./services/auth";
-import { Layout } from "./components/navigation/Layout";
 import { MarketingLayout } from "./marketing/layouts/MarketingLayout";
 import { Home as MarketingHome } from "./marketing/pages/Home";
-import { Product as MarketingProduct } from "./marketing/pages/Product";
-import { Pricing as MarketingPricing } from "./marketing/pages/Pricing";
-import { Business as MarketingBusiness } from "./marketing/pages/Business";
 import { Contact as MarketingContact } from "./marketing/pages/Contact";
 import { Legal as MarketingLegal } from "./marketing/pages/Legal";
 import { NotFound as MarketingNotFound } from "./marketing/pages/NotFound";
-import Onboarding from "./pages/onboarding/Onboarding";
-import BusinessSetupPage from "./pages/onboarding/business/BusinessSetupPage";
-import Home from "./pages/home/Home";
-import Food from "./pages/food/Food";
-import NutrientSummaryPage from "./pages/food/NutrientSummaryPage";
-import Workout from "./pages/workout/Workout";
-import Health from "./pages/health/Health";
-import HealthChecks from "./pages/health/HealthChecks";
-import HealthSources from "./pages/health/HealthSources";
-import HealthRecords from "./pages/health/HealthRecords";
-import WaterPage from "./pages/health/metrics/WaterPage";
-import StepsPage from "./pages/health/metrics/StepsPage";
-import SleepPage from "./pages/health/metrics/SleepPage";
-import CaloriesPage from "./pages/health/metrics/CaloriesPage";
-import HeartRatePage from "./pages/health/metrics/HeartRatePage";
-import HeartRateAlertsPage from "./pages/health/metrics/HeartRateAlertsPage";
-import BloodPressurePage from "./pages/health/metrics/BloodPressurePage";
-import WeightPage from "./pages/health/metrics/WeightPage";
-import Cycle from "./pages/cycle/Cycle";
-import Contraception from "./pages/contraception/Contraception";
-import Mind from "./pages/mind/Mind";
-import Professionals from "./pages/professionals/Professionals";
-import ProfessionalDetail from "./pages/professionals/ProfessionalDetail";
-import ProfessionalReviews from "./pages/professionals/ProfessionalReviews";
-import ProVerification from "./pages/professionals/ProVerification";
-import Messages from "./pages/messages/Messages";
-import ProRoutes, { ProHomeRedirect, ProOnlyRedirect } from "./pages/pro/ProRoutes";
-import ProMoreRoutes from "./pages/pro/more/MoreRoutes";
-import Marketplace from "./pages/marketplace/Marketplace";
-import MarketplaceCategoryPage from "./pages/marketplace/MarketplaceCategoryPage";
-import MyBookingsPage from "./pages/marketplace/MyBookingsPage";
-import MyRewardsPage from "./pages/marketplace/MyRewardsPage";
-import PointsHistoryPage from "./pages/marketplace/PointsHistoryPage";
-import HowToEarnPage from "./pages/marketplace/HowToEarnPage";
-import OfferDetailPage from "./pages/marketplace/rewards/OfferDetailPage";
-import VoucherPage from "./pages/marketplace/rewards/VoucherPage";
-import { ClientOnly } from "./pages/marketplace/ClientOnly";
-import ClientNotificationsPage from "./pages/notifications/ClientNotificationsPage";
-import AnalyticsShell from "./pages/business-analytics/AnalyticsShell";
-import MarketRoutes from "./pages/business-market/MarketRoutes";
-import RedeemVoucher from "./pages/business-market/RedeemVoucher";
-import HiringRoutes from "./pages/business-market/hiring/HiringRoutes";
-import BusinessNotificationsPage from "./pages/notifications/BusinessNotificationsPage";
-import BusinessProfilePage from "./pages/business-more/profile/BusinessProfilePage";
-import BusinessMoreRoutes from "./pages/business-more/BusinessMoreRoutes";
-import TeamRoutes from "./pages/business-team/TeamRoutes";
-import SchedulePage from "./pages/business-ops/classes/SchedulePage";
-import SessionPage from "./pages/business-ops/classes/SessionPage";
-import ClassRulesPage from "./pages/business-ops/classes/ClassRulesPage";
-import BusinessOperationsTab from "./pages/marketplace/BusinessOperationsTab";
-import { PlansRoutes } from "./pages/business-ops/plans";
-import { BusinessOrdersRoutes, StoreProductsRoute } from "./pages/business-ops/store/StoreOpsRoutes";
-import BusinessAppointmentsRoutes from "./pages/business-ops/appointments/AppointmentsRoutes";
-import AppointmentServicesPage from "./pages/business-ops/appointments/ServicesPage";
-import StoreRoutes from "./pages/store/StoreRoutes";
-import AppointmentRoutes from "./pages/appointments/AppointmentRoutes";
-import BusinessVenueTab from "./pages/marketplace/BusinessVenueTab";
-import BusinessCalendarTab from "./pages/marketplace/BusinessCalendarTab";
-import Profile from "./pages/profile/Profile";
-import MyCv from "./pages/profile/MyCv";
-import Subscription from "./pages/subscription/Subscription";
-import More from "./pages/profile/More";
-import ClientCalendarTab from "./pages/profile/ClientCalendarTab";
-import Community, { CourseBuilderPage, CoursePage, ForumNewPage, ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage } from "./pages/community/Community";
-import Settings from "./pages/settings/Settings";
-import NotificationsPage from "./pages/settings/NotificationsPage";
-import HealthCheckRemindersPage from "./pages/settings/HealthCheckRemindersPage";
-import AccessibilityPage from "./pages/settings/AccessibilityPage";
-import PrivacyPage from "./pages/settings/PrivacyPage";
-import TermsPage from "./pages/settings/TermsPage";
-import LanguagePage from "./pages/settings/LanguagePage";
-import TwoFactorPage from "./pages/settings/TwoFactorPage";
-import TwoFactorSetupPage from "./pages/settings/TwoFactorSetupPage";
-import ResetPassword from "./pages/auth/ResetPassword";
-import PublicCertificate from "./pages/courses/PublicCertificate";
-import InviteLanding from "./pages/public/InviteLanding";
-import PublicProfile from "./pages/public/PublicProfile";
-import PublicBooking from "./pages/public/PublicBooking";
-import SharedCard from "./pages/share/SharedCard";
-import BusinessLinkPage from "./pages/share/BusinessLinkPage";
 import { PublicReturnResume } from "./pages/public/PublicReturnResume";
-import CarePlan from "./pages/health/CarePlan";
-import { ConsoleGate } from "./components/business-console/ConsoleGate";
+import { AppPagesReady, appPages } from "./appPagesLazy";
+
+// The app and its public pages load as their own chunk (appPagesLazy.ts), so
+// the marketing routes below render from the entry chunk alone.
+const {
+  MfaChallenge, Layout, Onboarding, BusinessSetupPage, Home, Food,
+  NutrientSummaryPage, Workout, Health, HealthChecks, HealthSources, HealthRecords,
+  WaterPage, StepsPage, SleepPage, CaloriesPage, HeartRatePage, HeartRateAlertsPage,
+  BloodPressurePage, WeightPage, Cycle, Contraception, Mind, Professionals,
+  ProfessionalDetail, ProfessionalReviews, ProVerification, Messages, ProRoutes, ProHomeRedirect,
+  ProOnlyRedirect, ProMoreRoutes, Marketplace, MarketplaceCategoryPage, MyBookingsPage, MyRewardsPage,
+  PointsHistoryPage, HowToEarnPage, OfferDetailPage, VoucherPage, ClientOnly, ClientNotificationsPage,
+  AnalyticsShell, MarketRoutes, RedeemVoucher, HiringRoutes, BusinessNotificationsPage, BusinessProfilePage,
+  BusinessMoreRoutes, TeamRoutes, SchedulePage, SessionPage, ClassRulesPage, BusinessOperationsTab,
+  PlansRoutes, BusinessOrdersRoutes, StoreProductsRoute, BusinessAppointmentsRoutes, AppointmentServicesPage, StoreRoutes,
+  AppointmentRoutes, BusinessVenueTab, BusinessCalendarTab, Profile, MyCv, Subscription,
+  More, ClientCalendarTab, Community, CourseBuilderPage, CoursePage, ForumNewPage,
+  ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage, Settings, NotificationsPage,
+  HealthCheckRemindersPage, AccessibilityPage, PrivacyPage, TermsPage, LanguagePage, TwoFactorPage,
+  TwoFactorSetupPage, ResetPassword, PublicCertificate, InviteLanding, PublicProfile, PublicBooking,
+  SharedCard, BusinessLinkPage, CarePlan, ConsoleGate, CallLink, LegacyCallLink,
+} = appPages;
 
 const RouteLoading: React.FC = () => (
   <div className="min-h-[100dvh] flex items-center justify-center bg-cream">
     <p className="text-sm text-charcoal-faint">Loading…</p>
   </div>
+);
+
+/**
+ * The guarded routes wait for the app chunk (appPagesLazy.ts) BEFORE their
+ * guard decides anything, under a Suspense boundary of their own.
+ *
+ * Without it, a trip from the landing to /app signed out committed the
+ * guard's <Navigate> (which renders nothing) and then waited for the chunk
+ * on a blank page: the redirect target is a lazy page, and a transition keeps
+ * the last committed screen, which was that empty one. A boundary that is new
+ * with the route shows its fallback at once instead, so the visitor sees the
+ * app's own "Loading…" while the chunk arrives, then the guard runs exactly
+ * as before. Once the chunk is in, AppPagesReady never suspends again.
+ */
+const AppGate: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Suspense fallback={<RouteLoading />}>
+    <AppPagesReady>{children}</AppPagesReady>
+  </Suspense>
 );
 
 /** Admin-Centium, behind Cloudflare Access. A different origin, not a route. */
@@ -217,7 +170,7 @@ const AdminInterstitial: React.FC = () => {
   );
 };
 
-const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const RequireOnboardedGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const {
     user,
     authUserId,
@@ -283,6 +236,12 @@ const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children })
   return <>{children}</>;
 };
 
+const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <AppGate>
+    <RequireOnboardedGuard>{children}</RequireOnboardedGuard>
+  </AppGate>
+);
+
 /**
  * The inverse guard, and the one that was missing.
  *
@@ -293,7 +252,7 @@ const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children })
  * knows "a session arrived, advance a step"; it never asked whether this
  * person had already finished.
  */
-const RedirectIfOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const RedirectIfOnboardedGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const {
     user,
     authUserId,
@@ -359,6 +318,12 @@ const RedirectIfOnboarded: React.FC<{ children: React.ReactNode }> = ({ children
   return <>{children}</>;
 };
 
+const RedirectIfOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <AppGate>
+    <RedirectIfOnboardedGuard>{children}</RedirectIfOnboardedGuard>
+  </AppGate>
+);
+
 // GoTrue sends a refused sign-in to the Site URL when it cannot use
 // redirect_to; the explanation lives on the auth step, so go there. Once,
 // on first load only.
@@ -377,13 +342,23 @@ function AppRoutes() {
     <>
     <ReturnedAuthErrorRoute />
     <PublicReturnResume />
+    {/* Only an app page (appPages) ever suspends here, while its chunk loads:
+        the same screen the route guards show while the session settles. */}
+    <Suspense fallback={<RouteLoading />}>
     <Routes>
-      {/* Public marketing site */}
+      {/* Public marketing site.
+          EVERY public route (here and below, outside /app) must also be
+          listed in public/_redirects as a 200 rewrite: dist/404.html exists,
+          so Cloudflare Pages answers any path it does not know with a real
+          404. */}
       <Route element={<MarketingLayout />}>
         <Route path="/" element={<MarketingHome />} />
-        <Route path="/product" element={<MarketingProduct />} />
-        <Route path="/pricing" element={<MarketingPricing />} />
-        <Route path="/business" element={<MarketingBusiness />} />
+        {/* Landing v29 (decision A): the old Product / Pricing / Business
+            pages are retired into the landing's own sections. The edge
+            301s them (public/_redirects); these cover in-app navigation. */}
+        <Route path="/product" element={<Navigate to="/#platform" replace />} />
+        <Route path="/pricing" element={<Navigate to="/#pricing" replace />} />
+        <Route path="/business" element={<Navigate to="/#everyone" replace />} />
         <Route path="/contact" element={<MarketingContact />} />
         <Route path="/legal" element={<MarketingLegal />} />
         {/* v2 landing handoff consolidated the two standalone legal pages
@@ -419,6 +394,8 @@ function AppRoutes() {
       <Route path="/p/:handle/book" element={<PublicBooking />} />
       {/* Release 3 W8: a shared card (the site address + /s/{id}); shared_item_public is anon. */}
       <Route path="/s/:id" element={<SharedCard />} />
+      {/* send-push names a call /calls/{id}; the app's route is /app/calls/{id}. */}
+      <Route path="/calls/:callId" element={<LegacyCallLink />} />
       {/* Market + Share 3.0 B-SH.6: a business share link (the site address + /b/{slug}[/{kind}/{item}]); resolve_share_link is anon. */}
       <Route path="/b/:slug/*" element={<BusinessLinkPage />} />
 
@@ -499,6 +476,8 @@ function AppRoutes() {
         <Route path="/app/professionals/meal-plans" element={<ProOnlyRedirect otherwise={<Navigate to="/app/professionals" replace />} />} />
         <Route path="/app/professionals/health-metrics" element={<ProOnlyRedirect otherwise={<Navigate to="/app/professionals" replace />} />} />
         <Route path="/app/messages" element={<Messages />} />
+        {/* A tapped call notification: rings a call still ringing, opens its conversation. */}
+        <Route path="/app/calls/:callId" element={<CallLink />} />
         <Route path="/app/professionals/:id" element={<ProfessionalDetail />} />
         <Route path="/app/professionals/:id/reviews" element={<ProfessionalReviews />} />
         <Route path="/app/marketplace" element={<Marketplace />} />
@@ -585,6 +564,7 @@ function AppRoutes() {
           marketing 404 — is what catches an unmatched /app/... path. */}
       <Route path="/app/*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
     </>
   );
 }

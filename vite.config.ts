@@ -1,6 +1,32 @@
-import { defineConfig } from 'vite'
+import { writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+
+// A real HTTP 404 on Cloudflare Pages (landing v29). With a top-level 404.html
+// in the output, Pages stops answering every unknown path with index.html and
+// 200, and serves 404.html with status 404 instead. This copy of the built
+// index.html (same hashed assets, absolute base) boots the same app, so React
+// renders the marketing NotFound page through the router's path="*" route;
+// the only difference is a robots noindex. public/_redirects lists every real
+// route as a 200 rewrite. A build hook (not a postbuild npm script) so it
+// runs whatever command the Pages dashboard uses to call vite build.
+function notFoundPage(): Plugin {
+  return {
+    name: 'centium-404-page',
+    apply: 'build',
+    enforce: 'post',
+    writeBundle(options, bundle) {
+      const index = bundle['index.html']
+      if (!index || index.type !== 'asset' || !options.dir) return
+      const html = String(index.source)
+      if (!html.includes('</head>')) throw new Error('centium-404-page: index.html has no </head>')
+      const page = html.replace('</head>', '\n    <meta name="robots" content="noindex">\n  </head>')
+      writeFileSync(join(options.dir, '404.html'), page)
+    },
+  }
+}
 
 // Centium is served from a domain root and only ever from a domain root
 // (centium.atraxia.org in production, / in dev), so assets resolve against an
@@ -21,6 +47,7 @@ const ICON_VERSION = '?v=2'
 export default defineConfig({
   plugins: [
     react(),
+    notFoundPage(),
     // PWA scaffolding: an installable manifest and a service worker that
     // exists to receive push notifications. Nothing subscribes to push yet —
     // there is no VAPID key — so this makes the app installable and leaves

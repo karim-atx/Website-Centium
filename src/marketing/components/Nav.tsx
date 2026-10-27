@@ -1,309 +1,399 @@
-import React, { useState } from "react";
+import React, { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
-import clsx from "clsx";
-import { CentiumMark, CentiumWordmarkCropped } from "./CentiumLogo";
-import { useNavTheme } from "../hooks/useNavTheme";
-import { useNavHeroGlass } from "../hooks/useNavHeroGlass";
-import { useNavScrollSpy } from "../hooks/useNavScrollSpy";
+import { EntiumWordmark } from "../../components/icons/CentiumMark";
+import { LG, SM, reducedMotion } from "../landing/engine/env";
+import { landingState, spyClick } from "../landing/state";
+import { anchorHash, loaderEntryFor } from "../landing/loading/pickLoader";
+import { scrollToSection, useMarketingNav } from "../landing/navigation";
+import { LEAF_TEAL, LOGO_LAVENDER, MARK_C_PATH, MARK_LEAF_PATH } from "../landing/paths";
 
-// Fired on `window` whenever a nav-triggered long jump (see scrollToSection
-// below) starts/stops, so the hero canvas (useHeroFlow.ts, owned separately)
-// can idle for the duration per the handoff's "Hero flow canvas" section
-// ("idles when ... a nav jump is travelling"). No existing pub/sub
-// convention for this in the codebase, so a plain CustomEvent is the
-// smallest contract — flagged in the handoff report for the hero-canvas
-// owner to pick up (or ignore) on their side.
-export const NAV_JUMP_EVENT = "centium:nav-scroll-jump";
+// Centium landing v29: NV1 v16, the Original navbar (02_pages/01-NV1 and the
+// prototype's navVals / navClick), replacing the previous glass/dark-band nav.
+// - A solid plate, rgba(250,249,252,.94), no backdrop blur, on every page.
+// - On the landing it is hidden during loading and the intro and slides in at
+//   intro progress 0.79..0.83 (the scroll engine writes its transform and
+//   opacity); it is visible at once on other pages, under LO2, and when the
+//   landing opens on an anchor.
+// - Features / FAQ / Pricing scroll to their landing section (minus 72px) and
+//   light up from the scroll-spy; Contact is its own page. Log in and Get
+//   Started open the web app (/app), as before.
+// - Kept from the previous nav: aria-current on the active link, aria-expanded
+//   and "Open menu" / "Close menu" on the burger.
+// - The logo is the official mark and "entium" wordmark (CentiumMark.tsx),
+//   whose geometry is the prototype's own nav logo (28px mark, 100.42 x 11px word).
 
-const NAV_OFFSET = 88;
+const PLATE = { bg: "rgba(250,249,252,.94)", border: "rgba(34,30,26,.08)", shadow: "0 6px 22px rgba(72,58,130,.10)" };
 
-/** Handoff's `scrollToOffset()`: short hops use the browser's native smooth
- *  scroll (already handled correctly by MarketingLayout's hash effect for
- *  every Link here — untouched, out of this file's scope), but a jump
- *  further than 1.2 viewport heights away is driven frame-by-frame with a
- *  fixed, distance-clamped duration instead, because native smooth-scroll
- *  duration grows with distance and crawls on long jumps. Returns true if it
- *  took over (caller should preventDefault); false leaves the click to the
- *  default Link/route-hash handling. */
-function scrollToSection(id: string): boolean {
-  const el = document.getElementById(id);
-  if (!el) return false;
-  const measureTop = () => el.getBoundingClientRect().top + window.scrollY - NAV_OFFSET;
-  const from = window.scrollY;
-  const target = measureTop();
-  if (Math.abs(target - from) <= window.innerHeight * 1.2) return false;
-
-  window.dispatchEvent(new CustomEvent(NAV_JUMP_EVENT, { detail: { active: true } }));
-  const dist = Math.abs(target - from);
-  const dur = Math.min(900, Math.max(420, 360 + dist * 0.055));
-  const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
-  const t0 = performance.now();
-  let done = false;
-  const finish = () => {
-    if (done) return;
-    done = true;
-    window.dispatchEvent(new CustomEvent(NAV_JUMP_EVENT, { detail: { active: false } }));
-    (["wheel", "touchstart", "keydown"] as const).forEach((ev) => window.removeEventListener(ev, finish));
-    // Keep the URL in sync without re-triggering MarketingLayout's own hash
-    // scroll (it would just be a harmless no-op at this point, but a plain
-    // history update is simpler than reasoning about a second smooth-scroll
-    // racing this one to the same target).
-    window.history.replaceState(null, "", `/#${id}`);
-  };
-  const step = (now: number) => {
-    if (done) return;
-    const k = Math.min(1, (now - t0) / dur);
-    window.scrollTo(0, Math.round(from + (target - from) * ease(k)));
-    if (k >= 1) { finish(); return; }
-    requestAnimationFrame(step);
-  };
-  requestAnimationFrame(step);
-  // Wheel/touch/key input hands control back immediately.
-  (["wheel", "touchstart", "keydown"] as const).forEach((ev) =>
-    window.addEventListener(ev, finish, { once: true, passive: true })
-  );
-  return true;
-}
-
-// QA - Web 2.0 §01: the nav is part of the single-page landing page, not a
-// set of separate routes — every item scrolls to a section on "/" instead
-// of navigating to its own page. "Contact" has no equivalent landing-page
-// section, so it's kept as a real route to the existing /contact page.
-const links = [
-  { to: "/#platform", label: "Features", spyId: "platform" },
-  { to: "/#faq", label: "FAQ", spyId: "faq" },
-  { to: "/#pricing", label: "Pricing", spyId: "pricing" },
-  { to: "/contact", label: "Contact", spyId: null },
+const LINKS: { href: string; label: string; id: string | null }[] = [
+  { href: "/#platform", label: "Features", id: "platform" },
+  { href: "/#faq", label: "FAQ", id: "faq" },
+  { href: "/#pricing", label: "Pricing", id: "pricing" },
+  { href: "/contact", label: "Contact", id: null },
 ];
 
-/** Fixed, fully transparent nav overlaying the page content so section color
- *  and the hero canvas run behind it — v4 landing handoff: an earlier build
- *  used `position: sticky` with a `-72px` bottom margin to let the hero start
- *  beneath it, and that negative margin let the bar scroll away instead of
- *  staying pinned. `position: fixed` has zero flow height either way, so
- *  every other marketing page's existing top padding (tuned for the old
- *  zero-flow-height sticky nav) already clears it without change. Three
- *  palettes, evaluated in this priority order:
- *   1. `dark` (useNavTheme) — light-on-dark, for the other marketing pages'
- *      own `data-nav-dark` bands (Business/Product/Pricing/Contact). Home
- *      never marks a section dark, so this and `glass` never coexist.
- *   2. `glass` (useNavHeroGlass) — Home-only: over its hero the transparent
- *      pill has almost no contrast against the light lavender/teal gradient,
- *      so the pill/buttons gain a real glass fill and the logo lightens.
- *   3. plain — the default dark-ink-on-transparent look.
- *  Same-page hash links (Features/FAQ/Pricing) get a real active state via
- *  scroll-spy (useNavScrollSpy) — a no-op returning null on any page other
- *  than Home, where those section ids don't exist. Contact keeps its
- *  existing route-based active check since it's a real page, not a section. */
+const subscribeResize = (cb: () => void) => {
+  window.addEventListener("resize", cb);
+  return () => window.removeEventListener("resize", cb);
+};
+const getVw = () => window.innerWidth;
+const getSpy = () => landingState.get().spy;
+const getMenuOpen = () => landingState.get().menuOpen;
+
+// The current section's link, beyond the pill (1.2:1 on the plate, so not
+// enough alone): 800 with a thin teal underline. A hidden 800 copy holds the
+// width, so the links beside it don't move as the scroll-spy changes.
+const NavLabel: React.FC<{ label: string; active: boolean }> = ({ label, active }) => (
+  <span style={{ display: "inline-grid" }}>
+    <span
+      style={{
+        gridArea: "1 / 1",
+        fontWeight: active ? 800 : 600,
+        textDecorationLine: active ? "underline" : "none",
+        textDecorationColor: "#4A7D76",
+        textDecorationThickness: "1.5px",
+        textUnderlineOffset: "4px",
+      }}
+    >
+      {label}
+    </span>
+    <span aria-hidden="true" style={{ gridArea: "1 / 1", fontWeight: 800, visibility: "hidden" }}>
+      {label}
+    </span>
+  </span>
+);
+
+const plainClick = (e: React.MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+
 export const Nav: React.FC = () => {
-  const [open, setOpen] = useState(false);
-  const dark = useNavTheme();
-  const glass = useNavHeroGlass();
-  const { pathname } = useLocation();
-  const { active: spyActive, onLinkClick } = useNavScrollSpy(["platform", "pricing", "faq"]);
-  // Logo plate is inverted relative to the nav pills: over the hero the
-  // white-on-color lockup needs no plate of its own (setGlass(true) in the
-  // handoff clears it to transparent), so it only appears once glass turns
-  // off — i.e. past the hero, or on any page that never has a hero at all.
-  // The `dark` palette is left alone here (data-nav-dark is inert on Home
-  // per the handoff's "Known Deviations", but it's live and unrelated to
-  // this glass mechanism on the other marketing pages, so it keeps its
-  // existing plate-less treatment rather than gaining one now).
-  const logoPlate = !dark && !glass;
-  // v7 landing handoff §5.1: past the hero (or on any page with no hero at
-  // all), the logo plate AND the links pill/Log in/burger all share this
-  // one recipe now — "the same plate as the logo (fill .14, blur 120px, and
-  // a border), on the pill too." Applied wherever `logoPlate` is true.
-  // Previously the pill/Log in/burger had no background at all past the
-  // hero (only Tailwind blur classes with nothing to blur), which is the
-  // exact "pill goes transparent and links float over the page text" bug
-  // the handoff calls out by name — fixed by giving them this style too.
-  const pastHeroPlateStyle: React.CSSProperties = {
-    background: "rgba(246,245,250,.14)",
-    borderColor: "rgba(34,30,26,.08)",
-    boxShadow: "0 6px 22px rgba(72,58,130,.10)",
-    backdropFilter: "blur(120px) saturate(2.1)",
-    WebkitBackdropFilter: "blur(120px) saturate(2.1)",
+  const location = useLocation();
+  const vw = useSyncExternalStore(subscribeResize, getVw, getVw);
+  const lg = vw >= LG;
+  const spy = useSyncExternalStore(landingState.subscribe, getSpy, getSpy);
+  const menuOpen = useSyncExternalStore(landingState.subscribe, getMenuOpen, getMenuOpen);
+  const go = useMarketingNav();
+  const headerRef = useRef<HTMLElement>(null);
+  const home = location.pathname === "/";
+  const contact = location.pathname === "/contact";
+
+  // Initial visibility per page (prototype navVals `nv`): on the landing,
+  // hidden unless LO2 runs or it opened on an anchor; the engine takes over
+  // from its first scroll pass. Elsewhere: visible. Written here, not through
+  // the style prop, because the engine owns these properties afterwards.
+  useLayoutEffect(() => {
+    const hd = headerRef.current;
+    if (!hd) return;
+    const entry = loaderEntryFor(location.key, location.pathname, location.hash);
+    const nv = !home || entry.kind === "lo2" || anchorHash(location.hash) ? 1 : 0;
+    hd.style.transform = "translateY(" + ((nv - 1) * 100).toFixed(1) + "%)";
+    hd.style.opacity = String(nv);
+    hd.style.pointerEvents = nv > 0.5 ? "auto" : "none";
+    landingState.set({ menuOpen: false, spy: null });
+    // Only when the page changes; a same-page hash change keeps the engine's state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  const setMenu = (open: boolean) => landingState.set({ menuOpen: open });
+
+  // Prototype navClick.
+  const navClick = (id: string | null, close: boolean) => (e: React.MouseEvent) => {
+    if (!plainClick(e)) return;
+    e.preventDefault();
+    if (close) setMenu(false);
+    if (!id) {
+      go("/contact");
+      return;
+    }
+    if (!home) {
+      go("/#" + id);
+      return;
+    }
+    spyClick.at = Date.now();
+    landingState.set({ spy: id });
+    scrollToSection(id);
   };
 
+  // Prototype goHomeNav.
+  const goHomeNav = (e: React.MouseEvent) => {
+    if (!plainClick(e)) return;
+    e.preventDefault();
+    setMenu(false);
+    if (home) window.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" });
+    else go("/");
+  };
+
+  const leaf = (on: boolean) => () => {
+    const l = document.getElementById("nav-leaf");
+    if (l) l.style.transform = on ? "rotate(7.5deg)" : "none";
+  };
+
+  const links = LINKS.map((l) => {
+    const active = l.id ? home && spy === l.id : contact;
+    return { ...l, active, bg: active ? "rgba(125,103,217,.14)" : "transparent", color: active ? "#6A54C4" : "#5B5349", hoverColor: active ? "#6A54C4" : "#221E1A" };
+  });
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-[60] bg-transparent">
+    <header
+      id="site-nav"
+      ref={headerRef}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 60,
+        background: "transparent",
+        paddingTop: "env(safe-area-inset-top)",
+        willChange: "transform,opacity",
+      }}
+    >
       <div
-        className={clsx(
-          "max-w-[1180px] mx-auto px-5 sm:px-10 h-[72px] flex items-center justify-between gap-6 transition-colors duration-300",
-          dark ? "text-white" : "text-mkt-logo"
-        )}
+        style={{
+          maxWidth: "1180px",
+          margin: "0 auto",
+          padding: "0 " + (vw >= SM ? "40px" : "20px"),
+          height: "72px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "24px",
+        }}
       >
-        <Link
-          to="/"
-          className="group flex items-center gap-[10.9px] shrink-0 rounded-full border border-transparent transition-[background-color,backdrop-filter] duration-[450ms]"
-          onClick={() => setOpen(false)}
+        <a
+          id="nav-logo"
+          href="/"
+          aria-label="Centium home"
+          onClick={goHomeNav}
+          onMouseEnter={leaf(true)}
+          onMouseLeave={leaf(false)}
+          onFocus={leaf(true)}
+          onBlur={leaf(false)}
           style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10.9px",
+            flexShrink: 0,
+            borderRadius: "999px",
             padding: "9px 15px",
-            ...(glass && !dark
-              ? { color: "#FFFFFF", filter: "drop-shadow(0 2px 10px rgba(52,38,110,.42))" }
-              : undefined),
-            ...(logoPlate ? { ...pastHeroPlateStyle, border: "1px solid rgba(34,30,26,.08)" } : undefined),
+            transition: "background-color .45s",
+            color: LOGO_LAVENDER,
+            filter: "none",
+            background: PLATE.bg,
+            border: "1px solid " + PLATE.border,
+            boxShadow: PLATE.shadow,
           }}
         >
-          <CentiumMark size={28} leafFill={dark ? "#FFFFFF" : glass ? "#D8F1EB" : "#8AC4BA"} />
-          <CentiumWordmarkCropped height={11} />
-        </Link>
-
-        <nav
-          className={clsx(
-            "hidden lg:flex items-center gap-0.5 rounded-full p-1 backdrop-blur-[22px] backdrop-saturate-[1.8] transition-[background-color,border-color,box-shadow] duration-[450ms]",
-            !dark && (glass || logoPlate) && "border"
-          )}
-          // Hero handoff README §7: when the hero canvas grades itself tier-1
-          // (slow device), every [data-glassy] element on the page must drop
-          // its backdrop-filter — not just the hero's own "Request a Demo"
-          // pill. data-glassy-fallback repeats this pill's own existing glass
-          // background (the value below is not itself named in the hero
-          // handoff, which only specifies the CTA's fallback; it's reused
-          // here as the closest already-correct value for this element).
-          data-glassy=""
-          data-glassy-fallback="rgba(255,255,255,.66)"
-          style={
-            glass && !dark
-              ? { background: "rgba(255,255,255,.66)", borderColor: "rgba(255,255,255,.78)", boxShadow: "0 8px 26px rgba(72,58,130,.14)" }
-              : logoPlate
-                ? pastHeroPlateStyle
-                : undefined
-          }
-          aria-label="Primary"
-        >
-          {links.map((l) => {
-            const isActive = l.spyId ? spyActive === l.spyId : pathname === l.to;
-            // Regression fix: `text-[#hex]` Tailwind arbitrary-value classes
-            // silently lose to this app's unlayered `a { color: inherit }`
-            // reset (verified: the utility rule generates and its
-            // `--tw-text-opacity` custom property does apply, but `color`
-            // itself still renders the inherited value) — every other custom
-            // hex color in this codebase already goes through inline
-            // `style` for exactly this reason; `<a>` text color needs the
-            // same treatment rather than an arbitrary-value class.
-            const inactiveClass = dark ? "text-white/[.82] hover:text-white" : glass ? "hover:text-mkt-ink" : "text-mkt-soft hover:text-mkt-ink";
-            const inactiveStyle = !dark && glass ? { color: "#3B352D" } : undefined;
-            return (
-              <Link
-                key={l.to}
-                to={l.to}
-                onClick={(e) => {
-                  if (!l.spyId) return;
-                  onLinkClick(l.spyId);
-                  if (scrollToSection(l.spyId)) e.preventDefault();
-                }}
-                aria-current={isActive ? "true" : undefined}
-                className={clsx(
-                  "px-4 py-2 rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-colors duration-200",
-                  isActive ? (dark ? "bg-white/16 text-white" : undefined) : inactiveClass
-                )}
-                style={isActive ? (dark ? undefined : { background: "rgba(125,103,217,.14)", color: "#6A54C4" }) : inactiveStyle}
-              >
-                {l.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="hidden lg:flex items-center gap-3.5 shrink-0">
-          <Link
-            to="/app"
-            className={clsx(
-              "tap text-[13.5px] font-semibold whitespace-nowrap px-[17px] py-[9px] rounded-full backdrop-blur-[22px] backdrop-saturate-[1.8] border transition-[transform,background-color,color,border-color] duration-150 active:scale-[.96]",
-              dark
-                ? "text-white/[.88] border-white/[.14]"
-                : glass
-                  ? "text-[#3B352D]"
-                  : "text-mkt-soft border-mkt-ink/[.08]"
-            )}
-            data-glassy=""
-            data-glassy-fallback="rgba(255,255,255,.66)"
-            style={
-              glass && !dark
-                ? { background: "rgba(255,255,255,.66)", borderColor: "rgba(255,255,255,.78)", boxShadow: "0 8px 26px rgba(72,58,130,.14)" }
-                : logoPlate
-                  ? pastHeroPlateStyle
-                  : undefined
-            }
-          >
-            Log in
-          </Link>
-          <Link
-            to="/app"
-            className="tap px-[19px] py-2.5 rounded-full bg-mkt-accent text-white text-[13.5px] font-semibold whitespace-nowrap hover:bg-mkt-accent-hover transition-[background-color,transform] duration-150 active:scale-[.96]"
-          >
-            Get Started
-          </Link>
-        </div>
-
-        <button
-          onClick={() => setOpen((o) => !o)}
-          aria-label={open ? "Close menu" : "Open menu"}
-          aria-expanded={open}
-          className={clsx(
-            "lg:hidden tap w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-[22px] backdrop-saturate-[1.8] border transition-[transform,color,background-color,border-color] duration-150 active:scale-[.96]",
-            dark ? "text-white border-white/[.14]" : glass ? "text-[#3B352D]" : "text-mkt-ink border-mkt-ink/[.08]"
-          )}
-          data-glassy=""
-          data-glassy-fallback="rgba(255,255,255,.66)"
-          style={
-            glass && !dark
-              ? { background: "rgba(255,255,255,.66)", borderColor: "rgba(255,255,255,.78)", boxShadow: "0 8px 26px rgba(72,58,130,.14)" }
-              : logoPlate
-                ? pastHeroPlateStyle
-                : undefined
-          }
-        >
-          {open ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      </div>
-
-      {open && (
-        <div
-          className={clsx(
-            "lg:hidden mx-3 mb-3 p-4 rounded-[20px] border backdrop-blur-[22px] backdrop-saturate-[1.8] shadow-[0_18px_50px_rgba(34,30,26,.14)] animate-fade-slide-up",
-            dark ? "bg-[#131024]/[.72] border-white/[.14]" : "bg-[#FAF9FC]/[.62] border-mkt-ink/[.08]"
-          )}
-        >
-          <nav className="flex flex-col gap-1" aria-label="Primary">
-            {links.map((l) => {
-              const isActive = l.spyId ? spyActive === l.spyId : pathname === l.to;
-              return (
-                <Link
-                  key={l.to}
-                  to={l.to}
-                  onClick={(e) => {
-                    setOpen(false);
-                    if (!l.spyId) return;
-                    onLinkClick(l.spyId);
-                    if (scrollToSection(l.spyId)) e.preventDefault();
-                  }}
-                  className={clsx(
-                    "px-3 py-2.5 rounded-xl text-sm font-semibold",
-                    isActive ? (dark ? "text-white bg-white/[.14]" : undefined) : dark ? "text-white/[.85]" : "text-mkt-soft"
-                  )}
-                  style={isActive && !dark ? { background: "rgba(125,103,217,.14)", color: "#6A54C4" } : undefined}
+          <span id="nav-mark" style={{ position: "relative", display: "block", flexShrink: 0, width: "28px", height: "28px" }}>
+            <svg viewBox="270 180 690 730" fill="none" aria-hidden="true" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}>
+              <path d={MARK_C_PATH} fill="currentColor" />
+            </svg>
+            <svg
+              id="nav-leaf"
+              viewBox="270 180 690 730"
+              fill="none"
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                overflow: "visible",
+                transition: "transform .5s cubic-bezier(.22,1,.36,1)",
+                transformOrigin: "43.32% 96.36%",
+                transform: "none",
+              }}
+            >
+              <path d={MARK_LEAF_PATH} fill={LEAF_TEAL} />
+            </svg>
+          </span>
+          <EntiumWordmark height={11} style={{ flexShrink: 0, overflow: "visible" }} />
+        </a>
+        {lg ? (
+          <>
+            <nav
+              aria-label="Primary"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "2px",
+                borderRadius: "999px",
+                padding: "4px",
+                background: PLATE.bg,
+                border: "1px solid " + PLATE.border,
+                boxShadow: PLATE.shadow,
+                transition: "background-color .45s,border-color .45s,box-shadow .45s",
+              }}
+            >
+              {links.map((l) => (
+                <a
+                  key={l.label}
+                  href={l.href}
+                  onClick={navClick(l.id, false)}
+                  aria-current={l.active ? "true" : undefined}
+                  className="cl-hc"
+                  style={
+                    {
+                      padding: "8px 16px",
+                      borderRadius: "999px",
+                      fontSize: "13.5px",
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      transition: "color .2s",
+                      background: l.bg,
+                      color: l.color,
+                      "--hc": l.hoverColor,
+                    } as React.CSSProperties
+                  }
                 >
-                  {l.label}
-                </Link>
-              );
-            })}
+                  <NavLabel label={l.label} active={l.active} />
+                </a>
+              ))}
+            </nav>
+            <div style={{ display: "flex", alignItems: "center", gap: "14px", flexShrink: 0 }}>
+              <Link
+                to="/app"
+                className="cl-hbg cl-hbd cl-hc cl-abg"
+                style={
+                  {
+                    fontSize: "13.5px",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    padding: "9px 17px",
+                    borderRadius: "999px",
+                    border: "1px solid " + PLATE.border,
+                    background: PLATE.bg,
+                    boxShadow: PLATE.shadow,
+                    color: "#5B5349",
+                    transition: "background-color .2s,border-color .2s,color .2s",
+                    "--hbg": "#FFFFFF",
+                    "--hbd": "rgba(125,103,217,.28)",
+                    "--hc": "#221E1A",
+                    "--abg": "#F4F1FB",
+                  } as React.CSSProperties
+                }
+              >
+                Log in
+              </Link>
+              <Link
+                to="/app"
+                className="cl-hbg cl-press"
+                style={
+                  {
+                    padding: "10px 19px",
+                    borderRadius: "999px",
+                    background: "#775FD7",
+                    color: "#fff",
+                    fontSize: "13.5px",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    transition: "background-color .15s,transform .15s",
+                    "--hbg": "#6A54C4",
+                  } as React.CSSProperties
+                }
+              >
+                Get Started
+              </Link>
+            </div>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setMenu(!menuOpen)}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+            className="cl-press"
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "999px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "1px solid " + PLATE.border,
+              background: PLATE.bg,
+              boxShadow: PLATE.shadow,
+              color: "#221E1A",
+              transition: "transform .15s",
+            }}
+          >
+            {menuOpen ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" x2="20" y1="12" y2="12" />
+                <line x1="4" x2="20" y1="6" y2="6" />
+                <line x1="4" x2="20" y1="18" y2="18" />
+              </svg>
+            )}
+          </button>
+        )}
+      </div>
+      {menuOpen && !lg && (
+        <div
+          id="nav-menu"
+          style={{
+            margin: "0 12px 12px",
+            padding: "16px",
+            borderRadius: "20px",
+            border: "1px solid rgba(34,30,26,.08)",
+            background: "rgba(250,249,252,.97)",
+            boxShadow: "0 6px 22px rgba(72,58,130,.10)",
+            animation: reducedMotion() ? "none" : "centium-menu-in .45s cubic-bezier(.22,1,.36,1) both",
+          }}
+        >
+          <nav aria-label="Primary" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            {links.map((l) => (
+              <a
+                key={l.label}
+                href={l.href}
+                onClick={navClick(l.id, true)}
+                aria-current={l.active ? "true" : undefined}
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  lineHeight: "20px",
+                  fontWeight: 600,
+                  background: l.bg,
+                  color: l.active ? "#6A54C4" : "#5B5349",
+                }}
+              >
+                <NavLabel label={l.label} active={l.active} />
+              </a>
+            ))}
           </nav>
-          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-mkt-line">
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #EDEAE4" }}>
             <Link
               to="/app"
-              onClick={() => setOpen(false)}
-              className="tap flex-1 text-center px-4 py-2.5 rounded-xl text-sm font-semibold text-mkt-soft bg-mkt-wash2"
+              style={{
+                flex: 1,
+                textAlign: "center",
+                padding: "10px 16px",
+                borderRadius: "12px",
+                fontSize: "14px",
+                lineHeight: "20px",
+                fontWeight: 600,
+                color: "#5B5349",
+                background: "#FAF9F7",
+              }}
             >
               Log in
             </Link>
             <Link
               to="/app"
-              onClick={() => setOpen(false)}
-              className="tap flex-1 text-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-mkt-accent text-white"
+              style={{
+                flex: 1,
+                textAlign: "center",
+                padding: "10px 16px",
+                borderRadius: "12px",
+                fontSize: "14px",
+                lineHeight: "20px",
+                fontWeight: 600,
+                background: "#775FD7",
+                color: "#fff",
+              }}
             >
               Get Started
             </Link>

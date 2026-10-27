@@ -1,0 +1,111 @@
+/* Centium landing v29: the few states inline styles cannot express (hover,
+   focus, active, a keyframe), plus the prototype's base rules scoped to the
+   marketing site. Imported once by MarketingLayout. Values stay inline on
+   each element as CSS custom properties (--hc, --hbg, ...), so the literal
+   handover values live in the markup; these classes only switch them on.
+   !important because the resting value is an inline style. No font sizes
+   here: PostCSS larger-text would rewrite them (see postcss.config.js). */
+
+/* The prototype's html{overflow-x:clip} / body{overflow-x:clip}, only while a
+   marketing page is mounted (MarketingLayout toggles the class). */
+html.centium-site-html,
+html.centium-site-html body {
+  overflow-x: clip;
+}
+
+.centium-site summary::-webkit-details-marker {
+  display: none;
+}
+
+/* pages.md accessibility: focus outlines 2px #4E3894. */
+.centium-site a:focus-visible,
+.centium-site button:focus-visible,
+.centium-site summary:focus-visible {
+  outline: 2px solid #4e3894;
+  outline-offset: 2px;
+}
+
+/* The app's Larger text setting also puts .larger-icons on <html>, which
+   scales every svg by 1.15 (src/index.css) on these routes too. The marketing
+   type is inline px the setting never reaches, so the scale only moved the
+   drawn marks off their handover positions (the leaf dot of "lives", the nav
+   and footer logos, the section 06 chart): B4 QA keeps them at 1. Inline
+   transforms (rings, motion) win over both rules anyway. */
+html.larger-icons .centium-site svg {
+  transform: none;
+}
+
+/* Skip intro stays in the tab order after the intro has faded it out (inline
+   opacity 0): while it has keyboard focus it is shown (B4 QA). */
+.centium-site #skip-intro:focus-visible {
+  opacity: 1 !important;
+}
+
+/* Section 06's slide area takes keyboard focus (tabindex 0, arrow keys) with
+   an inline outline:none in the prototype, so it had no visible focus (B4 QA). */
+.centium-site #eco-view:focus-visible {
+  outline: 2px solid #4e3894 !important;
+  outline-offset: 2px;
+}
+
+.centium-site .cl-hc:hover {
+  color: var(--hc) !important;
+}
+.centium-site .cl-hbg:hover {
+  background: var(--hbg) !important;
+}
+.centium-site .cl-hbd:hover {
+  border-color: var(--hbd) !important;
+}
+.centium-site .cl-lift:hover {
+  transform: translateY(-2px) !important;
+}
+.centium-site .cl-press:active {
+  transform: scale(0.96) !important;
+}
+.centium-site .cl-abg:active {
+  background: var(--abg) !important;
+}
+/* Footer and legal text links: the 1px underline grows on hover. */
+.centium-site .cl-uline:hover {
+  background-size: 100% 1px !important;
+}
+
+/* The mobile menu's entrance (the prototype's fade-slide-up, renamed: the
+   app owns a different fade-slide-up keyframe). */
+@keyframes centium-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Focus states drawn by the handover's style-focus (literal values):
+   review cards (RV1) get a lavender ring instead of an outline; the contact
+   fields (CT1) take the lavender border and halo over any resting or
+   invalid border; the 404 buttons (NF1) sit their outline 3px off.
+   WCAG AA (CONTRAST): the review ring is #775FD7 at .78 (3.2:1 on white;
+   the handover's .35 was 1.6:1). */
+.centium-site .cl-fring:focus {
+  box-shadow: 0 0 0 3px rgba(119, 95, 215, 0.78) !important;
+}
+.centium-site .cl-ffield:focus {
+  border-color: #775fd7 !important;
+  box-shadow: 0 0 0 4px rgba(125, 103, 217, 0.14) !important;
+}
+.centium-site .cl-fo3:focus-visible {
+  outline-offset: 3px;
+}
+
+/* Contact placeholders: no colour in the handover, so they fell back to
+   Tailwind's #9CA3AF (2.5:1 on white). The site's AA muted grey (5.1:1);
+   opacity 1 because Firefox dims ::placeholder by default. */
+.centium-site input::placeholder,
+.centium-site textarea::placeholder {
+  color: #756d63;
+  opacity: 1;
+}

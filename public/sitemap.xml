@@ -4,9 +4,6 @@
      each site lists only its own URLs. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://centium.atraxia.org/</loc></url>
-  <url><loc>https://centium.atraxia.org/product</loc></url>
-  <url><loc>https://centium.atraxia.org/pricing</loc></url>
-  <url><loc>https://centium.atraxia.org/business</loc></url>
   <url><loc>https://centium.atraxia.org/contact</loc></url>
   <url><loc>https://centium.atraxia.org/legal</loc></url>
 </urlset>

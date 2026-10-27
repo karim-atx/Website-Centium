@@ -1,7 +1,8 @@
 // MO1.8.7 Privacy and MO1.8.8 Terms of Service: the in-app legal pages' copy,
 // word for word from the handover's copy tables ("copy aligned with
-// centium.atraxia.org/legal"). The website (src/marketing/pages/Legal.tsx)
-// is the source of truth and carries the full text; every heading here
+// centium.atraxia.org/legal"). The website (src/marketing/legal/text.ts, shown
+// by src/marketing/pages/Legal.tsx) is the source of truth and carries the
+// full text; every heading here
 // deep-links to its section there (BR-11: #legal/<privacy|terms>/<slug>,
 // the website's own slug rule), so the headings must stay the website's.
 
@@ -10,10 +11,10 @@ export interface LegalSection {
   body: string;
 }
 
-/** The website's "Last updated" date (LEGAL_UPDATED_DATE on the legal page). */
+/** The website's "Last updated" date (the legal page writes LEGAL_VERSION month first: src/marketing/legal/anchors.ts legalDateFor). */
 export const LEGAL_UPDATED = "September 6, 2026";
 
-/** The website's slug for a heading (Legal.tsx slugify, the handoff's legalSlug()). */
+/** The website's slug for a heading (src/marketing/legal/anchors.ts legalSlug, the handoff's legalSlug()). */
 export function legalSlug(heading: string): string {
   return heading
     .toLowerCase()
