@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   appliedLine,
   interpretPreviewReferral,
+  isOwnReferralCode,
   PREVIEW_REFUSAL_LINES,
   previewOfferLine,
   interpretRedeemReferral,
@@ -151,4 +152,12 @@ test("preview: ok without a name, or an unknown reason, is not treated as found"
   assert.equal(interpretPreviewReferral({ ok: true, reason: "found", referrer_first_name: null, referee_discount_pct: 10, referrer_discount_pct: 15 }).status, "refused");
   assert.equal(interpretPreviewReferral({ ok: true, reason: "weird", referrer_first_name: "A", referee_discount_pct: 10, referrer_discount_pct: 15 }).status, "refused");
   assert.equal(interpretPreviewReferral(null).status, "refused");
+});
+
+test("isOwnReferralCode: the server's upper(btrim()) comparison, never without a code", () => {
+  assert.equal(isOwnReferralCode("maya-7k4p", "MAYA-7K4P"), true);
+  assert.equal(isOwnReferralCode("  MAYA-7K4P ", "MAYA-7K4P"), true);
+  assert.equal(isOwnReferralCode("RAMI-2QX9", "MAYA-7K4P"), false);
+  assert.equal(isOwnReferralCode("MAYA-7K4P", null), false);
+  assert.equal(isOwnReferralCode("   ", "MAYA-7K4P"), false);
 });

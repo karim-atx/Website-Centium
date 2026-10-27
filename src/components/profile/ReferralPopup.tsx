@@ -9,7 +9,7 @@ import {
   previewReferralCode,
   type ReferralSummary,
 } from "../../services/redemption";
-import { appliedLine, previewOfferLine, redemptionsLine } from "../../services/redemption/referralLogic";
+import { appliedLine, isOwnReferralCode, previewOfferLine, redemptionsLine, REFUSAL_LINES } from "../../services/redemption/referralLogic";
 
 // MO1.10 Invite friends, as a centred popup (R15/popups, batch C, C30), on
 // the A6 backend ("Stage A6 · Referrals" in ../Database/docs/HANDOVER_API.md):
@@ -142,6 +142,12 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
   const lookUp = async () => {
     if (!codeDraft.trim()) return;
     setResult(null);
+    // DM: the preview answers not_valid for your own code (no oracle), so
+    // MO1.10.2's own-code line is decided here, from the code already loaded.
+    if (isOwnReferralCode(codeDraft, myCode)) {
+      setResult({ success: false, message: REFUSAL_LINES.own_code });
+      return;
+    }
     setBusy(true);
     const p = await previewReferralCode(codeDraft);
     setBusy(false);
