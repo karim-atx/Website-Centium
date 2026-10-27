@@ -12,7 +12,7 @@ export const PaneNutrition: React.FC<{ r: SectionVals }> = ({ r }) => (
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E4DCF8" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#DDE8E5" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E7E3DC" }} />
-      <span style={{ marginLeft: "10px", fontSize: "11.5px", fontWeight: "700", color: "#8C8378" }}>
+      <span style={{ marginLeft: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
         centium.atraxia.org/app/food
       </span>
     </div>
@@ -29,15 +29,15 @@ export const PaneNutrition: React.FC<{ r: SectionVals }> = ({ r }) => (
         <div style={{ position: "relative", width: "128px", height: "128px", flexShrink: "0" }}>
           <svg viewBox="0 0 120 120" style={{ width: "128px", height: "128px" }}>
             <circle cx="60" cy="60" r="52" fill="none" stroke="#F1EEF8" strokeWidth="9" />
-            <circle data-w="0.05 0.6" data-ring="0.78" cx="60" cy="60" r="52" fill="none" stroke="#7D67D9" strokeWidth="9" strokeLinecap="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" transform="rotate(-90 60 60)" />
+            <circle data-w="0.05 0.6" data-ring="0.78" cx="60" cy="60" r="52" fill="none" stroke="#775FD7" strokeWidth="9" strokeLinecap="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" transform="rotate(-90 60 60)" />
             <circle cx="60" cy="60" r="39" fill="none" stroke="#F1EEF8" strokeWidth="9" />
             <circle data-w="0.12 0.66" data-ring="0.75" cx="60" cy="60" r="39" fill="none" stroke="#B9A9EE" strokeWidth="9" strokeLinecap="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" transform="rotate(-90 60 60)" />
             <circle cx="60" cy="60" r="26" fill="none" stroke="#F1EEF8" strokeWidth="9" />
-            <circle data-w="0.18 0.72" data-ring="0.74" cx="60" cy="60" r="26" fill="none" stroke="#5E9E95" strokeWidth="9" strokeLinecap="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" transform="rotate(-90 60 60)" />
+            <circle data-w="0.18 0.72" data-ring="0.74" cx="60" cy="60" r="26" fill="none" stroke="#5D9C93" strokeWidth="9" strokeLinecap="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" transform="rotate(-90 60 60)" />
           </svg>
         </div>
         <div style={{ flex: "1", minWidth: "0" }}>
-          <div style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#8C8378" }}>
+          <div style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
             TODAY
           </div>
           <div style={{ fontSize: "26px", fontWeight: "800", letterSpacing: "-.02em", lineHeight: "1.1" }}>
@@ -45,7 +45,7 @@ export const PaneNutrition: React.FC<{ r: SectionVals }> = ({ r }) => (
               0
             </span>
           </div>
-          <div style={{ fontSize: "12px", fontWeight: "700", color: "#8C8378" }}>
+          <div style={{ fontSize: "12px", fontWeight: "700", color: "#756D63" }}>
             of 2,340 kcal
           </div>
           <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "5px" }}>
@@ -64,7 +64,7 @@ export const PaneNutrition: React.FC<{ r: SectionVals }> = ({ r }) => (
         </div>
       </div>
       <div style={{ position: "relative", padding: "14px 14px 10px", borderRadius: "16px", border: "1px solid rgba(125,103,217,.14)", display: r.mhBlock }}>
-        <div style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#8C8378" }}>
+        <div style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
           MEALS
         </div>
         <svg viewBox="0 0 4 100" preserveAspectRatio="none" style={{ position: "absolute", left: "24px", top: "40px", width: "4px", height: "calc(100% - 64px)" }}>
@@ -83,7 +83,7 @@ export const PaneNutrition: React.FC<{ r: SectionVals }> = ({ r }) => (
                     {me.k}
                   </span>
                 </div>
-                <div style={{ fontSize: "11px", fontWeight: "600", color: "#8C8378" }}>
+                <div style={{ fontSize: "11px", fontWeight: "600", color: "#756D63" }}>
                   {me.m}
                 </div>
               </div>
@@ -93,7 +93,7 @@ export const PaneNutrition: React.FC<{ r: SectionVals }> = ({ r }) => (
       </div>
       <div style={{ gridColumn: "1 / -1", gridTemplateColumns: r.scanCols, gap: "12px", alignItems: "stretch", display: r.mhGrid }}>
         <div style={{ position: "relative", padding: "12px", borderRadius: "16px", background: "repeating-linear-gradient(135deg,#FBFAF7 0 10px,#F5F2EC 10px 20px)", border: "1px solid #EDEAE4", overflow: "hidden" }}>
-          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: "#8C8378" }}>
+          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: "#6C655C" }}>
             LABNEH · 200 g
           </div>
           <div style={{ marginTop: "8px", display: "flex", gap: "2px", height: "40px" }}>
@@ -101,10 +101,10 @@ export const PaneNutrition: React.FC<{ r: SectionVals }> = ({ r }) => (
               <span key={bcI} style={{ width: bc, background: "#3B352D" }} />
             ))}
           </div>
-          <div style={{ marginTop: "4px", fontFamily: "'JetBrains Mono',monospace", fontSize: "9.5px", color: "#A9A29A", letterSpacing: ".2em" }}>
+          <div style={{ marginTop: "4px", fontFamily: "'JetBrains Mono',monospace", fontSize: "9.5px", color: "#6C655C", letterSpacing: ".2em" }}>
             5 281027 410036
           </div>
-          <span data-w="0.4 0.75" data-sweep="200" style={{ position: "absolute", left: "10px", top: "8px", bottom: "8px", width: "2px", background: "#7D67D9", boxShadow: "0 0 0 3px rgba(125,103,217,.16)", opacity: "0" }} />
+          <span data-w="0.4 0.75" data-sweep="200" style={{ position: "absolute", left: "10px", top: "8px", bottom: "8px", width: "2px", background: "#775FD7", boxShadow: "0 0 0 3px rgba(125,103,217,.16)", opacity: "0" }} />
         </div>
         <div data-w="0.72 0.9" data-op="" style={{ padding: "10px 14px", borderRadius: "16px", border: "1px solid rgba(125,103,217,.16)", background: "#FFFFFF", opacity: "0" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -118,7 +118,7 @@ export const PaneNutrition: React.FC<{ r: SectionVals }> = ({ r }) => (
           <div style={{ marginTop: "4px", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "8px" }}>
             {D.facts.map((fa, faI) => (
               <div key={faI} style={{ borderTop: "2px solid #221E1A", paddingTop: "4px" }}>
-                <div style={{ fontSize: "10px", fontWeight: "700", color: "#8C8378" }}>
+                <div style={{ fontSize: "10px", fontWeight: "700", color: "#756D63" }}>
                   {fa.k}
                 </div>
                 <div style={{ fontSize: "15px", fontWeight: "800" }}>

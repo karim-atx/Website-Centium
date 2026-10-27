@@ -167,7 +167,7 @@ export const Footer: React.FC = () => {
               minHeight: "48px",
               padding: "0 26px",
               borderRadius: "999px",
-              background: "#7D67D9",
+              background: "#775FD7",
               color: "#FFFFFF",
               fontWeight: 700,
               fontSize: "15px",
@@ -204,11 +204,11 @@ export const Footer: React.FC = () => {
                   fontSize: "10.5px",
                   fontWeight: 800,
                   letterSpacing: ".22em",
-                  color: "#8C8378",
+                  color: "#6C655C",
                 }}
               >
                 {c.t}
-                <span aria-hidden="true" style={{ display: lg ? "none" : "inline", color: "#7D67D9", fontSize: "15px" }}>
+                <span aria-hidden="true" style={{ display: lg ? "none" : "inline", color: "#775FD7", fontSize: "15px" }}>
                   +
                 </span>
               </summary>
@@ -260,8 +260,8 @@ export const Footer: React.FC = () => {
                   background: "rgba(255,255,255,.7)",
                   color: "#6A54C4",
                   transition: "transform .2s cubic-bezier(.22,1,.36,1)",
-                  "--hbg": "#5E9E95",
-                  "--hbd": "#5E9E95",
+                  "--hbg": "#5D9C93",
+                  "--hbd": "#5D9C93",
                   "--hc": "#FFFFFF",
                 } as React.CSSProperties
               }
@@ -297,7 +297,7 @@ export const Footer: React.FC = () => {
                 color: "#3B352D",
                 background: UNDERLINE,
                 transition: "background-size .3s cubic-bezier(.22,1,.36,1),color .2s",
-                "--hc": "#6A54C4",
+                "--hc": "#5C48A8",
               } as React.CSSProperties
             }
           >

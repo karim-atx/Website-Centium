@@ -51,16 +51,16 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
           </div>
           <div style={{ position: "relative", height: r.railH }}>
             <span style={{ position: "absolute", left: "5px", top: "0", bottom: "0", width: "2px", borderRadius: "2px", background: "#EFEAFB" }} />
-            <span id="rail-fill" style={{ position: "absolute", left: "5px", top: "0", bottom: "0", width: "2px", borderRadius: "2px", background: "#7D67D9", transformOrigin: "top", transform: "scaleY(0)" }} />
+            <span id="rail-fill" style={{ position: "absolute", left: "5px", top: "0", bottom: "0", width: "2px", borderRadius: "2px", background: "#775FD7", transformOrigin: "top", transform: "scaleY(0)" }} />
             {D.moments.map((mo, moI) => (
               <div key={moI} style={{ position: "absolute", left: "0", top: mo.l, display: "flex", alignItems: "center", gap: "12px", transform: "translateY(-50%)" }}>
                 <span style={{ position: "relative", width: "12px", height: "12px", flexShrink: "0", borderRadius: "99px", background: "#FFFFFF", border: "2px solid #D9D2EE" }}>
-                  <span data-rd={mo.i} style={{ position: "absolute", inset: "-2px", borderRadius: "99px", background: "#7D67D9", opacity: "0" }} />
+                  <span data-rd={mo.i} style={{ position: "absolute", inset: "-2px", borderRadius: "99px", background: "#775FD7", opacity: "0" }} />
                 </span>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "11px", color: "#8C8378" }}>
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "11px", color: "#756D63" }}>
                   {mo.t}
                 </span>
-                <span data-rl={mo.i} style={{ fontSize: "13px", fontWeight: "700", color: "#5B5349", opacity: ".55", whiteSpace: "nowrap" }}>
+                <span data-rl={mo.i} style={{ fontSize: "13px", fontWeight: "700", color: "#5B5349", opacity: ".81", whiteSpace: "nowrap" }}>
                   {mo.label}
                 </span>
               </div>
@@ -70,7 +70,7 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
         <div id="day-phone-slot" style={{ height: r.dayPhoneSpace, width: "100%", flexShrink: "0" }} />
         <div style={{ display: r.dayMobDisp, flexDirection: "column", gap: "10px", width: "100%", padding: "0 4px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <span style={{ fontSize: "10.5px", fontWeight: "700", letterSpacing: ".22em", color: "#7D67D9" }}>
+            <span style={{ fontSize: "10.5px", fontWeight: "700", letterSpacing: ".22em", color: "#775FD7" }}>
               01 · YOUR DAY, IN RHYTHM
             </span>
             <span id="day-clock-m" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "15px", color: "#221E1A" }}>
@@ -79,10 +79,10 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
           </div>
           <div style={{ position: "relative", height: "16px" }}>
             <span style={{ position: "absolute", left: "0", right: "0", top: "7px", height: "2px", borderRadius: "2px", background: "#EFEAFB" }} />
-            <span id="rail-fill-m" style={{ position: "absolute", left: "0", right: "0", top: "7px", height: "2px", borderRadius: "2px", background: "#7D67D9", transformOrigin: "left", transform: "scaleX(0)" }} />
+            <span id="rail-fill-m" style={{ position: "absolute", left: "0", right: "0", top: "7px", height: "2px", borderRadius: "2px", background: "#775FD7", transformOrigin: "left", transform: "scaleX(0)" }} />
             {D.momentsH.map((mo, moI) => (
               <span key={moI} style={{ position: "absolute", left: mo.l, top: "2px", width: "12px", height: "12px", marginLeft: "-6px", borderRadius: "99px", background: "#FFFFFF", border: "2px solid #D9D2EE" }}>
-                <span data-rdm={mo.i} style={{ position: "absolute", inset: "-2px", borderRadius: "99px", background: "#7D67D9", opacity: "0" }} />
+                <span data-rdm={mo.i} style={{ position: "absolute", inset: "-2px", borderRadius: "99px", background: "#775FD7", opacity: "0" }} />
               </span>
             ))}
           </div>

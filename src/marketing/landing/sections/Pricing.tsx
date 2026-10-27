@@ -37,7 +37,7 @@ const THUMB: React.CSSProperties = {
   top: "4px",
   bottom: "4px",
   borderRadius: "999px",
-  background: "#7D67D9",
+  background: "#775FD7",
   boxShadow: "0 6px 16px rgba(125,103,217,.28)",
   transition: "transform .45s cubic-bezier(.22,1,.36,1)",
 };
@@ -108,7 +108,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
     dots.forEach((d, j) => {
       const w = Math.max(0, 1 - Math.abs(pos - j));
       d.style.transform = "scaleX(" + (0.4 + 0.6 * w).toFixed(3) + ")";
-      d.style.background = w > 0.5 ? "#7D67D9" : "rgba(34,30,26,.18)";
+      d.style.background = w > 0.5 ? "#775FD7" : "rgba(34,30,26,.18)";
     });
     if (cnt) cnt.textContent = act + 1 + " / " + dots.length;
   };
@@ -310,9 +310,9 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
               textAlign: "center",
               fontWeight: "600",
               fontSize: "14px",
-              background: hi ? "#5E9E95" : "transparent",
+              background: hi ? "#4A7D76" : "transparent",
               color: hi ? "#fff" : "#221E1A",
-              border: "1px solid " + (hi ? "#5E9E95" : "#DFDAD2"),
+              border: "1px solid " + (hi ? "#4A7D76" : "#DFDAD2"),
             };
             return (
               <div
@@ -324,7 +324,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                   padding: "26px 22px",
                   borderRadius: "24px",
                   background: hi ? "linear-gradient(165deg,#FFFFFF 0%,#F8F5FF 58%,#F1F7F5 100%)" : "#FFFFFF",
-                  border: hi ? "2px solid #7D67D9" : "1px solid #EDEAE4",
+                  border: hi ? "2px solid #775FD7" : "1px solid #EDEAE4",
                   boxShadow: hi
                     ? "0 1px 1px rgba(72,58,130,.05),0 14px 30px rgba(72,58,130,.1),0 40px 80px rgba(92,72,168,.14)"
                     : "0 1px 1px rgba(72,58,130,.04),0 10px 26px rgba(72,58,130,.06)",
@@ -341,7 +341,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                       left: "22px",
                       padding: "4px 11px",
                       borderRadius: "99px",
-                      background: "#7D67D9",
+                      background: "#775FD7",
                       color: "#fff",
                       fontSize: "10px",
                       fontWeight: "800",
@@ -352,14 +352,14 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                   </span>
                 )}
                 <div style={{ fontSize: "18px", fontWeight: "800", color: hi ? "#427C76" : "#221E1A" }}>{p.name}</div>
-                <div style={{ marginTop: "4px", fontSize: "12.5px", fontWeight: "700", color: "#8C8378", minHeight: "19px" }}>{p.caption}</div>
+                <div style={{ marginTop: "4px", fontSize: "12.5px", fontWeight: "700", color: "#756D63", minHeight: "19px" }}>{p.caption}</div>
                 <div style={{ marginTop: "14px", display: "flex", alignItems: "baseline", gap: "5px", flexWrap: "wrap" }}>
                   <span data-pv={String(pr.value)} style={{ fontSize: r.priceF, fontWeight: "800", letterSpacing: "-.02em", lineHeight: "1.05" }}>
                     {pr.label}
                   </span>
-                  <span style={{ fontSize: "13px", fontWeight: "600", color: "#8C8378" }}>{pr.unit}</span>
+                  <span style={{ fontSize: "13px", fontWeight: "600", color: "#756D63" }}>{pr.unit}</span>
                 </div>
-                <div style={{ marginTop: "4px", fontSize: "12.5px", fontWeight: "600", color: pr.comingSoon ? "#6A54C4" : "#8C8378", minHeight: "19px" }}>{pr.note}</div>
+                <div style={{ marginTop: "4px", fontSize: "12.5px", fontWeight: "600", color: pr.comingSoon ? "#6A54C4" : "#756D63", minHeight: "19px" }}>{pr.note}</div>
                 <div style={{ margin: "18px 0 22px", display: "flex", flexDirection: "column", gap: "9px" }}>
                   {p.features.map((x) => (
                     <span key={x} style={{ display: "flex", gap: "8px", fontSize: "13.5px", lineHeight: "1.4" }}>
@@ -370,7 +370,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                           flexShrink: "0",
                           marginTop: "1px",
                           borderRadius: "99px",
-                          background: hi ? "#5E9E95" : "#C6B9EE",
+                          background: hi ? "#5D9C93" : "#C6B9EE",
                           color: "#fff",
                           fontSize: "9px",
                           display: "flex",
@@ -447,14 +447,14 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
             }
           >
             Compare all features
-            <span style={{ display: "inline-block", transform: cmp ? "rotate(45deg)" : "none", transition: "transform .3s cubic-bezier(.22,1,.36,1)", color: "#7D67D9" }}>+</span>
+            <span style={{ display: "inline-block", transform: cmp ? "rotate(45deg)" : "none", transition: "transform .3s cubic-bezier(.22,1,.36,1)", color: "#775FD7" }}>+</span>
           </button>
         </div>
         <div style={{ display: "grid", gridTemplateRows: cmp ? "1fr" : "0fr", transition: "grid-template-rows .4s cubic-bezier(.22,1,.36,1)" }}>
           <div style={{ overflow: "hidden" }}>
             <div style={{ marginTop: "18px", overflowX: "auto", borderRadius: "18px", border: "1px solid #EDEAE4" }}>
               <div style={{ minWidth: n === 5 ? "760px" : "480px", display: "grid", gridTemplateColumns: cmpCols, fontSize: "13px" }}>
-                <span style={{ padding: "12px 16px", background: "#FAF9FE", fontWeight: "800", fontSize: "11px", letterSpacing: ".12em", color: "#8C8378" }}>FEATURE</span>
+                <span style={{ padding: "12px 16px", background: "#FAF9FE", fontWeight: "800", fontSize: "11px", letterSpacing: ".12em", color: "#756D63" }}>FEATURE</span>
                 {A.plans.map((p) => (
                   <span key={p.name} style={{ padding: "12px 10px", background: "#FAF9FE", fontWeight: "800", textAlign: "center", color: p.recommended ? "#6A54C4" : "#221E1A" }}>
                     {p.name}
@@ -472,7 +472,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                               borderTop: "1px solid #F0EDE8",
                               textAlign: "center",
                               fontWeight: t === "✓" ? 800 : 600,
-                              color: t === "✓" ? "#2F5F58" : t === "–" ? "#C3BCB2" : "#5B5349",
+                              color: t === "✓" ? "#2F5F58" : t === "–" ? "#756D63" : "#5B5349",
                             }
                       }
                     >

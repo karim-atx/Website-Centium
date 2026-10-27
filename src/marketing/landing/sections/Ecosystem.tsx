@@ -107,7 +107,7 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
                 bottom: "4px",
                 width: "calc(50% - 4px)",
                 borderRadius: "999px",
-                background: "#7D67D9",
+                background: "#775FD7",
                 boxShadow: "0 6px 16px rgba(125,103,217,.28)",
                 transform: `translateX(${seg ? "100%" : "0%"})`,
                 transition: "transform .45s cubic-bezier(.22,1,.36,1)",
@@ -231,7 +231,7 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
             ←
           </button>
           <div style={{ flex: "1", height: "3px", borderRadius: "9px", background: "#EFEAFB", overflow: "hidden" }}>
-            <div id="eco-prog" style={{ height: "100%", width: "100%", background: "#7D67D9", transformOrigin: "left", transform: "scaleX(.2)" }} />
+            <div id="eco-prog" style={{ height: "100%", width: "100%", background: "#775FD7", transformOrigin: "left", transform: "scaleX(.2)" }} />
           </div>
           <span id="eco-count" aria-live="polite" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "13px", color: "#5B5349", minWidth: "62px", textAlign: "center" }}>
             01 / 05

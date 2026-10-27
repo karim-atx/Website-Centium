@@ -19,9 +19,9 @@ export const barcodeL = ["3px", "2px", "3px", "2px", "1px", "3px", "1px", "1px",
 export const calHead = ["M", "T", "W", "T", "F", "S", "S"];
 
 export const coachChat = [
-  { t: "Hi Lara, can we start this week?", w: "0.68 0.74", side: "flex-end", bg: "#7D67D9", ink: "#fff" },
+  { t: "Hi Lara, can we start this week?", w: "0.68 0.74", side: "flex-end", bg: "#775FD7", ink: "#fff" },
   { t: "Yes. I shared your plan. Video call now?", w: "0.74 0.8", side: "flex-start", bg: "#F3F9F7", ink: "#221E1A" },
-  { t: "Joining.", w: "0.8 0.86", side: "flex-end", bg: "#7D67D9", ink: "#fff" },
+  { t: "Joining.", w: "0.8 0.86", side: "flex-end", bg: "#775FD7", ink: "#fff" },
 ];
 
 export const cycCal = [
@@ -50,12 +50,12 @@ export const cycCal = [
   { d: "20", bg: "#D9CFF599", ink: "#3B352D", fw: 700, ring: "none", w: "0.340 0.440" },
   { d: "21", bg: "#4E3894", ink: "#FFFFFF", fw: 800, ring: "none", w: "0.352 0.452" },
   { d: "22", bg: "#D9CFF599", ink: "#3B352D", fw: 700, ring: "none", w: "0.364 0.464" },
-  { d: "23", bg: "#D9CFF5", ink: "#3B352D", fw: 700, ring: "inset 0 0 0 1px #5E9E95", w: "0.376 0.476" },
-  { d: "24", bg: "#D9CFF5", ink: "#3B352D", fw: 700, ring: "inset 0 0 0 1px #5E9E95", w: "0.388 0.488" },
-  { d: "25", bg: "#D9CFF5", ink: "#3B352D", fw: 700, ring: "inset 0 0 0 1px #5E9E95", w: "0.400 0.500" },
-  { d: "26", bg: "#BFDCD6", ink: "#3B352D", fw: 700, ring: "inset 0 0 0 1px #5E9E95", w: "0.412 0.512" },
-  { d: "27", bg: "#BFDCD6", ink: "#3B352D", fw: 700, ring: "inset 0 0 0 1px #5E9E95", w: "0.424 0.524" },
-  { d: "28", bg: "#BFDCD6", ink: "#3B352D", fw: 700, ring: "inset 0 0 0 1px #5E9E95", w: "0.436 0.536" },
+  { d: "23", bg: "#D9CFF5", ink: "#3B352D", fw: 700, ring: "inset 0 0 0 1px #5D9C93", w: "0.376 0.476" },
+  { d: "24", bg: "#D9CFF5", ink: "#3B352D", fw: 700, ring: "inset 0 0 0 1px #5D9C93", w: "0.388 0.488" },
+  { d: "25", bg: "#D9CFF5", ink: "#3B352D", fw: 700, ring: "inset 0 0 0 1px #5D9C93", w: "0.400 0.500" },
+  { d: "26", bg: "#BFDCD6", ink: "#3B352D", fw: 700, ring: "inset 0 0 0 1px #5D9C93", w: "0.412 0.512" },
+  { d: "27", bg: "#BFDCD6", ink: "#3B352D", fw: 700, ring: "inset 0 0 0 1px #5D9C93", w: "0.424 0.524" },
+  { d: "28", bg: "#BFDCD6", ink: "#3B352D", fw: 700, ring: "inset 0 0 0 1px #5D9C93", w: "0.436 0.536" },
   { d: "29", bg: "#EDE3CF99", ink: "#3B352D", fw: 700, ring: "none", w: "0.448 0.548" },
   { d: "30", bg: "#EDE3CF99", ink: "#3B352D", fw: 700, ring: "none", w: "0.460 0.560" },
   { d: "31", bg: "#EDE3CF99", ink: "#3B352D", fw: 700, ring: "none", w: "0.472 0.572" },
@@ -186,7 +186,7 @@ export const feedPosts = [
 export const forumCats = [
   { t: "All", bg: "#F4F1FB", ink: "#5C48A8" },
   { t: "Nutrition", bg: "#F4F1FB", ink: "#5C48A8" },
-  { t: "Running", bg: "#7D67D9", ink: "#fff" },
+  { t: "Running", bg: "#775FD7", ink: "#fff" },
   { t: "Strength", bg: "#F4F1FB", ink: "#5C48A8" },
 ];
 
@@ -316,21 +316,21 @@ export const lessons = [
   { t: "1 · Hips and ankles", d: "08:12", done: true, w: "0.15 0.28", bg: "transparent", bd: "#D9D2EE" },
   { t: "2 · Thoracic spine", d: "06:40", done: true, w: "0.25 0.38", bg: "transparent", bd: "#D9D2EE" },
   { t: "3 · Shoulders", d: "09:05", done: true, w: "0.35 0.48", bg: "transparent", bd: "#D9D2EE" },
-  { t: "4 · Daily flow", d: "12:30", done: false, w: "0.45 0.58", bg: "#F4F1FB", bd: "#7D67D9" },
+  { t: "4 · Daily flow", d: "12:30", done: false, w: "0.45 0.58", bg: "#F4F1FB", bd: "#775FD7" },
   { t: "5 · Desk reset", d: "05:20", done: false, w: "0.55 0.68", bg: "transparent", bd: "#D9D2EE" },
   { t: "6 · Full routine", d: "14:10", done: false, w: "0.65 0.78", bg: "transparent", bd: "#D9D2EE" },
 ];
 
 export const macroLegend = [
-  { k: "Protein", v: "128 / 165 g", c: "#7D67D9" },
+  { k: "Protein", v: "128 / 165 g", c: "#775FD7" },
   { k: "Carbs", v: "196 / 260 g", c: "#B9A9EE" },
-  { k: "Fat", v: "48 / 65 g", c: "#5E9E95" },
+  { k: "Fat", v: "48 / 65 g", c: "#5D9C93" },
 ];
 
 export const mealLine = [
-  { t: "Labneh breakfast", m: "08:10 · labneh, zaatar, cucumber", k: "410", c: "#7D67D9", w: "0.1 0.3" },
+  { t: "Labneh breakfast", m: "08:10 · labneh, zaatar, cucumber", k: "410", c: "#775FD7", w: "0.1 0.3" },
   { t: "Fattoush lunch", m: "13:00 · with grilled halloumi", k: "480", c: "#B9A9EE", w: "0.3 0.5" },
-  { t: "Mujaddara dinner", m: "19:30 · lentils, rice, onions", k: "520", c: "#5E9E95", w: "0.5 0.7" },
+  { t: "Mujaddara dinner", m: "19:30 · lentils, rice, onions", k: "520", c: "#5D9C93", w: "0.5 0.7" },
 ];
 
 export const ormBand = { l: "77.06%", t: "10.00%", h: "10.00%", lt: "calc(20.00% + 3px)" };
@@ -374,8 +374,8 @@ export const ormGrid = ["0", "33.33", "66.67"];
 
 export const ormLifts = [
   { t: "Bench press", on: "true", bg: "#2F5F58", ink: "#FFFFFF" },
-  { t: "Back squat", on: "false", bg: "transparent", ink: "#3F726D" },
-  { t: "Deadlift", on: "false", bg: "transparent", ink: "#3F726D" },
+  { t: "Back squat", on: "false", bg: "transparent", ink: "#3D6E69" },
+  { t: "Deadlift", on: "false", bg: "transparent", ink: "#3D6E69" },
 ];
 
 export const ormPRs = [
@@ -397,7 +397,7 @@ export const plSets = [
   { n: 1, kg: "50", reps: 10, mark: "W", mb: "#F4F1FB", mc: "#5C48A8", bg: "transparent", w: "0.05 0.20", mw: "0.20 0.30" },
   { n: 2, kg: "65", reps: 8, mark: "", mb: "", mc: "", bg: "transparent", w: "0.15 0.30", mw: "5 6" },
   { n: 3, kg: "70", reps: 8, mark: "PR", mb: "#2F5F58", mc: "#fff", bg: "#EDF4F3", w: "0.25 0.40", mw: "0.5 0.62" },
-  { n: 4, kg: "70", reps: 6, mark: "F", mb: "#F6F3EE", mc: "#8C8378", bg: "transparent", w: "0.35 0.50", mw: "0.50 0.60" },
+  { n: 4, kg: "70", reps: 6, mark: "F", mb: "#F6F3EE", mc: "#756D63", bg: "transparent", w: "0.35 0.50", mw: "0.50 0.60" },
 ];
 
 export const proFilters = [
@@ -416,7 +416,7 @@ export const proList = [
     bd: "rgba(94,158,149,.45)",
     bg: "#F3F9F7",
     abg: "#DAEAE7",
-    aink: "#3F726D",
+    aink: "#3D6E69",
   },
   { i: "HS", n: "Hadi Saleh", m: "Dietitian · Jounieh", w: "0.08 0.20", bd: "#F0EDE8", bg: "#FFFFFF", abg: "#DED4F4", aink: "#5C48A8" },
 ];
@@ -426,7 +426,7 @@ export const recTimeline = [
   { d: "2 Jun", t: "Vitamin D retest", m: "Hayek Lab", w: "0.13 0.28", dot: "#D9D2EE", bd: "#F0EDE8", bg: "#FFFFFF" },
   { d: "18 Jul", t: "Knee X-ray", m: "Clemenceau MC", w: "0.21 0.36", dot: "#D9D2EE", bd: "#F0EDE8", bg: "#FFFFFF" },
   { d: "9 Sep", t: "Physio summary", m: "Dana Azar", w: "0.29 0.44", dot: "#D9D2EE", bd: "#F0EDE8", bg: "#FFFFFF" },
-  { d: "14 Oct", t: "Blood panel", m: "Hayek Lab · 20 markers", w: "0.37 0.52", dot: "#7D67D9", bd: "rgba(125,103,217,.45)", bg: "#FAF9FE" },
+  { d: "14 Oct", t: "Blood panel", m: "Hayek Lab · 20 markers", w: "0.37 0.52", dot: "#775FD7", bd: "rgba(125,103,217,.45)", bg: "#FAF9FE" },
 ];
 
 export const replies = [

@@ -33,10 +33,10 @@ export const momentsH = [
 ];
 
 export const dayStepsTxt = [
-  { i: 0, t: "12:30", h: "Nutrition.", p: "Lunch added. Calories and macros grow on the Food card.", c: "#7D67D9" },
+  { i: 0, t: "12:30", h: "Nutrition.", p: "Lunch added. Calories and macros grow on the Food card.", c: "#775FD7" },
   { i: 1, t: "13:30", h: "Training.", p: "Upper Body, three of six done. Paused for now.", c: "#2F5F58" },
   { i: 2, t: "14:30", h: "Health.", p: "Heart rate, steps and water update. Two of four goals, and the day is earned.", c: "#2F5F58" },
-  { i: 3, t: "17:30", h: "Classes.", p: "Your session with Lara starts in 60 minutes.", c: "#7D67D9" },
+  { i: 3, t: "17:30", h: "Classes.", p: "Your session with Lara starts in 60 minutes.", c: "#775FD7" },
   { i: 4, t: "17:30", h: "Coaching.", p: "Lara would like to share your bench press PR.", c: "#2F5F58" },
-  { i: 5, t: "21:30", h: "Day closed.", p: "Upper Body done, four of four goals. Good evening, Rami.", c: "#7D67D9" },
+  { i: 5, t: "21:30", h: "Day closed.", p: "Upper Body done, four of four goals. Good evening, Rami.", c: "#775FD7" },
 ];

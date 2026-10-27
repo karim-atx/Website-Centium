@@ -38,7 +38,7 @@ export const ClosingCta: React.FC<{ r: SectionVals }> = ({ r }) => {
       <div style={{ maxWidth: "760px", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center" }}>
         <h2 style={{ fontWeight: "800", fontSize: r.ctaH, lineHeight: "1.02", letterSpacing: "-.04em" }}>Ready to bring it all together?</h2>
         <div id="cta-btns" style={{ display: "flex", flexDirection: r.ctaDir, justifyContent: "center", alignItems: "stretch", gap: "12px", marginTop: "32px", width: r.ctaBoxW }}>
-          <Link to="/app" className="cl-lift" style={{ ...btn, background: "#7D67D9", color: "#fff" }}>
+          <Link to="/app" className="cl-lift" style={{ ...btn, background: "#775FD7", color: "#fff" }}>
             Get Started
           </Link>
           <a

@@ -12,7 +12,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E4DCF8" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#DDE8E5" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E7E3DC" }} />
-      <span style={{ marginLeft: "10px", fontSize: "11.5px", fontWeight: "700", color: "#8C8378" }}>
+      <span style={{ marginLeft: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
         centium.atraxia.org/app/workout
       </span>
     </div>
@@ -27,7 +27,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
       </div>
       <div style={{ borderRadius: "16px", border: "1px solid rgba(94,158,149,.18)", background: "#FFFFFF", padding: "12px", display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#8C8378" }}>
+          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
             MUSCLES WORKED
           </span>
           <span style={{ fontSize: "11px", fontWeight: "700", color: "#2F5F58" }}>
@@ -49,7 +49,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
               {/* loading="lazy" (B4 QA, brief: only the intro and hero images load eagerly): the two body figures were fetched with the first paint on phones (250 KB). width/height are the files' own, so the box keeps its size before they load. */}
               <img src="/body/male-front.png" alt="Front body" width={400} height={759} loading="lazy" decoding="async" style={{ position: "relative", display: "block", height: "100%", width: "auto" }} />
             </div>
-            <span style={{ fontSize: "10px", fontWeight: "700", color: "#A9A29A" }}>
+            <span style={{ fontSize: "10px", fontWeight: "700", color: "#756D63" }}>
               Front
             </span>
           </div>
@@ -63,7 +63,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
               </div>
               <img src="/body/male-back.png" alt="Back body" width={370} height={759} loading="lazy" decoding="async" style={{ position: "relative", display: "block", height: "100%", width: "auto" }} />
             </div>
-            <span style={{ fontSize: "10px", fontWeight: "700", color: "#A9A29A" }}>
+            <span style={{ fontSize: "10px", fontWeight: "700", color: "#756D63" }}>
               Back
             </span>
           </div>
@@ -86,7 +86,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
               SET MARKS
             </span>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "34px 1fr 1fr 64px", padding: "6px 12px 0", fontSize: "9.5px", fontWeight: "800", letterSpacing: ".08em", color: "#A9A29A" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "34px 1fr 1fr 64px", padding: "6px 12px 0", fontSize: "9.5px", fontWeight: "800", letterSpacing: ".08em", color: "#756D63" }}>
             <span>
               SET
             </span>
@@ -125,7 +125,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
             <div style={{ position: "relative", width: "52px", height: "52px" }}>
               <svg viewBox="0 0 60 60" style={{ width: "52px", height: "52px" }}>
                 <circle cx="30" cy="30" r="24" fill="none" stroke="#EDF4F3" strokeWidth="6" />
-                <circle data-w="0.45 0.95" data-ringd="0.62" cx="30" cy="30" r="24" fill="none" stroke="#5E9E95" strokeWidth="6" strokeLinecap="round" pathLength="1" strokeDasharray="1" strokeDashoffset="0" transform="rotate(-90 30 30)" />
+                <circle data-w="0.45 0.95" data-ringd="0.62" cx="30" cy="30" r="24" fill="none" stroke="#5D9C93" strokeWidth="6" strokeLinecap="round" pathLength="1" strokeDasharray="1" strokeDashoffset="0" transform="rotate(-90 30 30)" />
               </svg>
               <span style={{ position: "absolute", inset: "0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "800" }}>
                 <span data-w="0.45 0.95" data-cnt="34" data-from="90">
@@ -139,7 +139,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
             </div>
           </div>
           <div style={{ borderRadius: "16px", border: "1px solid rgba(94,158,149,.18)", background: "#FFFFFF", padding: "9px 12px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#8C8378" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
               <span>
                 HEART RATE · THIS SESSION
               </span>
@@ -155,7 +155,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
                 <rect x="0" y="37" width="200" height="14" fill="#EFF6F4" />
                 <rect x="0" y="51" width="200" height="13" fill="#F8FAF9" />
                 <polyline data-w="0.45 0.95" data-draw="" points={D.hrCurve} fill="none" stroke="#2F5F58" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" vectorEffect="non-scaling-stroke" />
-                <line x1="0" y1="30" x2="200" y2="30" stroke="#5E9E95" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+                <line x1="0" y1="30" x2="200" y2="30" stroke="#5D9C93" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
               </svg>
               <span data-w="0.8 0.92" data-stamp="" style={{ position: "absolute", left: "58%", top: "-4px", padding: "1px 6px", borderRadius: "99px", background: "#2F5F58", color: "#fff", fontSize: "9px", fontWeight: "800", opacity: "0" }}>
                 Peak 171
@@ -164,7 +164,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
                 Avg 138
               </span>
             </div>
-            <div style={{ marginTop: "4px", display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: "4px", fontSize: "9px", fontWeight: "700", color: "#8C8378", textAlign: "center" }}>
+            <div style={{ marginTop: "4px", display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: "4px", fontSize: "9px", fontWeight: "700", color: "#756D63", textAlign: "center" }}>
               {D.zoneTime.map((zt, ztI) => (
                 <span key={ztI}>
                   {zt.z}
@@ -180,7 +180,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
       </div>
       <div style={{ gridColumn: "1 / -1", borderRadius: "16px", border: "1px solid rgba(94,158,149,.18)", background: "#FFFFFF", padding: "12px 14px", display: "flex", flexDirection: "column", gap: "8px", minHeight: r.ormMin }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px 12px", flexWrap: "wrap" }}>
-          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#8C8378" }}>
+          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
             ESTIMATED ONE-REP MAX · 16 WEEKS
           </span>
           <div role="tablist" aria-label="Lift" style={{ display: "flex", gap: "2px", padding: "3px", borderRadius: "99px", background: "#F3F9F7", border: "1px solid rgba(94,158,149,.18)" }}>
@@ -194,7 +194,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
         <div style={{ flex: "1", minHeight: "0", display: "grid", gridTemplateColumns: r.ormCols, gap: "14px" }}>
           <div style={{ display: "flex", flexDirection: r.ormNowDir, justifyContent: "center", alignItems: r.ormNowAlign, gap: "4px 12px", flexWrap: "wrap" }}>
             <div>
-              <div style={{ fontSize: "10.5px", fontWeight: "700", color: "#8C8378" }}>
+              <div style={{ fontSize: "10.5px", fontWeight: "700", color: "#756D63" }}>
                 Current estimate
               </div>
               <div style={{ fontSize: r.ormBig, fontWeight: "800", letterSpacing: "-.03em", lineHeight: "1.05" }}>
@@ -209,12 +209,12 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
             <span data-w="0.7 0.9" data-stamp="" style={{ alignSelf: r.ormChipSelf, padding: "3px 9px", borderRadius: "99px", background: "#2F5F58", color: "#FFFFFF", fontSize: "11px", fontWeight: "800", whiteSpace: "nowrap", opacity: "0" }}>
               +12.5 kg since 2 Jul
             </span>
-            <span style={{ fontSize: "10.5px", fontWeight: "600", color: "#8C8378" }}>
+            <span style={{ fontSize: "10.5px", fontWeight: "600", color: "#756D63" }}>
               Bench press · 32 sessions
             </span>
           </div>
           <div style={{ minHeight: r.ormPlotMin, display: "grid", gridTemplateColumns: "34px minmax(0,1fr)", gridTemplateRows: "minmax(0,1fr) 14px", columnGap: "6px" }}>
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: "9.5px", fontWeight: "700", color: "#A9A29A", textAlign: "right", margin: "-5px 0" }}>
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: "9.5px", fontWeight: "700", color: "#756D63", textAlign: "right", margin: "-5px 0" }}>
               <span>
                 90 kg
               </span>
@@ -230,7 +230,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
             </div>
             <div style={{ position: "relative", borderLeft: "1px solid #E1ECEA", borderBottom: "1px solid #E1ECEA" }}>
               <span style={{ position: "absolute", left: D.ormBand.l, right: "0", top: D.ormBand.t, height: D.ormBand.h, background: "#EDF4F3", borderRadius: "4px" }} />
-              <span style={{ position: "absolute", right: "4px", top: D.ormBand.lt, fontSize: "9px", fontWeight: "700", color: "#3F726D" }}>
+              <span style={{ position: "absolute", right: "4px", top: D.ormBand.lt, fontSize: "9px", fontWeight: "700", color: "#3D6E69" }}>
                 Recent range
               </span>
               <svg viewBox="0 0 300 100" preserveAspectRatio="none" style={{ position: "absolute", inset: "0", width: "100%", height: "100%", overflow: "visible" }}>
@@ -252,7 +252,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
               ))}
             </div>
             <span />
-            <div style={{ position: "relative", fontSize: "9.5px", fontWeight: "700", color: "#A9A29A" }}>
+            <div style={{ position: "relative", fontSize: "9.5px", fontWeight: "700", color: "#756D63" }}>
               {D.ormX.map((ox, oxI) => (
                 <span key={oxI} style={{ position: "absolute", left: ox.x, top: "2px", transform: `translateX(${ox.tx})` }}>
                   {ox.t}
@@ -261,7 +261,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
             </div>
           </div>
         </div>
-        <div style={{ fontSize: "10px", fontWeight: "600", color: "#8C8378" }}>
+        <div style={{ fontSize: "10px", fontWeight: "600", color: "#756D63" }}>
           Estimated from your top sets
         </div>
       </div>

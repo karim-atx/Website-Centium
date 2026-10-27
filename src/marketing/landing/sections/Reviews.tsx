@@ -104,7 +104,7 @@ export const Reviews: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                       </span>
                       <span>
                         <span style={{ display: "block", fontWeight: "800", fontSize: "14.5px" }}>{rv.name}</span>
-                        <span style={{ fontSize: "12.5px", color: "#8C8378" }}>{rv.role}</span>
+                        <span style={{ fontSize: "12.5px", color: "#756D63" }}>{rv.role}</span>
                       </span>
                     </figcaption>
                   </figure>

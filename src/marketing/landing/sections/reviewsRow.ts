@@ -38,7 +38,7 @@ export interface ReviewTone {
 
 /** The badge and star colours, alternating lavender and teal (prototype data7 RV). */
 export function reviewTone(i: number): ReviewTone {
-  return i % 2 ? { bg: "#DAEAE7", ink: "#3F726D", star: "#5E9E95" } : { bg: "#DED4F4", ink: "#5C48A8", star: "#9C7FF8" };
+  return i % 2 ? { bg: "#DAEAE7", ink: "#3D6E69", star: "#5D9C93" } : { bg: "#DED4F4", ink: "#5C48A8", star: "#9A7CF8" };
 }
 
 /** A rating clamped to whole stars 1 to 5. */

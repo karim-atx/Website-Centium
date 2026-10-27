@@ -12,7 +12,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E4DCF8" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#DDE8E5" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E7E3DC" }} />
-      <span style={{ marginLeft: "10px", fontSize: "11.5px", fontWeight: "700", color: "#8C8378" }}>
+      <span style={{ marginLeft: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
         centium.atraxia.org/app/health
       </span>
     </div>
@@ -27,7 +27,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
       </div>
       <div style={{ gridColumn: "1 / -1", borderRadius: "16px", border: "1px solid rgba(125,103,217,.14)", background: "#FFFFFF", padding: "10px 14px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#8C8378" }}>
+          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
             RECORDS TIMELINE
           </span>
           <span style={{ fontSize: "11px", fontWeight: "700", color: "#4E3894" }}>
@@ -41,7 +41,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
             <div key={rtI} data-w={rt.w} data-ty="10" data-op="" style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", opacity: "0" }}>
               <span style={{ width: "14px", height: "14px", borderRadius: "99px", background: rt.dot, border: "3px solid #fff", boxShadow: "0 0 0 1px #D9D2EE" }} />
               <div style={{ width: "100%", padding: "7px 8px", borderRadius: "10px", border: `1px solid ${rt.bd}`, background: rt.bg, textAlign: "left" }}>
-                <div style={{ fontSize: "9.5px", fontWeight: "700", color: "#8C8378" }}>
+                <div style={{ fontSize: "9.5px", fontWeight: "700", color: "#756D63" }}>
                   {rt.d}
                 </div>
                 <div style={{ fontSize: "11.5px", fontWeight: "800", lineHeight: "1.25" }}>
@@ -57,7 +57,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
       </div>
       <div style={{ borderRadius: "16px", border: "1px solid rgba(94,158,149,.18)", background: "#FFFFFF", padding: "10px 14px", flexDirection: "column", gap: "6px", display: r.mhFlex }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#8C8378" }}>
+          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
             LAB RESULTS · 14 OCT
           </span>
           <span style={{ fontSize: "11px", fontWeight: "800", color: "#2F5F58" }}>
@@ -69,7 +69,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
         </div>
         {D.labPanels.map((lp, lpI) => (
           <div key={lpI}>
-            <div style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#A9A29A", margin: "2px 0 3px" }}>
+            <div style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63", margin: "2px 0 3px" }}>
               {lp.t}
             </div>
             {lp.rows.map((lr, lrI) => (
@@ -123,7 +123,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
       </div>
       <div style={{ borderRadius: "16px", border: "1px solid rgba(125,103,217,.14)", background: "#FFFFFF", padding: "10px 14px", display: "flex", flexDirection: "column", gap: "7px", minHeight: "0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "8px" }}>
-          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#8C8378" }}>
+          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
             CYCLE · OCTOBER
           </span>
           <span style={{ fontSize: "10.5px", fontWeight: "700", color: "#4E3894", whiteSpace: "nowrap" }}>
@@ -141,7 +141,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
               </g>
             </svg>
             <div style={{ position: "absolute", inset: "0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#8C8378" }}>
+              <span style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
                 DAY
               </span>
               <span style={{ fontSize: "26px", fontWeight: "800", lineHeight: "1" }}>
@@ -149,7 +149,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
                   1
                 </span>
               </span>
-              <span style={{ fontSize: "10px", fontWeight: "700", color: "#8C8378" }}>
+              <span style={{ fontSize: "10px", fontWeight: "700", color: "#756D63" }}>
                 of 28
               </span>
             </div>
@@ -161,14 +161,14 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
                 <span style={{ flex: "1", fontSize: "12px", fontWeight: cp.fw, color: "#221E1A" }}>
                   {cp.t}
                 </span>
-                <span style={{ fontSize: "10.5px", fontWeight: "700", color: "#8C8378", whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: "10.5px", fontWeight: "700", color: "#6C655C", whiteSpace: "nowrap" }}>
                   {cp.d}
                 </span>
               </div>
             ))}
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: "3px", fontSize: "9.5px", fontWeight: "700", color: "#8C8378", textAlign: "center" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: "3px", fontSize: "9.5px", fontWeight: "700", color: "#756D63", textAlign: "center" }}>
           {D.calHead.map((ch, chI) => (
             <span key={chI}>
               {ch}
@@ -181,7 +181,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
           ))}
         </div>
         <div style={{ alignItems: "center", gap: "6px", flexWrap: "wrap", display: r.mhFlex }}>
-          <span style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#8C8378", marginRight: "2px" }}>
+          <span style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63", marginRight: "2px" }}>
             TODAY
           </span>
           {D.cycLogs.map((lg, lgI) => (
@@ -191,7 +191,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
           ))}
         </div>
         <div style={{ flex: "1", minHeight: "48px", flexDirection: "column", gap: "3px", display: r.mhFlex }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9.5px", fontWeight: "800", letterSpacing: ".1em", color: "#8C8378" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9.5px", fontWeight: "800", letterSpacing: ".1em", color: "#756D63" }}>
             <span>
               CYCLE LENGTH · 6 MONTHS
             </span>
@@ -200,7 +200,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
             </span>
           </div>
           <div style={{ flex: "1", display: "grid", gridTemplateColumns: "26px minmax(0,1fr)", gridTemplateRows: "minmax(0,1fr) 12px", columnGap: "6px" }}>
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: "9px", fontWeight: "700", color: "#A9A29A", textAlign: "right" }}>
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: "9px", fontWeight: "700", color: "#756D63", textAlign: "right" }}>
               <span>
                 30 d
               </span>
@@ -215,14 +215,14 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
               <svg viewBox="0 0 200 100" preserveAspectRatio="none" style={{ position: "absolute", inset: "0", width: "100%", height: "100%" }}>
                 <line x1="0" y1="0" x2="200" y2="0" stroke="#F1EEF8" vectorEffect="non-scaling-stroke" />
                 <line x1="0" y1="50" x2="200" y2="50" stroke="#E4DCF8" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
-                <polyline data-w="0.6 0.95" data-draw="" points={D.cycLenPts} fill="none" stroke="#7D67D9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" vectorEffect="non-scaling-stroke" />
+                <polyline data-w="0.6 0.95" data-draw="" points={D.cycLenPts} fill="none" stroke="#775FD7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" vectorEffect="non-scaling-stroke" />
               </svg>
               {D.cycLenDots.map((dt, dtI) => (
-                <span key={dtI} data-w={dt.w} data-stamp="" style={{ position: "absolute", left: dt.x, top: dt.y, width: "7px", height: "7px", margin: "-3.5px 0 0 -3.5px", borderRadius: "99px", background: "#FFFFFF", border: "1.5px solid #7D67D9", opacity: "0" }} />
+                <span key={dtI} data-w={dt.w} data-stamp="" style={{ position: "absolute", left: dt.x, top: dt.y, width: "7px", height: "7px", margin: "-3.5px 0 0 -3.5px", borderRadius: "99px", background: "#FFFFFF", border: "1.5px solid #775FD7", opacity: "0" }} />
               ))}
             </div>
             <span />
-            <div style={{ position: "relative", fontSize: "9px", fontWeight: "700", color: "#A9A29A" }}>
+            <div style={{ position: "relative", fontSize: "9px", fontWeight: "700", color: "#756D63" }}>
               {D.cycLenLab.map((cll, cllI) => (
                 <span key={cllI} style={{ position: "absolute", left: cll.x, top: "1px", transform: "translateX(-50%)" }}>
                   {cll.t}

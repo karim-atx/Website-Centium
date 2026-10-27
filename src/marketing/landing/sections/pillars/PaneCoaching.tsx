@@ -12,7 +12,7 @@ export const PaneCoaching: React.FC<{ r: SectionVals }> = ({ r }) => (
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E4DCF8" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#DDE8E5" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E7E3DC" }} />
-      <span style={{ marginLeft: "10px", fontSize: "11.5px", fontWeight: "700", color: "#8C8378" }}>
+      <span style={{ marginLeft: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
         centium.atraxia.org/app/coaching
       </span>
     </div>
@@ -41,11 +41,11 @@ export const PaneCoaching: React.FC<{ r: SectionVals }> = ({ r }) => (
             <div style={{ flex: "1", minWidth: "0" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12.5px", fontWeight: "800", whiteSpace: "nowrap" }}>
                 {pr.n}
-                <span style={{ width: "12px", height: "12px", borderRadius: "99px", background: "#5E9E95", color: "#fff", fontSize: "7.5px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ width: "12px", height: "12px", borderRadius: "99px", background: "#5D9C93", color: "#fff", fontSize: "7.5px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   ✓
                 </span>
               </div>
-              <div style={{ fontSize: "10.5px", fontWeight: "600", color: "#8C8378", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <div style={{ fontSize: "10.5px", fontWeight: "600", color: "#756D63", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {pr.m}
               </div>
             </div>
@@ -65,20 +65,20 @@ export const PaneCoaching: React.FC<{ r: SectionVals }> = ({ r }) => (
           </div>
           <div style={{ marginTop: "6px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "11px", lineHeight: "1.4" }}>
             <div>
-              <div style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".1em", color: "#8C8378" }}>
+              <div style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".1em", color: "#756D63" }}>
                 CERTIFICATIONS
               </div>
               MSc Clinical Nutrition, LDA registered
             </div>
             <div>
-              <div style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".1em", color: "#8C8378" }}>
+              <div style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".1em", color: "#756D63" }}>
                 EXPERIENCE
               </div>
               Sports nutrition, 8 years in clinic
             </div>
           </div>
           <div style={{ position: "relative", marginTop: "8px", height: "32px" }}>
-            <span data-w="0.42 0.52" data-out="" style={{ position: "absolute", inset: "0", borderRadius: "99px", background: "#7D67D9", color: "#fff", fontSize: "12.5px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span data-w="0.42 0.52" data-out="" style={{ position: "absolute", inset: "0", borderRadius: "99px", background: "#775FD7", color: "#fff", fontSize: "12.5px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center" }}>
               Hire Lara
             </span>
             <span data-w="0.46 0.56" data-op="" style={{ position: "absolute", inset: "0", borderRadius: "99px", background: "#2F5F58", color: "#fff", fontSize: "12.5px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", opacity: "0" }}>
@@ -96,13 +96,13 @@ export const PaneCoaching: React.FC<{ r: SectionVals }> = ({ r }) => (
             </div>
           </div>
           <div style={{ flex: "1", minWidth: "0" }}>
-            <div style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#3F726D" }}>
+            <div style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#3D6E69" }}>
               NEXT SESSION
             </div>
             <div style={{ fontSize: "12.5px", fontWeight: "800" }}>
               First check-in with Lara
             </div>
-            <div style={{ fontSize: "10.5px", fontWeight: "600", color: "#3F726D" }}>
+            <div style={{ fontSize: "10.5px", fontWeight: "600", color: "#3D6E69" }}>
               18:00 · video call · 30 min
             </div>
           </div>
@@ -112,10 +112,10 @@ export const PaneCoaching: React.FC<{ r: SectionVals }> = ({ r }) => (
         </div>
         <div data-w="0.68 0.78" data-op="" style={{ flex: "1", minHeight: "0", padding: "10px 12px", borderRadius: "14px", border: "1px solid rgba(94,158,149,.24)", background: "#FFFFFF", flexDirection: "column", gap: "6px", opacity: "0", display: r.mhFlex }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "8px" }}>
-            <span style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#3F726D" }}>
+            <span style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#3D6E69" }}>
               PLAN LARA SHARED
             </span>
-            <span style={{ fontSize: "10.5px", fontWeight: "700", color: "#8C8378", whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: "10.5px", fontWeight: "700", color: "#756D63", whiteSpace: "nowrap" }}>
               Mobility and strength · week 1
             </span>
           </div>
@@ -137,7 +137,7 @@ export const PaneCoaching: React.FC<{ r: SectionVals }> = ({ r }) => (
       <div style={{ flexDirection: "column", gap: "10px", display: r.mhFlex }}>
         <div data-w="0.55 0.68" data-op="" style={{ borderRadius: "16px", border: "1px solid rgba(125,103,217,.14)", background: "#FFFFFF", padding: "10px 12px", opacity: "0" }}>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#8C8378" }}>
+            <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
               NUTRITION PLAN
             </span>
             <span data-w="0.66 0.76" data-stamp="" style={{ padding: "1px 7px", borderRadius: "99px", background: "#EDF4F3", color: "#2F5F58", fontSize: "9.5px", fontWeight: "800", opacity: "0" }}>
@@ -168,7 +168,7 @@ export const PaneCoaching: React.FC<{ r: SectionVals }> = ({ r }) => (
         </div>
         <div data-w="0.86 0.95" data-op="" style={{ position: "relative", flex: "1", borderRadius: "16px", overflow: "hidden", background: "repeating-linear-gradient(135deg,#EEF4F2 0 10px,#E5EEEB 10px 20px)", minHeight: r.vidH, flexDirection: "column", justifyContent: "space-between", padding: "9px 12px", opacity: "0", display: r.mhBlock }}>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: "#5B7B76" }}>
+            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: "#516E6A" }}>
               video call
             </span>
             <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "11px", color: "#2F5F58" }}>
@@ -181,7 +181,7 @@ export const PaneCoaching: React.FC<{ r: SectionVals }> = ({ r }) => (
             </span>
             <div style={{ flex: "1", display: "flex", alignItems: "center", gap: "3px", height: "20px" }}>
               {D.voice.map((vc, vcI) => (
-                <span key={vcI} data-w={vc.w2} data-sy="" style={{ flex: "1", height: vc.h, borderRadius: "2px", background: "#5E9E95", transformOrigin: "center", transform: "scaleY(0)" }} />
+                <span key={vcI} data-w={vc.w2} data-sy="" style={{ flex: "1", height: vc.h, borderRadius: "2px", background: "#5D9C93", transformOrigin: "center", transform: "scaleY(0)" }} />
               ))}
             </div>
           </div>

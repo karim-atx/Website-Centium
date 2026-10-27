@@ -15,9 +15,9 @@
 
 type Tone = { sb: string; sc: string };
 const lav = { bg: "#DED4F4", ink: "#5C48A8" },
-  tea = { bg: "#DAEAE7", ink: "#3F726D" };
+  tea = { bg: "#DAEAE7", ink: "#3D6E69" };
 const okC: Tone = { sb: "#EDF4F3", sc: "#2F5F58" },
-  warnC: Tone = { sb: "#FBF2E6", sc: "#9A6B2F" },
+  warnC: Tone = { sb: "#FBF2E6", sc: "#91642C" },
   lavC: Tone = { sb: "#F4F1FB", sc: "#5C48A8" };
 
 export interface Row {
@@ -46,7 +46,7 @@ const row = (o: Partial<Row> & { av: string; a: string; m: string; s: string }, 
       aink: i % 2 ? tea.ink : lav.ink,
       w: (0.05 + i * 0.12).toFixed(2) + " " + (0.3 + i * 0.12).toFixed(2),
       bw: (0.2 + i * 0.1).toFixed(2) + " " + (0.7 + i * 0.06).toFixed(2),
-      bc: "#7D67D9",
+      bc: "#775FD7",
       ver: false,
       bar: "",
     },
@@ -73,7 +73,7 @@ const grid = (sess: [number, number, string, string, number][]): Cell[] => {
       const s = sess.find((x) => x[0] === ri && x[1] === d);
       cells.push(
         s
-          ? { t: "", bg: "#F6F4FA", on: true, n: s[2], c: s[3], w: (0.05 + s[4] * 0.1).toFixed(2) + " " + (0.2 + s[4] * 0.1).toFixed(2) }
+          ? { t: "", bg: "#F6F4FA", on: true, n: s[2], c: s[3], ink: s[3] === "#B9A9EE" ? "#3E2C80" : "#FFFFFF", w: (0.05 + s[4] * 0.1).toFixed(2) + " " + (0.2 + s[4] * 0.1).toFixed(2) }
           : { t: "", bg: "#F6F4FA" },
       );
     }
@@ -177,8 +177,8 @@ const st = (i: number, a: number, d: number) => (a + i * d).toFixed(2) + " " + (
 
 /** The exercises of the desktop plan builder (Karim: exercises on desktop and mobile). */
 const LIFT = {
-  "Upper body": { c: "#7D67D9", bg: "#F4F1FB", bd: "#D9CFF5", ink: "#4E3894" },
-  "Lower body": { c: "#5E9E95", bg: "#EDF4F3", bd: "#BFDCD6", ink: "#2F5F58" },
+  "Upper body": { c: "#775FD7", bg: "#F4F1FB", bd: "#D9CFF5", ink: "#4E3894" },
+  "Lower body": { c: "#5D9C93", bg: "#EDF4F3", bd: "#BFDCD6", ink: "#2F5F58" },
   Core: { c: "#4E3894", bg: "#E9E3FA", bd: "#CBBDF3", ink: "#3E2C80" },
 };
 type Lift = keyof typeof LIFT;
@@ -218,7 +218,7 @@ function v11slide(x: Draft, lg: boolean): Draft {
           kc: sets + " sets",
           ink: "#4E3894",
           bg: ci % 2 ? "#F6FAF9" : "#FAF9FE",
-          bar: ci % 2 ? "#5E9E95" : "#7D67D9",
+          bar: ci % 2 ? "#5D9C93" : "#775FD7",
           fill: ((items.length / 3) * 100).toFixed(1) + "%",
           bw: st(ci, 0.5, 0.1),
           items: items.map(([t, m, , sr], ii) => ({
@@ -242,8 +242,8 @@ function v11slide(x: Draft, lg: boolean): Draft {
     let run = 0;
     const B: [string, "total" | "up" | "down", number, string, string, string][] = [
       ["September", "total", 1960, "#BFDCD6", "#2F5F58", "$1,960"],
-      ["3 new clients", "up", 260, "#5E9E95", "#2F5F58", "+$260"],
-      ["Summer group program", "up", 180, "#7D67D9", "#4E3894", "+$180"],
+      ["3 new clients", "up", 260, "#5D9C93", "#2F5F58", "+$260"],
+      ["Summer group program", "up", 180, "#775FD7", "#4E3894", "+$180"],
       ["Fewer single sessions", "down", 60, "#DED4F4", "#5C48A8", "−$60"],
       ["October", "total", 2340, "#2F5F58", "#2F5F58", "$2,340"],
     ];
@@ -301,13 +301,18 @@ function v11slide(x: Draft, lg: boolean): Draft {
     ];
     const cells: Cell[] = [];
     times.forEach((tm, r) => {
-      cells.push({ t: tm, bg: "transparent", ink: "#8C8378", op0: "1", w: "-2 -1" });
+      cells.push({ t: tm, bg: "transparent", ink: "#756D63", op0: "1", w: "-2 -1" });
       cap[r].forEach((c, d) => {
         const a = c / 100;
+        // WCAG AA (4.5:1 at 9px): the prototype's split (white above 55%,
+        // #4E3894 below) left 35 to 75% at 3.0 to 4.4:1. Ink #221E1A up to 60%
+        // (5.0:1 or more); white from 65% on a fill no lighter than 0.77
+        // (4.9:1 or more), so 65 to 75% take the 80% shade.
+        const light = a >= 0.65;
         cells.push({
           t: c ? (c >= 100 ? "Full" : c + "%") : "",
-          bg: c ? "rgba(78,56,148," + (0.1 + a * 0.85).toFixed(2) + ")" : "#FAF9F7",
-          ink: a > 0.55 ? "#FFFFFF" : "#4E3894",
+          bg: c ? "rgba(78,56,148," + (light ? Math.max(0.1 + a * 0.85, 0.77) : 0.1 + a * 0.85).toFixed(2) + ")" : "#FAF9F7",
+          ink: light ? "#FFFFFF" : "#221E1A",
           op0: "0",
           w: st(r * 7 + d, 0.02, 0.018),
         });
@@ -333,7 +338,7 @@ function v11slide(x: Draft, lg: boolean): Draft {
       seg: (
         [
           ["Monthly", "212", "Renews monthly", 212, "#4E3894", "#FFFFFF"],
-          ["Quarterly", "98", "Every 3 months", 98, "#7D67D9", "#FFFFFF"],
+          ["Quarterly", "98", "Every 3 months", 98, "#775FD7", "#FFFFFF"],
           ["Annual", "64", "Paid yearly", 64, "#B9A9EE", "#221E1A"],
           ["Day pass", "41", "This month, at the desk", 41, "#DED4F4", "#221E1A"],
         ] as [string, string, string, number, string, string][]
@@ -348,11 +353,11 @@ function v11slide(x: Draft, lg: boolean): Draft {
       hours: ["06", "09", "12", "15", "18", "21"],
       staff: (
         [
-          ["KN", "Karim Nassar", "Head coach", 0, 8, "Floor 06:00", "#5E9E95"],
-          ["JD", "Joelle Daher", "Coach", 1, 6, "Spin, Pilates", "#7D67D9"],
-          ["DA", "Dana Azar", "Physio, linked", 4, 5, "Sessions", "#5E9E95", 1],
-          ["ST", "Sami Tannous", "Front desk", 8, 9, "Desk 14:00", "#B07A2A"],
-          ["RH", "Rita Haddad", "Owner", 3, 6, "Floor", "#5E9E95"],
+          ["KN", "Karim Nassar", "Head coach", 0, 8, "Floor 06:00", "#4A7D76"],
+          ["JD", "Joelle Daher", "Coach", 1, 6, "Spin, Pilates", "#775FD7"],
+          ["DA", "Dana Azar", "Physio, linked", 4, 5, "Sessions", "#4A7D76", 1],
+          ["ST", "Sami Tannous", "Front desk", 8, 9, "Desk 14:00", "#91642C"],
+          ["RH", "Rita Haddad", "Owner", 3, 6, "Floor", "#4A7D76"],
         ] as [string, string, string, number, number, string, string, number?][]
       ).map(([i, n, r, from, len, sTxt, c, ver], j) => ({
         i,
@@ -365,7 +370,7 @@ function v11slide(x: Draft, lg: boolean): Draft {
         wd: ((len / 17) * 100).toFixed(1) + "%",
         w: st(j, 0.1, 0.12),
         abg: j % 2 ? "#DAEAE7" : "#DED4F4",
-        aink: j % 2 ? "#3F726D" : "#5C48A8",
+        aink: j % 2 ? "#3D6E69" : "#5C48A8",
       })),
     });
   return x;
@@ -410,14 +415,14 @@ function proDrafts(): Draft[] {
       isGrid: true,
       days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
       cells: grid([
-        [0, 0, "Hala · consult", "#7D67D9", 0],
-        [0, 2, "Rana · call", "#5E9E95", 1],
-        [1, 1, "Joseph · consult", "#7D67D9", 2],
+        [0, 0, "Hala · consult", "#775FD7", 0],
+        [0, 2, "Rana · call", "#4A7D76", 1],
+        [1, 1, "Joseph · consult", "#775FD7", 2],
         [1, 3, "Group talk", "#4E3894", 3],
-        [2, 0, "Kimo · call", "#5E9E95", 4],
-        [2, 4, "Hala · consult", "#7D67D9", 5],
+        [2, 0, "Kimo · call", "#4A7D76", 4],
+        [2, 4, "Hala · consult", "#775FD7", 5],
         [3, 3, "Rami · video", "#2F5F58", 6],
-        [3, 1, "Rana · consult", "#7D67D9", 7],
+        [3, 1, "Rana · consult", "#775FD7", 7],
         [3, 4, "Check-ins", "#B9A9EE", 8],
       ]),
     },
@@ -474,7 +479,7 @@ function bizDrafts(): Draft[] {
       isGym: true,
       next: (
         [
-          ["06:30", "HIIT 45 · Karim Nassar", "Full · 3 waitlist", "#9A6B2F"],
+          ["06:30", "HIIT 45 · Karim Nassar", "Full · 3 waitlist", "#91642C"],
           ["09:00", "Spin · Joelle Daher", "16 / 20", "#2F5F58"],
           ["12:00", "Pilates · Dana Azar", "9 / 15", "#2F5F58"],
         ] as [string, string, string, string][]
@@ -525,7 +530,7 @@ function bizDrafts(): Draft[] {
         n: f[1],
         t: f[2],
         s: f[3],
-        sc: f[4] ? "#9A6B2F" : "#2F5F58",
+        sc: f[4] ? "#91642C" : "#2F5F58",
         bg: i % 2 ? tea.bg : lav.bg,
         ink: i % 2 ? tea.ink : lav.ink,
         w: (0.15 + i * 0.15).toFixed(2) + " " + (0.35 + i * 0.15).toFixed(2),
@@ -570,7 +575,7 @@ function mobk(twoBubbles: boolean): Record<string, MobK> {
         due: !!due,
         nodue: !due,
         w: (0.05 + i * 0.12).toFixed(2) + " " + (0.4 + i * 0.12).toFixed(2),
-        days: days.map((d2, k) => ({ c: d2 ? "#5E9E95" : "#D9D2EE", w: (0.4 + k * 0.05).toFixed(2) + " " + (0.45 + k * 0.05).toFixed(2) })),
+        days: days.map((d2, k) => ({ c: d2 ? "#5D9C93" : "#D9D2EE", w: (0.4 + k * 0.05).toFixed(2) + " " + (0.45 + k * 0.05).toFixed(2) })),
       })),
     },
     "PLAN BUILDER": {
@@ -595,8 +600,8 @@ function mobk(twoBubbles: boolean): Record<string, MobK> {
       mTimeline: true,
       mb: (
         [
-          ["09:00", "Hala Mansour", "Consult", "#7D67D9", "#EDE8FB"],
-          ["12:00", "Joseph Khalil", "Consult", "#7D67D9", "#EDE8FB"],
+          ["09:00", "Hala Mansour", "Consult", "#775FD7", "#EDE8FB"],
+          ["12:00", "Joseph Khalil", "Consult", "#775FD7", "#EDE8FB"],
           ["18:00", "Rami Haddad", "Video call", "#2F5F58", "#DDF0EC"],
         ] as [string, string, string, string, string][]
       ).map(([t, n, s2, c, bg]) => ({ t, n, s: s2, c, bg })),
@@ -650,9 +655,9 @@ function mobk(twoBubbles: boolean): Record<string, MobK> {
       mClasses: true,
       mb: (
         [
-          ["06:30", "HIIT 45", "Karim Nassar", "Waitlist", "100%", "#9A6B2F", "#C99A5B"],
-          ["09:00", "Spin", "Joelle Daher", "16/20", "80%", "#4E3894", "#7D67D9"],
-          ["12:00", "Pilates", "Dana Azar", "9/15", "60%", "#4E3894", "#7D67D9"],
+          ["06:30", "HIIT 45", "Karim Nassar", "Waitlist", "100%", "#91642C", "#C99A5B"],
+          ["09:00", "Spin", "Joelle Daher", "16/20", "80%", "#4E3894", "#775FD7"],
+          ["12:00", "Pilates", "Dana Azar", "9/15", "60%", "#4E3894", "#775FD7"],
         ] as [string, string, string, string, string, string, string][]
       ).map(([t, n, i, c, f, ink, bar]) => ({ t, n, i, c, f, ink, bar })),
     },
@@ -676,7 +681,7 @@ function mobk(twoBubbles: boolean): Record<string, MobK> {
       mb: (
         [
           ["Monthly", 212, "#4E3894"],
-          ["Quarterly", 98, "#7D67D9"],
+          ["Quarterly", 98, "#775FD7"],
           ["Annual", 64, "#B9A9EE"],
         ] as [string, number, string][]
       ).map(([n, c, bar]) => ({ n, c: String(c), f: ((c / 212) * 100).toFixed(0) + "%", bar })),

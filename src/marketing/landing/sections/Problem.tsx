@@ -33,23 +33,23 @@ export const Problem: React.FC<{ r: SectionVals }> = ({ r }) => (
               <span data-pink="" style={{ display: "block", color: "#221E1A", transition: "opacity .7s ease-out" }}>
                 {pb.t}
               </span>
-              <span data-pfaint="" aria-hidden="true" style={{ position: "absolute", left: "0", top: "0", color: "#A9A29A", opacity: "0", transition: "opacity .7s ease-out" }}>
+              <span data-pfaint="" aria-hidden="true" style={{ position: "absolute", left: "0", top: "0", color: "#756D63", opacity: "0", transition: "opacity .7s ease-out" }}>
                 {pb.t}
               </span>
-              <span data-pstrike="" aria-hidden="true" style={{ position: "absolute", left: "0", right: "14px", top: "54%", height: "2px", marginTop: "-1px", background: "#8C8378", transformOrigin: "left", transform: "scaleX(0)", transition: "transform .5s cubic-bezier(.3,0,.2,1)" }} />
+              <span data-pstrike="" aria-hidden="true" style={{ position: "absolute", left: "0", right: "14px", top: "54%", height: "2px", marginTop: "-1px", background: "#756D63", transformOrigin: "left", transform: "scaleX(0)", transition: "transform .5s cubic-bezier(.3,0,.2,1)" }} />
             </span>
-            <span style={{ fontSize: "12px", color: "#C3BCB2", whiteSpace: "nowrap", flexShrink: "0", marginLeft: "auto" }}>
+            <span style={{ fontSize: "12px", color: "#756D63", whiteSpace: "nowrap", flexShrink: "0", marginLeft: "auto" }}>
               {pb.tag}
             </span>
           </div>
         ))}
         <div id="prob-bar-wrap" style={{ position: "relative", marginTop: "22px", opacity: "0", transform: "translateY(14px) scale(.98)", transition: "opacity .6s cubic-bezier(.22,1,.36,1),transform .6s cubic-bezier(.22,1,.36,1)" }}>
           <span id="prob-ring" aria-hidden="true" style={{ position: "absolute", inset: "-5px", borderRadius: "21px", background: "rgba(94,158,149,1)", opacity: "0" }} />
-          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "22px 24px", borderRadius: "16px", overflow: "hidden", background: "#E6DFF7", border: "3px solid #7D67D9", boxShadow: "0 14px 32px rgba(72,58,130,.14)" }}>
-            <span style={{ position: "relative", zIndex: "1", fontWeight: "700", fontSize: "17px", letterSpacing: "-.01em", color: "#7D67D9" }}>
+          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "22px 24px", borderRadius: "16px", overflow: "hidden", background: "#E6DFF7", border: "3px solid #775FD7", boxShadow: "0 14px 32px rgba(72,58,130,.14)" }}>
+            <span style={{ position: "relative", zIndex: "1", fontWeight: "700", fontSize: "17px", letterSpacing: "-.01em", color: "#6347D1" }}>
               Centium is the solution
             </span>
-            <span style={{ position: "relative", zIndex: "1", fontWeight: "600", fontSize: "12px", letterSpacing: ".14em", whiteSpace: "nowrap", color: "#7D67D9" }}>
+            <span style={{ position: "relative", zIndex: "1", fontWeight: "600", fontSize: "12px", letterSpacing: ".14em", whiteSpace: "nowrap", color: "#6347D1" }}>
               ONE PLACE
             </span>
             <span id="prob-wipe" aria-hidden="true" style={{ position: "absolute", left: "0", right: "0", top: "0", height: "100%", pointerEvents: "none", borderRadius: "inherit", opacity: "0", background: "linear-gradient(rgba(94,158,149,0) 0%,rgba(94,158,149,.34) 38%,rgba(120,190,180,.72) 50%,rgba(94,158,149,.3) 62%,rgba(94,158,149,0) 100%)", boxShadow: "inset 0 1px 0 rgba(255,255,255,.5),inset 0 -1px 0 rgba(47,95,88,.18)" }} />

@@ -33,7 +33,7 @@ export const Pillars: React.FC<{ r: SectionVals }> = ({ r }) => (
         <div style={{ marginTop: r.plMt, display: "grid", gridTemplateColumns: r.plCols, gap: "48px", alignItems: "center" }}>
           <div style={{ display: r.plIdx, flexDirection: "column", gap: "6px" }}>
             {D.pls.map((pp, ppI) => (
-              <div key={ppI} data-pli="" style={{ position: "relative", padding: "14px 18px 14px 22px", borderRadius: "16px", opacity: ".38", transition: "opacity .3s" }}>
+              <div key={ppI} data-pli="" style={{ position: "relative", padding: "14px 18px 14px 22px", borderRadius: "16px", opacity: ".82", transition: "opacity .3s" }}>
                 <span style={{ position: "absolute", left: "0", top: "14px", bottom: "14px", width: "3px", borderRadius: "3px", background: "rgba(125,103,217,.15)", overflow: "hidden" }}>
                   <span data-plf="" style={{ display: "block", width: "100%", height: "100%", background: pp.c, transformOrigin: "top", transform: "scaleY(0)" }} />
                 </span>

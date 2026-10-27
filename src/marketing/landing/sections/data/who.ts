@@ -38,9 +38,9 @@ export const dialTicks = [
 ];
 
 export const instMacros = [
-  { k: "Protein", v: "128 / 165 g", p: "78%", c: "#7D67D9", w: "0.2 0.7" },
+  { k: "Protein", v: "128 / 165 g", p: "78%", c: "#775FD7", w: "0.2 0.7" },
   { k: "Carbs", v: "196 / 260 g", p: "75%", c: "#B9A9EE", w: "0.28 0.78" },
-  { k: "Fat", v: "48 / 65 g", p: "74%", c: "#5E9E95", w: "0.36 0.86" },
+  { k: "Fat", v: "48 / 65 g", p: "74%", c: "#5D9C93", w: "0.36 0.86" },
 ];
 
 export const weekChecks = [

@@ -81,7 +81,7 @@ export class PillarsMotion implements EngineSection {
         idx = Math.max(0, Math.min(4, Math.floor(s))),
         fr = s - idx;
       this.pli.forEach((el, i) => {
-        el.style.opacity = i === idx ? "1" : ".38";
+        el.style.opacity = i === idx ? "1" : ".82";
         el.style.background = i === idx ? "#FAF9FE" : "transparent";
       });
       this.plf.forEach((el, i) => {
@@ -116,7 +116,7 @@ export class PillarsMotion implements EngineSection {
       this.dots.forEach((d, j) => {
         d.style.transform = "scaleX(" + (j === act ? 1 : 0.3) + ")";
         d.style.opacity = j === act ? "1" : ".6";
-        d.style.background = j === act ? "#7D67D9" : "rgba(34,30,26,.18)";
+        d.style.background = j === act ? "#775FD7" : "rgba(34,30,26,.18)";
       });
     }
   }

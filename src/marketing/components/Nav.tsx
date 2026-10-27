@@ -257,7 +257,7 @@ export const Nav: React.FC = () => {
                   {
                     padding: "10px 19px",
                     borderRadius: "999px",
-                    background: "#7D67D9",
+                    background: "#775FD7",
                     color: "#fff",
                     fontSize: "13.5px",
                     fontWeight: 600,
@@ -368,7 +368,7 @@ export const Nav: React.FC = () => {
                 fontSize: "14px",
                 lineHeight: "20px",
                 fontWeight: 600,
-                background: "#7D67D9",
+                background: "#775FD7",
                 color: "#fff",
               }}
             >

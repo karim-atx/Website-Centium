@@ -142,20 +142,20 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                 <span style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: ".02em", color: "#5C5470" }}>Calories</span>
               </div>
               <div style={{ margin: "9px 10px 0", padding: "7px 9px", borderRadius: "9px", background: "#F2EFF8", display: "flex", alignItems: "center", gap: "7px" }}>
-                <span style={{ width: "6px", height: "6px", flexShrink: 0, borderRadius: "99px", background: "#7D67D9" }} />
+                <span style={{ width: "6px", height: "6px", flexShrink: 0, borderRadius: "99px", background: "#775FD7" }} />
                 <span style={{ flex: 1, fontSize: "11px", fontWeight: 700, color: "#3E2C80" }}>You haven't logged lunch</span>
-                <span style={{ fontSize: "9.5px", fontWeight: 600, color: "#8C8378" }}>2h ago</span>
+                <span style={{ fontSize: "9.5px", fontWeight: 600, color: "#6C655C" }}>2h ago</span>
               </div>
               <div style={{ padding: "8px 12px 11px", display: "flex", flexDirection: "column", gap: "5px", fontSize: "11px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ fontWeight: 700, color: "#221E1A" }}>Breakfast</span>
                   <span style={{ color: "#5B5349" }}>460 kcal</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", color: "#A9A29A" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", color: "#756D63" }}>
                   <span>Lunch</span>
                   <span>Add food</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", color: "#A9A29A" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", color: "#756D63" }}>
                   <span>Dinner</span>
                   <span>Add food</span>
                 </div>
@@ -184,9 +184,9 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
               </div>
               <div style={{ fontSize: "11.5px", fontWeight: 500, lineHeight: 1.55, color: "#3B352D", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
                 {"push day?? upper\nbench 80x8, 85x6, 85x5\n"}
-                <span style={{ color: "#A9A29A" }}>rows 3x10 (60? 62.5?)</span>
+                <span style={{ color: "#756D63" }}>rows 3x10 (60? 62.5?)</span>
                 {"\nohp 40 x 8 x 3\n"}
-                <span style={{ color: "#A9A29A" }}>felt heavy. try 87.5 next wk</span>
+                <span style={{ color: "#756D63" }}>felt heavy. try 87.5 next wk</span>
               </div>
             </div>
           </Frag>
@@ -283,7 +283,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                     Did you fill in your weekly check-in?
                   </span>
                 </div>
-                <span style={{ alignSelf: "flex-start", marginLeft: "26px", fontSize: "9.5px", color: "#8C93A0" }}>Lara · 9:02 AM</span>
+                <span style={{ alignSelf: "flex-start", marginLeft: "26px", fontSize: "9.5px", color: "#666E7C" }}>Lara · 9:02 AM</span>
               </div>
             </div>
           </Frag>
@@ -307,16 +307,16 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                       height: "14px",
                       flexShrink: 0,
                       borderRadius: "3px",
-                      border: "1.5px solid #8C8378",
+                      border: "1.5px solid #756D63",
                       boxShadow: "inset 0 5px 0 -3px #FAF9F7",
                     }}
                   />
                   <span style={{ fontSize: "10.5px", fontWeight: 700, color: "#5B5349" }}>Mail</span>
                 </div>
-                <span style={{ fontSize: "9.5px", color: "#A9A29A" }}>Promotions · 14</span>
+                <span style={{ fontSize: "9.5px", color: "#756D63" }}>Promotions · 14</span>
               </div>
               <div style={{ padding: "8px 11px 10px", display: "flex", flexDirection: "column", gap: "3px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: "6px", fontSize: "10px", color: "#A9A29A" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "6px", fontSize: "10px", color: "#756D63" }}>
                   <span style={{ overflowWrap: "anywhere" }}>Weekend offers inside</span>
                   <span>Fri</span>
                 </div>
@@ -334,7 +334,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                   }}
                 >
                   <span style={{ overflowWrap: "anywhere" }}>Booking confirmed: Vinyasa Flow</span>
-                  <span style={{ fontWeight: 600, color: "#8C8378" }}>Sun</span>
+                  <span style={{ fontWeight: 600, color: "#756D63" }}>Sun</span>
                 </div>
                 <span style={{ fontSize: "10px", color: "#5B5349", overflowWrap: "anywhere" }}>With Lara · today 6:30 PM · Studio One</span>
               </div>
@@ -387,7 +387,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                   width: r.ctaW,
                   padding: "15px 0",
                   borderRadius: "999px",
-                  background: "#7D67D9",
+                  background: "#775FD7",
                   color: "#fff",
                   fontWeight: 600,
                   fontSize: "15px",
@@ -432,12 +432,12 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
               fontSize: "11px",
               fontWeight: 700,
               letterSpacing: ".24em",
-              color: "#8C8378",
+              color: "#756D63",
               opacity: readyOp,
             }}
           >
             <span>SCROLL</span>
-            <span style={{ width: "1px", height: "28px", background: "linear-gradient(#7D67D9,rgba(125,103,217,0))" }} />
+            <span style={{ width: "1px", height: "28px", background: "linear-gradient(#775FD7,rgba(125,103,217,0))" }} />
           </div>
           <button
             id="skip-intro"

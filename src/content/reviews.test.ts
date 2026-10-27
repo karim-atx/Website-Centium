@@ -60,8 +60,8 @@ describe("the reviews row with 3, 5, 8 and 12 reviews", () => {
   });
 
   it("alternates lavender and teal, and clamps ratings to whole stars", () => {
-    assert.deepEqual(reviewTone(0), { bg: "#DED4F4", ink: "#5C48A8", star: "#9C7FF8" });
-    assert.deepEqual(reviewTone(1), { bg: "#DAEAE7", ink: "#3F726D", star: "#5E9E95" });
+    assert.deepEqual(reviewTone(0), { bg: "#DED4F4", ink: "#5C48A8", star: "#9A7CF8" });
+    assert.deepEqual(reviewTone(1), { bg: "#DAEAE7", ink: "#3D6E69", star: "#5D9C93" });
     assert.deepEqual(reviewTone(12), reviewTone(0));
     assert.equal(starCount(5), 5);
     assert.equal(starCount(0), 1);

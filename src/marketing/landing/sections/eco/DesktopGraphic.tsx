@@ -16,7 +16,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
       <span style={{ width: "7px", height: "7px", borderRadius: "9px", background: "#E4DCF8" }} />
       <span style={{ width: "7px", height: "7px", borderRadius: "9px", background: "#DDE8E5" }} />
       <span style={{ width: "7px", height: "7px", borderRadius: "9px", background: "#E7E3DC" }} />
-      <span style={{ marginLeft: "8px", fontSize: r.eF11, fontWeight: "700", color: "#8C8378" }}>
+      <span style={{ marginLeft: "8px", fontSize: r.eF11, fontWeight: "700", color: "#756D63" }}>
         {sl.url}
       </span>
     </div>
@@ -46,13 +46,13 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                     {rw.a}
                     {rw.ver ? (
                       <>
-                        <span style={{ width: "13px", height: "13px", borderRadius: "99px", background: "#5E9E95", color: "#fff", fontSize: r.eF8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ width: "13px", height: "13px", borderRadius: "99px", background: "#5D9C93", color: "#fff", fontSize: r.eF8, display: "flex", alignItems: "center", justifyContent: "center" }}>
                           ✓
                         </span>
                       </>
                     ) : null}
                   </div>
-                  <div style={{ fontSize: r.eF11, color: "#8C8378", fontWeight: "600", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <div style={{ fontSize: r.eF11, color: "#756D63", fontWeight: "600", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {rw.m}
                   </div>
                   {rw.bar ? (
@@ -68,7 +68,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                     <span style={{ position: "relative", width: "34px", height: "34px", flexShrink: "0" }}>
                       <svg viewBox="0 0 34 34" style={{ width: "34px", height: "34px" }}>
                         <circle cx="17" cy="17" r="13" fill="none" stroke="#EFEAFB" strokeWidth="4" />
-                        <circle data-w={rw.bw} data-ring={rw.ring} cx="17" cy="17" r="13" fill="none" stroke="#5E9E95" strokeWidth="4" strokeLinecap="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" transform="rotate(-90 17 17)" />
+                        <circle data-w={rw.bw} data-ring={rw.ring} cx="17" cy="17" r="13" fill="none" stroke="#5D9C93" strokeWidth="4" strokeLinecap="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" transform="rotate(-90 17 17)" />
                       </svg>
                     </span>
                   </>
@@ -86,16 +86,16 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
           <div style={{ flex: "1", display: "grid", gridTemplateColumns: "34px repeat(5,1fr)", gridTemplateRows: "auto repeat(4,minmax(0,1fr))", gap: "4px", minHeight: "0" }}>
             <span />
             {sl.days!.map((d, dI) => (
-              <span key={dI} style={{ textAlign: "center", fontSize: r.eF105, fontWeight: "700", color: "#8C8378" }}>
+              <span key={dI} style={{ textAlign: "center", fontSize: r.eF105, fontWeight: "700", color: "#756D63" }}>
                 {d}
               </span>
             ))}
             {sl.cells!.map((ce, ceI) => (
-              <span key={ceI} style={{ position: "relative", minHeight: "26px", borderRadius: "7px", background: ce.bg, fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF95, color: "#A9A29A", display: "flex", alignItems: "center", paddingLeft: "2px" }}>
+              <span key={ceI} style={{ position: "relative", minHeight: "26px", borderRadius: "7px", background: ce.bg, fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF95, color: "#756D63", display: "flex", alignItems: "center", paddingLeft: "2px" }}>
                 {ce.t}
                 {ce.on ? (
                   <>
-                    <span data-w={ce.w} data-stamp="" style={{ position: "absolute", inset: "0", borderRadius: "7px", background: ce.c, color: "#fff", fontFamily: "Manrope,sans-serif", fontSize: r.eF10, fontWeight: "800", display: "flex", alignItems: "center", padding: "0 6px", opacity: "0", whiteSpace: "nowrap", overflow: "hidden" }}>
+                    <span data-w={ce.w} data-stamp="" style={{ position: "absolute", inset: "0", borderRadius: "7px", background: ce.c, color: ce.ink, fontFamily: "Manrope,sans-serif", fontSize: r.eF10, fontWeight: "800", display: "flex", alignItems: "center", padding: "0 6px", opacity: "0", whiteSpace: "nowrap", overflow: "hidden" }}>
                       {ce.n}
                     </span>
                   </>
@@ -119,7 +119,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                   </span>
                   {ib.dot ? (
                     <>
-                      <span style={{ width: "6px", height: "6px", borderRadius: "9px", background: "#7D67D9" }} />
+                      <span style={{ width: "6px", height: "6px", borderRadius: "9px", background: "#775FD7" }} />
                     </>
                   ) : null}
                 </div>
@@ -147,7 +147,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
         <>
           <div style={{ flex: "1", minHeight: "0", display: "flex", flexDirection: "column", gap: "8px" }}>
             <div style={{ position: "relative", height: "84px", borderRadius: "12px", background: "repeating-linear-gradient(135deg,#F4F1FB 0 10px,#ECE7F8 10px 20px)" }}>
-              <span style={{ position: "absolute", left: "10px", top: "8px", fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF10, color: "#7B6FA3" }}>
+              <span style={{ position: "absolute", left: "10px", top: "8px", fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF10, color: "#6B5E94" }}>
                 gym cover photo
               </span>
               <span style={{ position: "absolute", left: "14px", bottom: "-16px", width: "44px", height: "44px", borderRadius: "12px", background: "#4E3894", color: "#fff", fontSize: "13px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", border: "3px solid #fff" }}>
@@ -159,14 +159,14 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
             </div>
             <div style={{ paddingLeft: "68px", fontSize: "15px", fontWeight: "800" }}>
               Atlas Fitness
-              <div style={{ fontSize: r.eF115, fontWeight: "600", color: "#8C8378" }}>
+              <div style={{ fontSize: r.eF115, fontWeight: "600", color: "#756D63" }}>
                 Achrafieh, Beirut · Gym and studio
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "8px", marginTop: "2px" }}>
               {sl.info!.map((inf, infI) => (
                 <div key={infI} data-w={inf.w} data-op="" style={{ padding: "8px 10px", borderRadius: "10px", border: "1px solid #F0EDE8", opacity: "0" }}>
-                  <div style={{ fontSize: r.eF95, fontWeight: "800", letterSpacing: ".1em", color: "#8C8378" }}>
+                  <div style={{ fontSize: r.eF95, fontWeight: "800", letterSpacing: ".1em", color: "#756D63" }}>
                     {inf.k}
                   </div>
                   <div style={{ fontSize: "12.5px", fontWeight: "800" }}>
@@ -176,12 +176,12 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
               ))}
             </div>
             <div style={{ flex: "1", minHeight: "0", display: "flex", flexDirection: "column", gap: "6px" }}>
-              <div style={{ fontSize: r.eF95, fontWeight: "800", letterSpacing: ".1em", color: "#8C8378" }}>
+              <div style={{ fontSize: r.eF95, fontWeight: "800", letterSpacing: ".1em", color: "#756D63" }}>
                 TOMORROW ON THE TIMETABLE
               </div>
               {sl.next!.map((nx, nxI) => (
                 <div key={nxI} data-w={nx.w} data-op="" style={{ flex: "1 1 0", minHeight: "30px", display: "flex", alignItems: "center", gap: "10px", padding: "0 10px", borderRadius: "10px", border: "1px solid #F0EDE8", opacity: "0" }}>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF11, color: "#8C8378" }}>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF11, color: "#756D63" }}>
                     {nx.t}
                   </span>
                   <span style={{ flex: "1", minWidth: "0", fontSize: "12px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -200,7 +200,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
         <>
           <div style={{ flex: "1", display: "grid", gridTemplateColumns: "150px 1fr", gap: "10px", minHeight: "0" }}>
             <div style={{ position: "relative", borderRadius: "12px", background: "repeating-linear-gradient(135deg,#EEF4F2 0 8px,#E5EEEB 8px 16px)", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "8px" }}>
-              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF95, color: "#5B7B76" }}>
+              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF95, color: "#516E6A" }}>
                 scan member card
               </span>
               <span data-w="0.1 0.6" data-sweepy="110" style={{ position: "absolute", left: "8px", right: "8px", top: "8px", height: "2px", background: "#2F5F58", boxShadow: "0 0 0 3px rgba(47,95,88,.15)", opacity: "0" }} />
@@ -209,7 +209,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                   79
                 </span>
               </div>
-              <div style={{ fontSize: r.eF10, fontWeight: "700", color: "#3F726D" }}>
+              <div style={{ fontSize: r.eF10, fontWeight: "700", color: "#3D6E69" }}>
                 check-ins today
               </div>
             </div>
@@ -222,7 +222,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                   <span style={{ flex: "1", fontSize: "12px", fontWeight: "700" }}>
                     {fd.n}
                   </span>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF105, color: "#8C8378" }}>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF105, color: "#756D63" }}>
                     {fd.t}
                   </span>
                   <span style={{ fontSize: r.eF105, fontWeight: "800", color: fd.sc }}>
@@ -238,7 +238,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
         <>
           <div style={{ flex: "1", display: "grid", gridTemplateColumns: r.planCols, gap: "5px", minHeight: "0" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-              <div style={{ fontSize: r.eF95, fontWeight: "800", letterSpacing: ".1em", color: "#8C8378" }}>
+              <div style={{ fontSize: r.eF95, fontWeight: "800", letterSpacing: ".1em", color: "#756D63" }}>
                 LIBRARY
               </div>
               {sl.lib!.map((lb, lbI) => (
@@ -289,7 +289,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
       {sl.isHeat ? (
         <>
           <div style={{ flex: "1", display: "flex", flexDirection: "column", gap: "6px", minHeight: "0" }}>
-            <div style={{ flex: "1", minHeight: "0", display: "grid", gridTemplateColumns: "44px repeat(7,1fr)", gridTemplateRows: "auto repeat(5,minmax(24px,1fr))", gap: "3px", fontSize: r.eF95, fontWeight: "700", color: "#8C8378", textAlign: "center" }}>
+            <div style={{ flex: "1", minHeight: "0", display: "grid", gridTemplateColumns: "44px repeat(7,1fr)", gridTemplateRows: "auto repeat(5,minmax(24px,1fr))", gap: "3px", fontSize: r.eF95, fontWeight: "700", color: "#756D63", textAlign: "center" }}>
               <span />
               {sl.days!.map((d, dI) => (
                 <span key={dI}>
@@ -327,21 +327,21 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
             <div style={{ flex: "1", minHeight: "0", display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: "8px" }}>
               {sl.seg!.map((sg, sgI) => (
                 <div key={sgI} data-w={sg.w} data-ty="10" data-op="" style={{ padding: "9px 10px", borderRadius: "12px", border: "1px solid #F0EDE8", opacity: "0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: r.eF10, fontWeight: "800", letterSpacing: ".08em", color: "#8C8378" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: r.eF10, fontWeight: "800", letterSpacing: ".08em", color: "#756D63" }}>
                     <span style={{ width: "8px", height: "8px", borderRadius: "2px", background: sg.c }} />
                     {sg.k}
                   </div>
                   <div style={{ fontSize: "17px", fontWeight: "800", marginTop: "2px" }}>
                     {sg.n}
                   </div>
-                  <div style={{ fontSize: r.eF10, fontWeight: "600", color: "#8C8378" }}>
+                  <div style={{ fontSize: r.eF10, fontWeight: "600", color: "#756D63" }}>
                     {sg.m}
                   </div>
                 </div>
               ))}
             </div>
             <div data-w="0.75 0.95" data-ty="10" data-op="" style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "14px", background: "#4E3894", color: "#fff", opacity: "0" }}>
-              <span style={{ width: "34px", height: "34px", flexShrink: "0", borderRadius: "8px", background: "repeating-linear-gradient(45deg,#5C48A8 0 4px,#6A54C4 4px 8px)", fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF8, display: "flex", alignItems: "center", justifyContent: "center", color: "#E4DCF8" }}>
+              <span style={{ width: "34px", height: "34px", flexShrink: "0", borderRadius: "8px", background: "repeating-linear-gradient(45deg,#5C48A8 0 4px,#6A54C4 4px 8px)", fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF8, display: "flex", alignItems: "center", justifyContent: "center", color: "#F4F1FB" }}>
                 QR
               </span>
               <div style={{ flex: "1" }}>
@@ -362,7 +362,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
       {sl.isGantt ? (
         <>
           <div style={{ flex: "1", display: "flex", flexDirection: "column", gap: "6px", minHeight: "0" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", fontSize: r.eF9, fontWeight: "700", color: "#A9A29A" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", fontSize: r.eF9, fontWeight: "700", color: "#756D63" }}>
               <span />
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 {sl.hours!.map((hr, hrI) => (
@@ -383,13 +383,13 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                       {sf.n}
                       {sf.ver ? (
                         <>
-                          <span style={{ width: "11px", height: "11px", borderRadius: "99px", background: "#5E9E95", color: "#fff", fontSize: "7px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span style={{ width: "11px", height: "11px", borderRadius: "99px", background: "#5D9C93", color: "#fff", fontSize: "7px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                             ✓
                           </span>
                         </>
                       ) : null}
                     </div>
-                    <div style={{ fontSize: r.eF95, fontWeight: "600", color: "#8C8378", whiteSpace: "nowrap" }}>
+                    <div style={{ fontSize: r.eF95, fontWeight: "600", color: "#756D63", whiteSpace: "nowrap" }}>
                       {sf.r}
                     </div>
                   </div>
@@ -403,15 +403,15 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
             ))}
             <div style={{ marginTop: "auto", display: "flex", gap: "12px", fontSize: r.eF10, fontWeight: "700", color: "#5B5349" }}>
               <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                <span style={{ width: "9px", height: "9px", borderRadius: "2px", background: "#5E9E95" }} />
+                <span style={{ width: "9px", height: "9px", borderRadius: "2px", background: "#4A7D76" }} />
                 Floor
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                <span style={{ width: "9px", height: "9px", borderRadius: "2px", background: "#7D67D9" }} />
+                <span style={{ width: "9px", height: "9px", borderRadius: "2px", background: "#775FD7" }} />
                 Classes
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                <span style={{ width: "9px", height: "9px", borderRadius: "2px", background: "#B07A2A" }} />
+                <span style={{ width: "9px", height: "9px", borderRadius: "2px", background: "#91642C" }} />
                 Front desk
               </span>
             </div>
@@ -435,7 +435,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
             <div style={{ flex: "1", minHeight: "150px", display: "grid", gridTemplateColumns: "42px minmax(0,1fr)", gridTemplateRows: "minmax(0,1fr) 30px", columnGap: "6px" }}>
               <div style={{ position: "relative" }}>
                 {sl.ticks!.map((tk, tkI) => (
-                  <span key={tkI} style={{ position: "absolute", right: "0", top: tk.y, transform: "translateY(-50%)", fontSize: r.eF95, fontWeight: "700", color: "#8C8378" }}>
+                  <span key={tkI} style={{ position: "absolute", right: "0", top: tk.y, transform: "translateY(-50%)", fontSize: r.eF95, fontWeight: "700", color: "#756D63" }}>
                     {tk.t}
                   </span>
                 ))}
@@ -464,7 +464,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                 ))}
               </div>
             </div>
-            <div style={{ fontSize: r.eF95, fontWeight: "600", color: "#8C8378" }}>
+            <div style={{ fontSize: r.eF95, fontWeight: "600", color: "#756D63" }}>
               US dollars. Paid through Centium. Axis starts at $1,500.
             </div>
           </div>

@@ -34,20 +34,22 @@ export default {
         // centium.* so nothing collides with the app's theme-aware names
         // (teal, primary, th, ...). Literal values, never theme tokens: the
         // marketing site stays light whatever the app theme on <html> is.
+        // WCAG AA: muted2, lavender.500, teal.500 and teal.700 are the AA values
+        // the pages render (the handover's: #8C8378, #7D67D9, #5E9E95, #3F726D).
         centium: {
           white: "#FFFFFF",
           ink: "#221E1A",
           ink2: "#3B352D",
           body: "#5B5349",
           muted: "#7A7168",
-          muted2: "#8C8378",
+          muted2: "#756D63",
           hair: "#EDEAE4",
           lavender: {
             50: "#F4F1FB",
             100: "#EDE8FB",
             200: "#DED4F4",
             300: "#B9A9EE",
-            500: "#7D67D9",
+            500: "#775FD7",
             600: "#6A54C4",
             700: "#5C48A8",
             800: "#4E3894",
@@ -60,8 +62,8 @@ export default {
             50: "#EDF4F3",
             100: "#DAEAE7",
             300: "#8FC3BA",
-            500: "#5E9E95",
-            700: "#3F726D",
+            500: "#5D9C93",
+            700: "#3D6E69",
             900: "#2F5F58",
             leaf: "#8AC4BA",
           },

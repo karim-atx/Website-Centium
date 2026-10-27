@@ -31,10 +31,10 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: "14px", fontWeight: "800", color: "#221E1A" }}>
             Clients{" "}
-            <span style={{ fontSize: "12px", fontWeight: "600", color: "#7A7168" }}>· 5</span>
+            <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63" }}>· 5</span>
           </span>
           <span style={{ display: "flex", gap: "8px", padding: "2px", borderRadius: "99px", background: "#FFFFFF", border: "1px solid #E4DCF8" }}>
-            <span style={{ padding: "3px 10px", borderRadius: "99px", background: "#7D67D9", color: "#FFFFFF", fontSize: "12px", fontWeight: "700", lineHeight: "14px" }}>All</span>
+            <span style={{ padding: "3px 10px", borderRadius: "99px", background: "#775FD7", color: "#FFFFFF", fontSize: "12px", fontWeight: "700", lineHeight: "14px" }}>All</span>
             <span style={{ padding: "3px 10px", fontSize: "12px", fontWeight: "700", color: "#5C48A8", lineHeight: "14px" }}>Needs attention</span>
           </span>
         </div>
@@ -63,7 +63,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
             <div style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "8px" }}>
               <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A", lineHeight: "19px" }}>{m.n}</span>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: "0" }}>
-                {m.nodue ? <span style={{ fontSize: "12px", fontWeight: "600", color: "#7A7168", lineHeight: "17px", whiteSpace: "nowrap", display: r.planDisp }}>{m.plan}</span> : null}
+                {m.nodue ? <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63", lineHeight: "17px", whiteSpace: "nowrap", display: r.planDisp }}>{m.plan}</span> : null}
                 {m.due ? (
                   <span
                     data-w="0.75 0.95"
@@ -82,11 +82,11 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
             </div>
             <svg viewBox="0 0 36 36" style={{ width: "32px", height: "32px", flexShrink: "0", transform: "rotate(-90deg)" }}>
               <circle cx="18" cy="18" r="15" fill="none" stroke="#E1ECEA" strokeWidth="4" />
-              <circle data-w={m.w} data-ring={m.pr} cx="18" cy="18" r="15" fill="none" stroke="#5E9E95" strokeWidth="4" strokeLinecap="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" />
+              <circle data-w={m.w} data-ring={m.pr} cx="18" cy="18" r="15" fill="none" stroke="#5D9C93" strokeWidth="4" strokeLinecap="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" />
             </svg>
           </div>
         ))}
-        <span style={{ fontSize: "12px", fontWeight: "600", color: "#7A7168", lineHeight: "16px", borderTop: "1px solid #E4DCF8", paddingTop: "5px" }}>{sl.mfoot}</span>
+        <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63", lineHeight: "16px", borderTop: "1px solid #E4DCF8", paddingTop: "5px" }}>{sl.mfoot}</span>
       </>
     ) : null}
     {sl.mTimeline ? (
@@ -105,7 +105,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
               <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
                 {m.n}
               </span>
-              <span style={{ fontSize: "12px", fontWeight: "600", color: "#7A7168" }}>
+              <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63" }}>
                 {m.s}
               </span>
             </div>
@@ -119,7 +119,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
           <span style={{ fontSize: "16px", fontWeight: "800", color: "#221E1A" }}>
             {sl.mh}
           </span>
-          <span style={{ fontSize: "12px", fontWeight: "600", color: "#7A7168" }}>
+          <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63" }}>
             {sl.ms}
           </span>
         </div>
@@ -187,13 +187,13 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "2px" }}>
           {sl.mMonths!.map((m, mI) => (
-            <span key={mI} style={{ fontSize: "12px", fontWeight: "600", color: "#7A7168", lineHeight: "17px" }}>
+            <span key={mI} style={{ fontSize: "12px", fontWeight: "600", color: "#756D63", lineHeight: "17px" }}>
               {m}
             </span>
           ))}
         </div>
-        <span style={{ fontSize: "12px", fontWeight: "600", color: "#7A7168", lineHeight: "16px", borderTop: "1px solid #E4DCF8", paddingTop: "5px", marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ width: "12px", height: "12px", borderRadius: "3px", border: "1.5px solid #7A7168" }} />
+        <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63", lineHeight: "16px", borderTop: "1px solid #E4DCF8", paddingTop: "5px", marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ width: "12px", height: "12px", borderRadius: "3px", border: "1.5px solid #756D63" }} />
           {sl.mfoot}
         </span>
       </>
@@ -213,7 +213,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
             <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
               {sl.mcn}
             </span>
-            <span style={{ fontSize: "12px", fontWeight: "600", color: "#7A7168" }}>
+            <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63" }}>
               {sl.mct}
             </span>
           </div>
@@ -235,7 +235,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
                 <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
                   {m.n}
                 </span>
-                <span style={{ fontSize: "12px", fontWeight: "600", color: "#7A7168" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63" }}>
                   {m.i}
                 </span>
               </div>
@@ -253,7 +253,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
     {sl.mDesk ? (
       <>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-          <span style={{ fontSize: "12px", fontWeight: "700", color: "#7A7168" }}>
+          <span style={{ fontSize: "12px", fontWeight: "700", color: "#756D63" }}>
             Checked in today
           </span>
           <span style={{ fontSize: "30px", fontWeight: "800", color: "#2F5F58" }}>
@@ -312,13 +312,13 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
               </span>
             </div>
             <span style={{ position: "relative", display: "block", height: "8px", borderRadius: "9px", background: "#E4DCF8", marginLeft: "44px" }}>
-              <span style={{ position: "absolute", top: "0", bottom: "0", left: m.l, width: m.w, borderRadius: "9px", background: "#5E9E95" }} />
+              <span style={{ position: "absolute", top: "0", bottom: "0", left: m.l, width: m.w, borderRadius: "9px", background: "#5D9C93" }} />
             </span>
           </div>
         ))}
         <div style={{ display: "flex", justifyContent: "space-between", marginLeft: "44px" }}>
           {sl.mhrs!.map((h, hI) => (
-            <span key={hI} style={{ fontSize: "12px", fontWeight: "600", color: "#7A7168" }}>
+            <span key={hI} style={{ fontSize: "12px", fontWeight: "600", color: "#756D63" }}>
               {h}
             </span>
           ))}
@@ -327,14 +327,14 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
     ) : null}
     {sl.mGym ? (
       <>
-        <div style={{ height: "64px", borderRadius: "10px", background: "repeating-linear-gradient(135deg,#EDE8FB 0 10px,#F4F1FB 10px 20px)", display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: "6px 8px", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#7B6FA3" }}>
+        <div style={{ height: "64px", borderRadius: "10px", background: "repeating-linear-gradient(135deg,#EDE8FB 0 10px,#F4F1FB 10px 20px)", display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: "6px 8px", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#6B5E94" }}>
           gym photo
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
           <span style={{ fontSize: "16px", fontWeight: "800", color: "#221E1A" }}>
             {sl.mh}
           </span>
-          <span style={{ fontSize: "12px", fontWeight: "600", color: "#7A7168" }}>
+          <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63" }}>
             {sl.ms}
           </span>
         </div>
@@ -346,7 +346,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
             <span style={{ flex: "1", minWidth: "0", fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
               {m.n}
             </span>
-            <span style={{ padding: "6px 14px", borderRadius: "99px", background: "#7D67D9", color: "#FFFFFF", fontSize: "12px", fontWeight: "700" }}>
+            <span style={{ padding: "6px 14px", borderRadius: "99px", background: "#775FD7", color: "#FFFFFF", fontSize: "12px", fontWeight: "700" }}>
               Book
             </span>
           </div>

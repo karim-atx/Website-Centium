@@ -22,7 +22,7 @@ describe("section 06 slides", () => {
     const all = JSON.stringify(plan);
     for (const meal of ["Labneh", "Fattoush", "Mujaddara", "kcal"]) assert.ok(!all.includes(meal), meal + " left in the plan builder");
     // The third column's first item is the one dropped in (prototype: highlighted border).
-    assert.equal(plan.cols?.[2].items[0].bd, "#7D67D9");
+    assert.equal(plan.cols?.[2].items[0].bd, "#775FD7");
   });
 
   it("keeps the mobile plan builder's exercises", () => {

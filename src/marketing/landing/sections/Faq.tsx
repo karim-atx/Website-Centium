@@ -27,14 +27,14 @@ export const Faq: React.FC<{ r: SectionVals }> = ({ r }) => {
         <div>
           <ChapterMark n="09" t="FAQ" size={r.chEy} />
           <h2 style={{ marginTop: "14px", fontWeight: "800", fontSize: r.h2, lineHeight: "1.04", letterSpacing: "-.035em" }}>Questions, answered.</h2>
-          <p style={{ marginTop: "16px", maxWidth: "360px", fontSize: "13px", lineHeight: "1.6", color: "#8C8378" }}>
+          <p style={{ marginTop: "16px", maxWidth: "360px", fontSize: "13px", lineHeight: "1.6", color: "#756D63" }}>
             Centium supports your health journey. It does not provide medical diagnosis or treatment.
           </p>
         </div>
         <div>
           {FAQ.map(([q, lead, a], i) => {
             const isOpen = open === i,
-              c = i % 2 ? "#3F726D" : "#6A54C4";
+              c = i % 2 ? "#3D6E69" : "#6A54C4";
             return (
               <div key={q} style={{ borderTop: "1px solid #EDEAE4" }}>
                 <button

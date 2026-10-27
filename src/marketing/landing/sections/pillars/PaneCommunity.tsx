@@ -12,7 +12,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E4DCF8" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#DDE8E5" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E7E3DC" }} />
-      <span style={{ marginLeft: "10px", fontSize: "11.5px", fontWeight: "700", color: "#8C8378" }}>
+      <span style={{ marginLeft: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
         centium.atraxia.org/app/community
       </span>
     </div>
@@ -43,11 +43,11 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
                 <div style={{ fontSize: "12.5px", fontWeight: "800", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {fp.t}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "10px", fontWeight: "600", color: "#8C8378", whiteSpace: "nowrap" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "10px", fontWeight: "600", color: "#6C655C", whiteSpace: "nowrap" }}>
                   {fp.m}
                   {fp.pro ? (
                     <>
-                      <span style={{ padding: "0 6px", borderRadius: "99px", background: "#7D67D9", color: "#FFFFFF", fontSize: "8.5px", fontWeight: "800", lineHeight: "14px" }}>
+                      <span style={{ padding: "0 6px", borderRadius: "99px", background: "#775FD7", color: "#FFFFFF", fontSize: "8.5px", fontWeight: "800", lineHeight: "14px" }}>
                         Professional
                       </span>
                     </>
@@ -61,7 +61,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
                     {fp.from}
                   </span>
                 </div>
-                <div style={{ fontSize: "9.5px", fontWeight: "700", color: "#A9A29A" }}>
+                <div style={{ fontSize: "9.5px", fontWeight: "700", color: "#6C655C" }}>
                   {fp.r}
                 </div>
               </div>
@@ -70,11 +70,11 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
         </div>
         <div style={{ flex: "1", minHeight: "0", borderRadius: "16px", border: "1px solid rgba(125,103,217,.14)", background: "#FFFFFF", padding: "10px 12px", flexDirection: "column", gap: "7px", display: r.mhFlex }}>
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <span style={{ width: "44px", height: "44px", flexShrink: "0", borderRadius: "11px", background: "repeating-linear-gradient(135deg,#F4F1FB 0 8px,#ECE7F8 8px 16px)", display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: "3px", fontFamily: "'JetBrains Mono',monospace", fontSize: "7px", color: "#7B6FA3" }}>
+            <span style={{ width: "44px", height: "44px", flexShrink: "0", borderRadius: "11px", background: "repeating-linear-gradient(135deg,#F4F1FB 0 8px,#ECE7F8 8px 16px)", display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: "3px", fontFamily: "'JetBrains Mono',monospace", fontSize: "7px", color: "#6B5E94" }}>
               cover
             </span>
             <div style={{ flex: "1", minWidth: "0" }}>
-              <div style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#8C8378" }}>
+              <div style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
                 COURSE
               </div>
               <div style={{ fontSize: "13.5px", fontWeight: "800" }}>
@@ -82,7 +82,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "10.5px", fontWeight: "700", color: "#5B5349" }}>
                 Maya Aoun
-                <span style={{ width: "11px", height: "11px", borderRadius: "99px", background: "#5E9E95", color: "#FFFFFF", fontSize: "7px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ width: "11px", height: "11px", borderRadius: "99px", background: "#5D9C93", color: "#FFFFFF", fontSize: "7px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   ✓
                 </span>
               </div>
@@ -90,7 +90,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
             <div style={{ position: "relative", width: "44px", height: "44px", flexShrink: "0" }}>
               <svg viewBox="0 0 44 44" style={{ width: "44px", height: "44px" }}>
                 <circle cx="22" cy="22" r="18" fill="none" stroke="#EFEAFB" strokeWidth="5" />
-                <circle data-w="0.3 0.85" data-ring="0.5" cx="22" cy="22" r="18" fill="none" stroke="#7D67D9" strokeWidth="5" strokeLinecap="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" transform="rotate(-90 22 22)" />
+                <circle data-w="0.3 0.85" data-ring="0.5" cx="22" cy="22" r="18" fill="none" stroke="#775FD7" strokeWidth="5" strokeLinecap="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" transform="rotate(-90 22 22)" />
               </svg>
               <span style={{ position: "absolute", inset: "0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "800" }}>
                 3/6
@@ -99,7 +99,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
           </div>
           <div data-w="0.45 0.6" data-op="" style={{ padding: "8px 10px", borderRadius: "12px", background: "#FAF9FE", border: "1px solid rgba(125,103,217,.18)", opacity: "0" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ width: "26px", height: "26px", flexShrink: "0", borderRadius: "99px", background: "#7D67D9", color: "#FFFFFF", fontSize: "9px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ width: "26px", height: "26px", flexShrink: "0", borderRadius: "99px", background: "#775FD7", color: "#FFFFFF", fontSize: "9px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 ❚❚
               </span>
               <div style={{ flex: "1", minWidth: "0" }}>
@@ -107,9 +107,9 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
                   4 · Daily flow
                 </div>
                 <div style={{ position: "relative", marginTop: "6px", height: "4px", borderRadius: "9px", background: "#E4DCF8" }}>
-                  <span data-w="0.5 0.95" data-sx="" style={{ position: "absolute", left: "0", top: "0", bottom: "0", width: "58%", borderRadius: "9px", background: "#7D67D9", transformOrigin: "left", transform: "scaleX(0)" }} />
+                  <span data-w="0.5 0.95" data-sx="" style={{ position: "absolute", left: "0", top: "0", bottom: "0", width: "58%", borderRadius: "9px", background: "#775FD7", transformOrigin: "left", transform: "scaleX(0)" }} />
                   <span data-w="0.5 0.95" data-tkp="58" style={{ position: "absolute", left: "0", top: "0", bottom: "0", width: "100%" }}>
-                    <span style={{ position: "absolute", left: "-5px", top: "-3px", width: "10px", height: "10px", borderRadius: "99px", background: "#FFFFFF", border: "2px solid #7D67D9" }} />
+                    <span style={{ position: "absolute", left: "-5px", top: "-3px", width: "10px", height: "10px", borderRadius: "99px", background: "#FFFFFF", border: "2px solid #775FD7" }} />
                   </span>
                 </div>
               </div>
@@ -127,7 +127,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
                 <span style={{ position: "relative", width: "15px", height: "15px", flexShrink: "0", borderRadius: "99px", border: `1.5px solid ${ls.bd}` }}>
                   {ls.done ? (
                     <>
-                      <span data-w={ls.w} data-stamp="" style={{ position: "absolute", inset: "-1.5px", borderRadius: "99px", background: "#7D67D9", color: "#FFFFFF", fontSize: "8px", display: "flex", alignItems: "center", justifyContent: "center", opacity: "0" }}>
+                      <span data-w={ls.w} data-stamp="" style={{ position: "absolute", inset: "-1.5px", borderRadius: "99px", background: "#775FD7", color: "#FFFFFF", fontSize: "8px", display: "flex", alignItems: "center", justifyContent: "center", opacity: "0" }}>
                         ✓
                       </span>
                     </>
@@ -136,7 +136,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
                 <span style={{ flex: "1" }}>
                   {ls.t}
                 </span>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: "#A9A29A" }}>
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: "#6C655C" }}>
                   {ls.d}
                 </span>
               </div>
@@ -146,7 +146,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
       </div>
       <div style={{ borderRadius: "16px", border: "1px solid rgba(125,103,217,.14)", background: "#FFFFFF", padding: "12px", display: "flex", flexDirection: "column", gap: "8px", minHeight: "0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <span style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#8C8378" }}>
+          <span style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
             OPEN THREAD · RUNNING
           </span>
           <span style={{ fontSize: "10.5px", fontWeight: "700", color: "#6A54C4" }}>
@@ -164,7 +164,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
             <div style={{ fontSize: "14px", fontWeight: "800" }}>
               Best pre-run breakfast?
             </div>
-            <div style={{ fontSize: "10.5px", fontWeight: "600", color: "#8C8378" }}>
+            <div style={{ fontSize: "10.5px", fontWeight: "600", color: "#756D63" }}>
               Rami Haddad · 2 h ago
             </div>
           </div>
@@ -179,7 +179,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
                 {rp.n}
                 {rp.pro ? (
                   <>
-                    <span style={{ padding: "1px 6px", borderRadius: "99px", background: "#7D67D9", color: "#FFFFFF", fontSize: "9px", fontWeight: "800" }}>
+                    <span style={{ padding: "1px 6px", borderRadius: "99px", background: "#775FD7", color: "#FFFFFF", fontSize: "9px", fontWeight: "800" }}>
                       Professional
                     </span>
                   </>
@@ -198,10 +198,10 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
           ))}
         </div>
         <div style={{ alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "12px", border: "1px solid #EDEAE4", background: "#FAF9F7", display: r.mhFlex }}>
-          <span style={{ flex: "1", fontSize: "11.5px", fontWeight: "600", color: "#A9A29A" }}>
+          <span style={{ flex: "1", fontSize: "11.5px", fontWeight: "600", color: "#756D63" }}>
             Write a reply
           </span>
-          <span style={{ padding: "4px 10px", borderRadius: "99px", background: "#7D67D9", color: "#FFFFFF", fontSize: "10.5px", fontWeight: "800" }}>
+          <span style={{ padding: "4px 10px", borderRadius: "99px", background: "#775FD7", color: "#FFFFFF", fontSize: "10.5px", fontWeight: "800" }}>
             Reply
           </span>
         </div>

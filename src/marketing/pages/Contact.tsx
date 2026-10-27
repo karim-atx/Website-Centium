@@ -199,7 +199,7 @@ export const Contact: React.FC = () => {
 
   const field = (f: Field): React.CSSProperties => ({
     borderRadius: "14px",
-    border: "1.5px solid " + (invalid[f] ? ERROR_RED : "#E0DDD6"),
+    border: "1.5px solid " + (invalid[f] ? ERROR_RED : "#9A907A"),
     background: invalid[f] ? "#FFFBFA" : unavailable ? "#F6F5F2" : "#FFFFFF",
     fontSize: "14.5px",
     color: "#221E1A",
@@ -221,7 +221,7 @@ export const Contact: React.FC = () => {
     fontSize: "10.5px",
     fontWeight: "800",
     letterSpacing: ".16em",
-    color: "#8C8378",
+    color: "#756D63",
   };
   const infoIcon = (bg: string): React.CSSProperties => ({
     width: "30px",
@@ -257,7 +257,7 @@ export const Contact: React.FC = () => {
         }}
       >
         <form onSubmit={handleSubmit} style={{ position: "relative", padding: ctPad, display: "flex", flexDirection: "column", gap: "14px", textAlign: "left" }}>
-          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".16em", color: "#8C8378" }}>WHAT'S THIS ABOUT?</span>
+          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".16em", color: "#756D63" }}>WHAT'S THIS ABOUT?</span>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "4px" }}>
             {topics.map((t, i) => {
               const active = topic === i;
@@ -336,7 +336,7 @@ export const Contact: React.FC = () => {
           <label style={label}>
             <span style={{ ...labelText, display: "flex", justifyContent: "space-between" }}>
               Message
-              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "11px", fontWeight: "500", color: "#A9A29A" }}>{message.length} / 1500</span>
+              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "11px", fontWeight: "500", color: "#756D63" }}>{message.length} / 1500</span>
             </span>
             <textarea
               required
@@ -358,7 +358,7 @@ export const Contact: React.FC = () => {
             />
             {fieldError("message")}
           </label>
-          <p style={{ marginTop: "-4px", fontSize: "12px", color: "#8C8378" }}>Please don't include medical details in this form.</p>
+          <p style={{ marginTop: "-4px", fontSize: "12px", color: "#756D63" }}>Please don't include medical details in this form.</p>
 
           {/* THE HONEYPOT. Off-screen rather than display:none, because the
               simplest scrapers skip anything display:none and fill in
@@ -417,7 +417,7 @@ export const Contact: React.FC = () => {
                   width: "40px",
                   height: "40px",
                   borderRadius: "99px",
-                  background: "#5E9E95",
+                  background: "#5D9C93",
                   color: "#fff",
                   fontSize: "18px",
                   display: "flex",
@@ -452,7 +452,7 @@ export const Contact: React.FC = () => {
                     minHeight: "50px",
                     marginTop: "2px",
                     borderRadius: "999px",
-                    background: "#7D67D9",
+                    background: "#775FD7",
                     color: "#fff",
                     fontWeight: "700",
                     fontSize: "14.5px",
@@ -541,7 +541,7 @@ export const Contact: React.FC = () => {
           href="/"
           onClick={pageLink("/")}
           className="cl-hbg"
-          style={{ padding: "15px 28px", borderRadius: "999px", background: "#7D67D9", color: "#fff", fontWeight: 600, fontSize: "15px", "--hbg": "#6A54C4" } as React.CSSProperties}
+          style={{ padding: "15px 28px", borderRadius: "999px", background: "#775FD7", color: "#fff", fontWeight: 600, fontSize: "15px", "--hbg": "#6A54C4" } as React.CSSProperties}
         >
           Back to home
         </a>
@@ -549,7 +549,7 @@ export const Contact: React.FC = () => {
           href="/legal"
           onClick={pageLink("/legal")}
           className="cl-hbd"
-          style={{ padding: "15px 26px", borderRadius: "999px", border: "1px solid #CFC5EA", color: "#221E1A", fontWeight: 600, fontSize: "15px", "--hbd": "#7D67D9" } as React.CSSProperties}
+          style={{ padding: "15px 26px", borderRadius: "999px", border: "1px solid #CFC5EA", color: "#221E1A", fontWeight: 600, fontSize: "15px", "--hbd": "#775FD7" } as React.CSSProperties}
         >
           Legal
         </a>

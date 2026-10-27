@@ -87,14 +87,25 @@ html.larger-icons .centium-site svg {
 /* Focus states drawn by the handover's style-focus (literal values):
    review cards (RV1) get a lavender ring instead of an outline; the contact
    fields (CT1) take the lavender border and halo over any resting or
-   invalid border; the 404 buttons (NF1) sit their outline 3px off. */
+   invalid border; the 404 buttons (NF1) sit their outline 3px off.
+   WCAG AA (CONTRAST): the review ring is #775FD7 at .78 (3.2:1 on white;
+   the handover's .35 was 1.6:1). */
 .centium-site .cl-fring:focus {
-  box-shadow: 0 0 0 3px rgba(125, 103, 217, 0.35) !important;
+  box-shadow: 0 0 0 3px rgba(119, 95, 215, 0.78) !important;
 }
 .centium-site .cl-ffield:focus {
-  border-color: #7d67d9 !important;
+  border-color: #775fd7 !important;
   box-shadow: 0 0 0 4px rgba(125, 103, 217, 0.14) !important;
 }
 .centium-site .cl-fo3:focus-visible {
   outline-offset: 3px;
+}
+
+/* Contact placeholders: no colour in the handover, so they fell back to
+   Tailwind's #9CA3AF (2.5:1 on white). The site's AA muted grey (5.1:1);
+   opacity 1 because Firefox dims ::placeholder by default. */
+.centium-site input::placeholder,
+.centium-site textarea::placeholder {
+  color: #756d63;
+  opacity: 1;
 }

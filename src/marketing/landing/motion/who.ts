@@ -6,7 +6,7 @@
 // Mobile dots: the markup gives them a transform/background transition and
 // an active first dot, but the prototype never updates them; here they follow
 // the swipe row (the card nearest the left edge is active), with the
-// markup's two states (active #7D67D9 at full width, others
+// markup's two states (active #775FD7 at full width, others
 // rgba(34,30,26,.18) at scaleX(.4)).
 
 import { clamp } from "../engine/math";
@@ -64,7 +64,7 @@ export class WhoMotion implements EngineSection {
       end = room > 2 && row.scrollLeft >= room - 2,
       act = end ? this.dots.length - 1 : Math.max(0, Math.min(this.dots.length - 1, Math.round(row.scrollLeft / stride)));
     this.dots.forEach((d, j) => {
-      d.style.background = j === act ? "#7D67D9" : "rgba(34,30,26,.18)";
+      d.style.background = j === act ? "#775FD7" : "rgba(34,30,26,.18)";
       d.style.transform = j === act ? "none" : "scaleX(.4)";
     });
   }

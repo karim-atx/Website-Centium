@@ -258,7 +258,7 @@ export const NotFound: React.FC = () => {
               href="/"
               onClick={goHomeNav}
               className="cl-hbg cl-lift cl-fo3"
-              style={{ ...btn, background: "#7D67D9", color: "#FFFFFF", transform: "none", boxShadow: "none", "--hbg": "#6A54C4" } as React.CSSProperties}
+              style={{ ...btn, background: "#775FD7", color: "#FFFFFF", transform: "none", boxShadow: "none", "--hbg": "#6A54C4" } as React.CSSProperties}
             >
               Back to home
             </a>
@@ -276,7 +276,7 @@ export const NotFound: React.FC = () => {
                   transform: "none",
                   boxShadow: "none",
                   "--hbg": "#FAF9FE",
-                  "--hbd": "#7D67D9",
+                  "--hbd": "#775FD7",
                 } as React.CSSProperties
               }
             >

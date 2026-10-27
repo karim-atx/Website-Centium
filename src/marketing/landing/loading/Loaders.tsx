@@ -158,7 +158,7 @@ export const Lo2: React.FC<{ vw: number }> = ({ vw }) => {
               id="lf-vein"
               d={LEAF_VEIN_PATH}
               fill="none"
-              stroke="#5E9E95"
+              stroke="#5D9C93"
               strokeWidth="7"
               strokeLinecap="round"
               pathLength={1}

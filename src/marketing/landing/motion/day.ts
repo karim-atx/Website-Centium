@@ -121,7 +121,7 @@ export class DayMotion implements EngineSection {
       d.style.opacity = sm(0, 0.1, U[k]).toFixed(3);
     });
     C.rl.forEach((d, k) => {
-      d.style.opacity = (0.55 + 0.45 * bump(k)).toFixed(3);
+      d.style.opacity = (0.81 + 0.19 * bump(k)).toFixed(3);
     });
     const mins = Math.round(h * 60 * 1000) / 1000,
       hh = Math.floor(mins / 60),

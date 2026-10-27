@@ -24,11 +24,11 @@ export const bookSlots = [
 ];
 
 export const chat = [
-  { t: "Hi Lara, I hired you yesterday. Where do we start?", side: "flex-end", bg: "#7D67D9", ink: "#fff" },
+  { t: "Hi Lara, I hired you yesterday. Where do we start?", side: "flex-end", bg: "#775FD7", ink: "#fff" },
   { t: "Welcome Rami. I shared a plan: high protein, week 3.", side: "flex-start", bg: "#fff", ink: "#221E1A" },
-  { t: "Can I swap dinner for mujaddara?", side: "flex-end", bg: "#7D67D9", ink: "#fff" },
+  { t: "Can I swap dinner for mujaddara?", side: "flex-end", bg: "#775FD7", ink: "#fff" },
   { t: "Yes. Add grilled halloumi for protein.", side: "flex-start", bg: "#fff", ink: "#221E1A" },
-  { t: "Perfect. Call on Thursday?", side: "flex-end", bg: "#7D67D9", ink: "#fff" },
+  { t: "Perfect. Call on Thursday?", side: "flex-end", bg: "#775FD7", ink: "#fff" },
 ];
 
 export const clientStats = [
@@ -39,9 +39,9 @@ export const clientStats = [
 
 export const clientsCo = [
   { i: "RH", n: "Rami Haddad", s: "New", w: "0.1 0.45", tx: "30", sb: "#F4F1FB", sc: "#5C48A8", bg: "#DED4F4", ink: "#5C48A8" },
-  { i: "HM", n: "Hala Mansour", s: "Logged today", w: "-2 -1", tx: "0", sb: "#EDF4F3", sc: "#2F5F58", bg: "#DAEAE7", ink: "#3F726D" },
-  { i: "RS", n: "Rana Sleiman", s: "Check-in due", w: "-2 -1", tx: "0", sb: "#FBF2E6", sc: "#9A6B2F", bg: "#DED4F4", ink: "#5C48A8" },
-  { i: "JK", n: "Joseph Khalil", s: "Plan shared", w: "-2 -1", tx: "0", sb: "#EDF4F3", sc: "#2F5F58", bg: "#DAEAE7", ink: "#3F726D" },
+  { i: "HM", n: "Hala Mansour", s: "Logged today", w: "-2 -1", tx: "0", sb: "#EDF4F3", sc: "#2F5F58", bg: "#DAEAE7", ink: "#3D6E69" },
+  { i: "RS", n: "Rana Sleiman", s: "Check-in due", w: "-2 -1", tx: "0", sb: "#FBF2E6", sc: "#91642C", bg: "#DED4F4", ink: "#5C48A8" },
+  { i: "JK", n: "Joseph Khalil", s: "Plan shared", w: "-2 -1", tx: "0", sb: "#EDF4F3", sc: "#2F5F58", bg: "#DAEAE7", ink: "#3D6E69" },
 ];
 
 export const cvLines = ["MSc Clinical Nutrition,  credentials verified", "Sports nutrition,  8 years in clinic", "Mediterranean meal planning"];
@@ -72,7 +72,7 @@ export const planMeals = [
 ];
 
 export const planTargets = [
-  { k: "Protein", v: "165 g", pct: "100%", c: "#7D67D9", w: "0.1 0.5" },
+  { k: "Protein", v: "165 g", pct: "100%", c: "#775FD7", w: "0.1 0.5" },
   { k: "Carbs", v: "240 g", pct: "86%", c: "#B9A9EE", w: "0.2 0.6" },
-  { k: "Fat", v: "70 g", pct: "64%", c: "#5E9E95", w: "0.3 0.7" },
+  { k: "Fat", v: "70 g", pct: "64%", c: "#5D9C93", w: "0.3 0.7" },
 ];

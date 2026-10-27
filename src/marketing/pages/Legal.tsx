@@ -134,7 +134,7 @@ export const Legal: React.FC = () => {
       >
         <PageMark id="LEGAL" word="Legal" size={r.chEyC} />
         <h1 style={{ margin: "14px 0 0", fontWeight: "800", fontSize: r.ctH1, letterSpacing: "-.04em", lineHeight: "1.04", textWrap: "balance" }}>Terms, privacy and health</h1>
-        <p style={{ margin: "12px 0 0", fontSize: "14px", fontWeight: "600", color: "#8C8378" }}>Last updated {LEGAL_UPDATED}</p>
+        <p style={{ margin: "12px 0 0", fontSize: "14px", fontWeight: "600", color: "#756D63" }}>Last updated {LEGAL_UPDATED}</p>
       </div>
       <div style={{ maxWidth: "1080px", margin: "0 auto", display: "grid", gridTemplateColumns: r.lgCols, gap: r.lgGap, alignItems: "start" }}>
         {/* B4 QA: the open list is 863px tall, so once stuck at 96px its end
@@ -162,7 +162,7 @@ export const Legal: React.FC = () => {
               }}
             >
               ON THIS PAGE
-              <span aria-hidden="true" style={{ display: r.footChev, color: "#7D67D9", fontSize: "16px" }}>
+              <span aria-hidden="true" style={{ display: r.footChev, color: "#775FD7", fontSize: "16px" }}>
                 +
               </span>
             </summary>
@@ -195,7 +195,7 @@ export const Legal: React.FC = () => {
               <span style={{ fontSize: "11px", fontWeight: "700", letterSpacing: ".22em", color: ld.c }}>{ld.num}</span>
               <h2 style={{ marginTop: "12px", fontSize: r.lgH2, fontWeight: "800", letterSpacing: "-.03em", lineHeight: "1.1" }}>{ld.title}</h2>
               {ld.box ? (
-                <div style={{ marginTop: "20px", padding: "20px 22px", borderRadius: "18px", background: "#7D67D9", border: "2px solid #3E2F7A" }}>
+                <div style={{ marginTop: "20px", padding: "20px 22px", borderRadius: "18px", background: "#775FD7", border: "2px solid #3E2F7A" }}>
                   <p style={{ fontSize: "17px", lineHeight: "1.55", fontWeight: "600", color: "#fff" }}>{ld.intro}</p>
                 </div>
               ) : (
@@ -222,7 +222,7 @@ export const Legal: React.FC = () => {
                 href="/"
                 onClick={pageLink("/")}
                 className="cl-hbg"
-                style={{ padding: "13px 22px", borderRadius: "999px", background: "#7D67D9", color: "#fff", fontWeight: 600, fontSize: "14.5px", "--hbg": "#6A54C4" } as React.CSSProperties}
+                style={{ padding: "13px 22px", borderRadius: "999px", background: "#775FD7", color: "#fff", fontWeight: 600, fontSize: "14.5px", "--hbg": "#6A54C4" } as React.CSSProperties}
               >
                 Back to home
               </a>
@@ -230,7 +230,7 @@ export const Legal: React.FC = () => {
                 href="/contact"
                 onClick={pageLink("/contact")}
                 className="cl-hbd"
-                style={{ padding: "13px 22px", borderRadius: "999px", border: "1px solid #CFC5EA", color: "#221E1A", fontWeight: 600, fontSize: "14.5px", "--hbd": "#7D67D9" } as React.CSSProperties}
+                style={{ padding: "13px 22px", borderRadius: "999px", border: "1px solid #CFC5EA", color: "#221E1A", fontWeight: 600, fontSize: "14.5px", "--hbd": "#775FD7" } as React.CSSProperties}
               >
                 Contact us
               </a>
