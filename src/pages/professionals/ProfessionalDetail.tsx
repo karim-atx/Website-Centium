@@ -490,7 +490,9 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
   const where: WhereRow[] | null = sv
     ? [
         ...(listing.location?.trim() ? [{ icon: "place" as const, title: listing.location.trim(), line: "In person" }] : []),
-        ...(kinds.has("online") || kinds.has(null) ? [{ icon: "online" as const, title: "Online", line: "Video sessions" }] : []),
+        // A session type with no location_kind says nothing about where (DJ,
+        // Karim 2026-10-27): it no longer reads as "Online".
+        ...(kinds.has("online") ? [{ icon: "online" as const, title: "Online", line: "Video sessions" }] : []),
         ...(kinds.has("home_visit") ? [{ icon: "home" as const, title: "Home visits", line: "At your place" }] : []),
         ...(kinds.has("phone") ? [{ icon: "phone" as const, title: "Phone", line: "Phone sessions" }] : []),
       ]

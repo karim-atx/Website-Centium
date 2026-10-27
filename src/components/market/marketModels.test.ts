@@ -178,7 +178,7 @@ test("people: initials, hired badge text, rating line, place, a stable avatar st
   assert.equal(ratingLine(4.8, 38, "1.2 km"), "4.8 · 38 reviews · 1.2 km");
   assert.equal(ratingLine(4.6, 1), "4.6 · 1 review");
   assert.equal(ratingLine(null, 0, "4.0 km"), "New · 4.0 km");
-  assert.equal(placeOf({ distanceKm: 1.23, area: "Hamra, Beirut" }), "1.2 km");
+  assert.equal(placeOf({ distanceKm: 1.23, area: "Hamra, Beirut" }), "about 1.2 km");
   assert.equal(placeOf({ distanceKm: null, area: "Hamra, Beirut" }), "Hamra, Beirut");
   const s = identityStep("4f3c-uuid");
   assert.ok(s >= 1 && s <= 4);

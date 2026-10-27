@@ -86,6 +86,9 @@ export interface DirectoryHit extends ProfessionalCardData {
   fromPriceValue: number | null;
   /** rank_score, the cursor's first half (p_before_score). */
   score: number | null;
+  /** The professional's approximate area (two decimals, ~1 km): the device works out the distance (DJ). */
+  approxLat: number | null;
+  approxLng: number | null;
 }
 
 const workType = (v: unknown): WorkType => (v === "class_slot" ? "class_slot" : "role");
@@ -162,7 +165,15 @@ export function parseDirectory(data: unknown): DirectoryHit[] {
       const prices = [num(r.consultation_rate), num(r.monthly_rate)].filter((p): p is number => p != null && p > 0);
       const card = parseCard(r);
       // Every row is kept (only an id is required): the cursor is the LAST ROW the server sent.
-      return { ...card, name: card.name || "Professional", rank: i + 1, fromPriceValue: prices.length ? Math.min(...prices) : null, score: num(r.rank_score) };
+      return {
+        ...card,
+        name: card.name || "Professional",
+        rank: i + 1,
+        fromPriceValue: prices.length ? Math.min(...prices) : null,
+        score: num(r.rank_score),
+        approxLat: num(r.approx_lat),
+        approxLng: num(r.approx_lng),
+      };
     })
     .filter((c) => c.id);
 }

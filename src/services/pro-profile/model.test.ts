@@ -86,7 +86,7 @@ test("public profile offers: public_offers('professional', id) rows, in the serv
 
 test("professionals_ranked: the server's order, the cursor score, From $X, every row kept", () => {
   const [h, g] = parseDirectory([
-    { professional_id: "p1", first_name: "A", consultation_rate: 35, monthly_rate: 15, average_rating: 4.6, review_count: 9, hired_via_centium: 3, area_label: "Hamra", distance_band: "under 2 km", band_rank: 1, rank_score: "0.8123", phone: "1" },
+    { professional_id: "p1", first_name: "A", consultation_rate: 35, monthly_rate: 15, average_rating: 4.6, review_count: 9, hired_via_centium: 3, area_label: "Hamra", approx_lat: "33.90", approx_lng: 35.48, distance_band: "under 2 km", band_rank: 1, rank_score: "0.8123", phone: "1" },
     { professional_id: "p2", first_name: null, rank_score: 0.5 },
   ]);
   assert.equal(h!.rank, 1);
@@ -96,6 +96,8 @@ test("professionals_ranked: the server's order, the cursor score, From $X, every
   assert.equal("phone" in h!, false);
   assert.equal(g!.name, "Professional");
   assert.equal(g!.rank, 2);
+  // DJ: the ~1 km area the device measures from; none for a row without one.
+  assert.deepEqual([h!.approxLat, h!.approxLng, g!.approxLat], [33.9, 35.48, null]);
 });
 
 test("teaches at: later start and weekday label", () => {

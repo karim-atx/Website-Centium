@@ -77,7 +77,9 @@ export const NearbyView: React.FC<{
   authUserId: string | null;
   dark: boolean;
   subtype: DirectoryListing["subtype"];
-}> = ({ authUserId, dark, subtype }) => {
+  /** DJ: the Distance filter's radius. The first search uses it, and pins and cards further than it are left out (measured here). */
+  maxKm?: number | null;
+}> = ({ authUserId, dark, subtype, maxKm = null }) => {
   const navigate = useNavigate();
   const [phase, setPhase] = useState<"checking" | "ask" | "locating" | "ready">("checking");
   const [origin, setOrigin] = useState<Origin | null>(null);
@@ -192,9 +194,9 @@ export const NearbyView: React.FC<{
 
   // The first search, once there is an origin.
   useEffect(() => {
-    if (origin) void search(origin.coords, 25);
+    if (origin) void search(origin.coords, maxKm ?? 25);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [origin?.coords.lat, origin?.coords.lng]);
+  }, [origin?.coords.lat, origin?.coords.lng, maxKm]);
 
   const onViewChange = (center: Coords, radiusKm: number) => {
     window.clearTimeout(timer.current);
@@ -208,8 +210,9 @@ export const NearbyView: React.FC<{
     return [...found.values()]
       .filter((p) => !subtype || p.subtype === subtype)
       .map((p) => ({ p, km: distanceKm(origin.coords, { lat: p.lat, lng: p.lng }) }))
+      .filter((n) => maxKm == null || n.km <= maxKm)
       .sort((a, b) => a.km - b.km);
-  }, [found, origin, subtype]);
+  }, [found, origin, subtype, maxKm]);
 
   const distanceOf = (p: NearbyProfessional) =>
     origin ? describeDistance(distanceKm(origin.coords, { lat: p.lat, lng: p.lng })) : "";

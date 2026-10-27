@@ -46,6 +46,10 @@ export interface ProfessionalCardData {
   fromPrice?: string | null;
 }
 
-/** The card's place: the distance ("1.2 km") or the area. */
+/**
+ * The card's place: the distance or the area. "about 1.2 km" (Karim, DJ,
+ * 2026-10-27; the board's "1.2 km"): the distance is to a ~1 km area, so it
+ * never claims more than that.
+ */
 export const placeOf = (p: Pick<ProfessionalCardData, "distanceKm" | "area">): string | null =>
-  p.distanceKm != null && Number.isFinite(p.distanceKm) ? `${p.distanceKm.toFixed(1)} km` : (p.area ?? null);
+  p.distanceKm != null && Number.isFinite(p.distanceKm) ? `about ${p.distanceKm.toFixed(1)} km` : (p.area ?? null);
