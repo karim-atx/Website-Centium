@@ -22,5 +22,11 @@ export const consentLine = (pro: string, kind: "intake" | "check_in", bodyHidden
     : `Your answers go to ${pro} when you send. ${pro} sees your photos and measurements with this ${what} only.`;
 };
 
+/**
+ * Release A (save_form_response p_consent, not drawn): the required box
+ * above Send. The fallback name ("Your professional") reads mid-sentence.
+ */
+export const consentBox = (pro: string) => `Share these answers with ${pro === "Your professional" ? "your professional" : pro}`;
+
 /** FINAL_PLAN 3 §6.2: no service promise. */
 export const thanksLine = (pro: string) => `Thanks. ${pro} will review it.`;

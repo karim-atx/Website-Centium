@@ -1,6 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { consentLine } from "./copy.ts";
+import { consentBox, consentLine } from "./copy.ts";
+
+describe("client forms consent box (Release A)", () => {
+  it("names the professional, and reads the fallback mid-sentence", () => {
+    assert.equal(consentBox("Rami"), "Share these answers with Rami");
+    assert.equal(consentBox("Your professional"), "Share these answers with your professional");
+  });
+});
 
 describe("client forms consent line", () => {
   it("names photos and measurements when they're shown", () => {

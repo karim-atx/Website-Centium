@@ -17,9 +17,12 @@ import { savePaymentModalities } from "../../../services/pro/profile";
  * - Payment methods you accept: Cash and Card at sessions
  *   (professional_profiles.payment_modalities 'cash' and 'card', each "You
  *   confirm each payment": a card taken in person is confirmed like cash);
- *   Card in the app, Coming soon (no in-app payments); Bank transfer, Coming
- *   soon: payment_modality has no bank transfer value yet (backend gap). Any
- *   other stored value (whish) is kept as it is on every save.
+ *   Card in the app, Coming soon (no in-app payments). Bank transfer
+ *   (W6C-2, 20261216080000: payment_modality gains 'bank_transfer') is a
+ *   method you accept like cash, confirmed by you; Centium moves no money, so
+ *   the frame's "Show your details on invoices" (there are no invoices yet)
+ *   reads as Cash and Card do. Any other stored value (whish) is kept as it
+ *   is on every save.
  * - Payouts, Invoices and receipts: states only (no in-app payments).
  * - Your Centium plan: the effective tier (useEffectiveProfessionalTier, the
  *   sidebar's own read) opening Subscription.
@@ -32,8 +35,9 @@ export default function Payments() {
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const accepts = (m: "cash" | "card") => !!facts?.paymentModalities.includes(m);
-  const setModality = async (m: "cash" | "card", on: boolean) => {
+  type Modality = "cash" | "card" | "bank_transfer";
+  const accepts = (m: Modality) => !!facts?.paymentModalities.includes(m);
+  const setModality = async (m: Modality, on: boolean) => {
     if (!authUserId || !facts || busy) return;
     const next = on ? [...new Set([...facts.paymentModalities, m])] : facts.paymentModalities.filter((x) => x !== m);
     setBusy(true);
@@ -65,7 +69,13 @@ export default function Payments() {
             <SettingsRow icon={Banknote} title="Cash" sub="You confirm each payment" right={<Toggle checked={accepts("cash")} onChange={(v) => void setModality("cash", v)} disabled={busy} label="Cash" />} />
             <SettingsRow icon={CreditCard} title="Card at sessions" sub="You confirm each payment" right={<Toggle checked={accepts("card")} onChange={(v) => void setModality("card", v)} disabled={busy} label="Card at sessions" />} />
             <SettingsRow icon={CreditCard} title="Card in the app" sub="Coming soon" right={<Toggle checked={false} onChange={() => {}} disabled label="Card in the app, coming soon" />} />
-            <SettingsRow icon={Landmark} title="Bank transfer" sub="Show your details on invoices" value={<ComingSoonPill />} last />
+            <SettingsRow
+              icon={Landmark}
+              title="Bank transfer"
+              sub="You confirm each payment"
+              right={<Toggle checked={accepts("bank_transfer")} onChange={(v) => void setModality("bank_transfer", v)} disabled={busy} label="Bank transfer" />}
+              last
+            />
             {saveError && <ErrorLine>{saveError}</ErrorLine>}
           </Section>
 

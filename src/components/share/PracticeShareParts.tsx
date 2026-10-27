@@ -53,7 +53,7 @@ export const MilestoneShareCard: React.FC<{ totals: PracticeTotals | null | unde
           </button>
         </div>
       </div>
-      {open && pro && <ShareFlow open onClose={() => setOpen(false)} spec={milestoneCard({ ...totals, sessionsDelivered: m })} pro={pro} kind={null} />}
+      {open && pro && <ShareFlow open onClose={() => setOpen(false)} spec={milestoneCard({ ...totals, sessionsDelivered: m })} pro={pro} kind="milestone" />}
     </>
   );
 };

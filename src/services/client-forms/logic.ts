@@ -431,6 +431,49 @@ export function referralBody(r: PendingReferral): string {
   return `To another professional. If you agree, they get ${r.fromName}'s referral and the reason for it. Nothing else is shared.`;
 }
 
+/**
+ * Release A (20261216060000): a referral the receiving professional accepted.
+ * Accepting connects nobody; connecting is the client's own second decision
+ * (connect_from_referral), where they pick what to share. Not drawn: worded
+ * from CU23's referral pop-up, one level-2 item like it.
+ */
+export interface ConnectReferral {
+  id: string;
+  fromId: string;
+  fromName: string;
+  toId: string;
+  /** The receiving professional's first name, or null when unreadable. */
+  toName: string | null;
+  respondedAt: string;
+}
+
+export function connectTitle(r: ConnectReferral): string {
+  return r.toName ? `${r.toName} accepted ${r.fromName}'s referral` : `Your referral from ${r.fromName} was accepted`;
+}
+
+export function connectBody(r: ConnectReferral): string {
+  const who = r.toName ?? "they";
+  return r.toName
+    ? `Connect to become ${r.toName}'s client. You choose what ${who} can see. Nothing is shared until you do.`
+    : "Connect to become their client. You choose what they can see. Nothing is shared until you do.";
+}
+
+/** CU23 level 2 (needs an answer), on the referring professional's card like the referral was. */
+export function connectReminder(r: ConnectReferral): Reminder {
+  return {
+    key: `connect:${r.id}`,
+    kind: "referral_connect",
+    level: 2,
+    at: new Date(r.respondedAt).getTime() || 0,
+    proId: r.fromId,
+    proName: r.fromName,
+    tone: "pr",
+    title: connectTitle(r),
+    detail: "Connect and choose what to share",
+    action: "Review",
+  };
+}
+
 export interface TodaySession {
   id: string;
   proId: string;

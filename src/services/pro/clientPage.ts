@@ -19,6 +19,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import type { Read, Write, ClientStage } from "./clients";
 import type { AccessCategory } from "./access";
+import { ACCESS_CATEGORIES } from "../consent";
 
 const failed = (error: unknown, fallback: string): Write => ({ ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : fallback });
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
@@ -107,6 +108,23 @@ export interface ChangeEntry {
   at: string;
   /** One readable line, e.g. "Changed the stage from Onboarding to Active". */
   line: string;
+  /** Who made the change: the professional, or (W3-4 sharing rows) the client. */
+  by: "pro" | "client";
+}
+
+/** W3-4: the sharing switch names, as the client's own sharing screen words them. */
+const SHARING_WORD: Record<string, string> = Object.fromEntries(ACCESS_CATEGORIES.map((c) => [c.category, c.label.toLowerCase()]));
+
+/**
+ * W3-4 (20261216070000): the client_access_grants trigger writes subject_type
+ * 'client_sharing' with summary { category } and nothing else. CATEGORY AND
+ * DATE ONLY (Karim): no direction is stored, so CL4's "turned off" cannot be
+ * said; the line is neutral, "{First name} changed {category} sharing".
+ */
+export function sharingLine(firstName: string, summary: Record<string, unknown>): string {
+  const cat = typeof summary.category === "string" ? summary.category : "";
+  const word = SHARING_WORD[cat] ?? (cat ? cat.replace(/_/g, " ") : "their");
+  return `${firstName.trim() || "Your client"} changed ${word} sharing`;
 }
 
 const STAGE_WORD: Record<ClientStage, string> = { onboarding: "Onboarding", active: "Active", paused: "Paused", completed: "Completed" };
@@ -130,7 +148,7 @@ export function changeLine(subjectType: string, summary: Record<string, unknown>
   return name ? `${cap} ${subject}: ${name}` : `${cap} ${subject}`;
 }
 
-export async function fetchChangeHistory(me: string, clientId: string): Promise<Read<ChangeEntry[]>> {
+export async function fetchChangeHistory(me: string, clientId: string, clientFirstName: string): Promise<Read<ChangeEntry[]>> {
   const [log, stages] = await Promise.all([
     from("pro_change_log").select("id, subject_type, summary, at").eq("professional_id", me).eq("client_id", clientId).order("at", { ascending: false }).limit(100),
     from("professional_client_stage_history").select("id, from_stage, to_stage, changed_at").eq("professional_id", me).eq("client_id", clientId).order("changed_at", { ascending: false }).limit(50),
@@ -139,13 +157,18 @@ export async function fetchChangeHistory(me: string, clientId: string): Promise<
   if (error) return readFail(error);
   const out: ChangeEntry[] = [];
   for (const r of (log.data ?? []) as unknown as { id: string; subject_type: string; summary: Record<string, unknown> | null; at: string }[]) {
-    out.push({ id: `log:${r.id}`, at: r.at, line: changeLine(r.subject_type, r.summary ?? {}) });
+    out.push(
+      r.subject_type === "client_sharing"
+        ? { id: `log:${r.id}`, at: r.at, line: sharingLine(clientFirstName, r.summary ?? {}), by: "client" }
+        : { id: `log:${r.id}`, at: r.at, line: changeLine(r.subject_type, r.summary ?? {}), by: "pro" },
+    );
   }
   for (const r of (stages.data ?? []) as unknown as { id: string; from_stage: ClientStage | null; to_stage: ClientStage; changed_at: string }[]) {
     out.push({
       id: `stage:${r.id}`,
       at: r.changed_at,
       line: r.from_stage ? `Changed the stage from ${STAGE_WORD[r.from_stage]} to ${STAGE_WORD[r.to_stage]}` : `Started in ${STAGE_WORD[r.to_stage]}`,
+      by: "pro",
     });
   }
   out.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));

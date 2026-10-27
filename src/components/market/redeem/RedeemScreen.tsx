@@ -214,7 +214,7 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
         }
       >
         {view ? (
-          <ResultBody m={m} tone={view.tone} icon={view.icon} title={view.title} body={view.body} rows={view.rows} error={markError} />
+          <ResultBody m={m} tone={view.tone} icon={view.icon} title={view.title} body={view.body} rows={view.rows} note={view.note} error={markError} />
         ) : null}
       </BottomSheet>
     </div>
@@ -330,8 +330,9 @@ const ResultBody: React.FC<{
   title: string;
   body: string;
   rows: { k: string; v: string }[];
+  note?: string;
   error?: string | null;
-}> = ({ m, tone, icon, title, body, rows, error }) => {
+}> = ({ m, tone, icon, title, body, rows, note, error }) => {
   const [bg, ink] = tone === "good" ? [m.goodbg, m.good] : tone === "caution" ? [m.cautionbg, m.caution] : [m.highbg, m.high];
   return (
     <div role="status" aria-live="polite" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", lineHeight: "normal", color: m.ink }}>
@@ -358,6 +359,12 @@ const ResultBody: React.FC<{
             </div>
           ))}
         </dl>
+      ) : null}
+      {/* DH (not drawn): the check-ID note, the rows' shape in Already used's caution colours. */}
+      {note ? (
+        <p style={{ margin: "10px 0 0", width: "100%", boxSizing: "border-box", borderRadius: 14, background: m.cautionbg, padding: "10px 14px", textAlign: "left", fontSize: textPx(12.5), lineHeight: linePx(18), fontWeight: 600, color: m.caution }}>
+          {note}
+        </p>
       ) : null}
       {error ? (
         <p role="alert" style={{ margin: "12px 0 0", fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: m.high }}>

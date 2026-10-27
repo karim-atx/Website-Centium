@@ -10,7 +10,7 @@ import {
   cardPayload,
   clientShownAs,
   clipQuote,
-  itemFormat,
+  FORMATS,
   itemKind,
   milestoneCard,
   reachedMilestone,
@@ -108,9 +108,15 @@ test("stored payloads pass the allowlist and come back as the same card", () => 
 });
 
 test("shared_items format and kind", () => {
-  assert.equal(itemFormat("square"), "post");
-  assert.equal(itemFormat("sticker"), "sticker");
-  assert.equal(itemKind(milestoneCard({ sessionsDelivered: 10, clientsCoached: 1, averageRating: null, reviewCount: 0, yearsOnCentium: null })), null);
+  // W8-4 (Release A 20261216010000): shared_items.format checks story, post,
+  // square, sticker, link, so every export format is recorded as itself.
+  const DB_FORMATS = ["story", "post", "square", "sticker", "link"];
+  for (const f of FORMATS) assert.ok(DB_FORMATS.includes(f), f);
+  const square = cardPayload(milestoneCard({ sessionsDelivered: 10, clientsCoached: 1, averageRating: null, reviewCount: 0, yearsOnCentium: null }), "square", "B", null);
+  assert.equal(square.format, "square");
+  assert.equal(specFromPayload(square, "Rami")!.format, "square");
+  // W8-3 (20261216020000): a practice milestone is recorded as `milestone`.
+  assert.equal(itemKind(milestoneCard({ sessionsDelivered: 10, clientsCoached: 1, averageRating: null, reviewCount: 0, yearsOnCentium: null })), "milestone");
   assert.equal(itemKind(winCard(win("pr", { pr_exercise: "Row", pr_load_kg: 80 }))!), "win");
 });
 

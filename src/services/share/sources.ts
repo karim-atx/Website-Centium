@@ -8,9 +8,10 @@
 // - packages: hire plans with a session count (services/pro/profile
 //   fetchServicePlans, active only);
 // - professional_open_slots(p_professional, p_from, p_to, p_service_id)
-//   (DB-4), this week only;
-// - the Community: forum_threads_readable pages plus forum_author_labels'
-//   is_mine (posts carry no author column), published, under the real name.
+//   (DB-4), this week only, per session type (see fetchWeekSlots);
+// - the Community: my_forum_threads() (Release A; posts carry no author
+//   column) plus forum_threads_readable for the body, published, under the
+//   real name.
 
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline } from "../network-error";
@@ -18,7 +19,6 @@ import { rpc } from "../pro/rpc";
 import { fetchCourseCards } from "../pro/courses";
 import { fetchTemplates } from "../pro/nutrition";
 import { fetchServicePlans } from "../pro/profile";
-import { fetchAuthors, fetchThreads } from "../forum";
 import { clock12 } from "../../utils/time12";
 import type { ClientWin, WinKind } from "../../components/share/shareCardModel";
 import type { Read } from "./index";
@@ -85,6 +85,12 @@ export async function fetchPromoItems(me: string, lane: "full_coaching" | "nutri
  * starts of every active session type are merged, then thinned to slots that
  * don't overlap (the reader offers a start every 15 minutes). null data = no
  * session type.
+ *
+ * Kept per type although Release A made p_service_id optional (W8-7): on the
+ * local stack the call without a type took 22-30 s against 8-15 s per type,
+ * past the 8 s statement timeout either way, and one call puts every type's
+ * work in one budget. Back to one call once the reader is fast (reported to
+ * the Database session).
  */
 export async function fetchWeekSlots(me: string, now: Date): Promise<Read<string[] | null>> {
   const svc = await from("appointment_services").select("id").eq("professional_id", me).eq("active", true);
@@ -125,25 +131,26 @@ export interface MyPost {
   categoryKey: string;
 }
 
-/** My published Community posts under my real name (forum_author_labels is_mine), newest first, from the latest pages. */
-export async function fetchMyPosts(pages = 3): Promise<Read<MyPost[]>> {
+/**
+ * My published Community posts under my real name, newest first. W8-6
+ * (Database Release A 20261216090000): my_forum_threads() answers for the
+ * caller only (id, title, category_key, status, created_at, reply_count;
+ * author_id stays ungranted), so older posts are found too. It carries no
+ * body or identity, so those come from forum_threads_readable by id; a
+ * nickname post is never put under the real name.
+ */
+export async function fetchMyPosts(): Promise<Read<MyPost[]>> {
+  const mine = await rpc("my_forum_threads", { p_limit: 50 });
+  if (mine.error) return readFail(mine.error);
+  const ids = ((Array.isArray(mine.data) ? mine.data : []) as { id: string; status: string }[]).filter((t) => t.status === "published").map((t) => t.id);
+  if (!ids.length) return { ok: true, data: [] };
+  const { data, error } = await from("forum_threads_readable").select("id, identity, title, body, category_key, status, withdrawn").in("id", ids);
+  if (error) return readFail(error);
+  const byId = new Map(((data ?? []) as unknown as { id: string; identity: string; title: string | null; body: string | null; category_key: string; status: string; withdrawn: boolean }[]).map((t) => [t.id, t]));
   const out: MyPost[] = [];
-  let before: string | null = null;
-  for (let i = 0; i < pages; i++) {
-    const r = await fetchThreads({ categoryKey: null, before });
-    if (!r.ok) return { ok: false, offline: false };
-    const list = r.value;
-    if (!list.length) break;
-    const authors = await fetchAuthors(
-      list.map((t) => t.id),
-      []
-    );
-    for (const t of list) {
-      if (authors.get(t.id)?.isMine && t.status === "published" && t.identity === "real_name" && t.body) out.push({ id: t.id, body: t.body, title: t.title, categoryKey: t.categoryKey });
-    }
-    const last = list.filter((t) => !t.pinned).pop();
-    if (!last || list.length < 30) break;
-    before = last.createdAt;
+  for (const id of ids) {
+    const t = byId.get(id);
+    if (t && t.status === "published" && !t.withdrawn && t.identity === "real_name" && t.body) out.push({ id, body: t.body, title: t.title, categoryKey: t.category_key });
   }
   return { ok: true, data: out };
 }

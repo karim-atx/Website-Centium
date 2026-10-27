@@ -31,6 +31,14 @@ export interface InviteLink {
   expiresAt: string;
   uses: number;
   maxUses: number;
+  /**
+   * W2-5c (20261216070000) client_codes.opened_at: when somebody first loaded
+   * /i/{code} (record_invite_open, from the link only), null until then. One
+   * stamp per LINK, not per person: every email or phone invite carries the
+   * same current link (invite_client uses current_invite_link_for), so this
+   * cannot say which invitee opened it.
+   */
+  openedAt: string | null;
 }
 
 export type Result<T> = { ok: true; data: T } | { ok: false; message: string; offline?: boolean };
@@ -49,16 +57,22 @@ export async function fetchInvitesAllowed(me: string): Promise<Result<boolean>> 
 
 /** The newest usable invite link: not revoked, not expired, not used up. */
 export async function fetchCurrentInviteLink(): Promise<Result<InviteLink | null>> {
+  // opened_at isn't in the generated types yet (Release A): cast at this boundary.
   const { data, error } = await supabase
-    .from("client_codes")
-    .select("id, code, expires_at, uses, max_uses, revoked_at, kind")
+    .from("client_codes" as never)
+    .select("id, code, expires_at, uses, max_uses, revoked_at, kind, opened_at")
     .eq("kind", "invite_link")
     .is("revoked_at", null)
     .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false });
   if (error) return { ok: false, message: "Couldn't load your invite link. Try again.", offline: isOffline(error) };
-  const row = (data ?? []).find((r) => (r.uses ?? 0) < (r.max_uses ?? 1));
-  return { ok: true, data: row ? { id: row.id, code: row.code, expiresAt: row.expires_at, uses: row.uses ?? 0, maxUses: row.max_uses ?? 1 } : null };
+  const row = ((data ?? []) as unknown as { id: string; code: string; expires_at: string; uses: number | null; max_uses: number | null; opened_at: string | null }[]).find(
+    (r) => (r.uses ?? 0) < (r.max_uses ?? 1),
+  );
+  return {
+    ok: true,
+    data: row ? { id: row.id, code: row.code, expiresAt: row.expires_at, uses: row.uses ?? 0, maxUses: row.max_uses ?? 1, openedAt: row.opened_at ?? null } : null,
+  };
 }
 
 /** create_invite_link with its defaults (90 days, 200 people). */
@@ -70,7 +84,7 @@ export async function createInviteLink(): Promise<Result<InviteLink>> {
     return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't create your invite link. Try again.", offline: isOffline(error) };
   }
   const r = data as { id: string; code: string; expires_at: string; uses: number | null; max_uses: number | null };
-  return { ok: true, data: { id: r.id, code: r.code, expiresAt: r.expires_at, uses: r.uses ?? 0, maxUses: r.max_uses ?? 1 } };
+  return { ok: true, data: { id: r.id, code: r.code, expiresAt: r.expires_at, uses: r.uses ?? 0, maxUses: r.max_uses ?? 1, openedAt: null } };
 }
 
 /** preview_invite_link(code).licence_verified (anon reader, Karim's answer 1). Null when unknown. */

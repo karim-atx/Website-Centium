@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { ShareEditorSheet, type EditorResult, type WinConsent } from "./ShareEditorSheet";
 import { ShareOptionsSheet } from "./ShareOptionsSheet";
-import { cardPayload, itemFormat, type CardPro, type CardSpec, type ShareFormat } from "./shareCardModel";
+import { cardPayload, type CardPro, type CardSpec, type ShareFormat } from "./shareCardModel";
 import { recordErrorMessage, recordSharedItem, sharedItemPath, type ItemKind } from "../../services/share";
 import { siteHref } from "../../config/site";
 
@@ -12,18 +12,18 @@ import { siteHref } from "../../config/site";
  * public card exist before the image leaves the device; a win is refused
  * unless the client allowed it. The payload carries only the allowlisted
  * keys (shareCardModel.cardPayload) and the stats left switched on.
- * shared_items.format is where the card went: Square is a post.
+ * shared_items.format is the export's own format, Square included (W8-4,
+ * Database Release A 20261216010000).
  *
- * A practice milestone has no shared_items kind (the backend lists win,
- * profile, review, slot, content, programme, course, package, meal_plan), so
- * it is exported without a record and has no public link.
+ * Every card is recorded: a practice milestone as kind `milestone` (W8-3,
+ * 20261216020000), so it has a public link like the others.
  */
 export const ShareFlow: React.FC<{
   open: boolean;
   onClose: () => void;
   spec: CardSpec;
   pro: CardPro;
-  kind: ItemKind | null;
+  kind: ItemKind;
   win?: { consent: WinConsent; requestId: string; label: string } | null;
   statRows?: { title: string; sub: string }[];
   onShared?: () => void;
@@ -39,14 +39,13 @@ export const ShareFlow: React.FC<{
 
   const onRecord = async (format: ShareFormat): Promise<{ ok: true; link: string | null } | { ok: false; message: string }> => {
     if (!result) return { ok: false, message: "Couldn't share the card. Try again." };
-    if (!kind) return { ok: true, link: null };
     const shown = { ...spec, stats: spec.stats.filter((_, i) => !result.hide.includes(i)) };
     const payload = cardPayload(shown, format, result.style, win ? (result.client ?? null) : null);
     const key = JSON.stringify(payload);
     const link = (id: string) => siteHref(sharedItemPath(id));
     const hit = recorded.current.get(key);
     if (hit) return { ok: true, link: link(hit) };
-    const r = await recordSharedItem(kind, itemFormat(format), payload, win?.requestId ?? null);
+    const r = await recordSharedItem(kind, format, payload, win?.requestId ?? null);
     if (!r.ok) return { ok: false, message: r.offline ? "You're offline. Try again when you're back online." : recordErrorMessage(r.code, r.message) };
     recorded.current.set(key, r.data);
     onShared?.();

@@ -40,7 +40,7 @@ import {
 import { fetchClientStages } from "../../services/pro/clients";
 
 type Step = { at: "menu" } | { at: "wins"; kinds: WinKind[]; title: string } | { at: "reviews" } | { at: "promo" } | { at: "posts" };
-type Flow = { spec: CardSpec; kind: ItemKind | null };
+type Flow = { spec: CardSpec; kind: ItemKind };
 
 const inMonth = (iso: string, now: Date) => {
   const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
@@ -150,7 +150,7 @@ export const WhatToShareSheet: React.FC<{ open: boolean; onClose: () => void; la
 
   const openMilestone = () => {
     if (!t || milestone == null) return;
-    setFlow({ spec: milestoneCard({ ...t, sessionsDelivered: milestone }), kind: null });
+    setFlow({ spec: milestoneCard({ ...t, sessionsDelivered: milestone }), kind: "milestone" });
   };
   const openProfile = () => {
     const rate = own?.monthlyRate ? { value: priceLabel(own.monthlyRate), label: "a month" } : own?.consultationRate ? { value: priceLabel(own.consultationRate), label: "a session" } : null;
