@@ -54,7 +54,8 @@ export function sentChip(status: ReferralStatus, clientFirst: string, proFirst: 
 export const canWithdraw = (s: ReferralStatus) => s === "awaiting_client" || s === "sent";
 /**
  * MO7 v3 "decline, reason dropdown open": the frame's five reasons. Release A
- * stores the reason as text (care_referrals.decline_reason, 1 to 500), so a
+ * stores the reason as text (care_referral_declines.reason, 1 to 500, read
+ * by the two professionals only), so a
  * preset saves its label and Other saves what the professional types.
  * Optional: no reason chosen declines with none.
  */

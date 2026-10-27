@@ -8,7 +8,10 @@
 //   declined_by_client, withdrawn, disputed, closed): refer_client (only to
 //   a linked colleague, only a current client), respond_care_referral,
 //   withdraw_care_referral, dispute_care_referral. Release A: a decline may
-//   carry decline_reason (p_reason); accepting connects nobody, the client
+//   carry a reason (p_reason), kept in care_referral_declines, a side table
+//   only the two professionals read (Database #41 7ea8d57: a column on
+//   care_referrals would be readable by the client, so there is none);
+//   accepting connects nobody, the client
 //   connects themselves (connect_from_referral). The receiver reads nothing
 //   until the client agreed (the select policy hides awaiting_client and
 //   declined_by_client); disputes go to support as "Care network disputes".
@@ -143,11 +146,21 @@ export interface Referral {
 
 export async function fetchReferrals(me: string): Promise<Read<{ received: Referral[]; sent: Referral[] }>> {
   const { data, error } = await from("care_referrals")
-    .select("id, from_professional, to_professional, client_id, reason, status, created_at, client_answered_at, responded_at, disputed_at, decline_reason")
+    .select("id, from_professional, to_professional, client_id, reason, status, created_at, client_answered_at, responded_at, disputed_at")
     .or(`from_professional.eq.${me},to_professional.eq.${me}`)
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) return readFail(error);
+  // The reasons for this page's declined referrals (both professionals read them).
+  const declinedIds = ((data ?? []) as unknown as { id: string; status: ReferralStatus }[]).filter((r) => r.status === "declined").map((r) => r.id);
+  const reasons = new Map<string, string>();
+  if (declinedIds.length) {
+    const d = await from("care_referral_declines").select("referral_id, reason").in("referral_id", declinedIds);
+    if (d.error) return readFail(d.error);
+    for (const r of (d.data ?? []) as unknown as { referral_id: string; reason: string }[]) {
+      if (r.reason?.trim()) reasons.set(r.referral_id, r.reason.trim());
+    }
+  }
   const all = ((data ?? []) as unknown as {
     id: string;
     from_professional: string;
@@ -159,7 +172,6 @@ export async function fetchReferrals(me: string): Promise<Read<{ received: Refer
     client_answered_at: string | null;
     responded_at: string | null;
     disputed_at: string | null;
-    decline_reason: string | null;
   }[]).map((r) => ({
     id: r.id,
     fromId: r.from_professional,
@@ -171,7 +183,7 @@ export async function fetchReferrals(me: string): Promise<Read<{ received: Refer
     clientAnsweredAt: r.client_answered_at,
     respondedAt: r.responded_at,
     disputedAt: r.disputed_at,
-    declineReason: r.decline_reason?.trim() || null,
+    declineReason: reasons.get(r.id) ?? null,
   }));
   return { ok: true, data: { received: all.filter((r) => r.toId === me), sent: all.filter((r) => r.fromId === me) } };
 }

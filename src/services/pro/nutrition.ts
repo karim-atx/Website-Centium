@@ -538,15 +538,21 @@ export interface ClientGoal {
   createdAt: string;
 }
 
-/** The client's current nutrition_goals row (Progress switch): their weight goal, desired weight and rate. */
+/**
+ * The client's current nutrition_goals row (Progress switch): their weight
+ * goal and rate. Not their target weight: since Database #41
+ * (20261216100000) desired_weight_kg is outside the table's select grant
+ * (naming it fails the whole read), and nobody reads a client's own target
+ * weight off the table; the professional's own is my_client_nutrition_targets.
+ */
 export async function fetchClientGoal(clientId: string): Promise<Read<ClientGoal | null>> {
   const { data, error } = await from("nutrition_goals")
-    .select("weight_goal, weekly_rate_kg, desired_weight_kg, target_calories, protein_pct, carbs_pct, fat_pct, set_by_professional_id, locked, created_at")
+    .select("weight_goal, weekly_rate_kg, target_calories, protein_pct, carbs_pct, fat_pct, set_by_professional_id, locked, created_at")
     .eq("user_id", clientId)
     .eq("is_current", true)
     .limit(1);
   if (error) return readFail(error);
-  type Row = { weight_goal: ClientGoal["weightGoal"]; weekly_rate_kg: unknown; desired_weight_kg: unknown; target_calories: unknown; protein_pct: unknown; carbs_pct: unknown; fat_pct: unknown; set_by_professional_id: string | null; locked: boolean; created_at: string };
+  type Row = { weight_goal: ClientGoal["weightGoal"]; weekly_rate_kg: unknown; target_calories: unknown; protein_pct: unknown; carbs_pct: unknown; fat_pct: unknown; set_by_professional_id: string | null; locked: boolean; created_at: string };
   const r = ((data ?? []) as unknown as Row[])[0];
   if (!r) return { ok: true, data: null };
   return {
@@ -554,7 +560,7 @@ export async function fetchClientGoal(clientId: string): Promise<Read<ClientGoal
     data: {
       weightGoal: r.weight_goal,
       weeklyRateKg: num(r.weekly_rate_kg) ?? 0,
-      desiredWeightKg: num(r.desired_weight_kg),
+      desiredWeightKg: null,
       calories: num(r.target_calories) ?? 0,
       proteinPct: num(r.protein_pct) ?? 0,
       carbsPct: num(r.carbs_pct) ?? 0,
