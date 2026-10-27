@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="page-sub page-calm page-404">
+<html lang="en" class="page-sub page-404">
   <head>
     <meta charset="utf-8" />
     <style>html{background:#02060C;color-scheme:dark}</style>
@@ -34,12 +34,14 @@
     <link rel="preload" href="https://fonts.gstatic.com/s/manrope/v20/xn7gYHE41ni1AdIRggexSg.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" />
     <link rel="stylesheet" href="/assets/css/atraxia.css" />
+    <link rel="stylesheet" href="/assets/css/404.css" />
     <script src="/assets/js/core.js"></script>
+    <script src="/assets/js/404-sky.js" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
     <div class="sl-arrive" aria-hidden="true"></div>
-    <div class="sl-sky" aria-hidden="true"><div class="bd-glow"></div><div class="bd-grain"></div></div>
+    <div class="sl-sky" aria-hidden="true"></div>
     <header class="nav">
       <div class="wrap nav-top">
         <a class="lockup" href="/" aria-label="Atraxia home">
@@ -71,12 +73,17 @@
         <span class="meta">EST. 2026</span>
       </div>
     </header>
-    <main id="main" tabindex="-1" class="nf-page">
-      <div class="wrap nf-head">
-        <span class="sl-eyebrow">ERROR 404</span>
-        <h1>Page not found</h1>
-        <p>This page has drifted out of orbit. It may have moved, or the link may be out of date.</p>
-        <a class="btn btn--primary" href="/">Back to home</a>
+    <main id="main" tabindex="-1" class="nf">
+      <div class="wrap nf-wrap">
+        <span class="nf-eyebrow"><span class="rule" aria-hidden="true"></span><span class="label">ERROR</span></span>
+        <p class="nf-code" aria-hidden="true">404</p>
+        <h1 class="nf-h">This page drifted out of orbit.</h1>
+        <p class="nf-lede">The page you’re looking for doesn’t exist or has moved.</p>
+        <div class="nf-actions">
+          <a class="btn nf-btn nf-home" href="/">Back to home</a>
+          <a class="btn nf-btn nf-ghost" href="/contact">Contact us</a>
+          <a class="btn nf-btn nf-ghost" href="/blog">Read our thinking</a>
+        </div>
       </div>
     </main>
     <footer class="site-footer">
