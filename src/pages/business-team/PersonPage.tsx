@@ -32,11 +32,11 @@ import type { TeamData } from "./useTeamData";
 // SubstituteSheet, B9 assign_class_instructor) for this person's next
 // session; with more than one to come, a session picker first.
 //
-// Specialty, jobs and bio (OP1-132 C1, C2, C5) come from what the
-// professional lists publicly (public_professional_directory /
-// public_professional_experience). An unlisted professional (their own
-// choice; since Database #38 joining a team no longer unlists anybody) shows
-// none of those rows: only their licences.
+// Specialty and bio (OP1-132 C1, C5) come from what the professional lists
+// publicly (public_professional_directory); an unlisted professional (their
+// own choice; since Database #38 joining a team no longer unlists anybody)
+// shows neither. Jobs (C2) come from business_staff_experience (W6L-3), the
+// business's own reader for its accepted staff, so they show either way.
 
 export function PersonPage({ data }: { data: TeamData }) {
   const { id = "" } = useParams();
@@ -78,7 +78,8 @@ export function PersonPage({ data }: { data: TeamData }) {
       if (r.ok) setCreds(r.value.filter((c) => c.professionalId === id));
       else setCredError(true);
     });
-    void fetchPublicDetails(id).then((r) => {
+    // W6L-3: their experience through business_staff_experience (own staff only).
+    void fetchPublicDetails(id, businessId).then((r) => {
       if (!cancelled && r.ok) setDetails(r.value);
     });
     void fetchReviewsFor(id).then((r) => {

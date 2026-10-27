@@ -50,6 +50,12 @@ export interface ProfileFacts {
   monthlyRate: number | null;
   consultationRate: number | null;
   bio: string | null;
+  /**
+   * W7-9 (20261216050000) show_team_workplaces: whether the businesses they
+   * joined as an existing team appear on their public profile (one flag for
+   * all of them, default false). A Centium hire shows regardless.
+   */
+  showTeamWorkplaces: boolean;
 }
 
 const EMPTY_FACTS: ProfileFacts = {
@@ -65,12 +71,13 @@ const EMPTY_FACTS: ProfileFacts = {
   monthlyRate: null,
   consultationRate: null,
   bio: null,
+  showTeamWorkplaces: false,
 };
 
 export async function fetchProfileFacts(me: string): Promise<Read<ProfileFacts>> {
   try {
     const { data, error } = await from("professional_profiles")
-      .select("handle, handle_changed_at, specialties, work_mode, home_visit_km, listed_publicly, affiliated_business_id, payment_modalities, monthly_rate, consultation_rate, bio")
+      .select("handle, handle_changed_at, specialties, work_mode, home_visit_km, listed_publicly, affiliated_business_id, payment_modalities, monthly_rate, consultation_rate, bio, show_team_workplaces")
       .eq("profile_id", me)
       .maybeSingle();
     if (error) return readFail(error);
@@ -86,6 +93,7 @@ export async function fetchProfileFacts(me: string): Promise<Read<ProfileFacts>>
       monthly_rate: number | string | null;
       consultation_rate: number | string | null;
       bio: string | null;
+      show_team_workplaces?: boolean | null;
     } | null;
     if (!r) return { ok: true, data: EMPTY_FACTS };
     const num = (v: number | string | null) => (v === null || v === undefined ? null : Number(v));
@@ -104,6 +112,7 @@ export async function fetchProfileFacts(me: string): Promise<Read<ProfileFacts>>
         monthlyRate: num(r.monthly_rate),
         consultationRate: num(r.consultation_rate),
         bio: r.bio,
+        showTeamWorkplaces: r.show_team_workplaces === true,
       },
     };
   } catch (e) {
@@ -135,6 +144,10 @@ export const saveServiceRadius = (me: string, km: number | null) =>
 
 export const savePaymentModalities = (me: string, modalities: string[]) =>
   writeProfile(me, { payment_modalities: modalities }, "Couldn't save your payment methods. Try again.");
+
+/** W7-9: show_team_workplaces is in the per-column INSERT and UPDATE grants. */
+export const saveShowTeamWorkplaces = (me: string, show: boolean) =>
+  writeProfile(me, { show_team_workplaces: show }, "Couldn't save that. Try again.");
 
 export const saveRates = (me: string, monthly: number | null, consultation: number | null) =>
   writeProfile(me, { monthly_rate: monthly, consultation_rate: consultation }, "Couldn't save your rates. Try again.");

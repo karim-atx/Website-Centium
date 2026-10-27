@@ -71,11 +71,21 @@ export async function withdrawJoinRequest(id: string): Promise<Write> {
   return { ok: false, message: "Couldn't withdraw. Try again." };
 }
 
-/** MO17 Ask to join: same answers as joining by ID (one not-found message, a rate limit). */
-export async function requestToJoinById(businessId: string): Promise<Write> {
-  const { error } = await rpc("request_to_join_business_by_id", { p_business_id: businessId });
+/**
+ * MO17 Ask to join: same answers as joining by ID (one not-found message, a
+ * rate limit). W6A-1 (20261216080000): the requested role (a wish; the
+ * business chooses on accepting) and an optional message, at most 500
+ * (22023 past it); blank sends null. Resolved by argument name.
+ */
+export async function requestToJoinById(businessId: string, ask?: { role: string | null; message: string }): Promise<Write> {
+  const { error } = await rpc("request_to_join_business_by_id", {
+    p_business_id: businessId,
+    p_role: ask?.role ?? null,
+    p_message: ask?.message.trim() || null,
+  });
   if (!error) return { ok: true };
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
+  if (error.code === "22023" && `${error.message ?? ""}`.includes("500 characters")) return { ok: false, message: "Your message can be up to 500 characters." };
   if (error.code === "ATX02") return { ok: false, message: "Too many tries in a short time. Try again in an hour." };
   if (`${error.message ?? ""}`.includes("ATXB9")) return { ok: false, message: "This business isn't taking requests right now." };
   return { ok: false, message: "Couldn't send your request. Try again." };

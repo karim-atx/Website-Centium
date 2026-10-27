@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Link2, UserPlus, UserRound } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { CentredPopup } from "../../components/ui/CentredPopup";
 import { CtaButton } from "../../components/pro/profile/kit";
-import { inviteView, previewInviteLink, type InvitePreview } from "../../services/public-pro";
+import { inviteView, previewInviteLink, recordInviteOpen, type InvitePreview } from "../../services/public-pro";
 import { redeemClientCode } from "../../services/redemption";
 import { isActiveClientOf } from "../../services/connected-professional";
 import { textPx } from "../../theme/textSize";
@@ -70,6 +70,16 @@ export default function InviteLanding() {
     };
   }, [proId, authUserId]);
   const alreadyClient = !!proId && connected?.id === proId && connected.yes;
+
+  // W2-5c: the first open of the link marks the invite "Opened" for the
+  // professional. Once per page, after the preview found the invite, and not
+  // when the professional opens their own link to check it.
+  const openedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!proId || !authReady || authUserId === proId || openedFor.current === code) return;
+    openedFor.current = code;
+    void recordInviteOpen(code);
+  }, [proId, authReady, authUserId, code]);
 
   useEffect(() => {
     document.title = state.status === "found" ? `${state.preview.firstName} invited you · Centium` : "Invite · Centium";

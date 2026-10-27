@@ -6,7 +6,7 @@ import { copyText } from "../../components/business-more/share";
 import { fetchPublicDetails, respondJoinRequest, type JoinRequest, type PublicDetails } from "../../services/business-team/team";
 import { Avatar, BackRow, Notice, TeamScope, isOfflineNow, useTeamToast } from "./parts";
 import { SeatsFullSheet } from "./TeamSheets";
-import { requestLine, requestedWhen, seatCounts, teamTitle } from "./teamLogic";
+import { ROLE_LABEL, requestLine, requestedWhen, seatCounts, teamTitle } from "./teamLogic";
 import type { TeamData } from "./useTeamData";
 
 // OP1-123 / 124 (requests), 126 (deny confirm), 127 (approve with no free
@@ -117,6 +117,13 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p className="tm-rq-n">{r.name}</p>
                   {requestLine(details[r.professionalId] ?? null, today) && <p className="tm-rq-s">{requestLine(details[r.professionalId] ?? null, today)}</p>}
+                  {/* W6A-1: the role they asked for and their note (no frame draws these; the 9c line's style). */}
+                  {r.requestedRole && <p className="tm-rq-s">{`Role asked for: ${ROLE_LABEL[r.requestedRole]}`}</p>}
+                  {r.message && (
+                    <p className="tm-rq-s" style={{ whiteSpace: "pre-line", overflowWrap: "anywhere" }}>
+                      {r.message}
+                    </p>
+                  )}
                   <p className="tm-rq-w">{requestedWhen(r.createdAt, today)}</p>
                 </div>
               </div>
