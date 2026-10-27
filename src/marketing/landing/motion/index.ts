@@ -35,15 +35,25 @@ function spySection(): EngineSection {
     ["pricing", "pricing"],
     ["faq", "faq"],
   ];
+  // B4 QA (fps): the sections' page positions are read in measure(), not on
+  // every scroll pass, where getBoundingClientRect after the intro's writes
+  // forced a layout each frame (13% of the throttled intro's CPU).
+  let spans: [string, number, number][] = [];
   return {
-    scroll(_y, ctx) {
-      const vh = ctx.vh;
-      let spy: string | null = null;
+    measure() {
+      spans = [];
       ids.forEach(([k, id]) => {
         const el = document.getElementById(id);
         if (!el) return;
         const r = el.getBoundingClientRect();
-        if (r.top <= vh * 0.4 && r.bottom > vh * 0.4) spy = k;
+        spans.push([k, r.top + window.scrollY, r.bottom + window.scrollY]);
+      });
+    },
+    scroll(y, ctx) {
+      const line = y + ctx.vh * 0.4;
+      let spy: string | null = null;
+      spans.forEach(([k, top, bottom]) => {
+        if (top <= line && bottom > line) spy = k;
       });
       if (spy !== landingState.get().spy && !(Date.now() - spyClick.at < 900)) landingState.set({ spy });
     },

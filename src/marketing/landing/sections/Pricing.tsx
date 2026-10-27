@@ -143,10 +143,19 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
         es.forEach((en) => {
           if (!en.isIntersecting) return;
           io.disconnect();
+          // B4 QA: the row is scroll-snap x mandatory, and Chrome resolves a
+          // programmatic smooth scroll to 56px to the nearest snap point (0), so
+          // the nudge never moved (prototype too, measured scrollLeft 0
+          // throughout). Snapping is switched off for the nudge and put back
+          // once the row has returned to 0.
           timers.push(
             window.setTimeout(() => {
+              if (el.scrollLeft > 1) return;
+              const snap = el.style.scrollSnapType;
+              el.style.scrollSnapType = "none";
               el.scrollTo({ left: 56, behavior: "smooth" });
               timers.push(window.setTimeout(() => el.scrollTo({ left: 0, behavior: "smooth" }), 520));
+              timers.push(window.setTimeout(() => (el.style.scrollSnapType = snap), 1100));
             }, 350),
           );
         });

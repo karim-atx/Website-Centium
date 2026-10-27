@@ -46,7 +46,8 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
               <div data-w="0.6 0.75" data-op="" style={{ position: "absolute", inset: "0", opacity: "0", filter: "drop-shadow(0 0 4px rgba(143,104,246,.6))" }}>
                 <div style={{ position: "absolute", inset: "0", background: "rgba(143,104,246,.6)", WebkitMaskImage: "url(/body/zones/male-front-core.png)", maskImage: "url(/body/zones/male-front-core.png)", WebkitMaskSize: "100% 100%", maskSize: "100% 100%" }} />
               </div>
-              <img src="/body/male-front.png" alt="Front body" style={{ position: "relative", display: "block", height: "100%", width: "auto" }} />
+              {/* loading="lazy" (B4 QA, brief: only the intro and hero images load eagerly): the two body figures were fetched with the first paint on phones (250 KB). width/height are the files' own, so the box keeps its size before they load. */}
+              <img src="/body/male-front.png" alt="Front body" width={400} height={759} loading="lazy" decoding="async" style={{ position: "relative", display: "block", height: "100%", width: "auto" }} />
             </div>
             <span style={{ fontSize: "10px", fontWeight: "700", color: "#A9A29A" }}>
               Front
@@ -60,7 +61,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
               <div data-w="0.5 0.65" data-op="" style={{ position: "absolute", inset: "0", opacity: "0", filter: "drop-shadow(0 0 4px rgba(143,104,246,.6))" }}>
                 <div style={{ position: "absolute", inset: "0", background: "rgba(143,104,246,.6)", WebkitMaskImage: "url(/body/zones/male-back-shoulders.png)", maskImage: "url(/body/zones/male-back-shoulders.png)", WebkitMaskSize: "100% 100%", maskSize: "100% 100%" }} />
               </div>
-              <img src="/body/male-back.png" alt="Back body" style={{ position: "relative", display: "block", height: "100%", width: "auto" }} />
+              <img src="/body/male-back.png" alt="Back body" width={370} height={759} loading="lazy" decoding="async" style={{ position: "relative", display: "block", height: "100%", width: "auto" }} />
             </div>
             <span style={{ fontSize: "10px", fontWeight: "700", color: "#A9A29A" }}>
               Back

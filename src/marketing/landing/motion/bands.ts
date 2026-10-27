@@ -19,6 +19,10 @@ interface Slot {
   cv: HTMLCanvasElement;
   b: Band;
   on: boolean;
+  /** Page top and height of the canvas, read in measure() (B4 QA: the tick ran
+   *  getBoundingClientRect on every band every frame, a forced layout). */
+  top: number;
+  h: number;
 }
 
 export class BandsMotion implements EngineSection {
@@ -64,20 +68,25 @@ export class BandsMotion implements EngineSection {
         if (!cv.getContext || !cv.getContext("2d")) return null;
         const dom = this.pick.dom[bi];
         const old = prev.find((s) => s.cv === cv);
+        const r = cv.getBoundingClientRect(),
+          top = r.top + window.scrollY;
         if (old && old.b.o.dom === dom) {
           old.b.resize();
+          old.top = top;
+          old.h = r.height;
           return old;
         }
         const b = new Band(cv, { dom, seed: this.pick.seed[bi], n: window.innerWidth >= 1024 ? 30 : 24, q: this.low ? "low" : "high", rm: this.rm });
-        return { cv, b, on: false };
+        return { cv, b, on: false, top, h: r.height };
       })
       .filter((s): s is Slot => !!s);
   }
 
   tick(t: number, ctx: EngineCtx) {
-    const vh = ctx.vh;
+    const vh = ctx.vh,
+      y = window.scrollY;
     for (const s of this.slots) {
-      const r = s.cv.getBoundingClientRect();
+      const r = { top: s.top - y, bottom: s.top - y + s.h };
       const p = this.rm ? 1 : clamp((vh * 0.95 - r.top) / (vh * 0.6));
       const vis = r.bottom > -20 && r.top < vh + 20;
       if (!vis) {

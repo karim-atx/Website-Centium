@@ -91,13 +91,17 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
     ) : null}
     {sl.mTimeline ? (
       <>
+        {/* Pro 03, Pro 04, Biz 01, 03 and 05: the 8px minimum gap applies to
+            every slide (lead decision on B2). Their title/detail stacks (and
+            the Biz 03 label/bar stacks) use gap 7px instead of the prototype's
+            6px: at 6px the glyph boxes were 7.0px apart at every width. */}
         {sl.mb!.map((m, mI) => (
           <div key={mI} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <span style={{ width: "44px", flexShrink: "0", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#5B5349" }}>
               {m.t}
             </span>
             <span style={{ width: "10px", height: "10px", flexShrink: "0", borderRadius: "99px", background: m.c, boxShadow: "0 0 0 4px #F7F5FC,0 0 0 5px #E4DCF8" }} />
-            <div style={{ flex: "1", minWidth: "0", padding: "8px 12px", borderRadius: "10px", background: m.bg, display: "flex", flexDirection: "column", gap: "6px" }}>
+            <div style={{ flex: "1", minWidth: "0", padding: "8px 12px", borderRadius: "10px", background: m.bg, display: "flex", flexDirection: "column", gap: "7px" }}>
               <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
                 {m.n}
               </span>
@@ -205,7 +209,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
           <span style={{ width: "32px", height: "32px", flexShrink: "0", borderRadius: "99px", background: "#DED4F4", color: "#4E3894", fontSize: "12px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {sl.mca}
           </span>
-          <div style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "7px" }}>
             <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
               {sl.mcn}
             </span>
@@ -227,7 +231,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
               <span style={{ width: "44px", flexShrink: "0", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#5B5349" }}>
                 {m.t}
               </span>
-              <div style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "6px" }}>
+              <div style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "7px" }}>
                 <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
                   {m.n}
                 </span>
@@ -276,7 +280,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
     {sl.mBars ? (
       <>
         {sl.mb!.map((m, mI) => (
-          <div key={mI} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div key={mI} style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
                 {m.n}
@@ -326,7 +330,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
         <div style={{ height: "64px", borderRadius: "10px", background: "repeating-linear-gradient(135deg,#EDE8FB 0 10px,#F4F1FB 10px 20px)", display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: "6px 8px", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#7B6FA3" }}>
           gym photo
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
           <span style={{ fontSize: "16px", fontWeight: "800", color: "#221E1A" }}>
             {sl.mh}
           </span>

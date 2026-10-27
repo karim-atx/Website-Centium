@@ -137,7 +137,11 @@ export const Legal: React.FC = () => {
         <p style={{ margin: "12px 0 0", fontSize: "14px", fontWeight: "600", color: "#8C8378" }}>Last updated {LEGAL_UPDATED}</p>
       </div>
       <div style={{ maxWidth: "1080px", margin: "0 auto", display: "grid", gridTemplateColumns: r.lgCols, gap: r.lgGap, alignItems: "start" }}>
-        <nav aria-label="Contents" style={{ position: r.lgTocPos, top: r.lgTocTop }}>
+        {/* B4 QA: the open list is 863px tall, so once stuck at 96px its end
+            ("03 Health & Medical Disclaimer") sat below the fold on screens
+            under 960px tall (1440x900, 1280x800; prototype too). On desktop it
+            now scrolls inside itself when the screen is shorter than it. */}
+        <nav aria-label="Contents" style={{ position: r.lgTocPos, top: r.lgTocTop, maxHeight: r.lg ? "calc(100vh - 112px)" : undefined, overflowY: r.lg ? "auto" : undefined, overscrollBehavior: r.lg ? "contain" : undefined }}>
           <details open={r.footOpen} style={{ borderRadius: "20px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.14)", padding: "8px 16px" }}>
             <summary
               // On desktop the list is always open (cursor default): a click does not fold it.

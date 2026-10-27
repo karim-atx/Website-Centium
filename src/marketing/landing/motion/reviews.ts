@@ -31,6 +31,23 @@ export class ReviewsMotion implements EngineSection {
     this.paused = p;
   }
 
+  /** B4 QA (not in the prototype): a card that takes keyboard focus while the
+   *  slide has it partly off-screen is brought in, 24px from the left edge, so
+   *  its focus ring is visible. The row stays paused there until focus leaves. */
+  reveal(card: EventTarget) {
+    if (this.rm || !this.row || !this.period || !(card instanceof HTMLElement) || card.parentElement !== this.row) return;
+    // From the slide offset, not the card's rect: off-screen the row's
+    // transform is not written, so the rect can be stale.
+    const left = (this.row.parentElement ?? this.row).getBoundingClientRect().left + card.offsetLeft - (this.off % this.period);
+    if (left >= 0 && left + card.offsetWidth <= window.innerWidth) return;
+    // The focusable cards are the first copy (offsetLeft 0 .. period), so no
+    // wrap: the first card gives -24 (the row 24px right of its rest), which
+    // tick() carries on from when the focus leaves.
+    const m = card.offsetLeft - 24;
+    this.off = m;
+    this.row.style.transform = "translate3d(" + (-m).toFixed(1) + "px,0,0)";
+  }
+
   measure() {
     const row = document.querySelector<HTMLElement>("[data-rvrow]");
     this.row = row;

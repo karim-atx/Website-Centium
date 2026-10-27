@@ -44,6 +44,11 @@ export const Home: React.FC = () => {
   // lazy sections mounting, the hero tail being sized, fonts), until the
   // visitor scrolls themselves or loading has settled.
   const pendingAnchor = useRef<string | null>(anchorHash(location.hash));
+  // A mid-page reload (entry.at) is kept the same way (B4 QA): its first
+  // scroll (MarketingLayout) runs before the lazy sections exist, so the page
+  // was too short and the position was lost (2494 instead of 6000 at 390,
+  // the page end at 1440).
+  const pendingAt = useRef<number | null>(entry.at);
 
   // The lazy sections reach the scroll engine through this host; sections
   // that mount before the motion chunk has arrived wait in `queued`.
@@ -85,6 +90,7 @@ export const Home: React.FC = () => {
     const removeAll = removers.current;
     const stopAnchor = () => {
       pendingAnchor.current = null;
+      pendingAt.current = null;
     };
     const inputs = ["wheel", "touchstart", "keydown", "pointerdown"] as const;
     inputs.forEach((ev) => window.addEventListener(ev, stopAnchor, { passive: true, once: true }));
@@ -101,13 +107,14 @@ export const Home: React.FC = () => {
         motion.current = mo;
         queued.current.forEach((s) => removeAll.set(s, mo.add(s)));
         queued.current = [];
-        // Keeps a pending anchor in place after every measure (added after the
+        // Keeps a pending anchor (or mid-page reload position) in place after every measure (added after the
         // intro, whose measure sizes the hero tail and so moves everything).
         mo.add({
           measure() {
             const id = pendingAnchor.current,
               el = id ? anchorTarget(id) : null;
             if (el) window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - ANCHOR_OFFSET);
+            else if (pendingAt.current != null) window.scrollTo(0, pendingAt.current);
           },
         });
       })
@@ -141,13 +148,37 @@ export const Home: React.FC = () => {
     motion.current?.measure();
   }, [view]);
 
-  const onSkip = () => {
+  const introEnd = () => {
     const end = motion.current?.intro.end;
     const track = document.getElementById("intro-track"),
       stage = document.getElementById("intro-stage");
-    const top = end ?? (track && stage ? track.getBoundingClientRect().top + window.scrollY + track.offsetHeight - stage.clientHeight : null);
+    return end ?? (track && stage ? track.getBoundingClientRect().top + window.scrollY + track.offsetHeight - stage.clientHeight : null);
+  };
+  const onSkip = () => {
+    const top = introEnd();
     if (top != null) window.scrollTo({ top, behavior: reducedMotion() ? "auto" : "smooth" });
   };
+
+  // Keyboard focus (B4 QA, not in the prototype): the navbar and the hero
+  // copy stay in the tab order while the intro keeps them invisible (opacity
+  // 0, as in the prototype), so a Tab from the top of the page would focus
+  // links nobody can see. Focus landing on one of them while it is hidden
+  // skips the intro at once, as the Skip intro button does, so the focused
+  // link is on screen with its outline.
+  useLayoutEffect(() => {
+    const onFocus = (e: FocusEvent) => {
+      const el = e.target instanceof Element ? e.target : null;
+      if (!el || !el.closest("#site-nav, #hero-copy")) return;
+      let op = 1;
+      for (let x: Element | null = el; x; x = x.parentElement) op *= parseFloat(getComputedStyle(x).opacity) || 0;
+      const top = introEnd();
+      if (op < 0.5 && top != null && window.scrollY < top) window.scrollTo(0, top);
+    };
+    document.addEventListener("focusin", onFocus);
+    return () => document.removeEventListener("focusin", onFocus);
+    // introEnd reads refs and the DOM only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onPillar = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();

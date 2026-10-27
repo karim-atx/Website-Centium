@@ -30,7 +30,18 @@ export class PillarsMotion implements EngineSection {
   private lg = true;
   private rm: boolean;
   private invalidate: () => void;
-  private onCar = () => this.invalidate();
+  // B4 QA (fps): the mobile pass ran getBoundingClientRect and scrollLeft on
+  // every scroll pass of the page, a forced layout each frame (6% of the
+  // throttled intro). The card width and the carousel's page position are read
+  // in measure(), its scrollLeft in its own scroll event.
+  private cw = 1;
+  private carTop = 0;
+  private carH = 0;
+  private left = 0;
+  private onCar = () => {
+    if (this.car) this.left = this.car.scrollLeft;
+    this.invalidate();
+  };
   debug: Record<string, number> = {};
 
   /** invalidate: ask the engine for a scroll pass (the carousel scrolled). */
@@ -52,6 +63,13 @@ export class PillarsMotion implements EngineSection {
       this.car?.removeEventListener("scroll", this.onCar);
       car?.addEventListener("scroll", this.onCar, { passive: true });
       this.car = car;
+    }
+    if (car && this.panes.length) {
+      const r = car.getBoundingClientRect();
+      this.cw = this.panes[0].el.getBoundingClientRect().width + 14;
+      this.carTop = r.top + window.scrollY;
+      this.carH = r.height;
+      this.left = car.scrollLeft;
     }
   }
 
@@ -82,11 +100,9 @@ export class PillarsMotion implements EngineSection {
       });
       this.debug = { s: +s.toFixed(3), idx, anim: +clamp((fr - 0.02) / 0.73).toFixed(3) };
     } else if (this.car) {
-      const first = this.panes[0].el,
-        cw = first.getBoundingClientRect().width + 14,
-        a = this.car.scrollLeft / cw;
-      const r = this.car.getBoundingClientRect(),
-        u = rm ? 1 : clamp((ctx.vh * 0.95 - r.top) / (ctx.vh * 0.45 + r.height));
+      const a = this.left / this.cw,
+        top = this.carTop - y,
+        u = rm ? 1 : clamp((ctx.vh * 0.95 - top) / (ctx.vh * 0.45 + this.carH));
       this.panes.forEach((p, i) => {
         p.el.style.opacity = "1";
         p.el.style.transform = "none";

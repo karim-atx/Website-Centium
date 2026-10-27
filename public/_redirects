@@ -26,7 +26,13 @@
 /legal/privacy        /             200
 /legal/terms          /             200
 
-# Public pages that need no session
+# Public pages that need no session (the trailing-slash forms 301 to the
+# canonical path, as above: React Router served them before 404.html existed)
+/certificate/:serial/ /certificate/:serial  301
+/i/:code/             /i/:code              301
+/p/:handle/           /p/:handle            301
+/p/:handle/book/      /p/:handle/book       301
+/s/:id/               /s/:id                301
 /certificate/:serial  /             200
 /i/:code              /             200
 /p/:handle            /             200

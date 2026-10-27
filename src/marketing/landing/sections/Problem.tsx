@@ -23,7 +23,12 @@ export const Problem: React.FC<{ r: SectionVals }> = ({ r }) => (
       </div>
       <div id="prob-list" style={{ display: "flex", flexDirection: "column" }}>
         {D.probs.map((pb, pbI) => (
-          <div key={pbI} data-prow="" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 0", borderTop: "1px solid #EDEAE4" }}>
+          // B4 QA: flexWrap + the tag's marginLeft auto (not in the prototype).
+          // Under about 400px "A spreadsheet you stopped filling" and its
+          // "Inconsistency" tag are wider than the row (the tag ended 20px past
+          // the screen at 360, 10px past the gutter at 390, prototype too); the
+          // tag now drops under the title, right-aligned. Rows that fit are unchanged.
+          <div key={pbI} data-prow="" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", padding: "15px 0", borderTop: "1px solid #EDEAE4" }}>
             <span style={{ position: "relative", display: "block", whiteSpace: "nowrap", fontSize: "17.5px", paddingRight: "14px" }}>
               <span data-pink="" style={{ display: "block", color: "#221E1A", transition: "opacity .7s ease-out" }}>
                 {pb.t}
@@ -33,7 +38,7 @@ export const Problem: React.FC<{ r: SectionVals }> = ({ r }) => (
               </span>
               <span data-pstrike="" aria-hidden="true" style={{ position: "absolute", left: "0", right: "14px", top: "54%", height: "2px", marginTop: "-1px", background: "#8C8378", transformOrigin: "left", transform: "scaleX(0)", transition: "transform .5s cubic-bezier(.3,0,.2,1)" }} />
             </span>
-            <span style={{ fontSize: "12px", color: "#C3BCB2", whiteSpace: "nowrap", flexShrink: "0" }}>
+            <span style={{ fontSize: "12px", color: "#C3BCB2", whiteSpace: "nowrap", flexShrink: "0", marginLeft: "auto" }}>
               {pb.tag}
             </span>
           </div>

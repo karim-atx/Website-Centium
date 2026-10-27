@@ -15,6 +15,8 @@ interface Row {
   ink: HTMLElement | null;
   faint: HTMLElement | null;
   strike: HTMLElement | null;
+  /** Page position of the row, read in measure() (B4 QA: no layout reads in the scroll pass). */
+  top: number;
 }
 
 export class ProblemMotion implements EngineSection {
@@ -37,18 +39,19 @@ export class ProblemMotion implements EngineSection {
       ink: el.querySelector<HTMLElement>("[data-pink]"),
       faint: el.querySelector<HTMLElement>("[data-pfaint]"),
       strike: el.querySelector<HTMLElement>("[data-pstrike]"),
+      top: el.getBoundingClientRect().top + window.scrollY,
     }));
     this.bar = document.getElementById("prob-bar-wrap");
   }
 
-  scroll(_y: number, ctx: EngineCtx) {
+  scroll(y: number, ctx: EngineCtx) {
     if (!this.rows.length) return;
     const n = this.rows.length;
     let target = 0;
     if (this.rm) target = n;
     else
       this.rows.forEach((r, i) => {
-        if (r.el.getBoundingClientRect().top < ctx.vh * 0.95) target = i + 1;
+        if (r.top - y < ctx.vh * 0.95) target = i + 1;
       });
     this.target = target;
     if (this.struck == null) this.struck = 0;

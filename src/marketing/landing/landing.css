@@ -25,6 +25,29 @@ html.centium-site-html body {
   outline-offset: 2px;
 }
 
+/* The app's Larger text setting also puts .larger-icons on <html>, which
+   scales every svg by 1.15 (src/index.css) on these routes too. The marketing
+   type is inline px the setting never reaches, so the scale only moved the
+   drawn marks off their handover positions (the leaf dot of "lives", the nav
+   and footer logos, the section 06 chart): B4 QA keeps them at 1. Inline
+   transforms (rings, motion) win over both rules anyway. */
+html.larger-icons .centium-site svg {
+  transform: none;
+}
+
+/* Skip intro stays in the tab order after the intro has faded it out (inline
+   opacity 0): while it has keyboard focus it is shown (B4 QA). */
+.centium-site #skip-intro:focus-visible {
+  opacity: 1 !important;
+}
+
+/* Section 06's slide area takes keyboard focus (tabindex 0, arrow keys) with
+   an inline outline:none in the prototype, so it had no visible focus (B4 QA). */
+.centium-site #eco-view:focus-visible {
+  outline: 2px solid #4e3894 !important;
+  outline-offset: 2px;
+}
+
 .centium-site .cl-hc:hover {
   color: var(--hc) !important;
 }

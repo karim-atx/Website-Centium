@@ -38,7 +38,17 @@ export class EcoMotion implements EngineSection {
   private base = 0;
   private rm: boolean;
   private invalidate: () => void;
-  private onSet = () => this.invalidate();
+  // B4 QA (fps): the scroll pass read the slide widths (desktop: offsetWidth
+  // between each slide's writes) and the mobile row's width and scrollLeft on
+  // every scroll pass of the page, forced layouts (6.5% of the throttled
+  // intro). They are read in measure() and in the row's own scroll event.
+  private cw = 1;
+  private left = 0;
+  private sw: number[] = [];
+  private onSet = () => {
+    if (this.set) this.left = this.set.scrollLeft;
+    this.invalidate();
+  };
 
   constructor(rm: boolean, invalidate: () => void) {
     this.rm = rm;
@@ -63,6 +73,9 @@ export class EcoMotion implements EngineSection {
     this.slides = set
       ? Array.from(set.querySelectorAll<HTMLElement>("[data-sl]")).map((s) => ({ el: s, card: s.querySelector<HTMLElement>("[data-slc]"), A: collect(s) }))
       : [];
+    this.cw = this.slides.length ? this.slides[0].el.getBoundingClientRect().width + 14 : 1;
+    this.sw = this.slides.map((s) => s.el.offsetWidth);
+    this.left = set ? set.scrollLeft : 0;
     this.count = document.getElementById("eco-count");
     this.progEl = document.getElementById("eco-prog");
     const view = document.getElementById("eco-view");
@@ -79,8 +92,7 @@ export class EcoMotion implements EngineSection {
   private idx(y: number): number {
     if (this.lg) return prog(this.track, y) * 4 + this.dragOff;
     if (!this.set || !this.slides.length) return 0;
-    const cw = this.slides[0].el.getBoundingClientRect().width + 14;
-    return this.set.scrollLeft / cw;
+    return this.left / this.cw;
   }
 
   /** Prototype ecoCur: the slide in the centre. */
@@ -186,7 +198,7 @@ export class EcoMotion implements EngineSection {
       const d = i - idx,
         ad = Math.abs(d);
       if (lg) {
-        const w = s.el.offsetWidth;
+        const w = this.sw[i] ?? s.el.offsetWidth;
         s.el.style.transform = "translateX(" + (d * w * 0.74).toFixed(1) + "px) scale(" + (1 - Math.min(1.2, ad) * 0.14).toFixed(4) + ")";
         s.el.style.opacity = (ad > 1.7 ? 0 : 1 - Math.min(1, ad) * 0.55).toFixed(3);
         s.el.style.zIndex = String(10 - Math.round(ad * 2));

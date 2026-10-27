@@ -41,7 +41,10 @@ export const Reviews: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
           id="rv-row-wrap"
           onMouseEnter={pause}
           onMouseLeave={play}
-          onFocus={pause}
+          onFocus={(e) => {
+            pause();
+            motion.reveal(e.target);
+          }}
           onBlur={play}
           style={{
             overflowX: rm ? "auto" : "hidden",
