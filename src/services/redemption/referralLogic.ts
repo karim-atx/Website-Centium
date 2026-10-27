@@ -75,16 +75,13 @@ export type RedeemReferralOutcome =
   | { status: "redeemed"; line: string; discountPct: number | null; pointsAwarded: number }
   | { status: "refused"; reason: RedeemReason | "unknown"; line: string };
 
-/** "Code applied. 10% off your subscription." — MO1.10.1's row. The frame's
- *  "first payment" wording waits on the D25 reward model; the discount today
- *  is on the subscription. The points are the referrer's, so they are named
- *  as the friend's. */
-export function appliedLine(discountPct: number | null, pointsAwarded = 0): string {
-  const points = pointsAwarded > 0 ? `${pointsAwarded.toLocaleString("en-US")} points for your friend` : "";
-  if (discountPct && discountPct > 0) {
-    return `Code applied. ${pctLabel(discountPct)}% off your subscription${points ? `, and ${points}` : ""}.`;
-  }
-  return points ? `Code applied. ${points[0].toUpperCase()}${points.slice(1)}.` : "Code applied.";
+/** MO1.10.1's row: "Code applied. 1,500 points for your friend." POINTS ONLY
+ *  (Karim, BR, 2026-10-27): the row still carries referee_discount_pct, but no
+ *  bill ever applied it (billing is in the app stores), so no discount is
+ *  promised until one is. The points are the referrer's, so they are named as
+ *  the friend's. */
+export function appliedLine(pointsAwarded = 0): string {
+  return pointsAwarded > 0 ? `Code applied. ${pointsAwarded.toLocaleString("en-US")} points for your friend.` : "Code applied.";
 }
 
 /** MO1.10.2's refusal lines, chosen from `reason` (never from `message`).
@@ -106,7 +103,7 @@ export function interpretRedeemReferral(row: RedeemReferralRow | null | undefine
   if (row?.ok === true && reason === "redeemed") {
     const discountPct = toPct(row.referee_discount_pct);
     const pointsAwarded = row.points_awarded ?? 0;
-    return { status: "redeemed", line: appliedLine(discountPct, pointsAwarded), discountPct, pointsAwarded };
+    return { status: "redeemed", line: appliedLine(pointsAwarded), discountPct, pointsAwarded };
   }
   if (reason && reason !== "redeemed" && Object.prototype.hasOwnProperty.call(REFUSAL_LINES, reason)) {
     const known = reason as Exclude<RedeemReason, "redeemed">;
@@ -166,10 +163,8 @@ export function interpretPreviewReferral(row: PreviewReferralRow | null | undefi
   return { status: "refused", reason: "unknown", line: UNKNOWN_REFUSAL_LINE };
 }
 
-/** The confirm row's second line, from the previewed rates. */
-export function previewOfferLine(p: { referrerFirstName: string; refereeDiscountPct: number | null; referrerDiscountPct: number | null }): string {
-  const mine = p.refereeDiscountPct !== null ? `You'll get ${pctLabel(p.refereeDiscountPct)}% off your subscription` : "You'll get the friend discount on your subscription";
-  return p.referrerDiscountPct !== null && p.referrerDiscountPct > 0
-    ? `${mine}, and ${p.referrerFirstName} gets ${pctLabel(p.referrerDiscountPct)}% off theirs.`
-    : `${mine}.`;
+/** The confirm row's second line. Points only (BR): the previewed discount
+ *  rates are never promised, since no bill applies them. */
+export function previewOfferLine(p: { referrerFirstName: string }): string {
+  return `${p.referrerFirstName} earns points when you join with their code.`;
 }

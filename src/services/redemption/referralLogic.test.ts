@@ -26,7 +26,7 @@ const row = (over: Partial<RedeemReferralRow> = {}): RedeemReferralRow => ({
   ...over,
 });
 
-test("redeemed: worded from the row's discount and points", () => {
+test("redeemed: worded from the points only (the row's discount is kept, never promised)", () => {
   const out = interpretRedeemReferral(
     row({ ok: true, reason: "redeemed", referral_id: "r1", referee_discount_pct: "10.00", referrer_discount_pct: 15, points_awarded: 1500 })
   );
@@ -34,7 +34,7 @@ test("redeemed: worded from the row's discount and points", () => {
   if (out.status !== "redeemed") return;
   assert.equal(out.discountPct, 10);
   assert.equal(out.pointsAwarded, 1500);
-  assert.equal(out.line, "Code applied. 10% off your subscription, and 1,500 points for your friend.");
+  assert.equal(out.line, "Code applied. 1,500 points for your friend.");
 });
 
 test("each refusal reason has its own line, never the server message", () => {
@@ -61,12 +61,10 @@ test("an unknown or missing reason, or no row, is a generic refusal", () => {
   assert.equal(interpretRedeemReferral(row({ reason: "toString" })).line, UNKNOWN_REFUSAL_LINE);
 });
 
-test("appliedLine: discount, points, either or neither", () => {
-  assert.equal(appliedLine(10), "Code applied. 10% off your subscription.");
-  assert.equal(appliedLine(12.5, 0), "Code applied. 12.5% off your subscription.");
-  assert.equal(appliedLine(null, 1500), "Code applied. 1,500 points for your friend.");
+test("appliedLine: points or nothing, never a discount", () => {
+  assert.equal(appliedLine(1500), "Code applied. 1,500 points for your friend.");
   assert.equal(appliedLine(0), "Code applied.");
-  assert.equal(appliedLine(null), "Code applied.");
+  assert.equal(appliedLine(), "Code applied.");
 });
 
 test("toPct and pctLabel read PostgREST numerics", () => {
@@ -136,7 +134,7 @@ test("redemptionsLine: nothing until somebody used the code", () => {
 test("preview: found carries the first name and both rates", () => {
   const out = interpretPreviewReferral({ ok: true, reason: "found", referrer_first_name: "Jpw", referee_discount_pct: "10.00", referrer_discount_pct: 15 });
   assert.deepEqual(out, { status: "found", referrerFirstName: "Jpw", refereeDiscountPct: 10, referrerDiscountPct: 15 });
-  assert.equal(previewOfferLine(out as Extract<typeof out, { status: "found" }>), "You'll get 10% off your subscription, and Jpw gets 15% off theirs.");
+  assert.equal(previewOfferLine(out as Extract<typeof out, { status: "found" }>), "Jpw earns points when you join with their code.");
 });
 
 test("preview: not_valid and already_referred are refusals with their own lines, never redeem's", () => {

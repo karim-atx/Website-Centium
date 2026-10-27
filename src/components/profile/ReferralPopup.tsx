@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { CircleAlert, CircleCheck, Copy, Check, Gift, Share, Sparkles, UserPlus } from "lucide-react";
+import { CircleAlert, CircleCheck, Copy, Check, Gift, Share, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { CentredPopup } from "../ui/CentredPopup";
 import { useApp } from "../../context/AppContext";
@@ -121,7 +121,8 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
   // The phone's share menu where there is one; elsewhere, copy.
   const shareCode = async () => {
     if (!myCode) return;
-    const text = `Join me on Centium with my referral code ${myCode} for 10% off your subscription.`;
+    // Points only (BR): no discount is promised to the friend either.
+    const text = `Join me on Centium with my referral code ${myCode}.`;
     if (typeof navigator.share === "function") {
       try {
         await navigator.share({ title: "Centium", text });
@@ -178,7 +179,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
   const appliedMessage = result?.success
     ? result.message
     : summary?.iWasReferred
-      ? appliedLine(summary.myDiscountPct)
+      ? appliedLine()
       : null;
   const progressLine = summary ? redemptionsLine(summary) : null;
 
@@ -209,17 +210,14 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
       <div className="text-start">
         {label("Rewards")}
         <div className="rounded-2xl border border-charcoal/[0.08] px-3.5">
-          {[
-            colleague
-              ? { icon: UserPlus, who: "Your colleague", what: "10% off their first plan" }
-              : { icon: UserPlus, who: "Your friend", what: "10% off their subscription" },
-            // BR (Karim, 2026-10-27): points only. No bill ever applied the
-            // "15% off your next month" (the discount columns are read by
-            // nothing; billing is in the app stores), so it is not promised
-            // until billing applies it. Server-driven rows and the ambassador
-            // terms follow Database stage B3.
-            { icon: Sparkles, who: "You", what: "1,500 points per friend who joins" },
-          ].map((row, i) => (
+          {/* BR (Karim, 2026-10-27): POINTS ONLY. No bill ever applied the
+              friend's "10% off" (the colleague's "10% off their first plan")
+              or the referrer's "15% off your next month": the discount columns
+              are read by nothing and billing is in the app stores. So neither
+              is promised until billing applies them, and the friend row is
+              gone. Server-driven rows and the ambassador terms follow Database
+              stage B3. */}
+          {[{ icon: Sparkles, who: "You", what: `1,500 points per ${colleague ? "colleague or client" : "friend"} who joins` }].map((row, i) => (
             <div key={row.who} className={`flex items-center gap-3 py-3 ${i === 1 ? "border-t border-charcoal/[0.06]" : ""}`}>
               {/* MO1.10 (2x frame): a 32 r10 #F0EDF9 tile (x 102–165) with
                   the glyph in #7D67D9 (new popup, decision 22). */}
