@@ -41,6 +41,12 @@
 /b/:slug              /             200
 /b/:slug/*            /             200
 
+# Call notifications: send-push (Database) names a call /calls/{id}; the app's
+# route is /app/calls/{id} (CallLink). 302, so the server can move to the
+# /app path without browsers having cached this one.
+/calls/:id            /app/calls/:id        302
+/calls/:id/           /app/calls/:id        302
+
 # The web app: every deep link and reload under /app stays 200; unknown
 # /app/... paths keep the client redirect to "/".
 /app                  /             200

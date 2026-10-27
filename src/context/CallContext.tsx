@@ -71,6 +71,12 @@ interface CallState {
   hangUp: () => Promise<void>;
   dismissError: () => void;
   dismissEnded: () => void;
+  /**
+   * Applies a row read on demand rather than over Realtime: a tapped call
+   * notification (CallLink) opens the app after the ring was sent, so the
+   * INSERT never reached this client. The same guard as a Realtime row.
+   */
+  applyCallRow: (row: CallRow) => void;
 }
 
 const CallCtx = createContext<CallState>({
@@ -85,6 +91,7 @@ const CallCtx = createContext<CallState>({
   hangUp: async () => {},
   dismissError: () => {},
   dismissEnded: () => {},
+  applyCallRow: () => {},
 });
 
 /** Statuses that mean the call is over, whoever ended it. */
@@ -288,6 +295,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hangUp,
         dismissError,
         dismissEnded,
+        applyCallRow: onCall,
       }}
     >
       {children}

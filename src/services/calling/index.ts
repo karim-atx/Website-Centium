@@ -253,3 +253,17 @@ export async function threadAllowsCalls(threadId: string, callerId: string): Pro
   }
   return data === true;
 }
+
+/**
+ * One call by id, for a tapped call notification (CallLink). A direct read:
+ * `calls_select_participant` answers only the caller and the callee, so
+ * anyone else (or a wrong id) gets null, as does an error.
+ */
+export async function fetchCall(callId: string): Promise<CallRow | null> {
+  const { data, error } = await supabase.from("calls").select("*").eq("id", callId).maybeSingle();
+  if (error) {
+    console.error("[calling] Could not read the call:", error.message);
+    return null;
+  }
+  return data;
+}

@@ -39,6 +39,7 @@ import ProfessionalDetail from "./pages/professionals/ProfessionalDetail";
 import ProfessionalReviews from "./pages/professionals/ProfessionalReviews";
 import ProVerification from "./pages/professionals/ProVerification";
 import Messages from "./pages/messages/Messages";
+import CallLink, { LegacyCallLink } from "./components/calls/CallLink";
 import ProRoutes, { ProHomeRedirect, ProOnlyRedirect } from "./pages/pro/ProRoutes";
 import ProMoreRoutes from "./pages/pro/more/MoreRoutes";
 import Marketplace from "./pages/marketplace/Marketplace";
@@ -423,6 +424,8 @@ function AppRoutes() {
       <Route path="/p/:handle/book" element={<PublicBooking />} />
       {/* Release 3 W8: a shared card (the site address + /s/{id}); shared_item_public is anon. */}
       <Route path="/s/:id" element={<SharedCard />} />
+      {/* send-push names a call /calls/{id}; the app's route is /app/calls/{id}. */}
+      <Route path="/calls/:callId" element={<LegacyCallLink />} />
       {/* Market + Share 3.0 B-SH.6: a business share link (the site address + /b/{slug}[/{kind}/{item}]); resolve_share_link is anon. */}
       <Route path="/b/:slug/*" element={<BusinessLinkPage />} />
 
@@ -503,6 +506,8 @@ function AppRoutes() {
         <Route path="/app/professionals/meal-plans" element={<ProOnlyRedirect otherwise={<Navigate to="/app/professionals" replace />} />} />
         <Route path="/app/professionals/health-metrics" element={<ProOnlyRedirect otherwise={<Navigate to="/app/professionals" replace />} />} />
         <Route path="/app/messages" element={<Messages />} />
+        {/* A tapped call notification: rings a call still ringing, opens its conversation. */}
+        <Route path="/app/calls/:callId" element={<CallLink />} />
         <Route path="/app/professionals/:id" element={<ProfessionalDetail />} />
         <Route path="/app/professionals/:id/reviews" element={<ProfessionalReviews />} />
         <Route path="/app/marketplace" element={<Marketplace />} />
