@@ -504,12 +504,20 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
       )
     : null;
   const kinds = new Set((sv?.sessions ?? []).map((s) => s.locationKind));
+  // Release B (20261217010000; MO3 v3, PLAN S1): how they work, from
+  // professional_public_profile. The in-person row reads "In person · within
+  // {n} km" once the service radius is known, and isn't shown for one who
+  // works only online; online or both modes give the "Online" row without an
+  // online session type.
+  const workMode = profile?.workMode ?? null;
+  const radiusKm = profile?.serviceRadiusKm ?? null;
+  const inPersonLine = radiusKm != null && radiusKm > 0 ? `In person · within ${Math.round(radiusKm * 10) / 10} km` : "In person";
   const where: WhereRow[] | null = sv
     ? [
-        ...(listing.location?.trim() ? [{ icon: "place" as const, title: listing.location.trim(), line: "In person" }] : []),
+        ...(listing.location?.trim() && workMode !== "online" ? [{ icon: "place" as const, title: listing.location.trim(), line: inPersonLine }] : []),
         // A session type with no location_kind says nothing about where (DJ,
         // Karim 2026-10-27): it no longer reads as "Online".
-        ...(kinds.has("online") ? [{ icon: "online" as const, title: "Online", line: "Video sessions" }] : []),
+        ...(kinds.has("online") || workMode === "online" || workMode === "both" ? [{ icon: "online" as const, title: "Online", line: "Video sessions" }] : []),
         ...(kinds.has("home_visit") ? [{ icon: "home" as const, title: "Home visits", line: "At your place" }] : []),
         ...(kinds.has("phone") ? [{ icon: "phone" as const, title: "Phone", line: "Phone sessions" }] : []),
       ]

@@ -7,7 +7,7 @@
 // D-27: no phone, email, social link or website is ever read into these
 // shapes, whatever the reader returns.
 
-import { num, rows, str } from "../market/parse";
+import { bool, num, rows, str } from "../market/parse";
 import type { ProfessionalCardData } from "../../components/market/peopleModel";
 
 export type WorkType = "role" | "class_slot";
@@ -71,6 +71,9 @@ export interface ProfileOffer {
 /** professional_public_profile(p_id): no contact fields (D-27). */
 export interface PublicProfile {
   card: ProfessionalCardData;
+  /** Release B (20261217010000): how they work and how far they go in person (MO3 Where). */
+  workMode: WorkMode | null;
+  serviceRadiusKm: number | null;
   about: string | null;
   specialties: string[];
   services: ProfileService[];
@@ -80,8 +83,50 @@ export interface PublicProfile {
   teachesAt: TeachesAtRow[];
 }
 
+/** professional_work_mode; null is unset, which the server counts as in person. */
+export type WorkMode = "in_person" | "online" | "both";
+
+/**
+ * Release B (Database 20261217010000 / 020000): what professionals_ranked and
+ * professionals_in_area say about how somebody is reached. An online row has
+ * no coordinates (distance_band 'online', band_rank 7); has_area is "an
+ * in-person result with a distance"; is_online_only is "works only online".
+ * A both-modes professional out of reach is false / false, so both are kept.
+ */
+export interface Reach {
+  workMode: WorkMode | null;
+  serviceRadiusKm: number | null;
+  /** "in_clinic", … (kinds of place, never an address). */
+  sessionPlaces: string[];
+  isOnlineOnly: boolean;
+  hasArea: boolean;
+  /** ISO 3166-1 alpha-2, or null when they saved no country. */
+  countryCode: string | null;
+}
+
+export const workModeOf = (v: unknown): WorkMode | null => (v === "in_person" || v === "online" || v === "both" ? v : null);
+
+/** Works online: online or both (or the server says online only). */
+export const worksOnline = (r: Pick<Reach, "workMode" | "isOnlineOnly">): boolean => r.isOnlineOnly || r.workMode === "online" || r.workMode === "both";
+
+/** Works in person: in person, both, or unset (the server's rule). */
+export const worksInPerson = (r: Pick<Reach, "workMode" | "isOnlineOnly">): boolean => !r.isOnlineOnly && r.workMode !== "online";
+
+/** The six Release B columns of a ranked or in-area row. */
+export function parseReach(r: Record<string, unknown>): Reach {
+  const cc = str(r.country_code);
+  return {
+    workMode: workModeOf(r.work_mode),
+    serviceRadiusKm: num(r.service_radius_km),
+    sessionPlaces: Array.isArray(r.session_places) ? (r.session_places as unknown[]).map(str).filter((s): s is string => !!s) : [],
+    isOnlineOnly: bool(r.is_online_only),
+    hasArea: bool(r.has_area),
+    countryCode: cc && /^[A-Za-z]{2}$/.test(cc) ? cc.toUpperCase() : null,
+  };
+}
+
 /** professionals_ranked: the card plus its place in the server's order, "From $X" and the keyset cursor (rank_score, id). */
-export interface DirectoryHit extends ProfessionalCardData {
+export interface DirectoryHit extends ProfessionalCardData, Reach {
   rank: number | null;
   fromPriceValue: number | null;
   /** rank_score, the cursor's first half (p_before_score). */
@@ -155,7 +200,7 @@ export function parsePublicProfile(profile: unknown, work: unknown, offers: unkn
   const card = parseCard(r);
   if (!card.id) return null;
   const skills = Array.isArray(r.skills) ? (r.skills as unknown[]).map(str).filter((s): s is string => !!s) : [];
-  return { card, about: str(r.bio), specialties: skills, services: [], offers: parseProfileOffers(offers), workHistory: parseWork(work), reviews: [], teachesAt: [] };
+  return { card, workMode: workModeOf(r.work_mode), serviceRadiusKm: num(r.service_radius_km), about: str(r.bio), specialties: skills, services: [], offers: parseProfileOffers(offers), workHistory: parseWork(work), reviews: [], teachesAt: [] };
 }
 
 /** professionals_ranked rows, in the server's order (rank_score desc, id). "From $X" is the lower of the two rates. */
@@ -164,7 +209,9 @@ export function parseDirectory(data: unknown): DirectoryHit[] {
     .map((r, i) => {
       const prices = [num(r.consultation_rate), num(r.monthly_rate)].filter((p): p is number => p != null && p > 0);
       const card = parseCard(r);
+      const reach = parseReach(r);
       // Every row is kept (only an id is required): the cursor is the LAST ROW the server sent.
+      // Online rows and no-area rows too (Release B): they come after every distance band.
       return {
         ...card,
         name: card.name || "Professional",
@@ -173,6 +220,9 @@ export function parseDirectory(data: unknown): DirectoryHit[] {
         score: num(r.rank_score),
         approxLat: num(r.approx_lat),
         approxLng: num(r.approx_lng),
+        ...reach,
+        // "Online" in place of a distance (PLAN S1) whenever none is measured.
+        online: worksOnline(reach),
       };
     })
     .filter((c) => c.id);

@@ -30,7 +30,22 @@ import { marketPalette } from "../../theme/marketTokens";
 import { FilterPopup, FilterSummary, FilterTrigger } from "../../components/market/FilterPopup";
 import { useFilter } from "../../components/market/useFilter";
 import { PopupMenu } from "../../components/ui/PopupMenu";
-import { arrangeDirectory, chosenRadiusKm, DEFAULT_RADIUS_KM, deviceDistance, DISTANCE_OPTIONS, SORTS, type DirectorySort } from "./directoryFilterModel";
+import { countryNear, countryOfArea } from "../../services/geo/country";
+import {
+  abroadLabel,
+  anyCountryChosen,
+  arrangeDirectory,
+  chosenRadiusKm,
+  chosenWhere,
+  COUNTRY_OPTIONS,
+  DEFAULT_RADIUS_KM,
+  deviceDistance,
+  DISTANCE_OPTIONS,
+  serverSort,
+  SORTS,
+  WHERE_OPTIONS,
+  type DirectorySort,
+} from "./directoryFilterModel";
 import { BackRow, Chevron, EmptyBlock } from "./profile/parts";
 import { hitCard, matchesQuery } from "./profile/profileModel";
 
@@ -70,8 +85,24 @@ import { hitCard, matchesQuery } from "./profile/profileModel";
 // match / Nearest" menu, and "about 1.2 km" on the cards. Shown once there is
 // a point (the ranked list) or on the map. Professionals with no area can't
 // be measured: they stay, after the measured ones.
+//
+// Release B (Database 20261217010000 / 020000; PLAN S1): the readers return
+// how somebody works, and online professionals with no point. The cards read
+// "Online" where the distance goes for one who works online and can't be
+// measured; the popup gains "Where" (In person / Online, on work_mode) and a
+// one-row "Country" group, "Include other countries" (not drawn; kept
+// modest). Every ranked and map search sends the searcher's country (the
+// saved area's, else the one near the position; omitted when unknown), and
+// p_any_country when that row is checked; only then does a card name another
+// country ("about 0.9 km · France"). Nearest asks the server for
+// p_sort 'distance' (pages in band order) and still sorts what is loaded on
+// the device.
 
-const DIRECTORY_FILTER_GROUPS = [{ heading: "Distance", options: DISTANCE_OPTIONS }] as const;
+const DIRECTORY_FILTER_GROUPS = [
+  { heading: "Distance", options: DISTANCE_OPTIONS },
+  { heading: "Where", options: WHERE_OPTIONS },
+  { heading: "Country", options: COUNTRY_OPTIONS },
+] as const;
 
 type Subtype = Enums<"professional_subtype">;
 const subtypeLabels: Record<Subtype, string> = SUBTYPE_LABELS;
@@ -95,6 +126,8 @@ export default function Professionals() {
   const [sortEl, setSortEl] = useState<HTMLButtonElement | null>(null);
   const [sortOpen, setSortOpen] = useState(false);
   const maxKm = chosenRadiusKm(filter.selected);
+  const where = useMemo(() => chosenWhere(filter.selected), [filter.selected]);
+  const anyCountry = anyCountryChosen(filter.selected);
 
   // THE ROW NEEDS AN ACCOUNT, NOT A CODE: the relationship from
   // professional_clients (fetchLinkedProfessionals); the local
@@ -173,6 +206,8 @@ export default function Professionals() {
   const [ranked, setRanked] = useState<Ranked>(null);
   // The point the distances are measured from: it stays on this device.
   const [point, setPoint] = useState<Coords | null>(null);
+  // Release B: the searcher's country, worked out on the device (services/geo/country).
+  const [searcherCountry, setSearcherCountry] = useState<string | null>(null);
   useEffect(() => {
     let live = true;
     void (async () => {
@@ -183,14 +218,16 @@ export default function Professionals() {
         if (p.ok) point = p.coords;
       }
       if (!point || !live) return;
+      const countryCode = area ? countryOfArea(area) : countryNear(point);
       setPoint(point);
-      const r = await fetchRankedDirectory({ point, subtype: type, radiusKm: maxKm ?? DEFAULT_RADIUS_KM });
+      setSearcherCountry(countryCode);
+      const r = await fetchRankedDirectory({ point, subtype: type, radiusKm: maxKm ?? DEFAULT_RADIUS_KM, sort: serverSort(sort), countryCode, anyCountry });
       if (live) setRanked(r.ok ? { hits: r.value } : null);
     })();
     return () => {
       live = false;
     };
-  }, [type, maxKm]);
+  }, [type, maxKm, sort, anyCountry]);
 
   const byId = useMemo(() => new Map((listings ?? []).map((l) => [l.profileId, l])), [listings]);
   const isRanked = !!ranked;
@@ -200,9 +237,10 @@ export default function Professionals() {
   const shownHits = arrangeDirectory(
     (ranked?.hits ?? [])
       .filter((h) => matchesQuery({ name: h.name, specialty: h.specialty, headline: null, location: h.area ?? null, skills: [] }, query))
-      .map((h) => ({ ...h, distanceKm: deviceDistance(point, h) })),
+      .map((h) => ({ ...h, distanceKm: deviceDistance(point, h), abroad: abroadLabel(h.countryCode, searcherCountry, anyCountry) })),
     maxKm,
     sort,
+    where,
   );
   const nearestFirst = sort === "Nearest";
   const count = isRanked ? shownHits.length : shownListings.length;
@@ -214,7 +252,7 @@ export default function Professionals() {
   };
 
   const loading = listings === null && !directoryError && !isRanked;
-  const filtering = !!query.trim() || !!type || (isRanked && maxKm != null);
+  const filtering = !!query.trim() || !!type || (isRanked && filter.active);
 
   return (
     <div style={{ lineHeight: "normal" }}>
@@ -362,7 +400,7 @@ export default function Professionals() {
         </button>
       )}
 
-      {view === "map" && <NearbyView authUserId={authUserId} dark={theme === "dark"} subtype={type} maxKm={maxKm} />}
+      {view === "map" && <NearbyView authUserId={authUserId} dark={theme === "dark"} subtype={type} maxKm={maxKm} where={where} anyCountry={anyCountry} />}
 
       <div style={{ display: view === "map" ? "none" : "flex", flexDirection: "column", gap: 10 }}>
         {listings !== null && <MarketOffline loaded />}
@@ -392,7 +430,9 @@ export default function Professionals() {
                   ? "No professionals match"
                   : type
                     ? "No professionals in this category yet"
-                    : `No professionals within ${maxKm} km`
+                    : maxKm != null
+                      ? `No professionals within ${maxKm} km`
+                      : "No professionals match these filters"
                 : "No professionals listed yet"
             }
             body={
@@ -401,7 +441,9 @@ export default function Professionals() {
                   ? "Try another search."
                   : type
                     ? "Try a different category."
-                    : "Try a wider distance."
+                    : maxKm != null
+                      ? "Try a wider distance."
+                      : "Try another filter."
                 : "Professionals choose whether to appear here. If you already work with one, ask them for their client code to connect."
             }
             style={{ paddingTop: 24, paddingBottom: 8 }}

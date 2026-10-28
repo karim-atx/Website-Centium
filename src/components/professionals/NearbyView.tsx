@@ -9,7 +9,9 @@ import { initials, pinGround, typeColours } from "./typeColour";
 import { SUBTYPE_SINGULAR } from "./subtypeLabels";
 import type { MapPin as Pin } from "./NearbyMap";
 import type { DirectoryListing } from "../../services/directory";
-import { fetchNearby, type NearbyCursor, type NearbyProfessional } from "../../services/nearby";
+import { fetchNearby, type NearbyCursor, type NearbyProfessional, type ReachedProfessional } from "../../services/nearby";
+import { countryNear, countryOfArea } from "../../services/geo/country";
+import { abroadLabel, keptByWhere, type WhereChoice } from "../../pages/professionals/directoryFilterModel";
 import {
   coarsePoint,
   describeDistance,
@@ -28,6 +30,11 @@ const NearbyMap = lazy(() => import("./NearbyMap"));
 
 type Origin = { coords: Coords; label: string; source: "device" | "area"; areaId?: string };
 
+const NO_WHERE: WhereChoice = { inPerson: false, online: false };
+
+/** A strip card: a pin's professional with its distance, or an online result (no point). */
+type Card = { p: NearbyProfessional; km: number } | { p: ReachedProfessional; km: null };
+
 /** Search radii, so a small pan or zoom does not count as a new search. */
 const RADII = [5, 10, 25, 50, 100];
 const radiusBucket = (km: number) => RADII.find((r) => r >= km) ?? 100;
@@ -36,7 +43,7 @@ const SEARCH_DEBOUNCE_MS = 900;
  * Pages fetched per search, at most. The server orders by distance BAND and
  * then by id, so within a band a later page can hold someone nearer than this
  * one; nearest-first is only right once the whole result is in. Each page is
- * one of the 60 searches an hour, so a busy area stops here and says so.
+ * one of the 240 map searches an hour (nearby_map, Release B), so a busy area stops here and says so.
  */
 const MAX_PAGES = 4;
 
@@ -69,9 +76,19 @@ const MAX_PAGES = 4;
  * location", and where that is refused or unavailable it opens the area
  * picker, as before.
  *
- * SEARCHES are kept well inside the database's 60-an-hour limit: one on
+ * SEARCHES are kept well inside the database's 240-an-hour limit: one on
  * opening, then one only when the visible area moves to a different coarse
  * cell or a larger radius (debounced), and never twice for the same cell.
+ *
+ * RELEASE B (Database 20261217020000): each search also sends the searcher's
+ * country (the chosen area's, or the one near the position; omitted when
+ * unknown) and "Include other countries" when chosen. Online professionals
+ * come back with no point: they are never pins. They join the floating card's
+ * strip AFTER everyone nearby, the card reading "Online" where the distance
+ * goes, and the screen-reader list the same way. A count pin's strip stays
+ * just its members. The Where filter applies as on the list
+ * (directoryFilterModel): "In person" alone leaves the online cards out,
+ * "Online" alone keeps only the pins of those who also work online.
  */
 export const NearbyView: React.FC<{
   authUserId: string | null;
@@ -79,13 +96,23 @@ export const NearbyView: React.FC<{
   subtype: DirectoryListing["subtype"];
   /** DJ: the Distance filter's radius. The first search uses it, and pins and cards further than it are left out (measured here). */
   maxKm?: number | null;
-}> = ({ authUserId, dark, subtype, maxKm = null }) => {
+  /** Release B: the Where filter ("In person" / "Online"). */
+  where?: WhereChoice;
+  /** Release B: "Include other countries" (p_any_country). */
+  anyCountry?: boolean;
+}> = ({ authUserId, dark, subtype, maxKm = null, where = NO_WHERE, anyCountry = false }) => {
   const navigate = useNavigate();
   const [phase, setPhase] = useState<"checking" | "ask" | "locating" | "ready">("checking");
   const [origin, setOrigin] = useState<Origin | null>(null);
   const [locError, setLocError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [found, setFound] = useState<Map<string, NearbyProfessional>>(new Map());
+  /** Release B: online results (no point), in the server's order. */
+  const [online, setOnline] = useState<Map<string, ReachedProfessional>>(new Map());
+  // The searcher's country, from where they search from (never from a panned view).
+  const searcherCountry = origin ? (origin.source === "area" ? countryOfArea(origin.areaId ? { id: origin.areaId } : null) : countryNear(origin.coords)) : null;
+  const countryOpts = useRef({ countryCode: searcherCountry, anyCountry });
+  countryOpts.current = { countryCode: searcherCountry, anyCountry };
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   /** A search stopped at MAX_PAGES: the order past what loaded may be off. */
@@ -160,21 +187,26 @@ export const NearbyView: React.FC<{
     // EVERY PAGE BEFORE ANY OF IT IS SHOWN, so the local nearest-first sort
     // is over a complete result rather than a partial one.
     const all: NearbyProfessional[] = [];
+    const remote: ReachedProfessional[] = [];
     let cursor: NearbyCursor | undefined;
     let pages = 0;
     let failure: { message: string; rateLimited?: boolean } | null = null;
+    const opts = countryOpts.current;
     do {
-      const r = await fetchNearby(point, radius, cursor);
+      const r = await fetchNearby(point, radius, cursor, opts);
       pages += 1;
       if (!r.ok) {
         failure = r;
         break;
       }
       all.push(...r.professionals);
+      remote.push(...r.online);
       cursor = r.next ?? undefined;
     } while (cursor && pages < MAX_PAGES);
     setSearching(false);
-    if (failure && all.length === 0) {
+    // "Include other countries" changed while this was out: its rows are for the old choice.
+    if (opts.anyCountry !== countryOpts.current.anyCountry) return;
+    if (failure && all.length === 0 && remote.length === 0) {
       setSearchError(failure.message);
       if (!failure.rateLimited) {
         if (before === undefined) searched.current.delete(key);
@@ -190,13 +222,28 @@ export const NearbyView: React.FC<{
       for (const p of all) next.set(p.profileId, p);
       return next;
     });
+    setOnline((prev) => {
+      const next = new Map(prev);
+      for (const p of remote) next.set(p.profileId, p);
+      return next;
+    });
   };
 
+  // "Include other countries" changes who the server returns at every point
+  // already searched: forget them and search again.
+  const lastAny = useRef(anyCountry);
   // The first search, once there is an origin.
   useEffect(() => {
+    if (lastAny.current !== anyCountry) {
+      lastAny.current = anyCountry;
+      searched.current.clear();
+      setFound(new Map());
+      setOnline(new Map());
+      setCardSet(null);
+    }
     if (origin) void search(origin.coords, maxKm ?? 25);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [origin?.coords.lat, origin?.coords.lng, maxKm]);
+  }, [origin?.coords.lat, origin?.coords.lng, maxKm, anyCountry]);
 
   const onViewChange = (center: Coords, radiusKm: number) => {
     window.clearTimeout(timer.current);
@@ -208,19 +255,32 @@ export const NearbyView: React.FC<{
   const nearby = useMemo(() => {
     if (!origin) return [];
     return [...found.values()]
-      .filter((p) => !subtype || p.subtype === subtype)
+      .filter((p) => (!subtype || p.subtype === subtype) && keptByWhere(p, where))
       .map((p) => ({ p, km: distanceKm(origin.coords, { lat: p.lat, lng: p.lng }) }))
       .filter((n) => maxKm == null || n.km <= maxKm)
       .sort((a, b) => a.km - b.km);
-  }, [found, origin, subtype, maxKm]);
+  }, [found, origin, subtype, maxKm, where]);
+
+  // Release B: the online results, after the pins (none when "In person" alone is chosen).
+  const remote = useMemo(() => {
+    if (where.inPerson && !where.online) return [];
+    return [...online.values()].filter((p) => (!subtype || p.subtype === subtype) && !found.has(p.profileId));
+  }, [online, found, subtype, where]);
 
   const distanceOf = (p: NearbyProfessional) =>
     origin ? describeDistance(distanceKm(origin.coords, { lat: p.lat, lng: p.lng })) : "";
   const placeOf = (p: NearbyProfessional) => (p.areaLabel ? ` · near ${p.areaLabel}` : "");
+  // The country, only with "Include other countries" on and a different one (directoryFilterModel).
+  const abroadOf = (p: ReachedProfessional) => {
+    const c = abroadLabel(p.countryCode, searcherCountry, anyCountry);
+    return c ? ` · ${c}` : "";
+  };
+  /** The card's place line: "1.2 km · near Hamra", or "Online" for an online result. */
+  const cardPlace = (c: Card) => (c.km == null ? `Online${abroadOf(c.p)}` : `${distanceOf(c.p)}${placeOf(c.p)}${abroadOf(c.p)}`);
 
   const groups = useMemo(() => groupByPoint(nearby.map((n) => ({ ...n.p, lat: n.p.lat, lng: n.p.lng }))), [nearby]);
   const keyOf = (lat: number, lng: number) => `${lat.toFixed(2)},${lng.toFixed(2)}`;
-  const cards = cardSet ? nearby.filter((n) => cardSet.includes(n.p.profileId)) : nearby;
+  const cards: Card[] = cardSet ? nearby.filter((n) => cardSet.includes(n.p.profileId)) : [...nearby, ...remote.map((p) => ({ p, km: null }))];
   const current = cards[Math.min(active, cards.length - 1)]?.p;
   const currentKey = current ? groups.find((g) => g.items.some((i) => i.profileId === current.profileId)) : undefined;
   const pins: Pin[] = groups.map((g) => {
@@ -363,11 +423,11 @@ export const NearbyView: React.FC<{
                     if (i !== active) setActive(i);
                   }}
                   className="flex overflow-x-auto no-scrollbar snap-x snap-mandatory py-2 -my-2"
-                  aria-label="Professionals on the map, nearest first"
+                  aria-label={!cardSet && remote.length ? "Professionals on the map, nearest first, then online" : "Professionals on the map, nearest first"}
                 >
-                  {cards.map(({ p }) => (
-                    <div key={p.profileId} className="w-full shrink-0 snap-center">
-                      <DirectoryCard listing={p} distance={`${distanceOf(p)}${placeOf(p)}`} hideBio className="shadow-[0_6px_20px_rgba(36,31,27,0.14)]" />
+                  {cards.map((c) => (
+                    <div key={c.p.profileId} className="w-full shrink-0 snap-center">
+                      <DirectoryCard listing={c.p} distance={cardPlace(c)} hideBio className="shadow-[0_6px_20px_rgba(36,31,27,0.14)]" />
                     </div>
                   ))}
                 </div>
@@ -394,18 +454,17 @@ export const NearbyView: React.FC<{
             <p role="status">
               {searching
                 ? "Searching this area…"
-                : `${nearby.length} near ${origin.label}${truncated ? ". Not all are shown here; zoom in for the nearest." : ""}`}
+                : `${nearby.length} near ${origin.label}${remote.length ? `, ${remote.length} online` : ""}${truncated ? ". Not all are shown here; zoom in for the nearest." : ""}`}
             </p>
             <ul className="flex flex-col gap-1 mt-1">
-              {nearby.map(({ p }) => (
-                <li key={p.profileId}>
+              {(cardSet ? [...nearby, ...remote.map((p) => ({ p, km: null }))] : cards).map((c) => (
+                <li key={c.p.profileId}>
                   <button
                     type="button"
-                    onClick={() => navigate(`/app/professionals/${p.profileId}`)}
+                    onClick={() => navigate(`/app/professionals/${c.p.profileId}`)}
                     className="tap min-h-[44px] text-left text-[13px] font-semibold text-primary-deep-text"
                   >
-                    {p.name}, {p.subtype ? SUBTYPE_SINGULAR[p.subtype] : "professional"}, {distanceOf(p)}
-                    {placeOf(p)}
+                    {c.p.name}, {c.p.subtype ? SUBTYPE_SINGULAR[c.p.subtype] : "professional"}, {cardPlace(c)}
                   </button>
                 </li>
               ))}

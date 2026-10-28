@@ -100,6 +100,27 @@ test("professionals_ranked: the server's order, the cursor score, From $X, every
   assert.deepEqual([h!.approxLat, h!.approxLng, g!.approxLat], [33.9, 35.48, null]);
 });
 
+test("Release B: ranked rows carry how they work; an online row has no point and reads Online", () => {
+  // Shapes captured from professionals_ranked in a rolled-back psql (20261217020000).
+  const [inp, onl, both, old] = parseDirectory([
+    { professional_id: "a1", first_name: "Rami", approx_lat: 33.9, approx_lng: 35.48, area_label: "Hamra", distance_band: "under 2 km", band_rank: 1, rank_score: 0.48, work_mode: "in_person", service_radius_km: 10, session_places: ["in_clinic"], is_online_only: false, has_area: true, country_code: "LB" },
+    { professional_id: "a2", first_name: "Dana", approx_lat: null, approx_lng: null, area_label: null, distance_band: "online", band_rank: 7, rank_score: 0.38, work_mode: "online", service_radius_km: 25, session_places: [], is_online_only: true, has_area: false, country_code: "LB" },
+    { professional_id: "a3", first_name: "Karam", approx_lat: null, approx_lng: null, area_label: "Jounieh", distance_band: "online", band_rank: 7, rank_score: 0.38, work_mode: "both", service_radius_km: 5, session_places: [], is_online_only: false, has_area: false, country_code: "fr" },
+    { professional_id: "a4", first_name: "Old", rank_score: 0.1 },
+  ]);
+  assert.deepEqual([inp!.workMode, inp!.serviceRadiusKm, inp!.sessionPlaces, inp!.hasArea, inp!.online, inp!.countryCode], ["in_person", 10, ["in_clinic"], true, false, "LB"]);
+  assert.deepEqual([onl!.workMode, onl!.isOnlineOnly, onl!.approxLat, onl!.online], ["online", true, null, true]);
+  assert.deepEqual([both!.isOnlineOnly, both!.hasArea, both!.online, both!.countryCode], [false, false, true, "FR"]);
+  assert.deepEqual([old!.workMode, old!.online, old!.countryCode, old!.sessionPlaces], [null, false, null, []]);
+});
+
+test("Release B: the public profile's work mode and service radius (MO3 Where)", () => {
+  const p = parsePublicProfile([{ professional_id: "p1", first_name: "Rami", work_mode: "both", service_radius_km: 10, session_places: ["in_clinic"], cover_url: null }], [])!;
+  assert.deepEqual([p.workMode, p.serviceRadiusKm], ["both", 10]);
+  const q = parsePublicProfile([{ professional_id: "p1", first_name: "Rami" }], [])!;
+  assert.deepEqual([q.workMode, q.serviceRadiusKm], [null, null]);
+});
+
 test("teaches at: later start and weekday label", () => {
   assert.equal(teachesTitle({ title: "Spin 45", startsOn: "2026-11-01" }, TODAY), "Spin 45 · from Nov 1");
   assert.equal(teachesTitle({ title: "Spin 45", startsOn: "2026-10-01" }, TODAY), "Spin 45");

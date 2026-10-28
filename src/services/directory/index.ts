@@ -19,31 +19,10 @@ import type { PaymentModality } from "../professional-profile";
 // in this bundle. Nothing here should ever reach past the view to
 // `professional_profiles` directly.
 
-export interface DirectoryListing {
-  /** profiles.id — the real account, and what ProfessionalDetail routes on. */
-  profileId: string;
-  name: string;
-  avatarUrl: string | null;
-  subtype: Enums<"professional_subtype"> | null;
-  specialty: string | null;
-  location: string | null;
-  bio: string | null;
-  monthlyRate: number | null;
-  consultationRate: number | null;
-  paymentModalities: PaymentModality[];
-  /** From professional_rating_summary, via the view. Null until reviewed. */
-  averageRating: number | null;
-  reviewCount: number;
-  /** The CV's one-line headline. */
-  headline: string | null;
-  skills: string[];
-  /**
-   * At least one licence verified by the review team and still shown (not
-   * expired, or shown after expiry by choice). The view computes it with the
-   * database's own verified rule; nothing here re-derives it.
-   */
-  hasVerifiedLicence: boolean;
-}
+// The listing shape lives in ./model (no Supabase import), so pure models and
+// their node:test files can name it.
+export type { DirectoryListing } from "./model";
+import type { DirectoryListing } from "./model";
 
 const LISTING_COLUMNS =
   "profile_id, first_name, avatar_url, professional_subtype, specialty, location, bio, monthly_rate, consultation_rate, payment_modalities, average_rating, review_count, headline, skills, has_verified_licence";

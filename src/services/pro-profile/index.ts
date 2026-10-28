@@ -17,6 +17,11 @@
 //   rate-limit row (240 an hour, ATX02), so the function is VOLATILE since
 //   Database PR #40 (20261215040000; as STABLE it failed 25006 under
 //   PostgREST and the directory fell back to the alphabetical list).
+//   Release B (20261217020000) adds p_sort, p_country_code and
+//   p_any_country, returns online and no-area professionals (no point, band
+//   7) with work_mode, service_radius_km, session_places, is_online_only,
+//   has_area and country_code, and meters the list apart from the map
+//   (nearby_list, 240 an hour).
 // - public_offers(p_owner_kind, p_owner_id) (Database PR #39,
 //   20261214010000): the profile's live point offers (nothing for an
 //   unlisted professional, signed in only).
@@ -64,6 +69,12 @@ export interface RankedQuery {
   point: Coords;
   radiusKm?: number;
   subtype: string | null;
+  /** Release B p_sort: "distance" pages by band, nearest first (Nearest); the default is "weighted" (Best match). */
+  sort?: "weighted" | "distance";
+  /** Release B p_country_code: the searcher's ISO country (saved area, else position); omitted when unknown. */
+  countryCode?: string | null;
+  /** Release B p_any_country: "Include other countries". */
+  anyCountry?: boolean;
 }
 
 /** professionals_ranked's limits: 50 a page; pages read here before stopping (each page is one of the 240 nearby searches an hour). */
@@ -74,7 +85,9 @@ const MAX_PAGES = 4;
  * The ranked directory, every page up to MAX_PAGES, each asked with the
  * exact cursor of the last row of the page before (p_before_score =
  * rank_score, p_before_id = professional_id). The point is coarsened to
- * one decimal place before it leaves the device, as the map does.
+ * one decimal place before it leaves the device, as the map does. With
+ * p_sort 'distance' the rank_score is the band (6 nearest … 0 online), and
+ * the same cursor pages it.
  */
 export async function fetchRankedDirectory(q: RankedQuery): Promise<MarketResult<DirectoryHit[]>> {
   const point = coarsePoint(q.point);
@@ -91,6 +104,11 @@ export async function fetchRankedDirectory(q: RankedQuery): Promise<MarketResult
         p_before_score: before?.score ?? null,
         p_before_id: before?.id ?? null,
         p_limit: PAGE,
+        // Release B (20261217020000), each sent only when set: a searcher
+        // with no known country gets exactly what they got before.
+        ...(q.sort === "distance" ? { p_sort: "distance" } : {}),
+        ...(q.countryCode ? { p_country_code: q.countryCode } : {}),
+        ...(q.anyCountry ? { p_any_country: true } : {}),
       },
       "Couldn't load professionals.",
       parseDirectory,
