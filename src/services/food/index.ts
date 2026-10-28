@@ -6,6 +6,7 @@ import type { FoodLogEntry, MealType, NutritionGoal, ServingUnit } from "../../t
 import { servingMultiplier, rescaleEntry } from "../nutrition";
 import { getFoodNutrientsById } from "../food-nutrients";
 import { normalizeGtin } from "../../utils/gtin";
+import { escapeLike } from "../postgrestLike";
 
 // Reads and writes the real food catalog and diary.
 //
@@ -139,10 +140,8 @@ const fromCustom = (r: CustomRow): FoodSearchResult => ({
   nutrients: r.nutrients ?? null,
 });
 
-/** PostgREST ilike treats % and _ as wildcards; a searched name must not. */
-function escapeLike(term: string): string {
-  return term.replace(/[\\%_]/g, (c) => "\\" + c);
-}
+// escapeLike (../postgrestLike): PostgREST ilike treats % _ and * as
+// wildcards; a searched name must not.
 
 function describe(error: PostgrestError): string {
   // 42501 is a column- or table-privilege violation. It is NOT an auth

@@ -5,6 +5,7 @@ import {
   initials,
   type PaymentRecord,
 } from "../../../services/business-revenue";
+import { toCsvText } from "../../../utils/csv";
 
 // Small pieces shared by the Revenue pages (AnInsightsV3 and PaySeeAllV2
 // literal values through the .rv-scope tokens in revenue.css).
@@ -230,13 +231,7 @@ export function downloadCsv(
   filename: string,
   rows: (string | number | null)[][],
 ) {
-  const csv = rows
-    .map((r) =>
-      r
-        .map((x) => (x === null ? "" : `"${String(x).replace(/"/g, '""')}"`))
-        .join(","),
-    )
-    .join("\n");
+  const csv = toCsvText(rows, "\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
