@@ -4,6 +4,7 @@ import { useApp } from "../../../context/AppContext";
 import { updateProfileFromOnboarding } from "../../../services/profile";
 import { recordLegalAcceptances } from "../../../services/legal/acceptances";
 import { setMapArea, UNDER_18_LISTING } from "../../../services/professional-profile";
+import { countryNear } from "../../../services/geo/country";
 import { fetchMyCv } from "../../../services/professional-cv";
 import { requestToJoin } from "../../../services/business-team/employment";
 import { fetchGoLiveStatus, logOtherDiscipline, markOwnerItemDone, saveProLaneColumns } from "../../../services/professional-onboarding";
@@ -168,8 +169,11 @@ export function ProLane<D extends DraftLike>({
     completeOnboarding({ ...resolved, certificationUrl: draft.certificationFile ?? undefined });
 
     // Needs the date of birth just saved. Only shown to clients once listed.
+    // Release B: the area's country goes with it. The draft keeps only the
+    // point (a picked area or a pin), so countryNear answers for both: a
+    // picked area is at its own centre.
     if (pro.area && pro.workMode && pro.workMode !== "online") {
-      const r = await setMapArea(pro.area.lat, pro.area.lng, pro.area.label);
+      const r = await setMapArea(pro.area.lat, pro.area.lng, pro.area.label, countryNear(pro.area));
       if (!r.ok) console.warn("[pro-onboarding] Area not saved:", r.message);
     }
     // Nobody is listed at submit (user decision, 14 Oct 2026, every lane): the

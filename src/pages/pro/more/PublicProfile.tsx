@@ -17,6 +17,7 @@ import { useReviewsAboutMe } from "../../../hooks/useProfessionalReviews";
 import { hireGate } from "../../../services/hires/proLogic";
 import { capLabel, effectiveTierLabel } from "../../../services/subscription-tiers";
 import { fetchMyProfile, type ProfessionalProfile } from "../../../services/professional-profile";
+import { fetchMyCoverUrl } from "../../../services/pro/cover";
 import type { DirectoryListing } from "../../../services/directory";
 import { textPx } from "../../../theme/textSize";
 import { WhatToShareSheet } from "../../../components/share/WhatToShareSheet";
@@ -48,6 +49,16 @@ export default function PublicProfile() {
   const { plan } = useMyProfessionalPlan();
   const [own, setOwn] = useState<ProfessionalProfile | null | undefined>(undefined);
   const [shareOpen, setShareOpen] = useState(false);
+  // Release B: the cover photo for MO15's band (read when Share profile opens).
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!shareOpen || !authUserId) return;
+    let live = true;
+    void fetchMyCoverUrl(authUserId).then((r) => live && r.ok && setCoverUrl(r.url));
+    return () => {
+      live = false;
+    };
+  }, [shareOpen, authUserId]);
   // W8 SH4: Share opens "What do you want to share?"; MO15 Share profile is its "Profile link" row.
   const [cardsOpen, setCardsOpen] = useState(false);
   const { lane } = useProSubtype();
@@ -182,6 +193,7 @@ export default function PublicProfile() {
         onClose={() => setShareOpen(false)}
         name={user.firstName ?? ""}
         avatarUrl={user.avatarUrl ?? null}
+        coverUrl={coverUrl}
         type={typeLabel(user.professionalSubtype)}
         rating={avg !== null ? { average: avg, count } : null}
         specialties={facts?.specialties ?? []}

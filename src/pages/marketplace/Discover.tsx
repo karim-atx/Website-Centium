@@ -11,7 +11,8 @@ import { marketPalette } from "../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
 import { initials } from "../../components/professionals/typeColour";
 import { fetchMarketplaceClasses, fetchMyBookedClassIds, type MarketplaceClass } from "../../services/marketplace";
-import { fetchMyGymMemberships, fetchPlansFor, fetchReviewSummary, fetchVenues, type GymMembership, type Venue, type VenuePlan } from "../../services/venues";
+import { fetchGymPointsNear, fetchMyGymMemberships, fetchPlansFor, fetchReviewSummary, fetchVenues, type GymMembership, type Venue, type VenuePlan } from "../../services/venues";
+import type { Coords } from "../../services/geo/distance";
 import { currentMembership, memberTag, membershipFromLine } from "../../services/venues/venueLogic";
 import { distanceKm } from "../../services/geo/distance";
 import { distanceText } from "../../services/marketplace/classBooking";
@@ -27,7 +28,8 @@ import { formatShortDate } from "../../utils/date";
 import { useImpression } from "../../services/marketplace/listingEvents";
 import { exploreSource, isLivePassState, viewerSpotsLeft, type ListingEvent } from "../../services/marketplace/listingLogic";
 import { ClassFilterPopup } from "./ClassFilterPopup";
-import { classCountLine, classFilterGroups, stripDays } from "./classFilterModel";
+import { classCountLine, classFilterGroups, gymFilterGroups, stripDays } from "./classFilterModel";
+import { FilterPopup, FilterSummary, FilterTrigger } from "../../components/market/FilterPopup";
 import RewardsTab from "./rewards/RewardsTab";
 
 // Market + Share 3.0 · W2 · Explore's search, tracks and lists (C-MO.4.1 /
@@ -50,6 +52,10 @@ import RewardsTab from "./rewards/RewardsTab";
 //   12 --gold star (gap 4, margin-top 1), "From $45/month" 12.5 / 700 --accent
 //   (margin-top 2), the 16 chevron. Featured venues stay first (B13 MK-06),
 //   then by rating, then by distance from the device's known position.
+//   Release B: with a known position (never prompted from a list), the gyms
+//   near it come from venues_in_area (a rounded point leaves the device; the
+//   distance is worked out here) and a filter beside the line offers the
+//   classes filter's Distance group ("Under 1 km / 3 km / 5 km").
 // - Classes: the day strip (margin 12 −16 0, padding 0 16, gap 8, scrolls;
 //   each day flex 0 0 calc((100% − 32px) / 5), min 56, 64 tall, radius 14:
 //   the weekday 12 / 16 500, the date 18 / 22 700, a 4 dot when the day has
@@ -97,7 +103,11 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
   const raw = params.get("tab");
   const tab: Tab = raw === "classes" ? "classes" : raw === "rewards" || raw === "businesses" ? "rewards" : "gyms";
   const filter = useFilter();
+  const gymFilter = useFilter();
+  const [gymAnchor, setGymAnchor] = useState<HTMLButtonElement | null>(null);
   const [day, setDay] = useState<string | null>(null);
+  // venues_in_area's gyms within 100 km of the known position (null until read, or when it failed).
+  const [gymPoints, setGymPoints] = useState<Map<string, Coords> | null>(null);
 
   const openClass = (c: MarketplaceClass) => navigate(`/app/marketplace/class?id=${encodeURIComponent(c.classId)}&src=${exploreSource({ query, featured: c.isFeatured })}`);
 
@@ -137,6 +147,16 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
     setReload((n) => n + 1);
   };
 
+  // Release B: only once a position is already known; unmetered, so read for real.
+  useEffect(() => {
+    if (!here) return;
+    let live = true;
+    void fetchGymPointsNear(here).then((r) => live && setGymPoints(r.ok ? r.value : null));
+    return () => {
+      live = false;
+    };
+  }, [here, reload]);
+
   // B13 MK-04: the businesses whose classes this viewer books as a member.
   const memberOf = useMemo(() => {
     const bizOf = new Map(gyms.map((g) => [g.id, g.businessId]));
@@ -166,10 +186,18 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
     .filter((c) => matchesFilter(groups, filter.selected, c));
   const dayLabel = q ? "Matching your search" : formatShortDate(atNoon(chosenDay), { weekday: "long", month: "long", day: "numeric" });
 
-  // ---- Gyms: featured first, then rating, then distance.
-  const gymKm = (g: Venue) => (here && g.lat != null && g.lng != null ? distanceKm(here, { lat: g.lat, lng: g.lng }) : null);
+  // ---- Gyms: featured first, then rating, then distance; the Distance filter.
+  // A gym venues_in_area placed is measured from its returned point; if that
+  // read failed, from the gym row's own coordinates as before; outside its
+  // 100 km, no distance.
+  const gymKm = (g: Venue) => {
+    if (!here) return null;
+    const p = gymPoints ? gymPoints.get(g.id) : g.lat != null && g.lng != null ? { lat: g.lat, lng: g.lng } : undefined;
+    return p ? distanceKm(here, p) : null;
+  };
+  const gymGroups = gymFilterGroups<{ km: number | null }>(!!here);
   const shownGyms = (() => {
-    const list = gyms.filter((g) => !q || [g.name, g.location].some((f) => f.toLowerCase().includes(q)));
+    const list = gyms.filter((g) => (!q || [g.name, g.location].some((f) => f.toLowerCase().includes(q))) && matchesFilter(gymGroups, gymFilter.selected, { km: gymKm(g) }));
     return list
       .map((g, i) => ({ g, i, r: ratings.get(g.id)?.total ? (ratings.get(g.id)?.average ?? 0) : 0, km: gymKm(g) }))
       .sort((a, b) => Number(b.g.isFeatured) - Number(a.g.isFeatured) || b.r - a.r || (a.km ?? Infinity) - (b.km ?? Infinity) || a.i - b.i)
@@ -274,7 +302,18 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
 
       {tab === "gyms" && (
         <>
-          <p style={{ margin: "12px 0 0", fontSize: textPx(11.5), color: m.faint }}>Sorted by rating and distance</p>
+          {gymGroups.length ? (
+            <>
+              <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <p style={{ margin: 0, fontSize: textPx(11.5), color: m.faint, minWidth: 0 }}>Sorted by rating and distance</p>
+                <FilterTrigger ref={setGymAnchor} active={gymFilter.active} open={gymFilter.open} onPress={gymFilter.toggleFilter} label="Filter gyms" />
+              </div>
+              {gymFilter.active ? <FilterSummary summary={gymFilter.summary} onShowAll={gymFilter.clearFilter} style={{ marginTop: 10 }} /> : null}
+              <FilterPopup open={gymFilter.open} anchor={gymAnchor} groups={gymGroups} selected={gymFilter.selected} onToggle={gymFilter.toggleOption} onClose={gymFilter.closeFilter} />
+            </>
+          ) : (
+            <p style={{ margin: "12px 0 0", fontSize: textPx(11.5), color: m.faint }}>Sorted by rating and distance</p>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
             {shownGyms.map((v) => (
               <GymCard
@@ -291,7 +330,7 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
               <ExploreEmptyState
                 icon={<Dumbbell size={24} strokeWidth={1.75} />}
                 title={gyms.length === 0 ? "No gyms yet" : "No gyms match"}
-                body={gyms.length === 0 ? "Gyms near you will show here." : "Try another search."}
+                body={gyms.length === 0 ? "Gyms near you will show here." : gymFilter.active ? "Try other filters, or Show all." : "Try another search."}
               />
             )}
           </div>

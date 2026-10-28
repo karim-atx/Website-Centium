@@ -44,8 +44,20 @@ export interface ProfessionalCardData {
   area?: string | null;
   /** "From $15", formatted by the caller; omitted when they list no priced service. */
   fromPrice?: string | null;
+  /** Release B: works online (online or both). With no distance measured, "Online" takes the place (PLAN S1). */
+  online?: boolean;
+  /** Release B: their country's name, only when it isn't the searcher's and "Include other countries" is on. */
+  abroad?: string | null;
 }
 
-/** The card's place: the distance ("1.2 km") or the area. */
-export const placeOf = (p: Pick<ProfessionalCardData, "distanceKm" | "area">): string | null =>
-  p.distanceKm != null && Number.isFinite(p.distanceKm) ? `${p.distanceKm.toFixed(1)} km` : (p.area ?? null);
+/**
+ * The card's place: the distance, else "Online" (PLAN S1: "4.8 · 38 reviews ·
+ * Online") for one who works online, else the area; then the country when the
+ * professional is in another one. "about 1.2 km" (Karim, DJ, 2026-10-27; the
+ * board's "1.2 km"): the distance is to a ~1 km area, so it never claims more
+ * than that.
+ */
+export function placeOf(p: Pick<ProfessionalCardData, "distanceKm" | "area" | "online" | "abroad">): string | null {
+  const place = p.distanceKm != null && Number.isFinite(p.distanceKm) ? `about ${p.distanceKm.toFixed(1)} km` : p.online ? "Online" : (p.area ?? null);
+  return [place, p.abroad].filter(Boolean).join(" · ") || null;
+}

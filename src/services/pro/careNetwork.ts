@@ -80,6 +80,55 @@ export async function searchColleagues(me: string, q: string): Promise<Read<Coll
 }
 
 // ---------------------------------------------------------------------------
+// W6B-5 "Nearby" (Release B 20261217020000)
+// ---------------------------------------------------------------------------
+
+export interface NearbyColleague extends Colleague {
+  /** band_rank: 1 under 2 km … 6 over 50 km (never the colleague's point). */
+  band: number;
+  areaLabel: string | null;
+}
+
+export type NearbyRead =
+  | { ok: true; data: NearbyColleague[] }
+  | { ok: false; reason: "no_area" | "rate_limited" | "offline" | "failed" };
+
+/**
+ * colleagues_near_me(p_radius_km 25, p_subtype, p_before_band, p_before_id,
+ * p_limit, p_any_country): listed colleagues whose in-person reach covers the
+ * caller's OWN published area, nearest band first, never the caller. It
+ * takes no point, so nothing about where the caller is leaves the device.
+ * ATXH4 when the caller has set no area; metered on nearby_list (ATX02,
+ * 240 an hour shared with the professionals list), so it's read once per
+ * sheet, when the chip is chosen. Its own country unless p_any_country.
+ */
+export async function fetchNearbyColleagues(): Promise<NearbyRead> {
+  try {
+    const { data, error } = await rpc("colleagues_near_me", { p_limit: 30 });
+    if (error) {
+      if (error.code === "ATXH4") return { ok: false, reason: "no_area" };
+      if (error.code === "ATX02") return { ok: false, reason: "rate_limited" };
+      return { ok: false, reason: isOffline(error) ? "offline" : "failed" };
+    }
+    const rows = (data ?? []) as {
+      professional_id: string;
+      first_name: string | null;
+      avatar_url: string | null;
+      professional_subtype: string | null;
+      specialty: string | null;
+      area_label: string | null;
+      band_rank: number;
+    }[];
+    return {
+      ok: true,
+      data: rows.map((r) => ({ id: r.professional_id, name: r.first_name, avatarUrl: r.avatar_url, type: r.professional_subtype, specialty: r.specialty, band: r.band_rank, areaLabel: r.area_label })),
+    };
+  } catch (e) {
+    return { ok: false, reason: isOffline(e) ? "offline" : "failed" };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Links
 // ---------------------------------------------------------------------------
 

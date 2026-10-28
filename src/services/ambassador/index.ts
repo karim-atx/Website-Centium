@@ -1,4 +1,8 @@
 import { supabase } from "../../../lib/supabase/client";
+import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { APPLY_FALLBACK, applyRefusalLine, toAmbassadorStatus, type AmbassadorStatus, type MyAmbassadorApplicationRow } from "./ambassadorLogic";
+
+export * from "./ambassadorLogic";
 
 // Asking whether an account carries Centium Ambassador status.
 //
@@ -58,4 +62,49 @@ export async function isAmbassadorAccount(userId: string): Promise<boolean> {
     return false;
   }
   return data === true;
+}
+
+// ---------------------------------------------------------------------------
+// Release B · B2 applications (Database 20261217040000). Neither function is
+// in database.types.ts (gen:types reads production), so the client is cast
+// the same way as above, bound so `this` stays the client.
+// ---------------------------------------------------------------------------
+
+type LooseRpc = (
+  fn: string,
+  args?: Record<string, unknown>
+) => PromiseLike<{ data: unknown; error: { code?: string; message: string; hint?: string | null } | null }>;
+const ambassadorRpc = (): LooseRpc => (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as LooseRpc;
+
+/** my_ambassador_application(): free, always one row. */
+export async function fetchMyAmbassadorApplication(): Promise<{ ok: true; status: AmbassadorStatus } | { ok: false; offline: boolean }> {
+  try {
+    const { data, error } = await ambassadorRpc()("my_ambassador_application", {});
+    if (error) return { ok: false, offline: isOffline(error) };
+    const row = (Array.isArray(data) ? data[0] : data) as MyAmbassadorApplicationRow | null | undefined;
+    return { ok: true, status: toAmbassadorStatus(row) };
+  } catch (e) {
+    return { ok: false, offline: isOffline(e) };
+  }
+}
+
+/**
+ * apply_for_ambassador(): metered 5 an hour, so it runs only from Send. Every
+ * refusal is a raised SQLSTATE, worded by applyRefusalLine (never the
+ * server's message).
+ */
+export async function applyForAmbassador(input: { motivation: string; link: string; acceptTerms: boolean }): Promise<{ ok: true; id: string } | { ok: false; code: string | null; message: string }> {
+  try {
+    const link = input.link.trim();
+    const { data, error } = await ambassadorRpc()("apply_for_ambassador", {
+      p_motivation: input.motivation.trim(),
+      p_link: link || null,
+      p_accept_terms: input.acceptTerms,
+    });
+    if (error) return { ok: false, code: error.code ?? null, message: isOffline(error) ? OFFLINE_MESSAGE : applyRefusalLine(error) };
+    if (typeof data !== "string" || !data) return { ok: false, code: null, message: APPLY_FALLBACK };
+    return { ok: true, id: data };
+  } catch (e) {
+    return { ok: false, code: null, message: isOffline(e) ? OFFLINE_MESSAGE : APPLY_FALLBACK };
+  }
 }

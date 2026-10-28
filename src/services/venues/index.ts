@@ -6,6 +6,7 @@ import { isOffline } from "../network-error";
 import { CLOSED_BUY_MEMBERSHIP, closureMessage, isBusinessClosedError } from "../business-closure/logic";
 import { readPassCache, writePassCache } from "./passCache";
 import type { PlanKind } from "../membership-plans/types";
+import { coarsePoint, type Coords } from "../geo/distance";
 
 // Venues, gym memberships and the pass: v5.1 backend stage 4a and 4b
 // (Database docs/HANDOVER_API.md, "4a · Venues" and "4b · Memberships,
@@ -809,4 +810,31 @@ export async function fetchBusinessOwner(businessId: string): Promise<string | n
     return null;
   }
   return data?.profile_id ?? null;
+}
+
+/**
+ * Release B (20261217020000) venues_in_area(p_lat, p_lng, p_radius_km,
+ * p_kind, p_before_km, p_before_id, p_limit): listed gyms near a point,
+ * nearest first. Anon and unmetered (STABLE, no rate-limit row), so Explore
+ * calls it for real.
+ *
+ * WHAT LEAVES THE DEVICE: the point rounded to one decimal (about 11 km), as
+ * the professionals map sends it (coarsePoint), and only once the browser
+ * already shares a position (useKnownPosition). The server's distance_km is
+ * to that rounded point, so it isn't shown: the gyms' own coordinates come
+ * back and the distance is worked out here from the real position. The
+ * widest radius (100 km) leaves room for the rounding.
+ */
+export async function fetchGymPointsNear(center: Coords): Promise<Result<Map<string, Coords>>> {
+  const point = coarsePoint(center);
+  const { data, error } = await (supabase as unknown as {
+    rpc: (fn: "venues_in_area", args: Record<string, unknown>) => PromiseLike<{ data: { venue_id: string; lat: number | string | null; lng: number | string | null }[] | null; error: PostgrestError | null }>;
+  }).rpc("venues_in_area", { p_lat: point.lat, p_lng: point.lng, p_radius_km: 100, p_kind: "gym", p_limit: 100 });
+  if (error) {
+    console.error("[venues] Could not read gyms by distance:", error.code, error.message);
+    return fail(error, "Couldn't work out distances right now.");
+  }
+  const out = new Map<string, Coords>();
+  for (const r of data ?? []) if (r.lat != null && r.lng != null) out.set(r.venue_id, { lat: Number(r.lat), lng: Number(r.lng) });
+  return { ok: true, value: out };
 }

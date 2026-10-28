@@ -47,6 +47,9 @@ export const MEMBER_NOTIFICATION_KINDS = [
   "review_prompt",
   "existing_team_invite",
   "hiring_fee_added",
+  // Release B (Database 20261217000000): the ambassador decision, to the applicant.
+  "ambassador_application_approved",
+  "ambassador_application_declined",
 ] as const;
 export type MemberNotificationKind = (typeof MEMBER_NOTIFICATION_KINDS)[number];
 
@@ -62,9 +65,19 @@ export const RELEASE1_KINDS = ["voucher_issued", "voucher_redeemed", "points_exp
  * hiring_fee_added, gym_review_received) or to a professional
  * (hire_offer_received, hired, classes_added, class_changed,
  * removed_from_team, existing_team_invite, instructor_review_received), so it
- * never lights a member's bell.
+ * never lights a member's bell. Release B adds the ambassador decision
+ * (admin_review_ambassador_application → notify_member, subject
+ * ambassador_application), addressed to the applicant: a member's kind,
+ * read on the client's page (not drawn on the board; PLAN S3's lines).
  */
-export const CLIENT_KINDS: readonly MemberNotificationKind[] = ["voucher_issued", "points_expiring", "class_cancelled", "review_prompt"];
+export const CLIENT_KINDS: readonly MemberNotificationKind[] = [
+  "voucher_issued",
+  "points_expiring",
+  "class_cancelled",
+  "review_prompt",
+  "ambassador_application_approved",
+  "ambassador_application_declined",
+];
 
 /** my_unread_notification_count's cap: the reader never counts past it. */
 export const UNREAD_COUNT_CAP = 99;
@@ -169,6 +182,9 @@ export const CLIENT_COPY: NotificationCopyTable = {
   review_prompt: { title: "Rate your instructor", body: "How was your class? Tell others what it was like." },
   voucher_redeemed: { title: "Voucher redeemed", body: "A member used a voucher for one of your offers." },
   offer_hidden: { title: "Offer hidden", body: "Hidden by Centium. Contact support for details." },
+  // PLAN S3 "Notification" (Release B).
+  ambassador_application_approved: { title: "Your ambassador application", body: "You're now a Centium Ambassador." },
+  ambassador_application_declined: { title: "Your ambassador application", body: "We've replied to your application." },
 };
 
 /** A key no table knows: a safe line, never the raw key. */
@@ -226,7 +242,13 @@ const formatNoticeDay = (d: Date): string => formatShortDate(d, { weekday: "shor
  *   6}. Your booking is cancelled.";
  * - review_prompt (class_session; business_name, class_title,
  *   instructor_name): class_title → "How was {class} with {instructor} at
- *   {business}?" (either name left out when missing).
+ *   {business}?" (either name left out when missing);
+ * - ambassador_application_approved (ambassador_application; no keys): the
+ *   plain line;
+ * - ambassador_application_declined (ambassador_application;
+ *   next_eligible_on, a date): "We've replied to your application. You can
+ *   apply again from {Jan 26, 2027}." The reason itself stays on the status
+ *   card (it is not in the payload).
  */
 export const CLIENT_FILLS: NotificationFillTable = {
   voucher_issued: (p) => {
@@ -264,6 +286,11 @@ export const CLIENT_FILLS: NotificationFillTable = {
     const who = pText(p, "instructor_name");
     const biz = pText(p, "business_name");
     return { body: `How was ${cls}${who ? ` with ${who}` : ""}${biz ? ` at ${biz}` : ""}?` };
+  },
+  ambassador_application_approved: () => ({}),
+  ambassador_application_declined: (p) => {
+    const on = pDate(p, "next_eligible_on");
+    return on ? { body: `We've replied to your application. You can apply again from ${formatNoticeDate(on)}.` } : {};
   },
 };
 
@@ -313,6 +340,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * class_cancelled (class_session) → My bookings › Upcoming;
  * review_prompt (class_session) → My bookings › Past (the session id isn't a
  * booking id, so the calendar's ?rate=<booking> link can't be built);
+ * ambassador_application_approved / _declined (ambassador_application) →
+ * More with the Referral popup open, where the status card is;
  * any other kind (not a member's) → nothing in the client UI.
  */
 export function clientNotificationTarget(n: Pick<MemberNotification, "kind" | "subjectType" | "subjectId">): string | null {
@@ -326,6 +355,9 @@ export function clientNotificationTarget(n: Pick<MemberNotification, "kind" | "s
       return "/app/marketplace/bookings?tab=upcoming";
     case "review_prompt":
       return "/app/marketplace/bookings?tab=past";
+    case "ambassador_application_approved":
+    case "ambassador_application_declined":
+      return "/app/more?open=referral";
     default:
       return null;
   }
@@ -372,6 +404,10 @@ export function notifLook(kind: string): { tone: NotifTone; glyph: NotifGlyph } 
     case "voucher_issued":
     case "voucher_redeemed":
       return { tone: "teal", glyph: "qr" };
+    case "ambassador_application_approved":
+      return { tone: "lav", glyph: "star" };
+    case "ambassador_application_declined":
+      return { tone: "lav", glyph: "app" };
     default:
       return { tone: "grey", glyph: "clock" };
   }

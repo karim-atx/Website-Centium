@@ -20,6 +20,12 @@ export interface ReferralSummaryRow {
   last_redeemed_at: string | null;
   i_was_referred: boolean | null;
   my_discount_pct: number | string | null;
+  /** B3 (Database 20261217050000): is_ambassador(auth.uid()). */
+  is_ambassador?: boolean | null;
+  /** B3: what the caller earns per friend now (2,000 ambassador, 1,500 otherwise). */
+  referrer_points?: number | null;
+  /** B3: what a friend gets. Read by nothing here: points only (BR). */
+  friend_discount_pct?: number | string | null;
 }
 
 export interface ReferralSummary {
@@ -31,6 +37,10 @@ export interface ReferralSummary {
   iWasReferred: boolean;
   /** The discount this account got for being referred, if it was. */
   myDiscountPct: number | null;
+  /** B3: the caller holds Centium Ambassador status (the Rewards chip, PLAN S4). */
+  isAmbassador: boolean;
+  /** B3: points per friend who joins, from the server; null when it named none. */
+  referrerPoints: number | null;
 }
 
 /** numeric arrives from PostgREST as a number or a string; either way, or null. */
@@ -53,7 +63,24 @@ export function toReferralSummary(row: ReferralSummaryRow | null | undefined): R
     lastRedeemedAt: row?.last_redeemed_at ?? null,
     iWasReferred: row?.i_was_referred === true,
     myDiscountPct: toPct(row?.my_discount_pct),
+    isAmbassador: row?.is_ambassador === true,
+    referrerPoints: typeof row?.referrer_points === "number" && row.referrer_points > 0 ? row.referrer_points : null,
   };
+}
+
+/** The standard figure every account earned before B3, and still earns unless an ambassador. */
+export const STANDARD_REFERRER_POINTS = 1500;
+
+/**
+ * The popup's "You" reward row (PLAN S4), from referral_summary's
+ * referrer_points: "2,000 points per friend who joins" for an ambassador,
+ * "1,500 …" otherwise. POINTS ONLY (Karim, BR): friend_discount_pct is never
+ * shown, since no bill applies it. Until the summary answers (or when it names
+ * no figure) the standard 1,500.
+ */
+export function rewardLine(referrerPoints: number | null | undefined, colleague = false): string {
+  const n = referrerPoints && referrerPoints > 0 ? referrerPoints : STANDARD_REFERRER_POINTS;
+  return `${n.toLocaleString("en-US")} points per ${colleague ? "colleague or client" : "friend"} who joins`;
 }
 
 /** redeem_referral_code()'s stable machine strings. */
@@ -75,16 +102,13 @@ export type RedeemReferralOutcome =
   | { status: "redeemed"; line: string; discountPct: number | null; pointsAwarded: number }
   | { status: "refused"; reason: RedeemReason | "unknown"; line: string };
 
-/** "Code applied. 10% off your subscription." — MO1.10.1's row. The frame's
- *  "first payment" wording waits on the D25 reward model; the discount today
- *  is on the subscription. The points are the referrer's, so they are named
- *  as the friend's. */
-export function appliedLine(discountPct: number | null, pointsAwarded = 0): string {
-  const points = pointsAwarded > 0 ? `${pointsAwarded.toLocaleString("en-US")} points for your friend` : "";
-  if (discountPct && discountPct > 0) {
-    return `Code applied. ${pctLabel(discountPct)}% off your subscription${points ? `, and ${points}` : ""}.`;
-  }
-  return points ? `Code applied. ${points[0].toUpperCase()}${points.slice(1)}.` : "Code applied.";
+/** MO1.10.1's row: "Code applied. 1,500 points for your friend." POINTS ONLY
+ *  (Karim, BR, 2026-10-27): the row still carries referee_discount_pct, but no
+ *  bill ever applied it (billing is in the app stores), so no discount is
+ *  promised until one is. The points are the referrer's, so they are named as
+ *  the friend's. */
+export function appliedLine(pointsAwarded = 0): string {
+  return pointsAwarded > 0 ? `Code applied. ${pointsAwarded.toLocaleString("en-US")} points for your friend.` : "Code applied.";
 }
 
 /** MO1.10.2's refusal lines, chosen from `reason` (never from `message`).
@@ -119,7 +143,7 @@ export function interpretRedeemReferral(row: RedeemReferralRow | null | undefine
   if (row?.ok === true && reason === "redeemed") {
     const discountPct = toPct(row.referee_discount_pct);
     const pointsAwarded = row.points_awarded ?? 0;
-    return { status: "redeemed", line: appliedLine(discountPct, pointsAwarded), discountPct, pointsAwarded };
+    return { status: "redeemed", line: appliedLine(pointsAwarded), discountPct, pointsAwarded };
   }
   if (reason && reason !== "redeemed" && Object.prototype.hasOwnProperty.call(REFUSAL_LINES, reason)) {
     const known = reason as Exclude<RedeemReason, "redeemed">;
@@ -179,10 +203,8 @@ export function interpretPreviewReferral(row: PreviewReferralRow | null | undefi
   return { status: "refused", reason: "unknown", line: UNKNOWN_REFUSAL_LINE };
 }
 
-/** The confirm row's second line, from the previewed rates. */
-export function previewOfferLine(p: { referrerFirstName: string; refereeDiscountPct: number | null; referrerDiscountPct: number | null }): string {
-  const mine = p.refereeDiscountPct !== null ? `You'll get ${pctLabel(p.refereeDiscountPct)}% off your subscription` : "You'll get the friend discount on your subscription";
-  return p.referrerDiscountPct !== null && p.referrerDiscountPct > 0
-    ? `${mine}, and ${p.referrerFirstName} gets ${pctLabel(p.referrerDiscountPct)}% off theirs.`
-    : `${mine}.`;
+/** The confirm row's second line. Points only (BR): the previewed discount
+ *  rates are never promised, since no bill applies them. */
+export function previewOfferLine(p: { referrerFirstName: string }): string {
+  return `${p.referrerFirstName} earns points when you join with their code.`;
 }

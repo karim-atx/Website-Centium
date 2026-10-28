@@ -429,12 +429,25 @@ export const ProfilePreview: React.FC<{
   type: string;
   tags: string[];
   line?: string | null;
-}> = ({ initials, avatarUrl, name, type, tags, line }) => (
+  /** Release B (W6C-3): professional_profiles.cover_url, drawn in the cover's place. */
+  coverUrl?: string | null;
+  /** Release B: "Add a cover" / "Change cover" on the cover (the Review step only). */
+  onCover?: () => void;
+  coverBusy?: boolean;
+}> = ({ initials, avatarUrl, name, type, tags, line, coverUrl, onCover, coverBusy }) => (
   <div className="obp-prev">
-    {/* Professionals have no cover photo yet (BU1-16): the handoff's
-        placeholder pattern shows, without its sample caption. */}
-    <div className="obp-prev-cover">
+    {/* The cover photo (Release B, professional-covers); without one, the
+        handoff's placeholder pattern, without its sample caption. The
+        action is not drawn: a pill in the badge's style, bottom left, as the
+        business onboarding's "Change cover". */}
+    <div className="obp-prev-cover" style={coverUrl ? { background: "var(--ob-list)" } : undefined}>
+      {coverUrl && <img src={coverUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
       <span className="obp-prev-badge">New on Explore</span>
+      {onCover && (
+        <button type="button" onClick={onCover} disabled={coverBusy} className="obp-prev-badge hit" style={{ right: "auto", top: "auto", left: 10, bottom: 10, border: 0, cursor: "pointer", opacity: coverBusy ? 0.6 : 1 }}>
+          {coverBusy ? "Uploading…" : coverUrl ? "Change cover" : "Add a cover"}
+        </button>
+      )}
     </div>
     <div className="obp-prev-body">
       <span aria-hidden className="obp-prev-av">

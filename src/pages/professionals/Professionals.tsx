@@ -27,6 +27,25 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
 import { textPx } from "../../theme/textSize";
 import { marketPalette } from "../../theme/marketTokens";
+import { FilterPopup, FilterSummary, FilterTrigger } from "../../components/market/FilterPopup";
+import { useFilter } from "../../components/market/useFilter";
+import { PopupMenu } from "../../components/ui/PopupMenu";
+import { countryNear, countryOfArea } from "../../services/geo/country";
+import {
+  abroadLabel,
+  anyCountryChosen,
+  arrangeDirectory,
+  chosenRadiusKm,
+  chosenWhere,
+  COUNTRY_OPTIONS,
+  DEFAULT_RADIUS_KM,
+  deviceDistance,
+  DISTANCE_OPTIONS,
+  serverSort,
+  SORTS,
+  WHERE_OPTIONS,
+  type DirectorySort,
+} from "./directoryFilterModel";
 import { BackRow, Chevron, EmptyBlock } from "./profile/parts";
 import { hitCard, matchesQuery } from "./profile/profileModel";
 
@@ -58,6 +77,32 @@ import { hitCard, matchesQuery } from "./profile/profileModel";
 //   under the list.
 // The header block stays one fixed area (FixedHeader) so it also sits over the
 // map, as before.
+//
+// DJ (Karim, 2026-10-27; not drawn for professionals, so the Explore classes
+// filter and the Rewards sort are reused): a Distance filter (Within 5 / 10 /
+// 25 / 50 km; the server gets the radius, the device measures each card from
+// the professional's ~1 km area and keeps those within it), a "Sort: Best
+// match / Nearest" menu, and "about 1.2 km" on the cards. Shown once there is
+// a point (the ranked list) or on the map. Professionals with no area can't
+// be measured: they stay, after the measured ones.
+//
+// Release B (Database 20261217010000 / 020000; PLAN S1): the readers return
+// how somebody works, and online professionals with no point. The cards read
+// "Online" where the distance goes for one who works online and can't be
+// measured; the popup gains "Where" (In person / Online, on work_mode) and a
+// one-row "Country" group, "Include other countries" (not drawn; kept
+// modest). Every ranked and map search sends the searcher's country (the
+// saved area's, else the one near the position; omitted when unknown), and
+// p_any_country when that row is checked; only then does a card name another
+// country ("about 0.9 km · France"). Nearest asks the server for
+// p_sort 'distance' (pages in band order) and still sorts what is loaded on
+// the device.
+
+const DIRECTORY_FILTER_GROUPS = [
+  { heading: "Distance", options: DISTANCE_OPTIONS },
+  { heading: "Where", options: WHERE_OPTIONS },
+  { heading: "Country", options: COUNTRY_OPTIONS },
+] as const;
 
 type Subtype = Enums<"professional_subtype">;
 const subtypeLabels: Record<Subtype, string> = SUBTYPE_LABELS;
@@ -75,6 +120,14 @@ export default function Professionals() {
   const [type, setType] = useState<Subtype | null>(null);
   const [query, setQuery] = useState("");
   const [linkedProfileOpen, setLinkedProfileOpen] = useState(false);
+  const filter = useFilter();
+  const [filterAnchor, setFilterAnchor] = useState<HTMLButtonElement | null>(null);
+  const [sort, setSort] = useState<DirectorySort>("Best match");
+  const [sortEl, setSortEl] = useState<HTMLButtonElement | null>(null);
+  const [sortOpen, setSortOpen] = useState(false);
+  const maxKm = chosenRadiusKm(filter.selected);
+  const where = useMemo(() => chosenWhere(filter.selected), [filter.selected]);
+  const anyCountry = anyCountryChosen(filter.selected);
 
   // THE ROW NEEDS AN ACCOUNT, NOT A CODE: the relationship from
   // professional_clients (fetchLinkedProfessionals); the local
@@ -151,6 +204,10 @@ export default function Professionals() {
   // The ranked directory. A failed, offline or pointless (no area, location
   // not allowed) answer keeps the live list (the quiet state), never an error over it.
   const [ranked, setRanked] = useState<Ranked>(null);
+  // The point the distances are measured from: it stays on this device.
+  const [point, setPoint] = useState<Coords | null>(null);
+  // Release B: the searcher's country, worked out on the device (services/geo/country).
+  const [searcherCountry, setSearcherCountry] = useState<string | null>(null);
   useEffect(() => {
     let live = true;
     void (async () => {
@@ -161,19 +218,31 @@ export default function Professionals() {
         if (p.ok) point = p.coords;
       }
       if (!point || !live) return;
-      const r = await fetchRankedDirectory({ point, subtype: type });
+      const countryCode = area ? countryOfArea(area) : countryNear(point);
+      setPoint(point);
+      setSearcherCountry(countryCode);
+      const r = await fetchRankedDirectory({ point, subtype: type, radiusKm: maxKm ?? DEFAULT_RADIUS_KM, sort: serverSort(sort), countryCode, anyCountry });
       if (live) setRanked(r.ok ? { hits: r.value } : null);
     })();
     return () => {
       live = false;
     };
-  }, [type]);
+  }, [type, maxKm, sort, anyCountry]);
 
   const byId = useMemo(() => new Map((listings ?? []).map((l) => [l.profileId, l])), [listings]);
   const isRanked = !!ranked;
   const shownListings = (listings ?? []).filter((l) => (type ? l.subtype === type : true) && matchesQuery(l, query));
   // The ranked page filtered on the device by the search field (the rail is the server's p_subtype).
-  const shownHits = (ranked?.hits ?? []).filter((h) => matchesQuery({ name: h.name, specialty: h.specialty, headline: null, location: h.area ?? null, skills: [] }, query));
+  // Then measured from the point, cut to the Distance choice and sorted (directoryFilterModel).
+  const shownHits = arrangeDirectory(
+    (ranked?.hits ?? [])
+      .filter((h) => matchesQuery({ name: h.name, specialty: h.specialty, headline: null, location: h.area ?? null, skills: [] }, query))
+      .map((h) => ({ ...h, distanceKm: deviceDistance(point, h), abroad: abroadLabel(h.countryCode, searcherCountry, anyCountry) })),
+    maxKm,
+    sort,
+    where,
+  );
+  const nearestFirst = sort === "Nearest";
   const count = isRanked ? shownHits.length : shownListings.length;
 
   const linkedListed = !!linkedProfessionalId && (listings ?? []).some((l) => l.profileId === linkedProfessionalId);
@@ -183,7 +252,7 @@ export default function Professionals() {
   };
 
   const loading = listings === null && !directoryError && !isRanked;
-  const filtering = !!query.trim() || !!type;
+  const filtering = !!query.trim() || !!type || (isRanked && filter.active);
 
   return (
     <div style={{ lineHeight: "normal" }}>
@@ -210,7 +279,9 @@ export default function Professionals() {
         </label>
 
         {isRanked && view === "list" ? (
-          <p style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: "16px", color: m.faint }}>Best match first: Centium work history, reviews and distance.</p>
+          <p style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: "16px", color: m.faint }}>
+            {nearestFirst ? "Nearest first, measured on this phone." : "Best match first: Centium work history, reviews and distance."}
+          </p>
         ) : null}
 
         {/* Kept: List / Map (the live segmented track, in the handover's
@@ -257,7 +328,52 @@ export default function Professionals() {
           idleFillDark="transparent"
           idleInkDark="rgb(var(--c-charcoal-soft))"
         />
+
+        {/* DJ: "Sort: Best match" (the Rewards sort trigger) on the ranked
+            list, and the Distance filter (FilterTrigger) on the ranked list
+            and the map. */}
+        {(isRanked && view === "list") || view === "map" ? (
+          <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            {isRanked && view === "list" ? (
+              <button
+                ref={setSortEl}
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={!!sortEl && sortOpen}
+                onClick={() => setSortOpen((o) => !o)}
+                className="hit market-focus"
+                style={{ height: 32, padding: "0 8px 0 12px", borderRadius: 10, border: `0.5px solid ${m.border}`, background: "transparent", display: "inline-flex", alignItems: "center", gap: 3, font: "inherit", fontSize: textPx(12), fontWeight: 700, color: m.ink2, cursor: "pointer", whiteSpace: "nowrap" }}
+              >
+                Sort: {sort}
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={NO_ICON_SCALE}>
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+            ) : (
+              <span />
+            )}
+            <FilterTrigger ref={setFilterAnchor} active={filter.active} open={filter.open} onPress={filter.toggleFilter} label="Filter professionals" />
+          </div>
+        ) : null}
+        {filter.active && ((isRanked && view === "list") || view === "map") ? (
+          <FilterSummary summary={filter.summary} onShowAll={filter.clearFilter} style={{ marginTop: 10 }} />
+        ) : null}
       </FixedHeader>
+      <FilterPopup open={filter.open} anchor={filterAnchor} groups={DIRECTORY_FILTER_GROUPS} selected={filter.selected} onToggle={filter.toggleOption} onClose={filter.closeFilter} />
+      <PopupMenu
+        open={sortOpen}
+        onClose={() => setSortOpen(false)}
+        anchor={sortEl}
+        heading="Sort by"
+        align="left"
+        options={SORTS.map((s) => ({ value: s, label: s }))}
+        selected={sort}
+        onSelect={(v) => {
+          setSort(v);
+          setSortOpen(false);
+        }}
+        width={200}
+      />
 
       {/* "Your professional" (kept, not drawn): the first item under the
           header, in the card chrome (radius 18, --card, 0.5px --hair,
@@ -284,7 +400,7 @@ export default function Professionals() {
         </button>
       )}
 
-      {view === "map" && <NearbyView authUserId={authUserId} dark={theme === "dark"} subtype={type} />}
+      {view === "map" && <NearbyView authUserId={authUserId} dark={theme === "dark"} subtype={type} maxKm={maxKm} where={where} anyCountry={anyCountry} />}
 
       <div style={{ display: view === "map" ? "none" : "flex", flexDirection: "column", gap: 10 }}>
         {listings !== null && <MarketOffline loaded />}
@@ -295,7 +411,7 @@ export default function Professionals() {
                 <ProfessionalCard
                   key={h.id}
                   pro={hitCard(h, l?.avatarUrl)}
-                  rank={i + 1}
+                  rank={nearestFirst ? undefined : i + 1}
                   nameAdornment={l?.hasVerifiedLicence ? <VerifiedCheck size={15} /> : undefined}
                   onPress={() => navigate(`/app/professionals/${h.id}`)}
                 />
@@ -308,12 +424,26 @@ export default function Professionals() {
         {!loading && !(directoryError && !isRanked) && count === 0 && (
           <EmptyBlock
             icon={<Users size={24} strokeWidth={1.75} aria-hidden style={NO_ICON_SCALE} />}
-            title={filtering ? (query.trim() ? "No professionals match" : "No professionals in this category yet") : "No professionals listed yet"}
+            title={
+              filtering
+                ? query.trim()
+                  ? "No professionals match"
+                  : type
+                    ? "No professionals in this category yet"
+                    : maxKm != null
+                      ? `No professionals within ${maxKm} km`
+                      : "No professionals match these filters"
+                : "No professionals listed yet"
+            }
             body={
               filtering
                 ? query.trim()
                   ? "Try another search."
-                  : "Try a different category."
+                  : type
+                    ? "Try a different category."
+                    : maxKm != null
+                      ? "Try a wider distance."
+                      : "Try another filter."
                 : "Professionals choose whether to appear here. If you already work with one, ask them for their client code to connect."
             }
             style={{ paddingTop: 24, paddingBottom: 8 }}

@@ -178,8 +178,13 @@ test("people: initials, hired badge text, rating line, place, a stable avatar st
   assert.equal(ratingLine(4.8, 38, "1.2 km"), "4.8 · 38 reviews · 1.2 km");
   assert.equal(ratingLine(4.6, 1), "4.6 · 1 review");
   assert.equal(ratingLine(null, 0, "4.0 km"), "New · 4.0 km");
-  assert.equal(placeOf({ distanceKm: 1.23, area: "Hamra, Beirut" }), "1.2 km");
+  assert.equal(placeOf({ distanceKm: 1.23, area: "Hamra, Beirut" }), "about 1.2 km");
   assert.equal(placeOf({ distanceKm: null, area: "Hamra, Beirut" }), "Hamra, Beirut");
+  // Release B (PLAN S1): "Online" where no distance is measured; a distance still wins.
+  assert.equal(ratingLine(4.8, 38, placeOf({ distanceKm: null, area: "Jounieh", online: true })), "4.8 · 38 reviews · Online");
+  assert.equal(placeOf({ distanceKm: 1.23, area: null, online: true }), "about 1.2 km");
+  assert.equal(placeOf({ distanceKm: 0.9, area: null, abroad: "France" }), "about 0.9 km · France");
+  assert.equal(placeOf({ distanceKm: null, area: null }), null);
   const s = identityStep("4f3c-uuid");
   assert.ok(s >= 1 && s <= 4);
   assert.equal(identityStep("4f3c-uuid"), s, "the same person, the same colour");

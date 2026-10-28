@@ -78,21 +78,40 @@ export function declineReasonText(reason: ReferralDeclineReason | null, other: s
 /** dispute_care_referral takes sent, accepted and declined referrals (either side). */
 export const canDispute = (s: ReferralStatus) => s === "sent" || s === "accepted" || s === "declined";
 
-/** The colleague filter chips (referStep15 chipRow10). "Nearby" has no reader, so it isn't offered. */
-export type ColleagueFilter = "all" | "dietitians" | "physios" | "doctors" | "trainers";
+/**
+ * The colleague filter chips (referStep15 chipRow10: Care network, Nearby,
+ * Dietitians, Physios, Doctors; Trainers kept after them). "Nearby" is W6B-5,
+ * colleagues_near_me (Release B), which lists colleagues outside the network
+ * too; the type chips filter the network.
+ */
+export type ColleagueFilter = "all" | "nearby" | "dietitians" | "physios" | "doctors" | "trainers";
 export const COLLEAGUE_FILTERS: { key: ColleagueFilter; label: string }[] = [
   { key: "all", label: "Care network" },
+  { key: "nearby", label: "Nearby" },
   { key: "dietitians", label: "Dietitians" },
   { key: "physios", label: "Physios" },
   { key: "doctors", label: "Doctors" },
   { key: "trainers", label: "Trainers" },
 ];
 export function matchesFilter(type: string | null, f: ColleagueFilter): boolean {
-  if (f === "all") return true;
+  if (f === "all" || f === "nearby") return true;
   if (f === "dietitians") return type === "dietitian" || type === "nutritionist";
   if (f === "physios") return type === "physiotherapist";
   if (f === "doctors") return type === "doctor";
   return type === "trainer" || type === "coach_instructor";
+}
+
+/**
+ * A Nearby row's distance (the frame's "Physiotherapist · {n} km"):
+ * colleagues_near_me returns a band, never a point, so the band is what
+ * shows. band_rank 1 to 6 as discovery_reach() numbers them.
+ */
+const BANDS = ["under 2 km", "2 to 5 km", "5 to 10 km", "10 to 25 km", "25 to 50 km", "over 50 km"];
+export const bandWords = (band: number): string => BANDS[Math.min(BANDS.length, Math.max(1, Math.round(band))) - 1];
+
+/** "Physiotherapist · 2 to 5 km", with "· in your network" when they're already in it. */
+export function nearbyLine(type: string | null, band: number, inNetwork: boolean): string {
+  return [typeLabel(type), bandWords(band), inNetwork ? "in your network" : null].filter(Boolean).join(" · ");
 }
 
 /** "today, 9:40 AM" / "yesterday" / "Oct 10" for the card's received line. */

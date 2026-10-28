@@ -46,9 +46,23 @@ export function classFilterGroups<T extends FilterableClass>(classes: readonly T
   if (types.length) groups.push({ heading: "Type", options: types, test: (c, v) => c.classType === v });
   groups.push({ heading: "Time", options: TIME_OPTIONS, test: (c, v) => timeMatches(c.startTime, v) });
   if (places.length > 1) groups.push({ heading: "Gym", options: places, test: (c, v) => placeOf(c) === v });
-  if (hasPosition) groups.push({ heading: "Distance", options: DISTANCE_OPTIONS, test: (c, v) => c.km != null && c.km < parseFloat(v.replace("Under ", "")) });
+  if (hasPosition) groups.push(distanceGroup<T>());
   groups.push({ heading: "Price", options: PRICE_OPTIONS, test: (c, v) => priceMatches(c.priceValue, v) });
   return groups;
+}
+
+/** The Distance group ("Under 1 km / 3 km / 5 km"): a choice keeps what is strictly nearer; no distance never matches. */
+export function distanceGroup<T extends { km?: number | null }>(): FilterGroupDef<T> {
+  return { heading: "Distance", options: DISTANCE_OPTIONS, test: (c, v) => c.km != null && c.km < parseFloat(v.replace("Under ", "")) };
+}
+
+/**
+ * Release B · Explore Gyms' filter: the classes filter's Distance group, the
+ * only one (no frame draws a gyms filter; it matches the classes one). Only
+ * with a known position, so no group at all without one and the trigger hides.
+ */
+export function gymFilterGroups<T extends { km?: number | null }>(hasPosition: boolean): FilterGroupDef<T>[] {
+  return hasPosition ? [distanceGroup<T>()] : [];
 }
 
 /** "Friday, October 16 · 5 classes" (D-02 month first). */

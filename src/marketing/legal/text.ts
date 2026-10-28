@@ -74,7 +74,7 @@ export const TERMS_GROUPS: LegalGroup[] = [
   {
     h: "Referral, rewards and ambassador program",
     items: [
-      "Centium may offer referral credits, reward points and an invite-only ambassador tier with enhanced referral terms. These have no cash value, cannot be transferred, sold or redeemed for cash, and may be adjusted, expired or revoked, including for suspected fraud or abuse. Centium may change or discontinue any referral, rewards or ambassador program at any time.",
+      "Centium may offer referral credits, reward points and an ambassador tier, by application or invitation, with enhanced referral terms. These have no cash value, cannot be transferred, sold or redeemed for cash, and may be adjusted, expired or revoked, including for suspected fraud or abuse. Centium may change or discontinue any referral, rewards or ambassador program at any time.",
     ],
   },
   {

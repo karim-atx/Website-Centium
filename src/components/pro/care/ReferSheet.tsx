@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowRight, Search, Send } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useOnline } from "../../../hooks/useOnline";
@@ -9,8 +10,8 @@ import { INK } from "../proInk";
 import { Avatar } from "../client/kit";
 import { ChipRow } from "../insights/parts";
 import { STAGE_LABEL, fetchClientStages, type StageRow } from "../../../services/pro/clients";
-import { REASON_MAX, referClient, type CareLink, type Colleague } from "../../../services/pro/careNetwork";
-import { COLLEAGUE_FILTERS, firstName, matchesFilter, typeLabel, type ColleagueFilter } from "./careModel";
+import { REASON_MAX, fetchNearbyColleagues, referClient, requestLink, type CareLink, type Colleague, type NearbyRead } from "../../../services/pro/careNetwork";
+import { COLLEAGUE_FILTERS, firstName, matchesFilter, nearbyLine, typeLabel, type ColleagueFilter } from "./careModel";
 
 const OFFLINE = "You're offline. Try again when you're connected.";
 const TONES = ["pr", "teal", "gold", "sky"] as const;
@@ -50,6 +51,34 @@ const Pick: React.FC<{ name: string; line: string; on: boolean; tone: (typeof TO
 );
 
 /**
+ * A Nearby colleague who isn't in the care network yet (refer_client refuses
+ * them with ATX09): the pick row's box without the radio, and "Ask to
+ * connect" (request_care_link) in its place.
+ */
+const AskRow: React.FC<{ name: string; line: string; tone: (typeof TONES)[number]; url?: string | null; state: "ask" | "busy" | "asked"; onAsk: () => void }> = ({ name, line, tone, url, state, onAsk }) => (
+  <div className="flex items-center" style={{ gap: 12, padding: "10px 12px", borderRadius: 14, border: `1px solid ${INK.b10}`, background: INK.card, marginBottom: 8 }}>
+    <Avatar name={name} url={url} size={38} tone={tone} />
+    <span className="flex-1 min-w-0">
+      <span className="block truncate" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>
+        {name}
+      </span>
+      <span className="block" style={{ fontSize: textPx(12), color: INK.chF }}>
+        {line}
+      </span>
+    </span>
+    {state === "asked" ? (
+      <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chF }}>
+        Pending
+      </span>
+    ) : (
+      <button type="button" disabled={state === "busy"} onClick={onAsk} className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, opacity: state === "busy" ? 0.5 : 1 }}>
+        Ask to connect
+      </button>
+    )}
+  </div>
+);
+
+/**
  * Release 3 · MO7 v3 Refer a client (gen/r15.js referStep15): the bottom
  * sheet with the three-step bar (4 high r9999 bars, gap 6; the step labels
  * 10.5 / 700, primary.deep up to the current one); 1 Client (search your
@@ -60,6 +89,11 @@ const Pick: React.FC<{ name: string; line: string; on: boolean; tone: (typeof TO
  * client's data on (refer_client takes the client, the colleague and the
  * note), and the receiver sees nothing until the client agrees (CU23). The
  * step says that plainly instead.
+ * W6B-5 "Nearby" (Release B colleagues_near_me, from the professional's own
+ * map area): colleagues already in the network are picked as usual ("{type}
+ * · {band} · in your network"); the others offer "Ask to connect", since a
+ * referral goes only to the network. No area (ATXH4) points to Where you
+ * work. Metered, so read once per opening of the sheet.
  */
 export const ReferSheet: React.FC<{
   open: boolean;
@@ -69,6 +103,7 @@ export const ReferSheet: React.FC<{
   onSent: (text: string) => void;
 }> = ({ open, onClose, links, colleagues, onSent }) => {
   const { professionalClients } = useApp();
+  const navigate = useNavigate();
   const online = useOnline();
   const noteId = useId();
   const [step, setStep] = useState(0);
@@ -80,6 +115,8 @@ export const ReferSheet: React.FC<{
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [stages, setStages] = useState<StageRow[]>([]);
+  const [nearby, setNearby] = useState<NearbyRead | "loading" | null>(null);
+  const [asked, setAsked] = useState<Record<string, "busy" | "asked">>({});
 
   useEffect(() => {
     if (!open) return;
@@ -90,6 +127,8 @@ export const ReferSheet: React.FC<{
     setFilter("all");
     setNote("");
     setErr(null);
+    setNearby(null);
+    setAsked({});
     let live = true;
     void fetchClientStages().then((r) => live && r.ok && setStages(r.data));
     return () => {
@@ -109,8 +148,33 @@ export const ReferSheet: React.FC<{
   const term = q.trim().toLowerCase();
   const shownClients = clients.filter((c) => !term || c.name.toLowerCase().includes(term));
   const shownColleagues = network.filter((x) => matchesFilter(x.c?.type ?? null, filter) && (!term || (x.c?.name ?? "").toLowerCase().includes(term)));
+  // Read when the chip is first chosen (once per opening; metered), and again on "Try again".
+  const loadNearby = () => {
+    setNearby("loading");
+    void fetchNearbyColleagues().then(setNearby);
+  };
+  const chooseFilter = (f: ColleagueFilter) => {
+    setFilter(f);
+    if (f === "nearby" && nearby === null) loadNearby();
+  };
+  const linkOf = (id: string) => links.find((l) => l.other === id) ?? null;
+  const nearbyRows = nearby && nearby !== "loading" && nearby.ok ? nearby.data.filter((c) => !term || (c.name ?? "").toLowerCase().includes(term)) : [];
+  const ask = async (id: string) => {
+    if (!online) return setErr(OFFLINE);
+    setErr(null);
+    setAsked((a) => ({ ...a, [id]: "busy" }));
+    const r = await requestLink(id);
+    setAsked((a) => {
+      const next = { ...a };
+      if (r.ok) next[id] = "asked";
+      else delete next[id];
+      return next;
+    });
+    if (!r.ok) setErr(r.message);
+  };
+
   const chosen = clients.find((c) => c.id === client) ?? null;
-  const pro = to ? colleagues[to] ?? null : null;
+  const pro = to ? (colleagues[to] ?? (nearby && nearby !== "loading" && nearby.ok ? nearby.data.find((c) => c.id === to) : null) ?? null) : null;
   const cFirst = firstName(chosen?.name) || "Your client";
   const pFirst = firstName(pro?.name) || "your colleague";
 
@@ -172,9 +236,51 @@ export const ReferSheet: React.FC<{
         <>
           <SearchBox value={q} onChange={setQ} placeholder="Search colleagues" />
           <div style={{ height: 10 }} />
-          <ChipRow label="Colleague type" items={COLLEAGUE_FILTERS} active={filter} onChange={(k) => setFilter(k as ColleagueFilter)} />
+          <ChipRow label="Colleague type" items={COLLEAGUE_FILTERS} active={filter} onChange={(k) => chooseFilter(k as ColleagueFilter)} />
           <div role="radiogroup" aria-label="Colleague">
-            {network.length === 0 ? (
+            {filter === "nearby" ? (
+              nearby === null || nearby === "loading" ? (
+                <p role="status" style={{ fontSize: textPx(12.5), color: INK.chF }}>Finding colleagues near you…</p>
+              ) : !nearby.ok ? (
+                nearby.reason === "no_area" ? (
+                  <p style={{ fontSize: textPx(12.5), color: INK.chF, lineHeight: 1.5 }}>
+                    Set your area in Where you work to see colleagues near you.{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        navigate("/app/more/where-you-work/area");
+                      }}
+                      className="tap font-bold"
+                      style={{ color: INK.prDeep }}
+                    >
+                      Where you work
+                    </button>
+                  </p>
+                ) : (
+                  <p style={{ fontSize: textPx(12.5), color: INK.chF, lineHeight: 1.5 }}>
+                    {nearby.reason === "rate_limited" ? "You've searched a lot in the last hour. Try Nearby again later." : nearby.reason === "offline" ? OFFLINE : "Couldn't load colleagues near you."}{" "}
+                    {nearby.reason !== "rate_limited" && (
+                      <button type="button" onClick={loadNearby} className="tap font-bold" style={{ color: INK.prDeep }}>
+                        Try again
+                      </button>
+                    )}
+                  </p>
+                )
+              ) : nearbyRows.length === 0 ? (
+                <p style={{ fontSize: textPx(12.5), color: INK.chF, lineHeight: 1.5 }}>{term ? "No colleagues match." : "No listed colleagues work near your area yet."}</p>
+              ) : (
+                nearbyRows.map((c, i) => {
+                  const link = linkOf(c.id);
+                  const name = c.name ?? "A colleague";
+                  return link?.status === "accepted" ? (
+                    <Pick key={c.id} name={name} url={c.avatarUrl} line={nearbyLine(c.type, c.band, true)} on={to === c.id} tone={TONES[(i + 1) % 4]} onClick={() => setTo(c.id)} />
+                  ) : (
+                    <AskRow key={c.id} name={name} url={c.avatarUrl} line={nearbyLine(c.type, c.band, false)} tone={TONES[(i + 1) % 4]} state={link ? "asked" : (asked[c.id] ?? "ask")} onAsk={() => void ask(c.id)} />
+                  );
+                })
+              )
+            ) : network.length === 0 ? (
               <p style={{ fontSize: textPx(12.5), color: INK.chF, lineHeight: 1.5 }}>Your care network is empty. Add colleagues in Network first; you can refer only to them.</p>
             ) : shownColleagues.length === 0 ? (
               <p style={{ fontSize: textPx(12.5), color: INK.chF }}>No colleagues match.</p>

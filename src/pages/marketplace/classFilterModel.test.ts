@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { matchesFilter } from "../../components/market/filterModel.ts";
-import { classCountLine, classFilterGroups, priceMatches, stripDays, timeMatches } from "./classFilterModel.ts";
+import { classCountLine, classFilterGroups, gymFilterGroups, priceMatches, stripDays, timeMatches } from "./classFilterModel.ts";
 
 const C = [
   { id: "a", classType: "Cycling", startTime: "18:30", businessName: "Hamra", priceValue: 12, km: 0.8 },
@@ -36,4 +36,14 @@ test("count line and the day strip", () => {
   assert.equal(days[0], "2026-10-16");
   assert.equal(days.at(-1), "2026-11-20");
   assert.equal(stripDays(new Date(2026, 9, 16), []).length, 14);
+});
+
+test("Release B: Explore Gyms filters by distance only with a known position", () => {
+  assert.deepEqual(gymFilterGroups(false), []);
+  const groups = gymFilterGroups<{ km: number | null }>(true);
+  assert.deepEqual(groups.map((g) => g.heading), ["Distance"]);
+  assert.deepEqual(groups[0].options, ["Under 1 km", "Under 3 km", "Under 5 km"]);
+  const gyms = [{ km: 0.5 }, { km: 2.9 }, { km: 3 }, { km: null }];
+  assert.deepEqual(gyms.filter((g) => matchesFilter(groups, ["Under 3 km"], g)).map((g) => g.km), [0.5, 2.9]);
+  assert.equal(gyms.filter((g) => matchesFilter(groups, [], g)).length, 4);
 });

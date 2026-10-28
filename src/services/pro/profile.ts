@@ -17,7 +17,10 @@
 // - my_business_employments() → business_id, business_name, accepted_at,
 //   invited_at.
 // - professional_profiles: specialties (≤ 5), work_mode (in_person, online,
-//   both), home_visit_km (> 0, ≤ 200) are in the UPDATE grant.
+//   both) and service_radius_km (Release B 20261217010000: 1 to 100, default
+//   25, not null) are in the UPDATE grant. MO20's radius is service_radius_km
+//   since Release B; home_visit_km keeps its own meaning (how far a home
+//   visit goes, onboarding's "Home visits cover") and isn't read here.
 
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
@@ -43,7 +46,8 @@ export interface ProfileFacts {
   handleChangedAt: string | null;
   specialties: string[];
   workMode: WorkModeDb | null;
-  homeVisitKm: number | null;
+  /** MO20's in-person service radius, km (service_radius_km); null only before the row exists. */
+  serviceRadiusKm: number | null;
   listedPublicly: boolean;
   affiliatedBusinessId: string | null;
   paymentModalities: string[];
@@ -64,7 +68,7 @@ const EMPTY_FACTS: ProfileFacts = {
   handleChangedAt: null,
   specialties: [],
   workMode: null,
-  homeVisitKm: null,
+  serviceRadiusKm: null,
   listedPublicly: false,
   affiliatedBusinessId: null,
   paymentModalities: [],
@@ -77,7 +81,7 @@ const EMPTY_FACTS: ProfileFacts = {
 export async function fetchProfileFacts(me: string): Promise<Read<ProfileFacts>> {
   try {
     const { data, error } = await from("professional_profiles")
-      .select("handle, handle_changed_at, specialties, work_mode, home_visit_km, listed_publicly, affiliated_business_id, payment_modalities, monthly_rate, consultation_rate, bio, show_team_workplaces")
+      .select("handle, handle_changed_at, specialties, work_mode, service_radius_km, listed_publicly, affiliated_business_id, payment_modalities, monthly_rate, consultation_rate, bio, show_team_workplaces")
       .eq("profile_id", me)
       .maybeSingle();
     if (error) return readFail(error);
@@ -86,7 +90,7 @@ export async function fetchProfileFacts(me: string): Promise<Read<ProfileFacts>>
       handle_changed_at: string | null;
       specialties: string[] | null;
       work_mode: WorkModeDb | null;
-      home_visit_km: number | string | null;
+      service_radius_km: number | string | null;
       listed_publicly: boolean;
       affiliated_business_id: string | null;
       payment_modalities: string[] | null;
@@ -105,7 +109,7 @@ export async function fetchProfileFacts(me: string): Promise<Read<ProfileFacts>>
         handleChangedAt: r.handle_changed_at,
         specialties: r.specialties ?? [],
         workMode: r.work_mode,
-        homeVisitKm: num(r.home_visit_km),
+        serviceRadiusKm: num(r.service_radius_km),
         listedPublicly: r.listed_publicly,
         affiliatedBusinessId: r.affiliated_business_id,
         paymentModalities: r.payment_modalities ?? [],
@@ -139,8 +143,9 @@ export const saveSpecialties = (me: string, specialties: string[]) =>
 export const saveWorkMode = (me: string, workMode: WorkModeDb | null) =>
   writeProfile(me, { work_mode: workMode }, "Couldn't save how you work. Try again.");
 
-export const saveServiceRadius = (me: string, km: number | null) =>
-  writeProfile(me, { home_visit_km: km }, "Couldn't save your service area. Try again.");
+/** MO20's radius: service_radius_km, 1 to 100 (23514 outside it; the slider can't go there). */
+export const saveServiceRadius = (me: string, km: number) =>
+  writeProfile(me, { service_radius_km: km }, "Couldn't save your service area. Try again.");
 
 export const savePaymentModalities = (me: string, modalities: string[]) =>
   writeProfile(me, { payment_modalities: modalities }, "Couldn't save your payment methods. Try again.");

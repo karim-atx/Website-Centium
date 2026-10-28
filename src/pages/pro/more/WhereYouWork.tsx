@@ -4,7 +4,7 @@ import { Building2, Check, Globe, MapPin, Store, Video } from "lucide-react";
 import { SettingsRow } from "../../../components/pro/calendar/calendarFields";
 import { SectionHead } from "../../../components/pro/client/kit";
 import { CtaButton, ErrorLine, StateLine, SubPage } from "../../../components/pro/profile/kit";
-import { RADIUS_MAX_KM, WORK_TAB_TO_DB, radiusFill, workTabOf, type WorkTab } from "../../../components/pro/profile/profileModel";
+import { RADIUS_DEFAULT_KM, RADIUS_STEPS, WORK_TAB_TO_DB, radiusAtPosition, radiusFill, radiusPosition, workTabOf, type WorkTab } from "../../../components/pro/profile/profileModel";
 import { useProfileFacts } from "../../../components/pro/profile/useProfileFacts";
 import { OfflineLine, ProCardSkeleton, ProError } from "../../../components/pro/states";
 import { INK } from "../../../components/pro/proInk";
@@ -45,9 +45,13 @@ const TABS: { key: WorkTab; label: string }[] = [
  * - Service area: the radius figure (200 high r18, a circle scaled to the
  *   radius in primary over 22% lavender, a 14 dot in primary.deep with a 3
  *   card ring), "Radius" / "{n} km", the 8 high bar (primary to the share,
- *   soft after; 25 km full scale, so 10 km is 40%) and Radius / Areas tabs
- *   (34, 12, 12 above). Areas is MapAreaSection, the map area opt-in (kept);
- * - pinned Save (check) for the work mode and the radius (home_visit_km).
+ *   soft after; 10 km is 40% as drawn, on profileModel's 1 to 100 km curve)
+ *   and Radius / Areas tabs (34, 12, 12 above). Areas is MapAreaSection, the
+ *   map area opt-in (kept), which sends the area's country (Release B);
+ * - pinned Save (check) for the work mode and the radius. Release B
+ *   (20261217010000): the radius is service_radius_km (1 to 100, default
+ *   25), which discovery uses; it no longer writes home_visit_km, which keeps
+ *   its home-visit meaning.
  */
 export default function WhereYouWork() {
   const navigate = useNavigate();
@@ -82,8 +86,10 @@ export default function WhereYouWork() {
 
   const worksAtBusiness = (jobs?.length ?? 0) > 0;
   const shownTab: WorkTab | null = tab ?? (facts ? workTabOf(facts.workMode, worksAtBusiness) : null);
-  const shownKm = km ?? facts?.homeVisitKm ?? null;
-  const dirty = (tab !== null && WORK_TAB_TO_DB[tab] !== facts?.workMode) || (km !== null && km !== facts?.homeVisitKm);
+  // No row yet reads as the column's default, which is what the first save stores.
+  const savedKm = facts ? (facts.serviceRadiusKm ?? RADIUS_DEFAULT_KM) : null;
+  const shownKm = km ?? savedKm;
+  const dirty = (tab !== null && WORK_TAB_TO_DB[tab] !== facts?.workMode) || (km !== null && km !== savedKm);
   const loading = !facts || jobs === null;
 
   useEffect(() => {
@@ -101,7 +107,7 @@ export default function WhereYouWork() {
         return setSaveError(r.message);
       }
     }
-    if (km !== null && km !== facts.homeVisitKm) {
+    if (km !== null && km !== savedKm) {
       const r = await saveServiceRadius(authUserId, km);
       if (!r.ok) {
         setBusy(false);
@@ -109,7 +115,7 @@ export default function WhereYouWork() {
       }
     }
     setBusy(false);
-    setFacts({ ...facts, workMode: tab !== null ? WORK_TAB_TO_DB[tab] : facts.workMode, homeVisitKm: km ?? facts.homeVisitKm });
+    setFacts({ ...facts, workMode: tab !== null ? WORK_TAB_TO_DB[tab] : facts.workMode, serviceRadiusKm: km ?? facts.serviceRadiusKm });
     setTab(null);
     setKm(null);
     setSaved(true);
@@ -207,14 +213,14 @@ export default function WhereYouWork() {
                     <span aria-hidden className="absolute block" style={{ left: 0, right: 0, top: 8, height: 8, borderRadius: 9999, background: `linear-gradient(to right, ${INK.pr} ${fill * 100}%, ${INK.soft} ${fill * 100}%)` }} />
                     <input
                       type="range"
-                      min={1}
-                      max={RADIUS_MAX_KM}
+                      min={0}
+                      max={RADIUS_STEPS}
                       step={1}
-                      value={Math.min(shownKm ?? 0, RADIUS_MAX_KM)}
+                      value={radiusPosition(shownKm)}
                       aria-labelledby="radius-label"
                       aria-valuetext={shownKm ? `${shownKm} km` : "Not set"}
                       onChange={(e) => {
-                        setKm(Number(e.target.value));
+                        setKm(radiusAtPosition(Number(e.target.value)));
                         setSaved(false);
                       }}
                       className="absolute inset-0 w-full opacity-0 cursor-pointer"

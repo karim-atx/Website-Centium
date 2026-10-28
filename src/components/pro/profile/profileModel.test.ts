@@ -13,7 +13,10 @@ import {
   profileHref,
   priceLabel,
   profileUrl,
+  radiusAtPosition,
   radiusFill,
+  radiusPosition,
+  serviceAreaLine,
   sessionLine,
   wordCount,
   workTabOf,
@@ -89,10 +92,29 @@ test("four work tabs map onto three values", () => {
   assert.equal(workTabOf(null, false), null);
 });
 
-test("radius bar fills 40% at 10 km", () => {
+test("radius bar fills 40% at 10 km, as drawn, on the 1 to 100 km column", () => {
   assert.ok(Math.abs(radiusFill(10) - 0.4) < 1e-9);
-  assert.equal(radiusFill(30), 1);
+  assert.equal(radiusFill(1), 0);
+  assert.equal(radiusFill(100), 1);
+  assert.equal(radiusFill(200), 1);
   assert.equal(radiusFill(null), 0);
+  assert.ok(radiusFill(25) > radiusFill(10) && radiusFill(25) < radiusFill(50));
+});
+
+test("radius slider positions: 1 to 100 km, every km up to 30 reachable", () => {
+  assert.equal(radiusAtPosition(0), 1);
+  assert.equal(radiusAtPosition(200), 100);
+  assert.equal(radiusPosition(10), 80);
+  for (let km = 1; km <= 30; km++) assert.equal(radiusAtPosition(radiusPosition(km)), km);
+});
+
+test("MO1 service area line (PLAN S2)", () => {
+  assert.equal(serviceAreaLine("Hamra", 25, "in_person"), "Hamra and 25 km around");
+  assert.equal(serviceAreaLine("Hamra", null, "both"), "Hamra");
+  assert.equal(serviceAreaLine("Hamra", 25, "online"), "Online only");
+  assert.equal(serviceAreaLine(null, 25, "online"), "Online only");
+  assert.equal(serviceAreaLine("", 25, "in_person"), null);
+  assert.equal(serviceAreaLine(null, 10, null), null);
 });
 
 test("prices and lines", () => {

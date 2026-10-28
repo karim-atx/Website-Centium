@@ -10,6 +10,8 @@ import { proLaneId } from "./proLanes";
 import { proChipLabel } from "./proModel";
 import { ProfilePreview, SummaryCard } from "./parts";
 import { ProLicencePublish } from "./ProLicencePublish";
+import { useCoverPicker } from "../../../components/pro/profile/useCoverPicker";
+import { ensureProProfileRow } from "../../../services/professional-onboarding";
 import type { ProStepProps } from "./types";
 
 /** What the Background summary lists, from the stored CV. */
@@ -45,8 +47,12 @@ export const ProReviewStep: React.FC<
   ProStepProps & { onSubmit: () => Promise<{ ok: true } | { ok: false; message: string }> }
 > = ({ kind, shared, pro, setPro, onBack, goTo, onSubmit }) => {
   const flow = useOnboardingFlow();
-  const { user } = useApp();
+  const { user, authUserId } = useApp();
   const { cv, setCv } = useMyCv();
+  // Release B (W6C-3): the cover on the preview. The bucket's insert policy
+  // needs the professional_profiles row, which ensureProProfileRow makes
+  // (as the credential step does before a licence upload).
+  const cover = useCoverPicker(async () => (authUserId ? ensureProProfileRow(authUserId) : { ok: false }));
   const [termsError, setTermsError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -124,7 +130,16 @@ export const ProReviewStep: React.FC<
         type={`${label} · ${pro.workMode === "online" ? "Online" : pro.area?.label ?? "Area not set"}`}
         tags={pro.specialties.slice(0, 3)}
         line={cv?.profile.headline ?? null}
+        coverUrl={cover.url}
+        onCover={cover.choose}
+        coverBusy={cover.busy}
       />
+      {cover.inputs}
+      {cover.error && (
+        <p role="alert" className="obp-sum-flag" style={{ margin: "-6px 2px 10px" }}>
+          {cover.error}
+        </p>
+      )}
       {/* OURS-licence-publish: the licences that will be on that profile, by choice, before going live. */}
       {cv && (
         <ProLicencePublish

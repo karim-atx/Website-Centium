@@ -7,8 +7,8 @@
 // - courses (services/pro/courses fetchCourseCards, published only);
 // - packages: hire plans with a session count (services/pro/profile
 //   fetchServicePlans, active only);
-// - professional_open_slots(p_professional, p_from, p_to, p_service_id)
-//   (DB-4), this week only, per session type (see fetchWeekSlots);
+// - professional_open_slots(p_professional, p_from, p_to) (DB-4), this week
+//   only, every session type in one call (see fetchWeekSlots);
 // - the Community: my_forum_threads() (Release A; posts carry no author
 //   column) plus forum_threads_readable for the body, published, under the
 //   real name.
@@ -81,37 +81,35 @@ export async function fetchPromoItems(me: string, lane: "full_coaching" | "nutri
 
 /**
  * This week's open slots (Monday to Sunday, from now on), as "Tue 6:00 PM".
- * professional_open_slots needs a session type (ATXF4 without one), so the
- * starts of every active session type are merged, then thinned to slots that
- * don't overlap (the reader offers a start every 15 minutes). null data = no
- * session type.
+ * One professional_open_slots call without p_service_id answers for every
+ * active session type (each row carries its service_id); the starts are
+ * merged, then thinned to slots that don't overlap (the reader offers a start
+ * every 15 minutes). null data = no session type.
  *
- * Kept per type although Release A made p_service_id optional (W8-7): on the
- * local stack the call without a type took 22-30 s against 8-15 s per type,
- * past the 8 s statement timeout either way, and one call puts every type's
- * work in one budget. Back to one call once the reader is fast (reported to
- * the Database session).
+ * ONE CALL since Release B (Database 20261217060000). It was per type while
+ * the reader re-checked the zone name for every candidate slot (the all-types
+ * call took 22-30 s locally); it now asks the zone once, and r3-coach's week
+ * answers in about 0.1 s.
  */
 export async function fetchWeekSlots(me: string, now: Date): Promise<Read<string[] | null>> {
-  const svc = await from("appointment_services").select("id").eq("professional_id", me).eq("active", true);
+  // Still asked first: no active type is "nothing to offer" (null), which an
+  // empty slot list can't tell apart from a booked-up week.
+  const svc = await from("appointment_services").select("id").eq("professional_id", me).eq("active", true).limit(1);
   if (svc.error) return readFail(svc.error);
-  const ids = ((svc.data ?? []) as unknown as { id: string }[]).map((r) => r.id);
-  if (!ids.length) return { ok: true, data: null };
+  if (!(svc.data ?? []).length) return { ok: true, data: null };
   const d = new Date(now);
   d.setHours(0, 0, 0, 0);
   const sun = new Date(d);
   sun.setDate(d.getDate() + (6 - ((d.getDay() + 6) % 7)));
   const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+  const { data, error } = await rpc("professional_open_slots", { p_professional: me, p_from: iso(d), p_to: iso(sun) });
+  if (error) return readFail(error);
   const starts = new Map<number, { s: Date; e: Date }>();
-  for (const id of ids) {
-    const { data, error } = await rpc("professional_open_slots", { p_professional: me, p_from: iso(d), p_to: iso(sun), p_service_id: id });
-    if (error) return readFail(error);
-    for (const r of (Array.isArray(data) ? data : []) as { starts_at: string; ends_at: string }[]) {
-      const t = new Date(r.starts_at);
-      const e = new Date(r.ends_at);
-      const had = starts.get(t.getTime());
-      if (t.getTime() > now.getTime() && (!had || e < had.e)) starts.set(t.getTime(), { s: t, e });
-    }
+  for (const r of (Array.isArray(data) ? data : []) as { starts_at: string; ends_at: string }[]) {
+    const t = new Date(r.starts_at);
+    const e = new Date(r.ends_at);
+    const had = starts.get(t.getTime());
+    if (t.getTime() > now.getTime() && (!had || e < had.e)) starts.set(t.getTime(), { s: t, e });
   }
   const kept: Date[] = [];
   let free = 0;

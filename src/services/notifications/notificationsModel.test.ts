@@ -126,6 +126,9 @@ test("targets: the documented subject per client kind; other kinds open nothing 
   assert.equal(clientNotificationTarget({ kind: "points_expiring", subjectType: "points", subjectId: null }), "/app/marketplace/points/history");
   assert.equal(clientNotificationTarget({ kind: "class_cancelled", subjectType: "class_session", subjectId: O }), "/app/marketplace/bookings?tab=upcoming");
   assert.equal(clientNotificationTarget({ kind: "review_prompt", subjectType: "class_session", subjectId: O }), "/app/marketplace/bookings?tab=past");
+  for (const k of ["ambassador_application_approved", "ambassador_application_declined"]) {
+    assert.equal(clientNotificationTarget({ kind: k, subjectType: "ambassador_application", subjectId: O }), "/app/more?open=referral", k);
+  }
   for (const k of MEMBER_NOTIFICATION_KINDS.filter((k) => !CLIENT_KINDS.includes(k))) {
     assert.equal(clientNotificationTarget({ kind: k, subjectType: "voucher", subjectId: V }), null, k);
   }
@@ -134,10 +137,12 @@ test("targets: the documented subject per client kind; other kinds open nothing 
   assert.equal(clientNotificationTarget({ kind: "x", subjectType: "offer", subjectId: O }), null);
 });
 
-test("kinds: the enum in order; the client's are a member's four, never an owner's or a professional's", () => {
-  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 18);
+test("kinds: the enum in order; the client's are a member's six, never an owner's or a professional's", () => {
+  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 20);
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(0, 4), [...RELEASE1_KINDS]);
-  assert.deepEqual([...CLIENT_KINDS], ["voucher_issued", "points_expiring", "class_cancelled", "review_prompt"]);
+  // Release B appends the ambassador decision (20261217000000), to the applicant.
+  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(18), ["ambassador_application_approved", "ambassador_application_declined"]);
+  assert.deepEqual([...CLIENT_KINDS], ["voucher_issued", "points_expiring", "class_cancelled", "review_prompt", "ambassador_application_approved", "ambassador_application_declined"]);
   for (const k of CLIENT_KINDS) assert.ok((MEMBER_NOTIFICATION_KINDS as readonly string[]).includes(k), k);
   const notMine = [
     "voucher_redeemed", "offer_hidden", "application_received", "hire_offer_accepted", "hire_offer_declined", "hiring_fee_added", "gym_review_received",
@@ -452,4 +457,17 @@ test("mergeFirstPage: new rows on top, shown rows refreshed, loaded pages kept; 
   );
   assert.deepEqual(rt.mergeFirstPage(list, true, { items: [{ id: "x", v: 2 }], more: false }), { list: [{ id: "x", v: 2 }], more: false });
   assert.deepEqual(rt.mergeFirstPage([], false, { items: [{ id: "x", v: 2 }], more: false }), { list: [{ id: "x", v: 2 }], more: false });
+});
+
+test("ambassador decision: PLAN S3's lines; the decline names the next date (next_eligible_on) month first", () => {
+  const c = (kind: string, payload?: Record<string, unknown>) => notificationCopy({ titleKey: kind, kind, payload });
+  assert.deepEqual(c("ambassador_application_approved", {}), { title: "Your ambassador application", body: "You're now a Centium Ambassador." });
+  assert.deepEqual(c("ambassador_application_declined", { next_eligible_on: "2027-01-26" }), {
+    title: "Your ambassador application",
+    body: "We've replied to your application. You can apply again from Jan 26, 2027.",
+  });
+  assert.equal(c("ambassador_application_declined", {}), CLIENT_COPY.ambassador_application_declined);
+  assert.equal(c("ambassador_application_declined", { next_eligible_on: "soon" }), CLIENT_COPY.ambassador_application_declined);
+  assert.deepEqual(notifLook("ambassador_application_approved"), { tone: "lav", glyph: "star" });
+  assert.deepEqual(notifLook("ambassador_application_declined"), { tone: "lav", glyph: "app" });
 });

@@ -1,5 +1,5 @@
 import { useState, type ComponentType } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { ReferralPopup } from "../../components/profile/ReferralPopup";
 import { useUnread } from "../../context/UnreadContext";
@@ -59,7 +59,14 @@ function PersonalMore() {
   const { user } = useApp();
   const unread = useUnread();
   const forumAllowed = forumAccess(user.dateOfBirth) === "adult";
-  const [referralOpen, setReferralOpen] = useState(false);
+  // Release B: an ambassador decision notice opens here with ?open=referral
+  // (clientNotificationTarget), on the popup that carries the status card.
+  const [params, setParams] = useSearchParams();
+  const [referralOpen, setReferralOpenState] = useState(() => params.get("open") === "referral");
+  const setReferralOpen = (open: boolean) => {
+    setReferralOpenState(open);
+    if (!open && params.has("open")) setParams({}, { replace: true });
+  };
 
   const go = (e: Entry) => (e.onClick ? e.onClick() : navigate(e.to!));
 
