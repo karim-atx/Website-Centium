@@ -333,6 +333,9 @@ test("business targets: by kind and documented subject; a non-uuid never reaches
 
 test("professional kinds: the seven 'to a professional' labels, a line and a fill each; offers and invites are requests", () => {
   assert.deepEqual([...PRO_KINDS], ["hire_offer_received", "hired", "classes_added", "class_changed", "removed_from_team", "existing_team_invite", "instructor_review_received"]);
+  // Database 20261219030000 writes a professional's ambassador decision to their hub (pro.ambassador.*):
+  // the member kinds stay out of PRO_KINDS, or the hub would show the decision twice.
+  for (const k of ["ambassador_application_approved", "ambassador_application_declined"]) assert.ok(!(PRO_KINDS as readonly string[]).includes(k), k);
   for (const k of PRO_KINDS) {
     assert.ok(PRO_COPY[k] && PRO_COPY[k].title.length > 0, k);
     assert.ok(typeof PRO_FILLS[k] === "function", k);

@@ -375,6 +375,11 @@ export default function Home() {
         setHubOpen(false);
         navigate(`${PRO_ROUTES.more}/reviews`);
         return;
+      case "ambassador_application":
+        // pro.ambassador.approved / .declined: the Referral popup's status card.
+        setHubOpen(false);
+        navigate(`${PRO_ROUTES.more}?open=referral`);
+        return;
       case "care_link":
       case "care_referral":
         setHubOpen(false);

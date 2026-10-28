@@ -1,5 +1,5 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   BadgeCheck,
   Banknote,
@@ -322,7 +322,14 @@ export default function ProfessionalMore() {
   const { venues } = useMyVenues();
   const care = useCareNetworkPending();
   const forumAllowed = forumAccess(user.dateOfBirth) === "adult";
-  const [referralOpen, setReferralOpen] = useState(false);
+  // Database 20261219030000: the hub's ambassador decision row opens here
+  // with ?open=referral, on the popup that carries the status card.
+  const [params, setParams] = useSearchParams();
+  const [referralOpen, setReferralOpenState] = useState(() => params.get("open") === "referral");
+  const setReferralOpen = (open: boolean) => {
+    setReferralOpenState(open);
+    if (!open && params.has("open")) setParams({}, { replace: true });
+  };
   const [sum, setSum] = useState<MoreSummary | null>(null);
 
   useEffect(() => {
