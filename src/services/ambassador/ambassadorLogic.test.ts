@@ -86,6 +86,17 @@ test("status card: pending, approved while it holds, declined while the 90 days 
   );
   assert.deepEqual(statusCard(declined), { kind: "declined", heading: "Not this time", line: "We're looking for more activity first. You can apply again from Jan 26." });
   assert.equal(statusCard(toAmbassadorStatus(row({ application_id: "a1", status: "declined", created_at: "2026-10-01T09:00:00", next_eligible_at: "2027-01-26T12:00:00" })))?.line, "You can apply again from Jan 26.");
+  // Closed (Database 20261219010000): granted another way while the application was open.
+  const closed = toAmbassadorStatus(row({ application_id: "a1", status: "closed", created_at: "2026-10-01T09:00:00", decided_at: "2026-10-05T09:00:00", is_ambassador: true }));
+  assert.equal(closed.application?.status, "closed");
+  assert.deepEqual(statusCard(closed), { kind: "approved", heading: "You're a Centium Ambassador", line: "Your new rewards apply to friends who join from now on." });
+  assert.equal(showEntryRow(closed), false);
+  // Closed, then the status revoked: no card, and they can apply again (no 90-day wait).
+  const closedRevoked = toAmbassadorStatus(row({ application_id: "a1", status: "closed", created_at: "2026-10-01T09:00:00", is_ambassador: false }));
+  assert.deepEqual([statusCard(closedRevoked), showEntryRow(closedRevoked)], [null, true]);
+  // An unknown future status still reads as no application.
+  assert.equal(toAmbassadorStatus(row({ application_id: "a1", status: "withdrawn", created_at: "2026-10-01T09:00:00" })).application, null);
+
   // After the 90 days: the entry row is back.
   const over = toAmbassadorStatus(row({ application_id: "a1", status: "declined", created_at: "2026-01-01T09:00:00", next_eligible_at: null }));
   assert.deepEqual([statusCard(over), showEntryRow(over)], [null, true]);

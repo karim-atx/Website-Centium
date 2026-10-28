@@ -7,7 +7,7 @@
 // back to its kind, so a new key never renders blank.
 
 import type { ProNotification } from "../../../services/pro/notifications";
-import { notificationCopy, PRO_COPY } from "../../../services/notifications/notificationsModel";
+import { CLIENT_COPY, notificationCopy, PRO_COPY } from "../../../services/notifications/notificationsModel";
 import { CATEGORY_LABEL } from "./categoryLabels";
 import { topicsPhrase } from "../forms/formModel";
 
@@ -115,6 +115,17 @@ export function notificationText(n: ProNotification, names: Record<string, strin
       return { title: `${who} declined sharing their ${winWord(p.win_kind)}. You can't ask again for this win.`, line: "Share cards", icon: "share", tone: "pr" };
     case "pro.share.removal_requested":
       return { title: `${who} asked you to remove a shared card`, line: "Share cards", icon: "share", tone: "req" };
+    // Database 20261219030000: a professional's ambassador decision, in the
+    // member notice's own words (CLIENT_COPY; the decline names the date from
+    // payload.next_eligible_on). Not in PRO_KINDS: the member row would repeat it.
+    case "pro.ambassador.approved": {
+      const c = notificationCopy({ titleKey: "ambassador_application_approved", kind: "ambassador_application_approved", payload: p }, CLIENT_COPY);
+      return { title: c.title, line: c.body, icon: "star", tone: "done" };
+    }
+    case "pro.ambassador.declined": {
+      const c = notificationCopy({ titleKey: "ambassador_application_declined", kind: "ambassador_application_declined", payload: p }, CLIENT_COPY);
+      return { title: c.title, line: c.body, icon: "bell", tone: "pr" };
+    }
     default:
       if (key.startsWith("pro.referral.")) return { title: "A referral was updated", line: "Care network", icon: "share", tone: "pr" };
       if (key.startsWith("pro.care_network.")) return { title: "Your care network was updated", line: "Care network", icon: "user-plus", tone: "pr" };

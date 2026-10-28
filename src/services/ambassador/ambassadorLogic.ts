@@ -9,7 +9,10 @@
 // - apply_for_ambassador(p_motivation, p_link, p_accept_terms) → uuid,
 //   metered 5 an hour; each refusal is its own SQLSTATE (APPLY_REFUSALS).
 
-export type AmbassadorApplicationState = "pending" | "approved" | "declined";
+/** "closed" (Database 20261219000000): the application was overtaken by a
+ *  grant made another way (an admin gave the status directly). Neither
+ *  approved nor declined: no notice, no 90-day wait. */
+export type AmbassadorApplicationState = "pending" | "approved" | "declined" | "closed";
 
 /** One my_ambassador_application() row. */
 export interface MyAmbassadorApplicationRow {
@@ -49,7 +52,7 @@ export interface AmbassadorStatus {
   canApply: boolean;
 }
 
-const STATES: readonly string[] = ["pending", "approved", "declined"];
+const STATES: readonly string[] = ["pending", "approved", "declined", "closed"];
 const int = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
 
 /** A row to the status. A missing or unreadable row is "not eligible, nothing sent": the honest default. */
@@ -128,7 +131,10 @@ export type StatusCard =
  * - approved while the status holds: "You're a Centium Ambassador" / "Your
  *   new rewards apply to friends who join from now on.";
  * - declined while the 90 days run: "Not this time" / "{reason} You can apply
- *   again from {MMM d}." Once they've passed, the entry row is back.
+ *   again from {MMM d}." Once they've passed, the entry row is back;
+ * - closed (made an ambassador another way while it was open): the approved
+ *   card while the status holds. Closed after a revoke shows no card: a
+ *   closed application doesn't block a new one, so the entry row is back.
  */
 export function statusCard(s: AmbassadorStatus): StatusCard | null {
   const a = s.application;
@@ -136,7 +142,7 @@ export function statusCard(s: AmbassadorStatus): StatusCard | null {
     const sent = shortDayMonth(a.createdAt);
     return { kind: "pending", heading: "Application under review", line: `${sent ? `Sent ${sent}. ` : ""}We'll let you know.` };
   }
-  if (a?.status === "approved" && s.isAmbassador) {
+  if ((a?.status === "approved" || a?.status === "closed") && s.isAmbassador) {
     return { kind: "approved", heading: "You're a Centium Ambassador", line: "Your new rewards apply to friends who join from now on." };
   }
   if (a?.status === "declined" && s.nextEligibleAt) {

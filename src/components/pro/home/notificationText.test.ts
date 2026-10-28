@@ -36,6 +36,9 @@ const DOCUMENTED = [
   "pro.care_network.request",
   "pro.care_network.accepted",
   "pro.care_network.declined",
+  // Database 20261219030000: the ambassador decision.
+  "pro.ambassador.approved",
+  "pro.ambassador.declined",
 ];
 
 test("each documented key has its own case", () => {
