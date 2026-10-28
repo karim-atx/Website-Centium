@@ -3,6 +3,8 @@ import {
   AtSign,
   Banknote,
   Bell,
+  BellRing,
+  Eye,
   CalendarCheck,
   CalendarClock,
   ClipboardCheck,
@@ -174,6 +176,23 @@ const PRO_GROUPS = (goneQuietDays: number | null): Group[] => [
   },
 ];
 
+// AX (Round C Release 1, undrawn; in MO1.8.3's row style): the in-app
+// message pop-up. Placed after the group holding Messages. Not push, so the
+// account's master switch doesn't dim it; previews dim while pop-ups are off.
+const IN_APP: Group = {
+  label: "While you're in the app",
+  rows: [
+    { key: "messagePopups", label: "Message pop-ups", desc: "A note at the top of the screen when a message arrives while you're using Centium", icon: BellRing },
+    { key: "messagePreviews", label: "Show message previews", desc: "The first line of the message in that note", icon: Eye },
+  ],
+};
+
+/** Puts IN_APP straight after the group with the Messages row. */
+const withInApp = (groups: Group[]): Group[] => {
+  const i = groups.findIndex((g) => g.rows.some((r) => r.key === "professionalMessages"));
+  return i < 0 ? [...groups, IN_APP] : [...groups.slice(0, i + 1), IN_APP, ...groups.slice(i + 1)];
+};
+
 /** A professional's own-tracking groups: GROUPS without "Professionals", Calendar events in Account. */
 const PRO_OWN_GROUPS: Group[] = GROUPS.filter((g) => g.label !== "Professionals").map((g) =>
   g.label === "Account" ? { ...g, rows: [{ key: "calendarEvents", label: "Calendar events", desc: "Reminders for events in your calendar", icon: CalendarDays }, ...g.rows] } : g
@@ -294,7 +313,7 @@ export default function NotificationsPage() {
       live = false;
     };
   }, [isPro, authUserId]);
-  const groups = isPro ? [...PRO_GROUPS(goneQuietDays), ...PRO_OWN_GROUPS] : GROUPS;
+  const groups = withInApp(isPro ? [...PRO_GROUPS(goneQuietDays), ...PRO_OWN_GROUPS] : GROUPS);
 
   // --- the account's values (app_preferences) --------------------------------
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
@@ -553,7 +572,15 @@ export default function NotificationsPage() {
                 title={r.label}
                 subtitle={r.sub}
                 srDescription={r.desc}
-                dimmed={r.key === "professionalMessages" ? messagesDimmed : dimmed}
+                dimmed={
+                  r.key === "messagePopups"
+                    ? false
+                    : r.key === "messagePreviews"
+                      ? prefs?.messagePopups === false
+                      : r.key === "professionalMessages"
+                        ? messagesDimmed
+                        : dimmed
+                }
                 toggle={{
                   // Off and disabled until the row has loaded: never a guess.
                   checked: prefs?.[r.key] ?? false,

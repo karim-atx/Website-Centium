@@ -3,7 +3,7 @@
 // words for each refusal the database can raise (Database 630f2cd, 27141fa,
 // df67bd8). Kept free of the Supabase client so it can be tested directly.
 
-import { ageFromDateOfBirth, detailDate } from "../../utils/date";
+import { ageFromDateOfBirth, detailDate, formatShortDate } from "../../utils/date";
 
 /** Design screen 1, and the brief's wording for an under-18 who opens the link. */
 export const ADULTS_ONLY_TEXT = "The community is for adults. You can join the forum from age 18.";
@@ -94,6 +94,20 @@ export function nicknameProblem(
   return null;
 }
 
+/**
+ * ATXK1's DETAIL, the next allowed change as an ISO-8601 UTC time, as the
+ * person's own calendar day ("Nov 27", with the year when it isn't this
+ * year). Read as the full instant, not the UTC date: a change allowed at
+ * 23:00 UTC is already the next day in Beirut.
+ */
+export function nicknameNextChange(details: string | null | undefined, now: Date = new Date()): string | null {
+  if (!details || !/^\d{4}-\d{2}-\d{2}T/.test(details)) return null;
+  const d = new Date(details);
+  if (Number.isNaN(d.getTime())) return null;
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return formatShortDate(d, { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }) });
+}
+
 export const NICKNAME_PROBLEM_TEXT: Record<Exclude<NicknameProblem, null>, string> = {
   format: "Use 3 to 20 letters, numbers or underscores.",
   reserved: "That sounds like an official account. Choose a different nickname.",
@@ -156,6 +170,14 @@ export function describeForumError(
         : "This couldn't be withdrawn. It may already have been removed.";
     case "ATX63":
       return "That nickname is taken. Choose a different one.";
+    // Release 1 (Database 20261220030000): one change in 30 days, the next
+    // allowed time in DETAIL; and no contact details, links or digit runs.
+    case "ATXK1": {
+      const on = nicknameNextChange(error.details);
+      return on ? `You can change your nickname again on ${on}.` : "You can change your nickname once every 30 days.";
+    }
+    case "ATXK2":
+      return "A nickname can't contain a phone number or other contact details.";
     case "ATX64":
       return "That photo couldn't be attached. Add it again.";
     case "ATX65":

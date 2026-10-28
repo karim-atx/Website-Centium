@@ -50,6 +50,9 @@ export const MEMBER_NOTIFICATION_KINDS = [
   // Release B (Database 20261217000000): the ambassador decision, to the applicant.
   "ambassador_application_approved",
   "ambassador_application_declined",
+  // Round C Release 1 (Database 20261220000000): a moderator reset the
+  // member's forum nickname (subject forum_nickname; no reason, no payload).
+  "forum_nickname_reset",
 ] as const;
 export type MemberNotificationKind = (typeof MEMBER_NOTIFICATION_KINDS)[number];
 
@@ -77,6 +80,7 @@ export const CLIENT_KINDS: readonly MemberNotificationKind[] = [
   "review_prompt",
   "ambassador_application_approved",
   "ambassador_application_declined",
+  "forum_nickname_reset",
 ];
 
 /** my_unread_notification_count's cap: the reader never counts past it. */
@@ -185,6 +189,8 @@ export const CLIENT_COPY: NotificationCopyTable = {
   // PLAN S3 "Notification" (Release B).
   ambassador_application_approved: { title: "Your ambassador application", body: "You're now a Centium Ambassador." },
   ambassador_application_declined: { title: "Your ambassador application", body: "We've replied to your application." },
+  // Round C S4: the reset carries no reason, so none is shown.
+  forum_nickname_reset: { title: "Your forum nickname was reset", body: "A moderator reset your nickname. Choose a new one to keep posting." },
 };
 
 /** A key no table knows: a safe line, never the raw key. */
@@ -288,6 +294,7 @@ export const CLIENT_FILLS: NotificationFillTable = {
     return { body: `How was ${cls}${who ? ` with ${who}` : ""}${biz ? ` at ${biz}` : ""}?` };
   },
   ambassador_application_approved: () => ({}),
+  forum_nickname_reset: () => ({}),
   ambassador_application_declined: (p) => {
     const on = pDate(p, "next_eligible_on");
     return on ? { body: `We've replied to your application. You can apply again from ${formatNoticeDate(on)}.` } : {};
@@ -358,6 +365,8 @@ export function clientNotificationTarget(n: Pick<MemberNotification, "kind" | "s
     case "ambassador_application_approved":
     case "ambassador_application_declined":
       return "/app/more?open=referral";
+    case "forum_nickname_reset":
+      return "/app/forum/nickname";
     default:
       return null;
   }
@@ -408,6 +417,8 @@ export function notifLook(kind: string): { tone: NotifTone; glyph: NotifGlyph } 
       return { tone: "lav", glyph: "star" };
     case "ambassador_application_declined":
       return { tone: "lav", glyph: "app" };
+    case "forum_nickname_reset":
+      return { tone: "lav", glyph: "user" };
     default:
       return { tone: "grey", glyph: "clock" };
   }

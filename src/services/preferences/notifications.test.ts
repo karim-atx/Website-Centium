@@ -40,15 +40,20 @@ const DEFAULT_ROW = {
   notification_pro_care_network: true,
   notification_pro_payments: true,
   notification_pro_unpaid_sessions: true,
+  message_popups: true,
+  message_previews: true,
   quiet_hours_enabled: false,
   quiet_hours_from: "22:00:00",
   quiet_hours_to: "07:00:00",
 };
 
-test("every MO1.8.3 row has its contract column, and the select names all twenty-six", () => {
-  assert.equal(Object.keys(NOTIFICATION_COLUMNS).length, 26);
+test("every MO1.8.3 row has its contract column, and the select names all twenty-eight", () => {
+  assert.equal(Object.keys(NOTIFICATION_COLUMNS).length, 28);
   assert.deepEqual(new Set(Object.values(NOTIFICATION_COLUMNS)), new Set(Object.keys(DEFAULT_ROW)));
-  assert.equal(NOTIFICATION_SELECT.split(", ").length, 26);
+  assert.equal(NOTIFICATION_SELECT.split(", ").length, 28);
+  // AX (Round C Release 1): the in-app pop-up's two switches.
+  assert.equal(NOTIFICATION_COLUMNS.messagePopups, "message_popups");
+  assert.equal(NOTIFICATION_COLUMNS.messagePreviews, "message_previews");
   // Release 3 W6: notification_reviews is read for the professional MO12 v2 "New reviews" row.
   assert.ok(NOTIFICATION_SELECT.includes("notification_reviews"));
 });

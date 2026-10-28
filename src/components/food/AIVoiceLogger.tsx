@@ -505,12 +505,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
         });
         break;
       case "rate_limited":
-        setNotice({
-          tone: "error",
-          text: outcome.retryAfterSeconds
-            ? `Voice logging is busy. Try again in about ${outcome.retryAfterSeconds}s, or add the food manually.`
-            : outcome.message,
-        });
+        setNotice({ tone: "error", text: outcome.message });
         break;
       default:
         setNotice({ tone: "error", text: outcome.message });

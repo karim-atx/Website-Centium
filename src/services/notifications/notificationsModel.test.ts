@@ -132,17 +132,20 @@ test("targets: the documented subject per client kind; other kinds open nothing 
   for (const k of MEMBER_NOTIFICATION_KINDS.filter((k) => !CLIENT_KINDS.includes(k))) {
     assert.equal(clientNotificationTarget({ kind: k, subjectType: "voucher", subjectId: V }), null, k);
   }
+  assert.equal(clientNotificationTarget({ kind: "forum_nickname_reset", subjectType: "forum_nickname", subjectId: null }), "/app/forum/nickname");
   // the guessed subject routes are gone: an unknown kind opens nothing whatever its subject
   assert.equal(clientNotificationTarget({ kind: "x", subjectType: "points", subjectId: null }), null);
   assert.equal(clientNotificationTarget({ kind: "x", subjectType: "offer", subjectId: O }), null);
 });
 
-test("kinds: the enum in order; the client's are a member's six, never an owner's or a professional's", () => {
-  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 20);
+test("kinds: the enum in order; the client's are a member's seven, never an owner's or a professional's", () => {
+  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 21);
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(0, 4), [...RELEASE1_KINDS]);
   // Release B appends the ambassador decision (20261217000000), to the applicant.
-  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(18), ["ambassador_application_approved", "ambassador_application_declined"]);
-  assert.deepEqual([...CLIENT_KINDS], ["voucher_issued", "points_expiring", "class_cancelled", "review_prompt", "ambassador_application_approved", "ambassador_application_declined"]);
+  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(18, 20), ["ambassador_application_approved", "ambassador_application_declined"]);
+  // Round C Release 1 appends the nickname reset (20261220000000), to the member.
+  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(20), ["forum_nickname_reset"]);
+  assert.deepEqual([...CLIENT_KINDS], ["voucher_issued", "points_expiring", "class_cancelled", "review_prompt", "ambassador_application_approved", "ambassador_application_declined", "forum_nickname_reset"]);
   for (const k of CLIENT_KINDS) assert.ok((MEMBER_NOTIFICATION_KINDS as readonly string[]).includes(k), k);
   const notMine = [
     "voucher_redeemed", "offer_hidden", "application_received", "hire_offer_accepted", "hire_offer_declined", "hiring_fee_added", "gym_review_received",

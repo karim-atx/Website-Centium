@@ -38,6 +38,9 @@ export type NotificationPrefs = {
   proCareNetwork: boolean;
   proPayments: boolean;
   proUnpaidSessions: boolean;
+  /** AX (Round C): the in-app pop-up for a new message, and its first line. Not push. */
+  messagePopups: boolean;
+  messagePreviews: boolean;
   quietHoursEnabled: boolean;
   /** "HH:MM", 24-hour, in the person's own timezone (profiles.timezone). */
   quietHoursFrom: string;
@@ -73,6 +76,8 @@ export const NOTIFICATION_COLUMNS = {
   proCareNetwork: "notification_pro_care_network",
   proPayments: "notification_pro_payments",
   proUnpaidSessions: "notification_pro_unpaid_sessions",
+  messagePopups: "message_popups",
+  messagePreviews: "message_previews",
   quietHoursEnabled: "quiet_hours_enabled",
   quietHoursFrom: "quiet_hours_from",
   quietHoursTo: "quiet_hours_to",

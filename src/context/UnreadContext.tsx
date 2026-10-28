@@ -1,8 +1,10 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useApp } from "./AppContext";
 import { usePoll } from "../hooks/usePoll";
 import { useUnreadRealtime } from "../hooks/useUnreadRealtime";
-import { fetchUnreadCounts, type UnreadCounts } from "../services/messaging";
+import { fetchMessagePopup, fetchUnreadCounts, type UnreadCounts } from "../services/messaging";
+import { enqueuePopup, popupSuppressedAt, type PopupCard } from "../services/messaging/popupModel";
 import { markDelivered } from "../services/messaging/chatFeatures";
 
 /**
@@ -36,6 +38,15 @@ interface UnreadState extends UnreadCounts {
 }
 
 const UnreadCtx = createContext<UnreadState>({ byThread: {}, total: 0, refresh: () => {} });
+
+interface PopupState {
+  /** The card showing now (the queue's front), or null. */
+  current: PopupCard | null;
+  /** The showing card is done (timed out, swiped, or tapped). */
+  dismiss: () => void;
+}
+
+const PopupCtx = createContext<PopupState>({ current: null, dismiss: () => {} });
 
 /**
  * Unread message counts, available anywhere inside the app shell.
@@ -88,7 +99,37 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // the same load() the poll and refresh() use, so there is no second path to
   // keep in step — a message arriving live and one found by a poll produce the
   // identical count.
-  const realtime = useUnreadRealtime(authUserId, () => void load());
+  // AX, the message pop-up (Round C Release 1). Its own context, so a card
+  // coming and going re-renders the pill, not every badge.
+  //
+  // ONLY WHILE SOMEBODY IS LOOKING AT THE APP, AND NOT AT THE CHAT. A hidden
+  // tab gets the system notification instead; on /app/messages the message is
+  // already on screen. Both are checked when the message arrives, and going
+  // to the chat drops whatever was waiting.
+  const { pathname } = useLocation();
+  const pathRef = useRef(pathname);
+  const [popups, setPopups] = useState<PopupCard[]>([]);
+  useEffect(() => {
+    pathRef.current = pathname;
+  }, [pathname]);
+  // Going to the chat, or another account signing in, drops the queue
+  // (adjusted while rendering, React's pattern for state that follows a prop).
+  const [seen, setSeen] = useState({ pathname, authUserId });
+  if (seen.pathname !== pathname || seen.authUserId !== authUserId) {
+    setSeen({ pathname, authUserId });
+    if (popups.length && (popupSuppressedAt(pathname) || seen.authUserId !== authUserId)) setPopups([]);
+  }
+  const onArrival = useCallback((messageId: string) => {
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+    if (popupSuppressedAt(pathRef.current)) return;
+    void fetchMessagePopup(messageId).then((p) => {
+      if (!p || popupSuppressedAt(pathRef.current)) return;
+      setPopups((q) => enqueuePopup(q, p));
+    });
+  }, []);
+  const dismissPopup = useCallback(() => setPopups((q) => q.slice(1)), []);
+
+  const realtime = useUnreadRealtime(authUserId, () => void load(), onArrival);
 
   // One poll, two speeds. The interval changes with the subscription's status
   // rather than the poll being switched off, because a socket that reports
@@ -101,11 +142,15 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   return (
     <UnreadCtx.Provider value={{ ...counts, refresh: () => void load() }}>
-      {children}
+      <PopupCtx.Provider value={{ current: popups[0] ?? null, dismiss: dismissPopup }}>{children}</PopupCtx.Provider>
     </UnreadCtx.Provider>
   );
 };
 
 export function useUnread(): UnreadState {
   return useContext(UnreadCtx);
+}
+
+export function useMessagePopup(): PopupState {
+  return useContext(PopupCtx);
 }
