@@ -102,12 +102,37 @@ export function workTabOf(mode: WorkModeDb | null, worksAtBusiness: boolean): Wo
 }
 
 /**
- * The MO20 radius bar (r13 whereWork13): the frame fills 40% at 10 km, so the
- * bar's full scale is 25 km. A stored radius above it (home_visit_km allows
- * up to 200) shows its own value with the bar full.
+ * The MO20 radius bar (r13 whereWork13) over professional_profiles.
+ * service_radius_km (Release B 20261217010000: 1 to 100 km, default 25).
+ * The frame fills 40% at 10 km on a linear 25 km scale; the column now runs
+ * to 100, so the bar is a curve through the same point: 1 km is empty,
+ * 10 km is 40% as drawn, 100 km is full. The slider moves in RADIUS_STEPS
+ * positions along that curve, so small radii get the fine steps.
  */
-export const RADIUS_MAX_KM = 25;
-export const radiusFill = (km: number | null) => (km === null ? 0 : Math.min(1, Math.max(0, km / RADIUS_MAX_KM)));
+export const RADIUS_MIN_KM = 1;
+export const RADIUS_MAX_KM = 100;
+export const RADIUS_DEFAULT_KM = 25;
+export const RADIUS_STEPS = 200;
+const RADIUS_CURVE = Math.log(0.4) / Math.log((10 - RADIUS_MIN_KM) / (RADIUS_MAX_KM - RADIUS_MIN_KM));
+const clampKm = (km: number) => Math.min(RADIUS_MAX_KM, Math.max(RADIUS_MIN_KM, km));
+export const radiusFill = (km: number | null) => (km === null ? 0 : Math.pow((clampKm(km) - RADIUS_MIN_KM) / (RADIUS_MAX_KM - RADIUS_MIN_KM), RADIUS_CURVE));
+/** The slider position (0 to RADIUS_STEPS) for a radius, and back to whole km. */
+export const radiusPosition = (km: number | null) => Math.round(radiusFill(km) * RADIUS_STEPS);
+export const radiusAtPosition = (pos: number) =>
+  clampKm(Math.round(RADIUS_MIN_KM + (RADIUS_MAX_KM - RADIUS_MIN_KM) * Math.pow(Math.min(1, Math.max(0, pos / RADIUS_STEPS)), 1 / RADIUS_CURVE)));
+
+/**
+ * The MO1 "Service area" row (PLAN S2, drawn copy): "{area_label} and {n} km
+ * around"; only the area when there's no radius; "Online only" when
+ * work_mode is online. Null when there's no area to name (the row keeps its
+ * plain subtitle).
+ */
+export function serviceAreaLine(areaLabel: string | null, km: number | null, workMode: WorkModeDb | null): string | null {
+  if (workMode === "online") return "Online only";
+  const area = areaLabel?.trim();
+  if (!area) return null;
+  return km ? `${area} and ${km} km around` : area;
+}
 
 // ---------------------------------------------------------------------------
 // MO5 / MO16 lines

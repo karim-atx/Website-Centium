@@ -299,14 +299,22 @@ function mapAreaFrom(data: unknown): ProfessionalProfile["mapArea"] {
  * Shows the professional on the clients' map at an approximate area. The
  * point is rounded here to two decimals as well, though the column type would
  * round it anyway; the label is the professional's own words for the area.
+ *
+ * Release B (20261217020000): p_country_code, the ISO code the device works
+ * out for the area (services/geo/country: countryOfArea for a picked area,
+ * countryNear for a pin). Left out when unknown, which stores unknown and
+ * keeps the professional findable from anywhere. Not in the generated types
+ * yet (they read production), hence the cast.
  */
-export async function setMapArea(lat: number, lng: number, label: string | null): Promise<MapAreaResult> {
+export async function setMapArea(lat: number, lng: number, label: string | null, countryCode?: string | null): Promise<MapAreaResult> {
   const round2 = (n: number) => Math.round(n * 100) / 100;
-  const { data, error } = await supabase.rpc("set_approximate_location", {
+  const args = {
     p_lat: round2(lat),
     p_lng: round2(lng),
     p_label: label?.trim() ? label.trim().slice(0, 80) : undefined,
-  });
+    p_country_code: countryCode ?? undefined,
+  };
+  const { data, error } = await supabase.rpc("set_approximate_location", args as never);
   if (error) {
     console.error("[professional-profile] Could not set the map area:", error.code, error.message);
     if (error.code === "ATX47") return { ok: false, message: UNDER_18_LISTING };

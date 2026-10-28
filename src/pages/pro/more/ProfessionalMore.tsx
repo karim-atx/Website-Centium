@@ -34,6 +34,7 @@ import { INK } from "../../../components/pro/proInk";
 import { PRO_ROUTES } from "../../../components/pro/subtypeLanes";
 import { useProMessagesSummary } from "../../../components/pro/messages/useProMessagesSummary";
 import { useCareNetworkPending } from "../../../components/pro/care/useCareNetworkPending";
+import { serviceAreaLine } from "../../../components/pro/profile/profileModel";
 import { clock12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
 
@@ -338,7 +339,8 @@ export default function ProfessionalMore() {
   const nt = lane === "nutrition";
 
   const where = sum?.businesses ? (sum.businesses.length ? sum.businesses.join(" · ") : "Independent") : "Independent, businesses & online";
-  const area = sum?.areaLabel ? sum.areaLabel : "Where clients can find you";
+  // PLAN S2 (drawn copy): "{area_label} and {n} km around" from the map area and service_radius_km.
+  const area = (sum && serviceAreaLine(sum.areaLabel, sum.serviceRadiusKm, sum.workMode)) || "Where clients can find you";
   const reviewsLine =
     sum?.rating && sum.rating.count > 0 && sum.rating.average != null
       ? `${sum.rating.average.toFixed(1)} average · ${sum.rating.count} ${sum.rating.count === 1 ? "review" : "reviews"}`

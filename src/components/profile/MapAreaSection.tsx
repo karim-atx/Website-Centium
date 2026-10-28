@@ -5,6 +5,7 @@ import { Button } from "../ui/Button";
 import { AreaPicker } from "../professionals/AreaPicker";
 import { AREAS, type Area } from "../../services/geo/areas";
 import { distanceKm, type Coords } from "../../services/geo/distance";
+import { countryNear, countryOfArea } from "../../services/geo/country";
 import { clearMapArea, setMapArea, type ProfessionalProfile } from "../../services/professional-profile";
 
 const NearbyMap = lazy(() => import("../professionals/NearbyMap"));
@@ -31,6 +32,8 @@ function nearestAreaName(c: Coords): string | null {
  * the directory. Turning it on asks for an area, from the list or by dropping
  * a pin, saved with set_approximate_location(). Only an approximate area is
  * ever stored or shown (two decimal places, about 1 km), never an address.
+ * Release B: the area's country goes with it (countryOfArea for a picked
+ * area, countryNear for a pin, nothing when unknown), worked out here.
  */
 export const MapAreaSection: React.FC<{
   mapArea: ProfessionalProfile["mapArea"];
@@ -47,13 +50,13 @@ export const MapAreaSection: React.FC<{
   const [error, setError] = useState<string | null>(null);
   const on = !!mapArea;
 
-  const save = async (c: Coords, label: string | null) => {
+  const save = async (c: Coords, label: string | null, country: string | null) => {
     setBusy(true);
     setError(null);
-    const r = await setMapArea(c.lat, c.lng, label);
+    const r = await setMapArea(c.lat, c.lng, label, country);
     setBusy(false);
     if (!r.ok) {
-      if (r.needsDob) onNeedsDob(() => void save(c, label));
+      if (r.needsDob) onNeedsDob(() => void save(c, label, country));
       else setError(r.message);
       return;
     }
@@ -135,7 +138,7 @@ export const MapAreaSection: React.FC<{
 
           {mode === "list" ? (
             <div className="max-h-[320px] overflow-y-auto">
-              <AreaPicker onPick={(a) => void save({ lat: a.lat, lng: a.lng }, a.name)} />
+              <AreaPicker onPick={(a) => void save({ lat: a.lat, lng: a.lng }, a.name, countryOfArea(a))} />
             </div>
           ) : (
             <>
@@ -150,7 +153,7 @@ export const MapAreaSection: React.FC<{
                   ariaLabel="Map for choosing your area. Tap to drop a pin, or pick from the list instead."
                 />
               </Suspense>
-              <Button size="sm" disabled={!pin || busy} onClick={() => pin && void save(pin, nearestAreaName(pin))}>
+              <Button size="sm" disabled={!pin || busy} onClick={() => pin && void save(pin, nearestAreaName(pin), countryNear(pin))}>
                 {busy ? "Saving…" : pin ? `Use this area${nearestAreaName(pin) ? ` (near ${nearestAreaName(pin)})` : ""}` : "Tap the map first"}
               </Button>
             </>
