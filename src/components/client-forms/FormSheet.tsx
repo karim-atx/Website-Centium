@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Camera, CircleAlert, X } from "lucide-react";
+import { Camera, Check, CircleAlert, X } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { CtaButton } from "../ui/PinnedCta";
@@ -27,8 +27,8 @@ import {
   type ClientQuestion,
   type FormItem,
 } from "../../services/client-forms/logic";
-import { formPhotoUrls, removeFormPhoto, saveFormResponse, uploadFormPhoto, type ClientFormBundle } from "../../services/client-forms";
-import { consentLine, DOCTOR_FOLLOW_UP, SEE_WARNING_SIGNS, thanksLine } from "./copy";
+import { CONSENT_REQUIRED_MESSAGE, formPhotoUrls, removeFormPhoto, saveFormResponse, uploadFormPhoto, type ClientFormBundle } from "../../services/client-forms";
+import { consentBox, consentLine, DOCTOR_FOLLOW_UP, SEE_WARNING_SIGNS, thanksLine } from "./copy";
 
 /**
  * Release 3 · W7 CU6 v3 / CU26: a professional's check-in or intake, filled
@@ -48,6 +48,12 @@ import { consentLine, DOCTOR_FOLLOW_UP, SEE_WARNING_SIGNS, thanksLine } from "./
  * progress-photo questions (form_question_hidden_in_recovery, mirrored by
  * isHiddenInRecovery): not rendered, not sent, and not required by
  * save_form_response either, and the consent line names neither.
+ *
+ * Release A (20261216060000): sending needs the client's consent
+ * (save_form_response p_consent, refused with consent_required without it).
+ * Not drawn: a required box above Send, "Share these answers with {pro}",
+ * in the AllergiesSheet checkbox style. Send without it ticked says so and
+ * sends nothing; draft saves never ask and never send consent.
  */
 
 const SAVE_DELAY_MS = 800;
@@ -86,6 +92,8 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
   const [errors, setErrors] = useState<string[]>([]);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  // Release A: unticked on every open; the client agrees for this send.
+  const [consent, setConsent] = useState(false);
   const [done, setDone] = useState<Done | null>(null);
   const [showSigns, setShowSigns] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
@@ -172,11 +180,15 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
       toTop();
       return;
     }
+    if (!consent) {
+      setSendError(CONSENT_REQUIRED_MESSAGE);
+      return;
+    }
     if (timer.current) window.clearTimeout(timer.current);
     setSending(true);
     setSendError(null);
     const final = visibleAnswers(answersRef.current, visible);
-    const res = await saveFormResponse(bundle.assignmentId, final, true);
+    const res = await saveFormResponse(bundle.assignmentId, final, true, consent);
     setSending(false);
     if (!res.ok) {
       setSendError(res.message);
@@ -384,6 +396,38 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
         <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginBottom: 10, lineHeight: 1.45 }}>
           {sendError}
         </p>
+      )}
+      {last && (
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={consent}
+          data-consent-box
+          onClick={() => {
+            setConsent((c) => !c);
+            setSendError((e) => (e === CONSENT_REQUIRED_MESSAGE ? null : e));
+          }}
+          className="tap w-full flex items-center text-left"
+          style={{ gap: 12, minHeight: 44, marginBottom: 8 }}
+        >
+          <span
+            aria-hidden
+            className="flex items-center justify-center shrink-0"
+            style={{
+              width: 20,
+              height: 20,
+              borderRadius: 6,
+              background: consent ? "rgb(var(--c-primary-fill))" : "transparent",
+              border: consent ? "none" : `2px solid ${sendError === CONSENT_REQUIRED_MESSAGE ? INK.hi : "rgb(var(--c-charcoal) / 0.10)"}`,
+              color: "rgb(var(--c-on-primary-fill))",
+            }}
+          >
+            {consent && <Check size={12} strokeWidth={3} />}
+          </span>
+          <span className="min-w-0" style={{ fontSize: textPx(13.5), fontWeight: 600, color: INK.ch }}>
+            {consentBox(pro)}
+          </span>
+        </button>
       )}
       {last ? (
         <CtaButton label={isCheckIn ? `Send to ${pro}` : "Submit"} loading={sending} onClick={() => void send()} />

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Building2, Check, MapPin, Store, Video } from "lucide-react";
+import { Building2, Check, Globe, MapPin, Store, Video } from "lucide-react";
 import { SettingsRow } from "../../../components/pro/calendar/calendarFields";
 import { SectionHead } from "../../../components/pro/client/kit";
 import { CtaButton, ErrorLine, StateLine, SubPage } from "../../../components/pro/profile/kit";
@@ -12,10 +12,11 @@ import { MapAreaSection } from "../../../components/profile/MapAreaSection";
 import { DobInline } from "../../../components/profile/DobInline";
 import { PinnedSlot } from "../../../components/ui/PinnedCta";
 import { SegmentedTabs } from "../../../components/ui/SegmentedTabs";
+import { Toggle } from "../../../components/ui/Toggle";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { fetchMyProfile, NEEDS_DOB, type ProfessionalProfile } from "../../../services/professional-profile";
-import { fetchEmployments, saveServiceRadius, saveWorkMode, type Employment } from "../../../services/pro/profile";
+import { fetchEmployments, saveServiceRadius, saveShowTeamWorkplaces, saveWorkMode, type Employment } from "../../../services/pro/profile";
 import { textPx } from "../../../theme/textSize";
 
 const TABS: { key: WorkTab; label: string }[] = [
@@ -36,6 +37,11 @@ const TABS: { key: WorkTab; label: string }[] = [
  *   Businesses) and online;
  * - (Database #38 retired "Listed by your business": working at a business
  *   no longer unlists anybody, so the listing and the map area stay theirs);
+ * - W7-9 (20261216050000): with a business in the list, "Show on your public
+ *   profile" (the Payments toggle row, saved at once) sets
+ *   professional_profiles.show_team_workplaces, one flag for the teams they
+ *   joined (default off). professional_workplaces() shows a Centium hire
+ *   regardless, and either kind only while the business is publicly visible;
  * - Service area: the radius figure (200 high r18, a circle scaled to the
  *   radius in primary over 22% lavender, a 14 dot in primary.deep with a 3
  *   card ring), "Radius" / "{n} km", the 8 high bar (primary to the share,
@@ -58,6 +64,7 @@ export default function WhereYouWork() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [dobAsk, setDobAsk] = useState<null | { retry: () => void }>(null);
+  const [teamBusy, setTeamBusy] = useState(false);
   const areaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -108,6 +115,16 @@ export default function WhereYouWork() {
     setSaved(true);
   };
 
+  const setShowTeam = async (show: boolean) => {
+    if (!authUserId || !facts || teamBusy) return;
+    setTeamBusy(true);
+    setSaveError(null);
+    const r = await saveShowTeamWorkplaces(authUserId, show);
+    setTeamBusy(false);
+    if (!r.ok) return setSaveError(r.message);
+    setFacts({ ...facts, showTeamWorkplaces: show });
+  };
+
   const inPerson = shownTab === "independent" || shownTab === "business" || shownTab === "mix";
   const online = shownTab === "online" || shownTab === "mix";
   const own = shownTab === "independent" || shownTab === "mix";
@@ -148,6 +165,17 @@ export default function WhereYouWork() {
               <StateLine>{shownTab === "business" ? "You're not working at a business yet. Join one from Businesses." : "Choose how you work above."}</StateLine>
             )}
           </div>
+          {(jobs ?? []).length > 0 && facts && (
+            <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "4px 14px", marginBottom: 12 }}>
+              <SettingsRow
+                icon={Globe}
+                title="Show on your public profile"
+                sub="Teams you joined. A business that hired you through Centium always shows."
+                right={<Toggle checked={facts.showTeamWorkplaces} onChange={(v) => void setShowTeam(v)} disabled={teamBusy} label="Show on your public profile" />}
+                last
+              />
+            </div>
+          )}
           {shownTab === "business" && !(jobs ?? []).length && (
             <SettingsRow icon={Building2} title="Businesses" sub="Join a business or answer an invitation" onClick={() => navigate("/app/more/businesses")} last />
           )}

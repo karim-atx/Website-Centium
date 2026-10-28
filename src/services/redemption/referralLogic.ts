@@ -96,6 +96,19 @@ export const REFUSAL_LINES: Record<Exclude<RedeemReason, "redeemed">, string> = 
 
 export const UNKNOWN_REFUSAL_LINE = "That code could not be applied. Try again.";
 
+/**
+ * DM: whether the typed code is the caller's own, compared the way the
+ * server reads codes (upper(btrim(code))). preview_referral_code answers
+ * not_valid for your own code on purpose (no lookup oracle), so without this
+ * check MO1.10.2's "You can't use your own code." was never shown. Checked
+ * before the preview, so it spends no rate-limit attempt.
+ */
+export function isOwnReferralCode(draft: string, myCode: string | null | undefined): boolean {
+  if (!myCode) return false;
+  const norm = (s: string) => s.trim().toUpperCase();
+  return norm(draft) !== "" && norm(draft) === norm(myCode);
+}
+
 /** Words a redeem_referral_code() row. A refusal is an ordinary outcome, not
  *  an error. `ok` and `reason` must agree before anything reads as applied. */
 export function interpretRedeemReferral(row: RedeemReferralRow | null | undefined): RedeemReferralOutcome {

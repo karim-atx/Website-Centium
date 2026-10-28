@@ -17,13 +17,13 @@ import { DietaryNeedsCard } from "../client/DietaryNeedsCard";
 import { fmtDay } from "../client/clientFormat";
 import { todayLocal } from "../../../utils/date";
 import { askToShare } from "../../../services/pro/clientPage";
-import { fetchClientGoal, fetchMyTargets, fetchWeightSeries, saveTargets, type ClientGoal, type MyTargets } from "../../../services/pro/nutrition";
+import { fetchBodyBasics, fetchClientGoal, fetchMyTargets, fetchWeightSeries, saveTargets, type BodyBasics, type ClientGoal, type MyTargets } from "../../../services/pro/nutrition";
 import type { ProLane } from "../subtypeLanes";
 import type { AccessCategory } from "../../../services/pro/access";
 import { NuHead } from "./kit";
 import { MACRO_COLOUR } from "./nuFormat";
 import { useNuRoster } from "./hooks";
-import { macroGrams, shiftDate, splitTotalOk } from "./nutritionModel";
+import { macroGrams, shiftDate, splitTotalOk, tdeeView } from "./nutritionModel";
 import { useNutritionOverview } from "./useNutritionOverview";
 
 /**
@@ -40,12 +40,20 @@ import { useNutritionOverview } from "./useNutritionOverview";
  *
  * Data, each behind its own consent:
  * - the targets I set: my_client_nutrition_targets (no switch needed, only
- *   mine, only while connected);
- * - the client's own weight goal, desired weight and rate: nutrition_goals,
- *   Progress switch (LockLine otherwise; never guessed);
+ *   mine, only while connected), with my weight goal, rate and target weight
+ *   (Release A, 20261216040000);
+ * - the client's own weight goal and rate: nutrition_goals, Progress switch
+ *   (LockLine otherwise; never guessed), the starting point until I set mine;
+ * - the target weight is MINE (Release A, W5-3d): set with
+ *   p_desired_weight_kg and never prefilled from the client's own, because
+ *   saving it would read as endorsing their number (the database stopped
+ *   inheriting it for the same reason). Cleared or Maintain saves none;
  * - weigh-ins: health_metrics weight, Weight switch;
- * - TDEE needs height, age, sex and activity, which no professional reader
- *   returns (backend gap): the card says so instead of estimating.
+ * - TDEE (Release A, W5-3c): client_body_basics (age in years, sex, height,
+ *   activity; Weight or Progress, no row otherwise) with the latest weigh-in,
+ *   Mifflin-St Jeor via calculateTDEEFromParts (tdeeView). Any input missing,
+ *   the card names it instead of estimating. Not wired: the frame's
+ *   chevron on the activity word (a professional override has no column).
  * Micronutrient targets (Nutrition only): no table yet, Coming soon.
  * Not drawn: r6c's separate "Daily calorie target" card, which repeats the
  * Daily target stepper's value with a second input.
@@ -61,20 +69,28 @@ interface Draft {
 function useTargetsData(clientId: string, access: ReturnType<typeof useClientAccess>, nonce: number) {
   const progress = access.has("progress");
   const weightShared = access.has("weight");
-  const [state, setState] = useState<{ key: string; mine: MyTargets | null; goal: ClientGoal | null; weights: Record<string, number> | null; error: boolean; offline: boolean } | null>(null);
+  const [state, setState] = useState<{ key: string; mine: MyTargets | null; goal: ClientGoal | null; weights: Record<string, number> | null; basics: BodyBasics | null; error: boolean; offline: boolean } | null>(null);
   const key = `${clientId}|${progress}|${weightShared}|${nonce}`;
   useEffect(() => {
     if (access.loading) return;
     let live = true;
     const since = shiftDate(todayLocal(), -90);
-    void Promise.all([fetchMyTargets(clientId), progress ? fetchClientGoal(clientId) : Promise.resolve(null), weightShared ? fetchWeightSeries(clientId, since) : Promise.resolve(null)]).then(([m, g, w]) => {
+    // client_body_basics returns no row unless Weight or Progress is on, so it isn't asked otherwise.
+    const basicsShared = progress || weightShared;
+    void Promise.all([
+      fetchMyTargets(clientId),
+      progress ? fetchClientGoal(clientId) : Promise.resolve(null),
+      weightShared ? fetchWeightSeries(clientId, since) : Promise.resolve(null),
+      basicsShared ? fetchBodyBasics(clientId) : Promise.resolve(null),
+    ]).then(([m, g, w, b]) => {
       if (!live) return;
-      const bad = [m, g, w].find((x) => x && !x.ok) as { ok: false; offline: boolean } | undefined;
+      const bad = [m, g, w, b].find((x) => x && !x.ok) as { ok: false; offline: boolean } | undefined;
       setState({
         key: `${clientId}|${progress}|${weightShared}|${nonce}`,
         mine: m.ok ? m.data : null,
         goal: g && g.ok ? g.data : null,
         weights: w && w.ok ? w.data : null,
+        basics: b && b.ok ? b.data : null,
         error: !!bad,
         offline: !!bad?.offline,
       });
@@ -100,17 +116,19 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
   const [asked, setAsked] = useState<Set<AccessCategory>>(new Set());
   const first = client?.firstName ?? "";
 
-  // Start from what I set, else the client's own targets (Progress), else nothing chosen yet.
+  // Start from what I set, else the client's own targets (Progress), else
+  // nothing chosen yet. The target weight only ever starts from mine.
   useEffect(() => {
     if (!data) return;
     const m = data.mine;
     const g = data.goal;
+    const rate = m?.weeklyRateKg ?? g?.weeklyRateKg ?? 0;
     setDraft({
-      weightGoal: g?.weightGoal ?? "maintain",
-      weeklyRateKg: g?.weeklyRateKg && g.weeklyRateKg > 0 ? g.weeklyRateKg : 0.5,
+      weightGoal: m?.weightGoal ?? g?.weightGoal ?? "maintain",
+      weeklyRateKg: rate > 0 ? rate : 0.5,
       targetCalories: Math.round(m?.calories ?? g?.calories ?? 0),
       macroSplit: m ? { proteinPct: m.proteinPct, carbsPct: m.carbsPct, fatPct: m.fatPct } : g ? { proteinPct: g.proteinPct, carbsPct: g.carbsPct, fatPct: g.fatPct } : { proteinPct: 30, carbsPct: 45, fatPct: 25 },
-      desiredWeightKg: g?.desiredWeightKg ?? undefined,
+      desiredWeightKg: m?.desiredWeightKg ?? undefined,
     });
     setGoalTouched(false);
     setLock(m ? m.locked : true);
@@ -138,6 +156,9 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
     );
   }
 
+  const est = tdeeView(data.basics, weight?.current ?? null, !!data.weights, first);
+  // My own goal and rate are known once I've set them, not only with Progress.
+  const goalKnown = goalTouched || progress || !!data.mine?.weightGoal;
   const pro: GoalsPanelPro = {
     goal: draft,
     onChange: (g) => {
@@ -147,8 +168,9 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
     readOnly: false,
     weight,
     weightLocked: <LockLine what="Weight" clientFirstName={first || "Your client"} action={askBtn("weight")} />,
-    tdee: null,
-    tdeeMissing: { title: "Needs height, age, sex and activity", line: `${first || "Your client"}'s height, age, sex and activity level aren't shared with professionals, so no maintenance estimate is made.` },
+    tdee: est.tdee,
+    tdeeMissing: est.tdee === null ? { title: est.title, line: est.line } : { title: "", line: "" },
+    tdeeBasis: est.tdee === null ? undefined : est.basis,
     lockNote: (
       <div style={{ marginTop: 10 }}>
         {!progress && (
@@ -161,8 +183,8 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
         </p>
       </div>
     ),
-    desiredWeightEditable: false,
-    weightGoalUnknown: !progress && !goalTouched,
+    desiredWeightEditable: true,
+    weightGoalUnknown: !goalKnown,
     today: todayLocal(),
   };
 
@@ -176,8 +198,10 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
       carbsPct: draft.macroSplit.carbsPct,
       fatPct: draft.macroSplit.fatPct,
       // Unchanged and unknown: the database keeps the client's own.
-      weightGoal: goalTouched || progress ? draft.weightGoal : null,
-      weeklyRateKg: goalTouched || progress ? draft.weeklyRateKg : null,
+      weightGoal: goalKnown ? draft.weightGoal : null,
+      weeklyRateKg: goalKnown ? draft.weeklyRateKg : null,
+      // Mine only, and only with a direction: Maintain or a cleared field saves none.
+      desiredWeightKg: goalKnown && draft.weightGoal !== "maintain" && draft.desiredWeightKg ? draft.desiredWeightKg : null,
       lock,
     });
     setBusy(false);
@@ -250,14 +274,16 @@ export const TargetsReadOnly: React.FC<{ clientId: string; firstName?: string; s
   if (!g) return <div>{head}<EmptyState icon={Target} title="No targets set" line={`${first} hasn't set nutrition targets yet.`} /></div>;
   const split = { proteinPct: g.proteinPct, carbsPct: g.carbsPct, fatPct: g.fatPct };
   const grams = macroGrams(g.calories, split);
+  const est = tdeeView(data.basics, weight?.current ?? null, !!data.weights, first);
   const pro: GoalsPanelPro = {
     goal: { weightGoal: g.weightGoal, weeklyRateKg: g.weeklyRateKg, targetCalories: Math.round(g.calories), macroSplit: split, desiredWeightKg: g.desiredWeightKg ?? undefined },
     onChange: () => undefined,
     readOnly: true,
     weight,
     weightLocked: <LockLine what="Weight" clientFirstName={first} />,
-    tdee: null,
-    tdeeMissing: { title: "Needs height, age, sex and activity", line: `${first}'s height, age, sex and activity level aren't shared with professionals, so no maintenance estimate is made.` },
+    tdee: est.tdee,
+    tdeeMissing: est.tdee === null ? { title: est.title, line: est.line } : { title: "", line: "" },
+    tdeeBasis: est.tdee === null ? undefined : est.basis,
     lockNote: (
       <p className="flex items-center" style={{ gap: 6, marginTop: 10, fontSize: textPx(11.5), color: INK.chF }}>
         <Lock size={12} strokeWidth={2} aria-hidden />

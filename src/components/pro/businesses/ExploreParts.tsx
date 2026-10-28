@@ -1,5 +1,5 @@
-import React from "react";
-import { BadgeCheck, Building2, ChevronRight, Clock, MessageCircle, Send, UserPlus } from "lucide-react";
+import React, { useId, useState } from "react";
+import { BadgeCheck, Building2, ChevronDown, ChevronRight, Clock, MessageCircle, Send, UserPlus } from "lucide-react";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { CtaButton } from "../../ui/PinnedCta";
 import { useIsDark } from "../../../hooks/useIsDark";
@@ -7,6 +7,9 @@ import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { Avatar } from "../client/kit";
 import { LogoTile } from "./BusinessParts";
+import { FieldInput, FieldLabel, wellStyle } from "../calendar/calendarFields";
+import { ROLE_LABEL } from "../../../pages/business-team/teamLogic";
+import type { BusinessRole } from "../../../services/business-team/types";
 
 /**
  * Release 3 · MO17 v2 / v3 pieces, literal from gen/r15.js (explore15,
@@ -180,15 +183,44 @@ export const BusinessCard: React.FC<{
   </div>
 );
 
+/** W6A-1: the most a join request's message may say (request_to_join_business, 22023 past it). */
+export const JOIN_MESSAGE_MAX = 500;
+
 /**
- * askJoin17 as the backend allows it: the business (tile 44 r14, name 15 /
- * 800, line 12 text.faint), the note (FINAL_PLAN: "one business at a time"
- * deleted), Send request. request_to_join_business_by_id takes the business
- * only, so the frame's "Your role", "Message (optional)" and "Shared with the
- * business" switches have nothing to write to and aren't drawn (reported).
+ * askJoin17: the business (tile 44 r14, name 15 / 800, line 12 text.faint),
+ * "Your role" (field, chevron-down), 12, "Message (optional)" (field), the
+ * note (FINAL_PLAN: "one business at a time" deleted), Send request.
+ * W6A-1 (20261216080000): request_to_join_business_by_id(p_business_id,
+ * p_message, p_role) records the role as a wish (the business picks the role
+ * when it accepts) and the message up to 500. The role is the business_role
+ * list (the frame's free-text sample has no column); none chosen sends null.
+ * The frame's "Shared with the business" switches still have nothing to
+ * write to and aren't drawn.
  */
-export const AskToJoinSheet: React.FC<{ business: { name: string; line: string } | null; busy: boolean; error: string | null; onSend: () => void; onClose: () => void }> = ({ business, busy, error, onSend, onClose }) => (
-  <BottomSheet open={!!business} onClose={onClose} title="Ask to join" footer={<CtaButton label="Send request" icon={<Send size={15} aria-hidden />} loading={busy} onClick={onSend} />}>
+export const AskToJoinSheet: React.FC<{
+  business: { name: string; line: string } | null;
+  busy: boolean;
+  error: string | null;
+  onSend: (ask: { role: BusinessRole | null; message: string }) => void;
+  onClose: () => void;
+}> = ({ business, busy, error, onSend, onClose }) => {
+  const [role, setRole] = useState<BusinessRole | "">("");
+  const [message, setMessage] = useState("");
+  const [forName, setForName] = useState<string | null>(null);
+  const roleId = useId();
+  // A fresh sheet for each business (state reset while rendering, not in an effect).
+  if ((business?.name ?? null) !== forName) {
+    setForName(business?.name ?? null);
+    setRole("");
+    setMessage("");
+  }
+  return (
+  <BottomSheet
+    open={!!business}
+    onClose={onClose}
+    title="Ask to join"
+    footer={<CtaButton label="Send request" icon={<Send size={15} aria-hidden />} loading={busy} onClick={() => onSend({ role: role || null, message: message.trim() })} />}
+  >
     {business && (
       <>
         <div className="flex items-center" style={{ gap: 12, marginBottom: 12 }}>
@@ -200,7 +232,29 @@ export const AskToJoinSheet: React.FC<{ business: { name: string; line: string }
             {business.line && <span className="block" style={{ fontSize: textPx(12), color: INK.chF }}>{business.line}</span>}
           </span>
         </div>
-        <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5 }}>
+        <div className="min-w-0">
+          <FieldLabel htmlFor={roleId}>Your role</FieldLabel>
+          <span className="relative flex items-center focus-within:!border-primary" style={{ ...wellStyle(), height: 40 }}>
+            <select
+              id={roleId}
+              value={role}
+              onChange={(e) => setRole(e.target.value as BusinessRole | "")}
+              className="flex-1 min-w-0 h-full bg-transparent outline-none appearance-none"
+              style={{ fontSize: textPx(14), color: role ? INK.ch : INK.chF, paddingRight: 22 }}
+            >
+              <option value="">Choose a role</option>
+              {(Object.keys(ROLE_LABEL) as BusinessRole[]).map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABEL[r]}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} strokeWidth={2} aria-hidden className="pointer-events-none absolute" style={{ right: 12, color: INK.chF }} />
+          </span>
+        </div>
+        <div style={{ height: 12 }} />
+        <FieldInput label="Message (optional)" value={message} onChange={setMessage} maxLength={JOIN_MESSAGE_MAX} />
+        <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 8 }}>
           The business checks your credentials before you appear on its team. Your clients and their data are never shared with the business.
         </p>
         {error && (
@@ -211,7 +265,8 @@ export const AskToJoinSheet: React.FC<{ business: { name: string; line: string }
       </>
     )}
   </BottomSheet>
-);
+  );
+};
 
 /**
  * exploreColleagues15 row: r18 card, pad 12 14, gap 12, 8 below; avatar 44;

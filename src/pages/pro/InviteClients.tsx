@@ -267,7 +267,12 @@ export default function InviteClients() {
           {joins === null ? (
             <ProCardSkeleton lines={2} />
           ) : list.length === 0 ? (
-            <p style={{ fontSize: textPx(12.5), color: INK.chF, lineHeight: 1.5 }}>Nobody yet. People who open your link appear here with their status.</p>
+            <p style={{ fontSize: textPx(12.5), color: INK.chF, lineHeight: 1.5 }}>
+              {/* W2-5c: opened_at is one stamp for the link (first open only), so it reads as the link's status, not a person's. */}
+              {link.data?.openedAt
+                ? `Opened ${shortDate(link.data.openedAt)}. Nobody has joined yet. People who join appear here with their status.`
+                : "Nobody yet. People who open your link appear here with their status."}
+            </p>
           ) : (
             <div style={{ borderRadius: 20, background: INK.card, border: `1px solid ${INK.bCard}`, padding: "4px 14px" }}>
               {shownJoins.map((j, i) => (

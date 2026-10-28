@@ -17,6 +17,7 @@ import {
   reachDate,
   splitTotalOk,
   targetFromTdee,
+  tdeeView,
   templateLine,
   weekOfPlan,
   worstConflict,
@@ -142,4 +143,17 @@ test("targets: TDEE ∓ rate × 7700 ÷ 7, reach date, split totals", () => {
   assert.equal(reachDate("2026-10-15", null, 80, 0.5), null);
   assert.equal(splitTotalOk(30, 40, 30), true);
   assert.equal(splitTotalOk(30, 40, 20), false);
+});
+
+test("TDEE (Release A client_body_basics): the frame's numbers, and each missing input named", () => {
+  const basics = { ageYears: 34, sex: "male" as const, heightCm: 180, activityLevel: "light" as const };
+  // NU8 frame: 82.4 kg · 180 cm · 34 · Male · Lightly active → 2,453 kcal.
+  assert.deepEqual(tdeeView(basics, 82.4, true, "John"), { tdee: 2453, basis: "82.4 kg · 180 cm · 34 · Male · Lightly active" });
+  const none = tdeeView(null, 82.4, true, "John");
+  assert.equal(none.tdee, null);
+  assert.match(none.tdee === null ? none.line : "", /doesn't share Weight or Progress/);
+  const partial = tdeeView({ ...basics, heightCm: null, activityLevel: null }, 82.4, true, "John");
+  assert.equal(partial.tdee === null ? partial.line : "", "John hasn't added their height and activity level yet, so no maintenance estimate is made.");
+  const noWeight = tdeeView(basics, null, false, "John");
+  assert.equal(noWeight.tdee === null ? noWeight.title : "", "Needs a weigh-in");
 });

@@ -20,6 +20,9 @@ import {
   partQuestions,
   partsOf,
   popupQueue,
+  connectBody,
+  connectReminder,
+  connectTitle,
   referralBody,
   referralTitle,
   referralReminder,
@@ -351,6 +354,18 @@ describe("Home reminders and the pop-up queue (CU5, CU23, CU26)", () => {
     assert.equal(referralBody(ref), "If you agree, Dana gets Rami's referral and the reason for it. Nothing else is shared.");
     assert.equal(referralBody({ ...ref, toName: null }), "To another professional. If you agree, they get Rami's referral and the reason for it. Nothing else is shared.");
     assert.equal(referralReminder({ ...ref, toName: null }).title, "Rami wants to refer you");
+  });
+
+  it("asks the client to connect once a referral is accepted (Release A, connect_from_referral)", () => {
+    const c = { id: "c1", fromId: "p1", fromName: "Rami", toId: "p2", toName: "Dana", respondedAt: "2026-10-16T08:00:00Z" };
+    const rem = connectReminder(c);
+    assert.equal(rem.key, "connect:c1");
+    assert.equal(rem.kind, "referral_connect");
+    assert.equal(rem.level, 2);
+    assert.equal(rem.proId, "p1");
+    assert.equal(rem.title, "Dana accepted Rami's referral");
+    assert.equal(connectTitle({ ...c, toName: null }), "Your referral from Rami was accepted");
+    assert.equal(connectBody(c), "Connect to become Dana's client. You choose what Dana can see. Nothing is shared until you do.");
   });
 
   it("writes the CU29 share request as a level-2 reminder queued with the others", () => {

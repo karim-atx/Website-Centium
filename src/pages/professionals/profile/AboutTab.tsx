@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, MapPin, Phone, Video, type LucideIcon } from "lucide-react";
+import { Building2, Home, MapPin, Phone, Video, type LucideIcon } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx, linePx } from "../../../theme/textSize";
 import { marketPalette } from "../../../theme/marketTokens";
@@ -47,7 +47,8 @@ import type { SocialLink } from "./profileModel";
 // social links. Their own sections use the caps label and the board's card.
 
 export interface WhereRow {
-  icon: "place" | "online" | "home" | "phone";
+  /** "business": a workplace from professional_workplaces (W7-9). */
+  icon: "place" | "business" | "online" | "home" | "phone";
   title: string;
   line: string;
 }
@@ -59,7 +60,7 @@ export interface Availability {
   blockedLine?: string;
 }
 
-const ICONS: Record<WhereRow["icon"], LucideIcon> = { place: MapPin, online: Video, home: Home, phone: Phone };
+const ICONS: Record<WhereRow["icon"], LucideIcon> = { place: MapPin, business: Building2, online: Video, home: Home, phone: Phone };
 
 export const AboutTab: React.FC<{
   bio: string | null;

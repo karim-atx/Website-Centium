@@ -122,11 +122,12 @@ export default function ProfessionalExplore({ pointsCard }: { pointsCard?: React
     if (!r.ok) return setToast(r.message);
     navigate("/app/messages", { state: { threadId: r.threadId } });
   };
-  const ask = async () => {
+  const ask = async (extra: { role: string | null; message: string }) => {
     if (!asking) return;
     setBusy(asking.venueId);
     setAskError(null);
-    const r = await requestToJoinById(asking.venueId);
+    // W6A-1: the role asked for and the optional message travel with the request.
+    const r = await requestToJoinById(asking.venueId, extra);
     setBusy(null);
     if (!r.ok) return setAskError(r.message);
     setSentIds((s) => new Set([...s, asking.venueId]));
@@ -255,7 +256,7 @@ export default function ProfessionalExplore({ pointsCard }: { pointsCard?: React
         business={asking ? { name: asking.name, line: lineOf(asking) } : null}
         busy={!!asking && busy === asking.venueId}
         error={askError}
-        onSend={() => void ask()}
+        onSend={(extra) => void ask(extra)}
         onClose={() => setAsking(null)}
       />
       <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />

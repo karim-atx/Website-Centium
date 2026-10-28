@@ -11,8 +11,11 @@
 // - workout_sessions + logged_exercises + logged_sets: Workout activity;
 // - food_log_entries (eaten_at, DB-5 / J8): Food diary;
 // - habit_items + habit_completions: Habits (services/pro/clientPage);
-// - my_client_nutrition_targets (the targets this professional set) and
-//   nutrition_goals (needs Progress; the only way the target weight shows);
+// - my_client_nutrition_targets (the targets this professional set, with the
+//   target weight they set) and nutrition_goals (needs Progress). Since
+//   Database #41 (20261216100000) desired_weight_kg is outside the table's
+//   select grant, so naming it would fail the whole read: a client's own
+//   target weight is readable by nobody off the table, only the setter's;
 // - request_client_access with a message (TR20).
 // Lab results reuse services/labs and services/pro/clientPage.
 
@@ -284,10 +287,10 @@ export interface InsightTargets {
 export async function fetchInsightTargets(clientId: string, progressShared: boolean): Promise<Read<InsightTargets>> {
   const mine = await rpc("my_client_nutrition_targets", { p_client_id: clientId });
   if (mine.error) return readFail(mine.error);
-  const m = ((mine.data ?? []) as { target_calories: unknown; protein_pct: unknown; carbs_pct: unknown; fat_pct: unknown }[])[0];
-  let goal: { target_calories: unknown; protein_pct: unknown; carbs_pct: unknown; fat_pct: unknown; desired_weight_kg: unknown; weight_goal: string | null } | undefined;
+  const m = ((mine.data ?? []) as { target_calories: unknown; protein_pct: unknown; carbs_pct: unknown; fat_pct: unknown; desired_weight_kg?: unknown; weight_goal?: string | null }[])[0];
+  let goal: { target_calories: unknown; protein_pct: unknown; carbs_pct: unknown; fat_pct: unknown; weight_goal: string | null } | undefined;
   if (progressShared) {
-    const g = await from("nutrition_goals").select("target_calories, protein_pct, carbs_pct, fat_pct, desired_weight_kg, weight_goal").eq("user_id", clientId).eq("is_current", true).limit(1);
+    const g = await from("nutrition_goals").select("target_calories, protein_pct, carbs_pct, fat_pct, weight_goal").eq("user_id", clientId).eq("is_current", true).limit(1);
     if (g.error) return readFail(g.error);
     goal = ((g.data ?? []) as unknown as (typeof goal)[])[0];
   }
@@ -303,7 +306,8 @@ export async function fetchInsightTargets(clientId: string, progressShared: bool
       kcal: src ? num(src.target_calories) : null,
       pct: pctOf(src),
       source: m ? "mine" : goal ? "client" : null,
-      goalWeightKg: goal && goal.weight_goal !== "maintain" ? num(goal.desired_weight_kg) : null,
+      // Only the target weight this professional set (see the header).
+      goalWeightKg: m && m.weight_goal !== "maintain" ? num(m.desired_weight_kg) : null,
     },
   };
 }

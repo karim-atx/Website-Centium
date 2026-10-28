@@ -7,7 +7,12 @@
 //   status awaiting_client → sent → accepted / declined, or
 //   declined_by_client, withdrawn, disputed, closed): refer_client (only to
 //   a linked colleague, only a current client), respond_care_referral,
-//   withdraw_care_referral, dispute_care_referral. The receiver reads nothing
+//   withdraw_care_referral, dispute_care_referral. Release A: a decline may
+//   carry a reason (p_reason), kept in care_referral_declines, a side table
+//   only the two professionals read (Database #41 7ea8d57: a column on
+//   care_referrals would be readable by the client, so there is none);
+//   accepting connects nobody, the client
+//   connects themselves (connect_from_referral). The receiver reads nothing
 //   until the client agreed (the select policy hides awaiting_client and
 //   declined_by_client); disputes go to support as "Care network disputes".
 // Names: a colleague's name is read from public_professional_directory
@@ -135,6 +140,8 @@ export interface Referral {
   clientAnsweredAt: string | null;
   respondedAt: string | null;
   disputedAt: string | null;
+  /** Release A: why the receiving professional declined (optional, at most 500), read by both professionals. */
+  declineReason: string | null;
 }
 
 export async function fetchReferrals(me: string): Promise<Read<{ received: Referral[]; sent: Referral[] }>> {
@@ -144,6 +151,16 @@ export async function fetchReferrals(me: string): Promise<Read<{ received: Refer
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) return readFail(error);
+  // The reasons for this page's declined referrals (both professionals read them).
+  const declinedIds = ((data ?? []) as unknown as { id: string; status: ReferralStatus }[]).filter((r) => r.status === "declined").map((r) => r.id);
+  const reasons = new Map<string, string>();
+  if (declinedIds.length) {
+    const d = await from("care_referral_declines").select("referral_id, reason").in("referral_id", declinedIds);
+    if (d.error) return readFail(d.error);
+    for (const r of (d.data ?? []) as unknown as { referral_id: string; reason: string }[]) {
+      if (r.reason?.trim()) reasons.set(r.referral_id, r.reason.trim());
+    }
+  }
   const all = ((data ?? []) as unknown as {
     id: string;
     from_professional: string;
@@ -166,6 +183,7 @@ export async function fetchReferrals(me: string): Promise<Read<{ received: Refer
     clientAnsweredAt: r.client_answered_at,
     respondedAt: r.responded_at,
     disputedAt: r.disputed_at,
+    declineReason: reasons.get(r.id) ?? null,
   }));
   return { ok: true, data: { received: all.filter((r) => r.toId === me), sent: all.filter((r) => r.fromId === me) } };
 }
@@ -175,8 +193,15 @@ export async function referClient(clientId: string, toProfessional: string, reas
   return error ? { ok: false, message: message(error, "Couldn't send the referral. Try again.") } : { ok: true };
 }
 
-export async function respondReferral(id: string, accept: boolean): Promise<Write> {
-  const { error } = await rpc("respond_care_referral", { p_referral_id: id, p_accept: accept });
+/**
+ * respond_care_referral(p_referral_id, p_accept, p_reason) (Release A,
+ * 20261216060000): a decline may say why (at most 500, 22023 past that); an
+ * accept never keeps one. Accepting does NOT connect the client: that is
+ * their own second decision (connect_from_referral).
+ */
+export async function respondReferral(id: string, accept: boolean, reason?: string | null): Promise<Write> {
+  const why = !accept ? (reason ?? "").trim() : "";
+  const { error } = await rpc("respond_care_referral", { p_referral_id: id, p_accept: accept, p_reason: why || null });
   return error ? { ok: false, message: message(error, "Couldn't answer the referral. Try again.") } : { ok: true };
 }
 

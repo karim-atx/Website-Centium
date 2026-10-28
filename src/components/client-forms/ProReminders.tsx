@@ -7,8 +7,11 @@ import { INK } from "../pro/proInk";
 import { textPx } from "../../theme/textSize";
 import { Toast } from "../ui/Toast";
 import { clock12 } from "../../utils/time12";
-import { fetchMyOpenForms, fetchMyPendingReferrals, fetchTodaySessions, type ClientFormBundle } from "../../services/client-forms";
+import { fetchMyAcceptedReferrals, fetchMyOpenForms, fetchMyPendingReferrals, fetchTodaySessions, type ClientFormBundle } from "../../services/client-forms";
 import {
+  connectBody,
+  connectReminder,
+  connectTitle,
   formReminder,
   groupReminders,
   popupQueue,
@@ -18,6 +21,7 @@ import {
   sessionReminder,
   shareReminder,
   visibleQuestions,
+  type ConnectReferral,
   type PendingReferral,
   type Reminder,
   type TodaySession,
@@ -25,7 +29,7 @@ import {
 import { ReminderCard } from "./ReminderCard";
 import { ReminderPopup } from "./ReminderPopup";
 import { FormSheet } from "./FormSheet";
-import { ReferralSheet } from "./ReferralSheet";
+import { ConnectReferralSheet, ReferralSheet } from "./ReferralSheet";
 import { WinPermissionPopup } from "../share/client/WinPermissionPopup";
 import { answerToast, sharedTitle } from "../share/client/sharingText";
 import { specFromPayload } from "../share/shareCardModel";
@@ -39,6 +43,9 @@ import { fetchProfessionalHandles, fetchProSummaries } from "../../services/shar
  * one card per professional, and the CU23 pop-up queue (at most 2 per app
  * open: a session starting within the hour first, then anything that needs
  * an answer). Nothing renders for a client with nothing waiting.
+ * Release A: an accepted referral is one more level-2 item ("{pro} accepted
+ * {referrer}'s referral", Review opens ConnectReferralSheet), because
+ * accepting no longer connects anybody.
  */
 
 /** Pop-ups already shown in this app open (module scope: cleared by a reload). */
@@ -91,6 +98,8 @@ const toShareReminder = (s: ShareAsk) => shareReminder({ id: s.request.id, proId
 interface Data {
   forms: ClientFormBundle[];
   referrals: PendingReferral[];
+  /** Release A: accepted referrals waiting for the client to connect (connect_from_referral). */
+  connects: ConnectReferral[];
   sessions: TodaySession[];
   shares: ShareAsk[];
 }
@@ -107,6 +116,7 @@ export const ProReminders: React.FC = () => {
   const [now, setNow] = useState(() => new Date());
   const [formOpen, setFormOpen] = useState<ClientFormBundle | null>(null);
   const [referralOpen, setReferralOpen] = useState<PendingReferral | null>(null);
+  const [connectOpen, setConnectOpen] = useState<ConnectReferral | null>(null);
   const [queue, setQueue] = useState<Reminder[] | null>(null);
   const [handled, setHandled] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
@@ -119,7 +129,9 @@ export const ProReminders: React.FC = () => {
   const load = useCallback(async () => {
     if (!authUserId) return;
     const at = new Date();
-    const [f, r, s, sh] = await Promise.all([fetchMyOpenForms(authUserId), fetchMyPendingReferrals(authUserId), fetchTodaySessions(authUserId, at), fetchShareAsks(authUserId)]);
+    const [f, r, s, sh, cn] = await Promise.all([fetchMyOpenForms(authUserId), fetchMyPendingReferrals(authUserId), fetchTodaySessions(authUserId, at), fetchShareAsks(authUserId), fetchMyAcceptedReferrals(authUserId)]);
+    // Release A: a failed read of the connect step keeps what was there, like the share asks.
+    const connects = cn.ok ? cn.data : null;
     setNow(at);
     if (!f.ok || !r.ok || !s.ok) {
       const offline = (!f.ok && f.offline) || (!r.ok && r.offline) || (!s.ok && s.offline);
@@ -127,12 +139,12 @@ export const ProReminders: React.FC = () => {
       setStatus((prev) => (prev === "ready" ? prev : offline ? "offline" : "error"));
       return;
     }
-    setData((prev) => ({ forms: f.data, referrals: r.data, sessions: s.data, shares: sh ?? prev?.shares ?? [] }));
+    setData((prev) => ({ forms: f.data, referrals: r.data, connects: connects ?? prev?.connects ?? [], sessions: s.data, shares: sh ?? prev?.shares ?? [] }));
     setStatus("ready");
     // The pop-up queue is set once, from what was waiting when Home opened.
     if (!queued.current) {
       queued.current = true;
-      const candidates = [...s.data.map((x) => sessionReminder(x, at)).filter((x): x is Reminder => !!x), ...r.data.map(referralReminder), ...(sh ?? []).map(toShareReminder)];
+      const candidates = [...s.data.map((x) => sessionReminder(x, at)).filter((x): x is Reminder => !!x), ...r.data.map(referralReminder), ...(connects ?? []).map(connectReminder), ...(sh ?? []).map(toShareReminder)];
       const q = popupQueue(candidates, shownThisOpen, readAck());
       q.forEach((x) => shownThisOpen.add(x.key));
       setQueue(q);
@@ -147,7 +159,7 @@ export const ProReminders: React.FC = () => {
   const reminders = useMemo<Reminder[]>(() => {
     if (!data) return [];
     const forms = data.forms.map((f) => formReminder({ ...f, questions: visibleQuestions(f.questions, hideBody) }, now));
-    const refs = data.referrals.map(referralReminder);
+    const refs = [...data.referrals.map(referralReminder), ...data.connects.map(connectReminder)];
     const sess = data.sessions.map((s) => sessionReminder(s, now)).filter((x): x is Reminder => !!x);
     const shares = data.shares.map(toShareReminder);
     return [...sess, ...refs, ...shares, ...forms];
@@ -162,9 +174,10 @@ export const ProReminders: React.FC = () => {
 
   const formByKey = (key: string) => data?.forms.find((f) => `form:${f.assignmentId}` === key) ?? null;
   const referralByKey = (key: string) => data?.referrals.find((r) => `referral:${r.id}` === key) ?? null;
+  const connectByKey = (key: string) => data?.connects.find((r) => `connect:${r.id}` === key) ?? null;
   const sessionByKey = (key: string) => data?.sessions.find((s) => `session:${s.id}` === key) ?? null;
   const shareByKey = (key: string) => data?.shares.find((s) => `share:${s.request.id}` === key) ?? null;
-  const waiting = (r: Reminder) => (r.kind === "session" ? !!sessionByKey(r.key) : r.kind === "share_request" ? !!shareByKey(r.key) : !!referralByKey(r.key));
+  const waiting = (r: Reminder) => (r.kind === "session" ? !!sessionByKey(r.key) : r.kind === "share_request" ? !!shareByKey(r.key) : r.kind === "referral_connect" ? !!connectByKey(r.key) : !!referralByKey(r.key));
 
   // The next pop-up: queued, not handled, and still waiting (answered elsewhere drops out).
   const live = (queue ?? []).filter((r) => !handled.includes(r.key) && waiting(r));
@@ -185,6 +198,10 @@ export const ProReminders: React.FC = () => {
       setReferralOpen(referralByKey(r.key));
       return;
     }
+    if (r.kind === "referral_connect") {
+      setConnectOpen(connectByKey(r.key));
+      return;
+    }
     if (r.kind === "share_request") {
       const sa = shareByKey(r.key);
       if (sa) setShareOpen(sa.request.id);
@@ -200,7 +217,7 @@ export const ProReminders: React.FC = () => {
     setHandled((h) => [...h, `share:${id}`]);
     void load();
   };
-  const queuedShare = current && queue && current.kind === "share_request" && !formOpen && !referralOpen && !shareOpen ? shareByKey(current.key) : null;
+  const queuedShare = current && queue && current.kind === "share_request" && !formOpen && !referralOpen && !connectOpen && !shareOpen ? shareByKey(current.key) : null;
   const reopenedShare = shareOpen ? (data?.shares.find((x) => x.request.id === shareOpen) ?? null) : null;
   const sharePopup = (sa: ShareAsk, index: number, count: number, close: () => void) => (
     <WinPermissionPopup
@@ -227,7 +244,7 @@ export const ProReminders: React.FC = () => {
   );
 
   const popupProps = (() => {
-    if (!current || !queue || formOpen || referralOpen || shareOpen || current.kind === "share_request") return null;
+    if (!current || !queue || formOpen || referralOpen || connectOpen || shareOpen || current.kind === "share_request") return null;
     const common = { index: qi, count: queue.length, kind: current.kind, tone: current.tone, proName: current.proName, proAvatarUrl: avatars.get(current.proId) ?? null };
     if (current.kind === "session") {
       const s = sessionByKey(current.key);
@@ -265,6 +282,24 @@ export const ProReminders: React.FC = () => {
           onClick: () => {
             advance();
             setReferralOpen(ref);
+          },
+        },
+        secondary: { label: "Not now", onClick: () => advance() },
+        onDismiss: () => advance(),
+      };
+    }
+    if (current.kind === "referral_connect") {
+      const c = connectByKey(current.key);
+      if (!c) return null;
+      return {
+        ...common,
+        title: connectTitle(c),
+        body: connectBody(c),
+        primary: {
+          label: "Review",
+          onClick: () => {
+            advance();
+            setConnectOpen(c);
           },
         },
         secondary: { label: "Not now", onClick: () => advance() },
@@ -316,6 +351,20 @@ export const ProReminders: React.FC = () => {
           const from = referralOpen?.fromName ?? "";
           setReferralOpen(null);
           setToast(agree ? `Thanks. ${from}'s referral is on its way.` : "Referral declined.");
+          void load();
+        }}
+      />
+
+      <ConnectReferralSheet
+        key={connectOpen ? `connect-${connectOpen.id}` : "connect-none"}
+        referral={connectOpen}
+        onClose={() => setConnectOpen(null)}
+        onConnected={() => {
+          const to = connectOpen?.toName;
+          const id = connectOpen?.id;
+          setConnectOpen(null);
+          setToast(to ? `You're connected with ${to}.` : "You're connected.");
+          setData((prev) => (prev ? { ...prev, connects: prev.connects.filter((x) => x.id !== id) } : prev));
           void load();
         }}
       />

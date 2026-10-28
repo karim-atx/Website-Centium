@@ -324,18 +324,22 @@ export interface JoinRequest {
   name: string;
   avatarUrl: string | null;
   createdAt: string;
+  /** W6A-1 (20261216080000): the role they asked for (a wish, not binding) and their note, when given. */
+  requestedRole: BusinessRole | null;
+  message: string | null;
 }
 
 /** Pending join requests (B6 business_join_requests: readable with the members permission). */
 export async function fetchJoinRequests(businessId: string): Promise<Result<JoinRequest[]>> {
   const rows = await db
-    .from("business_join_requests")
-    .select("id, professional_id, created_at")
+    // requested_role (Release A) isn't in the generated types yet: cast at this boundary.
+    .from("business_join_requests" as never)
+    .select("id, professional_id, created_at, message, requested_role")
     .eq("business_id", businessId)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
   if (rows.error) return fail(rows.error, "Couldn't load join requests. Try again.");
-  const list = (rows.data ?? []) as { id: string; professional_id: string; created_at: string }[];
+  const list = (rows.data ?? []) as unknown as { id: string; professional_id: string; created_at: string; message: string | null; requested_role?: BusinessRole | null }[];
   const names = await namesFor(list.map((r) => r.professional_id));
   return {
     ok: true,
@@ -345,6 +349,8 @@ export async function fetchJoinRequests(businessId: string): Promise<Result<Join
       name: names.get(r.professional_id)?.name ?? "Unnamed",
       avatarUrl: names.get(r.professional_id)?.avatarUrl ?? null,
       createdAt: r.created_at,
+      requestedRole: r.requested_role ?? null,
+      message: r.message?.trim() || null,
     })),
   };
 }
@@ -413,16 +419,25 @@ const clean = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null
  * carries website / instagram / facebook / x, and per D-27 a business does
  * not see a professional's socials at all (professional_social_handles is
  * for connected clients only), so nothing here asks for them.
+ *
+ * W6L-3 (20261216050000): with `staffOf` (the Team › Person page, accepted
+ * staff), the experience comes from business_staff_experience(business,
+ * professional) instead: the `members` permission and an accepted, unrevoked
+ * employment, so a business reads its own staff's CV even when they aren't
+ * listed (the public view answers nothing for an unlisted professional).
+ * The directory half (specialty, bio) stays public-only.
  */
-export async function fetchPublicDetails(professionalId: string): Promise<Result<PublicDetails | null>> {
+export async function fetchPublicDetails(professionalId: string, staffOf?: string): Promise<Result<PublicDetails | null>> {
   const [dir, exp] = await Promise.all([
     db.from("public_professional_directory").select("professional_subtype, specialty, bio").eq("profile_id", professionalId).maybeSingle(),
-    db.from("public_professional_experience").select("title, organisation, start_month, end_month, position").eq("professional_id", professionalId).order("position"),
+    staffOf
+      ? rpc("business_staff_experience", { p_business_id: staffOf, p_professional_id: professionalId })
+      : db.from("public_professional_experience").select("title, organisation, start_month, end_month, position").eq("professional_id", professionalId).order("position"),
   ]);
   if (dir.error) return fail(dir.error, "Couldn't load their profile.");
-  if (!dir.data) return { ok: true, value: null };
-  const d = dir.data as { professional_subtype: string | null; specialty: string | null; bio: string | null };
   const rows = (exp.error ? [] : exp.data ?? []) as { title: string | null; organisation: string | null; start_month: string | null; end_month: string | null }[];
+  if (!dir.data && !(staffOf && rows.length)) return { ok: true, value: null };
+  const d = (dir.data ?? { professional_subtype: null, specialty: null, bio: null }) as { professional_subtype: string | null; specialty: string | null; bio: string | null };
   return {
     ok: true,
     value: {

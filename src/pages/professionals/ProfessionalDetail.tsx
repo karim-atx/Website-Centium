@@ -24,6 +24,7 @@ import {
   declineText,
   fetchBookableSessions,
   fetchOpenSlots,
+  fetchProfessionalWorkplaces,
   localDay,
   mondayOf,
   previewInviteLink,
@@ -32,7 +33,10 @@ import {
   slotsByDay,
   weekDays,
   type BookableSession,
+  type Workplace,
 } from "../../services/public-pro";
+import { ROLE_LABEL } from "../business-team/teamLogic";
+import type { BusinessRole } from "../../services/business-team/types";
 import { recordProfessionalEvent } from "../../services/marketplace/listingEvents";
 import { getMyAccessRequests, type AccessRequest } from "../../services/access-requests";
 import { AccessRequestNotice } from "../../components/professionals/AccessRequestNotice";
@@ -404,6 +408,19 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
   }, [proId, svcReload]);
   const services = svc && svc.id === proId ? svc : null;
 
+  // ---- W7-9: where they work (professional_workplaces) ----
+  const [workplaces, setWorkplaces] = useState<{ id: string; list: Workplace[] } | null>(null);
+  useEffect(() => {
+    if (!proId) return;
+    let live = true;
+    void fetchProfessionalWorkplaces(proId).then((r) => {
+      if (live && r.ok) setWorkplaces({ id: proId, list: r.data });
+    });
+    return () => {
+      live = false;
+    };
+  }, [proId]);
+
   // ---- tabs, sheets, the strip ----
   const [tab, setTab] = useState<Tab>("about");
   const [bookFor, setBookFor] = useState<string | null>(null);
@@ -687,7 +704,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
             cv={publicCv}
             skills={specialtiesFromDb ? listing.skills : []}
             firstName={first}
-            where={isPreview || sv ? where : null}
+            where={isPreview || sv ? withWorkplaces(where, workplaces && workplaces.id === proId ? workplaces.list : []) : null}
             availability={availability}
             offers={offers}
             balance={pointsSummary?.balance ?? 0}
@@ -804,4 +821,21 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
       <ReviewFormSheet open={reviewOpen} onClose={() => setReviewOpen(false)} firstName={first} existing={myReview} onSave={submitReview} onWithdraw={withdrawMyReview} />
     </div>
   );
+}
+
+/**
+ * W7-9: MO3's Where with professional_workplaces (a Centium hire, or a team
+ * they chose to show; the business publicly visible either way), after
+ * their own place and before online, home and phone.
+ * "{Role} · {location}", either half alone.
+ */
+function withWorkplaces(where: WhereRow[] | null, list: Workplace[]): WhereRow[] | null {
+  if (!where || list.length === 0) return where;
+  const rows: WhereRow[] = list.map((w) => ({
+    icon: "business",
+    title: w.name,
+    line: [w.role ? (ROLE_LABEL[w.role as BusinessRole] ?? null) : null, w.location].filter(Boolean).join(" · ") || "Works here",
+  }));
+  const places = where.filter((w) => w.icon === "place");
+  return [...places, ...rows, ...where.filter((w) => w.icon !== "place")];
 }

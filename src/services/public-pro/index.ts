@@ -84,6 +84,50 @@ export async function previewInviteLink(code: string): Promise<Read<InvitePrevie
   }
 }
 
+/**
+ * W2-5c (20261216070000) record_invite_open(p_code): stamps
+ * client_codes.opened_at the first time the link is loaded, so the
+ * professional's sent invites can say "Opened". From the link only (Karim),
+ * granted to anon and authenticated, and silent whether or not the code is
+ * real, so nothing comes back and a failure is not the visitor's problem.
+ */
+export async function recordInviteOpen(code: string): Promise<void> {
+  try {
+    await rpc("record_invite_open", { p_code: code.trim() });
+  } catch {
+    /* silent by design */
+  }
+}
+
+export interface Workplace {
+  businessId: string;
+  name: string;
+  /** business_role ("instructor", "trainer", …). */
+  role: string | null;
+  location: string | null;
+}
+
+/**
+ * W7-9 (20261216050000) professional_workplaces(p_professional_id), anon and
+ * authenticated: where a professional works, accepted and unrevoked, and only
+ * while the business is publicly visible. A Centium hire shows by default;
+ * a team they joined only when they turned on show_team_workplaces (default
+ * false). No pay or dates.
+ */
+export async function fetchProfessionalWorkplaces(professionalId: string): Promise<Read<Workplace[]>> {
+  try {
+    const { data, error } = await rpc("professional_workplaces", { p_professional_id: professionalId });
+    if (error) return fail(error, "Couldn't load where they work.");
+    type Row = { business_id: string; business_name: string | null; location: string | null; role: string | null };
+    return {
+      ok: true,
+      data: ((data ?? []) as Row[]).map((r) => ({ businessId: r.business_id, name: r.business_name?.trim() || "A business", role: r.role, location: r.location?.trim() || null })),
+    };
+  } catch (e) {
+    return fail(e, "Couldn't load where they work.");
+  }
+}
+
 export interface HandleProfile {
   profileId: string;
   handle: string;

@@ -1,4 +1,4 @@
-import { CalendarClock, ClipboardCheck, ClipboardList, Send, Share2, type LucideIcon } from "lucide-react";
+import { CalendarClock, ClipboardCheck, ClipboardList, Send, Share2, UserPlus, type LucideIcon } from "lucide-react";
 import { INK } from "../pro/proInk";
 import type { ReminderTone } from "../../services/client-forms/logic";
 
@@ -25,6 +25,8 @@ export const onTone = (dark: boolean) => (dark ? "#121317" : "#FFFFFF");
 export function iconFor(kind: string): LucideIcon {
   if (kind === "session") return CalendarClock;
   if (kind === "referral") return Send;
+  // Release A: the client connects after a referral was accepted (user-plus).
+  if (kind === "referral_connect") return UserPlus;
   if (kind === "intake") return ClipboardList;
   // Release 3 · W8 CU29: a professional asks to share a win (remIcon21 'share-2').
   if (kind === "share_request") return Share2;
