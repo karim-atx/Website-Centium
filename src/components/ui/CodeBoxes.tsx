@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useRef } from "react";
 import clsx from "clsx";
+import { CODE_LENGTH, codeAfterInput } from "./codeBoxesInput";
 
 // Mobile v5.1 handover, Foundations 2.5 "Code boxes": six boxes 48 x 52, gap
 // 8, radius 12, digits 20 / 800. The focused box takes a 1.5 px primary
@@ -12,11 +13,13 @@ import clsx from "clsx";
 // back, and a paste (or a password manager or the phone's one-time-code
 // suggestion, which arrive as a multi-character input) fills from the first
 // box. Only digits are kept, and spaces in a pasted "123 456" are dropped.
+// Retyping a filled box changes that digit only (codeBoxesInput.ts); a digit
+// key is applied on keydown, so typing the same digit again still moves on.
 //
 // THE FIRST BOX CARRIES autocomplete="one-time-code", which is where iOS and
 // Android offer the code from a text message or a password manager.
 
-export const CODE_LENGTH = 6;
+export { CODE_LENGTH };
 
 export const CodeBoxes: React.FC<{
   value: string;
@@ -34,6 +37,13 @@ export const CodeBoxes: React.FC<{
   const refs = useRef<(HTMLInputElement | null)[]>([]);
   const digits = value.replace(/\D/g, "").slice(0, CODE_LENGTH);
   const empty = digits.length === 0;
+  // The code as last set, ahead of the parent's re-render: set() moves focus
+  // before the new value comes back as a prop, and the focus guard below must
+  // see the new length or it sends a paste's focus back to the first box.
+  const latest = useRef(digits);
+  useLayoutEffect(() => {
+    latest.current = digits;
+  });
 
   // Focus the first box when asked to: on mount, once the boxes are enabled,
   // and again when a wrong code is cleared (the parent empties the value).
@@ -43,17 +53,15 @@ export const CodeBoxes: React.FC<{
 
   const set = (next: string, focusAt?: number) => {
     const clean = next.replace(/\D/g, "").slice(0, CODE_LENGTH);
+    latest.current = clean;
     onChange(clean);
     if (focusAt !== undefined) refs.current[Math.min(focusAt, CODE_LENGTH - 1)]?.focus();
     if (clean.length === CODE_LENGTH) onComplete?.(clean);
   };
 
   const onInput = (i: number, raw: string) => {
-    const typed = raw.replace(/\D/g, "");
-    if (!typed) return;
-    // A multi-character input is a paste or an autofill: fill from box i.
-    const next = (digits.slice(0, i) + typed).slice(0, CODE_LENGTH);
-    set(next, next.length);
+    const edit = codeAfterInput(latest.current, i, raw);
+    if (edit) set(edit.code, edit.focusAt);
   };
 
   return (
@@ -82,7 +90,12 @@ export const CodeBoxes: React.FC<{
             set(text, text.replace(/\D/g, "").length);
           }}
           onKeyDown={(e) => {
-            if (e.key === "Backspace") {
+            if (/^\d$/.test(e.key) && !e.nativeEvent.isComposing && !e.ctrlKey && !e.metaKey && !e.altKey) {
+              // Not left to onChange: React skips it when the box already holds that digit.
+              e.preventDefault();
+              if (i > latest.current.length) return;
+              onInput(i, e.key);
+            } else if (e.key === "Backspace") {
               e.preventDefault();
               if (digits[i]) set(digits.slice(0, i) + digits.slice(i + 1), i);
               else if (i > 0) set(digits.slice(0, i - 1) + digits.slice(i), i - 1);
@@ -96,7 +109,8 @@ export const CodeBoxes: React.FC<{
           }}
           onFocus={(e) => {
             // Never start typing past a gap: jump to the first empty box.
-            if (i > digits.length) refs.current[digits.length]?.focus();
+            const have = latest.current.length;
+            if (i > have) refs.current[have]?.focus();
             else e.target.select();
           }}
           className={clsx(
