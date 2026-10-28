@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { CircleAlert, CircleCheck, Copy, Check, Gift, Share, Sparkles } from "lucide-react";
+import { Award, CircleAlert, CircleCheck, Copy, Check, Gift, Share, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { CentredPopup } from "../ui/CentredPopup";
 import { useApp } from "../../context/AppContext";
@@ -10,7 +10,9 @@ import {
   previewReferralCode,
   type ReferralSummary,
 } from "../../services/redemption";
-import { appliedLine, isOwnReferralCode, previewOfferLine, redemptionsLine, REFUSAL_LINES } from "../../services/redemption/referralLogic";
+import { appliedLine, isOwnReferralCode, previewOfferLine, redemptionsLine, REFUSAL_LINES, rewardLine } from "../../services/redemption/referralLogic";
+import { fetchMyAmbassadorApplication, showEntryRow, statusCard, type AmbassadorStatus } from "../../services/ambassador";
+import { AmbassadorApplySheet } from "../ambassador/AmbassadorApplySheet";
 
 // MO1.10 Invite friends, as a centred popup (R15/popups, batch C, C30), on
 // the A6 backend ("Stage A6 · Referrals" in ../Database/docs/HANDOVER_API.md):
@@ -41,6 +43,16 @@ import { appliedLine, isOwnReferralCode, previewOfferLine, redemptionsLine, REFU
 // MO1.10.3's subscribed state. The progress line's slot carries what the
 // summary does know: how many friends joined and the points earned.
 //
+// RELEASE B (Database 20261217040000 / 050000, PLAN S3 and S4):
+// - B3: the "You" row is referral_summary's referrer_points ("2,000 points
+//   per friend who joins" for an ambassador, 1,500 otherwise), points only
+//   (friend_discount_pct is never shown), and an "Ambassador" chip right of
+//   the Rewards label when is_ambassador.
+// - B2: my_ambassador_application() on every open (free). Under the progress
+//   line, the entry row "Share Centium often? Apply to be an ambassador"
+//   (hidden for ambassadors) opens AmbassadorApplySheet; while an application
+//   is pending, approved or recently declined the status card takes its place.
+//
 // QA 11.0: shared across Client / Professional / Business More pages.
 /**
  * `colleague` (Release 3 W6 · MO25, professionals): "Refer a colleague", the
@@ -59,6 +71,9 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [minting, setMinting] = useState(false);
   const [mintError, setMintError] = useState<string | null>(null);
+  // B2: null until my_ambassador_application() answers (no entry row or card until then).
+  const [amb, setAmb] = useState<AmbassadorStatus | null>(null);
+  const [applyOpen, setApplyOpen] = useState(false);
 
   // Another account signed in: nothing of the last one's may show (reset
   // during render, so no frame paints the previous account's code).
@@ -70,6 +85,8 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
     setMintError(null);
     setResult(null);
     setCodeDraft("");
+    setAmb(null);
+    setApplyOpen(false);
   }
 
   const fetchSummary = useCallback(
@@ -83,11 +100,21 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
     []
   );
 
-  // Re-read on every open so the counts are current; the reader is free.
+  const fetchAmbassador = useCallback(
+    () =>
+      fetchMyAmbassadorApplication().then((r) => {
+        // A failed read shows neither the entry row nor a card: nothing to act on.
+        if (r.ok) setAmb(r.status);
+      }),
+    []
+  );
+
+  // Re-read on every open so the counts are current; both readers are free.
   useEffect(() => {
     if (!open || !authUserId) return;
     void fetchSummary();
-  }, [open, authUserId, fetchSummary]);
+    void fetchAmbassador();
+  }, [open, authUserId, fetchSummary, fetchAmbassador]);
 
   const loadSummary = () => {
     setSummaryError(null);
@@ -188,6 +215,9 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
       ? appliedLine()
       : null;
   const progressLine = summary ? redemptionsLine(summary) : null;
+  const ambCard = amb ? statusCard(amb) : null;
+  // Not for an ambassador, by the summary or the application reader.
+  const ambEntry = amb && !summary?.isAmbassador ? showEntryRow(amb) : false;
 
   // MO1.10 row 3: the popup's labels are 10.5/700 (cap 7.5 on the 2x frame),
   // 10 above what they name (no rule under them in the popup).
@@ -214,16 +244,26 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
       icon={<Gift size={23} strokeWidth={1.75} />}
     >
       <div className="text-start">
-        {label("Rewards")}
+        {summary?.isAmbassador ? (
+          // PLAN S4: the chip right of the label (10.5 / 700, primary-pale
+          // fill, primary-accent ink, r999, padding 2 8).
+          <div className="flex items-center gap-2 mb-2.5">
+            <p className="text-[10.5px] leading-[14px] font-bold text-charcoal-faint uppercase tracking-wide">Rewards</p>
+            <span className="rounded-full bg-primary-pale text-primary-accent text-[10.5px] leading-[14px] font-bold" style={{ padding: "2px 8px" }}>
+              Ambassador
+            </span>
+          </div>
+        ) : (
+          label("Rewards")
+        )}
         <div className="rounded-2xl border border-charcoal/[0.08] px-3.5">
           {/* BR (Karim, 2026-10-27): POINTS ONLY. No bill ever applied the
               friend's "10% off" (the colleague's "10% off their first plan")
               or the referrer's "15% off your next month": the discount columns
               are read by nothing and billing is in the app stores. So neither
               is promised until billing applies them, and the friend row is
-              gone. Server-driven rows and the ambassador terms follow Database
-              stage B3. */}
-          {[{ icon: Sparkles, who: "You", what: `1,500 points per ${colleague ? "colleague or client" : "friend"} who joins` }].map((row, i) => (
+              gone. B3: the figure is referral_summary's referrer_points. */}
+          {[{ icon: Sparkles, who: "You", what: rewardLine(summary?.referrerPoints, colleague) }].map((row, i) => (
             <div key={row.who} className={`flex items-center gap-3 py-3 ${i === 1 ? "border-t border-charcoal/[0.06]" : ""}`}>
               {/* MO1.10 (2x frame): a 32 r10 #F0EDF9 tile (x 102–165) with
                   the glyph in #7D67D9 (new popup, decision 22). */}
@@ -329,6 +369,27 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
           </button>
         )}
 
+        {/* B2 (PLAN S3): the status card in the popup's bordered box (a 12 /
+            700 heading and a 12 faint line), else the entry row in the
+            progress line's neighbourhood, 12 faint with a 12 / 700
+            primary-accent link. */}
+        {ambCard ? (
+          <div role="status" className="mt-3 rounded-2xl border border-charcoal/[0.08] px-3.5 py-3 flex items-start gap-2.5">
+            {ambCard.kind === "approved" && <Award size={16} strokeWidth={1.75} className="text-primary-accent shrink-0 mt-px" aria-hidden />}
+            <div className="min-w-0">
+              <p className="text-[12px] font-bold text-charcoal">{ambCard.heading}</p>
+              <p className="text-[12px] text-charcoal-faint">{ambCard.line}</p>
+            </div>
+          </div>
+        ) : ambEntry ? (
+          <p className="mt-3 text-[12px] text-charcoal-faint">
+            Share Centium often?{" "}
+            <button type="button" onClick={() => setApplyOpen(true)} className="tap text-[12px] font-bold text-primary-accent">
+              Apply to be an ambassador
+            </button>
+          </p>
+        ) : null}
+
         {/* MO1.10 (2x frame): the rule 16 under the block above (y 1290 →
             1330) and 14 above "Have a code?". */}
         <div className="mt-4 pt-3.5 border-t border-charcoal/[0.06]">
@@ -418,6 +479,15 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
           )}
         </div>
       </div>
+      <AmbassadorApplySheet
+        open={applyOpen}
+        status={amb}
+        onClose={() => setApplyOpen(false)}
+        onSent={() => {
+          setApplyOpen(false);
+          void fetchAmbassador();
+        }}
+      />
     </CentredPopup>
   );
 };

@@ -10,6 +10,8 @@ import {
   pctLabel,
   redemptionsLine,
   REFUSAL_LINES,
+  rewardLine,
+  STANDARD_REFERRER_POINTS,
   toPct,
   toReferralSummary,
   UNKNOWN_REFUSAL_LINE,
@@ -90,7 +92,7 @@ test("toReferralSummary: the always-one-row shape, nulls and zeroes", () => {
       i_was_referred: false,
       my_discount_pct: null,
     }),
-    { code: null, redemptions: 0, pointsEarned: 0, lastRedeemedAt: null, iWasReferred: false, myDiscountPct: null }
+    { code: null, redemptions: 0, pointsEarned: 0, lastRedeemedAt: null, iWasReferred: false, myDiscountPct: null, isAmbassador: false, referrerPoints: null }
   );
   assert.deepEqual(toReferralSummary(undefined), {
     code: null,
@@ -99,6 +101,8 @@ test("toReferralSummary: the always-one-row shape, nulls and zeroes", () => {
     lastRedeemedAt: null,
     iWasReferred: false,
     myDiscountPct: null,
+    isAmbassador: false,
+    referrerPoints: null,
   });
   const jpw = toReferralSummary({
     code: "JPW-4KTM",
@@ -123,6 +127,31 @@ test("toReferralSummary: the always-one-row shape, nulls and zeroes", () => {
   });
   assert.equal(rmale.iWasReferred, true);
   assert.equal(rmale.myDiscountPct, 10);
+});
+
+test("toReferralSummary: B3's is_ambassador and referrer_points; friend_discount_pct is not carried", () => {
+  const base = { code: "AMB-1234", code_created_at: null, redemptions: 3, points_earned: 4500, last_redeemed_at: null, i_was_referred: false, my_discount_pct: null };
+  const amb = toReferralSummary({ ...base, is_ambassador: true, referrer_points: 2000, friend_discount_pct: "10.00" });
+  assert.equal(amb.isAmbassador, true);
+  assert.equal(amb.referrerPoints, 2000);
+  assert.ok(!("friendDiscountPct" in amb));
+  const std = toReferralSummary({ ...base, is_ambassador: false, referrer_points: 1500, friend_discount_pct: 10 });
+  assert.equal(std.isAmbassador, false);
+  assert.equal(std.referrerPoints, 1500);
+  // A pre-B3 row (no new columns) or a nonsense figure: not an ambassador, no figure.
+  assert.deepEqual([toReferralSummary(base).isAmbassador, toReferralSummary(base).referrerPoints], [false, null]);
+  assert.equal(toReferralSummary({ ...base, referrer_points: 0 }).referrerPoints, null);
+  assert.equal(toReferralSummary({ ...base, is_ambassador: null }).isAmbassador, false);
+});
+
+test("rewardLine: points per friend from the server, never a discount", () => {
+  assert.equal(rewardLine(2000), "2,000 points per friend who joins");
+  assert.equal(rewardLine(1500), "1,500 points per friend who joins");
+  assert.equal(rewardLine(2000, true), "2,000 points per colleague or client who joins");
+  // Before the summary answers: the standard figure.
+  assert.equal(rewardLine(null), `${STANDARD_REFERRER_POINTS.toLocaleString("en-US")} points per friend who joins`);
+  assert.equal(rewardLine(undefined, true), "1,500 points per colleague or client who joins");
+  for (const n of [null, 1500, 2000]) assert.doesNotMatch(rewardLine(n), /%|off/);
 });
 
 test("redemptionsLine: nothing until somebody used the code", () => {

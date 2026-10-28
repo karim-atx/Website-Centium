@@ -27,6 +27,7 @@ import { SettingsRow, SettingsSection } from "../../../components/pro/calendar/c
 import { FootNote, HeadLink, LockTile, StateLine, SubPage } from "../../../components/pro/profile/kit";
 import { NameSheet, HandleSheet, PhotoSourceSheet, TypeChangeSheet, TypeLockedPopup, usePhotoPicker } from "../../../components/pro/profile/ProfileSheets";
 import { ListingDetailsSheet, SpecialtiesSheet } from "../../../components/pro/profile/EditSheets";
+import { useCoverPicker } from "../../../components/pro/profile/useCoverPicker";
 import { ProfessionalBioSheet } from "../../../components/profile/ProfessionalBioCard";
 import { CvSheetsHost, type CvView } from "../../../components/cv/CvEditor";
 import { useMyCv } from "../../../components/cv/useMyCv";
@@ -60,12 +61,19 @@ type Sheet = null | "photo" | "name" | "locked" | "request" | "specialties" | "b
  * - the listing status line (the switch is Settings › Practice › Public listing);
  * - the lock note: icon 12, 11.5 / 1.45 text.faint, 8 above.
  */
+/** The "Photo and cover" row's line: "Added", "Photo added", "Cover added" or "Not added yet". */
+function photoAndCoverSub(photo: boolean, cover: boolean): string {
+  return photo && cover ? "Added" : photo ? "Photo added" : cover ? "Cover added" : "Not added yet";
+}
+
 export default function EditProfile() {
   const navigate = useNavigate();
   const { user, authUserId } = useApp();
   const { cv, setCv, error: cvError, reload: reloadCv, userId } = useMyCv();
   const { facts, setFacts, error: factsError, offline, reload } = useProfileFacts();
   const picker = usePhotoPicker();
+  // Release B: the cover photo (professional-covers, cover_url) in the same sheet.
+  const cover = useCoverPicker();
   const [sheet, setSheet] = useState<Sheet>(null);
   const [cvView, setCvView] = useState<CvView | null>(null);
   const [counts, setCounts] = useState<{ services: number; places: number } | null>(null);
@@ -92,9 +100,11 @@ export default function EditProfile() {
   const years = cv ? yearsOfExperience(cv.experience, currentMonth()) : 0;
 
   // "{n} places · {n} km": the businesses you work at, plus your own space and online when your work mode says so.
+  // The km is MO20's service radius (service_radius_km, Release B), which only bounds in-person work.
   const ownPlaces = facts?.workMode === "both" ? 2 : facts?.workMode ? 1 : 0;
   const places = (counts?.places ?? 0) + ownPlaces;
-  const whereSub = [places > 0 ? plural(places, "place") : "Not set yet", facts?.homeVisitKm ? `${facts.homeVisitKm} km` : null].filter(Boolean).join(" · ");
+  const radiusKm = facts?.workMode !== "online" ? facts?.serviceRadiusKm : null;
+  const whereSub = [places > 0 ? plural(places, "place") : "Not set yet", radiusKm ? `${radiusKm} km` : null].filter(Boolean).join(" · ");
   const licenceSub = !lic?.primary
     ? "Not added yet"
     : lic.verified
@@ -128,7 +138,7 @@ export default function EditProfile() {
       ) : (
         <>
           <div>
-            <SettingsRow icon={ImageIcon} title="Photo and cover" sub={user.avatarUrl ? "Added" : "Not added yet"} onClick={() => setSheet("photo")} />
+            <SettingsRow icon={ImageIcon} title="Photo and cover" sub={photoAndCoverSub(!!user.avatarUrl, !!cover.url)} onClick={() => setSheet("photo")} />
             <SettingsRow icon={UserRound} title="Name" sub={user.firstName || "Add your name"} onClick={() => setSheet("name")} />
             <SettingsRow icon={Briefcase} title="Professional type" sub={typeLabel(user.professionalSubtype)} right={<LockTile />} onClick={() => setSheet("locked")} ariaLabel={`Professional type, ${typeLabel(user.professionalSubtype)}. Locked`} />
             <SettingsRow icon={Sparkles} title="Specialties" sub={facts && facts.specialties.length > 0 ? `${facts.specialties.length} selected` : "None yet"} onClick={() => setSheet("specialties")} />
@@ -173,7 +183,8 @@ export default function EditProfile() {
       )}
 
       {picker.inputs}
-      <PhotoSourceSheet open={sheet === "photo"} onClose={() => setSheet(null)} picker={picker} />
+      {cover.inputs}
+      <PhotoSourceSheet open={sheet === "photo"} onClose={() => setSheet(null)} picker={picker} cover={cover} />
       <NameSheet open={sheet === "name"} onClose={() => setSheet(null)} />
       <TypeLockedPopup open={sheet === "locked"} onClose={() => setSheet(null)} onContact={() => setSheet("request")} />
       <TypeChangeSheet open={sheet === "request"} onClose={() => setSheet(null)} current={user.professionalSubtype} pending={pending} onSent={setPending} />

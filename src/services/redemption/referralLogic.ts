@@ -20,6 +20,12 @@ export interface ReferralSummaryRow {
   last_redeemed_at: string | null;
   i_was_referred: boolean | null;
   my_discount_pct: number | string | null;
+  /** B3 (Database 20261217050000): is_ambassador(auth.uid()). */
+  is_ambassador?: boolean | null;
+  /** B3: what the caller earns per friend now (2,000 ambassador, 1,500 otherwise). */
+  referrer_points?: number | null;
+  /** B3: what a friend gets. Read by nothing here: points only (BR). */
+  friend_discount_pct?: number | string | null;
 }
 
 export interface ReferralSummary {
@@ -31,6 +37,10 @@ export interface ReferralSummary {
   iWasReferred: boolean;
   /** The discount this account got for being referred, if it was. */
   myDiscountPct: number | null;
+  /** B3: the caller holds Centium Ambassador status (the Rewards chip, PLAN S4). */
+  isAmbassador: boolean;
+  /** B3: points per friend who joins, from the server; null when it named none. */
+  referrerPoints: number | null;
 }
 
 /** numeric arrives from PostgREST as a number or a string; either way, or null. */
@@ -53,7 +63,24 @@ export function toReferralSummary(row: ReferralSummaryRow | null | undefined): R
     lastRedeemedAt: row?.last_redeemed_at ?? null,
     iWasReferred: row?.i_was_referred === true,
     myDiscountPct: toPct(row?.my_discount_pct),
+    isAmbassador: row?.is_ambassador === true,
+    referrerPoints: typeof row?.referrer_points === "number" && row.referrer_points > 0 ? row.referrer_points : null,
   };
+}
+
+/** The standard figure every account earned before B3, and still earns unless an ambassador. */
+export const STANDARD_REFERRER_POINTS = 1500;
+
+/**
+ * The popup's "You" reward row (PLAN S4), from referral_summary's
+ * referrer_points: "2,000 points per friend who joins" for an ambassador,
+ * "1,500 …" otherwise. POINTS ONLY (Karim, BR): friend_discount_pct is never
+ * shown, since no bill applies it. Until the summary answers (or when it names
+ * no figure) the standard 1,500.
+ */
+export function rewardLine(referrerPoints: number | null | undefined, colleague = false): string {
+  const n = referrerPoints && referrerPoints > 0 ? referrerPoints : STANDARD_REFERRER_POINTS;
+  return `${n.toLocaleString("en-US")} points per ${colleague ? "colleague or client" : "friend"} who joins`;
 }
 
 /** redeem_referral_code()'s stable machine strings. */

@@ -17,6 +17,7 @@ import { CtaButton, ErrorLine } from "./kit";
 import { profileHref, profileUrl } from "./profileModel";
 import { SITE_HOST } from "../../../config/site";
 import { typeLabel } from "./typeLabel";
+import type { CoverPicker } from "./useCoverPicker";
 
 // Release 3 · W6 the profile's sheets and pop-ups:
 // - PhotoSourceSheet (MO26 "Profile · photo source", r15 profile15): "Profile
@@ -78,39 +79,74 @@ export function usePhotoPicker() {
   return { inputs, busy, error, hasPhoto: !!user.avatarUrl, takePhoto: () => camera.current?.click(), choose: () => gallery.current?.click(), remove };
 }
 
-export const PhotoSourceSheet: React.FC<{ open: boolean; onClose: () => void; picker: ReturnType<typeof usePhotoPicker> }> = ({ open, onClose, picker }) => {
+type SourceRow = { key: string; icon: typeof Camera; label: string; run: () => void; disabled: boolean };
+
+/** MO26's list card (r20, pad 4 14; 34 r11 tiles). `onRun` runs after a row's action (the photo rows close the sheet). */
+const SourceRows: React.FC<{ rows: SourceRow[]; onRun?: () => void }> = ({ rows, onRun }) => {
   const dark = useIsDark();
-  const rows = [
+  return (
+    <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "4px 14px" }}>
+      {rows.map((r, i) => (
+        <button
+          key={r.key}
+          type="button"
+          disabled={r.disabled}
+          onClick={() => {
+            r.run();
+            onRun?.();
+          }}
+          className="tap w-full flex items-center text-left disabled:opacity-50"
+          style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < rows.length - 1 ? `1px solid ${INK.b06}` : "none" }}
+        >
+          <span className="flex items-center justify-center shrink-0" style={{ width: 34, height: 34, borderRadius: 11, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
+            <r.icon size={16} strokeWidth={1.75} aria-hidden style={{ color: INK.prAccent }} />
+          </span>
+          <span className="flex-1 min-w-0" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch }}>
+            {r.label}
+          </span>
+          <ChevronRight size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
+        </button>
+      ))}
+    </div>
+  );
+};
+
+/**
+ * `cover` (Release B, MO14 "Photo and cover"): a second card for the cover
+ * photo under the profile photo's, with the cover (or MO15's striped band)
+ * above it. Not drawn: the sheet stays open on a cover row so the band and
+ * any error show the result. Unset, the sheet is MO26's, unchanged.
+ */
+export const PhotoSourceSheet: React.FC<{ open: boolean; onClose: () => void; picker: ReturnType<typeof usePhotoPicker>; cover?: CoverPicker }> = ({ open, onClose, picker, cover }) => {
+  const rows: SourceRow[] = [
     { key: "camera", icon: Camera, label: "Take a photo", run: picker.takePhoto, disabled: picker.busy },
     { key: "library", icon: ImageIcon, label: "Choose from library", run: picker.choose, disabled: picker.busy },
     { key: "remove", icon: Trash2, label: "Remove photo", run: () => void picker.remove(), disabled: picker.busy || !picker.hasPhoto },
   ];
   return (
-    <BottomSheet open={open} onClose={onClose} title="Profile photo">
-      <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "4px 14px" }}>
-        {rows.map((r, i) => (
-          <button
-            key={r.key}
-            type="button"
-            disabled={r.disabled}
-            onClick={() => {
-              r.run();
-              onClose();
-            }}
-            className="tap w-full flex items-center text-left disabled:opacity-50"
-            style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < rows.length - 1 ? `1px solid ${INK.b06}` : "none" }}
-          >
-            <span className="flex items-center justify-center shrink-0" style={{ width: 34, height: 34, borderRadius: 11, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
-              <r.icon size={16} strokeWidth={1.75} aria-hidden style={{ color: INK.prAccent }} />
-            </span>
-            <span className="flex-1 min-w-0" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch }}>
-              {r.label}
-            </span>
-            <ChevronRight size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
-          </button>
-        ))}
-      </div>
+    <BottomSheet open={open} onClose={onClose} title={cover ? "Photo and cover" : "Profile photo"}>
+      {cover && <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.chF, margin: "0 2px 8px" }}>Profile photo</p>}
+      <SourceRows rows={rows} onRun={onClose} />
       {picker.error && <ErrorLine>{picker.error}</ErrorLine>}
+      {cover && (
+        <>
+          <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.chF, margin: "16px 2px 8px" }}>Cover photo</p>
+          <div
+            aria-hidden={!cover.url}
+            className="relative overflow-hidden"
+            style={{ height: 96, borderRadius: 16, marginBottom: 8, background: cover.url ? INK.soft : `repeating-linear-gradient(45deg, ${INK.soft} 0 6px, ${INK.card} 6px 12px)`, border: `1px solid ${INK.bCard}` }}
+          >
+            {cover.url && <img src={cover.url} alt="Your cover photo" className="absolute inset-0 w-full h-full object-cover" />}
+          </div>
+          <SourceRows
+            rows={[
+              { key: "cover", icon: ImageIcon, label: cover.busy ? "Uploading…" : cover.url ? "Change cover" : "Add a cover", run: cover.choose, disabled: cover.busy },
+              { key: "cover-remove", icon: Trash2, label: "Remove cover", run: () => void cover.remove(), disabled: cover.busy || !cover.url },
+            ]}
+          />
+          {cover.error && <ErrorLine>{cover.error}</ErrorLine>}
+        </>
+      )}
     </BottomSheet>
   );
 };
@@ -335,7 +371,9 @@ export const ShareProfileSheet: React.FC<{
   specialties: string[];
   handle: string | null;
   onChooseHandle: () => void;
-}> = ({ open, onClose, name, avatarUrl, type, rating, specialties, handle, onChooseHandle }) => {
+  /** Release B: the cover photo fills the 70 band; without one, the stripes. */
+  coverUrl?: string | null;
+}> = ({ open, onClose, name, avatarUrl, type, rating, specialties, handle, onChooseHandle, coverUrl }) => {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const url = handle ? profileUrl(handle) : null;
@@ -381,7 +419,9 @@ export const ShareProfileSheet: React.FC<{
       }
     >
       <div style={{ borderRadius: 22, overflow: "hidden", border: `1px solid ${INK.b10}`, background: INK.card }}>
-        <div aria-hidden style={{ height: 70, background: `repeating-linear-gradient(45deg, ${INK.soft} 0 6px, ${INK.card} 6px 12px)` }} />
+        <div aria-hidden className="relative overflow-hidden" style={{ height: 70, background: coverUrl ? INK.soft : `repeating-linear-gradient(45deg, ${INK.soft} 0 6px, ${INK.card} 6px 12px)` }}>
+          {coverUrl && <img src={coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+        </div>
         <div style={{ padding: "0 16px 16px", marginTop: -26 }}>
           <span className="flex items-center justify-center overflow-hidden" style={{ width: 56, height: 56, borderRadius: 9999, border: `3px solid ${INK.card}`, background: INK.tealPale, fontSize: 18, fontWeight: 800, color: INK.tealDark }}>
             {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : initials}

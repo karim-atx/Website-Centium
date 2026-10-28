@@ -16,9 +16,11 @@ describe("legal text, word for word", () => {
     // legal/text.ts without a character changed (proven against git and the
     // handover's centium-legal-v7.js when it moved). Editing the legal text
     // must be deliberate: update this fingerprint in the same commit.
+    // Release B (Karim): "an invite-only ambassador tier" became "an
+    // ambassador tier, by application or invitation," (ambassador applications).
     const all = JSON.stringify([T.TERMS_GROUPS, T.LIABILITY_TEXT, T.PRIVACY_GROUPS, T.HEALTH_ITEMS, T.INTRO, T.ASK, T.GOVERNING]);
-    assert.equal(createHash("sha256").update(all).digest("hex"), "fed6618cb7b3f4be16a656a7208d4c24a69791580ff82e47eb575202c5924e7b");
-    assert.equal(all.length, 12463);
+    assert.equal(createHash("sha256").update(all).digest("hex"), "6794de785d422ec0e77fd00062a72370a4f6e534348bb3e3f80e620bc42499f3");
+    assert.equal(all.length, 12482);
   });
 
   it("has 11 terms groups plus Liability, 10 privacy groups and 7 health points", () => {
