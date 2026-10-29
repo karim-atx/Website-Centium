@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { localDayOf } from "../../utils/date";
+import { isAlreadySaved, requestColumn } from "../health-log/requestId";
 
 // A client's own body metrics, in public.health_metrics: weight and water
 // written from the manual-entry sheet, and heart rate, steps, sleep and
@@ -120,6 +121,8 @@ export async function logHealthMetric(params: {
   today: string;
   /** Weight only (B1 health_metrics.note, <= 200 characters; the database refuses it on any other type). */
   note?: string | null;
+  /** The outbox item's uuid (client_request_id): a replay is saved once (Round D). */
+  requestId?: string;
 }): Promise<MetricWriteResult> {
   const { userId, kind, value, day, today } = params;
   const note = kind === "weight" && params.note ? params.note.trim().slice(0, 200) : null;
@@ -146,10 +149,11 @@ export async function logHealthMetric(params: {
     // exists, writes apple_health / android_health from the mobile app.
     source: "manual",
     ...(note ? { note } : {}),
+    ...requestColumn(params.requestId),
     // B1 note is newer than lib/supabase/database.types.ts (generated from production).
   } as never);
 
-  if (error) {
+  if (error && !isAlreadySaved(error)) {
     console.error("[health-metrics] Could not save reading:", error.message);
     return { ok: false, message: describe(error) };
   }

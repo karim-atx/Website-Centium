@@ -10,13 +10,48 @@
 //   from the marked questions (form_answer_triggers_safety). Safety is decided
 //   there; answerTriggersSafety below is a mirror of that documented function,
 //   only ever used together with the returned flag (never on its own).
+// - 20261222080000: the client reads their form through my_form_questions
+//   (fromMyFormQuestion below), which applies recovery-sensitive mode and
+//   carries the prompts shown the moment an answer matches.
 
 import { clock12 } from "../../utils/time12";
 import { DAY_LONG, mondayIndex } from "../../utils/week";
 
-export type QuestionType = "number" | "scale" | "choice" | "multi" | "text" | "photo" | "date";
+export type QuestionType = "number" | "scale" | "choice" | "multi" | "text" | "long_text" | "photo" | "date";
 export type FormKind = "intake" | "check_in";
 export type Answers = Record<string, unknown>;
+
+/** Round D: a long text answer is at most 5,000 characters (save_form_response). */
+export const LONG_TEXT_MAX = 5000;
+/** A short text answer's field limit (the app's own, unchanged). */
+export const SHORT_TEXT_MAX = 2000;
+
+/**
+ * form_questions.show_if (Round D): one condition on an earlier question.
+ * 20261222080000 adds not_equals (answered, and not that), excludes (a
+ * multiple choice answered without that option) and in (one of these).
+ */
+export type ShowIfRule =
+  | { questionId: string; equals: string }
+  | { questionId: string; includes: string }
+  | { questionId: string; notEquals: string }
+  | { questionId: string; excludes: string }
+  | { questionId: string; in: string[] };
+
+/**
+ * A note's or a prompt's rule on one answer (20261222080000,
+ * form_rule_met): any of these answers, any answer but these, or a number
+ * at or below / at or above.
+ */
+export type AnswerRule = { answers: string[] } | { otherThan: string[] } | { max: number } | { min: number };
+
+/** What the client is shown the moment an answer matches (form_questions.client_prompt). */
+export interface ClientPrompt {
+  rule: AnswerRule;
+  kind: "urgent" | "support" | "recovery_and_support";
+  /** The words to show; always there for urgent. */
+  message: string | null;
+}
 
 export interface ClientQuestion {
   id: string;
@@ -30,6 +65,241 @@ export interface ClientQuestion {
   scaleMax: number | null;
   safetyTopic: string | null;
   safetyTrigger: Record<string, unknown> | null;
+  /** Round D: this question opens a section with this title. */
+  sectionTitle?: string | null;
+  /** Round D: asked only when this condition is met. */
+  showIf?: ShowIfRule | null;
+  /** Round D: the answer is offered for the client's profile after sending. */
+  profileField?: string | null;
+  /** 20261222080000 (my_form_questions): the words shown for each option, same order as options (reworded in recovery-sensitive mode). */
+  optionLabels?: string[] | null;
+  /** The words at both ends of a scale. */
+  scaleMinLabel?: string | null;
+  scaleMaxLabel?: string | null;
+  /** The hint in an empty text box. */
+  placeholder?: string | null;
+  /** Shown the moment the answer matches: urgent, support, or recovery and support. */
+  clientPrompt?: ClientPrompt | null;
+}
+
+// ---------------------------------------------------------------------------
+// Conditions (Round D, 20261222050000): a mirror of public.form_condition_met
+// ---------------------------------------------------------------------------
+
+/** show_if as stored ({"question_id", "equals" | "includes" | "not_equals" | "excludes" | "in"}), or null. */
+export function parseShowIfRule(raw: unknown): ShowIfRule | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.question_id !== "string") return null;
+  if (typeof r.equals === "string") return { questionId: r.question_id, equals: r.equals };
+  if (typeof r.includes === "string") return { questionId: r.question_id, includes: r.includes };
+  if (typeof r.not_equals === "string") return { questionId: r.question_id, notEquals: r.not_equals };
+  if (typeof r.excludes === "string") return { questionId: r.question_id, excludes: r.excludes };
+  if (Array.isArray(r.in)) return { questionId: r.question_id, in: r.in.filter((x): x is string => typeof x === "string") };
+  return null;
+}
+
+/** A rule as stored (the note's or prompt's object without its own keys), or null. */
+export function parseAnswerRule(raw: unknown): AnswerRule | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const r = raw as Record<string, unknown>;
+  const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : null);
+  const answers = strings(r.answers);
+  if (answers) return { answers };
+  const otherThan = strings(r.other_than);
+  if (otherThan) return { otherThan };
+  if (typeof r.max === "number") return { max: r.max };
+  if (typeof r.min === "number") return { min: r.min };
+  return null;
+}
+
+/** client_prompt as my_form_questions returns it ({rule…, kind, message}), or null. */
+export function parseClientPrompt(raw: unknown): ClientPrompt | null {
+  const rule = parseAnswerRule(raw);
+  if (!rule) return null;
+  const r = raw as Record<string, unknown>;
+  const kind = r.kind === "urgent" || r.kind === "support" || r.kind === "recovery_and_support" ? r.kind : null;
+  if (!kind) return null;
+  const message = typeof r.message === "string" && r.message.trim() ? r.message.trim() : null;
+  if (kind === "urgent" && !message) return null;
+  return { rule, kind, message };
+}
+
+const NUMBER_TEXT = /^\s*-?[0-9]+(\.[0-9]+)?\s*$/;
+
+/**
+ * A mirror of public.form_rule_met(p_rule, p_answer): "answers" is met by a
+ * string answer in the list or a multiple choice with one of them;
+ * "other_than" by a non-blank string not in the list, or a multiple choice
+ * with an option not in it; max / min by a number (or numeric text).
+ */
+export function ruleMet(rule: AnswerRule | null | undefined, answer: unknown): boolean {
+  if (!rule || answer === undefined || answer === null) return false;
+  if ("answers" in rule) {
+    if (typeof answer === "string") return rule.answers.includes(answer);
+    return Array.isArray(answer) && answer.some((x) => typeof x === "string" && rule.answers.includes(x));
+  }
+  if ("otherThan" in rule) {
+    if (typeof answer === "string") return answer.trim() !== "" && !rule.otherThan.includes(answer);
+    return Array.isArray(answer) && answer.some((x) => typeof x === "string" && !rule.otherThan.includes(x));
+  }
+  const n = typeof answer === "number" ? answer : typeof answer === "string" && NUMBER_TEXT.test(answer) ? Number(answer) : null;
+  if (n === null || !Number.isFinite(n)) return false;
+  return "max" in rule ? n <= rule.max : n >= rule.min;
+}
+
+/** The prompts these answers trigger among the questions shown, in question order. */
+export function promptsFor(questions: ClientQuestion[], answers: Answers): { question: ClientQuestion; prompt: ClientPrompt }[] {
+  return questions.flatMap((q) => (q.clientPrompt && ruleMet(q.clientPrompt.rule, answers[q.id]) ? [{ question: q, prompt: q.clientPrompt }] : []));
+}
+
+// ---------------------------------------------------------------------------
+// The client's form as my_form_questions gives it (20261222080000), with
+// recovery-sensitive mode already applied by the database
+// ---------------------------------------------------------------------------
+
+/** One row of my_form_questions(p_assignment_id). */
+export interface MyFormQuestionRow {
+  question_id: string;
+  position: number;
+  section_title: string | null;
+  type: QuestionType;
+  prompt: string;
+  unit: string | null;
+  required: boolean;
+  options: unknown;
+  option_labels: unknown;
+  scale_min: number | null;
+  scale_max: number | null;
+  scale_min_label: string | null;
+  scale_max_label: string | null;
+  placeholder: string | null;
+  show_if: unknown;
+  client_prompt: unknown;
+  profile_field: string | null;
+  safety_line: string | null;
+}
+
+const asStrings = (v: unknown): string[] | null => (Array.isArray(v) ? v.map((o) => String(o)) : null);
+const trimmed = (v: string | null | undefined): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
+
+/**
+ * A my_form_questions row as the sheet's question. It doesn't return
+ * safety_topic or safety_trigger (the database decides the safety flag on
+ * sending), so both are null and the answerTriggersSafety mirror stays quiet:
+ * the done screen's follow-up then rests on the returned safety_flag alone.
+ */
+export function fromMyFormQuestion(r: MyFormQuestionRow): ClientQuestion {
+  const options = asStrings(r.options);
+  const labels = asStrings(r.option_labels);
+  return {
+    id: r.question_id,
+    position: r.position,
+    type: r.type,
+    prompt: r.prompt,
+    unit: r.unit,
+    required: r.required,
+    options,
+    scaleMin: r.scale_min,
+    scaleMax: r.scale_max,
+    safetyTopic: null,
+    safetyTrigger: null,
+    sectionTitle: r.section_title,
+    showIf: parseShowIfRule(r.show_if),
+    profileField: r.profile_field,
+    optionLabels: options && labels && labels.length === options.length ? labels : null,
+    scaleMinLabel: trimmed(r.scale_min_label),
+    scaleMaxLabel: trimmed(r.scale_max_label),
+    placeholder: trimmed(r.placeholder),
+    clientPrompt: parseClientPrompt(r.client_prompt),
+  };
+}
+
+/** The sentence the form ends with (the same on every row), or null. */
+export const safetyLineOf = (rows: Pick<MyFormQuestionRow, "safety_line">[]): string | null => trimmed(rows.find((r) => trimmed(r.safety_line))?.safety_line);
+
+/** A choice's buttons: the option stored, and the words shown for it (option_labels, else the option). */
+export function optionChoices(q: Pick<ClientQuestion, "options" | "optionLabels">): { value: string; label: string }[] {
+  return (q.options ?? []).map((value, i) => ({ value, label: q.optionLabels?.[i] ?? value }));
+}
+
+/**
+ * A saved draft's choices without any option the form no longer offers (one
+ * recovery-sensitive mode hides), so a required question answered only with
+ * a hidden option reads as unanswered here as save_form_response reads it.
+ */
+export function keepOfferedOptions(answers: Answers, questions: ClientQuestion[]): Answers {
+  const out: Answers = { ...answers };
+  for (const q of questions) {
+    if (!q.options || !(q.id in out)) continue;
+    const v = out[q.id];
+    if (q.type === "choice" && typeof v === "string" && !q.options.includes(v)) delete out[q.id];
+    if (q.type === "multi" && Array.isArray(v)) {
+      const kept = v.filter((x) => typeof x === "string" && q.options!.includes(x));
+      if (kept.length) out[q.id] = kept;
+      else delete out[q.id];
+    }
+  }
+  return out;
+}
+
+/** "None" or "Nothing" in a multiple choice clears the other options, and picking another clears it. */
+export const isNoneOption = (o: string) => /^(none|nothing)$/i.test(o.trim());
+export function toggleMulti(current: string[], option: string): string[] {
+  if (current.includes(option)) return current.filter((x) => x !== option);
+  if (isNoneOption(option)) return [option];
+  return [...current.filter((x) => !isNoneOption(x)), option];
+}
+
+/** An answer as Postgres's `#>> '{}'` reads it: a string itself, a number or boolean as text, nothing as "". */
+function answerAsText(v: unknown): string {
+  if (v === undefined || v === null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  return JSON.stringify(v);
+}
+
+/**
+ * A mirror of public.form_condition_met(p_condition, p_answers): no
+ * condition is met; "equals" compares the answer as text (a scale's 3 is
+ * "3"); "includes" looks for the option in a multiple-choice answer (a
+ * list). 20261222080000: "not_equals" needs a single answer that isn't that
+ * one; "excludes" a multiple choice answered without that option; "in" a
+ * string answer in the list.
+ */
+export function conditionMet(rule: ShowIfRule | null | undefined, answers: Answers): boolean {
+  if (!rule) return true;
+  const v = answers[rule.questionId];
+  if ("equals" in rule) return answerAsText(v) === rule.equals;
+  if ("includes" in rule) return Array.isArray(v) && v.some((x) => typeof x === "string" && x === rule.includes);
+  if ("notEquals" in rule) {
+    if (v === undefined || v === null || Array.isArray(v) || typeof v === "object") return false;
+    const t = answerAsText(v);
+    return t.trim() !== "" && t !== rule.notEquals;
+  }
+  if ("excludes" in rule) return Array.isArray(v) && v.length > 0 && !v.some((x) => x === rule.excludes);
+  return typeof v === "string" && rule.in.includes(v);
+}
+
+/**
+ * The questions asked with these answers, judged in order (a mirror of
+ * form_hidden_question_ids): a question is hidden when the question it
+ * depends on is hidden, or when its condition isn't met by the answers that
+ * aren't hidden. Hidden is not required and not sent.
+ */
+export function shownQuestions(questions: ClientQuestion[], answers: Answers): ClientQuestion[] {
+  const hidden = new Set<string>();
+  const live: Answers = { ...answers };
+  const out: ClientQuestion[] = [];
+  for (const q of [...questions].sort((a, b) => a.position - b.position)) {
+    if (q.showIf && (hidden.has(q.showIf.questionId) || !conditionMet(q.showIf, live))) {
+      hidden.add(q.id);
+      delete live[q.id];
+      continue;
+    }
+    out.push(q);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +409,37 @@ export function partsOf(items: FormItem[]): FormItem[][] {
 }
 
 export const partQuestions = (part: FormItem[]) => part.flatMap((it) => it.questions);
+
+export interface FormParts {
+  parts: FormItem[][];
+  /** Each part's section title (null: an untitled part, or a form without sections). */
+  titles: (string | null)[];
+  /** The form has sections: "Section 1 of 3" rather than "part 1 of 3". */
+  sectioned: boolean;
+}
+
+/**
+ * The sheet's parts for these answers (Round D). A form with sections is one
+ * part per section (a question opens one with section_title; questions
+ * before the first form an untitled part), each section's questions those
+ * shown by their conditions, and a section with nothing shown is left out.
+ * A form without sections keeps the four-a-part rule (partsOf). Parts are
+ * worked out from the recovery-visible questions, so a section keeps its
+ * title even when the question that opens it is hidden.
+ */
+export function formParts(visible: ClientQuestion[], answers: Answers): FormParts {
+  const sorted = [...visible].sort((a, b) => a.position - b.position);
+  if (!sorted.some((q) => q.sectionTitle?.trim())) return { parts: partsOf(itemsOf(shownQuestions(sorted, answers))), titles: [], sectioned: false };
+  const sections: { title: string | null; questions: ClientQuestion[] }[] = [];
+  for (const q of sorted) {
+    const title = q.sectionTitle?.trim() || null;
+    if (title || !sections.length) sections.push({ title, questions: [] });
+    sections[sections.length - 1].questions.push(q);
+  }
+  const kept = sections.map((s) => ({ title: s.title, items: itemsOf(shownQuestions(s.questions, answers)) })).filter((s) => s.items.length > 0);
+  if (!kept.length) return { parts: [[]], titles: [null], sectioned: true };
+  return { parts: kept.map((s) => s.items), titles: kept.map((s) => s.title), sectioned: true };
+}
 
 /**
  * Where a saved draft picks up (CU6 "Part 2 of 3 · saved"): the last part
@@ -261,13 +562,13 @@ export const minutesText = (n: number) => (n === 1 ? "1 minute" : `${n} minutes`
 /** "Sunday, Oct 25" (CU6 "Next check-in: Sunday, Oct 25"). */
 export const longDate = (d: Date) => `${weekdayName(d)}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
 
-/** The next check-in of a schedule (daily@HH:MM / weekly:<1-7>@HH:MM) after this one, or null. */
+/** The next check-in of a schedule (daily@HH:MM, weekly: / every2weeks: / every4weeks:<1-7>@HH:MM) after this one, or null. */
 export function nextOccurrence(schedule: string | null, dueAt: string | null): Date | null {
   if (!schedule || !dueAt) return null;
-  const m = /^(daily|weekly:[1-7])@([01][0-9]|2[0-3]):[0-5][0-9]$/.exec(schedule);
+  const m = /^(daily|(weekly|every2weeks|every4weeks):[1-7])@([01][0-9]|2[0-3]):[0-5][0-9]$/.exec(schedule);
   const at = new Date(dueAt);
   if (!m || Number.isNaN(at.getTime())) return null;
-  const days = m[1] === "daily" ? 1 : 7;
+  const days = m[1] === "daily" ? 1 : m[2] === "every2weeks" ? 14 : m[2] === "every4weeks" ? 28 : 7;
   return new Date(at.getFullYear(), at.getMonth(), at.getDate() + days, at.getHours(), at.getMinutes());
 }
 
@@ -368,9 +669,10 @@ export interface OpenForm {
 
 /** CU5 / CU6 / CU26 card lines for an open form. */
 export function formReminder(f: OpenForm, now: Date): Reminder {
-  const parts = partsOf(itemsOf(f.questions));
-  const total = f.questions.length;
-  const done = f.questions.filter((q) => isAnswered(f.answers[q.id])).length;
+  const { parts, sectioned } = formParts(f.questions, f.answers);
+  const asked = shownQuestions(f.questions, f.answers);
+  const total = asked.length;
+  const done = asked.filter((q) => isAnswered(f.answers[q.id])).length;
   const due = f.dueAt ? new Date(f.dueAt).getTime() : Number.MAX_SAFE_INTEGER;
   const base = { key: `form:${f.assignmentId}`, kind: f.kind, level: 3 as const, at: due, proId: f.proId, proName: f.proName };
   const short = dueShort(f.dueAt, now);
@@ -380,7 +682,7 @@ export function formReminder(f: OpenForm, now: Date): Reminder {
       : { ...base, tone: "gold", title: `Your intake for ${f.proName}`, detail: [`${total} ${total === 1 ? "question" : "questions"}`, minutesText(minutesFor(total))].join(" · "), action: "Start" };
   }
   if (f.hasDraft) {
-    const where = parts.length > 1 ? `Part ${resumePart(parts, f.answers) + 1} of ${parts.length}` : `${done} of ${total} done`;
+    const where = parts.length > 1 ? `${sectioned ? "Section" : "Part"} ${resumePart(parts, f.answers) + 1} of ${parts.length}` : `${done} of ${total} done`;
     return { ...base, tone: "pr", title: "Continue your check-in", detail: [where, "saved", short].filter(Boolean).join(" · "), action: "Continue" };
   }
   const dueAt = f.dueAt ? new Date(f.dueAt) : null;

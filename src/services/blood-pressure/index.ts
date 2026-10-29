@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { recordedAtFor } from "../health-metrics";
+import { isAlreadySaved, requestColumn } from "../health-log/requestId";
 
 // Manually logged blood pressure, in public.blood_pressure_readings.
 //
@@ -122,6 +123,8 @@ export async function logBloodPressure(params: {
   today: string;
   /** An exact instant, when the user picked a time rather than just a day. */
   recordedAt?: string;
+  /** The outbox item's uuid (client_request_id): a replay is saved once (Round D). */
+  requestId?: string;
 }): Promise<BpWriteResult> {
   const invalid = validateBloodPressure(params.reading);
   if (invalid) return { ok: false, message: invalid };
@@ -135,10 +138,12 @@ export async function logBloodPressure(params: {
       // Honest provenance. Device sync writes apple_health / android_health
       // when it exists; nothing does today.
       source: "manual",
-    })
+      ...requestColumn(params.requestId),
+    } as never)
     .select("id")
-    .maybeSingle();
+    .maybeSingle<{ id: string }>();
 
+  if (isAlreadySaved(error)) return { ok: true };
   if (error) {
     console.error("[blood-pressure] Could not save reading:", error.message);
     return { ok: false, message: describe(error) };

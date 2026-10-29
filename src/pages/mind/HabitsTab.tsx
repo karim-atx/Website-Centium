@@ -13,6 +13,7 @@ import clsx from "clsx";
 import { habitIcon, habitIconOptions } from "../../utils/icons";
 import { shiftDate } from "../../utils/date";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import {
   COACH_HABIT_LOCKED,
   getCoachHabits,
@@ -91,6 +92,9 @@ export default function HabitsTab() {
     authUserId,
   } = useApp();
   const dark = useIsDark();
+  // Recovery-sensitive mode (AJ R7): no streak counts; each habit keeps its
+  // ticks only.
+  const hideNumbers = useHideNumbers();
   // Release 3 (CU28): a coach's habit is ticked and archived here, never
   // edited (no rename, colour or icon) or deleted; the database refuses a
   // rename with ATXG4 and this says the same before anything is tried.
@@ -313,7 +317,7 @@ export default function HabitsTab() {
               {/* #16 / #17: a 16 pt chip 3 under the name, pad 1 6, 10/14
                   700, #5B5349 / #B8B3C7 on #EAF4F2 / #293339, after the
                   outlined lavender leaf 11 tall (decision 24). */}
-              {h.streakDays > 0 && (
+              {!hideNumbers && h.streakDays > 0 && (
                 <span className="mt-[3px] min-h-4 w-fit flex items-center gap-0.5 text-[10px] leading-[14px] font-bold text-charcoal-soft bg-teal-pale rounded-full px-1.5 py-px">
                   <StreakLeaf variant="outline" height={11} className="text-primary-dark dark:text-primary-deep-text" /> {h.streakDays}
                 </span>
@@ -455,7 +459,9 @@ export default function HabitsTab() {
             // O2: the grid header stays; two centred lines in its body.
             <div className="flex flex-col items-center text-center px-6 py-8">
               <p className="text-[15px] font-bold text-charcoal">No habits yet</p>
-              <p className="mt-1 text-[12px] font-medium text-charcoal-faint">Add one to start a streak</p>
+              <p className="mt-1 text-[12px] font-medium text-charcoal-faint">
+                {hideNumbers ? "Add one to get started" : "Add one to start a streak"}
+              </p>
             </div>
           )}
         </div>

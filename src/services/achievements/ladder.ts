@@ -241,6 +241,37 @@ export function tierReached(tier: PointTier, summary: PointsSummary): boolean {
   return summary.balance >= tier.minPoints;
 }
 
+/**
+ * Recovery-sensitive mode (Round D AJ R8, decision D20): the streak and
+ * logging badges are hidden, every other badge stays.
+ *
+ * Streak: the whole consistency category, which is the logging-streak ladder.
+ * Logging: the badges that reward logging food, weigh-ins or body measurements
+ * as such (food item counts, a fully logged day, ten weigh-ins, a first tape
+ * measure); food, weight and measurements are numbers the mode hides, and the
+ * measurements screen is hidden outright. Matched by group and key from the catalogue
+ * (20260929110000_achievements_catalogue.sql).
+ */
+const RECOVERY_HIDDEN_GROUPS: ReadonlySet<string> = new Set(["logging_streak", "food_logs"]);
+const RECOVERY_HIDDEN_KEYS: ReadonlySet<string> = new Set(["first_food_log", "full_day", "weigh_ins", "first_measurements"]);
+
+/** Whether recovery-sensitive mode hides this achievement. */
+export function hiddenInRecovery(row: Pick<Achievement, "key" | "category" | "groupKey">): boolean {
+  return (
+    row.category === "consistency" ||
+    (row.groupKey !== null && RECOVERY_HIDDEN_GROUPS.has(row.groupKey)) ||
+    RECOVERY_HIDDEN_KEYS.has(row.key)
+  );
+}
+
+/** The rows a screen may show: all of them, or without the hidden ones when `hide`. */
+export function visibleAchievements<T extends Pick<Achievement, "key" | "category" | "groupKey">>(
+  rows: readonly T[],
+  hide: boolean
+): T[] {
+  return hide ? rows.filter((r) => !hiddenInRecovery(r)) : [...rows];
+}
+
 /** "12 of 55" — earned badges over the whole active catalogue. */
 export function earnedCount(rows: readonly Achievement[]): { earned: number; total: number } {
   return { earned: rows.filter(isEarned).length, total: rows.length };

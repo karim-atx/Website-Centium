@@ -13,9 +13,9 @@ import { ComingSoonPill } from "../ComingSoon";
 import { ListSkeleton, OfflineLine, ProCardSkeleton, ProError } from "../states";
 import { ErrorLine, Fab } from "../library/libraryUi";
 import { CHead } from "./moKit";
-import { createWeeklyCheckIn, fetchForms, type FormAssignment, type FormSummary } from "../../../services/pro/forms";
-import { PRO_ROUTES, type ProLane } from "../subtypeLanes";
-import { FORMS_PATH, checkInLine, intakeLine, LANE_TEMPLATES } from "./formsList";
+import { copyFormTemplate, fetchForms, listFormTemplates, type FormAssignment, type FormSummary, type FormTemplate } from "../../../services/pro/forms";
+import { PRO_ROUTES } from "../subtypeLanes";
+import { FORMS_PATH, checkInLine, intakeLine, templateMetaLine, templatesFor } from "./formsList";
 import type { FormKind } from "./formModel";
 
 export { FORMS_PATH };
@@ -30,14 +30,12 @@ const CardRow: React.FC = () => <ProCardSkeleton lines={2} />;
  * clients"); "Templates from Centium" (file-plus-2 rows with "Use"); the +
  * (fab10, "New form").
  *
- * Lanes: check-ins are Full coaching and Nutrition only (can_write_form;
- * HANDOVER d "Check-ins: Hidden" for Clinical overview), so Clinical shows
- * intake forms without the tabs. The only template the database holds is
- * the Weekly check-in (create_weekly_check_in_template); the other lane
- * templates the frames list have no questions anywhere, so they show Coming
- * soon instead of Use. Forms are never sent automatically on hire yet
- * (Karim kept intake on accept for a later release), so every intake form is
- * "Sent manually".
+ * Round D: every lane sends check-ins now (can_write_form, clinical included),
+ * so every lane has the tabs. The templates come from the Database
+ * (list_form_templates, the lane's and the any-lane ones); "Use" copies an
+ * available one into a new form (use_form_template) and opens it, the
+ * others say Coming soon. An intake form marked send_on_hire reads "Sent
+ * automatically when someone hires you".
  */
 export const FormsHome: React.FC = () => {
   const { authUserId } = useApp();
@@ -47,11 +45,12 @@ export const FormsHome: React.FC = () => {
   const back = useBack(PRO_ROUTES.more);
   const [tab, setTab] = useState<FormKind>(() => (new URLSearchParams(window.location.search).get("tab") === "check-ins" ? "check_in" : "intake"));
   const [data, setData] = useState<{ forms: FormSummary[]; assignments: FormAssignment[] } | null>(null);
+  const [templates, setTemplates] = useState<FormTemplate[] | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "error" | "offline">("loading");
   const [nonce, setNonce] = useState(0);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const checkIns = lane === "full_coaching" || lane === "nutrition";
+  const checkIns = !!lane;
   const kind: FormKind = checkIns ? tab : "intake";
 
   const load = useCallback(() => setNonce((n) => n + 1), []);
@@ -65,6 +64,7 @@ export const FormsHome: React.FC = () => {
         setState("ok");
       } else setState(r.offline ? "offline" : "error");
     });
+    void listFormTemplates().then((r) => live && r.ok && setTemplates(r.data));
     return () => {
       live = false;
     };
@@ -76,19 +76,19 @@ export const FormsHome: React.FC = () => {
     navigate(next === "check_in" ? `${FORMS_PATH}?tab=check-ins` : FORMS_PATH, { replace: true });
   };
 
-  const addWeekly = async () => {
-    if (busy) return;
+  const startFromTemplate = async (t: FormTemplate) => {
+    if (busy || !t.available) return;
     if (!online) return setErr("You're offline. Try again when you're connected.");
-    setBusy(true);
+    setBusy(t.key);
     setErr(null);
-    const r = await createWeeklyCheckIn();
-    setBusy(false);
+    const r = await copyFormTemplate(t.key);
+    setBusy(null);
     if (!r.ok) return setErr(r.message);
     navigate(`${FORMS_PATH}/${r.id}`);
   };
 
   const mine = (data?.forms ?? []).filter((f) => f.kind === kind);
-  const templates = lane ? LANE_TEMPLATES[lane as ProLane].filter((t) => t.kind === kind) : [];
+  const offered = templatesFor(templates ?? [], kind);
 
   return (
     <div style={{ paddingBottom: 120 }}>
@@ -126,30 +126,30 @@ export const FormsHome: React.FC = () => {
         />
       ) : (
         <SoftLine icon={kind === "intake" ? ClipboardList : CalendarCheck}>
-          {kind === "intake" ? "No intake forms yet. Start one with + or from a template." : "No check-ins yet. Start one with + or from the Weekly check-in template."}
+          {kind === "intake" ? "No intake forms yet. Start one with + or from a template." : "No check-ins yet. Start one with + or from a template."}
         </SoftLine>
       )}
 
-      {templates.length > 0 && (
+      {offered.length > 0 && (
         <>
           <div style={{ height: 4 }} />
           <SectionHead label="Templates from Centium" />
           <ListCard
-            rows={templates.map((t) => ({
-              key: t.title,
+            rows={offered.map((t) => ({
+              key: t.key,
               icon: FilePlus2,
               title: t.title,
-              meta: t.meta,
-              trailing: t.weekly ? (
+              meta: templateMetaLine(t),
+              trailing: t.available ? (
                 <button
                   type="button"
-                  onClick={() => void addWeekly()}
-                  disabled={busy}
+                  onClick={() => void startFromTemplate(t)}
+                  disabled={!!busy}
                   aria-label={`Use ${t.title}`}
                   className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']"
-                  style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, opacity: busy ? 0.5 : 1 }}
+                  style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, opacity: busy && busy !== t.key ? 0.5 : 1 }}
                 >
-                  Use
+                  {busy === t.key ? "Adding…" : "Use"}
                 </button>
               ) : (
                 <ComingSoonPill />

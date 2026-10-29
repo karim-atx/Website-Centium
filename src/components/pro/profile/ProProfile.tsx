@@ -22,6 +22,7 @@ import { licenceFacts, shortDate } from "./profileModel";
 import { NameSheet, PhoneSheet, PhotoSourceSheet, TypeChangeSheet, TypeLockedPopup, usePhotoPicker } from "./ProfileSheets";
 import { ImageApprovalBadge, ImageApprovalNote } from "../../moderation/ImageApproval";
 import { typeAndLane, typeLabel } from "./typeLabel";
+import { signOutWarning, useOutbox } from "../../outbox/Outbox";
 
 /**
  * Release 3 · W6 MO26 v2 Profile, the professional branch of /app/profile
@@ -41,6 +42,7 @@ import { typeAndLane, typeLabel } from "./typeLabel";
  */
 export const ProProfile: React.FC = () => {
   const { user, signOut } = useApp();
+  const waiting = useOutbox();
   const navigate = useNavigate();
   const back = useBack();
   const { cv } = useMyCv();
@@ -170,10 +172,17 @@ export const ProProfile: React.FC = () => {
       <TypeChangeSheet open={sheet === "request"} onClose={() => setSheet(null)} current={user.professionalSubtype} pending={pending} onSent={setPending} />
       <ChangePasswordSheet key={sheet === "password" ? "pw-open" : "pw-closed"} open={sheet === "password"} onClose={() => setSheet(null)} />
 
-      <CentredPopup open={confirmSignOut} onClose={() => setConfirmSignOut(false)} title="Sign out?" icon={<LogOut size={22} />} body="You can sign back in at any time.">
+      <CentredPopup
+        open={confirmSignOut}
+        onClose={() => setConfirmSignOut(false)}
+        title="Sign out?"
+        icon={<LogOut size={22} />}
+        // Round D (D23): anything kept to save later is named first.
+        body={signOutWarning(waiting) ?? "You can sign back in at any time."}
+      >
         <AppCta
           size="page"
-          label="Sign Out"
+          label={waiting.length > 0 ? "Sign out anyway" : "Sign Out"}
           onClick={() => {
             setConfirmSignOut(false);
             signOut();

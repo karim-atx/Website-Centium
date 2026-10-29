@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 
 // A personal reminder (Database 20261012010000): one per account, a cadence
 // in days and the next date it is due. GENERIC BY DESIGN: it has no topic,
@@ -12,13 +13,18 @@ export type PersonalReminder = { cadenceDays: number; nextDueOn: string; enabled
 export const CADENCE_MIN = 1;
 export const CADENCE_MAX = 365;
 
-export async function fetchPersonalReminder(userId: string): Promise<{ ok: true; reminder: PersonalReminder | null } | { ok: false }> {
+type Failed = { ok: false; message: string };
+
+/** Round D O12: a dropped connection says so; anything else the caller's line. */
+const failed = (error: unknown, fallback: string): Failed => ({ ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : fallback });
+
+export async function fetchPersonalReminder(userId: string): Promise<{ ok: true; reminder: PersonalReminder | null } | Failed> {
   const { data, error } = await supabase
     .from("personal_reminders")
     .select("cadence_days, next_due_on, enabled")
     .eq("user_id", userId)
     .maybeSingle();
-  if (error) return { ok: false };
+  if (error) return failed(error, "Couldn't load your reminder. Please try again.");
   return {
     ok: true,
     reminder: data ? { cadenceDays: data.cadence_days, nextDueOn: data.next_due_on, enabled: data.enabled } : null,
@@ -29,21 +35,22 @@ export async function fetchPersonalReminder(userId: string): Promise<{ ok: true;
  * Update first, insert if there was no row. Not an upsert: the update grant
  * leaves out user_id, which an upsert's update branch would name.
  */
-export async function savePersonalReminder(userId: string, r: PersonalReminder): Promise<boolean> {
+export async function savePersonalReminder(userId: string, r: PersonalReminder): Promise<{ ok: true } | Failed> {
+  const fallback = "Couldn't save. Please try again.";
   const row = { cadence_days: r.cadenceDays, next_due_on: r.nextDueOn, enabled: r.enabled };
   const { data, error } = await supabase.from("personal_reminders").update(row).eq("user_id", userId).select("user_id");
-  if (error) return false;
-  if (data && data.length > 0) return true;
+  if (error) return failed(error, fallback);
+  if (data && data.length > 0) return { ok: true };
   const { error: insertError } = await supabase.from("personal_reminders").insert({ user_id: userId, ...row });
-  if (!insertError) return true;
+  if (!insertError) return { ok: true };
   if (insertError.code === "23505") {
     const { error: retry } = await supabase.from("personal_reminders").update(row).eq("user_id", userId);
-    return !retry;
+    return retry ? failed(retry, fallback) : { ok: true };
   }
-  return false;
+  return failed(insertError, fallback);
 }
 
-export async function deletePersonalReminder(userId: string): Promise<boolean> {
+export async function deletePersonalReminder(userId: string): Promise<{ ok: true } | Failed> {
   const { error } = await supabase.from("personal_reminders").delete().eq("user_id", userId);
-  return !error;
+  return error ? failed(error, "Couldn't remove it. Please try again.") : { ok: true };
 }

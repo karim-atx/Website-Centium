@@ -36,6 +36,7 @@ import { NameTypeSheet, BioSheet, CategoriesSheet, ContactSheet, AreaSheet, Your
 import { BusinessCard, type CardData } from "./BusinessCard";
 import { bizLinkState } from "../../../components/share/business/bizCardModel";
 import { NO_LINK_HINT, NOT_LISTED_HINT, PAUSED_HINT } from "../../../components/share/business/BizShareButton";
+import { useOutbox, useSignOutGuard } from "../../../components/outbox/Outbox";
 
 // MO1B-011 / -013 / -025 · Business Profile (BizMoreV8 screen="profile", hero
 // block line 43, rows lines 262 to 268). Replaces the old listing form
@@ -84,6 +85,11 @@ const LISTING_OFF_BODY = {
 export default function BusinessProfilePage() {
   const navigate = useNavigate();
   const { authUserId, user, updateProfile, signOut } = useApp();
+  const waiting = useOutbox();
+  const { requestSignOut, guardDialog: signOutGuard } = useSignOutGuard(async () => {
+    await signOut();
+    navigate("/app/onboarding");
+  });
   const { business, kind, kindKnown, loading, error, reload, setBusiness } = useBusiness();
   const [toast, showToast] = useBizToast();
 
@@ -278,6 +284,11 @@ export default function BusinessProfilePage() {
   };
 
   const handleSignOut = () => {
+    // Round D (D23): with entries waiting to save, a warning first.
+    if (waiting.length > 0) {
+      requestSignOut();
+      return;
+    }
     if (!confirmSignOut) {
       setConfirmSignOut(true);
       window.setTimeout(() => setConfirmSignOut(false), 3000);
@@ -704,6 +715,7 @@ export default function BusinessProfilePage() {
       )}
       <BusinessCard open={cardOpen} onClose={() => setCardOpen(false)} data={cardData} onToast={showToast} />
       {toast}
+      {signOutGuard}
       <ConfirmCard
         open={listConfirm !== null}
         layout="decision"

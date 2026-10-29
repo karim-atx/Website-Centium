@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../../context/AppContext";
+import { useHideNumbers } from "../../../hooks/useHideNumbers";
 import { mondayFirstWeek } from "../../../utils/week";
 import { LotusGlyph } from "../LotusGlyph";
 import { useMeditationWeek } from "./data";
@@ -18,6 +19,7 @@ export const MeditationWidget: React.FC<{ size: "small" | "large"; editMode: boo
   const navigate = useNavigate();
   const { meditationSummary, today } = useApp();
   const { dark, online } = useHomeMode();
+  const hideNumbers = useHideNumbers();
   const isLarge = size === "large";
   const c = homeColors("meditation", dark);
   const colors = { tint: c.tint, icon: c.icon, label: c.label, ink: c.ink, tile: c.tile };
@@ -70,7 +72,8 @@ export const MeditationWidget: React.FC<{ size: "small" | "large"; editMode: boo
         unit="min today"
         // Small: value 42 (gap 11), dots 72, context 86. Large: value 52.5 (gap 19.5), context x2 from 92.5 (gap 6); strip 142, 61.
         bodyGap={isLarge ? 19.5 : 11}
-        headerRight={isLarge && s.streakDays > 0 ? <HeaderPill ink={c.label} dark={dark}>{`${s.streakDays} day streak`}</HeaderPill> : undefined}
+        // Recovery-sensitive mode (AJ R7): no streak pill.
+        headerRight={isLarge && !hideNumbers && s.streakDays > 0 ? <HeaderPill ink={c.label} dark={dark}>{`${s.streakDays} day streak`}</HeaderPill> : undefined}
         // Empty ring measured ≈ #AFD3C8: the dot colour at partial strength.
         graphic={isLarge ? undefined : <DayDots days={dots} size={8} gap={4} fill={fill} ring="rgba(141,191,176,0.6)" />}
         graphicHeight={8}

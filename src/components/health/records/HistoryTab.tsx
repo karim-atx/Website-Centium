@@ -13,6 +13,10 @@ import { updateSurgeryRemote } from "../../../services/medical-history";
 import { time12, minutesOfDay, clockParts } from "../../../utils/time12";
 import { textPx, linePx } from "../../../theme/textSize";
 import type { Medication, MedicationRoute, Surgery } from "../../../types";
+import type { Injury } from "../../../services/injuries";
+import { InjuriesSection } from "./InjuriesSection";
+import { ProfileProposals } from "../../client-forms/ProfileProposals";
+import { useHideNumbers } from "../../../hooks/useHideNumbers";
 import {
   useHealthMode,
   hairline,
@@ -63,6 +67,8 @@ export const HistoryTab: React.FC<{
   onAddCondition: () => void;
   onEditSurgery: (s: Surgery) => void;
   onEditMedication: (m: Medication) => void;
+  /** Round D: the Injuries list's Edit (the page owns the sheet). Omitted, the list isn't shown. */
+  onEditInjury?: (i: Injury) => void;
   /**
    * Release 3 (W3): a client's history as a professional reads it (the
    * Medical history switch), read only: the client's conditions as chips, the
@@ -70,11 +76,11 @@ export const HistoryTab: React.FC<{
    * shows and edits the signed-in person's own history exactly as before.
    */
   records?: { comorbidities: string[]; surgeries: Surgery[]; medications: Medication[] };
-}> = ({ loading, error, onRetry, onAddCondition, onEditSurgery, onEditMedication, records }) => {
+}> = ({ loading, error, onRetry, onAddCondition, onEditSurgery, onEditMedication, onEditInjury, records }) => {
   const app = useApp();
   const { dark, hc } = useHealthMode();
   if (records) return <ReadOnlyHistory records={records} loading={loading} error={error} onRetry={onRetry} dark={dark} hc={hc} />;
-  return <OwnHistory app={app} dark={dark} hc={hc} loading={loading} error={error} onRetry={onRetry} onAddCondition={onAddCondition} onEditSurgery={onEditSurgery} onEditMedication={onEditMedication} />;
+  return <OwnHistory app={app} dark={dark} hc={hc} loading={loading} error={error} onRetry={onRetry} onAddCondition={onAddCondition} onEditSurgery={onEditSurgery} onEditMedication={onEditMedication} onEditInjury={onEditInjury} />;
 };
 
 const ReadOnlyHistory: React.FC<{
@@ -144,9 +150,11 @@ const OwnHistory: React.FC<{
   onAddCondition: () => void;
   onEditSurgery: (s: Surgery) => void;
   onEditMedication: (m: Medication) => void;
-}> = ({ app, dark, hc, loading, error, onRetry, onAddCondition, onEditSurgery, onEditMedication }) => {
+  onEditInjury?: (i: Injury) => void;
+}> = ({ app, dark, hc, loading, error, onRetry, onAddCondition, onEditSurgery, onEditMedication, onEditInjury }) => {
   const { comorbidities, setComorbidities, surgeries, removeSurgery, medications, updateMedication, removeMedication } = app;
   const [recordError, setRecordError] = useState<{ section: string; message: string } | null>(null);
+  const hideNumbers = useHideNumbers();
 
   const run = async (section: string, action: () => Promise<{ ok: boolean; message?: string }>) => {
     setRecordError(null);
@@ -164,6 +172,8 @@ const OwnHistory: React.FC<{
 
   return (
     <div>
+      {/* Round D: answers from a sent form still waiting for the client's yes or no. */}
+      <ProfileProposals responseId={null} hideNumbers={hideNumbers} />
       <SectionCaps style={{ marginTop: 0 }}>Conditions</SectionCaps>
       {loading && !comorbidities.length ? (
         <div className="flex flex-wrap" style={{ gap: 7 }}>
@@ -284,6 +294,8 @@ const OwnHistory: React.FC<{
         </>
       )}
       {errFor("medications")}
+
+      {onEditInjury && <InjuriesSection onEdit={onEditInjury} />}
     </div>
   );
 };

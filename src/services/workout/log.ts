@@ -7,6 +7,7 @@ import { isUuid } from "../food";
 import { serializeEnduranceResult } from "./results";
 import type { SessionSwap } from "./coachLogic";
 import type { Json } from "../../../lib/supabase/database.types";
+import { isAlreadySaved, requestColumn } from "../health-log/requestId";
 
 // A client's own training log: workout_sessions, and the logged_exercises /
 // logged_sets hanging off it.
@@ -110,7 +111,9 @@ export async function saveWorkoutSession(
   // `swaps` rides along on the session object the logger hands to the app
   // context, which passes it here unchanged (WorkoutSession has no swaps
   // field of its own; the column is write-once from this one place).
-  session: Omit<WorkoutSession, "id"> & { swaps?: SessionSwap[] | null }
+  session: Omit<WorkoutSession, "id"> & { swaps?: SessionSwap[] | null },
+  /** The outbox item's uuid (client_request_id): a replay is saved once (Round D). */
+  requestId?: string
 ): Promise<WorkoutSaveResult> {
   const { data: sessionRow, error: sessionError } = await supabase
     .from("workout_sessions")
@@ -142,9 +145,22 @@ export async function saveWorkoutSession(
       // shape (swapsPayload). INSERT-ONLY for the client (no update grant),
       // so they travel with the session row itself.
       ...(session.swaps?.length ? { swaps: session.swaps as unknown as Json } : {}),
-    })
+      ...requestColumn(requestId),
+    } as never)
     .select("id")
-    .single();
+    .single<{ id: string }>();
+
+  // A replay of a queued workout. A session row that exists is a whole one:
+  // a failed save deletes its own row (abandon, below).
+  if (isAlreadySaved(sessionError) && requestId) {
+    const { data: saved } = await supabase
+      .from("workout_sessions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("client_request_id" as never, requestId as never)
+      .maybeSingle<{ id: string }>();
+    if (saved) return { ok: true, id: saved.id };
+  }
 
   if (sessionError || !sessionRow) {
     console.error("[workout] Could not save session:", sessionError?.message);

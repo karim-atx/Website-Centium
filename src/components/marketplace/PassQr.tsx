@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { qrModules } from "../../services/venues/venueLogic";
+import { onPassCached } from "../../services/venues/passCache";
 
 // The membership pass's QR (MO1.4.2.2.2), a real, scannable code: the
 // pass_token from my_gym_memberships() (32 hex characters, the doc's bearer
@@ -31,6 +32,14 @@ async function loadWriter() {
   }
   return writer;
 }
+
+// Round D O10: the member pass must draw at a door with no signal. When an
+// active pass is cached (memberships read online), fetch the writer now; the
+// loaded module then stays in memory for the session. A failure here is
+// silent: the pass retries the load when it opens.
+onPassCached(() => {
+  void loadWriter().catch(() => {});
+});
 
 /** `label` and `failedText` (Release 3 invite QR) default to the pass wording. */
 export function PassQr({

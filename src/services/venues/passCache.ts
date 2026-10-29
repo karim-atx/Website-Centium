@@ -35,7 +35,20 @@ function store(): KV | null {
   }
 }
 
+/**
+ * Round D O10: called whenever an active pass is cached, so the QR writer
+ * (a lazy chunk plus its wasm) can download while there is a connection;
+ * otherwise the cached pass has nothing to draw it with offline. PassQr
+ * registers itself; kept as a listener so this module stays DOM-free.
+ */
+const cachedListeners = new Set<() => void>();
+export function onPassCached(listener: () => void): () => void {
+  cachedListeners.add(listener);
+  return () => cachedListeners.delete(listener);
+}
+
 export function writePassCache<T>(userId: string, rows: T[], now: Date = new Date()): void {
+  if (rows.length > 0) for (const l of cachedListeners) l();
   const s = store();
   if (!s) return;
   try {

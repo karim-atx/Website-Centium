@@ -199,7 +199,9 @@ export async function clearAvatarUrl(userId: string): Promise<{ ok: boolean; mes
 
   if (error) {
     console.error("[profile] Could not save the profile picture:", error.message);
-    return { ok: false, message: error.message };
+    // Round D O5: never the raw "Failed to fetch".
+    if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
+    return { ok: false, message: "Couldn't remove your picture. Try again." };
   }
   return { ok: true };
 }
@@ -266,7 +268,8 @@ export async function updateSex(
   const { error } = await supabase.from("profiles").update({ sex }).eq("id", userId);
   if (error) {
     console.error("[profile] Could not save sex:", error.message);
-    return { ok: false, message: error.message };
+    if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
+    return { ok: false, message: "Couldn't save that. Try again." };
   }
   return { ok: true };
 }
@@ -327,7 +330,8 @@ export async function updateBodyMetric(
 
   if (error) {
     console.error(`[profile] Could not save ${field}:`, error.message);
-    return { ok: false, message: error.message };
+    if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
+    return { ok: false, message: "Couldn't save that. Try again." };
   }
   return { ok: true };
 }

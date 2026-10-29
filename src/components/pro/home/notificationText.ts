@@ -11,6 +11,7 @@ import { CLIENT_COPY, notificationCopy, PRO_COPY } from "../../../services/notif
 import { imageNoticeCopy } from "../../../services/moderation/imageCopy";
 import { CATEGORY_LABEL } from "./categoryLabels";
 import { topicsPhrase } from "../forms/formModel";
+import { heldNoticeText, RELEASED_NOTICE } from "../../share/heldShareModel";
 
 export type NotificationTone = "pr" | "req" | "att" | "act" | "done";
 
@@ -85,6 +86,11 @@ export function notificationText(n: ProNotification, names: Record<string, strin
       const topics = Array.isArray(p.safety_topics) ? p.safety_topics.filter((t): t is string => typeof t === "string") : [];
       return { title: who, line: topics.length ? `Check-in flagged: answers mention ${topicsPhrase(topics)}` : "Check-in flagged", icon: "clipboard", tone: "att" };
     }
+    // 20261222080000: an urgent answer was sent (form_responses.urgent; the
+    // push says "Urgent: a check-in needs your attention"). Subject
+    // form_response, so it opens the response as pro.form.flagged does.
+    case "pro.form.urgent":
+      return { title: who, line: "Urgent: a check-in needs your attention", icon: "clipboard", tone: "att" };
     case "pro.result.shared":
       return { title: who, line: str(p.marker) ? `Shared a result: ${str(p.marker)}` : "Shared a result with you", icon: "share", tone: "pr" };
     case "pro.client.allergies_updated":
@@ -116,6 +122,15 @@ export function notificationText(n: ProNotification, names: Record<string, strin
       return { title: `${who} declined sharing their ${winWord(p.win_kind)}. You can't ask again for this win.`, line: "Share cards", icon: "share", tone: "pr" };
     case "pro.share.removal_requested":
       return { title: `${who} asked you to remove a shared card`, line: "Share cards", icon: "share", tone: "req" };
+    // Round D · DV (Database 20261222030000): the word lists held a card;
+    // payload.reason is the short category, never the matched word.
+    case "pro.share.held": {
+      const c = heldNoticeText(p.reason);
+      return { title: c.title, line: c.line, icon: "share", tone: "att" };
+    }
+    // 20261222070000: a held card was released ("Not a problem" or Restore), once per hold.
+    case "pro.share.released":
+      return { title: RELEASED_NOTICE.title, line: RELEASED_NOTICE.line, icon: "share", tone: "done" };
     // Database 20261219030000: a professional's ambassador decision, in the
     // member notice's own words (CLIENT_COPY; the decline names the date from
     // payload.next_eligible_on). Not in PRO_KINDS: the member row would repeat it.

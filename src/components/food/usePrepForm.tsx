@@ -3,7 +3,10 @@ import { X, Plus, Trash2 } from "lucide-react";
 import { sheetChipStyle } from "../ui/sheetChip";
 import { useApp } from "../../context/AppContext";
 import type { CustomMeal, Food, Recipe, ServingUnit } from "../../types";
-import { searchFoods, listFoods, isUuid, type FoodSearchResult } from "../../services/food";
+import { searchFoods, listFoods, isUuid, searchEmptyLine, type FoodSearchFailure, type FoodSearchResult } from "../../services/food";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
+import { useOnline } from "../../hooks/useOnline";
+import { NutritionDetails } from "./NutritionDetails";
 import {
   MacroStrip,
   sumItems,
@@ -72,6 +75,11 @@ export interface PrepFormOptions {
    * arm-then-delete.
    */
   onDeleteRequest?: () => void;
+  /**
+   * A professional's own screen (Release 3 NU9 recipes). Round D: those never
+   * change for recovery-sensitive mode, so this turns the hiding off.
+   */
+  professional?: boolean;
 }
 
 /**
@@ -79,9 +87,13 @@ export interface PrepFormOptions {
  * component per item type). PrepCreateSheet wraps it in a sheet; the Custom
  * tab's detail popup renders the same body in place when editing.
  */
-export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDeleteRequest }: PrepFormOptions) {
+export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDeleteRequest, professional = false }: PrepFormOptions) {
   const open = active;
   const dark = useIsDark();
+  // Round D (R3, D18): in recovery-sensitive mode no kcal on result rows, no
+  // live macro strip, and a new food's numbers are optional and folded away.
+  const hide = useHideNumbers() && !professional;
+  const online = useOnline();
   const containerStyle = dark ? containerStyleDark : containerStyleLight;
   const fieldStyle = dark ? fieldStyleDark : fieldStyleLight;
   const isR = kind === "recipes";
@@ -110,6 +122,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchFailed, setSearchFailed] = useState<FoodSearchFailure | null>(null);
   const [creatingFood, setCreatingFood] = useState(false);
   const [foodDraft, setFoodDraft] = useState({ name: "", serving: "1 serving", calories: "", protein: "", carbs: "", fat: "" });
 
@@ -136,9 +149,10 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
     setSearching(true);
     const timer = window.setTimeout(
       () => {
-        void (term ? searchFoods(term) : listFoods()).then((rows) => {
+        void (term ? searchFoods(term) : listFoods().then((foods) => ({ foods, failure: null }))).then((r) => {
           if (cancelled) return;
-          setResults(rows);
+          setResults(r.foods);
+          setSearchFailed(r.failure);
           setSearching(false);
         });
       },
@@ -176,7 +190,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
   };
 
   const saveFood = async () => {
-    if (!foodDraft.name.trim() || !foodDraft.calories) return;
+    if (!foodDraft.name.trim() || (!hide && !foodDraft.calories)) return;
     const payload = {
       name: foodDraft.name.trim(),
       category: "homemade" as Food["category"],
@@ -246,6 +260,23 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
       JSON.stringify(items) !== JSON.stringify(editing.items) ||
       (isR && (servings !== String(editRecipe?.servings ?? 4) || steps !== (editRecipe?.steps ?? ""))));
 
+  const draftMacros = (
+    <div className="grid grid-cols-4 gap-1.5">
+      {(["calories", "protein", "carbs", "fat"] as const).map((k) => (
+        <input
+          key={k}
+          value={foodDraft[k]}
+          onChange={(e) =>
+            setFoodDraft((d) => ({ ...d, [k]: e.target.value.replace(/[^\d.]/g, "").replace(/(?<=\..*)\./g, "") }))
+          }
+          placeholder={k === "calories" ? "kcal" : k}
+          inputMode="decimal"
+          className="w-full rounded-[10px] bg-cream-card px-2 py-2 text-xs text-charcoal placeholder:text-charcoal-faint focus:outline-none"
+        />
+      ))}
+    </div>
+  );
+
   const body = (
     <>
       {step === "search" ? (
@@ -263,7 +294,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
             </p>
           ) : results.length === 0 ? (
             <p className="text-center text-[13px] py-4" style={{ color: PREP_FAINT }}>
-              {query.trim() ? "Nothing matches that search." : "No foods yet."}
+              {searchEmptyLine(searchFailed, online) ?? (query.trim() ? "Nothing matches that search." : "No foods yet.")}
             </p>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -285,9 +316,11 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
                         {r.servingLabel}
                       </span>
                     </span>
-                    <span className="flex-none text-[12px] font-semibold tabular-nums" style={{ color: PREP_FAINT }}>
-                      {Math.round(r.calories)} kcal
-                    </span>
+                    {!hide && (
+                      <span className="flex-none text-[12px] font-semibold tabular-nums" style={{ color: PREP_FAINT }}>
+                        {Math.round(r.calories)} kcal
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -316,23 +349,10 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
                 placeholder="Serving size"
                 className="w-full rounded-[10px] bg-cream-card px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
               />
-              <div className="grid grid-cols-4 gap-1.5">
-                {(["calories", "protein", "carbs", "fat"] as const).map((k) => (
-                  <input
-                    key={k}
-                    value={foodDraft[k]}
-                    onChange={(e) =>
-                      setFoodDraft((d) => ({ ...d, [k]: e.target.value.replace(/[^\d.]/g, "").replace(/(?<=\..*)\./g, "") }))
-                    }
-                    placeholder={k === "calories" ? "kcal" : k}
-                    inputMode="decimal"
-                    className="w-full rounded-[10px] bg-cream-card px-2 py-2 text-xs text-charcoal placeholder:text-charcoal-faint focus:outline-none"
-                  />
-                ))}
-              </div>
+              {hide ? <NutritionDetails>{draftMacros}</NutritionDetails> : draftMacros}
               <button
                 onClick={() => void saveFood()}
-                disabled={!foodDraft.name.trim() || !foodDraft.calories}
+                disabled={!foodDraft.name.trim() || (!hide && !foodDraft.calories)}
                 className="tap h-10 rounded-[12px] text-[13px] font-bold text-on-primary-fill disabled:opacity-40"
                 // The board's #A198DF in light, primary-fill in dark.
                 style={{ background: "rgb(var(--c-fill-cta))" }}
@@ -434,10 +454,12 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
             )}
           </div>
 
-          <MacroStrip
-            t={strip}
-            note={isR ? "Per serving, updating as ingredients are added." : "Whole meal, updating as foods are added."}
-          />
+          {!hide && (
+            <MacroStrip
+              t={strip}
+              note={isR ? "Per serving, updating as ingredients are added." : "Whole meal, updating as foods are added."}
+            />
+          )}
 
           {isR && (
             <label className="block">

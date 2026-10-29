@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { gestationOn, type Pregnancy } from "../../services/pregnancy";
 import {
   expectedGainByWeek,
@@ -66,6 +67,9 @@ const Bullets: React.FC<{ items: readonly string[]; color?: string }> = ({ items
  */
 export const PregnancyNutritionCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregnancy }) => {
   const { nutritionGoal, setNutritionGoal } = useApp();
+  // Recovery-sensitive mode (AJ R5): the energy figures and the calorie-target
+  // offer go; the nutrients and the limits stay.
+  const hideNumbers = useHideNumbers();
   const g = gestationOn(todayISO(), pregnancy);
   if (!g) return null;
 
@@ -80,50 +84,54 @@ export const PregnancyNutritionCard: React.FC<{ pregnancy: Pregnancy }> = ({ pre
         Week {g.week} · trimester {g.trimester}
       </p>
 
-      <p className="mt-2.5 text-[11.5px] leading-relaxed text-charcoal-soft">
-        {G.ENERGY_EXPLAINER}
-      </p>
-
-      <div className="mt-3 rounded-xl px-3.5 py-3" style={{ background: "rgba(184,115,90,0.10)" }}>
-        {offered === 0 ? (
-          <p className="text-[11.5px] leading-relaxed text-charcoal">
-            {G.APPLY_TARGETS_FIRST_TRIMESTER}
+      {!hideNumbers && (
+        <>
+          <p className="mt-2.5 text-[11.5px] leading-relaxed text-charcoal-soft">
+            {G.ENERGY_EXPLAINER}
           </p>
-        ) : (
-          <>
-            <p className="text-[15px] font-extrabold text-charcoal tabular-nums">
-              +{offered} kcal a day
-            </p>
-            <p className="mt-1 text-[10.5px] leading-[1.45] text-charcoal-soft">
-              {G.APPLY_TARGETS_EXPLAINER}
-            </p>
-            {applied > 0 && (
-              <p className="mt-1.5 text-[11px] font-semibold" style={{ color: PREGNANCY_COLOR }}>
-                {G.APPLY_TARGETS_APPLIED(applied)}
+
+          <div className="mt-3 rounded-xl px-3.5 py-3" style={{ background: "rgba(184,115,90,0.10)" }}>
+            {offered === 0 ? (
+              <p className="text-[11.5px] leading-relaxed text-charcoal">
+                {G.APPLY_TARGETS_FIRST_TRIMESTER}
               </p>
+            ) : (
+              <>
+                <p className="text-[15px] font-extrabold text-charcoal tabular-nums">
+                  +{offered} kcal a day
+                </p>
+                <p className="mt-1 text-[10.5px] leading-[1.45] text-charcoal-soft">
+                  {G.APPLY_TARGETS_EXPLAINER}
+                </p>
+                {applied > 0 && (
+                  <p className="mt-1.5 text-[11px] font-semibold" style={{ color: PREGNANCY_COLOR }}>
+                    {G.APPLY_TARGETS_APPLIED(applied)}
+                  </p>
+                )}
+                <div className="flex gap-2 mt-2.5">
+                  {!matches && (
+                    <Button
+                      size="sm"
+                      onClick={() => setNutritionGoal({ ...nutritionGoal, pregnancyKcal: offered })}
+                    >
+                      {G.APPLY_TARGETS_CTA}
+                    </Button>
+                  )}
+                  {applied > 0 && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setNutritionGoal({ ...nutritionGoal, pregnancyKcal: 0 })}
+                    >
+                      {G.APPLY_TARGETS_UNDO}
+                    </Button>
+                  )}
+                </div>
+              </>
             )}
-            <div className="flex gap-2 mt-2.5">
-              {!matches && (
-                <Button
-                  size="sm"
-                  onClick={() => setNutritionGoal({ ...nutritionGoal, pregnancyKcal: offered })}
-                >
-                  {G.APPLY_TARGETS_CTA}
-                </Button>
-              )}
-              {applied > 0 && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => setNutritionGoal({ ...nutritionGoal, pregnancyKcal: 0 })}
-                >
-                  {G.APPLY_TARGETS_UNDO}
-                </Button>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
 
       <p className="mt-3.5 text-[11px] font-bold text-charcoal mb-1.5">Every day</p>
       <ul className="space-y-1.5">
@@ -206,6 +214,9 @@ export const PregnancyWorkoutCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregn
  */
 export const PregnancyHealthCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregnancy }) => {
   const { user, weightByDate, bloodMarkers } = useApp();
+  // Recovery-sensitive mode (AJ R5): the weight-gain block (BMI, kg) goes;
+  // appointments and the urgent signs stay.
+  const hideNumbers = useHideNumbers();
   const navigate = useNavigate();
   const [signsOpen, setSignsOpen] = useState(false);
   const g = gestationOn(todayISO(), pregnancy);
@@ -238,45 +249,49 @@ export const PregnancyHealthCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregna
       </p>
 
       {/* --- weight gain --- */}
-      <p className="mt-3 text-[11px] font-bold text-charcoal mb-1.5">Weight gain</p>
-      {!range || !expected ? (
-        <p className="text-[11.5px] leading-relaxed text-charcoal-soft">
-          {G.WEIGHT_GAIN_NEEDS_DATA}
-        </p>
-      ) : (
+      {hideNumbers ? null : (
         <>
-          <p className="text-[11.5px] text-charcoal-soft">
-            Pre-pregnancy BMI {range.bmi} ({range.range.label}) · {range.minKg}–{range.maxKg} kg
-            recommended in total
-          </p>
-          <div className="mt-2 rounded-xl bg-cream-soft px-3.5 py-3">
-            <div className="flex items-baseline justify-between">
-              <span className="text-[10.5px] text-charcoal-faint">Expected by week {g.week}</span>
-              <span className="text-[11.5px] font-bold text-charcoal tabular-nums">
-                {expected.minKg}–{expected.maxKg} kg
-              </span>
-            </div>
-            <div className="mt-1.5 flex items-baseline justify-between">
-              <span className="text-[10.5px] text-charcoal-faint">So far</span>
-              {/* A DASH, NOT A ZERO, when there is no current weight — an
-                  unlogged weight is not a gain of nothing. */}
-              <span className="text-[11.5px] font-bold text-charcoal tabular-nums">
-                {actual !== null ? `${actual > 0 ? "+" : ""}${actual} kg` : "–"}
-              </span>
-            </div>
-            {verdict && (
-              <p className="mt-1.5 text-[10.5px] text-charcoal-soft">
-                {verdict === "within"
-                  ? "Within the expected range for this week."
-                  : verdict === "below"
-                    ? "Below the expected range for this week."
-                    : "Above the expected range for this week."}
+          <p className="mt-3 text-[11px] font-bold text-charcoal mb-1.5">Weight gain</p>
+          {!range || !expected ? (
+            <p className="text-[11.5px] leading-relaxed text-charcoal-soft">
+              {G.WEIGHT_GAIN_NEEDS_DATA}
+            </p>
+          ) : (
+            <>
+              <p className="text-[11.5px] text-charcoal-soft">
+                Pre-pregnancy BMI {range.bmi} ({range.range.label}) · {range.minKg}–{range.maxKg} kg
+                recommended in total
               </p>
-            )}
-          </div>
-          <p className="mt-1.5 text-[10.5px] leading-[1.45] text-charcoal-faint">
-            {G.WEIGHT_GAIN_SINGLETON_NOTE}
-          </p>
+              <div className="mt-2 rounded-xl bg-cream-soft px-3.5 py-3">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[10.5px] text-charcoal-faint">Expected by week {g.week}</span>
+                  <span className="text-[11.5px] font-bold text-charcoal tabular-nums">
+                    {expected.minKg}–{expected.maxKg} kg
+                  </span>
+                </div>
+                <div className="mt-1.5 flex items-baseline justify-between">
+                  <span className="text-[10.5px] text-charcoal-faint">So far</span>
+                  {/* A DASH, NOT A ZERO, when there is no current weight — an
+                      unlogged weight is not a gain of nothing. */}
+                  <span className="text-[11.5px] font-bold text-charcoal tabular-nums">
+                    {actual !== null ? `${actual > 0 ? "+" : ""}${actual} kg` : "–"}
+                  </span>
+                </div>
+                {verdict && (
+                  <p className="mt-1.5 text-[10.5px] text-charcoal-soft">
+                    {verdict === "within"
+                      ? "Within the expected range for this week."
+                      : verdict === "below"
+                        ? "Below the expected range for this week."
+                        : "Above the expected range for this week."}
+                  </p>
+                )}
+              </div>
+              <p className="mt-1.5 text-[10.5px] leading-[1.45] text-charcoal-faint">
+                {G.WEIGHT_GAIN_SINGLETON_NOTE}
+              </p>
+            </>
+          )}
         </>
       )}
 

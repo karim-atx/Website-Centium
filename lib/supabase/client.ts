@@ -10,6 +10,7 @@ import {
   isRecoveryExchangeInFlight,
 } from './recovery'
 import { suspensionAwareFetch } from './suspension'
+import { offlineFastFetch } from './offlineFast'
 import { identityGuardFetch } from './tabIdentity'
 import type { Database } from './database.types'
 
@@ -44,7 +45,8 @@ export const supabase = createBrowserClient<Database>(url, anonKey, {
   // See ./suspension.
   // The identity guard is outermost: a request from a tab bound to another
   // account never reaches the suspension handling, or the network.
-  global: { fetch: identityGuardFetch(suspensionAwareFetch()) },
+  // Innermost: offline, a read fails at once instead of after 7 s of retries (./offlineFast).
+  global: { fetch: identityGuardFetch(suspensionAwareFetch(offlineFastFetch())) },
   cookies: {
     getAll() {
       return parseCookieHeader(document.cookie)

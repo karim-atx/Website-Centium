@@ -8,7 +8,6 @@ import { textPx } from "../../../theme/textSize";
 import { browserOffline, enqueueLog, isOfflineFailure, QUEUED_COPY } from "../../../services/health-log/offlineQueue";
 import { dayLabel, FieldLabel, isoDay, MeasuredOnPopup, WhenField, partBSheetTone } from "./LogSheetParts";
 import { useIsDark } from "../../../hooks/useIsDark";
-import { useLogQueueFlush } from "./useLogQueue";
 import { formatShortDate } from "../../../utils/date";
 
 // HE1.7.1 "Log weight" (health-b-handover.md 3291-3450): "Last weigh-in",
@@ -45,7 +44,6 @@ export const LogWeightSheet: React.FC<{
   initialKg?: number;
 }> = ({ open, onClose, onSaved, day: dayProp, initialKg }) => {
   const { authUserId, selectedDate, today, weightByDate, logWeightForToday, recoverySensitive, recoveryModePending } = useApp();
-  useLogQueueFlush();
   const dark = useIsDark();
   const [whole, setWhole] = useState(70);
   const [tenth, setTenth] = useState(0);

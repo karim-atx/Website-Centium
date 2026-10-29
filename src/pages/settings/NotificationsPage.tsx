@@ -34,6 +34,7 @@ import { Button } from "../../components/ui/Button";
 import { WheelPicker } from "../../components/ui/WheelPicker";
 import { SettingsBody, SettingsRow, SettingsSection, settingsRowClass } from "../../components/ui/SettingsRows";
 import { useApp } from "../../context/AppContext";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import {
   describeQuietWindow,
   fetchNotificationPrefs,
@@ -313,7 +314,12 @@ export default function NotificationsPage() {
       live = false;
     };
   }, [isPro, authUserId]);
-  const groups = withInApp(isPro ? [...PRO_GROUPS(goneQuietDays), ...PRO_OWN_GROUPS] : GROUPS);
+  // Recovery-sensitive mode (AJ R11, D21): no "Streaks and achievements" row;
+  // the server sends those pushes to nobody with the mode on.
+  const hideNumbers = useHideNumbers();
+  const groups = withInApp(isPro ? [...PRO_GROUPS(goneQuietDays), ...PRO_OWN_GROUPS] : GROUPS)
+    .map((g) => (hideNumbers ? { ...g, rows: g.rows.filter((r) => r.key !== "streakAlerts") } : g))
+    .filter((g) => g.rows.length > 0);
 
   // --- the account's values (app_preferences) --------------------------------
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);

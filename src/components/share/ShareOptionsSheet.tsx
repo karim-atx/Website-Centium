@@ -8,6 +8,9 @@ import { ShareCard, ShareLayerComposite } from "./ShareCard";
 import { drawShareCard, drawShareLayerCard } from "./drawShareCard";
 import type { LayerPlacement } from "./shareLayerModel";
 import { cardStyleOf, usesOverlay, type CardPro, type CardSpec, type EditorStyle, type ShareFormat } from "./shareCardModel";
+import { PAUSED_LINE, type HeldReason } from "./heldShareModel";
+import { HeldShareNote, PausedLink } from "./HeldShareParts";
+import { GuidelinesLink } from "../moderation/GuidelinesLink";
 
 // Release 3 · W8 SH7 "Share options · browser fallback" and "Shared ·
 // confirmation" (source/gen/r31.js shareOpts31). Centium is a web app, so
@@ -24,8 +27,13 @@ import { cardStyleOf, usesOverlay, type CardPro, type CardSpec, type EditorStyle
 // must exist before anything leaves the device, so a failure stops the export
 // and shows the message. File names and the share title are neutral (no
 // client name), as they show before the image is opened.
+//
+// Round D · DV D-S21: a card the word lists held as it was recorded (`held`)
+// leaves nothing on the device: the sheet shows "Held for review." with the
+// short reason and the Community guidelines link, and the link is replaced by
+// a disabled "Copy link (works once approved)".
 
-export type RecordResult = { ok: true; link: string | null } | { ok: false; message: string };
+export type RecordResult = { ok: true; link: string | null; held?: HeldReason | null } | { ok: false; message: string };
 
 export interface ShareOptionsSheetProps {
   open: boolean;
@@ -102,6 +110,7 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
   const [busy, setBusy] = useState<Action | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [done, setDone] = useState<Done | null>(null);
+  const [held, setHeld] = useState<HeldReason | null>(null);
   const [copyable] = useState(canCopyImage);
 
   // A fresh sheet each time it opens.
@@ -110,6 +119,7 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
     setWasOpen(open);
     if (open) {
       setDone(null);
+      setHeld(null);
       setMessage(null);
       setBusy(null);
     }
@@ -173,8 +183,9 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
       setBusy(null);
       return;
     }
-    download();
     setBusy(null);
+    if (r.held) return setHeld(r.held);
+    download();
     setDone(saved);
   };
 
@@ -193,6 +204,11 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
     if (!r.ok) {
       setMessage(r.message);
       setBusy(null);
+      return;
+    }
+    if (r.held) {
+      setBusy(null);
+      setHeld(r.held);
       return;
     }
     if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
@@ -220,13 +236,18 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
     setBusy("copy");
     setMessage(null);
     let refused: string | null = null;
+    let heldNow = null as HeldReason | null;
     // The clipboard write starts inside the tap (Safari keeps the gesture);
-    // its image arrives only once the share is recorded.
+    // its image arrives only once the share is recorded (and not held).
     const blob = (async () => {
       const r = await record("sticker");
       if (!r.ok) {
         refused = r.message;
         throw new Error("not recorded");
+      }
+      if (r.held) {
+        heldNow = r.held;
+        throw new Error("held");
       }
       return toBlob(sticker);
     })();
@@ -234,9 +255,10 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
       setDone({ heading: "Sticker copied", body: `Paste it onto your own photo or video in Instagram.${clientLine}` });
     } catch {
-      // A refused record wins over the clipboard's own error.
+      // A hold, then a refused record, win over the clipboard's own error.
       await blob.catch(() => null);
-      setMessage(refused ?? "Couldn't copy the sticker. Save the image instead.");
+      if (heldNow) setHeld(heldNow);
+      else setMessage(refused ?? "Couldn't copy the sticker. Save the image instead.");
     }
     setBusy(null);
   };
@@ -248,9 +270,27 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
 
   const iconStyle = { ...NO_ICON_SCALE, color: INK.prDeep, flex: "none" } as const;
 
+  const preview = (
+    <div className="flex justify-center" style={{ marginBottom: 16 }}>
+      {layered && photoUrl && placement ? (
+        <ShareLayerComposite spec={spec} pro={pro} client={client} qr={qr} hide={hide} photoUrl={photoUrl} placement={placement} width={format === "post" ? 150 : 120} />
+      ) : (
+        <ShareCard spec={spec} pro={pro} format={format} style={style} width={format === "post" ? 150 : 120} client={client} qr={qr} hide={hide} photoUrl={photoUrl} onChecker={format === "sticker"} />
+      )}
+    </div>
+  );
+
   return (
-    <BottomSheet open={open} onClose={onClose} title={done ? "Shared" : "Share"} footer={done ? <CtaButton label="Done" size="sheet" onClick={finish} /> : undefined}>
-      {done ? (
+    <BottomSheet open={open} onClose={onClose} title={done ? "Shared" : "Share"} footer={done || held ? <CtaButton label="Done" size="sheet" onClick={finish} /> : undefined}>
+      {held && !done ? (
+        <div>
+          {preview}
+          <HeldShareNote reason={held} onNavigate={onClose} />
+          <div style={{ marginTop: 12 }}>
+            <PausedLink line={PAUSED_LINE} />
+          </div>
+        </div>
+      ) : done ? (
         <div className="flex flex-col items-center text-center" style={{ padding: "8px 0 4px" }} role="status">
           <span className="flex items-center justify-center" style={{ width: 64, height: 64, borderRadius: 9999, background: INK.goodBg }}>
             <Check size={30} strokeWidth={2.4} aria-hidden style={{ ...NO_ICON_SCALE, color: INK.good }} />
@@ -260,13 +300,7 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
         </div>
       ) : (
         <div aria-busy={draw === "drawing" || !!busy || undefined}>
-          <div className="flex justify-center" style={{ marginBottom: 16 }}>
-            {layered && photoUrl && placement ? (
-              <ShareLayerComposite spec={spec} pro={pro} client={client} qr={qr} hide={hide} photoUrl={photoUrl} placement={placement} width={format === "post" ? 150 : 120} />
-            ) : (
-              <ShareCard spec={spec} pro={pro} format={format} style={style} width={format === "post" ? 150 : 120} client={client} qr={qr} hide={hide} photoUrl={photoUrl} onChecker={format === "sticker"} />
-            )}
-          </div>
+          {preview}
           {draw === "error" ? (
             <div role="alert" className="flex items-center justify-between" style={{ gap: 10, borderRadius: 14, background: INK.hiBg, padding: "4px 4px 4px 12px", marginBottom: 12 }}>
               <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi }}>Couldn't draw the card. Try again.</p>
@@ -284,6 +318,7 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
           {message ? (
             <p role="alert" className="text-center" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginBottom: 8 }}>
               {message}
+              <GuidelinesLink message={message} />
             </p>
           ) : null}
           <div className="grid" style={{ gap: 8 }}>

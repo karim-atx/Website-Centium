@@ -139,16 +139,18 @@ test("targets: the documented subject per client kind; other kinds open nothing 
   assert.equal(clientNotificationTarget({ kind: "x", subjectType: "offer", subjectId: O }), null);
 });
 
-test("kinds: the enum in order; the client's are a member's ten, never an owner's or a professional's own", () => {
-  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 24);
+test("kinds: the enum in order; the client's are a member's eleven, never an owner's or a professional's own", () => {
+  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 25);
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(0, 4), [...RELEASE1_KINDS]);
   // Release B appends the ambassador decision (20261217000000), to the applicant.
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(18, 20), ["ambassador_application_approved", "ambassador_application_declined"]);
   // Round C Release 1 appends the nickname reset (20261220000000), to the member.
-  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(20), ["forum_nickname_reset", "support_resources", "image_approved", "image_rejected"]);
+  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(20, 24), ["forum_nickname_reset", "support_resources", "image_approved", "image_rejected"]);
+  // Round D · PR 1 appends the catalogue decision on a suggested food (20261222000000).
+  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(24), ["food_submission_reviewed"]);
   assert.deepEqual([...CLIENT_KINDS], [
     "voucher_issued", "points_expiring", "class_cancelled", "review_prompt", "ambassador_application_approved", "ambassador_application_declined",
-    "forum_nickname_reset", "support_resources", "image_approved", "image_rejected",
+    "forum_nickname_reset", "support_resources", "image_approved", "image_rejected", "food_submission_reviewed",
   ]);
   for (const k of CLIENT_KINDS) assert.ok((MEMBER_NOTIFICATION_KINDS as readonly string[]).includes(k), k);
   const notMine = [
@@ -159,6 +161,9 @@ test("kinds: the enum in order; the client's are a member's ten, never an owner'
   assert.equal(CLIENT_KINDS.length + notMine.length, MEMBER_NOTIFICATION_KINDS.length);
   // Round C Release 2: where the shared kinds open on the client side.
   assert.equal(clientNotificationTarget({ kind: "support_resources", subjectType: "wellbeing", subjectId: null }), "/app/get-support");
+  // 20261222080000: after a form's eating question, Get support offers recovery-sensitive mode.
+  assert.equal(clientNotificationTarget({ kind: "support_resources", subjectType: "wellbeing", subjectId: null, payload: { offer_recovery_mode: true } }), "/app/get-support?recovery=1");
+  assert.equal(clientNotificationTarget({ kind: "support_resources", subjectType: "wellbeing", subjectId: null, payload: { offer_recovery_mode: false } }), "/app/get-support");
   // every client kind has a plain line and a fill
   for (const k of CLIENT_KINDS) {
     assert.ok(CLIENT_COPY[k]?.title, k);
@@ -489,4 +494,13 @@ test("ambassador decision: PLAN S3's lines; the decline names the next date (nex
   assert.equal(c("ambassador_application_declined", { next_eligible_on: "soon" }), CLIENT_COPY.ambassador_application_declined);
   assert.deepEqual(notifLook("ambassador_application_approved"), { tone: "lav", glyph: "star" });
   assert.deepEqual(notifLook("ambassador_application_declined"), { tone: "lav", glyph: "app" });
+});
+
+test("Round D · DP: a suggested food's decision reads with its name and reason, opens Custom foods", () => {
+  const c = (payload?: Record<string, unknown>) => notificationCopy({ titleKey: "food_submission_reviewed", kind: "food_submission_reviewed", payload });
+  assert.equal(c().title, "Your food suggestion");
+  assert.deepEqual(c({ status: "approved", name: "Kibbeh" }), { title: "Added to the catalogue", body: "Kibbeh is in the catalogue now, so everyone can find it." });
+  assert.equal(c({ status: "rejected", name: "Kibbeh", reason_category: "duplicate" }).body, "Kibbeh wasn't added. The catalogue already has it. It's still in your own foods.");
+  assert.equal(clientNotificationTarget({ kind: "food_submission_reviewed", subjectType: "food_submission", subjectId: null }), "/app/food?tab=prep&sub=foods");
+  assert.deepEqual(notifLook("food_submission_reviewed"), { tone: "teal", glyph: "leaf" });
 });

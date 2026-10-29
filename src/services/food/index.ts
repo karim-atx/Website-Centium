@@ -7,6 +7,10 @@ import { servingMultiplier, rescaleEntry } from "../nutrition";
 import { getFoodNutrientsById } from "../food-nutrients";
 import { normalizeGtin } from "../../utils/gtin";
 import { escapeLike } from "../postgrestLike";
+import { searchFailure, type FoodSearchFailure } from "./searchFailure";
+import { isAlreadySaved, requestColumn } from "../health-log/requestId";
+
+export { searchFailure, searchEmptyLine, type FoodSearchFailure } from "./searchFailure";
 
 // Reads and writes the real food catalog and diary.
 //
@@ -61,6 +65,15 @@ export interface FoodSearchResult {
    * nutrientSchema keys. A missing key is "no data", never zero.
    */
   nutrients?: Record<string, number> | null;
+  /** Custom foods only (Round D · DP): the brand of a food found online. */
+  brand?: string | null;
+  /**
+   * Custom foods only: where a food found online came from (save_found_food),
+   * or null for one the user typed. Decides whether it may be suggested for
+   * the shared catalogue (never Open Food Facts).
+   */
+  externalSource?: "usda_fdc" | "open_food_facts" | null;
+  externalRef?: string | null;
 }
 
 const CATALOG_COLUMNS =
@@ -98,6 +111,10 @@ type CustomRow = Omit<CatalogRow, "is_lebanese" | "is_verified" | "barcode"> & {
   // Absent until Database-Atraxia 20260924420000 is applied.
   logo_tone?: number | null;
   nutrients?: Record<string, number> | null;
+  // Round D · DP (Database 20261222040000).
+  brand?: string | null;
+  external_source?: string | null;
+  external_ref?: string | null;
 };
 
 const fromCatalog = (r: CatalogRow): FoodSearchResult => ({
@@ -138,6 +155,9 @@ const fromCustom = (r: CustomRow): FoodSearchResult => ({
   overridesFoodId: r.overrides_food_id,
   logoTone: r.logo_tone ?? null,
   nutrients: r.nutrients ?? null,
+  brand: r.brand ?? null,
+  externalSource: r.external_source === "usda_fdc" || r.external_source === "open_food_facts" ? r.external_source : null,
+  externalRef: r.external_ref ?? null,
 });
 
 // escapeLike (../postgrestLike): PostgREST ilike treats % _ and * as
@@ -170,9 +190,9 @@ function describe(error: PostgrestError): string {
  * catalog row, that catalog row is dropped from the results rather than shown
  * beside their correction, which is the point of overrides_food_id.
  */
-export async function searchFoods(query: string): Promise<FoodSearchResult[]> {
+export async function searchFoods(query: string): Promise<FoodSearchOutcome> {
   const term = query.trim();
-  if (!term) return [];
+  if (!term) return { foods: [], failure: null };
   const pattern = "%" + escapeLike(term) + "%";
 
   const [catalog, custom] = await Promise.all([
@@ -185,8 +205,12 @@ export async function searchFoods(query: string): Promise<FoodSearchResult[]> {
       .limit(50),
   ]);
 
-  if (catalog.error) console.error("[food] catalog search failed:", catalog.error.message);
-  if (custom.error) console.error("[food] custom search failed:", custom.error.message);
+  if (catalog.error && !isOffline(catalog.error)) {
+    console.error("[food] catalog search failed:", catalog.error.message);
+  }
+  if (custom.error && !isOffline(custom.error)) {
+    console.error("[food] custom search failed:", custom.error.message);
+  }
 
   const mine = (custom.data ?? []).map((r) => fromCustom(r as CustomRow));
   const overridden = new Set(
@@ -196,8 +220,22 @@ export async function searchFoods(query: string): Promise<FoodSearchResult[]> {
     .map((r) => fromCatalog(r as CatalogRow))
     .filter((f) => !overridden.has(f.id));
 
-  return [...mine, ...shared];
+  return { foods: [...mine, ...shared], failure: searchFailure([catalog.error, custom.error]) };
 }
+
+/**
+ * What a search found, and whether it could actually ask.
+ *
+ * `failure` exists because an empty list used to mean two things: "nothing
+ * matches" and "the request never got there". Offline, Add Food said "Not in
+ * our catalog yet" about a food that is in the catalog (Round D, O3). Rows
+ * that did come back are still in `foods`, so a half-failed search shows what
+ * it found; callers need `failure` only to word an EMPTY result.
+ */
+export type FoodSearchOutcome = {
+  foods: FoodSearchResult[];
+  failure: FoodSearchFailure | null;
+};
 
 /**
  * The whole catalog, for the browse list an empty search box shows.
@@ -377,6 +415,8 @@ export interface LogFoodEntryParams {
    * decision rests on.
    */
   external?: { source: "open_food_facts"; ref: string; fetchedAt: string };
+  /** The outbox item's uuid, sent as client_request_id so a replay is saved once (Round D). */
+  requestId?: string;
 }
 
 export interface LogFoodEntryResult {
@@ -397,7 +437,7 @@ export interface LogFoodEntryResult {
  * them believing they had logged something they had not.
  */
 export async function logFoodEntry(params: LogFoodEntryParams): Promise<LogFoodEntryResult> {
-  const { userId, food, quantity, unit, meal, date, loggedVia, external } = params;
+  const { userId, food, quantity, unit, meal, date, loggedVia, external, requestId } = params;
 
   if (!(quantity > 0)) return { ok: false, message: "Quantity must be greater than zero." };
 
@@ -428,6 +468,24 @@ export async function logFoodEntry(params: LogFoodEntryParams): Promise<LogFoodE
   const nutrients = perServingNutrients
     ? Object.fromEntries(Object.entries(perServingNutrients).map(([key, amount]) => [key, round(amount * multiplier)]))
     : undefined;
+
+  const entryFor = (id: string) => ({
+    id,
+    foodId: food.source === "catalog" ? food.id : null,
+    customFoodId: food.source === "custom" ? food.id : null,
+    ...snapshot,
+    nutrients,
+    quantity,
+    unit,
+    meal,
+    date,
+    loggedVia,
+    display: {
+      category: food.category,
+      serving: food.servingLabel,
+      isLebanese: food.isLebanese,
+    },
+  });
 
   const { data, error } = await supabase
     .from("food_log_entries")
@@ -463,35 +521,28 @@ export async function logFoodEntry(params: LogFoodEntryParams): Promise<LogFoodE
       external_source: external?.source ?? null,
       external_ref: external?.ref ?? null,
       external_fetched_at: external?.fetchedAt ?? null,
-    })
+      ...requestColumn(requestId),
+    } as never)
     .select("id")
-    .single();
+    .single<{ id: string }>();
+
+  // A replay of a queued entry: the first attempt saved it, so use that row.
+  if (isAlreadySaved(error) && requestId) {
+    const { data: saved } = await supabase
+      .from("food_log_entries")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("client_request_id" as never, requestId as never)
+      .maybeSingle<{ id: string }>();
+    if (saved) return { ok: true, entry: entryFor(saved.id) };
+  }
 
   if (error || !data) {
     console.error("[food] Could not log entry:", error?.message);
     return { ok: false, message: error ? describe(error) : "Could not save that entry." };
   }
 
-  return {
-    ok: true,
-    entry: {
-      id: data.id,
-      foodId: food.source === "catalog" ? food.id : null,
-      customFoodId: food.source === "custom" ? food.id : null,
-      ...snapshot,
-      nutrients,
-      quantity,
-      unit,
-      meal,
-      date,
-      loggedVia,
-      display: {
-        category: food.category,
-        serving: food.servingLabel,
-        isLebanese: food.isLebanese,
-      },
-    },
-  };
+  return { ok: true, entry: entryFor(data.id) };
 }
 
 // The joined shape. Only ever read for DISPLAY — icon, star, serving text.
@@ -668,9 +719,9 @@ export async function matchFoodByName(name: string): Promise<FoodMatch | null> {
   const term = name.trim();
   if (!term) return null;
 
-  let candidates = await searchFoods(term);
+  let candidates = (await searchFoods(term)).foods;
   if (candidates.length === 0 && /[a-z]s$/i.test(term)) {
-    candidates = await searchFoods(term.slice(0, -1));
+    candidates = (await searchFoods(term.slice(0, -1))).foods;
   }
   if (candidates.length === 0) return null;
 
@@ -1107,7 +1158,9 @@ export async function getNutritionGoalOn(date: string): Promise<Omit<NutritionGo
   }
   const r = Array.isArray(data) ? data[0] : data;
   // A function returning a composite answers an all-null row when nothing matched.
-  if (!r || r.id == null) return null;
+  // Round D: in recovery-sensitive mode a professional's numbers are null;
+  // the caller then keeps the device's goal.
+  if (!r || r.id == null || r.target_calories == null || r.weight_goal == null) return null;
   return {
     weightGoal: r.weight_goal,
     weeklyRateKg: Number(r.weekly_rate_kg),

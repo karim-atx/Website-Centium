@@ -3,12 +3,23 @@
 // - forms (kind intake / check_in, title, archived_at) and form_questions
 //   (type, prompt, unit, required, options, scale_min / scale_max,
 //   safety_topic, safety_trigger): the owner writes them through RLS, gated
-//   by can_write_form(kind) (check-ins: Full coaching and Nutrition only);
-// - create_weekly_check_in_template() makes the built-in Weekly check-in with
-//   its safety-marked questions;
+//   by can_write_form(kind) (every lane, clinical check-ins included since
+//   Round D, 20261222050000);
+// - Round D (20261222050000): forms.description and send_on_hire (assigned
+//   when someone hires the professional); form_questions.section_title,
+//   show_if (one condition on an earlier question, 22023 otherwise) and
+//   profile_field; type long_text; schedules every2weeks / every4weeks;
+// - Round D (20261222060000): list_form_templates() and use_form_template(
+//   p_key) → the new form's id (ATX08 not available, ATX09 another lane);
+// - 20261222080000 (the approved templates): form_responses.urgent (an
+//   urgent answer was sent; safety_flag is set with it) and
+//   form_response_notes(p_response_id), the notes a response's answers
+//   trigger, for the professional only. The new form_questions columns come
+//   with a template; saveForm never writes them (toRow sends the builder's own);
 // - assign_form(p_form_id, p_client_id, p_due_at, p_schedule) sends one form
-//   (due_at) or starts a schedule (daily@HH:MM / weekly:<1-7>@HH:MM, the
-//   client's local time); cancel_form_assignment stops it;
+//   (due_at) or starts a schedule (daily@HH:MM / weekly:<1-7>@HH:MM /
+//   every2weeks:… / every4weeks:…, the client's local time);
+//   cancel_form_assignment stops it;
 // - form_responses: the professional reads a response once it's submitted,
 //   for that response only (decision 6); review_form_response(p_response_id,
 //   p_reply) marks it reviewed and tells the client;
@@ -16,12 +27,14 @@
 //   {client}/{assignment}/…, readable by the assigning professional.
 
 import { supabase } from "../../../lib/supabase/client";
+import { parseConfirmedAnswers, type ConfirmedAnswer } from "../client-forms/proposals";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import type { Read, Write } from "./clients";
-import { diffQuestions, fromRow, toRow, type FormAssignment, type FormKind, type FormSummary, type QuestionDraft, type QuestionRow } from "../../components/pro/forms/formModel";
+import { parseResponseNotes, type ResponseNote } from "../../components/pro/forms/reviewModel";
+import { diffQuestions, fromRow, isLocalKey, showIfRow, toRow, type FormAssignment, type FormKind, type FormSummary, type FormTemplate, type QuestionDraft, type QuestionRow } from "../../components/pro/forms/formModel";
 
-export type { FormAssignment, FormSummary };
+export type { FormAssignment, FormSummary, FormTemplate };
 
 const from = (table: string) => supabase.from(table as never);
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
@@ -30,7 +43,7 @@ function message(error: unknown, fallback: string): string {
   if (isOffline(error)) return OFFLINE_MESSAGE;
   const code = (error as { code?: string } | null)?.code;
   if (code === "ATX12") return "That person isn't your client any more.";
-  if (code === "ATX09") return "Check-ins are for Full coaching and Nutrition professionals.";
+  if (code === "ATX09") return "Only professionals can send forms.";
   if (code === "ATX08") return "This form isn't available any more.";
   if (code === "ATXG9") return "This form has already been sent.";
   return fallback;
@@ -47,17 +60,18 @@ export async function canWriteForm(kind: FormKind): Promise<boolean> {
 
 export async function fetchForms(me: string): Promise<Read<{ forms: FormSummary[]; assignments: FormAssignment[] }>> {
   const [f, a] = await Promise.all([
-    from("forms").select("id, kind, title, updated_at, form_questions(count)").eq("professional_id", me).is("archived_at", null).order("created_at", { ascending: true }),
+    from("forms").select("id, kind, title, updated_at, send_on_hire, form_questions(count)").eq("professional_id", me).is("archived_at", null).order("created_at", { ascending: true }),
     from("form_assignments").select("id, form_id, client_id, schedule, due_at, status, series_id").eq("professional_id", me).in("status", ["series", "due", "submitted", "missed"]),
   ]);
   if (f.error) return readFail(f.error);
   if (a.error) return readFail(a.error);
-  const forms = ((f.data ?? []) as unknown as { id: string; kind: FormKind; title: string; updated_at: string; form_questions: { count: number }[] }[]).map((r) => ({
+  const forms = ((f.data ?? []) as unknown as { id: string; kind: FormKind; title: string; updated_at: string; send_on_hire: boolean | null; form_questions: { count: number }[] }[]).map((r) => ({
     id: r.id,
     kind: r.kind,
     title: r.title,
     questionCount: r.form_questions?.[0]?.count ?? 0,
     updatedAt: r.updated_at,
+    sendOnHire: r.send_on_hire === true,
   }));
   return { ok: true, data: { forms, assignments: ((a.data ?? []) as unknown as AssignmentRow[]).map(mapAssignment) } };
 }
@@ -77,22 +91,26 @@ export interface FormDetail {
   id: string;
   kind: FormKind;
   title: string;
+  /** "" when there's none. */
+  description: string;
+  sendOnHire: boolean;
   questions: QuestionDraft[];
   assignments: FormAssignment[];
 }
 
-const Q_COLS = "id, position, type, prompt, unit, required, options, scale_min, scale_max, safety_topic, safety_trigger";
+// recovery_options, pro_note and client_prompt are read only, to lock the answers they name (never written by the builder).
+const Q_COLS = "id, position, type, prompt, unit, required, options, scale_min, scale_max, safety_topic, safety_trigger, section_title, show_if, profile_field, recovery_options, pro_note, client_prompt";
 
 export async function fetchForm(formId: string): Promise<Read<FormDetail | null>> {
   const [f, q, a] = await Promise.all([
-    from("forms").select("id, kind, title, archived_at").eq("id", formId).maybeSingle(),
+    from("forms").select("id, kind, title, description, send_on_hire, archived_at").eq("id", formId).maybeSingle(),
     from("form_questions").select(Q_COLS).eq("form_id", formId).order("position"),
     from("form_assignments").select("id, form_id, client_id, schedule, due_at, status, series_id").eq("form_id", formId).in("status", ["series", "due", "submitted", "missed"]),
   ]);
   if (f.error) return readFail(f.error);
   if (q.error) return readFail(q.error);
   if (a.error) return readFail(a.error);
-  const row = f.data as unknown as { id: string; kind: FormKind; title: string; archived_at: string | null } | null;
+  const row = f.data as unknown as { id: string; kind: FormKind; title: string; description: string | null; send_on_hire: boolean | null; archived_at: string | null } | null;
   if (!row || row.archived_at) return { ok: true, data: null };
   return {
     ok: true,
@@ -100,40 +118,77 @@ export async function fetchForm(formId: string): Promise<Read<FormDetail | null>
       id: row.id,
       kind: row.kind,
       title: row.title,
+      description: row.description ?? "",
+      sendOnHire: row.send_on_hire === true,
       questions: ((q.data ?? []) as unknown as QuestionRow[]).map(fromRow),
       assignments: ((a.data ?? []) as unknown as AssignmentRow[]).map(mapAssignment),
     },
   };
 }
 
+export interface FormFields {
+  kind: FormKind;
+  title: string;
+  description: string;
+  sendOnHire: boolean;
+}
+
+const QUESTIONS_FAILED = "Couldn't save the questions. Try again.";
+/** 22023 from the questions guard: a condition or profile field that doesn't fit. */
+const questionsMessage = (error: unknown) =>
+  (error as { code?: string } | null)?.code === "22023" ? "A condition or profile field doesn't fit its question. Check the questions and try again." : message(error, QUESTIONS_FAILED);
+
 /**
  * Saves a form: a new one is inserted first; then its questions are brought
- * in line with the draft (inserts, updates, deletes). Returns the form id.
+ * in line with the draft (deletes, updates in order, inserts). A condition on
+ * a question that was new in this save names it by its new id in a second
+ * pass, once the insert has returned the ids. Returns the form id.
  */
-export async function saveForm(me: string, formId: string | null, kind: FormKind, title: string, saved: QuestionDraft[], draft: QuestionDraft[]): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+export async function saveForm(me: string, formId: string | null, fields: FormFields, saved: QuestionDraft[], draft: QuestionDraft[]): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
   let id = formId;
+  const columns = { title: fields.title.trim(), description: fields.description.trim() || null, send_on_hire: fields.sendOnHire };
   if (!id) {
-    const { data, error } = await from("forms").insert({ professional_id: me, kind, title: title.trim() } as never).select("id").single();
+    const { data, error } = await from("forms").insert({ professional_id: me, kind: fields.kind, ...columns } as never).select("id").single();
     if (error) return { ok: false, message: message(error, "Couldn't save the form. Try again.") };
     id = (data as unknown as { id: string }).id;
   } else {
-    const { error } = await from("forms").update({ title: title.trim() } as never).eq("id", id);
+    const { error } = await from("forms").update(columns as never).eq("id", id);
     if (error) return { ok: false, message: message(error, "Couldn't save the form. Try again.") };
   }
   const d = diffQuestions(saved, draft);
   if (d.remove.length) {
     const { error } = await from("form_questions").delete().in("id", d.remove);
-    if (error) return { ok: false, message: message(error, "Couldn't save the questions. Try again.") };
+    if (error) return { ok: false, message: message(error, QUESTIONS_FAILED) };
   }
   for (const u of d.update) {
     const { error } = await from("form_questions").update(toRow(u.q, u.index) as never).eq("id", u.id);
-    if (error) return { ok: false, message: message(error, "Couldn't save the questions. Try again.") };
+    if (error) return { ok: false, message: questionsMessage(error) };
   }
+  const ids = new Map<string, string>();
   if (d.insert.length) {
-    const { error } = await from("form_questions").insert(d.insert.map((x) => ({ form_id: id, ...toRow(x.q, x.index) })) as never);
-    if (error) return { ok: false, message: message(error, "Couldn't save the questions. Try again.") };
+    const { data, error } = await from("form_questions").insert(d.insert.map((x) => ({ form_id: id, ...toRow(x.q, x.index) })) as never).select("id, position");
+    if (error) return { ok: false, message: questionsMessage(error) };
+    const byPosition = new Map(((data ?? []) as unknown as { id: string; position: number }[]).map((r) => [r.position, r.id]));
+    for (const x of d.insert) {
+      const newId = byPosition.get(x.index);
+      if (newId) ids.set(x.q.id, newId);
+    }
+  }
+  // The second pass: conditions on questions that only now have an id.
+  for (const q of draft) {
+    if (!q.showIf || !isLocalKey(q.showIf.questionId)) continue;
+    const rowId = isLocalKey(q.id) ? ids.get(q.id) : q.id;
+    if (!rowId) continue;
+    const { error } = await from("form_questions").update({ show_if: showIfRow(q.showIf, ids) } as never).eq("id", rowId);
+    if (error) return { ok: false, message: questionsMessage(error) };
   }
   return { ok: true, id };
+}
+
+/** "Automatically when someone hires you" (forms.send_on_hire), written at once from the Sending sheet. */
+export async function setSendOnHire(formId: string, on: boolean): Promise<Write> {
+  const { error } = await from("forms").update({ send_on_hire: on } as never).eq("id", formId);
+  return error ? { ok: false, message: message(error, "Couldn't change when it's sent. Try again.") } : { ok: true };
 }
 
 /** A form leaves the lists (archived_at); answers already sent stay readable. */
@@ -142,12 +197,53 @@ export async function archiveForm(formId: string): Promise<Write> {
   return error ? { ok: false, message: message(error, "Couldn't remove the form. Try again.") } : { ok: true };
 }
 
-/** The built-in Weekly check-in, copied into your forms with its safety questions marked. */
-export async function createWeeklyCheckIn(): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
-  const { data, error } = await rpc("create_weekly_check_in_template");
-  if (error || typeof data !== "string") return { ok: false, message: message(error, "Couldn't add the template. Try again.") };
+// ---------------------------------------------------------------------------
+// Templates (Round D, 20261222060000)
+// ---------------------------------------------------------------------------
+
+interface TemplateRow {
+  key: string;
+  lane: string;
+  kind: FormKind;
+  title: string;
+  description: string | null;
+  question_count: number | null;
+  available: boolean | null;
+}
+
+/** The templates for my lane and every lane, in the Database's order. */
+export async function listFormTemplates(): Promise<Read<FormTemplate[]>> {
+  const { data, error } = await rpc("list_form_templates");
+  if (error) return readFail(error);
+  return {
+    ok: true,
+    data: ((data ?? []) as TemplateRow[]).map((r) => ({
+      key: r.key,
+      lane: r.lane,
+      kind: r.kind,
+      title: r.title,
+      description: r.description,
+      questionCount: r.question_count ?? 0,
+      available: r.available === true,
+    })),
+  };
+}
+
+/** Copies an available template into a form of my own (questions, sections, conditions, profile fields). */
+export async function copyFormTemplate(key: string): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+  const { data, error } = await rpc("use_form_template", { p_key: key });
+  if (error || typeof data !== "string") {
+    const code = (error as { code?: string } | null)?.code;
+    if (code === "ATX08") return { ok: false, message: "This template isn't available yet." };
+    if (code === "ATX09") return { ok: false, message: "This template isn't for your practice." };
+    return { ok: false, message: message(error, "Couldn't add the template. Try again.") };
+  }
   return { ok: true, id: data };
 }
+
+// ---------------------------------------------------------------------------
+// Sending
+// ---------------------------------------------------------------------------
 
 /** One form sent now (dueAt), or a schedule started (schedule). */
 export async function assignForm(formId: string, clientId: string, dueAt: string | null, schedule: string | null): Promise<Write> {
@@ -177,6 +273,8 @@ export interface FormResponse {
   reply: string | null;
   safetyFlag: boolean;
   safetyTopics: string[];
+  /** form_responses.urgent (20261222080000): an urgent answer was sent. */
+  urgent: boolean;
 }
 
 interface ResponseRow {
@@ -189,10 +287,11 @@ interface ResponseRow {
   reply: string | null;
   safety_flag: boolean;
   safety_topics: string[] | null;
+  urgent: boolean | null;
   form_assignments: { form_id: string; forms: { title: string; kind: FormKind } | null } | null;
 }
 
-const R_COLS = "id, assignment_id, client_id, answers, submitted_at, reviewed_at, reply, safety_flag, safety_topics, form_assignments(form_id, forms(title, kind))";
+const R_COLS = "id, assignment_id, client_id, answers, submitted_at, reviewed_at, reply, safety_flag, safety_topics, urgent, form_assignments(form_id, forms(title, kind))";
 
 const mapResponse = (r: ResponseRow): FormResponse => ({
   id: r.id,
@@ -207,6 +306,7 @@ const mapResponse = (r: ResponseRow): FormResponse => ({
   reply: r.reply,
   safetyFlag: r.safety_flag,
   safetyTopics: r.safety_topics ?? [],
+  urgent: r.urgent === true,
 });
 
 /** Submitted responses sent to me, newest first (one client, or every client). */
@@ -266,4 +366,34 @@ export async function fetchLatestIntake(me: string, clientId: string): Promise<R
 /** The hub's To review rows for this response are done (the owner may set read_at). */
 export async function markResponseRead(responseId: string): Promise<void> {
   await supabase.from("professional_notifications").update({ read_at: new Date().toISOString() }).eq("subject_type", "form_response").eq("subject_id", responseId).is("read_at", null);
+}
+
+/**
+ * The carried answers the client confirmed into their profile
+ * (form_response_confirmed_answers, 20261222070000), as confirmed, in
+ * question order. Never a pending or declined one; each field needs the
+ * consent its profile row needs, so a missing consent simply gives no row.
+ * A failed read shows no box.
+ */
+export async function fetchConfirmedAnswers(responseId: string): Promise<ConfirmedAnswer[]> {
+  const { data, error } = await rpc("form_response_confirmed_answers", { p_response_id: responseId });
+  if (error) {
+    if (!isOffline(error)) console.error("[forms] form_response_confirmed_answers failed:", error.code, error.message);
+    return [];
+  }
+  return parseConfirmedAnswers(data);
+}
+
+/**
+ * The notes this response's answers trigger (form_response_notes,
+ * 20261222080000), urgent ones first. Only the professional it was sent to
+ * reads them; the client never does. A failed read shows no notes.
+ */
+export async function fetchResponseNotes(responseId: string): Promise<ResponseNote[]> {
+  const { data, error } = await rpc("form_response_notes", { p_response_id: responseId });
+  if (error) {
+    if (!isOffline(error)) console.error("[forms] form_response_notes failed:", error.code, error.message);
+    return [];
+  }
+  return parseResponseNotes(data);
 }

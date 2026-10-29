@@ -105,8 +105,10 @@ export const AddItemSheet: React.FC<{
     setFoodsError(false);
     const t = window.setTimeout(
       () => {
-        (term ? searchFoods(term) : listFoods())
-          .then((rows) => live && setFoods(rows))
+        // searchFoods reports a failed search instead of throwing, so it
+        // reaches the same error line a thrown request does.
+        (term ? searchFoods(term) : listFoods().then((foods) => ({ foods, failure: null })))
+          .then((r) => live && (setFoods(r.foods), setFoodsError(r.failure !== null)))
           .catch(() => live && (setFoods([]), setFoodsError(true)));
       },
       term ? 250 : 0

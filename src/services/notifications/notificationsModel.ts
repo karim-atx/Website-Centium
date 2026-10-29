@@ -27,6 +27,8 @@ import { formatShortDate } from "../../utils/date";
 import { clock12 } from "../../utils/time12";
 import { num, rows, str } from "../market/parse";
 import { imageHome, imageNoticeCopy, SUPPORT_NOTICE } from "../moderation/imageCopy";
+import { getSupportPath } from "../moderation/support";
+import { FOOD_REVIEW_COPY, foodReviewCopy } from "../food/onlineSearchModel";
 
 /** member_notification_kind, the whole enum in its declared order (20261210600000). */
 export const MEMBER_NOTIFICATION_KINDS = [
@@ -59,6 +61,9 @@ export const MEMBER_NOTIFICATION_KINDS = [
   "support_resources",
   "image_approved",
   "image_rejected",
+  // Round D · PR 1 (Database 20261222000000): a food the member suggested for
+  // the catalogue was reviewed (payload status, name, reason_category; never the note).
+  "food_submission_reviewed",
 ] as const;
 export type MemberNotificationKind = (typeof MEMBER_NOTIFICATION_KINDS)[number];
 
@@ -90,6 +95,7 @@ export const CLIENT_KINDS: readonly MemberNotificationKind[] = [
   "support_resources",
   "image_approved",
   "image_rejected",
+  "food_submission_reviewed",
 ];
 
 /** my_unread_notification_count's cap: the reader never counts past it. */
@@ -205,6 +211,8 @@ export const CLIENT_COPY: NotificationCopyTable = {
   support_resources: { title: SUPPORT_NOTICE.title, body: SUPPORT_NOTICE.body },
   image_approved: imageNoticeCopy(true, null, null),
   image_rejected: imageNoticeCopy(false, null, null),
+  // Round D · DP: the catalogue decision on a food the member suggested.
+  food_submission_reviewed: FOOD_REVIEW_COPY,
 };
 
 /** A key no table knows: a safe line, never the raw key. */
@@ -312,6 +320,7 @@ export const CLIENT_FILLS: NotificationFillTable = {
   support_resources: () => ({}),
   image_approved: (p) => (p.surface ? imageNoticeCopy(true, p.surface, null) : {}),
   image_rejected: (p) => (p.surface || p.reason_category ? imageNoticeCopy(false, p.surface, p.reason_category) : {}),
+  food_submission_reviewed: (p) => foodReviewCopy(p.status, p.name, p.reason_category),
   ambassador_application_declined: (p) => {
     const on = pDate(p, "next_eligible_on");
     return on ? { body: `We've replied to your application. You can apply again from ${formatNoticeDate(on)}.` } : {};
@@ -366,6 +375,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * booking id, so the calendar's ?rate=<booking> link can't be built);
  * ambassador_application_approved / _declined (ambassador_application) →
  * More with the Referral popup open, where the status card is;
+ * support_resources → Get support, offering recovery-sensitive mode when the
+ * payload's offer_recovery_mode is true (20261222080000);
  * any other kind (not a member's) → nothing in the client UI.
  */
 export function clientNotificationTarget(
@@ -387,10 +398,14 @@ export function clientNotificationTarget(
     case "forum_nickname_reset":
       return "/app/forum/nickname";
     case "support_resources":
-      return "/app/get-support";
+      // 20261222080000: after a form's eating question, with the offer to turn on recovery-sensitive mode.
+      return getSupportPath(n.payload?.offer_recovery_mode === true);
     case "image_approved":
     case "image_rejected":
       return imageHome(n.payload?.surface, "member");
+    case "food_submission_reviewed":
+      // Food › Custom › Custom foods, where the food (and the suggestion) lives.
+      return "/app/food?tab=prep&sub=foods";
     default:
       return null;
   }
@@ -449,12 +464,14 @@ export function notifLook(kind: string): { tone: NotifTone; glyph: NotifGlyph } 
       return { tone: "teal", glyph: "app" };
     case "image_rejected":
       return { tone: "red", glyph: "x" };
+    case "food_submission_reviewed":
+      return { tone: "teal", glyph: "leaf" };
     default:
       return { tone: "grey", glyph: "clock" };
   }
 }
 
-const key = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+const key =(d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
 /** `n.when`: today "9:02 AM"; this past week the weekday "Fri"; older "Oct 16" (or "Oct 16, 2025"). */
 export function notifWhen(iso: string, now: Date = new Date()): string {

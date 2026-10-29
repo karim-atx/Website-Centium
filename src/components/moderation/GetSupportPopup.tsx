@@ -1,14 +1,16 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { HeartHandshake, Phone } from "lucide-react";
+import { HandHeart, HeartHandshake, Phone } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
-import { supportLines, type SupportPlace } from "../../services/moderation/support";
+import { RECOVERY_LINK, RECOVERY_LINK_HINT, supportLines, type SupportPlace } from "../../services/moderation/support";
 
 // "Get support" (Round C Release 2; PLAN S3, undrawn, on the Foundations
 // centred popup in the "ours" geometry). Shown to the person themselves only:
 // after a private message that matched the self-harm list on their own device,
 // on their own held forum post, from the support_resources notice, and from
-// Settings › Help.
+// Settings › Help. 20261222080000: the notice sent after a form's eating
+// question also offers recovery-sensitive mode (onRecoveryMode), a link to
+// the setting; the setting itself only changes on the person's tap there.
 //
 // NEVER "we've told someone": nobody is notified by this popup. A centred
 // popup rather than a sheet, so it can't be swiped away by accident; "I'm OK"
@@ -19,7 +21,9 @@ export const GetSupportPopup: React.FC<{
   onClose: () => void;
   /** Lebanon's lines, or the local emergency number and findahelpline.com. */
   place: SupportPlace;
-}> = ({ open, onClose, place }) => {
+  /** Shows "Turn on recovery-sensitive mode", which opens the setting. */
+  onRecoveryMode?: () => void;
+}> = ({ open, onClose, place, onRecoveryMode }) => {
   const lines = supportLines(place);
   const first = lines.numbers[0];
   return (
@@ -59,6 +63,19 @@ export const GetSupportPopup: React.FC<{
         >
           {place === "lebanon" ? "Outside Lebanon? findahelpline.com" : "Find a helpline near you: findahelpline.com"}
         </a>
+        {onRecoveryMode && (
+          <button
+            type="button"
+            onClick={onRecoveryMode}
+            className="tap flex items-center gap-3 min-h-[48px] px-3.5 bg-cream-card border-t border-charcoal/[0.06] text-left"
+          >
+            <HandHeart size={16} className="shrink-0 text-primary-dark" aria-hidden />
+            <span className="flex-1 min-w-0">
+              <span className="block text-[13px] font-semibold text-charcoal">{RECOVERY_LINK}</span>
+              <span className="block text-[11.5px] leading-[16px] text-charcoal-soft">{RECOVERY_LINK_HINT}</span>
+            </span>
+          </button>
+        )}
       </div>
       <button type="button" onClick={onClose} className="tap mt-2 w-full min-h-[44px] text-[13px] font-bold text-charcoal-soft">
         I'm OK, continue

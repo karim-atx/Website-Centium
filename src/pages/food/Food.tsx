@@ -17,6 +17,7 @@ import {
   targetsFromGoal,
 } from "../../services/nutrition";
 import { copyDiaryEntry, deleteDiaryEntry, getNutritionGoalOn, isRemoteEntryId } from "../../services/food";
+import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { SwipeActions } from "../../components/ui/SwipeActions";
@@ -40,6 +41,8 @@ import { useClientShare } from "../../components/share/client/useClientShare";
 import { ShareEntryButton } from "../../components/share/client/ShareEntryButton";
 import { foodCard } from "../../components/share/client/clientCardModel";
 import { foodFacts } from "../../components/share/client/clientShareData";
+import { isQueuedEntry } from "../../services/food/provisional";
+import { removeQueued } from "../../services/health-log/offlineQueue";
 
 /**
  * Dark mode: the meal cards follow the dark tokens. These are the colours
@@ -86,6 +89,8 @@ const SWIPE_THRESHOLD = 60;
 // dropdown names it ("Dairy-Free").
 const restrictionName = (r: string) => dietaryRestrictionOptions.find((o) => o.value === r)?.label ?? r;
 const SAVE_FAILED = "Couldn't save. Try again.";
+// Round D (O12): a write refused for want of a connection says so.
+const failedLine = (lead: string, offline: boolean) => `${lead} ${offline ? OFFLINE_MESSAGE : "Try again."}`;
 
 // The calorie hero's height (FO1 #4: 101), so its placeholder does not shift the page.
 const HERO_PLACEHOLDER_HEIGHT = 101;
@@ -111,12 +116,15 @@ export default function Food() {
   const dark = useIsDark();
   const hc = !!accessibility.highContrast;
   const online = useOnline();
-  // v6 FO1 O4 / O5: a write that failed, or one tried offline, says
-  // "Couldn't save. Try again." in the shared toast. A failed single delete
+  // v6 FO1 O4 / O5: a write that failed says "Couldn't save. Try again." in
+  // the shared toast; one tried offline says OFFLINE_MESSAGE (Round D, O12). A failed single delete
   // shows the server's message there instead, as main did (release review O6).
   const [saveToast, setSaveToast] = useState<string | null>(null);
   // FO1 K9: the Custom tab's sub-tab, pinned in the fixed header.
-  const [prepSub, setPrepSub] = useState<SubTab>("meals");
+  // Round D · DP: ?tab=prep&sub=foods (the catalogue-decision notice) opens Custom foods.
+  const [prepSub, setPrepSub] = useState<SubTab>(() =>
+    new URLSearchParams(window.location.search).get("sub") === "foods" ? "foods" : "meals"
+  );
   // FO1 #30-#31 / #45 / #49: the lavender washes and hairline, light
   // #AEA1DC at 34 / 12 / 10 / 16%, dark #A991FE (the primary fill), High
   // contrast the filled #5B48B8 at the same strengths (O8).
@@ -127,7 +135,7 @@ export default function Food() {
   const hideNumbers = recoverySensitive || recoveryModePending;
   const navigate = useNavigate();
   const share = useClientShare();
-  const [tab, setTab] = useState<Tab>("diary");
+  const [tab, setTab] = useState<Tab>(() => (new URLSearchParams(window.location.search).get("tab") === "prep" ? "prep" : "diary"));
   const [addOpen, setAddOpen] = useState(false);
   const [addMeal, setAddMeal] = useState<MealType>("lunch");
   // FO7: which meal the sheet suggests for; null from the floating +.
@@ -207,7 +215,7 @@ export default function Food() {
 
   const handleCopyYesterdayMeal = async (meal: MealType) => {
     if (!online) {
-      setSaveToast(SAVE_FAILED);
+      setSaveToast(OFFLINE_MESSAGE);
       return;
     }
     // Each copy is now a real insert, so this awaits the writes and only
@@ -233,6 +241,13 @@ export default function Food() {
    */
   const handleDelete = async (id: string) => {
     setDeleteError(null);
+    // Round D outbox: an entry still waiting on this device is taken out of
+    // the queue too, so it never saves later.
+    if (isQueuedEntry(id)) {
+      if (authUserId) removeQueued(authUserId, id.slice("queued:".length));
+      removeFoodEntry(id);
+      return;
+    }
     if (!isRemoteEntryId(id)) {
       removeFoodEntry(id);
       return;
@@ -240,7 +255,7 @@ export default function Food() {
     // FO1 O4 / O5: one entry's delete that fails (or is tried offline) is
     // the shared toast; the row stays, as the database still has it.
     if (!online) {
-      setSaveToast(SAVE_FAILED);
+      setSaveToast(OFFLINE_MESSAGE);
       return;
     }
     const result = await deleteDiaryEntry(id);
@@ -285,11 +300,13 @@ export default function Food() {
     setBulkBusy(true);
     setDeleteError(null);
     const failed = new Set<string>();
+    let offline = !online;
     for (const e of selectedEntries) {
       if (isRemoteEntryId(e.id)) {
         const result = await deleteDiaryEntry(e.id);
         if (!result.ok) {
           failed.add(e.id);
+          if (result.message === OFFLINE_MESSAGE) offline = true;
           continue;
         }
       }
@@ -298,7 +315,7 @@ export default function Food() {
     setBulkBusy(false);
     setConfirmDelete(false);
     if (failed.size > 0) {
-      setDeleteError(`${itemsLabel(failed.size)} couldn't be deleted. Try again.`);
+      setDeleteError(failedLine(`${itemsLabel(failed.size)} couldn't be deleted.`, offline));
       setSelecting({ ...activeSelection, ids: failed });
       return;
     }
@@ -310,17 +327,20 @@ export default function Food() {
     if (!activeSelection || !authUserId) return;
     setBulkBusy(true);
     let copied = 0;
+    let offline = !online;
     for (const e of selectedEntries) {
       const result = await copyDiaryEntry(authUserId, e, day, meal);
       if (result.ok && result.entry) {
         addFoodEntryRecord(result.entry);
         copied++;
+      } else if (result.message === OFFLINE_MESSAGE) {
+        offline = true;
       }
     }
     setBulkBusy(false);
     setCopyOpen(false);
     if (copied < selectedEntries.length) {
-      setDeleteError(`${itemsLabel(selectedEntries.length - copied)} couldn't be copied. Try again.`);
+      setDeleteError(failedLine(`${itemsLabel(selectedEntries.length - copied)} couldn't be copied.`, offline));
       return;
     }
     setSelecting(null);
@@ -446,7 +466,8 @@ export default function Food() {
               style={{ padding: "14px 16px", gap: 10, border: `0.5px solid ${lav(0.34)}` }}
             >
               <span className="text-charcoal" style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 700 }}>
-                Couldn't load your diary.
+                {/* Round D: offline with nothing kept on this device yet, say so. */}
+                {online ? "Couldn't load your diary." : "You're offline. Your diary will load when you reconnect."}
               </span>
               <button
                 type="button"
@@ -775,6 +796,8 @@ export default function Food() {
                                       toggleSelected(e.id);
                                       return;
                                     }
+                                    // Waiting to save: nothing to edit on the server yet.
+                                    if (isQueuedEntry(e.id)) return;
                                     setEditingEntry(e);
                                   }}
                                   className={clsx(
@@ -799,6 +822,7 @@ export default function Food() {
                                     <span className="block truncate text-[9.5px] leading-[14.3px] text-charcoal-tertiary">
                                       {e.quantity !== 1 ? `${e.quantity} × ` : ""}
                                       {e.unit && e.unit !== "serving" ? e.unit : e.display.serving}
+                                      {isQueuedEntry(e.id) && <span className="font-bold text-status-caution"> · Waiting to save</span>}
                                     </span>
                                   </span>
                                   {!hideNumbers && (

@@ -1,5 +1,7 @@
-import React, { useState } from "react";
-import { Pencil, UtensilsCrossed } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Check, ExternalLink, Pencil, Send, UtensilsCrossed } from "lucide-react";
+import { fetchMyFoodSubmission, suggestFoodForCatalogue } from "../../services/food/onlineSearch";
+import { brandServing, canSuggestForCatalogue, submissionLine, SUGGESTED_LINE, type FoodSubmission } from "../../services/food/onlineSearchModel";
 import { BottomSheet } from "../ui/BottomSheet";
 import { ConfirmCard } from "../ui/ConfirmCard";
 import { useCustomFoodForm } from "./useCustomFoodForm";
@@ -8,6 +10,7 @@ import { foodCategoryIcon } from "../../utils/icons";
 import { deleteCustomFood, type FoodSearchResult } from "../../services/food";
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { FOOD_DARK } from "./foodDark";
 import { textPx } from "../../theme/textSize";
 
@@ -33,11 +36,45 @@ export const CustomFoodSheet: React.FC<{
 }> = ({ food, startEditing = false, onClose, onSaved, onDeleted }) => {
   const { syncCustomFood, forgetCustomFood } = useApp();
   const dark = useIsDark();
+  // Round D (R3): name and serving only in recovery-sensitive mode.
+  const hide = useHideNumbers();
   const [editing, setEditing] = useState(startEditing);
   const [shown, setShown] = useState(food);
   const [confirm, setConfirm] = useState<null | "delete" | "discard-back" | "discard-close">(null);
   const [busy, setBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // Round D · DP: "Suggest for the catalogue", with the newest suggestion's
+  // status from my_food_submissions (20261222070000): waiting, added, or not
+  // added with the reason category (then it can be suggested again). "sent"
+  // shows at once after a send; sending again while one waits returns it.
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggested, setSuggested] = useState(false);
+  const [submission, setSubmission] = useState<{ foodId: string; value: FoodSubmission | null } | null>(null);
+  const shownId = shown?.id ?? null;
+  const suggestable = !!shown && canSuggestForCatalogue(shown);
+  useEffect(() => {
+    if (!shownId || !suggestable) return;
+    let live = true;
+    void fetchMyFoodSubmission(shownId).then((value) => {
+      if (live) setSubmission({ foodId: shownId, value });
+    });
+    return () => {
+      live = false;
+    };
+  }, [shownId, suggestable]);
+  const suggestion = suggested
+    ? { line: SUGGESTED_LINE, canSuggest: false }
+    : submissionLine(submission?.foodId === shownId ? submission.value : null);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
+  const suggest = async () => {
+    if (!shown || suggesting) return;
+    setSuggesting(true);
+    setSuggestError(null);
+    const r = await suggestFoodForCatalogue(shown.id);
+    setSuggesting(false);
+    if (r.ok) setSuggested(true);
+    else setSuggestError(r.message);
+  };
 
   const form = useCustomFoodForm({
     editing: shown,
@@ -123,9 +160,10 @@ export const CustomFoodSheet: React.FC<{
                 <p className="truncate" style={{ margin: 0, fontSize: textPx(17), fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>
                   {shown.name}
                 </p>
-                <p style={{ margin: "2px 0 0", fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-muted))" }}>{shown.servingLabel}</p>
+                <p style={{ margin: "2px 0 0", fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-muted))" }}>{brandServing(shown.brand, shown.servingLabel)}</p>
               </div>
             </div>
+            {!hide && (
             <div className="grid grid-cols-4" style={{ gap: 7, marginTop: 16 }}>
               {[
                 [`${Math.round(shown.calories)}`, "kcal"],
@@ -139,13 +177,74 @@ export const CustomFoodSheet: React.FC<{
                 </div>
               ))}
             </div>
+            )}
             {shown.barcode && (
               <div
                 className="flex items-center justify-between"
-                style={{ marginTop: 10, background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 12, padding: "13px 14px", fontSize: textPx(13.5) }}
+                style={{ marginTop: hide ? 16 : 10, background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 12, padding: "13px 14px", fontSize: textPx(13.5) }}
               >
                 <span style={{ color: dark ? FOOD_DARK.label : "#575863" }}>Barcode</span>
                 <span style={{ color: "rgb(var(--c-charcoal))", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{shown.barcode}</span>
+              </div>
+            )}
+            {/* Round D · DP: where a food found online came from. */}
+            {shown.externalSource && (
+              <p style={{ margin: "12px 2px 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", lineHeight: 1.45 }}>
+                {shown.externalSource === "usda_fdc" ? (
+                  "Found in USDA FoodData Central (public domain)."
+                ) : (
+                  <>
+                    Product data from Open Food Facts, available under the Open Database License.
+                    {shown.externalRef && (
+                      <>
+                        {" "}
+                        <a
+                          href={`https://world.openfoodfacts.org/product/${encodeURIComponent(shown.externalRef)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center"
+                          style={{ color: dark ? FOOD_DARK.lavInk : "rgb(var(--thi-7d67d9))", fontWeight: 600, gap: 3 }}
+                        >
+                          View on Open Food Facts <ExternalLink size={11} />
+                        </a>
+                      </>
+                    )}
+                  </>
+                )}
+              </p>
+            )}
+            {/* Round D · DP: a USDA-found or typed food can be proposed for the
+                shared catalogue; Open Food Facts data never can (ATXL0). */}
+            {canSuggestForCatalogue(shown) && (
+              <div style={{ marginTop: 14, borderTop: `1px solid ${dark ? FOOD_DARK.rule : "#EFEFF2"}`, paddingTop: 12 }}>
+                {!suggestion.canSuggest ? (
+                  <p className="flex items-center" style={{ margin: 0, gap: 6, fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-soft))" }}>
+                    <Check size={14} className="shrink-0" /> {suggestion.line}
+                  </p>
+                ) : (
+                  <>
+                    {suggestion.line && (
+                      <p style={{ margin: "0 2px 8px", fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-soft))", lineHeight: 1.45 }}>{suggestion.line}</p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void suggest()}
+                      disabled={suggesting}
+                      className="tap w-full inline-flex items-center justify-center disabled:opacity-60"
+                      style={{ height: 44, gap: 7, borderRadius: 12, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: textPx(13.5), fontWeight: 600 }}
+                    >
+                      <Send size={14} /> {suggesting ? "Sending…" : suggestion.line ? "Suggest it again" : "Suggest for the catalogue"}
+                    </button>
+                    <p style={{ margin: "6px 2px 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", lineHeight: 1.45 }}>
+                      Our team checks it first. If it's added, everyone can find it in search.
+                    </p>
+                  </>
+                )}
+                {suggestError && (
+                  <p className="text-xs font-semibold text-status-high" style={{ marginTop: 8 }}>
+                    {suggestError}
+                  </p>
+                )}
               </div>
             )}
             {deleteError && (

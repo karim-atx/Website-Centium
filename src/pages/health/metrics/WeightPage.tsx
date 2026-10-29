@@ -304,7 +304,8 @@ export default function WeightPage() {
       range={range}
       onRangeChange={setRange}
       menu={menu}
-      cta={{ label: "Log weight", icon: <Plus size={16} />, onClick: () => (offline ? setToast(OFFLINE_ACTION) : setLogOpen(true)) }}
+      // Round D O4: the sheet queues a new weight offline, so it opens either way.
+      cta={{ label: "Log weight", icon: <Plus size={16} />, onClick: () => setLogOpen(true) }}
     >
       <WeightHero
         data={hero}

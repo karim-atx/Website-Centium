@@ -10,6 +10,8 @@ import {
 } from "../../services/nutrition";
 import { textPx } from "../../theme/textSize";
 import { useIsDark } from "../../hooks/useIsDark";
+import { browserOffline, enqueueLog, isOfflineFailure, newQueueId, SAVED_ON_DEVICE } from "../../services/health-log/offlineQueue";
+import { Toast } from "../ui/Toast";
 import { CycleWidget } from "./widgets/CycleWidget";
 import { StepsWidget } from "./widgets/StepsWidget";
 import { WeightWidget } from "./widgets/WeightWidget";
@@ -329,12 +331,14 @@ export const HomeWidget: React.FC<{
   editMode?: boolean;
 }> = ({ widget, onWaterClick, editMode = false }) => {
   const navigate = useNavigate();
-  const { user, water, waterGoalMl, foodLog, nutritionGoal, selectedDate, recoverySensitive, recoveryModePending, addWater } = useApp();
+  const { user, water, waterGoalMl, foodLog, nutritionGoal, selectedDate, recoverySensitive, recoveryModePending, logWaterDrink, today, authUserId } = useApp();
   const isLarge = widget.size === "large";
   const size = widget.size;
   // Water quick-add on the small tile: one tap adds a glass, and a tap in
   // flight cannot add a second one.
   const [addingWater, setAddingWater] = React.useState(false);
+  // Round D O4: the quick-add's outcome (it used to fail silently).
+  const [waterToast, setWaterToast] = React.useState<{ message: string; error: boolean } | null>(null);
 
   const totals = sumNutrition(foodLog.filter((e) => e.date === selectedDate));
   const targets = targetsFromGoal(nutritionGoal);
@@ -416,11 +420,37 @@ export const HomeWidget: React.FC<{
         const quickAdd = async (e: React.MouseEvent) => {
           e.stopPropagation();
           if (addingWater) return;
+          // Round D O4: offline, the glass goes into the device queue the
+          // water sheet uses, and is sent when the connection is back. Online
+          // it is one log_water call. The glass is filed under the selected
+          // day (now for today, midday for an earlier day) and keeps one id,
+          // so a lost answer replays as already_saved.
+          const loggedAt = selectedDate === today ? new Date() : new Date(`${selectedDate}T12:00:00`);
+          const requestId = newQueueId();
+          const queue = () => {
+            if (!authUserId) return;
+            enqueueLog(authUserId, { kind: "water", ml: WATER_QUICK_ADD_ML, day: selectedDate, loggedAt: loggedAt.toISOString() }, requestId);
+            setWaterToast({ message: SAVED_ON_DEVICE, error: false });
+          };
+          if (browserOffline()) return queue();
           setAddingWater(true);
-          await addWater(WATER_QUICK_ADD_ML);
+          const result = await logWaterDrink(WATER_QUICK_ADD_ML, loggedAt, requestId);
           setAddingWater(false);
+          if (result.ok) return;
+          if (isOfflineFailure(result)) return queue();
+          setWaterToast({ message: result.message, error: true });
         };
-        return wrap(
+        // The toast sits outside the tile's tap target: a portal still
+        // bubbles React clicks to its parents, which would open the sheet.
+        const toast = (
+          <Toast
+            open={waterToast !== null}
+            message={waterToast?.message ?? ""}
+            tone={waterToast?.error ? "error" : "default"}
+            onExpire={() => setWaterToast(null)}
+          />
+        );
+        return <>{wrap(
           onClick,
           shell(
             "rgba(143,192,232,.17)",
@@ -453,7 +483,7 @@ export const HomeWidget: React.FC<{
               </div>
             </>
           )
-        );
+        )}{toast}</>;
       }
       // Master handover item 7: the large tile is LargeWaterWidget above.
       return wrap(onClick, <LargeWaterWidget water={water} waterGoalMl={waterGoalMl} pct={pct} />);

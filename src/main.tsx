@@ -5,6 +5,7 @@ import './index.css'
 import './styles/theme-palette.css'
 import App from './App.tsx'
 import { preloadAppPages } from './appPagesLazy'
+import { ErrorBoundary } from './components/navigation/ErrorBoundary'
 
 // Registers the service worker that receives push notifications (src/sw.ts).
 //
@@ -35,6 +36,10 @@ preloadAppPages()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {/* Round D O1: a render error (offline, most often a chunk that can't
+        download) shows a panel with Retry instead of a blank page. */}
+    <ErrorBoundary fullScreen>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 )

@@ -23,6 +23,7 @@ import { dietaryRestrictionOptions } from "../../utils/dietaryRestrictions";
 // Item 8 shares Food's own tab bar (labels + literal flex-weights) instead
 // of a second, drifting copy of them.
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { textPx } from "../../theme/textSize";
 
 // FO2.2 / FO4.2 / FO5.2: each Weight Goal button carries its trend icon.
@@ -142,7 +143,7 @@ export default function GoalsPanel({
   onAllergiesSaved,
 }: { pro?: GoalsPanelPro; clientTargets?: ProfessionalTargets | null; onAllergiesSaved?: () => void } = {}) {
   const app = useApp();
-  const { user, healthSeries, metricValues, dietaryRestriction, setDietaryRestriction, pregnancy, cycleOffered, authUserId, recoverySensitive, recoveryModePending } = app;
+  const { user, healthSeries, metricValues, dietaryRestriction, setDietaryRestriction, pregnancy, cycleOffered, authUserId } = app;
   const proTargets = pro ? null : clientTargets ?? null;
   const myAllergies = useMyAllergies(!pro);
   const [allergiesOpen, setAllergiesOpen] = useState(false);
@@ -156,6 +157,9 @@ export default function GoalsPanel({
     pro ? pro.onChange({ ...pro.goal, weightGoal: g, weeklyRateKg: rate, desiredWeightKg: g === pro.goal.weightGoal ? pro.goal.desiredWeightKg : undefined }) : app.setWeightGoal(g, rate);
   const setMacroSplit = (s: MacroSplit) => (pro ? pro.onChange({ ...pro.goal, macroSplit: s }) : app.setMacroSplit(s));
   const dark = useIsDark();
+  // Round D (R1): the client's own tab only; the professional Targets view
+  // (pro) never changes for a client's recovery setting.
+  const hide = useHideNumbers() && !pro;
   const CARD = dark ? CARD_DARK : CARD_LIGHT;
   const TITLE = dark ? TITLE_DARK : TITLE_LIGHT;
   // What the stepper shows: the user's edit, or (null) the saved target, so it
@@ -332,8 +336,21 @@ export default function GoalsPanel({
           to my targets" writes into the calorie goal two cards below, so it
           belongs on the same screen as that number rather than somewhere the
           user has to remember what it did. */}
-      {!pro && cycleOffered && pregnancy && <PregnancyNutritionCard pregnancy={pregnancy} />}
+      {!pro && !hide && cycleOffered && pregnancy && <PregnancyNutritionCard pregnancy={pregnancy} />}
 
+      {/* Round D (R1): recovery-sensitive mode (or still unknown) replaces
+          every target with one neutral card: no weight goal, desired weight,
+          rate, TDEE, calorie target or macro grams. Dietary restriction and
+          allergies stay, in their own card below. */}
+      {hide ? (
+        <section style={CARD}>
+          <p style={{ ...TITLE, marginBottom: 8 }}>Goals &amp; macros</p>
+          <p style={{ margin: 0, fontSize: textPx(12.5), lineHeight: 1.45, color: "rgb(var(--c-charcoal-soft))" }}>
+            Targets are hidden in recovery-sensitive mode.
+          </p>
+        </section>
+      ) : (
+      <>
       <section style={CARD}>
         <p style={{ ...TITLE, marginBottom: 12 }}>Weight goal</p>
         <div className="grid grid-cols-3" style={{ gap: 6 }}>
@@ -656,12 +673,15 @@ export default function GoalsPanel({
         </p>
       </section>
       )}
+      </>
+      )}
 
       {!pro && (
       <section style={CARD}>
-        <p style={{ ...TITLE, marginBottom: 12 }}>Plan</p>
+        <p style={{ ...TITLE, marginBottom: 12 }}>{hide ? "Diet & allergies" : "Plan"}</p>
         <div className="flex gap-1.5 flex-wrap">
-          {(["custom", "existing"] as PlanType[]).map((p) => (
+          {/* The plan chips set targets, so they go with them in recovery mode. */}
+          {!hide && (["custom", "existing"] as PlanType[]).map((p) => (
             <Chip
               key={p}
               active={nutritionGoal.planType === p}
@@ -721,8 +741,8 @@ export default function GoalsPanel({
             </span>
           </Chip>
         </div>
-        {planError && <p className="text-[10.5px] font-semibold text-[#C0392B] dark:text-[#FF6B5E] mt-1.5">{planError}</p>}
-        {!planError && nutritionGoal.planType === "existing" && (
+        {!hide && planError && <p className="text-[10.5px] font-semibold text-[#C0392B] dark:text-[#FF6B5E] mt-1.5">{planError}</p>}
+        {!hide && !planError && nutritionGoal.planType === "existing" && (
           <p className="text-[10.5px] text-charcoal-faint mt-1.5">
             {proTargets?.professionalName || user.linkedProfessionalName} is responsible for your goals and macros while this plan is active: weight goal, calorie target and macro distribution can only be changed by them.
           </p>
@@ -774,7 +794,7 @@ export default function GoalsPanel({
       )}
 
       {/* Release 3 · CU3: the meal plan a professional assigned (nothing without one). */}
-      {!pro && authUserId && <MealPlanCard userId={authUserId} today={today} card={CARD} title={TITLE} hideNumbers={recoverySensitive || recoveryModePending} />}
+      {!pro && authUserId && <MealPlanCard userId={authUserId} today={today} card={CARD} title={TITLE} hideNumbers={hide} />}
 
       {!pro && allergiesOpen && (
         <AllergiesSheet

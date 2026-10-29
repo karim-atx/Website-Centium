@@ -21,6 +21,7 @@ import { todayLocal } from "../../utils/date";
 export const PersonalReminderSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const { authUserId } = useApp();
   const [loaded, setLoaded] = useState<"loading" | "ready" | "error">("loading");
+  const [loadError, setLoadError] = useState("");
   const [existing, setExisting] = useState<PersonalReminder | null>(null);
   const [cadence, setCadence] = useState("14");
   const [nextDue, setNextDue] = useState(todayLocal());
@@ -34,6 +35,7 @@ export const PersonalReminderSheet: React.FC<{ open: boolean; onClose: () => voi
     void fetchPersonalReminder(authUserId).then((r) => {
       if (cancelled) return;
       if (!r.ok) {
+        setLoadError(r.message);
         setLoaded("error");
         return;
       }
@@ -63,29 +65,29 @@ export const PersonalReminderSheet: React.FC<{ open: boolean; onClose: () => voi
   const save = async () => {
     if (!authUserId || !valid) return;
     setBusy(true);
-    const ok = await savePersonalReminder(authUserId, { cadenceDays: days, nextDueOn: nextDue, enabled });
+    const r = await savePersonalReminder(authUserId, { cadenceDays: days, nextDueOn: nextDue, enabled });
     setBusy(false);
-    if (ok) {
+    if (r.ok) {
       setExisting({ cadenceDays: days, nextDueOn: nextDue, enabled });
       setMessage("Saved.");
     } else {
-      setMessage("Couldn't save. Please try again.");
+      setMessage(r.message);
     }
   };
 
   const remove = async () => {
     if (!authUserId) return;
     setBusy(true);
-    const ok = await deletePersonalReminder(authUserId);
+    const r = await deletePersonalReminder(authUserId);
     setBusy(false);
-    if (ok) {
+    if (r.ok) {
       setExisting(null);
       setCadence("14");
       setNextDue(todayLocal());
       setEnabled(true);
       setMessage("Reminder removed.");
     } else {
-      setMessage("Couldn't remove it. Please try again.");
+      setMessage(r.message);
     }
   };
 
@@ -94,7 +96,7 @@ export const PersonalReminderSheet: React.FC<{ open: boolean; onClose: () => voi
       {loaded === "loading" ? (
         <p className="text-[13px] text-charcoal-faint">Loading…</p>
       ) : loaded === "error" ? (
-        <p className="text-[13px] text-charcoal-faint">Couldn't load your reminder. Please try again.</p>
+        <p className="text-[13px] text-charcoal-faint">{loadError}</p>
       ) : (
         <div className="space-y-4">
           <label className="block">

@@ -21,6 +21,7 @@ import {
   type MeasurementType,
 } from "../../services/measurements/sites";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { textPx } from "../../theme/textSize";
 
 // Recording one set of tape measurements.
@@ -69,6 +70,7 @@ export const AddMeasurementsSheet: React.FC<{
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dark = useIsDark();
+  const hideNumbers = useHideNumbers();
   const c = (key: keyof typeof COLORS) => COLORS[key][dark ? 1 : 0];
 
   // SEEDED ONCE, AND REMOUNTED PER OPENING. The caller keys this on the
@@ -124,6 +126,10 @@ export const AddMeasurementsSheet: React.FC<{
   };
 
   const now = new Date();
+
+  // Recovery-sensitive mode (AJ R2): body measurements are hidden, so the
+  // sheet renders nothing even if a caller opens it.
+  if (hideNumbers) return null;
 
   return (
     <BottomSheet open={open} onClose={onClose} title="Add measurements">

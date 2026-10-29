@@ -1,8 +1,9 @@
 import React, { useRef, useState } from "react";
 import { ShareEditorSheet, type EditorResult, type WinConsent } from "./ShareEditorSheet";
-import { ShareOptionsSheet } from "./ShareOptionsSheet";
+import { ShareOptionsSheet, type RecordResult } from "./ShareOptionsSheet";
 import { cardPayload, type CardPro, type CardSpec, type ShareFormat } from "./shareCardModel";
-import { recordErrorMessage, recordSharedItem, sharedItemPath, type ItemKind } from "../../services/share";
+import type { HeldReason } from "./heldShareModel";
+import { fetchMyOwnedSharedItems, recordErrorMessage, recordSharedItem, sharedItemPath, type ItemKind } from "../../services/share";
 import { siteHref } from "../../config/site";
 
 /**
@@ -17,6 +18,11 @@ import { siteHref } from "../../config/site";
  *
  * Every card is recorded: a practice milestone as kind `milestone` (W8-3,
  * 20261216020000), so it has a public link like the others.
+ *
+ * Round D · DV: the word lists may hold a card as it is recorded. Its state
+ * is read straight back (my_shared_items); a held card hands out no link and
+ * the options sheet shows the held note instead of exporting. If that read
+ * fails the export goes ahead as before (the link then answers nothing).
  */
 export const ShareFlow: React.FC<{
   open: boolean;
@@ -29,7 +35,7 @@ export const ShareFlow: React.FC<{
   onShared?: () => void;
 }> = ({ open, onClose, spec, pro, kind, win, statRows, onShared }) => {
   const [result, setResult] = useState<EditorResult | null>(null);
-  const recorded = useRef(new Map<string, string>());
+  const recorded = useRef(new Map<string, { id: string; held: HeldReason | null }>());
 
   const close = () => {
     setResult(null);
@@ -37,19 +43,23 @@ export const ShareFlow: React.FC<{
     onClose();
   };
 
-  const onRecord = async (format: ShareFormat): Promise<{ ok: true; link: string | null } | { ok: false; message: string }> => {
+  const onRecord = async (format: ShareFormat): Promise<RecordResult> => {
     if (!result) return { ok: false, message: "Couldn't share the card. Try again." };
     const shown = { ...spec, stats: spec.stats.filter((_, i) => !result.hide.includes(i)) };
     const payload = cardPayload(shown, format, result.style, win ? (result.client ?? null) : null);
     const key = JSON.stringify(payload);
     const link = (id: string) => siteHref(sharedItemPath(id));
     const hit = recorded.current.get(key);
-    if (hit) return { ok: true, link: link(hit) };
+    if (hit) return { ok: true, link: hit.held ? null : link(hit.id), held: hit.held };
     const r = await recordSharedItem(kind, format, payload, win?.requestId ?? null);
     if (!r.ok) return { ok: false, message: r.offline ? "You're offline. Try again when you're back online." : recordErrorMessage(r.code, r.message) };
-    recorded.current.set(key, r.data);
+    // DV: was it held as it was recorded? A failed read lets the export go ahead.
+    const mine = await fetchMyOwnedSharedItems();
+    const item = mine.ok ? mine.data.find((it) => it.id === r.data) : undefined;
+    const held = item?.state === "held_for_review" ? (item.heldReason ?? "other") : null;
+    recorded.current.set(key, { id: r.data, held });
     onShared?.();
-    return { ok: true, link: link(r.data) };
+    return { ok: true, link: held ? null : link(r.data), held };
   };
 
   return (

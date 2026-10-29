@@ -10,6 +10,8 @@ import { Toast } from "../../../components/ui/Toast";
 import { shiftDate } from "../../../utils/date";
 import { useApp } from "../../../context/AppContext";
 import { useOnline } from "../../../hooks/useOnline";
+import { useHideNumbers } from "../../../hooks/useHideNumbers";
+import { textPx, linePx } from "../../../theme/textSize";
 import { CalendarPickerSheet } from "../../../components/dashboard/CalendarPickerSheet";
 import {
   CapsLabel,
@@ -17,7 +19,10 @@ import {
   ErrorCard,
   FreshnessLine,
   HistoryCard,
+  MetricHero,
   MetricPage,
+  metricTextInk,
+  useHealthMode,
   OFFLINE_CACHED,
   StatCard,
   StatEmpty,
@@ -65,7 +70,9 @@ const n = (v: number) => Math.round(v).toLocaleString("en-GB");
 const iconInk = { color: "rgb(var(--th-7d6bb5))" };
 
 export default function CaloriesPage() {
-  const { healthSeries, metricsError } = useApp();
+  const { healthSeries, metricsError, recoveryModePending } = useApp();
+  const hideNumbers = useHideNumbers();
+  const { dark } = useHealthMode();
   const navigate = useNavigate();
   const online = useOnline();
   const { range, setRange, anchor, setAnchor, openDay, today } = useMetricRangeState("week");
@@ -129,6 +136,28 @@ export default function CaloriesPage() {
       }}
     />
   );
+
+  // --- recovery-sensitive: no number anywhere (AJ R4, the Weight page's state) ----------
+  // Held while the setting is still being read, so a kcal figure never flashes.
+  if (hideNumbers) {
+    return (
+      <MetricPage metric="calories" title="Calories burned" range={range} onRangeChange={setRange} menu={menu.filter((m) => m.value !== "date")}>
+        <MetricHero metric="calories" pattern={2} padding="16px" loading={recoveryModePending} ariaLabel="Calorie numbers hidden">
+          <div data-cal-recovery style={{ padding: "18px 0" }}>
+            <p style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>Calorie numbers are hidden while recovery-sensitive mode is on.</p>
+            <button
+              type="button"
+              onClick={() => navigate("/app/profile")}
+              className="tap relative before:absolute before:-inset-y-[13px] before:-inset-x-1 before:content-['']"
+              style={{ marginTop: 8, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: metricTextInk("calories", dark) }}
+            >
+              Change in Profile
+            </button>
+          </div>
+        </MetricHero>
+      </MetricPage>
+    );
+  }
 
   if (!loading && !hasAny) {
     return (

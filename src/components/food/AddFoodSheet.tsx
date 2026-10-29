@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { sheetChipStyle, sheetGreyStyleFor, sheetLabelStyleFor } from "../ui/sheetChip";
 import { Button } from "../ui/Button";
@@ -15,8 +15,14 @@ import {
   getFoodsByIds,
   createFoodByBarcode,
   logFoodEntry,
+  searchEmptyLine,
+  type FoodSearchFailure,
   type FoodSearchResult,
 } from "../../services/food";
+import { OFFLINE_MESSAGE } from "../../services/network-error";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
+import { useOnline } from "../../hooks/useOnline";
+import { NutritionDetails } from "./NutritionDetails";
 import { getFoodNutrientsById } from "../../services/food-nutrients";
 import { fetchFoodConflicts } from "../../services/nutrition/client";
 import { addNotice, type ConflictRow } from "../../services/nutrition/clientNutritionModel";
@@ -36,6 +42,12 @@ import { mealForCurrentTime } from "../../utils/mealForTime";
 import { useIsDark } from "../../hooks/useIsDark";
 import { FOOD_DARK } from "./foodDark";
 import { textPx } from "../../theme/textSize";
+import { enqueueLog, isOfflineFailure, newQueueId, SAVED_ON_DEVICE } from "../../services/health-log/offlineQueue";
+import { provisionalFoodEntry } from "../../services/food/provisional";
+import type { LogFoodEntryParams } from "../../services/food";
+import { searchFoodsOnline } from "../../services/food/onlineSearch";
+import { brandServing, onlineQuery, type OnlineFood, type OnlineSearchOutcome } from "../../services/food/onlineSearchModel";
+import { FoundFoodCard, OnlineResults, SearchOnlineButton } from "./OnlineFoodSearch";
 
 // Mobile v5.1 R3, dark mode (no light islands): a picked row's #F7F5FB is
 // primary.tint.2 dark, and the empty pick circle's #D1CAEB ring is
@@ -109,6 +121,10 @@ export const AddFoodSheet: React.FC<{
     nutritionGoal,
   } = useApp();
   const dark = useIsDark();
+  // Round D (R3): in recovery-sensitive mode every step shows a food's name
+  // and serving only — no kcal on rows, no macro strip, no nutrient breakdown.
+  const hide = useHideNumbers();
+  const online = useOnline();
   const sheetGreyStyle = sheetGreyStyleFor(dark);
   const sheetLabelStyle = sheetLabelStyleFor(dark);
   const [query, setQuery] = useState("");
@@ -157,6 +173,8 @@ export const AddFoodSheet: React.FC<{
   // --- real catalog -------------------------------------------------------
   const [results, setResults] = useState<FoodSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  // O3: why an empty result is empty, so offline doesn't read as "not in our catalog".
+  const [searchFailed, setSearchFailed] = useState<FoodSearchFailure | null>(null);
   const [suggestionFoods, setSuggestionFoods] = useState<Map<string, FoodSearchResult>>(new Map());
   const [scanNotice, setScanNotice] = useState(false);
   // FO9 multi-select: each picked food with the quantity it will log at.
@@ -186,6 +204,30 @@ export const AddFoodSheet: React.FC<{
   const [saving, setSaving] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
+  // --- Round D · DP: search online ----------------------------------------
+  // Started only by the user's tap (30 an hour), never as they type. The term
+  // searched opens the online step; `onlineResult` is null while it runs; a
+  // picked result waits on its confirm card until the user saves it.
+  const [onlineTerm, setOnlineTerm] = useState<string | null>(null);
+  const [onlineResult, setOnlineResult] = useState<OnlineSearchOutcome | null>(null);
+  const [foundFood, setFoundFood] = useState<OnlineFood | null>(null);
+  const onlineRun = useRef(0);
+  const searchOnline = (term: string) => {
+    const run = ++onlineRun.current;
+    setOnlineTerm(term);
+    setOnlineResult(null);
+    setFoundFood(null);
+    void searchFoodsOnline(term).then((r) => {
+      if (run === onlineRun.current) setOnlineResult(r);
+    });
+  };
+  const closeOnline = () => {
+    onlineRun.current++;
+    setOnlineTerm(null);
+    setOnlineResult(null);
+    setFoundFood(null);
+  };
+
   // Search runs against Supabase, so it is debounced: a query per keystroke
   // would be a request per keystroke. FO7: nothing is fetched until the user
   // types — the empty box shows their own suggestions, not the database.
@@ -195,14 +237,16 @@ export const AddFoodSheet: React.FC<{
     const term = query.trim();
     if (!term) {
       setResults([]);
+      setSearchFailed(null);
       setLoading(false);
       return;
     }
     setLoading(true);
     const timer = window.setTimeout(() => {
-      void searchFoods(term).then((rows) => {
+      void searchFoods(term).then((r) => {
         if (cancelled) return;
-        setResults(rows);
+        setResults(r.foods);
+        setSearchFailed(r.failure);
         setLoading(false);
       });
     }, 250);
@@ -282,6 +326,8 @@ export const AddFoodSheet: React.FC<{
     setMultiSaving(true);
     setMultiError(null);
     const failed = new Map(picked);
+    // O12: whether any failure was the connection, so the line can say so.
+    let offlineFailure = false;
     // Release 3 · CU13: a food with an allergen the client has is never added.
     const blocked: string[] = [];
     for (const [id, p] of picked) {
@@ -295,18 +341,23 @@ export const AddFoodSheet: React.FC<{
         failed.delete(id);
         continue;
       }
-      const result = await logFoodEntry({
-        userId: authUserId,
+      const params: Omit<LogFoodEntryParams, "userId"> = {
         food: p.food,
         quantity: p.quantity,
         unit: p.unit,
         meal: target,
         date: selectedDate,
         loggedVia: p.food.barcode ? "barcode" : "search",
-      });
+      };
+      const result = await logFoodEntry({ userId: authUserId, ...params });
       if (result.ok && result.entry) {
         addFoodEntryRecord(result.entry);
         failed.delete(id);
+      } else if (isOfflineFailure(result)) {
+        // Round D outbox: kept on this device, saved on reconnect.
+        keepOnDevice(params);
+        failed.delete(id);
+        offlineFailure = true;
       }
     }
     setMultiSaving(false);
@@ -319,10 +370,14 @@ export const AddFoodSheet: React.FC<{
     if (failed.size > 0) {
       // What didn't save stays selected, so trying again logs only those.
       setPicked(failed);
-      setMultiError(`${failed.size} of ${picked.size} couldn't be saved. Try again.`);
+      setMultiError(
+        offlineFailure || !navigator.onLine
+          ? `${failed.size} of ${picked.size} couldn't be saved. ${OFFLINE_MESSAGE}`
+          : `${failed.size} of ${picked.size} couldn't be saved. Try again.`
+      );
       return;
     }
-    setAddedMessage(`Added ${added} food${added === 1 ? "" : "s"} to ${detailMealLabels[target]}.`);
+    setAddedMessage(offlineFailure ? SAVED_ON_DEVICE : `Added ${added} food${added === 1 ? "" : "s"} to ${detailMealLabels[target]}.`);
     resetAndClose();
   };
 
@@ -333,7 +388,9 @@ export const AddFoodSheet: React.FC<{
   // getFoodNutrientsById's contract that's always null, never an error.
   useEffect(() => {
     if (!selectedFood || selectedFood.source !== "catalog") {
-      setRawNutrients(null);
+      // Round D · DP: a custom food carries its own per-serving map (a food
+      // saved from an online result, or one typed with advanced nutrients).
+      setRawNutrients(selectedFood?.source === "custom" && selectedFood.nutrients ? selectedFood.nutrients : null);
       setNutrientsLoading(false);
       return;
     }
@@ -463,6 +520,10 @@ export const AddFoodSheet: React.FC<{
     setBarcodeError(null);
     setSaving(false);
     setAddError(null);
+    onlineRun.current++;
+    setOnlineTerm(null);
+    setOnlineResult(null);
+    setFoundFood(null);
     onClose();
   }, [onClose]);
 
@@ -478,6 +539,14 @@ export const AddFoodSheet: React.FC<{
    * Failures surface. A silent no-op would leave someone believing they had
    * logged a meal they had not, which in a food diary is worse than an error.
    */
+  /** Round D outbox: keeps an entry on this device and shows it in the diary until it saves. */
+  const keepOnDevice = (params: Omit<LogFoodEntryParams, "userId">) => {
+    if (!authUserId) return;
+    const qid = newQueueId();
+    enqueueLog(authUserId, { kind: "food", params, provisionalId: `queued:${qid}` }, qid);
+    addFoodEntryRecord(provisionalFoodEntry(params, qid));
+  };
+
   const handleAdd = async () => {
     if (!selectedFood || saving || addBlocked) return;
     if (!authUserId) {
@@ -487,8 +556,7 @@ export const AddFoodSheet: React.FC<{
     setSaving(true);
     setAddError(null);
 
-    const result = await logFoodEntry({
-      userId: authUserId,
+    const params: Omit<LogFoodEntryParams, "userId"> = {
       food: selectedFood,
       quantity,
       unit,
@@ -503,9 +571,18 @@ export const AddFoodSheet: React.FC<{
               fetchedAt: offAttribution.attribution.fetchedAt,
             }
           : undefined,
-    });
+    };
+    const result = await logFoodEntry({ userId: authUserId, ...params });
 
     setSaving(false);
+    // Round D outbox: no connection, so the entry is kept on this device and
+    // shows in the diary as "Waiting to save" until it lands.
+    if (!result.ok && isOfflineFailure(result)) {
+      keepOnDevice(params);
+      setAddedMessage(SAVED_ON_DEVICE);
+      resetAndClose();
+      return;
+    }
     if (!result.ok || !result.entry) {
       setAddError(result.message ?? "Could not save that entry.");
       return;
@@ -561,7 +638,7 @@ export const AddFoodSheet: React.FC<{
   };
 
   const handleCreateBarcodeFood = async () => {
-    if (!barcodeDraft.name.trim() || !barcodeDraft.calories) return;
+    if (!barcodeDraft.name.trim() || (!hide && !barcodeDraft.calories)) return;
     setCreating(true);
     setBarcodeError(null);
     const result = await createFoodByBarcode({
@@ -616,9 +693,9 @@ export const AddFoodSheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={resetAndClose}
-        title={advancedOpen ? "Nutrient details" : "Add Food"}
+        title={advancedOpen && !hide ? "Nutrient details" : "Add Food"}
         onBack={
-          advancedOpen
+          advancedOpen && !hide
             ? () => setAdvancedOpen(false)
             : () => {
                 // A suggestion prefilled its last quantity; the next pick starts fresh.
@@ -629,7 +706,7 @@ export const AddFoodSheet: React.FC<{
               }
         }
       >
-        {advancedOpen ? (
+        {advancedOpen && !hide ? (
           <div className="animate-fade-slide-up flex flex-col gap-2.5">
             <p style={{ fontSize: textPx(13), color: "rgb(var(--c-charcoal-soft))", margin: "0 2px 2px" }}>
               {selectedFood.name} ·{" "}
@@ -675,7 +752,7 @@ export const AddFoodSheet: React.FC<{
                 <p style={{ margin: "2px 0 0", fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-muted))" }}>
                   {adjusting
                     ? `${unit === "serving" ? (quantity === 1 ? selectedFood.servingLabel : `${quantity} × ${selectedFood.servingLabel}`) : `${quantity} ${unit}`} · selected`
-                    : `${selectedFood.servingLabel}${selectedFood.isVerified ? " · USDA verified" : " · estimate"}`}
+                    : `${brandServing(selectedFood.brand, selectedFood.servingLabel)}${selectedFood.isVerified ? " · USDA verified" : " · estimate"}`}
                 </p>
               </div>
             </div>
@@ -737,6 +814,10 @@ export const AddFoodSheet: React.FC<{
             </div>
             )}
 
+            {hide ? (
+              // Keeps the strip's 16px gap above the buttons when the strip is hidden.
+              <div style={{ height: 6 }} />
+            ) : (
             <div className="grid grid-cols-4" style={{ ...sheetGreyStyle, padding: "13px 0", marginBottom: 16 }}>
               {[
                 { value: `${foodTotalCal}`, color: "rgb(var(--c-charcoal))", caption: "kcal" },
@@ -754,6 +835,7 @@ export const AddFoodSheet: React.FC<{
                 </div>
               ))}
             </div>
+            )}
 
             {conflictNotice && <FoodConflictNotice notice={conflictNotice} />}
 
@@ -783,6 +865,7 @@ export const AddFoodSheet: React.FC<{
               >
                 {justAdded ? <><Check size={16} /> Added</> : saving ? "Saving…" : conflictNotice?.addAnyway ? "Add anyway" : "Add to Diary"}
               </button>
+              {!hide && (
               <button
                 type="button"
                 onClick={() => setAdvancedOpen(true)}
@@ -793,6 +876,7 @@ export const AddFoodSheet: React.FC<{
               >
                 <SlidersHorizontal size={20} strokeWidth={1.9} />
               </button>
+              )}
             </div>
             )}
           </div>
@@ -836,6 +920,16 @@ export const AddFoodSheet: React.FC<{
         placeholder={placeholder}
         numeric={numeric}
       />
+    );
+
+    // D18: in recovery-sensitive mode these fold under "Nutrition details".
+    const barcodeMacros = (
+      <div className="grid grid-cols-2 gap-3">
+        {barcodeField("Calories", "calories", "0", true)}
+        {barcodeField("Protein (g)", "protein", "0", true)}
+        {barcodeField("Carbs (g)", "carbs", "0", true)}
+        {barcodeField("Fat (g)", "fat", "0", true)}
+      </div>
     );
 
     const scanAgain = () => {
@@ -888,7 +982,9 @@ export const AddFoodSheet: React.FC<{
                 </span>
                 <div className="text-left">
                   <p className="font-semibold text-charcoal text-sm">{scanResultFood.name}</p>
-                  <p className="text-xs text-charcoal-faint">{scanResultFood.calories} kcal · {scanResultFood.servingLabel}</p>
+                  <p className="text-xs text-charcoal-faint">
+                    {hide ? scanResultFood.servingLabel : `${scanResultFood.calories} kcal · ${scanResultFood.servingLabel}`}
+                  </p>
                 </div>
               </div>
               <Button
@@ -917,17 +1013,12 @@ export const AddFoodSheet: React.FC<{
               </p>
               {barcodeField("Product name", "name", "Coca-Cola 330ml")}
               {barcodeField("Serving size", "serving", "1 can (330 ml)")}
-              <div className="grid grid-cols-2 gap-3">
-                {barcodeField("Calories", "calories", "0", true)}
-                {barcodeField("Protein (g)", "protein", "0", true)}
-                {barcodeField("Carbs (g)", "carbs", "0", true)}
-                {barcodeField("Fat (g)", "fat", "0", true)}
-              </div>
+              {hide ? <NutritionDetails>{barcodeMacros}</NutritionDetails> : barcodeMacros}
               {barcodeError && <p className="text-xs font-semibold text-status-high text-center">{barcodeError}</p>}
               <Button
                 fullWidth
                 onClick={handleCreateBarcodeFood}
-                disabled={creating || !barcodeDraft.name.trim() || !barcodeDraft.calories}
+                disabled={creating || !barcodeDraft.name.trim() || (!hide && !barcodeDraft.calories)}
               >
                 {creating ? "Adding…" : "Add to catalog"}
               </Button>
@@ -970,6 +1061,43 @@ export const AddFoodSheet: React.FC<{
         onCode={(gtin) => void handleScannedCode(gtin)}
       />
       </>
+    );
+  }
+
+  // Round D · DP: the online results (D-S17), then a picked result's confirm
+  // card (D-S18). A saved result is the user's own custom food and goes to
+  // the add step above like any other; its back returns here.
+  if (onlineTerm !== null) {
+    return (
+      <BottomSheet
+        open={open}
+        onClose={resetAndClose}
+        title={foundFood ? "Check this food" : "Search online"}
+        onBack={foundFood ? () => setFoundFood(null) : closeOnline}
+      >
+        {foundFood ? (
+          <FoundFoodCard
+            key={`${foundFood.source}:${foundFood.ref}`}
+            food={foundFood}
+            onDone={() => setFoundFood(null)}
+            onLog={(saved) => {
+              setFoundFood(null);
+              setSelectedFood(saved);
+            }}
+          />
+        ) : (
+          <OnlineResults
+            term={onlineTerm}
+            result={onlineResult}
+            onPick={setFoundFood}
+            onRetry={() => searchOnline(onlineTerm)}
+            onAddYourself={() => {
+              closeOnline();
+              setCustomMode(true);
+            }}
+          />
+        )}
+      </BottomSheet>
     );
   }
 
@@ -1022,9 +1150,11 @@ export const AddFoodSheet: React.FC<{
               {r.sub}
             </span>
           </span>
-          <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>
-            {r.kcal} kcal
-          </span>
+          {!hide && (
+            <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>
+              {r.kcal} kcal
+            </span>
+          )}
         </button>
       </div>
     );
@@ -1241,7 +1371,7 @@ export const AddFoodSheet: React.FC<{
                   key: `${f.source}-${f.id}`,
                   food: f,
                   name: f.name,
-                  sub: f.servingLabel,
+                  sub: brandServing(f.brand, f.servingLabel),
                   kcal: f.calories,
                   star: f.isLebanese,
                   open: () => (multi ? openAdjust(f) : setSelectedFood(f)),
@@ -1250,10 +1380,22 @@ export const AddFoodSheet: React.FC<{
             {query.trim() !== "" && loading && filtered.length === 0 && (
               <p className="text-center text-sm text-charcoal-faint py-8">Searching…</p>
             )}
+            {/* Round D · DP (D17): "Search online" as a row under the results. */}
+            {onlineQuery(query) && !loading && filtered.length > 0 && !multi && (
+              <SearchOnlineButton variant="row" onClick={() => searchOnline(query.trim())} />
+            )}
             {query.trim() !== "" && !loading && filtered.length === 0 && (
-              <p className="text-center text-sm text-charcoal-faint py-8">
-                Not in our catalog yet. Try Custom or Barcode to add it.
-              </p>
+              <div className="flex flex-col" style={{ gap: 4, padding: "24px 0 16px" }}>
+                <p className="text-center text-sm text-charcoal-faint" style={{ margin: 0 }}>
+                  {searchEmptyLine(searchFailed, online) ?? "Not in our catalog yet. Search online, or try Custom or Barcode to add it."}
+                </p>
+                {/* …and in the nothing-found state (not when the search itself couldn't run). */}
+                {!searchFailed && onlineQuery(query) && (
+                  <div className="flex justify-center" style={{ marginTop: 10 }}>
+                    <SearchOnlineButton variant="empty" onClick={() => searchOnline(query.trim())} />
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

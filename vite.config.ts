@@ -53,35 +53,31 @@ export default defineConfig({
     // there is no VAPID key — so this makes the app installable and leaves
     // exactly one piece missing rather than two. See src/sw.ts.
     VitePWA({
-      // injectManifest, NOT generateSW, and the choice is the whole point.
-      // generateSW writes the worker from Workbox's own template, which is
-      // built around precaching and runtime caching strategies; custom code
-      // gets bolted on through importScripts. This worker is two handlers and
-      // no caching at all, so authoring it directly is both smaller and
-      // honest about what it does. injectManifest compiles src/sw.ts and
-      // substitutes the precache manifest into it; see below for why that
-      // list is all but empty, and src/sw.ts for why it is never used.
+      // injectManifest, NOT generateSW: src/sw.ts is written by hand (push,
+      // plus the app shell since Round D) and imports no Workbox code.
+      // injectManifest compiles it and substitutes the precache list below.
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
       injectManifest: {
-        // PRECACHES NOTHING, deliberately. An empty glob list means no build
-        // output is listed for caching, so every request still goes to the
-        // network. Adding an offline strategy is a separate decision with its
-        // own staleness questions, and this app reads live health data.
-        globPatterns: [],
+        // Round D (D24): THE APP SHELL, so the app opens offline. The page,
+        // every script and style, and the barcode / pass wasm. Data is never
+        // cached (src/sw.ts). Left out: the map (maplibre and its worker,
+        // about 1.5 MB), which needs map tiles from the network anyway, and
+        // images, which degrade to their alt text. About 9.5 MB, downloaded
+        // once per release.
+        globPatterns: ["index.html", "assets/**/*.{js,css,wasm}"],
+        globIgnores: ["**/NearbyMap-*", "**/maplibre-gl-worker-*"],
+        // The app's pages chunk alone is about 6 MB.
+        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
       },
-      // The other half of "precaches nothing". globPatterns alone still left
-      // four entries in the injected list, because the plugin adds the
-      // manifest's own icons by default. Measured: this takes the build from
-      // "precache 4 entries" to "precache 1 entry". The one that remains is
-      // manifest.webmanifest, which the plugin always appends and offers no
-      // option to drop — harmless, since src/sw.ts discards the whole list and
-      // never calls precacheAndRoute, so nothing is cached either way.
+      // The manifest's icons are not needed offline (the installed app keeps
+      // its own copies).
       includeManifestIcons: false,
       // The worker calls skipWaiting() and clients.claim() itself (see
       // src/sw.ts), so a new one takes over without waiting for every tab to
-      // close. Safe here only because nothing is cached.
+      // close. Safe because the shell is versioned: a page load always tries
+      // the network first, and hashed files never change under the same URL.
       registerType: 'autoUpdate',
       // Registration is explicit in src/main.tsx rather than injected into
       // index.html, so the app's entry point is where you find it.

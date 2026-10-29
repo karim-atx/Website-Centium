@@ -6,23 +6,22 @@ import { collapsedText, collapseTag } from "./services/push/collapse";
 declare const __ICON_VERSION__: string;
 
 /**
- * Centium's service worker. Two handlers, and deliberately nothing else.
+ * Centium's service worker: push notifications, and since Round D (D24)
+ * the app shell, so the app opens with no connection.
  *
- * WHAT THIS IS FOR, AND WHAT IT IS NOT. This worker exists so the app can
- * receive a push notification when it is closed — the case the calling
- * investigation identified as needing infrastructure that did not exist.
- * It is NOT an offline strategy. Nothing is precached and no fetch handler is
- * registered, so every request goes to the network exactly as it did before
- * this file existed. A worker that quietly started serving stale responses
- * would be a much larger change than the one being made here, and this app
- * reads live health data.
+ * WHAT IS CACHED, AND WHAT NEVER IS. Only the build's own static files: the
+ * page (index.html), the scripts and styles, and the barcode / pass wasm
+ * (vite.config.ts lists them). They are precached at install under a cache
+ * named after their revisions, and an old cache is deleted when a new
+ * worker takes over. NO DATA IS EVER CACHED HERE: requests to Supabase, the
+ * Edge Functions and every other origin go straight to the network. What the
+ * app shows offline comes from its own device cache (usePersistentState), as
+ * before, and the outbox saves what was logged.
  *
- * THE MISSING FETCH HANDLER DOES NOT COST INSTALLABILITY, which is the reason
- * someone would otherwise add one. Chrome dropped that requirement from its
- * install criteria — Chrome 108 on mobile, 112 on desktop — so a manifest plus
- * a registered worker is enough. Adding a no-op fetch handler to satisfy a
- * rule that no longer exists would be pure cargo cult; adding a real one is an
- * offline strategy, which is the decision above.
+ * HOW REQUESTS ARE ANSWERED. A page load (navigation) goes to the network
+ * first, so a new release is picked up at once; with no connection it gets
+ * the cached index.html. A precached file is served from the cache (its URL
+ * carries a content hash, so it never goes stale). Nothing else is touched.
  *
  * NOTHING SENDS A PUSH YET. No VAPID key exists, so `PushManager.subscribe()`
  * is never called and no subscription is registered anywhere. These handlers
@@ -37,16 +36,23 @@ declare const __ICON_VERSION__: string;
 // rather than pulled from workbox's types so this file needs no import at all.
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: unknown };
 
-// THE INJECTION POINT HAS TO APPEAR IN THE SOURCE. vite-plugin-pwa's
-// injectManifest strategy fails the build if it cannot find this token, so it
-// is referenced and thrown away. What gets substituted is a one-entry list
-// holding manifest.webmanifest — `globPatterns: []` and
-// `includeManifestIcons: false` in vite.config.ts remove everything the plugin
-// would otherwise add, and that last entry has no opt-out. It does not matter:
-// this list is only ever precached by passing it to Workbox's
-// precacheAndRoute, which this worker never imports and never calls. Nothing
-// here caches anything.
-void self.__WB_MANIFEST;
+// THE PRECACHE LIST, substituted at build by vite-plugin-pwa (injectManifest):
+// [{ url, revision }]. Hashed asset URLs carry revision null.
+type PrecacheEntry = string | { url: string; revision?: string | null };
+const PRECACHE = ((self.__WB_MANIFEST as PrecacheEntry[] | undefined) ?? []).map((e) =>
+  typeof e === "string" ? { url: e, revision: null } : { url: e.url, revision: e.revision ?? null }
+);
+const scopeUrl = (url: string) => new URL(url, self.registration.scope).href;
+const PRECACHED = new Set(PRECACHE.map((e) => scopeUrl(e.url)));
+const SHELL_URL = scopeUrl("index.html");
+// One cache per set of revisions: a new build gets a new name, the old one is deleted on activate.
+const SHELL_CACHE = `centium-shell-${hashOf(PRECACHE.map((e) => `${e.url}@${e.revision ?? ""}`).join("|"))}`;
+
+function hashOf(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
 
 /** Shown when a push arrives carrying nothing usable. */
 const FALLBACK_TITLE = "Centium";
@@ -190,10 +196,42 @@ self.addEventListener("notificationclick", (event) => {
 // The usual reason to let an old worker finish its lifetime is that pages are
 // holding responses it served; this one serves nothing, so waiting only means
 // a notification fix sits behind a tab close.
-self.addEventListener("install", () => {
-  void self.skipWaiting();
+self.addEventListener("install", (event) => {
+  // The shell is fetched fresh (not from the HTTP cache) and stored before
+  // this worker takes over. A failed download fails the install, so a half
+  // shell is never used; the previous worker keeps serving.
+  event.waitUntil(
+    caches
+      .open(SHELL_CACHE)
+      .then((cache) => cache.addAll(PRECACHE.map((e) => new Request(scopeUrl(e.url), { cache: "reload" }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches
+      .keys()
+      .then((names) => Promise.all(names.filter((n) => n.startsWith("centium-shell-") && n !== SHELL_CACHE).map((n) => caches.delete(n))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+  // A page load: the network first, the cached page when there is none.
+  if (req.mode === "navigate") {
+    event.respondWith(
+      fetch(req).catch(async () => (await caches.match(SHELL_URL, { cacheName: SHELL_CACHE })) ?? Response.error())
+    );
+    return;
+  }
+  // A precached build file: from the cache, else the network.
+  const href = url.origin + url.pathname;
+  if (PRECACHED.has(href)) {
+    event.respondWith(caches.match(href, { cacheName: SHELL_CACHE }).then((hit) => hit ?? fetch(req)));
+  }
 });

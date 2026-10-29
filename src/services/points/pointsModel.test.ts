@@ -146,3 +146,12 @@ test("points rules parse from platform_settings, all or nothing", () => {
   assert.equal(parsePointsRules({ points_value_food: 10 }), null);
   assert.equal(parsePointsRules(null), null);
 });
+
+test("recovery-sensitive mode: a streak rung is a neutral logging bonus, other rows unchanged", () => {
+  const t = (k: string) => (k === "streak_7" ? "A full week" : k === "full_day" ? "First full day" : null);
+  const ach = (key: string): LedgerEntry => ({ ...e("s", "achievement", 100, "x", key), refLabel: "Achievement" });
+  assert.deepEqual(ledgerLines(ach("streak_7"), t, true), { title: "Logging bonus", kind: "Earned · Achievement" });
+  assert.deepEqual(ledgerLines(ach("streak_365"), t, true), { title: "Logging bonus", kind: "Earned · Achievement" });
+  assert.deepEqual(ledgerLines(ach("streak_7"), t), { title: "A full week", kind: "Earned · Achievement" });
+  assert.deepEqual(ledgerLines(ach("full_day"), t, true), { title: "First full day", kind: "Earned · Achievement" });
+});

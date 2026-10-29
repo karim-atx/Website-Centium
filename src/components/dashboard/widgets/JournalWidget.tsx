@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { BookOpen } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
+import { useHideNumbers } from "../../../hooks/useHideNumbers";
 import { journalStreak } from "../../../services/journal/streak";
 import { mondayFirstWeek } from "../../../utils/week";
 import { useJournalWeek } from "./data";
@@ -18,6 +19,9 @@ export const JournalWidget: React.FC<{ size: "small" | "large"; editMode: boolea
   const navigate = useNavigate();
   const { journalEntries, journalLoading, journalError, reloadJournal, today } = useApp();
   const { dark, online } = useHomeMode();
+  // Recovery-sensitive mode (AJ R7): no streak. The value says whether today
+  // has an entry instead.
+  const hideNumbers = useHideNumbers();
   const isLarge = size === "large";
   const c = homeColors("journal", dark);
   const colors = { tint: c.tint, icon: c.icon, label: c.label, ink: c.ink, tile: c.tile };
@@ -38,7 +42,7 @@ export const JournalWidget: React.FC<{ size: "small" | "large"; editMode: boolea
         label="Journal"
         state={state}
         emptyTitle="No entries yet"
-        emptyHint={isLarge ? "Write your first entry to start a streak" : "Write your first"}
+        emptyHint={isLarge ? (hideNumbers ? "Write your first entry" : "Write your first entry to start a streak") : "Write your first"}
         onRetry={() => void reloadJournal()}
         onOpen={open}
         ariaLabel={state === "empty" ? "Journal, no entries yet. Write your first" : undefined}
@@ -68,12 +72,17 @@ export const JournalWidget: React.FC<{ size: "small" | "large"; editMode: boolea
         icon={BookOpen}
         label="Journal"
         onOpen={open}
-        ariaLabel={`Journal, ${streak} day streak, ${wordsLine}${writtenToday ? ", written today" : ""}`}
-        value={<FadeValue k={streak} value={streak} />}
-        unit="day streak"
+        ariaLabel={
+          hideNumbers
+            ? `Journal, ${writtenToday ? "written today" : "not written today"}, ${wordsLine}`
+            : `Journal, ${streak} day streak, ${wordsLine}${writtenToday ? ", written today" : ""}`
+        }
+        value={hideNumbers ? (writtenToday ? "Written" : "Not yet") : <FadeValue k={streak} value={streak} />}
+        unit={hideNumbers ? "today" : "day streak"}
         // Small: value 42 (gap 11), dots 72 (8 x 8), context 86. Large: value 52.5 (gap 19.5), context 92.5; strip 200 x 52 at 142, 61.
         bodyGap={isLarge ? 19.5 : 11}
-        headerRight={isLarge ? <HeaderPill ink={c.label} dark={dark}>{writtenToday ? "Written today" : "Not written today"}</HeaderPill> : undefined}
+        // Recovery mode: the value already says it, so no pill to repeat it.
+        headerRight={isLarge && !hideNumbers ? <HeaderPill ink={c.label} dark={dark}>{writtenToday ? "Written today" : "Not written today"}</HeaderPill> : undefined}
         // Not written: an outline in the dot colour at partial strength (measured ring ≈ #E2C584).
         graphic={isLarge ? undefined : <DayDots days={days} size={8} gap={4} fill={fill} ring={dark ? "rgba(224,179,96,0.6)" : "rgba(212,168,74,0.6)"} />}
         graphicHeight={8}

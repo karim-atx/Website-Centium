@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -21,6 +21,7 @@ import { LicencePendingTag } from "../../components/professionals/LicencePending
 import { updateBodyMetric, updateDateOfBirth, updateSex } from "../../services/profile";
 import type { Sex } from "../../types";
 import { validateHeightCm, validateWeightKg } from "../../utils/bodyMetrics";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import {
   ageFromDateOfBirth,
   formatDisplayDate,
@@ -57,6 +58,7 @@ import { CycleTrackingRow } from "../../components/profile/CycleTrackingRow";
 import { initials } from "../../components/professionals/typeColour";
 import { ProProfile } from "../../components/pro/profile/ProProfile";
 import { SharingYourWinsRow } from "../../components/share/client/SharingYourWinsSheet";
+import { signOutWarning, useOutbox } from "../../components/outbox/Outbox";
 
 const accountTypeLabel: Record<string, string> = {
   customer: "Customer",
@@ -87,9 +89,13 @@ function ClientProfile() {
   const isAmbassador = useIsAmbassador();
   const navigate = useNavigate();
   const [justToggledRecovery, setJustToggledRecovery] = useState(false);
+  // Recovery-sensitive mode (AJ R6): the weight half of the top-left tile and
+  // its editor go; sex, height and age stay.
+  const hideNumbers = useHideNumbers();
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [activityLevelOpen, setActivityLevelOpen] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const waiting = useOutbox();
   // V8 (QA 8.0) made each of age/height/weight editable by tapping the card
   // itself. That still holds — what changed is where the edit happens and
   // what it does. These values now persist to `profiles`, so an edit has to
@@ -162,6 +168,7 @@ function ClientProfile() {
   };
 
   const openMetricEditor = (field: "weightKg" | "heightCm") => {
+    if (field === "weightKg" && hideNumbers) return;
     setMetricDraft(String(user[field]));
     setMetricError(null);
     setMetricOpen(field);
@@ -268,8 +275,16 @@ function ClientProfile() {
   const [sharingFor, setSharingFor] = useState<LinkedProfessional | null>(null);
   // "Connect with a professional code" reveals the code box (C7).
   const [connectOpen, setConnectOpen] = useState(false);
-  // Safety & content starts collapsed (C5).
-  const [safetyOpen, setSafetyOpen] = useState(false);
+  // Safety & content starts collapsed (C5). 20261222080000: ?open=recovery
+  // (a form's eating question, or the support notice after it) opens it on
+  // the Recovery card; the toggle itself is still the person's to tap.
+  const [params] = useSearchParams();
+  const openRecovery = params.get("open") === "recovery";
+  const [safetyOpen, setSafetyOpen] = useState(openRecovery);
+  const safetyRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (openRecovery) safetyRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [openRecovery]);
 
   // After a code connects: the list again, and the box closes.
   const reloadProfessionals = async () => {
@@ -298,8 +313,10 @@ function ClientProfile() {
   // sex on the left, height and age on the right); then Memberships, the
   // professionals card, Training plan as two tiles, Safety & content
   // collapsed, and Sign Out as a text link. Colours are today's (C12).
+  // A null top leaves the bottom part alone in the tile (weight hidden in
+  // recovery-sensitive mode), with no divider.
   const tile = (
-    top: { value: React.ReactNode; unit: string; onClick: () => void; label: string },
+    top: { value: React.ReactNode; unit: string; onClick: () => void; label: string } | null,
     bottom: { value: React.ReactNode; unit: string; onClick: () => void; label: string }
   ) => (
     // MO1.5: 90 × 143, vertically centred beside the avatar (measured on the
@@ -308,7 +325,7 @@ function ClientProfile() {
     // theme tokens: a 1px #6F9993 border and divider (teal-dark), values
     // #5F5093 (primary-deep-text) and units #AEA1DC (primary).
     <div className="h-[143px] rounded-2xl bg-cream-card border border-teal-dark flex flex-col overflow-hidden min-w-0">
-      {[top, bottom].map((part, i) => (
+      {(top ? [top, bottom] : [bottom]).map((part, i) => (
         <button
           key={part.unit}
           type="button"
@@ -352,12 +369,14 @@ function ClientProfile() {
       >
         {!hidesClientFields &&
           tile(
-            {
-              value: user.weightKg,
-              unit: "kg",
-              onClick: () => openMetricEditor("weightKg"),
-              label: `Weight, ${user.weightKg} kg. Edit`,
-            },
+            hideNumbers
+              ? null
+              : {
+                  value: user.weightKg,
+                  unit: "kg",
+                  onClick: () => openMetricEditor("weightKg"),
+                  label: `Weight, ${user.weightKg} kg. Edit`,
+                },
             {
               value: user.sex,
               unit: "sex",
@@ -595,7 +614,7 @@ function ClientProfile() {
           Recovery card with Cycle tracking (moved from Settings, C6), then
           Advanced health monitoring. Customers only. */}
       {user.accountType === "customer" && (
-        <section className="mb-6">
+        <section ref={safetyRef} className="mb-6">
           <button
             type="button"
             onClick={() => setSafetyOpen((o) => !o)}
@@ -654,8 +673,8 @@ function ClientProfile() {
                   {/* QA 13.0: when the toggle is on it shows the text under. */}
                   {recoverySensitive && (
                     <p className="text-xs text-charcoal-faint leading-normal">
-                      Personalize food tracking to reduce number-focused and potentially triggering content. You control
-                      what is shown, and you can change this at any time.
+                      Personalize food tracking to reduce number-focused and potentially triggering content. Numbers like
+                      calories, weight and streaks are hidden, and you can change this at any time.
                     </p>
                   )}
                   {justToggledRecovery && (
@@ -707,9 +726,10 @@ function ClientProfile() {
         onClose={() => setConfirmSignOut(false)}
         title="Sign out?"
         icon={<LogOut size={22} />}
-        body="You can sign back in at any time."
+        // Round D (D23): anything kept to save later is named first.
+        body={signOutWarning(waiting) ?? "You can sign back in at any time."}
       >
-        <CtaButton size="page" label="Sign Out" onClick={handleSignOut} />
+        <CtaButton size="page" label={waiting.length > 0 ? "Sign out anyway" : "Sign Out"} onClick={handleSignOut} />
         <button
           type="button"
           onClick={() => setConfirmSignOut(false)}
@@ -790,7 +810,7 @@ function ClientProfile() {
       </BottomSheet>
 
       <BottomSheet
-        open={metricOpen !== null}
+        open={metricOpen !== null && !(metricOpen === "weightKg" && hideNumbers)}
         onClose={() => setMetricOpen(null)}
         title={metricOpen === "weightKg" ? "Weight" : "Height"}
       >
@@ -815,7 +835,7 @@ function ClientProfile() {
           <p className="text-[11px] text-charcoal-faint">
             {metricOpen === "weightKg"
               ? "Used for your calorie targets, and shown to any professional you share weight with."
-              : "Used for your calorie targets and BMI-based health recommendations."}
+              : "Used for your calorie targets and health recommendations."}
           </p>
 
           {metricError && <p className="text-xs font-semibold text-status-high">{metricError}</p>}

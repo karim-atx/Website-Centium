@@ -6,10 +6,8 @@ import { WheelPicker, type WheelOption } from "../../ui/WheelPicker";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
-import { browserOffline, enqueueLog, isOfflineFailure, QUEUED_COPY } from "../../../services/health-log/offlineQueue";
+import { browserOffline, enqueueLog, isOfflineFailure, newQueueId, QUEUED_COPY } from "../../../services/health-log/offlineQueue";
 import { FieldLabel, MeasuredOnPopup, WhenField, dayLabel, isoDay, partBSheetTone, whenLabel } from "./LogSheetParts";
-import { deleteDrink, logDrink } from "../../../services/health-log/waterIntakes";
-import { useLogQueueFlush } from "./useLogQueue";
 
 // HE1.1.1 "Log water" (health-b-handover.md 2866-3013): the shared Log sheet
 // for one drink. "Today so far", Amount chips (+ 250 ml / + 500 ml / Custom
@@ -18,9 +16,8 @@ import { useLogQueueFlush } from "./useLogQueue";
 //
 // STORAGE (Database B1, water_intakes): each drink is a row with its own
 // time (When, the Measured on popup); the day's running total in
-// health_metrics is still what every reader uses until B16, so it is written
-// too (addWater on the drink's day). A drink whose total cannot be written is
-// taken back, so the two never disagree.
+// health_metrics is still what every reader uses until B16. Round D: both are
+// written by one log_water call (logWaterDrink), so they can't disagree.
 //
 // LIMIT (V6-16): the app's 5 L day clamp stays; a drink that would pass it is
 // refused here with the handover's line rather than silently trimmed.
@@ -36,9 +33,8 @@ export function litres(ml: number): string {
 }
 
 export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSaved?: () => void }> = ({ open, onClose, onSaved }) => {
-  const { authUserId, today, waterByDate, waterGoalMl, addWater } = useApp();
+  const { authUserId, today, waterByDate, waterGoalMl, logWaterDrink } = useApp();
   const dark = useIsDark();
-  useLogQueueFlush();
   const [choice, setChoice] = useState<number | "custom" | null>(null);
   const [custom, setCustom] = useState(400);
   const [when, setWhen] = useState<Date>(() => new Date());
@@ -65,26 +61,21 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
 
   const save = async () => {
     if (amount === null || overLimit || !authUserId) return;
+    // One id for this drink: if the answer to the online try is lost, the
+    // queued copy replays it and the server answers already_saved.
+    const requestId = newQueueId();
     const queue = () => {
-      enqueueLog(authUserId, { kind: "water", ml: amount, day, loggedAt: when.toISOString() });
+      enqueueLog(authUserId, { kind: "water", ml: amount, day, loggedAt: when.toISOString() }, requestId);
       setToast(QUEUED_COPY);
       onClose();
     };
     if (browserOffline()) return queue();
     setSaving(true);
-    const drink = await logDrink(authUserId, amount, when);
+    const drink = await logWaterDrink(amount, when, requestId);
+    setSaving(false);
     if (!drink.ok) {
-      setSaving(false);
       if (isOfflineFailure(drink)) return queue();
       setToast(drink.message);
-      return;
-    }
-    const result = await addWater(amount, day);
-    setSaving(false);
-    if (!result.ok) {
-      void deleteDrink(drink.id);
-      if (isOfflineFailure(result)) return queue();
-      setToast("Couldn't save. Try again.");
       return;
     }
     onSaved?.();

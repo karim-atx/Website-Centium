@@ -23,6 +23,7 @@ import type { BlockResult, BlockKind, Exercise, LoggedExercise, LoggedSet, Sessi
 import type { SessionSwap } from "../../services/workout/coachLogic";
 import { ONE_RM_CLASSIFICATIONS } from "../../types";
 import { useApp } from "../../context/AppContext";
+import { SAVED_ON_DEVICE } from "../../services/health-log/offlineQueue";
 import { CyclePhaseChip } from "../cycle/CyclePhaseStrip";
 import { Metronome } from "./Metronome";
 import { RPECalculator } from "./RPECalculator";
@@ -420,6 +421,24 @@ export const WorkoutSessionSheet: React.FC<{
     pushActive(started ? "running" : "paused");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, started, currentExercise, hasProgress]);
+
+  // Round D O6: every logged set is kept on this device as it happens (not
+  // only on minimise or quit), so a closed tab, a crash or a dropped
+  // connection never loses the sets. Device only: the server copy is still
+  // written on minimise and quit, and hydrate merges the two (newer wins).
+  useEffect(() => {
+    if (!open || finished || !routineId || !hasProgress) return;
+    const t = window.setTimeout(() => {
+      savePausedSession(
+        routineId,
+        { blockResults: Object.values(blockResults), logged, elapsedSec: elapsed, startedAt: startedAt.toISOString(), started, timers },
+        { remote: false }
+      );
+    }, 600);
+    return () => window.clearTimeout(t);
+    // elapsed ticks every second; the snapshot follows the sets, not the clock.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, finished, routineId, logged, blockResults, started, timers]);
 
   if (!open) return null;
 
@@ -929,7 +948,11 @@ export const WorkoutSessionSheet: React.FC<{
     // CU1 v5 "finished, results sent": only when the database marked the
     // session sent (it tells the coach when Workout activity is shared).
     let closeAfter = 900;
-    if (coachId && authUserId && routineId) {
+    // Round D outbox: finished with no connection, kept on this device.
+    if (result.queued) {
+      setResultsToast(SAVED_ON_DEVICE);
+      closeAfter = 2600;
+    } else if (coachId && authUserId && routineId) {
       const sent = await readResultsSent(authUserId, routineId, payload.startedAt);
       if (sent) {
         setResultsToast(resultsSentMessage(coachName ?? "your coach", swaps?.length ?? 0, changed));

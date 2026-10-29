@@ -64,8 +64,11 @@ export const SubHeader: React.FC<{ title: string; sub?: string; kicker?: string;
   );
 };
 
-/** "You're offline…" under the header (AN11-009 O3 pattern). */
-export const OfflineLine: React.FC<{ text?: string }> = ({ text = "You're offline. Changes save when you're back online." }) => {
+/**
+ * "You're offline…" under the header (AN11-009 O3 pattern). Round D O2: these
+ * pages don't queue anything, so it no longer promises a later save.
+ */
+export const OfflineLine: React.FC<{ text?: string }> = ({ text = "You're offline. Changes need a connection." }) => {
   const online = useOnline();
   if (online) return null;
   return (

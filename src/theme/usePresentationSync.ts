@@ -8,7 +8,7 @@ import {
   savePresentation,
   type Presentation,
 } from "../services/presentation";
-import { afterFailure, canSave, RETRY_START, type RetryState } from "../services/presentation/retry";
+import { afterFailure, afterOnline, canSave, RETRY_START, type RetryState } from "../services/presentation/retry";
 
 // Keeps this device's presentation settings (light / dark / auto, colour
 // theme, the four accessibility switches) in step with this account's 'web'
@@ -36,8 +36,8 @@ import { afterFailure, canSave, RETRY_START, type RetryState } from "../services
 // under the setting, and the save is retried on the next change, on
 // reconnecting and on the next sign-in, BOUNDED (services/presentation/retry):
 // a backoff between failures (its timer saves the latest choice when it ends),
-// no retry after a permission refusal, and none after five failures in a row,
-// until the next sign-in. A save whose row comes back without
+// no retry after a permission refusal (until the next sign-in), and none after
+// five failures in a row (until reconnecting or the next sign-in). A save whose row comes back without
 // the values written counts as failed (services/presentation/save.ts), so
 // flush's loop below never goes round on an answer that is not the write.
 
@@ -218,13 +218,19 @@ export function usePresentationSync({
     void sync();
   }, [key, sync, setPending, claim]);
 
-  // Back online with something unsaved.
+  // Back online with something unsaved. Round D O13: the failure count and
+  // backoff start fresh (failures while offline said nothing about the
+  // server), so five saves lost to a dead connection no longer stop the sync
+  // until the next sign-in. A permission refusal stays stopped.
   useEffect(() => {
-    const retry = () => {
+    const onOnline = () => {
+      const was = retry.current;
+      retry.current = afterOnline(was);
+      if (retry.current !== was) clearRetryTimer();
       if (pendingRef.current) void sync();
     };
-    window.addEventListener("online", retry);
-    return () => window.removeEventListener("online", retry);
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
   }, [sync]);
 
   return { saveError: saveError && saveError.owner === ownerId ? saveError.message : null };

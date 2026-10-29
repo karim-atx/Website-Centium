@@ -8,6 +8,8 @@ import {
   tierProgress,
   tierReached,
   earnedCount,
+  hiddenInRecovery,
+  visibleAchievements,
   type Achievement,
   type PointsSummary,
 } from "./ladder";
@@ -334,4 +336,26 @@ test("earnedCount counts the whole active catalogue", () => {
   ];
   assert.deepEqual(earnedCount(rows), { earned: 2, total: 3 });
   assert.deepEqual(earnedCount([]), { earned: 0, total: 0 });
+});
+
+test("recovery mode hides the logging-streak ladder and the logging badges (D20)", () => {
+  assert.equal(hiddenInRecovery(row({ key: "streak_7", category: "consistency", groupKey: "logging_streak" })), true);
+  for (const r of foodLadder(0, 0)) assert.equal(hiddenInRecovery(r), true);
+  assert.equal(hiddenInRecovery(row({ key: "first_food_log" })), true);
+  assert.equal(hiddenInRecovery(row({ key: "full_day" })), true);
+  assert.equal(hiddenInRecovery(row({ key: "weigh_ins", category: "health" })), true);
+  assert.equal(hiddenInRecovery(row({ key: "first_measurements", category: "health" })), true);
+});
+
+test("recovery mode keeps every other badge (D20)", () => {
+  for (const key of ["recipe_created", "first_workout", "first_bp", "hydration", "body_awareness", "voice_logger"]) {
+    assert.equal(hiddenInRecovery(row({ key })), false, key);
+  }
+  assert.equal(hiddenInRecovery(row({ key: "habit_days_bronze", category: "mind", groupKey: "habit_days" })), false);
+});
+
+test("visibleAchievements filters only when asked", () => {
+  const rows = [row({ key: "first_food_log" }), row({ key: "first_workout", category: "training" })];
+  assert.deepEqual(visibleAchievements(rows, false).map((r) => r.key), ["first_food_log", "first_workout"]);
+  assert.deepEqual(visibleAchievements(rows, true).map((r) => r.key), ["first_workout"]);
 });

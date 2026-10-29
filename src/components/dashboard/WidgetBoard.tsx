@@ -9,6 +9,7 @@ import { createEditTapGuard, dropSlot, storedMove, widgetColumns, widgetSpans } 
 import { CycleCalendarIcon, WeightScaleIcon } from "../icons/PartBIcons";
 import { LotusGlyph } from "./LotusGlyph";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { textPx, linePx } from "../../theme/textSize";
 import { useWidgetConfigSync } from "./useWidgetConfigSync";
 
@@ -125,7 +126,10 @@ interface DragInfo {
 export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
   onWaterClick,
 }) => {
-  const { widgets, removeWidget, reorderWidgets, resizeWidget, addWidget, recoverySensitive, cycleOffered, cycleSettings } = useApp();
+  const { widgets, removeWidget, reorderWidgets, resizeWidget, addWidget, cycleOffered, cycleSettings } = useApp();
+  // Recovery-sensitive mode, pending included (AJ R13): fails closed, so the
+  // Weight widget never flashes while the setting loads.
+  const hideNumbers = useHideNumbers();
   const dark = useIsDark();
   // V6-141 D22: the board lives in widget_configs (platform web).
   useWidgetConfigSync();
@@ -144,12 +148,12 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
   // section is not offered to this profile, and offered in the picker only
   // when the tracker is on.
   const visibleWidgets = widgets.filter(
-    (w) => (w.type as string) !== "bodyFat" && !(recoverySensitive && w.type === "weight") && !(w.type === "cycle" && !cycleOffered)
+    (w) => (w.type as string) !== "bodyFat" && !(hideNumbers && w.type === "weight") && !(w.type === "cycle" && !cycleOffered)
   );
   const availableToAdd = allWidgetTypes.filter(
     (t) =>
       !widgets.some((w) => w.type === t.type) &&
-      !(recoverySensitive && t.type === "weight") &&
+      !(hideNumbers && t.type === "weight") &&
       !(t.type === "cycle" && !(cycleOffered && cycleSettings?.trackerEnabled))
   );
 

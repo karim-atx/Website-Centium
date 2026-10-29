@@ -13,6 +13,8 @@ import { BiomarkerLineChart, ChartTooltip, chartPointX } from "../BiomarkerLineC
 import { RangeBar, reportLabel } from "../BiomarkerDetailSheet";
 import { deleteLabResults, type LabResult } from "../../../services/labs/results";
 import { statusFor } from "../../../services/labs";
+import { OFFLINE_MESSAGE } from "../../../services/network-error";
+import { browserOffline } from "../../../services/health-log/offlineQueue";
 import type { CatalogueMarker } from "../../../services/labs/catalogueLogic";
 import type { BloodMarker } from "../../../types";
 import { textPx, linePx } from "../../../theme/textSize";
@@ -130,7 +132,8 @@ export const MarkerPage: React.FC<{
     const r = await deleteLabResults(deleting === "marker" ? results : [deleting], allResults);
     if (r.ok) await reloadHealthRecords();
     setBusy(false);
-    if (!r.ok) return setError("Couldn't delete. Try again.");
+    // Round D O12: offline, say it needs a connection.
+    if (!r.ok) return setError(browserOffline() ? OFFLINE_MESSAGE : "Couldn't delete. Try again.");
     const wasMarker = deleting === "marker";
     setDeleting(null);
     onToast(wasMarker ? "Marker deleted." : "Result deleted.");

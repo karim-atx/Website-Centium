@@ -17,6 +17,7 @@ import { CustomFoodForm } from "./CustomFoodForm";
 import { sheetChipStyle, sheetGreyStyleFor, sheetLabelStyleFor } from "../ui/sheetChip";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { FOOD_DARK } from "./foodDark";
 import {
   AUDIO_BITS_PER_SECOND,
@@ -161,6 +162,9 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     noteFeatureMilestone,
   } = useApp();
   const dark = useIsDark();
+  // Round D (R3): in recovery-sensitive mode a matched item shows its name and
+  // serving only — no macro panel and no "More nutrients" breakdown.
+  const hide = useHideNumbers();
   const reducedMotion = useReducedMotion();
   const sheetGreyStyle = sheetGreyStyleFor(dark);
   const sheetLabelStyle = sheetLabelStyleFor(dark);
@@ -1011,10 +1015,11 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                         so this panel and the diary row cannot disagree. */}
                     {preview && (
                       <div className="mt-2.5 pl-11">
-                        <p className="text-[11px] text-charcoal-faint mb-1.5">
+                        <p className={`text-[11px] text-charcoal-faint ${hide ? "" : "mb-1.5"}`}>
                           {item.food!.servingLabel}
                           {preview.unitNote ? ` · ${preview.unitNote}` : ""}
                         </p>
+                        {!hide && (
                         <div
                           className="grid grid-cols-4"
                           style={{ ...sheetGreyStyle, padding: "9px 0", borderRadius: 12 }}
@@ -1037,6 +1042,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                             </div>
                           ))}
                         </div>
+                        )}
                       </div>
                     )}
 
@@ -1112,7 +1118,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                         multiplier as the macros above. A key with no data is
                         rendered as "No data" by NutrientDetailSections, never
                         as a zero. */}
-                    {preview && (
+                    {preview && !hide && (
                       <div className="mt-2 pl-11">
                         <button
                           onClick={() => setExpanded(isOpen ? null : i)}

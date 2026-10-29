@@ -198,7 +198,7 @@ export const NotificationsHub: React.FC<{
     <span aria-hidden className="shrink-0" style={{ width: 8, height: 8, borderRadius: 9999, background: on ? INK.pr : "transparent", marginTop: 6 }} />
   );
 
-  // W6: a sent form (pro.form.submitted / pro.form.flagged, subject form_response)
+  // W6: a sent form (pro.form.submitted / .flagged / .urgent, subject form_response)
   // opens its review (HO20 for a check-in, CL10 for an intake) at
   // /app/more/forms/responses/{id}; every other row goes to the page's onOpen.
   const openRow = (n: ProNotification) => {

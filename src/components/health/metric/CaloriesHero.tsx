@@ -1,6 +1,7 @@
 import React from "react";
 import { textPx, linePx } from "../../../theme/textSize";
 import { useLoopWhileVisible } from "../useLoopWhileVisible";
+import { useHideNumbers } from "../../../hooks/useHideNumbers";
 import { HeroPill, MetricHero, mc, metricTextInk, useHealthMode } from "./MetricKit";
 
 // HE1.4 #10-#11 hero: tint card 358 r22 pad 18 16 14 16 with p2.svg. The
@@ -54,10 +55,14 @@ export const CaloriesHero: React.FC<{
 }> = ({ pct, value, sub, goalLabel, pills, loading, ariaLabel, workouts }) => {
   const { dark } = useHealthMode();
   const [ref, running] = useLoopWhileVisible<HTMLDivElement>();
+  const hideNumbers = useHideNumbers();
   const p = Math.max(0, Math.min(1, pct));
   const wp = workouts ? Math.max(0, Math.min(p, workouts.pct)) : 0;
   const ink = metricTextInk("calories", dark);
   const play = running ? "running" : "paused";
+  // Recovery-sensitive mode (AJ R4): the page shows its neutral hero instead;
+  // this one never draws a kcal figure, whoever renders it.
+  if (hideNumbers) return null;
   return (
     <div ref={ref}>
       <MetricHero metric="calories" pattern={2} padding="18px 16px 14px" loading={loading} ariaLabel={ariaLabel}>

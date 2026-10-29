@@ -1,12 +1,14 @@
 import { CloudOff } from "lucide-react";
 import { useOnline } from "../../hooks/useOnline";
+import { offlineBannerDetail } from "./offlineBannerText";
 
 /**
  * Shown on every screen while the browser reports no connection.
  *
  * WHAT THIS APP DOES OFFLINE, stated once here rather than discovered a
  * failure at a time: reading works, because everything already loaded is held
- * in context, and writing does not. Every write path refuses honestly and
+ * in context, and writing does not, except the logs the device queues (named
+ * in offlineBannerText.ts, Round D O2). Every other write refuses honestly and
  * keeps what the user typed — none of them silently pretend to save — so the
  * only thing missing was telling someone why several things in a row have just
  * stopped working.
@@ -34,10 +36,7 @@ export const OfflineBanner: React.FC = () => {
         <CloudOff size={16} className="text-charcoal-soft shrink-0 mt-0.5" />
         <div className="min-w-0">
           <p className="text-[13px] font-semibold text-charcoal">You&rsquo;re offline</p>
-          <p className="text-[11.5px] text-charcoal-soft mt-0.5">
-            You can still look through everything already loaded. Anything you log or
-            change won&rsquo;t save until you&rsquo;re back online.
-          </p>
+          <p className="text-[11.5px] text-charcoal-soft mt-0.5">{offlineBannerDetail()}</p>
         </div>
       </div>
     </div>
