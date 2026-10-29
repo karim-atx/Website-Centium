@@ -346,10 +346,13 @@ function SheetBody({
     if (saving) return;
     setWheelOpen(false);
     const e = validate(form);
+    // Round E: the playlist field already says what's wrong with the link;
+    // the banner counts it with the rest.
+    const badPlaylist = !playlistFieldValid(form.playlistUrl);
     setChecked(true);
-    if (Object.keys(e).length) {
+    if (Object.keys(e).length || badPlaylist) {
       setErrors(e);
-      setBanner({ kind: "fields", text: fieldsBanner(e) });
+      setBanner({ kind: "fields", text: fieldsBanner(e, badPlaylist) });
       scrollToFirst(e);
       return;
     }
@@ -358,11 +361,6 @@ function SheetBody({
     if (rp) {
       setBanner({ kind: "fields", text: "Fix 1 field to save: repeat." });
       repeatGroupEl?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
-      return;
-    }
-    // Round E: the playlist field already says what's wrong with the link.
-    if (!playlistFieldValid(form.playlistUrl)) {
-      setBanner({ kind: "fields", text: "Fix 1 field to save: playlist." });
       return;
     }
     setErrors({});
@@ -1288,8 +1286,9 @@ function SheetBody({
   );
 }
 
-function fieldsBanner(e: Partial<Record<ClassField, string>>): string {
+function fieldsBanner(e: Partial<Record<ClassField, string>>, badPlaylist = false): string {
   const words = FIELD_ORDER.filter((k) => e[k]).map((k) => FIELD_WORD[k]);
+  if (badPlaylist) words.push("playlist");
   return `Fix ${words.length} ${words.length === 1 ? "field" : "fields"} to save: ${joinAnd(words)}.`;
 }
 

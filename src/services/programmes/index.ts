@@ -81,11 +81,7 @@ export interface MyProgramme {
   currentDay: number | null;
   professionalId: string;
   professionalFirstName: string | null;
-  /**
-   * Round E: the programme's playlist, read from the programmes row the
-   * client is assigned to (programmes_select_assigned_client); my_programmes
-   * doesn't return it. null when there is none or it couldn't be read.
-   */
+  /** Round E: the programme's playlist (my_programmes, Database 20261224050000), or null. */
   playlistUrl: string | null;
 }
 
@@ -321,8 +317,6 @@ export async function fetchProgrammeProgress(assignmentId: string): Promise<Read
 export async function fetchMyProgrammes(): Promise<Read<MyProgramme[]>> {
   const { data, error } = await db().rpc("my_programmes");
   if (error) return readFail(error);
-  const ids = ((data ?? []) as { programme_id: string }[]).map((r) => r.programme_id);
-  const playlists = await fetchProgrammePlaylists(ids);
   return {
     ok: true,
     data: (
@@ -340,6 +334,7 @@ export async function fetchMyProgrammes(): Promise<Read<MyProgramme[]>> {
         current_day: number | null;
         professional_id: string;
         professional_first_name: string | null;
+        playlist_url?: string | null;
       }[]
     ).map((r) => ({
       assignmentId: r.assignment_id,
@@ -355,23 +350,7 @@ export async function fetchMyProgrammes(): Promise<Read<MyProgramme[]>> {
       currentDay: r.current_day,
       professionalId: r.professional_id,
       professionalFirstName: r.professional_first_name,
-      playlistUrl: playlists[r.programme_id] ?? null,
+      playlistUrl: r.playlist_url ?? null,
     })),
   };
-}
-
-/**
- * Round E: the playlists of programmes the client is assigned to, by id. A
- * failed read is no playlist (the programme card still shows), not an error.
- */
-async function fetchProgrammePlaylists(ids: string[]): Promise<Record<string, string>> {
-  if (ids.length === 0) return {};
-  const { data, error } = await db().from("programmes").select("id, playlist_url").in("id", ids);
-  if (error) {
-    console.error("[programmes] Could not read playlists:", error.message);
-    return {};
-  }
-  const out: Record<string, string> = {};
-  for (const r of (data ?? []) as { id: string; playlist_url: string | null }[]) if (r.playlist_url) out[r.id] = r.playlist_url;
-  return out;
 }
