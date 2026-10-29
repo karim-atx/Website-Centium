@@ -68,7 +68,7 @@ export const DobPromptCard: React.FC<{
         <DobInline
           setup
           title="Add your date of birth"
-          body="It keeps your age, calorie targets and health suggestions right. Check it before saving: it can't be changed afterwards without contacting support."
+          body="It keeps your age, calorie targets and health suggestions right. Check it before saving; to change it later, contact support."
           onSaved={() => setNeeds({ userId: authUserId, value: false })}
           after={
             <button type="button" onClick={dismiss} className="tap self-start min-h-[44px] text-[11.5px] font-bold text-primary-deep-text">
@@ -84,7 +84,7 @@ export const DobPromptCard: React.FC<{
       <DobInline
         tile={tile}
         title="Add your date of birth"
-        body="It keeps your age, calorie targets and health suggestions right. Check it before saving: it can't be changed afterwards without contacting support."
+        body="It keeps your age, calorie targets and health suggestions right. Check it before saving; to change it later, contact support."
         onSaved={() => setNeeds({ userId: authUserId, value: false })}
       />
       <button
