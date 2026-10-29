@@ -53,7 +53,14 @@ const COALESCE_MS = 250;
 
 export function useUnreadRealtime(
   userId: string | null,
-  onChange: () => void
+  onChange: () => void,
+  /**
+   * AX: each arrival's message id, uncoalesced, for the pop-up. THE ONE USE
+   * OF THE PAYLOAD, and only its id: message_popup() re-reads the message
+   * through the caller's own rules (muted, hidden, blocked...), so nothing
+   * from the row itself is ever shown.
+   */
+  onInsert?: (messageId: string) => void
 ): RealtimeStatus {
   /**
    * Stamped with the user it describes, and read back by comparison.
@@ -72,8 +79,10 @@ export function useUnreadRealtime(
   // Held in a ref so an inline closure from the caller does not tear down and
   // rebuild the socket on every render.
   const onChangeRef = useRef(onChange);
+  const onInsertRef = useRef(onInsert);
   useEffect(() => {
     onChangeRef.current = onChange;
+    onInsertRef.current = onInsert;
   });
 
   /** The coalesced re-read, published for the network-recovery effect below. */
@@ -110,7 +119,11 @@ export function useUnreadRealtime(
           schema: "public",
           table: "messages",
         },
-        fire
+        (payload: { new?: { id?: unknown } }) => {
+          fire();
+          const id = payload.new?.id;
+          if (typeof id === "string" && !cancelled) onInsertRef.current?.(id);
+        }
       )
       .subscribe((s) => {
         if (cancelled) return;

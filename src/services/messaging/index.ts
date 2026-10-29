@@ -5,6 +5,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { parseCard, type MessageCard } from "./cards";
 import { parseShareCard, type ShareCard } from "./shareCards";
 import { parseRecommendation, type RecommendationCard } from "./recommendation";
+import { parseMessagePopup, type MessagePopup } from "./popupModel";
 import { loadConsoleAccess } from "../business-console";
 
 // Two-party messaging, against the real tables.
@@ -1234,6 +1235,21 @@ export async function fetchUnreadCounts(): Promise<UnreadCounts> {
     }
   }
   return { byThread, total };
+}
+
+/**
+ * AX: the pop-up for one new message, or null when it must not pop up
+ * (message_popup() returns no row: muted, archived, blocked, hidden, the
+ * caller's own, or "Message pop-ups" off). A failure is also null: a missed
+ * pop-up costs nothing the badge doesn't already show.
+ */
+export async function fetchMessagePopup(messageId: string): Promise<MessagePopup | null> {
+  const { data, error } = await loose().rpc("message_popup", { p_message_id: messageId });
+  if (error) {
+    console.error("[messaging] Could not read the pop-up:", error.message);
+    return null;
+  }
+  return parseMessagePopup(data);
 }
 
 // ---------------------------------------------------------------------------

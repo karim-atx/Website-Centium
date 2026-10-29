@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { matchFoodByName } from "../food";
 import type { FoodSearchResult } from "../food";
 import type { ServingUnit } from "../../types";
+import { MAX_VOICE_ITEMS, MAX_VOICE_NAME_LENGTH, rateLimitedText } from "./voiceLimits";
 
 // Real voice food logging: a recorded clip in, candidate foods out.
 //
@@ -144,6 +145,7 @@ interface FnBody {
 
 const GENERIC_FAILURE = "Couldn't process that recording. Try again, or add the food manually.";
 
+
 /**
  * Maps a refusal body to something a user can act on.
  *
@@ -169,7 +171,9 @@ function describeRefusal(status: number, body: FnBody): VoiceFoodOutcome {
       ok: false,
       kind: "rate_limited",
       retryAfterSeconds,
-      message: fnMessage || "Voice logging is busy right now. Try again shortly, or add the food manually.",
+      // The per-user meter (20 an hour) sends its own sentence; the
+      // provider's limit sends only a time.
+      message: fnMessage || rateLimitedText(retryAfterSeconds),
     };
   }
 
@@ -253,7 +257,7 @@ export async function transcribeAndParse(audio: Blob): Promise<VoiceFoodOutcome>
   if (code === "no_speech") return { ok: false, kind: "no_speech" };
   if (code === "no_items") return { ok: false, kind: "no_items", transcript };
 
-  const raw = Array.isArray(body.items) ? body.items : [];
+  const raw = Array.isArray(body.items) ? body.items.slice(0, MAX_VOICE_ITEMS) : [];
   if (raw.length === 0) {
     // A 200 with neither items nor a code that explains why. Treated as "no
     // food found" rather than as success, so the user is never shown an empty
@@ -268,7 +272,7 @@ export async function transcribeAndParse(audio: Blob): Promise<VoiceFoodOutcome>
       if (typeof entry !== "object" || entry === null) return null;
       const e = entry as { name?: unknown; quantity?: unknown; unit?: unknown };
       const spokenName = typeof e.name === "string" ? e.name.trim() : "";
-      if (!spokenName) return null;
+      if (!spokenName || spokenName.length > MAX_VOICE_NAME_LENGTH) return null;
 
       const quantity =
         typeof e.quantity === "number" && Number.isFinite(e.quantity) && e.quantity > 0 ? e.quantity : 1;

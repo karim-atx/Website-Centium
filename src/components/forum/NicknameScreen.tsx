@@ -137,7 +137,7 @@ export function NicknameScreen({
         <ul id="nickname-rules" className="m-0 pl-[13px] text-[12.5px] leading-[19px] list-disc space-y-1.5" style={{ color: fv("body") }}>
           <li>3 to 20 letters, numbers or underscores</li>
           <li>Not your real name, and not a name that sounds official, like "Doctor" or "Support"</li>
-          <li>You can change it later in Profile › Credentials</li>
+          <li>You can change it once every 30 days, from the forum or Profile › Credentials</li>
         </ul>
       </div>
       {/* The page's own padding covers 112 of the 172 a pinned button needs. */}

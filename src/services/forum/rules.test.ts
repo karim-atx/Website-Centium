@@ -8,6 +8,7 @@ import {
   forumAge,
   initialOf,
   initialsOf,
+  nicknameNextChange,
   nicknameProblem,
   type ForumCategory,
 } from "./rules.ts";
@@ -118,4 +119,20 @@ test("ATX57 reads the end of the pause from details, month first", () => {
     describeForumError({ code: "ATX57", message: "your access to the community forum is paused until Friday 09 Oct" }, "post"),
     "Your access to the community forum is paused until Friday 09 Oct."
   );
+});
+
+test("nickname refusals (Release 1): ATXK1 names the next allowed day, ATXK2 the contact rule", () => {
+  const now = new Date(2026, 9, 29);
+  // Noon UTC: the same calendar day in every timezone the app is used in.
+  assert.equal(nicknameNextChange("2026-11-27T12:00:00Z", now), "Nov 27");
+  assert.equal(nicknameNextChange("2027-01-03T12:00:00Z", now), "Jan 3, 2027");
+  assert.equal(nicknameNextChange("soon", now), null);
+  assert.equal(nicknameNextChange(null, now), null);
+  assert.match(describeForumError({ code: "ATXK1", details: "2026-11-27T12:00:00Z" }, "nickname")!, /^You can change your nickname again on Nov 27(, \d{4})?\.$/);
+  assert.equal(describeForumError({ code: "ATXK1" }, "nickname"), "You can change your nickname once every 30 days.");
+  assert.equal(
+    describeForumError({ code: "ATXK2" }, "nickname"),
+    "A nickname can't contain a phone number or other contact details."
+  );
+  assert.equal(describeForumError({ code: "ATX63" }, "nickname"), "That nickname is taken. Choose a different one.");
 });

@@ -2,6 +2,7 @@ import type { TxReaderRow } from "../../services/business-revenue/model";
 import type { VenueMember } from "../../services/venues/consoleLogic";
 import type { StoreOrder } from "../../services/store/types";
 import { addDays, isoOf } from "../business-analytics/analyticsRange";
+import { toCsvText } from "../../utils/csv";
 
 // The pure half of the export (exportReports.ts reads): ranges, file name,
 // each report's rows (header first) and the CSV text.
@@ -125,6 +126,7 @@ export function customerRows(people: ExportPerson[], orders: StoreOrder[], r: Ex
   ];
 }
 
+/** The shared writer (utils/csv): formulas neutralised, quotes doubled, CRLF lines. */
 export function toCsv(rows: CsvCell[][]): string {
-  return rows.map((row) => row.map((v) => (v === null ? "" : `"${String(v).replace(/"/g, '""')}"`)).join(",")).join("\r\n");
+  return toCsvText(rows, "\r\n");
 }

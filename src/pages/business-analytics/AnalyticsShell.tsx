@@ -9,6 +9,7 @@ import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import { AnalyticsContext, type CsvRow } from "./analyticsContext";
 import { presetRange, rangeLine, type AnalyticsRange, type RangeKey } from "./analyticsRange";
 import { CustomRangeSheet } from "./CustomRangeSheet";
+import { toCsvText } from "../../utils/csv";
 import { FULL_PAGE_SECTIONS, PUSHED_VIEWS, SECTION_NEED, SECTION_VIEWS, pushedFor, sectionTabs, type SectionKey } from "./sections";
 
 // The Analytics shell (AN5-001 / AN4-001 rows 1-8, shared by AN1, AN3, AN4,
@@ -21,7 +22,7 @@ import { FULL_PAGE_SECTIONS, PUSHED_VIEWS, SECTION_NEED, SECTION_VIEWS, pushedFo
 // Export CSV with its own real rows.
 
 export function downloadCsv(filename: string, rows: CsvRow[]) {
-  const csv = rows.map((r) => r.map((v) => (v === null ? "" : `"${String(v).replace(/"/g, '""')}"`)).join(",")).join("\n");
+  const csv = toCsvText(rows, "\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
