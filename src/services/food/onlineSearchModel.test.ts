@@ -1,6 +1,10 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
+  latestSubmissionFor,
+  parseFoodSubmissions,
+  submissionLine,
+  SUGGESTED_LINE,
   brandServing,
   canSuggestForCatalogue,
   foodReviewCopy,
@@ -172,4 +176,24 @@ test("the decision: approved or rejected with the reason in words, never the not
   );
   assert.match(foodReviewCopy("rejected", null, "something_new").body!, /^Your food wasn't added\. It didn't meet our guidelines\./);
   assert.deepEqual(foodReviewCopy("pending", "X", null), {});
+});
+
+test("my food suggestions: parsed newest first, the latest per food, and its line", () => {
+  const list = parseFoodSubmissions([
+    { submission_id: "s3", custom_food_id: "f1", status: "rejected", reason_category: "duplicate", created_at: "2026-10-29T10:00:00Z" },
+    { submission_id: "s2", custom_food_id: "f1", status: "approved", reason_category: "ignored", created_at: "2026-10-20T10:00:00Z" },
+    { submission_id: "s1", custom_food_id: "f2", status: "pending", reason_category: null, created_at: "2026-10-19T10:00:00Z" },
+    { submission_id: "bad", status: "weird" },
+  ]);
+  assert.equal(list.length, 3);
+  assert.equal(list[1].reasonCategory, null);
+  assert.equal(latestSubmissionFor(list, "f1")?.id, "s3");
+  assert.equal(latestSubmissionFor(list, "f9"), null);
+  assert.deepEqual(submissionLine(null), { line: null, canSuggest: true });
+  assert.deepEqual(submissionLine(list[2]), { line: SUGGESTED_LINE, canSuggest: false });
+  assert.equal(submissionLine(list[1]).canSuggest, false);
+  const refused = submissionLine(list[0]);
+  assert.equal(refused.canSuggest, true);
+  assert.match(refused.line ?? "", /^Not added to the catalogue\. The catalogue already has it\.$/);
+  assert.deepEqual(parseFoodSubmissions(null), []);
 });

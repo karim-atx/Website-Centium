@@ -291,3 +291,49 @@ export function foodReviewCopy(status: unknown, name: unknown, reason: unknown):
   }
   return {};
 }
+
+// ---- the member's own suggestions (my_food_submissions, 20261222070000) ----
+
+export type FoodSubmissionStatus = "pending" | "approved" | "rejected";
+export interface FoodSubmission {
+  id: string;
+  customFoodId: string | null;
+  status: FoodSubmissionStatus;
+  /** Rejected only; never the reviewer's note. */
+  reasonCategory: string | null;
+  createdAt: string;
+}
+
+/** The rows, newest first as the server sends them; anything unreadable is left out. */
+export function parseFoodSubmissions(rows: unknown): FoodSubmission[] {
+  if (!Array.isArray(rows)) return [];
+  const out: FoodSubmission[] = [];
+  for (const r of rows as Record<string, unknown>[]) {
+    const status = r?.status;
+    if (typeof r?.submission_id !== "string" || (status !== "pending" && status !== "approved" && status !== "rejected")) continue;
+    out.push({
+      id: r.submission_id,
+      customFoodId: typeof r.custom_food_id === "string" ? r.custom_food_id : null,
+      status,
+      reasonCategory: status === "rejected" && typeof r.reason_category === "string" ? r.reason_category : null,
+      createdAt: typeof r.created_at === "string" ? r.created_at : "",
+    });
+  }
+  return out;
+}
+
+/** The newest suggestion of one of my foods, or null. */
+export const latestSubmissionFor = (list: FoodSubmission[], customFoodId: string): FoodSubmission | null =>
+  list.find((s) => s.customFoodId === customFoodId) ?? null;
+
+/**
+ * What a custom food's sheet says about its suggestion. Pending and approved
+ * replace the button; a refused one says why and can be suggested again
+ * (only a pending suggestion is unique per food).
+ */
+export function submissionLine(s: FoodSubmission | null): { line: string | null; canSuggest: boolean } {
+  if (!s) return { line: null, canSuggest: true };
+  if (s.status === "pending") return { line: SUGGESTED_LINE, canSuggest: false };
+  if (s.status === "approved") return { line: "Added to the catalogue. Everyone can find it in search.", canSuggest: false };
+  return { line: `Not added to the catalogue. ${reviewReasonText(s.reasonCategory)}`, canSuggest: true };
+}

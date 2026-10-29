@@ -89,3 +89,6 @@ export function strongestState<T extends { state: SharedItemState; createdAt: st
     return it.createdAt > best.createdAt ? it : best;
   }, null);
 }
+
+/** The hub notice pro.share.released (kind update, payload shared_item_id): the hold ended and the card is live again. */
+export const RELEASED_NOTICE = { title: "Your shared card is live again", line: "Our team checked it. Its link and QR work again." } as const;

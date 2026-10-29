@@ -151,3 +151,60 @@ export function proposalTitle(d: ProposalDraft): string {
       return d.kg.trim() ? `Weight ${d.kg.trim()} kg` : "Weight";
   }
 }
+
+// ---------------------------------------------------------------------------
+// The professional's side: the answers the client CONFIRMED
+// (form_response_confirmed_answers, 20261222070000), for CL10's "Added to
+// {first}'s profile" box. The value is as confirmed (edited or not).
+// ---------------------------------------------------------------------------
+
+export interface ConfirmedAnswer {
+  proposalId: string;
+  field: ProposalField;
+  value: Record<string, unknown>;
+}
+
+/** The rows in question order; an unknown field is left out. */
+export function parseConfirmedAnswers(rows: unknown): ConfirmedAnswer[] {
+  if (!Array.isArray(rows)) return [];
+  const out: ConfirmedAnswer[] = [];
+  for (const r of rows as Record<string, unknown>[]) {
+    const field = asProposalField(r?.field);
+    if (!field || typeof r.proposal_id !== "string") continue;
+    out.push({ proposalId: r.proposal_id, field, value: r.value && typeof r.value === "object" ? (r.value as Record<string, unknown>) : {} });
+  }
+  return out;
+}
+
+const SINCE_YEAR = /^(\d{4})-\d{2}(-\d{2})?$/;
+
+/** One row of the box: "Peanuts allergy, severe" · "Dietary needs card", "Left knee: meniscus repair, 2024" · "Profile and programme notes". */
+export function confirmedAnswerRow(a: Pick<ConfirmedAnswer, "field" | "value">): { title: string; where: string } {
+  const v = a.value;
+  switch (a.field) {
+    case "allergies": {
+      const name = isAllergen(v.allergen) ? `${allergenLabel(v.allergen)} allergy` : str(v.note).trim() || "An allergy";
+      return { title: isSeverity(v.severity) ? `${name}, ${v.severity}` : name, where: "Dietary needs card" };
+    }
+    case "dietary_restrictions": {
+      const label = dietaryRestrictionOptions.find((o) => o.value === v.restriction)?.label ?? "A diet";
+      return { title: v.kind === "preference" ? `${label} (preference)` : label, where: "Dietary needs card" };
+    }
+    case "medications": {
+      const name = str(v.name).trim() || "A medication";
+      const dose = str(v.dose).trim();
+      return { title: dose ? `${name}, ${dose}` : name, where: "Medications" };
+    }
+    case "injuries": {
+      const area = str(v.body_area).trim();
+      const what = str(v.description).trim() || "An injury";
+      const since = str(v.since).trim();
+      const year = SINCE_YEAR.exec(since)?.[1] ?? since;
+      return { title: `${area ? `${area}: ` : ""}${what}${year ? `, ${year}` : ""}`, where: "Profile and programme notes" };
+    }
+    case "weight": {
+      const kg = str(v.kg).trim();
+      return { title: kg ? `${kg} kg` : "Weight", where: "Weight" };
+    }
+  }
+}
