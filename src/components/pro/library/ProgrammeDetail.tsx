@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { BarChart3, Ellipsis, UserPlus } from "lucide-react";
+import { BarChart3, Check, Ellipsis, UserPlus } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import type { WorkoutTemplate } from "../../../types";
 import { BlockCard } from "../../workout/BlockCard";
@@ -18,6 +18,8 @@ import { OfflineLine, ProCardSkeleton, ProError } from "../states";
 import { DetailHeader, ErrorLine } from "./libraryUi";
 import { clientsLabel, currentWeek, isActive } from "./libraryModel";
 import { todayLocal } from "../../../utils/date";
+import { reviewStateText } from "../../../services/workout/logReplyLogic";
+import { useReviewStates } from "./useReviewStates";
 
 /**
  * Release 3 · W5 TR2 "Programme builder", as far as the schema goes.
@@ -50,6 +52,8 @@ export const ProgrammeDetail: React.FC<{
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmEnd, setConfirmEnd] = useState<string | null>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
+  // Round D · TR22: each session's reviewed mark and reply count.
+  const reviewStates = useReviewStates(sessions?.map((s) => s.id) ?? []);
 
   const assignments = templateAssignments.filter((a) => a.templateId === template.id);
   const active = assignments.filter(isActive);
@@ -112,6 +116,12 @@ export const ProgrammeDetail: React.FC<{
             <span className="block truncate" style={{ fontSize: textPx(11.5), color: INK.chF }}>
               {s.exercises.map((e) => e.name).join(", ")}
             </span>
+            {reviewStateText(reviewStates[s.id]) && (
+              <span className="flex items-center" style={{ gap: 4, fontSize: textPx(11.5), fontWeight: 600, color: reviewStates[s.id]?.reviewedAt ? INK.good : INK.chS }}>
+                {reviewStates[s.id]?.reviewedAt && <Check size={12} aria-hidden />}
+                {reviewStateText(reviewStates[s.id])}
+              </span>
+            )}
           </button>
         ))}
         {mine.length > 3 && <p style={{ fontSize: textPx(11), color: INK.chF }}>{`${mine.length - 3} earlier session${mine.length - 3 === 1 ? "" : "s"} not shown.`}</p>}

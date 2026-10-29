@@ -15,17 +15,16 @@
 // - current_personal_records: a client's estimated 1RM, behind Progress
 //   (personal_records_select_granted_professional; the view is
 //   security_invoker).
-// - professional_notifications: "Mark as reviewed" = read_at on the
-//   to_review row the workout_sessions_tell_coach trigger wrote for this
-//   session (subject_type 'workout_session').
+// - TR22 reply and "Mark as reviewed": services/workout/logReplies (Round D).
 
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { setTypesColumn } from "../templates/setTypes";
+import { prescribedSetCount, readSetTargets, setTargetsColumn } from "../workout/setTargets";
 import { SESSION_SELECT, toWorkoutSession } from "../workout/log";
 import { rpc } from "./rpc";
 import type { Read } from "./clients";
-import type { BlockKind, Exercise, ExerciseClassification, MuscleGroup, PrescribedSetType, WorkoutBlock, WorkoutSession } from "../../types";
+import type { BlockKind, Exercise, ExerciseClassification, MuscleGroup, PrescribedSetType, SetTarget, WorkoutBlock, WorkoutSession } from "../../types";
 
 const fail = (error: unknown): { ok: false; offline: boolean } => ({ ok: false, offline: isOffline(error) });
 
@@ -91,7 +90,7 @@ const ITEM_KEYS = [
   "exercise_id", "custom_exercise_id", "sets", "reps", "weight_kg", "min_sets", "max_sets", "min_reps", "max_reps",
   "intensity_pct", "rep_max_kg", "rep_max_update_mode", "rest_seconds", "rpe", "tempo", "estimated_one_rep_max_kg",
   "cardio_duration_min", "cardio_distance_km", "cardio_incline_pct", "cardio_pace_min_per_km", "cardio_avg_heart_rate",
-  "duration_seconds", "block_id", "endurance_plan", "pinned_note", "coach_note", "set_types",
+  "duration_seconds", "block_id", "endurance_plan", "pinned_note", "coach_note", "set_types", "set_targets",
 ] as const;
 
 interface CopyExerciseRow {
@@ -111,6 +110,7 @@ interface CopyExerciseRow {
   block_id: string | null;
   coach_note: string | null;
   set_types: (PrescribedSetType | null)[] | null;
+  set_targets: (SetTarget | null)[] | null;
   exercises: DefinitionRow | null;
   custom_exercise_library_items: DefinitionRow | null;
 }
@@ -175,6 +175,7 @@ export async function fetchClientCopy(routineId: string): Promise<Read<ClientCop
         blockId: e.block_id,
         ...(e.coach_note ? { coachNote: e.coach_note } : {}),
         ...(Array.isArray(e.set_types) ? { setTypes: e.set_types } : {}),
+        ...(readSetTargets(e.set_targets) ? { setTargets: readSetTargets(e.set_targets) } : {}),
       };
       return [x];
     });
@@ -284,9 +285,11 @@ export async function saveClientCopy(copy: ClientCopy, exercises: Exercise[], bl
       tempo: ex.tempo ?? null,
       coach_note: ex.coachNote?.trim().slice(0, 500) || null,
       set_types: setTypesColumn(ex.setTypes),
+      // Round D (TR11): one target per prescribed set, cut to the sets it has.
+      set_targets: setTargetsColumn(ex.setTargets, prescribedSetCount(ex)),
     };
   });
-  // A JSON null is not SQL null for the two jsonb keys (set_types_valid and
+  // A JSON null is not SQL null for the jsonb keys (set_types_valid and
   // valid_endurance_plan refuse it), so null-valued keys are left out: an
   // absent key is stored as null.
   const clean = items.map((it) => Object.fromEntries(Object.entries(it).filter(([, v]) => v !== null && v !== undefined)));
@@ -327,35 +330,4 @@ export async function fetchOneRepMaxes(clientIds: string[], exerciseId: string):
     if (r.user_id && r.estimated_one_rep_max_kg != null) out[r.user_id] = Math.max(out[r.user_id] ?? 0, Number(r.estimated_one_rep_max_kg));
   }
   return { ok: true, data: out };
-}
-
-// ---------------------------------------------------------------------------
-// TR22: reviewed = the session's To review notification read
-// ---------------------------------------------------------------------------
-
-export interface ReviewState {
-  notificationId: string;
-  reviewed: boolean;
-}
-
-/** The To review row for this session, or null when the trigger wrote none (e.g. not shared at the time). */
-export async function fetchReviewState(sessionId: string): Promise<Read<ReviewState | null>> {
-  const { data, error } = await supabase
-    .from("professional_notifications" as never)
-    .select("id, read_at")
-    .eq("subject_type", "workout_session")
-    .eq("subject_id", sessionId)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  if (error) return fail(error);
-  const r = ((data ?? []) as { id: string; read_at: string | null }[])[0];
-  return { ok: true, data: r ? { notificationId: r.id, reviewed: !!r.read_at } : null };
-}
-
-export async function markReviewed(notificationId: string): Promise<boolean> {
-  const { error } = await supabase
-    .from("professional_notifications" as never)
-    .update({ read_at: new Date().toISOString() } as never)
-    .eq("id", notificationId);
-  return !error;
 }

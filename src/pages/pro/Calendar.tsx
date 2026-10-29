@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircle, CircleCheck, Paperclip, Plus, Settings2 } from "lucide-react";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
@@ -70,6 +70,8 @@ import {
   type InviteeRow,
 } from "../../services/calendar";
 import { acceptFor } from "../../services/storage";
+import { fetchEventCapacity, saveEventCapacity } from "../../services/messaging/sessionPlaces";
+import { parseCapacity } from "../../services/messaging/groupCardsModel";
 import { startThread } from "../../services/messaging";
 
 /**
@@ -278,6 +280,10 @@ export default function Calendar() {
   const [linkError, setLinkError] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [scopeAsk, setScopeAsk] = useState<"save" | "delete" | null>(null);
+  // Round D (DT4): places when the event is shared to a group ('' = no limit).
+  const [capacity, setCapacity] = useState("");
+  const [capacityWas, setCapacityWas] = useState<number | null | undefined>(null);
+  const capacityFor = useRef<string | null>(null);
   useEffect(() => {
     if (!composeOpen || !me) return;
     void fetchInviteCandidates(me).then(setCandidates);
@@ -291,6 +297,9 @@ export default function Calendar() {
     setEditingOcc(null);
     setDraft(blankDraft(date));
     setGuests([]);
+    setCapacity("");
+    setCapacityWas(null);
+    capacityFor.current = null;
     setSaveError(null);
     setLinkError(false);
     setConfirmDelete(false);
@@ -316,6 +325,14 @@ export default function Calendar() {
       repeatUntil: e.repeatUntil ?? null,
     });
     setGuests((data.invitees[e.id] ?? []).map((g) => g.userId));
+    setCapacity("");
+    setCapacityWas(undefined);
+    capacityFor.current = e.id;
+    void fetchEventCapacity(e.id).then((c) => {
+      if (capacityFor.current !== e.id) return;
+      setCapacityWas(c);
+      if (c !== undefined) setCapacity(c === null ? "" : String(c));
+    });
     setSaveError(null);
     setLinkError(false);
     setConfirmDelete(false);
@@ -328,14 +345,20 @@ export default function Calendar() {
     if (draft.url.trim() && !url) return setLinkError(true);
     setLinkError(false);
     const payload = { ...draft, title: draft.title.trim(), url: url ?? undefined };
+    const places = parseCapacity(capacity);
+    if (!places.ok) return setSaveError(places.message);
+    // Only written when it changed (and was read, for an existing event).
+    const placesChanged = capacityWas !== undefined && places.value !== capacityWas;
     if (series && repeats && !scope) return setScopeAsk("save");
     setScopeAsk(null);
     setSaving(true);
     setSaveError(null);
     if (series && repeats && scope) {
       const r = await saveRepeating(me, series, editingOcc ?? series.date, scope, payload);
+      const c = r.ok && placesChanged && scope === "all" ? await saveEventCapacity(series.id, places.value) : null;
       setSaving(false);
       if (!r.ok) return setSaveError(r.message ?? "Couldn't save your changes. Try again.");
+      if (c && !c.ok) return setSaveError(c.message);
       await data.reload();
       return setComposeOpen(false);
     }
@@ -344,7 +367,11 @@ export default function Calendar() {
       setSaving(false);
       return setSaveError(r.message);
     }
-    const g = await setEventInvitees(r.event.id, guests);
+    // Members who booked a place from a group card aren't in the invite list
+    // (they needn't be clients): keep them, or saving would free their place.
+    const booked = (data.invitees[r.event.id] ?? []).map((i) => i.userId).filter((id) => !candidates.some((c) => c.userId === id));
+    const g = await setEventInvitees(r.event.id, [...new Set([...guests, ...booked])]);
+    const c = placesChanged ? await saveEventCapacity(r.event.id, places.value) : null;
     setSaving(false);
     await data.reload();
     if (r.alertMessage) {
@@ -354,6 +381,10 @@ export default function Calendar() {
     if (!g.ok) {
       setEditingId(r.event.id);
       return setSaveError(g.message ?? "Couldn't update the invitations. Try again.");
+    }
+    if (c && !c.ok) {
+      setEditingId(r.event.id);
+      return setSaveError(c.message);
     }
     setComposeOpen(false);
   };
@@ -826,6 +857,19 @@ export default function Calendar() {
         confirmDelete={confirmDelete}
         extra={
           <>
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Places (optional)</span>
+              <input
+                value={capacity}
+                inputMode="numeric"
+                maxLength={3}
+                onChange={(e) => setCapacity(e.target.value.replace(/[^\d]/g, ""))}
+                placeholder="No limit"
+                aria-label="Places"
+                className="w-full h-10 rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-charcoal-faint"
+              />
+              <span className="block text-[11px] text-charcoal-faint mt-1.5">When you share this to a group, members can book up to this many places. Leave it empty for no limit.</span>
+            </label>
             {candidates.length > 0 ? (
               <label className="block">
                 <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Invitees</span>

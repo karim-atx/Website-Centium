@@ -1,20 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { Check, Dumbbell, Repeat2 } from "lucide-react";
+import { Dumbbell, Repeat2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import type { Exercise, WorkoutTemplate } from "../../../types";
-import { fetchClientCopy, fetchReviewState, fetchSession, markReviewed, type ProgrammeSession, type ReviewState } from "../../../services/pro/library";
+import { fetchClientCopy, fetchSession, type ProgrammeSession } from "../../../services/pro/library";
 import { clock12 } from "../../../utils/time12";
 import { todayLocal } from "../../../utils/date";
 import { textPx } from "../../../theme/textSize";
-import { PinnedCta } from "../../ui/PinnedCta";
 import { INK } from "../proInk";
 import { ListCard } from "../client/kit";
 import { fmtDay } from "../client/clientFormat";
 import { LockLine } from "../LockLine";
-import { ComingSoonPill } from "../ComingSoon";
 import { OfflineLine, ProCardSkeleton, ProError } from "../states";
 import { DetailHeader } from "./libraryUi";
 import { compareLog, currentWeek, parseSwaps, type LogStatus } from "./libraryModel";
+import { WorkoutLogReplies } from "./WorkoutLogReplies";
 
 /**
  * Release 3 · W5 TR22 "Client workout log · targets vs logged, swap".
@@ -22,16 +21,14 @@ import { compareLog, currentWeek, parseSwaps, type LogStatus } from "./libraryMo
  * One session the client shares (Workout activity), each prescribed exercise
  * against what was logged: Changed (swapped, from workout_sessions.swaps),
  * As planned, Above, Below, Skipped. Targets come from the client's own copy
- * when it's readable, else the template. "Mark as reviewed" reads the session's
- * To review notification (written by workout_sessions_tell_coach) and sets its
- * read_at; it isn't offered when the trigger wrote none. "Reply to {first}"
- * has no backend for workout sessions yet: Coming soon.
+ * when it's readable, else the template. Round D: "Reply to {first}" and
+ * "Mark as reviewed" are WorkoutLogReplies (reply_to_workout_log,
+ * mark_workout_log_reviewed), which replaced the To review notification read.
  */
 export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemplate | null; onBack: () => void }> = ({ sessionId, template: given, onBack }) => {
   const { professionalClients, templateAssignments, workoutTemplates, exerciseCatalog, customExercises } = useApp();
   const [session, setSession] = useState<ProgrammeSession | null>(null);
   const [targets, setTargets] = useState<Exercise[] | null>(null);
-  const [review, setReview] = useState<ReviewState | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "none" | "error" | "offline">("loading");
   const [reload, setReload] = useState(0);
 
@@ -47,11 +44,10 @@ export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemp
         setState("none");
         return;
       }
-      const [copy, rv] = await Promise.all([r.data.routineId ? fetchClientCopy(r.data.routineId) : Promise.resolve(null), fetchReviewState(sessionId)]);
+      const copy = r.data.routineId ? await fetchClientCopy(r.data.routineId) : null;
       if (cancelled) return;
       setSession(r.data);
       setTargets(copy && copy.ok && copy.data ? copy.data.exercises : null);
-      setReview(rv.ok ? rv.data : null);
       setState("ok");
     });
     return () => {
@@ -104,7 +100,7 @@ export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemp
   };
 
   return (
-    <div style={{ paddingBottom: review && !review.reviewed ? 96 : 0 }}>
+    <div>
       <DetailHeader title={name || " "} eyebrow={when} onBack={onBack} />
       {state === "offline" && <OfflineLine />}
       {state === "loading" && <ProCardSkeleton lines={4} />}
@@ -135,24 +131,7 @@ export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemp
               }))}
             />
           )}
-          <div className="flex items-center" style={{ gap: 8, marginTop: 4 }}>
-            <span style={{ fontSize: textPx(13), color: INK.chS }}>{`Reply to ${first}`}</span>
-            <ComingSoonPill />
-          </div>
-          {review?.reviewed && (
-            <p className="flex items-center mt-4" style={{ gap: 6, fontSize: textPx(12.5), fontWeight: 700, color: INK.good }}>
-              <Check size={14} aria-hidden /> Reviewed
-            </p>
-          )}
-          {review && !review.reviewed && (
-            <PinnedCta
-              primary={{
-                label: "Mark as reviewed",
-                icon: <Check size={15} />,
-                onClick: () => void markReviewed(review.notificationId).then((ok) => ok && setReview({ ...review, reviewed: true })),
-              }}
-            />
-          )}
+          <WorkoutLogReplies sessionId={session.id} clientFirstName={first} />
         </>
       )}
     </div>

@@ -14,6 +14,7 @@ import { SetOptionsSheet } from "./SetOptionsSheet";
 import { typeStyles } from "./setTypeStyle";
 import { useIsDark } from "../../hooks/useIsDark";
 import type { LoggedSet, PrescribedSetType } from "../../types";
+import { setTargetText, setTargetsColumn, withSetTarget } from "../../services/workout/setTargets";
 
 /**
  * Release 3 · W5 (TR4 v3, HANDOVER g): the professional's mode. Present (even
@@ -173,6 +174,9 @@ export const ExerciseSettingsSheet: React.FC<{
       }
       next = { ...draft, endurancePlan: serializePlan(draft.endurancePlan) };
     }
+    // Round D (TR11): the per-set targets keep in step with the sets, so a
+    // shorter prescription drops the targets of the sets it no longer has.
+    if (pro) next = { ...next, setTargets: setTargetsColumn(next.setTargets, proSetCount) ?? undefined };
     setPlanProblem(null);
 
     onSave(next);
@@ -486,10 +490,22 @@ export const ExerciseSettingsSheet: React.FC<{
                       {style && <span aria-hidden style={{ width: 7, height: 7, borderRadius: 9999, background: style.dot }} />}
                       {`Set ${i + 1}`}
                       {style && <span className="sr-only">{`, ${style.short}`}</span>}
+                      {setTargetText(draft.setTargets?.[i]) && <span className="sr-only">{`, ${setTargetText(draft.setTargets?.[i])}`}</span>}
                     </button>
                   );
                 })}
               </div>
+              {/* Round D (TR11): each set's target RPE and note, as the client reads them. */}
+              {Array.from({ length: proSetCount }, (_, i) => {
+                const text = setTargetText(draft.setTargets?.[i]);
+                return text ? (
+                  <p key={i} className="text-[12px] text-charcoal-faint" style={{ marginTop: i === 0 ? 8 : 2 }}>
+                    <span className="font-semibold text-charcoal-soft">{`Set ${i + 1}`}</span>
+                    {` · ${text}`}
+                  </p>
+                ) : null;
+              })}
+              <p className="text-[11px] text-charcoal-faint mt-2">Tap a set for its type, target RPE and note.</p>
             </div>
           )}
 
@@ -568,14 +584,16 @@ export const ExerciseSettingsSheet: React.FC<{
           title={`Set ${(setOptionsIndex ?? 0) + 1} options`}
           routineName=""
           pinnedNote={undefined}
-          coach={{ coachRpe: draft.rpe }}
+          coach={{ coachRpe: draft.rpe, target: setOptionsIndex !== null ? draft.setTargets?.[setOptionsIndex] ?? null : null }}
           onSave={(result) => {
             if (setOptionsIndex === null) return;
             const kind: PrescribedSetType | null = result.kind === "warmup" ? "warmup" : result.kind === "pr" ? "pr" : result.kind === "drop" ? "dropset" : null;
             setDraft((d) => {
               const types = Array.from({ length: Math.max(proSetCount, d.setTypes?.length ?? 0) }, (_, i) => d.setTypes?.[i] ?? null);
               types[setOptionsIndex] = kind;
-              return { ...d, setTypes: types };
+              // Round D (TR11): the set's own target RPE and note.
+              const setTargets = withSetTarget(d.setTargets, setOptionsIndex, { rpe: result.rpe, note: result.notes }, proSetCount);
+              return { ...d, setTypes: types, setTargets };
             });
           }}
         />

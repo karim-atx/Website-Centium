@@ -14,6 +14,11 @@ export const IMAGE_SURFACES = [
   "service_image",
   "venue_photo",
   "forum_photo",
+  // Round D (Database 20261223050000): a course's cover and an Image lesson's image.
+  "course_cover",
+  "course_image",
+  // Round D (Database 20261223040000 / 050000): a group's photo, by its owner.
+  "group_photo",
 ] as const;
 export type ImageSurface = (typeof IMAGE_SURFACES)[number];
 
@@ -32,6 +37,9 @@ const SURFACE_WORD: Record<ImageSurface, string> = {
   service_image: "service photo",
   venue_photo: "venue photo",
   forum_photo: "forum photo",
+  course_cover: "course cover",
+  course_image: "lesson image",
+  group_photo: "group photo",
 };
 
 /** "profile photo", "logo"...; "photo" for a surface this build doesn't know. */
@@ -96,5 +104,8 @@ const IMAGE_HOME: Record<"member" | "business" | "professional", Partial<Record<
     showcase_image: "/app/pro/marketplace/showcase",
     plan_image: "/app/pro/marketplace/showcase",
     service_image: "/app/pro/marketplace/showcase",
+    course_cover: "/app/forum/courses/mine",
+    course_image: "/app/forum/courses/mine",
+    group_photo: "/app/messages",
   },
 };

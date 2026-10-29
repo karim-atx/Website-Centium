@@ -5,7 +5,9 @@ import type {
   MuscleGroup,
   PrescribedSetType,
   RepMaxUpdateMode,
+  SetTarget,
 } from "../../types";
+import { readSetTargets, setTargetsColumn } from "../workout/setTargets";
 
 // One routine_exercises row, read and written. Kept apart from ./index (which
 // talks to Supabase) so the round trip can be tested without a client.
@@ -36,7 +38,9 @@ export const PRESCRIPTION_COLUMNS =
   "cardio_duration_min, cardio_distance_km, " +
   "cardio_incline_pct, cardio_pace_min_per_km, cardio_avg_heart_rate, " +
   // Release 3 (DB-5): the professional's, copied in by assign_template_to_client.
-  "coach_note, set_types";
+  "coach_note, set_types, " +
+  // Round D (TR11): the professional's target RPE and note per set.
+  "set_targets";
 
 export interface DefinitionRow {
   id: string;
@@ -74,6 +78,7 @@ export interface PrescriptionRow {
   cardio_avg_heart_rate: number | null;
   coach_note: string | null;
   set_types: (PrescribedSetType | null)[] | null;
+  set_targets: (SetTarget | null)[] | null;
   exercises: DefinitionRow | null;
   custom_exercise_library_items: DefinitionRow | null;
 }
@@ -134,6 +139,7 @@ export function toExercise(r: PrescriptionRow): Exercise | null {
     pinnedNote: r.pinned_note ?? undefined,
     ...(r.coach_note ? { coachNote: r.coach_note } : {}),
     ...(Array.isArray(r.set_types) ? { setTypes: r.set_types } : {}),
+    ...(readSetTargets(r.set_targets) ? { setTargets: readSetTargets(r.set_targets) } : {}),
   };
 }
 
@@ -199,5 +205,7 @@ export function prescriptionOf(
     // Exactly as read (the database already validated it), so the stored form
     // ("normal" or null for a plain set) doesn't change under the coach.
     set_types: Array.isArray(ex.setTypes) && ex.setTypes.length > 0 ? ex.setTypes.slice(0, 50) : null,
+    // Round D (TR11): the coach's per-set targets, passed through the same way.
+    set_targets: setTargetsColumn(ex.setTargets),
   };
 }

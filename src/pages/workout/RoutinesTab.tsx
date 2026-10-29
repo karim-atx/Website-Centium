@@ -11,6 +11,7 @@ import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet"
 import { ExerciseSettingsSheet } from "../../components/workout/ExerciseSettingsSheet";
 import { BlockCard } from "../../components/workout/BlockCard";
 import { prescriptionLine } from "../../services/workout/prescription";
+import { setTargetLines } from "../../services/workout/setTargets";
 import { ExerciseLibrarySheet, type ExercisePick } from "../../components/workout/ExerciseLibrarySheet";
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import { BrowseProgramsSheet } from "../../components/workout/BrowseProgramsSheet";
@@ -79,6 +80,7 @@ import {
 } from "lucide-react";
 import { useCoachProgrammes } from "./useCoachProgrammes";
 import { CoachSection } from "./CoachSection";
+import { ProgrammeSection } from "./ProgrammeSection";
 import { coachColor } from "./coachColors";
 import { fullGroupIndex, shortDay } from "../../services/routines/programmeLogic";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -603,6 +605,15 @@ export default function RoutinesTab() {
           again; the strip itself shows the cycle phase (cycle offered,
           tracker on) or the pregnancy guidance (cycle offered, a pregnancy). */}
       <CyclePhaseStrip />
+
+      {/* Round D · DT1: week-by-day programmes (today's workouts, the week view). */}
+      <ProgrammeSection
+        routines={routines}
+        today={today}
+        dark={dark}
+        capsInk={capsInk}
+        onStart={(r) => (activeSession?.routineId === r.id && activeSession.status === "paused" ? resumeActive() : startRoutine(r))}
+      />
 
       <CoachSection
         coach={coach}
@@ -1444,6 +1455,10 @@ const RoutineRow: React.FC<{
                               and rendered a coach's 3–5 × 8–12 @ 75% as
                               "3 × 8 · 0kg". */}
                           {line && <p className="text-[11px] text-charcoal-faint">{line}</p>}
+                          {/* Round D (TR11): the coach's target RPE and note per set. */}
+                          {setTargetLines(ex.setTargets).map((t) => (
+                            <p key={t} className="text-[11px] text-charcoal-faint">{t}</p>
+                          ))}
                         </div>
                         {memberAction(ex)}
                       </div>

@@ -50,6 +50,7 @@ import { useBack } from "../../hooks/useBack";
 import { formatShortDate } from "../../utils/date";
 import { siteHref } from "../../config/site";
 import { GuidelinesLink } from "../moderation/GuidelinesLink";
+import { coverUrl, fetchCourseExtras, type CourseExtras } from "../../services/courses/extras";
 
 // Design screen 7: the course page. What you'll learn, the syllabus by week,
 // ratings, and the choice between watching free and the full course.
@@ -78,6 +79,8 @@ type Loaded = {
   certificate: Certificate | null;
   /** CU25: the modules' opening days for this learner (empty = all at once). */
   drip: DripRow[];
+  /** Round D: the approved cover, description and focus. */
+  extras: CourseExtras | null;
 };
 
 async function loadCourse(courseId: string, userId: string): Promise<Loaded | null | { error: string }> {
@@ -85,13 +88,14 @@ async function loadCourse(courseId: string, userId: string): Promise<Loaded | nu
   if (!c.ok) return { error: c.message };
   if (!c.value) return null;
   const course = c.value;
-  const [names, statMap, tree, access, paidOpen, enrolments] = await Promise.all([
+  const [names, statMap, tree, access, paidOpen, enrolments, extras] = await Promise.all([
     fetchAuthorNames(course.authorId ? [course.authorId] : []),
     fetchCourseStats([course.id]),
     fetchTrees([course.id]),
     fetchAccessLevel(course.id),
     fetchPaidOpen(),
     fetchMyEnrolments(userId),
+    fetchCourseExtras([course.id]),
   ]);
   const enrolment = enrolments.find((e) => e.courseId === course.id) ?? null;
   const [completed, myRating, questions, certificate, drip] = await Promise.all([
@@ -115,6 +119,7 @@ async function loadCourse(courseId: string, userId: string): Promise<Loaded | nu
     questions,
     certificate,
     drip,
+    extras: extras.get(course.id) ?? null,
   };
 }
 
@@ -175,6 +180,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
   }
 
   const { course, authorName, modules, access, enrolment } = state;
+  const cover = coverUrl(state.extras?.coverPath);
   const lessons = orderedLessons(modules, state.lessons, course.id);
   const stats = state.stats;
   const isAuthor = course.authorId === userId;
@@ -220,11 +226,13 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
       {/* MO1.3.5 #1: the hero, 390 × 176; padding 14 16 (measured: the
           disc at 16,14, the pill 16 in and 14 off the bottom). */}
       <div
-        className="h-[calc(env(safe-area-inset-top)+176px)] flex flex-col justify-between px-4 pt-[calc(env(safe-area-inset-top)+14px)] pb-3.5"
+        className="relative overflow-hidden h-[calc(env(safe-area-inset-top)+176px)] flex flex-col justify-between px-4 pt-[calc(env(safe-area-inset-top)+14px)] pb-3.5"
         style={{ background: coverBackground(course.coverColour, dark) }}
       >
-        {back}
-        <span className="self-start">
+        {/* Round D: the approved cover image over the colour (the fallback). */}
+        {cover && <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+        <span className="relative">{back}</span>
+        <span className="relative self-start">
           <CoverPill>{coursePill(course.level, modules.length, course.weeklyHours)}</CoverPill>
         </span>
       </div>
@@ -268,6 +276,22 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
             lessons={lessons}
             completed={state.completed}
           />
+        )}
+
+        {/* Round D: the course's focus and description (plain text, as written). */}
+        {(state.extras?.focus || state.extras?.description) && (
+          <div className="flex flex-col gap-1.5">
+            {state.extras?.focus && (
+              <span className="text-[12px] font-bold" style={{ color: fv("muted") }}>
+                Focus: {state.extras.focus}
+              </span>
+            )}
+            {state.extras?.description && (
+              <p className="m-0 text-[13.5px] leading-[1.6] whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ color: fv("body") }}>
+                {state.extras.description}
+              </p>
+            )}
+          </div>
         )}
 
         {/* MO1.3.5 #5: radius 18, padding 14, gap 10; each point's Check

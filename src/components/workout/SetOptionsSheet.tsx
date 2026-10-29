@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Info, Pin } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { sessionChipStyle } from "./sessionSheetStyles";
 import { typeStyles } from "./setTypeStyle";
 import { useIsDark } from "../../hooks/useIsDark";
-import type { LoggedSet } from "../../types";
+import type { LoggedSet, SetTarget } from "../../types";
 import { rpeOptions } from "../../services/workout";
 import { HANDOVER_SET_TYPES, setKind, type HandoverSetType } from "../../services/workout/stats";
+import { SET_TARGET_NOTE_MAX, TARGET_RPE_CHOICES } from "../../services/workout/setTargets";
 import { textPx } from "../../theme/textSize";
 
 /** What the popup hands back; the logger applies the type through its own rules. */
@@ -106,11 +107,15 @@ export const SetOptionsSheet: React.FC<{
    * prescription. Unset = the client logger's sheet exactly as before. Set:
    * Type is Warm up, Personal record or Drop set only; Target RPE shows the
    * coach's exercise RPE, switching to 6 while Warm up is on and back when it
-   * is cleared (a template stores one RPE per exercise, so the row is not
-   * editable per set); no Pain, Mood or Notes (nothing stores them on a
-   * template).
+   * is cleared; no Pain or Mood.
+   *
+   * Round D (TR11): the Target RPE row is editable per set (1 to 10 in
+   * halves, set_targets), "Set by you" once picked, tap again to go back to
+   * the exercise's RPE; and Notes is this set's note for the client (up to
+   * 200 characters). The result's `rpe` is the set's own target (undefined
+   * when it is the exercise's) and `notes` its note.
    */
-  coach?: { coachRpe?: number };
+  coach?: { coachRpe?: number; target?: SetTarget | null };
   /**
    * Release 3 · W7 (CU1 v5 "set 2 options"): the client logging a coach's
    * routine. Adds the coach's target above Type ("Alex's target: 6 × 82.5 kg
@@ -125,18 +130,39 @@ export const SetOptionsSheet: React.FC<{
   const [rpe, setRpe] = useState<number | undefined>(undefined);
   const [mood, setMood] = useState(5);
   const [pain, setPain] = useState(0);
+  /** Round D (TR11, coach): this set's own target RPE; undefined = the exercise's. */
+  const [pickedRpe, setPickedRpe] = useState<number | undefined>(undefined);
+  const rpeRowRef = useRef<HTMLDivElement | null>(null);
   const dark = useIsDark();
+  const coachTargetRpe = coach?.target?.rpe;
+  const coachTargetNote = coach?.target?.note;
 
   useEffect(() => {
     if (set) {
-      setKindState(setKind(set));
-      setNotes(set.notes ?? "");
-      setPinned(!!set.notes?.trim() && set.notes.trim() === pinnedNote?.trim());
+      const k = setKind(set);
+      setKindState(k);
+      setNotes(coach ? coachTargetNote ?? "" : set.notes ?? "");
+      setPinned(!coach && !!set.notes?.trim() && set.notes.trim() === pinnedNote?.trim());
       setRpe(set.rpe);
       setMood(set.mood ?? 5);
       setPain(set.pain ?? 0);
+      // A warm-up's stored 6 is the automatic warm-up RPE, not a pick, so
+      // clearing Warm up still restores the exercise's RPE.
+      setPickedRpe(k === "warmup" && coachTargetRpe === WARMUP_RPE ? undefined : coachTargetRpe);
     }
-  }, [set, pinnedNote]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [set, pinnedNote, coachTargetRpe, coachTargetNote]);
+
+  // Round D (TR11): the 1–10 row opens scrolled to the chosen RPE (or 6).
+  const shownRpe = coach ? pickedRpe ?? (kind === "warmup" ? WARMUP_RPE : coach.coachRpe) : undefined;
+  useEffect(() => {
+    if (!open || !coach) return;
+    const row = rpeRowRef.current;
+    const chip = row?.querySelector<HTMLElement>(`[data-rpe="${shownRpe ?? WARMUP_RPE}"]`);
+    if (row && chip) row.scrollLeft = Math.max(0, chip.offsetLeft - row.offsetLeft - 48);
+    // Only on opening, not on every pick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, set]);
 
   if (!set) return null;
 
@@ -150,7 +176,7 @@ export const SetOptionsSheet: React.FC<{
   })();
 
   const hasNote = notes.trim().length > 0;
-  const coachTarget = coach ? (kind === "warmup" ? WARMUP_RPE : coach.coachRpe) : undefined;
+  const coachTarget = shownRpe;
 
   return (
     <BottomSheet
@@ -167,7 +193,15 @@ export const SetOptionsSheet: React.FC<{
           onClick={() => {
             onSave(
               coach
-                ? { kind, rpe: coachTarget, mood, pain, notes: undefined, pinned: false }
+                ? {
+                    kind,
+                    // The set's own target only when it differs from the exercise's RPE.
+                    rpe: coachTarget !== coach.coachRpe ? coachTarget : undefined,
+                    mood,
+                    pain,
+                    notes: notes.trim().slice(0, SET_TARGET_NOTE_MAX) || undefined,
+                    pinned: false,
+                  }
                 : { kind, rpe, mood, pain, notes: notes.trim() || undefined, pinned: pinned && hasNote }
             );
             onClose();
@@ -217,28 +251,63 @@ export const SetOptionsSheet: React.FC<{
             <div className="flex items-baseline justify-between" style={{ marginBottom: 6 }}>
               <p style={{ ...sectionLabel, margin: 0 }}>Target RPE</p>
               <span style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>
-                {kind === "warmup" ? `Warm-up RPE ${WARMUP_RPE}` : coach.coachRpe != null ? "Set by you" : ""}
+                {pickedRpe != null
+                  ? "Set by you"
+                  : kind === "warmup"
+                    ? `Warm-up RPE ${WARMUP_RPE}`
+                    : coach.coachRpe != null
+                      ? "Same as the exercise"
+                      : "Optional"}
               </span>
             </div>
-            <div className="flex scroll-row no-scrollbar" style={{ gap: 6 }} role="list" aria-label="Target RPE">
-              {RPE_ASCENDING.map((r) => (
-                <span
+            {/* Round D (TR11): one target per set, 1 to 10 in halves. Tap the
+                chosen one again to go back to the exercise's RPE. */}
+            <div ref={rpeRowRef} className="flex scroll-row no-scrollbar" style={{ gap: 6 }} role="group" aria-label="Target RPE">
+              {TARGET_RPE_CHOICES.map((r) => (
+                <button
                   key={r}
-                  role="listitem"
-                  aria-current={coachTarget === r ? "true" : undefined}
-                  className="flex-none inline-flex items-center justify-center"
+                  type="button"
+                  data-rpe={r}
+                  onClick={() => setPickedRpe(pickedRpe === r ? undefined : r)}
+                  aria-pressed={coachTarget === r}
+                  className="tap flex-none inline-flex items-center justify-center"
                   style={{ ...sessionChipStyle(coachTarget === r, dark), minWidth: 30, height: 30, padding: "0 8px", borderRadius: 6 }}
                 >
                   {r}
-                </span>
+                </button>
               ))}
             </div>
-            {kind === "warmup" && coach.coachRpe != null && coach.coachRpe !== WARMUP_RPE && (
+            {pickedRpe == null && kind === "warmup" && coach.coachRpe != null && coach.coachRpe !== WARMUP_RPE && (
               <p className="flex items-start" style={{ gap: 6, margin: "8px 0 0", fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>
                 <Info size={13} className="shrink-0" style={{ marginTop: 2 }} aria-hidden />
                 {`Switched to the warm-up RPE automatically. Clear Warm up to restore your RPE ${coach.coachRpe}.`}
               </p>
             )}
+          </div>
+        )}
+
+        {coach && (
+          // Round D (TR11): this set's note for the client, in the client
+          // sheet's notes box (no pin: a template has no pinned note).
+          <div style={{ background: optionsColor("notesBox", dark), borderRadius: 14, padding: "10px 12px" }}>
+            <div className="flex items-baseline justify-between" style={{ marginBottom: 6 }}>
+              <label htmlFor="set-target-note" style={{ fontSize: textPx(13), fontWeight: 500, color: optionsColor("notesLabel", dark) }}>
+                Notes
+              </label>
+              <span className="tabular-nums" style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>
+                {notes.length}/{SET_TARGET_NOTE_MAX}
+              </span>
+            </div>
+            <input
+              id="set-target-note"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value.slice(0, SET_TARGET_NOTE_MAX))}
+              maxLength={SET_TARGET_NOTE_MAX}
+              placeholder="e.g. keep the back flat"
+              className="w-full text-charcoal placeholder:text-charcoal-faint focus:outline-none"
+              style={{ borderRadius: 10, background: "rgb(var(--c-cream-card))", border: "none", padding: "9px 12px", fontSize: textPx(14) }}
+            />
+            <p style={{ margin: "6px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Your client sees this under the set.</p>
           </div>
         )}
 

@@ -10,10 +10,12 @@ import {
 } from "../folders";
 import { resolveExerciseRef, type ExerciseLookup } from "../routines";
 import { setTypesColumn } from "./setTypes";
+import { prescribedSetCount, readSetTargets, setTargetsColumn } from "../workout/setTargets";
 import type {
   BlockKind,
   EndurancePlan,
   PrescribedSetType,
+  SetTarget,
   Exercise,
   ExerciseClassification,
   MuscleGroup,
@@ -135,7 +137,9 @@ const PRESCRIPTION_COLUMNS =
   "cardio_duration_min, cardio_distance_km, " +
   "cardio_incline_pct, cardio_pace_min_per_km, cardio_avg_heart_rate, " +
   // Release 3 (DB-5): the coach's note per exercise and the per-set types.
-  "coach_note, set_types";
+  "coach_note, set_types, " +
+  // Round D (TR11): a target RPE and a note per set.
+  "set_targets";
 
 const BLOCK_COLUMNS = "id, kind, label, time_cap_seconds, interval_seconds, rounds";
 
@@ -183,6 +187,7 @@ interface PrescriptionRow {
   block_id: string | null;
   coach_note?: string | null;
   set_types?: (PrescribedSetType | null)[] | null;
+  set_targets?: (SetTarget | null)[] | null;
   exercises: DefinitionRow | null;
   custom_exercise_library_items: DefinitionRow | null;
 }
@@ -276,6 +281,7 @@ function toExercise(r: PrescriptionRow): Exercise | null {
     blockId: r.block_id,
     ...(r.coach_note ? { coachNote: r.coach_note } : {}),
     ...(Array.isArray(r.set_types) ? { setTypes: r.set_types } : {}),
+    ...(readSetTargets(r.set_targets) ? { setTargets: readSetTargets(r.set_targets) } : {}),
   };
 }
 
@@ -420,6 +426,8 @@ function prescriptionOf(
     // them: FINAL_PLAN two-phase removal), so a save never nulls them.
     coach_note: ex.coachNote?.trim().slice(0, 500) || null,
     set_types: setTypesColumn(ex.setTypes),
+    // Round D (TR11): one target per prescribed set, cut to the sets it has.
+    set_targets: setTargetsColumn(ex.setTargets, prescribedSetCount(ex)),
   };
 }
 
@@ -496,7 +504,8 @@ async function writeExercises(
   }
 
   if (rows.length === 0) return null;
-  const { error } = await supabase.from("workout_template_exercises").insert(rows);
+  // `as never`: set_targets (Round D, 20261223010000) is newer than the generated types.
+  const { error } = await supabase.from("workout_template_exercises").insert(rows as never);
   if (error) {
     console.error("[templates] Could not write exercises:", error.message);
     return describe(error);

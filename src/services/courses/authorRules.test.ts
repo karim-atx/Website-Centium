@@ -17,6 +17,11 @@ import {
   LIMITS,
   type CourseStatus,
   type RevisionStatus,
+  HTML_REFUSED,
+  audienceLabel,
+  parseAudience,
+  statsMonthLabel,
+  completeLine,
 } from "./authorRules";
 
 const ALL_COURSE: CourseStatus[] = ["draft", "submitted", "published", "changes_requested", "unpublished"];
@@ -209,4 +214,33 @@ test("every cover colour is a six-digit hex, as courses_cover_colour_check requi
 
 test("the levels are exactly the four the schema allows", () => {
   assert.deepEqual([...COURSE_LEVELS], ["beginner", "intermediate", "advanced", "all_levels"]);
+});
+
+test("Round D: HTML in lesson text, the audience and the description are worded", () => {
+  assert.equal(describeAuthorError({ code: "22023", message: "lesson text is plain text with Markdown; HTML tags are not allowed" }, "save"), HTML_REFUSED);
+  assert.match(describeAuthorError({ code: "22023", message: "choose 1 to 500 clients" }, "audience"), /1 and 500/);
+  assert.match(describeAuthorError({ code: "ATX12" }, "audience"), /clients you work with/);
+  assert.match(describeAuthorError({ code: "22023" }, "description"), /2,000/);
+  assert.equal(describeAuthorError({ code: "ATX60" }, "description"), describeAuthorError({ code: "ATX60" }, "save"));
+});
+
+test("Round D: audience words and parsing", () => {
+  assert.equal(audienceLabel("public"), "Public");
+  assert.equal(audienceLabel("my_clients"), "All your clients");
+  assert.equal(audienceLabel("selected", 1), "1 selected client");
+  assert.equal(audienceLabel("selected", 12), "12 selected clients");
+  assert.equal(audienceLabel("selected"), "Selected clients");
+  assert.equal(parseAudience("selected"), "selected");
+  assert.equal(parseAudience("anything"), "public");
+  assert.equal(parseAudience(null), "public");
+});
+
+test("Round D: stats months and the complete line", () => {
+  assert.equal(statsMonthLabel("2026-10", 2026), "Oct");
+  assert.equal(statsMonthLabel("2025-12", 2026), "Dec 2025");
+  assert.equal(statsMonthLabel("nonsense", 2026), "nonsense");
+  assert.equal(statsMonthLabel("2026-13", 2026), "2026-13");
+  assert.equal(completeLine(40), "40% complete");
+  assert.equal(completeLine(0), "0% complete");
+  assert.equal(completeLine(null), null);
 });
