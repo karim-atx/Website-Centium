@@ -5,8 +5,7 @@ import { useOnline } from "../../../hooks/useOnline";
 import { Toast } from "../../../components/ui/Toast";
 import { CalendarPickerSheet } from "../../../components/dashboard/CalendarPickerSheet";
 import { LogWaterSheet } from "../../../components/health/log/LogWaterSheet";
-import { logDrink } from "../../../services/health-log/waterIntakes";
-import { browserOffline, enqueueLog, isOfflineFailure, SAVED_ON_DEVICE } from "../../../services/health-log/offlineQueue";
+import { browserOffline, enqueueLog, isOfflineFailure, newQueueId, SAVED_ON_DEVICE } from "../../../services/health-log/offlineQueue";
 import { removeDrink, sourceName, updateDrink, useDrinks, type Drink } from "../../../services/health-metrics/b1";
 import { clock12 } from "../../../utils/time12";
 import { useClientShare } from "../../../components/share/client/useClientShare";
@@ -66,9 +65,10 @@ import {
 // DATA (V6-57; Database B1 water_intakes): every drink is a row with its own
 // time. The page reads the drinks: History lists them (amount, time, the
 // running total after it), the Day chart steps up at each drink. Backfilled
-// rows (B1) are a pre-B1 day total, never a drink. Two-phase until B16: the
-// health_metrics day total is still written beside each drink (addWater),
-// and a day with no intakes rows falls back to that total. Goals: B1
+// rows (B1) are a pre-B1 day total, never a drink. Until B16 the
+// health_metrics day total is still kept: a new drink writes both in one
+// log_water call (logWaterDrink); an edit or delete adjusts it (addWater).
+// A day with no intakes rows falls back to that total. Goals: B1
 // metric_goals through AppContext (setWaterGoal, metricGoalOn). Units: the
 // shared B3 preference.
 
@@ -77,7 +77,7 @@ const DAY_LIMIT_ML = 5000;
 const pctOf = (ml: number, goal: number) => Math.round((ml / goal) * 100);
 
 export default function WaterPage() {
-  const { waterByDate, waterGoalMl, setWaterGoal, addWater, metricsError, authUserId, metricGoalOn } = useApp();
+  const { waterByDate, waterGoalMl, setWaterGoal, addWater, logWaterDrink, metricsError, authUserId, metricGoalOn } = useApp();
   const { range, setRange, anchor, setAnchor, openDay, today } = useMetricRangeState("day");
   const online = useOnline();
   const [unit, setUnit] = useWaterUnit();
@@ -150,37 +150,39 @@ export default function WaterPage() {
     if (success) setToast(success);
     return true;
   };
-  // A new drink: the B1 row (its own time) and, two-phase, the day total.
+  // A new drink: one log_water call (the B1 row and the day total).
   // Round D O4: offline, a new drink goes into the device queue (as the water
   // sheet does) instead of being refused. It has no Undo: taking it back
   // needs the server row it doesn't have yet.
-  const queueDrink = (ml: number) => {
+  const queueDrink = (ml: number, requestId?: string) => {
     if (!authUserId) return;
     if ((waterByDate[today] ?? 0) + ml > DAY_LIMIT_ML) {
       setToast({ message: `That's more than ${DAY_LIMIT_ML / 1000} L today. Check the amount.` });
       return;
     }
-    enqueueLog(authUserId, { kind: "water", ml, day: today, loggedAt: new Date().toISOString() });
+    enqueueLog(authUserId, { kind: "water", ml, day: today, loggedAt: new Date().toISOString() }, requestId);
     setToast({ message: SAVED_ON_DEVICE });
   };
   const addDrink = async (ml: number, success?: { message: string; undo?: () => void }) => {
     if (!authUserId) return null;
+    // One id for this drink, reused by the queue if the answer is lost.
+    const requestId = newQueueId();
     if (!online) {
-      queueDrink(ml);
+      queueDrink(ml, requestId);
       return null;
     }
-    const r = await logDrink(authUserId, ml, new Date());
+    if ((waterByDate[today] ?? 0) + ml > DAY_LIMIT_ML) {
+      setToast({ message: `That's more than ${DAY_LIMIT_ML / 1000} L today. Check the amount.` });
+      return null;
+    }
+    const r = await logWaterDrink(ml, new Date(), requestId);
     if (!r.ok) {
-      if (isOfflineFailure(r)) queueDrink(ml);
+      if (isOfflineFailure(r)) queueDrink(ml, requestId);
       else setToast({ message: r.overCap ? r.message : SAVE_FAILED });
       return null;
     }
-    const ok = await write(ml, today, success);
-    if (!ok) {
-      await removeDrink(r.id);
-      drinksRead.reload();
-      return null;
-    }
+    drinksRead.reload();
+    if (success) setToast(success);
     return r.id;
   };
   const quickAdd = (ml: number) => {

@@ -237,6 +237,7 @@ import {
 } from "../services/medical-history";
 import { GOAL_DEFAULT, fetchGoalHistory, goalOnFrom, normaliseGoal, saveGoal, upsertGoalRow, type GoalRow } from "../services/health-metrics/goals";
 import { clearQueue, enqueueLog, isOfflineFailure, newQueueId, removeQueued, type QueuedLog } from "../services/health-log/offlineQueue";
+import { logWater, type WaterResult } from "../services/health-log/waterIntakes";
 import { mergePausedSessions } from "../services/workout/pausedMerge";
 import { OFFLINE_MESSAGE } from "../services/network-error";
 import { fetchFoodConflicts } from "../services/nutrition/client";
@@ -658,6 +659,8 @@ interface AppState {
   // instead of silently keeping a number that was never stored.
   /** `day` (yyyy-mm-dd) defaults to the selected day; the Health B log sheets and their offline queue pass the day the drink was logged for. */
   addWater: (ml: number, day?: string) => Promise<{ ok: boolean; message?: string }>;
+  /** Round D: one new drink, one log_water call; the server's day total becomes the device's. `requestId` defaults to a fresh uuid; the outbox passes its item's (null for an older item). */
+  logWaterDrink: (ml: number, loggedAt: Date, requestId?: string | null) => Promise<WaterResult>;
   setWaterAmount: (ml: number) => Promise<{ ok: boolean; message?: string }>;
   waterGoalMl: number;
   setWaterGoal: (ml: number) => void;
@@ -4882,6 +4885,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
   const addWater: AppState["addWater"] = (ml, day = selectedDate) => writeWater((waterByDate[day] ?? 0) + ml, day);
+  const logWaterDrink: AppState["logWaterDrink"] = async (ml, loggedAt, requestId = newQueueId()) => {
+    const r = await logWater(ml, loggedAt, requestId);
+    if (r.ok) setWaterByDate((prev) => ({ ...prev, [r.day]: r.dayTotalMl }));
+    return r;
+  };
   const setWaterAmount: AppState["setWaterAmount"] = (ml) => writeWater(ml);
   // B1 metric_goals (V6-59): the goal is stored with the day it applies from;
   // the local copy is the cache the screens read synchronously.
@@ -6575,6 +6583,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       water,
       waterByDate,
       addWater,
+      logWaterDrink,
       setWaterAmount,
       waterGoalMl,
       setWaterGoal,

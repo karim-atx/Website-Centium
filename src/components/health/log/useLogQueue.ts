@@ -3,7 +3,6 @@ import { useApp } from "../../../context/AppContext";
 import { logBloodPressure } from "../../../services/blood-pressure";
 import { flushLogQueue, queuedLogs, type QueuedLog } from "../../../services/health-log/offlineQueue";
 import { isUuid } from "../../../services/health-log/requestId";
-import { logWater } from "../../../services/health-log/waterIntakes";
 import { sendMessage } from "../../../services/messaging";
 
 /** Fired when a kept entry was refused once sent (not the connection); detail: { kind, message }. */
@@ -18,7 +17,7 @@ export const OUTBOX_DROPPED_EVENT = "centium:outbox-dropped";
  * one of those screens was open. The queue itself keeps one flush at a time.
  */
 export function useLogQueueFlush() {
-  const { authUserId, today, logWeightForToday, reloadMetrics, reloadBloodPressure, refreshAchievements, deliverQueued } = useApp();
+  const { authUserId, today, logWeightForToday, logWaterDrink, reloadBloodPressure, refreshAchievements, deliverQueued } = useApp();
 
   // The latest senders, so the listener is added once per account.
   const send = useRef<(item: QueuedLog) => Promise<{ ok: boolean; message?: string }>>(async () => ({ ok: false }));
@@ -29,9 +28,7 @@ export function useLogQueueFlush() {
         case "water": {
           // Round D: the drink and the day total in one call, sent once
           // (log_water with the item's uuid; a replay is already_saved).
-          const r = await logWater(item.ml, item.loggedAt ? new Date(item.loggedAt) : new Date(`${item.day}T12:00:00`), isUuid(item.id) ? item.id : null);
-          if (r.ok) reloadMetrics();
-          return r;
+          return logWaterDrink(item.ml, item.loggedAt ? new Date(item.loggedAt) : new Date(`${item.day}T12:00:00`), isUuid(item.id) ? item.id : null);
         }
         case "weight":
           return logWeightForToday(item.kg, item.day, item.note ?? null, item.id);
