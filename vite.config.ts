@@ -1,5 +1,5 @@
-import { writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -28,6 +28,40 @@ function notFoundPage(): Plugin {
   }
 }
 
+// Round E: the lab report reader runs on the device, from Centium's own
+// files and never a CDN. tesseract.js (the reader), its wasm core, the English
+// model and pdf.js are copied from node_modules into public/ocr/<versions>/
+// (git-ignored) whenever dev or build starts, so they are plain static files
+// fetched only when someone scans a report. They sit outside assets/, so the
+// offline precache below never downloads them and the first load is
+// unchanged. The folder name carries the versions, so a cached old worker can
+// never meet a newer library.
+const pkgVersion = (name: string) =>
+  (JSON.parse(readFileSync(join('node_modules', name, 'package.json'), 'utf8')) as { version: string }).version
+const OCR_DIR = `ocr/t${pkgVersion('tesseract.js')}-c${pkgVersion('tesseract.js-core')}-p${pkgVersion('pdfjs-dist')}`
+const OCR_FILES: [string, string][] = [
+  ['tesseract.js/dist/worker.min.js', 'worker.min.js'],
+  ['tesseract.js-core/tesseract-core-lstm.wasm.js', 'core/tesseract-core-lstm.wasm.js'],
+  ['tesseract.js-core/tesseract-core-simd-lstm.wasm.js', 'core/tesseract-core-simd-lstm.wasm.js'],
+  ['tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm.js', 'core/tesseract-core-relaxedsimd-lstm.wasm.js'],
+  ['@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz', 'lang/eng.traineddata.gz'],
+  ['pdfjs-dist/build/pdf.min.mjs', 'pdf/pdf.min.mjs'],
+  ['pdfjs-dist/build/pdf.worker.min.mjs', 'pdf/pdf.worker.min.mjs'],
+]
+function ocrFiles(): Plugin {
+  return {
+    name: 'centium-ocr-files',
+    configResolved() {
+      rmSync(join('public', 'ocr'), { recursive: true, force: true })
+      for (const [from, to] of OCR_FILES) {
+        const out = join('public', OCR_DIR, to)
+        mkdirSync(dirname(out), { recursive: true })
+        copyFileSync(join('node_modules', from), out)
+      }
+    },
+  }
+}
+
 // Centium is served from a domain root and only ever from a domain root
 // (centium.atraxia.org in production, / in dev), so assets resolve against an
 // absolute /. This used to be a relative './' base because one build had to
@@ -48,6 +82,7 @@ export default defineConfig({
   plugins: [
     react(),
     notFoundPage(),
+    ocrFiles(),
     // PWA scaffolding: an installable manifest and a service worker that
     // exists to receive push notifications. Nothing subscribes to push yet —
     // there is no VAPID key — so this makes the app installable and leaves
@@ -132,5 +167,5 @@ export default defineConfig({
   // this file, but it also names an icon (the notification icon and badge).
   // Handing it ICON_VERSION as a compile-time constant keeps every icon
   // reference on the one version number above.
-  define: { __ICON_VERSION__: JSON.stringify(ICON_VERSION) },
+  define: { __ICON_VERSION__: JSON.stringify(ICON_VERSION), __OCR_BASE__: JSON.stringify(`/${OCR_DIR}`) },
 })

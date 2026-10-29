@@ -1,6 +1,6 @@
 import { partBSheetTone } from "../log/LogSheetParts";
 import React, { useRef, useState } from "react";
-import { Camera, ChevronRight, FileText, PenLine } from "lucide-react";
+import { Camera, ChevronRight, FileText, PenLine, ShieldCheck } from "lucide-react";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { textPx, linePx } from "../../../theme/textSize";
 import { acceptFor } from "../../../services/storage";
@@ -23,7 +23,9 @@ export const UploadChoiceSheet: React.FC<{
   onFile: (file: File) => void;
   /** "Type it in" (omitted for Replace). */
   onTypeIt?: () => void;
-}> = ({ open, onClose, title, bucket, onFile, onTypeIt }) => {
+  /** Round E · Scan a report: the line saying the report is read on the phone. */
+  note?: string;
+}> = ({ open, onClose, title, bucket, onFile, onTypeIt, note }) => {
   const { dark, hc } = useHealthMode();
   const camera = useRef<HTMLInputElement>(null);
   const picker = useRef<HTMLInputElement>(null);
@@ -81,7 +83,13 @@ export const UploadChoiceSheet: React.FC<{
           <ChevronRight size={17} style={{ color: INK_FAINT }} aria-hidden />
         </button>
       ))}
-      <HelpLine style={{ marginTop: 10 }}>{`Files up to ${mb} MB.`}</HelpLine>
+      {note && (
+        <p className="flex items-start" style={{ marginTop: 10, gap: 6, fontSize: textPx(11.5), lineHeight: linePx(17.3), color: INK_FAINT }}>
+          <ShieldCheck size={14} className="shrink-0" style={{ marginTop: 1.5, color: deepInk(dark) }} aria-hidden />
+          <span>{note}</span>
+        </p>
+      )}
+      <HelpLine style={{ marginTop: note ? 4 : 10 }}>{`Files up to ${mb} MB.`}</HelpLine>
       {error && <HelpLine error>{error}</HelpLine>}
     </BottomSheet>
   );

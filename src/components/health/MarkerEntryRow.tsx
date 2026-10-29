@@ -62,7 +62,12 @@ export const MarkerEntryRow: React.FC<{
   /** Outline the empty field in red (Save tapped with a ticked row incomplete). */
   showErrors?: boolean;
   first?: boolean;
-}> = ({ index, draft, catalogue, sex, onChange, onRemove, onChooseMarker, showErrors, first }) => {
+  /**
+   * Round E (a report read on the device): what was read for this row, or
+   * what still needs typing (attention), under the row with a visible Remove.
+   */
+  note?: { text: string; attention?: boolean };
+}> = ({ index, draft, catalogue, sex, onChange, onRemove, onChooseMarker, showErrors, first, note }) => {
   const { dark, hc } = useHealthMode();
   const marker = draft.markerKey ? (catalogue?.find((c) => c.key === draft.markerKey) ?? null) : null;
   const [expanded, setExpanded] = useState(false);
@@ -168,6 +173,22 @@ export const MarkerEntryRow: React.FC<{
           {rangeText(asNumber(draft.low), asNumber(draft.high))}
         </button>
       </div>
+      {note && (
+        <div className="flex items-start" style={{ padding: "0 12px 10px 42px", gap: 10, marginTop: -4, opacity: draft.ticked ? 1 : 0.4 }}>
+          <p className="flex-1 min-w-0" style={{ fontSize: textPx(11), lineHeight: linePx(16), fontWeight: note.attention ? 600 : 400, color: note.attention ? red : INK_FAINT, overflowWrap: "anywhere" }}>
+            {note.text}
+          </p>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']"
+            style={{ fontSize: textPx(11), lineHeight: linePx(16), fontWeight: 700, color: INK_SOFT }}
+            aria-label={`Remove result ${n}${draft.name ? `, ${draft.name}` : ""}`}
+          >
+            Remove
+          </button>
+        </div>
+      )}
       {expanded && (
         <div style={{ padding: "0 12px 12px 42px" }}>
           {draft.other && (

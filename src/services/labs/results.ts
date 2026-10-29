@@ -156,6 +156,8 @@ export async function saveLabReport(input: {
   filePath: string | null;
   meta: FileMeta | null;
   results: ResultInput[];
+  /** Round E: the results were read off the report on the device. */
+  scanned?: boolean;
 }): Promise<{ ok: boolean; panelId?: string; message?: string }> {
   const p_panel = {
     panel_date: input.date,
@@ -163,7 +165,10 @@ export async function saveLabReport(input: {
     source_image_url: input.filePath,
     ...(input.filePath && input.meta ? input.meta : {}),
   };
-  const { data, error } = await db.rpc("save_lab_report", { p_panel, p_markers: input.results.map(markerPayload) });
+  // Round E (Database 20261224010000): each result says how it was entered.
+  // A scanned report carries no file (ATXN3), which the scan flow never sends.
+  const entry_method = input.scanned ? "scanned" : "typed";
+  const { data, error } = await db.rpc("save_lab_report", { p_panel, p_markers: input.results.map((m) => ({ ...markerPayload(m), entry_method })) });
   if (error) {
     console.error("[labs] save_lab_report failed:", error.code, error.message);
     return { ok: false, message: "Couldn't save. Try again." };
