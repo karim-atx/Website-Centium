@@ -865,7 +865,7 @@ function ClientProfile() {
             </div>
             <p className="text-[11px] text-charcoal-faint">
               Your age is calculated from this, and is used for calorie targets and health
-              recommendations. A date of birth can't be changed once it's saved. If it's wrong, contact support.
+              recommendations. A date of birth can't be changed once it's saved.
             </p>
             <p className="text-sm text-charcoal-soft">
               Need to correct it?{" "}
