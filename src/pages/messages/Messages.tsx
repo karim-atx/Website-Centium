@@ -215,7 +215,7 @@ function ClientAndBusinessMessages() {
   }, [authUserId]);
 
   // OP1-190 O3: back online, the business list re-reads what the offline
-  // line said was saved.
+  // line said was last loaded (Round D O14: held in memory, not saved).
   const wasOnline = useRef(online);
   useEffect(() => {
     const back = online && !wasOnline.current;

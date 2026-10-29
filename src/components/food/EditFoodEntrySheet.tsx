@@ -10,6 +10,7 @@ import { rescaleEntry, servingMultiplier, targetsFromGoal } from "../../services
 import { getFoodNutrientsById } from "../../services/food-nutrients";
 import { NutrientDetailSections } from "./NutrientSections";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { FOOD_DARK } from "./foodDark";
 import { textPx } from "../../theme/textSize";
 
@@ -42,6 +43,8 @@ export const EditFoodEntrySheet: React.FC<{
 }> = ({ open, onClose, entry }) => {
   const { updateFoodEntry, removeFoodEntry, nutritionGoal } = useApp();
   const dark = useIsDark();
+  // Round D (R3): name and serving only in recovery-sensitive mode.
+  const hide = useHideNumbers();
   const [quantity, setQuantityRaw] = useState(1);
   const [quantityDraft, setQuantityDraft] = useState("1");
   const setQuantity = (updater: number | ((q: number) => number)) => {
@@ -190,10 +193,10 @@ export const EditFoodEntrySheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={advancedOpen ? "Nutrient details" : "Edit Logged Food"}
-      onBack={advancedOpen ? () => setAdvancedOpen(false) : undefined}
+      title={advancedOpen && !hide ? "Nutrient details" : "Edit Logged Food"}
+      onBack={advancedOpen && !hide ? () => setAdvancedOpen(false) : undefined}
     >
-      {advancedOpen ? (
+      {advancedOpen && !hide ? (
         <div className="animate-fade-slide-up flex flex-col gap-2.5">
           <p style={{ fontSize: textPx(13), color: "rgb(var(--c-charcoal-soft))", margin: "0 2px 2px" }}>
             {entry.name} ·{" "}
@@ -278,6 +281,10 @@ export const EditFoodEntrySheet: React.FC<{
 
           {/* Same rescaleEntry() the save uses, so the preview can't disagree
               with what gets written. */}
+          {hide ? (
+            // Keeps the strip's 16px gap above the buttons when the strip is hidden.
+            <div style={{ height: 6 }} />
+          ) : (
           <div className="grid grid-cols-4" style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 16, padding: "13px 0", marginBottom: 16 }}>
             {[
               { value: `${Math.round(preview.calories)}`, color: "rgb(var(--c-charcoal))", caption: "kcal" },
@@ -295,6 +302,7 @@ export const EditFoodEntrySheet: React.FC<{
               </div>
             ))}
           </div>
+          )}
 
           {error && (
             <p className="text-xs font-semibold text-status-high text-center" style={{ marginBottom: 10 }}>
@@ -323,6 +331,7 @@ export const EditFoodEntrySheet: React.FC<{
             >
               {busy && !deleting ? "Saving…" : "Save changes"}
             </button>
+            {!hide && (
             <button
               type="button"
               onClick={() => setAdvancedOpen(true)}
@@ -333,6 +342,7 @@ export const EditFoodEntrySheet: React.FC<{
             >
               <SlidersHorizontal size={20} strokeWidth={1.9} />
             </button>
+            )}
           </div>
         </div>
       )}

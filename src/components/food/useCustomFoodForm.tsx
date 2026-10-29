@@ -5,6 +5,8 @@ import { BarcodeScanner } from "./BarcodeScanner";
 import { logoTones } from "./logoTones";
 import { FOOD_DARK } from "./foodDark";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
+import { NutritionDetails } from "./NutritionDetails";
 import { NUTRIENT_SECTIONS } from "../../data/nutrientSchema";
 import { foodCategories } from "../../data/mockFoods";
 import { foodCategoryIcon } from "../../utils/icons";
@@ -59,6 +61,9 @@ const numText = (n: number | null | undefined) => (n === null || n === undefined
 export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteRequest }: CustomFoodFormOptions) {
   const { authUserId, addCustomFood } = useApp();
   const dark = useIsDark();
+  // Round D (D18): in recovery-sensitive mode kcal is optional and the macro
+  // fields fold under "Nutrition details", closed. A blank kcal saves as 0.
+  const hide = useHideNumbers();
   // Mobile v5.1 R3: the pastel logo tones take their dark shades (logoTones.ts).
   const LOGO_TONES = logoTones(dark);
   const initialDraft = {
@@ -86,7 +91,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
   // Awaits the write so the food handed back carries its real custom_foods
   // id, which is what gives the resulting diary entry real provenance.
   const saveCustomFood = async () => {
-    if (!draft.name.trim() || !draft.calories || saving) return;
+    if (!draft.name.trim() || (!hide && !draft.calories) || saving) return;
     setSaving(true);
     setError(null);
 
@@ -174,7 +179,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
    * exactly as create does (normalise, find or create the shared row).
    */
   const saveEdit = async () => {
-    if (!editing || !draft.name.trim() || !draft.calories || saving) return;
+    if (!editing || !draft.name.trim() || (!hide && !draft.calories) || saving) return;
     setSaving(true);
     setError(null);
     const typedCode = barcode.trim();
@@ -261,7 +266,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
   );
 
   const tone = LOGO_TONES[logoTone % LOGO_TONES.length];
-  const canSave = !!draft.name.trim() && !!draft.calories && !saving;
+  const canSave = !!draft.name.trim() && (hide || !!draft.calories) && !saving;
 
   // Advanced nutrients: the same sourced set the Nutrient Summary reads, so
   // the two stay in step. Popular's four macros are already the fields
@@ -369,6 +374,15 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
     </div>
   );
 
+  const macroGrid = (
+    <div className="grid grid-cols-2" style={{ gap: 12 }}>
+      {field("Calories", "calories", "0", true)}
+      {field("Protein (g)", "protein", "0", true)}
+      {field("Carbs (g)", "carbs", "0", true)}
+      {field("Fat (g)", "fat", "0", true)}
+    </div>
+  );
+
   const body = (
       <div className="flex flex-col animate-fade-slide-up" style={{ gap: 16 }}>
         {field("Food name", "name", "Mom's Kibbeh")}
@@ -416,12 +430,11 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
           </p>
         </div>
 
-        <div className="grid grid-cols-2" style={{ gap: 12 }}>
-          {field("Calories", "calories", "0", true)}
-          {field("Protein (g)", "protein", "0", true)}
-          {field("Carbs (g)", "carbs", "0", true)}
-          {field("Fat (g)", "fat", "0", true)}
-        </div>
+        {hide ? (
+          <NutritionDetails>{macroGrid}</NutritionDetails>
+        ) : (
+          macroGrid
+        )}
 
         {/* Barcode sits after the macros, just before the save / advanced row. */}
         <div style={{ border: "1px solid rgb(var(--th-aea1dc) / 0.4)", borderRadius: 14, background: "rgb(var(--th-aea1dc) / 0.07)", padding: 12 }}>

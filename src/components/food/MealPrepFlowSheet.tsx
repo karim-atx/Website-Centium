@@ -22,6 +22,7 @@ import {
 } from "./mealPrepShared";
 import { PREP_ON_PRIMARY, FOOD_DARK } from "./foodDark";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { textPx } from "../../theme/textSize";
 
 export type PrepKind = "meals" | "recipes";
@@ -56,6 +57,10 @@ export const MealPrepFlowSheet: React.FC<{
 }> = ({ kind, itemId, startEditing = false, onClose, professional = false }) => {
   const { customMeals, recipes, selectedDate, logCustomMeal, logRecipe, removeCustomMeal, removeRecipe } = useApp();
   const dark = useIsDark();
+  // Round D (R3): in recovery-sensitive mode the detail shows names, servings
+  // and quantities only — no kcal, macro strip or nutrient breakdown. The
+  // professional recipe library is their own screen and never changes.
+  const hide = useHideNumbers() && !professional;
   const isR = kind === "recipes";
   // Item 11: the flow's own primaries are solid (#79A8A1 / #A198DF). As the
   // outline Edit button's ink in dark mode, the teal #4F7F78 (3.64:1 on the
@@ -83,6 +88,7 @@ export const MealPrepFlowSheet: React.FC<{
     editRecipe: isR ? (item as Recipe | null) : null,
     onDone: () => setScreen("detail"),
     onDeleteRequest: () => setConfirm("delete"),
+    professional,
   });
 
   useEffect(() => {
@@ -177,10 +183,11 @@ export const MealPrepFlowSheet: React.FC<{
             logging={logging}
             logError={logError}
             hideLog={professional}
+            hideNumbers={hide}
           />
         )}
         {!item && <p style={{ margin: 0, fontSize: textPx(13), color: PREP_FAINT }}>Nothing saved yet.</p>}
-        {screen === "advanced" && <AdvancedScreen kind={kind} item={item} qty={qty} />}
+        {screen === "advanced" && !hide && <AdvancedScreen kind={kind} item={item} qty={qty} />}
       </BottomSheet>
 
       <ConfirmCard
@@ -239,7 +246,9 @@ const DetailScreen: React.FC<{
   logError: string | null;
   /** Professional recipe library: no Servings, Meal, Add to Diary or nutrient details. */
   hideLog?: boolean;
-}> = ({ kind, item, total, per, qty, setQty, meal, setMeal, onAdvanced, onLog, logging, logError, hideLog = false }) => {
+  /** Recovery-sensitive mode: no kcal, macro strip or nutrient details. */
+  hideNumbers?: boolean;
+}> = ({ kind, item, total, per, qty, setQty, meal, setMeal, onAdvanced, onLog, logging, logError, hideLog = false, hideNumbers = false }) => {
   const dark = useIsDark();
   const GREY = dark ? GREY_CONTAINER_DARK : GREY_CONTAINER;
   const isR = kind === "recipes";
@@ -255,11 +264,17 @@ const DetailScreen: React.FC<{
           {item.title}
         </p>
         <p className="mt-0.5 text-[12.5px]" style={{ color: PREP_FAINT }}>
-          {isR ? `${recipe!.servings} servings · ${Math.round(total.kcal)} kcal total` : `${item.items.length} foods`}
+          {isR
+            ? hideNumbers
+              ? `${recipe!.servings} servings`
+              : `${recipe!.servings} servings · ${Math.round(total.kcal)} kcal total`
+            : `${item.items.length} foods`}
         </p>
       </div>
 
-      <MacroStrip t={shown} note={isR ? `Per serving × ${q}. Totals ÷ ${recipe!.servings} servings.` : `Whole meal × ${q}.`} />
+      {!hideNumbers && (
+        <MacroStrip t={shown} note={isR ? `Per serving × ${q}. Totals ÷ ${recipe!.servings} servings.` : `Whole meal × ${q}.`} />
+      )}
 
       <div style={GREY}>
         <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
@@ -284,9 +299,11 @@ const DetailScreen: React.FC<{
                 <span className="flex-none text-[11.5px]" style={{ color: PREP_FAINT }}>
                   {rItem.quantity} {rItem.unit ?? "serving"}
                 </span>
-                <span className="flex-none w-12 text-right text-[11.5px] font-semibold tabular-nums" style={{ color: PREP_SOFT }}>
-                  {Math.round(kcal)}
-                </span>
+                {!hideNumbers && (
+                  <span className="flex-none w-12 text-right text-[11.5px] font-semibold tabular-nums" style={{ color: PREP_SOFT }}>
+                    {Math.round(kcal)}
+                  </span>
+                )}
               </div>
             );
           })}
@@ -348,6 +365,7 @@ const DetailScreen: React.FC<{
         >
           {logging ? "Logging…" : "Add to Diary"}
         </button>
+        {!hideNumbers && (
         <button
           onClick={onAdvanced}
           aria-label="Nutrient details"
@@ -357,6 +375,7 @@ const DetailScreen: React.FC<{
         >
           <SlidersHorizontal size={20} strokeWidth={1.9} />
         </button>
+        )}
       </div>
       </>
       )}

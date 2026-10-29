@@ -7,6 +7,9 @@ import { servingMultiplier, rescaleEntry } from "../nutrition";
 import { getFoodNutrientsById } from "../food-nutrients";
 import { normalizeGtin } from "../../utils/gtin";
 import { escapeLike } from "../postgrestLike";
+import { searchFailure, type FoodSearchFailure } from "./searchFailure";
+
+export { searchFailure, searchEmptyLine, type FoodSearchFailure } from "./searchFailure";
 
 // Reads and writes the real food catalog and diary.
 //
@@ -170,9 +173,9 @@ function describe(error: PostgrestError): string {
  * catalog row, that catalog row is dropped from the results rather than shown
  * beside their correction, which is the point of overrides_food_id.
  */
-export async function searchFoods(query: string): Promise<FoodSearchResult[]> {
+export async function searchFoods(query: string): Promise<FoodSearchOutcome> {
   const term = query.trim();
-  if (!term) return [];
+  if (!term) return { foods: [], failure: null };
   const pattern = "%" + escapeLike(term) + "%";
 
   const [catalog, custom] = await Promise.all([
@@ -185,8 +188,12 @@ export async function searchFoods(query: string): Promise<FoodSearchResult[]> {
       .limit(50),
   ]);
 
-  if (catalog.error) console.error("[food] catalog search failed:", catalog.error.message);
-  if (custom.error) console.error("[food] custom search failed:", custom.error.message);
+  if (catalog.error && !isOffline(catalog.error)) {
+    console.error("[food] catalog search failed:", catalog.error.message);
+  }
+  if (custom.error && !isOffline(custom.error)) {
+    console.error("[food] custom search failed:", custom.error.message);
+  }
 
   const mine = (custom.data ?? []).map((r) => fromCustom(r as CustomRow));
   const overridden = new Set(
@@ -196,8 +203,22 @@ export async function searchFoods(query: string): Promise<FoodSearchResult[]> {
     .map((r) => fromCatalog(r as CatalogRow))
     .filter((f) => !overridden.has(f.id));
 
-  return [...mine, ...shared];
+  return { foods: [...mine, ...shared], failure: searchFailure([catalog.error, custom.error]) };
 }
+
+/**
+ * What a search found, and whether it could actually ask.
+ *
+ * `failure` exists because an empty list used to mean two things: "nothing
+ * matches" and "the request never got there". Offline, Add Food said "Not in
+ * our catalog yet" about a food that is in the catalog (Round D, O3). Rows
+ * that did come back are still in `foods`, so a half-failed search shows what
+ * it found; callers need `failure` only to word an EMPTY result.
+ */
+export type FoodSearchOutcome = {
+  foods: FoodSearchResult[];
+  failure: FoodSearchFailure | null;
+};
 
 /**
  * The whole catalog, for the browse list an empty search box shows.
@@ -668,9 +689,9 @@ export async function matchFoodByName(name: string): Promise<FoodMatch | null> {
   const term = name.trim();
   if (!term) return null;
 
-  let candidates = await searchFoods(term);
+  let candidates = (await searchFoods(term)).foods;
   if (candidates.length === 0 && /[a-z]s$/i.test(term)) {
-    candidates = await searchFoods(term.slice(0, -1));
+    candidates = (await searchFoods(term.slice(0, -1))).foods;
   }
   if (candidates.length === 0) return null;
 

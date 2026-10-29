@@ -13,6 +13,7 @@ import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { sumItems, divideTotals, PREP_PRIMARY, type PrepItem } from "../../components/food/mealPrepShared";
 import { PREP_ON_PRIMARY } from "../../components/food/foodDark";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { logoTone } from "../../components/food/logoTones";
 import { foodCategoryIcon } from "../../utils/icons";
 import { deleteCustomFood, listCustomFoods, type FoodSearchResult } from "../../services/food";
@@ -93,6 +94,9 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
   const { customMeals, customMealsError, recipes, recipesError, reloadMealPrep, authUserId, removeCustomMeal, removeRecipe, forgetCustomFood } =
     useApp();
   const dark = useIsDark();
+  // Round D (R3): the rows keep their ingredient count and serving, never kcal.
+  const hide = useHideNumbers();
+  const kcalPart = (text: string) => (hide ? "" : ` · ${text}`);
   const [subOwn, setSub] = useState<SubTab>("meals");
   // Food drives the sub-tab from its fixed header (FO1 K9); alone, the panel
   // keeps its own.
@@ -185,7 +189,7 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
           open: { kind: "meals", id: m.id, edit: false },
           name: m.title,
           // Decision 12: "N ingredients · kcal"; there is no servings column.
-          detail: `${m.items.length} ingredient${m.items.length === 1 ? "" : "s"} · ${Math.round(sumItems(m.items as PrepItem[]).kcal)} kcal`,
+          detail: `${m.items.length} ingredient${m.items.length === 1 ? "" : "s"}${kcalPart(`${Math.round(sumItems(m.items as PrepItem[]).kcal)} kcal`)}`,
           icon: <Package size={16} />,
           iconBg: "rgb(var(--c-cream-card))",
         }))
@@ -193,7 +197,7 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
         ? recipes.map((r) => ({
             open: { kind: "recipes", id: r.id, edit: false },
             name: r.title,
-            detail: `${r.items.length} ingredient${r.items.length === 1 ? "" : "s"} · ${Math.round(divideTotals(sumItems(r.items as PrepItem[]), r.servings).kcal)} kcal / serving`,
+            detail: `${r.items.length} ingredient${r.items.length === 1 ? "" : "s"}${kcalPart(`${Math.round(divideTotals(sumItems(r.items as PrepItem[]), r.servings).kcal)} kcal / serving`)}`,
             icon: <Soup size={16} />,
             iconBg: "rgb(var(--c-cream-card))",
           }))
@@ -203,7 +207,7 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
             return {
               open: { kind: "foods", food: f, edit: false },
               name: f.name,
-              detail: `${f.servingLabel} · ${Math.round(f.calories)} kcal`,
+              detail: `${f.servingLabel}${kcalPart(`${Math.round(f.calories)} kcal`)}`,
               icon: <Icon size={16} style={tone ? { color: tone.fg } : undefined} />,
               iconBg: tone ? tone.bg : "rgb(var(--c-cream-card))",
             };

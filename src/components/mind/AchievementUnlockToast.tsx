@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
-import { LEVEL_LABEL } from "../../services/achievements";
+import { hiddenInRecovery, LEVEL_LABEL } from "../../services/achievements";
 import { pillColours } from "./achievementStyle";
 import { AchievementIcon } from "./AchievementIcon";
 
@@ -37,12 +37,26 @@ const EASE_IN = "cubic-bezier(.55,0,1,.45)";
 const FROM_Y = -90;
 
 export const AchievementUnlockToast: React.FC = () => {
-  const { unlockQueue, dismissUnlock } = useApp();
+  const { unlockQueue, dismissUnlock, recoverySensitive, recoveryModePending } = useApp();
   // A FRESH PILL PER QUEUE ENTRY: keyed by its position in the run of pills,
   // so the same badge queued twice (the dev helper) still restarts.
   const [shown, setShown] = useState(0);
   const achievement = unlockQueue[0] ?? null;
-  if (!achievement) return null;
+  // Recovery-sensitive mode (AJ R8, D20): a streak or logging badge never
+  // pops. With the mode on it is dropped from the queue (marked shown, so it
+  // does not come back on the next read); while the setting is still being
+  // read the pill simply waits, so nothing flashes and nothing is lost.
+  const hiddenBadge = !!achievement && hiddenInRecovery(achievement) && (recoverySensitive || recoveryModePending);
+  const drop = hiddenBadge && recoverySensitive;
+  // Once per queue entry: a re-run of the effect (Strict Mode) must not drop
+  // the entry behind it too.
+  const dropped = useRef<Unlocked | null>(null);
+  useEffect(() => {
+    if (!drop || !achievement || dropped.current === achievement) return;
+    dropped.current = achievement;
+    dismissUnlock();
+  }, [drop, achievement, dismissUnlock]);
+  if (!achievement || hiddenBadge) return null;
   return (
     <Pill
       key={`${shown}-${achievement.key}`}

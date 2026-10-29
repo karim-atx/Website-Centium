@@ -17,8 +17,10 @@ export const PrepCreateSheet: React.FC<{
   editMeal?: CustomMeal | null;
   editRecipe?: Recipe | null;
   onBack?: () => void;
-}> = ({ kind, open, onClose, editMeal, editRecipe, onBack }) => {
-  const form = usePrepForm({ kind, active: open, editMeal, editRecipe, onDone: () => (onBack ?? onClose)() });
+  /** A professional's own recipe screen: numbers stay whatever their recovery setting. */
+  professional?: boolean;
+}> = ({ kind, open, onClose, editMeal, editRecipe, onBack, professional = false }) => {
+  const form = usePrepForm({ kind, active: open, editMeal, editRecipe, professional, onDone: () => (onBack ?? onClose)() });
   return (
     <BottomSheet
       open={open}

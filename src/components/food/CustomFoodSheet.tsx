@@ -8,6 +8,7 @@ import { foodCategoryIcon } from "../../utils/icons";
 import { deleteCustomFood, type FoodSearchResult } from "../../services/food";
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { FOOD_DARK } from "./foodDark";
 import { textPx } from "../../theme/textSize";
 
@@ -33,6 +34,8 @@ export const CustomFoodSheet: React.FC<{
 }> = ({ food, startEditing = false, onClose, onSaved, onDeleted }) => {
   const { syncCustomFood, forgetCustomFood } = useApp();
   const dark = useIsDark();
+  // Round D (R3): name and serving only in recovery-sensitive mode.
+  const hide = useHideNumbers();
   const [editing, setEditing] = useState(startEditing);
   const [shown, setShown] = useState(food);
   const [confirm, setConfirm] = useState<null | "delete" | "discard-back" | "discard-close">(null);
@@ -126,6 +129,7 @@ export const CustomFoodSheet: React.FC<{
                 <p style={{ margin: "2px 0 0", fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-muted))" }}>{shown.servingLabel}</p>
               </div>
             </div>
+            {!hide && (
             <div className="grid grid-cols-4" style={{ gap: 7, marginTop: 16 }}>
               {[
                 [`${Math.round(shown.calories)}`, "kcal"],
@@ -139,10 +143,11 @@ export const CustomFoodSheet: React.FC<{
                 </div>
               ))}
             </div>
+            )}
             {shown.barcode && (
               <div
                 className="flex items-center justify-between"
-                style={{ marginTop: 10, background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 12, padding: "13px 14px", fontSize: textPx(13.5) }}
+                style={{ marginTop: hide ? 16 : 10, background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 12, padding: "13px 14px", fontSize: textPx(13.5) }}
               >
                 <span style={{ color: dark ? FOOD_DARK.label : "#575863" }}>Barcode</span>
                 <span style={{ color: "rgb(var(--c-charcoal))", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{shown.barcode}</span>

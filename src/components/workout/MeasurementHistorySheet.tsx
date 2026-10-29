@@ -17,6 +17,7 @@ import {
   type MeasurementGoal,
 } from "../../services/measurements/trend";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { DARK_SURFACE, liftTo } from "../../data/folderColors";
 import { textPx } from "../../theme/textSize";
 
@@ -69,8 +70,11 @@ export const MeasurementHistorySheet: React.FC<{
   const dark = useIsDark();
   // Enter blurs the field, and the blur is what saves: this stops a second save.
   const committing = useRef(false);
+  // Recovery-sensitive mode (AJ R2): body measurements are hidden, so the
+  // sheet renders nothing even if a caller opens it.
+  const hideNumbers = useHideNumbers();
 
-  if (!type) return null;
+  if (hideNumbers || !type) return null;
   const site = siteFor(type);
   if (!site) return null;
   const unit = site.unit;

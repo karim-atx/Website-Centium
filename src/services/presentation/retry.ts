@@ -11,7 +11,9 @@
 //   - between failures each retry waits retryDelayMs(failures), doubling from
 //     FIRST_DELAY_MS up to MAX_DELAY_MS. A trigger inside that wait does not
 //     save early; the timer saves the latest choice when it ends.
-// A save that lands resets the count.
+// A save that lands resets the count, and so does reconnecting (Round D O13):
+// failures while offline say nothing about the server, so coming back online
+// starts a fresh count. A permission refusal stays stopped.
 
 export const MAX_FAILURES = 5;
 export const FIRST_DELAY_MS = 5_000;
@@ -30,9 +32,9 @@ export function retryDelayMs(failures: number): number {
   return Math.min(FIRST_DELAY_MS * 2 ** (failures - 1), MAX_DELAY_MS);
 }
 
-export type RetryState = { failures: number; blocked: boolean; notBefore: number };
+export type RetryState = { failures: number; blocked: boolean; notBefore: number; permission: boolean };
 
-export const RETRY_START: RetryState = { failures: 0, blocked: false, notBefore: 0 };
+export const RETRY_START: RetryState = { failures: 0, blocked: false, notBefore: 0, permission: false };
 
 /** The state after a failed save at `now`. */
 export function afterFailure(state: RetryState, permission: boolean, now: number): RetryState {
@@ -41,7 +43,13 @@ export function afterFailure(state: RetryState, permission: boolean, now: number
     failures,
     blocked: permission || failures >= MAX_FAILURES,
     notBefore: now + retryDelayMs(failures),
+    permission: state.permission || permission,
   };
+}
+
+/** The state after the browser's `online` event: a fresh count, unless a permission refusal stopped it. */
+export function afterOnline(state: RetryState): RetryState {
+  return state.permission ? state : RETRY_START;
 }
 
 /** Whether a save may be attempted at `now`: "now", "later" (wait for the timer) or "never" (until sign-in). */

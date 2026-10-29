@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import type { Goal } from "../../types";
 import clsx from "clsx";
 import { Check, Scale, Dumbbell, TrendingUp, Salad, Activity, HeartPulse, BarChart3, Leaf } from "lucide-react";
@@ -29,7 +30,10 @@ const goals: { value: Goal; label: string; icon: LucideIcon }[] = [
 const triggeringGoals: Goal[] = ["lose_weight"];
 
 export const GoalsEditSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const { user, updateProfile, recoverySensitive } = useApp();
+  const { user, updateProfile } = useApp();
+  // Pending counts as on (AJ R13): fails closed, so a triggering goal is
+  // never offered while the setting is still being read.
+  const hideNumbers = useHideNumbers();
   const [selected, setSelected] = useState<Goal[]>(user.goals);
 
   useEffect(() => {
@@ -44,7 +48,7 @@ export const GoalsEditSheet: React.FC<{ open: boolean; onClose: () => void }> = 
     onClose();
   };
 
-  const visibleGoals = recoverySensitive ? goals.filter((g) => !triggeringGoals.includes(g.value)) : goals;
+  const visibleGoals = hideNumbers ? goals.filter((g) => !triggeringGoals.includes(g.value)) : goals;
 
   return (
     <BottomSheet open={open} onClose={onClose} title="Edit Goals">

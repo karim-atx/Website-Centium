@@ -8,6 +8,7 @@ import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useOnline } from "../../hooks/useOnline";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { AchievementDetailSheet } from "../../components/mind/AchievementDetailSheet";
 import { AchievementTile } from "../../components/mind/AchievementIcon";
 import { keyInk, tierCardColours, tierHex, tierIcon } from "../../components/mind/achievementStyle";
@@ -20,6 +21,7 @@ import {
   tierProgress,
   tierReached,
   earnedCount,
+  visibleAchievements,
   CATEGORY_LABEL,
   CATEGORY_ORDER,
   type Badge,
@@ -184,7 +186,11 @@ export default function AchievementsTab() {
 
   // Memoised because `achievements ?? []` is a new array on every render, and
   // everything below it is derived.
-  const rows = useMemo(() => achievements ?? [], [achievements]);
+  // Recovery-sensitive mode (AJ R8, D20): the streak and logging badges are
+  // left out of everything below (grid, tabs, Recent, the earned count, a
+  // ?badge= link); the rest stay.
+  const hideNumbers = useHideNumbers();
+  const rows = useMemo(() => visibleAchievements(achievements ?? [], hideNumbers), [achievements, hideNumbers]);
   const badges = useMemo(() => toBadges(rows), [rows]);
   const categories = useMemo(() => categoriesPresent(badges), [badges]);
   const recent = useMemo(() => recentlyUnlocked(rows, 3), [rows]);
@@ -215,7 +221,7 @@ export default function AchievementsTab() {
 
   const tabItems = [
     { key: "all", label: "All" },
-    ...(achievements === null ? CATEGORY_ORDER : categories).map((c) => ({ key: c, label: CATEGORY_LABEL[c] })),
+    ...(achievements === null ? CATEGORY_ORDER.filter((c) => !(hideNumbers && c === "consistency")) : categories).map((c) => ({ key: c, label: CATEGORY_LABEL[c] })),
   ];
   const tabs = (
     <PinnedTabs>

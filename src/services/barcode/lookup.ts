@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { lookupByBarcode, type FoodSearchResult } from "../food";
 import { normalizeGtin } from "../../utils/gtin";
+import { OFFLINE_MESSAGE } from "../network-error";
 
 // What a scanned or typed barcode turns into, in the order the handover sets
 // (FO3.2 / HO2.1):
@@ -48,8 +49,13 @@ interface FnProduct {
   attribution: OffProduct["attribution"];
 }
 
-/** The Edge Function's error codes, said the way a person scanning needs to hear them. */
-export function lookupErrorMessage(code: string | undefined): string {
+/**
+ * The Edge Function's error codes, said the way a person scanning needs to hear them.
+ * `offline` wins over any code: a request that never left the device has none
+ * worth reading, and "try again" without saying why sends them round in circles.
+ */
+export function lookupErrorMessage(code: string | undefined, offline = false): string {
+  if (offline) return OFFLINE_MESSAGE;
   if (code === "rate_limited") return "You've scanned a lot in the last hour. Try again later, or enter it by hand.";
   if (code === "upstream_rate_limited" || code === "upstream_unavailable" || code === "upstream_error")
     return "Open Food Facts isn't answering right now. Try again, or enter it by hand.";
@@ -97,7 +103,13 @@ export async function resolveBarcode(raw: string): Promise<BarcodeLookup> {
   // Not found, and found without usable numbers or a name, both go to the
   // manual form: the user can read the packet.
   if (status === 404 || status === 422) return { kind: "miss", gtin };
-  return { kind: "error", gtin, message: lookupErrorMessage(code) };
+  // No HTTP response at all means the request never reached the function:
+  // supabase-js reports that as FunctionsFetchError, with no status or code.
+  const offline =
+    status === 0 &&
+    ((error as { name?: string } | null)?.name === "FunctionsFetchError" ||
+      (typeof navigator !== "undefined" && navigator.onLine === false));
+  return { kind: "error", gtin, message: lookupErrorMessage(code, offline) };
 }
 
 /** An Open Food Facts product as a food the add step can log (per its own serving). */

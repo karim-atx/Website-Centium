@@ -180,7 +180,7 @@ export const BizListError: React.FC<{ onRetry: () => void }> = ({ onRetry }) => 
 export const BizOfflineBanner: React.FC = () => (
   <div role="status" data-biz-offline="" className="mb-1.5 rounded-[14px] bg-primary-pale px-3 py-[9px] flex items-center gap-2">
     <WifiOff size={15} strokeWidth={2.2} className="text-primary-dark shrink-0" aria-hidden />
-    <span className="text-[12px] leading-[16px] font-bold text-primary-deep-text">You're offline. Showing your last saved chats.</span>
+    <span className="text-[12px] leading-[16px] font-bold text-primary-deep-text">You're offline. Showing your chats as last loaded.</span>
   </div>
 );
 

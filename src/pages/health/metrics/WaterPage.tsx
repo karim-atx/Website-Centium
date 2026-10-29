@@ -6,6 +6,7 @@ import { Toast } from "../../../components/ui/Toast";
 import { CalendarPickerSheet } from "../../../components/dashboard/CalendarPickerSheet";
 import { LogWaterSheet } from "../../../components/health/log/LogWaterSheet";
 import { logDrink } from "../../../services/health-log/waterIntakes";
+import { browserOffline, enqueueLog, isOfflineFailure, SAVED_ON_DEVICE } from "../../../services/health-log/offlineQueue";
 import { removeDrink, sourceName, updateDrink, useDrinks, type Drink } from "../../../services/health-metrics/b1";
 import { clock12 } from "../../../utils/time12";
 import { useClientShare } from "../../../components/share/client/useClientShare";
@@ -150,15 +151,28 @@ export default function WaterPage() {
     return true;
   };
   // A new drink: the B1 row (its own time) and, two-phase, the day total.
+  // Round D O4: offline, a new drink goes into the device queue (as the water
+  // sheet does) instead of being refused. It has no Undo: taking it back
+  // needs the server row it doesn't have yet.
+  const queueDrink = (ml: number) => {
+    if (!authUserId) return;
+    if ((waterByDate[today] ?? 0) + ml > DAY_LIMIT_ML) {
+      setToast({ message: `That's more than ${DAY_LIMIT_ML / 1000} L today. Check the amount.` });
+      return;
+    }
+    enqueueLog(authUserId, { kind: "water", ml, day: today, loggedAt: new Date().toISOString() });
+    setToast({ message: SAVED_ON_DEVICE });
+  };
   const addDrink = async (ml: number, success?: { message: string; undo?: () => void }) => {
+    if (!authUserId) return null;
     if (!online) {
-      setToast({ message: OFFLINE_ACTION });
+      queueDrink(ml);
       return null;
     }
-    if (!authUserId) return null;
     const r = await logDrink(authUserId, ml, new Date());
     if (!r.ok) {
-      setToast({ message: r.overCap ? r.message : SAVE_FAILED });
+      if (isOfflineFailure(r)) queueDrink(ml);
+      else setToast({ message: r.overCap ? r.message : SAVE_FAILED });
       return null;
     }
     const ok = await write(ml, today, success);
@@ -174,6 +188,8 @@ export default function WaterPage() {
     void addDrink(ml, {
       message: `${ml} ml added`,
       undo: () => {
+        // Undo still needs a connection (the server row to remove).
+        if (browserOffline()) return setToast({ message: OFFLINE_ACTION });
         if (id) void removeDrink(id).then(() => write(-ml, today));
       },
     }).then((x) => (id = x));
@@ -407,7 +423,7 @@ export default function WaterPage() {
         text={hero.text}
         loading={loading}
         onQuickAdd={quickAdd}
-        onCustom={() => (online ? setCustomOpen(true) : setToast({ message: OFFLINE_ACTION }))}
+        onCustom={() => setCustomOpen(true)}
         ariaLabel={`${hero.text.value} ${hero.text.unit === "L" ? "litres" : hero.text.unit}, ${hero.text.lines.join(", ")}, ${hero.text.pill}`}
       />
       {!online && hasAny && <FreshnessLine offline>{OFFLINE_CACHED}</FreshnessLine>}

@@ -9,6 +9,8 @@ import { useApp } from "../../../context/AppContext";
 import { deletePrivateFile, uploadPrivateFile } from "../../../services/storage";
 import { updatePanel, type LabResult } from "../../../services/labs/results";
 import { fileMetaOf } from "../../../services/storage/fileMeta";
+import { OFFLINE_MESSAGE } from "../../../services/network-error";
+import { browserOffline } from "../../../services/health-log/offlineQueue";
 import { textPx, linePx } from "../../../theme/textSize";
 import type { LabReport } from "../../../types";
 import { UploadChoiceSheet } from "./UploadChoiceSheet";
@@ -151,7 +153,8 @@ export const LabReportEditSheet: React.FC<{ report: LabReport | null; onClose: (
     }
     if (ok) await reloadHealthRecords();
     setSaving(false);
-    if (!ok) return setError("Couldn't save. Try again.");
+    // Round D O12: offline, say it needs a connection.
+    if (!ok) return setError(browserOffline() ? OFFLINE_MESSAGE : "Couldn't save. Try again.");
     onSaved("Changes saved.");
     onClose();
   };
@@ -210,7 +213,7 @@ export const RemoveReportPopup: React.FC<{ report: LabReport | null; onClose: ()
         setError(null);
         void removeLabReport(report.id).then((r) => {
           setBusy(false);
-          if (!r.ok) return setError(r.message ?? "That lab report couldn't be removed.");
+          if (!r.ok) return setError(browserOffline() ? OFFLINE_MESSAGE : r.message ?? "That lab report couldn't be removed.");
           onRemoved();
           onClose();
         });

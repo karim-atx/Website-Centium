@@ -8,6 +8,8 @@ import { sumNutrientMaps, targetsFromGoal } from "../../services/nutrition";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { useBack } from "../../hooks/useBack";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
+import { Navigate } from "react-router-dom";
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands). Inks and surfaces with an
@@ -45,6 +47,7 @@ export default function NutrientSummaryPage() {
   const { foodLog, selectedDate, nutritionGoal, metricValues, language, t } = useApp();
   const back = useBack();
   const dark = useIsDark();
+  const hide = useHideNumbers();
   const [filter, setFilter] = useState<NutrientFilter>("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterButton, setFilterButton] = useState<HTMLButtonElement | null>(null);
@@ -73,6 +76,11 @@ export default function NutrientSummaryPage() {
   const targets = targetsFromGoal(nutritionGoal);
   const loggedOnly = filter === "logged";
   const BackIcon = language === "ar" ? ChevronRight : ChevronLeft;
+
+  // Round D (R9): nothing on this page survives recovery-sensitive mode
+  // (kcal, %DV, grams), and it is reachable by URL, so it sends the person
+  // back to Food. Pending counts too, so the page never flashes first.
+  if (hide) return <Navigate to="/app/food" replace />;
 
   return (
     <div>

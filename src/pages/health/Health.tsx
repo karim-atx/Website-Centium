@@ -195,6 +195,9 @@ export default function Health() {
   // --- Calories burned (#35-#44): of the 2,600 kcal app constant.
   const KCAL_GOAL = 2600;
   const kcal = metricValues.caloriesBurned;
+  // Recovery-sensitive mode (AJ R4, D19): the tile goes, steps stay. Pending
+  // counts as on, so a kcal figure never flashes while the setting loads.
+  const hideKcal = recoverySensitive || recoveryModePending;
   // --- Heart rate (#45-#54): "resting · low to high" for today's readings.
   // Resting (HA-08, Database B1): activity_daily.resting_bpm for today, else a
   // reading marked context = rest; without either the latest reading,
@@ -349,20 +352,22 @@ export default function Health() {
           ariaLabel={sleep === null ? "Sleep, no readings yet" : `Sleep, ${hm(sleep)}`}
           onClick={() => go("/app/health/sleep")}
         />
-        <MetricWidget
-          preset="health"
-          metric="calories"
-          icon={Flame}
-          label="Calories burned"
-          value={kcal === null ? undefined : formatMetric("caloriesBurned", kcal)}
-          unit="kcal"
-          graphic={kcal === null ? undefined : <CaloriesGaugeMini fraction={kcal / KCAL_GOAL} dark={dark} />}
-          context={`of ${KCAL_GOAL.toLocaleString()} kcal`}
-          state={ld(kcal === null ? "empty" : "ready")}
-          emptyHint={NO_DEVICE}
-          ariaLabel={kcal === null ? "Calories burned, no readings yet" : `Calories burned, ${formatMetric("caloriesBurned", kcal)} of ${KCAL_GOAL.toLocaleString()} kilocalories`}
-          onClick={() => go("/app/health/calories")}
-        />
+        {!hideKcal && (
+          <MetricWidget
+            preset="health"
+            metric="calories"
+            icon={Flame}
+            label="Calories burned"
+            value={kcal === null ? undefined : formatMetric("caloriesBurned", kcal)}
+            unit="kcal"
+            graphic={kcal === null ? undefined : <CaloriesGaugeMini fraction={kcal / KCAL_GOAL} dark={dark} />}
+            context={`of ${KCAL_GOAL.toLocaleString()} kcal`}
+            state={ld(kcal === null ? "empty" : "ready")}
+            emptyHint={NO_DEVICE}
+            ariaLabel={kcal === null ? "Calories burned, no readings yet" : `Calories burned, ${formatMetric("caloriesBurned", kcal)} of ${KCAL_GOAL.toLocaleString()} kilocalories`}
+            onClick={() => go("/app/health/calories")}
+          />
+        )}
         <MetricWidget
           preset="health"
           metric="heart-rate"
@@ -380,6 +385,9 @@ export default function Health() {
         <MetricWidget
           preset="health"
           metric="blood-pressure"
+          // Five tiles with Calories burned hidden: the last one spans the
+          // row so the grid ends without a hole.
+          className={hideKcal ? "col-span-2" : undefined}
           icon={Gauge}
           label="Blood pressure"
           value={bpLatest ? `${bpLatest.systolic}/${bpLatest.diastolic}` : undefined}

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { textPx, linePx } from "../../theme/textSize";
 import { marketPalette, tierRank, tierStyle } from "../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
@@ -43,6 +44,8 @@ export default function PointsHistoryPage() {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const { pointsSummary, pointTiers, achievements, refreshAchievements } = useApp();
+  // Round D R7: streak rungs read as a neutral "Logging bonus" in recovery-sensitive mode.
+  const hideNumbers = useHideNumbers();
   // Opened straight from a link (or Explore's hero), the summary and the
   // achievements may not have been read yet: the app's one points read.
   const known = !!pointsSummary && !!achievements;
@@ -136,7 +139,7 @@ export default function PointsHistoryPage() {
                 {it.label}
               </h2>
             ) : (
-              <LedgerRow key={it.key} entry={it.entry} balanceAfter={pointsSummary ? it.balanceAfter : null} lines={ledgerLines(it.entry, title)} ink={amountTone(it.entry.amount) === "earned" ? earnedInk : spentInk} />
+              <LedgerRow key={it.key} entry={it.entry} balanceAfter={pointsSummary ? it.balanceAfter : null} lines={ledgerLines(it.entry, title, hideNumbers)} ink={amountTone(it.entry.amount) === "earned" ? earnedInk : spentInk} />
             )
           )}
           {more ? (

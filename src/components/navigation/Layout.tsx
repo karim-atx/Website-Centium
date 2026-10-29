@@ -1,6 +1,9 @@
 import React, { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { OfflineBanner } from "./OfflineBanner";
+import { ErrorBoundary } from "./ErrorBoundary";
+import { OutboxStatus } from "../outbox/Outbox";
+import { useLogQueueFlush } from "../health/log/useLogQueue";
 import { PendingDeletionBanner } from "./PendingDeletionBanner";
 import { ConsentReviewBanner } from "../professionals/ConsentReviewBanner";
 import { Sidebar } from "./Sidebar";
@@ -87,6 +90,8 @@ export const Layout: React.FC = () => {
   }, [pathname]);
   useKeyboardInset();
   useAppGutter();
+  // Round D O8: the offline outbox is sent from here, once for the whole app.
+  useLogQueueFlush();
 
   // Handover 2026-09-29, 01 GLOBAL: the client app is a single phone-width
   // column — at most 430px, centred, no desktop sidebar — on every screen
@@ -129,9 +134,15 @@ export const Layout: React.FC = () => {
                 answered without a connection, so the reason belongs above the
                 controls it affects. */}
             <OfflineBanner />
+            {/* Round D (D22): "{n} waiting to save" while the outbox holds anything. */}
+            <OutboxStatus />
             <PendingDeletionBanner />
             <ConsentReviewBanner />
-            <Outlet />
+            {/* Round D O1: a page that fails to render keeps the navs and
+                shows the panel; going to another page clears it. */}
+            <ErrorBoundary resetKey={pathname}>
+              <Outlet />
+            </ErrorBoundary>
           </main>
         </div>
         <BottomNav />

@@ -2,6 +2,7 @@ import React from "react";
 import { ExternalLink } from "lucide-react";
 import type { OffProduct } from "../../services/barcode/lookup";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { FOOD_DARK } from "./foodDark";
 import { textPx } from "../../theme/textSize";
 
@@ -17,6 +18,8 @@ export const OffProductCard: React.FC<{
   onManual: () => void;
 }> = ({ product, onConfirm, onManual }) => {
   const dark = useIsDark();
+  // Round D (R3): name and serving only in recovery-sensitive mode.
+  const hide = useHideNumbers();
   const macro = (v: number | null) => (v === null ? "–" : `${v}g`);
   return (
     <div>
@@ -26,6 +29,7 @@ export const OffProductCard: React.FC<{
           {product.brand ? `${product.brand} · ` : ""}
           {product.perServing ? product.servingLabel : "per 100 g"}
         </p>
+        {!hide && (
         <div className="grid grid-cols-4 text-center" style={{ marginTop: 12 }}>
           {[
             [`${product.calories}`, "kcal"],
@@ -39,6 +43,7 @@ export const OffProductCard: React.FC<{
             </div>
           ))}
         </div>
+        )}
       </div>
       <p style={{ margin: "10px 2px 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", lineHeight: 1.45 }}>
         {product.attribution.notice}{" "}

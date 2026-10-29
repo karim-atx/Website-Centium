@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { readPassCache, writePassCache, PASS_CACHE_HOURS } from "./passCache";
+import { onPassCached, readPassCache, writePassCache, PASS_CACHE_HOURS } from "./passCache";
 
 function fakeStorage() {
   const m = new Map<string, string>();
@@ -29,4 +29,15 @@ test("the pass cache is per account, short-lived, drops ended memberships, and i
   assert.equal(readPassCache<{ id: string; expiresOn: string }>("u1", (r) => r.expiresOn, late), null);
   assert.equal(s.keys().length, 0);
   delete (globalThis as { window?: unknown }).window;
+});
+
+test("caching an active pass tells the QR writer to load; an empty write does not", () => {
+  let calls = 0;
+  const off = onPassCached(() => calls++);
+  writePassCache("u-listen", [{ id: "m1" }]);
+  writePassCache("u-listen", []);
+  assert.equal(calls, 1);
+  off();
+  writePassCache("u-listen", [{ id: "m1" }]);
+  assert.equal(calls, 1);
 });

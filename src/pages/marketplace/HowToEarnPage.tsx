@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
+import { visibleAchievements } from "../../services/achievements";
 import { textPx, linePx } from "../../theme/textSize";
 import { marketPalette, tierRank, tierStyle, type TierStyle } from "../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
@@ -95,11 +97,15 @@ export default function HowToEarnPage() {
     };
   }, [rulesTry]);
 
+  // Recovery-sensitive mode (AJ R7/R8): no Streak milestones card, and the
+  // Achievements card leaves out the hidden streak and logging badges.
+  const hideNumbers = useHideNumbers();
+  const shownAchievements = useMemo(() => (achievements ? visibleAchievements(achievements, hideNumbers) : null), [achievements, hideNumbers]);
   const streak = streakNow(achievements, streaks);
   const milestonePoints = (days: number) => achievements?.find((a) => a.key === `streak_${days}`)?.points ?? null;
   const next = streak === null ? null : nextMilestone(streak, milestonePoints);
-  const picked = useMemo(() => (achievements ? pickAchievements(achievements) : null), [achievements]);
-  const earnedCount = achievements ? achievements.filter((a) => a.earnedAt).length : 0;
+  const picked = useMemo(() => (shownAchievements ? pickAchievements(shownAchievements) : null), [shownAchievements]);
+  const earnedCount = shownAchievements ? shownAchievements.filter((a) => a.earnedAt).length : 0;
 
   return (
     <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
@@ -135,43 +141,45 @@ export default function HowToEarnPage() {
         </p>
       </Section>
 
-      <Section title="Streak milestones" aside={streak !== null ? `${streak}-day streak` : null} t={t} bodyPadding="12px 14px">
-        {next ? (
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: textPx(12.5) }}>
-            <span style={{ fontWeight: 700 }}>Next: {next.days} days</span>
-            <span style={{ color: m.faint, textAlign: "right" }}>
-              {next.toGo} {next.toGo === 1 ? "day" : "days"} to go{next.points !== null ? ` · +${next.points.toLocaleString("en-US")}` : ""}
-            </span>
+      {!hideNumbers && (
+        <Section title="Streak milestones" aside={streak !== null ? `${streak}-day streak` : null} t={t} bodyPadding="12px 14px">
+          {next ? (
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: textPx(12.5) }}>
+              <span style={{ fontWeight: 700 }}>Next: {next.days} days</span>
+              <span style={{ color: m.faint, textAlign: "right" }}>
+                {next.toGo} {next.toGo === 1 ? "day" : "days"} to go{next.points !== null ? ` · +${next.points.toLocaleString("en-US")}` : ""}
+              </span>
+            </div>
+          ) : (
+            <div style={{ fontSize: textPx(12.5), fontWeight: 700 }}>{streak === null ? "Your streak will show here." : "Every milestone reached"}</div>
+          )}
+          <div
+            role="progressbar"
+            aria-label="Streak towards the next milestone"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={next ? next.pct : streak === null ? 0 : 100}
+            style={{ marginTop: 8, height: 5, borderRadius: 999, background: t.track, overflow: "hidden" }}
+          >
+            <div style={{ height: "100%", width: `${next ? next.pct : streak === null ? 0 : 100}%`, borderRadius: 999, background: t.ink }} />
           </div>
-        ) : (
-          <div style={{ fontSize: textPx(12.5), fontWeight: 700 }}>{streak === null ? "Your streak will show here." : "Every milestone reached"}</div>
-        )}
-        <div
-          role="progressbar"
-          aria-label="Streak towards the next milestone"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={next ? next.pct : streak === null ? 0 : 100}
-          style={{ marginTop: 8, height: 5, borderRadius: 999, background: t.track, overflow: "hidden" }}
-        >
-          <div style={{ height: "100%", width: `${next ? next.pct : streak === null ? 0 : 100}%`, borderRadius: 999, background: t.ink }} />
-        </div>
-        <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
-          {STREAK_MILESTONES.map((d) => {
-            const on = streak !== null && streak >= d;
-            const p = milestonePoints(d);
-            return (
-              <div key={d} style={{ borderRadius: 12, padding: "8px 0", textAlign: "center", background: on ? t.pill : m.soft }} aria-label={`${d} days${p !== null ? `, ${p.toLocaleString("en-US")} points` : ""}${on ? ", reached" : ""}`} role="img">
-                <div style={{ fontSize: textPx(12), fontWeight: 800, color: on ? t.text : m.ink }}>{d} days</div>
-                <div style={{ fontSize: textPx(11), color: m.faint }}>{p !== null ? `+${p.toLocaleString("en-US")}` : " "}</div>
-              </div>
-            );
-          })}
-        </div>
-        <p style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>Each milestone pays once per streak. It can be earned again after a streak breaks and is rebuilt.</p>
-      </Section>
+          <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+            {STREAK_MILESTONES.map((d) => {
+              const on = streak !== null && streak >= d;
+              const p = milestonePoints(d);
+              return (
+                <div key={d} style={{ borderRadius: 12, padding: "8px 0", textAlign: "center", background: on ? t.pill : m.soft }} aria-label={`${d} days${p !== null ? `, ${p.toLocaleString("en-US")} points` : ""}${on ? ", reached" : ""}`} role="img">
+                  <div style={{ fontSize: textPx(12), fontWeight: 800, color: on ? t.text : m.ink }}>{d} days</div>
+                  <div style={{ fontSize: textPx(11), color: m.faint }}>{p !== null ? `+${p.toLocaleString("en-US")}` : " "}</div>
+                </div>
+              );
+            })}
+          </div>
+          <p style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>Each milestone pays once per streak. It can be earned again after a streak breaks and is rebuilt.</p>
+        </Section>
+      )}
 
-      <Section title="Achievements" aside={achievements ? `${earnedCount} of ${achievements.length}` : null} t={t} bodyPadding="4px 14px 8px">
+      <Section title="Achievements" aside={shownAchievements ? `${earnedCount} of ${shownAchievements.length}` : null} t={t} bodyPadding="4px 14px 8px">
         {picked === null ? (
           <div aria-hidden className="animate-skeleton-pulse" style={{ margin: "10px 0", height: 120, borderRadius: 12, background: m.soft }} />
         ) : (

@@ -29,6 +29,7 @@ import {
 } from "../../services/client-forms/logic";
 import { CONSENT_REQUIRED_MESSAGE, formPhotoUrls, removeFormPhoto, saveFormResponse, uploadFormPhoto, type ClientFormBundle } from "../../services/client-forms";
 import { consentBox, consentLine, DOCTOR_FOLLOW_UP, SEE_WARNING_SIGNS, thanksLine } from "./copy";
+import { clearLocalDraft, readLocalDraft, writeLocalDraft } from "../../services/client-forms/localDraft";
 
 /**
  * Release 3 · W7 CU6 v3 / CU26: a professional's check-in or intake, filled
@@ -85,9 +86,12 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
   const visible = useMemo(() => visibleQuestions(bundle.questions, hideBody), [bundle, hideBody]);
   const parts = useMemo(() => partsOf(itemsOf(visible)), [visible]);
 
-  const [initial] = useState(() => visibleAnswers(bundle.answers, visible));
+  // Round D O7: answers kept on this device (typed while offline, or the
+  // sheet closed before the server had them) win over the server draft.
+  const [localDraft] = useState(() => readLocalDraft(me, bundle.assignmentId));
+  const [initial] = useState(() => visibleAnswers(localDraft ? { ...bundle.answers, ...localDraft } : bundle.answers, visible));
   const [answers, setAnswers] = useState<Answers>(initial);
-  const [step, setStep] = useState(() => (bundle.hasDraft ? resumePart(parts, initial) : 0));
+  const [step, setStep] = useState(() => (bundle.hasDraft || localDraft ? resumePart(parts, initial) : 0));
   const [saveState, setSaveState] = useState<SaveState>(bundle.hasDraft ? "saved" : "idle");
   const [errors, setErrors] = useState<string[]>([]);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -100,7 +104,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
   const [photoError, setPhotoError] = useState<{ id: string; message: string } | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
 
-  const dirty = useRef(false);
+  const dirty = useRef(!!localDraft);
   const changed = useRef(false);
   const timer = useRef<number | null>(null);
   const answersRef = useRef<Answers>(initial);
@@ -127,12 +131,13 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
     if (res.ok) {
       changed.current = true;
       setSaveState("saved");
+      if (!dirty.current) clearLocalDraft(me, bundle.assignmentId);
     } else {
       dirty.current = true;
       setSaveState("error");
       if (res.code === "sent" || res.code === "closed") setSendError(res.message);
     }
-  }, [bundle, visible]);
+  }, [bundle, visible, me]);
 
   useEffect(
     () => () => {
@@ -141,12 +146,24 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
     []
   );
 
+  // Round D O7: answers kept on this device go to the server as soon as it
+  // can be reached: on open, and when the connection comes back.
+  useEffect(() => {
+    const flush = () => {
+      if (dirty.current && navigator.onLine) void saveDraft();
+    };
+    flush();
+    window.addEventListener("online", flush);
+    return () => window.removeEventListener("online", flush);
+  }, [saveDraft]);
+
   const setAnswer = (id: string, value: unknown) => {
     const next = { ...answersRef.current };
     if (value === undefined || value === null || (typeof value === "string" && value === "")) delete next[id];
     else next[id] = value;
     answersRef.current = next;
     setAnswers(next);
+    writeLocalDraft(me, bundle.assignmentId, next);
     setErrors((e) => e.filter((x) => x !== id));
     dirty.current = true;
     if (timer.current) window.clearTimeout(timer.current);
@@ -196,6 +213,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
     }
     dirty.current = false;
     changed.current = true;
+    clearLocalDraft(me, bundle.assignmentId);
     setDone({ flagged: showDoctorFollowUp(res.row, visible, final), next: bundle.kind === "check_in" ? nextOccurrence(bundle.schedule, bundle.dueAt) : null });
   };
 

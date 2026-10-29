@@ -144,6 +144,9 @@ export function parseLedgerRows(data: unknown): LedgerEntry[] {
   });
 }
 
+/** A streak rung's ledger title in recovery-sensitive mode (see ledgerLines). */
+export const STREAK_HIDDEN_LABEL = "Logging bonus";
+
 /** streak_7 → 7 (the streak achievements are the milestones, D-08). */
 export function streakDays(key: string | null): number | null {
   const m = key ? /^streak_(\d+)$/.exec(key) : null;
@@ -162,11 +165,20 @@ export function streakDays(key: string | null): number | null {
  *   `description` ("Daily logging", "Reversed · Logging", "Referral redeemed
  *   by a new member"), or "Earned" / "Spent" by the sign when it has none.
  * `achievementTitle` turns an achievement key into its title.
+ *
+ * `hideStreaks` (recovery-sensitive mode, Round D AJ R7): a streak rung is
+ * "Logging bonus", neither its title ("A full week") nor "7-day streak", so
+ * the history never says how long a streak ran. The points stay.
  */
-export function ledgerLines(e: LedgerEntry, achievementTitle: (key: string) => string | null): { title: string; kind: string } {
+export function ledgerLines(
+  e: LedgerEntry,
+  achievementTitle: (key: string) => string | null,
+  hideStreaks = false
+): { title: string; kind: string } {
   const label = e.refLabel ?? "Points";
   if (e.source === "achievement") {
     const days = streakDays(e.description);
+    if (hideStreaks && days !== null) return { title: STREAK_HIDDEN_LABEL, kind: `Earned · ${label}` };
     const title = (e.description ? achievementTitle(e.description) : null) ?? (days !== null ? `${days}-day streak` : label);
     return { title, kind: `Earned · ${label}` };
   }

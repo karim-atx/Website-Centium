@@ -2,6 +2,7 @@ import React from "react";
 import { Dumbbell } from "lucide-react";
 import { textPx, linePx } from "../../../theme/textSize";
 import { clock12 } from "../../../utils/time12";
+import { useHideNumbers } from "../../../hooks/useHideNumbers";
 import type { WorkoutKcalSession } from "../../../services/health-metrics/b1";
 import { hairline, mc, metricIconInk, useHealthMode } from "./MetricKit";
 
@@ -21,7 +22,9 @@ const n = (v: number) => Math.round(v).toLocaleString("en-GB");
  */
 export const FromWorkoutsCard: React.FC<{ sessions: WorkoutKcalSession[]; dayTotal: number; onOpen: (id: string) => void }> = ({ sessions, dayTotal, onOpen }) => {
   const { dark, hc } = useHealthMode();
-  if (sessions.length === 0) return null;
+  // Recovery-sensitive mode (AJ R4): workout kcal are calorie numbers too.
+  const hideNumbers = useHideNumbers();
+  if (hideNumbers || sessions.length === 0) return null;
   const sum = sessions.reduce((s, x) => s + x.kcal, 0);
   const sep = hc ? "rgb(var(--c-charcoal) / 0.3)" : dark ? "rgba(245,243,250,0.05)" : "rgba(36,31,27,0.05)";
   const unit = <span style={{ marginLeft: 3, fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: dark ? "#B8B3C7" : mc("calories", "ink") }}>kcal</span>;

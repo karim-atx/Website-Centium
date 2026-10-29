@@ -6,7 +6,7 @@ import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
 import AchievementsTab from "./AchievementsTab";
 import MeditationPage from "./MeditationPage";
-import { earnedCount } from "../../services/achievements";
+import { earnedCount, visibleAchievements } from "../../services/achievements";
 import { formatMeditationTime, isEmptySummary } from "../../services/meditation/logic";
 import { habitBestStreak } from "../../services/habits/streak";
 import { habitShade, type HabitShade } from "../../services/habits/colours";
@@ -35,6 +35,7 @@ import clsx from "clsx";
 import { journalStreak as journalStreakFrom } from "../../services/journal/streak";
 import { useBack } from "../../hooks/useBack";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 
 type Section = MindSection;
 const SECTIONS: readonly Section[] = ["habits", "journal", "achievements", "meditation"];
@@ -156,6 +157,7 @@ export default function Mind() {
   const navigate = useNavigate();
   const back = useBack();
   const dark = useIsDark();
+  const hideNumbers = useHideNumbers();
   const hc = !!accessibility.highContrast;
   const { section: sectionParam } = useParams<{ section?: string }>();
   const section = SECTIONS.find((s) => s === sectionParam) ?? null;
@@ -183,9 +185,13 @@ export default function Mind() {
   // An unknown sub-route goes to the hub rather than rendering nothing.
   if (sectionParam && !section) return <Navigate to="/app/mind" replace />;
 
-  const achievementCounts = earnedCount(achievements ?? []);
+  // Recovery-sensitive mode (AJ R7/R8): no streak number anywhere on the hub,
+  // and the Achievements count leaves out the hidden streak and logging badges.
+  const achievementCounts = earnedCount(visibleAchievements(achievements ?? [], hideNumbers));
 
-  const autoStreaks = streaks.filter((s) => s.auto);
+  // Auto-tracked rows are streaks and nothing else, so the group goes.
+  const autoStreaks = hideNumbers ? [] : streaks.filter((s) => s.auto);
+  const writtenToday = journalEntries.some((e) => e.date === today);
   const doneHabits = habits.filter((h) => h.done).length;
   // Local calendar days, from the app's local today (not UTC).
   const journalDays = journalStreakFrom(journalEntries.map((e) => e.date), today);
@@ -219,7 +225,8 @@ export default function Mind() {
           />
         }
         label={h.label}
-        days={h.streakDays}
+        // Recovery-sensitive mode: the tick only, no streak count.
+        days={hideNumbers ? null : h.streakDays}
         check={
           <button
             onClick={() => toggleHabit(h.id)}
@@ -296,6 +303,9 @@ export default function Mind() {
             line={
               journalLoading ? (
                 <LineSkeleton />
+              ) : hideNumbers ? (
+                // Recovery-sensitive mode: whether today has an entry, not a streak.
+                writtenToday ? "Written today" : "Not written today"
               ) : (
                 // MO1.1 #2 (2x frame): the handover's leaf, outlined in
                 // #7D6BB5 with a white inside, 6 × 10 pt over its 1 pt
@@ -331,7 +341,19 @@ export default function Mind() {
         </div>
 
         {/* MO1.1 #3: the hero, the habit with the highest current streak. */}
-        {lead && LeadIcon ? (
+        {hideNumbers && lead ? (
+          // Recovery-sensitive mode: no streak hero (count, personal best, or
+          // a habit picked for its streak); today's progress ring stays.
+          <div className="flex items-center gap-3 rounded-[20px] bg-primary-pale px-4 py-3.5 mb-6 min-h-[84px]">
+            <p className="flex-1 min-w-0 text-[13.5px] font-bold text-charcoal">Today's habits</p>
+            <DoneRing done={doneHabits} total={habits.length} />
+            <span className="text-[10.5px] leading-[1.3] text-charcoal-soft shrink-0 whitespace-nowrap">
+              Habits
+              <br />
+              done today
+            </span>
+          </div>
+        ) : lead && LeadIcon ? (
           // MO1.1 #3 (measured on the 2x frame): 84 tall; the count's
           // baseline 19.5 above Personal best's; "days" 4 pt after the count
           // and the habit 8 after "days"; the label at its natural width on
@@ -480,7 +502,9 @@ export default function Mind() {
           )}
         </div>
         <p className="mt-2.5 px-1 text-[11px] leading-[1.45] text-charcoal-muted dark:text-charcoal-faint">
-          Auto streaks count from what you log across the app. To track something new, add a habit.
+          {hideNumbers
+            ? "To track something new, add a habit."
+            : "Auto streaks count from what you log across the app. To track something new, add a habit."}
         </p>
         {/* CU28: the helper line under the card, per coach. "Sees your
             streaks" only while the client shares Habits with them. */}
@@ -555,7 +579,8 @@ function Row({
 }: {
   icon: React.ReactNode;
   label: string;
-  days: number;
+  /** Null in recovery-sensitive mode: the strip keeps the tick only. */
+  days: number | null;
   check?: React.ReactNode;
   /** The habit colour's tile (B3); absent = lavender primary-pale. */
   shade?: HabitShade | null;
@@ -578,13 +603,15 @@ function Row({
       </div>
       {/* The strip: #EDF3F2 on the frame, #6F9993 at 12% (decision 22). */}
       <div className="w-[110px] shrink-0 flex items-center justify-end gap-2.5 pr-3.5 bg-th-6f9993/[0.12] dark:bg-teal-pale">
-        <span className="relative flex items-center gap-1">
-          {/* MO1.1 (2x frame): a filled leaf about 10 × 18.5 pt, slit showing. */}
-          <StreakLeaf variant="filled" height={18.5} className="text-team-teal-deep dark:text-teal-deep-text" />
-          <span className="text-[20px] font-extrabold leading-none text-team-teal-deep dark:text-teal-deep-text tabular-nums">
-            {days}
+        {days !== null && (
+          <span className="relative flex items-center gap-1">
+            {/* MO1.1 (2x frame): a filled leaf about 10 × 18.5 pt, slit showing. */}
+            <StreakLeaf variant="filled" height={18.5} className="text-team-teal-deep dark:text-teal-deep-text" />
+            <span className="text-[20px] font-extrabold leading-none text-team-teal-deep dark:text-teal-deep-text tabular-nums">
+              {days}
+            </span>
           </span>
-        </span>
+        )}
         {check ?? <span className="w-6 shrink-0" aria-hidden />}
       </div>
     </div>

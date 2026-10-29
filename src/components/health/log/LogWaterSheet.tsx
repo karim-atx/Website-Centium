@@ -9,7 +9,6 @@ import { textPx } from "../../../theme/textSize";
 import { browserOffline, enqueueLog, isOfflineFailure, QUEUED_COPY } from "../../../services/health-log/offlineQueue";
 import { FieldLabel, MeasuredOnPopup, WhenField, dayLabel, isoDay, partBSheetTone, whenLabel } from "./LogSheetParts";
 import { deleteDrink, logDrink } from "../../../services/health-log/waterIntakes";
-import { useLogQueueFlush } from "./useLogQueue";
 
 // HE1.1.1 "Log water" (health-b-handover.md 2866-3013): the shared Log sheet
 // for one drink. "Today so far", Amount chips (+ 250 ml / + 500 ml / Custom
@@ -38,7 +37,6 @@ export function litres(ml: number): string {
 export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSaved?: () => void }> = ({ open, onClose, onSaved }) => {
   const { authUserId, today, waterByDate, waterGoalMl, addWater } = useApp();
   const dark = useIsDark();
-  useLogQueueFlush();
   const [choice, setChoice] = useState<number | "custom" | null>(null);
   const [custom, setCustom] = useState(400);
   const [when, setWhen] = useState<Date>(() => new Date());

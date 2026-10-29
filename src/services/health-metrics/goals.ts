@@ -1,4 +1,8 @@
 import { supabase } from "../../../lib/supabase/client";
+import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+
+/** Round D O5: a sentence for the screen, never the raw "Failed to fetch". */
+const goalError = (error: unknown, fallback = "Couldn't save your goal. Try again."): string => (isOffline(error) ? OFFLINE_MESSAGE : fallback);
 
 // Database stage B1 `metric_goals` (HANDOVER_API.md "metric_goals — and it is
 // not measurement_goals"): a goal is a number with a date, keyed (user_id,
@@ -33,7 +37,7 @@ export async function fetchGoalHistory(userId: string): Promise<{ ok: true; rows
     .eq("user_id", userId)
     .in("metric", ["steps", "water"])
     .order("effective_from", { ascending: true });
-  if (error) return { ok: false, message: error.message };
+  if (error) return { ok: false, message: goalError(error, "Couldn't load your goals. Try again.") };
   return {
     ok: true,
     rows: ((data ?? []) as { metric: GoalMetric; value: number | string; effective_from: string }[]).map((r) => ({
@@ -54,10 +58,10 @@ export async function saveGoal(userId: string, metric: GoalMetric, value: number
     .eq("metric", metric)
     .eq("effective_from", day)
     .select("metric");
-  if (upd.error) return { ok: false, message: upd.error.message };
+  if (upd.error) return { ok: false, message: goalError(upd.error) };
   if ((upd.data ?? []).length > 0) return { ok: true };
   const ins = await supabase.from("metric_goals").insert({ user_id: userId, metric, value: v, effective_from: day });
-  if (ins.error) return { ok: false, message: ins.error.message };
+  if (ins.error) return { ok: false, message: goalError(ins.error) };
   return { ok: true };
 }
 

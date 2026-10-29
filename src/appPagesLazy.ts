@@ -51,6 +51,11 @@ export function loadAppPages(): Promise<AppPages> {
     (err: unknown) => {
       loading = null;
       if (!APP_ADDRESS.test(window.location.pathname)) throw err;
+      // Offline (Round D O1): a reload would land on the browser's offline
+      // page. The error boundary shows "This needs a connection" instead and
+      // retries on the `online` event, which downloads the chunk again
+      // (`loading` is cleared above). The one reload stays unspent.
+      if (navigator.onLine === false) throw err;
       let retried = true;
       try {
         retried = sessionStorage.getItem(RELOAD_KEY) === "1";

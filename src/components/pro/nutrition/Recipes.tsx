@@ -109,7 +109,7 @@ export const Recipes: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         }}
       />
       {open && <MealPrepFlowSheet kind="recipes" itemId={open} professional onClose={() => setOpen(null)} />}
-      <PrepCreateSheet kind="recipes" open={creating} onClose={() => setCreating(false)} />
+      <PrepCreateSheet kind="recipes" open={creating} onClose={() => setCreating(false)} professional />
     </div>
   );
 };

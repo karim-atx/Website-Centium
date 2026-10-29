@@ -31,7 +31,6 @@ import { BpHowToMeasureSheet } from "./BpHowToMeasureSheet";
 import { browserOffline, enqueueLog, isOfflineFailure, QUEUED_COPY } from "../../services/health-log/offlineQueue";
 import { FieldLabel, MeasuredOnPopup, Segmented, WhenField, hairAt, isoDay, partBSheetTone, whenLabel } from "./log/LogSheetParts";
 import type { BloodPressureInput } from "../../services/blood-pressure/reading";
-import { useLogQueueFlush } from "./log/useLogQueue";
 import { AlertTriangle, Info, Trash2 } from "lucide-react";
 
 // HE1.6.1 "Log blood pressure" (health-b-handover.md 3014-3145): the shared
@@ -78,7 +77,6 @@ export const BloodPressureSheet: React.FC<{
 }> = ({ open, onClose, editing, onSaved }) => {
   const { authUserId, today, refreshAchievements } = useApp();
   const dark = useIsDark();
-  useLogQueueFlush();
 
   const [sys, setSys] = useState("");
   const [dia, setDia] = useState("");

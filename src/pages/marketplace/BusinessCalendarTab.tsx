@@ -11,6 +11,7 @@ import { useServerCalendar } from "../../hooks/useServerCalendar";
 import { useBusinessTeam } from "../../hooks/useBusinessTeam";
 import { useBusinessClasses } from "../../hooks/useBusinessCatalog";
 import { respondToInvite } from "../../services/calendar";
+import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { ChevronLeft, ChevronRight, Plus, Clock, Users, Trash2, Check, X, CalendarDays } from "lucide-react";
 import clsx from "clsx";
 import { DAY_LETTERS, monthLeadingBlanks, mondayIndex } from "../../utils/week";
@@ -93,10 +94,19 @@ export default function BusinessCalendarTab() {
   // The picker's names, from the same hook that already fed it.
   const { team: employees } = useBusinessTeam();
 
+  // Round D O12: a failed response used to be silent. The line sits under
+  // that invite's buttons; offline it says it needs a connection.
+  const [respondError, setRespondError] = useState<{ id: string; message: string } | null>(null);
   const respond = async (inviteId: string, accepted: boolean) => {
     setResponding(inviteId);
-    await respondToInvite(inviteId, accepted);
+    setRespondError(null);
+    const result = await respondToInvite(inviteId, accepted);
     setResponding(null);
+    if (!result.ok) {
+      const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+      setRespondError({ id: inviteId, message: offline ? OFFLINE_MESSAGE : result.message ?? "Couldn't save your response. Try again." });
+      return;
+    }
     await reload();
   };
   const today = new Date();
@@ -423,6 +433,11 @@ export default function BusinessCalendarTab() {
                       <X size={13} /> Decline
                     </Button>
                   </div>
+                )}
+                {e.invite && respondError?.id === e.invite.id && (
+                  <p role="alert" className="mt-2 text-[12px] font-semibold text-status-high">
+                    {respondError.message}
+                  </p>
                 )}
               </Card>
             ))}

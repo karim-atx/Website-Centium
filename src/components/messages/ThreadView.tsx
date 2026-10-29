@@ -49,6 +49,8 @@ import {
 import { AttachmentGone } from "./AttachmentGone";
 import { ImageLightbox } from "./ImageLightbox";
 import { GetSupportPopup } from "../moderation/GetSupportPopup";
+import { enqueueLog, isOfflineFailure, removeQueued, type QueuedLog } from "../../services/health-log/offlineQueue";
+import { useOutbox } from "../outbox/Outbox";
 import { loadSelfHarmPhrases, mentionsSelfHarm } from "../../services/moderation/phrases";
 import { supportPlace } from "../../services/moderation/support";
 import { browserTimezone } from "../../services/timezone";
@@ -395,6 +397,18 @@ export const ThreadView: React.FC<{
   const [pending, setPending] = useState<{ kind: "text" | "photo" | "file" | "voice"; text?: string } | null>(
     null
   );
+  // Round D outbox: this thread's texts waiting on this device. When one
+  // leaves the queue (sent on reconnect), the thread re-reads to show it.
+  const outbox = useOutbox();
+  const waitingHere = outbox.filter((q): q is Extract<QueuedLog, { kind: "message" }> => q.kind === "message" && q.threadId === thread.id);
+  const waitingCount = waitingHere.length;
+  const prevWaiting = useRef(waitingCount);
+  useEffect(() => {
+    if (waitingCount < prevWaiting.current) void load();
+    prevWaiting.current = waitingCount;
+    // load reads current state; only the count change matters here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waitingCount]);
 
   /** The message being replied to, if any. Cleared on send and on cancel. */
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -861,6 +875,12 @@ export const ThreadView: React.FC<{
     const result = await sendMessage(thread.id, authUserId, body, target?.id ?? null);
     setSending(false);
     setPending(null);
+    // Round D outbox: with no connection a text is kept on this device and
+    // sent on reconnect; it shows below as "Not sent yet" (with Delete).
+    if (!result.ok && isOfflineFailure(result)) {
+      enqueueLog(authUserId, { kind: "message", threadId: thread.id, text: body, replyToId: target?.id ?? null, queuedAt: new Date().toISOString() });
+      return;
+    }
     if (!result.ok) {
       // The draft is deliberately restored. Losing what someone typed because
       // the network blinked is worse than the failure itself — clearing it
@@ -1994,6 +2014,21 @@ export const ThreadView: React.FC<{
             </div>
           );
         })}
+        {/* Round D outbox: texts kept on this device to send on reconnect,
+            in the sent bubble's shape, faded, with "Not sent yet" and Delete. */}
+        {waitingHere.map((q) => (
+          <div key={q.id} className="self-end max-w-[76%] flex flex-col items-end gap-1" data-outbox-message="">
+            <div className="rounded-[20px_20px_4px_20px] px-3 py-[9px] text-[13.5px] leading-[1.4] whitespace-pre-wrap break-words bg-bubble-sent text-white dark:text-[#0D0B1A] opacity-60">
+              {q.text}
+            </div>
+            <span className="flex items-center gap-2 text-[11px] text-charcoal-faint">
+              <Clock size={12} aria-hidden /> Not sent yet. It will send when you reconnect.
+              <button type="button" className="tap font-bold text-status-high" onClick={() => authUserId && removeQueued(authUserId, q.id)}>
+                Delete
+              </button>
+            </span>
+          </div>
+        ))}
         {/* The in-flight message, rendered after the real ones and outside the
             list. 90%, not lower: a parent opacity fades text toward the page. */}
         {pending && (

@@ -28,6 +28,7 @@ import {
   type BusinessNavGlyphProps,
 } from "../icons/BusinessNavGlyphs";
 import { useApp } from "../../context/AppContext";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { Flame, HeartPulse } from "lucide-react";
 import { useUnread } from "../../context/UnreadContext";
 import { UnreadBadge } from "../messages/UnreadBadge";
@@ -124,6 +125,8 @@ const SidebarRow: React.FC<{
 
 export const Sidebar: React.FC = () => {
   const { user, t, today, foodLog, waterByDate, workoutLog, journalEntries } = useApp();
+  // Recovery-sensitive mode (AJ R7): the streak block goes entirely.
+  const hideNumbers = useHideNumbers();
   const unread = useUnread();
   const isBusiness = user.accountType === "business";
   // The SAME walk the Home board runs, not a second opinion about it — see
@@ -216,7 +219,7 @@ export const Sidebar: React.FC = () => {
           those tabs. A professional's streak can therefore only ever be zero,
           and "Start a streak today" would be an invitation to screens their
           account does not have. */}
-      {user.accountType === "customer" && (
+      {user.accountType === "customer" && !hideNumbers && (
         <div className="rounded-3xl bg-primary-pale p-4 mt-4">
           <div className="flex items-center gap-2 text-primary-dark font-semibold text-sm mb-1">
             <Flame size={16} className="text-teal" />

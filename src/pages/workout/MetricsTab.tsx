@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { RECOVERY_HIDDEN_LINE, useHideNumbers } from "../../hooks/useHideNumbers";
 import { Sparkline } from "../../components/health/Sparkline";
 import { OneRepMaxesSheet } from "../../components/workout/OneRepMaxesSheet";
 import { LiftDetailSheet } from "../../components/workout/LiftDetailSheet";
@@ -103,6 +104,9 @@ export default function MetricsTab() {
     noteFeatureMilestone,
     refreshAchievements,
   } = useApp();
+  // Recovery-sensitive mode (AJ R2): body measurements are one of the
+  // numbers the mode hides, so the card keeps its title and says why.
+  const hideNumbers = useHideNumbers();
 
   // Explorer milestone: "By the numbers". One row per account for ever — the repeat is
   // a primary-key conflict the service treats as the success it is. 
@@ -498,7 +502,7 @@ export default function MetricsTab() {
         icon="/metrics/body.png"
         title="Body measurements"
         right={
-          measuredSites.length === 0 && !measurementsError ? (
+          hideNumbers ? undefined : measuredSites.length === 0 && !measurementsError ? (
             <button
               onClick={() => setAddMeasurementsOpen(true)}
               className="tap flex items-center"
@@ -517,7 +521,11 @@ export default function MetricsTab() {
           )
         }
       >
-        {measurementsError ? (
+        {hideNumbers ? (
+          <p style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(12.5), marginTop: 10 }}>
+            {RECOVERY_HIDDEN_LINE}
+          </p>
+        ) : measurementsError ? (
           <p className="text-sm text-status-high" style={{ marginTop: 10 }}>
             {measurementsError}
           </p>
@@ -574,7 +582,7 @@ export default function MetricsTab() {
 
       <AddMeasurementsSheet
         key={addMeasurementsOpen ? "open" : "closed"}
-        open={addMeasurementsOpen}
+        open={addMeasurementsOpen && !hideNumbers}
         onClose={() => setAddMeasurementsOpen(false)}
         onSave={async (values, recordedAt) => {
           if (!authUserId) return "You need to be signed in to save measurements.";
@@ -590,7 +598,7 @@ export default function MetricsTab() {
 
       <MeasurementHistorySheet
         key={historyType ?? "none"}
-        open={historyType != null}
+        open={historyType != null && !hideNumbers}
         onClose={() => setHistoryType(null)}
         type={historyType}
         readings={historyType ? (visibleBySite[historyType] ?? []) : []}

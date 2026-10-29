@@ -11,6 +11,8 @@ import { PersonalReminderSheet } from "../reminders/PersonalReminderSheet";
 import { useApp } from "../../context/AppContext";
 import { useBack } from "../../hooks/useBack";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useOnline } from "../../hooks/useOnline";
+import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { textPx, linePx } from "../../theme/textSize";
 import { SCREENING_COPY, bmiOf, screeningLastChecked, screeningRows, type ScreeningRow } from "../../services/health-checks/screening";
 import { cadenceOf, checkState, customCadence, type CheckState } from "../../services/health-checks/checkStatus";
@@ -83,6 +85,8 @@ export function GeneralPlan() {
   const dark = useIsDark();
   const { authUserId, user, bloodMarkers, bloodPressure, pregnancy, recoverySensitive, recoveryModePending } = useApp();
   const store = useHealthCheckStore(authUserId);
+  // Round D O12: a failed load says so when it's the connection.
+  const online = useOnline();
   // B2 / B4 are on the stack: the stored-state entry points show once the account's checks have loaded.
   const ready = store.status === "ready";
   // HE1.8.2 #61: the account's Allow notifications (A2 rule), read only where a reminder can be set.
@@ -408,7 +412,7 @@ export function GeneralPlan() {
 
       {store.status === "error" && (
         <p role="alert" className="text-status-high" style={{ margin: "10px 0 0", fontSize: textPx(12), lineHeight: "17.4px", fontWeight: 600 }}>
-          Couldn't load your checks.{" "}
+          {online ? "Couldn't load your checks." : OFFLINE_MESSAGE}{" "}
           <button type="button" onClick={store.retry} className="tap underline" style={{ fontWeight: 700 }}>
             Retry
           </button>

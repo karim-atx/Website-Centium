@@ -236,6 +236,11 @@ import {
   updateMedicationRemote,
 } from "../services/medical-history";
 import { GOAL_DEFAULT, fetchGoalHistory, goalOnFrom, normaliseGoal, saveGoal, upsertGoalRow, type GoalRow } from "../services/health-metrics/goals";
+import { clearQueue, enqueueLog, isOfflineFailure, newQueueId, removeQueued, type QueuedLog } from "../services/health-log/offlineQueue";
+import { mergePausedSessions } from "../services/workout/pausedMerge";
+import { OFFLINE_MESSAGE } from "../services/network-error";
+import { fetchFoodConflicts } from "../services/nutrition/client";
+import { addNotice } from "../services/nutrition/clientNutritionModel";
 import {
   getHealthMetrics,
   deleteHealthMetricsForDay,
@@ -491,6 +496,13 @@ interface AppState {
   // for the paths that are still local-only but would make a future diary
   // hydration duplicate rather than replace this row.
   addFoodEntryRecord: (entry: FoodLogEntry) => void;
+  /**
+   * Round D outbox: swaps a diary entry shown while it waited on this device
+   * (id `queued:…`) for the saved row, or drops it when it was refused.
+   */
+  replaceFoodEntryRecord: (provisionalId: string, entry: FoodLogEntry | null) => void;
+  /** Round D outbox: sends one kept food entry, habit tick, workout or goal; the flusher calls it. */
+  deliverQueued: (item: QueuedLog) => Promise<{ ok: boolean; message?: string }>;
   // V4: logged foods are editable (quantity/unit) and removable.
   updateFoodEntry: (id: string, patch: Partial<Pick<FoodLogEntry, "quantity" | "unit" | "meal">>) => void;
   removeFoodEntry: (id: string) => void;
@@ -501,7 +513,7 @@ interface AppState {
   workoutSessions: WorkoutSession[];
   saveWorkoutSession: (
     session: Omit<WorkoutSession, "id">
-  ) => Promise<{ ok: boolean; message?: string }>;
+  ) => Promise<{ ok: boolean; message?: string; /** Kept on this device to save on reconnect (Round D). */ queued?: boolean }>;
 
   // V6 (QA 6.0): quitting a started routine (instead of finishing it)
   // preserves logged sets + elapsed time, keyed by routine, so reopening it
@@ -515,7 +527,8 @@ interface AppState {
    * it on the server when the Undo toast expires (approved decision 4).
    */
   removeWorkoutSession: (id: string) => { undo: () => void; commit: () => Promise<string | undefined> } | null;
-  savePausedSession: (routineId: string, session: PausedWorkoutSession) => void;
+  /** `remote: false` keeps the snapshot on this device only (the per-set snapshot, Round D O6). */
+  savePausedSession: (routineId: string, session: PausedWorkoutSession, opts?: { remote?: boolean }) => void;
   clearPausedSession: (routineId: string) => void;
 
   // Handover 2026-09-29, 03 "Active workout session" (WO8, WO17, WO1.1):
@@ -2246,9 +2259,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // the table could not accept.
   const isPausableRoutineId = (routineId: string) => isUuid(routineId);
 
-  const savePausedSession: AppState["savePausedSession"] = (routineId, session) => {
+  const savePausedSession: AppState["savePausedSession"] = (routineId, session, opts) => {
     setPausedSessions((prev) => ({ ...prev, [routineId]: session }));
-    if (!authUserId || !isPausableRoutineId(routineId)) return;
+    if (opts?.remote === false || !authUserId || !isPausableRoutineId(routineId)) return;
     void savePausedSessionRemote(authUserId, routineId, {
       logged: session.logged,
       elapsedSec: session.elapsedSec,
@@ -3337,7 +3350,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               ...(state.timers ? { timers: state.timers as PausedWorkoutSession["timers"] } : {}),
             };
           }
-          setPausedSessions(next);
+          // Round D O6: MERGED, not replaced. A session paused (or snapshotted
+          // set by set) while offline never reached the server; replacing the
+          // device's copy with the server's would lose it. The newer of each
+          // pair wins, and a device copy the server lacks is pushed back up.
+          setPausedSessions((local) => {
+            const { merged, pushUp } = mergePausedSessions(local, next);
+            for (const routineId of pushUp) {
+              const s = merged[routineId];
+              if (authUserId && isPausableRoutineId(routineId))
+                void savePausedSessionRemote(authUserId, routineId, {
+                  logged: s.logged,
+                  elapsedSec: s.elapsedSec,
+                  startedAt: s.startedAt,
+                  started: s.started,
+                  blockResults: s.blockResults,
+                  timers: s.timers,
+                });
+            }
+            return merged;
+          });
         }
       }
     );
@@ -4148,6 +4180,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // into a single evaluation.
     refreshAchievements();
   };
+  const replaceFoodEntryRecord: AppState["replaceFoodEntryRecord"] = (provisionalId, entry) => {
+    setFoodLog((prev) => {
+      const rest = prev.filter((e) => e.id !== provisionalId);
+      return entry && !rest.some((e) => e.id === entry.id) ? [...rest, entry] : rest;
+    });
+    if (entry) refreshAchievements();
+  };
 
   // Editing quantity or unit has to rescale the snapshot, because an entry
   // carries totals rather than per-serving values. The ratio of the new
@@ -4194,6 +4233,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const moveWorkoutSession: AppState["moveWorkoutSession"] = async (id, date) => {
     const before = workoutSessionsRef.current.find((w) => w.id === id);
     if (!before || before.date === date) return undefined;
+    // Round D outbox: a workout still waiting on this device has no row to move yet.
+    if (id.startsWith("queued:")) return "This workout hasn't saved yet. Move it once you're back online.";
     setWorkoutSessions((prev) => prev.map((w) => (w.id === id ? { ...w, date } : w)));
     if (!authUserId) return undefined;
     const result = await updateWorkoutSessionRemote(id, { date });
@@ -4220,6 +4261,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       undo: restore,
       commit: async () => {
         if (!authUserId) return undefined;
+        // Round D outbox: still waiting on this device, so it is taken out of the queue.
+        if (id.startsWith("queued:")) {
+          removeQueued(authUserId, id.slice("queued:".length));
+          return undefined;
+        }
         const result = await deleteWorkoutSessionRemote(id);
         if (!result.ok) {
           restore();
@@ -4243,9 +4289,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const result = await saveWorkoutSessionRemote(authUserId, session);
-    if (!result.ok) return { ok: false, message: result.message };
-
-    setWorkoutSessions((prev) => [...prev, { ...session, id: result.id! }]);
+    if (!result.ok) {
+      // Round D outbox: a finished workout with no connection is kept on
+      // this device and saved on reconnect. History shows it from now; the
+      // achievements and 1RMs follow once it is really saved.
+      if (isOfflineFailure(result)) {
+        const qid = newQueueId();
+        enqueueLog(authUserId, { kind: "workout", session }, qid);
+        setWorkoutSessions((prev) => [...prev, { ...session, id: `queued:${qid}` }]);
+        return { ok: true, queued: true };
+      }
+      return { ok: false, message: result.message };
+    }
+    afterWorkoutSaved(session, result.id!);
+    return { ok: true };
+  };
+  /** What a saved session brings with it: its row in history, achievements and 1RMs. */
+  const afterWorkoutSaved = (session: Omit<WorkoutSession, "id">, id: string, provisionalId?: string) => {
+    setWorkoutSessions((prev) => [...prev.filter((s) => s.id !== provisionalId), { ...session, id }]);
 
     // The richest moment in the app for this: one finished session can earn
     // first_workout, a rung of the workouts ladder, block_completed,
@@ -4279,8 +4340,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
     }
+  };
 
-    return { ok: true };
+  /**
+   * Round D outbox: sends one kept entry (food, habit tick, workout, goal).
+   * Water, weight, blood pressure and messages are sent by the flusher hook
+   * itself, as before. A refusal that isn't the connection drops the entry
+   * (and its provisional row), as the write would have been refused online.
+   */
+  const deliverQueued: AppState["deliverQueued"] = async (item) => {
+    if (!authUserId) return { ok: false, message: "Sign in again to save this." };
+    switch (item.kind) {
+      case "food": {
+        // The allergen check couldn't run offline, so it runs now: a food
+        // with an allergen the client has is never added (Release 3 CU13).
+        const f = item.params.food;
+        const c = await fetchFoodConflicts(authUserId, {
+          foodId: f.source === "catalog" ? f.id : null,
+          customFoodId: f.source === "custom" ? f.id : null,
+          name: f.name,
+        });
+        if (!c.ok && c.offline) return { ok: false, message: OFFLINE_MESSAGE };
+        if (c.ok && addNotice(f.name, c.data)?.blocks) {
+          replaceFoodEntryRecord(item.provisionalId, null);
+          return { ok: false, message: `${f.name} wasn't added. It contains an allergen you have.` };
+        }
+        const r = await logFoodEntry({ userId: authUserId, ...item.params });
+        if (r.ok && r.entry) replaceFoodEntryRecord(item.provisionalId, r.entry);
+        else if (!isOfflineFailure(r)) replaceFoodEntryRecord(item.provisionalId, null);
+        return r;
+      }
+      case "habit": {
+        const r = await setCompletion(item.habitId, item.day, item.done);
+        if (r.ok && item.done) refreshAchievements();
+        return r;
+      }
+      case "workout": {
+        const r = await saveWorkoutSessionRemote(authUserId, item.session);
+        const provisional = `queued:${item.id}`;
+        if (r.ok) afterWorkoutSaved(item.session, r.id!, provisional);
+        else if (!isOfflineFailure(r)) setWorkoutSessions((prev) => prev.filter((s) => s.id !== provisional));
+        return r;
+      }
+      case "goal": {
+        const r = await saveGoal(authUserId, item.metric, item.value, item.day);
+        if (r.ok) setMetricGoalRows((rows) => upsertGoalRow(rows, item.metric, item.value, item.day));
+        return r;
+      }
+      default:
+        return { ok: false, message: "Not sent from here." };
+    }
   };
   /**
    * WHICH MOVEMENT A RECORD BELONGS TO, resolved in the one order that is
@@ -4778,7 +4887,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setWaterGoal = (ml: number) => {
     const v = normaliseGoal("water", ml);
     setWaterGoalState(v);
-    if (authUserId) void saveGoal(authUserId, "water", v, today).then((r) => r.ok && setMetricGoalRows((rows) => upsertGoalRow(rows, "water", v, today)));
+    if (authUserId) void saveGoalOrQueue("water", v);
   };
 
   // OPTIMISTIC, THEN CORRECTED BY THE WRITE. Ticking a box should feel
@@ -4810,6 +4919,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // with a completion, and un-ticking removes the row it would count.
       if (result.ok) {
         if (nowDone) refreshAchievements();
+        return null;
+      }
+      // Round D outbox: with no connection the tick stays, kept on this
+      // device and saved on reconnect (a later tick of the same day replaces it).
+      if (authUserId && isOfflineFailure(result)) {
+        enqueueLog(authUserId, { kind: "habit", habitId: id, day, done: nowDone });
         return null;
       }
       // v6 MO1.1.1 K7 / O4: the circle goes back; the screen says so in a
@@ -5543,7 +5658,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setStepsGoal = (goal: number) => {
     const v = normaliseGoal("steps", goal);
     setStepsGoalState(v);
-    if (authUserId) void saveGoal(authUserId, "steps", v, today).then((r) => r.ok && setMetricGoalRows((rows) => upsertGoalRow(rows, "steps", v, today)));
+    if (authUserId) void saveGoalOrQueue("steps", v);
+  };
+  // Round D O4: a goal set with no connection is kept and saved on reconnect,
+  // rather than living on this device only while the server keeps the old one.
+  const saveGoalOrQueue = async (metric: "water" | "steps", v: number) => {
+    if (!authUserId) return;
+    const r = await saveGoal(authUserId, metric, v, today);
+    if (r.ok) setMetricGoalRows((rows) => upsertGoalRow(rows, metric, v, today));
+    else if (isOfflineFailure(r)) enqueueLog(authUserId, { kind: "goal", metric, value: v, day: today });
   };
 
   // B1 metric_goals: read the history; a one-time migration writes a goal the
@@ -6271,6 +6394,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const signOut = async () => {
     signingOutHere = true;
+    // Round D (D23): anything kept to save later is health data on a shared
+    // device. The person was warned before getting here (SignOutGuard).
+    if (authUserId) clearQueue(authUserId);
     // Local cache is cleared FIRST and unconditionally. On a shared device
     // the cached profile/health data is the thing that actually matters, so
     // it must not be left behind by a network failure on the way to
@@ -6402,6 +6528,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       foodLog,
       addFoodEntry,
       addFoodEntryRecord,
+      replaceFoodEntryRecord,
+      deliverQueued,
       updateFoodEntry,
       removeFoodEntry,
       workoutLog,
