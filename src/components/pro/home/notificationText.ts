@@ -11,7 +11,7 @@ import { CLIENT_COPY, notificationCopy, PRO_COPY } from "../../../services/notif
 import { imageNoticeCopy } from "../../../services/moderation/imageCopy";
 import { CATEGORY_LABEL } from "./categoryLabels";
 import { topicsPhrase } from "../forms/formModel";
-import { heldNoticeText } from "../../share/heldShareModel";
+import { heldNoticeText, RELEASED_NOTICE } from "../../share/heldShareModel";
 
 export type NotificationTone = "pr" | "req" | "att" | "act" | "done";
 
@@ -134,6 +134,9 @@ export function notificationText(n: ProNotification, names: Record<string, strin
       const c = heldNoticeText(p.reason);
       return { title: c.title, line: c.line, icon: "share", tone: "att" };
     }
+    // 20261222070000: a held card was released ("Not a problem" or Restore), once per hold.
+    case "pro.share.released":
+      return { title: RELEASED_NOTICE.title, line: RELEASED_NOTICE.line, icon: "share", tone: "done" };
     // Database 20261219030000: a professional's ambassador decision, in the
     // member notice's own words (CLIENT_COPY; the decline names the date from
     // payload.next_eligible_on). Not in PRO_KINDS: the member row would repeat it.

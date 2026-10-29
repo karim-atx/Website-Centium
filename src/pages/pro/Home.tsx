@@ -354,8 +354,8 @@ export default function Home() {
       navigate(proMemberTarget({ kind: n.memberKind, payload: n.payload }));
       return;
     }
-    // Round D · DV: a held card opens itself (a card about no client has no other page).
-    if (n.titleKey === "pro.share.held" && typeof n.payload.shared_item_id === "string") {
+    // Round D · DV: a held or released card opens itself (a card about no client has no other page).
+    if ((n.titleKey === "pro.share.held" || n.titleKey === "pro.share.released") && typeof n.payload.shared_item_id === "string") {
       setHubOpen(false);
       setHeldCardId(n.payload.shared_item_id);
       return;

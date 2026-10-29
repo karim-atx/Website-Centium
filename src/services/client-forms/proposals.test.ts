@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { draftFrom, offeredProposals, proposalTitle, shapeValue, type ProfileProposal } from "./proposals";
+import { confirmedAnswerRow, draftFrom, parseConfirmedAnswers, offeredProposals, proposalTitle, shapeValue, type ProfileProposal } from "./proposals";
 
 const p = (over: Partial<ProfileProposal> & Pick<ProfileProposal, "field" | "suggested">): ProfileProposal => ({
   id: "x",
@@ -70,5 +70,31 @@ describe("the value confirm_form_profile_proposal takes", () => {
       assert.equal(shapeValue({ ...d, kg: "15" }, TODAY).ok, false);
       assert.equal(shapeValue({ ...d, kg: "" }, TODAY).ok, false);
     }
+  });
+});
+
+describe("the answers a client confirmed, for their professional", () => {
+  it("parses rows in order and leaves out an unknown field", () => {
+    const list = parseConfirmedAnswers([
+      { proposal_id: "p1", question_id: "q1", question_prompt: "Allergies?", field: "allergies", value: { allergen: "peanuts", severity: "severe", note: null }, confirmed_at: "2026-10-29T10:00:00Z" },
+      { proposal_id: "p2", field: "shoe_size", value: { size: 44 } },
+      { proposal_id: "p3", field: "injuries", value: null },
+    ]);
+    assert.deepEqual(list.map((a) => a.proposalId), ["p1", "p3"]);
+    assert.deepEqual(list[1].value, {});
+    assert.deepEqual(parseConfirmedAnswers(undefined), []);
+  });
+  it("says each one as confirmed, and where it went", () => {
+    const allergy = confirmedAnswerRow({ field: "allergies", value: { allergen: "peanuts", severity: "severe" } });
+    assert.match(allergy.title, /allergy, severe$/);
+    assert.equal(allergy.where, "Dietary needs card");
+    assert.deepEqual(confirmedAnswerRow({ field: "injuries", value: { description: "meniscus repair", body_area: "Left knee", since: "2024-03-01" } }), {
+      title: "Left knee: meniscus repair, 2024",
+      where: "Profile and programme notes",
+    });
+    assert.equal(confirmedAnswerRow({ field: "injuries", value: { description: "Sprained wrist" } }).title, "Sprained wrist");
+    assert.equal(confirmedAnswerRow({ field: "medications", value: { name: "Metformin", dose: "500 mg", route: "oral" } }).title, "Metformin, 500 mg");
+    assert.equal(confirmedAnswerRow({ field: "weight", value: { kg: 70 } }).title, "70 kg");
+    assert.equal(confirmedAnswerRow({ field: "dietary_restrictions", value: { restriction: "not-a-diet" } }).title, "A diet");
   });
 });

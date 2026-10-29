@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowRight, Check, CircleCheck, MessageCircle, ShieldAlert } from "lucide-react";
+import { ArrowDownToLine, ArrowRight, Bandage, Check, CircleCheck, MessageCircle, Pill, Scale, ShieldAlert, Wheat, type LucideIcon } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useOnline } from "../../../hooks/useOnline";
 import { useBack } from "../../../hooks/useBack";
@@ -16,7 +16,8 @@ import { ErrorLine } from "../library/libraryUi";
 import { NumBoxes, fieldStyle } from "./moKit";
 import { answerFor, answerText, answeredCount, REPLY_MAX, safetyBanner } from "./formModel";
 import { askedQuestions, numberBoxes, photoAnswers, textQuestions, weekNumber, type PositionedQuestion } from "./reviewModel";
-import { fetchResponse, fetchResponses, markResponseRead, photoUrls, reviewResponse, type FormResponse } from "../../../services/pro/forms";
+import { fetchConfirmedAnswers, fetchResponse, fetchResponses, markResponseRead, photoUrls, reviewResponse, type FormResponse } from "../../../services/pro/forms";
+import { confirmedAnswerRow, type ConfirmedAnswer, type ProposalField } from "../../../services/client-forms/proposals";
 import { startThread } from "../../../services/messaging";
 import { time12 } from "../../../utils/time12";
 import { FORMS_PATH } from "./FormsHome";
@@ -197,6 +198,7 @@ const CheckInReview: React.FC<{ response: FormResponse; questions: PositionedQue
         {`Submitted ${dayWord(response.submittedAt)}, ${time12(hhmm(response.submittedAt))}${hasPrev ? " · compared with the last check-in" : ""}`}
       </p>
       {response.safetyFlag && <SafetyBanner topics={response.safetyTopics} firstName={first} />}
+      <AddedToProfile responseId={response.id} firstName={first} />
       {boxes.length > 0 && <NumBoxes boxes={boxes.map((b) => ({ label: b.label, value: b.value, unit: b.unit, delta: b.delta, dir: null, line: b.was == null ? "First answer" : `Was ${b.was}`, spark: b.spark }))} />}
       {photos.map((p) => (
         <div key={p.q.id} style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, padding: "12px 14px", marginBottom: 10 }}>
@@ -243,14 +245,67 @@ const CheckInReview: React.FC<{ response: FormResponse; questions: PositionedQue
   );
 };
 
+const FIELD_ICON: Record<ProposalField, LucideIcon> = { allergies: Wheat, dietary_restrictions: Wheat, medications: Pill, injuries: Bandage, weight: Scale };
+
+/**
+ * CL10 "Added to {first}'s profile" (gen/r18.js intakeAnswers18): the
+ * tealPale box (r16, pad 12 14, 12 below); arrow-down-to-line 14 and the
+ * title 13 / 800 in teal ink; rows 6 apart, 8 under the title: the field's
+ * icon 14 in teal ink, the answer as confirmed in bold 12.5 (line 1.4) and
+ * where it went 11.5 in text.soft. Only the answers the client confirmed
+ * (form_response_confirmed_answers); none, or no consent for them, and the
+ * box isn't drawn. Also on a check-in's review: a carried question can be
+ * in any form (undrawn there; the same box).
+ */
+const AddedToProfile: React.FC<{ responseId: string; firstName: string }> = ({ responseId, firstName }) => {
+  const [answers, setAnswers] = useState<{ id: string; list: ConfirmedAnswer[] } | null>(null);
+  useEffect(() => {
+    let live = true;
+    void fetchConfirmedAnswers(responseId).then((list) => {
+      if (live) setAnswers({ id: responseId, list });
+    });
+    return () => {
+      live = false;
+    };
+  }, [responseId]);
+  const list = answers?.id === responseId ? answers.list : [];
+  if (list.length === 0) return null;
+  const ink = "rgb(var(--c-team-teal-ink))";
+  return (
+    <div style={{ borderRadius: 16, background: INK.tealPale, padding: "12px 14px", marginBottom: 12 }}>
+      <p className="flex items-center" style={{ gap: 6, fontSize: textPx(13), fontWeight: 800, color: ink }}>
+        <ArrowDownToLine size={14} strokeWidth={2} color={ink} aria-hidden />
+        {`Added to ${firstName}’s profile`}
+      </p>
+      <div className="flex flex-col" style={{ gap: 6, marginTop: 8 }}>
+        {list.map((a) => {
+          const row = confirmedAnswerRow(a);
+          const Icon = FIELD_ICON[a.field];
+          return (
+            <span key={a.proposalId} className="flex" style={{ gap: 8, fontSize: textPx(12.5), color: INK.ch, lineHeight: 1.4 }}>
+              <Icon size={14} strokeWidth={2} color={ink} className="shrink-0" aria-hidden />
+              <span className="min-w-0">
+                <b>{row.title}</b>
+                <span className="block" style={{ fontSize: textPx(11.5), color: INK.chS }}>
+                  {row.where}
+                </span>
+              </span>
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 /**
  * CL10 Intake answers (gen/r18.js intakeAnswers18): head19 with the form as
  * the eyebrow, the client's name and the Message round button; "Submitted
  * {date} · {n} of {n} answered" 12 text.faint; the answers card (r18, pad 4
  * 14, rows 9 0 with the 6% rule, label 12 text.faint, answer 14 / 600).
- * Answers aren't carried into the profile (no backend: the "Added to
- * {first}'s profile" box is left out) and the form has no sections, so the
- * answers are one card.
+ * Round D (Database 20261222070000): the "Added to {first}'s profile" box
+ * lists the carried answers the client confirmed (AddedToProfile). The form
+ * has no sections, so the answers are one card.
  */
 const IntakeAnswers: React.FC<{ response: FormResponse; questions: PositionedQuestion[]; name: string }> = ({ response, questions, name }) => {
   const navigate = useNavigate();
@@ -272,6 +327,7 @@ const IntakeAnswers: React.FC<{ response: FormResponse; questions: PositionedQue
       <p style={{ fontSize: textPx(12), color: INK.chF, margin: "-6px 0 12px" }}>{`Submitted ${fmtDay(response.submittedAt, true)} · ${answeredCount(questions, response.answers)} of ${questions.length} answered`}</p>
       {response.safetyFlag && <SafetyBanner topics={response.safetyTopics} firstName={first} />}
       {err && <ErrorLine>{err}</ErrorLine>}
+      <AddedToProfile responseId={response.id} firstName={first} />
       <AnswerRows questions={rows} answers={response.answers} pad="9px 0" />
       {photos.map((p) => (
         <div key={p.q.id} style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, padding: "12px 14px", marginBottom: 10 }}>

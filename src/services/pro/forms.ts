@@ -22,6 +22,7 @@
 //   {client}/{assignment}/…, readable by the assigning professional.
 
 import { supabase } from "../../../lib/supabase/client";
+import { parseConfirmedAnswers, type ConfirmedAnswer } from "../client-forms/proposals";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import type { Read, Write } from "./clients";
@@ -354,4 +355,20 @@ export async function fetchLatestIntake(me: string, clientId: string): Promise<R
 /** The hub's To review rows for this response are done (the owner may set read_at). */
 export async function markResponseRead(responseId: string): Promise<void> {
   await supabase.from("professional_notifications").update({ read_at: new Date().toISOString() }).eq("subject_type", "form_response").eq("subject_id", responseId).is("read_at", null);
+}
+
+/**
+ * The carried answers the client confirmed into their profile
+ * (form_response_confirmed_answers, 20261222070000), as confirmed, in
+ * question order. Never a pending or declined one; each field needs the
+ * consent its profile row needs, so a missing consent simply gives no row.
+ * A failed read shows no box.
+ */
+export async function fetchConfirmedAnswers(responseId: string): Promise<ConfirmedAnswer[]> {
+  const { data, error } = await rpc("form_response_confirmed_answers", { p_response_id: responseId });
+  if (error) {
+    if (!isOffline(error)) console.error("[forms] form_response_confirmed_answers failed:", error.code, error.message);
+    return [];
+  }
+  return parseConfirmedAnswers(data);
 }

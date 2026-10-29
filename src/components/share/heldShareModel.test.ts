@@ -1,7 +1,7 @@
 // Round D · DV: a held share card's words and what each state allows.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { HELD_REASONS, heldNoteLine, heldNoticeText, heldReasonWords, itemAllows, PAUSED_LINE, readHeldReason, readItemState, strongestState, type SharedItemState } from "./heldShareModel";
+import { HELD_REASONS, heldNoteLine, heldNoticeText, RELEASED_NOTICE, heldReasonWords, itemAllows, PAUSED_LINE, readHeldReason, readItemState, strongestState, type SharedItemState } from "./heldShareModel";
 
 test("each reason category has its own short words, never a matched word", () => {
   assert.equal(heldReasonWords("contact_details"), "It shows contact details");
@@ -62,4 +62,9 @@ test("a hold wins over the newest export of the same card", () => {
   assert.equal(strongestState([it("live", "2026-10-02"), it("held_for_review", "2026-10-01")])?.state, "held_for_review");
   assert.equal(strongestState([it("live", "2026-10-01"), it("live", "2026-10-03")])?.createdAt, "2026-10-03");
   assert.equal(strongestState([it("removed", "2026-10-03"), it("live", "2026-10-01")])?.state, "live");
+});
+
+test("the released notice says the link works again, with no reason", () => {
+  assert.equal(RELEASED_NOTICE.title, "Your shared card is live again");
+  assert.match(RELEASED_NOTICE.line, /link and QR work again/);
 });

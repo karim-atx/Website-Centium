@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Check, ExternalLink, Pencil, Send, UtensilsCrossed } from "lucide-react";
-import { suggestFoodForCatalogue } from "../../services/food/onlineSearch";
-import { brandServing, canSuggestForCatalogue, SUGGESTED_LINE } from "../../services/food/onlineSearchModel";
+import { fetchMyFoodSubmission, suggestFoodForCatalogue } from "../../services/food/onlineSearch";
+import { brandServing, canSuggestForCatalogue, submissionLine, SUGGESTED_LINE, type FoodSubmission } from "../../services/food/onlineSearchModel";
 import { BottomSheet } from "../ui/BottomSheet";
 import { ConfirmCard } from "../ui/ConfirmCard";
 import { useCustomFoodForm } from "./useCustomFoodForm";
@@ -43,11 +43,28 @@ export const CustomFoodSheet: React.FC<{
   const [confirm, setConfirm] = useState<null | "delete" | "discard-back" | "discard-close">(null);
   const [busy, setBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  // Round D · DP: "Suggest for the catalogue". The proposals table isn't
-  // readable by the app, so "sent" lasts while this popup is open; sending
-  // again while one waits returns the same proposal.
+  // Round D · DP: "Suggest for the catalogue", with the newest suggestion's
+  // status from my_food_submissions (20261222070000): waiting, added, or not
+  // added with the reason category (then it can be suggested again). "sent"
+  // shows at once after a send; sending again while one waits returns it.
   const [suggesting, setSuggesting] = useState(false);
   const [suggested, setSuggested] = useState(false);
+  const [submission, setSubmission] = useState<{ foodId: string; value: FoodSubmission | null } | null>(null);
+  const shownId = shown?.id ?? null;
+  const suggestable = !!shown && canSuggestForCatalogue(shown);
+  useEffect(() => {
+    if (!shownId || !suggestable) return;
+    let live = true;
+    void fetchMyFoodSubmission(shownId).then((value) => {
+      if (live) setSubmission({ foodId: shownId, value });
+    });
+    return () => {
+      live = false;
+    };
+  }, [shownId, suggestable]);
+  const suggestion = suggested
+    ? { line: SUGGESTED_LINE, canSuggest: false }
+    : submissionLine(submission?.foodId === shownId ? submission.value : null);
   const [suggestError, setSuggestError] = useState<string | null>(null);
   const suggest = async () => {
     if (!shown || suggesting) return;
@@ -200,12 +217,15 @@ export const CustomFoodSheet: React.FC<{
                 shared catalogue; Open Food Facts data never can (ATXL0). */}
             {canSuggestForCatalogue(shown) && (
               <div style={{ marginTop: 14, borderTop: `1px solid ${dark ? FOOD_DARK.rule : "#EFEFF2"}`, paddingTop: 12 }}>
-                {suggested ? (
+                {!suggestion.canSuggest ? (
                   <p className="flex items-center" style={{ margin: 0, gap: 6, fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-soft))" }}>
-                    <Check size={14} className="shrink-0" /> {SUGGESTED_LINE}
+                    <Check size={14} className="shrink-0" /> {suggestion.line}
                   </p>
                 ) : (
                   <>
+                    {suggestion.line && (
+                      <p style={{ margin: "0 2px 8px", fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-soft))", lineHeight: 1.45 }}>{suggestion.line}</p>
+                    )}
                     <button
                       type="button"
                       onClick={() => void suggest()}
@@ -213,7 +233,7 @@ export const CustomFoodSheet: React.FC<{
                       className="tap w-full inline-flex items-center justify-center disabled:opacity-60"
                       style={{ height: 44, gap: 7, borderRadius: 12, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: textPx(13.5), fontWeight: 600 }}
                     >
-                      <Send size={14} /> {suggesting ? "Sending…" : "Suggest for the catalogue"}
+                      <Send size={14} /> {suggesting ? "Sending…" : suggestion.line ? "Suggest it again" : "Suggest for the catalogue"}
                     </button>
                     <p style={{ margin: "6px 2px 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", lineHeight: 1.45 }}>
                       Our team checks it first. If it's added, everyone can find it in search.

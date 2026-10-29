@@ -9,6 +9,9 @@ import {
   saveFoundFoodArgs,
   saveFoundFoodMessage,
   suggestFoodMessage,
+  latestSubmissionFor,
+  parseFoodSubmissions,
+  type FoodSubmission,
   type OnlineFood,
   type OnlineSearchOutcome,
 } from "./onlineSearchModel";
@@ -120,5 +123,24 @@ export async function suggestFoodForCatalogue(customFoodId: string): Promise<{ o
     return { ok: false, code: error.code, message: suggestFoodMessage(error.code, offline || browserOffline()) };
   } catch (e) {
     return { ok: false, message: suggestFoodMessage(undefined, isOffline(e) || browserOffline()) };
+  }
+}
+
+/**
+ * The newest suggestion of one of my foods (my_food_submissions,
+ * 20261222070000): pending, approved, or rejected with its reason category.
+ * Null when there is none, or when it can't be read (the sheet then offers
+ * the button; a second send while one waits returns that one).
+ */
+export async function fetchMyFoodSubmission(customFoodId: string): Promise<FoodSubmission | null> {
+  try {
+    const { data, error } = await rpc().rpc("my_food_submissions", { p_status: null, p_limit: 200, p_offset: 0 });
+    if (error) {
+      if (!isOffline(error)) console.error("[food] my_food_submissions failed:", error.code, error.message);
+      return null;
+    }
+    return latestSubmissionFor(parseFoodSubmissions(data), customFoodId);
+  } catch {
+    return null;
   }
 }
