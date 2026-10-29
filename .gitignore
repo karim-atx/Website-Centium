@@ -3,6 +3,10 @@ dist
 *.tsbuildinfo
 .DS_Store
 
+# Wrangler's local state and build cache (wrangler pages dev / dev): recreated on
+# every run, never committed.
+.wrangler/
+
 # environment variables — never commit real values.
 # .env.* deliberately covers every suffix (.production, .staging, .development
 # and anything else someone invents) rather than listing them; .env itself
