@@ -77,7 +77,8 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
   const [flags, setFlags] = useState<BiomarkerFlag[] | null | undefined>(undefined);
   const [loggedDays, setLoggedDays] = useState<string[] | null | undefined>(undefined);
   const [chkNonce, setChkNonce] = useState(0);
-  const checkIns = useClientCheckIns(clientId, lane !== "clinical_overview", chkNonce);
+  // Round D: every lane sends check-ins (clinical included, can_write_form).
+  const checkIns = useClientCheckIns(clientId, true, chkNonce);
   const checkInsGroup: Group = { key: "chk", icon: ClipboardCheck, title: "Check-ins", summary: checkInsSummary(checkIns), body: <CheckInsProgress data={checkIns} firstName={firstName} onRetry={() => setChkNonce((n) => n + 1)} /> };
   const labsVisible = access.has("lab_results") || (access.access?.resultSharedCount ?? 0) > 0;
 
@@ -235,6 +236,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
         summary: !access.has("health_metrics") ? "Not shared" : v?.sleepHours != null ? `${Math.floor(v.sleepHours)}h ${Math.round((v.sleepHours % 1) * 60)}m a night` : "Sleep per night and stages",
         body: !access.has("health_metrics") ? lock("Activity & vitals", "health_metrics") : <SleepTrendChart clientId={clientId} today={today} initial={chartInitial} />,
       },
+      checkInsGroup,
     ];
   }
 

@@ -1,10 +1,10 @@
 import React, { useId } from "react";
-import { AlignLeft, Calendar, Camera, CircleDot, GripVertical, Hash, ListChecks, Gauge, Plus, Ruler, ShieldAlert, Square, Circle, ToggleRight, Trash2, Type, X, type LucideIcon } from "lucide-react";
+import { AlignLeft, Calendar, Camera, CircleDot, GitBranch, GripVertical, Hash, ListChecks, Gauge, Plus, Ruler, ShieldAlert, Square, Circle, ToggleRight, Trash2, Type, UserRoundPlus, X, type LucideIcon } from "lucide-react";
 import { textPx } from "../../../theme/textSize";
 import { Toggle } from "../../ui/Toggle";
 import { INK } from "../proInk";
 import type { GripProps } from "./useReorder";
-import { OPTIONS_MAX, PROMPT_MAX, SAFETY_LABEL, UNIT_MAX, isYesNo, typeLabel, uiTypeOf, type QuestionDraft, type UiType } from "./formModel";
+import { OPTIONS_MAX, PROFILE_FIELD_LABEL, PROMPT_MAX, SAFETY_LABEL, SECTION_MAX, UNIT_MAX, isYesNo, typeLabel, uiTypeOf, type QuestionDraft, type UiType } from "./formModel";
 
 /** The add-a-question glyphs (gen/r18.js QT18). */
 export const TYPE_ICON: Record<UiType, LucideIcon> = {
@@ -38,6 +38,13 @@ export const TYPE_ICON: Record<UiType, LucideIcon> = {
  * Here the question, the answers and the unit are editable in place. A
  * safety-marked question (Weekly check-in: pain, injury, illness, symptoms)
  * is locked on: it can't be removed or reworded, and says why.
+ *
+ * Round D (not drawn; worded from the plan's D-S10 and the MO29 rows): long
+ * text shows a 72 high well, "Long answer"; a question can open a section
+ * ("Section {n}" caps and its title above the card, "Start a section here"
+ * on the card), take one condition ("Only ask if…", picked in the builder's
+ * sheet) and have its answer offered for the client's profile ("Carry into
+ * the profile").
  */
 export const QuestionCard: React.FC<{
   q: QuestionDraft;
@@ -50,7 +57,15 @@ export const QuestionCard: React.FC<{
   problem: string | null;
   /** Preview: the question as the client sees it, nothing editable. */
   readOnly?: boolean;
-}> = ({ q, index, count, onChange, onRemove, register, grip, problem, readOnly }) => {
+  /** The section number when this question opens one. */
+  section?: number;
+  /** "Only ask if {question} is {answer}", or null. */
+  conditionLine?: string | null;
+  /** Opens the condition picker; omitted when no earlier question can be named. */
+  onCondition?: () => void;
+  /** Opens the profile-field picker; omitted when the type carries nothing. */
+  onProfile?: () => void;
+}> = ({ q, index, count, onChange, onRemove, register, grip, problem, readOnly, section, conditionLine, onCondition, onProfile }) => {
   const id = useId();
   const ui = uiTypeOf(q);
   const Icon = TYPE_ICON[ui];
@@ -61,6 +76,8 @@ export const QuestionCard: React.FC<{
   let body: React.ReactNode;
   if (q.type === "text") {
     body = <span className="block" style={{ height: 40, borderRadius: 10, background: INK.soft, padding: "0 12px", lineHeight: "40px", fontSize: textPx(13), color: INK.chT }}>Short answer</span>;
+  } else if (q.type === "long_text") {
+    body = <span className="block" style={{ height: 72, borderRadius: 10, background: INK.soft, padding: "10px 12px", fontSize: textPx(13), color: INK.chT }}>Long answer</span>;
   } else if ((q.type === "choice" || q.type === "multi") && yesNo) {
     body = (
       <div className="flex" style={{ gap: 6 }}>
@@ -155,59 +172,123 @@ export const QuestionCard: React.FC<{
     );
   }
 
-  return (
-    <div ref={register} style={{ background: INK.card, border: `1px solid ${problem ? INK.hi : INK.bCard}`, borderRadius: 16, padding: "12px 12px 10px", marginBottom: 8 }}>
-      <div className="flex items-center" style={{ gap: 8, marginBottom: 8 }}>
-        {!readOnly && <button type="button" aria-label={`Move question ${index + 1} of ${count}. Use the arrow keys.`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-3 before:content-['']" {...grip} style={{ width: 14, height: 20, ...grip.style }}>
-          <GripVertical size={14} strokeWidth={2} aria-hidden style={{ color: INK.chT }} />
-        </button>}
-        <span className="inline-flex items-center min-w-0 whitespace-nowrap" style={{ gap: 4, fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: INK.prDeep }}>
-          <Icon size={12} strokeWidth={2.2} aria-hidden />
-          <span className="truncate">{typeLabel(q)}</span>
-        </span>
-        {readOnly ? (
-          q.required && <span className="ml-auto shrink-0" style={{ fontSize: textPx(11.5), color: INK.chF }}>Required</span>
-        ) : (
-          <span className="ml-auto inline-flex items-center shrink-0" style={{ gap: 6, fontSize: textPx(11.5), color: INK.chF }}>
-            <span aria-hidden>Required</span>
-            <Toggle checked={q.required} onChange={(v) => !locked && set({ required: v })} label={`Required: ${q.prompt || `question ${index + 1}`}`} disabled={locked} />
-          </span>
+  const linkBtn: React.CSSProperties = { gap: 6, minHeight: 36, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, textAlign: "left" };
+  const showCondition = !!onCondition || !!conditionLine;
+  const showProfile = !!onProfile || !!q.profileField;
+  const extras =
+    readOnly || (!showCondition && !showProfile && (locked || q.sectionTitle != null)) ? null : (
+      <div className="flex flex-col items-start" style={{ marginTop: 8, paddingTop: 2, borderTop: `1px solid ${INK.b06}` }}>
+        {showCondition && (
+          <button type="button" disabled={locked || !onCondition} onClick={onCondition} className="tap flex items-center" style={{ ...linkBtn, color: conditionLine ? INK.ch : INK.prDeep }}>
+            <GitBranch size={13} strokeWidth={2.2} aria-hidden style={{ color: INK.prDeep, flexShrink: 0 }} />
+            <span style={{ overflowWrap: "anywhere" }}>{conditionLine ?? "Only ask if…"}</span>
+          </button>
         )}
-        {!locked && (
-          <button type="button" onClick={onRemove} aria-label={`Remove question ${index + 1}`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-2 before:content-['']" style={{ width: 28, height: 28 }}>
-            <Trash2 size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
+        {showProfile && (
+          <button type="button" disabled={locked || !onProfile} onClick={onProfile} className="tap flex items-center" style={{ ...linkBtn, color: q.profileField ? INK.ch : INK.prDeep }}>
+            <UserRoundPlus size={13} strokeWidth={2.2} aria-hidden style={{ color: INK.prDeep, flexShrink: 0 }} />
+            {q.profileField ? `Carry into the profile: ${PROFILE_FIELD_LABEL[q.profileField]}` : "Carry into the profile"}
+          </button>
+        )}
+        {q.sectionTitle == null && !locked && (
+          <button type="button" onClick={() => set({ sectionTitle: "" })} className="tap flex items-center" style={linkBtn}>
+            <Plus size={13} strokeWidth={2.4} aria-hidden style={{ flexShrink: 0 }} />
+            Start a section here
           </button>
         )}
       </div>
-      {readOnly || q.safetyTopic ? (
-        <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, marginBottom: 8, lineHeight: 1.4, overflowWrap: "anywhere" }}>{q.prompt}</p>
-      ) : (
-        <>
-          <label htmlFor={id} className="sr-only">{`Question ${index + 1}`}</label>
-          <textarea
-            id={id}
-            value={q.prompt}
-            rows={1}
-            maxLength={PROMPT_MAX}
-            onChange={(e) => set({ prompt: e.target.value })}
-            placeholder="Write your question"
-            className="block w-full bg-transparent outline-none resize-none placeholder:text-charcoal-tertiary [field-sizing:content]"
-            style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, marginBottom: 8, lineHeight: 1.4 }}
-          />
-        </>
-      )}
-      {!readOnly && q.safetyTopic && (
-        <p className="flex items-start" style={{ gap: 6, fontSize: textPx(11.5), color: INK.chS, lineHeight: 1.45, marginBottom: 8 }}>
-          <ShieldAlert size={13} strokeWidth={2} aria-hidden style={{ color: INK.hi, flexShrink: 0, marginTop: 2 }} />
-          {`Safety question. Answers that suggest ${SAFETY_LABEL[q.safetyTopic]} flag the check-in for you, so it stays on.`}
-        </p>
-      )}
-      {body}
-      {problem && (
-        <p role="alert" style={{ fontSize: textPx(11.5), fontWeight: 600, color: INK.hi, marginTop: 8 }}>
-          {problem}
-        </p>
-      )}
+    );
+
+  const sectionHead =
+    q.sectionTitle == null ? null : (
+      <div style={{ margin: index ? "14px 0 8px" : "0 0 8px" }}>
+        <span className="block" style={{ fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: INK.chF, marginBottom: 2 }}>
+          {`Section ${section ?? 1}`}
+        </span>
+        {locked ? (
+          <p style={{ fontSize: textPx(15), fontWeight: 800, color: INK.ch, overflowWrap: "anywhere" }}>{q.sectionTitle}</p>
+        ) : (
+          <span className="flex items-center" style={{ gap: 6 }}>
+            <input
+              value={q.sectionTitle}
+              maxLength={SECTION_MAX}
+              onChange={(e) => set({ sectionTitle: e.target.value })}
+              placeholder="Section title"
+              aria-label={`Section ${section ?? 1} title`}
+              className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-tertiary"
+              style={{ fontSize: textPx(15), fontWeight: 800, color: INK.ch, height: 36, borderBottom: `1px solid ${INK.b10}` }}
+            />
+            <button type="button" onClick={() => set({ sectionTitle: null })} aria-label={`Remove section ${section ?? 1}`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-2 before:content-['']" style={{ width: 28, height: 28 }}>
+              <X size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
+            </button>
+          </span>
+        )}
+      </div>
+    );
+
+  return (
+    <div ref={register}>
+      {sectionHead}
+      <div style={{ background: INK.card, border: `1px solid ${problem ? INK.hi : INK.bCard}`, borderRadius: 16, padding: "12px 12px 10px", marginBottom: 8 }}>
+        <div className="flex items-center" style={{ gap: 8, marginBottom: 8 }}>
+          {!readOnly && <button type="button" aria-label={`Move question ${index + 1} of ${count}. Use the arrow keys.`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-3 before:content-['']" {...grip} style={{ width: 14, height: 20, ...grip.style }}>
+            <GripVertical size={14} strokeWidth={2} aria-hidden style={{ color: INK.chT }} />
+          </button>}
+          <span className="inline-flex items-center min-w-0 whitespace-nowrap" style={{ gap: 4, fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: INK.prDeep }}>
+            <Icon size={12} strokeWidth={2.2} aria-hidden />
+            <span className="truncate">{typeLabel(q)}</span>
+          </span>
+          {readOnly ? (
+            q.required && <span className="ml-auto shrink-0" style={{ fontSize: textPx(11.5), color: INK.chF }}>Required</span>
+          ) : (
+            <span className="ml-auto inline-flex items-center shrink-0" style={{ gap: 6, fontSize: textPx(11.5), color: INK.chF }}>
+              <span aria-hidden>Required</span>
+              <Toggle checked={q.required} onChange={(v) => !locked && set({ required: v })} label={`Required: ${q.prompt || `question ${index + 1}`}`} disabled={locked} />
+            </span>
+          )}
+          {!locked && (
+            <button type="button" onClick={onRemove} aria-label={`Remove question ${index + 1}`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-2 before:content-['']" style={{ width: 28, height: 28 }}>
+              <Trash2 size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
+            </button>
+          )}
+        </div>
+        {readOnly || q.safetyTopic ? (
+          <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, marginBottom: 8, lineHeight: 1.4, overflowWrap: "anywhere" }}>{q.prompt}</p>
+        ) : (
+          <>
+            <label htmlFor={id} className="sr-only">{`Question ${index + 1}`}</label>
+            <textarea
+              id={id}
+              value={q.prompt}
+              rows={1}
+              maxLength={PROMPT_MAX}
+              onChange={(e) => set({ prompt: e.target.value })}
+              placeholder="Write your question"
+              className="block w-full bg-transparent outline-none resize-none placeholder:text-charcoal-tertiary [field-sizing:content]"
+              style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, marginBottom: 8, lineHeight: 1.4 }}
+            />
+          </>
+        )}
+        {!readOnly && q.safetyTopic && (
+          <p className="flex items-start" style={{ gap: 6, fontSize: textPx(11.5), color: INK.chS, lineHeight: 1.45, marginBottom: 8 }}>
+            <ShieldAlert size={13} strokeWidth={2} aria-hidden style={{ color: INK.hi, flexShrink: 0, marginTop: 2 }} />
+            {`Safety question. Answers that suggest ${SAFETY_LABEL[q.safetyTopic]} flag the check-in for you, so it stays on.`}
+          </p>
+        )}
+        {readOnly && conditionLine && (
+          <p className="flex items-center" style={{ gap: 5, fontSize: textPx(11.5), color: INK.chF, marginBottom: 8, overflowWrap: "anywhere" }}>
+            <GitBranch size={12} strokeWidth={2.2} aria-hidden style={{ flexShrink: 0 }} />
+            {conditionLine}
+          </p>
+        )}
+        {body}
+        {extras}
+        {problem && (
+          <p role="alert" style={{ fontSize: textPx(11.5), fontWeight: 600, color: INK.hi, marginTop: 8 }}>
+            {problem}
+          </p>
+        )}
+      </div>
     </div>
   );
 };

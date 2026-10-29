@@ -8,6 +8,7 @@ import { textPx } from "../../../theme/textSize";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { CentredPopup } from "../../ui/CentredPopup";
 import { CtaButton, PinnedCta } from "../../ui/PinnedCta";
+import { Toggle } from "../../ui/Toggle";
 import { INK } from "../proInk";
 import { SectionHead } from "../client/kit";
 import { ComingSoon, ComingSoonPill } from "../ComingSoon";
@@ -15,9 +16,28 @@ import { ProCardSkeleton, ProError } from "../states";
 import { ErrorLine } from "../library/libraryUi";
 import { QuestionCard, TYPE_ICON } from "./QuestionCard";
 import { SendingSheet, ScheduleSheet } from "./SendSheets";
-import { TopToast, fieldStyle } from "./moKit";
+import { ChoiceChips, FieldLabel, RadioRows, TopToast, fieldStyle } from "./moKit";
 import { moveItem, useReorder } from "./useReorder";
-import { TITLE_MAX, UI_TYPES, questionProblem, questionsFor, type FormKind, type QuestionDraft, type UiType } from "./formModel";
+import {
+  DESCRIPTION_MAX,
+  PROFILE_FIELD_LABEL,
+  TITLE_MAX,
+  UI_TYPES,
+  conditionLine,
+  conditionOp,
+  conditionParents,
+  conditionProblem,
+  conditionValues,
+  profileFieldsFor,
+  questionProblem,
+  questionsFor,
+  sectionNumber,
+  withoutQuestion,
+  type FormKind,
+  type ProfileField,
+  type QuestionDraft,
+  type UiType,
+} from "./formModel";
 import { archiveForm, canWriteForm, fetchForm, saveForm, type FormAssignment } from "../../../services/pro/forms";
 import { FORMS_PATH } from "./FormsHome";
 
@@ -31,11 +51,15 @@ const OFFLINE = "You're offline. Try again when you're connected.";
  * (44 high, r14, 1.5 dashed 11%, 13 / 700 primary.deep with the plus), and
  * the pinned pair: "Sending" (intake) or "Schedule" (check-in) beside "Save".
  *
- * Not in the database, so not drawn as working (reported): the form's
- * Description and its Sections (no columns; "Add section" is left out),
- * Long text (one text type), sending on hire, carrying answers into the
- * profile, and every 2 / 4 weeks. Nothing is written until Save; Sending and
- * Schedule work on the saved form.
+ * Round D (20261222050000): the form's Description (shown to the client
+ * above the questions, up to 1,000 characters); for intake forms "Send when
+ * someone hires you" (forms.send_on_hire); Long text; sections ("Add
+ * section" beside "Add question" opens a section at the next question, or
+ * "Start a section here" on a card); "Only ask if…" (one condition on an
+ * earlier choice, yes / no, multiple choice or scale question; one level);
+ * and "Carry into the profile" (the answer is offered to the client for
+ * their profile after they send it, the field fitting the question's type).
+ * Nothing is written until Save; Sending and Schedule work on the saved form.
  */
 export const FormBuilder: React.FC = () => {
   const { formId: routeId, kind: routeKind } = useParams<{ formId?: string; kind?: string }>();
@@ -44,11 +68,16 @@ export const FormBuilder: React.FC = () => {
   const online = useOnline();
   const navigate = useNavigate();
   const titleId = useId();
+  const descId = useId();
   const isNew = !routeId;
   const [kind, setKind] = useState<FormKind>(routeKind === "check-in" ? "check_in" : "intake");
   const [formId, setFormId] = useState<string | null>(routeId ?? null);
   const [title, setTitle] = useState("");
   const [savedTitle, setSavedTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [savedDescription, setSavedDescription] = useState("");
+  const [onHire, setOnHire] = useState(false);
+  const [savedOnHire, setSavedOnHire] = useState(false);
   const [saved, setSaved] = useState<QuestionDraft[]>([]);
   const [draft, setDraft] = useState<QuestionDraft[]>([]);
   const [series, setSeries] = useState<FormAssignment[]>([]);
@@ -60,7 +89,12 @@ export const FormBuilder: React.FC = () => {
   const [err, setErr] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [sheet, setSheet] = useState<"add" | "send" | "preview" | null>(null);
+  /** "Add section": the next question added opens a section. */
+  const [addAsSection, setAddAsSection] = useState(false);
   const [confirm, setConfirm] = useState<"discard" | "remove" | null>(null);
+  /** The question whose condition or profile field is being picked. */
+  const [picking, setPicking] = useState<{ id: string; what: "condition" | "profile" } | null>(null);
+  const [pickParent, setPickParent] = useState<string | null>(null);
 
   useEffect(() => {
     if (!routeId) return;
@@ -73,6 +107,10 @@ export const FormBuilder: React.FC = () => {
       setFormId(r.data.id);
       setTitle(r.data.title);
       setSavedTitle(r.data.title);
+      setDescription(r.data.description);
+      setSavedDescription(r.data.description);
+      setOnHire(r.data.sendOnHire);
+      setSavedOnHire(r.data.sendOnHire);
       setSaved(r.data.questions);
       setDraft(r.data.questions);
       setSeries(r.data.assignments.filter((a) => a.status === "series"));
@@ -91,8 +129,9 @@ export const FormBuilder: React.FC = () => {
     };
   }, [kind]);
 
-  const dirty = title.trim() !== savedTitle.trim() || JSON.stringify(saved) !== JSON.stringify(draft);
-  const problems = useMemo(() => draft.map(questionProblem), [draft]);
+  const dirty =
+    title.trim() !== savedTitle.trim() || description.trim() !== savedDescription.trim() || onHire !== savedOnHire || JSON.stringify(saved) !== JSON.stringify(draft);
+  const problems = useMemo(() => draft.map((q, i) => questionProblem(q) ?? conditionProblem(draft, i)), [draft]);
   const titleProblem = !title.trim() ? "Give the form a title." : title.trim().length > TITLE_MAX ? `Keep the title under ${TITLE_MAX} characters.` : null;
   const blocked = !!titleProblem || problems.some(Boolean) || draft.length === 0;
   const ready = !!formId && !dirty;
@@ -108,7 +147,7 @@ export const FormBuilder: React.FC = () => {
     if (!online) return setErr(OFFLINE);
     setBusy(true);
     setErr(null);
-    const r = await saveForm(authUserId, formId, kind, title, saved, draft);
+    const r = await saveForm(authUserId, formId, { kind, title, description, sendOnHire: kind === "intake" && onHire }, saved, draft);
     setBusy(false);
     if (!r.ok) return setErr(r.message);
     setToast("Saved.");
@@ -129,8 +168,17 @@ export const FormBuilder: React.FC = () => {
   };
 
   const add = (ui: UiType) => {
-    setDraft((d) => [...d, ...questionsFor(ui)]);
+    const added = questionsFor(ui);
+    if (addAsSection && added[0]) added[0] = { ...added[0], sectionTitle: "" };
+    setDraft((d) => [...d, ...added]);
+    setAddAsSection(false);
     setSheet(null);
+  };
+
+  const update = (id: string, patch: Partial<QuestionDraft>) => setDraft((d) => d.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+  const closePicker = () => {
+    setPicking(null);
+    setPickParent(null);
   };
 
   if (state === "loading")
@@ -155,9 +203,14 @@ export const FormBuilder: React.FC = () => {
     return (
       <div>
         <Head title={heading} onBack={() => navigate(FORMS_PATH)} onPreview={null} />
-        <p style={{ fontSize: textPx(13), color: INK.chS }}>Check-ins are for Full coaching and Nutrition professionals.</p>
+        <p style={{ fontSize: textPx(13), color: INK.chS }}>Only professionals can write and send forms.</p>
       </div>
     );
+
+  const pickIndex = picking ? draft.findIndex((x) => x.id === picking.id) : -1;
+  const pickQ = pickIndex >= 0 ? draft[pickIndex] : null;
+  const parents = pickQ ? conditionParents(draft, pickIndex) : [];
+  const parent = pickParent ? draft.find((x) => x.id === pickParent) ?? null : null;
 
   return (
     <div style={{ paddingBottom: 172 }}>
@@ -167,31 +220,73 @@ export const FormBuilder: React.FC = () => {
       </label>
       <input id={titleId} value={title} maxLength={TITLE_MAX} onChange={(e) => setTitle(e.target.value)} className="outline-none focus:border-primary" style={{ ...fieldStyle(), height: 40 }} />
       {tried && titleProblem && <ErrorLine>{titleProblem}</ErrorLine>}
+      <label htmlFor={descId} className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, margin: "12px 0 6px" }}>
+        Description <span style={{ fontWeight: 500, color: INK.chF }}>(optional)</span>
+      </label>
+      <textarea
+        id={descId}
+        value={description}
+        maxLength={DESCRIPTION_MAX}
+        rows={2}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="What it's for, shown to the client above the questions"
+        className="block w-full outline-none resize-none focus:border-primary placeholder:text-charcoal-tertiary [field-sizing:content]"
+        style={{ ...fieldStyle(), minHeight: 64, padding: "10px 12px", lineHeight: 1.45 }}
+      />
+      {kind === "intake" && (
+        <div className="flex items-center justify-between" style={{ gap: 12, marginTop: 12, minHeight: 44 }}>
+          <span className="min-w-0">
+            <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 700, color: INK.ch }}>
+              Send when someone hires you
+            </span>
+            <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 2 }}>
+              Due 3 days after they hire you
+            </span>
+          </span>
+          <Toggle checked={onHire} onChange={setOnHire} label="Send when someone hires you" />
+        </div>
+      )}
       <div style={{ height: 14 }} />
       <SectionHead label={`Questions · ${draft.length}`} />
-      {draft.map((q, i) => (
-        <QuestionCard
-          key={q.id}
-          q={q}
-          index={i}
-          count={draft.length}
-          register={register(i)}
-          grip={gripProps(i)}
-          problem={tried ? problems[i] : null}
-          onChange={(next) => setDraft((d) => d.map((x) => (x.id === q.id ? next : x)))}
-          onRemove={() => setDraft((d) => d.filter((x) => x.id !== q.id))}
-        />
-      ))}
+      {draft.map((q, i) => {
+        const canPickCondition = !q.safetyTopic && (!!q.showIf || conditionParents(draft, i).length > 0);
+        const canPickProfile = !q.safetyTopic && profileFieldsFor(q).length > 0;
+        return (
+          <QuestionCard
+            key={q.id}
+            q={q}
+            index={i}
+            count={draft.length}
+            register={register(i)}
+            grip={gripProps(i)}
+            problem={tried ? problems[i] : null}
+            section={q.sectionTitle != null ? sectionNumber(draft, i) : undefined}
+            conditionLine={conditionLine(draft, q)}
+            onCondition={canPickCondition ? () => setPicking({ id: q.id, what: "condition" }) : undefined}
+            onProfile={canPickProfile ? () => setPicking({ id: q.id, what: "profile" }) : undefined}
+            onChange={(next) => setDraft((d) => d.map((x) => (x.id === q.id ? next : x)))}
+            onRemove={() => setDraft((d) => withoutQuestion(d, q.id))}
+          />
+        );
+      })}
       {tried && draft.length === 0 && <ErrorLine>Add at least one question.</ErrorLine>}
-      <button
-        type="button"
-        onClick={() => setSheet("add")}
-        className="tap w-full flex items-center justify-center"
-        style={{ gap: 6, height: 44, borderRadius: 14, border: "1.5px dashed rgb(var(--c-charcoal) / 0.11)", fontSize: textPx(13), fontWeight: 700, color: INK.prDeep, marginTop: 4 }}
-      >
-        <Plus size={14} strokeWidth={2.4} aria-hidden />
-        Add question
-      </button>
+      <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8, marginTop: 4 }}>
+        {(["question", "section"] as const).map((what) => (
+          <button
+            key={what}
+            type="button"
+            onClick={() => {
+              setAddAsSection(what === "section");
+              setSheet("add");
+            }}
+            className="tap w-full flex items-center justify-center"
+            style={{ gap: 6, height: 44, borderRadius: 14, border: "1.5px dashed rgb(var(--c-charcoal) / 0.11)", fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}
+          >
+            <Plus size={14} strokeWidth={2.4} aria-hidden />
+            {what === "question" ? "Add question" : "Add section"}
+          </button>
+        ))}
+      </div>
       {err && <div style={{ marginTop: 12 }}><ErrorLine>{err}</ErrorLine></div>}
       {formId && (
         <button type="button" onClick={() => setConfirm("remove")} className="tap flex items-center mx-auto" style={{ gap: 6, marginTop: 20, minHeight: 44, fontSize: textPx(12.5), fontWeight: 700, color: INK.hi }}>
@@ -205,7 +300,15 @@ export const FormBuilder: React.FC = () => {
         secondary={{ label: kind === "check_in" ? "Schedule" : "Sending", icon: kind === "check_in" ? <CalendarClock size={15} /> : <Send size={15} />, onClick: () => setSheet("send") }}
       />
 
-      <BottomSheet open={sheet === "add"} onClose={() => setSheet(null)} title="Add a question">
+      <BottomSheet
+        open={sheet === "add"}
+        onClose={() => {
+          setSheet(null);
+          setAddAsSection(false);
+        }}
+        title={addAsSection ? "Add a section" : "Add a question"}
+      >
+        {addAsSection && <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginBottom: 10 }}>A section starts with a question. Choose its first one, then give the section a title.</p>}
         <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8 }}>
           {UI_TYPES.map((t) => {
             const Icon = TYPE_ICON[t.key];
@@ -233,11 +336,89 @@ export const FormBuilder: React.FC = () => {
             );
           })}
         </div>
-        <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 10 }}>Carrying allergy, injury and medication answers into the client's profile is coming soon.</p>
+      </BottomSheet>
+
+      <BottomSheet open={picking?.what === "condition" && !!pickQ} onClose={closePicker} title="Only ask if…">
+        {pickQ && !parent && (
+          <>
+            <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginBottom: 10 }}>The client sees this question only when an earlier answer matches. Otherwise it's skipped.</p>
+            {parents.length ? (
+              <RadioRows
+                label="Earlier question"
+                value={pickQ.showIf?.questionId ?? null}
+                onChange={(v) => setPickParent(v)}
+                rows={parents.map((p) => ({ value: p.id, title: p.prompt.trim(), line: p.type === "multi" ? "Multiple choice" : p.type === "scale" ? "Scale" : "Single choice" }))}
+              />
+            ) : (
+              <p style={{ fontSize: textPx(12.5), color: INK.chS }}>Add a choice, yes or no, or scale question above this one first.</p>
+            )}
+            {pickQ.showIf && (
+              <CtaButton
+                className="w-full mt-3"
+                size="sheet"
+                variant="secondary"
+                label="Always ask"
+                onClick={() => {
+                  update(pickQ.id, { showIf: null });
+                  closePicker();
+                }}
+              />
+            )}
+          </>
+        )}
+        {pickQ && parent && (
+          <>
+            <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch, marginBottom: 2, overflowWrap: "anywhere" }}>{parent.prompt.trim()}</p>
+            <FieldLabel top={8}>{conditionOp(parent) === "includes" ? "When the answers include" : "When the answer is"}</FieldLabel>
+            <ChoiceChips
+              label={conditionOp(parent) === "includes" ? "When the answers include" : "When the answer is"}
+              value={pickQ.showIf?.questionId === parent.id ? pickQ.showIf.value : ""}
+              onChange={(v) => {
+                update(pickQ.id, { showIf: { questionId: parent.id, op: conditionOp(parent), value: v } });
+                closePicker();
+              }}
+              items={conditionValues(parent).map((v) => ({ value: v, label: v }))}
+            />
+            <button type="button" onClick={() => setPickParent(null)} className="tap flex items-center" style={{ minHeight: 44, marginTop: 8, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
+              Choose another question
+            </button>
+          </>
+        )}
+      </BottomSheet>
+
+      <BottomSheet open={picking?.what === "profile" && !!pickQ} onClose={closePicker} title="Carry into the profile">
+        {pickQ && (
+          <>
+            <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginBottom: 10 }}>
+              After sending, the client is asked whether to add this answer to their profile. Nothing is added unless they confirm it. Weight is never offered while they use recovery-sensitive mode.
+            </p>
+            <RadioRows<ProfileField | "none">
+              label="Carry into the profile"
+              value={pickQ.profileField ?? "none"}
+              onChange={(v) => {
+                update(pickQ.id, { profileField: v === "none" ? null : v });
+                closePicker();
+              }}
+              rows={[{ value: "none" as const, title: "Don't carry it" }, ...profileFieldsFor(pickQ).map((f) => ({ value: f, title: PROFILE_FIELD_LABEL[f] }))]}
+            />
+          </>
+        )}
       </BottomSheet>
 
       {kind === "intake" ? (
-        <SendingSheet open={sheet === "send"} onClose={() => setSheet(null)} formId={formId} ready={ready} onSent={(t) => { setSheet(null); setToast(t); }} />
+        <SendingSheet
+          open={sheet === "send"}
+          onClose={() => setSheet(null)}
+          formId={formId}
+          ready={ready}
+          questions={draft}
+          sendOnHire={savedOnHire}
+          onSendOnHire={(v) => {
+            setOnHire(v);
+            setSavedOnHire(v);
+          }}
+          onSent={(t) => { setSheet(null); setToast(t); }}
+        />
       ) : (
         <ScheduleSheet
           open={sheet === "send"}
@@ -255,8 +436,22 @@ export const FormBuilder: React.FC = () => {
       )}
 
       <BottomSheet open={sheet === "preview"} onClose={() => setSheet(null)} title={heading}>
+        {description.trim() && <p style={{ fontSize: textPx(13), color: INK.chS, lineHeight: 1.5, marginBottom: 12, whiteSpace: "pre-line" }}>{description.trim()}</p>}
         {draft.map((q, i) => (
-          <QuestionCard key={q.id} q={q} index={i} count={draft.length} readOnly register={() => undefined} grip={gripProps(i)} problem={null} onChange={() => undefined} onRemove={() => undefined} />
+          <QuestionCard
+            key={q.id}
+            q={q}
+            index={i}
+            count={draft.length}
+            readOnly
+            section={q.sectionTitle != null ? sectionNumber(draft, i) : undefined}
+            conditionLine={conditionLine(draft, q)}
+            register={() => undefined}
+            grip={gripProps(i)}
+            problem={null}
+            onChange={() => undefined}
+            onRemove={() => undefined}
+          />
         ))}
       </BottomSheet>
 

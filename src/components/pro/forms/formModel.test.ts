@@ -1,8 +1,31 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { answerFor, answerText, diffQuestions, parseSchedule, questionProblem, questionsFor, safetyBanner, scheduleLine, scheduleString, toRow, topicsPhrase, typeLabel } from "./formModel";
-import { numberBoxes, seriesOverTime, weekNumber, type PositionedQuestion } from "./reviewModel";
-import { checkInLine, intakeLine, LANE_TEMPLATES } from "./formsList";
+import {
+  answerFor,
+  answerText,
+  conditionLine,
+  conditionParents,
+  conditionProblem,
+  conditionValues,
+  diffQuestions,
+  fromRow,
+  parseSchedule,
+  profileFieldsFor,
+  questionProblem,
+  questionsFor,
+  safetyBanner,
+  scheduleLine,
+  scheduleString,
+  sectionNumber,
+  showIfRow,
+  toRow,
+  topicsPhrase,
+  typeLabel,
+  withoutQuestion,
+  type FormTemplate,
+} from "./formModel";
+import { askedQuestions, numberBoxes, seriesOverTime, weekNumber, type PositionedQuestion } from "./reviewModel";
+import { checkInLine, intakeLine, templateMetaLine, templatesFor } from "./formsList";
 import { bodyOf, sectionsOf, templateMeta } from "./noteTemplateModel";
 
 const q = (over: Partial<PositionedQuestion> & { id: string }): PositionedQuestion => ({
@@ -16,6 +39,9 @@ const q = (over: Partial<PositionedQuestion> & { id: string }): PositionedQuesti
   scaleMax: null,
   safetyTopic: null,
   safetyTrigger: null,
+  sectionTitle: null,
+  showIf: null,
+  profileField: null,
   position: 0,
   ...over,
 });
@@ -31,7 +57,9 @@ describe("question types", () => {
       ["Waist", "cm"],
       ["Hips", "cm"],
     ]);
-    assert.deepEqual(questionsFor("long"), []);
+    const long = questionsFor("long")[0];
+    assert.equal(long.type, "long_text");
+    assert.equal(typeLabel(long), "Long text");
     assert.equal(typeLabel({ type: "choice", options: ["Yes", "No"], scaleMin: null, scaleMax: null }), "Yes or no");
     assert.equal(typeLabel({ type: "scale", options: null, scaleMin: 0, scaleMax: 10 }), "Scale 0 to 10");
   });
@@ -45,7 +73,21 @@ describe("question types", () => {
 
   it("writes only the columns a type uses and keeps the safety marking", () => {
     const pain = q({ id: "p", type: "scale", prompt: "Any pain?", unit: "x", scaleMin: 0, scaleMax: 10, safetyTopic: "pain", safetyTrigger: { min: 4 } });
-    assert.deepEqual(toRow(pain, 3), { position: 3, type: "scale", prompt: "Any pain?", unit: null, required: false, options: null, scale_min: 0, scale_max: 10, safety_topic: "pain", safety_trigger: { min: 4 } });
+    assert.deepEqual(toRow(pain, 3), {
+      position: 3,
+      type: "scale",
+      prompt: "Any pain?",
+      unit: null,
+      required: false,
+      options: null,
+      scale_min: 0,
+      scale_max: 10,
+      safety_topic: "pain",
+      safety_trigger: { min: 4 },
+      section_title: null,
+      show_if: null,
+      profile_field: null,
+    });
   });
 
   it("diffs saved and draft questions into inserts, updates and deletes", () => {
@@ -64,9 +106,87 @@ describe("schedules", () => {
   it("round-trips the database's schedule strings, Monday = 1", () => {
     assert.equal(scheduleString({ isoDay: 7, time: "18:00" }), "weekly:7@18:00");
     assert.equal(scheduleString({ isoDay: null, time: "08:30" }), "daily@08:30");
-    assert.deepEqual(parseSchedule("weekly:1@07:05"), { isoDay: 1, time: "07:05" });
+    assert.deepEqual(parseSchedule("weekly:1@07:05"), { isoDay: 1, time: "07:05", every: 1 });
+    assert.deepEqual(parseSchedule("daily@08:30"), { isoDay: null, time: "08:30" });
     assert.equal(parseSchedule("weekly:8@07:05"), null);
     assert.equal(scheduleLine({ isoDay: 7, time: "18:00" }), "Every week · Sunday 6:00 PM");
+  });
+
+  it("writes and reads every 2 and every 4 weeks (Round D)", () => {
+    assert.equal(scheduleString({ isoDay: 3, time: "09:00", every: 2 }), "every2weeks:3@09:00");
+    assert.equal(scheduleString({ isoDay: 5, time: "18:30", every: 4 }), "every4weeks:5@18:30");
+    assert.equal(scheduleString({ isoDay: 5, time: "18:30", every: 1 }), "weekly:5@18:30");
+    assert.deepEqual(parseSchedule("every2weeks:3@09:00"), { isoDay: 3, time: "09:00", every: 2 });
+    assert.deepEqual(parseSchedule("every4weeks:5@18:30"), { isoDay: 5, time: "18:30", every: 4 });
+    assert.equal(parseSchedule("every3weeks:1@09:00"), null);
+    assert.equal(scheduleLine({ isoDay: 1, time: "09:00", every: 2 }), "Every 2 weeks · Monday 9:00 AM");
+    assert.equal(scheduleLine({ isoDay: null, time: "08:00" }), "Every day · 8:00 AM");
+  });
+});
+
+describe("sections, conditions and profile fields (Round D)", () => {
+  const yes = q({ id: "a", type: "choice", prompt: "Any allergies?", unit: null, options: ["Yes", "No"] });
+  const which = q({ id: "b", type: "multi", prompt: "Which ones?", unit: null, options: ["Peanuts", "Gluten"], position: 1 });
+  const notes = q({ id: "c", type: "text", prompt: "Anything else?", unit: null, position: 2 });
+
+  it("offers only earlier choice, multiple choice and scale questions without a condition of their own", () => {
+    const withCond = { ...which, showIf: { questionId: "a", op: "equals" as const, value: "Yes" } };
+    assert.deepEqual(conditionParents([yes, withCond, notes], 2).map((x) => x.id), ["a"]);
+    assert.deepEqual(conditionParents([yes, which, notes], 0), []);
+    // A question others depend on can't take a condition (one level).
+    assert.deepEqual(conditionParents([yes, which, { ...notes, showIf: { questionId: "b", op: "includes", value: "Gluten" } }], 1), []);
+  });
+
+  it("names the answers a condition can match", () => {
+    assert.deepEqual(conditionValues(yes), ["Yes", "No"]);
+    assert.deepEqual(conditionValues(q({ id: "s", type: "scale", scaleMin: 1, scaleMax: 3 })), ["1", "2", "3"]);
+  });
+
+  it("says why a condition can't be saved", () => {
+    const ok = { ...notes, showIf: { questionId: "a", op: "equals" as const, value: "Yes" } };
+    assert.equal(conditionProblem([yes, which, ok], 2), null);
+    assert.equal(conditionProblem([ok, yes, which], 0), "Move this below the question it depends on.");
+    assert.equal(conditionProblem([yes, which, { ...ok, showIf: { questionId: "a", op: "equals", value: "Maybe" } }], 2), "The answer this depends on changed. Choose it again.");
+    assert.equal(conditionProblem([yes, which, { ...ok, showIf: { questionId: "a", op: "includes", value: "Yes" } }], 2), "Choose the condition again.");
+    assert.equal(conditionLine([yes], ok), "Only ask if \"Any allergies?\" is Yes");
+    assert.equal(conditionLine([which], { showIf: { questionId: "b", op: "includes", value: "Gluten" } }), "Only ask if \"Which ones?\" includes Gluten");
+  });
+
+  it("clears a condition when its question is removed", () => {
+    const dep = { ...notes, showIf: { questionId: "a", op: "equals" as const, value: "Yes" } };
+    const next = withoutQuestion([yes, which, dep], "a");
+    assert.deepEqual(next.map((x) => [x.id, x.showIf]), [["b", null], ["c", null]]);
+  });
+
+  it("writes show_if with the row id, and leaves it for the second pass while the question is new", () => {
+    assert.deepEqual(showIfRow({ questionId: "a", op: "equals", value: "Yes" }), { question_id: "a", equals: "Yes" });
+    assert.equal(showIfRow({ questionId: "new-x-1", op: "includes", value: "Gluten" }), null);
+    assert.deepEqual(showIfRow({ questionId: "new-x-1", op: "includes", value: "Gluten" }, new Map([["new-x-1", "row-9"]])), { question_id: "row-9", includes: "Gluten" });
+    const back = fromRow({ id: "z", position: 1, type: "long_text", prompt: "History", unit: null, required: false, options: null, scale_min: null, scale_max: null, safety_topic: null, safety_trigger: null, section_title: "Health", show_if: { question_id: "a", equals: "Yes" }, profile_field: "injuries" });
+    assert.deepEqual([back.sectionTitle, back.showIf, back.profileField], ["Health", { questionId: "a", op: "equals", value: "Yes" }, "injuries"]);
+  });
+
+  it("pairs profile fields with the database's question types", () => {
+    assert.deepEqual(profileFieldsFor({ type: "multi", options: ["Peanuts"] }), ["allergies", "dietary_restrictions"]);
+    assert.deepEqual(profileFieldsFor({ type: "text", options: null }), ["allergies", "dietary_restrictions", "medications", "injuries"]);
+    assert.deepEqual(profileFieldsFor({ type: "long_text", options: null }), ["medications", "injuries"]);
+    assert.deepEqual(profileFieldsFor({ type: "number", options: null }), ["weight"]);
+    assert.deepEqual(profileFieldsFor({ type: "choice", options: ["Yes", "No"] }), []);
+    assert.deepEqual(profileFieldsFor({ type: "scale", options: null }), []);
+  });
+
+  it("numbers sections and asks a section title", () => {
+    const d = [yes, { ...which, sectionTitle: "Diet" }, { ...notes, sectionTitle: "" }];
+    assert.equal(sectionNumber(d, 1), 1);
+    assert.equal(sectionNumber(d, 2), 2);
+    assert.equal(questionProblem(d[2]), "Give the section a title.");
+    assert.equal(toRow({ ...d[1], sectionTitle: "  Diet " }, 1).section_title, "Diet");
+  });
+
+  it("lists only the questions a client was asked in a response", () => {
+    const dep = { ...notes, showIf: { questionId: "a", op: "equals" as const, value: "Yes" } };
+    assert.deepEqual(askedQuestions([yes, dep], { a: "No" }).map((x) => x.id), ["a"]);
+    assert.deepEqual(askedQuestions([yes, dep], { a: "Yes" }).map((x) => x.id), ["a", "c"]);
   });
 });
 
@@ -107,13 +227,18 @@ describe("answers", () => {
 });
 
 describe("forms list", () => {
-  it("has the Weekly check-in as the only template that works, none for Clinical check-ins", () => {
-    assert.deepEqual(LANE_TEMPLATES.full_coaching.filter((t) => t.weekly).map((t) => t.title), ["Weekly check-in"]);
-    assert.equal(LANE_TEMPLATES.clinical_overview.some((t) => t.kind === "check_in"), false);
+  it("lists the Database's templates for the tab, available first", () => {
+    const t = (key: string, kind: "intake" | "check_in", available: boolean, n = 5): FormTemplate => ({ key, lane: "any", kind, title: key, description: "About it", questionCount: n, available });
+    const all = [t("par_q", "intake", false, 0), t("weekly_check_in", "check_in", true, 9), t("coaching_intake", "intake", false), t("health_history", "intake", true)];
+    assert.deepEqual(templatesFor(all, "intake").map((x) => x.key), ["health_history", "par_q", "coaching_intake"]);
+    assert.deepEqual(templatesFor(all, "check_in").map((x) => x.key), ["weekly_check_in"]);
+    assert.equal(templateMetaLine(all[1]), "About it · 9 questions");
+    assert.equal(templateMetaLine(all[0]), "About it");
   });
   it("writes the list lines from live schedules", () => {
     const f = { id: "f", kind: "check_in" as const, title: "Weekly check-in", questionCount: 9, updatedAt: "" };
     assert.equal(intakeLine({ ...f, kind: "intake", questionCount: 1 }), "Sent manually · 1 question");
+    assert.equal(intakeLine({ ...f, kind: "intake", questionCount: 4, sendOnHire: true }), "Sent automatically when someone hires you · 4 questions");
     assert.equal(checkInLine(f, []), "Not scheduled · 9 questions");
     const a = (clientId: string) => ({ id: clientId, formId: "f", clientId, schedule: "weekly:7@18:00", dueAt: null, status: "series" as const, seriesId: null });
     assert.equal(checkInLine(f, [a("x"), a("y")]), "Every week · Sunday 6:00 PM · 2 clients");

@@ -11,15 +11,16 @@
 //   writes its own yes / no questions);
 // - Body measurements → three number questions (Weight kg, Waist cm, Hips
 //   cm), one row each;
-// - Long text has no column that tells it apart from short text, so it isn't
-//   offered (Coming soon) rather than saved as something it isn't.
-// Sections and a description have no column either (reported).
+// - Long text → long_text (Round D, 20261222000000; answers up to 5,000).
+// Round D (20261222050000) adds a form description, sections (a question can
+// open one: section_title), one condition per question (show_if) and the
+// profile field an answer is offered to the client for (profile_field).
 
 import { signedNum } from "../proRules";
 import { DAY_LONG } from "../../../utils/week";
 import { time12 } from "../../../utils/time12";
 
-export type DbQuestionType = "number" | "scale" | "choice" | "multi" | "text" | "photo" | "date";
+export type DbQuestionType = "number" | "scale" | "choice" | "multi" | "text" | "long_text" | "photo" | "date";
 export type SafetyTopic = "pain" | "injury" | "illness" | "symptoms";
 export type FormKind = "intake" | "check_in";
 
@@ -27,7 +28,7 @@ export type FormKind = "intake" | "check_in";
 export type UiType = "short" | "long" | "single" | "multi" | "number" | "scale" | "date" | "yesno" | "photo" | "body";
 export const UI_TYPES: { key: UiType; label: string; available: boolean }[] = [
   { key: "short", label: "Short text", available: true },
-  { key: "long", label: "Long text", available: false },
+  { key: "long", label: "Long text", available: true },
   { key: "single", label: "Single choice", available: true },
   { key: "multi", label: "Multiple choice", available: true },
   { key: "number", label: "Number with unit", available: true },
@@ -43,6 +44,31 @@ export const PROMPT_MAX = 300;
 export const TITLE_MAX = 80;
 export const UNIT_MAX = 20;
 export const REPLY_MAX = 1000;
+export const DESCRIPTION_MAX = 1000;
+export const SECTION_MAX = 80;
+/** A long text answer (save_form_response refuses more). */
+export const LONG_TEXT_MAX = 5000;
+
+/**
+ * One condition (form_questions.show_if): ask this question only when an
+ * earlier question's answer equals a value (choice, yes / no, scale) or a
+ * multiple-choice answer includes an option. One level only.
+ */
+export interface ShowIf {
+  questionId: string;
+  op: "equals" | "includes";
+  value: string;
+}
+
+/** form_questions.profile_field: what the client is offered to add to their profile. */
+export type ProfileField = "allergies" | "dietary_restrictions" | "medications" | "injuries" | "weight";
+export const PROFILE_FIELD_LABEL: Record<ProfileField, string> = {
+  allergies: "Allergies",
+  dietary_restrictions: "Dietary needs",
+  medications: "Medications",
+  injuries: "Injuries",
+  weight: "Weight",
+};
 
 /** One question as the builder holds it (a form_questions row, or a new one). */
 export interface QuestionDraft {
@@ -58,6 +84,10 @@ export interface QuestionDraft {
   scaleMax: number | null;
   safetyTopic: SafetyTopic | null;
   safetyTrigger: Record<string, unknown> | null;
+  /** This question opens a section with this title ("" while being written). */
+  sectionTitle: string | null;
+  showIf: ShowIf | null;
+  profileField: ProfileField | null;
 }
 
 let seq = 0;
@@ -75,6 +105,9 @@ const blank = (type: DbQuestionType, prompt: string, extra: Partial<QuestionDraf
   scaleMax: null,
   safetyTopic: null,
   safetyTrigger: null,
+  sectionTitle: null,
+  showIf: null,
+  profileField: null,
   ...extra,
 });
 
@@ -100,7 +133,7 @@ export function questionsFor(ui: UiType): QuestionDraft[] {
     case "body":
       return [blank("number", "Weight", { unit: "kg" }), blank("number", "Waist", { unit: "cm" }), blank("number", "Hips", { unit: "cm" })];
     case "long":
-      return [];
+      return [blank("long_text", "")];
   }
 }
 
@@ -109,6 +142,8 @@ export function typeLabel(q: Pick<QuestionDraft, "type" | "options" | "scaleMin"
   switch (q.type) {
     case "text":
       return "Short text";
+    case "long_text":
+      return "Long text";
     case "choice":
       return isYesNo(q.options) ? "Yes or no" : "Single choice";
     case "multi":
@@ -131,6 +166,8 @@ export function uiTypeOf(q: Pick<QuestionDraft, "type" | "options">): UiType {
   switch (q.type) {
     case "text":
       return "short";
+    case "long_text":
+      return "long";
     case "choice":
       return isYesNo(q.options) ? "yesno" : "single";
     case "multi":
@@ -159,11 +196,95 @@ export function questionProblem(q: QuestionDraft): string | null {
   }
   if (q.type === "number" && (q.unit ?? "").trim().length > UNIT_MAX) return `Keep the unit under ${UNIT_MAX} characters.`;
   if (q.type === "scale" && (q.scaleMin == null || q.scaleMax == null || q.scaleMin >= q.scaleMax)) return "The scale needs a low and a high end.";
+  if (q.sectionTitle != null) {
+    const t = q.sectionTitle.trim();
+    if (!t) return "Give the section a title.";
+    if (t.length > SECTION_MAX) return `Keep the section title under ${SECTION_MAX} characters.`;
+  }
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Conditions ("Only ask if…") and profile fields (Round D, 20261222050000)
+// ---------------------------------------------------------------------------
+
+/** The kinds a condition can depend on: single choice and yes / no, multiple choice, scale. */
+const CONDITION_TYPES: DbQuestionType[] = ["choice", "multi", "scale"];
+
+/** "equals" for a single answer, "includes" for a multiple-choice one. */
+export const conditionOp = (parent: Pick<QuestionDraft, "type">): ShowIf["op"] => (parent.type === "multi" ? "includes" : "equals");
+
+/** The answers a condition can name: the options, or a scale's numbers. */
+export function conditionValues(parent: Pick<QuestionDraft, "type" | "options" | "scaleMin" | "scaleMax">): string[] {
+  if (parent.type === "scale") {
+    const lo = parent.scaleMin ?? 1;
+    const hi = parent.scaleMax ?? 10;
+    return hi > lo ? Array.from({ length: hi - lo + 1 }, (_, i) => String(lo + i)) : [];
+  }
+  return [...new Set((parent.options ?? []).map((o) => o.trim()).filter(Boolean))];
+}
+
+/** Whether another question's condition names this one (so it can't take a condition itself: one level). */
+export const isDependedOn = (draft: QuestionDraft[], id: string) => draft.some((x) => x.showIf?.questionId === id);
+
+/**
+ * The questions the one at `index` can depend on: earlier, a choice, yes /
+ * no, multiple choice or scale question, written, and without a condition
+ * of its own. None when this question is itself depended on.
+ */
+export function conditionParents(draft: QuestionDraft[], index: number): QuestionDraft[] {
+  const q = draft[index];
+  if (!q || isDependedOn(draft, q.id)) return [];
+  return draft.slice(0, index).filter((p) => CONDITION_TYPES.includes(p.type) && !p.showIf && !!p.prompt.trim() && conditionValues(p).length > 0);
+}
+
+/** Why the condition on the question at `index` can't be saved, or null. */
+export function conditionProblem(draft: QuestionDraft[], index: number): string | null {
+  const c = draft[index]?.showIf;
+  if (!c) return null;
+  const at = draft.findIndex((p) => p.id === c.questionId);
+  if (at === -1) return "The question this depends on was removed. Choose another.";
+  if (at >= index) return "Move this below the question it depends on.";
+  const parent = draft[at];
+  if (parent.showIf) return "It depends on a question that has a condition itself. Choose another.";
+  if (!CONDITION_TYPES.includes(parent.type) || conditionOp(parent) !== c.op) return "Choose the condition again.";
+  if (!conditionValues(parent).includes(c.value)) return "The answer this depends on changed. Choose it again.";
+  return null;
+}
+
+/** 'Only ask if "Any allergies?" is Yes' / '… includes Peanuts'; null without a condition. */
+export function conditionLine(draft: Pick<QuestionDraft, "id" | "prompt">[], q: Pick<QuestionDraft, "showIf">): string | null {
+  const c = q.showIf;
+  if (!c) return null;
+  const parent = draft.find((p) => p.id === c.questionId);
+  const what = parent?.prompt.trim() ? `"${parent.prompt.trim()}"` : "an earlier question";
+  return `Only ask if ${what} ${c.op === "includes" ? "includes" : "is"} ${c.value}`;
+}
+
+/** Removing a question clears the conditions that named it. */
+export function withoutQuestion(draft: QuestionDraft[], id: string): QuestionDraft[] {
+  return draft.filter((x) => x.id !== id).map((x) => (x.showIf?.questionId === id ? { ...x, showIf: null } : x));
+}
+
+/**
+ * The profile fields a question's answer can be offered for (the database's
+ * pairs): allergies and dietary needs from a choice or text question,
+ * medications and injuries from text or long text, weight from a number. A
+ * yes / no question names nothing to carry, so it offers none.
+ */
+export function profileFieldsFor(q: Pick<QuestionDraft, "type" | "options">): ProfileField[] {
+  const out: ProfileField[] = [];
+  if ((q.type === "choice" && !isYesNo(q.options)) || q.type === "multi" || q.type === "text") out.push("allergies", "dietary_restrictions");
+  if (q.type === "text" || q.type === "long_text") out.push("medications", "injuries");
+  if (q.type === "number") out.push("weight");
+  return out;
+}
+
+/** "Section 2" for the question at `index` that opens it (1-based count of section openers so far). */
+export const sectionNumber = (draft: QuestionDraft[], index: number) => draft.slice(0, index + 1).filter((x) => x.sectionTitle != null).length;
+
 /** The form_questions columns a draft writes (position from its index). */
-export function toRow(q: QuestionDraft, position: number) {
+export function toRow(q: QuestionDraft, position: number, ids: ReadonlyMap<string, string> = new Map()) {
   const opts = q.type === "choice" || q.type === "multi" ? (q.options ?? []).map((o) => o.trim()).filter(Boolean) : null;
   return {
     position,
@@ -176,8 +297,36 @@ export function toRow(q: QuestionDraft, position: number) {
     scale_max: q.type === "scale" ? q.scaleMax : null,
     safety_topic: q.safetyTopic,
     safety_trigger: q.safetyTrigger,
+    section_title: q.sectionTitle?.trim() || null,
+    show_if: showIfRow(q.showIf, ids),
+    profile_field: q.profileField,
   };
 }
+
+export const isLocalKey = (id: string) => id.startsWith("new-");
+
+/**
+ * show_if as stored: {"question_id", "equals" | "includes"}. A condition on a
+ * question that isn't saved yet has no row id to name: `ids` maps local keys
+ * to the new ids; without one it's null, and saveForm writes it in a second pass.
+ */
+export function showIfRow(c: ShowIf | null, ids: ReadonlyMap<string, string> = new Map()): Record<string, string> | null {
+  if (!c) return null;
+  const id = isLocalKey(c.questionId) ? ids.get(c.questionId) : c.questionId;
+  return id ? { question_id: id, [c.op]: c.value } : null;
+}
+
+export function parseShowIf(raw: unknown): ShowIf | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.question_id !== "string") return null;
+  if (typeof r.equals === "string") return { questionId: r.question_id, op: "equals", value: r.equals };
+  if (typeof r.includes === "string") return { questionId: r.question_id, op: "includes", value: r.includes };
+  return null;
+}
+
+const PROFILE_FIELDS = Object.keys(PROFILE_FIELD_LABEL) as ProfileField[];
+export const asProfileField = (v: unknown): ProfileField | null => (PROFILE_FIELDS.includes(v as ProfileField) ? (v as ProfileField) : null);
 
 export interface QuestionRow {
   id: string;
@@ -191,6 +340,9 @@ export interface QuestionRow {
   scale_max: number | null;
   safety_topic: string | null;
   safety_trigger: unknown;
+  section_title?: string | null;
+  show_if?: unknown;
+  profile_field?: string | null;
 }
 
 export function fromRow(r: QuestionRow): QuestionDraft {
@@ -207,6 +359,9 @@ export function fromRow(r: QuestionRow): QuestionDraft {
     scaleMax: r.scale_max,
     safetyTopic: topic,
     safetyTrigger: r.safety_trigger && typeof r.safety_trigger === "object" && !Array.isArray(r.safety_trigger) ? (r.safety_trigger as Record<string, unknown>) : null,
+    sectionTitle: r.section_title ?? null,
+    showIf: parseShowIf(r.show_if),
+    profileField: asProfileField(r.profile_field),
   };
 }
 
@@ -244,30 +399,42 @@ export function topicsPhrase(topics: string[]): string {
 export const safetyBanner = (topics: string[], firstName: string) => `Answers mention ${topicsPhrase(topics)}. Suggest ${firstName} talks to a doctor.`;
 
 // ---------------------------------------------------------------------------
-// Schedules (form_assignments.schedule: daily@HH:MM or weekly:<1-7>@HH:MM, ISO weekday)
+// Schedules (form_assignments.schedule: daily@HH:MM, weekly:<1-7>@HH:MM, and
+// since Round D every2weeks:<1-7>@HH:MM / every4weeks:<1-7>@HH:MM, ISO weekday;
+// the database counts whole weeks from the series' first week)
 // ---------------------------------------------------------------------------
+
+export type ScheduleEvery = 1 | 2 | 4;
 
 export interface Schedule {
   /** null = every day; 1 Monday to 7 Sunday. */
   isoDay: number | null;
   /** "HH:MM", 24-hour (stored as written). */
   time: string;
+  /** Every week (the default), every 2 or every 4 weeks; ignored for every day. */
+  every?: ScheduleEvery;
 }
 
+const EVERY_KEY: Record<ScheduleEvery, string> = { 1: "weekly", 2: "every2weeks", 4: "every4weeks" };
+
 export function scheduleString(s: Schedule): string {
-  return s.isoDay == null ? `daily@${s.time}` : `weekly:${s.isoDay}@${s.time}`;
+  return s.isoDay == null ? `daily@${s.time}` : `${EVERY_KEY[s.every ?? 1]}:${s.isoDay}@${s.time}`;
 }
 
 export function parseSchedule(v: string | null | undefined): Schedule | null {
   if (!v) return null;
-  const m = /^(daily|weekly:([1-7]))@([01][0-9]|2[0-3]):([0-5][0-9])$/.exec(v);
+  const m = /^(daily|(weekly|every2weeks|every4weeks):([1-7]))@([01][0-9]|2[0-3]):([0-5][0-9])$/.exec(v);
   if (!m) return null;
-  return { isoDay: m[2] ? Number(m[2]) : null, time: `${m[3]}:${m[4]}` };
+  const time = `${m[4]}:${m[5]}`;
+  if (!m[3]) return { isoDay: null, time };
+  return { isoDay: Number(m[3]), time, every: m[2] === "every2weeks" ? 2 : m[2] === "every4weeks" ? 4 : 1 };
 }
 
-/** "Every week · Sunday 6:00 PM" / "Every day · 8:00 AM". */
+/** "Every week · Sunday 6:00 PM" / "Every 2 weeks · Monday 9:00 AM" / "Every day · 8:00 AM". */
 export function scheduleLine(s: Schedule): string {
-  return s.isoDay == null ? `Every day · ${time12(s.time)}` : `Every week · ${DAY_LONG[s.isoDay - 1]} ${time12(s.time)}`;
+  if (s.isoDay == null) return `Every day · ${time12(s.time)}`;
+  const every = (s.every ?? 1) === 1 ? "Every week" : `Every ${s.every} weeks`;
+  return `${every} · ${DAY_LONG[s.isoDay - 1]} ${time12(s.time)}`;
 }
 
 /** Times offered in the schedule sheet: every 30 minutes, 6 AM to 10 PM. */
@@ -360,4 +527,18 @@ export interface FormSummary {
   title: string;
   questionCount: number;
   updatedAt: string;
+  /** forms.send_on_hire: assigned when someone hires the professional. */
+  sendOnHire?: boolean;
+}
+
+/** A row of list_form_templates (Round D, 20261222060000). */
+export interface FormTemplate {
+  key: string;
+  lane: string;
+  kind: FormKind;
+  title: string;
+  description: string | null;
+  questionCount: number;
+  /** false: not ready yet (Coming soon). */
+  available: boolean;
 }

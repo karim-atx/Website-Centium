@@ -13,7 +13,9 @@
 //   20 a day;
 // - record_shared_item(p_kind, p_format, p_card, p_share_request_id,
 //   p_image_path) → uuid. A win only after the client allowed it (ATXH0);
-// - shared_items (select own).
+// - shared_items (select own);
+// - my_shared_items() (Round D · DV, 20261222030000): each own card with its
+//   state, held_reason and link_live.
 // Client:
 // - share_requests (select party), answer_share_request(p_request_id,
 //   p_answer allowed | allowed_no_name | declined) (ATX08 not pending);
@@ -25,7 +27,9 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline } from "../network-error";
 import { rpc } from "../pro/rpc";
+import { BLOCKED_TEXT } from "../moderation/text";
 import type { CardPayload, ClientWin, ShareFormat, Visibility, WinKind } from "../../components/share/shareCardModel";
+import { readHeldReason, readItemState, type HeldReason, type SharedItemState } from "../../components/share/heldShareModel";
 
 const from = (table: string) => supabase.from(table as never);
 
@@ -137,6 +141,8 @@ export async function recordSharedItem(kind: ItemKind, format: ShareFormat | "li
 export function recordErrorMessage(code: string | null, message: string): string {
   if (code === "ATXH0") return /remove/i.test(message) ? "The client asked you to remove this card, so it can't be shared again." : "A win is shared only after the client allows it.";
   if (code === "ATXH1") return "This card has something that can't be shared.";
+  // Round D: a blocked word (ATX60) in our words, never which word.
+  if (code === "ATX60") return BLOCKED_TEXT;
   return "Couldn't share the card. Try again.";
 }
 
@@ -172,6 +178,67 @@ export async function fetchMySharedItemsFor(me: string, clientId: string): Promi
   const { data, error } = await from("shared_items").select(ITEM_COLS).eq("professional_id", me).eq("client_id", clientId);
   if (error) return readFail(error);
   return { ok: true, data: ((data ?? []) as unknown as ItemRow[]).map(toItem) };
+}
+
+/** Round D · DV: one of the professional's own cards, with its state (my_shared_items, 20261222030000). */
+export interface OwnedSharedItem {
+  id: string;
+  clientId: string | null;
+  kind: string;
+  format: string;
+  /** The owner's own preview, in every state. */
+  card: unknown;
+  createdAt: string;
+  state: SharedItemState;
+  heldAt: string | null;
+  /** contact_details, not_relevant, not_allowed_content or other while held; never the matched word. */
+  heldReason: HeldReason | null;
+  removalRequestedAt: string | null;
+  removedAt: string | null;
+  /** Whether /s/{id} and its QR answer (false while held or removed). */
+  linkLive: boolean;
+}
+
+type OwnedRow = {
+  shared_item_id: string;
+  client_id: string | null;
+  kind: string;
+  format: string;
+  card: unknown;
+  created_at: string;
+  state: string;
+  held_at: string | null;
+  held_reason: string | null;
+  removal_requested_at: string | null;
+  removed_at: string | null;
+  link_live: boolean | null;
+};
+
+/** Every card the professional recorded, newest first, with its state. */
+export async function fetchMyOwnedSharedItems(): Promise<Read<OwnedSharedItem[]>> {
+  const { data, error } = await rpc("my_shared_items");
+  if (error) return readFail(error);
+  const rows = (Array.isArray(data) ? data : []) as OwnedRow[];
+  return {
+    ok: true,
+    data: rows.map((r) => {
+      const state = readItemState(r.state);
+      return {
+        id: r.shared_item_id,
+        clientId: r.client_id,
+        kind: r.kind,
+        format: r.format,
+        card: r.card,
+        createdAt: r.created_at,
+        state,
+        heldAt: r.held_at,
+        heldReason: state === "held_for_review" ? readHeldReason(r.held_reason) : null,
+        removalRequestedAt: r.removal_requested_at,
+        removedAt: r.removed_at,
+        linkLive: r.link_live === true,
+      };
+    }),
+  };
 }
 
 /** The professional's own handle (professional_profiles, select own). */

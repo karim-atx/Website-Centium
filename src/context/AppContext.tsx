@@ -795,7 +795,8 @@ interface AppState {
   weightLoggedDate: string | null;
   weightByDate: Record<string, number>;
   /** `day` (yyyy-mm-dd) defaults to the selected day (HE1.7.1's When field, date only until PB-HB-43). */
-  logWeightForToday: (value: number, day?: string, note?: string | null) => Promise<{ ok: boolean; message?: string }>;
+  /** requestId: the outbox item's uuid, so a replay is saved once (Round D). */
+  logWeightForToday: (value: number, day?: string, note?: string | null, requestId?: string) => Promise<{ ok: boolean; message?: string }>;
   /** v6 Batch 2 Health A (HE1.7 weigh-in Delete): removes that local day's manual weight readings, then re-reads health_metrics (metricHistory, weightByDate, metricValues.weight). */
   deleteWeighIn: (day: string) => Promise<{ ok: boolean; message?: string }>;
   // V8 (QA 8.0): "Pressing the edit feature only prompts you to edit daily
@@ -4365,18 +4366,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           replaceFoodEntryRecord(item.provisionalId, null);
           return { ok: false, message: `${f.name} wasn't added. It contains an allergen you have.` };
         }
-        const r = await logFoodEntry({ userId: authUserId, ...item.params });
+        const r = await logFoodEntry({ userId: authUserId, ...item.params, requestId: item.id });
         if (r.ok && r.entry) replaceFoodEntryRecord(item.provisionalId, r.entry);
         else if (!isOfflineFailure(r)) replaceFoodEntryRecord(item.provisionalId, null);
         return r;
       }
       case "habit": {
-        const r = await setCompletion(item.habitId, item.day, item.done);
+        const r = await setCompletion(item.habitId, item.day, item.done, item.id);
         if (r.ok && item.done) refreshAchievements();
         return r;
       }
       case "workout": {
-        const r = await saveWorkoutSessionRemote(authUserId, item.session);
+        const r = await saveWorkoutSessionRemote(authUserId, item.session, item.id);
         const provisional = `queued:${item.id}`;
         if (r.ok) afterWorkoutSaved(item.session, r.id!, provisional);
         else if (!isOfflineFailure(r)) setWorkoutSessions((prev) => prev.filter((s) => s.id !== provisional));
@@ -5624,7 +5625,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     readBloodPressure();
   }, [authUserId, profileReady, readBloodPressure]);
 
-  const logWeightForToday: AppState["logWeightForToday"] = async (value, day = selectedDate, note = null) => {
+  const logWeightForToday: AppState["logWeightForToday"] = async (value, day = selectedDate, note = null, requestId) => {
     if (!authUserId) return { ok: false, message: "You need to be signed in to log your weight." };
     const result = await logHealthMetric({
       userId: authUserId,
@@ -5633,6 +5634,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       day,
       today,
       note,
+      requestId,
     });
     if (!result.ok) return result;
     setWeightByDate((prev) => ({ ...prev, [day]: value }));

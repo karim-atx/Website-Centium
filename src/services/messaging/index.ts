@@ -7,6 +7,7 @@ import { parseShareCard, type ShareCard } from "./shareCards";
 import { parseRecommendation, type RecommendationCard } from "./recommendation";
 import { parseMessagePopup, type MessagePopup } from "./popupModel";
 import { loadConsoleAccess } from "../business-console";
+import { isAlreadySaved, requestColumn } from "../health-log/requestId";
 
 // Two-party messaging, against the real tables.
 //
@@ -960,17 +961,31 @@ export async function sendMessage(
    * copy is what goes stale. The composer only offers targets from the open
    * thread, so this is a defence against a bug rather than a user.
    */
-  replyToId?: string | null
+  replyToId?: string | null,
+  /** A queued message's uuid (client_request_id): a replay is sent once (Round D). */
+  requestId?: string
 ): Promise<SendResult> {
   const body = text.trim();
   if (!body) return { ok: false, message: "A message can't be empty." };
 
-  return insertMessage({
+  const sent = await insertMessage({
     thread_id: threadId,
     sender_id: senderId,
     text: body,
     reply_to_id: replyToId ?? null,
+    ...requestColumn(requestId),
   });
+  // Already sent by an earlier attempt whose answer was lost.
+  if (!sent.ok && sent.alreadySaved && requestId) {
+    const { data } = await supabase
+      .from("messages")
+      .select(MESSAGE_COLUMNS)
+      .eq("sender_id", senderId)
+      .eq("client_request_id" as never, requestId as never)
+      .maybeSingle();
+    if (data) return { ok: true, message: toMessage(data as MessageRow) };
+  }
+  return sent;
 }
 
 /** The one place a message row is written, so every path returns the same shape. */
@@ -982,13 +997,15 @@ async function insertMessage(row: {
   voice_note_seconds?: number | null;
   reply_to_id?: string | null;
   forwarded?: boolean;
-} & AttachmentMeta): Promise<SendResult> {
+  client_request_id?: string;
+} & AttachmentMeta): Promise<SendResult & { alreadySaved?: boolean }> {
   const { data, error } = await supabase
     .from("messages")
-    .insert(row)
+    .insert(row as never)
     .select(MESSAGE_COLUMNS)
     .single();
 
+  if (isAlreadySaved(error)) return { ok: false, message: describe(error!), alreadySaved: true };
   if (error) {
     console.error("[messaging] Could not send:", error.message);
     return { ok: false, message: describe(error) };

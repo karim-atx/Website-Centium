@@ -4,8 +4,18 @@
 // else about the client is read here). Pure.
 
 import { answerFor, deltaText, isAnswered, numericAnswer, photoPaths, type QuestionDraft } from "./formModel";
+import { conditionMet } from "../../../services/client-forms/logic";
 
 export type PositionedQuestion = QuestionDraft & { position: number };
+
+/**
+ * Round D: the questions this client was asked. A question whose condition
+ * wasn't met by their answers was hidden from them (form_condition_met), so
+ * it isn't listed as "Not answered".
+ */
+export function askedQuestions<Q extends Pick<QuestionDraft, "showIf">>(questions: Q[], answers: Record<string, unknown>): Q[] {
+  return questions.filter((q) => !q.showIf || conditionMet(q.showIf.op === "includes" ? { questionId: q.showIf.questionId, includes: q.showIf.value } : { questionId: q.showIf.questionId, equals: q.showIf.value }, answers));
+}
 
 export interface ResponseLike {
   id: string;

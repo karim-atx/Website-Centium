@@ -17,6 +17,7 @@ import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { logoTone } from "../../components/food/logoTones";
 import { foodCategoryIcon } from "../../utils/icons";
 import { deleteCustomFood, listCustomFoods, type FoodSearchResult } from "../../services/food";
+import { brandServing } from "../../services/food/onlineSearchModel";
 import { textPx } from "../../theme/textSize";
 
 // Pull-to-refresh, the same gesture and threshold as the Health page's: the
@@ -207,7 +208,7 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
             return {
               open: { kind: "foods", food: f, edit: false },
               name: f.name,
-              detail: `${f.servingLabel}${kcalPart(`${Math.round(f.calories)} kcal`)}`,
+              detail: `${brandServing(f.brand, f.servingLabel)}${kcalPart(`${Math.round(f.calories)} kcal`)}`,
               icon: <Icon size={16} style={tone ? { color: tone.fg } : undefined} />,
               iconBg: tone ? tone.bg : "rgb(var(--c-cream-card))",
             };

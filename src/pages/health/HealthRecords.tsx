@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Camera, Download, Pencil, Plus, Scissors, Search, Share2, Stethoscope, Trash2, Pill, PenLine } from "lucide-react";
+import { Camera, Download, Pencil, Plus, Scissors, Search, Share2, Stethoscope, Trash2, Pill, PenLine, Bandage } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useBack } from "../../hooks/useBack";
 import { useOnline } from "../../hooks/useOnline";
@@ -21,6 +21,8 @@ import { BiomarkersTab } from "../../components/health/records/BiomarkersTab";
 import { LabsTab, LabReportEditSheet, RemoveReportPopup } from "../../components/health/records/LabsTab";
 import { ImagingTab, ImagingShareNotice } from "../../components/health/records/ImagingTab";
 import { HistoryTab, ConditionPopup, SurgerySheet, MedicationSheet } from "../../components/health/records/HistoryTab";
+import { InjurySheet } from "../../components/health/records/InjuriesSection";
+import type { Injury } from "../../services/injuries";
 import { MarkerPage } from "../../components/health/records/MarkerPage";
 import { UploadChoiceSheet } from "../../components/health/records/UploadChoiceSheet";
 import { useLabResults } from "../../components/health/records/useLabResults";
@@ -123,6 +125,7 @@ export default function HealthRecords() {
   const [conditionOpen, setConditionOpen] = useState(false);
   const [surgeryForm, setSurgeryForm] = useState<{ surgery: Surgery | null } | null>(null);
   const [medForm, setMedForm] = useState<{ medication: Medication | null } | null>(null);
+  const [injuryForm, setInjuryForm] = useState<{ injury: Injury | null } | null>(null);
   const [confirmation, setConfirmation] = useState<{ count: number; name: string } | null>(null);
   const [highlight, setHighlight] = useState<Set<string>>(new Set());
 
@@ -395,10 +398,12 @@ export default function HealthRecords() {
           { value: "condition", label: "Condition", icon: <Stethoscope size={15} /> },
           { value: "surgery", label: "Surgery", icon: <Scissors size={15} /> },
           { value: "medication", label: "Medication", icon: <Pill size={15} /> },
+          { value: "injury", label: "Injury", icon: <Bandage size={15} /> },
         ]}
         onSelect={(v) => {
           if (v === "condition") setConditionOpen(true);
           else if (v === "surgery") setSurgeryForm({ surgery: null });
+          else if (v === "injury") setInjuryForm({ injury: null });
           else setMedForm({ medication: null });
         }}
         width={155}
@@ -409,6 +414,7 @@ export default function HealthRecords() {
       <ConditionPopup open={conditionOpen} onClose={() => setConditionOpen(false)} onSaved={setToast} />
       <SurgerySheet open={!!surgeryForm} surgery={surgeryForm?.surgery ?? null} onClose={() => setSurgeryForm(null)} onSaved={setToast} />
       <MedicationSheet open={!!medForm} medication={medForm?.medication ?? null} onClose={() => setMedForm(null)} onSaved={setToast} />
+      <InjurySheet open={!!injuryForm} injury={injuryForm?.injury ?? null} onClose={() => setInjuryForm(null)} onSaved={setToast} />
       <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
     </>
   );
@@ -525,6 +531,7 @@ export default function HealthRecords() {
           onAddCondition={() => setConditionOpen(true)}
           onEditSurgery={(surgery) => setSurgeryForm({ surgery })}
           onEditMedication={(medication) => setMedForm({ medication })}
+          onEditInjury={(injury) => setInjuryForm({ injury })}
         />
       )}
 

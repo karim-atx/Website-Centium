@@ -44,6 +44,7 @@ import { startThread } from "../../services/messaging";
 import type { ProNotification } from "../../services/pro/notifications";
 import { proMemberTarget } from "../../services/notifications/notificationsModel";
 import { imageHome } from "../../services/moderation/imageCopy";
+import { HeldShareCardSheet } from "../../components/share/HeldShareCardSheet";
 
 /**
  * Release 3 · Home (/app/pro, CL1 v6; HANDOVER f "CL · Home"; FINAL_PLAN W2).
@@ -225,6 +226,8 @@ export default function Home() {
   // ---- inbox, hub, add client ----
   const inbox = useProInbox();
   const [hubOpen, setHubOpen] = useState(false);
+  // Round D · DV: the card a pro.share.held notice opens.
+  const [heldCardId, setHeldCardId] = useState<string | null>(null);
   const [hubTab, setHubTab] = useState<HubTab>("requests");
   const [hubToast, setHubToast] = useState<HubToast | null>(null);
   const [pageToast, setPageToast] = useState<{ text: string; action?: { label: string; onClick: () => void } } | null>(null);
@@ -349,6 +352,12 @@ export default function Home() {
     if (n.memberKind) {
       setHubOpen(false);
       navigate(proMemberTarget({ kind: n.memberKind, payload: n.payload }));
+      return;
+    }
+    // Round D · DV: a held card opens itself (a card about no client has no other page).
+    if (n.titleKey === "pro.share.held" && typeof n.payload.shared_item_id === "string") {
+      setHubOpen(false);
+      setHeldCardId(n.payload.shared_item_id);
       return;
     }
     switch (n.subjectType) {
@@ -645,6 +654,7 @@ export default function Home() {
         onPendingRequests={() => openHub("requests")}
         onOfflineAdded={(name, note) => setPageToast({ text: note ? `${name} added. ${note}` : `${name} added.` })}
       />
+      <HeldShareCardSheet itemId={heldCardId} onClose={() => setHeldCardId(null)} />
       <Toast open={!!pageToast} message={pageToast?.text ?? ""} action={pageToast?.action} onExpire={() => setPageToast(null)} />
     </div>
   );

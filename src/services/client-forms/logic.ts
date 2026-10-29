@@ -14,9 +14,17 @@
 import { clock12 } from "../../utils/time12";
 import { DAY_LONG, mondayIndex } from "../../utils/week";
 
-export type QuestionType = "number" | "scale" | "choice" | "multi" | "text" | "photo" | "date";
+export type QuestionType = "number" | "scale" | "choice" | "multi" | "text" | "long_text" | "photo" | "date";
 export type FormKind = "intake" | "check_in";
 export type Answers = Record<string, unknown>;
+
+/** Round D: a long text answer is at most 5,000 characters (save_form_response). */
+export const LONG_TEXT_MAX = 5000;
+/** A short text answer's field limit (the app's own, unchanged). */
+export const SHORT_TEXT_MAX = 2000;
+
+/** form_questions.show_if (Round D): one condition on an earlier question. */
+export type ShowIfRule = { questionId: string; equals: string } | { questionId: string; includes: string };
 
 export interface ClientQuestion {
   id: string;
@@ -30,6 +38,51 @@ export interface ClientQuestion {
   scaleMax: number | null;
   safetyTopic: string | null;
   safetyTrigger: Record<string, unknown> | null;
+  /** Round D: this question opens a section with this title. */
+  sectionTitle?: string | null;
+  /** Round D: asked only when this condition is met. */
+  showIf?: ShowIfRule | null;
+  /** Round D: the answer is offered for the client's profile after sending. */
+  profileField?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Conditions (Round D, 20261222050000): a mirror of public.form_condition_met
+// ---------------------------------------------------------------------------
+
+/** show_if as stored ({"question_id", "equals" | "includes"}), or null. */
+export function parseShowIfRule(raw: unknown): ShowIfRule | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.question_id !== "string") return null;
+  if (typeof r.equals === "string") return { questionId: r.question_id, equals: r.equals };
+  if (typeof r.includes === "string") return { questionId: r.question_id, includes: r.includes };
+  return null;
+}
+
+/** An answer as Postgres's `#>> '{}'` reads it: a string itself, a number or boolean as text, nothing as "". */
+function answerAsText(v: unknown): string {
+  if (v === undefined || v === null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  return JSON.stringify(v);
+}
+
+/**
+ * A mirror of public.form_condition_met(p_condition, p_answers): no
+ * condition is met; "equals" compares the answer as text (a scale's 3 is
+ * "3"); "includes" looks for the option in a multiple-choice answer (a list).
+ */
+export function conditionMet(rule: ShowIfRule | null | undefined, answers: Answers): boolean {
+  if (!rule) return true;
+  const v = answers[rule.questionId];
+  if ("equals" in rule) return answerAsText(v) === rule.equals;
+  return Array.isArray(v) && v.some((x) => typeof x === "string" && x === rule.includes);
+}
+
+/** The questions asked with these answers: a question whose condition isn't met is hidden (not required, not sent). */
+export function shownQuestions(questions: ClientQuestion[], answers: Answers): ClientQuestion[] {
+  return questions.filter((q) => conditionMet(q.showIf, answers));
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +192,37 @@ export function partsOf(items: FormItem[]): FormItem[][] {
 }
 
 export const partQuestions = (part: FormItem[]) => part.flatMap((it) => it.questions);
+
+export interface FormParts {
+  parts: FormItem[][];
+  /** Each part's section title (null: an untitled part, or a form without sections). */
+  titles: (string | null)[];
+  /** The form has sections: "Section 1 of 3" rather than "part 1 of 3". */
+  sectioned: boolean;
+}
+
+/**
+ * The sheet's parts for these answers (Round D). A form with sections is one
+ * part per section (a question opens one with section_title; questions
+ * before the first form an untitled part), each section's questions those
+ * shown by their conditions, and a section with nothing shown is left out.
+ * A form without sections keeps the four-a-part rule (partsOf). Parts are
+ * worked out from the recovery-visible questions, so a section keeps its
+ * title even when the question that opens it is hidden.
+ */
+export function formParts(visible: ClientQuestion[], answers: Answers): FormParts {
+  const sorted = [...visible].sort((a, b) => a.position - b.position);
+  if (!sorted.some((q) => q.sectionTitle?.trim())) return { parts: partsOf(itemsOf(shownQuestions(sorted, answers))), titles: [], sectioned: false };
+  const sections: { title: string | null; questions: ClientQuestion[] }[] = [];
+  for (const q of sorted) {
+    const title = q.sectionTitle?.trim() || null;
+    if (title || !sections.length) sections.push({ title, questions: [] });
+    sections[sections.length - 1].questions.push(q);
+  }
+  const kept = sections.map((s) => ({ title: s.title, items: itemsOf(shownQuestions(s.questions, answers)) })).filter((s) => s.items.length > 0);
+  if (!kept.length) return { parts: [[]], titles: [null], sectioned: true };
+  return { parts: kept.map((s) => s.items), titles: kept.map((s) => s.title), sectioned: true };
+}
 
 /**
  * Where a saved draft picks up (CU6 "Part 2 of 3 · saved"): the last part
@@ -261,13 +345,13 @@ export const minutesText = (n: number) => (n === 1 ? "1 minute" : `${n} minutes`
 /** "Sunday, Oct 25" (CU6 "Next check-in: Sunday, Oct 25"). */
 export const longDate = (d: Date) => `${weekdayName(d)}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
 
-/** The next check-in of a schedule (daily@HH:MM / weekly:<1-7>@HH:MM) after this one, or null. */
+/** The next check-in of a schedule (daily@HH:MM, weekly: / every2weeks: / every4weeks:<1-7>@HH:MM) after this one, or null. */
 export function nextOccurrence(schedule: string | null, dueAt: string | null): Date | null {
   if (!schedule || !dueAt) return null;
-  const m = /^(daily|weekly:[1-7])@([01][0-9]|2[0-3]):[0-5][0-9]$/.exec(schedule);
+  const m = /^(daily|(weekly|every2weeks|every4weeks):[1-7])@([01][0-9]|2[0-3]):[0-5][0-9]$/.exec(schedule);
   const at = new Date(dueAt);
   if (!m || Number.isNaN(at.getTime())) return null;
-  const days = m[1] === "daily" ? 1 : 7;
+  const days = m[1] === "daily" ? 1 : m[2] === "every2weeks" ? 14 : m[2] === "every4weeks" ? 28 : 7;
   return new Date(at.getFullYear(), at.getMonth(), at.getDate() + days, at.getHours(), at.getMinutes());
 }
 
@@ -368,9 +452,10 @@ export interface OpenForm {
 
 /** CU5 / CU6 / CU26 card lines for an open form. */
 export function formReminder(f: OpenForm, now: Date): Reminder {
-  const parts = partsOf(itemsOf(f.questions));
-  const total = f.questions.length;
-  const done = f.questions.filter((q) => isAnswered(f.answers[q.id])).length;
+  const { parts, sectioned } = formParts(f.questions, f.answers);
+  const asked = shownQuestions(f.questions, f.answers);
+  const total = asked.length;
+  const done = asked.filter((q) => isAnswered(f.answers[q.id])).length;
   const due = f.dueAt ? new Date(f.dueAt).getTime() : Number.MAX_SAFE_INTEGER;
   const base = { key: `form:${f.assignmentId}`, kind: f.kind, level: 3 as const, at: due, proId: f.proId, proName: f.proName };
   const short = dueShort(f.dueAt, now);
@@ -380,7 +465,7 @@ export function formReminder(f: OpenForm, now: Date): Reminder {
       : { ...base, tone: "gold", title: `Your intake for ${f.proName}`, detail: [`${total} ${total === 1 ? "question" : "questions"}`, minutesText(minutesFor(total))].join(" · "), action: "Start" };
   }
   if (f.hasDraft) {
-    const where = parts.length > 1 ? `Part ${resumePart(parts, f.answers) + 1} of ${parts.length}` : `${done} of ${total} done`;
+    const where = parts.length > 1 ? `${sectioned ? "Section" : "Part"} ${resumePart(parts, f.answers) + 1} of ${parts.length}` : `${done} of ${total} done`;
     return { ...base, tone: "pr", title: "Continue your check-in", detail: [where, "saved", short].filter(Boolean).join(" · "), action: "Continue" };
   }
   const dueAt = f.dueAt ? new Date(f.dueAt) : null;

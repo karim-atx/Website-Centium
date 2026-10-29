@@ -11,6 +11,7 @@ import { CLIENT_COPY, notificationCopy, PRO_COPY } from "../../../services/notif
 import { imageNoticeCopy } from "../../../services/moderation/imageCopy";
 import { CATEGORY_LABEL } from "./categoryLabels";
 import { topicsPhrase } from "../forms/formModel";
+import { heldNoticeText } from "../../share/heldShareModel";
 
 export type NotificationTone = "pr" | "req" | "att" | "act" | "done";
 
@@ -116,6 +117,12 @@ export function notificationText(n: ProNotification, names: Record<string, strin
       return { title: `${who} declined sharing their ${winWord(p.win_kind)}. You can't ask again for this win.`, line: "Share cards", icon: "share", tone: "pr" };
     case "pro.share.removal_requested":
       return { title: `${who} asked you to remove a shared card`, line: "Share cards", icon: "share", tone: "req" };
+    // Round D · DV (Database 20261222030000): the word lists held a card;
+    // payload.reason is the short category, never the matched word.
+    case "pro.share.held": {
+      const c = heldNoticeText(p.reason);
+      return { title: c.title, line: c.line, icon: "share", tone: "att" };
+    }
     // Database 20261219030000: a professional's ambassador decision, in the
     // member notice's own words (CLIENT_COPY; the decline names the date from
     // payload.next_eligible_on). Not in PRO_KINDS: the member row would repeat it.

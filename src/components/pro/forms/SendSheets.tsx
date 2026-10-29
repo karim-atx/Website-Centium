@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Bandage, CalendarCheck, Check, ChevronDown, Clock, Send, Wheat } from "lucide-react";
+import { Bandage, CalendarCheck, Check, ChevronDown, Clock, Pill, Scale, Send, Wheat } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useOnline } from "../../../hooks/useOnline";
 import { textPx } from "../../../theme/textSize";
@@ -9,12 +9,11 @@ import { CentredPopup } from "../../ui/CentredPopup";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { INK } from "../proInk";
 import { ListCard } from "../client/kit";
-import { ComingSoonPill } from "../ComingSoon";
 import { ChoiceChips, FieldLabel, RadioRows } from "./moKit";
 import { DAY_LONG } from "../../../utils/week";
 import { time12 } from "../../../utils/time12";
-import { SCHEDULE_TIMES, parseSchedule, scheduleLine, scheduleString } from "./formModel";
-import { assignForm, cancelAssignment, type FormAssignment } from "../../../services/pro/forms";
+import { SCHEDULE_TIMES, parseSchedule, scheduleLine, scheduleString, type ProfileField, type QuestionDraft, type ScheduleEvery } from "./formModel";
+import { assignForm, cancelAssignment, setSendOnHire, type FormAssignment } from "../../../services/pro/forms";
 import { fetchActiveMealPlans, fetchActiveProgrammes } from "../../../services/pro/clients";
 import type { ProLane } from "../subtypeLanes";
 
@@ -65,6 +64,12 @@ const PersonRow: React.FC<{ name: string; line?: string; on: boolean; multi?: bo
   </button>
 );
 
+const CarryCount: React.FC<{ text: string }> = ({ text }) => (
+  <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 700, color: text === "Off" ? INK.chF : INK.prDeep }}>
+    {text}
+  </span>
+);
+
 const Err: React.FC<{ text: string | null }> = ({ text }) =>
   text ? (
     <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginTop: 10 }}>
@@ -86,19 +91,30 @@ const DUE: { value: Due; label: string }[] = [
 /**
  * MO29 "Sending" (sendSheet18): When (radio18: "Automatically when someone
  * hires you" and "Only when I send it"), then "Carry answers into the
- * client's profile" (listCard6 with switches), then Save.
- * The database sends a form only when the professional does (assign_form);
- * nothing sends on hire (Karim kept intake forms on accept for a later
- * release) and no column carries answers into the profile, so those rows
- * show Coming soon. "Only when I send it" sends here: pick a client and when
- * it's due (assign_form p_due_at), then Send.
+ * client's profile" (listCard6), then Save.
+ * Round D (20261222050000): "When" is forms.send_on_hire, written as soon as
+ * it's picked (the saved form only); a hire assigns it, due in 3 days. The
+ * carry rows say which questions of this form carry each kind of answer
+ * (set on each question: "Carry into the profile"); the client confirms each
+ * one before anything reaches their profile. Sending to someone now works
+ * either way: pick a client and when it's due (assign_form p_due_at), Send.
  */
-export const SendingSheet: React.FC<{ open: boolean; onClose: () => void; formId: string | null; ready: boolean; onSent: (text: string) => void }> = ({ open, onClose, formId, ready, onSent }) => {
+export const SendingSheet: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  formId: string | null;
+  ready: boolean;
+  questions: QuestionDraft[];
+  sendOnHire: boolean;
+  onSendOnHire: (on: boolean) => void;
+  onSent: (text: string) => void;
+}> = ({ open, onClose, formId, ready, questions, sendOnHire, onSendOnHire, onSent }) => {
   const roster = useRoster();
   const online = useOnline();
   const [who, setWho] = useState<string | null>(null);
   const [due, setDue] = useState<Due>("3");
   const [busy, setBusy] = useState(false);
+  const [hireBusy, setHireBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
     if (open) {
@@ -107,6 +123,21 @@ export const SendingSheet: React.FC<{ open: boolean; onClose: () => void; formId
       setErr(null);
     }
   }, [open]);
+  const pickWhen = async (v: "auto" | "manual") => {
+    const on = v === "auto";
+    if (on === sendOnHire || hireBusy || !formId) return;
+    if (!online) return setErr(OFFLINE);
+    setHireBusy(true);
+    setErr(null);
+    const r = await setSendOnHire(formId, on);
+    setHireBusy(false);
+    if (!r.ok) return setErr(r.message);
+    onSendOnHire(on);
+  };
+  const carried = (fields: ProfileField[]) => {
+    const n = questions.filter((q) => q.profileField && fields.includes(q.profileField)).length;
+    return n ? `${n} question${n === 1 ? "" : "s"}` : "Off";
+  };
   const person = roster.find((p) => p.clientId === who) ?? null;
   const send = async () => {
     if (!formId || !person || busy) return;
@@ -129,21 +160,24 @@ export const SendingSheet: React.FC<{ open: boolean; onClose: () => void; formId
       <FieldLabel top={0}>When</FieldLabel>
       <RadioRows
         label="When"
-        value="manual"
-        onChange={() => undefined}
+        value={sendOnHire ? "auto" : "manual"}
+        onChange={(v) => void pickWhen(v)}
         rows={[
-          { value: "auto", title: "Automatically when someone hires you", line: "Before their first session", disabled: true, trailing: <ComingSoonPill /> },
-          { value: "manual", title: "Only when I send it", line: "Choose who gets it below" },
+          { value: "auto", title: "Automatically when someone hires you", line: formId ? "Due 3 days after they hire you" : "Save the form first", disabled: !formId || hireBusy },
+          { value: "manual", title: "Only when I send it", line: "Choose who gets it below", disabled: !formId || hireBusy },
         ]}
       />
       <FieldLabel>Carry answers into the client's profile</FieldLabel>
       <ListCard
         rows={[
-          { key: "allergies", icon: Wheat, title: "Allergies and restrictions", meta: "Into the dietary needs card", trailing: <ComingSoonPill /> },
-          { key: "injuries", icon: Bandage, title: "Injuries", meta: "Into the profile and programme notes", trailing: <ComingSoonPill /> },
+          { key: "allergies", icon: Wheat, title: "Allergies and restrictions", meta: "Into the dietary needs card", trailing: <CarryCount text={carried(["allergies", "dietary_restrictions"])} /> },
+          { key: "injuries", icon: Bandage, title: "Injuries", meta: "Into the profile", trailing: <CarryCount text={carried(["injuries"])} /> },
+          { key: "medications", icon: Pill, title: "Medications", meta: "Into the medical history", trailing: <CarryCount text={carried(["medications"])} /> },
+          { key: "weight", icon: Scale, title: "Weight", meta: "A weigh-in, never in recovery-sensitive mode", trailing: <CarryCount text={carried(["weight"])} /> },
         ]}
       />
-      <FieldLabel top={2}>Send to</FieldLabel>
+      <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 6 }}>Set this on each question. The client confirms each answer before it's added.</p>
+      <FieldLabel>Send to</FieldLabel>
       {!ready && <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 8 }}>Save the form first.</p>}
       {roster.length === 0 ? (
         <p style={{ fontSize: textPx(12.5), color: INK.chF }}>You have no clients to send it to yet.</p>
@@ -172,12 +206,12 @@ type Who = "programme" | "selected";
  * weeks, Every 4 weeks), Day and the time (field, two columns, gap 10), Who
  * gets it (radio18: "Clients on a programme" with the count, "Selected
  * clients or groups"), the reminder note, Save.
- * The database repeats daily or weekly on a weekday at the client's local
- * time (assign_form p_schedule weekly:<1-7>@HH:MM); every 2 or 4 weeks
- * isn't a schedule it has, so those chips are off with Coming soon. The time
- * is when the check-in is due; the client is reminded 2 hours before (the
- * hourly job), and there's no second reminder the next morning, so the note
- * says only the first part. Groups have no reader here: "Selected clients"
+ * The database repeats on a weekday at the client's local time, every week,
+ * every 2 or every 4 weeks (assign_form p_schedule weekly: / every2weeks: /
+ * every4weeks:<1-7>@HH:MM, Round D; whole weeks from the series' first week).
+ * The time is when the check-in is due; the client is reminded 2 hours
+ * before and again at 8 the next morning while it's still open (the hourly
+ * job, Round D). Groups have no reader here: "Selected clients"
  * picks clients. Nutrition counts "Clients on a meal plan". Saving starts one
  * schedule per client (one assign_form call each); clients already on it are
  * listed with Stop (cancel_form_assignment on the series id stops the series
@@ -197,6 +231,7 @@ export const ScheduleSheet: React.FC<{
   const online = useOnline();
   const [day, setDay] = useState(7);
   const [time, setTime] = useState("18:00");
+  const [every, setEvery] = useState<ScheduleEvery>(1);
   const [who, setWho] = useState<Who>("programme");
   const [picked, setPicked] = useState<string[]>([]);
   const [onPlan, setOnPlan] = useState<string[] | null>(null);
@@ -213,6 +248,7 @@ export const ScheduleSheet: React.FC<{
     const cur = parseSchedule(live[0]?.schedule);
     if (cur?.isoDay) setDay(cur.isoDay);
     if (cur) setTime(cur.time);
+    setEvery(cur?.every ?? 1);
     if (!authUserId) return;
     let on = true;
     void (lane === "nutrition" ? fetchActiveMealPlans(authUserId) : fetchActiveProgrammes(authUserId)).then((r) => on && setOnPlan(r.ok ? [...new Set(r.data.map((p) => p.clientId))] : []));
@@ -225,7 +261,7 @@ export const ScheduleSheet: React.FC<{
   const already = new Set(live.map((s) => s.clientId));
   const targets = (who === "programme" ? onPlan ?? [] : picked).filter((id) => !already.has(id) && roster.some((p) => p.clientId === id));
   const nameOf = (id: string) => roster.find((p) => p.clientId === id)?.name ?? "A client";
-  const schedule = scheduleString({ isoDay: day, time });
+  const schedule = scheduleString({ isoDay: day, time, every });
 
   const save = async () => {
     if (!formId || !targets.length || busy) return;
@@ -270,15 +306,14 @@ export const ScheduleSheet: React.FC<{
       <FieldLabel top={0}>Repeat</FieldLabel>
       <ChoiceChips
         label="Repeat"
-        value="1"
-        onChange={() => undefined}
+        value={String(every) as "1" | "2" | "4"}
+        onChange={(v) => setEvery(Number(v) as ScheduleEvery)}
         items={[
           { value: "1", label: "Every week" },
-          { value: "2", label: "Every 2 weeks", disabled: true },
-          { value: "4", label: "Every 4 weeks", disabled: true },
+          { value: "2", label: "Every 2 weeks" },
+          { value: "4", label: "Every 4 weeks" },
         ]}
       />
-      <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 6 }}>Every 2 and 4 weeks are coming soon.</p>
       <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10, marginTop: 12 }}>
         {fieldBtn("Day", DAY_LONG[day - 1], "day", ChevronDown)}
         {fieldBtn("Due at", time12(time), "time", Clock)}
@@ -311,7 +346,7 @@ export const ScheduleSheet: React.FC<{
           ))}
         </div>
       )}
-      <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 8 }}>A reminder goes 2 hours before it is due.</p>
+      <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 8 }}>A reminder goes 2 hours before it is due, and again the next morning if it's still open.</p>
       {!ready && <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 6 }}>Save the check-in first.</p>}
       {live.length > 0 && (
         <>

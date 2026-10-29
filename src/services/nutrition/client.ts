@@ -67,6 +67,10 @@ export async function fetchProfessionalTargets(userId: string): Promise<Read<Pro
     locked: boolean;
   }[])[0];
   if (!r || !r.set_by_professional) return { ok: true, data: null };
+  // Round D (20261222010000): in recovery-sensitive mode every number a
+  // professional set comes back null. Nothing is applied then: zeros would
+  // overwrite the device's goal, and the screens hide targets anyway.
+  if (r.target_calories == null || r.weight_goal == null) return { ok: true, data: null };
   const setter = await supabase.from("nutrition_goals").select("set_by_professional_id").eq("id", r.goal_id).maybeSingle();
   if (setter.error) return readFail(setter.error);
   const proId = (setter.data as { set_by_professional_id: string | null } | null)?.set_by_professional_id ?? null;

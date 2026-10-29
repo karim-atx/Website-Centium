@@ -17,11 +17,19 @@
 //   decline_reason is never read here: the client isn't told why;
 // - appointments (select own) with staff_id = the professional, status booked;
 // - first names from public_profile_summary (professionals and businesses).
-// Pure rules live in ./logic.
+// - Round D (20261222050000): forms.description; form_questions.section_title,
+//   show_if and profile_field; on submit, answers to questions with a profile
+//   field become proposals the client confirms one by one
+//   (my_form_profile_proposals(p_response_id), confirm_form_profile_proposal(
+//   p_proposal_id, p_value), decline_form_profile_proposal(p_proposal_id);
+//   ATXL2 a weight in recovery-sensitive mode, ATX10 already decided, ATX08
+//   not theirs, 22023 an invalid value).
+// Pure rules live in ./logic and ./proposals.
 
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
-import type { Answers, ClientQuestion, ConnectReferral, FormKind, PendingReferral, QuestionType, TodaySession } from "./logic";
+import { parseShowIfRule, type Answers, type ClientQuestion, type ConnectReferral, type FormKind, type PendingReferral, type QuestionType, type TodaySession } from "./logic";
+import { asProposalField, type ProfileProposal, type ProposalStatus } from "./proposals";
 import type { AccessCategory } from "../consent";
 
 export type Read<T> = { ok: true; data: T } | { ok: false; offline: boolean };
@@ -36,6 +44,8 @@ export interface ClientFormBundle {
   formId: string;
   kind: FormKind;
   title: string;
+  /** Round D: shown above the questions ("" when none). */
+  description: string;
   dueAt: string | null;
   status: "due" | "missed";
   proId: string;
@@ -51,8 +61,8 @@ export interface ClientFormBundle {
 }
 
 interface AssignmentRow { id: string; form_id: string; professional_id: string; series_id: string | null; due_at: string | null; status: "due" | "missed" }
-interface FormRow { id: string; kind: FormKind; title: string }
-interface QuestionRow { id: string; form_id: string; position: number; type: QuestionType; prompt: string; unit: string | null; required: boolean; options: unknown; scale_min: number | null; scale_max: number | null; safety_topic: string | null; safety_trigger: unknown }
+interface FormRow { id: string; kind: FormKind; title: string; description: string | null }
+interface QuestionRow { id: string; form_id: string; position: number; type: QuestionType; prompt: string; unit: string | null; required: boolean; options: unknown; scale_min: number | null; scale_max: number | null; safety_topic: string | null; safety_trigger: unknown; section_title: string | null; show_if: unknown; profile_field: string | null }
 interface ResponseRow { assignment_id: string; answers: unknown; submitted_at: string | null }
 interface NameRow { id: string; first_name: string | null; avatar_url: string | null }
 
@@ -68,6 +78,9 @@ const toQuestion = (r: QuestionRow): ClientQuestion => ({
   scaleMax: r.scale_max,
   safetyTopic: r.safety_topic,
   safetyTrigger: r.safety_trigger && typeof r.safety_trigger === "object" && !Array.isArray(r.safety_trigger) ? (r.safety_trigger as Record<string, unknown>) : null,
+  sectionTitle: r.section_title,
+  showIf: parseShowIfRule(r.show_if),
+  profileField: r.profile_field,
 });
 
 async function namesOf(ids: string[]): Promise<Map<string, NameRow>> {
@@ -90,8 +103,8 @@ export async function fetchMyOpenForms(me: string): Promise<Read<ClientFormBundl
   const formIds = [...new Set(assignments.map((x) => x.form_id))];
   const seriesIds = [...new Set(assignments.map((x) => x.series_id).filter((x): x is string => !!x))];
   const [f, q, r, s, names] = await Promise.all([
-    from("forms").select("id, kind, title").in("id", formIds),
-    from("form_questions").select("id, form_id, position, type, prompt, unit, required, options, scale_min, scale_max, safety_topic, safety_trigger").in("form_id", formIds).order("position", { ascending: true }),
+    from("forms").select("id, kind, title, description").in("id", formIds),
+    from("form_questions").select("id, form_id, position, type, prompt, unit, required, options, scale_min, scale_max, safety_topic, safety_trigger, section_title, show_if, profile_field").in("form_id", formIds).order("position", { ascending: true }),
     from("form_responses").select("assignment_id, answers, submitted_at").eq("client_id", me).in("assignment_id", assignments.map((x) => x.id)),
     seriesIds.length ? from("form_assignments").select("id, schedule").in("id", seriesIds) : Promise.resolve({ data: [], error: null }),
     namesOf([...new Set(assignments.map((x) => x.professional_id))]),
@@ -120,6 +133,7 @@ export async function fetchMyOpenForms(me: string): Promise<Read<ClientFormBundl
       formId: x.form_id,
       kind: form.kind,
       title: form.title,
+      description: form.description?.trim() ?? "",
       dueAt: x.due_at,
       status: x.status,
       proId: x.professional_id,
@@ -173,6 +187,50 @@ export async function saveFormResponse(assignmentId: string, answers: Answers, s
   }
   const row = (data ?? {}) as Partial<SavedResponse>;
   return { ok: true, row: { id: String(row.id ?? ""), safety_flag: row.safety_flag === true, safety_topics: Array.isArray(row.safety_topics) ? row.safety_topics : [], submitted_at: row.submitted_at ?? null } };
+}
+
+// ---------------------------------------------------------------------------
+// Round D: answers carried into the profile, confirmed one by one
+// ---------------------------------------------------------------------------
+
+interface ProposalRow { proposal_id: string; response_id: string; question_prompt: string | null; field: string; suggested: unknown; status: ProposalStatus }
+
+/** This response's proposals (all statuses; the step offers the pending ones). */
+/** One response's proposals, or every one the client has (null). */
+export async function fetchProfileProposals(responseId: string | null): Promise<Read<ProfileProposal[]>> {
+  const { data, error } = await rpcClient.rpc("my_form_profile_proposals", { p_response_id: responseId });
+  if (error) return readFail(error);
+  const out: ProfileProposal[] = [];
+  for (const r of (data ?? []) as ProposalRow[]) {
+    const field = asProposalField(r.field);
+    if (!field) continue;
+    const suggested = r.suggested && typeof r.suggested === "object" && !Array.isArray(r.suggested) ? (r.suggested as Record<string, unknown>) : {};
+    out.push({ id: r.proposal_id, responseId: r.response_id, prompt: r.question_prompt ?? "", field, suggested, status: r.status });
+  }
+  return { ok: true, data: out };
+}
+
+export type ProposalResult = { ok: true } | { ok: false; message: string; gone?: boolean };
+
+function proposalFail(error: { code?: string; message: string }, fallback: string): ProposalResult {
+  if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
+  if (error.code === "ATXL2") return { ok: false, message: "Weight isn't added while recovery-sensitive mode is on.", gone: true };
+  if (error.code === "ATX10") return { ok: false, message: "You already decided this one.", gone: true };
+  if (error.code === "ATX08") return { ok: false, message: "This isn't available any more.", gone: true };
+  if (error.code === "22023") return { ok: false, message: "Check the details and try again." };
+  return { ok: false, message: fallback };
+}
+
+/** Adds one carried answer to the profile, as the client edited it (p_value). */
+export async function confirmProfileProposal(id: string, value: Record<string, unknown>): Promise<ProposalResult> {
+  const { error } = await rpcClient.rpc("confirm_form_profile_proposal", { p_proposal_id: id, p_value: value });
+  return error ? proposalFail(error, "Couldn't add it. Try again.") : { ok: true };
+}
+
+/** Leaves one carried answer out: nothing is written. */
+export async function declineProfileProposal(id: string): Promise<ProposalResult> {
+  const { error } = await rpcClient.rpc("decline_form_profile_proposal", { p_proposal_id: id });
+  return error ? proposalFail(error, "Couldn't skip it. Try again.") : { ok: true };
 }
 
 const FORM_UPLOADS = "form-uploads";

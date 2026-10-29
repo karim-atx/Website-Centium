@@ -9,18 +9,20 @@ import { INK } from "../pro/proInk";
 import { textPx } from "../../theme/textSize";
 import {
   firstPartMissing,
-  itemsOf,
+  formParts,
+  LONG_TEXT_MAX,
   longDate,
   missingMessage,
   missingRequired,
   nextOccurrence,
   parseNumber,
   partQuestions,
-  partsOf,
   resumePart,
   scaleColumns,
   scaleValues,
+  SHORT_TEXT_MAX,
   showDoctorFollowUp,
+  shownQuestions,
   visibleAnswers,
   visibleQuestions,
   type Answers,
@@ -30,6 +32,7 @@ import {
 import { CONSENT_REQUIRED_MESSAGE, formPhotoUrls, removeFormPhoto, saveFormResponse, uploadFormPhoto, type ClientFormBundle } from "../../services/client-forms";
 import { consentBox, consentLine, DOCTOR_FOLLOW_UP, SEE_WARNING_SIGNS, thanksLine } from "./copy";
 import { clearLocalDraft, readLocalDraft, writeLocalDraft } from "../../services/client-forms/localDraft";
+import { ProfileProposals } from "./ProfileProposals";
 
 /**
  * Release 3 · W7 CU6 v3 / CU26: a professional's check-in or intake, filled
@@ -55,6 +58,15 @@ import { clearLocalDraft, readLocalDraft, writeLocalDraft } from "../../services
  * Not drawn: a required box above Send, "Share these answers with {pro}",
  * in the AllergiesSheet checkbox style. Send without it ticked says so and
  * sends nothing; draft saves never ask and never send consent.
+ *
+ * Round D (20261222050000): the form's description above the first part;
+ * sections as the parts ("section 2 of 3" and the section's title, 15 / 700);
+ * long text (a taller field, up to 5,000 characters); and conditions: a
+ * question whose condition isn't met by the answers so far is hidden, not
+ * required and not sent (shownQuestions mirrors form_condition_met), its
+ * answer kept on this device in case it shows again. After sending, a form
+ * with "Carry into the profile" questions lists the answers the Database
+ * proposed for the profile (ProfileProposals), each confirmed on its own.
  */
 
 const SAVE_DELAY_MS = 800;
@@ -66,6 +78,8 @@ type SaveState = "idle" | "saving" | "saved" | "error";
 interface Done {
   flagged: boolean;
   next: Date | null;
+  /** The sent response, when some answer may be offered for the profile. */
+  proposalsFor: string | null;
 }
 
 interface FormSheetProps {
@@ -84,14 +98,16 @@ export const FormSheet: React.FC<FormSheetProps> = (props) =>
 
 const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = ({ open, bundle, me, hideBody, timezone, onClose }) => {
   const visible = useMemo(() => visibleQuestions(bundle.questions, hideBody), [bundle, hideBody]);
-  const parts = useMemo(() => partsOf(itemsOf(visible)), [visible]);
 
   // Round D O7: answers kept on this device (typed while offline, or the
   // sheet closed before the server had them) win over the server draft.
   const [localDraft] = useState(() => readLocalDraft(me, bundle.assignmentId));
   const [initial] = useState(() => visibleAnswers(localDraft ? { ...bundle.answers, ...localDraft } : bundle.answers, visible));
   const [answers, setAnswers] = useState<Answers>(initial);
-  const [step, setStep] = useState(() => (bundle.hasDraft || localDraft ? resumePart(parts, initial) : 0));
+  // Round D: the parts follow the answers, as a condition shows or hides a question.
+  const { parts, titles, sectioned } = useMemo(() => formParts(visible, answers), [visible, answers]);
+  const [stepState, setStep] = useState(() => (bundle.hasDraft || localDraft ? resumePart(formParts(visible, initial).parts, initial) : 0));
+  const step = Math.min(stepState, parts.length - 1);
   const [saveState, setSaveState] = useState<SaveState>(bundle.hasDraft ? "saved" : "idle");
   const [errors, setErrors] = useState<string[]>([]);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -127,7 +143,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
     timer.current = null;
     dirty.current = false;
     setSaveState("saving");
-    const res = await saveFormResponse(bundle.assignmentId, visibleAnswers(answersRef.current, visible), false);
+    const res = await saveFormResponse(bundle.assignmentId, visibleAnswers(answersRef.current, shownQuestions(visible, answersRef.current)), false);
     if (res.ok) {
       changed.current = true;
       setSaveState("saved");
@@ -185,7 +201,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
     }
     setErrors([]);
     void saveDraft();
-    setStep((s) => Math.min(s + 1, parts.length - 1));
+    setStep(Math.min(step + 1, parts.length - 1));
     toTop();
   };
 
@@ -204,7 +220,8 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
     if (timer.current) window.clearTimeout(timer.current);
     setSending(true);
     setSendError(null);
-    const final = visibleAnswers(answersRef.current, visible);
+    const asked = shownQuestions(visible, answersRef.current);
+    const final = visibleAnswers(answersRef.current, asked);
     const res = await saveFormResponse(bundle.assignmentId, final, true, consent);
     setSending(false);
     if (!res.ok) {
@@ -214,7 +231,8 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
     dirty.current = false;
     changed.current = true;
     clearLocalDraft(me, bundle.assignmentId);
-    setDone({ flagged: showDoctorFollowUp(res.row, visible, final), next: bundle.kind === "check_in" ? nextOccurrence(bundle.schedule, bundle.dueAt) : null });
+    const carries = asked.some((q) => !!q.profileField && final[q.id] !== undefined);
+    setDone({ flagged: showDoctorFollowUp(res.row, asked, final), next: bundle.kind === "check_in" ? nextOccurrence(bundle.schedule, bundle.dueAt) : null, proposalsFor: carries && res.row.id ? res.row.id : null });
   };
 
   const addPhoto = async (q: ClientQuestion, file: File | undefined) => {
@@ -244,7 +262,8 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
   const pro = bundle.proName;
   const title = done ? (isCheckIn ? "Check-in sent" : "Form sent") : isCheckIn ? "Weekly check-in" : bundle.title;
   const savedWord = saveState === "saved" ? "saved" : saveState === "saving" ? "saving" : saveState === "error" ? "not saved yet" : null;
-  const partLine = [`For ${pro}`, parts.length > 1 ? `part ${step + 1} of ${parts.length}` : null, savedWord].filter(Boolean).join(" · ");
+  const partLine = [`For ${pro}`, parts.length > 1 ? `${sectioned ? "section" : "part"} ${step + 1} of ${parts.length}` : null, savedWord].filter(Boolean).join(" · ");
+  const sectionTitle = titles[step] ?? null;
 
   // Question numbers run across parts (CU6: part 2 starts at 3).
   const firstNumber = parts.slice(0, step).reduce((n, p) => n + p.length, 1);
@@ -369,6 +388,25 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
           </>
         );
       }
+      case "long_text": {
+        const text = typeof v === "string" ? v : "";
+        return (
+          <>
+            <textarea
+              aria-labelledby={`${q.id}-l`}
+              value={text}
+              onChange={(e) => setAnswer(q.id, e.target.value)}
+              rows={5}
+              maxLength={LONG_TEXT_MAX}
+              className="block w-full resize-y bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              style={{ ...field(errors.includes(q.id)), minHeight: 120, padding: 12, fontSize: textPx(12.5), lineHeight: 1.5, color: INK.ch }}
+            />
+            {text.length > LONG_TEXT_MAX - 500 && (
+              <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 4, textAlign: "right" }}>{`${text.length.toLocaleString("en-GB")} of ${LONG_TEXT_MAX.toLocaleString("en-GB")}`}</p>
+            )}
+          </>
+        );
+      }
       default:
         return (
           <textarea
@@ -376,7 +414,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
             value={typeof v === "string" ? v : ""}
             onChange={(e) => setAnswer(q.id, e.target.value)}
             rows={q.required ? 1 : 2}
-            maxLength={2000}
+            maxLength={SHORT_TEXT_MAX}
             className="block w-full resize-none bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             style={{ ...field(errors.includes(q.id)), minHeight: q.required ? 44 : 64, padding: 12, fontSize: textPx(12.5), lineHeight: 1.5, color: INK.ch }}
           />
@@ -456,7 +494,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
   );
 
   return (
-    <BottomSheet open={open} onClose={close} title={title} footer={footer} onBack={!done && step > 0 ? () => { setErrors([]); setStep((s) => s - 1); toTop(); } : undefined}>
+    <BottomSheet open={open} onClose={close} title={title} footer={footer} onBack={!done && step > 0 ? () => { setErrors([]); setStep(step - 1); toTop(); } : undefined}>
       <div ref={topRef} />
       {done ? (
         <div className="animate-fade-slide-up">
@@ -479,6 +517,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
               )}
             </div>
           )}
+          {done.proposalsFor && <ProfileProposals responseId={done.proposalsFor} hideNumbers={hideBody} />}
           <CtaButton variant="secondary" label="Done" className="mt-4" onClick={close} />
         </div>
       ) : (
@@ -487,6 +526,12 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
             <Avatar name={pro} url={null} size={16} tone="teal" />
             <span aria-live="polite">{partLine}</span>
           </p>
+          {step === 0 && bundle.description && (
+            <p style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.chS, marginBottom: 14, whiteSpace: "pre-line", overflowWrap: "anywhere" }}>{bundle.description}</p>
+          )}
+          {sectionTitle && (
+            <h3 style={{ fontSize: textPx(15), fontWeight: 700, color: INK.ch, marginBottom: 12, overflowWrap: "anywhere" }}>{sectionTitle}</h3>
+          )}
           {visible.length === 0 ? (
             <p className="text-[13px] leading-[1.5] text-charcoal-soft">Nothing to answer here. You can send it as it is.</p>
           ) : (

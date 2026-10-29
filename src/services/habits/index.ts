@@ -8,6 +8,7 @@ export * from "./colours";
 export * from "./coachGroups";
 import { toHabitIcon, validateHabitIcon } from "./icons";
 import { toHabitColour } from "./colours";
+import { requestColumn } from "../health-log/requestId";
 
 // Habits, in public.habit_items and public.habit_completions.
 //
@@ -288,13 +289,15 @@ export async function deleteHabitRemote(id: string): Promise<WriteResult> {
 export async function setCompletion(
   habitId: string,
   date: string,
-  done: boolean
+  done: boolean,
+  /** The outbox item's uuid (client_request_id), Round D. A tick is already idempotent (23505 below). */
+  requestId?: string
 ): Promise<WriteResult> {
   if (done) {
     const { error } = await supabase
       .from("habit_completions")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .insert({ habit_item_id: habitId, completed_date: date } as any);
+      .insert({ habit_item_id: habitId, completed_date: date, ...requestColumn(requestId) } as any);
     if (error && error.code !== "23505") {
       console.error("[habits] Could not tick the habit:", error.message);
       return { ok: false, message: describe(error) };

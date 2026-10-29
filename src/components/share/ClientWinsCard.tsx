@@ -12,7 +12,9 @@ import { canAskToShare, shareDate, winCard, winRowText, winsShieldLine, type Car
 import { AskPermissionSheet } from "./AskPermissionSheet";
 import { ShareFlow } from "./ShareFlow";
 import { useSharePro } from "./useSharePro";
-import { fetchClientWins, fetchMyShareRequests, fetchMySharedItemsFor, type MySharedItem, type ShareRequest } from "../../services/share";
+import { fetchClientWins, fetchMyOwnedSharedItems, fetchMyShareRequests, fetchMySharedItemsFor, type MySharedItem, type OwnedSharedItem, type ShareRequest } from "../../services/share";
+import { HELD_CHIP, strongestState, type HeldReason } from "./heldShareModel";
+import { HeldShareNote } from "./HeldShareParts";
 
 /** "Yesterday", "Today" or "Oct 12" ("Oct 12, 2025" in another year; the app's short date, shareDate). */
 function whenWord(iso: string, today: string): string {
@@ -37,6 +39,8 @@ interface Row {
   tone: WinTone;
   request: ShareRequest | null;
   removal: boolean;
+  /** DV: the win's card is held for review, with its short reason. */
+  held: HeldReason | null;
 }
 
 /**
@@ -63,6 +67,10 @@ interface Row {
  * (SH4 "Share icons hidden for Never allow"; the state pills stay) and the
  * shield line says "{first} doesn't want wins shared."; otherwise the line
  * carries the setting where SH4 draws it (winsShieldLine).
+ *
+ * Round D · DV: a card the word lists held (my_shared_items) shows "Held for
+ * review" (gold) and the held note with its short reason; its share icon is
+ * hidden until our team checks it. If that read fails the rows show as before.
  */
 export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstName: string; today: string; lane: ProLane; winSharing?: WinSharingSetting }> = ({ clientId, name, firstName, today, lane, winSharing = "always_ask" }) => {
   const { authUserId } = useApp();
@@ -70,6 +78,7 @@ export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstNam
   const [wins, setWins] = useState<ClientWin[] | null>(null);
   const [requests, setRequests] = useState<ShareRequest[]>([]);
   const [items, setItems] = useState<MySharedItem[]>([]);
+  const [owned, setOwned] = useState<Map<string, OwnedSharedItem>>(new Map());
   const [state, setState] = useState<"loading" | "ready" | "error" | "offline">("loading");
   const [asking, setAsking] = useState<Row | null>(null);
   const [sharing, setSharing] = useState<Row | null>(null);
@@ -77,7 +86,7 @@ export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstNam
 
   const load = useCallback(async () => {
     if (!authUserId) return;
-    const [w, r, i] = await Promise.all([fetchClientWins(clientId), fetchMyShareRequests(authUserId, clientId), fetchMySharedItemsFor(authUserId, clientId)]);
+    const [w, r, i, o] = await Promise.all([fetchClientWins(clientId), fetchMyShareRequests(authUserId, clientId), fetchMySharedItemsFor(authUserId, clientId), fetchMyOwnedSharedItems()]);
     if (!w.ok || !r.ok || !i.ok) {
       const offline = (!w.ok && w.offline) || (!r.ok && r.offline) || (!i.ok && i.offline);
       setState((prev) => (prev === "ready" ? (offline ? "offline" : prev) : offline ? "offline" : "error"));
@@ -86,6 +95,7 @@ export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstNam
     setWins(w.data);
     setRequests(r.data);
     setItems(i.data);
+    if (o.ok) setOwned(new Map(o.data.filter((x) => x.clientId === clientId).map((x) => [x.id, x])));
     setState("ready");
   }, [authUserId, clientId]);
 
@@ -103,15 +113,19 @@ export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstNam
         if (!spec || !text) return null;
         const request = requests.find((q) => q.winId === w.winId) ?? null;
         const removal = !!request && items.some((it) => it.shareRequestId === request.id && it.removalRequestedAt && !it.removedAt);
-        return { win: w, spec, title: text.title, icon: text.icon, tone: text.tone, request, removal };
+        const mine = request ? items.filter((it) => it.shareRequestId === request.id).flatMap((it) => owned.get(it.id) ?? []) : [];
+        const top = strongestState(mine);
+        const held = top?.state === "held_for_review" ? (top.heldReason ?? "other") : null;
+        return { win: w, spec, title: text.title, icon: text.icon, tone: text.tone, request, removal, held };
       })
       .filter((x): x is Row => !!x);
-  }, [wins, requests, items, today]);
+  }, [wins, requests, items, owned, today]);
 
   const mayAsk = canAskToShare(winSharing);
   const right = (r: Row) => {
     const s = r.request?.status;
     if (r.removal) return <SharePill tone="gold">Removal asked</SharePill>;
+    if (r.held) return <SharePill tone="gold">{HELD_CHIP}</SharePill>;
     if (s === "pending") return <SharePill tone="gold">{`Waiting for ${firstName}`}</SharePill>;
     if (s === "declined") return <SharePill>Declined</SharePill>;
     if (s === "withdrawn") return <SharePill>Withdrawn</SharePill>;
@@ -164,6 +178,11 @@ export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstNam
                   {right(r)}
                 </div>
                 {n && <p style={{ fontSize: textPx(11.5), lineHeight: 1.45, color: INK.chS, margin: "8px 0 0 48px" }}>{n}</p>}
+                {r.held && !r.removal && (
+                  <div style={{ margin: "8px 0 0 48px" }}>
+                    <HeldShareNote reason={r.held} />
+                  </div>
+                )}
               </div>
             );
           })

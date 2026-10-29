@@ -15,7 +15,7 @@ import { DetailHead } from "../insights/parts";
 import { ErrorLine } from "../library/libraryUi";
 import { NumBoxes, fieldStyle } from "./moKit";
 import { answerFor, answerText, answeredCount, REPLY_MAX, safetyBanner } from "./formModel";
-import { numberBoxes, photoAnswers, textQuestions, weekNumber, type PositionedQuestion } from "./reviewModel";
+import { askedQuestions, numberBoxes, photoAnswers, textQuestions, weekNumber, type PositionedQuestion } from "./reviewModel";
 import { fetchResponse, fetchResponses, markResponseRead, photoUrls, reviewResponse, type FormResponse } from "../../../services/pro/forms";
 import { startThread } from "../../../services/messaging";
 import { time12 } from "../../../utils/time12";
@@ -84,10 +84,11 @@ export const ResponseScreen: React.FC = () => {
   if (data === null) return <ComingSoon line="This response isn't available any more." />;
   const rel = professionalClients.find((c) => c.clientId === data.response.clientId);
   const name = rel?.name ?? "A client";
+  const asked = askedQuestions(data.questions, data.response.answers);
   return data.response.formKind === "check_in" ? (
-    <CheckInReview key={data.response.id} response={data.response} questions={data.questions} history={history} name={name} onReviewed={() => setNonce((n) => n + 1)} />
+    <CheckInReview key={data.response.id} response={data.response} questions={asked} history={history} name={name} onReviewed={() => setNonce((n) => n + 1)} />
   ) : (
-    <IntakeAnswers response={data.response} questions={data.questions} name={name} />
+    <IntakeAnswers response={data.response} questions={asked} name={name} />
   );
 };
 
@@ -120,6 +121,9 @@ const AnswerRows: React.FC<{ questions: PositionedQuestion[]; answers: Record<st
         const v = answerFor(answers, q);
         return (
           <div key={q.id} style={{ padding: pad, borderTop: i ? `1px solid ${INK.b06}` : "none" }}>
+            {q.sectionTitle?.trim() && (
+              <p style={{ fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: INK.prDeep, marginBottom: 4, overflowWrap: "anywhere" }}>{q.sectionTitle.trim()}</p>
+            )}
             <p style={{ fontSize: textPx(12), color: INK.chF }}>{q.prompt}</p>
             <p style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, marginTop: 2, lineHeight: 1.45, overflowWrap: "anywhere" }}>{answerText(q, v)}</p>
           </div>

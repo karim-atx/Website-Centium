@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { sheetChipStyle, sheetGreyStyleFor, sheetLabelStyleFor } from "../ui/sheetChip";
 import { Button } from "../ui/Button";
@@ -45,6 +45,9 @@ import { textPx } from "../../theme/textSize";
 import { enqueueLog, isOfflineFailure, newQueueId, SAVED_ON_DEVICE } from "../../services/health-log/offlineQueue";
 import { provisionalFoodEntry } from "../../services/food/provisional";
 import type { LogFoodEntryParams } from "../../services/food";
+import { searchFoodsOnline } from "../../services/food/onlineSearch";
+import { brandServing, onlineQuery, type OnlineFood, type OnlineSearchOutcome } from "../../services/food/onlineSearchModel";
+import { FoundFoodCard, OnlineResults, SearchOnlineButton } from "./OnlineFoodSearch";
 
 // Mobile v5.1 R3, dark mode (no light islands): a picked row's #F7F5FB is
 // primary.tint.2 dark, and the empty pick circle's #D1CAEB ring is
@@ -200,6 +203,30 @@ export const AddFoodSheet: React.FC<{
   // --- logging ------------------------------------------------------------
   const [saving, setSaving] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+
+  // --- Round D · DP: search online ----------------------------------------
+  // Started only by the user's tap (30 an hour), never as they type. The term
+  // searched opens the online step; `onlineResult` is null while it runs; a
+  // picked result waits on its confirm card until the user saves it.
+  const [onlineTerm, setOnlineTerm] = useState<string | null>(null);
+  const [onlineResult, setOnlineResult] = useState<OnlineSearchOutcome | null>(null);
+  const [foundFood, setFoundFood] = useState<OnlineFood | null>(null);
+  const onlineRun = useRef(0);
+  const searchOnline = (term: string) => {
+    const run = ++onlineRun.current;
+    setOnlineTerm(term);
+    setOnlineResult(null);
+    setFoundFood(null);
+    void searchFoodsOnline(term).then((r) => {
+      if (run === onlineRun.current) setOnlineResult(r);
+    });
+  };
+  const closeOnline = () => {
+    onlineRun.current++;
+    setOnlineTerm(null);
+    setOnlineResult(null);
+    setFoundFood(null);
+  };
 
   // Search runs against Supabase, so it is debounced: a query per keystroke
   // would be a request per keystroke. FO7: nothing is fetched until the user
@@ -361,7 +388,9 @@ export const AddFoodSheet: React.FC<{
   // getFoodNutrientsById's contract that's always null, never an error.
   useEffect(() => {
     if (!selectedFood || selectedFood.source !== "catalog") {
-      setRawNutrients(null);
+      // Round D · DP: a custom food carries its own per-serving map (a food
+      // saved from an online result, or one typed with advanced nutrients).
+      setRawNutrients(selectedFood?.source === "custom" && selectedFood.nutrients ? selectedFood.nutrients : null);
       setNutrientsLoading(false);
       return;
     }
@@ -491,6 +520,10 @@ export const AddFoodSheet: React.FC<{
     setBarcodeError(null);
     setSaving(false);
     setAddError(null);
+    onlineRun.current++;
+    setOnlineTerm(null);
+    setOnlineResult(null);
+    setFoundFood(null);
     onClose();
   }, [onClose]);
 
@@ -719,7 +752,7 @@ export const AddFoodSheet: React.FC<{
                 <p style={{ margin: "2px 0 0", fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-muted))" }}>
                   {adjusting
                     ? `${unit === "serving" ? (quantity === 1 ? selectedFood.servingLabel : `${quantity} × ${selectedFood.servingLabel}`) : `${quantity} ${unit}`} · selected`
-                    : `${selectedFood.servingLabel}${selectedFood.isVerified ? " · USDA verified" : " · estimate"}`}
+                    : `${brandServing(selectedFood.brand, selectedFood.servingLabel)}${selectedFood.isVerified ? " · USDA verified" : " · estimate"}`}
                 </p>
               </div>
             </div>
@@ -1031,6 +1064,43 @@ export const AddFoodSheet: React.FC<{
     );
   }
 
+  // Round D · DP: the online results (D-S17), then a picked result's confirm
+  // card (D-S18). A saved result is the user's own custom food and goes to
+  // the add step above like any other; its back returns here.
+  if (onlineTerm !== null) {
+    return (
+      <BottomSheet
+        open={open}
+        onClose={resetAndClose}
+        title={foundFood ? "Check this food" : "Search online"}
+        onBack={foundFood ? () => setFoundFood(null) : closeOnline}
+      >
+        {foundFood ? (
+          <FoundFoodCard
+            key={`${foundFood.source}:${foundFood.ref}`}
+            food={foundFood}
+            onDone={() => setFoundFood(null)}
+            onLog={(saved) => {
+              setFoundFood(null);
+              setSelectedFood(saved);
+            }}
+          />
+        ) : (
+          <OnlineResults
+            term={onlineTerm}
+            result={onlineResult}
+            onPick={setFoundFood}
+            onRetry={() => searchOnline(onlineTerm)}
+            onAddYourself={() => {
+              closeOnline();
+              setCustomMode(true);
+            }}
+          />
+        )}
+      </BottomSheet>
+    );
+  }
+
   /**
    * One food row (FO7 suggestions and search results). FO9: the icon selects
    * the food and starts multi-select, turning every icon into a circle
@@ -1301,7 +1371,7 @@ export const AddFoodSheet: React.FC<{
                   key: `${f.source}-${f.id}`,
                   food: f,
                   name: f.name,
-                  sub: f.servingLabel,
+                  sub: brandServing(f.brand, f.servingLabel),
                   kcal: f.calories,
                   star: f.isLebanese,
                   open: () => (multi ? openAdjust(f) : setSelectedFood(f)),
@@ -1310,10 +1380,22 @@ export const AddFoodSheet: React.FC<{
             {query.trim() !== "" && loading && filtered.length === 0 && (
               <p className="text-center text-sm text-charcoal-faint py-8">Searching…</p>
             )}
+            {/* Round D · DP (D17): "Search online" as a row under the results. */}
+            {onlineQuery(query) && !loading && filtered.length > 0 && !multi && (
+              <SearchOnlineButton variant="row" onClick={() => searchOnline(query.trim())} />
+            )}
             {query.trim() !== "" && !loading && filtered.length === 0 && (
-              <p className="text-center text-sm text-charcoal-faint py-8">
-                {searchEmptyLine(searchFailed, online) ?? "Not in our catalog yet. Try Custom or Barcode to add it."}
-              </p>
+              <div className="flex flex-col" style={{ gap: 4, padding: "24px 0 16px" }}>
+                <p className="text-center text-sm text-charcoal-faint" style={{ margin: 0 }}>
+                  {searchEmptyLine(searchFailed, online) ?? "Not in our catalog yet. Search online, or try Custom or Barcode to add it."}
+                </p>
+                {/* …and in the nothing-found state (not when the search itself couldn't run). */}
+                {!searchFailed && onlineQuery(query) && (
+                  <div className="flex justify-center" style={{ marginTop: 10 }}>
+                    <SearchOnlineButton variant="empty" onClick={() => searchOnline(query.trim())} />
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

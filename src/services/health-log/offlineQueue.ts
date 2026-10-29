@@ -3,6 +3,7 @@ import type { LogFoodEntryParams } from "../food";
 import type { WorkoutSession } from "../../types";
 import type { SessionSwap } from "../workout/coachLogic";
 import { describeQueued, withQueued } from "./outboxModel";
+import { newRequestId } from "./requestId";
 
 export { describeQueued, withQueued };
 
@@ -87,7 +88,8 @@ function write(userId: string, items: QueuedLog[]) {
 /** Distributive Omit, so each queued kind keeps its own fields. */
 type WithoutId<T> = T extends unknown ? Omit<T, "id"> : never;
 
-export const newQueueId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+/** A uuid: it is also the item's client_request_id, so a replay is saved once (Database 20261222020000). */
+export const newQueueId = newRequestId;
 
 /** Adds an entry. A habit tick (same habit and day) or a goal (same metric) replaces the waiting one. */
 export function enqueueLog(userId: string, item: WithoutId<QueuedLog>, id: string = newQueueId()): string {

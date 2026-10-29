@@ -121,7 +121,10 @@ export default function Food() {
   // shows the server's message there instead, as main did (release review O6).
   const [saveToast, setSaveToast] = useState<string | null>(null);
   // FO1 K9: the Custom tab's sub-tab, pinned in the fixed header.
-  const [prepSub, setPrepSub] = useState<SubTab>("meals");
+  // Round D · DP: ?tab=prep&sub=foods (the catalogue-decision notice) opens Custom foods.
+  const [prepSub, setPrepSub] = useState<SubTab>(() =>
+    new URLSearchParams(window.location.search).get("sub") === "foods" ? "foods" : "meals"
+  );
   // FO1 #30-#31 / #45 / #49: the lavender washes and hairline, light
   // #AEA1DC at 34 / 12 / 10 / 16%, dark #A991FE (the primary fill), High
   // contrast the filled #5B48B8 at the same strengths (O8).
@@ -132,7 +135,7 @@ export default function Food() {
   const hideNumbers = recoverySensitive || recoveryModePending;
   const navigate = useNavigate();
   const share = useClientShare();
-  const [tab, setTab] = useState<Tab>("diary");
+  const [tab, setTab] = useState<Tab>(() => (new URLSearchParams(window.location.search).get("tab") === "prep" ? "prep" : "diary"));
   const [addOpen, setAddOpen] = useState(false);
   const [addMeal, setAddMeal] = useState<MealType>("lunch");
   // FO7: which meal the sheet suggests for; null from the floating +.

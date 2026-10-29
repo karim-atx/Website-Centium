@@ -27,6 +27,8 @@ const DOCUMENTED = [
   "pro.review.new",
   "pro.session.unpaid",
   "pro.share.removal_requested",
+  // Round D · DV (20261222030000): a held card.
+  "pro.share.held",
   // pro.referral.* and pro.care_network.*: the keys the migrations write.
   "pro.referral.received",
   "pro.referral.client_agreed",
