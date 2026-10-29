@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Check, CheckCircle2, Circle, ClipboardCheck, FileDown, FileText, Image as ImageIcon, ListChecks, PlayCircle, Plus, X, type LucideIcon } from "lucide-react";
 import {
   addPdfLesson,
@@ -18,35 +18,48 @@ import {
   type BuilderLesson,
 } from "../../../services/courses/author";
 import { youtubeEmbedUrl, type LessonKind } from "../../../services/courses/rules";
+import { CHECK_IN_ANSWER_MAX, HTML_REFUSED } from "../../../services/courses/authorRules";
+import { FORMATTING_HELP, hasHtmlTag } from "../../../services/courses/markdown";
+import {
+  addCheckInLesson,
+  addImageLesson,
+  fetchLessonImagePaths,
+  IMAGE_ACCEPT,
+  lessonImageUrl,
+  submitLessonImage,
+  validateCourseImage,
+  withdrawCourseImage,
+} from "../../../services/courses/extras";
+import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { SegmentedTabs } from "../../ui/SegmentedTabs";
 import { CtaButton } from "../../ui/PinnedCta";
 import { INK } from "../proInk";
-import { ComingSoonPill } from "../ComingSoon";
+import { LessonMarkdown } from "../../courses/LessonMarkdown";
+import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../moderation/ImageApproval";
 import { Field, FieldError, Label, Note, TextBox } from "./courseUi";
 import { fieldBox } from "./courseStyles";
 import { lessonEyebrow } from "./courseModel";
 
-const KIND_LABEL: Record<LessonKind, string> = { video: "Video", reading: "Reading", pdf: "PDF", quiz: "Quiz" };
+const KIND_LABEL: Record<LessonKind, string> = { video: "Video", reading: "Reading", pdf: "PDF", quiz: "Quiz", image: "Image", check_in: "Check-in" };
 
 /**
  * Release 3 · W6 MO28 "Create course · 3 Lesson type" (cLessonType18):
  * "Week {n} · {title}" 12.5 text.soft, m-bottom 10; a 2-column grid, gap 8;
  * each card r16, 1px 10% border (primary when chosen, on primary.pale), pad
  * 12; tile 34 r10 (primary.pale, card when chosen), icon 17 primary.deep;
- * name 14 / 800 m-top 8; line 11 text.faint 1.35. Image and Check-in are
- * drawn as new: course_lessons takes video, reading, pdf and quiz only, so
- * those two are Coming soon.
+ * name 14 / 800 m-top 8; line 11 text.faint 1.35. Round D (20261223030000):
+ * Image and Check-in are real kinds now.
  */
 export const LessonTypeStep: React.FC<{ weekLabel: string; kind: LessonKind | null; onPick: (k: LessonKind) => void; footer: React.ReactNode }> = ({ weekLabel, kind, onPick, footer }) => {
   const types: { key: LessonKind | null; icon: LucideIcon; name: string; line: string }[] = [
     { key: "video", icon: PlayCircle, name: "Video", line: "Upload or link a video" },
-    { key: "reading", icon: FileText, name: "Reading", line: "Text with headings and images" },
+    { key: "reading", icon: FileText, name: "Reading", line: "Text with headings, lists and links" },
     { key: "pdf", icon: FileDown, name: "PDF", line: "A plan or handout to download" },
-    { key: null, icon: ImageIcon, name: "Image", line: "A photo or diagram, new" },
+    { key: "image", icon: ImageIcon, name: "Image", line: "A photo or diagram" },
     { key: "quiz", icon: ListChecks, name: "Quiz", line: "Short questions with answers" },
-    { key: null, icon: ClipboardCheck, name: "Check-in", line: "A few questions back to you, new" },
+    { key: "check_in", icon: ClipboardCheck, name: "Check-in", line: "A question your clients answer for you" },
   ];
   return (
     <div>
@@ -69,7 +82,6 @@ export const LessonTypeStep: React.FC<{ weekLabel: string; kind: LessonKind | nu
                 <span className="flex items-center justify-center" style={{ width: 34, height: 34, borderRadius: 10, background: on ? INK.card : INK.prPale }}>
                   <t.icon size={17} strokeWidth={2} aria-hidden style={{ color: INK.prDeep }} />
                 </span>
-                {!t.key && <ComingSoonPill />}
               </span>
               <p style={{ fontSize: textPx(14), fontWeight: 800, color: INK.ch, marginTop: 8 }}>{t.name}</p>
               <p style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.35, marginTop: 2 }}>{t.line}</p>
@@ -90,14 +102,18 @@ const minuteOptions = (current: number | null) => {
 /**
  * Release 3 · W6 MO28 "3 Lesson editor" (cLessonEdit18): Edit / Preview
  * tabs (34 high, 12, 12 under); the fields by kind; footer Back + "Save
- * lesson" (check). Reading: title, the text (course_lessons.body is plain
- * text, so no formatting toolbar: the lesson page shows it as written),
- * "Reading time". Video: a single YouTube link (ATX70 otherwise) and its
- * length. PDF: the file, stripped before upload (services/courses/pdf).
+ * lesson" (check). Reading: title, the text (Round D: limited Markdown,
+ * listed under the box; HTML tags are refused, 22023, and checked before
+ * saving), "Reading time". Video: a single YouTube link (ATX70 otherwise)
+ * and its length. PDF: the file, stripped before upload (services/courses/pdf).
  * Quiz: pass mark and "Question {n} of {n}" with its answers (the whole set
  * saved at once, exactly one correct: set_course_quiz_options), "Add
- * question". Preview (r16 card, 120 image band, eyebrow 10.5 / 800 caps,
- * title 18 / 800, body 13.5 text.soft 1.6; "This is how clients see it.").
+ * question". Round D: Image (D-S6: the picked image goes through image
+ * approval, course_image, with its badge and note; an optional caption) and
+ * Check-in (D-S7: one question, the lesson's body; the answers are read on
+ * the course's stats page). Preview (r16 card, 120 image band, eyebrow 10.5
+ * / 800 caps, title 18 / 800, body 13.5 text.soft 1.6, rendered as the
+ * lesson page renders it; "This is how clients see it.").
  */
 export const LessonEditor: React.FC<{
   courseId: string;
@@ -121,6 +137,33 @@ export const LessonEditor: React.FC<{
   const [passMark, setPassMark] = useState(String(lesson?.passMark ?? 70));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Round D: an Image lesson's picked image (sent for approval on Save) and its approved one.
+  const { authUserId } = useApp();
+  const [imagePick, setImagePick] = useState<{ file: File; preview: string } | null>(null);
+  const [approvedImage, setApprovedImage] = useState<string | null>(null);
+  const { image: ownImage, refresh: refreshImage } = useOwnImage("course_image", kind === "image" ? lesson?.id : null);
+  const imageInput = useRef<HTMLInputElement | null>(null);
+  useEffect(() => () => {
+    if (imagePick) URL.revokeObjectURL(imagePick.preview);
+  }, [imagePick]);
+  useEffect(() => {
+    if (kind !== "image" || !lesson) return;
+    let live = true;
+    void fetchLessonImagePaths([lesson.id])
+      .then((m) => lessonImageUrl(m.get(lesson.id)))
+      .then((u) => live && setApprovedImage(u));
+    return () => {
+      live = false;
+    };
+  }, [kind, lesson]);
+  const shownOwn = imagePick ? null : ownImage;
+  const imageSrc = imagePick?.preview ?? (shownOwn?.status === "pending" ? shownOwn.url : null) ?? approvedImage;
+  const pickImage = (f: File | undefined) => {
+    if (!f) return;
+    const bad = validateCourseImage(f);
+    setError(bad);
+    if (!bad) setImagePick({ file: f, preview: URL.createObjectURL(f) });
+  };
 
   const titleOk = title.trim().length >= LIMITS.lessonTitle.min;
   const pass = Number(passMark);
@@ -129,17 +172,35 @@ export const LessonEditor: React.FC<{
     editable &&
     titleOk &&
     (lesson
-      ? true
+      ? kind !== "check_in" || body.trim().length > 0
       : kind === "video"
       ? url.trim().length > 0
-      : kind === "reading"
+      : kind === "reading" || kind === "check_in"
       ? body.trim().length > 0
       : kind === "pdf"
       ? !!file
+      : kind === "image"
+      ? !!imagePick
       : passOk);
+
+  /** The picked image goes for approval against the lesson (submit_image 'course_image'). */
+  const sendImage = async (lessonId: string) => {
+    if (!imagePick || !authUserId) return { ok: true as const };
+    const r = await submitLessonImage(authUserId, lessonId, imagePick.file);
+    if (r.ok) {
+      setImagePick(null);
+      refreshImage();
+    }
+    return r;
+  };
 
   const save = async () => {
     if (busy || !ready) return;
+    // The server refuses HTML tags in a body (22023); say so before sending.
+    if ((kind === "reading" || kind === "image" || kind === "check_in") && hasHtmlTag(body)) {
+      setError(HTML_REFUSED);
+      return;
+    }
     setBusy(true);
     setError(null);
     if (!lesson) {
@@ -150,12 +211,29 @@ export const LessonEditor: React.FC<{
           ? await addReadingLesson(moduleId, title.trim(), body, minutes)
           : kind === "pdf"
           ? await addPdfLesson(courseId, moduleId, title.trim(), file!)
+          : kind === "image"
+          ? await addImageLesson(moduleId, title.trim(), body, minutes)
+          : kind === "check_in"
+          ? await addCheckInLesson(moduleId, title.trim(), body.trim(), minutes)
           : await addQuizLesson(moduleId, title.trim(), pass);
-      setBusy(false);
       if (!r.ok) {
+        setBusy(false);
         setError(r.message);
         return;
       }
+      if (kind === "image") {
+        const sent = await sendImage(r.value);
+        setBusy(false);
+        // The lesson exists either way; on a failed image it stays open to pick again.
+        if (!sent.ok) {
+          setError(sent.message);
+          onSaved(r.value, true);
+          return;
+        }
+        onSaved(r.value, false);
+        return;
+      }
+      setBusy(false);
       // A new quiz stays open so its questions can be added.
       onSaved(r.value, kind === "quiz");
       return;
@@ -165,7 +243,9 @@ export const LessonEditor: React.FC<{
     if (title.trim() !== lesson.title) patch.title = title.trim();
     if (kind !== "quiz" && minutes !== null && minutes !== lesson.minutes) patch.minutes = minutes;
     if (kind === "video" && url.trim()) patch.url = url.trim();
-    if (kind === "reading" && body !== (lesson.body ?? "")) patch.body = body;
+    // Round D: an Image lesson's caption and a Check-in's prompt are its body too.
+    if ((kind === "reading" || kind === "image") && body !== (lesson.body ?? "")) patch.body = body;
+    if (kind === "check_in" && body.trim() !== (lesson.body ?? "")) patch.body = body.trim();
     if (kind === "quiz" && passOk && pass !== lesson.passMark) patch.passMark = pass;
     if (Object.keys(patch).length) {
       const r = await updateLesson(lesson.id, patch);
@@ -183,8 +263,25 @@ export const LessonEditor: React.FC<{
         return;
       }
     }
+    if (kind === "image") {
+      const r = await sendImage(lesson.id);
+      if (!r.ok) {
+        setBusy(false);
+        setError(r.message);
+        return;
+      }
+    }
     setBusy(false);
     onSaved(null, false);
+  };
+
+  const withdrawImage = async () => {
+    if (!lesson || busy) return;
+    setBusy(true);
+    const r = await withdrawCourseImage("course_image", lesson.id);
+    setBusy(false);
+    if (!r.ok) setError(r.message);
+    refreshImage();
   };
 
   const embed = youtubeEmbedUrl(lesson?.videoId ?? null);
@@ -237,13 +334,20 @@ export const LessonEditor: React.FC<{
                 referrerPolicy="strict-origin-when-cross-origin"
                 allowFullScreen
               />
+            ) : kind === "image" && imageSrc ? (
+              <img src={imageSrc} alt={title} className="block w-full" style={{ maxHeight: 320, objectFit: "contain", background: INK.soft }} />
             ) : (
               <div style={{ height: 120, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }} aria-hidden />
             )}
             <div style={{ padding: "12px 14px" }}>
               <p style={{ fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: INK.chF }}>{lessonEyebrow(weekIndex, KIND_LABEL[kind], kind === "quiz" ? null : minutes)}</p>
               <p style={{ fontSize: textPx(18), fontWeight: 800, color: INK.ch, marginTop: 4, overflowWrap: "anywhere" }}>{title}</p>
-              {kind === "reading" && body && <p style={{ fontSize: textPx(13.5), color: INK.chS, lineHeight: 1.6, marginTop: 8, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{body}</p>}
+              {(kind === "reading" || kind === "image" || kind === "check_in") && body && (
+                <LessonMarkdown text={body} linkColour={INK.prDeep} style={{ fontSize: textPx(13.5), color: INK.chS, lineHeight: 1.6, marginTop: 8 }} />
+              )}
+              {kind === "check_in" && (
+                <div style={{ marginTop: 10, height: 72, borderRadius: 12, border: `1px solid ${INK.b10}`, background: INK.soft, padding: 10, fontSize: textPx(12.5), color: INK.chF }}>Your answer</div>
+              )}
             </div>
           </div>
           <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 8 }}>This is how clients see it.</p>
@@ -256,7 +360,80 @@ export const LessonEditor: React.FC<{
             <>
               <div style={{ height: 12 }} />
               <TextBox id="lesson-body" label="Text" value={body} onChange={setBody} rows={8} maxLength={LIMITS.body.max} disabled={!editable} />
+              <Note mt={6}>{FORMATTING_HELP}</Note>
               {minutesField("Reading time")}
+            </>
+          )}
+          {kind === "image" && (
+            <>
+              <Label mt={12}>Image</Label>
+              <button
+                type="button"
+                onClick={() => imageInput.current?.click()}
+                disabled={!editable || busy}
+                aria-label={imageSrc ? "Change the image" : "Choose an image"}
+                className="tap relative w-full flex flex-col items-center justify-center overflow-hidden disabled:cursor-default"
+                style={{ minHeight: 120, borderRadius: 16, background: INK.soft, border: imageSrc ? `1px solid ${INK.b10}` : `1.5px dashed rgb(var(--c-charcoal) / 0.11)`, gap: 6 }}
+              >
+                {imageSrc ? (
+                  <img src={imageSrc} alt="" className="block w-full" style={{ maxHeight: 240, objectFit: "contain" }} />
+                ) : (
+                  <>
+                    <ImageIcon size={22} strokeWidth={1.75} aria-hidden style={{ color: INK.chF }} />
+                    <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.chS }}>Choose an image</span>
+                  </>
+                )}
+                {shownOwn && <ImageApprovalBadge state={shownOwn} className="absolute top-2 left-2" />}
+              </button>
+              <input
+                ref={imageInput}
+                type="file"
+                accept={IMAGE_ACCEPT}
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden
+                onChange={(e) => {
+                  pickImage(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+              {imagePick ? (
+                <Note mt={6}>Sent for approval when you save. Clients see it once our team approves it.</Note>
+              ) : shownOwn ? (
+                <>
+                  <ImageApprovalNote state={shownOwn} className="mt-1.5" />
+                  {shownOwn.status === "pending" && editable && (
+                    <button type="button" onClick={() => void withdrawImage()} disabled={busy} className="tap" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi, minHeight: 32 }}>
+                      Remove this image
+                    </button>
+                  )}
+                </>
+              ) : (
+                <Note mt={6}>JPEG, PNG or WebP, up to 5 MB. Our team approves it before clients see it.</Note>
+              )}
+              <div style={{ height: 12 }} />
+              <TextBox id="lesson-caption" label="Caption (optional)" value={body} onChange={setBody} rows={3} maxLength={LIMITS.body.max} disabled={!editable} />
+              <Note mt={6}>{FORMATTING_HELP}</Note>
+              {minutesField("Viewing time")}
+            </>
+          )}
+          {kind === "check_in" && (
+            <>
+              <div style={{ height: 12 }} />
+              <TextBox
+                id="lesson-prompt"
+                label="Question for your clients"
+                value={body}
+                onChange={setBody}
+                rows={4}
+                maxLength={LIMITS.body.max}
+                disabled={!editable}
+                placeholder="How did this week's sessions feel?"
+              />
+              <Note mt={6}>
+                Each client writes an answer of up to {CHECK_IN_ANSWER_MAX.toLocaleString("en-US")} characters. Only you see the answers, under Check-in answers on the course's stats.
+              </Note>
+              {minutesField("Time to answer")}
             </>
           )}
           {kind === "video" && (

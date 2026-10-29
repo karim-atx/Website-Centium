@@ -70,6 +70,7 @@ import {
   SWAP_REASON_MAX,
   targetLine,
 } from "../../services/workout/coachLogic";
+import { setTargetText } from "../../services/workout/setTargets";
 
 // Set-type colours (one definition, shared with WO10): see setTypeStyle.ts.
 // Super set (exercise level only) = soft coral: bracket #DB885D, badge
@@ -856,11 +857,15 @@ export const WorkoutSessionSheet: React.FC<{
                     target={
                       coachId && setIdx < offered
                         ? (() => {
-                            const text = targetLine(meta, setIdx, resolvedKg[meta.id]);
+                            // Round D (TR11): a set with its own target RPE shows it on the
+                            // quiet line below, so the target line leaves the exercise's out.
+                            const own = meta.setTargets?.[setIdx]?.rpe != null ? { ...meta, rpe: undefined } : meta;
+                            const text = targetLine(own, setIdx, resolvedKg[meta.id]);
                             return text ? { text, off: loggedOffText(meta, s, resolvedKg[meta.id]) } : undefined;
                           })()
                         : undefined
                     }
+                    setTarget={setIdx < offered ? setTargetText(meta.setTargets?.[setIdx]) ?? undefined : undefined}
                     offColor={coachLoggerColor(hc ? "offHc" : "off", dark)}
                     targetColor={coachLoggerColor("target", dark)}
                   />
@@ -1328,10 +1333,14 @@ export const WorkoutSessionSheet: React.FC<{
         target={(() => {
           const meta = setOptionsTarget ? template.exercises[setOptionsTarget.exIdx] : undefined;
           if (!coachId || !meta || !setOptionsTarget) return undefined;
-          const text = optionsTargetText(coachName, meta, setOptionsTarget.setIdx, resolvedKg[meta.id]);
+          // Round D (TR11): the set's own target RPE and note come first.
+          const own = meta.setTargets?.[setOptionsTarget.setIdx] ?? null;
+          const withRpe = own?.rpe != null ? { ...meta, rpe: own.rpe } : meta;
+          const base = optionsTargetText(coachName, withRpe, setOptionsTarget.setIdx, resolvedKg[meta.id]);
+          const text = [base, own?.note].filter(Boolean).join(" · ");
           if (!text) return undefined;
           const normal = (meta.setTypes?.[setOptionsTarget.setIdx] ?? "normal") === "normal";
-          return { text, rpe: normal ? meta.rpe : undefined, coachName: coachWho };
+          return { text, rpe: own?.rpe ?? (normal ? meta.rpe : undefined), coachName: coachWho };
         })()}
         onSave={(result) => {
           if (!setOptionsTarget) return;
@@ -1517,9 +1526,11 @@ const SetRow: React.FC<{
   onOptions: () => void;
   /** CU1 v5: the coach's target under the set, and what was logged off it. */
   target?: { text: string; off: string | null };
+  /** Round D (TR11): the coach's target RPE and note for this set ("RPE 8 · keep the back flat"). */
+  setTarget?: string;
   targetColor?: string;
   offColor?: string;
-}> = ({ rowRef, set: s, number, separator, family, shades, weightPlaceholder, repsPlaceholder, justTicked, tickKey, needsReps, onChange, onType, onCheck, onOptions, target, targetColor, offColor }) => {
+}> = ({ rowRef, set: s, number, separator, family, shades, weightPlaceholder, repsPlaceholder, justTicked, tickKey, needsReps, onChange, onType, onCheck, onOptions, target, setTarget, targetColor, offColor }) => {
   const dark = useIsDark();
   const kind = setKind(s);
   const t = kind === "normal" ? null : typeStyles(dark)[kind];
@@ -1645,6 +1656,12 @@ const SetRow: React.FC<{
         >
           {target.text}
           {target.off ? ` · logged ${target.off}` : ""}
+        </p>
+      )}
+      {setTarget && (
+        // Round D (TR11): quiet, in the target line's own size and ink.
+        <p className="basis-full" style={{ margin: "1px 0 1px 58px", fontSize: textPx(10.5), lineHeight: linePx(14), fontWeight: 500, color: targetColor }}>
+          {setTarget}
         </p>
       )}
       {needsReps && (

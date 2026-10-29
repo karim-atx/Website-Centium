@@ -1,12 +1,20 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Search } from "lucide-react";
 import { MessagesHeader } from "./MessagesHeader";
 import { type PickableClient } from "./ClientPicker";
-import { createGroup, GROUP_NAME_MAX, inviteToGroup } from "../../services/messaging/groups";
+import {
+  createGroup,
+  GROUP_DESCRIPTION_MAX,
+  GROUP_NAME_MAX,
+  GROUP_PHOTO_ACCEPT,
+  inviteToGroup,
+  setGroupDescription,
+  submitGroupPhoto,
+} from "../../services/messaging/groups";
+import { useApp } from "../../context/AppContext";
 import { PinnedCta } from "../ui/PinnedCta";
 import { INK } from "../pro/proInk";
 import { Avatar } from "../pro/client/kit";
-import { ComingSoonPill } from "../pro/ComingSoon";
 import { textPx } from "../../theme/textSize";
 
 /**
@@ -22,8 +30,11 @@ import { textPx } from "../../theme/textSize";
  * over GroupPicker; the hired-clients line (12 text.soft); the pinned CTA
  * "Create and invite {n} clients". The title row stays the shared Messages
  * header (one title size for pages reached from More, X-12).
- * message_threads has no photo or description column (backend gap), so both
- * show Coming soon and nothing is sent for them.
+ * Round D (Database 20261223040000): the photo and the description are sent
+ * once the group exists. The photo waits for approval (submit_image
+ * 'group_photo'); the description is checked by the word lists. Either one
+ * refused is named on the "Group created" screen; the group exists anyway and
+ * both can be set again in Group info.
  *
  * Invitations go one person at a time, so somebody the database refuses (under
  * 18, no longer a client) is named and the rest still go.
@@ -39,7 +50,20 @@ export const NewGroup: React.FC<{
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refused, setRefused] = useState<{ name: string; reason: string }[] | null>(null);
+  const [notSaved, setNotSaved] = useState<{ name: string; reason: string }[]>([]);
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const { authUserId } = useApp();
+  const [desc, setDesc] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  // The picked photo, shown before anything is sent; its object URL is let go when it changes.
+  const preview = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo]);
+  useEffect(
+    () => () => {
+      if (preview) URL.revokeObjectURL(preview);
+    },
+    [preview]
+  );
 
   const trimmed = name.trim();
   const toggle = (id: string) =>
@@ -62,10 +86,20 @@ export const NewGroup: React.FC<{
     }
     const people = clients.filter((c) => picked.has(c.userId)).map((c) => ({ userId: c.userId, name: c.name }));
     const result = people.length > 0 ? await inviteToGroup(made.threadId, people) : { sent: 0, refused: [] };
+    const missed: { name: string; reason: string }[] = [];
+    if (desc.trim()) {
+      const d = await setGroupDescription(made.threadId, desc);
+      if (!d.ok) missed.push({ name: "Description", reason: d.message });
+    }
+    if (photo && authUserId) {
+      const p = await submitGroupPhoto(authUserId, made.threadId, photo);
+      if (!p.ok) missed.push({ name: "Group photo", reason: p.message });
+    }
     setBusy(false);
-    if (result.refused.length > 0) {
-      // Show who was not invited before moving on; the group exists either way.
+    if (result.refused.length > 0 || missed.length > 0) {
+      // Show what didn't go before moving on; the group exists either way.
       setRefused(result.refused);
+      setNotSaved(missed);
       setCreatedId(made.threadId);
       return;
     }
@@ -79,15 +113,18 @@ export const NewGroup: React.FC<{
     return (
       <div className="flex flex-col" style={{ gap: 14, paddingBottom: 172 }}>
         <Header title="Group created" onBack={() => onCreated(createdId)} />
-        <p style={{ fontSize: textPx(14), color: INK.ch }}>These people weren't invited. Everyone else has an invitation.</p>
-        <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "2px 12px" }}>
-          {refused.map((r, i) => (
-            <div key={i} style={{ padding: "9px 0", borderTop: i ? `1px solid ${INK.b06}` : undefined }}>
-              <p style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{r.name}</p>
-              <p style={{ fontSize: textPx(11.5), color: INK.chF }}>{r.reason}</p>
-            </div>
-          ))}
-        </div>
+        {refused.length > 0 && (
+          <>
+            <p style={{ fontSize: textPx(14), color: INK.ch }}>These people weren't invited. Everyone else has an invitation.</p>
+            <ReasonList rows={refused} />
+          </>
+        )}
+        {notSaved.length > 0 && (
+          <>
+            <p style={{ fontSize: textPx(14), color: INK.ch }}>These weren't saved. You can add them again in Group info.</p>
+            <ReasonList rows={notSaved} />
+          </>
+        )}
         <PinnedCta primary={{ label: "Open the group", onClick: () => onCreated(createdId) }} />
       </div>
     );
@@ -100,25 +137,49 @@ export const NewGroup: React.FC<{
         Each person you pick gets an invitation and joins only if they accept. Members see each other's first names and messages in the group, never health data or other chats.
       </div>
       <div className="flex items-center" style={{ gap: 14, marginBottom: 14 }}>
-        <span className="flex flex-col items-center shrink-0" style={{ gap: 4 }} role="img" aria-label="Group photo, coming soon">
-          <GroupPhoto size={64} />
-          <ComingSoonPill />
+        <span className="flex flex-col items-center shrink-0" style={{ gap: 4 }}>
+          <button type="button" onClick={() => fileRef.current?.click()} aria-label={photo ? "Change the group photo" : "Add a group photo"} className="tap rounded-full">
+            {preview ? (
+              <span className="flex rounded-full overflow-hidden" style={{ width: 64, height: 64, border: `1px solid ${INK.b10}` }}>
+                <img src={preview} alt="" className="w-full h-full object-cover" />
+              </span>
+            ) : (
+              <GroupPhoto size={64} />
+            )}
+          </button>
+          <button type="button" onClick={() => (photo ? setPhoto(null) : fileRef.current?.click())} className="tap" style={{ minHeight: 24, fontSize: textPx(11.5), fontWeight: 700, color: photo ? INK.chS : INK.prDeep }}>
+            {photo ? "Remove" : "Add photo"}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept={GROUP_PHOTO_ACCEPT}
+            className="hidden"
+            aria-hidden
+            tabIndex={-1}
+            onChange={(e) => {
+              setPhoto(e.target.files?.[0] ?? null);
+              e.target.value = "";
+            }}
+          />
         </span>
         <div className="flex-1 min-w-0">
           <FieldLabel htmlFor="gname">Group name</FieldLabel>
           <input id="gname" value={name} maxLength={GROUP_NAME_MAX} onChange={(e) => setName(e.target.value)} placeholder="e.g. Spring Strength Group" style={FIELD} className="focus:outline-none focus:ring-2 focus:ring-primary/20" />
         </div>
       </div>
-      <div className="flex items-center justify-between" style={{ gap: 8, marginBottom: 6 }}>
-        <FieldLabel htmlFor="gdesc" bare>
-          Description (optional)
-        </FieldLabel>
-        <ComingSoonPill />
-      </div>
-      <input id="gdesc" disabled aria-describedby="gdesc-soon" style={{ ...FIELD, opacity: 0.6 }} />
-      <span id="gdesc-soon" className="sr-only">
-        Coming soon
-      </span>
+      <FieldLabel htmlFor="gdesc">Description (optional)</FieldLabel>
+      <textarea
+        id="gdesc"
+        value={desc}
+        rows={2}
+        maxLength={GROUP_DESCRIPTION_MAX}
+        onChange={(e) => setDesc(e.target.value)}
+        placeholder="What the group is for"
+        className="w-full rounded-[12px] px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-charcoal-faint"
+        style={{ fontSize: textPx(14), background: INK.soft, border: `1px solid ${INK.b10}`, color: INK.ch }}
+      />
+      {photo && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 6 }}>Members see the photo once our team approves it.</p>}
       <p style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.chS, margin: "14px 0 6px" }}>Invite · {clientsWord(n)}</p>
       <GroupPicker clients={clients} selected={picked} onToggle={toggle} />
       <p style={{ fontSize: textPx(12), color: INK.chS, marginTop: 6 }}>Only your hired clients can be invited. Accounts under 18 can't join groups.</p>
@@ -131,6 +192,18 @@ export const NewGroup: React.FC<{
     </div>
   );
 };
+
+/** What didn't go through after creating the group: a name and the reason, in the roster card's look. */
+const ReasonList: React.FC<{ rows: { name: string; reason: string }[] }> = ({ rows }) => (
+  <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "2px 12px" }}>
+    {rows.map((r, i) => (
+      <div key={i} style={{ padding: "9px 0", borderTop: i ? `1px solid ${INK.b06}` : undefined }}>
+        <p style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{r.name}</p>
+        <p style={{ fontSize: textPx(11.5), color: INK.chF }}>{r.reason}</p>
+      </div>
+    ))}
+  </div>
+);
 
 /** v6 MO1.7 K12: the Messages title row (#2-#4) on New group and the broadcast editor. */
 export const Header: React.FC<{ title: string; onBack: () => void; className?: string }> = ({ title, onBack, className }) => (

@@ -95,7 +95,7 @@ export function lessonEyebrow(weekIndex: number, kindLabel: string, minutes: num
 
 /** "Video · 6 min", "Quiz · 4 questions", "PDF" (the Structure rows' meta). */
 export function lessonMeta(kind: string, minutes: number | null, questions?: number): string {
-  const label = kind === "video" ? "Video" : kind === "reading" ? "Reading" : kind === "pdf" ? "PDF" : "Quiz";
+  const label = kind === "video" ? "Video" : kind === "reading" ? "Reading" : kind === "pdf" ? "PDF" : kind === "image" ? "Image" : kind === "check_in" ? "Check-in" : "Quiz";
   if (kind === "quiz") return questions === undefined ? label : `${label} · ${plural(questions, "question", "questions")}`;
   return minutes ? `${label} · ${minutes} min` : label;
 }

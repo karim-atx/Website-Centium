@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronDown, ChevronUp, ClipboardList, Ellipsis, FileDown, FileText, ListChecks, PlayCircle, Plus, Trash2, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, ClipboardCheck, ClipboardList, Ellipsis, FileDown, FileText, Image as ImageIcon, ListChecks, PlayCircle, Plus, Trash2, type LucideIcon } from "lucide-react";
 import {
   removeLesson,
   removeModule,
@@ -19,7 +19,7 @@ import { INK } from "../proInk";
 import { Field, Note } from "./courseUi";
 import { lessonMeta } from "./courseModel";
 
-const KIND_ICON: Record<string, LucideIcon> = { video: PlayCircle, reading: FileText, pdf: FileDown, quiz: ListChecks, check: ClipboardList };
+const KIND_ICON: Record<string, LucideIcon> = { video: PlayCircle, reading: FileText, pdf: FileDown, quiz: ListChecks, check: ClipboardList, image: ImageIcon, check_in: ClipboardCheck };
 
 type Run = (fn: () => Promise<{ ok: boolean; message?: string }>) => Promise<boolean>;
 

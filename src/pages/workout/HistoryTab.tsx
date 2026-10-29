@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
+import { useWorkoutReplies } from "./useWorkoutReplies";
+import { replyHeading, type WorkoutLogReply } from "../../services/workout/logReplyLogic";
+import { notifWhen } from "../../services/notifications/notificationsModel";
 import { formatCompactDuration } from "../../services/workout";
 import { CalendarPickerSheet } from "../../components/dashboard/CalendarPickerSheet";
 import { HeroCard } from "../../components/ui/HeroCard";
@@ -118,6 +122,26 @@ export default function HistoryTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [workoutSessions, range.from, range.to]
   );
+  // Round D · TR22 (D-S5): the coaches' replies, under "Sent to {pro}".
+  const replies = useWorkoutReplies(
+    listed.map((s) => s.id),
+    coachNames
+  );
+  // The workout_log_reply notice links here with ?session=<id>: show every
+  // period, open that session and bring it into view.
+  const [params] = useSearchParams();
+  const focusId = params.get("session");
+  const focused = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusId || focused.current === focusId || !workoutSessions.some((s) => s.id === focusId)) return;
+    focused.current = focusId;
+    setPeriod("all");
+    setExpandedId(focusId);
+    const t = window.setTimeout(() => document.getElementById(`session-${focusId}`)?.scrollIntoView({ block: "center", behavior: "smooth" }), 80);
+    return () => window.clearTimeout(t);
+    // Once per link, when the session is in the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId, workoutSessions.length]);
   const summary = historySummary(listed);
   const phrase = comparisonPhrase(summary.volumeKg);
   const sessionDays = useMemo(() => new Set(workoutSessions.map((s) => s.date)), [workoutSessions]);
@@ -256,6 +280,7 @@ export default function HistoryTab() {
               session={s}
               family={familyOf(s)}
               sentLine={sentLineOf(s)}
+              replies={replies[s.id]}
               expanded={expandedId === s.id}
               onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)}
               onChangeDate={() => setMoving(s)}
@@ -380,7 +405,9 @@ const SessionCard: React.FC<{
   onShare?: () => void;
   /** CU1 v4: "Sent to Alex · 1 swap" when the session went to a coach. */
   sentLine?: string | null;
-}> = ({ session, family: baseFamily, expanded, onToggle, onChangeDate, onDelete, onShare, sentLine: sentText }) => {
+  /** Round D · TR22 (D-S5): the coaches' replies, oldest first. */
+  replies?: WorkoutLogReply[];
+}> = ({ session, family: baseFamily, expanded, onToggle, onChangeDate, onDelete, onShare, sentLine: sentText, replies }) => {
   const [showAll, setShowAll] = useState(false);
   // Mobile v5.1 R3: the folder's row tint and header shade for the current
   // mode (dark: hue tints on the dark card; headInk then picks white).
@@ -401,7 +428,7 @@ const SessionCard: React.FC<{
         { key: "delete", label: "Delete", icon: <Trash2 size={16} />, onClick: onDelete, destructive: true },
       ]}
     >
-      <div className="overflow-hidden" style={{ borderRadius: 14, background: family.row }}>
+      <div id={`session-${session.id}`} className="overflow-hidden" style={{ borderRadius: 14, background: family.row }}>
         <div className="flex" style={{ minHeight: 63 }}>
           <button
             onClick={onChangeDate}
@@ -444,6 +471,30 @@ const SessionCard: React.FC<{
             )}
           </button>
         </div>
+
+        {replies && replies.length > 0 && (
+          // Round D · TR22 (D-S5): "Reply from {pro}" under "Sent to {pro}",
+          // in the received message bubble; two lines until the card opens.
+          <div className="flex flex-col" style={{ gap: 6, padding: "0 14px 11px 71px" }}>
+            {replies.map((r) => (
+              <div
+                key={r.id}
+                className="self-start max-w-full rounded-[20px_20px_20px_4px] bg-cream-card border border-charcoal/[0.08] text-charcoal"
+                style={{ padding: "8px 12px" }}
+              >
+                <p style={{ margin: 0, fontSize: textPx(11.5), lineHeight: linePx(15), fontWeight: 700, color: "rgb(var(--c-primary-deep-text))" }}>
+                  {`${replyHeading(r.firstName)} · ${notifWhen(r.createdAt)}`}
+                </p>
+                <p
+                  className={expanded ? "whitespace-pre-wrap break-words" : "line-clamp-2 break-words"}
+                  style={{ margin: "2px 0 0", fontSize: textPx(13.5), lineHeight: 1.4 }}
+                >
+                  {r.body}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {expanded && (
           <div style={{ borderTop: "1px solid rgb(var(--c-charcoal) / 0.07)", padding: "5px 24px 11px 14px" }}>

@@ -5,6 +5,8 @@ import { GraduationCap, Plus, Star, Users } from "lucide-react";
 import { fetchCourseCards, type CourseCard } from "../../../services/pro/courses";
 import { fetchCourseCategories, type CourseCategory } from "../../../services/courses";
 import { formatPrice } from "../../../services/courses/rules";
+import { completeLine } from "../../../services/courses/authorRules";
+import { coverUrl, fetchAuthorSummaries, fetchCourseExtras, type AuthorSummary, type CourseExtras } from "../../../services/courses/extras";
 import { useBack } from "../../../hooks/useBack";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
@@ -32,17 +34,15 @@ import { CourseStats } from "../../pro/courses/CourseStats";
  *   edge on the left and the price tag (11 / 800, r8, pad 3 8, right 10 top
  *   10); body pad 12 14 13; title 15 / 800 line 1.3; size line 12
  *   text.faint m-top 3; meta 12 text.soft, gap 12, m-top 10;
- * - Published: enrolled (users 13) and the rating (star 12 #D9A441, bold).
- *   "{n}% complete" and its bar have no reader for authors (course_enrolments
- *   and course_lesson_progress are learner-only), so they are not drawn;
+ * - Published: enrolled (users 13) and the rating (star 12 #D9A441, bold);
+ *   Round D: "{n}% complete" and its bar (course_author_summaries);
  * - Drafts: a 6 pt dot (gold In review, text.tertiary Draft) and "Submitted
  *   {date}"; a sent-back course shows the reviewer's reason;
- * - Archived: "{n} took it" and the note. "Unpublished {date}" has no reader
- *   (unpublished_at is outside the column grant);
+ * - Archived: "{n} took it", Round D "Unpublished {date}", and the note;
  * - empty: EmptyState graduation-cap + "Create a course" (secondary, sm);
  * - "+" (fab10): 56, 20 from the right, 104 up, "Create course".
- * The cover is the course's own colour (no cover photos yet: no column or
- * bucket), never the frame's stripes.
+ * The cover is the approved cover image (Round D, course-covers) over the
+ * course's own colour, never the frame's stripes.
  *
  * ONLY A PROFESSIONAL GETS THE AUTHOR SIDE (Community gates it); create_course
  * then refuses anyone without a verified licence (ATX66), and the sheet says so.
@@ -62,16 +62,20 @@ export function MyCourses({ userId, canAuthor, openCourseId }: { userId: string;
   const [failed, setFailed] = useState<{ offline: boolean } | null>(null);
   const [creating, setCreating] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [summaries, setSummaries] = useState<Map<string, AuthorSummary>>(() => new Map());
+  const [extras, setExtras] = useState<Map<string, CourseExtras>>(() => new Map());
 
   const load = useCallback(async () => {
-    const [r, cats] = await Promise.all([fetchCourseCards(userId), fetchCourseCategories()]);
+    const [r, cats, sums] = await Promise.all([fetchCourseCards(userId), fetchCourseCategories(), fetchAuthorSummaries()]);
     if (cats.ok) setCategories(cats.value);
+    setSummaries(sums);
     if (!r.ok) {
       setFailed({ offline: r.offline });
       return;
     }
     setFailed(null);
     setCards(r.data);
+    setExtras(await fetchCourseExtras(r.data.map((c) => c.id)));
   }, [userId]);
 
   useEffect(() => {
@@ -134,7 +138,7 @@ export function MyCourses({ userId, canAuthor, openCourseId }: { userId: string;
         <>
           {shown.length === 0 && <EmptyState icon={GraduationCap} title={`No ${tab.toLowerCase()} courses`} />}
           {shown.map((c) => (
-            <CourseCardView key={c.id} card={c} onOpen={() => openCard(c)} />
+            <CourseCardView key={c.id} card={c} summary={summaries.get(c.id) ?? null} cover={coverUrl(extras.get(c.id)?.coverPath)} onOpen={() => openCard(c)} />
           ))}
           {tab === "Archived" && shown.length > 0 && (
             <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5 }}>Archived courses are hidden from new clients. Anyone enrolled keeps access.</p>
@@ -175,7 +179,7 @@ export function MyCourses({ userId, canAuthor, openCourseId }: { userId: string;
   );
 }
 
-function CourseCardView({ card: c, onOpen }: { card: CourseCard; onOpen: () => void }) {
+function CourseCardView({ card: c, summary, cover, onOpen }: { card: CourseCard; summary: AuthorSummary | null; cover: string | null; onOpen: () => void }) {
   const dark = useIsDark();
   const tab = tabOf(c.status);
   const pub = tab === "Published";
@@ -188,7 +192,8 @@ function CourseCardView({ card: c, onOpen }: { card: CourseCard; onOpen: () => v
       style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, marginBottom: 10 }}
       aria-label={`${c.title}, ${pub ? "published" : statusLabel(c.status).toLowerCase()}`}
     >
-      <div className="relative" style={{ height: 96, background: coverBackground(c.coverColour, dark) }}>
+      <div className="relative overflow-hidden" style={{ height: 96, background: coverBackground(c.coverColour, dark) }}>
+        {cover && <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" />}
         <span aria-hidden className="absolute" style={{ left: 0, top: 0, bottom: 0, width: 6, background: tab === "Archived" ? INK.chF : tab === "Drafts" ? dot : INK.prAccent }} />
         <span className="absolute" style={{ right: 10, top: 10, fontSize: textPx(11), fontWeight: 800, borderRadius: 8, padding: "3px 8px", background: INK.card, color: INK.ch }}>
           {formatPrice(c.priceCents)}
@@ -215,6 +220,7 @@ function CourseCardView({ card: c, onOpen }: { card: CourseCard; onOpen: () => v
             <span className="inline-flex items-center" style={{ gap: 5 }}>
               <span aria-hidden style={{ width: 6, height: 6, borderRadius: 9999, background: INK.chF }} />
               {c.enrolled} took it
+              {summary?.unpublishedAt && <span style={{ color: INK.chF, marginLeft: 7 }}>Unpublished {fmtDay(summary.unpublishedAt)}</span>}
             </span>
           ) : (
             <>
@@ -226,6 +232,14 @@ function CourseCardView({ card: c, onOpen }: { card: CourseCard; onOpen: () => v
             </>
           )}
         </div>
+        {pub && summary && completeLine(summary.completionPct) && (
+          <div style={{ marginTop: 8 }}>
+            <p style={{ fontSize: textPx(12), color: INK.chS }}>{completeLine(summary.completionPct)}</p>
+            <span className="block" style={{ height: 6, borderRadius: 9999, background: INK.soft, overflow: "hidden", marginTop: 4 }}>
+              <span className="block h-full" style={{ width: `${summary.completionPct ?? 0}%`, background: INK.prDeep }} />
+            </span>
+          </div>
+        )}
         {c.status === "changes_requested" && c.reviewReason && (
           <p style={{ marginTop: 8, fontSize: textPx(12), color: INK.goldInk, lineHeight: 1.45, overflowWrap: "anywhere" }}>{c.reviewReason}</p>
         )}

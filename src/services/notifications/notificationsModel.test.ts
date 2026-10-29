@@ -139,18 +139,19 @@ test("targets: the documented subject per client kind; other kinds open nothing 
   assert.equal(clientNotificationTarget({ kind: "x", subjectType: "offer", subjectId: O }), null);
 });
 
-test("kinds: the enum in order; the client's are a member's eleven, never an owner's or a professional's own", () => {
-  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 25);
+test("kinds: the enum in order; the client's are a member's thirteen, never an owner's or a professional's own", () => {
+  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 27);
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(0, 4), [...RELEASE1_KINDS]);
   // Release B appends the ambassador decision (20261217000000), to the applicant.
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(18, 20), ["ambassador_application_approved", "ambassador_application_declined"]);
   // Round C Release 1 appends the nickname reset (20261220000000), to the member.
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(20, 24), ["forum_nickname_reset", "support_resources", "image_approved", "image_rejected"]);
-  // Round D · PR 1 appends the catalogue decision on a suggested food (20261222000000).
-  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(24), ["food_submission_reviewed"]);
+  // Round D · PR 1 appends the catalogue decision on a suggested food (20261222000000);
+  // PR 2 a professional's reply to a logged workout, then a course published for the member.
+  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(24), ["food_submission_reviewed", "workout_log_reply", "course_published"]);
   assert.deepEqual([...CLIENT_KINDS], [
     "voucher_issued", "points_expiring", "class_cancelled", "review_prompt", "ambassador_application_approved", "ambassador_application_declined",
-    "forum_nickname_reset", "support_resources", "image_approved", "image_rejected", "food_submission_reviewed",
+    "forum_nickname_reset", "support_resources", "image_approved", "image_rejected", "food_submission_reviewed", "workout_log_reply", "course_published",
   ]);
   for (const k of CLIENT_KINDS) assert.ok((MEMBER_NOTIFICATION_KINDS as readonly string[]).includes(k), k);
   const notMine = [
@@ -500,4 +501,16 @@ test("Round D · DP: a suggested food's decision reads with its name and reason,
   assert.equal(c({ status: "rejected", name: "Kibbeh", reason_category: "duplicate" }).body, "Kibbeh wasn't added. The catalogue already has it. It's still in your own foods.");
   assert.equal(clientNotificationTarget({ kind: "food_submission_reviewed", subjectType: "food_submission", subjectId: null }), "/app/food?tab=prep&sub=foods");
   assert.deepEqual(notifLook("food_submission_reviewed"), { tone: "teal", glyph: "leaf" });
+});
+
+test("Round D: course_published names the author and the course, and opens the course", () => {
+  const C = "11111111-2222-4333-8444-555555555555";
+  const c = (payload?: Record<string, unknown>) => notificationCopy({ titleKey: "course_published", kind: "course_published", payload });
+  assert.deepEqual(c({ course_id: C, title: "Strong knees", author_first_name: "Rana" }), { title: "Rana published a course for you", body: "Strong knees is ready to start." });
+  assert.deepEqual(c({ title: "Strong knees" }), { title: CLIENT_COPY.course_published.title, body: "Strong knees is ready to start." });
+  assert.equal(c({}), CLIENT_COPY.course_published);
+  assert.equal(clientNotificationTarget({ kind: "course_published", subjectType: "course", subjectId: null, payload: { course_id: C } }), `/app/forum/courses/${C}`);
+  assert.equal(clientNotificationTarget({ kind: "course_published", subjectType: "course", subjectId: C }), `/app/forum/courses/${C}`);
+  assert.equal(clientNotificationTarget({ kind: "course_published", subjectType: "course", subjectId: null, payload: { course_id: "../x" } }), "/app/forum?tab=courses");
+  assert.deepEqual(notifLook("course_published"), { tone: "lav", glyph: "app" });
 });

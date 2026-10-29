@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Check, Copy, Search, Send, Share } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { suggestCourse, type CourseCard } from "../../../services/pro/courses";
+import { fetchEnrolledClients } from "../../../services/courses/extras";
 import { textPx } from "../../../theme/textSize";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { CtaButton } from "../../ui/PinnedCta";
@@ -23,8 +24,8 @@ const courseUrl = (id: string) => siteHref(`/app/forum/courses/${id}`);
  * - footer Share (secondary, the device's share sheet or copy) and "Send to
  *   {n} clients": each client gets a course recommendation card in their
  *   chat (start_message_thread, send_recommendation 'course').
- * Whether a client is already enrolled has no reader for the author, so the
- * frame's "Already enrolled · In the group" row is not drawn.
+ * Round D (course_enrolled_clients): a client already enrolled shows
+ * "Already enrolled" under their name (11.5 text.faint) and isn't offered.
  */
 export const ShareCourseSheet: React.FC<{ course: CourseCard; onClose: () => void; onSent: (n: number) => void }> = ({ course, onClose, onSent }) => {
   const { professionalClients } = useApp();
@@ -33,7 +34,15 @@ export const ShareCourseSheet: React.FC<{ course: CourseCard; onClose: () => voi
   const [picked, setPicked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [enrolled, setEnrolled] = useState<Set<string>>(() => new Set());
   const url = courseUrl(course.id);
+  useEffect(() => {
+    let live = true;
+    void fetchEnrolledClients(course.id).then((s) => live && setEnrolled(s));
+    return () => {
+      live = false;
+    };
+  }, [course.id]);
 
   const roster = useMemo(
     () => professionalClients.filter((c) => !!c.clientId).filter((c) => c.name.toLowerCase().includes(query.trim().toLowerCase())),
@@ -112,23 +121,30 @@ export const ShareCourseSheet: React.FC<{ course: CourseCard; onClose: () => voi
         <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "2px 12px" }} role="group" aria-label="Your clients">
           {roster.map((c, i) => {
             const on = picked.includes(c.clientId!);
+            const already = enrolled.has(c.clientId!);
             return (
               <button
                 key={c.id}
                 type="button"
                 role="checkbox"
                 aria-checked={on}
+                disabled={already}
                 onClick={() => setPicked((p) => (on ? p.filter((x) => x !== c.clientId) : [...p, c.clientId!]))}
-                className="tap w-full flex items-center text-left"
+                className="tap w-full flex items-center text-left disabled:cursor-default"
                 style={{ gap: 12, padding: "9px 0", borderTop: i ? `1px solid ${INK.b06}` : undefined }}
               >
                 <Avatar name={c.name} url={c.avatarUrl} size={36} />
-                <span className="flex-1 min-w-0" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
-                  {c.name}
+                <span className="flex-1 min-w-0">
+                  <span className="block" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
+                    {c.name}
+                  </span>
+                  {already && <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>Already enrolled</span>}
                 </span>
-                <span className="flex items-center justify-center shrink-0" style={{ width: 22, height: 22, borderRadius: 7, border: `2px solid ${on ? INK.prDeep : "rgb(var(--c-charcoal) / 0.11)"}`, background: on ? INK.prDeep : "transparent" }}>
-                  {on && <Check size={13} strokeWidth={3} aria-hidden style={{ color: INK.card }} />}
-                </span>
+                {!already && (
+                  <span className="flex items-center justify-center shrink-0" style={{ width: 22, height: 22, borderRadius: 7, border: `2px solid ${on ? INK.prDeep : "rgb(var(--c-charcoal) / 0.11)"}`, background: on ? INK.prDeep : "transparent" }}>
+                    {on && <Check size={13} strokeWidth={3} aria-hidden style={{ color: INK.card }} />}
+                  </span>
+                )}
               </button>
             );
           })}

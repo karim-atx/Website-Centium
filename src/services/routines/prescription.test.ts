@@ -37,6 +37,7 @@ const row: PrescriptionRow = {
   cardio_avg_heart_rate: 140,
   coach_note: "Pause at the bottom of each rep.",
   set_types: ["warmup", "normal", null, "pr", "dropset"],
+  set_targets: [null, { rpe: 8, note: "keep the back flat" }],
   exercises: {
     id: "33333333-3333-4333-8333-333333333333",
     name: "Bench Press",
@@ -52,6 +53,7 @@ const columns = PRESCRIPTION_COLUMNS.split(",").map((c) => c.trim());
 test("the read selects coach_note and set_types", () => {
   assert.ok(columns.includes("coach_note"));
   assert.ok(columns.includes("set_types"));
+  assert.ok(columns.includes("set_targets"));
 });
 
 test("every column the routine reads is written back unchanged by a save", () => {
@@ -82,16 +84,18 @@ test("a coach-assigned routine keeps the coach's note and set types through a cl
   const written = prescriptionOf(edited, { exercise_id: ex.exerciseId!, custom_exercise_id: null }, "r", 0, null);
   assert.equal(written.coach_note, "Pause at the bottom of each rep.");
   assert.deepEqual(written.set_types, ["warmup", "normal", null, "pr", "dropset"]);
+  assert.deepEqual(written.set_targets, [null, { rpe: 8, note: "keep the back flat" }]);
   assert.equal(written.reps, 10);
 });
 
 test("a routine with no coach data writes null for both, as before", () => {
-  const ex = toExercise({ ...row, coach_note: null, set_types: null })!;
+  const ex = toExercise({ ...row, coach_note: null, set_types: null, set_targets: null })!;
   assert.equal(ex.coachNote, undefined);
   assert.equal(ex.setTypes, undefined);
   const written = prescriptionOf(ex, { exercise_id: ex.exerciseId!, custom_exercise_id: null }, "r", 0, null);
   assert.equal(written.coach_note, null);
   assert.equal(written.set_types, null);
+  assert.equal(written.set_targets, null);
 });
 
 test("Duplicate keeps the prescribed set types but not the coach's exercise note", () => {

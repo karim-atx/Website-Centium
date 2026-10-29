@@ -17,6 +17,7 @@ import { ProCardSkeleton, ProError } from "../states";
 import { Card, Chip, ListCard, SectionHead, SoftLine, type ListRow, type Tone } from "./kit";
 import { fmtDay } from "./clientFormat";
 import type { ClientPageData } from "./useClientPage";
+import { ClientWeekProgrammes } from "../programmes/ClientWeekProgrammes";
 import type { ProLane } from "../subtypeLanes";
 import { PRO_ROUTES } from "../subtypeLanes";
 import {
@@ -151,6 +152,9 @@ const ProgrammeSection: React.FC<{ data: ClientPageData; programmes: { list: Cli
           </div>
         </Card>
       )}
+
+      {/* Round D · DT1: week-by-day programmes (components/pro/programmes). */}
+      <ClientWeekProgrammes clientId={clientId} today={today} />
 
       <SectionHead label="This week" />
       {!shares ? (

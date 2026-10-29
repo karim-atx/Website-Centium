@@ -858,10 +858,21 @@ export interface Exercise {
    * "normal", "warmup", "pr", "dropset" or null). Absent = every set normal.
    */
   setTypes?: (PrescribedSetType | null)[];
+  /**
+   * Round D (TR11): the professional's target RPE and note per set, index =
+   * set number - 1 (set_targets jsonb, beside set_types). Absent = none.
+   */
+  setTargets?: (SetTarget | null)[];
 }
 
 /** A set type a coach can prescribe (set_types_valid's accepted values). */
 export type PrescribedSetType = "normal" | "warmup" | "pr" | "dropset";
+
+/** Round D (TR11): one set's target (set_targets_valid: rpe 1–10 in halves, note ≤ 200). */
+export interface SetTarget {
+  rpe?: number;
+  note?: string;
+}
 
 // V4 (QA 4.0): a custom exercise, saved to the searchable library on
 // creation — it's only added to a routine when a user explicitly taps it,

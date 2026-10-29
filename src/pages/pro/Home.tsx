@@ -385,6 +385,14 @@ export default function Home() {
         setHubOpen(false);
         navigate(`${PRO_ROUTES.more}/reviews`);
         return;
+      case "workout_session":
+        // Round D (TR22): "finished a workout" opens the log, with Reply and Mark as reviewed.
+        if (n.subjectId) {
+          setHubOpen(false);
+          navigate(`${PRO_ROUTES.library}/programmes?view=log&id=${encodeURIComponent(n.subjectId)}`);
+          return;
+        }
+        break;
       case "ambassador_application":
         // pro.ambassador.approved / .declined: the Referral popup's status card.
         setHubOpen(false);

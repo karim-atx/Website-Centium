@@ -214,6 +214,19 @@ function ClientAndBusinessMessages() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUserId]);
 
+  // Round D (DT4): a thread asked for while this page is already open (a
+  // group's "Ask {pro}" opens the chat with the professional) opens it too.
+  const lastKey = useRef(location.key);
+  useEffect(() => {
+    if (lastKey.current === location.key) return;
+    lastKey.current = location.key;
+    if (requestedThreadId) {
+      deepLinkConsumed.current = true;
+      void load(requestedThreadId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
+
   // OP1-190 O3: back online, the business list re-reads what the offline
   // line said was last loaded (Round D O14: held in memory, not saved).
   const wasOnline = useRef(online);

@@ -3,17 +3,20 @@ import { CalendarPlus, ClipboardList, Pin, Send, UtensilsCrossed } from "lucide-
 import { BottomSheet } from "../../ui/BottomSheet";
 import { CtaButton } from "../../ui/PinnedCta";
 import { ListCard, type ListRow } from "../client/kit";
-import { ComingSoonPill } from "../ComingSoon";
 import { ProCardSkeleton, ProError } from "../states";
 import { INK } from "../proInk";
 import { textPx } from "../../../theme/textSize";
 import { range12, time12 } from "../../../utils/time12";
 import { todayLocal } from "../../../utils/date";
+import { daysLabel } from "../../../services/messaging/groupCardsModel";
 import {
+  fetchShareableMealPlans,
   fetchShareableProgrammes,
   fetchShareableSessions,
   sendAnnouncement,
   sendGroupCard,
+  type GroupCardKind,
+  type ShareableMealPlan,
   type ShareableProgramme,
   type ShareableSession,
 } from "../../../services/pro/messages";
@@ -24,14 +27,17 @@ import {
  * - A programme: one of my templates, sent with send_group_card
  *   (programme_share; the database copies only its name, length and exercise
  *   count, never a client's copy).
- * - A meal plan: no card kind exists for meal plans (message_card_kind has
- *   recommendation, programme_share, session_share), so Coming soon.
+ * - A meal plan (Round D, meal_plan_share): one of my meal plan templates;
+ *   the card carries its name, days and the note, never calories or macros.
  * - A group session: one of my own upcoming calendar events
- *   (session_share: title, start, length and place; never an attendee).
+ *   (session_share: title, start, length, place and the event, so members
+ *   can book a place; never an attendee).
  * - An announcement: my message, pinned to the top (the chat's pin).
  * An optional note (≤ 300) goes with a card. Nothing is sent before Share.
  */
-type Step = { kind: "menu" } | { kind: "programmes" } | { kind: "sessions" } | { kind: "announce" } | { kind: "note"; card: "programme_share" | "session_share"; id: string; title: string };
+type ListStep = "programmes" | "sessions" | "mealplans";
+const LIST_FOR: Record<GroupCardKind, ListStep> = { programme_share: "programmes", session_share: "sessions", meal_plan_share: "mealplans" };
+type Step = { kind: "menu" } | { kind: ListStep } | { kind: "announce" } | { kind: "note"; card: GroupCardKind; id: string; title: string };
 
 export const ShareToGroupSheet: React.FC<{
   open: boolean;
@@ -45,6 +51,7 @@ export const ShareToGroupSheet: React.FC<{
   const [step, setStep] = useState<Step>({ kind: "menu" });
   const [programmes, setProgrammes] = useState<ShareableProgramme[] | null>(null);
   const [sessions, setSessions] = useState<ShareableSession[] | null>(null);
+  const [mealPlans, setMealPlans] = useState<ShareableMealPlan[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -67,10 +74,12 @@ export const ShareToGroupSheet: React.FC<{
       void fetchShareableProgrammes(userId).then((r) => !cancelled && (r.ok ? setProgrammes(r.data) : setFailed(true)));
     if (step.kind === "sessions" && !sessions)
       void fetchShareableSessions(userId, todayLocal()).then((r) => !cancelled && (r.ok ? setSessions(r.data) : setFailed(true)));
+    if (step.kind === "mealplans" && !mealPlans)
+      void fetchShareableMealPlans(userId).then((r) => !cancelled && (r.ok ? setMealPlans(r.data) : setFailed(true)));
     return () => {
       cancelled = true;
     };
-  }, [open, step.kind, userId, programmes, sessions, reload]);
+  }, [open, step.kind, userId, programmes, sessions, mealPlans, reload]);
 
   const finish = () => {
     onShared();
@@ -91,10 +100,10 @@ export const ShareToGroupSheet: React.FC<{
     finish();
   };
 
-  const back = step.kind === "menu" ? undefined : () => setStep(step.kind === "note" ? { kind: step.card === "programme_share" ? "programmes" : "sessions" } : { kind: "menu" });
+  const back = step.kind === "menu" ? undefined : () => setStep(step.kind === "note" ? { kind: LIST_FOR[step.card] } : { kind: "menu" });
   const menu: ListRow[] = [
     { key: "programme", icon: ClipboardList, title: "A programme", meta: "Members open it in Workout", onClick: () => setStep({ kind: "programmes" }) },
-    ...(coachesNutrition ? [{ key: "meal", icon: UtensilsCrossed, title: "A meal plan", meta: "Only if you coach nutrition", trailing: <ComingSoonPill /> }] : []),
+    ...(coachesNutrition ? [{ key: "meal", icon: UtensilsCrossed, title: "A meal plan", meta: "Only if you coach nutrition", onClick: () => setStep({ kind: "mealplans" }) }] : []),
     { key: "session", icon: CalendarPlus, title: "A group session", meta: "Members book a place", onClick: () => setStep({ kind: "sessions" }) },
     { key: "announce", icon: Pin, title: "An announcement", meta: "Pinned to the top", onClick: () => setStep({ kind: "announce" }) },
   ];
@@ -168,10 +177,24 @@ export const ShareToGroupSheet: React.FC<{
           })) ?? null,
           "No upcoming sessions. Add one in Calendar."
         )}
+      {step.kind === "mealplans" &&
+        list(
+          mealPlans?.map((p) => ({
+            key: p.id,
+            icon: UtensilsCrossed,
+            title: p.name,
+            meta: daysLabel(p.days) ?? undefined,
+            onClick: () => setStep({ kind: "note", card: "meal_plan_share", id: p.id, title: p.name }),
+          })) ?? null,
+          "No meal plans yet. Make one in Meal plans first."
+        )}
       {step.kind === "note" && (
         <>
           <p style={{ fontSize: textPx(15), fontWeight: 700, color: INK.ch, marginBottom: 12 }}>{step.title}</p>
           {field("Note (optional)", 300, false)}
+          {step.card === "meal_plan_share" && (
+            <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginTop: 8 }}>Members see its name, its length and your note, never calories or macros.</p>
+          )}
         </>
       )}
       {step.kind === "announce" && field("Announcement", 2000, true)}

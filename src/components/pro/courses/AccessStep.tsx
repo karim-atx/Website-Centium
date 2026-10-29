@@ -5,22 +5,26 @@ import type { DripMode } from "../../../services/pro/courses";
 import { textPx } from "../../../theme/textSize";
 import { SegmentedTabs } from "../../ui/SegmentedTabs";
 import { INK } from "../proInk";
-import { ComingSoonPill } from "../ComingSoon";
-import { Field, Label, RadioRows } from "./courseUi";
+import type { CourseAudience } from "../../../services/courses/authorRules";
+import { Field, Label, Note, RadioRows } from "./courseUi";
 import { DRIP_EVERY_DAYS, parsePrice } from "./courseModel";
+import { ChooseClients } from "./ChooseClients";
 
 export interface AccessDraft {
   free: boolean;
   price: string;
   mode: DripMode;
+  /** Round D: courses.audience, and the selected clients' ids. */
+  audience: CourseAudience;
+  members: string[];
 }
 
 /**
  * Release 3 · W6 MO28 "Create course · 4 Access" (cAccess18):
- * - Who can join (radio18): a published course is in the catalogue for any
- *   adult (courses_read), so Public is the one real choice; "All your
- *   clients" and "Selected clients" have no backend (no audience column)
- *   and are Coming soon;
+ * - Who can join (radio18), Round D (set_course_audience): All your clients
+ *   (my_clients), Selected clients (the D-S9 checklist under the row, 1 to
+ *   500 current clients) or Public (the catalogue). It changes at once,
+ *   without review, and a learner already enrolled keeps the course;
  * - Price: Free / Paid tabs (36 high, 12, 8 under), the price field with the
  *   tag (15), the frame's note (11.5 text.faint 1.5), and the existing
  *   commission breakdown (course_commission_percent, rounded as
@@ -34,8 +38,10 @@ export const AccessStep: React.FC<{
   onChange: (v: AccessDraft) => void;
   commission: number | null;
   editable: boolean;
+  /** The audience isn't content: it can change whenever the course isn't with a reviewer. */
+  audienceEditable: boolean;
   footer: React.ReactNode;
-}> = ({ value, onChange, commission, editable, footer }) => {
+}> = ({ value, onChange, commission, editable, audienceEditable, footer }) => {
   const cents = parsePrice(value.price);
   const breakdown = cents !== null && commission !== null ? priceBreakdown(cents, commission) : null;
   return (
@@ -43,15 +49,32 @@ export const AccessStep: React.FC<{
       <Label mt={0}>Who can join</Label>
       <RadioRows
         name="Who can join"
-        on="public"
-        onPick={() => undefined}
-        locked={!editable}
+        on={value.audience}
+        onPick={(k) => onChange({ ...value, audience: k as CourseAudience })}
+        locked={!audienceEditable}
         rows={[
-          { key: "all", title: "All your clients", sub: "Anyone you work with now", disabled: true, trailing: <ComingSoonPill /> },
-          { key: "selected", title: "Selected clients", sub: "Choose people or groups", disabled: true, trailing: <ComingSoonPill /> },
+          { key: "my_clients", title: "All your clients", sub: "Anyone you work with now" },
+          {
+            key: "selected",
+            title: "Selected clients",
+            sub: "Choose people",
+            trailing:
+              value.audience === "selected" ? (
+                <span style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, whiteSpace: "nowrap" }}>{value.members.length} selected</span>
+              ) : undefined,
+          },
           { key: "public", title: "Public", sub: "On your profile and in Community › Courses" },
         ]}
       />
+      {value.audience === "selected" && audienceEditable && <ChooseClients picked={value.members} onChange={(members) => onChange({ ...value, members })} />}
+      <Note mt={6}>
+        {value.audience === "public"
+          ? "Anyone can find and join it. Your clients are told when it's first published."
+          : value.audience === "my_clients"
+          ? "Only your current clients see it and can join. They're told when it's first published."
+          : "Only the clients you choose see it and can join. They're told when it's first published."}{" "}
+        This changes straight away, without review. Anyone already enrolled keeps the course.
+      </Note>
 
       <Label>Price</Label>
       <SegmentedTabs

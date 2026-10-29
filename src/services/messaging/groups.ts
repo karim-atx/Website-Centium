@@ -1,6 +1,9 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { stripPrivateExif } from "../storage/exif";
+import { stageAndSubmit, withdrawPending } from "../moderation/images";
+import { describeDescriptionError, descriptionToSend, GROUP_DESCRIPTION_MAX } from "./groupCardsModel";
 
 // Groups (Messages phase 2B, Database 20261003000000-040000).
 //
@@ -41,6 +44,10 @@ export interface GroupState {
   name: string;
   ownerId: string | null;
   closedAt: string | null;
+  /** Round D: the approved photo in the private group-photos bucket (members read it signed). */
+  photoPath: string | null;
+  /** Round D: the owner's description (up to 500), moderated. */
+  description: string | null;
 }
 
 /** A refusal, by the database's code, in words. `doing` names the action for the generic case. */
@@ -190,15 +197,137 @@ export async function fetchGroupMembers(threadId: string): Promise<GroupMember[]
   }));
 }
 
-/** The group's name, host and whether it is closed. */
+type ThreadRow = { name: string | null; created_by: string | null; closed_at: string | null; photo_path?: string | null; description?: string | null };
+const threadsTable = () =>
+  supabase as unknown as {
+    from: (t: "message_threads") => {
+      select: (c: string) => { eq: (k: string, v: string) => { maybeSingle: () => PromiseLike<{ data: ThreadRow | null; error: PostgrestError | null }> } };
+    };
+  };
+
+/**
+ * The group's name, host, whether it is closed, and (Round D, Database
+ * 20261223040000) its photo and description. A database without those two
+ * columns yet (42703) still gives the rest.
+ */
 export async function fetchGroupState(threadId: string): Promise<GroupState | null> {
-  const { data, error } = await supabase
-    .from("message_threads")
-    .select("name, created_by, closed_at")
-    .eq("id", threadId)
-    .maybeSingle();
+  const read = (cols: string) => threadsTable().from("message_threads").select(cols).eq("id", threadId).maybeSingle();
+  let { data, error } = await read("name, created_by, closed_at, photo_path, description");
+  if (error?.code === "42703") ({ data, error } = await read("name, created_by, closed_at"));
   if (error || !data) return null;
-  return { name: data.name?.trim() || "Group", ownerId: data.created_by, closedAt: data.closed_at };
+  return {
+    name: data.name?.trim() || "Group",
+    ownerId: data.created_by,
+    closedAt: data.closed_at,
+    photoPath: data.photo_path?.trim() || null,
+    description: data.description?.trim() || null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Round D · the group's photo and description (owner only)
+// ---------------------------------------------------------------------------
+
+type Rpc = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: PostgrestError | null }> };
+const untyped = () => supabase as unknown as Rpc;
+
+export { GROUP_DESCRIPTION_MAX };
+
+/** set_group_description: up to 500, '' clears; moderated (ATX60 refuses a blocked word). */
+export async function setGroupDescription(threadId: string, text: string): Promise<Ok | Fail> {
+  const desc = descriptionToSend(text);
+  if (desc === null) return { ok: false, message: describeDescriptionError({ code: "22023" }) };
+  const { error } = await untyped().rpc("set_group_description", { p_thread_id: threadId, p_description: desc });
+  if (error) {
+    console.error("[groups] Could not set the description:", error.code, error.message);
+    return { ok: false, message: describeDescriptionError(error) };
+  }
+  return { ok: true };
+}
+
+const PHOTO_BUCKET = "group-photos";
+const PHOTO_SIGN_SECONDS = 60 * 60;
+const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+const PHOTO_EDGE_PX = 800;
+/** The `accept` attribute for a group photo picker. */
+export const GROUP_PHOTO_ACCEPT = [...PHOTO_TYPES, ".jpg", ".jpeg", ".png", ".webp"].join(",");
+
+const photoUrls = new Map<string, { url: string; until: number }>();
+
+/**
+ * A signed URL for the group's approved photo (private bucket group-photos;
+ * the group's joined members may read it). Cached until shortly before it
+ * expires, so the header and Chat info share one. Null when it can't be signed.
+ */
+export async function groupPhotoUrl(path: string): Promise<string | null> {
+  const hit = photoUrls.get(path);
+  if (hit && hit.until > Date.now()) return hit.url;
+  try {
+    const { data, error } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrl(path, PHOTO_SIGN_SECONDS);
+    if (error || !data?.signedUrl) return null;
+    photoUrls.set(path, { url: data.signedUrl, until: Date.now() + (PHOTO_SIGN_SECONDS - 120) * 1000 });
+    return data.signedUrl;
+  } catch {
+    return null;
+  }
+}
+
+/** At most PHOTO_EDGE_PX on the long edge, as JPEG. Never throws: the original goes on a decode failure. */
+async function downscale(file: File): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, PHOTO_EDGE_PX / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && file.type === "image/jpeg") {
+      bitmap.close();
+      return file;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bitmap.close();
+      return file;
+    }
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+    return blob ? new File([blob], "group.jpg", { type: "image/jpeg" }) : file;
+  } catch (e) {
+    console.warn("[groups] Could not resize the photo, uploading as picked:", e);
+    return file;
+  }
+}
+
+/**
+ * Sends a new group photo for approval (submit_image 'group_photo', the
+ * record being the thread): staged in image-staging, then copied into
+ * group-photos and written to message_threads.photo_path by the Database
+ * once an admin approves it. The owner sees it with "Waiting for approval"
+ * until then (useOwnImage); members keep the previous photo, or none.
+ */
+export async function submitGroupPhoto(me: string, threadId: string, file: File): Promise<Ok | Fail> {
+  if (!PHOTO_TYPES.includes(file.type)) return { ok: false, message: "Group photos need to be a JPEG, PNG or WebP." };
+  if (file.size > PHOTO_MAX_BYTES) return { ok: false, message: "That image is too large. Pick one under 5 MB." };
+  try {
+    const stripped = await stripPrivateExif(await downscale(file));
+    const r = await stageAndSubmit(me, "group_photo", threadId, stripped);
+    return r.ok ? { ok: true } : { ok: false, message: r.message };
+  } catch (e) {
+    console.error("[groups] Could not send the photo:", e);
+    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : "That photo couldn't be uploaded. Check your connection and try again." };
+  }
+}
+
+/**
+ * Takes back a photo still waiting for approval. An approved photo can't be
+ * removed from here: photo_path is written by image approval only (the owner
+ * has no write on it).
+ */
+export async function withdrawGroupPhoto(threadId: string): Promise<Ok | Fail> {
+  const r = await withdrawPending("group_photo", threadId);
+  return r.ok ? { ok: true } : { ok: false, message: r.message };
 }
 
 /**

@@ -181,7 +181,7 @@ export function submitWarnings(course: { subtitle: string | null; learnPoints: s
 // Refusals
 // ---------------------------------------------------------------------------
 
-export type AuthorAction = "read" | "create" | "save" | "submit" | "video" | "pdf" | "options" | "revision";
+export type AuthorAction = "read" | "create" | "save" | "submit" | "video" | "pdf" | "options" | "revision" | "audience" | "description" | "check_in";
 
 /**
  * THE ONE THAT NEEDS SAYING OUT LOUD. Renaming a lesson is not a cosmetic
@@ -197,6 +197,27 @@ export const REVISION_EXPLAINER =
   "Your course stays live and unchanged while you edit this copy. Learners see the changes only once we've approved them.";
 
 export const WITHDRAW_EXPLAINER = "Your published course isn't affected. Only these draft changes are lost.";
+
+/** Round D: the server's refusal of HTML in lesson text (22023), as a sentence. */
+export const HTML_REFUSED = "Lesson text can't contain HTML tags. Use the formatting listed under the text box instead.";
+
+/** Who can join a course (courses.audience, Round D 20261223030000). */
+export type CourseAudience = "public" | "my_clients" | "selected";
+export const AUDIENCE_LIMITS = { min: 1, max: 500 } as const;
+export const DESCRIPTION_MAX = 2000;
+export const FOCUS_MAX = 300;
+export const CHECK_IN_ANSWER_MAX = 4000;
+/** The drawn Focus choices (MO28). Stored as the words; none is "". */
+export const FOCUS_CHOICES = ["Training", "Nutrition", "Health education"] as const;
+
+/** The Access row's meta and the audience radio's words. */
+export function audienceLabel(audience: CourseAudience, selected?: number): string {
+  if (audience === "my_clients") return "All your clients";
+  if (audience === "selected") return selected ? `${selected} selected ${selected === 1 ? "client" : "clients"}` : "Selected clients";
+  return "Public";
+}
+
+export const parseAudience = (v: unknown): CourseAudience => (v === "my_clients" || v === "selected" ? v : "public");
 
 /** Words for a database refusal. Always returns something. */
 export function describeAuthorError(error: { code?: string; message?: string }, action: AuthorAction): string {
@@ -223,16 +244,45 @@ export function describeAuthorError(error: { code?: string; message?: string }, 
         ? "That's a lot of uploads at once. Give it a minute."
         : "You've submitted a lot today. Try again tomorrow.";
     case "ATX08":
-      return "That course no longer exists.";
+      return action === "check_in" ? "That check-in isn't one of yours." : "That course no longer exists.";
+    // Round D (20261223030000): selected clients must be the author's active clients.
+    case "ATX12":
+      return "Only clients you work with now can be chosen. Check the list and try again.";
     case "22023":
+      // Round D: lesson text is plain text with limited Markdown; HTML tags are refused.
+      if (/html/i.test(error.message ?? "")) return HTML_REFUSED;
       return action === "options"
         ? "A question needs between 2 and 8 answers, with exactly one marked correct."
         : action === "submit"
         ? "Add at least one lesson before submitting."
+        : action === "audience"
+        ? "Choose between 1 and 500 clients."
+        : action === "description"
+        ? "The description is up to 2,000 characters and the focus up to 300."
+        : action === "check_in"
+        ? "A check-in needs a question for your clients."
         : "That isn't a value this field accepts.";
     case "23514":
       return "That doesn't fit. Check the lengths and numbers, and try again.";
     default:
       return "Something went wrong. Try again.";
   }
+}
+
+// ---------------------------------------------------------------------------
+// Round D author stats (course_author_stats): counts only
+// ---------------------------------------------------------------------------
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "Oct" for a month of this year, "Oct 2025" otherwise; the raw value if it isn't "YYYY-MM". */
+export function statsMonthLabel(ym: string, thisYear: number): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(ym);
+  if (!m || Number(m[2]) < 1 || Number(m[2]) > 12) return ym;
+  return Number(m[1]) === thisYear ? MONTHS[Number(m[2]) - 1] : `${MONTHS[Number(m[2]) - 1]} ${m[1]}`;
+}
+
+/** "{n}% complete" on an author's course card; null with nobody enrolled. */
+export function completeLine(pct: number | null): string | null {
+  return pct === null ? null : `${pct}% complete`;
 }

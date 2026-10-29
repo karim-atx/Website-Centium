@@ -8,7 +8,9 @@
 // a PDF lesson, never to a video or reading.
 import { BLOCKED_TEXT } from "../moderation/text";
 
-export type LessonKind = "video" | "reading" | "quiz" | "pdf";
+// Round D (20261223030000) adds an Image lesson and a Check-in lesson; both are
+// free to open, like a video or a reading.
+export type LessonKind = "video" | "reading" | "quiz" | "pdf" | "image" | "check_in";
 export type Tier = "free" | "paid";
 export type AccessLevel = "none" | "free" | "paid";
 
@@ -67,6 +69,8 @@ export function weekContents(kinds: LessonKind[]): string {
     n("reading") ? plural(n("reading"), "reading", "readings") : null,
     n("quiz") ? plural(n("quiz"), "quiz", "quizzes") : null,
     n("pdf") ? plural(n("pdf"), "PDF", "PDFs") : null,
+    n("image") ? plural(n("image"), "image", "images") : null,
+    n("check_in") ? plural(n("check_in"), "check-in", "check-ins") : null,
   ]
     .filter(Boolean)
     .join(", ");
@@ -140,7 +144,7 @@ export function youtubeEmbedUrl(videoId: string | null): string | null {
   return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&playsinline=1`;
 }
 
-export type CourseAction = "read" | "enrol" | "paid" | "complete" | "quiz" | "pdf" | "ask" | "rate";
+export type CourseAction = "read" | "enrol" | "paid" | "complete" | "quiz" | "pdf" | "ask" | "rate" | "check_in";
 
 export const PAID_OPEN_SOON = "Paid courses open soon.";
 
@@ -161,11 +165,16 @@ export function describeCourseError(error: { code?: string; message?: string }, 
         ? "Downloadable plans are part of the full course."
         : "Questions to the professional are part of the full course.";
     case "ATX67":
-      return action === "complete" || action === "quiz"
+      // Round D (20261223030000): a course that isn't public is joined by its audience only.
+      return action === "enrol" || action === "paid"
+        ? "This course is only open to the people its author chose."
+        : action === "complete" || action === "quiz" || action === "check_in"
         ? "Start the course first, then try again."
         : action === "rate"
         ? "Start the course before rating it."
         : "That course isn't available any more.";
+    case "22023":
+      return action === "check_in" ? "Write an answer of up to 4,000 characters." : null;
     case "ATX02":
       return action === "ask"
         ? "You've asked a lot of questions today. Try again tomorrow."
