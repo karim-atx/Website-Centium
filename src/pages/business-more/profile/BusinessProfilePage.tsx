@@ -204,6 +204,7 @@ export default function BusinessProfilePage() {
       return;
     }
     setBusiness({ ...business, ...(k === "logo" ? { logoPath: null, logoUrl: null } : { coverPath: null, coverUrl: null }) });
+    (k === "logo" ? ownLogo : ownCover).refresh();
   };
 
   // Your photo (LOST 5): the owner's own avatar, the same upload and remove
@@ -241,6 +242,7 @@ export default function BusinessProfilePage() {
       return;
     }
     updateProfile({ avatarUrl: undefined });
+    refreshOwnAvatar();
     setSheet(null);
     showToast("Your photo was removed.");
   };
@@ -442,7 +444,11 @@ export default function BusinessProfilePage() {
           <PhotoMenu
             kind={menu}
             top={menu === "cover" ? 84 : 158}
-            hasPhoto={menu === "logo" ? !!business?.logoUrl : !!business?.coverUrl}
+            hasPhoto={
+              menu === "logo"
+                ? !!business?.logoUrl || ownLogo.image?.status === "pending"
+                : !!business?.coverUrl || ownCover.image?.status === "pending"
+            }
             onClose={() => setMenu(null)}
             onCamera={() => {
               pickFor.current = menu;
@@ -652,7 +658,7 @@ export default function BusinessProfilePage() {
           }}
           avatarUrl={shownAvatar}
           approval={ownAvatar}
-          canRemove={!!user.avatarUrl}
+          canRemove={!!user.avatarUrl || ownAvatar?.status === "pending"}
           initials={ownInitials}
           busy={avatarBusy}
           error={avatarError}

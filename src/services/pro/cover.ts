@@ -1,7 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { stripPrivateExif } from "../storage/exif";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
-import { stageAndSubmit } from "../moderation/images";
+import { stageAndSubmit, withdrawPending } from "../moderation/images";
 
 // Release B · the professional's cover photo (W6C-3, MO14 "Photo and cover";
 // Database 20261217070000): the PUBLIC bucket professional-covers (5 MB,
@@ -121,6 +121,9 @@ export async function submitCover(me: string, file: File): Promise<CoverResult> 
 
 /** Removes the cover: the row first (the truth), then the file. */
 export async function removeCover(me: string, currentUrl: string | null | undefined): Promise<{ ok: true } | { ok: false; message: string }> {
+  // A cover still waiting for approval is taken back too (withdraw_image).
+  const withdrawn = await withdrawPending("professional_cover", me);
+  if (!withdrawn.ok) return withdrawn;
   const written = await clearCoverUrl(me);
   if (!written.ok) return written;
   const path = pathFromPublicUrl(currentUrl, me);

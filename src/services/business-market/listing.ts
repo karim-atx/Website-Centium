@@ -21,7 +21,7 @@ import {
   type TopItem,
 } from "./listingLogic";
 import type { Result } from "./index";
-import { myImageApprovals, stagedUrl, stagingPath, submitImage, uploadToStaging, stageAndSubmit } from "../moderation/images";
+import { myImageApprovals, stagedUrl, stagingPath, submitImage, uploadToStaging, stageAndSubmit, withdrawPending } from "../moderation/images";
 import { latestApproval, type ImageApproval } from "../moderation/imageModel";
 import { contactRefusal, moderationRefusal } from "../moderation/text";
 
@@ -173,6 +173,9 @@ export async function replaceBusinessPhoto(p: { uid: string; businessId: string;
 }
 
 export async function deleteBusinessPhoto(p: { uid: string; photo: BusinessPhoto }): Promise<Result<null>> {
+  // A photo (or replacement) still waiting for approval is taken back first (withdraw_image).
+  const withdrawn = await withdrawPending("venue_photo", p.photo.id);
+  if (!withdrawn.ok) return withdrawn;
   const { data, error } = await db.from("business_photos").delete().eq("id", p.photo.id).select("id");
   if (error) return failWith(error, "Couldn't delete the photo. Try again.");
   if (!data || data.length === 0) return { ok: false, message: photoError("ATX03") };

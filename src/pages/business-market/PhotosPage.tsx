@@ -214,6 +214,7 @@ function PhotosBody() {
       setDeleteStep(1);
       if (!r.ok) return showToast(r.message, "error");
       m.setBusiness({ ...business, coverPath: null, coverUrl: null });
+      ownCover.refresh();
     } else {
       const photo = confirmDelete.photo;
       const r = await deleteBusinessPhoto({ uid: authUserId, photo });
@@ -222,6 +223,7 @@ function PhotosBody() {
       setDeleteStep(1);
       if (!r.ok) return showToast(r.message, "error");
       setGallery((m.photos ?? []).filter((p) => p.id !== photo.id));
+      refreshOwnPhotos();
     }
     m.refreshStrength();
     showToast("Photo deleted.");

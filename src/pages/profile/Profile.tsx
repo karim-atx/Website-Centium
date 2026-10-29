@@ -158,6 +158,7 @@ function ClientProfile() {
       return;
     }
     updateProfile({ avatarUrl: undefined });
+    refreshOwnAvatar();
   };
 
   const openMetricEditor = (field: "weightKg" | "heightCm") => {
@@ -917,7 +918,7 @@ function ClientProfile() {
             label: "Remove photo",
             icon: <Trash2 size={15} strokeWidth={1.75} />,
             destructive: true,
-            disabled: !user.avatarUrl || avatarBusy,
+            disabled: (!user.avatarUrl && ownAvatar?.status !== "pending") || avatarBusy,
           },
         ]}
         onSelect={(v) => {

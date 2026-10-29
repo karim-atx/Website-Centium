@@ -39,7 +39,7 @@ import { fetchServicePlans } from "../pro/profile";
 import type { Read, Write } from "../pro/clients";
 import { reorderShowcase } from "../business-market/overview";
 import { prepareProductPhoto } from "../store/products";
-import { stageAndSubmit } from "../moderation/images";
+import { stageAndSubmit, withdrawPending } from "../moderation/images";
 import { contactRefusal, moderationRefusal } from "../moderation/text";
 import { PLAN_SHOWCASE_DEFAULT, parseProOverview, parseShelfRows, planShowcaseById, visibleRefusal, type Format, type LocationKind, type PlanService, type ProOverview, type SessionService, type ShelfItem } from "./model";
 
@@ -362,6 +362,9 @@ export async function submitServicePhoto(me: string, kind: ServiceKind, id: stri
 
 /** Remove photo: the one image_url write left to the app. */
 export async function clearServicePhoto(me: string, kind: ServiceKind, id: string): Promise<Write> {
+  // A photo still waiting for approval is taken back too (withdraw_image).
+  const withdrawn = await withdrawPending(PHOTO_SURFACE[kind], id);
+  if (!withdrawn.ok) return { ok: false, message: withdrawn.message };
   try {
     // Three literal payloads so npm run audit:grants checks each table's grant.
     const { error } =

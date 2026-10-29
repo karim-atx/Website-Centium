@@ -128,7 +128,7 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
   const [photoError, setPhotoError] = useState<string | null>(null);
   // A newly picked photo (prepared, on this device until Save) and its preview.
   const [photo, setPhoto] = useState<{ file: File; preview: string } | null>(null);
-  // Remove photo also hides a pending one in this sheet (it can't be taken back).
+  // Remove photo also hides a pending one in this sheet; Save withdraws it.
   const [cleared, setCleared] = useState(false);
   const camRef = useRef<HTMLInputElement>(null);
   const libRef = useRef<HTMLInputElement>(null);
@@ -159,7 +159,8 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
    * again resends it); a new service is saved, so the sheet closes and says so.
    */
   const finish = async (me: string, id: string, done: string) => {
-    if (editing && target?.item.imageUrl && imageUrl === null) {
+    // Removed: the approved photo, or one still waiting (clearServicePhoto withdraws it).
+    if (editing && ((target?.item.imageUrl && imageUrl === null) || (cleared && !photo && own?.status === "pending"))) {
       const c = await clearServicePhoto(me, photoKind, id);
       if (!c.ok) {
         setBusy(false);

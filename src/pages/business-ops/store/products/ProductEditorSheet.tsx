@@ -104,7 +104,7 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
   const [photoError, setPhotoError] = useState<string | null>(null);
   // A newly picked photo (prepared, on this device until Save) and its preview.
   const [photo, setPhoto] = useState<{ file: File; preview: string } | null>(null);
-  // Remove photo also hides a pending one in this sheet (it can't be taken back).
+  // Remove photo also hides a pending one in this sheet; Save withdraws it.
   const [cleared, setCleared] = useState(false);
   const { image: own, refresh: refreshOwn } = useOwnImage("showcase_image", product?.id);
   const [touched, setTouched] = useState({ price: false, stock: false });
@@ -190,7 +190,8 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
       const r = await updateProduct(product.id, draft, stockShipped);
       if (!r.ok) return fail(saveRefusal(r) ?? "Couldn't save the item. Try again.");
       id = product.id;
-      if (stockShipped && product.imageUrl && imageUrl === null) {
+      // Removed: the approved photo, or one still waiting (clearProductPhoto withdraws it).
+      if (stockShipped && ((product.imageUrl && imageUrl === null) || (cleared && !photo && own?.status === "pending"))) {
         const c = await clearProductPhoto(id);
         if (!c.ok) return fail("Couldn't remove the photo. Try again.");
       }

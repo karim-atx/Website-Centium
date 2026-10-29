@@ -4,7 +4,7 @@ import { prepareForumPhoto } from "../forum/photo";
 import { storagePath } from "../venues/venueLogic";
 import { COVER_MAX_BYTES, LOGO_MAX_BYTES, replacedObject } from "../venues/consoleLogic";
 import { coverToRemove, coverUrlFor } from "./cover";
-import { describeImageError, stageAndSubmit } from "../moderation/images";
+import { describeImageError, stageAndSubmit, withdrawPending } from "../moderation/images";
 import { fetchGymHours } from "../venues";
 import { loadConsoleAccess } from "../business-console";
 import type { HoursRow } from "../venues/hours";
@@ -250,6 +250,9 @@ export async function removeBusinessImage(params: {
   previousPath: string | null;
 }): Promise<Result<null>> {
   const { kind, uid, ownerId, businessId, previousPath } = params;
+  // A logo or cover still waiting for approval is taken back too (withdraw_image).
+  const withdrawn = await withdrawPending(kind === "logo" ? "business_logo" : "business_cover", businessId);
+  if (!withdrawn.ok) return withdrawn;
   const written = await db
     .from("business_profiles")
     .update(kind === "logo" ? { logo_url: null } : { cover_url: null })

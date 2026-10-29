@@ -22,6 +22,7 @@ import {
 } from "../../../services/business-classes/scheduleRules";
 import { prepareClassCover, type SeriesRow } from "../../../services/business-classes/schedule";
 import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../../components/moderation/ImageApproval";
+import { withdrawImage } from "../../../services/moderation/images";
 import { time12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
@@ -194,7 +195,7 @@ function SheetBody({
   const [coverErr, setCoverErr] = useState<string | null>(null);
   // A newly picked cover (prepared, on this device until Save) and its preview.
   const [coverPick, setCoverPick] = useState<{ file: File; preview: string } | null>(null);
-  // Remove also hides a pending cover in this sheet (it can't be taken back).
+  // Remove also hides a pending cover in this sheet; Save then withdraws it.
   const [coverCleared, setCoverCleared] = useState(false);
   // The owner's pending or refused cover: the series' for a `future` edit, else the class's.
   const coverOf = mode === "edit" && scope === "future" && editing?.seriesId ? { surface: "class_series_cover" as const, id: editing.seriesId } : { surface: "class_cover" as const, id: mode === "edit" ? editing?.id ?? null : null };
@@ -305,7 +306,12 @@ function SheetBody({
     const timeout = new Promise<{ ok: false; message: string }>((r) => window.setTimeout(() => r({ ok: false, message: CLASS_SAVE_FAILED }), 15_000));
     const r = await Promise.race([onSave(draftOf(form), mode === "create" ? ruleOf(form) : null, coverPick?.file ?? null), timeout]);
     setSaving(false);
-    if (r.ok) return; // the page closes the sheet and shows the toast
+    if (r.ok) {
+      // Removed while a cover was waiting for approval (and none picked
+      // instead): take that submission back too, so it is never published.
+      if (coverCleared && !coverPick && ownCover?.status === "pending") void withdrawImage(ownCover.id);
+      return; // the page closes the sheet and shows the toast
+    }
     // ATX76, the Team-only instructor rule (scheduleRules maps it to the note's words).
     if (r.message === HIRING_ERROR_TEXT.instructor_not_on_team) {
       setInstrErr(r.message);

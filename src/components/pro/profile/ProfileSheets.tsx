@@ -68,6 +68,7 @@ export function usePhotoPicker() {
     setBusy(false);
     if (!r.ok) return setError(r.message ?? "Couldn't remove your picture.");
     updateProfile({ avatarUrl: undefined });
+    refresh();
   };
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -82,7 +83,7 @@ export function usePhotoPicker() {
   );
   // What the owner sees: the pending photo, else the approved one.
   const url = (image?.status === "pending" && image.url) || user.avatarUrl || null;
-  return { inputs, busy, error, url, image, hasPhoto: !!user.avatarUrl, takePhoto: () => camera.current?.click(), choose: () => gallery.current?.click(), remove };
+  return { inputs, busy, error, url, image, hasPhoto: !!user.avatarUrl || image?.status === "pending", takePhoto: () => camera.current?.click(), choose: () => gallery.current?.click(), remove };
 }
 
 type SourceRow = { key: string; icon: typeof Camera; label: string; run: () => void; disabled: boolean };
@@ -154,7 +155,7 @@ export const PhotoSourceSheet: React.FC<{ open: boolean; onClose: () => void; pi
           <SourceRows
             rows={[
               { key: "cover", icon: ImageIcon, label: cover.busy ? "Uploading…" : cover.url ? "Change cover" : "Add a cover", run: cover.choose, disabled: cover.busy },
-              { key: "cover-remove", icon: Trash2, label: "Remove cover", run: () => void cover.remove(), disabled: cover.busy || !cover.approvedUrl },
+              { key: "cover-remove", icon: Trash2, label: "Remove cover", run: () => void cover.remove(), disabled: cover.busy || !(cover.approvedUrl || cover.image?.status === "pending") },
             ]}
           />
           {cover.error && <ErrorLine>{cover.error}</ErrorLine>}

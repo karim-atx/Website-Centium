@@ -123,3 +123,35 @@ export async function imageStateFor(surface: ImageSurface, recordId: string) {
   if (!a || (a.status !== "pending" && a.status !== "rejected")) return null;
   return { ...a, url: await stagedUrl(a.stagingPath) };
 }
+
+/**
+ * Takes back a submission an admin hasn't decided yet (Database
+ * 20261221110000 withdraw_image): it leaves the queue and is never
+ * published. Withdrawing twice is fine. ATX10 (already approved or
+ * rejected) is not a failure here: there is nothing pending to take back,
+ * and an approved image is removed by clearing its column as usual.
+ */
+export async function withdrawImage(approvalId: string): Promise<Result<null>> {
+  const { error } = await rpc().rpc("withdraw_image", { p_approval_id: approvalId });
+  if (error && error.code !== "ATX10") {
+    console.error("[images] withdraw_image refused:", error.code, error.message);
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't remove that photo. Try again.", code: error.code };
+  }
+  return { ok: true, value: null };
+}
+
+/**
+ * Remove, for an image that may be waiting for approval: withdraws the
+ * caller's pending submissions for that record (or, with no record yet, the
+ * one at that staged path). Callers then clear the column as before.
+ */
+export async function withdrawPending(surface: ImageSurface, recordId: string | null, stagedPath?: string | null): Promise<Result<null>> {
+  const pending = (await myImageApprovals(surface, recordId)).filter(
+    (a) => a.status === "pending" && (stagedPath == null || a.stagingPath === stagedPath)
+  );
+  for (const a of pending) {
+    const r = await withdrawImage(a.id);
+    if (!r.ok) return r;
+  }
+  return { ok: true, value: null };
+}

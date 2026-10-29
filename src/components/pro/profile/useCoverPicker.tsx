@@ -52,13 +52,15 @@ export function useCoverPicker(beforeUpload?: () => Promise<{ ok: boolean; messa
     refresh();
   };
   const remove = async () => {
-    if (!authUserId || busy || !approvedUrl) return;
+    // A cover waiting for approval can be removed too (removeCover withdraws it).
+    if (!authUserId || busy || !(approvedUrl || image?.status === "pending")) return;
     setBusy(true);
     setError(null);
     const r = await removeCover(authUserId, approvedUrl);
     setBusy(false);
     if (!r.ok) return setError(r.message);
     setCover({ userId: authUserId, url: null });
+    refresh();
   };
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];

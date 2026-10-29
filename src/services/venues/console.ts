@@ -3,7 +3,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { prepareForumPhoto } from "../forum/photo";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { storagePath } from "./venueLogic";
-import { stageAndSubmit } from "../moderation/images";
+import { stageAndSubmit, withdrawPending } from "../moderation/images";
 import {
   consoleMessage,
   COVER_MAX_BYTES,
@@ -305,6 +305,9 @@ export async function removeVenueImage(params: {
   previousPath: string | null;
 }): Promise<Result<null>> {
   const { kind, uid, gymId, businessId, previousPath } = params;
+  // An image still waiting for approval is taken back too (withdraw_image).
+  const withdrawn = await withdrawPending(kind === "logo" ? "business_logo" : "gym_cover", kind === "logo" ? businessId : gymId);
+  if (!withdrawn.ok) return withdrawn;
   const written =
     kind === "logo"
       ? await db.from("business_profiles").update({ logo_url: null }).eq("id", businessId).select("id")

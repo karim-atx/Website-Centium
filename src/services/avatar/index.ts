@@ -1,7 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { stripPrivateExif } from "../storage/exif";
 import { clearAvatarUrl } from "../profile";
-import { stageAndSubmit } from "../moderation/images";
+import { stageAndSubmit, withdrawPending } from "../moderation/images";
 
 // Profile pictures: the one PUBLIC bucket, and the reason this is its own
 // module rather than another branch of services/storage.
@@ -215,6 +215,9 @@ export async function removeAvatar(
   userId: string,
   currentUrl: string | null | undefined
 ): Promise<{ ok: boolean; message?: string }> {
+  // A picture still waiting for approval is taken back too (withdraw_image).
+  const withdrawn = await withdrawPending("avatar", userId);
+  if (!withdrawn.ok) return { ok: false, message: withdrawn.message };
   const written = await clearAvatarUrl(userId);
   if (!written.ok) {
     return { ok: false, message: written.message ?? "Couldn't remove your picture." };

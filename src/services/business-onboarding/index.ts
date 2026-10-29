@@ -7,7 +7,7 @@ import { COVER_MAX_BYTES, LOGO_MAX_BYTES, replacedObject } from "../venues/conso
 import { storagePath } from "../venues/venueLogic";
 import { uploadWithProgress } from "../storage";
 import { coverToRemove, coverUrlFor } from "../business-more/cover";
-import { myImageApprovals, stagedUrl, stagingPath, submitImage, uploadToStaging } from "../moderation/images";
+import { myImageApprovals, stagedUrl, stagingPath, submitImage, uploadToStaging, withdrawPending } from "../moderation/images";
 import { OB_STRINGS } from "../../pages/onboarding/shell/flow";
 import { looksBlurry } from "./blurCheck";
 import { fetchBookingPolicies, setBookingPolicy } from "../business-classes/schedule";
@@ -213,6 +213,9 @@ export async function uploadBusinessImage(uid: string, kind: "logo" | "cover", f
 
 /** Remove photo: the public object of a published picture (the column is cleared by Step 1's save). */
 export async function removeBusinessImage(uid: string, kind: "logo" | "cover", previous: string | null): Promise<void> {
+  // A staged picture already submitted is taken back (withdraw_image); one
+  // never submitted just stays private until the staging sweep.
+  if (previous) await withdrawPending(kind === "logo" ? "business_logo" : "business_cover", null, previous);
   if (kind === "logo") {
     const old = replacedObject(previous, uid, "");
     if (old) await db.storage.from("business-logos").remove([old]);

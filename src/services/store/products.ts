@@ -24,6 +24,7 @@ import { prepareForumPhoto } from "../forum/photo";
 
 import type { OfferingCategory, Product, ProductCategory } from "./types";
 import { contactRefusal } from "../moderation/text";
+import { withdrawPending } from "../moderation/images";
 export type { OfferingCategory, Product, ProductCategory } from "./types";
 
 export interface ProductsLoad {
@@ -150,6 +151,9 @@ export async function updateProduct(id: string, d: ProductDraft, stockShipped: b
 
 /** Remove photo: the one image_url write left to the app (a new photo goes for approval). */
 export async function clearProductPhoto(id: string): Promise<Write<null>> {
+  // A photo still waiting for approval is taken back too (withdraw_image).
+  const withdrawn = await withdrawPending("showcase_image", id);
+  if (!withdrawn.ok) return { ok: false, message: withdrawn.message, code: withdrawn.code };
   const { error } = await db.from("business_offerings").update({ image_url: null }).eq("id", id);
   if (error) return writeFail(error, "Could not remove the product photo");
   return { ok: true, value: null };

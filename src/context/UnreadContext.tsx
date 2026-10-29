@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useApp } from "./AppContext";
 import { usePoll } from "../hooks/usePoll";
 import { useUnreadRealtime } from "../hooks/useUnreadRealtime";
+import { useAppPresence } from "../hooks/useAppPresence";
 import { fetchMessagePopup, fetchUnreadCounts, type UnreadCounts } from "../services/messaging";
 import { enqueuePopup, popupSuppressedAt, type PopupCard } from "../services/messaging/popupModel";
 import { markDelivered } from "../services/messaging/chatFeatures";
@@ -130,6 +131,9 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const dismissPopup = useCallback(() => setPopups((q) => q.slice(1)), []);
 
   const realtime = useUnreadRealtime(authUserId, () => void load(), onArrival);
+  // The other half of the pop-up: while this tab is shown and in front, the
+  // server sends no message push to this account (no duplicate notification).
+  useAppPresence(authUserId);
 
   // One poll, two speeds. The interval changes with the subscription's status
   // rather than the poll being switched off, because a socket that reports

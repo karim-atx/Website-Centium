@@ -113,6 +113,7 @@ export function VenueImagesCard({
       return;
     }
     setImages({ gymId, value: kind === "logo" ? { ...current, logoPath: null, logoUrl: null } : { ...current, coverPath: null, coverUrl: null } });
+    (kind === "logo" ? ownLogo : ownCover).refresh();
     onToast?.(kind === "logo" ? "Logo removed." : "Cover photo removed.");
   };
 
@@ -124,7 +125,9 @@ export function VenueImagesCard({
     else (action === "camera" ? cameraInput : libraryInput).current?.click();
   };
 
-  const has = (kind: Kind) => (kind === "logo" ? !!current?.logoPath : !!current?.coverPath);
+  // An image waiting for approval can be removed too (removeVenueImage withdraws it).
+  const has = (kind: Kind) =>
+    kind === "logo" ? !!current?.logoPath || ownLogo.image?.status === "pending" : !!current?.coverPath || ownCover.image?.status === "pending";
   const options: { value: Action; label: string; destructive?: boolean }[] = [
     ...(hasCamera() ? [{ value: "camera" as const, label: "Take a photo" }] : []),
     { value: "library", label: "Choose from library" },
