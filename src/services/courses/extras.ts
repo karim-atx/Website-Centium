@@ -183,6 +183,16 @@ export const submitLessonImage = (uid: string, lessonId: string, file: File) => 
 /** Takes back a cover or lesson image still waiting for approval. */
 export const withdrawCourseImage = (surface: "course_cover" | "course_image", recordId: string) => withdrawPending(surface, recordId);
 
+/**
+ * Removes the approved cover at once, in any status (Database
+ * 20261223060000, remove_course_cover). The colour shows again; a new cover
+ * goes for approval like the first one. ATX08: not the author's course.
+ */
+export async function removeCourseCover(courseId: string): Promise<WriteResult> {
+  const { error } = await rpc("remove_course_cover", { p_course_id: courseId });
+  return error ? authorFail(error, "save") : { ok: true };
+}
+
 /** course_lessons.image_path of some lessons, by id (only approved images have one). */
 export async function fetchLessonImagePaths(lessonIds: string[]): Promise<Map<string, string>> {
   const out = new Map<string, string>();

@@ -320,14 +320,20 @@ export async function submitGroupPhoto(me: string, threadId: string, file: File)
   }
 }
 
-/**
- * Takes back a photo still waiting for approval. An approved photo can't be
- * removed from here: photo_path is written by image approval only (the owner
- * has no write on it).
- */
+/** Takes back a photo still waiting for approval. */
 export async function withdrawGroupPhoto(threadId: string): Promise<Ok | Fail> {
   const r = await withdrawPending("group_photo", threadId);
   return r.ok ? { ok: true } : { ok: false, message: r.message };
+}
+
+/**
+ * Removes the approved photo at once (Database 20261223060000,
+ * remove_group_photo); members can no longer read the file. Errors as
+ * rename_group (ATX08 / ATX44 / ATX45).
+ */
+export async function removeGroupPhoto(threadId: string): Promise<Ok | Fail> {
+  const { error } = await untyped().rpc("remove_group_photo", { p_thread_id: threadId });
+  return error ? fail(error, "remove the photo") : { ok: true };
 }
 
 /**

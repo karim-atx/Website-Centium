@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { CalendarRange, Check, ChevronRight, Circle, Play } from "lucide-react";
 import type { Routine } from "../../types";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -76,6 +77,18 @@ export const ProgrammeSection: React.FC<{
 
   const retry = useCallback(() => setNonce((n) => n + 1), []);
   const byId = useMemo(() => new Map(routines.map((r) => [r.id, r])), [routines]);
+
+  // Round D (Database 20261223060000): the "Your coach assigned a programme"
+  // push opens /app/workout?tab=routines&programme={assignment id}, which
+  // opens that programme's week sheet once the programmes have loaded. Once
+  // per link (adjusted during render); an id that isn't one of mine is ignored.
+  const [params] = useSearchParams();
+  const linkedId = params.get("programme");
+  const [handledLink, setHandledLink] = useState<string | null>(null);
+  if (linkedId && rows && handledLink !== linkedId) {
+    setHandledLink(linkedId);
+    if (rows.some((r) => r.programme.assignmentId === linkedId)) setOpen(linkedId);
+  }
 
   if (!rows && !failed) return null;
   if (!rows || (rows.length === 0 && failed)) {

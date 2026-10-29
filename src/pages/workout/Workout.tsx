@@ -29,7 +29,8 @@ const workoutTabs: SegmentedTabItem[] = (["routines", "library", "history", "met
 }));
 
 export default function Workout() {
-  // Round D · TR22: ?tab=history opens History (the workout_log_reply notice's link).
+  // Round D · TR22: ?tab=history opens History (the workout_log_reply notice's
+  // link); ?tab=routines (the programme push's link) opens Routines.
   const [params] = useSearchParams();
   const linked = params.get("tab");
   const [tab, setTab] = useState<Tab>(linked === "history" ? "history" : "routines");
@@ -38,6 +39,7 @@ export default function Workout() {
   if (seenLink !== params.toString()) {
     setSeenLink(params.toString());
     if (linked === "history") setTab("history");
+    else if (linked === "routines") setTab("routines");
   }
 
   return (

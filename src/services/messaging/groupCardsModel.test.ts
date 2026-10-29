@@ -2,6 +2,8 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
   daysLabel,
+  parseSharedPlan,
+  portionLabel,
   describeBookingError,
   describeCancelError,
   describeDescriptionError,
@@ -115,4 +117,33 @@ test("parseCapacity: empty is no limit, 1 to 500 otherwise", () => {
   assert.equal(parseCapacity("501").ok, false);
   assert.equal(parseCapacity("2.5").ok, false);
   assert.equal(parseCapacity("ten").ok, false);
+});
+
+test("a shared meal plan: grouped by day then meal, in the server's order; none is null", () => {
+  assert.equal(parseSharedPlan([]), null);
+  assert.equal(parseSharedPlan(null), null);
+  const plan = parseSharedPlan([
+    { meal_plan_id: "p1", plan_name: "Lean week", days_count: 7, day_index: 0, day_label: null, meal_slot: "breakfast", item_position: 0, item_kind: "recipe", item_id: "r1", name: "Overnight oats", grams: null, servings: "1", note: null },
+    { meal_plan_id: "p1", plan_name: "Lean week", days_count: 7, day_index: 0, day_label: null, meal_slot: "breakfast", item_position: 1, item_kind: "food", item_id: "f1", name: "Banana", grams: "120", servings: null, note: "or a pear" },
+    { meal_plan_id: "p1", plan_name: "Lean week", days_count: 7, day_index: 0, day_label: null, meal_slot: "dinner", item_position: 0, item_kind: "custom_meal", item_id: "m1", name: "Salmon bowl", grams: null, servings: 1.5, note: null },
+    { meal_plan_id: "p1", plan_name: "Lean week", days_count: 7, day_index: 1, day_label: "Rest day", meal_slot: "lunch", item_position: 0, item_kind: "food", item_id: "f2", name: null, grams: null, servings: null, note: null },
+  ]);
+  assert.ok(plan);
+  assert.equal(plan.name, "Lean week");
+  assert.equal(plan.days, 7);
+  assert.deepEqual(plan.dayList.map((d) => [d.label, d.meals.map((m) => [m.title, m.items.length])]), [
+    ["Day 1", [["Breakfast", 2], ["Dinner", 1]]],
+    ["Rest day", [["Lunch", 1]]],
+  ]);
+  assert.equal(plan.dayList[0].meals[0].items[1].note, "or a pear");
+  assert.equal(plan.dayList[1].meals[0].items[0].name, "Removed item");
+  assert.ok(!JSON.stringify(plan).match(/kcal|calorie|protein|carb|fat/i));
+});
+
+test("a shared plan item's portion: grams first, then servings", () => {
+  assert.equal(portionLabel({ grams: 120, servings: null }), "120 g");
+  assert.equal(portionLabel({ grams: 120, servings: 2 }), "120 g");
+  assert.equal(portionLabel({ grams: null, servings: 1 }), "1 serving");
+  assert.equal(portionLabel({ grams: null, servings: 1.5 }), "1.5 servings");
+  assert.equal(portionLabel({ grams: 0, servings: null }), null);
 });

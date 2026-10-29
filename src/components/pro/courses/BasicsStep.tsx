@@ -39,6 +39,8 @@ export interface CoverControl {
   onPick: (file: File | null) => void;
   /** Takes back a cover still waiting for approval. */
   onWithdraw: () => void;
+  /** Removes the approved cover at once (remove_course_cover). */
+  onRemove: () => void;
   /** A published course's cover changes the live course once approved, not through the revision. */
   live: boolean;
 }
@@ -72,6 +74,7 @@ export const BasicsStep: React.FC<{
   const dark = useIsDark();
   const [menu, setMenu] = useState<HTMLButtonElement | null>(null);
   const [coverErr, setCoverErr] = useState<string | null>(null);
+  const [removeAsk, setRemoveAsk] = useState(false);
   const input = useRef<HTMLInputElement | null>(null);
   const set = (k: keyof BasicsDraft, v: string) => onChange({ ...draft, [k]: v });
   const own = cover.pick ? null : cover.own;
@@ -140,6 +143,31 @@ export const BasicsStep: React.FC<{
         </>
       ) : (
         <Note mt={6}>JPEG, PNG or WebP, up to 5 MB. {cover.live ? "A new cover goes live once our team approves it." : "Our team approves it before others see it."}</Note>
+      )}
+      {!cover.pick && cover.approvedUrl && own?.status !== "pending" && (
+        removeAsk ? (
+          <div className="flex flex-wrap items-center" style={{ gap: 10, marginTop: 6 }}>
+            <span style={{ fontSize: textPx(12), color: INK.chF }}>Remove the cover? A new one needs approval again.</span>
+            <button
+              type="button"
+              onClick={() => {
+                setRemoveAsk(false);
+                cover.onRemove();
+              }}
+              className="tap"
+              style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi, minHeight: 32 }}
+            >
+              Remove
+            </button>
+            <button type="button" onClick={() => setRemoveAsk(false)} className="tap" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, minHeight: 32 }}>
+              Keep it
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setRemoveAsk(true)} className="tap" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi, minHeight: 32 }}>
+            Remove cover
+          </button>
+        )
       )}
       <Label>Cover colour</Label>
       <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: -2, marginBottom: 6 }}>Shown when there's no cover image.</p>

@@ -13,6 +13,7 @@ import {
   setGroupDescription,
   submitGroupPhoto,
   withdrawGroupPhoto,
+  removeGroupPhoto,
 } from "../../services/messaging/groups";
 
 /**
@@ -23,8 +24,8 @@ import {
  * - PHOTO: goes through image approval (submit_image 'group_photo'). Until an
  *   admin approves it the owner sees the new one here with "Waiting for
  *   approval" (or the reason it was refused); members keep the previous photo,
- *   or none. A pending photo can be taken back; an approved one can't be
- *   removed from the app (photo_path is written by approval only).
+ *   or none. A pending photo can be taken back (withdraw_image); an approved
+ *   one is removed at once after a confirm (remove_group_photo, 060000).
  * - DESCRIPTION: set_group_description, up to 500, empty clears it; checked
  *   by the word lists (ATX60 refuses a blocked word, in our words).
  * Only what changed is sent; the name first, as before.
@@ -43,6 +44,10 @@ export const GroupDetailsSheet: React.FC<{
   const [newDesc, setNewDesc] = useState(description ?? "");
   const [busy, setBusy] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [removeAsk, setRemoveAsk] = useState(false);
+  // The approved photo just removed: shown as none until the thread re-reads
+  // (a later approved photo has another path, so it shows).
+  const [gonePath, setGonePath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const own = useOwnImage("group_photo", open ? threadId : null);
@@ -105,7 +110,20 @@ export const GroupDetailsSheet: React.FC<{
     own.refresh();
   };
 
+  const removeApproved = async () => {
+    if (photoBusy) return;
+    setRemoveAsk(false);
+    setPhotoBusy(true);
+    setError(null);
+    const r = await removeGroupPhoto(threadId);
+    setPhotoBusy(false);
+    if (!r.ok) return setError(r.message);
+    setGonePath(photoPath);
+    onChanged();
+  };
+
   const pending = own.image?.status === "pending";
+  const shownPath = photoPath && photoPath === gonePath ? null : photoPath;
   return (
     <BottomSheet
       open={open}
@@ -119,7 +137,7 @@ export const GroupDetailsSheet: React.FC<{
             <img src={own.image.url} alt="" className="w-full h-full object-cover" />
           </span>
         ) : (
-          <GroupAvatar path={photoPath} size={64} iconSize={26} />
+          <GroupAvatar path={shownPath} size={64} iconSize={26} />
         )}
         <div className="flex-1 min-w-0 flex flex-col items-start" style={{ gap: 6 }}>
           <ImageApprovalBadge state={own.image} />
@@ -131,14 +149,30 @@ export const GroupDetailsSheet: React.FC<{
               className="tap disabled:opacity-60"
               style={{ minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}
             >
-              {photoBusy ? "Sending…" : photoPath || own.image ? "Change photo" : "Add a photo"}
+              {photoBusy ? "Sending…" : shownPath || own.image ? "Change photo" : "Add a photo"}
             </button>
             {pending && (
               <button type="button" disabled={photoBusy} onClick={() => void takeBack()} className="tap disabled:opacity-60" style={{ minHeight: 44, fontSize: textPx(13), fontWeight: 600, color: INK.hi }}>
                 Remove
               </button>
             )}
+            {!own.image && shownPath && !removeAsk && (
+              <button type="button" disabled={photoBusy} onClick={() => setRemoveAsk(true)} className="tap disabled:opacity-60" style={{ minHeight: 44, fontSize: textPx(13), fontWeight: 600, color: INK.hi }}>
+                Remove
+              </button>
+            )}
           </div>
+          {removeAsk && (
+            <div className="flex items-center flex-wrap" style={{ gap: 14 }}>
+              <span style={{ fontSize: textPx(12), color: INK.chF }}>Remove the photo for everyone?</span>
+              <button type="button" disabled={photoBusy} onClick={() => void removeApproved()} className="tap disabled:opacity-60" style={{ minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.hi }}>
+                Remove
+              </button>
+              <button type="button" onClick={() => setRemoveAsk(false)} className="tap" style={{ minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}>
+                Keep it
+              </button>
+            </div>
+          )}
           <input ref={fileRef} type="file" accept={GROUP_PHOTO_ACCEPT} className="hidden" aria-label="Choose a group photo" onChange={(e) => void pick(e.target.files?.[0])} />
         </div>
       </div>

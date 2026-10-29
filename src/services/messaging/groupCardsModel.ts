@@ -183,3 +183,69 @@ export function parseCapacity(text: string): { ok: true; value: number | null } 
     return { ok: false, message: `Places is a whole number from ${CAPACITY_MIN} to ${CAPACITY_MAX}. Leave it empty for no limit.` };
   return { ok: true, value: n };
 }
+
+// ---------------------------------------------------------------------------
+// A shared meal plan, opened from its card (Database 20261223060000,
+// shared_meal_plan_detail): one row per item, in day and meal order. No
+// calories or macros for anybody, and not the plan's own notes.
+// ---------------------------------------------------------------------------
+
+const SLOT_NAMES: Record<string, string> = { breakfast: "Breakfast", lunch: "Lunch", snack: "Snacks", dinner: "Dinner" };
+
+export interface SharedPlanItem {
+  name: string;
+  grams: number | null;
+  servings: number | null;
+  note: string | null;
+}
+export interface SharedPlanDay {
+  index: number;
+  /** "Day 1" when the plan has no label for it. */
+  label: string;
+  meals: { slot: string; title: string; items: SharedPlanItem[] }[];
+}
+export interface SharedPlan {
+  id: string;
+  name: string;
+  days: number | null;
+  dayList: SharedPlanDay[];
+}
+
+const numOrNull = (v: unknown): number | null => {
+  const n = typeof v === "string" ? Number(v) : v;
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
+};
+const textOrNull = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
+
+/** The rows grouped by day, then meal, keeping the server's order. Null when there are none (not a member, or the card is gone). */
+export function parseSharedPlan(rows: unknown): SharedPlan | null {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const first = rows[0] as Record<string, unknown>;
+  const id = textOrNull(first.meal_plan_id);
+  if (!id) return null;
+  const dayList: SharedPlanDay[] = [];
+  for (const raw of rows as Record<string, unknown>[]) {
+    const index = numOrNull(raw.day_index) ?? 0;
+    let day = dayList[dayList.length - 1];
+    if (!day || day.index !== index) {
+      day = { index, label: textOrNull(raw.day_label) ?? `Day ${index + 1}`, meals: [] };
+      dayList.push(day);
+    }
+    const slot = typeof raw.meal_slot === "string" ? raw.meal_slot : "snack";
+    let meal = day.meals[day.meals.length - 1];
+    if (!meal || meal.slot !== slot) {
+      meal = { slot, title: SLOT_NAMES[slot] ?? "Meal", items: [] };
+      day.meals.push(meal);
+    }
+    meal.items.push({ name: textOrNull(raw.name) ?? "Removed item", grams: numOrNull(raw.grams), servings: numOrNull(raw.servings), note: textOrNull(raw.note) });
+  }
+  return { id, name: textOrNull(first.plan_name) ?? "Meal plan", days: numOrNull(first.days_count), dayList };
+}
+
+/** "150 g", "1 serving", "1.5 servings", or null. Grams first when both are set. */
+export function portionLabel(item: Pick<SharedPlanItem, "grams" | "servings">): string | null {
+  const trim = (n: number) => String(Math.round(n * 10) / 10);
+  if (item.grams !== null && item.grams > 0) return `${trim(item.grams)} g`;
+  if (item.servings !== null && item.servings > 0) return `${trim(item.servings)} ${item.servings === 1 ? "serving" : "servings"}`;
+  return null;
+}

@@ -122,6 +122,9 @@ export async function sendGroupCard(threadId: string, kind: GroupCardKind, refId
   const { error } = await rpc("send_group_card", { p_thread_id: threadId, p_kind: kind, p_ref_id: refId, p_note: note?.trim() ? note.trim() : null });
   if (!error) return { ok: true };
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
+  // 22023 is also a plan assigned to a client (20261223060000): only a template can be shared.
+  if (error.code === "22023" && /assigned to a client/.test(error.message ?? ""))
+    return { ok: false, message: "A plan assigned to a client stays private. Share the template it came from." };
   if (error.code === "22023") return { ok: false, message: "The note is at most 300 characters." };
   if (error.code === "ATX08") return { ok: false, message: "That isn't available to share any more, or the group has closed." };
   return { ok: false, message: "Couldn't share that. Try again." };

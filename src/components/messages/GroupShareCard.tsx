@@ -6,6 +6,7 @@ import { ConfirmCard } from "../ui/ConfirmCard";
 import { useOpenThread } from "./useOpenThread";
 import { useProSubtype } from "../../hooks/useProSubtype";
 import { mealPlansHref } from "../pro/nutrition/nav";
+import { SharedMealPlanSheet } from "./SharedMealPlanSheet";
 import { INK } from "../pro/proInk";
 import { textPx } from "../../theme/textSize";
 import { clock12 } from "../../utils/time12";
@@ -25,9 +26,9 @@ import { placesAfter, placesLine, sessionAction, type SessionPlaces } from "../.
  *   {n} places", or, for a paid session, "Ask {pro}" (opens the chat with the
  *   professional). The professional sees the places line on their own card.
  * - MEAL PLAN (D-S13): name, days and note only. The professional who sent it
- *   gets "Open plan" (their builder). Members have no link: meal_plan_detail
- *   reads a plan for its professional and its own client only, so a shared
- *   template can't be opened by a member.
+ *   gets "Open plan" (their builder). Members get "View plan", a sheet read
+ *   through shared_meal_plan_detail (20261223060000): the days, meals and
+ *   items, never calories or macros.
  * - PROGRAMME: unchanged (read-only).
  */
 export const GroupShareCard: React.FC<{
@@ -62,8 +63,32 @@ export const GroupShareCard: React.FC<{
       />
     ) : card.kind === "meal_plan_share" && mine && viewerIsPro && card.mealPlanId ? (
       <MealPlanLink planId={card.mealPlanId} />
+    ) : card.kind === "meal_plan_share" && !mine && !readOnly ? (
+      <ViewSharedPlan messageId={messageId} name={card.name} />
     ) : null;
   return <ShareChatCard card={card} time={time} footer={footer} />;
+};
+
+const ViewSharedPlan: React.FC<{ messageId: string; name: string }> = ({ messageId, name }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(true);
+        }}
+        className="tap h-11 -my-[5.5px] w-full flex items-center"
+      >
+        <span className="h-[33px] w-full rounded-[10px] border border-charcoal/10 flex items-center justify-center" style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
+          View plan
+        </span>
+      </button>
+      <SharedMealPlanSheet open={open} onClose={() => setOpen(false)} messageId={messageId} fallbackName={name} />
+    </>
+  );
 };
 
 const MealPlanLink: React.FC<{ planId: string }> = ({ planId }) => {

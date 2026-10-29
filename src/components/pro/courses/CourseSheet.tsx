@@ -35,6 +35,7 @@ import {
   setCourseDescription,
   submitCourseCover,
   withdrawCourseImage,
+  removeCourseCover,
   type CourseExtras,
 } from "../../../services/courses/extras";
 import { useApp } from "../../../context/AppContext";
@@ -490,6 +491,9 @@ export function CourseSheet({
           onPick: (file) => setCoverPick(file ? { file, preview: URL.createObjectURL(file) } : null),
           onWithdraw: () => {
             if (courseId) void run(() => withdrawCourseImage("course_cover", courseId)).then(refreshCover);
+          },
+          onRemove: () => {
+            if (courseId) void run(() => removeCourseCover(courseId));
           },
           live: published,
         }}
