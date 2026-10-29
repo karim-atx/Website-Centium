@@ -10,13 +10,26 @@
 // note, event_id (Round D: the event, so a member can book a place);
 // meal_plan_share: meal_plan_id, name, days, note (NEVER calories or macros).
 // Anything unreadable is null, and the message's own text shows instead.
+//
+// Round E (Database 20261224040000): the programme, session and meal-plan
+// cards carry their parent's playlist_url (and its derived playlist_service)
+// when it had one as sent; playlist_share (send_playlist_card) is a playlist
+// on its own, with an optional title and note. A link is only kept when it
+// passes the shared rule (services/music/playlistLink), the server's own.
+
+import { playlistServiceOf } from "../music/playlistLink";
 
 export type ShareCard =
-  | { kind: "programme_share"; templateId: string | null; name: string; durationWeeks: number | null; exerciseCount: number | null; note: string | null }
-  | { kind: "session_share"; title: string; startsAt: string | null; durationMin: number | null; location: string | null; note: string | null; eventId: string | null }
-  | { kind: "meal_plan_share"; mealPlanId: string | null; name: string; days: number | null; note: string | null };
+  | { kind: "programme_share"; templateId: string | null; name: string; durationWeeks: number | null; exerciseCount: number | null; note: string | null; playlistUrl: string | null }
+  | { kind: "session_share"; title: string; startsAt: string | null; durationMin: number | null; location: string | null; note: string | null; eventId: string | null; playlistUrl: string | null }
+  | { kind: "meal_plan_share"; mealPlanId: string | null; name: string; days: number | null; note: string | null; playlistUrl: string | null }
+  | { kind: "playlist_share"; playlistUrl: string; title: string | null; note: string | null };
 
 const text = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
+const playlist = (v: unknown): string | null => {
+  const url = text(v);
+  return url && playlistServiceOf(url) ? url : null;
+};
 const num = (v: unknown): number | null => {
   const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
   return Number.isFinite(n) ? n : null;
@@ -32,18 +45,23 @@ export function parseShareCard(raw: unknown): ShareCard | null {
   if (kind === "programme_share") {
     const name = text(p.name);
     if (!name) return null;
-    return { kind, templateId: text(p.template_id), name, durationWeeks: num(p.duration_weeks), exerciseCount: num(p.exercise_count), note: text(p.note) };
+    return { kind, templateId: text(p.template_id), name, durationWeeks: num(p.duration_weeks), exerciseCount: num(p.exercise_count), note: text(p.note), playlistUrl: playlist(p.playlist_url) };
   }
   if (kind === "session_share") {
     const title = text(p.title);
     if (!title) return null;
-    return { kind, title, startsAt: text(p.starts_at), durationMin: num(p.duration_min), location: text(p.location), note: text(p.note), eventId: text(p.event_id) };
+    return { kind, title, startsAt: text(p.starts_at), durationMin: num(p.duration_min), location: text(p.location), note: text(p.note), eventId: text(p.event_id), playlistUrl: playlist(p.playlist_url) };
   }
   if (kind === "meal_plan_share") {
     const name = text(p.name);
     if (!name) return null;
     // Only the allowlisted keys are read: a stray number on the payload never reaches the card.
-    return { kind, mealPlanId: text(p.meal_plan_id), name, days: num(p.days), note: text(p.note) };
+    return { kind, mealPlanId: text(p.meal_plan_id), name, days: num(p.days), note: text(p.note), playlistUrl: playlist(p.playlist_url) };
+  }
+  if (kind === "playlist_share") {
+    const url = playlist(p.playlist_url);
+    if (!url) return null;
+    return { kind, playlistUrl: url, title: text(p.title), note: text(p.note) };
   }
   return null;
 }

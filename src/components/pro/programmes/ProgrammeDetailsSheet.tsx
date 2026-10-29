@@ -3,7 +3,9 @@ import { BottomSheet } from "../../ui/BottomSheet";
 import { Button } from "../../ui/Button";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
-import { createProgramme, updateProgramme, type Programme } from "../../../services/programmes";
+import { createProgramme, setProgrammePlaylist, updateProgramme, type Programme } from "../../../services/programmes";
+import { PlaylistField, playlistFieldValid } from "../../music/PlaylistField";
+import { tidyPlaylistInput } from "../../../services/music/playlistLink";
 import { MAX_WEEKS, NAME_MAX, TEXT_MAX } from "../../../services/programmes/model";
 
 /**
@@ -11,6 +13,10 @@ import { MAX_WEEKS, NAME_MAX, TEXT_MAX } from "../../../services/programmes/mode
  * (1–120), length (1–52 weeks), description and coach note (up to 2,000
  * each). create_programme / update_programme; a length that would cut off
  * a week with workouts is refused (22023) and said plainly.
+ *
+ * Round E: "Playlist (optional)", saved after the details through
+ * set_programme_playlist (programmes take no direct writes). A new programme
+ * whose playlist is refused is kept: the sheet stays open on it as an edit.
  */
 const FIELD = "w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20";
 
@@ -26,6 +32,9 @@ export const ProgrammeDetailsSheet: React.FC<{
   const [weeks, setWeeks] = useState("4");
   const [description, setDescription] = useState("");
   const [coachNote, setCoachNote] = useState("");
+  const [playlist, setPlaylist] = useState("");
+  // A new programme already created on an earlier try (its playlist failed).
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +47,8 @@ export const ProgrammeDetailsSheet: React.FC<{
       setWeeks(String(programme?.durationWeeks ?? 4));
       setDescription(programme?.description ?? "");
       setCoachNote(programme?.coachNote ?? "");
+      setPlaylist(programme?.playlistUrl ?? "");
+      setCreatedId(null);
       setError(null);
       setBusy(false);
     }
@@ -45,19 +56,32 @@ export const ProgrammeDetailsSheet: React.FC<{
 
   const n = Number(weeks);
   const weeksOk = Number.isInteger(n) && n >= 1 && n <= MAX_WEEKS;
-  const ok = name.trim().length > 0 && weeksOk && !busy;
+  const playlistUrl = tidyPlaylistInput(playlist);
+  const ok = name.trim().length > 0 && weeksOk && playlistFieldValid(playlistUrl) && !busy;
 
   const save = async () => {
     setBusy(true);
     setError(null);
     const fields = { name, durationWeeks: n, description, coachNote };
-    const r = programme ? await updateProgramme(programme.id, fields) : await createProgramme(fields);
-    setBusy(false);
+    const existing = programme?.id ?? createdId;
+    const r = existing ? await updateProgramme(existing, fields) : await createProgramme(fields);
     if (!r.ok) {
+      setBusy(false);
       setError(r.message);
       return;
     }
-    onSaved(programme ? programme.id : (r.data as string));
+    const id = existing ?? (r.data as string);
+    if (!existing) setCreatedId(id);
+    if ((playlistUrl || null) !== (programme?.playlistUrl ?? null)) {
+      const p = await setProgrammePlaylist(id, playlistUrl || null);
+      if (!p.ok) {
+        setBusy(false);
+        setError(p.message);
+        return;
+      }
+    }
+    setBusy(false);
+    onSaved(id);
     onClose();
   };
 
@@ -92,6 +116,13 @@ export const ProgrammeDetailsSheet: React.FC<{
           {label("Coach note (clients see this)")}
           <textarea value={coachNote} maxLength={TEXT_MAX} onChange={(e) => setCoachNote(e.target.value)} rows={3} className={FIELD} placeholder="Keep the last two reps hard but clean." />
         </label>
+        <PlaylistField
+          value={playlist}
+          onChange={setPlaylist}
+          hint="Clients see it on this programme and can play it while they train."
+          labelStyle={{ fontWeight: 600 }}
+          inputStyle={{ borderRadius: 12, minHeight: 42, fontSize: textPx(14), fontWeight: 400 }}
+        />
         {error && (
           <p role="alert" style={{ fontSize: textPx(11.5), fontWeight: 600, color: INK.hi }}>
             {error}

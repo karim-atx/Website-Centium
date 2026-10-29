@@ -8,6 +8,8 @@ import { fetchMyMealPlan, type MyMealPlan } from "../../services/nutrition/clien
 import { initials, mealPlanLines, planDay } from "../../services/nutrition/clientNutritionModel";
 import { mealLabels } from "../../services/nutrition";
 import type { MealType } from "../../types";
+import { MusicSection } from "../music/MusicSection";
+import { providerHeading } from "../../services/music/whichMusic";
 
 /** The professional's initials in the board's teal avatar (gen/ui.js avatar, tone teal). */
 export function ProAvatar({ name, size }: { name: string | null; size: number }) {
@@ -99,6 +101,10 @@ export function MealPlanCard({ userId, today, card, title, hideNumbers }: { user
 
       <BottomSheet open={open} onClose={() => setOpen(false)} title={plan.name} size="tall">
         <div className="flex flex-col" style={{ gap: 12 }}>
+          {/* Round E: the professional's playlist for the plan, beside the
+              member's own cooking favourite when they have one; otherwise
+              the favourite or "Play your music". */}
+          <MusicSection moment="cooking" provider={{ url: plan.playlistUrl, heading: providerHeading(plan.professionalName) }} />
           {days.length === 0 && (
             <p style={{ margin: 0, fontSize: textPx(13), color: "rgb(var(--c-charcoal-soft))" }}>No meals in this plan yet.</p>
           )}

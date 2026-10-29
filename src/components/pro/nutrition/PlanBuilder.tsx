@@ -10,6 +10,8 @@ import { ConfirmCard } from "../../ui/ConfirmCard";
 import { CtaButton } from "../../ui/PinnedCta";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { MacroSplitEditor } from "../../food/MacroSplitEditor";
+import { PlaylistField, playlistFieldValid } from "../../music/PlaylistField";
+import { PlaylistCard } from "../../music/PlaylistCard";
 import { INK, NO_ICON_SCALE } from "../proInk";
 import { RoundBtn } from "../client/kit";
 import { EmptyState } from "../EmptyState";
@@ -70,6 +72,7 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
   const [itemMenu, setItemMenu] = useState<{ item: PlanItem; anchor: HTMLElement } | null>(null);
   const [flagged, setFlagged] = useState<{ item: PlanItem; row: ConflictRow } | null>(null);
   const [renaming, setRenaming] = useState(false);
+  const [playlistOpen, setPlaylistOpen] = useState(false);
   const [targetsOpen, setTargetsOpen] = useState(false);
   const [confirm, setConfirm] = useState<"delete" | "end" | null>(null);
   const [busy, setBusy] = useState(false);
@@ -192,6 +195,8 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
   const menuOptions = [
     { value: "rename", label: "Rename" },
     { value: "targets", label: "Plan targets" },
+    // Round E: the plan's cook-along playlist.
+    { value: "playlist", label: plan.playlistUrl ? "Playlist" : "Add a playlist" },
     ...(isCopy ? [] : [{ value: "assign", label: "Assign to clients" }]),
     isCopy ? { value: "end", label: `End ${firstName || "this"}'s plan`, destructive: true } : { value: "delete", label: "Delete template", destructive: true },
   ];
@@ -317,6 +322,7 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
           setMenuAnchor(null);
           if (v === "rename") setRenaming(true);
           else if (v === "targets") setTargetsOpen(true);
+          else if (v === "playlist") setPlaylistOpen(true);
           else if (v === "assign") onAssign(plan);
           else if (v === "delete") setConfirm("delete");
           else if (v === "end") setConfirm("end");
@@ -390,6 +396,17 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
         return r.ok ? null : r.message;
       }} />
       <PlanTargetsSheet open={targetsOpen} plan={plan} onClose={() => setTargetsOpen(false)} onSaved={reload} />
+      <PlanPlaylistSheet
+        open={playlistOpen}
+        url={plan.playlistUrl}
+        isCopy={isCopy}
+        onClose={() => setPlaylistOpen(false)}
+        onSave={async (url) => {
+          const r = await updatePlanMeta(plan.id, { playlistUrl: url });
+          if (r.ok) reload();
+          return r.ok ? null : r.message;
+        }}
+      />
 
       <ConfirmCard
         open={confirm === "delete"}
@@ -526,6 +543,71 @@ const RenameSheet: React.FC<{ open: boolean; name: string; onClose: () => void; 
           {err}
         </p>
       )}
+    </BottomSheet>
+  );
+};
+
+/**
+ * Round E · the plan's playlist (meal_plans.playlist_url, Database
+ * 20261224030000): the shared "Playlist (optional)" field and, once the link
+ * is one the shared rule accepts, the card members will see. Clients see it
+ * with the plan as "{your name}'s playlist"; a template's is copied to each
+ * client's plan when it is assigned (later changes don't reach copies already
+ * made). Designed here on RenameSheet's pattern; empty removes it.
+ */
+const PlanPlaylistSheet: React.FC<{ open: boolean; url: string | null; isCopy: boolean; onClose: () => void; onSave: (url: string | null) => Promise<string | null> }> = ({
+  open,
+  url,
+  isCopy,
+  onClose,
+  onSave,
+}) => {
+  const [v, setV] = useState(url ?? "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    if (open) {
+      setV(url ?? "");
+      setErr(null);
+    }
+  }, [open, url]);
+  const ok = playlistFieldValid(v);
+  return (
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title="Playlist"
+      footer={
+        <CtaButton
+          className="w-full"
+          size="sheet"
+          label={!v && url ? "Remove playlist" : "Save"}
+          loading={busy}
+          disabled={!ok || v === (url ?? "")}
+          onClick={async () => {
+            setBusy(true);
+            const e = await onSave(v || null);
+            setBusy(false);
+            if (e) setErr(e);
+            else onClose();
+          }}
+        />
+      }
+    >
+      <div className="flex flex-col" style={{ gap: 12 }}>
+        <PlaylistField
+          value={v}
+          onChange={(x) => {
+            setV(x);
+            if (err) setErr(null);
+          }}
+          error={err}
+          hint={isCopy ? "Shown with this client's plan." : "Shown with the plan. Clients you assign it to get it with their copy."}
+          labelStyle={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}
+          inputStyle={{ background: INK.soft, borderRadius: 12, fontSize: textPx(14), fontWeight: 400 }}
+        />
+        {v && ok && <PlaylistCard url={v} heading="Your playlist" />}
+      </div>
     </BottomSheet>
   );
 };

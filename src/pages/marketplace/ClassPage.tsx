@@ -14,6 +14,7 @@ import { NO_ICON_SCALE } from "../../components/pro/proInk";
 import { InstructorCard } from "../../components/market/InstructorCard";
 import { hiredViaCentium } from "../../services/marketplace/instructorRule";
 import { ConfirmationStrip } from "../../components/market/ConfirmationStrip";
+import { MusicSection } from "../../components/music/MusicSection";
 import {
   MarketEmptyCard,
   MarketError,
@@ -889,6 +890,16 @@ export function ClassPage({ classId }: { classId: string }) {
         <>
           <h2 style={{ ...caps, marginTop: 18 }}>About this class</h2>
           <p style={body}>{about}</p>
+        </>
+      )}
+      {/* Round E: the gym's playlist for this class, and the member's own
+          workout music beside it when they have one. The gym sets it, so it
+          goes under the gym's name (the instructor may change). Nothing shows
+          when the class has none. */}
+      {c.playlistUrl && (
+        <>
+          <h2 style={{ ...caps, marginTop: 18 }}>Music</h2>
+          <MusicSection moment="workout" provider={{ url: c.playlistUrl, heading: `${c.businessName}'s playlist` }} style={{ marginTop: 8 }} />
         </>
       )}
       {level && (

@@ -34,6 +34,7 @@ import {
   FileText,
   ShieldCheck,
   KeyRound,
+  Music2,
 } from "lucide-react";
 import { DEVICE_PLACEHOLDER_ICON } from "../../components/settings/DevicePlaceholders";
 import { useIsDark } from "../../hooks/useIsDark";
@@ -340,6 +341,8 @@ function SettingsHub() {
           valueTight
           onClick={() => navigate("/app/settings/language")}
         />
+        {/* Round E: the music app and the Workout, Mind, Sleep and Cooking favourites. */}
+        <SettingsRow icon={Music2} title={t("Your music")} onClick={() => navigate("/app/settings/music")} />
         <SettingsRow icon={Accessibility} title={t("Accessibility")} onClick={() => navigate("/app/settings/accessibility")} />
         <SettingsRow icon={Lock} title={t("Privacy")} onClick={() => navigate("/app/settings/privacy")} />
         {/* V9 (QA 9.0): for every account type; Settings is the one shared page. */}

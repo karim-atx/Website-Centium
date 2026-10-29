@@ -28,4 +28,6 @@ export interface DirectoryListing {
    * database's own verified rule; nothing here re-derives it.
    */
   hasVerifiedLicence: boolean;
+  /** Round E (20261224030000): the profile's playlist, or null. Optional so older fixtures stay valid. */
+  playlistUrl?: string | null;
 }

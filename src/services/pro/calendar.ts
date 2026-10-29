@@ -29,6 +29,7 @@ import { PAST_MIDNIGHT_ACCEPT_MESSAGE, PAST_MIDNIGHT_CODE } from "../booking/pas
 import { siteHref, siteText } from "../../config/site";
 import type { Read, Write } from "./clients";
 import type { EventAlert } from "../../components/calendar/eventAlert";
+import { playlistSaveError } from "../music/playlistLink";
 
 const from = (table: string) => supabase.from(table as never);
 const failed = (error: unknown, fallback: string): Write => ({ ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : fallback });
@@ -450,6 +451,8 @@ export interface NewSession {
   notes: string | null;
   alert: EventAlert;
   alert2: EventAlert;
+  /** Round E: the session's playlist (calendar_events.playlist_url), or null. */
+  playlistUrl?: string | null;
 }
 
 /**
@@ -469,6 +472,7 @@ export async function createSessions(me: string, s: NewSession): Promise<{ ok: t
     location: s.location,
     url: s.url,
     notes: s.notes,
+    ...(s.playlistUrl ? { playlist_url: s.playlistUrl } : null),
     repeat: "none",
     color: s.colour,
     appointment_service_id: s.serviceId,
@@ -476,7 +480,12 @@ export async function createSessions(me: string, s: NewSession): Promise<{ ok: t
     created_by_client: true,
   }));
   const ins = await from("calendar_events").insert(rows as never).select("id, event_date");
-  if (ins.error) return failed(ins.error, "Couldn't save this session. Try again.") as { ok: false; message: string };
+  if (ins.error) {
+    // Round E: a refused playlist link (ATXN0-2) says what's wrong with it.
+    const playlist = playlistSaveError((ins.error as { code?: string }).code);
+    if (playlist) return { ok: false, message: playlist };
+    return failed(ins.error, "Couldn't save this session. Try again.") as { ok: false; message: string };
+  }
   const ids = ((ins.data ?? []) as unknown as { id: string; event_date: string }[]).sort((a, b) => a.event_date.localeCompare(b.event_date));
   const inv = await from("calendar_event_invitees").insert(
     ids.map((e) => ({ calendar_event_id: e.id, invited_user_id: s.clientId, invited_by: me, alert: s.alert, alert_2: s.alert2 })) as never

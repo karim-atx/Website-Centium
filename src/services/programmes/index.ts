@@ -18,6 +18,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { programmeErrorMessage, type ProgrammeSlot, type ProgressRow, type ScheduleRow } from "./model";
+import { playlistSaveError } from "../music/playlistLink";
 
 type PgError = { code?: string; message: string } | null;
 type Rpc = { rpc: (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: PgError }> };
@@ -50,6 +51,8 @@ export interface Programme {
   coachNote: string | null;
   durationWeeks: number;
   updatedAt: string;
+  /** Round E: programmes.playlist_url, set through set_programme_playlist. */
+  playlistUrl: string | null;
 }
 
 export interface ProgrammeAssignmentRow {
@@ -78,9 +81,23 @@ export interface MyProgramme {
   currentDay: number | null;
   professionalId: string;
   professionalFirstName: string | null;
+  /**
+   * Round E: the programme's playlist, read from the programmes row the
+   * client is assigned to (programmes_select_assigned_client); my_programmes
+   * doesn't return it. null when there is none or it couldn't be read.
+   */
+  playlistUrl: string | null;
 }
 
-type ProgrammeDbRow = { id: string; name: string; description: string | null; coach_note: string | null; duration_weeks: number; updated_at: string };
+type ProgrammeDbRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  coach_note: string | null;
+  duration_weeks: number;
+  updated_at: string;
+  playlist_url?: string | null;
+};
 const toProgramme = (r: ProgrammeDbRow): Programme => ({
   id: r.id,
   name: r.name,
@@ -88,6 +105,7 @@ const toProgramme = (r: ProgrammeDbRow): Programme => ({
   coachNote: r.coach_note,
   durationWeeks: r.duration_weeks,
   updatedAt: r.updated_at,
+  playlistUrl: r.playlist_url ?? null,
 });
 
 type AssignmentDbRow = {
@@ -121,7 +139,7 @@ const ASSIGNMENT_COLUMNS = "id, programme_id, client_id, starts_on, join_week, e
 export async function fetchOwnProgrammes(me: string): Promise<Read<Programme[]>> {
   const { data, error } = await db()
     .from("programmes")
-    .select("id, name, description, coach_note, duration_weeks, updated_at")
+    .select("id, name, description, coach_note, duration_weeks, updated_at, playlist_url")
     .eq("professional_id", me)
     .order("updated_at", { ascending: false });
   if (error) return readFail(error);
@@ -179,6 +197,20 @@ export async function createProgramme(f: ProgrammeFields): Promise<Done<string>>
 export async function updateProgramme(id: string, f: ProgrammeFields): Promise<Done> {
   const { error } = await db().rpc("update_programme", { p_programme_id: id, ...fieldArgs(f) });
   if (error) return writeFail(error, "Couldn't save the programme. Try again.");
+  return { ok: true, data: undefined };
+}
+
+/**
+ * Round E: sets or clears (empty) a programme's playlist. Programmes take no
+ * direct writes; set_programme_playlist checks the link (ATXN0 / ATXN1 / ATXN2)
+ * and that the programme is the caller's (ATX08).
+ */
+export async function setProgrammePlaylist(id: string, url: string | null): Promise<Done> {
+  const { error } = await db().rpc("set_programme_playlist", { p_programme_id: id, p_playlist_url: url || null });
+  if (error) {
+    const playlist = playlistSaveError(error.code);
+    return playlist ? { ok: false, message: playlist } : writeFail(error, "Couldn't save the playlist. Try again.");
+  }
   return { ok: true, data: undefined };
 }
 
@@ -289,6 +321,8 @@ export async function fetchProgrammeProgress(assignmentId: string): Promise<Read
 export async function fetchMyProgrammes(): Promise<Read<MyProgramme[]>> {
   const { data, error } = await db().rpc("my_programmes");
   if (error) return readFail(error);
+  const ids = ((data ?? []) as { programme_id: string }[]).map((r) => r.programme_id);
+  const playlists = await fetchProgrammePlaylists(ids);
   return {
     ok: true,
     data: (
@@ -321,6 +355,23 @@ export async function fetchMyProgrammes(): Promise<Read<MyProgramme[]>> {
       currentDay: r.current_day,
       professionalId: r.professional_id,
       professionalFirstName: r.professional_first_name,
+      playlistUrl: playlists[r.programme_id] ?? null,
     })),
   };
+}
+
+/**
+ * Round E: the playlists of programmes the client is assigned to, by id. A
+ * failed read is no playlist (the programme card still shows), not an error.
+ */
+async function fetchProgrammePlaylists(ids: string[]): Promise<Record<string, string>> {
+  if (ids.length === 0) return {};
+  const { data, error } = await db().from("programmes").select("id, playlist_url").in("id", ids);
+  if (error) {
+    console.error("[programmes] Could not read playlists:", error.message);
+    return {};
+  }
+  const out: Record<string, string> = {};
+  for (const r of (data ?? []) as { id: string; playlist_url: string | null }[]) if (r.playlist_url) out[r.id] = r.playlist_url;
+  return out;
 }

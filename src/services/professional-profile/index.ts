@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
-import type { PostgrestError } from "@supabase/supabase-js";
+import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import { playlistSaveError } from "../music/playlistLink";
 import { moderationRefusal } from "../moderation/text";
 import type { Enums } from "../../../lib/supabase/database.types";
 import { contactRefusal } from "../moderation/text";
@@ -192,6 +193,38 @@ export async function saveMyProfile(
     };
   }
   return { ok: true, profile: toProfile(inserted.data as Row) };
+}
+
+// ---------------------------------------------------------------------------
+// Round E · the profile's playlist (professional_profiles.playlist_url,
+// 20261224030000): public wherever the profile is (the directory view and
+// professional_by_handle, listed only, like the cover). Kept out of COLUMNS
+// above, whose literal drives the generated row type: the column is newer
+// than the types, so these two read and write through an untyped view.
+
+const untyped = supabase as unknown as SupabaseClient;
+
+export async function fetchMyPlaylist(userId: string): Promise<{ ok: true; url: string | null } | { ok: false; message: string }> {
+  const { data, error } = await untyped.from("professional_profiles").select("playlist_url").eq("profile_id", userId).maybeSingle();
+  if (error) {
+    console.error("[professional-profile] Could not read the playlist:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  return { ok: true, url: (data as { playlist_url: string | null } | null)?.playlist_url ?? null };
+}
+
+/** Sets or clears (null) the profile's playlist. Update first; a profile with no row yet gets one. */
+export async function saveMyPlaylist(userId: string, url: string | null): Promise<{ ok: true; url: string | null } | { ok: false; message: string }> {
+  const refused = (error: PostgrestError) => {
+    console.error("[professional-profile] Could not save the playlist:", error.code, error.message);
+    return { ok: false as const, message: playlistSaveError(error.code) ?? describe(error) };
+  };
+  const updated = await untyped.from("professional_profiles").update({ playlist_url: url }).eq("profile_id", userId).select("playlist_url");
+  if (updated.error) return refused(updated.error);
+  if (updated.data && updated.data.length > 0) return { ok: true, url: (updated.data[0] as { playlist_url: string | null }).playlist_url };
+  const inserted = await untyped.from("professional_profiles").insert({ profile_id: userId, playlist_url: url }).select("playlist_url").single();
+  if (inserted.error) return refused(inserted.error);
+  return { ok: true, url: (inserted.data as { playlist_url: string | null }).playlist_url };
 }
 
 export type LeaveAffiliationResult = { ok: true } | { ok: false; message: string };

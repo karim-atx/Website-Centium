@@ -64,12 +64,12 @@ export const GroupShareCard: React.FC<{
     ) : card.kind === "meal_plan_share" && mine && viewerIsPro && card.mealPlanId ? (
       <MealPlanLink planId={card.mealPlanId} />
     ) : card.kind === "meal_plan_share" && !mine && !readOnly ? (
-      <ViewSharedPlan messageId={messageId} name={card.name} />
+      <ViewSharedPlan messageId={messageId} name={card.name} senderFirstName={senderFirstName} />
     ) : null;
   return <ShareChatCard card={card} time={time} footer={footer} />;
 };
 
-const ViewSharedPlan: React.FC<{ messageId: string; name: string }> = ({ messageId, name }) => {
+const ViewSharedPlan: React.FC<{ messageId: string; name: string; senderFirstName: string }> = ({ messageId, name, senderFirstName }) => {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -86,7 +86,7 @@ const ViewSharedPlan: React.FC<{ messageId: string; name: string }> = ({ message
           View plan
         </span>
       </button>
-      <SharedMealPlanSheet open={open} onClose={() => setOpen(false)} messageId={messageId} fallbackName={name} />
+      <SharedMealPlanSheet open={open} onClose={() => setOpen(false)} messageId={messageId} fallbackName={name} senderFirstName={senderFirstName} />
     </>
   );
 };

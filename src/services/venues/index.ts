@@ -1,5 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
-import type { PostgrestError } from "@supabase/supabase-js";
+import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { hostedImageUrl, stage4Message, storagePath, type Billing, type GymMembershipStatus, type PassState, type PlanLite } from "./venueLogic";
 import type { HoursRow } from "./hours";
 import { isOffline } from "../network-error";
@@ -823,6 +823,21 @@ export async function fetchBusinessOwner(businessId: string): Promise<string | n
     return null;
   }
   return data?.profile_id ?? null;
+}
+
+/**
+ * Round E (20261224030000): the business's house playlist, or null. Public
+ * like the profile (anon reads the column too). Newer than the generated
+ * types, so read through an untyped view of the client.
+ */
+export async function fetchHousePlaylist(businessId: string): Promise<string | null> {
+  const db = supabase as unknown as SupabaseClient;
+  const { data, error } = await db.from("business_profiles").select("playlist_url").eq("id", businessId).maybeSingle();
+  if (error) {
+    console.warn("[venues] Could not read the house playlist:", error.message);
+    return null;
+  }
+  return (data as { playlist_url: string | null } | null)?.playlist_url ?? null;
 }
 
 /**

@@ -909,14 +909,17 @@ interface AppState {
     title: string,
     items: RecipeItem[],
     servings: number,
-    steps?: string
+    steps?: string,
+    /** Round E: the "Cook-along" playlist link ('' or null: none). */
+    playlistUrl?: string | null
   ) => Promise<string | undefined>;
   updateRecipe: (
     id: string,
     title: string,
     items: RecipeItem[],
     servings: number,
-    steps?: string
+    steps?: string,
+    playlistUrl?: string | null
   ) => Promise<string | undefined>;
   removeRecipe: (id: string) => Promise<void>;
   recipesError: string | null;
@@ -2903,7 +2906,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const uploaded: Recipe[] = [];
       const keptLocal: Recipe[] = [];
       for (const recipe of pending) {
-        const written = await createRecipeRemote(authUserId, recipe.title, recipe.items, recipe.servings, recipe.steps);
+        const written = await createRecipeRemote(authUserId, recipe.title, recipe.items, recipe.servings, recipe.steps, undefined, recipe.playlistUrl);
         if (written.ok && written.recipe) uploaded.push(written.recipe);
         else {
           console.error("[recipes] Could not upload a local recipe:", written.message);
@@ -5877,31 +5880,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // A LOCAL ID MEANS NEVER SYNCED, same shape as isRemoteMealId above.
   const isRemoteRecipeId = (id: string) => isUuid(id);
 
-  const addRecipe: AppState["addRecipe"] = async (title, items, servings, steps) => {
+  const addRecipe: AppState["addRecipe"] = async (title, items, servings, steps, playlistUrl) => {
     if (!authUserId) {
       setRecipes((prev) => [
-        { id: `rc${Date.now()}`, title: title.trim(), items, servings, steps },
+        { id: `rc${Date.now()}`, title: title.trim(), items, servings, steps, playlistUrl: playlistUrl || undefined },
         ...prev,
       ]);
       return undefined;
     }
-    const result = await createRecipeRemote(authUserId, title, items, servings, steps);
+    const result = await createRecipeRemote(authUserId, title, items, servings, steps, undefined, playlistUrl);
     if (!result.ok || !result.recipe) return result.message ?? "Could not save that recipe.";
     setRecipes((prev) => [result.recipe!, ...prev]);
     return undefined;
   };
 
-  const updateRecipe: AppState["updateRecipe"] = async (id, title, items, servings, steps) => {
+  const updateRecipe: AppState["updateRecipe"] = async (id, title, items, servings, steps, playlistUrl) => {
     const applyLocal = () =>
       setRecipes((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, title: title.trim(), items, servings, steps } : r))
+        prev.map((r) =>
+          r.id === id
+            ? { ...r, title: title.trim(), items, servings, steps, ...(playlistUrl !== undefined ? { playlistUrl: playlistUrl || undefined } : {}) }
+            : r
+        )
       );
 
     if (!authUserId || !isRemoteRecipeId(id)) {
       applyLocal();
       return undefined;
     }
-    const result = await updateRecipeRemote(id, title, items, servings, steps);
+    const result = await updateRecipeRemote(id, title, items, servings, steps, playlistUrl);
     if (!result.ok) return result.message ?? "Could not save that recipe.";
     applyLocal();
     return undefined;

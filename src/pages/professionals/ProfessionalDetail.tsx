@@ -719,6 +719,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
             teaches={profile?.teachesAt ?? []}
             today={today}
             footer={aboutFooter}
+            playlistUrl={listing.playlistUrl}
           />
         )}
         {tab === "services" && (

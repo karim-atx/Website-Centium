@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { CalendarPlus, ClipboardList, Pin, Send, UtensilsCrossed } from "lucide-react";
+import { CalendarPlus, ClipboardList, Music2, Pin, Send, UtensilsCrossed } from "lucide-react";
+import { emptyPlaylistShare, playlistShareReady, PlaylistShareFields, type PlaylistShareDraft, type PlaylistShareError } from "./SharePlaylistSheet";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { CtaButton } from "../../ui/PinnedCta";
 import { ListCard, type ListRow } from "../client/kit";
@@ -15,6 +16,7 @@ import {
   fetchShareableSessions,
   sendAnnouncement,
   sendGroupCard,
+  sendPlaylistCard,
   type GroupCardKind,
   type ShareableMealPlan,
   type ShareableProgramme,
@@ -33,11 +35,13 @@ import {
  *   (session_share: title, start, length, place and the event, so members
  *   can book a place; never an attendee).
  * - An announcement: my message, pinned to the top (the chat's pin).
+ * - A playlist (Round E, playlist_share): a Spotify, Apple Music or YouTube
+ *   Music link with an optional title and note (send_playlist_card).
  * An optional note (≤ 300) goes with a card. Nothing is sent before Share.
  */
 type ListStep = "programmes" | "sessions" | "mealplans";
 const LIST_FOR: Record<GroupCardKind, ListStep> = { programme_share: "programmes", session_share: "sessions", meal_plan_share: "mealplans" };
-type Step = { kind: "menu" } | { kind: ListStep } | { kind: "announce" } | { kind: "note"; card: GroupCardKind; id: string; title: string };
+type Step = { kind: "menu" } | { kind: ListStep } | { kind: "announce" } | { kind: "playlist" } | { kind: "note"; card: GroupCardKind; id: string; title: string };
 
 export const ShareToGroupSheet: React.FC<{
   open: boolean;
@@ -57,12 +61,16 @@ export const ShareToGroupSheet: React.FC<{
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
+  const [playlist, setPlaylist] = useState<PlaylistShareDraft>(emptyPlaylistShare);
+  const [playlistError, setPlaylistError] = useState<PlaylistShareError>(null);
 
   useEffect(() => {
     if (!open) {
       setStep({ kind: "menu" });
       setText("");
       setError(null);
+      setPlaylist(emptyPlaylistShare());
+      setPlaylistError(null);
     }
   }, [open]);
 
@@ -87,6 +95,15 @@ export const ShareToGroupSheet: React.FC<{
   };
   const share = async () => {
     if (busy) return;
+    if (step.kind === "playlist") {
+      if (!playlistShareReady(playlist)) return;
+      setBusy(true);
+      setPlaylistError(null);
+      const p = await sendPlaylistCard(threadId, playlist.url, playlist.title, playlist.note);
+      setBusy(false);
+      if (!p.ok) return setPlaylistError({ message: p.message, field: p.field });
+      return finish();
+    }
     setBusy(true);
     setError(null);
     const r =
@@ -106,6 +123,7 @@ export const ShareToGroupSheet: React.FC<{
     ...(coachesNutrition ? [{ key: "meal", icon: UtensilsCrossed, title: "A meal plan", meta: "Only if you coach nutrition", onClick: () => setStep({ kind: "mealplans" }) }] : []),
     { key: "session", icon: CalendarPlus, title: "A group session", meta: "Members book a place", onClick: () => setStep({ kind: "sessions" }) },
     { key: "announce", icon: Pin, title: "An announcement", meta: "Pinned to the top", onClick: () => setStep({ kind: "announce" }) },
+    { key: "playlist", icon: Music2, title: "A playlist", meta: "Spotify, Apple Music or YouTube Music", onClick: () => setStep({ kind: "playlist" }) },
   ];
 
   const list = (rows: ListRow[] | null, empty: string) =>
@@ -137,12 +155,12 @@ export const ShareToGroupSheet: React.FC<{
   );
 
   const footer =
-    step.kind === "note" || step.kind === "announce" ? (
+    step.kind === "note" || step.kind === "announce" || step.kind === "playlist" ? (
       <CtaButton
         label={step.kind === "announce" ? "Send and pin" : "Share"}
         icon={<Send size={15} aria-hidden />}
         loading={busy}
-        disabled={step.kind === "announce" && !text.trim()}
+        disabled={(step.kind === "announce" && !text.trim()) || (step.kind === "playlist" && !playlistShareReady(playlist))}
         onClick={() => void share()}
       />
     ) : undefined;
@@ -198,6 +216,16 @@ export const ShareToGroupSheet: React.FC<{
         </>
       )}
       {step.kind === "announce" && field("Announcement", 2000, true)}
+      {step.kind === "playlist" && (
+        <PlaylistShareFields
+          draft={playlist}
+          onChange={(d) => {
+            setPlaylist(d);
+            if (playlistError) setPlaylistError(null);
+          }}
+          error={playlistError}
+        />
+      )}
       {error && (
         <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginTop: 8 }}>
           {error}

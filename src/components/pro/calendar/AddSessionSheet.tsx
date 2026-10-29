@@ -15,6 +15,8 @@ import { fetchMyEmployments } from "../../../services/business-team/employment";
 import { FieldButton, FieldInput, FieldLabel, SwitchRow } from "./calendarFields";
 import { fieldDate, hhmmOf, isoWeekday, minutes, money, remindersLabel, weeklyDates, REPEAT_TIMES, type AlertValue } from "./calendarModel";
 import { DEFAULT_SESSION } from "./calendarItems";
+import { PlaylistField, playlistFieldValid } from "../../music/PlaylistField";
+import { tidyPlaylistInput } from "../../../services/music/playlistLink";
 
 /**
  * Release 3 · W4 + Add session (CA10 Choose client, CA11 Session type
@@ -76,6 +78,8 @@ export const AddSessionSheet: React.FC<{
   const [business, setBusiness] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<[AlertValue, AlertValue]>([reminders.alert, reminders.alert2]);
   const [notes, setNotes] = useState("");
+  // Round E: "Playlist (optional)", on every session saved.
+  const [playlist, setPlaylist] = useState("");
   const [query, setQuery] = useState("");
   const [wheel, setWheel] = useState<"start" | "end" | null>(null);
   const [dateOpen, setDateOpen] = useState(false);
@@ -165,6 +169,8 @@ export const AddSessionSheet: React.FC<{
       setError("Links need to be a web address (http or https).");
       return;
     }
+    // The playlist field already says what's wrong with the link.
+    if (!playlistFieldValid(tidyPlaylistInput(playlist))) return;
     setSaving(true);
     setError(null);
     const r = await createSessions(me, {
@@ -181,6 +187,7 @@ export const AddSessionSheet: React.FC<{
       notes: notes.trim() || null,
       alert: alerts[0],
       alert2: alerts[1],
+      playlistUrl: tidyPlaylistInput(playlist) || null,
     });
     setSaving(false);
     if (!r.ok) {
@@ -352,6 +359,7 @@ export const AddSessionSheet: React.FC<{
             />
           </div>
           <FieldInput label={`Notes for ${first}`} value={notes} onChange={setNotes} maxLength={2000} />
+          <PlaylistField value={playlist} onChange={setPlaylist} hint={`${first} sees it on the session and opens it in their own app.`} />
           <div className="flex items-center" style={{ gap: 10, borderRadius: 12, background: INK.soft, padding: 12 }}>
             <Info size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} />
             <span style={{ fontSize: textPx(12), color: INK.chS, lineHeight: 1.45 }}>{`${first} gets an invitation to accept. It shows in their calendar once accepted.`}</span>

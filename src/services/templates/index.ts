@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { playlistSaveError } from "../music/playlistLink";
 import type { PostgrestError } from "@supabase/supabase-js";
 import {
   createFolder,
@@ -65,6 +66,9 @@ export const OVERWRITE_REFUSED = "ATX18";
 
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
+  // Round E: the playlist link refused (ATXN0 / ATXN1 / ATXN2).
+  const playlist = playlistSaveError(code);
+  if (playlist) return playlist;
   if (code === OVERWRITE_REFUSED) {
     return "This client has changed their routine since you last assigned it.";
   }
@@ -145,8 +149,9 @@ const BLOCK_COLUMNS = "id, kind, label, time_cap_seconds, interval_seconds, roun
 
 const DEFINITION_COLUMNS = "id, name, classification, muscle_groups, secondary_muscle_groups";
 
+// Round E (Database 20261224030000): playlist_url, the professional's own read.
 const TEMPLATE_SELECT =
-  "id, owner_id, name, category, description, duration_min, duration_weeks, level, folder_id, coach_note, is_public, is_verified, created_at, " +
+  "id, owner_id, name, category, description, duration_min, duration_weeks, level, folder_id, coach_note, is_public, is_verified, created_at, playlist_url, " +
   `workout_template_exercise_blocks(${BLOCK_COLUMNS}), ` +
   `workout_template_exercises(${PRESCRIPTION_COLUMNS}, ` +
   `exercises(${DEFINITION_COLUMNS}), ` +
@@ -207,6 +212,8 @@ interface TemplateRow {
   created_at: string;
   /** Absent on the signed-out starter-program read, which doesn't select it. */
   duration_weeks?: number | null;
+  /** Round E; absent on the starter-program read too. */
+  playlist_url?: string | null;
   workout_template_exercise_blocks: BlockRow[];
   workout_template_exercises: PrescriptionRow[];
 }
@@ -305,6 +312,7 @@ function toTemplate(r: TemplateRow): WorkoutTemplate {
     ownerId: r.owner_id,
     blocks: (r.workout_template_exercise_blocks ?? []).map(toBlock),
     durationWeeks: r.duration_weeks ?? null,
+    playlistUrl: r.playlist_url ?? null,
   };
 }
 
@@ -534,7 +542,9 @@ export async function createTemplate(
       folder_id: template.folderId ?? null,
       coach_note: template.coachNote ?? null,
       duration_weeks: template.durationWeeks ?? null,
-    })
+      // Round E: newer than the generated types (cast below).
+      ...(template.playlistUrl ? { playlist_url: template.playlistUrl } : {}),
+    } as never)
     .select("id, created_at")
     .single();
 
@@ -604,6 +614,7 @@ export async function updateTemplate(
     folder_id?: string | null;
     coach_note?: string | null;
     duration_weeks?: number | null;
+    playlist_url?: string | null;
   } = {};
   if (patch.name !== undefined) payload.name = patch.name.trim();
   if (patch.category !== undefined) payload.category = patch.category ?? null;
@@ -614,9 +625,12 @@ export async function updateTemplate(
   if (patch.coachNote !== undefined) payload.coach_note = patch.coachNote ?? null;
   // The owner may update duration_weeks (follow-up 20261124160000).
   if (patch.durationWeeks !== undefined) payload.duration_weeks = patch.durationWeeks ?? null;
+  // Round E: the owner may update playlist_url; empty clears it.
+  if (patch.playlistUrl !== undefined) payload.playlist_url = patch.playlistUrl || null;
 
   if (Object.keys(payload).length > 0) {
-    const { error } = await supabase.from("workout_templates").update(payload).eq("id", id);
+    // `as never`: playlist_url is newer than the generated types.
+    const { error } = await supabase.from("workout_templates").update(payload as never).eq("id", id);
     if (error) {
       console.error("[templates] Could not update template:", error.message);
       return { ok: false, message: describe(error) };

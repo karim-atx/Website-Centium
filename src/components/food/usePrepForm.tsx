@@ -21,6 +21,7 @@ import { PREP_ON_PRIMARY, FOOD_DARK } from "./foodDark";
 import type { PrepKind } from "./MealPrepFlowSheet";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { PlaylistField, playlistFieldValid } from "../music/PlaylistField";
 
 const servingUnitOptions: ServingUnit[] = ["serving", "g", "ml", "cup", "tbsp", "tsp"];
 
@@ -112,6 +113,8 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
   const [title, setTitle] = useState("");
   const [servings, setServings] = useState("4");
   const [steps, setSteps] = useState("");
+  // Round E: the recipe's "Cook-along" playlist (recipes only).
+  const [playlist, setPlaylist] = useState("");
   const [items, setItems] = useState<PrepItem[]>([]);
   const [qtyDrafts, setQtyDrafts] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState(false);
@@ -132,6 +135,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
     setTitle(editing?.title ?? "");
     setServings(isR ? String(editRecipe?.servings ?? 4) : "4");
     setSteps(isR ? editRecipe?.steps ?? "" : "");
+    setPlaylist(isR ? editRecipe?.playlistUrl ?? "" : "");
     setItems(editing ? (editing.items as PrepItem[]) : []);
     setQtyDrafts({});
     setSaveError(null);
@@ -216,14 +220,16 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
   // without one, and an edit keeps whatever type the meal already had.
   const mealType = editMeal?.mealType;
 
+  const playlistOk = !isR || playlistFieldValid(playlist);
+
   const save = async () => {
-    if (!title.trim() || items.length === 0 || saving) return;
+    if (!title.trim() || items.length === 0 || saving || !playlistOk) return;
     setSaving(true);
     setSaveError(null);
     const message = isR
       ? editRecipe
-        ? await updateRecipe(editRecipe.id, title, items, servingsN, steps.trim() || undefined)
-        : await addRecipe(title, items, servingsN, steps.trim() || undefined)
+        ? await updateRecipe(editRecipe.id, title, items, servingsN, steps.trim() || undefined, playlist || null)
+        : await addRecipe(title, items, servingsN, steps.trim() || undefined, playlist || null)
       : editMeal
         ? await updateCustomMeal(editMeal.id, title, items, mealType)
         : await addCustomMeal(title, items);
@@ -258,7 +264,8 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
     !!editing &&
     (title !== editing.title ||
       JSON.stringify(items) !== JSON.stringify(editing.items) ||
-      (isR && (servings !== String(editRecipe?.servings ?? 4) || steps !== (editRecipe?.steps ?? ""))));
+      (isR &&
+        (servings !== String(editRecipe?.servings ?? 4) || steps !== (editRecipe?.steps ?? "") || playlist !== (editRecipe?.playlistUrl ?? ""))));
 
   const draftMacros = (
     <div className="grid grid-cols-4 gap-1.5">
@@ -475,6 +482,16 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
             </label>
           )}
 
+          {isR && (
+            <PlaylistField
+              value={playlist}
+              onChange={setPlaylist}
+              hint="A cook-along playlist, shown with the recipe."
+              labelStyle={{ fontSize: 12, fontWeight: 600 }}
+              inputStyle={{ background: fieldStyle.background, fontSize: fieldStyle.fontSize, fontWeight: 400, minHeight: 46 }}
+            />
+          )}
+
           {saveError && <p className="text-[12px] font-semibold text-status-high">{saveError}</p>}
 
           <div className="flex" style={{ gap: 10 }}>
@@ -491,7 +508,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
             )}
             <button
               onClick={() => void save()}
-              disabled={!title.trim() || items.length === 0 || saving}
+              disabled={!title.trim() || items.length === 0 || saving || !playlistOk}
               className="tap flex-1 disabled:opacity-40 disabled:pointer-events-none"
               style={{ height: 52, borderRadius: 14, border: "none", background: PREP_PRIMARY[kind], color: PREP_ON_PRIMARY[kind], fontSize: textPx(15.5), fontWeight: 700 }}
             >

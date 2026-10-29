@@ -6,6 +6,8 @@ import { InstagramGlyph } from "../../../components/business-more/InstagramGlyph
 import { BUSINESS_TYPE_OPTIONS, CATEGORY_KEYS, CATEGORY_LABEL, MAX_CATEGORIES, typeLabel, type BizKind } from "../../../components/business-more/kind";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import type { BusinessPatch, BusinessTypeValue } from "../../../services/business-more";
+import { PlaylistField, playlistFieldValid } from "../../../components/music/PlaylistField";
+import { tidyPlaylistInput } from "../../../services/music/playlistLink";
 import { ImageApprovalBadge, ImageApprovalNote, type OwnImageState } from "../../../components/moderation/ImageApproval";
 
 // MO1B-014 to -023 · the BizMoreV8 sheets (`sheet` template lines 127 to 137):
@@ -163,6 +165,45 @@ export function BioSheet({ open, onClose, bio, onSave }: { open: boolean; onClos
           setBusy(true);
           setError(null);
           const failed = await onSave({ bio: draft });
+          setBusy(false);
+          if (failed) setError(failed);
+        }}
+      />
+    </BizSheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// House playlist (Round E, ours: no frame draws it). Public like the profile:
+// shown on the gym's page as "House playlist".
+
+export function HousePlaylistSheet({ open, onClose, url, onSave }: { open: boolean; onClose: () => void; url: string; onSave: Save }) {
+  const [draft, setDraft] = useState(url);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const next = tidyPlaylistInput(draft);
+  const dirty = next !== url.trim();
+  return (
+    <BizSheet open={open} onClose={onClose} title="House playlist" lead="The music you play here. Members open it in their own app.">
+      <PlaylistField
+        value={draft}
+        onChange={(v) => {
+          setDraft(v);
+          setError(null);
+        }}
+        label="House playlist (optional)"
+        hint="Shown on your page on Explore."
+        error={error}
+        style={{ marginBottom: 12 }}
+      />
+      <BizButton
+        label={url && !next ? "Remove playlist" : "Save"}
+        disabled={!dirty || !playlistFieldValid(next)}
+        busy={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          const failed = await onSave({ playlistUrl: next || null });
           setBusy(false);
           if (failed) setError(failed);
         }}

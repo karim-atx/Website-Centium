@@ -11,6 +11,7 @@ import { EVENT_SWATCHES } from "./eventColour";
 import { ALERT_OPTIONS, alertLabel, type EventAlert } from "./eventAlert";
 import { fieldTime, fromParts, minuteOptions, minutesOf, fromMinutes, toParts, type Meridiem, type TimeParts } from "./calendarTime";
 import { useBackCloses } from "../../hooks/useBackCloses";
+import { PlaylistField } from "../music/PlaylistField";
 
 // MO1.6.4 New event (and MO1.6.4.1, its date popup), in the lavender-header
 // sheet. Field order as the frame draws it: Title, Location, Date with All
@@ -37,6 +38,8 @@ export interface EventDraft {
   alert: EventAlert;
   /** The last day a repeat runs (calendar_events.repeat_until, B3); null = never ends. */
   repeatUntil: string | null;
+  /** Round E: "Playlist (optional)". Omitted by callers that don't save one. */
+  playlistUrl?: string;
 }
 
 const REPEAT_OPTIONS: { value: CalendarEvent["repeat"]; label: string }[] = [
@@ -414,6 +417,15 @@ export const EventComposeSheet: React.FC<{
             className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
           />
         </label>
+
+        {draft.playlistUrl !== undefined && (
+          <PlaylistField
+            value={draft.playlistUrl}
+            onChange={(v) => setDraft((d) => ({ ...d, playlistUrl: v }))}
+            labelStyle={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}
+            inputStyle={{ minHeight: 40, borderRadius: 12, fontSize: 14, fontWeight: 400 }}
+          />
+        )}
 
         <label className="block">
           <span className={LABEL}>Link</span>

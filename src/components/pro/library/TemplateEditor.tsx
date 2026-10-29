@@ -8,6 +8,8 @@ import { PopupMenu } from "../../ui/PopupMenu";
 import { useApp } from "../../../context/AppContext";
 import type { Exercise, WorkoutTemplate } from "../../../types";
 import { INK } from "../proInk";
+import { PlaylistField, playlistFieldValid } from "../../music/PlaylistField";
+import { tidyPlaylistInput } from "../../../services/music/playlistLink";
 
 /**
  * Release 3 · W5 TR3 / TR13: the template builder = the shared
@@ -26,6 +28,8 @@ import { INK } from "../proInk";
  * - Folder (Unfiled or one of the template folders) and the note to the
  *   client (workout_templates.coach_note, shown on their routine) — both kept
  *   from the old sheet.
+ * - Round E: "Playlist (optional)" (workout_templates.playlist_url), copied
+ *   to the client's routine with the rest when it is assigned.
  */
 export const TemplateEditor: React.FC<{
   open: boolean;
@@ -41,6 +45,7 @@ export const TemplateEditor: React.FC<{
   const [folderId, setFolderId] = useState<string | null>(template?.folderId ?? defaultFolderId);
   const [weeks, setWeeks] = useState(template?.durationWeeks ? String(template.durationWeeks) : "");
   const [note, setNote] = useState(template?.coachNote ?? "");
+  const [playlist, setPlaylist] = useState(template?.playlistUrl ?? "");
   const [assignTo, setAssignTo] = useState<string[]>([]);
   const [pickerAnchor, setPickerAnchor] = useState<HTMLElement | null>(null);
 
@@ -52,6 +57,7 @@ export const TemplateEditor: React.FC<{
       setFolderId(template?.folderId ?? defaultFolderId);
       setWeeks(template?.durationWeeks ? String(template.durationWeeks) : "");
       setNote(template?.coachNote ?? "");
+      setPlaylist(template?.playlistUrl ?? "");
       setAssignTo([]);
     }
   }
@@ -65,6 +71,8 @@ export const TemplateEditor: React.FC<{
   const submit = async (draft: RoutineDraft): Promise<string | undefined> => {
     const w = Number(weeks);
     if (weeks && (!Number.isInteger(w) || w < 1 || w > 104)) return "Programme length is 1 to 104 weeks.";
+    const playlistUrl = tidyPlaylistInput(playlist);
+    if (!playlistFieldValid(playlistUrl)) return "Check the playlist link.";
     const payload = {
       name: draft.name,
       exercises: draft.exercises,
@@ -73,6 +81,7 @@ export const TemplateEditor: React.FC<{
       durationMin: draft.durationMin,
       coachNote: note.trim() || undefined,
       durationWeeks: weeks ? w : null,
+      playlistUrl: playlistUrl || null,
     };
     if (template) {
       const message = await updateWorkoutTemplate(template.id, payload);
@@ -160,6 +169,13 @@ export const TemplateEditor: React.FC<{
           className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
         />
       </label>
+      <PlaylistField
+        value={playlist}
+        onChange={setPlaylist}
+        hint="Your clients see it on this workout and can play it while they train."
+        labelStyle={{ fontWeight: 600 }}
+        inputStyle={{ borderRadius: 16, fontWeight: 400 }}
+      />
     </div>
   );
 

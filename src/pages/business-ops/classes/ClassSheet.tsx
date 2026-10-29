@@ -40,6 +40,7 @@ import {
   type Instructor,
 } from "../../../services/business-classes";
 import { BoardSwitch, FieldBox, fieldStyle, useMarketColours } from "./parts";
+import { PlaylistField, playlistFieldValid } from "../../../components/music/PlaylistField";
 import { normalisePrice, repeatProblem, ruleOf, type ClassForm, type RepeatKind } from "./classForm";
 import { InstructorPicker } from "./InstructorPicker";
 import { useClassTeam } from "./useClassTeam";
@@ -245,6 +246,7 @@ function SheetBody({
     price: normalisePrice(f.price) ?? "x",
     paymentType: f.paymentType,
     about: f.about.trim() || null,
+    playlistUrl: f.playlistUrl.trim() || null,
     level: f.level || null,
     whatToBring: bringList(f.bring),
     // Only a removal is written; a new cover goes for approval (onSave's `cover`).
@@ -356,6 +358,11 @@ function SheetBody({
     if (rp) {
       setBanner({ kind: "fields", text: "Fix 1 field to save: repeat." });
       repeatGroupEl?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
+      return;
+    }
+    // Round E: the playlist field already says what's wrong with the link.
+    if (!playlistFieldValid(form.playlistUrl)) {
+      setBanner({ kind: "fields", text: "Fix 1 field to save: playlist." });
       return;
     }
     setErrors({});
@@ -1047,6 +1054,16 @@ function SheetBody({
               style={{ ...fieldStyle(m), display: "block", minHeight: 76, outline: "none" }}
             />
           </FieldBox>
+          {/* Round E: the class playlist, shown on the class page beside the member's own music. */}
+          <div className="min-w-0" style={{ gridColumn: `span ${stack ? 1 : 2}`, background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
+            <PlaylistField
+              value={form.playlistUrl}
+              onChange={(v) => update({ playlistUrl: v })}
+              hint="Shown on the class page. Members open it in their own app."
+              labelStyle={{ fontSize: textPx(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}
+              inputStyle={{ background: m.card, borderRadius: 10, minHeight: 41, color: m.ink }}
+            />
+          </div>
           <FieldBox m={m} label="Level" span={stack ? 1 : 2}>
             <button
               ref={setLevelEl}

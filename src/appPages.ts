@@ -81,6 +81,7 @@ export { default as AccessibilityPage } from "./pages/settings/AccessibilityPage
 export { default as PrivacyPage } from "./pages/settings/PrivacyPage";
 export { default as TermsPage } from "./pages/settings/TermsPage";
 export { default as LanguagePage } from "./pages/settings/LanguagePage";
+export { default as YourMusicPage } from "./pages/settings/YourMusicPage";
 export { default as TwoFactorPage } from "./pages/settings/TwoFactorPage";
 export { default as TwoFactorSetupPage } from "./pages/settings/TwoFactorSetupPage";
 export { default as ResetPassword } from "./pages/auth/ResetPassword";

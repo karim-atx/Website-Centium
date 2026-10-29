@@ -21,6 +21,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { fetchGroupMembers } from "../messaging/groups";
 import { sendMessage, setPin } from "../messaging";
 import { rpc } from "./rpc";
+import { playlistSaveError } from "../music/playlistLink";
 
 export type Write = { ok: true } | { ok: false; message: string };
 export type Read<T> = { ok: true; data: T } | { ok: false; offline: boolean };
@@ -127,6 +128,36 @@ export async function sendGroupCard(threadId: string, kind: GroupCardKind, refId
     return { ok: false, message: "A plan assigned to a client stays private. Share the template it came from." };
   if (error.code === "22023") return { ok: false, message: "The note is at most 300 characters." };
   if (error.code === "ATX08") return { ok: false, message: "That isn't available to share any more, or the group has closed." };
+  return { ok: false, message: "Couldn't share that. Try again." };
+}
+
+/**
+ * Round E · send_playlist_card(p_thread_id, p_playlist_url, p_title, p_note)
+ * (Database 20261224040000): a playlist card of mine, in a client conversation
+ * or a group I can post in. The link is the shared type (ATXN0 / ATXN1 /
+ * ATXN2, `field`: the link is what's wrong); a title ≤ 120 and a note ≤ 300
+ * (22023); ATX08 a conversation I can't post a card in; ATX09 not a
+ * professional. The service is derived on the server, never sent.
+ */
+export async function sendPlaylistCard(
+  threadId: string,
+  url: string,
+  title: string | null,
+  note: string | null
+): Promise<{ ok: true } | { ok: false; message: string; field?: boolean }> {
+  const { error } = await rpc("send_playlist_card", {
+    p_thread_id: threadId,
+    p_playlist_url: url.trim(),
+    p_title: title?.trim() ? title.trim() : null,
+    p_note: note?.trim() ? note.trim() : null,
+  });
+  if (!error) return { ok: true };
+  if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
+  const link = playlistSaveError(error.code);
+  if (link) return { ok: false, message: link, field: true };
+  if (error.code === "22023") return { ok: false, message: "The title is at most 120 characters and the note at most 300." };
+  if (error.code === "ATX08") return { ok: false, message: "You can't share a card in this conversation." };
+  if (error.code === "ATX09") return { ok: false, message: "Only professionals can share a playlist card." };
   return { ok: false, message: "Couldn't share that. Try again." };
 }
 

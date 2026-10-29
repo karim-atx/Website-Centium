@@ -209,6 +209,8 @@ export interface SharedPlan {
   name: string;
   days: number | null;
   dayList: SharedPlanDay[];
+  /** Round E: the plan's playlist link (on every row of shared_meal_plan_detail), or null. */
+  playlistUrl: string | null;
 }
 
 const numOrNull = (v: unknown): number | null => {
@@ -239,7 +241,7 @@ export function parseSharedPlan(rows: unknown): SharedPlan | null {
     }
     meal.items.push({ name: textOrNull(raw.name) ?? "Removed item", grams: numOrNull(raw.grams), servings: numOrNull(raw.servings), note: textOrNull(raw.note) });
   }
-  return { id, name: textOrNull(first.plan_name) ?? "Meal plan", days: numOrNull(first.days_count), dayList };
+  return { id, name: textOrNull(first.plan_name) ?? "Meal plan", days: numOrNull(first.days_count), dayList, playlistUrl: textOrNull(first.playlist_url) };
 }
 
 /** "150 g", "1 serving", "1.5 servings", or null. Grams first when both are set. */

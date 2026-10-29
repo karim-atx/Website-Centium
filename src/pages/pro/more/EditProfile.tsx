@@ -22,11 +22,14 @@ import {
   AtSign,
   Globe2,
   Store,
+  Music2,
 } from "lucide-react";
 import { SettingsRow, SettingsSection } from "../../../components/pro/calendar/calendarFields";
 import { FootNote, HeadLink, LockTile, StateLine, SubPage } from "../../../components/pro/profile/kit";
 import { NameSheet, HandleSheet, PhotoSourceSheet, TypeChangeSheet, TypeLockedPopup, usePhotoPicker } from "../../../components/pro/profile/ProfileSheets";
-import { ListingDetailsSheet, SpecialtiesSheet } from "../../../components/pro/profile/EditSheets";
+import { ListingDetailsSheet, ProfilePlaylistSheet, SpecialtiesSheet } from "../../../components/pro/profile/EditSheets";
+import { fetchMyPlaylist } from "../../../services/professional-profile";
+import { SERVICE_LABEL, playlistServiceOf } from "../../../services/music/playlistLink";
 import { useCoverPicker } from "../../../components/pro/profile/useCoverPicker";
 import { ProfessionalBioSheet } from "../../../components/profile/ProfessionalBioCard";
 import { CvSheetsHost, type CvView } from "../../../components/cv/CvEditor";
@@ -41,7 +44,7 @@ import { fetchEmployments, fetchPendingTypeChange, fetchServicePlans } from "../
 import { fetchSessionTypes } from "../../../services/pro/calendar";
 import type { ProfessionalSubtype } from "../../../types";
 
-type Sheet = null | "photo" | "name" | "locked" | "request" | "specialties" | "bio" | "details" | "handle";
+type Sheet = null | "photo" | "name" | "locked" | "request" | "specialties" | "bio" | "details" | "handle" | "playlist";
 
 /**
  * Release 3 · W6 MO14 v2 Edit public profile (/app/more/edit-profile), backed
@@ -75,6 +78,17 @@ export default function EditProfile() {
   // Release B: the cover photo (professional-covers, cover_url) in the same sheet.
   const cover = useCoverPicker();
   const [sheet, setSheet] = useState<Sheet>(null);
+  // Round E: the profile's playlist (undefined while reading).
+  const [playlist, setPlaylist] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (!userId) return;
+    let live = true;
+    void fetchMyPlaylist(userId).then((r) => live && setPlaylist(r.ok ? r.url : null));
+    return () => {
+      live = false;
+    };
+  }, [userId]);
+  const playlistService = playlistServiceOf(playlist);
   const [cvView, setCvView] = useState<CvView | null>(null);
   const [counts, setCounts] = useState<{ services: number; places: number } | null>(null);
   const [pending, setPending] = useState<ProfessionalSubtype | null>(null);
@@ -165,6 +179,7 @@ export default function EditProfile() {
               onClick={() => setCvView({ kind: "list", key: "volunteering" })}
             />
             <SettingsRow icon={Globe2} title="Details and links" sub="Specialty, location, website and socials" onClick={() => setSheet("details")} />
+            <SettingsRow icon={Music2} title="Playlist" sub={playlist === undefined ? undefined : playlistService ? `${SERVICE_LABEL[playlistService]} · shown on your profile` : "Optional. Spotify, Apple Music or YouTube Music"} onClick={() => setSheet("playlist")} />
             <SettingsRow icon={AtSign} title="Your handle" sub={facts?.handle ? profileUrl(facts.handle) : "Choose a handle for your profile link"} onClick={() => setSheet("handle")} />
             <SettingsRow
               icon={Store}
@@ -191,6 +206,7 @@ export default function EditProfile() {
       <SpecialtiesSheet open={sheet === "specialties"} onClose={() => setSheet(null)} initial={facts?.specialties ?? []} onSaved={(list) => setFacts((f) => (f ? { ...f, specialties: list } : f))} />
       <ProfessionalBioSheet open={sheet === "bio"} onClose={() => setSheet(null)} onSaved={(bio) => setFacts((f) => (f ? { ...f, bio } : f))} />
       <ListingDetailsSheet open={sheet === "details"} onClose={() => setSheet(null)} />
+      <ProfilePlaylistSheet open={sheet === "playlist"} onClose={() => setSheet(null)} url={playlist ?? null} onSaved={setPlaylist} />
       <HandleSheet open={sheet === "handle"} onClose={() => setSheet(null)} handle={facts?.handle ?? null} onSaved={(h) => setFacts((f) => (f ? { ...f, handle: h } : f))} />
       {cv && userId && <CvSheetsHost userId={userId} cv={cv} setCv={setCv} reload={reloadCv} view={cvView} onView={setCvView} />}
     </SubPage>

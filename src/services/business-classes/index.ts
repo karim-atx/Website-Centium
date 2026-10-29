@@ -55,6 +55,8 @@ export interface ClassDraft {
   whatToBring?: string[];
   /** Round C Release 2: only null (the owner removed it) is ever sent; a new cover goes through image approval. */
   coverUrl?: null;
+  /** Round E (optional; left out of the write when undefined): the class playlist, "" or null clears it. */
+  playlistUrl?: string | null;
   /**
    * B13 MK-04 (optional; left out of the write when undefined): in the
    * insert, and save_class_series / edit_class keys since 20261121390000.
@@ -108,7 +110,7 @@ export type ClassesResult =
   | { ok: false; message: string };
 
 const COLUMNS =
-  "id, title, class_type, event_date, start_time, end_time, max_capacity, professional_id, notes, price, payment_type, cancellation_hours, about, level, what_to_bring, cover_url, series_id, series_exception, cancelled_at, cancel_reason, centium_spots, listed_on_explore";
+  "id, title, class_type, event_date, start_time, end_time, max_capacity, professional_id, notes, price, payment_type, cancellation_hours, about, level, what_to_bring, cover_url, series_id, series_exception, cancelled_at, cancel_reason, centium_spots, listed_on_explore, playlist_url";
 
 type Row = {
   id: string;
@@ -135,6 +137,8 @@ type Row = {
   // B13 MK-04 (absent from my_class_schedule, so optional).
   centium_spots?: number | null;
   listed_on_explore?: boolean | null;
+  // Round E (absent from my_class_schedule's older shape, so optional).
+  playlist_url?: string | null;
 };
 
 /**
@@ -160,6 +164,7 @@ type WriteRow = {
   cover_url?: null;
   centium_spots?: number | null;
   listed_on_explore?: boolean;
+  playlist_url?: string | null;
 };
 
 // Times arrive as HH:MM:SS from a `time` column; every input and comparison in
@@ -190,6 +195,7 @@ const toClass = (r: Row): BusinessClassRow => ({
   cancelReason: r.cancel_reason ?? null,
   centiumSpots: r.centium_spots ?? null,
   listedOnExplore: r.listed_on_explore !== false,
+  playlistUrl: r.playlist_url ?? null,
 });
 
 /**
@@ -235,6 +241,8 @@ function toRow(draft: ClassDraft): { ok: true; row: WriteRow } | { ok: false; me
       // B13 MK-04 (the insert, and classFieldsOf for the series calls).
       ...(draft.centiumSpots !== undefined ? { centium_spots: draft.centiumSpots } : null),
       ...(draft.listedOnExplore !== undefined ? { listed_on_explore: draft.listedOnExplore } : null),
+      // Round E: empty means none (the writers turn '' into NULL too).
+      ...(draft.playlistUrl !== undefined ? { playlist_url: draft.playlistUrl?.trim() || null } : null),
     },
   };
 }
@@ -266,6 +274,7 @@ export function classFieldsOf(draft: ClassDraft): { ok: true; fields: ClassField
       ...(r.cover_url !== undefined ? { cover_url: r.cover_url } : null),
       ...(r.centium_spots !== undefined ? { centium_spots: r.centium_spots } : null),
       ...(r.listed_on_explore !== undefined ? { listed_on_explore: r.listed_on_explore } : null),
+      ...(r.playlist_url !== undefined ? { playlist_url: r.playlist_url } : null),
     },
   };
 }

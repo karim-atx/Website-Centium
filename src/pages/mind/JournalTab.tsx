@@ -31,6 +31,7 @@ import { JOURNAL_LIMITS, accountCanUseFolderLock } from "../../services/journal"
 import { isFolderOpen, type UnlockWindows } from "../../services/journal/lockLogic";
 import { JournalPasswordPopup, LockedFolderView, type PasswordPurpose } from "../../components/mind/JournalLock";
 import { entryMenuTarget } from "../../components/mind/entryMenu";
+import { MusicSection } from "../../components/music/MusicSection";
 
 type FolderOption = "rename" | "move" | "lock" | "unlock" | "delete";
 
@@ -928,6 +929,8 @@ export default function JournalTab() {
         />
       )}
 
+      {/* Round E: Play your music while writing (the Mind favourite, or the music app). */}
+      <MusicSection moment="mind" className="mt-6 mb-4" />
     </div>
   );
 }

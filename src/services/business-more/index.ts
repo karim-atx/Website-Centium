@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { prepareForumPhoto } from "../forum/photo";
 import { storagePath } from "../venues/venueLogic";
+import { playlistSaveError } from "../music/playlistLink";
 import { COVER_MAX_BYTES, LOGO_MAX_BYTES, replacedObject } from "../venues/consoleLogic";
 import { coverToRemove, coverUrlFor } from "./cover";
 import { describeImageError, stageAndSubmit, withdrawPending } from "../moderation/images";
@@ -72,10 +73,12 @@ export interface BusinessFull {
   /** CP: closed for good (close_business), or null. Not deactivatedAt, which is the reversible pause. */
   closedAt: string | null;
   closureReason: string | null;
+  /** Round E (20261224030000): the house playlist, public like the profile; null = none. */
+  playlistUrl: string | null;
 }
 
 const BUSINESS_COLUMNS =
-  "id, profile_id, business_name, business_type, bio, location, branch_type, public_email, public_phone, public_website, instagram, categories, logo_url, cover_url, business_code, slug, active, deactivated_at, closed_at, closure_reason";
+  "id, profile_id, business_name, business_type, bio, location, branch_type, public_email, public_phone, public_website, instagram, categories, logo_url, cover_url, business_code, slug, active, deactivated_at, closed_at, closure_reason, playlist_url";
 
 type BusinessRow = {
   id: string;
@@ -98,6 +101,7 @@ type BusinessRow = {
   deactivated_at: string | null;
   closed_at: string | null;
   closure_reason: string | null;
+  playlist_url?: string | null;
 };
 
 const storagePublicUrl = (bucket: string, path: string): string => supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
@@ -130,6 +134,7 @@ const toBusiness = (r: BusinessRow): BusinessFull => ({
   deactivatedAt: r.deactivated_at,
   closedAt: r.closed_at ?? null,
   closureReason: r.closure_reason ?? null,
+  playlistUrl: r.playlist_url ?? null,
 });
 
 /**
@@ -162,6 +167,8 @@ export interface BusinessPatch {
   instagram?: string | null;
   categories?: string[];
   active?: boolean;
+  /** Round E: the house playlist ("" or null clears it). */
+  playlistUrl?: string | null;
 }
 
 /** Fired after the business type is saved, so the business navbar re-reads it. */
@@ -182,6 +189,7 @@ export function businessPatchRow(patch: BusinessPatch): Record<string, unknown> 
   if ("instagram" in patch) row.instagram = clean(patch.instagram?.replace(/^@/, ""));
   if ("categories" in patch && patch.categories) row.categories = patch.categories;
   if ("active" in patch && patch.active !== undefined) row.active = patch.active;
+  if ("playlistUrl" in patch) row.playlist_url = clean(patch.playlistUrl);
   return row;
 }
 
@@ -194,6 +202,9 @@ export async function saveBusiness(businessId: string, patch: BusinessPatch): Pr
   if (error) {
     console.error("[business-more] Could not save the business:", error.message);
     if (error.code === "23514") return { ok: false, code: error.code, message: "One of these values isn't allowed. Check it and try again." };
+    // Round E: a refused house playlist link (ATXN0-2) says what's wrong with it.
+    const playlist = playlistSaveError(error.code);
+    if (playlist) return { ok: false, code: error.code, message: playlist };
     return fail(error, "Couldn't save. Try again.");
   }
   if (!data || data.length === 0) return { ok: false, code: "42501", message: "Couldn't save. Try again." };

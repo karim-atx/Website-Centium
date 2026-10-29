@@ -54,6 +54,7 @@ import { useSyncedRemove } from "../../../components/health/metric/SyncedRemove"
 import { useSleepSessions } from "../../../services/health-metrics/b1";
 import { clock12, hourLabel12, rangeClock12 } from "../../../utils/time12";
 import { Toast } from "../../../components/ui/Toast";
+import { MusicSection } from "../../../components/music/MusicSection";
 import { SleepHero, SleepStagesCard, hm, type StageMinutes } from "../../../components/health/metric/SleepHero";
 import { useClientShare } from "../../../components/share/client/useClientShare";
 import { ShareEntryButton } from "../../../components/share/client/ShareEntryButton";
@@ -219,6 +220,9 @@ export default function SleepPage() {
         cta={{ label: "Connect a source", icon: <Link2 size={16} />, onClick: () => navigate("/app/settings/devices") }}
       >
         {metricsError ? <ErrorCard onRetry={retryMetrics} /> : <SyncedNoDevice metric="sleep" icon={Moon} bodyName="Sleep data" footName="sleep" range={range} today={today} />}
+        {/* Round E: winding down doesn't need a sleep source. */}
+        <CapsLabel>Wind down</CapsLabel>
+        <MusicSection moment="sleep" />
         {picker}
       </MetricPage>
     );
@@ -445,6 +449,9 @@ export default function SleepPage() {
           </ChartCard>
         ))}
       <StatCard metric="sleep" stats={stats} valueSize={17} style={{ marginTop: 10 }} />
+      {/* Round E: wind down with music (the member's Sleep favourite, or their music app). */}
+      <CapsLabel>Wind down</CapsLabel>
+      <MusicSection moment="sleep" />
       <CapsLabel>History</CapsLabel>
       <HistoryCard metric="sleep" icon={Moon} items={items} loading={loading} empty="No sleep recorded yet" />
       {picker}
