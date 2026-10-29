@@ -86,6 +86,11 @@ export function notificationText(n: ProNotification, names: Record<string, strin
       const topics = Array.isArray(p.safety_topics) ? p.safety_topics.filter((t): t is string => typeof t === "string") : [];
       return { title: who, line: topics.length ? `Check-in flagged: answers mention ${topicsPhrase(topics)}` : "Check-in flagged", icon: "clipboard", tone: "att" };
     }
+    // 20261222080000: an urgent answer was sent (form_responses.urgent; the
+    // push says "Urgent: a check-in needs your attention"). Subject
+    // form_response, so it opens the response as pro.form.flagged does.
+    case "pro.form.urgent":
+      return { title: who, line: "Urgent: a check-in needs your attention", icon: "clipboard", tone: "att" };
     case "pro.result.shared":
       return { title: who, line: str(p.marker) ? `Shared a result: ${str(p.marker)}` : "Shared a result with you", icon: "share", tone: "pr" };
     case "pro.client.allergies_updated":

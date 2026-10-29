@@ -18,6 +18,8 @@ const DOCUMENTED = [
   "pro.booking.late_cancel",
   "pro.form.submitted",
   "pro.form.flagged",
+  // 20261222080000: an urgent answer.
+  "pro.form.urgent",
   "pro.workout.finished",
   "pro.client.allergies_updated",
   "pro.diary.reply",

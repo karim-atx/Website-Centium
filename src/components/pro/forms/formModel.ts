@@ -15,6 +15,11 @@
 // Round D (20261222050000) adds a form description, sections (a question can
 // open one: section_title), one condition per question (show_if) and the
 // profile field an answer is offered to the client for (profile_field).
+// 20261222080000 (the approved templates) adds the conditions not_equals,
+// excludes and in, and lets a question depend on one that has a condition
+// itself. Its other new question columns (scale words, placeholder,
+// recovery_hidden / recovery_options, pro_note, client_prompt,
+// profile_hint) come with a template and are never written by the builder.
 
 import { signedNum } from "../proRules";
 import { DAY_LONG } from "../../../utils/week";
@@ -51,14 +56,17 @@ export const LONG_TEXT_MAX = 5000;
 
 /**
  * One condition (form_questions.show_if): ask this question only when an
- * earlier question's answer equals a value (choice, yes / no, scale) or a
- * multiple-choice answer includes an option. One level only.
+ * earlier question's answer equals / is not / is one of some values (choice,
+ * yes / no, scale), or a multiple-choice answer includes / doesn't include an
+ * option. The earlier question may have a condition itself (20261222080000):
+ * questions are judged in order, and a hidden one hides those that depend on
+ * it. The builder creates equals and includes; the others come with a
+ * template and are kept as they are.
  */
-export interface ShowIf {
-  questionId: string;
-  op: "equals" | "includes";
-  value: string;
-}
+export type ShowIf =
+  | { questionId: string; op: "equals" | "includes" | "not_equals" | "excludes"; value: string }
+  | { questionId: string; op: "in"; value: string[] };
+export type ShowIfOp = ShowIf["op"];
 
 /** form_questions.profile_field: what the client is offered to add to their profile. */
 export type ProfileField = "allergies" | "dietary_restrictions" | "medications" | "injuries" | "weight";
@@ -211,8 +219,20 @@ export function questionProblem(q: QuestionDraft): string | null {
 /** The kinds a condition can depend on: single choice and yes / no, multiple choice, scale. */
 const CONDITION_TYPES: DbQuestionType[] = ["choice", "multi", "scale"];
 
-/** "equals" for a single answer, "includes" for a multiple-choice one. */
-export const conditionOp = (parent: Pick<QuestionDraft, "type">): ShowIf["op"] => (parent.type === "multi" ? "includes" : "equals");
+/** The condition the builder creates: "equals" for a single answer, "includes" for a multiple-choice one. */
+export const conditionOp = (parent: Pick<QuestionDraft, "type">): "equals" | "includes" => (parent.type === "multi" ? "includes" : "equals");
+
+/** Every condition a parent of this kind can carry (the database's pairs). */
+const opsFor = (parent: Pick<QuestionDraft, "type">): ShowIfOp[] => (parent.type === "multi" ? ["includes", "excludes"] : ["equals", "not_equals", "in"]);
+
+/** The answers a condition names (one, or the list of "in"). */
+export const conditionAnswers = (c: ShowIf): string[] => (c.op === "in" ? c.value : [c.value]);
+
+/** The answer picked in the builder's sheet for this parent: only a condition the builder creates (equals / includes), else "". */
+export function pickedAnswer(c: ShowIf | null, parent: Pick<QuestionDraft, "id" | "type">): string {
+  if (!c || c.questionId !== parent.id || c.op === "in" || c.op !== conditionOp(parent)) return "";
+  return c.value;
+}
 
 /** The answers a condition can name: the options, or a scale's numbers. */
 export function conditionValues(parent: Pick<QuestionDraft, "type" | "options" | "scaleMin" | "scaleMax">): string[] {
@@ -224,18 +244,15 @@ export function conditionValues(parent: Pick<QuestionDraft, "type" | "options" |
   return [...new Set((parent.options ?? []).map((o) => o.trim()).filter(Boolean))];
 }
 
-/** Whether another question's condition names this one (so it can't take a condition itself: one level). */
-export const isDependedOn = (draft: QuestionDraft[], id: string) => draft.some((x) => x.showIf?.questionId === id);
-
 /**
  * The questions the one at `index` can depend on: earlier, a choice, yes /
- * no, multiple choice or scale question, written, and without a condition
- * of its own. None when this question is itself depended on.
+ * no, multiple choice or scale question, and written. A parent may have a
+ * condition itself, and a question others depend on may take one (chains,
+ * 20261222080000): a parent always comes earlier, so a chain can't loop.
  */
 export function conditionParents(draft: QuestionDraft[], index: number): QuestionDraft[] {
-  const q = draft[index];
-  if (!q || isDependedOn(draft, q.id)) return [];
-  return draft.slice(0, index).filter((p) => CONDITION_TYPES.includes(p.type) && !p.showIf && !!p.prompt.trim() && conditionValues(p).length > 0);
+  if (!draft[index]) return [];
+  return draft.slice(0, index).filter((p) => CONDITION_TYPES.includes(p.type) && !!p.prompt.trim() && conditionValues(p).length > 0);
 }
 
 /** Why the condition on the question at `index` can't be saved, or null. */
@@ -246,19 +263,39 @@ export function conditionProblem(draft: QuestionDraft[], index: number): string 
   if (at === -1) return "The question this depends on was removed. Choose another.";
   if (at >= index) return "Move this below the question it depends on.";
   const parent = draft[at];
-  if (parent.showIf) return "It depends on a question that has a condition itself. Choose another.";
-  if (!CONDITION_TYPES.includes(parent.type) || conditionOp(parent) !== c.op) return "Choose the condition again.";
-  if (!conditionValues(parent).includes(c.value)) return "The answer this depends on changed. Choose it again.";
+  if (!CONDITION_TYPES.includes(parent.type) || !opsFor(parent).includes(c.op)) return "Choose the condition again.";
+  const named = conditionAnswers(c);
+  const values = conditionValues(parent);
+  if (!named.length || named.some((v) => !values.includes(v))) return "The answer this depends on changed. Choose it again.";
   return null;
 }
 
-/** 'Only ask if "Any allergies?" is Yes' / '… includes Peanuts'; null without a condition. */
+/** "A or B", "A, B or C". */
+const orList = (xs: string[]) => (xs.length <= 1 ? xs[0] ?? "" : `${xs.slice(0, -1).join(", ")} or ${xs[xs.length - 1]}`);
+
+/** A condition in plain words: "is Yes", "is not 0", "includes Home", "doesn't include None", "is Some days or Not this week". */
+export function conditionWords(c: ShowIf): string {
+  switch (c.op) {
+    case "equals":
+      return `is ${c.value}`;
+    case "not_equals":
+      return `is not ${c.value}`;
+    case "includes":
+      return `includes ${c.value}`;
+    case "excludes":
+      return `doesn't include ${c.value}`;
+    case "in":
+      return `is ${orList(c.value)}`;
+  }
+}
+
+/** 'Only ask if "Any allergies?" is Yes' / '… includes Peanuts' / '… is not 0'; null without a condition. */
 export function conditionLine(draft: Pick<QuestionDraft, "id" | "prompt">[], q: Pick<QuestionDraft, "showIf">): string | null {
   const c = q.showIf;
   if (!c) return null;
   const parent = draft.find((p) => p.id === c.questionId);
   const what = parent?.prompt.trim() ? `"${parent.prompt.trim()}"` : "an earlier question";
-  return `Only ask if ${what} ${c.op === "includes" ? "includes" : "is"} ${c.value}`;
+  return `Only ask if ${what} ${conditionWords(c)}`;
 }
 
 /** Removing a question clears the conditions that named it. */
@@ -268,13 +305,14 @@ export function withoutQuestion(draft: QuestionDraft[], id: string): QuestionDra
 
 /**
  * The profile fields a question's answer can be offered for (the database's
- * pairs): allergies and dietary needs from a choice or text question,
- * medications and injuries from text or long text, weight from a number. A
- * yes / no question names nothing to carry, so it offers none.
+ * pairs, 20261222080000): allergies and dietary needs from a choice, short
+ * or long text question (a long text one per line), medications and injuries
+ * from short or long text, weight from a number. A yes / no question names
+ * nothing to carry, so it offers none.
  */
 export function profileFieldsFor(q: Pick<QuestionDraft, "type" | "options">): ProfileField[] {
   const out: ProfileField[] = [];
-  if ((q.type === "choice" && !isYesNo(q.options)) || q.type === "multi" || q.type === "text") out.push("allergies", "dietary_restrictions");
+  if ((q.type === "choice" && !isYesNo(q.options)) || q.type === "multi" || q.type === "text" || q.type === "long_text") out.push("allergies", "dietary_restrictions");
   if (q.type === "text" || q.type === "long_text") out.push("medications", "injuries");
   if (q.type === "number") out.push("weight");
   return out;
@@ -283,7 +321,12 @@ export function profileFieldsFor(q: Pick<QuestionDraft, "type" | "options">): Pr
 /** "Section 2" for the question at `index` that opens it (1-based count of section openers so far). */
 export const sectionNumber = (draft: QuestionDraft[], index: number) => draft.slice(0, index + 1).filter((x) => x.sectionTitle != null).length;
 
-/** The form_questions columns a draft writes (position from its index). */
+/**
+ * The form_questions columns a draft writes (position from its index): the
+ * builder's own. The template-only columns (scale words, placeholder,
+ * recovery_hidden / recovery_options, pro_note, client_prompt, profile_hint)
+ * are never sent, so an update leaves them as they are.
+ */
 export function toRow(q: QuestionDraft, position: number, ids: ReadonlyMap<string, string> = new Map()) {
   const opts = q.type === "choice" || q.type === "multi" ? (q.options ?? []).map((o) => o.trim()).filter(Boolean) : null;
   return {
@@ -306,11 +349,13 @@ export function toRow(q: QuestionDraft, position: number, ids: ReadonlyMap<strin
 export const isLocalKey = (id: string) => id.startsWith("new-");
 
 /**
- * show_if as stored: {"question_id", "equals" | "includes"}. A condition on a
- * question that isn't saved yet has no row id to name: `ids` maps local keys
- * to the new ids; without one it's null, and saveForm writes it in a second pass.
+ * show_if as stored: {"question_id", and one of "equals", "includes",
+ * "not_equals", "excludes" (an answer) or "in" (a list)}, written back exactly
+ * as read. A condition on a question that isn't saved yet has no row id to
+ * name: `ids` maps local keys to the new ids; without one it's null, and
+ * saveForm writes it in a second pass.
  */
-export function showIfRow(c: ShowIf | null, ids: ReadonlyMap<string, string> = new Map()): Record<string, string> | null {
+export function showIfRow(c: ShowIf | null, ids: ReadonlyMap<string, string> = new Map()): Record<string, string | string[]> | null {
   if (!c) return null;
   const id = isLocalKey(c.questionId) ? ids.get(c.questionId) : c.questionId;
   return id ? { question_id: id, [c.op]: c.value } : null;
@@ -322,6 +367,9 @@ export function parseShowIf(raw: unknown): ShowIf | null {
   if (typeof r.question_id !== "string") return null;
   if (typeof r.equals === "string") return { questionId: r.question_id, op: "equals", value: r.equals };
   if (typeof r.includes === "string") return { questionId: r.question_id, op: "includes", value: r.includes };
+  if (typeof r.not_equals === "string") return { questionId: r.question_id, op: "not_equals", value: r.not_equals };
+  if (typeof r.excludes === "string") return { questionId: r.question_id, op: "excludes", value: r.excludes };
+  if (Array.isArray(r.in)) return { questionId: r.question_id, op: "in", value: r.in.filter((x): x is string => typeof x === "string") };
   return null;
 }
 

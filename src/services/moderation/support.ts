@@ -46,3 +46,18 @@ export function parsePhrases(data: unknown): Phrase[] {
     .filter((r) => typeof r.normalised === "string" && r.normalised.trim())
     .map((r) => ({ normalised: String(r.normalised).trim(), language: typeof r.language === "string" ? r.language : "en" }));
 }
+
+/**
+ * Where the client turns on recovery-sensitive mode: Profile's Safety &
+ * content card, opened (20261222080000). Offered after a form's eating
+ * question and from that support_resources notice; the setting changes only
+ * on the person's own tap there.
+ */
+export const RECOVERY_SETTING_PATH = "/app/profile?open=recovery";
+
+/** The Get support popup's own route; with the recovery offer when the notice carries offer_recovery_mode. */
+export const getSupportPath = (offerRecoveryMode: boolean): string => (offerRecoveryMode ? "/app/get-support?recovery=1" : "/app/get-support");
+
+/** The link to that setting, where Get support offers it. */
+export const RECOVERY_LINK = "Turn on recovery-sensitive mode";
+export const RECOVERY_LINK_HINT = "Hides calories, weight and other numbers.";

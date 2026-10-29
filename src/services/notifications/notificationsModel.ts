@@ -27,6 +27,7 @@ import { formatShortDate } from "../../utils/date";
 import { clock12 } from "../../utils/time12";
 import { num, rows, str } from "../market/parse";
 import { imageHome, imageNoticeCopy, SUPPORT_NOTICE } from "../moderation/imageCopy";
+import { getSupportPath } from "../moderation/support";
 import { FOOD_REVIEW_COPY, foodReviewCopy } from "../food/onlineSearchModel";
 
 /** member_notification_kind, the whole enum in its declared order (20261210600000). */
@@ -374,6 +375,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * booking id, so the calendar's ?rate=<booking> link can't be built);
  * ambassador_application_approved / _declined (ambassador_application) →
  * More with the Referral popup open, where the status card is;
+ * support_resources → Get support, offering recovery-sensitive mode when the
+ * payload's offer_recovery_mode is true (20261222080000);
  * any other kind (not a member's) → nothing in the client UI.
  */
 export function clientNotificationTarget(
@@ -395,7 +398,8 @@ export function clientNotificationTarget(
     case "forum_nickname_reset":
       return "/app/forum/nickname";
     case "support_resources":
-      return "/app/get-support";
+      // 20261222080000: after a form's eating question, with the offer to turn on recovery-sensitive mode.
+      return getSupportPath(n.payload?.offer_recovery_mode === true);
     case "image_approved":
     case "image_rejected":
       return imageHome(n.payload?.surface, "member");

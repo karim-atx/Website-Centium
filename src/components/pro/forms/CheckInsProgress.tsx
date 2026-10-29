@@ -11,8 +11,8 @@ import { fmtDay } from "../client/clientFormat";
 import { ProCardSkeleton, ProError } from "../states";
 import { RangeTrack } from "./moKit";
 import { SafetyBanner } from "./ResponseScreen";
-import { photoAnswers, seriesOverTime, type PositionedQuestion } from "./reviewModel";
-import { fetchQuestions, fetchResponses, type FormResponse } from "../../../services/pro/forms";
+import { photoAnswers, responseMarker, seriesOverTime, type PositionedQuestion, type ResponseNote } from "./reviewModel";
+import { fetchQuestions, fetchResponseNotes, fetchResponses, type FormResponse } from "../../../services/pro/forms";
 import { FORMS_PATH } from "./formsList";
 
 export interface CheckIns {
@@ -41,13 +41,14 @@ export function useClientCheckIns(clientId: string, enabled: boolean, nonce = 0)
   return data;
 }
 
-/** The group's one line: "{n} check-ins · last {date}", or the flag first. */
+/** The group's one line: "{n} check-ins · last {date}", or "Urgent" / "Flagged" first. */
 export function checkInsSummary(c: CheckIns | null | undefined): string {
   if (c === undefined) return "Loading…";
   if (c === null) return "Couldn't load";
   if (!c.responses.length) return "No check-ins yet";
   const last = c.responses[0];
-  return `${last.safetyFlag ? "Flagged · " : ""}${c.responses.length} check-in${c.responses.length === 1 ? "" : "s"} · last ${fmtDay(last.submittedAt)}`;
+  const marker = responseMarker(last);
+  return `${marker ? `${marker} · ` : ""}${c.responses.length} check-in${c.responses.length === 1 ? "" : "s"} · last ${fmtDay(last.submittedAt)}`;
 }
 
 type Span = "6W" | "3M" | "All";
@@ -58,7 +59,8 @@ type Span = "6W" | "3M" | "All";
  * number or scale question across the client's check-ins (cc16: the
  * question, 6W / 3M / All, W1… labels, the pin tooltip "Week {n}"), the
  * photos line ("{n} sets · {date}"), and the check-ins themselves (open HO20).
- * The newest flagged check-in shows the safety banner (FINAL_PLAN 3 §6.2).
+ * The newest check-in, when flagged or urgent, shows the warning (FINAL_PLAN
+ * 3 §6.2; urgent since 20261222080000); the list marks each "Urgent" or "Flagged".
  * Decision 6: answers sent in a check-in are read for that check-in only;
  * nothing here reads health_metrics.
  */
@@ -73,6 +75,19 @@ export const CheckInsProgress: React.FC<{ data: CheckIns | null | undefined; fir
     return data.responses.slice(0, n);
   }, [data, span]);
   const series = useMemo(() => seriesOverTime(allQuestions, shown), [allQuestions, shown]);
+  // An urgent newest check-in names its urgent answers in the warning (form_response_notes).
+  const urgentId = data?.responses[0]?.urgent ? data.responses[0].id : null;
+  const [notes, setNotes] = useState<{ id: string; list: ResponseNote[] } | null>(null);
+  useEffect(() => {
+    if (!urgentId) return;
+    let live = true;
+    void fetchResponseNotes(urgentId).then((list) => {
+      if (live) setNotes({ id: urgentId, list });
+    });
+    return () => {
+      live = false;
+    };
+  }, [urgentId]);
 
   if (data === undefined) return <ProCardSkeleton lines={3} />;
   if (data === null) return <ProError onRetry={onRetry} />;
@@ -86,7 +101,7 @@ export const CheckInsProgress: React.FC<{ data: CheckIns | null | undefined; fir
 
   return (
     <div>
-      {latest.safetyFlag && <SafetyBanner topics={latest.safetyTopics} firstName={firstName} />}
+      <SafetyBanner response={latest} firstName={firstName} notes={notes?.id === latest.id ? notes.list : []} />
       {total < 2 && <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 10 }}>Charts start after the second check-in.</p>}
       {(total < 2 ? [] : series.slice(0, 3)).map((s, si) => {
         const vals = s.points.map((p) => p.value);
@@ -117,14 +132,17 @@ export const CheckInsProgress: React.FC<{ data: CheckIns | null | undefined; fir
           ...(withPhotos.length
             ? [{ key: "photos", icon: ImageIcon, title: "Progress photos", meta: `${withPhotos.length} set${withPhotos.length === 1 ? "" : "s"} · ${fmtDay(withPhotos[0].submittedAt)}`, onClick: () => navigate(`${FORMS_PATH}/responses/${withPhotos[0].id}`) }]
             : []),
-          ...data.responses.slice(0, 6).map((r) => ({
-            key: r.id,
-            icon: ClipboardCheck,
-            tone: r.safetyFlag ? ("att" as const) : undefined,
-            title: r.formTitle,
-            meta: `${fmtDay(r.submittedAt)} · ${r.safetyFlag ? "Flagged · " : ""}${r.reviewedAt ? "Reviewed" : "To review"}`,
-            onClick: () => navigate(`${FORMS_PATH}/responses/${r.id}`),
-          })),
+          ...data.responses.slice(0, 6).map((r) => {
+            const marker = responseMarker(r);
+            return {
+              key: r.id,
+              icon: ClipboardCheck,
+              tone: marker ? ("att" as const) : undefined,
+              title: r.formTitle,
+              meta: `${fmtDay(r.submittedAt)} · ${marker ? `${marker} · ` : ""}${r.reviewedAt ? "Reviewed" : "To review"}`,
+              onClick: () => navigate(`${FORMS_PATH}/responses/${r.id}`),
+            };
+          }),
         ]}
       />
     </div>

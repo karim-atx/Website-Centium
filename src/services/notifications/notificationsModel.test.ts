@@ -161,6 +161,9 @@ test("kinds: the enum in order; the client's are a member's eleven, never an own
   assert.equal(CLIENT_KINDS.length + notMine.length, MEMBER_NOTIFICATION_KINDS.length);
   // Round C Release 2: where the shared kinds open on the client side.
   assert.equal(clientNotificationTarget({ kind: "support_resources", subjectType: "wellbeing", subjectId: null }), "/app/get-support");
+  // 20261222080000: after a form's eating question, Get support offers recovery-sensitive mode.
+  assert.equal(clientNotificationTarget({ kind: "support_resources", subjectType: "wellbeing", subjectId: null, payload: { offer_recovery_mode: true } }), "/app/get-support?recovery=1");
+  assert.equal(clientNotificationTarget({ kind: "support_resources", subjectType: "wellbeing", subjectId: null, payload: { offer_recovery_mode: false } }), "/app/get-support");
   // every client kind has a plain line and a fill
   for (const k of CLIENT_KINDS) {
     assert.ok(CLIENT_COPY[k]?.title, k);

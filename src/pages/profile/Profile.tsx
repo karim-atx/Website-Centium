@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -275,8 +275,16 @@ function ClientProfile() {
   const [sharingFor, setSharingFor] = useState<LinkedProfessional | null>(null);
   // "Connect with a professional code" reveals the code box (C7).
   const [connectOpen, setConnectOpen] = useState(false);
-  // Safety & content starts collapsed (C5).
-  const [safetyOpen, setSafetyOpen] = useState(false);
+  // Safety & content starts collapsed (C5). 20261222080000: ?open=recovery
+  // (a form's eating question, or the support notice after it) opens it on
+  // the Recovery card; the toggle itself is still the person's to tap.
+  const [params] = useSearchParams();
+  const openRecovery = params.get("open") === "recovery";
+  const [safetyOpen, setSafetyOpen] = useState(openRecovery);
+  const safetyRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (openRecovery) safetyRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [openRecovery]);
 
   // After a code connects: the list again, and the box closes.
   const reloadProfessionals = async () => {
@@ -606,7 +614,7 @@ function ClientProfile() {
           Recovery card with Cycle tracking (moved from Settings, C6), then
           Advanced health monitoring. Customers only. */}
       {user.accountType === "customer" && (
-        <section className="mb-6">
+        <section ref={safetyRef} className="mb-6">
           <button
             type="button"
             onClick={() => setSafetyOpen((o) => !o)}

@@ -11,6 +11,11 @@
 //   profile_field; type long_text; schedules every2weeks / every4weeks;
 // - Round D (20261222060000): list_form_templates() and use_form_template(
 //   p_key) → the new form's id (ATX08 not available, ATX09 another lane);
+// - 20261222080000 (the approved templates): form_responses.urgent (an
+//   urgent answer was sent; safety_flag is set with it) and
+//   form_response_notes(p_response_id), the notes a response's answers
+//   trigger, for the professional only. The new form_questions columns come
+//   with a template; saveForm never writes them (toRow sends the builder's own);
 // - assign_form(p_form_id, p_client_id, p_due_at, p_schedule) sends one form
 //   (due_at) or starts a schedule (daily@HH:MM / weekly:<1-7>@HH:MM /
 //   every2weeks:… / every4weeks:…, the client's local time);
@@ -26,6 +31,7 @@ import { parseConfirmedAnswers, type ConfirmedAnswer } from "../client-forms/pro
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import type { Read, Write } from "./clients";
+import { parseResponseNotes, type ResponseNote } from "../../components/pro/forms/reviewModel";
 import { diffQuestions, fromRow, isLocalKey, showIfRow, toRow, type FormAssignment, type FormKind, type FormSummary, type FormTemplate, type QuestionDraft, type QuestionRow } from "../../components/pro/forms/formModel";
 
 export type { FormAssignment, FormSummary, FormTemplate };
@@ -266,6 +272,8 @@ export interface FormResponse {
   reply: string | null;
   safetyFlag: boolean;
   safetyTopics: string[];
+  /** form_responses.urgent (20261222080000): an urgent answer was sent. */
+  urgent: boolean;
 }
 
 interface ResponseRow {
@@ -278,10 +286,11 @@ interface ResponseRow {
   reply: string | null;
   safety_flag: boolean;
   safety_topics: string[] | null;
+  urgent: boolean | null;
   form_assignments: { form_id: string; forms: { title: string; kind: FormKind } | null } | null;
 }
 
-const R_COLS = "id, assignment_id, client_id, answers, submitted_at, reviewed_at, reply, safety_flag, safety_topics, form_assignments(form_id, forms(title, kind))";
+const R_COLS = "id, assignment_id, client_id, answers, submitted_at, reviewed_at, reply, safety_flag, safety_topics, urgent, form_assignments(form_id, forms(title, kind))";
 
 const mapResponse = (r: ResponseRow): FormResponse => ({
   id: r.id,
@@ -296,6 +305,7 @@ const mapResponse = (r: ResponseRow): FormResponse => ({
   reply: r.reply,
   safetyFlag: r.safety_flag,
   safetyTopics: r.safety_topics ?? [],
+  urgent: r.urgent === true,
 });
 
 /** Submitted responses sent to me, newest first (one client, or every client). */
@@ -371,4 +381,18 @@ export async function fetchConfirmedAnswers(responseId: string): Promise<Confirm
     return [];
   }
   return parseConfirmedAnswers(data);
+}
+
+/**
+ * The notes this response's answers trigger (form_response_notes,
+ * 20261222080000), urgent ones first. Only the professional it was sent to
+ * reads them; the client never does. A failed read shows no notes.
+ */
+export async function fetchResponseNotes(responseId: string): Promise<ResponseNote[]> {
+  const { data, error } = await rpc("form_response_notes", { p_response_id: responseId });
+  if (error) {
+    if (!isOffline(error)) console.error("[forms] form_response_notes failed:", error.code, error.message);
+    return [];
+  }
+  return parseResponseNotes(data);
 }

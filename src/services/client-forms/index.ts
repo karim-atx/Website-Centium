@@ -24,11 +24,17 @@
 //   p_proposal_id, p_value), decline_form_profile_proposal(p_proposal_id);
 //   ATXL2 a weight in recovery-sensitive mode, ATX10 already decided, ATX08
 //   not theirs, 22023 an invalid value).
+// - 20261222080000: the questions come from my_form_questions(
+//   p_assignment_id), the client's own form with recovery-sensitive mode
+//   applied (hidden questions and options left out, reworded options in
+//   option_labels), each with its scale words, placeholder and client_prompt,
+//   and the form's safety_line. Until that migration is on the database (the
+//   function is missing: PGRST202 / 42883) form_questions is read as before.
 // Pure rules live in ./logic and ./proposals.
 
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
-import { parseShowIfRule, type Answers, type ClientQuestion, type ConnectReferral, type FormKind, type PendingReferral, type QuestionType, type TodaySession } from "./logic";
+import { fromMyFormQuestion, parseShowIfRule, safetyLineOf, type Answers, type ClientQuestion, type ConnectReferral, type FormKind, type MyFormQuestionRow, type PendingReferral, type QuestionType, type TodaySession } from "./logic";
 import { asProposalField, type ProfileProposal, type ProposalStatus } from "./proposals";
 import type { AccessCategory } from "../consent";
 
@@ -51,8 +57,14 @@ export interface ClientFormBundle {
   proId: string;
   proName: string;
   proAvatarUrl: string | null;
-  /** Every question of the form, by position (the recovery filter is applied by the caller). */
+  /**
+   * The form's questions, by position, as my_form_questions gives them (the
+   * database applies recovery-sensitive mode; the caller's J12 filter stays
+   * for the read before that migration and while the setting is unknown).
+   */
   questions: ClientQuestion[];
+  /** The sentence the form ends with (forms.safety_line; the same on every row), or null. */
+  safetyLine: string | null;
   /** The saved draft's answers ({} when none). */
   answers: Answers;
   hasDraft: boolean;
@@ -66,6 +78,7 @@ interface QuestionRow { id: string; form_id: string; position: number; type: Que
 interface ResponseRow { assignment_id: string; answers: unknown; submitted_at: string | null }
 interface NameRow { id: string; first_name: string | null; avatar_url: string | null }
 
+/** The read before 20261222080000: form_questions as stored, without recovery-sensitive wording. */
 const toQuestion = (r: QuestionRow): ClientQuestion => ({
   id: r.id,
   position: r.position,
@@ -93,6 +106,42 @@ async function namesOf(ids: string[]): Promise<Map<string, NameRow>> {
 
 const nameOr = (m: Map<string, NameRow>, id: string, fallback: string) => m.get(id)?.first_name?.trim() || fallback;
 
+type QuestionsRead = { ok: true; byAssignment: Map<string, { questions: ClientQuestion[]; safetyLine: string | null }> } | { ok: false; error: unknown };
+
+const missingFunction = (e: { code?: string }) => e.code === "PGRST202" || e.code === "42883";
+
+/**
+ * Each assignment's questions through my_form_questions (one call each: it
+ * takes one assignment). When the function isn't on the database yet, every
+ * form is read from form_questions as before.
+ */
+async function questionsOf(assignments: AssignmentRow[]): Promise<QuestionsRead> {
+  const reads = await Promise.all(assignments.map((x) => rpcClient.rpc("my_form_questions", { p_assignment_id: x.id })));
+  const byAssignment = new Map<string, { questions: ClientQuestion[]; safetyLine: string | null }>();
+  for (const [i, res] of reads.entries()) {
+    if (res.error && missingFunction(res.error)) return questionsBeforeMigration(assignments);
+    if (res.error) return { ok: false, error: res.error };
+    const rows = (Array.isArray(res.data) ? res.data : []) as MyFormQuestionRow[];
+    byAssignment.set(assignments[i].id, { questions: rows.map(fromMyFormQuestion), safetyLine: safetyLineOf(rows) });
+  }
+  return { ok: true, byAssignment };
+}
+
+async function questionsBeforeMigration(assignments: AssignmentRow[]): Promise<QuestionsRead> {
+  const q = await from("form_questions")
+    .select("id, form_id, position, type, prompt, unit, required, options, scale_min, scale_max, safety_topic, safety_trigger, section_title, show_if, profile_field")
+    .in("form_id", [...new Set(assignments.map((x) => x.form_id))])
+    .order("position", { ascending: true });
+  if (q.error) return { ok: false, error: q.error };
+  const byForm = new Map<string, ClientQuestion[]>();
+  for (const row of (q.data ?? []) as unknown as QuestionRow[]) {
+    const list = byForm.get(row.form_id) ?? [];
+    list.push(toQuestion(row));
+    byForm.set(row.form_id, list);
+  }
+  return { ok: true, byAssignment: new Map(assignments.map((x) => [x.id, { questions: byForm.get(x.form_id) ?? [], safetyLine: null }])) };
+}
+
 /** The forms waiting for me (due or missed, not sent), with their questions and any saved draft. */
 export async function fetchMyOpenForms(me: string): Promise<Read<ClientFormBundle[]>> {
   const a = await from("form_assignments").select("id, form_id, professional_id, series_id, due_at, status").eq("client_id", me).in("status", ["due", "missed"]).order("due_at", { ascending: true });
@@ -104,21 +153,15 @@ export async function fetchMyOpenForms(me: string): Promise<Read<ClientFormBundl
   const seriesIds = [...new Set(assignments.map((x) => x.series_id).filter((x): x is string => !!x))];
   const [f, q, r, s, names] = await Promise.all([
     from("forms").select("id, kind, title, description").in("id", formIds),
-    from("form_questions").select("id, form_id, position, type, prompt, unit, required, options, scale_min, scale_max, safety_topic, safety_trigger, section_title, show_if, profile_field").in("form_id", formIds).order("position", { ascending: true }),
+    questionsOf(assignments),
     from("form_responses").select("assignment_id, answers, submitted_at").eq("client_id", me).in("assignment_id", assignments.map((x) => x.id)),
     seriesIds.length ? from("form_assignments").select("id, schedule").in("id", seriesIds) : Promise.resolve({ data: [], error: null }),
     namesOf([...new Set(assignments.map((x) => x.professional_id))]),
   ]);
   if (f.error) return readFail(f.error);
-  if (q.error) return readFail(q.error);
+  if (!q.ok) return readFail(q.error);
   if (r.error) return readFail(r.error);
   const forms = new Map(((f.data ?? []) as unknown as FormRow[]).map((x) => [x.id, x]));
-  const questions = new Map<string, ClientQuestion[]>();
-  for (const row of (q.data ?? []) as unknown as QuestionRow[]) {
-    const list = questions.get(row.form_id) ?? [];
-    list.push(toQuestion(row));
-    questions.set(row.form_id, list);
-  }
   const responses = new Map(((r.data ?? []) as unknown as ResponseRow[]).map((x) => [x.assignment_id, x]));
   const schedules = new Map(((s.data ?? []) as unknown as { id: string; schedule: string | null }[]).map((x) => [x.id, x.schedule]));
 
@@ -139,7 +182,8 @@ export async function fetchMyOpenForms(me: string): Promise<Read<ClientFormBundl
       proId: x.professional_id,
       proName: nameOr(names, x.professional_id, "Your professional"),
       proAvatarUrl: names.get(x.professional_id)?.avatar_url ?? null,
-      questions: questions.get(x.form_id) ?? [],
+      questions: q.byAssignment.get(x.id)?.questions ?? [],
+      safetyLine: q.byAssignment.get(x.id)?.safetyLine ?? null,
       answers,
       hasDraft: !!resp,
       schedule: x.series_id ? schedules.get(x.series_id) ?? null : null,

@@ -28,5 +28,14 @@ export const consentLine = (pro: string, kind: "intake" | "check_in", bodyHidden
  */
 export const consentBox = (pro: string) => `Share these answers with ${pro === "Your professional" ? "your professional" : pro}`;
 
+/**
+ * 20261222080000: a support prompt's line when the form gives none (the
+ * approved templates don't), above its private Get support link.
+ */
+export const SUPPORT_PROMPT = "If things are hard right now, you can talk to someone. Only you see this.";
+export const GET_SUPPORT = "Get support";
+/** Under an urgent prompt: the number its message names. */
+export const URGENT_NUMBER = "112";
+
 /** FINAL_PLAN 3 §6.2: no service promise. */
 export const thanksLine = (pro: string) => `Thanks. ${pro} will review it.`;
