@@ -18,7 +18,7 @@ interface Props {
 
 // v6 (OB-087…091): Client lane · Step 1 of 4 · About you (BizOnboardingV10
 // lane "client", step "about"). Kept: the reserved-name check (ATX37), the
-// date of birth's 16+ rule, min/max and its "can't be changed later" note
+// date of birth's 16+ rule, min/max and its "to change it later, contact support" note
 // (KEEP-SAFETY; the date locks once saved, ATX51), height and weight bounds.
 // New: the optional height and weight collapsible with cm/ft and kg/lb
 // (stored metric either way).
@@ -144,7 +144,7 @@ export const AboutStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
         value={draft.dateOfBirth}
         onChange={(e) => setDraft((d) => ({ ...d, dateOfBirth: e.target.value }))}
         error={dobProblem}
-        help={age !== undefined ? `${age} years old` : "Required. It can't be changed later without contacting support."}
+        help={age !== undefined ? `${age} years old` : "Required. Check it before saving; to change it later, contact support."}
         end={
           <button type="button" className="hit" aria-label="Choose a date" onClick={() => dobRef.current?.showPicker?.()} style={{ display: "flex" }}>
             <Calendar size={16} strokeWidth={2} />

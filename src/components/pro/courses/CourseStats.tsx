@@ -134,6 +134,7 @@ export function CourseStats({ card, categories, onChanged }: { card: CourseCard;
         {statsBody((s) => (
           <div style={{ paddingBottom: 8 }}>
             <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 6 }}>New enrolments by month</p>
+            {s.byMonth.length === 0 && <p style={{ fontSize: textPx(12.5), color: INK.chF, paddingBottom: 2 }}>No enrolments yet.</p>}
             {s.byMonth.map((m) => (
               <BarRow key={m.month} label={statsMonthLabel(m.month, thisYear)} value={m.enrolled} max={monthMax} labelWidth={64} />
             ))}
@@ -143,7 +144,7 @@ export function CourseStats({ card, categories, onChanged }: { card: CourseCard;
       <Group icon={CircleCheck} title="Completion" insight={pct === null ? "No one enrolled yet" : `${pct}% finished`} open={open === "co"} onToggle={() => toggle("co")}>
         {statsBody((s) =>
           s.enrolled === 0 ? (
-            <p style={{ fontSize: textPx(12.5), color: INK.chF, paddingBottom: 10 }}>No one has enrolled yet.</p>
+            <p style={{ fontSize: textPx(12.5), color: INK.chF, paddingBottom: 10 }}>Nobody has finished this course yet.</p>
           ) : (
             <div style={{ paddingBottom: 10 }}>
               <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5 }}>
@@ -165,7 +166,7 @@ export function CourseStats({ card, categories, onChanged }: { card: CourseCard;
       >
         {statsBody((s) =>
           s.dropOff.length === 0 ? (
-            <p style={{ fontSize: textPx(12.5), color: INK.chF, paddingBottom: 10 }}>No one has stopped partway yet.</p>
+            <p style={{ fontSize: textPx(12.5), color: INK.chF, paddingBottom: 10 }}>Drop-off shows once a few people have started.</p>
           ) : (
             <div style={{ paddingBottom: 8 }}>
               <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 6 }}>The last lesson reached by people who haven't finished</p>

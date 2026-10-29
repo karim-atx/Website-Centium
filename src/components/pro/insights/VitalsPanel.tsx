@@ -208,7 +208,7 @@ const BpView: React.FC<{ readings: BloodPressureReading[]; range: ChartRange; on
     <>
       <ProChart
         title="Blood pressure"
-        question={latestCat === "stage1" || latestCat === "stage2" ? `Is blood pressure coming down out of Stage ${latestCat === "stage1" ? 1 : 2}?` : "Is blood pressure staying in the normal range?"}
+        question={latestCat === "stage1" || latestCat === "stage2" ? `Is blood pressure coming down out of Stage ${latestCat === "stage1" ? 1 : 2}?` : "Is blood pressure staying within a healthy range?"}
         range={range}
         onRangeChange={onRange}
         x={b.map((x) => bucketLabel(range, x))}
@@ -366,7 +366,7 @@ export const WeightView: React.FC<{ rows: MetricRow[]; body: MetricRow[]; bodyOn
       {shown.length ? (
         <ProChart
           title="Weight"
-          question={goalKg != null ? `Is weight trending toward the ${goalKg} kg goal?` : "Is weight trending the right way?"}
+          question={goalKg != null ? `Is weight trending toward the ${goalKg} kg goal?` : "How is weight changing over time?"}
           range={range}
           onRangeChange={onRange}
           x={shown.map((w) => w.day)}

@@ -200,7 +200,7 @@ export function addNotice(
     return {
       tone: "red",
       title: `${foodName} contains ${what}`,
-      body: `You're allergic to ${what}${b.severity ? ` (${b.severity})` : ""}. Foods with an allergen you have can't be added. To add it, update your allergies first.`,
+      body: `You're allergic to ${what}${b.severity ? ` (${b.severity})` : ""}. Foods with an allergen you've recorded can't be added. To add it, update your allergies first.`,
       blocks: true,
       addAnyway: false,
     };

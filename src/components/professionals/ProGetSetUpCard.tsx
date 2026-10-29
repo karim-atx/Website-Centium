@@ -117,7 +117,7 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
   const todo: Item[] = [
     { key: "client", icon: UserPlus, title: "Add your first client", desc: "Share a client code", done: professionalClients.length > 0, onClick: onAddClient },
     { key: "plans", icon: Package, title: "Add packages and prices", desc: descByKind, done: data.plans > 0, onClick: onPlans },
-    { key: "rates", icon: Banknote, title: "Set your rates and payment methods", desc: "Cash and card", done: data.rates, onClick: () => navigate("/app/more/services") },
+    { key: "rates", icon: Banknote, title: "Set your rates and payment methods", desc: "Cash (card payments coming soon)", done: data.rates, onClick: () => navigate("/app/more/services") },
     {
       key: "availability",
       icon: CalendarClock,

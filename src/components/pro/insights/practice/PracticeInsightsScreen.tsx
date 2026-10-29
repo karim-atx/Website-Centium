@@ -227,7 +227,7 @@ export const PracticeInsightsScreen: React.FC = () => {
             scrubHint="Drag sideways to scrub, tap a point to pin it"
           />
         ) : (
-          <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginBottom: 10 }}>Still active after shows once 5 clients have been with you for a month.</p>
+          <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginBottom: 10 }}>"Still active after a month" shows once 5 clients have been with you that long.</p>
         )}
         <div style={{ height: 12 }} />
         {roster && (

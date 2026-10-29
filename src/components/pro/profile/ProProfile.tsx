@@ -217,7 +217,7 @@ const DobSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onCl
           </p>
         </div>
       ) : (
-        <DobInline title="Add your date of birth" body="It's kept private: clients never see it. Check it before saving: it can't be changed afterwards." onSaved={onClose} />
+        <DobInline title="Add your date of birth" body="It's kept private: clients never see it. Check it before saving; to change it later, contact support." onSaved={onClose} />
       )}
     </BottomSheet>
   );

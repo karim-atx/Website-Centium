@@ -210,7 +210,7 @@ export default function InviteClients() {
             <p className="flex items-start" style={{ gap: 8, borderRadius: 12, background: INK.soft, padding: "10px 12px", marginBottom: 12, fontSize: textPx(12), color: INK.chS, lineHeight: 1.45 }}>
               <Info size={14} strokeWidth={2} aria-hidden className="shrink-0" style={{ marginTop: 1 }} />
               <span>
-                <b style={{ color: INK.ch }}>Licence not verified yet.</b> Your invite page says so until your licence is verified.
+                <b style={{ color: INK.ch }}>Licence not verified yet.</b> Until your licence is verified, your invite page says it's pending.
               </span>
             </p>
           )}

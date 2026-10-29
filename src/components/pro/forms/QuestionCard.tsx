@@ -281,7 +281,7 @@ export const QuestionCard: React.FC<{
         {!readOnly && q.safetyTopic && (
           <p className="flex items-start" style={{ gap: 6, fontSize: textPx(11.5), color: INK.chS, lineHeight: 1.45, marginBottom: 8 }}>
             <ShieldAlert size={13} strokeWidth={2} aria-hidden style={{ color: INK.hi, flexShrink: 0, marginTop: 2 }} />
-            {`Safety question. Answers that suggest ${SAFETY_LABEL[q.safetyTopic]} flag the check-in for you, so it stays on.`}
+            {`Safety question: answers that suggest ${SAFETY_LABEL[q.safetyTopic]} flag the check-in for you, so it can't be turned off.`}
           </p>
         )}
         {readOnly && conditionLine && (

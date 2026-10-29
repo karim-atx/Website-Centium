@@ -4367,7 +4367,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!c.ok && c.offline) return { ok: false, message: OFFLINE_MESSAGE };
         if (c.ok && addNotice(f.name, c.data)?.blocks) {
           replaceFoodEntryRecord(item.provisionalId, null);
-          return { ok: false, message: `${f.name} wasn't added. It contains an allergen you have.` };
+          return { ok: false, message: `${f.name} wasn't added. It contains an allergen you've recorded.` };
         }
         const r = await logFoodEntry({ userId: authUserId, ...item.params, requestId: item.id });
         if (r.ok && r.entry) replaceFoodEntryRecord(item.provisionalId, r.entry);

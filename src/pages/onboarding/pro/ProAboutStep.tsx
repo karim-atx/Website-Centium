@@ -113,7 +113,7 @@ export const ProAboutStep: React.FC<ProStepProps> = ({ kind, shared, setShared, 
         }
         error={dobError}
         // KEEP-SAFETY (the old DobField's lock note): the lock note shows until a date is chosen.
-        help={age !== undefined ? `${age} years old` : "Required. It can't be changed later without contacting support."}
+        help={age !== undefined ? `${age} years old` : "Required. Check it before saving; to change it later, contact support."}
       />
       {isOther && (
         <>

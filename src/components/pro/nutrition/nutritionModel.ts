@@ -379,7 +379,7 @@ export type TdeeView =
 export function tdeeView(basics: TdeeBasics | null, weightKg: number | null, weightShared: boolean, first: string): TdeeView {
   const who = first || "Your client";
   const title = "Needs height, age, sex and activity";
-  if (!basics) return { tdee: null, title, line: `${who} doesn't share Weight or Progress with you, so their height, age, sex and activity aren't available and no maintenance estimate is made.` };
+  if (!basics) return { tdee: null, title, line: `${who} hasn't shared their height, age, sex and activity level with you, so no maintenance estimate is made.` };
   const { ageYears, sex, heightCm, activityLevel } = basics;
   const missing = [heightCm === null ? "height" : null, ageYears === null ? "date of birth" : null, sex === null ? "sex" : null, activityLevel === null ? "activity level" : null].filter((x): x is string => !!x);
   if (missing.length || ageYears === null || sex === null || heightCm === null || activityLevel === null) {

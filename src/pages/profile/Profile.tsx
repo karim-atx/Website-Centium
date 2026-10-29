@@ -896,7 +896,7 @@ function ClientProfile() {
 
           <p className="text-[11px] text-charcoal-faint">
             Your age is calculated from this, and is used for calorie targets and health
-            recommendations. Check it before saving: it can't be changed afterwards.
+            recommendations. Check it before saving; to change it later, contact support.
           </p>
 
           {dobError && <p className="text-xs font-semibold text-status-high">{dobError}</p>}

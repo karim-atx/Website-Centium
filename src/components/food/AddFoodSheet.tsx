@@ -364,7 +364,7 @@ export const AddFoodSheet: React.FC<{
     const added = picked.size - failed.size - blocked.length;
     if (blocked.length > 0) {
       setPicked(failed);
-      setMultiError(`${blocked.join(", ")} ${blocked.length === 1 ? "wasn't" : "weren't"} added: ${blocked.length === 1 ? "it contains" : "they contain"} an allergen you have.`);
+      setMultiError(`${blocked.join(", ")} ${blocked.length === 1 ? "wasn't" : "weren't"} added: ${blocked.length === 1 ? "it contains" : "they contain"} an allergen you've recorded.`);
       return;
     }
     if (failed.size > 0) {

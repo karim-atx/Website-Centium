@@ -177,7 +177,7 @@ export const AssignSheet: React.FC<{
           );
         })
       )}
-      <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 10, lineHeight: 1.5 }}>Each client gets their own copy, where you can swap items. Allergens are never added.</p>
+      <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 10, lineHeight: 1.5 }}>Each client gets their own copy, where you can swap items. Foods with an allergen the client has recorded are never added.</p>
       <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
         <label className="block min-w-0">
           <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>

@@ -384,7 +384,7 @@ const Intake: React.FC<{
     <>
       <ProChart
         title="Calories in vs target"
-        question={`Is ${firstName} eating to the target over time?`}
+        question={`How do ${firstName}'s logged days compare with the target?`}
         range={range}
         onRangeChange={onRange}
         x={b.map((x) => bucketLabel(range, x))}
