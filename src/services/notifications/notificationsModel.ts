@@ -26,6 +26,7 @@
 import { formatShortDate } from "../../utils/date";
 import { clock12 } from "../../utils/time12";
 import { num, rows, str } from "../market/parse";
+import { imageHome, imageNoticeCopy, SUPPORT_NOTICE } from "../moderation/imageCopy";
 
 /** member_notification_kind, the whole enum in its declared order (20261210600000). */
 export const MEMBER_NOTIFICATION_KINDS = [
@@ -53,6 +54,11 @@ export const MEMBER_NOTIFICATION_KINDS = [
   // Round C Release 1 (Database 20261220000000): a moderator reset the
   // member's forum nickname (subject forum_nickname; no reason, no payload).
   "forum_nickname_reset",
+  // Round C Release 2 (Database 20261221000000): the support notice (subject
+  // wellbeing) and the image decisions (subject image_approval).
+  "support_resources",
+  "image_approved",
+  "image_rejected",
 ] as const;
 export type MemberNotificationKind = (typeof MEMBER_NOTIFICATION_KINDS)[number];
 
@@ -81,6 +87,9 @@ export const CLIENT_KINDS: readonly MemberNotificationKind[] = [
   "ambassador_application_approved",
   "ambassador_application_declined",
   "forum_nickname_reset",
+  "support_resources",
+  "image_approved",
+  "image_rejected",
 ];
 
 /** my_unread_notification_count's cap: the reader never counts past it. */
@@ -191,6 +200,11 @@ export const CLIENT_COPY: NotificationCopyTable = {
   ambassador_application_declined: { title: "Your ambassador application", body: "We've replied to your application." },
   // Round C S4: the reset carries no reason, so none is shown.
   forum_nickname_reset: { title: "Your forum nickname was reset", body: "A moderator reset your nickname. Choose a new one to keep posting." },
+  // Round C Release 2 (Database 20261221040000 / 030000): image approval
+  // (payload surface, reason_category) and the private support notice.
+  support_resources: { title: SUPPORT_NOTICE.title, body: SUPPORT_NOTICE.body },
+  image_approved: imageNoticeCopy(true, null, null),
+  image_rejected: imageNoticeCopy(false, null, null),
 };
 
 /** A key no table knows: a safe line, never the raw key. */
@@ -295,6 +309,9 @@ export const CLIENT_FILLS: NotificationFillTable = {
   },
   ambassador_application_approved: () => ({}),
   forum_nickname_reset: () => ({}),
+  support_resources: () => ({}),
+  image_approved: (p) => (p.surface ? imageNoticeCopy(true, p.surface, null) : {}),
+  image_rejected: (p) => (p.surface || p.reason_category ? imageNoticeCopy(false, p.surface, p.reason_category) : {}),
   ambassador_application_declined: (p) => {
     const on = pDate(p, "next_eligible_on");
     return on ? { body: `We've replied to your application. You can apply again from ${formatNoticeDate(on)}.` } : {};
@@ -351,7 +368,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * More with the Referral popup open, where the status card is;
  * any other kind (not a member's) → nothing in the client UI.
  */
-export function clientNotificationTarget(n: Pick<MemberNotification, "kind" | "subjectType" | "subjectId">): string | null {
+export function clientNotificationTarget(
+  n: Pick<MemberNotification, "kind" | "subjectType" | "subjectId"> & { payload?: Readonly<Record<string, unknown>> }
+): string | null {
   const id = n.subjectId && UUID.test(n.subjectId) ? n.subjectId : null;
   switch (n.kind) {
     case "voucher_issued":
@@ -367,6 +386,11 @@ export function clientNotificationTarget(n: Pick<MemberNotification, "kind" | "s
       return "/app/more?open=referral";
     case "forum_nickname_reset":
       return "/app/forum/nickname";
+    case "support_resources":
+      return "/app/get-support";
+    case "image_approved":
+    case "image_rejected":
+      return imageHome(n.payload?.surface, "member");
     default:
       return null;
   }
@@ -419,6 +443,12 @@ export function notifLook(kind: string): { tone: NotifTone; glyph: NotifGlyph } 
       return { tone: "lav", glyph: "app" };
     case "forum_nickname_reset":
       return { tone: "lav", glyph: "user" };
+    case "support_resources":
+      return { tone: "teal", glyph: "leaf" };
+    case "image_approved":
+      return { tone: "teal", glyph: "app" };
+    case "image_rejected":
+      return { tone: "red", glyph: "x" };
     default:
       return { tone: "grey", glyph: "clock" };
   }
@@ -485,6 +515,11 @@ export const BUSINESS_KINDS: readonly MemberNotificationKind[] = [
   "hire_offer_declined",
   "hiring_fee_added",
   "gym_review_received",
+  // Round C Release 2: an owner's own images and the support notice reach
+  // them here (Database: "add the kinds to BUSINESS_KINDS").
+  "support_resources",
+  "image_approved",
+  "image_rejected",
 ];
 
 /**
@@ -493,6 +528,11 @@ export const BUSINESS_KINDS: readonly MemberNotificationKind[] = [
  * is missing (BUSINESS_FILLS adds the values).
  */
 export const BUSINESS_COPY: NotificationCopyTable = {
+  // Round C Release 2 (Database 20261221040000 / 030000): image approval
+  // (payload surface, reason_category) and the private support notice.
+  support_resources: { title: SUPPORT_NOTICE.title, body: SUPPORT_NOTICE.body },
+  image_approved: imageNoticeCopy(true, null, null),
+  image_rejected: imageNoticeCopy(false, null, null),
   application_received: { title: "New application", body: "A professional applied to one of your openings." },
   hire_offer_accepted: { title: "Your offer was accepted", body: "They're on your team now." },
   hire_offer_declined: { title: "Your offer was declined", body: "You can offer the role to someone else." },
@@ -543,6 +583,9 @@ const starsText = (p: Readonly<Record<string, unknown>>): string | null => {
  *   for {gym_name}" / "5 stars, with a written review." ("5 stars." without).
  */
 export const BUSINESS_FILLS: NotificationFillTable = {
+  support_resources: () => ({}),
+  image_approved: (p) => (p.surface ? imageNoticeCopy(true, p.surface, null) : {}),
+  image_rejected: (p) => (p.surface || p.reason_category ? imageNoticeCopy(false, p.surface, p.reason_category) : {}),
   application_received: (p) => {
     const role = pText(p, "opening_title");
     const who = pText(p, "professional_name");
@@ -609,6 +652,12 @@ export function bizNotifLook(kind: string): { tone: NotifTone; glyph: NotifGlyph
       return { tone: "blue", glyph: "qr" };
     case "gym_review_received":
       return { tone: "gold", glyph: "star" };
+    case "support_resources":
+      return { tone: "teal", glyph: "leaf" };
+    case "image_approved":
+      return { tone: "teal", glyph: "app" };
+    case "image_rejected":
+      return { tone: "red", glyph: "x" };
     default:
       return { tone: "grey", glyph: "clock" };
   }
@@ -642,6 +691,11 @@ export function bizNotifTarget(n: Pick<MemberNotification, "kind" | "subjectType
       return "/app/business/analytics/reputation";
     case "offer_hidden":
       return n.subjectType === "offer" && id ? `/app/business/marketplace/offers/${id}` : "/app/business/marketplace";
+    case "support_resources":
+      return "/app/get-support";
+    case "image_approved":
+    case "image_rejected":
+      return imageHome(n.payload?.surface, "business");
     default:
       return null;
   }
@@ -667,6 +721,13 @@ export function bizNotifTarget(n: Pick<MemberNotification, "kind" | "subjectType
 // review_instructor (instructor_review_received) and the business_classes
 // trigger (class_changed / class_cancelled, future sessions only).
 
+/**
+ * Round C Release 2: the kinds that reach a person whatever their account
+ * (the support notice; an image decision), so they sit in more than one
+ * inbox list. Every other label goes to exactly one.
+ */
+export const SHARED_KINDS: readonly MemberNotificationKind[] = ["support_resources", "image_approved", "image_rejected"];
+
 /** The kinds addressed to a professional (the migration's payload table; instructor_review_received "to the INSTRUCTOR"). */
 export const PRO_KINDS: readonly MemberNotificationKind[] = [
   "hire_offer_received",
@@ -676,6 +737,10 @@ export const PRO_KINDS: readonly MemberNotificationKind[] = [
   "removed_from_team",
   "existing_team_invite",
   "instructor_review_received",
+  // Round C Release 2: the private support notice (a professional's post can
+  // match too; the payload may carry country_code). The image decisions reach
+  // the hub as pro.image.* rows instead, so they are NOT here.
+  "support_resources",
 ];
 
 /**
@@ -695,6 +760,7 @@ export function proHubKind(kind: string): "request" | "update" {
  * filled rows, PRO_FILLS).
  */
 export const PRO_COPY: NotificationCopyTable = {
+  support_resources: { title: SUPPORT_NOTICE.title, body: SUPPORT_NOTICE.body },
   hire_offer_received: { title: "New offer", body: "Accept or decline in Opportunities." },
   hired: { title: "You're hired", body: "See it in My work." },
   classes_added: { title: "Classes added to your calendar", body: "Your calendar is updated." },
@@ -734,6 +800,7 @@ const PAY_UNIT: Readonly<Record<string, string>> = { per_class: "per class", per
  *   (the board's reviewer name isn't in the payload).
  */
 export const PRO_FILLS: NotificationFillTable = {
+  support_resources: () => ({}),
   hire_offer_received: (p) => {
     const biz = pText(p, "business_name");
     const role = roleOf(p);
@@ -839,6 +906,10 @@ export function proMemberTarget(n: Pick<MemberNotification, "kind"> & { payload?
       return `/app/pro/calendar${day("starts_at")}`;
     case "instructor_review_received":
       return "/app/more/reviews";
+    case "support_resources": {
+      const cc = n.payload ? pText(n.payload, "country_code") : null;
+      return cc ? `/app/get-support?country=${encodeURIComponent(cc)}` : "/app/get-support";
+    }
     default:
       return "/app/pro/marketplace/opportunities";
   }

@@ -16,7 +16,9 @@ import { hostedImageUrl, storagePath } from "../venues/venueLogic";
 // `business-logos` as <uid>/cover-<id>.jpg. A stored value is read as it was
 // written: a full http(s) URL is drawn as it is, a path whose file name starts
 // with "cover-" is the old business-logos object, anything else is
-// business-covers. New covers are <owner_uid>/<uuid>.jpg, never "cover-…".
+// business-covers. Since Round C Release 2 a new cover waits for approval and
+// the Database publishes it at its staged path, <owner_uid>/business_cover/
+// <uuid>.<ext>, never "cover-…".
 // Venue covers (gyms.cover_url, gym-covers) are a different picture and are
 // not handled here.
 
@@ -28,11 +30,6 @@ export const LEGACY_COVER_BUCKET = "business-logos";
 export function coverBucketFor(path: string): typeof BUSINESS_COVER_BUCKET | typeof LEGACY_COVER_BUCKET {
   const file = path.split("/").pop() ?? "";
   return file.startsWith("cover-") ? LEGACY_COVER_BUCKET : BUSINESS_COVER_BUCKET;
-}
-
-/** A new cover's object path: <owner_uid>/<file>. */
-export function coverObjectPath(ownerUid: string, fileId: string): string {
-  return `${ownerUid}/${fileId}.jpg`;
 }
 
 /**

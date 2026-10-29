@@ -5,6 +5,7 @@ import type {
   MyReport,
   ReviewMetrics,
 } from "./types";
+import { BLOCKED_TEXT, CONTACT_TEXT } from "../moderation/text";
 
 // B14 (Reputation) rows → app shapes. Pure: no Supabase, so node:test runs it.
 // Every column is read defensively (the generated types predate B14; the
@@ -118,6 +119,8 @@ export const REPORT_NOTE_MAX = 300;
 
 /** B14 refusals, in the words a page shows (null = the page's own fallback). */
 export function reputationError(code: string | undefined): string | null {
+  if (code === "ATX60") return BLOCKED_TEXT;
+  if (code === "contact_details") return CONTACT_TEXT;
   if (code === "ATXF9") return "This review already has a reply. Edit it instead.";
   if (code === "ATXG0") return "You've already reported this review.";
   if (code === "ATX10") return "Centium removed this, so it can't be changed.";

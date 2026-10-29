@@ -6,6 +6,7 @@ import { InstagramGlyph } from "../../../components/business-more/InstagramGlyph
 import { BUSINESS_TYPE_OPTIONS, CATEGORY_KEYS, CATEGORY_LABEL, MAX_CATEGORIES, typeLabel, type BizKind } from "../../../components/business-more/kind";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import type { BusinessPatch, BusinessTypeValue } from "../../../services/business-more";
+import { ImageApprovalBadge, ImageApprovalNote, type OwnImageState } from "../../../components/moderation/ImageApproval";
 
 // MO1B-014 to -023 · the BizMoreV8 sheets (`sheet` template lines 127 to 137):
 // band #F0EEFD / #1C1F28 with the business outline (#7248F8 / #9976F7), title
@@ -377,12 +378,16 @@ export function AreaSheet({ open, onClose, area, onSave }: { open: boolean; onCl
 // Your photo (OURS, NOTHING_LOST LOST 5): the owner's own picture
 // (profiles.avatar_url), which team chats and direct messages show. The page
 // owns the upload (services/avatar, the same path as the personal Profile);
-// this sheet is the preview and the three choices.
+// this sheet is the preview and the three choices. `avatarUrl` is what the
+// owner sees (a pending photo first, Round C Release 2), `approval` its badge
+// and note, `canRemove` whether there is an approved photo to clear.
 
 export function YourPhotoSheet({
   open,
   onClose,
   avatarUrl,
+  approval,
+  canRemove,
   initials,
   busy,
   error,
@@ -393,6 +398,8 @@ export function YourPhotoSheet({
   open: boolean;
   onClose: () => void;
   avatarUrl: string | null;
+  approval: OwnImageState;
+  canRemove: boolean;
   initials: string;
   busy: boolean;
   error: string | null;
@@ -416,6 +423,12 @@ export function YourPhotoSheet({
           )}
         </span>
       </div>
+      {approval && (
+        <div className="flex flex-col items-center text-center gap-1.5" style={{ marginBottom: 12 }}>
+          <ImageApprovalBadge state={approval} />
+          <ImageApprovalNote state={approval} />
+        </div>
+      )}
       {error && (
         <p role="alert" className="text-[12px] font-bold text-status-high" style={{ marginBottom: 6 }}>
           {error}
@@ -423,7 +436,7 @@ export function YourPhotoSheet({
       )}
       <BizButton label="Choose from library" onClick={onLibrary} busy={busy} />
       <BizButtonSoft label="Take a photo" onClick={onCamera} disabled={busy} />
-      {avatarUrl && <BizButtonSoft label="Remove photo" tone="high" onClick={onRemove} disabled={busy} />}
+      {canRemove && <BizButtonSoft label="Remove photo" tone="high" onClick={onRemove} disabled={busy} />}
     </BizSheet>
   );
 }

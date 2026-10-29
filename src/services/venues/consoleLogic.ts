@@ -521,16 +521,6 @@ export function hoursWritePlan(
 export const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 export const COVER_MAX_BYTES = 5 * 1024 * 1024;
 
-/** business-logos: <owner_uid>/<file>. */
-export function logoObjectPath(uid: string, fileId: string): string {
-  return `${uid}/${fileId}.jpg`;
-}
-
-/** gym-covers: <owner_uid>/<gym_id>/<file>. */
-export function coverObjectPath(uid: string, gymId: string, fileId: string): string {
-  return `${uid}/${gymId}/${fileId}.jpg`;
-}
-
 /**
  * The previous object to remove after a replacement, or null. Only a valid
  * path in the caller's own prefix (the only one the delete policy allows),

@@ -10,6 +10,8 @@ import { MarketingLayout } from "./marketing/layouts/MarketingLayout";
 import { Home as MarketingHome } from "./marketing/pages/Home";
 import { Contact as MarketingContact } from "./marketing/pages/Contact";
 import { Legal as MarketingLegal } from "./marketing/pages/Legal";
+import { CommunityGuidelines } from "./marketing/pages/CommunityGuidelines";
+import { GetSupportPage } from "./pages/settings/GetSupportPage";
 import { NotFound as MarketingNotFound } from "./marketing/pages/NotFound";
 import { PublicReturnResume } from "./pages/public/PublicReturnResume";
 import { AppPagesReady, appPages } from "./appPagesLazy";
@@ -366,6 +368,8 @@ function AppRoutes() {
             rather than leave them 404ing for anyone with an old link. */}
         <Route path="/legal/privacy" element={<Navigate to="/legal#privacy" replace />} />
         <Route path="/legal/terms" element={<Navigate to="/legal#terms" replace />} />
+        {/* Round C Release 2: linked from every moderation and image-approval message. */}
+        <Route path="/legal/community-guidelines" element={<CommunityGuidelines />} />
         {/* v3 landing handoff: branded 404 for anything else under the
             marketing site. Ranked below every explicit path above (and
             below /app/* below, a more specific splat) by React Router's own
@@ -543,6 +547,7 @@ function AppRoutes() {
         <Route path="/app/forum" element={<Community />} />
         <Route path="/app/forum/new" element={<ForumNewPage />} />
         <Route path="/app/forum/nickname" element={<ForumNicknamePage />} />
+        <Route path="/app/get-support" element={<GetSupportPage />} />
         <Route path="/app/forum/post/:id" element={<ForumPostPage />} />
         {/* BEFORE the :courseId route in the file, though React Router ranks
             by specificity rather than order: a static segment beats a dynamic

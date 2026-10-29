@@ -17,7 +17,9 @@ import {
   visibleCategoryChips,
   yourBusinessErrors,
 } from "./lanes";
-import { imageUrl, removeBusinessImage, uploadBusinessImage } from "../../../services/business-onboarding";
+import { removeBusinessImage, uploadBusinessImage } from "../../../services/business-onboarding";
+import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../../components/moderation/ImageApproval";
+import { useImagePreview } from "./useImagePreview";
 import type { LaneStepProps } from "./laneTypes";
 
 // OB-218 / 248 / 281 (+ 220 activities menu, 250 contact, 251 field errors,
@@ -49,8 +51,14 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
   const shown = showErrors ? errors : {};
   const cats = categoryOptions(lane, biz.storeType);
   const chips = useMemo(() => visibleCategoryChips(cats.all, cats.shown, biz.categories), [cats.all, cats.shown, biz.categories]);
-  const coverUrl = imageUrl("cover", biz.coverPath);
-  const logoUrl = imageUrl("logo", biz.logoPath);
+  const coverUrl = useImagePreview("cover", biz.coverPath);
+  const logoUrl = useImagePreview("logo", biz.logoPath);
+  // Pictures sent for approval by an earlier save of this step: the badge and
+  // note show while the draft still holds that picture.
+  const ownCover = useOwnImage("business_cover", biz.businessId);
+  const ownLogo = useOwnImage("business_logo", biz.businessId);
+  const coverState = ownCover.image?.stagingPath === biz.coverPath ? ownCover.image : null;
+  const logoState = ownLogo.image?.stagingPath === biz.logoPath ? ownLogo.image : null;
 
   const toggleCategory = (c: string) =>
     setBiz((b) => ({
@@ -67,7 +75,7 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
     }
     setUploading(kind);
     setUploadError(null);
-    const res = await uploadBusinessImage(uid, kind, file, kind === "cover" ? biz.coverPath : biz.logoPath);
+    const res = await uploadBusinessImage(uid, kind, file);
     setUploading(null);
     if (!res.ok) {
       setUploadError(res.message);
@@ -160,6 +168,7 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
           }}
         >
           {!coverUrl && !coverErr && <span className="absolute left-[14px] top-3 font-mono text-[10px] text-charcoal-faint">{coverLabel(lane)}</span>}
+          <ImageApprovalBadge state={coverState} className="absolute left-3 top-3" />
           <span
             data-anchor
             className="absolute right-3 bottom-3 h-[34px] px-3 rounded-full bg-cream-card text-primary-dark flex items-center gap-[6px] text-[12px] font-extrabold"
@@ -186,6 +195,10 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
             {uploading === "logo" ? "Uploading…" : help}
           </span>
         </div>
+        {logoState && <ImageApprovalBadge state={logoState} className="mt-2 ml-4" />}
+        {/* One "waiting" line covers both pictures; a refusal gives its own reason. */}
+        <ImageApprovalNote state={coverState} className="mt-2" />
+        {!(coverState?.status === "pending" && logoState?.status === "pending") && <ImageApprovalNote state={logoState} className="mt-2" />}
       </div>
 
       <BizField

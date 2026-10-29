@@ -3,10 +3,11 @@ import { supabase as typed } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { prepareForumPhoto } from "../forum/photo";
 import { recordLegalAcceptances } from "../legal/acceptances";
-import { COVER_MAX_BYTES, LOGO_MAX_BYTES, logoObjectPath, replacedObject } from "../venues/consoleLogic";
+import { COVER_MAX_BYTES, LOGO_MAX_BYTES, replacedObject } from "../venues/consoleLogic";
 import { storagePath } from "../venues/venueLogic";
 import { uploadWithProgress } from "../storage";
-import { BUSINESS_COVER_BUCKET, coverObjectPath, coverToRemove, coverUrlFor } from "../business-more/cover";
+import { coverToRemove, coverUrlFor } from "../business-more/cover";
+import { myImageApprovals, stagedUrl, stagingPath, submitImage, uploadToStaging } from "../moderation/images";
 import { OB_STRINGS } from "../../pages/onboarding/shell/flow";
 import { looksBlurry } from "./blurCheck";
 import { fetchBookingPolicies, setBookingPolicy } from "../business-classes/schedule";
@@ -25,6 +26,7 @@ import {
   type StarterPlan,
 } from "../../pages/onboarding/business/lanes";
 import { docsFor, type BusinessLaneDraft } from "../../pages/onboarding/business/draft";
+import { contactRefusal, moderationRefusal } from "../moderation/text";
 
 // Database stage B5 "Business foundations and onboarding" (HANDOVER_API.md
 // "## B5"), for the Classes, Gym and Store onboarding lanes:
@@ -54,7 +56,7 @@ function fail<T>(error: unknown, fallback = SAVE_FAIL): Res<T> {
   const msg = e?.message ?? "";
   // ATXB6 (identity: slug / timezone), ATXB7 (published policy), ATXB8 (review).
   if (/ATXB6/.test(msg)) return { ok: false, code: "ATXB6", message: msg.replace(/^.*ATXB6:\s*/, "").replace(/^./, (m) => m.toUpperCase()) };
-  return { ok: false, code: e?.code, message: fallback };
+  return { ok: false, code: e?.code, message: moderationRefusal(e) ?? fallback };
 }
 
 /** The browser's timezone when the server knows it, else the column default. */
@@ -91,6 +93,9 @@ export async function fetchMyBusinessRow(uid: string): Promise<Res<BusinessRow |
  * business_code is the trigger's to assign and is never sent.
  */
 export async function saveBusinessBasics(uid: string, d: BusinessLaneDraft): Promise<Res<BusinessRow>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(d.description);
+  if (contact) return { ok: false, message: contact };
   if (!d.lane) return { ok: false, message: SAVE_FAIL };
   const type = businessTypeFor(d.lane, d.storeType);
   if (!type) return { ok: false, message: SAVE_FAIL };
@@ -104,15 +109,18 @@ export async function saveBusinessBasics(uid: string, d: BusinessLaneDraft): Pro
     public_email: d.email.trim() || null,
     instagram: handle || null,
     public_website: d.website.trim() || null,
-    cover_url: d.coverPath,
-    logo_url: d.logoPath,
   };
   const existing = await fetchMyBusinessRow(uid);
   if (!existing.ok) return existing;
   if (existing.value) {
-    const upd = await db.from("business_profiles").update(row).eq("id", existing.value.id).select("id, business_code, business_type, active").single();
+    // The image columns are the Database's to write (on approval); a removed
+    // picture is the one write left here.
+    const cleared = { ...(d.coverPath ? {} : { cover_url: null }), ...(d.logoPath ? {} : { logo_url: null }) };
+    const upd = await db.from("business_profiles").update({ ...row, ...cleared }).eq("id", existing.value.id).select("id, business_code, business_type, active").single();
     if (upd.error) return fail(upd.error);
     const r = upd.data as { id: string; business_code: string | null; business_type: string; active: boolean };
+    const sent = await submitStep1Images(r.id, d);
+    if (!sent.ok) return sent;
     return { ok: true, value: { id: r.id, businessCode: r.business_code, businessType: r.business_type, active: r.active } };
   }
   const tz = deviceTimezone();
@@ -130,45 +138,87 @@ export async function saveBusinessBasics(uid: string, d: BusinessLaneDraft): Pro
   const made = await fetchMyBusinessRow(uid);
   if (!made.ok) return made;
   if (!made.value) return { ok: false, message: SAVE_FAIL };
+  const sent = await submitStep1Images(made.value.id, d);
+  if (!sent.ok) return sent;
   return { ok: true, value: made.value };
 }
 
+const STEP1_SURFACE = { cover: "business_cover", logo: "business_logo" } as const;
+
+/** A path staged by uploadBusinessImage: <uid>/business_cover|business_logo/<file>. */
+const isStagedPath = (kind: "logo" | "cover", path: string) => path.split("/")[1] === STEP1_SURFACE[kind];
+
+/**
+ * Step 1's pictures, submitted for approval once the business row exists
+ * (Round C Release 2): every Step 1 save sends a picture staged since the
+ * last one, and skips one already submitted (pending, decided or published,
+ * which is when the column holds the same path). Older drafts' paths are
+ * public objects the old save already wrote, and are left alone.
+ */
+async function submitStep1Images(businessId: string, d: BusinessLaneDraft): Promise<Res<null>> {
+  const kinds = (["cover", "logo"] as const).filter((k) => {
+    const path = k === "cover" ? d.coverPath : d.logoPath;
+    return !!path && isStagedPath(k, path);
+  });
+  if (kinds.length === 0) return { ok: true, value: null };
+  const { data, error } = await db.from("business_profiles").select("cover_url, logo_url").eq("id", businessId).maybeSingle();
+  if (error) return fail(error);
+  const columns = (data ?? {}) as { cover_url?: string | null; logo_url?: string | null };
+  for (const k of kinds) {
+    const path = (k === "cover" ? d.coverPath : d.logoPath)!;
+    if ((k === "cover" ? columns.cover_url : columns.logo_url) === path) continue;
+    const mine = await myImageApprovals(STEP1_SURFACE[k], businessId);
+    if (mine.some((a) => a.stagingPath === path)) continue;
+    const r = await submitImage(STEP1_SURFACE[k], businessId, path);
+    if (!r.ok) return { ok: false, message: r.message, code: r.code };
+  }
+  return { ok: true, value: null };
+}
+
 /** The public URL of a stored logo or cover path (an old cover is read from where it was written: ../business-more/cover). */
-export function imageUrl(kind: "logo" | "cover", path: string | null): string | null {
+function imageUrl(kind: "logo" | "cover", path: string | null): string | null {
   if (kind === "cover") return coverUrlFor(path, (bucket, p) => db.storage.from(bucket).getPublicUrl(p).data.publicUrl);
   const p = storagePath(path);
   return p ? db.storage.from("business-logos").getPublicUrl(p).data.publicUrl : null;
 }
 
 /**
- * Uploads a logo (business-logos, <uid>/<file>) or cover (business-covers,
- * <own uid>/<file>: the policy accepts the uploader's own uid, so no business
- * row is needed yet, and the onboarding account is the owner) after re-drawing
- * it (metadata stripped), and removes the object it replaces. The column is
- * written with Step 1's save.
+ * How the owner sees a Step 1 picture: a staged one from image-staging (a
+ * signed URL; the public copy only exists once approved), anything older from
+ * its public bucket.
  */
-export async function uploadBusinessImage(uid: string, kind: "logo" | "cover", file: File, previous: string | null): Promise<Res<string>> {
+export async function imagePreviewUrl(kind: "logo" | "cover", path: string | null): Promise<string | null> {
+  if (!path) return null;
+  if (!isStagedPath(kind, path)) return imageUrl(kind, path);
+  return (await stagedUrl(path)) ?? imageUrl(kind, path);
+}
+
+/**
+ * Stages a logo or cover in image-staging (<uid>/business_logo|business_cover/
+ * <file>) after re-drawing it (metadata stripped). No business row is needed
+ * yet: Step 1's save submits it for approval (submitStep1Images), and the
+ * Database writes the column once it is approved. The picture it replaces is
+ * left where it is: until the new one is approved, it is what others see.
+ */
+export async function uploadBusinessImage(uid: string, kind: "logo" | "cover", file: File): Promise<Res<string>> {
   const prepared = await prepareForumPhoto(file);
   if (!prepared.ok) return { ok: false, message: prepared.message };
   const max = kind === "logo" ? LOGO_MAX_BYTES : COVER_MAX_BYTES;
   if (prepared.file.size > max) {
     return { ok: false, message: kind === "logo" ? "This logo is too large. Choose one under 2 MB." : "This photo is too large. Choose one under 5 MB." };
   }
-  const bucket = kind === "logo" ? "business-logos" : BUSINESS_COVER_BUCKET;
-  const path = kind === "logo" ? logoObjectPath(uid, crypto.randomUUID()) : coverObjectPath(uid, crypto.randomUUID());
-  const { error } = await db.storage.from(bucket).upload(path, prepared.file, { contentType: "image/jpeg", upsert: false });
-  if (error) return fail(error, "The image couldn't be uploaded. Try again.");
-  await removeBusinessImage(uid, kind, previous, path);
-  return { ok: true, value: path };
+  const up = await uploadToStaging(stagingPath(uid, STEP1_SURFACE[kind], prepared.file), prepared.file);
+  return up.ok ? { ok: true, value: up.value } : { ok: false, message: up.message };
 }
 
-export async function removeBusinessImage(uid: string, kind: "logo" | "cover", previous: string | null, next = ""): Promise<void> {
+/** Remove photo: the public object of a published picture (the column is cleared by Step 1's save). */
+export async function removeBusinessImage(uid: string, kind: "logo" | "cover", previous: string | null): Promise<void> {
   if (kind === "logo") {
-    const old = replacedObject(previous, uid, next);
+    const old = replacedObject(previous, uid, "");
     if (old) await db.storage.from("business-logos").remove([old]);
     return;
   }
-  const old = coverToRemove(previous, { ownerUid: uid, callerUid: uid }, next);
+  const old = coverToRemove(previous, { ownerUid: uid, callerUid: uid });
   if (old) await db.storage.from(old.bucket).remove([old.path]);
 }
 
@@ -217,8 +267,8 @@ export async function saveVenues(d: BusinessLaneDraft, businessId: string): Prom
     public_phones: d.phone.trim() ? [d.phone.trim()] : [],
     public_email: d.email.trim() || null,
     public_website: d.website.trim() || null,
-    cover_url: d.coverPath,
-    logo_url: d.logoPath,
+    // No cover_url / logo_url: a venue's cover is its own picture (gym_cover,
+    // set in the venue console) and the logo is the business's.
     default_cancellation_hours: d.lane === "classes" ? d.essentials.cancelHours : 12,
   });
   const write = async (loc: Location, id: string | null): Promise<Res<string>> => {

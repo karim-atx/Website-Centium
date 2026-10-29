@@ -42,6 +42,7 @@ import {
   type OfferError,
   type OfferVariant,
 } from "./manageModel";
+import { contactRefusal } from "../moderation/text";
 
 export * from "./manageModel";
 
@@ -100,6 +101,9 @@ async function write(fn: string, args: Record<string, unknown>, fallback: string
  * of creating a second.
  */
 export function createOffer(owner: OfferOwner, draft: OfferDraft, requestId: string): Promise<OfferWrite> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(draft.headline, draft.terms);
+  if (contact) return Promise.resolve({ ok: false, message: contact });
   const variant: OfferVariant = owner.variant;
   return write(
     "create_offer",
@@ -110,6 +114,8 @@ export function createOffer(owner: OfferOwner, draft: OfferDraft, requestId: str
 
 /** update_offer(p_offer_id, …): refuses offer_expired (ended) and a taken-down offer. */
 export function updateOffer(owner: OfferOwner, offerId: string, draft: OfferDraft): Promise<OfferWrite> {
+  const contact = contactRefusal(draft.headline, draft.terms);
+  if (contact) return Promise.resolve({ ok: false, message: contact });
   return write("update_offer", { p_offer_id: offerId, ...offerArgs(draft, owner.variant), p_funding_ack: draft.fundingAck }, "Couldn't save this offer. Try again.");
 }
 

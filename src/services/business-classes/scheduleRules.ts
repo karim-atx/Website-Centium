@@ -382,8 +382,3 @@ export function bringList(items: string[]): string[] {
   }
   return out;
 }
-
-/** The class-covers object path: <uploader uid>/<business_id>/<file> (HANDOVER_API B9 "Covers"). */
-export function classCoverPath(uid: string, businessId: string, fileId: string): string {
-  return `${uid}/${businessId}/${fileId}.jpg`;
-}

@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { describeForumError, type ForumAction, type ForumCategory, type ReportReasonKey } from "./rules";
+import { contactRefusal } from "../moderation/text";
 
 // The shared forum (Database 630f2cd, 27141fa, df67bd8).
 //
@@ -344,6 +345,9 @@ export async function createThread(input: {
   body: string;
   photoPath: string | null;
 }): Promise<Result<{ id: string; held: boolean }>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(input.title, input.body);
+  if (contact) return { ok: false, message: contact };
   const { data, error } = await supabase
     .from("forum_threads")
     .insert({
@@ -366,6 +370,9 @@ export async function createReply(input: {
   identity: Identity;
   body: string;
 }): Promise<Result<ForumReply>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(input.body);
+  if (contact) return { ok: false, message: contact };
   const { data, error } = await supabase
     .from("forum_replies")
     .insert({ author_id: input.userId, thread_id: input.threadId, identity: input.identity, body: input.body.trim() })
@@ -442,6 +449,9 @@ export function editTimeLeft(createdAt: string, now = Date.now()): number {
  * post afterwards rather than assuming it is still published.
  */
 export async function editPost(ref: PostRef, body: string, title?: string): Promise<Result<null>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(body, title);
+  if (contact) return { ok: false, message: contact };
   const { error } = await supabase.rpc("edit_forum_post", {
     ...refArgs(ref),
     p_body: body.trim(),

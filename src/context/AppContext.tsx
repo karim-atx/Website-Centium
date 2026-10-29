@@ -2081,8 +2081,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // THE CANDIDATE TEST IS THE VALUE'S OWN SHAPE, the same trick the custom
   // meal, custom exercise and routine uploads use rather than a migration
   // flag that can drift: `data:` means local-only, anything else came from
-  // the server. A successful migration replaces the value with an https URL,
-  // so the same picture cannot qualify twice — and the ref below stops a
+  // the server. A successful migration clears the value (the picture then
+  // waits for approval), so the same picture cannot qualify twice — and the ref below stops a
   // FAILED attempt retrying in a loop, with the next page load as the retry.
   //
   // AFTER profileReady, WHICH IS WHAT MAKES IT SAFE. fetchProfile overwrites
@@ -2101,10 +2101,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let cancelled = false;
     void migrateLocalAvatar(authUserId, local!).then((result) => {
       if (cancelled || !result.ok) return;
-      // Only if it is still the same picture. Someone who picked a new one
-      // while this was in flight has already written a real URL, and the
-      // migration must not put the old face back.
-      setUser((prev) => (prev.avatarUrl === local ? { ...prev, avatarUrl: result.url } : prev));
+      // Round C Release 2: the picture now waits for approval, and avatar_url
+      // is written by the Database once it is approved. The local copy goes
+      // (that is what makes this one-time); the owner sees the pending one on
+      // their profile screens. Only if it is still the same picture: one that
+      // changed while this was in flight is left alone.
+      setUser((prev) => (prev.avatarUrl === local ? { ...prev, avatarUrl: undefined } : prev));
     });
     return () => {
       cancelled = true;

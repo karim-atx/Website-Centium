@@ -3,13 +3,12 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { prepareForumPhoto } from "../forum/photo";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { storagePath } from "./venueLogic";
+import { stageAndSubmit } from "../moderation/images";
 import {
   consoleMessage,
   COVER_MAX_BYTES,
-  coverObjectPath,
   hoursWritePlan,
   LOGO_MAX_BYTES,
-  logoObjectPath,
   replacedObject,
   toMyVenue,
   toRosterEntry,
@@ -236,10 +235,11 @@ export async function saveVenueTimezone(gymId: string, timezone: string): Promis
 
 // ---------------------------------------------------------------------------
 // Logo (business_profiles.logo_url in business-logos) and cover (gyms.cover_url
-// in gym-covers). Stored as object PATHS under <owner_uid>/…; the URL is built.
+// in gym-covers). Stored as object PATHS; the URL is built. New images wait for
+// approval (uploadVenueImage) and the Database writes the column.
 
 export interface VenueImages {
-  /** The stored paths, kept so a replacement can remove the old object. */
+  /** The stored paths, kept so Remove can delete the object. */
   logoPath: string | null;
   coverPath: string | null;
   logoUrl: string | null;
@@ -272,9 +272,11 @@ export async function fetchVenueImages(gymId: string, businessId: string): Promi
 type ImageKind = "logo" | "cover";
 
 /**
- * Prepares (metadata stripped by re-drawing, as forum photos are), uploads to
- * the owner's own prefix, points the column at it, and only then removes the
- * object it replaced. A failed column write removes the new object instead.
+ * Prepares (metadata stripped by re-drawing, as forum photos are), stages it
+ * and submits it for approval (Round C Release 2): the logo as business_logo
+ * (owner only), the cover as gym_cover. The columns keep the approved image
+ * until an admin approves; the Database then copies the file into
+ * business-logos / gym-covers at the staged path and writes the column.
  */
 export async function uploadVenueImage(params: {
   kind: ImageKind;
@@ -282,42 +284,16 @@ export async function uploadVenueImage(params: {
   gymId: string;
   businessId: string;
   file: File;
-  previousPath: string | null;
-}): Promise<Result<{ path: string; url: string | null }>> {
-  const { kind, uid, gymId, businessId, file, previousPath } = params;
+}): Promise<Result<null>> {
+  const { kind, uid, gymId, businessId, file } = params;
   const prepared = await prepareForumPhoto(file);
   if (!prepared.ok) return { ok: false, message: prepared.message };
   const max = kind === "logo" ? LOGO_MAX_BYTES : COVER_MAX_BYTES;
   if (prepared.file.size > max) {
     return { ok: false, message: kind === "logo" ? "This logo is too large. Choose one under 2 MB." : "This photo is too large. Choose one under 5 MB." };
   }
-
-  const bucket = kind === "logo" ? "business-logos" : "gym-covers";
-  const path = kind === "logo" ? logoObjectPath(uid, crypto.randomUUID()) : coverObjectPath(uid, gymId, crypto.randomUUID());
-  const { error: upErr } = await supabase.storage.from(bucket).upload(path, prepared.file, { contentType: "image/jpeg", upsert: false });
-  if (upErr) {
-    console.warn(`[venue console] ${kind} upload refused:`, upErr.message);
-    return { ok: false, message: isOffline(upErr) ? OFFLINE_MESSAGE : "The image couldn't be uploaded. Try again." };
-  }
-
-  const written =
-    kind === "logo"
-      ? await db.from("business_profiles").update({ logo_url: path }).eq("id", businessId).select("id")
-      : await db.from("gyms").update({ cover_url: path }).eq("id", gymId).select("id");
-  if (written.error || !written.data || written.data.length === 0) {
-    console.error(`[venue console] Could not save the ${kind}:`, written.error?.message ?? "no row updated");
-    await supabase.storage.from(bucket).remove([path]);
-    return written.error
-      ? fail(written.error, "Couldn't save the image. Try again.")
-      : { ok: false, code: "42501", message: consoleMessage("42501", "", "") };
-  }
-
-  const old = replacedObject(previousPath, uid, path);
-  if (old) {
-    const { error } = await supabase.storage.from(bucket).remove([old]);
-    if (error) console.warn(`[venue console] Could not remove the previous ${kind}:`, error.message);
-  }
-  return { ok: true, value: { path, url: publicUrl(bucket, path) } };
+  const r = await stageAndSubmit(uid, kind === "logo" ? "business_logo" : "gym_cover", kind === "logo" ? businessId : gymId, prepared.file);
+  return r.ok ? { ok: true, value: null } : r;
 }
 
 /** Clears the column, then removes the object (own prefix only). */

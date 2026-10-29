@@ -1,7 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { prepareForumPhoto } from "../forum/photo";
+import { stageAndSubmit } from "../moderation/images";
 import {
-  classCoverPath,
   refusalMessage,
   refusalOf,
   type BookingPolicy,
@@ -48,7 +48,8 @@ export interface ClassFields {
   about?: string | null;
   level?: ClassLevel | null;
   what_to_bring?: string[];
-  cover_url?: string | null;
+  /** Only null (Remove): an approved cover is written by the Database (submit_image). */
+  cover_url?: null;
   cancellation_hours?: number | null;
   /** B13 MK-04 (accepted since 20261121390000; the series and its later splits keep them): null = no separate limit. */
   centium_spots?: number | null;
@@ -211,28 +212,28 @@ export async function classInstructorConflicts(businessId: string, from?: string
 }
 
 // ---------------------------------------------------------------------------
-// Class covers (EX-01): public bucket class-covers, <uid>/<business_id>/<file>
+// Class covers (EX-01). Round C Release 2: a new cover waits for an admin.
+// The sheet prepares the photo here and keeps it until Save; once the class
+// (class_cover) or its series (class_series_cover) exists, it is staged and
+// submitted (services/moderation/images), and the Database writes cover_url
+// when it is approved. The app itself only ever writes cover_url as null
+// (Remove).
 
-/** Uploads a cover (re-encoded as JPEG, metadata dropped) and returns its public URL for cover_url. */
-export async function uploadClassCover(uid: string, businessId: string, file: File): Promise<{ ok: true; url: string; path: string } | { ok: false; message: string }> {
+/** A picked cover re-encoded as JPEG with its metadata dropped, ready to stage. */
+export async function prepareClassCover(file: File): Promise<{ ok: true; file: File } | { ok: false; message: string }> {
   const prepared = await prepareForumPhoto(file);
   if (!prepared.ok) return { ok: false, message: prepared.message };
   if (prepared.file.size > 5 * 1024 * 1024) return { ok: false, message: "This photo is too large. Choose one under 5 MB." };
-  const path = classCoverPath(uid, businessId, crypto.randomUUID());
-  const up = await supabase.storage.from("class-covers").upload(path, prepared.file, { contentType: "image/jpeg", upsert: false });
-  if (up.error) {
-    console.warn("[business-classes] cover upload refused:", up.error.message);
-    return { ok: false, message: "Couldn't upload the photo. Check your connection and try again." };
-  }
-  return { ok: true, path, url: supabase.storage.from("class-covers").getPublicUrl(path).data.publicUrl };
+  return { ok: true, file: prepared.file };
 }
 
-/** Removes a cover this account uploaded (own-prefix delete policy); anything else is left alone. */
-export async function removeClassCover(uid: string, url: string | null | undefined): Promise<void> {
-  const m = /\/class-covers\/(.+)$/.exec(url ?? "");
-  const path = m ? decodeURIComponent(m[1].split("?")[0]) : null;
-  if (!path || path.split("/")[0] !== uid) return;
-  await supabase.storage.from("class-covers").remove([path]);
+/** Which record a cover is for: one class, or a series and its classes. */
+export type CoverTarget = { surface: "class_cover" | "class_series_cover"; id: string };
+
+/** Stages a prepared cover and opens its approval. The record must exist. */
+export async function submitClassCover(uid: string, target: CoverTarget, file: File): Promise<{ ok: true } | { ok: false; message: string }> {
+  const r = await stageAndSubmit(uid, target.surface, target.id, file);
+  return r.ok ? { ok: true } : { ok: false, message: r.message };
 }
 
 // ---------------------------------------------------------------------------

@@ -119,9 +119,6 @@ export function photoLine(shown: number, inReview: number): string {
   return `${shown} of 6 recommended${inReview ? ` · ${inReview} in review` : ""}`;
 }
 
-/** `<uid>/<business_id>/<file>`: the folder the bucket and the row guard both require. */
-export const photoObjectPath = (uid: string, businessId: string, name: string): string => `${uid}/${businessId}/${name}`;
-
 /** Only the uploader may remove an object (the bucket policy keys on the first folder). */
 export const ownsObject = (path: string, uid: string): boolean => path.split("/")[0] === uid;
 

@@ -10,18 +10,20 @@ import { useOnline } from "../../hooks/useOnline";
 import { FORUM_PHOTO_ACCEPT } from "../../services/forum/photo";
 import { fetchVenueImages, removeVenueImage, uploadVenueImage, type VenueImages } from "../../services/venues/console";
 import { VCardError, VDetailCard } from "./VenueKit";
+import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../moderation/ImageApproval";
 
 // The business logo and the venue cover (stage A4), owner only, rebuilt from
 // the MO1 Business Profile hero (OURS-OP1-venue-images: K21 cover 132 r18 with
 // a camera badge, the 72 r20 logo overlapping it by 34, K20 photo source menu
 // "Take a photo / Choose from library / Remove photo", K16 remove confirm,
-// K17 toasts). Objects go to the PUBLIC business-logos / gym-covers buckets
-// under <your uid>/… (the uid prefix is what lets account deletion find
-// them) and the PATH is stored in business_profiles.logo_url /
-// gyms.cover_url. Every photo is re-drawn with its metadata stripped (the
-// forum photo preparation) before it leaves the device; replacing one removes
-// the old object. A path with no object behind it (the seed's) shows the
-// initials / the tint. One cover per venue (V6-163).
+// K17 toasts). A new logo or cover waits for approval (Round C Release 2:
+// business_logo / gym_cover): it is staged and submitted, the owner sees it
+// here at once with a "Waiting for approval" badge, and everyone else keeps
+// the approved one until the Database publishes it into business-logos /
+// gym-covers and writes business_profiles.logo_url / gyms.cover_url. Every
+// photo is re-drawn with its metadata stripped (the forum photo preparation)
+// before it leaves the device. A path with no object behind it (the seed's)
+// shows the initials / the tint. One cover per venue (V6-163).
 
 type Kind = "logo" | "cover";
 type Action = "camera" | "library" | "remove";
@@ -81,29 +83,23 @@ export function VenueImagesCard({
 
   const current = images?.gymId === gymId ? images.value : null;
   const disabled = !current || !!busy || !online;
+  // The owner's own submissions waiting for (or refused) approval.
+  const ownLogo = useOwnImage("business_logo", businessId);
+  const ownCover = useOwnImage("gym_cover", gymId);
+  const pendingUrl = (own: typeof ownLogo.image) => (own?.status === "pending" ? own.url : null);
 
   const upload = async (kind: Kind, file: File | undefined) => {
     if (!file || !authUserId || !current || busy) return;
     setBusy(kind);
     setError(null);
-    const r = await uploadVenueImage({
-      kind,
-      uid: authUserId,
-      gymId,
-      businessId,
-      file,
-      previousPath: kind === "logo" ? current.logoPath : current.coverPath,
-    });
+    const r = await uploadVenueImage({ kind, uid: authUserId, gymId, businessId, file });
     setBusy(null);
     if (!r.ok) {
       setError(r.message);
       return;
     }
-    setImages({
-      gymId,
-      value: kind === "logo" ? { ...current, logoPath: r.value.path, logoUrl: r.value.url } : { ...current, coverPath: r.value.path, coverUrl: r.value.url },
-    });
-    onToast?.(kind === "logo" ? "Logo updated." : "Cover photo updated.");
+    (kind === "logo" ? ownLogo : ownCover).refresh();
+    onToast?.(kind === "logo" ? "Logo sent for approval." : "Cover photo sent for approval.");
   };
 
   const remove = async (kind: Kind) => {
@@ -152,7 +148,8 @@ export function VenueImagesCard({
             onClick={(e) => setMenu({ kind: "cover", anchor: e.currentTarget })}
             className="tap relative block w-full h-[132px] rounded-[18px] overflow-hidden bg-primary-pale disabled:cursor-default"
           >
-            <VenueImage srcs={[current?.coverUrl]} className="absolute inset-0 w-full h-full" />
+            <VenueImage srcs={[pendingUrl(ownCover.image), current?.coverUrl]} className="absolute inset-0 w-full h-full" />
+            <ImageApprovalBadge state={ownCover.image} className="absolute left-[10px] top-[10px]" />
             {busy === "cover" ? (
               <span className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(36,31,27,0.55)" }}>
                 {spinner}
@@ -166,7 +163,7 @@ export function VenueImagesCard({
             )}
           </button>
           {/* K21 logo, overlapping the cover by 34 */}
-          <div style={{ marginTop: -34, paddingLeft: 14 }}>
+          <div className="flex items-end gap-[10px]" style={{ marginTop: -34, paddingLeft: 14 }}>
             <button
               type="button"
               aria-label="Change logo"
@@ -177,7 +174,7 @@ export function VenueImagesCard({
               style={{ padding: 3 }}
             >
               <span className="relative w-[72px] h-[72px] rounded-[20px] overflow-hidden bg-[#8E7FD0] flex items-center justify-center text-white text-[24px] font-extrabold">
-                <VenueImage srcs={[current?.logoUrl]} className="absolute inset-0 w-full h-full" fallback={initials(venueName)} />
+                <VenueImage srcs={[pendingUrl(ownLogo.image), current?.logoUrl]} className="absolute inset-0 w-full h-full" fallback={initials(venueName)} />
                 {busy === "logo" && (
                   <span className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(36,31,27,0.55)" }}>
                     {spinner}
@@ -193,12 +190,16 @@ export function VenueImagesCard({
                 </span>
               )}
             </button>
+            <ImageApprovalBadge state={ownLogo.image} className="mb-[4px]" />
           </div>
           <div className="mt-[10px] space-y-[2px]">
             <p className="text-[12px] leading-[16px] text-charcoal-soft">Business logo · Shown on all your venues.</p>
             <p className="text-[12px] leading-[16px] text-charcoal-soft">Cover photo for {venueName} · The wide photo at the top of this venue's page.</p>
             <p className="text-[11px] leading-[15px] text-charcoal-faint">JPEG, PNG or WebP. Logo under 2 MB, cover under 5 MB.</p>
           </div>
+          {/* One "waiting" line covers both pictures; a refusal gives its own reason. */}
+          <ImageApprovalNote state={ownLogo.image} className="mt-[10px]" />
+          {!(ownCover.image?.status === "pending" && ownLogo.image?.status === "pending") && <ImageApprovalNote state={ownCover.image} className="mt-[10px]" />}
           {error && <p className="mt-[10px] text-[11.5px] leading-[16px] font-bold text-status-high">{error}</p>}
           {!online && <p className="mt-[10px] text-[11.5px] leading-[16px] text-charcoal-faint">You're offline. Showing what was loaded last.</p>}
         </div>

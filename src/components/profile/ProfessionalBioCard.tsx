@@ -6,6 +6,7 @@ import { wellStyle } from "../pro/calendar/calendarFields";
 import { CtaButton, ErrorLine } from "../pro/profile/kit";
 import { INK } from "../pro/proInk";
 import { textPx } from "../../theme/textSize";
+import { GuidelinesLink } from "../moderation/GuidelinesLink";
 
 /**
  * The professional's bio. Release 3 W6: the MO14 Edit public profile "Bio"
@@ -84,7 +85,12 @@ export const ProfessionalBioSheet: React.FC<{ open: boolean; onClose: () => void
         className="w-full resize-none outline-none placeholder:text-charcoal-faint disabled:opacity-60"
         style={{ ...wellStyle(), padding: "10px 12px", lineHeight: 1.5 }}
       />
-      {error && <ErrorLine>{error}</ErrorLine>}
+      {error && (
+        <ErrorLine>
+          {error}
+          <GuidelinesLink message={error} />
+        </ErrorLine>
+      )}
     </BottomSheet>
   );
 };

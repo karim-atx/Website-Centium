@@ -49,6 +49,7 @@ import { PinnedCta } from "../ui/PinnedCta";
 import { useBack } from "../../hooks/useBack";
 import { formatShortDate } from "../../utils/date";
 import { siteHref } from "../../config/site";
+import { GuidelinesLink } from "../moderation/GuidelinesLink";
 
 // Design screen 7: the course page. What you'll learn, the syllabus by week,
 // ratings, and the choice between watching free and the full course.
@@ -598,6 +599,7 @@ function CertificateCard({ certificate }: { certificate: Certificate | null }) {
           {error && (
             <span role="alert" className="text-xs font-semibold" style={{ color: fv("danger") }}>
               {error}
+              <GuidelinesLink message={error} />
             </span>
           )}
         </>

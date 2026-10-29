@@ -16,6 +16,7 @@ import {
   type MyReviewStatus,
   type ReviewReportReason,
 } from "../../services/professional-reviews/rules";
+import { GuidelinesLink } from "../moderation/GuidelinesLink";
 
 // The review screens' shared parts: the reviewer's own card, the form that
 // writes and edits a review, the report form and the professional's reply
@@ -145,7 +146,12 @@ export const MyReviewCard: React.FC<{
               {armed ? "Tap again to withdraw your review" : "Withdraw review"}
             </button>
           )}
-          {error && <p className="text-xs font-semibold text-status-high">{error}</p>}
+          {error && (
+        <p className="text-xs font-semibold text-status-high">
+          {error}
+          <GuidelinesLink message={error} />
+        </p>
+      )}
         </>
       )}
     </Card>
@@ -251,7 +257,12 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
           A review can be up to {REVIEW_BODY_MAX.toLocaleString("en")} characters.
         </p>
       )}
-      {error && <p className="text-xs font-semibold text-status-high">{error}</p>}
+      {error && (
+        <p className="text-xs font-semibold text-status-high">
+          {error}
+          <GuidelinesLink message={error} />
+        </p>
+      )}
       {/* Handover-complete pass: the 30-day edit notes are gone (MO1.2.1.2
           draws none). Edit mode keeps "Save changes" and Withdraw with its
           note: withdrawing is the reviewer's control over their own words. */}
@@ -355,7 +366,12 @@ export const ReviewReportForm: React.FC<{
           className={fieldClass}
         />
       </label>
-      {error && <p role="alert" className="text-xs font-semibold text-status-high">{error}</p>}
+      {error && (
+        <p role="alert" className="text-xs font-semibold text-status-high">
+          {error}
+          <GuidelinesLink message={error} />
+        </p>
+      )}
       <Button fullWidth size="lg" onClick={() => void send()} disabled={busy}>
         {busy ? "Sending…" : "Send report"}
       </Button>
@@ -419,7 +435,12 @@ function ReplyForm({ onClose, existing, onSave }: ReplyProps) {
           A reply can be up to {REPLY_BODY_MAX.toLocaleString("en")} characters.
         </p>
       )}
-      {error && <p className="text-xs font-semibold text-status-high">{error}</p>}
+      {error && (
+        <p className="text-xs font-semibold text-status-high">
+          {error}
+          <GuidelinesLink message={error} />
+        </p>
+      )}
       <Button fullWidth size="lg" onClick={() => void save()} disabled={busy || over || len === 0}>
         {busy ? "Saving…" : existing ? "Save reply" : "Post reply"}
       </Button>
@@ -443,7 +464,12 @@ export const RemoveReplyButton: React.FC<{ onRemove: () => Promise<string | null
       <button type="button" onClick={() => void tap()} disabled={busy} className="tap min-h-[44px] text-xs font-semibold text-status-high">
         {armed ? "Tap again to remove" : "Remove reply"}
       </button>
-      {error && <span className="text-xs font-semibold text-status-high">{error}</span>}
+      {error && (
+        <span className="text-xs font-semibold text-status-high">
+          {error}
+          <GuidelinesLink message={error} />
+        </span>
+      )}
     </>
   );
 };

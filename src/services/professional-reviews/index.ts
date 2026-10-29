@@ -30,6 +30,7 @@ import { asReviewStatus, describeReviewError, type MyReviewStatus, type ReviewRe
 // modules and node tests can use them; re-exported here for existing callers.
 export type { ReviewReply, ReviewRow } from "./types";
 import type { ReviewReply, ReviewRow } from "./types";
+import { contactRefusal } from "../moderation/text";
 
 /** One professional the caller may review — listed or not, current or past. */
 export interface ReviewableProfessional {
@@ -210,6 +211,9 @@ export async function createReview(
   body: string,
   reviewerNameVisible: boolean
 ): Promise<Done> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(body);
+  if (contact) return { ok: false, message: contact };
   const { error } = await supabase
     .from("professional_reviews")
     .insert({
@@ -236,6 +240,9 @@ export async function editReview(
   body: string,
   reviewerNameVisible: boolean
 ): Promise<Done> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(body);
+  if (contact) return { ok: false, message: contact };
   const { error } = await supabase.rpc("edit_my_professional_review", {
     p_review_id: reviewId,
     p_rating: rating,
@@ -298,6 +305,9 @@ export async function reportReply(reviewId: string, reason: ReviewReportReason, 
 
 /** The professional's one public reply. Also replaces one they withdrew. */
 export async function replyToReview(reviewId: string, body: string): Promise<Done> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(body);
+  if (contact) return { ok: false, message: contact };
   const { error } = await supabase.rpc("reply_to_professional_review", { p_review_id: reviewId, p_body: body.trim() });
   if (error) {
     console.error("[reviews] Could not reply:", error.code, error.message);
@@ -307,6 +317,9 @@ export async function replyToReview(reviewId: string, body: string): Promise<Don
 }
 
 export async function editReply(reviewId: string, body: string): Promise<Done> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(body);
+  if (contact) return { ok: false, message: contact };
   const { error } = await supabase.rpc("edit_my_review_reply", { p_review_id: reviewId, p_body: body.trim() });
   if (error) {
     console.error("[reviews] Could not edit the reply:", error.code, error.message);

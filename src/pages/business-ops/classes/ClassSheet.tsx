@@ -20,7 +20,8 @@ import {
   slashDate,
   type RepeatRule,
 } from "../../../services/business-classes/scheduleRules";
-import type { SeriesRow } from "../../../services/business-classes/schedule";
+import { prepareClassCover, type SeriesRow } from "../../../services/business-classes/schedule";
+import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../../components/moderation/ImageApproval";
 import { time12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
@@ -74,7 +75,10 @@ import { conflictsFor, durationMinutes, durationOptions, everyText, initialOf, i
 // moved-class line, the capacity hints and floor, Show on Explore and the
 // spots open on Centium (B13 MK-04, the old Spots tab), notes for the
 // instructor, and the class page's cover photo, about, level and what to
-// bring (B9 EX-01). The instructor clash is the board's CentredDialog
+// bring (B9 EX-01; Round C Release 2: a picked cover is kept here, shown from
+// the device, and sent for approval by the page once the class or series is
+// saved, with the pending or refused one's badge and note when editing). The
+// instructor clash is the board's CentredDialog
 // `assignConflict` ("{first} has a clash", busy times only): the server
 // refuses any clash (ATXD9), so the board's "Assign anyway" can't exist; its
 // actions are "Go back" (to the Time field, the live "Change time") and the
@@ -110,8 +114,6 @@ export interface ClassSheetProps {
   scope?: "this" | "future";
   /** The series of the session being edited, for the read-only Repeat line. */
   series?: SeriesRow | null;
-  /** B9 EX-01: uploads a cover to class-covers and returns its public URL. */
-  onUploadCover?: (file: File) => Promise<{ ok: true; url: string } | { ok: false; message: string }>;
   /** The session being edited. */
   editing?: BusinessClassRow | null;
   /** Booked count of the session being edited (capacity floor). */
@@ -125,8 +127,8 @@ export interface ClassSheetProps {
   online: boolean;
   people: "clients" | "members";
   onClose: () => void;
-  /** `rule` is the repeat a new class asks for (null: one class). */
-  onSave: (draft: ClassDraft, rule: RepeatRule | null) => Promise<{ ok: true } | { ok: false; message: string; code?: "capacity" | "permission" | "busy" }>;
+  /** `rule` is the repeat a new class asks for (null: one class); `cover` a newly picked cover photo, sent for approval after the save. */
+  onSave: (draft: ClassDraft, rule: RepeatRule | null, cover: File | null) => Promise<{ ok: true } | { ok: false; message: string; code?: "capacity" | "permission" | "busy" }>;
   /** The business the class belongs to: the Team (my_team) is read for it. */
   businessId?: string | null;
   /** The picker's "Go to Hiring" / "Post an opening": leave for Hiring with the draft kept. */
@@ -150,7 +152,6 @@ function SheetBody({
   mode,
   scope = "this",
   series,
-  onUploadCover,
   editing,
   bookedCount = 0,
   initial,
@@ -191,6 +192,16 @@ function SheetBody({
   const [bringDraft, setBringDraft] = useState("");
   const [coverBusy, setCoverBusy] = useState(false);
   const [coverErr, setCoverErr] = useState<string | null>(null);
+  // A newly picked cover (prepared, on this device until Save) and its preview.
+  const [coverPick, setCoverPick] = useState<{ file: File; preview: string } | null>(null);
+  // Remove also hides a pending cover in this sheet (it can't be taken back).
+  const [coverCleared, setCoverCleared] = useState(false);
+  // The owner's pending or refused cover: the series' for a `future` edit, else the class's.
+  const coverOf = mode === "edit" && scope === "future" && editing?.seriesId ? { surface: "class_series_cover" as const, id: editing.seriesId } : { surface: "class_cover" as const, id: mode === "edit" ? editing?.id ?? null : null };
+  const { image: ownCover } = useOwnImage(coverOf.surface, coverOf.id);
+  useEffect(() => () => {
+    if (coverPick) URL.revokeObjectURL(coverPick.preview);
+  }, [coverPick]);
   const [repeatEl, setRepeatEl] = useState<HTMLButtonElement | null>(null);
   const [repeatGroupEl, setRepeatGroupEl] = useState<HTMLDivElement | null>(null);
   const [levelEl, setLevelEl] = useState<HTMLButtonElement | null>(null);
@@ -212,7 +223,7 @@ function SheetBody({
   const fieldRefs = useRef<Partial<Record<ClassField, HTMLElement | null>>>({});
   const startRef = useRef<HTMLButtonElement | null>(null);
 
-  const dirty = JSON.stringify(form) !== JSON.stringify(initial);
+  const dirty = !!coverPick || JSON.stringify(form) !== JSON.stringify(initial);
   // B9: a booked class may move (members are told); only a series edit keeps
   // its date, which is where the series splits (edit_class 'future').
   const dateLocked = mode === "edit" && scope === "future";
@@ -235,7 +246,8 @@ function SheetBody({
     about: f.about.trim() || null,
     level: f.level || null,
     whatToBring: bringList(f.bring),
-    coverUrl: f.coverUrl || null,
+    // Only a removal is written; a new cover goes for approval (onSave's `cover`).
+    coverUrl: initial.coverUrl && !f.coverUrl ? null : undefined,
     // B13 MK-04: never above the capacity (business_classes_centium_spots_ok).
     centiumSpots: f.centiumSpots === null ? null : Math.max(0, Math.min(f.centiumSpots, Number.isFinite(capOf(f)) ? capOf(f) : f.centiumSpots)),
     listedOnExplore: f.listedOnExplore,
@@ -291,7 +303,7 @@ function SheetBody({
     setSaving(true);
     setFailed(false);
     const timeout = new Promise<{ ok: false; message: string }>((r) => window.setTimeout(() => r({ ok: false, message: CLASS_SAVE_FAILED }), 15_000));
-    const r = await Promise.race([onSave(draftOf(form), mode === "create" ? ruleOf(form) : null), timeout]);
+    const r = await Promise.race([onSave(draftOf(form), mode === "create" ? ruleOf(form) : null, coverPick?.file ?? null), timeout]);
     setSaving(false);
     if (r.ok) return; // the page closes the sheet and shows the toast
     // ATX76, the Team-only instructor rule (scheduleRules maps it to the note's words).
@@ -417,14 +429,17 @@ function SheetBody({
     setBringDraft("");
   };
   const pickCover = async (file: File | undefined) => {
-    if (!file || !onUploadCover) return;
+    if (!file) return;
     setCoverBusy(true);
     setCoverErr(null);
-    const r = await onUploadCover(file);
+    const r = await prepareClassCover(file);
     setCoverBusy(false);
-    if (r.ok) update({ coverUrl: r.url });
+    if (r.ok) setCoverPick({ file: r.file, preview: URL.createObjectURL(r.file) });
     else setCoverErr(r.message);
   };
+  // What the owner sees: a new pick, else their pending cover, else the approved one.
+  const coverState = coverPick || coverCleared ? null : ownCover;
+  const coverSrc = coverPick?.preview ?? (coverState?.status === "pending" ? coverState.url : null) ?? (form.coverUrl || null);
 
   const length = Math.max(5, minutesOf(form.endTime) - minutesOf(form.startTime));
   const setStart = (hhmm: string) => {
@@ -977,14 +992,24 @@ function SheetBody({
                 e.target.value = "";
               }}
             />
-            {form.coverUrl ? (
+            {coverSrc ? (
               <div className="relative overflow-hidden" style={{ borderRadius: 10, aspectRatio: "16 / 9", background: m.card }}>
-                <img src={form.coverUrl} alt="Class cover" className="w-full h-full object-cover" />
+                <img src={coverSrc} alt="Class cover" className="w-full h-full object-cover" />
+                <ImageApprovalBadge state={coverState} className="absolute left-2 top-2" />
                 <div className="absolute flex" style={{ right: 8, bottom: 8, gap: 6 }}>
                   <button type="button" onClick={() => coverInput.current?.click()} disabled={coverBusy} className="market-focus hit inline-flex items-center" style={{ minHeight: 36, padding: "0 12px", borderRadius: 10, background: "rgba(36,31,27,0.72)", color: "#FFFFFF", fontSize: textPx(12), fontWeight: 800, border: 0 }}>
                     {coverBusy ? "Uploading…" : "Change"}
                   </button>
-                  <button type="button" aria-label="Remove the cover photo" onClick={() => update({ coverUrl: "" })} disabled={coverBusy} className="market-focus hit inline-flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(36,31,27,0.72)", color: "#FFFFFF", border: 0 }}>
+                  <button
+                    type="button"
+                    aria-label="Remove the cover photo"
+                    onClick={() => {
+                      setCoverPick(null);
+                      setCoverCleared(true);
+                      update({ coverUrl: "" });
+                    }}
+                    disabled={coverBusy}
+                    className="market-focus hit inline-flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(36,31,27,0.72)", color: "#FFFFFF", border: 0 }}>
                     <X size={16} strokeWidth={2.4} aria-hidden />
                   </button>
                 </div>
@@ -993,7 +1018,7 @@ function SheetBody({
               <button
                 type="button"
                 onClick={() => coverInput.current?.click()}
-                disabled={coverBusy || !onUploadCover}
+                disabled={coverBusy}
                 className="market-focus w-full flex items-center justify-center disabled:opacity-60"
                 style={{ minHeight: 64, gap: 8, borderRadius: 10, border: `1.5px dashed ${m.border}`, background: m.card, fontSize: textPx(13), fontWeight: 700, color: m.pdark }}
               >
@@ -1001,6 +1026,8 @@ function SheetBody({
                 {coverBusy ? "Uploading…" : "Add a cover photo"}
               </button>
             )}
+            {coverState && !coverSrc ? <ImageApprovalBadge state={coverState} className="mt-2" /> : null}
+            <ImageApprovalNote state={coverState} className="mt-2" />
           </FieldBox>
           <FieldBox m={m} label="About this class" htmlFor={`${uid}-about`} span={stack ? 1 : 2}>
             <textarea

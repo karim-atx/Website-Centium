@@ -224,10 +224,12 @@ export function useSchedule() {
    * series that wasn't edited on its own (edit_class splits the series here).
    * A date change on one session goes through move_class_session (members'
    * calendars move and they're told); a time change does the same inside
-   * edit_class. `told` counts the members a move told (0 when unknown).
+   * edit_class. `told` counts the members a move told (0 when unknown);
+   * `seriesId` is the class's series as re-read (after a `future` split, the
+   * new one), for its cover's approval.
    */
   const edit = useCallback(
-    async (classId: string, scope: "this" | "future", draft: ClassDraft): Promise<{ ok: true; changed: number; told: number } | Fail> => {
+    async (classId: string, scope: "this" | "future", draft: ClassDraft): Promise<{ ok: true; changed: number; told: number; seriesId: string | null } | Fail> => {
       const before = state.classes.find((c) => c.id === classId);
       if (!before) return { ok: false, message: "This class isn't on your schedule any more." };
       const f = classFieldsOf(draft);
@@ -255,7 +257,7 @@ export function useSchedule() {
       }
       if (before.professionalId !== (draft.professionalId || null)) covers.delete(classId);
       await reread();
-      return { ok: true, changed: r.value, told };
+      return { ok: true, changed: r.value, told, seriesId: state.classes.find((c) => c.id === classId)?.seriesId ?? null };
     },
     []
   );

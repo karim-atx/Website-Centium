@@ -434,7 +434,9 @@ export const ProfilePreview: React.FC<{
   /** Release B: "Add a cover" / "Change cover" on the cover (the Review step only). */
   onCover?: () => void;
   coverBusy?: boolean;
-}> = ({ initials, avatarUrl, name, type, tags, line, coverUrl, onCover, coverBusy }) => (
+  /** Round C Release 2: the owner's "Waiting for approval" / "Not approved" badge, top left on the cover. */
+  coverBadge?: React.ReactNode;
+}> = ({ initials, avatarUrl, name, type, tags, line, coverUrl, onCover, coverBusy, coverBadge }) => (
   <div className="obp-prev">
     {/* The cover photo (Release B, professional-covers); without one, the
         handoff's placeholder pattern, without its sample caption. The
@@ -443,6 +445,7 @@ export const ProfilePreview: React.FC<{
     <div className="obp-prev-cover" style={coverUrl ? { background: "var(--ob-list)" } : undefined}>
       {coverUrl && <img src={coverUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
       <span className="obp-prev-badge">New on Explore</span>
+      {coverBadge && <span style={{ position: "absolute", left: 10, top: 10 }}>{coverBadge}</span>}
       {onCover && (
         <button type="button" onClick={onCover} disabled={coverBusy} className="obp-prev-badge hit" style={{ right: "auto", top: "auto", left: 10, bottom: 10, border: 0, cursor: "pointer", opacity: coverBusy ? 0.6 : 1 }}>
           {coverBusy ? "Uploading…" : coverUrl ? "Change cover" : "Add a cover"}

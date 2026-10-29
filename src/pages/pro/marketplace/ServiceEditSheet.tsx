@@ -1,4 +1,4 @@
-import React, { useId, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { ImageIcon, Minus, Plus } from "lucide-react";
 import { sheetChipStyle } from "../../../components/ui/sheetChip";
 import { EVENT_SWATCHES } from "../../../components/calendar/eventColour";
@@ -6,6 +6,7 @@ import { DEFAULT_SESSION } from "../../../components/pro/calendar/calendarItems"
 import { parsePriceInput } from "../../../components/pro/profile/profileModel";
 import { useApp } from "../../../context/AppContext";
 import { useOnline } from "../../../hooks/useOnline";
+import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../../components/moderation/ImageApproval";
 import { BILLING_OPTIONS, PLAN_FEATURES_MAX, PLAN_NAME_MAX, type PlanBilling } from "../../../services/hires/proLogic";
 import { savePlan, setPlanFields } from "../../../services/pro/profile";
 import type { BookingAudience } from "../../../services/pro/calendar";
@@ -13,16 +14,20 @@ import {
   FORMATS,
   SHELF_DURATION_MAX,
   SHELF_NAME_MAX,
+  clearServicePhoto,
   formatOfLocation,
   locationOfFormat,
+  photoSurfaceOf,
+  prepareServicePhoto,
   reorderShelf,
   savePlanShowcase,
   saveSessionService,
   saveShelfItem,
   shelfMove,
-  uploadShelfPhoto,
+  submitServicePhoto,
   type Format,
   type PlanService,
+  type ServiceKind,
   type ServiceRef,
   type ShelfItem,
 } from "../../../services/pro-market";
@@ -38,10 +43,12 @@ import { MasterSheet, PrimaryButton, SaveError, SheetBox, SheetSwitch, fieldStyl
 //   MasterSheet: Take photo · Choose from library · Remove photo, rows 52 tall
 //   radius 14 --sgrey 14 / 600, Remove in --high). The photo is the item's
 //   live image_url for all three kinds (a shelf item since 73ea87b; a
-//   session type and a plan since DB3, Database PR #39, 20261214040000): the
-//   product-images bucket under the caller's uid; Take photo / Choose from
-//   library upload, Remove photo clears it; no photo is an empty frame
-//   (never the board's "SERVICE PHOTO");
+//   session type and a plan since DB3, Database PR #39, 20261214040000).
+//   Round C Release 2: Take photo / Choose from library keep the photo on
+//   the device until Save, then it is staged and sent for approval
+//   (service_image / plan_image / showcase_image) once the row exists, with
+//   the pending or refused one's badge and note; Remove photo still clears
+//   image_url; no photo is an empty frame (never the board's "SERVICE PHOTO");
 // - Name, Description, Price (SheetBox: --sgrey radius 14 padding 12 14, the
 //   13 / 500 --slabel label, the --sfield field radius 10 padding 11 13); a
 //   plan's Description is its DB3 `description` (≤ 500);
@@ -119,6 +126,10 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  // A newly picked photo (prepared, on this device until Save) and its preview.
+  const [photo, setPhoto] = useState<{ file: File; preview: string } | null>(null);
+  // Remove photo also hides a pending one in this sheet (it can't be taken back).
+  const [cleared, setCleared] = useState(false);
   const camRef = useRef<HTMLInputElement>(null);
   const libRef = useRef<HTMLInputElement>(null);
   const takenDown = !!item?.hiddenByCentium;
@@ -136,6 +147,37 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
   const durations = DURATIONS.includes(duration) ? DURATIONS : [...DURATIONS, duration].sort((a, b) => a - b);
   const buffers = BUFFERS.includes(buffer) ? BUFFERS : [...BUFFERS, buffer].sort((a, b) => a - b);
   const editing = !!target;
+  const photoKind: ServiceKind = isSession ? "session" : isShelf ? "shelf" : "plan";
+  const { image: own, refresh: refreshOwn } = useOwnImage(photoSurfaceOf(photoKind), target?.item.id);
+  useEffect(() => () => {
+    if (photo) URL.revokeObjectURL(photo.preview);
+  }, [photo]);
+
+  /**
+   * After the row is saved: Remove photo clears image_url, and a new photo is
+   * staged and sent for approval. A refused photo keeps an edit open (Save
+   * again resends it); a new service is saved, so the sheet closes and says so.
+   */
+  const finish = async (me: string, id: string, done: string) => {
+    if (editing && target?.item.imageUrl && imageUrl === null) {
+      const c = await clearServicePhoto(me, photoKind, id);
+      if (!c.ok) {
+        setBusy(false);
+        return setError(c.message);
+      }
+    }
+    if (photo) {
+      const s = await submitServicePhoto(me, photoKind, id, photo.file);
+      if (!s.ok) {
+        setBusy(false);
+        if (editing) return setPhotoError(s.message);
+        return onSaved(`${done}. ${s.message}`);
+      }
+      refreshOwn();
+    }
+    setBusy(false);
+    onSaved(done);
+  };
 
   const save = async () => {
     if (!authUserId || busy) return;
@@ -150,14 +192,15 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
         name,
         description,
         price: price.trim() === "" ? null : p,
-        imageUrl,
         format,
         durationLabel,
         visible: shown,
       });
-      setBusy(false);
-      if (!r.ok) return setError(r.message);
-      return onSaved(editing ? "Service saved" : `${name.trim()} added`);
+      if (!r.ok) {
+        setBusy(false);
+        return setError(r.message);
+      }
+      return finish(authUserId, r.id, editing ? "Service saved" : `${name.trim()} added`);
     }
     if (isSession) {
       const r = await saveSessionService(authUserId, session?.id ?? null, {
@@ -168,12 +211,13 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
         price: p,
         colour,
         locationKind: locationOfFormat(format, session ? session.locationKind : "in_person"),
-        imageUrl,
         visible: shown,
       });
-      setBusy(false);
-      if (!r.ok) return setError(r.message);
-      return onSaved(editing ? "Service saved" : `${name.trim()} added`);
+      if (!r.ok) {
+        setBusy(false);
+        return setError(r.message);
+      }
+      return finish(authUserId, r.id, editing ? "Service saved" : `${name.trim()} added`);
     }
     const count = kind === "package" ? Number(sessions) : null;
     if (kind === "package" && (!Number.isInteger(count) || (count ?? 0) < 1)) {
@@ -191,10 +235,12 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
       return setError(r.message);
     }
     // The plan's DB3 showcase fields go in a second write (the shared savePlan writes the Services page's fields).
-    const sc = await savePlanShowcase(authUserId, r.plan.id, { description, imageUrl, visible: shown, format });
-    setBusy(false);
-    if (!sc.ok) return setError(sc.message);
-    onSaved(editing ? "Service saved" : `${r.plan.name} added`);
+    const sc = await savePlanShowcase(authUserId, r.plan.id, { description, visible: shown, format });
+    if (!sc.ok) {
+      setBusy(false);
+      return setError(sc.message);
+    }
+    return finish(authUserId, r.plan.id, editing ? "Service saved" : `${r.plan.name} added`);
   };
 
   // The plan editor's reorder (kept): swap positions with the neighbour. A
@@ -229,11 +275,14 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
     setPhotoOpen(false);
     setPhotoBusy(true);
     setPhotoError(null);
-    const r = await uploadShelfPhoto(authUserId, file);
+    const r = await prepareServicePhoto(file);
     setPhotoBusy(false);
     if (!r.ok) return setPhotoError(r.message);
-    setImageUrl(r.url);
+    setPhoto({ file: r.file, preview: URL.createObjectURL(r.file) });
   };
+  // What the owner sees: a new pick, else their pending photo, else the approved one.
+  const ownState = photo || cleared ? null : own;
+  const shownUrl = photo?.preview ?? (ownState?.status === "pending" ? ownState.url : null) ?? imageUrl;
 
   const chip = (on: boolean, disabled?: boolean): React.CSSProperties => ({
     ...sheetChipStyle(on),
@@ -286,15 +335,15 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, paddingBottom: 4 }}>
             <button
               type="button"
-              aria-label={imageUrl ? "Change photo" : "Add a photo"}
+              aria-label={shownUrl ? "Change photo" : "Add a photo"}
               aria-haspopup="dialog"
               disabled={photoBusy || !online}
               onClick={() => setPhotoOpen(true)}
               className="market-focus"
               style={{ position: "relative", width: 132, height: 132, borderRadius: 18, background: m.soft, border: 0, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
             >
-              {imageUrl && failedUrl !== imageUrl ? (
-                <img src={imageUrl} alt="" onError={() => setFailedUrl(imageUrl)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18, display: "block" }} />
+              {shownUrl && failedUrl !== shownUrl ? (
+                <img src={shownUrl} alt="" onError={() => setFailedUrl(shownUrl)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18, display: "block" }} />
               ) : (
                 <ImageIcon size={28} strokeWidth={1.6} color={m.tert} aria-hidden />
               )}
@@ -307,6 +356,8 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
               </span>
             </button>
             <span style={{ fontSize: px(11.5), color: m.faint }}>{photoBusy ? "Uploading…" : "Tap the photo to change it"}</span>
+            <ImageApprovalBadge state={ownState} />
+            <ImageApprovalNote state={ownState} className="text-center" />
             {photoError ? (
               <span role="alert" style={{ fontSize: px(11.5), color: m.high, textAlign: "center" }}>
                 {photoError}
@@ -543,7 +594,7 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
         <div style={{ display: "flex", flexDirection: "column", gap: 10, color: m.ink, lineHeight: "normal" }}>
           {(["Take photo", "Choose from library", "Remove photo"] as const).map((label) => {
             const remove = label === "Remove photo";
-            const off = remove && !imageUrl;
+            const off = remove && !shownUrl;
             return (
               <button
                 key={label}
@@ -553,6 +604,8 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
                   else if (label === "Choose from library") libRef.current?.click();
                   else {
                     setImageUrl(null);
+                    setPhoto(null);
+                    setCleared(true);
                     setPhotoOpen(false);
                   }
                 }}

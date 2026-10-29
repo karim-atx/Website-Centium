@@ -11,7 +11,6 @@ import {
   parseStrength,
   parseTopItem,
   photoError,
-  photoObjectPath,
   sortPhotos,
   type BusinessPhoto,
   type Funnel,
@@ -22,6 +21,9 @@ import {
   type TopItem,
 } from "./listingLogic";
 import type { Result } from "./index";
+import { myImageApprovals, stagedUrl, stagingPath, submitImage, uploadToStaging, stageAndSubmit } from "../moderation/images";
+import { latestApproval, type ImageApproval } from "../moderation/imageModel";
+import { contactRefusal, moderationRefusal } from "../moderation/text";
 
 // B13 listing pieces for the business Marketplace (HANDOVER_API.md "B13"):
 // MK-02 listing_strength + gyms.amenities / first_visit, MK-03 the photo
@@ -35,7 +37,7 @@ const BUCKET = "business-photos";
 const failWith = <T>(e: { code?: string; message: string }, message: string): Result<T> => ({
   ok: false,
   code: e.code,
-  message: isOffline(e) ? OFFLINE_MESSAGE : message,
+  message: isOffline(e) ? OFFLINE_MESSAGE : (moderationRefusal(e) ?? message),
 });
 
 // ---------------------------------------------------------------------------
@@ -61,6 +63,9 @@ export async function fetchVenueDetails(gymId: string): Promise<Result<VenueDeta
 
 /** gyms.amenities (fixed keys) or gyms.first_visit; the venue write needs the Venues permission (gyms_update_insider). */
 export async function saveVenueDetails(gymId: string, patch: Partial<VenueDetails>): Promise<Result<VenueDetails>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(patch.firstVisit);
+  if (contact) return { ok: false, message: contact };
   const row: Record<string, unknown> = {};
   if (patch.amenities) row.amenities = cleanAmenities(patch.amenities);
   if (patch.firstVisit !== undefined) row.first_visit = patch.firstVisit === null ? null : cleanFirstVisit(patch.firstVisit);
@@ -109,51 +114,62 @@ export async function fetchBusinessPhotos(businessId: string): Promise<Result<Bu
   return { ok: true, value: sortPhotos(((data ?? []) as PhotoRow[]).map(toPhoto)) };
 }
 
-async function putObject(uid: string, businessId: string, file: File): Promise<Result<string>> {
-  const prepared = await prepareForumPhoto(file); // metadata stripped on the device (MA1-033 K2)
+/** A photo prepared on the device (metadata stripped, MA1-033 K2) and within 5 MB. */
+async function preparePhoto(file: File): Promise<Result<File>> {
+  const prepared = await prepareForumPhoto(file);
   if (!prepared.ok) return { ok: false, message: prepared.message };
   if (prepared.file.size > 5 * 1024 * 1024) return { ok: false, message: "This photo is too large. Choose one under 5 MB." };
-  const path = photoObjectPath(uid, businessId, `${crypto.randomUUID()}.jpg`);
-  const up = await db.storage.from(BUCKET).upload(path, prepared.file, { contentType: "image/jpeg", upsert: false });
-  if (up.error) {
-    console.warn("[marketplace] photo upload refused:", up.error.message);
-    return { ok: false, message: isOffline(up.error) ? OFFLINE_MESSAGE : "Couldn't upload the photo. Try again." };
-  }
-  return { ok: true, value: path };
+  return { ok: true, value: prepared.file };
 }
 
 const dropObject = async (path: string, uid: string): Promise<void> => {
   if (ownsObject(path, uid)) await db.storage.from(BUCKET).remove([path]);
 };
 
-/** Upload, then the row (in review until Centium approves it). ATXF5 past 20. */
+/**
+ * Round C Release 2 (venue_photo): the file is staged in image-staging at
+ * <uid>/<business_id>/<file>, the row is inserted with that path (in review),
+ * then submitted. The Database copies the file into business-photos at the
+ * same path once an admin approves it. ATXF5 past 20.
+ */
 export async function addBusinessPhoto(p: { uid: string; businessId: string; gymId: string | null; file: File; position: number }): Promise<Result<BusinessPhoto>> {
-  const put = await putObject(p.uid, p.businessId, p.file);
-  if (!put.ok) return put;
+  const prepared = await preparePhoto(p.file);
+  if (!prepared.ok) return prepared;
+  const path = stagingPath(p.uid, "venue_photo", prepared.value, p.businessId);
+  const up = await uploadToStaging(path, prepared.value);
+  if (!up.ok) return up;
+  const unstage = () => db.storage.from("image-staging").remove([path]);
   const { data, error } = await db
     .from("business_photos")
-    .insert({ business_id: p.businessId, gym_id: p.gymId, path: put.value, position: p.position })
+    .insert({ business_id: p.businessId, gym_id: p.gymId, path, position: p.position })
     .select(PHOTO_COLS)
     .single();
   if (error || !data) {
-    await dropObject(put.value, p.uid);
+    await unstage();
     if (error) console.warn("[marketplace] photo row refused:", error.message);
     return error ? failWith(error, photoError(error.code)) : { ok: false, message: photoError(undefined) };
   }
-  return { ok: true, value: toPhoto(data as PhotoRow) };
+  const photo = toPhoto(data as PhotoRow);
+  const sub = await submitImage("venue_photo", photo.id, path);
+  if (!sub.ok) {
+    // A row nobody can approve is not left behind.
+    await db.from("business_photos").delete().eq("id", photo.id);
+    await unstage();
+    return sub;
+  }
+  return { ok: true, value: photo };
 }
 
-/** A new file in the same place: the path changes, so the photo goes back to review. */
-export async function replaceBusinessPhoto(p: { uid: string; businessId: string; photo: BusinessPhoto; file: File }): Promise<Result<BusinessPhoto>> {
-  const put = await putObject(p.uid, p.businessId, p.file);
-  if (!put.ok) return put;
-  const { data, error } = await db.from("business_photos").update({ path: put.value }).eq("id", p.photo.id).select(PHOTO_COLS);
-  if (error || !data || data.length === 0) {
-    await dropObject(put.value, p.uid);
-    return error ? failWith(error, photoError(error.code)) : { ok: false, message: photoError("ATX03") };
-  }
-  await dropObject(p.photo.path, p.uid);
-  return { ok: true, value: toPhoto(data[0] as PhotoRow) };
+/**
+ * A new file for the same photo: staged and submitted for the existing row,
+ * which is not changed. The approved file stays public until the new one is
+ * approved; then the Database writes the new path.
+ */
+export async function replaceBusinessPhoto(p: { uid: string; businessId: string; photo: BusinessPhoto; file: File }): Promise<Result<null>> {
+  const prepared = await preparePhoto(p.file);
+  if (!prepared.ok) return prepared;
+  const r = await stageAndSubmit(p.uid, "venue_photo", p.photo.id, prepared.value, { businessId: p.businessId });
+  return r.ok ? { ok: true, value: null } : r;
 }
 
 export async function deleteBusinessPhoto(p: { uid: string; photo: BusinessPhoto }): Promise<Result<null>> {
@@ -162,6 +178,18 @@ export async function deleteBusinessPhoto(p: { uid: string; photo: BusinessPhoto
   if (!data || data.length === 0) return { ok: false, message: photoError("ATX03") };
   await dropObject(p.photo.path, p.uid);
   return { ok: true, value: null };
+}
+
+/** The caller's own photo submission waiting for (or refused) approval, with its signed staged preview. */
+export type OwnPhotoImage = ImageApproval & { url: string | null };
+
+/** The caller's own venue photo submissions that are pending or rejected, by photo id. */
+export async function fetchOwnPhotoImages(): Promise<Map<string, OwnPhotoImage>> {
+  const byPhoto = new Map<string, ImageApproval[]>();
+  for (const a of await myImageApprovals("venue_photo")) byPhoto.set(a.recordId, [...(byPhoto.get(a.recordId) ?? []), a]);
+  const open = [...byPhoto.values()].map((list) => latestApproval(list)).filter((a): a is ImageApproval => !!a && (a.status === "pending" || a.status === "rejected"));
+  const withUrls = await Promise.all(open.map(async (a) => ({ ...a, url: await stagedUrl(a.stagingPath) })));
+  return new Map(withUrls.map((a) => [a.recordId, a]));
 }
 
 /** Every photo id, once each, in the new order. */

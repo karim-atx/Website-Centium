@@ -6,6 +6,7 @@
 // YouTube). A price buys four things: quizzes, PDFs, questions answered by the
 // professional, and a certificate. So "locked" only ever applies to a quiz or
 // a PDF lesson, never to a video or reading.
+import { BLOCKED_TEXT } from "../moderation/text";
 
 export type LessonKind = "video" | "reading" | "quiz" | "pdf";
 export type Tier = "free" | "paid";
@@ -146,6 +147,9 @@ export const PAID_OPEN_SOON = "Paid courses open soon.";
 /** Words for a database refusal; null when the code is not one of the course ones. */
 export function describeCourseError(error: { code?: string; message?: string }, action: CourseAction): string | null {
   switch (error.code ?? "") {
+    // Round C Release 2: a rating or question that holds a blocked word.
+    case "ATX60":
+      return BLOCKED_TEXT;
     case "ATX55":
       return "Courses are for members aged 18 and over.";
     case "ATX68":

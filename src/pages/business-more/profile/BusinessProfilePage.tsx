@@ -25,7 +25,11 @@ import {
 import { saveMyBusinessProfile } from "../../../services/business-profile";
 import { fetchBusinessPhotos } from "../../../services/business-market/listing";
 import type { BusinessPhoto } from "../../../services/business-market/listingLogic";
-import { AVATAR_ACCEPT, removeAvatar, uploadAvatar } from "../../../services/avatar";
+import { AVATAR_ACCEPT, removeAvatar, submitAvatar } from "../../../services/avatar";
+// Named for the avatar: the logo and cover use the same component under its own names.
+import { ImageApprovalBadge as AvatarApprovalBadge, useOwnImage as useOwnAvatar } from "../../../components/moderation/ImageApproval";
+// The logo and cover's own names for the same components.
+import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../../components/moderation/ImageApproval";
 import { fetchReviewMetrics } from "../../../services/reputation";
 import { dayValue, isoWeekdayIn, NOT_PUBLISHED } from "../../../services/venues/hours";
 import { NameTypeSheet, BioSheet, CategoriesSheet, ContactSheet, AreaSheet, YourPhotoSheet } from "./ProfileSheets";
@@ -167,18 +171,27 @@ export default function BusinessProfilePage() {
     return null;
   };
 
+  // Round C Release 2: a new logo or cover waits for approval (owner only; an
+  // insider is told to ask the owner). The owner sees it here (signed, from
+  // image-staging) with the badge; business.logoUrl / coverUrl stay the
+  // approved ones.
+  const ownLogo = useOwnImage("business_logo", business?.id);
+  const ownCover = useOwnImage("business_cover", business?.id);
+  const shownLogo = (ownLogo.image?.status === "pending" && ownLogo.image.url) || business?.logoUrl || null;
+  const shownCover = (ownCover.image?.status === "pending" && ownCover.image.url) || business?.coverUrl || null;
+
   const onFile = async (file: File) => {
     const k = pickFor.current;
     if (!authUserId || !business) return;
     setUploading(k);
-    const r = await uploadBusinessImage({ kind: k, uid: authUserId, ownerId: business.ownerId, businessId: business.id, file, previousPath: k === "logo" ? business.logoPath : business.coverPath });
+    const r = await uploadBusinessImage({ kind: k, uid: authUserId, ownerId: business.ownerId, businessId: business.id, file });
     setUploading(null);
     if (!r.ok) {
-      showToast("Couldn't upload the photo. Try again.");
+      showToast(r.message);
       return;
     }
-    setBusiness({ ...business, ...(k === "logo" ? { logoPath: r.value.path, logoUrl: r.value.url } : { coverPath: r.value.path, coverUrl: r.value.url }) });
-    showToast("Profile updated.");
+    (k === "logo" ? ownLogo : ownCover).refresh();
+    showToast("Photo sent for approval.");
   };
 
   const removePhoto = async (k: PhotoKind) => {
@@ -194,25 +207,28 @@ export default function BusinessProfilePage() {
   };
 
   // Your photo (LOST 5): the owner's own avatar, the same upload and remove
-  // as the personal Profile (services/avatar). Local state follows the URL
-  // the server gave back, never an optimistic guess.
+  // as the personal Profile (services/avatar). Round C Release 2: a new photo
+  // waits for approval; the owner sees it here (ownAvatar, signed) with the
+  // badge, and user.avatarUrl keeps the approved one.
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const avatarCameraRef = useRef<HTMLInputElement>(null);
   const avatarLibraryRef = useRef<HTMLInputElement>(null);
+  const { image: ownAvatar, refresh: refreshOwnAvatar } = useOwnAvatar("avatar", authUserId);
+  const shownAvatar = (ownAvatar?.status === "pending" && ownAvatar.url) || user.avatarUrl || null;
   const onAvatarFile = async (file: File) => {
     if (!authUserId || avatarBusy) return;
     setAvatarBusy(true);
     setAvatarError(null);
-    const r = await uploadAvatar(authUserId, file, user.avatarUrl);
+    const r = await submitAvatar(authUserId, file);
     setAvatarBusy(false);
     if (!r.ok) {
       setAvatarError(r.message);
       return;
     }
-    updateProfile({ avatarUrl: r.url });
+    refreshOwnAvatar();
     setSheet(null);
-    showToast("Your photo was updated.");
+    showToast("Your photo was sent for approval.");
   };
   const onAvatarRemove = async () => {
     if (!authUserId || avatarBusy) return;
@@ -320,14 +336,15 @@ export default function BusinessProfilePage() {
 
       {/* Hero (MO1B-011 rows 2 to 7) */}
       <div className="relative" style={{ marginBottom: 16 }}>
-        <div className="relative overflow-hidden" style={{ height: 132, borderRadius: 18, background: business?.coverUrl ? undefined : stripes }}>
-          {business?.coverUrl ? (
-            <img src={business.coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="relative overflow-hidden" style={{ height: 132, borderRadius: 18, background: shownCover ? undefined : stripes }}>
+          {shownCover ? (
+            <img src={shownCover} alt="" className="absolute inset-0 w-full h-full object-cover" />
           ) : (
             <span className="absolute text-[11px] font-bold text-charcoal-faint" style={{ left: 12, top: 10 }}>
               Add a cover photo
             </span>
           )}
+          <ImageApprovalBadge state={ownCover.image} className="absolute left-[10px] top-[10px]" />
           {uploading === "cover" && (
             <span className="absolute inset-0 flex items-center justify-center bg-black/20">
               <Loader2 size={32} className="animate-spin text-white" aria-label="Uploading" />
@@ -354,7 +371,7 @@ export default function BusinessProfilePage() {
             style={{ width: 72, height: 72, borderRadius: 20, boxShadow: "0 0 0 3px rgb(var(--c-cream))" }}
           >
             <span className="absolute inset-0 overflow-hidden flex items-center justify-center" style={{ borderRadius: 20 }}>
-              {business?.logoUrl ? <img src={business.logoUrl} alt="" className="w-full h-full object-cover" /> : initials}
+              {shownLogo ? <img src={shownLogo} alt="" className="w-full h-full object-cover" /> : initials}
               {uploading === "logo" && (
                 <span className="absolute inset-0 flex items-center justify-center bg-black/20">
                   <Loader2 size={24} className="animate-spin text-white" aria-label="Uploading" />
@@ -369,6 +386,7 @@ export default function BusinessProfilePage() {
               <Camera size={13} strokeWidth={2.2} />
             </span>
           </button>
+          <ImageApprovalBadge state={ownLogo.image} className="mb-[4px]" />
           <span className="flex-1" />
           <button
             type="button"
@@ -416,6 +434,9 @@ export default function BusinessProfilePage() {
             </span>
           )}
         </div>
+        {/* The logo and cover waiting for approval: one "waiting" line covers both; a refusal gives its own reason. */}
+        <ImageApprovalNote state={ownCover.image} className="mt-[8px]" />
+        {!(ownCover.image?.status === "pending" && ownLogo.image?.status === "pending") && <ImageApprovalNote state={ownLogo.image} className="mt-[8px]" />}
 
         {menu && (
           <PhotoMenu
@@ -569,8 +590,11 @@ export default function BusinessProfilePage() {
           title="Your photo"
           desc="Shown to your team and in direct messages"
           trailing={
-            <span aria-hidden className="relative shrink-0 flex items-center justify-center overflow-hidden rounded-full bg-th-8e7fd0 text-white text-[11px] font-extrabold" style={{ width: 32, height: 32 }}>
-              {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" /> : ownInitials}
+            <span className="flex items-center gap-2 shrink-0">
+              <AvatarApprovalBadge state={ownAvatar} />
+              <span aria-hidden className="relative shrink-0 flex items-center justify-center overflow-hidden rounded-full bg-th-8e7fd0 text-white text-[11px] font-extrabold" style={{ width: 32, height: 32 }}>
+                {shownAvatar ? <img src={shownAvatar} alt="" className="w-full h-full object-cover" /> : ownInitials}
+              </span>
             </span>
           }
           onClick={() => {
@@ -626,7 +650,9 @@ export default function BusinessProfilePage() {
           onClose={() => {
             if (!avatarBusy) setSheet(null);
           }}
-          avatarUrl={user.avatarUrl ?? null}
+          avatarUrl={shownAvatar}
+          approval={ownAvatar}
+          canRemove={!!user.avatarUrl}
           initials={ownInitials}
           busy={avatarBusy}
           error={avatarError}

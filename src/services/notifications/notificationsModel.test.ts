@@ -25,6 +25,7 @@ import {
   PRO_COPY,
   PRO_FILLS,
   PRO_KINDS,
+  SHARED_KINDS,
   proHubKind,
   proMemberTarget,
   parseMarkedCount,
@@ -138,14 +139,17 @@ test("targets: the documented subject per client kind; other kinds open nothing 
   assert.equal(clientNotificationTarget({ kind: "x", subjectType: "offer", subjectId: O }), null);
 });
 
-test("kinds: the enum in order; the client's are a member's seven, never an owner's or a professional's", () => {
-  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 21);
+test("kinds: the enum in order; the client's are a member's ten, never an owner's or a professional's own", () => {
+  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 24);
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(0, 4), [...RELEASE1_KINDS]);
   // Release B appends the ambassador decision (20261217000000), to the applicant.
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(18, 20), ["ambassador_application_approved", "ambassador_application_declined"]);
   // Round C Release 1 appends the nickname reset (20261220000000), to the member.
-  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(20), ["forum_nickname_reset"]);
-  assert.deepEqual([...CLIENT_KINDS], ["voucher_issued", "points_expiring", "class_cancelled", "review_prompt", "ambassador_application_approved", "ambassador_application_declined", "forum_nickname_reset"]);
+  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(20), ["forum_nickname_reset", "support_resources", "image_approved", "image_rejected"]);
+  assert.deepEqual([...CLIENT_KINDS], [
+    "voucher_issued", "points_expiring", "class_cancelled", "review_prompt", "ambassador_application_approved", "ambassador_application_declined",
+    "forum_nickname_reset", "support_resources", "image_approved", "image_rejected",
+  ]);
   for (const k of CLIENT_KINDS) assert.ok((MEMBER_NOTIFICATION_KINDS as readonly string[]).includes(k), k);
   const notMine = [
     "voucher_redeemed", "offer_hidden", "application_received", "hire_offer_accepted", "hire_offer_declined", "hiring_fee_added", "gym_review_received",
@@ -153,6 +157,8 @@ test("kinds: the enum in order; the client's are a member's seven, never an owne
   ] as const;
   for (const k of notMine) assert.ok(!CLIENT_KINDS.includes(k), k);
   assert.equal(CLIENT_KINDS.length + notMine.length, MEMBER_NOTIFICATION_KINDS.length);
+  // Round C Release 2: where the shared kinds open on the client side.
+  assert.equal(clientNotificationTarget({ kind: "support_resources", subjectType: "wellbeing", subjectId: null }), "/app/get-support");
   // every client kind has a plain line and a fill
   for (const k of CLIENT_KINDS) {
     assert.ok(CLIENT_COPY[k]?.title, k);
@@ -274,10 +280,17 @@ test("business kinds: enum labels with a line and a tile; review is gym_review_r
   const biz: readonly string[] = BUSINESS_KINDS;
   assert.ok(biz.includes("gym_review_received"));
   assert.ok(!biz.includes("review_received"));
-  for (const k of [...CLIENT_KINDS, ...PRO_KINDS, "something_new"]) assert.ok(!biz.includes(k), k);
-  // the three inboxes split the enum: every label goes to exactly one (class_cancelled is the client's; the calendar also reads it)
-  const all = [...CLIENT_KINDS, ...BUSINESS_KINDS, ...PRO_KINDS].sort();
-  assert.deepEqual(all, [...MEMBER_NOTIFICATION_KINDS].sort());
+  const shared: readonly string[] = SHARED_KINDS;
+  for (const k of [...CLIENT_KINDS, ...PRO_KINDS, "something_new"].filter((k) => !shared.includes(k))) assert.ok(!biz.includes(k), k);
+  // the three inboxes split the enum: every label goes to exactly one (class_cancelled is the client's; the calendar also reads it),
+  // except Round C Release 2's shared kinds: the support notice reaches all three, the image decisions the member and business inboxes
+  // (a professional's arrive in the hub as pro.image.*).
+  const all = [...CLIENT_KINDS, ...BUSINESS_KINDS, ...PRO_KINDS].filter((k) => !shared.includes(k)).sort();
+  assert.deepEqual(all, MEMBER_NOTIFICATION_KINDS.filter((k) => !shared.includes(k)).sort());
+  assert.deepEqual([...SHARED_KINDS], ["support_resources", "image_approved", "image_rejected"]);
+  for (const k of SHARED_KINDS) assert.ok(CLIENT_KINDS.includes(k) && BUSINESS_KINDS.includes(k), k);
+  assert.ok(PRO_KINDS.includes("support_resources"));
+  assert.ok(!PRO_KINDS.includes("image_approved") && !PRO_KINDS.includes("image_rejected"));
   // an unknown key on a business kind reads as the kind; an unknown kind is the generic line, never the key
   assert.equal(notificationCopy({ titleKey: "biz.hiring.v2", kind: "hiring_fee_added" }, BUSINESS_COPY).title, "Hiring fee added to your Centium bill");
   assert.equal(notificationCopy({ titleKey: "biz.secret", kind: "hired" }, BUSINESS_COPY), GENERIC_COPY);
@@ -335,7 +348,7 @@ test("business targets: by kind and documented subject; a non-uuid never reaches
 // ---- Release 2 · the professional's member-inbox kinds ----
 
 test("professional kinds: the seven 'to a professional' labels, a line and a fill each; offers and invites are requests", () => {
-  assert.deepEqual([...PRO_KINDS], ["hire_offer_received", "hired", "classes_added", "class_changed", "removed_from_team", "existing_team_invite", "instructor_review_received"]);
+  assert.deepEqual([...PRO_KINDS], ["hire_offer_received", "hired", "classes_added", "class_changed", "removed_from_team", "existing_team_invite", "instructor_review_received", "support_resources"]);
   // Database 20261219030000 writes a professional's ambassador decision to their hub (pro.ambassador.*):
   // the member kinds stay out of PRO_KINDS, or the hub would show the decision twice.
   for (const k of ["ambassador_application_approved", "ambassador_application_declined"]) assert.ok(!(PRO_KINDS as readonly string[]).includes(k), k);

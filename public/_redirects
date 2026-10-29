@@ -21,10 +21,12 @@
 /legal/               /legal          301
 /legal/privacy/       /legal/privacy  301
 /legal/terms/         /legal/terms    301
+/legal/community-guidelines/ /legal/community-guidelines 301
 /contact              /             200
 /legal                /             200
 /legal/privacy        /             200
 /legal/terms          /             200
+/legal/community-guidelines /       200
 
 # Public pages that need no session (the trailing-slash forms 301 to the
 # canonical path, as above: React Router served them before 404.html existed)

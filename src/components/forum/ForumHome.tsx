@@ -25,6 +25,7 @@ import {
   ForumPlaceholder,
   HeartIcon,
   HeldNote,
+  OwnPhotoBadge,
   ReplyIcon,
 } from "./parts";
 import { AlertCircle, BadgeCheck, Ban, Flag, Info, MessageSquare, MessagesSquare, MoreVertical, Pencil, Trash2 } from "lucide-react";
@@ -416,7 +417,7 @@ export function ForumHome({
                   className="tap text-left rounded-[20px] px-4 py-3 flex flex-col gap-1.5 bg-cream-card border-[0.5px] border-hair-08"
                 >
                   <span className="text-[14.5px] leading-[20px] font-bold text-charcoal [overflow-wrap:anywhere]">{t.title}</span>
-                  <HeldNote />
+                  <HeldNote inline text={[t.title, t.body ?? ""].join("\n")} />
                 </button>
               ))}
             </div>
@@ -718,9 +719,10 @@ function ThreadCard({
         <div className="-mt-1.5 text-[12.5px] leading-[20px] line-clamp-2 text-charcoal-soft [overflow-wrap:anywhere]">{thread.body}</div>
       )}
       {/* K1: the post's photo, 120 tall r12; 12 to the counts. */}
-      {thread.photoPath && (
-        <div className="h-[120px] rounded-xl overflow-hidden bg-cream-soft">
+      {thread.photoPath && (photoUrl || author.isMine) && (
+        <div className="relative h-[120px] rounded-xl overflow-hidden bg-cream-soft">
           {photoUrl && <img src={photoUrl} alt="" className="w-full h-full object-cover" loading="lazy" draggable={false} />}
+          {author.isMine && <OwnPhotoBadge threadId={thread.id} />}
         </div>
       )}
       {/* #29-#32: 12 under the body; likes and replies 14 apart, 12/18 700
@@ -862,9 +864,10 @@ function ProThreadCard({
       <p className="m-0 font-bold text-charcoal [overflow-wrap:anywhere]" style={{ fontSize: textPx(14.5), lineHeight: 1.35 }}>
         {thread.title}
       </p>
-      {thread.photoPath && (
-        <div className="h-[120px] rounded-xl overflow-hidden bg-cream-soft" style={{ marginTop: 8 }}>
+      {thread.photoPath && (photoUrl || author.isMine) && (
+        <div className="relative h-[120px] rounded-xl overflow-hidden bg-cream-soft" style={{ marginTop: 8 }}>
           {photoUrl && <img src={photoUrl} alt="" className="w-full h-full object-cover" loading="lazy" draggable={false} />}
+          {author.isMine && <OwnPhotoBadge threadId={thread.id} />}
         </div>
       )}
       <div className="flex items-center text-charcoal-faint" style={{ gap: 12, marginTop: 8, fontSize: textPx(11.5) }}>

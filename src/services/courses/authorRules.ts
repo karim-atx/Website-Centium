@@ -1,5 +1,6 @@
 // The author side's rules that need no network. Kept free of the Supabase
 // client so they can be tested directly, like ./rules.ts for the learner side.
+import { BLOCKED_TEXT } from "../moderation/text";
 
 export type CourseStatus = "draft" | "submitted" | "published" | "changes_requested" | "unpublished";
 export type RevisionStatus = "draft" | "submitted" | "applied" | "changes_requested" | "withdrawn";
@@ -200,6 +201,9 @@ export const WITHDRAW_EXPLAINER = "Your published course isn't affected. Only th
 /** Words for a database refusal. Always returns something. */
 export function describeAuthorError(error: { code?: string; message?: string }, action: AuthorAction): string {
   switch (error.code ?? "") {
+    // Round C Release 2: course text that holds a blocked word.
+    case "ATX60":
+      return BLOCKED_TEXT;
     case "ATX66":
       return "Only professionals with a verified licence can publish courses. Check your licence in Profile.";
     case "ATX70":

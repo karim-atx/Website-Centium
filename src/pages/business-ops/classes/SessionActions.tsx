@@ -8,7 +8,7 @@ import { linePx, textPx } from "../../../theme/textSize";
 import { useApp } from "../../../context/AppContext";
 import { fetchClassRoster } from "../../../services/venues/console";
 import { splitRoster } from "../../../services/venues/consoleLogic";
-import { uploadClassCover } from "../../../services/business-classes/schedule";
+import { submitClassCover, type CoverTarget } from "../../../services/business-classes/schedule";
 import { sendMessage, startThread } from "../../../services/messaging";
 import { cancelledToast, dayMonth, repeatsSentence, seriesToast, toldTail } from "../../../services/business-classes/scheduleRules";
 import { ClassSheet } from "./ClassSheet";
@@ -158,10 +158,6 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
         sessions={api.sessions}
         online={api.online}
         people={people}
-        onUploadCover={async (file) => {
-          if (!authUserId || !api.businessId) return { ok: false, message: "Couldn't upload the photo. Try again." };
-          return uploadClassCover(authUserId, api.businessId, file);
-        }}
         onClose={() => setSheet(null)}
         businessId={api.businessId}
         onGoToHiring={(form) => {
@@ -170,12 +166,23 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
           // The picker's "Post an opening" opens the hub's post sheet (W4 lead decision).
           navigate("/app/business/hiring?post=1");
         }}
-        onSave={async (draft, rule) => {
+        onSave={async (draft, rule, cover) => {
           if (!sheet) return { ok: false, message: "" };
+          // Round C Release 2: a new cover goes for approval once the record
+          // exists, after the sheet closes; only a refusal is shown (a toast).
+          const sendCover = (target: CoverTarget) => {
+            if (!cover) return;
+            if (!authUserId) return show("Class saved. Couldn't send the cover photo. Try again.");
+            void submitClassCover(authUserId, target, cover).then((c) => {
+              if (!c.ok) show(`Class saved. ${c.message}`);
+            });
+          };
           if (sheet.mode === "edit" && sheet.editingId) {
             const r = await api.edit(sheet.editingId, sheet.scope, draft);
             if (!r.ok) return r;
             setSheet(null);
+            // After a `future` split the cover is the new series'.
+            sendCover(sheet.scope === "future" && r.seriesId ? { surface: "class_series_cover", id: r.seriesId } : { surface: "class_cover", id: sheet.editingId });
             // OURS-AN3 A8: "Changes saved. {n} clients were told." / "Changes saved."
             // Future (OURS): how many sessions took the edit.
             show(sheet.scope === "future" && r.changed > 1 ? `Changes saved to ${r.changed} sessions.` : `Changes saved.${toldTail(r.told, people)}`);
@@ -186,6 +193,7 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
             if (!r.ok) return r;
             setSheet(null);
             const first = r.created[0];
+            sendCover({ surface: "class_series_cover", id: r.seriesId });
             // AN3-055 row 4 / O1-O3, with "View class" (row 5; S1 unspecified: the first session's page).
             show(seriesToast(rule, r.created.length), first ? { label: "View class", onClick: () => navigate(`/app/business/classes/${first.id}`) } : undefined);
             if (first) opts.onCreated?.(first.id);
@@ -204,6 +212,7 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
               setSheet({ mode: "create", scope: "this", initial: blankForm(carried.date ?? todayIso(), carried) });
             },
           });
+          sendCover({ surface: "class_cover", id: saved.id });
           opts.onCreated?.(saved.id);
           return { ok: true };
         }}

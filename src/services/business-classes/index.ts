@@ -53,7 +53,8 @@ export interface ClassDraft {
   about?: string | null;
   level?: BusinessClassRow["level"];
   whatToBring?: string[];
-  coverUrl?: string | null;
+  /** Round C Release 2: only null (the owner removed it) is ever sent; a new cover goes through image approval. */
+  coverUrl?: null;
   /**
    * B13 MK-04 (optional; left out of the write when undefined): in the
    * insert, and save_class_series / edit_class keys since 20261121390000.
@@ -156,7 +157,7 @@ type WriteRow = {
   about?: string | null;
   level?: BusinessClassRow["level"];
   what_to_bring?: string[];
-  cover_url?: string | null;
+  cover_url?: null;
   centium_spots?: number | null;
   listed_on_explore?: boolean;
 };
@@ -230,7 +231,7 @@ function toRow(draft: ClassDraft): { ok: true; row: WriteRow } | { ok: false; me
       ...(draft.about !== undefined ? { about: draft.about?.trim() || null } : null),
       ...(draft.level !== undefined ? { level: draft.level ?? null } : null),
       ...(draft.whatToBring !== undefined ? { what_to_bring: draft.whatToBring } : null),
-      ...(draft.coverUrl !== undefined ? { cover_url: draft.coverUrl ?? null } : null),
+      ...(draft.coverUrl !== undefined ? { cover_url: null } : null),
       // B13 MK-04 (the insert, and classFieldsOf for the series calls).
       ...(draft.centiumSpots !== undefined ? { centium_spots: draft.centiumSpots } : null),
       ...(draft.listedOnExplore !== undefined ? { listed_on_explore: draft.listedOnExplore } : null),

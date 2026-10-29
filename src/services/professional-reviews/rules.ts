@@ -1,6 +1,7 @@
 // The parts of professional reviews that are rules rather than reads: limits,
 // the 30-day edit window, what a rating shows as, and what a refusal says.
 // Kept free of the Supabase client so they can be tested under node.
+import { BLOCKED_TEXT } from "../moderation/text";
 
 /** professional_reviews_body_check: length(btrim(body)) between 1 and 4000. */
 export const REVIEW_BODY_MAX = 4000;
@@ -125,6 +126,9 @@ export function describeReviewError(error: { code?: string; message?: string }, 
   const msg = error.message ?? "";
   const isReply = action === "reply" || action === "editReply" || action === "removeReply";
   switch (code) {
+    // Round C Release 2: the word lists (reviews and replies alike).
+    case "ATX60":
+      return BLOCKED_TEXT;
     case "ATX02":
       switch (action) {
         case "edit":

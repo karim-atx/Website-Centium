@@ -20,7 +20,6 @@ import {
   photoCounts,
   photoError,
   photoLine,
-  photoObjectPath,
   sortPhotos,
   summarize,
   topBooked,
@@ -66,8 +65,7 @@ test("photos: move one step, drag to an index, edges unchanged", () => {
   assert.deepEqual(moveTo(["a", "b"], "x", 0), ["a", "b"]);
 });
 
-test("photos: the bucket path and who may remove an object", () => {
-  assert.equal(photoObjectPath("u1", "b1", "f.jpg"), "u1/b1/f.jpg");
+test("photos: who may remove an object", () => {
   assert.equal(ownsObject("u1/b1/f.jpg", "u1"), true);
   assert.equal(ownsObject("u2/b1/f.jpg", "u1"), false);
   assert.match(photoError("ATXF5"), /20 photos/);

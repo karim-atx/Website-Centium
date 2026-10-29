@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import clsx from "clsx";
 import { Heart, MessageCircle } from "lucide-react";
@@ -8,6 +9,12 @@ import { linePx, textPx } from "../../theme/textSize";
 import { CentiumMark } from "../icons/CentiumMark";
 import { AvatarPlaceholder } from "../icons/PartBIcons";
 import { useApp } from "../../context/AppContext";
+import { GetSupportPopup } from "../moderation/GetSupportPopup";
+import { ImageApprovalBadge, useOwnImage } from "../moderation/ImageApproval";
+import { GuidelinesLink } from "../moderation/GuidelinesLink";
+import { mentionsSelfHarm } from "../../services/moderation/phrases";
+import { supportPlace } from "../../services/moderation/support";
+import { browserTimezone } from "../../services/timezone";
 
 // Small pieces shared by the forum screens (design PgYuBboDr8DEL2bk7EJKtU).
 // Sizes, weights and colours are the design's; colours go through the
@@ -164,14 +171,56 @@ export function RemovedNote({ kind, radius = 16 }: { kind: "post" | "reply"; rad
   );
 }
 
-/** The author's own held post (design screen 5). */
-export function HeldNote() {
+/**
+ * The author's own held post or reply (design screen 5's amber note; Round C
+ * Release 2 words). A hold now has more reasons than a link: the word lists
+ * and contact details hold too, and a self-harm phrase holds a post without
+ * any penalty.
+ *
+ * THE GENTLE NOTE IS DECIDED ON THIS DEVICE. The server tells the author
+ * nothing about why (and sends the support notice separately); this checks
+ * the author's own text against the self-harm phrase list, here, as private
+ * messages do. Inside a card that is itself a button (`inline`) the note
+ * holds no link or button of its own.
+ */
+export function HeldNote({ text, inline }: { text?: string; inline?: boolean }) {
+  const [gentle, setGentle] = useState(false);
+  const [support, setSupport] = useState(false);
+  useEffect(() => {
+    let live = true;
+    if (text) void mentionsSelfHarm(text).then((m) => live && setGentle(m));
+    return () => {
+      live = false;
+    };
+  }, [text]);
+  const box = { color: fv("held-ink"), background: fv("amber-bg"), borderRadius: 10, padding: "8px 10px" } as const;
+  if (gentle)
+    return (
+      <span className="block text-xs leading-[1.5]" style={box}>
+        <span className="block font-bold">Only you can see this for now.</span>
+        <span className="block font-semibold">If you're going through something hard, you don't have to face it alone.</span>
+        {!inline && (
+          <>
+            <button type="button" onClick={() => setSupport(true)} className="tap mt-1 min-h-[32px] font-extrabold underline">
+              Get support
+            </button>
+            <GetSupportPopup open={support} onClose={() => setSupport(false)} place={supportPlace(null, browserTimezone())} />
+          </>
+        )}
+      </span>
+    );
   return (
-    <span
-      className="block text-xs font-bold"
-      style={{ color: fv("held-ink"), background: fv("amber-bg"), borderRadius: 10, padding: "8px 10px" }}
-    >
-      Only you can see this until a moderator checks the link.
+    <span className="block text-xs leading-[1.5]" style={box}>
+      <span className="font-bold">Held for review.</span>{" "}
+      <span className="font-semibold">Only you can see this until our team checks it.</span>
+      {!inline && (
+        <>
+          {" "}
+          <Link to="/legal/community-guidelines" className="font-bold underline" style={{ color: "inherit" }}>
+            Community guidelines
+          </Link>
+        </>
+      )}
     </span>
   );
 }
@@ -286,6 +335,20 @@ export function DangerLine({ children, className }: { children: React.ReactNode;
   return (
     <p role="alert" className={clsx("m-0 text-[12px] font-semibold text-status-high", className)}>
       {children}
+      {typeof children === "string" && <GuidelinesLink message={children} />}
     </p>
   );
+}
+
+/**
+ * The author's own post photo while it waits for an admin (Round C Release
+ * 2: every forum photo is approved before others can see it). The author's
+ * signed URL works from the start; this adds the "Waiting for approval" (or
+ * "Not approved") badge over it. Others get no URL until it is approved, and
+ * their card draws no frame at all.
+ */
+export function OwnPhotoBadge({ threadId }: { threadId: string }) {
+  const { image } = useOwnImage("forum_photo", threadId);
+  if (!image) return null;
+  return <ImageApprovalBadge state={image} className="absolute top-2 left-2 shadow-soft" />;
 }
