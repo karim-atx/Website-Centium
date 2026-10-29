@@ -793,7 +793,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
           {intro ? (
             <Box label="Converts to" labelId={ids.conv}>
               <Picker labelledBy={ids.conv} value={convName} open={menu?.key === "conv"} onOpen={openMenu("conv")} />
-              <BoxNote>Converts to only suggests the plan when the offer ends; nothing is charged.</BoxNote>
+              <BoxNote>When an offer ends, "Converts to" only suggests the next plan to the member; nothing is charged.</BoxNote>
             </Box>
           ) : null}
           <Box label="Payment type" labelId={ids.pay}>

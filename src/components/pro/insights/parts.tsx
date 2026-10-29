@@ -286,7 +286,7 @@ export const AskShareSheet: React.FC<{ open: boolean; onClose: () => void; clien
         labelSize={12}
       />
       {kind === "new" ? (
-        <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5, marginBottom: 12 }}>Booking new bloods isn't in Centium yet. You can ask {firstName} to share a past test.</p>
+        <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5, marginBottom: 12 }}>Booking new blood tests isn't in Centium yet. You can ask {firstName} to share a past test.</p>
       ) : (
         <label className="block" style={{ marginBottom: 12 }}>
           <span className="sr-only">Message</span>

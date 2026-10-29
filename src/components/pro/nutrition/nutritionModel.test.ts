@@ -151,7 +151,7 @@ test("TDEE (Release A client_body_basics): the frame's numbers, and each missing
   assert.deepEqual(tdeeView(basics, 82.4, true, "John"), { tdee: 2453, basis: "82.4 kg · 180 cm · 34 · Male · Lightly active" });
   const none = tdeeView(null, 82.4, true, "John");
   assert.equal(none.tdee, null);
-  assert.match(none.tdee === null ? none.line : "", /doesn't share Weight or Progress/);
+  assert.match(none.tdee === null ? none.line : "", /hasn't shared their height, age, sex and activity level with you, so no maintenance estimate is made\./);
   const partial = tdeeView({ ...basics, heightCm: null, activityLevel: null }, 82.4, true, "John");
   assert.equal(partial.tdee === null ? partial.line : "", "John hasn't added their height and activity level yet, so no maintenance estimate is made.");
   const noWeight = tdeeView(basics, null, false, "John");

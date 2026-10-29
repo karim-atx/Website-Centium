@@ -73,9 +73,9 @@ export function renewsSub(billing: MembershipBilling): string {
   return billing === "annually"
     ? "Billed each year until cancelled"
     : billing === "quarterly"
-      ? "Billed every 3 months until cancelled"
+      ? "Renews every 3 months until cancelled"
       : billing === "semiannually"
-        ? "Billed every 6 months until cancelled"
+        ? "Renews every 6 months until cancelled"
         : "Billed each month until cancelled";
 }
 

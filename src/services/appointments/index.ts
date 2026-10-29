@@ -176,7 +176,7 @@ export async function markAppointment(id: string, status: "completed" | "no_show
 
 export async function markAppointmentPaid(id: string): Promise<Write<null>> {
   const { error } = await db.rpc("mark_appointment_paid", { p_appointment_id: id });
-  if (error) return writeFail(error, "Could not record the payment");
+  if (error) return writeFail(error, "Couldn't record the payment. Try again.");
   return { ok: true, value: null };
 }
 
@@ -214,15 +214,15 @@ export async function bookAppointmentFor(
  */
 export async function fetchWaiverPending(businessId: string, clientId: string): Promise<Load<boolean>> {
   const docs = await db.from("policy_documents").select("id, kind, current_version").eq("business_id", businessId).in("kind", [...APPOINTMENT_TERMS_KINDS]);
-  if (docs.error) return loadFail(docs.error, "Could not read the terms");
+  if (docs.error) return loadFail(docs.error, "Couldn't load the terms. Try again.");
   const d = ((docs.data ?? []) as Row[]).map((r) => ({ id: String(r.id), kind: String(r.kind), currentVersion: r.current_version === null || r.current_version === undefined ? null : Number(r.current_version) }));
   if (d.length === 0) return { status: "ok", value: false };
   const vers = await db.from("policy_versions").select("id, document_id, version, published_at, requires_reacceptance").in("document_id", d.map((x) => x.id));
-  if (vers.error) return loadFail(vers.error, "Could not read the terms");
+  if (vers.error) return loadFail(vers.error, "Couldn't load the terms. Try again.");
   const v = ((vers.data ?? []) as Row[]).map((r) => ({ id: String(r.id), documentId: String(r.document_id), version: Number(r.version), published: !!r.published_at, requiresReacceptance: r.requires_reacceptance === true }));
   if (v.length === 0) return { status: "ok", value: false };
   const acc = await db.from("policy_acceptances").select("version_id").eq("person_id", clientId).in("version_id", v.map((x) => x.id));
-  if (acc.error) return loadFail(acc.error, "Could not read the acceptances");
+  if (acc.error) return loadFail(acc.error, "Couldn't load what was accepted. Try again.");
   return { status: "ok", value: waiverPending(d, v, new Set(((acc.data ?? []) as Row[]).map((r) => String(r.version_id)))) };
 }
 

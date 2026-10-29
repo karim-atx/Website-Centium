@@ -113,7 +113,7 @@ export async function cancelOrder(orderId: string, reason: string | null): Promi
 /** The store records that the cash was received (never a processed payment). */
 export async function markOrderPaid(orderId: string): Promise<Write<null>> {
   const { error } = await db.rpc("mark_order_paid", { p_order_id: orderId });
-  if (error) return writeFail(error, "Could not mark the order paid");
+  if (error) return writeFail(error, "Couldn't mark the order paid. Try again.");
   return { ok: true, value: null };
 }
 
@@ -165,7 +165,7 @@ export async function fetchBusinessTimezone(businessId: string): Promise<string 
 
 export async function fetchSalesSummary(businessId: string, from: string, to: string): Promise<Load<SalesSummary>> {
   const { data, error } = await db.rpc("store_sales_summary", { p_business_id: businessId, p_from: from, p_to: to });
-  if (error) return loadFail(error, "Could not read the sales summary");
+  if (error) return loadFail(error, "Couldn't load the sales summary. Try again.");
   const r = ((Array.isArray(data) ? data[0] : data) ?? {}) as Row;
   return {
     status: "ok",

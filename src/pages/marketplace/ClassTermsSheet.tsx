@@ -149,7 +149,7 @@ function TermsFooter({
         </p>
       )}
       {!online && <p className="m-0 text-[12px] font-semibold text-charcoal-soft">You're offline.</p>}
-      <CtaButton label={booked ? "Agree" : "Agree and book"} loading={busy} disabled={!all || !online} onClick={onAgree} className="!bg-fill-pinned !text-on-primary-fill" />
+      <CtaButton label={booked ? "I agree" : "Agree and book"} loading={busy} disabled={!all || !online} onClick={onAgree} className="!bg-fill-pinned !text-on-primary-fill" />
     </div>
   );
 }

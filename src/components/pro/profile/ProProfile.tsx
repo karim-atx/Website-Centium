@@ -208,7 +208,7 @@ const DobSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onCl
             <p className="text-base font-semibold text-charcoal tabular-nums">{formatDisplayDate(user.dateOfBirth)}</p>
             {ageFromDateOfBirth(user.dateOfBirth) !== undefined && <p className="text-xs text-charcoal-faint mt-0.5">{ageFromDateOfBirth(user.dateOfBirth)} years old</p>}
           </div>
-          <p className="text-[11px] text-charcoal-faint">A date of birth can't be changed once it's saved.</p>
+          <p className="text-[11px] text-charcoal-faint">A date of birth can't be changed once it's saved. If it's wrong, contact support.</p>
           <p className="text-sm text-charcoal-soft">
             Need to correct it?{" "}
             <Link to="/contact" className="font-semibold text-primary-deep-text underline">
@@ -217,7 +217,7 @@ const DobSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onCl
           </p>
         </div>
       ) : (
-        <DobInline title="Add your date of birth" body="It's kept private: clients never see it. Check it before saving: it can't be changed afterwards." onSaved={onClose} />
+        <DobInline title="Add your date of birth" body="It's kept private: clients never see it. Check it before saving; to change it later, contact support." onSaved={onClose} />
       )}
     </BottomSheet>
   );

@@ -401,7 +401,7 @@ export function CourseSheet({
     }
     const cents = access.free ? 0 : parsePrice(access.price) ?? -1;
     if (!access.free && !(cents > 0 && cents <= 50_000)) {
-      setError("A price is between $1 and $500.");
+      setError("Set a price between $1 and $500.");
       return;
     }
     const plan = dripPlan(data.modules.map((m) => m.id), access.mode);

@@ -60,7 +60,7 @@ const CONFIRM: Record<AccountType, { title: string; lead: string; rows: [LucideI
       [BadgeCheck, "A public profile clients can find"],
     ],
     // User decision 14 Oct 2026: every lane is listed only once verified.
-    note: "Every profile is verified before going live.",
+    note: "We check each professional's licence or certificate before their profile goes live.",
     button: "Continue as professional",
     tile: "pale",
     comp: "professional",
