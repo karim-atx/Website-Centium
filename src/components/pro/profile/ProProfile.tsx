@@ -208,7 +208,7 @@ const DobSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onCl
             <p className="text-base font-semibold text-charcoal tabular-nums">{formatDisplayDate(user.dateOfBirth)}</p>
             {ageFromDateOfBirth(user.dateOfBirth) !== undefined && <p className="text-xs text-charcoal-faint mt-0.5">{ageFromDateOfBirth(user.dateOfBirth)} years old</p>}
           </div>
-          <p className="text-[11px] text-charcoal-faint">A date of birth can't be changed once it's saved. If it's wrong, contact support.</p>
+          <p className="text-[11px] text-charcoal-faint">A date of birth can't be changed once it's saved.</p>
           <p className="text-sm text-charcoal-soft">
             Need to correct it?{" "}
             <Link to="/contact" className="font-semibold text-primary-deep-text underline">
