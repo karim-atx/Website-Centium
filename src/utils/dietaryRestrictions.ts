@@ -11,7 +11,10 @@ export type DietaryRestriction =
   | "dairy_free"
   | "nut_free"
   | "low_carb"
-  | "pescatarian";
+  | "pescatarian"
+  // Database 20261222075000: the diets the approved form templates carry.
+  | "halal"
+  | "kosher";
 
 export const dietaryRestrictionOptions: { value: DietaryRestriction; label: string }[] = [
   { value: "vegetarian", label: "Vegetarian" },
@@ -21,7 +24,22 @@ export const dietaryRestrictionOptions: { value: DietaryRestriction; label: stri
   { value: "nut_free", label: "Nut-Free" },
   { value: "low_carb", label: "Low-Carb" },
   { value: "pescatarian", label: "Pescatarian" },
+  { value: "halal", label: "Halal" },
+  { value: "kosher", label: "Kosher" },
 ];
+
+/**
+ * A diet as words: its label, or, for a value the app doesn't know yet (the
+ * Database can add one before the app does), the value itself in words
+ * ("gluten_free" -> "Gluten free"), never the raw code.
+ */
+export function dietLabel(value: string | null | undefined): string {
+  if (!value) return "";
+  const known = dietaryRestrictionOptions.find((o) => o.value === value);
+  if (known) return known.label;
+  const words = value.replace(/[_-]+/g, " ").trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : "";
+}
 
 const RESTRICTED_KEYWORDS: Record<DietaryRestriction, string[]> = {
   vegetarian: ["chicken", "beef", "lamb", "meat", "shawarma", "fish", "salmon", "tuna", "shrimp", "bacon", "sujuk", "kafta"],
@@ -34,6 +52,8 @@ const RESTRICTED_KEYWORDS: Record<DietaryRestriction, string[]> = {
   nut_free: ["almond", "walnut", "pistachio", "cashew", "pine nut", "hazelnut", "peanut", "nut"],
   low_carb: ["bread", "rice", "pasta", "pita", "manoushe", "man'oushe", "potato", "sugar", "cake", "sweet"],
   pescatarian: ["chicken", "beef", "lamb", "meat", "shawarma", "bacon", "sujuk", "kafta"],
+  halal: ["pork", "bacon", "ham", "lard"],
+  kosher: ["pork", "bacon", "ham", "lard", "shrimp", "lobster", "crab"],
 };
 
 // Takes just a name: a diary entry snapshots its name but not the catalog

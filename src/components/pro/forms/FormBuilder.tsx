@@ -24,12 +24,14 @@ import {
   TITLE_MAX,
   UI_TYPES,
   conditionLine,
-  conditionOp,
   conditionParents,
   conditionProblem,
   conditionValues,
-  conditionWords,
-  pickedAnswer,
+  OP_LABEL,
+  opsFor,
+  sheetCondition,
+  sheetShowIf,
+  type ShowIfOp,
   profileFieldsFor,
   questionProblem,
   questionsFor,
@@ -99,6 +101,8 @@ export const FormBuilder: React.FC = () => {
   /** The question whose condition or profile field is being picked. */
   const [picking, setPicking] = useState<{ id: string; what: "condition" | "profile" } | null>(null);
   const [pickParent, setPickParent] = useState<string | null>(null);
+  // The condition being chosen in the sheet: its kind and answers, for one parent.
+  const [pickCond, setPickCond] = useState<{ parent: string; op: ShowIfOp; picked: string[] } | null>(null);
 
   useEffect(() => {
     if (!routeId) return;
@@ -183,6 +187,7 @@ export const FormBuilder: React.FC = () => {
   const closePicker = () => {
     setPicking(null);
     setPickParent(null);
+    setPickCond(null);
   };
 
   if (state === "loading")
@@ -215,6 +220,14 @@ export const FormBuilder: React.FC = () => {
   const pickQ = pickIndex >= 0 ? draft[pickIndex] : null;
   const parents = pickQ ? conditionParents(draft, pickIndex) : [];
   const parent = pickParent ? draft.find((x) => x.id === pickParent) ?? null : null;
+  const cond = parent ? (pickCond?.parent === parent.id ? pickCond : { parent: parent.id, ...sheetCondition(pickQ?.showIf ?? null, parent) }) : null;
+  const saveCondition = (op: ShowIfOp, picked: string[]) => {
+    if (!pickQ || !parent) return;
+    const c = sheetShowIf(parent.id, op, picked);
+    if (!c) return;
+    update(pickQ.id, { showIf: c });
+    closePicker();
+  };
 
   return (
     <div style={{ paddingBottom: 172 }}>
@@ -373,21 +386,47 @@ export const FormBuilder: React.FC = () => {
         {pickQ && parent && (
           <>
             <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch, marginBottom: 2, overflowWrap: "anywhere" }}>{parent.prompt.trim()}</p>
-            {pickQ.showIf?.questionId === parent.id && !pickedAnswer(pickQ.showIf, parent) && (
-              <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginTop: 4, overflowWrap: "anywhere" }}>
-                {`Now: when the answer ${conditionWords(pickQ.showIf)}. Choosing an answer below replaces it.`}
-              </p>
+            {cond && (
+              <>
+                <FieldLabel top={8}>Condition</FieldLabel>
+                <ChoiceChips
+                  label="Condition"
+                  value={cond.op}
+                  onChange={(op) => setPickCond({ parent: parent.id, op, picked: op === "in" ? cond.picked : cond.picked.slice(0, 1) })}
+                  items={opsFor(parent).map((op) => ({ value: op, label: OP_LABEL[op] }))}
+                />
+                <FieldLabel top={10}>{cond.op === "in" ? "Any of these answers" : "This answer"}</FieldLabel>
+                {cond.op === "in" ? (
+                  <>
+                    <div role="group" aria-label="Any of these answers" className="flex flex-wrap" style={{ gap: 6 }}>
+                      {conditionValues(parent).map((v) => {
+                        const on = cond.picked.includes(v);
+                        return (
+                          <button
+                            key={v}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => setPickCond({ parent: parent.id, op: "in", picked: on ? cond.picked.filter((x) => x !== v) : [...cond.picked, v] })}
+                            className="tap inline-flex items-center relative before:absolute before:inset-x-0 before:-inset-y-[6px] before:content-['']"
+                            style={{ height: 32, padding: "0 12px", borderRadius: 10, fontSize: textPx(12.5), fontWeight: 700, background: on ? INK.fill : INK.soft, color: on ? INK.onFill : INK.chS }}
+                          >
+                            {v}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <CtaButton className="w-full mt-3" size="sheet" label="Save condition" disabled={cond.picked.length === 0} onClick={() => saveCondition("in", cond.picked)} />
+                  </>
+                ) : (
+                  <ChoiceChips
+                    label="This answer"
+                    value={cond.picked[0] ?? ""}
+                    onChange={(v) => saveCondition(cond.op, [v])}
+                    items={conditionValues(parent).map((v) => ({ value: v, label: v }))}
+                  />
+                )}
+              </>
             )}
-            <FieldLabel top={8}>{conditionOp(parent) === "includes" ? "When the answers include" : "When the answer is"}</FieldLabel>
-            <ChoiceChips
-              label={conditionOp(parent) === "includes" ? "When the answers include" : "When the answer is"}
-              value={pickedAnswer(pickQ.showIf, parent)}
-              onChange={(v) => {
-                update(pickQ.id, { showIf: { questionId: parent.id, op: conditionOp(parent), value: v } });
-                closePicker();
-              }}
-              items={conditionValues(parent).map((v) => ({ value: v, label: v }))}
-            />
             <button type="button" onClick={() => setPickParent(null)} className="tap flex items-center" style={{ minHeight: 44, marginTop: 8, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
               Choose another question
             </button>

@@ -11,7 +11,9 @@ import {
   diffQuestions,
   fromRow,
   parseSchedule,
-  pickedAnswer,
+  optionsNamedByRules,
+  sheetCondition,
+  sheetShowIf,
   profileFieldsFor,
   questionProblem,
   questionsFor,
@@ -174,10 +176,23 @@ describe("sections, conditions and profile fields (Round D)", () => {
     assert.equal(conditionProblem([days, { ...mins, showIf: { questionId: "d", op: "excludes", value: "0" } }], 1), "Choose the condition again.");
     assert.equal(conditionProblem([plan, { ...hard, showIf: { questionId: "p", op: "in", value: ["Some days", "Never"] } }], 1), "The answer this depends on changed. Choose it again.");
     assert.equal(conditionProblem([plan, { ...hard, showIf: { questionId: "p", op: "in", value: [] } }], 1), "The answer this depends on changed. Choose it again.");
-    // The builder's sheet picks only what it creates.
-    assert.equal(pickedAnswer(mins.showIf, days), "");
-    assert.equal(pickedAnswer(what.showIf, mins), "Yes");
-    assert.equal(pickedAnswer(what.showIf, days), "");
+    // The builder's sheet starts from any stored kind for its parent, and saves every kind.
+    assert.deepEqual(sheetCondition(mins.showIf, days), { op: "not_equals", picked: ["0"] });
+    assert.deepEqual(sheetCondition(more.showIf, { id: "x", type: "multi" }), { op: "excludes", picked: ["None"] });
+    assert.deepEqual(sheetCondition(hard.showIf, plan), { op: "in", picked: ["Some days", "Not this week"] });
+    assert.deepEqual(sheetCondition(what.showIf, mins), { op: "equals", picked: ["Yes"] });
+    assert.deepEqual(sheetCondition(what.showIf, days), { op: "equals", picked: [] });
+    assert.deepEqual(sheetCondition(null, { id: "x", type: "multi" }), { op: "includes", picked: [] });
+    assert.deepEqual(sheetShowIf("d", "not_equals", ["0"]), { questionId: "d", op: "not_equals", value: "0" });
+    assert.deepEqual(sheetShowIf("x", "excludes", ["None"]), { questionId: "x", op: "excludes", value: "None" });
+    assert.deepEqual(sheetShowIf("p", "in", ["Some days", "Not this week"]), { questionId: "p", op: "in", value: ["Some days", "Not this week"] });
+    assert.equal(sheetShowIf("p", "in", []), null);
+    // What the sheet saves is what the database stores ("is not", "is not none", "either of").
+    assert.deepEqual(toRow({ ...hard, showIf: sheetShowIf("p", "in", ["Some days", "Not this week"]) }, 6).show_if, { question_id: "p", in: ["Some days", "Not this week"] });
+    assert.deepEqual(toRow({ ...more, showIf: sheetShowIf("x", "excludes", ["None"]) }, 4).show_if, { question_id: "x", excludes: "None" });
+    assert.deepEqual(toRow({ ...mins, showIf: sheetShowIf("d", "not_equals", ["0"]) }, 1).show_if, { question_id: "d", not_equals: "0" });
+    // A condition on a question that has a condition itself is valid (the medication review).
+    assert.ok(conditionParents(draft, draft.indexOf(what)).some((p) => p.id === mins.id));
   });
 
   it("names the answers a condition can match", () => {
@@ -336,4 +351,28 @@ describe("note templates", () => {
     assert.equal(templateMeta(body), "2 sections");
     assert.equal(templateMeta("Free words"), "Free text");
   });
+});
+
+describe("template rules lock the answers they name", () => {
+  it("locks only an answer a recovery rule, a note or a prompt names", () => {
+  const base = { options: ["None", "New numbness or weakness", "Fever", "Lose body fat", "Gain muscle", "Other"] };
+  // Only the options named: by a recovery rule's key, a note's or a prompt's list.
+  assert.deepEqual(
+    optionsNamedByRules({
+      ...base,
+      recovery_options: { "Lose body fat": null },
+      pro_note: { other_than: ["None"], note: "Symptoms reported." },
+      client_prompt: { answers: ["New numbness or weakness", "Not an option"], kind: "urgent", message: "Call 112." },
+    }),
+    ["None", "New numbness or weakness", "Lose body fat"]
+  );
+  // A number rule names no answer; no rules, nothing locked.
+  assert.deepEqual(optionsNamedByRules({ ...base, pro_note: { max: 2, note: "Follow up." }, client_prompt: { max: 2, kind: "support" } }), []);
+  assert.deepEqual(optionsNamedByRules({ options: null, recovery_options: { A: null } }), []);
+  // Read with the question, never written back.
+  const q = fromRow({ id: "q", position: 0, type: "multi", prompt: "Any new symptoms?", unit: null, required: true, options: base.options, scale_min: null, scale_max: null, safety_topic: null, safety_trigger: null, recovery_options: { "Lose body fat": "Something else" } });
+  assert.deepEqual(q.fixedOptions, ["Lose body fat"]);
+  const row = toRow(q, 0) as Record<string, unknown>;
+  assert.ok(!("recovery_options" in row) && !("pro_note" in row) && !("client_prompt" in row) && !("fixedOptions" in row));
+});
 });

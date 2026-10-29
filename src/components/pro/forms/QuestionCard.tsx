@@ -1,5 +1,5 @@
 import React, { useId } from "react";
-import { AlignLeft, Calendar, Camera, CircleDot, GitBranch, GripVertical, Hash, ListChecks, Gauge, Plus, Ruler, ShieldAlert, Square, Circle, ToggleRight, Trash2, Type, UserRoundPlus, X, type LucideIcon } from "lucide-react";
+import { AlignLeft, Calendar, Camera, CircleDot, GitBranch, GripVertical, Hash, ListChecks, Gauge, Lock, Plus, Ruler, ShieldAlert, Square, Circle, ToggleRight, Trash2, Type, UserRoundPlus, X, type LucideIcon } from "lucide-react";
 import { textPx } from "../../../theme/textSize";
 import { Toggle } from "../../ui/Toggle";
 import { INK } from "../proInk";
@@ -91,6 +91,8 @@ export const QuestionCard: React.FC<{
   } else if (q.type === "choice" || q.type === "multi") {
     const opts = q.options ?? [];
     const Mark = q.type === "choice" ? Circle : Square;
+    // A rule this question carries names these answers: they can't be renamed or removed.
+    const fixed = new Set(q.fixedOptions ?? []);
     body = (
       <div className="flex flex-col" style={{ gap: 6 }}>
         {opts.map((o, i) => (
@@ -99,6 +101,7 @@ export const QuestionCard: React.FC<{
             <input
               value={o}
               disabled={locked}
+              readOnly={fixed.has(o)}
               maxLength={120}
               onChange={(e) => set({ options: opts.map((x, j) => (j === i ? e.target.value : x)) })}
               placeholder={`Answer ${i + 1}`}
@@ -106,13 +109,19 @@ export const QuestionCard: React.FC<{
               className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-tertiary"
               style={{ fontSize: textPx(13), color: INK.ch, height: 28 }}
             />
-            {!locked && opts.length > 2 && (
+            {fixed.has(o) && <Lock size={12} strokeWidth={2} aria-label="Can't be renamed" style={{ color: INK.chF, flexShrink: 0 }} />}
+            {!locked && !fixed.has(o) && opts.length > 2 && (
               <button type="button" onClick={() => set({ options: opts.filter((_, j) => j !== i) })} aria-label={`Remove answer ${i + 1}`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-2 before:content-['']" style={{ width: 28, height: 28 }}>
                 <X size={13} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
               </button>
             )}
           </span>
         ))}
+        {fixed.size > 0 && (
+          <p style={{ fontSize: textPx(11.5), lineHeight: 1.45, color: INK.chF, marginTop: 2 }}>
+            Answers with a lock can't be renamed or removed: recovery-sensitive mode, a note for you or a safety message depends on them.
+          </p>
+        )}
         {!locked && opts.length < OPTIONS_MAX && (
           <button type="button" onClick={() => set({ options: [...opts, ""] })} className="tap self-start flex items-center relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-['']" style={{ gap: 4, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, marginTop: 2 }}>
             <Plus size={12} strokeWidth={2.4} aria-hidden />

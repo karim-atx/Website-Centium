@@ -96,6 +96,12 @@ export interface QuestionDraft {
   sectionTitle: string | null;
   showIf: ShowIf | null;
   profileField: ProfileField | null;
+  /**
+   * Answers a rule copied from a template names (a recovery-sensitive rule,
+   * a note for the professional, or what the client is shown straight away):
+   * they can't be renamed or removed. Read with the question, never written.
+   */
+  fixedOptions?: string[];
 }
 
 let seq = 0;
@@ -222,16 +228,28 @@ const CONDITION_TYPES: DbQuestionType[] = ["choice", "multi", "scale"];
 /** The condition the builder creates: "equals" for a single answer, "includes" for a multiple-choice one. */
 export const conditionOp = (parent: Pick<QuestionDraft, "type">): "equals" | "includes" => (parent.type === "multi" ? "includes" : "equals");
 
-/** Every condition a parent of this kind can carry (the database's pairs). */
-const opsFor = (parent: Pick<QuestionDraft, "type">): ShowIfOp[] => (parent.type === "multi" ? ["includes", "excludes"] : ["equals", "not_equals", "in"]);
+/** Every condition a parent of this kind can carry (the database's pairs), in the order the builder offers them. */
+export const opsFor = (parent: Pick<QuestionDraft, "type">): ShowIfOp[] => (parent.type === "multi" ? ["includes", "excludes"] : ["equals", "not_equals", "in"]);
+
+/** The builder's words for each kind ("is not none" is Doesn't include None). */
+export const OP_LABEL: Record<ShowIfOp, string> = { equals: "Is", not_equals: "Is not", in: "Is either of", includes: "Includes", excludes: "Doesn't include" };
 
 /** The answers a condition names (one, or the list of "in"). */
 export const conditionAnswers = (c: ShowIf): string[] => (c.op === "in" ? c.value : [c.value]);
 
-/** The answer picked in the builder's sheet for this parent: only a condition the builder creates (equals / includes), else "". */
-export function pickedAnswer(c: ShowIf | null, parent: Pick<QuestionDraft, "id" | "type">): string {
-  if (!c || c.questionId !== parent.id || c.op === "in" || c.op !== conditionOp(parent)) return "";
-  return c.value;
+/**
+ * Where the builder's sheet starts for this parent: the stored condition when
+ * it names this parent (any kind), else "is" / "includes" with nothing picked.
+ */
+export function sheetCondition(c: ShowIf | null, parent: Pick<QuestionDraft, "id" | "type">): { op: ShowIfOp; picked: string[] } {
+  if (c && c.questionId === parent.id && opsFor(parent).includes(c.op)) return { op: c.op, picked: conditionAnswers(c) };
+  return { op: conditionOp(parent), picked: [] };
+}
+
+/** The condition the sheet saves: one answer, or the list for "is either of"; null with nothing picked. */
+export function sheetShowIf(parentId: string, op: ShowIfOp, picked: string[]): ShowIf | null {
+  if (!picked.length) return null;
+  return op === "in" ? { questionId: parentId, op, value: [...picked] } : { questionId: parentId, op, value: picked[0] };
 }
 
 /** The answers a condition can name: the options, or a scale's numbers. */
@@ -391,6 +409,32 @@ export interface QuestionRow {
   section_title?: string | null;
   show_if?: unknown;
   profile_field?: string | null;
+  /** 20261222080000, read only: the rules that can name this question's answers. */
+  recovery_options?: unknown;
+  pro_note?: unknown;
+  client_prompt?: unknown;
+}
+
+/**
+ * The answers a question's rules name (Karim, 2026-10-29: renaming one is
+ * locked only then). recovery_options names them by key (the database
+ * refuses a rename while it does); a note's or a prompt's "answers" /
+ * "other_than" list names them (a rename would quietly stop it matching,
+ * and the prompt is what shows "call 112"). Only the question's own
+ * options, in their order.
+ */
+export function optionsNamedByRules(r: Pick<QuestionRow, "options" | "recovery_options" | "pro_note" | "client_prompt">): string[] {
+  const options = Array.isArray(r.options) ? r.options.map((o) => String(o)) : [];
+  const named = new Set<string>();
+  const obj = (v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
+  for (const k of Object.keys(obj(r.recovery_options) ?? {})) named.add(k);
+  for (const rule of [obj(r.pro_note), obj(r.client_prompt)]) {
+    for (const key of ["answers", "other_than"]) {
+      const list = rule?.[key];
+      if (Array.isArray(list)) for (const x of list) if (typeof x === "string") named.add(x);
+    }
+  }
+  return options.filter((o) => named.has(o));
 }
 
 export function fromRow(r: QuestionRow): QuestionDraft {
@@ -410,6 +454,7 @@ export function fromRow(r: QuestionRow): QuestionDraft {
     sectionTitle: r.section_title ?? null,
     showIf: parseShowIf(r.show_if),
     profileField: asProfileField(r.profile_field),
+    fixedOptions: optionsNamedByRules(r),
   };
 }
 

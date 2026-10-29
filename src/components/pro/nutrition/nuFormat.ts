@@ -3,14 +3,14 @@
 // severity always come from food_conflicts, never from these strings.
 
 import { ALLERGEN_LABEL } from "../client/clientFormat";
-import { dietaryRestrictionOptions } from "../../../utils/dietaryRestrictions";
+import { dietLabel } from "../../../utils/dietaryRestrictions";
 import type { ConflictRow } from "./nutritionModel";
 
 /** The board's macro colours (gen r13 dayTotal13, r14): protein, carbs, fat. */
 export const MACRO_COLOUR = { p: "#7D6BB5", c: "#AEA1DC", f: "#A2C8C2" } as const;
 
 export const allergenLabel = (a: string): string => ALLERGEN_LABEL[a] ?? a;
-export const restrictionLabel = (r: string): string => dietaryRestrictionOptions.find((o) => o.value === r)?.label ?? r;
+export const restrictionLabel = (r: string): string => dietLabel(r);
 
 /** NU11 / NU12 titles (FINAL_PLAN 3 templates: "{food_name} contains {allergen}", "… may contain … Check this.", "{food_name} isn't {restriction}"). */
 export function conflictTitle(name: string, row: ConflictRow): string {
