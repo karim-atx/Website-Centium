@@ -7,6 +7,7 @@ import { CLOSED_BUY_MEMBERSHIP, closureMessage, isBusinessClosedError } from "..
 import { readPassCache, writePassCache } from "./passCache";
 import type { PlanKind } from "../membership-plans/types";
 import { coarsePoint, type Coords } from "../geo/distance";
+import { contactRefusal } from "../moderation/text";
 
 // Venues, gym memberships and the pass: v5.1 backend stage 4a and 4b
 // (Database docs/HANDOVER_API.md, "4a · Venues" and "4b · Memberships,
@@ -715,6 +716,9 @@ export async function fetchMyReviews(): Promise<Result<MyReview[]>> {
  * Stars alone are a review (Database #38, 20261213190000: p_body defaults to null); a blank text is sent as null.
  */
 export async function writeGymReview(gymId: string, rating: number, body: string): Promise<Result<string>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(body);
+  if (contact) return { ok: false, message: contact };
   const { data, error } = await rpc<string>("write_gym_review", { p_gym_id: gymId, p_rating: rating, p_body: body.trim() || null });
   if (error) return fail(error, "Couldn't post your review. Try again.");
   return { ok: true, value: data ?? "" };
@@ -737,6 +741,9 @@ export async function businessHasVenue(businessId: string): Promise<boolean | nu
  * alone are a review (Database #38): a blank text is sent as null.
  */
 export async function writeBusinessReview(businessId: string, rating: number, body: string): Promise<Result<string>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(body);
+  if (contact) return { ok: false, message: contact };
   const { data, error } = await rpc<string>("write_business_review", { p_business_id: businessId, p_rating: rating, p_body: body.trim() || null });
   if (error) {
     const own =
@@ -759,6 +766,9 @@ export async function writeBusinessReview(businessId: string, rating: number, bo
  * Stars alone are a review since Database #38: a blank text is sent as null.
  */
 export async function writeClassReview(bookingId: string, rating: number, body: string): Promise<Result<string>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(body);
+  if (contact) return { ok: false, message: contact };
   const { data, error } = await rpc<string>("write_class_review", { p_booking_id: bookingId, p_rating: rating, p_body: body.trim() || null });
   if (error) {
     const own =
@@ -780,6 +790,9 @@ export async function writeClassReview(bookingId: string, rating: number, body: 
  * btrim(p_body), and the body CHECK refuses an empty string but takes null).
  */
 export async function editGymReview(reviewId: string, rating: number, body: string): Promise<Result<null>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(body);
+  if (contact) return { ok: false, message: contact };
   const { error } = await rpc<null>("edit_gym_review", { p_review_id: reviewId, p_rating: rating, p_body: body.trim() || null });
   if (error) return fail(error, "Couldn't save your review. Try again.");
   return { ok: true, value: null };

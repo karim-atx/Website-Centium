@@ -6,7 +6,8 @@ import { PassQr } from "../../marketplace/PassQr";
 import { ChoiceCard, FieldInput, FieldLabel, wellStyle } from "../calendar/calendarFields";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
-import { AVATAR_ACCEPT, removeAvatar, uploadAvatar } from "../../../services/avatar";
+import { AVATAR_ACCEPT, removeAvatar, submitAvatar } from "../../../services/avatar";
+import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../moderation/ImageApproval";
 import { requestTypeChange, setMyHandle } from "../../../services/pro/profile";
 import { updatePhone } from "../../../services/profile";
 import { saveFirstName } from "../../../services/pro/profile";
@@ -22,8 +23,10 @@ import type { CoverPicker } from "./useCoverPicker";
 // Release 3 · W6 the profile's sheets and pop-ups:
 // - PhotoSourceSheet (MO26 "Profile · photo source", r15 profile15): "Profile
 //   photo" over a list card (r6b listCard6: r20, pad 4 14; rows 11 0, a 34
-//   r11 tile with a 16 / 1.75 icon, 13 / 600, chevron 14). Uploads through
-//   services/avatar, the same write the client Profile uses.
+//   r11 tile with a 16 / 1.75 icon, 13 / 600, chevron 14). Sends through
+//   services/avatar, as the client Profile does. Round C Release 2: a new
+//   photo or cover waits for approval; the owner sees it (`url`) with the
+//   badge and note, and user.avatarUrl keeps the approved photo.
 // - TypeLockedPopup (MO26 v2 "locked type explained", r16 profile16 + ui.js
 //   popup): lock tile, "Professional type is locked", Contact support
 //   (primary, Mail) and Close (secondary). Contact support opens
@@ -46,15 +49,16 @@ export function usePhotoPicker() {
   const gallery = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { image, refresh } = useOwnImage("avatar", authUserId);
 
   const upload = async (file: File) => {
     if (!authUserId || busy) return;
     setBusy(true);
     setError(null);
-    const r = await uploadAvatar(authUserId, file, user.avatarUrl);
+    const r = await submitAvatar(authUserId, file);
     setBusy(false);
     if (!r.ok) return setError(r.message);
-    updateProfile({ avatarUrl: r.url });
+    refresh();
   };
   const remove = async () => {
     if (!authUserId || busy) return;
@@ -64,6 +68,7 @@ export function usePhotoPicker() {
     setBusy(false);
     if (!r.ok) return setError(r.message ?? "Couldn't remove your picture.");
     updateProfile({ avatarUrl: undefined });
+    refresh();
   };
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -76,7 +81,9 @@ export function usePhotoPicker() {
       <input ref={gallery} type="file" accept={AVATAR_ACCEPT} className="hidden" onChange={onPick} />
     </>
   );
-  return { inputs, busy, error, hasPhoto: !!user.avatarUrl, takePhoto: () => camera.current?.click(), choose: () => gallery.current?.click(), remove };
+  // What the owner sees: the pending photo, else the approved one.
+  const url = (image?.status === "pending" && image.url) || user.avatarUrl || null;
+  return { inputs, busy, error, url, image, hasPhoto: !!user.avatarUrl || image?.status === "pending", takePhoto: () => camera.current?.click(), choose: () => gallery.current?.click(), remove };
 }
 
 type SourceRow = { key: string; icon: typeof Camera; label: string; run: () => void; disabled: boolean };
@@ -128,6 +135,12 @@ export const PhotoSourceSheet: React.FC<{ open: boolean; onClose: () => void; pi
       {cover && <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.chF, margin: "0 2px 8px" }}>Profile photo</p>}
       <SourceRows rows={rows} onRun={onClose} />
       {picker.error && <ErrorLine>{picker.error}</ErrorLine>}
+      {picker.image && (
+        <div className="flex flex-col items-start" style={{ gap: 6, margin: "8px 2px 0" }}>
+          <ImageApprovalBadge state={picker.image} />
+          <ImageApprovalNote state={picker.image} />
+        </div>
+      )}
       {cover && (
         <>
           <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.chF, margin: "16px 2px 8px" }}>Cover photo</p>
@@ -137,14 +150,16 @@ export const PhotoSourceSheet: React.FC<{ open: boolean; onClose: () => void; pi
             style={{ height: 96, borderRadius: 16, marginBottom: 8, background: cover.url ? INK.soft : `repeating-linear-gradient(45deg, ${INK.soft} 0 6px, ${INK.card} 6px 12px)`, border: `1px solid ${INK.bCard}` }}
           >
             {cover.url && <img src={cover.url} alt="Your cover photo" className="absolute inset-0 w-full h-full object-cover" />}
+            <ImageApprovalBadge state={cover.image} className="absolute left-2 top-2" />
           </div>
           <SourceRows
             rows={[
               { key: "cover", icon: ImageIcon, label: cover.busy ? "Uploading…" : cover.url ? "Change cover" : "Add a cover", run: cover.choose, disabled: cover.busy },
-              { key: "cover-remove", icon: Trash2, label: "Remove cover", run: () => void cover.remove(), disabled: cover.busy || !cover.url },
+              { key: "cover-remove", icon: Trash2, label: "Remove cover", run: () => void cover.remove(), disabled: cover.busy || !(cover.approvedUrl || cover.image?.status === "pending") },
             ]}
           />
           {cover.error && <ErrorLine>{cover.error}</ErrorLine>}
+          <ImageApprovalNote state={cover.image} className="mt-2 mx-0.5" />
         </>
       )}
     </BottomSheet>

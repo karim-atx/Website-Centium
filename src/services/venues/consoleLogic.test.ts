@@ -2,12 +2,10 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
   consoleMessage,
-  coverObjectPath,
   draftAsHoursRow,
   draftsFromRows,
   draftWrapsMidnight,
   hoursWritePlan,
-  logoObjectPath,
   money,
   pageLine,
   paidLine,
@@ -327,13 +325,6 @@ test("hoursWritePlan: update changed rows by id, insert missing days, skip the u
 });
 
 // ---- image paths
-
-test("object paths start with the owner's uid (the purge registry keys on it)", () => {
-  assert.equal(logoObjectPath(UID, "f1"), `${UID}/f1.jpg`);
-  assert.equal(coverObjectPath(UID, GYM, "f2"), `${UID}/${GYM}/f2.jpg`);
-  assert.equal(logoObjectPath(UID, "f1").split("/")[0], UID);
-  assert.equal(coverObjectPath(UID, GYM, "f2").split("/")[0], UID);
-});
 
 test("replacedObject: only a valid path in the caller's own prefix, never the new one", () => {
   assert.equal(replacedObject(`${UID}/old.jpg`, UID, `${UID}/new.jpg`), `${UID}/old.jpg`);

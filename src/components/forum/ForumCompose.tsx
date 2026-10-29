@@ -12,6 +12,8 @@ import { CtaButton } from "../ui/PinnedCta";
 import { PopupMenu } from "../ui/PopupMenu";
 import { categoryDot, orderCategories } from "./categoryColour";
 import { useIsDark } from "../../hooks/useIsDark";
+import { mentionsSelfHarm } from "../../services/moderation/phrases";
+import { contactRefusal } from "../../services/moderation/text";
 
 // Design screen 3: a new post, as mobile v5.1 MO1.3.2's lavender-header
 // sheet over the forum (also what /app/forum/new opens). The category is a
@@ -118,6 +120,12 @@ export function ForumCompose({
       else if (!b) setError({ field: "body", message: "Write something in your post." });
       return;
     }
+    // Before the photo uploads: contact details are explained here, not after.
+    const contact = contactRefusal(t, b);
+    if (contact) {
+      setError({ field: "body", message: contact });
+      return;
+    }
     setBusy(true);
     setError(null);
     let photoPath: string | null = null;
@@ -143,7 +151,10 @@ export function ForumCompose({
       setError({ field: "body", message: r.message });
       return;
     }
-    navigate(r.value.held ? "/app/forum" : `/app/forum/post/${r.value.id}`, { replace: true });
+    // A held post goes back to the forum, where it waits at the top; one held
+    // for a self-harm phrase opens itself, so its "Get support" is right there.
+    const gentle = r.value.held && (await mentionsSelfHarm([t, b].join("\n")));
+    navigate(r.value.held && !gentle ? "/app/forum" : `/app/forum/post/${r.value.id}`, { replace: true });
   };
 
   // MO1.3.2: choice cards with a check circle (the radio stays, hidden, for
@@ -355,7 +366,8 @@ export function ForumCompose({
           </div>
         )}
         <span className="text-xs leading-[1.5]" style={{ color: fv("muted") }}>
-          Posts with links are checked by a moderator before they appear.
+          Posts with links are checked by a moderator before they appear. Photos are checked by our team first,
+          usually within a day.
         </span>
       </div>
 

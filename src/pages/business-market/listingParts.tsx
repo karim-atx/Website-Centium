@@ -689,7 +689,8 @@ export function PhotosCard({ photos, line, onOpen }: { photos: string[]; line: s
         {slots.map((i) =>
           photos[i] ? (
             <span key={i} style={{ position: "relative", aspectRatio: "4 / 3", borderRadius: 12, overflow: "hidden", background: m.soft }}>
-              <img src={photos[i]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              {/* A teammate's photo waiting for approval has no public file yet: the tile stays empty. */}
+              <img key={photos[i]} src={photos[i]} alt="" onError={(e) => (e.currentTarget.style.visibility = "hidden")} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               {i === 0 && <span style={{ position: "absolute", left: 4, top: 4, fontSize: px(9), fontWeight: 800, background: m.card, color: m.ink, borderRadius: 999, padding: "1px 5px" }}>Cover</span>}
             </span>
           ) : (

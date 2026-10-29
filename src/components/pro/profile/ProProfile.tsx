@@ -20,6 +20,7 @@ import { INK } from "../proInk";
 import { FootNote, LockTile, VerifiedTag } from "./kit";
 import { licenceFacts, shortDate } from "./profileModel";
 import { NameSheet, PhoneSheet, PhotoSourceSheet, TypeChangeSheet, TypeLockedPopup, usePhotoPicker } from "./ProfileSheets";
+import { ImageApprovalBadge, ImageApprovalNote } from "../../moderation/ImageApproval";
 import { typeAndLane, typeLabel } from "./typeLabel";
 
 /**
@@ -93,7 +94,7 @@ export const ProProfile: React.FC = () => {
       <div className="flex flex-col items-center text-center" style={{ margin: "-4px 0 18px" }}>
         <button type="button" onClick={() => setSheet("photo")} aria-label="Change profile photo" className="tap relative">
           <span className="flex items-center justify-center overflow-hidden" style={{ width: 88, height: 88, borderRadius: 9999, background: INK.tealPale, fontSize: 28, fontWeight: 800, color: INK.tealDark }}>
-            {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials}
+            {picker.url ? <img src={picker.url} alt="" className="w-full h-full object-cover" /> : initials}
           </span>
           <span className="absolute flex items-center justify-center" style={{ right: -2, bottom: -2, width: 32, height: 32, borderRadius: 9999, background: INK.fill, border: `3px solid ${INK.cream}` }}>
             <Camera size={14} strokeWidth={2} aria-hidden style={{ color: INK.onFill }} />
@@ -114,6 +115,9 @@ export const ProProfile: React.FC = () => {
             {picker.error}
           </p>
         )}
+        {/* Round C Release 2: a new photo waits for approval. */}
+        <ImageApprovalBadge state={picker.image} className="mt-2" />
+        <ImageApprovalNote state={picker.image} className="mt-1.5 max-w-[280px]" />
       </div>
 
       <div style={{ padding: "0 8px" }}>

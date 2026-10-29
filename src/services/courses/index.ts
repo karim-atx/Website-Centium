@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { describeCourseError, type AccessLevel, type CourseAction, type LessonKind, type Tier } from "./rules";
+import { contactRefusal } from "../moderation/text";
 
 // Courses, the learner side (Database 99ec17b).
 //
@@ -336,6 +337,9 @@ export async function fetchQuestions(courseId: string): Promise<CourseQuestion[]
 }
 
 export async function askQuestion(courseId: string, body: string): Promise<Result<null>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(body);
+  if (contact) return { ok: false, message: contact };
   const { error } = await supabase.rpc("ask_course_question", { p_course_id: courseId, p_body: body.trim() });
   if (error) return fail(error, "ask");
   return { ok: true, value: null };
@@ -352,6 +356,9 @@ export async function fetchMyRating(courseId: string, userId: string): Promise<{
 }
 
 export async function rateCourse(courseId: string, stars: number, body: string): Promise<Result<null>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(body);
+  if (contact) return { ok: false, message: contact };
   const { error } = await supabase.rpc("rate_course", {
     p_course_id: courseId,
     p_stars: stars,

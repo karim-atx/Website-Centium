@@ -17,6 +17,7 @@ import type {
   MyReport,
   ReviewMetrics,
 } from "./types";
+import { contactRefusal } from "../moderation/text";
 export type {
   BizReply,
   BizReview,
@@ -146,6 +147,9 @@ export async function postReply(
   reviewId: string,
   body: string,
 ): Promise<Write<string>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(body);
+  if (contact) return { ok: false, code: "contact_details", message: contact };
   const { data, error } = await db.rpc("reply_to_review", {
     p_review_id: reviewId,
     p_body: body.trim(),
@@ -158,6 +162,9 @@ export async function editReply(
   reviewId: string,
   body: string,
 ): Promise<Write<null>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(body);
+  if (contact) return { ok: false, code: "contact_details", message: contact };
   const { error } = await db.rpc("edit_review_reply", {
     p_review_id: reviewId,
     p_body: body.trim(),

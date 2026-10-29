@@ -32,6 +32,7 @@ import {
   type OfferWhere,
 } from "../../../services/offers/manage";
 import { BackHeader, BoxInput, Caps, FieldError, FieldLabel, FundingCheck, PrimaryButton, SubSegment } from "./parts";
+import { GuidelinesLink } from "../../moderation/GuidelinesLink";
 
 // Market + Share 3.0 · W3 · Create offer → Preview and publish, and the same
 // editor for an existing offer (B-MA.3 `offerCreate` / `offerPreview`,
@@ -227,6 +228,7 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
             {saveNote ? (
               <p role={saveNote.quiet ? "status" : "alert"} style={{ margin: "12px 0 0", fontSize: textPx(12.5), lineHeight: linePx(18), fontWeight: saveNote.quiet ? 500 : 600, color: saveNote.quiet ? m.ink2 : m.high, textAlign: saveNote.quiet ? "center" : undefined }}>
                 {saveNote.text}
+                <GuidelinesLink message={saveNote.text} />
               </p>
             ) : null}
             <PrimaryButton label={isNew ? "Publish" : "Save changes"} onPress={() => void publish()} disabled={!draft.fundingAck || !owner} busy={busy} style={{ marginTop: 16 }} />

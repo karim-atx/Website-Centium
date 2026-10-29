@@ -4,6 +4,7 @@ import { FOCUS_CSS, usePress } from "../market/usePress";
 import { useIsDark } from "../../hooks/useIsDark";
 import { marketPalette } from "../../theme/marketTokens";
 import { linePx, textPx } from "../../theme/textSize";
+import { GuidelinesLink } from "../moderation/GuidelinesLink";
 
 // MO1.2.1.2's review flow (34 pt stars on a 44 pitch, the text, Submit),
 // shared by the gym page's "Write a review" (GymReviews), a venue-less
@@ -96,6 +97,7 @@ export function ReviewForm({
       {error && (
         <p role="alert" style={{ margin: 0, fontSize: textPx(12), fontWeight: 600, color: m.high }}>
           {error}
+          <GuidelinesLink message={error} />
         </p>
       )}
       {/* The sheet CTA: 50 radius 16 --fill / --onfill 15 / 700; 40% when it can't be sent. */}

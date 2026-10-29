@@ -2,12 +2,14 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { prepareForumPhoto } from "../forum/photo";
 import { storagePath } from "../venues/venueLogic";
-import { COVER_MAX_BYTES, LOGO_MAX_BYTES, logoObjectPath, replacedObject } from "../venues/consoleLogic";
-import { BUSINESS_COVER_BUCKET, coverObjectPath, coverToRemove, coverUrlFor } from "./cover";
+import { COVER_MAX_BYTES, LOGO_MAX_BYTES, replacedObject } from "../venues/consoleLogic";
+import { coverToRemove, coverUrlFor } from "./cover";
+import { describeImageError, stageAndSubmit, withdrawPending } from "../moderation/images";
 import { fetchGymHours } from "../venues";
 import { loadConsoleAccess } from "../business-console";
 import type { HoursRow } from "../venues/hours";
 import type { BusinessTypeValue, StoreSettings } from "./types";
+import { contactRefusal, moderationRefusal } from "../moderation/text";
 
 export type { BusinessTypeValue, StoreSettings } from "./types";
 
@@ -36,7 +38,8 @@ export type Result<T> = { ok: true; value: T } | { ok: false; message: string; c
 const fail = <T>(error: { code?: string; message?: string } | null | undefined, fallback: string): Result<T> => ({
   ok: false,
   code: error?.code,
-  message: isOffline(error) ? OFFLINE_MESSAGE : fallback,
+  // Round C Release 2: a blocked word (ATX60) in our words, never which word.
+  message: isOffline(error) ? OFFLINE_MESSAGE : (moderationRefusal(error) ?? fallback),
 });
 
 // ---------------------------------------------------------------------------
@@ -183,6 +186,9 @@ export function businessPatchRow(patch: BusinessPatch): Record<string, unknown> 
 }
 
 export async function saveBusiness(businessId: string, patch: BusinessPatch): Promise<Result<BusinessFull>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(patch.bio);
+  if (contact) return { ok: false, message: contact };
   const row = businessPatchRow(patch);
   const { data, error } = await db.from("business_profiles").update(row).eq("id", businessId).select(BUSINESS_COLUMNS);
   if (error) {
@@ -204,56 +210,35 @@ export async function saveBusiness(businessId: string, patch: BusinessPatch): Pr
 // Logo and cover
 
 /**
- * The logo goes in business-logos under the uploader's own uid (that bucket's
- * policy is own-prefix). The cover goes in business-covers under the OWNER's
- * uid (Database 20261120040000; see ./cover): an insider with `marketing` may
- * write there, and the file is charged to and purged with the owner. Old
- * covers in business-logos (<uid>/cover-<id>.jpg) keep displaying, and are
- * removed from there when replaced.
+ * A new logo or cover waits for approval (Round C Release 2, business_logo /
+ * business_cover; OWNER ONLY, an insider is refused with ATX09): it is staged
+ * and submitted, and the column keeps the approved image until the Database
+ * publishes the file (business-logos / business-covers, at the staged path
+ * <owner uid>/...) and writes logo_url / cover_url itself. Old covers in
+ * business-logos (<uid>/cover-<id>.jpg) keep displaying (./cover).
  */
 type ImageKind = "logo" | "cover";
 
-export async function uploadBusinessImage(params: {
-  kind: ImageKind;
-  uid: string;
-  ownerId: string;
-  businessId: string;
-  file: File;
-  previousPath: string | null;
-}): Promise<Result<{ path: string; url: string | null }>> {
-  const { kind, uid, ownerId, businessId, file, previousPath } = params;
+export async function uploadBusinessImage(params: { kind: ImageKind; uid: string; ownerId: string; businessId: string; file: File }): Promise<Result<null>> {
+  const { kind, uid, ownerId, businessId, file } = params;
+  // The refusal an insider would get, without uploading the file first.
+  if (uid !== ownerId) return { ok: false, code: "ATX09", message: describeImageError({ code: "ATX09" }) };
   const prepared = await prepareForumPhoto(file);
   if (!prepared.ok) return { ok: false, message: prepared.message };
   if (kind === "logo" && prepared.file.size > LOGO_MAX_BYTES) return { ok: false, message: "This photo is too large. Choose one under 2 MB." };
   if (kind === "cover" && prepared.file.size > COVER_MAX_BYTES) return { ok: false, message: "This photo is too large. Choose one under 5 MB." };
-  const bucket = kind === "logo" ? "business-logos" : BUSINESS_COVER_BUCKET;
-  const path = kind === "logo" ? logoObjectPath(uid, crypto.randomUUID()) : coverObjectPath(ownerId, crypto.randomUUID());
-  const up = await supabase.storage.from(bucket).upload(path, prepared.file, { contentType: "image/jpeg", upsert: false });
-  if (up.error) {
-    console.warn(`[business-more] ${kind} upload refused:`, up.error.message);
-    return { ok: false, message: isOffline(up.error) ? OFFLINE_MESSAGE : "Couldn't upload the photo. Try again." };
-  }
-  const written = await db
-    .from("business_profiles")
-    .update(kind === "logo" ? { logo_url: path } : { cover_url: path })
-    .eq("id", businessId)
-    .select("id");
-  if (written.error || !written.data || written.data.length === 0) {
-    await supabase.storage.from(bucket).remove([path]);
-    return { ok: false, message: "Couldn't upload the photo. Try again." };
-  }
-  await removeOldImage(kind, previousPath, uid, ownerId, path);
-  return { ok: true, value: { path, url: publicUrl(bucket, path) } };
+  const r = await stageAndSubmit(uid, kind === "logo" ? "business_logo" : "business_cover", businessId, prepared.file);
+  return r.ok ? { ok: true, value: null } : r;
 }
 
-/** The object a replaced or removed image leaves behind, removed from wherever it was written. */
-async function removeOldImage(kind: ImageKind, previousPath: string | null, uid: string, ownerId: string, next: string): Promise<void> {
+/** The object a removed image leaves behind, removed from wherever it was written. */
+async function removeOldImage(kind: ImageKind, previousPath: string | null, uid: string, ownerId: string): Promise<void> {
   if (kind === "logo") {
-    const old = replacedObject(previousPath, uid, next);
+    const old = replacedObject(previousPath, uid, "");
     if (old) await supabase.storage.from("business-logos").remove([old]);
     return;
   }
-  const old = coverToRemove(previousPath, { ownerUid: ownerId, callerUid: uid }, next);
+  const old = coverToRemove(previousPath, { ownerUid: ownerId, callerUid: uid });
   if (old) await supabase.storage.from(old.bucket).remove([old.path]);
 }
 
@@ -265,13 +250,16 @@ export async function removeBusinessImage(params: {
   previousPath: string | null;
 }): Promise<Result<null>> {
   const { kind, uid, ownerId, businessId, previousPath } = params;
+  // A logo or cover still waiting for approval is taken back too (withdraw_image).
+  const withdrawn = await withdrawPending(kind === "logo" ? "business_logo" : "business_cover", businessId);
+  if (!withdrawn.ok) return withdrawn;
   const written = await db
     .from("business_profiles")
     .update(kind === "logo" ? { logo_url: null } : { cover_url: null })
     .eq("id", businessId)
     .select("id");
   if (written.error) return fail(written.error, "Couldn't remove the photo. Try again.");
-  await removeOldImage(kind, previousPath, uid, ownerId, "");
+  await removeOldImage(kind, previousPath, uid, ownerId);
   return { ok: true, value: null };
 }
 

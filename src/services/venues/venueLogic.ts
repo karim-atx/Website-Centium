@@ -4,6 +4,7 @@
 
 import { formatPrice } from "../../utils/price";
 import { formatShortDate } from "../../utils/date";
+import { BLOCKED_TEXT } from "../moderation/text";
 
 /** B7 MB-03 adds quarterly and semiannually to billing_period. */
 export type Billing = "daily" | "monthly" | "quarterly" | "semiannually" | "annually";
@@ -187,6 +188,9 @@ export function addDaysIso(iso: string, days: number): string {
  */
 export function stage4Message(code: string | undefined, serverMessage: string, fallback: string): string {
   switch (code) {
+    // Round C Release 2: a review that holds a word the community doesn't allow.
+    case "ATX60":
+      return BLOCKED_TEXT;
     case "ATX01":
       return "Your session expired. Sign in again.";
     case "ATX02":

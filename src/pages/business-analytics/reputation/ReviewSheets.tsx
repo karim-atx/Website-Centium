@@ -17,6 +17,7 @@ import { INJURY_MESSAGE_NOTE, INJURY_REPLY_NOTE } from "./parts";
 import { startReviewerThread } from "../../../services/reputation";
 import { sendMessage } from "../../../services/messaging";
 import { useApp } from "../../../context/AppContext";
+import { GuidelinesLink } from "../../../components/moderation/GuidelinesLink";
 
 // AN13 sheets (InsightFlowsV2): Reply to review (AN13-027), Post a reply on
 // a flagged review (AN13-022 / -023; the injury note verbatim when a flag
@@ -270,7 +271,10 @@ export const ReviewComposer: React.FC<{
                 aria-hidden
                 style={{ flexShrink: 0, marginTop: 1 }}
               />
-              {err}
+              <span>
+                {err}
+                <GuidelinesLink message={err} />
+              </span>
             </div>
           )}
         </div>

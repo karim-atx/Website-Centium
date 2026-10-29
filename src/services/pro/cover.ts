@@ -1,20 +1,21 @@
 import { supabase } from "../../../lib/supabase/client";
 import { stripPrivateExif } from "../storage/exif";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { stageAndSubmit, withdrawPending } from "../moderation/images";
 
 // Release B · the professional's cover photo (W6C-3, MO14 "Photo and cover";
 // Database 20261217070000): the PUBLIC bucket professional-covers (5 MB,
-// JPEG / PNG / WebP, path `<uid>/<file>`, written only by a professional into
-// their own folder: the insert policy also needs their professional_profiles
-// row) and professional_profiles.cover_url (500 max, in the owner's UPDATE
-// grant; professional_public_profile and professional_by_handle return it).
+// JPEG / PNG / WebP) and professional_profiles.cover_url (500 max, in the
+// owner's UPDATE grant; professional_public_profile and professional_by_handle
+// return it).
 //
-// THE AVATAR PATTERN (services/avatar), for the same reasons it gives: a
-// public URL goes in the column, a fresh file name every time (a reused path
-// stays cached on the CDN), upload → row → old file, the uploaded file removed
-// again if the row write fails, and EXIF stripped before anything reaches a
-// world-readable bucket. Only the size differs: a cover is drawn full width,
-// so it keeps up to 1600 px on its long edge.
+// ROUND C RELEASE 2 (Database 20261221040000): a new cover waits for an
+// admin. It is resized and EXIF-stripped here as before, then staged in the
+// private image-staging bucket and submitted as professional_cover; on
+// approval the Database copies it into professional-covers at the same path
+// and writes cover_url itself. This module only writes cover_url to clear it
+// (Remove cover). The size is the cover's own: drawn full width, so up to
+// 1600 px on its long edge.
 
 const BUCKET = "professional-covers";
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -22,10 +23,10 @@ const MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_EDGE_PX = 1600;
 const JPEG_QUALITY = 0.85;
 
-/** The `accept` attribute for a cover picker (a hint; uploadCover decides). */
+/** The `accept` attribute for a cover picker (a hint; submitCover decides). */
 export const COVER_ACCEPT = [...MIME_TYPES, ".jpg", ".jpeg", ".png", ".webp"].join(",");
 
-export type CoverResult = { ok: true; url: string } | { ok: false; message: string };
+export type CoverResult = { ok: true } | { ok: false; message: string };
 
 const from = (table: string) => supabase.from(table as never);
 
@@ -84,10 +85,10 @@ export function validateCover(file: Pick<File, "type" | "size">): string | null 
   return null;
 }
 
-/** Writes cover_url on the caller's own row; false when there is no row to write. */
-async function writeCoverUrl(me: string, url: string | null): Promise<{ ok: true } | { ok: false; message: string }> {
+/** Clears cover_url on the caller's own row; false when there is no row to write. */
+async function clearCoverUrl(me: string): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
-    const { data, error } = await from("professional_profiles").update({ cover_url: url } as never).eq("profile_id", me).select("profile_id");
+    const { data, error } = await from("professional_profiles").update({ cover_url: null } as never).eq("profile_id", me).select("profile_id");
     if (error) return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't save your cover photo. Try again." };
     if (!(data ?? []).length) return { ok: false, message: "Finish setting up your profile first, then add a cover." };
     return { ok: true };
@@ -96,47 +97,34 @@ async function writeCoverUrl(me: string, url: string | null): Promise<{ ok: true
   }
 }
 
-/** Uploads a new cover and points the caller's row at it; the old file goes last, only on success. */
-export async function uploadCover(me: string, file: File, previousUrl?: string | null): Promise<CoverResult> {
+/**
+ * Sends a new cover for approval (submit_image 'professional_cover', the
+ * record being the caller's own professional_profiles row, which must exist).
+ * cover_url is left alone: the approved cover stays up until this one is
+ * approved, and a newer submission replaces a pending one.
+ */
+export async function submitCover(me: string, file: File): Promise<CoverResult> {
   const invalid = validateCover(file);
   if (invalid) return { ok: false, message: invalid };
 
   const stripped = await stripPrivateExif(await downscale(file));
-  const extension = stripped.type === "image/png" ? "png" : stripped.type === "image/webp" ? "webp" : "jpg";
-  const path = `${me}/${crypto.randomUUID()}.${extension}`;
-
   // A thrown error (a dropped connection, an unreadable answer) is a failed
   // upload too, never a picker stuck on "Uploading…".
-  const uploadError = await supabase.storage
-    .from(BUCKET)
-    .upload(path, stripped, { contentType: stripped.type, upsert: false })
-    .then((r) => r.error, (e: unknown) => (e instanceof Error ? e : new Error(String(e))));
-  if (uploadError) {
-    console.error("[cover] Upload failed:", uploadError.message);
-    return { ok: false, message: "That photo couldn't be uploaded. Check your connection and try again." };
+  try {
+    const r = await stageAndSubmit(me, "professional_cover", me, stripped);
+    return r.ok ? { ok: true } : { ok: false, message: r.message };
+  } catch (e) {
+    console.error("[cover] Could not send the cover:", e);
+    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : "That photo couldn't be uploaded. Check your connection and try again." };
   }
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(BUCKET).getPublicUrl(path);
-
-  const written = await writeCoverUrl(me, publicUrl);
-  if (!written.ok) {
-    await supabase.storage.from(BUCKET).remove([path]);
-    return written;
-  }
-
-  const previousPath = pathFromPublicUrl(previousUrl, me);
-  if (previousPath && previousPath !== path) {
-    const { error } = await supabase.storage.from(BUCKET).remove([previousPath]);
-    if (error) console.warn("[cover] Could not remove the previous cover:", error.message);
-  }
-  return { ok: true, url: publicUrl };
 }
 
 /** Removes the cover: the row first (the truth), then the file. */
 export async function removeCover(me: string, currentUrl: string | null | undefined): Promise<{ ok: true } | { ok: false; message: string }> {
-  const written = await writeCoverUrl(me, null);
+  // A cover still waiting for approval is taken back too (withdraw_image).
+  const withdrawn = await withdrawPending("professional_cover", me);
+  if (!withdrawn.ok) return withdrawn;
+  const written = await clearCoverUrl(me);
   if (!written.ok) return written;
   const path = pathFromPublicUrl(currentUrl, me);
   if (path) {

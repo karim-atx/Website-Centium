@@ -12,13 +12,13 @@ import {
   fetchMyBusinessRow,
   fetchReviewStatus,
   hasProgress,
-  imageUrl,
   markProgress,
 
   type ReviewStatus,
 } from "../../../services/business-onboarding";
 import { listDrafts } from "../../../services/onboarding/drafts";
 import { saveListingActive } from "../../../services/business-market";
+import { useImagePreview } from "./useImagePreview";
 import "../shell/onboarding.css";
 
 // /app/business/setup: where a business lands after Submit for review, and
@@ -110,18 +110,21 @@ export default function BusinessSetupPage() {
 
   const lane = biz.lane ?? laneForBusinessType(status?.businessType) ?? "gym";
   const name = status?.businessName ?? biz.name;
+  // The owner's own pictures, a staged one (waiting for approval) included.
+  const coverUrl = useImagePreview("cover", biz.coverPath);
+  const logoUrl = useImagePreview("logo", biz.logoPath);
   const preview = useMemo(
     () => ({
-      coverUrl: imageUrl("cover", biz.coverPath),
+      coverUrl,
       coverLabel: coverLabel(lane),
-      logoUrl: imageUrl("logo", biz.logoPath),
+      logoUrl,
       initials: initials(name),
       name,
       type: areaOf(biz.location.address) ? `${laneTypeLabel(lane, biz.storeType)} · ${areaOf(biz.location.address)}` : laneTypeLabel(lane, biz.storeType),
       tags: listingTags(lane === "classes" && biz.essentials.classTypes.length ? biz.essentials.classTypes : biz.categories),
       line: listingLine(lane, biz.hours, biz.essentials, areaOf(biz.location.address)),
     }),
-    [biz, lane, name]
+    [biz, lane, name, coverUrl, logoUrl]
   );
 
   if (!uid) return <Navigate to="/app/onboarding" replace />;

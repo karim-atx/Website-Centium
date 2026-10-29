@@ -8,6 +8,7 @@
 
 import type { ProNotification } from "../../../services/pro/notifications";
 import { CLIENT_COPY, notificationCopy, PRO_COPY } from "../../../services/notifications/notificationsModel";
+import { imageNoticeCopy } from "../../../services/moderation/imageCopy";
 import { CATEGORY_LABEL } from "./categoryLabels";
 import { topicsPhrase } from "../forms/formModel";
 
@@ -124,6 +125,16 @@ export function notificationText(n: ProNotification, names: Record<string, strin
     }
     case "pro.ambassador.declined": {
       const c = notificationCopy({ titleKey: "ambassador_application_declined", kind: "ambassador_application_declined", payload: p }, CLIENT_COPY);
+      return { title: c.title, line: c.body, icon: "bell", tone: "pr" };
+    }
+    // Round C Release 2 (Database 20261221040000): an image decision, with
+    // payload.surface and, when rejected, payload.reason_category.
+    case "pro.image.approved": {
+      const c = imageNoticeCopy(true, p.surface, null);
+      return { title: c.title, line: c.body, icon: "bell", tone: "done" };
+    }
+    case "pro.image.rejected": {
+      const c = imageNoticeCopy(false, p.surface, p.reason_category);
       return { title: c.title, line: c.body, icon: "bell", tone: "pr" };
     }
     default:

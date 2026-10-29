@@ -1,15 +1,15 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { coverBucketFor, coverObjectPath, coverToRemove, coverUrlFor } from "./cover";
+import { coverBucketFor, coverToRemove, coverUrlFor } from "./cover";
 
 const OWNER = "11111111-1111-4111-8111-111111111111";
 const MANAGER = "22222222-2222-4222-8222-222222222222";
 const url = (bucket: string, path: string) => `https://x/storage/v1/object/public/${bucket}/${path}`;
 
-test("new covers go to business-covers under the owner's uid, never named cover-", () => {
-  const p = coverObjectPath(OWNER, "abc");
-  assert.equal(p, `${OWNER}/abc.jpg`);
+test("an approved cover (published at its staged path) is read from business-covers", () => {
+  const p = `${OWNER}/business_cover/abc.jpg`;
   assert.equal(coverBucketFor(p), "business-covers");
+  assert.deepEqual(coverToRemove(p, { ownerUid: OWNER, callerUid: MANAGER }), { bucket: "business-covers", path: p });
 });
 
 test("old business-logos covers keep displaying from where they were written", () => {

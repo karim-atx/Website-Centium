@@ -5,7 +5,6 @@ import {
   busyDateOf,
   cancelBody,
   cancelledToast,
-  classCoverPath,
   effectiveRules,
   hoursBefore,
   isoWeekday,
@@ -123,9 +122,8 @@ test("booking rules: type, then default, then venue, then the fallback", () => {
   assert.equal(minutesBefore(0), "At class time");
 });
 
-test("class details: what to bring and the cover path", () => {
+test("class details: what to bring", () => {
   assert.deepEqual(bringList(["  Mat ", "mat", "", "Water"]), ["Mat", "Water"]);
   assert.equal(bringList(Array.from({ length: 14 }, (_, i) => `Item ${i}`)).length, 10);
   assert.equal(bringList(["x".repeat(80)])[0].length, 60);
-  assert.equal(classCoverPath("u1", "b1", "f1"), "u1/b1/f1.jpg");
 });

@@ -24,7 +24,7 @@ import {
 import { forumAge, hiddenInRecovery, type ForumCategory } from "../../services/forum/rules";
 import { ForumSafetySheet } from "./ForumSafetySheet";
 import { OwnPostSheet } from "./OwnPostSheet";
-import { AuthorInitial, AuthorName, DangerLine, ForumPlaceholder, HeartIcon, HeldNote, ProfessionalBadge, RemovedNote } from "./parts";
+import { AuthorInitial, AuthorName, DangerLine, ForumPlaceholder, HeartIcon, HeldNote, OwnPhotoBadge, ProfessionalBadge, RemovedNote } from "./parts";
 import { fv } from "./forumColor";
 import { PopupMenu, type PopupMenuOption } from "../ui/PopupMenu";
 import { useIsDark } from "../../hooks/useIsDark";
@@ -392,7 +392,7 @@ export function ForumPostView({
               <h2 className="relative m-0 text-[21px] font-extrabold leading-tight [overflow-wrap:anywhere] [text-wrap:balance]">{thread.title}</h2>
             )}
           </div>
-          {thread.status === "held" && <HeldNote />}
+          {thread.status === "held" && <HeldNote text={[thread.title ?? "", thread.body ?? ""].join("\n")} />}
           {editing && "threadId" in editing.ref ? (
             editFields("post")
           ) : (
@@ -400,9 +400,12 @@ export function ForumPostView({
               {thread.body}
             </p>
           )}
-          {thread.photoPath && (
-            <div className="rounded-[14px] overflow-hidden" style={{ background: fv("photo-bg"), minHeight: photoUrl ? undefined : 180 }}>
+          {/* A photo waiting for approval has no URL for anybody but its
+              author: others see the post without it (Round C Release 2). */}
+          {thread.photoPath && (photoUrl || (authors.get(thread.id)?.isMine ?? false)) && (
+            <div className="relative rounded-[14px] overflow-hidden" style={{ background: fv("photo-bg"), minHeight: photoUrl ? undefined : 180 }}>
               {photoUrl && <img src={photoUrl} alt="Photo attached to the post" className="w-full max-h-[420px] object-cover" />}
+              {(authors.get(thread.id)?.isMine ?? false) && <OwnPhotoBadge threadId={thread.id} />}
             </div>
           )}
           <p className="m-0 text-[13px]" style={{ color: fv("muted") }}>
@@ -784,7 +787,7 @@ function ReplyRow({
             </button>
           )}
         </span>
-        {reply.status === "held" && <HeldNote />}
+        {reply.status === "held" && <HeldNote text={reply.body ?? ""} />}
         {editor ?? (
           <span className="text-[14px] leading-[1.5] whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ color: fv("body") }}>
             {reply.body}

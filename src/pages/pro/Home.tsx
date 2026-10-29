@@ -43,6 +43,7 @@ import { acceptEmployment, removeMyEmployment, type MyEmployment } from "../../s
 import { startThread } from "../../services/messaging";
 import type { ProNotification } from "../../services/pro/notifications";
 import { proMemberTarget } from "../../services/notifications/notificationsModel";
+import { imageHome } from "../../services/moderation/imageCopy";
 
 /**
  * Release 3 · Home (/app/pro, CL1 v6; HANDOVER f "CL · Home"; FINAL_PLAN W2).
@@ -380,6 +381,12 @@ export default function Home() {
         setHubOpen(false);
         navigate(`${PRO_ROUTES.more}?open=referral`);
         return;
+      case "image_approval": {
+        // Round C Release 2: pro.image.approved / .rejected open where the image lives.
+        setHubOpen(false);
+        navigate(imageHome(n.payload.surface, "professional") ?? PRO_ROUTES.more);
+        return;
+      }
       case "care_link":
       case "care_referral":
         setHubOpen(false);

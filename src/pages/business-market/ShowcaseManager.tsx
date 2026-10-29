@@ -11,6 +11,7 @@ import { reorderShowcase } from "../../services/business-market/overview";
 import { marketPalette } from "../../theme/marketTokens";
 import { ProductEditorSheet } from "../business-ops/store/products/ProductEditorSheet";
 import { useMarket } from "./MarketContext";
+import { usePendingPhotos } from "./usePendingPhotos";
 import { CapsLabel, OutlineButton, TextLink, lh, px, useMarketColors, useStrip } from "./listingParts";
 import { dropIndex, groupByCategory, itemsHeader, mergeSectionOrder, moveTo, priceLine } from "./showcaseModel";
 
@@ -61,6 +62,8 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
   const [editor, setEditor] = useState<{ open: boolean; product: Product | null }>({ open: false, product: null });
   const [strip, showStrip] = useStrip();
   const reload = useCallback(() => setTick((t) => t + 1), []);
+  // Round C Release 2: a photo waiting for approval shows in its row's frame (only to this business).
+  const pending = usePendingPhotos("showcase_image", tick);
 
   useEffect(() => {
     if (!businessId) return;
@@ -117,6 +120,7 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
       <ItemList
         label={section}
         items={list}
+        pending={pending}
         store={store}
         canReorder={canEdit}
         onOpen={open}
@@ -163,6 +167,7 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
               <ItemList
                 label={g.name}
                 items={g.list.slice(0, CAP)}
+                pending={pending}
                 store
                 canReorder={canEdit}
                 onOpen={open}
@@ -178,7 +183,7 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
           {banner}
           {header}
           <div style={{ marginTop: 10 }}>
-            <ItemList label="Showcase items" items={products} store={false} canReorder={canEdit} onOpen={open} onReorder={(ids) => void reorder(ids)} />
+            <ItemList label="Showcase items" items={products} pending={pending} store={false} canReorder={canEdit} onOpen={open} onReorder={(ids) => void reorder(ids)} />
           </div>
         </>
       );
@@ -262,6 +267,7 @@ const DOTS = (
 function ItemList({
   label,
   items,
+  pending,
   store,
   canReorder,
   onOpen,
@@ -269,6 +275,8 @@ function ItemList({
 }: {
   label: string;
   items: Product[];
+  /** Item id → the owner's photo waiting for approval (signed URL). */
+  pending: Map<string, string>;
   store: boolean;
   canReorder: boolean;
   onOpen: (p: Product) => void;
@@ -373,6 +381,7 @@ function ItemList({
           const chip = store ? stockChip(p) : p.visible ? null : { label: "Hidden", tone: "soft" as const };
           const [chipBg, chipInk] = !chip ? ["", ""] : chip.tone === "warn" ? [c.cautionbg, c.caution] : chip.tone === "bad" ? [c.highbg, c.high] : [c.soft, c.faint];
           const op = p.visible ? 1 : 0.5;
+          const photo = pending.get(p.id) ?? p.imageUrl;
           const price = priceLine(p, store);
           return (
             <div
@@ -416,7 +425,7 @@ function ItemList({
                 style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10, padding: 0, border: 0, background: "transparent", textAlign: "left", fontFamily: "inherit", color: c.ink, cursor: "pointer" }}
               >
                 <span style={{ width: 52, height: 52, borderRadius: 12, background: c.soft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, opacity: op, overflow: "hidden" }}>
-                  {p.imageUrl ? <img src={p.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : <ImageIcon size={18} strokeWidth={1.8} color={c.tert} aria-hidden />}
+                  {photo ? <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : <ImageIcon size={18} strokeWidth={1.8} color={c.tert} aria-hidden />}
                 </span>
                 <span style={{ flex: 1, minWidth: 0, opacity: op, lineHeight: "normal" }}>
                   <span style={{ display: "block", fontSize: px(13.5), fontWeight: 700 }}>{p.name}</span>

@@ -4,7 +4,7 @@ import { BizListingPreview, BizSummary } from "./ui";
 import { ObSectionLabel, ObTerms } from "../shell";
 import { areaOf, bizStepNames, coverLabel, hoursSummary, initials, laneTypeLabel, listingLine, listingTags, TERMS_ERROR } from "./lanes";
 import { docsFor } from "./draft";
-import { imageUrl } from "../../../services/business-onboarding";
+import { useImagePreview } from "./useImagePreview";
 import { HealthDisclaimer } from "../../../components/ui/HealthDisclaimer";
 import type { LaneStepProps } from "./laneTypes";
 
@@ -20,6 +20,8 @@ export const ReviewStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, onCo
   const [termsError, setTermsError] = useState(false);
   const typeL = laneTypeLabel(lane, biz.storeType);
   const docs = docsFor(biz);
+  const coverUrl = useImagePreview("cover", biz.coverPath);
+  const logoUrl = useImagePreview("logo", biz.logoPath);
   const uploaded = [biz.proof, biz.idFront, biz.idBack].filter((s) => s.path).length;
   // All three verification files are needed to submit (Policies and
   // verification will not continue without them; a draft from before uploads
@@ -95,9 +97,9 @@ export const ReviewStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, onCo
       <BizSummary n={5} title={names.payments} lines={[biz.cash ? "Cash now, Whish after approval" : "Whish after approval"]} onAction={() => goTo("bizPayments")} />
       <ObSectionLabel title="Your listing on Explore" margin="14px 2px 12px" />
       <BizListingPreview
-        coverUrl={imageUrl("cover", biz.coverPath)}
+        coverUrl={coverUrl}
         coverLabel={coverLabel(lane)}
-        logoUrl={imageUrl("logo", biz.logoPath)}
+        logoUrl={logoUrl}
         initials={initials(biz.name)}
         name={biz.name}
         type={area ? `${typeL} · ${area}` : typeL}

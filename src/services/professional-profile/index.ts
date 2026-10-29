@@ -1,6 +1,8 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { moderationRefusal } from "../moderation/text";
 import type { Enums } from "../../../lib/supabase/database.types";
+import { contactRefusal } from "../moderation/text";
 
 // A professional's own `professional_profiles` row: the listing content, the
 // rates, and the public-listing switch.
@@ -49,7 +51,7 @@ function describe(error: PostgrestError): string {
   if (code === "42501") {
     return "That field can't be edited from here.";
   }
-  return "Could not save your profile. Try again.";
+  return moderationRefusal(error) ?? "Could not save your profile. Try again.";
 }
 
 type Row = {
@@ -157,6 +159,9 @@ export async function saveMyProfile(
   userId: string,
   patch: ProfessionalProfilePatch
 ): Promise<SaveResult> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(patch.bio);
+  if (contact) return { ok: false, message: contact };
   const row = toRow(patch);
 
   const updated = await supabase

@@ -10,6 +10,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { marketRpc, marketRpcRaw, isPendingError, type MarketResult } from "../market/rpc";
 import { isOffline } from "../network-error";
 import { findPast, isOver, parseClassBookings, REVIEW_ERROR_TEXT, reviewErrorOf, targetOf, type PastBooking, type ReviewError, type ReviewTarget } from "./model";
+import { contactRefusal } from "../moderation/text";
 
 export * from "./model";
 
@@ -59,6 +60,9 @@ const FALLBACK = "Couldn't send your review. Try again.";
 
 /** review_instructor(p_class_id, p_rating, p_body) → the review id. One per member per series; a second one edits it. */
 export async function reviewInstructor(classId: string, rating: number, text: string | null): Promise<ReviewWrite> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(text);
+  if (contact) return { ok: false, message: contact };
   const res = await marketRpcRaw("review_instructor", { p_class_id: classId, p_rating: rating, p_body: text });
   if ("thrown" in res) return { ok: false, offline: isOffline(res.thrown), message: FALLBACK };
   if (res.error) {

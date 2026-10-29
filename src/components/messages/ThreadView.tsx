@@ -48,6 +48,10 @@ import {
 } from "../../services/messaging/chatFeatures";
 import { AttachmentGone } from "./AttachmentGone";
 import { ImageLightbox } from "./ImageLightbox";
+import { GetSupportPopup } from "../moderation/GetSupportPopup";
+import { loadSelfHarmPhrases, mentionsSelfHarm } from "../../services/moderation/phrases";
+import { supportPlace } from "../../services/moderation/support";
+import { browserTimezone } from "../../services/timezone";
 import { attachmentUrl, isImagePath } from "../../services/messaging/attachmentUrls";
 import { ForwardSheet } from "./ForwardSheet";
 import { QuotedMessage } from "./QuotedMessage";
@@ -356,6 +360,13 @@ export const ThreadView: React.FC<{
     if (!draft && cv2FieldRef.current) cv2FieldRef.current.style.height = "";
   }, [draft]);
   const [sending, setSending] = useState(false);
+  // Round C Release 2: "Get support" for the sender only, when their own
+  // message matched the self-harm list ON THIS DEVICE. Nothing about the
+  // match is sent; the message itself goes as normal.
+  const [supportOpen, setSupportOpen] = useState(false);
+  useEffect(() => {
+    void loadSelfHarmPhrases();
+  }, []);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
@@ -867,6 +878,7 @@ export const ThreadView: React.FC<{
     // Appending the returned ROW, not the draft — the id and timestamp are the
     // database's, so the next poll recognises it instead of duplicating it.
     setMessages((prev) => (prev.some((m) => m.id === result.message.id) ? prev : [...prev, result.message]));
+    void mentionsSelfHarm(body).then((m) => m && setSupportOpen(true));
   };
 
   /**
@@ -2313,6 +2325,8 @@ export const ThreadView: React.FC<{
           />
         </>
       )}
+
+      <GetSupportPopup open={supportOpen} onClose={() => setSupportOpen(false)} place={supportPlace(null, browserTimezone())} />
 
       <FileViewerSheet
         open={!!viewing}

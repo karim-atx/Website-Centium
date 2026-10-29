@@ -14,6 +14,7 @@
 import { formatShortDate } from "../../utils/date";
 import { formatPoints } from "../../components/market/pointsModel";
 import { num, rows, str } from "../market/parse";
+import { BLOCKED_TEXT } from "../moderation/text";
 
 export type OfferVariant = "business" | "professional";
 export type OfferStatus = "active" | "scheduled" | "paused" | "expired";
@@ -422,6 +423,9 @@ export function offerWriteRefusal(e: { code?: string | null; message?: string | 
       return "This offer no longer exists.";
     case "ATX02":
       return "Too many new offers in a short time. Try again later.";
+    // Round C Release 2: the word lists.
+    case "ATX60":
+      return BLOCKED_TEXT;
     default:
       return null;
   }

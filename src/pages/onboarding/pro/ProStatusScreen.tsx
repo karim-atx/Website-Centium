@@ -11,6 +11,7 @@ import { isRegulated, type ProKind } from "./proModel";
 import { ProfilePreview, SummaryCard, Timeline } from "./parts";
 import { formatShortDate } from "../../../utils/date";
 import { useCoverPicker } from "../../../components/pro/profile/useCoverPicker";
+import { ImageApprovalBadge } from "../../../components/moderation/ImageApproval";
 
 export type ProStatus = "pending" | "live" | "verified" | "rejected";
 
@@ -72,7 +73,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
   const celebrate = status === "live" || status === "verified";
   const [k, setK] = useState(celebrate && !reduced ? 1 : 4);
   // Release B: the cover added on Review shows on the preview (read only here).
-  const { url: coverUrl } = useCoverPicker();
+  const { url: coverUrl, image: coverImage } = useCoverPicker();
   useEffect(() => {
     if (!celebrate || reduced) return;
     const timers = K_AT.slice(1).map((ms, i) => window.setTimeout(() => setK(i + 2), ms));
@@ -202,6 +203,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
             initials={preview.initials}
             avatarUrl={preview.avatarUrl}
             coverUrl={coverUrl}
+            coverBadge={coverImage && <ImageApprovalBadge state={coverImage} />}
             name={preview.name}
             type={`${preview.label}${verified && reg ? " · Verified" : ""}`}
             tags={preview.tags.slice(0, 2)}

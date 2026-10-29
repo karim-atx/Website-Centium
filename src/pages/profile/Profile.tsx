@@ -12,7 +12,8 @@ import { CtaButton } from "../../components/ui/PinnedCta";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { useApp } from "../../context/AppContext";
 import { useIsAmbassador } from "../../hooks/useIsAmbassador";
-import { AVATAR_ACCEPT, removeAvatar, uploadAvatar } from "../../services/avatar";
+import { AVATAR_ACCEPT, removeAvatar, submitAvatar } from "../../services/avatar";
+import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../components/moderation/ImageApproval";
 import { DataSharingSection } from "../../components/professionals/DataSharingSection";
 import { MembershipsCard } from "../../components/profile/MembershipsCard";
 import { fetchLinkedProfessionals, type LinkedProfessional } from "../../services/consent";
@@ -114,6 +115,11 @@ function ClientProfile() {
   const [avatarAnchor, setAvatarAnchor] = useState<HTMLElement | null>(null);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  // Round C Release 2: a new picture waits for approval. The owner sees it
+  // here (signed, from image-staging) with the badge; everyone else, and the
+  // rest of the app, keep the approved one in user.avatarUrl.
+  const { image: ownAvatar, refresh: refreshOwnAvatar } = useOwnImage("avatar", authUserId);
+  const shownAvatar = (ownAvatar?.status === "pending" && ownAvatar.url) || user.avatarUrl;
   const [credentialsOpen, setCredentialsOpen] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -125,20 +131,20 @@ function ClientProfile() {
   // not the other side of a message thread, not the same person on a second
   // device. See services/avatar.
   //
-  // LOCAL STATE IS UPDATED LAST, from the URL the server gave back, so what
-  // is on screen is what is actually stored rather than an optimistic guess
-  // that a failed upload would leave standing.
+  // Since Round C Release 2 it is sent for approval: user.avatarUrl is not
+  // touched, and the pending picture is read back (refresh) rather than
+  // guessed, so a failed send leaves nothing standing.
   const handleAvatarFile = async (file: File) => {
     if (!authUserId || avatarBusy) return;
     setAvatarBusy(true);
     setAvatarError(null);
-    const result = await uploadAvatar(authUserId, file, user.avatarUrl);
+    const result = await submitAvatar(authUserId, file);
     setAvatarBusy(false);
     if (!result.ok) {
       setAvatarError(result.message);
       return;
     }
-    updateProfile({ avatarUrl: result.url });
+    refreshOwnAvatar();
   };
 
   const handleAvatarRemove = async () => {
@@ -152,6 +158,7 @@ function ClientProfile() {
       return;
     }
     updateProfile({ avatarUrl: undefined });
+    refreshOwnAvatar();
   };
 
   const openMetricEditor = (field: "weightKg" | "heightCm") => {
@@ -371,8 +378,9 @@ function ClientProfile() {
             aria-expanded={!!avatarAnchor}
             className="tap relative w-[84px] h-[84px] rounded-full bg-teal-pale flex items-center justify-center text-[30px] font-bold text-charcoal-soft dark:text-teal-deep-text overflow-hidden shrink-0"
           >
-            {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" /> : user.firstName.charAt(0)}
+            {shownAvatar ? <img src={shownAvatar} alt="" className="w-full h-full object-cover" /> : user.firstName.charAt(0)}
           </button>
+          <ImageApprovalBadge state={ownAvatar} className="mt-2" />
           {/* Decision 23 (item 98): the Premium crown and Ambassador badge are
               16 badges after the name, 5 apart, as the Professional card's
               verified badge (DirectoryCard). */}
@@ -418,6 +426,7 @@ function ClientProfile() {
               {avatarError}
             </p>
           )}
+          <ImageApprovalNote state={ownAvatar} className="mt-2 max-w-[260px]" />
         </div>
 
         {!hidesClientFields &&
@@ -909,7 +918,7 @@ function ClientProfile() {
             label: "Remove photo",
             icon: <Trash2 size={15} strokeWidth={1.75} />,
             destructive: true,
-            disabled: !user.avatarUrl || avatarBusy,
+            disabled: (!user.avatarUrl && ownAvatar?.status !== "pending") || avatarBusy,
           },
         ]}
         onSelect={(v) => {

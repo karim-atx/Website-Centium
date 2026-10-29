@@ -8,6 +8,10 @@ import { prepareForumPhoto } from "../forum/photo";
 // still seen by the business), image_url and category_id
 // (product_categories). Writing them needs `store` or `marketing`.
 //
+// Round C Release 2: image_url is written by the Database once an admin
+// approves the photo (showcase_image, through image-staging); this file only
+// ever clears it (clearProductPhoto).
+//
 // GRANTS (local stack, 15 Oct): business_offerings INSERT business_id,
 // category, category_id, description, image_url, price, stock, title,
 // visible; UPDATE category, category_id, description, image_url, price,
@@ -19,6 +23,8 @@ import { prepareForumPhoto } from "../forum/photo";
 // the B11 fields as "Coming soon" there (never sent).
 
 import type { OfferingCategory, Product, ProductCategory } from "./types";
+import { contactRefusal } from "../moderation/text";
+import { withdrawPending } from "../moderation/images";
 export type { OfferingCategory, Product, ProductCategory } from "./types";
 
 export interface ProductsLoad {
@@ -96,12 +102,14 @@ export interface ProductDraft {
   stock: number | null;
   visible: boolean;
   categoryId: string | null;
-  imageUrl: string | null;
   /** The Explore category a new item is listed under (W3: a gym or class business picks it, as the old Offerings form did); unset = by business type. */
   category?: OfferingCategory;
 }
 
 export async function createProduct(businessId: string, businessType: string | null, d: ProductDraft, stockShipped: boolean): Promise<Write<Product>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(d.name, d.description);
+  if (contact) return { ok: false, code: "contact_details", message: contact };
   const payload: Row = {
     business_id: businessId,
     title: d.name.trim(),
@@ -113,7 +121,6 @@ export async function createProduct(businessId: string, businessType: string | n
     payload.stock = d.stock;
     payload.visible = d.visible;
     payload.category_id = d.categoryId;
-    payload.image_url = d.imageUrl;
   }
   const { data, error } = await db.from("business_offerings").insert(payload).select(BASE).single();
   if (error || !data) return writeFail(error, "Could not create the product");
@@ -121,6 +128,9 @@ export async function createProduct(businessId: string, businessType: string | n
 }
 
 export async function updateProduct(id: string, d: ProductDraft, stockShipped: boolean): Promise<Write<null>> {
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(d.name, d.description);
+  if (contact) return { ok: false, code: "contact_details", message: contact };
   // Two literal payloads (not a conditional) so npm run audit:grants checks both.
   const { error } = stockShipped
     ? await db
@@ -132,11 +142,20 @@ export async function updateProduct(id: string, d: ProductDraft, stockShipped: b
           stock: d.stock,
           visible: d.visible,
           category_id: d.categoryId,
-          image_url: d.imageUrl,
         })
         .eq("id", id)
     : await db.from("business_offerings").update({ title: d.name.trim(), price: d.price, description: d.description.trim() || null }).eq("id", id);
   if (error) return writeFail(error, "Could not save the product");
+  return { ok: true, value: null };
+}
+
+/** Remove photo: the one image_url write left to the app (a new photo goes for approval). */
+export async function clearProductPhoto(id: string): Promise<Write<null>> {
+  // A photo still waiting for approval is taken back too (withdraw_image).
+  const withdrawn = await withdrawPending("showcase_image", id);
+  if (!withdrawn.ok) return { ok: false, message: withdrawn.message, code: withdrawn.code };
+  const { error } = await db.from("business_offerings").update({ image_url: null }).eq("id", id);
+  if (error) return writeFail(error, "Could not remove the product photo");
   return { ok: true, value: null };
 }
 
@@ -172,25 +191,15 @@ export async function createCategory(businessId: string, name: string, glyph: st
 }
 
 // ---------------------------------------------------------------------------
-// Product photos: public bucket product-images, <uid>/<business_id>/<file>,
-// 5 MB, JPEG / PNG / WebP (re-encoded as JPEG, metadata dropped).
+// Product photos: JPEG / PNG / WebP up to 5 MB, re-encoded as JPEG with the
+// metadata dropped. Staged and submitted for approval by the editor once the
+// row exists (also a professional's service photos, services/pro-market).
 
-const PHOTO_BUCKET = "product-images";
-
-export async function uploadProductPhoto(businessId: string, file: File): Promise<{ ok: true; url: string } | { ok: false; message: string }> {
-  const { data: auth } = await db.auth.getUser();
-  const uid = auth?.user?.id as string | undefined;
-  if (!uid) return { ok: false, message: "Sign in again to add a photo." };
+export async function prepareProductPhoto(file: File): Promise<{ ok: true; file: File } | { ok: false; message: string }> {
   const prepared = await prepareForumPhoto(file);
   if (!prepared.ok) return { ok: false, message: prepared.message };
   if (prepared.file.size > 5 * 1024 * 1024) return { ok: false, message: "This photo is too large. Choose one under 5 MB." };
-  const path = `${uid}/${businessId}/${crypto.randomUUID()}.jpg`;
-  const up = await db.storage.from(PHOTO_BUCKET).upload(path, prepared.file, { contentType: "image/jpeg", upsert: false });
-  if (up.error) {
-    console.warn("[store] product photo upload refused:", up.error.message);
-    return { ok: false, message: "Couldn't upload the photo. Check your connection and try again." };
-  }
-  return { ok: true, url: db.storage.from(PHOTO_BUCKET).getPublicUrl(path).data.publicUrl as string };
+  return { ok: true, file: prepared.file };
 }
 
 // ---------------------------------------------------------------------------

@@ -18,6 +18,7 @@ import {
   starKey,
   type ReviewTarget,
 } from "../../services/instructor-reviews";
+import { GuidelinesLink } from "../moderation/GuidelinesLink";
 
 // Market + Share 3.0 · W5 · InstructorReviewDialog (PLAN F13; C-MO.4.5
 // `revPrompt` / `revFilled`, Client Professional Screens lines 254–270 and
@@ -232,6 +233,7 @@ const ReviewCard: React.FC<Omit<InstructorReviewDialogProps, "target"> & { targe
         {note ? (
           <p role={note.tone === "error" ? "alert" : "status"} style={{ margin: "12px 0 0", fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: note.tone === "error" ? m.high : m.ink2 }}>
             {note.text}
+            <GuidelinesLink message={note.text} />
           </p>
         ) : !online ? (
           <p role="status" style={{ margin: "12px 0 0", fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: m.ink2 }}>

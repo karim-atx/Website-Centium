@@ -16,6 +16,8 @@ import { AMENITY_LABEL, isAmenityKey, photoCounts, photoLine as galleryLine, sor
 import { fetchMarketplaceOverview } from "../../services/business-market/overview";
 import { classesLine, heroView, ledgerRows, membershipsLine, type GymFigures, type OverviewState } from "../../services/business-market/overviewModel";
 import { fetchVenueDashboard } from "../../services/venues/console";
+import { fetchOwnPhotoImages, type OwnPhotoImage } from "../../services/business-market/listing";
+import { useOwnImage } from "../../components/moderation/ImageApproval";
 import type { VenueDashboard } from "../../services/venues/consoleLogic";
 import { useMarket } from "./MarketContext";
 import { CapsLabel, CategoriesCard, OutlineButton, PhotosCard, RatingCard, StrengthCard, YourCard, px, lh, useMarketColors, useStrip, type CardModel } from "./listingParts";
@@ -298,6 +300,18 @@ function ListingSection() {
       alive = false;
     };
   }, [businessId]);
+  // Round C Release 2: the viewer's own cover and photos waiting for approval
+  // show in the Photos thumbnails (from image-staging); the client card and
+  // the strength stay on the approved ones, which is what clients see.
+  const ownCover = useOwnImage("business_cover", businessId);
+  const [ownPhotos, setOwnPhotos] = useState<Map<string, OwnPhotoImage>>(new Map());
+  useEffect(() => {
+    let alive = true;
+    void fetchOwnPhotoImages().then((map) => alive && setOwnPhotos(map));
+    return () => {
+      alive = false;
+    };
+  }, [m.photos]);
   if (!business) return null;
   const reviews =
     metrics && metrics.businessId === businessId
@@ -307,7 +321,9 @@ function ListingSection() {
   const counts = photoCounts(gallery);
   // The cover first, then the approved photos; in-review photos are counted on the line, not shown yet.
   const photos = [...(business.coverUrl ? [business.coverUrl] : []), ...gallery.filter((p) => p.status === "approved").map((p) => p.url)];
-  const thumbs = [...(business.coverUrl ? [business.coverUrl] : []), ...gallery.filter((p) => p.status !== "rejected").map((p) => p.url)];
+  const pendingUrl = (own: OwnPhotoImage | null | undefined) => (own?.status === "pending" ? own.url : null);
+  const coverThumb = pendingUrl(ownCover.image) ?? business.coverUrl;
+  const thumbs = [...(coverThumb ? [coverThumb] : []), ...gallery.filter((p) => p.status !== "rejected").map((p) => pendingUrl(ownPhotos.get(p.id)) ?? p.url)];
   const amenities = m.details?.amenities ?? [];
   const amenitiesDone = m.strength?.amenities ?? amenities.length > 0;
   const firstVisitDone = m.strength?.first_visit ?? !!m.details?.firstVisit;

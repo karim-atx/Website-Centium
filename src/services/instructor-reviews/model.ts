@@ -13,6 +13,7 @@
 // instructor).
 
 import { bool, num, rows, str } from "../market/parse";
+import { BLOCKED_TEXT } from "../moderation/text";
 
 // ---------------------------------------------------------------- my_class_bookings (DB4)
 
@@ -201,7 +202,7 @@ export const REVIEW_TEXT_MAX = 2000;
  * alone are a review since Database #38 (gym_reviews.body is nullable and
  * its CHECK allows null), so an empty text is sent as null and accepted.
  */
-export type ReviewError = "not_attended" | "not_yet" | "no_instructor" | "bad_rating" | "too_long" | "rate_limited";
+export type ReviewError = "not_attended" | "not_yet" | "no_instructor" | "bad_rating" | "too_long" | "rate_limited" | "blocked";
 
 export function reviewErrorOf(e: { code?: string | null; message?: string | null } | null | undefined): ReviewError | null {
   if (!e) return null;
@@ -212,6 +213,7 @@ export function reviewErrorOf(e: { code?: string | null; message?: string | null
   if (e.code === "ATX91") return "bad_rating";
   if (e.code === "22023") return "too_long";
   if (e.code === "ATX02") return "rate_limited";
+  if (e.code === "ATX60") return "blocked";
   return null;
 }
 
@@ -223,4 +225,6 @@ export const REVIEW_ERROR_TEXT: Record<ReviewError, string> = {
   bad_rating: "Choose from 1 to 5 stars.",
   too_long: "Keep it under 2,000 characters.",
   rate_limited: "Too many reviews in a short time. Try again later.",
+  // Round C Release 2: the word lists.
+  blocked: BLOCKED_TEXT,
 };

@@ -11,6 +11,7 @@ import { proChipLabel } from "./proModel";
 import { ProfilePreview, SummaryCard } from "./parts";
 import { ProLicencePublish } from "./ProLicencePublish";
 import { useCoverPicker } from "../../../components/pro/profile/useCoverPicker";
+import { ImageApprovalBadge, ImageApprovalNote } from "../../../components/moderation/ImageApproval";
 import { ensureProProfileRow } from "../../../services/professional-onboarding";
 import type { ProStepProps } from "./types";
 
@@ -49,9 +50,9 @@ export const ProReviewStep: React.FC<
   const flow = useOnboardingFlow();
   const { user, authUserId } = useApp();
   const { cv, setCv } = useMyCv();
-  // Release B (W6C-3): the cover on the preview. The bucket's insert policy
-  // needs the professional_profiles row, which ensureProProfileRow makes
-  // (as the credential step does before a licence upload).
+  // Release B (W6C-3): the cover on the preview. submit_image needs the
+  // professional_profiles row, which ensureProProfileRow makes (as the
+  // credential step does before a licence upload).
   const cover = useCoverPicker(async () => (authUserId ? ensureProProfileRow(authUserId) : { ok: false }));
   const [termsError, setTermsError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -133,6 +134,7 @@ export const ProReviewStep: React.FC<
         coverUrl={cover.url}
         onCover={cover.choose}
         coverBusy={cover.busy}
+        coverBadge={cover.image && <ImageApprovalBadge state={cover.image} />}
       />
       {cover.inputs}
       {cover.error && (
@@ -140,6 +142,8 @@ export const ProReviewStep: React.FC<
           {cover.error}
         </p>
       )}
+      {/* Round C Release 2: a new cover waits for approval. */}
+      <ImageApprovalNote state={cover.image} className="mx-0.5 mb-2.5" />
       {/* OURS-licence-publish: the licences that will be on that profile, by choice, before going live. */}
       {cv && (
         <ProLicencePublish

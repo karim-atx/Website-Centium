@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { stripPrivateExif } from "../storage/exif";
-import { updateAvatarUrl } from "../profile";
+import { clearAvatarUrl } from "../profile";
+import { stageAndSubmit, withdrawPending } from "../moderation/images";
 
 // Profile pictures: the one PUBLIC bucket, and the reason this is its own
 // module rather than another branch of services/storage.
@@ -22,6 +23,15 @@ import { updateAvatarUrl } from "../profile";
 // state and nowhere else — not to a coach, not in a thread, not on a second
 // device, and not on the same device after signing out. The avatars bucket
 // and its four policies have existed since the storage migration, unused.
+//
+// ROUND C RELEASE 2 (Database 20261221040000): a new picture waits for an
+// admin. It is still resized and EXIF-stripped here, then staged in the
+// private image-staging bucket and submitted as `avatar`; on approval the
+// Database copies it into `avatars` at the same path and writes avatar_url
+// itself. This module only writes avatar_url to clear it (removeAvatar). The
+// owner sees their pending picture on their own profile screens through
+// useOwnImage; it never goes into the app-wide user state (a signed URL that
+// expires in ten minutes).
 
 const BUCKET = "avatars";
 
@@ -66,13 +76,11 @@ const JPEG_QUALITY = 0.85;
  * Extension hints alongside the MIME types, because some pickers match one
  * and not the other. NOT A CONTROL: `accept` is a hint, most OS dialogs offer
  * a way past it, and a file's reported type can be wrong regardless — the
- * check inside uploadAvatar is what actually decides.
+ * check inside submitAvatar is what actually decides.
  */
 export const AVATAR_ACCEPT = [...MIME_TYPES, ".jpg", ".jpeg", ".png", ".webp"].join(",");
 
-export type AvatarResult =
-  | { ok: true; url: string }
-  | { ok: false; message: string };
+export type AvatarResult = { ok: true } | { ok: false; message: string };
 
 /**
  * Whether an avatar value is a local-only picture that never reached Storage.
@@ -82,7 +90,8 @@ export type AvatarResult =
  * of step with reality, the value's own shape says whether it has been
  * uploaded. `data:` means it only ever lived in this browser; anything else
  * is a URL the server gave us. A migrated avatar cannot look like a candidate
- * again, because migrating it is what replaces the value.
+ * again, because a successful migration clears the local value (the picture
+ * then waits for approval like any other).
  */
 export function isLocalOnlyAvatar(url: string | null | undefined): boolean {
   return typeof url === "string" && url.startsWith("data:");
@@ -91,7 +100,7 @@ export function isLocalOnlyAvatar(url: string | null | undefined): boolean {
 /**
  * The object path inside `avatars` that a public URL points at, or null.
  *
- * Used only to delete the file an account is replacing. Verified to sit under
+ * Used only to delete the file an account is removing. Verified to sit under
  * the caller's own folder before it is returned: the bucket's policies would
  * refuse anything else anyway, but building a delete for someone else's path
  * and letting the server say no is not a thing to do on purpose.
@@ -165,85 +174,40 @@ function validate(file: File): string | null {
 }
 
 /**
- * Uploads a new profile picture and points the account's row at it.
+ * Sends a new profile picture for approval (submit_image 'avatar', the record
+ * being the account's own profiles row).
  *
- * A FRESH FILENAME EVERY TIME, NEVER `<userId>/avatar.jpg`. The bucket is
- * public, so the URL is served through a CDN and cached by it and by every
- * browser that has seen it. Reusing one path would mean the row updates, the
- * database is right, and the old face keeps appearing for everyone until some
- * cache somewhere decides otherwise — the exact bug this feature is being
- * built to fix, reintroduced one layer down and much harder to see.
+ * A FRESH FILENAME EVERY TIME (stagingPath's uuid), never a reused one: on
+ * approval the file is copied into the public bucket at the same path, and a
+ * reused path there would stay cached on the CDN and in every browser that
+ * had seen it.
  *
- * ORDER: upload, then the row, then the old file. The row write is the thing
- * that makes the new picture real, so nothing is deleted until it succeeds;
- * if it fails, the object just uploaded is removed rather than left orphaned,
- * which is the same compensating delete services/storage documents.
- *
- * `previousUrl` is whatever the account is currently showing. A `data:` URL
- * from before this existed resolves to no path and nothing is deleted, which
- * is correct — there was never a file.
+ * avatar_url IS NOT WRITTEN. The approved picture stays up for everyone until
+ * an admin approves this one; a newer submission replaces a pending one.
  */
-export async function uploadAvatar(
-  userId: string,
-  file: File,
-  previousUrl?: string | null
-): Promise<AvatarResult> {
+export async function submitAvatar(userId: string, file: File): Promise<AvatarResult> {
   const invalid = validate(file);
   if (invalid) return { ok: false, message: invalid };
 
   const resized = await downscale(file);
   const stripped = await stripPrivateExif(resized);
 
-  const extension = stripped.type === "image/png" ? "png" : stripped.type === "image/webp" ? "webp" : "jpg";
-  const path = `${userId}/${crypto.randomUUID()}.${extension}`;
-
-  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, stripped, {
-    contentType: stripped.type,
-    // A uuid collision would mean something is very wrong; overwriting is
-    // never the right response to it.
-    upsert: false,
-  });
-  if (uploadError) {
-    console.error("[avatar] Upload failed:", uploadError.message);
+  try {
+    const r = await stageAndSubmit(userId, "avatar", userId, stripped);
+    return r.ok ? { ok: true } : { ok: false, message: r.message };
+  } catch (e) {
+    console.error("[avatar] Could not send the picture:", e);
     return {
       ok: false,
       message: "That picture couldn't be uploaded. Check your connection and try again.",
     };
   }
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(BUCKET).getPublicUrl(path);
-
-  const written = await updateAvatarUrl(userId, publicUrl);
-  if (!written.ok) {
-    // The row is what makes the file the account's picture. Without it the
-    // object is unreferenced, so it goes rather than sitting in the bucket
-    // counting against the account forever.
-    await supabase.storage.from(BUCKET).remove([path]);
-    return { ok: false, message: written.message ?? "Couldn't save your new picture." };
-  }
-
-  // LAST, AND ONLY ON SUCCESS. Storage does not cascade and the row no longer
-  // references this object, so nothing else will ever clean it up — but
-  // deleting it before the row moved would have left the account pointing at
-  // a file that was gone.
-  const previousPath = pathFromPublicUrl(previousUrl, userId);
-  if (previousPath && previousPath !== path) {
-    const { error } = await supabase.storage.from(BUCKET).remove([previousPath]);
-    // Logged, not surfaced: the user's picture changed, which is what they
-    // asked for. A leftover file is an internal tidiness problem.
-    if (error) console.warn("[avatar] Could not remove the previous picture:", error.message);
-  }
-
-  return { ok: true, url: publicUrl };
 }
 
 /**
  * Removes the account's picture — the row first, then the file.
  *
- * ROW FIRST, the opposite order to upload, and for the same reason both are
- * right: the row is the truth. Clearing it first means the worst case is an
+ * ROW FIRST: the row is the truth. Clearing it first means the worst case is an
  * orphaned file nobody references; deleting the object first would mean the
  * worst case is every surface in the app showing a broken image.
  */
@@ -251,7 +215,10 @@ export async function removeAvatar(
   userId: string,
   currentUrl: string | null | undefined
 ): Promise<{ ok: boolean; message?: string }> {
-  const written = await updateAvatarUrl(userId, null);
+  // A picture still waiting for approval is taken back too (withdraw_image).
+  const withdrawn = await withdrawPending("avatar", userId);
+  if (!withdrawn.ok) return { ok: false, message: withdrawn.message };
+  const written = await clearAvatarUrl(userId);
   if (!written.ok) {
     return { ok: false, message: written.message ?? "Couldn't remove your picture." };
   }
@@ -265,7 +232,7 @@ export async function removeAvatar(
 }
 
 /**
- * Carries a pre-Storage `data:` avatar up to the bucket, once.
+ * Sends a pre-Storage `data:` avatar for approval, once.
  *
  * WHY THESE EXIST AT ALL: before this module, picking a picture produced a
  * base64 string in localStorage and nothing else. Those users have a real
@@ -273,11 +240,16 @@ export async function removeAvatar(
  * disappears the first time they sign out, because signOut clears
  * `centium-state:*`. This gets it to the server before that happens.
  *
+ * THROUGH APPROVAL LIKE ANY NEW PICTURE (Round C Release 2): staged and
+ * submitted by submitAvatar; avatar_url is written by the Database only once
+ * an admin approves it.
+ *
  * ONE-TIME BY CONSTRUCTION, not by a flag. isLocalOnlyAvatar answers from the
- * value itself, and a successful migration replaces that value with an https
- * URL — so the candidate test can never match the same picture twice. The
- * caller adds a per-account "already tried this page life" guard for the
- * failure case, the same shape the custom-meal and routine uploads use.
+ * value itself, and the caller clears that value once this succeeds (the
+ * owner then sees the pending picture on their profile screens) — so the
+ * candidate test can never match the same picture twice. The caller adds a
+ * per-account "already tried this page life" guard for the failure case, the
+ * same shape the custom-meal and routine uploads use.
  */
 export async function migrateLocalAvatar(userId: string, dataUrl: string): Promise<AvatarResult> {
   if (!isLocalOnlyAvatar(dataUrl)) {
@@ -293,8 +265,7 @@ export async function migrateLocalAvatar(userId: string, dataUrl: string): Promi
     // the chance.
     const type = MIME_TYPES.includes(blob.type) ? blob.type : "image/jpeg";
     const file = new File([blob], "avatar", { type });
-    // No previousUrl: a data: URL has no object behind it to delete.
-    return await uploadAvatar(userId, file);
+    return await submitAvatar(userId, file);
   } catch (e) {
     console.warn("[avatar] Could not migrate the local picture:", e);
     return { ok: false, message: "Couldn't move your saved picture to your account." };

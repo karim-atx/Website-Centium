@@ -1,24 +1,32 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ImageIcon } from "lucide-react";
 import {
+  clearProductPhoto,
   createCategory,
   createProduct,
   deleteProduct,
   fetchCategories,
   parseStock,
+  prepareProductPhoto,
   updateProduct,
-  uploadProductPhoto,
   type OfferingCategory,
   type Product,
   type ProductCategory,
 } from "../../../../services/store/products";
 import { formatPrice, parsePrice } from "../../../../utils/price";
 import { useOnline } from "../../../../hooks/useOnline";
+import { useApp } from "../../../../context/AppContext";
+import { stageAndSubmit } from "../../../../services/moderation/images";
+import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../../../components/moderation/ImageApproval";
 import { marketplaceCategories } from "../../../../data/mockProfessionals";
 import { BizShareButton } from "../../../../components/share/business/BizShareButton";
 import { productData } from "../../../../components/share/business/bizCardModel";
 import { MasterSheet, CentredDialog, PrimaryButton, SaveError, SheetBox, SheetSwitch, fieldStyle, px, useMarketColors } from "../../../business-market/listingParts";
 import { CategoryPicker } from "./CategoryPicker";
+import { CONTACT_TEXT, moderationRefusal } from "../../../../services/moderation/text";
+
+/** Round C Release 2: the word lists and contact details, in our words; null for anything else. */
+const saveRefusal = (r: { code?: string }) => (r.code === "contact_details" ? CONTACT_TEXT : moderationRefusal(r));
 
 // Market + Share 3.0 · W3 · B-MA.2 "Edit item" (Business Marketplace Screens
 // lines 119–137, frame-check B-MA.2 showcaseEdit) and its stacked "Item
@@ -40,8 +48,11 @@ import { CategoryPicker } from "./CategoryPicker";
 // Category (product_categories) and In stock; a new item's Explore category
 // for a gym or class business (the old Offerings form's chips); hide in the
 // store (the toggle); Delete as a two-step CentredDialog (B-MA.5.1's
-// destructive style); the photo upload to the live product-images bucket
-// (uploadProductPhoto: JPEG / PNG / WebP up to 5 MB, metadata dropped); the
+// destructive style); the photo (prepareProductPhoto: JPEG / PNG / WebP up to
+// 5 MB, metadata dropped; Round C Release 2: kept on the device until Save,
+// then staged and sent for approval as showcase_image once the row exists,
+// with the pending or refused one's badge and note; Remove photo still clears
+// image_url directly); the
 // B-SH.1 Product spotlight share of a saved item in the header. B11 columns
 // (stock, visible, category_id, image_url) are written only when the
 // database has them (`stockShipped`); otherwise those controls are disabled
@@ -76,6 +87,7 @@ export interface ProductEditorProps {
 export function ProductEditorSheet({ open, onClose, businessId, businessType, stockShipped, product, initial, onSaved, variant = "store" }: ProductEditorProps) {
   const m = useMarketColors();
   const online = useOnline();
+  const { authUserId } = useApp();
   const store = variant === "store";
   const ids = useId();
   const [name, setName] = useState("");
@@ -90,6 +102,11 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
   const [photoOpen, setPhotoOpen] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  // A newly picked photo (prepared, on this device until Save) and its preview.
+  const [photo, setPhoto] = useState<{ file: File; preview: string } | null>(null);
+  // Remove photo also hides a pending one in this sheet; Save withdraws it.
+  const [cleared, setCleared] = useState(false);
+  const { image: own, refresh: refreshOwn } = useOwnImage("showcase_image", product?.id);
   const [touched, setTouched] = useState({ price: false, stock: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,12 +127,18 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
     setMarket(LISTABLE[0].id as OfferingCategory);
     setVisible(product?.visible ?? true);
     setImageUrl(product?.imageUrl ?? null);
+    setPhoto(null);
+    setCleared(false);
     setPhotoError(null);
     setPhotoOpen(false);
     setTouched({ price: false, stock: false });
     setError(null);
     setDel(0);
   }, [open, product, initial, stockShipped]);
+
+  useEffect(() => () => {
+    if (photo) URL.revokeObjectURL(photo.preview);
+  }, [photo]);
 
   // The store's categories, read each time the sheet opens.
   useEffect(() => {
@@ -139,6 +162,7 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
   const valid = name.trim().length > 0 && priceOk && stockOk;
   const changed =
     !product ||
+    !!photo ||
     name.trim() !== product.name ||
     (priceOk && (priceEmpty ? null : priceVal) !== product.price) ||
     description.trim() !== product.description ||
@@ -155,17 +179,42 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
       stock: store ? stockVal : (product?.stock ?? null),
       visible,
       categoryId: store ? categoryId : (product?.categoryId ?? null),
-      imageUrl,
       ...(!product && !store ? { category: market } : {}),
     };
-    const r = product ? await updateProduct(product.id, draft, stockShipped) : await createProduct(businessId, businessType, draft, stockShipped);
-    setBusy(false);
-    if (!r.ok) {
-      setError("Couldn't save the item. Try again.");
-      return;
+    const fail = (text: string) => {
+      setBusy(false);
+      setError(text);
+    };
+    let id: string;
+    if (product) {
+      const r = await updateProduct(product.id, draft, stockShipped);
+      if (!r.ok) return fail(saveRefusal(r) ?? "Couldn't save the item. Try again.");
+      id = product.id;
+      // Removed: the approved photo, or one still waiting (clearProductPhoto withdraws it).
+      if (stockShipped && ((product.imageUrl && imageUrl === null) || (cleared && !photo && own?.status === "pending"))) {
+        const c = await clearProductPhoto(id);
+        if (!c.ok) return fail("Couldn't remove the photo. Try again.");
+      }
+    } else {
+      const r = await createProduct(businessId, businessType, draft, stockShipped);
+      if (!r.ok) return fail(saveRefusal(r) ?? "Couldn't save the item. Try again.");
+      id = r.value.id;
     }
     const n = name.trim();
-    onSaved(product ? "Changes saved." : stockShipped && !visible ? `${n} added. It's hidden from Explore.` : `${n} added.`);
+    const done = product ? "Changes saved." : stockShipped && !visible ? `${n} added. It's hidden from Explore.` : `${n} added.`;
+    // The new photo goes for approval now that the row exists.
+    if (photo) {
+      const s = authUserId ? await stageAndSubmit(authUserId, "showcase_image", id, photo.file) : { ok: false as const, message: "Couldn't send that photo. Try again." };
+      if (!s.ok) {
+        setBusy(false);
+        // An edit stays open with the photo kept (Save again resends it); a new item is saved, so the sheet closes and says so.
+        if (product) return setPhotoError(s.message);
+        return onSaved(`${done} ${s.message}`);
+      }
+      refreshOwn();
+    }
+    setBusy(false);
+    onSaved(done);
   };
 
   const remove = async () => {
@@ -195,14 +244,17 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
     setPhotoOpen(false);
     setPhotoBusy(true);
     setPhotoError(null);
-    const r = await uploadProductPhoto(businessId, file);
+    const r = await prepareProductPhoto(file);
     setPhotoBusy(false);
     if (!r.ok) {
       setPhotoError(r.message);
       return;
     }
-    setImageUrl(r.url);
+    setPhoto({ file: r.file, preview: URL.createObjectURL(r.file) });
   };
+  // What the owner sees: a new pick, else their pending photo, else the approved one.
+  const ownState = photo || cleared ? null : own;
+  const shownUrl = photo?.preview ?? (ownState?.status === "pending" ? ownState.url : null) ?? imageUrl;
 
   const canPhoto = stockShipped && online && !photoBusy;
   const share =
@@ -242,7 +294,7 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingBottom: 4 }}>
             <button
               type="button"
-              aria-label={imageUrl ? "Change photo" : "Add a photo"}
+              aria-label={shownUrl ? "Change photo" : "Add a photo"}
               aria-haspopup="dialog"
               aria-describedby={!stockShipped ? `${ids}-photo-note` : undefined}
               disabled={!canPhoto}
@@ -250,8 +302,8 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
               className="market-focus"
               style={{ position: "relative", width: 132, height: 132, borderRadius: 18, background: m.soft, border: 0, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: canPhoto ? "pointer" : "default", overflow: "visible" }}
             >
-              {imageUrl ? (
-                <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18, display: "block" }} />
+              {shownUrl ? (
+                <img src={shownUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18, display: "block" }} />
               ) : (
                 <ImageIcon size={28} strokeWidth={1.6} color={m.tert} aria-hidden />
               )}
@@ -267,6 +319,8 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
               </span>
             </button>
             {photoBusy ? <p role="status" style={{ fontSize: px(11.5), color: m.faint, marginTop: 8 }}>Uploading…</p> : null}
+            <ImageApprovalBadge state={ownState} className="mt-2" />
+            <ImageApprovalNote state={ownState} className="mt-1.5 text-center" />
             {!stockShipped ? (
               <p id={`${ids}-photo-note`} style={{ fontSize: px(11.5), color: m.faint, marginTop: 8 }}>
                 {SOON}
@@ -413,7 +467,7 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
             </svg>,
             () => libRef.current?.click()
           )}
-          {imageUrl
+          {shownUrl
             ? photoRow(
                 "Remove photo",
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, transform: "none" }}>
@@ -423,6 +477,8 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
                 </svg>,
                 () => {
                   setImageUrl(null);
+                  setPhoto(null);
+                  setCleared(true);
                   setPhotoOpen(false);
                 },
                 true

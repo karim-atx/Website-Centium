@@ -26,6 +26,11 @@
 // deleting a plan (DELETE is granted, policy professional_plans_delete_own;
 // professional_hires.plan_id is ON DELETE RESTRICT, so a plan someone hired
 // answers 23503).
+//
+// PHOTOS (Round C Release 2): image_url on all three is written by the
+// Database once an admin approves the photo (service_image, plan_image,
+// showcase_image, through image-staging: submitServicePhoto after the row is
+// saved). The writers here leave it out; clearServicePhoto is Remove photo.
 
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
@@ -33,13 +38,21 @@ import { marketRpc, type MarketResult } from "../market/rpc";
 import { fetchServicePlans } from "../pro/profile";
 import type { Read, Write } from "../pro/clients";
 import { reorderShowcase } from "../business-market/overview";
-import { uploadProductPhoto } from "../store/products";
+import { prepareProductPhoto } from "../store/products";
+import { stageAndSubmit, withdrawPending } from "../moderation/images";
+import { contactRefusal, moderationRefusal } from "../moderation/text";
 import { PLAN_SHOWCASE_DEFAULT, parseProOverview, parseShelfRows, planShowcaseById, visibleRefusal, type Format, type LocationKind, type PlanService, type ProOverview, type SessionService, type ShelfItem } from "./model";
 
 export * from "./model";
 
 const from = (table: string) => supabase.from(table as never);
-const failed = (error: unknown, fallback: string): Write => ({ ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : fallback });
+const failed = (error: unknown, fallback: string): { ok: false; message: string } => ({
+  ok: false,
+  // Round C Release 2: a blocked word (ATX60) is said as such, never which word.
+  message: isOffline(error) ? OFFLINE_MESSAGE : (moderationRefusal(error as { code?: string } | null) ?? fallback),
+});
+/** A saved row: its id, for the photo's approval. */
+type Saved = { ok: true; id: string } | { ok: false; message: string };
 
 // ---------------------------------------------------------------------------
 // P-MA.1 Overview
@@ -130,18 +143,19 @@ export interface SessionDraft {
   price: number;
   colour: string;
   locationKind: LocationKind;
-  /** The service photo (product-images, the shelf's uploader); null = none. */
-  imageUrl: string | null;
   /** Show in Showcase. */
   visible: boolean;
 }
 
-/** Adds or edits a session type with its description (appointment_services, the calendar's own table). */
-export async function saveSessionService(me: string, id: string | null, d: SessionDraft): Promise<Write> {
+/** Adds or edits a session type with its description (appointment_services, the calendar's own table); the row's id. */
+export async function saveSessionService(me: string, id: string | null, d: SessionDraft): Promise<Saved> {
   const name = d.name.trim();
   if (!name) return { ok: false, message: "Give the service a name." };
   if (name.length > 60) return { ok: false, message: "Keep the name to 60 characters or fewer." };
   if (d.description.trim().length > 500) return { ok: false, message: "Keep the description to 500 characters or fewer." };
+  // Round C Release 2: contact details belong in messages, said at save time.
+  const contact = contactRefusal(name, d.description);
+  if (contact) return { ok: false, message: contact };
   const row = {
     name,
     description: d.description.trim() || null,
@@ -150,14 +164,15 @@ export async function saveSessionService(me: string, id: string | null, d: Sessi
     price: d.price,
     colour: d.colour,
     location_kind: d.locationKind,
-    image_url: d.imageUrl,
     visible: d.visible,
   };
   try {
-    const { error } = id
-      ? await from("appointment_services").update(row as never).eq("id", id).eq("professional_id", me)
-      : await from("appointment_services").insert({ ...row, professional_id: me, business_id: null } as never);
-    return error ? failed(error, "Couldn't save this service. Try again.") : { ok: true };
+    if (id) {
+      const { error } = await from("appointment_services").update(row as never).eq("id", id).eq("professional_id", me);
+      return error ? failed(error, "Couldn't save this service. Try again.") : { ok: true, id };
+    }
+    const { data, error } = await from("appointment_services").insert({ ...row, professional_id: me, business_id: null } as never).select("id").single();
+    return error || !data ? failed(error, "Couldn't save this service. Try again.") : { ok: true, id: (data as { id: string }).id };
   } catch (e) {
     return failed(e, "Couldn't save this service. Try again.");
   }
@@ -165,21 +180,22 @@ export async function saveSessionService(me: string, id: string | null, d: Sessi
 
 export interface PlanShowcaseDraft {
   description: string;
-  imageUrl: string | null;
   visible: boolean;
   format: Format | null;
 }
 
 /**
  * A plan's showcase fields (DB3, 20261214040000), after the shared savePlan
- * wrote the rest: description (≤ 500, professional_plans_desc_len), photo,
+ * wrote the rest: description (≤ 500, professional_plans_desc_len),
  * Show in Showcase, format (professional_plans_format_check).
  */
 export async function savePlanShowcase(me: string, id: string, d: PlanShowcaseDraft): Promise<Write> {
   if (d.description.trim().length > 500) return { ok: false, message: "Keep the description to 500 characters or fewer." };
+  const contact = contactRefusal(d.description);
+  if (contact) return { ok: false, message: contact };
   try {
     const { error } = await from("professional_plans")
-      .update({ description: d.description.trim() || null, image_url: d.imageUrl, visible: d.visible, format: d.format } as never)
+      .update({ description: d.description.trim() || null, visible: d.visible, format: d.format } as never)
       .eq("id", id)
       .eq("professional_id", me);
     return error ? failed(error, "Couldn't save this service. Try again.") : { ok: true };
@@ -228,8 +244,8 @@ export async function setServiceVisible(me: string, kind: "session" | "plan", id
 // format, duration_label, bookable, sort (not hidden_at / hidden_reason /
 // professional_id). `category` is required: a professional's item is
 // 'professionals' (the enum's own value, as the Database's probe writes it).
-// Photos go to the live product-images bucket under the caller's uid
-// (product_images_insert_own), as a store's do.
+// Photos go for approval as showcase_image, as a store's do (see Service
+// photos below).
 
 const SHELF_COLUMNS = "id, title, description, price, image_url, format, duration_label, visible, hidden_at, sort, created_at";
 
@@ -249,7 +265,6 @@ export interface ShelfDraft {
   description: string;
   /** null = no price shown. */
   price: number | null;
-  imageUrl: string | null;
   format: Format | null;
   durationLabel: string;
   visible: boolean;
@@ -258,34 +273,40 @@ export interface ShelfDraft {
 export const SHELF_NAME_MAX = 80;
 export const SHELF_DURATION_MAX = 40;
 
-/** Adds (id null) or edits one of the professional's own shelf items. */
-export async function saveShelfItem(me: string, id: string | null, d: ShelfDraft): Promise<Write> {
+/** Adds (id null) or edits one of the professional's own shelf items; the row's id. */
+export async function saveShelfItem(me: string, id: string | null, d: ShelfDraft): Promise<Saved> {
   const title = d.name.trim();
   if (!title) return { ok: false, message: "Give the service a name." };
   if (title.length > SHELF_NAME_MAX) return { ok: false, message: `Keep the name to ${SHELF_NAME_MAX} characters or fewer.` };
   if (d.description.trim().length > 500) return { ok: false, message: "Keep the description to 500 characters or fewer." };
+  const contact = contactRefusal(title, d.description);
+  if (contact) return { ok: false, message: contact };
   const description = d.description.trim() || null;
   const duration_label = d.durationLabel.trim().slice(0, SHELF_DURATION_MAX) || null;
   try {
     // Two literal payloads (not a shared object) so npm run audit:grants checks the update.
-    const { error } = id
-      ? await from("business_offerings")
-          .update({ title, description, price: d.price, image_url: d.imageUrl, format: d.format, duration_label, visible: d.visible } as never)
-          .eq("id", id)
-          .eq("professional_id", me)
-      : await from("business_offerings").insert({
-          professional_id: me,
-          business_id: null,
-          category: "professionals",
-          title,
-          description,
-          price: d.price,
-          image_url: d.imageUrl,
-          format: d.format,
-          duration_label,
-          visible: d.visible,
-        } as never);
-    return error ? failed(error, "Couldn't save this service. Try again.") : { ok: true };
+    if (id) {
+      const { error } = await from("business_offerings")
+        .update({ title, description, price: d.price, format: d.format, duration_label, visible: d.visible } as never)
+        .eq("id", id)
+        .eq("professional_id", me);
+      return error ? failed(error, "Couldn't save this service. Try again.") : { ok: true, id };
+    }
+    const { data, error } = await from("business_offerings")
+      .insert({
+        professional_id: me,
+        business_id: null,
+        category: "professionals",
+        title,
+        description,
+        price: d.price,
+        format: d.format,
+        duration_label,
+        visible: d.visible,
+      } as never)
+      .select("id")
+      .single();
+    return error || !data ? failed(error, "Couldn't save this service. Try again.") : { ok: true, id: (data as { id: string }).id };
   } catch (e) {
     return failed(e, "Couldn't save this service. Try again.");
   }
@@ -317,7 +338,43 @@ export async function reorderShelf(ids: string[]): Promise<Write> {
   return r.ok ? { ok: true } : { ok: false, message: r.offline ? OFFLINE_MESSAGE : r.message };
 }
 
-/** A service photo: the product-images bucket under the caller's own uid (uid/uid/<file>.jpg). */
-export function uploadShelfPhoto(me: string, file: File): Promise<{ ok: true; url: string } | { ok: false; message: string }> {
-  return uploadProductPhoto(me, file);
+// ---------------------------------------------------------------------------
+// Service photos (Round C Release 2): prepared on pick, staged and submitted
+// once the row exists; the Database writes image_url when it is approved.
+// ---------------------------------------------------------------------------
+
+/** A picked photo re-encoded as JPEG with its metadata dropped (the store's rule: up to 5 MB). */
+export const prepareServicePhoto = prepareProductPhoto;
+
+const PHOTO_SURFACE = { session: "service_image", plan: "plan_image", shelf: "showcase_image" } as const;
+
+/** Which table a service photo belongs to: a session type, a plan or a shelf item. */
+export type ServiceKind = keyof typeof PHOTO_SURFACE;
+
+/** The approval surface of each kind's photo. */
+export const photoSurfaceOf = (kind: ServiceKind) => PHOTO_SURFACE[kind];
+
+/** Stages a prepared photo for a saved session type, plan or shelf item and opens its approval. */
+export async function submitServicePhoto(me: string, kind: ServiceKind, id: string, file: File): Promise<Write> {
+  const r = await stageAndSubmit(me, PHOTO_SURFACE[kind], id, file);
+  return r.ok ? { ok: true } : { ok: false, message: r.message };
+}
+
+/** Remove photo: the one image_url write left to the app. */
+export async function clearServicePhoto(me: string, kind: ServiceKind, id: string): Promise<Write> {
+  // A photo still waiting for approval is taken back too (withdraw_image).
+  const withdrawn = await withdrawPending(PHOTO_SURFACE[kind], id);
+  if (!withdrawn.ok) return { ok: false, message: withdrawn.message };
+  try {
+    // Three literal payloads so npm run audit:grants checks each table's grant.
+    const { error } =
+      kind === "session"
+        ? await from("appointment_services").update({ image_url: null } as never).eq("id", id).eq("professional_id", me)
+        : kind === "plan"
+          ? await from("professional_plans").update({ image_url: null } as never).eq("id", id).eq("professional_id", me)
+          : await from("business_offerings").update({ image_url: null } as never).eq("id", id).eq("professional_id", me);
+    return error ? failed(error, "Couldn't remove the photo. Try again.") : { ok: true };
+  } catch (e) {
+    return failed(e, "Couldn't remove the photo. Try again.");
+  }
 }

@@ -6,11 +6,12 @@ import { useOnline } from "../../hooks/useOnline";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { FORUM_PHOTO_ACCEPT } from "../../services/forum/photo";
 import { removeBusinessImage, uploadBusinessImage } from "../../services/business-more";
-import { addBusinessPhoto, deleteBusinessPhoto, reorderBusinessPhotos, replaceBusinessPhoto } from "../../services/business-market/listing";
+import { addBusinessPhoto, deleteBusinessPhoto, fetchOwnPhotoImages, reorderBusinessPhotos, replaceBusinessPhoto, type OwnPhotoImage } from "../../services/business-market/listing";
 import { moveId, moveTo, PHOTO_LIMIT, sortPhotos, type BusinessPhoto } from "../../services/business-market/listingLogic";
 import { MarketProvider, useMarket } from "./MarketContext";
 import { MarketError } from "../../components/market/MarketStates";
 import { useIsDark } from "../../hooks/useIsDark";
+import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../components/moderation/ImageApproval";
 import { BackHeader, CentredDialog, MasterSheet, PrimaryButton, SoonNote, lh, px, useMarketColors, useStrip } from "./listingParts";
 
 // MA1-033 / 035 / 080 / 083 / 084 / 086 / 087 / 088 / 090-095 · Photos.
@@ -24,6 +25,11 @@ import { BackHeader, CentredDialog, MasterSheet, PrimaryButton, SoonNote, lh, px
 // cover_url stays the owner's choice), so "Set as cover" is not offered.
 // Uploads strip metadata on the device first (K2, KEEP-SAFETY). While
 // business_photos is absent (probe "pending") the old cover-only page stands.
+// Round C Release 2: a new cover or photo (added or replaced) waits for an
+// admin (business_cover / venue_photo). The uploader sees it here at once
+// from image-staging with one badge, "Waiting for approval" or "Not
+// approved"; the old row-status chip only shows on photos with no submission
+// of theirs. Everyone else keeps the approved file until the new one is.
 
 export default function PhotosPage() {
   return (
@@ -62,6 +68,17 @@ function PhotosBody() {
   const camRef = useRef<HTMLInputElement | null>(null);
   const libRef = useRef<HTMLInputElement | null>(null);
   const pressRef = useRef<{ timer: number; id: string } | null>(null);
+  const ownCover = useOwnImage("business_cover", business?.id);
+  const [ownPhotos, setOwnPhotos] = useState<Map<string, OwnPhotoImage>>(new Map());
+  const [ownTick, setOwnTick] = useState(0);
+  const refreshOwnPhotos = () => setOwnTick((t) => t + 1);
+  useEffect(() => {
+    let alive = true;
+    void fetchOwnPhotoImages().then((map) => alive && setOwnPhotos(map));
+    return () => {
+      alive = false;
+    };
+  }, [ownTick]);
 
   useEffect(() => {
     let alive = true;
@@ -77,7 +94,13 @@ function PhotosBody() {
   const back = () => navigate(m.tabHref("overview"));
   const eyebrow = kind === "store" ? "Products · Overview" : "Marketplace · Overview";
   if (m.error && !business) return <MarketError thing="your photos" onRetry={m.reload} />;
-  const cover = business?.coverUrl ?? null;
+  const cover = (ownCover.image?.status === "pending" && ownCover.image.url) || business?.coverUrl || null;
+  /** What the uploader sees for a gallery photo: their pending file, else the approved one. */
+  const photoUrl = (p: BusinessPhoto) => {
+    const own = ownPhotos.get(p.id);
+    return (own?.status === "pending" && own.url) || p.url;
+  };
+  const anyPending = ownCover.image?.status === "pending" ? ownCover.image : ([...ownPhotos.values()].find((o) => o.status === "pending") ?? null);
   const galleryLive = m.backend.photos === "live" && m.photos !== null;
   const gallery = sortPhotos(m.photos ?? []);
   const shownGallery = drag ? (drag.order.map((id) => gallery.find((p) => p.id === id)).filter(Boolean) as BusinessPhoto[]) : gallery;
@@ -96,16 +119,15 @@ function PhotosBody() {
     if (!business || !authUserId) return;
     setCoverUp({ name: file.name || "Photo", state: "waiting", file, replace });
     setSheet("upload");
-    const r = await uploadBusinessImage({ kind: "cover", uid: authUserId, ownerId: business.ownerId, businessId: business.id, file, previousPath: business.coverPath });
+    const r = await uploadBusinessImage({ kind: "cover", uid: authUserId, ownerId: business.ownerId, businessId: business.id, file });
     if (!r.ok) {
       setCoverUp({ name: file.name || "Photo", state: "failed", file, replace, message: r.message });
       return;
     }
-    m.setBusiness({ ...business, coverPath: r.value.path, coverUrl: r.value.url });
-    m.refreshStrength();
+    ownCover.refresh();
     setCoverUp(null);
     setSheet(null);
-    showToast(replace ? "Your cover photo is replaced." : "1 photo added.");
+    showToast("Cover photo sent. It shows on Explore once approved.");
   };
 
   // ---- gallery uploads, one after another (MA1-086)
@@ -129,7 +151,10 @@ function PhotosBody() {
       setUps(list);
     }
     const next = [...(m.photos ?? []), ...added];
-    if (added.length) setGallery(next);
+    if (added.length) {
+      setGallery(next);
+      refreshOwnPhotos();
+    }
     if (list.every((x) => x.state === "done")) {
       const n = list.length;
       setUps(null);
@@ -160,7 +185,7 @@ function PhotosBody() {
       setUps([{ ...rows[0], state: "failed", message: r.message }]);
       return;
     }
-    setGallery((m.photos ?? []).map((p) => (p.id === photo.id ? r.value : p)));
+    refreshOwnPhotos();
     setUps(null);
     setSheet(null);
     showToast("Photo replaced. It shows on Explore once approved.");
@@ -189,6 +214,7 @@ function PhotosBody() {
       setDeleteStep(1);
       if (!r.ok) return showToast(r.message, "error");
       m.setBusiness({ ...business, coverPath: null, coverUrl: null });
+      ownCover.refresh();
     } else {
       const photo = confirmDelete.photo;
       const r = await deleteBusinessPhoto({ uid: authUserId, photo });
@@ -197,6 +223,7 @@ function PhotosBody() {
       setDeleteStep(1);
       if (!r.ok) return showToast(r.message, "error");
       setGallery((m.photos ?? []).filter((p) => p.id !== photo.id));
+      refreshOwnPhotos();
     }
     m.refreshStrength();
     showToast("Photo deleted.");
@@ -327,8 +354,11 @@ function PhotosBody() {
   };
   const canOptions = (t: Target) => (t.kind === "cover" ? owner : canGallery);
 
+  // One badge per tile: the uploader's own submission when there is one, else the row's status.
   const tileChip = (p: BusinessPhoto) =>
-    p.status === "in_review" ? (
+    ownPhotos.has(p.id) ? (
+      <ImageApprovalBadge state={ownPhotos.get(p.id) ?? null} className="absolute right-2 top-2" />
+    ) : p.status === "in_review" ? (
       <span style={{ position: "absolute", right: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.caution, background: c.cautionbg, borderRadius: 999, padding: "2px 8px" }}>In review</span>
     ) : p.status === "rejected" ? (
       <span style={{ position: "absolute", right: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.high, background: c.highbg, borderRadius: 999, padding: "2px 8px" }}>Not approved</span>
@@ -372,6 +402,7 @@ function PhotosBody() {
           <div style={{ position: "relative", aspectRatio: "4 / 3", borderRadius: 16, overflow: "hidden", background: c.pale }}>
             <img src={cover} alt="Cover photo" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             <span style={{ position: "absolute", left: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.onfill, background: c.fill, borderRadius: 999, padding: "2px 8px" }}>Cover</span>
+            <ImageApprovalBadge state={ownCover.image} className="absolute right-2 top-2" />
             {optionsButton({ kind: "cover" }, "Photo options, Cover photo")}
           </div>
         )}
@@ -399,7 +430,8 @@ function PhotosBody() {
                 WebkitUserSelect: "none",
               }}
             >
-              <img src={p.url} alt={p.caption ?? `Photo ${n}`} draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }} />
+              {/* A teammate's photo waiting for approval has no public file yet: the tile shows its chip only. */}
+              <img key={photoUrl(p)} src={photoUrl(p)} alt={p.caption ?? `Photo ${n}`} draggable={false} onError={(e) => (e.currentTarget.style.visibility = "hidden")} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }} />
               {n === 1 && <span style={{ position: "absolute", left: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.onfill, background: c.fill, borderRadius: 999, padding: "2px 8px" }}>Cover</span>}
               {tileChip(p)}
               {p.caption && (
@@ -427,6 +459,8 @@ function PhotosBody() {
         )}
       </div>
 
+      <ImageApprovalNote state={anyPending} className="mt-[10px]" />
+
       <input ref={camRef} type="file" accept={FORUM_PHOTO_ACCEPT} capture="environment" hidden onChange={onPick} />
       <input ref={libRef} type="file" accept={FORUM_PHOTO_ACCEPT} multiple={galleryLive && sheet !== "replace"} hidden onChange={onPick} />
 
@@ -435,13 +469,16 @@ function PhotosBody() {
       {sheet === "options" && target && (
         <MasterSheet open onClose={() => setSheet(null)} title="Photo options">
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-            <img src={target.kind === "cover" ? cover ?? "" : target.photo.url} alt="" style={{ width: 64, height: 48, borderRadius: 10, objectFit: "cover" }} />
+            <img src={target.kind === "cover" ? cover ?? "" : photoUrl(target.photo)} alt="" style={{ width: 64, height: 48, borderRadius: 10, objectFit: "cover" }} />
             <span style={{ minWidth: 0 }}>
               <span style={{ display: "block", fontSize: px(14), fontWeight: 800, color: c.ink }}>{target.kind === "cover" ? "Cover photo" : target.photo.caption ?? `Photo ${posOf(target)}`}</span>
               <span style={{ display: "block", fontSize: px(11.5), color: c.faint }}>{`Photo ${posOf(target)} of ${total}`}</span>
             </span>
           </div>
-          {target.kind === "photo" && target.photo.status === "rejected" && (
+          {(target.kind === "cover" ? ownCover.image : ownPhotos.get(target.photo.id)) && (
+            <ImageApprovalNote state={(target.kind === "cover" ? ownCover.image : ownPhotos.get(target.photo.id)) ?? null} className="mb-[10px]" />
+          )}
+          {target.kind === "photo" && !ownPhotos.has(target.photo.id) && target.photo.status === "rejected" && (
             <p style={{ fontSize: px(12), lineHeight: lh(17), color: c.high, background: c.highbg, borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
               {target.photo.rejectReason ? `Not approved: ${target.photo.rejectReason}` : "Not approved. Replace it or delete it."}
             </p>
