@@ -7,7 +7,7 @@ import { CtaButton } from "../../ui/PinnedCta";
 import { INK } from "../proInk";
 import { fmtDay, ALLERGEN_LABEL } from "./clientFormat";
 import { fetchDietaryNeeds, type DietaryNeeds } from "../../../services/pro/clientPage";
-import { dietaryRestrictionOptions } from "../../../utils/dietaryRestrictions";
+import { dietLabel } from "../../../utils/dietaryRestrictions";
 import type { UseClientAccess } from "../../../hooks/useClientAccess";
 
 /**
@@ -32,7 +32,7 @@ import type { UseClientAccess } from "../../../hooks/useClientAccess";
  */
 
 const SEVERITY: Record<string, string> = { mild: "Mild", moderate: "Moderate", severe: "Severe" };
-const restrictionLabel = (r: string) => dietaryRestrictionOptions.find((o) => o.value === r)?.label ?? r;
+const restrictionLabel = dietLabel;
 
 export const DietaryNeedsCard: React.FC<{
   clientId: string;

@@ -98,7 +98,8 @@ export interface FormDetail {
   assignments: FormAssignment[];
 }
 
-const Q_COLS = "id, position, type, prompt, unit, required, options, scale_min, scale_max, safety_topic, safety_trigger, section_title, show_if, profile_field";
+// recovery_options, pro_note and client_prompt are read only, to lock the answers they name (never written by the builder).
+const Q_COLS = "id, position, type, prompt, unit, required, options, scale_min, scale_max, safety_topic, safety_trigger, section_title, show_if, profile_field, recovery_options, pro_note, client_prompt";
 
 export async function fetchForm(formId: string): Promise<Read<FormDetail | null>> {
   const [f, q, a] = await Promise.all([

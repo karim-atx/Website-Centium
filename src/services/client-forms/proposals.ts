@@ -11,7 +11,7 @@
 // medications {name}, injuries {description}, weight {kg}.
 
 import { ALLERGENS, SEVERITIES, allergenLabel, type Allergen, type AllergySeverity } from "../nutrition/clientNutritionModel";
-import { dietaryRestrictionOptions, type DietaryRestriction } from "../../utils/dietaryRestrictions";
+import { dietLabel, dietaryRestrictionOptions, type DietaryRestriction } from "../../utils/dietaryRestrictions";
 import type { MedicationRoute } from "../../types";
 
 export type ProposalField = "allergies" | "dietary_restrictions" | "medications" | "injuries" | "weight";
@@ -187,7 +187,7 @@ export function confirmedAnswerRow(a: Pick<ConfirmedAnswer, "field" | "value">):
       return { title: isSeverity(v.severity) ? `${name}, ${v.severity}` : name, where: "Dietary needs card" };
     }
     case "dietary_restrictions": {
-      const label = dietaryRestrictionOptions.find((o) => o.value === v.restriction)?.label ?? "A diet";
+      const label = dietLabel(str(v.restriction)) || "A diet";
       return { title: v.kind === "preference" ? `${label} (preference)` : label, where: "Dietary needs card" };
     }
     case "medications": {

@@ -95,6 +95,17 @@ describe("the answers a client confirmed, for their professional", () => {
     assert.equal(confirmedAnswerRow({ field: "injuries", value: { description: "Sprained wrist" } }).title, "Sprained wrist");
     assert.equal(confirmedAnswerRow({ field: "medications", value: { name: "Metformin", dose: "500 mg", route: "oral" } }).title, "Metformin, 500 mg");
     assert.equal(confirmedAnswerRow({ field: "weight", value: { kg: 70 } }).title, "70 kg");
-    assert.equal(confirmedAnswerRow({ field: "dietary_restrictions", value: { restriction: "not-a-diet" } }).title, "A diet");
+    assert.equal(confirmedAnswerRow({ field: "dietary_restrictions", value: { restriction: "not-a-diet" } }).title, "Not a diet");
+    assert.equal(confirmedAnswerRow({ field: "dietary_restrictions", value: {} }).title, "A diet");
+  });
+});
+
+describe("halal and kosher (Database 20261222075000) are words", () => {
+  it("a confirmed diet and a waiting one read as words, and a diet the app doesn't know yet too", () => {
+    assert.equal(confirmedAnswerRow({ field: "dietary_restrictions", value: { restriction: "halal", kind: "restriction" } }).title, "Halal");
+    assert.equal(confirmedAnswerRow({ field: "dietary_restrictions", value: { restriction: "kosher", kind: "preference" } }).title, "Kosher (preference)");
+    assert.equal(confirmedAnswerRow({ field: "dietary_restrictions", value: { restriction: "low_fodmap" } }).title, "Low fodmap");
+    assert.equal(proposalTitle(draftFrom({ field: "dietary_restrictions", suggested: { text: "I eat halal", restriction: "halal" } })), "Halal");
+    assert.equal(proposalTitle(draftFrom({ field: "dietary_restrictions", suggested: { text: "Kosher", restriction: "kosher" } })), "Kosher");
   });
 });
