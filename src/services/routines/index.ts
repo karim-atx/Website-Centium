@@ -360,7 +360,8 @@ async function writeExercises(
   }
 
   if (rows.length === 0) return { error: null, ids };
-  const { error } = await supabase.from("routine_exercises").insert(rows);
+  // `as never`: set_targets (Round D, 20261223010000) is newer than the generated types.
+  const { error } = await supabase.from("routine_exercises").insert(rows as never);
   if (error) {
     console.error("[routines] Could not write exercises:", error.message);
     return { error: describe(error), ids };

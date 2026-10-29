@@ -28,6 +28,9 @@ import { useBack } from "../../hooks/useBack";
 import { CalendarClock } from "lucide-react";
 import { fetchDripSchedule, fetchLessonIsOpen } from "../../services/courses/drip";
 import { lessonDripLine, nextLocked, type DripRow } from "./drip";
+import { LessonMarkdown } from "./LessonMarkdown";
+import { fetchLessonImagePaths, fetchMyCheckIn, lessonImageUrl, submitCheckIn } from "../../services/courses/extras";
+import { CHECK_IN_ANSWER_MAX } from "../../services/courses/authorRules";
 
 // Design screen 8: a lesson. The video is YouTube's official embedded player
 // on the privacy-enhanced domain (youtube-nocookie.com), with no autoplay and
@@ -201,13 +204,22 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
       )}
 
       <div className="pt-[14px] flex flex-col gap-3">
+        {/* Round D: lesson text is limited Markdown, rendered without HTML. */}
         {lesson.kind === "reading" && (
-          <div
-            className="rounded-2xl p-[14px] text-sm leading-[1.6] whitespace-pre-wrap [overflow-wrap:anywhere]"
-            style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("body") }}
-          >
-            {lesson.body}
+          <div className="rounded-2xl p-[14px] text-sm leading-[1.6]" style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("body") }}>
+            <LessonMarkdown text={lesson.body} linkColour={fv("link")} />
           </div>
+        )}
+
+        {lesson.kind === "image" && <ImageBlock lesson={lesson} enrolled={!!enrolment} />}
+
+        {lesson.kind === "check_in" && (
+          <CheckInBlock
+            lesson={lesson}
+            authorName={state.authorName}
+            canAnswer={!!enrolment}
+            onAnswered={async () => setState(await loadLesson(courseId, userId))}
+          />
         )}
 
         {lesson.kind === "quiz" &&
@@ -223,7 +235,7 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
 
         {lesson.kind === "pdf" && (open ? <PdfBlock lessonId={lesson.id} /> : <LockedNote>Downloadable plans are part of the full course.</LockedNote>)}
 
-        {open && lesson.kind !== "quiz" && (
+        {open && lesson.kind !== "quiz" && lesson.kind !== "check_in" && (
           <button
             type="button"
             onClick={() => void markComplete()}
@@ -433,6 +445,161 @@ function QuizBlock({
         >
           {busy ? "Checking…" : "Check my answers"}
         </button>
+      )}
+    </div>
+  );
+}
+
+/** Round D: an Image lesson. The image is private (course-images), read with a short-lived link by an enrolled learner; the caption is limited Markdown. */
+function ImageBlock({ lesson, enrolled }: { lesson: Lesson; enrolled: boolean }) {
+  const [src, setSrc] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    let live = true;
+    void fetchLessonImagePaths([lesson.id])
+      .then((m) => lessonImageUrl(m.get(lesson.id)))
+      .then((u) => live && setSrc(u));
+    return () => {
+      live = false;
+    };
+  }, [lesson.id]);
+  return (
+    <div className="flex flex-col gap-2.5">
+      {src === undefined ? (
+        <ForumPlaceholder height={200} />
+      ) : src ? (
+        <img src={src} alt={lesson.title} className="block w-full rounded-2xl" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }} />
+      ) : (
+        <div className="rounded-2xl p-[14px] text-[13px]" style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("muted") }}>
+          {enrolled ? "The image isn't ready yet." : "Start the course to see this image."}
+        </div>
+      )}
+      {lesson.body && (
+        <div className="text-[13.5px] leading-[1.6]" style={{ color: fv("body") }}>
+          <LessonMarkdown text={lesson.body} linkColour={fv("link")} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Round D: a Check-in lesson. The learner answers the author's question
+ * (1 to 4,000 characters); answering again replaces the answer, and sending
+ * it completes the lesson. Only the author reads the answers.
+ */
+function CheckInBlock({ lesson, authorName, canAnswer, onAnswered }: { lesson: Lesson; authorName: string; canAnswer: boolean; onAnswered: () => Promise<void> }) {
+  const [saved, setSaved] = useState<{ answer: string; updatedAt: string } | null | undefined>(undefined);
+  const [draft, setDraft] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    // Not enrolled: there's no answer to read (the block says to start the course).
+    if (!canAnswer) return;
+    let live = true;
+    void fetchMyCheckIn(lesson.id).then((r) => {
+      if (!live) return;
+      setSaved(r);
+      setDraft(r?.answer ?? "");
+    });
+    return () => {
+      live = false;
+    };
+  }, [lesson.id, canAnswer]);
+
+  const send = async () => {
+    const answer = draft.trim();
+    if (busy || !answer) return;
+    if (answer.length > CHECK_IN_ANSWER_MAX) return setError(`Keep your answer to ${CHECK_IN_ANSWER_MAX.toLocaleString("en-US")} characters.`);
+    setBusy(true);
+    setError(null);
+    const r = await submitCheckIn(lesson.id, answer);
+    setBusy(false);
+    if (!r.ok) return setError(r.message);
+    setSaved({ answer, updatedAt: new Date().toISOString() });
+    setEditing(false);
+    setSent(true);
+    await onAnswered();
+  };
+
+  const showForm = canAnswer && (saved === null || editing);
+  return (
+    <div className="rounded-2xl p-[14px] flex flex-col gap-2.5" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
+      {lesson.body && (
+        <div className="text-sm leading-[1.6] font-semibold" style={{ color: fv("text") }}>
+          <LessonMarkdown text={lesson.body} linkColour={fv("link")} />
+        </div>
+      )}
+      {!canAnswer ? (
+        <span className="text-[13px]" style={{ color: fv("muted") }}>
+          Start the course to answer.
+        </span>
+      ) : saved === undefined ? (
+        <ForumPlaceholder height={80} />
+      ) : showForm ? (
+        <>
+          <label htmlFor={`check-in-${lesson.id}`} className="sr-only">
+            Your answer
+          </label>
+          <textarea
+            id={`check-in-${lesson.id}`}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={5}
+            maxLength={CHECK_IN_ANSWER_MAX}
+            placeholder="Your answer"
+            className="block w-full rounded-xl p-3 text-sm leading-[1.5] outline-none resize-y"
+            style={{ background: "transparent", border: `1px solid ${fv("border")}`, color: fv("text") }}
+          />
+          <span className="text-xs" style={{ color: fv("muted") }}>
+            Only {authorName} sees your answer.
+          </span>
+          <div className="flex gap-2">
+            {editing && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(false);
+                  setDraft(saved?.answer ?? "");
+                  setError(null);
+                }}
+                className="tap h-12 px-4 rounded-[14px] text-sm font-bold"
+                style={{ background: fv("rules-bg"), color: fv("rules-ink") }}
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => void send()}
+              disabled={busy || !draft.trim()}
+              className="tap flex-1 h-12 rounded-[14px] text-sm font-extrabold disabled:opacity-60"
+              style={{ background: fv("accent"), color: fv("on-accent") }}
+            >
+              {busy ? "Sending…" : `Send to ${authorName}`}
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="m-0 text-sm leading-[1.5] whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ color: fv("body") }}>
+            {saved?.answer}
+          </p>
+          <span role="status" className="flex items-center gap-1.5 text-[13px] font-bold" style={{ color: fv("done-ink") }}>
+            <CheckIcon />
+            {sent ? `Sent to ${authorName}` : `You answered. Only ${authorName} sees it.`}
+          </span>
+          <button type="button" onClick={() => setEditing(true)} className="tap self-start text-[13px] font-bold min-h-[44px]" style={{ color: fv("link") }}>
+            Change my answer
+          </button>
+        </>
+      )}
+      {error && (
+        <p role="alert" className="m-0 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
+          {error}
+        </p>
       )}
     </div>
   );

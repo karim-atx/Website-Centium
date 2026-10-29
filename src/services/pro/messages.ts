@@ -8,7 +8,9 @@
 // - joined member counts for group rows (group_members());
 // - send_group_card(p_thread_id, p_kind, p_ref_id, p_note) (DB-7): a
 //   programme_share (one of my own workout_templates) or a session_share
-//   (one of my own calendar_events). The database builds the payload; the note
+//   (one of my own calendar_events, which now carries event_id) or, from Round
+//   D, a meal_plan_share (one of my own meal_plans: name, days and note, never
+//   calories or macros). The database builds the payload; the note
 //   is at most 300 characters (22023); ATX08 when the thread or the item isn't
 //   mine to post; ATX09 for a non-professional;
 // - an announcement: an ordinary message pinned to the top (sendMessage +
@@ -90,12 +92,41 @@ export async function fetchShareableSessions(me: string, today: string): Promise
   };
 }
 
+export interface ShareableMealPlan {
+  id: string;
+  name: string;
+  days: number;
+}
+
+/**
+ * Round D · my meal plan templates, for "A meal plan" (meal_plan_share). Only
+ * the name and length are read: the card never carries calories or macros.
+ */
+export async function fetchShareableMealPlans(me: string): Promise<Read<ShareableMealPlan[]>> {
+  const { data, error } = await supabase
+    .from("meal_plans" as never)
+    .select("id, name, days_count")
+    .eq("professional_id", me)
+    .eq("is_template", true)
+    .order("name", { ascending: true })
+    .limit(100);
+  if (error) return { ok: false, offline: isOffline(error) };
+  const rows = (data ?? []) as unknown as { id: string; name: string; days_count: number }[];
+  return { ok: true, data: rows.map((r) => ({ id: r.id, name: r.name, days: Number(r.days_count) || 0 })) };
+}
+
+export type GroupCardKind = "programme_share" | "session_share" | "meal_plan_share";
+
 /** send_group_card: the card goes in as a message of mine. */
-export async function sendGroupCard(threadId: string, kind: "programme_share" | "session_share", refId: string, note: string | null): Promise<Write> {
+export async function sendGroupCard(threadId: string, kind: GroupCardKind, refId: string, note: string | null): Promise<Write> {
   const { error } = await rpc("send_group_card", { p_thread_id: threadId, p_kind: kind, p_ref_id: refId, p_note: note?.trim() ? note.trim() : null });
   if (!error) return { ok: true };
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
+  // 22023 is also a plan assigned to a client (20261223060000): only a template can be shared.
+  if (error.code === "22023" && /assigned to a client/.test(error.message ?? ""))
+    return { ok: false, message: "A plan assigned to a client stays private. Share the template it came from." };
   if (error.code === "22023") return { ok: false, message: "The note is at most 300 characters." };
+  if (error.code === "ATX08") return { ok: false, message: "That isn't available to share any more, or the group has closed." };
   return { ok: false, message: "Couldn't share that. Try again." };
 }
 

@@ -28,6 +28,8 @@ const DOCUMENTED = [
   "pro.access.declined",
   "pro.review.new",
   "pro.session.unpaid",
+  // Round D: a member booked a place from a group's session card.
+  "pro.session.booked",
   "pro.share.removal_requested",
   // Round D · DV (20261222030000): a held card.
   "pro.share.held",

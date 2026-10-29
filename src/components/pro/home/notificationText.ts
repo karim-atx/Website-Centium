@@ -77,6 +77,17 @@ export function notificationText(n: ProNotification, names: Record<string, strin
       return { title: `${who} cancelled a booking`, line: "Late cancel", icon: "calendar-x", tone: "att" };
     case "pro.session.unpaid":
       return { title: "A session is unpaid", line: str(p.title) ?? "Session", icon: "banknote", tone: "act" };
+    // Round D (Database 20261223040000): a member booked a place from a group's session card.
+    case "pro.session.booked": {
+      const taken = typeof p.taken === "number" ? p.taken : null;
+      const cap = typeof p.capacity === "number" ? p.capacity : null;
+      return {
+        title: `A group member booked ${str(p.title) ?? "a session"}`,
+        line: taken !== null && cap !== null ? `${taken} of ${cap} ${cap === 1 ? "place" : "places"} taken` : "Group session",
+        icon: "calendar-check",
+        tone: "pr",
+      };
+    }
     case "pro.workout.finished":
       return { title: who, line: `Finished ${str(p.routine) ?? "a workout"}`, icon: "activity", tone: "pr" };
     case "pro.form.submitted":

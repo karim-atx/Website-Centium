@@ -64,6 +64,13 @@ export const MEMBER_NOTIFICATION_KINDS = [
   // Round D · PR 1 (Database 20261222000000): a food the member suggested for
   // the catalogue was reviewed (payload status, name, reason_category; never the note).
   "food_submission_reviewed",
+  // Round D (Database 20261223010000): a professional replied to a workout
+  // the member logged (subject workout_session; payload reply_id, routine).
+  "workout_log_reply",
+  // Round D (Database 20261223030000): a course the member is in the audience
+  // of was first published (subject course; payload course_id, title,
+  // author_first_name). Sent once per course.
+  "course_published",
 ] as const;
 export type MemberNotificationKind = (typeof MEMBER_NOTIFICATION_KINDS)[number];
 
@@ -96,6 +103,10 @@ export const CLIENT_KINDS: readonly MemberNotificationKind[] = [
   "image_approved",
   "image_rejected",
   "food_submission_reviewed",
+  // Round D · TR22: a professional's reply to a logged workout.
+  "workout_log_reply",
+  // Round D · courses: a course for the member was published.
+  "course_published",
 ];
 
 /** my_unread_notification_count's cap: the reader never counts past it. */
@@ -213,6 +224,10 @@ export const CLIENT_COPY: NotificationCopyTable = {
   image_rejected: imageNoticeCopy(false, null, null),
   // Round D · DP: the catalogue decision on a food the member suggested.
   food_submission_reviewed: FOOD_REVIEW_COPY,
+  // Round D · TR22 (D-S5). The payload carries no name, so "Your coach".
+  workout_log_reply: { title: "Your coach replied to your workout", body: "Read it in your workout history." },
+  // Round D · courses (payload course_id, title, author_first_name).
+  course_published: { title: "A new course for you", body: "Open it in Community › Courses." },
 };
 
 /** A key no table knows: a safe line, never the raw key. */
@@ -321,6 +336,18 @@ export const CLIENT_FILLS: NotificationFillTable = {
   image_approved: (p) => (p.surface ? imageNoticeCopy(true, p.surface, null) : {}),
   image_rejected: (p) => (p.surface || p.reason_category ? imageNoticeCopy(false, p.surface, p.reason_category) : {}),
   food_submission_reviewed: (p) => foodReviewCopy(p.status, p.name, p.reason_category),
+  workout_log_reply: (p) => {
+    const routine = pText(p, "routine");
+    return routine ? { body: `About ${routine}. Read it in your workout history.` } : {};
+  },
+  course_published: (p) => {
+    const title = pText(p, "title");
+    const who = pText(p, "author_first_name");
+    const out: Partial<NotificationCopy> = {};
+    if (who) out.title = `${who} published a course for you`;
+    if (title) out.body = `${title} is ready to start.`;
+    return out;
+  },
   ambassador_application_declined: (p) => {
     const on = pDate(p, "next_eligible_on");
     return on ? { body: `We've replied to your application. You can apply again from ${formatNoticeDate(on)}.` } : {};
@@ -406,6 +433,14 @@ export function clientNotificationTarget(
     case "food_submission_reviewed":
       // Food › Custom › Custom foods, where the food (and the suggestion) lives.
       return "/app/food?tab=prep&sub=foods";
+    case "workout_log_reply":
+      // Round D · TR22: the session in Workout › History, opened.
+      return n.subjectType === "workout_session" && id ? `/app/workout?tab=history&session=${id}` : "/app/workout?tab=history";
+    case "course_published": {
+      // Round D: the course's page (payload course_id, else the subject).
+      const course = typeof n.payload?.course_id === "string" && UUID.test(n.payload.course_id) ? n.payload.course_id : n.subjectType === "course" ? id : null;
+      return course ? `/app/forum/courses/${course}` : "/app/forum?tab=courses";
+    }
     default:
       return null;
   }
@@ -466,6 +501,10 @@ export function notifLook(kind: string): { tone: NotifTone; glyph: NotifGlyph } 
       return { tone: "red", glyph: "x" };
     case "food_submission_reviewed":
       return { tone: "teal", glyph: "leaf" };
+    case "workout_log_reply":
+      return { tone: "lav", glyph: "user" };
+    case "course_published":
+      return { tone: "lav", glyph: "app" };
     default:
       return { tone: "grey", glyph: "clock" };
   }

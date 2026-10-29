@@ -5,7 +5,7 @@ import { CentredPopup } from "../ui/CentredPopup";
 import { CtaButton } from "../ui/PinnedCta";
 import { INK } from "../pro/proInk";
 import { Avatar } from "../pro/client/kit";
-import { ComingSoonPill } from "../pro/ComingSoon";
+import { GroupDetailsSheet } from "./GroupDetailsSheet";
 import { GroupPicker } from "./NewGroup";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
@@ -47,7 +47,10 @@ export const GroupInfoSection: React.FC<{
    * admin): drawn as gen/r16.js groupInfo16. Unset keeps the client look.
    */
   pro?: boolean;
-}> = ({ threadId, authUserId, name, members, isHost, ended, clients, onChanged, pro }) => {
+  /** Round D: the group's description and approved photo, for the owner's edit sheet. */
+  description?: string | null;
+  photoPath?: string | null;
+}> = ({ threadId, authUserId, name, members, isHost, ended, clients, onChanged, pro, description = null, photoPath = null }) => {
   const [adding, setAdding] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [renaming, setRenaming] = useState(false);
@@ -111,6 +114,10 @@ export const GroupInfoSection: React.FC<{
   if (pro) {
     return (
       <ProGroupInfo
+        threadId={threadId}
+        description={description}
+        photoPath={photoPath}
+        onChanged={onChanged}
         name={name}
         joined={joined}
         authUserId={authUserId}
@@ -127,14 +134,8 @@ export const GroupInfoSection: React.FC<{
         setPicked={setPicked}
         invite={() => void invite()}
         renaming={renaming}
-        startRename={() => {
-          setNewName(name);
-          setRenaming(true);
-        }}
+        startRename={() => setRenaming(true)}
         stopRename={() => setRenaming(false)}
-        newName={newName}
-        setNewName={setNewName}
-        saveName={() => void run(() => renameGroup(threadId, newName.trim()), () => setRenaming(false))}
         confirm={confirm}
         setConfirm={setConfirm}
         runConfirm={runConfirm}
@@ -336,10 +337,14 @@ type Confirm = null | "close" | "leave" | { remove: GroupMember };
  * - End group: the popup (users tile, "End {name}?", the body, End group 48
  *   r14 status.high with white / #0D0B1A ink, 14 / 700, and Keep group as
  *   the secondary CTA). Remove uses the same popup (not drawn: own pick).
- * message_threads has no description column (backend gap): the rename
- * sheet's Description shows Coming soon.
+ * Round D: the rename sheet is GroupDetailsSheet (photo through image
+ * approval, name, description).
  */
 const ProGroupInfo: React.FC<{
+  threadId: string;
+  description: string | null;
+  photoPath: string | null;
+  onChanged: () => void;
   name: string;
   joined: GroupMember[];
   authUserId: string;
@@ -358,9 +363,6 @@ const ProGroupInfo: React.FC<{
   renaming: boolean;
   startRename: () => void;
   stopRename: () => void;
-  newName: string;
-  setNewName: (v: string) => void;
-  saveName: () => void;
   confirm: Confirm;
   setConfirm: (c: Confirm) => void;
   runConfirm: () => void;
@@ -458,24 +460,18 @@ const ProGroupInfo: React.FC<{
         />
       </BottomSheet>
 
-      <BottomSheet
-        open={p.renaming}
-        onClose={p.stopRename}
-        title="Rename or edit description"
-        footer={<CtaButton className="w-full" size="sheet" label="Save" loading={p.busy} disabled={!p.newName.trim() || p.newName.trim() === p.name} onClick={p.saveName} />}
-      >
-        <label htmlFor="grename" className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-          Group name
-        </label>
-        <input id="grename" value={p.newName} maxLength={GROUP_NAME_MAX} onChange={(e) => p.setNewName(e.target.value)} style={PRO_FIELD} className="focus:outline-none focus:ring-2 focus:ring-primary/20" />
-        <div className="flex items-center justify-between" style={{ gap: 8, margin: "14px 0 6px" }}>
-          <label htmlFor="gredesc" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>
-            Description (optional)
-          </label>
-          <ComingSoonPill />
-        </div>
-        <input id="gredesc" disabled style={{ ...PRO_FIELD, opacity: 0.6 }} />
-      </BottomSheet>
+      {p.isHost && (
+        <GroupDetailsSheet
+          open={p.renaming}
+          onClose={p.stopRename}
+          threadId={p.threadId}
+          authUserId={p.authUserId}
+          name={p.name}
+          description={p.description}
+          photoPath={p.photoPath}
+          onChanged={p.onChanged}
+        />
+      )}
 
       <CentredPopup
         open={!!c}
@@ -508,15 +504,4 @@ const ProGroupInfo: React.FC<{
       </CentredPopup>
     </>
   );
-};
-
-const PRO_FIELD: React.CSSProperties = {
-  width: "100%",
-  height: 40,
-  borderRadius: 12,
-  background: INK.soft,
-  border: `1px solid ${INK.b10}`,
-  padding: "0 12px",
-  fontSize: textPx(14),
-  color: INK.ch,
 };

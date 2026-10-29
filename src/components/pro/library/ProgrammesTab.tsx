@@ -23,6 +23,7 @@ import { TargetsSheet } from "./TargetsSheet";
 import { TemplateEditor } from "./TemplateEditor";
 import { TemplateFolders } from "./TemplateFolders";
 import { WorkoutLogView } from "./WorkoutLogView";
+import { WeekProgrammesSection, WeekProgrammeView } from "../programmes/WeekProgrammes";
 import { DetailHeader, ErrorLine, Fab, FilterChip, LibCard, SquareBtn } from "./libraryUi";
 import { assignedLine, clientsLabel, currentWeek, isActive, templateMeta } from "./libraryModel";
 
@@ -315,6 +316,10 @@ export const ProgrammesTab: React.FC = () => {
         </>
       );
   }
+  // Round D · DT1: week-by-day programmes (components/pro/programmes).
+  if ((view === "programme" || view === "programme-client") && viewId) {
+    return <WeekProgrammeView view={view} id={viewId} onBack={back} onOpenAssignment={(id) => go({ view: "programme-client", id })} />;
+  }
   if (view === "log" && viewId) {
     return <WorkoutLogView sessionId={viewId} template={null} onBack={back} />;
   }
@@ -368,6 +373,7 @@ export const ProgrammesTab: React.FC = () => {
       </div>
       {errors}
 
+      {chip === "programmes" && <WeekProgrammesSection query={query} onOpen={(id) => go({ view: "programme", id })} />}
       {chip === "programmes" &&
         (empty ? (
           <EmptyState icon={ClipboardList} title="No templates yet. Build your first one." />

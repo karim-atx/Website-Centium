@@ -73,3 +73,13 @@ test("refusal wording", () => {
   assert.equal(describeCourseError({ code: "ATX69" }, "quiz"), "Quizzes are part of the full course.");
   assert.equal(describeCourseError({ code: "XX000" }, "read"), null);
 });
+
+test("Round D: new lesson kinds and refusals", () => {
+  assert.equal(weekContents(["reading", "image", "check_in", "check_in"]), "1 reading, 1 image, 2 check-ins");
+  assert.equal(lessonOpenTo("image", "free"), true);
+  assert.equal(lessonOpenTo("check_in", "free"), true);
+  assert.match(describeCourseError({ code: "ATX67" }, "enrol")!, /only open to the people/);
+  assert.match(describeCourseError({ code: "ATX67" }, "check_in")!, /Start the course/);
+  assert.match(describeCourseError({ code: "22023" }, "check_in")!, /4,000/);
+  assert.equal(describeCourseError({ code: "22023" }, "read"), null);
+});

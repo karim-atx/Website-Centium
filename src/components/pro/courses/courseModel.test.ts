@@ -65,6 +65,8 @@ test("lesson meta and the preview eyebrow", () => {
   assert.equal(lessonMeta("pdf", null), "PDF");
   assert.equal(lessonMeta("quiz", null, 4), "Quiz · 4 questions");
   assert.equal(lessonMeta("quiz", null, 1), "Quiz · 1 question");
+  assert.equal(lessonMeta("image", 2), "Image · 2 min");
+  assert.equal(lessonMeta("check_in", null), "Check-in");
   assert.equal(lessonEyebrow(0, "Reading", 4), "Week 1 · Reading · 4 min");
   assert.equal(lessonEyebrow(1, "Quiz", null), "Week 2 · Quiz");
 });

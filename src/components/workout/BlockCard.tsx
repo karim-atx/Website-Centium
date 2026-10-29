@@ -1,6 +1,7 @@
 import React from "react";
 import type { BlockKind, Exercise, WorkoutBlock } from "../../types";
 import { blockHeading, isRoundBased, prescriptionLine } from "../../services/workout/prescription";
+import { setTargetLines } from "../../services/workout/setTargets";
 import { liftTo, tintOn, DARK_SURFACE } from "../../data/folderColors";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
@@ -126,6 +127,10 @@ export const BlockCard: React.FC<{
                   {line && (
                     <p style={{ margin: "1px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{line}</p>
                   )}
+                  {/* Round D (TR11): the coach's target RPE and note per set. */}
+                  {setTargetLines(ex.setTargets).map((t) => (
+                    <p key={t} style={{ margin: "1px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{t}</p>
+                  ))}
                 </div>
                 {renderMemberAction?.(ex)}
               </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Archive, ArchiveRestore, Ban, BellOff, ChevronLeft, Flag, Pin, PinOff, Search, Trash2, Users } from "lucide-react";
+import { Archive, ArchiveRestore, Ban, BellOff, ChevronLeft, Flag, Pin, PinOff, Search, Trash2 } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { SegmentedTabs } from "../ui/SegmentedTabs";
 import { Toggle } from "../ui/Toggle";
@@ -29,6 +29,7 @@ import { fetchSharesPresence, setSharesPresence } from "../../services/messaging
 import { useThreadLive } from "../../context/threadLive";
 import { useApp } from "../../context/AppContext";
 import { GroupInfoSection } from "./GroupInfoSection";
+import { GroupAvatar } from "./GroupAvatar";
 import { useIsDark } from "../../hooks/useIsDark";
 import type { GroupMember } from "../../services/messaging/groups";
 
@@ -79,6 +80,9 @@ export const ChatInfo: React.FC<{
     members: GroupMember[];
     isHost: boolean;
     ended: null | "closed" | "left" | "removed";
+    /** Round D: the approved photo (group-photos) and the description. */
+    photoPath?: string | null;
+    description?: string | null;
     onChanged: () => void;
     onReport: (() => void) | null;
   };
@@ -237,9 +241,7 @@ export const ChatInfo: React.FC<{
           the name (all measured on the frame at 2x). */}
       <div className="flex flex-col items-center gap-2 -mt-1">
         {group ? (
-          <span className="w-20 h-20 rounded-full bg-th-e4f0ee dark:bg-teal-pale flex items-center justify-center">
-            <Users size={30} className="text-th-2f5f58 dark:text-teal-deep-text" aria-hidden />
-          </span>
+          <GroupAvatar path={group.photoPath} size={80} iconSize={30} />
         ) : (
         <span className="w-20 h-20 rounded-full bg-primary-pale flex items-center justify-center overflow-hidden text-[26px] font-extrabold text-primary-deep-text">
           {thread.participantAvatarUrl ? (
@@ -252,6 +254,12 @@ export const ChatInfo: React.FC<{
         </span>
         )}
         <p className="text-lg font-bold text-charcoal text-center">{displayName}</p>
+        {group?.description && (
+          // Round D: the group's description, under its name, for everyone in it.
+          <p data-group-description="" className="-mt-1 max-w-[440px] text-[13px] leading-[19px] text-charcoal-soft text-center whitespace-pre-line" style={{ overflowWrap: "anywhere" }}>
+            {group.description}
+          </p>
+        )}
         {online && !group && (
           <p className="-mt-[9px] text-[12.5px] font-semibold" style={{ color: "#2E7D57" }}>
             Online
@@ -406,6 +414,8 @@ export const ChatInfo: React.FC<{
           clients={professionalClients
             .filter((c) => c.clientId)
             .map((c) => ({ userId: c.clientId!, name: c.name, avatarUrl: c.avatarUrl ?? null }))}
+          description={group.description ?? null}
+          photoPath={group.photoPath ?? null}
           onChanged={group.onChanged}
           pro={user.accountType === "professional" || undefined}
         />

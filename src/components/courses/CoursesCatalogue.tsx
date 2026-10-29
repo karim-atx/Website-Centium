@@ -23,6 +23,7 @@ import { SegmentedTabs } from "../ui/SegmentedTabs";
 import { fv } from "../forum/forumColor";
 import { CoverPill, Instructor, RatingShort } from "./courseParts";
 import { coverBackground } from "./courseCover";
+import { coverUrl, fetchCourseExtras, type CourseExtras } from "../../services/courses/extras";
 import { useIsDark } from "../../hooks/useIsDark";
 
 // Design screen 6: the Courses tab. Search, category chips, "Continue
@@ -37,6 +38,8 @@ type Data = {
   lessons: Lesson[];
   enrolments: Enrolment[];
   completed: Map<string, Set<string>>;
+  /** Round D: approved covers, by course. */
+  extras: Map<string, CourseExtras>;
 };
 
 async function load(userId: string): Promise<{ data: Data } | { error: string }> {
@@ -44,11 +47,12 @@ async function load(userId: string): Promise<{ data: Data } | { error: string }>
   if (!cats.ok) return { error: cats.message };
   if (!cat.ok) return { error: cat.message };
   const ids = cat.value.map((c) => c.id);
-  const [names, stats, tree, completed] = await Promise.all([
+  const [names, stats, tree, completed, extras] = await Promise.all([
     fetchAuthorNames(cat.value.map((c) => c.authorId).filter((x): x is string => !!x)),
     fetchCourseStats(ids),
     fetchTrees(ids),
     fetchCompleted(enrolments.map((e) => e.id)),
+    fetchCourseExtras(ids),
   ]);
   return {
     data: {
@@ -60,6 +64,7 @@ async function load(userId: string): Promise<{ data: Data } | { error: string }>
       lessons: tree.lessons,
       enrolments,
       completed,
+      extras,
     },
   };
 }
@@ -249,6 +254,7 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
             {shown.map((c) => {
               const weeks = data.modules.filter((m) => m.courseId === c.id).length;
               const s = data.stats.get(c.id);
+              const cover = coverUrl(data.extras.get(c.id)?.coverPath);
               return (
                 <Link
                   key={c.id}
@@ -257,8 +263,11 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
                   style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("text") }}
                 >
                   {/* MO1.3.1 #7: a 96 pt cover (measured from the frame, 2x: 191 px of the 188 pt card). */}
-                  <div className="h-24 flex items-end p-2.5" style={{ background: coverBackground(c.coverColour, dark) }}>
-                    <CoverPill>{coursePill(c.level, weeks)}</CoverPill>
+                  <div className="relative overflow-hidden h-24 flex items-end p-2.5" style={{ background: coverBackground(c.coverColour, dark) }}>
+                    {cover && <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+                    <span className="relative">
+                      <CoverPill>{coursePill(c.level, weeks)}</CoverPill>
+                    </span>
                   </div>
                   <div className="px-[14px] py-3 flex flex-col gap-[5px]">
                     <span className="text-[15px] font-extrabold leading-[1.3] [overflow-wrap:anywhere]">{c.title}</span>

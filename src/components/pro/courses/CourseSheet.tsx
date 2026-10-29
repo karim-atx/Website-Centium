@@ -25,6 +25,21 @@ import {
 } from "../../../services/courses/author";
 import type { CourseCategory } from "../../../services/courses";
 import type { LessonKind } from "../../../services/courses/rules";
+import { audienceLabel, AUDIENCE_LIMITS } from "../../../services/courses/authorRules";
+import {
+  coverUrl,
+  fetchAudienceMembers,
+  fetchCourseExtras,
+  fetchRevisionDescription,
+  setCourseAudience,
+  setCourseDescription,
+  submitCourseCover,
+  withdrawCourseImage,
+  removeCourseCover,
+  type CourseExtras,
+} from "../../../services/courses/extras";
+import { useApp } from "../../../context/AppContext";
+import { useOwnImage } from "../../moderation/ImageApproval";
 import { fetchDrip, fetchModuleOpensAfter, fetchQuizCounts, fetchRevisionDrip, saveDrip, type DripMode } from "../../../services/pro/courses";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { CentredPopup } from "../../ui/CentredPopup";
@@ -39,7 +54,7 @@ import { DangerCta } from "./StructureStep";
 import { BasicsStep, type BasicsDraft } from "./BasicsStep";
 import { StructureStep } from "./StructureStep";
 import { LessonEditor, LessonTypeStep } from "./LessonSteps";
-import { AccessStep } from "./AccessStep";
+import { AccessStep, type AccessDraft } from "./AccessStep";
 import { ReviewStep } from "./ReviewStep";
 
 /**
@@ -82,7 +97,15 @@ type Loaded = {
   quizCounts: Map<string, number>;
   drip: { mode: DripMode; weekday: number | null };
   commission: number | null;
+  /** Round D: cover, description, focus and audience of the live course. */
+  extras: CourseExtras;
+  /** The open revision's description and focus (null = unchanged, "" = cleared). */
+  revDesc: { description: string | null; focus: string | null };
+  /** The selected clients, when the audience is "selected". */
+  members: string[];
 };
+
+const NO_EXTRAS: CourseExtras = { coverPath: null, description: null, focus: null, audience: "public", unpublishedAt: null };
 
 const emptyBasics = (categories: CourseCategory[]): BasicsDraft => ({
   title: "",
@@ -92,9 +115,11 @@ const emptyBasics = (categories: CourseCategory[]): BasicsDraft => ({
   weeklyHours: "",
   learnPoints: "",
   coverColour: COVER_COLOURS[0],
+  description: "",
+  focus: "",
 });
 
-const basicsOf = (c: AuthoredCourse): BasicsDraft => ({
+const basicsOf = (c: AuthoredCourse, text: { description: string; focus: string }): BasicsDraft => ({
   title: c.title,
   subtitle: c.subtitle ?? "",
   categoryKey: c.categoryKey,
@@ -102,7 +127,17 @@ const basicsOf = (c: AuthoredCourse): BasicsDraft => ({
   weeklyHours: c.weeklyHours === null ? "" : String(c.weeklyHours),
   learnPoints: c.learnPoints.join("\n"),
   coverColour: c.coverColour,
+  description: text.description,
+  focus: text.focus,
 });
+
+/** The description and focus being edited: the open revision's where it changes them, else the live course's. */
+const shownText = (d: Loaded, editingRev: string | null) => ({
+  description: (editingRev && d.revDesc.description !== null ? d.revDesc.description : d.extras.description) ?? "",
+  focus: (editingRev && d.revDesc.focus !== null ? d.revDesc.focus : d.extras.focus) ?? "",
+});
+
+const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
 
 export function CourseSheet({
   courseId,
@@ -138,7 +173,14 @@ export function CourseSheet({
   const [discard, setDiscard] = useState(false);
   const [withdrawAsk, setWithdrawAsk] = useState(false);
   const [footerEl, setFooterEl] = useState<HTMLDivElement | null>(null);
-  const [access, setAccess] = useState<{ free: boolean; price: string; mode: DripMode } | null>(null);
+  const [access, setAccess] = useState<AccessDraft | null>(null);
+  const { authUserId, professionalClients } = useApp();
+  // Round D: a picked cover waits here until Save, then goes for approval.
+  const [coverPick, setCoverPick] = useState<{ file: File; preview: string } | null>(null);
+  const { image: ownCover, refresh: refreshCover } = useOwnImage("course_cover", courseId);
+  useEffect(() => () => {
+    if (coverPick) URL.revokeObjectURL(coverPick.preview);
+  }, [coverPick]);
 
   const load = useCallback(async () => {
     if (!courseId) return;
@@ -150,12 +192,23 @@ export function CourseSheet({
     const rev = await fetchMyRevision(courseId);
     const revision = rev.ok ? rev.value : null;
     const editing = editingRevisionId(revision);
-    const [tree, opens, drip, commission] = await Promise.all([fetchBuilderTree(courseId, editing), fetchModuleOpensAfter(courseId, editing), editing ? fetchRevisionDrip(editing) : fetchDrip(courseId), fetchCommissionPercent()]);
+    const [tree, opens, drip, commission, extrasMap, revDesc] = await Promise.all([
+      fetchBuilderTree(courseId, editing),
+      fetchModuleOpensAfter(courseId, editing),
+      editing ? fetchRevisionDrip(editing) : fetchDrip(courseId),
+      fetchCommissionPercent(),
+      fetchCourseExtras([courseId]),
+      editing ? fetchRevisionDescription(editing) : Promise.resolve({ description: null, focus: null }),
+    ]);
     if (!tree.ok) {
       setLoadError(tree.message);
       return;
     }
-    const quizCounts = await fetchQuizCounts(tree.value.lessons.filter((l) => l.kind === "quiz").map((l) => l.id));
+    const extras = extrasMap.get(courseId) ?? NO_EXTRAS;
+    const [quizCounts, members] = await Promise.all([
+      fetchQuizCounts(tree.value.lessons.filter((l) => l.kind === "quiz").map((l) => l.id)),
+      extras.audience === "selected" ? fetchAudienceMembers(courseId) : Promise.resolve({ ok: true as const, value: [] as string[] }),
+    ]);
     setLoadError(null);
     setData({
       course: c.value,
@@ -166,6 +219,9 @@ export function CourseSheet({
       quizCounts,
       drip: drip.ok ? drip.data : { mode: "all_at_once", weekday: null },
       commission,
+      extras,
+      revDesc,
+      members: members.ok ? members.value : [],
     });
   }, [courseId]);
 
@@ -197,15 +253,21 @@ export function CourseSheet({
 
   useEffect(() => {
     if (!data || !shown) return;
-    setBasics(basicsOf(shown));
-    setAccess({ free: shown.priceCents === 0, price: shown.priceCents ? String(shown.priceCents / 100) : "", mode: data.drip.mode });
+    setBasics(basicsOf(shown, shownText(data, editingRev)));
+    setAccess({
+      free: shown.priceCents === 0,
+      price: shown.priceCents ? String(shown.priceCents / 100) : "",
+      mode: data.drip.mode,
+      audience: data.extras.audience,
+      members: data.members,
+    });
     if (!started) {
       setStarted(true);
       if (data.course.status === "published") setView({ step: "overview" });
       else if (data.course.status === "submitted") setView({ step: 4 });
       else if (initialStep === 1) setView({ step: 1 });
     }
-  }, [data, shown, started, initialStep]);
+  }, [data, shown, started, initialStep, editingRev]);
 
   useEffect(() => {
     if (!courseId && categories.length && !basics.categoryKey) setBasics((b) => ({ ...b, categoryKey: categories[0].key }));
@@ -245,6 +307,24 @@ export function CourseSheet({
     return patch;
   };
 
+  /** Round D: what set_course_description should get: null leaves a field, "" clears it. */
+  const textPatch = (b: BasicsDraft, base: { description: string; focus: string }) => {
+    const d = b.description.trim();
+    const f = b.focus.trim();
+    return { description: d !== base.description.trim() ? d : null, focus: f !== base.focus.trim() ? f : null };
+  };
+
+  /** A picked cover goes for approval once the course exists. */
+  const sendCover = async (id: string): Promise<{ ok: true } | { ok: false; message: string }> => {
+    if (!coverPick || !authUserId) return { ok: true };
+    const r = await submitCourseCover(authUserId, id, coverPick.file);
+    if (r.ok) {
+      setCoverPick(null);
+      refreshCover();
+    }
+    return r;
+  };
+
   const saveBasics = async (then: "next" | "draft"): Promise<void> => {
     setShowErrors(true);
     if (titleError(basics.title) || !basics.categoryKey) return;
@@ -263,19 +343,39 @@ export function CourseSheet({
       }
       const patch = basicsPatch(basics, null);
       delete patch.title;
+      const problems: string[] = [];
       if (Object.keys(patch).length) {
         const r = await updateCourseDetails(created.value, patch, null);
-        if (!r.ok) setError(r.message);
+        if (!r.ok) problems.push(r.message);
       }
+      const text = textPatch(basics, { description: "", focus: "" });
+      if (text.description || text.focus) {
+        const r = await setCourseDescription(created.value, text.description, text.focus, null);
+        if (!r.ok) problems.push(r.message);
+      }
+      const c = await sendCover(created.value);
+      if (!c.ok) problems.push(c.message);
       setBusy(false);
+      if (problems.length) setError(problems.join(" "));
       onChanged();
       if (then === "draft") onSavedDraft?.();
       else onCreated?.(created.value);
       return;
     }
     const patch = basicsPatch(basics, shown);
-    if (Object.keys(patch).length) {
-      const ok = await run(() => updateCourseDetails(courseId!, patch, editingRev));
+    const text = data ? textPatch(basics, shownText(data, editingRev)) : { description: null, focus: null };
+    if (Object.keys(patch).length || text.description !== null || text.focus !== null || coverPick) {
+      const ok = await run(async () => {
+        if (Object.keys(patch).length) {
+          const r = await updateCourseDetails(courseId!, patch, editingRev);
+          if (!r.ok) return r;
+        }
+        if (text.description !== null || text.focus !== null) {
+          const r = await setCourseDescription(courseId!, text.description, text.focus, editingRev);
+          if (!r.ok) return r;
+        }
+        return sendCover(courseId!);
+      });
       if (!ok) return;
     }
     setView(published ? { step: "overview" } : { step: 1 });
@@ -284,8 +384,19 @@ export function CourseSheet({
   // ---- Access ---------------------------------------------------------------
   const saveAccess = async () => {
     if (!data || !shown || !access) return;
+    // Round D: who can join takes effect at once and without review, so it is
+    // saved even when the content is frozen. Only current clients can be chosen.
+    const current = new Set(professionalClients.map((c) => c.clientId).filter(Boolean));
+    const members = access.members.filter((id) => current.has(id));
+    const audienceChanged = access.audience !== data.extras.audience || (access.audience === "selected" && !sameSet(members, data.members));
+    if (access.audience === "selected" && (members.length < AUDIENCE_LIMITS.min || members.length > AUDIENCE_LIMITS.max)) {
+      setError(`Choose between ${AUDIENCE_LIMITS.min} and ${AUDIENCE_LIMITS.max} clients.`);
+      return;
+    }
+    const saveAudience = async () => (audienceChanged ? setCourseAudience(courseId!, access.audience, members) : { ok: true as const });
     if (!editable) {
-      setView({ step: 4 });
+      if (audienceChanged && !(await run(saveAudience))) return;
+      setView(published ? { step: "overview" } : { step: 4 });
       return;
     }
     const cents = access.free ? 0 : parsePrice(access.price) ?? -1;
@@ -296,8 +407,10 @@ export function CourseSheet({
     const plan = dripPlan(data.modules.map((m) => m.id), access.mode);
     const priceChanged = cents !== shown.priceCents;
     const dripChanged = access.mode !== data.drip.mode || !dripMatches(plan, data.opensAfter);
-    if (priceChanged || dripChanged) {
+    if (priceChanged || dripChanged || audienceChanged) {
       const ok = await run(async () => {
+        const a = await saveAudience();
+        if (!a.ok) return a;
         if (priceChanged) {
           const r = await updateCourseDetails(courseId!, { priceCents: cents }, editingRev);
           if (!r.ok) return r;
@@ -371,6 +484,19 @@ export function CourseSheet({
         editable={editable}
         showErrors={showErrors}
         reviewReason={data?.course.status === "changes_requested" ? data.course.reviewReason : data?.revision?.status === "changes_requested" ? data.revision.reviewReason : null}
+        cover={{
+          approvedUrl: coverUrl(data?.extras.coverPath),
+          own: ownCover,
+          pick: coverPick,
+          onPick: (file) => setCoverPick(file ? { file, preview: URL.createObjectURL(file) } : null),
+          onWithdraw: () => {
+            if (courseId) void run(() => withdrawCourseImage("course_cover", courseId)).then(refreshCover);
+          },
+          onRemove: () => {
+            if (courseId) void run(() => removeCourseCover(courseId));
+          },
+          live: published,
+        }}
         footer={toFooter(
           <>
             <CtaButton variant="secondary" label={published ? "Back" : "Cancel"} onClick={() => (published ? setView({ step: "overview" }) : close())} disabled={busy} />
@@ -451,6 +577,7 @@ export function CourseSheet({
         onChange={setAccess}
         commission={data.commission}
         editable={editable}
+        audienceEditable
         footer={toFooter(
           <>
             <CtaButton variant="secondary" label="Back" onClick={() => setView(published ? { step: "overview" } : { step: 1 })} disabled={busy} />
@@ -599,7 +726,7 @@ function EditOverview({
               meta: `${sizeLine(data.modules.length, data.lessons.length).replace(" · ", ", ")}${rev && open && rev.contentChanged ? " · changed" : ""}`,
               onClick: () => onRow({ step: 1 }),
             },
-            { key: "a", icon: LockOpen, title: "Access", meta: `Public · ${price}`, onClick: () => onRow({ step: 3 }) },
+            { key: "a", icon: LockOpen, title: "Access", meta: `${audienceLabel(data.extras.audience, data.extras.audience === "selected" ? data.members.length : undefined)} · ${price}`, onClick: () => onRow({ step: 3 }) },
           ]}
         />
       </div>

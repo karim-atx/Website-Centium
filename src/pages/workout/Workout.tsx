@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { SegmentedTabs, type SegmentedTabItem } from "../../components/ui/SegmentedTabs";
 import { FixedHeader } from "../../components/ui/FixedHeader";
 import RoutinesTab from "./RoutinesTab";
@@ -28,7 +29,18 @@ const workoutTabs: SegmentedTabItem[] = (["routines", "library", "history", "met
 }));
 
 export default function Workout() {
-  const [tab, setTab] = useState<Tab>("routines");
+  // Round D · TR22: ?tab=history opens History (the workout_log_reply notice's
+  // link); ?tab=routines (the programme push's link) opens Routines.
+  const [params] = useSearchParams();
+  const linked = params.get("tab");
+  const [tab, setTab] = useState<Tab>(linked === "history" ? "history" : "routines");
+  // A new link while the page is open (adjusted during render, not in an effect).
+  const [seenLink, setSeenLink] = useState(params.toString());
+  if (seenLink !== params.toString()) {
+    setSeenLink(params.toString());
+    if (linked === "history") setTab("history");
+    else if (linked === "routines") setTab("routines");
+  }
 
   return (
     <div>

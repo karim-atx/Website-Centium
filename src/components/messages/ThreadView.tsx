@@ -1,7 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowDown, Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, Handshake, ImageIcon, Mic, Paperclip, Pencil, Phone, PhoneOff, Pin, Search, Send, SendHorizontal, Share2, ShieldCheck, Star, Trash2, Users, Video, X } from "lucide-react";
-import { ShareChatCard } from "../pro/messages/ShareChatCard";
+import { ArrowDown, Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, Handshake, ImageIcon, Mic, Paperclip, Pencil, Phone, PhoneOff, Pin, Search, Send, SendHorizontal, Share2, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
+import { GroupShareCard } from "./GroupShareCard";
+import { GroupAvatar } from "./GroupAvatar";
+import { useSessionPlaces } from "./useSessionPlaces";
+import type { ShareCard } from "../../services/messaging/shareCards";
 import { useApp } from "../../context/AppContext";
 import { ChatCard } from "./ChatCard";
 import { cardAllows } from "../../services/messaging/cards";
@@ -782,6 +785,26 @@ export const ThreadView: React.FC<{
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [infoOpen]);
   usePoll(() => void refreshGroup(), 60000, isGroup);
+  // Round D (DT4): places on the session cards shared in this group.
+  const sessionPlaces = useSessionPlaces(
+    messages.filter((m) => m.shareCard?.kind === "session_share" && m.shareCard.eventId && !m.deletedAt).map((m) => m.id),
+    isGroup
+  );
+  const shareCardFor = (m: Message, card: ShareCard) => (
+    <GroupShareCard
+      card={card}
+      time={clockTime(m.createdAt)}
+      messageId={m.id}
+      mine={m.senderId === authUserId}
+      viewerIsPro={!!proView}
+      senderId={m.senderId}
+      senderFirstName={nameOf(m.senderId)}
+      places={sessionPlaces.places[m.id]}
+      onPlaces={sessionPlaces.set}
+      onRefresh={() => void sessionPlaces.refresh()}
+      readOnly={!!groupEnded}
+    />
+  );
 
   const react = async (m: Message, emoji: string | null) => {
     if (!authUserId) return;
@@ -1387,6 +1410,8 @@ export const ThreadView: React.FC<{
                   members,
                   isHost,
                   ended: groupEnded,
+                  photoPath: groupState?.photoPath ?? null,
+                  description: groupState?.description ?? null,
                   onChanged: () => void refreshGroup(),
                   onReport: reportLatest,
                 }
@@ -1478,9 +1503,8 @@ export const ThreadView: React.FC<{
           className="tap flex items-center gap-2.5 flex-1 min-w-0 text-left"
         >
           {isGroup ? (
-            <span className="w-10 h-10 rounded-full bg-th-e4f0ee dark:bg-teal-pale flex items-center justify-center shrink-0">
-              <Users size={19} className="text-th-2f5f58 dark:text-teal-deep-text" aria-hidden />
-            </span>
+            // Round D D-S16: the group's approved photo, else the Users disc.
+            <GroupAvatar path={groupState?.photoPath} size={40} iconSize={19} />
           ) : cv2Icon ? (
             // OP1-180 row 4 "or icon 18" / AN14-058 row 1: a member masked (user-round on maskBg), support the life-buoy.
             <BizAvatar thread={thread} size={40} />
@@ -1770,7 +1794,7 @@ export const ThreadView: React.FC<{
                   shows as the ordinary bubble below, with its notice, never as
                   a card. */}
               {proView && m.shareCard && !m.deletedAt && !removal ? (
-                // MO27: a shared programme or session, drawn on the professional's side only.
+                // MO27: a shared programme, session or meal plan, on the professional's side (GroupShareCard: places, Open plan).
                 <div
                   ref={(el) => {
                     bubbleRefs.current[m.id] = el;
@@ -1781,11 +1805,12 @@ export const ThreadView: React.FC<{
                   }}
                   className={`self-end w-[86%] rounded-[18px] ${highlighted === m.id ? "ring-2 ring-primary-dark" : ""}`}
                 >
-                  <ShareChatCard card={m.shareCard} time={clockTime(m.createdAt)} />
+                  {shareCardFor(m, m.shareCard)}
                 </div>
               ) : !proView && m.shareCard && !m.deletedAt && !removal ? (
-                // CU24 (Release 3): a member sees the programme or session the
-                // host shared as the same read-only card, on the sender's side.
+                // CU24 (Release 3): a member sees what the host shared as the
+                // same card, on the sender's side; Round D adds a session's
+                // places and Book a place / Cancel booking / Ask {pro}.
                 <div
                   ref={(el) => {
                     bubbleRefs.current[m.id] = el;
@@ -1796,7 +1821,7 @@ export const ThreadView: React.FC<{
                   }}
                   className={`${mine ? "self-end" : "self-start"} w-[86%] rounded-[18px] ${highlighted === m.id ? "ring-2 ring-primary-dark" : ""}`}
                 >
-                  <ShareChatCard card={m.shareCard} time={clockTime(m.createdAt)} />
+                  {shareCardFor(m, m.shareCard)}
                 </div>
               ) : (m.card || m.recommendation) && !m.deletedAt && !removal ? (
                 <div
