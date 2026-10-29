@@ -16,6 +16,7 @@ import { acceptFor, validateFileFor } from "../../../services/storage";
 import { fetchLatestIntake, type FormResponse } from "../../../services/pro/forms";
 import { getMedicalHistory } from "../../../services/medical-history";
 import { FORMS_PATH } from "../forms/formsList";
+import { responseMarker } from "../forms/reviewModel";
 
 /**
  * Release 3 · CL2 v3 Tab 6 Files (source gen/r6b.js cpTab6 'Files'):
@@ -92,7 +93,15 @@ export const FilesTab: React.FC<{ data: ClientPageData }> = ({ data }) => {
       <ListCard
         rows={[
           intake
-            ? { key: "intake", icon: ClipboardList, title: "Intake form", meta: `Completed ${fmtDay(intake.submittedAt)} · ${Object.keys(intake.answers).length} answer${Object.keys(intake.answers).length === 1 ? "" : "s"}`, onClick: () => navigate(`${FORMS_PATH}/responses/${intake.id}`) }
+            ? {
+                key: "intake",
+                icon: ClipboardList,
+                // 20261222080000: an urgent (or flagged) intake says so first, as the check-ins list does.
+                tone: responseMarker(intake) ? ("att" as const) : undefined,
+                title: "Intake form",
+                meta: `${responseMarker(intake) ? `${responseMarker(intake)} · ` : ""}Completed ${fmtDay(intake.submittedAt)} · ${Object.keys(intake.answers).length} answer${Object.keys(intake.answers).length === 1 ? "" : "s"}`,
+                onClick: () => navigate(`${FORMS_PATH}/responses/${intake.id}`),
+              }
             : { key: "intake", icon: ClipboardList, title: "Intake form", meta: intake === undefined ? "Loading…" : "No intake form answered yet", onClick: () => navigate(FORMS_PATH) },
           {
             key: "history",

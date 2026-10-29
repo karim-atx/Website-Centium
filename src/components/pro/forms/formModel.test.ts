@@ -7,9 +7,11 @@ import {
   conditionParents,
   conditionProblem,
   conditionValues,
+  conditionWords,
   diffQuestions,
   fromRow,
   parseSchedule,
+  pickedAnswer,
   profileFieldsFor,
   questionProblem,
   questionsFor,
@@ -24,7 +26,7 @@ import {
   withoutQuestion,
   type FormTemplate,
 } from "./formModel";
-import { askedQuestions, numberBoxes, seriesOverTime, weekNumber, type PositionedQuestion } from "./reviewModel";
+import { askedQuestions, numberBoxes, parseResponseNotes, responseMarker, responseWarning, seriesOverTime, weekNumber, type PositionedQuestion } from "./reviewModel";
 import { checkInLine, intakeLine, templateMetaLine, templatesFor } from "./formsList";
 import { bodyOf, sectionsOf, templateMeta } from "./noteTemplateModel";
 
@@ -129,12 +131,53 @@ describe("sections, conditions and profile fields (Round D)", () => {
   const which = q({ id: "b", type: "multi", prompt: "Which ones?", unit: null, options: ["Peanuts", "Gluten"], position: 1 });
   const notes = q({ id: "c", type: "text", prompt: "Anything else?", unit: null, position: 2 });
 
-  it("offers only earlier choice, multiple choice and scale questions without a condition of their own", () => {
+  it("offers earlier choice, multiple choice and scale questions, with a condition of their own or not (chains)", () => {
     const withCond = { ...which, showIf: { questionId: "a", op: "equals" as const, value: "Yes" } };
-    assert.deepEqual(conditionParents([yes, withCond, notes], 2).map((x) => x.id), ["a"]);
+    assert.deepEqual(conditionParents([yes, withCond, notes], 2).map((x) => x.id), ["a", "b"]);
     assert.deepEqual(conditionParents([yes, which, notes], 0), []);
-    // A question others depend on can't take a condition (one level).
-    assert.deepEqual(conditionParents([yes, which, { ...notes, showIf: { questionId: "b", op: "includes", value: "Gluten" } }], 1), []);
+    // A question others depend on may take a condition itself.
+    assert.deepEqual(conditionParents([yes, which, { ...notes, showIf: { questionId: "b", op: "includes", value: "Gluten" } }], 1).map((x) => x.id), ["a"]);
+    // The text question is never a parent.
+    assert.deepEqual(conditionParents([yes, notes, which], 2).map((x) => x.id), ["a"]);
+  });
+
+  it("keeps a template's conditions (not_equals, excludes, in, chains) valid and unchanged", () => {
+    const days = q({ id: "d", type: "choice", prompt: "Days a week?", unit: null, options: ["0", "1–2", "3–4"], position: 0 });
+    const mins = q({ id: "m", type: "choice", prompt: "How long?", unit: null, options: ["Yes", "No"], position: 1, showIf: { questionId: "d", op: "not_equals", value: "0" } });
+    const what = q({ id: "w", type: "long_text", prompt: "What changed?", unit: null, position: 2, showIf: { questionId: "m", op: "equals", value: "Yes" } });
+    const meds = q({ id: "x", type: "multi", prompt: "Which?", unit: null, options: ["None", "Vitamins"], position: 3 });
+    const more = q({ id: "y", type: "long_text", prompt: "Tell more", unit: null, position: 4, showIf: { questionId: "x", op: "excludes", value: "None" } });
+    const plan = q({ id: "p", type: "choice", prompt: "Did you do them?", unit: null, options: ["Every day", "Some days", "Not this week"], position: 5 });
+    const hard = q({ id: "h", type: "long_text", prompt: "What made it hard?", unit: null, position: 6, showIf: { questionId: "p", op: "in", value: ["Some days", "Not this week"] } });
+    const draft = [days, mins, what, meds, more, plan, hard];
+    draft.forEach((_, i) => assert.equal(conditionProblem(draft, i), null, `question ${i}`));
+    assert.equal(conditionLine(draft, mins), 'Only ask if "Days a week?" is not 0');
+    assert.equal(conditionLine(draft, more), 'Only ask if "Which?" doesn\'t include None');
+    assert.equal(conditionLine(draft, hard), 'Only ask if "Did you do them?" is Some days or Not this week');
+    assert.equal(conditionWords({ questionId: "p", op: "in", value: ["A", "B", "C"] }), "is A, B or C");
+    // Round trip: stored → draft → stored, exactly.
+    for (const raw of [
+      { question_id: "d", not_equals: "0" },
+      { question_id: "x", excludes: "None" },
+      { question_id: "p", in: ["Some days", "Not this week"] },
+      { question_id: "m", equals: "Yes" },
+      { question_id: "x", includes: "Vitamins" },
+    ]) {
+      const back = fromRow({ id: "z", position: 9, type: "long_text", prompt: "Z", unit: null, required: false, options: null, scale_min: null, scale_max: null, safety_topic: null, safety_trigger: null, show_if: raw });
+      assert.deepEqual(toRow(back, 9).show_if, raw);
+    }
+    // Reordering or editing another question writes the same show_if back.
+    const moved = [days, mins, what, plan, hard, meds, more];
+    const d = diffQuestions(draft, moved);
+    for (const u of d.update) assert.deepEqual(toRow(u.q, u.index).show_if, toRow(draft.find((x) => x.id === u.id)!, 0).show_if);
+    // The wrong kind of parent, or an answer that's gone, is still caught.
+    assert.equal(conditionProblem([days, { ...mins, showIf: { questionId: "d", op: "excludes", value: "0" } }], 1), "Choose the condition again.");
+    assert.equal(conditionProblem([plan, { ...hard, showIf: { questionId: "p", op: "in", value: ["Some days", "Never"] } }], 1), "The answer this depends on changed. Choose it again.");
+    assert.equal(conditionProblem([plan, { ...hard, showIf: { questionId: "p", op: "in", value: [] } }], 1), "The answer this depends on changed. Choose it again.");
+    // The builder's sheet picks only what it creates.
+    assert.equal(pickedAnswer(mins.showIf, days), "");
+    assert.equal(pickedAnswer(what.showIf, mins), "Yes");
+    assert.equal(pickedAnswer(what.showIf, days), "");
   });
 
   it("names the answers a condition can match", () => {
@@ -169,7 +212,8 @@ describe("sections, conditions and profile fields (Round D)", () => {
   it("pairs profile fields with the database's question types", () => {
     assert.deepEqual(profileFieldsFor({ type: "multi", options: ["Peanuts"] }), ["allergies", "dietary_restrictions"]);
     assert.deepEqual(profileFieldsFor({ type: "text", options: null }), ["allergies", "dietary_restrictions", "medications", "injuries"]);
-    assert.deepEqual(profileFieldsFor({ type: "long_text", options: null }), ["medications", "injuries"]);
+    // 20261222080000: allergies and diets from a long text too (one per line).
+    assert.deepEqual(profileFieldsFor({ type: "long_text", options: null }), ["allergies", "dietary_restrictions", "medications", "injuries"]);
     assert.deepEqual(profileFieldsFor({ type: "number", options: null }), ["weight"]);
     assert.deepEqual(profileFieldsFor({ type: "choice", options: ["Yes", "No"] }), []);
     assert.deepEqual(profileFieldsFor({ type: "scale", options: null }), []);
@@ -187,6 +231,44 @@ describe("sections, conditions and profile fields (Round D)", () => {
     const dep = { ...notes, showIf: { questionId: "a", op: "equals" as const, value: "Yes" } };
     assert.deepEqual(askedQuestions([yes, dep], { a: "No" }).map((x) => x.id), ["a"]);
     assert.deepEqual(askedQuestions([yes, dep], { a: "Yes" }).map((x) => x.id), ["a", "c"]);
+  });
+
+  it("judges a response's questions in order: a hidden parent hides its children, every condition kind", () => {
+    const changed = q({ id: "b", type: "choice", prompt: "Changed?", unit: null, options: ["Yes", "No"], position: 1, showIf: { questionId: "a", op: "equals", value: "Yes" } });
+    const what = q({ id: "c", type: "long_text", prompt: "What changed?", unit: null, position: 2, showIf: { questionId: "b", op: "equals", value: "Yes" } });
+    // A stale answer to "Changed?" doesn't show "What changed?" once "Any?" is No.
+    assert.deepEqual(askedQuestions([yes, changed, what], { a: "No", b: "Yes" }).map((x) => x.id), ["a"]);
+    assert.deepEqual(askedQuestions([yes, changed, what], { a: "Yes", b: "Yes" }).map((x) => x.id), ["a", "b", "c"]);
+    const not0 = q({ id: "n", type: "text", prompt: "N", unit: null, showIf: { questionId: "a", op: "not_equals", value: "No" } });
+    const excl = q({ id: "e", type: "text", prompt: "E", unit: null, showIf: { questionId: "b2", op: "excludes", value: "None" } });
+    const inn = q({ id: "i", type: "text", prompt: "I", unit: null, showIf: { questionId: "a", op: "in", value: ["Yes", "Maybe"] } });
+    const multi = q({ id: "b2", type: "multi", prompt: "M", unit: null, options: ["None", "X"] });
+    assert.deepEqual(askedQuestions([yes, multi, not0, excl, inn], { a: "Yes", b2: ["X"] }).map((x) => x.id), ["a", "b2", "n", "e", "i"]);
+    assert.deepEqual(askedQuestions([yes, multi, not0, excl, inn], { a: "No", b2: ["None"] }).map((x) => x.id), ["a", "b2"]);
+  });
+});
+
+describe("notes and urgent (20261222080000)", () => {
+  it("reads form_response_notes, urgent first, then in question order", () => {
+    const rows = [
+      { question_id: "q1", position: 1, prompt: "How are your symptoms?", note: "Follow up: they say their symptoms are much worse.", urgent: false },
+      { question_id: "q9", position: 9, prompt: "Any new symptoms this week?", note: "Urgent signs reported.", urgent: true },
+      { question_id: "q0", position: 0, prompt: "Bad", note: "  ", urgent: false },
+      null,
+    ];
+    assert.deepEqual(parseResponseNotes(rows).map((n) => [n.questionId, n.urgent]), [["q9", true], ["q1", false]]);
+    assert.deepEqual(parseResponseNotes(null), []);
+  });
+
+  it("reads urgent and the safety flag as one warning", () => {
+    // save_form_response sets safety_flag with urgent, without topics: no empty topics sentence.
+    assert.deepEqual(responseWarning({ urgent: true, safetyFlag: true, safetyTopics: [] }), { urgent: true, topics: [] });
+    assert.deepEqual(responseWarning({ urgent: true, safetyFlag: true, safetyTopics: ["pain"] }), { urgent: true, topics: ["pain"] });
+    assert.deepEqual(responseWarning({ urgent: false, safetyFlag: true, safetyTopics: ["pain"] }), { urgent: false, topics: ["pain"] });
+    assert.equal(responseWarning({ urgent: false, safetyFlag: false, safetyTopics: [] }), null);
+    assert.equal(responseMarker({ urgent: true, safetyFlag: true }), "Urgent");
+    assert.equal(responseMarker({ urgent: false, safetyFlag: true }), "Flagged");
+    assert.equal(responseMarker({ urgent: false, safetyFlag: false }), null);
   });
 });
 

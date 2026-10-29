@@ -28,6 +28,8 @@ import {
   conditionParents,
   conditionProblem,
   conditionValues,
+  conditionWords,
+  pickedAnswer,
   profileFieldsFor,
   questionProblem,
   questionsFor,
@@ -56,7 +58,9 @@ const OFFLINE = "You're offline. Try again when you're connected.";
  * someone hires you" (forms.send_on_hire); Long text; sections ("Add
  * section" beside "Add question" opens a section at the next question, or
  * "Start a section here" on a card); "Only ask if…" (one condition on an
- * earlier choice, yes / no, multiple choice or scale question; one level);
+ * earlier choice, yes / no, multiple choice or scale question, which may
+ * have a condition itself; the builder creates "is" and "includes", and a
+ * template's "is not", "doesn't include" and "is one of" are shown and kept);
  * and "Carry into the profile" (the answer is offered to the client for
  * their profile after they send it, the field fitting the question's type).
  * Nothing is written until Save; Sending and Schedule work on the saved form.
@@ -369,10 +373,15 @@ export const FormBuilder: React.FC = () => {
         {pickQ && parent && (
           <>
             <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch, marginBottom: 2, overflowWrap: "anywhere" }}>{parent.prompt.trim()}</p>
+            {pickQ.showIf?.questionId === parent.id && !pickedAnswer(pickQ.showIf, parent) && (
+              <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginTop: 4, overflowWrap: "anywhere" }}>
+                {`Now: when the answer ${conditionWords(pickQ.showIf)}. Choosing an answer below replaces it.`}
+              </p>
+            )}
             <FieldLabel top={8}>{conditionOp(parent) === "includes" ? "When the answers include" : "When the answer is"}</FieldLabel>
             <ChoiceChips
               label={conditionOp(parent) === "includes" ? "When the answers include" : "When the answer is"}
-              value={pickQ.showIf?.questionId === parent.id ? pickQ.showIf.value : ""}
+              value={pickedAnswer(pickQ.showIf, parent)}
               onChange={(v) => {
                 update(pickQ.id, { showIf: { questionId: parent.id, op: conditionOp(parent), value: v } });
                 closePicker();
