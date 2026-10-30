@@ -3,6 +3,7 @@ import type { SearchHit } from "../../services/messaging/chatFeatures";
 import { snippetFor } from "../../services/messaging/searchSnippet";
 import { dayAndTime, listTime } from "./chatTime";
 import { LoadMoreSentinel } from "./LoadMoreSentinel";
+import { t } from "../../i18n/core";
 
 /**
  * Message search results (phase 2A). One row per matching message: who and
@@ -59,7 +60,7 @@ export const SearchResults: React.FC<{
             )}
           </span>
           <span className={`text-[13px] text-charcoal-soft flex gap-1.5 min-w-0 ${card ? "items-start" : "items-center"}`}>
-            {h.matchedIn === "attachment_name" && <FileText size={13} className={`shrink-0 ${card ? "mt-[3px]" : ""}`} aria-label="In a file name" />}
+            {h.matchedIn === "attachment_name" && <FileText size={13} className={`shrink-0 ${card ? "mt-[3px]" : ""}`} aria-label={t("In a file name")} />}
             <span className={card ? "line-clamp-2 break-words" : "truncate"}>
               {s.before}
               {s.match && (
@@ -74,7 +75,7 @@ export const SearchResults: React.FC<{
     {/* MO1.2.1.3.2 draws no "More results": in one chat the results load
         on as they scroll (handover-complete pass). The chat list's own
         search keeps its button. */}
-    {hasMore && card && <LoadMoreSentinel busy={loadingMore} count={hits.length} onMore={onMore} label="More results" />}
+    {hasMore && card && <LoadMoreSentinel busy={loadingMore} count={hits.length} onMore={onMore} label={t("More results")} />}
     {hasMore && !card && (
       <button
         type="button"
@@ -82,7 +83,7 @@ export const SearchResults: React.FC<{
         disabled={loadingMore}
         className="tap min-h-[44px] text-[13px] font-semibold text-primary-deep-text disabled:opacity-50"
       >
-        {loadingMore ? "Loading…" : "More results"}
+        {loadingMore ? t("Loading…") : t("More results")}
       </button>
     )}
   </div>

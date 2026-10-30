@@ -5,6 +5,7 @@ import { LG, reducedMotion } from "../landing/engine/env";
 import { usePageLink, useMarketingNav, useSectionLink } from "../landing/navigation";
 import { WASH_BG, WEDGE_312, WEDGE_48 } from "../landing/wash";
 import { LanguageSwitch } from "./LanguageSwitch";
+import { isRtl, t, tk } from "../../i18n/core";
 
 // Centium landing v29: FO1 v17, the centred footer (02_pages/22-FO1 and the
 // prototype markup, exact inline styles), replacing the previous footer.
@@ -23,25 +24,25 @@ import { LanguageSwitch } from "./LanguageSwitch";
 
 const COLUMNS: { t: string; l: { t: string; section?: string; app?: boolean }[] }[] = [
   {
-    t: "PRODUCT",
+    t: tk("PRODUCT"),
     l: [
-      { t: "Features", section: "platform" },
-      { t: "Pricing", section: "pricing" },
-      { t: "Reviews", section: "reviews" },
+      { t: tk("Features"), section: "platform" },
+      { t: tk("Pricing"), section: "pricing" },
+      { t: tk("Reviews"), section: "reviews" },
     ],
   },
   {
-    t: "FOR TEAMS",
+    t: tk("FOR TEAMS"),
     l: [
-      { t: "Professionals", section: "everyone" },
-      { t: "Businesses", section: "everyone" },
+      { t: tk("Professionals"), section: "everyone" },
+      { t: tk("Businesses"), section: "everyone" },
     ],
   },
   {
-    t: "HELP",
+    t: tk("HELP"),
     l: [
-      { t: "FAQ", section: "faq" },
-      { t: "Log in", app: true },
+      { t: tk("FAQ"), section: "faq" },
+      { t: tk("Log in"), app: true },
     ],
   },
 ];
@@ -148,11 +149,11 @@ export const Footer: React.FC = () => {
         }}
       >
         <div data-ftrow="logo" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
-          <a href="/" onClick={goHomeNav} aria-label="Centium home" style={{ display: "block" }}>
+          <a href="/" onClick={goHomeNav} aria-label={t("Centium home")} style={{ display: "block" }}>
             <CentiumLockup width={logoW} style={{ overflow: "visible" }} />
           </a>
           <p style={{ margin: 0, maxWidth: "340px", fontSize: "15px", lineHeight: 1.55, color: "#5B5349", textWrap: "balance" }}>
-            Nutrition, training, health, coaching and community, in one place.
+            {t("Nutrition, training, health, coaching and community, in one place.")}
           </p>
         </div>
         <a
@@ -178,11 +179,13 @@ export const Footer: React.FC = () => {
             } as React.CSSProperties
           }
         >
-          Contact us<span aria-hidden="true">→</span>
+          {t("Contact us")}
+          {/* Round F (AV): the arrow points the way the text reads (Arabic only; English unchanged). */}
+          <span aria-hidden="true">{isRtl() ? "←" : "→"}</span>
         </a>
         <nav
           data-ftrow="links"
-          aria-label="Footer"
+          aria-label={t("Footer")}
           style={{
             display: "grid",
             gridTemplateColumns: lg ? "repeat(3,160px)" : "minmax(0,1fr)",
@@ -286,7 +289,7 @@ export const Footer: React.FC = () => {
           data-ftrow="legal"
           style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "6px 16px", fontSize: "13px", color: "#5B5349" }}
         >
-          <span style={{ whiteSpace: "nowrap" }}>© {new Date().getFullYear()} Centium. All rights reserved.</span>
+          <span style={{ whiteSpace: "nowrap" }}>{t("© {year} Centium. All rights reserved.", { year: new Date().getFullYear() })}</span>
           <span aria-hidden="true" style={{ width: "3px", height: "3px", borderRadius: "99px", background: "#B9B2A8" }} />
           <a
             href="/legal"
@@ -302,7 +305,7 @@ export const Footer: React.FC = () => {
               } as React.CSSProperties
             }
           >
-            Legal
+            {t("Legal")}
           </a>
           {/* Round F (AV): the language switch lives here (and in the phone
               menu), so the nav keeps the handoff's measured layout. */}

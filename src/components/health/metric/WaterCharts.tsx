@@ -4,6 +4,7 @@ import { textPx, linePx } from "../../../theme/textSize";
 import { mc, useHealthMode } from "./MetricKit";
 import { daysOf, type Period } from "./periods";
 import { weekdayColumn } from "../../../utils/week";
+import { isRtl } from "../../../i18n/core";
 
 // HE1.1 #27 day chart and HE1.1.m #27-#30 month grid.
 //
@@ -40,28 +41,33 @@ export const WaterDayChart: React.FC<{
   const x = Math.max(6, Math.min(326 - 6, ((Math.max(6, Math.min(22, hour)) - 6) / 16) * 326));
   const y = yOf(totalMl);
   const faint = hc ? "rgb(var(--c-charcoal))" : dark ? "#B8B3C7" : "#8C8378";
+  // Round F (F10): in right to left, time runs from right to left. Every x on
+  // the 326 grid is mirrored (edge decisions stay on the unmirrored x); SVG
+  // text anchors are logical, so the labels follow.
+  const rtl = isRtl();
+  const mx = (v: number) => (rtl ? 326 - v : v);
   return (
     <svg viewBox="0 0 326 146" width="100%" height={146} aria-hidden style={{ display: "block", overflow: "visible" }}>
-      <line x1={0} x2={326} y1={BASE + 0.5} y2={BASE + 0.5} stroke={hc ? "rgb(var(--c-charcoal) / 0.3)" : dark ? "rgba(245,243,250,0.08)" : "rgba(36,31,27,0.08)"} />
-      <line x1={2.4} x2={326} y1={yOf(goalMl)} y2={yOf(goalMl)} stroke={ink} strokeWidth={1.5} strokeDasharray="4 4" />
-      <text x={326} y={yOf(goalMl) - 8} textAnchor="end" fontSize={10} fontWeight={700} fill={ink}>
+      <line x1={mx(0)} x2={mx(326)} y1={BASE + 0.5} y2={BASE + 0.5} stroke={hc ? "rgb(var(--c-charcoal) / 0.3)" : dark ? "rgba(245,243,250,0.08)" : "rgba(36,31,27,0.08)"} />
+      <line x1={mx(2.4)} x2={mx(326)} y1={yOf(goalMl)} y2={yOf(goalMl)} stroke={ink} strokeWidth={1.5} strokeDasharray="4 4" />
+      <text x={mx(326)} y={yOf(goalMl) - 8} textAnchor="end" fontSize={10} fontWeight={700} fill={ink}>
         {goalLabel}
       </text>
       {drinks && drinks.length > 0 && (() => {
         // Stepped line from 6am at 0, up by each drink at its time; dots at each step.
         const xOf = (h: number) => Math.max(0, Math.min(326, ((Math.max(6, Math.min(22, h)) - 6) / 16) * 326));
         let cum = 0;
-        let d = `M0 ${BASE}`;
+        let d = `M${mx(0)} ${BASE}`;
         const dots: { x: number; y: number }[] = [];
         for (const k of drinks) {
-          const xx = xOf(k.hour);
+          const xx = mx(xOf(k.hour));
           d += ` H${xx.toFixed(1)}`;
           cum += k.ml;
           const yy = yOf(cum);
           d += ` V${yy.toFixed(1)}`;
           dots.push({ x: xx, y: yy });
         }
-        d += ` H${x.toFixed(1)}`;
+        d += ` H${mx(x).toFixed(1)}`;
         return (
           <>
             <path d={d} fill="none" stroke={mc("water", "main")} strokeWidth={2} strokeLinejoin="round" />
@@ -73,15 +79,15 @@ export const WaterDayChart: React.FC<{
       })()}
       {totalMl > 0 && (
         <>
-          {isToday && x < 320 && <line x1={x + 7} x2={326} y1={y} y2={y} stroke={dark ? "rgba(245,243,250,0.18)" : "rgba(36,31,27,0.18)"} strokeWidth={1.5} strokeDasharray="1.5 4" strokeLinecap="round" />}
-          <circle cx={x} cy={y} r={5.5} fill={dark ? "#1C1F28" : "#FFFFFF"} stroke={mc("water", "accent")} strokeWidth={2} />
-          <text x={x} y={y - 10} textAnchor={x > 300 ? "end" : "middle"} fontSize={9.5} fontWeight={700} fill={ink}>
+          {isToday && x < 320 && <line x1={mx(x + 7)} x2={mx(326)} y1={y} y2={y} stroke={dark ? "rgba(245,243,250,0.18)" : "rgba(36,31,27,0.18)"} strokeWidth={1.5} strokeDasharray="1.5 4" strokeLinecap="round" />}
+          <circle cx={mx(x)} cy={y} r={5.5} fill={dark ? "#1C1F28" : "#FFFFFF"} stroke={mc("water", "accent")} strokeWidth={2} />
+          <text x={mx(x)} y={y - 10} textAnchor={x > 300 ? "end" : "middle"} fontSize={9.5} fontWeight={700} fill={ink}>
             {label}
           </text>
         </>
       )}
       {AXIS.map((h, i) => (
-        <text key={h} x={(i / (AXIS.length - 1)) * 326} y={139} textAnchor={i === 0 ? "start" : i === AXIS.length - 1 ? "end" : "middle"} fontSize={10} fontWeight={600} fill={faint}>
+        <text key={h} x={mx((i / (AXIS.length - 1)) * 326)} y={139} textAnchor={i === 0 ? "start" : i === AXIS.length - 1 ? "end" : "middle"} fontSize={10} fontWeight={600} fill={faint}>
           {hourLabel12(h)}
         </text>
       ))}

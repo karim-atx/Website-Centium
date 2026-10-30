@@ -12,6 +12,7 @@ import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { SCREENS, screenBackground, type ScreenImage } from "../assets/dashboard";
 import { landingState } from "../state";
 import type { IntroVals } from "../sections/introVals";
+import { t } from "../../../i18n/core";
 
 const PHONE_SHELL: React.CSSProperties = {
   position: "absolute",
@@ -75,19 +76,19 @@ export const PhoneStage: React.FC<{ r: IntroVals }> = ({ r }) => {
     <div id="phone-layer" style={{ position: r.phoneLayerPos, left: 0, top: 0, width: "100%", height: r.VH, zIndex: 4, pointerEvents: "none" }}>
       <div id="phone-food" aria-hidden="true" style={{ ...PHONE_SHELL, display: r.sideDisp, willChange: "transform,opacity" }}>
         <div style={SCREEN}>
-          <Screen img={SCREENS.food07} on={r.lg || late} eager={r.lg} alt="Centium Food screen" style={{ display: "block", width: "100%", height: "auto" }} />
+          <Screen img={SCREENS.food07} on={r.lg || late} eager={r.lg} alt={t("Centium Food screen")} style={{ display: "block", width: "100%", height: "auto" }} />
         </div>
       </div>
       <div id="phone-work" aria-hidden="true" style={{ ...PHONE_SHELL, display: r.sideDisp, willChange: "transform,opacity" }}>
         <div style={SCREEN}>
-          <Screen img={SCREENS.workout08} on={r.lg || late} eager={r.lg} alt="Centium Workout screen" style={{ display: "block", width: "100%", height: "auto" }} />
+          <Screen img={SCREENS.workout08} on={r.lg || late} eager={r.lg} alt={t("Centium Workout screen")} style={{ display: "block", width: "100%", height: "auto" }} />
         </div>
       </div>
       <div id="phone" style={PHONE_SHELL}>
         <div style={SCREEN}>
           <div id="dash-view" style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
             <div id="dash-in" style={{ position: "absolute", left: 0, top: 0, width: "100%", aspectRatio: "473 / 1600", willChange: "transform" }}>
-              <Screen data-base="0" data-eager="" img={SCREENS.empty01} eager alt="Centium client dashboard" style={{ ...FILL, opacity: 1 }} />
+              <Screen data-base="0" data-eager="" img={SCREENS.empty01} eager alt={t("Centium client dashboard")} style={{ ...FILL, opacity: 1 }} />
               <Screen data-base="1" data-eager="" img={SCREENS.morning02} eager alt="" style={{ ...FILL, opacity: 0 }} />
               <Screen data-base="2" img={SCREENS.afternoon03} on={late} alt="" style={{ ...FILL, opacity: 0 }} />
               <Screen data-base="3" img={SCREENS.full04} on={late} alt="" style={{ ...FILL, height: "auto", opacity: 0 }} />

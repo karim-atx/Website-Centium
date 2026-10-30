@@ -6,6 +6,7 @@ import { CentredDialog } from "../listingParts";
 import { feeCalcLine, feeMoney, quoteFee, type HiringFeeQuote, type OpeningType, type PayUnit } from "../../../services/hiring";
 import { useFeeRules } from "./hiringParts";
 import { feeNote, offerBody, offerPayText, offerTitle, startsText } from "./hubModel";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W4 · B-MA.8.3 Offer and hire (`hireConfirm`,
 // `hireConfirmMin`) and B-MA.8.6's "Send this offer?" (`dConfirm`): the W3
@@ -89,18 +90,18 @@ export default function HireConfirmDialog({
   const failed = !!answered?.failed;
 
   const rows: [string, string][] = [
-    ["Role", offer.title],
-    ["Pay", offerPayText(offer.type, offer.pay, offer.payUnit, offer.classesPerMonth)],
-    ["Starts", startsText(offer.startsOn)],
+    [t("Role"), offer.title],
+    [t("Pay"), offerPayText(offer.type, offer.pay, offer.payUnit, offer.classesPerMonth)],
+    [t("Starts"), startsText(offer.startsOn)],
   ];
-  const shownNote: DialogNote | null = note ?? (failed ? { text: "Couldn't work out the fee. Try again.", tone: "error" } : null);
+  const shownNote: DialogNote | null = note ?? (failed ? { text: t("Couldn't work out the fee. Try again."), tone: "error" } : null);
   return (
     <CentredDialog
       open
       title={offerTitle(offer.name, direct)}
       body={offerBody(offer.name)}
-      cancel="Cancel"
-      action={failed ? "Try again" : "Send offer"}
+      cancel={t("Cancel")}
+      action={failed ? t("Try again") : t("Send offer")}
       tone="primary"
       width={338}
       pad="24px 22px 22px"
@@ -119,9 +120,9 @@ export default function HireConfirmDialog({
       </div>
       <div data-fee-ticket aria-busy={!q || undefined} style={{ position: "relative", marginTop: 10, display: "flex", borderRadius: 14, background: m.pale, overflow: "hidden", textAlign: "start" }}>
         <div style={{ flex: 1, minWidth: 0, padding: "11px 14px" }}>
-          <div style={{ fontSize: textPx(12), fontWeight: 800, color: m.pdark }}>One-time Centium hiring fee</div>
-          <div style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.ink2, marginTop: 2 }}>{q ? feeCalcLine(q, rules?.rate ?? null) : failed ? "Not worked out yet" : "Working out the fee"}</div>
-          {q?.minimumApplied ? <div style={{ marginTop: 4, fontSize: textPx(11), fontWeight: 800, color: m.caution }}>Minimum fee applied</div> : null}
+          <div style={{ fontSize: textPx(12), fontWeight: 800, color: m.pdark }}>{t("One-time Centium hiring fee")}</div>
+          <div style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.ink2, marginTop: 2 }}>{q ? feeCalcLine(q, rules?.rate ?? null) : failed ? t("Not worked out yet") : t("Working out the fee")}</div>
+          {q?.minimumApplied ? <div style={{ marginTop: 4, fontSize: textPx(11), fontWeight: 800, color: m.caution }}>{t("Minimum fee applied")}</div> : null}
         </div>
         <div style={{ width: 84, flexShrink: 0, borderInlineStart: `1.5px dashed ${m.fill}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <span style={{ fontSize: textPx(17), fontWeight: 800, color: m.pdark, fontVariantNumeric: "tabular-nums" }}>{q ? feeMoney(q.fee) : "–"}</span>
@@ -136,7 +137,7 @@ export default function HireConfirmDialog({
       ) : null}
       {shownNote ? (
         <p role={shownNote.tone === "error" ? "alert" : "status"} style={{ margin: "12px 0 0", fontSize: textPx(12), lineHeight: linePx(17), fontWeight: shownNote.tone === "error" ? 600 : 500, color: shownNote.tone === "error" ? m.high : m.faint }}>
-          {shownNote.text}
+          {t(shownNote.text)}
         </p>
       ) : null}
     </CentredDialog>

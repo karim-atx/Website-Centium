@@ -8,6 +8,7 @@ import { ObFooter, ObHeader, ObPage, ObProgress, ObTitle } from "./shell/ObShell
 import { ObSelectCard } from "./shell/ObBlocks";
 import { Composed, OB, type Composition } from "./shell/visuals";
 import { useOnboardingFlow } from "./shell/flow";
+import { t, tk } from "../../i18n/core";
 
 interface Props {
   draft: OnboardingDraft;
@@ -31,58 +32,58 @@ const CARDS: {
   tile: "pale" | "teal";
   dot: string;
 }[] = [
-  { type: "customer", comp: "personal", title: "Personal", desc: "Look after your own health.", points: ["Log food, training and sleep", "Work with your professional"], tile: "teal", dot: OB.leaf },
-  { type: "professional", comp: "professional", title: "Professional", desc: "Coach, treat or advise clients.", points: ["Plans and check-ins for each client", "Get found on Explore"], tile: "pale", dot: OB.brand },
-  { type: "business", comp: "business", title: "Business", desc: "Run a gym, studio or store.", points: ["Classes, members, payments and team", "Sell products or services"], tile: "pale", dot: OB.brand },
+  { type: "customer", comp: "personal", title: tk("Personal"), desc: tk("Look after your own health."), points: [tk("Log food, training and sleep"), tk("Work with your professional")], tile: "teal", dot: OB.leaf },
+  { type: "professional", comp: "professional", title: tk("Professional"), desc: tk("Coach, treat or advise clients."), points: [tk("Plans and check-ins for each client"), tk("Get found on Explore")], tile: "pale", dot: OB.brand },
+  { type: "business", comp: "business", title: tk("Business"), desc: tk("Run a gym, studio or store."), points: [tk("Classes, members, payments and team"), tk("Sell products or services")], tile: "pale", dot: OB.brand },
 ];
 
 /** The confirmation sheet's contents (SharedOnboardingV4 CC). */
 const CONFIRM: Record<AccountType, { title: string; lead: string; rows: [LucideIcon, string][]; note: string; button: string; tile: "pale" | "teal"; comp: Composition }> = {
   customer: {
-    title: "Personal account",
-    lead: "For looking after your own health, your way.",
+    title: tk("Personal account"),
+    lead: tk("For looking after your own health, your way."),
     rows: [
-      [Utensils, "Log food, workouts and sleep"],
-      [HeartPulse, "See trends in your health metrics"],
-      [Users, "Work with a professional if you have one"],
+      [Utensils, tk("Log food, workouts and sleep")],
+      [HeartPulse, tk("See trends in your health metrics")],
+      [Users, tk("Work with a professional if you have one")],
     ],
-    note: "Free to start. Premium adds AI logging and deeper insights.",
-    button: "Continue as personal",
+    note: tk("Free to start. Premium adds AI logging and deeper insights."),
+    button: tk("Continue as personal"),
     tile: "teal",
     comp: "personal",
   },
   professional: {
-    title: "Professional account",
-    lead: "For coaching, treating or advising clients.",
+    title: tk("Professional account"),
+    lead: tk("For coaching, treating or advising clients."),
     rows: [
-      [Users, "Your clients, plans and check-ins"],
-      [MessageCircle, "Messages and progress in one place"],
-      [BadgeCheck, "A public profile clients can find"],
+      [Users, tk("Your clients, plans and check-ins")],
+      [MessageCircle, tk("Messages and progress in one place")],
+      [BadgeCheck, tk("A public profile clients can find")],
     ],
     // User decision 14 Oct 2026: every lane is listed only once verified.
-    note: "We check each professional's licence or certificate before their profile goes live.",
-    button: "Continue as professional",
+    note: tk("We check each professional's licence or certificate before their profile goes live."),
+    button: tk("Continue as professional"),
     tile: "pale",
     comp: "professional",
   },
   business: {
-    title: "Business account",
-    lead: "For gyms, studios and stores.",
+    title: tk("Business account"),
+    lead: tk("For gyms, studios and stores."),
     rows: [
-      [CalendarDays, "Classes, members and bookings"],
-      [Wallet, "Payments, team and your listing"],
-      [Store, "Sell products or services on Explore"],
+      [CalendarDays, tk("Classes, members and bookings")],
+      [Wallet, tk("Payments, team and your listing")],
+      [Store, tk("Sell products or services on Explore")],
     ],
-    note: "We review every business before it goes live.",
-    button: "Continue as business",
+    note: tk("We review every business before it goes live."),
+    button: tk("Continue as business"),
     tile: "pale",
     comp: "business",
   },
 };
 
 const SUBS: { value: CustomerSubtype; label: string }[] = [
-  { value: "general", label: "General user" },
-  { value: "client", label: "Client of a professional" },
+  { value: "general", label: tk("General user") },
+  { value: "client", label: tk("Client of a professional") },
 ];
 
 type CodeCheck =
@@ -94,13 +95,13 @@ type CodeCheck =
   | { status: "error"; message: string };
 
 const subtypeLabel: Record<ProfessionalSubtype, string> = {
-  trainer: "Personal trainer",
-  physiotherapist: "Physiotherapist",
-  dietitian: "Dietitian",
-  doctor: "Doctor",
-  nutritionist: "Nutritionist",
-  coach_instructor: "Coach or instructor",
-  other: "Health professional",
+  trainer: tk("Personal trainer"),
+  physiotherapist: tk("Physiotherapist"),
+  dietitian: tk("Dietitian"),
+  doctor: tk("Doctor"),
+  nutritionist: tk("Nutritionist"),
+  coach_instructor: tk("Coach or instructor"),
+  other: tk("Health professional"),
 };
 
 export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
@@ -136,12 +137,12 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
         return;
       }
       if (result.data.redeemed) {
-        setCheck({ status: "unusable", message: "That code has already been used." });
+        setCheck({ status: "unusable", message: tk("That code has already been used.") });
         setDraft((d) => ({ ...d, clientCodeProfessional: null }));
         return;
       }
       if (result.data.expiresAt && new Date(result.data.expiresAt).getTime() < Date.now()) {
-        setCheck({ status: "unusable", message: "That code has expired. Ask for a new one." });
+        setCheck({ status: "unusable", message: tk("That code has expired. Ask for a new one.") });
         setDraft((d) => ({ ...d, clientCodeProfessional: null }));
         return;
       }
@@ -198,7 +199,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
   };
 
   const sel = draft.accountType;
-  const codeError = check.status === "not_found" ? "Code not found. Check it and try again." : check.status === "unusable" || check.status === "error" ? check.message : null;
+  const codeError = check.status === "not_found" ? t("Code not found. Check it and try again.") : check.status === "unusable" || check.status === "error" ? t(check.message) : null;
   const conf = sel ? CONFIRM[sel] : null;
 
   return (
@@ -208,21 +209,21 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
         <ObHeader margin="intro" onBack={onBack} />
         <ObTitle
           variant="intro"
-          eyebrow="Your account"
-          title="What brings you to Centium?"
-          subtitle="This shapes your experience. You can adjust it later."
+          eyebrow={t("Your account")}
+          title={t("What brings you to Centium?")}
+          subtitle={t("This shapes your experience. You can adjust it later.")}
           fade={leaving ? 0.25 : 1}
         />
-        <div className="ob-cards" role="radiogroup" aria-label="Account type">
+        <div className="ob-cards" role="radiogroup" aria-label={t("Account type")}>
           {CARDS.map((c) => {
             const on = sel === c.type;
             const recede = !!sel && !on;
             return (
               <ObSelectCard
                 key={c.type}
-                title={c.title}
-                desc={c.desc}
-                points={c.points}
+                title={t(c.title)}
+                desc={t(c.desc)}
+                points={c.points.map((p) => t(p))}
                 dot={c.dot}
                 tile={c.tile}
                 on={on}
@@ -240,7 +241,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
                           aria-pressed={draft.customerSubtype === s.value}
                           onClick={() => setDraft((d) => ({ ...d, customerSubtype: s.value }))}
                         >
-                          {s.label}
+                          {t(s.label)}
                         </button>
                       ))
                     : undefined
@@ -252,23 +253,23 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
         </div>
         <p className="ob-cards-note" style={{ opacity: leaving ? 0.25 : 1 }}>
           {/* V6-69: no multi-account backend, so the second line. */}
-          You can change this later in Settings.
+          {t("You can change this later in Settings.")}
         </p>
       </div>
-      <ObFooter primary={{ label: "Continue", disabled: !canContinue || leaving, onClick: () => setSheet(true) }} />
+      <ObFooter primary={{ label: t("Continue"), disabled: !canContinue || leaving, onClick: () => setSheet(true) }} />
       {conf && (
         <BottomSheet
           open={sheet}
           onClose={() => setSheet(false)}
-          title={conf.title}
+          title={t(conf.title)}
           bodyPadding={{ top: 20, right: 20, bottom: 12, left: 20 }}
           footer={
             <div className="ob-vars" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <button type="button" className="ob-btn ob-btn-primary tap" style={{ background: "var(--ob-fill)", color: "var(--ob-on-fill)", boxShadow: "none" }} onClick={confirm}>
-                {conf.button}
+                {t(conf.button)}
               </button>
               <button type="button" className="ob-btn ob-btn-secondary tap" style={{ border: "1px solid var(--ob-border)", background: "var(--ob-card)", color: "var(--ob-ink)" }} onClick={() => setSheet(false)}>
-                Choose another
+                {t("Choose another")}
               </button>
             </div>
           }
@@ -289,20 +290,20 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
               >
                 <Composed comp={conf.comp} w={42} />
               </span>
-              <p style={{ fontSize: 14, lineHeight: "20px", color: "var(--ob-ink-soft)", textWrap: "pretty" }}>{conf.lead}</p>
+              <p style={{ fontSize: 14, lineHeight: "20px", color: "var(--ob-ink-soft)", textWrap: "pretty" }}>{t(conf.lead)}</p>
             </div>
             <div style={{ background: "var(--ob-list)", borderRadius: 18, padding: "4px 0" }}>
-              {conf.rows.map(([Icon, t], k) => (
-                <div key={t} style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, minHeight: 52, padding: "8px 14px" }}>
+              {conf.rows.map(([Icon, row], k) => (
+                <div key={row} style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, minHeight: 52, padding: "8px 14px" }}>
                   {k > 0 && <span style={{ position: "absolute", top: 0, insetInlineStart: 62, insetInlineEnd: 14, height: 1, background: "var(--ob-ring)" }} />}
                   <span className="ob-sq-ic">
                     <Icon size={17} strokeWidth={1.75} />
                   </span>
-                  <span style={{ fontSize: 13.5, fontWeight: 700, lineHeight: "18px" }}>{t}</span>
+                  <span style={{ fontSize: 13.5, fontWeight: 700, lineHeight: "18px" }}>{t(row)}</span>
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: 12, lineHeight: "17px", color: "var(--ob-faint)", marginTop: 12, textAlign: "center" }}>{conf.note}</p>
+            <p style={{ fontSize: 12, lineHeight: "17px", color: "var(--ob-faint)", marginTop: 12, textAlign: "center" }}>{t(conf.note)}</p>
           </div>
         </BottomSheet>
       )}
@@ -319,14 +320,14 @@ const ClientCodeField: React.FC<{
 }> = ({ draft, setDraft, check, error }) => (
   <div style={{ marginBlock: "12px 0", marginInline: "70px 0" }}>
     <label className="ob-label" htmlFor="ob-client-code" style={{ display: "block", marginBottom: 6 }}>
-      Your professional's code
+      {t("Your professional's code")}
     </label>
     <span className="ob-box" data-err={error ? "true" : undefined}>
       <input
         id="ob-client-code"
         value={draft.professionalUserIdCode}
         onChange={(e) => setDraft((d) => ({ ...d, professionalUserIdCode: e.target.value }))}
-        placeholder="e.g. SOHA-XXXX"
+        placeholder={t("e.g. SOHA-XXXX")}
         autoCapitalize="characters"
         autoComplete="off"
         aria-invalid={error ? true : undefined}
@@ -346,10 +347,10 @@ const ClientCodeField: React.FC<{
         )}
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: "block", fontSize: 13, fontWeight: 700, lineHeight: "19.5px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            You'll connect with {check.data.professionalFirstName}
+            {t("You'll connect with {name}", { name: check.data.professionalFirstName })}
           </span>
           <span style={{ display: "block", fontSize: 11.5, lineHeight: "17.25px", color: "var(--ob-accent)" }}>
-            {subtypeLabel[check.data.professionalSubtype] ?? "Health professional"}
+            {t(subtypeLabel[check.data.professionalSubtype] ?? "Health professional")}
           </span>
         </span>
         <Check size={16} style={{ color: "var(--ob-good)", flexShrink: 0 }} />
@@ -358,7 +359,7 @@ const ClientCodeField: React.FC<{
       <div className="ob-help" data-err={error ? "true" : undefined} id="ob-client-code-help">
         <span role={error ? "alert" : undefined} style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {check.status === "checking" && <Loader2 size={12} className="ob-spin" />}
-          {check.status === "checking" ? "Checking code…" : error ?? "Ask your trainer, dietitian or physiotherapist for the code they gave you."}
+          {check.status === "checking" ? t("Checking code…") : error ?? t("Ask your trainer, dietitian or physiotherapist for the code they gave you.")}
         </span>
       </div>
     )}

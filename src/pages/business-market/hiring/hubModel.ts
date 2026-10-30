@@ -5,6 +5,8 @@
 // node --test loads it (hubModel.test.ts).
 
 import { clock12, rangeClock12, time12 } from "../../../utils/time12";
+import { getLanguage, t } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
 import { feeMoney, payMoney, payText, minimumSentence, type OpeningType, type PayUnit } from "../../../services/hiring/fee";
 import { hiredText, ratingLine } from "../../../components/market/peopleModel";
 import type { Application, Opening, OpeningStatus, ProCard } from "../../../services/hiring/model";
@@ -189,9 +191,10 @@ export function hiredState(startsOn: string | null): string {
 
 /** The dialog's Pay row: "$80 per class · 4 a month", "$900 a month", "$60 for the slot". */
 export function offerPayText(type: OpeningType, pay: number, unit: PayUnit, classesPerMonth: number | null): string {
-  if (type === "class_slot") return `${payMoney(pay)} for the slot`;
-  if (unit === "per_month") return `${payMoney(pay)} a month`;
-  return classesPerMonth && classesPerMonth > 0 ? `${payMoney(pay)} per class · ${classesPerMonth} a month` : `${payMoney(pay)} per class`;
+  const price = payMoney(pay);
+  if (type === "class_slot") return t("{price} for the slot", { price });
+  if (unit === "per_month") return t("{price} a month", { price });
+  return classesPerMonth && classesPerMonth > 0 ? t("{price} per class · {n} a month", { price, n: classesPerMonth }) : t("{price} per class", { price });
 }
 
 /**
@@ -218,13 +221,15 @@ export function offerStartDate(o: Pick<Opening, "startsAt" | "weekdays">, today:
 /** "Sun, Nov 1, 2026" for the Starts row; "" when unreadable. */
 export function startsText(day: string | null): string {
   const d = dateOf(day);
-  return d ? weekdayMonthDayYear(d) : "";
+  if (!d) return "";
+  // Arabic: the same parts in the app's locale (Arabic day and month names).
+  return getLanguage() === "ar" ? d.toLocaleDateString(appLocale(), { weekday: "short", month: "short", day: "numeric", year: "numeric" }) : weekdayMonthDayYear(d);
 }
 
-export const offerTitle = (name: string, direct: boolean): string => (direct ? "Send this offer?" : `Offer ${firstName(name)} the role?`);
+export const offerTitle = (name: string, direct: boolean): string => (direct ? t("Send this offer?") : t("Offer {name} the role?", { name: firstName(name) }));
 
 /** We store no pronouns: the board's "when she does" reads "when they do". */
-export const offerBody = (name: string): string => `${firstName(name)} accepts in Opportunities. The hire is confirmed when they do.`;
+export const offerBody = (name: string): string => t("{name} accepts in Opportunities. The hire is confirmed when they do.", { name: firstName(name) });
 
 /**
  * The note under the fee ticket: the minimum sentence when the minimum
@@ -234,9 +239,9 @@ export const offerBody = (name: string): string => `${firstName(name)} accepts i
 export function feeNote(o: { type: OpeningType; minimum: number; minimumApplied: boolean; onTeam: boolean; name: string; direct: boolean }): string {
   const parts: string[] = [];
   if (o.minimumApplied) parts.push(minimumSentence(o));
-  parts.push("Charged once when the hire is confirmed and added to your Centium bill.");
-  if (o.onTeam) parts.push(`${firstName(o.name)} is already on your Team: a new opening is a new hire.`);
-  else if (o.direct) parts.push("Nothing recurring.");
+  parts.push(t("Charged once when the hire is confirmed and added to your Centium bill."));
+  if (o.onTeam) parts.push(t("{name} is already on your Team: a new opening is a new hire.", { name: firstName(o.name) }));
+  else if (o.direct) parts.push(t("Nothing recurring."));
   return parts.join(" ");
 }
 

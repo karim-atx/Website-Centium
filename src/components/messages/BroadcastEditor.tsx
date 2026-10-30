@@ -4,6 +4,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { ClientPicker, type PickableClient } from "./ClientPicker";
 import { Header } from "./NewGroup";
 import { listTime } from "./chatTime";
+import { t, tn } from "../../i18n/core";
 import { GROUP_NAME_MAX } from "../../services/messaging/groups";
 import {
   createList,
@@ -68,7 +69,7 @@ export const BroadcastEditor: React.FC<{
   }, [list]);
 
   // Names for chips: the roster's, or the list's own for anybody no longer on the roster.
-  const nameOf = (id: string) => clients.find((c) => c.userId === id)?.name ?? peopleNames[id] ?? "Client";
+  const nameOf = (id: string) => clients.find((c) => c.userId === id)?.name ?? peopleNames[id] ?? t("Client");
   const firstName = (id: string) => nameOf(id).split(" ")[0];
   const chosen = [...recipients];
   const trimmedName = name.trim();
@@ -137,27 +138,26 @@ export const BroadcastEditor: React.FC<{
 
   return (
     <div className="flex flex-col gap-3.5 pb-6">
-      <Header title={list ? savedName || "Broadcast" : "New broadcast"} onBack={onBack} />
+      <Header title={list ? savedName || t("Broadcast") : t("New broadcast")} onBack={onBack} />
 
       {/* The privacy note, verbatim from the design. */}
       <div
         className="rounded-[14px] bg-[#FBF1DC] dark:bg-gold-pale px-3.5 py-3 text-[13px] leading-[1.5] dark:!text-gold"
         style={{ color: "#5C3F0E" }}
       >
-        Each client receives this as a private message from you. Recipients can't see each other, and their
-        replies come only to you.
+        {t("Each client receives this as a private message from you. Recipients can't see each other, and their replies come only to you.")}
       </div>
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="bname" className={label}>
-          List name (only you see this)
+          {t("List name (only you see this)")}
         </label>
         <input
           id="bname"
           value={name}
           maxLength={GROUP_NAME_MAX}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Weekly tips"
+          placeholder={t("e.g. Weekly tips")}
           className={`h-12 ${field}`}
         />
       </div>
@@ -165,14 +165,14 @@ export const BroadcastEditor: React.FC<{
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <span className={label}>
-            Recipients · {loadingPeople ? "…" : count === 0 ? "none yet" : `${count} ${count === 1 ? "client" : "clients"}`}
+            {t("Recipients")} · {loadingPeople ? "…" : count === 0 ? t("none yet") : tn(count, "{n} client", "{n} clients")}
           </span>
           <button
             type="button"
             onClick={() => setPicking(true)}
             className="tap min-h-[44px] text-[13px] font-bold text-primary-deep-text"
           >
-            {count === 0 ? "Choose" : "Edit"}
+            {count === 0 ? t("Choose") : t("Edit")}
           </button>
         </div>
         {count > 0 && (
@@ -184,17 +184,17 @@ export const BroadcastEditor: React.FC<{
             ))}
             {count > 4 && (
               <span className="text-[12.5px] font-semibold bg-cream-soft text-charcoal-soft rounded-full px-[11px] py-1.5">
-                + {count - 4} more
+                {tn(count - 4, "+ {n} more", "+ {n} more")}
               </span>
             )}
           </div>
         )}
-        <p className="text-xs text-charcoal-soft">Only your connected clients can be added.</p>
+        <p className="text-xs text-charcoal-soft">{t("Only your connected clients can be added.")}</p>
       </div>
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="bmsg" className={label}>
-          Message
+          {t("Message")}
         </label>
         <textarea
           id="bmsg"
@@ -209,8 +209,8 @@ export const BroadcastEditor: React.FC<{
       {sent && (
         <p className="flex items-center gap-2 text-sm text-charcoal bg-status-good-bg rounded-xl px-3.5 py-2.5" role="status">
           <Check size={16} className="text-status-good shrink-0" />
-          Sent to {sent.sentCount} {sent.sentCount === 1 ? "client" : "clients"}
-          {sent.skippedCount > 0 ? ` · ${sent.skippedCount} couldn't receive it` : ""}
+          {tn(sent.sentCount, "Sent to {n} client", "Sent to {n} clients")}
+          {sent.skippedCount > 0 ? ` · ${tn(sent.skippedCount, "{n} couldn't receive it", "{n} couldn't receive it")}` : ""}
         </p>
       )}
 
@@ -220,22 +220,22 @@ export const BroadcastEditor: React.FC<{
         disabled={!trimmedName || !body || count === 0 || busy}
         className="tap h-[52px] rounded-2xl bg-primary-fill text-on-primary-fill text-[15px] font-bold disabled:opacity-40"
       >
-        {busy ? "Sending…" : `Send to ${count} ${count === 1 ? "client" : "clients"}`}
+        {busy ? t("Sending…") : tn(count, "Send to {n} client", "Send to {n} clients")}
       </button>
 
       {history.length > 0 && (
-        <section className="flex flex-col gap-1 mt-2" aria-label="Sent before">
-          <h2 className="section-label text-charcoal-soft">Sent before</h2>
+        <section className="flex flex-col gap-1 mt-2" aria-label={t("Sent before")}>
+          <h2 className="section-label text-charcoal-soft">{t("Sent before")}</h2>
           {history.map((b) => (
             <div key={b.id} className="flex items-center justify-between min-h-[44px] border-b border-charcoal/[0.06] text-sm">
               <span className="text-charcoal">
-                Sent to {b.sentCount} {b.sentCount === 1 ? "client" : "clients"}
-                {b.skippedCount > 0 && <span className="text-charcoal-soft"> · {b.skippedCount} skipped</span>}
+                {tn(b.sentCount, "Sent to {n} client", "Sent to {n} clients")}
+                {b.skippedCount > 0 && <span className="text-charcoal-soft"> · {tn(b.skippedCount, "{n} skipped", "{n} skipped")}</span>}
               </span>
               <span className="text-xs text-charcoal-soft">{listTime(b.sentAt)}</span>
             </div>
           ))}
-          <p className="text-xs text-charcoal-soft mt-1">Replies arrive in each client's chat with you.</p>
+          <p className="text-xs text-charcoal-soft mt-1">{t("Replies arrive in each client's chat with you.")}</p>
         </section>
       )}
 
@@ -245,11 +245,11 @@ export const BroadcastEditor: React.FC<{
           onClick={() => setConfirmDelete(true)}
           className="tap self-start flex items-center gap-2 min-h-[44px] text-sm font-semibold text-status-high"
         >
-          <Trash2 size={15} /> Delete list
+          <Trash2 size={15} /> {t("Delete list")}
         </button>
       )}
 
-      <BottomSheet open={picking} onClose={() => setPicking(false)} title="Recipients">
+      <BottomSheet open={picking} onClose={() => setPicking(false)} title={t("Recipients")}>
         <div className="animate-fade-slide-up">
           <ClientPicker clients={clients} selected={recipients} onToggle={toggle} />
           <button
@@ -257,15 +257,15 @@ export const BroadcastEditor: React.FC<{
             onClick={() => setPicking(false)}
             className="tap w-full mt-3 h-12 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold"
           >
-            Done · {count} {count === 1 ? "client" : "clients"}
+            {t("Done")} · {tn(count, "{n} client", "{n} clients")}
           </button>
         </div>
       </BottomSheet>
 
-      <BottomSheet open={confirmDelete} onClose={() => setConfirmDelete(false)} title="Delete list">
+      <BottomSheet open={confirmDelete} onClose={() => setConfirmDelete(false)} title={t("Delete list")}>
         <div className="animate-fade-slide-up">
           <p className="text-sm text-charcoal-soft mb-4">
-            This deletes the list. Messages already sent stay in each client's chat with you.
+            {t("This deletes the list. Messages already sent stay in each client's chat with you.")}
           </p>
           <button
             type="button"
@@ -273,10 +273,10 @@ export const BroadcastEditor: React.FC<{
             disabled={busy}
             className="tap w-full rounded-xl bg-status-high text-white dark:text-[#0D0B1A] font-semibold text-sm py-3 disabled:opacity-50"
           >
-            Delete list
+            {t("Delete list")}
           </button>
           <button type="button" onClick={() => setConfirmDelete(false)} className="tap w-full text-sm font-medium text-charcoal-soft py-3">
-            Cancel
+            {t("Cancel")}
           </button>
         </div>
       </BottomSheet>

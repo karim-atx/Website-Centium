@@ -49,6 +49,7 @@ import {
 } from "../../../services/messaging/chatFeatures";
 import { fetchClientStages, STAGE_LABEL, type ClientStage } from "../../../services/pro/clients";
 import { fetchCardKinds, fetchMemberCounts } from "../../../services/pro/messages";
+import { t, tk } from "../../../i18n/core";
 
 /**
  * Release 3 · Messages for professionals (MO22 v5 lists, MO22 v2 chats, MO27
@@ -72,7 +73,7 @@ import { fetchCardKinds, fetchMemberCounts } from "../../../services/pro/message
  */
 
 type View = "list" | "archived" | "starred" | "newGroup" | "broadcast" | "invitation";
-const OFFLINE_TOAST = "You're offline. Try again when you're connected.";
+const OFFLINE_TOAST = tk("You're offline. Try again when you're connected.");
 const TONES = ["pr", "teal", "gold", "sky"] as const;
 const toneOf = (id: string) => TONES[[...id].reduce((a, ch) => (a + ch.charCodeAt(0)) % 997, 0) % 4];
 const DOT_COLOUR: Record<Dot, string> = {
@@ -352,7 +353,7 @@ export default function ProMessages() {
 
   const failToast = (message: string) => {
     const offline = (typeof navigator !== "undefined" && navigator.onLine === false) || message === OFFLINE_MESSAGE;
-    setToast(offline ? OFFLINE_TOAST : message.startsWith("You can pin") ? message : "Couldn't save. Try again.");
+    setToast(offline ? t(OFFLINE_TOAST) : message === t("You can pin up to 5 chats. Unpin one to pin this.") ? message : t("Couldn't save. Try again."));
   };
   const writeSettings = async (t: MessageThread, patch: Parameters<typeof saveThreadSettings>[2], next: Partial<ThreadSettings>) => {
     if (!authUserId) return;
@@ -388,25 +389,25 @@ export default function ProMessages() {
   };
 
   const confirmDelete = async () => {
-    const t = deleteTarget;
-    if (!t) return;
+    const target = deleteTarget;
+    if (!target) return;
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
       setDeleteTarget(null);
-      setToast(OFFLINE_TOAST);
+      setToast(t(OFFLINE_TOAST));
       return;
     }
     setDeleteBusy(true);
-    const r = await deleteConversationForMe(t.id);
+    const r = await deleteConversationForMe(target.id);
     setDeleteBusy(false);
     setDeleteTarget(null);
     if (!r.ok) {
-      setToast(r.message === OFFLINE_MESSAGE ? OFFLINE_TOAST : "Couldn't delete. Try again.");
+      setToast(r.message === OFFLINE_MESSAGE ? t(OFFLINE_TOAST) : "Couldn't delete. Try again.");
       return;
     }
     setAnnounce("Conversation deleted.");
-    setThreads((all) => all.filter((x) => x.id !== t.id));
+    setThreads((all) => all.filter((x) => x.id !== target.id));
     unread.refresh();
-    if (open?.id === t.id) {
+    if (open?.id === target.id) {
       setOpen(null);
       setFocusId(null);
     }

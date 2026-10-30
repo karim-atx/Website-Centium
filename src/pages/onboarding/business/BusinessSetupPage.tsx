@@ -20,6 +20,7 @@ import { listDrafts } from "../../../services/onboarding/drafts";
 import { saveListingActive } from "../../../services/business-market";
 import { useImagePreview } from "./useImagePreview";
 import "../shell/onboarding.css";
+import { t, tk } from "../../../i18n/core";
 
 // /app/business/setup: where a business lands after Submit for review, and
 // what it sees until it is live: OB-238 Pending review; OB-240 You're live,
@@ -45,7 +46,8 @@ function writeLocal(uid: string, d: BusinessLaneDraft) {
   }
 }
 
-const actionFor = (field: string) => (/photo|cover|logo/i.test(field) ? "Replace" : /\bid\b/i.test(field) ? "Retake" : "Edit");
+/** English keys; BizSummary shows them through t(). */
+const actionFor = (field: string) => (/photo|cover|logo/i.test(field) ? tk("Replace") : /\bid\b/i.test(field) ? tk("Retake") : tk("Edit"));
 
 export default function BusinessSetupPage() {
   const { authUserId, user } = useApp();
@@ -74,7 +76,7 @@ export default function BusinessSetupPage() {
     setError(null);
     const [st, drafts, row] = await Promise.all([fetchReviewStatus(uid), listDrafts(uid), fetchMyBusinessRow(uid)]);
     if (!st.ok) {
-      setError(OB_STRINGS.statusLoadError);
+      setError(t(OB_STRINGS.statusLoadError));
       setStatus(undefined);
       return;
     }
@@ -83,9 +85,9 @@ export default function BusinessSetupPage() {
     const payload = bizDraft ? (bizDraft.payload as { draft?: { biz?: unknown } }) : null;
     if (payload?.draft?.biz) setBizState(normaliseBusinessDraft(payload.draft.biz));
     else if (row.ok && row.value) {
-      const t = row.value.businessType;
-      const lane = laneForBusinessType(t);
-      setBizState((b) => ({ ...b, businessId: row.value!.id, lane: b.lane ?? lane, storeType: b.storeType ?? (lane === "store" ? (t as StoreType) : null) }));
+      const bt = row.value.businessType;
+      const lane = laneForBusinessType(bt);
+      setBizState((b) => ({ ...b, businessId: row.value!.id, lane: b.lane ?? lane, storeType: b.storeType ?? (lane === "store" ? (bt as StoreType) : null) }));
     }
     // The draft's verification id is the submission it was sent as: files
     // added while fixing belong to the next one, so they start a new id (and
@@ -164,24 +166,24 @@ export default function BusinessSetupPage() {
   if (status === undefined) {
     return (
       <StatusLoading
-        footer={{ label: error ? "Try again" : "Go to Dashboard", onClick: () => (error ? void load() : navigate("/app")), error: error ?? undefined, disabled: !error }}
+        footer={{ label: error ? t("Try again") : t("Go to Dashboard"), onClick: () => (error ? void load() : navigate("/app")), error: error ?? undefined, disabled: !error }}
       />
     );
   }
   if (!status || status.status === "none") return <Navigate to="/app" replace />;
 
   if (status.status === "pending") {
-    return <PendingScreen name={name} submittedAt={status.submittedAt} footer={{ label: "Go to Dashboard", onClick: () => navigate("/app") }} />;
+    return <PendingScreen name={name} submittedAt={status.submittedAt} footer={{ label: t("Go to Dashboard"), onClick: () => navigate("/app") }} />;
   }
 
   if (status.status === "approved") {
     const share = async () => {
-      const text = `Find ${name} on Centium Explore.`; // OURS (the public listing URL shape is UNSPECIFIED)
+      const text = t("Find {name} on Centium Explore.", { name }); // OURS (the public listing URL shape is UNSPECIFIED)
       try {
         if (navigator.share) await navigator.share({ title: name, text });
         else {
           await navigator.clipboard.writeText(text);
-          showToast("Copied."); // OURS
+          showToast(t("Copied.")); // OURS
         }
       } catch {
         /* the share sheet was closed */
@@ -199,9 +201,9 @@ export default function BusinessSetupPage() {
           listed={status.active}
           onShowOnExplore={async () => {
             const r = await saveListingActive(status.businessId, true);
-            if (!r.ok) return r.message ?? "Couldn't turn your listing on. Try again.";
+            if (!r.ok) return r.message != null ? t(r.message) : t("Couldn't turn your listing on. Try again.");
             setStatus({ ...status, active: true });
-            showToast("Your listing is on Explore.");
+            showToast(t("Your listing is on Explore."));
             return null;
           }}
         />
@@ -218,7 +220,7 @@ export default function BusinessSetupPage() {
     <RejectedScreen
       items={items}
       footer={{
-        label: "Fix and resubmit",
+        label: t("Fix and resubmit"),
         onClick: () => setFix(items[0] ? itemStep(items[0], lane) : "bizBusiness"),
       }}
     />

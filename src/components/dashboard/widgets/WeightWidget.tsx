@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../../context/AppContext";
 import { WeightScaleIcon } from "../../icons/PartBIcons";
 import { trendLabel, withinDays } from "../../../services/health-metrics/series";
+import { isRtl } from "../../../i18n/core";
 import { FadeValue, HeaderPill, HomeCard, HomeKeyframes, Line, staleLine, textPx, useHomeMode, useLoadingTimeout } from "./kit";
 
 // HO1.W2 Weight (small, large) and HO1.W2·e. Colours: the metric table
@@ -23,8 +24,10 @@ const Sparkline: React.FC<{ values: number[]; dark: boolean }> = ({ values, dark
   const h = 20;
   const min = Math.min(...values);
   const max = Math.max(...values);
+  // Round F (F10): in right to left, time runs from right to left (every x mirrored).
+  const rtl = isRtl();
   const pts = values.map((v, i) => ({
-    x: 2 + (i * (w - 5)) / Math.max(1, values.length - 1),
+    x: rtl ? w - (2 + (i * (w - 5)) / Math.max(1, values.length - 1)) : 2 + (i * (w - 5)) / Math.max(1, values.length - 1),
     y: max === min ? h / 2 : 2 + ((max - v) / (max - min)) * (h - 5),
   }));
   const last = pts[pts.length - 1];
@@ -53,7 +56,13 @@ const Sparkline: React.FC<{ values: number[]; dark: boolean }> = ({ values, dark
  * a scaled SVG): measured 9/700 values, 8/700 goal, 7.5/500 dates.
  */
 const TrendChart: React.FC<{ points: { date: string; value: number }[]; goal: number | null; dark: boolean }> = ({ points, goal, dark }) => {
-  const xs = (i: number) => 14 + (i * 175) / Math.max(1, points.length - 1);
+  // Round F (F10): in right to left, time runs from right to left. Every x is
+  // mirrored and the nudges (dx) flip; SVG text anchors are logical, so the
+  // labels follow.
+  const rtl = isRtl();
+  const mx = (x: number) => (rtl ? 200 - x : x);
+  const nudge = (d: number) => (rtl ? -d : d);
+  const xs = (i: number) => mx(14 + (i * 175) / Math.max(1, points.length - 1));
   const values = points.map((p) => p.value);
   const top = Math.max(...values, goal ?? -Infinity);
   const bottom = Math.min(...values, goal ?? Infinity);
@@ -69,7 +78,7 @@ const TrendChart: React.FC<{ points: { date: string; value: number }[]; goal: nu
       x={xs(i)}
       y={y(v) - 7}
       textAnchor={i === points.length - 1 ? "end" : "middle"}
-      dx={i === points.length - 1 ? 4.5 : 0}
+      dx={i === points.length - 1 ? nudge(4.5) : 0}
       style={{ fontSize: textPx(9), fontWeight: 700 }}
       fill="rgb(var(--c-charcoal))"
     >
@@ -81,7 +90,7 @@ const TrendChart: React.FC<{ points: { date: string; value: number }[]; goal: nu
       {goal !== null && (
         <>
           <line x1={0} x2={200} y1={66.5} y2={66.5} stroke={dark ? "rgba(195,179,251,0.35)" : "#CCC6E0"} strokeWidth={1} strokeDasharray="4 4" />
-          <text x={200} y={62} textAnchor="end" style={{ fontSize: textPx(8), fontWeight: 700 }} fill={deep}>
+          <text x={mx(200)} y={62} textAnchor="end" style={{ fontSize: textPx(8), fontWeight: 700 }} fill={deep}>
             Goal {kg(goal).replace(/\.0$/, "")}
           </text>
         </>
@@ -104,7 +113,7 @@ const TrendChart: React.FC<{ points: { date: string; value: number }[]; goal: nu
             x={xs(i)}
             y={86}
             textAnchor={i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"}
-            dx={i === 0 ? -7 : i === points.length - 1 ? 9 : 0}
+            dx={i === 0 ? nudge(-7) : i === points.length - 1 ? nudge(9) : 0}
             style={{ fontSize: textPx(7.5), fontWeight: 500 }}
             fill="rgb(var(--c-charcoal-faint))"
           >

@@ -40,7 +40,7 @@ export class PillarsMotion implements EngineSection {
   private carH = 0;
   private left = 0;
   private onCar = () => {
-    if (this.car) this.left = this.car.scrollLeft;
+    if (this.car) this.left = Math.abs(this.car.scrollLeft);
     this.invalidate();
   };
   debug: Record<string, number> = {};
@@ -71,7 +71,7 @@ export class PillarsMotion implements EngineSection {
       this.cw = this.panes[0].el.getBoundingClientRect().width + 14;
       this.carTop = r.top + window.scrollY;
       this.carH = r.height;
-      this.left = car.scrollLeft;
+      this.left = Math.abs(car.scrollLeft);
     }
   }
 

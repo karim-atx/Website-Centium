@@ -18,6 +18,7 @@ import { cadenceOf, shortDate } from "../../services/health-checks/checkStatus";
 import { fetchNotificationPrefs, saveNotificationPrefs } from "../../services/preferences";
 import { time12 } from "../../utils/time12";
 import { todayLocal } from "../../utils/date";
+import { t } from "../../i18n/core";
 
 // OURS-health-check-reminders: the list MO1.8.3's Health checks count line
 // opens. One row per health-check reminder (each opens HE1.8.2 to edit),
@@ -64,7 +65,7 @@ export default function HealthCheckRemindersPage() {
     setSaving(false);
     if (r.status !== "ok") {
       setOn(!next);
-      setToast({ message: "Couldn't save. Try again." });
+      setToast({ message: t("Couldn't save. Try again.") });
     }
   };
   const checks: CheckOption[] = reminders.map((r) => ({
@@ -82,14 +83,14 @@ export default function HealthCheckRemindersPage() {
           <button
             type="button"
             onClick={() => (window.history.length > 1 ? back() : navigate("/app/settings/notifications"))}
-            aria-label="Back"
+            aria-label={t("Back")}
             className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
             style={{ width: 36, height: 36 }}
           >
             <ChevronLeft size={20} className="text-charcoal-soft" aria-hidden />
           </button>
           <h1 className="flex-1 min-w-0 text-charcoal" style={{ fontSize: textPx(24), lineHeight: linePx(30), fontWeight: 700, letterSpacing: -0.5 }}>
-            Health-check reminders
+            {t("Health-check reminders")}
           </h1>
         </div>
       </FixedHeader>
@@ -97,7 +98,7 @@ export default function HealthCheckRemindersPage() {
       {allowOff && <NotificationsOffLine onTurnOn={() => navigate("/app/settings/notifications")} style={{ marginTop: 2, marginBottom: 12 }} />}
       <InfoBox style={{ marginTop: 2 }}>
         <p className="text-charcoal-soft" style={{ margin: 0, fontSize: textPx(12), lineHeight: "18px" }}>
-          Reminders for the checks you chose. They follow Allow notifications and quiet hours.
+          {t("Reminders for the checks you chose. They follow Allow notifications and quiet hours.")}
         </p>
       </InfoBox>
 
@@ -106,20 +107,20 @@ export default function HealthCheckRemindersPage() {
           <ClipboardCheck size={18} strokeWidth={1.75} />
         </span>
         <span className="flex-1 text-charcoal" style={{ fontSize: textPx(14), lineHeight: "19px", fontWeight: 600 }}>
-          Health checks
+          {t("Health checks")}
         </span>
-        <Toggle checked={on ?? false} disabled={on === null || saving} onChange={(v) => void setPaused(v)} label="Health checks" />
+        <Toggle checked={on ?? false} disabled={on === null || saving} onChange={(v) => void setPaused(v)} label={t("Health checks")} />
       </div>
 
       <p className="text-primary-accent" style={{ margin: "24px 0 0", fontSize: textPx(11), lineHeight: "14px", fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase" }}>
-        Your reminders
+        {t("Your reminders")}
       </p>
       <div className="bg-th-aea1dc dark:bg-primary-fill" style={{ height: 1.5, marginTop: 8 }} aria-hidden />
 
       {reminders.length === 0 ? (
         <div className="text-center" style={{ marginTop: 24 }}>
           <p className="text-charcoal-soft" style={{ margin: 0, fontSize: textPx(13), lineHeight: "19.5px" }}>
-            No reminders yet.
+            {t("No reminders yet.")}
           </p>
           <button
             type="button"
@@ -127,14 +128,14 @@ export default function HealthCheckRemindersPage() {
             className="tap text-th-7d6bb5 dark:text-primary-deep-text"
             style={{ marginTop: 4, minHeight: 32, fontSize: textPx(13), lineHeight: "19.5px", fontWeight: 700 }}
           >
-            Set one from Your health checks.
+            {t("Set one from Your health checks.")}
           </button>
         </div>
       ) : (
         <>
           {paused && (
             <p className="text-charcoal-soft" style={{ margin: "12px 0 0", fontSize: textPx(12), lineHeight: "18px" }}>
-              Paused. Turn Health checks on to get these.
+              {t("Paused. Turn Health checks on to get these.")}
             </p>
           )}
           <div className={paused ? "opacity-40" : undefined} style={{ marginTop: 12 }}>
@@ -149,12 +150,12 @@ export default function HealthCheckRemindersPage() {
                 actions={[
                   {
                     key: "delete",
-                    label: "Remove reminder",
+                    label: t("Remove reminder"),
                     icon: <Trash2 size={16} />,
                     destructive: true,
                     onClick: () => {
                       void checkStoreActions.removeReminder(r.checkId).then((res) =>
-                        setToast(res.ok ? { message: "Reminder removed.", undo: () => void checkStoreActions.setReminder({ ...r, id: undefined }) } : { message: "Couldn't save. Try again." })
+                        setToast(res.ok ? { message: t("Reminder removed."), undo: () => void checkStoreActions.setReminder({ ...r, id: undefined }) } : { message: t("Couldn't save. Try again.") })
                       );
                     },
                   },

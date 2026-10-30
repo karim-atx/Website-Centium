@@ -6,6 +6,7 @@ import type { ActivityEvent, TotalType, WeekTotal } from "./activityFeed";
 import { dayLabel, whenLabel } from "./dashboardModel";
 import { PopupMenu } from "../ui/PopupMenu";
 import { linePx, textPx } from "../../theme/textSize";
+import { isRtl } from "../../i18n/core";
 
 // DA1-015 #29-#31 · Recent activity (BizSummaryV27), OURS-DA-states #3-#6:
 // live line, refresh, collapsed 3 rows, expanded with this week's totals, the
@@ -161,6 +162,8 @@ function EmptyLine({ c }: { c: DashPalette }) {
 }
 
 function Totals({ c, totals }: { c: DashPalette; totals: WeekTotal[] }) {
+  // Round F (F10): in right to left, the week runs from right to left (each spark x mirrored).
+  const rtl = isRtl();
   return (
     <div style={{ padding: "0 16px 12px" }}>
       <p style={{ fontSize: textPx(10.5), lineHeight: linePx(14), color: c.faint, marginBottom: 8, marginTop: 0 }}>This week, compared with last week</p>
@@ -169,7 +172,7 @@ function Totals({ c, totals }: { c: DashPalette; totals: WeekTotal[] }) {
           const col = badgeOf(c, t.type);
           const has = t.n + t.prev > 0;
           const mx = has ? Math.max(...t.days, 1) : 1;
-          const pts = t.days.map((v, k) => [2 + k * 6.67, has ? 12 - (v / mx) * 10 : 7]);
+          const pts = t.days.map((v, k) => [rtl ? 44 - (2 + k * 6.67) : 2 + k * 6.67, has ? 12 - (v / mx) * 10 : 7]);
           const spark = pts.map((p, k) => (k ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
           const last = pts[6];
           const diff = t.n - t.prev;

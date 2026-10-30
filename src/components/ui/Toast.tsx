@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { AlertCircle, Check, CircleCheck } from "lucide-react";
 import { linePx, textPx } from "../../theme/textSize";
 import { useIsDark } from "../../hooks/useIsDark";
+import { t } from "../../i18n/core";
 
 /** How long a toast stays up. The handover gives no duration. */
 export const TOAST_MS = 5000;
@@ -134,7 +135,7 @@ export const Toast: React.FC<{
           />
         ))}
         <span className="flex-1 min-w-0 break-words">{message}</span>
-        {onUndo && actionButton("Undo", onUndo, market ? 800 : 700)}
+        {onUndo && actionButton(t("Undo"), onUndo, market ? 800 : 700)}
         {action &&
           (listing ? (
             <button
@@ -178,7 +179,7 @@ export const Toast: React.FC<{
           <Check size={15} strokeWidth={2.6} className="flex-none" style={{ color: "rgb(var(--thi-a2c8c2))" }} />
         ))}
       <span className={error ? "flex-1 min-w-0 break-words" : "flex-1 min-w-0 truncate"}>{message}</span>
-      {onUndo && actionButton("Undo", onUndo)}
+      {onUndo && actionButton(t("Undo"), onUndo)}
       {action && actionButton(action.label, action.onClick)}
     </div>,
     document.body

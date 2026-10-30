@@ -11,6 +11,7 @@ import {
   supportUnreadBadge,
   type SupportThreadSummary,
 } from "../../services/support";
+import { t } from "../../i18n/core";
 
 // MO1.8.9 Contact us, as a centred popup (no ×; tapping outside or Escape
 // closes it).
@@ -108,7 +109,7 @@ export const ContactUsPopup: React.FC<{ open: boolean; onClose: () => void }> = 
   return (
     // MO1.8.9 measured: the card 346 wide (the overlay padded 0 22 on the 390
     // board, card x 44 to 735 on the 2x board).
-    <CentredPopup open={open} onClose={close} title="Contact us" icon={<Headset size={22} strokeWidth={1.75} />} maxWidth={346}>
+    <CentredPopup open={open} onClose={close} title={t("Contact us")} icon={<Headset size={22} strokeWidth={1.75} />} maxWidth={346}>
       <div className="flex flex-col">
         {/* Live chat: tile #F0EDF9 (primary.tint) with MessageCircle 17 / 1.75
             in primary.accent; title 14 / 600; value 12 / 400 muted. */}
@@ -117,19 +118,19 @@ export const ContactUsPopup: React.FC<{ open: boolean; onClose: () => void }> = 
           onClick={() => void openChat()}
           disabled={busy || loading}
           aria-busy={busy || loading}
-          aria-label={badge ? `Live chat, ${badge} unread` : undefined}
+          aria-label={badge ? t("Live chat, {badge} unread", { badge }) : undefined}
           className={`${rowClass} disabled:cursor-default`}
         >
           <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
             <MessageCircle size={17} strokeWidth={1.75} className="text-primary-accent" />
           </span>
-          <span className="flex-1 min-w-0 text-[14px] font-semibold text-charcoal">Live chat</span>
+          <span className="flex-1 min-w-0 text-[14px] font-semibold text-charcoal">{t("Live chat")}</span>
           {loading ? (
             // States › Loading: a skeleton block where the value sits (surface.soft).
             <span aria-hidden className="shrink-0 h-3 w-20 rounded-md bg-cream-soft animate-skeleton-pulse" />
           ) : (
             <span className="shrink-0 max-w-[60%] truncate text-[12px] text-charcoal-faint">
-              {busy ? "Opening…" : value}
+              {busy ? t("Opening…") : value}
             </span>
           )}
           {badge && (
@@ -146,7 +147,7 @@ export const ContactUsPopup: React.FC<{ open: boolean; onClose: () => void }> = 
         {error && (
           // States › Error: an inline line in danger under the affected row.
           <p role="alert" className="ps-[50px] pb-2 -mt-1 text-[12px] font-semibold text-status-high">
-            {error}
+            {t(error)}
           </p>
         )}
 
@@ -154,7 +155,7 @@ export const ContactUsPopup: React.FC<{ open: boolean; onClose: () => void }> = 
           <span className="w-9 h-9 rounded-2xl bg-berry-pale flex items-center justify-center shrink-0" aria-hidden>
             <Mail size={17} strokeWidth={1.75} className="text-berry" />
           </span>
-          <span className="flex-1 min-w-0 text-[14px] font-semibold text-charcoal">Email</span>
+          <span className="flex-1 min-w-0 text-[14px] font-semibold text-charcoal">{t("Email")}</span>
           <span className="shrink-0 max-w-[60%] truncate text-[12px] text-charcoal-faint">{SUPPORT_EMAIL}</span>
           <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-charcoal-faint" />
         </a>

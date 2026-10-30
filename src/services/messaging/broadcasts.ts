@@ -1,6 +1,7 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { describeGroupError } from "./groups";
+import { t, tk } from "../../i18n/core";
 
 // Broadcast lists (Messages phase 2B, Database 20261003030000).
 //
@@ -42,18 +43,18 @@ export interface Broadcast {
 
 function fail(error: PostgrestError, doing: string): Fail {
   console.error(`[broadcasts] Could not ${doing}:`, error.code, error.message);
-  if (error.code === "ATX02") return { ok: false, message: "You can send up to 10 broadcasts a day. Try again tomorrow." };
+  if (error.code === "ATX02") return { ok: false, message: t("You can send up to 10 broadcasts a day. Try again tomorrow.") };
   if (error.code === "ATX43") {
     return {
       ok: false,
       message: /lists/i.test(error.message ?? "")
-        ? "You have 20 broadcast lists, which is the most you can keep. Delete one to make another."
-        : "A broadcast list can have up to 200 people.",
+        ? t("You have 20 broadcast lists, which is the most you can keep. Delete one to make another.")
+        : t("A broadcast list can have up to 200 people."),
     };
   }
-  if (error.code === "ATX08") return { ok: false, message: "That list isn't available any more." };
+  if (error.code === "ATX08") return { ok: false, message: t("That list isn't available any more.") };
   if (error.code === "22023" && /something to say/i.test(error.message ?? "")) {
-    return { ok: false, message: "Write a message first." };
+    return { ok: false, message: t("Write a message first.") };
   }
   return { ok: false, message: describeGroupError(error, doing) };
 }
@@ -96,25 +97,25 @@ export async function fetchListPeople(listId: string): Promise<BroadcastPerson[]
     console.error("[broadcasts] Could not load the list:", error.message);
     return [];
   }
-  return (data ?? []).map((r) => ({ userId: r.user_id, firstName: r.first_name?.trim() || "Someone", avatarUrl: r.avatar_url }));
+  return (data ?? []).map((r) => ({ userId: r.user_id, firstName: r.first_name?.trim() || t("Someone"), avatarUrl: r.avatar_url }));
 }
 
 export async function createList(name: string): Promise<{ ok: true; listId: string } | Fail> {
   const { data, error } = await supabase.rpc("create_broadcast_list", { p_name: name });
-  if (error) return fail(error, "create the list");
+  if (error) return fail(error, tk("create the list"));
   const id = (data as { id?: string } | null)?.id;
-  return id ? { ok: true, listId: id } : { ok: false, message: "Couldn't create the list. Try again." };
+  return id ? { ok: true, listId: id } : { ok: false, message: t("Couldn't create the list. Try again.") };
 }
 
 export async function renameList(listId: string, name: string): Promise<{ ok: true } | Fail> {
   const { error } = await supabase.rpc("rename_broadcast_list", { p_list_id: listId, p_name: name });
-  return error ? fail(error, "rename the list") : { ok: true };
+  return error ? fail(error, tk("rename the list")) : { ok: true };
 }
 
 /** Deletes the list. Not an unsend: messages already sent stay with each client. */
 export async function deleteList(listId: string): Promise<{ ok: true } | Fail> {
   const { error } = await supabase.rpc("delete_broadcast_list", { p_list_id: listId });
-  return error ? fail(error, "delete the list") : { ok: true };
+  return error ? fail(error, tk("delete the list")) : { ok: true };
 }
 
 /**
@@ -126,11 +127,11 @@ export async function setListPeople(listId: string, current: string[], wanted: s
   const drop = current.filter((id) => !wanted.includes(id));
   if (add.length > 0) {
     const { error } = await supabase.rpc("add_to_broadcast_list", { p_list_id: listId, p_user_ids: add });
-    if (error) return fail(error, "add them");
+    if (error) return fail(error, tk("add them"));
   }
   for (const id of drop) {
     const { error } = await supabase.rpc("remove_from_broadcast_list", { p_list_id: listId, p_user_id: id });
-    if (error) return fail(error, "remove them");
+    if (error) return fail(error, tk("remove them"));
   }
   return { ok: true };
 }
@@ -138,7 +139,7 @@ export async function setListPeople(listId: string, current: string[], wanted: s
 /** Sends a text broadcast. Each client receives it in their own chat with you. */
 export async function sendBroadcast(listId: string, text: string): Promise<{ ok: true; broadcast: Broadcast } | Fail> {
   const { data, error } = await supabase.rpc("send_broadcast", { p_list_id: listId, p_text: text });
-  if (error) return fail(error, "send the broadcast");
+  if (error) return fail(error, tk("send the broadcast"));
   const r = data as { id: string; list_id: string | null; list_name: string; sent_at: string; sent_count: number; skipped_count: number };
   return {
     ok: true,

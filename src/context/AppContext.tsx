@@ -119,7 +119,7 @@ import {
   normalizeMacroSplit,
   rescaleEntry,
 } from "../services/nutrition";
-import { t as translate, setActiveLanguage, isCatalogueLoaded, type Language, type Vars } from "../i18n/core";
+import { isCatalogueLoaded, setActiveLanguage, t as translate, tk, type Language, type Vars } from "../i18n/core";
 import { loadLanguage } from "../i18n/load";
 import { ensureArabicFont } from "../i18n/fonts";
 import { readAccountLanguage, settleLanguage, writeAccountLanguage } from "../services/preferences/language";
@@ -6546,7 +6546,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!result.ok) {
       // Nothing is cleared and the session is untouched: claiming success on a
       // failed request is the exact bug being fixed.
-      return { ok: false, message: result.message ?? "Could not schedule deletion." };
+      return { ok: false, message: result.message ?? tk("Could not schedule deletion.") };
     }
 
     setDeletionRequestedAt(result.deletionRequestedAt ?? null);
@@ -6556,7 +6556,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const cancelDeletion: AppState["cancelDeletion"] = async () => {
     const result = await cancelAccountDeletionRemote();
-    if (!result.ok) return { ok: false, message: result.message ?? "Could not cancel." };
+    if (!result.ok) return { ok: false, message: result.message ?? tk("Could not cancel.") };
     setDeletionRequestedAt(result.deletionRequestedAt ?? null);
     return { ok: true };
   };

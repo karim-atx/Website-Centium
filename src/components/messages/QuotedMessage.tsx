@@ -1,5 +1,6 @@
 import { CornerUpLeft, X } from "lucide-react";
 import { describeMessage, type Message } from "../../services/messaging";
+import { t } from "../../i18n/core";
 
 /**
  * The one-line quote of a message being replied to.
@@ -28,7 +29,7 @@ export const QuotedMessage: React.FC<{
   /** Inside a sent bubble, rather than above the composer. */
   inBubble?: boolean;
 }> = ({ message, authorLabel, onCancel, onJump, inBubble = false }) => {
-  const body = message ? describeMessage(message) : "Message unavailable";
+  const body = message ? describeMessage(message) : t("Message unavailable");
 
   const content = (
     <>
@@ -81,7 +82,7 @@ export const QuotedMessage: React.FC<{
       {onCancel && (
         <button
           onClick={onCancel}
-          aria-label="Cancel reply"
+          aria-label={t("Cancel reply")}
           className="tap w-7 h-7 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 hover:bg-charcoal/5"
         >
           <X size={14} />

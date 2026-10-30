@@ -1,6 +1,8 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
+import { rateLimitMessage } from "../network-error";
+import { tk } from "../../i18n/core";
 
 // The professional's side of the client relationship: issuing invite codes,
 // reading the roster, and ending a relationship.
@@ -116,7 +118,7 @@ function describe(error: PostgrestError): string {
    * 20260907193614 -- it was redundant on the day it was written, not left
    * behind by anything. create_client_code calls that function with `perform`
    * and does not catch it, so ATX02 reaches the client unchanged. */
-  if (code === CODE.RATE_LIMIT) return message;
+  if (code === CODE.RATE_LIMIT) return rateLimitMessage(message);
   /* create_client_code requires account_type = 'professional'.
    *
    * THE REGEX THIS REPLACES WAS PARTLY DEAD, which is its own argument against
@@ -127,16 +129,16 @@ function describe(error: PostgrestError): string {
    * A fallback that is two-thirds unreachable does not add safety, it adds the
    * appearance of it. */
   if (code === CODE.WRONG_ACCOUNT_TYPE) {
-    return "Only professional accounts can generate client codes.";
+    return tk("Only professional accounts can generate client codes.");
   }
   if (
     code === "PGRST301" ||
     code === "42501" ||
     /jwt|not authenticated|authentication|permission denied/i.test(message)
   ) {
-    return "You need to be signed in as a professional to do this.";
+    return tk("You need to be signed in as a professional to do this.");
   }
-  return message || "Something went wrong. Try again.";
+  return message || tk("Something went wrong. Try again.");
 }
 
 export type CreateCodeResult =

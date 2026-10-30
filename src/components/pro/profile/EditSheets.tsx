@@ -11,6 +11,7 @@ import { MAX_SPECIALTIES, MORE_SPECIALTIES, SPECIALTIES, proKindOf } from "../..
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { CtaButton, ErrorLine } from "./kit";
+import { t } from "../../../i18n/core";
 
 // Release 3 · W6 MO14's own sheets beyond the CV's:
 // - SpecialtiesSheet: professional_profiles.specialties (up to 5), chosen from
@@ -76,7 +77,7 @@ export const SpecialtiesSheet: React.FC<{ open: boolean; onClose: () => void; in
       <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 12 }}>Choose up to {MAX_SPECIALTIES}. Clients see them on your profile.</p>
       <div className="flex flex-wrap" style={{ gap: 6 }}>
         {options.map((s) => (
-          <SpecialtyChip key={s} label={s} on={chosen.includes(s)} onClick={() => toggle(s)} disabled={!chosen.includes(s) && chosen.length >= MAX_SPECIALTIES} />
+          <SpecialtyChip key={s} label={t(s)} on={chosen.includes(s)} onClick={() => toggle(s)} disabled={!chosen.includes(s) && chosen.length >= MAX_SPECIALTIES} />
         ))}
       </div>
       {error && <ErrorLine>{error}</ErrorLine>}

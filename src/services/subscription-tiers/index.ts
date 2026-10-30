@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t } from "../../i18n/core";
 import { effectivePlanLabel } from "./pricing";
 import type { Enums } from "../../../lib/supabase/database.types";
 
@@ -154,14 +155,14 @@ async function load(tierType: TierType): Promise<TiersResult> {
     if (error) {
       return {
         ok: false,
-        message: isOffline(error) ? OFFLINE_MESSAGE : "Could not load subscription plans. Try again.",
+        message: isOffline(error) ? OFFLINE_MESSAGE : t("Could not load subscription plans. Try again."),
       };
     }
     return { ok: true, tiers: (data ?? []).map((row) => toTier(row as Row)) };
   } catch (e) {
     return {
       ok: false,
-      message: isOffline(e) ? OFFLINE_MESSAGE : "Could not load subscription plans. Try again.",
+      message: isOffline(e) ? OFFLINE_MESSAGE : t("Could not load subscription plans. Try again."),
     };
   }
 }
@@ -242,14 +243,14 @@ export async function fetchMySubscriptionTier(
     if (error) {
       return {
         ok: false,
-        message: isOffline(error) ? OFFLINE_MESSAGE : "Could not load your plan. Try again.",
+        message: isOffline(error) ? OFFLINE_MESSAGE : t("Could not load your plan. Try again."),
       };
     }
     held = data;
   } catch (e) {
     return {
       ok: false,
-      message: isOffline(e) ? OFFLINE_MESSAGE : "Could not load your plan. Try again.",
+      message: isOffline(e) ? OFFLINE_MESSAGE : t("Could not load your plan. Try again."),
     };
   }
 
@@ -300,15 +301,15 @@ export function fetchRevenueSharePct(): Promise<RevenueShareResult> {
       if (error) {
         return {
           ok: false,
-          message: isOffline(error) ? OFFLINE_MESSAGE : "Could not load pricing. Try again.",
+          message: isOffline(error) ? OFFLINE_MESSAGE : t("Could not load pricing. Try again."),
         };
       }
-      if (!data) return { ok: false, message: "Could not load pricing. Try again." };
+      if (!data) return { ok: false, message: t("Could not load pricing. Try again.") };
       return { ok: true, pct: Number(data.marketplace_revenue_share_pct) };
     } catch (e) {
       return {
         ok: false,
-        message: isOffline(e) ? OFFLINE_MESSAGE : "Could not load pricing. Try again.",
+        message: isOffline(e) ? OFFLINE_MESSAGE : t("Could not load pricing. Try again."),
       };
     }
   })().then((result) => {
@@ -366,7 +367,7 @@ export async function fetchEffectiveProfessionalTier(): Promise<EffectiveTierRes
     if (error) {
       return {
         ok: false,
-        message: isOffline(error) ? OFFLINE_MESSAGE : "Could not load your plan. Try again.",
+        message: isOffline(error) ? OFFLINE_MESSAGE : t("Could not load your plan. Try again."),
       };
     }
     // A set-returning function comes back as an array of at most one row.
@@ -409,7 +410,7 @@ export async function fetchEffectiveProfessionalTier(): Promise<EffectiveTierRes
   } catch (e) {
     return {
       ok: false,
-      message: isOffline(e) ? OFFLINE_MESSAGE : "Could not load your plan. Try again.",
+      message: isOffline(e) ? OFFLINE_MESSAGE : t("Could not load your plan. Try again."),
     };
   }
 }
@@ -470,7 +471,7 @@ export async function fetchBusinessPlan(ownerId: string): Promise<BusinessPlanRe
     if (error) {
       return {
         ok: false,
-        message: isOffline(error) ? OFFLINE_MESSAGE : "Could not load your plan. Try again.",
+        message: isOffline(error) ? OFFLINE_MESSAGE : t("Could not load your plan. Try again."),
       };
     }
     // Only an active subscription entitles anyone to seats, exactly as
@@ -483,7 +484,7 @@ export async function fetchBusinessPlan(ownerId: string): Promise<BusinessPlanRe
   } catch (e) {
     return {
       ok: false,
-      message: isOffline(e) ? OFFLINE_MESSAGE : "Could not load your plan. Try again.",
+      message: isOffline(e) ? OFFLINE_MESSAGE : t("Could not load your plan. Try again."),
     };
   }
 

@@ -41,6 +41,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import DevicesSourcesPage from "./DevicesSourcesPage";
 import BusinessSettings from "../business-more/BusinessSettings";
 import { PracticeSection } from "../../components/pro/settings/PracticeSection";
+import { tk } from "../../i18n/core";
 
 // MO1.8 Settings (R17, batch C; handover-complete pass). The board's layout:
 // labelled sections of flat icon-tile rows instead of cards, sub-screens as
@@ -64,9 +65,9 @@ import { PracticeSection } from "../../components/pro/settings/PracticeSection";
 
 /** What each permission is for: read to screen readers, not drawn (MO1.8). */
 const PERMISSION_PURPOSE = {
-  mic: "Needed for AI voice logging",
-  camera: "Needed for scanning biomarkers & photos",
-  location: "Needed to find gyms & businesses near you",
+  mic: tk("Needed for AI voice logging"),
+  camera: tk("Needed for scanning biomarkers & photos"),
+  location: tk("Needed to find gyms & businesses near you"),
 } as const;
 type PermissionKey = keyof typeof PERMISSION_PURPOSE;
 
@@ -221,7 +222,7 @@ function SettingsHub() {
           icon={theme === "dark" ? Moon : Sun}
           title={t("Dark Mode")}
           subtitle={`${theme === "dark" ? t("Currently on") : t("Currently off")}. ${t("Applies throughout Centium")}`}
-          toggle={{ checked: theme === "dark", onChange: toggleTheme, label: "Dark mode" }}
+          toggle={{ checked: theme === "dark", onChange: toggleTheme, label: t("Dark mode") }}
           // MO1.8 draws no divider between Dark Mode and the colour theme.
           className="before:hidden"
         />
@@ -287,8 +288,8 @@ function SettingsHub() {
             subtitle={
               deviceNote === "platform"
                 ? isIos
-                  ? "Connects in the Centium app on iPhone"
-                  : "Connects in the Centium app on Android"
+                  ? t("Connects in the Centium app on iPhone")
+                  : t("Connects in the Centium app on Android")
                 : undefined
             }
             toggle={{
@@ -298,8 +299,9 @@ function SettingsHub() {
           />
           <SettingsRow
             icon={DEVICE_PLACEHOLDER_ICON.whoop}
+            // i18n-ignore (a brand name)
             title="Whoop"
-            subtitle={deviceNote === "whoop" ? "Whoop sync isn't available yet" : undefined}
+            subtitle={deviceNote === "whoop" ? t("Whoop sync isn't available yet") : undefined}
             toggle={{
               checked: false,
               onChange: (next) => setDeviceNote(next ? "whoop" : null),
@@ -325,9 +327,9 @@ function SettingsHub() {
           zone, Blocked members). Change password stays here, first (DECIDED),
           so Security keeps one row and no divider. This section's glyphs take
           #7D6BB5 / #C3B3FB (MO1.8 #49, #53, #60, #69). */}
-      <SettingsSection label="Data & account">
+      <SettingsSection label={t("Data & account")}>
         {/* Task J. */}
-        <SettingsRow icon={KeyRound} iconTone="dark" title="Change password" onClick={() => setChangePasswordOpen(true)} />
+        <SettingsRow icon={KeyRound} iconTone="dark" title={t("Change password")} onClick={() => setChangePasswordOpen(true)} />
         <StorageUsageRow />
         {/* Task T: the profile's time zone, for every account (#timezone),
             and the "Use device time zone" switch row (MO1.8.13). */}

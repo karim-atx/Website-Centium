@@ -136,7 +136,7 @@ export default function BusinessSettings() {
 
       <BizLabel>{t("Appearance")}</BizLabel>
       <BizCard>
-        <BizRow title="Dark mode" toggle={{ checked: theme === "dark", onChange: toggleTheme, label: "Dark mode" }} />
+        <BizRow title={t("Dark mode")} toggle={{ checked: theme === "dark", onChange: toggleTheme, label: t("Dark mode") }} />
       </BizCard>
 
       {/* MO1B-029 row 4: the theme in its own card (padding 14 14 12, margin -6 0 13). */}
@@ -144,7 +144,7 @@ export default function BusinessSettings() {
         <p className="text-[12px] font-bold text-charcoal" style={{ marginBottom: 12 }}>
           {t("Color theme")}
         </p>
-        <div role="radiogroup" aria-label="Color theme" className="flex justify-between">
+        <div role="radiogroup" aria-label={t("Color theme")} className="flex justify-between">
           {COLOR_THEMES.map((th) => {
             const on = colorTheme === th.value;
             return (
@@ -183,11 +183,11 @@ export default function BusinessSettings() {
 
       <BizLabel>{t("Permissions")}</BizLabel>
       <BizCard>
-        <BizRow title={t("Camera")} desc={permDesc("camera", camera, "For photos of your space")} toggle={permToggle("camera", camera, () => void askCamera())} />
-        <BizRow title={t("Location")} desc={permDesc("location", location, "To pin your business on the map")} toggle={permToggle("location", location, askLocation)} />
+        <BizRow title={t("Camera")} desc={permDesc("camera", camera, t("For photos of your space"))} toggle={permToggle("camera", camera, () => void askCamera())} />
+        <BizRow title={t("Location")} desc={permDesc("location", location, t("To pin your business on the map"))} toggle={permToggle("location", location, askLocation)} />
         <BizRow
           title={t("Push notifications")}
-          desc={!pushAvailable ? t(pushUnavailableReason()) : pushLine ?? undefined}
+          desc={!pushAvailable ? t(pushUnavailableReason()) : pushLine ? t(pushLine) : undefined}
           toggle={{ checked: !!push, disabled: !pushAvailable || pushBusy || push === null, onChange: (v) => void togglePush(v) }}
         />
       </BizCard>
@@ -197,16 +197,16 @@ export default function BusinessSettings() {
         <BizRow
           icon={ShieldCheck}
           title={t("Two-factor authentication")}
-          value={twofa === null ? undefined : twofa ? "On" : "Off"}
+          value={twofa === null ? undefined : twofa ? t("On") : t("Off")}
           onClick={() => navigate("/app/settings/two-factor")}
         />
       </BizCard>
 
-      <BizLabel>Data & account</BizLabel>
+      <BizLabel>{t("Data & account")}</BizLabel>
       <SettingsRowVariant.Provider value="business">
         <BizCard>
-          <BizRow icon={KeyRound} title="Change password" onClick={() => setPwOpen(true)} />
-          <BizRow icon={Smartphone} title="Active sessions" desc="Where you're signed in" onClick={() => navigate("/app/business/more/security")} />
+          <BizRow icon={KeyRound} title={t("Change password")} onClick={() => setPwOpen(true)} />
+          <BizRow icon={Smartphone} title={t("Active sessions")} desc={t("Where you're signed in")} onClick={() => navigate("/app/business/more/security")} />
           <StorageUsageRow />
           {/* The time zone field row is the shared one (Task T); it takes the card's
               14 / 15 inset, and its "Use device time zone" row is a business row. */}
@@ -216,27 +216,27 @@ export default function BusinessSettings() {
           <div style={{ paddingBlock: "12px", paddingInline: "14px 15px" }}>
             <CycleTrackingRow />
           </div>
-          <BizRow icon={EyeOff} title="Deactivate or delete" desc="Pause, close or delete your business" onClick={() => navigate("/app/business/more/deactivate")} />
+          <BizRow icon={EyeOff} title={t("Deactivate or delete")} desc={t("Pause, close or delete your business")} onClick={() => navigate("/app/business/more/deactivate")} />
         </BizCard>
       </SettingsRowVariant.Provider>
 
       <BizLabel>{t("General")}</BizLabel>
       <BizCard>
         <BizRow icon={Languages} title={t("Language")} value={<span lang={language}>{languageName}</span>} onClick={() => navigate("/app/settings/language")} />
-        <BizRow icon={Accessibility} title={t("Accessibility")} desc="Larger text, reduced motion" onClick={() => navigate("/app/settings/accessibility")} />
+        <BizRow icon={Accessibility} title={t("Accessibility")} desc={t("Larger text, reduced motion")} onClick={() => navigate("/app/settings/accessibility")} />
         <BizRow icon={Lock} title={t("Privacy")} onClick={() => navigate("/app/settings/privacy")} />
         <BizRow icon={FileText} title={t("Terms of Service")} onClick={() => navigate("/app/settings/terms")} />
         <BizRow icon={CircleHelp} title={t("Contact us")} onClick={() => setContactOpen(true)} />
         <BizRow icon={Bug} title={t("Report a bug")} onClick={() => setBugOpen(true)} />
         <BizRow icon={Star} title={t("Rate this app")} onClick={() => setRateOpen(true)} />
-        <BizRow icon={BookOpen} title="Help centre" desc="Guides for running your business" onClick={() => navigate("/app/business/more/help")} />
-        <BizRow icon={ScrollText} title="Business terms and waivers" onClick={() => navigate("/app/business/more/business-terms")} />
+        <BizRow icon={BookOpen} title={t("Help centre")} desc={t("Guides for running your business")} onClick={() => navigate("/app/business/more/help")} />
+        <BizRow icon={ScrollText} title={t("Business terms and waivers")} onClick={() => navigate("/app/business/more/business-terms")} />
       </BizCard>
 
       {/* MO1B-032 row 5: the version line. The build carries no version number
           yet (package.json 0.0.0), so the line names the app only. */}
       <p className="text-center text-[10.5px] text-th-9a94b3" style={{ margin: "4px 0 6px" }}>
-        Centium for Business
+        {t("Centium for Business")}
       </p>
       <button
         type="button"
@@ -244,7 +244,7 @@ export default function BusinessSettings() {
         className="tap w-full flex items-center justify-center text-[14px] font-bold text-status-high"
         style={{ height: 48 }}
       >
-        Delete business account
+        {t("Delete business account")}
       </button>
 
       <ContactUsPopup open={contactOpen} onClose={() => setContactOpen(false)} />

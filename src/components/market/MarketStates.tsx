@@ -4,6 +4,7 @@ import { useOnline } from "../../hooks/useOnline";
 import { textPx, linePx } from "../../theme/textSize";
 import { marketPalette } from "../../theme/marketTokens";
 import { ConfirmationStrip } from "./ConfirmationStrip";
+import { t } from "../../i18n/core";
 
 // Market + Share 3.0 · the shared data states (D-04, HANDOVER §4 "States
 // everywhere"; not drawn on the board, designed here in its chrome and to be
@@ -33,18 +34,18 @@ export interface MarketSkeletonProps {
   /** How many cards (a list), stacked with the list's gap. */
   count?: number;
   gap?: number;
-  /** Accessible name for the busy region. */
+  /** Accessible name for the busy region (English; shown through t()). */
   label?: string;
   className?: string;
   style?: React.CSSProperties;
 }
 
-export const MarketSkeleton: React.FC<MarketSkeletonProps> = ({ radius = 20, rows = 2, height, count = 1, gap = 10, label = "Loading", className, style }) => {
+export const MarketSkeleton: React.FC<MarketSkeletonProps> = ({ radius = 20, rows = 2, height, count = 1, gap = 10, label, className, style }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const widths = ["44%", "72%", "58%", "36%"];
   return (
-    <div role="status" aria-busy="true" aria-label={label} className={className} style={{ display: "flex", flexDirection: "column", gap, ...style }}>
+    <div role="status" aria-busy="true" aria-label={label ? t(label) : t("Loading")} className={className} style={{ display: "flex", flexDirection: "column", gap, ...style }}>
       {Array.from({ length: count }, (_, k) => (
         <div
           key={k}
@@ -61,11 +62,15 @@ export const MarketSkeleton: React.FC<MarketSkeletonProps> = ({ radius = 20, row
   );
 };
 
-/** "Couldn't load {thing}. Check your connection and try again." + Retry, or the offline line when the browser is offline. */
+/**
+ * "Couldn't load {thing}. Check your connection and try again." + Retry, or the offline line when the browser is offline.
+ * Round F (AV): one sentence with a {thing} placeholder; `thing` is the English noun phrase ("your offers"), translated
+ * here through t() (its Arabic is in the catalogue, src/i18n/ar/shared.ts), or already translated by the caller.
+ */
 export const MarketError: React.FC<{ thing: string; onRetry: () => void; notchBg?: string; className?: string; style?: React.CSSProperties }> = ({ thing, onRetry, notchBg, className, style }) => {
   const online = useOnline();
   if (!online) return <MarketOffline loaded={false} onRetry={onRetry} notchBg={notchBg} className={className} style={style} />;
-  return <ConfirmationStrip tone="error" text={`Couldn't load ${thing}. Check your connection and try again.`} action="Retry" onAction={onRetry} notchBg={notchBg} still className={className} style={style} />;
+  return <ConfirmationStrip tone="error" text={t("Couldn't load {thing}. Check your connection and try again.", { thing: t(thing) })} action={t("Retry")} onAction={onRetry} notchBg={notchBg} still className={className} style={style} />;
 };
 
 /**
@@ -77,9 +82,9 @@ export const MarketOffline: React.FC<{ loaded: boolean; onRetry?: () => void; fo
   const online = useOnline();
   if (online && !force) return null;
   return loaded ? (
-    <ConfirmationStrip tone="neutral" text="You're offline. Showing what was loaded." notchBg={notchBg} still className={className} style={style} />
+    <ConfirmationStrip tone="neutral" text={t("You're offline. Showing what was loaded.")} notchBg={notchBg} still className={className} style={style} />
   ) : (
-    <ConfirmationStrip tone="neutral" text="You're offline. Try again when you're connected." action={onRetry ? "Retry" : undefined} onAction={onRetry} notchBg={notchBg} still className={className} style={style} />
+    <ConfirmationStrip tone="neutral" text={t("You're offline. Try again when you're connected.")} action={onRetry ? t("Retry") : undefined} onAction={onRetry} notchBg={notchBg} still className={className} style={style} />
   );
 };
 
@@ -94,8 +99,8 @@ export const MarketEmptyCard: React.FC<{ title: string; body?: string; placehold
   const m = marketPalette(dark);
   return (
     <div className={className} style={{ lineHeight: "normal", borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, padding: 16, color: m.ink, ...style }}>
-      <div style={{ fontSize: textPx(13.5), fontWeight: 800 }}>{title}</div>
-      {body ? <div style={{ fontSize: textPx(12.5), lineHeight: linePx(18), color: m.ink2, marginTop: 4 }}>{body}</div> : null}
+      <div style={{ fontSize: textPx(13.5), fontWeight: 800 }}>{t(title)}</div>
+      {body ? <div style={{ fontSize: textPx(12.5), lineHeight: linePx(18), color: m.ink2, marginTop: 4 }}>{t(body)}</div> : null}
       {placeholder ? (
         <div
           style={{
@@ -113,7 +118,7 @@ export const MarketEmptyCard: React.FC<{ title: string; body?: string; placehold
             color: m.faint,
           }}
         >
-          {placeholder}
+          {t(placeholder)}
         </div>
       ) : null}
     </div>

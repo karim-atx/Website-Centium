@@ -5,6 +5,7 @@
 import { clock12 } from "../../utils/time12";
 import { formatShortDate } from "../../utils/date";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 // The clock in Messages. v6 X-14: always 12-hour through the shared
 // formatter ("6:42 PM", unpadded hour), whatever the device's own hour cycle
@@ -18,7 +19,7 @@ export function listTime(iso: string, now = new Date()): string {
   if (sameDay(d, now)) return clock12(d);
   const y = new Date(now);
   y.setDate(now.getDate() - 1);
-  if (sameDay(d, y)) return "Yesterday";
+  if (sameDay(d, y)) return t("Yesterday");
   const days = (now.getTime() - d.getTime()) / 86_400_000;
   // v6 MO1.7 D2: "Tue" within the week, then month first as drawn ("Sep 27"),
   // with the year once it is another year ("Sep 27, 2025").
@@ -49,7 +50,7 @@ export function bizListTime(iso: string, now = new Date()): string {
 /** MO1.2.1.3.2's search result time: the day, then the clock ("Today · 8:14 AM"). */
 export function dayAndTime(iso: string, now = new Date()): string {
   const d = new Date(iso);
-  const day = sameDay(d, now) ? "Today" : listTime(iso, now);
+  const day = sameDay(d, now) ? t("Today") : listTime(iso, now);
   return `${day} · ${clockTime(iso)}`;
 }
 

@@ -6,6 +6,7 @@ import { useBusiness } from "../../../components/business-more/useBusiness";
 import { useOnline } from "../../../hooks/useOnline";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { DAY_LETTERS, DAY_LONG, DAY_SHORT } from "../../../utils/week";
+import { isRtl } from "../../../i18n/core";
 import { useAnalytics } from "../shell/AnalyticsContext";
 import { fetchClassesRaw } from "./classesData";
 import {
@@ -779,7 +780,7 @@ function BookingsData({ m, r, people, bkView, setBkView, cs, toggle }: { m: Clas
       <div style={{ padding: "6px 20px 14px" }}>
         <div role="tablist" aria-label="Bookings view" className="an3-pill">
           <span className="an3-pill-track" aria-hidden />
-          <span className="an3-pill-thumb" aria-hidden style={{ transform: `translateX(${bkView === "dow" ? 72 : 0}px)` }} />
+          <span className="an3-pill-thumb" aria-hidden style={{ transform: `translateX(${bkView === "dow" ? (isRtl() ? -72 : 72) : 0}px)` }} />
           {(
             [
               ["time", "Over time"],
@@ -792,7 +793,7 @@ function BookingsData({ m, r, people, bkView, setBkView, cs, toggle }: { m: Clas
               role="tab"
               aria-selected={bkView === k}
               className="an3-pill-tab"
-              style={{ left: i ? 74 : 0, color: bkView === k ? "var(--k-pill-on)" : "var(--k-faint)" }}
+              style={{ insetInlineStart: i ? 74 : 0, color: bkView === k ? "var(--k-pill-on)" : "var(--k-faint)" }}
               onClick={() => setBkView(k)}
             >
               {label}
@@ -822,7 +823,8 @@ function BookingsData({ m, r, people, bkView, setBkView, cs, toggle }: { m: Clas
               ))}
             </div>
             {ghost && (
-              <svg width="100%" height="100" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: "absolute", insetInlineStart: 0, insetInlineEnd: 0, top: 0, overflow: "visible" }}>
+              <svg width="100%" height="100" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: "absolute", insetInlineStart: 0, insetInlineEnd: 0, top: 0, overflow: "visible", ...(isRtl() ? { transform: "scaleX(-1)" } : {}) }}>
+                {/* Round F (F10): the bars (a grid) follow the direction; this line has no text, so it is mirrored whole in right to left. */}
                 <polyline points={ghost} fill="none" stroke="var(--k-ghost)" strokeWidth={2} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
               </svg>
             )}

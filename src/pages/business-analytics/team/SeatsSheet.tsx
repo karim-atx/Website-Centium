@@ -7,6 +7,7 @@ import { formatShortDate } from "../../../utils/date";
 import { Buttons, ErrLine, LeadRow, RowsCard, Sheet } from "./parts";
 import { money } from "./fmt";
 import type { SeatInfo } from "./teamData";
+import { t } from "../../../i18n/core";
 
 // AN5-022 (no free seats), AN5-057 (choose blocks), AN5-058 (confirm),
 // AN5-059 (pay: Whish shown as Soon, X-29), AN5-060 (done) and AN5-057 O1
@@ -89,7 +90,7 @@ export function SeatsSheet({
   // charges that period's price); NULL is "Not available", never $0.
   const period = seats.period ?? "monthly";
   const each = (amount: number) => `${money(amount)} ${perPeriod(period)}`;
-  const priceRow = { l: "Price per block", v: price !== null ? each(price) : NOT_AVAILABLE };
+  const priceRow = { l: "Price per block", v: price !== null ? each(price) : t(NOT_AVAILABLE) };
   const total = seats.capacity + n * per;
   const have = seats.blocks > 0 ? `${blocksWord(seats.blocks)} · ${seats.capacity} seats` : `${seats.capacity} seats`;
   const amountOf = (k: number) => (price !== null ? Math.round(k * price * 100) / 100 : null);

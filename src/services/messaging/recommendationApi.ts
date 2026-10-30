@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t } from "../../i18n/core";
 
 // Release 3 · DB-7 / CU9: the client's "Add to my week" on a professional's
 // recommendation. Cards are immutable, so "Added" is the client's own
@@ -36,6 +37,6 @@ export async function addRecommendation(messageId: string): Promise<{ ok: true }
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
   return {
     ok: false,
-    message: error.code === "ATX08" ? "This recommendation isn't available any more." : "Couldn't add this to your week. Try again.",
+    message: error.code === "ATX08" ? t("This recommendation isn't available any more.") : t("Couldn't add this to your week. Try again."),
   };
 }

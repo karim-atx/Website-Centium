@@ -5,6 +5,7 @@ import { passwordChecks, passwordStrength } from "../../../utils/password";
 import "./onboarding.css";
 import { MARK_LEAF_PATH } from "../../../components/icons/CentiumMark";
 import { OB, type Shape, Shapes } from "./visuals";
+import { t, tk } from "../../../i18n/core";
 
 // The body blocks of the onboarding steps (BizOnboardingV10 `bl` kinds), one
 // component per kind, literal to the markup. Lanes compose steps from these;
@@ -163,7 +164,7 @@ export const ObCollapsible: React.FC<{
       <span className="ob-coll-s">{summary}</span>
     </span>
     <span className="ob-pilltag" data-tone={tag === "Optional" ? "opt" : tag === "Done" ? "done" : undefined}>
-      {tag}
+      {t(tag)}
     </span>
     <span className="ob-chev">{open ? <ChevronUp size={16} strokeWidth={2.2} /> : <ChevronDown size={16} strokeWidth={2.2} />}</span>
   </button>
@@ -346,7 +347,7 @@ export const ObUnits: React.FC<{ items: ObUnitField[] }> = ({ items }) => (
             onChange={(e) => u.onChange(e.target.value)}
             style={{ whiteSpace: "nowrap" }}
           />
-          <span className="ob-unit-sw" role="radiogroup" aria-label={`${u.label} unit`}>
+          <span className="ob-unit-sw" role="radiogroup" aria-label={t("{label} unit", { label: u.label })}>
             {u.units.map((un) => (
               <button key={un.value} type="button" role="radio" aria-checked={u.unit === un.value} className="hit" onClick={() => u.onUnit(un.value)}>
                 {un.label}
@@ -373,7 +374,7 @@ export interface ObGoalTile {
 }
 
 export const ObGoalTiles: React.FC<{ items: ObGoalTile[] }> = ({ items }) => (
-  <div className="ob-goals" role="group" aria-label="Goal areas">
+  <div className="ob-goals" role="group" aria-label={t("Goal areas")}>
     {items.map((g) => (
       <div
         key={g.key}
@@ -570,7 +571,7 @@ export const ObTerms: React.FC<{
   /** The sentence after the documents (default: the handover's ", and confirm these details are true."). */
   tail?: string;
   disabled?: boolean;
-}> = ({ on, onChange, error, doc = "Terms of Service", tail = ", and confirm these details are true.", disabled }) => (
+}> = ({ on, onChange, error, doc = tk("Terms of Service"), tail = tk(", and confirm these details are true."), disabled }) => (
   <div className="ob-terms">
     <div
       role="checkbox"
@@ -590,15 +591,22 @@ export const ObTerms: React.FC<{
         {on && <Check size={13} strokeWidth={3} />}
       </span>
       <span className="ob-terms-t">
-        I accept the{" "}
-        <a href="/legal#terms" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
-          {doc}
-        </a>{" "}
-        and{" "}
-        <a href="/legal#privacy" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
-          Privacy Policy
-        </a>
-        {tail}
+        {t("I accept the {terms} and {privacy}")
+          .split(/(\{terms\}|\{privacy\})/)
+          .map((piece, i) =>
+            piece === "{terms}" ? (
+              <a key={i} href="/legal#terms" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                {t(doc)}
+              </a>
+            ) : piece === "{privacy}" ? (
+              <a key={i} href="/legal#privacy" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                {t("Privacy Policy")}
+              </a>
+            ) : (
+              piece
+            )
+          )}
+        {t(tail)}
       </span>
     </div>
     {error && (
@@ -798,8 +806,8 @@ export const ObStrength: React.FC<{ password: string }> = ({ password }) => {
   return (
     <div className="ob-str" aria-live="polite">
       <div className="ob-str-head">
-        <span>Password strength</span>
-        <span style={{ color }}>{label}</span>
+        <span>{t("Password strength")}</span>
+        <span style={{ color }}>{t(label)}</span>
       </div>
       <div className="ob-str-bar">
         <span style={{ width: `${(passed / passwordChecks.length) * 100}%`, background: color }} />
@@ -810,7 +818,7 @@ export const ObStrength: React.FC<{ password: string }> = ({ password }) => {
           return (
             <span key={c.label} className="ob-str-ck" data-met={met}>
               <span>{met ? <Check size={9} strokeWidth={3.4} /> : <X size={9} strokeWidth={3.4} />}</span>
-              {c.label}
+              {t(c.label)}
             </span>
           );
         })}

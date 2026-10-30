@@ -1,6 +1,7 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t } from "../../i18n/core";
 import { parseSharedPlan, type SharedPlan } from "./groupCardsModel";
 
 // Round D · a meal plan shared in a group, opened by a member (Database
@@ -18,7 +19,7 @@ export async function fetchSharedMealPlan(messageId: string): Promise<SharedPlan
   if (error) {
     if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
     console.error("[shared plan] Could not read the plan:", error.code, error.message);
-    return { ok: false, message: "Couldn't open the plan. Try again." };
+    return { ok: false, message: t("Couldn't open the plan. Try again.") };
   }
   return { ok: true, plan: parseSharedPlan(data) };
 }

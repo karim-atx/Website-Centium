@@ -9,6 +9,7 @@
 
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { BLOCKED_TEXT } from "../moderation/text";
+import { t, tk, tn } from "../../i18n/core";
 
 /** The most cards shared_session_places reads at once (22023 over it). */
 export const PLACES_BATCH = 200;
@@ -66,7 +67,7 @@ export function placesBatches(ids: readonly string[], size = PLACES_BATCH): stri
 /** "{taken} of {capacity} places taken"; null with no limit (no line). */
 export function placesLine(p: Pick<SessionPlaces, "capacity" | "taken"> | null | undefined): string | null {
   if (!p || p.capacity === null) return null;
-  return `${p.taken} of ${p.capacity} ${p.capacity === 1 ? "place" : "places"} taken`;
+  return tn(p.capacity, "{taken} of {n} place taken", "{taken} of {n} places taken", { taken: p.taken });
 }
 
 export function isFull(p: Pick<SessionPlaces, "capacity" | "taken">): boolean {
@@ -118,28 +119,28 @@ const isRateLimit = (e: Err) => codeOf(e) === "ATX02" || codeOf(e) === "429" || 
 /** book_shared_session's refusals. `pro` is the professional's first name. */
 export function describeBookingError(e: Err, pro: string): string {
   if (isOffline(e)) return OFFLINE_MESSAGE;
-  if (isRateLimit(e)) return "You've booked a lot of sessions in the last hour. Try again later.";
+  if (isRateLimit(e)) return t("You've booked a lot of sessions in the last hour. Try again later.");
   switch (codeOf(e)) {
     case "ATXM0":
-      return "This session is full.";
+      return t("This session is full.");
     case "ATXM1":
-      return `This is a paid session. Ask ${pro} to book it.`;
+      return t("This is a paid session. Ask {name} to book it.", { name: pro });
     case "ATX10":
-      return "This session has already started.";
+      return t("This session has already started.");
     case "ATX08":
-      return "This session isn't available any more.";
+      return t("This session isn't available any more.");
     case "22023":
-      return "You can't book your own session.";
+      return t("You can't book your own session.");
     default:
-      return "Couldn't book a place. Try again.";
+      return t("Couldn't book a place. Try again.");
   }
 }
 
 /** cancel_shared_session_booking's refusals. */
 export function describeCancelError(e: Err): string {
   if (isOffline(e)) return OFFLINE_MESSAGE;
-  if (codeOf(e) === "ATX08") return "You don't have a place on this session any more.";
-  return "Couldn't cancel your booking. Try again.";
+  if (codeOf(e) === "ATX08") return t("You don't have a place on this session any more.");
+  return t("Couldn't cancel your booking. Try again.");
 }
 
 /** set_group_description's refusals (ATX44 / ATX45 / ATX08 as rename_group). */
@@ -149,38 +150,38 @@ export function describeDescriptionError(e: Err): string {
     case "ATX60":
       return BLOCKED_TEXT;
     case "22023":
-      return `Keep the description to ${GROUP_DESCRIPTION_MAX} characters or fewer.`;
+      return tn(GROUP_DESCRIPTION_MAX, "Keep the description to {n} character or fewer.", "Keep the description to {n} characters or fewer.");
     case "ATX44":
-      return "Only the group's host can do that.";
+      return t("Only the group's host can do that.");
     case "ATX45":
-      return "This group has been closed.";
+      return t("This group has been closed.");
     case "ATX08":
-      return "That group isn't available any more.";
+      return t("That group isn't available any more.");
     default:
-      return "Couldn't save the description. Try again.";
+      return t("Couldn't save the description. Try again.");
   }
 }
 
 /** The description to send: trimmed, '' clears. Null when it is too long. */
 export function descriptionToSend(text: string): string | null {
-  const t = text.trim();
-  return t.length > GROUP_DESCRIPTION_MAX ? null : t;
+  const s = text.trim();
+  return s.length > GROUP_DESCRIPTION_MAX ? null : s;
 }
 
 /** A meal plan's length on its card: "7 days". Never calories or macros. */
 export function daysLabel(days: number | null | undefined): string | null {
   if (days === null || days === undefined || !Number.isFinite(days) || days < 1) return null;
-  return `${days} ${days === 1 ? "day" : "days"}`;
+  return tn(days, "{n} day", "{n} days");
 }
 
 /** The capacity field: '' is no limit; otherwise a whole number 1 to 500. */
 export function parseCapacity(text: string): { ok: true; value: number | null } | { ok: false; message: string } {
-  const t = text.trim();
-  if (!t) return { ok: true, value: null };
-  if (!/^\d+$/.test(t)) return { ok: false, message: `Places is a whole number from ${CAPACITY_MIN} to ${CAPACITY_MAX}. Leave it empty for no limit.` };
-  const n = Number(t);
+  const s = text.trim();
+  if (!s) return { ok: true, value: null };
+  if (!/^\d+$/.test(s)) return { ok: false, message: t("Places is a whole number from {min} to {max}. Leave it empty for no limit.", { min: CAPACITY_MIN, max: CAPACITY_MAX }) };
+  const n = Number(s);
   if (n < CAPACITY_MIN || n > CAPACITY_MAX)
-    return { ok: false, message: `Places is a whole number from ${CAPACITY_MIN} to ${CAPACITY_MAX}. Leave it empty for no limit.` };
+    return { ok: false, message: t("Places is a whole number from {min} to {max}. Leave it empty for no limit.", { min: CAPACITY_MIN, max: CAPACITY_MAX }) };
   return { ok: true, value: n };
 }
 
@@ -190,7 +191,7 @@ export function parseCapacity(text: string): { ok: true; value: number | null } 
 // calories or macros for anybody, and not the plan's own notes.
 // ---------------------------------------------------------------------------
 
-const SLOT_NAMES: Record<string, string> = { breakfast: "Breakfast", lunch: "Lunch", snack: "Snacks", dinner: "Dinner" };
+const SLOT_NAMES: Record<string, string> = { breakfast: tk("Breakfast"), lunch: tk("Lunch"), snack: tk("Snacks"), dinner: tk("Dinner") };
 
 export interface SharedPlanItem {
   name: string;
@@ -230,24 +231,24 @@ export function parseSharedPlan(rows: unknown): SharedPlan | null {
     const index = numOrNull(raw.day_index) ?? 0;
     let day = dayList[dayList.length - 1];
     if (!day || day.index !== index) {
-      day = { index, label: textOrNull(raw.day_label) ?? `Day ${index + 1}`, meals: [] };
+      day = { index, label: textOrNull(raw.day_label) ?? t("Day {n}", { n: index + 1 }), meals: [] };
       dayList.push(day);
     }
     const slot = typeof raw.meal_slot === "string" ? raw.meal_slot : "snack";
     let meal = day.meals[day.meals.length - 1];
     if (!meal || meal.slot !== slot) {
-      meal = { slot, title: SLOT_NAMES[slot] ?? "Meal", items: [] };
+      meal = { slot, title: t(SLOT_NAMES[slot] ?? tk("Meal")), items: [] };
       day.meals.push(meal);
     }
-    meal.items.push({ name: textOrNull(raw.name) ?? "Removed item", grams: numOrNull(raw.grams), servings: numOrNull(raw.servings), note: textOrNull(raw.note) });
+    meal.items.push({ name: textOrNull(raw.name) ?? t("Removed item"), grams: numOrNull(raw.grams), servings: numOrNull(raw.servings), note: textOrNull(raw.note) });
   }
-  return { id, name: textOrNull(first.plan_name) ?? "Meal plan", days: numOrNull(first.days_count), dayList, playlistUrl: textOrNull(first.playlist_url) };
+  return { id, name: textOrNull(first.plan_name) ?? t("Meal plan"), days: numOrNull(first.days_count), dayList, playlistUrl: textOrNull(first.playlist_url) };
 }
 
 /** "150 g", "1 serving", "1.5 servings", or null. Grams first when both are set. */
 export function portionLabel(item: Pick<SharedPlanItem, "grams" | "servings">): string | null {
   const trim = (n: number) => String(Math.round(n * 10) / 10);
-  if (item.grams !== null && item.grams > 0) return `${trim(item.grams)} g`;
-  if (item.servings !== null && item.servings > 0) return `${trim(item.servings)} ${item.servings === 1 ? "serving" : "servings"}`;
+  if (item.grams !== null && item.grams > 0) return t("{n} g", { n: trim(item.grams) });
+  if (item.servings !== null && item.servings > 0) return tn(item.servings, "{n} serving", "{n} servings", { n: trim(item.servings) });
   return null;
 }

@@ -6,6 +6,7 @@ import React from "react";
 import { LG } from "../engine/env";
 import { ENTIUM_LETTERS, LEAF_TEAL, LEAF_VEIN_PATH, LOGO_LAVENDER, MARK_C_PATH, MARK_LEAF_PATH } from "../paths";
 import { LOCKUP_RATIO, LETTER_BASE } from "./loaderChoice";
+import { t } from "../../../i18n/core";
 
 const leafGradientStops = (edge: string) => (
   <>
@@ -22,7 +23,7 @@ export const Lo1: React.FC<{ vw: number }> = ({ vw }) => {
     <div
       id="lo1"
       role="progressbar"
-      aria-label="Loading Centium"
+      aria-label={t("Loading Centium")}
       aria-valuemin={0}
       aria-valuemax={100}
       style={{ position: "fixed", inset: 0, zIndex: 90, pointerEvents: "none" }}
@@ -76,7 +77,7 @@ export const Lo2: React.FC<{ vw: number }> = ({ vw }) => {
     <div
       id="loader"
       role="progressbar"
-      aria-label="Loading Centium"
+      aria-label={t("Loading Centium")}
       aria-valuemin={0}
       aria-valuemax={100}
       style={{ position: "fixed", inset: 0, zIndex: 90, pointerEvents: "none" }}

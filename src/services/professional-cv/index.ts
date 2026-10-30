@@ -5,6 +5,7 @@ import { deletePrivateFile, uploadPrivateFile } from "../storage";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { toDbDate, toMonth, type MonthValue } from "./cvDates";
 import { licenceStatus, type LicenceReviewRow, type LicenceStatus } from "./licenceStatus";
+import { tk } from "../../i18n/core";
 
 // A professional's CV: licences, experience, education and the rest.
 //
@@ -353,19 +354,20 @@ const reviewFrom = (r: Tables<"professional_licence_reviews">): LicenceReviewRow
 
 export type Fail = { ok: false; message: string };
 
-function describe(error: PostgrestError, what: string): string {
+/** `fallback` is the whole sentence, marked where it is passed. */
+function describe(error: PostgrestError, fallback: string): string {
   if (isOffline(error)) return OFFLINE_MESSAGE;
   const code = error.code ?? "";
   const msg = error.message ?? "";
-  if (code === "PGRST301" || /jwt|not authenticated/i.test(msg)) return "Your session expired. Sign in again.";
-  if (code === "23505" && /languages/.test(msg)) return "That language is already on your CV.";
+  if (code === "PGRST301" || /jwt|not authenticated/i.test(msg)) return tk("Your session expired. Sign in again.");
+  if (code === "23505" && /languages/.test(msg)) return tk("That language is already on your CV.");
   if (code === "23514") {
-    if (/url/.test(msg)) return "Links must start with https://";
-    if (/range|expiry_after_issue/.test(msg)) return "The end date can't be before the start date.";
-    if (/skills/.test(msg)) return "That's more skills than a CV can hold (30 at most).";
-    return "Check the details: each field has a length limit.";
+    if (/url/.test(msg)) return tk("Links must start with https://");
+    if (/range|expiry_after_issue/.test(msg)) return tk("The end date can't be before the start date.");
+    if (/skills/.test(msg)) return tk("That's more skills than a CV can hold (30 at most).");
+    return tk("Check the details: each field has a length limit.");
   }
-  return `Couldn't save ${what}. Try again.`;
+  return fallback;
 }
 
 // Each table name is cast to one member of the union so supabase-js types
@@ -404,7 +406,7 @@ export async function fetchMyCv(userId: string): Promise<{ ok: true; cv: MyCv } 
   );
   if (failed?.error) {
     console.error("[professional-cv] Could not read the CV:", failed.error.message);
-    return { ok: false, message: isOffline(failed.error) ? OFFLINE_MESSAGE : "Couldn't load your CV." };
+    return { ok: false, message: isOffline(failed.error) ? OFFLINE_MESSAGE : tk("Couldn't load your CV.") };
   }
 
   const rows = <K extends SectionKey>(key: K, data: unknown) =>
@@ -456,14 +458,14 @@ export async function saveCvProfile(
     .select("profile_id");
   if (updated.error) {
     console.error("[professional-cv] Could not update the profile:", updated.error.message);
-    return { ok: false, message: describe(updated.error, "your CV") };
+    return { ok: false, message: describe(updated.error, tk("Couldn't save your CV. Try again.")) };
   }
   if (updated.data && updated.data.length > 0) return { ok: true };
 
   const inserted = await supabase.from("professional_profiles").insert({ profile_id: userId, ...row });
   if (inserted.error) {
     console.error("[professional-cv] Could not create the profile:", inserted.error.message);
-    return { ok: false, message: describe(inserted.error, "your CV") };
+    return { ok: false, message: describe(inserted.error, tk("Couldn't save your CV. Try again.")) };
   }
   return { ok: true };
 }
@@ -486,7 +488,7 @@ export async function saveEntry<K extends SectionKey>(
           .single();
   if (result.error || !result.data) {
     console.error(`[professional-cv] Could not save ${key}:`, result.error?.message);
-    return { ok: false, message: result.error ? describe(result.error, "that") : "Couldn't save that. Try again." };
+    return { ok: false, message: result.error ? describe(result.error, tk("Couldn't save that. Try again.")) : tk("Couldn't save that. Try again.") };
   }
   return { ok: true, entry: (section.from as (r: unknown) => SectionEntry<K>)(result.data) };
 }
@@ -495,7 +497,7 @@ export async function deleteEntry(key: SectionKey, id: string): Promise<{ ok: tr
   const { error } = await cvTable(SECTIONS[key].table).delete().eq("id", id);
   if (error) {
     console.error(`[professional-cv] Could not delete ${key}:`, error.message);
-    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't delete that. Try again." };
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : tk("Couldn't delete that. Try again.") };
   }
   return { ok: true };
 }
@@ -518,7 +520,7 @@ export async function saveLicence(
   let uploaded: string | null = null;
   if (file) {
     const up = await uploadPrivateFile({ bucket: BUCKET, userId, file });
-    if (!up.ok || !up.path) return { ok: false, message: up.message ?? "That file couldn't be uploaded." };
+    if (!up.ok || !up.path) return { ok: false, message: up.message ?? tk("That file couldn't be uploaded.") };
     uploaded = up.path;
   }
 
@@ -539,7 +541,7 @@ export async function saveLicence(
     }
     return {
       ok: false,
-      message: result.error ? describe(result.error, "the licence") : "Couldn't save the licence. Try again.",
+      message: result.error ? describe(result.error, tk("Couldn't save the licence. Try again.")) : tk("Couldn't save the licence. Try again."),
     };
   }
 
@@ -568,7 +570,7 @@ export async function setLicencePublished(licence: Licence, on: boolean): Promis
     .single();
   if (result.error || !result.data) {
     console.error("[professional-cv] Could not change whether the licence is public:", result.error?.message);
-    return { ok: false, message: result.error && isOffline(result.error) ? OFFLINE_MESSAGE : "Couldn't change that. Try again." };
+    return { ok: false, message: result.error && isOffline(result.error) ? OFFLINE_MESSAGE : tk("Couldn't change that. Try again.") };
   }
   return { ok: true, licence: licenceFrom(result.data) };
 }
@@ -582,7 +584,7 @@ export async function removeLicenceDocument(licence: Licence): Promise<{ ok: tru
     .select("*")
     .single();
   if (result.error || !result.data) {
-    return { ok: false, message: "Couldn't remove the document. Try again." };
+    return { ok: false, message: tk("Couldn't remove the document. Try again.") };
   }
   if (licence.documentPath) {
     const removed = await deletePrivateFile(BUCKET, licence.documentPath);
@@ -603,7 +605,7 @@ export async function deleteLicence(userId: string, licence: Licence): Promise<{
   const { error } = await supabase.from("professional_licences").delete().eq("id", licence.id);
   if (error) {
     console.error("[professional-cv] Could not delete the licence:", error.message);
-    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't delete the licence. Try again." };
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : tk("Couldn't delete the licence. Try again.") };
   }
   if (licence.mirrorsCertification && licence.documentPath) {
     const cleared = await supabase
@@ -694,7 +696,7 @@ export async function fetchPublicCv(professionalId: string): Promise<{ ok: true;
   const failed = [licences, experience, education, languages, awards, publications, volunteering, links].find((r) => r.error);
   if (failed?.error) {
     console.error("[professional-cv] Could not read a public CV:", failed.error.message);
-    return { ok: false, message: isOffline(failed.error) ? OFFLINE_MESSAGE : "Couldn't load their CV." };
+    return { ok: false, message: isOffline(failed.error) ? OFFLINE_MESSAGE : tk("Couldn't load their CV.") };
   }
 
   // Every view column is nullable to the type generator; rows without the

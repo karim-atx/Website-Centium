@@ -9,12 +9,15 @@ import { Link } from "react-router-dom";
 import { LEAF_TEAL, MARK_LEAF_PATH } from "../paths";
 import { SCREENS, screenBackground } from "../assets/dashboard";
 import type { IntroVals } from "./introVals";
+import { t, tk } from "../../../i18n/core";
 
-const TITLE = "Your health lives in a lot of places.";
-const TITLE_WORDS = TITLE.split(" ");
-const WORDS = "Your food. Your training. Your health. Your coach. Your people.".split(" ");
-const PILL_TOP = ["NUTRITION", "TRAINING", "HEALTH"];
-const PILL_BOT = ["COACHING", "COMMUNITY"];
+// The two intro lines are split into words for their reveals (never into
+// letters, so Arabic stays joined); t() runs at render. In Arabic there is no
+// "lives", so no leaf dot: the page gets LO2 instead of LO1 (pickLoader.ts).
+const TITLE = tk("Your health lives in a lot of places.");
+const WORDS = tk("Your food. Your training. Your health. Your coach. Your people.");
+const PILL_TOP = [tk("NUTRITION"), tk("TRAINING"), tk("HEALTH")];
+const PILL_BOT = [tk("COACHING"), tk("COMMUNITY")];
 
 const FRAG_SHADOW = "0 1px 1px rgba(34,30,26,.05),0 8px 18px rgba(34,30,26,.07),0 22px 44px rgba(72,58,130,.08)";
 
@@ -59,9 +62,9 @@ const appIcon = (style: React.CSSProperties) => (
 );
 
 export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, onContact, onSkip }) => {
-  const pill = (t: string, mobile: boolean, id?: string) => (
+  const pill = (label: string, mobile: boolean, id?: string) => (
     <a
-      key={t}
+      key={label}
       id={id}
       href="#platform"
       onClick={onPillar}
@@ -78,27 +81,29 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
         } as unknown as React.CSSProperties
       }
     >
-      {t}
+      {t(label)}
     </a>
   );
+  const title = t(TITLE);
   return (
     <>
       <div id="intro-track" style={{ position: "relative", zIndex: 2, height: r.introH }}>
         <div id="intro-stage" style={{ position: r.stagePos, top: 0, height: r.VH, overflowX: "clip", overflowY: "visible" }}>
           <div id="stm0" style={{ position: "absolute", left: "50%", top: r.stmTop, transform: "translate(-50%,-50%)", width: r.stmW, textAlign: "center" }}>
             <h2
-              aria-label={TITLE}
+              aria-label={title}
               style={{ fontWeight: 800, fontSize: r.stmSize, lineHeight: 1.04, letterSpacing: "-.04em", color: "#221E1A", textWrap: "balance" }}
             >
-              {TITLE_WORDS.map((t, i) => (
+              {title.split(" ").map((w, i) => (
                 <span
                   key={i}
                   aria-hidden="true"
                   style={{ display: "inline-block", overflow: "hidden", verticalAlign: "top", padding: ".16em 0 .1em", marginBlock: "-.16em -.1em", marginInline: "0 .24em" }}
                 >
                   <span data-tw="" style={{ display: "inline-block", transform: "translateY(" + twY + ")" }}>
-                    {t === "lives" ? (
+                    {w === "lives" ? (
                       <>
+                        {/* i18n-ignore: the English title only */}
                         l
                         <span id="i-wrap" style={{ position: "relative", display: "inline-block" }}>
                           ı
@@ -112,10 +117,11 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                             </svg>
                           </span>
                         </span>
+                        {/* i18n-ignore */}
                         ves
                       </>
                     ) : (
-                      t
+                      w
                     )}
                   </span>
                 </span>
@@ -127,7 +133,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
             style={{ position: "absolute", left: "50%", top: r.stmTop, transform: "translate(-50%,-50%)", width: r.stmW, textAlign: "center", opacity: 0 }}
           >
             <h2 style={{ fontWeight: 800, fontSize: r.stmSize, lineHeight: 1.04, letterSpacing: "-.04em", color: "#221E1A", textWrap: "balance" }}>
-              {WORDS.map((w, i) => (
+              {t(WORDS).split(" ").map((w, i) => (
                 <span key={i} data-wd="" style={{ opacity: 0.14 }}>
                   {w + " "}
                 </span>
@@ -139,25 +145,25 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
             <div data-chrome="" style={{ borderRadius: "14px", background: "#FFFFFF", border: "1px solid #E7E3EE", boxShadow: FRAG_SHADOW, overflow: "hidden" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 12px", background: "#F6F4FA", borderBottom: "1px solid #EEEAF4" }}>
                 {appIcon({ background: "#EDE9F6", boxShadow: "inset 0 0 0 4px #EDE9F6,inset 0 0 0 6px #9C8FC4" })}
-                <span style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: ".02em", color: "#5C5470" }}>Calories</span>
+                <span style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: ".02em", color: "#5C5470" }}>{t("Calories")}</span>
               </div>
               <div style={{ margin: "9px 10px 0", padding: "7px 9px", borderRadius: "9px", background: "#F2EFF8", display: "flex", alignItems: "center", gap: "7px" }}>
                 <span style={{ width: "6px", height: "6px", flexShrink: 0, borderRadius: "99px", background: "#775FD7" }} />
-                <span style={{ flex: 1, fontSize: "11px", fontWeight: 700, color: "#3E2C80" }}>You haven't logged lunch</span>
-                <span style={{ fontSize: "9.5px", fontWeight: 600, color: "#6C655C" }}>2h ago</span>
+                <span style={{ flex: 1, fontSize: "11px", fontWeight: 700, color: "#3E2C80" }}>{t("You haven't logged lunch")}</span>
+                <span style={{ fontSize: "9.5px", fontWeight: 600, color: "#6C655C" }}>{t("2h ago")}</span>
               </div>
               <div style={{ padding: "8px 12px 11px", display: "flex", flexDirection: "column", gap: "5px", fontSize: "11px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontWeight: 700, color: "#221E1A" }}>Breakfast</span>
-                  <span style={{ color: "#5B5349" }}>460 kcal</span>
+                  <span style={{ fontWeight: 700, color: "#221E1A" }}>{t("Breakfast")}</span>
+                  <span style={{ color: "#5B5349" }}>{t("460 kcal")}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", color: "#756D63" }}>
-                  <span>Lunch</span>
-                  <span>Add food</span>
+                  <span>{t("Lunch")}</span>
+                  <span>{t("Add food")}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", color: "#756D63" }}>
-                  <span>Dinner</span>
-                  <span>Add food</span>
+                  <span>{t("Dinner")}</span>
+                  <span>{t("Add food")}</span>
                 </div>
                 <div style={{ marginTop: "2px", height: "5px", borderRadius: "9px", background: "#EEEAF4", overflow: "hidden" }}>
                   <span style={{ display: "block", width: "22%", height: "100%", background: "#9C8FC4" }} />
@@ -180,13 +186,13 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
             >
               <div style={{ display: "flex", alignItems: "center", gap: "7px", fontFamily: "Manrope,sans-serif", marginBottom: "8px" }}>
                 {appIcon({ background: "#EFEBE2", boxShadow: "inset 0 -6px 0 #FBFAF7,inset 0 0 0 1px #CFC8B8" })}
-                <span style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: ".02em", color: "#6B6356" }}>Notes</span>
+                <span style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: ".02em", color: "#6B6356" }}>{t("Notes")}</span>
               </div>
               <div style={{ fontSize: "11.5px", fontWeight: 500, lineHeight: 1.55, color: "#3B352D", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-                {"push day?? upper\nbench 80x8, 85x6, 85x5\n"}
-                <span style={{ color: "#756D63" }}>rows 3x10 (60? 62.5?)</span>
-                {"\nohp 40 x 8 x 3\n"}
-                <span style={{ color: "#756D63" }}>felt heavy. try 87.5 next wk</span>
+                {t("push day?? upper\nbench 80x8, 85x6, 85x5\n")}
+                <span style={{ color: "#756D63" }}>{t("rows 3x10 (60? 62.5?)")}</span>
+                {t("\nohp 40 x 8 x 3\n")}
+                <span style={{ color: "#756D63" }}>{t("felt heavy. try 87.5 next wk")}</span>
               </div>
             </div>
           </Frag>
@@ -195,11 +201,11 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
             <div data-chrome="" style={{ borderRadius: "22px", background: "#2A2633", boxShadow: FRAG_SHADOW, padding: "12px 14px 13px", color: "#FFFFFF" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "8px" }}>
                 {appIcon({ background: "#3A3546", boxShadow: "inset 0 0 0 5px #3A3546,inset 0 0 0 7px #D9CFF5" })}
-                <span style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: ".02em", color: "#D9D3E6" }}>Heart</span>
+                <span style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: ".02em", color: "#D9D3E6" }}>{t("Heart")}</span>
               </div>
               <div style={{ display: "flex", alignItems: "baseline", gap: "5px" }}>
                 <span style={{ fontSize: r.fragBig, fontWeight: 700, letterSpacing: "-.02em" }}>58</span>
-                <span style={{ fontSize: "11px", fontWeight: 600, color: "#B8B0C9" }}>bpm resting</span>
+                <span style={{ fontSize: "11px", fontWeight: 600, color: "#B8B0C9" }}>{t("bpm resting")}</span>
               </div>
               <svg viewBox="0 0 140 24" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: "20px", margin: "4px 0 6px" }}>
                 <polyline
@@ -226,7 +232,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                 }}
               >
                 <span style={{ width: "6px", height: "6px", borderRadius: "99px", border: "1.5px solid #B8B0C9" }} />
-                Not shared with your other apps
+                {t("Not shared with your other apps")}
               </div>
             </div>
           </Frag>
@@ -235,7 +241,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
             <div data-chrome="" style={{ borderRadius: "18px", background: "#F3F4F6", boxShadow: FRAG_SHADOW, padding: "10px 11px 11px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "8px" }}>
                 {appIcon({ background: "#E3E6EB", boxShadow: "inset 3px 3px 0 #F3F4F6,inset -3px -6px 0 #F3F4F6,inset 0 0 0 9px #8C93A0" })}
-                <span style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: ".02em", color: "#5F6672" }}>Messages</span>
+                <span style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: ".02em", color: "#5F6672" }}>{t("Messages")}</span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
                 <span
@@ -249,7 +255,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                     color: "#3B352D",
                   }}
                 >
-                  Sorry, crazy week
+                  {t("Sorry, crazy week")}
                 </span>
                 <div style={{ display: "flex", alignItems: "flex-end", gap: "6px" }}>
                   <span
@@ -267,6 +273,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                       justifyContent: "center",
                     }}
                   >
+                    {/* i18n-ignore: initials */}
                     LK
                   </span>
                   <span
@@ -280,10 +287,10 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                       color: "#221E1A",
                     }}
                   >
-                    Did you fill in your weekly check-in?
+                    {t("Did you fill in your weekly check-in?")}
                   </span>
                 </div>
-                <span style={{ alignSelf: "flex-start", marginInlineStart: "26px", fontSize: "9.5px", color: "#666E7C" }}>Lara · 9:02 AM</span>
+                <span style={{ alignSelf: "flex-start", marginInlineStart: "26px", fontSize: "9.5px", color: "#666E7C" }}>{t("Lara · 9:02 AM")}</span>
               </div>
             </div>
           </Frag>
@@ -311,14 +318,14 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                       boxShadow: "inset 0 5px 0 -3px #FAF9F7",
                     }}
                   />
-                  <span style={{ fontSize: "10.5px", fontWeight: 700, color: "#5B5349" }}>Mail</span>
+                  <span style={{ fontSize: "10.5px", fontWeight: 700, color: "#5B5349" }}>{t("Mail")}</span>
                 </div>
-                <span style={{ fontSize: "9.5px", color: "#756D63" }}>Promotions · 14</span>
+                <span style={{ fontSize: "9.5px", color: "#756D63" }}>{t("Promotions · 14")}</span>
               </div>
               <div style={{ padding: "8px 11px 10px", display: "flex", flexDirection: "column", gap: "3px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "6px", fontSize: "10px", color: "#756D63" }}>
-                  <span style={{ overflowWrap: "anywhere" }}>Weekend offers inside</span>
-                  <span>Fri</span>
+                  <span style={{ overflowWrap: "anywhere" }}>{t("Weekend offers inside")}</span>
+                  <span>{t("Fri")}</span>
                 </div>
                 <div
                   style={{
@@ -333,10 +340,10 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                     borderBottom: "1px solid #F1EEEA",
                   }}
                 >
-                  <span style={{ overflowWrap: "anywhere" }}>Booking confirmed: Vinyasa Flow</span>
-                  <span style={{ fontWeight: 600, color: "#756D63" }}>Sun</span>
+                  <span style={{ overflowWrap: "anywhere" }}>{t("Booking confirmed: Vinyasa Flow")}</span>
+                  <span style={{ fontWeight: 600, color: "#756D63" }}>{t("Sun")}</span>
                 </div>
-                <span style={{ fontSize: "10px", color: "#5B5349", overflowWrap: "anywhere" }}>With Lara · today 6:30 PM · Studio One</span>
+                <span style={{ fontSize: "10px", color: "#5B5349", overflowWrap: "anywhere" }}>{t("With Lara · today 6:30 PM · Studio One")}</span>
               </div>
             </div>
           </Frag>
@@ -347,37 +354,37 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
           >
             <nav
               id="pillar-row"
-              aria-label="Pillars"
+              aria-label={t("Pillars")}
               style={{ display: r.pillDesk, gridTemplateColumns: "1fr auto 1fr", columnGap: r.pillGap, alignItems: "center", width: "max-content", margin: "0 auto" }}
             >
               <span style={{ display: "flex", justifyContent: "flex-end", gap: r.pillGap }}>
-                {pill("NUTRITION", false)}
-                {pill("TRAINING", false)}
+                {pill(PILL_TOP[0], false)}
+                {pill(PILL_TOP[1], false)}
               </span>
-              {pill("HEALTH", false, "pill-health")}
+              {pill(PILL_TOP[2], false, "pill-health")}
               <span style={{ display: "flex", justifyContent: "flex-start", gap: r.pillGap }}>
-                {pill("COACHING", false)}
-                {pill("COMMUNITY", false)}
+                {pill(PILL_BOT[0], false)}
+                {pill(PILL_BOT[1], false)}
               </span>
             </nav>
-            <nav id="pillar-rows-m" aria-label="Pillars" style={{ display: r.pillMob, flexDirection: "column", alignItems: "center", rowGap: 0 }}>
-              <span style={{ display: "flex", gap: r.pillGap }}>{PILL_TOP.map((t) => pill(t, true))}</span>
-              <span style={{ display: "flex", gap: r.pillGap }}>{PILL_BOT.map((t) => pill(t, true))}</span>
+            <nav id="pillar-rows-m" aria-label={t("Pillars")} style={{ display: r.pillMob, flexDirection: "column", alignItems: "center", rowGap: 0 }}>
+              <span style={{ display: "flex", gap: r.pillGap }}>{PILL_TOP.map((p) => pill(p, true))}</span>
+              <span style={{ display: "flex", gap: r.pillGap }}>{PILL_BOT.map((p) => pill(p, true))}</span>
             </nav>
             <h1
               id="hero-title"
               style={{ marginTop: r.h1Mt, fontWeight: 800, fontSize: r.display, lineHeight: 0.98, letterSpacing: "-.045em", color: "#221E1A" }}
             >
               <span id="ht1" style={{ display: "inline-block" }}>
-                Your health,
+                {t("Your health,")}
               </span>
               <br />
               <span id="ht2" style={{ display: "inline-block" }}>
-                all in one place
+                {t("all in one place")}
               </span>
             </h1>
             <p style={{ margin: r.subMt + " auto 0", maxWidth: "560px", fontSize: r.subSize, lineHeight: 1.5, color: "#5B5349" }}>
-              More clarity. More control. More you.
+              {t("More clarity. More control. More you.")}
             </p>
             <div style={{ display: "flex", justifyContent: "center", gap: "12px", marginTop: r.ctaMt, flexWrap: "wrap" }}>
               <Link
@@ -394,7 +401,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                   transition: "transform .25s cubic-bezier(.22,1,.36,1)",
                 }}
               >
-                Get Started
+                {t("Get Started")}
               </Link>
               <a
                 href="/contact"
@@ -412,7 +419,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                   transition: "transform .25s cubic-bezier(.22,1,.36,1)",
                 }}
               >
-                Request a Demo
+                {t("Request a Demo")}
               </a>
             </div>
           </div>
@@ -436,7 +443,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
               opacity: readyOp,
             }}
           >
-            <span>SCROLL</span>
+            <span>{t("SCROLL")}</span>
             <span style={{ width: "1px", height: "28px", background: "linear-gradient(#775FD7,rgba(125,103,217,0))" }} />
           </div>
           <button
@@ -465,7 +472,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
               } as React.CSSProperties
             }
           >
-            Skip intro
+            {t("Skip intro")}
           </button>
         </div>
         <div id="hero" style={{ position: "absolute", left: 0, top: r.heroAnchor, height: "1px", width: "1px" }} />

@@ -632,7 +632,7 @@ html.high-contrast.dark .an3 {
 }
 .an3-pill-thumb {
   position: absolute;
-  left: 2px;
+  inset-inline-start: 2px;
   top: 9px;
   width: 72px;
   height: 26px;

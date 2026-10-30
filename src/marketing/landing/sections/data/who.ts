@@ -4,6 +4,8 @@
 // colour, percentage and animation window ("a b", read by motion/anim.ts as
 // data-w) is literal. The names and figures are approved demo data.
 
+import { tk } from "../../../../i18n/core";
+
 export const dialTicks = [
   { tr: "rotate(0 60 60)", on: true, w: "0.040 0.100" },
   { tr: "rotate(12 60 60)", on: true, w: "0.085 0.145" },
@@ -38,9 +40,9 @@ export const dialTicks = [
 ];
 
 export const instMacros = [
-  { k: "Protein", v: "128 / 165 g", p: "78%", c: "#775FD7", w: "0.2 0.7" },
-  { k: "Carbs", v: "196 / 260 g", p: "75%", c: "#B9A9EE", w: "0.28 0.78" },
-  { k: "Fat", v: "48 / 65 g", p: "74%", c: "#5D9C93", w: "0.36 0.86" },
+  { k: tk("Protein"), v: tk("128 / 165 g"), p: "78%", c: "#775FD7", w: "0.2 0.7" },
+  { k: tk("Carbs"), v: tk("196 / 260 g"), p: "75%", c: "#B9A9EE", w: "0.28 0.78" },
+  { k: tk("Fat"), v: tk("48 / 65 g"), p: "74%", c: "#5D9C93", w: "0.36 0.86" },
 ];
 
 export const weekChecks = [

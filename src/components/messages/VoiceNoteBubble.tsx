@@ -3,6 +3,7 @@ import { Loader2, Pause, Play } from "lucide-react";
 import { signedUrlFor } from "../../services/storage";
 import { mayOpenAttachment } from "../../services/messaging";
 import { AttachmentGone } from "./AttachmentGone";
+import { t } from "../../i18n/core";
 
 /** mm:ss, because a voice note is read as a length before it is played. */
 function formatDuration(seconds: number): string {
@@ -148,7 +149,7 @@ export const VoiceNoteBubble: React.FC<{
           onClick={() => void toggle()}
           disabled={loading}
           aria-label={
-            playing ? "Pause voice note" : seconds ? `Play voice note, ${formatDuration(seconds)}` : "Play voice note"
+            playing ? t("Pause voice note") : seconds ? t("Play voice note, {duration}", { duration: formatDuration(seconds) }) : t("Play voice note")
           }
           className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
             mine ? "bg-white/25 text-white dark:bg-black/15 dark:text-[#0D0B1A]" : "bg-primary-fill text-on-primary-fill"
@@ -191,7 +192,7 @@ export const VoiceNoteBubble: React.FC<{
         <button
           type="button"
           onClick={cycleSpeed}
-          aria-label={`Playback speed ${speed}×`}
+          aria-label={t("Playback speed {speed}×", { speed })}
           className={`tap h-[26px] rounded-full px-2 text-[11px] font-extrabold shrink-0 ${
             mine ? "bg-white/20 text-white dark:bg-black/15 dark:text-[#0D0B1A]" : "bg-primary-pale text-primary-deep-text"
           }`}
@@ -199,7 +200,7 @@ export const VoiceNoteBubble: React.FC<{
           {speed}×
         </button>
       </div>
-      {failed && <p className="text-[11px] opacity-80 mt-1">Couldn't play this voice note.</p>}
+      {failed && <p className="text-[11px] opacity-80 mt-1">{t("Couldn't play this voice note.")}</p>}
     </div>
   );
 };

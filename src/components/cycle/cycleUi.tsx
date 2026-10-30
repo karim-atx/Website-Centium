@@ -5,6 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { linePx, textPx } from "../../theme/textSize";
 import { Toggle } from "../ui/Toggle";
 import { HEALTH_DISCLAIMER } from "../../services/legal/disclaimer";
+import { t } from "../../i18n/core";
 import { DISCLAIMER, DISCLAIMER_LONG, PRIVACY_LINE } from "../../services/cycle/guidance";
 import { appLocale } from "../../i18n/format";
 
@@ -264,7 +265,7 @@ export const CycleFooter: React.FC<{ privacy?: boolean; className?: string }> = 
       {DISCLAIMER_LONG}
     </p>
     <p className="text-center text-charcoal-soft" style={type(10.5, 15.8, 400, { marginTop: 10 })}>
-      {HEALTH_DISCLAIMER}
+      {t(HEALTH_DISCLAIMER)}
     </p>
   </div>
 );

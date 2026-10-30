@@ -5,6 +5,7 @@ import { Composed, OB } from "../shell/visuals";
 import { ProCoachArt, ProDietitianArt, ProDoctorArt, ProNutritionistArt, ProOtherArt, ProPhysioArt, ProTrainerArt } from "../../../components/icons/BusinessArt";
 import type { ProfessionalSubtype } from "../../../types";
 import { SPECIALTY_CARDS, proKindOf, specialtyNote, type ProKind } from "./proModel";
+import { t } from "../../../i18n/core";
 
 const ART: Record<ProKind, React.FC<{ size?: number }>> = {
   trainer: ProTrainerArt,
@@ -37,12 +38,12 @@ export const ProSpecialtyStep: React.FC<{
       <ObHeader margin="intro" onBack={onBack} />
       <ObTitle
         variant="intro"
-        chip={{ label: "Professional", vis: <Composed comp="professional" w={16} /> }}
-        eyebrow="Before step 1"
-        title="What kind of professional are you?"
-        subtitle="This shapes your experience. You can adjust it later."
+        chip={{ label: t("Professional"), vis: <Composed comp="professional" w={16} /> }}
+        eyebrow={t("Before step 1")}
+        title={t("What kind of professional are you?")}
+        subtitle={t("This shapes your experience. You can adjust it later.")}
       />
-      <div className="ob-cards" role="radiogroup" aria-label="Account type">
+      <div className="ob-cards" role="radiogroup" aria-label={t("Account type")}>
         {SPECIALTY_CARDS.map((c) => {
           const on = value === c.subtype;
           const recede = !!value && !on;
@@ -50,9 +51,9 @@ export const ProSpecialtyStep: React.FC<{
           return (
             <ObSelectCard
               key={c.kind}
-              title={c.title}
-              desc={<span>{c.description}</span>}
-              points={on ? c.points : undefined}
+              title={t(c.title)}
+              desc={<span>{t(c.description)}</span>}
+              points={on ? c.points.map((p) => t(p)) : undefined}
               dot={OB.brand}
               tile={c.tile === "tealPale" ? "teal" : "pale"}
               visual={({ recede: r }) => <Art size={r ? 44 : 52} />}
@@ -71,6 +72,6 @@ export const ProSpecialtyStep: React.FC<{
       </div>
       <p className="ob-cards-note">{specialtyNote(value ? proKindOf(value) : null)}</p>
     </div>
-    <ObFooter primary={{ label: "Continue", onClick: onNext, disabled: !value }} />
+    <ObFooter primary={{ label: t("Continue"), onClick: onNext, disabled: !value }} />
   </ObPage>
 );

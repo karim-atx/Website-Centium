@@ -21,6 +21,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ActivityLevel, Goal, TrackPreference } from "../../../types";
+import { t, tk } from "../../../i18n/core";
 
 // The client lane's content model, literal from BizOnboardingV10 (the second
 // `if (CU)` block, which is the final design): goal areas and their
@@ -75,22 +76,22 @@ export interface AreaDef {
 export function goalAreas({ rs, cy }: GentleFlags): AreaDef[] {
   return [
     // The Refine sheet for Move more adds "Run my first 5K" and "Stretch more" (OB-098).
-    { key: "move", icon: Footprints, title: "Move more", subs: ["Get stronger", "Improve my fitness", "Move every day", "Run my first 5K", "Stretch more"] },
+    { key: "move", icon: Footprints, title: tk("Move more"), subs: [tk("Get stronger"), tk("Improve my fitness"), tk("Move every day"), tk("Run my first 5K"), tk("Stretch more")] },
     {
       key: "eat",
       icon: Utensils,
-      title: rs ? "Eat with ease" : "Eat better",
-      subs: rs ? ["Eat regularly and calmly", "Notice how food makes me feel"] : ["Eat more balanced meals", "Lose weight", "Build muscle"],
+      title: rs ? tk("Eat with ease") : tk("Eat better"),
+      subs: rs ? [tk("Eat regularly and calmly"), tk("Notice how food makes me feel")] : [tk("Eat more balanced meals"), tk("Lose weight"), tk("Build muscle")],
     },
-    { key: "sleep", icon: Moon, title: "Sleep and recover", subs: ["Sleep better", "Recover well"] },
+    { key: "sleep", icon: Moon, title: tk("Sleep and recover"), subs: [tk("Sleep better"), tk("Recover well")] },
     {
       key: "mind",
       icon: Brain,
-      title: "Mind and mood",
-      subs: rs ? ["Feel more energetic", "Feel less stressed", "Build a journaling habit"] : ["Feel less stressed", "Build a journaling habit"],
+      title: tk("Mind and mood"),
+      subs: rs ? [tk("Feel more energetic"), tk("Feel less stressed"), tk("Build a journaling habit")] : [tk("Feel less stressed"), tk("Build a journaling habit")],
     },
-    { key: "habits", icon: ListChecks, title: "Build habits", subs: ["Build consistent routines", "Drink more water"] },
-    { key: "health", icon: HeartPulse, title: "Health", subs: ["Track my health metrics", ...(cy ? ["Understand my cycle"] : [])] },
+    { key: "habits", icon: ListChecks, title: tk("Build habits"), subs: [tk("Build consistent routines"), tk("Drink more water")] },
+    { key: "health", icon: HeartPulse, title: tk("Health"), subs: [tk("Track my health metrics"), ...(cy ? [tk("Understand my cycle")] : [])] },
   ];
 }
 
@@ -118,11 +119,11 @@ export function goalsToSave(areas: GoalArea[], subGoals: Partial<Record<GoalArea
 // ---- How active you are (isScale) -----------------------------------------
 
 export const ACTIVITY_SCALE: { value: ActivityLevel; label: string; desc: string; icon: LucideIcon }[] = [
-  { value: "sedentary", label: "Resting", desc: "Mostly sitting, little exercise", icon: Armchair },
-  { value: "light", label: "Light", desc: "Walks and light movement", icon: Footprints },
-  { value: "moderate", label: "Regular", desc: "A few workouts a week", icon: Bike },
-  { value: "very_active", label: "Active", desc: "Training most days", icon: Flame },
-  { value: "athlete", label: "Athlete", desc: "Hard training every day", icon: Trophy },
+  { value: "sedentary", label: tk("Resting"), desc: tk("Mostly sitting, little exercise"), icon: Armchair },
+  { value: "light", label: tk("Light"), desc: tk("Walks and light movement"), icon: Footprints },
+  { value: "moderate", label: tk("Regular"), desc: tk("A few workouts a week"), icon: Bike },
+  { value: "very_active", label: tk("Active"), desc: tk("Training most days"), icon: Flame },
+  { value: "athlete", label: tk("Athlete"), desc: tk("Hard training every day"), icon: Trophy },
 ];
 
 // ---- Activities you enjoy (hasMenu) -----------------------------------------
@@ -133,15 +134,15 @@ export const ACTIVITY_SCALE: { value: ActivityLevel; label: string; desc: string
  * Database session on 13 October).
  */
 export const ACTIVITIES: { key: string; label: string; db: string }[] = [
-  { key: "walking", label: "Walking", db: "walking" },
-  { key: "running", label: "Running", db: "running" },
-  { key: "strength", label: "Strength", db: "gym" },
-  { key: "yoga", label: "Yoga", db: "yoga" },
-  { key: "pilates", label: "Pilates", db: "pilates" },
-  { key: "cycling", label: "Cycling", db: "cycling" },
-  { key: "swimming", label: "Swimming", db: "swimming" },
-  { key: "hiit", label: "HIIT", db: "hiit" },
-  { key: "team_sports", label: "Team sports", db: "team_sports" },
+  { key: "walking", label: tk("Walking"), db: "walking" },
+  { key: "running", label: tk("Running"), db: "running" },
+  { key: "strength", label: tk("Strength"), db: "gym" },
+  { key: "yoga", label: tk("Yoga"), db: "yoga" },
+  { key: "pilates", label: tk("Pilates"), db: "pilates" },
+  { key: "cycling", label: tk("Cycling"), db: "cycling" },
+  { key: "swimming", label: tk("Swimming"), db: "swimming" },
+  { key: "hiit", label: tk("HIIT"), db: "hiit" },
+  { key: "team_sports", label: tk("Team sports"), db: "team_sports" },
 ];
 
 export function activitiesToSave(keys: string[]): string[] {
@@ -168,32 +169,32 @@ export function trackDef(key: TrackPreference, { rs }: GentleFlags): TrackDef {
   switch (key) {
     case "nutrition":
       return rs
-        ? { key, icon: Utensils, label: "Meals and eating patterns", desc: "What you ate and how you felt" }
-        : { key, icon: Utensils, label: "Nutrition", desc: "Meals, calories and macros" };
+        ? { key, icon: Utensils, label: tk("Meals and eating patterns"), desc: tk("What you ate and how you felt") }
+        : { key, icon: Utensils, label: tk("Nutrition"), desc: tk("Meals, calories and macros") };
     case "water":
-      return { key, icon: GlassWater, label: "Water", desc: "Glasses through the day" };
+      return { key, icon: GlassWater, label: tk("Water"), desc: tk("Glasses through the day") };
     case "hunger_fullness":
-      return { key, icon: Gauge, label: "Hunger and fullness", desc: "A gentle check before and after meals", soon: true };
+      return { key, icon: Gauge, label: tk("Hunger and fullness"), desc: tk("A gentle check before and after meals"), soon: true };
     case "workouts":
-      return { key, icon: Dumbbell, label: "Workouts", desc: "Routines, sets and programmes" };
+      return { key, icon: Dumbbell, label: tk("Workouts"), desc: tk("Routines, sets and programmes") };
     case "steps":
-      return { key, icon: Footprints, label: "Steps", desc: "From your phone or watch" };
+      return { key, icon: Footprints, label: tk("Steps"), desc: tk("From your phone or watch") };
     case "sleep":
-      return { key, icon: Moon, label: "Sleep", desc: "Hours and how rested you feel" };
+      return { key, icon: Moon, label: tk("Sleep"), desc: tk("Hours and how rested you feel") };
     case "mood":
-      return { key, icon: Smile, label: "Mood", desc: "A quick check-in each day" };
+      return { key, icon: Smile, label: tk("Mood"), desc: tk("A quick check-in each day") };
     case "journal":
-      return { key, icon: NotebookPen, label: "Journal", desc: "Private notes and reflections" };
+      return { key, icon: NotebookPen, label: tk("Journal"), desc: tk("Private notes and reflections") };
     case "habits":
-      return { key, icon: ListChecks, label: "Habits", desc: rs ? "Daily habits, without streaks" : "Daily habits and streaks" };
+      return { key, icon: ListChecks, label: tk("Habits"), desc: rs ? tk("Daily habits, without streaks") : tk("Daily habits and streaks") };
     case "weight":
-      return { key, icon: Scale, label: "Weight", desc: "Weigh-ins and trends" };
+      return { key, icon: Scale, label: tk("Weight"), desc: tk("Weigh-ins and trends") };
     case "body_composition":
-      return { key, icon: Ruler, label: "Body composition", desc: "Measurements over time" };
+      return { key, icon: Ruler, label: tk("Body composition"), desc: tk("Measurements over time") };
     case "bloodwork":
-      return { key, icon: TestTube, label: "Blood work", desc: "Upload results and track markers" };
+      return { key, icon: TestTube, label: tk("Blood work"), desc: tk("Upload results and track markers") };
     case "cycle":
-      return { key, icon: CalendarHeart, label: "Cycle", desc: "Periods and symptoms" };
+      return { key, icon: CalendarHeart, label: tk("Cycle"), desc: tk("Periods and symptoms") };
   }
 }
 
@@ -206,13 +207,13 @@ export function recommendedTracking({ rs, cy }: GentleFlags): TrackPreference[] 
 /** "More to track" groups (GROUPS). */
 export function trackGroups({ rs, cy }: GentleFlags): { key: string; title: string; icon: LucideIcon; items: TrackPreference[] }[] {
   return [
-    { key: "food", title: "Food", icon: Utensils, items: ["nutrition", "water", ...(rs ? (["hunger_fullness"] as TrackPreference[]) : [])] },
-    { key: "move", title: "Move", icon: Dumbbell, items: ["workouts", "steps"] },
-    { key: "sleep", title: "Sleep and recover", icon: Moon, items: ["sleep"] },
-    { key: "mind", title: "Mind", icon: Brain, items: ["mood", "journal", "habits"] },
+    { key: "food", title: tk("Food"), icon: Utensils, items: ["nutrition", "water", ...(rs ? (["hunger_fullness"] as TrackPreference[]) : [])] },
+    { key: "move", title: tk("Move"), icon: Dumbbell, items: ["workouts", "steps"] },
+    { key: "sleep", title: tk("Sleep and recover"), icon: Moon, items: ["sleep"] },
+    { key: "mind", title: tk("Mind"), icon: Brain, items: ["mood", "journal", "habits"] },
     {
       key: "body",
-      title: "Body and health",
+      title: tk("Body and health"),
       icon: HeartPulse,
       items: [...(rs ? [] : (["weight", "body_composition"] as TrackPreference[])), "bloodwork", ...(cy ? (["cycle"] as TrackPreference[]) : [])],
     },
@@ -226,16 +227,19 @@ export function trackingToSave(tracking: TrackPreference[], flags: GentleFlags):
   return out.length ? out : (["nutrition", "workouts"] as TrackPreference[]);
 }
 
-/** The You're all set summary line: "Tracking nutrition, workouts, sleep and steps. Moderately active." */
+/**
+ * The You're all set summary line: "Tracking nutrition, workouts, sleep and steps. Moderately active."
+ * Translated (called during render): the list joins with t(", ") and "{items} and {last}".
+ */
 export function startingPointSummary(tracking: TrackPreference[], level: ActivityLevel | null, flags: GentleFlags): string {
-  const names = tracking.map((t) => trackDef(t, flags).label.toLowerCase());
-  const list = names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  const names = tracking.map((k) => t(trackDef(k, flags).label).toLowerCase());
+  const list = names.length <= 1 ? names.join("") : t("{items} and {last}", { items: names.slice(0, -1).join(t(", ")), last: names[names.length - 1] });
   const levelText: Record<ActivityLevel, string> = {
-    sedentary: "Mostly resting.",
-    light: "Lightly active.",
-    moderate: "Moderately active.",
-    very_active: "Very active.",
-    athlete: "Training like an athlete.",
+    sedentary: tk("Mostly resting."),
+    light: tk("Lightly active."),
+    moderate: tk("Moderately active."),
+    very_active: tk("Very active."),
+    athlete: tk("Training like an athlete."),
   };
-  return `${list ? `Tracking ${list}.` : ""}${level ? `${list ? " " : ""}${levelText[level]}` : ""}`;
+  return `${list ? t("Tracking {list}.", { list }) : ""}${level ? `${list ? " " : ""}${t(levelText[level])}` : ""}`;
 }

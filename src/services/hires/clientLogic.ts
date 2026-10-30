@@ -9,6 +9,7 @@ import { formatPrice } from "../../utils/price";
 import { OFFLINE_MESSAGE } from "../network-error";
 import type { HirePaymentMethod, PlanBilling } from "./proLogic";
 import { formatShortDate } from "../../utils/date";
+import { t, tk } from "../../i18n/core";
 
 export type { HirePaymentMethod, PlanBilling } from "./proLogic";
 
@@ -135,11 +136,14 @@ export function hireDecline(hires: MyHire[], professionalId: string): { label: s
  * and "/day" follow the same short form (the frame draws neither, so these
  * two are unspecified by the handover).
  */
-const SHORT_PERIOD: Record<PlanBilling, string> = { daily: "day", monthly: "mo", annually: "yr" };
+// One key per period, so the unit is translated with the price (Round F).
+const PRICE_PER: Record<PlanBilling, string> = { daily: tk("{price}/day"), monthly: tk("{price}/mo"), annually: tk("{price}/yr") };
 
 /** "$120/mo" — the plan card's and the checkout plan line's price. */
 export function planPriceLabel(price: number, billing: PlanBilling): string {
-  return `${formatPrice(price) || "$0"}/${SHORT_PERIOD[billing] ?? billing}`;
+  const p = formatPrice(price) || "$0";
+  const key: string | undefined = PRICE_PER[billing];
+  return key ? t(key, { price: p }) : `${p}/${billing}`;
 }
 
 /** "$400" — the Pay button and the confirmed line (MO1.2.1.5.1 "Pay $400"). */

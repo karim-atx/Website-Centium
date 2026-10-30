@@ -36,7 +36,6 @@ import { SettingsBody, SettingsRow, SettingsSection, settingsRowClass } from "..
 import { useApp } from "../../context/AppContext";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import {
-  describeQuietWindow,
   fetchNotificationPrefs,
   SAME_QUIET_TIME_MESSAGE,
   sameQuietTime,
@@ -57,6 +56,7 @@ import { pushUnavailableReason } from "./platform";
 import { time12 } from "../../utils/time12";
 import { HealthChecksNotificationRow } from "../../components/health-checks/HealthChecksNotificationRow";
 import { fetchGoneQuietDays } from "../../services/pro/practice";
+import { t, tk, tn } from "../../i18n/core";
 
 // MO1.8.3 Notifications, as a page (was a sheet); handover-complete pass:
 // every group and row the frame draws, Quiet hours included.
@@ -94,47 +94,58 @@ import { fetchGoneQuietDays } from "../../services/pro/practice";
 type Row = { key: NotificationToggleKey; label: string; desc: string; icon: typeof Bell; sub?: string };
 type Group = { label: string; rows: Row[] };
 
-const QUIET = "Quiet hours";
+const QUIET = tk("Quiet hours");
+
+/**
+ * describeQuietWindow's sentence (services/preferences), as one key per
+ * shape so the Arabic can order it; the English is the same text.
+ */
+function quietWindowText(from: string, to: string): string {
+  const vars = { from: time12(from), to: time12(to) };
+  return wrapsMidnight(from, to)
+    ? t("From {from} until {to} the next morning, your time, messages and updates wait and arrive together as one summary when quiet hours end. Reminders you set for a time still arrive, and so do safety alerts. Suggestions to log are skipped.", vars)
+    : t("From {from} until {to}, your time, messages and updates wait and arrive together as one summary when quiet hours end. Reminders you set for a time still arrive, and so do safety alerts. Suggestions to log are skipped.", vars);
+}
 
 // MO1.8.3's groups, rows, order and glyphs (all 17 / 1.75).
 const GROUPS: Group[] = [
   {
-    label: "Reminders",
+    label: tk("Reminders"),
     rows: [
-      { key: "mealReminders", label: "Food logging", desc: "Nudges to log breakfast, lunch, dinner & snacks", icon: UtensilsCrossed },
-      { key: "workoutReminders", label: "Workouts", desc: "Reminders for your scheduled routines", icon: Dumbbell },
-      { key: "water", label: "Water", desc: "Reminders to log your water", icon: GlassWater },
-      { key: "habits", label: "Habits", desc: "Reminders for today's habits", icon: ListChecks },
-      { key: "journal", label: "Journal", desc: "A nudge to write in your journal", icon: NotebookPen },
+      { key: "mealReminders", label: tk("Food logging"), desc: tk("Nudges to log breakfast, lunch, dinner & snacks"), icon: UtensilsCrossed },
+      { key: "workoutReminders", label: tk("Workouts"), desc: tk("Reminders for your scheduled routines"), icon: Dumbbell },
+      { key: "water", label: tk("Water"), desc: tk("Reminders to log your water"), icon: GlassWater },
+      { key: "habits", label: tk("Habits"), desc: tk("Reminders for today's habits"), icon: ListChecks },
+      { key: "journal", label: tk("Journal"), desc: tk("A nudge to write in your journal"), icon: NotebookPen },
     ],
   },
   {
-    label: "Progress",
+    label: tk("Progress"),
     rows: [
-      { key: "streakAlerts", label: "Streaks and achievements", desc: "When a streak is about to reset", icon: Trophy },
-      { key: "weeklySummary", label: "Weekly summary", desc: "A recap of your week every Monday", icon: CalendarCheck },
+      { key: "streakAlerts", label: tk("Streaks and achievements"), desc: tk("When a streak is about to reset"), icon: Trophy },
+      { key: "weeklySummary", label: tk("Weekly summary"), desc: tk("A recap of your week every Monday"), icon: CalendarCheck },
     ],
   },
   {
-    label: "Community",
+    label: tk("Community"),
     rows: [
-      { key: "forumReplies", label: "Replies to my posts", desc: "When someone replies to your forum posts", icon: MessageCircle },
-      { key: "mentions", label: "Mentions", desc: "When someone mentions you in the forum", icon: AtSign },
+      { key: "forumReplies", label: tk("Replies to my posts"), desc: tk("When someone replies to your forum posts"), icon: MessageCircle },
+      { key: "mentions", label: tk("Mentions"), desc: tk("When someone mentions you in the forum"), icon: AtSign },
     ],
   },
   {
-    label: "Professionals",
+    label: tk("Professionals"),
     rows: [
       // V9 (QA 9.0): the label works for Client, Professional and Business alike.
-      { key: "professionalMessages", label: "Messages", desc: "“New message from …” when someone writes to you. Never the message itself.", icon: MessagesSquare },
-      { key: "calendarEvents", label: "Calendar events", desc: "Reminders for events in your calendar", icon: CalendarDays },
+      { key: "professionalMessages", label: tk("Messages"), desc: tk("“New message from …” when someone writes to you. Never the message itself."), icon: MessagesSquare },
+      { key: "calendarEvents", label: tk("Calendar events"), desc: tk("Reminders for events in your calendar"), icon: CalendarDays },
     ],
   },
   {
-    label: "Account",
+    label: tk("Account"),
     rows: [
-      { key: "memberships", label: "Memberships", desc: "Updates about your gym and studio memberships", icon: Store },
-      { key: "referralRewards", label: "Referral rewards", desc: "When a referral earns you a reward", icon: Gift },
+      { key: "memberships", label: tk("Memberships"), desc: tk("Updates about your gym and studio memberships"), icon: Store },
+      { key: "referralRewards", label: tk("Referral rewards"), desc: tk("When a referral earns you a reward"), icon: Gift },
     ],
   },
 ];
@@ -146,33 +157,33 @@ const GROUPS: Group[] = [
 // "Messages and reviews" and Calendar events joins Account.
 const PRO_GROUPS = (goneQuietDays: number | null): Group[] => [
   {
-    label: "Clients",
+    label: tk("Clients"),
     rows: [
-      { key: "proRequests", label: "New hire and booking requests", desc: "When someone asks to hire you or book a session", icon: UserPlus },
-      { key: "proBookingChanges", label: "Booking changes and cancellations", desc: "When a client moves or cancels a session", icon: CalendarClock },
-      { key: "proSubmissions", label: "Check-ins and food journals submitted", desc: "When a client sends a check-in or replies on their food journal", icon: ClipboardCheck },
+      { key: "proRequests", label: tk("New hire and booking requests"), desc: tk("When someone asks to hire you or book a session"), icon: UserPlus },
+      { key: "proBookingChanges", label: tk("Booking changes and cancellations"), desc: tk("When a client moves or cancels a session"), icon: CalendarClock },
+      { key: "proSubmissions", label: tk("Check-ins and food journals submitted"), desc: tk("When a client sends a check-in or replies on their food journal"), icon: ClipboardCheck },
       {
         key: "proGoneQuiet",
-        label: "Clients gone quiet",
-        desc: "When a client has had no activity for a while",
+        label: tk("Clients gone quiet"),
+        desc: tk("When a client has had no activity for a while"),
         icon: Moon,
-        sub: goneQuietDays === null ? undefined : `After ${goneQuietDays} days with no activity`,
+        sub: goneQuietDays === null ? undefined : tn(goneQuietDays, "After {n} days with no activity", "After {n} days with no activity"),
       },
     ],
   },
   {
-    label: "Messages and reviews",
+    label: tk("Messages and reviews"),
     rows: [
-      { key: "professionalMessages", label: "Messages", desc: "“New message from …” when someone writes to you. Never the message itself.", icon: MessageCircle },
-      { key: "reviews", label: "New reviews", desc: "When a client reviews you", icon: Star },
-      { key: "proCareNetwork", label: "Care network", desc: "Referrals and requests from colleagues", icon: Send },
+      { key: "professionalMessages", label: tk("Messages"), desc: tk("“New message from …” when someone writes to you. Never the message itself."), icon: MessageCircle },
+      { key: "reviews", label: tk("New reviews"), desc: tk("When a client reviews you"), icon: Star },
+      { key: "proCareNetwork", label: tk("Care network"), desc: tk("Referrals and requests from colleagues"), icon: Send },
     ],
   },
   {
-    label: "Payments",
+    label: tk("Payments"),
     rows: [
-      { key: "proPayments", label: "Payments received", desc: "When a payment is marked received", icon: Banknote },
-      { key: "proUnpaidSessions", label: "Unpaid sessions", desc: "A reminder about sessions not marked paid", icon: Receipt, sub: "Day after the session" },
+      { key: "proPayments", label: tk("Payments received"), desc: tk("When a payment is marked received"), icon: Banknote },
+      { key: "proUnpaidSessions", label: tk("Unpaid sessions"), desc: tk("A reminder about sessions not marked paid"), icon: Receipt, sub: tk("Day after the session") },
     ],
   },
 ];
@@ -181,10 +192,10 @@ const PRO_GROUPS = (goneQuietDays: number | null): Group[] => [
 // message pop-up. Placed after the group holding Messages. Not push, so the
 // account's master switch doesn't dim it; previews dim while pop-ups are off.
 const IN_APP: Group = {
-  label: "While you're in the app",
+  label: tk("While you're in the app"),
   rows: [
-    { key: "messagePopups", label: "Message pop-ups", desc: "A note at the top of the screen when a message arrives while you're using Centium", icon: BellRing },
-    { key: "messagePreviews", label: "Show message previews", desc: "The first line of the message in that note", icon: Eye },
+    { key: "messagePopups", label: tk("Message pop-ups"), desc: tk("A note at the top of the screen when a message arrives while you're using Centium"), icon: BellRing },
+    { key: "messagePreviews", label: tk("Show message previews"), desc: tk("The first line of the message in that note"), icon: Eye },
   ],
 };
 
@@ -196,7 +207,7 @@ const withInApp = (groups: Group[]): Group[] => {
 
 /** A professional's own-tracking groups: GROUPS without "Professionals", Calendar events in Account. */
 const PRO_OWN_GROUPS: Group[] = GROUPS.filter((g) => g.label !== "Professionals").map((g) =>
-  g.label === "Account" ? { ...g, rows: [{ key: "calendarEvents", label: "Calendar events", desc: "Reminders for events in your calendar", icon: CalendarDays }, ...g.rows] } : g
+  g.label === "Account" ? { ...g, rows: [{ key: "calendarEvents", label: tk("Calendar events"), desc: tk("Reminders for events in your calendar"), icon: CalendarDays }, ...g.rows] } : g
 );
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -265,27 +276,27 @@ function TimeRow({
           <WheelPicker
             columns={[
               {
-                label: "Hours",
+                label: t("Hours"),
                 value: parts.hour,
                 options: HOURS.map((h) => ({ value: h, label: String(h) })),
                 onChange: (v) => set({ hour: Number(v) }),
               },
               {
-                label: "Minutes",
+                label: t("Minutes"),
                 value: parts.minute,
                 options: minuteOptions(parts.minute).map((m) => ({ value: m, label: String(m).padStart(2, "0") })),
                 onChange: (v) => set({ minute: Number(v) }),
               },
               {
-                label: "AM or PM",
+                label: t("AM or PM"),
                 value: parts.meridiem,
-                options: MERIDIEMS.map((m) => ({ value: m, label: m })),
+                options: MERIDIEMS.map((m) => ({ value: m, label: t(m) })),
                 onChange: (v) => set({ meridiem: v as Meridiem }),
               },
             ]}
           />
           <Button fullWidth onClick={onToggle} className="mt-3 h-12 rounded-[14px] text-[15px]">
-            Done
+            {t("Done")}
           </Button>
         </div>
       )}
@@ -354,7 +365,7 @@ export default function NotificationsPage() {
    * the old values back. Returns the error sentence, or null when saved.
    */
   const save = async (patch: Partial<NotificationPrefs>): Promise<string | null> => {
-    if (!authUserId || !prefs) return "Your settings haven't loaded yet.";
+    if (!authUserId || !prefs) return t("Your settings haven't loaded yet.");
     const keys = Object.keys(patch) as NotificationPrefKey[];
     const before: Partial<NotificationPrefs> = {};
     for (const k of keys) Object.assign(before, { [k]: prefs[k] });
@@ -426,23 +437,23 @@ export default function NotificationsPage() {
 
   const deviceLine = !prefs
     ? loadError
-      ? "Couldn't load"
-      : "Loading…"
+      ? t("Couldn't load")
+      : t("Loading…")
     : busy
     ? pushAvailable
-      ? "Registering this device…"
-      : "Saving…"
+      ? t("Registering this device…")
+      : t("Saving…")
     : pushNote
-    ? pushNote
+    ? t(pushNote)
     : !prefs.allow
-    ? "Off"
+    ? t("Off")
     : !pushAvailable
-    ? pushUnavailableReason()
+    ? t(pushUnavailableReason())
     : deviceOn
-    ? "On"
+    ? t("On")
     : permission === "denied"
-    ? "Blocked in browser settings"
-    : "Off";
+    ? t("Blocked in browser settings")
+    : t("Off");
 
   // BR-12 (user decision, 7 October 2026): the rows dim and lock ONLY when the
   // account's own master (notification_allow) is off, Messages included. Every
@@ -465,7 +476,7 @@ export default function NotificationsPage() {
     // reflects it.
     if (key === "professionalMessages" && value && pushSupported() && Notification.permission !== "granted") {
       const r = await enablePush(authUserId);
-      if (r.status !== "ok") setNote(group, `${r.message} You'll still see new messages in the app.`);
+      if (r.status !== "ok") setNote(group, `${t(r.message)} ${t("You'll still see new messages in the app.")}`);
       setRegistered(await isThisDeviceRegistered());
     }
   };
@@ -523,7 +534,7 @@ export default function NotificationsPage() {
   return (
     <div>
       {/* MO1.8.3 draws the 27 / 700 title on a 40 line, gap 6 (as Settings). */}
-      <PageHeader title="Notifications" showBack tightBack />
+      <PageHeader title={t("Notifications")} showBack tightBack />
 
       {/* MO1.8.3: 24 pt side insets; the lead card 14 under the title (79). */}
       <SettingsBody className="-mt-1.5">
@@ -537,7 +548,7 @@ export default function NotificationsPage() {
           <Bell size={22} strokeWidth={1.75} />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-[17px] font-semibold text-charcoal">Allow notifications</p>
+          <p className="text-[17px] font-semibold text-charcoal">{t("Allow notifications")}</p>
           <p className="text-[13px] font-bold text-primary-accent mt-px" role="status">
             {deviceLine}
           </p>
@@ -546,7 +557,7 @@ export default function NotificationsPage() {
           checked={on}
           onChange={(v) => void setMaster(v)}
           disabled={!prefs || busy || (pushAvailable && registered === null)}
-          label="Allow notifications"
+          label={t("Allow notifications")}
           // MO1.8.3's lead switch, drawn larger than the rows' (decision 23).
           lead
         />
@@ -554,7 +565,7 @@ export default function NotificationsPage() {
       {loadError && (
         <div className="mb-8">
           <ErrorLine>
-            {loadError}{" "}
+            {t(loadError)}{" "}
             <button
               type="button"
               onClick={() => {
@@ -563,21 +574,21 @@ export default function NotificationsPage() {
               }}
               className="tap font-semibold underline"
             >
-              Try again
+              {t("Try again")}
             </button>
           </ErrorLine>
         </div>
       )}
 
       {groups.map((g) => (
-        <SettingsSection key={g.label} label={g.label}>
+        <SettingsSection key={g.label} label={t(g.label)}>
           {g.rows.map((r) => (
             <React.Fragment key={r.key}>
               <SettingsRow
                 icon={r.icon}
-                title={r.label}
-                subtitle={r.sub}
-                srDescription={r.desc}
+                title={t(r.label)}
+                subtitle={r.sub && t(r.sub)}
+                srDescription={t(r.desc)}
                 dimmed={
                   r.key === "messagePopups"
                     ? false
@@ -605,18 +616,18 @@ export default function NotificationsPage() {
               )}
             </React.Fragment>
           ))}
-          {notes[g.label] && <ErrorLine>{notes[g.label]}</ErrorLine>}
+          {notes[g.label] && <ErrorLine>{t(notes[g.label])}</ErrorLine>}
         </SettingsSection>
       ))}
 
-      <SettingsSection label={QUIET}>
+      <SettingsSection label={t(QUIET)}>
         <SettingsRow
           icon={Moon}
-          title={QUIET}
+          title={t(QUIET)}
           // The window as the server reads it: in this person's timezone,
           // wrapping midnight when From is later than To (the normal case),
           // and suppressed rather than delivered at the end.
-          srDescription={from !== null && to !== null ? describeQuietWindow(from, to) : undefined}
+          srDescription={from !== null && to !== null ? quietWindowText(from, to) : undefined}
           dimmed={dimmed}
           toggle={{
             checked: prefs?.quietHoursEnabled ?? false,
@@ -632,7 +643,7 @@ export default function NotificationsPage() {
           }}
         />
         <TimeRow
-          label="From"
+          label={t("From")}
           value={from}
           open={wheel === "from" && !quietOff}
           onToggle={() => void toggleWheel("from")}
@@ -644,9 +655,9 @@ export default function NotificationsPage() {
           divider
         />
         <TimeRow
-          label="To"
+          label={t("To")}
           value={to}
-          spoken={wraps ? "the next morning" : undefined}
+          spoken={wraps ? t("the next morning") : undefined}
           open={wheel === "to" && !quietOff}
           onToggle={() => void toggleWheel("to")}
           onChange={(v) => {
@@ -656,7 +667,7 @@ export default function NotificationsPage() {
           dimmed={quietOff}
           divider={false}
         />
-        {notes[QUIET] && <ErrorLine>{notes[QUIET]}</ErrorLine>}
+        {notes[QUIET] && <ErrorLine>{t(notes[QUIET])}</ErrorLine>}
       </SettingsSection>
       </SettingsBody>
     </div>

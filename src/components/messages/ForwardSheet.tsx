@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
+import { t, tn } from "../../i18n/core";
 import { AvatarPlaceholder } from "../icons/PartBIcons";
 import {
   describeMessage,
@@ -71,7 +72,7 @@ export const ForwardSheet: React.FC<{
       if (cancelled) return;
       setThreads(
         result.ok
-          ? result.threads.filter((t) => t.id !== currentThreadId && (t.participantId !== null || t.kind === "group"))
+          ? result.threads.filter((th) => th.id !== currentThreadId && (th.participantId !== null || th.kind === "group"))
           : []
       );
       if (!result.ok) setError(result.message);
@@ -97,21 +98,21 @@ export const ForwardSheet: React.FC<{
     if (!message || !senderId || busy || chosen.size === 0) return;
     setBusy(true);
     setError(null);
-    const targets = (threads ?? []).filter((t) => chosen.has(t.id));
+    const targets = (threads ?? []).filter((th) => chosen.has(th.id));
     const done: MessageThread[] = [];
-    for (const t of targets) {
-      const result = await forwardMessage(t.id, message);
+    for (const th of targets) {
+      const result = await forwardMessage(th.id, message);
       if (!result.ok) {
         setBusy(false);
         setChosen(new Set(targets.filter((x) => !done.includes(x)).map((x) => x.id)));
         setError(
           done.length > 0
-            ? `Sent to ${done.map((d) => d.participantName).join(", ")}. Not sent to ${t.participantName}: ${result.message}`
-            : `Not sent to ${t.participantName}: ${result.message}`
+            ? t("Sent to {names}. Not sent to {name}: {reason}", { names: done.map((d) => d.participantName).join(", "), name: th.participantName, reason: result.message })
+            : t("Not sent to {name}: {reason}", { name: th.participantName, reason: result.message })
         );
         return;
       }
-      done.push(t);
+      done.push(th);
     }
     setBusy(false);
     setSentTo(done.map((d) => d.participantName).join(", "));
@@ -119,14 +120,14 @@ export const ForwardSheet: React.FC<{
   };
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Forward to">
+    <BottomSheet open={open} onClose={onClose} title={t("Forward to")}>
       {sentTo ? (
         <div className="py-8 flex flex-col items-center text-center animate-fade-slide-up">
           <div className="w-12 h-12 rounded-full bg-primary-pale flex items-center justify-center mb-3">
             <Check size={22} className="text-primary-dark" />
           </div>
-          <p className="text-sm font-semibold text-charcoal">Forwarded</p>
-          <p className="text-xs text-charcoal-faint mt-1">Sent to {sentTo}.</p>
+          <p className="text-sm font-semibold text-charcoal">{t("Forwarded")}</p>
+          <p className="text-xs text-charcoal-faint mt-1">{t("Sent to {names}.", { names: sentTo })}</p>
         </div>
       ) : (
         <div className="animate-fade-slide-up">
@@ -146,40 +147,40 @@ export const ForwardSheet: React.FC<{
               conversations exist before anyone knows whether any do. */}
           {threads !== null && threads.length === 0 && !error && (
             <p className="text-sm text-charcoal-faint text-center py-8">
-              No other conversations to forward to.
+              {t("No other conversations to forward to.")}
             </p>
           )}
 
-          {(threads ?? []).map((t) => (
+          {(threads ?? []).map((th) => (
             <button
-              key={t.id}
-              onClick={() => toggle(t.id)}
+              key={th.id}
+              onClick={() => toggle(th.id)}
               disabled={busy}
-              aria-pressed={chosen.has(t.id)}
+              aria-pressed={chosen.has(th.id)}
               className="tap w-full flex items-center gap-3 px-1 py-3 text-start disabled:opacity-50"
             >
               <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden">
-                {t.participantAvatarUrl ? (
-                  <img src={t.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
+                {th.participantAvatarUrl ? (
+                  <img src={th.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
                   // v6 (V6-170, asset map): initials when a name exists, else the placeholder figure.
-                  t.participantName.trim() ? (
-                    <span className="text-[14px] font-bold text-primary-deep-text">{t.participantName.trim().charAt(0).toUpperCase()}</span>
+                  th.participantName.trim() ? (
+                    <span className="text-[14px] font-bold text-primary-deep-text">{th.participantName.trim().charAt(0).toUpperCase()}</span>
                   ) : (
                     <AvatarPlaceholder size={36} />
                   )
                 )}
               </span>
               <span className="flex-1 min-w-0 text-sm font-medium text-charcoal truncate">
-                {t.participantName}
+                {th.participantName}
               </span>
               <span
                 aria-hidden
                 className={`w-[22px] h-[22px] rounded-full flex items-center justify-center shrink-0 ${
-                  chosen.has(t.id) ? "bg-primary-fill text-on-primary-fill" : "border-2 border-charcoal/20"
+                  chosen.has(th.id) ? "bg-primary-fill text-on-primary-fill" : "border-2 border-charcoal/20"
                 }`}
               >
-                {chosen.has(t.id) && <Check size={13} strokeWidth={3} />}
+                {chosen.has(th.id) && <Check size={13} strokeWidth={3} />}
               </span>
             </button>
           ))}
@@ -191,7 +192,7 @@ export const ForwardSheet: React.FC<{
               disabled={busy || chosen.size === 0}
               className="tap w-full mt-3 rounded-xl bg-primary-fill text-on-primary-fill font-semibold text-sm py-3 disabled:opacity-40"
             >
-              {busy ? "Sending…" : chosen.size > 1 ? `Send to ${chosen.size} chats` : "Send"}
+              {busy ? t("Sending…") : chosen.size > 1 ? tn(chosen.size, "Send to {n} chat", "Send to {n} chats") : t("Send")}
             </button>
           )}
         </div>

@@ -14,6 +14,7 @@
 // amount).
 
 import type { SubscriptionPeriod } from "./period";
+import { t, tk, tn } from "../../i18n/core";
 
 export type CentiumProduct = "business_plan" | "seat_block" | "featured_week";
 export type CentiumChargeStatus = "pending" | "paid" | "failed" | "waived" | "cancelled" | "payment_not_received";
@@ -173,42 +174,42 @@ export function pendingPlanCharge(charges: CentiumCharge[]): CentiumCharge | nul
   return charges.find((c) => c.product === "business_plan" && (c.status === "pending" || c.status === "failed")) ?? null;
 }
 
-export const blocksText = (n: number): string => (n === 1 ? "1 seat block" : `${n} seat blocks`);
+export const blocksText = (n: number): string => tn(n, "{n} seat block", "{n} seat blocks");
 
 /** A billing-history row's title. */
 export function chargeTitle(c: CentiumCharge): string {
   switch (c.product) {
     case "business_plan":
-      return c.isRenewal ? "Business plan renewal" : "Business plan";
+      return c.isRenewal ? t("Business plan renewal") : t("Business plan");
     case "seat_block":
-      return c.isRenewal ? `${blocksText(c.quantity)} renewal` : blocksText(c.quantity);
+      return c.isRenewal ? tn(c.quantity, "{n} seat block renewal", "{n} seat blocks renewal") : blocksText(c.quantity);
     case "featured_week":
-      return c.quantity === 1 ? "Featured listing, 1 week" : `Featured listing, ${c.quantity} weeks`;
+      return tn(c.quantity, "Featured listing, {n} week", "Featured listing, {n} weeks");
   }
 }
 
 const METHOD_PAID: Record<CentiumChargeMethod, string> = {
-  cash: "Paid in cash",
-  transfer: "Paid by bank transfer",
-  whish: "Paid with Whish",
-  manual: "Paid",
+  cash: tk("Paid in cash"),
+  transfer: tk("Paid by bank transfer"),
+  whish: tk("Paid with Whish"),
+  manual: tk("Paid"),
 };
 
 /** What happened to the charge, in the business's words. */
 export function chargeStatusText(c: CentiumCharge): string {
   switch (c.status) {
     case "pending":
-      return "Awaiting payment";
+      return t("Awaiting payment");
     case "paid":
-      return c.method ? METHOD_PAID[c.method] : "Paid";
+      return c.method ? t(METHOD_PAID[c.method]) : t("Paid");
     case "failed":
-      return "Payment failed";
+      return t("Payment failed");
     case "waived":
-      return "No charge";
+      return t("No charge");
     case "cancelled":
-      return "Cancelled";
+      return t("Cancelled");
     case "payment_not_received":
-      return "Payment not received";
+      return t("Payment not received");
   }
 }
 
@@ -231,24 +232,24 @@ export function seatPurchaseRefusal(
 ): { kind: "already_pending" | "no_plan" | "no_price" | "not_on_sale" | "not_owner" | "range" | "final" | "not_found" | "failed"; message: string } {
   switch (code) {
     case "ATXD7":
-      return { kind: "already_pending", message: "A seat order is already waiting for payment." };
+      return { kind: "already_pending", message: t("A seat order is already waiting for payment.") };
     case "ATXD6": {
       const m = (serverMessage ?? "").toLowerCase();
       const period = /no (monthly|yearly) price/.exec(m);
-      if (period) return { kind: "no_price", message: `Seat blocks aren't available on ${period[1]} billing yet.` };
-      if (m.includes("not on sale")) return { kind: "not_on_sale", message: "Seat blocks aren't on sale right now." };
-      return { kind: "no_plan", message: "Seats need an active Business plan." };
+      if (period) return { kind: "no_price", message: period[1] === "monthly" ? t("Seat blocks aren't available on monthly billing yet.") : t("Seat blocks aren't available on yearly billing yet.") };
+      if (m.includes("not on sale")) return { kind: "not_on_sale", message: t("Seat blocks aren't on sale right now.") };
+      return { kind: "no_plan", message: t("Seats need an active Business plan.") };
     }
     case "ATX03":
-      return { kind: "not_owner", message: action === "buy" ? "Only the business owner can buy seats." : "Only the business owner can cancel this order." };
+      return { kind: "not_owner", message: action === "buy" ? t("Only the business owner can buy seats.") : t("Only the business owner can cancel this order.") };
     case "22023":
-      return { kind: "range", message: "Choose between 1 and 20 seat blocks." };
+      return { kind: "range", message: t("Choose between 1 and 20 seat blocks.") };
     case "ATXD8":
-      return { kind: "final", message: "This order can't change any more." };
+      return { kind: "final", message: t("This order can't change any more.") };
     case "ATX08":
-      return { kind: "not_found", message: "This order couldn't be found." };
+      return { kind: "not_found", message: t("This order couldn't be found.") };
     default:
-      return { kind: "failed", message: action === "buy" ? "Couldn't place the order. Try again." : "Couldn't cancel the order. Try again." };
+      return { kind: "failed", message: action === "buy" ? t("Couldn't place the order. Try again.") : t("Couldn't cancel the order. Try again.") };
   }
 }
 

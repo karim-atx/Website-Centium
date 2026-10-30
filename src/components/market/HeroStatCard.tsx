@@ -5,6 +5,7 @@ import { marketPalette } from "../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../pro/proInk";
 import { sparkline } from "./chartModel";
 import { deltaTone } from "./pointsModel";
+import { isRtl } from "../../i18n/core";
 
 // Market + Share 3.0 · HeroStatCard (HANDOVER §4 B-MA.1 items
 // 2–3, P-MA.1; Business Marketplace Screens lines 70–86, Professional
@@ -49,7 +50,8 @@ export const HeroStatCard: React.FC<HeroStatCardProps> = ({ label, value, delta,
         </div>
         {sub ? <div style={{ fontSize: textPx(11.5), color: m.faint }}>{sub}</div> : null}
       </div>
-      <svg width="100%" height={64} viewBox="0 0 358 64" preserveAspectRatio="none" aria-hidden style={{ display: "block", marginTop: 8, ...NO_ICON_SCALE }}>
+      {/* Round F (F10): in right to left, time runs from right to left: the sparkline (no text) is mirrored whole. */}
+      <svg width="100%" height={64} viewBox="0 0 358 64" preserveAspectRatio="none" aria-hidden style={{ display: "block", marginTop: 8, ...(isRtl() ? { transform: "scaleX(-1)" } : NO_ICON_SCALE) }}>
         <path d={sp.area} fill="rgba(174,161,220,0.2)" />
         <path d={sp.line} fill="none" stroke="#AEA1DC" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray={sp.dash} vectorEffect="non-scaling-stroke" />
       </svg>

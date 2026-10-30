@@ -28,6 +28,7 @@ import { BizAvatar } from "./BusinessList";
 import { useBizChatColours } from "./bizAvatar";
 import { useListColors, type ListColors } from "./listColors";
 import { typeColours } from "../professionals/typeColour";
+import { t, tk, tn } from "../../i18n/core";
 import { linePx, textPx } from "../../theme/textSize";
 
 /**
@@ -67,11 +68,11 @@ export type ChatListItem =
 
 /** What a row's swipe tiles and ⋮ menu can do. */
 export interface RowActions {
-  pin: (t: MessageThread) => void;
-  mute: (t: MessageThread, choice: MuteChoice) => void;
-  archive: (t: MessageThread) => void;
+  pin: (th: MessageThread) => void;
+  mute: (th: MessageThread, choice: MuteChoice) => void;
+  archive: (th: MessageThread) => void;
   /** Delete for me (B3); absent means no tile and no menu item. */
-  delete?: (t: MessageThread) => void;
+  delete?: (th: MessageThread) => void;
 }
 
 /**
@@ -84,19 +85,19 @@ export interface RowActions {
  * Gym on a server without the column.
  */
 const SUBTYPE_ROLE: Record<string, string> = {
-  trainer: "Coach",
-  dietitian: "Nutritionist",
-  physiotherapist: "Physiotherapist",
-  doctor: "Doctor",
-  other: "Professional",
+  trainer: tk("Coach"),
+  dietitian: tk("Nutritionist"),
+  physiotherapist: tk("Physiotherapist"),
+  doctor: tk("Doctor"),
+  other: tk("Professional"),
 };
-function roleFor(t: MessageThread, c: ListColors): { label: string; ink: string } | null {
-  if (t.otherRole === "official" || t.kind === "official_support") return { label: "Official", ink: c.tealInk };
-  if (t.otherRole === "gym" || t.venue?.memberSide) return { label: "Gym", ink: c.neutralInk };
-  if (t.kind === "group" || !t.otherRole) return null;
-  const label = SUBTYPE_ROLE[t.otherRole];
+function roleFor(th: MessageThread, c: ListColors): { label: string; ink: string } | null {
+  if (th.otherRole === "official" || th.kind === "official_support") return { label: tk("Official"), ink: c.tealInk };
+  if (th.otherRole === "gym" || th.venue?.memberSide) return { label: tk("Gym"), ink: c.neutralInk };
+  if (th.kind === "group" || !th.otherRole) return null;
+  const label = SUBTYPE_ROLE[th.otherRole];
   if (!label) return null;
-  return { label, ink: typeColours(t.otherRole, c.dark).deep };
+  return { label, ink: typeColours(th.otherRole, c.dark).deep };
 }
 
 export const ThreadList: React.FC<{
@@ -153,11 +154,11 @@ export const ThreadList: React.FC<{
                         className="shrink-0 rounded-full text-[10.5px] leading-[15.8px] font-bold px-2"
                         style={{ background: c.primaryTint, color: c.primaryInk }}
                       >
-                        Invitation
+                        {t("Invitation")}
                       </span>
                     </span>
                     <span className="text-[13px] leading-[19.5px] font-semibold truncate" style={{ color: c.primaryInk }}>
-                      {inv.invitedByFirstName} invited you · {inv.memberCount} {inv.memberCount === 1 ? "member" : "members"}
+                      {t("{name} invited you", { name: inv.invitedByFirstName })} · {tn(inv.memberCount, "{n} member", "{n} members")}
                     </span>
                   </span>
                 </button>
@@ -176,10 +177,10 @@ export const ThreadList: React.FC<{
                       time={list.lastSentAt ? listTime(list.lastSentAt) : ""}
                       preview={
                         item.lastSentCount !== null
-                          ? `Broadcast · sent to ${item.lastSentCount} ${item.lastSentCount === 1 ? "client" : "clients"}`
-                          : `${list.memberCount} ${list.memberCount === 1 ? "client" : "clients"} · not sent yet`
+                          ? tn(item.lastSentCount, "Broadcast · sent to {n} client", "Broadcast · sent to {n} clients")
+                          : tn(list.memberCount, "{n} client · not sent yet", "{n} clients · not sent yet")
                       }
-                      status={{ label: "Replies come to you privately", color: "rgb(var(--c-charcoal-faint))" }}
+                      status={{ label: t("Replies come to you privately"), color: "rgb(var(--c-charcoal-faint))" }}
                     />
                   </button>
                 </li>
@@ -196,7 +197,7 @@ export const ThreadList: React.FC<{
                   <span className="min-w-0 flex-1 flex flex-col gap-[2.3px]">
                     <span className="flex items-center justify-between gap-2 min-w-0">
                       <span className="text-[15px] leading-[22.5px] font-bold truncate" style={{ color: c.ink }}>
-                        {list.name} (broadcast)
+                        {t("{name} (broadcast)", { name: list.name })}
                       </span>
                       <span className="text-[12px] leading-[18px] font-medium shrink-0" style={{ color: c.inkSoft }}>
                         {list.lastSentAt ? listTime(list.lastSentAt) : ""}
@@ -204,31 +205,31 @@ export const ThreadList: React.FC<{
                     </span>
                     <span className="text-[13px] leading-[19.5px] font-medium truncate" style={{ color: c.inkSoft }}>
                       {item.lastSentCount !== null
-                        ? `Sent to ${item.lastSentCount} ${item.lastSentCount === 1 ? "client" : "clients"}`
-                        : `${list.memberCount} ${list.memberCount === 1 ? "client" : "clients"} · not sent yet`}
+                        ? tn(item.lastSentCount, "Sent to {n} client", "Sent to {n} clients")
+                        : tn(list.memberCount, "{n} client · not sent yet", "{n} clients · not sent yet")}
                     </span>
                   </span>
                 </button>
               </li>
             );
           }
-          const t = item.thread;
+          const th = item.thread;
           return (
             <ThreadRow
-              key={t.id}
-              thread={t}
-              settings={settings[t.id]}
-              count={unread.byThread[t.id] ?? 0}
+              key={th.id}
+              thread={th}
+              settings={settings[th.id]}
+              count={unread.byThread[th.id] ?? 0}
               readState={readState}
               delivered={delivered}
               authUserId={authUserId}
-              typing={live.typing.has(t.id)}
+              typing={live.typing.has(th.id)}
               // Presence is never shown in a group (the database refuses it there).
-              online={t.kind !== "group" && live.online.has(t.id)}
+              online={th.kind !== "group" && live.online.has(th.id)}
               onOpen={onOpen}
               actions={actions}
-              onMenu={(anchor) => setMenu({ thread: t, anchor })}
-              onMuteMenu={(anchor) => setMuteMenu({ thread: t, anchor })}
+              onMenu={(anchor) => setMenu({ thread: th, anchor })}
+              onMuteMenu={(anchor) => setMuteMenu({ thread: th, anchor })}
               c={c}
               business={business}
               pro={pro}
@@ -271,8 +272,8 @@ export const ThreadList: React.FC<{
           width={160}
           align="right"
           dim={0.4}
-          heading="Mute notifications"
-          options={MUTE_CHOICES.map((m) => ({ value: m.value, label: m.label }))}
+          heading={t("Mute notifications")}
+          options={MUTE_CHOICES.map((m) => ({ value: m.value, label: t(m.label) }))}
           onSelect={(v) => {
             const m = muteMenu;
             setMuteMenu(null);
@@ -285,22 +286,22 @@ export const ThreadList: React.FC<{
 };
 
 function menuOptions(
-  t: MessageThread | null,
+  th: MessageThread | null,
   s: ThreadSettings | undefined,
   canDelete: boolean
 ): PopupMenuOption<"pin" | "mute" | "archive" | "delete">[] {
-  if (!t) return [];
+  if (!th) return [];
   const muted = isMuted(s);
   const opts: PopupMenuOption<"pin" | "mute" | "archive" | "delete">[] = [
-    { value: "pin", label: s?.pinnedAt ? "Unpin" : "Pin", icon: s?.pinnedAt ? <PinOff size={15} strokeWidth={1.75} /> : <Pin size={15} strokeWidth={1.75} /> },
-    { value: "mute", label: muted ? "Unmute" : "Mute", icon: muted ? <Bell size={15} strokeWidth={1.75} /> : <BellOff size={15} strokeWidth={1.75} /> },
+    { value: "pin", label: s?.pinnedAt ? t("Unpin") : t("Pin"), icon: s?.pinnedAt ? <PinOff size={15} strokeWidth={1.75} /> : <Pin size={15} strokeWidth={1.75} /> },
+    { value: "mute", label: muted ? t("Unmute") : t("Mute"), icon: muted ? <Bell size={15} strokeWidth={1.75} /> : <BellOff size={15} strokeWidth={1.75} /> },
     {
       value: "archive",
-      label: s?.archivedAt ? "Unarchive" : "Archive",
+      label: s?.archivedAt ? t("Unarchive") : t("Archive"),
       icon: s?.archivedAt ? <ArchiveRestore size={15} strokeWidth={1.75} /> : <Archive size={15} strokeWidth={1.75} />,
     },
   ];
-  if (canDelete) opts.push({ value: "delete", label: "Delete", destructive: true, icon: <Trash2 size={15} strokeWidth={1.75} /> });
+  if (canDelete) opts.push({ value: "delete", label: t("Delete"), destructive: true, icon: <Trash2 size={15} strokeWidth={1.75} /> });
   return opts;
 }
 
@@ -320,38 +321,38 @@ const ThreadRow: React.FC<{
   c: ListColors;
   business?: boolean;
   pro?: ProRowOptions;
-}> = ({ thread: t, settings: s, count, readState, delivered, authUserId, typing, online, onOpen, actions, onMenu, onMuteMenu, c, business, pro }) => {
+}> = ({ thread: th, settings: s, count, readState, delivered, authUserId, typing, online, onOpen, actions, onMenu, onMuteMenu, c, business, pro }) => {
   const bc = useBizChatColours();
   const rowRef = useRef<HTMLLIElement | null>(null);
-  const group = t.kind === "group";
+  const group = th.kind === "group";
   const muted = isMuted(s);
   const pinned = !!s?.pinnedAt;
-  const mine = !!t.lastMessageId && t.lastMessageSenderId === authUserId;
-  const read = mine && t.lastMessageId ? !!readState[t.lastMessageId] : false;
-  const reached = mine && !!t.lastMessageId && delivered.has(t.lastMessageId);
+  const mine = !!th.lastMessageId && th.lastMessageSenderId === authUserId;
+  const read = mine && th.lastMessageId ? !!readState[th.lastMessageId] : false;
+  const reached = mine && !!th.lastMessageId && delivered.has(th.lastMessageId);
   // "Lina: …" in a group, so the preview says who (B3 last_sender_first_name).
-  const groupSender = group && !mine && t.lastMessageSenderId ? t.lastSenderFirstName ?? undefined : undefined;
-  const role = roleFor(t, c);
-  const name = t.participantName;
+  const groupSender = group && !mine && th.lastMessageSenderId ? th.lastSenderFirstName ?? undefined : undefined;
+  const role = roleFor(th, c);
+  const name = th.participantName;
   const unread = count > 0;
 
   const tiles: SwipeAction[] = actions
     ? [
         {
           key: "pin",
-          label: pinned ? "Unpin" : "Pin",
-          ariaLabel: `${pinned ? "Unpin" : "Pin"} chat with ${name}`,
+          label: pinned ? t("Unpin") : t("Pin"),
+          ariaLabel: pinned ? t("Unpin chat with {name}", { name }) : t("Pin chat with {name}", { name }),
           icon: pinned ? <PinOff size={18} aria-hidden /> : <Pin size={18} aria-hidden />,
-          onClick: () => actions.pin(t),
+          onClick: () => actions.pin(th),
           light: { fill: "rgb(var(--th-f0edf9))", ink: c.primaryInk },
           dark: { fill: "rgb(var(--th-303141))", ink: c.primaryInk },
         },
         {
           key: "mute",
-          label: muted ? "Unmute" : "Mute",
-          ariaLabel: `${muted ? "Unmute" : "Mute"} chat with ${name}`,
+          label: muted ? t("Unmute") : t("Mute"),
+          ariaLabel: muted ? t("Unmute chat with {name}", { name }) : t("Mute chat with {name}", { name }),
           icon: muted ? <Bell size={18} aria-hidden /> : <BellOff size={18} aria-hidden />,
-          onClick: (tile) => (muted ? actions.mute(t, "off") : onMuteMenu(tile)),
+          onClick: (tile) => (muted ? actions.mute(th, "off") : onMuteMenu(tile)),
           light: { fill: "#EDEFF3", ink: "#5F6878" },
           dark: { fill: "#262932", ink: "#B8C0CE" },
         },
@@ -359,10 +360,10 @@ const ThreadRow: React.FC<{
           ? [
               {
                 key: "delete",
-                label: "Delete",
-                ariaLabel: `Delete chat with ${name}`,
+                label: t("Delete"),
+                ariaLabel: t("Delete chat with {name}", { name }),
                 icon: <Trash2 size={18} aria-hidden />,
-                onClick: () => actions.delete?.(t),
+                onClick: () => actions.delete?.(th),
                 destructive: true,
                 light: { fill: "#FCEDEC", ink: "#B42318" },
                 dark: { fill: "#3C2A30", ink: "#F09A8E" },
@@ -380,12 +381,12 @@ const ThreadRow: React.FC<{
   // when read), the preview 13 (inkSoft 400; unread ink 700) and the badge
   // (min 20, h 20, padding 0 6, fill / onFill 11/800). No "You: " on a direct
   // chat: the tick says it (template 30, Jane S.).
-  const bizTime = t.lastMessageAt ? bizListTime(t.lastMessageAt) : "";
+  const bizTime = th.lastMessageAt ? bizListTime(th.lastMessageAt) : "";
   const bizBody = (
     <div className="group relative bg-cream rounded-[14px]">
       <button
         type="button"
-        onClick={() => onOpen(t)}
+        onClick={() => onOpen(th)}
         onKeyDown={(e) => {
           if (actions && ((e.shiftKey && e.key === "F10") || e.key === "ContextMenu")) {
             e.preventDefault();
@@ -396,10 +397,10 @@ const ThreadRow: React.FC<{
         className="relative w-full flex items-center gap-3 min-h-[71px] px-2 py-2.5 rounded-[14px] text-start transition-colors duration-100 active:bg-primary-pale"
       >
         <span className="relative shrink-0">
-          <BizAvatar thread={t} size={48} />
+          <BizAvatar thread={th} size={48} />
           {online && (
             <span
-              aria-label="Online"
+              aria-label={t("Online")}
               data-row-online=""
               className="absolute end-px bottom-px w-3 h-3 rounded-full"
               style={{ background: bc.online, boxShadow: "0 0 0 2px rgb(var(--c-cream))" }}
@@ -411,8 +412,8 @@ const ThreadRow: React.FC<{
             <span data-row-name="" className="flex-1 min-w-0 text-[15px] leading-[1.5] font-bold text-charcoal truncate">
               {name}
             </span>
-            {pinned && <Pin size={12} aria-label="Pinned" className="shrink-0 text-charcoal-faint" />}
-            {muted && <BellOff size={12} aria-label="Muted" className="shrink-0 text-charcoal-faint" />}
+            {pinned && <Pin size={12} aria-label={t("Pinned")} className="shrink-0 text-charcoal-faint" />}
+            {muted && <BellOff size={12} aria-label={t("Muted")} className="shrink-0 text-charcoal-faint" />}
             <span
               data-row-time=""
               className={`shrink-0 whitespace-nowrap text-[11.5px] leading-[1.5] ${unread ? "font-extrabold text-primary-dark" : "font-normal text-charcoal-faint"}${actions ? " [@media(hover:hover)]:group-hover:opacity-0 group-has-[[data-row-more]:focus-visible]:opacity-0" : ""}`}
@@ -423,32 +424,32 @@ const ThreadRow: React.FC<{
           <span className="flex items-center gap-1.5 mt-0.5">
             {typing ? (
               <span data-row-preview="" className="flex-1 min-w-0 truncate text-[13px] leading-[1.5] italic text-primary-dark">
-                typing…
+                {t("typing…")}
               </span>
             ) : (
               <>
                 {mine &&
                   !group &&
                   (read ? (
-                    <CheckCheck size={15} strokeWidth={2} aria-label="Read" className="shrink-0" style={{ color: bc.readTick }} />
+                    <CheckCheck size={15} strokeWidth={2} aria-label={t("Read")} className="shrink-0" style={{ color: bc.readTick }} />
                   ) : reached ? (
-                    <CheckCheck size={15} strokeWidth={2} aria-label="Delivered" className="shrink-0 text-charcoal-faint" />
+                    <CheckCheck size={15} strokeWidth={2} aria-label={t("Delivered")} className="shrink-0 text-charcoal-faint" />
                   ) : (
-                    <Check size={15} strokeWidth={2} aria-label="Sent" className="shrink-0 text-charcoal-faint" />
+                    <Check size={15} strokeWidth={2} aria-label={t("Sent")} className="shrink-0 text-charcoal-faint" />
                   ))}
                 <span
                   data-row-preview=""
                   className={`flex-1 min-w-0 truncate text-[13px] leading-[1.5] ${unread ? "font-bold text-charcoal" : "font-normal text-charcoal-soft"}`}
                 >
-                  {group && (mine ? "You: " : groupSender ? `${groupSender}: ` : "")}
-                  {t.lastMessagePreview ?? "No messages yet"}
+                  {group && (mine ? t("You: ") : groupSender ? `${groupSender}: ` : "")}
+                  {th.lastMessagePreview ?? t("No messages yet")}
                 </span>
               </>
             )}
             {unread && (
               <span
                 data-row-badge=""
-                aria-label={`${count} unread`}
+                aria-label={tn(count, "{n} unread", "{n} unread")}
                 className={`shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-primary-fill text-on-primary-fill text-[11px] font-extrabold inline-flex items-center justify-center${actions ? " [@media(hover:hover)]:group-hover:opacity-0 group-has-[[data-row-more]:focus-visible]:opacity-0" : ""}`}
               >
                 {count > 99 ? "99+" : count}
@@ -461,7 +462,7 @@ const ThreadRow: React.FC<{
         <button
           type="button"
           data-row-more=""
-          aria-label={`More for chat with ${name}`}
+          aria-label={t("More for chat with {name}", { name })}
           onClick={(e) => onMenu(e.currentTarget)}
           className="tap absolute end-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center bg-cream text-charcoal-soft opacity-0 focus-visible:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
         >
@@ -498,7 +499,7 @@ const ThreadRow: React.FC<{
     <div className="group relative" style={{ background: c.rowFill }}>
       <button
         type="button"
-        onClick={() => onOpen(t)}
+        onClick={() => onOpen(th)}
         onKeyDown={(e) => {
           // O13 keyboard path: Shift+F10 or the context-menu key opens the ⋮ menu.
           if (actions && ((e.shiftKey && e.key === "F10") || e.key === "ContextMenu")) {
@@ -509,11 +510,11 @@ const ThreadRow: React.FC<{
         className="tap w-full flex items-center gap-3 px-1 py-3 min-h-[72px] text-start"
       >
         <span className="relative shrink-0">
-          <Avatar thread={t} c={c} />
+          <Avatar thread={th} c={c} />
           {/* ONLINE, only when both people share it (server-gated, K8). */}
           {online && (
             <span
-              aria-label="Online"
+              aria-label={t("Online")}
               className="absolute end-px bottom-px w-[11px] h-[11px] rounded-full border-2"
               style={{ background: "#2E9E6B", borderColor: c.rowFill }}
             />
@@ -531,18 +532,18 @@ const ThreadRow: React.FC<{
                   className="shrink-0 text-[11px] leading-[16.5px] font-bold"
                   style={{ color: role.ink }}
                 >
-                  {role.label}
+                  {t(role.label)}
                 </span>
               )}
-              {pinned && <Pin size={12} aria-label="Pinned" className="shrink-0" style={{ color: c.muted }} />}
-              {muted && <BellOff size={12} aria-label="Muted" className="shrink-0" style={{ color: c.muted }} />}
+              {pinned && <Pin size={12} aria-label={t("Pinned")} className="shrink-0" style={{ color: c.muted }} />}
+              {muted && <BellOff size={12} aria-label={t("Muted")} className="shrink-0" style={{ color: c.muted }} />}
             </span>
             <span
               data-row-time=""
               className={`shrink-0 text-[12px] leading-[18px] ${unread ? "font-bold" : "font-medium"}${actions ? " [@media(hover:hover)]:group-hover:opacity-0 group-has-[[data-row-more]:focus-visible]:opacity-0" : ""}`}
               style={{ color: unread ? c.primaryInk : c.inkSoft }}
             >
-              {t.lastMessageAt ? listTime(t.lastMessageAt) : ""}
+              {th.lastMessageAt ? listTime(th.lastMessageAt) : ""}
             </span>
           </span>
           <span className="flex items-center justify-between gap-2 min-w-0">
@@ -553,22 +554,22 @@ const ThreadRow: React.FC<{
             >
               {typing ? (
                 <span className="truncate italic font-medium" style={{ color: c.primaryInk }}>
-                  typing…
+                  {t("typing…")}
                 </span>
               ) : (
                 <>
                   {mine &&
                     !group &&
                     (read ? (
-                      <CheckCheck size={14} aria-label="Read" className="shrink-0 text-[#3A7BD5] dark:text-[#7FB0F0]" />
+                      <CheckCheck size={14} aria-label={t("Read")} className="shrink-0 text-[#3A7BD5] dark:text-[#7FB0F0]" />
                     ) : reached ? (
-                      <CheckCheck size={14} aria-label="Delivered" className="shrink-0 opacity-70" />
+                      <CheckCheck size={14} aria-label={t("Delivered")} className="shrink-0 opacity-70" />
                     ) : (
-                      <Check size={14} aria-label="Sent" className="shrink-0 opacity-70" />
+                      <Check size={14} aria-label={t("Sent")} className="shrink-0 opacity-70" />
                     ))}
                   <span className="truncate">
-                    {mine ? "You: " : groupSender ? `${groupSender}: ` : ""}
-                    {t.lastMessagePreview ?? "No messages yet"}
+                    {mine ? t("You: ") : groupSender ? `${groupSender}: ` : ""}
+                    {th.lastMessagePreview ?? t("No messages yet")}
                   </span>
                 </>
               )}
@@ -576,7 +577,7 @@ const ThreadRow: React.FC<{
             {unread && (
               <span
                 data-row-badge=""
-                aria-label={`${count} unread`}
+                aria-label={tn(count, "{n} unread", "{n} unread")}
                 className={`shrink-0 min-w-[20px] h-5 px-1.5 rounded-full text-[11px] leading-[16.5px] font-extrabold flex items-center justify-center${actions ? " [@media(hover:hover)]:group-hover:opacity-0 group-has-[[data-row-more]:focus-visible]:opacity-0" : ""}`}
                 style={{ background: c.badgeFill, color: c.badgeInk }}
               >
@@ -592,7 +593,7 @@ const ThreadRow: React.FC<{
         <button
           type="button"
           data-row-more=""
-          aria-label={`More for chat with ${name}`}
+          aria-label={t("More for chat with {name}", { name })}
           onClick={(e) => onMenu(e.currentTarget)}
           className="tap absolute end-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center opacity-0 focus-visible:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
           style={{ background: c.rowFill, color: c.inkSoft }}
@@ -604,12 +605,12 @@ const ThreadRow: React.FC<{
   );
 
   // Release 3 · MO22 v5 (gen/r19.js row19): the professional's row.
-  const proStatus = pro?.statusFor(t) ?? null;
+  const proStatus = pro?.statusFor(th) ?? null;
   const proBody = pro ? (
     <div className="group relative" style={{ background: "rgb(var(--c-cream))" }}>
       <button
         type="button"
-        onClick={() => onOpen(t)}
+        onClick={() => onOpen(th)}
         onKeyDown={(e) => {
           if (actions && ((e.shiftKey && e.key === "F10") || e.key === "ContextMenu")) {
             e.preventDefault();
@@ -621,10 +622,10 @@ const ThreadRow: React.FC<{
         <ProRowBody
           avatar={
             <span className="relative shrink-0">
-              {group ? <ProTile kind="group" /> : <ProAvatar thread={t} tone={pro.toneFor?.(t) ?? "pr"} />}
+              {group ? <ProTile kind="group" /> : <ProAvatar thread={th} tone={pro.toneFor?.(th) ?? "pr"} />}
               {online && (
                 <span
-                  aria-label="Online"
+                  aria-label={t("Online")}
                   className="absolute rounded-full"
                   style={{ insetInlineEnd: 1, bottom: 1, width: 11, height: 11, background: "#2E9E6B", border: "2px solid rgb(var(--c-cream))" }}
                 />
@@ -634,21 +635,21 @@ const ThreadRow: React.FC<{
           name={name}
           marks={
             <>
-              {pinned && <Pin size={12} aria-label="Pinned" className="shrink-0" style={{ color: c.muted }} />}
-              {muted && <BellOff size={12} aria-label="Muted" className="shrink-0" style={{ color: c.muted }} />}
+              {pinned && <Pin size={12} aria-label={t("Pinned")} className="shrink-0" style={{ color: c.muted }} />}
+              {muted && <BellOff size={12} aria-label={t("Muted")} className="shrink-0" style={{ color: c.muted }} />}
             </>
           }
-          time={t.lastMessageAt ? listTime(t.lastMessageAt) : ""}
+          time={th.lastMessageAt ? listTime(th.lastMessageAt) : ""}
           unread={unread ? count : 0}
           preview={
             typing ? (
               <span className="italic" style={{ color: "rgb(var(--c-primary-deep-text))" }}>
-                typing…
+                {t("typing…")}
               </span>
             ) : (
               <>
-                {mine ? "You: " : groupSender ? `${groupSender}: ` : ""}
-                {t.lastMessagePreview ?? "No messages yet"}
+                {mine ? t("You: ") : groupSender ? `${groupSender}: ` : ""}
+                {th.lastMessagePreview ?? t("No messages yet")}
               </>
             )
           }
@@ -660,7 +661,7 @@ const ThreadRow: React.FC<{
         <button
           type="button"
           data-row-more=""
-          aria-label={`More for chat with ${name}`}
+          aria-label={t("More for chat with {name}", { name })}
           onClick={(e) => onMenu(e.currentTarget)}
           className="tap absolute end-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center opacity-0 focus-visible:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
           style={{ background: "rgb(var(--c-cream))", color: c.inkSoft }}
@@ -698,9 +699,9 @@ const ThreadRow: React.FC<{
 /** Release 3 · MO22 v5: what the professional's rows add. */
 export interface ProRowOptions {
   /** The quiet third line (a 6 dot and the word), or none. */
-  statusFor: (t: MessageThread) => { label: string; color: string } | null;
+  statusFor: (th: MessageThread) => { label: string; color: string } | null;
   /** The initials avatar's tone (the frames vary it per person). */
-  toneFor?: (t: MessageThread) => "pr" | "teal" | "gold" | "sky";
+  toneFor?: (th: MessageThread) => "pr" | "teal" | "gold" | "sky";
 }
 
 /** gen/lib.js b06: the row divider, 6% ink. */
@@ -755,7 +756,7 @@ const ProRowBody: React.FC<{
           {unread > 0 && (
             <span
               data-row-badge=""
-              aria-label={`${unread} unread`}
+              aria-label={tn(unread, "{n} unread", "{n} unread")}
               className={`shrink-0 flex items-center justify-center rounded-full${hide}`}
               style={{ minWidth: 20, height: 20, padding: "0 6px", background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(11), fontWeight: 800 }}
             >
@@ -775,17 +776,17 @@ const ProRowBody: React.FC<{
 };
 
 /** gen/ui.js avatar at 48: tone fill, initials 16 / 800 (33%). A photo when there is one. */
-const ProAvatar: React.FC<{ thread: MessageThread; tone: "pr" | "teal" | "gold" | "sky" }> = ({ thread: t, tone }) => {
-  if (t.participantAvatarUrl)
+const ProAvatar: React.FC<{ thread: MessageThread; tone: "pr" | "teal" | "gold" | "sky" }> = ({ thread: th, tone }) => {
+  if (th.participantAvatarUrl)
     return (
       <span className="w-12 h-12 rounded-full overflow-hidden flex shrink-0">
-        <img src={t.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
+        <img src={th.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
       </span>
     );
   const bg = tone === "teal" ? "rgb(var(--c-teal-pale))" : tone === "gold" ? "rgb(var(--c-gold-pale))" : tone === "sky" ? "rgb(var(--c-sky-pale))" : "rgb(var(--c-primary-pale))";
   const ink = tone === "teal" ? "rgb(var(--th-3c6b65))" : tone === "gold" ? "rgb(var(--c-team-gold-ink))" : tone === "sky" ? "rgb(var(--c-sky))" : "rgb(var(--c-primary-deep-text))";
-  const words = t.participantName.replace(/·.*$/, "").trim().split(/\s+/).filter(Boolean);
-  const initials = t.participantId || t.kind !== "peer" ? ((words[0]?.[0] ?? "") + (words.length > 1 ? words[words.length - 1][0] : "")).toUpperCase() : "";
+  const words = th.participantName.replace(/·.*$/, "").trim().split(/\s+/).filter(Boolean);
+  const initials = th.participantId || th.kind !== "peer" ? ((words[0]?.[0] ?? "") + (words.length > 1 ? words[words.length - 1][0] : "")).toUpperCase() : "";
   return (
     <span aria-hidden className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ background: bg, color: ink, fontSize: 16, fontWeight: 800 }}>
       {initials || <AvatarPlaceholder size={48} />}
@@ -806,17 +807,17 @@ const ProTile: React.FC<{ kind: "group" | "broadcast" }> = ({ kind }) =>
   );
 
 /** #14a / #14b: the photo, the venue's logo, or a type tile; a person without a photo shows initials. */
-const Avatar: React.FC<{ thread: MessageThread; c: ListColors }> = ({ thread: t, c }) => {
-  if (t.kind === "group") return <TypeTile kind="group" c={c} />;
-  if (t.participantAvatarUrl)
+const Avatar: React.FC<{ thread: MessageThread; c: ListColors }> = ({ thread: th, c }) => {
+  if (th.kind === "group") return <TypeTile kind="group" c={c} />;
+  if (th.participantAvatarUrl)
     return (
       <span className="w-12 h-12 rounded-full overflow-hidden flex">
-        <img src={t.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
+        <img src={th.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
       </span>
     );
-  if (t.kind === "official_support") return <TypeTile kind="official" c={c} />;
-  if (t.venue?.memberSide) return <TypeTile kind="gym" c={c} />;
-  const initial = t.participantId ? t.participantName.trim().charAt(0).toUpperCase() : "";
+  if (th.kind === "official_support") return <TypeTile kind="official" c={c} />;
+  if (th.venue?.memberSide) return <TypeTile kind="gym" c={c} />;
+  const initial = th.participantId ? th.participantName.trim().charAt(0).toUpperCase() : "";
   return (
     <span
       className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center text-[17px] leading-[25.5px] font-bold"

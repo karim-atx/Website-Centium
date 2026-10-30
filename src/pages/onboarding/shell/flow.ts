@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { tk } from "../../../i18n/core";
 
 /**
  * What the onboarding flow (Onboarding.tsx) gives every step frame: "Save and
@@ -46,20 +47,21 @@ export function useOnline(): boolean {
 }
 
 // Strings shared by every lane (OURS-step-states, OURS-finish-later-*).
+// English keys (tk); every screen shows them through t().
 export const OB_STRINGS = {
-  saveError: "Couldn't save this step. Check your connection and try again.",
-  tryAgain: "Try again",
-  offlineStep: "You're offline. Your answers are saved on this device and will sync when you're back.",
-  offlineSubmit: "Connect to the internet to submit.",
-  backOnline: "Back online. Your answers are saved.",
-  uploading: "Uploading…",
-  uploadFailed: "Upload failed. Check your connection and try again.",
-  submitting: "Submitting…",
-  statusLoadError: "Couldn't load your review status. Try again.",
-  finishLaterTitle: "Finish later?",
-  finishLaterBody: "Everything so far is saved. Sign in again to pick up on this step.",
-  finishLaterOffline: "You're offline. Your answers are saved on this device.",
-  finishLaterError: "Couldn't save. Your answers are still on this device.",
-  saveAndExit: "Save and exit",
-  keepGoing: "Keep going",
+  saveError: tk("Couldn't save this step. Check your connection and try again."),
+  tryAgain: tk("Try again"),
+  offlineStep: tk("You're offline. Your answers are saved on this device and will sync when you're back."),
+  offlineSubmit: tk("Connect to the internet to submit."),
+  backOnline: tk("Back online. Your answers are saved."),
+  uploading: tk("Uploading…"),
+  uploadFailed: tk("Upload failed. Check your connection and try again."),
+  submitting: tk("Submitting…"),
+  statusLoadError: tk("Couldn't load your review status. Try again."),
+  finishLaterTitle: tk("Finish later?"),
+  finishLaterBody: tk("Everything so far is saved. Sign in again to pick up on this step."),
+  finishLaterOffline: tk("You're offline. Your answers are saved on this device."),
+  finishLaterError: tk("Couldn't save. Your answers are still on this device."),
+  saveAndExit: tk("Save and exit"),
+  keepGoing: tk("Keep going"),
 } as const;

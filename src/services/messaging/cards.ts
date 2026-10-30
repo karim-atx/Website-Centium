@@ -18,6 +18,7 @@
 // posted), so nothing here looks a plan up to render it.
 
 import { planPriceLabel } from "../hires/clientLogic";
+import { t } from "../../i18n/core";
 import { appLocale } from "../../i18n/format";
 
 export type CardBilling = "daily" | "monthly" | "annually";
@@ -118,7 +119,7 @@ export function parseCard(raw: unknown): MessageCard | null {
     if (amount === null || !dueOn) return null;
     return {
       kind: "payment_reminder",
-      businessName: asText(p.business_name) ?? "Your gym or studio",
+      businessName: asText(p.business_name) ?? t("Your gym or studio"),
       amount,
       currency: asText(p.currency)?.toUpperCase() ?? "USD",
       method: asText(p.method),

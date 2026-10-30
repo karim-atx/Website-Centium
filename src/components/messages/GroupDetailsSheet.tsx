@@ -4,6 +4,7 @@ import { CtaButton } from "../ui/PinnedCta";
 import { INK } from "../pro/proInk";
 import { textPx } from "../../theme/textSize";
 import { GroupAvatar } from "./GroupAvatar";
+import { t } from "../../i18n/core";
 import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../moderation/ImageApproval";
 import {
   GROUP_DESCRIPTION_MAX,
@@ -81,7 +82,7 @@ export const GroupDetailsSheet: React.FC<{
       if (!r.ok) {
         setBusy(false);
         onChanged();
-        return setError(nameChanged ? `The name is saved. ${r.message}` : r.message);
+        return setError(nameChanged ? t("The name is saved. {reason}", { reason: r.message }) : r.message);
       }
     }
     setBusy(false);
@@ -128,8 +129,8 @@ export const GroupDetailsSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Rename or edit description"
-      footer={<CtaButton className="w-full" size="sheet" label="Save" loading={busy} disabled={!newName.trim() || tooLong || (!nameChanged && !descChanged)} onClick={() => void save()} />}
+      title={t("Rename or edit description")}
+      footer={<CtaButton className="w-full" size="sheet" label={t("Save")} loading={busy} disabled={!newName.trim() || tooLong || (!nameChanged && !descChanged)} onClick={() => void save()} />}
     >
       <div className="flex items-center" style={{ gap: 14, marginBottom: 14 }}>
         {own.image?.url ? (
@@ -149,43 +150,43 @@ export const GroupDetailsSheet: React.FC<{
               className="tap disabled:opacity-60"
               style={{ minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}
             >
-              {photoBusy ? "Sending…" : shownPath || own.image ? "Change photo" : "Add a photo"}
+              {photoBusy ? t("Sending…") : shownPath || own.image ? t("Change photo") : t("Add a photo")}
             </button>
             {pending && (
               <button type="button" disabled={photoBusy} onClick={() => void takeBack()} className="tap disabled:opacity-60" style={{ minHeight: 44, fontSize: textPx(13), fontWeight: 600, color: INK.hi }}>
-                Remove
+                {t("Remove")}
               </button>
             )}
             {!own.image && shownPath && !removeAsk && (
               <button type="button" disabled={photoBusy} onClick={() => setRemoveAsk(true)} className="tap disabled:opacity-60" style={{ minHeight: 44, fontSize: textPx(13), fontWeight: 600, color: INK.hi }}>
-                Remove
+                {t("Remove")}
               </button>
             )}
           </div>
           {removeAsk && (
             <div className="flex items-center flex-wrap" style={{ gap: 14 }}>
-              <span style={{ fontSize: textPx(12), color: INK.chF }}>Remove the photo for everyone?</span>
+              <span style={{ fontSize: textPx(12), color: INK.chF }}>{t("Remove the photo for everyone?")}</span>
               <button type="button" disabled={photoBusy} onClick={() => void removeApproved()} className="tap disabled:opacity-60" style={{ minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.hi }}>
-                Remove
+                {t("Remove")}
               </button>
               <button type="button" onClick={() => setRemoveAsk(false)} className="tap" style={{ minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}>
-                Keep it
+                {t("Keep it")}
               </button>
             </div>
           )}
-          <input ref={fileRef} type="file" accept={GROUP_PHOTO_ACCEPT} className="hidden" aria-label="Choose a group photo" onChange={(e) => void pick(e.target.files?.[0])} />
+          <input ref={fileRef} type="file" accept={GROUP_PHOTO_ACCEPT} className="hidden" aria-label={t("Choose a group photo")} onChange={(e) => void pick(e.target.files?.[0])} />
         </div>
       </div>
       <ImageApprovalNote state={own.image} className="mb-3" />
-      {!own.image && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginBottom: 12 }}>Members see a new photo once our team approves it.</p>}
+      {!own.image && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginBottom: 12 }}>{t("Members see a new photo once our team approves it.")}</p>}
 
       <label htmlFor="grename" className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-        Group name
+        {t("Group name")}
       </label>
       <input id="grename" value={newName} maxLength={GROUP_NAME_MAX} onChange={(e) => setNewName(e.target.value)} style={FIELD} className="focus:outline-none focus:ring-2 focus:ring-primary/20" />
       <div className="flex items-center justify-between" style={{ gap: 8, margin: "14px 0 6px" }}>
         <label htmlFor="gredesc" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>
-          Description (optional)
+          {t("Description (optional)")}
         </label>
         <span className="tabular-nums" style={{ fontSize: textPx(11.5), color: tooLong ? INK.hi : INK.chF }}>
           {newDesc.trim().length}/{GROUP_DESCRIPTION_MAX}
@@ -197,11 +198,11 @@ export const GroupDetailsSheet: React.FC<{
         rows={3}
         maxLength={GROUP_DESCRIPTION_MAX + 50}
         onChange={(e) => setNewDesc(e.target.value)}
-        placeholder="What the group is for"
+        placeholder={t("What the group is for")}
         className="w-full rounded-[12px] px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-charcoal-faint"
         style={{ fontSize: textPx(14), background: INK.soft, border: `1px solid ${INK.b10}`, color: INK.ch }}
       />
-      <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 6 }}>Everyone in the group sees it. Leave it empty to remove it.</p>
+      <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 6 }}>{t("Everyone in the group sees it. Leave it empty to remove it.")}</p>
       {error && (
         <p role="alert" className="rounded-xl" style={{ fontSize: textPx(12), color: INK.hi, background: INK.hiBg, padding: "10px 14px", marginTop: 10 }}>
           {error}

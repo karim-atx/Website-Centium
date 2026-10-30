@@ -97,6 +97,7 @@ import { formatShortDate } from "../../utils/date";
 import { BizAvatar } from "./BusinessList";
 import { bizAvatarKind } from "./bizAvatar";
 import { appLocale } from "../../i18n/format";
+import { isRtl, t, tk, tn } from "../../i18n/core";
 
 /** How far the finger must travel from the mic before a release cancels. */
 const CANCEL_DISTANCE = 60;
@@ -182,8 +183,8 @@ function dayChip(iso: string): string {
   const now = new Date();
   const start = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const days = Math.round((start(now) - start(d)) / 86400000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
+  if (days === 0) return t("Today");
+  if (days === 1) return t("Yesterday");
   if (days > 1 && days < 7) return d.toLocaleDateString(appLocale("en-US"), { weekday: "long" });
   return d.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", ...(d.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }) });
 }
@@ -252,10 +253,10 @@ export const ThreadView: React.FC<{
           : null;
   const groupName = isGroup ? groupState?.name ?? thread.participantName : thread.participantName;
   const nameOf = (userId: string | null) =>
-    (userId && members.find((m) => m.userId === userId)?.firstName) || "Someone";
+    (userId && members.find((m) => m.userId === userId)?.firstName) || t("Someone");
   /** Who wrote a message, as a quote or a label says it. */
   const authorOf = (senderId: string | null) =>
-    senderId === authUserId ? "You" : isGroup ? nameOf(senderId) : thread.participantName;
+    senderId === authUserId ? t("You") : isGroup ? nameOf(senderId) : thread.participantName;
   const typingName = isGroup && theyAreTyping ? nameOf(live.typingBy[thread.id] ?? null) : null;
   /**
    * WHERE THE COMPOSER STICKS: just above the bottom bar, not behind it. The
@@ -972,10 +973,10 @@ export const ThreadView: React.FC<{
     if (!origin) return;
     const dx = e.clientX - origin.x;
     const dy = e.clientY - origin.y;
-    // Same shape as the swipe already used in Food: rightward
-    // past the threshold, and near-horizontal so a scroll is never mistaken
-    // for it.
-    if (dx > SWIPE_THRESHOLD && Math.abs(dy) < 40) setReplyTo(m);
+    // Same shape as the swipe already used in Food: towards the inline end
+    // (rightward, leftward in right to left) past the threshold, and
+    // near-horizontal so a scroll is never mistaken for it.
+    if ((isRtl() ? -dx : dx) > SWIPE_THRESHOLD && Math.abs(dy) < 40) setReplyTo(m);
   };
 
   /** Scrolls to a quoted message and marks it, so the jump is visible. */
@@ -1019,7 +1020,7 @@ export const ThreadView: React.FC<{
       setHasOlder(more);
     }
     if (list.some((m) => m.id === id)) setPendingFocus(id);
-    else setError("That message isn't in this conversation any more.");
+    else setError(t("That message isn't in this conversation any more."));
   };
   useEffect(() => {
     if (pendingFocus && bubbleRefs.current[pendingFocus]) {
@@ -1253,7 +1254,7 @@ export const ThreadView: React.FC<{
     const close = () => setActionsFor(null);
     // An unsent message has nothing left to reply to, copy, star or react to.
     if (m.deletedAt) {
-      return [{ label: "Delete for me", danger: true, onSelect: () => {
+      return [{ label: tk("Delete for me"), danger: true, onSelect: () => {
         setHiding(m);
         close();
       } }];
@@ -1263,27 +1264,27 @@ export const ThreadView: React.FC<{
     // CU9: a recommendation card is not copied, forwarded or edited either; its sender may unsend it.
     const allows = m.card ? cardAllows(m.card) : m.recommendation ? { copy: false, forward: false, edit: false, unsend: true } : { copy: true, forward: true, edit: true, unsend: true };
     const list: MessageAction[] = [
-      { label: "Reply", onSelect: () => {
+      { label: tk("Reply"), onSelect: () => {
         setReplyTo(m);
         close();
       } },
     ];
     // Anything with content: the server copies a photo, file or voice note
     // into the destination chat (forward-message).
-    if (allows.forward && (m.text?.trim() || (m.attachmentPath && !m.attachmentPurgedAt))) list.push({ label: "Forward", onSelect: () => {
+    if (allows.forward && (m.text?.trim() || (m.attachmentPath && !m.attachmentPurgedAt))) list.push({ label: tk("Forward"), onSelect: () => {
       setForwarding(m);
       close();
     } });
     list.push({
-      label: starred.has(m.id) ? "Unstar" : "Star",
+      label: starred.has(m.id) ? tk("Unstar") : tk("Star"),
       onSelect: () => {
         void toggleStar(m);
         close();
       },
     });
-    if (allows.copy && m.text?.trim()) list.push({ label: "Copy", onSelect: () => void copyMessage(m) });
+    if (allows.copy && m.text?.trim()) list.push({ label: tk("Copy"), onSelect: () => void copyMessage(m) });
     list.push({
-      label: pin?.messageId === m.id ? "Unpin" : "Pin",
+      label: pin?.messageId === m.id ? tk("Unpin") : tk("Pin"),
       onSelect: () => {
         if (pin?.messageId === m.id) void unpinMessage();
         else void pinMessage(m);
@@ -1301,8 +1302,8 @@ export const ThreadView: React.FC<{
     const left = mine ? editTimeLeft(m) : 0;
     if (allows.edit && left > 0 && m.text?.trim()) {
       list.push({
-        label: "Edit",
-        note: `${Math.max(1, Math.ceil(left / 60_000))} min left`,
+        label: tk("Edit"),
+        note: tn(Math.max(1, Math.ceil(left / 60_000)), "{n} min left", "{n} min left"),
         onSelect: () => {
           setReplyTo(null);
           setEditing(m);
@@ -1311,23 +1312,23 @@ export const ThreadView: React.FC<{
         },
       });
     }
-    if (mine) list.push({ label: "Info", onSelect: () => {
+    if (mine) list.push({ label: tk("Info"), onSelect: () => {
       setInfoFor(m);
       close();
     } });
     if (canReport && !mine) {
-      list.push({ label: "Report", danger: true, onSelect: () => {
+      list.push({ label: tk("Report"), danger: true, onSelect: () => {
         setReportFor(m);
         close();
       } });
     }
     if (allows.unsend && left > 0) {
-      list.push({ label: "Delete for everyone", danger: true, onSelect: () => {
+      list.push({ label: tk("Delete for everyone"), danger: true, onSelect: () => {
         setUnsending(m);
         close();
       } });
     }
-    list.push({ label: "Delete for me", danger: true, onSelect: () => {
+    list.push({ label: tk("Delete for me"), danger: true, onSelect: () => {
     setHiding(m);
     close();
   } });
@@ -1354,7 +1355,7 @@ export const ThreadView: React.FC<{
       if (m.role === "owner" || !m.joinedAt) continue;
       if (hasOlder && m.joinedAt < oldest) continue;
       const before = messages.find((x) => x.createdAt >= m.joinedAt!);
-      const label = `${m.userId === authUserId ? "You" : m.firstName} joined the group`;
+      const label = m.userId === authUserId ? t("You joined the group") : t("{name} joined the group", { name: m.firstName });
       if (before) (at[before.id] ??= []).push(label);
       else after.push(label);
     }
@@ -1430,12 +1431,12 @@ export const ThreadView: React.FC<{
             {/* Focused, the Search glyph takes the border's #7D6BB5 too (sampled). */}
             <label className="group flex-1 flex items-center gap-2 h-11 rounded-[14px] bg-cream-card border border-charcoal/10 focus-within:border-primary-dark px-3">
               <Search size={16} strokeWidth={1.75} className="text-charcoal-soft group-focus-within:text-primary-dark shrink-0" aria-hidden />
-              <span className="sr-only">Search in this chat</span>
+              <span className="sr-only">{t("Search in this chat")}</span>
               <input
                 autoFocus
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={`Search in chat with ${thread.participantName}`}
+                placeholder={t("Search in chat with {name}", { name: thread.participantName })}
                 className="flex-1 min-w-0 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
               />
             </label>
@@ -1445,24 +1446,23 @@ export const ThreadView: React.FC<{
               // 5 either side, so the field is 295 wide as drawn (gap 8).
               className="tap min-h-[44px] px-[5px] text-[13.5px] font-bold text-primary-deep-text shrink-0"
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
-          {searchError && <p className="text-xs text-status-high mt-2">{searchError}</p>}
+          {searchError && <p className="text-xs text-status-high mt-2">{t(searchError)}</p>}
           {searchTerm && !searchBusy && !searchError && searchHits.length === 0 && (
-            <p className="text-sm text-charcoal-faint text-center py-8">No messages match "{searchTerm}".</p>
+            <p className="text-sm text-charcoal-faint text-center py-8">{t('No messages match "{term}".', { term: searchTerm })}</p>
           )}
           {searchTerm && searchHits.length > 0 && (
             <div className="mt-3.5 flex flex-col gap-2">
               <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-primary-dark px-1">
-                {searchHits.length}
-                {searchMore ? "+" : ""} {searchHits.length === 1 && !searchMore ? "message" : "messages"}
+                {searchMore ? t("{n}+ messages", { n: searchHits.length }) : tn(searchHits.length, "{n} message", "{n} messages")}
               </p>
               <SearchResults
                 card
                 hits={searchHits}
                 query={searchTerm}
-                titleFor={(h) => (h.senderId === authUserId ? "You" : thread.participantName)}
+                titleFor={(h) => (h.senderId === authUserId ? t("You") : thread.participantName)}
                 isOther={(h) => h.senderId !== authUserId}
                 onOpen={(h) => {
                   closeSearch();
@@ -1488,7 +1488,7 @@ export const ThreadView: React.FC<{
       >
         <button
           onClick={onBack}
-          aria-label="Back to conversations"
+          aria-label={t("Back to conversations")}
           className={cv2 ? "tap w-11 h-11 -ms-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal shrink-0" : "tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0"}
         >
           {/* MO1.2.1.3: ChevronLeft 17 on a 32 #F5F5F6 disc at x 16 (measured). OP1-180 row 3: plain 44, 20/2.2 ink. */}
@@ -1500,7 +1500,7 @@ export const ThreadView: React.FC<{
         <button
           type="button"
           onClick={() => setInfoOpen(true)}
-          aria-label={`Chat info for ${thread.participantName}`}
+          aria-label={t("Chat info for {name}", { name: thread.participantName })}
           className="tap flex items-center gap-2.5 flex-1 min-w-0 text-start"
         >
           {isGroup ? (
@@ -1523,7 +1523,7 @@ export const ThreadView: React.FC<{
             {isMinor ? (
               <span data-minor-row className="flex items-center min-w-0" style={{ gap: 6 }}>
                 <span className={cv2 ? "text-[15px] leading-[19px] font-bold text-charcoal truncate" : "text-[14.5px] font-bold text-primary-deep-text truncate"}>{groupName}</span>
-                <MemberTag label="Under 18" tone="muted" />
+                <MemberTag label={t("Under 18")} tone="muted" />
               </span>
             ) : (
               <span className={cv2 ? "text-[15px] leading-[19px] font-bold text-charcoal truncate" : "text-[14.5px] font-bold text-primary-deep-text truncate"}>{groupName}</span>
@@ -1531,31 +1531,31 @@ export const ThreadView: React.FC<{
             {isGroup ? (
               typingName ? (
                 <span className="text-xs font-semibold truncate" style={{ color: "#2E7D57" }}>
-                  {typingName} is typing…
+                  {t("{name} is typing…", { name: typingName })}
                 </span>
               ) : (
                 members.length > 0 && (
                   <span className="text-xs text-charcoal-soft truncate">
-                    {groupHost ? `${groupHost.firstName} (host) · ` : ""}
-                    {joinedCount} {joinedCount === 1 ? "member" : "members"}
+                    {groupHost ? `${t("{name} (host)", { name: groupHost.firstName })} · ` : ""}
+                    {tn(joinedCount, "{n} member", "{n} members")}
                   </span>
                 )
               )
             ) : proView?.subtitle && !theyAreTyping ? (
               // MO22 v2: "Online · Standard coaching" / "Enquiry", 12 text.soft.
               <span data-pro-subtitle="" className="text-xs text-charcoal-soft truncate">
-                {theyAreOnline ? `Online · ${proView.subtitle}` : proView.subtitle}
+                {theyAreOnline ? `${t("Online")} · ${proView.subtitle}` : proView.subtitle}
               </span>
             ) : (
               (theyAreTyping || theyAreOnline) &&
               (cv2 ? (
                 // OP1-180 row 5 / OP1-187 row 1: 12/16, "Online" #3F9165 in both themes, "typing…" italic pDark.
                 <span className={`text-[12px] leading-[16px] ${theyAreTyping ? "italic text-primary-dark" : ""}`} style={theyAreTyping ? undefined : { color: "#3F9165" }}>
-                  {theyAreTyping ? "typing…" : "Online"}
+                  {theyAreTyping ? t("typing…") : t("Online")}
                 </span>
               ) : (
                 <span className="text-[11.5px] font-semibold" style={{ color: "#2E7D57" }}>
-                  {theyAreTyping ? "typing…" : "Online"}
+                  {theyAreTyping ? t("typing…") : t("Online")}
                 </span>
               ))
             )}
@@ -1582,7 +1582,7 @@ export const ThreadView: React.FC<{
             className="tap h-[33px] px-3 rounded-full bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill text-[12.5px] font-bold flex items-center gap-1.5 shrink-0 disabled:opacity-60"
           >
             <Handshake size={14} aria-hidden />
-            {viewerIsProfessional ? (postingPlans ? "Sending…" : "Offer plans") : "Hire"}
+            {viewerIsProfessional ? (postingPlans ? t("Sending…") : t("Offer plans")) : t("Hire")}
           </button>
         )}
 
@@ -1602,7 +1602,7 @@ export const ThreadView: React.FC<{
               type="button"
               onClick={() => void placeCall("voice")}
               disabled={callBusy}
-              aria-label={`Voice call ${thread.participantName}`}
+              aria-label={t("Voice call {name}", { name: thread.participantName })}
               className="tap w-11 h-11 -me-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
             >
               <Phone size={17} strokeWidth={1.75} />
@@ -1611,7 +1611,7 @@ export const ThreadView: React.FC<{
               type="button"
               onClick={() => void placeCall("video")}
               disabled={callBusy}
-              aria-label={`Video call ${thread.participantName}`}
+              aria-label={t("Video call {name}", { name: thread.participantName })}
               className="tap w-11 h-11 -me-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
             >
               <Video size={17} strokeWidth={1.75} />
@@ -1621,7 +1621,7 @@ export const ThreadView: React.FC<{
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
-          aria-label="Search this chat"
+          aria-label={t("Search this chat")}
           // The glyph's centre at x 357 (measured); -my-0.5 keeps the 44 target
           // without making the header row taller than the 40 avatar.
           className="tap w-11 h-11 -me-1 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0"
@@ -1635,7 +1635,7 @@ export const ThreadView: React.FC<{
       {proView?.kind === "enquiry" && (
         <div data-enquiry-notice="" className="flex items-start gap-2 rounded-[14px] bg-cream-soft px-3 py-2.5 mb-2 text-[11.5px] leading-[1.5] text-charcoal-soft">
           <PhoneOff size={13} strokeWidth={2} aria-hidden className="shrink-0 mt-[3px] text-charcoal-faint" />
-          <span>{`Voice and video calls open once ${thread.participantName.trim().split(/\s+/)[0] || "they"} hires you.`}</span>
+          <span>{t("Voice and video calls open once {name} hires you.", { name: thread.participantName.trim().split(/\s+/)[0] || t("they") })}</span>
         </div>
       )}
 
@@ -1650,10 +1650,8 @@ export const ThreadView: React.FC<{
         <div className="flex items-start gap-2 rounded-xl bg-teal-pale text-charcoal-soft dark:text-teal-deep-text px-3 py-2.5 mb-2">
           <ShieldCheck size={15} className="shrink-0 mt-px" />
           <p className="text-[11px] leading-relaxed">
-            <span className="font-semibold">You're talking with Centium Support.</span>{" "}
-            This is Centium's official support chat. It is not a message from
-            another member. Centium Support will never ask for your password
-            or payment details in a message.
+            <span className="font-semibold">{t("You're talking with Centium Support.")}</span>{" "}
+            {t("This is Centium's official support chat. It is not a message from another member. Centium Support will never ask for your password or payment details in a message.")}
           </p>
         </div>
       )}
@@ -1662,7 +1660,7 @@ export const ThreadView: React.FC<{
           (microphone blocked) or why it became a voice call (camera blocked). */}
       {mediaNotice && (
         <p role="status" className="text-[11px] text-charcoal-faint bg-cream-soft rounded-xl px-3 py-2 mb-2">
-          {mediaNotice}
+          {t(mediaNotice)}
         </p>
       )}
 
@@ -1679,12 +1677,12 @@ export const ThreadView: React.FC<{
                 onClick={() => jumpTo(pin.messageId)}
                 className="tap flex-1 min-w-0 text-start"
               >
-                <p className="text-[11px] font-semibold text-primary-dark">Pinned</p>
+                <p className="text-[11px] font-semibold text-primary-dark">{t("Pinned")}</p>
                 <p className="text-xs text-charcoal truncate">{describeMessage(target)}</p>
               </button>
               <button
                 onClick={() => void unpinMessage()}
-                aria-label="Unpin message"
+                aria-label={t("Unpin message")}
                 className="tap w-7 h-7 rounded-full flex items-center justify-center text-charcoal-faint shrink-0"
               >
                 <X size={14} />
@@ -1707,7 +1705,7 @@ export const ThreadView: React.FC<{
               disabled={loadingOlder}
               className="tap sr-only focus:not-sr-only mx-auto flex items-center justify-center min-h-[44px] px-4 text-xs font-semibold text-charcoal-soft disabled:opacity-60"
             >
-              {loadingOlder ? "Loading earlier messages…" : "Load earlier messages"}
+              {loadingOlder ? t("Loading earlier messages…") : t("Load earlier messages")}
             </button>
           )}
         </div>
@@ -1724,20 +1722,20 @@ export const ThreadView: React.FC<{
             <p className="text-[15px] font-extrabold text-charcoal mt-2.5">{groupName}</p>
             <p className="text-[12.5px] leading-[18px] text-charcoal-soft mt-1">
               {thread.kind === "official_support"
-                ? "You're chatting with the Centium team. We usually reply within an hour."
+                ? t("You're chatting with the Centium team. We usually reply within an hour.")
                 : thread.venue || bizSide
-                  ? "Only you and this member can read this chat."
+                  ? t("Only you and this member can read this chat.")
                   : thread.otherRole && thread.otherRole !== "official" && thread.otherRole !== "gym"
-                    ? `Messages with your team are private. ${thread.participantName.split(" ")[0]} sees your business name.`
-                    : `No messages yet. Say hello to ${thread.participantName}.`}
+                    ? t("Messages with your team are private. {name} sees your business name.", { name: thread.participantName.split(" ")[0] })
+                    : t("No messages yet. Say hello to {name}.", { name: thread.participantName })}
             </p>
           </div>
         )}
         {loaded && messages.length === 0 && !(cv2 && !departed && !isGroup) && (
           <p className="text-sm text-charcoal-faint text-center py-8">
             {departed
-              ? "This conversation is empty."
-              : `No messages yet. Say hello to ${thread.participantName}.`}
+              ? t("This conversation is empty.")
+              : t("No messages yet. Say hello to {name}.", { name: thread.participantName })}
           </p>
         )}
         {messages.map((m, index) => {
@@ -1783,7 +1781,7 @@ export const ThreadView: React.FC<{
                 <div ref={dividerRef} className="flex items-center gap-2 my-1" role="separator">
                   <span className="flex-1 h-px bg-primary/40" />
                   <span className="text-xs font-bold text-primary-deep-text">
-                    {newCount === 1 ? "1 new message" : `${newCount} new messages`}
+                    {tn(newCount, "{n} new message", "{n} new messages")}
                   </span>
                   <span className="flex-1 h-px bg-primary/40" />
                 </div>
@@ -1854,15 +1852,15 @@ export const ThreadView: React.FC<{
                     onChoose={(planId) => m.senderId && navigate(`/app/professionals/${m.senderId}?hire=${planId}`)}
                     meta={
                       <>
-                        {starred.has(m.id) && <Star size={11} aria-label="Starred" className="fill-current opacity-80" />}
+                        {starred.has(m.id) && <Star size={11} aria-label={t("Starred")} className="fill-current opacity-80" />}
                         {clockTime(m.createdAt)}
                         {mine && !isGroup &&
                           (tick === "read" ? (
-                            <CheckCheck size={14} aria-label="Read" className="text-tick-read-received" />
+                            <CheckCheck size={14} aria-label={t("Read")} className="text-tick-read-received" />
                           ) : tick === "delivered" ? (
-                            <CheckCheck size={14} aria-label="Delivered" />
+                            <CheckCheck size={14} aria-label={t("Delivered")} />
                           ) : (
-                            <Check size={14} aria-label="Sent" />
+                            <Check size={14} aria-label={t("Sent")} />
                           ))}
                       </>
                     }
@@ -1902,7 +1900,7 @@ export const ThreadView: React.FC<{
                 {isGroup && !mine && (
                   <span className={`text-xs font-extrabold ${senderTone(m.senderId, groupState?.ownerId ?? null, members)}`}>
                     {nameOf(m.senderId)}
-                    {m.senderId === groupState?.ownerId ? " · Host" : ""}
+                    {m.senderId === groupState?.ownerId ? ` · ${t("Host")}` : ""}
                   </span>
                 )}
                 {m.replyToId && (
@@ -1918,7 +1916,7 @@ export const ThreadView: React.FC<{
                     the sent ground at 11px. */}
                 {m.forwarded && (
                   <span className="flex items-center gap-1 text-[11px] italic opacity-85">
-                    <Forward size={11} className="shrink-0" /> Forwarded
+                    <Forward size={11} className="shrink-0" /> {t("Forwarded")}
                   </span>
                 )}
                 {m.text && <span>{m.text}</span>}
@@ -1928,7 +1926,7 @@ export const ThreadView: React.FC<{
                   // UNSENT: the same words for both people, and nothing else
                   // from the message survives on the row to show.
                   <span className="flex items-center gap-1.5 italic text-[13.5px] opacity-85">
-                    <Ban size={14} className="shrink-0" /> This message was deleted
+                    <Ban size={14} className="shrink-0" /> {t("This message was deleted")}
                   </span>
                 ) : (
                   removal && (
@@ -1987,19 +1985,19 @@ export const ThreadView: React.FC<{
                       : `self-end -mt-0.5 flex items-center gap-1 text-[10px] font-semibold ${mine ? "opacity-80" : "text-charcoal-faint"}`
                   }
                 >
-                  {starred.has(m.id) && <Star size={11} aria-label="Starred" className="fill-current opacity-80" />}
+                  {starred.has(m.id) && <Star size={11} aria-label={t("Starred")} className="fill-current opacity-80" />}
                   {clockTime(m.createdAt)}
-                  {m.editedAt && !m.deletedAt ? " · edited" : ""}
+                  {m.editedAt && !m.deletedAt ? ` · ${t("edited")}` : ""}
                   {/* A GROUP HAS NO TICKS: one timestamp cannot say who read
                       it, so your own messages say how many have. */}
-                  {isGroup && mine && !m.deletedAt && (readCounts[m.id] ?? 0) > 0 ? ` · read by ${readCounts[m.id]}` : ""}
+                  {isGroup && mine && !m.deletedAt && (readCounts[m.id] ?? 0) > 0 ? ` · ${t("read by {n}", { n: readCounts[m.id] })}` : ""}
                   {mine && !isGroup && !m.deletedAt &&
                     (tick === "read" ? (
-                      <CheckCheck size={cv2 ? 15 : 14} strokeWidth={cv2 ? 2 : undefined} aria-label="Read" className="text-tick-read-sent" />
+                      <CheckCheck size={cv2 ? 15 : 14} strokeWidth={cv2 ? 2 : undefined} aria-label={t("Read")} className="text-tick-read-sent" />
                     ) : tick === "delivered" ? (
-                      <CheckCheck size={cv2 ? 15 : 14} strokeWidth={cv2 ? 2 : undefined} aria-label="Delivered" />
+                      <CheckCheck size={cv2 ? 15 : 14} strokeWidth={cv2 ? 2 : undefined} aria-label={t("Delivered")} />
                     ) : (
-                      <Check size={cv2 ? 15 : 14} strokeWidth={cv2 ? 2 : undefined} aria-label="Sent" />
+                      <Check size={cv2 ? 15 : 14} strokeWidth={cv2 ? 2 : undefined} aria-label={t("Sent")} />
                     ))}
                 </span>
               </div>
@@ -2012,7 +2010,7 @@ export const ThreadView: React.FC<{
                       type="button"
                       disabled={block.blocked}
                       onClick={() => void react(m, g.me ? null : emoji)}
-                      aria-label={`${emoji} ${g.n}${g.me ? ", including you. Tap to remove yours" : ""}`}
+                      aria-label={g.me ? t("{emoji} {n}, including you. Tap to remove yours", { emoji, n: g.n }) : `${emoji} ${g.n}`}
                       aria-pressed={g.me}
                       className={`tap rounded-full border ${cv2 ? "text-[13px] px-1.5 py-[3px]" : "text-xs px-2 py-0.5"} ${
                         g.me ? "bg-primary-pale border-primary/40" : "bg-cream-card border-charcoal/10"
@@ -2048,9 +2046,9 @@ export const ThreadView: React.FC<{
               {q.text}
             </div>
             <span className="flex items-center gap-2 text-[11px] text-charcoal-faint">
-              <Clock size={12} aria-hidden /> Not sent yet. It will send when you reconnect.
+              <Clock size={12} aria-hidden /> {t("Not sent yet. It will send when you reconnect.")}
               <button type="button" className="tap font-bold text-status-high" onClick={() => authUserId && removeQueued(authUserId, q.id)}>
-                Delete
+                {t("Delete")}
               </button>
             </span>
           </div>
@@ -2071,10 +2069,10 @@ export const ThreadView: React.FC<{
                 ) : (
                   <Mic size={15} />
                 )}
-                {pending.kind === "photo" ? "Photo" : pending.kind === "file" ? "Document" : "Voice note"}
+                {pending.kind === "photo" ? t("Photo") : pending.kind === "file" ? t("Document") : t("Voice note")}
               </span>
             )}
-            <span className="flex items-center justify-end gap-1 mt-1 opacity-80" title="Sending">
+            <span className="flex items-center justify-end gap-1 mt-1 opacity-80" title={t("Sending")}>
               <Clock size={13} />
             </span>
           </div>
@@ -2091,7 +2089,7 @@ export const ThreadView: React.FC<{
         {theyAreTyping && (
           <div
             role="status"
-            aria-label={`${typingName ?? thread.participantName} is typing`}
+            aria-label={t("{name} is typing", { name: typingName ?? thread.participantName })}
             className={cv2 ? "self-start rounded-[16px] bg-cream-soft px-3.5 py-3 flex gap-1" : "self-start rounded-[20px_20px_20px_4px] bg-cream-soft px-3.5 py-2.5 flex gap-1"}
           >
             {[0, 1, 2].map((i) =>
@@ -2120,13 +2118,13 @@ export const ThreadView: React.FC<{
           className="tap fixed left-1/2 -translate-x-1/2 top-20 z-30 rounded-full bg-primary-fill text-on-primary-fill text-xs font-bold px-3.5 h-11 flex items-center gap-1.5 shadow-lg"
         >
           <ArrowDown size={14} className="rotate-180" />
-          {newCount === 1 ? "1 new message" : `${newCount} new messages`}
+          {tn(newCount, "{n} new message", "{n} new messages")}
         </button>
       )}
 
       {(error || recorder.error) && (
         <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5 mb-2">
-          {error ?? recorder.error?.message}
+          {t(error ?? recorder.error?.message ?? "")}
         </p>
       )}
 
@@ -2137,15 +2135,15 @@ export const ThreadView: React.FC<{
           <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-center" role="status">
             <p className="text-sm font-semibold text-charcoal">
               {groupEnded === "closed"
-                ? "This group was closed"
+                ? t("This group was closed")
                 : groupEnded === "left"
-                  ? "You left this group"
-                  : "You were removed from this group"}
+                  ? t("You left this group")
+                  : t("You were removed from this group")}
             </p>
             <p className="text-xs text-charcoal-soft mt-1 leading-relaxed">
               {groupEnded === "closed"
-                ? "You can still read it, but nobody can send messages here."
-                : "You can still read what was sent while you were in it. Nothing new will arrive."}
+                ? t("You can still read it, but nobody can send messages here.")
+                : t("You can still read what was sent while you were in it. Nothing new will arrive.")}
             </p>
           </div>
         </div>
@@ -2153,14 +2151,14 @@ export const ThreadView: React.FC<{
         <div className={`sticky ${footerBottom} bg-cream pt-2`}>
           <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-center">
             <p className="text-sm font-semibold text-charcoal">
-              {block.iBlocked ? `You blocked ${thread.participantName}` : "You can't message this person"}
+              {block.iBlocked ? t("You blocked {name}", { name: thread.participantName }) : t("You can't message this person")}
             </p>
             <p className="text-xs text-charcoal-soft mt-1 leading-relaxed">
               {block.iBlocked
                 ? thread.kind === "business"
-                  ? "No one there can message you, and you can't message them until you unblock. They haven't been told."
-                  : "Neither of you can message or call the other. They haven't been told."
-                : "Messages and calls aren't available in this conversation."}
+                  ? t("No one there can message you, and you can't message them until you unblock. They haven't been told.")
+                  : t("Neither of you can message or call the other. They haven't been told.")
+                : t("Messages and calls aren't available in this conversation.")}
             </p>
             {block.iBlocked && (
               <button
@@ -2169,7 +2167,7 @@ export const ThreadView: React.FC<{
                 disabled={safetyBusy}
                 className="tap mt-2 min-h-[44px] px-4 text-sm font-semibold text-primary-deep-text disabled:opacity-50"
               >
-                Unblock
+                {t("Unblock")}
               </button>
             )}
           </div>
@@ -2188,7 +2186,7 @@ export const ThreadView: React.FC<{
           <div className="flex items-stretch gap-2 min-w-0 flex-1">
             <span className="w-0.5 self-stretch rounded-full shrink-0 bg-primary" />
             <span className="min-w-0 flex-1">
-              <span className="block text-[11px] font-semibold truncate text-primary-dark">Editing message</span>
+              <span className="block text-[11px] font-semibold truncate text-primary-dark">{t("Editing message")}</span>
               <span className="block text-[11.5px] truncate text-charcoal-soft">{editing.text}</span>
             </span>
           </div>
@@ -2198,7 +2196,7 @@ export const ThreadView: React.FC<{
               setEditing(null);
               setDraft("");
             }}
-            aria-label="Cancel editing"
+            aria-label={t("Cancel editing")}
             className="tap w-11 h-11 -my-2 -me-2 rounded-full flex items-center justify-center text-charcoal-soft shrink-0"
           >
             <X size={14} />
@@ -2247,7 +2245,7 @@ export const ThreadView: React.FC<{
               <button
                 onClick={(e) => setAttachAnchor(e.currentTarget)}
                 disabled={sending}
-                aria-label="Attach a photo or document"
+                aria-label={t("Attach a photo or document")}
                 aria-haspopup="menu"
                 aria-expanded={!!attachAnchor}
                 className="tap w-11 h-11 rounded-full border border-charcoal/10 bg-cream-card flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-40"
@@ -2275,7 +2273,7 @@ export const ThreadView: React.FC<{
               {Math.floor(recorder.seconds / 60)}:{String(recorder.seconds % 60).padStart(2, "0")}
             </span>
             <span className="text-[11px] text-charcoal-faint truncate">
-              {willCancel ? "Release to cancel" : `Slide away to cancel · max ${MAX_SECONDS / 60} min`}
+              {willCancel ? t("Release to cancel") : t("Slide away to cancel · max {n} min", { n: MAX_SECONDS / 60 })}
             </span>
           </div>
         ) : cv2 ? (
@@ -2297,8 +2295,8 @@ export const ThreadView: React.FC<{
                 void send();
               }
             }}
-            placeholder={isGroup ? "Message the group" : "Message"}
-            aria-label="Message"
+            placeholder={isGroup ? t("Message the group") : t("Message")}
+            aria-label={t("Message")}
             className={`flex-1 min-w-0 min-h-[44px] max-h-[117px] resize-none rounded-[22px] bg-cream-card border border-solid px-[14px] py-[11px] text-[14px] leading-[19px] text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 ${draft.trim() ? "border-primary-fill" : "border-charcoal/10"}`}
           />
         ) : (
@@ -2312,7 +2310,7 @@ export const ThreadView: React.FC<{
             onKeyDown={(e) => {
               if (e.key === "Enter") void send();
             }}
-            placeholder={isGroup ? "Message the group" : "Message…"}
+            placeholder={isGroup ? t("Message the group") : t("Message…")}
             className="flex-1 min-w-0 h-11 rounded-full bg-cream-soft border border-charcoal/10 px-4 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         )}
@@ -2327,7 +2325,7 @@ export const ThreadView: React.FC<{
             onPointerUp={() => void onRecordUp()}
             onPointerCancel={() => void onRecordUp()}
             disabled={sending}
-            aria-label="Hold to record a voice note"
+            aria-label={t("Hold to record a voice note")}
             // MO1.2.1.3.5: Mic 18/1.75 idle. MO1.2.1.3.6: a 48 red disc with Mic 19 while recording.
             className={`tap rounded-full flex items-center justify-center shrink-0 touch-none disabled:opacity-40 ${
               recorder.recording
@@ -2344,7 +2342,7 @@ export const ThreadView: React.FC<{
           <button
             onClick={() => void send()}
             disabled={sending || !draft.trim()}
-            aria-label={cv2 ? "Send" : "Send message"}
+            aria-label={cv2 ? t("Send") : t("Send message")}
             className="tap w-11 h-11 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
           >
             {/* OP1-184 row 2: send-horizontal 17/2.2, shown only while there is text (the mic / send swap). */}
@@ -2369,7 +2367,7 @@ export const ThreadView: React.FC<{
             business={thread.kind === "business"}
             iBlocked={block.iBlocked}
             busy={safetyBusy}
-            error={safetyError}
+            error={safetyError && t(safetyError)}
             onBlock={() => void doBlock()}
             onUnblock={() => void doUnblock()}
           />
@@ -2394,7 +2392,7 @@ export const ThreadView: React.FC<{
         onClose={() => setViewing(null)}
         path={viewing}
         bucket="message-attachments"
-        label="File"
+        label={t("File")}
       />
 
       {photo && (
@@ -2422,17 +2420,17 @@ export const ThreadView: React.FC<{
         // (handover-complete pass; was Foundations' 0.18).
         dim={0.4}
         options={[
-          { value: "photo", label: "Photo", icon: <ImageIcon size={15} strokeWidth={1.75} /> },
+          { value: "photo", label: t("Photo"), icon: <ImageIcon size={15} strokeWidth={1.75} /> },
           {
             value: "document",
-            label: "Document",
+            label: t("Document"),
             icon: <FileText size={15} strokeWidth={1.75} />,
-            note: "PDF, Word, Excel, PowerPoint, text or CSV, up to 25 MB",
+            note: t("PDF, Word, Excel, PowerPoint, text or CSV, up to 25 MB"),
           },
           // MO27: the professional's "Share to the group".
-          ...(proView?.onShare ? [{ value: "share" as const, label: "Share to the group", icon: <Share2 size={15} strokeWidth={1.75} /> }] : []),
+          ...(proView?.onShare ? [{ value: "share" as const, label: t("Share to the group"), icon: <Share2 size={15} strokeWidth={1.75} /> }] : []),
           // Round E: a playlist card in a client conversation.
-          ...(proView?.onSharePlaylist ? [{ value: "playlist" as const, label: "Share a playlist", icon: <Music2 size={15} strokeWidth={1.75} /> }] : []),
+          ...(proView?.onSharePlaylist ? [{ value: "playlist" as const, label: t("Share a playlist"), icon: <Music2 size={15} strokeWidth={1.75} /> }] : []),
         ]}
         onSelect={(v) => {
           setAttachAnchor(null);
@@ -2445,7 +2443,7 @@ export const ThreadView: React.FC<{
       {/* MESSAGE INFO, for your own messages. Delivered and read are stored
           only where both people allow read receipts, so a dash can mean
           "not yet" or "not shared" — the note says which is possible. */}
-      <BottomSheet open={!!infoFor} onClose={() => setInfoFor(null)} title="Message info">
+      <BottomSheet open={!!infoFor} onClose={() => setInfoFor(null)} title={t("Message info")}>
         {infoFor && (
           <div className="flex flex-col animate-fade-slide-up">
             <p className="text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3 py-2 mb-2 truncate">
@@ -2457,13 +2455,13 @@ export const ThreadView: React.FC<{
             <>
             {(
               [
-                ["Sent", infoFor.createdAt],
-                ["Delivered", infoFor.deliveredAt],
-                ["Read", infoFor.readAt],
+                [tk("Sent"), infoFor.createdAt],
+                [tk("Delivered"), infoFor.deliveredAt],
+                [tk("Read"), infoFor.readAt],
               ] as const
             ).map(([label, at]) => (
               <div key={label} className="flex items-center justify-between min-h-[48px] border-b border-charcoal/[0.06] last:border-b-0">
-                <span className="text-sm font-semibold text-charcoal">{label}</span>
+                <span className="text-sm font-semibold text-charcoal">{t(label)}</span>
                 <span className="text-sm text-charcoal-soft tabular-nums">
                   {at
                     ? `${formatShortDate(new Date(at), { day: "numeric", month: "short" })}, ${clockTime(at)}`
@@ -2473,7 +2471,7 @@ export const ThreadView: React.FC<{
             ))}
             {(!infoFor.deliveredAt || !infoFor.readAt) && (
               <p className="text-xs text-charcoal-soft mt-2 leading-relaxed">
-                Delivered and read times aren't shown when either of you has read receipts off.
+                {t("Delivered and read times aren't shown when either of you has read receipts off.")}
               </p>
             )}
             </>
@@ -2484,7 +2482,7 @@ export const ThreadView: React.FC<{
 
       {/* A SEPARATE SHEET, opened after the actions close — two overlays alive
           at once would fight over the same dismiss. */}
-      <BottomSheet open={!!unsending} onClose={() => setUnsending(null)} title="Delete for everyone">
+      <BottomSheet open={!!unsending} onClose={() => setUnsending(null)} title={t("Delete for everyone")}>
         <div className="animate-fade-slide-up">
           {unsending && (
             <p className="text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3 py-2 mb-3 truncate">
@@ -2493,8 +2491,8 @@ export const ThreadView: React.FC<{
           )}
           <p className="text-sm text-charcoal-soft mb-4">
             {departed
-              ? "This removes the message from the conversation. You'll see \"This message was deleted\" in its place."
-              : `This removes the message for you and ${thread.participantName}. You'll both see "This message was deleted" in its place.`}
+              ? t("This removes the message from the conversation. You'll see \"This message was deleted\" in its place.")
+              : t("This removes the message for you and {name}. You'll both see \"This message was deleted\" in its place.", { name: thread.participantName })}
           </p>
           <button
             onClick={async () => {
@@ -2516,18 +2514,18 @@ export const ThreadView: React.FC<{
             disabled={unsendBusy}
             className="tap w-full rounded-xl bg-status-high text-white dark:text-[#0D0B1A] font-semibold text-sm py-3 disabled:opacity-50"
           >
-            {unsendBusy ? "Deleting…" : "Delete for everyone"}
+            {unsendBusy ? t("Deleting…") : t("Delete for everyone")}
           </button>
           <button
             onClick={() => setUnsending(null)}
             className="tap w-full text-sm font-medium text-charcoal-soft py-3"
           >
-            Cancel
+            {t("Cancel")}
           </button>
         </div>
       </BottomSheet>
 
-      <BottomSheet open={!!hiding} onClose={() => setHiding(null)} title="Delete for me">
+      <BottomSheet open={!!hiding} onClose={() => setHiding(null)} title={t("Delete for me")}>
         <div className="animate-fade-slide-up">
           {hiding && (
             <p className="text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3 py-2 mb-3 truncate">
@@ -2538,24 +2536,24 @@ export const ThreadView: React.FC<{
               other person still has it. With nobody left to name, it says only
               that hiding is not deleting. */}
           <p className="text-sm text-charcoal-soft mb-1">
-            This removes the message from your view of the conversation.
+            {t("This removes the message from your view of the conversation.")}
           </p>
           <p className="text-xs text-charcoal-faint mb-4">
             {departed
-              ? "The message isn't deleted. It stays part of the conversation. You won't be able to undo this here."
-              : `${thread.participantName} will still see it, and it stays part of the conversation for them. You won't be able to undo this here.`}
+              ? t("The message isn't deleted. It stays part of the conversation. You won't be able to undo this here.")
+              : t("{name} will still see it, and it stays part of the conversation for them. You won't be able to undo this here.", { name: thread.participantName })}
           </p>
           <button
             onClick={() => void confirmHide()}
             className="tap w-full rounded-xl bg-primary-fill text-on-primary-fill font-semibold text-sm py-3"
           >
-            Delete for me
+            {t("Delete for me")}
           </button>
           <button
             onClick={() => setHiding(null)}
             className="tap w-full text-sm font-medium text-charcoal-soft py-3"
           >
-            Cancel
+            {t("Cancel")}
           </button>
         </div>
       </BottomSheet>
@@ -2617,11 +2615,11 @@ const GroupMessageInfo: React.FC<{ messageId: string; sentAt: string; count: num
   return (
     <>
       <div className="flex items-center justify-between min-h-[48px] border-b border-charcoal/[0.06]">
-        <span className="text-sm font-semibold text-charcoal">Sent</span>
+        <span className="text-sm font-semibold text-charcoal">{t("Sent")}</span>
         <span className="text-sm text-charcoal-soft tabular-nums">{when(sentAt)}</span>
       </div>
       <div className="flex items-center justify-between min-h-[48px] border-b border-charcoal/[0.06]">
-        <span className="text-sm font-semibold text-charcoal">Read by</span>
+        <span className="text-sm font-semibold text-charcoal">{t("Read by")}</span>
         <span className="text-sm text-charcoal-soft tabular-nums">{count ?? "–"}</span>
       </div>
       {(readers ?? []).map((r) => (
@@ -2632,8 +2630,8 @@ const GroupMessageInfo: React.FC<{ messageId: string; sentAt: string; count: num
       ))}
       <p className="text-xs text-charcoal-soft mt-2 leading-relaxed">
         {unnamed > 0
-          ? `${unnamed} more read it with read receipts off, so they aren't named.`
-          : "People with read receipts off are counted but not named."}
+          ? tn(unnamed, "{n} more read it with read receipts off, so they aren't named.", "{n} more read it with read receipts off, so they aren't named.")
+          : t("People with read receipts off are counted but not named.")}
       </p>
     </>
   );

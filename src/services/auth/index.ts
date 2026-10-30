@@ -6,7 +6,7 @@ import {
 } from "../../../lib/supabase/suspension";
 import type { AuthError, Session } from "@supabase/supabase-js";
 import { DISPOSABLE_EMAIL_MESSAGE, isDisposableEmailText } from "./messages";
-import { getLanguage } from "../../i18n/core";
+import { getLanguage, tk } from "../../i18n/core";
 
 // Re-exported so the auth UI has one import for everything auth-shaped, and
 // so nothing outside this layer needs to know the detection lives in lib/.
@@ -71,27 +71,27 @@ export function describeAuthError(error: AuthError): string {
   // AAL ones are the worst of those, since "AAL2 session is required" names
   // an internal concept and tells the user nothing they can act on.
   if (code === "mfa_verification_failed" || code === "invalid_code") {
-    return "That code didn't match. Check your authenticator app and try the current code.";
+    return tk("That code didn't match. Check your authenticator app and try the current code.");
   }
   if (code === "mfa_challenge_expired" || /challenge.*expired|expired.*challenge/i.test(message)) {
     // GoTrue gives a challenge 300 seconds. A screen left open through a
     // lock and unlock is the ordinary way to reach this, so it reads as an
     // instruction rather than a failure.
-    return "That took too long. The code request expired. Enter a fresh code to try again.";
+    return tk("That took too long. The code request expired. Enter a fresh code to try again.");
   }
   if (code === "insufficient_aal" || /aal2/i.test(message)) {
-    return "Confirm your two-factor code first, then try this again.";
+    return tk("Confirm your two-factor code first, then try this again.");
   }
   if (code === "mfa_factor_not_found") {
-    return "That two-factor method is no longer on your account. Sign in again to continue.";
+    return tk("That two-factor method is no longer on your account. Sign in again to continue.");
   }
   if (code === "too_many_enrolled_mfa_factors") {
-    return "This account already has as many authenticator apps as it can hold. Remove one first.";
+    return tk("This account already has as many authenticator apps as it can hold. Remove one first.");
   }
   if (code === "mfa_totp_enroll_not_enabled" || code === "mfa_totp_verify_not_enabled") {
     // Not the user's doing at all: TOTP is switched off on the project.
     // Named honestly rather than blamed on the code they just typed.
-    return "Two-factor authentication isn't available right now. Try again later.";
+    return tk("Two-factor authentication isn't available right now. Try again later.");
   }
 
   // Kept separate from the auth-attempt throttle below on purpose. This one
@@ -102,10 +102,10 @@ export function describeAuthError(error: AuthError): string {
   // than the "wait a minute" the generic throttle message promises.
   // The real fix is configuring custom SMTP on the project.
   if (code === "over_email_send_rate_limit") {
-    return "We can't send confirmation emails right now. The email limit for this project has been reached. Try again later, or contact support if this persists.";
+    return tk("We can't send confirmation emails right now. The email limit for this project has been reached. Try again later, or contact support if this persists.");
   }
   if (isAuthRateLimited(error)) {
-    return "Too many attempts. Wait a minute and try again.";
+    return tk("Too many attempts. Wait a minute and try again.");
   }
   // The project's auth captcha refused the Turnstile token: missing, expired
   // or already spent. Said as something to do, not a failure of theirs.
@@ -122,21 +122,21 @@ export function describeAuthError(error: AuthError): string {
     return SUSPENDED_MESSAGE;
   }
   if (code === "invalid_credentials" || /invalid login credentials/i.test(message)) {
-    return "Email or password is incorrect.";
+    return tk("Email or password is incorrect.");
   }
   if (code === "weak_password") {
-    return "That password is too weak. See the checklist below.";
+    return tk("That password is too weak. See the checklist below.");
   }
   if (code === "user_already_exists" || /already registered/i.test(message)) {
-    return "An account already exists for this email. Try signing in instead.";
+    return tk("An account already exists for this email. Try signing in instead.");
   }
   if (code === "validation_failed") {
-    return "Check the email and password and try again.";
+    return tk("Check the email and password and try again.");
   }
-  return message || "Something went wrong. Try again.";
+  return message || tk("Something went wrong. Try again.");
 }
 
-export const CAPTCHA_FAILED_MESSAGE = "The security check didn't go through. Complete it again, then try once more.";
+export const CAPTCHA_FAILED_MESSAGE = tk("The security check didn't go through. Complete it again, then try once more.");
 
 /**
  * A refusal from Supabase's own per-IP limit (HTTP 429, over_request_rate_limit
@@ -439,8 +439,8 @@ export async function requestAccountDeletion(): Promise<AccountDeletionResult> {
     return {
       ok: false,
       message: error?.message
-        ? "Could not schedule your account for deletion. Please try again."
-        : "Could not schedule your account for deletion.",
+        ? tk("Could not schedule your account for deletion. Please try again.")
+        : tk("Could not schedule your account for deletion."),
     };
   }
 
@@ -460,7 +460,7 @@ export async function cancelAccountDeletion(): Promise<AccountDeletionResult> {
 
   if (error || !data) {
     console.error("[auth] Could not cancel account deletion:", error?.message);
-    return { ok: false, message: "Could not cancel the deletion. Please try again." };
+    return { ok: false, message: tk("Could not cancel the deletion. Please try again.") };
   }
 
   const row = data as unknown as { deletion_requested_at: string | null };

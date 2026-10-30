@@ -9,6 +9,7 @@ import { useBack } from "../../hooks/useBack";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { useOnline } from "../../hooks/useOnline";
 import { linePx, textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 // v6 Batch 3 · the BizMoreV8 kit (business More, Business Profile, Settings,
 // Help and legal; MO1B). Every value is the source's own
@@ -37,7 +38,7 @@ export const DEEP = "text-th-5f5093 dark:text-primary-dark";
 export const SubHeader: React.FC<{ title: string; sub?: string; kicker?: string; onBack?: () => void }> = ({
   title,
   sub,
-  kicker = "More",
+  kicker = t("More"),
   onBack,
 }) => {
   const back = useBack();
@@ -46,7 +47,7 @@ export const SubHeader: React.FC<{ title: string; sub?: string; kicker?: string;
       <button
         type="button"
         onClick={onBack ?? back}
-        aria-label="Back"
+        aria-label={t("Back")}
         // 40 drawn; .tap gives the 44 hit area (MO1B-011 row 1 OURS).
         className="tap flex items-center justify-center shrink-0 rounded-full text-charcoal-soft"
         style={{ width: 40, height: 40, marginInlineStart: -8 }}
@@ -68,7 +69,7 @@ export const SubHeader: React.FC<{ title: string; sub?: string; kicker?: string;
  * "You're offline…" under the header (AN11-009 O3 pattern). Round D O2: these
  * pages don't queue anything, so it no longer promises a later save.
  */
-export const OfflineLine: React.FC<{ text?: string }> = ({ text = "You're offline. Changes need a connection." }) => {
+export const OfflineLine: React.FC<{ text?: string }> = ({ text = t("You're offline. Changes need a connection.") }) => {
   const online = useOnline();
   if (online) return null;
   return (
@@ -337,7 +338,7 @@ export const BizRow: React.FC<BizRowProps> = ({
 };
 
 /** A "Soon" chip after a dimmed row's title (OURS-MO1B-payment-methods row 1). */
-export const SoonChip: React.FC<{ label?: string }> = ({ label = "Soon" }) => (
+export const SoonChip: React.FC<{ label?: string }> = ({ label = t("Soon") }) => (
   <span className="ms-1.5 inline-flex items-center rounded-full bg-primary-pale text-primary-dark text-[9.5px] font-extrabold uppercase tracking-[0.06em] align-middle" style={{ padding: "2px 8px" }}>
     {label}
   </span>
@@ -599,7 +600,7 @@ export const BizPopup: React.FC<{ open: boolean; onClose: () => void; title: str
       <div role="dialog" aria-modal="true" aria-label={title} className="relative w-full max-w-[390px] bg-cream-card animate-pop" style={{ borderRadius: 24, padding: "20px 18px 16px", boxShadow: "0 20px 48px rgba(36,31,27,0.28)" }}>
         <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
           <p className="text-[17px] font-extrabold text-charcoal">{title}</p>
-          <button type="button" onClick={onClose} aria-label="Close" className="tap flex items-center justify-center text-charcoal-faint" style={{ width: 36, height: 36 }}>
+          <button type="button" onClick={onClose} aria-label={t("Close")} className="tap flex items-center justify-center text-charcoal-faint" style={{ width: 36, height: 36 }}>
             <X size={18} strokeWidth={2.4} aria-hidden />
           </button>
         </div>
@@ -663,7 +664,7 @@ export const BizConfirm: React.FC<{
 // States
 
 /** Rows skeleton: a 36 tile block and two text bars per row. */
-export const RowsSkeleton: React.FC<{ rows?: number; label?: string }> = ({ rows = 3, label = "Loading" }) => (
+export const RowsSkeleton: React.FC<{ rows?: number; label?: string }> = ({ rows = 3, label = t("Loading") }) => (
   <div aria-busy="true" aria-label={label} className={LIST_BG} style={{ borderRadius: 18, padding: "4px 0", marginBottom: 13 }}>
     {Array.from({ length: rows }, (_, i) => (
       <div key={i} className="flex items-center" style={{ minHeight: 56.6, paddingBlock: "6.7px 9.3px", paddingInline: "14px 15px", gap: 11 }}>
@@ -678,11 +679,11 @@ export const RowsSkeleton: React.FC<{ rows?: number; label?: string }> = ({ rows
 );
 
 /** "Couldn't load this. Try again." 12/600 high + Retry 12.5/800 primary-dark (44). */
-export const LoadError: React.FC<{ message?: string; onRetry: () => void }> = ({ message = "Couldn't load this. Try again.", onRetry }) => (
+export const LoadError: React.FC<{ message?: string; onRetry: () => void }> = ({ message = t("Couldn't load this. Try again."), onRetry }) => (
   <div role="alert" className="flex items-center justify-between gap-3" style={{ marginBottom: 13 }}>
     <p className="text-[12px] font-semibold text-status-high">{message}</p>
     <button type="button" onClick={onRetry} className="tap shrink-0 text-[12.5px] font-extrabold text-primary-dark" style={{ minHeight: 44 }}>
-      Retry
+      {t("Retry")}
     </button>
   </div>
 );
@@ -712,7 +713,7 @@ export const SearchBox: React.FC<{ value: string; onChange: (v: string) => void;
       style={{ fontSize: textPx(13.5), lineHeight: linePx(19) }}
     />
     {value && onClear && (
-      <button type="button" onClick={onClear} aria-label="Clear search" className="tap shrink-0 flex items-center justify-center text-charcoal-faint" style={{ width: 28, height: 28 }}>
+      <button type="button" onClick={onClear} aria-label={t("Clear search")} className="tap shrink-0 flex items-center justify-center text-charcoal-faint" style={{ width: 28, height: 28 }}>
         <X size={15} aria-hidden />
       </button>
     )}

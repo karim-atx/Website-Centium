@@ -3,6 +3,12 @@
 // later. Every moderation and image-approval message links here.
 //
 // A line is a list of pieces; a piece in `b` is bold, as the draft marks it.
+// Round F (AV): the Arabic is guidelines.ar.ts, the same shape; the page
+// takes the text for the language with guidelinesFor().
+
+import { documentFor } from "../../i18n/core";
+import { legalDate } from "../../pages/settings/legalCopy";
+import type * as ArabicGuidelines from "./guidelines.ar";
 
 export type GuidelinePiece = string | { b: string };
 
@@ -77,3 +83,14 @@ export const GUIDELINE_SECTIONS: { id: string; h: string; items: GuidelinePiece[
     ],
   },
 ];
+
+/** The intro and sections in the active language (call during render). */
+export function guidelinesFor(): { intro: string; sections: typeof GUIDELINE_SECTIONS } {
+  const AR = documentFor<typeof ArabicGuidelines>("legal.guidelines");
+  return AR
+    ? { intro: AR.GUIDELINES_INTRO, sections: AR.GUIDELINE_SECTIONS }
+    : { intro: GUIDELINES_INTRO, sections: GUIDELINE_SECTIONS };
+}
+
+/** GUIDELINES_UPDATED in the active language (as is in English). */
+export const guidelinesUpdated = (): string => legalDate(GUIDELINES_UPDATED);

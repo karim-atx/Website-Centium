@@ -15,6 +15,7 @@ import type { CheckReminder, ReminderRepeat } from "../../services/health-checks
 import { browserOffline } from "../../services/health-log/offlineQueue";
 import { ButtonRow, CheckTile, InfoBox, PopupNote } from "./HealthCheckParts";
 import { clock12 } from "../../utils/time12";
+import { t, tk, tn } from "../../i18n/core";
 
 export const OFFLINE_ACTION = "You're offline. Try again when you're connected.";
 export const SAVE_FAILED = "Couldn't save. Try again.";
@@ -23,7 +24,14 @@ export type CheckOption = { id: string; name: string; frequency: string; cadence
 
 /** "Today · 6 Oct 2026" / "6 Oct 2026" (HE1.8.1 #50). */
 function doneLabel(day: string, today: string): string {
-  return day === today ? `Today · ${shortDate(day)}` : shortDate(day);
+  return day === today ? t("Today · {date}", { date: shortDate(day) }) : shortDate(day);
+}
+
+/** "Every [field] months" as one sentence with the number field in its place, so the word order follows the language. */
+function everyMonths(field: React.ReactNode): React.ReactNode {
+  return t("Every {field} months")
+    .split(/(\{field\})/)
+    .map((part, i) => (part === "{field}" ? <React.Fragment key={i}>{field}</React.Fragment> : part.trim() ? <React.Fragment key={i}>{part.trim()}</React.Fragment> : null));
 }
 
 /** The Date done / Date field (HE1.8.1 #48-#50): 44 r12 pad 0 12, CalendarDays 16 #5B5349, 14/20 400. */
@@ -82,7 +90,7 @@ export const MarkDonePopup: React.FC<{
   };
   return (
     <>
-      <CentredPopup open={open && !calOpen} onClose={onClose} title="When was it done?" geometry="partB" align="start">
+      <CentredPopup open={open && !calOpen} onClose={onClose} title={t("When was it done?")} geometry="partB" align="start">
         <div style={{ marginTop: -4 }}>
           <InfoBox className="flex items-center" style={{ padding: "10px 12px", gap: 10 }}>
             <CheckTile id={check.custom ? "custom" : check.id} onCard />
@@ -96,17 +104,17 @@ export const MarkDonePopup: React.FC<{
             </span>
           </InfoBox>
           <div style={{ marginTop: 14 }}>
-            <FieldLabel>Date done</FieldLabel>
-            <DateBox label={doneLabel(day, today)} onClick={() => setCalOpen(true)} ariaLabel={`Date done: ${doneLabel(day, today)}`} />
+            <FieldLabel>{t("Date done")}</FieldLabel>
+            <DateBox label={doneLabel(day, today)} onClick={() => setCalOpen(true)} ariaLabel={t("Date done: {date}", { date: doneLabel(day, today) })} />
           </div>
           <p className="text-charcoal-soft" style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: "16.7px" }}>
-            {nextDueLine(check.cadence)}
+            {t(nextDueLine(check.cadence))}
           </p>
-          {(note || offline) && <PopupNote>{note ?? OFFLINE_ACTION}</PopupNote>}
+          {(note || offline) && <PopupNote>{t(note ?? OFFLINE_ACTION)}</PopupNote>}
           <ButtonRow
             style={{ marginTop: 16 }}
-            secondary={doneOn ? { label: "Undo", onClick: () => void run(onUndo), disabled: busy } : { label: "Cancel", onClick: onClose }}
-            primary={{ label: "Save", onClick: () => void run(() => onSave(day)), disabled: offline, loading: busy }}
+            secondary={doneOn ? { label: t("Undo"), onClick: () => void run(onUndo), disabled: busy } : { label: t("Cancel"), onClick: onClose }}
+            primary={{ label: t("Save"), onClick: () => void run(() => onSave(day)), disabled: offline, loading: busy }}
           />
         </div>
       </CentredPopup>
@@ -114,7 +122,7 @@ export const MarkDonePopup: React.FC<{
         variant="partB"
         open={calOpen}
         onClose={() => setCalOpen(false)}
-        title="Date done"
+        title={t("Date done")}
         selectedDate={day}
         today={today}
         maxDate={today}
@@ -175,7 +183,7 @@ export const CheckFormPopup: React.FC<{
   const intervalOk = Number.isInteger(months) && months >= 1 && months <= 120;
   const canSave = isOther ? (other ?? "").trim().length >= 2 && intervalOk : !!chosen;
   const offline = browserOffline();
-  const fieldText = isOther && !editing ? "Other…" : chosen ? chosen.name : "Choose a check";
+  const fieldText = isOther && !editing ? t("Other…") : chosen ? chosen.name : t("Choose a check");
 
   const save = async () => {
     if (browserOffline()) return setNote(OFFLINE_ACTION);
@@ -195,18 +203,18 @@ export const CheckFormPopup: React.FC<{
   const fieldStyle: React.CSSProperties = { minHeight: 44, borderRadius: 12, padding: "0 12px", border: `0.5px solid ${hairAt(dark, 0.08)}` };
   const menuOptions = [
     ...options.filter((o) => !o.custom).map((o) => ({ value: o.id, label: o.name })),
-    { value: "__other", label: "Other…" },
+    { value: "__other", label: t("Other…") },
   ];
 
   return (
     <>
-      <CentredPopup open={open && !calOpen} onClose={onClose} title={editing ? "Edit check" : "Log a check"} geometry="partB" align="start">
+      <CentredPopup open={open && !calOpen} onClose={onClose} title={editing ? t("Edit check") : t("Log a check")} geometry="partB" align="start">
         <div style={{ marginTop: -16 }}>
           <p className="text-charcoal-faint" style={{ margin: "3px 0 0", fontSize: textPx(12), lineHeight: "18px" }}>
-            Mark a check as done to work out when it's next due.
+            {t("Mark a check as done to work out when it's next due.")}
           </p>
           <p className="text-charcoal-soft" style={{ margin: "12px 0 5px", fontSize: textPx(11.5), lineHeight: "17.3px", fontWeight: 700 }}>
-            Check
+            {t("Check")}
           </p>
           {fixedName || (editing?.custom && isOther) || (!editing && isOther) ? (
             fixedName ? (
@@ -218,8 +226,8 @@ export const CheckFormPopup: React.FC<{
                 autoFocus
                 value={other ?? ""}
                 onChange={(e) => setOther(e.target.value.slice(0, 60))}
-                aria-label="Name of the check"
-                placeholder="Name of the check"
+                aria-label={t("Name of the check")}
+                placeholder={t("Name of the check")}
                 className="w-full bg-cream-soft text-charcoal placeholder:text-charcoal-faint focus:outline-none"
                 style={{ ...fieldStyle, fontSize: textPx(14), lineHeight: "21px" }}
               />
@@ -241,51 +249,51 @@ export const CheckFormPopup: React.FC<{
           )}
           {isOther && (
             <div style={{ marginTop: 14 }}>
-              <FieldLabel htmlFor="hc-interval">How often</FieldLabel>
+              <FieldLabel htmlFor="hc-interval">{t("How often")}</FieldLabel>
               <label className="flex items-center text-charcoal-soft" style={{ gap: 8, fontSize: textPx(14), lineHeight: "20px" }}>
-                Every
-                <input
-                  id="hc-interval"
-                  inputMode="numeric"
-                  value={intervalText}
-                  onChange={(e) => setIntervalText(e.target.value.replace(/\D/g, "").slice(0, 3))}
-                  aria-label="How often, in months"
-                  className="bg-cream-soft text-charcoal text-center focus:outline-none"
-                  style={{ width: 64, minHeight: 44, borderRadius: 12, border: `0.5px solid ${hairAt(dark, 0.08)}` }}
-                />
-                months
+                {everyMonths(
+                  <input
+                    id="hc-interval"
+                    inputMode="numeric"
+                    value={intervalText}
+                    onChange={(e) => setIntervalText(e.target.value.replace(/\D/g, "").slice(0, 3))}
+                    aria-label={t("How often, in months")}
+                    className="bg-cream-soft text-charcoal text-center focus:outline-none"
+                    style={{ width: 64, minHeight: 44, borderRadius: 12, border: `0.5px solid ${hairAt(dark, 0.08)}` }}
+                  />
+                )}
               </label>
-              {!intervalOk && <PopupNote>Enter a number from 1 to 120.</PopupNote>}
+              {!intervalOk && <PopupNote>{t("Enter a number from 1 to 120.")}</PopupNote>}
             </div>
           )}
           <div style={{ marginTop: 14 }}>
-            <FieldLabel>Date done</FieldLabel>
+            <FieldLabel>{t("Date done")}</FieldLabel>
             <DateBox
-              label={day ? doneLabel(day, today) : "Add a date"}
+              label={day ? doneLabel(day, today) : t("Add a date")}
               placeholder={!day}
               onClick={() => setCalOpen(true)}
-              ariaLabel={day ? `Date done: ${doneLabel(day, today)}` : "Date done: add a date"}
+              ariaLabel={day ? t("Date done: {date}", { date: doneLabel(day, today) }) : t("Date done: add a date")}
             />
             {editing && day && (
               <button type="button" onClick={() => setDay(null)} className="tap text-status-high" style={{ marginTop: 6, minHeight: 32, fontSize: textPx(13), lineHeight: "19.5px", fontWeight: 700 }}>
-                Clear the date
+                {t("Clear the date")}
               </button>
             )}
           </div>
           {remindersReady && (
             <div className="flex items-center justify-between" style={{ marginTop: 16, gap: 12 }}>
               <span className="text-charcoal" style={{ fontSize: textPx(13), lineHeight: "19.5px", fontWeight: 600 }}>
-                Remind me when it's due
+                {t("Remind me when it's due")}
               </span>
-              <Toggle checked={remind} onChange={setRemind} label="Remind me when it's due" />
+              <Toggle checked={remind} onChange={setRemind} label={t("Remind me when it's due")} />
             </div>
           )}
           {remindersReady && remind && notificationsOff && <NotificationsOffLine onTurnOn={() => navigate("/app/settings/notifications")} style={{ marginTop: 10 }} />}
-          {(note || offline) && <PopupNote>{note ?? OFFLINE_ACTION}</PopupNote>}
+          {(note || offline) && <PopupNote>{t(note ?? OFFLINE_ACTION)}</PopupNote>}
           <ButtonRow
             style={{ marginTop: 16 }}
-            secondary={{ label: "Cancel", onClick: onClose }}
-            primary={{ label: "Save", onClick: () => void save(), disabled: !canSave || offline, loading: busy }}
+            secondary={{ label: t("Cancel"), onClick: onClose }}
+            primary={{ label: t("Save"), onClick: () => void save(), disabled: !canSave || offline, loading: busy }}
           />
         </div>
       </CentredPopup>
@@ -312,7 +320,7 @@ export const CheckFormPopup: React.FC<{
         variant="partB"
         open={calOpen}
         onClose={() => setCalOpen(false)}
-        title="Date done"
+        title={t("Date done")}
         selectedDate={day ?? today}
         today={today}
         maxDate={today}
@@ -342,18 +350,18 @@ export const HideOrDeletePopup: React.FC<{
         setNote(null);
         onClose();
       }}
-      title={custom ? "Delete this check?" : "Hide this check?"}
+      title={custom ? t("Delete this check?") : t("Hide this check?")}
       geometry="partB"
       align="start"
       bodyWeight={400}
-      body={custom ? `${check.name} and its reminder are removed. This can't be undone.` : `${check.name} moves to Hidden checks. You can show it again from the menu.`}
+      body={custom ? t("{name} and its reminder are removed. This can't be undone.", { name: check.name }) : t("{name} moves to Hidden checks. You can show it again from the menu.", { name: check.name })}
     >
-      {note && <PopupNote>{note}</PopupNote>}
+      {note && <PopupNote>{t(note)}</PopupNote>}
       <ButtonRow
         style={{ marginTop: 0 }}
-        secondary={{ label: "Keep", onClick: onClose }}
+        secondary={{ label: t("Keep"), onClick: onClose }}
         primary={{
-          label: custom ? "Delete" : "Hide",
+          label: custom ? t("Delete") : t("Hide"),
           tone: custom ? "destructive" : "primary",
           loading: busy,
           onClick: async () => {
@@ -381,10 +389,10 @@ export const HiddenChecksSheet: React.FC<{
 }> = ({ open, onClose, hidden, onShow }) => {
   const dark = useIsDark();
   return (
-    <BottomSheet open={open} onClose={onClose} title="Hidden checks" chrome="partB" tone={partBSheetTone(dark)}>
+    <BottomSheet open={open} onClose={onClose} title={t("Hidden checks")} chrome="partB" tone={partBSheetTone(dark)}>
       {hidden.length === 0 ? (
         <p className="text-center text-charcoal-soft" style={{ margin: "8px 0", fontSize: textPx(13), lineHeight: "19.5px" }}>
-          Nothing hidden.
+          {t("Nothing hidden.")}
         </p>
       ) : (
         <div className="bg-cream-card" style={{ borderRadius: 18, border: `0.5px solid ${hairAt(dark, 0.08)}`, overflow: "hidden" }}>
@@ -409,7 +417,7 @@ export const HiddenChecksSheet: React.FC<{
                 className="tap text-th-7d6bb5 dark:text-primary-deep-text"
                 style={{ minHeight: 44, padding: "0 4px", fontSize: textPx(13), lineHeight: "19.5px", fontWeight: 700 }}
               >
-                Show
+                {t("Show")}
               </button>
             </div>
           ))}
@@ -426,18 +434,18 @@ export const HiddenChecksSheet: React.FC<{
 export const NotificationsOffLine: React.FC<{ onTurnOn: () => void; style?: React.CSSProperties }> = ({ onTurnOn, style }) => (
   <p className="flex items-center flex-wrap bg-cream-soft text-charcoal-soft" style={{ margin: 0, borderRadius: 12, padding: "10px 12px", gap: 6, fontSize: textPx(12), lineHeight: "17.4px", ...style }}>
     <BellOff size={14} aria-hidden className="shrink-0" />
-    <span>Notifications are off.</span>
+    <span>{t("Notifications are off.")}</span>
     <button type="button" onClick={onTurnOn} className="tap text-th-7d6bb5 dark:text-primary-deep-text" style={{ fontWeight: 700, minHeight: 24 }}>
-      Turn on ›
+      {t("Turn on ›")}
     </button>
   </p>
 );
 
 const REPEATS: { value: string; label: string }[] = [
-  { value: "none", label: "None" },
-  { value: "monthly", label: "Monthly" },
-  { value: "yearly", label: "Yearly" },
-  { value: "custom", label: "Custom" },
+  { value: "none", label: tk("None") },
+  { value: "monthly", label: tk("Monthly") },
+  { value: "yearly", label: tk("Yearly") },
+  { value: "custom", label: tk("Custom") },
 ];
 
 export const CheckReminderSheet: React.FC<{
@@ -473,7 +481,7 @@ export const CheckReminderSheet: React.FC<{
   const past = r.date < today;
   const repeatKey = r.repeat.kind === "months" ? "custom" : r.repeat.kind;
   const field: React.CSSProperties = { minHeight: 44, borderRadius: 12, padding: "0 12px", gap: 8, border: `0.5px solid ${hairAt(dark, 0.1)}` };
-  const repeatText = REPEATS.find((x) => x.value === repeatKey)?.label ?? "None";
+  const repeatText = t(REPEATS.find((x) => x.value === repeatKey)?.label ?? "None");
 
   const [busy, setBusy] = useState(false);
   const save = async () => {
@@ -481,7 +489,7 @@ export const CheckReminderSheet: React.FC<{
     setBusy(true);
     const res = await onSave(r);
     setBusy(false);
-    if (!res.ok) return setNote("Couldn't set the reminder. Try again.");
+    if (!res.ok) return setNote(t("Couldn't set the reminder. Try again."));
     onClose();
   };
 
@@ -490,7 +498,7 @@ export const CheckReminderSheet: React.FC<{
       <BottomSheet
         open={open && !calOpen}
         onClose={onClose}
-        title="Set a reminder"
+        title={t("Set a reminder")}
         chrome="partB"
         tone={partBSheetTone(dark)}
         footerBottom={30}
@@ -506,11 +514,11 @@ export const CheckReminderSheet: React.FC<{
                 className="tap w-full text-status-high"
                 style={{ minHeight: 40, marginBottom: 6, fontSize: textPx(13), lineHeight: "19.5px", fontWeight: 700 }}
               >
-                Remove reminder
+                {t("Remove reminder")}
               </button>
             )}
             <CtaButton
-              label="Save reminder"
+              label={t("Save reminder")}
               onClick={() => void save()}
               loading={busy}
               disabled={past || !check}
@@ -520,22 +528,22 @@ export const CheckReminderSheet: React.FC<{
           </div>
         }
       >
-        <FieldLabel>Check</FieldLabel>
+        <FieldLabel>{t("Check")}</FieldLabel>
         <button ref={checkRef} type="button" onClick={() => setMenu("check")} className="tap w-full flex items-center bg-cream-soft text-start" style={field}>
           <span className="flex-1 min-w-0 truncate text-charcoal" style={{ fontSize: textPx(14), lineHeight: "20px" }}>
-            {check?.name ?? "Choose a check"}
+            {check?.name ?? t("Choose a check")}
           </span>
           <ChevronDown size={16} className="shrink-0 text-charcoal-faint" aria-hidden />
         </button>
 
         <div style={{ marginTop: 16 }}>
-          <FieldLabel>Date</FieldLabel>
-          <DateBox label={shortDate(r.date)} onClick={() => setCalOpen(true)} ariaLabel={`Date: ${shortDate(r.date)}`} />
-          {past && <PopupNote>Pick a date from today on.</PopupNote>}
+          <FieldLabel>{t("Date")}</FieldLabel>
+          <DateBox label={shortDate(r.date)} onClick={() => setCalOpen(true)} ariaLabel={t("Date: {date}", { date: shortDate(r.date) })} />
+          {past && <PopupNote>{t("Pick a date from today on.")}</PopupNote>}
         </div>
 
         <div style={{ marginTop: 16 }}>
-          <FieldLabel>Time</FieldLabel>
+          <FieldLabel>{t("Time")}</FieldLabel>
           <TimeWheel
             value={{ h: hh, m: mm }}
             minuteStep={5}
@@ -545,33 +553,33 @@ export const CheckReminderSheet: React.FC<{
         </div>
 
         <div style={{ marginTop: 16 }}>
-          <FieldLabel>Repeat</FieldLabel>
+          <FieldLabel>{t("Repeat")}</FieldLabel>
           <button ref={repeatRef} type="button" onClick={() => setMenu("repeat")} className="tap w-full flex items-center bg-cream-soft text-start" style={field}>
             <span className="flex-1 min-w-0 truncate text-charcoal" style={{ fontSize: textPx(14), lineHeight: "20px" }}>
-              {r.repeat.kind === "months" ? `Every ${r.repeat.n} months` : repeatText}
+              {r.repeat.kind === "months" ? tn(r.repeat.n, "Every {n} months", "Every {n} months") : repeatText}
             </span>
             <ChevronDown size={16} className="shrink-0 text-charcoal-faint" aria-hidden />
           </button>
           {r.repeat.kind === "months" && (
             <label className="flex items-center text-charcoal-soft" style={{ marginTop: 10, gap: 8, fontSize: textPx(13) }}>
-              Every
-              <input
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={60}
-                value={r.repeat.n}
-                onChange={(e) => setR({ ...r, repeat: { kind: "months", n: Math.max(1, Math.min(60, Number(e.target.value) || 1)) } })}
-                className="bg-cream-soft text-charcoal text-center focus:outline-none"
-                style={{ width: 64, height: 40, borderRadius: 10, border: `0.5px solid ${hairAt(dark, 0.1)}` }}
-              />
-              months
+              {everyMonths(
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={60}
+                  value={r.repeat.n}
+                  onChange={(e) => setR({ ...r, repeat: { kind: "months", n: Math.max(1, Math.min(60, Number(e.target.value) || 1)) } })}
+                  className="bg-cream-soft text-charcoal text-center focus:outline-none"
+                  style={{ width: 64, height: 40, borderRadius: 10, border: `0.5px solid ${hairAt(dark, 0.1)}` }}
+                />
+              )}
             </label>
           )}
         </div>
 
         {notificationsOff && <NotificationsOffLine onTurnOn={() => navigate("/app/settings/notifications")} style={{ marginTop: 14 }} />}
-        {note && <PopupNote>{note}</PopupNote>}
+        {note && <PopupNote>{t(note)}</PopupNote>}
       </BottomSheet>
       <PopupMenu
         open={menu === "check"}
@@ -592,7 +600,7 @@ export const CheckReminderSheet: React.FC<{
         anchor={repeatEl}
         matchWidth={repeatEl}
         variant="field"
-        options={REPEATS}
+        options={REPEATS.map((o) => ({ ...o, label: t(o.label) }))}
         selected={repeatKey}
         onSelect={(v) => {
           setMenu(null);
@@ -604,7 +612,7 @@ export const CheckReminderSheet: React.FC<{
         variant="partB"
         open={calOpen}
         onClose={() => setCalOpen(false)}
-        title="Date"
+        title={t("Date")}
         selectedDate={r.date}
         today={today}
         minDate={today}

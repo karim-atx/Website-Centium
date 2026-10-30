@@ -33,9 +33,10 @@ import { Flame, HeartPulse } from "lucide-react";
 import { useUnread } from "../../context/UnreadContext";
 import { UnreadBadge } from "../messages/UnreadBadge";
 import { PlanLine } from "./PlanLine";
-import { currentDayStreak, dayStreakLabel } from "../../services/streaks/dayStreak";
+import { currentDayStreak } from "../../services/streaks/dayStreak";
 import { forumAccess } from "../../services/forum/rules";
 import { CentiumMark } from "../icons/CentiumMark";
+import { tn } from "../../i18n/core";
 
 const NAV_ACCENT = "rgb(var(--c-team-nav-accent))";
 const NAV_IDLE = "rgb(var(--c-nav-idle))";
@@ -223,7 +224,8 @@ export const Sidebar: React.FC = () => {
         <div className="rounded-3xl bg-primary-pale p-4 mt-4">
           <div className="flex items-center gap-2 text-primary-dark font-semibold text-sm mb-1">
             <Flame size={16} className="text-teal" />
-            {dayStreakLabel(dayStreak)}
+            {/* dayStreakLabel's English, translated here (services/streaks returns English). */}
+            {dayStreak <= 0 ? t("Start a streak today") : tn(dayStreak, "{n} day streak", "{n} day streak")}
           </div>
           {/* "Keep logging to unlock rewards 🎁" PROMISED A REWARD, and there
               is not one to unlock. Logging does earn something real now — the
@@ -231,8 +233,8 @@ export const Sidebar: React.FC = () => {
               credits points at every rung — so the line names that instead. */}
           <p className="text-xs text-primary-dark/70">
             {dayStreak > 0
-              ? "Keep logging to earn achievements 🏆"
-              : "Log two of food, water, a workout or a journal entry."}
+              ? t("Keep logging to earn achievements 🏆")
+              : t("Log two of food, water, a workout or a journal entry.")}
           </p>
         </div>
       )}

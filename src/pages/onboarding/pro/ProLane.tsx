@@ -36,6 +36,7 @@ import { ProBackgroundStep } from "./ProBackgroundStep";
 import { ProReviewStep } from "./ProReviewStep";
 import { ProStatusScreen, type ProStatus } from "./ProStatusScreen";
 import type { ProShared, ProStepProps } from "./types";
+import { t } from "../../../i18n/core";
 
 const FLOW_OF: Record<ProStepKey, ProFlowStep> = {
   about: "proAbout",
@@ -112,12 +113,12 @@ export function ProLane<D extends DraftLike>({
   };
 
   const submit = async (): Promise<{ ok: true } | { ok: false; message: string }> => {
-    if (!authUserId) return { ok: false, message: "You're signed out. Go back and sign in again to finish." };
-    const fail = "Couldn't finish setting up your account. Try again.";
+    if (!authUserId) return { ok: false, message: t("You're signed out. Go back and sign in again to finish.") };
+    const fail = t("Couldn't finish setting up your account. Try again.");
     // Terms and Privacy from the Review checkbox; the health disclaimer is
     // shown above the Review step's submit button (ProReviewStep).
     const legal = await recordLegalAcceptances(authUserId, ["terms", "privacy", "health_disclaimer"]);
-    if (!legal.ok) return { ok: false, message: legal.offline ? OFFLINE_MESSAGE : fail };
+    if (!legal.ok) return { ok: false, message: legal.offline ? t(OFFLINE_MESSAGE) : fail };
 
     const other = kind === "other";
     // A radius only where home visits can happen (not online only, not at a business).
@@ -132,7 +133,7 @@ export function ProLane<D extends DraftLike>({
       session_lengths: lengthsForDb(pro.lengths),
       session_places: placesForDb(pro.formats, homeVisitKm),
     });
-    if (!cols.ok) return cols;
+    if (!cols.ok) return { ok: false, message: t(cols.message) };
     if (other && pro.whatYouDo.trim()) void logOtherDiscipline(authUserId, pro.whatYouDo);
 
     // "At a business": the join request (Database B6 request_to_join_business).
@@ -144,7 +145,7 @@ export function ProLane<D extends DraftLike>({
       const joined = await requestToJoin(code);
       if (!joined.ok) {
         const notFound = joined.message === "No business found for that ID.";
-        return { ok: false, message: notFound ? "No business found for that ID. Check it in Where you work." : joined.message };
+        return { ok: false, message: notFound ? t("No business found for that ID. Check it in Where you work.") : t(joined.message) };
       }
     }
 
@@ -165,7 +166,7 @@ export function ProLane<D extends DraftLike>({
       tracking: ["nutrition", "workouts"] as TrackPreference[],
     };
     const saved = await updateProfileFromOnboarding(authUserId, resolved);
-    if (!saved.ok) return { ok: false, message: saved.message ?? fail };
+    if (!saved.ok) return { ok: false, message: saved.message ? t(saved.message) : fail };
     completeOnboarding({ ...resolved, certificationUrl: draft.certificationFile ?? undefined });
 
     // Needs the date of birth just saved. Only shown to clients once listed.
@@ -211,7 +212,7 @@ export function ProLane<D extends DraftLike>({
 
   if (done) {
     const name = draft.firstName.trim();
-    const label = kind === "other" && pro.whatYouDo.trim() ? pro.whatYouDo.trim() : PRO_LABEL[kind];
+    const label = kind === "other" && pro.whatYouDo.trim() ? pro.whatYouDo.trim() : t(PRO_LABEL[kind]);
     return (
       <ProStatusScreen
         status={done.status}
@@ -225,7 +226,7 @@ export function ProLane<D extends DraftLike>({
           avatarUrl: user.avatarUrl ?? null,
           name,
           label,
-          tags: pro.specialties,
+          tags: pro.specialties.map((s) => t(s)),
           line: done.headline,
         }}
         onPrimary={() => navigate("/app/pro")}

@@ -44,6 +44,7 @@ import {
   type StarterPlan,
 } from "./lanes";
 import type { LaneStepProps } from "./laneTypes";
+import { t } from "../../../i18n/core";
 
 // OB-224…227 (Classes), 257…261 (Gym), 287…290 (Store) + OURS-essentials-
 // additions: Step 3 · {Type} essentials. Collapsibles, one open at a time,
@@ -104,43 +105,43 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
     sections.push(
       {
         icon: CalendarDays,
-        title: "Class types",
+        title: t("Class types"),
         summary: sums.a,
         ok: e.classTypes.length > 0,
-        error: showErrors && e.classTypes.length === 0 ? "Pick at least one class type." : undefined,
+        error: showErrors && e.classTypes.length === 0 ? t("Pick at least one class type.") : undefined,
         body: (
           <BizChips
             options={typeChips}
             selected={e.classTypes}
             onToggle={(v) => set({ classTypes: toggleIn(e.classTypes, v) })}
             onMore={(anchor) => setMenu({ kind: "types", anchor })}
-            error={showErrors && e.classTypes.length === 0 ? "Pick at least one class type." : undefined}
+            error={showErrors && e.classTypes.length === 0 ? t("Pick at least one class type.") : undefined}
           />
         ),
       },
       {
         icon: CalendarX,
-        title: "Booking policies",
+        title: t("Booking policies"),
         summary: sums.b,
         ok: true,
         body: (
           <>
-            <ObSectionLabel title="Cancellation window" margin="4px 2px 10px" />
+            <ObSectionLabel title={t("Cancellation window")} margin="4px 2px 10px" />
             <BizRows
               radioGroup
-              ariaLabel="Cancellation window"
+              ariaLabel={t("Cancellation window")}
               rows={CANCEL_OPTIONS.map((h) => ({
                 key: String(h),
-                title: `Free until ${h} hours before`,
-                desc: e.cancelHours === h ? "After that the booking counts as used" : undefined,
+                title: t("Free until {hours} hours before", { hours: h }),
+                desc: e.cancelHours === h ? t("After that the booking counts as used") : undefined,
                 radio: { selected: e.cancelHours === h, onSelect: () => set({ cancelHours: h }) },
               }))}
             />
-            <ObSectionLabel title="Booking window" margin="4px 2px 10px" />
+            <ObSectionLabel title={t("Booking window")} margin="4px 2px 10px" />
             <BizRows
               rows={[
-                { key: "ahead", title: "Clients can book up to", value: `${e.bookAheadDays} days ahead`, onClick: () => undefined },
-                { key: "closes", title: "Booking closes", value: `${e.closesBeforeMin} min before`, onClick: () => undefined },
+                { key: "ahead", title: t("Clients can book up to"), value: t("{n} days ahead", { n: e.bookAheadDays }), onClick: () => undefined },
+                { key: "closes", title: t("Booking closes"), value: t("{n} min before", { n: e.closesBeforeMin }), onClick: () => undefined },
               ].map((r) => ({
                 ...r,
                 onClick: undefined,
@@ -163,42 +164,42 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
       },
       {
         icon: Users,
-        title: "Default class size",
+        title: t("Default class size"),
         summary: sums.c,
         ok: true,
         body: (
           <>
             <BizNums
               items={[
-                { key: "spots", value: e.spots, label: "Spots per class", min: 1, max: 200, onChange: (v) => set({ spots: v }) },
-                { key: "wait", value: e.waitlist, label: "Waitlist size", min: 0, max: 50, onChange: (v) => set({ waitlist: v }) },
+                { key: "spots", value: e.spots, label: t("Spots per class"), min: 1, max: 200, onChange: (v) => set({ spots: v }) },
+                { key: "wait", value: e.waitlist, label: t("Waitlist size"), min: 0, max: 50, onChange: (v) => set({ waitlist: v }) },
               ]}
             />
-            <ObTip icon={Info} margin="-6px 0 14px">Most studios start with 12 to 16 spots.</ObTip>
+            <ObTip icon={Info} margin="-6px 0 14px">{t("Most studios start with 12 to 16 spots.")}</ObTip>
           </>
         ),
       },
       {
         icon: Ticket,
-        title: "Intro offer",
+        title: t("Intro offer"),
         summary: sums.d,
         ok: true,
         optional: true,
         body: (
           <>
-            <BizRows rows={[{ key: "intro", title: "Offer an intro deal", toggle: { on: e.introOn, onChange: (v) => set({ introOn: v }) } }]} />
+            <BizRows rows={[{ key: "intro", title: t("Offer an intro deal"), toggle: { on: e.introOn, onChange: (v) => set({ introOn: v }) } }]} />
             {e.introOn && (
               <>
                 <BizRows
                   radioGroup
-                  ariaLabel="Intro offer"
+                  ariaLabel={t("Intro offer")}
                   rows={[
-                    { key: "free", title: "First class free", radio: { selected: e.introKind === "first_free", onSelect: () => set({ introKind: "first_free" }) } },
-                    { key: "pack", title: "Intro pack", radio: { selected: e.introKind === "pack", onSelect: () => set({ introKind: "pack" }) } },
+                    { key: "free", title: t("First class free"), radio: { selected: e.introKind === "first_free", onSelect: () => set({ introKind: "first_free" }) } },
+                    { key: "pack", title: t("Intro pack"), radio: { selected: e.introKind === "pack", onSelect: () => set({ introKind: "pack" }) } },
                   ]}
                 />
                 {e.introKind === "pack" && (
-                  <BizField label="Price" value={e.introPrice} onChange={(v) => set({ introPrice: v.replace(/[^0-9.]/g, "").slice(0, 8) })} inputMode="decimal" leading={<span className="text-[15px]">$</span>} placeholder="0" />
+                  <BizField label={t("Price")} value={e.introPrice} onChange={(v) => set({ introPrice: v.replace(/[^0-9.]/g, "").slice(0, 8) })} inputMode="decimal" leading={<span className="text-[15px]">$</span>} placeholder="0" />
                 )}
               </>
             )}
@@ -214,39 +215,39 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
     sections.push(
       {
         icon: Sparkles,
-        title: "Facilities and amenities",
+        title: t("Facilities and amenities"),
         summary: sums.a,
         ok: e.amenities.length > 0,
-        error: showErrors && e.amenities.length === 0 ? "Pick at least one facility." : undefined,
+        error: showErrors && e.amenities.length === 0 ? t("Pick at least one facility.") : undefined,
         body: (
           <BizChips
             options={amenityChips}
             selected={e.amenities}
             onToggle={(v) => set({ amenities: toggleIn(e.amenities, v) })}
             onMore={(anchor) => setMenu({ kind: "amenities", anchor })}
-            error={showErrors && e.amenities.length === 0 ? "Pick at least one facility." : undefined}
+            error={showErrors && e.amenities.length === 0 ? t("Pick at least one facility.") : undefined}
           />
         ),
       },
       {
         icon: ScanLine,
-        title: "Entry and check-in",
+        title: t("Entry and check-in"),
         summary: sums.b,
         ok: true,
         body: (
           <>
             <BizRows
               rows={[
-                { key: "qr", title: "Check in with a QR code", desc: "Shown in the member's app", // QR stays on: gyms.access_qr is the fallback access method and the
+                { key: "qr", title: t("Check in with a QR code"), desc: t("Shown in the member's app"), // QR stays on: gyms.access_qr is the fallback access method and the
                 // database requires one (gyms_access_method_check), so it is not switchable.
                 toggle: { on: true, onChange: () => {} } },
-                { key: "desk", title: "Front desk can check people in", toggle: { on: e.frontDeskCheckIn, onChange: (v) => set({ frontDeskCheckIn: v }) } },
+                { key: "desk", title: t("Front desk can check people in"), toggle: { on: e.frontDeskCheckIn, onChange: (v) => set({ frontDeskCheckIn: v }) } },
               ]}
             />
             <BizNums
               items={[
-                { key: "age", value: e.minAge, label: "Minimum age", min: 16, max: 21, onChange: (v) => set({ minAge: v }) },
-                { key: "guests", value: e.guestPasses, label: "Guest passes a month", min: 0, max: 10, onChange: (v) => set({ guestPasses: v }) },
+                { key: "age", value: e.minAge, label: t("Minimum age"), min: 16, max: 21, onChange: (v) => set({ minAge: v }) },
+                { key: "guests", value: e.guestPasses, label: t("Guest passes a month"), min: 0, max: 10, onChange: (v) => set({ guestPasses: v }) },
               ]}
             />
           </>
@@ -254,7 +255,7 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
       },
       {
         icon: BadgeCheck,
-        title: "Starter membership plan",
+        title: t("Starter membership plan"),
         summary: sums.c,
         ok: !!plan || e.planSkipped,
         optional: true,
@@ -263,18 +264,18 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
             {plan ? (
               <BizPlanCard
                 icon={BadgeCheck}
-                title={plan.name || "Monthly unlimited"}
-                sub={plan.includes.length ? plan.includes.join(", ").replace(/, ([^,]*)$/, " and $1") : "Nothing added yet"}
+                title={plan.name || t("Monthly unlimited")}
+                sub={plan.includes.length ? includesLine(plan.includes) : t("Nothing added yet")}
                 price={plan.price ? `$${plan.price}` : "$0"}
-                note={plan.type === "Monthly" ? "Billed monthly" : plan.type === "Annual" ? "Billed yearly" : "Paid once"}
-                action={{ label: "Edit plan", onClick: () => setSheet(plan) }}
+                note={plan.type === "Monthly" ? t("Billed monthly") : plan.type === "Annual" ? t("Billed yearly") : t("Paid once")}
+                action={{ label: t("Edit plan"), onClick: () => setSheet(plan) }}
               />
             ) : (
-              <BizLink icon={Plus} text="Add a starter plan" onClick={() => setSheet({ type: "Monthly", name: "", price: "", includes: [] })} className="mt-[2px] mx-[2px] mb-3" />
+              <BizLink icon={Plus} text={t("Add a starter plan")} onClick={() => setSheet({ type: "Monthly", name: "", price: "", includes: [] })} className="mt-[2px] mx-[2px] mb-3" />
             )}
             <BizLink
               icon={Clock}
-              text="Skip for now, add plans after approval"
+              text={t("Skip for now, add plans after approval")}
               onClick={() => {
                 set({ planSkipped: true, starterPlan: null });
                 setOpen(3);
@@ -286,15 +287,15 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
       },
       {
         icon: Ticket,
-        title: "Day pass",
+        title: t("Day pass"),
         summary: sums.d,
         ok: true,
         optional: true,
         body: (
           <>
-            <BizRows rows={[{ key: "day", title: "Sell day passes", toggle: { on: e.dayPassOn, onChange: (v) => set({ dayPassOn: v }) } }]} />
+            <BizRows rows={[{ key: "day", title: t("Sell day passes"), toggle: { on: e.dayPassOn, onChange: (v) => set({ dayPassOn: v }) } }]} />
             {e.dayPassOn && (
-              <BizField label="Price" value={e.dayPassPrice} onChange={(v) => set({ dayPassPrice: v.replace(/[^0-9.]/g, "").slice(0, 8) })} inputMode="decimal" leading={<span className="text-[15px]">$</span>} placeholder="0" />
+              <BizField label={t("Price")} value={e.dayPassPrice} onChange={(v) => set({ dayPassPrice: v.replace(/[^0-9.]/g, "").slice(0, 8) })} inputMode="decimal" leading={<span className="text-[15px]">$</span>} placeholder="0" />
             )}
           </>
         ),
@@ -305,11 +306,11 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
   if (lane === "store") {
     const cats = categoryOptions(lane, biz.storeType);
     const catChips = visibleCategoryChips(cats.all, cats.all.length, biz.categories);
-    const offerError = !e.sellsProducts && !e.offersAppointments ? "Turn on Sells products or Offers appointments." : e.sellsProducts && !e.pickup && !e.delivery ? "Turn on pickup or delivery." : undefined;
+    const offerError = !e.sellsProducts && !e.offersAppointments ? t("Turn on Sells products or Offers appointments.") : e.sellsProducts && !e.pickup && !e.delivery ? t("Turn on pickup or delivery.") : undefined;
     sections.push(
       {
         icon: Store,
-        title: "What you offer",
+        title: t("What you offer"),
         summary: sums.o,
         ok: !offerError,
         error: offerError,
@@ -318,10 +319,10 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
             <BizRows
               className="mb-2"
               rows={[
-                { key: "sells", title: "Sells products", toggle: { on: e.sellsProducts, onChange: (v) => set({ sellsProducts: v }) } },
-                { key: "appts", title: "Offers appointments", toggle: { on: e.offersAppointments, onChange: (v) => set({ offersAppointments: v }) } },
-                { key: "delivery", title: "Delivery", desc: areaOf(biz.location.address) ? `${areaOf(biz.location.address)} only` : undefined, toggle: { on: e.delivery, onChange: (v) => set({ delivery: v }) } },
-                { key: "pickup", title: "Pickup", desc: biz.location.address || undefined, toggle: { on: e.pickup, onChange: (v) => set({ pickup: v }) } },
+                { key: "sells", title: t("Sells products"), toggle: { on: e.sellsProducts, onChange: (v) => set({ sellsProducts: v }) } },
+                { key: "appts", title: t("Offers appointments"), toggle: { on: e.offersAppointments, onChange: (v) => set({ offersAppointments: v }) } },
+                { key: "delivery", title: t("Delivery"), desc: areaOf(biz.location.address) ? t("{area} only", { area: areaOf(biz.location.address) }) : undefined, toggle: { on: e.delivery, onChange: (v) => set({ delivery: v }) } },
+                { key: "pickup", title: t("Pickup"), desc: biz.location.address || undefined, toggle: { on: e.pickup, onChange: (v) => set({ pickup: v }) } },
               ]}
             />
             {offerError && (
@@ -335,10 +336,10 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
       },
       {
         icon: Tags,
-        title: "What you sell",
+        title: t("What you sell"),
         summary: sums.a,
         ok: biz.categories.length > 0,
-        error: showErrors && biz.categories.length === 0 ? "Pick at least one thing you sell." : undefined,
+        error: showErrors && biz.categories.length === 0 ? t("Pick at least one thing you sell.") : undefined,
         body: (
           <BizChips
             options={catChips}
@@ -346,56 +347,56 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
             onToggle={(v) => setBiz((b) => ({ ...b, categories: toggleIn(b.categories, v, MAX_CATEGORIES) }))}
             onMore={(anchor) => setMenu({ kind: "cats", anchor })}
             max={MAX_CATEGORIES}
-            error={showErrors && biz.categories.length === 0 ? "Pick at least one thing you sell." : undefined}
+            error={showErrors && biz.categories.length === 0 ? t("Pick at least one thing you sell.") : undefined}
           />
         ),
       },
       wellness
         ? {
             icon: CalendarClock,
-            title: "Appointments",
+            title: t("Appointments"),
             summary: sums.d,
             ok: true,
             body: (
               <>
-                <BizRows rows={[{ key: "offer", title: "Offer appointments", toggle: { on: e.offersAppointments, onChange: (v) => set({ offersAppointments: v }) } }]} />
+                <BizRows rows={[{ key: "offer", title: t("Offer appointments"), toggle: { on: e.offersAppointments, onChange: (v) => set({ offersAppointments: v }) } }]} />
                 {e.offersAppointments && (
-                  <BizNums items={[{ key: "len", value: e.sessionLength, label: "Session length, min", min: 15, max: 120, step: 15, onChange: (v) => set({ sessionLength: v }) }]} />
+                  <BizNums items={[{ key: "len", value: e.sessionLength, label: t("Session length, min"), min: 15, max: 120, step: 15, onChange: (v) => set({ sessionLength: v }) }]} />
                 )}
               </>
             ),
           }
         : {
             icon: Truck,
-            title: "Delivery and pickup",
+            title: t("Delivery and pickup"),
             summary: sums.b,
             ok: true,
             body: e.delivery ? (
               <BizRows
                 rows={[
-                  { key: "fee", title: "Delivery fee", input: <PriceInput label="Delivery fee" value={e.deliveryFee} onChange={(v) => set({ deliveryFee: v })} /> },
-                  { key: "free", title: "Free delivery over", input: <PriceInput label="Free delivery over" value={e.freeOver} onChange={(v) => set({ freeOver: v })} /> },
-                  { key: "time", title: "Delivery time", input: <TextInput label="Delivery time" value={e.deliveryTime} onChange={(v) => set({ deliveryTime: v })} placeholder="1 to 2 days" /> },
+                  { key: "fee", title: t("Delivery fee"), input: <PriceInput label={t("Delivery fee")} value={e.deliveryFee} onChange={(v) => set({ deliveryFee: v })} /> },
+                  { key: "free", title: t("Free delivery over"), input: <PriceInput label={t("Free delivery over")} value={e.freeOver} onChange={(v) => set({ freeOver: v })} /> },
+                  { key: "time", title: t("Delivery time"), input: <TextInput label={t("Delivery time")} value={e.deliveryTime} onChange={(v) => set({ deliveryTime: v })} placeholder={t("1 to 2 days")} /> },
                 ]}
               />
             ) : (
-              <p className="text-[12px] leading-[17px] text-charcoal-soft mb-4 mx-1">Turn on Delivery above to set a fee and delivery time.</p>
+              <p className="text-[12px] leading-[17px] text-charcoal-soft mb-4 mx-1">{t("Turn on Delivery above to set a fee and delivery time.")}</p>
             ),
           },
       {
         icon: RotateCcw,
-        title: "Returns and exchanges",
+        title: t("Returns and exchanges"),
         summary: sums.c,
         ok: true,
         body: (
           <>
             <BizRows
               radioGroup
-              ariaLabel="Returns"
-              rows={RETURNS_OPTIONS.map((o) => ({ key: o.key, title: o.title, desc: o.desc, radio: { selected: e.returnsRule === o.key, onSelect: () => set({ returnsRule: o.key }) } }))}
+              ariaLabel={t("Returns")}
+              rows={RETURNS_OPTIONS.map((o) => ({ key: o.key, title: t(o.title), desc: o.desc && t(o.desc), radio: { selected: e.returnsRule === o.key, onSelect: () => set({ returnsRule: o.key }) } }))}
             />
             {e.returnsRule !== "no_returns" && (
-              <BizRows rows={[{ key: "ex", title: "Allow exchanges", desc: "Within 30 days", toggle: { on: e.allowExchanges, onChange: (v) => set({ allowExchanges: v }) } }]} />
+              <BizRows rows={[{ key: "ex", title: t("Allow exchanges"), desc: t("Within 30 days"), toggle: { on: e.allowExchanges, onChange: (v) => set({ allowExchanges: v }) } }]} />
             )}
           </>
         ),
@@ -403,6 +404,9 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
     );
   }
 
+  // Option values stay English (stored, parsed); labels are translated.
+  const menuLabel = (o: string) =>
+    menu?.kind === "ahead" ? t("{n} days ahead", { n: parseInt(o, 10) }) : menu?.kind === "closes" ? t("{n} min before", { n: parseInt(o, 10) }) : t(o);
   const menuOptions =
     menu?.kind === "types"
       ? [...CLASS_TYPES, ...CLASS_TYPES_MORE]
@@ -428,18 +432,18 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
     <BizFrame
       step={flowKey}
       lane={lane}
-      title={lane === "gym" ? "Gym essentials" : lane === "classes" ? "Class essentials" : "Store essentials"}
+      title={lane === "gym" ? t("Gym essentials") : lane === "classes" ? t("Class essentials") : t("Store essentials")}
       subtitle={
         lane === "classes"
-          ? "Set your defaults once. You can change them on any class later."
+          ? t("Set your defaults once. You can change them on any class later.")
           : lane === "gym"
-          ? "What members get and how they come in. Plans can grow later."
-          : "What you sell and how it reaches people."
+          ? t("What members get and how they come in. Plans can grow later.")
+          : t("What you sell and how it reaches people.")
       }
       onBack={onBack}
       saveExit={saveExit}
       footer={{
-        label: save.error && !save.offline ? "Try again" : "Continue",
+        label: save.error && !save.offline ? t("Try again") : t("Continue"),
         onClick: () => {
           if (errors.length) {
             setShowErrors(true);
@@ -458,12 +462,12 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
         <>
           {menu && (menu.kind === "types" || menu.kind === "amenities" || menu.kind === "cats") && (
             <ObMenu
-              title={menu.kind === "types" ? "Class types" : menu.kind === "amenities" ? "Facilities and amenities" : "What you sell"}
+              title={menu.kind === "types" ? t("Class types") : menu.kind === "amenities" ? t("Facilities and amenities") : t("What you sell")}
               anchor={menu.anchor}
               align="left"
               options={menuOptions.map((o) => ({
                 key: o,
-                label: o,
+                label: t(o),
                 on: (menuSelected as string[]).includes(o),
                 disabled: menu.kind === "cats" && !biz.categories.includes(o) && biz.categories.length >= MAX_CATEGORIES,
               }))}
@@ -479,10 +483,10 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
             open={menu?.kind === "ahead" || menu?.kind === "closes"}
             onClose={() => setMenu(null)}
             anchor={menu?.anchor ?? null}
-            heading={menu?.kind === "ahead" ? "Clients can book up to" : "Booking closes"}
+            heading={menu?.kind === "ahead" ? t("Clients can book up to") : t("Booking closes")}
             width={180}
             align="right"
-            options={menuOptions.map((o) => ({ value: o, label: o }))}
+            options={menuOptions.map((o) => ({ value: o, label: menuLabel(o) }))}
             selected={typeof menuSelected === "string" ? menuSelected : null}
             onSelect={(v) => {
               if (menu?.kind === "ahead") set({ bookAheadDays: parseInt(v, 10) });
@@ -514,10 +518,16 @@ export const EssentialsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, 
           {s.body}
         </BizCollapsible>
       ))}
-      <ObTip icon={Info} margin="6px 0 0">Tap a section to change it. Everything here can be edited after you&apos;re live.</ObTip>
+      <ObTip icon={Info} margin="6px 0 0">{t("Tap a section to change it. Everything here can be edited after you're live.")}</ObTip>
     </BizFrame>
   );
 };
+
+/** "Main floor, Pool and Sauna": the plan's includes, translated. */
+function includesLine(includes: string[]): string {
+  const names = includes.map((x) => t(x));
+  return names.length > 1 ? t("{items} and {last}", { items: names.slice(0, -1).join(t(", ")), last: names[names.length - 1] }) : names[0];
+}
 
 /** OB-261: the Starter plan sheet (plan type, name, price, includes). */
 const StarterPlanSheet: React.FC<{ plan: StarterPlan | null; onClose: () => void; onSave: (p: StarterPlan) => void }> = ({ plan, onClose, onSave }) => {
@@ -528,10 +538,10 @@ const StarterPlanSheet: React.FC<{ plan: StarterPlan | null; onClose: () => void
     setDraft(plan);
   }
   const p = draft ?? { type: "Monthly" as const, name: "", price: "", includes: [] };
-  const priceLabel = p.type === "Monthly" ? "Price a month" : p.type === "Annual" ? "Price a year" : "Price";
-  const chip = (t: string, on: boolean, onClick: () => void) => (
+  const priceLabel = p.type === "Monthly" ? t("Price a month") : p.type === "Annual" ? t("Price a year") : t("Price");
+  const chip = (value: string, on: boolean, onClick: () => void) => (
     <button
-      key={t}
+      key={value}
       type="button"
       aria-pressed={on}
       onClick={onClick}
@@ -540,7 +550,7 @@ const StarterPlanSheet: React.FC<{ plan: StarterPlan | null; onClose: () => void
         on ? "bg-primary-fill border-primary-fill text-on-primary-fill" : "bg-cream-card border-hair-11 text-charcoal-soft"
       )}
     >
-      {t}
+      {t(value)}
     </button>
   );
   const field = (label: string, value: string, onChange: (v: string) => void, inputMode?: "decimal") => (
@@ -557,31 +567,32 @@ const StarterPlanSheet: React.FC<{ plan: StarterPlan | null; onClose: () => void
     <BottomSheet
       open={!!plan}
       onClose={onClose}
-      title="Starter plan"
+      title={t("Starter plan")}
       bodyPadding={{ top: 18, right: 20, bottom: 12, left: 20 }}
       footer={
         <button
           type="button"
-          onClick={() => onSave({ ...p, name: p.name.trim() || (p.type === "Monthly" ? "Monthly unlimited" : p.type) })}
+          // The default name is the owner's plan name, shown to members: written in the app's language.
+          onClick={() => onSave({ ...p, name: p.name.trim() || (p.type === "Monthly" ? t("Monthly unlimited") : t(p.type)) })}
           className="w-full h-[52px] rounded-[16px] bg-primary-fill text-on-primary-fill flex items-center justify-center text-[14px] font-bold"
         >
-          Save plan
+          {t("Save plan")}
         </button>
       }
     >
       <div className="mb-3">
-        <p className="text-[12px] font-bold text-charcoal-soft mb-[6px]">Plan type</p>
-        <div className="flex flex-wrap gap-2">{PLAN_TYPES.map((t) => chip(t, p.type === t, () => setDraft({ ...p, type: t })))}</div>
+        <p className="text-[12px] font-bold text-charcoal-soft mb-[6px]">{t("Plan type")}</p>
+        <div className="flex flex-wrap gap-2">{PLAN_TYPES.map((pt) => chip(pt, p.type === pt, () => setDraft({ ...p, type: pt })))}</div>
         {p.type === "Visit pack" && (
-          <p className="text-[11.5px] leading-[15px] text-charcoal-faint mt-[6px]">Visit packs go on sale once plan types open. Your answer is kept.</p>
+          <p className="text-[11.5px] leading-[15px] text-charcoal-faint mt-[6px]">{t("Visit packs go on sale once plan types open. Your answer is kept.")}</p>
         )}
       </div>
-      {field("Plan name", p.name, (v) => setDraft({ ...p, name: v.slice(0, 80) }))}
+      {field(t("Plan name"), p.name, (v) => setDraft({ ...p, name: v.slice(0, 80) }))}
       {field(priceLabel, p.price, (v) => setDraft({ ...p, price: v.replace(/[^0-9.]/g, "").slice(0, 8) }), "decimal")}
       <div className="mb-3">
-        <p className="text-[12px] font-bold text-charcoal-soft mb-[6px]">Includes</p>
+        <p className="text-[12px] font-bold text-charcoal-soft mb-[6px]">{t("Includes")}</p>
         <div className="flex flex-wrap gap-2">
-          {PLAN_INCLUDES.map((t) => chip(t, p.includes.includes(t), () => setDraft({ ...p, includes: p.includes.includes(t) ? p.includes.filter((x) => x !== t) : [...p.includes, t] })))}
+          {PLAN_INCLUDES.map((inc) => chip(inc, p.includes.includes(inc), () => setDraft({ ...p, includes: p.includes.includes(inc) ? p.includes.filter((x) => x !== inc) : [...p.includes, inc] })))}
         </div>
       </div>
     </BottomSheet>

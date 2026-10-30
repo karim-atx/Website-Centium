@@ -1,3 +1,4 @@
+import { tk } from "../../i18n/core";
 // Text moderation on our side (Round C Release 2). Pure.
 //
 // The word lists live in the database: a blocked word is refused with ATX60
@@ -7,10 +8,10 @@
 // are a hold on the server; here they are explained at save time instead,
 // so the person can move them to a message before anything is held.
 
-export const BLOCKED_TEXT = "That contains a word this community doesn't allow. Edit it and try again.";
+export const BLOCKED_TEXT = tk("That contains a word this community doesn't allow. Edit it and try again.");
 
 export const CONTACT_TEXT =
-  "Phone numbers and email addresses can't be shared here. Send them in a message instead.";
+  tk("Phone numbers and email addresses can't be shared here. Send them in a message instead.");
 
 /** ATX60 → the one sentence every surface shows; null for any other error. */
 export function moderationRefusal(error: { code?: string | null } | null | undefined): string | null {

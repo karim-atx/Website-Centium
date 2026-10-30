@@ -18,6 +18,7 @@ import { linePx, textPx } from "../../theme/textSize";
 import { LoadErrorCard, SkeletonRows, YoursTag, matchesSearch, searchKey, useLibraryInk } from "../../components/workout/LibraryParts";
 import { Toast } from "../../components/ui/Toast";
 import { customExerciseUsage, isCustomExerciseRule } from "../../services/exercises";
+import { inlineScrolled } from "../../utils/inlineScroll";
 
 type ViewMode = "list" | "body";
 type SortMode = "alphabetical" | "muscleGroup" | "classification";
@@ -187,7 +188,7 @@ export default function LibraryTab() {
   const [filterMore, setFilterMore] = useState(false);
   const measureFilterRow = () => {
     const el = filterRowRef.current;
-    setFilterMore(!!el && el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    setFilterMore(!!el && inlineScrolled(el) + el.clientWidth < el.scrollWidth - 1);
   };
   useEffect(() => {
     measureFilterRow();

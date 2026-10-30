@@ -7,6 +7,8 @@ import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { useApp } from "../../context/AppContext";
 import { getMfaStatus, verifyTotp } from "../../services/mfa";
 import { redeemRecoveryCode } from "../../services/recoveryCodes";
+import { t } from "../../i18n/core";
+import { rich } from "../../pages/onboarding/shell/rich";
 
 /**
  * The second factor, asked for at the point the app would otherwise let
@@ -52,7 +54,7 @@ export const MfaChallenge: React.FC = () => {
       if (cancelled) return;
       setLoading(false);
       if (!result.ok) {
-        setError(result.message);
+        setError(t(result.message));
         return;
       }
       const factor = result.data.factors[0];
@@ -78,13 +80,13 @@ export const MfaChallenge: React.FC = () => {
     const result = await redeemRecoveryCode(recovery);
     if (!result.ok) {
       setBusy(false);
-      setError(result.message);
+      setError(t(result.message));
       return;
     }
     if (!result.value.success) {
-      // The server's one sentence for every failure, shown as it is.
+      // The server's one sentence for every failure, shown through t() (it translates once the errors catalogue has it).
       setBusy(false);
-      setError(result.value.message);
+      setError(t(result.value.message));
       return;
     }
     // In: the guard reads the pass, and this screen unmounts.
@@ -99,7 +101,7 @@ export const MfaChallenge: React.FC = () => {
     if (!result.ok) {
       setBusy(false);
       setCode("");
-      setError(result.message);
+      setError(t(result.message));
       return;
     }
     // The session is now aal2. The guard reads context, not the token, so it
@@ -134,14 +136,14 @@ export const MfaChallenge: React.FC = () => {
         <ObHeader margin="intro" />
         <ObTitle
           variant="intro"
-          eyebrow="Welcome back"
-          title="Two-factor authentication"
+          eyebrow={t("Welcome back")}
+          title={t("Two-factor authentication")}
           subtitle={
             useRecovery
-              ? "Enter one of the recovery codes you saved when you turned on two-factor."
+              ? t("Enter one of the recovery codes you saved when you turned on two-factor.")
               : factorName
-                ? `Enter the 6-digit code from ${factorName}.`
-                : "Enter the 6-digit code from your authenticator app."
+                ? t("Enter the 6-digit code from {app}.", { app: factorName })
+                : t("Enter the 6-digit code from your authenticator app.")
           }
         />
         {useRecovery ? (
@@ -157,8 +159,9 @@ export const MfaChallenge: React.FC = () => {
             autoComplete="one-time-code"
             autoCapitalize="characters"
             spellCheck={false}
+            // i18n-ignore (the code's shape)
             placeholder="XXXX-XXXX"
-            aria-label="Recovery code"
+            aria-label={t("Recovery code")}
             icon={ShieldCheck}
             error={error}
             style={{ fontWeight: 700, letterSpacing: "0.12em" }}
@@ -176,7 +179,7 @@ export const MfaChallenge: React.FC = () => {
               error={!!error}
               disabled={loading || !factorId || busy}
               autoFocus
-              label="Six-digit authentication code"
+              label={t("Six-digit authentication code")}
             />
             {error && (
               <div className="ob-help" data-err="true">
@@ -190,13 +193,13 @@ export const MfaChallenge: React.FC = () => {
         {/* With no codes either, support removes the factor once they have
             confirmed who it is. */}
         <p style={{ fontSize: 11.5, lineHeight: "17px", color: "var(--ob-faint)", textAlign: "center", marginTop: 16 }}>
-          No codes either? Contact Centium support to have two-factor removed. We'll need to confirm who you are first.
+          {t("No codes either? Contact Centium support to have two-factor removed. We'll need to confirm who you are first.")}
         </p>
       </form>
       <ObFooter
-        primary={{ label: busy ? "Checking…" : "Continue", type: "submit", form: "ob-mfa", disabled: !canSubmit }}
+        primary={{ label: busy ? t("Checking…") : t("Continue"), type: "submit", form: "ob-mfa", disabled: !canSubmit }}
         link={{
-          node: <b>{useRecovery ? "Use my authenticator app" : "Use a recovery code"}</b>,
+          node: <b>{useRecovery ? t("Use my authenticator app") : t("Use a recovery code")}</b>,
           disabled: busy,
           onClick: () => {
             setUseRecovery((v) => !v);
@@ -207,7 +210,7 @@ export const MfaChallenge: React.FC = () => {
         }}
         after={
           <button type="button" className="ob-link hit" onClick={() => void signOut()}>
-            Not you? <b>Sign out</b>
+            {rich(t("Not you? {signOut}"), { signOut: <b>{t("Sign out")}</b> })}
           </button>
         }
       />

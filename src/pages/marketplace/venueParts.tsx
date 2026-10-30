@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { ChevronLeft, Copy, MapPin, Navigation } from "lucide-react";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { inlineScrolled } from "../../utils/inlineScroll";
 
 // Pieces the class page (MO1.4.4) and the gym page (MO1.4.2.1 / .s) share
 // (v6 Part B "Hero pages": the hero scrolls away and a compact header takes
@@ -77,7 +78,7 @@ export function HeroGallery({ photos }: { photos: string[] }) {
         className="absolute inset-0 flex overflow-x-auto overflow-y-hidden snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         onScroll={(e) => {
           const el = e.currentTarget;
-          const i = el.clientWidth ? Math.round(el.scrollLeft / el.clientWidth) : 0;
+          const i = el.clientWidth ? Math.round(inlineScrolled(el) / el.clientWidth) : 0;
           if (i !== index) setIndex(i);
         }}
       >

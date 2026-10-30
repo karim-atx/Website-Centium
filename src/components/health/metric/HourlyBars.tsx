@@ -2,6 +2,7 @@ import React from "react";
 import { hourLabel12 } from "../../../utils/time12";
 import type { MetricKey } from "../MetricWidget";
 import { mc, useHealthMode } from "./MetricKit";
+import { isRtl } from "../../../i18n/core";
 
 /**
  * Day view by hour (HE1.2.d / HE1.4.d chart, Database B1 activity_hourly):
@@ -28,11 +29,16 @@ export const HourlyBars: React.FC<{
   const w = 8;
   const faint = hc ? "rgb(var(--c-charcoal))" : dark ? "#B8B3C7" : "#8C8378";
   const ghost = dark ? "rgba(245,243,250,0.18)" : "rgba(36,31,27,0.18)";
+  // Round F (F10): in right to left, the hours run from right to left. Every x
+  // on the 326 grid is mirrored (a bar by its far edge); SVG text anchors are
+  // logical, so the labels follow.
+  const rtl = isRtl();
+  const mx = (x: number) => (rtl ? 326 - x : x);
   return (
     <svg viewBox="0 0 326 146" width="100%" height={146} role="list" style={{ display: "block", overflow: "visible" }}>
       <line x1={0} x2={326} y1={BASE + 0.5} y2={BASE + 0.5} stroke={hc ? "rgb(var(--c-charcoal) / 0.3)" : dark ? "rgba(245,243,250,0.08)" : "rgba(36,31,27,0.08)"} />
       {values.map((v, h) => {
-        const x = h * pitch + (pitch - w) / 2;
+        const x = mx(h * pitch + (pitch - w) / 2 + (rtl ? w : 0));
         const ahead = nowHour !== null && h > nowHour;
         if (ahead)
           return <rect key={h} x={x + 0.5} y={BASE - 6.5} width={w - 1} height={6} rx={3} fill="none" stroke={ghost} role="listitem" aria-label={label(h, null)} />;
@@ -52,7 +58,7 @@ export const HourlyBars: React.FC<{
         );
       })}
       {[0, 6, 12, 18].map((h, i) => (
-        <text key={h} x={h * pitch + (i === 0 ? 0 : pitch / 2)} y={139} textAnchor={i === 0 ? "start" : "middle"} fontSize={10} fontWeight={600} fill={faint}>
+        <text key={h} x={mx(h * pitch + (i === 0 ? 0 : pitch / 2))} y={139} textAnchor={i === 0 ? "start" : "middle"} fontSize={10} fontWeight={600} fill={faint}>
           {hourLabel12(h)}
         </text>
       ))}

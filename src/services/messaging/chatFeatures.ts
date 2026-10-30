@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t, tk, tn } from "../../i18n/core";
 
 // Messaging phase 2A on the client (Database 20261002000000-030000): per-person
 // chat settings (mute, pin, archive), reactions, and the reads the chat list,
@@ -107,7 +108,7 @@ export async function deleteConversationForMe(threadId: string): Promise<{ ok: t
   if (error) {
     console.error("[chat] Could not delete the conversation:", error.message);
     if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-    return { ok: false, message: "Couldn't delete. Try again." };
+    return { ok: false, message: t("Couldn't delete. Try again.") };
   }
   return { ok: true, clearedAt: (data as string | null) ?? null };
 }
@@ -115,10 +116,10 @@ export async function deleteConversationForMe(threadId: string): Promise<{ ok: t
 export type MuteChoice = "1h" | "8h" | "1w" | "always" | "off";
 
 export const MUTE_CHOICES: { value: MuteChoice; label: string }[] = [
-  { value: "1h", label: "1 hour" },
-  { value: "8h", label: "8 hours" },
-  { value: "1w", label: "1 week" },
-  { value: "always", label: "Always" },
+  { value: "1h", label: tk("1 hour") },
+  { value: "8h", label: tk("8 hours") },
+  { value: "1w", label: tk("1 week") },
+  { value: "always", label: tk("Always") },
 ];
 
 export function mutePatch(choice: MuteChoice, now = Date.now()): SettingsPatch {
@@ -131,8 +132,8 @@ export function mutePatch(choice: MuteChoice, now = Date.now()): SettingsPatch {
 function fail(error: { code?: string; message?: string }): Fail {
   console.error("[chat] Could not save:", error.message);
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  if (error.code === "ATX38") return { ok: false, message: "You can pin up to 5 chats. Unpin one to pin this." };
-  return { ok: false, message: "Couldn't save that. Try again." };
+  if (error.code === "ATX38") return { ok: false, message: t("You can pin up to 5 chats. Unpin one to pin this.") };
+  return { ok: false, message: t("Couldn't save that. Try again.") };
 }
 
 // ---------------------------------------------------------------------------
@@ -183,8 +184,8 @@ export async function setReaction(
   if (error) {
     if (error.code === "23505") return setReaction(messageId, userId, emoji, true);
     console.error("[chat] Could not react:", error.message);
-    if (/ATX35/.test(error.code ?? "")) return { ok: false, message: "You can't react in this conversation." };
-    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't add that reaction. Try again." };
+    if (/ATX35/.test(error.code ?? "")) return { ok: false, message: t("You can't react in this conversation.") };
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't add that reaction. Try again.") };
   }
   return { ok: true };
 }
@@ -404,8 +405,8 @@ export async function searchMessages(
       message: isOffline(error)
         ? OFFLINE_MESSAGE
         : error.code === "22023"
-          ? `Type at least ${MIN_GLOBAL_QUERY} characters to search all chats.`
-          : "Couldn't search right now. Try again.",
+          ? tn(MIN_GLOBAL_QUERY, "Type at least {n} character to search all chats.", "Type at least {n} characters to search all chats.")
+          : t("Couldn't search right now. Try again."),
     };
   }
   const hits = (data ?? []).map((r) => ({
@@ -442,7 +443,7 @@ export async function setSharesPresence(userId: string, on: boolean): Promise<{ 
   const { error } = await supabase.from("profiles").update({ shares_presence: on }).eq("id", userId);
   if (error) {
     console.error("[chat] Could not save the online setting:", error.message);
-    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't save that. Try again." };
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't save that. Try again.") };
   }
   return { ok: true };
 }

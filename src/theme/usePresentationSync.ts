@@ -9,6 +9,7 @@ import {
   type Presentation,
 } from "../services/presentation";
 import { afterFailure, afterOnline, canSave, RETRY_START, type RetryState } from "../services/presentation/retry";
+import { t } from "../i18n/core";
 
 // Keeps this device's presentation settings (light / dark / auto, colour
 // theme, the four accessibility switches) in step with this account's 'web'
@@ -43,7 +44,9 @@ import { afterFailure, afterOnline, canSave, RETRY_START, type RetryState } from
 
 const keyOf = (p: Presentation) => JSON.stringify(presentationToRow(p));
 
-const KEPT = "Your choice is kept on this device until it saves.";
+// The failure and what it means for the choice, as one sentence in the chosen
+// language (built when the save fails, so the language is set).
+const kept = (message: string) => t("{message} Your choice is kept on this device until it saves.", { message: t(message) });
 
 export function usePresentationSync({
   ownerId,
@@ -130,7 +133,7 @@ export function usePresentationSync({
         if (owner.current !== id) return;
         if (result.status === "error") {
           setPending(true);
-          setSaveError({ owner: id, message: `${result.message} ${KEPT}` });
+          setSaveError({ owner: id, message: kept(result.message) });
           retry.current = afterFailure(retry.current, result.permission, Date.now());
           clearRetryTimer();
           if (!retry.current.blocked) {
@@ -163,7 +166,7 @@ export function usePresentationSync({
       if (read.status === "error") {
         // Nothing is lost: the device copy stays applied. Say so only when a
         // change of this device's is waiting to be saved.
-        if (pendingRef.current) setSaveError({ owner: id, message: `${read.message} ${KEPT}` });
+        if (pendingRef.current) setSaveError({ owner: id, message: kept(read.message) });
         return;
       }
       server.current = read.settings;

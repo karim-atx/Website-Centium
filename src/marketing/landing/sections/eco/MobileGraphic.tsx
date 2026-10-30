@@ -7,6 +7,10 @@
 import React from "react";
 import type { Slide } from "./data";
 import type { SectionVals } from "../sectionVals";
+import { t } from "../../../../i18n/core";
+
+/** t() for an optional data field: a missing one stays missing (renders nothing), as before. */
+const tOpt = (s: string | undefined) => (s === undefined ? s : t(s));
 
 export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }) => (
   <div data-mobg="" style={{ display: r.mobFlex, height: r.mgH, borderRadius: "12px", background: "#F7F5FC", padding: "14px", flexDirection: "column", justifyContent: "space-evenly", gap: "8px", overflow: "hidden" }}>
@@ -30,12 +34,12 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
             SVG text in a span) and at 10px it would break the 12px label rule. */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: "14px", fontWeight: "800", color: "#221E1A" }}>
-            Clients{" "}
+            {t("Clients")}{" "}
             <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63" }}>· 5</span>
           </span>
           <span style={{ display: "flex", gap: "8px", padding: "2px", borderRadius: "99px", background: "#FFFFFF", border: "1px solid #E4DCF8" }}>
-            <span style={{ padding: "3px 10px", borderRadius: "99px", background: "#775FD7", color: "#FFFFFF", fontSize: "12px", fontWeight: "700", lineHeight: "14px" }}>All</span>
-            <span style={{ padding: "3px 10px", fontSize: "12px", fontWeight: "700", color: "#5C48A8", lineHeight: "14px" }}>Needs attention</span>
+            <span style={{ padding: "3px 10px", borderRadius: "99px", background: "#775FD7", color: "#FFFFFF", fontSize: "12px", fontWeight: "700", lineHeight: "14px" }}>{t("All")}</span>
+            <span style={{ padding: "3px 10px", fontSize: "12px", fontWeight: "700", color: "#5C48A8", lineHeight: "14px" }}>{t("Needs attention")}</span>
           </span>
         </div>
         {sl.mb!.map((m, mI) => (
@@ -61,16 +65,16 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
               <span style={{ position: "absolute", right: "-1px", bottom: "-1px", width: "10px", height: "10px", borderRadius: "99px", background: "#3FA36B", border: "2px solid #F7F5FC", display: m.on }} />
             </span>
             <div style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "8px" }}>
-              <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A", lineHeight: "19px" }}>{m.n}</span>
+              <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A", lineHeight: "19px" }}>{tOpt(m.n)}</span>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: "0" }}>
-                {m.nodue ? <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63", lineHeight: "17px", whiteSpace: "nowrap", display: r.planDisp }}>{m.plan}</span> : null}
+                {m.nodue ? <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63", lineHeight: "17px", whiteSpace: "nowrap", display: r.planDisp }}>{tOpt(m.plan)}</span> : null}
                 {m.due ? (
                   <span
                     data-w="0.75 0.95"
                     data-op=""
                     style={{ padding: "0 4px", borderRadius: "99px", background: "#EDE8FB", color: "#4E3894", fontSize: "12px", fontWeight: "700", lineHeight: "17px", whiteSpace: "nowrap", opacity: "0" }}
                   >
-                    Check-in due
+                    {t("Check-in due")}
                   </span>
                 ) : null}
                 <span style={{ display: m.due && !r.ecoChipWeek ? "none" : "flex", gap: "8px", flexShrink: "0" }}>
@@ -86,7 +90,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
             </svg>
           </div>
         ))}
-        <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63", lineHeight: "16px", borderTop: "1px solid #E4DCF8", paddingTop: "5px" }}>{sl.mfoot}</span>
+        <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63", lineHeight: "16px", borderTop: "1px solid #E4DCF8", paddingTop: "5px" }}>{tOpt(sl.mfoot)}</span>
       </>
     ) : null}
     {sl.mTimeline ? (
@@ -98,15 +102,15 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
         {sl.mb!.map((m, mI) => (
           <div key={mI} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <span style={{ width: "44px", flexShrink: "0", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#5B5349" }}>
-              {m.t}
+              {tOpt(m.t)}
             </span>
             <span style={{ width: "10px", height: "10px", flexShrink: "0", borderRadius: "99px", background: m.c, boxShadow: "0 0 0 4px #F7F5FC,0 0 0 5px #E4DCF8" }} />
             <div style={{ flex: "1", minWidth: "0", padding: "8px 12px", borderRadius: "10px", background: m.bg, display: "flex", flexDirection: "column", gap: "7px" }}>
               <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
-                {m.n}
+                {tOpt(m.n)}
               </span>
               <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63" }}>
-                {m.s}
+                {tOpt(m.s)}
               </span>
             </div>
           </div>
@@ -117,28 +121,28 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
       <>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <span style={{ fontSize: "16px", fontWeight: "800", color: "#221E1A" }}>
-            {sl.mh}
+            {tOpt(sl.mh)}
           </span>
           <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63" }}>
-            {sl.ms}
+            {tOpt(sl.ms)}
           </span>
         </div>
         {sl.mb!.map((m, mI) => (
           <div key={mI} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderRadius: "10px", background: "#FFFFFF", border: "1px solid #E4DCF8" }}>
             <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
-              {m.n}
+              {tOpt(m.n)}
             </span>
             <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#4E3894" }}>
-              {m.s}
+              {tOpt(m.s)}
             </span>
           </div>
         ))}
         <div data-w="0.3 0.8" data-ty="10" data-op="" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderRadius: "10px", background: "#EDE8FB", border: "1px dashed #9C7FF8", opacity: "0" }}>
           <span style={{ fontSize: "14px", fontWeight: "700", color: "#4E3894" }}>
-            {sl.mx}
+            {tOpt(sl.mx)}
           </span>
           <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#4E3894" }}>
-            {sl.mxs}
+            {tOpt(sl.mxs)}
           </span>
         </div>
       </>
@@ -156,18 +160,18 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
             18px / 39px / 18px / 18px with 6px). */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: "14px", fontWeight: "800", color: "#221E1A" }}>
-            Earnings
+            {t("Earnings")}
           </span>
           <span style={{ padding: "3px 10px", borderRadius: "99px", background: "#FFFFFF", border: "1px solid #E4DCF8", fontSize: "12px", fontWeight: "700", color: "#5C48A8", lineHeight: "14px" }}>
-            Last 4 months
+            {t("Last 4 months")}
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
           <span style={{ fontSize: "26px", fontWeight: "800", letterSpacing: "-.02em", color: "#221E1A", lineHeight: "36px" }}>
-            {sl.mh}
+            {tOpt(sl.mh)}
           </span>
           <span data-w="0.6 0.85" data-op="" style={{ padding: "2px 8px", borderRadius: "99px", background: "#DDF0EC", color: "#2F5F58", fontSize: "12px", fontWeight: "800", opacity: "0" }}>
-            +$380 vs Sep
+            {t("+$380 vs Sep")}
           </span>
         </div>
         <div style={{ position: "relative", flex: "1", minHeight: "56px", marginBottom: "4px" }}>
@@ -182,7 +186,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
             <span key={ptI} data-w={pt.w} data-stamp="" style={{ position: "absolute", left: pt.x, top: pt.y, width: pt.s, height: pt.s, margin: pt.m, borderRadius: "99px", background: "#FFFFFF", border: "2px solid #2F5F58", opacity: "0" }} />
           ))}
           <span data-w="0.75 0.95" data-op="" style={{ position: "absolute", right: "20px", top: "calc(30% + 12px)", padding: "2px 8px", borderRadius: "8px", background: "#2F5F58", color: "#FFFFFF", fontSize: "12px", fontWeight: "800", opacity: "0" }}>
-            {sl.mtop}
+            {tOpt(sl.mtop)}
           </span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "2px" }}>
@@ -194,7 +198,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
         </div>
         <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63", lineHeight: "16px", borderTop: "1px solid #E4DCF8", paddingTop: "5px", marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
           <span style={{ width: "12px", height: "12px", borderRadius: "3px", border: "1.5px solid #756D63" }} />
-          {sl.mfoot}
+          {tOpt(sl.mfoot)}
         </span>
       </>
     ) : null}
@@ -202,7 +206,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
       <>
         {sl.mb!.map((m, mI) => (
           <span key={mI} style={{ alignSelf: m.side, maxWidth: "78%", padding: "9px 12px", borderRadius: "14px", background: m.bg, color: m.ink, fontSize: "14px", lineHeight: "1.4" }}>
-            {m.t}
+            {tOpt(m.t)}
           </span>
         ))}
         <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", borderRadius: "12px", background: "#FFFFFF", border: "1px solid #E4DCF8" }}>
@@ -211,10 +215,10 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
           </span>
           <div style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "7px" }}>
             <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
-              {sl.mcn}
+              {tOpt(sl.mcn)}
             </span>
             <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63" }}>
-              {sl.mct}
+              {tOpt(sl.mct)}
             </span>
           </div>
           <span style={{ width: "36px", height: "36px", borderRadius: "99px", background: "#2F5F58", color: "#FFFFFF", fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -229,11 +233,11 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
           <div key={mI} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <span style={{ width: "44px", flexShrink: "0", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#5B5349" }}>
-                {m.t}
+                {tOpt(m.t)}
               </span>
               <div style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "7px" }}>
                 <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
-                  {m.n}
+                  {tOpt(m.n)}
                 </span>
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63" }}>
                   {m.i}
@@ -254,10 +258,10 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
       <>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
           <span style={{ fontSize: "12px", fontWeight: "700", color: "#756D63" }}>
-            Checked in today
+            {t("Checked in today")}
           </span>
           <span style={{ fontSize: "30px", fontWeight: "800", color: "#2F5F58" }}>
-            <span data-w="0.1 0.7" data-cnt={sl.mh} data-from="0">
+            <span data-w="0.1 0.7" data-cnt={tOpt(sl.mh)} data-from="0">
               0
             </span>
           </span>
@@ -268,10 +272,10 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
               {m.a}
             </span>
             <span style={{ flex: "1", fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
-              {m.n}
+              {tOpt(m.n)}
             </span>
             <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#5B5349" }}>
-              {m.t}
+              {tOpt(m.t)}
             </span>
           </div>
         ))}
@@ -283,7 +287,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
           <div key={mI} style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
-                {m.n}
+                {tOpt(m.n)}
               </span>
               <span style={{ fontSize: "14px", fontWeight: "800", color: "#4E3894" }}>
                 {m.c}
@@ -305,10 +309,10 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
                 {m.a}
               </span>
               <span style={{ flex: "1", fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
-                {m.n}
+                {tOpt(m.n)}
               </span>
               <span style={{ padding: "3px 8px", borderRadius: "99px", background: "#EDE8FB", fontSize: "12px", fontWeight: "700", color: "#4E3894", whiteSpace: "nowrap" }}>
-                {m.r}
+                {tOpt(m.r)}
               </span>
             </div>
             <span style={{ position: "relative", display: "block", height: "8px", borderRadius: "9px", background: "#E4DCF8", marginInlineStart: "44px" }}>
@@ -328,26 +332,26 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
     {sl.mGym ? (
       <>
         <div style={{ height: "64px", borderRadius: "10px", background: "repeating-linear-gradient(135deg,#EDE8FB 0 10px,#F4F1FB 10px 20px)", display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: "6px 8px", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#6B5E94" }}>
-          gym photo
+          {t("gym photo")}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
           <span style={{ fontSize: "16px", fontWeight: "800", color: "#221E1A" }}>
-            {sl.mh}
+            {tOpt(sl.mh)}
           </span>
           <span style={{ fontSize: "12px", fontWeight: "600", color: "#756D63" }}>
-            {sl.ms}
+            {tOpt(sl.ms)}
           </span>
         </div>
         {sl.mb!.map((m, mI) => (
           <div key={mI} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <span style={{ width: "44px", flexShrink: "0", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#5B5349" }}>
-              {m.t}
+              {tOpt(m.t)}
             </span>
             <span style={{ flex: "1", minWidth: "0", fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
-              {m.n}
+              {tOpt(m.n)}
             </span>
             <span style={{ padding: "6px 14px", borderRadius: "99px", background: "#775FD7", color: "#FFFFFF", fontSize: "12px", fontWeight: "700" }}>
-              Book
+              {t("Book")}
             </span>
           </div>
         ))}

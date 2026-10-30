@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Plus, X } from "lucide-react";
+import { t } from "../../i18n/core";
 
 /**
  * Free-text chips: type, press Enter or +, get a chip; tap its x to remove it.
@@ -60,7 +61,7 @@ export const ChipInput: React.FC<{
                 type="button"
                 disabled={disabled}
                 onClick={() => onChange(values.filter((x) => x !== v))}
-                aria-label={`Remove ${v}`}
+                aria-label={t("Remove {value}", { value: v })}
                 className="tap relative w-7 h-7 flex items-center justify-center shrink-0 before:absolute before:-inset-2 before:content-['']"
               >
                 <X size={12} />
@@ -93,7 +94,7 @@ export const ChipInput: React.FC<{
           type="button"
           onClick={add}
           disabled={disabled || !text.trim()}
-          aria-label={`Add to ${label.toLowerCase()}`}
+          aria-label={t("Add to {label}", { label: label.toLowerCase() })}
           className="tap w-11 h-11 rounded-xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
         >
           <Plus size={16} />

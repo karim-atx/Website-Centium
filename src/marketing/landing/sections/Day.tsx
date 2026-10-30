@@ -11,6 +11,7 @@ import React from "react";
 import { ChapterMark } from "./ChapterMark";
 import * as D from "./data/day";
 import type { SectionVals } from "./sectionVals";
+import { t } from "../../../i18n/core";
 
 export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
   <div id="day-track" data-screen-label="DY1 v15 Your day, pillar by pillar" style={{ position: "relative", zIndex: "2", height: r.dayTrackH }}>
@@ -18,12 +19,12 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
       <div style={{ maxWidth: "1180px", margin: "0 auto", height: "100%", display: r.dayDisp, gridTemplateColumns: r.dayCols, gap: r.dayGap, alignItems: "center", flexDirection: "column" }}>
         <div style={{ display: r.dayLeftDisp, flexDirection: "column", gap: "22px", textAlign: "start" }}>
           <div>
-            <ChapterMark n="01" t="Your day" size={r.chEyD} />
+            <ChapterMark n="01" t={t("Your day")} size={r.chEyD} />
             <h2 style={{ marginTop: "12px", fontWeight: "800", fontSize: r.dayH2, lineHeight: "1.04", letterSpacing: "-.035em" }}>
-              Your day, in rhythm.
+              {t("Your day, in rhythm.")}
             </h2>
           </div>
-          <div aria-label="Time" style={{ display: "flex", alignItems: "flex-end", gap: "2px", fontFamily: "'JetBrains Mono',monospace", fontSize: r.clock, lineHeight: "1", color: "#221E1A" }}>
+          <div aria-label={t("Time")} style={{ display: "flex", alignItems: "flex-end", gap: "2px", fontFamily: "'JetBrains Mono',monospace", fontSize: r.clock, lineHeight: "1", color: "#221E1A" }}>
             {D.clockCols.map((cc, ccI) => (
               <React.Fragment key={ccI}>
                 {cc.digit ? (
@@ -63,7 +64,7 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
                 {/* Active state: motion/day.ts sets the current moment to 800
                     with a teal underline, the others to 600 (AA keeps them at .81). */}
                 <span data-rl={mo.i} style={{ fontSize: "13px", fontWeight: "600", color: "#5B5349", opacity: ".81", whiteSpace: "nowrap", textDecorationLine: "none", textDecorationColor: "#4A7D76", textDecorationThickness: "1.5px", textUnderlineOffset: "4px" }}>
-                  {mo.label}
+                  {t(mo.label)}
                 </span>
               </div>
             ))}
@@ -73,7 +74,7 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
         <div style={{ display: r.dayMobDisp, flexDirection: "column", gap: "10px", width: "100%", padding: "0 4px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <span style={{ fontSize: "10.5px", fontWeight: "700", letterSpacing: ".22em", color: "#775FD7" }}>
-              01 · YOUR DAY, IN RHYTHM
+              {t("01 · YOUR DAY, IN RHYTHM")}
             </span>
             <span id="day-clock-m" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "15px", color: "#221E1A" }}>
               08:10
@@ -96,10 +97,10 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
                 {ds.t}
               </span>
               <h3 style={{ marginTop: "8px", fontSize: r.stepT, fontWeight: "800", letterSpacing: "-.025em", lineHeight: "1.12" }}>
-                {ds.h}
+                {t(ds.h)}
               </h3>
               <p style={{ marginTop: "8px", fontSize: r.stepP, lineHeight: "1.6", color: "#5B5349", maxWidth: "340px" }}>
-                {ds.p}
+                {t(ds.p)}
               </p>
             </div>
           ))}

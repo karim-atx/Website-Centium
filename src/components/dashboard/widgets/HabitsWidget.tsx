@@ -6,6 +6,7 @@ import { useApp } from "../../../context/AppContext";
 import { habitIcon } from "../../../utils/icons";
 import { useHabitColours, type HabitColourKey } from "./data";
 import { FadeValue, HeaderPill, HomeCard, HomeKeyframes, homeColors, Line, linePx, textPx, useHomeMode, useLoadingTimeout } from "./kit";
+import { inlineScrolled } from "../../../utils/inlineScroll";
 
 // HO1.W8 Habits (small), OURS-home-large-widgets §B (large) and
 // OURS-home-habits-empty. The purple follows the theme primary (th-/thi-);
@@ -68,7 +69,7 @@ const HabitGrid: React.FC<{ habits: HabitItem[]; day: string; today: string; dar
       <span
         className="flex no-scrollbar"
         style={{ overflowX: "auto", scrollSnapType: "x mandatory", height: 88 }}
-        onScroll={(e) => setPage(Math.round(e.currentTarget.scrollLeft / Math.max(1, e.currentTarget.clientWidth)))}
+        onScroll={(e) => setPage(Math.round(inlineScrolled(e.currentTarget) / Math.max(1, e.currentTarget.clientWidth)))}
         onClick={(e) => e.stopPropagation()}
       >
         {pages.map((items, p) => (

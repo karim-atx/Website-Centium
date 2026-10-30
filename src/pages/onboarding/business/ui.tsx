@@ -4,6 +4,7 @@ import { Camera, Check, ChevronRight, Eye, Loader2, MapPin, Minus, Pencil, Plus,
 import { Toggle } from "../../../components/ui/Toggle";
 import { ObChip, ObCollapsible } from "../shell";
 import "./business-onboarding.css";
+import { t, tk, tx } from "../../../i18n/core";
 
 // The BizOnboardingV10 body blocks the shell (shell/ObBlocks.tsx) does not
 // have, used by the business lanes only: the field with a text area or a Pin
@@ -120,12 +121,12 @@ export const BizField: React.FC<BizFieldProps> = ({
         {pin && (
           <button
             type="button"
-            aria-label="Place the pin on the map"
+            aria-label={t("Place the pin on the map")}
             onClick={pin.onClick}
             className="tap flex-1 min-w-0 h-[52px] rounded-[16px] bg-primary-pale border-[1.5px] border-solid border-primary-fill text-primary-dark flex items-center justify-center gap-[5px] text-[13px] font-extrabold box-border"
           >
             <MapPin size={16} strokeWidth={2.2} aria-hidden />
-            Pin
+            {tx("Pin", "map")}
           </button>
         )}
       </div>
@@ -167,10 +168,11 @@ export const BizChips: React.FC<{
         </div>
       )}
       <div role="group" aria-labelledby={label ? labelId : undefined} className="flex flex-wrap gap-2">
-        {options.map((t) => {
-          const on = selected.includes(t);
+        {options.map((o) => {
+          const on = selected.includes(o);
           const full = !on && max !== undefined && selected.length >= max;
-          return <ObChip key={t} label={t} on={on} disabled={full} onClick={() => onToggle(t)} />;
+          // The option is the stored English value; its label is translated.
+          return <ObChip key={o} label={t(o)} on={on} disabled={full} onClick={() => onToggle(o)} />;
         })}
         {onMore && (
           <button
@@ -180,7 +182,7 @@ export const BizChips: React.FC<{
             className="hit h-[38px] px-[13px] rounded-[12px] border border-solid border-primary-pale bg-primary-pale text-primary-dark font-extrabold flex items-center gap-[6px] text-[12.5px] box-border whitespace-nowrap"
           >
             <Plus size={13} strokeWidth={2.6} aria-hidden />
-            More
+            {t("More")}
           </button>
         )}
       </div>
@@ -299,8 +301,8 @@ export const BizNums: React.FC<{
         <p className="text-[10.5px] font-semibold leading-[13px] text-charcoal-faint mt-[3px] min-h-[26px]">{n.label}</p>
         <div className="flex justify-center gap-2 mt-[6px]">
           {[
-            { k: "less", label: `Less, ${n.label}`, icon: Minus, next: n.value - (n.step ?? 1), off: n.value <= n.min },
-            { k: "more", label: `More, ${n.label}`, icon: Plus, next: n.value + (n.step ?? 1), off: n.value >= n.max },
+            { k: "less", label: t("Less, {label}", { label: n.label }), icon: Minus, next: n.value - (n.step ?? 1), off: n.value <= n.min },
+            { k: "more", label: t("More, {label}", { label: n.label }), icon: Plus, next: n.value + (n.step ?? 1), off: n.value >= n.max },
           ].map((b) => (
             <button
               key={b.k}
@@ -384,12 +386,12 @@ export const BizUpload: React.FC<{
           ) : (
             <Upload size={15} strokeWidth={2.4} aria-hidden />
           )}
-          {state === "done" ? "Uploaded" : state === "err" ? retryLabel : state === "busy" ? "Uploading…" : "Upload"}
+          {state === "done" ? t("Uploaded") : state === "err" ? t(retryLabel) : state === "busy" ? t("Uploading…") : t("Upload")}
         </span>
         {state === "busy" && progress !== undefined && (
           <span
             role="progressbar"
-            aria-label={`Uploading ${title}`}
+            aria-label={t("Uploading {title}", { title })}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(progress * 100)}
@@ -432,7 +434,7 @@ export const BizDocCard: React.FC<{
           status === "Template" ? "bg-primary-pale text-primary-dark" : "bg-status-good-bg text-status-good"
         )}
       >
-        {status}
+        {t(status)}
       </span>
     </div>
     <div className="mt-3 rounded-[12px] bg-surface-raised border border-list-rule py-[10px] px-3 text-[11.5px] leading-[17px] text-charcoal-soft">
@@ -443,11 +445,11 @@ export const BizDocCard: React.FC<{
     <div className="flex gap-2 mt-[10px]">
       <button type="button" onClick={onPreview} className="tap flex-1 h-[38px] rounded-[12px] bg-cream-soft flex items-center justify-center gap-[6px] text-[12.5px] font-bold text-charcoal">
         <Eye size={14} strokeWidth={2.2} aria-hidden />
-        Preview
+        {t("Preview")}
       </button>
       <button type="button" onClick={onEdit} className="tap flex-1 h-[38px] rounded-[12px] bg-primary-pale text-primary-dark flex items-center justify-center gap-[6px] text-[12.5px] font-extrabold">
         <Pencil size={14} strokeWidth={2.2} aria-hidden />
-        Edit
+        {t("Edit")}
       </button>
     </div>
   </div>
@@ -493,7 +495,7 @@ export const BizSummary: React.FC<{
   onAction?: () => void;
   flag?: string;
   bad?: boolean;
-}> = ({ n, title, lines, action = "Edit", onAction, flag, bad }) => (
+}> = ({ n, title, lines, action = tk("Edit"), onAction, flag, bad }) => (
   <div className={clsx("rounded-[18px] py-3 px-[14px] mb-[10px]", bad ? "bg-status-high-bg border-[1.5px] border-status-high" : "bg-list")}>
     <div className="flex items-center gap-[10px]">
       <span
@@ -506,8 +508,8 @@ export const BizSummary: React.FC<{
       </span>
       <span className="flex-1 min-w-0 text-[13.5px] font-extrabold text-charcoal">{title}</span>
       {onAction && (
-        <button type="button" onClick={onAction} aria-label={`${action} ${title}`} className="hit text-[12px] font-extrabold text-primary-dark">
-          {action}
+        <button type="button" onClick={onAction} aria-label={`${t(action)} ${title}`} className="hit text-[12px] font-extrabold text-primary-dark">
+          {t(action)}
         </button>
       )}
     </div>
@@ -537,7 +539,7 @@ export const BizListingPreview: React.FC<{
   <div className="rounded-[22px] bg-cream-card border border-hair-11 overflow-hidden mb-[14px]" style={{ boxShadow: "var(--ob-preview-shadow)" }}>
     <div className="relative h-[118px]" style={{ background: coverUrl ? `center / cover no-repeat url("${coverUrl}")` : stripes }}>
       {!coverUrl && <span className="absolute start-3 top-[10px] font-mono text-[10px] text-charcoal-faint">{coverLabel}</span>}
-      <span className="absolute end-[10px] top-[10px] text-[10px] font-extrabold py-[3px] px-2 rounded-full bg-cream-card text-primary-dark">New on Explore</span>
+      <span className="absolute end-[10px] top-[10px] text-[10px] font-extrabold py-[3px] px-2 rounded-full bg-cream-card text-primary-dark">{t("New on Explore")}</span>
     </div>
     <div className="flex gap-3 pt-3 px-[14px] pb-[14px]">
       <span
@@ -551,9 +553,9 @@ export const BizListingPreview: React.FC<{
         <p className="text-[12px] text-charcoal-faint leading-[17px]">{type}</p>
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-[6px] mt-2">
-            {tags.map((t) => (
-              <span key={t} className="text-[10.5px] font-bold py-[3px] px-2 rounded-full bg-cream-soft text-charcoal-soft">
-                {t}
+            {tags.map((tag) => (
+              <span key={tag} className="text-[10.5px] font-bold py-[3px] px-2 rounded-full bg-cream-soft text-charcoal-soft">
+                {t(tag)}
               </span>
             ))}
           </div>

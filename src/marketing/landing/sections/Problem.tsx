@@ -8,17 +8,18 @@ import React from "react";
 import { ChapterMark } from "./ChapterMark";
 import * as D from "./data/problem";
 import type { SectionVals } from "./sectionVals";
+import { t } from "../../../i18n/core";
 
 export const Problem: React.FC<{ r: SectionVals }> = ({ r }) => (
   <section id="problem" data-screen-label="PR1 v6 Problem" style={{ position: "relative", zIndex: "2", padding: `${r.secY} ${r.px}` }}>
     <div style={{ maxWidth: "1240px", margin: "0 auto", display: "grid", gridTemplateColumns: r.two, gap: r.gap, alignItems: "center" }}>
       <div>
-        <ChapterMark n="02" t="The problem" size={r.chEy} />
+        <ChapterMark n="02" t={t("The problem")} size={r.chEy} />
         <h2 style={{ marginTop: "16px", fontWeight: "800", fontSize: r.h2, lineHeight: "1.04", letterSpacing: "-.035em" }}>
-          One hub, not another app to manage.
+          {t("One hub, not another app to manage.")}
         </h2>
         <p style={{ marginTop: "20px", maxWidth: "520px", fontSize: "17px", lineHeight: "1.65", color: "#5B5349" }}>
-          Health shouldn't feel like a chore. No more jumping between apps, subscriptions and platforms just to keep track of your progress. Centium brings it all together in one place, so you can spend less time managing your health and more time improving it.
+          {t("Health shouldn't feel like a chore. No more jumping between apps, subscriptions and platforms just to keep track of your progress. Centium brings it all together in one place, so you can spend less time managing your health and more time improving it.")}
         </p>
       </div>
       <div id="prob-list" style={{ display: "flex", flexDirection: "column" }}>
@@ -31,15 +32,15 @@ export const Problem: React.FC<{ r: SectionVals }> = ({ r }) => (
           <div key={pbI} data-prow="" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", padding: "15px 0", borderTop: "1px solid #EDEAE4" }}>
             <span style={{ position: "relative", display: "block", whiteSpace: "nowrap", fontSize: "17.5px", paddingInlineEnd: "14px" }}>
               <span data-pink="" style={{ display: "block", color: "#221E1A", transition: "opacity .7s ease-out" }}>
-                {pb.t}
+                {t(pb.t)}
               </span>
               <span data-pfaint="" aria-hidden="true" style={{ position: "absolute", left: "0", top: "0", color: "#756D63", opacity: "0", transition: "opacity .7s ease-out" }}>
-                {pb.t}
+                {t(pb.t)}
               </span>
               <span data-pstrike="" aria-hidden="true" style={{ position: "absolute", left: "0", right: "14px", top: "54%", height: "2px", marginTop: "-1px", background: "#756D63", transformOrigin: "left", transform: "scaleX(0)", transition: "transform .5s cubic-bezier(.3,0,.2,1)" }} />
             </span>
             <span style={{ fontSize: "12px", color: "#756D63", whiteSpace: "nowrap", flexShrink: "0", marginInlineStart: "auto" }}>
-              {pb.tag}
+              {t(pb.tag)}
             </span>
           </div>
         ))}
@@ -47,10 +48,10 @@ export const Problem: React.FC<{ r: SectionVals }> = ({ r }) => (
           <span id="prob-ring" aria-hidden="true" style={{ position: "absolute", inset: "-5px", borderRadius: "21px", background: "rgba(94,158,149,1)", opacity: "0" }} />
           <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "22px 24px", borderRadius: "16px", overflow: "hidden", background: "#E6DFF7", border: "3px solid #775FD7", boxShadow: "0 14px 32px rgba(72,58,130,.14)" }}>
             <span style={{ position: "relative", zIndex: "1", fontWeight: "700", fontSize: "17px", letterSpacing: "-.01em", color: "#6347D1" }}>
-              Centium is the solution
+              {t("Centium is the solution")}
             </span>
             <span style={{ position: "relative", zIndex: "1", fontWeight: "600", fontSize: "12px", letterSpacing: ".14em", whiteSpace: "nowrap", color: "#6347D1" }}>
-              ONE PLACE
+              {t("ONE PLACE")}
             </span>
             <span id="prob-wipe" aria-hidden="true" style={{ position: "absolute", left: "0", right: "0", top: "0", height: "100%", pointerEvents: "none", borderRadius: "inherit", opacity: "0", background: "linear-gradient(rgba(94,158,149,0) 0%,rgba(94,158,149,.34) 38%,rgba(120,190,180,.72) 50%,rgba(94,158,149,.3) 62%,rgba(94,158,149,0) 100%)", boxShadow: "inset 0 1px 0 rgba(255,255,255,.5),inset 0 -1px 0 rgba(47,95,88,.18)" }} />
             <span id="prob-gloss" aria-hidden="true" style={{ position: "absolute", left: "0", width: "34%", top: "-20%", bottom: "-20%", pointerEvents: "none", opacity: "0", background: "linear-gradient(100deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.42) 42%,rgba(214,240,235,.7) 52%,rgba(255,255,255,0) 100%)", filter: "blur(1px)" }} />

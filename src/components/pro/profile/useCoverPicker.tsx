@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import { COVER_ACCEPT, fetchMyCoverUrl, removeCover, submitCover } from "../../../services/pro/cover";
 import { useOwnImage } from "../../moderation/ImageApproval";
+import { t } from "../../../i18n/core";
 
 /**
  * Release B · the professional's cover photo picker (MO14 "Photo and cover",
@@ -43,12 +44,12 @@ export function useCoverPicker(beforeUpload?: () => Promise<{ ok: boolean; messa
       const ready = await beforeUpload();
       if (!ready.ok) {
         setBusy(false);
-        return setError(ready.message ?? "Couldn't add your cover. Try again.");
+        return setError(t(ready.message ?? "Couldn't add your cover. Try again."));
       }
     }
     const r = await submitCover(authUserId, file);
     setBusy(false);
-    if (!r.ok) return setError(r.message);
+    if (!r.ok) return setError(t(r.message));
     refresh();
   };
   const remove = async () => {
@@ -58,7 +59,7 @@ export function useCoverPicker(beforeUpload?: () => Promise<{ ok: boolean; messa
     setError(null);
     const r = await removeCover(authUserId, approvedUrl);
     setBusy(false);
-    if (!r.ok) return setError(r.message);
+    if (!r.ok) return setError(t(r.message));
     setCover({ userId: authUserId, url: null });
     refresh();
   };

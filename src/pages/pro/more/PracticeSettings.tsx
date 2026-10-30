@@ -51,6 +51,7 @@ import { fetchGoLiveStatus } from "../../../services/professional-onboarding";
 import { isRegulated, proKindOf } from "../../onboarding/pro/proModel";
 import type { LicenceStatus } from "../../../services/professional-cv";
 import { textPx } from "../../../theme/textSize";
+import { t, tk, tn } from "../../../i18n/core";
 
 /**
  * Release 3 W6 · Settings › Practice (/app/more/practice/*), MO23 v3
@@ -81,8 +82,10 @@ const Note = ({ children }: { children: ReactNode }) => (
 // the frame's three groups. Each row opens W4's sheet for that policy.
 // ---------------------------------------------------------------------------
 
-const hours = (h: number) => (h === 0 ? "No notice" : h % 24 === 0 && h >= 48 ? `${h / 24} days` : `${h} hour${h === 1 ? "" : "s"}`);
-const charge = (p: number) => (p === 0 ? "No charge" : p === 50 ? "Half the session price" : p === 100 ? "Full session price" : `${p}% of the session price`);
+const hours = (h: number) =>
+  h === 0 ? t("No notice") : h % 24 === 0 && h >= 48 ? tn(h / 24, "{n} days", "{n} days") : tn(h, "{n} hour", "{n} hours");
+const charge = (p: number) =>
+  p === 0 ? t("No charge") : p === 50 ? t("Half the session price") : p === 100 ? t("Full session price") : t("{pct}% of the session price", { pct: p });
 
 function BookingDefaults() {
   const navigate = useNavigate();
@@ -114,14 +117,14 @@ function BookingDefaults() {
     const r = await saveBookingPolicy(me, next);
     if (!r.ok) {
       setPolicy(policy);
-      setToast(r.message);
+      setToast(t(r.message));
     }
   };
 
   const p = policy ?? DEFAULT_POLICY;
   return (
     <div>
-      <PageHeader title="Booking defaults" showBack tightBack />
+      <PageHeader title={t("Booking defaults")} showBack tightBack />
       <SettingsBody className="-mt-3">
         {state === "loading" && !policy ? (
           <ListSkeleton rows={4} />
@@ -130,38 +133,38 @@ function BookingDefaults() {
         ) : (
           <>
             {state === "offline" && <OfflineLine />}
-            <SettingsSection label="New bookings">
-              <SettingsRow icon={Clock} title="Minimum notice" value={hours(p.minNoticeHours)} onClick={() => setSheet("notice")} />
-              <SettingsRow icon={CalendarRange} title="How far ahead" value={windowLabel(p.windowDays).replace(" ahead", "")} onClick={() => setSheet("window")} />
-              <SettingsRow icon={Timer} title="Buffer between sessions" subtitle="Set on each session type" onClick={() => navigate("/app/pro/calendar/availability")} />
-              <SettingsRow icon={Users} title="Who can book" value={AUDIENCE[p.whoCanBook].title} onClick={() => setSheet("who")} />
+            <SettingsSection label={t("New bookings")}>
+              <SettingsRow icon={Clock} title={t("Minimum notice")} value={hours(p.minNoticeHours)} onClick={() => setSheet("notice")} />
+              <SettingsRow icon={CalendarRange} title={t("How far ahead")} value={t(windowLabel(p.windowDays).replace(" ahead", ""))} onClick={() => setSheet("window")} />
+              <SettingsRow icon={Timer} title={t("Buffer between sessions")} subtitle={t("Set on each session type")} onClick={() => navigate("/app/pro/calendar/availability")} />
+              <SettingsRow icon={Users} title={t("Who can book")} value={t(AUDIENCE[p.whoCanBook].title)} onClick={() => setSheet("who")} />
             </SettingsSection>
-            <SettingsSection label="Changes and cancellations">
-              <SettingsRow icon={CalendarX} title="Free cancellation" value={p.freeCancelHours === 0 ? "Up to the start" : `${p.freeCancelHours} h before`} onClick={() => setSheet("notice")} />
+            <SettingsSection label={t("Changes and cancellations")}>
+              <SettingsRow icon={CalendarX} title={t("Free cancellation")} value={p.freeCancelHours === 0 ? t("Up to the start") : t("{n} h before", { n: p.freeCancelHours })} onClick={() => setSheet("notice")} />
               <SettingsRow
                 icon={Banknote}
-                title="Charge late cancellations"
+                title={t("Charge late cancellations")}
                 subtitle={charge(p.lateCancelPct)}
-                toggle={{ checked: p.lateCancelPct > 0, onChange: (v) => void setCharge("lateCancelPct", v), disabled: !policy, label: "Charge late cancellations" }}
+                toggle={{ checked: p.lateCancelPct > 0, onChange: (v) => void setCharge("lateCancelPct", v), disabled: !policy, label: t("Charge late cancellations") }}
               />
               <SettingsRow
                 icon={UserX}
-                title="Charge no-shows"
+                title={t("Charge no-shows")}
                 subtitle={charge(p.noShowPct)}
-                toggle={{ checked: p.noShowPct > 0, onChange: (v) => void setCharge("noShowPct", v), disabled: !policy, label: "Charge no-shows" }}
+                toggle={{ checked: p.noShowPct > 0, onChange: (v) => void setCharge("noShowPct", v), disabled: !policy, label: t("Charge no-shows") }}
               />
             </SettingsSection>
-            <SettingsSection label="Reminders to clients">
-              <SettingsRow icon={Bell} title="Before a session" value={remindersLabel(reminders.alert, reminders.alert2)} onClick={() => setSheet("reminders")} />
+            <SettingsSection label={t("Reminders to clients")}>
+              <SettingsRow icon={Bell} title={t("Before a session")} value={t(remindersLabel(reminders.alert, reminders.alert2))} onClick={() => setSheet("reminders")} />
             </SettingsSection>
-            <Note>These apply to every new session type. You can change them on a single session type in Calendar.</Note>
+            <Note>{t("These apply to every new session type. You can change them on a single session type in Calendar.")}</Note>
           </>
         )}
       </SettingsBody>
       {me && (
         <BookingSheet kind={sheet} me={me} policy={p} handle={handle} reminders={reminders} onClose={() => setSheet(null)} onSaved={() => void load()} onToast={setToast} />
       )}
-      <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+      <Toast open={!!toast} message={toast ? t(toast) : ""} onExpire={() => setToast(null)} />
     </div>
   );
 }
@@ -172,15 +175,15 @@ function BookingDefaults() {
 // ---------------------------------------------------------------------------
 
 const CATS: { key: AccessCategory; icon: LucideIcon; label: string }[] = [
-  { key: "workout_activity", icon: Dumbbell, label: "Workout activity" },
-  { key: "food_diary", icon: UtensilsCrossed, label: "Food diary" },
-  { key: "weight", icon: Scale, label: "Weight" },
-  { key: "body_measurements", icon: Ruler, label: "Body measurements" },
-  { key: "health_metrics", icon: Activity, label: "Activity & vitals" },
-  { key: "blood_pressure", icon: HeartPulse, label: "Blood pressure" },
-  { key: "lab_results", icon: FlaskConical, label: "Lab results" },
-  { key: "medical_history", icon: ClipboardList, label: "Medical history" },
-  { key: "allergies_dietary", icon: Wheat, label: "Allergies and dietary needs" },
+  { key: "workout_activity", icon: Dumbbell, label: tk("Workout activity") },
+  { key: "food_diary", icon: UtensilsCrossed, label: tk("Food diary") },
+  { key: "weight", icon: Scale, label: tk("Weight") },
+  { key: "body_measurements", icon: Ruler, label: tk("Body measurements") },
+  { key: "health_metrics", icon: Activity, label: tk("Activity & vitals") },
+  { key: "blood_pressure", icon: HeartPulse, label: tk("Blood pressure") },
+  { key: "lab_results", icon: FlaskConical, label: tk("Lab results") },
+  { key: "medical_history", icon: ClipboardList, label: tk("Medical history") },
+  { key: "allergies_dietary", icon: Wheat, label: tk("Allergies and dietary needs") },
 ];
 
 function DataRequests() {
@@ -216,25 +219,25 @@ function DataRequests() {
 
   return (
     <div>
-      <PageHeader title="Default data requests" showBack tightBack />
+      <PageHeader title={t("Default data requests")} showBack tightBack />
       <SettingsBody className="-mt-3">
         <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5, marginBottom: 8 }}>
-          Asked of every new client when they hire you. Each client chooses what to share and can change it any time.
+          {t("Asked of every new client when they hire you. Each client chooses what to share and can change it any time.")}
         </p>
         {state === "loading" ? (
           <ListSkeleton rows={5} />
         ) : !cats ? (
           state === "offline" ? <OfflineLine /> : <ProError onRetry={() => void load()} />
         ) : (
-          <SettingsSection label="Ask new clients for">
+          <SettingsSection label={t("Ask new clients for")}>
             {CATS.map((c) => (
-              <SettingsRow key={c.key} icon={c.icon} title={c.label} toggle={{ checked: cats.includes(c.key), onChange: (v) => void flip(c.key, v), label: c.label }} />
+              <SettingsRow key={c.key} icon={c.icon} title={t(c.label)} toggle={{ checked: cats.includes(c.key), onChange: (v) => void flip(c.key, v), label: t(c.label) }} />
             ))}
           </SettingsSection>
         )}
-        <Note>Asking only for what you use builds trust. Clients see why you ask for each one.</Note>
+        <Note>{t("Asking only for what you use builds trust. Clients see why you ask for each one.")}</Note>
       </SettingsBody>
-      <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+      <Toast open={!!toast} message={toast ? t(toast) : ""} onExpire={() => setToast(null)} />
     </div>
   );
 }
@@ -290,24 +293,24 @@ function InvoicePage() {
 
   return (
     <div>
-      <PageHeader title="Invoice details" showBack tightBack />
+      <PageHeader title={t("Invoice details")} showBack tightBack />
       {state === "loading" ? (
         <ListSkeleton rows={3} />
       ) : !draft ? (
         state === "offline" ? <OfflineLine /> : <ProError onRetry={() => void load()} />
       ) : (
         <div className="space-y-4">
-          {field("name", "Name on invoices", "Your name or business name", 120)}
-          {field("taxNumber", "Tax number", "Optional", 40)}
-          {field("prefix", "Invoice numbering", "Prefix, for example INV-", 10)}
-          <Note>Shown on invoices and receipts once payments in the app launch.</Note>
+          {field("name", t("Name on invoices"), t("Your name or business name"), 120)}
+          {field("taxNumber", t("Tax number"), t("Optional"), 40)}
+          {field("prefix", t("Invoice numbering"), t("Prefix, for example INV-"), 10)}
+          <Note>{t("Shown on invoices and receipts once payments in the app launch.")}</Note>
           {msg && (
             <p role="status" style={{ fontSize: textPx(12), fontWeight: 600, color: msg === "Saved" ? INK.good : INK.hi }}>
-              {msg}
+              {t(msg)}
             </p>
           )}
           <Button fullWidth onClick={() => void save()} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? t("Saving…") : t("Save")}
           </Button>
         </div>
       )}
@@ -328,7 +331,6 @@ function ListingPage() {
   const navigate = useNavigate();
   const { authUserId, user } = useApp();
   const regulated = isRegulated(proKindOf(user.professionalSubtype));
-  const docWord = regulated ? "licence" : "certificate";
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfessionalProfile | null>(null);
@@ -366,50 +368,57 @@ function ListingPage() {
     const r = await setPublicListing(next);
     setBusy(false);
     if (r.status === "ok") return setProfile((p) => (p ? { ...p, listedPublicly: r.listed } : p));
-    if (r.status === "no_profile") return setError("Fill in your public profile first. There's nothing to list yet.");
+    if (r.status === "no_profile") return setError(t("Fill in your public profile first. There's nothing to list yet."));
     if (r.status === "needs_dob") return setDobAsk({ retry: () => void toggle(true) });
     if (r.status === "needs_verification") return setCheck((c) => (c?.kind === "verified" ? { kind: "none" } : c));
-    setError(r.message);
+    setError(t(r.message));
   };
 
   const listed = profile?.listedPublicly ?? false;
   const verified = check?.kind === "verified";
   const waiting = !listed && !verified;
+  // One key per document word: Arabic needs the noun inside the sentence.
   const waitingLine =
     check?.kind === "pending"
-      ? `We're checking your ${docWord}. You can be listed once it's verified.`
+      ? regulated
+        ? t("We're checking your licence. You can be listed once it's verified.")
+        : t("We're checking your certificate. You can be listed once it's verified.")
       : check?.kind === "rejected"
-        ? `We couldn't verify your ${docWord}. Fix it in Edit public profile to be listed.`
-        : `Add your ${docWord} in Edit public profile. You can be listed once we've checked it.`;
+        ? regulated
+          ? t("We couldn't verify your licence. Fix it in Edit public profile to be listed.")
+          : t("We couldn't verify your certificate. Fix it in Edit public profile to be listed.")
+        : regulated
+          ? t("Add your licence in Edit public profile. You can be listed once we've checked it.")
+          : t("Add your certificate in Edit public profile. You can be listed once we've checked it.");
 
   return (
     <div>
-      <PageHeader title="Public listing" showBack tightBack />
+      <PageHeader title={t("Public listing")} showBack tightBack />
       <SettingsBody className="-mt-3">
         <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5, marginBottom: 8 }}>
-          Clients browsing Explore can find you once you're listed. Your public profile is what they see.
+          {t("Clients browsing Explore can find you once you're listed. Your public profile is what they see.")}
         </p>
         {loading ? (
           <ListSkeleton rows={2} />
         ) : loadError ? (
-          <ProError onRetry={() => void load()} message={loadError} />
+          <ProError onRetry={() => void load()} message={t(loadError)} />
         ) : (
-          <SettingsSection label="Explore">
+          <SettingsSection label={t("Explore")}>
             <SettingsRow
               icon={Globe2}
-              title="Show me in Explore"
+              title={t("Show me in Explore")}
               subtitle={
                 profile
                   ? listed
-                    ? "Clients browsing Explore can find you."
+                    ? t("Clients browsing Explore can find you.")
                     : waiting
                       ? waitingLine
-                      : "You're not listed. Only clients with your code or invite link can connect."
-                  : "Fill in your public profile first. There's nothing to list yet."
+                      : t("You're not listed. Only clients with your code or invite link can connect.")
+                  : t("Fill in your public profile first. There's nothing to list yet.")
               }
-              toggle={{ checked: listed, onChange: (v) => void toggle(v), disabled: !profile || busy || waiting, label: "Show me in Explore" }}
+              toggle={{ checked: listed, onChange: (v) => void toggle(v), disabled: !profile || busy || waiting, label: t("Show me in Explore") }}
             />
-            <SettingsRow icon={Globe2} title="Edit public profile" onClick={() => navigate("/app/more/edit-profile")} />
+            <SettingsRow icon={Globe2} title={t("Edit public profile")} onClick={() => navigate("/app/more/edit-profile")} />
           </SettingsSection>
         )}
         {error && (
@@ -420,8 +429,8 @@ function ListingPage() {
         <div className="mt-4">
           {dobAsk ? (
             <DobInline
-              title="Add your date of birth"
-              body={`${NEEDS_DOB} It's kept private: clients never see it.`}
+              title={t("Add your date of birth")}
+              body={`${t(NEEDS_DOB)} ${t("It's kept private: clients never see it.")}`}
               onSaved={() => {
                 const retry = dobAsk.retry;
                 setDobAsk(null);
@@ -432,8 +441,8 @@ function ListingPage() {
           ) : (
             needsDob && (
               <DobInline
-                title="Add your date of birth to stay fully listed"
-                body="You're listed and you stay listed. Until you add your date of birth you can't add a map area, and if you turn your listing off you won't be able to turn it back on. It's kept private: clients never see it."
+                title={t("Add your date of birth to stay fully listed")}
+                body={t("You're listed and you stay listed. Until you add your date of birth you can't add a map area, and if you turn your listing off you won't be able to turn it back on. It's kept private: clients never see it.")}
                 onSaved={() => setNeedsDob(false)}
               />
             )

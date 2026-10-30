@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Check, Search } from "lucide-react";
 import { AvatarPlaceholder } from "../icons/PartBIcons";
+import { t } from "../../i18n/core";
 
 export interface PickableClient {
   userId: string;
@@ -24,7 +25,7 @@ export const ClientPicker: React.FC<{
   disabled?: Set<string>;
   disabledLabel?: string;
   emptyText?: string;
-}> = ({ clients, selected, onToggle, disabled, disabledLabel = "Already added", emptyText }) => {
+}> = ({ clients, selected, onToggle, disabled, disabledLabel, emptyText }) => {
   const [q, setQ] = useState("");
   const shown = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -36,7 +37,7 @@ export const ClientPicker: React.FC<{
   if (clients.length === 0) {
     return (
       <p className="text-sm text-charcoal-faint text-center py-8">
-        {emptyText ?? "You don't have any connected clients yet."}
+        {emptyText ?? t("You don't have any connected clients yet.")}
       </p>
     );
   }
@@ -46,11 +47,11 @@ export const ClientPicker: React.FC<{
       {clients.length > 8 && (
         <label className="flex items-center gap-2 h-11 rounded-[14px] bg-cream-card border border-charcoal/10 px-3 mb-2">
           <Search size={16} className="text-charcoal-soft shrink-0" aria-hidden />
-          <span className="sr-only">Search clients</span>
+          <span className="sr-only">{t("Search clients")}</span>
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search clients"
+            placeholder={t("Search clients")}
             className="flex-1 min-w-0 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
           />
         </label>
@@ -81,7 +82,7 @@ export const ClientPicker: React.FC<{
             </span>
             <span className="flex-1 min-w-0">
               <span className="block text-sm font-semibold text-charcoal truncate">{c.name}</span>
-              {fixed && <span className="block text-xs text-charcoal-soft">{disabledLabel}</span>}
+              {fixed && <span className="block text-xs text-charcoal-soft">{disabledLabel ?? t("Already added")}</span>}
             </span>
             <span
               aria-hidden
@@ -94,7 +95,7 @@ export const ClientPicker: React.FC<{
           </button>
         );
       })}
-      {shown.length === 0 && <p className="text-sm text-charcoal-faint text-center py-6">No clients match.</p>}
+      {shown.length === 0 && <p className="text-sm text-charcoal-faint text-center py-6">{t("No clients match.")}</p>}
     </div>
   );
 };

@@ -2,6 +2,7 @@ import React from "react";
 import { AlertCircle, CloudOff } from "lucide-react";
 import { textPx } from "../../theme/textSize";
 import { ERROR_PANEL_COPY, errorPanelKind, isChunkLoadError } from "./errorPanel";
+import { t } from "../../i18n/core";
 
 /**
  * Round D O1: a render error used to blank the whole app, and offline the
@@ -105,16 +106,16 @@ const ErrorPanel: React.FC<{ error: unknown; onRetry: () => void; fullScreen?: b
       <span className="flex items-center justify-center bg-primary-pale text-primary" style={{ width: 56, height: 56, borderRadius: 16 }}>
         <Icon size={26} strokeWidth={1.5} aria-hidden />
       </span>
-      <p className="text-charcoal" style={{ fontSize: textPx(15), fontWeight: 700, marginTop: 12 }}>{copy.title}</p>
+      <p className="text-charcoal" style={{ fontSize: textPx(15), fontWeight: 700, marginTop: 12 }}>{t(copy.title)}</p>
       {copy.line && (
-        <p className="text-charcoal-soft" style={{ fontSize: textPx(12.5), fontWeight: 500, marginTop: 4, lineHeight: 1.6, maxWidth: 260 }}>{copy.line}</p>
+        <p className="text-charcoal-soft" style={{ fontSize: textPx(12.5), fontWeight: 500, marginTop: 4, lineHeight: 1.6, maxWidth: 260 }}>{t(copy.line)}</p>
       )}
       <button
         type="button"
         onClick={onRetry}
         className="tap mt-4 h-11 px-5 rounded-xl bg-primary-fill text-on-primary-fill font-bold text-[13px] hover:brightness-[0.92]"
       >
-        {copy.action}
+        {t(copy.action)}
       </button>
     </div>
   );

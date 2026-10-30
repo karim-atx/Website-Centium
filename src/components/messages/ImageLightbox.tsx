@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Download, X } from "lucide-react";
 import { useBackCloses } from "../../hooks/useBackCloses";
+import { t } from "../../i18n/core";
 
 // A photo from a conversation, full screen: pinch or wheel to zoom, drag to
 // pan while zoomed, double-tap to zoom in or out, and close with the button,
@@ -138,7 +139,7 @@ export const ImageLightbox: React.FC<{
       a.remove();
       window.setTimeout(() => URL.revokeObjectURL(href), 10_000);
     } catch {
-      setNote("That photo couldn't be downloaded. Try again.");
+      setNote(t("That photo couldn't be downloaded. Try again."));
     }
     setDownloading(false);
   };
@@ -147,15 +148,15 @@ export const ImageLightbox: React.FC<{
     "tap w-11 h-11 rounded-full flex items-center justify-center bg-white/15 text-white hover:bg-white/25 disabled:opacity-50";
 
   return createPortal(
-    <div role="dialog" aria-modal="true" aria-label="Photo" className="fixed inset-0 z-[60] bg-black/95 flex flex-col">
+    <div role="dialog" aria-modal="true" aria-label={t("Photo")} className="fixed inset-0 z-[60] bg-black/95 flex flex-col">
       <div
         className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-3"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 10px)" }}
       >
-        <button ref={closeRef} type="button" onClick={onClose} aria-label="Close" className={control}>
+        <button ref={closeRef} type="button" onClick={onClose} aria-label={t("Close")} className={control}>
           <X size={20} />
         </button>
-        <button type="button" onClick={() => void download()} disabled={downloading} aria-label="Download photo" className={control}>
+        <button type="button" onClick={() => void download()} disabled={downloading} aria-label={t("Download photo")} className={control}>
           <Download size={19} />
         </button>
       </div>
@@ -175,7 +176,7 @@ export const ImageLightbox: React.FC<{
       >
         <img
           src={url}
-          alt="Photo from this conversation"
+          alt={t("Photo from this conversation")}
           draggable={false}
           onClick={onImageClick}
           className="max-w-full max-h-full object-contain will-change-transform"

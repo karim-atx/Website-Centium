@@ -14,6 +14,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { Read, Write } from "./clients";
+import { tk } from "../../i18n/core";
 
 export type AccessCategory =
   | "food_diary"
@@ -88,10 +89,10 @@ async function write(me: string, row: Record<string, unknown>, fallback: string)
 }
 
 export const saveDataRequests = (me: string, cats: AccessCategory[]) =>
-  write(me, { default_data_requests: cats }, "Couldn't save your data requests. Try again.");
+  write(me, { default_data_requests: cats }, tk("Couldn't save your data requests. Try again."));
 
 export const saveCallsWithHiredClients = (me: string, on: boolean) =>
-  write(me, { calls_with_hired_clients: on }, "Couldn't save this setting. Try again.");
+  write(me, { calls_with_hired_clients: on }, tk("Couldn't save this setting. Try again."));
 
 /**
  * Keeps any other keys already stored in invoice_details: the object is read,
@@ -99,7 +100,7 @@ export const saveCallsWithHiredClients = (me: string, on: boolean) =>
  */
 export async function saveInvoiceDetails(me: string, d: InvoiceDetails): Promise<Write> {
   const { data, error } = await from("practice_settings").select("invoice_details").eq("professional_id", me).maybeSingle();
-  if (error) return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't save your invoice details. Try again." };
+  if (error) return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : tk("Couldn't save your invoice details. Try again.") };
   const prev = ((data as unknown as { invoice_details: Record<string, unknown> } | null)?.invoice_details ?? {}) as Record<string, unknown>;
   const next: Record<string, unknown> = { ...prev };
   const put = (k: string, v: string) => {
@@ -110,7 +111,7 @@ export async function saveInvoiceDetails(me: string, d: InvoiceDetails): Promise
   put("name", d.name);
   put("tax_number", d.taxNumber);
   put("prefix", d.prefix);
-  return write(me, { invoice_details: next }, "Couldn't save your invoice details. Try again.");
+  return write(me, { invoice_details: next }, tk("Couldn't save your invoice details. Try again."));
 }
 
 /** practice_settings.gone_quiet_days (default 7); null when it couldn't be read. */

@@ -11,6 +11,23 @@ import {
   type BillingPeriod,
   limitLabel,
 } from "../../services/subscription-tiers/pricing";
+import { t } from "../../i18n/core";
+
+/**
+ * A translated sentence with one element inside it: `text` holds "{slot}"
+ * where `children` goes ("You're on {plan}" with the plan in bold).
+ */
+export const Slot: React.FC<{ text: string; slot: string; children: React.ReactNode }> = ({ text, slot, children }) => {
+  const at = text.indexOf(`{${slot}}`);
+  if (at < 0) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, at)}
+      {children}
+      {text.slice(at + slot.length + 2)}
+    </>
+  );
+};
 
 // The plan list, shared by all three account types.
 //
@@ -66,7 +83,7 @@ export const BillingToggle: React.FC<{
           period === p ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-faint"
         )}
       >
-        {p === "monthly" ? "Monthly" : "Yearly"}
+        {p === "monthly" ? t("Monthly") : t("Yearly")}
         {notes?.[p] && <span className="text-[11px] font-semibold opacity-90">{notes[p]}</span>}
         {/* COMPUTED, NOT WRITTEN. This badge read "−15%" on the marketing
             picker and "SAVE 30%" in the app, beside prices that produced
@@ -125,7 +142,7 @@ export const PlanRow: React.FC<{
           <p className="text-sm font-bold text-charcoal">{tier.name}</p>
           {isCurrent && (
             <span className="text-[10px] font-bold text-primary-dark bg-white dark:bg-cream-card rounded-full px-2 py-0.5">
-              CURRENT
+              {t("CURRENT")}
             </span>
           )}
           {period === "yearly" && saving && (
@@ -144,7 +161,7 @@ export const PlanRow: React.FC<{
             to per month. */}
         {period === "yearly" && yearly != null && monthly != null && monthly > 0 && (
           <p className="text-[11px] text-charcoal-faint">
-            {formatPrice(monthlyEquivalent(yearly))}/mo, billed yearly
+            {t("{price}/mo, billed yearly", { price: formatPrice(monthlyEquivalent(yearly)) })}
           </p>
         )}
       </div>

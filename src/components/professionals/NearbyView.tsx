@@ -24,6 +24,7 @@ import {
   type Coords,
 } from "../../services/geo";
 import type { Area } from "../../services/geo/areas";
+import { inlineScrolled, scrollToInline } from "../../utils/inlineScroll";
 
 // MapLibre is only downloaded here, when the map is opened.
 const NearbyMap = lazy(() => import("./NearbyMap"));
@@ -305,7 +306,7 @@ export const NearbyView: React.FC<{
   const showCard = (i: number, instant = false) => {
     setActive(i);
     const el = strip.current;
-    if (el) el.scrollTo({ left: i * el.clientWidth, behavior: instant ? "auto" : "smooth" });
+    if (el) scrollToInline(el, i * el.clientWidth, instant ? "auto" : "smooth");
   };
   // A pin: one professional moves the strip to them among everyone nearby;
   // several load just them, first one showing.
@@ -419,7 +420,7 @@ export const NearbyView: React.FC<{
                   ref={strip}
                   onScroll={(e) => {
                     const el = e.currentTarget;
-                    const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+                    const i = Math.round(inlineScrolled(el) / Math.max(1, el.clientWidth));
                     if (i !== active) setActive(i);
                   }}
                   className="flex overflow-x-auto no-scrollbar snap-x snap-mandatory py-2 -my-2"

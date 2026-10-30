@@ -4,6 +4,7 @@ import { PageHeader } from "../ui/PageHeader";
 import { PinnedCta } from "../ui/PinnedCta";
 import { SettingsBody } from "../ui/SettingsRows";
 import { RECOVERY_CODES_FILENAME, recoveryCodesClipboard, recoveryCodesFile } from "./recoveryCodesText";
+import { t, tn } from "../../i18n/core";
 
 // MO1.8.4.2 Recovery codes: the step after Verify on MO1.8.4.1, and what
 // View codes opens on the Recovery codes widget. Measured from the 2x frame:
@@ -67,7 +68,7 @@ export const RecoveryCodesView: React.FC<{
 
   return (
     <div className="pb-[172px]">
-      <PageHeader title="Recovery codes" showBack onBack={onBack} sub tightBack />
+      <PageHeader title={t("Recovery codes")} showBack onBack={onBack} sub tightBack />
 
       <SettingsBody className="-mt-1">
         <div className="flex flex-col items-center text-center">
@@ -77,21 +78,21 @@ export const RecoveryCodesView: React.FC<{
           >
             <Check size={24} strokeWidth={2.4} />
           </span>
-          <h2 className="mt-2.5 text-[20px] font-extrabold leading-[1.5] text-charcoal">Two-factor is on</h2>
+          <h2 className="mt-2.5 text-[20px] font-extrabold leading-[1.5] text-charcoal">{t("Two-factor is on")}</h2>
           <p className="mt-2.5 text-[14px] leading-[1.5] text-charcoal-soft">
             {masked
-              ? `${masked.left} of ${masked.total} codes left. Codes are only shown once, when they're made; generate new ones if you've lost them.`
-              : "Save these codes. Each one signs you in once if you lose your phone."}
+              ? tn(masked.total, "{left} of {n} codes left. Codes are only shown once, when they're made; generate new ones if you've lost them.", "{left} of {n} codes left. Codes are only shown once, when they're made; generate new ones if you've lost them.", { left: masked.left })
+              : t("Save these codes. Each one signs you in once if you lose your phone.")}
           </p>
         </div>
 
         <ul
-          aria-label="Your recovery codes"
+          aria-label={t("Your recovery codes")}
           className="mt-[17px] grid grid-cols-2 gap-x-3 gap-y-2.5 rounded-2xl bg-th-f0edf9 dark:bg-primary-pale p-3.5"
         >
           {masked
             ? Array.from({ length: masked.total }, (_, i) => (
-                <li key={i} aria-label="Hidden code" className="text-center text-[14px] leading-[21px] font-bold tracking-[0.12em] text-charcoal-faint">
+                <li key={i} aria-label={t("Hidden code")} className="text-center text-[14px] leading-[21px] font-bold tracking-[0.12em] text-charcoal-faint">
                   ••••-••••
                 </li>
               ))
@@ -111,10 +112,10 @@ export const RecoveryCodesView: React.FC<{
         {!masked && (
         <div className="mt-3 flex gap-2">
           <button type="button" onClick={() => void copyAll()} className={action}>
-            {copied ? "Copied" : "Copy all"}
+            {copied ? t("Copied") : t("Copy all")}
           </button>
           <button type="button" onClick={download} className={action}>
-            Download
+            {t("Download")}
           </button>
         </div>
         )}
@@ -123,8 +124,8 @@ export const RecoveryCodesView: React.FC<{
       <PinnedCta
         primary={
           masked
-            ? { label: "Generate new", onClick: masked.onGenerate, loading: masked.generating }
-            : { label: "I’ve saved them", onClick: onSaved }
+            ? { label: t("Generate new"), onClick: masked.onGenerate, loading: masked.generating }
+            : { label: t("I’ve saved them"), onClick: onSaved }
         }
       />
     </div>

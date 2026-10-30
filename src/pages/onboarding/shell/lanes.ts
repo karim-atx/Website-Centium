@@ -2,6 +2,7 @@ import type { Shape } from "./visuals";
 import { LANE_CHIP_VIS } from "./visuals";
 import { PRO_LANES } from "../pro/proLanes";
 import { BIZ_LANES } from "../business/bizLanes";
+import { tk } from "../../../i18n/core";
 
 /**
  * The numbered steps of each onboarding lane, by name, in order. The lane
@@ -22,7 +23,7 @@ export interface LaneDef {
 }
 
 export const LANES: Record<string, LaneDef> = {
-  client: { chip: "Personal", vis: LANE_CHIP_VIS.client, steps: ["about", "gentle", "goals", "track"] },
+  client: { chip: tk("Personal"), vis: LANE_CHIP_VIS.client, steps: ["about", "gentle", "goals", "track"] },
   // Professional lanes (OB-B): pro-trainer, pro-physio, pro-diet, pro-other.
   ...PRO_LANES,
   // Business lanes (OB-C): biz-classes, biz-gym, biz-store.

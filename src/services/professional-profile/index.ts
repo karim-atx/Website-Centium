@@ -4,6 +4,7 @@ import { playlistSaveError } from "../music/playlistLink";
 import { moderationRefusal } from "../moderation/text";
 import type { Enums } from "../../../lib/supabase/database.types";
 import { contactRefusal } from "../moderation/text";
+import { tk } from "../../i18n/core";
 
 // A professional's own `professional_profiles` row: the listing content, the
 // rates, and the public-listing switch.
@@ -47,12 +48,12 @@ export type ProfessionalProfilePatch = Partial<
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again.";
+    return tk("Your session expired. Sign in again.");
   }
   if (code === "42501") {
-    return "That field can't be edited from here.";
+    return tk("That field can't be edited from here.");
   }
-  return moderationRefusal(error) ?? "Could not save your profile. Try again.";
+  return moderationRefusal(error) ?? tk("Could not save your profile. Try again.");
 }
 
 type Row = {
@@ -189,7 +190,7 @@ export async function saveMyProfile(
     console.error("[professional-profile] Could not create profile:", inserted.error?.message);
     return {
       ok: false,
-      message: inserted.error ? describe(inserted.error) : "Could not save your profile.",
+      message: inserted.error ? describe(inserted.error) : tk("Could not save your profile."),
     };
   }
   return { ok: true, profile: toProfile(inserted.data as Row) };
@@ -268,17 +269,17 @@ export async function leaveAffiliation(businessId: string): Promise<LeaveAffilia
   } catch (e) {
     return {
       ok: false,
-      message: e instanceof Error ? e.message : "Could not leave that business.",
+      message: e instanceof Error ? e.message : tk("Could not leave that business."),
     };
   }
 }
 
 /** The one sentence for both public surfaces: the directory listing and the map area. */
-export const UNDER_18_LISTING = "Accounts under 18 can't be listed publicly.";
+export const UNDER_18_LISTING = tk("Accounts under 18 can't be listed publicly.");
 /** ATX48: fixed by adding a date of birth. */
-export const NEEDS_DOB = "Add your date of birth to appear in the directory.";
+export const NEEDS_DOB = tk("Add your date of birth to appear in the directory.");
 /** ATXC6: fixed once a licence or certificate is verified. */
-export const NEEDS_VERIFICATION = "You can be listed once your licence or certificate is verified.";
+export const NEEDS_VERIFICATION = tk("You can be listed once your licence or certificate is verified.");
 
 export type SetListingResult =
   | { status: "ok"; listed: boolean }
@@ -315,7 +316,7 @@ export async function setPublicListing(listed: boolean): Promise<SetListingResul
     // licence or certificate. Anyone already listed keeps their listing.
     if (error.code === "ATXC6") return { status: "needs_verification" };
     console.error("[professional-profile] Could not set listing:", error.code, error.message);
-    return { status: "error", message: "Could not update your listing. Try again." };
+    return { status: "error", message: tk("Could not update your listing. Try again.") };
   }
 
   const row = data as unknown as { listed_publicly: boolean } | null;
@@ -357,8 +358,8 @@ export async function setMapArea(lat: number, lng: number, label: string | null,
     console.error("[professional-profile] Could not set the map area:", error.code, error.message);
     if (error.code === "ATX47") return { ok: false, message: UNDER_18_LISTING };
     if (error.code === "ATX48") return { ok: false, needsDob: true, message: NEEDS_DOB };
-    if (error.code === "ATX08") return { ok: false, message: "Save your details first. There's nothing to list yet." };
-    return { ok: false, message: describe(error) === "Your session expired. Sign in again." ? describe(error) : "Couldn't save your area. Try again." };
+    if (error.code === "ATX08") return { ok: false, message: tk("Save your details first. There's nothing to list yet.") };
+    return { ok: false, message: describe(error) === tk("Your session expired. Sign in again.") ? describe(error) : tk("Couldn't save your area. Try again.") };
   }
   return { ok: true, mapArea: mapAreaFrom(data) };
 }
@@ -368,7 +369,7 @@ export async function clearMapArea(): Promise<MapAreaResult> {
   const { error } = await supabase.rpc("clear_approximate_location");
   if (error) {
     console.error("[professional-profile] Could not clear the map area:", error.code, error.message);
-    return { ok: false, message: "Couldn't turn that off. Try again." };
+    return { ok: false, message: tk("Couldn't turn that off. Try again.") };
   }
   return { ok: true, mapArea: null };
 }

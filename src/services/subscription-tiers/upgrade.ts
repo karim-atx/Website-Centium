@@ -12,6 +12,8 @@
  * same address the contact form falls back to, and the same shape the account
  * screens already use for "talk to a person".
  */
+import { tk } from "../../i18n/core";
+
 export const UPGRADE_EMAIL = "support@atraxia.org";
 
 export const UPGRADE_SUBJECT = "Upgrade my Centium plan";
@@ -22,4 +24,4 @@ export function upgradeMailto(): string {
 }
 
 /** The words on the control, in one place so the three screens agree. */
-export const UPGRADE_ACTION_LABEL = "Contact us to upgrade";
+export const UPGRADE_ACTION_LABEL = tk("Contact us to upgrade");

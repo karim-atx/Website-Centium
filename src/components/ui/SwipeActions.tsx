@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useIsDark } from "../../hooks/useIsDark";
+import { isRtl } from "../../i18n/core";
 
 export interface SwipeAction {
   key: string;
@@ -184,7 +185,8 @@ export const SwipeActions: React.FC<{
       }
     }
     if (s.axis !== "x") return;
-    setOffset(Math.min(0, Math.max(-openWidth, s.base + dx)));
+    // offset counts towards the inline start: in right to left the row opens by dragging right.
+    setOffset(Math.min(0, Math.max(-openWidth, s.base + (isRtl() ? -dx : dx))));
   };
   const onPointerUp = () => {
     clearLong();
@@ -306,7 +308,7 @@ export const SwipeActions: React.FC<{
                 transition: dragging ? "none" : "width .22s cubic-bezier(.22,1,.36,1), box-shadow .22s",
               }
             : {
-                transform: `translateX(${offset}px)`,
+                transform: `translateX(${isRtl() ? -offset : offset}px)`,
                 transition: dragging ? "none" : "transform .22s cubic-bezier(.22,1,.36,1)",
               }),
         }}

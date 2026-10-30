@@ -1,6 +1,7 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t } from "../../i18n/core";
 import { describeBookingError, describeCancelError, parsePlaces, placesBatches, type SessionPlaces } from "./groupCardsModel";
 
 // Round D · places on a session shared in a group (Database 20261223040000).
@@ -69,6 +70,6 @@ export async function saveEventCapacity(eventId: string, capacity: number | null
   if (!error) return { ok: true };
   console.error("[places] Could not save the capacity:", error.code, error.message);
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  if (error.code === "23514") return { ok: false, message: "Places is a whole number from 1 to 500. Leave it empty for no limit." };
-  return { ok: false, message: "The event is saved, but its places couldn't be. Try again." };
+  if (error.code === "23514") return { ok: false, message: t("Places is a whole number from {min} to {max}. Leave it empty for no limit.", { min: 1, max: 500 }) };
+  return { ok: false, message: t("The event is saved, but its places couldn't be. Try again.") };
 }

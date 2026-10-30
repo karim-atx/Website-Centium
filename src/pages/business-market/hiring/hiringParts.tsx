@@ -17,6 +17,7 @@ import { BUSY_WARNING_TEXT, type Opening, type ProCard } from "../../../services
 import type { MarketResult } from "../../../services/market/rpc";
 import { FEE_NOTICE_PLAIN, feeNotice, fetchHiringFeeRules, type HiringFeeRules } from "../../../services/hiring";
 import { footLine, hiredLine, openingTag, payLine, personRating, scheduleLine, type HiringTag } from "./hubModel";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W4 · pieces shared by the B-MA.8 pages (W4-A owns this
 // file; the other W4 pages import from it). Literal values from Business
@@ -585,7 +586,7 @@ export function useFeeRules(): HiringFeeRules | null {
 
 /** The footer notice with the server's rate and floors ("One-time 8% hiring fee (min. $25 per role, $3 per class slot) when you hire"). */
 export function feeNoticeText(rules: HiringFeeRules | null): string {
-  return rules ? feeNotice(rules) : FEE_NOTICE_PLAIN;
+  return rules ? feeNotice(rules) : t(FEE_NOTICE_PLAIN);
 }
 
 export function FeeNoticeRow({ text }: { text: string }) {

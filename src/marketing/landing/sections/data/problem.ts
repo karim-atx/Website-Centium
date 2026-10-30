@@ -4,10 +4,12 @@
 // colour, percentage and animation window ("a b", read by motion/anim.ts as
 // data-w) is literal. The names and figures are approved demo data.
 
+import { tk } from "../../../../i18n/core";
+
 export const probs = [
-  { t: "A nutrition app", tag: "Costly" },
-  { t: "A workout app", tag: "Generic" },
-  { t: "A health app", tag: "Discrepancies" },
-  { t: "A messenger app", tag: "Elsewhere" },
-  { t: "A spreadsheet you stopped filling", tag: "Inconsistency" },
+  { t: tk("A nutrition app"), tag: tk("Costly") },
+  { t: tk("A workout app"), tag: tk("Generic") },
+  { t: tk("A health app"), tag: tk("Discrepancies") },
+  { t: tk("A messenger app"), tag: tk("Elsewhere") },
+  { t: tk("A spreadsheet you stopped filling"), tag: tk("Inconsistency") },
 ];

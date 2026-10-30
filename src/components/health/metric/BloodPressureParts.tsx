@@ -4,6 +4,7 @@ import { textPx, linePx } from "../../../theme/textSize";
 import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { MetricHero, hairline, mc, metricIconInk, metricTextInk, useHealthMode } from "./MetricKit";
 import { daysOf, monthLetter, type MetricRange, type Period } from "./periods";
+import { isRtl } from "../../../i18n/core";
 import { BP_CATEGORIES, type BpCategory } from "../../../services/blood-pressure/classify";
 import { BP_CATEGORY_LABEL, BP_CATEGORY_RANGE, BP_DETAIL_FOOTER, SEVERE_READING_MESSAGE } from "../../../services/blood-pressure/guidance";
 import { PREGNANCY_FLAG_COPY, type PregnancyFlag } from "../../../services/pregnancy/checks";
@@ -230,20 +231,28 @@ export const BloodPressureChart: React.FC<BpChartProps> = ({ range, period, read
   const base = 118.5;
   const top = 6;
   const y = (v: number) => base - ((v - lo) / (hi - lo)) * (base - top);
+  // Round F (F10): in right to left, time runs from right to left. Every x on
+  // the 326 grid is mirrored (the helpers below take unmirrored centres); SVG
+  // text anchors are logical, so the labels follow.
+  const rtl = isRtl();
+  const mx = (v: number) => (rtl ? 326 - v : v);
   const label = (bold: boolean): React.CSSProperties => ({
     fontSize: "calc(10.5px + var(--text-boost, 0px))",
     fontWeight: bold ? 800 : 600,
     fill: bold ? "rgb(var(--c-charcoal))" : "rgb(var(--c-charcoal-faint))",
   });
-  const dumbbell = (key: string, cx: number, s: number, d: number, alpha = 1, r = 5.5) => (
-    <g key={key} opacity={alpha} data-dumbbell>
-      <line x1={cx} x2={cx} y1={y(s)} y2={y(d)} stroke={sysFill} strokeWidth={3} strokeLinecap="round" />
-      <circle cx={cx} cy={y(s)} r={r} fill={sysFill} />
-      <circle cx={cx} cy={y(d)} r={r} fill={diaFill} />
-    </g>
-  );
+  const dumbbell = (key: string, ux: number, s: number, d: number, alpha = 1, r = 5.5) => {
+    const cx = mx(ux);
+    return (
+      <g key={key} opacity={alpha} data-dumbbell>
+        <line x1={cx} x2={cx} y1={y(s)} y2={y(d)} stroke={sysFill} strokeWidth={3} strokeLinecap="round" />
+        <circle cx={cx} cy={y(s)} r={r} fill={sysFill} />
+        <circle cx={cx} cy={y(d)} r={r} fill={diaFill} />
+      </g>
+    );
+  };
   const ghostCap = (key: string, cx: number, w = 18) => (
-    <rect key={key} x={cx - w / 2 + 0.5} y={y(reference[0]) - w / 2} width={w - 1} height={y(reference[1]) - y(reference[0]) + w} rx={w / 2} fill="none" stroke={ghost} strokeWidth={1} data-ghost />
+    <rect key={key} x={mx(cx) - w / 2 + 0.5} y={y(reference[0]) - w / 2} width={w - 1} height={y(reference[1]) - y(reference[0]) + w} rx={w / 2} fill="none" stroke={ghost} strokeWidth={1} data-ghost />
   );
 
   const refLines = (
@@ -251,7 +260,7 @@ export const BloodPressureChart: React.FC<BpChartProps> = ({ range, period, read
       {reference.map((v, i) => (
         <g key={v}>
           <line x1={0} x2={326} y1={y(v)} y2={y(v)} stroke={refInk} strokeWidth={1.5} strokeDasharray="4 4" />
-          <text x={326} y={i === 0 ? y(v) - 5 : y(v) + 13} textAnchor="end" style={{ fontSize: "calc(10.5px + var(--text-boost, 0px))", fontWeight: 600, fill: metricTextInk(K, dark) }}>
+          <text x={mx(326)} y={i === 0 ? y(v) - 5 : y(v) + 13} textAnchor="end" style={{ fontSize: "calc(10.5px + var(--text-boost, 0px))", fontWeight: 600, fill: metricTextInk(K, dark) }}>
             {v}
           </text>
         </g>
@@ -269,7 +278,7 @@ export const BloodPressureChart: React.FC<BpChartProps> = ({ range, period, read
     let lastX = -99;
     body = (
       <>
-        {nowX < 326 && <rect x={nowX} y={0} width={326 - nowX} height={base} fill={dark ? "rgba(255,255,255,0.03)" : "#FAFAFA"} />}
+        {nowX < 326 && <rect x={rtl ? 0 : nowX} y={0} width={326 - nowX} height={base} fill={dark ? "rgba(255,255,255,0.03)" : "#FAFAFA"} />}
         {sorted.map((r) => {
           const d = new Date(r.recordedAt);
           let cx = Math.max(6, Math.min(320, ((d.getHours() + d.getMinutes() / 60 - HOUR0) / HOURS) * 326));
@@ -281,7 +290,7 @@ export const BloodPressureChart: React.FC<BpChartProps> = ({ range, period, read
       </>
     );
     labels = [6, 10, 14, 18, 22].map((h) => (
-      <text key={h} x={((h - HOUR0) / HOURS) * 326} y={139} textAnchor="middle" style={label(false)}>
+      <text key={h} x={mx(((h - HOUR0) / HOURS) * 326)} y={139} textAnchor="middle" style={label(false)}>
         {h === 12 ? "12pm" : h > 12 ? `${h - 12}pm` : `${h}am`}
       </text>
     ));
@@ -295,14 +304,14 @@ export const BloodPressureChart: React.FC<BpChartProps> = ({ range, period, read
       return <g key={d}>{rs.map((r, j) => dumbbell(r.id, cx + (j - (rs.length - 1) / 2) * 6, r.systolic, r.diastolic))}</g>;
     });
     labels = days.map((d, i) => (
-      <text key={d} x={25.4 + 46.6 * i} y={139} textAnchor="middle" style={label(d === today)}>
+      <text key={d} x={mx(25.4 + 46.6 * i)} y={139} textAnchor="middle" style={label(d === today)}>
         {["S", "M", "T", "W", "T", "F", "S"][new Date(`${d}T12:00:00`).getDay()]}
       </text>
     ));
   } else if (range === "month") {
     const days = daysOf(period);
     const n = days.length;
-    const x = (day: string) => 8 + ((Number(day.slice(8, 10)) - 1) * 310) / Math.max(1, n - 1);
+    const x = (day: string) => mx(8 + ((Number(day.slice(8, 10)) - 1) * 310) / Math.max(1, n - 1));
     body = (
       <>
         {readings.map((r) => (
@@ -315,10 +324,10 @@ export const BloodPressureChart: React.FC<BpChartProps> = ({ range, period, read
           <g data-avg-lines>
             <line x1={0} x2={326} y1={y(average.systolic)} y2={y(average.systolic)} stroke={sysFill} strokeWidth={1.5} />
             <line x1={0} x2={326} y1={y(average.diastolic)} y2={y(average.diastolic)} stroke={diaFill} strokeWidth={1.5} />
-            <text x={2} y={y(average.systolic) - 5} style={{ fontSize: "calc(10.5px + var(--text-boost, 0px))", fontWeight: 600, fill: metricTextInk(K, dark) }}>
+            <text x={mx(2)} y={y(average.systolic) - 5} style={{ fontSize: "calc(10.5px + var(--text-boost, 0px))", fontWeight: 600, fill: metricTextInk(K, dark) }}>
               Avg {average.systolic}
             </text>
-            <text x={2} y={y(average.diastolic) + 14} style={{ fontSize: "calc(10.5px + var(--text-boost, 0px))", fontWeight: 600, fill: metricTextInk(K, dark) }}>
+            <text x={mx(2)} y={y(average.diastolic) + 14} style={{ fontSize: "calc(10.5px + var(--text-boost, 0px))", fontWeight: 600, fill: metricTextInk(K, dark) }}>
               Avg {average.diastolic}
             </text>
           </g>
@@ -326,7 +335,7 @@ export const BloodPressureChart: React.FC<BpChartProps> = ({ range, period, read
       </>
     );
     labels = [1, 8, 15, 22, 29].filter((dn) => dn <= n).map((dn) => (
-      <text key={dn} x={8 + ((dn - 1) * 310) / Math.max(1, n - 1)} y={139} textAnchor="middle" style={label(false)}>
+      <text key={dn} x={mx(8 + ((dn - 1) * 310) / Math.max(1, n - 1))} y={139} textAnchor="middle" style={label(false)}>
         {dn}
       </text>
     ));
@@ -342,7 +351,7 @@ export const BloodPressureChart: React.FC<BpChartProps> = ({ range, period, read
       return dumbbell(prefix, cx, s, d, today.startsWith(prefix) ? 1 : 0.45, 4.5);
     });
     labels = Array.from({ length: 12 }, (_, i) => (
-      <text key={i} x={16.2 + 27.2 * i} y={139} textAnchor="middle" style={label(today.startsWith(`${yr}-${String(i + 1).padStart(2, "0")}`))}>
+      <text key={i} x={mx(16.2 + 27.2 * i)} y={139} textAnchor="middle" style={label(today.startsWith(`${yr}-${String(i + 1).padStart(2, "0")}`))}>
         {monthLetter(i + 1)}
       </text>
     ));

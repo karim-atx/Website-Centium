@@ -3,6 +3,7 @@ import { Ban, ShieldCheck } from "lucide-react";
 import clsx from "clsx";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
+import { t } from "../../i18n/core";
 import { REPORT_REASONS, reportMessage, type Message, type ReportReason } from "../../services/messaging";
 
 // Report and block, for a conversation (Database 20261001020000).
@@ -38,38 +39,37 @@ export const ReportSheet: React.FC<{
     setError(null);
     const result = await reportMessage({ reporterId, messageId: message.id, reportedId, reason, detail });
     setBusy(false);
-    if (result.ok) setDone("Thanks. Our team will review this message.");
+    if (result.ok) setDone(t("Thanks. Our team will review this message."));
     else if (result.already) setDone(result.message);
     else setError(result.message);
   };
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={done ? "Report sent" : "Report"} size="tall">
+    <BottomSheet open={open} onClose={onClose} title={done ? t("Report sent") : t("Report")} size="tall">
       {done ? (
         <div className="space-y-4">
           <p className="flex items-start gap-2 text-sm text-charcoal">
             <ShieldCheck size={17} className="shrink-0 mt-0.5 text-status-good" /> {done}
           </p>
           <p className="text-xs text-charcoal-soft leading-relaxed">
-            {personName} isn't told who reported them. If you feel unsafe, you can also block them: they won't be able to
-            message or call you.
+            {t("{name} isn't told who reported them. If you feel unsafe, you can also block them: they won't be able to message or call you.", { name: personName })}
           </p>
           {canBlock && onBlock && (
             <Button variant="outline" fullWidth onClick={onBlock}>
-              <Ban size={15} /> Block {personName}
+              <Ban size={15} /> {t("Block {name}", { name: personName })}
             </Button>
           )}
           <Button fullWidth onClick={onClose}>
-            Done
+            {t("Done")}
           </Button>
         </div>
       ) : (
         <div className="space-y-4">
           <p className="text-xs text-charcoal-soft leading-relaxed">
-            Tell our team what's wrong with this message. {personName} won't be told who reported it.
+            {t("Tell our team what's wrong with this message. {name} won't be told who reported it.", { name: personName })}
           </p>
           <fieldset className="space-y-2">
-            <legend className="text-xs font-semibold text-charcoal-soft mb-2">Reason</legend>
+            <legend className="text-xs font-semibold text-charcoal-soft mb-2">{t("Reason")}</legend>
             {REPORT_REASONS.map((r) => (
               <label
                 key={r.value}
@@ -87,14 +87,14 @@ export const ReportSheet: React.FC<{
                   className="mt-1 accent-primary"
                 />
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-charcoal">{r.label}</span>
-                  <span className="block text-xs text-charcoal-soft">{r.hint}</span>
+                  <span className="block text-sm font-semibold text-charcoal">{t(r.label)}</span>
+                  <span className="block text-xs text-charcoal-soft">{t(r.hint)}</span>
                 </span>
               </label>
             ))}
           </fieldset>
           <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Anything else? (optional)</span>
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Anything else? (optional)")}</span>
             <textarea
               value={detail}
               onChange={(e) => setDetail(e.target.value)}
@@ -105,7 +105,7 @@ export const ReportSheet: React.FC<{
           </label>
           {error && <p className="text-xs font-semibold text-status-high">{error}</p>}
           <Button fullWidth size="lg" disabled={!reason || busy || !message} onClick={() => void submit()}>
-            {busy ? "Sending…" : "Send report"}
+            {busy ? t("Sending…") : t("Send report")}
           </Button>
         </div>
       )}
@@ -132,23 +132,23 @@ export const BlockSheet: React.FC<{
    */
   business?: boolean;
 }> = ({ open, onClose, personName, iBlocked, busy, error, onBlock, onUnblock, business }) => (
-  <BottomSheet open={open} onClose={onClose} title={iBlocked ? `Unblock ${personName}?` : `Block ${personName}?`}>
+  <BottomSheet open={open} onClose={onClose} title={iBlocked ? t("Unblock {name}?", { name: personName }) : t("Block {name}?", { name: personName })}>
     <div className="space-y-3 animate-fade-slide-up">
       <p className="text-sm text-charcoal">
         {iBlocked
           ? business
-            ? `You and ${personName} will be able to message each other again.`
-            : "You'll be able to message and call each other again."
+            ? t("You and {name} will be able to message each other again.", { name: personName })
+            : t("You'll be able to message and call each other again.")
           : business
-            ? `No one at ${personName} will be able to message you, and you won't be able to message them either. They won't be told.`
-            : "Neither of you will be able to message or call the other. They won't be told."}
+            ? t("No one at {name} will be able to message you, and you won't be able to message them either. They won't be told.", { name: personName })
+            : t("Neither of you will be able to message or call the other. They won't be told.")}
       </p>
       <div className="flex gap-2">
         <Button variant="outline" className="flex-1" onClick={onClose}>
-          Cancel
+          {t("Cancel")}
         </Button>
         <Button className="flex-1" disabled={busy} onClick={iBlocked ? onUnblock : onBlock}>
-          {iBlocked ? (busy ? "Unblocking…" : "Unblock") : busy ? "Blocking…" : "Block"}
+          {iBlocked ? (busy ? t("Unblocking…") : t("Unblock")) : busy ? t("Blocking…") : t("Block")}
         </Button>
       </div>
       {error && <p className="text-xs font-semibold text-status-high">{error}</p>}

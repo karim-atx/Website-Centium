@@ -8,6 +8,7 @@ import { NEEDS_VERIFICATION, setPublicListing } from "../../services/professiona
 import { ProStatusScreen, type ProStatus } from "../onboarding/pro/ProStatusScreen";
 import { ProLicencePublish } from "../onboarding/pro/ProLicencePublish";
 import { GO_LIVE_ON_VERIFICATION, PRO_LABEL, initials, isRegulated, proKindOf } from "../onboarding/pro/proModel";
+import { t } from "../../i18n/core";
 
 /**
  * A professional's licence or certificate check after onboarding (OB-184
@@ -101,7 +102,7 @@ export default function ProVerification() {
       rejectionReason={state.reason}
       noDocument={state.noDocument}
       notListed={state.notListed}
-      preview={{ initials: initials(name), avatarUrl: user.avatarUrl ?? null, name, label: PRO_LABEL[kind], tags: state.tags, line: state.line }}
+      preview={{ initials: initials(name), avatarUrl: user.avatarUrl ?? null, name, label: t(PRO_LABEL[kind]), tags: state.tags.map((s) => t(s)), line: state.line }}
       onPrimary={() => navigate("/app/pro")}
       onFix={() => navigate("/app/more/edit-profile")}
       onRetry={() => void load()}

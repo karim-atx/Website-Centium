@@ -32,14 +32,15 @@ import { GroupInfoSection } from "./GroupInfoSection";
 import { GroupAvatar } from "./GroupAvatar";
 import { useIsDark } from "../../hooks/useIsDark";
 import type { GroupMember } from "../../services/messaging/groups";
+import { t, tk } from "../../i18n/core";
 
 type Tab = GalleryKind | "starred";
 
 const TABS: { value: Tab; label: string }[] = [
-  { value: "media", label: "Media" },
-  { value: "files", label: "Files" },
-  { value: "voice", label: "Voice" },
-  { value: "starred", label: "Starred" },
+  { value: "media", label: tk("Media") },
+  { value: "files", label: tk("Files") },
+  { value: "voice", label: tk("Voice") },
+  { value: "starred", label: tk("Starred") },
 ];
 
 /**
@@ -95,9 +96,9 @@ export const ChatInfo: React.FC<{
   const displayName = group ? group.name : thread.participantName;
   const nameFor = (senderId: string | null) =>
     senderId === authUserId
-      ? "You"
+      ? t("You")
       : group
-        ? group.members.find((m) => m.userId === senderId)?.firstName ?? "Someone"
+        ? group.members.find((m) => m.userId === senderId)?.firstName ?? t("Someone")
         : thread.participantName;
   const [tab, setTab] = useState<Tab>("media");
   const [items, setItems] = useState<GalleryItem[] | null>(null);
@@ -200,10 +201,10 @@ export const ChatInfo: React.FC<{
 
   const muted = isMuted(s);
   const muteLabel = s.mutedAlways
-    ? "Muted"
+    ? t("Muted")
     : s.mutedUntil && muted
-      ? `Muted until ${listTime(s.mutedUntil) === clockTime(s.mutedUntil) ? clockTime(s.mutedUntil) : `${listTime(s.mutedUntil)} ${clockTime(s.mutedUntil)}`}`
-      : "Mute";
+      ? t("Muted until {time}", { time: listTime(s.mutedUntil) === clockTime(s.mutedUntil) ? clockTime(s.mutedUntil) : `${listTime(s.mutedUntil)} ${clockTime(s.mutedUntil)}` })
+      : t("Mute");
 
   // MO1.2.1.3.1: tiles tinted primary-pale (#F0EDF9 sampled from the frame)
   // with no border (a no-decision item: the handover's look, theme token).
@@ -229,12 +230,12 @@ export const ChatInfo: React.FC<{
         <button
           type="button"
           onClick={onBack}
-          aria-label="Back"
+          aria-label={t("Back")}
           className="tap w-9 h-9 mt-0.5 rounded-full flex items-center justify-center text-charcoal"
         >
           <ChevronLeft size={18} />
         </button>
-        <h1 className="text-[22px] font-extrabold text-charcoal">Chat info</h1>
+        <h1 className="text-[22px] font-extrabold text-charcoal">{t("Chat info")}</h1>
       </div>
 
       {/* Avatar 80 at y 80, the name's cap 8 under it, "Online" right under
@@ -262,7 +263,7 @@ export const ChatInfo: React.FC<{
         )}
         {online && !group && (
           <p className="-mt-[9px] text-[12.5px] font-semibold" style={{ color: "#2E7D57" }}>
-            Online
+            {t("Online")}
           </p>
         )}
       </div>
@@ -271,7 +272,7 @@ export const ChatInfo: React.FC<{
       <div className="grid grid-cols-4 gap-2 -mt-0.5">
         <button type="button" onClick={onSearch} className={tile}>
           <Search {...tileIcon} />
-          Search chat
+          {t("Search chat")}
         </button>
         <button type="button" disabled={busy} onClick={() => setMuteOpen(true)} className={tile}>
           <BellOff {...tileIcon} />
@@ -284,18 +285,18 @@ export const ChatInfo: React.FC<{
           className={tile}
         >
           {s.pinnedAt ? <PinOff {...tileIcon} /> : <Pin {...tileIcon} />}
-          {s.pinnedAt ? "Unpin" : "Pin"}
+          {s.pinnedAt ? t("Unpin") : t("Pin")}
         </button>
         <button type="button" disabled={busy} onClick={archive} className={tile}>
           {s.archivedAt ? <ArchiveRestore {...tileIcon} /> : <Archive {...tileIcon} />}
-          {s.archivedAt ? "Unarchive" : "Archive"}
+          {s.archivedAt ? t("Unarchive") : t("Archive")}
         </button>
       </div>
 
       {error && <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{error}</p>}
 
-      <p className={label}>Shared in this chat</p>
-      <section className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] p-3 flex flex-col gap-3" aria-label="Shared in this chat">
+      <p className={label}>{t("Shared in this chat")}</p>
+      <section className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] p-3 flex flex-col gap-3" aria-label={t("Shared in this chat")}>
         {/* MO1.2.1.3.1: the four kinds as segmented tabs inside the card.
             Light keeps the pills' colours (decision 15). 30 tabs in a 38
             track (padding 4), measured on the frame at 2x; labels 12, 700
@@ -307,7 +308,7 @@ export const ChatInfo: React.FC<{
           trackStyle={{ padding: 4, ...(dark ? {} : { background: "rgb(var(--th-f4f3f9))" }) }}
           labelSize={12}
           idleWeight={600}
-          items={TABS.map((t) => ({ key: t.value, label: t.label }))}
+          items={TABS.map((x) => ({ key: x.value, label: t(x.label) }))}
           activeKey={tab}
           onChange={(k) => {
             if (k === tab) return;
@@ -385,21 +386,21 @@ export const ChatInfo: React.FC<{
         {((tab === "starred" ? starred : items)?.length ?? -1) === 0 && (
           <p className="text-[13px] text-charcoal-faint text-center py-4">
             {tab === "media"
-              ? "No photos yet."
+              ? t("No photos yet.")
               : tab === "files"
-                ? "No files yet."
+                ? t("No files yet.")
                 : tab === "voice"
-                  ? "No voice notes yet."
-                  : "No starred messages in this chat."}
+                  ? t("No voice notes yet.")
+                  : t("No starred messages in this chat.")}
           </p>
         )}
         {/* MO1.2.1.3.1 draws no "Show more": the gallery loads on as it
             scrolls (handover-complete pass). */}
         {tab !== "starred" && galleryMore && (
-          <LoadMoreSentinel busy={galleryBusy} count={items?.length ?? 0} onMore={() => void moreGallery()} label="Show more" />
+          <LoadMoreSentinel busy={galleryBusy} count={items?.length ?? 0} onMore={() => void moreGallery()} label={t("Show more")} />
         )}
         <p className="text-[11.5px] font-normal text-charcoal-faint">
-          {tab === "media" ? "Photos are private to this chat." : tab === "starred" ? "Only you can see your stars." : "Files are private to this chat."}
+          {tab === "media" ? t("Photos are private to this chat.") : tab === "starred" ? t("Only you can see your stars.") : t("Files are private to this chat.")}
         </p>
       </section>
 
@@ -421,8 +422,8 @@ export const ChatInfo: React.FC<{
         />
       )}
 
-      <p className={label}>Privacy</p>
-      <section className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-4 py-1 flex flex-col" aria-label="Privacy">
+      <p className={label}>{t("Privacy")}</p>
+      <section className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-4 py-1 flex flex-col" aria-label={t("Privacy")}>
         {/* Never in a group: the database does not share presence there. */}
         {!group && (
         // MO1.2.1.3.1 #7: titles 13.5/600, subtitles 11.5/400 faint, rows
@@ -430,9 +431,9 @@ export const ChatInfo: React.FC<{
         <div className="flex items-center justify-between gap-3 min-h-[56px] py-3 border-b border-charcoal/[0.06]">
           {/* Subtitle lines 16 apart, 3 under the title (measured): rows 79. */}
           <div className="flex flex-col gap-[3px]">
-            <span className="text-[13.5px] font-semibold text-charcoal">Show when I'm online</span>
+            <span className="text-[13.5px] font-semibold text-charcoal">{t("Show when I'm online")}</span>
             <span className="text-[11.5px] leading-4 font-normal text-charcoal-faint">
-              Off by default. If off, you won't see theirs either. Applies to all your chats.
+              {t("Off by default. If off, you won't see theirs either. Applies to all your chats.")}
             </span>
             {presenceError && <span className="text-[11.5px] text-status-high">{presenceError}</span>}
           </div>
@@ -440,21 +441,21 @@ export const ChatInfo: React.FC<{
             checked={presence ?? false}
             disabled={presence === null}
             onChange={(v) => void togglePresence(v)}
-            label="Show when I'm online"
+            label={t("Show when I'm online")}
           />
         </div>
         )}
         <div className="flex items-center justify-between gap-3 min-h-[56px] py-3">
           <div className="flex flex-col gap-[3px]">
-            <span className="text-[13.5px] font-semibold text-charcoal">Read receipts</span>
-            <span className="text-[11.5px] leading-4 font-normal text-charcoal-faint">If off, you won't see theirs either. Applies to all your chats.</span>
+            <span className="text-[13.5px] font-semibold text-charcoal">{t("Read receipts")}</span>
+            <span className="text-[11.5px] leading-4 font-normal text-charcoal-faint">{t("If off, you won't see theirs either. Applies to all your chats.")}</span>
             {receiptsError && <span className="text-[11.5px] text-status-high">{receiptsError}</span>}
           </div>
           <Toggle
             checked={receipts ?? true}
             disabled={receipts === null}
             onChange={(v) => void toggleReceipts(v)}
-            label="Read receipts"
+            label={t("Read receipts")}
           />
         </div>
       </section>
@@ -464,26 +465,26 @@ export const ChatInfo: React.FC<{
       {safety && (
         <button type="button" onClick={safety.iBlocked ? safety.onUnblock : safety.onBlock} className={dangerCard}>
           <Ban size={15} strokeWidth={1.75} aria-hidden />
-          {safety.iBlocked ? `Unblock ${thread.participantName}` : `Block ${thread.participantName}`}
+          {safety.iBlocked ? t("Unblock {name}", { name: thread.participantName }) : t("Block {name}", { name: thread.participantName })}
         </button>
       )}
       {(safety?.onReport ?? group?.onReport) && (
         <button type="button" onClick={(safety?.onReport ?? group?.onReport)!} className={dangerCard}>
           <Flag size={15} strokeWidth={1.75} aria-hidden />
-          Report
+          {t("Report")}
         </button>
       )}
       {onDelete && (
         <button type="button" onClick={onDelete} className={dangerCard}>
           <Trash2 size={15} strokeWidth={1.75} aria-hidden />
-          Delete conversation
+          {t("Delete conversation")}
         </button>
       )}
 
-      <BottomSheet open={muteOpen} onClose={() => setMuteOpen(false)} title="Mute notifications">
+      <BottomSheet open={muteOpen} onClose={() => setMuteOpen(false)} title={t("Mute notifications")}>
         <div className="flex flex-col animate-fade-slide-up">
           <p className="text-xs text-charcoal-soft mb-2">
-            You won't be notified of new messages. {group ? "Nobody in the group is told." : `${thread.participantName} isn't told.`}
+            {t("You won't be notified of new messages.")} {group ? t("Nobody in the group is told.") : t("{name} isn't told.", { name: thread.participantName })}
           </p>
           {MUTE_CHOICES.map((c) => (
             <button
@@ -493,7 +494,7 @@ export const ChatInfo: React.FC<{
               onClick={() => void chooseMute(c.value)}
               className="tap w-full min-h-[48px] text-start text-sm font-semibold text-charcoal border-b border-charcoal/[0.06] disabled:opacity-50"
             >
-              {c.label}
+              {t(c.label)}
             </button>
           ))}
           {muted && (
@@ -503,7 +504,7 @@ export const ChatInfo: React.FC<{
               onClick={() => void chooseMute("off")}
               className="tap w-full min-h-[48px] text-start text-sm font-semibold text-primary-deep-text disabled:opacity-50"
             >
-              Unmute
+              {t("Unmute")}
             </button>
           )}
           {error && <p className="text-xs text-status-high mt-2">{error}</p>}

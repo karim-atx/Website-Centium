@@ -3,6 +3,7 @@ import { SettingsRow } from "../ui/SettingsRows";
 import { HardDrive } from "lucide-react";
 import { getStorageUsage, type StorageUsage } from "../../services/storage";
 import { linePx, textPx } from "../../theme/textSize";
+import { t, tk } from "../../i18n/core";
 
 /**
  * How much Storage this account holds, against its cap. A Settings row in the
@@ -40,7 +41,7 @@ function formatBytes(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / KB))} KB`;
 }
 
-const EXPLAINER = "Lab reports, scans and other files you upload.";
+const EXPLAINER = tk("Lab reports, scans and other files you upload.");
 
 export const StorageUsageRow: React.FC = () => {
   const [usage, setUsage] = useState<StorageUsage | null>(null);
@@ -70,8 +71,8 @@ export const StorageUsageRow: React.FC = () => {
     <SettingsRow
       icon={HardDrive}
       iconTone="dark"
-      title="Storage"
-      srDescription={EXPLAINER}
+      title={t("Storage")}
+      srDescription={t(EXPLAINER)}
       subtitle={
         <>
           {usage ? (
@@ -83,7 +84,7 @@ export const StorageUsageRow: React.FC = () => {
               aria-valuenow={pct}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-label="Storage used"
+              aria-label={t("Storage used")}
             >
               {/* A visible sliver for any non-zero usage: a bar that renders as
                   nothing says "empty", and 4 MB of 2 GB is not empty. */}
@@ -100,15 +101,15 @@ export const StorageUsageRow: React.FC = () => {
           <span className={`block mt-[5px] ${warning ? "text-status-high" : "text-charcoal-faint"}`} style={small}>
             {usage ? (
               <bdi>
-                {formatBytes(usage.usedBytes)} of {formatBytes(usage.capBytes)}
+                {t("{used} of {cap}", { used: formatBytes(usage.usedBytes), cap: formatBytes(usage.capBytes) })}
               </bdi>
             ) : (
-              <span aria-label="Loading">–</span>
+              <span aria-label={t("Loading")}>–</span>
             )}
           </span>
           {warning && (
             <span className="block mt-[5px] text-status-high" style={small}>
-              You're running low. Remove a lab report or scan you no longer need to free up space.
+              {t("You're running low. Remove a lab report or scan you no longer need to free up space.")}
             </span>
           )}
         </>

@@ -4,6 +4,8 @@
 // soft teal and lavender glows sit at its two ends and the row fades out
 // under a 12% edge mask. Reduced motion: one copy, scrolled by hand.
 // The reviews come from src/content/reviews.ts (Karim edits that file only).
+// Round F: quote, name and role show through t(), so the sample reviews have
+// Arabic in i18n/ar/landing.ts; a review added later shows as written.
 // The first copy is the readable one (focusable); the repeats are
 // aria-hidden and out of the tab order.
 
@@ -14,6 +16,7 @@ import { REVIEWS } from "../../../content/reviews";
 import { reviewCopies, reviewTone, starCount } from "./reviewsRow";
 import { SectionHostContext } from "../sectionHost";
 import { ReviewsMotion } from "../motion/reviews";
+import { t } from "../../../i18n/core";
 
 const EDGE_MASK = "linear-gradient(90deg,transparent 0,#000 12%,#000 88%,transparent 100%)";
 
@@ -33,8 +36,8 @@ export const Reviews: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
   return (
     <section id="reviews" data-screen-label="RV1 v7 Reviews" style={{ position: "relative", zIndex: "2", padding: `${r.secY} 0` }}>
       <div style={{ maxWidth: "1240px", margin: "0 auto", padding: `0 ${r.px}` }}>
-        <ChapterMark n="07" t="In their words" size={r.chEy} />
-        <h2 style={{ marginTop: "14px", fontWeight: "800", fontSize: r.h2, lineHeight: "1.04", letterSpacing: "-.035em" }}>Heard from the people who use it.</h2>
+        <ChapterMark n="07" t={t("In their words")} size={r.chEy} />
+        <h2 style={{ marginTop: "14px", fontWeight: "800", fontSize: r.h2, lineHeight: "1.04", letterSpacing: "-.035em" }}>{t("Heard from the people who use it.")}</h2>
       </div>
       <div style={{ position: "relative", marginTop: "36px" }}>
         <div
@@ -79,11 +82,11 @@ export const Reviews: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                       gap: "12px",
                     }}
                   >
-                    <span role="img" aria-label={stars + " out of 5"} style={{ fontSize: "14px", letterSpacing: "2px", color: tone.star }}>
+                    <span role="img" aria-label={t("{n} out of 5", { n: stars })} style={{ fontSize: "14px", letterSpacing: "2px", color: tone.star }}>
                       {"★".repeat(stars)}
                       {stars < 5 && <span style={{ color: "#E0DDD6" }}>{"★".repeat(5 - stars)}</span>}
                     </span>
-                    <blockquote style={{ margin: "0", fontSize: "15.5px", lineHeight: "1.5", color: "#221E1A", textWrap: "pretty" }}>{rv.quote}</blockquote>
+                    <blockquote style={{ margin: "0", fontSize: "15.5px", lineHeight: "1.5", color: "#221E1A", textWrap: "pretty" }}>{t(rv.quote)}</blockquote>
                     <figcaption style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
                       <span
                         style={{
@@ -103,8 +106,8 @@ export const Reviews: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                         {rv.initials}
                       </span>
                       <span>
-                        <span style={{ display: "block", fontWeight: "800", fontSize: "14.5px" }}>{rv.name}</span>
-                        <span style={{ fontSize: "12.5px", color: "#756D63" }}>{rv.role}</span>
+                        <span style={{ display: "block", fontWeight: "800", fontSize: "14.5px" }}>{t(rv.name)}</span>
+                        <span style={{ fontSize: "12.5px", color: "#756D63" }}>{t(rv.role)}</span>
                       </span>
                     </figcaption>
                   </figure>

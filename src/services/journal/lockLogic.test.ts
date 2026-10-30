@@ -34,8 +34,8 @@ test("the next expiry is the soonest window, never negative", () => {
   assert.equal(msUntilNextExpiry({ a: "not a date" }, NOW), null);
 });
 
-test("errors: rate limit passes through verbatim, the rest are sentences", () => {
-  assert.equal(describeLockError("ATX02", "Try again in 12 minutes."), "Try again in 12 minutes.");
+test("errors: rate limit is said by its delay, the rest are sentences", () => {
+  assert.equal(describeLockError("ATX02", "Too many unlock_journal_folder attempts. Please try again in 12 minute(s)."), "Too many tries. Try again in 12 minutes.");
   assert.match(describeLockError("ATX02", ""), /Too many tries/);
   assert.match(describeLockError("ATX77", "raw"), /without a password/);
   assert.match(describeLockError("ATX78", "raw"), /no longer exists/);

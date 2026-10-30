@@ -27,6 +27,7 @@ import {
 } from "../../../components/charts/ScrubChart";
 import { Toggle } from "../../../components/ui/Toggle";
 import { useOnline } from "../../../hooks/useOnline";
+import { isRtl } from "../../../i18n/core";
 import { clock12 } from "../../../utils/time12";
 import {
   fetchBusinessTimezone,
@@ -1375,6 +1376,11 @@ const DHead: React.FC<{ cells: [{ v: string; d?: string; l: string }, { v: strin
 /** mkChart: 8 weekly bars (last bar pDark), the previous 8 weeks dashed, legend, y and x labels. */
 const WeekChart: React.FC<{ vals: number[]; prev: number[]; aria: string }> = ({ vals, prev, aria }) => {
   const ch = weekBars(vals, prev);
+  // Round F (F10): in right to left, time runs from right to left. The plot has
+  // no text, so it is mirrored whole; the y labels move to the right and the
+  // x row (flex) follows the direction with its inset on the right.
+  const rtl = isRtl();
+  const yAt = (top: number): React.CSSProperties => (rtl ? { top, left: "auto", right: 0 } : { top });
   return (
     <div role="img" aria-label={aria} className="pa-wk">
       <div className="pa-wk-leg" aria-hidden>
@@ -1388,7 +1394,7 @@ const WeekChart: React.FC<{ vals: number[]; prev: number[]; aria: string }> = ({
         </span>
       </div>
       <div className="relative">
-        <svg width="100%" height="118" viewBox="0 0 300 118" preserveAspectRatio="none" style={{ display: "block", overflow: "visible" }} aria-hidden>
+        <svg width="100%" height="118" viewBox="0 0 300 118" preserveAspectRatio="none" style={rtl ? { display: "block", overflow: "visible", transform: "scaleX(-1)" } : { display: "block", overflow: "visible" }} aria-hidden>
           <line x1="24" x2="300" y1="10" y2="10" stroke="var(--an-grid)" strokeWidth="1" />
           <line x1="24" x2="300" y1="55" y2="55" stroke="var(--an-grid)" strokeWidth="1" />
           <line x1="24" x2="300" y1="100" y2="100" stroke="var(--pa-axis)" strokeWidth="1" />
@@ -1397,17 +1403,17 @@ const WeekChart: React.FC<{ vals: number[]; prev: number[]; aria: string }> = ({
           ))}
           <path d={ch.ghost} fill="none" stroke="var(--pa-axis)" strokeWidth="1.5" strokeDasharray="4 3" strokeLinejoin="round" />
         </svg>
-        <span className="pa-wk-y" style={{ top: 3 }} aria-hidden>
+        <span className="pa-wk-y" style={yAt(3)} aria-hidden>
           {ch.ymax}
         </span>
-        <span className="pa-wk-y" style={{ top: 48 }} aria-hidden>
+        <span className="pa-wk-y" style={yAt(48)} aria-hidden>
           {ch.ymid}
         </span>
-        <span className="pa-wk-y" style={{ top: 93 }} aria-hidden>
+        <span className="pa-wk-y" style={yAt(93)} aria-hidden>
           0
         </span>
       </div>
-      <div className="pa-wk-x" aria-hidden>
+      <div className="pa-wk-x" aria-hidden style={rtl ? { paddingLeft: 0, paddingRight: 24 } : undefined}>
         <span>{vals.length} weeks ago</span>
         <span>This week</span>
       </div>

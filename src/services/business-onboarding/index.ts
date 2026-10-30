@@ -27,6 +27,7 @@ import {
 } from "../../pages/onboarding/business/lanes";
 import { docsFor, type BusinessLaneDraft } from "../../pages/onboarding/business/draft";
 import { contactRefusal, moderationRefusal } from "../moderation/text";
+import { tk } from "../../i18n/core";
 
 // Database stage B5 "Business foundations and onboarding" (HANDOVER_API.md
 // "## B5"), for the Classes, Gym and Store onboarding lanes:
@@ -48,7 +49,7 @@ const db = typed as unknown as SupabaseClient;
 
 export type Res<T> = { ok: true; value: T } | { ok: false; message: string; offline?: boolean; code?: string };
 
-const SAVE_FAIL = "Couldn't save this step. Check your connection and try again.";
+const SAVE_FAIL: string = tk("Couldn't save this step. Check your connection and try again.");
 
 function fail<T>(error: unknown, fallback = SAVE_FAIL): Res<T> {
   const e = error as { message?: string; code?: string } | null;
@@ -80,7 +81,7 @@ export interface BusinessRow {
 
 export async function fetchMyBusinessRow(uid: string): Promise<Res<BusinessRow | null>> {
   const { data, error } = await db.from("business_profiles").select("id, business_code, business_type, active").eq("profile_id", uid).maybeSingle();
-  if (error) return fail(error, "Couldn't load your business.");
+  if (error) return fail(error, tk("Couldn't load your business."));
   if (!data) return { ok: true, value: null };
   const r = data as { id: string; business_code: string | null; business_type: string; active: boolean };
   return { ok: true, value: { id: r.id, businessCode: r.business_code, businessType: r.business_type, active: r.active } };
@@ -205,7 +206,7 @@ export async function uploadBusinessImage(uid: string, kind: "logo" | "cover", f
   if (!prepared.ok) return { ok: false, message: prepared.message };
   const max = kind === "logo" ? LOGO_MAX_BYTES : COVER_MAX_BYTES;
   if (prepared.file.size > max) {
-    return { ok: false, message: kind === "logo" ? "This logo is too large. Choose one under 2 MB." : "This photo is too large. Choose one under 5 MB." };
+    return { ok: false, message: kind === "logo" ? tk("This logo is too large. Choose one under 2 MB.") : tk("This photo is too large. Choose one under 5 MB.") };
   }
   const up = await uploadToStaging(stagingPath(uid, STEP1_SURFACE[kind], prepared.file), prepared.file);
   return up.ok ? { ok: true, value: up.value } : { ok: false, message: up.message };
@@ -534,7 +535,7 @@ async function publishPolicies(businessId: string): Promise<Res<null>> {
 export const VERIFY_MAX_BYTES = 10 * 1024 * 1024;
 const VERIFY_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const VERIFY_BUCKET = "business-verification";
-export const ID_BLURRY = "This photo is blurry. Retake it in good light so all 4 corners show.";
+export const ID_BLURRY = tk("This photo is blurry. Retake it in good light so all 4 corners show.");
 
 /**
  * A verification file's path: <owner_uid>/<verification_id>/<file>
@@ -563,11 +564,11 @@ export async function uploadVerificationFile(params: {
   onProgress: (fraction: number) => void;
 }): Promise<Res<{ path: string; name: string; size: number }>> {
   const { ownerUid, verificationId, file, checkBlur, acceptBlurry, onProgress } = params;
-  if (!VERIFY_TYPES.includes(file.type)) return { ok: false, message: "Choose a photo or a PDF." }; // OURS
+  if (!VERIFY_TYPES.includes(file.type)) return { ok: false, message: tk("Choose a photo or a PDF.") }; // OURS
   let body: Blob;
   let ext: "jpg" | "pdf";
   if (file.type === "application/pdf") {
-    if (file.size > VERIFY_MAX_BYTES) return { ok: false, message: "This file is over 10 MB. Choose a smaller one." };
+    if (file.size > VERIFY_MAX_BYTES) return { ok: false, message: tk("This file is over 10 MB. Choose a smaller one.") };
     const { preparePdf } = await import("../courses/pdf");
     const prepared = await preparePdf(file);
     if (!prepared.ok) return { ok: false, message: prepared.message };
@@ -580,7 +581,7 @@ export async function uploadVerificationFile(params: {
     body = prepared.file;
     ext = "jpg";
   }
-  if (body.size > VERIFY_MAX_BYTES) return { ok: false, message: "This file is over 10 MB. Choose a smaller one." };
+  if (body.size > VERIFY_MAX_BYTES) return { ok: false, message: tk("This file is over 10 MB. Choose a smaller one.") };
   const path = verificationObjectPath(ownerUid, verificationId, crypto.randomUUID(), ext);
   const { error } = await uploadWithProgress(VERIFY_BUCKET, path, body, body.type, { onProgress });
   if (error) {
@@ -616,13 +617,13 @@ export async function submitForReview(uid: string, businessId: string, d: Busine
   // disclaimer shown above Submit for review (B5 legal_acceptances, the
   // shell's service and LEGAL_VERSION; the same three the professional lane records).
   const legal = await recordLegalAcceptances(uid, ["terms", "privacy", "health_disclaimer"]);
-  if (!legal.ok) return legal.offline ? { ok: false, offline: true, message: OFFLINE_MESSAGE } : { ok: false, message: "Couldn't submit. Check your connection and try again." };
+  if (!legal.ok) return legal.offline ? { ok: false, offline: true, message: OFFLINE_MESSAGE } : { ok: false, message: tk("Couldn't submit. Check your connection and try again.") };
   const drafts = await savePolicyDrafts(businessId, d);
   if (!drafts.ok) return drafts;
   const pub = await publishPolicies(businessId);
   if (!pub.ok) return pub;
   const pending = await db.from("business_verifications").select("id").eq("business_id", businessId).eq("status", "pending").maybeSingle();
-  if (pending.error) return fail(pending.error, "Couldn't submit. Check your connection and try again.");
+  if (pending.error) return fail(pending.error, tk("Couldn't submit. Check your connection and try again."));
   if (!pending.data) {
     const files = [d.proof.path, d.idFront.path, d.idBack.path].filter((p): p is string => !!p);
     // The id the files were grouped under (<owner>/<verification_id>/…), so
@@ -632,7 +633,7 @@ export async function submitForReview(uid: string, businessId: string, d: Busine
     // An id already used by an earlier submission (a draft that missed being
     // cleared after a submit): the files stay where they are, the row gets a new id.
     if (ins.error?.code === "23505" && d.verificationId) ins = await insert(crypto.randomUUID());
-    if (ins.error) return fail(ins.error, "Couldn't submit. Check your connection and try again.");
+    if (ins.error) return fail(ins.error, tk("Couldn't submit. Check your connection and try again."));
   }
   return { ok: true, value: null };
 }
@@ -664,11 +665,11 @@ export interface ReviewStatus {
 
 export async function fetchReviewStatus(uid: string): Promise<Res<ReviewStatus | null>> {
   const biz = await db.from("business_profiles").select("id, active, business_name, business_type, business_code").eq("profile_id", uid).maybeSingle();
-  if (biz.error) return fail(biz.error, "Couldn't load your review status. Try again.");
+  if (biz.error) return fail(biz.error, tk("Couldn't load your review status. Try again."));
   if (!biz.data) return { ok: true, value: null };
   const b = biz.data as { id: string; active: boolean; business_name: string; business_type: string; business_code: string | null };
   const v = await db.from("business_verifications").select("id, status, items, submitted_at, reviewed_at").eq("business_id", b.id).order("submitted_at", { ascending: false }).limit(1);
-  if (v.error) return fail(v.error, "Couldn't load your review status. Try again.");
+  if (v.error) return fail(v.error, tk("Couldn't load your review status. Try again."));
   const row = (v.data as { id: string; status: ReviewStatus["status"]; items: ReviewItem[]; submitted_at: string; reviewed_at: string | null }[])[0];
   return {
     ok: true,

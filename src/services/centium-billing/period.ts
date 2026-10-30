@@ -21,6 +21,7 @@
 
 import { monthlyEquivalent, yearlySaving, type YearlySaving } from "../subscription-tiers/pricing";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tn } from "../../i18n/core";
 
 export type SubscriptionPeriod = "monthly" | "yearly";
 
@@ -36,26 +37,28 @@ export function priceOrNull(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export const periodName = (p: SubscriptionPeriod): string => (p === "monthly" ? "Monthly" : "Yearly");
+export const periodName = (p: SubscriptionPeriod): string => (p === "monthly" ? t("Monthly") : t("Yearly"));
 
 /** "a month" / "a year", after a price. */
-export const perPeriod = (p: SubscriptionPeriod): string => (p === "monthly" ? "a month" : "a year");
+export const perPeriod = (p: SubscriptionPeriod): string => (p === "monthly" ? t("a month") : t("a year"));
 
 /** "/mo" / "/yr", the plan list's short form. */
-export const periodSuffix = (p: SubscriptionPeriod): string => (p === "monthly" ? "/mo" : "/yr");
+export const periodSuffix = (p: SubscriptionPeriod): string => (p === "monthly" ? t("/mo") : t("/yr"));
 
-export const NOT_AVAILABLE = "Not available";
+/** Marked, not translated: shown through t(). */
+export const NOT_AVAILABLE = tk("Not available");
 
 /**
  * "Yearly price: Not available", where a sentence would otherwise carry the
  * price (business_plan_summary's plan_price or seat_block_price is NULL, or
  * subscription_price_for is). Never "$0", never another period's figure.
  */
-export const missingPriceText = (p: SubscriptionPeriod): string => `${periodName(p)} price: ${NOT_AVAILABLE}`;
+export const missingPriceText = (p: SubscriptionPeriod): string => (p === "monthly" ? t("Monthly price: Not available") : t("Yearly price: Not available"));
 
 /** "$29.00 a month", or "Not available" for a NULL price. Never "$0". */
 export function periodPriceText(amount: number | null, period: SubscriptionPeriod, money: (n: number) => string): string {
-  return amount === null ? NOT_AVAILABLE : `${money(amount)} ${perPeriod(period)}`;
+  if (amount === null) return t(NOT_AVAILABLE);
+  return period === "monthly" ? t("{price} a month", { price: money(amount) }) : t("{price} a year", { price: money(amount) });
 }
 
 /**
@@ -71,7 +74,7 @@ export function periodSaving(prices: Partial<Record<SubscriptionPeriod, number |
 }
 
 /** "$24.17 a month, billed yearly": a yearly price restated, so the two compare. */
-export const perMonthText = (yearly: number, money: (n: number) => string): string => `${money(monthlyEquivalent(yearly))} a month, billed yearly`;
+export const perMonthText = (yearly: number, money: (n: number) => string): string => t("{price} a month, billed yearly", { price: money(monthlyEquivalent(yearly)) });
 
 /**
  * One period as a choice: offered only with a price. The current period is
@@ -102,7 +105,8 @@ export function periodOptions(current: SubscriptionPeriod, prices: Record<Subscr
 }
 
 /** Why a period isn't offered: the plan has no price for it yet. */
-export const noPriceText = (p: SubscriptionPeriod): string => `${periodName(p)} billing isn't available for your plan yet.`;
+export const noPriceText = (p: SubscriptionPeriod): string =>
+  p === "monthly" ? t("Monthly billing isn't available for your plan yet.") : t("Yearly billing isn't available for your plan yet.");
 
 /**
  * Where renews_at lands after a switch made at `from`: one month or one year
@@ -137,11 +141,20 @@ export function switchConfirm(input: {
   money: (n: number) => string;
 }): { title: string; body: string; action: string } {
   const { to, price, seatBlocks, renewal, money } = input;
-  const what = seatBlocks > 0 ? `Your plan and ${seatBlocks === 1 ? "1 seat block" : `${seatBlocks} seat blocks`}` : "Your plan";
+  const vars = { price: money(price), date: renewalDayText(renewal, input.now) };
+  const monthly = to === "monthly";
+  const body =
+    seatBlocks > 0
+      ? monthly
+        ? tn(seatBlocks, "Your plan and {n} seat block will cost {price} a month. Your next renewal moves to {date}. Nothing is charged now.", "Your plan and {n} seat blocks will cost {price} a month. Your next renewal moves to {date}. Nothing is charged now.", vars)
+        : tn(seatBlocks, "Your plan and {n} seat block will cost {price} a year. Your next renewal moves to {date}. Nothing is charged now.", "Your plan and {n} seat blocks will cost {price} a year. Your next renewal moves to {date}. Nothing is charged now.", vars)
+      : monthly
+        ? t("Your plan will cost {price} a month. Your next renewal moves to {date}. Nothing is charged now.", vars)
+        : t("Your plan will cost {price} a year. Your next renewal moves to {date}. Nothing is charged now.", vars);
   return {
-    title: `Switch to ${to} billing?`,
-    body: `${what} will cost ${money(price)} ${perPeriod(to)}. Your next renewal moves to ${renewalDayText(renewal, input.now)}. Nothing is charged now.`,
-    action: `Switch to ${to}`,
+    title: monthly ? t("Switch to monthly billing?") : t("Switch to yearly billing?"),
+    body,
+    action: monthly ? t("Switch to monthly") : t("Switch to yearly"),
   };
 }
 
@@ -154,17 +167,21 @@ export type PeriodSwitchRefusal = { kind: "signed_out" | "no_subscription" | "no
  * (OFFLINE_MESSAGE, kind "offline") before this is asked.
  */
 export function periodSwitchRefusal(code: string | undefined, message: string | undefined, period: SubscriptionPeriod): PeriodSwitchRefusal {
-  if (code === "42501") return { kind: "signed_out", message: "Your session has ended. Sign in again to change how you're billed." };
+  if (code === "42501") return { kind: "signed_out", message: t("Your session has ended. Sign in again to change how you're billed.") };
   if (code === "ATXAD") {
     const m = (message ?? "").toLowerCase();
-    if (m.includes("no subscription")) return { kind: "no_subscription", message: "You don't have a plan to change yet." };
+    if (m.includes("no subscription")) return { kind: "no_subscription", message: t("You don't have a plan to change yet.") };
     const named = /has no (monthly|yearly) price/.exec(m);
     if (named) return { kind: "no_price", message: noPriceText(named[1] as SubscriptionPeriod) };
     return { kind: "no_price", message: noPriceText(period) };
   }
-  return { kind: "failed", message: "Couldn't change how you're billed. Try again." };
+  return { kind: "failed", message: t("Couldn't change how you're billed. Try again.") };
 }
 
 /** What switched, for the line under the choice. */
-export const switchedText = (p: SubscriptionPeriod, renewsAt: string | null, now?: Date): string =>
-  `You're now billed ${p}.${renewsAt ? ` Your next renewal is ${renewalDayText(renewsAt, now)}.` : ""}`;
+export const switchedText = (p: SubscriptionPeriod, renewsAt: string | null, now?: Date): string => {
+  const monthly = p === "monthly";
+  if (!renewsAt) return monthly ? t("You're now billed monthly.") : t("You're now billed yearly.");
+  const vars = { date: renewalDayText(renewsAt, now) };
+  return monthly ? t("You're now billed monthly. Your next renewal is {date}.", vars) : t("You're now billed yearly. Your next renewal is {date}.", vars);
+};

@@ -3,6 +3,7 @@ import { ArrowDownRight, ArrowUpRight, ChevronRight, ClipboardPlus, FileText, Fl
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
+import { isRtl } from "../../../i18n/core";
 import { SegmentedTabs } from "../../ui/SegmentedTabs";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { BottomSheet } from "../../ui/BottomSheet";
@@ -377,7 +378,10 @@ const Spark: React.FC<{ m: Marker; t0: number; t1: number }> = ({ m, t0, t1 }) =
   const lo = m.low ?? 0;
   const mx = Math.max(...vals, hi) * 1.05;
   const mn = lo === 0 ? Math.min(...vals) * 0.6 : Math.min(...vals, lo) * 0.95;
-  const X = (d: string) => 3 + ((new Date(d).getTime() - t0) / Math.max(1, t1 - t0)) * (W - 6);
+  // Round F (F10): in right to left, time runs from right to left (every x mirrored).
+  const rtl = isRtl();
+  const ux = (d: string) => 3 + ((new Date(d).getTime() - t0) / Math.max(1, t1 - t0)) * (W - 6);
+  const X = (d: string) => (rtl ? W - ux(d) : ux(d));
   const Y = (v: number) => 3 + ((mx - Math.max(mn, Math.min(mx, v))) / (mx - mn || 1)) * (H - 6);
   return (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden style={{ flexShrink: 0, borderRadius: 6 }}>

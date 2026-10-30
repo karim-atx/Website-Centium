@@ -3,6 +3,7 @@ import { trendTicks } from "../../utils/chartTicks";
 import { useIsDark } from "../../hooks/useIsDark";
 import { DARK_SURFACE, liftTo } from "../../data/folderColors";
 import { textPx } from "../../theme/textSize";
+import { isRtl } from "../../i18n/core";
 
 export interface TrendPoint {
   /** Milliseconds; points are placed along x by time. */
@@ -151,8 +152,13 @@ export const TrendChart: React.FC<{
   const t0 = n ? points[0].t : 0;
   const t1 = n ? points[n - 1].t : 0;
   const span = t1 - t0;
+  // Round F (F10): in right to left, time runs from right to left. Every x is
+  // mirrored; SVG text anchors are logical (start/end follow the direction), so
+  // they mirror on their own.
+  const rtl = isRtl();
+  const mx = (x: number) => (rtl ? width - x : x);
   const xAt = (i: number) =>
-    g.left + (n < 2 ? plotW : span > 0 && !evenX ? ((points[i].t - t0) / span) * plotW : (i / (n - 1)) * plotW);
+    mx(g.left + (n < 2 ? plotW : span > 0 && !evenX ? ((points[i].t - t0) / span) * plotW : (i / (n - 1)) * plotW));
   const ticks = fixedTicks ?? (n ? trendTicks(points.map((p) => p.value)) : ([0, 1, 2] as const));
   const top = Math.max(ticks[2], ...points.map((p) => p.value));
   const bottom = g.plotTop + g.plotH;
@@ -174,7 +180,8 @@ export const TrendChart: React.FC<{
   const sx = n ? xAt(sel) : 0;
   const scrubLabel = n ? (scrubText ? scrubText(points[sel]) : `${points[sel].label} · ${points[sel].value} ${unit}`) : "";
   // The label centres on the scrubber, kept inside the chart.
-  const labelAnchor = sx > width - 60 ? "end" : sx < g.left + 40 ? "start" : "middle";
+  const ux = mx(sx);
+  const labelAnchor = ux > width - 60 ? "end" : ux < g.left + 40 ? "start" : "middle";
 
   return (
     <div
@@ -192,21 +199,21 @@ export const TrendChart: React.FC<{
         if (e.buttons || e.pointerType === "mouse") pickAt(e.clientX);
       }}
       onKeyDown={(e) => {
-        if (e.key === "ArrowLeft") setPicked(Math.max(0, sel - 1));
-        else if (e.key === "ArrowRight") setPicked(Math.min(n - 1, sel + 1));
+        if (e.key === (rtl ? "ArrowRight" : "ArrowLeft")) setPicked(Math.max(0, sel - 1));
+        else if (e.key === (rtl ? "ArrowLeft" : "ArrowRight")) setPicked(Math.min(n - 1, sel + 1));
       }}
     >
       {width > 0 && n === 0 && emptyText && (
         <svg width={width} height={g.height} className="block" aria-hidden>
           {ticks.map((v, i) => (
             <g key={i}>
-              <line x1={g.left} x2={width - g.right} y1={tickY(v)} y2={tickY(v)} stroke={t.grid} strokeWidth={1} />
-              <text x={g.labelX} y={tickY(v) + 3} style={{ fontSize: textPx(8.5) }} fill={t.axis}>
+              <line x1={mx(g.left)} x2={mx(width - g.right)} y1={tickY(v)} y2={tickY(v)} stroke={t.grid} strokeWidth={1} />
+              <text x={mx(g.labelX)} y={tickY(v) + 3} style={{ fontSize: textPx(8.5) }} fill={t.axis}>
                 {formatTick(v)}
               </text>
             </g>
           ))}
-          <text x={(g.left + width - g.right) / 2} y={g.plotTop + g.plotH / 2 + 4} style={{ fontSize: textPx(12) }} fontWeight={700} fill={tone === "card" ? "#FFFFFF" : t.axis} textAnchor="middle">
+          <text x={mx((g.left + width - g.right) / 2)} y={g.plotTop + g.plotH / 2 + 4} style={{ fontSize: textPx(12) }} fontWeight={700} fill={tone === "card" ? "#FFFFFF" : t.axis} textAnchor="middle">
             {emptyText}
           </text>
         </svg>
@@ -222,8 +229,8 @@ export const TrendChart: React.FC<{
 
           {ticks.map((v, i) => (
             <g key={i}>
-              <line x1={g.left} x2={width - g.right} y1={yAt(v)} y2={yAt(v)} stroke={t.grid} strokeWidth={1} />
-              <text x={g.labelX} y={yAt(v) + 3} style={{ fontSize: textPx(8.5) }} fill={t.axis}>
+              <line x1={mx(g.left)} x2={mx(width - g.right)} y1={yAt(v)} y2={yAt(v)} stroke={t.grid} strokeWidth={1} />
+              <text x={mx(g.labelX)} y={yAt(v) + 3} style={{ fontSize: textPx(8.5) }} fill={t.axis}>
                 {i === 2 && unitOnAxis ? `${formatTick(v)} ${unit}` : formatTick(v)}
               </text>
             </g>
@@ -275,16 +282,16 @@ export const TrendChart: React.FC<{
           ) : (
             <>
               {/* A single point sits at the right edge; its date goes under it. */}
-              <text x={n < 2 ? xAt(0) : g.left} y={g.datesY} style={{ fontSize: textPx(8.5) }} fill={t.axis} textAnchor={n < 2 ? "end" : "start"}>
+              <text x={n < 2 ? xAt(0) : mx(g.left)} y={g.datesY} style={{ fontSize: textPx(8.5) }} fill={t.axis} textAnchor={n < 2 ? "end" : "start"}>
                 {points[0].label}
               </text>
               {n > 2 && span > 0 && (
-                <text x={g.left + plotW / 2} y={g.datesY} style={{ fontSize: textPx(8.5) }} fill={t.axis} textAnchor="middle">
+                <text x={mx(g.left + plotW / 2)} y={g.datesY} style={{ fontSize: textPx(8.5) }} fill={t.axis} textAnchor="middle">
                   {formatDate(t0 + span / 2)}
                 </text>
               )}
               {n > 1 && (
-                <text x={width - g.right} y={g.datesY} style={{ fontSize: textPx(8.5) }} fill={t.axis} textAnchor="end">
+                <text x={mx(width - g.right)} y={g.datesY} style={{ fontSize: textPx(8.5) }} fill={t.axis} textAnchor="end">
                   {points[n - 1].label}
                 </text>
               )}

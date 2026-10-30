@@ -1,5 +1,6 @@
 import { Home, UtensilsCrossed, Dumbbell, HeartPulse, MoreHorizontal, Users, Store, User as UserIcon, CalendarDays, MessageCircle, MessageSquare, Building2, UserPlus, Settings, TrendingUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { tk } from "../../i18n/core";
 import { PRO_ROUTES, SLOT4, type ProLane, type Slot4Glyph } from "../pro/subtypeLanes";
 
 export interface NavItem {
@@ -12,11 +13,11 @@ export interface NavItem {
 // Iteration 6 "Team": Home moves to the centre slot, where BottomNav
 // renders it as the Centium mark instead of this icon/label pair.
 export const primaryNavItems: NavItem[] = [
-  { to: "/app/food", label: "Food", icon: UtensilsCrossed },
-  { to: "/app/workout", label: "Workout", icon: Dumbbell },
-  { to: "/app", label: "Home", icon: Home },
-  { to: "/app/health", label: "Health", icon: HeartPulse },
-  { to: "/app/more", label: "More", icon: MoreHorizontal },
+  { to: "/app/food", label: tk("Food"), icon: UtensilsCrossed },
+  { to: "/app/workout", label: tk("Workout"), icon: Dumbbell },
+  { to: "/app", label: tk("Home"), icon: Home },
+  { to: "/app/health", label: tk("Health"), icon: HeartPulse },
+  { to: "/app/more", label: tk("More"), icon: MoreHorizontal },
 ];
 
 // (The client desktop sidebar list went with the client sidebar: the client app
@@ -42,11 +43,11 @@ export interface ProTab {
 export function proTabs(lane: ProLane): ProTab[] {
   const slot4 = SLOT4[lane];
   return [
-    { to: PRO_ROUTES.clients, label: "Clients", glyph: "clients" },
-    { to: PRO_ROUTES.calendar, label: "Calendar", glyph: "calendar" },
-    { to: PRO_ROUTES.home, label: "Home", glyph: "mark" },
+    { to: PRO_ROUTES.clients, label: tk("Clients"), glyph: "clients" },
+    { to: PRO_ROUTES.calendar, label: tk("Calendar"), glyph: "calendar" },
+    { to: PRO_ROUTES.home, label: tk("Home"), glyph: "mark" },
     { to: slot4.to, label: slot4.label, glyph: slot4.glyph },
-    { to: PRO_ROUTES.more, label: "More", glyph: "more" },
+    { to: PRO_ROUTES.more, label: tk("More"), glyph: "more" },
   ];
 }
 
@@ -84,13 +85,13 @@ export function isProTabActive(tab: ProTab, pathname: string): boolean {
 /** The desktop sidebar's More rows under the five tabs (MO1 v7 destinations that have a page). */
 export function proSidebarShortcuts(): BusinessShortcut[] {
   return [
-    { to: "/app/messages", label: "Messages", icon: MessageCircle, unread: true },
-    { to: "/app/marketplace", label: "Explore", icon: Store },
-    { to: "/app/forum", label: "Community", icon: MessageSquare },
-    { to: `${PRO_ROUTES.more}/practice-insights`, label: "Practice insights", icon: TrendingUp },
-    { to: `${PRO_ROUTES.more}/businesses`, label: "Businesses", icon: Building2 },
-    { to: "/app/profile", label: "Profile", icon: UserIcon },
-    { to: "/app/settings", label: "Settings", icon: Settings },
+    { to: "/app/messages", label: tk("Messages"), icon: MessageCircle, unread: true },
+    { to: "/app/marketplace", label: tk("Explore"), icon: Store },
+    { to: "/app/forum", label: tk("Community"), icon: MessageSquare },
+    { to: `${PRO_ROUTES.more}/practice-insights`, label: tk("Practice insights"), icon: TrendingUp },
+    { to: `${PRO_ROUTES.more}/businesses`, label: tk("Businesses"), icon: Building2 },
+    { to: "/app/profile", label: tk("Profile"), icon: UserIcon },
+    { to: "/app/settings", label: tk("Settings"), icon: Settings },
   ];
 }
 
@@ -135,11 +136,11 @@ export const BUSINESS_OPERATIONS_ROUTE = "/app/business/operations";
 export const BUSINESS_PRODUCTS_ROUTE = "/app/business/products";
 
 const OPERATIONS_TAB: Record<BusinessNavKind, BusinessTab> = {
-  classes: { to: BUSINESS_OPERATIONS_ROUTE, label: "Schedule", glyph: "schedule" },
-  gym: { to: BUSINESS_OPERATIONS_ROUTE, label: "Front desk", glyph: "front-desk" },
-  store: { to: BUSINESS_OPERATIONS_ROUTE, label: "Orders", glyph: "orders" },
-  appointments: { to: BUSINESS_OPERATIONS_ROUTE, label: "Appointments", glyph: "appointments" },
-  unknown: { to: BUSINESS_OPERATIONS_ROUTE, label: "Operations", glyph: "operations" },
+  classes: { to: BUSINESS_OPERATIONS_ROUTE, label: tk("Schedule"), glyph: "schedule" },
+  gym: { to: BUSINESS_OPERATIONS_ROUTE, label: tk("Front desk"), glyph: "front-desk" },
+  store: { to: BUSINESS_OPERATIONS_ROUTE, label: tk("Orders"), glyph: "orders" },
+  appointments: { to: BUSINESS_OPERATIONS_ROUTE, label: tk("Appointments"), glyph: "appointments" },
+  unknown: { to: BUSINESS_OPERATIONS_ROUTE, label: tk("Operations"), glyph: "operations" },
 };
 
 const isStoreKind = (k: BusinessNavKind) => k === "store" || k === "appointments";
@@ -147,13 +148,13 @@ const isStoreKind = (k: BusinessNavKind) => k === "store" || k === "appointments
 /** The bar's five tabs, left to right (Dashboard is the centre slot). */
 export function businessTabs(kind: BusinessNavKind): BusinessTab[] {
   return [
-    { to: "/app/business/analytics", label: "Analytics", glyph: "analytics" },
+    { to: "/app/business/analytics", label: tk("Analytics"), glyph: "analytics" },
     OPERATIONS_TAB[kind],
-    { to: "/app", label: "Dashboard", glyph: "mark" },
+    { to: "/app", label: tk("Dashboard"), glyph: "mark" },
     isStoreKind(kind)
-      ? { to: BUSINESS_PRODUCTS_ROUTE, label: "Products", glyph: "products" }
-      : { to: "/app/business/marketplace", label: "Marketplace", glyph: "marketplace" },
-    { to: "/app/more", label: "More", glyph: "more" },
+      ? { to: BUSINESS_PRODUCTS_ROUTE, label: tk("Products"), glyph: "products" }
+      : { to: "/app/business/marketplace", label: tk("Marketplace"), glyph: "marketplace" },
+    { to: "/app/more", label: tk("More"), glyph: "more" },
   ];
 }
 
@@ -207,11 +208,11 @@ export function isBusinessTabActive(tab: BusinessTab, pathname: string): boolean
 
 /** Team and access wording per type (COPY.md vocabulary map, Staff row). */
 const TEAM_LABEL: Record<BusinessNavKind, string> = {
-  classes: "Instructors",
-  gym: "Team",
-  store: "Staff",
-  appointments: "Staff",
-  unknown: "Team",
+  classes: tk("Instructors"),
+  gym: tk("Team"),
+  store: tk("Staff"),
+  appointments: tk("Staff"),
+  unknown: tk("Team"),
 };
 
 export interface BusinessShortcut extends NavItem {
@@ -222,11 +223,11 @@ export interface BusinessShortcut extends NavItem {
 /** OURS-NAV-desktop-sidebar row 5: the More shortcuts under the five tabs. */
 export function businessSidebarShortcuts(kind: BusinessNavKind): BusinessShortcut[] {
   return [
-    { to: "/app/messages", label: "Messages", icon: MessageCircle, unread: true },
-    { to: "/app/business/calendar", label: "Calendar", icon: CalendarDays },
-    { to: "/app/business/members", label: "Members", icon: UserPlus },
+    { to: "/app/messages", label: tk("Messages"), icon: MessageCircle, unread: true },
+    { to: "/app/business/calendar", label: tk("Calendar"), icon: CalendarDays },
+    { to: "/app/business/members", label: tk("Members"), icon: UserPlus },
     { to: "/app/business/employees", label: TEAM_LABEL[kind], icon: Users },
-    { to: "/app/business/profile", label: "Business Profile", icon: Building2 },
-    { to: "/app/settings", label: "Settings", icon: Settings },
+    { to: "/app/business/profile", label: tk("Business Profile"), icon: Building2 },
+    { to: "/app/settings", label: tk("Settings"), icon: Settings },
   ];
 }

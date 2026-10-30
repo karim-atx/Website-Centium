@@ -11,6 +11,7 @@ import { PopupMenu } from "../ui/PopupMenu";
 import { linePx, textPx } from "../../theme/textSize";
 import type { MyVenue } from "../../services/venues/consoleLogic";
 import { bellBadge, unreadBadge } from "../../services/notifications/notificationsModel";
+import { t } from "../../i18n/core";
 
 // DA1-015 #2-#7 (header, bell, name row, Listed chip), S1 (Needs your
 // attention), DA2-003 (Finish setting up), OURS-DA-kept-features #1, #2, #4
@@ -48,8 +49,8 @@ export function DashHeader({
   const chip = listed ? { bg: c.goodTint, ink: c.good, dot: c.good, text: "Listed" } : { bg: c.soft, ink: c.faint, dot: c.tert, text: "Hidden" };
   const badge = bellBadge(attentionCount, notificationsUnread);
   const bellLabel = notificationsUnread
-    ? `Needs your attention, ${attentionCount} items, ${unreadBadge(notificationsUnread)} unread notifications`
-    : `Needs your attention, ${attentionCount} items`;
+    ? t("Needs your attention, {count} items, {unread} unread notifications", { count: attentionCount, unread: unreadBadge(notificationsUnread) })
+    : t("Needs your attention, {count} items", { count: attentionCount });
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
@@ -297,7 +298,7 @@ export function AttentionPanel({
         <button
           type="button"
           data-notifications-row
-          aria-label={notificationsUnread ? `Notifications, ${unreadBadge(notificationsUnread)} unread` : undefined}
+          aria-label={notificationsUnread ? t("Notifications, {unread} unread", { unread: unreadBadge(notificationsUnread) }) : undefined}
           onClick={() => {
             onClose();
             navigate("/app/business/notifications");
@@ -308,8 +309,8 @@ export function AttentionPanel({
             <Bell size={15} aria-hidden />
           </span>
           <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12.5), fontWeight: 600, color: c.ink, lineHeight: 1.5 }}>
-            Notifications
-            <span style={{ display: "block", fontSize: textPx(10.5), fontWeight: 500, marginTop: 1, color: c.faint }}>Applications, offer replies, hiring fees and reviews</span>
+            {t("Notifications")}
+            <span style={{ display: "block", fontSize: textPx(10.5), fontWeight: 500, marginTop: 1, color: c.faint }}>{t("Applications, offer replies, hiring fees and reviews")}</span>
           </span>
           {notificationsUnread ? (
             <span

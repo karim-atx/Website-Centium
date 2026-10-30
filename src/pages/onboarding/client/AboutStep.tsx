@@ -8,6 +8,7 @@ import { isReservedDisplayName } from "../../../services/profile";
 import { ObFooter, ObStep } from "../shell/ObShell";
 import { ObCollapsible, ObField, ObSeg, ObTip, ObUnits } from "../shell/ObBlocks";
 import { OB_STRINGS, useOnboardingFlow } from "../shell/flow";
+import { t, tk, tn } from "../../../i18n/core";
 
 interface Props {
   draft: OnboardingDraft;
@@ -24,9 +25,9 @@ interface Props {
 // (stored metric either way).
 
 const SEX: { value: Sex; label: string; icon: typeof Venus }[] = [
-  { value: "female", label: "Female", icon: Venus },
-  { value: "male", label: "Male", icon: Mars },
-  { value: "other", label: "Other", icon: VenusAndMars },
+  { value: "female", label: tk("Female"), icon: Venus },
+  { value: "male", label: tk("Male"), icon: Mars },
+  { value: "other", label: tk("Other"), icon: VenusAndMars },
 ];
 
 const CM_PER_IN = 2.54;
@@ -37,7 +38,7 @@ export function cmToFtText(cm: string): string {
   const n = Number(cm);
   if (!cm || !Number.isFinite(n) || n <= 0) return "";
   const total = Math.round(n / CM_PER_IN);
-  return `${Math.floor(total / 12)} ft ${total % 12} in`;
+  return t("{ft} ft {inch} in", { ft: Math.floor(total / 12), inch: total % 12 });
 }
 /** "5 ft 10 in", "5'10", "5 10" -> "178"; "" when it cannot be read. */
 export function ftTextToCm(text: string): string {
@@ -70,12 +71,13 @@ export const AboutStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
   const [weightText, setWeightText] = useState(() => (draft.weightUnit === "lb" ? kgToLbText(draft.weightKg) : draft.weightKg));
   const dobRef = useRef<HTMLInputElement>(null);
 
-  const nameError = tried && !draft.firstName.trim() ? "Add your name." : reserved ? "That name is reserved. Choose a different name." : null;
+  const nameError = tried && !draft.firstName.trim() ? t("Add your name.") : reserved ? t("That name is reserved. Choose a different name.") : null;
   // The 16+ rule shows as soon as a full date fails it (Task T).
   const dobProblem = draft.dateOfBirth ? validateDateOfBirth(draft.dateOfBirth) : tried ? validateDateOfBirth("") : null;
   const age = draft.dateOfBirth && !dobProblem ? ageFromDateOfBirth(draft.dateOfBirth) : undefined;
-  const heightError = draft.heightCm ? validateHeightCm(Number(draft.heightCm)) : heightText.trim() ? "Enter a valid height." : null;
-  const weightError = draft.weightKg ? validateWeightKg(Number(draft.weightKg)) : weightText.trim() ? "Enter a valid weight." : null;
+  // The validators (utils) return English; shown through t().
+  const heightError = draft.heightCm ? validateHeightCm(Number(draft.heightCm)) : heightText.trim() ? tk("Enter a valid height.") : null;
+  const weightError = draft.weightKg ? validateWeightKg(Number(draft.weightKg)) : weightText.trim() ? tk("Enter a valid weight.") : null;
   const shownBodyError = tried ? heightError ?? weightError : null;
   const errorCount = [nameError, tried ? dobProblem : null, tried ? heightError : null, tried ? weightError : null].filter(Boolean).length;
 
@@ -99,11 +101,11 @@ export const AboutStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
 
   const summary =
     open || (!draft.heightCm && !draft.weightKg)
-      ? "Private. Used only to set your targets."
+      ? t("Private. Used only to set your targets.")
       : [
-          draft.heightCm ? (draft.heightUnit === "ft" ? cmToFtText(draft.heightCm) : `${draft.heightCm} cm`) : null,
+          draft.heightCm ? (draft.heightUnit === "ft" ? cmToFtText(draft.heightCm) : t("{n} cm", { n: draft.heightCm })) : null,
           // Whole numbers on the summary, as drawn ("178 cm · 76 kg").
-          draft.weightKg ? (draft.weightUnit === "lb" ? `${Math.round(Number(kgToLbText(draft.weightKg)))} lb` : `${Math.round(Number(draft.weightKg))} kg`) : null,
+          draft.weightKg ? (draft.weightUnit === "lb" ? t("{n} lb", { n: Math.round(Number(kgToLbText(draft.weightKg))) }) : t("{n} kg", { n: Math.round(Number(draft.weightKg)) })) : null,
         ]
           .filter(Boolean)
           .join(" · ");
@@ -112,20 +114,20 @@ export const AboutStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
     <ObStep
       lane="client"
       step="about"
-      title="About you"
-      subtitle="This helps us personalise your targets. Only you see it."
+      title={t("About you")}
+      subtitle={t("This helps us personalise your targets. Only you see it.")}
       onBack={onBack}
       footer={
         <ObFooter
-          error={errorCount > 0 ? `Fix ${errorCount} thing${errorCount === 1 ? "" : "s"} to continue.` : !flow?.online ? OB_STRINGS.offlineStep : null}
+          error={errorCount > 0 ? tn(errorCount, "Fix {n} thing to continue.", "Fix {n} things to continue.") : !flow?.online ? t(OB_STRINGS.offlineStep) : null}
           errorTone={errorCount > 0 ? "error" : "info"}
-          primary={{ label: "Continue", disabled: busy || errorCount > 0, onClick: () => void handleContinue() }}
+          primary={{ label: t("Continue"), disabled: busy || errorCount > 0, onClick: () => void handleContinue() }}
         />
       }
     >
       <ObField
-        label="Name"
-        placeholder="e.g. Jane Smith"
+        label={t("Name")}
+        placeholder={t("e.g. Jane Smith")}
         autoComplete="given-name"
         value={draft.firstName}
         error={nameError}
@@ -136,35 +138,35 @@ export const AboutStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
       />
       <ObField
         ref={dobRef}
-        label="Date of birth"
+        label={t("Date of birth")}
         type="date"
         required
         min={isoDateYearsAgo(MAX_AGE)}
         max={isoDateYearsAgo(MIN_AGE)}
         value={draft.dateOfBirth}
         onChange={(e) => setDraft((d) => ({ ...d, dateOfBirth: e.target.value }))}
-        error={dobProblem}
-        help={age !== undefined ? `${age} years old` : "Required. Check it before saving; to change it later, contact support."}
+        error={dobProblem && t(dobProblem)}
+        help={age !== undefined ? tn(age, "{n} years old", "{n} years old") : t("Required. Check it before saving; to change it later, contact support.")}
         end={
-          <button type="button" className="hit" aria-label="Choose a date" onClick={() => dobRef.current?.showPicker?.()} style={{ display: "flex" }}>
+          <button type="button" className="hit" aria-label={t("Choose a date")} onClick={() => dobRef.current?.showPicker?.()} style={{ display: "flex" }}>
             <Calendar size={16} strokeWidth={2} />
           </button>
         }
       />
-      <ObSeg label="Sex" value={draft.sex} options={SEX} onChange={(v) => setDraft((d) => ({ ...d, sex: v }))} />
-      <ObCollapsible icon={Ruler} title="Optional: height and weight" summary={summary} open={open} onToggle={() => setOpen((o) => !o)} margin="6px 0 12px" controls="ob-about-body" />
+      <ObSeg label={t("Sex")} value={draft.sex} options={SEX.map((s) => ({ ...s, label: t(s.label) }))} onChange={(v) => setDraft((d) => ({ ...d, sex: v }))} />
+      <ObCollapsible icon={Ruler} title={t("Optional: height and weight")} summary={summary} open={open} onToggle={() => setOpen((o) => !o)} margin="6px 0 12px" controls="ob-about-body" />
       {open && (
         <div id="ob-about-body">
           <ObUnits
             items={[
               {
-                label: "Height",
+                label: t("Height"),
                 value: heightText,
                 inputMode: draft.heightUnit === "ft" ? undefined : "numeric",
-                placeholder: draft.heightUnit === "ft" ? "5 ft 10 in" : "178",
+                placeholder: draft.heightUnit === "ft" ? t("{ft} ft {inch} in", { ft: 5, inch: 10 }) : "178",
                 units: [
-                  { value: "cm", label: "cm" },
-                  { value: "ft", label: "ft" },
+                  { value: "cm", label: t("cm") },
+                  { value: "ft", label: t("ft") },
                 ],
                 unit: draft.heightUnit,
                 error: tried && !!heightError,
@@ -179,13 +181,13 @@ export const AboutStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
                 },
               },
               {
-                label: "Weight",
+                label: t("Weight"),
                 value: weightText,
                 inputMode: "decimal",
                 placeholder: draft.weightUnit === "lb" ? "168" : "76.4",
                 units: [
-                  { value: "kg", label: "kg" },
-                  { value: "lb", label: "lb" },
+                  { value: "kg", label: t("kg") },
+                  { value: "lb", label: t("lb") },
                 ],
                 unit: draft.weightUnit,
                 error: tried && !!weightError,
@@ -204,11 +206,11 @@ export const AboutStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
           />
           {shownBodyError && (
             <div className="ob-help" data-err="true" style={{ margin: "-8px 0 12px" }}>
-              <span role="alert">{shownBodyError}</span>
+              <span role="alert">{t(shownBodyError)}</span>
             </div>
           )}
           <ObTip icon={Lock} margin="0">
-            Leave these blank if you prefer. You can add them later in Profile.
+            {t("Leave these blank if you prefer. You can add them later in Profile.")}
           </ObTip>
         </div>
       )}

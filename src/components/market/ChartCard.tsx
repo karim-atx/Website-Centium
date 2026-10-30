@@ -20,6 +20,7 @@ import {
   tooltipLeft,
 } from "./chartModel";
 import { appLocale } from "../../i18n/format";
+import { isRtl } from "../../i18n/core";
 
 // Market + Share 3.0 · ChartCard (HANDOVER §4 B-MA.7, P-MA.6, §5: kind line |
 // bar | funnel, range, series, scrub / tap, tooltip). Markup and behaviour
@@ -56,6 +57,18 @@ import { appLocale } from "../../i18n/format";
 // or series changes. Keyboard: the plot is a slider (arrows, Home, End).
 // Dark (D-05): the guide, ring and tapped bar #C3B3FB, the tooltip inverted
 // (#F5F3FA on #121317), the compare line --teal.
+
+// Round F (F10): in right to left, time runs from right to left. The plots
+// have no text, so each svg is mirrored whole (FLIP replaces NO_ICON_SCALE
+// there); the tooltip and markers are placed from the inline start, the bar
+// and axis rows are flex (they follow the direction), the pointer is read from
+// the inline start and the arrow keys move visually.
+const FLIP: { transform: string } = { transform: "scaleX(-1)" };
+/** The pointer x from the plot's inline start. */
+const inlineX = (e: React.PointerEvent<HTMLDivElement>, rtl: boolean) => {
+  const r = e.currentTarget.getBoundingClientRect();
+  return rtl ? r.right - e.clientX : e.clientX - r.left;
+};
 
 export type ChartKind = "line" | "bar" | "funnel";
 
@@ -147,20 +160,22 @@ const Tooltip: React.FC<{ left: number; top: number; width: number; text: string
   const dark = useIsDark();
   const c = chartInk(dark);
   return (
-    <div aria-hidden style={{ position: "absolute", top, left, width, textAlign: "center", opacity: shown ? 1 : 0, pointerEvents: "none" }}>
+    <div aria-hidden style={{ position: "absolute", top, insetInlineStart: left, width, textAlign: "center", opacity: shown ? 1 : 0, pointerEvents: "none" }}>
       <span style={{ display: "inline-block", background: c.tipBg, color: c.tipInk, borderRadius: 8, padding: big ? "4px 9px" : "3px 8px", fontSize: textPx(big ? 11.5 : 11), fontWeight: 700, whiteSpace: "nowrap" }}>{text}</span>
     </div>
   );
 };
 
-/** Arrow-key scrubbing for a plot (role slider). */
-function sliderKeys(i: number | undefined, n: number, set: (i: number) => void) {
+/** Arrow-key scrubbing for a plot (role slider); left and right swap in right to left. */
+function sliderKeys(i: number | undefined, n: number, set: (i: number) => void, rtl = false) {
+  const fwd = rtl ? "ArrowLeft" : "ArrowRight";
+  const back = rtl ? "ArrowRight" : "ArrowLeft";
   return (e: React.KeyboardEvent) => {
     if (n <= 0) return;
     const cur = i ?? -1;
     let next = -1;
-    if (e.key === "ArrowRight" || e.key === "ArrowUp") next = Math.min(n - 1, cur + 1);
-    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") next = cur < 0 ? n - 1 : Math.max(0, cur - 1);
+    if (e.key === fwd || e.key === "ArrowUp") next = Math.min(n - 1, cur + 1);
+    else if (e.key === back || e.key === "ArrowDown") next = cur < 0 ? n - 1 : Math.max(0, cur - 1);
     else if (e.key === "Home") next = 0;
     else if (e.key === "End") next = n - 1;
     if (next < 0) return;
@@ -210,6 +225,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
   const mark = has ? markers.find((k) => k.index === i) : undefined;
   const tip = has ? `${labels[i!] ?? ""} · ${formatValue(series[i!])}${mark ? ` · ${mark.label}` : ""}` : "";
   const axis = showAxis ?? kind !== "funnel";
+  const rtl = isRtl();
 
   const head = onExpand ? (
     <button
@@ -226,8 +242,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
   );
 
   const fromPointer = (e: React.PointerEvent<HTMLDivElement>, hit: (x: number, width: number, count: number) => number) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    const j = hit(e.clientX - r.left, r.width, n);
+    const j = hit(inlineX(e, rtl), e.currentTarget.getBoundingClientRect().width, n);
     if (j >= 0) setI(j);
   };
 
@@ -248,11 +263,11 @@ export const ChartCard: React.FC<ChartCardProps> = ({
         aria-valuetext={has ? tip : "Tap or drag the chart"}
         onPointerDown={(e) => fromPointer(e, scrubIndex)}
         onPointerMove={(e) => fromPointer(e, scrubIndex)}
-        onKeyDown={sliderKeys(i, n, setI)}
+        onKeyDown={sliderKeys(i, n, setI, rtl)}
         className="market-focus"
         style={{ position: "relative", height: 120, marginTop: 22, touchAction: "none", cursor: "crosshair" }}
       >
-        <svg width={w} height={120} viewBox={`0 0 ${w} 120`} aria-hidden style={{ display: "block", overflow: "visible", ...NO_ICON_SCALE }}>
+        <svg width={w} height={120} viewBox={`0 0 ${w} 120`} aria-hidden style={{ display: "block", overflow: "visible", ...(rtl ? FLIP : NO_ICON_SCALE) }}>
           <path d={`M0 10H${w}M0 60H${w}M0 110H${w}`} stroke={m.div} strokeWidth={1} />
           <path d={g.area} fill="rgba(174,161,220,0.22)" />
           <path d={g.line} fill="none" stroke="#AEA1DC" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
@@ -278,7 +293,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
         aria-valuenow={has ? i : undefined}
         aria-valuetext={has ? tip : "Tap a bar"}
         onPointerDown={(e) => fromPointer(e, barIndexAt)}
-        onKeyDown={sliderKeys(i, n, setI)}
+        onKeyDown={sliderKeys(i, n, setI, rtl)}
         className="market-focus"
         style={{ position: "relative", height: 110, boxSizing: "content-box", marginTop: 24, display: "flex", alignItems: "flex-end", gap: barGap(n), borderBottom: `1px solid ${m.div}`, cursor: "pointer", touchAction: "manipulation" }}
       >
@@ -288,7 +303,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
           <div key={j} aria-hidden style={{ position: "relative", flex: 1, minWidth: 0, height: h, background: j === i ? c.scrub : "#AEA1DC", borderRadius: "3px 3px 0 0" }} />
         ))}
         {markers.filter((k) => k.index >= 0 && k.index < n).map((k) => (
-          <span key={k.index} data-marker aria-hidden style={{ position: "absolute", bottom: -4, left: barCentre(k.index, w, n) - 3, width: 6, height: 6, borderRadius: 999, background: m.teal }} />
+          <span key={k.index} data-marker aria-hidden style={{ position: "absolute", bottom: -4, insetInlineStart: barCentre(k.index, w, n) - 3, width: 6, height: 6, borderRadius: 999, background: m.teal }} />
         ))}
         <Tooltip left={tooltipLeft(has ? barCentre(i!, w, n) : 0, w)} top={-22} width={110} text={tip} shown={has} />
       </div>
@@ -327,6 +342,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
 const Funnel: React.FC<{ steps: readonly FunnelStep[]; rateSeries: readonly number[]; plotRef: React.RefObject<HTMLDivElement | null>; w: number }> = ({ steps, rateSeries, plotRef, w }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
+  const rtl = isRtl();
   return (
     <>
       <div ref={plotRef} style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -343,7 +359,7 @@ const Funnel: React.FC<{ steps: readonly FunnelStep[]; rateSeries: readonly numb
         ))}
       </div>
       <div style={{ marginTop: 14, fontSize: textPx(10.5), fontWeight: 700, color: m.faint }}>Rate over time</div>
-      <svg width={w} height={36} viewBox={`0 0 ${w} 36`} aria-hidden style={{ display: "block", marginTop: 4, ...NO_ICON_SCALE }}>
+      <svg width={w} height={36} viewBox={`0 0 ${w} 36`} aria-hidden style={{ display: "block", marginTop: 4, ...(rtl ? FLIP : NO_ICON_SCALE) }}>
         <path d={lineGeo(rateSeries, w, 36).line} fill="none" stroke="#AEA1DC" strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round" />
       </svg>
     </>
@@ -433,6 +449,7 @@ export const ExpandedChart: React.FC<ExpandedChartProps> = ({ question, total, d
   const tone = deltaTone(delta);
   const compareInk = dark ? m.teal : "#6F9993";
   const [ax0, ax1, ax2] = axisLabels(labels);
+  const rtl = isRtl();
   return (
     <div style={{ color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
@@ -452,7 +469,7 @@ export const ExpandedChart: React.FC<ExpandedChartProps> = ({ question, total, d
       >
         <span style={{ fontSize: textPx(13), fontWeight: 700, color: m.ink }}>Compare to previous period</span>
         <span aria-hidden style={{ width: 42, height: 26, borderRadius: 999, background: compare ? m.fill : m.swoff, position: "relative", flexShrink: 0 }}>
-          <span style={{ position: "absolute", left: compare ? 18 : 2, top: 2, width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)", transition: "left 140ms ease" }} />
+          <span style={{ position: "absolute", insetInlineStart: compare ? 18 : 2, top: 2, width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)", transition: "inset-inline-start 140ms ease" }} />
         </span>
       </button>
       <div style={{ marginTop: 12, display: "flex", gap: 16, fontSize: textPx(11), color: m.ink2 }}>
@@ -474,19 +491,13 @@ export const ExpandedChart: React.FC<ExpandedChartProps> = ({ question, total, d
         aria-valuemax={Math.max(0, n - 1)}
         aria-valuenow={has ? i : undefined}
         aria-valuetext={has ? tip : "Tap or drag the chart"}
-        onPointerDown={(e) => {
-          const r = e.currentTarget.getBoundingClientRect();
-          setI(scrubIndex(e.clientX - r.left, r.width, n));
-        }}
-        onPointerMove={(e) => {
-          const r = e.currentTarget.getBoundingClientRect();
-          setI(scrubIndex(e.clientX - r.left, r.width, n));
-        }}
-        onKeyDown={sliderKeys(i, n, setI)}
+        onPointerDown={(e) => setI(scrubIndex(inlineX(e, rtl), e.currentTarget.getBoundingClientRect().width, n))}
+        onPointerMove={(e) => setI(scrubIndex(inlineX(e, rtl), e.currentTarget.getBoundingClientRect().width, n))}
+        onKeyDown={sliderKeys(i, n, setI, rtl)}
         className="market-focus"
         style={{ position: "relative", height: H, marginTop: 30, touchAction: "none", cursor: "crosshair" }}
       >
-        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden style={{ display: "block", overflow: "visible", ...NO_ICON_SCALE }}>
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden style={{ display: "block", overflow: "visible", ...(rtl ? FLIP : NO_ICON_SCALE) }}>
           <path d={`M0 10H${W}M0 80H${W}M0 160H${W}M0 230H${W}`} stroke={m.div} strokeWidth={1} />
           {bars ? (
             <path d={barsPath(series, W, H, max)} fill="#AEA1DC" />

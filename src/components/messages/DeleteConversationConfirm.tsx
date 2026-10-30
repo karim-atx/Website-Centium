@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
 import type { MessageThread } from "../../services/messaging";
+import { t } from "../../i18n/core";
 
 /**
  * OURS · MO1.7 "Delete this conversation?" (design-handover frame-check
@@ -17,13 +18,12 @@ import type { MessageThread } from "../../services/messaging";
  * white / #F09A8E with #0D0B1A). Focus starts on Cancel; Escape, Back and
  * the scrim cancel, except while busy.
  */
-function deleteLine(t: MessageThread): string {
-  const lead = "It's removed from your Messages, with its history.";
-  if (t.kind === "official_support")
-    return "It's removed from your Messages. Centium keeps its copy. A new message from Centium brings it back.";
-  if (t.kind === "group") return `${lead} Other members still have it. You stay in the group, so new messages bring it back.`;
-  if (t.venue?.memberSide) return `${lead} ${t.venue.name} still has it. A new message from them brings it back.`;
-  return `${lead} ${t.participantName} still has it. If they message you again, it comes back with only the new messages.`;
+function deleteLine(th: MessageThread): string {
+  if (th.kind === "official_support")
+    return t("It's removed from your Messages. Centium keeps its copy. A new message from Centium brings it back.");
+  if (th.kind === "group") return t("It's removed from your Messages, with its history. Other members still have it. You stay in the group, so new messages bring it back.");
+  if (th.venue?.memberSide) return t("It's removed from your Messages, with its history. {name} still has it. A new message from them brings it back.", { name: th.venue.name });
+  return t("It's removed from your Messages, with its history. {name} still has it. If they message you again, it comes back with only the new messages.", { name: th.participantName });
 }
 
 export const DeleteConversationConfirm: React.FC<{
@@ -49,7 +49,7 @@ export const DeleteConversationConfirm: React.FC<{
     <CentredPopup
       open={open}
       onClose={cancel}
-      title="Delete this conversation?"
+      title={t("Delete this conversation?")}
       geometry="ours"
       align="start"
       alert
@@ -73,7 +73,7 @@ export const DeleteConversationConfirm: React.FC<{
           disabled={busy}
           className="tap min-w-0 h-[calc(48px+var(--text-boost,0px))] rounded-[14px] text-[14px] leading-[21px] font-bold px-2.5 bg-cream-card text-charcoal-soft border-[0.5px] border-charcoal/[0.14] disabled:opacity-60"
         >
-          Cancel
+          {t("Cancel")}
         </button>
         <button
           type="button"
@@ -88,10 +88,10 @@ export const DeleteConversationConfirm: React.FC<{
           {busy ? (
             <>
               <Loader2 size={18} className="animate-spin" aria-hidden />
-              <span className="sr-only">Deleting…</span>
+              <span className="sr-only">{t("Deleting…")}</span>
             </>
           ) : (
-            "Delete"
+            t("Delete")
           )}
         </button>
       </div>

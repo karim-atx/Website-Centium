@@ -1,3 +1,4 @@
+import { tk, tn } from "../../../../i18n/core";
 import { appLocale } from "../../../../i18n/format";
 // Centium landing v29: section 06's slides, a literal port of the
 // prototype's data() eco block (Centium Site v29.dc.html: row, grid,
@@ -189,34 +190,34 @@ function v11slide(x: Draft, lg: boolean): Draft {
   const k = (x.k || "").split(" · ")[1] || "";
   if (k === "SHARED PLAN") {
     const cols: [string, [string, Lift, number, string][]][] = [
-      ["Mon", [["Bench press", "Upper body", 4, "4 x 8"], ["Seated row", "Upper body", 3, "3 x 10"], ["Shoulder press", "Upper body", 3, "3 x 10"]]],
-      ["Tue", [["Back squat", "Lower body", 4, "4 x 6"], ["Romanian deadlift", "Lower body", 3, "3 x 8"]]],
-      ["Thu", [["Pull-ups", "Upper body", 3, "3 x 8"], ["Plank", "Core", 3, "3 x 45 s"]]],
-      ["Sat", [["Goblet squat", "Lower body", 3, "3 x 10"], ["Dead bug", "Core", 3, "3 x 12"]]],
+      [tk("Mon"), [[tk("Bench press"), tk("Upper body"), 4, "4 x 8"], [tk("Seated row"), tk("Upper body"), 3, "3 x 10"], [tk("Shoulder press"), tk("Upper body"), 3, "3 x 10"]]],
+      [tk("Tue"), [[tk("Back squat"), tk("Lower body"), 4, "4 x 6"], [tk("Romanian deadlift"), tk("Lower body"), 3, "3 x 8"]]],
+      [tk("Thu"), [[tk("Pull-ups"), tk("Upper body"), 3, "3 x 8"], [tk("Plank"), tk("Core"), 3, "3 x 45 s"]]],
+      [tk("Sat"), [[tk("Goblet squat"), tk("Lower body"), 3, "3 x 10"], [tk("Dead bug"), tk("Core"), 3, "3 x 12"]]],
     ];
     const lib: [string, Lift][] = [
-      ["Bench press", "Upper body"],
-      ["Seated row", "Upper body"],
-      ["Back squat", "Lower body"],
-      ["Romanian deadlift", "Lower body"],
-      ["Plank", "Core"],
-      ["Dead bug", "Core"],
+      [tk("Bench press"), tk("Upper body")],
+      [tk("Seated row"), tk("Upper body")],
+      [tk("Back squat"), tk("Lower body")],
+      [tk("Romanian deadlift"), tk("Lower body")],
+      [tk("Plank"), tk("Core")],
+      [tk("Dead bug"), tk("Core")],
     ];
     return Object.assign({}, x, {
       isRows: false,
       isPlan: true,
-      k: x.k.replace("SHARED PLAN", "PLAN BUILDER"),
-      t: "Drag a week together.",
-      d: "Pick exercises from your library and drop them into days. Rami sees the plan the moment you save.",
-      head: "Strength block · week 3",
-      sub: "For Rami Haddad",
+      k: x.k.replace(tk("SHARED PLAN"), tk("PLAN BUILDER")),
+      t: tk("Drag a week together."),
+      d: tk("Pick exercises from your library and drop them into days. Rami sees the plan the moment you save."),
+      head: tk("Strength block · week 3"),
+      sub: tk("For Rami Haddad"),
       lib: (lg ? lib : []).map(([t, m]) => Object.assign({ t }, LIFT[m])),
-      legend: [...(Object.keys(LIFT) as Lift[]).map((t): { t: string; c: string } => ({ t, c: LIFT[t].c })), { t: "Day totals in sets", c: "#FFFFFF" }],
+      legend: [...(Object.keys(LIFT) as Lift[]).map((t): { t: string; c: string } => ({ t, c: LIFT[t].c })), { t: tk("Day totals in sets"), c: "#FFFFFF" }],
       cols: cols.slice(0, lg ? 4 : 2).map(([d, items], ci) => {
         const sets = items.reduce((a, it) => a + it[2], 0);
         return {
           d,
-          kc: sets + " sets",
+          kc: tn(sets, "{n} set", "{n} sets"),
           ink: "#4E3894",
           bg: ci % 2 ? "#F6FAF9" : "#FAF9FE",
           bar: ci % 2 ? "#5D9C93" : "#775FD7",
@@ -242,11 +243,11 @@ function v11slide(x: Draft, lg: boolean): Draft {
       l0 = 2.5;
     let run = 0;
     const B: [string, "total" | "up" | "down", number, string, string, string][] = [
-      ["September", "total", 1960, "#BFDCD6", "#2F5F58", "$1,960"],
-      ["3 new clients", "up", 260, "#5D9C93", "#2F5F58", "+$260"],
-      ["Summer group program", "up", 180, "#775FD7", "#4E3894", "+$180"],
-      ["Fewer single sessions", "down", 60, "#DED4F4", "#5C48A8", "−$60"],
-      ["October", "total", 2340, "#2F5F58", "#2F5F58", "$2,340"],
+      [tk("September"), "total", 1960, "#BFDCD6", "#2F5F58", "$1,960"],
+      [tk("3 new clients"), "up", 260, "#5D9C93", "#2F5F58", "+$260"],
+      [tk("Summer group program"), "up", 180, "#775FD7", "#4E3894", "+$180"],
+      [tk("Fewer single sessions"), "down", 60, "#DED4F4", "#5C48A8", "−$60"],
+      [tk("October"), "total", 2340, "#2F5F58", "#2F5F58", "$2,340"],
     ];
     const wf = B.map(([t, kind, v, c, ink, lab], i) => {
       let lo: number, hi: number;
@@ -282,17 +283,17 @@ function v11slide(x: Draft, lg: boolean): Draft {
     });
     return Object.assign({}, x, {
       isWater: true,
-      t: "See what changed your month.",
-      d: "October against September, step by step: what added to your earnings and what took away.",
-      head: "Earnings bridge",
-      sub: "September to October",
+      t: tk("See what changed your month."),
+      d: tk("October against September, step by step: what added to your earnings and what took away."),
+      head: tk("Earnings bridge"),
+      sub: tk("September to October"),
       wf,
       ticks: [2500, 2250, 2000, 1750, 1500].map((v) => ({ t: "$" + v.toLocaleString(appLocale("en-US")), y: (100 - Y(v)).toFixed(2) + "%" })),
     });
   }
   if (k === "CLASSES") {
     const times = ["06:30", "09:00", "12:00", "17:30", "19:00"],
-      days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      days = [tk("Mon"), tk("Tue"), tk("Wed"), tk("Thu"), tk("Fri"), tk("Sat"), tk("Sun")];
     const cap = [
       [95, 60, 90, 100, 85, 40, 0],
       [40, 55, 35, 50, 45, 70, 30],
@@ -311,7 +312,7 @@ function v11slide(x: Draft, lg: boolean): Draft {
         // (4.9:1 or more), so 65 to 75% take the 80% shade.
         const light = a >= 0.65;
         cells.push({
-          t: c ? (c >= 100 ? "Full" : c + "%") : "",
+          t: c ? (c >= 100 ? tk("Full") : c + "%") : "",
           bg: c ? "rgba(78,56,148," + (light ? Math.max(0.1 + a * 0.85, 0.77) : 0.1 + a * 0.85).toFixed(2) + ")" : "#FAF9F7",
           ink: light ? "#FFFFFF" : "#221E1A",
           op0: "0",
@@ -322,10 +323,10 @@ function v11slide(x: Draft, lg: boolean): Draft {
     return Object.assign({}, x, {
       isRows: false,
       isHeat: true,
-      t: "See every class at a glance.",
-      d: "Capacity across the week as a heat map. Full classes open a waitlist on their own.",
-      head: "Timetable · this week",
-      sub: "Atlas Fitness",
+      t: tk("See every class at a glance."),
+      d: tk("Capacity across the week as a heat map. Full classes open a waitlist on their own."),
+      head: tk("Timetable · this week"),
+      sub: tk("Atlas Fitness"),
       days,
       cells,
     });
@@ -334,14 +335,14 @@ function v11slide(x: Draft, lg: boolean): Draft {
     return Object.assign({}, x, {
       isRows: false,
       isStack: true,
-      head: "Membership mix",
-      sub: "Active members",
+      head: tk("Membership mix"),
+      sub: tk("Active members"),
       seg: (
         [
-          ["Monthly", "212", "Renews monthly", 212, "#4E3894", "#FFFFFF"],
-          ["Quarterly", "98", "Every 3 months", 98, "#775FD7", "#FFFFFF"],
-          ["Annual", "64", "Paid yearly", 64, "#B9A9EE", "#221E1A"],
-          ["Day pass", "41", "This month, at the desk", 41, "#DED4F4", "#221E1A"],
+          [tk("Monthly"), "212", tk("Renews monthly"), 212, "#4E3894", "#FFFFFF"],
+          [tk("Quarterly"), "98", tk("Every 3 months"), 98, "#775FD7", "#FFFFFF"],
+          [tk("Annual"), "64", tk("Paid yearly"), 64, "#B9A9EE", "#221E1A"],
+          [tk("Day pass"), "41", tk("This month, at the desk"), 41, "#DED4F4", "#221E1A"],
         ] as [string, string, string, number, string, string][]
       ).map(([kk, n, m, f, c, ink], i) => ({ k: kk.toUpperCase(), t: kk, n, m, f, c, ink, w: st(i, 0.1, 0.12) })),
     });
@@ -349,16 +350,16 @@ function v11slide(x: Draft, lg: boolean): Draft {
     return Object.assign({}, x, {
       isRows: false,
       isGantt: true,
-      head: "Today's shifts",
-      sub: "Thursday",
+      head: tk("Today's shifts"),
+      sub: tk("Thursday"),
       hours: ["06", "09", "12", "15", "18", "21"],
       staff: (
         [
-          ["KN", "Karim Nassar", "Head coach", 0, 8, "Floor 06:00", "#4A7D76"],
-          ["JD", "Joelle Daher", "Coach", 1, 6, "Spin, Pilates", "#775FD7"],
-          ["DA", "Dana Azar", "Physio, linked", 4, 5, "Sessions", "#4A7D76", 1],
-          ["ST", "Sami Tannous", "Front desk", 8, 9, "Desk 14:00", "#91642C"],
-          ["RH", "Rita Haddad", "Owner", 3, 6, "Floor", "#4A7D76"],
+          ["KN", tk("Karim Nassar"), tk("Head coach"), 0, 8, tk("Floor 06:00"), "#4A7D76"],
+          ["JD", tk("Joelle Daher"), tk("Coach"), 1, 6, tk("Spin, Pilates"), "#775FD7"],
+          ["DA", tk("Dana Azar"), tk("Physio, linked"), 4, 5, tk("Sessions"), "#4A7D76", 1],
+          ["ST", tk("Sami Tannous"), tk("Front desk"), 8, 9, tk("Desk 14:00"), "#91642C"],
+          ["RH", tk("Rita Haddad"), tk("Owner"), 3, 6, tk("Floor"), "#4A7D76"],
         ] as [string, string, string, number, number, string, string, number?][]
       ).map(([i, n, r, from, len, sTxt, c, ver], j) => ({
         i,
@@ -381,73 +382,73 @@ function proDrafts(): Draft[] {
   return [
     {
       k: "01 · CLIENTS",
-      t: "Your whole roster at a glance.",
-      d: "See who logged, who needs a check-in and how each plan is going.",
+      t: tk("Your whole roster at a glance."),
+      d: tk("See who logged, who needs a check-in and how each plan is going."),
       url: "app/pro/clients",
-      head: "Clients",
-      sub: "Today",
+      head: tk("Clients"),
+      sub: tk("Today"),
       isRows: true,
       rows: (
         [
-          ["HM", "Hala Mansour", "Active 12 min ago · 3 meals logged", "86%", "Logged"],
-          ["RH", "Rami Haddad", "Active 1 h ago · PR yesterday", "72%", "Logged"],
-          ["RS", "Rana Sleiman", "Last active Monday", "40%", "Check-in due", 1],
-          ["JK", "Joseph Khalil", "Active today · plan shared", "64%", "New plan", 2],
-          ["KK", "Kimo Khaldi", "Active today · breakfast logged", "58%", "Logged"],
+          ["HM", tk("Hala Mansour"), tk("Active 12 min ago · 3 meals logged"), "86%", tk("Logged")],
+          ["RH", tk("Rami Haddad"), tk("Active 1 h ago · PR yesterday"), "72%", tk("Logged")],
+          ["RS", tk("Rana Sleiman"), tk("Last active Monday"), "40%", tk("Check-in due"), 1],
+          ["JK", tk("Joseph Khalil"), tk("Active today · plan shared"), "64%", tk("New plan"), 2],
+          ["KK", tk("Kimo Khaldi"), tk("Active today · breakfast logged"), "58%", tk("Logged")],
         ] as [string, string, string, string, string, number?][]
       ).map((x, i) => row({ av: x[0], a: x[1], m: x[2], ring: parseInt(x[3]) / 100, s: x[4], ...(x[5] === 1 ? warnC : x[5] === 2 ? lavC : {}) }, i)),
     },
     {
       k: "02 · SHARED PLAN",
-      t: "Build once, share with every client.",
-      d: "Edit a plan and it updates on your client side the moment you save.",
+      t: tk("Build once, share with every client."),
+      d: tk("Edit a plan and it updates on your client side the moment you save."),
       url: "app/pro/plans",
-      head: "High protein · week 3",
-      sub: "Shared with 4 clients",
+      head: tk("High protein · week 3"),
+      sub: tk("Shared with 4 clients"),
       isRows: true,
     },
     {
       k: "03 · SCHEDULE",
-      t: "Sessions, calls and check-ins in one week.",
-      d: "Clients book your free slots. You see every session in one calendar.",
+      t: tk("Sessions, calls and check-ins in one week."),
+      d: tk("Clients book your free slots. You see every session in one calendar."),
       url: "app/pro/schedule",
-      head: "This week",
-      sub: "9 sessions",
+      head: tk("This week"),
+      sub: tk("9 sessions"),
       isGrid: true,
-      days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+      days: [tk("Mon"), tk("Tue"), tk("Wed"), tk("Thu"), tk("Fri")],
       cells: grid([
-        [0, 0, "Hala · consult", "#775FD7", 0],
-        [0, 2, "Rana · call", "#4A7D76", 1],
-        [1, 1, "Joseph · consult", "#775FD7", 2],
-        [1, 3, "Group talk", "#4E3894", 3],
-        [2, 0, "Kimo · call", "#4A7D76", 4],
-        [2, 4, "Hala · consult", "#775FD7", 5],
-        [3, 3, "Rami · video", "#2F5F58", 6],
-        [3, 1, "Rana · consult", "#775FD7", 7],
-        [3, 4, "Check-ins", "#B9A9EE", 8],
+        [0, 0, tk("Hala · consult"), "#775FD7", 0],
+        [0, 2, tk("Rana · call"), "#4A7D76", 1],
+        [1, 1, tk("Joseph · consult"), "#775FD7", 2],
+        [1, 3, tk("Group talk"), "#4E3894", 3],
+        [2, 0, tk("Kimo · call"), "#4A7D76", 4],
+        [2, 4, tk("Hala · consult"), "#775FD7", 5],
+        [3, 3, tk("Rami · video"), "#2F5F58", 6],
+        [3, 1, tk("Rana · consult"), "#775FD7", 7],
+        [3, 4, tk("Check-ins"), "#B9A9EE", 8],
       ]),
     },
     {
       k: "04 · MESSAGES AND CALLS",
-      t: "Talk to clients where their data lives.",
-      d: "Messages, voice and video calls sit next to the plan and the history.",
+      t: tk("Talk to clients where their data lives."),
+      d: tk("Messages, voice and video calls sit next to the plan and the history."),
       url: "app/pro/messages",
-      head: "Messages",
-      sub: "2 unread",
+      head: tk("Messages"),
+      sub: tk("2 unread"),
       isChat: true,
       inbox: (
         [
-          ["RH", "Rami Haddad", 1],
-          ["HM", "Hala Mansour", 1],
-          ["KK", "Kimo Khaldi", 0],
-          ["RS", "Rana Sleiman", 0],
+          ["RH", tk("Rami Haddad"), 1],
+          ["HM", tk("Hala Mansour"), 1],
+          ["KK", tk("Kimo Khaldi"), 0],
+          ["RS", tk("Rana Sleiman"), 0],
         ] as [string, string, number][]
       ).map(([i, n, dot], j) => ({ i, n, dot: !!dot, bg: j === 0 ? "#F4F1FB" : "transparent" })),
       msgs: (
         [
-          ["Can we move Thursday to 18:00?", 0],
-          ["Done. See you then.", 1],
-          ["Thank you! My log is up to date.", 0],
+          [tk("Can we move Thursday to 18:00?"), 0],
+          [tk("Done. See you then."), 1],
+          [tk("Thank you! My log is up to date."), 0],
         ] as [string, number][]
       ).map(([t, me], i) => ({
         t,
@@ -459,11 +460,11 @@ function proDrafts(): Draft[] {
     },
     {
       k: "05 · EARNINGS",
-      t: "See what your practice earns.",
-      d: "Sessions and plans paid through Centium, month by month, with what is still to come.",
+      t: tk("See what your practice earns."),
+      d: tk("Sessions and plans paid through Centium, month by month, with what is still to come."),
       url: "app/pro/earnings",
-      head: "Earnings",
-      sub: "October",
+      head: tk("Earnings"),
+      sub: tk("October"),
     },
   ];
 }
@@ -472,59 +473,59 @@ function bizDrafts(): Draft[] {
   const x: Draft[] = [
     {
       k: "01 · GYM PAGE",
-      t: "Put your gym on the map.",
-      d: "A public page with your hours, classes and team, found inside Centium.",
+      t: tk("Put your gym on the map."),
+      d: tk("A public page with your hours, classes and team, found inside Centium."),
       url: "app/biz/page",
-      head: "Gym page",
-      sub: "Live",
+      head: tk("Gym page"),
+      sub: tk("Live"),
       isGym: true,
       next: (
         [
-          ["06:30", "HIIT 45 · Karim Nassar", "Full · 3 waitlist", "#91642C"],
-          ["09:00", "Spin · Joelle Daher", "16 / 20", "#2F5F58"],
-          ["12:00", "Pilates · Dana Azar", "9 / 15", "#2F5F58"],
+          ["06:30", tk("HIIT 45 · Karim Nassar"), tk("Full · 3 waitlist"), "#91642C"],
+          ["09:00", tk("Spin · Joelle Daher"), "16 / 20", "#2F5F58"],
+          ["12:00", tk("Pilates · Dana Azar"), "9 / 15", "#2F5F58"],
         ] as [string, string, string, string][]
       ).map(([t, n, s2, c], i) => ({ t, n, s: s2, c, w: (0.55 + i * 0.1).toFixed(2) + " " + (0.7 + i * 0.1).toFixed(2) })),
       info: (
         [
-          ["HOURS", "06:00 to 23:00"],
-          ["CLASSES", "28 a week"],
-          ["TEAM", "9 people"],
+          [tk("HOURS"), tk("06:00 to 23:00")],
+          [tk("CLASSES"), tk("28 a week")],
+          [tk("TEAM"), tk("9 people")],
         ] as [string, string][]
       ).map(([k, v], i) => ({ k, v, w: (0.4 + i * 0.12).toFixed(2) + " " + (0.6 + i * 0.12).toFixed(2) })),
     },
     {
       k: "02 · CLASSES",
-      t: "Bookings and waitlists that run themselves.",
-      d: "Members book from their phone. When a class fills, the waitlist takes over.",
+      t: tk("Bookings and waitlists that run themselves."),
+      d: tk("Members book from their phone. When a class fills, the waitlist takes over."),
       url: "app/biz/classes",
-      head: "Tomorrow",
-      sub: "4 classes",
+      head: tk("Tomorrow"),
+      sub: tk("4 classes"),
       isRows: true,
     },
     {
       k: "03 · MEMBERSHIPS",
-      t: "Memberships, digitised.",
-      d: "Plans, renewals and member cards live in the app, not in a drawer.",
+      t: tk("Memberships, digitised."),
+      d: tk("Plans, renewals and member cards live in the app, not in a drawer."),
       url: "app/biz/memberships",
-      head: "Membership plans",
-      sub: "October",
+      head: tk("Membership plans"),
+      sub: tk("October"),
       isRows: true,
     },
     {
       k: "04 · FRONT DESK",
-      t: "Check members in with one scan.",
-      d: "Scan a member card at the desk. Renewals due show up right away.",
+      t: tk("Check members in with one scan."),
+      d: tk("Scan a member card at the desk. Renewals due show up right away."),
       url: "app/biz/desk",
-      head: "Front desk",
-      sub: "Live",
+      head: tk("Front desk"),
+      sub: tk("Live"),
       isDesk: true,
       feed: (
         [
-          ["NS", "Nour Saab", "18:02", "In"],
-          ["GK", "Georges Karam", "18:04", "In"],
-          ["YC", "Yasmina Chahine", "18:05", "Renew", 1],
-          ["TM", "Tarek Mouawad", "18:07", "In"],
+          ["NS", tk("Nour Saab"), "18:02", tk("In")],
+          ["GK", tk("Georges Karam"), "18:04", tk("In")],
+          ["YC", tk("Yasmina Chahine"), "18:05", tk("Renew"), 1],
+          ["TM", tk("Tarek Mouawad"), "18:07", tk("In")],
         ] as [string, string, string, string, number?][]
       ).map((f, i) => ({
         i: f[0],
@@ -539,11 +540,11 @@ function bizDrafts(): Draft[] {
     },
     {
       k: "05 · TEAM",
-      t: "Your team and linked professionals.",
-      d: "Coaches, front desk and verified professionals working from one place.",
+      t: tk("Your team and linked professionals."),
+      d: tk("Coaches, front desk and verified professionals working from one place."),
       url: "app/biz/team",
-      head: "Team",
-      sub: "Today",
+      head: tk("Team"),
+      sub: tk("Today"),
       isRows: true,
     },
   ];
@@ -556,15 +557,15 @@ type MobK = Partial<Slide> & { t: string; d: string };
 function mobk(twoBubbles: boolean): Record<string, MobK> {
   return {
     CLIENTS: {
-      t: "Your whole roster at a glance.",
-      d: "See who logged and who needs a check-in.",
+      t: tk("Your whole roster at a glance."),
+      d: tk("See who logged and who needs a check-in."),
       mRoster: true,
-      mfoot: "Average adherence 66%",
+      mfoot: tk("Average adherence 66%"),
       mb: (
         [
-          ["HM", "Hala Mansour", "Upper / Lower", 86, 1, 0, [1, 1, 1, 0, 1, 1, 0]],
-          ["RH", "Rami Haddad", "High protein", 72, 0, 0, [1, 0, 1, 1, 0, 1, 0]],
-          ["RS", "Rana Sleiman", "Mobility", 40, 0, 1, [1, 0, 0, 1, 0, 0, 0]],
+          ["HM", tk("Hala Mansour"), tk("Upper / Lower"), 86, 1, 0, [1, 1, 1, 0, 1, 1, 0]],
+          ["RH", tk("Rami Haddad"), tk("High protein"), 72, 0, 0, [1, 0, 1, 1, 0, 1, 0]],
+          ["RS", tk("Rana Sleiman"), tk("Mobility"), 40, 0, 1, [1, 0, 0, 1, 0, 0, 0]],
         ] as [string, string, string, number, number, number, number[]][]
       ).map(([a, n, plan, p, on, due, days], i) => ({
         a,
@@ -572,7 +573,7 @@ function mobk(twoBubbles: boolean): Record<string, MobK> {
         plan,
         p: p + "%",
         pr: String(p / 100),
-        on: on ? "block" : "none",
+        on: on ? tk("block") : "none",
         due: !!due,
         nodue: !due,
         w: (0.05 + i * 0.12).toFixed(2) + " " + (0.4 + i * 0.12).toFixed(2),
@@ -580,59 +581,59 @@ function mobk(twoBubbles: boolean): Record<string, MobK> {
       })),
     },
     "PLAN BUILDER": {
-      t: "Drag a week together.",
-      d: "Build a plan once. Rami sees it when you save.",
+      t: tk("Drag a week together."),
+      d: tk("Build a plan once. Rami sees it when you save."),
       mPlan: true,
-      mh: "Monday",
-      ms: "Upper body · Rami",
+      mh: tk("Monday"),
+      ms: tk("Upper body · Rami"),
       mb: (
         [
-          ["Bench press", "4 x 8"],
-          ["Seated row", "3 x 10"],
-          ["Shoulder press", "3 x 10"],
+          [tk("Bench press"), "4 x 8"],
+          [tk("Seated row"), "3 x 10"],
+          [tk("Shoulder press"), "3 x 10"],
         ] as [string, string][]
       ).map(([n, s2]) => ({ n, s: s2 })),
-      mx: "+ Pull-ups",
+      mx: tk("+ Pull-ups"),
       mxs: "3 x 8",
     },
     SCHEDULE: {
-      t: "Your day in one timeline.",
-      d: "Sessions and calls, booked into your free slots.",
+      t: tk("Your day in one timeline."),
+      d: tk("Sessions and calls, booked into your free slots."),
       mTimeline: true,
       mb: (
         [
-          ["09:00", "Hala Mansour", "Consult", "#775FD7", "#EDE8FB"],
-          ["12:00", "Joseph Khalil", "Consult", "#775FD7", "#EDE8FB"],
-          ["18:00", "Rami Haddad", "Video call", "#2F5F58", "#DDF0EC"],
+          ["09:00", tk("Hala Mansour"), tk("Consult"), "#775FD7", "#EDE8FB"],
+          ["12:00", tk("Joseph Khalil"), tk("Consult"), "#775FD7", "#EDE8FB"],
+          ["18:00", tk("Rami Haddad"), tk("Video call"), "#2F5F58", "#DDF0EC"],
         ] as [string, string, string, string, string][]
       ).map(([t, n, s2, c, bg]) => ({ t, n, s: s2, c, bg })),
     },
     "MESSAGES AND CALLS": {
-      t: "Talk where the data lives.",
-      d: "Messages and calls sit next to the plan.",
+      t: tk("Talk where the data lives."),
+      d: tk("Messages and calls sit next to the plan."),
       mChat: true,
       mb: (
         [
-          ["Can we move Thursday to 18:00?", 0],
-          ["Done. See you then.", 1],
-          ["Thanks! My log is up to date.", 0],
+          [tk("Can we move Thursday to 18:00?"), 0],
+          [tk("Done. See you then."), 1],
+          [tk("Thanks! My log is up to date."), 0],
         ] as [string, number][]
       )
         .slice(0, twoBubbles ? 2 : 3)
         .map(([t, me]) => ({ t, side: me ? "flex-end" : "flex-start", bg: me ? "#2F5F58" : "#FFFFFF", ink: me ? "#FFFFFF" : "#221E1A" })),
       mca: "RH",
-      mcn: "Rami Haddad",
-      mct: "Video call · Thu 18:00",
+      mcn: tk("Rami Haddad"),
+      mct: tk("Video call · Thu 18:00"),
     },
     EARNINGS: {
-      t: "See what your practice earns.",
-      d: "Month by month, paid through Centium.",
+      t: tk("See what your practice earns."),
+      d: tk("Month by month, paid through Centium."),
       mArea: true,
       mh: "$2,340",
-      ms: "October",
+      ms: tk("October"),
       mtop: "$2,340",
-      mfoot: "Next payout 1 Nov",
-      mMonths: ["Jul", "Aug", "Sep", "Oct"],
+      mfoot: tk("Next payout 1 Nov"),
+      mMonths: [tk("Jul"), tk("Aug"), tk("Sep"), tk("Oct")],
       mline: "0,72 100,50 200,36 300,12",
       marea: "M0,120 L0,72 L100,50 L200,36 L300,12 L300,120 Z",
       mpts: (
@@ -651,65 +652,65 @@ function mobk(twoBubbles: boolean): Record<string, MobK> {
       })),
     },
     CLASSES: {
-      t: "Classes that fill themselves.",
-      d: "Members book from their phone. Waitlists take over.",
+      t: tk("Classes that fill themselves."),
+      d: tk("Members book from their phone. Waitlists take over."),
       mClasses: true,
       mb: (
         [
-          ["06:30", "HIIT 45", "Karim Nassar", "Waitlist", "100%", "#91642C", "#C99A5B"],
-          ["09:00", "Spin", "Joelle Daher", "16/20", "80%", "#4E3894", "#775FD7"],
-          ["12:00", "Pilates", "Dana Azar", "9/15", "60%", "#4E3894", "#775FD7"],
+          ["06:30", tk("HIIT 45"), tk("Karim Nassar"), tk("Waitlist"), "100%", "#91642C", "#C99A5B"],
+          ["09:00", tk("Spin"), tk("Joelle Daher"), "16/20", "80%", "#4E3894", "#775FD7"],
+          ["12:00", tk("Pilates"), tk("Dana Azar"), "9/15", "60%", "#4E3894", "#775FD7"],
         ] as [string, string, string, string, string, string, string][]
       ).map(([t, n, i, c, f, ink, bar]) => ({ t, n, i, c, f, ink, bar })),
     },
     "FRONT DESK": {
-      t: "Check members in with one scan.",
-      d: "Renewals due show up right away.",
+      t: tk("Check members in with one scan."),
+      d: tk("Renewals due show up right away."),
       mDesk: true,
       mh: "86",
       mb: (
         [
-          ["NS", "Nour Saab", "18:02"],
-          ["GK", "Georges Karam", "18:04"],
-          ["YC", "Yasmina Chahine", "18:05"],
+          ["NS", tk("Nour Saab"), "18:02"],
+          ["GK", tk("Georges Karam"), "18:04"],
+          ["YC", tk("Yasmina Chahine"), "18:05"],
         ] as [string, string, string][]
       ).map(([a, n, t]) => ({ a, n, t })),
     },
     MEMBERSHIPS: {
-      t: "Memberships, digitised.",
-      d: "Plans, renewals and member cards in the app.",
+      t: tk("Memberships, digitised."),
+      d: tk("Plans, renewals and member cards in the app."),
       mBars: true,
       mb: (
         [
-          ["Monthly", 212, "#4E3894"],
-          ["Quarterly", 98, "#775FD7"],
-          ["Annual", 64, "#B9A9EE"],
+          [tk("Monthly"), 212, "#4E3894"],
+          [tk("Quarterly"), 98, "#775FD7"],
+          [tk("Annual"), 64, "#B9A9EE"],
         ] as [string, number, string][]
       ).map(([n, c, bar]) => ({ n, c: String(c), f: ((c / 212) * 100).toFixed(0) + "%", bar })),
     },
     TEAM: {
-      t: "Your team, on one shift board.",
-      d: "Coaches, front desk and linked professionals.",
+      t: tk("Your team, on one shift board."),
+      d: tk("Coaches, front desk and linked professionals."),
       mStaff: true,
       mhrs: ["06", "12", "18", "23"],
       mb: (
         [
-          ["KN", "Karim Nassar", "Head coach", 6, 14],
-          ["JD", "Joelle Daher", "Coach", 9, 15],
-          ["ST", "Sami Tannous", "Front desk", 14, 23],
+          ["KN", tk("Karim Nassar"), tk("Head coach"), 6, 14],
+          ["JD", tk("Joelle Daher"), tk("Coach"), 9, 15],
+          ["ST", tk("Sami Tannous"), tk("Front desk"), 14, 23],
         ] as [string, string, string, number, number][]
       ).map(([a, n, r2, f, t]) => ({ a, n, r: r2, l: (((f - 6) / 17) * 100).toFixed(1) + "%", w: (((t - f) / 17) * 100).toFixed(1) + "%" })),
     },
     "GYM PAGE": {
-      t: "Put your gym on the map.",
-      d: "Hours, classes and team, found in Centium.",
+      t: tk("Put your gym on the map."),
+      d: tk("Hours, classes and team, found in Centium."),
       mGym: true,
-      mh: "Atlas Fitness",
-      ms: "Achrafieh, Beirut",
+      mh: tk("Atlas Fitness"),
+      ms: tk("Achrafieh, Beirut"),
       mb: (
         [
-          ["06:30", "HIIT 45 · Karim Nassar"],
-          ["09:00", "Spin · Joelle Daher"],
+          ["06:30", tk("HIIT 45 · Karim Nassar")],
+          ["09:00", tk("Spin · Joelle Daher")],
         ] as [string, string][]
       ).map(([t, n]) => ({ t, n })),
     },

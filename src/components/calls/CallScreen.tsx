@@ -13,6 +13,7 @@ import { ConnectionState } from "livekit-client";
 import { PhoneOff } from "lucide-react";
 import { useCallCountdown, formatDuration } from "../../hooks/useCallCountdown";
 import type { CallCredentials } from "../../services/calling";
+import { t } from "../../i18n/core";
 
 /**
  * The connected call, and THE ONLY MODULE IN THIS APP THAT IMPORTS LIVEKIT.
@@ -106,7 +107,7 @@ const CallStage: React.FC<{
             </div>
             <p className="text-sm font-semibold text-white/85">{participantName}</p>
             <p className="text-xs text-white/55">
-              {connected ? "Connected" : "Connecting…"}
+              {connected ? t("Connected") : t("Connecting…")}
             </p>
           </div>
         )}
@@ -125,7 +126,7 @@ const CallStage: React.FC<{
           </span>
           {secondsLeft !== null && secondsLeft <= WARN_AT_SECONDS && (
             <span className="text-xs font-semibold text-white dark:text-[#0D0B1A] bg-status-high/90 rounded-full px-2.5 py-1 tabular-nums">
-              {formatDuration(secondsLeft)} left
+              {t("{time} left", { time: formatDuration(secondsLeft) })}
             </span>
           )}
         </div>
@@ -146,7 +147,7 @@ const CallStage: React.FC<{
         )}
         <button
           onClick={onHangUp}
-          aria-label="End call"
+          aria-label={t("End call")}
           className="tap w-16 h-14 rounded-full bg-status-high text-white dark:text-[#0D0B1A] flex items-center justify-center"
         >
           <PhoneOff size={22} />

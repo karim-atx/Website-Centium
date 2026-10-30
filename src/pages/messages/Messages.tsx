@@ -30,6 +30,7 @@ import { useUnread } from "../../context/UnreadContext";
 import { fetchThreads, migrateLegacyStars, startMemberThread, startThread, threadForPush, type MessageThread } from "../../services/messaging";
 import { fetchGroupInvitations, type GroupInvitation } from "../../services/messaging/groups";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
+import { t, tk } from "../../i18n/core";
 import {
   CONVERSATION_DELETE_READY,
   deleteConversationForMe,
@@ -75,7 +76,7 @@ import {
  */
 
 type Filter = "all" | "unread" | "groups";
-const OFFLINE_TOAST = "You're offline. Try again when you're connected.";
+const OFFLINE_TOAST = tk("You're offline. Try again when you're connected.");
 
 /**
  * Release 3 (W6): a professional's Messages is its own screen
@@ -172,7 +173,7 @@ function ClientAndBusinessMessages() {
       setThreads(result.threads);
       setError(null);
       if (thenOpenId) {
-        const target = result.threads.find((t) => t.id === thenOpenId);
+        const target = result.threads.find((th) => th.id === thenOpenId);
         if (target) {
           setView("list");
           setOpen(target);
@@ -180,8 +181,8 @@ function ClientAndBusinessMessages() {
       }
       // Only your own latest messages carry a tick.
       const mineLast = result.threads
-        .filter((t) => t.lastMessageId && t.lastMessageSenderId === authUserId)
-        .map((t) => t.lastMessageId!);
+        .filter((th) => th.lastMessageId && th.lastMessageSenderId === authUserId)
+        .map((th) => th.lastMessageId!);
       void fetchLastMessageState(mineLast).then(({ readAt, delivered: reached }) => {
         setReadState(readAt);
         setDelivered(reached);
@@ -190,11 +191,11 @@ function ClientAndBusinessMessages() {
         deepLinkConsumed.current = true;
         navigate("/app/messages", { replace: true });
         const threadId = await threadForPush(pushId);
-        const target = threadId ? result.threads.find((t) => t.id === threadId) : undefined;
+        const target = threadId ? result.threads.find((th) => th.id === threadId) : undefined;
         if (target) setOpen(target);
       } else if (requestedThreadId && !deepLinkConsumed.current) {
         deepLinkConsumed.current = true;
-        const target = result.threads.find((t) => t.id === requestedThreadId);
+        const target = result.threads.find((th) => th.id === requestedThreadId);
         if (target) setOpen(target);
       }
     } else {
@@ -277,20 +278,20 @@ function ClientAndBusinessMessages() {
     }
   };
   const openHit = (h: SearchHit) => {
-    const t = threads.find((x) => x.id === h.threadId);
-    if (!t) return;
+    const th = threads.find((x) => x.id === h.threadId);
+    if (!th) return;
     setFocusId(h.messageId);
-    setOpen(t);
+    setOpen(th);
   };
   const { active, archived, activeTotal } = useMemo(() => {
-    const matches = (t: MessageThread) =>
-      !q || t.participantName.toLowerCase().includes(q) || (t.lastMessagePreview ?? "").toLowerCase().includes(q);
-    const archivedSet = threads.filter((t) => settings[t.id]?.archivedAt);
-    const activeSet = threads.filter((t) => !settings[t.id]?.archivedAt);
-    const byFilter = (t: MessageThread) =>
+    const matches = (th: MessageThread) =>
+      !q || th.participantName.toLowerCase().includes(q) || (th.lastMessagePreview ?? "").toLowerCase().includes(q);
+    const archivedSet = threads.filter((th) => settings[th.id]?.archivedAt);
+    const activeSet = threads.filter((th) => !settings[th.id]?.archivedAt);
+    const byFilter = (th: MessageThread) =>
       filter === "all" ||
-      (filter === "unread" && t.unreadCount > 0) ||
-      (filter === "groups" && t.kind === "group");
+      (filter === "unread" && th.unreadCount > 0) ||
+      (filter === "groups" && th.kind === "group");
     return {
       active: activeSet.filter(matches).filter(byFilter),
       archived: archivedSet.filter(matches),
@@ -311,10 +312,10 @@ function ClientAndBusinessMessages() {
             .map((invitation) => ({ type: "invite", invitation }))
         : [];
     const pinned = active
-      .filter((t) => settings[t.id]?.pinnedAt)
+      .filter((th) => settings[th.id]?.pinnedAt)
       .sort((a, b) => (settings[b.id]?.pinnedAt ?? "").localeCompare(settings[a.id]?.pinnedAt ?? ""));
     const rest = active
-      .filter((t) => !settings[t.id]?.pinnedAt)
+      .filter((th) => !settings[th.id]?.pinnedAt)
       .map((thread) => ({ at: thread.lastMessageAt ?? "", item: { type: "thread", thread } as ChatListItem }))
       .sort((a, b) => b.at.localeCompare(a.at));
     return [...invites, ...pinned.map((thread) => ({ type: "thread", thread }) as ChatListItem), ...rest.map((x) => x.item)];
@@ -344,24 +345,24 @@ function ClientAndBusinessMessages() {
   // O2 / O3: what a failed write says. The pin cap's own line stays (ATX38).
   const failToast = (message: string) => {
     const offline = (typeof navigator !== "undefined" && navigator.onLine === false) || message === OFFLINE_MESSAGE;
-    setToast(offline ? OFFLINE_TOAST : message.startsWith("You can pin") ? message : "Couldn't save. Try again.");
+    setToast(offline ? t(OFFLINE_TOAST) : message === t("You can pin up to 5 chats. Unpin one to pin this.") ? message : t("Couldn't save. Try again."));
   };
 
   /** Pin, mute and archive from a row: shown at once, reverted if the write fails. */
   const writeSettings = async (
-    t: MessageThread,
+    th: MessageThread,
     patch: Parameters<typeof saveThreadSettings>[2],
     next: Partial<ThreadSettings>
   ) => {
     if (!authUserId) return;
-    const prev = settings[t.id];
-    setSettings((all) => ({ ...all, [t.id]: { ...(all[t.id] ?? NO_SETTINGS), ...next } }));
-    const r = await saveThreadSettings(t.id, authUserId, patch);
+    const prev = settings[th.id];
+    setSettings((all) => ({ ...all, [th.id]: { ...(all[th.id] ?? NO_SETTINGS), ...next } }));
+    const r = await saveThreadSettings(th.id, authUserId, patch);
     if (!r.ok) {
       setSettings((all) => {
         const copy = { ...all };
-        if (prev) copy[t.id] = prev;
-        else delete copy[t.id];
+        if (prev) copy[th.id] = prev;
+        else delete copy[th.id];
         return copy;
       });
       failToast(r.message);
@@ -371,44 +372,44 @@ function ClientAndBusinessMessages() {
   };
 
   const rowActions: RowActions = {
-    pin: (t) => {
-      const at = settings[t.id]?.pinnedAt ? null : new Date().toISOString();
-      void writeSettings(t, { pinned_at: at }, { pinnedAt: at });
+    pin: (th) => {
+      const at = settings[th.id]?.pinnedAt ? null : new Date().toISOString();
+      void writeSettings(th, { pinned_at: at }, { pinnedAt: at });
     },
-    mute: (t, choice: MuteChoice) => {
+    mute: (th, choice: MuteChoice) => {
       const patch = mutePatch(choice);
-      void writeSettings(t, patch, { mutedAlways: !!patch.muted_always, mutedUntil: patch.muted_until ?? null });
+      void writeSettings(th, patch, { mutedAlways: !!patch.muted_always, mutedUntil: patch.muted_until ?? null });
     },
-    archive: (t) => {
-      const at = settings[t.id]?.archivedAt ? null : new Date().toISOString();
-      void writeSettings(t, { archived_at: at }, { archivedAt: at });
+    archive: (th) => {
+      const at = settings[th.id]?.archivedAt ? null : new Date().toISOString();
+      void writeSettings(th, { archived_at: at }, { archivedAt: at });
     },
-    ...(canDelete ? { delete: (t: MessageThread) => setDeleteTarget(t) } : null),
+    ...(canDelete ? { delete: (th: MessageThread) => setDeleteTarget(th) } : null),
   };
 
   const confirmDelete = async () => {
-    const t = deleteTarget;
-    if (!t) return;
+    const th = deleteTarget;
+    if (!th) return;
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
       setDeleteTarget(null);
-      setToast(OFFLINE_TOAST);
+      setToast(t(OFFLINE_TOAST));
       return;
     }
     setDeleteBusy(true);
-    const r = await deleteConversationForMe(t.id);
+    const r = await deleteConversationForMe(th.id);
     setDeleteBusy(false);
     setDeleteTarget(null);
     if (!r.ok) {
-      setToast(r.message === OFFLINE_MESSAGE ? OFFLINE_TOAST : "Couldn't delete. Try again.");
+      setToast(r.message === OFFLINE_MESSAGE ? t(OFFLINE_TOAST) : t("Couldn't delete. Try again."));
       return;
     }
-    setAnnounce("Conversation deleted.");
+    setAnnounce(t("Conversation deleted."));
     // Gone from the list at once; my_conversations() leaves it out from now on
     // until a newer message arrives. The server dropped its pin and archive
     // and kept its mute, so the settings are re-read, not guessed.
-    setThreads((all) => all.filter((x) => x.id !== t.id));
+    setThreads((all) => all.filter((x) => x.id !== th.id));
     unread.refresh();
-    if (open?.id === t.id) {
+    if (open?.id === th.id) {
       setOpen(null);
       setFocusId(null);
     }
@@ -419,9 +420,9 @@ function ClientAndBusinessMessages() {
   // database decides who may see what (ThreadLiveContext). Person-to-person
   // chats only, and at most 30 channels.
   const liveIds = threads
-    .filter((t) => (t.kind === "peer" && t.participantId) || t.kind === "group")
+    .filter((th) => (th.kind === "peer" && th.participantId) || th.kind === "group")
     .slice(0, 30)
-    .map((t) => t.id);
+    .map((th) => th.id);
   const overlays = (
     <>
       <DeleteConversationConfirm
@@ -489,21 +490,21 @@ function ClientAndBusinessMessages() {
             OP1-190 title row with the chat's back, K2). */}
         {biz ? (
           <div className="-mt-2">
-            <BizListHeader title="Starred messages" onBack={() => setView("list")} />
+            <BizListHeader title={t("Starred messages")} onBack={() => setView("list")} />
           </div>
         ) : (
           <FixedHeader paddingBottom={12}>
-            <MessagesHeader title="Starred messages" onBack={() => setView("list")} />
+            <MessagesHeader title={t("Starred messages")} onBack={() => setView("list")} />
           </FixedHeader>
         )}
         <StarredMessages
           threads={threads}
           authUserId={authUserId}
           onOpen={(threadId) => {
-            const t = threads.find((x) => x.id === threadId);
-            if (t) {
+            const th = threads.find((x) => x.id === threadId);
+            if (th) {
               setView("list");
-              setOpen(t);
+              setOpen(th);
             }
           }}
         />
@@ -512,10 +513,10 @@ function ClientAndBusinessMessages() {
   }
 
   const tabs = [
-    { key: "all", label: "All" },
+    { key: "all", label: t("All") },
     // K4: no count on "Unread" (the frame draws none; the rows' badges say it).
-    { key: "unread", label: "Unread" },
-    { key: "groups", label: "Groups" },
+    { key: "unread", label: t("Unread") },
+    { key: "groups", label: t("Groups") },
   ];
   // #11: the active sub-tab is the theme secondary with white; dark keeps the
   // literal #79A8A1 in Centium (V6-94). High contrast (O7): a teal that holds
@@ -541,11 +542,11 @@ function ClientAndBusinessMessages() {
           style={{ background: c.fieldFill, border: `0.5px solid ${c.fieldBorder}` }}
         >
           <Search size={16} className="shrink-0" style={{ color: c.muted }} aria-hidden />
-          <span className="sr-only">Search messages and chats</span>
+          <span className="sr-only">{t("Search messages and chats")}</span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search messages"
+            placeholder={t("Search messages")}
             className="flex-1 min-w-0 bg-transparent text-[13.5px] leading-[20.3px] font-normal text-charcoal placeholder:text-charcoal-muted focus:outline-none"
           />
         </label>
@@ -567,8 +568,8 @@ function ClientAndBusinessMessages() {
 
   // Messages found by the database's search, under the chats (both lists).
   const hitsSection = searchingMessages && (
-    <section className="mt-3" aria-label="Messages">
-      <SectionLabel c={c}>Messages</SectionLabel>
+    <section className="mt-3" aria-label={t("Messages")}>
+      <SectionLabel c={c}>{t("Messages")}</SectionLabel>
       {searchError && (
         <p className="text-[12.5px] py-2" style={{ color: c.dangerText }}>
           {searchError}
@@ -576,15 +577,15 @@ function ClientAndBusinessMessages() {
       )}
       {!searching && !searchError && hits.length === 0 && (
         <p className="text-[13px] text-center py-6" style={{ color: c.inkSoft }}>
-          No messages match "{term}".
+          {t('No messages match "{term}".', { term })}
         </p>
       )}
       <SearchResults
         hits={hits}
         query={term}
         titleFor={(h) => {
-          const name = threads.find((t) => t.id === h.threadId)?.participantName ?? "Conversation";
-          return h.senderId === authUserId ? `You → ${name}` : name;
+          const name = threads.find((th) => th.id === h.threadId)?.participantName ?? t("Conversation");
+          return h.senderId === authUserId ? t("You → {name}", { name }) : name;
         }}
         onOpen={openHit}
         hasMore={hitsMore}
@@ -625,10 +626,10 @@ function ClientAndBusinessMessages() {
     return live(
       <div className="-mt-2" data-biz-messages="">
         {view === "archived" ? (
-          <BizListHeader title="Archived" onBack={() => setView("list")} />
+          <BizListHeader title={t("Archived")} onBack={() => setView("list")} />
         ) : (
           <BizListHeader
-            title="Messages"
+            title={t("Messages")}
             onNew={() => {
               setNewChatError(null);
               setBizNewOpen(true);
@@ -639,11 +640,11 @@ function ClientAndBusinessMessages() {
         {/* Row 3: h44 r14 card, 1px border, padding 0 12, gap 8, search 16 faint, "Search" 14 faint; 6 under. */}
         <label data-search-field="" className="flex items-center gap-2 h-11 rounded-[14px] px-3 mb-1.5 bg-cream-card border border-charcoal/[0.08]">
           <Search size={16} className="shrink-0 text-charcoal-faint" aria-hidden />
-          <span className="sr-only">Search messages and chats</span>
+          <span className="sr-only">{t("Search messages and chats")}</span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search"
+            placeholder={t("Search")}
             className="flex-1 min-w-0 bg-transparent text-[14px] text-charcoal placeholder:text-charcoal-faint focus:outline-none"
           />
         </label>
@@ -672,21 +673,21 @@ function ClientAndBusinessMessages() {
         {loading && !error && <BizListSkeleton />}
 
         {/* O4: no conversation yet. */}
-        {noConversations && <BizEmptyCard title="No messages yet" helper="Messages with your team and members show here." />}
+        {noConversations && <BizEmptyCard title={t("No messages yet")} helper={t("Messages with your team and members show here.")} />}
 
-        {searchingMessages && items.length > 0 && <SectionLabel c={c}>Chats</SectionLabel>}
+        {searchingMessages && items.length > 0 && <SectionLabel c={c}>{t("Chats")}</SectionLabel>}
 
         {listEmpty &&
           (q ? (
-            <BizEmptyCard icon={<Search size={22} aria-hidden />} title="No chats match your search" />
+            <BizEmptyCard icon={<Search size={22} aria-hidden />} title={t("No chats match your search")} />
           ) : view === "archived" ? (
-            <BizEmptyCard icon={<Archive size={22} aria-hidden />} title="No archived chats" />
+            <BizEmptyCard icon={<Archive size={22} aria-hidden />} title={t("No archived chats")} />
           ) : filter === "unread" ? (
-            <BizEmptyCard icon={<CheckCheck size={22} aria-hidden />} title="You're all caught up" />
+            <BizEmptyCard icon={<CheckCheck size={22} aria-hidden />} title={t("You're all caught up")} />
           ) : filter === "groups" ? (
-            <BizEmptyCard icon={<Users size={22} aria-hidden />} title="No groups yet" />
+            <BizEmptyCard icon={<Users size={22} aria-hidden />} title={t("No groups yet")} />
           ) : (
-            <BizEmptyCard title="No chats here" />
+            <BizEmptyCard title={t("No chats here")} />
           ))}
 
         {!loading && threadList}
@@ -703,7 +704,7 @@ function ClientAndBusinessMessages() {
               className="tap min-h-[44px] flex items-center gap-1.5 text-[13px] font-bold text-primary-dark"
             >
               <Star size={15} strokeWidth={2} aria-hidden />
-              Starred messages
+              {t("Starred messages")}
             </button>
             {archived.length > 0 && (
               <button
@@ -713,7 +714,7 @@ function ClientAndBusinessMessages() {
                 className="tap min-h-[44px] flex items-center gap-1.5 text-[13px] font-bold text-primary-dark"
               >
                 <Archive size={15} strokeWidth={2} aria-hidden />
-                Archived · {archived.length}
+                {t("Archived")} · {archived.length}
               </button>
             )}
           </div>
@@ -739,16 +740,16 @@ function ClientAndBusinessMessages() {
     <div>
       <FixedHeader paddingBottom={12} id="messages-fixed">
         {view === "archived" ? (
-          <MessagesHeader title="Archived" onBack={() => setView("list")} />
+          <MessagesHeader title={t("Archived")} onBack={() => setView("list")} />
         ) : (
           <MessagesHeader
-            title="Messages"
+            title={t("Messages")}
             right={
               // #5 / #6: 36 r11 tile, Star 18; a 44 hit area.
               <button
                 type="button"
                 onClick={() => setView("starred")}
-                aria-label="Starred messages"
+                aria-label={t("Starred messages")}
                 data-starred-button=""
                 className="tap relative w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']"
                 style={{ background: c.primaryTint, color: c.primaryInk }}
@@ -767,7 +768,7 @@ function ClientAndBusinessMessages() {
       {error && (
         <div role="alert" className="flex flex-col items-center text-center py-8 gap-1">
           <p className="text-[12.5px] leading-[18.8px] font-medium" style={{ color: c.dangerText }}>
-            {error === OFFLINE_MESSAGE ? OFFLINE_TOAST : "Couldn't load messages."}
+            {error === OFFLINE_MESSAGE ? t(OFFLINE_TOAST) : t("Couldn't load messages.")}
           </p>
           <button
             type="button"
@@ -779,7 +780,7 @@ function ClientAndBusinessMessages() {
             className="tap min-h-[44px] px-3 text-[12.5px] font-bold"
             style={{ color: c.primaryInk }}
           >
-            Retry
+            {t("Retry")}
           </button>
         </div>
       )}
@@ -800,7 +801,7 @@ function ClientAndBusinessMessages() {
             <Archive size={20} style={{ color: c.primaryInk }} aria-hidden />
           </span>
           <span className="flex-1 min-w-0 text-[15px] leading-[22.5px] font-bold" style={{ color: c.ink }}>
-            Archived
+            {t("Archived")}
           </span>
           <span className="text-[12px] leading-[18px] font-bold" style={{ color: c.primaryInk }}>
             {archived.length}
@@ -812,31 +813,31 @@ function ClientAndBusinessMessages() {
         <EmptyState
           c={c}
           icon={<MessageCircle size={26} aria-hidden />}
-          title="No conversations yet"
-          helper="Chats with your professionals, gyms and groups show up here."
+          title={t("No conversations yet")}
+          helper={t("Chats with your professionals, gyms and groups show up here.")}
           frame
         />
       )}
 
-      {searchingMessages && items.length > 0 && <SectionLabel c={c}>Chats</SectionLabel>}
+      {searchingMessages && items.length > 0 && <SectionLabel c={c}>{t("Chats")}</SectionLabel>}
 
       {/* O4: the per-tab empties, in the MO1.7.e pattern. */}
       {listEmpty &&
         (q ? (
-          <EmptyState c={c} icon={<Search size={26} aria-hidden />} title="No chats match your search" />
+          <EmptyState c={c} icon={<Search size={26} aria-hidden />} title={t("No chats match your search")} />
         ) : view === "archived" ? (
-          <EmptyState c={c} icon={<Archive size={26} aria-hidden />} title="No archived chats" />
+          <EmptyState c={c} icon={<Archive size={26} aria-hidden />} title={t("No archived chats")} />
         ) : filter === "unread" ? (
-          <EmptyState c={c} icon={<CheckCheck size={26} aria-hidden />} title="You're all caught up" />
+          <EmptyState c={c} icon={<CheckCheck size={26} aria-hidden />} title={t("You're all caught up")} />
         ) : filter === "groups" ? (
           <EmptyState
             c={c}
             icon={<Users size={26} aria-hidden />}
-            title="No groups yet"
-            helper="A professional can invite you to one."
+            title={t("No groups yet")}
+            helper={t("A professional can invite you to one.")}
           />
         ) : (
-          <EmptyState c={c} icon={<MessageCircle size={26} aria-hidden />} title="No chats here" />
+          <EmptyState c={c} icon={<MessageCircle size={26} aria-hidden />} title={t("No chats here")} />
         ))}
 
       {!loading && threadList}
@@ -890,7 +891,7 @@ const EmptyState: React.FC<{ c: ListColors; icon: React.ReactNode; title: string
 /** O1: five 72 rows, a 48 circle and two bars (120 × 14, 220 × 12, r6), pulsing 1.2 s. */
 const ListSkeleton: React.FC<{ c: ListColors }> = ({ c }) => (
   <div aria-busy="true">
-    <span className="sr-only">Loading messages</span>
+    <span className="sr-only">{t("Loading messages")}</span>
     {[0, 1, 2, 3, 4].map((i) => (
       <div
         key={i}

@@ -16,18 +16,19 @@ import { PaneHealth } from "./pillars/PaneHealth";
 import { PaneNutrition } from "./pillars/PaneNutrition";
 import { PaneTraining } from "./pillars/PaneTraining";
 import type { SectionVals } from "./sectionVals";
+import { t } from "../../../i18n/core";
 
 export const Pillars: React.FC<{ r: SectionVals }> = ({ r }) => (
   <div id="pl-track" data-screen-label="PI1 v6 Platform" style={{ position: "relative", zIndex: "2", height: r.plH }}>
     <div id="platform" style={{ position: r.pinPos, top: "0", minHeight: r.pinMin, padding: `${r.pinPad} ${r.px}`, display: "flex", flexDirection: "column", justifyContent: "center" }}>
       <div style={{ maxWidth: "1240px", margin: "0 auto", width: "100%" }}>
         <div style={{ textAlign: "center", maxWidth: "760px", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <ChapterMark n="03" t="Pillars" size={r.chEy} />
+          <ChapterMark n="03" t={t("Pillars")} size={r.chEy} />
           <h2 style={{ marginTop: "14px", fontWeight: "800", fontSize: r.h2, lineHeight: "1.04", letterSpacing: "-.035em" }}>
-            Five pillars, one history.
+            {t("Five pillars, one history.")}
           </h2>
           <p style={{ marginTop: "14px", fontSize: "17px", color: "#5B5349" }}>
-            Nutrition, training, health, coaching and community, each with its own tools and one shared record.
+            {t("Nutrition, training, health, coaching and community, each with its own tools and one shared record.")}
           </p>
         </div>
         <div style={{ marginTop: r.plMt, display: "grid", gridTemplateColumns: r.plCols, gap: "48px", alignItems: "center" }}>
@@ -44,10 +45,10 @@ export const Pillars: React.FC<{ r: SectionVals }> = ({ r }) => (
                     inactive rows at .82): motion/pillars.ts sets the current
                     title to 800 with a teal underline, the others to 600. */}
                 <div data-plt="" style={{ fontSize: "22px", fontWeight: "600", letterSpacing: "-.02em", marginTop: "2px", textDecorationLine: "none", textDecorationColor: "#4A7D76", textDecorationThickness: "2px", textUnderlineOffset: "5px" }}>
-                  {pp.t}
+                  {t(pp.t)}
                 </div>
                 <div style={{ fontSize: "14px", color: "#5B5349", marginTop: "2px" }}>
-                  {pp.line}
+                  {t(pp.line)}
                 </div>
               </div>
             ))}

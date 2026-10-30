@@ -1,5 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { rateLimitMessage } from "../network-error";
+import { tk } from "../../i18n/core";
 
 // Two-factor recovery codes (v5.1 backend stage 1, Database docs/HANDOVER_API.md).
 //
@@ -53,16 +55,16 @@ const rpc = (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.b
 function describe(error: PostgrestError): { message: string; code?: string } {
   switch (error.code) {
     case "ATX01":
-      return { code: "ATX01", message: "Your session expired. Sign in again." };
+      return { code: "ATX01", message: tk("Your session expired. Sign in again.") };
     case "ATX75":
-      return { code: "ATX75", message: "Complete your authenticator challenge first." };
+      return { code: "ATX75", message: tk("Complete your authenticator challenge first.") };
     case "ATX74":
-      return { code: "ATX74", message: "Turn on two-factor first." };
+      return { code: "ATX74", message: tk("Turn on two-factor first.") };
     case "ATX02":
-      // Written to be shown as it is, and it names the delay.
-      return { code: "ATX02", message: error.message };
+      // The server's text names an internal action; only its delay is read.
+      return { code: "ATX02", message: rateLimitMessage(error.message) };
     default:
-      return { code: error.code, message: "Couldn't reach Centium. Check your connection and try again." };
+      return { code: error.code, message: tk("Couldn't reach Centium. Check your connection and try again.") };
   }
 }
 
@@ -78,7 +80,7 @@ export async function getRecoveryStatus(): Promise<RecoveryResult<RecoveryStatus
   const { data, error } = await rpc<StatusRow[] | StatusRow>("two_factor_recovery_status");
   if (error) return { ok: false, ...describe(error) };
   const row = Array.isArray(data) ? data[0] : data;
-  if (!row) return { ok: false, message: "Couldn't read your recovery codes." };
+  if (!row) return { ok: false, message: tk("Couldn't read your recovery codes.") };
   return {
     ok: true,
     value: {
@@ -102,6 +104,6 @@ export async function redeemRecoveryCode(typed: string): Promise<RecoveryResult<
   const { data, error } = await rpc<RedeemResult | RedeemResult[]>("redeem_two_factor_recovery_code", { p_code: typed.trim() });
   if (error) return { ok: false, ...describe(error) };
   const row = Array.isArray(data) ? data[0] : data;
-  if (!row) return { ok: false, message: "Couldn't check that code. Try again." };
+  if (!row) return { ok: false, message: tk("Couldn't check that code. Try again.") };
   return { ok: true, value: { success: !!row.success, message: row.message, remaining: row.remaining ?? null } };
 }

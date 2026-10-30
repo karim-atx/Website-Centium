@@ -10,6 +10,7 @@ import { clock12 } from "../../../utils/time12";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { appLocale } from "../../../i18n/format";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · MO27 group chat: a programme (programme_share), a session
@@ -35,16 +36,16 @@ import { appLocale } from "../../../i18n/format";
  */
 export const ShareChatCard: React.FC<{ card: ShareCard; time: string; footer?: React.ReactNode }> = ({ card, time, footer }) => {
   if (card.kind === "playlist_share") return <PlaylistShareCard card={card} time={time} footer={footer} />;
-  const kind = card.kind === "programme_share" ? "Programme" : card.kind === "meal_plan_share" ? "Meal plan" : "Group session";
+  const kind = card.kind === "programme_share" ? t("Programme") : card.kind === "meal_plan_share" ? t("Meal plan") : t("Group session");
   const title = card.kind === "session_share" ? card.title : card.name;
   const facts =
     card.kind === "programme_share"
-      ? [card.durationWeeks ? `${card.durationWeeks} ${card.durationWeeks === 1 ? "week" : "weeks"}` : null, card.exerciseCount ? `${card.exerciseCount} ${card.exerciseCount === 1 ? "exercise" : "exercises"}` : null]
+      ? [card.durationWeeks ? tn(card.durationWeeks, "{n} week", "{n} weeks") : null, card.exerciseCount ? tn(card.exerciseCount, "{n} exercise", "{n} exercises") : null]
       : card.kind === "meal_plan_share"
         ? [daysLabel(card.days)]
         : [
             card.startsAt ? `${new Date(card.startsAt).toLocaleDateString(appLocale("en-US"), { weekday: "short", day: "numeric", month: "short" })} · ${clock12(card.startsAt)}` : null,
-            card.durationMin ? `${card.durationMin} min` : null,
+            card.durationMin ? t("{n} min", { n: card.durationMin }) : null,
             card.location,
           ];
   const line = facts.filter(Boolean).join(" · ");
@@ -108,9 +109,9 @@ const PlaylistShareCard: React.FC<{ card: Extract<ShareCard, { kind: "playlist_s
   const service = playlistServiceOf(card.playlistUrl);
   if (!service) return null;
   const album = isAlbum(card.playlistUrl);
-  const name = card.title ?? meta?.title ?? `${SERVICE_LABEL[service]} ${album ? "album" : "playlist"}`;
+  const name = card.title ?? meta?.title ?? (album ? t("{service} album", { service: SERVICE_LABEL[service] }) : t("{service} playlist", { service: SERVICE_LABEL[service] }));
   return (
-    <Frame kind="Playlist" cardKind={card.kind} time={time}>
+    <Frame kind={t("Playlist")} cardKind={card.kind} time={time}>
       <div style={{ background: INK.card, border: `1px solid ${INK.b10}`, borderRadius: 14, padding: 12 }}>
         <div className="flex items-center" style={{ gap: 12 }}>
           <Cover src={meta?.cover ?? null} />
@@ -126,7 +127,7 @@ const PlaylistShareCard: React.FC<{ card: Extract<ShareCard, { kind: "playlist_s
             )}
             <p className="flex items-center" style={{ gap: 5, fontSize: textPx(12), color: INK.chS, marginTop: 4 }}>
               <ServiceIcon service={service} size={13} />
-              {`${SERVICE_LABEL[service]} · ${album ? "Album" : "Playlist"}`}
+              {`${SERVICE_LABEL[service]} · ${album ? t("Album") : t("Playlist")}`}
             </p>
           </div>
         </div>

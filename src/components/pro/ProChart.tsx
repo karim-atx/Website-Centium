@@ -4,6 +4,7 @@ import { useApp } from "../../context/AppContext";
 import { textPx } from "../../theme/textSize";
 import { INK, NO_ICON_SCALE } from "./proInk";
 import { PRO_CHART_RANGES, type ProChartRange } from "./proRules";
+import { isRtl } from "../../i18n/core";
 
 /**
  * Release 3 · ProChart, the one chart standard (HANDOVER e: "Range W M 3M Y,
@@ -193,7 +194,13 @@ export const ProChart: React.FC<ProChartProps> = ({
   const drag = useRef<{ moved: boolean; start: number } | null>(null);
   const plotRef = useRef<HTMLDivElement | null>(null);
 
-  const X = (i: number) => (xPos ? PAD + (xPos[i] ?? 0) * (W - 2 * PAD) : PAD + (i * (W - 2 * PAD)) / (n - 1));
+  // Round F (F10): in right to left, time runs from right to left. Every x is
+  // mirrored (UX is the unmirrored x, for the pointer and the edge decisions);
+  // SVG text anchors are logical, so the labels follow.
+  const rtl = isRtl();
+  const mir = (v: number) => (rtl ? W - v : v);
+  const UX = (i: number) => (xPos ? PAD + (xPos[i] ?? 0) * (W - 2 * PAD) : PAD + (i * (W - 2 * PAD)) / (n - 1));
+  const X = (i: number) => mir(UX(i));
   const Y = (v: number) => H - 18 - ((v - min) / (max - min || 1)) * (H - 34);
   const clampY = (v: number) => Y(Math.max(min, Math.min(max, v)));
 
@@ -201,17 +208,17 @@ export const ProChart: React.FC<ProChartProps> = ({
     const el = plotRef.current;
     if (!el) return 0;
     const r = el.getBoundingClientRect();
-    const vx = ((clientX - r.left) / Math.max(1, r.width)) * W;
+    const vx = ((rtl ? r.right - clientX : clientX - r.left) / Math.max(1, r.width)) * W;
     if (xPos) {
       let best = 0;
-      for (let i = 1; i < x.length; i++) if (Math.abs(X(i) - vx) < Math.abs(X(best) - vx)) best = i;
+      for (let i = 1; i < x.length; i++) if (Math.abs(UX(i) - vx) < Math.abs(UX(best) - vx)) best = i;
       return best;
     }
     return Math.max(0, Math.min(x.length - 1, Math.round(((vx - PAD) / (W - 2 * PAD)) * (n - 1))));
   };
 
   const tip = pin != null && tooltip ? tooltip(pin) : null;
-  const px = pin != null ? X(pin) : 0;
+  const px = pin != null ? UX(pin) : 0;
 
   const labelEvery = x.length <= 8 ? 1 : Math.ceil(x.length / 7);
   const xLabels = useMemo(() => x.map((l, i) => (labelEvery === 1 || i % labelEvery === 0 || i === x.length - 1 ? l : null)).filter((l): l is string => l != null), [x, labelEvery]);
@@ -303,7 +310,7 @@ export const ProChart: React.FC<ProChartProps> = ({
         onKeyDown={(e) => {
           if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
             e.preventDefault();
-            const dir = e.key === "ArrowRight" ? 1 : -1;
+            const dir = (e.key === "ArrowRight") !== rtl ? 1 : -1;
             setPin((p) => Math.max(0, Math.min(x.length - 1, p == null ? (dir > 0 ? 0 : x.length - 1) : p + dir)));
           } else if (e.key === "Escape") setPin(null);
         }}
@@ -313,7 +320,7 @@ export const ProChart: React.FC<ProChartProps> = ({
             aria-live="polite"
             className="absolute z-[2]"
             style={{
-              ...(px / W > 0.55 ? { right: 0 } : { left: `${Math.max(0, (px / W) * 100 - 24).toFixed(0)}%` }),
+              ...(px / W > 0.55 ? { insetInlineEnd: 0 } : { insetInlineStart: `${Math.max(0, (px / W) * 100 - 24).toFixed(0)}%` }),
               top: -2,
               maxWidth: "calc(100% - 8px)",
               borderRadius: 12,
@@ -341,7 +348,7 @@ export const ProChart: React.FC<ProChartProps> = ({
               <g key={`bd${i}`}>
                 <rect x={0} y={clampY(b.high)} width={W} height={Math.max(0, clampY(b.low) - clampY(b.high))} fill={b.fill} />
                 {b.label && (
-                  <text x={W - 4} y={(clampY(b.low) + clampY(b.high)) / 2 + 3} textAnchor="end" fontSize={8.5} fontWeight={700} fill={INK.chF}>
+                  <text x={mir(W - 4)} y={(clampY(b.low) + clampY(b.high)) / 2 + 3} textAnchor="end" fontSize={8.5} fontWeight={700} fill={INK.chF}>
                     {b.label}
                   </text>
                 )}
@@ -356,7 +363,7 @@ export const ProChart: React.FC<ProChartProps> = ({
               <g key={`rf${i}`}>
                 <line x1={0} x2={W} y1={Y(r.value)} y2={Y(r.value)} stroke={r.color ?? INK.tealDark} strokeWidth={1.2} strokeDasharray={r.dashed === false ? undefined : "4 3"} opacity={r.dashed === false ? 0.7 : 1} />
                 {r.label && (
-                  <text x={r.side === "right" ? W - 2 : 2} y={Y(r.value) - 4} textAnchor={r.side === "right" ? "end" : "start"} fontSize={8.5} fontWeight={800} fill={r.color ?? INK.tealDark}>
+                  <text x={mir(r.side === "right" ? W - 2 : 2)} y={Y(r.value) - 4} textAnchor={r.side === "right" ? "end" : "start"} fontSize={8.5} fontWeight={800} fill={r.color ?? INK.tealDark}>
                     {r.label}
                   </text>
                 )}
@@ -365,7 +372,7 @@ export const ProChart: React.FC<ProChartProps> = ({
           )}
           {goal != null && <line x1={0} x2={W} y1={Y(goal)} y2={Y(goal)} stroke={INK.tealDark} strokeWidth={1.4} strokeDasharray="4 3" />}
           {goal != null && goalLabel && (
-            <text x={4} y={Y(goal) - 5} fontSize={9} fontWeight={800} fill={INK.tealDark}>
+            <text x={mir(4)} y={Y(goal) - 5} fontSize={9} fontWeight={800} fill={INK.tealDark}>
               {goalLabel}
             </text>
           )}
@@ -467,7 +474,7 @@ export const ProChart: React.FC<ProChartProps> = ({
             );
           })}
           {(marks ?? []).map((m, i) => {
-            const mx = m.pos != null ? PAD + m.pos * (W - 2 * PAD) : X(m.index);
+            const mx = m.pos != null ? mir(PAD + m.pos * (W - 2 * PAD)) : X(m.index);
             return (
               <g key={i}>
                 <circle cx={mx} cy={12} r={8} fill={m.color ?? "#D9A441"} />
@@ -477,13 +484,13 @@ export const ProChart: React.FC<ProChartProps> = ({
               </g>
             );
           })}
-          {pin != null && <line x1={px} x2={px} y1={0} y2={H - 18} stroke={INK.ch} strokeDasharray="2 2" />}
+          {pin != null && <line x1={mir(px)} x2={mir(px)} y1={0} y2={H - 18} stroke={INK.ch} strokeDasharray="2 2" />}
         </svg>
       </div>
       {xTicks ? (
         <div aria-hidden className="relative" style={{ height: 14, marginTop: 2 }}>
           {xTicks.map((t, i) => (
-            <span key={i} className="absolute whitespace-nowrap" style={{ left: `${(t.pos * 100).toFixed(1)}%`, transform: `translateX(-${(t.pos * 100).toFixed(1)}%)`, fontSize: textPx(9.5), color: INK.chT }}>
+            <span key={i} className="absolute whitespace-nowrap" style={{ insetInlineStart: `${(t.pos * 100).toFixed(1)}%`, transform: `translateX(${rtl ? "" : "-"}${(t.pos * 100).toFixed(1)}%)`, fontSize: textPx(9.5), color: INK.chT }}>
               {t.label}
             </span>
           ))}

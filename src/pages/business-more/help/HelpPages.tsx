@@ -23,6 +23,7 @@ import { useBusiness } from "../../../components/business-more/useBusiness";
 import { ContactUsPopup } from "../../../components/profile/ContactUsPopup";
 import { useOnline } from "../../../hooks/useOnline";
 import { helpTopics, readMinutes, searchHelp, type HelpTopic } from "./helpContent";
+import { t, tn } from "../../../i18n/core";
 
 // MO1B-050 to -070 · Help centre (BizMoreV8 screen="helpc" / "article").
 // Entry: Settings › General › Help centre (V6-152: no separate Help and legal
@@ -45,7 +46,7 @@ function useContact() {
   const online = useOnline();
   const [open, setOpen] = useState(false);
   const [toast, showToast] = useBizToast();
-  const openContact = () => (online ? setOpen(true) : showToast("You're offline. Try again when you're connected."));
+  const openContact = () => (online ? setOpen(true) : showToast(t("You're offline. Try again when you're connected.")));
   const node = (
     <>
       <ContactUsPopup open={open} onClose={() => setOpen(false)} />
@@ -64,52 +65,52 @@ export function HelpCentrePage() {
   const { openContact, node } = useContact();
 
   return (
-    <BizPage title="Help centre" sub={q ? undefined : "Guides for running your business on Centium."} offline={false}>
-      <SearchBox value={q} onChange={setQ} onClear={() => setQ("")} placeholder="Search help articles" label="Search help articles" icon={Search} />
+    <BizPage title={t("Help centre")} sub={q ? undefined : t("Guides for running your business on Centium.")} offline={false}>
+      <SearchBox value={q} onChange={setQ} onClear={() => setQ("")} placeholder={t("Search help articles")} label={t("Search help articles")} icon={Search} />
       {!laneSettled ? (
         // The topics differ per lane: held on the skeleton until it is known.
         <>
-          <BizLabel>Topics</BizLabel>
-          <RowsSkeleton rows={5} label="Loading help topics" />
+          <BizLabel>{t("Topics")}</BizLabel>
+          <RowsSkeleton rows={5} label={t("Loading help topics")} />
         </>
       ) : q.trim() ? (
         results.length > 0 ? (
-          <BizSection label={`${results.length} ${results.length === 1 ? "result" : "results"}`}>
+          <BizSection label={tn(results.length, "{n} result", "{n} results")}>
             {results.map(({ topic, article }) => (
               <BizRow key={`${topic.id}-${article.id}`} icon={FileText} title={article.title} desc={topic.title} onClick={() => navigate(`/app/business/more/help/${topic.id}/${article.id}`)} />
             ))}
           </BizSection>
         ) : (
           <>
-            <BizLabel>No results</BizLabel>
+            <BizLabel>{t("No results")}</BizLabel>
             <BizCard>
               <p className="text-center text-[12.5px] leading-[18px] text-charcoal-soft" style={{ padding: 24 }}>
-                Nothing matches "{q.trim()}". Try another word, or contact us.
+                {t("Nothing matches \"{query}\". Try another word, or contact us.", { query: q.trim() })}
               </p>
             </BizCard>
             <BizSection>
-              <BizRow icon={MessageSquare} title="Contact us" desc="Chat with the Centium team" onClick={openContact} />
+              <BizRow icon={MessageSquare} title={t("Contact us")} desc={t("Chat with the Centium team")} onClick={openContact} />
             </BizSection>
           </>
         )
       ) : (
         <>
-          <BizSection label="Topics">
-            {topics.map((t) => (
+          <BizSection label={t("Topics")}>
+            {topics.map((tp) => (
               <BizRow
-                key={t.id}
-                icon={ICONS[t.icon]}
-                title={t.title}
-                desc={t.articles
+                key={tp.id}
+                icon={ICONS[tp.icon]}
+                title={tp.title}
+                desc={tp.articles
                   .slice(0, 2)
                   .map((x) => x.title)
-                  .join(", ")}
-                onClick={() => navigate(`/app/business/more/help/${t.id}`)}
+                  .join(t(", "))}
+                onClick={() => navigate(`/app/business/more/help/${tp.id}`)}
               />
             ))}
           </BizSection>
           <BizSection>
-            <BizRow icon={MessageSquare} title="Contact us" desc="Chat with the Centium team" onClick={openContact} />
+            <BizRow icon={MessageSquare} title={t("Contact us")} desc={t("Chat with the Centium team")} onClick={openContact} />
           </BizSection>
         </>
       )}
@@ -121,8 +122,8 @@ export function HelpCentrePage() {
 /** A topic or article opened directly: its text is per lane, so it waits for the lane. */
 function HelpLoading() {
   return (
-    <BizPage title="Help centre" offline={false}>
-      <RowsSkeleton rows={4} label="Loading help" />
+    <BizPage title={t("Help centre")} offline={false}>
+      <RowsSkeleton rows={4} label={t("Loading help")} />
     </BizPage>
   );
 }
@@ -131,11 +132,11 @@ export function HelpTopicPage() {
   const navigate = useNavigate();
   const { topic: topicId } = useParams();
   const { kind, laneSettled } = useBusiness();
-  const topic = helpTopics(kind).find((t) => t.id === topicId);
+  const topic = helpTopics(kind).find((tp) => tp.id === topicId);
   if (!laneSettled) return <HelpLoading />;
   if (!topic) return <HelpCentrePage />;
   return (
-    <BizPage title={topic.title} sub={`${topic.articles.length} ${topic.articles.length === 1 ? "article" : "articles"}`} offline={false}>
+    <BizPage title={topic.title} sub={tn(topic.articles.length, "{n} article", "{n} articles")} offline={false}>
       <BizSection>
         {topic.articles.map((ar) => (
           <BizRow key={ar.id} icon={FileText} title={ar.title} onClick={() => navigate(`/app/business/more/help/${topic.id}/${ar.id}`)} />
@@ -148,39 +149,40 @@ export function HelpTopicPage() {
 export function HelpArticlePage() {
   const { topic: topicId, article: articleId } = useParams();
   const { kind, laneSettled } = useBusiness();
-  const topic = helpTopics(kind).find((t) => t.id === topicId);
+  const topic = helpTopics(kind).find((tp) => tp.id === topicId);
   const article = topic?.articles.find((x) => x.id === articleId);
   const [answered, setAnswered] = useState(false);
   const { openContact, node } = useContact();
   if (!laneSettled) return <HelpLoading />;
   if (!topic || !article) return <HelpCentrePage />;
   return (
-    <BizPage title={article.title} sub={`${topic.title} · ${readMinutes(article)} min read`} offline={false}>
+    <BizPage title={article.title} sub={tn(readMinutes(article), "{topic} · {n} min read", "{topic} · {n} min read", { topic: topic.title })} offline={false}>
       <p className="text-[15px] font-extrabold text-charcoal" style={{ margin: "0 0 8px" }}>
-        Steps
+        {t("Steps")}
       </p>
       <ol>
         {article.steps.map((s, i) => (
           <li key={i} className="text-[13.5px] leading-[20px] text-charcoal" style={{ margin: "0 0 10px", textWrap: "pretty" } as React.CSSProperties}>
+            {/* i18n-ignore (the step number) */}
             {i + 1}.&nbsp; {s}
           </li>
         ))}
       </ol>
       <p className="text-[12.5px] font-extrabold text-charcoal" style={{ margin: "14px 0 8px" }}>
-        Was this helpful?
+        {t("Was this helpful?")}
       </p>
       {answered ? (
         <p role="status" className="text-[12.5px] leading-[19px] text-charcoal-soft" style={{ margin: "0 0 13px" }}>
-          Thanks for telling us.
+          {t("Thanks for telling us.")}
         </p>
       ) : (
         <BizSection>
-          <BizRow icon={ThumbsUp} title="Yes" onClick={() => setAnswered(true)} />
-          <BizRow icon={ThumbsDown} title="No" onClick={() => setAnswered(true)} />
+          <BizRow icon={ThumbsUp} title={t("Yes")} onClick={() => setAnswered(true)} />
+          <BizRow icon={ThumbsDown} title={t("No")} onClick={() => setAnswered(true)} />
         </BizSection>
       )}
-      <BizSection label="Still need help?">
-        <BizRow icon={MessageSquare} title="Contact us" desc="Chat with the Centium team" onClick={openContact} />
+      <BizSection label={t("Still need help?")}>
+        <BizRow icon={MessageSquare} title={t("Contact us")} desc={t("Chat with the Centium team")} onClick={openContact} />
       </BizSection>
       {node}
     </BizPage>

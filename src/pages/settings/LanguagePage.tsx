@@ -17,8 +17,8 @@ export default function LanguagePage() {
       <PageHeader title={t("Language")} showBack sub tightBack />
       {/* MO1.8.5: 24 pt side insets; the label 16 under the 36 pt title. */}
       <SettingsBody className="-mt-1">
-      <SettingsSection label="App language">
-        <div role="radiogroup" aria-label="App language">
+      <SettingsSection label={t("App language")}>
+        <div role="radiogroup" aria-label={t("App language")}>
           {APP_LANGUAGES.map((l) => {
             const selected = language === l.code;
             return (

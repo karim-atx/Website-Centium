@@ -9,6 +9,7 @@ import { CLOSEST_GROUPS, GUIDE, WHAT_YOU_DO_MAX, whatYouDoError, type ClosestGro
 import { proLaneId } from "./proLanes";
 import { proChipLabel } from "./proModel";
 import type { ProStepProps } from "./types";
+import { t, tn } from "../../../i18n/core";
 
 const GROUP_ICONS = { fitness: Dumbbell, clinical: Stethoscope, nutrition: Apple, other: Sparkles } as const;
 
@@ -32,10 +33,11 @@ export const ProAboutStep: React.FC<ProStepProps> = ({ kind, shared, setShared, 
   const dob = shared.dateOfBirth;
   const dobProblem = dob ? validateDateOfBirth(dob) : null;
   const age = dob && !dobProblem ? ageFromDateOfBirth(dob) : undefined;
-  const nameError = reserved ? "That name is reserved. Choose a different name." : tried && !name.trim() ? "Add your name." : null;
-  const dobError = dobProblem ?? (tried && !dob ? "Add your date of birth." : null);
+  const nameError = reserved ? t("That name is reserved. Choose a different name.") : tried && !name.trim() ? t("Add your name.") : null;
+  // validateDateOfBirth (utils/date) returns English; shown through t().
+  const dobError = dobProblem ? t(dobProblem) : tried && !dob ? t("Add your date of birth.") : null;
   const doError = isOther ? whatYouDoError(pro.whatYouDo) : null;
-  const groupError = isOther && tried && !pro.closestGroup ? "Pick the closest group." : null;
+  const groupError = isOther && tried && !pro.closestGroup ? t("Pick the closest group.") : null;
   const errors = [nameError, dobError, doError, groupError].filter(Boolean).length;
   const valid = !!name.trim() && !!dob && !dobProblem && !doError && (!isOther || !!pro.closestGroup);
 
@@ -59,25 +61,25 @@ export const ProAboutStep: React.FC<ProStepProps> = ({ kind, shared, setShared, 
       lane={proLaneId(kind)}
       chipLabel={chipLabel}
       step="about"
-      title="About you"
-      subtitle="Sets up your own Centium profile. You'll add clients next."
+      title={t("About you")}
+      subtitle={t("Sets up your own Centium profile. You'll add clients next.")}
       onBack={onBack}
       footer={
         <ObFooter
-          error={tried && errors > 0 ? `Fix ${errors} thing${errors === 1 ? "" : "s"} to continue.` : flow && !flow.online ? OB_STRINGS.offlineStep : null}
+          error={tried && errors > 0 ? tn(errors, "Fix {n} thing to continue.", "Fix {n} things to continue.") : flow && !flow.online ? t(OB_STRINGS.offlineStep) : null}
           errorTone={tried && errors > 0 ? "error" : "info"}
-          primary={{ label: "Continue", onClick: () => void go(), disabled: (tried && errors > 0) || busy }}
+          primary={{ label: t("Continue"), onClick: () => void go(), disabled: (tried && errors > 0) || busy }}
         />
       }
     >
       <ObField
-        label="Name"
+        label={t("Name")}
         value={name}
         onChange={(e) => {
           setReserved(false);
           setShared({ firstName: e.target.value });
         }}
-        placeholder="e.g. John Doe"
+        placeholder={t("e.g. John Doe")}
         autoComplete="name"
         error={nameError}
         onKeyDown={(e) => {
@@ -86,7 +88,7 @@ export const ProAboutStep: React.FC<ProStepProps> = ({ kind, shared, setShared, 
       />
       <ObField
         ref={dateRef}
-        label="Date of birth"
+        label={t("Date of birth")}
         type="date"
         className="obp-date"
         style={dob ? undefined : { color: "var(--ob-faint)" }}
@@ -98,7 +100,7 @@ export const ProAboutStep: React.FC<ProStepProps> = ({ kind, shared, setShared, 
           <button
             type="button"
             className="hit"
-            aria-label="Open the calendar"
+            aria-label={t("Open the calendar")}
             onClick={() => {
               try {
                 dateRef.current?.showPicker();
@@ -113,30 +115,30 @@ export const ProAboutStep: React.FC<ProStepProps> = ({ kind, shared, setShared, 
         }
         error={dobError}
         // KEEP-SAFETY (the old DobField's lock note): the lock note shows until a date is chosen.
-        help={age !== undefined ? `${age} years old` : "Required. Check it before saving; to change it later, contact support."}
+        help={age !== undefined ? tn(age, "{n} years old", "{n} years old") : t("Required. Check it before saving; to change it later, contact support.")}
       />
       {isOther && (
         <>
           <ObField
-            label="What do you do?"
-            tag="Optional"
+            label={t("What do you do?")}
+            tag={t("Optional")}
             value={pro.whatYouDo}
             onChange={(e) => setPro((p) => ({ ...p, whatYouDo: e.target.value }))}
-            placeholder="e.g. Breathwork coach"
+            placeholder={t("e.g. Breathwork coach")}
             maxLength={WHAT_YOU_DO_MAX + 10}
             error={doError}
-            help="Shown under your name, so clients know what you offer."
+            help={t("Shown under your name, so clients know what you offer.")}
             count={pro.whatYouDo ? `${pro.whatYouDo.trim().length} / ${WHAT_YOU_DO_MAX}` : undefined}
           />
           <div style={{ marginBottom: 14 }}>
             <div className="ob-field-head">
-              <span className="ob-label">Closest group</span>
+              <span className="ob-label">{t("Closest group")}</span>
               <span className="ob-tag" style={{ color: groupError ? "var(--ob-high)" : "var(--ob-accent)" }}>
-                Required
+                {t("Required")}
               </span>
             </div>
             {/* OURS: the Sex radiogroup's segmented choice (OB-087), 4-up for the four professional_group values. */}
-            <div className="ob-seg" role="radiogroup" aria-label="Closest group" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+            <div className="ob-seg" role="radiogroup" aria-label={t("Closest group")} style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
               {CLOSEST_GROUPS.map((g) => {
                 const Icon = GROUP_ICONS[g.value];
                 return (
@@ -149,19 +151,19 @@ export const ProAboutStep: React.FC<ProStepProps> = ({ kind, shared, setShared, 
                     onClick={() => setPro((p) => ({ ...p, closestGroup: g.value as ClosestGroup }))}
                   >
                     <Icon size={18} strokeWidth={2} aria-hidden />
-                    {g.label}
+                    {t(g.label)}
                   </button>
                 );
               })}
             </div>
             <div className="ob-help" data-err={groupError ? "true" : undefined}>
-              <span role={groupError ? "alert" : undefined}>{groupError ?? "This sets your steps. You can add a licence later."}</span>
+              <span role={groupError ? "alert" : undefined}>{groupError ?? t("This sets your steps. You can add a licence later.")}</span>
             </div>
           </div>
         </>
       )}
       <ObTip icon={Lightbulb} margin="2px 0 0">
-        {GUIDE[kind]}
+        {t(GUIDE[kind])}
       </ObTip>
     </ObStep>
   );

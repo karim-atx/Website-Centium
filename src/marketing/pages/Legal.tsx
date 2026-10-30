@@ -2,8 +2,11 @@ import React, { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSEO } from "../useSEO";
 import { LEGAL_VERSION } from "../../services/legal/acceptances";
-import { ASK, GOVERNING } from "../legal/text";
-import { LEGAL_DOCS, LEGAL_IDS, LEGAL_TOC, legalAnchorFor, legalDateFor } from "../legal/anchors";
+import * as EN from "../legal/text";
+import type * as ArabicText from "../legal/text.ar";
+import { documentFor, t } from "../../i18n/core";
+import { legalDate } from "../../pages/settings/legalCopy";
+import { LEGAL_IDS, legalAnchorFor, legalDateFor, legalDocsFor, legalTocFor } from "../legal/anchors";
 import { PageMark } from "../landing/sections/ChapterMark";
 import { anchorOffset, usePageLink } from "../landing/navigation";
 import { anchorHash } from "../landing/loading/pickLoader";
@@ -57,12 +60,16 @@ function legalVals(vw: number) {
 const LEGAL_UPDATED = legalDateFor(LEGAL_VERSION);
 
 export const Legal: React.FC = () => {
-  useSEO("Legal", "Centium's Terms of Service, Privacy Policy, and Health & Medical Disclaimer.");
+  useSEO(t("Legal"), t("Centium's Terms of Service, Privacy Policy, and Health & Medical Disclaimer."));
   usePageMotion();
   const r = legalVals(useViewportWidth());
   const location = useLocation();
   const navigate = useNavigate();
   const pageLink = usePageLink();
+  // Round F (AV): the words in the active language; the ids stay the English ones.
+  const docs = legalDocsFor();
+  const toc = legalTocFor(docs);
+  const { ASK, GOVERNING } = documentFor<typeof ArabicText>("legal.text") ?? EN;
 
   // The shim: an old-shape hash becomes the id it meant (the layout's
   // scroll-on-navigate then lands on it). An effect, not a layout effect:
@@ -132,16 +139,16 @@ export const Legal: React.FC = () => {
         id="lg-head"
         style={{ position: "relative", textAlign: "center", maxWidth: "820px", margin: `0 auto ${r.lgHeadMb}`, display: "flex", flexDirection: "column", alignItems: "center" }}
       >
-        <PageMark id="LEGAL" word="Legal" size={r.chEyC} />
-        <h1 style={{ margin: "14px 0 0", fontWeight: "800", fontSize: r.ctH1, letterSpacing: "-.04em", lineHeight: "1.04", textWrap: "balance" }}>Terms, privacy and health</h1>
-        <p style={{ margin: "12px 0 0", fontSize: "14px", fontWeight: "600", color: "#756D63" }}>Last updated {LEGAL_UPDATED}</p>
+        <PageMark id="LEGAL" word={t("Legal")} size={r.chEyC} />
+        <h1 style={{ margin: "14px 0 0", fontWeight: "800", fontSize: r.ctH1, letterSpacing: "-.04em", lineHeight: "1.04", textWrap: "balance" }}>{t("Terms, privacy and health")}</h1>
+        <p style={{ margin: "12px 0 0", fontSize: "14px", fontWeight: "600", color: "#756D63" }}>{t("Last updated {date}", { date: legalDate(LEGAL_UPDATED) })}</p>
       </div>
       <div style={{ maxWidth: "1080px", margin: "0 auto", display: "grid", gridTemplateColumns: r.lgCols, gap: r.lgGap, alignItems: "start" }}>
         {/* B4 QA: the open list is 863px tall, so once stuck at 96px its end
             ("03 Health & Medical Disclaimer") sat below the fold on screens
             under 960px tall (1440x900, 1280x800; prototype too). On desktop it
             now scrolls inside itself when the screen is shorter than it. */}
-        <nav aria-label="Contents" style={{ position: r.lgTocPos, top: r.lgTocTop, maxHeight: r.lg ? "calc(100vh - 112px)" : undefined, overflowY: r.lg ? "auto" : undefined, overscrollBehavior: r.lg ? "contain" : undefined }}>
+        <nav aria-label={t("Contents")} style={{ position: r.lgTocPos, top: r.lgTocTop, maxHeight: r.lg ? "calc(100vh - 112px)" : undefined, overflowY: r.lg ? "auto" : undefined, overscrollBehavior: r.lg ? "contain" : undefined }}>
           <details open={r.footOpen} style={{ borderRadius: "20px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.14)", padding: "8px 16px" }}>
             <summary
               // On desktop the list is always open (cursor default): a click does not fold it.
@@ -161,13 +168,13 @@ export const Legal: React.FC = () => {
                 color: "#5B5349",
               }}
             >
-              ON THIS PAGE
+              {t("ON THIS PAGE")}
               <span aria-hidden="true" style={{ display: r.footChev, color: "#775FD7", fontSize: "16px" }}>
                 +
               </span>
             </summary>
             <div style={{ display: "flex", flexDirection: "column", gap: "2px", paddingBottom: "10px" }}>
-              {LEGAL_TOC.map((lt) => (
+              {toc.map((lt) => (
                 <a
                   key={lt.h}
                   href={lt.h}
@@ -190,7 +197,7 @@ export const Legal: React.FC = () => {
           </details>
         </nav>
         <div style={{ maxWidth: "68ch", textAlign: "start" }}>
-          {LEGAL_DOCS.map((ld) => (
+          {docs.map((ld) => (
             <article key={ld.id} id={ld.id} style={{ scrollMarginTop: "96px", paddingBottom: "44px", marginBottom: "44px", borderBottom: "1px solid #EDEAE4" }}>
               <span style={{ fontSize: "11px", fontWeight: "700", letterSpacing: ".22em", color: ld.c }}>{ld.num}</span>
               <h2 style={{ marginTop: "12px", fontSize: r.lgH2, fontWeight: "800", letterSpacing: "-.03em", lineHeight: "1.1" }}>{ld.title}</h2>
@@ -224,7 +231,7 @@ export const Legal: React.FC = () => {
                 className="cl-hbg"
                 style={{ padding: "13px 22px", borderRadius: "999px", background: "#775FD7", color: "#fff", fontWeight: 600, fontSize: "14.5px", "--hbg": "#6A54C4" } as React.CSSProperties}
               >
-                Back to home
+                {t("Back to home")}
               </a>
               <a
                 href="/contact"
@@ -232,7 +239,7 @@ export const Legal: React.FC = () => {
                 className="cl-hbd"
                 style={{ padding: "13px 22px", borderRadius: "999px", border: "1px solid #CFC5EA", color: "#221E1A", fontWeight: 600, fontSize: "14.5px", "--hbd": "#775FD7" } as React.CSSProperties}
               >
-                Contact us
+                {t("Contact us")}
               </a>
             </div>
           </div>

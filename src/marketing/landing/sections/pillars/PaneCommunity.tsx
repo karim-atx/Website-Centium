@@ -5,6 +5,7 @@
 import React from "react";
 import * as D from "../data/pillars";
 import type { SectionVals } from "../sectionVals";
+import { t } from "../../../../i18n/core";
 
 export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
   <div data-pls="4" style={{ zoom: r.plZoom, maxHeight: r.plMaxH, position: r.plPanePos, left: "0", top: "0", right: "0", bottom: "0", flex: `0 0 ${r.plPaneW}`, scrollSnapAlign: "center", opacity: r.plPaneOp, borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.16)", boxShadow: r.plSh, overflow: "hidden", display: "flex", flexDirection: "column", textAlign: "start" }}>
@@ -13,16 +14,17 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#DDE8E5" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E7E3DC" }} />
       <span style={{ marginInlineStart: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
+        {/* i18n-ignore: URL */}
         centium.atraxia.org/app/community
       </span>
     </div>
     <div style={{ position: "relative", flex: "1", padding: r.panePad, display: "grid", gridTemplateColumns: r.paneCols, gap: r.paneGap, alignContent: "stretch", gridTemplateRows: r.cRows }}>
       <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "12px" }}>
         <span style={{ fontSize: "19px", fontWeight: "800", letterSpacing: "-.02em" }}>
-          Community
+          {t("Community")}
         </span>
         <span style={{ fontSize: "12px", fontWeight: "700", color: "#4E3894" }}>
-          Professional answers
+          {t("Professional answers")}
         </span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" }}>
@@ -30,7 +32,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
           <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
             {D.forumCats.map((fc, fcI) => (
               <span key={fcI} style={{ padding: "4px 10px", borderRadius: "99px", fontSize: "11px", fontWeight: "700", background: fc.bg, color: fc.ink }}>
-                {fc.t}
+                {t(fc.t)}
               </span>
             ))}
           </div>
@@ -41,14 +43,14 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
               </span>
               <div style={{ flex: "1", minWidth: "0" }}>
                 <div style={{ fontSize: "12.5px", fontWeight: "800", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {fp.t}
+                  {t(fp.t)}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "10px", fontWeight: "600", color: "#6C655C", whiteSpace: "nowrap" }}>
-                  {fp.m}
+                  {t(fp.m)}
                   {fp.pro ? (
                     <>
                       <span style={{ padding: "0 6px", borderRadius: "99px", background: "#775FD7", color: "#FFFFFF", fontSize: "8.5px", fontWeight: "800", lineHeight: "14px" }}>
-                        Professional
+                        {t("Professional")}
                       </span>
                     </>
                   ) : null}
@@ -62,7 +64,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
                   </span>
                 </div>
                 <div style={{ fontSize: "9.5px", fontWeight: "700", color: "#6C655C" }}>
-                  {fp.r}
+                  {t(fp.r)}
                 </div>
               </div>
             </div>
@@ -71,17 +73,17 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
         <div style={{ flex: "1", minHeight: "0", borderRadius: "16px", border: "1px solid rgba(125,103,217,.14)", background: "#FFFFFF", padding: "10px 12px", flexDirection: "column", gap: "7px", display: r.mhFlex }}>
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
             <span style={{ width: "44px", height: "44px", flexShrink: "0", borderRadius: "11px", background: "repeating-linear-gradient(135deg,#F4F1FB 0 8px,#ECE7F8 8px 16px)", display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: "3px", fontFamily: "'JetBrains Mono',monospace", fontSize: "7px", color: "#6B5E94" }}>
-              cover
+              {t("cover")}
             </span>
             <div style={{ flex: "1", minWidth: "0" }}>
               <div style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
-                COURSE
+                {t("COURSE")}
               </div>
               <div style={{ fontSize: "13.5px", fontWeight: "800" }}>
-                Mobility basics
+                {t("Mobility basics")}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "10.5px", fontWeight: "700", color: "#5B5349" }}>
-                Maya Aoun
+                {t("Maya Aoun")}
                 <span style={{ width: "11px", height: "11px", borderRadius: "99px", background: "#5D9C93", color: "#FFFFFF", fontSize: "7px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   ✓
                 </span>
@@ -104,7 +106,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
               </span>
               <div style={{ flex: "1", minWidth: "0" }}>
                 <div style={{ fontSize: "11.5px", fontWeight: "800" }}>
-                  4 · Daily flow
+                  {t("4 · Daily flow")}
                 </div>
                 <div style={{ position: "relative", marginTop: "6px", height: "4px", borderRadius: "9px", background: "#E4DCF8" }}>
                   <span data-w="0.5 0.95" data-sx="" style={{ position: "absolute", left: "0", top: "0", bottom: "0", width: "58%", borderRadius: "9px", background: "#775FD7", transformOrigin: "left", transform: "scaleX(0)" }} />
@@ -134,7 +136,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
                   ) : null}
                 </span>
                 <span style={{ flex: "1" }}>
-                  {ls.t}
+                  {t(ls.t)}
                 </span>
                 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: "#6C655C" }}>
                   {ls.d}
@@ -147,7 +149,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
       <div style={{ borderRadius: "16px", border: "1px solid rgba(125,103,217,.14)", background: "#FFFFFF", padding: "12px", display: "flex", flexDirection: "column", gap: "8px", minHeight: "0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <span style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
-            OPEN THREAD · RUNNING
+            {t("OPEN THREAD · RUNNING")}
           </span>
           <span style={{ fontSize: "10.5px", fontWeight: "700", color: "#6A54C4" }}>
             ♥{" "}
@@ -158,29 +160,30 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
         </div>
         <div style={{ display: "flex", gap: "9px", alignItems: "center" }}>
           <span style={{ width: "32px", height: "32px", flexShrink: "0", borderRadius: "99px", background: "#EDEAE4", color: "#5B5349", fontSize: "11px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {/* i18n-ignore: initials */}
             RH
           </span>
           <div style={{ flex: "1", minWidth: "0" }}>
             <div style={{ fontSize: "14px", fontWeight: "800" }}>
-              Best pre-run breakfast?
+              {t("Best pre-run breakfast?")}
             </div>
             <div style={{ fontSize: "10.5px", fontWeight: "600", color: "#756D63" }}>
-              Rami Haddad · 2 h ago
+              {t("Rami Haddad · 2 h ago")}
             </div>
           </div>
         </div>
         <p style={{ fontSize: "12px", lineHeight: "1.5", color: "#3B352D" }}>
-          Long run on Saturday, 16 km. What do you eat before, and how early?
+          {t("Long run on Saturday, 16 km. What do you eat before, and how early?")}
         </p>
         <div style={{ flex: "1", minHeight: "0", flexDirection: "column", justifyContent: "space-between", gap: "7px", display: r.mhFlex }}>
           {D.replies.map((rp, rpI) => (
             <div key={rpI} data-w={rp.w} data-ty="14" data-op="" style={{ marginInlineStart: "14px", padding: "8px 11px", borderRadius: "12px", border: `1px solid ${rp.bd}`, background: rp.bg, opacity: "0" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11.5px", fontWeight: "800" }}>
-                {rp.n}
+                {t(rp.n)}
                 {rp.pro ? (
                   <>
                     <span style={{ padding: "1px 6px", borderRadius: "99px", background: "#775FD7", color: "#FFFFFF", fontSize: "9px", fontWeight: "800" }}>
-                      Professional
+                      {t("Professional")}
                     </span>
                   </>
                 ) : null}
@@ -192,17 +195,17 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
                 </span>
               </div>
               <div style={{ marginTop: "2px", fontSize: "12px", color: "#3B352D", lineHeight: "1.4" }}>
-                {rp.t}
+                {t(rp.t)}
               </div>
             </div>
           ))}
         </div>
         <div style={{ alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "12px", border: "1px solid #EDEAE4", background: "#FAF9F7", display: r.mhFlex }}>
           <span style={{ flex: "1", fontSize: "11.5px", fontWeight: "600", color: "#756D63" }}>
-            Write a reply
+            {t("Write a reply")}
           </span>
           <span style={{ padding: "4px 10px", borderRadius: "99px", background: "#775FD7", color: "#FFFFFF", fontSize: "10.5px", fontWeight: "800" }}>
-            Reply
+            {t("Reply")}
           </span>
         </div>
       </div>

@@ -167,7 +167,8 @@ const ChipRow: React.FC<{ labelledBy: string; selected: string | null; children:
     const on = el?.querySelector<HTMLElement>('[aria-checked="true"]');
     if (!el || !on) return;
     const left = on.offsetLeft;
-    if (left < el.scrollLeft + 14) el.scrollLeft = Math.max(0, left - 14);
+    // offsetLeft and scrollLeft share one axis in both directions; the browser clamps to the range.
+    if (left < el.scrollLeft + 14) el.scrollLeft = left - 14;
     else if (left + on.offsetWidth > el.scrollLeft + el.clientWidth - 14) el.scrollLeft = left + on.offsetWidth - el.clientWidth + 14;
   }, [selected]);
   return (

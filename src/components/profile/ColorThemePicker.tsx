@@ -27,7 +27,7 @@ export const ColorThemePicker: React.FC = () => {
     // bold) whose centres are 61 apart, so 15 between them, starting at the
     // text column. Below 390 the gap narrows to 4 and then the columns shrink
     // (never under the 38 swatch), so all five fit at 320 (revision round).
-    <div role="radiogroup" aria-label="Color theme" className="flex" style={{ columnGap: "clamp(4px, calc((100% - 230px) / 4), 15px)" }}>
+    <div role="radiogroup" aria-label={t("Color theme")} className="flex" style={{ columnGap: "clamp(4px, calc((100% - 230px) / 4), 15px)" }}>
       {COLOR_THEMES.map((theme) => {
         const selected = colorTheme === theme.value;
         const [left, right] = theme.value === "centium" ? CENTIUM_SWATCH[dark ? "dark" : "light"] : [theme.primary, theme.secondary];

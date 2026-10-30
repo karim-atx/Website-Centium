@@ -3,6 +3,7 @@ import { Star } from "lucide-react";
 import { describeMessage, type MessageThread } from "../../services/messaging";
 import { fetchStarredMessages, type StarredMessage } from "../../services/messaging/chatFeatures";
 import { listTime } from "./chatTime";
+import { t } from "../../i18n/core";
 import { useListColors } from "./listColors";
 
 /**
@@ -36,7 +37,7 @@ export const StarredMessages: React.FC<{
   if (failed) {
     return (
       <p role="alert" className="text-center py-8 text-[12.5px] leading-[18.8px] font-medium" style={{ color: c.dangerText }}>
-        Couldn't load your starred messages. Try again.
+        {t("Couldn't load your starred messages. Try again.")}
       </p>
     );
   }
@@ -49,21 +50,21 @@ export const StarredMessages: React.FC<{
           <Star size={26} aria-hidden />
         </span>
         <p className="text-[16px] leading-[20.8px] font-extrabold" style={{ color: c.ink }}>
-          No starred messages
+          {t("No starred messages")}
         </p>
         <p className="max-w-[260px] text-[12.5px] leading-[18.8px] font-normal" style={{ color: c.inkSoft }}>
           {/* The privacy line is main's, kept verbatim (release review O10). */}
-          Long-press a message and tap Star to keep it here. Only you can see your stars.
+          {t("Long-press a message and tap Star to keep it here. Only you can see your stars.")}
         </p>
       </div>
     );
   }
 
   const nameFor = (m: StarredMessage) => {
-    if (m.senderId === authUserId) return "You";
-    return threads.find((t) => t.id === m.threadId)?.participantName ?? "Conversation";
+    if (m.senderId === authUserId) return t("You");
+    return threads.find((th) => th.id === m.threadId)?.participantName ?? t("Conversation");
   };
-  const chatFor = (threadId: string) => threads.find((t) => t.id === threadId)?.participantName;
+  const chatFor = (threadId: string) => threads.find((th) => th.id === threadId)?.participantName;
 
   return (
     <div className="flex flex-col gap-2">
@@ -82,7 +83,7 @@ export const StarredMessages: React.FC<{
             <span className="text-[11px] text-charcoal-soft shrink-0">{listTime(m.createdAt)}</span>
           </span>
           <span className="text-[13.5px] text-charcoal line-clamp-3 flex items-start gap-1.5">
-            <Star size={12} className="fill-current text-primary-deep-text shrink-0 mt-1" aria-label="Starred" />
+            <Star size={12} className="fill-current text-primary-deep-text shrink-0 mt-1" aria-label={t("Starred")} />
             {describeMessage({
               text: m.text,
               attachmentPath: m.attachmentPath,

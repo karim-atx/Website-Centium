@@ -15,7 +15,8 @@ import {
   type BillingPeriod,
 } from "../../services/subscription-tiers/pricing";
 import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
-import { BillingToggle, PlanRow, PlanSkeleton } from "./PlanRows";
+import { BillingToggle, PlanRow, PlanSkeleton, Slot } from "./PlanRows";
+import { t, tk, tn } from "../../i18n/core";
 import { useBack } from "../../hooks/useBack";
 import { CentiumLockup } from "../../components/icons/CentiumMark";
 import ProSubscription from "../pro/more/ProSubscription";
@@ -53,25 +54,25 @@ import {
 // team, not here.
 
 const features = [
-  { icon: Mic, label: "AI food logging" },
-  { icon: LineChart, label: "Advanced nutrition insights" },
-  { icon: TrendingUp, label: "Advanced progress tracking" },
-  { icon: Droplet, label: "Bloodwork history" },
-  { icon: Dumbbell, label: "Advanced workout analytics" },
-  { icon: Users, label: "Professional sharing" },
+  { icon: Mic, label: tk("AI food logging") },
+  { icon: LineChart, label: tk("Advanced nutrition insights") },
+  { icon: TrendingUp, label: tk("Advanced progress tracking") },
+  { icon: Droplet, label: tk("Bloodwork history") },
+  { icon: Dumbbell, label: tk("Advanced workout analytics") },
+  { icon: Users, label: tk("Professional sharing") },
   // "Streak rewards" WAS A PAID FEATURE THAT DOES NOT EXIST. Nothing is
   // awarded for a streak, to a subscriber or to anyone else — streaks feed the
   // consistency achievements, which every account earns on the same terms and
   // which are not part of a plan. Listing it under what Premium buys made it a
   // claim about the purchase.
-  { icon: Flame, label: "Streak & achievement tracking" },
-  { icon: Sparkles, label: "Personalized insights" },
+  { icon: Flame, label: tk("Streak & achievement tracking") },
+  { icon: Sparkles, label: tk("Personalized insights") },
 ];
 
 const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button
     onClick={onClick}
-    aria-label="Back"
+    aria-label={t("Back")}
     className="tap w-9 h-9 -ms-2 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft mb-4"
   >
     <ChevronLeft size={20} />
@@ -97,10 +98,10 @@ const UpgradeFooter: React.FC<{ show?: boolean }> = ({ show = true }) => (
         href={upgradeMailto()}
         className="tap w-full flex items-center justify-center rounded-2xl bg-primary-fill text-on-primary-fill text-base font-semibold h-14"
       >
-        {UPGRADE_ACTION_LABEL}
+        {t(UPGRADE_ACTION_LABEL)}
       </a>
     )}
-    <p className="text-[11px] text-charcoal-faint text-center mt-4">{NO_PAYMENTS_NOTE}</p>
+    <p className="text-[11px] text-charcoal-faint text-center mt-4">{t(NO_PAYMENTS_NOTE)}</p>
   </>
 );
 
@@ -129,8 +130,8 @@ function ClientSubscription() {
     <div>
       <BackButton onClick={back} />
       <Masthead
-        title="Your health, without the limits."
-        blurb="Unlock the full Centium experience with AI-powered logging and deeper insights."
+        title={t("Your health, without the limits.")}
+        blurb={t("Unlock the full Centium experience with AI-powered logging and deeper insights.")}
       />
 
       {/* THE PLAN, NAMED. Never "no subscription": an account with no
@@ -138,15 +139,17 @@ function ClientSubscription() {
           a name, not an absence. */}
       <div className="rounded-2xl bg-primary-pale px-4 py-3.5 mb-6 text-center">
         {planLoading ? (
-          <p className="text-sm text-primary-dark">Checking your plan…</p>
+          <p className="text-sm text-primary-dark">{t("Checking your plan…")}</p>
         ) : planError ? (
-          <p className="text-sm font-semibold text-status-high">{planError}</p>
+          <p className="text-sm font-semibold text-status-high">{t(planError)}</p>
         ) : current ? (
           <p className="text-sm text-primary-dark">
-            You're on <span className="font-bold">{planLabel(current.name)}</span>
+            <Slot text={t("You're on {plan}")} slot="plan">
+              <span className="font-bold">{planLabel(current.name)}</span>
+            </Slot>
           </p>
         ) : (
-          <p className="text-sm text-primary-dark">Your plan couldn't be identified.</p>
+          <p className="text-sm text-primary-dark">{t("Your plan couldn't be identified.")}</p>
         )}
       </div>
 
@@ -157,7 +160,7 @@ function ClientSubscription() {
             className="flex items-center gap-2.5 bg-cream-card rounded-2xl px-3.5 py-3 shadow-soft animate-fade-slide-up"
           >
             <f.icon size={16} className="text-primary shrink-0" />
-            <span className="text-xs font-medium text-charcoal leading-tight">{f.label}</span>
+            <span className="text-xs font-medium text-charcoal leading-tight">{t(f.label)}</span>
           </div>
         ))}
       </div>
@@ -167,17 +170,17 @@ function ClientSubscription() {
       {/* A FAILED READ IS SAID OUT LOUD, not rendered as an empty list. On the
           screen where somebody looks at what they could pay for, "no plans"
           and "we couldn't fetch the plans" are not the same sentence. */}
-      {error && <p className="text-xs font-semibold text-status-high mb-4">{error}</p>}
+      {error && <p className="text-xs font-semibold text-status-high mb-4">{t(error)}</p>}
 
       <div className="space-y-2.5 mb-6">
         {loading && <PlanSkeleton rows={2} />}
-        {tiers.map((t) => (
+        {tiers.map((tier) => (
           <PlanRow
-            key={t.id}
-            tier={t}
+            key={tier.id}
+            tier={tier}
             period={period}
-            isCurrent={current?.id === t.id}
-            detail={t.monthlyPrice === 0 ? "Everything you need to start" : "Every feature above"}
+            isCurrent={current?.id === tier.id}
+            detail={tier.monthlyPrice === 0 ? t("Everything you need to start") : t("Every feature above")}
           />
         ))}
       </div>
@@ -240,7 +243,7 @@ function BusinessSubscription() {
   const rowPrice = (rowId: string | undefined): string | undefined => {
     const v = priceOf(rowId, period);
     if (v === undefined) return undefined;
-    return v === null ? NOT_AVAILABLE : `${formatPrice(v)}${periodSuffix(period)}`;
+    return v === null ? t(NOT_AVAILABLE) : `${formatPrice(v)}${periodSuffix(period)}`;
   };
   const ownTotal = ownSub && own.prices ? own.prices[ownSub.period] : undefined;
 
@@ -273,15 +276,15 @@ function BusinessSubscription() {
     <div>
       <BackButton onClick={back} />
       <Masthead
-        title="Grow your team."
-        blurb="A base plan, plus seats for the professionals who work with you."
+        title={t("Grow your team.")}
+        blurb={t("A base plan, plus seats for the professionals who work with you.")}
       />
 
       <div className="rounded-2xl bg-primary-pale px-4 py-3.5 mb-6 text-center">
         {planLoading ? (
-          <p className="text-sm text-primary-dark">Checking your plan…</p>
+          <p className="text-sm text-primary-dark">{t("Checking your plan…")}</p>
         ) : planError ? (
-          <p className="text-sm font-semibold text-status-high">{planError}</p>
+          <p className="text-sm font-semibold text-status-high">{t(planError)}</p>
         ) : plan && !plan.active ? (
           // NO SUBSCRIPTION, SAID PLAINLY. This branch used to fall through to
           // the one below, which read "You're on Base · 0 of 0 seats used" off
@@ -289,32 +292,34 @@ function BusinessSubscription() {
           // anything that it is on a plan, on the screen whose job is to sell
           // it one.
           <p className="text-sm text-primary-dark">
-            You're not on a plan yet. Pick one below.
+            {t("You're not on a plan yet. Pick one below.")}
           </p>
         ) : plan ? (
           <>
             <p className="text-sm text-primary-dark">
-              You're on <span className="font-bold">{plan.base?.name ?? "Base"}</span>
+              <Slot text={t("You're on {plan}")} slot="plan">
+                <span className="font-bold">{plan.base?.name ?? "Base"}</span>
+              </Slot>
               {plan.seatBlocks > 0 && (
                 <>
                   {" "}
-                  + {plan.seatBlocks} seat block{plan.seatBlocks === 1 ? "" : "s"}
+                  + {tn(plan.seatBlocks, "{n} seat block", "{n} seat blocks")}
                 </>
               )}
             </p>
             {/* "N of M seats used" — M is blocks x seats per block, read from
                 the add-on row rather than assumed to be five. */}
             <p className="text-xs text-primary-dark/80 mt-0.5">
-              {seatsUsed} of {plan.totalSeats} seat{plan.totalSeats === 1 ? "" : "s"} used
+              {tn(plan.totalSeats, "{used} of {n} seat used", "{used} of {n} seats used", { used: seatsUsed })}
             </p>
             {/* What it costs, at the period it is billed: the plan plus its
                 seat blocks from subscription_price_for. */}
             {ownSub && ownTotal !== undefined && (
               <p className="text-[11px] text-primary-dark/70 mt-1">
                 {[
-                  `Billed ${ownSub.period}`,
-                  ownTotal === null ? missingPriceText(ownSub.period) : `${formatPrice(ownTotal)}${periodSuffix(ownSub.period)} in total`,
-                  ownSub.renewsAt ? `renews ${renewalDayText(ownSub.renewsAt)}` : null,
+                  ownSub.period === "monthly" ? t("Billed monthly") : t("Billed yearly"),
+                  ownTotal === null ? missingPriceText(ownSub.period) : t("{price} in total", { price: `${formatPrice(ownTotal)}${periodSuffix(ownSub.period)}` }),
+                  ownSub.renewsAt ? t("renews {date}", { date: renewalDayText(ownSub.renewsAt) }) : null,
                 ]
                   .filter(Boolean)
                   .join(" · ")}
@@ -322,7 +327,7 @@ function BusinessSubscription() {
             )}
           </>
         ) : (
-          <p className="text-sm text-primary-dark">Your plan couldn't be identified.</p>
+          <p className="text-sm text-primary-dark">{t("Your plan couldn't be identified.")}</p>
         )}
       </div>
 
@@ -330,7 +335,7 @@ function BusinessSubscription() {
       <BillingToggle
         period={period}
         onChange={pick}
-        label={chooses ? "How you're billed" : undefined}
+        label={chooses ? t("How you're billed") : undefined}
         bestSaving={bestSaving}
         notes={
           chooses && ownSub && own.prices
@@ -343,16 +348,16 @@ function BusinessSubscription() {
         <p className="text-[11px] text-charcoal-faint -mt-3 mb-4 text-center">
           {own.prices[otherPeriod(ownSub.period)] === null
             ? noPriceText(otherPeriod(ownSub.period))
-            : "Seat blocks follow your plan's billing. Switching charges nothing now."}
+            : t("Seat blocks follow your plan's billing. Switching charges nothing now.")}
         </p>
       )}
       {note && (
         <p role={note.tone === "error" ? "alert" : "status"} className={`text-xs font-semibold mb-4 text-center ${note.tone === "error" ? "text-status-high" : "text-primary-dark"}`}>
-          {note.text}
+          {t(note.text)}
         </p>
       )}
 
-      {error && <p className="text-xs font-semibold text-status-high mb-4">{error}</p>}
+      {error && <p className="text-xs font-semibold text-status-high mb-4">{t(error)}</p>}
       {list.error && <RetryLine message={list.error} onRetry={list.reload} />}
 
       <div className="space-y-2.5 mb-4">
@@ -367,7 +372,7 @@ function BusinessSubscription() {
             // business with no subscription at all, on the very screen meant
             // to sell it one.
             isCurrent={plan?.active === true}
-            detail="The business account itself"
+            detail={t("The business account itself")}
             priceText={rowPrice(base.rowId)}
             periodPrices={pricesOf(base.rowId)}
           />
@@ -377,7 +382,7 @@ function BusinessSubscription() {
             tier={seat}
             period={period}
             isCurrent={false}
-            detail={`${perBlock} professional${perBlock === 1 ? "" : "s"} per block`}
+            detail={tn(perBlock, "{n} professional per block", "{n} professionals per block")}
             priceText={rowPrice(seat.rowId)}
             periodPrices={pricesOf(seat.rowId)}
           />
@@ -390,10 +395,16 @@ function BusinessSubscription() {
       {base && seat && sentenceBase != null && sentenceSeat != null && (
         <div className="rounded-2xl bg-cream-soft px-4 py-3.5 mb-6">
           <p className="text-xs text-charcoal-soft leading-relaxed">
-            {formatPrice(sentenceBase)}{periodSuffix(sentencePeriod)} covers the business account. Each seat block is{" "}
-            {formatPrice(sentenceSeat)}{periodSuffix(sentencePeriod)} and seats {perBlock} professional
-            {perBlock === 1 ? "" : "s"}. Buy as many blocks as you need. Every seated professional
-            gets the {seatPlan?.name ?? "seat"} plan for as long as they're on your team.
+            {tn(
+              perBlock,
+              "{base} covers the business account. Each seat block is {seat} and seats {n} professional. Buy as many blocks as you need. Every seated professional gets the {plan} plan for as long as they're on your team.",
+              "{base} covers the business account. Each seat block is {seat} and seats {n} professionals. Buy as many blocks as you need. Every seated professional gets the {plan} plan for as long as they're on your team.",
+              {
+                base: `${formatPrice(sentenceBase)}${periodSuffix(sentencePeriod)}`,
+                seat: `${formatPrice(sentenceSeat)}${periodSuffix(sentencePeriod)}`,
+                plan: seatPlan?.name ?? t("seat"),
+              }
+            )}
           </p>
         </div>
       )}
@@ -409,7 +420,7 @@ function BusinessSubscription() {
         title={confirm?.title ?? ""}
         subtitle={confirm?.body}
         confirmLabel={confirm?.action}
-        cancelLabel="Keep my billing"
+        cancelLabel={t("Keep my billing")}
         busy={busy}
         onCancel={() => setAsk(null)}
         onConfirm={() => void doSwitch()}
@@ -421,9 +432,9 @@ function BusinessSubscription() {
 /** A failed read, said with its own Retry (44px). */
 const RetryLine: React.FC<{ message: string; onRetry: () => void }> = ({ message, onRetry }) => (
   <div role="alert" className="flex items-center justify-between gap-3 mb-4">
-    <p className="text-xs font-semibold text-status-high">{message}</p>
+    <p className="text-xs font-semibold text-status-high">{t(message)}</p>
     <button type="button" onClick={onRetry} className="tap shrink-0 min-h-[44px] px-2 text-xs font-bold text-primary-dark">
-      Retry
+      {t("Retry")}
     </button>
   </div>
 );

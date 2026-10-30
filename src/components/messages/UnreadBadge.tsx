@@ -1,3 +1,5 @@
+import { t, tn } from "../../i18n/core";
+
 /**
  * The unread count, or nothing at all.
  *
@@ -16,7 +18,7 @@ export const UnreadBadge: React.FC<{ count: number; className?: string }> = ({
   if (count <= 0) return null;
   return (
     <span
-      aria-label={`${count} unread`}
+      aria-label={tn(count, "{n} unread", "{n} unread")}
       className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-primary-fill text-on-primary-fill text-[10px] font-bold tabular-nums shrink-0 ${className ?? ""}`}
     >
       {count > 99 ? "99+" : count}
@@ -37,7 +39,7 @@ export const UnreadDot: React.FC<{ show: boolean }> = ({ show }) => {
   if (!show) return null;
   return (
     <span
-      aria-label="Unread messages"
+      aria-label={t("Unread messages")}
       className="absolute top-1 end-[calc(50%-16px)] w-2 h-2 rounded-full bg-primary ring-2 ring-cream-card"
     />
   );

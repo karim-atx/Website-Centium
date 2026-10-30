@@ -7,6 +7,7 @@ import { anchorHash, loaderEntryFor } from "../landing/loading/pickLoader";
 import { scrollToSection, useMarketingNav } from "../landing/navigation";
 import { LEAF_TEAL, LOGO_LAVENDER, MARK_C_PATH, MARK_LEAF_PATH } from "../landing/paths";
 import { LanguageSwitch } from "./LanguageSwitch";
+import { t, tk } from "../../i18n/core";
 
 // Centium landing v29: NV1 v16, the Original navbar (02_pages/01-NV1 and the
 // prototype's navVals / navClick), replacing the previous glass/dark-band nav.
@@ -26,10 +27,10 @@ import { LanguageSwitch } from "./LanguageSwitch";
 const PLATE = { bg: "rgba(250,249,252,.94)", border: "rgba(34,30,26,.08)", shadow: "0 6px 22px rgba(72,58,130,.10)" };
 
 const LINKS: { href: string; label: string; id: string | null }[] = [
-  { href: "/#platform", label: "Features", id: "platform" },
-  { href: "/#faq", label: "FAQ", id: "faq" },
-  { href: "/#pricing", label: "Pricing", id: "pricing" },
-  { href: "/contact", label: "Contact", id: null },
+  { href: "/#platform", label: tk("Features"), id: "platform" },
+  { href: "/#faq", label: tk("FAQ"), id: "faq" },
+  { href: "/#pricing", label: tk("Pricing"), id: "pricing" },
+  { href: "/contact", label: tk("Contact"), id: null },
 ];
 
 const subscribeResize = (cb: () => void) => {
@@ -162,7 +163,7 @@ export const Nav: React.FC = () => {
         <a
           id="nav-logo"
           href="/"
-          aria-label="Centium home"
+          aria-label={t("Centium home")}
           onClick={goHomeNav}
           onMouseEnter={leaf(true)}
           onMouseLeave={leaf(false)}
@@ -211,7 +212,7 @@ export const Nav: React.FC = () => {
         {lg ? (
           <>
             <nav
-              aria-label="Primary"
+              aria-label={t("Primary")}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -245,7 +246,7 @@ export const Nav: React.FC = () => {
                     } as React.CSSProperties
                   }
                 >
-                  <NavLabel label={l.label} active={l.active} />
+                  <NavLabel label={t(l.label)} active={l.active} />
                 </a>
               ))}
             </nav>
@@ -272,7 +273,7 @@ export const Nav: React.FC = () => {
                   } as React.CSSProperties
                 }
               >
-                Log in
+                {t("Log in")}
               </Link>
               <Link
                 to="/app"
@@ -291,7 +292,7 @@ export const Nav: React.FC = () => {
                   } as React.CSSProperties
                 }
               >
-                Get Started
+                {t("Get Started")}
               </Link>
             </div>
           </>
@@ -299,7 +300,7 @@ export const Nav: React.FC = () => {
           <button
             type="button"
             onClick={() => setMenu(!menuOpen)}
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-label={menuOpen ? t("Close menu") : t("Open menu")}
             aria-expanded={menuOpen}
             className="cl-press"
             style={{
@@ -344,7 +345,7 @@ export const Nav: React.FC = () => {
             animation: reducedMotion() ? "none" : "centium-menu-in .45s cubic-bezier(.22,1,.36,1) both",
           }}
         >
-          <nav aria-label="Primary" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <nav aria-label={t("Primary")} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             {links.map((l) => (
               <a
                 key={l.label}
@@ -361,7 +362,7 @@ export const Nav: React.FC = () => {
                   color: l.active ? "#6A54C4" : "#5B5349",
                 }}
               >
-                <NavLabel label={l.label} active={l.active} />
+                <NavLabel label={t(l.label)} active={l.active} />
               </a>
             ))}
           </nav>
@@ -384,7 +385,7 @@ export const Nav: React.FC = () => {
                 background: "#FAF9F7",
               }}
             >
-              Log in
+              {t("Log in")}
             </Link>
             <Link
               to="/app"
@@ -400,7 +401,7 @@ export const Nav: React.FC = () => {
                 color: "#fff",
               }}
             >
-              Get Started
+              {t("Get Started")}
             </Link>
           </div>
         </div>

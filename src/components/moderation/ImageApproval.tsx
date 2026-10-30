@@ -4,6 +4,7 @@ import { Clock, ImageOff } from "lucide-react";
 import { imageStateFor } from "../../services/moderation/images";
 import { PENDING_BADGE, PENDING_LINE, reasonText, REJECTED_BADGE, type ImageSurface } from "../../services/moderation/imageCopy";
 import type { ImageApproval } from "../../services/moderation/imageModel";
+import { t } from "../../i18n/core";
 
 // Image approval on the owner's own screens (Round C Release 2; PLAN S2,
 // undrawn, in the existing badge and note styles).
@@ -48,7 +49,7 @@ export const ImageApprovalBadge: React.FC<{ state: OwnImageState; className?: st
       } ${className ?? ""}`}
     >
       {pending ? <Clock size={11} aria-hidden /> : <ImageOff size={11} aria-hidden />}
-      {pending ? PENDING_BADGE : REJECTED_BADGE}
+      {t(pending ? PENDING_BADGE : REJECTED_BADGE)}
     </span>
   );
 };
@@ -59,9 +60,9 @@ export const ImageApprovalNote: React.FC<{ state: OwnImageState; className?: str
   const pending = state.status === "pending";
   return (
     <p data-image-approval-note={state.status} className={`text-[11.5px] leading-[16px] ${pending ? "text-charcoal-soft" : "text-status-high"} ${className ?? ""}`}>
-      {pending ? PENDING_LINE : `${reasonText(state.reasonCategory)} Choose another photo.`}{" "}
+      {pending ? t(PENDING_LINE) : t("{reason} Choose another photo.", { reason: t(reasonText(state.reasonCategory)) })}{" "}
       <Link to="/legal/community-guidelines" className="font-semibold underline">
-        Community guidelines
+        {t("Community guidelines")}
       </Link>
     </p>
   );

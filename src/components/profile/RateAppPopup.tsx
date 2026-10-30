@@ -6,6 +6,7 @@ import { StarRating } from "../ui/StarRating";
 import { useApp } from "../../context/AppContext";
 import { MAX_REVIEW_TEXT, submitReview } from "../../services/app-reviews";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 /**
  * MO1.8.11 Rate this app, as a centred popup (no ×; outside tap and Escape
@@ -42,7 +43,7 @@ export const RateAppPopup: React.FC<{ open: boolean; onClose: () => void }> = ({
 
   const send = async () => {
     if (!authUserId) {
-      setError("You need to be signed in to leave a review.");
+      setError(t("You need to be signed in to leave a review."));
       return;
     }
     setBusy(true);
@@ -56,7 +57,7 @@ export const RateAppPopup: React.FC<{ open: boolean; onClose: () => void }> = ({
     });
     setBusy(false);
     if (!result.ok) {
-      setError(result.message ?? "That review couldn't be sent.");
+      setError(t(result.message ?? "That review couldn't be sent."));
       return;
     }
     setSent(true);
@@ -73,9 +74,9 @@ export const RateAppPopup: React.FC<{ open: boolean; onClose: () => void }> = ({
         open={open}
         onClose={onClose}
         className={pad}
-        title="Review sent"
+        title={t("Review sent")}
         icon={<Check size={22} strokeWidth={1.75} />}
-        body="Thank you. The team reads these when reviewing feedback. You won’t get a reply here."
+        body={t("Thank you. The team reads these when reviewing feedback. You won’t get a reply here.")}
       />
     );
   }
@@ -85,11 +86,11 @@ export const RateAppPopup: React.FC<{ open: boolean; onClose: () => void }> = ({
       open={open}
       onClose={onClose}
       className={pad}
-      title="Rate this app"
+      title={t("Rate this app")}
       // MO1.8.11: Star 22 / 1.75; the card the Foundations 342 wide (decision 23 flag).
       icon={<Star size={22} strokeWidth={1.75} />}
       cta={{
-        label: "Send",
+        label: t("Send"),
         loading: busy,
         disabled: rating < 1 || tooLong,
         onClick: () => void send(),
@@ -102,9 +103,9 @@ export const RateAppPopup: React.FC<{ open: boolean; onClose: () => void }> = ({
         value={reviewText}
         onChange={(e) => setReviewText(e.target.value)}
         rows={3}
-        aria-label="Your review (optional)"
+        aria-label={t("Your review (optional)")}
         aria-invalid={tooLong || undefined}
-        placeholder="What works well, and what doesn't? (optional)"
+        placeholder={t("What works well, and what doesn't? (optional)")}
         // 96 tall on the board (186 to 281.5 on the 2x crop), 14 under the stars.
         className={`mt-3.5 h-24 w-full rounded-2xl bg-cream-soft border px-3.5 py-3 text-[13px] text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none ${
           tooLong ? "border-status-high" : "border-charcoal/10"
@@ -117,7 +118,7 @@ export const RateAppPopup: React.FC<{ open: boolean; onClose: () => void }> = ({
         <div className="mt-1.5 flex items-start gap-2">
           {tooLong && (
             <p role="alert" className="flex-1 min-w-0 text-[12px] font-semibold text-status-high">
-              Too long: {reviewText.length.toLocaleString(appLocale("en-GB"))} of {MAX_REVIEW_TEXT.toLocaleString(appLocale("en-GB"))} characters.
+              {t("Too long: {count} of {max} characters.", { count: reviewText.length.toLocaleString(appLocale("en-GB")), max: MAX_REVIEW_TEXT.toLocaleString(appLocale("en-GB")) })}
             </p>
           )}
           <p className={`ms-auto shrink-0 text-[11px] leading-[18px] text-end tabular-nums ${tooLong ? "text-status-high" : "text-charcoal-faint"}`}>
@@ -128,8 +129,9 @@ export const RateAppPopup: React.FC<{ open: boolean; onClose: () => void }> = ({
 
       {/* Stated rather than silently collected (privacy, exception 1). */}
       <p className="mt-2 text-[11px] text-charcoal-faint">
-        Sent with this review: the page you were on{route ? ` (${route})` : ""} and your browser
-        version. Nothing from your health records is included.
+        {route
+          ? t("Sent with this review: the page you were on ({route}) and your browser version. Nothing from your health records is included.", { route })
+          : t("Sent with this review: the page you were on and your browser version. Nothing from your health records is included.")}
       </p>
 
       {error && (

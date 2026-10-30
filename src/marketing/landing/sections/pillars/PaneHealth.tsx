@@ -5,6 +5,13 @@
 import React from "react";
 import * as D from "../data/pillars";
 import type { SectionVals } from "../sectionVals";
+import { getLanguage, t } from "../../../../i18n/core";
+import { ARABIC_LOCALE } from "../../../../i18n/format";
+
+/** The calendar head (M T W T F S S): in Arabic, each weekday's narrow name
+ *  from Intl (the letters repeat in English, so they cannot be catalogue keys). */
+const weekInitial = (en: string, i: number) =>
+  getLanguage() === "ar" ? new Intl.DateTimeFormat(ARABIC_LOCALE, { weekday: "narrow", timeZone: "UTC" }).format(new Date(Date.UTC(2024, 0, 1 + i, 12))) : en;
 
 export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
   <div data-pls="2" style={{ zoom: r.plZoom, maxHeight: r.plMaxH, position: r.plPanePos, left: "0", top: "0", right: "0", bottom: "0", flex: `0 0 ${r.plPaneW}`, scrollSnapAlign: "center", opacity: r.plPaneOp, borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.16)", boxShadow: r.plSh, overflow: "hidden", display: "flex", flexDirection: "column", textAlign: "start" }}>
@@ -13,25 +20,26 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#DDE8E5" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E7E3DC" }} />
       <span style={{ marginInlineStart: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
+        {/* i18n-ignore: URL */}
         centium.atraxia.org/app/health
       </span>
     </div>
     <div style={{ position: "relative", flex: "1", padding: r.panePad, display: "grid", gridTemplateColumns: r.paneCols, gap: r.paneGap, alignContent: "stretch", gridTemplateRows: r.hRows }}>
       <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "12px" }}>
         <span style={{ fontSize: "19px", fontWeight: "800", letterSpacing: "-.02em" }}>
-          Health records
+          {t("Health records")}
         </span>
         <span style={{ fontSize: "12px", fontWeight: "700", color: "#4E3894", whiteSpace: "nowrap" }}>
-          Updated today
+          {t("Updated today")}
         </span>
       </div>
       <div style={{ gridColumn: "1 / -1", borderRadius: "16px", border: "1px solid rgba(125,103,217,.14)", background: "#FFFFFF", padding: "10px 14px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
-            RECORDS TIMELINE
+            {t("RECORDS TIMELINE")}
           </span>
           <span style={{ fontSize: "11px", fontWeight: "700", color: "#4E3894" }}>
-            5 documents
+            {t("5 documents")}
           </span>
         </div>
         <div style={{ position: "relative", marginTop: "10px", display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr))", gap: "8px" }}>
@@ -42,13 +50,13 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
               <span style={{ width: "14px", height: "14px", borderRadius: "99px", background: rt.dot, border: "3px solid #fff", boxShadow: "0 0 0 1px #D9D2EE" }} />
               <div style={{ width: "100%", padding: "7px 8px", borderRadius: "10px", border: `1px solid ${rt.bd}`, background: rt.bg, textAlign: "start" }}>
                 <div style={{ fontSize: "9.5px", fontWeight: "700", color: "#756D63" }}>
-                  {rt.d}
+                  {t(rt.d)}
                 </div>
                 <div style={{ fontSize: "11.5px", fontWeight: "800", lineHeight: "1.25" }}>
-                  {rt.t}
+                  {t(rt.t)}
                 </div>
                 <div style={{ fontSize: "9.5px", fontWeight: "600", color: "#5B5349" }}>
-                  {rt.m}
+                  {t(rt.m)}
                 </div>
               </div>
             </div>
@@ -58,19 +66,19 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
       <div style={{ borderRadius: "16px", border: "1px solid rgba(94,158,149,.18)", background: "#FFFFFF", padding: "10px 14px", flexDirection: "column", gap: "6px", display: r.mhFlex }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
-            LAB RESULTS · 14 OCT
+            {t("LAB RESULTS · 14 OCT")}
           </span>
           <span style={{ fontSize: "11px", fontWeight: "800", color: "#2F5F58" }}>
-            18 in range ·{" "}
+            {t("18 in range ·")}{" "}
             <span style={{ color: "#6A54C4" }}>
-              2 to review
+              {t("2 to review")}
             </span>
           </span>
         </div>
         {D.labPanels.map((lp, lpI) => (
           <div key={lpI}>
             <div style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63", margin: "2px 0 3px" }}>
-              {lp.t}
+              {t(lp.t)}
             </div>
             {lp.rows.map((lr, lrI) => (
               <div key={lrI} style={{ padding: "3px 0" }}>
@@ -79,13 +87,13 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
                     {lr.icon}
                   </span>
                   <span style={{ flex: "1" }}>
-                    {lr.k}
+                    {t(lr.k)}
                   </span>
                   <span>
                     {lr.v}
                   </span>
                   <span style={{ fontSize: "9.5px", fontWeight: "700", color: lr.sc, width: "50px", textAlign: "end" }}>
-                    {lr.st}
+                    {t(lr.st)}
                   </span>
                 </div>
                 {lr.track ? (
@@ -111,7 +119,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
                         <polyline data-w="0.72 0.92" data-draw="" points="0,24 53,20 106,12 160,6" fill="none" stroke="#6A54C4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" vectorEffect="non-scaling-stroke" />
                       </svg>
                       <div style={{ fontSize: "10px", fontWeight: "600", color: "#5B5349", lineHeight: "1.35" }}>
-                        Higher than your last two tests. Worth talking through with your doctor.
+                        {t("Higher than your last two tests. Worth talking through with your doctor.")}
                       </div>
                     </div>
                   </>
@@ -124,10 +132,10 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
       <div style={{ borderRadius: "16px", border: "1px solid rgba(125,103,217,.14)", background: "#FFFFFF", padding: "10px 14px", display: "flex", flexDirection: "column", gap: "7px", minHeight: "0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "8px" }}>
           <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
-            CYCLE · OCTOBER
+            {t("CYCLE · OCTOBER")}
           </span>
           <span style={{ fontSize: "10.5px", fontWeight: "700", color: "#4E3894", whiteSpace: "nowrap" }}>
-            Next period in about 19 days
+            {t("Next period in about 19 days")}
           </span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: `${r.cycRing} minmax(0,1fr)`, gap: "16px", alignItems: "center" }}>
@@ -142,7 +150,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
             </svg>
             <div style={{ position: "absolute", inset: "0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
               <span style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
-                DAY
+                {t("DAY")}
               </span>
               <span style={{ fontSize: "26px", fontWeight: "800", lineHeight: "1" }}>
                 <span data-w="0.35 0.8" data-cnt="9" data-from="1">
@@ -150,7 +158,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
                 </span>
               </span>
               <span style={{ fontSize: "10px", fontWeight: "700", color: "#756D63" }}>
-                of 28
+                {t("of 28")}
               </span>
             </div>
           </div>
@@ -159,10 +167,10 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
               <div key={cpI} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "3px 8px", borderRadius: "9px", background: cp.bg }}>
                 <span style={{ width: "9px", height: "9px", flexShrink: "0", borderRadius: "3px", background: cp.c }} />
                 <span style={{ flex: "1", fontSize: "12px", fontWeight: cp.fw, color: "#221E1A" }}>
-                  {cp.t}
+                  {t(cp.t)}
                 </span>
                 <span style={{ fontSize: "10.5px", fontWeight: "700", color: "#6C655C", whiteSpace: "nowrap" }}>
-                  {cp.d}
+                  {t(cp.d)}
                 </span>
               </div>
             ))}
@@ -171,7 +179,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: "3px", fontSize: "9.5px", fontWeight: "700", color: "#756D63", textAlign: "center" }}>
           {D.calHead.map((ch, chI) => (
             <span key={chI}>
-              {ch}
+              {weekInitial(ch, chI)}
             </span>
           ))}
           {D.cycCal.map((cd, cdI) => (
@@ -182,33 +190,33 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
         </div>
         <div style={{ alignItems: "center", gap: "6px", flexWrap: "wrap", display: r.mhFlex }}>
           <span style={{ fontSize: "9.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63", marginInlineEnd: "2px" }}>
-            TODAY
+            {t("TODAY")}
           </span>
           {D.cycLogs.map((lg, lgI) => (
             <span key={lgI} data-w={lg.w} data-ty="8" data-op="" style={{ padding: "3px 9px", borderRadius: "99px", background: lg.bg, color: lg.ink, fontSize: "10.5px", fontWeight: "700", opacity: "0" }}>
-              {lg.t}
+              {t(lg.t)}
             </span>
           ))}
         </div>
         <div style={{ flex: "1", minHeight: "48px", flexDirection: "column", gap: "3px", display: r.mhFlex }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9.5px", fontWeight: "800", letterSpacing: ".1em", color: "#756D63" }}>
             <span>
-              CYCLE LENGTH · 6 MONTHS
+              {t("CYCLE LENGTH · 6 MONTHS")}
             </span>
             <span style={{ color: "#4E3894" }}>
-              avg 28 d
+              {t("avg 28 d")}
             </span>
           </div>
           <div style={{ flex: "1", display: "grid", gridTemplateColumns: "26px minmax(0,1fr)", gridTemplateRows: "minmax(0,1fr) 12px", columnGap: "6px" }}>
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: "9px", fontWeight: "700", color: "#756D63", textAlign: "end" }}>
               <span>
-                30 d
+                {t("30 d")}
               </span>
               <span>
-                28 d
+                {t("28 d")}
               </span>
               <span>
-                26 d
+                {t("26 d")}
               </span>
             </div>
             <div style={{ position: "relative", borderInlineStart: "1px solid #E6E1F1", borderBottom: "1px solid #E6E1F1" }}>
@@ -225,7 +233,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
             <div style={{ position: "relative", fontSize: "9px", fontWeight: "700", color: "#756D63" }}>
               {D.cycLenLab.map((cll, cllI) => (
                 <span key={cllI} style={{ position: "absolute", left: cll.x, top: "1px", transform: "translateX(-50%)" }}>
-                  {cll.t}
+                  {t(cll.t)}
                 </span>
               ))}
             </div>

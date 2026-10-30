@@ -122,9 +122,15 @@ html.high-contrast .sc {
   display: block;
   overflow: visible;
 }
+/* Round F (F10): in right to left, time runs from right to left. The plot has
+   no text, so the drawing is mirrored whole; the labels, tags and tooltip are
+   placed from the inline start. */
+[dir="rtl"] .sc-plot svg {
+  transform: scaleX(-1);
+}
 .sc-ylab {
   position: absolute;
-  left: 0;
+  inset-inline-start: 0;
   transform: translateY(-50%);
   font-size: 9.5px;
   color: var(--sc-axis);
@@ -144,10 +150,13 @@ html.high-contrast .sc {
   font-weight: 800;
   white-space: nowrap;
 }
+[dir="rtl"] .sc-tag {
+  transform: translateX(50%);
+}
 .sc-hit {
   position: absolute;
-  left: 30px;
-  right: 4px;
+  inset-inline-start: 30px;
+  inset-inline-end: 4px;
   top: 0;
   bottom: 0;
   touch-action: pan-y;
@@ -219,7 +228,7 @@ html.high-contrast .sc {
 .sc-xl {
   display: flex;
   justify-content: space-between;
-  padding-left: 30px;
+  padding-inline-start: 30px;
   margin-top: 4px;
   font-size: 9.5px;
   color: var(--sc-axis);

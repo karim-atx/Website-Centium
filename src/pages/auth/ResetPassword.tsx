@@ -11,6 +11,7 @@ import { meetsPasswordRule, shouldWarnPasswordMismatch } from "../../utils/passw
 import { ObFooter, ObHeader, ObLockup, ObPage, ObTitle, ObToast, useObToast } from "../onboarding/shell/ObShell";
 import { ObField, ObStatus, ObStrength } from "../onboarding/shell/ObBlocks";
 import { CI, LF, OB } from "../onboarding/shell/visuals";
+import { t } from "../../i18n/core";
 
 /**
  * The destination of a password-reset link, and the only thing a recovery
@@ -79,7 +80,7 @@ export default function ResetPassword() {
     if (!result.ok) {
       setBusy(false);
       setMfaCode("");
-      setError(result.message);
+      setError(t(result.message));
       return;
     }
     // THE GUARD HAS TO BE TOLD, or /app asks for a code the user just gave.
@@ -98,14 +99,14 @@ export default function ResetPassword() {
     const result = await updatePassword(password);
     setBusy(false);
     if (!result.ok) {
-      setError(result.message ?? "Could not update your password.");
+      setError(result.message ? t(result.message) : t("Could not update your password."));
       return;
     }
     // Only now does the session stop being a recovery session. Through the
     // context so the guards' state clears too.
     clearRecovery();
     setDone(true);
-    showToast("Password updated. Taking you to Centium…");
+    showToast(t("Password updated. Taking you to Centium…"));
     setTimeout(() => navigate("/app", { replace: true }), 900);
   };
 
@@ -127,7 +128,7 @@ export default function ResetPassword() {
             <ObLockup />
           </div>
           <p role="status" style={{ textAlign: "center", fontSize: 13, lineHeight: "19.5px", fontWeight: 500, color: "var(--ob-faint)" }}>
-            {authReady ? "Checking your account…" : "Loading…"}
+            {authReady ? t("Checking your account…") : t("Loading…")}
           </p>
         </div>
       </ObPage>
@@ -143,15 +144,15 @@ export default function ResetPassword() {
           {header}
           <ObStatus
             vis={[LF(50, 82, 0.13, -45, OB.leaf, 0.5), CI(50, 50, 40, "none", { s: OB.high, sw: 1.5, o: 0.5 })]}
-            eyebrow="Link expired"
+            eyebrow={t("Link expired")}
             eyebrowColor="var(--ob-high)"
-            title="This link didn't open"
-            body="Password reset links only work in the same browser you requested them from. Open the link there, or request a new one."
+            title={t("This link didn't open")}
+            body={t("Password reset links only work in the same browser you requested them from. Open the link there, or request a new one.")}
           />
         </div>
         <ObFooter
-          primary={{ label: "Back to sign in", onClick: () => navigate("/app/onboarding?auth=signin", { replace: true }) }}
-          link={{ node: "Send a new link", onClick: () => navigate("/app/onboarding?auth=forgot", { replace: true }) }}
+          primary={{ label: t("Back to sign in"), onClick: () => navigate("/app/onboarding?auth=signin", { replace: true }) }}
+          link={{ node: t("Send a new link"), onClick: () => navigate("/app/onboarding?auth=forgot", { replace: true }) }}
         />
       </ObPage>
     );
@@ -172,13 +173,13 @@ export default function ResetPassword() {
           {header}
           <ObTitle
             variant="intro"
-            eyebrow="Reset password"
-            title="Confirm it's you"
-            subtitle="This account uses two-factor authentication. Enter a code before choosing a new password."
+            eyebrow={t("Reset password")}
+            title={t("Confirm it's you")}
+            subtitle={t("This account uses two-factor authentication. Enter a code before choosing a new password.")}
           />
           <div className="ob-info" style={{ marginBottom: 16 }}>
             <ShieldCheck size={16} />
-            <span>{mfaFactor?.name ? `Enter the code from ${mfaFactor.name}` : "Enter the code from your authenticator app"}</span>
+            <span>{mfaFactor?.name ? t("Enter the code from {app}", { app: mfaFactor.name }) : t("Enter the code from your authenticator app")}</span>
           </div>
           {/* Six boxes (Foundations 2.5), as on every two-factor screen. */}
           <CodeBoxes
@@ -190,7 +191,7 @@ export default function ResetPassword() {
             error={!!error}
             disabled={busy}
             autoFocus
-            label="Six-digit authentication code"
+            label={t("Six-digit authentication code")}
           />
           {error && (
             <div className="ob-help" data-err="true" style={{ justifyContent: "center" }}>
@@ -201,12 +202,12 @@ export default function ResetPassword() {
           )}
           {/* No backup path to offer from here: says what actually happens. */}
           <p style={{ fontSize: 11.5, lineHeight: "17px", color: "var(--ob-faint)", textAlign: "center", marginTop: 16 }}>
-            Lost access to your authenticator? Contact Centium support. Resetting your password alone won't get you back in.
+            {t("Lost access to your authenticator? Contact Centium support. Resetting your password alone won't get you back in.")}
           </p>
         </form>
         <ObFooter
-          primary={{ label: busy ? "Checking…" : "Continue", type: "submit", form: "ob-reset-mfa", disabled: busy || mfaCode.length < 6 }}
-          link={{ node: "Cancel and sign out", onClick: cancel }}
+          primary={{ label: busy ? t("Checking…") : t("Continue"), type: "submit", form: "ob-reset-mfa", disabled: busy || mfaCode.length < 6 }}
+          link={{ node: t("Cancel and sign out"), onClick: cancel }}
         />
       </ObPage>
     );
@@ -226,24 +227,24 @@ export default function ResetPassword() {
         {header}
         <ObTitle
           variant="intro"
-          eyebrow="Reset password"
-          title="Set a new password"
-          subtitle={recoveryPending ? "Choose a new password to finish signing in." : "Choose a new password for your account."}
+          eyebrow={t("Reset password")}
+          title={t("Set a new password")}
+          subtitle={recoveryPending ? t("Choose a new password to finish signing in.") : t("Choose a new password for your account.")}
         />
         <ObField
           variant="intro"
           icon={Lock}
           type={showPassword ? "text" : "password"}
           autoComplete="new-password"
-          placeholder="New password"
-          aria-label="New password"
+          placeholder={t("New password")}
+          aria-label={t("New password")}
           // First field of the step, so Enter-to-submit works without a pointer.
           autoFocus
           value={password}
           readOnly={busy || done}
           onChange={(e) => setPassword(e.target.value)}
           end={
-            <button type="button" className="hit" onClick={passwordVisibility.toggle} aria-label={showPassword ? "Hide password" : "Show password"} style={{ display: "flex" }}>
+            <button type="button" className="hit" onClick={passwordVisibility.toggle} aria-label={showPassword ? t("Hide password") : t("Show password")} style={{ display: "flex" }}>
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           }
@@ -253,11 +254,11 @@ export default function ResetPassword() {
           icon={Lock}
           type={showPassword ? "text" : "password"}
           autoComplete="new-password"
-          placeholder="Confirm new password"
-          aria-label="Confirm new password"
+          placeholder={t("Confirm new password")}
+          aria-label={t("Confirm new password")}
           value={confirmPassword}
           readOnly={busy || done}
-          error={mismatch ? "Passwords don't match" : null}
+          error={mismatch ? t("Passwords don't match") : null}
           onChange={(e) => setConfirmPassword(e.target.value)}
           onBlur={() => setConfirmBlurred(true)}
         />
@@ -265,10 +266,10 @@ export default function ResetPassword() {
       </form>
       <ObFooter
         error={error}
-        primary={{ label: busy ? "Saving…" : "Set new password", type: "submit", form: "ob-reset", disabled: !canSubmit || done }}
+        primary={{ label: busy ? t("Saving…") : t("Set new password"), type: "submit", form: "ob-reset", disabled: !canSubmit || done }}
         // The way out for someone who opened the link by mistake: signing
         // out ends the recovery session rather than leaving it usable.
-        link={{ node: "Cancel and sign out", onClick: cancel }}
+        link={{ node: t("Cancel and sign out"), onClick: cancel }}
       />
       <ObToast message={toast} />
     </ObPage>

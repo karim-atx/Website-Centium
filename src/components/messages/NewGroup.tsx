@@ -16,6 +16,7 @@ import { PinnedCta } from "../ui/PinnedCta";
 import { INK } from "../pro/proInk";
 import { Avatar } from "../pro/client/kit";
 import { textPx } from "../../theme/textSize";
+import { t, tn } from "../../i18n/core";
 
 /**
  * New group (phase 2B; Release 3 MO27 "New group", gen/r16.js newGroup16).
@@ -89,11 +90,11 @@ export const NewGroup: React.FC<{
     const missed: { name: string; reason: string }[] = [];
     if (desc.trim()) {
       const d = await setGroupDescription(made.threadId, desc);
-      if (!d.ok) missed.push({ name: "Description", reason: d.message });
+      if (!d.ok) missed.push({ name: t("Description"), reason: d.message });
     }
     if (photo && authUserId) {
       const p = await submitGroupPhoto(authUserId, made.threadId, photo);
-      if (!p.ok) missed.push({ name: "Group photo", reason: p.message });
+      if (!p.ok) missed.push({ name: t("Group photo"), reason: p.message });
     }
     setBusy(false);
     if (result.refused.length > 0 || missed.length > 0) {
@@ -107,38 +108,37 @@ export const NewGroup: React.FC<{
   };
 
   const n = picked.size;
-  const clientsWord = (k: number) => `${k} ${k === 1 ? "client" : "clients"}`;
 
   if (refused && createdId) {
     return (
       <div className="flex flex-col" style={{ gap: 14, paddingBottom: 172 }}>
-        <Header title="Group created" onBack={() => onCreated(createdId)} />
+        <Header title={t("Group created")} onBack={() => onCreated(createdId)} />
         {refused.length > 0 && (
           <>
-            <p style={{ fontSize: textPx(14), color: INK.ch }}>These people weren't invited. Everyone else has an invitation.</p>
+            <p style={{ fontSize: textPx(14), color: INK.ch }}>{t("These people weren't invited. Everyone else has an invitation.")}</p>
             <ReasonList rows={refused} />
           </>
         )}
         {notSaved.length > 0 && (
           <>
-            <p style={{ fontSize: textPx(14), color: INK.ch }}>These weren't saved. You can add them again in Group info.</p>
+            <p style={{ fontSize: textPx(14), color: INK.ch }}>{t("These weren't saved. You can add them again in Group info.")}</p>
             <ReasonList rows={notSaved} />
           </>
         )}
-        <PinnedCta primary={{ label: "Open the group", onClick: () => onCreated(createdId) }} />
+        <PinnedCta primary={{ label: t("Open the group"), onClick: () => onCreated(createdId) }} />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col" style={{ paddingBottom: 172 }}>
-      <Header title="New group" onBack={onBack} className="mb-3.5" />
+      <Header title={t("New group")} onBack={onBack} className="mb-3.5" />
       <div style={{ borderRadius: 14, background: INK.tealPale, padding: "12px 14px", fontSize: textPx(13), lineHeight: 1.5, marginBottom: 14 }} className="text-charcoal-soft dark:text-teal-deep-text">
-        Each person you pick gets an invitation and joins only if they accept. Members see each other's first names and messages in the group, never health data or other chats.
+        {t("Each person you pick gets an invitation and joins only if they accept. Members see each other's first names and messages in the group, never health data or other chats.")}
       </div>
       <div className="flex items-center" style={{ gap: 14, marginBottom: 14 }}>
         <span className="flex flex-col items-center shrink-0" style={{ gap: 4 }}>
-          <button type="button" onClick={() => fileRef.current?.click()} aria-label={photo ? "Change the group photo" : "Add a group photo"} className="tap rounded-full">
+          <button type="button" onClick={() => fileRef.current?.click()} aria-label={photo ? t("Change the group photo") : t("Add a group photo")} className="tap rounded-full">
             {preview ? (
               <span className="flex rounded-full overflow-hidden" style={{ width: 64, height: 64, border: `1px solid ${INK.b10}` }}>
                 <img src={preview} alt="" className="w-full h-full object-cover" />
@@ -148,7 +148,7 @@ export const NewGroup: React.FC<{
             )}
           </button>
           <button type="button" onClick={() => (photo ? setPhoto(null) : fileRef.current?.click())} className="tap" style={{ minHeight: 24, fontSize: textPx(11.5), fontWeight: 700, color: photo ? INK.chS : INK.prDeep }}>
-            {photo ? "Remove" : "Add photo"}
+            {photo ? t("Remove") : t("Add photo")}
           </button>
           <input
             ref={fileRef}
@@ -164,31 +164,31 @@ export const NewGroup: React.FC<{
           />
         </span>
         <div className="flex-1 min-w-0">
-          <FieldLabel htmlFor="gname">Group name</FieldLabel>
-          <input id="gname" value={name} maxLength={GROUP_NAME_MAX} onChange={(e) => setName(e.target.value)} placeholder="e.g. Spring Strength Group" style={FIELD} className="focus:outline-none focus:ring-2 focus:ring-primary/20" />
+          <FieldLabel htmlFor="gname">{t("Group name")}</FieldLabel>
+          <input id="gname" value={name} maxLength={GROUP_NAME_MAX} onChange={(e) => setName(e.target.value)} placeholder={t("e.g. Spring Strength Group")} style={FIELD} className="focus:outline-none focus:ring-2 focus:ring-primary/20" />
         </div>
       </div>
-      <FieldLabel htmlFor="gdesc">Description (optional)</FieldLabel>
+      <FieldLabel htmlFor="gdesc">{t("Description (optional)")}</FieldLabel>
       <textarea
         id="gdesc"
         value={desc}
         rows={2}
         maxLength={GROUP_DESCRIPTION_MAX}
         onChange={(e) => setDesc(e.target.value)}
-        placeholder="What the group is for"
+        placeholder={t("What the group is for")}
         className="w-full rounded-[12px] px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-charcoal-faint"
         style={{ fontSize: textPx(14), background: INK.soft, border: `1px solid ${INK.b10}`, color: INK.ch }}
       />
-      {photo && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 6 }}>Members see the photo once our team approves it.</p>}
-      <p style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.chS, margin: "14px 0 6px" }}>Invite · {clientsWord(n)}</p>
+      {photo && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 6 }}>{t("Members see the photo once our team approves it.")}</p>}
+      <p style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.chS, margin: "14px 0 6px" }}>{t("Invite")} · {tn(n, "{n} client", "{n} clients")}</p>
       <GroupPicker clients={clients} selected={picked} onToggle={toggle} />
-      <p style={{ fontSize: textPx(12), color: INK.chS, marginTop: 6 }}>Only your hired clients can be invited. Accounts under 18 can't join groups.</p>
+      <p style={{ fontSize: textPx(12), color: INK.chS, marginTop: 6 }}>{t("Only your hired clients can be invited. Accounts under 18 can't join groups.")}</p>
       {error && (
         <p role="alert" className="rounded-xl" style={{ fontSize: textPx(12), color: INK.hi, background: INK.hiBg, padding: "10px 14px", marginTop: 12 }}>
           {error}
         </p>
       )}
-      <PinnedCta primary={{ label: n > 0 ? `Create and invite ${clientsWord(n)}` : "Create group", onClick: () => void create(), disabled: !trimmed, loading: busy }} />
+      <PinnedCta primary={{ label: n > 0 ? tn(n, "Create and invite {n} client", "Create and invite {n} clients") : t("Create group"), onClick: () => void create(), disabled: !trimmed, loading: busy }} />
     </div>
   );
 };
@@ -257,20 +257,20 @@ export const GroupPicker: React.FC<{
   }, [clients, q]);
 
   if (clients.length === 0) {
-    return <p style={{ fontSize: textPx(13), color: INK.chF, textAlign: "center", padding: "24px 0" }}>You don't have any connected clients yet.</p>;
+    return <p style={{ fontSize: textPx(13), color: INK.chF, textAlign: "center", padding: "24px 0" }}>{t("You don't have any connected clients yet.")}</p>;
   }
   return (
     <div className="flex flex-col">
       <label className="flex items-center" style={{ ...FIELD, gap: 8 }}>
         <Search size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} />
-        <span className="sr-only">Search your clients</span>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search your clients" className="flex-1 min-w-0 bg-transparent focus:outline-none placeholder:text-charcoal-faint" style={{ fontSize: textPx(14), color: INK.ch }} />
+        <span className="sr-only">{t("Search your clients")}</span>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Search your clients")} className="flex-1 min-w-0 bg-transparent focus:outline-none placeholder:text-charcoal-faint" style={{ fontSize: textPx(14), color: INK.ch }} />
       </label>
       <div style={{ height: 8 }} />
       {shown.length === 0 ? (
-        <p style={{ fontSize: textPx(13), color: INK.chF, textAlign: "center", padding: "18px 0" }}>No clients match.</p>
+        <p style={{ fontSize: textPx(13), color: INK.chF, textAlign: "center", padding: "18px 0" }}>{t("No clients match.")}</p>
       ) : (
-        <div role="group" aria-label="Your clients" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "2px 12px" }}>
+        <div role="group" aria-label={t("Your clients")} style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "2px 12px" }}>
           {shown.map((c, i) => {
             const fixed = disabled?.has(c.userId) ?? false;
             const on = !fixed && selected.has(c.userId);
@@ -291,7 +291,7 @@ export const GroupPicker: React.FC<{
                 </span>
                 {fixed ? (
                   <span className="shrink-0" style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.chF }}>
-                    In the group
+                    {t("In the group")}
                   </span>
                 ) : (
                   <span aria-hidden className="flex items-center justify-center shrink-0" style={{ width: 22, height: 22, borderRadius: 7, border: `2px solid ${on ? INK.prDeep : "rgb(var(--c-charcoal) / 0.11)"}`, background: on ? INK.prDeep : "transparent" }}>

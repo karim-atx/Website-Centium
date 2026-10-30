@@ -11,6 +11,7 @@ import { ChapterMark } from "./ChapterMark";
 import type { SectionVals } from "./sectionVals";
 import { SectionHostContext } from "../sectionHost";
 import { FAQ } from "./data/faq";
+import { t } from "../../../i18n/core";
 
 export const Faq: React.FC<{ r: SectionVals }> = ({ r }) => {
   const host = useContext(SectionHostContext);
@@ -25,18 +26,22 @@ export const Faq: React.FC<{ r: SectionVals }> = ({ r }) => {
     <section id="faq" data-screen-label="FA1 v6 FAQ" style={{ position: "relative", zIndex: "2", padding: `${r.secY} ${r.px}` }}>
       <div style={{ maxWidth: "1240px", margin: "0 auto", display: "grid", gridTemplateColumns: r.faqCols, gap: r.gap }}>
         <div>
-          <ChapterMark n="09" t="FAQ" size={r.chEy} />
-          <h2 style={{ marginTop: "14px", fontWeight: "800", fontSize: r.h2, lineHeight: "1.04", letterSpacing: "-.035em" }}>Questions, answered.</h2>
+          <ChapterMark n="09" t={t("FAQ")} size={r.chEy} />
+          <h2 style={{ marginTop: "14px", fontWeight: "800", fontSize: r.h2, lineHeight: "1.04", letterSpacing: "-.035em" }}>{t("Questions, answered.")}</h2>
           <p style={{ marginTop: "16px", maxWidth: "360px", fontSize: "13px", lineHeight: "1.6", color: "#756D63" }}>
-            Centium supports your health journey. It does not provide medical diagnosis or treatment.
+            {t("Centium supports your health journey. It does not provide medical diagnosis or treatment.")}
           </p>
         </div>
         <div>
-          {FAQ.map(([q, lead, a], i) => {
+          {FAQ.map(([qKey, leadKey, aKey], i) => {
+            // The lead word is drawn in colour; in Arabic the question starts with its own lead word.
+            const q = t(qKey),
+              a = t(aKey),
+              lead = q.startsWith(t(leadKey)) ? t(leadKey) : "";
             const isOpen = open === i,
               c = i % 2 ? "#3D6E69" : "#6A54C4";
             return (
-              <div key={q} style={{ borderTop: "1px solid #EDEAE4" }}>
+              <div key={qKey} style={{ borderTop: "1px solid #EDEAE4" }}>
                 <button
                   onClick={() => toggle(i)}
                   aria-expanded={isOpen ? "true" : "false"}

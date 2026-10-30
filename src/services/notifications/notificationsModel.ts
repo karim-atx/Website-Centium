@@ -30,6 +30,7 @@ import { imageHome, imageNoticeCopy, SUPPORT_NOTICE } from "../moderation/imageC
 import { getSupportPath } from "../moderation/support";
 import { FOOD_REVIEW_COPY, foodReviewCopy } from "../food/onlineSearchModel";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tn } from "../../i18n/core";
 
 /** member_notification_kind, the whole enum in its declared order (20261210600000). */
 export const MEMBER_NOTIFICATION_KINDS = [
@@ -207,17 +208,17 @@ export type NotificationCopyTable = Readonly<Record<string, NotificationCopy>>;
  * here for every Release 1 kind.
  */
 export const CLIENT_COPY: NotificationCopyTable = {
-  voucher_issued: { title: "Voucher ready", body: "Your voucher is in My rewards." },
-  points_expiring: { title: "Points expire soon", body: "Some of your points expire soon. Redeem them for a reward before they lapse." },
-  class_cancelled: { title: "Class cancelled", body: "One of your booked classes is cancelled." },
-  review_prompt: { title: "Rate your instructor", body: "How was your class? Tell others what it was like." },
-  voucher_redeemed: { title: "Voucher redeemed", body: "A member used a voucher for one of your offers." },
-  offer_hidden: { title: "Offer hidden", body: "Hidden by Centium. Contact support for details." },
+  voucher_issued: { title: tk("Voucher ready"), body: tk("Your voucher is in My rewards.") },
+  points_expiring: { title: tk("Points expire soon"), body: tk("Some of your points expire soon. Redeem them for a reward before they lapse.") },
+  class_cancelled: { title: tk("Class cancelled"), body: tk("One of your booked classes is cancelled.") },
+  review_prompt: { title: tk("Rate your instructor"), body: tk("How was your class? Tell others what it was like.") },
+  voucher_redeemed: { title: tk("Voucher redeemed"), body: tk("A member used a voucher for one of your offers.") },
+  offer_hidden: { title: tk("Offer hidden"), body: tk("Hidden by Centium. Contact support for details.") },
   // PLAN S3 "Notification" (Release B).
-  ambassador_application_approved: { title: "Your ambassador application", body: "You're now a Centium Ambassador." },
-  ambassador_application_declined: { title: "Your ambassador application", body: "We've replied to your application." },
+  ambassador_application_approved: { title: tk("Your ambassador application"), body: tk("You're now a Centium Ambassador.") },
+  ambassador_application_declined: { title: tk("Your ambassador application"), body: tk("We've replied to your application.") },
   // Round C S4: the reset carries no reason, so none is shown.
-  forum_nickname_reset: { title: "Your forum nickname was reset", body: "A moderator reset your nickname. Choose a new one to keep posting." },
+  forum_nickname_reset: { title: tk("Your forum nickname was reset"), body: tk("A moderator reset your nickname. Choose a new one to keep posting.") },
   // Round C Release 2 (Database 20261221040000 / 030000): image approval
   // (payload surface, reason_category) and the private support notice.
   support_resources: { title: SUPPORT_NOTICE.title, body: SUPPORT_NOTICE.body },
@@ -226,13 +227,13 @@ export const CLIENT_COPY: NotificationCopyTable = {
   // Round D · DP: the catalogue decision on a food the member suggested.
   food_submission_reviewed: FOOD_REVIEW_COPY,
   // Round D · TR22 (D-S5). The payload carries no name, so "Your coach".
-  workout_log_reply: { title: "Your coach replied to your workout", body: "Read it in your workout history." },
+  workout_log_reply: { title: tk("Your coach replied to your workout"), body: tk("Read it in your workout history.") },
   // Round D · courses (payload course_id, title, author_first_name).
-  course_published: { title: "A new course for you", body: "Open it in Community › Courses." },
+  course_published: { title: tk("A new course for you"), body: tk("Open it in Community › Courses.") },
 };
 
 /** A key no table knows: a safe line, never the raw key. */
-export const GENERIC_COPY: NotificationCopy = { title: "New notification", body: "" };
+export const GENERIC_COPY: NotificationCopy = { title: tk("New notification"), body: "" };
 
 /**
  * A line's payload values: what the documented keys say, or nothing (the
@@ -297,21 +298,21 @@ const formatNoticeDay = (d: Date): string => formatShortDate(d, { weekday: "shor
 export const CLIENT_FILLS: NotificationFillTable = {
   voucher_issued: (p) => {
     const offer = pText(p, "offer_title");
-    return offer ? { body: `Your voucher for ${offer} is in My rewards.` } : {};
+    return offer ? { body: t("Your voucher for {offer} is in My rewards.", { offer }) } : {};
   },
   points_expiring: (p) => {
     const n = pCount(p, "points");
     const on = pDate(p, "expires_on");
     const out: Partial<NotificationCopy> = {};
-    if (n !== null) out.title = n === 1 ? "1 point expires soon" : `${formatCount(n)} points expire soon`;
+    if (n !== null) out.title = tn(n, "{n} point expires soon", "{n} points expire soon", { n: formatCount(n) });
     if (on) {
       const date = formatNoticeDate(on);
       out.body =
         n === 1
-          ? `It expires on ${date}. Redeem it for a reward before then.`
+          ? t("It expires on {date}. Redeem it for a reward before then.", { date })
           : n !== null
-            ? `They expire on ${date}. Redeem them for a reward before then.`
-            : `Some of your points expire on ${date}. Redeem them for a reward before then.`;
+            ? t("They expire on {date}. Redeem them for a reward before then.", { date })
+            : t("Some of your points expire on {date}. Redeem them for a reward before then.", { date });
     }
     return out;
   },
@@ -320,8 +321,11 @@ export const CLIENT_FILLS: NotificationFillTable = {
     const biz = pText(p, "business_name");
     const at = pDate(p, "starts_at");
     const out: Partial<NotificationCopy> = {};
-    if (cls) out.title = `${cls} is cancelled`;
-    if (cls && biz) out.body = `${biz} cancelled ${cls}${at ? ` on ${formatNoticeDay(at)}` : ""}. Your booking is cancelled.`;
+    if (cls) out.title = t("{class} is cancelled", { class: cls });
+    if (cls && biz)
+      out.body = at
+        ? t("{business} cancelled {class} on {day}. Your booking is cancelled.", { business: biz, class: cls, day: formatNoticeDay(at) })
+        : t("{business} cancelled {class}. Your booking is cancelled.", { business: biz, class: cls });
     return out;
   },
   review_prompt: (p) => {
@@ -329,7 +333,17 @@ export const CLIENT_FILLS: NotificationFillTable = {
     if (!cls) return {};
     const who = pText(p, "instructor_name");
     const biz = pText(p, "business_name");
-    return { body: `How was ${cls}${who ? ` with ${who}` : ""}${biz ? ` at ${biz}` : ""}?` };
+    const vars = { class: cls, instructor: who ?? "", business: biz ?? "" };
+    return {
+      body:
+        who && biz
+          ? t("How was {class} with {instructor} at {business}?", vars)
+          : who
+            ? t("How was {class} with {instructor}?", vars)
+            : biz
+              ? t("How was {class} at {business}?", vars)
+              : t("How was {class}?", vars),
+    };
   },
   ambassador_application_approved: () => ({}),
   forum_nickname_reset: () => ({}),
@@ -339,24 +353,35 @@ export const CLIENT_FILLS: NotificationFillTable = {
   food_submission_reviewed: (p) => foodReviewCopy(p.status, p.name, p.reason_category),
   workout_log_reply: (p) => {
     const routine = pText(p, "routine");
-    return routine ? { body: `About ${routine}. Read it in your workout history.` } : {};
+    return routine ? { body: t("About {routine}. Read it in your workout history.", { routine }) } : {};
   },
   course_published: (p) => {
     const title = pText(p, "title");
     const who = pText(p, "author_first_name");
     const out: Partial<NotificationCopy> = {};
-    if (who) out.title = `${who} published a course for you`;
-    if (title) out.body = `${title} is ready to start.`;
+    if (who) out.title = t("{name} published a course for you", { name: who });
+    if (title) out.body = t("{title} is ready to start.", { title });
     return out;
   },
   ambassador_application_declined: (p) => {
     const on = pDate(p, "next_eligible_on");
-    return on ? { body: `We've replied to your application. You can apply again from ${formatNoticeDate(on)}.` } : {};
+    return on ? { body: t("We've replied to your application. You can apply again from {date}.", { date: formatNoticeDate(on) }) } : {};
   },
 };
 
-function own<T>(t: Readonly<Record<string, T>>, k: string): T | null {
-  return Object.prototype.hasOwnProperty.call(t, k) ? t[k] : null;
+function own<T>(table: Readonly<Record<string, T>>, k: string): T | null {
+  return Object.prototype.hasOwnProperty.call(table, k) ? table[k] : null;
+}
+
+/**
+ * A table's line in the chosen language. The tables hold English keys (tk);
+ * the line is translated where it is read. Unchanged (English, or no
+ * catalogue entry): the table's own object comes back.
+ */
+function translated(c: NotificationCopy): NotificationCopy {
+  const title = t(c.title);
+  const body = c.body ? t(c.body) : c.body;
+  return title === c.title && body === c.body ? c : { title, body };
 }
 
 /** Each inbox's copy table brings its own fills (CLIENT_, BUSINESS_, PRO_); any other table none. */
@@ -380,8 +405,8 @@ export function notificationCopy(
   fills: NotificationFillTable | null = defaultFills(table)
 ): NotificationCopy {
   const k = own(table, n.titleKey) ? n.titleKey : own(table, n.kind) ? n.kind : null;
-  if (k === null) return GENERIC_COPY;
-  const base = table[k];
+  if (k === null) return translated(GENERIC_COPY);
+  const base = translated(table[k]);
   const fill = fills ? own(fills, k) : null;
   if (!fill || !n.payload) return base;
   const f = fill(n.payload);
@@ -590,13 +615,13 @@ export const BUSINESS_COPY: NotificationCopyTable = {
   support_resources: { title: SUPPORT_NOTICE.title, body: SUPPORT_NOTICE.body },
   image_approved: imageNoticeCopy(true, null, null),
   image_rejected: imageNoticeCopy(false, null, null),
-  application_received: { title: "New application", body: "A professional applied to one of your openings." },
-  hire_offer_accepted: { title: "Your offer was accepted", body: "They're on your team now." },
-  hire_offer_declined: { title: "Your offer was declined", body: "You can offer the role to someone else." },
-  hiring_fee_added: { title: "Hiring fee added to your Centium bill", body: "Due on your next bill." },
-  voucher_redeemed: { title: "Voucher redeemed at the front desk", body: "A member used a voucher for one of your offers." },
-  offer_hidden: { title: "Offer hidden", body: "Hidden by Centium. Contact support for details." },
-  gym_review_received: { title: "New review", body: "A member left you a review." },
+  application_received: { title: tk("New application"), body: tk("A professional applied to one of your openings.") },
+  hire_offer_accepted: { title: tk("Your offer was accepted"), body: tk("They're on your team now.") },
+  hire_offer_declined: { title: tk("Your offer was declined"), body: tk("You can offer the role to someone else.") },
+  hiring_fee_added: { title: tk("Hiring fee added to your Centium bill"), body: tk("Due on your next bill.") },
+  voucher_redeemed: { title: tk("Voucher redeemed at the front desk"), body: tk("A member used a voucher for one of your offers.") },
+  offer_hidden: { title: tk("Offer hidden"), body: tk("Hidden by Centium. Contact support for details.") },
+  gym_review_received: { title: tk("New review"), body: tk("A member left you a review.") },
 };
 
 /** "$25.60" (fees always show cents, as feeMoney); another currency with its own symbol. Null when the amount isn't a number. */
@@ -615,10 +640,10 @@ export function noticeMoney(amount: unknown, currency: unknown): string | null {
 /** The role a hiring row names: payload role_title (the documented key; Database #38 corrected the writers). */
 const roleOf = (p: Readonly<Record<string, unknown>>): string | null => pText(p, "role_title");
 
-/** "5 stars" / "1 star"; null outside 1–5. */
-const starsText = (p: Readonly<Record<string, unknown>>): string | null => {
+/** The rating, 1–5; null outside it. */
+const starsOf = (p: Readonly<Record<string, unknown>>): number | null => {
   const r = pCount(p, "rating");
-  return r !== null && r <= 5 ? (r === 1 ? "1 star" : `${r} stars`) : null;
+  return r !== null && r <= 5 ? r : null;
 };
 
 /**
@@ -647,25 +672,25 @@ export const BUSINESS_FILLS: NotificationFillTable = {
     const role = pText(p, "opening_title");
     const who = pText(p, "professional_name");
     const out: Partial<NotificationCopy> = {};
-    if (role) out.title = `New application · ${role}`;
-    if (who) out.body = `${who} applied.`;
+    if (role) out.title = t("New application · {role}", { role });
+    if (who) out.body = t("{name} applied.", { name: who });
     return out;
   },
   hire_offer_accepted: (p) => {
     const who = pText(p, "professional_name");
     const role = roleOf(p);
     const out: Partial<NotificationCopy> = {};
-    if (who) out.title = `${who} accepted your offer`;
-    if (role) out.body = `They're on your team now as ${role}.`;
+    if (who) out.title = t("{name} accepted your offer", { name: who });
+    if (role) out.body = t("They're on your team now as {role}.", { role });
     return out;
   },
   hire_offer_declined: (p) => {
     const who = pText(p, "professional_name");
     const role = roleOf(p);
     const out: Partial<NotificationCopy> = {};
-    if (who) out.title = `${who} declined your offer`;
-    if (who && role) out.body = `${who} declined ${role}.`;
-    else if (role) out.body = `Your offer for ${role} was declined.`;
+    if (who) out.title = t("{name} declined your offer", { name: who });
+    if (who && role) out.body = t("{name} declined {role}.", { name: who, role });
+    else if (role) out.body = t("Your offer for {role} was declined.", { role });
     return out;
   },
   hiring_fee_added: (p) => {
@@ -673,23 +698,28 @@ export const BUSINESS_FILLS: NotificationFillTable = {
     if (!money) return {};
     const who = pText(p, "professional_name");
     const role = roleOf(p);
-    const forWhom = who ? ` for ${who}${role ? ` · ${role}` : ""}` : "";
-    return { body: `${money}${forWhom}. Due on your next bill.` };
+    if (!who) return { body: t("{amount}. Due on your next bill.", { amount: money }) };
+    return {
+      body: role
+        ? t("{amount} for {name} · {role}. Due on your next bill.", { amount: money, name: who, role })
+        : t("{amount} for {name}. Due on your next bill.", { amount: money, name: who }),
+    };
   },
   voucher_redeemed: (p) => {
     const offer = pText(p, "offer_title");
-    return offer ? { body: `A member used a voucher for ${offer}.` } : {};
+    return offer ? { body: t("A member used a voucher for {offer}.", { offer }) } : {};
   },
   offer_hidden: (p) => {
     const offer = pText(p, "offer_title");
-    return offer ? { title: `${offer} is hidden` } : {};
+    return offer ? { title: t("{offer} is hidden", { offer }) } : {};
   },
   gym_review_received: (p) => {
     const gym = pText(p, "gym_name");
-    const stars = starsText(p);
+    const stars = starsOf(p);
     const out: Partial<NotificationCopy> = {};
-    if (gym) out.title = `New review for ${gym}`;
-    if (stars) out.body = p.has_body === true ? `${stars}, with a written review.` : `${stars}.`;
+    if (gym) out.title = t("New review for {gym}", { gym });
+    if (stars !== null)
+      out.body = p.has_body === true ? tn(stars, "{n} star, with a written review.", "{n} stars, with a written review.") : tn(stars, "{n} star.", "{n} stars.");
     return out;
   },
 };
@@ -818,18 +848,27 @@ export function proHubKind(kind: string): "request" | "update" {
  */
 export const PRO_COPY: NotificationCopyTable = {
   support_resources: { title: SUPPORT_NOTICE.title, body: SUPPORT_NOTICE.body },
-  hire_offer_received: { title: "New offer", body: "Accept or decline in Opportunities." },
-  hired: { title: "You're hired", body: "See it in My work." },
-  classes_added: { title: "Classes added to your calendar", body: "Your calendar is updated." },
-  class_changed: { title: "Class time changed", body: "A gym changed one of your classes. Your calendar is updated." },
-  class_cancelled: { title: "Class cancelled", body: "A gym cancelled one of your sessions. It's struck through in your calendar." },
-  removed_from_team: { title: "Your role ended", body: "Future classes were removed from your calendar. Past ones stay as history." },
-  existing_team_invite: { title: "A gym added you to their team", body: "Accept to join as existing team." },
-  instructor_review_received: { title: "New review", body: "A member reviewed one of your classes." },
+  hire_offer_received: { title: tk("New offer"), body: tk("Accept or decline in Opportunities.") },
+  hired: { title: tk("You're hired"), body: tk("See it in My work.") },
+  classes_added: { title: tk("Classes added to your calendar"), body: tk("Your calendar is updated.") },
+  class_changed: { title: tk("Class time changed"), body: tk("A gym changed one of your classes. Your calendar is updated.") },
+  class_cancelled: { title: tk("Class cancelled"), body: tk("A gym cancelled one of your sessions. It's struck through in your calendar.") },
+  removed_from_team: { title: tk("Your role ended"), body: tk("Future classes were removed from your calendar. Past ones stay as history.") },
+  existing_team_invite: { title: tk("A gym added you to their team"), body: tk("Accept to join as existing team.") },
+  instructor_review_received: { title: tk("New review"), body: tk("A member reviewed one of your classes.") },
 };
 
-/** pay_unit words; an unknown unit is left out. */
-const PAY_UNIT: Readonly<Record<string, string>> = { per_class: "per class", per_session: "per session", per_hour: "an hour", per_month: "a month", hour: "an hour", month: "a month", class: "per class", session: "per session" };
+/** pay_unit words; an unknown unit is left out. Shown through t(). */
+const PAY_UNIT: Readonly<Record<string, string>> = {
+  per_class: tk("per class"),
+  per_session: tk("per session"),
+  per_hour: tk("an hour"),
+  per_month: tk("a month"),
+  hour: tk("an hour"),
+  month: tk("a month"),
+  class: tk("per class"),
+  session: tk("per session"),
+};
 
 /**
  * The professional kinds' payload values (the migration's table; P-MA.7
@@ -865,10 +904,10 @@ export const PRO_FILLS: NotificationFillTable = {
     const unit = pText(p, "pay_unit");
     const from = pDate(p, "starts_on");
     const out: Partial<NotificationCopy> = {};
-    if (biz) out.title = `New offer from ${biz}`;
-    const payLine = pay !== null && pay >= 0 ? `$${Number.isInteger(pay) ? pay : pay.toFixed(2)}${unit && PAY_UNIT[unit] ? ` ${PAY_UNIT[unit]}` : ""}` : null;
-    const parts = [role, payLine, from ? `from ${formatNoticeDay(from)}` : null].filter(Boolean);
-    if (parts.length) out.body = `${parts.join(" · ")}. Accept or decline in Opportunities.`;
+    if (biz) out.title = t("New offer from {business}", { business: biz });
+    const payLine = pay !== null && pay >= 0 ? `$${Number.isInteger(pay) ? pay : pay.toFixed(2)}${unit && PAY_UNIT[unit] ? ` ${t(PAY_UNIT[unit])}` : ""}` : null;
+    const parts = [role, payLine, from ? t("from {date}", { date: formatNoticeDay(from) }) : null].filter(Boolean);
+    if (parts.length) out.body = t("{details}. Accept or decline in Opportunities.", { details: parts.join(" · ") });
     return out;
   },
   hired: (p) => {
@@ -878,12 +917,12 @@ export const PRO_FILLS: NotificationFillTable = {
     const out: Partial<NotificationCopy> = {};
     // add_existing_team writes `hired` too, with source 'existing_team': no hire, no role.
     if (p.source === "existing_team") {
-      if (biz) out.title = `${biz} added you to their team`;
-      out.body = "You're on their team as existing team. No hiring fee.";
+      if (biz) out.title = t("{business} added you to their team", { business: biz });
+      out.body = t("You're on their team as existing team. No hiring fee.");
       return out;
     }
-    if (biz) out.title = `${biz} hired you`;
-    if (role) out.body = from ? `${role} · starts ${formatNoticeDay(from)}.` : `${role}.`;
+    if (biz) out.title = t("{business} hired you", { business: biz });
+    if (role) out.body = from ? t("{role} · starts {date}.", { role, date: formatNoticeDay(from) }) : `${role}.`;
     return out;
   },
   classes_added: (p) => {
@@ -891,7 +930,12 @@ export const PRO_FILLS: NotificationFillTable = {
     const n = pCount(p, "session_count");
     const first = pDate(p, "first_starts_at");
     if (!biz || n === null) return {};
-    return { body: `${biz} added ${n === 1 ? "1 class" : `${formatCount(n)} classes`}.${first ? ` The first is ${formatNoticeDay(first)}.` : ""}` };
+    const vars = { n: formatCount(n), business: biz, date: first ? formatNoticeDay(first) : "" };
+    return {
+      body: first
+        ? tn(n, "{business} added {n} class. The first is {date}.", "{business} added {n} classes. The first is {date}.", vars)
+        : tn(n, "{business} added {n} class.", "{business} added {n} classes.", vars),
+    };
   },
   class_changed: (p) => {
     const biz = pText(p, "business_name");
@@ -899,38 +943,44 @@ export const PRO_FILLS: NotificationFillTable = {
     const now = pDate(p, "starts_at");
     const was = pDate(p, "previous_starts_at");
     if (!biz || !cls) return {};
-    const when = now && was ? (formatNoticeDay(now) === formatNoticeDay(was) ? ` from ${clock12(was)} to ${clock12(now)}` : ` from ${formatNoticeDay(was)}, ${clock12(was)} to ${formatNoticeDay(now)}, ${clock12(now)}`) : "";
-    return { body: `${biz} moved ${cls}${when}. Your calendar is updated.` };
+    if (!now || !was) return { body: t("{business} moved {class}. Your calendar is updated.", { business: biz, class: cls }) };
+    const sameDay = formatNoticeDay(now) === formatNoticeDay(was);
+    const from = sameDay ? clock12(was) : `${formatNoticeDay(was)}, ${clock12(was)}`;
+    const to = sameDay ? clock12(now) : `${formatNoticeDay(now)}, ${clock12(now)}`;
+    return { body: t("{business} moved {class} from {from} to {to}. Your calendar is updated.", { business: biz, class: cls, from, to }) };
   },
   class_cancelled: (p) => {
     const biz = pText(p, "business_name");
     const cls = pText(p, "class_title");
     const at = pDate(p, "starts_at");
     const out: Partial<NotificationCopy> = {};
-    if (cls) out.title = at ? `${cls} on ${formatNoticeDay(at)} is cancelled` : `${cls} is cancelled`;
-    if (biz) out.body = `${biz} cancelled this session. It's struck through in your calendar.`;
+    if (cls) out.title = at ? t("{class} on {day} is cancelled", { class: cls, day: formatNoticeDay(at) }) : t("{class} is cancelled", { class: cls });
+    if (biz) out.body = t("{business} cancelled this session. It's struck through in your calendar.", { business: biz });
     return out;
   },
   removed_from_team: (p) => {
     const biz = pText(p, "business_name");
-    return biz ? { title: `Your role at ${biz} ended` } : {};
+    return biz ? { title: t("Your role at {business} ended", { business: biz }) } : {};
   },
   existing_team_invite: (p) => {
     const biz = pText(p, "business_name");
     const by = pDate(p, "accept_by");
     const fee = pText(p, "fee_text");
     const out: Partial<NotificationCopy> = {};
-    if (biz) out.title = `${biz} added you to their team`;
-    if (by) out.body = `Accept by ${formatNoticeDate(by)} to join as existing team${fee ? `, ${fee}` : ""}.`;
+    if (biz) out.title = t("{business} added you to their team", { business: biz });
+    if (by)
+      out.body = fee
+        ? t("Accept by {date} to join as existing team, {fee}.", { date: formatNoticeDate(by), fee })
+        : t("Accept by {date} to join as existing team.", { date: formatNoticeDate(by) });
     return out;
   },
   instructor_review_received: (p) => {
-    const stars = starsText(p);
+    const stars = starsOf(p);
     const cls = pText(p, "class_title");
     const gym = pText(p, "gym_name");
     const out: Partial<NotificationCopy> = {};
-    if (stars) out.title = `New review · ${stars}`;
-    if (cls) out.body = `A member reviewed ${cls}${gym ? ` at ${gym}` : ""}.`;
+    if (stars !== null) out.title = tn(stars, "New review · {n} star", "New review · {n} stars");
+    if (cls) out.body = gym ? t("A member reviewed {class} at {gym}.", { class: cls, gym }) : t("A member reviewed {class}.", { class: cls });
     return out;
   },
 };

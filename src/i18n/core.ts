@@ -47,6 +47,16 @@ export function t(key: string, vars?: Vars): string {
   return fill(typeof e === "string" ? e : key, vars);
 }
 
+/**
+ * The same English with a different meaning in one place ("Online" as a
+ * session format, not presence): the catalogue key is "English|context", and
+ * English shows the plain text.
+ */
+export function tx(key: string, context: string, vars?: Vars): string {
+  const e = active === "en" ? undefined : catalogues[active][`${key}|${context}`];
+  return fill(typeof e === "string" ? e : key, vars);
+}
+
 function pluralRule(l: Language, n: number): Intl.LDMLPluralRule {
   let r = rules.get(l);
   if (!r) {
@@ -64,6 +74,25 @@ export function tn(n: number, one: string, other: string, vars?: Vars): string {
   if (typeof e === "string") return fill(e, v);
   if (e) return fill(e[pluralRule(active, n)] ?? e.other ?? other, v);
   return fill(n === 1 ? one : other, v);
+}
+
+/**
+ * Marks English text kept in a constant (a list of labels, a copy table) as a
+ * catalogue key, for t() to translate where it is shown. It returns the text
+ * unchanged; the catalogue test reads these marks the way it reads t("…").
+ */
+export const tk = <S extends string>(s: S): S => s;
+
+// Long documents (the legal pages) are whole translated modules, not keys.
+// They travel in the language's lazy chunk (ar/index.ts), so English's first
+// load carries none of them.
+const documents: Record<Language, Record<string, unknown>> = { en: {}, ar: {} };
+export function addDocuments(l: Language, docs: Record<string, unknown>) {
+  Object.assign(documents[l], docs);
+}
+/** The active language's version of a long document, or undefined in English (or if not loaded). */
+export function documentFor<T>(name: string): T | undefined {
+  return active === "en" ? undefined : (documents[active][name] as T | undefined);
 }
 
 /** Every key a catalogue holds (the review file and the completeness tests read it). */

@@ -30,6 +30,7 @@ import { siteHref, siteText } from "../../config/site";
 import type { Read, Write } from "./clients";
 import type { EventAlert } from "../../components/calendar/eventAlert";
 import { playlistSaveError } from "../music/playlistLink";
+import { tk } from "../../i18n/core";
 
 const from = (table: string) => supabase.from(table as never);
 const failed = (error: unknown, fallback: string): Write => ({ ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : fallback });
@@ -80,10 +81,10 @@ export async function fetchAvailability(me: string): Promise<Read<AvailabilityRo
  */
 export async function setDayHours(me: string, weekday: number, hours: { start: string; end: string } | null): Promise<Write> {
   const del = await from("instructor_availability").delete().eq("professional_id", me).is("business_id", null).eq("weekday", weekday);
-  if (del.error) return failed(del.error, "Couldn't save your hours. Try again.");
+  if (del.error) return failed(del.error, tk("Couldn't save your hours. Try again."));
   if (!hours) return { ok: true };
   const ins = await from("instructor_availability").insert({ professional_id: me, business_id: null, weekday, starts_at: hours.start, ends_at: hours.end } as never);
-  if (ins.error) return failed(ins.error, "Couldn't save your hours. Try again.");
+  if (ins.error) return failed(ins.error, tk("Couldn't save your hours. Try again."));
   return { ok: true };
 }
 
@@ -139,13 +140,13 @@ export async function addTimeOff(me: string, d: TimeOffDraft): Promise<Write> {
   const { error } = await from("instructor_unavailable_dates").insert(
     d.dates.map((on_date) => ({ professional_id: me, business_id: null, on_date, starts_time: d.start, ends_time: d.end, reason })) as never
   );
-  return error ? failed(error, "Couldn't save your time off. Try again.") : { ok: true };
+  return error ? failed(error, tk("Couldn't save your time off. Try again.")) : { ok: true };
 }
 
 export async function deleteTimeOff(ids: string[]): Promise<Write> {
   if (ids.length === 0) return { ok: true };
   const { error } = await from("instructor_unavailable_dates").delete().in("id", ids);
-  return error ? failed(error, "Couldn't delete this time off. Try again.") : { ok: true };
+  return error ? failed(error, tk("Couldn't delete this time off. Try again.")) : { ok: true };
 }
 
 /** An edit is the old rows out and the new rows in (a repeat may change its dates). */
@@ -210,13 +211,13 @@ export async function saveSessionType(me: string, id: string | null, d: SessionT
   const { error } = id
     ? await from("appointment_services").update(row as never).eq("id", id).eq("professional_id", me)
     : await from("appointment_services").insert({ ...row, professional_id: me, business_id: null } as never);
-  return error ? failed(error, "Couldn't save this session type. Try again.") : { ok: true };
+  return error ? failed(error, tk("Couldn't save this session type. Try again.")) : { ok: true };
 }
 
 /** Deleting hides the type (active false): past sessions keep their link to it. */
 export async function deleteSessionType(me: string, id: string): Promise<Write> {
   const { error } = await from("appointment_services").update({ active: false } as never).eq("id", id).eq("professional_id", me);
-  return error ? failed(error, "Couldn't delete this session type. Try again.") : { ok: true };
+  return error ? failed(error, tk("Couldn't delete this session type. Try again.")) : { ok: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -292,10 +293,10 @@ export async function saveBookingPolicy(me: string, p: BookingPolicy): Promise<W
     booking_link_enabled: p.bookingLinkEnabled,
   };
   const up = await from("professional_booking_policies").update(row as never).eq("professional_id", me).select("professional_id");
-  if (up.error) return failed(up.error, "Couldn't save your booking settings. Try again.");
+  if (up.error) return failed(up.error, tk("Couldn't save your booking settings. Try again."));
   if ((up.data ?? []).length > 0) return { ok: true };
   const ins = await from("professional_booking_policies").insert({ ...row, professional_id: me } as never);
-  return ins.error ? failed(ins.error, "Couldn't save your booking settings. Try again.") : { ok: true };
+  return ins.error ? failed(ins.error, tk("Couldn't save your booking settings. Try again.")) : { ok: true };
 }
 
 export interface ReminderDefaults {
@@ -315,10 +316,10 @@ export async function fetchReminderDefaults(me: string): Promise<Read<ReminderDe
 export async function saveReminderDefaults(me: string, alert: EventAlert, alert2: EventAlert): Promise<Write> {
   const row = { default_alert: alert, default_alert_2: alert2 };
   const up = await from("practice_settings").update(row as never).eq("professional_id", me).select("professional_id");
-  if (up.error) return failed(up.error, "Couldn't save your reminders. Try again.");
+  if (up.error) return failed(up.error, tk("Couldn't save your reminders. Try again."));
   if ((up.data ?? []).length > 0) return { ok: true };
   const ins = await from("practice_settings").insert({ ...row, professional_id: me } as never);
-  return ins.error ? failed(ins.error, "Couldn't save your reminders. Try again.") : { ok: true };
+  return ins.error ? failed(ins.error, tk("Couldn't save your reminders. Try again.")) : { ok: true };
 }
 
 /** The booking link's handle (DB-1 professional_profiles.handle); null until one is chosen. */
@@ -377,9 +378,9 @@ export async function fetchBookingRequests(me: string): Promise<Read<BookingRow[
 
 function bookingError(error: { code?: string } | null, fallback: string): Write {
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  if (error?.code === "ATXG6") return { ok: false, message: "That time is no longer free." };
-  if (error?.code === "ATX10") return { ok: false, message: "This booking has already been answered." };
-  if (error?.code === "ATX08") return { ok: false, message: "This booking no longer exists." };
+  if (error?.code === "ATXG6") return { ok: false, message: tk("That time is no longer free.") };
+  if (error?.code === "ATX10") return { ok: false, message: tk("This booking has already been answered.") };
+  if (error?.code === "ATX08") return { ok: false, message: tk("This booking no longer exists.") };
   // accept_booking_request's backstop: a request from before the midnight rule (ATXAA).
   if (error?.code === PAST_MIDNIGHT_CODE) return { ok: false, message: PAST_MIDNIGHT_ACCEPT_MESSAGE };
   return { ok: false, message: fallback };
@@ -387,18 +388,18 @@ function bookingError(error: { code?: string } | null, fallback: string): Write 
 
 export async function acceptBooking(id: string): Promise<Write> {
   const { error } = await rpc("accept_booking_request", { p_appointment_id: id });
-  return error ? bookingError(error, "Couldn't accept this booking. Try again.") : { ok: true };
+  return error ? bookingError(error, tk("Couldn't accept this booking. Try again.")) : { ok: true };
 }
 
 export async function declineBooking(id: string, reason?: string): Promise<Write> {
   const { error } = await rpc("decline_booking_request", { p_appointment_id: id, p_reason: reason?.trim() || null });
-  return error ? bookingError(error, "Couldn't decline this booking. Try again.") : { ok: true };
+  return error ? bookingError(error, tk("Couldn't decline this booking. Try again.")) : { ok: true };
 }
 
 /** A booked appointment the professional cancels: the client is told, the event goes. */
 export async function cancelBooking(id: string): Promise<Write> {
   const { error } = await rpc("cancel_professional_booking", { p_appointment_id: id, p_reason: null });
-  return error ? bookingError(error, "Couldn't cancel this session. Try again.") : { ok: true };
+  return error ? bookingError(error, tk("Couldn't cancel this session. Try again.")) : { ok: true };
 }
 
 /**
@@ -484,7 +485,7 @@ export async function createSessions(me: string, s: NewSession): Promise<{ ok: t
     // Round E: a refused playlist link (ATXN0-2) says what's wrong with it.
     const playlist = playlistSaveError((ins.error as { code?: string }).code);
     if (playlist) return { ok: false, message: playlist };
-    return failed(ins.error, "Couldn't save this session. Try again.") as { ok: false; message: string };
+    return failed(ins.error, tk("Couldn't save this session. Try again.")) as { ok: false; message: string };
   }
   const ids = ((ins.data ?? []) as unknown as { id: string; event_date: string }[]).sort((a, b) => a.event_date.localeCompare(b.event_date));
   const inv = await from("calendar_event_invitees").insert(
@@ -496,8 +497,8 @@ export async function createSessions(me: string, s: NewSession): Promise<{ ok: t
       ok: false,
       message:
         code === "ATX12"
-          ? "The session is saved, but the invitation couldn't be sent: you can only invite people you currently work with."
-          : "The session is saved, but the invitation couldn't be sent. Open it and try again.",
+          ? tk("The session is saved, but the invitation couldn't be sent: you can only invite people you currently work with.")
+          : tk("The session is saved, but the invitation couldn't be sent. Open it and try again."),
     };
   }
   return { ok: true, firstId: ids[0]?.id ?? "" };
@@ -507,12 +508,12 @@ export type Outcome = "completed" | "no_show" | "late_cancel";
 
 export async function setSessionOutcome(eventId: string, outcome: Outcome): Promise<Write> {
   const { error } = await rpc("set_session_outcome", { p_event_id: eventId, p_outcome: outcome });
-  return error ? failed(error, "Couldn't save the outcome. Try again.") : { ok: true };
+  return error ? failed(error, tk("Couldn't save the outcome. Try again.")) : { ok: true };
 }
 
 export async function setSessionPaid(eventId: string, paid: boolean): Promise<Write> {
   const { error } = await rpc("set_session_paid", { p_event_id: eventId, p_paid: paid });
-  return error ? failed(error, "Couldn't save the payment. Try again.") : { ok: true };
+  return error ? failed(error, tk("Couldn't save the payment. Try again.")) : { ok: true };
 }
 
 /** The professional's own note on one session (session_notes.event_id). */
@@ -533,13 +534,13 @@ export async function saveSessionNote(me: string, eventId: string, clientId: str
   const text = body.trim();
   if (noteId && !text) {
     const { error } = await from("session_notes").delete().eq("id", noteId);
-    return error ? failed(error, "Couldn't save the note. Try again.") : { ok: true };
+    return error ? failed(error, tk("Couldn't save the note. Try again.")) : { ok: true };
   }
   if (!text) return { ok: true };
   const { error } = noteId
     ? await from("session_notes").update({ body: text } as never).eq("id", noteId)
     : await from("session_notes").insert({ professional_id: me, client_id: clientId, event_id: eventId, kind, body: text, shared_with_client: false } as never);
-  return error ? failed(error, "Couldn't save the note. Try again.") : { ok: true };
+  return error ? failed(error, tk("Couldn't save the note. Try again.")) : { ok: true };
 }
 
 /** "{n}-session pack · {n} left" for one client (session_packs). */

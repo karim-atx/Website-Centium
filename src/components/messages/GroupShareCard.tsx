@@ -16,6 +16,7 @@ import type { ShareCard } from "../../services/messaging/shareCards";
 import { bookSharedSession, cancelSharedSessionBooking } from "../../services/messaging/sessionPlaces";
 import { placesAfter, placesLine, sessionAction, type SessionPlaces } from "../../services/messaging/groupCardsModel";
 import { appLocale } from "../../i18n/format";
+import { t, tn } from "../../i18n/core";
 
 /**
  * Round D · a card the professional shared into a group (DT4), drawn by
@@ -84,7 +85,7 @@ const ViewSharedPlan: React.FC<{ messageId: string; name: string; senderFirstNam
         className="tap h-11 -my-[5.5px] w-full flex items-center"
       >
         <span className="h-[33px] w-full rounded-[10px] border border-charcoal/10 flex items-center justify-center" style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
-          View plan
+          {t("View plan")}
         </span>
       </button>
       <SharedMealPlanSheet open={open} onClose={() => setOpen(false)} messageId={messageId} fallbackName={name} senderFirstName={senderFirstName} />
@@ -102,7 +103,7 @@ const MealPlanLink: React.FC<{ planId: string }> = ({ planId }) => {
       className="tap h-11 -my-[5.5px] w-full flex items-center"
     >
       <span className="h-[33px] w-full rounded-[10px] border border-charcoal/10 flex items-center justify-center" style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
-        Open plan
+        {t("Open plan")}
       </span>
     </Link>
   );
@@ -150,7 +151,7 @@ const SessionFooter: React.FC<{
   };
 
   const when = card.startsAt
-    ? `${new Date(card.startsAt).toLocaleDateString(appLocale("en-US"), { weekday: "short", day: "numeric", month: "short" })} at ${clock12(card.startsAt)}`
+    ? t("{date} at {time}", { date: new Date(card.startsAt).toLocaleDateString(appLocale("en-US"), { weekday: "short", day: "numeric", month: "short" }), time: clock12(card.startsAt) })
     : null;
   const button = (label: string, onClick: () => void, filled: boolean, disabled = false) => (
     <button
@@ -176,20 +177,20 @@ const SessionFooter: React.FC<{
           {line}
         </p>
       )}
-      {action.kind === "book" && button("Book a place", () => setConfirm("book"), true)}
+      {action.kind === "book" && button(t("Book a place"), () => setConfirm("book"), true)}
       {(action.kind === "cancel" || action.kind === "booked") && (
         <span className="h-[33px] w-full rounded-[10px] bg-primary-pale text-primary-deep-text flex items-center justify-center gap-1.5" style={{ fontSize: textPx(12.5), fontWeight: 700 }}>
           <CircleCheck size={15} strokeWidth={2} aria-hidden />
-          You're booked
+          {t("You're booked")}
         </span>
       )}
-      {action.kind === "cancel" && button("Cancel booking", () => setConfirm("cancel"), false)}
+      {action.kind === "cancel" && button(t("Cancel booking"), () => setConfirm("cancel"), false)}
       {action.kind === "full" && (
         <span className="h-[33px] w-full rounded-[10px] bg-cream-soft flex items-center justify-center" style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.chS }}>
-          Full · {action.capacity} {action.capacity === 1 ? "place" : "places"}
+          {t("Full")} · {tn(action.capacity, "{n} place", "{n} places")}
         </span>
       )}
-      {action.kind === "ask" && senderId && button(ask.busy ? "Opening…" : `Ask ${pro}`, () => void ask.open(), false, ask.busy)}
+      {action.kind === "ask" && senderId && button(ask.busy ? t("Opening…") : t("Ask {name}", { name: pro }), () => void ask.open(), false, ask.busy)}
       {(error || ask.error) && (
         <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi }}>
           {error ?? ask.error}
@@ -198,10 +199,10 @@ const SessionFooter: React.FC<{
       <ConfirmCard
         open={confirm === "book"}
         layout="decision"
-        title={`Book ${card.title}?`}
+        title={t("Book {title}?", { title: card.title })}
         subtitle={[when, card.location].filter(Boolean).join(" · ") || undefined}
-        confirmLabel="Book a place"
-        cancelLabel="Not now"
+        confirmLabel={t("Book a place")}
+        cancelLabel={t("Not now")}
         busy={busy}
         onCancel={() => setConfirm(null)}
         onConfirm={() => void run("book")}
@@ -210,10 +211,10 @@ const SessionFooter: React.FC<{
         open={confirm === "cancel"}
         layout="decision"
         tone="destructive"
-        title="Cancel your booking?"
-        subtitle={`Your place on ${card.title} goes back to the group.`}
-        confirmLabel="Cancel booking"
-        cancelLabel="Keep my place"
+        title={t("Cancel your booking?")}
+        subtitle={t("Your place on {title} goes back to the group.", { title: card.title })}
+        confirmLabel={t("Cancel booking")}
+        cancelLabel={t("Keep my place")}
         busy={busy}
         onCancel={() => setConfirm(null)}
         onConfirm={() => void run("cancel")}

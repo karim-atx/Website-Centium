@@ -1,6 +1,7 @@
 import React from "react";
 import { ErrorCard, FreshnessLine, SkeletonBar } from "../health/metric/MetricKit";
 import { INK } from "./proInk";
+import { t } from "../../i18n/core";
 
 /**
  * Release 3 · the data-screen states every professional screen uses
@@ -41,7 +42,7 @@ export const ClientRowSkeleton: React.FC = () => (
 
 /** A list of skeleton rows while the first answer is out. */
 export const ListSkeleton: React.FC<{ rows?: number; row?: React.FC }> = ({ rows = 4, row: Row = ClientRowSkeleton }) => (
-  <div role="status" aria-label="Loading" className="flex flex-col" style={{ gap: 8 }}>
+  <div role="status" aria-label={t("Loading")} className="flex flex-col" style={{ gap: 8 }}>
     {Array.from({ length: rows }, (_, i) => (
       <Row key={i} />
     ))}
@@ -50,8 +51,8 @@ export const ListSkeleton: React.FC<{ rows?: number; row?: React.FC }> = ({ rows
 
 /** The inline error with Retry, in place of the section it couldn't load. */
 export const ProError: React.FC<{ onRetry: () => void; message?: string }> = ({ onRetry, message }) => (
-  <ErrorCard onRetry={onRetry} message={message ?? "Couldn't load this. Check your connection and try again."} />
+  <ErrorCard onRetry={onRetry} message={message ?? t("Couldn't load this. Check your connection and try again.")} />
 );
 
 /** Offline with data already on screen: the line above it. */
-export const OfflineLine: React.FC = () => <FreshnessLine offline>{OFFLINE_LAST_UPDATE}</FreshnessLine>;
+export const OfflineLine: React.FC = () => <FreshnessLine offline>{t(OFFLINE_LAST_UPDATE)}</FreshnessLine>;

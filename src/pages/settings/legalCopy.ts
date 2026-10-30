@@ -5,6 +5,14 @@
 // full text; every heading here
 // deep-links to its section there (BR-11: #legal/<privacy|terms>/<slug>,
 // the website's own slug rule), so the headings must stay the website's.
+//
+// Round F (AV): the Arabic is legalCopy.ar.ts, the same shape; legalCopyFor()
+// gives the copy for the active language. The deep links always take the
+// English heading (the website's ids are English slugs).
+
+import { documentFor, getLanguage } from "../../i18n/core";
+import { ARABIC_LOCALE } from "../../i18n/format";
+import type * as ArabicCopy from "./legalCopy.ar";
 
 export interface LegalSection {
   heading: string;
@@ -13,6 +21,26 @@ export interface LegalSection {
 
 /** The website's "Last updated" date (the legal page writes LEGAL_VERSION month first: src/marketing/legal/anchors.ts legalDateFor). */
 export const LEGAL_UPDATED = "September 6, 2026";
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/**
+ * A legal "Last updated" date written month first in English ("September 6,
+ * 2026") in the active language: unchanged in English, Arabic month names
+ * with Western digits in Arabic ("6 أيلول 2026"). Call during render.
+ */
+export function legalDate(english: string): string {
+  if (getLanguage() === "en") return english;
+  const m = /^([A-Za-z]+) (\d{1,2}), (\d{4})$/.exec(english);
+  const month = m ? MONTHS.indexOf(m[1]) : -1;
+  if (!m || month < 0) return english;
+  return new Date(Date.UTC(Number(m[3]), month, Number(m[2]))).toLocaleDateString(ARABIC_LOCALE, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
 
 /** The website's slug for a heading (src/marketing/legal/anchors.ts legalSlug, the handoff's legalSlug()). */
 export function legalSlug(heading: string): string {
@@ -145,3 +173,10 @@ export const TERMS_SECTIONS: LegalSection[] = [
 
 export const TERMS_GOVERNING_LAW =
   "Governed by the laws of Lebanon. Disputes go to the courts of Beirut, subject to consumer rights in your country.";
+
+/** The in-app legal copy in the active language (call during render). */
+export function legalCopyFor() {
+  const AR = documentFor<typeof ArabicCopy>("settings.legalCopy");
+  if (AR) return AR;
+  return { PRIVACY_INTRO, PRIVACY_SECTIONS, TERMS_INTRO, TERMS_SECTIONS, TERMS_GOVERNING_LAW };
+}

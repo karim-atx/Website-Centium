@@ -5,7 +5,7 @@ import { useOnboardingFlow, OB_STRINGS } from "../shell/flow";
 import { HealthDisclaimer } from "../../../components/ui/HealthDisclaimer";
 import { useApp } from "../../../context/AppContext";
 import { useMyCv } from "../../../components/cv/useMyCv";
-import { FORMATS, PRO_LABEL, isRegulated, initials, workSummary } from "./proModel";
+import { FORMATS, PRO_LABEL, isRegulated, initials, optionLabel, workSummary } from "./proModel";
 import { proLaneId } from "./proLanes";
 import { proChipLabel } from "./proModel";
 import { ProfilePreview, SummaryCard } from "./parts";
@@ -14,20 +14,21 @@ import { useCoverPicker } from "../../../components/pro/profile/useCoverPicker";
 import { ImageApprovalBadge, ImageApprovalNote } from "../../../components/moderation/ImageApproval";
 import { ensureProProfileRow } from "../../../services/professional-onboarding";
 import type { ProStepProps } from "./types";
+import { t, tk, tn, tx } from "../../../i18n/core";
 
-/** What the Background summary lists, from the stored CV. */
+/** What the Background summary lists, from the stored CV (translated: called during render). */
 function backgroundLine(cv: ReturnType<typeof useMyCv>["cv"]): string {
-  if (!cv) return "Loading…";
+  if (!cv) return t("Loading…");
   const parts: string[] = [];
-  if (cv.profile.headline) parts.push("Headline");
+  if (cv.profile.headline) parts.push(t("Headline"));
   const lic = cv.licences.filter((l) => l.name || l.documentPath).length;
-  if (lic) parts.push(`${lic} licence${lic === 1 ? "" : "s"}`);
-  if (cv.experience.length) parts.push(`${cv.experience.length} role${cv.experience.length === 1 ? "" : "s"}`);
-  if (cv.education.length) parts.push("education");
-  if (cv.profile.skills.length) parts.push("skills");
-  if (cv.languages.length) parts.push("languages");
-  if (!parts.length) return "Nothing added yet, optional";
-  const s = parts.join(", ");
+  if (lic) parts.push(tn(lic, "{n} licence", "{n} licences"));
+  if (cv.experience.length) parts.push(tn(cv.experience.length, "{n} role", "{n} roles"));
+  if (cv.education.length) parts.push(t("education"));
+  if (cv.profile.skills.length) parts.push(t("skills"));
+  if (cv.languages.length) parts.push(t("languages"));
+  if (!parts.length) return t("Nothing added yet, optional");
+  const s = parts.join(t(", "));
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
@@ -61,22 +62,29 @@ export const ProReviewStep: React.FC<
   const chipLabel = proChipLabel(kind, pro.whatYouDo);
   const offline = !!flow && !flow.online;
 
-  const label = kind === "other" && pro.whatYouDo.trim() ? pro.whatYouDo.trim() : PRO_LABEL[kind];
+  const label = kind === "other" && pro.whatYouDo.trim() ? pro.whatYouDo.trim() : t(PRO_LABEL[kind]);
   const formats = pro.formats.filter((f) => FORMATS[kind].includes(f));
   const servicesLines = [
-    pro.specialties.length ? pro.specialties.join(", ") : "No specialties yet",
-    formats.length ? formats.join(", ") : "No session formats yet",
+    pro.specialties.length ? pro.specialties.map((s) => t(s)).join(t(", ")) : t("No specialties yet"),
+    formats.length ? formats.map(optionLabel).join(t(", ")) : t("No session formats yet"),
   ];
+  const number = pro.licenceNumber.trim();
   const credLine = reg
-    ? `${kind === "physio" || kind === "doctor" ? "Licence" : "Registration"} ${pro.licenceNumber.trim()}${pro.registrationLicenceId ? " · proof uploaded" : ""}`
+    ? kind === "physio" || kind === "doctor"
+      ? pro.registrationLicenceId
+        ? t("Licence {number} · proof uploaded", { number })
+        : t("Licence {number}", { number })
+      : pro.registrationLicenceId
+      ? t("Registration {number} · proof uploaded", { number })
+      : t("Registration {number}", { number })
     : shared.certificationFile
-    ? "Certificate uploaded, checked before you go live"
-    : "No certificate yet, needed to go live";
+    ? t("Certificate uploaded, checked before you go live")
+    : t("No certificate yet, needed to go live");
   const toCheck = reg || !!shared.certificationFile;
 
   const submit = async () => {
     if (!pro.termsAccepted) {
-      setTermsError("Accept the Terms of Service and Privacy Policy to submit.");
+      setTermsError(tk("Accept the Terms of Service and Privacy Policy to submit."));
       return;
     }
     if (busy || offline) return;
@@ -87,29 +95,29 @@ export const ProReviewStep: React.FC<
     if (!r.ok) setSubmitError(r.message);
   };
 
-  const name = shared.firstName.trim() || "Your name";
+  const name = shared.firstName.trim() || t("Your name");
 
   return (
     <ObStep
       lane={proLaneId(kind)}
       chipLabel={chipLabel}
       step="review"
-      title="Review and submit"
+      title={t("Review and submit")}
       subtitle={
         reg
-          ? "One last look. Your profile goes live once your licence is checked."
+          ? t("One last look. Your profile goes live once your licence is checked.")
           : toCheck
-          ? "One last look. Your profile goes live once your certificate is checked."
-          : "One last look. Your profile goes live once you add a certificate and we've checked it."
+          ? t("One last look. Your profile goes live once your certificate is checked.")
+          : t("One last look. Your profile goes live once you add a certificate and we've checked it.")
       }
       onBack={onBack}
       saveExit={false}
       footer={
         <ObFooter
-          error={submitError ?? (offline ? OB_STRINGS.offlineSubmit : null)}
+          error={submitError ? t(submitError) : offline ? t(OB_STRINGS.offlineSubmit) : null}
           errorTone={submitError ? "error" : "info"}
           primary={{
-            label: busy ? OB_STRINGS.submitting : submitError ? OB_STRINGS.tryAgain : toCheck ? "Submit for verification" : "Finish setting up",
+            label: busy ? t(OB_STRINGS.submitting) : submitError ? t(OB_STRINGS.tryAgain) : toCheck ? t("Submit for verification") : t("Finish setting up"),
             onClick: () => void submit(),
             disabled: busy || offline || !!termsError,
           }}
@@ -118,18 +126,18 @@ export const ProReviewStep: React.FC<
         </ObFooter>
       }
     >
-      <SummaryCard n={1} heading="About you" lines={[`${name} · ${label}`]} onAction={() => goTo("about")} />
-      <SummaryCard n={2} heading="Where you work" lines={[workSummary(pro, kind)]} onAction={() => goTo("work")} />
-      <SummaryCard n={3} heading="Specialties and services" lines={servicesLines} onAction={() => goTo("services")} />
-      <SummaryCard n={4} heading="Credentials" lines={[credLine]} onAction={() => goTo("creds")} />
-      <SummaryCard n={5} heading="Your background" lines={[backgroundLine(cv)]} onAction={() => goTo("background")} />
-      <ObSectionLabel title="Your public profile" margin="14px 2px 12px" />
+      <SummaryCard n={1} heading={t("About you")} lines={[`${name} · ${label}`]} onAction={() => goTo("about")} />
+      <SummaryCard n={2} heading={t("Where you work")} lines={[workSummary(pro, kind)]} onAction={() => goTo("work")} />
+      <SummaryCard n={3} heading={t("Specialties and services")} lines={servicesLines} onAction={() => goTo("services")} />
+      <SummaryCard n={4} heading={t("Credentials")} lines={[credLine]} onAction={() => goTo("creds")} />
+      <SummaryCard n={5} heading={t("Your background")} lines={[backgroundLine(cv)]} onAction={() => goTo("background")} />
+      <ObSectionLabel title={t("Your public profile")} margin="14px 2px 12px" />
       <ProfilePreview
         initials={initials(name)}
         avatarUrl={user.avatarUrl ?? null}
         name={name}
-        type={`${label} · ${pro.workMode === "online" ? "Online" : pro.area?.label ?? "Area not set"}`}
-        tags={pro.specialties.slice(0, 3)}
+        type={`${label} · ${pro.workMode === "online" ? tx("Online", "session format") : pro.area?.label ?? t("Area not set")}`}
+        tags={pro.specialties.slice(0, 3).map((s) => t(s))}
         line={cv?.profile.headline ?? null}
         coverUrl={cover.url}
         onCover={cover.choose}
@@ -139,7 +147,7 @@ export const ProReviewStep: React.FC<
       {cover.inputs}
       {cover.error && (
         <p role="alert" className="obp-sum-flag" style={{ margin: "-6px 2px 10px" }}>
-          {cover.error}
+          {t(cover.error)}
         </p>
       )}
       {/* Round C Release 2: a new cover waits for approval. */}
@@ -149,7 +157,7 @@ export const ProReviewStep: React.FC<
         <ProLicencePublish
           licences={cv.licences}
           onChanged={(l) => setCv((c) => (c ? { ...c, licences: c.licences.map((x) => (x.id === l.id ? l : x)) } : c))}
-          unnamedHint="Add its name in Your background to show it on your profile."
+          unnamedHint={t("Add its name in Your background to show it on your profile.")}
           margin="18px 2px 4px"
         />
       )}
@@ -159,7 +167,7 @@ export const ProReviewStep: React.FC<
           setPro((p) => ({ ...p, termsAccepted: on }));
           if (on) setTermsError(null);
         }}
-        error={termsError}
+        error={termsError && t(termsError)}
         disabled={busy}
       />
     </ObStep>
