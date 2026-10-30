@@ -5,7 +5,7 @@ import './index.css'
 import './styles/theme-palette.css'
 import App from './App.tsx'
 import { preloadAppPages } from './appPagesLazy'
-import { installDigitNormaliser } from "./i18n/digits"
+import { installDigitNormaliser } from "./i18n/digitInput"
 import { ErrorBoundary } from './components/navigation/ErrorBoundary'
 
 // Registers the service worker that receives push notifications (src/sw.ts).
