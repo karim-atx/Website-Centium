@@ -7,6 +7,7 @@ import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { FixedHeader } from "../../components/ui/FixedHeader";
 import { Toast } from "../../components/ui/Toast";
 import { EventComposeSheet, type EventDraft } from "../../components/calendar/EventComposeSheet";
+import { playlistFieldValid } from "../../components/music/PlaylistField";
 import { EventDetailSheet } from "../../components/calendar/EventDetailSheet";
 import { RateClassSheet } from "../../components/marketplace/RateClassSheet";
 import { InstructorReviewDialog } from "../../components/market/InstructorReviewDialog";
@@ -115,6 +116,7 @@ const blankDraft = (date: string, color: string): EventDraft => ({
   // MO1.6.4 draws a new event's Alert as "None".
   alert: "none",
   repeatUntil: null,
+  playlistUrl: "",
 });
 
 const HOUR_PX = 56;
@@ -492,6 +494,7 @@ export default function ClientCalendarTab() {
       // The saved calendar_events.alert (Stage 2).
       alert: e.alert,
       repeatUntil: e.repeatUntil ?? null,
+      playlistUrl: e.playlistUrl ?? "",
     });
     setComposeOpen(true);
   };
@@ -509,6 +512,8 @@ export default function ClientCalendarTab() {
       return;
     }
     setLinkError(false);
+    // Round E: the playlist field already says what's wrong with the link.
+    if (!playlistFieldValid(draft.playlistUrl ?? "")) return;
     setSaving(true);
     setSaveError(null);
     const payload = {
@@ -524,6 +529,7 @@ export default function ClientCalendarTab() {
       url: url ?? undefined,
       alert: draft.alert,
       repeatUntil: draft.repeatUntil,
+      playlistUrl: draft.playlistUrl,
     };
     // A REPEATING EVENT ASKS FIRST which occurrences change (B3, PB-O-64).
     if (editingSeries && editingRepeats && !scope) {

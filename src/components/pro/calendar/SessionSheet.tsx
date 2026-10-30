@@ -8,6 +8,7 @@ import { normaliseLink, linkLabel } from "../../calendar/calendarTime";
 import { textPx } from "../../../theme/textSize";
 import { range12 } from "../../../utils/time12";
 import { INK } from "../proInk";
+import { PlaylistCard } from "../../music/PlaylistCard";
 import { Avatar } from "../client/kit";
 import type { ProLane } from "../subtypeLanes";
 import {
@@ -197,6 +198,8 @@ export const SessionSheet: React.FC<{
                 {linkLabel(href)}
               </a>
             )}
+          {/* Round E: the session's playlist, as the client sees it. */}
+          {e.playlistUrl && <PlaylistCard url={e.playlistUrl} heading="Session playlist" />}
           {price !== null &&
             line(
               <Banknote {...ic} />,

@@ -19,6 +19,7 @@ import { INK } from "../../../components/pro/proInk";
 import { Footnote, MessagesHead, MsgTabs, SearchField, SecLabel } from "../../../components/pro/messages/parts";
 import { OfferPlansSheet } from "../../../components/pro/messages/OfferPlansSheet";
 import { ShareToGroupSheet } from "../../../components/pro/messages/ShareToGroupSheet";
+import { SharePlaylistSheet } from "../../../components/pro/messages/SharePlaylistSheet";
 import { dotFor, enquiryStatus, enquiryWaiting, PRO_TABS, tabOf, type Dot, type ProTab } from "../../../components/pro/messages/messagesModel";
 import { useApp } from "../../../context/AppContext";
 import { ThreadLiveProvider } from "../../../context/ThreadLiveContext";
@@ -126,6 +127,7 @@ export default function ProMessages() {
   const [newChatError, setNewChatError] = useState<string | null>(null);
   const [offerOpen, setOfferOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [playlistOpen, setPlaylistOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -439,7 +441,7 @@ export default function ProMessages() {
           ? { kind: "enquiry", subtitle: "Enquiry", onOfferPlans: () => setOfferOpen(true) }
           : kind === "businesses"
             ? { kind: "business" }
-            : { kind: "client", subtitle: stage ? STAGE_LABEL[stage] : undefined };
+            : { kind: "client", subtitle: stage ? STAGE_LABEL[stage] : undefined, onSharePlaylist: () => setPlaylistOpen(true) };
     return live(
       <div>
         <ThreadView
@@ -454,6 +456,9 @@ export default function ProMessages() {
         />
         {authUserId && kind === "enquiries" && (
           <OfferPlansSheet open={offerOpen} onClose={() => setOfferOpen(false)} threadId={open.id} userId={authUserId} firstName={firstName} onSent={() => setAnnounce("Plans sent.")} />
+        )}
+        {authUserId && kind === "clients" && (
+          <SharePlaylistSheet open={playlistOpen} onClose={() => setPlaylistOpen(false)} threadId={open.id} onShared={() => setAnnounce("Playlist shared.")} />
         )}
         {authUserId && kind === "groups" && (
           <ShareToGroupSheet

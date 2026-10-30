@@ -21,6 +21,8 @@ import {
   ungroupBlock,
 } from "../../services/workout/blocks";
 import { prescriptionLine } from "../../services/workout/prescription";
+import { PlaylistField, playlistFieldValid } from "../music/PlaylistField";
+import { tidyPlaylistInput } from "../../services/music/playlistLink";
 
 const colorOptions = FOLDER_SWATCHES.map((s) => s.color);
 
@@ -87,6 +89,8 @@ export const CreateRoutineSheet: React.FC<{
   const [name, setName] = useState("");
   const [duration, setDuration] = useState("45");
   const [color, setColor] = useState(colorOptions[0]);
+  // Round E: the member's own routine may carry a playlist (routines.playlist_url).
+  const [playlist, setPlaylist] = useState("");
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [blocks, setBlocks] = useState<WorkoutBlock[]>([]);
   const [selecting, setSelecting] = useState(false);
@@ -120,6 +124,7 @@ export const CreateRoutineSheet: React.FC<{
     setName("");
     setDuration("45");
     setColor(colorOptions[0]);
+    setPlaylist("");
     setExercises([]);
     setBlocks([]);
     setSelecting(false);
@@ -193,12 +198,18 @@ export const CreateRoutineSheet: React.FC<{
       onClose();
       return;
     }
+    const playlistUrl = tidyPlaylistInput(playlist);
+    if (!playlistFieldValid(playlistUrl)) {
+      setError("Check the playlist link.");
+      return;
+    }
     const routine: Omit<Routine, "id"> = {
       folderId,
       name: name.trim(),
       color,
       estimatedDurationMin: Number(duration) || 30,
       exercises,
+      playlistUrl: playlistUrl || null,
     };
     setSaving(true);
     setError(null);
@@ -483,6 +494,16 @@ export const CreateRoutineSheet: React.FC<{
               </div>
             )}
           </div>
+
+          {!pro && (
+            <PlaylistField
+              value={playlist}
+              onChange={setPlaylist}
+              hint="Play it from this routine while you train."
+              labelStyle={{ fontWeight: 600 }}
+              inputStyle={{ borderRadius: 16, fontWeight: 400 }}
+            />
+          )}
 
           {pro?.extra}
 

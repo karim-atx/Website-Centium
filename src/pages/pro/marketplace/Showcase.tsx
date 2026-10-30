@@ -14,7 +14,9 @@ import { useIsDark } from "../../../hooks/useIsDark";
 import { useOnline } from "../../../hooks/useOnline";
 import { useReviewsAboutMe } from "../../../hooks/useProfessionalReviews";
 import { deleteSessionType, fetchAvailability, fetchBookingPolicy, DEFAULT_POLICY, type AvailabilityRow, type BookingAudience } from "../../../services/pro/calendar";
-import { fetchMyProfile, type ProfessionalProfile } from "../../../services/professional-profile";
+import { fetchMyPlaylist, fetchMyProfile, type ProfessionalProfile } from "../../../services/professional-profile";
+import { PlaylistCard } from "../../../components/music/PlaylistCard";
+import { providerHeading } from "../../../services/music/whichMusic";
 import {
   aboutRows,
   deletePlanService,
@@ -141,11 +143,14 @@ function AboutPanel() {
   const { facts } = useProfileFacts();
   const [own, setOwn] = useState<{ value: ProfessionalProfile | null } | "error" | null>(null);
   const [tick, setTick] = useState(0);
+  // Round E: the profile's playlist, as clients see it (null = none or unread).
+  const [playlist, setPlaylist] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authUserId) return;
     let alive = true;
     void fetchMyProfile(authUserId).then((r) => alive && setOwn(r.ok ? { value: r.profile } : "error"));
+    void fetchMyPlaylist(authUserId).then((r) => alive && setPlaylist(r.ok ? r.url : null));
     return () => {
       alive = false;
     };
@@ -213,6 +218,12 @@ function AboutPanel() {
               </span>
             ))}
           </div>
+        </>
+      ) : null}
+      {playlist ? (
+        <>
+          {caps("Music")}
+          <PlaylistCard url={playlist} heading={providerHeading(name)} style={{ marginTop: 8 }} />
         </>
       ) : null}
       <div style={{ marginTop: 18, borderRadius: 20, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>

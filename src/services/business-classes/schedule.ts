@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { prepareForumPhoto } from "../forum/photo";
+import { playlistSaveError } from "../music/playlistLink";
 import { stageAndSubmit } from "../moderation/images";
 import {
   refusalMessage,
@@ -30,7 +31,8 @@ export type Done<T> = { ok: true; value: T } | { ok: false; refusal: ScheduleRef
 
 const fail = <T>(action: ScheduleAction, error: DbError | null, people?: "clients" | "members"): Done<T> => {
   console.error(`[business-classes] ${action} refused:`, error?.code, error?.message);
-  return { ok: false, refusal: refusalOf(error), message: refusalMessage(action, error, people) };
+  // Round E: a refused playlist link (ATXN0-2) says what's wrong with the link.
+  return { ok: false, refusal: refusalOf(error), message: playlistSaveError(error?.code) ?? refusalMessage(action, error, people) };
 };
 
 /** save_class_series / edit_class field keys (class_fields_check refuses any other key with 22023). */
@@ -55,6 +57,8 @@ export interface ClassFields {
   centium_spots?: number | null;
   /** B13 MK-04: false = members only. */
   listed_on_explore?: boolean;
+  /** Round E (20261224030000): the class playlist; materialise copies a series' to each date. */
+  playlist_url?: string | null;
 }
 
 // ---------------------------------------------------------------------------

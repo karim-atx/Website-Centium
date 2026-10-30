@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { findCatalogFoodByName, isUuid } from "../food";
@@ -95,8 +96,15 @@ interface RecipeRow {
   title: string;
   servings: number;
   steps: string | null;
+  playlist_url: string | null;
   recipe_items: ItemRow[];
 }
+
+// Round E (Database 20261224030000): recipes.playlist_url, the "Cook-along"
+// playlist, written by the owner with the rest of the row. Newer than the
+// generated types, so the reads and writes that name it go through an
+// untyped view of the client.
+const db = supabase as unknown as SupabaseClient;
 
 const ITEM_SELECT =
   "quantity, unit, note, position, " +
@@ -131,7 +139,7 @@ function toRecipe(row: RecipeRow): Recipe {
     })
     .filter((i): i is RecipeItem => i !== null);
 
-  return { id: row.id, title: row.title, items, servings: row.servings, steps: row.steps ?? undefined };
+  return { id: row.id, title: row.title, items, servings: row.servings, steps: row.steps ?? undefined, playlistUrl: row.playlist_url ?? undefined };
 }
 
 /**
@@ -141,9 +149,9 @@ function toRecipe(row: RecipeRow): Recipe {
  * are reversed at display time instead (Part 4 Q2).
  */
 export async function getRecipes(userId: string): Promise<RecipesResult> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("recipes")
-    .select(`id, title, servings, steps, recipe_items(${ITEM_SELECT})`)
+    .select(`id, title, servings, steps, playlist_url, recipe_items(${ITEM_SELECT})`)
     .or(`owner_id.eq.${userId},scoped_to_client_id.eq.${userId}`)
     .order("created_at", { ascending: false });
 
@@ -194,9 +202,10 @@ export async function createRecipe(
   items: RecipeItem[],
   servings: number,
   steps?: string,
-  scopedToClientId?: string
+  scopedToClientId?: string,
+  playlistUrl?: string | null
 ): Promise<RecipeResult> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("recipes")
     .insert({
       owner_id: userId,
@@ -204,6 +213,8 @@ export async function createRecipe(
       servings,
       steps: steps?.trim() || null,
       scoped_to_client_id: scopedToClientId ?? null,
+      // Only named when given, so a writer that doesn't know playlists is unchanged.
+      ...(playlistUrl !== undefined ? { playlist_url: playlistUrl || null } : {}),
     })
     .select("id")
     .single();
@@ -221,7 +232,7 @@ export async function createRecipe(
     return { ok: false, message: itemError };
   }
 
-  return { ok: true, recipe: { id: data.id, title: title.trim(), items, servings, steps } };
+  return { ok: true, recipe: { id: data.id, title: title.trim(), items, servings, steps, playlistUrl: playlistUrl || undefined } };
 }
 
 /**
@@ -239,11 +250,13 @@ export async function updateRecipe(
   title: string,
   items: RecipeItem[],
   servings: number,
-  steps?: string
+  steps?: string,
+  playlistUrl?: string | null
 ): Promise<RecipeResult> {
-  const { error } = await supabase
+  // playlist_url is in the UPDATE grant (Round E); named only when given.
+  const { error } = await db
     .from("recipes")
-    .update({ title: title.trim(), servings, steps: steps?.trim() || null })
+    .update({ title: title.trim(), servings, steps: steps?.trim() || null, ...(playlistUrl !== undefined ? { playlist_url: playlistUrl || null } : {}) })
     .eq("id", recipeId);
 
   if (error) {
@@ -260,7 +273,7 @@ export async function updateRecipe(
   const itemError = await writeItems(recipeId, items);
   if (itemError) return { ok: false, message: itemError };
 
-  return { ok: true, recipe: { id: recipeId, title: title.trim(), items, servings, steps } };
+  return { ok: true, recipe: { id: recipeId, title: title.trim(), items, servings, steps, playlistUrl: playlistUrl || undefined } };
 }
 
 /** Items go with it: recipe_items.recipe_id is ON DELETE CASCADE. */

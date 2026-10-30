@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowDown, Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, Handshake, ImageIcon, Mic, Paperclip, Pencil, Phone, PhoneOff, Pin, Search, Send, SendHorizontal, Share2, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
+import { ArrowDown, Ban, Check, CheckCheck, ChevronLeft, Clock, FileText, Forward, Handshake, ImageIcon, Mic, Music2, Paperclip, Pencil, Phone, PhoneOff, Pin, Search, Send, SendHorizontal, Share2, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
 import { GroupShareCard } from "./GroupShareCard";
 import { GroupAvatar } from "./GroupAvatar";
 import { useSessionPlaces } from "./useSessionPlaces";
@@ -2430,10 +2430,13 @@ export const ThreadView: React.FC<{
           },
           // MO27: the professional's "Share to the group".
           ...(proView?.onShare ? [{ value: "share" as const, label: "Share to the group", icon: <Share2 size={15} strokeWidth={1.75} /> }] : []),
+          // Round E: a playlist card in a client conversation.
+          ...(proView?.onSharePlaylist ? [{ value: "playlist" as const, label: "Share a playlist", icon: <Music2 size={15} strokeWidth={1.75} /> }] : []),
         ]}
         onSelect={(v) => {
           setAttachAnchor(null);
           if (v === "share") return proView?.onShare?.();
+          if (v === "playlist") return proView?.onSharePlaylist?.();
           (v === "photo" ? fileInputRef : docInputRef).current?.click();
         }}
       />
@@ -2644,4 +2647,6 @@ export interface ThreadViewPro {
   onOfferPlans?: () => void;
   /** Groups: open the "Share to the group" sheet. */
   onShare?: () => void;
+  /** Round E · a client conversation: open "Share a playlist" (groups share one from onShare's sheet). */
+  onSharePlaylist?: () => void;
 }

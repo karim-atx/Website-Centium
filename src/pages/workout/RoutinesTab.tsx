@@ -77,6 +77,7 @@ import {
   Check,
   Group,
   AlertCircle,
+  Music2,
 } from "lucide-react";
 import { useCoachProgrammes } from "./useCoachProgrammes";
 import { CoachSection } from "./CoachSection";
@@ -84,6 +85,10 @@ import { ProgrammeSection } from "./ProgrammeSection";
 import { coachColor } from "./coachColors";
 import { fullGroupIndex, shortDay } from "../../services/routines/programmeLogic";
 import { BottomSheet } from "../../components/ui/BottomSheet";
+import { Button } from "../../components/ui/Button";
+import { MusicSection } from "../../components/music/MusicSection";
+import { PlaylistField, playlistFieldValid } from "../../components/music/PlaylistField";
+import { tidyPlaylistInput } from "../../services/music/playlistLink";
 
 
 let addedExId = 0;
@@ -110,7 +115,7 @@ const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
 
 // WO1.1 menus, on the shared popup (02 "Popup / dropdown": row/folder ⋮ menus).
 type FolderAction = "rename" | "color" | "duplicate" | "subfolder" | "routine" | "delete";
-type RoutineAction = "rename" | "duplicate" | "delete";
+type RoutineAction = "rename" | "playlist" | "duplicate" | "delete";
 const MENU_ICON = 15;
 const FOLDER_MENU: { value: FolderAction; label: string; icon: React.ReactNode; destructive?: boolean }[] = [
   { value: "rename", label: "Rename", icon: <Pencil size={MENU_ICON} /> },
@@ -122,6 +127,8 @@ const FOLDER_MENU: { value: FolderAction; label: string; icon: React.ReactNode; 
 ];
 const ROUTINE_MENU: { value: RoutineAction; label: string; icon: React.ReactNode; destructive?: boolean }[] = [
   { value: "rename", label: "Rename", icon: <Pencil size={MENU_ICON} /> },
+  // Round E: the routine's playlist (routines.playlist_url).
+  { value: "playlist", label: "Playlist", icon: <Music2 size={MENU_ICON} /> },
   { value: "duplicate", label: "Duplicate", icon: <Copy size={MENU_ICON} /> },
   { value: "delete", label: "Delete", icon: <Trash2 size={MENU_ICON} />, destructive: true },
 ];
@@ -262,6 +269,8 @@ export default function RoutinesTab() {
   const [newFolderColor, setNewFolderColor] = useState(folderColorOptions[0]);
   // A folder or a routine being renamed in place (ids are unique across both).
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  // Round E: the routine whose playlist is being edited, and the draft.
+  const [playlistFor, setPlaylistFor] = useState<{ routine: Routine; draft: string; error: string | null; saving: boolean } | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [menu, setMenu] = useState<{ kind: "folder" | "routine"; id: string; anchor: HTMLElement } | null>(null);
   // QA 11.0: "The three dots here should show an 'edit' option, to edit
@@ -370,7 +379,8 @@ export default function RoutinesTab() {
     if (action === "rename") {
       setRenamingId(routine.id);
       setRenameDraft(routine.name);
-    } else if (action === "duplicate") run(duplicateRoutine(routine.id));
+    } else if (action === "playlist") setPlaylistFor({ routine, draft: routine.playlistUrl ?? "", error: null, saving: false });
+    else if (action === "duplicate") run(duplicateRoutine(routine.id));
     else setPendingDeleteRoutine(routine);
   };
 
@@ -793,6 +803,14 @@ export default function RoutinesTab() {
           there were no routines). The spacer lets the last routine scroll
           clear of both buttons: 172 for one CTA + 52 for the second (44 + 8),
           less the 112 the layout already pads. */}
+      {/* Round E: "Play your music" for the Workout area (Settings › Your
+          music: the workout favourite, or the chosen app), under the list so
+          it never pushes a routine down. */}
+      <section aria-label="Music" style={{ marginTop: 18 }}>
+        <p className="mb-2.5 text-[9.5px] leading-[14.3px] font-bold tracking-[1.9px] uppercase" style={{ color: capsInk }}>Music</p>
+        <MusicSection moment="workout" />
+      </section>
+
       <div aria-hidden style={{ height: 112 }} />
       <PinnedCta
         size="base"
@@ -844,6 +862,45 @@ export default function RoutinesTab() {
         options={COACH_MENU}
         onSelect={() => coachMenu && guard(() => run(duplicateRoutine(coachMenu.routineId)))()}
       />
+
+      {/* Round E: a routine's playlist, from its ⋮ menu. */}
+      <BottomSheet
+        open={!!playlistFor}
+        onClose={() => setPlaylistFor(null)}
+        title="Playlist"
+        footer={
+          <Button
+            fullWidth
+            size="lg"
+            disabled={!playlistFor || playlistFor.saving}
+            onClick={() => {
+              if (!playlistFor) return;
+              const url = tidyPlaylistInput(playlistFor.draft);
+              if (!playlistFieldValid(url)) return;
+              if (!online) {
+                setPlaylistFor({ ...playlistFor, error: "You're offline. Try again when you're connected." });
+                return;
+              }
+              setPlaylistFor({ ...playlistFor, saving: true, error: null });
+              void updateRoutine(playlistFor.routine.id, { playlistUrl: url || null }).then((message) => {
+                if (message) setPlaylistFor((p) => (p ? { ...p, saving: false, error: message } : p));
+                else setPlaylistFor(null);
+              });
+            }}
+          >
+            {playlistFor?.saving ? "Saving…" : "Save"}
+          </Button>
+        }
+      >
+        {playlistFor && (
+          <PlaylistField
+            value={playlistFor.draft}
+            onChange={(draft) => setPlaylistFor((p) => (p ? { ...p, draft, error: null } : p))}
+            error={playlistFor.error}
+            hint={`Play it from ${playlistFor.routine.name} while you train.`}
+          />
+        )}
+      </BottomSheet>
 
       {/* CU1 v4: the programmes that ended (ended_at, or past their last day). */}
       <BottomSheet open={pastOpen} onClose={() => setPastOpen(false)} title="Past programmes">

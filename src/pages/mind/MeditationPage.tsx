@@ -3,6 +3,7 @@ import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { MindHeader } from "../../components/mind/MindHeader";
 import { BreathingRunner } from "../../components/mind/BreathingRunner";
 import { PoseSequence, type Pose } from "../../components/mind/PoseSequence";
+import { MusicSection } from "../../components/music/MusicSection";
 import { useApp } from "../../context/AppContext";
 import { breathingPatterns, stretchList, yogaPoses } from "../../data/mockMindContent";
 
@@ -114,6 +115,9 @@ export default function MeditationPage() {
       )}
       {subTab === "stretching" && <PoseSequence key="stretching" kind="stretching" poses={stretches} />}
       {subTab === "yoga" && <PoseSequence key="yoga" kind="yoga" poses={poses} />}
+
+      {/* Round E: Play your music (the member's Mind favourite, or their music app). */}
+      <MusicSection moment="mind" className="mt-6" />
 
       {/* Breathing's pinned row: the page's own padding covers 112 of the
           168 a 44 pt pinned row needs. Stretching and Yoga have none. */}

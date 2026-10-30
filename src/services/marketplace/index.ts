@@ -98,6 +98,8 @@ export interface MarketplaceClass {
   centiumSpotsLeft?: number | null;
   /** B13 MK-06: a live featured week. */
   isFeatured?: boolean;
+  /** Round E (20261224030000): the class playlist the gym set, or null. */
+  playlistUrl?: string | null;
 }
 
 export interface MarketplaceVenue {
@@ -158,6 +160,7 @@ type ClassRow = {
   starts_at: string | null;
   centium_spots_left: number | null;
   is_featured: boolean | null;
+  playlist_url?: string | null;
 };
 
 type VenueRow = {
@@ -210,6 +213,7 @@ const toClass = (r: ClassRow): MarketplaceClass => ({
   level: r.level,
   whatToBring: r.what_to_bring ?? [],
   coverUrl: r.cover_url,
+  playlistUrl: r.playlist_url ?? null,
   // C-MO.4.3.1 / C-MO.4.3: the Team-only instructor rule.
   ...instructorFacts(r as unknown as Record<string, unknown>),
   startsAt: r.starts_at,
@@ -241,7 +245,7 @@ const toVenue = (r: VenueRow): MarketplaceVenue => ({
 // execute, so a signed-out "*" read failed before). Every reader in this file
 // runs signed in today (the Explore pages sit behind /app).
 const CLASS_COLUMNS =
-  "class_id, business_id, business_name, location, title, class_type, event_date, start_time, end_time, price, payment_type, notes, max_capacity, booked_count, spots_remaining, is_full, gym_id, venue_name, venue_address, venue_lat, venue_lng, about, level, what_to_bring, cover_url, instructor_id, instructor_name, instructor_avatar_url, instructor_is_team, instructor_specialty, instructor_rating, instructor_review_count, instructor_hire_count, starts_at, centium_spots_left, is_featured";
+  "class_id, business_id, business_name, location, title, class_type, event_date, start_time, end_time, price, payment_type, notes, max_capacity, booked_count, spots_remaining, is_full, gym_id, venue_name, venue_address, venue_lat, venue_lng, about, level, what_to_bring, cover_url, instructor_id, instructor_name, instructor_avatar_url, instructor_is_team, instructor_specialty, instructor_rating, instructor_review_count, instructor_hire_count, starts_at, centium_spots_left, is_featured, playlist_url";
 const VENUE_COLUMNS =
   "kind, venue_id, name, venue_type, location, lat, lng, bio, perk, can_host_classes, upcoming_class_count, amenities, first_visit, is_featured";
 

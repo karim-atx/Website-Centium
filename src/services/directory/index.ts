@@ -25,7 +25,7 @@ export type { DirectoryListing } from "./model";
 import type { DirectoryListing } from "./model";
 
 const LISTING_COLUMNS =
-  "profile_id, first_name, avatar_url, professional_subtype, specialty, location, bio, monthly_rate, consultation_rate, payment_modalities, average_rating, review_count, headline, skills, has_verified_licence";
+  "profile_id, first_name, avatar_url, professional_subtype, specialty, location, bio, monthly_rate, consultation_rate, payment_modalities, average_rating, review_count, headline, skills, has_verified_licence, playlist_url";
 
 /**
  * The columns LISTING_COLUMNS selects, as the view returns them. The string
@@ -51,6 +51,7 @@ type DirectoryRow = {
   headline: string | null;
   skills: string[] | null;
   has_verified_licence: boolean | null;
+  playlist_url?: string | null;
 };
 
 const toListing = (r: DirectoryRow & { profile_id: string }): DirectoryListing => ({
@@ -69,6 +70,7 @@ const toListing = (r: DirectoryRow & { profile_id: string }): DirectoryListing =
   headline: r.headline,
   skills: r.skills ?? [],
   hasVerifiedLicence: !!r.has_verified_licence,
+  playlistUrl: r.playlist_url ?? null,
 });
 
 export type DirectoryResult =

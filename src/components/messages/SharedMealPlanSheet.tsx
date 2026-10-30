@@ -5,6 +5,8 @@ import { textPx } from "../../theme/textSize";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { daysLabel, portionLabel, type SharedPlan } from "../../services/messaging/groupCardsModel";
 import { fetchSharedMealPlan } from "../../services/messaging/sharedMealPlan";
+import { MusicSection } from "../music/MusicSection";
+import { providerHeading } from "../../services/music/whichMusic";
 
 /**
  * Round D · a meal plan shared in a group, opened by a member from its card
@@ -12,7 +14,14 @@ import { fetchSharedMealPlan } from "../../services/messaging/sharedMealPlan";
  * with their portion and note. Never calories or macros (the server sends
  * none). In recovery-sensitive mode the portions are left out too.
  */
-export const SharedMealPlanSheet: React.FC<{ open: boolean; onClose: () => void; messageId: string; fallbackName: string }> = ({ open, onClose, messageId, fallbackName }) => {
+export const SharedMealPlanSheet: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  messageId: string;
+  fallbackName: string;
+  /** Round E: the professional who shared it, for "{name}'s playlist". */
+  senderFirstName?: string;
+}> = ({ open, onClose, messageId, fallbackName, senderFirstName }) => {
   const hideNumbers = useHideNumbers();
   const [state, setState] = useState<{ key: string; plan: SharedPlan | null; error: string | null } | null>(null);
   const [tick, setTick] = useState(0);
@@ -49,6 +58,8 @@ export const SharedMealPlanSheet: React.FC<{ open: boolean; onClose: () => void;
       ) : (
         <div className="flex flex-col" style={{ gap: 16 }}>
           {days && <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: -4 }}>{days}</p>}
+          {/* Round E: the plan's playlist (and the member's own cooking favourite beside it). */}
+          {plan.playlistUrl && <MusicSection moment="cooking" provider={{ url: plan.playlistUrl, heading: providerHeading(senderFirstName) }} playlistsOnly />}
           {plan.dayList.map((d) => (
             <section key={d.index} className="flex flex-col" style={{ gap: 8 }}>
               <h3 style={{ fontSize: textPx(14), fontWeight: 700, color: INK.hi }}>{d.label}</h3>

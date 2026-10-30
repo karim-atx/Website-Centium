@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import clsx from "clsx";
-import { AlertCircle, Camera, Globe, IdCard, Loader2, Mail, MapPin, MapPinned, Pencil, Phone, Plus, Share2, Star, Tags, Text, UserRound } from "lucide-react";
+import { AlertCircle, Camera, Globe, IdCard, Loader2, Mail, MapPin, MapPinned, Music2, Pencil, Phone, Plus, Share2, Star, Tags, Text, UserRound } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { BizCard, BizLabel, BizRow, BizSection, LoadError, RowsSkeleton, SubHeader, OfflineLine, LIST_BG, BORDER } from "../../../components/business-more/kit";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
@@ -32,7 +32,8 @@ import { ImageApprovalBadge as AvatarApprovalBadge, useOwnImage as useOwnAvatar 
 import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../../components/moderation/ImageApproval";
 import { fetchReviewMetrics } from "../../../services/reputation";
 import { dayValue, isoWeekdayIn, NOT_PUBLISHED } from "../../../services/venues/hours";
-import { NameTypeSheet, BioSheet, CategoriesSheet, ContactSheet, AreaSheet, YourPhotoSheet } from "./ProfileSheets";
+import { NameTypeSheet, BioSheet, CategoriesSheet, ContactSheet, AreaSheet, YourPhotoSheet, HousePlaylistSheet } from "./ProfileSheets";
+import { SERVICE_LABEL, playlistServiceOf } from "../../../services/music/playlistLink";
 import { BusinessCard, type CardData } from "./BusinessCard";
 import { bizLinkState } from "../../../components/share/business/bizCardModel";
 import { NO_LINK_HINT, NOT_LISTED_HINT, PAUSED_HINT } from "../../../components/share/business/BizShareButton";
@@ -59,7 +60,7 @@ import { useOutbox, useSignOutGuard } from "../../../components/outbox/Outbox";
 const stripes = "repeating-linear-gradient(135deg, rgb(var(--c-primary-pale)) 0 10px, var(--biz-list) 10px 20px)";
 
 type PhotoKind = "cover" | "logo";
-type SheetKind = "hero" | "bio" | "cats" | "area" | "contact" | "photo" | null;
+type SheetKind = "hero" | "bio" | "cats" | "area" | "contact" | "photo" | "playlist" | null;
 
 function todayLine(loc: BizLocation): string {
   const today = isoWeekdayIn(loc.timezone);
@@ -532,6 +533,16 @@ export default function BusinessProfilePage() {
           onClick={() => openSheet("cats")}
         />
         <BizRow icon={MapPinned} title="Area" desc={business?.location?.trim() || "Shown next to your name on Explore"} onClick={() => openSheet("area")} />
+        {/* Round E: the house playlist, shown on the gym's page. */}
+        <BizRow
+          icon={Music2}
+          title="House playlist"
+          desc={(() => {
+            const service = playlistServiceOf(business?.playlistUrl);
+            return service ? `${SERVICE_LABEL[service]} · shown on your page` : "Optional. Spotify, Apple Music or YouTube Music";
+          })()}
+          onClick={() => openSheet("playlist")}
+        />
       </BizSection>
 
       <BizSection label={kindKnown && kind === "store" ? "Pickup and opening hours" : "Locations and hours"}>
@@ -660,6 +671,7 @@ export default function BusinessProfilePage() {
       {sheet === "bio" && <BioSheet key={sheetKey} open onClose={() => setSheet(null)} bio={business?.bio ?? ""} onSave={save} />}
       {sheet === "cats" && <CategoriesSheet key={sheetKey} open onClose={() => setSheet(null)} kind={kind} categories={business?.categories ?? []} onSave={save} />}
       {sheet === "area" && <AreaSheet key={sheetKey} open onClose={() => setSheet(null)} area={business?.location ?? ""} onSave={save} />}
+      {sheet === "playlist" && <HousePlaylistSheet key={sheetKey} open onClose={() => setSheet(null)} url={business?.playlistUrl ?? ""} onSave={save} />}
       {sheet === "photo" && (
         <YourPhotoSheet
           key={sheetKey}

@@ -3,7 +3,9 @@ import { Check, X } from "lucide-react";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { FieldInput } from "../calendar/calendarFields";
 import { useApp } from "../../../context/AppContext";
-import { fetchMyProfile, saveMyProfile } from "../../../services/professional-profile";
+import { fetchMyProfile, saveMyProfile, saveMyPlaylist } from "../../../services/professional-profile";
+import { PlaylistField, playlistFieldValid } from "../../music/PlaylistField";
+import { tidyPlaylistInput } from "../../../services/music/playlistLink";
 import { saveRates, saveSpecialties } from "../../../services/pro/profile";
 import { MAX_SPECIALTIES, MORE_SPECIALTIES, SPECIALTIES, proKindOf } from "../../../pages/onboarding/pro/proModel";
 import { textPx } from "../../../theme/textSize";
@@ -145,6 +147,51 @@ export const ListingDetailsSheet: React.FC<{ open: boolean; onClose: () => void;
         ))}
         {error && <ErrorLine>{error}</ErrorLine>}
       </div>
+    </BottomSheet>
+  );
+};
+
+/**
+ * Round E (ours: no frame draws it): the profile's playlist, shown on the
+ * profile, the public page and the showcase as "{first name}'s playlist".
+ */
+export const ProfilePlaylistSheet: React.FC<{ open: boolean; onClose: () => void; url: string | null; onSaved: (url: string | null) => void }> = ({ open, onClose, url, onSaved }) => {
+  const { authUserId } = useApp();
+  const [draft, setDraft] = useState(url ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    setDraft(url ?? "");
+    setError(null);
+  }, [open, url]);
+  const next = tidyPlaylistInput(draft);
+  const save = async () => {
+    if (!authUserId || busy || !playlistFieldValid(next)) return;
+    setBusy(true);
+    setError(null);
+    const r = await saveMyPlaylist(authUserId, next || null);
+    setBusy(false);
+    if (!r.ok) return setError(r.message);
+    onSaved(r.url);
+    onClose();
+  };
+  return (
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title="Playlist"
+      footer={<CtaButton label={url && !next ? "Remove playlist" : "Save"} size="sheet" onClick={() => void save()} disabled={next === (url ?? "") || !playlistFieldValid(next)} busy={busy} full />}
+    >
+      <PlaylistField
+        value={draft}
+        onChange={(v) => {
+          setDraft(v);
+          setError(null);
+        }}
+        hint="Shown on your profile. Clients open it in their own app."
+        error={error}
+      />
     </BottomSheet>
   );
 };

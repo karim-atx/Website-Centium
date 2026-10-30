@@ -14,6 +14,8 @@ import { WEEKDAY_LETTERS } from "../../../services/public-pro";
 import { dayText, teachesTitle, weekdayCaps, type ProfileOffer, type TeachesAtRow } from "../../../services/pro-profile/model";
 import { time12Split } from "../../../utils/time12";
 import { Caps, Chevron, PressButton } from "./parts";
+import { PlaylistCard } from "../../../components/music/PlaylistCard";
+import { providerHeading } from "../../../services/music/whichMusic";
 import type { SocialLink } from "./profileModel";
 
 // Market + Share 3.0 · W5 · C-MO.4.9 `proAbout` "About · point offers"
@@ -77,7 +79,9 @@ export const AboutTab: React.FC<{
   today: string;
   /** The kept relationship blocks (client code card, the data-sharing line). */
   footer?: React.ReactNode;
-}> = ({ bio, specialties, socials, cv, skills, firstName, where, availability, offers, balance, teaches, today, footer }) => {
+  /** Round E: the professional's playlist, under the bio and specialties. */
+  playlistUrl?: string | null;
+}> = ({ bio, specialties, socials, cv, skills, firstName, where, availability, offers, balance, teaches, today, footer, playlistUrl }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const navigate = useNavigate();
@@ -96,6 +100,13 @@ export const AboutTab: React.FC<{
             </li>
           ))}
         </ul>
+      )}
+
+      {playlistUrl && (
+        <section aria-label="Music" style={{ marginTop: 18 }}>
+          <Caps>Music</Caps>
+          <PlaylistCard url={playlistUrl} heading={providerHeading(firstName)} style={{ marginTop: 8 }} />
+        </section>
       )}
 
       {socials.length > 0 && (

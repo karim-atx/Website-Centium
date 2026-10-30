@@ -16,12 +16,16 @@ import { DAY_LONG, DAY_SHORT } from "../../utils/week";
 import { shortDay } from "../../services/routines/programmeLogic";
 import { textPx } from "../../theme/textSize";
 import { coachColor } from "./coachColors";
+import { MusicSection } from "../../components/music/MusicSection";
+import { providerHeading } from "../../services/music/whichMusic";
 
 /**
  * Round D · DT1 CU1 for week-by-day programmes: Workout › Routines, above
  * "From your coach". One card per active programme (my_programmes):
  *
  * - "Week {n} of {n} · from {coach}" (or "Starts {date}"), the coach note;
+ * - Round E: the coach's playlist (and the member's own workout favourite
+ *   beside it, when they have one), when the programme has one;
  * - TODAY: today's workouts from programme_schedule, each with a done tick
  *   or Start, which opens the routine exactly as a routine row's Play does;
  *   a rest day says so and names the next session;
@@ -143,6 +147,14 @@ export const ProgrammeSection: React.FC<{
                 <p style={{ marginTop: 10, fontSize: textPx(12.5), lineHeight: 1.45, color: "rgb(var(--c-charcoal))", background: coachColor("soft", dark), borderRadius: 12, padding: "8px 10px", whiteSpace: "pre-wrap" }}>
                   {p.coachNote}
                 </p>
+              )}
+              {p.playlistUrl && (
+                <MusicSection
+                  moment="workout"
+                  playlistsOnly
+                  provider={{ url: p.playlistUrl, heading: p.professionalFirstName ? providerHeading(p.professionalFirstName) : "Your coach's playlist" }}
+                  style={{ marginTop: 10 }}
+                />
               )}
 
               <p className="text-[9.5px] leading-[14.3px] font-bold tracking-[1.9px] uppercase" style={{ color: capsInk, marginTop: 12, marginBottom: 6 }}>

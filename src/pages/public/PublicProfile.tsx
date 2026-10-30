@@ -13,6 +13,8 @@ import { ReviewItem } from "../../components/professionals/ReviewItem";
 import { ratingLabel, reviewCountLabel } from "../../services/professional-reviews/rules";
 import { textPx } from "../../theme/textSize";
 import { ProHero, PublicCard, PublicFrame, PublicMessage, PublicSkeleton, SignInButtons } from "./publicKit";
+import { PlaylistCard } from "../../components/music/PlaylistCard";
+import { providerHeading } from "../../services/music/whichMusic";
 
 /**
  * Release 3 · W7 the public profile, {site}/p/{handle} (the MO15 share
@@ -128,6 +130,14 @@ export default function PublicProfile() {
           <div className="rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-4">
             <p className="text-[13px] text-charcoal-soft leading-[21.5px] whitespace-pre-line">{listing.bio.trim()}</p>
           </div>
+        </section>
+      )}
+
+      {/* Round E: the professional's playlist (public like the profile, listed only). */}
+      {listing?.playlistUrl && (
+        <section aria-label="Music">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] px-1 mb-2 text-charcoal-faint">Music</p>
+          <PlaylistCard url={listing.playlistUrl} heading={providerHeading(pro.firstName)} />
         </section>
       )}
 

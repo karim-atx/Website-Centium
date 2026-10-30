@@ -138,6 +138,12 @@ test("a shared meal plan: grouped by day then meal, in the server's order; none 
   assert.equal(plan.dayList[0].meals[0].items[1].note, "or a pear");
   assert.equal(plan.dayList[1].meals[0].items[0].name, "Removed item");
   assert.ok(!JSON.stringify(plan).match(/kcal|calorie|protein|carb|fat/i));
+  // Round E: no playlist on the plan.
+  assert.equal(plan.playlistUrl, null);
+  const withMusic = parseSharedPlan([
+    { meal_plan_id: "p2", plan_name: "Cook week", days_count: 1, day_index: 0, meal_slot: "lunch", name: "Soup", playlist_url: "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M", playlist_service: "spotify" },
+  ]);
+  assert.equal(withMusic?.playlistUrl, "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M");
 });
 
 test("a shared plan item's portion: grams first, then servings", () => {

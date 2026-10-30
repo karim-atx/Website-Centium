@@ -22,6 +22,8 @@ export interface BusinessClassRow {
   level?: "all_levels" | "beginner" | "intermediate" | "advanced" | null;
   whatToBring?: string[];
   coverUrl?: string | null;
+  /** Round E: the class's playlist (Database 20261224030000; a series' copies to each date), or null. */
+  playlistUrl?: string | null;
   /**
    * B13 MK-04 (writable, Schedule): the total places for people from Centium
    * (Explore), including ones already booked; null = no separate limit.

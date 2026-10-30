@@ -9,6 +9,7 @@ import { eventColours } from "./eventColour";
 import { linkLabel, normaliseLink } from "./calendarTime";
 import { range12 } from "../../utils/time12";
 import type { ClientCalendarEvent } from "../../services/calendar";
+import { PlaylistCard } from "../music/PlaylistCard";
 
 /**
  * OURS-Calendar-event-detail: the read-only sheet for an event this account
@@ -116,6 +117,9 @@ export const EventDetailSheet: React.FC<{
             <FileText size={11} aria-hidden className="mt-0.5 shrink-0" /> {e.notes}
           </p>
         )}
+
+        {/* Round E: the session's playlist. */}
+        {e.playlistUrl && <PlaylistCard url={e.playlistUrl} heading="Session playlist" style={{ marginTop: 4 }} />}
 
         {href && (
           <a

@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CalendarDays, ChevronLeft, Maximize2, Plus, Trash2 } from "lucide-react";
-import type { LabPhase } from "../../services/labs/catalogueLogic";
+import { CalendarDays, ChevronLeft, Maximize2, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import { prefillRange, type CatalogueMarker, type LabPhase } from "../../services/labs/catalogueLogic";
+import { readReport } from "../../services/labs/scanRead";
+import { parseReport, type ScannedResult } from "../../services/labs/scanParse";
 import { deletePrivateFile, uploadPrivateFile } from "../../services/storage";
 import { saveLabReport } from "../../services/labs/results";
 import { fileMetaOf } from "../../services/storage/fileMeta";
@@ -32,14 +34,20 @@ import {
   REPORT_NAME_DEFAULT,
   PINNED_FILL,
   INK,
+  INK_SOFT,
   INK_FAINT,
 } from "./records/kit";
 
-// HE1.9.2 → HE1.9.2.1 → HE1.9.2.1a → HE1.9.2.2 → HE1.9.2.3: Scan a report.
+// HE1.9.2 → HE1.9.2.1 → HE1.9.2.1a → HE1.9.2.2 → HE1.9.2.3: a report's results.
 //
-// NOTHING READS THE PHOTO. Every value is typed by the user (the earlier mock
-// parser that invented six markers is gone for good, see the git history of
-// this file); the report is kept with the results so they can be checked.
+// TWO WAYS IN. Labs › "Upload a report" keeps the report: it is uploaded and
+// the member types the results. Biomarkers › "Scan a report" (Round E,
+// `read`) READS THE REPORT ON THE DEVICE (services/labs/scanRead: tesseract.js
+// and pdf.js in this browser) and UPLOADS NOTHING: neither the photo nor the
+// text read from it leaves the phone. What was read is matched to the
+// standard list (services/labs/scanParse) and shown for the member to check,
+// edit or remove; anything unreadable is left for them to type. Only the
+// results they save are stored, marked as scanned.
 //
 // WEB MAPPING (HE1.9.2 is NATIVE): there is no live viewfinder. The page's
 // "Scan a report" opens the upload choice (Take a photo through the OS camera
@@ -55,7 +63,51 @@ import {
 //
 // No navbar for the whole flow (V6-130): a full-screen layer over the shell.
 
-type Stage = "uploading" | "uploaded" | "entry";
+type Stage = "reading" | "uploading" | "uploaded" | "entry";
+
+/** What the on-device read found, for the lines above the results. */
+interface ScanInfo {
+  found: number;
+  unmatched: string[];
+  failed: boolean;
+  /** The report date was read from the report. */
+  dated: boolean;
+}
+
+/** One scanned result as a draft row, and the note under it. */
+function scannedDraft(r: ScannedResult, list: CatalogueMarker[], sex: string | null | undefined): { draft: MarkerDraft; note: { text: string; attention?: boolean } } {
+  const marker = list.find((m) => m.key === r.markerKey) ?? null;
+  const printed = r.rangeLow !== null || r.rangeHigh !== null;
+  // No range on the report: the list's, converted into the printed unit by its factors.
+  const fromList = !printed && marker && r.unit ? prefillRange(marker, sex, r.unit, null) : null;
+  const fmt = (n: number | null) => (n === null ? "" : String(n));
+  const draft: MarkerDraft = {
+    ...emptyMarker(),
+    markerKey: r.markerKey,
+    name: r.name,
+    value: r.value === null ? "" : String(r.value),
+    unit: r.unit ?? "",
+    low: printed ? fmt(r.rangeLow) : fmt(fromList?.low ?? null),
+    high: printed ? fmt(r.rangeHigh) : fmt(fromList?.high ?? null),
+    rangeFrom: printed ? "you" : fromList ? "list" : null,
+  };
+  const note =
+    r.value === null
+      ? { text: "Couldn't read the value. Type it from your report.", attention: true }
+      : !r.unit
+        ? {
+            text: r.printedUnit
+              ? `The unit printed (${r.printedUnit}) isn't one Centium uses for ${r.name}. Choose the unit.`
+              : "Couldn't read the unit. Choose it from your report.",
+            attention: true,
+          }
+        : r.check
+          ? { text: `Check this value against your report: it's far outside the range printed beside it (“${r.line}”).`, attention: true }
+          : r.checkRange
+            ? { text: `Check the range against your report: it may have been misread (“${r.line}”).`, attention: true }
+            : { text: `Read from your report: “${r.line}”` };
+  return { draft, note };
+}
 
 export interface ScanSaved {
   count: number;
@@ -71,18 +123,22 @@ export const BiomarkerCaptureFlow: React.FC<{
   file?: File | null;
   /** HE1.9.2.3: back on the page with the confirmation line. */
   onSaved?: (s: ScanSaved) => void;
-}> = ({ open, onClose, file = null, onSaved }) => {
+  /** Round E: read the picked report on the device instead of uploading it. */
+  read?: boolean;
+}> = ({ open, onClose, file = null, onSaved, read = false }) => {
   if (!open) return null;
-  return <ScanFlow key={file ? `${file.name}:${file.size}:${file.lastModified}` : "typed"} file={file} onClose={onClose} onSaved={onSaved} />;
+  return <ScanFlow key={file ? `${read ? "read" : "upload"}:${file.name}:${file.size}:${file.lastModified}` : "typed"} file={file} read={read && !!file} onClose={onClose} onSaved={onSaved} />;
 };
 
-const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s: ScanSaved) => void }> = ({ file, onClose, onSaved }) => {
+const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void; onSaved?: (s: ScanSaved) => void }> = ({ file, read, onClose, onSaved }) => {
   const { authUserId, user, cycleSettings, cyclePrediction, today, reloadHealthRecords } = useApp();
   const { dark, hc } = useHealthMode();
   const reduced = useReducedMotion();
   const online = useOnline();
   const lab = useLabCatalogue();
-  const [stage, setStage] = useState<Stage>(file ? "uploading" : "entry");
+  const [stage, setStage] = useState<Stage>(read ? "reading" : file ? "uploading" : "entry");
+  const [scanInfo, setScanInfo] = useState<ScanInfo | null>(null);
+  const [notes, setNotes] = useState<({ text: string; attention?: boolean } | null)[]>([]);
   const [path, setPath] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -129,9 +185,31 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
             : null
       : null;
 
-  // HE1.9.2.1: upload.
+  // Round E: read on the device. The catalogue is needed to match, so the
+  // read starts once it has loaded (or failed: then nothing is matched and
+  // every result is typed).
   useEffect(() => {
-    if (!file || stage !== "uploading" || !authUserId) return;
+    if (!read || !file || stage !== "reading" || !lab.loaded) return;
+    const ac = new AbortController();
+    abortRef.current = ac;
+    setProgress(0);
+    void readReport(file, { onProgress: setProgress, signal: ac.signal }).then((r) => {
+      if (ac.signal.aborted) return;
+      const list = lab.catalogue ?? [];
+      const reading = r.ok ? parseReport(r.text, list, today) : null;
+      const rows = (reading?.results ?? []).map((x) => scannedDraft(x, list, user.sex));
+      setMarkers(rows.length ? rows.map((x) => x.draft) : [emptyMarker()]);
+      setNotes(rows.map((x) => x.note));
+      if (reading?.date) setDate(reading.date);
+      setScanInfo({ found: rows.length, unmatched: reading?.unmatched.slice(0, 12) ?? [], failed: !r.ok, dated: !!reading?.date });
+      setStage("entry");
+    });
+    return () => ac.abort();
+  }, [read, file, stage, lab.loaded, lab.catalogue, today, user.sex]);
+
+  // HE1.9.2.1: upload (Labs › Upload a report only; a scan uploads nothing).
+  useEffect(() => {
+    if (read || !file || stage !== "uploading" || !authUserId) return;
     let live = true;
     setUploadError(null);
     setProgress(0);
@@ -154,7 +232,7 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
       live = false;
       ac.abort();
     };
-  }, [file, stage, authUserId, attempt]);
+  }, [read, file, stage, authUserId, attempt]);
 
   // HE1.9.2.1a: Enter results opens 600 ms after the animation ends.
   useEffect(() => {
@@ -186,11 +264,20 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
   };
   useBackCloses(true, back);
 
-  const setMarker = (i: number, patch: Partial<MarkerDraft>) => setMarkers((prev) => prev.map((m, j) => (j === i ? { ...m, ...patch } : m)));
-  const removeMarker = (i: number) => setMarkers((prev) => (prev.length === 1 ? [emptyMarker()] : prev.filter((_, j) => j !== i)));
+  const setMarker = (i: number, patch: Partial<MarkerDraft>) => {
+    setMarkers((prev) => prev.map((m, j) => (j === i ? { ...m, ...patch } : m)));
+    // A scanned row's warning goes once the member has filled what it asked for.
+    if (patch.value !== undefined || patch.unit !== undefined || patch.markerKey !== undefined || patch.low !== undefined || patch.high !== undefined)
+      setNotes((prev) => prev.map((n, j) => (j === i && n?.attention ? null : n)));
+  };
+  const removeMarker = (i: number) => {
+    setMarkers((prev) => (prev.length === 1 ? [emptyMarker()] : prev.filter((_, j) => j !== i)));
+    setNotes((prev) => prev.filter((_, j) => j !== i));
+  };
   const ticked = markers.filter((m) => m.ticked);
   const nameOk = reportName.trim().length >= 1 && reportName.trim().length <= 60;
-  const ready = ticked.length > 0 && ticked.every(draftUsable) && nameOk;
+  // A marker from the list needs its unit (a scanned row can arrive without one).
+  const ready = ticked.length > 0 && ticked.every((m) => draftUsable(m) && (m.other || !m.markerKey || !!m.unit)) && nameOk;
 
   const save = async () => {
     if (!ready) {
@@ -204,7 +291,7 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
     }
     setSaving(true);
     // One transaction (B2 save_lab_report): the report and every ticked result.
-    const withFile = hasFile && !!path && !!file;
+    const withFile = !read && hasFile && !!path && !!file;
     const result = await saveLabReport({
       name: reportName.trim(),
       date,
@@ -214,6 +301,7 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
         const r = draftRange(m);
         return { name: m.name, value: Number(m.value), unit: m.unit, markerKey: m.markerKey, rangeLow: r.low, rangeHigh: r.high };
       }),
+      scanned: read,
     });
     setSaving(false);
     if (!result.ok) {
@@ -243,7 +331,7 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
       <div className="flex items-center" style={{ gap: 6, height: 30, marginLeft: -8 }}>
         <button
           type="button"
-          onClick={stage === "uploading" ? () => leave() : back}
+          onClick={stage === "uploading" || stage === "reading" ? () => leave() : back}
           aria-label="Back"
           className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
           style={{ width: 36, height: 36 }}
@@ -291,8 +379,38 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
     </div>
   );
 
+  const privacy = (
+    <p className="flex items-start" style={{ gap: 6, fontSize: textPx(11.5), lineHeight: linePx(17.3), color: INK_FAINT }}>
+      <ShieldCheck size={14} className="shrink-0" style={{ marginTop: 1.5, color: deepInk(dark) }} aria-hidden />
+      <span>Read on your phone. The photo and its text never leave it.</span>
+    </p>
+  );
+
   const content =
-    stage === "uploading" ? (
+    stage === "reading" ? (
+      <>
+        {header("Scan a report")}
+        <div className="flex flex-col items-center" style={{ paddingTop: 12 }}>
+          {paper(286, 380, 26, [139.7, 209.6], 5, 14, 12)}
+          <div style={{ width: 286, marginTop: 26 }}>
+            {bar()}
+            <div className="flex justify-between items-baseline" style={{ marginTop: 10 }}>
+              <p role="status" style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: INK }}>Reading your report</p>
+              <span data-read-pct style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: INK_FAINT, fontVariantNumeric: "tabular-nums" }}>
+                {Math.round(progress * 100)}%
+              </span>
+            </div>
+            <p style={{ margin: "4px 0 8px", fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>Keep the app open. The first scan takes a little longer.</p>
+            {privacy}
+            <div className="flex" style={{ gap: 18, marginTop: 8 }}>
+              <button type="button" onClick={leave} className="tap min-h-[44px]" style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: deepInk(dark) }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    ) : stage === "uploading" ? (
       <>
         {header("Scan a report")}
         <div className="flex flex-col items-center" style={{ paddingTop: 12 }}>
@@ -345,8 +463,23 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
       </>
     ) : (
       <>
-        {header("Enter results")}
+        {header(read ? "Check results" : "Enter results")}
         <div style={{ padding: "0 16px 120px" }}>
+          {read && scanInfo && (
+            <div style={{ margin: "2px 0 12px", borderRadius: 14, padding: "12px 14px", background: dark ? "rgb(var(--c-primary) / 0.12)" : "rgb(var(--th-9a8cd6) / 0.12)" }}>
+              <p role="status" style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 700, color: INK }}>
+                {scanInfo.failed
+                  ? "This report couldn't be read. Type the results in below."
+                  : scanInfo.found === 0
+                    ? "No results could be read. Type them in below."
+                    : `Found ${scanInfo.found} result${scanInfo.found === 1 ? "" : "s"}. Check each one against your report.`}
+              </p>
+              <p style={{ marginTop: 5, fontSize: textPx(11), lineHeight: linePx(16.5), color: INK_SOFT }}>
+                Edit anything that was misread, remove what you don&apos;t want, and add anything missing.
+              </p>
+              <div style={{ marginTop: 8 }}>{privacy}</div>
+            </div>
+          )}
           {hasFile && (
             <button
               type="button"
@@ -385,6 +518,7 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
               <CalendarDays size={15} style={{ color: INK_FAINT }} aria-hidden />
               {fmtDate(date)}
             </button>
+            {read && scanInfo && <HelpLine>{scanInfo.dated ? "Read from your report. Check it." : "No date could be read. Choose the date on your report."}</HelpLine>}
           </div>
           <p style={{ marginTop: 20, fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: INK }}>Results</p>
           <p style={{ margin: "2px 0 8px", fontSize: textPx(11.5), lineHeight: linePx(17.3), color: INK_FAINT }}>
@@ -404,13 +538,32 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
                 onChange={(patch) => setMarker(i, patch)}
                 onRemove={() => removeMarker(i)}
                 onChooseMarker={() => setPickerFor(i)}
+                note={notes[i] ?? undefined}
               />
             ))}
           </div>
+          {read && scanInfo && scanInfo.unmatched.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <p style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: INK }}>Not matched</p>
+              <p style={{ margin: "2px 0 6px", fontSize: textPx(11), lineHeight: linePx(16), color: INK_FAINT }}>
+                These lines look like results but aren&apos;t on Centium&apos;s list. Add any you need with Add marker.
+              </p>
+              <ul className="flex flex-col" style={{ gap: 4 }}>
+                {scanInfo.unmatched.map((l, i) => (
+                  <li key={i} style={{ fontSize: textPx(11.5), lineHeight: linePx(17), color: INK_SOFT, overflowWrap: "anywhere" }}>
+                    {l}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <p style={{ marginTop: 8, fontSize: textPx(11), lineHeight: linePx(16), color: INK_FAINT }}>Untick a result to leave it out. Tap a marker name to change it.</p>
           <button
             type="button"
-            onClick={() => setMarkers((prev) => [...prev, emptyMarker()])}
+            onClick={() => {
+              setMarkers((prev) => [...prev, emptyMarker()]);
+              setNotes((prev) => [...prev, null]);
+            }}
             className="tap flex items-center min-h-[44px]"
             style={{ marginTop: 2, gap: 6, fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: deepInk(dark) }}
           >
@@ -459,7 +612,7 @@ const ScanFlow: React.FC<{ file: File | null; onClose: () => void; onSaved?: (s:
         open={discardOpen}
         geometry="ours"
         title="Discard this report?"
-        body="The photo and the results you typed are not saved."
+        body={read ? "The results read from your report are not saved." : "The photo and the results you typed are not saved."}
         cancelLabel="Keep editing"
         confirmLabel="Discard"
         onCancel={() => setDiscardOpen(false)}

@@ -41,6 +41,8 @@ export interface ClassForm {
   repeat: RepeatForm;
   /** B9 EX-01 details shown on the class page. */
   about: string;
+  /** Round E: "Playlist (optional)", shown on the class page. */
+  playlistUrl: string;
   level: ClassLevel | "";
   bring: string[];
   coverUrl: string;
@@ -66,6 +68,7 @@ export const blankForm = (date: string, carry?: Partial<ClassForm>): ClassForm =
   notes: "",
   repeat: noRepeat(date),
   about: "",
+  playlistUrl: "",
   level: "",
   bring: [],
   coverUrl: "",
@@ -88,6 +91,7 @@ export const formOf = (row: BusinessClassRow): ClassForm => ({
   notes: row.notes ?? "",
   repeat: noRepeat(row.date),
   about: row.about ?? "",
+  playlistUrl: row.playlistUrl ?? "",
   level: row.level ?? "",
   bring: row.whatToBring ?? [],
   coverUrl: row.coverUrl ?? "",

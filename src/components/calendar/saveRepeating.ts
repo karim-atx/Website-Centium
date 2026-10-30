@@ -46,12 +46,16 @@ export async function saveRepeating(
   }
 
   const sameUrl = (series.url ?? "") === (draft.url ?? "");
+  // Round E: an occurrence's override can't carry a playlist, so a changed one
+  // makes this date its own event, like a changed link.
+  const samePlaylist = draft.playlistUrl === undefined || (series.playlistUrl ?? "") === (draft.playlistUrl?.trim() ?? "");
   const overridable =
     draft.date === occurrence &&
     draft.repeat === series.repeat &&
     // An event saved with no colour opens with the first swatch selected.
     (draft.color ?? EVENT_SWATCHES[0]) === (series.color ?? EVENT_SWATCHES[0]) &&
     sameUrl &&
+    samePlaylist &&
     (draft.alert ?? series.alert) === series.alert;
 
   if (overridable) {

@@ -6,6 +6,7 @@ import { FixedHeader } from "../../components/ui/FixedHeader";
 import { Toast } from "../../components/ui/Toast";
 import { calendarJump } from "../../components/ui/calendarJump";
 import { EventComposeSheet, type EventDraft } from "../../components/calendar/EventComposeSheet";
+import { playlistFieldValid } from "../../components/music/PlaylistField";
 import { EventDetailSheet } from "../../components/calendar/EventDetailSheet";
 import { RepeatScopePopup, type RepeatScope } from "../../components/calendar/RepeatScopePopup";
 import { YearScroll } from "../../components/calendar/YearScroll";
@@ -130,6 +131,7 @@ const blankDraft = (date: string): EventDraft => ({
   url: "",
   alert: "none",
   repeatUntil: null,
+  playlistUrl: "",
 });
 
 export default function Calendar() {
@@ -323,6 +325,7 @@ export default function Calendar() {
       url: e.url ?? "",
       alert: e.alert,
       repeatUntil: e.repeatUntil ?? null,
+      playlistUrl: e.playlistUrl ?? "",
     });
     setGuests((data.invitees[e.id] ?? []).map((g) => g.userId));
     setCapacity("");
@@ -344,6 +347,8 @@ export default function Calendar() {
     const url = normaliseLink(draft.url);
     if (draft.url.trim() && !url) return setLinkError(true);
     setLinkError(false);
+    // Round E: the playlist field already says what's wrong with the link.
+    if (!playlistFieldValid(draft.playlistUrl ?? "")) return;
     const payload = { ...draft, title: draft.title.trim(), url: url ?? undefined };
     const places = parseCapacity(capacity);
     if (!places.ok) return setSaveError(places.message);

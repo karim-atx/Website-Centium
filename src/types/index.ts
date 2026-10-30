@@ -461,6 +461,8 @@ export interface WorkoutTemplate {
    * (follow-up 20261124160000).
    */
   durationWeeks?: number | null;
+  /** Round E: the playlist the professional sets (workout_templates.playlist_url), copied to clients. */
+  playlistUrl?: string | null;
 }
 
 export type TemplateLevel = "beginner" | "intermediate" | "advanced";
@@ -957,6 +959,11 @@ export interface Routine {
   // client-professional relationship ends.
   assignedByProfessional?: boolean;
   sourceTemplateId?: string;
+  /**
+   * Round E: the routine's playlist (routines.playlist_url), or null. A copy
+   * of a professional's template carries the template's, as it was when copied.
+   */
+  playlistUrl?: string | null;
   /**
    * The groups this routine's exercises are gathered into.
    *
@@ -1493,6 +1500,8 @@ export interface Recipe {
   items: RecipeItem[];
   servings: number;
   steps?: string;
+  /** Round E: the recipe's "Cook-along" playlist link (recipes.playlist_url), if any. */
+  playlistUrl?: string;
 }
 
 // V2: Journal — organized into folders, entries retain their date.

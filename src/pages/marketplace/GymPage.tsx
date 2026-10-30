@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { PlaylistCard } from "../../components/music/PlaylistCard";
 import { CalendarPlus, ChevronLeft, Copy, MessageCircle, Navigation, Phone, QrCode } from "lucide-react";
 import { BusinessClosedNote } from "../../components/marketplace/BusinessClosedNote";
 import { useBusinessStatus } from "../../hooks/useBusinessStatus";
@@ -23,6 +24,7 @@ import { linePx, textPx } from "../../theme/textSize";
 import { startVenueThread } from "../../services/messaging";
 import {
   fetchBusinessOwner,
+  fetchHousePlaylist,
   fetchGymHours,
   fetchMyGymMemberships,
   fetchPlansFor,
@@ -188,6 +190,8 @@ export function GymPage({ gymId }: { gymId: string }) {
   };
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [owner, setOwner] = useState<string | null>(null);
+  // Round E: the business's house playlist (business_profiles), or null.
+  const [housePlaylist, setHousePlaylist] = useState<string | null>(null);
   const [msgBusy, setMsgBusy] = useState(false);
   const [msgError, setMsgError] = useState<string | null>(null);
   // A4: undefined while loading; the rows (possibly none = not published).
@@ -319,6 +323,7 @@ export function GymPage({ gymId }: { gymId: string }) {
       recordListingEvent({ businessId, kind: "profile_open", source });
       void fetchVenuePhotos(businessId, venue.value.id).then((ph) => live && setPhotos(ph));
       void fetchBusinessOwner(businessId).then((o) => live && setOwner(o));
+      void fetchHousePlaylist(businessId).then((u) => live && setHousePlaylist(u));
       const p = await fetchPlansFor([businessId]);
       if (!live) return;
       if (p.ok) {
@@ -619,9 +624,19 @@ export function GymPage({ gymId }: { gymId: string }) {
               </>
             )}
 
+            {/* Round E: the house playlist, under the About text (ours: no frame draws it). */}
+            {housePlaylist && (
+              <>
+                <Caps m={m} style={{ marginTop: gym.bio ? 18 : 8 }}>
+                  Music
+                </Caps>
+                <PlaylistCard url={housePlaylist} heading="House playlist" style={{ marginTop: 8 }} />
+              </>
+            )}
+
             <LocationHours
               m={m}
-              first={!gym.bio}
+              first={!gym.bio && !housePlaylist}
               address={gym.location || null}
               showMap={!!gym.location || hasCoords}
               onMap={openDirections}

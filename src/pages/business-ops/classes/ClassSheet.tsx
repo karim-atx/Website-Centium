@@ -40,6 +40,7 @@ import {
   type Instructor,
 } from "../../../services/business-classes";
 import { BoardSwitch, FieldBox, fieldStyle, useMarketColours } from "./parts";
+import { PlaylistField, playlistFieldValid } from "../../../components/music/PlaylistField";
 import { normalisePrice, repeatProblem, ruleOf, type ClassForm, type RepeatKind } from "./classForm";
 import { InstructorPicker } from "./InstructorPicker";
 import { useClassTeam } from "./useClassTeam";
@@ -245,6 +246,7 @@ function SheetBody({
     price: normalisePrice(f.price) ?? "x",
     paymentType: f.paymentType,
     about: f.about.trim() || null,
+    playlistUrl: f.playlistUrl.trim() || null,
     level: f.level || null,
     whatToBring: bringList(f.bring),
     // Only a removal is written; a new cover goes for approval (onSave's `cover`).
@@ -344,10 +346,13 @@ function SheetBody({
     if (saving) return;
     setWheelOpen(false);
     const e = validate(form);
+    // Round E: the playlist field already says what's wrong with the link;
+    // the banner counts it with the rest.
+    const badPlaylist = !playlistFieldValid(form.playlistUrl);
     setChecked(true);
-    if (Object.keys(e).length) {
+    if (Object.keys(e).length || badPlaylist) {
       setErrors(e);
-      setBanner({ kind: "fields", text: fieldsBanner(e) });
+      setBanner({ kind: "fields", text: fieldsBanner(e, badPlaylist) });
       scrollToFirst(e);
       return;
     }
@@ -1047,6 +1052,16 @@ function SheetBody({
               style={{ ...fieldStyle(m), display: "block", minHeight: 76, outline: "none" }}
             />
           </FieldBox>
+          {/* Round E: the class playlist, shown on the class page beside the member's own music. */}
+          <div className="min-w-0" style={{ gridColumn: `span ${stack ? 1 : 2}`, background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
+            <PlaylistField
+              value={form.playlistUrl}
+              onChange={(v) => update({ playlistUrl: v })}
+              hint="Shown on the class page. Members open it in their own app."
+              labelStyle={{ fontSize: textPx(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}
+              inputStyle={{ background: m.card, borderRadius: 10, minHeight: 41, color: m.ink }}
+            />
+          </div>
           <FieldBox m={m} label="Level" span={stack ? 1 : 2}>
             <button
               ref={setLevelEl}
@@ -1271,8 +1286,9 @@ function SheetBody({
   );
 }
 
-function fieldsBanner(e: Partial<Record<ClassField, string>>): string {
+function fieldsBanner(e: Partial<Record<ClassField, string>>, badPlaylist = false): string {
   const words = FIELD_ORDER.filter((k) => e[k]).map((k) => FIELD_WORD[k]);
+  if (badPlaylist) words.push("playlist");
   return `Fix ${words.length} ${words.length === 1 ? "field" : "fields"} to save: ${joinAnd(words)}.`;
 }
 

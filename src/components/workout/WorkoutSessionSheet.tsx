@@ -18,6 +18,8 @@ import {
   Repeat2,
   Undo2,
   Send,
+  Music2,
+  ChevronRight,
 } from "lucide-react";
 import type { BlockResult, BlockKind, Exercise, LoggedExercise, LoggedSet, SessionTimers, WorkoutBlock, WorkoutSession } from "../../types";
 import type { SessionSwap } from "../../services/workout/coachLogic";
@@ -71,6 +73,9 @@ import {
   targetLine,
 } from "../../services/workout/coachLogic";
 import { setTargetText } from "../../services/workout/setTargets";
+import { MusicSection } from "../music/MusicSection";
+import { providerHeading } from "../../services/music/whichMusic";
+import { playlistServiceOf } from "../../services/music/playlistLink";
 
 // Set-type colours (one definition, shared with WO10): see setTypeStyle.ts.
 // Super set (exercise level only) = soft coral: bracket #DB885D, badge
@@ -237,6 +242,8 @@ export const WorkoutSessionSheet: React.FC<{
   const closeTimer = useRef<number | null>(null);
   const share = useClientShare(() => onClose());
   const [coachNoteOpen, setCoachNoteOpen] = useState(false);
+  // Round E: the music sheet, from the row at the top of the list.
+  const [musicOpen, setMusicOpen] = useState(false);
   // WO25: unread = a note exists and (never read, or read before it last changed).
   const noteText = routineRow?.coachNote ?? coachNote;
   const noteUnread =
@@ -975,6 +982,12 @@ export const WorkoutSessionSheet: React.FC<{
   };
 
   const circle = "tap relative flex-none flex items-center justify-center rounded-full";
+  // Round E: the routine's playlist. On a coach's copy it is the coach's (it
+  // came with the template); on the member's own routine, the routine's own.
+  const routinePlaylist = playlistServiceOf(routineRow?.playlistUrl) ? routineRow!.playlistUrl! : null;
+  const musicProvider = routinePlaylist && coachId ? { url: routinePlaylist, heading: coachName ? providerHeading(coachName) : "Your coach's playlist" } : null;
+  const musicItem = routinePlaylist && !coachId ? { url: routinePlaylist, heading: "Routine playlist" } : null;
+  const musicLine = musicProvider?.heading ?? musicItem?.heading ?? "Play your music";
   const exMenuEx = exMenu ? template.exercises[exMenu.exIdx] : undefined;
   const exMenuBlock = blockOf(exMenuEx);
 
@@ -1067,6 +1080,21 @@ export const WorkoutSessionSheet: React.FC<{
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ padding: 12 }}>
           <div className="flex flex-col" style={{ gap: 12 }}>
+            {/* Round E: one compact row, so the exercises stay where they
+                were; the playlist cards open in a sheet. */}
+            <button
+              type="button"
+              onClick={() => setMusicOpen(true)}
+              className="tap flex items-center w-full text-left"
+              style={{ minHeight: 44, gap: 10, padding: "0 12px", borderRadius: 12, background: "rgb(var(--c-cream-soft))" }}
+              aria-haspopup="dialog"
+            >
+              <Music2 size={16} aria-hidden style={{ color: "rgb(var(--c-charcoal-soft))" }} />
+              <span className="flex-1 min-w-0 truncate" style={{ fontSize: textPx(13), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
+                {musicLine}
+              </span>
+              <ChevronRight size={16} aria-hidden style={{ color: "rgb(var(--c-charcoal-faint))" }} />
+            </button>
             {groupIntoRuns(template.exercises, template.blocks).map((run) => {
               const indices = run.members.map((m) => template.exercises.indexOf(m));
               if (run.block?.kind === "superset") {
@@ -1448,6 +1476,10 @@ export const WorkoutSessionSheet: React.FC<{
           </div>
         </div>
       )}
+
+      <BottomSheet open={musicOpen} onClose={() => setMusicOpen(false)} title="Music">
+        <MusicSection moment="workout" provider={musicProvider} item={musicItem} />
+      </BottomSheet>
 
       {coachNoteOpen && (
         <CoachNotePopup

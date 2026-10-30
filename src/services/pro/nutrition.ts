@@ -29,6 +29,7 @@
 
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { playlistSaveError } from "../music/playlistLink";
 import { rpc } from "./rpc";
 import type { Read, Write } from "./clients";
 import { shiftIso } from "./home";
@@ -80,10 +81,12 @@ export interface MealPlan {
   notes: string | null;
   updatedAt: string;
   days: PlanDay[];
+  /** Round E: the plan's playlist link (meal_plans.playlist_url), or null. A client's copy takes the template's when assigned. */
+  playlistUrl: string | null;
 }
 
 const FOOD_COLS = "name, serving_label, calories, protein_g, carbs_g, fat_g";
-const PLAN_SELECT = `id, name, client_id, source_plan_id, is_template, kcal_target, protein_pct, carbs_pct, fat_pct, days_count, notes, updated_at, meal_plan_days(id, day_index, label, meal_plan_items(id, meal_slot, position, grams, servings, note, food_id, custom_food_id, recipe_id, custom_meal_id, foods(${FOOD_COLS}), custom_foods(${FOOD_COLS}), recipes(title), custom_meals(title)))`;
+const PLAN_SELECT = `id, name, client_id, source_plan_id, is_template, kcal_target, protein_pct, carbs_pct, fat_pct, days_count, notes, updated_at, playlist_url, meal_plan_days(id, day_index, label, meal_plan_items(id, meal_slot, position, grams, servings, note, food_id, custom_food_id, recipe_id, custom_meal_id, foods(${FOOD_COLS}), custom_foods(${FOOD_COLS}), recipes(title), custom_meals(title)))`;
 
 type FoodRow = { name: string; serving_label: string; calories: unknown; protein_g: unknown; carbs_g: unknown; fat_g: unknown } | null;
 type ItemRow = {
@@ -106,6 +109,7 @@ type DayRow = { id: string; day_index: number; label: string | null; meal_plan_i
 type PlanRow = {
   id: string;
   name: string;
+  playlist_url?: string | null;
   client_id: string | null;
   source_plan_id: string | null;
   is_template: boolean;
@@ -154,6 +158,7 @@ function toPlan(r: PlanRow): MealPlan {
     daysCount: r.days_count,
     notes: r.notes,
     updatedAt: r.updated_at,
+    playlistUrl: r.playlist_url ?? null,
     days: (r.meal_plan_days ?? [])
       .map((d) => ({ id: d.id, dayIndex: d.day_index, label: d.label, items: (d.meal_plan_items ?? []).map((i) => toItem(d.id, i)).sort((a, b) => a.position - b.position) }))
       .sort((a, b) => a.dayIndex - b.dayIndex),
@@ -255,6 +260,8 @@ export interface PlanMetaPatch {
   proteinPct?: number | null;
   carbsPct?: number | null;
   fatPct?: number | null;
+  /** Round E: the plan's playlist ('' or null clears it). */
+  playlistUrl?: string | null;
 }
 
 export async function updatePlanMeta(planId: string, patch: PlanMetaPatch): Promise<Write> {
@@ -269,8 +276,12 @@ export async function updatePlanMeta(planId: string, patch: PlanMetaPatch): Prom
   if (patch.proteinPct !== undefined) row.protein_pct = patch.proteinPct;
   if (patch.carbsPct !== undefined) row.carbs_pct = patch.carbsPct;
   if (patch.fatPct !== undefined) row.fat_pct = patch.fatPct;
+  if (patch.playlistUrl !== undefined) row.playlist_url = patch.playlistUrl?.trim() || null;
   const { error } = await from("meal_plans").update(row as never).eq("id", planId);
-  return error ? failed(error, "Couldn't save the meal plan. Try again.") : { ok: true };
+  if (!error) return { ok: true };
+  // The playlist is the shared, validated type: its refusal says what's wrong with the link.
+  const link = isOffline(error) ? null : playlistSaveError((error as { code?: string }).code);
+  return link ? { ok: false, message: link } : failed(error, "Couldn't save the meal plan. Try again.");
 }
 
 /** Deleting a template keeps every client's copy (template_id is set null). */

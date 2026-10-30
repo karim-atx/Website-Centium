@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { playlistSaveError } from "../music/playlistLink";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type {
   BlockKind,
@@ -86,6 +87,9 @@ export const ROUTINE_NAME_RULE = "A routine name is 1 to 60 characters.";
 
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
+  // Round E: the playlist link refused (ATXN0 / ATXN1 / ATXN2).
+  const playlist = playlistSaveError(code);
+  if (playlist) return playlist;
   if (code === "42501") return "You don't have permission to do that.";
   // 23503 is the foreign key: a folder or exercise that is not there.
   if (code === "23503") return "Something this refers to no longer exists. Try again.";
@@ -163,8 +167,9 @@ const BLOCK_COLUMNS = "id, kind, label, time_cap_seconds, interval_seconds, roun
 
 const DEFINITION_COLUMNS = "id, name, classification, muscle_groups, secondary_muscle_groups";
 
+// Round E (Database 20261224030000): playlist_url, the owner's to read and write.
 const ROUTINE_SELECT =
-  "id, folder_id, position, created_at, name, color, estimated_duration_min, coach_note, coach_note_updated_at, coach_note_read_at, assigned_by_professional_id, " +
+  "id, folder_id, position, created_at, name, color, estimated_duration_min, coach_note, coach_note_updated_at, coach_note_read_at, assigned_by_professional_id, playlist_url, " +
   `routine_exercise_blocks(${BLOCK_COLUMNS}), ` +
   `routine_exercises(${PRESCRIPTION_COLUMNS}, ` +
   `exercises(${DEFINITION_COLUMNS}), ` +
@@ -191,6 +196,7 @@ interface RoutineRow {
   coach_note_updated_at: string | null;
   coach_note_read_at: string | null;
   assigned_by_professional_id: string | null;
+  playlist_url?: string | null;
   routine_exercise_blocks: BlockRow[];
   routine_exercises: PrescriptionRow[];
 }
@@ -226,6 +232,7 @@ function toRoutine(r: RoutineRow): Routine {
     coachNoteUpdatedAt: r.coach_note_updated_at ?? undefined,
     coachNoteReadAt: r.coach_note_read_at ?? undefined,
     assignedByProfessionalId: r.assigned_by_professional_id ?? undefined,
+    playlistUrl: r.playlist_url ?? null,
     blocks: (r.routine_exercise_blocks ?? []).map(toBlock),
   };
 }
@@ -391,7 +398,9 @@ export async function createRoutine(
       // NEVER coach_note or assigned_by_professional_id, not even as null:
       // only the professional's server functions (assign / adopt) set them,
       // and Database-Atraxia removes both from the client INSERT grant.
-    })
+      // Round E: playlist_url is in the INSERT grant (newer than the types).
+      ...(routine.playlistUrl ? { playlist_url: routine.playlistUrl } : {}),
+    } as never)
     .select("id, created_at")
     .single();
 
@@ -462,6 +471,7 @@ export async function updateRoutine(
     name?: string;
     color?: string | null;
     estimated_duration_min?: number | null;
+    playlist_url?: string | null;
   } = {};
   if (patch.folderId !== undefined) payload.folder_id = patch.folderId;
   if (patch.name !== undefined) payload.name = patch.name.trim();
@@ -471,9 +481,12 @@ export async function updateRoutine(
   }
   // coach_note is the professional's: the client UPDATE grant no longer
   // includes it, so a patch carrying coachNote never writes it.
+  // Round E: the playlist is the owner's, on their copies too; empty clears it.
+  if (patch.playlistUrl !== undefined) payload.playlist_url = patch.playlistUrl || null;
 
   if (Object.keys(payload).length > 0) {
-    const { error } = await supabase.from("routines").update(payload).eq("id", id);
+    // `as never`: playlist_url is newer than the generated types.
+    const { error } = await supabase.from("routines").update(payload as never).eq("id", id);
     if (error) {
       console.error("[routines] Could not update routine:", error.message);
       return { ok: false, message: describe(error) };

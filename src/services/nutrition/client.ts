@@ -8,6 +8,7 @@
 // severity/note, delete), food_conflicts(...). The pure rules are in
 // clientNutritionModel.ts.
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { Allergen, AllergySeverity, ConflictRow, MealPlanDetailRow, MyAllergy, ProfessionalTargets } from "./clientNutritionModel";
@@ -110,6 +111,8 @@ export interface MyMealPlan {
   professionalId: string;
   professionalName: string | null;
   rows: MealPlanDetailRow[];
+  /** Round E: the plan's playlist (meal_plans.playlist_url, copied from the template by assign_meal_plan), or null. */
+  playlistUrl: string | null;
 }
 
 /** The client's current meal plan assignment (the most recent one), with its days from meal_plan_detail. */
@@ -125,13 +128,14 @@ export async function fetchMyMealPlan(userId: string, today: string): Promise<Re
   const a = ((data ?? []) as unknown as A[]).find((x) => assignmentIsCurrent({ endedAt: x.ended_at, endsOn: x.ends_on }, today));
   if (!a) return { ok: true, data: null };
   const [planRes, detailRes, names] = await Promise.all([
-    supabase.from("meal_plans").select("id, name, days_count").eq("id", a.meal_plan_id).maybeSingle(),
+    // playlist_url is newer than the generated types (Round E): an untyped view for this read.
+    (supabase as unknown as SupabaseClient).from("meal_plans").select("id, name, days_count, playlist_url").eq("id", a.meal_plan_id).maybeSingle(),
     supabase.rpc("meal_plan_detail", { p_meal_plan_id: a.meal_plan_id }),
     professionalNames([a.professional_id]),
   ]);
   if (planRes.error) return readFail(planRes.error);
   if (detailRes.error) return readFail(detailRes.error);
-  const plan = planRes.data as unknown as { id: string; name: string; days_count: number } | null;
+  const plan = planRes.data as unknown as { id: string; name: string; days_count: number; playlist_url: string | null } | null;
   if (!plan) return { ok: true, data: null };
   type D = { day_index: number; day_label: string | null; meal_slot: string; item_position: number; name: string; calories: unknown };
   return {
@@ -145,6 +149,7 @@ export async function fetchMyMealPlan(userId: string, today: string): Promise<Re
       endsOn: a.ends_on,
       professionalId: a.professional_id,
       professionalName: names.get(a.professional_id) || null,
+      playlistUrl: plan.playlist_url ?? null,
       rows: ((detailRes.data ?? []) as unknown as D[]).map((d) => ({
         dayIndex: d.day_index,
         dayLabel: d.day_label,

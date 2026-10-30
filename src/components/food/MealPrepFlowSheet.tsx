@@ -24,6 +24,7 @@ import { PREP_ON_PRIMARY, FOOD_DARK } from "./foodDark";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { textPx } from "../../theme/textSize";
+import { MusicSection } from "../music/MusicSection";
 
 export type PrepKind = "meals" | "recipes";
 
@@ -319,6 +320,13 @@ const DetailScreen: React.FC<{
             {recipe!.steps}
           </p>
         </div>
+      )}
+
+      {/* Round E: the recipe's cook-along playlist; without one, the member's
+          cooking favourite or "Play your music". Where the recipe isn't
+          being logged (a professional's view), only a playlist the recipe has. */}
+      {isR && (
+        <MusicSection moment="cooking" item={{ url: recipe!.playlistUrl, heading: "Cook-along" }} playlistsOnly={hideLog} />
       )}
 
       {!hideLog && (

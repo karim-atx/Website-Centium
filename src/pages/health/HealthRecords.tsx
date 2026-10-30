@@ -107,8 +107,9 @@ export default function HealthRecords() {
   const [toast, setToast] = useState<string | null>(null);
   const [popupKey, setPopupKey] = useState<string | null>(null);
   const [markerKey, setMarkerKey] = useState<string | null>(null);
-  const [scan, setScan] = useState<{ file: File | null } | null>(null);
-  const [choice, setChoice] = useState<"report" | "imaging" | null>(null);
+  const [scan, setScan] = useState<{ file: File | null; read?: boolean } | null>(null);
+  // "scan": Biomarkers › Scan a report, read on the device (Round E); "report": Labs › Upload a report.
+  const [choice, setChoice] = useState<"scan" | "report" | "imaging" | null>(null);
   const [imagingForm, setImagingForm] = useState<{ record: ImagingRecord | null; file: File | null } | null>(null);
   const [shareImaging, setShareImaging] = useState<ImagingRecord | null>(null);
   const [deleteImaging, setDeleteImaging] = useState<ImagingRecord | null>(null);
@@ -271,7 +272,7 @@ export default function HealthRecords() {
 
   const cta =
     tab === "biomarkers"
-      ? { label: "Scan a report", icon: <Camera size={16} />, onClick: () => setChoice("report") }
+      ? { label: "Scan a report", icon: <Camera size={16} />, onClick: () => setChoice("scan") }
       : tab === "labs"
         ? { label: "Upload a report", icon: <Camera size={16} />, onClick: () => setChoice("report") }
         : tab === "imaging"
@@ -317,17 +318,18 @@ export default function HealthRecords() {
         onChanged={() => setSharesTick((x) => x + 1)}
       />
       <ShareBiomarkerSheet open={!!shareMarkers && !bioCardsLocked} onClose={() => setShareMarkers(null)} marker={shareMarkers?.marker ?? null} markers={shareMarkers?.marker ? undefined : bloodMarkers} />
-      <BiomarkerCaptureFlow open={!!scan} file={scan?.file ?? null} onClose={() => setScan(null)} onSaved={scanSaved} />
+      <BiomarkerCaptureFlow open={!!scan} file={scan?.file ?? null} read={!!scan?.read} onClose={() => setScan(null)} onSaved={scanSaved} />
       <UploadChoiceSheet
         open={choice !== null}
         onClose={() => setChoice(null)}
-        title={choice === "imaging" ? "Add imaging" : "Add a report"}
+        title={choice === "imaging" ? "Add imaging" : choice === "scan" ? "Scan a report" : "Add a report"}
         bucket={choice === "imaging" ? "medical-imaging" : "lab-reports"}
+        note={choice === "scan" ? "Read on your phone. The photo and its text never leave it." : undefined}
         onFile={(file) => {
           const c = choice;
           setChoice(null);
           if (c === "imaging") setImagingForm({ record: null, file });
-          else setScan({ file });
+          else setScan({ file, read: c === "scan" });
         }}
         onTypeIt={() => {
           const c = choice;

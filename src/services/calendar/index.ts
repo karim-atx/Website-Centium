@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { playlistSaveError } from "../music/playlistLink";
 import type { Tables, TablesInsert } from "../../../lib/supabase/database.types";
 import type { CalendarEvent } from "../../types";
 import { signedUrlFor, uploadPrivateFile } from "../storage";
@@ -36,7 +37,7 @@ import type { ExceptionMap, OccurrenceOverride } from "../../components/calendar
  * Verified against column_privileges. repeat_until is Database B3
  * (20261116020000), newer than the generated types.
  */
-type EditableRow = { repeat_until: string | null } & Pick<
+type EditableRow = { repeat_until: string | null; playlist_url?: string | null } & Pick<
   TablesInsert<"calendar_events">,
   | "title"
   | "event_date"
@@ -97,6 +98,8 @@ export interface ClientCalendarEvent extends CalendarEvent {
   invite?: CalendarInvite;
   /** Storage path in calendar-attachments; signed per view, never stored as a URL. */
   attachmentPath?: string;
+  /** Round E (20261224030000): the session's playlist, readable wherever the event is. */
+  playlistUrl?: string;
   /**
    * A session THIS account scheduled for somebody else, read through
    * calendar_events_select_assigning_professional. Owned by the client, shown
@@ -142,7 +145,7 @@ export type CalendarWriteResult =
   | { ok: false; message: string };
 
 const COLUMNS =
-  "id, owner_id, title, event_date, all_day, start_time, end_time, location, url, notes, repeat, color, created_by_client, attachment_path, alert, repeat_until, source_kind, source_id";
+  "id, owner_id, title, event_date, all_day, start_time, end_time, location, url, notes, repeat, color, created_by_client, attachment_path, alert, repeat_until, source_kind, source_id, playlist_url";
 
 type EventRow = Pick<
   Tables<"calendar_events">,
@@ -171,6 +174,8 @@ type EventRow = Pick<
   repeat_until: string | null;
   source_kind: string | null;
   source_id: string | null;
+  // Round E (20261224030000), newer than the generated types.
+  playlist_url?: string | null;
 };
 
 /**
@@ -206,6 +211,7 @@ function toEvent(row: EventRow, userId: string, invite?: CalendarInvite): Client
         ? row.source_kind
         : undefined,
     sourceId: row.source_id ?? undefined,
+    playlistUrl: row.playlist_url ?? undefined,
     invite,
   };
 }
@@ -215,7 +221,8 @@ export const BOOKING_EVENT_MESSAGE = "A booking added this event. To change or c
 
 /** A write's refusal as a sentence: ATXB3 (booking-made event) has its own. */
 function writeMessage(error: { code?: string } | null, fallback: string): string {
-  return error?.code === "ATXB3" ? BOOKING_EVENT_MESSAGE : fallback;
+  // Round E: a refused playlist link (ATXN0-2) says what's wrong with it.
+  return error?.code === "ATXB3" ? BOOKING_EVENT_MESSAGE : (playlistSaveError(error?.code) ?? fallback);
 }
 
 function statusOf(accepted: boolean | null, respondedAt: string | null): InviteStatus {
@@ -389,6 +396,8 @@ export interface CalendarEventDraft {
   alert?: EventAlert;
   /** The last day of a repeat (B3); ignored and cleared when it doesn't repeat. */
   repeatUntil?: string | null;
+  /** Round E: the playlist; omitted = leave as stored, "" or null clears it. */
+  playlistUrl?: string | null;
 }
 
 /**
@@ -475,6 +484,7 @@ function toRow(draft: CalendarEventDraft): EditableRow {
     // The CHECK refuses an end on a one-off, or one before the first date.
     repeat_until:
       draft.repeat !== "none" && draft.repeatUntil && draft.repeatUntil >= draft.date ? draft.repeatUntil : null,
+    ...(draft.playlistUrl !== undefined ? { playlist_url: draft.playlistUrl?.trim() || null } : null),
   };
 }
 
@@ -491,7 +501,7 @@ export async function createEvent(
 
   if (error || !data) {
     console.error("[calendar] Could not create event:", error?.message);
-    return { ok: false, message: "Couldn't save that event. Try again." };
+    return { ok: false, message: playlistSaveError(error?.code) ?? "Couldn't save that event. Try again." };
   }
   return withAlert(userId, toEvent(data as unknown as EventRow, userId), draft.alert);
 }
