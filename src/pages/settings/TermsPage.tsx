@@ -59,6 +59,8 @@ export default function TermsPage() {
       <p className="mt-6 text-[12px] leading-[18px] text-charcoal-faint">{TERMS_GOVERNING_LAW}</p>
 
       <LegalFullLink href="/legal#terms">Read the full Terms of Service</LegalFullLink>
+      {/* Round F (DN, F3): the Refund and Cancellation Policy, part of the Terms. */}
+      <LegalFullLink href="/legal/refund-policy">Refund and cancellation policy</LegalFullLink>
       </SettingsBody>
     </div>
   );

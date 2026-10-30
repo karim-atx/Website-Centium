@@ -12,7 +12,7 @@ export interface LegalSection {
 }
 
 /** The website's "Last updated" date (the legal page writes LEGAL_VERSION month first: src/marketing/legal/anchors.ts legalDateFor). */
-export const LEGAL_UPDATED = "September 6, 2026";
+export const LEGAL_UPDATED = "October 31, 2026";
 
 /** The website's slug for a heading (src/marketing/legal/anchors.ts legalSlug, the handoff's legalSlug()). */
 export function legalSlug(heading: string): string {

@@ -18,9 +18,11 @@ describe("legal text, word for word", () => {
     // must be deliberate: update this fingerprint in the same commit.
     // Release B (Karim): "an invite-only ambassador tier" became "an
     // ambassador tier, by application or invitation," (ambassador applications).
+    // Round F (Karim, F3): Subscriptions and billing gains "See our Refund and
+    // Cancellation Policy." (the policy's own page), version 2026-10-31.
     const all = JSON.stringify([T.TERMS_GROUPS, T.LIABILITY_TEXT, T.PRIVACY_GROUPS, T.HEALTH_ITEMS, T.INTRO, T.ASK, T.GOVERNING]);
-    assert.equal(createHash("sha256").update(all).digest("hex"), "6794de785d422ec0e77fd00062a72370a4f6e534348bb3e3f80e620bc42499f3");
-    assert.equal(all.length, 12482);
+    assert.equal(createHash("sha256").update(all).digest("hex"), "b01135c49957756136c856c84962d572242b344dc5d615fe76bda0a42329c83c");
+    assert.equal(all.length, 12482 + 42);
   });
 
   it("has 11 terms groups plus Liability, 10 privacy groups and 7 health points", () => {
@@ -47,8 +49,8 @@ describe("the Last updated date", () => {
   it("is LEGAL_VERSION written month first, the app's LEGAL_UPDATED", () => {
     const src = readFileSync(new URL("../../services/legal/acceptances.ts", import.meta.url), "utf8");
     const version = /export const LEGAL_VERSION = "(\d{4}-\d{2}-\d{2})"/.exec(src)?.[1];
-    assert.equal(version, "2026-09-06");
-    assert.equal(legalDateFor(version as string), "September 6, 2026");
+    assert.equal(version, "2026-10-31");
+    assert.equal(legalDateFor(version as string), "October 31, 2026");
     assert.equal(legalDateFor(version as string), LEGAL_UPDATED);
     assert.equal(legalDateFor("2027-01-31"), "January 31, 2027");
   });
