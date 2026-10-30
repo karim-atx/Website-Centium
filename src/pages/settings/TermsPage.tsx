@@ -3,7 +3,7 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { SettingsBody } from "../../components/ui/SettingsRows";
 import { LegalFullLink, LegalIntro, LegalSections, LegalUpdated } from "../../components/settings/LegalText";
 import { HEALTH_DISCLAIMER } from "../../services/legal/disclaimer";
-import { TERMS_GOVERNING_LAW, TERMS_INTRO, TERMS_SECTIONS } from "./legalCopy";
+import { LEGAL_LANGUAGE, TERMS_GOVERNING_LAW, TERMS_INTRO, TERMS_SECTIONS } from "./legalCopy";
 import { useApp } from "../../context/AppContext";
 import { SubHeader } from "../../components/business-more/kit";
 import { BusinessLegalSections } from "../../components/business-more/BusinessLegal";
@@ -57,6 +57,7 @@ export default function TermsPage() {
 
       {/* MO1.8.8: 12 / 400 muted on an 18 line, 24 under the last section. */}
       <p className="mt-6 text-[12px] leading-[18px] text-charcoal-faint">{TERMS_GOVERNING_LAW}</p>
+      <p className="mt-2 text-[12px] leading-[18px] text-charcoal-faint">{LEGAL_LANGUAGE}</p>
 
       <LegalFullLink href="/legal#terms">Read the full Terms of Service</LegalFullLink>
       {/* Round F (DN, F3): the Refund and Cancellation Policy, part of the Terms. */}

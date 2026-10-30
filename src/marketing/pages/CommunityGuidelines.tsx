@@ -7,6 +7,7 @@ import { useViewportWidth } from "../landing/viewport";
 import { LG, SM } from "../landing/engine/env";
 import { WASH_BG, WEDGE_312, WEDGE_48 } from "../landing/wash";
 import { GUIDELINE_SECTIONS, GUIDELINES_INTRO, GUIDELINES_UPDATED, type GuidelinePiece } from "../legal/guidelines";
+import { LANGUAGE } from "../legal/text";
 
 // The Community guidelines (Round C Release 2, undrawn): one document in the
 // Legal page's own layout and literal values (LG1 v17, pages/Legal.tsx): the
@@ -116,6 +117,8 @@ export const CommunityGuidelines: React.FC = () => {
               Contact us
             </a>
           </div>
+          {/* Round F (A11): the Legal page's language line, in its style. */}
+          <p style={{ marginTop: "20px", fontSize: "12.5px", lineHeight: "1.6", color: "#5B5349" }}>{LANGUAGE}</p>
         </div>
       </div>
     </section>

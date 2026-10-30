@@ -134,7 +134,8 @@ export const PRIVACY_GROUPS: LegalGroup[] = [
   {
     h: "Third-party processors",
     items: [
-      "We use a small number of processors to run Centium: Supabase (database and authentication hosting), LiveKit (voice and video calling infrastructure), Resend (transactional email), and Cloudflare (content delivery). Each is bound by contract to process data only on our instructions.",
+      "We use a small number of processors to run Centium: Supabase (database and authentication hosting), LiveKit (voice and video calling infrastructure), Resend (transactional email), Cloudflare (content delivery), and Groq (transcribing and reading voice food logs: it receives the recording when you log food by voice). Each is bound by contract to process data only on our instructions.",
+      "Food search sends only the words you search for to USDA FoodData Central and Open Food Facts, public food databases. Nothing else about you is sent to them.",
     ],
   },
   {
@@ -210,3 +211,9 @@ export const ASK = [
 /** The governing-law line under the closing card. */
 export const GOVERNING =
   "These terms are governed by the laws of Lebanon, and any dispute will be resolved in the courts of Beirut, subject to any mandatory consumer-protection rights in your country of residence.";
+
+// Round F (Karim, A11): every legal page says which language prevails, as the
+// Refund and Cancellation Policy does.
+/** The language line under the governing-law line (and on the Community guidelines). */
+export const LANGUAGE =
+  "Centium's legal pages are published in English and Arabic. If the two differ, the Arabic version prevails.";

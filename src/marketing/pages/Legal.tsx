@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSEO } from "../useSEO";
 import { LEGAL_VERSION } from "../../services/legal/acceptances";
-import { ASK, GOVERNING } from "../legal/text";
+import { ASK, GOVERNING, LANGUAGE } from "../legal/text";
 import { LEGAL_DOCS, LEGAL_IDS, LEGAL_TOC, legalAnchorFor, legalDateFor } from "../legal/anchors";
 import { PageMark } from "../landing/sections/ChapterMark";
 import { anchorOffset, usePageLink } from "../landing/navigation";
@@ -263,6 +263,8 @@ export const Legal: React.FC = () => {
             </div>
           </div>
           <p style={{ marginTop: "20px", fontSize: "12.5px", lineHeight: "1.6", color: "#5B5349" }}>{GOVERNING}</p>
+          {/* Round F (A11): unspecified in the handoff; the governing line's style. */}
+          <p style={{ marginTop: "8px", fontSize: "12.5px", lineHeight: "1.6", color: "#5B5349" }}>{LANGUAGE}</p>
         </div>
       </div>
     </section>

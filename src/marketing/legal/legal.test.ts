@@ -20,9 +20,11 @@ describe("legal text, word for word", () => {
     // ambassador tier, by application or invitation," (ambassador applications).
     // Round F (Karim, F3): Subscriptions and billing gains "See our Refund and
     // Cancellation Policy." (the policy's own page), version 2026-10-31.
-    const all = JSON.stringify([T.TERMS_GROUPS, T.LIABILITY_TEXT, T.PRIVACY_GROUPS, T.HEALTH_ITEMS, T.INTRO, T.ASK, T.GOVERNING]);
-    assert.equal(createHash("sha256").update(all).digest("hex"), "b01135c49957756136c856c84962d572242b344dc5d615fe76bda0a42329c83c");
-    assert.equal(all.length, 12482 + 42);
+    // Round F (Karim, A11 and A12): the language line, Groq among the
+    // processors and the food search sources (the lawyer confirms them).
+    const all = JSON.stringify([T.TERMS_GROUPS, T.LIABILITY_TEXT, T.PRIVACY_GROUPS, T.HEALTH_ITEMS, T.INTRO, T.ASK, T.GOVERNING, T.LANGUAGE]);
+    assert.equal(createHash("sha256").update(all).digest("hex"), "40f264801e0a8cac10e8df99f281176a1adfa7db9ddbe5e168fde05993f91c53");
+    assert.equal(all.length, 12482 + 42 + 371);
   });
 
   it("has 11 terms groups plus Liability, 10 privacy groups and 7 health points", () => {

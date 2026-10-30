@@ -17,7 +17,7 @@ export const REFUND_POLICY_LINKS: Record<PolicyLang, [string, string][]> = {
     ["reportaproblem.apple.com", "https://reportaproblem.apple.com"],
   ],
   ar: [
-    ['"المساعدة" في تطبيق Centium', BILLING_HELP_PATH],
+    ["قسم المساعدة في تطبيق Centium", BILLING_HELP_PATH],
     ["centium.atraxia.org", "https://centium.atraxia.org"],
     ["reportaproblem.apple.com", "https://reportaproblem.apple.com"],
   ],
