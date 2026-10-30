@@ -20,6 +20,7 @@
 // nothing.
 
 import { monthlyEquivalent, yearlySaving, type YearlySaving } from "../subscription-tiers/pricing";
+import { appLocale } from "../../i18n/format";
 
 export type SubscriptionPeriod = "monthly" | "yearly";
 
@@ -123,7 +124,7 @@ export function renewalDayText(when: string | Date, now: Date = new Date()): str
   const d = typeof when === "string" ? new Date(when) : when;
   if (Number.isNaN(d.getTime())) return "";
   const sameYear = d.getFullYear() === now.getFullYear();
-  return d.toLocaleDateString("en-US", sameYear ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString(appLocale("en-US"), sameYear ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
 }
 
 /** The confirm before a switch. */

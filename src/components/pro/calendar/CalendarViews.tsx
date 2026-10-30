@@ -13,6 +13,7 @@ import { TicketCheck } from "../../market/ProfessionalCard";
 import { primaryLine, REQUEST_GOLD, FOLLOW_UP_PLUM, DEFAULT_SESSION, type CalItem } from "./calendarItems";
 import { minutes, offBands, type TimeOffEntry } from "./calendarModel";
 import { TicketRow, classBadgeText, classInk } from "./TicketRow";
+import { appLocale } from "../../../i18n/format";
 
 // Release 3 · W4 CA1 v2 Month, CA3 v2 Week, CA4 v2 Day (source/gen/cal.js
 // calMonth, calWeek, calDay, agendaRow, headerCard; Monday-first per FINAL_PLAN
@@ -134,7 +135,7 @@ export const AgendaRow: React.FC<{ item: CalItem; onOpen: (i: CalItem) => void; 
     <button
       type="button"
       onClick={() => onOpen(item)}
-      className="tap w-full flex items-start text-left"
+      className="tap w-full flex items-start text-start"
       style={{ gap: 11, borderRadius: 15, padding: "12px 14px", background: tint, opacity: item.badge === "declined" ? 0.6 : 1 }}
     >
       <span aria-hidden style={{ width: 3, alignSelf: "stretch", minHeight: 32, borderRadius: 9999, background: bar, flexShrink: 0 }} />
@@ -202,7 +203,7 @@ export const MonthGrid: React.FC<{
               data-today={id === todayIso || undefined}
               onClick={() => onSelect(id)}
               aria-pressed={sel}
-              aria-label={`${new Date(`${id}T00:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}${has ? ", sessions booked" : ""}${dot.cls ? (hiredLive ? ", hired classes" : ", classes") : ""}${off ? ", day off" : ""}`}
+              aria-label={`${new Date(`${id}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" })}${has ? ", sessions booked" : ""}${dot.cls ? (hiredLive ? ", hired classes" : ", classes") : ""}${off ? ", day off" : ""}`}
               className={clsx(
                 "tap flex flex-col items-center justify-center",
                 sel ? "bg-primary-fill text-on-primary-fill" : id === todayIso ? "bg-team-lavender/[0.16]" : ""
@@ -271,11 +272,11 @@ export const WeekDayRow: React.FC<{
       <button
         type="button"
         onClick={onDay}
-        aria-label={`${d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}, open in Day view`}
+        aria-label={`${d.toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" })}, open in Day view`}
         className={clsx("tap shrink-0 flex flex-col items-center justify-center", today ? "bg-primary-fill text-on-primary-fill" : "")}
         style={{ width: 56, borderRadius: 16, padding: "8px 0", gap: 2, background: today ? undefined : INK.soft, color: today ? undefined : INK.chS }}
       >
-        <span style={{ fontSize: textPx(10), fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em" }}>{d.toLocaleDateString("en-US", { weekday: "short" })}</span>
+        <span style={{ fontSize: textPx(10), fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em" }}>{d.toLocaleDateString(appLocale("en-US"), { weekday: "short" })}</span>
         <span style={{ fontSize: textPx(16), fontWeight: 700, lineHeight: 1 }}>{d.getDate()}</span>
       </button>
       <div className="flex-1 min-w-0" style={{ paddingTop: 4 }}>
@@ -315,7 +316,7 @@ export const RequestCard: React.FC<{ item: CalItem; busy: boolean; onAccept: () 
   const { tint } = eventColours(REQUEST_GOLD, dark);
   const who = item.name ?? "Someone new";
   return (
-    <div style={{ borderRadius: 22, padding: "16px 20px", background: tint, borderLeft: `3px solid ${REQUEST_GOLD}`, marginBottom: 10 }}>
+    <div style={{ borderRadius: 22, padding: "16px 20px", background: tint, borderInlineStart: `3px solid ${REQUEST_GOLD}`, marginBottom: 10 }}>
       <div className="flex justify-between" style={{ gap: 10 }}>
         <div className="min-w-0">
           <p style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{`${who} · ${item.title}`}</p>
@@ -377,24 +378,24 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
         {Array.from({ length: to - from + 1 }, (_, k) => {
           const h = from + k;
           return (
-            <div key={h} data-hour={h} className="absolute left-0 right-0 flex" style={{ top: k * HP, borderTop: `1px solid ${INK.b06}` }}>
+            <div key={h} data-hour={h} className="absolute start-0 end-0 flex" style={{ top: k * HP, borderTop: `1px solid ${INK.b06}` }}>
               {/* The board's label: 36 content + 6 padding (content-box), so 42 wide here (border-box), on the page fill. */}
-              <span className="shrink-0 text-right" style={{ fontSize: textPx(9), color: INK.chF, marginTop: -6, paddingRight: 6, width: 42, background: "rgb(var(--c-cream))" }}>
+              <span className="shrink-0 text-end" style={{ fontSize: textPx(9), color: INK.chF, marginTop: -6, paddingInlineEnd: 6, width: 42, background: "rgb(var(--c-cream))" }}>
                 {hourLabel12(h)}
               </span>
             </div>
           );
         })}
         {offBands(windows, from, to).map((b) => (
-          <div key={`off${b.start}`} aria-hidden className="absolute" style={{ left: 40, right: 0, top: y(b.start), height: y(b.end) - y(b.start), background: hatch, borderRadius: 8 }} />
+          <div key={`off${b.start}`} aria-hidden className="absolute" style={{ insetInlineStart: 40, insetInlineEnd: 0, top: y(b.start), height: y(b.end) - y(b.start), background: hatch, borderRadius: 8 }} />
         ))}
         {breaks.map((b) => (
           <button
             key={`br${b.entry.key}${b.start}`}
             type="button"
             onClick={() => onBreak(b.entry)}
-            className="tap absolute flex items-center text-left"
-            style={{ left: 40, right: 4, top: y(minutes(b.start)), height: Math.max(y(minutes(b.end)) - y(minutes(b.start)), 26), borderRadius: 12, background: INK.soft, padding: "0 10px", gap: 6, fontSize: textPx(11), fontWeight: 600, color: INK.chF }}
+            className="tap absolute flex items-center text-start"
+            style={{ insetInlineStart: 40, insetInlineEnd: 4, top: y(minutes(b.start)), height: Math.max(y(minutes(b.end)) - y(minutes(b.start)), 26), borderRadius: 12, background: INK.soft, padding: "0 10px", gap: 6, fontSize: textPx(11), fontWeight: 600, color: INK.chF }}
           >
             <Coffee size={12} strokeWidth={2} aria-hidden />
             {b.entry.reason || "Break"}
@@ -407,7 +408,7 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
             onClick={() => onOpenSlot(o.start)}
             aria-label={`Open slot, ${range12(o.start, o.end)}, add a session`}
             className="tap absolute flex items-center justify-between"
-            style={{ left: 40, right: 4, top: y(minutes(o.start)), height: Math.max(y(minutes(o.end)) - y(minutes(o.start)), 26), borderRadius: 12, border: `1.5px dashed ${INK.b10}`, padding: "0 10px", fontSize: textPx(11), fontWeight: 600, color: INK.chF }}
+            style={{ insetInlineStart: 40, insetInlineEnd: 4, top: y(minutes(o.start)), height: Math.max(y(minutes(o.end)) - y(minutes(o.start)), 26), borderRadius: 12, border: `1.5px dashed ${INK.b10}`, padding: "0 10px", fontSize: textPx(11), fontWeight: 600, color: INK.chF }}
           >
             Open slot
             <Plus size={13} strokeWidth={2} aria-hidden />
@@ -426,7 +427,7 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
                 key={i.key}
                 type="button"
                 onClick={() => onOpen(i)}
-                className="tap absolute flex items-center text-left"
+                className="tap absolute flex items-center text-start"
                 style={{ left, width, top, height: hh, borderRadius: 12, border: `1.5px dashed ${REQUEST_GOLD}`, padding: "0 10px", fontSize: textPx(11), fontWeight: 600, color: gold }}
               >
                 <span className="truncate">{`Requested · ${i.name ?? i.title}`}</span>
@@ -445,7 +446,7 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
               key={i.key}
               type="button"
               onClick={() => onOpen(i)}
-              className="tap absolute text-left overflow-hidden shadow-soft"
+              className="tap absolute text-start overflow-hidden shadow-soft"
               style={{
                 left,
                 width,
@@ -453,7 +454,7 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
                 height: hh,
                 borderRadius: 12,
                 background: tint,
-                borderLeft: `3px solid ${bar}`,
+                borderInlineStart: `3px solid ${bar}`,
                 padding: short ? "0 10px" : "6px 10px",
                 display: short ? "flex" : "block",
                 alignItems: "center",
@@ -479,8 +480,8 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
           );
         })}
         {nowMinutes !== null && nowMinutes >= from * 60 && nowMinutes <= to * 60 && (
-          <div aria-hidden className="absolute" style={{ left: 36, right: 0, top: y(nowMinutes), height: 2, background: INK.hi }}>
-            <span className="absolute" style={{ left: -4, top: -3, width: 8, height: 8, borderRadius: 9999, background: INK.hi }} />
+          <div aria-hidden className="absolute" style={{ insetInlineStart: 36, insetInlineEnd: 0, top: y(nowMinutes), height: 2, background: INK.hi }}>
+            <span className="absolute" style={{ insetInlineStart: -4, top: -3, width: 8, height: 8, borderRadius: 9999, background: INK.hi }} />
           </div>
         )}
       </div>
@@ -510,7 +511,7 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
 
 /** A whole day of time off, above the Day timeline (not drawn: the Time off row's own shape). */
 export const DayOffRow: React.FC<{ entry: TimeOffEntry; onOpen: () => void }> = ({ entry, onOpen }) => (
-  <button type="button" onClick={onOpen} className="tap w-full flex items-center text-left" style={{ gap: 10, borderRadius: 15, padding: "12px 14px", background: INK.soft, marginBottom: 10 }}>
+  <button type="button" onClick={onOpen} className="tap w-full flex items-center text-start" style={{ gap: 10, borderRadius: 15, padding: "12px 14px", background: INK.soft, marginBottom: 10 }}>
     <Plane size={14} strokeWidth={1.75} aria-hidden style={{ color: INK.chF }} />
     <span className="flex-1 min-w-0" style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch }}>
       {entry.reason || "Time off"}

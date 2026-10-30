@@ -170,7 +170,7 @@ export const MarkerPage: React.FC<{
   };
 
   const stat = (value: React.ReactNode, label: string, color: string, first?: boolean) => (
-    <div className="flex-1 text-center" style={{ padding: "2px 4px", borderLeft: first ? undefined : `0.5px solid ${hc ? "rgb(var(--c-charcoal) / 0.3)" : dark ? "rgba(245,243,250,0.08)" : "#E5E7EB"}` }}>
+    <div className="flex-1 text-center" style={{ padding: "2px 4px", borderInlineStart: first ? undefined : `0.5px solid ${hc ? "rgb(var(--c-charcoal) / 0.3)" : dark ? "rgba(245,243,250,0.08)" : "#E5E7EB"}` }}>
       <p style={{ fontSize: textPx(16), lineHeight: linePx(24), fontWeight: 700, letterSpacing: -0.3, fontVariantNumeric: "tabular-nums", color }}>{value}</p>
       <p style={{ marginTop: 1, fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 600, color: INK_FAINT }}>{label}</p>
     </div>

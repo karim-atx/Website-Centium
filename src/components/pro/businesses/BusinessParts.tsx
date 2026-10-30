@@ -14,6 +14,7 @@ import { initialsOf } from "../client/clientFormat";
 import { INK } from "../proInk";
 import { classWhen, monthYear, ROLE_NAME, typeLine } from "./useBusinesses";
 import { deadInvitationLine, invitationExpiry, invitationState, type InvitationState } from "./invitationLogic";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · MO9 v3 / MO13 building blocks, literal from gen/r13.js
@@ -37,7 +38,7 @@ export const PageHead: React.FC<{ title: string; sub?: string; onBack: () => voi
 /** head19 with the eyebrow: back 36 (-6 in, 2 down), gap 10; eyebrow 10.5 / 600 caps 0.11em text.faint, 2 under; title 19 / 700 -0.03em; 13 below. */
 export const EyebrowHead: React.FC<{ eyebrow: string; title: string; onBack: () => void }> = ({ eyebrow, title, onBack }) => (
   <div className="flex items-start" style={{ gap: 10, marginBottom: 13 }}>
-    <button type="button" onClick={onBack} aria-label="Back" className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginLeft: -6, marginTop: 2 }}>
+    <button type="button" onClick={onBack} aria-label="Back" className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -6, marginTop: 2 }}>
       <ChevronLeft size={18} strokeWidth={2} style={{ color: INK.chS }} aria-hidden />
     </button>
     <div className="min-w-0">
@@ -87,7 +88,7 @@ export const BizCard: React.FC<{
   ].filter((l) => l.text);
   return (
     <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "14px 16px", marginBottom: 10 }}>
-      <button type="button" onClick={onOpen} className="tap w-full text-left" aria-label={`Open ${e.businessName}`}>
+      <button type="button" onClick={onOpen} className="tap w-full text-start" aria-label={`Open ${e.businessName}`}>
         <span className="flex items-center" style={{ gap: 12 }}>
           <LogoTile name={e.businessName} logoUrl={facts?.logoUrl} />
           <span className="flex-1 min-w-0">
@@ -135,7 +136,7 @@ export const ConsoleLinks: React.FC<{ businessId: string; businessName: string; 
   };
   const row = (key: string, label: string, desc: string, to: string) => (
     <li key={key}>
-      <button type="button" onClick={() => open(to)} className="tap w-full flex items-center text-left" style={{ minHeight: 48, gap: 12 }}>
+      <button type="button" onClick={() => open(to)} className="tap w-full flex items-center text-start" style={{ minHeight: 48, gap: 12 }}>
         <span className="min-w-0 flex-1">
           <span className="block" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch }}>
             {label}
@@ -185,7 +186,7 @@ export const InvitationCard: React.FC<{
       <div className="min-w-0 flex-1">
         <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{`${e.businessName} invited you to their team`}</p>
         <p style={{ fontSize: textPx(12), color: INK.chF }}>
-          {`Invited ${new Date(e.invitedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` + (e.role && ROLE_NAME[e.role] ? ` · as ${ROLE_NAME[e.role]}` : "")}
+          {`Invited ${new Date(e.invitedAt).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" })}` + (e.role && ROLE_NAME[e.role] ? ` · as ${ROLE_NAME[e.role]}` : "")}
         </p>
         {expiry && (
           <p style={{ fontSize: textPx(12), fontWeight: state === "open" ? 500 : 700, color: state === "open" ? INK.chS : INK.hi }}>{expiry}</p>
@@ -245,7 +246,7 @@ export const JoinById: React.FC<{ hint: string; onSent: () => void; onToast: (m:
   };
   return (
     <div>
-      <div className="flex items-center" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${error ? INK.hi : INK.b10}`, padding: "0 4px 0 12px", gap: 8 }}>
+      <div className="flex items-center" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${error ? INK.hi : INK.b10}`, paddingBlock: "0", paddingInline: "12px 4px", gap: 8 }}>
         <Building2 size={15} strokeWidth={2} style={{ color: INK.chF }} className="shrink-0" aria-hidden />
         <label htmlFor="join-code" className="sr-only">
           Business ID

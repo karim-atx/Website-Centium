@@ -141,7 +141,7 @@ export const Metronome: React.FC = () => {
       </button>
       {open && (
         <div
-          className="absolute right-0 top-11 z-20 w-48 animate-fade-slide-up"
+          className="absolute end-0 top-11 z-20 w-48 animate-fade-slide-up"
           style={{ background: "rgb(var(--c-cream-card))", borderRadius: 20, padding: 16, boxShadow: "0 12px 32px rgba(0,0,0,0.18)" }}
         >
           <style>{`@keyframes metro-beat { 0% { transform: scale(1.7); opacity: 1; } 100% { transform: scale(1); opacity: 0.85; } } @keyframes metro-beat-soft { 0% { opacity: 0.25; } 100% { opacity: 1; } }`}</style>

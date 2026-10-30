@@ -72,7 +72,7 @@ function TierCard({ tier, rank, yearly, current, recommended }: { tier: Subscrip
   const badge = (text: string, bg: string, color: string) => (
     <span
       className="absolute"
-      style={{ top: -10, left: 16, fontSize: textPx(10), fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", borderRadius: 9999, padding: "3px 9px", background: bg, color }}
+      style={{ top: -10, insetInlineStart: 16, fontSize: textPx(10), fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", borderRadius: 9999, padding: "3px 9px", background: bg, color }}
     >
       {text}
     </span>
@@ -193,7 +193,7 @@ export default function ProSubscription() {
         onClick={back}
         aria-label="Back"
         className="tap flex items-center justify-center"
-        style={{ width: 44, height: 44, marginLeft: -12, marginBottom: 0, color: INK.chS }}
+        style={{ width: 44, height: 44, marginInlineStart: -12, marginBottom: 0, color: INK.chS }}
       >
         <ChevronLeft size={20} strokeWidth={2} />
       </button>
@@ -303,7 +303,7 @@ export default function ProSubscription() {
             ))}
           </div>
           <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, overflow: "hidden", marginBottom: 10 }}>
-            <button type="button" aria-expanded={compare} onClick={() => setCompare((c) => !c)} className="tap w-full flex items-center justify-between text-left" style={{ padding: "13px 16px", minHeight: 44 }}>
+            <button type="button" aria-expanded={compare} onClick={() => setCompare((c) => !c)} className="tap w-full flex items-center justify-between text-start" style={{ padding: "13px 16px", minHeight: 44 }}>
               <span style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>All plans at a glance</span>
               {compare ? <ChevronUp size={16} strokeWidth={2} style={{ color: INK.chF }} /> : <ChevronDown size={16} strokeWidth={2} style={{ color: INK.chF }} />}
             </button>
@@ -335,7 +335,7 @@ export default function ProSubscription() {
                         {cells[0]}
                       </span>
                       <span className="text-center">{cells[1]}</span>
-                      <span className="text-right">{cells[2]}</span>
+                      <span className="text-end">{cells[2]}</span>
                     </div>
                   );
                 })}

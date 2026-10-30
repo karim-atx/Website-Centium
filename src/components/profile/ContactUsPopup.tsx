@@ -141,7 +141,7 @@ export const ContactUsPopup: React.FC<{ open: boolean; onClose: () => void }> = 
               {badge}
             </span>
           )}
-          <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />
+          <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-charcoal-faint" />
         </button>
         {error && (
           // States › Error: an inline line in danger under the affected row.
@@ -156,7 +156,7 @@ export const ContactUsPopup: React.FC<{ open: boolean; onClose: () => void }> = 
           </span>
           <span className="flex-1 min-w-0 text-[14px] font-semibold text-charcoal">Email</span>
           <span className="shrink-0 max-w-[60%] truncate text-[12px] text-charcoal-faint">{SUPPORT_EMAIL}</span>
-          <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />
+          <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-charcoal-faint" />
         </a>
       </div>
     </CentredPopup>

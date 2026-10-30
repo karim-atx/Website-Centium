@@ -462,7 +462,7 @@ export const NearbyView: React.FC<{
                   <button
                     type="button"
                     onClick={() => navigate(`/app/professionals/${c.p.profileId}`)}
-                    className="tap min-h-[44px] text-left text-[13px] font-semibold text-primary-deep-text"
+                    className="tap min-h-[44px] text-start text-[13px] font-semibold text-primary-deep-text"
                   >
                     {c.p.name}, {c.p.subtype ? SUBTYPE_SINGULAR[c.p.subtype] : "professional"}, {cardPlace(c)}
                   </button>

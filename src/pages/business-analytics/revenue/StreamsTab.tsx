@@ -32,7 +32,7 @@ const Collapsible: React.FC<{
       type="button"
       aria-expanded={open}
       onClick={onToggle}
-      className="tap w-full flex items-center gap-[10px] p-[16px] text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary-dark"
+      className="tap w-full flex items-center gap-[10px] p-[16px] text-start focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary-dark"
     >
       <span className="flex-1 min-w-0">
         <span
@@ -185,7 +185,7 @@ export const StreamsTab: React.FC = () => {
                 type="button"
                 aria-expanded={open}
                 onClick={() => setRowOpen(open ? null : r.key)}
-                className="tap w-full text-left py-[10px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark rounded-[6px]"
+                className="tap w-full text-start py-[10px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark rounded-[6px]"
                 style={{ borderTop: i ? `1px solid ${v("divider")}` : "none" }}
               >
                 <span className="flex justify-between items-baseline gap-[8px]">
@@ -216,7 +216,7 @@ export const StreamsTab: React.FC = () => {
                     />
                   </span>
                   <span
-                    className="text-[11px] w-[34px] text-right"
+                    className="text-[11px] w-[34px] text-end"
                     style={{ color: v("faint") }}
                   >
                     {Math.round((r.value / total) * 100)}%

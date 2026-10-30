@@ -36,7 +36,7 @@ const Frag: React.FC<{ i: number; r: IntroVals; skin: { size: string; pos: strin
   <div
     aria-hidden="true"
     data-frag={i}
-    style={{ position: "absolute", left: 0, top: 0, width: r.fragW, opacity: 0, transformOrigin: "0 0", textAlign: "left" }}
+    style={{ position: "absolute", left: 0, top: 0, width: r.fragW, opacity: 0, transformOrigin: "0 0", textAlign: "start" }}
   >
     {children}
     <div
@@ -94,7 +94,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                 <span
                   key={i}
                   aria-hidden="true"
-                  style={{ display: "inline-block", overflow: "hidden", verticalAlign: "top", padding: ".16em 0 .1em", margin: "-.16em .24em -.1em 0" }}
+                  style={{ display: "inline-block", overflow: "hidden", verticalAlign: "top", padding: ".16em 0 .1em", marginBlock: "-.16em -.1em", marginInline: "0 .24em" }}
                 >
                   <span data-tw="" style={{ display: "inline-block", transform: "translateY(" + twY + ")" }}>
                     {t === "lives" ? (
@@ -283,7 +283,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                     Did you fill in your weekly check-in?
                   </span>
                 </div>
-                <span style={{ alignSelf: "flex-start", marginLeft: "26px", fontSize: "9.5px", color: "#666E7C" }}>Lara · 9:02 AM</span>
+                <span style={{ alignSelf: "flex-start", marginInlineStart: "26px", fontSize: "9.5px", color: "#666E7C" }}>Lara · 9:02 AM</span>
               </div>
             </div>
           </Frag>

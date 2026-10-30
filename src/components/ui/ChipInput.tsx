@@ -53,7 +53,7 @@ export const ChipInput: React.FC<{
           {values.map((v) => (
             <span
               key={v}
-              className="inline-flex items-center gap-0.5 rounded-full bg-primary-pale text-primary-deep-text text-[12.5px] font-semibold pl-3 max-w-full"
+              className="inline-flex items-center gap-0.5 rounded-full bg-primary-pale text-primary-deep-text text-[12.5px] font-semibold ps-3 max-w-full"
             >
               <span className="truncate py-1.5">{v}</span>
               <button

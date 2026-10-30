@@ -291,7 +291,7 @@ export default function HabitsTab() {
       >
         {/* #12: rows 59 + the 1 px divider (pitch 60); min-height so Larger
             text can wrap the name to two lines (O8). */}
-        <div className="flex items-center min-h-[59px] pl-3 pr-[7px] bg-cream-card">
+        <div className="flex items-center min-h-[59px] ps-3 pe-[7px] bg-cream-card">
           <div className="flex items-center gap-2.5 flex-1 min-w-0 py-1.5">
             {/* #13 / #14 / S3: the 28 r8 tile in the habit's colour (lavender
                 #F0EDF9 / #303141 with #7D6BB5 / #C3B3FB through the theme;
@@ -333,7 +333,7 @@ export default function HabitsTab() {
             aria-label={`${h.label}, more options`}
             aria-haspopup="menu"
             aria-expanded={menu?.habit.id === h.id}
-            className="tap w-5 h-11 mr-0.5 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
+            className="tap w-5 h-11 me-0.5 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
           >
             <EllipsisVertical size={16} aria-hidden />
           </button>
@@ -408,7 +408,7 @@ export default function HabitsTab() {
       {(habits.length > 0 || !habitsError) && (
         <div className="rounded-[24px] border border-primary bg-cream-card overflow-hidden mb-4">
           {/* #7: the band, 58 + a 1 pt hairline, #AEA1DC@60% / #A991FE@60%. */}
-          <div className="flex items-center h-[59px] pl-3.5 pr-[7px] border-b border-charcoal/[0.04] bg-primary/60">
+          <div className="flex items-center h-[59px] ps-3.5 pe-[7px] border-b border-charcoal/[0.04] bg-primary/60">
             {/* #8 / #9: the white mark 24 × 24, then the white "ENTIUM"
                 wordmark 91.6 × 10, 6 apart; white in every theme. */}
             <span className="flex-1 min-w-0 overflow-hidden flex items-center gap-1.5" role="img" aria-label="Centium">
@@ -523,14 +523,14 @@ export default function HabitsTab() {
             ref={panelRef}
             role="group"
             aria-label={panel.mode === "edit" ? "Edit habit" : "Add habit"}
-            className="rounded-[20px] bg-cream-card border border-charcoal/[0.08] shadow-soft dark:shadow-none pt-3 pb-3 pl-3.5"
+            className="rounded-[20px] bg-cream-card border border-charcoal/[0.08] shadow-soft dark:shadow-none pt-3 pb-3 ps-3.5"
           >
             {/* #41: "Icon", 9/13.5 700, 1.8 tracking, uppercase, 42% ink. */}
             <p className="mb-1.5 text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42]">Icon</p>
             {/* #42–#57: the app's 20 icons (D-1) in one scrolling row, 38 r11
                 tiles 46 apart, 18 icons in #5B5349 / #B8B3C7; the first on
                 the panel padding (its ring has 2 px of room). */}
-            <div className="flex gap-2 overflow-x-auto no-scrollbar -ml-0.5 pl-0.5 pr-3.5 py-[3px] [-webkit-overflow-scrolling:touch]">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar -ms-0.5 ps-0.5 pe-3.5 py-[3px] [-webkit-overflow-scrolling:touch]">
               {habitIconOptions.map((opt) => {
                 const Icon = habitIcon[opt.key];
                 const selected = newIcon === opt.key;
@@ -571,7 +571,7 @@ export default function HabitsTab() {
                 <p className="mt-2.5 mb-[5px] text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42]">
                   Suggestions
                 </p>
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pr-3.5">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pe-3.5">
                   {suggestions.map((s) => {
                     const Icon = habitIcon[s.icon];
                     return (
@@ -595,7 +595,7 @@ export default function HabitsTab() {
               </>
             )}
 
-            <div className="flex items-center gap-2 mt-2.5 pr-3.5">
+            <div className="flex items-center gap-2 mt-2.5 pe-3.5">
               {/* #82: 36 tall, r12, surface.soft, 1 px 10% border; up to 40
                   characters (V6-143). */}
               <input
@@ -647,7 +647,7 @@ export default function HabitsTab() {
             </div>
             {/* O3 / O4 / O5: 11/600 in danger under the field row. */}
             {panelError && (
-              <p id="habit-panel-error" role="alert" className="mt-1.5 pr-3.5 text-[11px] leading-4 font-semibold text-status-high">
+              <p id="habit-panel-error" role="alert" className="mt-1.5 pe-3.5 text-[11px] leading-4 font-semibold text-status-high">
                 {panelError}
               </p>
             )}

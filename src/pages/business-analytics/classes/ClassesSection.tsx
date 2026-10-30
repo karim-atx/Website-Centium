@@ -343,7 +343,7 @@ function FillBody(props: {
               <span>{prevLine}</span>
             </>
           )}
-          <span style={{ marginLeft: "auto" }}>Ticks every 10%</span>
+          <span style={{ marginInlineStart: "auto" }}>Ticks every 10%</span>
         </div>
         {early && (
           <p className="an3-note" style={{ marginTop: 12 }}>
@@ -471,7 +471,7 @@ function SessionList({ m, sort, setSort, all, setAll, openRow, setOpenRow, raw, 
                   <div style={{ width: `${Math.max(s.pct, 1.5)}%`, background: TONE[pctTone(s.pct)] }} />
                 </div>
               </div>
-              <div style={{ textAlign: "right" }}>
+              <div style={{ textAlign: "end" }}>
                 <p className="an3-val" style={{ color: INK[pctInk(s.pct)] }}>{`${s.booked}/${s.cap}`}</p>
                 <p className="an3-sess-time">{s.full ? "Full" : `${s.pct}%`}</p>
               </div>
@@ -497,7 +497,7 @@ function SessionList({ m, sort, setSort, all, setAll, openRow, setOpenRow, raw, 
                   <span>Same slot, last 4 weeks</span>
                   <span>{sameSlotHistory(s, raw, per)}</span>
                 </div>
-                <button type="button" className="an3-link tap self-start" style={{ marginTop: 4, marginLeft: -4 }} onClick={() => onOpenClass(s.id)}>
+                <button type="button" className="an3-link tap self-start" style={{ marginTop: 4, marginInlineStart: -4 }} onClick={() => onOpenClass(s.id)}>
                   Open in Classes
                   <ChevronRight size={13} aria-hidden />
                 </button>
@@ -822,7 +822,7 @@ function BookingsData({ m, r, people, bkView, setBkView, cs, toggle }: { m: Clas
               ))}
             </div>
             {ghost && (
-              <svg width="100%" height="100" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: "absolute", left: 0, right: 0, top: 0, overflow: "visible" }}>
+              <svg width="100%" height="100" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: "absolute", insetInlineStart: 0, insetInlineEnd: 0, top: 0, overflow: "visible" }}>
                 <polyline points={ghost} fill="none" stroke="var(--k-ghost)" strokeWidth={2} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
               </svg>
             )}
@@ -929,7 +929,7 @@ function BookingsData({ m, r, people, bkView, setBkView, cs, toggle }: { m: Clas
                 {tc.sub}
               </span>
             </span>
-            <span style={{ fontSize: 12.5, fontWeight: 800, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{tc.n}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 800, textAlign: "end", fontVariantNumeric: "tabular-nums" }}>{tc.n}</span>
           </div>
         ))}
         <div style={{ height: 6 }} />
@@ -1010,7 +1010,7 @@ function PeakBody({
             <span style={{ width: 40, height: 6, borderRadius: 999, background: `linear-gradient(90deg,${shade(5)},${shade(100)})` }} aria-hidden />
             Full
           </span>
-          <button type="button" className="tap flex items-center" aria-expanded={fullDay} onClick={() => setFullDay(!fullDay)} style={{ marginLeft: "auto", gap: 2, minHeight: 32, fontWeight: 800, color: "var(--k-pdark)" }}>
+          <button type="button" className="tap flex items-center" aria-expanded={fullDay} onClick={() => setFullDay(!fullDay)} style={{ marginInlineStart: "auto", gap: 2, minHeight: 32, fontWeight: 800, color: "var(--k-pdark)" }}>
             {fullDay ? "Scheduled hours" : "Full day"}
             <span className="flex" style={{ transform: fullDay ? "rotate(180deg)" : "none" }} aria-hidden>
               <ChevronDown size={12} />

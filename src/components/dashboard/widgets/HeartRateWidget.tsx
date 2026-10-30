@@ -102,7 +102,7 @@ export const HeartRateWidget: React.FC<{ size: "small" | "large"; editMode: bool
         context={<Line>{isLarge ? stale ?? `${word}` : smallContext}</Line>}
         children={
           isLarge && low !== null && high !== null ? (
-            <span className="absolute" style={{ left: 16, right: 16, top: 107.5, zIndex: 1 }} aria-hidden>
+            <span className="absolute" style={{ insetInlineStart: 16, insetInlineEnd: 16, top: 107.5, zIndex: 1 }} aria-hidden>
               <span className="relative block rounded-full" style={{ height: 8, background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.9)" }}>
                 <span
                   className="absolute inset-y-0 rounded-full"
@@ -121,7 +121,7 @@ export const HeartRateWidget: React.FC<{ size: "small" | "large"; editMode: bool
                     top: -2,
                     width: 12,
                     height: 12,
-                    marginLeft: -6,
+                    marginInlineStart: -6,
                     boxSizing: "border-box",
                     background: ink,
                     border: `1.64317px solid ${dark ? "#1C1F28" : "#FFFFFF"}`,

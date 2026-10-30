@@ -1,4 +1,5 @@
 import { dayMonth } from "../shell/range";
+import { appLocale } from "../../../i18n/format";
 
 const SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -10,7 +11,7 @@ export const dayDate = (iso: string): string => `${weekday(iso)}, ${dayMonth(iso
 
 /** "$3,470" / "$60" (no cents when whole). */
 export const money = (n: number): string =>
-  `$${n.toLocaleString("en-US", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}`;
+  `$${n.toLocaleString(appLocale("en-US"), { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}`;
 
 
 export const hhmmOf = (min: number): string => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;

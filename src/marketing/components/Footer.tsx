@@ -4,6 +4,7 @@ import { CentiumLockup } from "../../components/icons/CentiumMark";
 import { LG, reducedMotion } from "../landing/engine/env";
 import { usePageLink, useMarketingNav, useSectionLink } from "../landing/navigation";
 import { WASH_BG, WEDGE_312, WEDGE_48 } from "../landing/wash";
+import { LanguageSwitch } from "./LanguageSwitch";
 
 // Centium landing v29: FO1 v17, the centred footer (02_pages/22-FO1 and the
 // prototype markup, exact inline styles), replacing the previous footer.
@@ -109,8 +110,8 @@ export const Footer: React.FC = () => {
       aria-hidden="true"
       style={{
         position: "absolute",
-        left: 0,
-        right: 0,
+        insetInlineStart: 0,
+        insetInlineEnd: 0,
         bottom: 0,
         top: lg ? "-620px" : "-420px",
         pointerEvents: "none",
@@ -303,6 +304,10 @@ export const Footer: React.FC = () => {
           >
             Legal
           </a>
+          {/* Round F (AV): the language switch lives here (and in the phone
+              menu), so the nav keeps the handoff's measured layout. */}
+          <span aria-hidden="true" style={{ width: "3px", height: "3px", borderRadius: "99px", background: "#B9B2A8" }} />
+          <LanguageSwitch style={{ fontSize: "13px", fontWeight: 700, color: "#3B352D", padding: "0" }} />
         </div>
       </div>
       {/* Kept from the previous footer (audit 2.C): iOS Safari's rubber-band

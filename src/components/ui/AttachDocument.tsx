@@ -76,7 +76,7 @@ export const AttachDocument: React.FC<{
               type="button"
               onClick={onClearPending}
               aria-label="Remove the picked file"
-              className="tap w-11 h-11 -mr-3 flex items-center justify-center text-charcoal-faint"
+              className="tap w-11 h-11 -me-3 flex items-center justify-center text-charcoal-faint"
             >
               <X size={14} />
             </button>

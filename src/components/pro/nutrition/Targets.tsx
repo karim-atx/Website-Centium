@@ -25,6 +25,7 @@ import { MACRO_COLOUR } from "./nuFormat";
 import { useNuRoster } from "./hooks";
 import { macroGrams, shiftDate, splitTotalOk, tdeeView } from "./nutritionModel";
 import { useNutritionOverview } from "./useNutritionOverview";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · NU8 v3 "Targets · weight goal rate and TDEE" (source gen
@@ -338,12 +339,12 @@ export const TargetsList: React.FC<{ lane: ProLane; onBack: () => void; onOpen: 
           {o.clients.map((c, i) => {
             const t = o.targets[c.clientId];
             return (
-              <button key={c.clientId} type="button" onClick={() => onOpen(c.clientId)} className="tap w-full flex items-center text-left" style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < o.clients.length - 1 ? `1px solid ${INK.b06}` : "none" }}>
+              <button key={c.clientId} type="button" onClick={() => onOpen(c.clientId)} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < o.clients.length - 1 ? `1px solid ${INK.b06}` : "none" }}>
                 <Avatar name={c.name} url={c.avatarUrl} size={34} />
                 <span className="flex-1 min-w-0">
                   <span className="block" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>{c.name}</span>
                   <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>
-                    {t ? `${Math.round(t.calories).toLocaleString("en-GB")} kcal · ${Math.round(t.proteinPct)}% protein${t.locked ? " · locked" : ""}` : "Not set by you"}
+                    {t ? `${Math.round(t.calories).toLocaleString(appLocale("en-GB"))} kcal · ${Math.round(t.proteinPct)}% protein${t.locked ? " · locked" : ""}` : "Not set by you"}
                   </span>
                 </span>
               </button>

@@ -43,7 +43,7 @@ export const OpsHeader: React.FC<{ kicker: string; title: string; sub?: string |
           onClick={typeof back === "function" ? back : goBack}
           aria-label="Back"
           // 40 drawn; .tap gives the 44 hit box (OP1-005 O6).
-          className="tap flex items-center justify-center shrink-0 rounded-full text-charcoal-soft rtl:-scale-x-100"
+          className="tap flex items-center justify-center shrink-0 rounded-full text-charcoal-soft"
           style={{ width: 40, height: 40, marginInlineStart: -8 }}
         >
           <ChevronLeft size={20} aria-hidden />
@@ -200,7 +200,7 @@ export interface KitRowProps {
 export const KitRow: React.FC<KitRowProps> = ({ icon, title, sub, subWrap, chip, value, onClick, ariaLabel, disabled, trailing }) => {
   const body = (
     <>
-      <span aria-hidden className={clsx("kit-rule absolute top-0 right-0 h-px", RULE)} style={{ left: icon ? 48 : 0 }} />
+      <span aria-hidden className={clsx("kit-rule absolute top-0 end-0 h-px", RULE)} style={{ left: icon ? 48 : 0 }} />
       {icon && <KitTile icon={icon} />}
       <span className="flex-1 min-w-0">
         <span className={clsx("block text-[13.5px] font-bold leading-[18px] text-charcoal", ONE_LINE)}>{title}</span>
@@ -302,7 +302,7 @@ export const TextButton: React.FC<{ label: string; onClick: () => void; tone?: "
 
 export const FixedCta: React.FC<{ label: string; onClick: () => void; plus?: boolean; disabled?: boolean; busy?: boolean; error?: string | null }> = ({ label, onClick, plus, disabled, busy, error }) =>
   createPortal(
-    <div className="fixed z-20" style={{ left: "calc(var(--app-gutter, 0px) + 16px)", right: "calc(var(--app-gutter, 0px) + 16px)", bottom: "calc(env(safe-area-inset-bottom) + 88px)" }}>
+    <div className="fixed z-20" style={{ insetInlineStart: "calc(var(--app-gutter, 0px) + 16px)", insetInlineEnd: "calc(var(--app-gutter, 0px) + 16px)", bottom: "calc(env(safe-area-inset-bottom) + 88px)" }}>
       {error && (
         <p role="alert" className="text-[11.5px] font-bold text-status-high text-center" style={{ marginBottom: 6 }}>
           {error}

@@ -169,7 +169,7 @@ export const NotFound: React.FC = () => {
         padding: lg ? "112px 40px 88px" : vh < 780 ? "84px 20px 48px" : "104px 20px 72px",
       }}
     >
-      <canvas id="nf-lines" ref={cvRef} aria-hidden="true" style={{ position: "absolute", left: "0", top: "0", width: "100%", height: "100%", display: "block", pointerEvents: "none" }} />
+      <canvas id="nf-lines" ref={cvRef} aria-hidden="true" style={{ position: "absolute", insetInlineStart: "0", top: "0", width: "100%", height: "100%", display: "block", pointerEvents: "none" }} />
       <div
         id="nf-block"
         ref={blkRef}
@@ -222,7 +222,7 @@ export const NotFound: React.FC = () => {
                   aria-hidden="true"
                   style={{
                     position: "absolute",
-                    left: "0",
+                    insetInlineStart: "0",
                     top: "0",
                     width: ".2em",
                     height: ".2em",

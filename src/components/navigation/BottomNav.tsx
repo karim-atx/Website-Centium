@@ -103,7 +103,7 @@ const BusinessBar: React.FC<{ kind: BusinessNavKind; pathname: string; unread: b
   <nav
     data-bottom-nav
     aria-label={t("Business tabs")}
-    className={clsx(FLOATING_BAR, "lg:hidden left-[calc(var(--app-gutter)+10px)] right-[calc(var(--app-gutter)+10px)]")}
+    className={clsx(FLOATING_BAR, "lg:hidden start-[calc(var(--app-gutter)+10px)] end-[calc(var(--app-gutter)+10px)]")}
   >
     {/* padX 0 · 5 equal columns (NAV-001 row 2). */}
     <div className="grid grid-cols-5 items-center h-full">
@@ -206,7 +206,7 @@ const ProBar: React.FC<{ lane: ProLane; pathname: string; unread: boolean; t: (s
   <nav
     data-bottom-nav
     aria-label={t("Professional tabs")}
-    className={clsx(FLOATING_BAR, "lg:hidden left-[calc(var(--app-gutter)+22px)] right-[calc(var(--app-gutter)+22px)]")}
+    className={clsx(FLOATING_BAR, "lg:hidden start-[calc(var(--app-gutter)+22px)] end-[calc(var(--app-gutter)+22px)]")}
   >
     <div className="grid grid-cols-5 items-center h-full px-1">
       {proTabs(lane).map((tab) => {
@@ -297,7 +297,7 @@ export const BottomNav: React.FC = () => {
         // Handover 2026-09-29, 01 GLOBAL: the client app keeps this nav at
         // every width (there is no client sidebar any more), inside the
         // centred 430px column — 22px in from its edges, not the window's.
-        "fixed z-40 left-[calc(var(--app-gutter)+22px)] right-[calc(var(--app-gutter)+22px)] h-[58px] rounded-full",
+        "fixed z-40 start-[calc(var(--app-gutter)+22px)] end-[calc(var(--app-gutter)+22px)] h-[58px] rounded-full",
         // 18px above the viewport edge, plus the home-indicator/gesture-bar
         // inset on notched devices — the design canvas has no device chrome
         // to account for this, but the bar this replaces did.

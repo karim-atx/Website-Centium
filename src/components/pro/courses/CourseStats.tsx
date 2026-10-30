@@ -106,7 +106,7 @@ export function CourseStats({ card, categories, onChanged }: { card: CourseCard;
     <div className="flex flex-col pb-28">
       <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 13 }}>
         <div className="flex items-start min-w-0" style={{ gap: 10 }}>
-          <button type="button" onClick={back} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginLeft: -6, marginTop: 2 }}>
+          <button type="button" onClick={back} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -6, marginTop: 2 }}>
             <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
           </button>
           <div className="min-w-0">
@@ -210,7 +210,7 @@ export function CourseStats({ card, categories, onChanged }: { card: CourseCard;
                 <span style={{ height: 7, borderRadius: 9999, background: INK.soft, overflow: "hidden" }}>
                   <span className="block h-full" style={{ width: `${total ? Math.round((b.count / total) * 100) : 0}%`, background: "#D9A441" }} />
                 </span>
-                <span className="text-right">{b.count}</span>
+                <span className="text-end">{b.count}</span>
               </div>
             ))}
           </div>
@@ -273,7 +273,7 @@ function BarRow({ label, value, max, labelWidth }: { label: string; value: numbe
     <div className="grid items-center" style={{ gridTemplateColumns: `${labelWidth}px minmax(0,1fr) 28px`, gap: 8, marginTop: 4, fontSize: textPx(11.5), color: INK.chS }} aria-label={`${label}: ${value}`}>
       <span className="truncate">{label}</span>
       {bar}
-      <span className="text-right" style={{ fontVariantNumeric: "tabular-nums" }}>{value}</span>
+      <span className="text-end" style={{ fontVariantNumeric: "tabular-nums" }}>{value}</span>
     </div>
   );
 }

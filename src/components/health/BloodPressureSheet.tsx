@@ -289,7 +289,7 @@ export const BloodPressureSheet: React.FC<{
           <span
             aria-hidden
             className="shrink-0 text-charcoal"
-            style={{ margin: "36px 9px 0 8px", width: 10.1, fontSize: textPx(26), lineHeight: "39px", fontWeight: 300, opacity: 0.35 }}
+            style={{ marginBlock: "36px 0", marginInline: "8px 9px", width: 10.1, fontSize: textPx(26), lineHeight: "39px", fontWeight: 300, opacity: 0.35 }}
           >
             /
           </span>

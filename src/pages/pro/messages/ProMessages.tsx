@@ -572,7 +572,7 @@ export default function ProMessages() {
 
       {/* K1: Archived, at the top of the list (it scrolls away). */}
       {view === "list" && !loading && archived.length > 0 && (
-        <button type="button" onClick={() => setView("archived")} data-archived-row="" className="tap w-full flex items-center text-left" style={{ gap: 12, padding: "10px 8px", minHeight: 56, borderBottom: `1px solid ${INK.b06}` }}>
+        <button type="button" onClick={() => setView("archived")} data-archived-row="" className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "10px 8px", minHeight: 56, borderBottom: `1px solid ${INK.b06}` }}>
           <span className="flex items-center justify-center shrink-0 rounded-full" style={{ width: 36, height: 36, background: INK.prPale }}>
             <Archive size={17} style={{ color: INK.prDeep }} aria-hidden />
           </span>
@@ -652,7 +652,7 @@ export default function ProMessages() {
           aria-label="New group"
           data-fab=""
           className="tap fixed z-30 rounded-full flex items-center justify-center bg-primary-fill text-on-primary-fill dark:shadow-none lg:bottom-8"
-          style={{ width: 52, height: 52, right: 18, bottom: "calc(env(safe-area-inset-bottom) + 104px)", boxShadow: "0 8px 22px rgba(95,80,147,0.28)" }}
+          style={{ width: 52, height: 52, insetInlineEnd: 18, bottom: "calc(env(safe-area-inset-bottom) + 104px)", boxShadow: "0 8px 22px rgba(95,80,147,0.28)" }}
         >
           <Plus size={22} strokeWidth={2.4} aria-hidden />
         </button>
@@ -680,7 +680,7 @@ export default function ProMessages() {
                 setNewOpen(null);
                 o.go();
               }}
-              className="tap w-full flex items-center text-left"
+              className="tap w-full flex items-center text-start"
               style={{ gap: 12, minHeight: 60, padding: "0 4px", borderBottom: `1px solid ${INK.b06}` }}
             >
               <span className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 11, background: INK.prPale }}>

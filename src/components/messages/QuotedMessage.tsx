@@ -67,7 +67,7 @@ export const QuotedMessage: React.FC<{
         // A quote with no target is not tappable: jumping to nothing would
         // read as the control being broken rather than the message being gone.
         disabled={!message}
-        className="tap flex items-stretch gap-2 w-full text-left rounded-xl bg-black/10 px-2.5 py-1.5 mb-1.5 disabled:cursor-default"
+        className="tap flex items-stretch gap-2 w-full text-start rounded-xl bg-black/10 px-2.5 py-1.5 mb-1.5 disabled:cursor-default"
       >
         {content}
       </button>

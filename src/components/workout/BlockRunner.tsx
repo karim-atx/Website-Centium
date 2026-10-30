@@ -157,7 +157,7 @@ export const BlockRunner: React.FC<{
       style={{
         borderRadius: 16,
         background: colors.tint,
-        borderLeft: `4px solid ${colors.rail}`,
+        borderInlineStart: `4px solid ${colors.rail}`,
       }}
     >
       <div style={{ padding: "10px 12px 8px" }}>

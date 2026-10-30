@@ -237,9 +237,9 @@ export const NotificationsHub: React.FC<{
       <div
         key={n.id}
         className="flex"
-        style={{ alignItems: "flex-start", gap: 4, padding: "0 6px 0 0", borderTop: i === 0 ? 0 : `0.5px solid ${dark ? m.div : "rgba(36,31,27,0.06)"}`, background: unread ? (dark ? "rgba(169,145,254,0.08)" : "#FBFAFE") : m.card }}
+        style={{ alignItems: "flex-start", gap: 4, paddingBlock: "0", paddingInline: "0 6px", borderTop: i === 0 ? 0 : `0.5px solid ${dark ? m.div : "rgba(36,31,27,0.06)"}`, background: unread ? (dark ? "rgba(169,145,254,0.08)" : "#FBFAFE") : m.card }}
       >
-        <button type="button" onClick={() => openRow(n)} className="market-focus flex-1 min-w-0 flex text-left" style={{ alignItems: "flex-start", gap: 12, padding: "12px 0 12px 14px", background: "none", border: 0, font: "inherit", color: m.ink, cursor: "pointer" }}>
+        <button type="button" onClick={() => openRow(n)} className="market-focus flex-1 min-w-0 flex text-start" style={{ alignItems: "flex-start", gap: 12, paddingBlock: "12px", paddingInline: "14px 0", background: "none", border: 0, font: "inherit", color: m.ink, cursor: "pointer" }}>
           {withAction && n.clientId ? (
             <Initials text={initialsOf(inbox.names[n.clientId] ?? t.title)} size={38} />
           ) : (
@@ -441,7 +441,7 @@ export const NotificationsHub: React.FC<{
           style={{ background: m.page, color: m.ink, padding: "calc(env(safe-area-inset-top) + 12px) 16px 32px", lineHeight: "normal" }}
         >
           <style>{FOCUS_CSS}</style>
-          <div className="flex items-center shrink-0" style={{ gap: 6, margin: "-4px 0 6px -10px" }}>
+          <div className="flex items-center shrink-0" style={{ gap: 6, marginBlock: "-4px 6px", marginInline: "-10px 0" }}>
             <button type="button" onClick={p.onClose} aria-label="Back" className="market-focus" style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", background: "none", border: 0, padding: 0, borderRadius: 12, color: m.ink, cursor: "pointer" }}>
               <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
             </button>

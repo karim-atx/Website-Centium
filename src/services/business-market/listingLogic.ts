@@ -1,3 +1,4 @@
+import { appLocale } from "../../i18n/format";
 // Pure B13 listing rules (node --test loads this file; no client imports):
 // amenity keys and labels, listing_strength rows, the photo gallery, and the
 // listing-performance readers mapped onto the MA1 Performance tab.
@@ -249,7 +250,7 @@ export function summarize(weeks: readonly PerfWeek[], kind: MarketKind): PerfSum
 }
 
 /** "1,240" */
-export const num = (v: number): string => v.toLocaleString("en-US");
+export const num = (v: number): string => v.toLocaleString(appLocale("en-US"));
 
 /** One decimal under 10%, whole above (MA1-096 row 6e DEFECT fix). */
 export function pctOf(part: number, whole: number): string {

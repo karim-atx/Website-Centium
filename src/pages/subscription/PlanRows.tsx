@@ -120,7 +120,7 @@ export const PlanRow: React.FC<{
         isCurrent ? "border-primary bg-primary-pale" : "border-charcoal/10 bg-cream-card"
       )}
     >
-      <div className="text-left min-w-0">
+      <div className="text-start min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-sm font-bold text-charcoal">{tier.name}</p>
           {isCurrent && (

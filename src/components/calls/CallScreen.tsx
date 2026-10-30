@@ -112,14 +112,14 @@ const CallStage: React.FC<{
         )}
 
         {video && hasPublication(mine) && (
-          <div className="absolute top-4 right-4 w-24 sm:w-32 aspect-[3/4] rounded-2xl overflow-hidden ring-1 ring-white/20 shadow-lift">
+          <div className="absolute top-4 end-4 w-24 sm:w-32 aspect-[3/4] rounded-2xl overflow-hidden ring-1 ring-white/20 shadow-lift">
             <VideoTrack trackRef={mine!} className="w-full h-full object-cover" />
           </div>
         )}
 
         {/* Elapsed time, and the countdown once the cap is close. Both read
             from the same wall clock, so they cannot disagree. */}
-        <div className="absolute top-4 left-4 flex items-center gap-2">
+        <div className="absolute top-4 start-4 flex items-center gap-2">
           <span className="text-xs font-semibold text-white/80 bg-black/35 rounded-full px-2.5 py-1 tabular-nums">
             {formatDuration(elapsedSeconds)}
           </span>

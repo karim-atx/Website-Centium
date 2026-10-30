@@ -313,7 +313,7 @@ const TplCard: React.FC<{ icon: LucideIcon; title: string; line: string; onOpen:
   const dark = useIsDark();
   return (
     <div className="flex items-center" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "14px 16px", marginBottom: 8, gap: 12 }}>
-      <button type="button" onClick={onOpen} className="tap flex-1 min-w-0 flex items-center text-left" style={{ gap: 12 }}>
+      <button type="button" onClick={onOpen} className="tap flex-1 min-w-0 flex items-center text-start" style={{ gap: 12 }}>
         <span aria-hidden className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 11, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
           <Icon size={17} strokeWidth={1.75} style={{ color: INK.prAccent, ...NO_ICON_SCALE }} />
         </span>
@@ -326,7 +326,7 @@ const TplCard: React.FC<{ icon: LucideIcon; title: string; line: string; onOpen:
           </span>
         </span>
       </button>
-      <button type="button" aria-label={`${title} options`} onClick={(e) => onMenu(e.currentTarget)} className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, margin: "-12px -14px -12px -8px" }}>
+      <button type="button" aria-label={`${title} options`} onClick={(e) => onMenu(e.currentTarget)} className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, marginBlock: "-12px", marginInline: "-8px -14px" }}>
         <EllipsisVertical size={16} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
       </button>
     </div>

@@ -84,7 +84,7 @@ function ProMarketplacePage() {
   return (
     <div data-pro-market style={{ color: m.ink, marginTop: -4 }}>
       <style>{FOCUS_CSS}</style>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginLeft: -7 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginInlineStart: -7 }}>
         <button
           type="button"
           onClick={back}

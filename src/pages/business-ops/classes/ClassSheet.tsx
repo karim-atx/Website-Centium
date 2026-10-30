@@ -870,7 +870,7 @@ function SheetBody({
                           if (k === "date") setUntilOpen(true);
                           if (k === "count") window.setTimeout(() => countRef.current?.focus(), 30);
                         }}
-                        className="market-focus flex flex-1 items-center text-left"
+                        className="market-focus flex flex-1 items-center text-start"
                         style={{ gap: 10, minHeight: 44, background: "transparent", border: 0 }}
                       >
                         <span className="shrink-0 flex items-center justify-center" style={{ width: 20, height: 20, borderRadius: 999, border: `${on ? 6 : 1.5}px solid ${on ? m.segactive : m.border}`, background: m.card, boxSizing: "border-box" }} />
@@ -900,7 +900,7 @@ function SheetBody({
                             onFocus={() => rp.ends !== "count" && update({ repeat: { ...rp, ends: "count" } })}
                             onChange={(e) => update({ repeat: { ...rp, ends: "count", count: e.target.value.replace(/\D/g, "").slice(0, 3) } })}
                             className="tabular-nums"
-                            style={{ width: 30, border: 0, background: "transparent", outline: "none", textAlign: "right", fontWeight: 700, color: m.ink, fontSize: textPx(12.5) }}
+                            style={{ width: 30, border: 0, background: "transparent", outline: "none", textAlign: "end", fontWeight: 700, color: m.ink, fontSize: textPx(12.5) }}
                           />
                           sessions
                         </span>
@@ -1006,8 +1006,8 @@ function SheetBody({
             {coverSrc ? (
               <div className="relative overflow-hidden" style={{ borderRadius: 10, aspectRatio: "16 / 9", background: m.card }}>
                 <img src={coverSrc} alt="Class cover" className="w-full h-full object-cover" />
-                <ImageApprovalBadge state={coverState} className="absolute left-2 top-2" />
-                <div className="absolute flex" style={{ right: 8, bottom: 8, gap: 6 }}>
+                <ImageApprovalBadge state={coverState} className="absolute start-2 top-2" />
+                <div className="absolute flex" style={{ insetInlineEnd: 8, bottom: 8, gap: 6 }}>
                   <button type="button" onClick={() => coverInput.current?.click()} disabled={coverBusy} className="market-focus hit inline-flex items-center" style={{ minHeight: 36, padding: "0 12px", borderRadius: 10, background: "rgba(36,31,27,0.72)", color: "#FFFFFF", fontSize: textPx(12), fontWeight: 800, border: 0 }}>
                     {coverBusy ? "Uploading…" : "Change"}
                   </button>
@@ -1081,7 +1081,7 @@ function SheetBody({
             {form.bring.length > 0 && (
               <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 8 }}>
                 {form.bring.map((b) => (
-                  <span key={b} className="inline-flex items-center" style={{ minHeight: 32, gap: 2, padding: "0 4px 0 10px", borderRadius: 999, background: m.pale, color: m.pdark, fontSize: textPx(12), fontWeight: 700 }}>
+                  <span key={b} className="inline-flex items-center" style={{ minHeight: 32, gap: 2, paddingBlock: "0", paddingInline: "10px 4px", borderRadius: 999, background: m.pale, color: m.pdark, fontSize: textPx(12), fontWeight: 700 }}>
                     {b}
                     <button type="button" aria-label={`Remove ${b}`} onClick={() => update({ bring: form.bring.filter((x) => x !== b) })} className="market-focus hit inline-flex items-center justify-center" style={{ width: 28, height: 28, background: "transparent", border: 0, color: m.pdark }}>
                       <X size={13} strokeWidth={2.6} aria-hidden />
@@ -1257,11 +1257,11 @@ function SheetBody({
         }}
       >
         {conflict ? (
-          <div style={{ marginTop: 14, borderRadius: 14, background: m.sgrey, padding: "4px 14px", textAlign: "left" }}>
+          <div style={{ marginTop: 14, borderRadius: 14, background: m.sgrey, padding: "4px 14px", textAlign: "start" }}>
             {clashRows(clashClass, clashFirst, clashBusy).map((r, i) => (
               <div key={r.k} className="flex justify-between" style={{ gap: 12, padding: "8px 0", borderTop: i ? `0.5px solid ${m.div}` : 0, fontSize: textPx(12.5) }}>
                 <span style={{ color: m.slabel }}>{r.k}</span>
-                <span style={{ fontWeight: 700, textAlign: "right", color: m.ink }}>{r.v}</span>
+                <span style={{ fontWeight: 700, textAlign: "end", color: m.ink }}>{r.v}</span>
               </div>
             ))}
           </div>

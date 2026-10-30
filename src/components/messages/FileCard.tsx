@@ -23,7 +23,7 @@ export const FileCard: React.FC<{
     <button
       type="button"
       onClick={onOpen}
-      className={`tap w-full flex items-center gap-2.5 rounded-[14px] bg-cream-card border border-charcoal/10 px-3 py-2.5 text-left text-charcoal ${
+      className={`tap w-full flex items-center gap-2.5 rounded-[14px] bg-cream-card border border-charcoal/10 px-3 py-2.5 text-start text-charcoal ${
         className ?? ""
       }`}
     >

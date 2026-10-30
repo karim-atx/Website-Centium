@@ -205,14 +205,14 @@ export const SwipeActions: React.FC<{
     <div className="relative" style={{ borderRadius: radius }}>
       <div
         aria-hidden={offset === 0}
-        className="absolute inset-y-0 right-0 flex items-center justify-end"
+        className="absolute inset-y-0 end-0 flex items-center justify-end"
         // Hidden while fully closed: a tile behind a row whose corner radius
         // is near the tile's inset otherwise shows as a sliver at the curve.
         // Hiding waits for the row's .22s slide back.
         style={{
           gap: tileGap,
           width: openWidth,
-          paddingRight: edgeInset,
+          paddingInlineEnd: edgeInset,
           visibility: offset === 0 && !dragging ? "hidden" : "visible",
           transition: offset === 0 && !dragging ? "visibility 0s linear .22s" : "none",
         }}

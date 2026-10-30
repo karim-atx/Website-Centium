@@ -19,6 +19,7 @@ import {
   scrubIndex,
   tooltipLeft,
 } from "./chartModel";
+import { appLocale } from "../../i18n/format";
 
 // Market + Share 3.0 · ChartCard (HANDOVER §4 B-MA.7, P-MA.6, §5: kind line |
 // bar | funnel, range, series, scrub / tap, tooltip). Markup and behaviour
@@ -187,7 +188,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
   range,
   labels,
   series,
-  formatValue = (v) => Math.round(v).toLocaleString("en-US"),
+  formatValue = (v) => Math.round(v).toLocaleString(appLocale("en-US")),
   steps = [],
   rateSeries = [],
   showAxis,
@@ -413,7 +414,7 @@ export interface ExpandedChartProps {
   note?: string | null;
 }
 
-export const ExpandedChart: React.FC<ExpandedChartProps> = ({ question, total, delta, unit, range, labels, series, prev, bars, formatValue = (v) => Math.round(v).toLocaleString("en-US"), compare, onCompareChange, note }) => {
+export const ExpandedChart: React.FC<ExpandedChartProps> = ({ question, total, delta, unit, range, labels, series, prev, bars, formatValue = (v) => Math.round(v).toLocaleString(appLocale("en-US")), compare, onCompareChange, note }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const c = chartInk(dark);

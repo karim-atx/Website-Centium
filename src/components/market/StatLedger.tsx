@@ -37,7 +37,7 @@ export const StatLedger: React.FC<{ rows: StatLedgerRow[]; className?: string; s
               <span style={{ fontSize: textPx(16), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: m.ink }}>{r.value}</span>
               {r.leaf ? <PointsLeaf height={12} /> : null}
             </span>
-            <span style={{ minWidth: 46, textAlign: "right", fontSize: textPx(11), fontWeight: 700, fontVariantNumeric: "tabular-nums", color: tone === "high" ? m.high : tone === "faint" ? m.faint : m.good }}>
+            <span style={{ minWidth: 46, textAlign: "end", fontSize: textPx(11), fontWeight: 700, fontVariantNumeric: "tabular-nums", color: tone === "high" ? m.high : tone === "faint" ? m.faint : m.good }}>
               {r.delta ?? "–"}
             </span>
           </div>

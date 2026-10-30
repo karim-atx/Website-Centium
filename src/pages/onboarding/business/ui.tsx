@@ -79,7 +79,7 @@ export const BizField: React.FC<BizFieldProps> = ({
         <div
           className={clsx(
             "group flex-[3] min-w-0 rounded-[16px] bg-cream-card flex gap-[10px] box-border text-[15px]",
-            area ? "min-h-[96px] items-start py-[13px] px-4" : clsx("min-h-[52px] items-center", leading ? "pl-[14px] pr-4" : "px-4"),
+            area ? "min-h-[96px] items-start py-[13px] px-4" : clsx("min-h-[52px] items-center", leading ? "ps-[14px] pe-4" : "px-4"),
             error
               ? "border-[1.5px] border-status-high"
               : "border border-hair-11 focus-within:border-[1.5px] focus-within:border-brand-c focus-within:shadow-[var(--ob-focus)]"
@@ -237,7 +237,7 @@ export const BizRows: React.FC<{ rows: BizRow[]; ariaLabel?: string; radioGroup?
       const interactive = !!(r.radio || r.onClick);
       const inner = (
         <>
-          {i > 0 && <span aria-hidden className="absolute top-0 right-[14px] h-px bg-list-rule" style={{ left: Icon ? 55 : 14 }} />}
+          {i > 0 && <span aria-hidden className="absolute top-0 end-[14px] h-px bg-list-rule" style={{ left: Icon ? 55 : 14 }} />}
           {Icon && (
             <span className="w-[30px] h-[30px] rounded-[10px] bg-row-tile text-white flex items-center justify-center shrink-0">
               <Icon size={15} aria-hidden />
@@ -248,7 +248,7 @@ export const BizRows: React.FC<{ rows: BizRow[]; ariaLabel?: string; radioGroup?
               <span className={clsx("w-[10px] h-[10px] rounded-full", r.radio.selected ? "bg-primary-dark" : "bg-transparent")} />
             </span>
           )}
-          <span className="flex-1 min-w-0 text-left">
+          <span className="flex-1 min-w-0 text-start">
             <span className="block text-[12.5px] font-bold leading-[17px] text-charcoal">{r.title}</span>
             {r.desc && <span className="block mt-[2px] text-[10.5px] leading-[14px] text-desc">{r.desc}</span>}
           </span>
@@ -361,7 +361,7 @@ export const BizUpload: React.FC<{
         disabled={state === "busy"}
         aria-describedby={error ? errId : undefined}
         className={clsx(
-          "relative overflow-hidden w-full text-left flex items-center gap-3 rounded-[16px] py-[11px] px-[14px] box-border",
+          "relative overflow-hidden w-full text-start flex items-center gap-3 rounded-[16px] py-[11px] px-[14px] box-border",
           state === "done" || state === "busy" ? "border border-solid border-hair-11 bg-cream-card" : "border-[1.5px]",
           state === "empty" && "border-dashed border-primary-fill bg-primary-pale",
           state === "err" && "border-solid border-status-high bg-cream-card"
@@ -393,7 +393,7 @@ export const BizUpload: React.FC<{
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(progress * 100)}
-            className="absolute left-0 bottom-0 h-[3px] bg-primary-fill transition-[width] duration-150"
+            className="absolute start-0 bottom-0 h-[3px] bg-primary-fill transition-[width] duration-150"
             style={{ width: `${Math.round(progress * 100)}%` }}
           />
         )}
@@ -512,11 +512,11 @@ export const BizSummary: React.FC<{
       )}
     </div>
     {lines.map((l, i) => (
-      <p key={i} className="text-[12px] leading-[17px] text-charcoal-soft mt-1 ml-9">
+      <p key={i} className="text-[12px] leading-[17px] text-charcoal-soft mt-1 ms-9">
         {l}
       </p>
     ))}
-    {flag && <p className={clsx("text-[11.5px] font-bold leading-4 mt-[6px] ml-9", bad ? "text-status-high" : "text-caution-text")}>{flag}</p>}
+    {flag && <p className={clsx("text-[11.5px] font-bold leading-4 mt-[6px] ms-9", bad ? "text-status-high" : "text-caution-text")}>{flag}</p>}
   </div>
 );
 
@@ -536,8 +536,8 @@ export const BizListingPreview: React.FC<{
 }> = ({ coverUrl, coverLabel, logoUrl, initials, name, type, tags, line }) => (
   <div className="rounded-[22px] bg-cream-card border border-hair-11 overflow-hidden mb-[14px]" style={{ boxShadow: "var(--ob-preview-shadow)" }}>
     <div className="relative h-[118px]" style={{ background: coverUrl ? `center / cover no-repeat url("${coverUrl}")` : stripes }}>
-      {!coverUrl && <span className="absolute left-3 top-[10px] font-mono text-[10px] text-charcoal-faint">{coverLabel}</span>}
-      <span className="absolute right-[10px] top-[10px] text-[10px] font-extrabold py-[3px] px-2 rounded-full bg-cream-card text-primary-dark">New on Explore</span>
+      {!coverUrl && <span className="absolute start-3 top-[10px] font-mono text-[10px] text-charcoal-faint">{coverLabel}</span>}
+      <span className="absolute end-[10px] top-[10px] text-[10px] font-extrabold py-[3px] px-2 rounded-full bg-cream-card text-primary-dark">New on Explore</span>
     </div>
     <div className="flex gap-3 pt-3 px-[14px] pb-[14px]">
       <span

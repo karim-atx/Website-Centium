@@ -41,6 +41,7 @@ import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../modera
 import { Field, FieldError, Label, Note, TextBox } from "./courseUi";
 import { fieldBox } from "./courseStyles";
 import { lessonEyebrow } from "./courseModel";
+import { appLocale } from "../../../i18n/format";
 
 const KIND_LABEL: Record<LessonKind, string> = { video: "Video", reading: "Reading", pdf: "PDF", quiz: "Quiz", image: "Image", check_in: "Check-in" };
 
@@ -75,7 +76,7 @@ export const LessonTypeStep: React.FC<{ weekLabel: string; kind: LessonKind | nu
               aria-checked={on}
               disabled={!t.key}
               onClick={() => t.key && onPick(t.key)}
-              className="tap text-left disabled:cursor-default"
+              className="tap text-start disabled:cursor-default"
               style={{ borderRadius: 16, border: `1px solid ${on ? INK.pr : INK.b10}`, background: on ? INK.prPale : INK.card, padding: 12, opacity: t.key ? 1 : 0.7 }}
             >
               <span className="flex items-center justify-between" style={{ gap: 6 }}>
@@ -383,7 +384,7 @@ export const LessonEditor: React.FC<{
                     <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.chS }}>Choose an image</span>
                   </>
                 )}
-                {shownOwn && <ImageApprovalBadge state={shownOwn} className="absolute top-2 left-2" />}
+                {shownOwn && <ImageApprovalBadge state={shownOwn} className="absolute top-2 start-2" />}
               </button>
               <input
                 ref={imageInput}
@@ -431,7 +432,7 @@ export const LessonEditor: React.FC<{
                 placeholder="How did this week's sessions feel?"
               />
               <Note mt={6}>
-                Each client writes an answer of up to {CHECK_IN_ANSWER_MAX.toLocaleString("en-US")} characters. Only you see the answers, under Check-in answers on the course's stats.
+                Each client writes an answer of up to {CHECK_IN_ANSWER_MAX.toLocaleString(appLocale("en-US"))} characters. Only you see the answers, under Check-in answers on the course's stats.
               </Note>
               {minutesField("Time to answer")}
             </>
@@ -653,7 +654,7 @@ function QuestionBlock({ index, total, question, editable, onChanged }: { index:
           <button type="button" onClick={() => void save()} disabled={busy || !ready} className="tap disabled:opacity-40" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, minHeight: 32 }}>
             {saved && !busy ? "Saved" : "Save question"}
           </button>
-          <button type="button" onClick={() => void remove()} disabled={busy} className="tap ml-auto" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi, minHeight: 32 }}>
+          <button type="button" onClick={() => void remove()} disabled={busy} className="tap ms-auto" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi, minHeight: 32 }}>
             Delete
           </button>
         </div>

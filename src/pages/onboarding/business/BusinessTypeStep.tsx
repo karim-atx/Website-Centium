@@ -215,7 +215,7 @@ export const BusinessTypeStep: React.FC<BizTypeStepProps> = ({ biz, setBiz, onNe
                 aria-checked={on}
                 onClick={() => setSheetPick(s.key)}
                 className={clsx(
-                  "w-full text-left flex items-center gap-3 rounded-[16px] py-[9px] pr-3 pl-[9px] box-border",
+                  "w-full text-start flex items-center gap-3 rounded-[16px] py-[9px] pe-3 ps-[9px] box-border",
                   on ? "border-[1.5px] border-solid border-brand-c bg-primary-pale shadow-[0_0_0_3px_rgb(var(--c-brand-c)/0.1)] dark:shadow-[0_0_0_3px_rgba(169,145,254,0.14)]" : "border border-solid border-hair-11 bg-cream-card"
                 )}
               >

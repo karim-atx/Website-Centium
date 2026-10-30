@@ -72,7 +72,7 @@ export const FieldButton = React.forwardRef<
         aria-label={ariaLabel}
         aria-haspopup={Icon === ChevronDown ? "menu" : undefined}
         aria-expanded={Icon === ChevronDown ? !!open : undefined}
-        className="tap flex items-center justify-between text-left disabled:opacity-50"
+        className="tap flex items-center justify-between text-start disabled:opacity-50"
         style={{ ...wellStyle(open), height: 40 }}
       >
         {lead}
@@ -178,12 +178,12 @@ export const SettingsRow: React.FC<{
       </span>
       {value !== undefined && <span style={{ flexShrink: 0, fontSize: textPx(12.5), color: INK.chF }}>{value}</span>}
       {right ?? (onClick ? <ChevronRight size={16} strokeWidth={1.75} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} /> : null)}
-      {!last && <span aria-hidden className="absolute" style={{ bottom: 0, left: Icon || tile ? 50 : 0, right: 0, height: 1, background: INK.b06 }} />}
+      {!last && <span aria-hidden className="absolute" style={{ bottom: 0, left: Icon || tile ? 50 : 0, insetInlineEnd: 0, height: 1, background: INK.b06 }} />}
     </>
   );
   const style: React.CSSProperties = { gap: 14, padding: "13px 0", minHeight: 44 };
   return onClick ? (
-    <button type="button" onClick={onClick} aria-label={ariaLabel} className="tap relative w-full flex items-center text-left" style={style}>
+    <button type="button" onClick={onClick} aria-label={ariaLabel} className="tap relative w-full flex items-center text-start" style={style}>
       {body}
     </button>
   ) : (
@@ -203,7 +203,7 @@ export const ChoiceCard: React.FC<{ title: string; sub?: string; on: boolean; on
       aria-checked={on}
       onClick={onClick}
       disabled={disabled}
-      className="tap w-full flex items-center text-left disabled:cursor-not-allowed"
+      className="tap w-full flex items-center text-start disabled:cursor-not-allowed"
       style={{
         gap: 9,
         borderRadius: 12,

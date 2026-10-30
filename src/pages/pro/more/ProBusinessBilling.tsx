@@ -121,7 +121,7 @@ export function ProBusinessBilling() {
                 setNote(null);
                 if (o.selectable && o.price !== null) setAsk({ to: o.period, price: o.price, at: renewalAfterSwitch(new Date(), o.period) });
               }}
-              className="tap w-full flex items-center justify-between text-left"
+              className="tap w-full flex items-center justify-between text-start"
               style={{
                 minHeight: 44,
                 gap: 10,
@@ -142,7 +142,7 @@ export function ProBusinessBilling() {
                   </span>
                 )}
               </span>
-              <span className="flex flex-col items-end" style={{ textAlign: "right" }}>
+              <span className="flex flex-col items-end" style={{ textAlign: "end" }}>
                 <span style={{ fontSize: textPx(12), fontWeight: 700, color: o.price === null ? INK.chF : INK.chS }}>{periodPriceText(o.price, o.period, formatPrice)}</span>
                 {o.period === "yearly" && o.price !== null && saving && (
                   <span style={{ fontSize: textPx(11), fontWeight: 600, color: INK.chF }}>{perMonthText(o.price, formatPrice)}</span>

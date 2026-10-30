@@ -96,7 +96,7 @@ export function useBizShareSheet(): BizShareSheet {
       )}
       {strip &&
         createPortal(
-          <div className="fixed left-0 right-0 flex justify-center" style={{ zIndex: 95, top: "calc(env(safe-area-inset-top) + 12px)", padding: "0 16px", pointerEvents: "none" }}>
+          <div className="fixed start-0 end-0 flex justify-center" style={{ zIndex: 95, top: "calc(env(safe-area-inset-top) + 12px)", padding: "0 16px", pointerEvents: "none" }}>
             <div style={{ width: "100%", maxWidth: 398, pointerEvents: "auto" }}>
               <ConfirmationStrip key={strip.n} text={strip.text} tone={strip.tone} action="Done" onAction={() => setStrip(null)} still={reduced} />
             </div>

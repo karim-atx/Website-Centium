@@ -153,7 +153,7 @@ export const PersonalRecordReviewSheet: React.FC = () => {
                     disabled={status === "missing"}
                     inputMode="decimal"
                     aria-label={`${name} one rep max`}
-                    className="w-16 rounded-lg border border-charcoal/15 bg-cream-card px-2 py-1 text-xs text-charcoal text-right focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-40"
+                    className="w-16 rounded-lg border border-charcoal/15 bg-cream-card px-2 py-1 text-xs text-charcoal text-end focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-40"
                   />
                   <span className="text-xs font-semibold text-charcoal-faint">kg</span>
                 </div>

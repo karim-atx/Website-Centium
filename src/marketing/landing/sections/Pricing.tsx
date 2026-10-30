@@ -263,7 +263,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                 position: r.saveBadgePos,
                 left: r.saveBadgeL,
                 top: r.saveBadgeT,
-                marginLeft: r.saveML,
+                marginInlineStart: r.saveML,
                 padding: "4px 10px",
                 borderRadius: "99px",
                 background: "#EDF4F3",
@@ -330,7 +330,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                     : "0 1px 1px rgba(72,58,130,.04),0 10px 26px rgba(72,58,130,.06)",
                   display: "flex",
                   flexDirection: "column",
-                  textAlign: "left",
+                  textAlign: "start",
                 }}
               >
                 {hi && (
@@ -419,11 +419,11 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
               }}
             />
           ))}
-          <span id="pc-count" ref={countRef} style={{ marginLeft: "6px", fontSize: "13px", fontWeight: "700", color: "#5B5349", fontVariantNumeric: "tabular-nums" }}>
+          <span id="pc-count" ref={countRef} style={{ marginInlineStart: "6px", fontSize: "13px", fontWeight: "700", color: "#5B5349", fontVariantNumeric: "tabular-nums" }}>
             {"1 / " + n}
           </span>
         </div>
-        <p style={{ marginTop: "16px", textAlign: "center", fontSize: "13px", color: "#5B5349", maxWidth: "760px", marginLeft: "auto", marginRight: "auto" }}>{A.footnote}</p>
+        <p style={{ marginTop: "16px", textAlign: "center", fontSize: "13px", color: "#5B5349", maxWidth: "760px", marginInlineStart: "auto", marginInlineEnd: "auto" }}>{A.footnote}</p>
         <div style={{ marginTop: "22px", display: "flex", justifyContent: "center" }}>
           <button
             onClick={() => setCmp((v) => !v)}
@@ -466,7 +466,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                       key={ri + "-" + j}
                       style={
                         j === 0
-                          ? { padding: "11px 16px", borderTop: "1px solid #F0EDE8", textAlign: "left", fontWeight: 700, color: "#221E1A" }
+                          ? { padding: "11px 16px", borderTop: "1px solid #F0EDE8", textAlign: "start", fontWeight: 700, color: "#221E1A" }
                           : {
                               padding: "11px 10px",
                               borderTop: "1px solid #F0EDE8",

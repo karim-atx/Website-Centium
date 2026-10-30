@@ -174,7 +174,7 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
                     top: "0",
                     width: r.slW,
                     height: cardH,
-                    marginLeft: r.slML,
+                    marginInlineStart: r.slML,
                     flex: `0 0 ${r.slW}`,
                     scrollSnapAlign: "center",
                     transformOrigin: "50% 50%",
@@ -193,7 +193,7 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
                       background: sl.bg,
                       border: "1px solid rgba(125,103,217,.16)",
                       boxShadow: r.slSh,
-                      textAlign: "left",
+                      textAlign: "start",
                       overflow: "hidden",
                     }}
                   >

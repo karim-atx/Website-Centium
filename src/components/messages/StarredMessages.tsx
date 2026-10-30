@@ -72,7 +72,7 @@ export const StarredMessages: React.FC<{
           key={m.id}
           type="button"
           onClick={() => onOpen(m.threadId)}
-          className="tap w-full text-left rounded-2xl bg-cream-card border border-charcoal/[0.08] px-3.5 py-3 flex flex-col gap-1"
+          className="tap w-full text-start rounded-2xl bg-cream-card border border-charcoal/[0.08] px-3.5 py-3 flex flex-col gap-1"
         >
           <span className="flex items-center justify-between gap-2">
             <span className="text-xs font-bold text-primary-deep-text truncate">

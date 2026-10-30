@@ -59,6 +59,7 @@ import { ReviewsTab } from "./profile/ReviewsTab";
 import { BookSheet, type BookedResult } from "./profile/BookSheet";
 import { fetchConnectedSocials } from "./profile/connectedSocials";
 import { averageOf, typeLabel, profileRatingLine, reviewLines, serviceRows, sessionWhen, socialLinks, summaryFigure, summaryLine } from "./profile/profileModel";
+import { appLocale } from "../../i18n/format";
 
 // Market + Share 3.0 · W5 · C-MO.4.9 Professional profile (Client
 // Professional Screens lines 52–158; HANDOVER §4 "C-MO.4.9"). Literal values:
@@ -662,7 +663,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
           {isConnected && clientSince && (
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 10, background: m.pale, padding: "6px 10px", fontSize: textPx(12), fontWeight: 700, color: m.pdark }}>
               <Handshake size={14} strokeWidth={2} aria-hidden style={NO_ICON_SCALE} />
-              Client since {new Date(clientSince).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+              Client since {new Date(clientSince).toLocaleDateString(appLocale("en-US"), { month: "long", year: "numeric" })}
             </span>
           )}
         </div>

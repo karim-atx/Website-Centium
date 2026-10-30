@@ -5,6 +5,7 @@
 // overlay and the meal plan card's summary.
 
 import type { MacroSplit, NutritionGoal, WeightGoalType } from "../../types";
+import { appLocale } from "../../i18n/format";
 
 // ---------------------------------------------------------------------------
 // Allergens (the 14 regulated allergens, enum `allergen`)
@@ -304,8 +305,8 @@ export function mealsOnDay(rows: MealPlanDetailRow[], dayIndex: number): number 
   return new Set(rows.filter((r) => r.dayIndex === dayIndex).map((r) => r.slot)).size;
 }
 
-const SHORT = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-const WEEKDAY = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+const SHORT = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", timeZone: "UTC" });
+const WEEKDAY = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(appLocale("en-US"), { weekday: "long", timeZone: "UTC" });
 
 /**
  * The card's two lines (CU3: "{meal_plan_name}, week {n}" and "Ends {date} ·

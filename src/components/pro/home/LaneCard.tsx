@@ -52,7 +52,7 @@ export const LaneCard: React.FC<{
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="tap w-full flex items-center text-left"
+        className="tap w-full flex items-center text-start"
         style={{ gap: 12, padding: "14px 16px" }}
       >
         <span className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 11, background: dark ? "rgba(174,161,220,0.14)" : ICON_TILE_LIGHT }}>
@@ -93,7 +93,7 @@ export const LaneCard: React.FC<{
                   key={r.key}
                   type="button"
                   onClick={r.onOpen}
-                  className="tap w-full flex items-center text-left"
+                  className="tap w-full flex items-center text-start"
                   style={{ gap: 12, padding: "10px 0", borderBottom: i < n - 1 ? `1px solid ${INK.b06}` : "none" }}
                 >
                   <Initials text={initialsOf(r.name)} size={32} />

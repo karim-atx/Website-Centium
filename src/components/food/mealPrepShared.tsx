@@ -80,7 +80,7 @@ export const MacroStrip: React.FC<{ t: MacroTotals; note?: string }> = ({ t, not
     <div>
       <div className="grid grid-cols-4" style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 16, padding: "13px 0" }}>
         {rows.map((r, k) => (
-          <div key={k} style={{ textAlign: "center", borderLeft: k === 0 ? "none" : `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` }}>
+          <div key={k} style={{ textAlign: "center", borderInlineStart: k === 0 ? "none" : `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` }}>
             <p style={{ margin: 0, fontSize: textPx(15.5), fontWeight: 800, color: r[2] }}>{r[0]}</p>
             <p style={{ margin: "2px 0 0", fontSize: textPx(11), color: PREP_FAINT }}>{r[1]}</p>
           </div>

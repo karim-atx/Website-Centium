@@ -125,7 +125,7 @@ export const EnduranceRunner: React.FC<{
                 onClick={() => setCurrent(i)}
                 aria-current={i === current ? "step" : undefined}
                 className={clsx(
-                  "tap w-full flex items-center justify-between text-left",
+                  "tap w-full flex items-center justify-between text-start",
                   i === current ? "font-bold" : "font-medium"
                 )}
                 style={{

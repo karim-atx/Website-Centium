@@ -11,6 +11,7 @@ import { FOCUS_CSS, usePress } from "../../components/market/usePress";
 import { expiringLine, nextRewardLine, todayLine } from "../../services/points";
 import { fetchRewardCatalog, forAge, type CatalogOffer } from "../../services/offers";
 import { forumAccess } from "../../services/forum/rules";
+import { appLocale } from "../../i18n/format";
 
 // Market + Share 3.0 · W2 · the points hero (C-MO.4.1 homeBronze / home /
 // homeGold / homeExpiring / homeCap; HANDOVER §4 "Points hero"; Client Explore
@@ -106,7 +107,7 @@ export function PointsHero() {
   );
   return (
     <section
-      aria-label={`${pointsSummary.tierName} tier, ${pointsSummary.balance.toLocaleString("en-US")} points`}
+      aria-label={`${pointsSummary.tierName} tier, ${pointsSummary.balance.toLocaleString(appLocale("en-US"))} points`}
       data-points-hero=""
       style={{ borderRadius: 20, padding: "14px 16px", background: t.fill, border: `0.5px solid ${t.border}`, color: m.ink, lineHeight: "normal" }}
     >

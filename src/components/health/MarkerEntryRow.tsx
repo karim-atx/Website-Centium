@@ -134,7 +134,7 @@ export const MarkerEntryRow: React.FC<{
         <button
           type="button"
           onClick={onChooseMarker}
-          className="tap flex items-center min-w-0 text-left"
+          className="tap flex items-center min-w-0 text-start"
           style={{ flex: "1 1 125px", gap: 3, minHeight: 44, outline: missingName ? `1px solid ${red}` : undefined, borderRadius: 6 }}
           aria-label={`Marker ${n}: ${draft.name || "Choose a marker"}`}
         >
@@ -156,7 +156,7 @@ export const MarkerEntryRow: React.FC<{
           ref={unitRef}
           type="button"
           onClick={() => (marker && marker.units.length > 1 ? setUnitOpen(true) : setExpanded(true))}
-          className="tap shrink-0 text-left truncate"
+          className="tap shrink-0 text-start truncate"
           style={{ ...small, width: 42, minHeight: 44 }}
           aria-label={`Marker ${n} unit${draft.unit ? `, ${draft.unit}` : ""}`}
         >
@@ -166,7 +166,7 @@ export const MarkerEntryRow: React.FC<{
           type="button"
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
-          className="tap shrink-0 text-right truncate"
+          className="tap shrink-0 text-end truncate"
           style={{ width: 56, minHeight: 44, fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 400, color: INK_FAINT }}
           aria-label={`Marker ${n} reference range, ${rangeText(asNumber(draft.low), asNumber(draft.high))}`}
         >
@@ -174,7 +174,7 @@ export const MarkerEntryRow: React.FC<{
         </button>
       </div>
       {note && (
-        <div className="flex items-start" style={{ padding: "0 12px 10px 42px", gap: 10, marginTop: -4, opacity: draft.ticked ? 1 : 0.4 }}>
+        <div className="flex items-start" style={{ paddingBlock: "0 10px", paddingInline: "42px 12px", gap: 10, marginTop: -4, opacity: draft.ticked ? 1 : 0.4 }}>
           <p className="flex-1 min-w-0" style={{ fontSize: textPx(11), lineHeight: linePx(16), fontWeight: note.attention ? 600 : 400, color: note.attention ? red : INK_FAINT, overflowWrap: "anywhere" }}>
             {note.text}
           </p>
@@ -190,7 +190,7 @@ export const MarkerEntryRow: React.FC<{
         </div>
       )}
       {expanded && (
-        <div style={{ padding: "0 12px 12px 42px" }}>
+        <div style={{ paddingBlock: "0 12px", paddingInline: "42px 12px" }}>
           {draft.other && (
             <div className="flex" style={{ gap: 8, marginBottom: 8 }}>
               <input
@@ -199,7 +199,7 @@ export const MarkerEntryRow: React.FC<{
                 placeholder="Marker name, as on your report"
                 aria-label={`Marker ${n} name`}
                 className="flex-1 min-w-0 outline-none"
-                style={{ ...box, width: "auto", textAlign: "left", padding: "0 10px", fontSize: textPx(13), fontWeight: 600 }}
+                style={{ ...box, width: "auto", textAlign: "start", padding: "0 10px", fontSize: textPx(13), fontWeight: 600 }}
               />
               <input
                 value={draft.unit}
@@ -221,7 +221,7 @@ export const MarkerEntryRow: React.FC<{
                 onChange={(e) => e.target.value && setPhase(e.target.value as LabPhase)}
                 aria-label={`Marker ${n} cycle phase`}
                 className="w-full outline-none"
-                style={{ ...box, width: "100%", textAlign: "left", padding: "0 10px", fontSize: textPx(13), fontWeight: 600 }}
+                style={{ ...box, width: "100%", textAlign: "start", padding: "0 10px", fontSize: textPx(13), fontWeight: 600 }}
               >
                 <option value="" disabled>
                   Choose a phase

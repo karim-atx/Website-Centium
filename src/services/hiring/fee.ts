@@ -17,6 +17,7 @@
 //   platform_settings (services/hiring fetchHiringFeeRules).
 
 import { bool, num, str } from "../market/parse";
+import { appLocale } from "../../i18n/format";
 
 export type OpeningType = "role" | "class_slot";
 export type PayUnit = "per_class" | "per_month" | "per_slot";
@@ -80,7 +81,7 @@ export function parseFeeQuote(type: OpeningType, r: Record<string, unknown> | nu
 /** "8%", "7.5%". */
 export function ratePercent(rate: number): string {
   const p = Math.round(rate * 10000) / 100;
-  return `${p.toLocaleString("en-US", { maximumFractionDigits: 2 })}%`;
+  return `${p.toLocaleString(appLocale("en-US"), { maximumFractionDigits: 2 })}%`;
 }
 
 /** "$25", "$2.50": a floor shows cents only when it has some. */
@@ -102,13 +103,13 @@ export function feeExplanation(r: HiringFeeRules | null): string {
 
 /** "$25.60": fees always show cents. */
 export function feeMoney(n: number): string {
-  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return "$" + n.toLocaleString(appLocale("en-US"), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /** "$320", "$37.50": pay and bases show cents only when there are some. */
 export function payMoney(n: number): string {
   const whole = Math.abs(n - Math.round(n)) < 0.005;
-  return "$" + n.toLocaleString("en-US", whole ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return "$" + n.toLocaleString(appLocale("en-US"), whole ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 const basisText = (q: HiringFeeQuote) => (q.basis === "first_month_pay" ? "the first month's pay" : "the total pay for the slot");

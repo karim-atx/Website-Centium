@@ -301,7 +301,7 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
             aria-invalid={!!dobProblem}
             aria-describedby="ob-owner-dob-help"
             onChange={(e) => setDob(e.target.value)}
-            className="flex-1 min-w-0 bg-transparent outline-none text-[15px] leading-[22px] text-charcoal [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0"
+            className="flex-1 min-w-0 bg-transparent outline-none text-[15px] leading-[22px] text-charcoal [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:end-0"
           />
           <Calendar size={16} strokeWidth={2} className="text-charcoal-faint shrink-0 pointer-events-none" aria-hidden />
         </div>

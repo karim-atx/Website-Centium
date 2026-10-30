@@ -4,6 +4,7 @@ import { cycleStats, hasEnoughForInsights, symptomGrid } from "../../services/cy
 import * as G from "../../services/cycle/guidance";
 import { getCycleStats, type CycleServerStats } from "../../services/cycle";
 import { CapsLabel, CycleCard, CycleFooter, hair, type, useCycleMode } from "./cycleUi";
+import { appLocale } from "../../i18n/format";
 
 // HE1.10.a, the Insights tab.
 //
@@ -17,7 +18,7 @@ import { CapsLabel, CycleCard, CycleFooter, hair, type, useCycleMode } from "./c
 // counts tinted by phase colour. A null stat is a dash, never a zero (the
 // app's "–", D-17).
 
-const MONTH = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short" });
+const MONTH = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short" });
 
 /** Cell colours per phase (HE1.10.a #36-#40). */
 function cellColours(phase: string): { ink: string; bg: string } {
@@ -121,7 +122,7 @@ export const CycleInsightsTab: React.FC<{
                         }}
                       >
                         <span
-                          className="absolute inset-y-0 left-0"
+                          className="absolute inset-y-0 start-0"
                           data-strip-period=""
                           style={{ width: `${(pDays / c.days) * 100}%`, background: "rgb(var(--metric-cycle-main))" }}
                         />
@@ -167,7 +168,7 @@ export const CycleInsightsTab: React.FC<{
               <div
                 key={label}
                 className="flex-1 min-w-0 text-center"
-                style={{ padding: "2px 4px", borderLeft: i === 0 ? undefined : `0.5px solid ${divider}` }}
+                style={{ padding: "2px 4px", borderInlineStart: i === 0 ? undefined : `0.5px solid ${divider}` }}
               >
                 <p style={type(18, 27, 700, { letterSpacing: -0.4, color: ink, fontVariantNumeric: "tabular-nums" })}>
                   {/* A NULL IS A DASH, never a zero: a zero-day cycle is not a cycle. */}

@@ -84,7 +84,7 @@ export const OfferCard: React.FC<OfferCardProps> = (props) => {
   const pressable = !!props.onPress;
   const Tag = (pressable ? "button" : "div") as "button";
   const tagProps = pressable ? { type: "button" as const, onClick: props.onPress, ...press.handlers } : {};
-  const reset: React.CSSProperties = pressable ? { font: "inherit", lineHeight: "normal", textAlign: "left", cursor: "pointer", width: "100%", ...press.style } : {};
+  const reset: React.CSSProperties = pressable ? { font: "inherit", lineHeight: "normal", textAlign: "start", cursor: "pointer", width: "100%", ...press.style } : {};
 
   if (props.variant === "manager") {
     const [chipBg, chipInk] = statusChip(props.status, m);
@@ -144,7 +144,7 @@ export const OfferCard: React.FC<OfferCardProps> = (props) => {
         {...tagProps}
         aria-label={pressable ? `${p.owner}. ${p.headline}. ${formatPoints(p.cost)} points. ${prog.note}` : undefined}
         className={`${pressable ? "market-focus " : ""}${p.className ?? ""}`}
-        style={{ position: "relative", lineHeight: "normal", overflow: "hidden", borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, padding: "12px 14px 14px 12px", display: "flex", gap: 12, color: m.ink, ...reset, ...p.style }}
+        style={{ position: "relative", lineHeight: "normal", overflow: "hidden", borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, paddingBlock: "12px 14px", paddingInline: "12px 14px", display: "flex", gap: 12, color: m.ink, ...reset, ...p.style }}
       >
         {p.ownerLogoUrl ? (
           <img src={p.ownerLogoUrl} alt="" style={{ width: 44, height: 44, borderRadius: p.ownerRound ? 999 : 12, objectFit: "cover", flexShrink: 0, display: "block" }} />
@@ -157,12 +157,12 @@ export const OfferCard: React.FC<OfferCardProps> = (props) => {
           <span style={{ display: "block", fontSize: textPx(12), fontWeight: 600, color: m.accent }}>{p.owner}</span>
           <span style={{ display: "block", fontSize: textPx(14), lineHeight: linePx(20), fontWeight: 700, marginTop: 1 }}>{p.headline}</span>
         </span>
-        <span style={{ alignSelf: "flex-end", textAlign: "right", flexShrink: 0, paddingTop: 16, display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+        <span style={{ alignSelf: "flex-end", textAlign: "end", flexShrink: 0, paddingTop: 16, display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
           <PointsFigure value={p.cost} mark="leaf" size={17} />
           <span style={{ display: "block", fontSize: textPx(11), lineHeight: linePx(15), color: prog.can ? m.tealink : m.faint, fontWeight: prog.can ? 700 : 500 }}>{prog.note}</span>
         </span>
-        <span aria-hidden style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 2, background: m.div }} />
-        <span aria-hidden style={{ position: "absolute", left: 0, bottom: 0, height: 2, width: `${prog.pct}%`, background: prog.can ? m.teal : m.segactive }} />
+        <span aria-hidden style={{ position: "absolute", insetInlineStart: 0, insetInlineEnd: 0, bottom: 0, height: 2, background: m.div }} />
+        <span aria-hidden style={{ position: "absolute", insetInlineStart: 0, bottom: 0, height: 2, width: `${prog.pct}%`, background: prog.can ? m.teal : m.segactive }} />
       </Tag>
     </>
   );

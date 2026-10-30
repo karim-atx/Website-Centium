@@ -16,6 +16,7 @@ import { allergenLabel, restrictionLabel } from "./nuFormat";
 import { useTileBg } from "./hooks";
 import { perServing } from "./itemFacts";
 import { SLOT_CHIP_ORDER, SLOT_LABEL, gramsAllowed, portionMultiplier, scaleMacros, worstConflict, type ConflictRow, type ItemKind, type MealSlot } from "./nutritionModel";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · NU3 v2 "Add food with conflict flags" and NU4 v2 "Add food ·
@@ -259,7 +260,7 @@ export const AddItemSheet: React.FC<{
                   const c = conflictOf(r);
                   const isBlocked = c?.kind === "allergy_confirmed";
                   return (
-                    <button key={`${r.kind}-${r.id}`} type="button" onClick={() => choose(r)} className="tap w-full flex items-center text-left" style={{ gap: 12, padding: "10px 2px", minHeight: 44 }}>
+                    <button key={`${r.kind}-${r.id}`} type="button" onClick={() => choose(r)} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "10px 2px", minHeight: 44 }}>
                       <span className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 12, background: tile }}>
                         {r.kind === "recipe" ? (
                           <ChefHat size={16} strokeWidth={2} aria-hidden style={{ color: dark ? INK.prAccent : "#7D6BB5" }} />
@@ -276,7 +277,7 @@ export const AddItemSheet: React.FC<{
                         </span>
                         <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>{isBlocked ? `${r.sub} · blocked` : r.sub}</span>
                       </span>
-                      <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, whiteSpace: "nowrap" }}>{`${Math.round(r.per.kcal).toLocaleString("en-GB")} kcal`}</span>
+                      <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, whiteSpace: "nowrap" }}>{`${Math.round(r.per.kcal).toLocaleString(appLocale("en-GB"))} kcal`}</span>
                     </button>
                   );
                 })}
@@ -349,12 +350,12 @@ export const AddItemSheet: React.FC<{
             {shown && (
               <div className="grid" style={{ ...grey, gridTemplateColumns: "repeat(4, minmax(0, 1fr))", padding: "13px 0", marginBottom: 12 }}>
                 {[
-                  [Math.round(shown.kcal).toLocaleString("en-GB"), INK.ch, "kcal"],
+                  [Math.round(shown.kcal).toLocaleString(appLocale("en-GB")), INK.ch, "kcal"],
                   [`${Math.round(shown.p)}g`, dark ? "#C3B3FB" : "#7D6BB5", "protein"],
                   [`${Math.round(shown.c)}g`, dark ? "#B7ABDE" : "#8175C2", "carbs"],
                   [`${Math.round(shown.f)}g`, dark ? "#8FB0F0" : "#4274D7", "fat"],
                 ].map(([v, col, l], i) => (
-                  <div key={l} style={{ textAlign: "center", borderLeft: i ? `1px solid ${dark ? "rgba(245,243,250,0.08)" : "#E2E3E7"}` : "none" }}>
+                  <div key={l} style={{ textAlign: "center", borderInlineStart: i ? `1px solid ${dark ? "rgba(245,243,250,0.08)" : "#E2E3E7"}` : "none" }}>
                     <p style={{ fontSize: textPx(15.5), fontWeight: 800, color: col }}>{v}</p>
                     <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 2 }}>{l}</p>
                   </div>

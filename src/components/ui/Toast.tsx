@@ -106,8 +106,8 @@ export const Toast: React.FC<{
         {...pauseProps}
         className="fixed z-[75] flex items-center"
         style={{
-          left: "calc(var(--app-gutter) + 16px)",
-          right: "calc(var(--app-gutter) + 16px)",
+          insetInlineStart: "calc(var(--app-gutter) + 16px)",
+          insetInlineEnd: "calc(var(--app-gutter) + 16px)",
           bottom: `calc(env(safe-area-inset-bottom) + ${bottom ?? 96}px)`,
           gap: more ? 8 : 10,
           background: listing && dark ? "#F5F3FA" : "#241F1B",
@@ -159,8 +159,8 @@ export const Toast: React.FC<{
       {...pauseProps}
       className="fixed z-[75] flex items-center animate-fade-slide-up"
       style={{
-        left: "calc(var(--app-gutter) + 16px)",
-        right: "calc(var(--app-gutter) + 16px)",
+        insetInlineStart: "calc(var(--app-gutter) + 16px)",
+        insetInlineEnd: "calc(var(--app-gutter) + 16px)",
         bottom: `calc(env(safe-area-inset-bottom) + ${bottom ?? 88}px + var(--active-bar, 0px))`,
         gap: 10,
         background: error ? (dark ? "#3C2A30" : "#FBE7E4") : "#241F1B",

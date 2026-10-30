@@ -560,7 +560,7 @@ const IndexSkeleton: React.FC = () => (
         <span
           key={i}
           className="flex items-center gap-[12px]"
-          style={{ minHeight: 72, padding: "12px 14px 12px 16px" }}
+          style={{ minHeight: 72, paddingBlock: "12px", paddingInline: "16px 14px" }}
         >
           <span
             className="pa-sk animate-skeleton-pulse"

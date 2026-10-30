@@ -15,6 +15,7 @@ import { addDays, bucketLabel, bucketTitle, bucketsFor, dayLabel, mondayOf, RANG
 import { InsightCard, InsightLine, NotShared, QuietLine, StatBoxes, type StatBox } from "./parts";
 import { readGate, useRead } from "./reads";
 import type { PanelProps } from "./panelProps";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · W5 Insights › Activity (TR9 v3; NU14 "Client insights ›
@@ -38,7 +39,7 @@ import type { PanelProps } from "./panelProps";
  * appear after a week.").
  */
 
-const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
+const fmt = (n: number) => Math.round(n).toLocaleString(appLocale("en-GB"));
 const PARTS: { label: string; from: number; to: number }[] = [
   { label: "Morning", from: 5, to: 11 },
   { label: "Midday", from: 11, to: 17 },

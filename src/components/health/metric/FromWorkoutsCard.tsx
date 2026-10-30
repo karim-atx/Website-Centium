@@ -5,8 +5,9 @@ import { clock12 } from "../../../utils/time12";
 import { useHideNumbers } from "../../../hooks/useHideNumbers";
 import type { WorkoutKcalSession } from "../../../services/health-metrics/b1";
 import { hairline, mc, metricIconInk, useHealthMode } from "./MetricKit";
+import { appLocale } from "../../../i18n/format";
 
-const n = (v: number) => Math.round(v).toLocaleString("en-GB");
+const n = (v: number) => Math.round(v).toLocaleString(appLocale("en-GB"));
 
 /**
  * HE1.4 #14-#33 "From workouts" (Database B1 workout_sessions.kcal, HA-07):
@@ -27,7 +28,7 @@ export const FromWorkoutsCard: React.FC<{ sessions: WorkoutKcalSession[]; dayTot
   if (hideNumbers || sessions.length === 0) return null;
   const sum = sessions.reduce((s, x) => s + x.kcal, 0);
   const sep = hc ? "rgb(var(--c-charcoal) / 0.3)" : dark ? "rgba(245,243,250,0.05)" : "rgba(36,31,27,0.05)";
-  const unit = <span style={{ marginLeft: 3, fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: dark ? "#B8B3C7" : mc("calories", "ink") }}>kcal</span>;
+  const unit = <span style={{ marginInlineStart: 3, fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: dark ? "#B8B3C7" : mc("calories", "ink") }}>kcal</span>;
   return (
     <section style={{ marginTop: 12, borderRadius: 18, padding: 14, background: dark ? "#1C1F28" : "#FFFFFF", border: `0.5px solid ${hairline(dark, hc)}` }}>
       <div className="flex items-center justify-between">
@@ -40,7 +41,7 @@ export const FromWorkoutsCard: React.FC<{ sessions: WorkoutKcalSession[]; dayTot
             key={x.id}
             type="button"
             onClick={() => onOpen(x.id)}
-            className="tap w-full flex items-center text-left"
+            className="tap w-full flex items-center text-start"
             style={{ gap: 11, padding: "9px 0", borderTop: i ? `0.5px solid ${sep}` : undefined }}
           >
             <span className="grid place-items-center shrink-0" style={{ width: 32, height: 32, borderRadius: 10, background: mc("calories", "tint") }} aria-hidden>

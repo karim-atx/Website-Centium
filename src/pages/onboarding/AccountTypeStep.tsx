@@ -294,7 +294,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
             <div style={{ background: "var(--ob-list)", borderRadius: 18, padding: "4px 0" }}>
               {conf.rows.map(([Icon, t], k) => (
                 <div key={t} style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, minHeight: 52, padding: "8px 14px" }}>
-                  {k > 0 && <span style={{ position: "absolute", top: 0, left: 62, right: 14, height: 1, background: "var(--ob-ring)" }} />}
+                  {k > 0 && <span style={{ position: "absolute", top: 0, insetInlineStart: 62, insetInlineEnd: 14, height: 1, background: "var(--ob-ring)" }} />}
                   <span className="ob-sq-ic">
                     <Icon size={17} strokeWidth={1.75} />
                   </span>
@@ -317,7 +317,7 @@ const ClientCodeField: React.FC<{
   check: CodeCheck;
   error: string | null;
 }> = ({ draft, setDraft, check, error }) => (
-  <div style={{ margin: "12px 0 0 70px" }}>
+  <div style={{ marginBlock: "12px 0", marginInline: "70px 0" }}>
     <label className="ob-label" htmlFor="ob-client-code" style={{ display: "block", marginBottom: 6 }}>
       Your professional's code
     </label>

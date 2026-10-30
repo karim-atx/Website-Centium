@@ -4,6 +4,7 @@
 
 import { clock12 } from "../../utils/time12";
 import { formatShortDate } from "../../utils/date";
+import { appLocale } from "../../i18n/format";
 
 // The clock in Messages. v6 X-14: always 12-hour through the shared
 // formatter ("6:42 PM", unpadded hour), whatever the device's own hour cycle
@@ -21,8 +22,8 @@ export function listTime(iso: string, now = new Date()): string {
   const days = (now.getTime() - d.getTime()) / 86_400_000;
   // v6 MO1.7 D2: "Tue" within the week, then month first as drawn ("Sep 27"),
   // with the year once it is another year ("Sep 27, 2025").
-  if (days < 7 && days > -7) return d.toLocaleDateString("en-US", { weekday: "short" });
-  return d.toLocaleDateString("en-US", {
+  if (days < 7 && days > -7) return d.toLocaleDateString(appLocale("en-US"), { weekday: "short" });
+  return d.toLocaleDateString(appLocale("en-US"), {
     month: "short",
     day: "numeric",
     ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : null),

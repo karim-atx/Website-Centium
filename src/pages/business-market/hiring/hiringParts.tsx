@@ -153,7 +153,7 @@ export function useHiringStrip(): [React.ReactNode, (text: string, o?: StripOpti
   }, [s]);
   const node = s
     ? createPortal(
-        <div className="fixed left-0 right-0 flex justify-center" style={{ zIndex: 95, top: "calc(env(safe-area-inset-top) + 12px)", padding: "0 16px", pointerEvents: "none" }}>
+        <div className="fixed start-0 end-0 flex justify-center" style={{ zIndex: 95, top: "calc(env(safe-area-inset-top) + 12px)", padding: "0 16px", pointerEvents: "none" }}>
           <div style={{ width: "100%", maxWidth: 398, pointerEvents: "auto" }} data-strip>
             <ConfirmationStrip
               key={s.n}
@@ -388,14 +388,14 @@ export function OpeningCard({ o, justPosted, onOpen, menu }: { o: Opening; justP
         style={{ position: "absolute", inset: 0, width: "100%", borderRadius: 19, background: "transparent", border: 0, padding: 0, cursor: "pointer" }}
       />
       <div aria-hidden style={{ padding: "14px 16px 10px", position: "relative", pointerEvents: "none" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginRight: menu ? 30 : 0 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginInlineEnd: menu ? 30 : 0 }}>
           <div style={{ flex: 1, minWidth: 0, fontSize: textPx(15), fontWeight: 800, lineHeight: linePx(20), overflowWrap: "anywhere" }}>{o.title}</div>
           <TagChip tag={tag} />
         </div>
         {sched ? <div style={{ fontSize: textPx(12), color: m.ink2, marginTop: 3 }}>{sched}</div> : null}
         {pay ? <div style={{ fontSize: textPx(12), fontWeight: 700, marginTop: 2 }}>{pay}</div> : null}
       </div>
-      {menu ? <div style={{ position: "absolute", top: 8, right: 8 }}>{menu}</div> : null}
+      {menu ? <div style={{ position: "absolute", top: 8, insetInlineEnd: 8 }}>{menu}</div> : null}
       <div aria-hidden style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", borderTop: `0.5px solid ${m.div}`, position: "relative", pointerEvents: "none" }}>
         <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12), fontWeight: 700, color: footInk }}>{foot.text}</span>
         <ChevronRight size={16} strokeWidth={2} color={m.faint} aria-hidden style={NO_ICON_SCALE} />
@@ -428,7 +428,7 @@ export function FieldBox({ label, htmlFor, labelId, half, children, hint }: { la
 
 /** The field inside a box: --sfield radius 10 padding 11 13, 14 / 19, flex gap 8 (1px border: transparent, --caution on a warning). */
 export function fieldShell(m: MarketPalette, border?: string): React.CSSProperties {
-  return { display: "flex", alignItems: "center", gap: 8, width: "100%", boxSizing: "border-box", background: m.card, borderRadius: 10, padding: "11px 13px", fontSize: textPx(14), lineHeight: linePx(19), color: m.ink, border: `1px solid ${border ?? "transparent"}`, fontFamily: "inherit", textAlign: "left" };
+  return { display: "flex", alignItems: "center", gap: 8, width: "100%", boxSizing: "border-box", background: m.card, borderRadius: 10, padding: "11px 13px", fontSize: textPx(14), lineHeight: linePx(19), color: m.ink, border: `1px solid ${border ?? "transparent"}`, fontFamily: "inherit", textAlign: "start" };
 }
 
 /** A text / number input in the field shell, with an optional prefix ("$") or suffix. */
@@ -608,7 +608,7 @@ export function BusyWarning({ lines, style }: { lines: string[]; style?: React.C
   const m = marketPalette(useIsDark());
   if (!lines.length) return null;
   return (
-    <div role="status" style={{ borderRadius: 14, background: m.cautionbg, padding: "12px 14px", lineHeight: "normal", textAlign: "left", ...style }}>
+    <div role="status" style={{ borderRadius: 14, background: m.cautionbg, padding: "12px 14px", lineHeight: "normal", textAlign: "start", ...style }}>
       <div style={{ fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 700, color: m.ink }}>{BUSY_WARNING_TEXT}</div>
       {lines.map((l) => (
         <div key={l} style={{ fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2, marginTop: 4 }}>

@@ -1,3 +1,4 @@
+import { appLocale } from "../../../../i18n/format";
 // Centium landing v29: section 06's slides, a literal port of the
 // prototype's data() eco block (Centium Site v29.dc.html: row, grid,
 // proSlides, bizSlides, v11slide, MOBK, mobKey, ecoSets). Two sets of five
@@ -286,7 +287,7 @@ function v11slide(x: Draft, lg: boolean): Draft {
       head: "Earnings bridge",
       sub: "September to October",
       wf,
-      ticks: [2500, 2250, 2000, 1750, 1500].map((v) => ({ t: "$" + v.toLocaleString("en-US"), y: (100 - Y(v)).toFixed(2) + "%" })),
+      ticks: [2500, 2250, 2000, 1750, 1500].map((v) => ({ t: "$" + v.toLocaleString(appLocale("en-US")), y: (100 - Y(v)).toFixed(2) + "%" })),
     });
   }
   if (k === "CLASSES") {

@@ -328,7 +328,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
 
   const header = (title: string) => (
     <div style={{ padding: "calc(env(safe-area-inset-top) + 24px) 16px 14px", background: "rgb(var(--c-cream-card))" }} className="sticky top-0 z-10">
-      <div className="flex items-center" style={{ gap: 6, height: 30, marginLeft: -8 }}>
+      <div className="flex items-center" style={{ gap: 6, height: 30, marginInlineStart: -8 }}>
         <button
           type="button"
           onClick={stage === "uploading" || stage === "reading" ? () => leave() : back}
@@ -373,7 +373,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
   const bar = (full?: boolean) => (
     <div className="relative overflow-hidden" style={{ width: 286, height: 6, borderRadius: 9999, background: dark ? "#303141" : "#EEECF4" }}>
       <span
-        style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: full ? "100%" : `${Math.round(progress * 100)}%`, borderRadius: 9999, background: "rgb(var(--c-fill-pinned))", transition: reduced ? undefined : "width 200ms linear" }}
+        style={{ position: "absolute", top: 0, bottom: 0, insetInlineStart: 0, width: full ? "100%" : `${Math.round(progress * 100)}%`, borderRadius: 9999, background: "rgb(var(--c-fill-pinned))", transition: reduced ? undefined : "width 200ms linear" }}
         data-upload-fill
       />
     </div>
@@ -484,7 +484,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
             <button
               type="button"
               onClick={() => setViewerOpen(true)}
-              className="tap w-full flex items-center text-left"
+              className="tap w-full flex items-center text-start"
               style={{ minHeight: 92, padding: 10, gap: 12, borderRadius: 14, background: fieldFill(dark) }}
             >
               {paper(54, 72, 5, [25.7, 38.6], 3, 4, 6)}
@@ -514,7 +514,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
           </div>
           <div style={{ marginTop: 14 }}>
             <FieldLabel htmlFor="report-date">Date on the report</FieldLabel>
-            <button id="report-date" type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-left" style={{ ...fieldStyle(dark, hc), gap: 8 }}>
+            <button id="report-date" type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-start" style={{ ...fieldStyle(dark, hc), gap: 8 }}>
               <CalendarDays size={15} style={{ color: INK_FAINT }} aria-hidden />
               {fmtDate(date)}
             </button>
@@ -570,7 +570,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
             <Plus size={15} aria-hidden /> Add marker
           </button>
         </div>
-        <div className="fixed left-0 right-0 mx-auto max-w-[430px] z-10" style={{ bottom: "calc(env(safe-area-inset-bottom) + 24px)", padding: "0 16px" }}>
+        <div className="fixed start-0 end-0 mx-auto max-w-[430px] z-10" style={{ bottom: "calc(env(safe-area-inset-bottom) + 24px)", padding: "0 16px" }}>
           <CtaButton
             size="page"
             label={`Save ${ticked.length} result${ticked.length === 1 ? "" : "s"}`}

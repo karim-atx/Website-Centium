@@ -313,7 +313,7 @@ export const PregnancyHealthCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregna
         <button
           onClick={() => setSignsOpen((v) => !v)}
           aria-expanded={signsOpen}
-          className="tap w-full flex items-center gap-2 text-left"
+          className="tap w-full flex items-center gap-2 text-start"
         >
           <AlertTriangle size={14} className="text-status-high shrink-0" />
           <span className="flex-1 text-[11.5px] font-bold text-charcoal">{G.URGENT_TITLE}</span>

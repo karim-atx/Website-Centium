@@ -8,6 +8,7 @@ import { addDays, bucketLabel, bucketTitle, bucketsFor, calorieBand, macroGrams,
 import { Micros } from "./NutrientAnalysis";
 import { WeightView } from "./VitalsPanel";
 import { useRead, type ReadState } from "./reads";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · W5 the charts the client page's Progress tab (W3, CL2 v5)
@@ -24,7 +25,7 @@ import { useRead, type ReadState } from "./reads";
  * Working sets exclude warm-ups and sets not completed.
  */
 
-const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
+const fmt = (n: number) => Math.round(n).toLocaleString(appLocale("en-GB"));
 
 const gate = <T,>(r: ReadState<T>) => (r.data !== undefined ? null : r.error ? <ProError onRetry={r.retry} /> : <ProCardSkeleton lines={3} height={150} />);
 

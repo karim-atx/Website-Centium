@@ -786,7 +786,7 @@ function OfferCard({
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${c.div}` }}>
         <span style={{ fontSize: px(11), fontWeight: 600, color: c.faint }}>On your card:</span>
         <span style={{ fontSize: px(10.5), fontWeight: 800, color: on ? c.pdark : c.faint, background: on ? c.pale : c.soft, opacity: on ? 1 : 0.6, borderRadius: 999, padding: "2px 8px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{chip}</span>
-        {used && <span style={{ marginLeft: "auto", fontSize: px(11), color: c.faint, whiteSpace: "nowrap" }}>{used}</span>}
+        {used && <span style={{ marginInlineStart: "auto", fontSize: px(11), color: c.faint, whiteSpace: "nowrap" }}>{used}</span>}
         {menu && (
           <button
             type="button"
@@ -794,7 +794,7 @@ function OfferCard({
             disabled={menu.disabled}
             onClick={(e) => menu.onOpen(e.currentTarget)}
             className="tap market-focus"
-            style={{ marginLeft: "auto", width: 32, height: 24, display: "flex", alignItems: "center", justifyContent: "center", color: c.faint, background: "transparent", border: 0, borderRadius: 8, cursor: menu.disabled ? "default" : "pointer", opacity: menu.disabled ? 0.4 : 1 }}
+            style={{ marginInlineStart: "auto", width: 32, height: 24, display: "flex", alignItems: "center", justifyContent: "center", color: c.faint, background: "transparent", border: 0, borderRadius: 8, cursor: menu.disabled ? "default" : "pointer", opacity: menu.disabled ? 0.4 : 1 }}
           >
             <Ellipsis size={16} strokeWidth={2.4} aria-hidden />
           </button>

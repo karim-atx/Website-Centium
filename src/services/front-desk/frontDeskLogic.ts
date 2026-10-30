@@ -12,6 +12,7 @@
 import { dayMonthYear, type PassState } from "../venues/venueLogic";
 import type { VenueMember } from "../venues/consoleLogic";
 import { clock12 } from "../../utils/time12";
+import { appLocale } from "../../i18n/format";
 
 // ---------------------------------------------------------------------------
 // Dates
@@ -633,7 +634,7 @@ export const GUEST_LABEL_MAX = 40;
 
 /** "$15", "$42.50", "$1,240" (OP1-017 row 13 draws whole dollars: "$465"). */
 export function deskMoney(n: number): string {
-  return "$" + (Number.isInteger(n) ? n.toLocaleString("en-US") : n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  return "$" + (Number.isInteger(n) ? n.toLocaleString(appLocale("en-US")) : n.toLocaleString(appLocale("en-US"), { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 }
 
 export type DeskSaleRow = {

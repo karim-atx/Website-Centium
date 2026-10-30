@@ -25,6 +25,7 @@ import { dietaryRestrictionOptions } from "../../utils/dietaryRestrictions";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { textPx } from "../../theme/textSize";
+import { appLocale } from "../../i18n/format";
 
 // FO2.2 / FO4.2 / FO5.2: each Weight Goal button carries its trend icon.
 const goalOptions: { value: WeightGoalType; label: string; Icon: typeof Equal }[] = [
@@ -237,7 +238,7 @@ export default function GoalsPanel({
     weeksToGoal > 0 ? new Date(Date.parse(`${today}T00:00:00Z`) + weeksToGoal * 7 * 86400000) : null;
   const reachDateIso = reachDateObj ? reachDateObj.toISOString().slice(0, 10) : null;
   const reachDate = reachDateObj
-    ? reachDateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    ? reachDateObj.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" })
     : null;
 
   // V7 (QA 7.0): a desired weight that contradicts the chosen direction
@@ -466,7 +467,7 @@ export default function GoalsPanel({
             ) : (
               <p style={{ margin: "1px 0 0", fontSize: textPx(19), fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>
                 {weight.current}
-                <span style={{ fontSize: textPx(11), fontWeight: 600, marginLeft: 3 }}>kg</span>
+                <span style={{ fontSize: textPx(11), fontWeight: 600, marginInlineStart: 3 }}>kg</span>
               </p>
             )}
             </>
@@ -487,8 +488,8 @@ export default function GoalsPanel({
                 {/* Wraps at 360, where the figure and the button don't both fit. */}
                 <div className="flex items-center justify-between flex-wrap" style={{ columnGap: 8, rowGap: 6, marginTop: 1 }}>
                   <p style={{ margin: 0, fontSize: textPx(19), fontWeight: 800, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
-                    {tdee.toLocaleString()}
-                    <span style={{ fontSize: textPx(11), fontWeight: 600, marginLeft: 3 }}>kcal</span>
+                    {tdee.toLocaleString(appLocale())}
+                    <span style={{ fontSize: textPx(11), fontWeight: 600, marginInlineStart: 3 }}>kcal</span>
                   </p>
                   {useSuggestedButton}
                 </div>
@@ -517,7 +518,7 @@ export default function GoalsPanel({
                   <>
                     <p style={{ margin: 0, fontSize: textPx(24), fontWeight: 800, lineHeight: 1.1, color: "rgb(var(--c-charcoal))" }}>
                       {weight.current}
-                      <span style={{ fontSize: textPx(13), fontWeight: 700, marginLeft: 3 }}>kg</span>
+                      <span style={{ fontSize: textPx(13), fontWeight: 700, marginInlineStart: 3 }}>kg</span>
                     </p>
                     {trendLabel(weightMeta) && <p className="text-[10px] text-charcoal-faint">{trendLabel(weightMeta)}</p>}
                   </>
@@ -564,15 +565,15 @@ export default function GoalsPanel({
                   <div className="min-w-0" style={{ flex: "1 1 auto" }}>
                     <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Maintenance calories</p>
                     <p style={{ margin: "2px 0 0", fontSize: textPx(19), fontWeight: 800, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
-                      {tdee.toLocaleString()}
-                      <span style={{ fontSize: textPx(11), fontWeight: 600, marginLeft: 3 }}>kcal</span>
+                      {tdee.toLocaleString(appLocale())}
+                      <span style={{ fontSize: textPx(11), fontWeight: 600, marginInlineStart: 3 }}>kcal</span>
                     </p>
                   </div>
-                  <div className="min-w-0 self-stretch" style={{ flex: "1 1 auto", borderLeft: `1px solid ${goalsColor("hairline", dark)}`, paddingLeft: 10 }}>
+                  <div className="min-w-0 self-stretch" style={{ flex: "1 1 auto", borderInlineStart: `1px solid ${goalsColor("hairline", dark)}`, paddingInlineStart: 10 }}>
                     <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Target calories</p>
                     <p style={{ margin: "2px 0 0", fontSize: textPx(19), fontWeight: 800, color: rateColor, whiteSpace: "nowrap" }}>
-                      {(suggestedForGoal ?? tdee).toLocaleString()}
-                      <span style={{ fontSize: textPx(11), fontWeight: 600, marginLeft: 3 }}>kcal</span>
+                      {(suggestedForGoal ?? tdee).toLocaleString(appLocale())}
+                      <span style={{ fontSize: textPx(11), fontWeight: 600, marginInlineStart: 3 }}>kcal</span>
                     </p>
                     <p style={{ margin: "1px 0 0", fontSize: textPx(10.5), color: rateColor, opacity: 0.6 }}>
                       to {nutritionGoal.weightGoal} weight
@@ -594,7 +595,7 @@ export default function GoalsPanel({
         {/* One line from 390 up; at 360 the stepper and Use custom wrap under the title together. */}
         <div className="flex items-center justify-between flex-wrap" style={{ columnGap: 8, rowGap: 8 }}>
           <p style={{ ...TITLE, minWidth: 0, whiteSpace: "nowrap" }}>Daily target</p>
-          <div className="flex items-center ml-auto" style={{ gap: 8 }}>
+          <div className="flex items-center ms-auto" style={{ gap: 8 }}>
           {/* No overflow clipping: it would clip the 44px hit area of the - / + buttons, and the ends are transparent anyway. A minimum height, so 130% text grows the pill rather than being cut. */}
           <span className="flex items-stretch rounded-full flex-none" style={{ minHeight: 30, background: goalsColor("stepperPill", dark) }}>
             <button
@@ -608,7 +609,7 @@ export default function GoalsPanel({
             </button>
             <span
               className="flex items-baseline justify-center"
-              style={{ width: 66, background: goalsColor("stepperField", dark), borderLeft: `1px solid ${goalsColor("stepperRule", dark)}`, borderRight: `1px solid ${goalsColor("stepperRule", dark)}`, gap: 3 }}
+              style={{ width: 66, background: goalsColor("stepperField", dark), borderInlineStart: `1px solid ${goalsColor("stepperRule", dark)}`, borderInlineEnd: `1px solid ${goalsColor("stepperRule", dark)}`, gap: 3 }}
             >
               <input
                 value={calorieDraft}
@@ -616,7 +617,7 @@ export default function GoalsPanel({
                 inputMode="numeric"
                 disabled={locked}
                 aria-label="Daily calorie target"
-                className="text-right focus:outline-none disabled:opacity-60 bg-transparent self-center"
+                className="text-end focus:outline-none disabled:opacity-60 bg-transparent self-center"
                 style={{ width: 38, padding: 0, fontSize: textPx(14), fontWeight: 800, color: goalsColor("stepperFigure", dark) }}
               />
               <span className="self-center" style={{ fontSize: textPx(9.5), color: goalsColor("stepperUnit", dark) }}>kcal</span>

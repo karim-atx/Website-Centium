@@ -7,12 +7,12 @@ import * as D from "../data/pillars";
 import type { SectionVals } from "../sectionVals";
 
 export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
-  <div data-pls="1" style={{ zoom: r.plZoom, maxHeight: r.plMaxH, position: r.plPanePos, left: "0", top: "0", right: "0", bottom: "0", flex: `0 0 ${r.plPaneW}`, scrollSnapAlign: "center", opacity: r.plPaneOp, borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(94,158,149,.2)", boxShadow: r.plSh, overflow: "hidden", display: "flex", flexDirection: "column", textAlign: "left" }}>
+  <div data-pls="1" style={{ zoom: r.plZoom, maxHeight: r.plMaxH, position: r.plPanePos, left: "0", top: "0", right: "0", bottom: "0", flex: `0 0 ${r.plPaneW}`, scrollSnapAlign: "center", opacity: r.plPaneOp, borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(94,158,149,.2)", boxShadow: r.plSh, overflow: "hidden", display: "flex", flexDirection: "column", textAlign: "start" }}>
     <div style={{ height: "36px", flexShrink: "0", display: "flex", alignItems: "center", gap: "7px", padding: "0 14px", background: "#F6FAF9", borderBottom: "1px solid rgba(94,158,149,.14)" }}>
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E4DCF8" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#DDE8E5" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E7E3DC" }} />
-      <span style={{ marginLeft: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
+      <span style={{ marginInlineStart: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
         centium.atraxia.org/app/workout
       </span>
     </div>
@@ -214,7 +214,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
             </span>
           </div>
           <div style={{ minHeight: r.ormPlotMin, display: "grid", gridTemplateColumns: "34px minmax(0,1fr)", gridTemplateRows: "minmax(0,1fr) 14px", columnGap: "6px" }}>
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: "9.5px", fontWeight: "700", color: "#756D63", textAlign: "right", margin: "-5px 0" }}>
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: "9.5px", fontWeight: "700", color: "#756D63", textAlign: "end", margin: "-5px 0" }}>
               <span>
                 90 kg
               </span>
@@ -228,7 +228,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
                 75
               </span>
             </div>
-            <div style={{ position: "relative", borderLeft: "1px solid #E1ECEA", borderBottom: "1px solid #E1ECEA" }}>
+            <div style={{ position: "relative", borderInlineStart: "1px solid #E1ECEA", borderBottom: "1px solid #E1ECEA" }}>
               <span style={{ position: "absolute", left: D.ormBand.l, right: "0", top: D.ormBand.t, height: D.ormBand.h, background: "#EDF4F3", borderRadius: "4px" }} />
               <span style={{ position: "absolute", right: "4px", top: D.ormBand.lt, fontSize: "9px", fontWeight: "700", color: "#3D6E69" }}>
                 Recent range
@@ -240,7 +240,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
                 <polyline data-w="0.12 0.95" data-draw="" points={D.ormTrend} fill="none" stroke="#2F5F58" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" pathLength="1" strokeDasharray="1" strokeDashoffset="1" vectorEffect="non-scaling-stroke" />
               </svg>
               {D.ormDots.map((od, odI) => (
-                <span key={odI} data-w={od.w} data-stamp="" style={{ position: "absolute", left: od.x, top: od.y, width: "6px", height: "6px", margin: "-3px 0 0 -3px", borderRadius: "99px", background: "#8FC3BA", opacity: "0" }} />
+                <span key={odI} data-w={od.w} data-stamp="" style={{ position: "absolute", left: od.x, top: od.y, width: "6px", height: "6px", marginBlock: "-3px 0", marginInline: "-3px 0", borderRadius: "99px", background: "#8FC3BA", opacity: "0" }} />
               ))}
               {D.ormPRs.map((op, opI) => (
                 <span key={opI} data-w={op.w} data-stamp="" style={{ position: "absolute", left: op.x, top: op.y, opacity: "0", transformOrigin: "0 100%" }}>

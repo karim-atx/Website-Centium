@@ -10,6 +10,7 @@ import { textPx } from "../../theme/textSize";
 import { useBack } from "../../hooks/useBack";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { Navigate } from "react-router-dom";
+import { appLocale } from "../../i18n/format";
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands). Inks and surfaces with an
@@ -34,7 +35,7 @@ const filterOptions: { value: NutrientFilter; label: string }[] = [
 
 const formatDiaryDate = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  return d.toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" });
 };
 
 // Mobile handoff item 9: a full-page nutrient breakdown for the selected
@@ -96,7 +97,7 @@ export default function NutrientSummaryPage() {
             onClick={back}
             aria-label={t("Back")}
             className="tap flex-none flex items-center justify-center rounded-full"
-            style={{ width: 32, height: 32, marginLeft: -6, color: "rgb(var(--c-charcoal-soft))", background: "none", padding: 0 }}
+            style={{ width: 32, height: 32, marginInlineStart: -6, color: "rgb(var(--c-charcoal-soft))", background: "none", padding: 0 }}
           >
             <BackIcon size={18} strokeWidth={2} style={{ display: "block" }} />
           </button>
@@ -150,7 +151,7 @@ export default function NutrientSummaryPage() {
           {loggedOnly && (
             <span
               className="absolute rounded-full"
-              style={{ top: -3, right: -3, width: 9, height: 9, background: summaryColor("dot", dark), border: "1.5px solid rgb(var(--c-cream))" }}
+              style={{ top: -3, insetInlineEnd: -3, width: 9, height: 9, background: summaryColor("dot", dark), border: "1.5px solid rgb(var(--c-cream))" }}
             />
           )}
         </button>

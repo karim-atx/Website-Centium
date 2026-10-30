@@ -37,7 +37,7 @@ export const BackHeader: React.FC<{ m: MarketPalette; eyebrow?: string; title: s
         {title}
       </h1>
     </div>
-    {right && <div className="flex items-center shrink-0" style={{ gap: 2, marginRight: -6 }}>{right}</div>}
+    {right && <div className="flex items-center shrink-0" style={{ gap: 2, marginInlineEnd: -6 }}>{right}</div>}
   </div>
 );
 
@@ -146,6 +146,6 @@ export const fieldStyle = (m: MarketPalette, opts: { error?: boolean; active?: b
   fontSize: textPx(14),
   lineHeight: linePx(19),
   color: m.ink,
-  textAlign: "left",
+  textAlign: "start",
   border: `1px solid ${opts.error ? m.high : opts.active ? m.fill : "transparent"}`,
 });

@@ -123,7 +123,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro, rank, o
         {...press.handlers}
         aria-label={`${rank ? `${rank}. ` : ""}${pro.name}, ${pro.specialty}. ${ratingLine(pro.rating, pro.reviewCount, placeOf(pro))}${hideHired ? "" : `. ${hiredText(pro.hiredViaCentiumCount)}`}${pro.fromPrice ? `. ${pro.fromPrice}` : ""}`}
         className={`market-focus ${className ?? ""}`}
-        style={{ display: "block", width: "100%", textAlign: "left", font: "inherit", lineHeight: "normal", cursor: "pointer", borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, padding: "14px 16px", color: m.ink, ...press.style, ...style }}
+        style={{ display: "block", width: "100%", textAlign: "start", font: "inherit", lineHeight: "normal", cursor: "pointer", borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, padding: "14px 16px", color: m.ink, ...press.style, ...style }}
       >
         <span style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <MarketAvatar id={pro.id} name={pro.name} photoUrl={pro.photoUrl} size={52} fontSize={16} />

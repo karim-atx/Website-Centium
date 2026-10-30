@@ -22,6 +22,7 @@ import {
   type ShareableProgramme,
   type ShareableSession,
 } from "../../../services/pro/messages";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · MO27 "Group chat · share to the group" (gen/r16.js groupChat16
@@ -190,7 +191,7 @@ export const ShareToGroupSheet: React.FC<{
             key: s.id,
             icon: CalendarPlus,
             title: s.title,
-            meta: [new Date(`${s.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" }), s.startTime ? (s.endTime ? range12(s.startTime, s.endTime) : time12(s.startTime)) : null, s.location].filter(Boolean).join(" · "),
+            meta: [new Date(`${s.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short", day: "numeric", month: "short" }), s.startTime ? (s.endTime ? range12(s.startTime, s.endTime) : time12(s.startTime)) : null, s.location].filter(Boolean).join(" · "),
             onClick: () => setStep({ kind: "note", card: "session_share", id: s.id, title: s.title }),
           })) ?? null,
           "No upcoming sessions. Add one in Calendar."

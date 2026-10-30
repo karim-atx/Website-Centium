@@ -29,7 +29,7 @@ export const Problem: React.FC<{ r: SectionVals }> = ({ r }) => (
           // the screen at 360, 10px past the gutter at 390, prototype too); the
           // tag now drops under the title, right-aligned. Rows that fit are unchanged.
           <div key={pbI} data-prow="" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", padding: "15px 0", borderTop: "1px solid #EDEAE4" }}>
-            <span style={{ position: "relative", display: "block", whiteSpace: "nowrap", fontSize: "17.5px", paddingRight: "14px" }}>
+            <span style={{ position: "relative", display: "block", whiteSpace: "nowrap", fontSize: "17.5px", paddingInlineEnd: "14px" }}>
               <span data-pink="" style={{ display: "block", color: "#221E1A", transition: "opacity .7s ease-out" }}>
                 {pb.t}
               </span>
@@ -38,7 +38,7 @@ export const Problem: React.FC<{ r: SectionVals }> = ({ r }) => (
               </span>
               <span data-pstrike="" aria-hidden="true" style={{ position: "absolute", left: "0", right: "14px", top: "54%", height: "2px", marginTop: "-1px", background: "#756D63", transformOrigin: "left", transform: "scaleX(0)", transition: "transform .5s cubic-bezier(.3,0,.2,1)" }} />
             </span>
-            <span style={{ fontSize: "12px", color: "#756D63", whiteSpace: "nowrap", flexShrink: "0", marginLeft: "auto" }}>
+            <span style={{ fontSize: "12px", color: "#756D63", whiteSpace: "nowrap", flexShrink: "0", marginInlineStart: "auto" }}>
               {pb.tag}
             </span>
           </div>

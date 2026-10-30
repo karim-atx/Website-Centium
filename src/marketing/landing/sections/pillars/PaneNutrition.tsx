@@ -7,12 +7,12 @@ import * as D from "../data/pillars";
 import type { SectionVals } from "../sectionVals";
 
 export const PaneNutrition: React.FC<{ r: SectionVals }> = ({ r }) => (
-  <div data-pls="0" style={{ zoom: r.plZoom, maxHeight: r.plMaxH, position: r.plPanePos, left: "0", top: "0", right: "0", bottom: "0", flex: `0 0 ${r.plPaneW}`, scrollSnapAlign: "center", opacity: r.plPaneOp, borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.16)", boxShadow: r.plSh, overflow: "hidden", display: "flex", flexDirection: "column", textAlign: "left" }}>
+  <div data-pls="0" style={{ zoom: r.plZoom, maxHeight: r.plMaxH, position: r.plPanePos, left: "0", top: "0", right: "0", bottom: "0", flex: `0 0 ${r.plPaneW}`, scrollSnapAlign: "center", opacity: r.plPaneOp, borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.16)", boxShadow: r.plSh, overflow: "hidden", display: "flex", flexDirection: "column", textAlign: "start" }}>
     <div style={{ height: "36px", flexShrink: "0", display: "flex", alignItems: "center", gap: "7px", padding: "0 14px", background: "#FAF9FE", borderBottom: "1px solid rgba(125,103,217,.1)" }}>
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E4DCF8" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#DDE8E5" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E7E3DC" }} />
-      <span style={{ marginLeft: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
+      <span style={{ marginInlineStart: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
         centium.atraxia.org/app/food
       </span>
     </div>
@@ -72,7 +72,7 @@ export const PaneNutrition: React.FC<{ r: SectionVals }> = ({ r }) => (
         </svg>
         <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "10px" }}>
           {D.mealLine.map((me, meI) => (
-            <div key={meI} data-w={me.w} data-tx="-14" style={{ position: "relative", display: "flex", gap: "12px", alignItems: "center", paddingLeft: "2px", opacity: "0" }}>
+            <div key={meI} data-w={me.w} data-tx="-14" style={{ position: "relative", display: "flex", gap: "12px", alignItems: "center", paddingInlineStart: "2px", opacity: "0" }}>
               <span style={{ width: "12px", height: "12px", flexShrink: "0", borderRadius: "99px", background: "#fff", border: `3px solid ${me.c}` }} />
               <div style={{ flex: "1", minWidth: "0", padding: "8px 10px", borderRadius: "12px", background: "#FAF9FE" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "8px" }}>

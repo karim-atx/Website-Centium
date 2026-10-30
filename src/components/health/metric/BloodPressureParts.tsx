@@ -401,7 +401,7 @@ export const BpTiles: React.FC<{ morning: BpHalf; evening: BpHalf; countWord: (n
       key={label}
       data-bp-tile={label}
       className="flex-1 min-w-0 flex flex-col items-center justify-center text-center"
-      style={{ padding: "0 6px", borderLeft: i ? `0.5px solid ${hc ? "rgb(var(--c-charcoal) / 0.3)" : dark ? "#383B44" : "#E5E7EB"}` : undefined }}
+      style={{ padding: "0 6px", borderInlineStart: i ? `0.5px solid ${hc ? "rgb(var(--c-charcoal) / 0.3)" : dark ? "#383B44" : "#E5E7EB"}` : undefined }}
     >
       {h.avg ? (
         <span className="flex items-center" style={{ gap: 5 }}>
@@ -466,7 +466,7 @@ export const BpReferenceCard: React.FC<{
           </p>
         )}
       </div>
-      <p className="text-right" style={{ fontSize: textPx(11.5), lineHeight: linePx(17.3), fontWeight: 400, color: "rgb(var(--c-charcoal-faint))" }}>
+      <p className="text-end" style={{ fontSize: textPx(11.5), lineHeight: linePx(17.3), fontWeight: 400, color: "rgb(var(--c-charcoal-faint))" }}>
         {range}
       </p>
     </div>

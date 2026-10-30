@@ -18,6 +18,7 @@
 // anything else (ATXH1).
 
 import { siteHref, siteText } from "../../config/site";
+import { appLocale } from "../../i18n/format";
 
 export type ShareFormat = "story" | "post" | "square" | "sticker";
 export type ShareStyle = "L" | "D" | "B" | "P";
@@ -217,7 +218,7 @@ export const fmtLoad = (kg: number) => {
   const r = Math.round(kg * 10) / 10;
   return Number.isInteger(r) ? String(r) : r.toFixed(1);
 };
-export const fmtInt = (n: number) => Math.round(n).toLocaleString("en-US");
+export const fmtInt = (n: number) => Math.round(n).toLocaleString(appLocale("en-US"));
 
 /**
  * Every date the share features show, professional and client side: the
@@ -227,7 +228,7 @@ export const fmtInt = (n: number) => Math.round(n).toLocaleString("en-US");
 export function shareDate(iso: string, now: Date = new Date()): string {
   const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-US", {
+  return d.toLocaleDateString(appLocale("en-US"), {
     month: "short",
     day: "numeric",
     ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : null),

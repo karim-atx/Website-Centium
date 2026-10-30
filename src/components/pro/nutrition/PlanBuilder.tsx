@@ -40,6 +40,7 @@ import { MACRO_COLOUR, conflictBody, conflictTitle } from "./nuFormat";
 import { useDietaryNeeds, useNuRoster, useTileBg } from "./hooks";
 import { itemLine, itemMacros } from "./itemFacts";
 import { SLOT_LABEL, SLOT_ORDER, dayLabels, dayTotalView, planDayFor, sumMacros, worstConflict, type ConflictRow, type MealSlot } from "./nutritionModel";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · NU2 v3 "Meal-plan builder · visual day total" (source gen
@@ -256,7 +257,7 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
             <section key={slot} style={{ marginBottom: 10 }} aria-label={SLOT_LABEL[slot]}>
               <div className="flex items-center justify-between" style={{ marginBottom: 6, gap: 8 }}>
                 <h2 style={{ fontSize: textPx(13), fontWeight: 800, color: INK.ch, whiteSpace: "nowrap" }}>
-                  {SLOT_LABEL[slot]} <span style={{ fontWeight: 600, fontSize: textPx(11.5), color: INK.chF }}>{`${kcal.toLocaleString("en-GB")} kcal`}</span>
+                  {SLOT_LABEL[slot]} <span style={{ fontWeight: 600, fontSize: textPx(11.5), color: INK.chF }}>{`${kcal.toLocaleString(appLocale("en-GB"))} kcal`}</span>
                 </h2>
                 <button
                   type="button"
@@ -292,7 +293,7 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
                           aria-label={`${it.name} options`}
                           onClick={(e) => setItemMenu({ item: it, anchor: e.currentTarget })}
                           className="tap flex items-center justify-center shrink-0"
-                          style={{ width: 44, height: 44, marginRight: -12 }}
+                          style={{ width: 44, height: 44, marginInlineEnd: -12 }}
                         >
                           <EllipsisVertical size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
                         </button>
@@ -460,10 +461,10 @@ const DayTotal: React.FC<{ heading: string; view: ReturnType<typeof dayTotalView
             {f > 0 && <circle cx="56" cy="56" r={R} fill="none" stroke={dark ? "#C3B3FB" : "#7D6BB5"} strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(C * f).toFixed(1)} ${C.toFixed(1)}`} transform="rotate(-90 56 56)" />}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center" role="img" aria-label={view.target ? `${view.kcal} of ${view.target} kcal` : `${view.kcal} kcal`}>
-            <span style={{ fontSize: textPx(22), fontWeight: 800, letterSpacing: "-0.02em", color: INK.ch, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{view.kcal.toLocaleString("en-GB")}</span>
-            <span style={{ fontSize: textPx(10.5), color: INK.chF, marginTop: 3 }}>{view.target ? `of ${Math.round(view.target).toLocaleString("en-GB")} kcal` : empty ? "Nothing planned yet" : "No target set"}</span>
+            <span style={{ fontSize: textPx(22), fontWeight: 800, letterSpacing: "-0.02em", color: INK.ch, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{view.kcal.toLocaleString(appLocale("en-GB"))}</span>
+            <span style={{ fontSize: textPx(10.5), color: INK.chF, marginTop: 3 }}>{view.target ? `of ${Math.round(view.target).toLocaleString(appLocale("en-GB"))} kcal` : empty ? "Nothing planned yet" : "No target set"}</span>
             {view.left !== null && (
-              <span style={{ fontSize: textPx(10.5), fontWeight: 700, color: view.left >= 0 ? INK.good : INK.hi }}>{view.left >= 0 ? `${view.left.toLocaleString("en-GB")} left` : `${Math.abs(view.left).toLocaleString("en-GB")} over`}</span>
+              <span style={{ fontSize: textPx(10.5), fontWeight: 700, color: view.left >= 0 ? INK.good : INK.hi }}>{view.left >= 0 ? `${view.left.toLocaleString(appLocale("en-GB"))} left` : `${Math.abs(view.left).toLocaleString(appLocale("en-GB"))} over`}</span>
             )}
           </div>
         </div>

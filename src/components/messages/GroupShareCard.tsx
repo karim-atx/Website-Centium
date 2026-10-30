@@ -15,6 +15,7 @@ import { OFFLINE_MESSAGE } from "../../services/network-error";
 import type { ShareCard } from "../../services/messaging/shareCards";
 import { bookSharedSession, cancelSharedSessionBooking } from "../../services/messaging/sessionPlaces";
 import { placesAfter, placesLine, sessionAction, type SessionPlaces } from "../../services/messaging/groupCardsModel";
+import { appLocale } from "../../i18n/format";
 
 /**
  * Round D · a card the professional shared into a group (DT4), drawn by
@@ -149,7 +150,7 @@ const SessionFooter: React.FC<{
   };
 
   const when = card.startsAt
-    ? `${new Date(card.startsAt).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" })} at ${clock12(card.startsAt)}`
+    ? `${new Date(card.startsAt).toLocaleDateString(appLocale("en-US"), { weekday: "short", day: "numeric", month: "short" })} at ${clock12(card.startsAt)}`
     : null;
   const button = (label: string, onClick: () => void, filled: boolean, disabled = false) => (
     <button

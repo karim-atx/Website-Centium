@@ -61,7 +61,7 @@ const PriceInput: React.FC<{ label: string; value: string; onChange: (v: string)
       value={value}
       placeholder="0"
       onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, "").slice(0, 8))}
-      className="w-[56px] bg-transparent outline-none text-right tabular-nums placeholder:text-charcoal-faint"
+      className="w-[56px] bg-transparent outline-none text-end tabular-nums placeholder:text-charcoal-faint"
     />
   </span>
 );
@@ -73,7 +73,7 @@ const TextInput: React.FC<{ label: string; value: string; onChange: (v: string) 
     placeholder={placeholder}
     maxLength={60}
     onChange={(e) => onChange(e.target.value)}
-    className="w-[110px] bg-transparent outline-none text-right text-[12px] font-bold text-primary-dark placeholder:text-charcoal-faint"
+    className="w-[110px] bg-transparent outline-none text-end text-[12px] font-bold text-primary-dark placeholder:text-charcoal-faint"
   />
 );
 

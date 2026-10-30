@@ -1,3 +1,4 @@
+import { appLocale } from "../i18n/format";
 /**
  * Formats a date for display, e.g. "Sep 7, 2026".
  *
@@ -30,7 +31,7 @@ export function formatDisplayDate(value: string | null | undefined): string {
   // shapes land on the same footing.
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return "–";
-  return parsed.toLocaleDateString("en-US", {
+  return parsed.toLocaleDateString(appLocale("en-US"), {
     month: "short",
     day: "numeric",
     year: "numeric",

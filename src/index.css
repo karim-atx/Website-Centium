@@ -823,7 +823,7 @@ body {
   margin: 0;
   background-color: rgb(var(--c-cream));
   color: rgb(var(--c-charcoal));
-  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  font-family: "Manrope", "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.25s ease, color 0.25s ease;
@@ -1187,4 +1187,23 @@ html.big-targets :where(.tap, .hit):where(:not(:has(button, a[href], input, sele
 html.high-contrast {
   --c-pro-card-border: rgb(var(--c-charcoal) / 0.3);
   --c-pro-ring-track: rgb(var(--c-charcoal) / 0.3);
+}
+
+/* Round F (AV): right to left.
+   - Direction icons point the reading way. `scale`, not transform, so a
+     rotation a component sets (an open row's chevron) still applies.
+   - Arabic letters join, so no letter-spacing anywhere in Arabic (it would
+     break the words apart); uppercase has no effect on Arabic. */
+[dir="rtl"] :is(
+  .lucide-chevron-left, .lucide-chevron-right, .lucide-chevrons-left, .lucide-chevrons-right,
+  .lucide-arrow-left, .lucide-arrow-right, .lucide-move-left, .lucide-move-right,
+  .lucide-send, .lucide-send-horizontal, .lucide-reply, .lucide-reply-all, .lucide-forward,
+  .lucide-undo, .lucide-undo-2, .lucide-redo, .lucide-redo-2, .lucide-corner-up-left, .lucide-corner-up-right,
+  .lucide-log-in, .lucide-log-out, .lucide-list-start, .lucide-text-align-start
+) {
+  scale: -1 1;
+}
+html[lang="ar"] body,
+html[lang="ar"] body * {
+  letter-spacing: normal !important;
 }

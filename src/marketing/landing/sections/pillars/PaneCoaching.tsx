@@ -7,12 +7,12 @@ import * as D from "../data/pillars";
 import type { SectionVals } from "../sectionVals";
 
 export const PaneCoaching: React.FC<{ r: SectionVals }> = ({ r }) => (
-  <div data-pls="3" style={{ zoom: r.plZoom, maxHeight: r.plMaxH, position: r.plPanePos, left: "0", top: "0", right: "0", bottom: "0", flex: `0 0 ${r.plPaneW}`, scrollSnapAlign: "center", opacity: r.plPaneOp, borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(94,158,149,.2)", boxShadow: r.plSh, overflow: "hidden", display: "flex", flexDirection: "column", textAlign: "left" }}>
+  <div data-pls="3" style={{ zoom: r.plZoom, maxHeight: r.plMaxH, position: r.plPanePos, left: "0", top: "0", right: "0", bottom: "0", flex: `0 0 ${r.plPaneW}`, scrollSnapAlign: "center", opacity: r.plPaneOp, borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(94,158,149,.2)", boxShadow: r.plSh, overflow: "hidden", display: "flex", flexDirection: "column", textAlign: "start" }}>
     <div style={{ height: "36px", flexShrink: "0", display: "flex", alignItems: "center", gap: "7px", padding: "0 14px", background: "#F6FAF9", borderBottom: "1px solid rgba(94,158,149,.14)" }}>
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E4DCF8" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#DDE8E5" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E7E3DC" }} />
-      <span style={{ marginLeft: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
+      <span style={{ marginInlineStart: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
         centium.atraxia.org/app/coaching
       </span>
     </div>
@@ -56,7 +56,7 @@ export const PaneCoaching: React.FC<{ r: SectionVals }> = ({ r }) => (
             <span style={{ fontSize: "14px", fontWeight: "800" }}>
               Lara Khoury
             </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", padding: "2px 7px 2px 2px", borderRadius: "99px", background: "#2F5F58", color: "#fff", fontSize: "9.5px", fontWeight: "800" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", paddingBlock: "2px", paddingInline: "2px 7px", borderRadius: "99px", background: "#2F5F58", color: "#fff", fontSize: "9.5px", fontWeight: "800" }}>
               <span style={{ width: "12px", height: "12px", borderRadius: "99px", background: "#8AC4BA", color: "#1E3F3A", fontSize: "7.5px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 ✓
               </span>

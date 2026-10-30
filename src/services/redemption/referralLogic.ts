@@ -1,3 +1,4 @@
+import { appLocale } from "../../i18n/format";
 // A6 Referrals: the pure parts, tested without a database
 // (referralLogic.test.ts). The I/O lives in ./index.ts.
 //
@@ -80,7 +81,7 @@ export const STANDARD_REFERRER_POINTS = 1500;
  */
 export function rewardLine(referrerPoints: number | null | undefined, colleague = false): string {
   const n = referrerPoints && referrerPoints > 0 ? referrerPoints : STANDARD_REFERRER_POINTS;
-  return `${n.toLocaleString("en-US")} points per ${colleague ? "colleague or client" : "friend"} who joins`;
+  return `${n.toLocaleString(appLocale("en-US"))} points per ${colleague ? "colleague or client" : "friend"} who joins`;
 }
 
 /** redeem_referral_code()'s stable machine strings. */
@@ -108,7 +109,7 @@ export type RedeemReferralOutcome =
  *  promised until one is. The points are the referrer's, so they are named as
  *  the friend's. */
 export function appliedLine(pointsAwarded = 0): string {
-  return pointsAwarded > 0 ? `Code applied. ${pointsAwarded.toLocaleString("en-US")} points for your friend.` : "Code applied.";
+  return pointsAwarded > 0 ? `Code applied. ${pointsAwarded.toLocaleString(appLocale("en-US"))} points for your friend.` : "Code applied.";
 }
 
 /** MO1.10.2's refusal lines, chosen from `reason` (never from `message`).
@@ -158,7 +159,7 @@ export function interpretRedeemReferral(row: RedeemReferralRow | null | undefine
 export function redemptionsLine(summary: Pick<ReferralSummary, "redemptions" | "pointsEarned">): string | null {
   if (summary.redemptions <= 0) return null;
   const friends = summary.redemptions === 1 ? "1 friend joined" : `${summary.redemptions} friends joined`;
-  const points = summary.pointsEarned > 0 ? ` · ${summary.pointsEarned.toLocaleString("en-US")} points earned` : "";
+  const points = summary.pointsEarned > 0 ? ` · ${summary.pointsEarned.toLocaleString(appLocale("en-US"))} points earned` : "";
   return `${friends} with your code${points}`;
 }
 

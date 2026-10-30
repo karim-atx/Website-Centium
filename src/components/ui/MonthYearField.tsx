@@ -87,7 +87,7 @@ export const MonthYearField: React.FC<{
           setDraft(initial());
           setOpen(true);
         }}
-        className="tap w-full min-h-[48px] flex items-center justify-between gap-2 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 text-left text-sm disabled:opacity-60"
+        className="tap w-full min-h-[48px] flex items-center justify-between gap-2 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 text-start text-sm disabled:opacity-60"
       >
         <span className={shown ? "text-charcoal truncate" : "text-charcoal-faint truncate"}>
           {shown || "Month, year"}

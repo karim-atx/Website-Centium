@@ -16,7 +16,7 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
   <div id="day-track" data-screen-label="DY1 v15 Your day, pillar by pillar" style={{ position: "relative", zIndex: "2", height: r.dayTrackH }}>
     <div id="day" style={{ position: r.dayPinPos, top: "0", height: r.dayStageH, padding: r.dayPad, overflow: "hidden" }}>
       <div style={{ maxWidth: "1180px", margin: "0 auto", height: "100%", display: r.dayDisp, gridTemplateColumns: r.dayCols, gap: r.dayGap, alignItems: "center", flexDirection: "column" }}>
-        <div style={{ display: r.dayLeftDisp, flexDirection: "column", gap: "22px", textAlign: "left" }}>
+        <div style={{ display: r.dayLeftDisp, flexDirection: "column", gap: "22px", textAlign: "start" }}>
           <div>
             <ChapterMark n="01" t="Your day" size={r.chEyD} />
             <h2 style={{ marginTop: "12px", fontWeight: "800", fontSize: r.dayH2, lineHeight: "1.04", letterSpacing: "-.035em" }}>
@@ -83,13 +83,13 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
             <span style={{ position: "absolute", left: "0", right: "0", top: "7px", height: "2px", borderRadius: "2px", background: "#EFEAFB" }} />
             <span id="rail-fill-m" style={{ position: "absolute", left: "0", right: "0", top: "7px", height: "2px", borderRadius: "2px", background: "#775FD7", transformOrigin: "left", transform: "scaleX(0)" }} />
             {D.momentsH.map((mo, moI) => (
-              <span key={moI} style={{ position: "absolute", left: mo.l, top: "2px", width: "12px", height: "12px", marginLeft: "-6px", borderRadius: "99px", background: "#FFFFFF", border: "2px solid #D9D2EE" }}>
+              <span key={moI} style={{ position: "absolute", left: mo.l, top: "2px", width: "12px", height: "12px", marginInlineStart: "-6px", borderRadius: "99px", background: "#FFFFFF", border: "2px solid #D9D2EE" }}>
                 <span data-rdm={mo.i} style={{ position: "absolute", inset: "-2px", borderRadius: "99px", background: "#775FD7", opacity: "0" }} />
               </span>
             ))}
           </div>
         </div>
-        <div style={{ position: "relative", width: "100%", height: r.stepH, textAlign: "left" }}>
+        <div style={{ position: "relative", width: "100%", height: r.stepH, textAlign: "start" }}>
           {D.dayStepsTxt.map((ds, dsI) => (
             <div key={dsI} data-dstep={ds.i} style={{ position: "absolute", left: "0", right: "0", top: r.stepTop, transform: "translateY(-50%)", opacity: "0" }}>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: ds.c }}>

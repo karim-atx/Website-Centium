@@ -5,6 +5,7 @@
 // No imports that reach the Supabase client: the node test runner loads this file.
 import { licenceStatus, type LicenceReviewRow } from "../../../services/professional-cv/licenceStatus";
 import { siteHref, siteText } from "../../../config/site";
+import { appLocale } from "../../../i18n/format";
 
 type WorkModeDb = "in_person" | "online" | "both";
 type LicenceLike = { id: string; documentPath: string | null };
@@ -74,14 +75,14 @@ export function licenceFacts<L extends LicenceLike>(licences: L[], reviews: Lice
 /** "Mar 3, 2026", the frames' date shape for a verification date. */
 export function shortDate(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" });
 }
 
 /** "Mar 2028" for a "YYYY-MM" month. */
 export function monthYear(month: string | null): string | null {
   if (!month) return null;
   const d = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1);
-  return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return d.toLocaleDateString(appLocale("en-US"), { month: "short", year: "numeric" });
 }
 
 // ---------------------------------------------------------------------------

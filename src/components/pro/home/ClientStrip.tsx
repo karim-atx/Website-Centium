@@ -49,7 +49,7 @@ export const ClientStrip: React.FC<{ entries: StripEntry[]; noun: string; onOpen
                 <span
                   aria-hidden
                   className="absolute flex items-center justify-center"
-                  style={{ right: -3, bottom: -3, width: 15, height: 15, borderRadius: 9999, background: INK.card, boxShadow: `0 0 0 1px ${INK.b10}` }}
+                  style={{ insetInlineEnd: -3, bottom: -3, width: 15, height: 15, borderRadius: 9999, background: INK.card, boxShadow: `0 0 0 1px ${INK.b10}` }}
                 >
                   <Icon size={10} strokeWidth={2.6} style={{ color: c, ...NO_ICON_SCALE }} />
                 </span>
@@ -66,7 +66,7 @@ export const ClientStrip: React.FC<{ entries: StripEntry[]; noun: string; onOpen
           </span>
         )}
       </div>
-      <span className="flex-1 min-w-0 text-right" style={{ fontSize: textPx(10.5), fontWeight: 600, color: INK.chF, lineHeight: 1.35 }}>
+      <span className="flex-1 min-w-0 text-end" style={{ fontSize: textPx(10.5), fontWeight: 600, color: INK.chF, lineHeight: 1.35 }}>
         {stripCounts(
           entries.map((e) => e.trend),
           noun
@@ -80,7 +80,7 @@ export const FocusRow: React.FC<{ name: string; line: string; onOpen: () => void
   <button
     type="button"
     onClick={onOpen}
-    className="tap w-full flex items-center text-left"
+    className="tap w-full flex items-center text-start"
     style={{ gap: 10, marginTop: 10, padding: "10px 12px", borderRadius: 14, background: INK.soft }}
   >
     <Initials text={initialsOf(name)} size={32} />

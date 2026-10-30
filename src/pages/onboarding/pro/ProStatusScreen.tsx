@@ -101,7 +101,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
       <div className="ob-status" aria-busy={status === "loading"}>
         <div className="ob-status-vis" style={{ opacity: 0.5 }}>
           {[170, 132, 96].map((s, i) => (
-            <span key={s} className="ob-status-ring" style={{ width: s, height: s, marginLeft: -s / 2, marginTop: -s / 2, opacity: i === 0 ? 0.6 : 1 }} />
+            <span key={s} className="ob-status-ring" style={{ width: s, height: s, marginInlineStart: -s / 2, marginTop: -s / 2, opacity: i === 0 ? 0.6 : 1 }} />
           ))}
         </div>
         <div className="ob-skel" style={{ width: 200, height: 28, borderRadius: 8, margin: "14px auto 0" }} />

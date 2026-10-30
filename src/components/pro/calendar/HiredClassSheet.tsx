@@ -32,7 +32,7 @@ const Row: React.FC<{ k: string; v: string; first: boolean; ink?: string }> = ({
   return (
     <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "9px 0", borderTop: first ? 0 : `0.5px solid ${m.div}`, fontSize: px(12.5) }}>
       <span style={{ color: m.slabel }}>{k}</span>
-      <span style={{ fontWeight: 700, textAlign: "right", color: ink ?? m.ink, minWidth: 0, overflowWrap: "anywhere" }}>{v}</span>
+      <span style={{ fontWeight: 700, textAlign: "end", color: ink ?? m.ink, minWidth: 0, overflowWrap: "anywhere" }}>{v}</span>
     </div>
   );
 };
@@ -102,7 +102,7 @@ export const HiredClassSheet: React.FC<{
               </div>
             ) : null}
           </div>
-          <div style={{ width: 76, flex: "none", borderLeft: `1.5px dashed ${perf}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 76, flex: "none", borderInlineStart: `1.5px dashed ${perf}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
             {t ? (
               <>
                 <span style={{ fontSize: px(17), fontWeight: 800, color: ink }}>{t.time}</span>
@@ -110,8 +110,8 @@ export const HiredClassSheet: React.FC<{
               </>
             ) : null}
           </div>
-          <span aria-hidden style={{ position: "absolute", right: 69, top: -7, width: 14, height: 14, borderRadius: 999, background: m.sbody }} />
-          <span aria-hidden style={{ position: "absolute", right: 69, bottom: -7, width: 14, height: 14, borderRadius: 999, background: m.sbody }} />
+          <span aria-hidden style={{ position: "absolute", insetInlineEnd: 69, top: -7, width: 14, height: 14, borderRadius: 999, background: m.sbody }} />
+          <span aria-hidden style={{ position: "absolute", insetInlineEnd: 69, bottom: -7, width: 14, height: 14, borderRadius: 999, background: m.sbody }} />
         </div>
         <div style={{ marginTop: 12, borderRadius: 14, background: m.sgrey, padding: "2px 14px" }}>
           {rows.map(([k, v, i], n) => (

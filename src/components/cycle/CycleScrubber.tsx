@@ -76,12 +76,12 @@ export const CycleScrubber: React.FC<{
         data-scrubber=""
       >
         <div className="absolute inset-x-0 rounded-full" data-scrub-track="" style={{ top: 20, height: 4, background: dark ? "#303141" : "#EEECF4" }} />
-        <div className="absolute left-0 rounded-full" data-scrub-fill="" style={{ top: 20, height: 4, width: `${frac * 100}%`, background: "rgb(var(--c-primary))" }} />
+        <div className="absolute start-0 rounded-full" data-scrub-fill="" style={{ top: 20, height: 4, width: `${frac * 100}%`, background: "rgb(var(--c-primary))" }} />
         <div
           aria-hidden
           className="absolute"
           data-scrub-tick=""
-          style={{ top: 18, left: "50%", marginLeft: -1, width: 2, height: 8, borderRadius: 2, background: "rgb(var(--c-charcoal) / 0.25)" }}
+          style={{ top: 18, insetInlineStart: "50%", marginInlineStart: -1, width: 2, height: 8, borderRadius: 2, background: "rgb(var(--c-charcoal) / 0.25)" }}
         />
         <div
           aria-hidden
@@ -90,7 +90,7 @@ export const CycleScrubber: React.FC<{
           style={{
             top: 22 - THUMB / 2,
             left: `${frac * 100}%`,
-            marginLeft: -THUMB / 2,
+            marginInlineStart: -THUMB / 2,
             width: THUMB,
             height: THUMB,
             background: dark ? "#1C1F28" : "#FFFFFF",

@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { hasEmailPassword } from "../auth/passwordChangeLogic";
 import { describeLockError } from "./lockLogic";
+import { appLocale } from "../../i18n/format";
 
 // The journal, in public.journal_folders and public.journal_entries.
 //
@@ -79,7 +80,7 @@ export function validateEntry(title: string, body: string): string | null {
   }
   if (b.length < 1) return "Write something before saving.";
   if (body.length > JOURNAL_LIMITS.bodyMax) {
-    return `That's longer than ${JOURNAL_LIMITS.bodyMax.toLocaleString()} characters.`;
+    return `That's longer than ${JOURNAL_LIMITS.bodyMax.toLocaleString(appLocale())} characters.`;
   }
   return null;
 }

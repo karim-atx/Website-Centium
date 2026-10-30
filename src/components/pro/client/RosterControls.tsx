@@ -25,11 +25,11 @@ import { INK } from "../proInk";
  */
 
 export const ScrollRow: React.FC<{ children: React.ReactNode; label: string; role?: string }> = ({ children, label, role }) => (
-  <div className="relative" style={{ margin: "0 -16px 12px 0" }}>
-    <div role={role} aria-label={label} className="flex overflow-x-auto no-scrollbar" style={{ gap: 6, padding: "5px 44px 5px 0", margin: "-5px 0" }}>
+  <div className="relative" style={{ marginBlock: "0 12px", marginInline: "0 -16px" }}>
+    <div role={role} aria-label={label} className="flex overflow-x-auto no-scrollbar" style={{ gap: 6, paddingBlock: "5px", paddingInline: "0 44px", margin: "-5px 0" }}>
       {children}
     </div>
-    <span aria-hidden className="absolute pointer-events-none" style={{ top: 0, right: 0, bottom: 0, width: 44, background: "linear-gradient(to right, transparent, rgb(var(--c-cream)))" }} />
+    <span aria-hidden className="absolute pointer-events-none" style={{ top: 0, insetInlineEnd: 0, bottom: 0, width: 44, background: "linear-gradient(to right, transparent, rgb(var(--c-cream)))" }} />
   </div>
 );
 
@@ -124,8 +124,8 @@ export const FilterPanel: React.FC<{
         className="absolute overflow-y-auto"
         style={{
           top: 116,
-          left: "max(16px, calc(50% - 199px))",
-          right: "max(16px, calc(50% - 199px))",
+          insetInlineStart: "max(16px, calc(50% - 199px))",
+          insetInlineEnd: "max(16px, calc(50% - 199px))",
           maxHeight: "calc(100vh - 220px)",
           background: INK.card,
           border: "1px solid rgba(174,161,220,0.5)",

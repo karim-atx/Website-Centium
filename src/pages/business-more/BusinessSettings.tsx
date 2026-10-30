@@ -30,7 +30,7 @@ import { TimezoneSetting } from "../../components/settings/TimezoneSetting";
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
 import { COLOR_THEMES } from "../../theme/colorThemes";
-import { APP_LANGUAGES } from "../../i18n/languages";
+import { languageEntry } from "../../i18n/languages";
 import { getMfaStatus } from "../../services/mfa";
 import { enablePush, isThisDeviceRegistered, pushSupported, unsubscribeFromPush } from "../../services/push";
 import { pushUnavailableReason, watchPermission, type PermissionReading } from "../settings/platform";
@@ -126,7 +126,9 @@ export default function BusinessSettings() {
   const [rateOpen, setRateOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const languageName = APP_LANGUAGES.find((l) => l.code === language)?.name ?? "English";
+  // Round F (F7): Arabic reads "العربية · Beta" until every area is translated.
+  const languageEntryNow = languageEntry(language);
+  const languageName = languageEntryNow.beta ? `${languageEntryNow.name} · ${t("Beta")}` : languageEntryNow.name;
 
   return (
     <div>
@@ -211,7 +213,7 @@ export default function BusinessSettings() {
           <div className="[&>#timezone]:ps-[14px] [&>#timezone]:pe-[15px]">
             <TimezoneSetting />
           </div>
-          <div style={{ padding: "12px 15px 12px 14px" }}>
+          <div style={{ paddingBlock: "12px", paddingInline: "14px 15px" }}>
             <CycleTrackingRow />
           </div>
           <BizRow icon={EyeOff} title="Deactivate or delete" desc="Pause, close or delete your business" onClick={() => navigate("/app/business/more/deactivate")} />

@@ -34,6 +34,7 @@ import {
 import { setNutritionCoaching } from "../../../services/pro/clients";
 import { mondayFirstWeek, DAY_SHORT } from "../../../utils/week";
 import type { AccessCategory } from "../../../services/pro/access";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · CL2 v4 Tab 2 Plan (Full coaching) and Meal plan (Nutrition),
@@ -348,7 +349,7 @@ const MealPlanSection: React.FC<{
   const toJournal = () => navigate(mealPlansHref(lane, "journals", { client: data.clientId }));
   const diaryShared = data.access.has("food_diary");
   const weekN = plan?.startsOn ? Math.floor(Math.max(0, Math.round((new Date(`${today}T00:00:00`).getTime() - new Date(`${plan.startsOn}T00:00:00`).getTime()) / 86400000)) / 7) + 1 : null;
-  const kcal = plan?.kcal ? `${Math.round(plan.kcal).toLocaleString("en-GB")} kcal` : null;
+  const kcal = plan?.kcal ? `${Math.round(plan.kcal).toLocaleString(appLocale("en-GB"))} kcal` : null;
 
   // my_client_nutrition_targets: the targets you set, no switch needed.
   const targetsRow: ListRow =
@@ -360,7 +361,7 @@ const MealPlanSection: React.FC<{
             key: "t",
             icon: Target,
             title: "Targets set by you",
-            meta: [targets.calories ? `${Math.round(targets.calories).toLocaleString("en-GB")} kcal` : null, targets.proteinPct ? `${targets.proteinPct}% protein` : null, targets.locked ? `locked for ${firstName}` : null].filter(Boolean).join(" · "),
+            meta: [targets.calories ? `${Math.round(targets.calories).toLocaleString(appLocale("en-GB"))} kcal` : null, targets.proteinPct ? `${targets.proteinPct}% protein` : null, targets.locked ? `locked for ${firstName}` : null].filter(Boolean).join(" · "),
             onClick: toTargets,
           };
   // The diary reaches you only through the Food diary switch.
@@ -418,7 +419,7 @@ const MealPlanSection: React.FC<{
                     <span style={{ height: 6, borderRadius: 9999, background: INK.soft, overflow: "hidden" }}>
                       <span className="block" style={{ width: `${Math.min(100, (pct as number) * 2)}%`, height: "100%", background: colour as string }} />
                     </span>
-                    <span style={{ textAlign: "right", color: INK.chS }}>{g != null ? `${g} g` : `${pct}%`}</span>
+                    <span style={{ textAlign: "end", color: INK.chS }}>{g != null ? `${g} g` : `${pct}%`}</span>
                   </div>
                 );
               })}
@@ -439,7 +440,7 @@ const MealPlanSection: React.FC<{
       </Card>
       {plan && dayIndex !== null && (
         <>
-          <SectionHead label={new Date(`${today}T00:00:00`).toLocaleDateString("en-US", { weekday: "long" })} />
+          <SectionHead label={new Date(`${today}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "long" })} />
           {items === undefined ? (
             <ProCardSkeleton lines={3} />
           ) : !items || items.length === 0 ? (

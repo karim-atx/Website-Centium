@@ -23,7 +23,7 @@
   --sc-tab-on-ink: #ffffff;
   --sc-tab-ink: #6d50d3;
   --sc-bar: rgb(var(--c-primary-fill));
-  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
   color: var(--sc-ink);
   line-height: 1.5;
 }

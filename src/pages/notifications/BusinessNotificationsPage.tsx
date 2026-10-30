@@ -170,7 +170,7 @@ export default function BusinessNotificationsPage() {
   return (
     <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "-4px 0 6px -10px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBlock: "-4px 6px", marginInline: "-10px 0" }}>
         <button
           type="button"
           onClick={back}

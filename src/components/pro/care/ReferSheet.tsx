@@ -32,7 +32,7 @@ const Pick: React.FC<{ name: string; line: string; on: boolean; tone: (typeof TO
     role="radio"
     aria-checked={on}
     onClick={onClick}
-    className="tap w-full flex items-center text-left"
+    className="tap w-full flex items-center text-start"
     style={{ gap: 12, padding: "10px 12px", borderRadius: 14, border: `1px solid ${on ? INK.pr : INK.b10}`, background: on ? INK.prPale : INK.card, marginBottom: 8 }}
   >
     <Avatar name={name} url={url} size={38} tone={tone} />
@@ -307,7 +307,7 @@ export const ReferSheet: React.FC<{
             className="block w-full outline-none resize-none focus:border-primary"
             style={{ borderRadius: 12, background: INK.soft, border: `1px solid ${note ? INK.pr : INK.b10}`, padding: "10px 12px", fontSize: textPx(14), color: INK.ch, lineHeight: 1.45 }}
           />
-          <p className="text-right" style={{ fontSize: textPx(11), color: INK.chF, marginTop: 4 }}>{`${note.length} / ${REASON_MAX}`}</p>
+          <p className="text-end" style={{ fontSize: textPx(11), color: INK.chF, marginTop: 4 }}>{`${note.length} / ${REASON_MAX}`}</p>
         </>
       )}
       {err && (

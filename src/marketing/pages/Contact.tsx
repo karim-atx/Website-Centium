@@ -256,7 +256,7 @@ export const Contact: React.FC = () => {
           boxShadow: "0 1px 1px rgba(72,58,130,.05),0 10px 24px rgba(72,58,130,.06),0 40px 80px rgba(92,72,168,.09)",
         }}
       >
-        <form onSubmit={handleSubmit} style={{ position: "relative", padding: ctPad, display: "flex", flexDirection: "column", gap: "14px", textAlign: "left" }}>
+        <form onSubmit={handleSubmit} style={{ position: "relative", padding: ctPad, display: "flex", flexDirection: "column", gap: "14px", textAlign: "start" }}>
           <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".16em", color: "#756D63" }}>WHAT'S THIS ABOUT?</span>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "4px" }}>
             {topics.map((t, i) => {
@@ -374,7 +374,7 @@ export const Contact: React.FC = () => {
             tabIndex={-1}
             autoComplete="off"
             aria-hidden="true"
-            style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", opacity: 0 }}
+            style={{ position: "absolute", insetInlineStart: "-9999px", width: "1px", height: "1px", opacity: 0 }}
           />
 
           {/* MOUNTED FOR THE WHOLE LIFE OF THE FORM, hidden rather than
@@ -499,13 +499,13 @@ export const Contact: React.FC = () => {
           style={{
             padding: `22px ${ctPad}`,
             background: "#FAF9FE",
-            borderLeft: "0",
+            borderInlineStart: "0",
             borderTop: "1px solid #EDEAE4",
             display: "grid",
             gridTemplateColumns: sm ? "repeat(2,minmax(0,1fr))" : "minmax(0,1fr)",
             gap: "18px 32px",
             alignItems: "start",
-            textAlign: "left",
+            textAlign: "start",
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -518,7 +518,7 @@ export const Contact: React.FC = () => {
               </span>
               EMAIL
             </span>
-            <a href={`mailto:${SUPPORT_EMAIL}`} style={{ paddingLeft: "40px", fontSize: "14.5px", fontWeight: "700", color: "#6A54C4" }}>
+            <a href={`mailto:${SUPPORT_EMAIL}`} style={{ paddingInlineStart: "40px", fontSize: "14.5px", fontWeight: "700", color: "#6A54C4" }}>
               {SUPPORT_EMAIL}
             </a>
           </div>
@@ -532,7 +532,7 @@ export const Contact: React.FC = () => {
               </span>
               RESPONSE TIME
             </span>
-            <p style={{ paddingLeft: "40px", fontSize: "14.5px", color: "#5B5349" }}>Within a few business days</p>
+            <p style={{ paddingInlineStart: "40px", fontSize: "14.5px", color: "#5B5349" }}>Within a few business days</p>
           </div>
         </div>
       </div>

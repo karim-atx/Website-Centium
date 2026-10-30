@@ -45,7 +45,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
                 position: "relative",
                 width: "32px",
                 height: "32px",
-                marginRight: "4px",
+                marginInlineEnd: "4px",
                 flexShrink: "0",
                 borderRadius: "99px",
                 background: "#DED4F4",
@@ -243,7 +243,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
                 {m.c}
               </span>
             </div>
-            <span style={{ display: "block", height: "6px", borderRadius: "9px", background: "#E4DCF8", marginLeft: "56px", overflow: "hidden" }}>
+            <span style={{ display: "block", height: "6px", borderRadius: "9px", background: "#E4DCF8", marginInlineStart: "56px", overflow: "hidden" }}>
               <span data-w="0.2 0.8" data-sx="" style={{ display: "block", height: "100%", width: m.f, background: m.bar, borderRadius: "9px", transformOrigin: "left", transform: "scaleX(0)" }} />
             </span>
           </div>
@@ -311,12 +311,12 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
                 {m.r}
               </span>
             </div>
-            <span style={{ position: "relative", display: "block", height: "8px", borderRadius: "9px", background: "#E4DCF8", marginLeft: "44px" }}>
+            <span style={{ position: "relative", display: "block", height: "8px", borderRadius: "9px", background: "#E4DCF8", marginInlineStart: "44px" }}>
               <span style={{ position: "absolute", top: "0", bottom: "0", left: m.l, width: m.w, borderRadius: "9px", background: "#5D9C93" }} />
             </span>
           </div>
         ))}
-        <div style={{ display: "flex", justifyContent: "space-between", marginLeft: "44px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginInlineStart: "44px" }}>
           {sl.mhrs!.map((h, hI) => (
             <span key={hI} style={{ fontSize: "12px", fontWeight: "600", color: "#756D63" }}>
               {h}

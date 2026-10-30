@@ -828,7 +828,7 @@ export const AddFoodSheet: React.FC<{
                 <div
                   key={cell.caption}
                   className="text-center"
-                  style={i > 0 ? { borderLeft: `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` } : undefined}
+                  style={i > 0 ? { borderInlineStart: `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` } : undefined}
                 >
                   <p style={{ margin: 0, fontSize: textPx(15.5), fontWeight: 800, color: cell.color }}>{cell.value}</p>
                   <p style={{ margin: "2px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{cell.caption}</p>
@@ -980,7 +980,7 @@ export const AddFoodSheet: React.FC<{
                 <span className="w-9 h-9 rounded-xl bg-primary-pale flex items-center justify-center shrink-0">
                   <FoodIcon category={scanResultFood.category} size={16} className="text-primary-dark" />
                 </span>
-                <div className="text-left">
+                <div className="text-start">
                   <p className="font-semibold text-charcoal text-sm">{scanResultFood.name}</p>
                   <p className="text-xs text-charcoal-faint">
                     {hide ? scanResultFood.servingLabel : `${scanResultFood.calories} kcal · ${scanResultFood.servingLabel}`}
@@ -1140,7 +1140,7 @@ export const AddFoodSheet: React.FC<{
         >
           {multi ? on && <Check size={17} strokeWidth={2.6} /> : <FoodIcon category={r.food?.category ?? "homemade"} size={16} />}
         </button>
-        <button onClick={r.open} disabled={!r.food} className="tap flex-1 min-w-0 flex items-center justify-between text-left" style={{ gap: 10 }}>
+        <button onClick={r.open} disabled={!r.food} className="tap flex-1 min-w-0 flex items-center justify-between text-start" style={{ gap: 10 }}>
           <span className="min-w-0">
             <span className="flex items-center gap-1.5 truncate" style={{ fontSize: textPx(14), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
               {r.name}
@@ -1224,12 +1224,12 @@ export const AddFoodSheet: React.FC<{
               so it carries the panel's top radius itself. */}
           <div className="bg-cream-card" style={{ margin: "-20px -20px 0", padding: "12px 20px 4px", borderRadius: "22px 22px 0 0" }}>
           <div className="relative mb-4">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-faint" />
+            <Search size={16} className="absolute start-4 top-1/2 -translate-y-1/2 text-charcoal-faint" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search food, meals or ingredients…"
-              className="w-full rounded-2xl bg-cream-soft pl-10 pr-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-2xl bg-cream-soft ps-10 pe-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
@@ -1249,7 +1249,7 @@ export const AddFoodSheet: React.FC<{
                 icon: (
                   <span className="relative inline-flex">
                     <Camera size={17} />
-                    <Plus size={9} strokeWidth={3} className="absolute" style={{ top: -5, right: -6 }} />
+                    <Plus size={9} strokeWidth={3} className="absolute" style={{ top: -5, insetInlineEnd: -6 }} />
                   </span>
                 ),
                 bg: dark ? "linear-gradient(150deg,rgb(var(--th-617b77)),rgb(var(--th-365652)))" : "linear-gradient(150deg,rgb(var(--th-8fb5af)),rgb(var(--th-4f7f78)))",
@@ -1291,7 +1291,7 @@ export const AddFoodSheet: React.FC<{
                     key={m.id}
                     onClick={() => logMeal(m.id)}
                     disabled={justAdded}
-                    className="tap w-full flex items-center justify-between rounded-2xl px-3.5 py-3 bg-primary-pale/60 hover:bg-primary-pale text-left disabled:opacity-50"
+                    className="tap w-full flex items-center justify-between rounded-2xl px-3.5 py-3 bg-primary-pale/60 hover:bg-primary-pale text-start disabled:opacity-50"
                   >
                     <div>
                       <p className="text-sm font-semibold text-charcoal">{m.title}</p>

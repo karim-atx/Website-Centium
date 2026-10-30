@@ -3,10 +3,11 @@ import { useApp } from "../../context/AppContext";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { CalendarPickerSheet } from "./CalendarPickerSheet";
 import { JumpToToday } from "../ui/JumpToToday";
+import { appLocale } from "../../i18n/format";
 
 const dayLabel = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  return d.toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" });
 };
 
 // Iteration 6 "Team" §1.1: a pill-shaped day navigator with the same

@@ -91,7 +91,7 @@ export const PlaylistField: React.FC<{
             onClick={() => onChange("")}
             aria-label="Clear the playlist link"
             className="tap absolute grid place-items-center rounded-full"
-            style={{ right: 8, top: "50%", transform: "translateY(-50%)", width: 28, height: 28, color: INK_FAINT }}
+            style={{ insetInlineEnd: 8, top: "50%", transform: "translateY(-50%)", width: 28, height: 28, color: INK_FAINT }}
           >
             <X size={15} aria-hidden />
           </button>

@@ -48,7 +48,7 @@ export const Faq: React.FC<{ r: SectionVals }> = ({ r }) => {
                     gap: "16px",
                     padding: "20px 0",
                     minHeight: "44px",
-                    textAlign: "left",
+                    textAlign: "start",
                   }}
                 >
                   <span style={{ fontSize: "17px", fontWeight: "600" }}>

@@ -93,7 +93,7 @@ export const BizListHeader: React.FC<{ title: string; onBack?: () => void; onNew
           type="button"
           onClick={onBack}
           aria-label={t("Back")}
-          className="tap w-11 h-11 -ml-2.5 rounded-full flex items-center justify-center text-charcoal shrink-0"
+          className="tap w-11 h-11 -ms-2.5 rounded-full flex items-center justify-center text-charcoal shrink-0"
         >
           <BackIcon size={20} strokeWidth={2.2} aria-hidden />
         </button>
@@ -274,7 +274,7 @@ export const BizNewMessageSheet: React.FC<{
             type="button"
             disabled={busy}
             onClick={() => onPick(m.professionalId)}
-            className="tap w-full flex items-center gap-3 min-h-[56px] text-left border-b border-charcoal/[0.06] disabled:opacity-60"
+            className="tap w-full flex items-center gap-3 min-h-[56px] text-start border-b border-charcoal/[0.06] disabled:opacity-60"
           >
             <span className="w-10 h-10 rounded-full bg-primary-pale text-primary-dark flex items-center justify-center shrink-0 text-[14px] font-extrabold">
               {bizInitials(m.name)}
@@ -297,7 +297,7 @@ export const BizNewMessageSheet: React.FC<{
                 disabled={busy}
                 data-new-member=""
                 onClick={() => onPickMember(bizId, p.personId)}
-                className="tap w-full flex items-center gap-3 min-h-[56px] text-left border-b border-charcoal/[0.06] disabled:opacity-60"
+                className="tap w-full flex items-center gap-3 min-h-[56px] text-start border-b border-charcoal/[0.06] disabled:opacity-60"
               >
                 {/* The masked member avatar (BizAvatar "member": 40 maskBg, user-round 18/2 inkSoft). */}
                 <span data-biz-avatar="member" className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-charcoal-soft" style={{ background: c.maskBg }}>

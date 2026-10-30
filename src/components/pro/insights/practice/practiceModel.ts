@@ -1,3 +1,4 @@
+import { appLocale } from "../../../../i18n/format";
 // Release 3 · W6 MO19 v3 Practice insights: the numbers from the documented
 // readers, by HANDOVER i ("Practice insights: clients coached, Sessions
 // delivered, Average rating, Retention, Outcome, Years on Centium"). Pure.
@@ -41,7 +42,7 @@ export function lastMonths(today: string, n: number): { start: string; end: stri
     const s = new Date(d.getFullYear(), d.getMonth() - i, 1);
     const e = new Date(d.getFullYear(), d.getMonth() - i + 1, 1);
     const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
-    out.push({ start: iso(s), end: iso(e), label: s.toLocaleDateString("en-US", { month: "short" }), long: s.toLocaleDateString("en-US", { month: "long" }) });
+    out.push({ start: iso(s), end: iso(e), label: s.toLocaleDateString(appLocale("en-US"), { month: "short" }), long: s.toLocaleDateString(appLocale("en-US"), { month: "long" }) });
   }
   return out;
 }

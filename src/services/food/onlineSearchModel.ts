@@ -1,5 +1,6 @@
 import { ALL_NUTRIENT_ROWS } from "../../data/nutrientSchema";
 import { OFFLINE_MESSAGE } from "../network-error";
+import { appLocale } from "../../i18n/format";
 
 // Round D · DP, looking foods up online (search-foods-online, save_found_food,
 // submit_food_to_catalogue): the pure half. Parsing the function's answer,
@@ -202,7 +203,7 @@ export function formatNutrientAmount(n: number): string {
   if (a === 0) return "0";
   if (a < 0.1) return n.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
   if (a < 10) return (Math.round(n * 10) / 10).toString();
-  return Math.round(n).toLocaleString("en-US");
+  return Math.round(n).toLocaleString(appLocale("en-US"));
 }
 
 /** save_found_food's arguments for a confirmed result. */

@@ -51,7 +51,7 @@ export const YourReviewsSection: React.FC<{ authUserId: string | null }> = ({ au
         aria-expanded={expanded}
         aria-controls="your-reviews-list"
         onClick={() => setExpanded((v) => !v)}
-        className="tap w-full min-h-[56px] flex items-center gap-3 rounded-[20px] bg-cream-card border border-charcoal/[0.08] px-4 py-2.5 text-left"
+        className="tap w-full min-h-[56px] flex items-center gap-3 rounded-[20px] bg-cream-card border border-charcoal/[0.08] px-4 py-2.5 text-start"
       >
         <span className="w-9 h-9 rounded-[11px] bg-th-f0edf9 dark:bg-primary/15 flex items-center justify-center shrink-0 text-th-7d67d9 dark:text-primary-accent">
           <Star size={17} strokeWidth={1.75} aria-hidden />
@@ -106,7 +106,7 @@ function ReviewableRow({ professional: p, onChanged }: { professional: Reviewabl
       <div className="flex items-baseline justify-between gap-2 mb-1 px-1">
         <p className="min-w-0 text-sm font-semibold text-charcoal truncate">
           {p.firstName}
-          {note && <span className="ml-1.5 text-[11px] font-semibold text-charcoal-faint">{note}</span>}
+          {note && <span className="ms-1.5 text-[11px] font-semibold text-charcoal-faint">{note}</span>}
         </p>
         {/* Only a listed professional has a page to open. */}
         {p.listedPublicly && (

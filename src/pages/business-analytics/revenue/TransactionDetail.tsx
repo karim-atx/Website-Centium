@@ -115,7 +115,7 @@ function useRefund(onDone: () => void) {
         }
         extra={
           subject ? (
-            <div className="rv-scope text-left">
+            <div className="rv-scope text-start">
               {err && (
                 <p
                   role="alert"

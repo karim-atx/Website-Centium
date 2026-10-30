@@ -8,6 +8,7 @@ import { fetchMyForumBlocks, unblockForumBlock, type ForumBlock } from "../../se
 import { forumAccess } from "../../services/forum/rules";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { linePx, textPx } from "../../theme/textSize";
+import { appLocale } from "../../i18n/format";
 
 // Settings › Data & account › "Blocked members" (MO1.8 BM, MO1.8.12,
 // MO1.8.12.1, MO1.8.12.e): a Part B centred popup (X-01: 350 / r24 / pad 20 /
@@ -34,9 +35,9 @@ const EMPTY = "You haven't blocked anyone.";
 function blockedOn(iso: string, zone: string | null): string {
   const d = new Date(iso);
   const tz = zone ?? undefined;
-  const year = (x: Date) => new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone: tz }).format(x);
+  const year = (x: Date) => new Intl.DateTimeFormat(appLocale("en-US"), { year: "numeric", timeZone: tz }).format(x);
   const sameYear = year(d) === year(new Date());
-  const text = new Intl.DateTimeFormat("en-US", {
+  const text = new Intl.DateTimeFormat(appLocale("en-US"), {
     day: "numeric",
     month: "short",
     ...(sameYear ? {} : { year: "numeric" }),

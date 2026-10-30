@@ -6,6 +6,7 @@ import { landingState, spyClick } from "../landing/state";
 import { anchorHash, loaderEntryFor } from "../landing/loading/pickLoader";
 import { scrollToSection, useMarketingNav } from "../landing/navigation";
 import { LEAF_TEAL, LOGO_LAVENDER, MARK_C_PATH, MARK_LEAF_PATH } from "../landing/paths";
+import { LanguageSwitch } from "./LanguageSwitch";
 
 // Centium landing v29: NV1 v16, the Original navbar (02_pages/01-NV1 and the
 // prototype's navVals / navClick), replacing the previous glass/dark-band nav.
@@ -138,8 +139,8 @@ export const Nav: React.FC = () => {
       style={{
         position: "fixed",
         top: 0,
-        left: 0,
-        right: 0,
+        insetInlineStart: 0,
+        insetInlineEnd: 0,
         zIndex: 60,
         background: "transparent",
         paddingTop: "env(safe-area-inset-top)",
@@ -364,6 +365,10 @@ export const Nav: React.FC = () => {
               </a>
             ))}
           </nav>
+          {/* Round F (AV): the language switch, above Log in. */}
+          <div style={{ marginTop: "12px", display: "flex", justifyContent: "center" }}>
+            <LanguageSwitch />
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #EDEAE4" }}>
             <Link
               to="/app"

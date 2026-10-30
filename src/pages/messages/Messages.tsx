@@ -793,7 +793,7 @@ function ClientAndBusinessMessages() {
           type="button"
           onClick={() => setView("archived")}
           data-archived-row=""
-          className="tap w-full flex items-center gap-3 px-1 py-3 min-h-[72px] text-left"
+          className="tap w-full flex items-center gap-3 px-1 py-3 min-h-[72px] text-start"
           style={{ background: c.rowFill, borderBottom: `0.5px solid ${c.rowRule}` }}
         >
           <span className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ background: c.primaryTint }}>

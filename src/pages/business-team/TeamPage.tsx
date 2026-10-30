@@ -253,7 +253,7 @@ export function TeamPage({ data }: { data: TeamData }) {
                   type="button"
                   className="tap"
                   onClick={() => navigate(`/app/business/employees/${p.professionalId}`)}
-                  style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: 0, padding: 0, color: "inherit", font: "inherit" }}
+                  style={{ display: "block", width: "100%", textAlign: "start", background: "none", border: 0, padding: 0, color: "inherit", font: "inherit" }}
                 >
                   <Row
                     icon={<UserX size={16} strokeWidth={2.1} />}

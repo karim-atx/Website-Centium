@@ -61,7 +61,7 @@ export const BarcodeScanner: React.FC<{
             <div
               aria-hidden
               className="absolute"
-              style={{ left: "12%", right: "12%", top: "30%", bottom: "30%", border: "2px solid rgba(255,255,255,0.85)", borderRadius: 14 }}
+              style={{ insetInlineStart: "12%", insetInlineEnd: "12%", top: "30%", bottom: "30%", border: "2px solid rgba(255,255,255,0.85)", borderRadius: 14 }}
             />
             <p
               className="absolute inset-x-0 text-center"

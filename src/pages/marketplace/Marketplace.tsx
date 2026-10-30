@@ -13,6 +13,7 @@ import { marketPalette } from "../../theme/marketTokens";
 import { PointsFigure } from "../../components/market/PointsFigure";
 import { FOCUS_CSS, usePress } from "../../components/market/usePress";
 import { PointsHero } from "./PointsHero";
+import { appLocale } from "../../i18n/format";
 
 // Market + Share 3.0 · W2 · client Explore (C-MO.4.1 Marketplace Home; HANDOVER
 // §4 Client Marketplace; Client Explore Screens lines 26–81).
@@ -53,7 +54,7 @@ export default function Marketplace() {
           <button
             onClick={back}
             aria-label="Back"
-            className="tap w-9 h-9 mt-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 -ml-[7px]"
+            className="tap w-9 h-9 mt-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 -ms-[7px]"
           >
             <ChevronLeft size={18} />
           </button>
@@ -83,7 +84,7 @@ function HeaderBalance() {
   const { pointsSummary } = useApp();
   if (!pointsSummary) return null;
   return (
-    <span className="shrink-0 self-center" aria-label={`${pointsSummary.balance.toLocaleString("en-US")} points`}>
+    <span className="shrink-0 self-center" aria-label={`${pointsSummary.balance.toLocaleString(appLocale("en-US"))} points`}>
       <PointsFigure value={pointsSummary.balance} mark="leaf" size={17} />
     </span>
   );

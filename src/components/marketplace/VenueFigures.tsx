@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchVenueDashboard } from "../../services/venues/console";
 import { money, type VenueDashboard } from "../../services/venues/consoleLogic";
 import { CARD, VCardError, VGroupHeader, VNumberCard } from "./VenueKit";
+import { appLocale } from "../../i18n/format";
 
 // venue_dashboard(id) (stage A4), restyled per OURS-OP1-venue-figures: four
 // K5 two-up number-box cards (the OpsTabsV4 "Active plans | Members on plans"
@@ -44,7 +45,7 @@ export function VenueFigures({ gymId, timezone, refreshKey = 0 }: { gymId: strin
   }, [gymId, refreshKey, tick]);
 
   const d = data?.gymId === gymId ? data.value : null;
-  const n = (v: number | undefined) => (d && v !== undefined ? v.toLocaleString() : null);
+  const n = (v: number | undefined) => (d && v !== undefined ? v.toLocaleString(appLocale()) : null);
   const showMoney = !!d && d.amountAwaitingPayment !== null && d.amountMarkedPaidThisMonth !== null;
 
   return (
@@ -65,7 +66,7 @@ export function VenueFigures({ gymId, timezone, refreshKey = 0 }: { gymId: strin
               d
                 ? d.membersTotal === 0
                   ? "No memberships at this venue yet."
-                  : `${d.membersTotal.toLocaleString()} membership${d.membersTotal === 1 ? "" : "s"} in total. Unpaid ones are listed first under Members.`
+                  : `${d.membersTotal.toLocaleString(appLocale())} membership${d.membersTotal === 1 ? "" : "s"} in total. Unpaid ones are listed first under Members.`
                 : null
             }
           />

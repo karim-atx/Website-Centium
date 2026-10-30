@@ -94,7 +94,7 @@ export const StatBoxes: React.FC<{ boxes: StatBox[] }> = ({ boxes }) => (
             <p className="flex flex-wrap items-baseline" style={{ gap: "4px 8px", marginTop: 8 }}>
               <span style={{ fontSize: textPx(26), fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1, fontVariantNumeric: "tabular-nums", color: INK.ch }}>
                 {b.value}
-                {b.unit && <span style={{ fontSize: textPx(13), fontWeight: 700, color: INK.chF, marginLeft: 3 }}>{b.unit}</span>}
+                {b.unit && <span style={{ fontSize: textPx(13), fontWeight: 700, color: INK.chF, marginInlineStart: 3 }}>{b.unit}</span>}
               </span>
               {b.delta && (
                 <span className="inline-flex items-center whitespace-nowrap" style={{ gap: 2, fontSize: textPx(12), fontWeight: 800, color: dc }}>
@@ -115,7 +115,7 @@ export const Group: React.FC<{ id: string; icon: LucideIcon; title: string; line
   const dark = useIsDark();
   return (
     <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, marginBottom: 10, overflow: "hidden" }}>
-      <button type="button" aria-expanded={open} aria-controls={`grp-${id}`} onClick={onToggle} className="tap w-full flex items-center text-left" style={{ gap: 12, padding: "14px 16px", minHeight: 64 }}>
+      <button type="button" aria-expanded={open} aria-controls={`grp-${id}`} onClick={onToggle} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "14px 16px", minHeight: 64 }}>
         <span className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 11, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
           <Icon size={17} strokeWidth={1.75} aria-hidden style={{ color: INK.prAccent }} />
         </span>
@@ -201,7 +201,7 @@ export const ClientPicker: React.FC<{ clients: PickerClient[]; value: string | n
         style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8, fontSize: textPx(14), color: INK.ch }}
       >
         {cur && <Avatar name={cur.name} url={cur.avatarUrl} size={24} />}
-        <span className="flex-1 min-w-0 truncate text-left">{label}</span>
+        <span className="flex-1 min-w-0 truncate text-start">{label}</span>
         <ChevronDown size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} />
       </button>
       <PopupMenu
@@ -224,7 +224,7 @@ export const ClientPicker: React.FC<{ clients: PickerClient[]; value: string | n
 export const DetailHead: React.FC<{ eyebrow?: string; title: string; onBack: () => void; right?: React.ReactNode }> = ({ eyebrow, title, onBack, right }) => (
   <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 13 }}>
     <div className="flex items-start min-w-0" style={{ gap: 10 }}>
-      <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginLeft: -6, marginTop: 2 }}>
+      <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -6, marginTop: 2 }}>
         <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
       </button>
       <div className="min-w-0">
@@ -298,7 +298,7 @@ export const AskShareSheet: React.FC<{ open: boolean; onClose: () => void; clien
             className="w-full"
             style={{ borderRadius: 14, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "10px 12px", fontSize: textPx(14), color: INK.ch, resize: "none" }}
           />
-          <span className="block text-right" style={{ fontSize: textPx(11), color: INK.chF }}>{`${msg.length} / ${ASK_MESSAGE_MAX}`}</span>
+          <span className="block text-end" style={{ fontSize: textPx(11), color: INK.chF }}>{`${msg.length} / ${ASK_MESSAGE_MAX}`}</span>
         </label>
       )}
       <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5 }}>{`${firstName} gets a request in Centium to share a past test or book new bloods, with your message. Nothing is shared until ${firstName} says yes.`}</p>

@@ -69,7 +69,7 @@ export const RangeBar: React.FC<{ value: number; low: number | null; high: numbe
         />
       </div>
       <div style={{ position: "relative", height: 14.3, marginTop: 4 }}>
-        {labels === "ends" && <span style={{ ...label, left: 0, transform: "none" }}>0</span>}
+        {labels === "ends" && <span style={{ ...label, insetInlineStart: 0, transform: "none" }}>0</span>}
         {low !== null && <span style={{ ...label, left: bandL }}>{low}</span>}
         {labels === "inrange" && (
           <span style={{ ...label, left: (bandL + bandR) / 2, color: dark ? "#7FC79C" : "#357A4D" }}>In range</span>
@@ -143,7 +143,7 @@ export const BiomarkerDetailSheet: React.FC<{
       titleClass={`text-[17px] leading-[25.5px] tracking-[-0.3px] ${onShareWithProfessional ? "pr-[108px]" : "pr-[72px]"}`}
       titleAside={
         onShareWithProfessional ? (
-          <span className="flex items-center" style={{ gap: 2, marginTop: -9, marginRight: -10 }}>
+          <span className="flex items-center" style={{ gap: 2, marginTop: -9, marginInlineEnd: -10 }}>
             {status && <StatusWord status={status} size={12} line={18} icon={14} />}
             <button
               ref={menuBtn}

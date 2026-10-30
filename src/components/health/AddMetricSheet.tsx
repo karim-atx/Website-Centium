@@ -297,7 +297,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             onClick={onClose}
             aria-label="Close"
             className="tap absolute flex items-center justify-center"
-            style={{ right: 3, top: -1, width: 44, height: 44, background: "none", border: "none", padding: 0 }}
+            style={{ insetInlineEnd: 3, top: -1, width: 44, height: 44, background: "none", border: "none", padding: 0 }}
           >
             <span
               className="flex items-center justify-center rounded-full box-border"
@@ -312,7 +312,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
         <div className="min-h-0 overflow-y-auto" style={{ background: am("card"), borderRadius: 18, padding: 14 }}>
           <div className="flex items-start justify-between gap-3" style={{ marginBottom: 9 }}>
             <p style={{ ...labelStyle, margin: 0 }}>WATER</p>
-            <div style={{ textAlign: "right" }}>
+            <div style={{ textAlign: "end" }}>
               <p
                 style={{
                   margin: 0,
@@ -336,7 +336,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               pattern, opening the shared Log water sheet. */}
           <button
             onClick={() => setWaterSheetOpen(true)}
-            className="tap w-full flex items-center gap-[9px] text-left"
+            className="tap w-full flex items-center gap-[9px] text-start"
             style={{ background: am("row"), border: "none", borderRadius: 12, padding: "9px 11px", marginBottom: 14 }}
           >
             <WaterRowGlyph />
@@ -356,7 +356,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                 // (HE1.7.1 K1), so the box does not pretend to open it.
                 disabled={weightHidden}
                 aria-label={weightValue ? undefined : "Log weight"}
-                className="tap flex items-center w-full text-left box-border"
+                className="tap flex items-center w-full text-start box-border"
                 style={{ background: am("row"), border: "none", borderRadius: 12, padding: "0 10px", height: 42, gap: 8 }}
               >
                 <WeightGlyph />
@@ -382,7 +382,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                         }}
                       >
                         {weightValue.value.toFixed(1)}
-                        <span style={{ fontSize: textPx(11), fontWeight: 400, color: am("caption"), marginLeft: 2 }}>kg</span>
+                        <span style={{ fontSize: textPx(11), fontWeight: 400, color: am("caption"), marginInlineStart: 2 }}>kg</span>
                       </span>
                       {weightValue.recordedAt && (
                         <span
@@ -414,7 +414,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               <button
                 onClick={handleAddRecords}
                 aria-label="Add records"
-                className="tap flex items-center w-full text-left box-border"
+                className="tap flex items-center w-full text-start box-border"
                 style={{ background: am("row"), border: "none", borderRadius: 12, padding: "0 8px", height: 42, gap: 7 }}
               >
                 <Camera size={21} strokeWidth={1.8} style={{ color: am("icon"), flex: "none" }} />
@@ -434,7 +434,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
           <p style={labelStyle}>BLOOD PRESSURE</p>
           <button
             onClick={() => setBpSheetOpen(true)}
-            className="tap w-full flex items-center gap-[9px] text-left"
+            className="tap w-full flex items-center gap-[9px] text-start"
             style={{ background: am("row"), border: "none", borderRadius: 12, padding: "9px 11px", marginBottom: 13 }}
           >
             <CuffGlyph />

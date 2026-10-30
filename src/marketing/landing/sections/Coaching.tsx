@@ -21,7 +21,7 @@ export const Coaching: React.FC<{ r: SectionVals }> = ({ r }) => (
           </h2>
         </div>
         <div style={{ marginTop: "36px", display: "grid", gridTemplateColumns: r.coCols, gap: "18px", alignItems: "stretch" }}>
-          <div style={{ display: r.coSide, position: "relative", height: "420px", borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.14)", boxShadow: "0 1px 1px rgba(72,58,130,.05),0 6px 16px rgba(72,58,130,.06),0 24px 50px rgba(92,72,168,.09)", overflow: "hidden", textAlign: "left" }}>
+          <div style={{ display: r.coSide, position: "relative", height: "420px", borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.14)", boxShadow: "0 1px 1px rgba(72,58,130,.05),0 6px 16px rgba(72,58,130,.06),0 24px 50px rgba(92,72,168,.09)", overflow: "hidden", textAlign: "start" }}>
             <div style={{ position: "absolute", left: "20px", top: "16px", right: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
                 CLIENT VIEW · RAMI
@@ -38,7 +38,7 @@ export const Coaching: React.FC<{ r: SectionVals }> = ({ r }) => (
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "17px", fontWeight: "800" }}>
                     Lara Khoury
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", padding: "2px 7px 2px 2px", borderRadius: "99px", background: "#EDF4F3", color: "#2F5F58", fontSize: "10px", fontWeight: "800" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", paddingBlock: "2px", paddingInline: "2px 7px", borderRadius: "99px", background: "#EDF4F3", color: "#2F5F58", fontSize: "10px", fontWeight: "800" }}>
                       <span style={{ width: "13px", height: "13px", borderRadius: "99px", background: "#5D9C93", color: "#fff", fontSize: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         ✓
                       </span>
@@ -252,7 +252,7 @@ export const Coaching: React.FC<{ r: SectionVals }> = ({ r }) => (
               </span>
             </div>
           </div>
-          <div style={{ display: r.coSide, position: "relative", height: "420px", borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(94,158,149,.2)", boxShadow: "0 1px 1px rgba(72,58,130,.05),0 6px 16px rgba(72,58,130,.06),0 24px 50px rgba(92,72,168,.09)", overflow: "hidden", textAlign: "left" }}>
+          <div style={{ display: r.coSide, position: "relative", height: "420px", borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(94,158,149,.2)", boxShadow: "0 1px 1px rgba(72,58,130,.05),0 6px 16px rgba(72,58,130,.06),0 24px 50px rgba(92,72,168,.09)", overflow: "hidden", textAlign: "start" }}>
             <div style={{ position: "absolute", left: "20px", top: "16px", right: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#3D6E69" }}>
                 PROFESSIONAL VIEW · LARA

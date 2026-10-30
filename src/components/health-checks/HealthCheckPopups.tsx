@@ -34,7 +34,7 @@ const DateBox: React.FC<{ label: string; placeholder?: boolean; onClick: () => v
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
-      className="tap w-full flex items-center bg-cream-soft text-left"
+      className="tap w-full flex items-center bg-cream-soft text-start"
       style={{ minHeight: 44, borderRadius: 12, padding: "0 12px", gap: 8, border: `0.5px solid ${hairAt(dark, 0.1)}` }}
     >
       <CalendarDays size={16} className="shrink-0 text-charcoal-soft" aria-hidden />
@@ -230,7 +230,7 @@ export const CheckFormPopup: React.FC<{
               type="button"
               onClick={() => setMenuOpen(true)}
               aria-haspopup="listbox"
-              className="tap w-full flex items-center justify-between bg-cream-soft text-left"
+              className="tap w-full flex items-center justify-between bg-cream-soft text-start"
               style={fieldStyle}
             >
               <span className={chosen ? "text-charcoal" : "text-charcoal-faint"} style={{ fontSize: textPx(14), lineHeight: "21px" }}>
@@ -392,7 +392,7 @@ export const HiddenChecksSheet: React.FC<{
             <div
               key={c.id}
               className="flex items-center"
-              style={{ minHeight: 72, padding: "10px 14px 10px 12px", gap: 10, borderTop: i > 0 ? `0.5px solid ${hairAt(dark, 0.05)}` : undefined }}
+              style={{ minHeight: 72, paddingBlock: "10px", paddingInline: "12px 14px", gap: 10, borderTop: i > 0 ? `0.5px solid ${hairAt(dark, 0.05)}` : undefined }}
             >
               <CheckTile id={c.id} />
               <span className="flex-1 min-w-0">
@@ -521,7 +521,7 @@ export const CheckReminderSheet: React.FC<{
         }
       >
         <FieldLabel>Check</FieldLabel>
-        <button ref={checkRef} type="button" onClick={() => setMenu("check")} className="tap w-full flex items-center bg-cream-soft text-left" style={field}>
+        <button ref={checkRef} type="button" onClick={() => setMenu("check")} className="tap w-full flex items-center bg-cream-soft text-start" style={field}>
           <span className="flex-1 min-w-0 truncate text-charcoal" style={{ fontSize: textPx(14), lineHeight: "20px" }}>
             {check?.name ?? "Choose a check"}
           </span>
@@ -546,7 +546,7 @@ export const CheckReminderSheet: React.FC<{
 
         <div style={{ marginTop: 16 }}>
           <FieldLabel>Repeat</FieldLabel>
-          <button ref={repeatRef} type="button" onClick={() => setMenu("repeat")} className="tap w-full flex items-center bg-cream-soft text-left" style={field}>
+          <button ref={repeatRef} type="button" onClick={() => setMenu("repeat")} className="tap w-full flex items-center bg-cream-soft text-start" style={field}>
             <span className="flex-1 min-w-0 truncate text-charcoal" style={{ fontSize: textPx(14), lineHeight: "20px" }}>
               {r.repeat.kind === "months" ? `Every ${r.repeat.n} months` : repeatText}
             </span>

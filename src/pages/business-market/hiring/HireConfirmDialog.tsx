@@ -109,25 +109,25 @@ export default function HireConfirmDialog({
       onAction={failed ? retry : onSend}
       onCancel={onCancel}
     >
-      <div data-hire-rows style={{ marginTop: 14, borderRadius: 14, background: m.sgrey, padding: "4px 14px", textAlign: "left" }}>
+      <div data-hire-rows style={{ marginTop: 14, borderRadius: 14, background: m.sgrey, padding: "4px 14px", textAlign: "start" }}>
         {rows.map(([k, v], i) => (
           <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: i ? `0.5px solid ${m.div}` : "0", fontSize: textPx(12.5) }}>
             <span style={{ color: m.slabel }}>{k}</span>
-            <span style={{ fontWeight: 700, textAlign: "right", color: m.ink }}>{v}</span>
+            <span style={{ fontWeight: 700, textAlign: "end", color: m.ink }}>{v}</span>
           </div>
         ))}
       </div>
-      <div data-fee-ticket aria-busy={!q || undefined} style={{ position: "relative", marginTop: 10, display: "flex", borderRadius: 14, background: m.pale, overflow: "hidden", textAlign: "left" }}>
+      <div data-fee-ticket aria-busy={!q || undefined} style={{ position: "relative", marginTop: 10, display: "flex", borderRadius: 14, background: m.pale, overflow: "hidden", textAlign: "start" }}>
         <div style={{ flex: 1, minWidth: 0, padding: "11px 14px" }}>
           <div style={{ fontSize: textPx(12), fontWeight: 800, color: m.pdark }}>One-time Centium hiring fee</div>
           <div style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.ink2, marginTop: 2 }}>{q ? feeCalcLine(q, rules?.rate ?? null) : failed ? "Not worked out yet" : "Working out the fee"}</div>
           {q?.minimumApplied ? <div style={{ marginTop: 4, fontSize: textPx(11), fontWeight: 800, color: m.caution }}>Minimum fee applied</div> : null}
         </div>
-        <div style={{ width: 84, flexShrink: 0, borderLeft: `1.5px dashed ${m.fill}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 84, flexShrink: 0, borderInlineStart: `1.5px dashed ${m.fill}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <span style={{ fontSize: textPx(17), fontWeight: 800, color: m.pdark, fontVariantNumeric: "tabular-nums" }}>{q ? feeMoney(q.fee) : "–"}</span>
         </div>
-        <span aria-hidden style={{ position: "absolute", right: 77, top: -7, width: 14, height: 14, borderRadius: 999, background: m.sbody }} />
-        <span aria-hidden style={{ position: "absolute", right: 77, bottom: -7, width: 14, height: 14, borderRadius: 999, background: m.sbody }} />
+        <span aria-hidden style={{ position: "absolute", insetInlineEnd: 77, top: -7, width: 14, height: 14, borderRadius: 999, background: m.sbody }} />
+        <span aria-hidden style={{ position: "absolute", insetInlineEnd: 77, bottom: -7, width: 14, height: 14, borderRadius: 999, background: m.sbody }} />
       </div>
       {q ? (
         <div style={{ marginTop: 8, fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>

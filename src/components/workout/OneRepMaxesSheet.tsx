@@ -14,6 +14,7 @@ import {
   type LiftSort,
 } from "../../services/workout/oneRepMax";
 import { textPx } from "../../theme/textSize";
+import { appLocale } from "../../i18n/format";
 
 /**
  * Mobile v5.1 R3 (no light islands): the colours here with no token of the
@@ -35,7 +36,7 @@ const ormColor = (key: keyof typeof ORM_COLORS, dark: boolean): string => ORM_CO
 const SORTS = (Object.keys(LIFT_SORT_LABEL) as LiftSort[]).map((value) => ({ value, label: LIFT_SORT_LABEL[value] }));
 
 const shortDate = (day: string) =>
-  new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  new Date(`${day}T00:00:00Z`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", timeZone: "UTC" });
 
 export const OrmIcon: React.FC<{ size: number }> = ({ size }) => (
   <img src="/metrics/orm-teal.png" alt="" width={size} height={size} style={{ borderRadius: size * 0.27 }} />
@@ -112,7 +113,7 @@ export const OneRepMaxesSheet: React.FC<{
                 <li key={lift.key} style={{ borderTop: i ? "1px solid rgb(var(--c-charcoal) / 0.06)" : undefined }}>
                   <button
                     onClick={() => onSelect?.(lift)}
-                    className="tap w-full flex items-center text-left"
+                    className="tap w-full flex items-center text-start"
                     style={{ height: 62, gap: 10 }}
                   >
                     <span className="flex-1 min-w-0">
@@ -126,7 +127,7 @@ export const OneRepMaxesSheet: React.FC<{
                     <span className="flex flex-col items-end flex-none">
                       <span style={{ color: ormColor("teal", dark), fontSize: textPx(15), fontWeight: 800 }}>
                         {kgWhole(lift.oneRm)}
-                        <span style={{ color: ormColor("tealUnit", dark), fontSize: textPx(10), fontWeight: 600, marginLeft: 2 }}>kg</span>
+                        <span style={{ color: ormColor("tealUnit", dark), fontSize: textPx(10), fontWeight: 600, marginInlineStart: 2 }}>kg</span>
                       </span>
                       <Change value={lift.change30} dark={dark} />
                     </span>

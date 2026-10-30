@@ -173,35 +173,35 @@ export const WeightHero: React.FC<{
         {data.startKg !== null && (
           <div data-wt-journey style={{ marginTop: 18 }}>
             <div className="relative" style={{ height: 18 }}>
-              <span className="absolute left-0" style={num}>{fmtW(data.startKg, u)}</span>
+              <span className="absolute start-0" style={num}>{fmtW(data.startKg, u)}</span>
               {pos > 0.12 && pos < 0.88 && (
                 <span className="absolute" style={{ ...num, left: pct, transform: "translateX(-50%)" }}>
                   {fmtW(data.nowKg, u)}
                 </span>
               )}
               {hasGoal ? (
-                <span className="absolute right-0" style={num}>{fmtW(data.goalKg as number, u)}</span>
+                <span className="absolute end-0" style={num}>{fmtW(data.goalKg as number, u)}</span>
               ) : (
-                pos >= 0.88 && <span className="absolute right-0" style={num}>{fmtW(data.nowKg, u)}</span>
+                pos >= 0.88 && <span className="absolute end-0" style={num}>{fmtW(data.nowKg, u)}</span>
               )}
             </div>
             <div className="relative" style={{ marginTop: 9, height: 8 }}>
               <div className="absolute inset-0" style={{ borderRadius: 4, background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.85)" }} />
-              <div className="absolute left-0 top-0 bottom-0" data-wt-fill style={{ width: pct, borderRadius: 4, background: fill, transformOrigin: "left", animation: anim }} />
-              <span className="absolute" style={{ left: 0, top: -3, width: 14, height: 14, borderRadius: 9999, background: dotDark }} />
+              <div className="absolute start-0 top-0 bottom-0" data-wt-fill style={{ width: pct, borderRadius: 4, background: fill, transformOrigin: "left", animation: anim }} />
+              <span className="absolute" style={{ insetInlineStart: 0, top: -3, width: 14, height: 14, borderRadius: 9999, background: dotDark }} />
               {hasGoal && (
                 <span
                   className="absolute"
-                  style={{ right: 0, top: -3, width: 14, height: 14, borderRadius: 9999, background: dark ? "#1C1F28" : "#FFFFFF", border: `1.6px dashed ${dotDark}`, boxSizing: "border-box" }}
+                  style={{ insetInlineEnd: 0, top: -3, width: 14, height: 14, borderRadius: 9999, background: dark ? "#1C1F28" : "#FFFFFF", border: `1.6px dashed ${dotDark}`, boxSizing: "border-box" }}
                 />
               )}
-              <span className="absolute" style={{ left: pct, top: -7, width: 22, height: 22, marginLeft: -11, animation: anim }} data-wt-now>
+              <span className="absolute" style={{ left: pct, top: -7, width: 22, height: 22, marginInlineStart: -11, animation: anim }} data-wt-now>
                 {running && <span className="absolute inset-0" style={{ borderRadius: 9999, background: fill, animation: "wtRing 3s ease-out infinite" }} />}
                 <span className="absolute inset-0" style={{ borderRadius: 9999, background: fill, border: `3.8px solid ${dark ? "#1C1F28" : "#FFFFFF"}`, boxSizing: "border-box" }} />
               </span>
             </div>
             <div className="relative" style={{ marginTop: 11, height: 16 }}>
-              <span className="absolute left-0" style={{ ...lbl, color: primaryInk }}>{data.startLabel}</span>
+              <span className="absolute start-0" style={{ ...lbl, color: primaryInk }}>{data.startLabel}</span>
               <span
                 className="absolute"
                 style={{ ...lbl, fontWeight: 700, color: primaryInk, ...(pos >= 0.88 ? { right: hasGoal ? 40 : 0 } : { left: pct, transform: "translateX(-50%)" }) }}
@@ -209,12 +209,12 @@ export const WeightHero: React.FC<{
                 Now
               </span>
               {hasGoal ? (
-                <span className="absolute right-0" style={{ ...lbl, color: primaryInk }}>Goal</span>
+                <span className="absolute end-0" style={{ ...lbl, color: primaryInk }}>Goal</span>
               ) : (
                 <button
                   type="button"
                   onClick={onSetGoal}
-                  className="tap absolute right-0 before:absolute before:-inset-y-[14px] before:-inset-x-1 before:content-['']"
+                  className="tap absolute end-0 before:absolute before:-inset-y-[14px] before:-inset-x-1 before:content-['']"
                   style={{ ...lbl, fontWeight: 700, color: primaryInk, top: 0, display: pos >= 0.88 ? "none" : undefined }}
                 >
                   Set a goal
@@ -251,7 +251,7 @@ export const WeightHero: React.FC<{
                       width: 3,
                       height: 13,
                       borderRadius: 2,
-                      marginLeft: -1.5,
+                      marginInlineStart: -1.5,
                       background: dotDark,
                       left: `calc((100% - 6px) * ${Math.min(40, Math.max(0, data.bmi.bmi)) / 40} + ${[18.5, 25, 30].filter((b) => data.bmi && data.bmi.kind === "value" && data.bmi.bmi >= b).length * 2}px)`,
                     }}

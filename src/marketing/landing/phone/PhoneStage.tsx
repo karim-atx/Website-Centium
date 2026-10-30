@@ -19,7 +19,7 @@ const PHONE_SHELL: React.CSSProperties = {
   top: "50%",
   width: "290px",
   height: "662px",
-  marginLeft: "-145px",
+  marginInlineStart: "-145px",
   marginTop: "-331px",
   padding: "9px",
   borderRadius: "48px",

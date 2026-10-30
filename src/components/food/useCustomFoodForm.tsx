@@ -507,7 +507,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
                 >
                   <button
                     onClick={() => setOpenGroups((g) => ({ ...g, [sec.id]: !g[sec.id] }))}
-                    className="tap w-full flex items-center text-left"
+                    className="tap w-full flex items-center text-start"
                     style={{
                       gap: 8,
                       padding: "10px 12px",
@@ -568,7 +568,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
                               padding: "5px 8px",
                               fontSize: textPx(12),
                               color: "rgb(var(--c-charcoal))",
-                              textAlign: "right",
+                              textAlign: "end",
                             }}
                           />
                           <span style={{ width: 34, flex: "none", fontSize: textPx(10.5), color: "rgb(var(--c-charcoal-muted))" }}>{r.unit || ""}</span>

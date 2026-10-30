@@ -113,7 +113,7 @@ export const StructureStep: React.FC<{
                   disabled={!editable}
                   onClick={() => setRenaming({ id: m.id, title: m.title })}
                   aria-label={`Rename week ${i + 1}, ${m.title}`}
-                  className="tap flex-1 min-w-0 text-left disabled:cursor-default"
+                  className="tap flex-1 min-w-0 text-start disabled:cursor-default"
                   style={{ fontSize: textPx(14), fontWeight: 800, color: INK.ch, overflowWrap: "anywhere" }}
                 >
                   Week {i + 1} · {m.title}
@@ -131,7 +131,7 @@ export const StructureStep: React.FC<{
               const Icon = KIND_ICON[l.kind] ?? FileText;
               return (
                 <div key={l.id} className="flex items-center" style={{ gap: 10, padding: "9px 0", borderTop: `1px solid ${INK.b06}` }}>
-                  <button type="button" onClick={() => onEditLesson(l)} className="tap flex-1 min-w-0 flex items-center text-left" style={{ gap: 10 }}>
+                  <button type="button" onClick={() => onEditLesson(l)} className="tap flex-1 min-w-0 flex items-center text-start" style={{ gap: 10 }}>
                     <span className="flex items-center justify-center shrink-0" style={{ width: 28, height: 28, borderRadius: 8, background: INK.prPale }}>
                       <Icon size={14} strokeWidth={2} aria-hidden style={{ color: INK.prDeep }} />
                     </span>

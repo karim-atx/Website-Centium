@@ -153,7 +153,7 @@ export const PlayYourMusicRow: React.FC<{
   const inner = (
     <>
       <MusicTile size={40} />
-      <span className="flex-1 min-w-0 text-left">
+      <span className="flex-1 min-w-0 text-start">
         <span className="block" style={{ fontSize: textPx(14), lineHeight: linePx(20), fontWeight: 700, color: INK }}>
           Play your music
         </span>

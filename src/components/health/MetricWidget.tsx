@@ -341,7 +341,7 @@ export const MetricWidget: React.FC<MetricWidgetProps> = ({
       {...(interactive ? { type: "button" as const, onClick: handle } : {})}
       aria-label={ariaLabel ?? (state === "loading" ? `Loading ${label}` : undefined)}
       aria-busy={state === "loading" ? true : undefined}
-      className={`tap relative overflow-hidden text-left flex flex-col ${className ?? ""}`}
+      className={`tap relative overflow-hidden text-start flex flex-col ${className ?? ""}`}
       style={{
         background: c.tint,
         borderRadius: 15,
@@ -392,7 +392,7 @@ export const MetricWidget: React.FC<MetricWidgetProps> = ({
             fontWeight: 700,
             letterSpacing: 1.4,
             color: c.label,
-            marginRight: preset === "health" && !headerRight ? -16 : undefined,
+            marginInlineEnd: preset === "health" && !headerRight ? -16 : undefined,
           }}
         >
           {label}
@@ -405,7 +405,7 @@ export const MetricWidget: React.FC<MetricWidgetProps> = ({
           size={16}
           aria-hidden
           className="absolute"
-          style={{ right: 9.9, top: "50%", marginTop: -8, color: "rgb(var(--c-charcoal-faint))" }}
+          style={{ insetInlineEnd: 9.9, top: "50%", marginTop: -8, color: "rgb(var(--c-charcoal-faint))" }}
         />
       )}
     </Tag>

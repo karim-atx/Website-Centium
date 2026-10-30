@@ -5,6 +5,7 @@ import './index.css'
 import './styles/theme-palette.css'
 import App from './App.tsx'
 import { preloadAppPages } from './appPagesLazy'
+import { installDigitNormaliser } from "./i18n/digits"
 import { ErrorBoundary } from './components/navigation/ErrorBoundary'
 
 // Registers the service worker that receives push notifications (src/sw.ts).
@@ -33,6 +34,9 @@ registerSW({
 // The web app's pages are their own chunk (appPagesLazy.ts): on an app
 // address its download starts now, alongside the session check.
 preloadAppPages()
+
+// Round F (AV): Arabic-Indic digits typed into a number field become 0-9 before React reads them.
+installDigitNormaliser()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

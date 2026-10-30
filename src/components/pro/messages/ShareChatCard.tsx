@@ -9,6 +9,7 @@ import { daysLabel } from "../../../services/messaging/groupCardsModel";
 import { clock12 } from "../../../utils/time12";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · MO27 group chat: a programme (programme_share), a session
@@ -42,7 +43,7 @@ export const ShareChatCard: React.FC<{ card: ShareCard; time: string; footer?: R
       : card.kind === "meal_plan_share"
         ? [daysLabel(card.days)]
         : [
-            card.startsAt ? `${new Date(card.startsAt).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" })} · ${clock12(card.startsAt)}` : null,
+            card.startsAt ? `${new Date(card.startsAt).toLocaleDateString(appLocale("en-US"), { weekday: "short", day: "numeric", month: "short" })} · ${clock12(card.startsAt)}` : null,
             card.durationMin ? `${card.durationMin} min` : null,
             card.location,
           ];

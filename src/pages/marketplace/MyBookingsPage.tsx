@@ -339,7 +339,7 @@ const BookingTicket: React.FC<{ row: BookingRow; onOpen?: () => void; menu?: (an
         aria-label={label}
         className="market-focus"
         {...press.handlers}
-        style={{ ...bodyBox, flex: 1, minWidth: 0, paddingRight: 0, background: "none", border: 0, font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", ...press.style }}
+        style={{ ...bodyBox, flex: 1, minWidth: 0, paddingInlineEnd: 0, background: "none", border: 0, font: "inherit", color: "inherit", textAlign: "start", cursor: "pointer", ...press.style }}
       >
         {content}
       </button>
@@ -350,7 +350,7 @@ const BookingTicket: React.FC<{ row: BookingRow; onOpen?: () => void; menu?: (an
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         className="market-focus"
-        style={{ width: 32, minHeight: 44, alignSelf: "center", flexShrink: 0, marginRight: 4, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: 0, borderRadius: 10, color: m.ink2, cursor: "pointer" }}
+        style={{ width: 32, minHeight: 44, alignSelf: "center", flexShrink: 0, marginInlineEnd: 4, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: 0, borderRadius: 10, color: m.ink2, cursor: "pointer" }}
       >
         <MoreVertical size={16} aria-hidden style={NO_ICON_SCALE} />
       </button>
@@ -442,7 +442,7 @@ const EndMembershipDialog: React.FC<{ membership: GymMembership | null; onClose:
     display: "flex",
     gap: 12,
     alignItems: "flex-start",
-    textAlign: "left",
+    textAlign: "start",
     padding: "11px 13px",
     borderRadius: 14,
     background: m.card,

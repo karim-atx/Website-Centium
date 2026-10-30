@@ -129,7 +129,7 @@ export function SegmentedTicketStrip<K extends string>({
               margin: 0,
               padding: 0,
               border: 0,
-              borderLeft: i ? (dark ? DIVIDER_DARK : DIVIDER) : 0,
+              borderInlineStart: i ? (dark ? DIVIDER_DARK : DIVIDER) : 0,
               font: "inherit",
               cursor: "pointer",
               background: on ? activeBg : idleBg,
@@ -156,10 +156,10 @@ export function SegmentedTicketStrip<K extends string>({
       })}
       {tile ? (
         <>
-          <span aria-hidden style={{ ...notch, left: -7, top: -7 }} />
-          <span aria-hidden style={{ ...notch, right: -7, top: -7 }} />
-          <span aria-hidden style={{ ...notch, left: -7, bottom: -7 }} />
-          <span aria-hidden style={{ ...notch, right: -7, bottom: -7 }} />
+          <span aria-hidden style={{ ...notch, insetInlineStart: -7, top: -7 }} />
+          <span aria-hidden style={{ ...notch, insetInlineEnd: -7, top: -7 }} />
+          <span aria-hidden style={{ ...notch, insetInlineStart: -7, bottom: -7 }} />
+          <span aria-hidden style={{ ...notch, insetInlineEnd: -7, bottom: -7 }} />
         </>
       ) : null}
     </div>

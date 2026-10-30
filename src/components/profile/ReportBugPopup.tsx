@@ -5,6 +5,7 @@ import { CentredPopup } from "../ui/CentredPopup";
 import { useApp } from "../../context/AppContext";
 import { MAX_DESCRIPTION, prepareBugScreenshot, submitBugReport } from "../../services/bug-reports";
 import { SCREENSHOT_ACCEPT } from "../../services/bug-reports/screenshotRules";
+import { appLocale } from "../../i18n/format";
 
 /**
  * MO1.8.10 Report a bug, as a centred popup (no ×; outside tap and Escape
@@ -156,10 +157,10 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
         <div className="mt-1.5 flex items-start gap-2">
           {tooLong && (
             <p role="alert" className="flex-1 min-w-0 text-[12px] font-semibold text-status-high">
-              Too long: {description.length.toLocaleString("en-GB")} of {MAX_DESCRIPTION.toLocaleString("en-GB")} characters.
+              Too long: {description.length.toLocaleString(appLocale("en-GB"))} of {MAX_DESCRIPTION.toLocaleString(appLocale("en-GB"))} characters.
             </p>
           )}
-          <p className={`ms-auto shrink-0 text-[11px] leading-[18px] text-right tabular-nums ${tooLong ? "text-status-high" : "text-charcoal-faint"}`}>
+          <p className={`ms-auto shrink-0 text-[11px] leading-[18px] text-end tabular-nums ${tooLong ? "text-status-high" : "text-charcoal-faint"}`}>
             {description.length} / {MAX_DESCRIPTION}
           </p>
         </div>
@@ -197,7 +198,7 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
           <span className="flex-1 min-w-0 truncate text-[14px] leading-5 font-semibold text-charcoal">
             {preparing ? "Preparing…" : shot ? shot.name : "Add screenshot"}
           </span>
-          {!shot && <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />}
+          {!shot && <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-charcoal-faint" />}
         </button>
         {shot && (
           <button

@@ -36,6 +36,7 @@ import {
   SYMPTOM_LABEL,
 } from "../../services/cycle/guidance";
 import { Info, Lock } from "lucide-react";
+import { appLocale } from "../../i18n/format";
 
 // Logging one day.
 //
@@ -64,7 +65,7 @@ const Section: React.FC<{ title: string; hint?: string; children: React.ReactNod
   <div style={{ marginBottom: 18 }}>
     <p className="text-charcoal-faint" style={type(12, 16, 600, { margin: "0 0 6px 2px" })}>
       {title}
-      {hint && <span style={{ marginLeft: 6, fontWeight: 400 }}>{hint}</span>}
+      {hint && <span style={{ marginInlineStart: 6, fontWeight: 400 }}>{hint}</span>}
     </p>
     {children}
   </div>
@@ -187,7 +188,7 @@ export const LogDaySheet: React.FC<{
 
   const prettyDate = (() => {
     const d = new Date(`${date}T00:00:00`);
-    return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+    return d.toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "short", day: "numeric" });
   })();
 
   const opt = (key: string, label: string, on: boolean, onClick: () => void, role: "radio" | "checkbox" = "radio") => (

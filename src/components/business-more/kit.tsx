@@ -48,7 +48,7 @@ export const SubHeader: React.FC<{ title: string; sub?: string; kicker?: string;
         onClick={onBack ?? back}
         aria-label="Back"
         // 40 drawn; .tap gives the 44 hit area (MO1B-011 row 1 OURS).
-        className="tap flex items-center justify-center shrink-0 rounded-full text-charcoal-soft rtl:-scale-x-100"
+        className="tap flex items-center justify-center shrink-0 rounded-full text-charcoal-soft"
         style={{ width: 40, height: 40, marginInlineStart: -8 }}
       >
         <ChevronLeft size={20} aria-hidden />
@@ -220,7 +220,7 @@ export const BizRow: React.FC<BizRowProps> = ({
     "[&:first-child>.biz-rule]:hidden",
     className
   );
-  const style: React.CSSProperties = { minHeight: 56.6, padding: "6.7px 15px 9.3px 14px", gap: 11, opacity: dim ? 0.5 : undefined };
+  const style: React.CSSProperties = { minHeight: 56.6, paddingBlock: "6.7px 9.3px", paddingInline: "14px 15px", gap: 11, opacity: dim ? 0.5 : undefined };
 
   const body = (
     <>
@@ -296,7 +296,7 @@ export const BizRow: React.FC<BizRowProps> = ({
         </span>
       )}
       {checked && <Check size={16} strokeWidth={2.6} aria-hidden className="shrink-0 text-primary-dark" />}
-      {showChevron && <ChevronRight size={14} aria-hidden className={clsx("shrink-0 rtl:-scale-x-100", DESC)} />}
+      {showChevron && <ChevronRight size={14} aria-hidden className={clsx("shrink-0", DESC)} />}
     </>
   );
 
@@ -666,7 +666,7 @@ export const BizConfirm: React.FC<{
 export const RowsSkeleton: React.FC<{ rows?: number; label?: string }> = ({ rows = 3, label = "Loading" }) => (
   <div aria-busy="true" aria-label={label} className={LIST_BG} style={{ borderRadius: 18, padding: "4px 0", marginBottom: 13 }}>
     {Array.from({ length: rows }, (_, i) => (
-      <div key={i} className="flex items-center" style={{ minHeight: 56.6, padding: "6.7px 15px 9.3px 14px", gap: 11 }}>
+      <div key={i} className="flex items-center" style={{ minHeight: 56.6, paddingBlock: "6.7px 9.3px", paddingInline: "14px 15px", gap: 11 }}>
         <span className="block shrink-0 bg-cream-soft dark:bg-white/[0.06] animate-skeleton-pulse" style={{ width: 36, height: 36, borderRadius: 11 }} />
         <span className="flex-1">
           <span className="block bg-cream-soft dark:bg-white/[0.06] animate-skeleton-pulse" style={{ width: "55%", height: 10, borderRadius: 5 }} />

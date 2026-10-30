@@ -1,3 +1,4 @@
+import { appLocale } from "../../i18n/format";
 // MO1.8 #64 / MO1.8.13 O11: the time zone label "(GMT±HH:MM) City", from
 // the engine's own data (Intl), with the offset in force right now (so it is
 // DST-aware). The board shows Rio Branco as GMT-03:00; it is -05:00, and this
@@ -7,7 +8,7 @@
 /** Minutes east of UTC for `zone` at `at`, or null when the engine can't say. */
 export function zoneOffsetMinutes(zone: string, at: Date = new Date()): number | null {
   try {
-    const parts = new Intl.DateTimeFormat("en-US", {
+    const parts = new Intl.DateTimeFormat(appLocale("en-US"), {
       timeZone: zone,
       hourCycle: "h23",
       year: "numeric",

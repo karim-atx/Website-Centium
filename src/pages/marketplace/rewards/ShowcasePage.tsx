@@ -273,7 +273,7 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
       <section aria-labelledby="showcase-products" style={{ marginTop: 18 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
           <CapsLabel id="showcase-products">Products</CapsLabel>
-          <span style={{ fontSize: textPx(11), color: m.faint, textAlign: "right" }}>{productsNote(extras?.website ?? null)}</span>
+          <span style={{ fontSize: textPx(11), color: m.faint, textAlign: "end" }}>{productsNote(extras?.website ?? null)}</span>
         </div>
         <div style={{ marginTop: 8 }}>
           {products.state === "loading" ? (
@@ -362,7 +362,7 @@ const ShowcaseOffers: React.FC<{ state: Offers; balance: number; onRetry: () => 
                 type="button"
                 onClick={() => onOpen(o)}
                 className="market-focus"
-                style={{ width: "100%", boxSizing: "border-box", borderRadius: 16, border: `0.5px solid ${m.hair}`, background: "transparent", padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, font: "inherit", lineHeight: "normal", textAlign: "left", color: m.ink, cursor: "pointer" }}
+                style={{ width: "100%", boxSizing: "border-box", borderRadius: 16, border: `0.5px solid ${m.hair}`, background: "transparent", padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, font: "inherit", lineHeight: "normal", textAlign: "start", color: m.ink, cursor: "pointer" }}
               >
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>{o.headline}</span>

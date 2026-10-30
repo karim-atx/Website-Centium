@@ -13,6 +13,7 @@
 
 import { METRIC_IDENTITY, SHARE_TOKENS } from "../../../theme/marketTokens";
 import { statAllowed, statDefaultOn, visibleStats, type ShareLocks } from "../shareLocks";
+import { appLocale } from "../../../i18n/format";
 
 export type ClientTemplate = "workout" | "pr" | "streak" | "achievement" | "steps" | "sleep" | "water" | "food";
 export type IdentityKey = keyof typeof METRIC_IDENTITY;
@@ -226,9 +227,9 @@ export function shortDate(iso: string): string {
   return `${MONTH[(m || 1) - 1]} ${d || 1}`;
 }
 
-export const fmtInt = (n: number) => Math.round(n).toLocaleString("en-US");
+export const fmtInt = (n: number) => Math.round(n).toLocaleString(appLocale("en-US"));
 /** 92.5 → "92.5", 120 → "120". */
-export const fmtKg = (kg: number) => (Math.round(kg * 10) / 10).toLocaleString("en-US", { maximumFractionDigits: 1 });
+export const fmtKg = (kg: number) => (Math.round(kg * 10) / 10).toLocaleString(appLocale("en-US"), { maximumFractionDigits: 1 });
 /** "52 min" under an hour, else "3 h 26" (the board's durations). */
 export function fmtDuration(totalSec: number): string {
   const min = Math.max(0, Math.round(totalSec / 60));
@@ -410,7 +411,7 @@ export interface StepsFacts {
 
 export function stepsCard(s: StepsFacts): ClientCardSpec {
   const stats: ClientStat[] = [];
-  if (s.distanceM != null && s.distanceM > 0) stats.push({ key: "distance", title: "Distance", value: `${(Math.round(s.distanceM / 100) / 10).toLocaleString("en-US")} km`, label: "distance" });
+  if (s.distanceM != null && s.distanceM > 0) stats.push({ key: "distance", title: "Distance", value: `${(Math.round(s.distanceM / 100) / 10).toLocaleString(appLocale("en-US"))} km`, label: "distance" });
   if (s.activeMin != null && s.activeMin > 0) stats.push({ key: "active", title: "Active", value: `${fmtInt(s.activeMin)} min`, label: "active" });
   return {
     template: "steps",
@@ -475,7 +476,7 @@ export interface WaterFacts {
 const FL_OZ_ML = 29.5735;
 export function waterAmount(ml: number, unit: "ml" | "floz"): { big: string; unit: string } {
   if (unit === "floz") return { big: fmtInt(ml / FL_OZ_ML), unit: "fl oz" };
-  return { big: (Math.round(ml / 100) / 10).toLocaleString("en-US", { maximumFractionDigits: 1 }), unit: "L" };
+  return { big: (Math.round(ml / 100) / 10).toLocaleString(appLocale("en-US"), { maximumFractionDigits: 1 }), unit: "L" };
 }
 
 export function waterCard(w: WaterFacts): ClientCardSpec {

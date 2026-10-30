@@ -48,6 +48,7 @@ import { hourLabel12 } from "../../../utils/time12";
 import { useClientShare } from "../../../components/share/client/useClientShare";
 import { ShareEntryButton } from "../../../components/share/client/ShareEntryButton";
 import { stepsCard } from "../../../components/share/client/clientCardModel";
+import { appLocale } from "../../../i18n/format";
 
 // HE1.2 Steps (Week), HE1.2.s, HE1.2.e, HE1.2.1, HE1.2.d, HE1.2.m, HE1.2.y.
 //
@@ -63,7 +64,7 @@ import { stepsCard } from "../../../components/share/client/clientCardModel";
 // is B1's metric_goals (V6-59).
 
 const MONTH_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const n = (v: number) => Math.round(v).toLocaleString("en-GB");
+const n = (v: number) => Math.round(v).toLocaleString(appLocale("en-GB"));
 const abbrev = (v: number) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(2)}M` : n(v));
 const change = (now: number | null, before: number | null, what: string) => {
   if (now === null || before === null || before <= 0) return null;

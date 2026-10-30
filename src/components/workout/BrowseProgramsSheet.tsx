@@ -250,7 +250,7 @@ export const BrowseProgramsSheet: React.FC<{
                     setSelected(p);
                     setAdoptError(null);
                   }}
-                  className="tap flex flex-col items-start text-left min-w-0"
+                  className="tap flex flex-col items-start text-start min-w-0"
                   style={{ background: c.tile, borderRadius: 16, padding: "12px 13px 13px" }}
                 >
                   <span

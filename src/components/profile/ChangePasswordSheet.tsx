@@ -26,7 +26,7 @@ import {
 } from "../../utils/password";
 
 const inputClass =
-  "w-full rounded-2xl bg-cream-card border border-charcoal/10 pl-10 pr-11 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10";
+  "w-full rounded-2xl bg-cream-card border border-charcoal/10 ps-10 pe-11 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10";
 
 type Step = "loading" | "google" | "form" | "code" | "done";
 
@@ -215,7 +215,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
             {!settingFirst && (
               <label className="block relative">
                 <span className="sr-only">Current password</span>
-                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
+                <Lock size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
                 <input
                   value={current}
                   onChange={(e) => setCurrent(e.target.value)}
@@ -228,7 +228,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
                 <button
                   type="button"
                   onClick={currentVisibility.toggle}
-                  className="tap absolute right-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
+                  className="tap absolute end-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
                   aria-label={currentVisibility.shown ? "Hide current password" : "Show current password"}
                 >
                   {currentVisibility.shown ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -238,7 +238,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
 
             <label className="block relative">
               <span className="sr-only">New password</span>
-              <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
+              <Lock size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
               <input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -251,7 +251,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
               <button
                 type="button"
                 onClick={newVisibility.toggle}
-                className="tap absolute right-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
+                className="tap absolute end-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
                 aria-label={newVisibility.shown ? "Hide new password" : "Show new password"}
               >
                 {newVisibility.shown ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -260,7 +260,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
 
             <label className="block relative">
               <span className="sr-only">Confirm new password</span>
-              <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
+              <Lock size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
               <input
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
@@ -273,7 +273,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
             </label>
 
             {mismatch && (
-              <p className="text-[11px] font-semibold text-status-high -mt-1.5 pl-1">Passwords don't match</p>
+              <p className="text-[11px] font-semibold text-status-high -mt-1.5 ps-1">Passwords don't match</p>
             )}
 
             {password && (

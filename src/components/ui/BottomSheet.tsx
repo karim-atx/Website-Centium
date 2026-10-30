@@ -378,7 +378,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
           <div
             className="shrink-0 flex items-center justify-between"
             {...swipeHandlers}
-            style={{ ...(titleWrap ? { minHeight: handle ? 46 : headerHeight, paddingTop: 8, paddingBottom: 8 } : { height: handle ? 46 : headerHeight }), paddingLeft: 18, paddingRight: 18, ...(swipeToClose ? { touchAction: "none" } : null) }}
+            style={{ ...(titleWrap ? { minHeight: handle ? 46 : headerHeight, paddingTop: 8, paddingBottom: 8 } : { height: handle ? 46 : headerHeight }), paddingInlineStart: 18, paddingInlineEnd: 18, ...(swipeToClose ? { touchAction: "none" } : null) }}
           >
             <div className="flex items-center shrink-0" style={{ width: 26 }}>
               {onBack && (

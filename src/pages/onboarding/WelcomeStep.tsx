@@ -101,18 +101,18 @@ export const WelcomeStep: React.FC<{
                 aria-hidden
                 style={{
                   position: "absolute",
-                  left: "50%",
+                  insetInlineStart: "50%",
                   top: "50%",
                   width: s,
                   height: s,
-                  marginLeft: -s / 2,
+                  marginInlineStart: -s / 2,
                   marginTop: -s / 2,
                   borderRadius: 999,
                   border: `1px solid ${i === 0 ? "var(--ob-ring-outer)" : "var(--ob-ring)"}`,
                 }}
               />
             ))}
-            <span aria-hidden style={{ position: "absolute", left: "50%", top: "50%", width: 220, height: 220, margin: "-110px 0 0 -110px", borderRadius: 999, background: "var(--ob-halo)" }} />
+            <span aria-hidden style={{ position: "absolute", insetInlineStart: "50%", top: "50%", width: 220, height: 220, marginBlock: "-110px 0", marginInline: "-110px 0", borderRadius: 999, background: "var(--ob-halo)" }} />
             <Composed key={p.comp} comp={p.comp} w={p.comp === "personal" ? 150 : 230} h={150} style={{ position: "relative" }} />
           </div>
           <div style={{ margin: "22px 28px 0" }} aria-live="polite">
@@ -175,11 +175,11 @@ const LogoAnimation: React.FC<{ k: number }> = ({ k }) => {
       <span
         style={{
           position: "absolute",
-          left: "50%",
+          insetInlineStart: "50%",
           top: 372,
           width: 300,
           height: 300,
-          margin: "-150px 0 0 -150px",
+          marginBlock: "-150px 0", marginInline: "-150px 0",
           borderRadius: 999,
           background: "radial-gradient(circle, var(--ob-glow) 0%, rgba(143,104,246,0) 68%)",
           opacity: moving ? 0 : kf.gl,
@@ -191,11 +191,11 @@ const LogoAnimation: React.FC<{ k: number }> = ({ k }) => {
         viewBox="270 180 690 730"
         style={{
           position: "absolute",
-          left: "50%",
+          insetInlineStart: "50%",
           top: cy,
           width: size,
           height: size,
-          marginLeft: -size / 2 + cx,
+          marginInlineStart: -size / 2 + cx,
           marginTop: -size / 2,
           overflow: "visible",
           transition: moving ? `all 450ms ${MOVE}` : undefined,
@@ -224,7 +224,7 @@ const LogoAnimation: React.FC<{ k: number }> = ({ k }) => {
         viewBox="48 44 1005 93"
         role="img"
         aria-label="Centium"
-        style={{ position: "absolute", left: "50%", top: 462, height: 13, width: 140, marginLeft: -70, overflow: "visible", color: "var(--ob-ink)" }}
+        style={{ position: "absolute", insetInlineStart: "50%", top: 462, height: 13, width: 140, marginInlineStart: -70, overflow: "visible", color: "var(--ob-ink)" }}
       >
         <g stroke="currentColor" strokeWidth={17} fill="none">
           {WORDMARK_FULL.map((d, i) => (

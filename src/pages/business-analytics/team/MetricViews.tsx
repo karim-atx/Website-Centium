@@ -31,7 +31,7 @@ function Legend({ items }: { items: { t: string; kind: "fill" | "teal" | "target
           {i.kind === "fill" || i.kind === "teal" ? (
             <span style={{ width: 12, height: 6, borderRadius: 999, background: i.kind === "teal" ? "var(--an-teal)" : "var(--an-fill)" }} />
           ) : (
-            <span style={{ width: 0, height: 12, borderLeft: i.kind === "target" ? "2px solid var(--an-teal)" : "1.5px dashed var(--an-avg)" }} />
+            <span style={{ width: 0, height: 12, borderInlineStart: i.kind === "target" ? "2px solid var(--an-teal)" : "1.5px dashed var(--an-avg)" }} />
           )}
           {i.t}
         </span>

@@ -173,12 +173,12 @@ export function CompactHeader({
       data-shown={shown ? "true" : "false"}
       aria-hidden={!shown}
       inert={!shown}
-      className="fixed top-0 z-30 left-[var(--app-gutter,0px)] right-[var(--app-gutter,0px)] bg-cream"
+      className="fixed top-0 z-30 start-[var(--app-gutter,0px)] end-[var(--app-gutter,0px)] bg-cream"
       style={{
         paddingTop: "calc(env(safe-area-inset-top) + 24px)",
-        paddingRight: 16,
+        paddingInlineEnd: 16,
         paddingBottom: 8,
-        paddingLeft: 8,
+        paddingInlineStart: 8,
         opacity: shown ? 1 : 0,
         pointerEvents: shown ? "auto" : "none",
         transition: reduced ? "none" : "opacity 150ms ease",

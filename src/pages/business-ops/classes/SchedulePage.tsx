@@ -333,7 +333,7 @@ export default function SchedulePage() {
           )}
 
           {/* The old Open spots week navigation (OURS placement: under the cards). */}
-          <div className="flex items-center justify-between" style={{ marginTop: 12, marginLeft: -10, marginRight: -10 }}>
+          <div className="flex items-center justify-between" style={{ marginTop: 12, marginInlineStart: -10, marginInlineEnd: -10 }}>
             <WeekArrow m={m} label="Previous week" onClick={() => moveWeek(-1)}>
               <ChevronLeft size={16} aria-hidden />
             </WeekArrow>
@@ -632,7 +632,7 @@ function SessionCard({
           disabled={menuDisabled}
           onClick={() => menuRef.current && onMenu(menuRef.current)}
           className="market-focus hit shrink-0 flex items-center justify-center disabled:opacity-40"
-          style={{ width: 24, alignSelf: "center", height: 32, margin: "0 -6px 0 -4px", color: m.faint, position: "relative", zIndex: 1, background: "transparent", border: 0, borderRadius: 8 }}
+          style={{ width: 24, alignSelf: "center", height: 32, marginBlock: "0", marginInline: "-4px -6px", color: m.faint, position: "relative", zIndex: 1, background: "transparent", border: 0, borderRadius: 8 }}
         >
           <EllipsisVertical size={17} aria-hidden />
         </button>
@@ -650,7 +650,7 @@ function SeriesCardView({ m, card, who, price, onOpen }: { m: MarketPalette; car
       type="button"
       onClick={onOpen}
       {...press.handlers}
-      className="market-focus w-full text-left block"
+      className="market-focus w-full text-start block"
       style={{ background: m.card, borderRadius: 20, border: `1px solid ${m.border}`, padding: "12px 14px", lineHeight: "normal", ...press.style }}
     >
       <span className="flex justify-between" style={{ gap: 8 }}>
@@ -669,7 +669,7 @@ function LinkRow({ m, icon, title, sub, onClick, divider }: { m: MarketPalette; 
     <button
       type="button"
       onClick={onClick}
-      className="market-focus w-full flex items-center text-left"
+      className="market-focus w-full flex items-center text-start"
       style={{ gap: 12, padding: "14px 16px", minHeight: 56, borderTop: divider ? `0.5px solid ${m.div}` : 0, background: "transparent", lineHeight: "normal" }}
     >
       <span className="shrink-0 flex items-center justify-center" style={{ width: 32, height: 32, borderRadius: 10, background: m.pale, color: m.pdark }}>{icon}</span>
@@ -711,7 +711,7 @@ function NeedsAttention({
   const count = new Set(issues.flatMap((i) => i.sessions.map((s) => s.id))).size;
   return (
     <div style={{ marginTop: 12, borderRadius: 20, border: `1px solid ${m.border}`, overflow: "hidden", background: m.card, lineHeight: "normal" }}>
-      <button type="button" aria-expanded={open} onClick={onToggle} className="market-focus w-full flex items-center text-left" style={{ gap: 10, padding: "12px 14px", minHeight: 56, background: m.highbg, border: 0 }}>
+      <button type="button" aria-expanded={open} onClick={onToggle} className="market-focus w-full flex items-center text-start" style={{ gap: 10, padding: "12px 14px", minHeight: 56, background: m.highbg, border: 0 }}>
         <TriangleAlert size={17} strokeWidth={2.2} style={{ color: m.high }} className="shrink-0" aria-hidden />
         <span className="flex-1 min-w-0">
           <span className="block" style={{ fontSize: textPx(14), fontWeight: 800, color: m.ink }}>Needs attention</span>
@@ -756,7 +756,7 @@ function NeedsAttention({
                       else if (membersMsg) onMessageMembers?.(s.id);
                     }}
                     className="market-focus flex items-center justify-center shrink-0 disabled:opacity-40"
-                    style={{ marginLeft: "auto", width: 44, height: 44, borderRadius: 12, background: m.soft, color: m.pdark, border: 0 }}
+                    style={{ marginInlineStart: "auto", width: 44, height: 44, borderRadius: 12, background: m.soft, color: m.pdark, border: 0 }}
                   >
                     <MessageCircle size={17} strokeWidth={2} aria-hidden />
                   </button>

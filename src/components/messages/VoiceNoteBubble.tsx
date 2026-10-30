@@ -159,7 +159,7 @@ export const VoiceNoteBubble: React.FC<{
           ) : playing ? (
             <Pause size={14} className="fill-current" />
           ) : (
-            <Play size={14} className="fill-current ml-0.5" />
+            <Play size={14} className="fill-current ms-0.5" />
           )}
         </button>
         <div

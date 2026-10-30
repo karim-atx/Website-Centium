@@ -301,7 +301,7 @@ const DetailScreen: React.FC<{
                   {rItem.quantity} {rItem.unit ?? "serving"}
                 </span>
                 {!hideNumbers && (
-                  <span className="flex-none w-12 text-right text-[11.5px] font-semibold tabular-nums" style={{ color: PREP_SOFT }}>
+                  <span className="flex-none w-12 text-end text-[11.5px] font-semibold tabular-nums" style={{ color: PREP_SOFT }}>
                     {Math.round(kcal)}
                   </span>
                 )}

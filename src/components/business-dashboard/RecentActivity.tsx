@@ -94,7 +94,7 @@ function Row({ c, e, now, isNew }: { c: DashPalette; e: ActivityEvent; now: Date
         <span
           style={{
             position: "absolute",
-            right: -4,
+            insetInlineEnd: -4,
             bottom: -4,
             width: 20,
             height: 20,
@@ -247,7 +247,7 @@ export function RecentActivityCard({
   return (
     <section aria-label="Recent activity" style={{ background: c.card, borderRadius: 24, border: `1px solid ${c.border}`, overflow: "hidden", marginBottom: 20 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px 12px" }}>
-        <button type="button" onClick={toggle} aria-expanded={open} style={{ flex: 1, minWidth: 0, cursor: "pointer", background: "none", border: 0, padding: 0, textAlign: "left" }}>
+        <button type="button" onClick={toggle} aria-expanded={open} style={{ flex: 1, minWidth: 0, cursor: "pointer", background: "none", border: 0, padding: 0, textAlign: "start" }}>
           <p style={{ fontSize: textPx(10.5), fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: c.faint, whiteSpace: "nowrap", margin: 0, lineHeight: 1.5 }}>Recent activity</p>
           <p data-live-line style={{ display: "flex", alignItems: "center", gap: 6, fontSize: textPx(11), lineHeight: linePx(15), color: c.inkSoft, marginTop: 3, marginBottom: 0 }}>
             <span style={{ width: 8, height: 8, borderRadius: 999, background: online ? c.good : c.tert, boxShadow: online ? `0 0 0 3px ${c.goodTint}` : "none", flexShrink: 0 }} />
@@ -284,7 +284,7 @@ export function RecentActivityCard({
         <button
           type="button"
           onClick={open ? onSeeAll : toggle}
-          style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "center", gap: 4, padding: "11px 0 13px", borderTop: `1px solid ${c.divider}`, fontSize: textPx(11.5), fontWeight: 700, color: c.pDark, cursor: "pointer", background: "none", borderLeft: 0, borderRight: 0, borderBottom: 0, minHeight: 44 }}
+          style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "center", gap: 4, padding: "11px 0 13px", borderTop: `1px solid ${c.divider}`, fontSize: textPx(11.5), fontWeight: 700, color: c.pDark, cursor: "pointer", background: "none", borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0, minHeight: 44 }}
         >
           {open ? "See all activity" : `Show ${Math.max(week.length - 3, 0)} more and this week's totals`}
           <ChevronRight size={13} aria-hidden />
@@ -320,7 +320,7 @@ export function ActivityScreen({ c, events, now, today, onBack, newIds }: { c: D
   return (
     <div>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 14 }}>
-        <button type="button" aria-label="Back" onClick={onBack} style={{ display: "flex", width: 40, height: 40, marginLeft: -8, borderRadius: 999, alignItems: "center", justifyContent: "center", color: c.inkSoft, flexShrink: 0, background: "none", border: 0 }}>
+        <button type="button" aria-label="Back" onClick={onBack} style={{ display: "flex", width: 40, height: 40, marginInlineStart: -8, borderRadius: 999, alignItems: "center", justifyContent: "center", color: c.inkSoft, flexShrink: 0, background: "none", border: 0 }}>
           <ChevronLeft size={20} aria-hidden />
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>

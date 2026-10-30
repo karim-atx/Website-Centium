@@ -312,7 +312,7 @@ export function PopupMenu<V extends string>({
                 onSelect(opt.value);
                 if (!multiSelect && !keepOpen) onClose();
               }}
-              className="tap w-full flex items-center text-left disabled:opacity-40"
+              className="tap w-full flex items-center text-start disabled:opacity-40"
               style={
                 plain
                   ? {

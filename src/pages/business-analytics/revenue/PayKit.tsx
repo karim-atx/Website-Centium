@@ -31,7 +31,7 @@ export const PayBoxes: React.FC<{ boxes: PayBox[]; line: string }> = ({
       <div
         key={b.l}
         className="pt-[14px] px-[16px] pb-[12px]"
-        style={{ borderLeft: i ? `1px solid ${v("divider")}` : "none" }}
+        style={{ borderInlineStart: i ? `1px solid ${v("divider")}` : "none" }}
       >
         <p
           className="text-[11px] font-bold leading-[15px]"
@@ -171,7 +171,7 @@ export const PayControls: React.FC<{
       })}
       {count && (
         <span
-          className="ml-auto text-[11.5px] font-bold whitespace-nowrap"
+          className="ms-auto text-[11.5px] font-bold whitespace-nowrap"
           style={{ color: v("faint") }}
         >
           {count}
@@ -211,7 +211,7 @@ export const PayControls: React.FC<{
                     cur.onPick(o.value);
                     setOpen(null);
                   }}
-                  className="tap w-full flex items-center gap-[10px] rounded-[8px] px-[10px] py-[9px] mt-[6px] min-h-[44px] box-border text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
+                  className="tap w-full flex items-center gap-[10px] rounded-[8px] px-[10px] py-[9px] mt-[6px] min-h-[44px] box-border text-start focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
                   style={{
                     border: `1px solid ${sel ? v("primary") : v("option")}`,
                     background: sel ? v("pale") : v("raised"),
@@ -271,7 +271,7 @@ export const PayList: React.FC<{ rows: PayRowData[] }> = ({ rows }) => (
         <button
           type="button"
           onClick={r.onClick}
-          className="tap w-full flex items-center gap-[11px] pt-[11px] pr-[12px] pb-[11px] pl-[14px] min-h-[64px] box-border text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary-dark"
+          className="tap w-full flex items-center gap-[11px] pt-[11px] pe-[12px] pb-[11px] ps-[14px] min-h-[64px] box-border text-start focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary-dark"
         >
           <Avatar who={r.who} size={36} font={12} icon={16} pay />
           <span className="flex-1 min-w-0">
@@ -332,7 +332,7 @@ export const PayList: React.FC<{ rows: PayRowData[] }> = ({ rows }) => (
             aria-label={r.action.name}
             title={r.action.name}
             onClick={r.action.onClick}
-            className="tap absolute right-[12px] bottom-[11px] w-[30px] h-[30px] rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
+            className="tap absolute end-[12px] bottom-[11px] w-[30px] h-[30px] rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
             style={{ background: v("pale"), color: v("pdark") }}
           >
             <span aria-hidden className="absolute -inset-[7px]" />
@@ -496,7 +496,7 @@ export const PayDetail: React.FC<{
             {f.l}
           </span>
           <span
-            className="text-[13px] font-extrabold text-right"
+            className="text-[13px] font-extrabold text-end"
             style={
               { color: v("ink"), textWrap: "balance" } as React.CSSProperties
             }

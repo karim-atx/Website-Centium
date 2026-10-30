@@ -41,7 +41,7 @@ export const SearchResults: React.FC<{
           key={h.messageId}
           type="button"
           onClick={() => onOpen(h)}
-          className={`tap w-full text-left min-h-[56px] border-b border-charcoal/[0.06] flex flex-col ${
+          className={`tap w-full text-start min-h-[56px] border-b border-charcoal/[0.06] flex flex-col ${
             card ? "pt-2.5 pb-3 px-3.5 gap-1 last-of-type:border-b-0" : "py-2.5 px-1 gap-0.5"
           }`}
         >

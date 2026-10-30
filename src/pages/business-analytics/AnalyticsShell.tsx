@@ -135,7 +135,7 @@ export default function AnalyticsShell() {
             type="button"
             aria-label="Back"
             onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/app/business/analytics/overview"))}
-            className="tap shrink-0 w-[40px] h-[40px] -ml-[8px] rounded-full flex items-center justify-center text-charcoal-soft"
+            className="tap shrink-0 w-[40px] h-[40px] -ms-[8px] rounded-full flex items-center justify-center text-charcoal-soft"
           >
             <ChevronLeft size={20} aria-hidden />
           </button>

@@ -916,7 +916,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
         )}
 
         {stage === "result" && (
-          <div className="w-full text-left animate-fade-slide-up">
+          <div className="w-full text-start animate-fade-slide-up">
             {/* WHAT WAS ACTUALLY HEARD, not a script. Shown because a wrong
                 match usually has an obvious cause once you can see the words
                 the transcriber produced. */}
@@ -970,7 +970,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                           changing an amount is not also a deselect. */}
                       <button
                         onClick={() => toggleItem(i)}
-                        className="tap flex items-center gap-3 min-w-0 flex-1 text-left"
+                        className="tap flex items-center gap-3 min-w-0 flex-1 text-start"
                         aria-pressed={item.selected}
                       >
                         <span className="w-8 h-8 rounded-lg bg-cream-card flex items-center justify-center shrink-0">
@@ -1014,7 +1014,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                         function logFoodEntry uses on its way to the database,
                         so this panel and the diary row cannot disagree. */}
                     {preview && (
-                      <div className="mt-2.5 pl-11">
+                      <div className="mt-2.5 ps-11">
                         <p className={`text-[11px] text-charcoal-faint ${hide ? "" : "mb-1.5"}`}>
                           {item.food!.servingLabel}
                           {preview.unitNote ? ` · ${preview.unitNote}` : ""}
@@ -1033,7 +1033,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                             <div
                               key={cell.caption}
                               className="text-center"
-                              style={ci > 0 ? { borderLeft: `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` } : undefined}
+                              style={ci > 0 ? { borderInlineStart: `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` } : undefined}
                             >
                               <p style={{ margin: 0, fontSize: textPx(14), fontWeight: 800, color: cell.color }}>
                                 {cell.value}
@@ -1054,7 +1054,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                         the match and the panel above recomputes, which is a
                         better answer than four sets of numbers at once. */}
                     {item.food && item.alternatives.length > 0 && (
-                      <div className="mt-2 pl-11 flex items-center gap-1.5 flex-wrap">
+                      <div className="mt-2 ps-11 flex items-center gap-1.5 flex-wrap">
                         <span className="text-[11px] text-charcoal-faint shrink-0">Also:</span>
                         {item.alternatives.map((alt) => (
                           <button
@@ -1074,7 +1074,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                         that used to carry that name threw the recording away
                         and started over; that action still exists below, under
                         a name that says so. */}
-                    <div className="flex items-center justify-between gap-3 mt-2.5 pl-11">
+                    <div className="flex items-center justify-between gap-3 mt-2.5 ps-11">
                       <span className="text-[11px] text-charcoal-faint">
                         {preview ? preview.quantityLabel : item.spokenUnit ? `per ${item.spokenUnit}` : "servings"}
                       </span>
@@ -1100,7 +1100,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                         of the two and now looks like it: creating the food once
                         fixes every future recording that names it. */}
                     {!item.food && (
-                      <div className="mt-2.5 pl-11 flex items-center gap-3">
+                      <div className="mt-2.5 ps-11 flex items-center gap-3">
                         <Button size="sm" className="!px-3" onClick={() => setCreatingFor(i)}>
                           <Plus size={13} /> Create food
                         </Button>
@@ -1119,7 +1119,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                         rendered as "No data" by NutrientDetailSections, never
                         as a zero. */}
                     {preview && !hide && (
-                      <div className="mt-2 pl-11">
+                      <div className="mt-2 ps-11">
                         <button
                           onClick={() => setExpanded(isOpen ? null : i)}
                           aria-expanded={isOpen}

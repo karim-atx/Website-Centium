@@ -155,7 +155,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onLogFood, onLogWork
           aria-label="Log food"
           className="tap"
           // Tucks 2px under the centre so no sub-pixel seam shows at the join.
-          style={{ ...pill, marginRight: -2, borderRadius: `${px(PILL_H) / 2}px 0 0 ${px(PILL_H) / 2}px` }}
+          style={{ ...pill, marginInlineEnd: -2, borderRadius: `${px(PILL_H) / 2}px 0 0 ${px(PILL_H) / 2}px` }}
         >
           <span className="absolute" style={{ ...glyph("food", 150, 145), right: px(CENTRE_LEFT - 616), top: px(222 - PILL_TOP) }} />
         </button>
@@ -169,7 +169,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onLogFood, onLogWork
           onClick={onLogWorkout}
           aria-label="Log workout"
           className="tap"
-          style={{ ...pill, marginLeft: -2, borderRadius: `0 ${px(PILL_H) / 2}px ${px(PILL_H) / 2}px 0` }}
+          style={{ ...pill, marginInlineStart: -2, borderRadius: `0 ${px(PILL_H) / 2}px ${px(PILL_H) / 2}px 0` }}
         >
           <span className="absolute" style={{ ...glyph("workout", 139, 155), left: px(1548 - (2 * CX - CENTRE_LEFT)), top: px(217 - PILL_TOP) }} />
         </button>
@@ -180,11 +180,11 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onLogFood, onLogWork
           aria-label="Tell Centium what you ate"
           className="tap absolute flex items-center justify-center"
           style={{
-            left: "50%",
+            insetInlineStart: "50%",
             top: px(CY - MIC_R - TOP),
             width: px(2 * MIC_R),
             height: px(2 * MIC_R),
-            marginLeft: -px(MIC_R),
+            marginInlineStart: -px(MIC_R),
             borderRadius: 9999,
             background: TEAL,
             border: "none",
@@ -200,11 +200,11 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onLogFood, onLogWork
           aria-label="Add metric"
           className="tap absolute flex items-start justify-center"
           style={{
-            left: "50%",
+            insetInlineStart: "50%",
             top: px(505 - TOP),
             width: px(2 * 250),
             height: px(BOTTOM - 505),
-            marginLeft: -px(250),
+            marginInlineStart: -px(250),
             background: "transparent",
             border: "none",
             padding: 0,

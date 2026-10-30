@@ -184,19 +184,19 @@ export default function HubPage() {
           aria-label={`Add your existing team. Professionals already working with you join free. No hiring fee. ${stub.n} ${stub.unit}. Add people`}
           className="market-focus"
           data-banner
-          style={{ position: "relative", display: "flex", width: "100%", marginBottom: 12, borderRadius: 18, background: bannerBg, overflow: "hidden", border: 0, padding: 0, textAlign: "left", fontFamily: "inherit", color: m.ink, cursor: "pointer" }}
+          style={{ position: "relative", display: "flex", width: "100%", marginBottom: 12, borderRadius: 18, background: bannerBg, overflow: "hidden", border: 0, padding: 0, textAlign: "start", fontFamily: "inherit", color: m.ink, cursor: "pointer" }}
         >
           <span aria-hidden style={{ flex: 1, minWidth: 0, padding: "12px 14px", display: "block" }}>
             <span style={{ display: "block", fontSize: textPx(14), fontWeight: 800 }}>Add your existing team</span>
             <span style={{ display: "block", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2, marginTop: 2 }}>Professionals already working with you join free. No hiring fee.</span>
             <span style={{ display: "block", marginTop: 6, fontSize: textPx(12.5), fontWeight: 800, color: bannerInk }}>Add people</span>
           </span>
-          <span aria-hidden style={{ width: 76, flexShrink: 0, borderLeft: `1.5px dashed ${bannerDash}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <span aria-hidden style={{ width: 76, flexShrink: 0, borderInlineStart: `1.5px dashed ${bannerDash}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontSize: textPx(20), fontWeight: 800, color: bannerInk, lineHeight: 1 }}>{stub.n}</span>
             <span style={{ fontSize: textPx(10), fontWeight: 700, color: bannerInk }}>{stub.unit}</span>
           </span>
-          <span aria-hidden style={{ position: "absolute", right: 69, top: -7, width: 14, height: 14, borderRadius: 999, background: m.page }} />
-          <span aria-hidden style={{ position: "absolute", right: 69, bottom: -7, width: 14, height: 14, borderRadius: 999, background: m.page }} />
+          <span aria-hidden style={{ position: "absolute", insetInlineEnd: 69, top: -7, width: 14, height: 14, borderRadius: 999, background: m.page }} />
+          <span aria-hidden style={{ position: "absolute", insetInlineEnd: 69, bottom: -7, width: 14, height: 14, borderRadius: 999, background: m.page }} />
         </button>
       ) : null}
 

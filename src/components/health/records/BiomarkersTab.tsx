@@ -148,9 +148,9 @@ export const BiomarkersTab: React.FC<{
             aria-hidden
           >
             <span style={{ ...capsStyle, width: 103 }}>Marker</span>
-            <span style={{ ...capsStyle, width: 62, textAlign: "right" }}>Range</span>
-            <span style={{ ...capsStyle, width: 66, textAlign: "right" }}>Result</span>
-            <span style={{ ...capsStyle, flex: 1, textAlign: "right" }}>Status</span>
+            <span style={{ ...capsStyle, width: 62, textAlign: "end" }}>Range</span>
+            <span style={{ ...capsStyle, width: 66, textAlign: "end" }}>Result</span>
+            <span style={{ ...capsStyle, flex: 1, textAlign: "end" }}>Status</span>
           </div>
           <div role="list">
             {rows.map((m, i) => {
@@ -172,7 +172,7 @@ export const BiomarkersTab: React.FC<{
                   <button
                     type="button"
                     onClick={() => onOpen(m)}
-                    className="tap w-full text-left block focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
+                    className="tap w-full text-start block focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
                     style={{ padding: "0 14px" }}
                     aria-label={`${m.name}, ${m.value} ${m.unit}${!threshold && m.status ? `, ${m.status === "normal" ? "in range" : m.status === "low" ? "below range" : "above range"}` : ""}`}
                   >
@@ -180,10 +180,10 @@ export const BiomarkersTab: React.FC<{
                       <span className="line-clamp-2" style={{ width: 103, fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 600, color: INK }}>
                         {m.name}
                       </span>
-                      <span className="truncate" style={{ width: 62, textAlign: "right", fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 500, color: INK_FAINT }}>
+                      <span className="truncate" style={{ width: 62, textAlign: "end", fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 500, color: INK_FAINT }}>
                         {threshold ? "–" : rangeText(m.rangeLow, m.rangeHigh)}
                       </span>
-                      <span className="truncate" style={{ width: 66, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                      <span className="truncate" style={{ width: 66, textAlign: "end", fontVariantNumeric: "tabular-nums" }}>
                         <span style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 800, color: threshold ? INK : statusColor(m.status, dark) }}>{m.value}</span>{" "}
                         <span style={{ fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 600, color: INK_FAINT }}>{m.unit}</span>
                       </span>

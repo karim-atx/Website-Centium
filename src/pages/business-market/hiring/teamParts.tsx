@@ -112,7 +112,7 @@ export function SheetNote({ children }: { children: React.ReactNode }) {
 export function CautionCard({ title, hint, action, onAction, id }: { title: string; hint: string; action: string; onAction: () => void; id?: string }) {
   const m = useMarketColors();
   return (
-    <div id={id} role="status" data-caution style={{ borderRadius: 14, background: m.cautionbg, padding: "12px 14px", textAlign: "left", lineHeight: "normal", fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif" }}>
+    <div id={id} role="status" data-caution style={{ borderRadius: 14, background: m.cautionbg, padding: "12px 14px", textAlign: "start", lineHeight: "normal", fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif" }}>
       <p style={{ margin: 0, fontSize: px(13), lineHeight: lh(18), fontWeight: 700, color: m.ink }}>{title}</p>
       <p style={{ margin: "4px 0 0", fontSize: px(12), lineHeight: lh(17), color: m.ink2 }}>{hint}</p>
       <button
@@ -131,11 +131,11 @@ export function CautionCard({ title, hint, action, onAction, id }: { title: stri
 export function DialogRows({ rows }: { rows: [string, string][] }) {
   const m = useMarketColors();
   return (
-    <div style={{ marginTop: 14, borderRadius: 14, background: m.sgrey, padding: "4px 14px", textAlign: "left" }}>
+    <div style={{ marginTop: 14, borderRadius: 14, background: m.sgrey, padding: "4px 14px", textAlign: "start" }}>
       {rows.map(([k, v], i) => (
         <div key={`${k}-${i}`} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: i ? `0.5px solid ${m.div}` : 0, fontSize: px(12.5), lineHeight: "normal" }}>
           <span style={{ color: m.slabel }}>{k}</span>
-          <span style={{ fontWeight: 700, textAlign: "right", color: m.ink }}>{v}</span>
+          <span style={{ fontWeight: 700, textAlign: "end", color: m.ink }}>{v}</span>
         </div>
       ))}
     </div>

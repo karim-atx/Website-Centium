@@ -535,10 +535,10 @@ export const ObStatus: React.FC<{
         <span
           key={s}
           className="ob-status-ring"
-          style={{ width: s, height: s, marginLeft: -s / 2, marginTop: -s / 2, opacity: i === 0 ? ringOpacity * 0.6 : ringOpacity, transform: `scale(${ringScale})` }}
+          style={{ width: s, height: s, marginInlineStart: -s / 2, marginTop: -s / 2, opacity: i === 0 ? ringOpacity * 0.6 : ringOpacity, transform: `scale(${ringScale})` }}
         />
       ))}
-      <span className="ob-status-glow" style={{ width: glowSize, height: glowSize, marginLeft: -glowSize / 2, marginTop: -glowSize / 2, opacity: glowOpacity }} />
+      <span className="ob-status-glow" style={{ width: glowSize, height: glowSize, marginInlineStart: -glowSize / 2, marginTop: -glowSize / 2, opacity: glowOpacity }} />
       {visNode ? (
         <svg viewBox="0 0 100 100" width={120} height={120} aria-hidden className="ob-status-svg" style={visStyle}>
           {visNode}

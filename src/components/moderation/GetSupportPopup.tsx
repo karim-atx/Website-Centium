@@ -40,7 +40,7 @@ export const GetSupportPopup: React.FC<{
           : { label: "Find a helpline", onClick: () => window.open(lines.directory, "_blank", "noopener") }
       }
     >
-      <div className="mt-4 flex flex-col rounded-2xl border border-charcoal/[0.08] overflow-hidden text-left">
+      <div className="mt-4 flex flex-col rounded-2xl border border-charcoal/[0.08] overflow-hidden text-start">
         {lines.numbers.map((n, i) => (
           <a
             key={n.number}
@@ -67,7 +67,7 @@ export const GetSupportPopup: React.FC<{
           <button
             type="button"
             onClick={onRecoveryMode}
-            className="tap flex items-center gap-3 min-h-[48px] px-3.5 bg-cream-card border-t border-charcoal/[0.06] text-left"
+            className="tap flex items-center gap-3 min-h-[48px] px-3.5 bg-cream-card border-t border-charcoal/[0.06] text-start"
           >
             <HandHeart size={16} className="shrink-0 text-primary-dark" aria-hidden />
             <span className="flex-1 min-w-0">

@@ -192,7 +192,7 @@ function ListingGroup() {
               return (
                 <div key={st.t}>
                   {i > 0 && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, height: 26, paddingLeft: 2, fontSize: px(11), fontWeight: 700, color: m.tealink }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, height: 26, paddingInlineStart: 2, fontSize: px(11), fontWeight: 700, color: m.tealink }}>
                       <ArrowDown size={12} strokeWidth={2.6} aria-hidden />
                       {st.conv}
                     </div>
@@ -204,7 +204,7 @@ function ListingGroup() {
                       aria-expanded={sel}
                       onClick={() => setStage(sel ? null : 0)}
                       className="market-focus"
-                      style={{ display: "block", width: "100%", textAlign: "left", border: 0, borderRadius: 8, padding: 0, background: sel ? m.soft : "transparent", boxShadow: sel ? `0 0 0 6px ${m.soft}` : "none", fontFamily: "inherit", color: "inherit", cursor: "pointer" }}
+                      style={{ display: "block", width: "100%", textAlign: "start", border: 0, borderRadius: 8, padding: 0, background: sel ? m.soft : "transparent", boxShadow: sel ? `0 0 0 6px ${m.soft}` : "none", fontFamily: "inherit", color: "inherit", cursor: "pointer" }}
                     >
                       {body}
                     </button>
@@ -224,7 +224,7 @@ function ListingGroup() {
                 <span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: colOf(k) }} />
                 <span style={{ flex: 1 }}>{SOURCE_LABEL[k]}</span>
                 <span style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{num(detail.bySource[k] ?? 0)}</span>
-                <span style={{ width: 44, textAlign: "right", color: m.faint }}>{`${Math.round(((detail.bySource[k] ?? 0) / Math.max(1, detail.seen)) * 100)}%`}</span>
+                <span style={{ width: 44, textAlign: "end", color: m.faint }}>{`${Math.round(((detail.bySource[k] ?? 0) / Math.max(1, detail.seen)) * 100)}%`}</span>
               </div>
             ))}
           </div>
@@ -282,7 +282,7 @@ function HalfCard({ m, title, value, sub, onAll }: { m: MarketPalette; title: st
         type="button"
         onClick={onAll}
         className="market-focus"
-        style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "center", gap: 2, minHeight: 44, borderTop: `1px solid ${m.div}`, borderLeft: 0, borderRight: 0, borderBottom: 0, background: "transparent", fontFamily: "inherit", fontSize: px(12), fontWeight: 800, color: m.pdark, cursor: "pointer" }}
+        style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "center", gap: 2, minHeight: 44, borderTop: `1px solid ${m.div}`, borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0, background: "transparent", fontFamily: "inherit", fontSize: px(12), fontWeight: 800, color: m.pdark, cursor: "pointer" }}
       >
         See all
         <ChevronRight size={14} aria-hidden />

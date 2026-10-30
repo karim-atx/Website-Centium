@@ -28,7 +28,7 @@ export const MessagesHeader: React.FC<{
         type="button"
         onClick={onBack ?? back}
         aria-label={t("Back")}
-        className="tap relative w-8 h-8 -ml-2 shrink-0 rounded-full flex items-center justify-center before:absolute before:-inset-1.5 before:content-['']"
+        className="tap relative w-8 h-8 -ms-2 shrink-0 rounded-full flex items-center justify-center before:absolute before:-inset-1.5 before:content-['']"
         style={{ color: "rgb(var(--c-charcoal))" }}
       >
         <BackIcon size={22} aria-hidden />

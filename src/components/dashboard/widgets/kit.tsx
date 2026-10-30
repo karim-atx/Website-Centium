@@ -227,7 +227,7 @@ export function stop(action: () => void) {
 
 /** Invisible 44 x 44 hit area centred on a smaller control (pattern from the repo's water quick add). */
 export const Hit44: React.FC = () => (
-  <span aria-hidden className="absolute" style={{ left: "50%", top: "50%", width: 44, height: 44, transform: "translate(-50%, -50%)" }} />
+  <span aria-hidden className="absolute" style={{ insetInlineStart: "50%", top: "50%", width: 44, height: 44, transform: "translate(-50%, -50%)" }} />
 );
 
 /** Loading for 8 s with no data turns into Error (handover assumption, OURS-home-widget-states L3). */

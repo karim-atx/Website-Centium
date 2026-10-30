@@ -155,7 +155,7 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
               {/* #5: sessions this week; the "/N" target has no source (BACKEND PB-HO-06, hidden). */}
               <Ring done={sessionsThisWeek} total={ww?.scheduled ?? 0} label={ringLabel} dark={dark} empty={!ww?.scheduled} />
             </span>
-            <span className="flex-1 min-w-0" style={{ marginLeft: 12 }}>
+            <span className="flex-1 min-w-0" style={{ marginInlineStart: 12 }}>
               <Line style={{ fontSize: textPx(14), lineHeight: linePx(18.2), fontWeight: 700, color: "rgb(var(--c-charcoal-soft))" }}>No workout planned</Line>
               <Line style={{ marginTop: 5, fontSize: textPx(10), lineHeight: linePx(13), fontWeight: 600, color: c.ink }}>Pick a routine to start this week</Line>
               <span className="block" style={{ marginTop: 5 }}>
@@ -274,7 +274,7 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
             <span style={{ marginTop: 4.2 }}>
               <Ring done={doneCount} total={exercises} label={`${doneCount}/${exercises}`} dark={dark} />
             </span>
-            <span className="flex-1 min-w-0" style={{ marginLeft: 12 }}>
+            <span className="flex-1 min-w-0" style={{ marginInlineStart: 12 }}>
               <Line style={{ fontSize: textPx(20), lineHeight: linePx(22), fontWeight: 700, letterSpacing: -0.4, color: "rgb(var(--c-charcoal))" }}>{name}</Line>
               <Line style={{ marginTop: 5, fontSize: textPx(10), lineHeight: linePx(13), fontWeight: 600, color: c.ink }}>{lineLarge}</Line>
               <span className="block" style={{ marginTop: 5 }}>

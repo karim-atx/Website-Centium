@@ -48,7 +48,7 @@ export const ClientHeader: React.FC<{
   return (
     <>
       <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 13 }}>
-        <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, marginLeft: -10, marginTop: -2 }}>
+        <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, marginInlineStart: -10, marginTop: -2 }}>
           <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
         </button>
         <div className="flex" style={{ gap: 8 }}>

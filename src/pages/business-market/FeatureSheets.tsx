@@ -94,7 +94,7 @@ export function FeatureSheet({
             aria-disabled={!!retry}
             onClick={() => !retry && setMenu(true)}
             className="market-focus"
-            style={{ ...fieldStyle(m), display: "flex", alignItems: "center", gap: 10, textAlign: "left", cursor: retry ? "default" : "pointer" }}
+            style={{ ...fieldStyle(m), display: "flex", alignItems: "center", gap: 10, textAlign: "start", cursor: retry ? "default" : "pointer" }}
           >
             <span style={{ width: 34, height: 34, borderRadius: 10, background: m.pale, color: m.pdark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <Award size={17} strokeWidth={2} aria-hidden />
@@ -108,7 +108,7 @@ export function FeatureSheet({
         </SheetBox>
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 10, marginTop: 12 }}>
           <SheetBox label="Starts">
-            <button type="button" onClick={() => setCal(true)} className="market-focus" style={{ ...fieldStyle(m), display: "flex", alignItems: "center", gap: 8, textAlign: "left", cursor: "pointer", boxShadow: cal ? `inset 0 0 0 1.5px ${m.fill}` : undefined }}>
+            <button type="button" onClick={() => setCal(true)} className="market-focus" style={{ ...fieldStyle(m), display: "flex", alignItems: "center", gap: 8, textAlign: "start", cursor: "pointer", boxShadow: cal ? `inset 0 0 0 1.5px ${m.fill}` : undefined }}>
               <span style={{ flex: 1 }}>{dayMonth(from)}</span>
               <Calendar size={16} strokeWidth={2.2} color={m.faint} aria-hidden />
             </button>

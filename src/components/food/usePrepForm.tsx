@@ -312,7 +312,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
                     key={`${r.source}-${r.id}`}
                     onClick={() => addFood(toFood(r), r.source === "catalog" ? "catalog" : "custom")}
                     disabled={added}
-                    className="tap w-full flex items-center justify-between gap-2.5 rounded-[12px] bg-cream-card text-left disabled:opacity-40"
+                    className="tap w-full flex items-center justify-between gap-2.5 rounded-[12px] bg-cream-card text-start disabled:opacity-40"
                     style={{ border: "1px solid rgb(var(--c-charcoal) / 0.1)", padding: "11px 12px" }}
                   >
                     <span className="min-w-0">

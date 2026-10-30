@@ -362,7 +362,7 @@ export const ChatInfo: React.FC<{
                 key={m.id}
                 type="button"
                 onClick={() => onJumpTo(m.id)}
-                className="tap text-left py-2.5 border-b border-charcoal/[0.06] last:border-b-0"
+                className="tap text-start py-2.5 border-b border-charcoal/[0.06] last:border-b-0"
               >
                 <span className="block text-xs font-bold text-primary-deep-text">
                   {nameFor(m.senderId)} · {listTime(m.createdAt)}
@@ -491,7 +491,7 @@ export const ChatInfo: React.FC<{
               type="button"
               disabled={busy}
               onClick={() => void chooseMute(c.value)}
-              className="tap w-full min-h-[48px] text-left text-sm font-semibold text-charcoal border-b border-charcoal/[0.06] disabled:opacity-50"
+              className="tap w-full min-h-[48px] text-start text-sm font-semibold text-charcoal border-b border-charcoal/[0.06] disabled:opacity-50"
             >
               {c.label}
             </button>
@@ -501,7 +501,7 @@ export const ChatInfo: React.FC<{
               type="button"
               disabled={busy}
               onClick={() => void chooseMute("off")}
-              className="tap w-full min-h-[48px] text-left text-sm font-semibold text-primary-deep-text disabled:opacity-50"
+              className="tap w-full min-h-[48px] text-start text-sm font-semibold text-primary-deep-text disabled:opacity-50"
             >
               Unmute
             </button>

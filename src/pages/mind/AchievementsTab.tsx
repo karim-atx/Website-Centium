@@ -27,6 +27,7 @@ import {
   type Badge,
   type AchievementCategory,
 } from "../../services/achievements";
+import { appLocale } from "../../i18n/format";
 
 // The Achievements page, v6 MO1.1.3 (/app/mind/achievements).
 //
@@ -88,13 +89,13 @@ function BadgeTile({ badge, onOpen, hc }: { badge: Badge; onOpen: () => void; hc
             <span className="block h-full rounded-full bg-team-gold-deep" style={{ width: `${badge.progress * 100}%` }} />
           </span>
           <span className="mt-[5px] block text-[9.5px] leading-[14.3px] font-semibold tabular-nums text-charcoal-faint">
-            {Math.min(badge.rungs[0].currentValue, badge.next.threshold).toLocaleString()} /{" "}
-            {badge.next.threshold.toLocaleString()}
+            {Math.min(badge.rungs[0].currentValue, badge.next.threshold).toLocaleString(appLocale())} /{" "}
+            {badge.next.threshold.toLocaleString(appLocale())}
           </span>
         </span>
       ) : (
         <span className="text-[11.5px] leading-[14.4px] font-bold text-charcoal line-clamp-2">
-          {badge.pointsEarned > 0 ? `+${badge.pointsEarned.toLocaleString()} pts` : "No points, just bragging rights"}
+          {badge.pointsEarned > 0 ? `+${badge.pointsEarned.toLocaleString(appLocale())} pts` : "No points, just bragging rights"}
         </span>
       )}
     </button>
@@ -110,7 +111,7 @@ function Banner({ text, onRetry }: { text: string; onRetry?: () => void }) {
     >
       <p className="flex-1 min-w-0 text-[12px] font-semibold">{text}</p>
       {onRetry && (
-        <button onClick={onRetry} className="tap shrink-0 -my-3 -mr-3 px-3 min-h-11 text-[12px] font-bold">
+        <button onClick={onRetry} className="tap shrink-0 -my-3 -me-3 px-3 min-h-11 text-[12px] font-bold">
           Retry
         </button>
       )}
@@ -227,7 +228,7 @@ export default function AchievementsTab() {
     <PinnedTabs>
       <SegmentedTabs
         scroll
-        className="-mr-4"
+        className="-me-4"
         // #39-#40: a 52 track (pad 6), r16 0 0 16 running off the right
         // edge; tabs 40 tall, padding 0 14, gap 5, r12, 12.5/700; active
         // #A79AD5 / white (dark #A991FE / #0D0B1A, V6-02), idle #F5F4FE /
@@ -289,14 +290,14 @@ export default function AchievementsTab() {
               </p>
               <p className="mt-1 flex items-baseline gap-[5px]">
                 <span className="text-[30px] font-extrabold leading-[30px] tracking-[-1.2px] text-charcoal tabular-nums">
-                  {pointsSummary.balance.toLocaleString()}
+                  {pointsSummary.balance.toLocaleString(appLocale())}
                 </span>
                 <span className="text-[12px] leading-[18px] font-semibold text-charcoal-faint">pts</span>
               </p>
             </div>
             {/* Only once the list has loaded: a failed read is not "0 of 0". */}
             {achievements !== null && (
-              <div className="text-right">
+              <div className="text-end">
                 <p className="tabular-nums leading-[22px]">
                   <span className="text-[17px] font-extrabold text-charcoal">{counts.earned}</span>
                   <span className="text-[12px] font-semibold text-charcoal-faint"> of {counts.total}</span>
@@ -310,12 +311,12 @@ export default function AchievementsTab() {
           <div className="mt-4 flex items-baseline justify-between gap-3">
             <p className="text-[11.5px] leading-[17.3px] font-bold text-charcoal">
               {pointsSummary.nextTierName && pointsSummary.pointsToNextTier !== null
-                ? `${pointsSummary.pointsToNextTier.toLocaleString()} to ${pointsSummary.nextTierName}`
+                ? `${pointsSummary.pointsToNextTier.toLocaleString(appLocale())} to ${pointsSummary.nextTierName}`
                 : "Highest tier"}
             </p>
             {pointsSummary.nextTierMinPoints !== null && (
               <p className="text-[11.5px] leading-[17.3px] font-normal text-charcoal-faint tabular-nums">
-                {pointsSummary.balance.toLocaleString()} / {pointsSummary.nextTierMinPoints.toLocaleString()}
+                {pointsSummary.balance.toLocaleString(appLocale())} / {pointsSummary.nextTierMinPoints.toLocaleString(appLocale())}
               </p>
             )}
           </div>
@@ -337,7 +338,7 @@ export default function AchievementsTab() {
           <div className="relative flex mt-[18px]">
             <span
               aria-hidden
-              className="absolute left-[10%] right-[10%] top-[14.75px] h-[1.5px]"
+              className="absolute start-[10%] end-[10%] top-[14.75px] h-[1.5px]"
               style={{ background: hair(hc, 0.08) }}
             />
             {(() => {
@@ -380,7 +381,7 @@ export default function AchievementsTab() {
                     {t.name}
                   </span>
                   <span className="mt-[5px] text-[10px] leading-[12px] font-normal text-charcoal-faint tabular-nums">
-                    {t.minPoints.toLocaleString()}
+                    {t.minPoints.toLocaleString(appLocale())}
                   </span>
                 </div>
               );
@@ -413,7 +414,7 @@ export default function AchievementsTab() {
                 <button
                   key={a.key}
                   onClick={() => badge && setOpenId(badge.id)}
-                  className="tap w-full flex items-center gap-3 text-left"
+                  className="tap w-full flex items-center gap-3 text-start"
                 >
                   <AchievementTile achievementKey={a.key} emoji={a.icon} tile={40} radius={12} icon={34} />
                   <span
@@ -426,10 +427,10 @@ export default function AchievementsTab() {
                     </span>
                     {/* #26 / #31: the key's ink; explorer rows say so instead of "+0". */}
                     <span
-                      className="shrink-0 whitespace-nowrap [.larger-text_&]:whitespace-normal [.larger-text_&]:max-w-[150px] text-right text-[12px] leading-[18px] font-extrabold tabular-nums"
+                      className="shrink-0 whitespace-nowrap [.larger-text_&]:whitespace-normal [.larger-text_&]:max-w-[150px] text-end text-[12px] leading-[18px] font-extrabold tabular-nums"
                       style={{ color: keyInk(a.key, dark) }}
                     >
-                      {a.points > 0 ? `+${a.points.toLocaleString()}` : "No points, just bragging rights"}
+                      {a.points > 0 ? `+${a.points.toLocaleString(appLocale())}` : "No points, just bragging rights"}
                     </span>
                   </span>
                 </button>

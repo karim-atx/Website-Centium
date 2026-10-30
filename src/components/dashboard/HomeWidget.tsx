@@ -184,16 +184,16 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
 
       {/* Fill container: 126px at the goal, never higher. */}
       <div
-        className="absolute left-0 right-0 bottom-0"
+        className="absolute start-0 end-0 bottom-0"
         style={{ height: fillHeightPx, transition: "height 1.1s cubic-bezier(.34,1.32,.5,1)" }}
       >
         {/* Body, from 10px below the container's top edge. */}
-        <div className="absolute left-0 right-0 bottom-0" style={{ top: 10, background: bodyGradient }} />
+        <div className="absolute start-0 end-0 bottom-0" style={{ top: 10, background: bodyGradient }} />
 
         {/* Waves, band and depth shadow. Keyed on the millilitre value so the
             slosh restarts on every change; the container above is not keyed,
             so its height transition still runs. */}
-        <div key={water} className="absolute left-0 right-0 bottom-0 overflow-hidden cent-water-slosh" style={{ top: 10, willChange: "transform" }}>
+        <div key={water} className="absolute start-0 end-0 bottom-0 overflow-hidden cent-water-slosh" style={{ top: 10, willChange: "transform" }}>
           {WATER_WAVE_LAYERS.map((w, i) => {
             const { fill, edge } = buildWavePath(w.y, w.amp, w.crests, 160);
             const drift = driftFor(w.crests, w.driftCycle);
@@ -215,7 +215,7 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
                   className="cent-water-drift"
                   style={{
                     position: "absolute",
-                    left: 0,
+                    insetInlineStart: 0,
                     top: -30,
                     display: "block",
                     animationDuration: drift.duration,
@@ -234,7 +234,7 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
           })}
           <span
             aria-hidden="true"
-            className="absolute left-0 right-0 top-0 pointer-events-none"
+            className="absolute start-0 end-0 top-0 pointer-events-none"
             style={{ height: 22, background: `linear-gradient(180deg, rgba(255,255,255,${dimWaves ? 0.21 : 0.42}), rgba(255,255,255,0))` }}
           />
           <span
@@ -250,19 +250,19 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
 
       <p
         className="absolute uppercase"
-        style={{ left: 25, top: 19, margin: 0, fontSize: textPx(11), fontWeight: 700, letterSpacing: ".16em", lineHeight: 1, color: labelColor, textShadow }}
+        style={{ insetInlineStart: 25, top: 19, margin: 0, fontSize: textPx(11), fontWeight: 700, letterSpacing: ".16em", lineHeight: 1, color: labelColor, textShadow }}
       >
         Water
       </p>
       <p
         className="absolute tabular-nums"
-        style={{ left: 25, top: 37, margin: 0, fontSize: textPx(29), fontWeight: 800, lineHeight: 1, letterSpacing: "-0.035em", color: valueColor, textShadow }}
+        style={{ insetInlineStart: 25, top: 37, margin: 0, fontSize: textPx(29), fontWeight: 800, lineHeight: 1, letterSpacing: "-0.035em", color: valueColor, textShadow }}
       >
         {(water / 1000).toFixed(1)} L
       </p>
       <p
         className="absolute"
-        style={{ left: 25, top: 70, margin: 0, fontSize: textPx(13.5), fontWeight: 500, lineHeight: 1.2, whiteSpace: "nowrap", color: subColor, textShadow }}
+        style={{ insetInlineStart: 25, top: 70, margin: 0, fontSize: textPx(13.5), fontWeight: 500, lineHeight: 1.2, whiteSpace: "nowrap", color: subColor, textShadow }}
       >
         {subLabel}
       </p>
@@ -270,7 +270,7 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
       <span
         className="absolute flex items-center rounded-full tabular-nums"
         style={{
-          right: 21,
+          insetInlineEnd: 21,
           top: 15,
           height: 28,
           padding: "0 14px",
@@ -295,7 +295,7 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
             height={9}
             viewBox="0 0 24 24"
             className="absolute cent-water-sparkle"
-            style={{ right: 11, top: 12, display: "block" }}
+            style={{ insetInlineEnd: 11, top: 12, display: "block" }}
           >
             <path d={SPARKLE_PATH} fill="#FFE9B0" />
           </svg>
@@ -304,7 +304,7 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
             height={6}
             viewBox="0 0 24 24"
             className="absolute cent-water-sparkle"
-            style={{ right: 9, top: 30, display: "block", animationDelay: "0.6s" }}
+            style={{ insetInlineEnd: 9, top: 30, display: "block", animationDelay: "0.6s" }}
           >
             <path d={SPARKLE_PATH} fill="#FFF3D4" />
           </svg>
@@ -312,7 +312,7 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
       )}
 
       {/* Goal marker: a hairline beside the goal figure. */}
-      <span className="absolute flex items-stretch" style={{ right: 21, top: 82, gap: 8 }}>
+      <span className="absolute flex items-stretch" style={{ insetInlineEnd: 21, top: 82, gap: 8 }}>
         <span style={{ width: 1, background: "#FFFFFF", flex: "none" }} />
         <span className="flex flex-col justify-center" style={{ fontSize: textPx(11), fontWeight: 500, lineHeight: 1.16, color: goalColor }}>
           <span>{(waterGoalMl / 1000).toFixed(1)} L</span>
@@ -588,7 +588,7 @@ export const HomeWidget: React.FC<{
                       style={{ width: `${Math.min(100, (m.consumed / (m.target || 1)) * 100)}%`, background: m.color }}
                     />
                   </span>
-                  <span className="w-14 shrink-0 text-right text-[9px] text-primary-deep-text/[0.68] dark:text-primary-deep-text tabular-nums">
+                  <span className="w-14 shrink-0 text-end text-[9px] text-primary-deep-text/[0.68] dark:text-primary-deep-text tabular-nums">
                     {Math.round(m.consumed)} / {Math.round(m.target)}g
                   </span>
                 </div>

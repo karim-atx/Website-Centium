@@ -205,7 +205,7 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
               {/* Frame check: Foundations `label.section` (10.5/700 uppercase,
                   14 line, 0.12em; decision 20), 4 in from the content edge;
                   the label's pre-R1 colour stays (decision 22). */}
-              <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
+              <span className="ps-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
                 Continue learning
               </span>
               {continuing.map(({ course, next, week, n, percent }) => (
@@ -236,7 +236,7 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
               44 pt tinted row above the search), so the drawn layout is the
               same for everyone; 44 to the finger, 14 in the layout. */}
           <span className="flex items-center justify-between gap-3 h-[14px]">
-            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
+            <span className="ps-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
               {/* Handover-complete pass: "Popular" always, as drawn (the "Results" swap while searching is gone). */}
               Popular
             </span>

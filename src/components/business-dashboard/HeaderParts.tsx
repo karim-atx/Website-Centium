@@ -92,7 +92,7 @@ export function DashHeader({
               style={{
                 position: "absolute",
                 top: -3,
-                right: -3,
+                insetInlineEnd: -3,
                 minWidth: 18,
                 height: 18,
                 padding: "0 5px",
@@ -302,7 +302,7 @@ export function AttentionPanel({
             onClose();
             navigate("/app/business/notifications");
           }}
-          style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", minHeight: 44, borderRadius: 8, padding: "9px 10px", border: `1px solid ${c.option}`, background: c.raised, cursor: "pointer", textAlign: "left", font: "inherit", boxSizing: "border-box" }}
+          style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", minHeight: 44, borderRadius: 8, padding: "9px 10px", border: `1px solid ${c.option}`, background: c.raised, cursor: "pointer", textAlign: "start", font: "inherit", boxSizing: "border-box" }}
         >
           <span style={{ display: "flex", color: c.pDark }}>
             <Bell size={15} aria-hidden />
@@ -393,11 +393,11 @@ export function SetupCard({ c, steps, onStep, onDismiss }: { c: DashPalette; ste
         className="hit"
         aria-label="Dismiss"
         onClick={onDismiss}
-        style={{ position: "absolute", top: 12, right: 12, width: 30, height: 30, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", color: c.deep, cursor: "pointer", background: "none", border: 0, padding: 0 }}
+        style={{ position: "absolute", top: 12, insetInlineEnd: 12, width: 30, height: 30, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", color: c.deep, cursor: "pointer", background: "none", border: 0, padding: 0 }}
       >
         <X size={17} strokeWidth={2.2} aria-hidden />
       </button>
-      <p style={{ fontSize: textPx(15), fontWeight: 800, paddingRight: 36, margin: 0, color: c.ink, lineHeight: 1.5 }}>Finish setting up</p>
+      <p style={{ fontSize: textPx(15), fontWeight: 800, paddingInlineEnd: 36, margin: 0, color: c.ink, lineHeight: 1.5 }}>Finish setting up</p>
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "10px 0 6px" }}>
         <div role="progressbar" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={done} aria-label="Setup progress" style={{ flex: 1, height: 6, borderRadius: 999, background: c.paleTrack, overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${Math.round((done / steps.length) * 100)}%`, borderRadius: 999, background: c.primary }} />
@@ -424,7 +424,7 @@ export function SetupCard({ c, steps, onStep, onDismiss }: { c: DashPalette; ste
             >
               {s.done && <Check size={12} strokeWidth={3} aria-hidden />}
             </span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: textPx(13), fontWeight: 600, color: s.done ? (c.hc ? c.inkSoft : c.faint) : c.ink, textDecoration: s.done ? "line-through" : "none", textAlign: "left", lineHeight: 1.5 }}>{s.label}</span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: textPx(13), fontWeight: 600, color: s.done ? (c.hc ? c.inkSoft : c.faint) : c.ink, textDecoration: s.done ? "line-through" : "none", textAlign: "start", lineHeight: 1.5 }}>{s.label}</span>
             {!s.done && <span style={{ fontSize: textPx(11.5), fontWeight: 700, color: c.deep, whiteSpace: "nowrap", alignSelf: "flex-start", lineHeight: linePx(19.5) }}>{s.action}</span>}
           </>
         );
@@ -434,7 +434,7 @@ export function SetupCard({ c, steps, onStep, onDismiss }: { c: DashPalette; ste
             {inner}
           </div>
         ) : (
-          <button key={s.key} type="button" data-setup-step onClick={() => onStep(s)} aria-label={`${s.label}: ${s.action}`} style={{ ...style, background: "none", borderLeft: 0, borderRight: 0, borderBottom: 0, cursor: "pointer", font: "inherit" }}>
+          <button key={s.key} type="button" data-setup-step onClick={() => onStep(s)} aria-label={`${s.label}: ${s.action}`} style={{ ...style, background: "none", borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0, cursor: "pointer", font: "inherit" }}>
             {inner}
           </button>
         );

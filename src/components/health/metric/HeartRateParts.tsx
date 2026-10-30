@@ -133,7 +133,7 @@ export const HeartRateHero: React.FC<{ data: HrHeroData | null; loading?: boolea
               />
             )}
           </svg>
-          <div className="absolute" style={{ left: 0, right: 0, top: 26, height: 14, borderRadius: 7, background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.85)" }} />
+          <div className="absolute" style={{ insetInlineStart: 0, insetInlineEnd: 0, top: 26, height: 14, borderRadius: 7, background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.85)" }} />
           {!single && (
             <div
               className="absolute"
@@ -155,7 +155,7 @@ export const HeartRateHero: React.FC<{ data: HrHeroData | null; loading?: boolea
               top: 23,
               width: 20,
               height: 20,
-              marginLeft: -10,
+              marginInlineStart: -10,
               left: `${(stripX(data.marker) / 326) * 100}%`,
               borderRadius: 9999,
               background: dark ? mc(K, "main") : mc(K, "accent"),

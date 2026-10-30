@@ -95,7 +95,7 @@ export const DietaryNeedsCard: React.FC<{
       style={{
         background: INK.card,
         border: `1px solid ${none ? INK.bCard : dark ? "rgba(240,154,142,0.28)" : "rgba(192,57,43,0.22)"}`,
-        borderLeft: none ? `1px solid ${INK.bCard}` : `3px solid ${INK.hi}`,
+        borderInlineStart: none ? `1px solid ${INK.bCard}` : `3px solid ${INK.hi}`,
         borderRadius: 20,
         padding: "12px 14px",
         marginBottom: 12,

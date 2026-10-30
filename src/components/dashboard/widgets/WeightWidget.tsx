@@ -197,7 +197,7 @@ export const WeightWidget: React.FC<{ size: "small" | "large"; editMode: boolean
         // 111.5, 51 in a 175.5-wide card = 12 from the right edge.
         children={
           !isLarge && last5.length >= 2 ? (
-            <span className="absolute" style={{ right: 12, top: 51, zIndex: 1 }}>
+            <span className="absolute" style={{ insetInlineEnd: 12, top: 51, zIndex: 1 }}>
               <Sparkline values={last5.map((p) => p.value)} dark={dark} />
             </span>
           ) : undefined

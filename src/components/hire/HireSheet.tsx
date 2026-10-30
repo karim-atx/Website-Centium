@@ -387,7 +387,7 @@ export function HireSheet({
                     aria-checked={on}
                     onClick={() => setRequestPlan(o.id)}
                     className="market-focus"
-                    style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 44, padding: "9px 13px", borderRadius: 10, background: m.card, border: on ? `1.5px solid ${m.segactive}` : `0.5px solid ${m.border}`, font: "inherit", textAlign: "left", cursor: "pointer", color: m.ink }}
+                    style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 44, padding: "9px 13px", borderRadius: 10, background: m.card, border: on ? `1.5px solid ${m.segactive}` : `0.5px solid ${m.border}`, font: "inherit", textAlign: "start", cursor: "pointer", color: m.ink }}
                   >
                     <span aria-hidden style={{ width: 20, height: 20, borderRadius: 999, boxSizing: "border-box", border: on ? `6px solid ${m.segactive}` : `1.5px solid ${m.border}`, flexShrink: 0 }} />
                     <span style={{ flex: 1, minWidth: 0, fontSize: textPx(14), fontWeight: 700, overflowWrap: "anywhere" }}>{o.name}</span>
@@ -409,7 +409,7 @@ export function HireSheet({
             className="market-focus placeholder:text-charcoal-faint"
             style={{ display: "block", width: "100%", boxSizing: "border-box", resize: "none", borderRadius: 10, border: `0.5px solid ${m.border}`, background: m.card, padding: "11px 13px", font: "inherit", fontSize: textPx(13.5), lineHeight: linePx(19), color: m.ink, outline: "none" }}
           />
-          <p aria-live="polite" style={{ margin: "4px 0 0", textAlign: "right", fontSize: textPx(11), color: m.faint, fontVariantNumeric: "tabular-nums" }}>
+          <p aria-live="polite" style={{ margin: "4px 0 0", textAlign: "end", fontSize: textPx(11), color: m.faint, fontVariantNumeric: "tabular-nums" }}>
             {requestMessage.length}/{REQUEST_MESSAGE_MAX}
           </p>
         </SheetBox>
@@ -426,7 +426,7 @@ export function HireSheet({
 
   const checkoutBody = () => {
     if (!plan) return null;
-    const notch: React.CSSProperties = { position: "absolute", right: 65, width: 14, height: 14, borderRadius: 999, background: m.sbody };
+    const notch: React.CSSProperties = { position: "absolute", insetInlineEnd: 65, width: 14, height: 14, borderRadius: 999, background: m.sbody };
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div role="group" aria-label="Plan" style={{ position: "relative", display: "flex", borderRadius: 14, background: m.sgrey, overflow: "hidden", color: m.ink }}>
@@ -441,7 +441,7 @@ export function HireSheet({
               </div>
             ))}
           </div>
-          <div style={{ width: 72, flexShrink: 0, borderLeft: `1.5px dashed ${m.fill}`, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 72, flexShrink: 0, borderInlineStart: `1.5px dashed ${m.fill}`, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontSize: textPx(18), fontWeight: 800, color: m.pdark, whiteSpace: "nowrap" }}>{priceShort(plan.price)}</span>
           </div>
           <span aria-hidden style={{ ...notch, top: -7 }} />

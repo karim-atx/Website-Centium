@@ -117,7 +117,7 @@ const HabitGrid: React.FC<{ habits: HabitItem[]; day: string; today: string; dar
       {pages.length > 1 && (
         // Main's hint, verbatim, back beside the dots as main laid them out
         // (hint left, dots right; release review O1). Dots keep top 91.
-        <span className="absolute flex items-center justify-between" style={{ left: 0, right: 0, top: 87.5, height: 11, gap: 10 }}>
+        <span className="absolute flex items-center justify-between" style={{ insetInlineStart: 0, insetInlineEnd: 0, top: 87.5, height: 11, gap: 10 }}>
           <span className="whitespace-nowrap" style={{ fontSize: textPx(8.5), lineHeight: linePx(11), fontWeight: 600, color: deep, opacity: dark ? 1 : 0.68 }}>
             For more habits, swipe.
           </span>

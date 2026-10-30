@@ -180,7 +180,7 @@ export const BookingSheet: React.FC<{
               <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
                 Link
               </span>
-              <button type="button" onClick={copy} aria-label={`Copy link, ${url}`} className="tap w-full flex items-center justify-between text-left" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8, fontSize: textPx(14), color: INK.ch }}>
+              <button type="button" onClick={copy} aria-label={`Copy link, ${url}`} className="tap w-full flex items-center justify-between text-start" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8, fontSize: textPx(14), color: INK.ch }}>
                 <span className="truncate">{url}</span>
                 <Copy size={16} strokeWidth={1.75} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} />
               </button>

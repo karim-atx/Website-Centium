@@ -16,7 +16,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
       <span style={{ width: "7px", height: "7px", borderRadius: "9px", background: "#E4DCF8" }} />
       <span style={{ width: "7px", height: "7px", borderRadius: "9px", background: "#DDE8E5" }} />
       <span style={{ width: "7px", height: "7px", borderRadius: "9px", background: "#E7E3DC" }} />
-      <span style={{ marginLeft: "8px", fontSize: r.eF11, fontWeight: "700", color: "#756D63" }}>
+      <span style={{ marginInlineStart: "8px", fontSize: r.eF11, fontWeight: "700", color: "#756D63" }}>
         {sl.url}
       </span>
     </div>
@@ -91,7 +91,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
               </span>
             ))}
             {sl.cells!.map((ce, ceI) => (
-              <span key={ceI} style={{ position: "relative", minHeight: "26px", borderRadius: "7px", background: ce.bg, fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF95, color: "#756D63", display: "flex", alignItems: "center", paddingLeft: "2px" }}>
+              <span key={ceI} style={{ position: "relative", minHeight: "26px", borderRadius: "7px", background: ce.bg, fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF95, color: "#756D63", display: "flex", alignItems: "center", paddingInlineStart: "2px" }}>
                 {ce.t}
                 {ce.on ? (
                   <>
@@ -157,7 +157,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                 Published
               </span>
             </div>
-            <div style={{ paddingLeft: "68px", fontSize: "15px", fontWeight: "800" }}>
+            <div style={{ paddingInlineStart: "68px", fontSize: "15px", fontWeight: "800" }}>
               Atlas Fitness
               <div style={{ fontSize: r.eF115, fontWeight: "600", color: "#756D63" }}>
                 Achrafieh, Beirut · Gym and studio
@@ -307,7 +307,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                 Capacity
               </span>
               <span style={{ flex: "1", maxWidth: "160px", height: "6px", borderRadius: "9px", background: "linear-gradient(90deg,#EFEAFB,#B9A9EE,#4E3894)" }} />
-              <span data-w="0.8 0.95" data-stamp="" style={{ marginLeft: "auto", padding: "2px 9px", borderRadius: "99px", background: "#F4F1FB", color: "#5C48A8", fontWeight: "800", opacity: "0" }}>
+              <span data-w="0.8 0.95" data-stamp="" style={{ marginInlineStart: "auto", padding: "2px 9px", borderRadius: "99px", background: "#F4F1FB", color: "#5C48A8", fontWeight: "800", opacity: "0" }}>
                 HIIT 45 Thu · Full, 3 waitlist
               </span>
             </div>
@@ -319,7 +319,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
           <div style={{ flex: "1", display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" }}>
             <div style={{ display: "flex", height: "34px", borderRadius: "10px", overflow: "hidden", gap: "2px" }}>
               {sl.seg!.map((sg, sgI) => (
-                <span key={sgI} data-w={sg.w} data-sx="" style={{ flex: sg.f, background: sg.c, transformOrigin: "left", transform: "scaleX(0)", display: "flex", alignItems: "center", paddingLeft: "8px", fontSize: r.eF105, fontWeight: "800", color: sg.ink, whiteSpace: "nowrap", overflow: "hidden" }}>
+                <span key={sgI} data-w={sg.w} data-sx="" style={{ flex: sg.f, background: sg.c, transformOrigin: "left", transform: "scaleX(0)", display: "flex", alignItems: "center", paddingInlineStart: "8px", fontSize: r.eF105, fontWeight: "800", color: sg.ink, whiteSpace: "nowrap", overflow: "hidden" }}>
                   {sg.t}
                 </span>
               ))}
@@ -395,7 +395,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                   </div>
                 </div>
                 <div style={{ position: "relative", height: "22px", borderRadius: "6px", background: "repeating-linear-gradient(90deg,#FAF9FE 0 calc(100% / 17 - 1px),#F0EDE8 calc(100% / 17 - 1px) calc(100% / 17))" }}>
-                  <span data-w={sf.w} data-sx="" style={{ position: "absolute", top: "3px", bottom: "3px", left: sf.l, width: sf.wd, borderRadius: "5px", background: sf.c, transformOrigin: "left", transform: "scaleX(0)", fontSize: r.eF9, fontWeight: "800", color: "#fff", display: "flex", alignItems: "center", paddingLeft: "6px", whiteSpace: "nowrap", overflow: "hidden" }}>
+                  <span data-w={sf.w} data-sx="" style={{ position: "absolute", top: "3px", bottom: "3px", left: sf.l, width: sf.wd, borderRadius: "5px", background: sf.c, transformOrigin: "left", transform: "scaleX(0)", fontSize: r.eF9, fontWeight: "800", color: "#fff", display: "flex", alignItems: "center", paddingInlineStart: "6px", whiteSpace: "nowrap", overflow: "hidden" }}>
                     {sf.s}
                   </span>
                 </div>
@@ -440,7 +440,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                   </span>
                 ))}
               </div>
-              <div style={{ position: "relative", borderLeft: "1px solid #E6E1EA", borderBottom: "1px solid #E6E1EA" }}>
+              <div style={{ position: "relative", borderInlineStart: "1px solid #E6E1EA", borderBottom: "1px solid #E6E1EA" }}>
                 {sl.ticks!.map((tk, tkI) => (
                   <span key={tkI} style={{ position: "absolute", left: "0", right: "0", top: tk.y, borderTop: "1px solid #F1EEF4" }} />
                 ))}

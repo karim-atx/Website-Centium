@@ -5,6 +5,7 @@ import { CentredPopup } from "../ui/CentredPopup";
 import { StarRating } from "../ui/StarRating";
 import { useApp } from "../../context/AppContext";
 import { MAX_REVIEW_TEXT, submitReview } from "../../services/app-reviews";
+import { appLocale } from "../../i18n/format";
 
 /**
  * MO1.8.11 Rate this app, as a centred popup (no ×; outside tap and Escape
@@ -116,10 +117,10 @@ export const RateAppPopup: React.FC<{ open: boolean; onClose: () => void }> = ({
         <div className="mt-1.5 flex items-start gap-2">
           {tooLong && (
             <p role="alert" className="flex-1 min-w-0 text-[12px] font-semibold text-status-high">
-              Too long: {reviewText.length.toLocaleString("en-GB")} of {MAX_REVIEW_TEXT.toLocaleString("en-GB")} characters.
+              Too long: {reviewText.length.toLocaleString(appLocale("en-GB"))} of {MAX_REVIEW_TEXT.toLocaleString(appLocale("en-GB"))} characters.
             </p>
           )}
-          <p className={`ms-auto shrink-0 text-[11px] leading-[18px] text-right tabular-nums ${tooLong ? "text-status-high" : "text-charcoal-faint"}`}>
+          <p className={`ms-auto shrink-0 text-[11px] leading-[18px] text-end tabular-nums ${tooLong ? "text-status-high" : "text-charcoal-faint"}`}>
             {reviewText.length} / {MAX_REVIEW_TEXT}
           </p>
         </div>

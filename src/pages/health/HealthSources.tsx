@@ -32,7 +32,7 @@ export default function HealthSources() {
   return (
     <div className="pb-8">
       <PageHeader title="Sources and guidelines" showBack onBack={() => navigate("/app/health")} />
-      <HealthDisclaimer className="!text-left mb-4" />
+      <HealthDisclaimer className="!text-start mb-4" />
 
       {state.kind === "loading" && <p className="text-[13px] text-charcoal-faint">Loading…</p>}
       {state.kind === "error" && <p className="text-[13px] text-charcoal-faint">Couldn't load the sources. Please try again.</p>}

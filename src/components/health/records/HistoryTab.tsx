@@ -406,7 +406,7 @@ export const SurgerySheet: React.FC<{ open: boolean; surgery: Surgery | null; on
         <FieldLabel htmlFor="surgery-name">Procedure</FieldLabel>
         <input id="surgery-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. ACL reconstruction" className="outline-none placeholder:text-charcoal-faint" style={fieldStyle(dark, hc)} />
         <FieldLabel style={{ marginTop: 16 }}>Date</FieldLabel>
-        <button type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-left" style={{ ...fieldStyle(dark, hc), gap: 8, color: date ? undefined : INK_FAINT }}>
+        <button type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-start" style={{ ...fieldStyle(dark, hc), gap: 8, color: date ? undefined : INK_FAINT }}>
           <CalendarDays size={15} style={{ color: INK_FAINT }} aria-hidden />
           {date ? surgeryDate({ date, datePrecision: precision }) : "Choose a date"}
         </button>
@@ -457,7 +457,7 @@ const TimeRow: React.FC<{ value: string; onChange: (v: string) => void; onRemove
   return (
     <div style={{ marginTop: index ? 8 : 0 }}>
       <div className="flex items-center" style={{ gap: 8 }}>
-        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="tap flex-1 text-left" style={fieldStyle(dark, hc, 600)}>
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="tap flex-1 text-start" style={fieldStyle(dark, hc, 600)}>
           {time12(value)}
         </button>
         {onRemove && (

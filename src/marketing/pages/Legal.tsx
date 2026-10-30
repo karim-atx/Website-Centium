@@ -107,8 +107,8 @@ export const Legal: React.FC = () => {
       aria-hidden="true"
       style={{
         position: "absolute",
-        left: "0",
-        right: "0",
+        insetInlineStart: "0",
+        insetInlineEnd: "0",
         top: "0",
         height: r.lgWashH,
         transform: "scaleY(-1)",
@@ -189,7 +189,7 @@ export const Legal: React.FC = () => {
             </div>
           </details>
         </nav>
-        <div style={{ maxWidth: "68ch", textAlign: "left" }}>
+        <div style={{ maxWidth: "68ch", textAlign: "start" }}>
           {LEGAL_DOCS.map((ld) => (
             <article key={ld.id} id={ld.id} style={{ scrollMarginTop: "96px", paddingBottom: "44px", marginBottom: "44px", borderBottom: "1px solid #EDEAE4" }}>
               <span style={{ fontSize: "11px", fontWeight: "700", letterSpacing: ".22em", color: ld.c }}>{ld.num}</span>

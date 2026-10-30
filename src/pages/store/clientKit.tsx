@@ -85,7 +85,7 @@ export const ClientRow: React.FC<ClientRowProps> = ({ icon, title, sub, value, p
       {pill && <Pill label={pill.label} tone={pill.tone} />}
       {value !== undefined && value !== null && <span className="shrink-0 whitespace-nowrap text-[14px] font-bold text-charcoal tabular-nums">{value}</span>}
       {trailing}
-      {(chevron ?? !!onClick) && onClick && <ChevronRight size={15} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />}
+      {(chevron ?? !!onClick) && onClick && <ChevronRight size={15} aria-hidden className="shrink-0 text-charcoal-faint" />}
     </>
   );
   const cls = "w-full flex items-center text-start border-t-[0.5px] border-charcoal/[0.08] first:border-t-0";

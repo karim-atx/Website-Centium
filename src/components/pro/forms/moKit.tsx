@@ -30,7 +30,7 @@ import { INK } from "../proInk";
 
 export const CHead: React.FC<{ title: string; sub?: string; onBack: () => void; right?: React.ReactNode }> = ({ title, sub, onBack, right }) => (
   <div className="flex items-start" style={{ gap: 6, marginBottom: 16 }}>
-    <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginLeft: -7, borderRadius: 9999 }}>
+    <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -7, borderRadius: 9999 }}>
       <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
     </button>
     <div className="flex-1 min-w-0" style={{ marginTop: 3 }}>
@@ -71,7 +71,7 @@ export function RadioRows<V extends string>({ rows, value, onChange, label }: { 
             aria-checked={on}
             aria-disabled={r.disabled || undefined}
             onClick={() => !r.disabled && onChange(r.value)}
-            className="tap w-full flex items-center text-left"
+            className="tap w-full flex items-center text-start"
             style={{ gap: 12, padding: "11px 12px", borderRadius: 14, border: `1px solid ${on ? INK.pr : INK.b10}`, background: on ? INK.prPale : INK.card, minHeight: 44, opacity: r.disabled ? 0.55 : 1 }}
           >
             <span className="flex items-center justify-center shrink-0" style={{ width: 20, height: 20, borderRadius: 9999, border: `2px solid ${on ? INK.prDeep : "rgb(var(--c-charcoal) / 0.11)"}` }}>
@@ -206,7 +206,7 @@ export const TopToast: React.FC<{ icon: LucideIcon; text: string | null; tone?: 
   }, [text, onDone]);
   if (!text) return null;
   return (
-    <div role="status" className="fixed z-40 flex items-center" style={{ left: "calc(var(--app-gutter, 0px) + 16px)", right: "calc(var(--app-gutter, 0px) + 16px)", top: 16, gap: 10, borderRadius: 16, background: INK.card, boxShadow: "0 10px 40px rgba(36,31,27,0.18)", padding: "12px 14px" }}>
+    <div role="status" className="fixed z-40 flex items-center" style={{ insetInlineStart: "calc(var(--app-gutter, 0px) + 16px)", insetInlineEnd: "calc(var(--app-gutter, 0px) + 16px)", top: 16, gap: 10, borderRadius: 16, background: INK.card, boxShadow: "0 10px 40px rgba(36,31,27,0.18)", padding: "12px 14px" }}>
       <Icon size={18} strokeWidth={2} aria-hidden style={{ color: tone === "good" ? INK.good : INK.prDeep, flexShrink: 0 }} />
       <span className="flex-1" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch, lineHeight: 1.4 }}>
         {text}

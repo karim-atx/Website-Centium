@@ -226,7 +226,7 @@ export function OverviewSection() {
               justifyContent: "center",
               textAlign: "center",
               padding: "18px 8px 16px",
-              borderLeft: i % 2 ? `1px solid ${c.hair}` : "none",
+              borderInlineStart: i % 2 ? `1px solid ${c.hair}` : "none",
               borderTop: i > 1 ? `1px solid ${c.hair}` : "none",
             }}
           >
@@ -357,7 +357,7 @@ function InsightCard({
         <span style={{ width: 30, height: 30, borderRadius: 10, background: tint(col, c.dark ? 0.2 : 0.14), color: col, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <Icon size={15} strokeWidth={2.2} aria-hidden />
         </span>
-        <span style={{ flex: 1, fontSize: textPx(13), fontWeight: 800, lineHeight: linePx(17), color: c.ink, textAlign: "left" }}>{title}</span>
+        <span style={{ flex: 1, fontSize: textPx(13), fontWeight: 800, lineHeight: linePx(17), color: c.ink, textAlign: "start" }}>{title}</span>
         {onOpen && <ChevronRight size={15} color={c.faint} aria-hidden />}
       </div>
       {data ? (
@@ -368,7 +368,7 @@ function InsightCard({
             </span>
             {data.delta && <span style={{ fontSize: textPx(11), fontWeight: 700, color: data.up ? c.good : c.faint, whiteSpace: "nowrap" }}>{data.delta}</span>}
           </div>
-          <p style={{ fontSize: textPx(10.5), lineHeight: linePx(14), color: c.faint, margin: 0, textAlign: "left" }}>{data.sub}</p>
+          <p style={{ fontSize: textPx(10.5), lineHeight: linePx(14), color: c.faint, margin: 0, textAlign: "start" }}>{data.sub}</p>
         </>
       ) : (
         <>
@@ -391,7 +391,7 @@ function InsightCard({
     minWidth: 0,
   };
   return onOpen ? (
-    <button type="button" data-insight={title} onClick={onOpen} className="tap" style={{ ...style, cursor: "pointer", font: "inherit", textAlign: "left" }}>
+    <button type="button" data-insight={title} onClick={onOpen} className="tap" style={{ ...style, cursor: "pointer", font: "inherit", textAlign: "start" }}>
       {body}
     </button>
   ) : (

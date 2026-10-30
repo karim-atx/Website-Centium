@@ -42,6 +42,7 @@ import { CONSENT_REQUIRED_MESSAGE, formPhotoUrls, removeFormPhoto, saveFormRespo
 import { consentBox, consentLine, DOCTOR_FOLLOW_UP, GET_SUPPORT, SEE_WARNING_SIGNS, SUPPORT_PROMPT, thanksLine, URGENT_NUMBER } from "./copy";
 import { clearLocalDraft, readLocalDraft, writeLocalDraft } from "../../services/client-forms/localDraft";
 import { ProfileProposals } from "./ProfileProposals";
+import { appLocale } from "../../i18n/format";
 
 /**
  * Release 3 · W7 CU6 v3 / CU26: a professional's check-in or intake, filled
@@ -327,7 +328,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
       type="button"
       aria-pressed={selected}
       onClick={onClick}
-      className={`tap min-h-[44px] rounded-xl px-3 py-2.5 text-[12px] font-semibold border ${centred ? "text-center" : "text-left"} ${
+      className={`tap min-h-[44px] rounded-xl px-3 py-2.5 text-[12px] font-semibold border ${centred ? "text-center" : "text-start"} ${
         selected ? "bg-primary-fill text-on-primary-fill border-primary-fill" : "bg-cream-card text-charcoal border-charcoal/[0.1]"
       }`}
     >
@@ -365,7 +366,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
             {(q.scaleMinLabel || q.scaleMaxLabel) && (
               <p className="flex justify-between" style={{ gap: 12, marginTop: 6, fontSize: textPx(11), lineHeight: 1.4, color: INK.chF }}>
                 <span className="min-w-0">{q.scaleMinLabel ? `${values[0] ?? q.scaleMin} = ${q.scaleMinLabel}` : ""}</span>
-                <span className="min-w-0 text-right">{q.scaleMaxLabel ? `${values[values.length - 1] ?? q.scaleMax} = ${q.scaleMaxLabel}` : ""}</span>
+                <span className="min-w-0 text-end">{q.scaleMaxLabel ? `${values[values.length - 1] ?? q.scaleMax} = ${q.scaleMaxLabel}` : ""}</span>
               </p>
             )}
           </>
@@ -405,7 +406,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
               {list.map((p) => (
                 <span key={p} className="relative overflow-hidden" style={{ height: 96, borderRadius: 12, background: INK.soft }}>
                   {photoUrls[p] && <img src={photoUrls[p]} alt="" className="w-full h-full object-cover" />}
-                  <button type="button" onClick={() => dropPhoto(q, p)} aria-label="Remove photo" className="tap absolute top-1 right-1 w-11 h-11 flex items-start justify-end p-1">
+                  <button type="button" onClick={() => dropPhoto(q, p)} aria-label="Remove photo" className="tap absolute top-1 end-1 w-11 h-11 flex items-start justify-end p-1">
                     <span className="flex items-center justify-center rounded-full" style={{ width: 22, height: 22, background: "rgba(36,31,27,0.55)", color: "#FFFFFF" }}>
                       <X size={12} strokeWidth={2.4} aria-hidden />
                     </span>
@@ -446,7 +447,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
               style={{ ...field(errors.includes(q.id)), minHeight: 120, padding: 12, fontSize: textPx(12.5), lineHeight: 1.5, color: INK.ch }}
             />
             {text.length > LONG_TEXT_MAX - 500 && (
-              <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 4, textAlign: "right" }}>{`${text.length.toLocaleString("en-GB")} of ${LONG_TEXT_MAX.toLocaleString("en-GB")}`}</p>
+              <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 4, textAlign: "end" }}>{`${text.length.toLocaleString(appLocale("en-GB"))} of ${LONG_TEXT_MAX.toLocaleString(appLocale("en-GB"))}`}</p>
             )}
           </>
         );
@@ -468,7 +469,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
   };
 
   const promptLink = (icon: React.ReactNode, label: string, onClick: () => void) => (
-    <button type="button" onClick={onClick} className="tap inline-flex items-center text-left text-primary-dark" style={{ gap: 6, minHeight: 44, fontSize: textPx(12.5), fontWeight: 700 }}>
+    <button type="button" onClick={onClick} className="tap inline-flex items-center text-start text-primary-dark" style={{ gap: 6, minHeight: 44, fontSize: textPx(12.5), fontWeight: 700 }}>
       {icon}
       {label}
     </button>
@@ -538,7 +539,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
             setConsent((c) => !c);
             setSendError((e) => (e === CONSENT_REQUIRED_MESSAGE ? null : e));
           }}
-          className="tap w-full flex items-center text-left"
+          className="tap w-full flex items-center text-start"
           style={{ gap: 12, minHeight: 44, marginBottom: 8 }}
         >
           <span

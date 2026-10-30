@@ -163,7 +163,7 @@ export const PinnedSlot: React.FC<{ aboveKeyboard?: boolean; children: React.Rea
     <div
       className={clsx(
         "fixed z-20 flex flex-col gap-2",
-        "left-[calc(var(--app-gutter)+16px)] right-[calc(var(--app-gutter)+16px)]",
+        "start-[calc(var(--app-gutter)+16px)] end-[calc(var(--app-gutter)+16px)]",
         // The client navbar floats at every width, so this holds at desktop
         // sizes too.
         aboveKeyboard

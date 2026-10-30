@@ -17,7 +17,7 @@ export const NutritionDetails: React.FC<{ children: React.ReactNode }> = ({ chil
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="tap w-full flex items-center text-left"
+        className="tap w-full flex items-center text-start"
         style={{ gap: 8, padding: "4px 2px", background: "none", border: "none" }}
       >
         <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12.5), fontWeight: 700, color: "rgb(var(--c-charcoal-soft))" }}>

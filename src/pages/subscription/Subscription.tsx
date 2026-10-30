@@ -72,7 +72,7 @@ const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button
     onClick={onClick}
     aria-label="Back"
-    className="tap w-9 h-9 -ml-2 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft mb-4"
+    className="tap w-9 h-9 -ms-2 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft mb-4"
   >
     <ChevronLeft size={20} />
   </button>

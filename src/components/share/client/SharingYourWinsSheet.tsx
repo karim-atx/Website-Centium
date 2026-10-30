@@ -159,7 +159,7 @@ export const SharingYourWinsSheet: React.FC<{
         )}
 
         {(status === "error" || status === "offline") && (
-          <div className="flex items-center" style={{ gap: 10, borderRadius: 16, background: INK.soft, padding: "6px 6px 6px 14px", marginTop: 14 }}>
+          <div className="flex items-center" style={{ gap: 10, borderRadius: 16, background: INK.soft, paddingBlock: "6px", paddingInline: "14px 6px", marginTop: 14 }}>
             <p role="alert" className="flex-1 min-w-0" style={{ fontSize: textPx(12), lineHeight: 1.45, color: INK.chS }}>
               {status === "offline" ? "You're offline. Your sharing settings show when you're back online." : "Couldn't load your sharing settings."}
             </p>
@@ -328,7 +328,7 @@ export const SharingYourWinsRow: React.FC<{ me: string | null; connectedCount: n
           <span className="block text-[15px] font-semibold text-charcoal">Sharing your wins</span>
           {setting && <span className="block text-[11.5px] leading-tight text-charcoal-faint">{WIN_SHARING_LABEL[setting]}</span>}
         </span>
-        <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+        <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
       </button>
       <SharingYourWinsSheet open={open} onClose={() => setOpen(false)} me={me} onSettingChange={setSetting} />
     </>

@@ -113,7 +113,7 @@ export const OfferPlansSheet: React.FC<{
                   role="checkbox"
                   aria-checked={on}
                   onClick={() => toggle(p.id)}
-                  className="tap w-full flex items-center text-left"
+                  className="tap w-full flex items-center text-start"
                   style={{
                     gap: 14,
                     padding: "14px 16px",

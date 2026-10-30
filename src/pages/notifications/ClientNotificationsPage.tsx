@@ -159,7 +159,7 @@ export default function ClientNotificationsPage() {
   return (
     <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "-4px 0 6px -10px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBlock: "-4px 6px", marginInline: "-10px 0" }}>
         <button
           type="button"
           onClick={back}
@@ -260,13 +260,13 @@ export const NotificationRow: React.FC<{
         gap: 12,
         padding: "12px 14px",
         borderTop: first ? 0 : `0.5px solid ${dark ? m.div : "rgba(36,31,27,0.06)"}`,
-        borderLeft: 0,
-        borderRight: 0,
+        borderInlineStart: 0,
+        borderInlineEnd: 0,
         borderBottom: 0,
         background: unread ? (dark ? "rgba(169,145,254,0.08)" : "#FBFAFE") : dark ? m.card : "#FFFFFF",
         font: "inherit",
         color: m.ink,
-        textAlign: "left",
+        textAlign: "start",
         cursor: opens || unread ? "pointer" : "default",
       }}
     >

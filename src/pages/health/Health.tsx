@@ -33,6 +33,7 @@ import { getMyCarePlan, type MyCarePlan } from "../../services/care-plan";
 import { fromLine, shortDay } from "../../services/care-plan/logic";
 import { activityByDay, localDay, syncState, useActivityDaily, useHealthSources, useDrinks, useMetricRows, useSleepSessions, whenText } from "../../services/health-metrics/b1";
 import { OFFLINE_CACHED, hairline, useHealthMode, useMetricsLoad } from "../../components/health/metric/MetricKit";
+import { appLocale } from "../../i18n/format";
 
 // HE1 · Health (v6 Part B, health-handover.md HE1; checklist
 // design-handover/v5-partB/frame-check/HE1.md). Replaces the History-style
@@ -295,7 +296,7 @@ export default function Health() {
         <div
           role="alert"
           className="flex items-center justify-between"
-          style={{ marginTop: 10, borderRadius: 12, padding: "4px 4px 4px 12px", gap: 8, background: dark ? "#3C2A30" : "#FBE7E4" }}
+          style={{ marginTop: 10, borderRadius: 12, paddingBlock: "4px", paddingInline: "12px 4px", gap: 8, background: dark ? "#3C2A30" : "#FBE7E4" }}
         >
           <span style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: dark ? "#F09A8E" : "#C0392B" }}>Couldn't load your health data.</span>
           <button
@@ -333,10 +334,10 @@ export default function Health() {
           label="Steps"
           value={steps === null ? undefined : formatMetric("steps", steps)}
           graphic={steps === null ? undefined : <StepsArcMini fraction={steps / stepsGoal} dark={dark} />}
-          context={`of ${stepsGoal.toLocaleString()} steps`}
+          context={`of ${stepsGoal.toLocaleString(appLocale())} steps`}
           state={ld(steps === null ? "empty" : "ready")}
           emptyHint={NO_DEVICE}
-          ariaLabel={steps === null ? "Steps, no readings yet" : `Steps, ${formatMetric("steps", steps)} of ${stepsGoal.toLocaleString()}`}
+          ariaLabel={steps === null ? "Steps, no readings yet" : `Steps, ${formatMetric("steps", steps)} of ${stepsGoal.toLocaleString(appLocale())}`}
           onClick={() => go("/app/health/steps")}
         />
         <MetricWidget
@@ -361,10 +362,10 @@ export default function Health() {
             value={kcal === null ? undefined : formatMetric("caloriesBurned", kcal)}
             unit="kcal"
             graphic={kcal === null ? undefined : <CaloriesGaugeMini fraction={kcal / KCAL_GOAL} dark={dark} />}
-            context={`of ${KCAL_GOAL.toLocaleString()} kcal`}
+            context={`of ${KCAL_GOAL.toLocaleString(appLocale())} kcal`}
             state={ld(kcal === null ? "empty" : "ready")}
             emptyHint={NO_DEVICE}
-            ariaLabel={kcal === null ? "Calories burned, no readings yet" : `Calories burned, ${formatMetric("caloriesBurned", kcal)} of ${KCAL_GOAL.toLocaleString()} kilocalories`}
+            ariaLabel={kcal === null ? "Calories burned, no readings yet" : `Calories burned, ${formatMetric("caloriesBurned", kcal)} of ${KCAL_GOAL.toLocaleString(appLocale())} kilocalories`}
             onClick={() => go("/app/health/calories")}
           />
         )}
@@ -516,7 +517,7 @@ export default function Health() {
         type="button"
         onClick={() => setAddMetricOpen(true)}
         aria-label="Add metric"
-        className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+20px)] z-30 rounded-full flex items-center justify-center"
+        className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] end-[calc(var(--app-gutter)+20px)] z-30 rounded-full flex items-center justify-center"
         style={{
           width: 56,
           height: 56,
@@ -567,7 +568,7 @@ function RecordRow({ icon, title, subtitle, onClick, radius = 18 }: { icon: Reac
     <button
       type="button"
       onClick={onClick}
-      className="tap relative w-full flex items-center text-left"
+      className="tap relative w-full flex items-center text-start"
       style={{
         minHeight: 60,
         borderRadius: radius,
@@ -591,7 +592,7 @@ function RecordRow({ icon, title, subtitle, onClick, radius = 18 }: { icon: Reac
           </span>
         )}
       </span>
-      <ChevronRight size={17} aria-hidden className="absolute" style={{ right: 13.5, top: "50%", marginTop: -8.5, color: "rgb(var(--c-charcoal-faint))" }} />
+      <ChevronRight size={17} aria-hidden className="absolute" style={{ insetInlineEnd: 13.5, top: "50%", marginTop: -8.5, color: "rgb(var(--c-charcoal-faint))" }} />
     </button>
   );
 }

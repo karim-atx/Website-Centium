@@ -107,7 +107,7 @@ export const PregnancyOverview: React.FC<{
             <button
               key={to}
               onClick={() => navigate(to)}
-              className="tap w-full flex items-center gap-2.5 py-2 text-left"
+              className="tap w-full flex items-center gap-2.5 py-2 text-start"
             >
               <Icon size={15} style={{ color: PREGNANCY_COLOR }} className="shrink-0" />
               <span className="flex-1 text-[12.5px] font-semibold text-charcoal">{label}</span>

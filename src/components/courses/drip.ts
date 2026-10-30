@@ -1,3 +1,4 @@
+import { appLocale } from "../../i18n/format";
 // CU25 (Release 3, DB-6): a course that opens a week at a time, as the
 // enrolled learner sees it. Pure, so the wording and the "which week is next"
 // rule are tested without Supabase.
@@ -49,8 +50,8 @@ export function nextLocked(rows: DripRow[]): DripRow | null {
 export function openingDay(opensAt: string): { weekday: string; date: string } {
   const d = new Date(opensAt);
   return {
-    weekday: d.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" }),
-    date: d.toLocaleDateString("en-US", { day: "numeric", month: "short", timeZone: "UTC" }),
+    weekday: d.toLocaleDateString(appLocale("en-US"), { weekday: "long", timeZone: "UTC" }),
+    date: d.toLocaleDateString(appLocale("en-US"), { day: "numeric", month: "short", timeZone: "UTC" }),
   };
 }
 

@@ -86,7 +86,7 @@ export function MealPlanCard({ userId, today, card, title, hideNumbers }: { user
   return (
     <section style={card}>
       <p style={{ ...title, marginBottom: 10 }}>Meal plan from {who}</p>
-      <button type="button" onClick={() => setOpen(true)} className="tap w-full flex items-center text-left" style={{ gap: 10, minHeight: 44 }}>
+      <button type="button" onClick={() => setOpen(true)} className="tap w-full flex items-center text-start" style={{ gap: 10, minHeight: 44 }}>
         <ProAvatar name={plan.professionalName} size={28} />
         <span className="flex-1 min-w-0">
           <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>

@@ -7,6 +7,7 @@ import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { hiddenInRecovery, LEVEL_LABEL } from "../../services/achievements";
 import { pillColours } from "./achievementStyle";
 import { AchievementIcon } from "./AchievementIcon";
+import { appLocale } from "../../i18n/format";
 
 // The unlock moment, v6 MO1.1.3.2: a pill at the top of whatever page earned
 // it (K1: rendered in Layout, not in Mind).
@@ -192,7 +193,7 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
           transition: dragging ? "opacity 0ms" : `transform ${timing}, opacity ${timing}`,
         }}
       >
-        <span className="flex items-center min-h-[57px] pl-[5px] pr-5 py-[4.5px]">
+        <span className="flex items-center min-h-[57px] ps-[5px] pe-5 py-[4.5px]">
           {/* #56-#57: the 48 coin, 1 px ring in the level ink, the 40 medallion. */}
           <span
             className="shrink-0 w-12 h-12 rounded-full border flex items-center justify-center bg-cream-card"
@@ -201,7 +202,7 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
             <AchievementIcon achievementKey={achievement.key} emoji={achievement.icon} size={40} />
           </span>
           {/* #58-#60: text from 64 in; #61: points 10 after it. */}
-          <span className="flex-1 min-w-0 ml-[11px] mr-2.5">
+          <span className="flex-1 min-w-0 ms-[11px] me-2.5">
             <span className="block text-[9px] leading-[12px] font-extrabold tracking-[1.3px] uppercase" style={{ color: c.ink }}>
               Achievement unlocked
             </span>
@@ -223,7 +224,7 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
             className="shrink-0 text-[16px] leading-[20px] font-extrabold tabular-nums"
             style={{ color: c.ink }}
           >
-            {achievement.points > 0 ? `+${achievement.points.toLocaleString()}` : "No points"}
+            {achievement.points > 0 ? `+${achievement.points.toLocaleString(appLocale())}` : "No points"}
           </span>
         </span>
 
@@ -235,7 +236,7 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
               <span
                 className="absolute top-1/2 w-[81.3px] h-[96.9px] -translate-y-1/2"
                 style={{
-                  left: -82,
+                  insetInlineStart: -82,
                   background: `linear-gradient(90deg, transparent 0%, ${c.sheen} 30%, ${c.sheenMid} 50%, ${c.sheen} 70%, transparent 100%)`,
                 }}
               />

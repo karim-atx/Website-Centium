@@ -139,7 +139,7 @@ export const ThreadList: React.FC<{
                 <button
                   type="button"
                   onClick={() => onOpenInvitation(inv)}
-                  className="tap w-full flex items-center gap-3 px-1 py-3 min-h-[72px] text-left"
+                  className="tap w-full flex items-center gap-3 px-1 py-3 min-h-[72px] text-start"
                   style={{ background: c.rowFill }}
                 >
                   <TypeTile kind="group" c={c} />
@@ -169,7 +169,7 @@ export const ThreadList: React.FC<{
             if (pro)
               return (
                 <li key={`bc-${list.id}`} style={{ borderBottom: `1px solid ${PRO_RULE}` }}>
-                  <button type="button" onClick={() => onOpenBroadcast(list)} className="tap w-full text-left">
+                  <button type="button" onClick={() => onOpenBroadcast(list)} className="tap w-full text-start">
                     <ProRowBody
                       avatar={<ProTile kind="broadcast" />}
                       name={list.name}
@@ -189,7 +189,7 @@ export const ThreadList: React.FC<{
                 <button
                   type="button"
                   onClick={() => onOpenBroadcast(list)}
-                  className="tap w-full flex items-center gap-3 px-1 py-3 min-h-[72px] text-left"
+                  className="tap w-full flex items-center gap-3 px-1 py-3 min-h-[72px] text-start"
                   style={{ background: c.rowFill }}
                 >
                   <TypeTile kind="broadcast" c={c} />
@@ -393,7 +393,7 @@ const ThreadRow: React.FC<{
           }
         }}
         data-biz-row=""
-        className="relative w-full flex items-center gap-3 min-h-[71px] px-2 py-2.5 rounded-[14px] text-left transition-colors duration-100 active:bg-primary-pale"
+        className="relative w-full flex items-center gap-3 min-h-[71px] px-2 py-2.5 rounded-[14px] text-start transition-colors duration-100 active:bg-primary-pale"
       >
         <span className="relative shrink-0">
           <BizAvatar thread={t} size={48} />
@@ -401,7 +401,7 @@ const ThreadRow: React.FC<{
             <span
               aria-label="Online"
               data-row-online=""
-              className="absolute right-px bottom-px w-3 h-3 rounded-full"
+              className="absolute end-px bottom-px w-3 h-3 rounded-full"
               style={{ background: bc.online, boxShadow: "0 0 0 2px rgb(var(--c-cream))" }}
             />
           )}
@@ -463,7 +463,7 @@ const ThreadRow: React.FC<{
           data-row-more=""
           aria-label={`More for chat with ${name}`}
           onClick={(e) => onMenu(e.currentTarget)}
-          className="tap absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center bg-cream text-charcoal-soft opacity-0 focus-visible:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
+          className="tap absolute end-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center bg-cream text-charcoal-soft opacity-0 focus-visible:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
         >
           <MoreVertical size={18} aria-hidden />
         </button>
@@ -506,7 +506,7 @@ const ThreadRow: React.FC<{
             if (rowRef.current) onMenu(rowRef.current);
           }
         }}
-        className="tap w-full flex items-center gap-3 px-1 py-3 min-h-[72px] text-left"
+        className="tap w-full flex items-center gap-3 px-1 py-3 min-h-[72px] text-start"
       >
         <span className="relative shrink-0">
           <Avatar thread={t} c={c} />
@@ -514,7 +514,7 @@ const ThreadRow: React.FC<{
           {online && (
             <span
               aria-label="Online"
-              className="absolute right-px bottom-px w-[11px] h-[11px] rounded-full border-2"
+              className="absolute end-px bottom-px w-[11px] h-[11px] rounded-full border-2"
               style={{ background: "#2E9E6B", borderColor: c.rowFill }}
             />
           )}
@@ -594,7 +594,7 @@ const ThreadRow: React.FC<{
           data-row-more=""
           aria-label={`More for chat with ${name}`}
           onClick={(e) => onMenu(e.currentTarget)}
-          className="tap absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center opacity-0 focus-visible:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
+          className="tap absolute end-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center opacity-0 focus-visible:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
           style={{ background: c.rowFill, color: c.inkSoft }}
         >
           <MoreVertical size={18} aria-hidden />
@@ -616,7 +616,7 @@ const ThreadRow: React.FC<{
             if (rowRef.current) onMenu(rowRef.current);
           }
         }}
-        className="tap w-full text-left"
+        className="tap w-full text-start"
       >
         <ProRowBody
           avatar={
@@ -626,7 +626,7 @@ const ThreadRow: React.FC<{
                 <span
                   aria-label="Online"
                   className="absolute rounded-full"
-                  style={{ right: 1, bottom: 1, width: 11, height: 11, background: "#2E9E6B", border: "2px solid rgb(var(--c-cream))" }}
+                  style={{ insetInlineEnd: 1, bottom: 1, width: 11, height: 11, background: "#2E9E6B", border: "2px solid rgb(var(--c-cream))" }}
                 />
               )}
             </span>
@@ -662,7 +662,7 @@ const ThreadRow: React.FC<{
           data-row-more=""
           aria-label={`More for chat with ${name}`}
           onClick={(e) => onMenu(e.currentTarget)}
-          className="tap absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center opacity-0 focus-visible:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
+          className="tap absolute end-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center opacity-0 focus-visible:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
           style={{ background: "rgb(var(--c-cream))", color: c.inkSoft }}
         >
           <MoreVertical size={18} aria-hidden />

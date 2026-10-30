@@ -91,7 +91,7 @@ export const ProServicesStep: React.FC<ProStepProps> = ({ kind, pro, setPro, onN
       }
     >
       <div style={{ position: "relative" }}>
-        <span ref={setAnchor} aria-hidden style={{ position: "absolute", left: 0, top: 48, width: 0, height: 0 }} />
+        <span ref={setAnchor} aria-hidden style={{ position: "absolute", insetInlineStart: 0, top: 48, width: 0, height: 0 }} />
         <Chips
           label="Specialties"
           tag="Up to 5"

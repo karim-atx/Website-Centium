@@ -61,7 +61,7 @@ export const ImagingTab: React.FC<{
               type="button"
               onClick={() => r.filePath && onView(r)}
               disabled={!r.filePath}
-              className="tap w-full flex items-center text-left"
+              className="tap w-full flex items-center text-start"
               style={{ minHeight: 66, padding: "9px 14px", gap: 11, background: "rgb(var(--c-cream-card))" }}
             >
               <RowTile icon={ScanLine} />
@@ -93,7 +93,7 @@ export const ImagingTab: React.FC<{
                 ]}
               >
                 <div className="flex items-center" style={{ minHeight: 66, padding: "9px 14px", gap: 11, background: "rgb(var(--c-cream-card))" }}>
-                  <button type="button" onClick={() => (r.filePath ? onView(r) : onEdit(r))} className="tap flex-1 min-w-0 flex items-center text-left" style={{ gap: 11 }}>
+                  <button type="button" onClick={() => (r.filePath ? onView(r) : onEdit(r))} className="tap flex-1 min-w-0 flex items-center text-start" style={{ gap: 11 }}>
                     <RowTile icon={ScanLine} />
                     <RowText title={r.type} meta={r.note ? `${fmtDate(r.date)} · ${r.note}` : fmtDate(r.date)} />
                   </button>

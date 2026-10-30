@@ -55,7 +55,7 @@ export const HealthChecksNotificationRow: React.FC<{
         <button
           type="button"
           onClick={() => navigate("/app/settings/notifications/health-checks")}
-          className="tap block max-w-full truncate text-left text-charcoal-faint"
+          className="tap block max-w-full truncate text-start text-charcoal-faint"
           style={{ fontSize: textPx(11), lineHeight: "15px" }}
         >
           {store.status === "ready" ? reminderCountLine(names) : " "}

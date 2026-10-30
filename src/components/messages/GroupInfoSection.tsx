@@ -176,7 +176,7 @@ export const GroupInfoSection: React.FC<{
             </span>
             <span className="flex-1 min-w-0 text-sm font-semibold text-charcoal truncate">
               {m.userId === authUserId ? "You" : m.firstName}
-              {m.role === "owner" && <span className="ml-1.5 text-xs font-bold text-primary-deep-text">Host</span>}
+              {m.role === "owner" && <span className="ms-1.5 text-xs font-bold text-primary-deep-text">Host</span>}
             </span>
             {isHost && open && m.role !== "owner" && (
               <button
@@ -391,10 +391,10 @@ const ProGroupInfo: React.FC<{
             <Avatar name={m.firstName?.trim() || "?"} url={m.avatarUrl} size={36} />
             <span className="flex-1 min-w-0" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
               {m.userId === p.authUserId ? "You" : m.firstName}
-              {m.role === "owner" && <span style={{ marginLeft: 6, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>Admin</span>}
+              {m.role === "owner" && <span style={{ marginInlineStart: 6, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>Admin</span>}
             </span>
             {admin && m.role !== "owner" && (
-              <button type="button" onClick={() => p.setConfirm({ remove: m })} className="tap shrink-0" style={{ minHeight: 44, paddingLeft: 8, fontSize: textPx(13), fontWeight: 600, color: INK.hi }}>
+              <button type="button" onClick={() => p.setConfirm({ remove: m })} className="tap shrink-0" style={{ minHeight: 44, paddingInlineStart: 8, fontSize: textPx(13), fontWeight: 600, color: INK.hi }}>
                 Remove
               </button>
             )}
@@ -418,7 +418,7 @@ const ProGroupInfo: React.FC<{
         <div>
           {p.isHost && (
             <section style={{ ...card, padding: "2px 14px", marginBottom: 10 }}>
-              <button type="button" onClick={p.startRename} className="tap w-full flex items-center text-left" style={{ gap: 12, minHeight: 52 }}>
+              <button type="button" onClick={p.startRename} className="tap w-full flex items-center text-start" style={{ gap: 12, minHeight: 52 }}>
                 <Pencil size={17} strokeWidth={1.75} aria-hidden style={{ color: INK.chS }} />
                 <span className="flex-1" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>
                   Rename or edit description
@@ -428,7 +428,7 @@ const ProGroupInfo: React.FC<{
             </section>
           )}
           <section style={{ ...card, padding: "2px 14px" }}>
-            <button type="button" onClick={() => p.setConfirm(p.isHost ? "close" : "leave")} className="tap w-full flex items-center text-left" style={{ minHeight: 52, fontSize: textPx(14), fontWeight: 700, color: INK.hi }}>
+            <button type="button" onClick={() => p.setConfirm(p.isHost ? "close" : "leave")} className="tap w-full flex items-center text-start" style={{ minHeight: 52, fontSize: textPx(14), fontWeight: 700, color: INK.hi }}>
               {p.isHost ? "End group" : "Leave group"}
             </button>
           </section>

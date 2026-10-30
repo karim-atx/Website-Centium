@@ -334,7 +334,7 @@ export default function NearbyMap({
         aria-label="Use my location"
         // MO1.2.2 #9: 40 x 40, white, round; the glyph #7D6BB5 (sampled; new
         // in the redesign, so the handover's colour, decision 22).
-        className="tap absolute top-3 right-3 z-[3] w-10 h-10 rounded-full bg-cream-card shadow-md flex items-center justify-center text-th-7d6bb5 dark:text-primary-deep-text"
+        className="tap absolute top-3 end-3 z-[3] w-10 h-10 rounded-full bg-cream-card shadow-md flex items-center justify-center text-th-7d6bb5 dark:text-primary-deep-text"
       >
         <LocateFixed size={17} strokeWidth={1.75} />
       </button>

@@ -78,7 +78,7 @@ export default function HealthCheckRemindersPage() {
   return (
     <div style={{ paddingBottom: 96 }}>
       <FixedHeader paddingBottom={10}>
-        <div className="flex items-center" style={{ gap: 6, marginLeft: -7.5, minHeight: 36 }}>
+        <div className="flex items-center" style={{ gap: 6, marginInlineStart: -7.5, minHeight: 36 }}>
           <button
             type="button"
             onClick={() => (window.history.length > 1 ? back() : navigate("/app/settings/notifications"))}
@@ -163,8 +163,8 @@ export default function HealthCheckRemindersPage() {
                 <button
                   type="button"
                   onClick={() => setEditing(r)}
-                  className="tap w-full flex items-center bg-cream-card text-left"
-                  style={{ minHeight: 72, padding: "10px 14px 10px 12px", gap: 10, borderTop: i > 0 ? `0.5px solid ${hairAt(dark, 0.05)}` : undefined }}
+                  className="tap w-full flex items-center bg-cream-card text-start"
+                  style={{ minHeight: 72, paddingBlock: "10px", paddingInline: "12px 14px", gap: 10, borderTop: i > 0 ? `0.5px solid ${hairAt(dark, 0.05)}` : undefined }}
                 >
                   <CheckTile id={r.checkId.startsWith("custom-") ? "custom" : r.checkId} />
                   <span className="flex-1 min-w-0">

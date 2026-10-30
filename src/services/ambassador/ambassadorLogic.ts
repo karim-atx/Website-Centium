@@ -1,3 +1,4 @@
+import { appLocale } from "../../i18n/format";
 // Release B · B2 Ambassador applications (PLAN S3, Database
 // 20261217040000_applying_to_be_an_ambassador): the pure parts, tested
 // without a database (ambassadorLogic.test.ts). The I/O lives in ./index.ts.
@@ -83,7 +84,7 @@ export function shortDayMonth(value: string): string | null {
   const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   const d = day ? new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3])) : new Date(value);
   if (Number.isNaN(d.getTime())) return null;
-  return `${d.toLocaleDateString("en-US", { month: "short" })} ${d.getDate()}`;
+  return `${d.toLocaleDateString(appLocale("en-US"), { month: "short" })} ${d.getDate()}`;
 }
 
 /** The figure an ambassador earns per friend (PLAN S3 "What you get").
@@ -93,7 +94,7 @@ export function shortDayMonth(value: string): string | null {
 export const AMBASSADOR_REFERRER_POINTS = 2000;
 
 export function whatYouGetLine(points = AMBASSADOR_REFERRER_POINTS): string {
-  return `${points.toLocaleString("en-US")} points per friend who joins`;
+  return `${points.toLocaleString(appLocale("en-US"))} points per friend who joins`;
 }
 
 export interface ChecklistRow {

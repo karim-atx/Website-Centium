@@ -13,6 +13,7 @@ import { addDays, bucketLabel, bucketTitle, bucketsFor, calorieBand, fewestMeals
 import { InsightCard, InsightLine, NotShared, type PickerClient } from "./parts";
 import { readGate, useRead } from "./reads";
 import type { PanelProps } from "./panelProps";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · W5 Insights › Nutrition (TR9 v5 "leaf streak, one fixed
@@ -32,7 +33,7 @@ import type { PanelProps } from "./panelProps";
  * read only (kcal average, days logged, salt over the 5 g limit).
  */
 
-const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
+const fmt = (n: number) => Math.round(n).toLocaleString(appLocale("en-GB"));
 /** Salt (g) from sodium (mg): × 2.5 ÷ 1000. */
 const saltOf = (sodiumMg: number) => (sodiumMg * 2.5) / 1000;
 

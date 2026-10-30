@@ -65,7 +65,7 @@ export const ClientPicker: React.FC<{
             disabled={fixed}
             onClick={() => onToggle(c.userId)}
             aria-pressed={on}
-            className="tap w-full flex items-center gap-3 px-1 min-h-[56px] text-left border-b border-charcoal/[0.06] disabled:opacity-60"
+            className="tap w-full flex items-center gap-3 px-1 min-h-[56px] text-start border-b border-charcoal/[0.06] disabled:opacity-60"
           >
             <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden">
               {c.avatarUrl ? (

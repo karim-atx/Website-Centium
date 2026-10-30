@@ -40,7 +40,7 @@ export const GroupInvitationView: React.FC<{
           type="button"
           onClick={onBack}
           aria-label="Back"
-          className="tap relative w-8 h-8 -ml-2 rounded-full flex items-center justify-center text-charcoal shrink-0 before:absolute before:-inset-1.5 before:content-['']"
+          className="tap relative w-8 h-8 -ms-2 rounded-full flex items-center justify-center text-charcoal shrink-0 before:absolute before:-inset-1.5 before:content-['']"
         >
           <ChevronLeft size={22} aria-hidden />
         </button>
@@ -60,7 +60,7 @@ export const GroupInvitationView: React.FC<{
         <h1 className="text-base font-extrabold text-charcoal">
           {invitation.invitedByFirstName} invited you to "{invitation.groupName}"
         </h1>
-        <ul className="list-disc pl-[18px] text-[13px] leading-[1.55] text-charcoal-soft">
+        <ul className="list-disc ps-[18px] text-[13px] leading-[1.55] text-charcoal-soft">
           <li>Other members will see your first name and messages you send here.</li>
           <li>They won't see your health data, profile or other chats.</li>
           <li>You can leave or report at any time.</li>

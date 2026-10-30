@@ -110,7 +110,7 @@ export const PlanMenuButton: React.FC<{ plan: MembershipPlanRow; offline: boolea
         style={{
           width: 32,
           height: 32,
-          margin: "-6px -8px -6px 0",
+          marginBlock: "-6px", marginInline: "0 -8px",
           borderRadius: 10,
           display: "flex",
           alignItems: "center",
@@ -251,7 +251,7 @@ export const SeeAllRow: React.FC<{ label: string; onClick: () => void }> = ({ la
       type="button"
       onClick={onClick}
       className="tap market-focus"
-      style={{ width: "100%", minHeight: 44, borderTop: `0.5px solid ${m.div}`, borderLeft: 0, borderRight: 0, borderBottom: 0, background: "transparent", color: m.pdark, fontSize: textPx(12.5), fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}
+      style={{ width: "100%", minHeight: 44, borderTop: `0.5px solid ${m.div}`, borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0, background: "transparent", color: m.pdark, fontSize: textPx(12.5), fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}
     >
       {label}
     </button>

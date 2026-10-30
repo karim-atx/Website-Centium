@@ -52,6 +52,7 @@ import {
 import { GoalBarChart, LegendDash, LegendDot, LegendGhost, buildGoalBars } from "../../../components/health/metric/StepsBarChart";
 import { SyncedNoDevice } from "../../../components/health/metric/StepsNoDevice";
 import { CaloriesHero, ESTIMATED_INCL_WORKOUTS } from "../../../components/health/metric/CaloriesHero";
+import { appLocale } from "../../../i18n/format";
 
 // HE1.4 Calories burned (Week), HE1.4.d, HE1.4.m, HE1.4.y.
 //
@@ -66,7 +67,7 @@ import { CaloriesHero, ESTIMATED_INCL_WORKOUTS } from "../../../components/healt
 
 const KCAL_GOAL = 2600;
 const MONTH_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const n = (v: number) => Math.round(v).toLocaleString("en-GB");
+const n = (v: number) => Math.round(v).toLocaleString(appLocale("en-GB"));
 const iconInk = { color: "rgb(var(--th-7d6bb5))" };
 
 export default function CaloriesPage() {

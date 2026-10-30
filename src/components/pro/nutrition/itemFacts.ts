@@ -7,6 +7,7 @@
 import type { CustomMeal, Recipe } from "../../../types";
 import { divideTotals, sumItems, type PrepItem } from "../../food/mealPrepShared";
 import { portionMultiplier, scaleMacros, type ItemKind, type Macros, type ServingFacts } from "./nutritionModel";
+import { appLocale } from "../../../i18n/format";
 
 export interface FactSources {
   recipes: Recipe[];
@@ -41,7 +42,7 @@ export function itemMacros(item: { kind: ItemKind | null; refId: string | null; 
 
 /** NU2 row line: "200 g · 146 kcal", "1 medium · 95 kcal", "Recipe · 1 serving · 540 kcal". */
 export function itemLine(item: { kind: ItemKind | null; facts: ServingFacts | null; grams: number | null; servings: number | null }, m: Macros | null): string {
-  const kcal = m ? `${Math.round(m.kcal).toLocaleString("en-GB")} kcal` : "No nutrition data";
+  const kcal = m ? `${Math.round(m.kcal).toLocaleString(appLocale("en-GB"))} kcal` : "No nutrition data";
   const n = item.servings ?? 1;
   const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
   if (item.kind === "recipe") return `Recipe · ${fmt(n)} ${n === 1 ? "serving" : "servings"} · ${kcal}`;

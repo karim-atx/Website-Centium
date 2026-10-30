@@ -94,7 +94,7 @@ export const BuiltInExerciseSheet: React.FC<{
                     }
                   >
                     {MUSCLE_GROUP_LABEL[mg]}
-                    {secondary && <span className="ml-1 text-[9px] align-super">2°</span>}
+                    {secondary && <span className="ms-1 text-[9px] align-super">2°</span>}
                   </span>
                 );
               })}

@@ -73,11 +73,11 @@ export const TicketRow: React.FC<TicketRowProps> = ({ title, sub, colour, mark, 
       </span>
       {stub ? (
         <>
-          <span aria-hidden className="flex items-center justify-center" style={{ width: 30, boxSizing: "content-box", flex: "none", borderLeft: `1.5px dashed ${bar}`, color: bar }}>
+          <span aria-hidden className="flex items-center justify-center" style={{ width: 30, boxSizing: "content-box", flex: "none", borderInlineStart: `1.5px dashed ${bar}`, color: bar }}>
             <TicketCheck size={14} />
           </span>
-          <span aria-hidden style={{ position: "absolute", right: 23, top: -7, width: 14, height: 14, borderRadius: 999, background: notchBg }} />
-          <span aria-hidden style={{ position: "absolute", right: 23, bottom: -7, width: 14, height: 14, borderRadius: 999, background: notchBg }} />
+          <span aria-hidden style={{ position: "absolute", insetInlineEnd: 23, top: -7, width: 14, height: 14, borderRadius: 999, background: notchBg }} />
+          <span aria-hidden style={{ position: "absolute", insetInlineEnd: 23, bottom: -7, width: 14, height: 14, borderRadius: 999, background: notchBg }} />
         </>
       ) : null}
     </>
@@ -86,7 +86,7 @@ export const TicketRow: React.FC<TicketRowProps> = ({ title, sub, colour, mark, 
     position: "relative",
     display: "flex",
     width: "100%",
-    textAlign: "left",
+    textAlign: "start",
     borderRadius: 15,
     background: tint,
     overflow: "hidden",

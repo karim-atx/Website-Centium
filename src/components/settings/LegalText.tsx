@@ -61,6 +61,6 @@ export const LegalFullLink: React.FC<{ href: string; children: React.ReactNode }
     className="tap mt-7 flex items-start justify-between gap-3 border-t border-th-aea1dc/30 dark:border-charcoal/[0.06] pt-3.5 text-[14px] leading-[21px] font-bold text-primary-accent"
   >
     <span className="max-w-[150px]">{children}</span>
-    <ChevronRight size={16} strokeWidth={2} aria-hidden className="shrink-0 mt-[2.5px] rtl:-scale-x-100" />
+    <ChevronRight size={16} strokeWidth={2} aria-hidden className="shrink-0 mt-[2.5px]" />
   </a>
 );

@@ -60,7 +60,7 @@ const EntryRow: React.FC<{
   divider?: boolean;
 }> = ({ title, sub, onClick, right, after, divider }) => (
   <div className={clsx(divider && "border-t border-charcoal/[0.06] pt-2.5")}>
-    <button type="button" onClick={onClick} className="tap w-full min-h-[44px] flex justify-between items-start gap-2 text-left">
+    <button type="button" onClick={onClick} className="tap w-full min-h-[44px] flex justify-between items-start gap-2 text-start">
       <span className="min-w-0 flex flex-col gap-0.5">
         <span className="text-sm font-bold text-charcoal break-words">{title}</span>
         {sub && <span className="text-[12.5px] text-charcoal-soft break-words">{sub}</span>}

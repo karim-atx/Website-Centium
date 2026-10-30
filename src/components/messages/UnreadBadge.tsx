@@ -38,7 +38,7 @@ export const UnreadDot: React.FC<{ show: boolean }> = ({ show }) => {
   return (
     <span
       aria-label="Unread messages"
-      className="absolute top-1 right-[calc(50%-16px)] w-2 h-2 rounded-full bg-primary ring-2 ring-cream-card"
+      className="absolute top-1 end-[calc(50%-16px)] w-2 h-2 rounded-full bg-primary ring-2 ring-cream-card"
     />
   );
 };

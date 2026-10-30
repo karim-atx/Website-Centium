@@ -96,6 +96,7 @@ import {
 import { formatShortDate } from "../../utils/date";
 import { BizAvatar } from "./BusinessList";
 import { bizAvatarKind } from "./bizAvatar";
+import { appLocale } from "../../i18n/format";
 
 /** How far the finger must travel from the mic before a release cancels. */
 const CANCEL_DISTANCE = 60;
@@ -183,8 +184,8 @@ function dayChip(iso: string): string {
   const days = Math.round((start(now) - start(d)) / 86400000);
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
-  if (days > 1 && days < 7) return d.toLocaleDateString("en-US", { weekday: "long" });
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", ...(d.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }) });
+  if (days > 1 && days < 7) return d.toLocaleDateString(appLocale("en-US"), { weekday: "long" });
+  return d.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", ...(d.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }) });
 }
 
 export const ThreadView: React.FC<{
@@ -1488,7 +1489,7 @@ export const ThreadView: React.FC<{
         <button
           onClick={onBack}
           aria-label="Back to conversations"
-          className={cv2 ? "tap w-11 h-11 -ml-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal shrink-0" : "tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0"}
+          className={cv2 ? "tap w-11 h-11 -ms-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal shrink-0" : "tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0"}
         >
           {/* MO1.2.1.3: ChevronLeft 17 on a 32 #F5F5F6 disc at x 16 (measured). OP1-180 row 3: plain 44, 20/2.2 ink. */}
           {cv2 ? <ChevronLeft size={20} strokeWidth={2.2} /> : <ChevronLeft size={17} />}
@@ -1500,7 +1501,7 @@ export const ThreadView: React.FC<{
           type="button"
           onClick={() => setInfoOpen(true)}
           aria-label={`Chat info for ${thread.participantName}`}
-          className="tap flex items-center gap-2.5 flex-1 min-w-0 text-left"
+          className="tap flex items-center gap-2.5 flex-1 min-w-0 text-start"
         >
           {isGroup ? (
             // Round D D-S16: the group's approved photo, else the Users disc.
@@ -1602,7 +1603,7 @@ export const ThreadView: React.FC<{
               onClick={() => void placeCall("voice")}
               disabled={callBusy}
               aria-label={`Voice call ${thread.participantName}`}
-              className="tap w-11 h-11 -mr-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
+              className="tap w-11 h-11 -me-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
             >
               <Phone size={17} strokeWidth={1.75} />
             </button>
@@ -1611,7 +1612,7 @@ export const ThreadView: React.FC<{
               onClick={() => void placeCall("video")}
               disabled={callBusy}
               aria-label={`Video call ${thread.participantName}`}
-              className="tap w-11 h-11 -mr-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
+              className="tap w-11 h-11 -me-2.5 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
             >
               <Video size={17} strokeWidth={1.75} />
             </button>
@@ -1623,7 +1624,7 @@ export const ThreadView: React.FC<{
           aria-label="Search this chat"
           // The glyph's centre at x 357 (measured); -my-0.5 keeps the 44 target
           // without making the header row taller than the 40 avatar.
-          className="tap w-11 h-11 -mr-1 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0"
+          className="tap w-11 h-11 -me-1 -my-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0"
         >
           <Search size={17} strokeWidth={1.75} />
         </button>
@@ -1676,7 +1677,7 @@ export const ThreadView: React.FC<{
               <Pin size={13} className="text-primary-dark shrink-0" />
               <button
                 onClick={() => jumpTo(pin.messageId)}
-                className="tap flex-1 min-w-0 text-left"
+                className="tap flex-1 min-w-0 text-start"
               >
                 <p className="text-[11px] font-semibold text-primary-dark">Pinned</p>
                 <p className="text-xs text-charcoal truncate">{describeMessage(target)}</p>
@@ -2004,7 +2005,7 @@ export const ThreadView: React.FC<{
               </div>
               )}
               {grouped.length > 0 && !m.deletedAt && (
-                <div className={`flex gap-1 flex-wrap ${mine ? "self-end mr-2" : "self-start ml-2"} ${cv2 ? "-mt-1.5 relative" : ""}`}>
+                <div className={`flex gap-1 flex-wrap ${mine ? "self-end me-2" : "self-start ms-2"} ${cv2 ? "-mt-1.5 relative" : ""}`}>
                   {grouped.map(([emoji, g]) => (
                     <button
                       key={emoji}
@@ -2198,7 +2199,7 @@ export const ThreadView: React.FC<{
               setDraft("");
             }}
             aria-label="Cancel editing"
-            className="tap w-11 h-11 -my-2 -mr-2 rounded-full flex items-center justify-center text-charcoal-soft shrink-0"
+            className="tap w-11 h-11 -my-2 -me-2 rounded-full flex items-center justify-center text-charcoal-soft shrink-0"
           >
             <X size={14} />
           </button>
@@ -2624,7 +2625,7 @@ const GroupMessageInfo: React.FC<{ messageId: string; sentAt: string; count: num
         <span className="text-sm text-charcoal-soft tabular-nums">{count ?? "–"}</span>
       </div>
       {(readers ?? []).map((r) => (
-        <div key={r.userId} className="flex items-center justify-between min-h-[44px] border-b border-charcoal/[0.06] last:border-b-0 pl-3">
+        <div key={r.userId} className="flex items-center justify-between min-h-[44px] border-b border-charcoal/[0.06] last:border-b-0 ps-3">
           <span className="text-sm text-charcoal">{r.firstName}</span>
           <span className="text-xs text-charcoal-soft tabular-nums">{when(r.readAt)}</span>
         </div>

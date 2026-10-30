@@ -1,5 +1,6 @@
 import type { BizKind } from "../../../components/business-more/kind";
 import type { First90, GrowthWeek, InvitesFunnel, PeopleSummary, PeriodStats, PlanFigure } from "../../../services/business-analytics/model";
+import { appLocale } from "../../../i18n/format";
 
 // The Members section's pages per type (AN4 frames for the drawn structure;
 // OURS-AN4-gym-variant and OURS-AN4-classes-variant for the per-type set and
@@ -139,7 +140,7 @@ export function inRange(key: string, words: string): string {
   return `in ${words}`;
 }
 
-const plural = (n: number, one: string, many: string) => `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
+const plural = (n: number, one: string, many: string) => `${n.toLocaleString(appLocale("en-US"))} ${n === 1 ? one : many}`;
 const MINUS = "−";
 
 /** AN4-005 row 16a: "+{n} vs prev" good, "−{n} vs prev" high, 0 "No change" faint; none while early or with compare off. */
@@ -174,11 +175,11 @@ export function pageView(page: MembersPageDef, vocab: MembersVocab, f: MembersFi
       // AN4-024 rows 3-4: box 1 + "New", box 2 "–", no delta, the early lead.
       if (fresh)
         return {
-          boxes: [box(0, active.toLocaleString("en-US"), { t: "New", tone: "good" }), box(1, null)],
-          lead: `${fresh.n === 1 ? `Your first ${vocab.one}` : `Your first ${fresh.n.toLocaleString("en-US")} ${vocab.people}`} joined ${fresh.weeks === 1 ? "this week" : `in the last ${fresh.weeks} weeks`}. Trends compare periods once you have 8 weeks of history.`,
+          boxes: [box(0, active.toLocaleString(appLocale("en-US")), { t: "New", tone: "good" }), box(1, null)],
+          lead: `${fresh.n === 1 ? `Your first ${vocab.one}` : `Your first ${fresh.n.toLocaleString(appLocale("en-US"))} ${vocab.people}`} joined ${fresh.weeks === 1 ? "this week" : `in the last ${fresh.weeks} weeks`}. Trends compare periods once you have 8 weeks of history.`,
         };
       return {
-        boxes: [box(0, active.toLocaleString("en-US"), early ? undefined : netDelta(f.stats, ctx.compare)), box(1, null)],
+        boxes: [box(0, active.toLocaleString(appLocale("en-US")), early ? undefined : netDelta(f.stats, ctx.compare)), box(1, null)],
         lead: `${plural(active, `active ${vocab.one}`, `active ${vocab.people}`)}: ${j} joined and ${e} left ${inRange(ctx.rangeKey, ctx.rangeWords)}, so ${how}.`,
       };
     }
@@ -188,11 +189,11 @@ export function pageView(page: MembersPageDef, vocab: MembersVocab, f: MembersFi
       // AN4-044 row 13 early lead, only while it is true: the first members are recent and some booked.
       if (fresh && joined > 0 && bookedAClass > 0)
         return {
-          boxes: [box(0, joined.toLocaleString("en-US")), box(1, `${stillActive} of ${joined}`)],
+          boxes: [box(0, joined.toLocaleString(appLocale("en-US"))), box(1, `${stillActive} of ${joined}`)],
           lead: `Too early for 30, 60 and 90-day checks. ${bookedAClass} of your ${plural(joined, `new ${vocab.one}`, `new ${vocab.people}`)} ${bookedAClass === 1 ? "has" : "have"} already booked a class.`,
         };
       return {
-        boxes: [box(0, joined.toLocaleString("en-US")), box(1, joined > 0 ? `${stillActive} of ${joined}` : null)],
+        boxes: [box(0, joined.toLocaleString(appLocale("en-US"))), box(1, joined > 0 ? `${stillActive} of ${joined}` : null)],
         lead:
           joined > 0
             ? `${stillActive} of the ${plural(joined, vocab.one, vocab.people)} who joined in the last 90 days ${stillActive === 1 ? "is" : "are"} still with you.`
@@ -209,7 +210,7 @@ export function pageView(page: MembersPageDef, vocab: MembersVocab, f: MembersFi
       if (n === undefined) return coming;
       const all = s?.members ?? 0;
       return {
-        boxes: [box(0, n.toLocaleString("en-US")), box(1, null)],
+        boxes: [box(0, n.toLocaleString(appLocale("en-US"))), box(1, null)],
         lead: all === 0 ? `No one has a current membership right now.` : `${n} of your ${plural(all, `${vocab.one} with a current membership`, `${vocab.people} with a current membership`)} ${n === 1 ? "has" : "have"} not checked in for 14 days.`,
       };
     }
@@ -224,7 +225,7 @@ export function pageView(page: MembersPageDef, vocab: MembersVocab, f: MembersFi
       // AN4-031 D3 / AN4-011 O4 / AN4-044 O2: early with no one flagged reads the early lead ("0" in ink).
       if (early && n === 0) return { boxes: [box(0, "0"), box(1, null)], lead: `We flag ${vocab.people} once they have 4 weeks of bookings to compare against.` };
       return {
-        boxes: [box(0, n.toLocaleString("en-US")), box(1, null)],
+        boxes: [box(0, n.toLocaleString(appLocale("en-US"))), box(1, null)],
         lead:
           n > 0
             ? `${plural(n, `${vocab.one} has`, `${vocab.people} have`)} booked in the last 4 months but not in the last 21 days.`
@@ -232,7 +233,7 @@ export function pageView(page: MembersPageDef, vocab: MembersVocab, f: MembersFi
       };
     }
     case "plans": {
-      const count = box(0, ctx.planCount.toLocaleString("en-US"));
+      const count = box(0, ctx.planCount.toLocaleString(appLocale("en-US")));
       if (!f.plans) return { boxes: [count, box(1, null)], lead: page.coming };
       const total = f.plans.reduce((a, p) => a + p.activeNow, 0);
       const top = f.plans[0];
@@ -241,12 +242,12 @@ export function pageView(page: MembersPageDef, vocab: MembersVocab, f: MembersFi
       if (early) {
         const all = Math.max(total, f.growth?.cur.at(-1)?.active ?? 0);
         return {
-          boxes: [count, box(1, top.activeNow.toLocaleString("en-US"), undefined, `On ${top.name}`)],
+          boxes: [count, box(1, top.activeNow.toLocaleString(appLocale("en-US")), undefined, `On ${top.name}`)],
           lead: `${top.activeNow} of your ${plural(all, vocab.one, vocab.people)} ${top.activeNow === 1 ? "is" : "are"} on ${top.name}.`,
         };
       }
       return {
-        boxes: [count, box(1, top.activeNow.toLocaleString("en-US"), undefined, `On ${top.name}, the most popular`)],
+        boxes: [count, box(1, top.activeNow.toLocaleString(appLocale("en-US")), undefined, `On ${top.name}, the most popular`)],
         lead: `${top.name} holds ${Math.round((top.activeNow / total) * 100)}% of ${vocab.people} on a plan.`,
       };
     }

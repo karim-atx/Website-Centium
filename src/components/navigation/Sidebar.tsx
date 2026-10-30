@@ -172,7 +172,7 @@ export const Sidebar: React.FC = () => {
   return (
     // OURS-NAV-desktop-sidebar row 1: w256, #FFFFFF (dark #121317), right
     // hairline charcoal 6%, pad 24 16.
-    <aside className="hidden lg:flex flex-col w-64 shrink-0 h-[100dvh] sticky top-0 border-r border-charcoal/[0.06] bg-white dark:bg-cream px-4 py-6 overflow-y-auto">
+    <aside className="hidden lg:flex flex-col w-64 shrink-0 h-[100dvh] sticky top-0 border-e border-charcoal/[0.06] bg-white dark:bg-cream px-4 py-6 overflow-y-auto">
       {/* v6 (TK 4.1, X-24): the one vector mark in the theme's brand pair,
           framed as the PNG it replaces (30 tall, centium-mark.png's canvas).
           Row 2: + Centium 20/700, mb 32. */}

@@ -254,7 +254,7 @@ export const CreateCustomExerciseSheet: React.FC<{
                   )}
                 >
                   {mg.label}
-                  {isSecondary && <span className="ml-1 text-[9px] align-super">2°</span>}
+                  {isSecondary && <span className="ms-1 text-[9px] align-super">2°</span>}
                 </button>
               );
             })}
@@ -270,7 +270,7 @@ export const CreateCustomExerciseSheet: React.FC<{
             <button
               onClick={(e) => setClassAnchor(e.currentTarget)}
               aria-haspopup="menu"
-              className="tap w-full flex items-center justify-between text-left"
+              className="tap w-full flex items-center justify-between text-start"
               style={{ ...dropdownStyle, color: "rgb(var(--c-charcoal))" }}
             >
               <span className="truncate">{classificationOptions.find((c) => c.value === classification)?.label}</span>
@@ -282,7 +282,7 @@ export const CreateCustomExerciseSheet: React.FC<{
             <button
               onClick={(e) => setTagAnchor(e.currentTarget)}
               aria-haspopup="menu"
-              className="tap w-full flex items-center justify-between text-left"
+              className="tap w-full flex items-center justify-between text-start"
               style={{ ...dropdownStyle, color: tags.length ? "rgb(var(--c-charcoal))" : "rgb(var(--c-charcoal-muted))" }}
             >
               <span className="truncate">
@@ -357,7 +357,7 @@ export const CreateCustomExerciseSheet: React.FC<{
                 <p className="text-[13px] font-bold text-charcoal mb-1.5">
                   Delete “{name.trim() || initial?.name}”?
                 </p>
-                <ul className="text-[11.5px] text-charcoal-soft" style={{ margin: 0, paddingLeft: 16 }}>
+                <ul className="text-[11.5px] text-charcoal-soft" style={{ margin: 0, paddingInlineStart: 16 }}>
                   {/* B3 custom_exercise_usage: the count of the user's own
                       routines using it, from the server (the caller). */}
                   {impact && impact.routines > 0 && (

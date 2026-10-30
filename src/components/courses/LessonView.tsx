@@ -31,6 +31,7 @@ import { lessonDripLine, nextLocked, type DripRow } from "./drip";
 import { LessonMarkdown } from "./LessonMarkdown";
 import { fetchLessonImagePaths, fetchMyCheckIn, lessonImageUrl, submitCheckIn } from "../../services/courses/extras";
 import { CHECK_IN_ANSWER_MAX } from "../../services/courses/authorRules";
+import { appLocale } from "../../i18n/format";
 
 // Design screen 8: a lesson. The video is YouTube's official embedded player
 // on the privacy-enhanced domain (youtube-nocookie.com), with no autoplay and
@@ -266,7 +267,7 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
                 type="button"
                 onClick={() => navigate(`${toCourse}/lessons/${l.id}`)}
                 aria-current={current ? "page" : undefined}
-                className="tap flex justify-between items-center gap-3 text-[13px] py-2.5 text-left"
+                className="tap flex justify-between items-center gap-3 text-[13px] py-2.5 text-start"
                 style={{
                   borderBottom: i < week.length - 1 ? `1px solid ${fv("rule")}` : undefined,
                   color: lOpen ? fv("text") : fv("muted"),
@@ -512,7 +513,7 @@ function CheckInBlock({ lesson, authorName, canAnswer, onAnswered }: { lesson: L
   const send = async () => {
     const answer = draft.trim();
     if (busy || !answer) return;
-    if (answer.length > CHECK_IN_ANSWER_MAX) return setError(`Keep your answer to ${CHECK_IN_ANSWER_MAX.toLocaleString("en-US")} characters.`);
+    if (answer.length > CHECK_IN_ANSWER_MAX) return setError(`Keep your answer to ${CHECK_IN_ANSWER_MAX.toLocaleString(appLocale("en-US"))} characters.`);
     setBusy(true);
     setError(null);
     const r = await submitCheckIn(lesson.id, answer);

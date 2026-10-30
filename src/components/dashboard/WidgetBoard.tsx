@@ -57,7 +57,7 @@ const PickerRow: React.FC<{ item: (typeof allWidgetTypes)[number]; dark: boolean
   const ink = item.ink[dark ? 1 : 0];
   return (
     <div className="flex items-center" style={{ height: 56, padding: "0 14px", gap: 10, borderRadius: 15, background: item.tint[dark ? 1 : 0] }}>
-      <button type="button" onClick={() => onAdd(size)} className="tap flex-1 min-w-0 flex items-center text-left self-stretch" style={{ gap: 10 }}>
+      <button type="button" onClick={() => onAdd(size)} className="tap flex-1 min-w-0 flex items-center text-start self-stretch" style={{ gap: 10 }}>
         <span className="shrink-0 grid place-items-center" style={{ width: 20, height: 20, borderRadius: 6, background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.85)" }} aria-hidden>
           <item.icon size={12} strokeWidth={1.5} style={{ color: ink }} />
         </span>

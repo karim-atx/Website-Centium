@@ -1,6 +1,7 @@
 import React, { useId } from "react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { appLocale } from "../../i18n/format";
 
 // Mobile v5.1 R3, dark mode (no light islands): the chart grid and axis text
 // as [light, dark], the dark values the v5.1 chart rules (grid
@@ -20,7 +21,7 @@ interface Point {
 }
 
 const shortDate = (iso: string) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  new Date(`${iso}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 
 export const WeightTrendChart: React.FC<{
   history: { date: string; value: number }[];

@@ -1,3 +1,4 @@
+import { appLocale } from "../../../i18n/format";
 // The business onboarding lanes (Classes, Gym, Store): what each lane asks,
 // its literal wording and sample-free defaults, and the pure rules (validation,
 // summaries, the mapping onto the database). Pure (no React, no storage) so it
@@ -611,8 +612,8 @@ export function laneTypeLabel(lane: BizLane | null, storeType: StoreType | null)
 export function submittedLabel(iso: string | null, now: Date = new Date()): { line: string; day: string } {
   if (!iso) return { line: "", day: "" };
   const d = new Date(iso);
-  const t = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const t = d.toLocaleTimeString(appLocale("en-US"), { hour: "numeric", minute: "2-digit" });
   const same = d.toDateString() === now.toDateString();
-  const day = same ? "Today" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const day = same ? "Today" : d.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
   return { line: `${day}, ${t}`, day };
 }

@@ -163,7 +163,7 @@ function HeaderRow({ choices, offerId, range, onOffer, onRange }: { choices: Off
         aria-label={`Offer: ${label}`}
         onClick={() => setOpen(true)}
         className="market-focus hit"
-        style={{ flex: 1, minWidth: 0, height: 42, boxSizing: "border-box", borderRadius: 12, border: `1px solid ${m.border}`, background: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, padding: "0 10px 0 12px", fontFamily: "inherit", fontSize: px(12.5), fontWeight: 700, color: m.ink, cursor: "pointer", lineHeight: "normal" }}
+        style={{ flex: 1, minWidth: 0, height: 42, boxSizing: "border-box", borderRadius: 12, border: `1px solid ${m.border}`, background: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, paddingBlock: "0", paddingInline: "12px 10px", fontFamily: "inherit", fontSize: px(12.5), fontWeight: 700, color: m.ink, cursor: "pointer", lineHeight: "normal" }}
       >
         <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
         <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={m.faint} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: "none", ...NO_ICON_SCALE }}>

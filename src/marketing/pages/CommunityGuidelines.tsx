@@ -46,8 +46,8 @@ export const CommunityGuidelines: React.FC = () => {
       aria-hidden="true"
       style={{
         position: "absolute",
-        left: "0",
-        right: "0",
+        insetInlineStart: "0",
+        insetInlineEnd: "0",
         top: "0",
         height: r.washH,
         transform: "scaleY(-1)",
@@ -72,7 +72,7 @@ export const CommunityGuidelines: React.FC = () => {
         <h1 style={{ margin: "14px 0 0", fontWeight: "800", fontSize: r.h1, letterSpacing: "-.04em", lineHeight: "1.04", textWrap: "balance" }}>Community guidelines</h1>
         <p style={{ margin: "12px 0 0", fontSize: "14px", fontWeight: "600", color: "#756D63" }}>Last updated {GUIDELINES_UPDATED}</p>
       </div>
-      <div style={{ position: "relative", maxWidth: "68ch", margin: "0 auto", textAlign: "left" }}>
+      <div style={{ position: "relative", maxWidth: "68ch", margin: "0 auto", textAlign: "start" }}>
         <article style={{ paddingBottom: "44px", marginBottom: "44px", borderBottom: "1px solid #EDEAE4" }}>
           <p style={{ fontSize: "16.5px", lineHeight: "1.7", color: "#5B5349" }}>{GUIDELINES_INTRO}</p>
           {GUIDELINE_SECTIONS.map((s) => (

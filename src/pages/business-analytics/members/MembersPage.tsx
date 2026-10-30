@@ -219,7 +219,7 @@ function PlanBar({ t, n, w, color, track, aria }: { t: string; n: number; w: str
       <div style={{ height: 8, borderRadius: 999, background: track, overflow: "hidden" }}>
         <div style={{ height: "100%", width: w, borderRadius: 999, background: color }} />
       </div>
-      <span className="text-charcoal" style={{ fontSize: 12, fontWeight: 800, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+      <span className="text-charcoal" style={{ fontSize: 12, fontWeight: 800, textAlign: "end", fontVariantNumeric: "tabular-nums" }}>
         {n}
       </span>
     </div>

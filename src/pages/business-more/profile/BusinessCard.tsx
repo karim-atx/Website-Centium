@@ -98,7 +98,7 @@ export function BusinessCard({
             aria-label="Close"
             // 36 drawn; .tap gives the 44 hit area (MO1B-026 row 3).
             className="tap absolute flex items-center justify-center rounded-full bg-cream-card text-charcoal-soft"
-            style={{ right: 8, top: 8, width: 36, height: 36 }}
+            style={{ insetInlineEnd: 8, top: 8, width: 36, height: 36 }}
           >
             <X size={16} strokeWidth={2.4} aria-hidden />
           </button>

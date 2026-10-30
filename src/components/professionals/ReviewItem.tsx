@@ -2,6 +2,7 @@ import React from "react";
 import { Star, User } from "lucide-react";
 import type { ReviewRow } from "../../services/professional-reviews";
 import { textPx } from "../../theme/textSize";
+import { appLocale } from "../../i18n/format";
 
 // One review, rendered the same way everywhere it appears: the listing's
 // reviews sheet, the reviewer's own card, and the professional's Profile.
@@ -40,7 +41,7 @@ const Body: React.FC<{
           review.body && <p className="text-charcoal-soft leading-relaxed whitespace-pre-line break-words" style={{ fontSize: textPx(size) }}>{review.body}</p>
         )}
         {reply && (
-          <div className="mt-2.5 ml-1 pl-3 border-l-2 border-primary/30">
+          <div className="mt-2.5 ms-1 ps-3 border-s-2 border-primary/30">
             <p className="flex items-center gap-2 text-[11px] font-bold text-charcoal-soft">
               {replyLabel}
               {reply.editedAt && !reply.redactedAt && !hideEdited && (
@@ -113,7 +114,7 @@ export const ReviewItem: React.FC<{
                 {stars(review.rating, 11)}
               </span>
               <span className="text-[11px] text-charcoal-faint">
-                {new Date(review.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                {new Date(review.createdAt).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" })}
               </span>
             </div>
           </div>

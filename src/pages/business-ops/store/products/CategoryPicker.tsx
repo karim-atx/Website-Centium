@@ -79,7 +79,7 @@ export function CategoryPicker({
     boxSizing: "border-box",
     border: `1.5px solid ${sel ? m.fill : "transparent"}`,
     background: sel ? m.pale : m.card,
-    textAlign: "left",
+    textAlign: "start",
     fontFamily: "inherit",
     color: m.ink,
     cursor: "pointer",
@@ -95,7 +95,7 @@ export function CategoryPicker({
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
         className="market-focus"
-        style={{ ...fieldStyle(m), display: "flex", alignItems: "center", gap: 8, textAlign: "left", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.6 : 1, boxShadow: open ? `inset 0 0 0 1px ${m.fill}` : undefined }}
+        style={{ ...fieldStyle(m), display: "flex", alignItems: "center", gap: 8, textAlign: "start", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.6 : 1, boxShadow: open ? `inset 0 0 0 1px ${m.fill}` : undefined }}
       >
         {current && <CategoryGlyph glyph={current.glyph} size={16} color={m.pdark} />}
         <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: current ? m.ink : m.faint }}>{current?.name ?? "Choose a category"}</span>

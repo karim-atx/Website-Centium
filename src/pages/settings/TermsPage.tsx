@@ -47,7 +47,7 @@ export default function TermsPage() {
         <span className="block text-[14px] font-semibold leading-[22px] text-charcoal">{HEALTH_DISCLAIMER}</span>
         <span className="mt-2 flex items-center justify-between gap-2 text-[13.5px] font-bold text-primary-accent">
           Health and Medical Disclaimer
-          <ChevronRight size={16} strokeWidth={2} aria-hidden className="shrink-0 rtl:-scale-x-100" />
+          <ChevronRight size={16} strokeWidth={2} aria-hidden className="shrink-0" />
         </span>
       </a>
 

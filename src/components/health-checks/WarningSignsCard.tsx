@@ -12,7 +12,7 @@ export const WarningSignsCard: React.FC<{ timezone: string | null; id?: string }
   return (
     <section id={id} className="rounded-[18px] border border-charcoal/[0.08] bg-cream-card px-4 py-4 mb-4">
       <p className="text-[13px] font-bold text-charcoal">{WARNING_SIGNS.emergencyTitle}</p>
-      <ul className="mt-2 space-y-1.5 list-disc pl-4 text-[12px] leading-[1.45] text-charcoal-soft">
+      <ul className="mt-2 space-y-1.5 list-disc ps-4 text-[12px] leading-[1.45] text-charcoal-soft">
         {WARNING_SIGNS.emergency.map((s) => (
           <li key={s}>{s}</li>
         ))}
@@ -43,7 +43,7 @@ export const WarningSignsCard: React.FC<{ timezone: string | null; id?: string }
         )}
       </div>
       <p className="mt-4 text-[13px] font-bold text-charcoal">{WARNING_SIGNS.todayTitle}</p>
-      <ul className="mt-2 space-y-1.5 list-disc pl-4 text-[12px] leading-[1.45] text-charcoal-soft">
+      <ul className="mt-2 space-y-1.5 list-disc ps-4 text-[12px] leading-[1.45] text-charcoal-soft">
         {WARNING_SIGNS.today.map((s) => (
           <li key={s}>{s}</li>
         ))}

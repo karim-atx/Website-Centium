@@ -144,7 +144,7 @@ export const Who: React.FC<{ r: SectionVals }> = ({ r }) => (
             <p style={{ marginTop: "6px", fontSize: "14px", lineHeight: "1.55", color: "#5B5349" }}>
               Pays attention to the details that shape their health and wants them all in one place.
             </p>
-            <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "6px", textAlign: "left" }}>
+            <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "6px", textAlign: "start" }}>
               {D.instMacros.map((im, imI) => (
                 <div key={imI}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: r.eF115, fontWeight: "700" }}>

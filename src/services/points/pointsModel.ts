@@ -7,6 +7,7 @@
 
 import { formatShortDate } from "../../utils/date";
 import { num, rows, str } from "../market/parse";
+import { appLocale } from "../../i18n/format";
 
 // ---------------------------------------------------------------------------
 // The summary's today and expiring figures
@@ -57,7 +58,7 @@ export function longDay(isoDay: string): string {
 export function expiringLine(x: PointsExtras | null): string | null {
   if (!x || x.expiringSoon <= 0 || !x.expiringSoonDate) return null;
   const n = Math.round(x.expiringSoon);
-  return `${n.toLocaleString("en-US")} ${n === 1 ? "point expires" : "points expire"} on ${longDay(x.expiringSoonDate)}`;
+  return `${n.toLocaleString(appLocale("en-US"))} ${n === 1 ? "point expires" : "points expire"} on ${longDay(x.expiringSoonDate)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -94,10 +95,10 @@ export function nextRewardLine(
     const ahead = offers.filter((o) => o.pointsCost > balance).sort((a, b) => a.pointsCost - b.pointsCost)[0];
     if (!ahead) return { lead: "You can redeem every reward", detail: "", pct: 100 };
     const pct = Math.round((Math.max(0, balance) / ahead.pointsCost) * 1000) / 10;
-    return { lead: `${(ahead.pointsCost - balance).toLocaleString("en-US")} to your next reward`, detail: `${ahead.headline} at ${ahead.ownerName}`, pct };
+    return { lead: `${(ahead.pointsCost - balance).toLocaleString(appLocale("en-US"))} to your next reward`, detail: `${ahead.headline} at ${ahead.ownerName}`, pct };
   }
   if (tier.nextTierName && tier.pointsToNextTier !== null) {
-    return { lead: `${tier.pointsToNextTier.toLocaleString("en-US")} to ${tier.nextTierName}`, detail: "", pct: Math.round(Math.max(0, Math.min(1, tier.progress)) * 1000) / 10 };
+    return { lead: `${tier.pointsToNextTier.toLocaleString(appLocale("en-US"))} to ${tier.nextTierName}`, detail: "", pct: Math.round(Math.max(0, Math.min(1, tier.progress)) * 1000) / 10 };
   }
   return { lead: "Highest tier", detail: "", pct: 100 };
 }
@@ -203,7 +204,7 @@ export function ledgerCursor(entries: readonly LedgerEntry[]): LedgerCursor | nu
 }
 
 /** "+5" / "−800" (a true minus, U+2212, as the board). */
-export const signedPoints = (n: number): string => `${n > 0 ? "+" : "−"}${Math.abs(Math.round(n)).toLocaleString("en-US")}`;
+export const signedPoints = (n: number): string => `${n > 0 ? "+" : "−"}${Math.abs(Math.round(n)).toLocaleString(appLocale("en-US"))}`;
 
 /** The amount's ink (`l.ink`): earned #4F8F8A, spent / reversed / expired #7D67D9. */
 export const amountTone = (n: number): "earned" | "spent" => (n > 0 ? "earned" : "spent");

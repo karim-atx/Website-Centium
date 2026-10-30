@@ -8,6 +8,7 @@ import { Chip, ListCard, NumBox, SectionHead, SoftLine, type ListRow } from "./k
 import type { ClientPageData } from "./useClientPage";
 import { fetchEventOutcomes } from "../../../services/pro/clientPage";
 import { range12, time12 } from "../../../utils/time12";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · CL2 v3 Tab 4 Sessions / Tab 5 Appointments (source gen/r6b.js
@@ -37,7 +38,7 @@ export const SessionsTab: React.FC<{ data: ClientPageData; patient: boolean; onS
   const word = patient ? "appointment" : "session";
   const count = (o: string) => past.filter((s) => outcomes?.[s.id] === o).length;
   const when = (date: string, start?: string, end?: string) => {
-    const d = date === today ? "Today" : new Date(`${date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    const d = date === today ? "Today" : new Date(`${date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
     return `${d} ${end ? range12(start, end) : time12(start)}`;
   };
   const place = (s: { location?: string; url?: string }) => (s.location ? s.location : s.url ? "Online" : "");

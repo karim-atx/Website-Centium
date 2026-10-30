@@ -127,11 +127,11 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
               <span style={{ fontSize: textPx(30), fontWeight: 800, color: rpeColor("hero", dark), letterSpacing: "-0.02em" }}>
                 {suggested ?? "–"}
               </span>
-              {suggested != null && <span style={{ fontSize: textPx(13), fontWeight: 600, color: rpeColor("label", dark), marginLeft: 4 }}>kg</span>}
+              {suggested != null && <span style={{ fontSize: textPx(13), fontWeight: 600, color: rpeColor("label", dark), marginInlineStart: 4 }}>kg</span>}
             </p>
           </div>
           {ready && (
-            <div className="text-right flex-none" style={{ paddingBottom: 4 }}>
+            <div className="text-end flex-none" style={{ paddingBottom: 4 }}>
               <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 700, color: rpeColor("support", dark) }}>
                 {r} {r === 1 ? "rep" : "reps"} @ RPE {rpe}
               </p>

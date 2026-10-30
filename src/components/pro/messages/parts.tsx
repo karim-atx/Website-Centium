@@ -22,7 +22,7 @@ export const MessagesHead: React.FC<{ title: string; onBack: () => void; right?:
         onClick={onBack}
         aria-label="Back"
         className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']"
-        style={{ width: 36, height: 36, marginLeft: -7 }}
+        style={{ width: 36, height: 36, marginInlineStart: -7 }}
       >
         <ChevronLeft size={18} strokeWidth={2} style={{ color: INK.chS }} aria-hidden />
       </button>

@@ -235,7 +235,7 @@ export function ForumHome({
       to="/app/forum/new"
       aria-label="New post"
       data-forum-fab=""
-      className="tap fixed z-30 rounded-full flex items-center justify-center no-underline bg-primary-fill text-on-primary-fill dark:shadow-none bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+18px)] lg:bottom-8 lg:right-8"
+      className="tap fixed z-30 rounded-full flex items-center justify-center no-underline bg-primary-fill text-on-primary-fill dark:shadow-none bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] end-[calc(var(--app-gutter)+18px)] lg:bottom-8 lg:end-8"
       style={{ width: 52, height: 52, boxShadow: "0 8px 22px rgba(95,80,147,0.28)" }}
     >
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
@@ -247,7 +247,7 @@ export function ForumHome({
       to="/app/forum/new"
       aria-label="Add"
       data-forum-fab=""
-      className="tap fixed z-30 w-14 h-14 rounded-full flex items-center justify-center no-underline bg-primary-fill text-on-primary-fill shadow-fab dark:shadow-none bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+20px)] lg:bottom-8 lg:right-8"
+      className="tap fixed z-30 w-14 h-14 rounded-full flex items-center justify-center no-underline bg-primary-fill text-on-primary-fill shadow-fab dark:shadow-none bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] end-[calc(var(--app-gutter)+20px)] lg:bottom-8 lg:end-8"
     >
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
         <path d="M12 5v14M5 12h14" />
@@ -264,8 +264,8 @@ export function ForumHome({
   // border (the fill when on), card / fill, 600 / 700; gap 6, running off the
   // right edge under a 44 fade to the page.
   const proStrip = (
-    <div className="relative -mr-4">
-      <div className="flex overflow-x-auto no-scrollbar pr-4" style={{ gap: 6 }} role="group" aria-label="Categories" data-forum-strip="">
+    <div className="relative -me-4">
+      <div className="flex overflow-x-auto no-scrollbar pe-4" style={{ gap: 6 }} role="group" aria-label="Categories" data-forum-strip="">
         {[{ key: null as string | null, name: "All" }, ...chips].map((c) => {
           const on = activeFilter === c.key;
           return (
@@ -292,13 +292,13 @@ export function ForumHome({
           );
         })}
       </div>
-      <span aria-hidden className="absolute inset-y-0 right-0 pointer-events-none" style={{ width: 44, background: "linear-gradient(to right, transparent, rgb(var(--c-cream)))" }} />
+      <span aria-hidden className="absolute inset-y-0 end-0 pointer-events-none" style={{ width: 44, background: "linear-gradient(to right, transparent, rgb(var(--c-cream)))" }} />
     </div>
   );
 
   const strip = proLook ? proStrip : recoveryPending ? (
     <div
-      className="flex gap-1 -mr-4 p-1 pr-4 overflow-hidden bg-th-f4f3f9 dark:bg-cream-soft"
+      className="flex gap-1 -me-4 p-1 pe-4 overflow-hidden bg-th-f4f3f9 dark:bg-cream-soft"
       style={{ borderRadius: "12px 0 0 12px" }}
       aria-hidden="true"
     >
@@ -308,7 +308,7 @@ export function ForumHome({
     </div>
   ) : (
     <div
-      className="flex gap-1 overflow-x-auto no-scrollbar -mr-4 p-1 pr-4 bg-th-f4f3f9 dark:bg-cream-soft"
+      className="flex gap-1 overflow-x-auto no-scrollbar -me-4 p-1 pe-4 bg-th-f4f3f9 dark:bg-cream-soft"
       style={{ borderRadius: "12px 0 0 12px" }}
       role="group"
       aria-label="Categories"
@@ -414,7 +414,7 @@ export function ForumHome({
                   key={t.id}
                   type="button"
                   onClick={() => navigate(`/app/forum/post/${t.id}`)}
-                  className="tap text-left rounded-[20px] px-4 py-3 flex flex-col gap-1.5 bg-cream-card border-[0.5px] border-hair-08"
+                  className="tap text-start rounded-[20px] px-4 py-3 flex flex-col gap-1.5 bg-cream-card border-[0.5px] border-hair-08"
                 >
                   <span className="text-[14.5px] leading-[20px] font-bold text-charcoal [overflow-wrap:anywhere]">{t.title}</span>
                   <HeldNote inline text={[t.title, t.body ?? ""].join("\n")} />
@@ -672,7 +672,7 @@ function ThreadCard({
       // #F5F3FA@8%) with the 2.7px left edge in the category colour (A20; the
       // table's hairline-coloured edge is a slip, the PNG draws the colour).
       className="tap relative cursor-pointer rounded-[20px] p-4 flex flex-col gap-2.5 bg-cream-card border-[0.5px] border-hair-08 select-none [-webkit-touch-callout:none]"
-      style={{ borderLeft: `2.7px solid ${colours.strong}` }}
+      style={{ borderInlineStart: `2.7px solid ${colours.strong}` }}
     >
       {/* S7 keyboard path: a ⋮ that shows only while focused. */}
       <button
@@ -682,7 +682,7 @@ function ThreadCard({
           e.stopPropagation();
           if (cardRef.current) onMenu(cardRef.current);
         }}
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:right-2 focus:w-11 focus:h-11 focus:rounded-full focus:flex focus:items-center focus:justify-center focus:bg-cream-soft text-charcoal-soft"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:end-2 focus:w-11 focus:h-11 focus:rounded-full focus:flex focus:items-center focus:justify-center focus:bg-cream-soft text-charcoal-soft"
       >
         <MoreVertical size={18} strokeWidth={1.75} aria-hidden />
       </button>
@@ -737,7 +737,7 @@ function ThreadCard({
           }}
           aria-pressed={liked}
           aria-label={`${liked ? "Unlike" : "Like"}, ${thread.reactionCount} ${thread.reactionCount === 1 ? "like" : "likes"}`}
-          className="tap flex gap-[5px] items-center -my-2 py-2 pr-1 font-bold"
+          className="tap flex gap-[5px] items-center -my-2 py-2 pe-1 font-bold"
         >
           <HeartIcon filled={liked} color={iconInk} size={14} /> {thread.reactionCount}
         </button>
@@ -840,7 +840,7 @@ function ProThreadCard({
           e.stopPropagation();
           if (cardRef.current) onMenu(cardRef.current);
         }}
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:right-2 focus:w-11 focus:h-11 focus:rounded-full focus:flex focus:items-center focus:justify-center focus:bg-cream-soft text-charcoal-soft"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:end-2 focus:w-11 focus:h-11 focus:rounded-full focus:flex focus:items-center focus:justify-center focus:bg-cream-soft text-charcoal-soft"
       >
         <MoreVertical size={18} strokeWidth={1.75} aria-hidden />
       </button>
@@ -857,7 +857,7 @@ function ProThreadCard({
             Professional
           </span>
         )}
-        <span className="ml-auto shrink-0 text-charcoal-faint" style={{ fontSize: textPx(11) }}>
+        <span className="ms-auto shrink-0 text-charcoal-faint" style={{ fontSize: textPx(11) }}>
           {thread.pinned ? `Pinned · ${forumAge(thread.createdAt)}` : forumAge(thread.createdAt)}
         </span>
       </div>

@@ -97,7 +97,7 @@ export const TagsSheet: React.FC<{
       footer={<CtaButton size="sheet" className="w-full" label={targets.length > 1 ? `Apply to ${targets.length} clients` : "Save tags"} loading={busy} onClick={() => void apply()} />}
     >
       <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 12 }}>{`Tag ${names}. Only you see tags.`}</p>
-      <div className="flex items-center" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 4px 0 12px", gap: 8 }}>
+      <div className="flex items-center" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, paddingBlock: "0", paddingInline: "12px 4px", gap: 8 }}>
         <Tag size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
         <input
           value={draft}
@@ -138,7 +138,7 @@ export const TagsSheet: React.FC<{
                   return n;
                 })
               }
-              className="tap w-full flex items-center text-left"
+              className="tap w-full flex items-center text-start"
               style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < rows.length - 1 ? `1px solid ${INK.b06}` : "none" }}
             >
               <span className="flex items-center justify-center shrink-0" style={{ width: 24, height: 24, borderRadius: 7, ...(on ? { background: INK.fill } : { border: `1.5px solid ${INK.b10}` }) }}>

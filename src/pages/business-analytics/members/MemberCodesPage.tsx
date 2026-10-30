@@ -14,6 +14,7 @@ import { KIND_LABEL } from "../../business-ops/plans/planModel";
 import { AnAvatar, AnCard, AnCountLine, AnHeaderRow, AnLead, AnListRow, AnNoneRow, AnNumberBoxes, AnRowButton, AnSeeAll, AnStrip } from "./anKit";
 import type { MembersVocab } from "./membersModel";
 import { liveCodes, type MembersData } from "./useMembersData";
+import { appLocale } from "../../../i18n/format";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -242,7 +243,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
         <AnNumberBoxes
           boxes={[
             { label: "Codes redeemed", value: data.codes === null ? null : pct === null ? null : `${pct}%` },
-            { label: "Waiting to be used", value: data.codes === null ? null : waiting.length.toLocaleString() },
+            { label: "Waiting to be used", value: data.codes === null ? null : waiting.length.toLocaleString(appLocale()) },
           ]}
         />
         <AnLead>

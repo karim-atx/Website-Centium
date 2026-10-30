@@ -5,6 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { exerciseHistory } from "../../services/workout/history";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
+import { appLocale } from "../../i18n/format";
 
 // Mobile v5.1 R3, dark mode (no light islands): on the card's lavender 10%
 // tint (#2B2C3A dark) the stat label takes text.secondary dark (tertiary
@@ -46,7 +47,7 @@ export const ExerciseHistorySheet: React.FC<{
             <div key={e.sessionId} style={{ background: "rgb(var(--th-aea1dc) / 0.10)", borderRadius: 14, padding: "12px 14px 13px" }}>
               <div className="flex items-start justify-between" style={{ gap: 10 }}>
                 <p style={{ margin: 0, fontSize: textPx(13.5), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
-                  {new Date(`${e.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                  {new Date(`${e.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" })}
                 </p>
                 <p className="truncate" style={{ margin: "1px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{e.routineName}</p>
               </div>
@@ -65,7 +66,7 @@ export const ExerciseHistorySheet: React.FC<{
                 )}
                 <div>
                   <p style={label(dark)}>VOLUME</p>
-                  <p style={value(dark)}>{e.volumeKg.toLocaleString()} kg</p>
+                  <p style={value(dark)}>{e.volumeKg.toLocaleString(appLocale())} kg</p>
                 </div>
               </div>
               <p className="truncate" style={{ margin: "8px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{e.line}</p>

@@ -46,7 +46,7 @@ export const StatusLoading: React.FC<{ footer: BizFooter }> = ({ footer }) => (
   <BizFrame footer={footer}>
     <div className="text-center pt-2 pb-1" aria-busy="true" aria-label="Loading">
       <div className="relative w-[200px] h-[170px] mx-auto" style={{ opacity: 0.5 }}>
-        <Shapes shapes={STATUS_SUBMITTED_VIS} size={120} style={{ position: "absolute", left: 40, top: 25 }} />
+        <Shapes shapes={STATUS_SUBMITTED_VIS} size={120} style={{ position: "absolute", insetInlineStart: 40, top: 25 }} />
       </div>
       <div className="flex flex-col items-center gap-2 mt-[6px]">
         <span className="ob-skel w-[200px] h-7 rounded-[8px]" />

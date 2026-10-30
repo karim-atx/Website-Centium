@@ -13,6 +13,7 @@ import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import { useNavigate } from "react-router-dom";
 import { startMemberThread } from "../../services/messaging";
 import { DIVIDER, VAvatar, VCardError, VDetailCard, VDetailRow, VFooterLink, VOfflineLine, VPill, VSkeletonRows, VTextTabs, type PillTone } from "./VenueKit";
+import { appLocale } from "../../i18n/format";
 
 // A venue's member roster (stage A4, venue_members()): THE one roster
 // component (V6-163, Q-R1), in the OP1 083 "Booked members" language
@@ -140,8 +141,8 @@ export function VenueMembersRoster({
   };
 
   const statusWord = status ? `${status} ` : "";
-  const header = card ? "Members" : `${total.toLocaleString()} ${statusWord}membership${total === 1 ? "" : "s"}`;
-  const right = card ? (current ? `${total.toLocaleString()} membership${total === 1 ? "" : "s"}` : undefined) : "Unpaid first";
+  const header = card ? "Members" : `${total.toLocaleString(appLocale())} ${statusWord}membership${total === 1 ? "" : "s"}`;
+  const right = card ? (current ? `${total.toLocaleString(appLocale())} membership${total === 1 ? "" : "s"}` : undefined) : "Unpaid first";
 
   const rows = (
     <>
@@ -219,7 +220,7 @@ export function VenueMembersRoster({
         footer={
           <>
             {paging}
-            {card && onSeeAll && total > 3 && <VFooterLink label={`See all ${total.toLocaleString()}`} onClick={onSeeAll} />}
+            {card && onSeeAll && total > 3 && <VFooterLink label={`See all ${total.toLocaleString(appLocale())}`} onClick={onSeeAll} />}
           </>
         }
       >

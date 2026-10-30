@@ -6,6 +6,7 @@ import {
 } from "../../../lib/supabase/suspension";
 import type { AuthError, Session } from "@supabase/supabase-js";
 import { DISPOSABLE_EMAIL_MESSAGE, isDisposableEmailText } from "./messages";
+import { getLanguage } from "../../i18n/core";
 
 // Re-exported so the auth UI has one import for everything auth-shaped, and
 // so nothing outside this layer needs to know the detection lives in lib/.
@@ -195,7 +196,10 @@ export async function signUpWithEmail(email: string, password: string, captchaTo
     password,
     // The Turnstile token, when the screen has one: required by GoTrue once
     // the project's auth captcha is on, ignored while it is off.
-    options: { emailRedirectTo: authRedirectUrl(), ...(captchaToken ? { captchaToken } : {}) },
+    // Round F (AV, F12): the language chosen so far, so the confirmation
+    // email is already in it (the Database's Auth templates read
+    // user metadata; app_preferences.language takes over once it exists).
+    options: { emailRedirectTo: authRedirectUrl(), data: { language: getLanguage() }, ...(captchaToken ? { captchaToken } : {}) },
   });
 
   if (error) {

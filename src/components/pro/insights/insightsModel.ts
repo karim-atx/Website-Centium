@@ -19,6 +19,7 @@
 //   cause, no advice; a template whose data is missing returns null.
 
 import { DAY_LONG, mondayIndex } from "../../../utils/week";
+import { appLocale } from "../../../i18n/format";
 
 export type ChartRange = "W" | "M" | "3M" | "Y";
 export const RANGE_DAYS: Record<ChartRange, number> = { W: 7, M: 30, "3M": 91, Y: 365 };
@@ -517,7 +518,7 @@ export function inBandLine(days: { day: string; kcal: number }[], band: { low: n
   if (wd) {
     const target = (band.low + band.high) / 2;
     const amounts = over.filter((d) => DAY_LONG[weekdayIndex(d.day)] === wd).map((d) => Math.round((d.kcal - target) / 10) * 10);
-    tail = `; ${plural(wd)} run ${Math.min(...amounts).toLocaleString("en-GB")} to ${Math.max(...amounts).toLocaleString("en-GB")} over`;
+    tail = `; ${plural(wd)} run ${Math.min(...amounts).toLocaleString(appLocale("en-GB"))} to ${Math.max(...amounts).toLocaleString(appLocale("en-GB"))} over`;
   }
   return `${inBand} of ${days.length} days in the band${tail}.`;
 }

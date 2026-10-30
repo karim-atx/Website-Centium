@@ -12,7 +12,7 @@ import { ForumBlocksSetting } from "../../components/forum/ForumBlocksSetting";
 import { useApp } from "../../context/AppContext";
 import { pushSupported } from "../../services/push";
 import { detectPlatform } from "../../components/health/IntegrationsCard";
-import { APP_LANGUAGES } from "../../i18n/languages";
+import { languageEntry } from "../../i18n/languages";
 import { pushUnavailableReason, watchPermission, type PermissionReading } from "./platform";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -203,7 +203,9 @@ function SettingsHub() {
 
   const dark = useIsDark();
   const isIos = detectPlatform() === "ios";
-  const languageName = APP_LANGUAGES.find((l) => l.code === language)?.name ?? "English";
+  // Round F (F7): Arabic reads "العربية · Beta" until every area is translated.
+  const languageEntryNow = languageEntry(language);
+  const languageName = languageEntryNow.beta ? `${languageEntryNow.name} · ${t("Beta")}` : languageEntryNow.name;
 
   return (
     <div>

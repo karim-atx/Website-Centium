@@ -13,6 +13,7 @@ import { useOnline } from "../../hooks/useOnline";
 import { linePx, textPx } from "../../theme/textSize";
 import { clock12 } from "../../utils/time12";
 import { readSources, savePriorities, type ConnectedSource, type ManualKey, type ManualSummary } from "./sourcesData";
+import { appLocale } from "../../i18n/format";
 
 // OURS-Sources: "Devices and sources" (/app/settings/devices). Designed by
 // us in the handover's language (Health full-page header, MO1.8 rows, the
@@ -93,7 +94,7 @@ function sourceLine(src: ConnectedSource): { text: string; danger: boolean } {
 }
 
 function dayMonth(d: Date): string {
-  return new Intl.DateTimeFormat("en-US", { day: "numeric", month: "short" }).format(d).replace("Sept", "Sep");
+  return new Intl.DateTimeFormat(appLocale("en-US"), { day: "numeric", month: "short" }).format(d).replace("Sept", "Sep");
 }
 
 /** "Last synced today at 8:40 AM" / "yesterday at …" / "on 3 Oct at …". */
@@ -154,7 +155,7 @@ const Row: React.FC<{
   return (
     <button type="button" onClick={onClick} className={clsx("tap", settingsRowClass)}>
       {body}
-      <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />
+      <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-charcoal-faint" />
     </button>
   );
 };

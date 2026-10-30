@@ -7,12 +7,12 @@ import * as D from "../data/pillars";
 import type { SectionVals } from "../sectionVals";
 
 export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
-  <div data-pls="4" style={{ zoom: r.plZoom, maxHeight: r.plMaxH, position: r.plPanePos, left: "0", top: "0", right: "0", bottom: "0", flex: `0 0 ${r.plPaneW}`, scrollSnapAlign: "center", opacity: r.plPaneOp, borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.16)", boxShadow: r.plSh, overflow: "hidden", display: "flex", flexDirection: "column", textAlign: "left" }}>
+  <div data-pls="4" style={{ zoom: r.plZoom, maxHeight: r.plMaxH, position: r.plPanePos, left: "0", top: "0", right: "0", bottom: "0", flex: `0 0 ${r.plPaneW}`, scrollSnapAlign: "center", opacity: r.plPaneOp, borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.16)", boxShadow: r.plSh, overflow: "hidden", display: "flex", flexDirection: "column", textAlign: "start" }}>
     <div style={{ height: "36px", flexShrink: "0", display: "flex", alignItems: "center", gap: "7px", padding: "0 14px", background: "#FAF9FE", borderBottom: "1px solid rgba(125,103,217,.1)" }}>
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E4DCF8" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#DDE8E5" }} />
       <span style={{ width: "8px", height: "8px", borderRadius: "9px", background: "#E7E3DC" }} />
-      <span style={{ marginLeft: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
+      <span style={{ marginInlineStart: "10px", fontSize: "11.5px", fontWeight: "700", color: "#756D63" }}>
         centium.atraxia.org/app/community
       </span>
     </div>
@@ -54,7 +54,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
                   ) : null}
                 </div>
               </div>
-              <div style={{ textAlign: "right", flexShrink: "0" }}>
+              <div style={{ textAlign: "end", flexShrink: "0" }}>
                 <div style={{ fontSize: "11px", fontWeight: "800", color: "#6A54C4" }}>
                   ♥{" "}
                   <span data-w={fp.lw} data-cnt={fp.likes} data-from={fp.from}>
@@ -174,7 +174,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
         </p>
         <div style={{ flex: "1", minHeight: "0", flexDirection: "column", justifyContent: "space-between", gap: "7px", display: r.mhFlex }}>
           {D.replies.map((rp, rpI) => (
-            <div key={rpI} data-w={rp.w} data-ty="14" data-op="" style={{ marginLeft: "14px", padding: "8px 11px", borderRadius: "12px", border: `1px solid ${rp.bd}`, background: rp.bg, opacity: "0" }}>
+            <div key={rpI} data-w={rp.w} data-ty="14" data-op="" style={{ marginInlineStart: "14px", padding: "8px 11px", borderRadius: "12px", border: `1px solid ${rp.bd}`, background: rp.bg, opacity: "0" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11.5px", fontWeight: "800" }}>
                 {rp.n}
                 {rp.pro ? (
@@ -184,7 +184,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
                     </span>
                   </>
                 ) : null}
-                <span style={{ marginLeft: "auto", fontSize: "11px", color: "#6A54C4" }}>
+                <span style={{ marginInlineStart: "auto", fontSize: "11px", color: "#6A54C4" }}>
                   ♥{" "}
                   <span data-w={rp.lw} data-cnt={rp.likes}>
                     0

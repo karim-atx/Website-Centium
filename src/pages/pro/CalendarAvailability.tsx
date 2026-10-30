@@ -218,7 +218,7 @@ export default function CalendarAvailability() {
                       <span style={{ fontSize: textPx(12.5), color: INK.chF }}>Day off</span>
                     )}
                     <Toggle checked={on} label={`${DAY_LONG[wd - 1]}, working`} disabled={busyDay === wd} onChange={(v) => void toggleDay(wd, v)} />
-                    {i < 6 && <span aria-hidden className="absolute" style={{ bottom: 0, left: 0, right: 0, height: 1, background: INK.b06 }} />}
+                    {i < 6 && <span aria-hidden className="absolute" style={{ bottom: 0, insetInlineStart: 0, insetInlineEnd: 0, height: 1, background: INK.b06 }} />}
                   </div>
                 );
               })}

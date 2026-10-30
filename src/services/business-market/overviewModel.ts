@@ -14,6 +14,7 @@
 // (data honesty, as VenueFigures does).
 
 import { num, rows, str } from "../market/parse";
+import { appLocale } from "../../i18n/format";
 
 /** StatLedger's row (components/market/StatLedger), kept here so node:test needs no JSX. */
 export interface StatLedgerRow {
@@ -71,7 +72,7 @@ export function parseOverview(data: unknown): MarketplaceOverview | null {
 }
 
 /** The board's figures: "7,200". */
-export const formatCount = (n: number): string => Math.round(n).toLocaleString("en-US");
+export const formatCount = (n: number): string => Math.round(n).toLocaleString(appLocale("en-US"));
 
 /** The quiet value of a figure that has nothing to show (loading, a failed read, not the caller's to see). */
 export const QUIET = "–";

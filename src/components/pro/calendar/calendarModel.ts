@@ -2,6 +2,7 @@
 // --test can check them. Dates are "YYYY-MM-DD" local days; times "HH:MM".
 
 import { minutesOfDay, range12 } from "../../../utils/time12";
+import { appLocale } from "../../../i18n/format";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -24,7 +25,7 @@ export function isoWeekday(iso: string): number {
 /** "Thu, Oct 8" (COPY {day_date}: weekday and date from one value). */
 export function dayDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  return d.toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
 }
 
 /** "Thu, Oct 8, 2026" (CA5 / CA14 Date field). */
@@ -34,14 +35,14 @@ export function fieldDate(iso: string): string {
 
 /** "Thursday, October 8" (S011, the Day navigator and the Month eyebrow). */
 export function longDay(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  return new Date(`${iso}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" });
 }
 
 /** "Oct 5 to Oct 11, 2026" (COPY {date_range}, FINAL_PLAN section 3 item 5). */
 export function dateRange(fromIso: string, toIso: string): string {
   const f = new Date(`${fromIso}T00:00:00`);
   const t = new Date(`${toIso}T00:00:00`);
-  const dm = (d: Date) => `${d.toLocaleDateString("en-US", { month: "short" })} ${d.getDate()}`;
+  const dm = (d: Date) => `${d.toLocaleDateString(appLocale("en-US"), { month: "short" })} ${d.getDate()}`;
   const fromPart = f.getFullYear() === t.getFullYear() ? dm(f) : `${dm(f)}, ${f.getFullYear()}`;
   return `${fromPart} to ${dm(t)}, ${t.getFullYear()}`;
 }
@@ -49,7 +50,7 @@ export function dateRange(fromIso: string, toIso: string): string {
 /** "$60", "$60.50": a stored price in its currency. */
 export function money(amount: number, currency = "USD"): string {
   try {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat(appLocale("en-US"), {
       style: "currency",
       currency,
       minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,

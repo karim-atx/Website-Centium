@@ -304,7 +304,7 @@ const TimeWheelCard: React.FC<{ label: string; value: string; left?: number; onC
       style={{ left: left ?? undefined, right: left === undefined ? 52 : undefined, border: "1px solid var(--menu-border)", boxShadow: "var(--shadow-menu)" }}
     >
       <div className="relative rounded-[10px] bg-cream-soft py-1 px-[6px] grid grid-cols-3 gap-[2px]">
-        <span aria-hidden className="absolute left-1 right-1 top-1/2 h-8 -translate-y-1/2 rounded-[9px] bg-cream-card" style={{ boxShadow: "0 1px 3px rgba(36,31,27,0.08)" }} />
+        <span aria-hidden className="absolute start-1 end-1 top-1/2 h-8 -translate-y-1/2 rounded-[9px] bg-cream-card" style={{ boxShadow: "0 1px 3px rgba(36,31,27,0.08)" }} />
         <WheelCol label="Hour" items={HOURS12} index={hi} loop onPick={(i) => set(i, mi, pm)} />
         <WheelCol label="Minutes" items={MINS} index={mi} loop onPick={(i) => set(hi, i, pm)} />
         <WheelCol label="AM or PM" items={["AM", "PM"]} index={pm ? 1 : 0} onPick={(i) => set(hi, mi, i === 1)} />
@@ -436,7 +436,7 @@ const PlacePin: React.FC<{
           type="button"
           aria-label="Use current location"
           onClick={locate}
-          className="absolute right-3 bottom-3 w-11 h-11 rounded-full bg-cream-card flex items-center justify-center text-primary-dark"
+          className="absolute end-3 bottom-3 w-11 h-11 rounded-full bg-cream-card flex items-center justify-center text-primary-dark"
           // 12 from the edge as drawn, lifted above the map's credit line (it must stay visible).
           style={{ boxShadow: "0 4px 12px rgba(0,0,0,0.18)", bottom: 30 }}
         >

@@ -156,7 +156,7 @@ export const ForwardSheet: React.FC<{
               onClick={() => toggle(t.id)}
               disabled={busy}
               aria-pressed={chosen.has(t.id)}
-              className="tap w-full flex items-center gap-3 px-1 py-3 text-left disabled:opacity-50"
+              className="tap w-full flex items-center gap-3 px-1 py-3 text-start disabled:opacity-50"
             >
               <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden">
                 {t.participantAvatarUrl ? (

@@ -282,7 +282,7 @@ export const GroupPicker: React.FC<{
                 aria-checked={fixed || on}
                 disabled={fixed}
                 onClick={() => onToggle(c.userId)}
-                className="tap w-full flex items-center text-left"
+                className="tap w-full flex items-center text-start"
                 style={{ gap: 12, padding: "9px 0", minHeight: 44, borderTop: i ? `1px solid ${INK.b06}` : undefined, opacity: fixed ? 0.55 : 1 }}
               >
                 <Avatar name={c.name} url={c.avatarUrl} size={36} />

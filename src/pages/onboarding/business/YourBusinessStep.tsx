@@ -161,24 +161,24 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
           type="button"
           aria-label="Add a cover photo"
           onClick={(e) => setMenu({ kind: "photo", photo: "cover", anchor: e.currentTarget.querySelector("[data-anchor]") as HTMLElement })}
-          className="relative block w-full h-[150px] rounded-[20px] overflow-hidden box-border text-left"
+          className="relative block w-full h-[150px] rounded-[20px] overflow-hidden box-border text-start"
           style={{
             background: coverUrl ? `center / cover no-repeat url("${coverUrl}")` : coverErr ? "rgb(var(--c-cream-card))" : stripes,
             border: coverErr ? "1.5px dashed rgb(var(--c-status-high))" : "none",
           }}
         >
-          {!coverUrl && !coverErr && <span className="absolute left-[14px] top-3 font-mono text-[10px] text-charcoal-faint">{coverLabel(lane)}</span>}
-          <ImageApprovalBadge state={coverState} className="absolute left-3 top-3" />
+          {!coverUrl && !coverErr && <span className="absolute start-[14px] top-3 font-mono text-[10px] text-charcoal-faint">{coverLabel(lane)}</span>}
+          <ImageApprovalBadge state={coverState} className="absolute start-3 top-3" />
           <span
             data-anchor
-            className="absolute right-3 bottom-3 h-[34px] px-3 rounded-full bg-cream-card text-primary-dark flex items-center gap-[6px] text-[12px] font-extrabold"
+            className="absolute end-3 bottom-3 h-[34px] px-3 rounded-full bg-cream-card text-primary-dark flex items-center gap-[6px] text-[12px] font-extrabold"
             style={{ boxShadow: "var(--ob-pill-shadow)" }}
           >
             <Camera size={14} strokeWidth={2.2} aria-hidden />
             {uploading === "cover" ? "Uploading…" : biz.coverPath ? "Change cover" : "Add cover"}
           </span>
         </button>
-        <div className="flex items-end gap-3 -mt-9 ml-4 relative">
+        <div className="flex items-end gap-3 -mt-9 ms-4 relative">
           <button
             type="button"
             aria-label={biz.logoPath ? "Change logo" : "Add a logo"}
@@ -187,7 +187,7 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
             style={{ boxShadow: "0 0 0 4px rgb(var(--c-cream))" }}
           >
             {logoUrl ? <img src={logoUrl} alt="" className="w-full h-full object-cover rounded-[22px]" /> : initials(biz.name)}
-            <span className="absolute -right-[6px] -bottom-[6px] w-7 h-7 rounded-full bg-cream-card border border-hair-11 text-primary-dark flex items-center justify-center">
+            <span className="absolute -end-[6px] -bottom-[6px] w-7 h-7 rounded-full bg-cream-card border border-hair-11 text-primary-dark flex items-center justify-center">
               <Camera size={13} strokeWidth={2.2} aria-hidden />
             </span>
           </button>
@@ -195,7 +195,7 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
             {uploading === "logo" ? "Uploading…" : help}
           </span>
         </div>
-        {logoState && <ImageApprovalBadge state={logoState} className="mt-2 ml-4" />}
+        {logoState && <ImageApprovalBadge state={logoState} className="mt-2 ms-4" />}
         {/* One "waiting" line covers both pictures; a refusal gives its own reason. */}
         <ImageApprovalNote state={coverState} className="mt-2" />
         {!(coverState?.status === "pending" && logoState?.status === "pending") && <ImageApprovalNote state={logoState} className="mt-2" />}

@@ -123,7 +123,7 @@ export default function ProfessionalReviews() {
               <span aria-hidden style={{ flex: 1, height: 5, borderRadius: 999, overflow: "hidden", background: m.pale }}>
                 <span style={{ display: "block", height: "100%", borderRadius: 999, width: `${(dist[n - 1] / total) * 100}%`, background: m.accent }} />
               </span>
-              <span aria-hidden style={{ width: 16, textAlign: "right", color: m.faint, fontVariantNumeric: "tabular-nums" }}>{dist[n - 1]}</span>
+              <span aria-hidden style={{ width: 16, textAlign: "end", color: m.faint, fontVariantNumeric: "tabular-nums" }}>{dist[n - 1]}</span>
             </div>
           ))}
         </div>
@@ -161,7 +161,7 @@ export default function ProfessionalReviews() {
                       aria-haspopup="menu"
                       aria-expanded={menuFor?.id === r.id}
                       onClick={(e) => setMenuFor({ id: r.id, anchor: e.currentTarget })}
-                      className="tap w-11 h-11 -my-3.5 -mr-3 rounded-full flex items-center justify-center"
+                      className="tap w-11 h-11 -my-3.5 -me-3 rounded-full flex items-center justify-center"
                       style={{ color: m.faint }}
                     >
                       <EllipsisVertical size={16} strokeWidth={1.75} aria-hidden />

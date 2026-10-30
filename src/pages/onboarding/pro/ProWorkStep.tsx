@@ -275,11 +275,11 @@ const PlacePin: React.FC<{
             hideControls
           />
         </Suspense>
-        <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-100%)", display: "flex", color: "var(--ob-brand)", pointerEvents: "none" }}>
+        <span style={{ position: "absolute", insetInlineStart: "50%", top: "50%", transform: "translate(-50%,-100%)", display: "flex", color: "var(--ob-brand)", pointerEvents: "none" }}>
           <MapPin size={40} strokeWidth={2} aria-hidden />
         </span>
         <span
-          style={{ position: "absolute", left: "50%", top: "50%", width: 10, height: 4, borderRadius: 999, background: "rgba(0,0,0,0.25)", transform: "translate(-50%,-1px)", pointerEvents: "none" }}
+          style={{ position: "absolute", insetInlineStart: "50%", top: "50%", width: 10, height: 4, borderRadius: 999, background: "rgba(0,0,0,0.25)", transform: "translate(-50%,-1px)", pointerEvents: "none" }}
         />
         <button
           type="button"
@@ -289,7 +289,7 @@ const PlacePin: React.FC<{
           // 12 from the edge as drawn, lifted above the map's credit line (it must stay visible).
           style={{
             position: "absolute",
-            right: 12,
+            insetInlineEnd: 12,
             bottom: 30,
             width: 44,
             height: 44,

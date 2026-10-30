@@ -92,7 +92,7 @@ function HeartRateAlertsScreen() {
     const inner = (
       <>
         {tile(Icon)}
-        <span className="flex-1 min-w-0 text-left" style={title}>
+        <span className="flex-1 min-w-0 text-start" style={title}>
           {label}
         </span>
         <span className="shrink-0 flex flex-col items-end">
@@ -125,7 +125,7 @@ function HeartRateAlertsScreen() {
   return (
     <div style={{ paddingBottom: 96 }} data-hr-alerts>
       <FixedHeader paddingBottom={14} fillClassName="bg-cream dark:bg-[#1C1F28]">
-        <div className="flex items-center" style={{ gap: 4, height: 36, marginLeft: -8 }}>
+        <div className="flex items-center" style={{ gap: 4, height: 36, marginInlineStart: -8 }}>
           <button type="button" onClick={back} aria-label="Back" className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36 }}>
             <ChevronLeft size={20} style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
           </button>
@@ -169,7 +169,7 @@ function HeartRateAlertsScreen() {
         <span className="shrink-0 grid place-items-center bg-th-f0edf9 dark:bg-th-303141" style={{ width: 40, height: 40, borderRadius: 12 }} aria-hidden>
           <Bell size={21} strokeWidth={1.5} style={{ color: hc && !dark ? "#4B3BA0" : dark ? "rgb(var(--thi-c3b3fb))" : "rgb(var(--thi-7d6bb5))" }} />
         </span>
-        <span className="flex-1 text-left" style={{ fontSize: textPx(14), lineHeight: linePx(19), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
+        <span className="flex-1 text-start" style={{ fontSize: textPx(14), lineHeight: linePx(19), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
           Notifications
         </span>
         <ChevronRight size={17} style={{ color: "rgb(var(--c-charcoal-faint))" }} aria-hidden />

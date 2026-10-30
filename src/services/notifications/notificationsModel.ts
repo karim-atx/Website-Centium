@@ -29,6 +29,7 @@ import { num, rows, str } from "../market/parse";
 import { imageHome, imageNoticeCopy, SUPPORT_NOTICE } from "../moderation/imageCopy";
 import { getSupportPath } from "../moderation/support";
 import { FOOD_REVIEW_COPY, foodReviewCopy } from "../food/onlineSearchModel";
+import { appLocale } from "../../i18n/format";
 
 /** member_notification_kind, the whole enum in its declared order (20261210600000). */
 export const MEMBER_NOTIFICATION_KINDS = [
@@ -266,7 +267,7 @@ const pDate = (p: Readonly<Record<string, unknown>>, k: string): Date | null => 
   return Number.isNaN(d.getTime()) ? null : d;
 };
 /** "1,250". */
-export const formatCount = (n: number): string => n.toLocaleString("en-US");
+export const formatCount = (n: number): string => n.toLocaleString(appLocale("en-US"));
 /** Month first: "Nov 30, 2026". */
 export const formatNoticeDate = (d: Date): string => formatShortDate(d, { month: "short", day: "numeric", year: "numeric" });
 /** Month first with the weekday: "Fri, Nov 6". */
@@ -603,9 +604,9 @@ export function noticeMoney(amount: unknown, currency: unknown): string | null {
   const n = num(amount);
   if (n === null || n < 0) return null;
   const code = typeof currency === "string" && /^[A-Za-z]{3}$/.test(currency.trim()) ? currency.trim().toUpperCase() : "USD";
-  if (code === "USD") return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (code === "USD") return "$" + n.toLocaleString(appLocale("en-US"), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   try {
-    return n.toLocaleString("en-US", { style: "currency", currency: code, minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return n.toLocaleString(appLocale("en-US"), { style: "currency", currency: code, minimumFractionDigits: 2, maximumFractionDigits: 2 });
   } catch {
     return null;
   }
