@@ -20,14 +20,23 @@ const table = () =>
 
 export const toLanguage = (v: string | null | undefined): Language | null => (v === "ar" || v === "en" ? v : null);
 
-/** The account's language, or null when it has no preferences row yet (or the read failed). */
-export async function readAccountLanguage(ownerId: string): Promise<Language | null> {
-  const { data, error } = await table().select("language").eq("owner_id", ownerId).maybeSingle();
-  if (error) {
-    console.error("[language] Could not read:", error.message);
-    return null;
+/**
+ * The account's language; null when it has no preferences row yet; undefined
+ * when the read failed, which must never lead to a write (the device's choice
+ * would overwrite the account's).
+ */
+export async function readAccountLanguage(ownerId: string): Promise<Language | null | undefined> {
+  try {
+    const { data, error } = await table().select("language").eq("owner_id", ownerId).maybeSingle();
+    if (error) {
+      console.error("[language] Could not read:", error.message);
+      return undefined;
+    }
+    return toLanguage(data?.language);
+  } catch (e) {
+    console.error("[language] Could not read:", e);
+    return undefined;
   }
-  return toLanguage(data?.language);
 }
 
 /** Update first, insert only if no row matched (the UPDATE grant excludes owner_id, so never upsert). */

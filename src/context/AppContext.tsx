@@ -2193,6 +2193,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const local = language;
     const onboarded = user.onboarded;
     void readAccountLanguage(authUserId).then((account) => {
+      // A failed read settles nothing (and writes nothing); the next sign-in tries again.
+      if (account === undefined) {
+        languageSettledFor.current = null;
+        return;
+      }
       const s = settleLanguage(local, account, onboarded);
       if (s.use !== local) setLanguageState(s.use);
       if (s.write) void writeAccountLanguage(authUserId, s.use);
