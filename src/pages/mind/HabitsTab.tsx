@@ -411,7 +411,7 @@ export default function HabitsTab() {
           <div className="flex items-center h-[59px] ps-3.5 pe-[7px] border-b border-charcoal/[0.04] bg-primary/60">
             {/* #8 / #9: the white mark 24 × 24, then the white "ENTIUM"
                 wordmark 91.6 × 10, 6 apart; white in every theme. */}
-            <span className="flex-1 min-w-0 overflow-hidden flex items-center gap-1.5" role="img" aria-label="Centium">
+            <span dir="ltr" className="flex-1 min-w-0 overflow-hidden flex items-center gap-1.5" role="img" aria-label="Centium">
               <span aria-hidden className="w-6 h-6 flex items-center justify-center shrink-0">
                 <CentiumMark height={24} variant="white" />
               </span>

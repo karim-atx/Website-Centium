@@ -251,7 +251,7 @@ html.high-contrast.dark .tm-vars {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  text-align: left;
+  text-align: start;
 }
 .tm-jr.has {
   border-color: var(--tm-high-bd) !important;
@@ -1282,7 +1282,7 @@ html.high-contrast .tm-cls {
   font-weight: 600;
   line-height: 20px;
   color: var(--tm-ink) !important;
-  text-align: left;
+  text-align: start;
   outline: none;
 }
 .tm-textarea {
@@ -1297,7 +1297,7 @@ html.high-contrast .tm-cls {
   font-size: 11.5px;
   color: var(--tm-faint);
   margin-top: 5px !important;
-  text-align: right;
+  text-align: end;
 }
 .tm-input::placeholder {
   color: var(--tm-faint);
@@ -1407,7 +1407,7 @@ html.high-contrast .tm-cls {
   background: var(--tm-menu-row-bg) !important;
   min-height: 44px;
   box-sizing: border-box;
-  text-align: left;
+  text-align: start;
 }
 .tm-opt + .tm-opt {
   margin-top: 6px;

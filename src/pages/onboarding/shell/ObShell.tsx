@@ -49,9 +49,9 @@ export const ObProgress: React.FC<{ count: number; index: number; variant?: "int
   );
 };
 
-/** The 22×22 mark + 78×8.5 wordmark lockup. */
+/** The 22×22 mark + 78×8.5 wordmark lockup (left to right in every language: the mark is its C). */
 export const ObLockup = React.forwardRef<HTMLSpanElement, { style?: React.CSSProperties }>(({ style }, ref) => (
-  <span ref={ref} className="ob-lockup" style={style}>
+  <span ref={ref} className="ob-lockup" dir="ltr" style={style}>
     <MarkSvg size={22} className="ob-lockup-mark" />
     <Wordmark width={78} height={8.5} className="ob-lockup-word" />
   </span>

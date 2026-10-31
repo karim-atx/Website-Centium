@@ -79,7 +79,7 @@ export const MessageActions: React.FC<{
   // fill, 12.5/500) with an icon, padding 9 × 10: 36 tall as drawn
   // (handover-complete pass; was 44 for the tap target).
   const row =
-    "tap w-full h-9 px-2.5 flex items-center gap-2.5 text-left text-[12.5px] font-medium rounded-lg border border-border-option bg-surface-raised";
+    "tap w-full h-9 px-2.5 flex items-center gap-2.5 text-start text-[12.5px] font-medium rounded-lg border border-border-option bg-surface-raised";
   const icon = (label: string) => {
     const I = iconFor(label);
     return I ? <I size={15} strokeWidth={1.75} className="shrink-0" aria-hidden /> : null;

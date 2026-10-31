@@ -304,7 +304,7 @@ export function GrowthChart({ cur, prev, endsThisWeek, early = false, resetKey =
                     <span style={{ width: 7, height: 7, borderRadius: 2, flexShrink: 0, background: r.k === "active" ? c.line : r.k === "joined" ? c.good : r.k === "ended" ? c.high : "transparent" }} />
                     {r.l}
                   </span>
-                  <span style={{ fontWeight: 800, textAlign: "right", fontVariantNumeric: "tabular-nums", color: r.k !== "net" ? c.ink : r.n > 0 ? c.good : r.n < 0 ? c.high : c.faint }}>{r.v}</span>
+                  <span style={{ fontWeight: 800, textAlign: "end", fontVariantNumeric: "tabular-nums", color: r.k !== "net" ? c.ink : r.n > 0 ? c.good : r.n < 0 ? c.high : c.faint }}>{r.v}</span>
                 </span>
               ))}
             </div>

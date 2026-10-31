@@ -193,7 +193,7 @@ export const ObRows: React.FC<{ rows: ObRowItem[]; label?: string; marginBottom?
         const hasIc = !!r.icon && r.kind !== "radio";
         const inner = (
           <>
-            {i > 0 && <span className="ob-row-rule" style={{ left: hasIc ? 55 : 14 }} />}
+            {i > 0 && <span className="ob-row-rule" style={{ insetInlineStart: hasIc ? 55 : 14 }} />}
             {hasIc && r.icon && (
               <span className="ob-row-ic">
                 <r.icon size={15} />

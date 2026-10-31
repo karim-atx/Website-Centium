@@ -10,6 +10,7 @@ import { WASH_BG, WEDGE_312, WEDGE_48 } from "../landing/wash";
 import { SITE_URL } from "../../config/site";
 import { linkPhrases, parsePolicy, type PolicyBlock, type PolicyPiece } from "../legal/policyDoc";
 import { initialPolicyLang, PREVAILS_SECTION_ID, REFUND_POLICY_LINKS, REFUND_POLICY_PATH, type PolicyLang } from "../legal/refund";
+import { getLanguage } from "../../i18n/core";
 import EN_MD from "../../../docs/legal/refund-policy.md?raw";
 import AR_MD from "../../../docs/legal/refund-policy.ar.md?raw";
 
@@ -108,9 +109,10 @@ export const RefundPolicy: React.FC = () => {
   const pageLink = usePageLink();
   const { search } = useLocation();
   const navigate = useNavigate();
-  const [lang, setLang] = useState<PolicyLang>(() =>
-    initialPolicyLang(search, document.documentElement.lang || "", typeof navigator === "undefined" ? "" : navigator.language || ""),
-  );
+  // Round F (AV): the app's language, not <html lang>, which follows it only
+  // after this first render; a choice on the page (or ?lang=) wins.
+  const [chosen, setLang] = useState<PolicyLang | null>(null);
+  const lang = chosen ?? initialPolicyLang(search, getLanguage(), typeof navigator === "undefined" ? "" : navigator.language || "");
   useArabicFont(lang === "ar");
   const doc = DOCS[lang];
   const links = REFUND_POLICY_LINKS[lang];

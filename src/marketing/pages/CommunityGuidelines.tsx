@@ -10,6 +10,7 @@ import { GUIDELINES_UPDATED, guidelinesFor, type GuidelinePiece } from "../legal
 import * as EN from "../legal/text";
 import type * as ArabicText from "../legal/text.ar";
 import { documentFor, t } from "../../i18n/core";
+import { legalDate } from "../../pages/settings/legalCopy";
 
 // The Community guidelines (Round C Release 2, undrawn): one document in the
 // Legal page's own layout and literal values (LG1 v17, pages/Legal.tsx): the
@@ -73,7 +74,7 @@ export const CommunityGuidelines: React.FC = () => {
       <div style={{ position: "relative", textAlign: "center", maxWidth: "820px", margin: `0 auto ${r.headMb}`, display: "flex", flexDirection: "column", alignItems: "center" }}>
         <PageMark id="LEGAL" word={t("Legal")} size={r.eyebrow} />
         <h1 style={{ margin: "14px 0 0", fontWeight: "800", fontSize: r.h1, letterSpacing: "-.04em", lineHeight: "1.04", textWrap: "balance" }}>{t("Community guidelines")}</h1>
-        <p style={{ margin: "12px 0 0", fontSize: "14px", fontWeight: "600", color: "#756D63" }}>{t("Last updated {date}", { date: GUIDELINES_UPDATED })}</p>
+        <p style={{ margin: "12px 0 0", fontSize: "14px", fontWeight: "600", color: "#756D63" }}>{t("Last updated {date}", { date: legalDate(GUIDELINES_UPDATED) })}</p>
       </div>
       <div style={{ position: "relative", maxWidth: "68ch", margin: "0 auto", textAlign: "start" }}>
         <article style={{ paddingBottom: "44px", marginBottom: "44px", borderBottom: "1px solid #EDEAE4" }}>

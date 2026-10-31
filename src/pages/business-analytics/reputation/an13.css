@@ -269,7 +269,7 @@ html.high-contrast .rp-star-track svg {
   padding: 14px 16px;
   min-height: 44px;
   width: 100%;
-  text-align: left;
+  text-align: start;
 }
 .rp-coll-head:focus-visible,
 .rp-all-head:focus-visible {
@@ -344,13 +344,13 @@ html.reduce-motion .rp-chev {
 .rp-dist-n {
   font-size: 12px;
   font-weight: 800;
-  text-align: right;
+  text-align: end;
   font-variant-numeric: tabular-nums;
 }
 .rp-dist-p {
   font-size: 11px;
   color: var(--an-faint);
-  text-align: right;
+  text-align: end;
   font-variant-numeric: tabular-nums;
 }
 .rp-cap {
@@ -509,7 +509,7 @@ html.reduce-motion .rp-chev {
   padding: 0 10px;
   border: 1px solid var(--an-opt-border);
   background: var(--an-opt-bg);
-  text-align: left;
+  text-align: start;
 }
 .rp-opt + .rp-opt {
   margin-top: 6px;
@@ -778,7 +778,7 @@ html.larger-text .rp-who {
   gap: 10px;
   padding: 14px 16px;
   width: 100%;
-  text-align: left;
+  text-align: start;
   min-height: 44px;
 }
 .rp-all-head .rp-chev {

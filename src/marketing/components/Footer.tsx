@@ -212,7 +212,7 @@ export const Footer: React.FC = () => {
                   color: "#6C655C",
                 }}
               >
-                {c.t}
+                {t(c.t)}
                 <span aria-hidden="true" style={{ display: lg ? "none" : "inline", color: "#775FD7", fontSize: "15px" }}>
                   +
                 </span>
@@ -231,11 +231,11 @@ export const Footer: React.FC = () => {
                   } as React.CSSProperties;
                   return ln.app ? (
                     <Link key={ln.t} to="/app" className="cl-hc cl-uline" style={style}>
-                      {ln.t}
+                      {t(ln.t)}
                     </Link>
                   ) : (
                     <a key={ln.t} href={"/#" + ln.section} onClick={sectionLink(ln.section!)} className="cl-hc cl-uline" style={style}>
-                      {ln.t}
+                      {t(ln.t)}
                     </a>
                   );
                 })}

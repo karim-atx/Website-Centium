@@ -91,7 +91,8 @@ export const WelcomeStep: React.FC<{
     <ObPage>
       <div className="ob-welcome" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ position: "relative", minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
         <div style={{ ...aStyle, flex: 1, display: "flex", flexDirection: "column", visibility: kf && kf.a === 0 && k >= 2 ? "hidden" : undefined }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, marginTop: 56 }}>
+          {/* Left to right in every language: the mark is the lockup's C. */}
+          <div dir="ltr" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, marginTop: 56 }}>
             <MarkSvg size={26} />
             <Wordmark width={91} height={10} style={{ color: "var(--ob-ink)" }} />
           </div>

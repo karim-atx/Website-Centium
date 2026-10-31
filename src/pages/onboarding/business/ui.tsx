@@ -239,7 +239,7 @@ export const BizRows: React.FC<{ rows: BizRow[]; ariaLabel?: string; radioGroup?
       const interactive = !!(r.radio || r.onClick);
       const inner = (
         <>
-          {i > 0 && <span aria-hidden className="absolute top-0 end-[14px] h-px bg-list-rule" style={{ left: Icon ? 55 : 14 }} />}
+          {i > 0 && <span aria-hidden className="absolute top-0 end-[14px] h-px bg-list-rule" style={{ insetInlineStart: Icon ? 55 : 14 }} />}
           {Icon && (
             <span className="w-[30px] h-[30px] rounded-[10px] bg-row-tile text-white flex items-center justify-center shrink-0">
               <Icon size={15} aria-hidden />

@@ -101,7 +101,7 @@ export const GroupInfoSection: React.FC<{
     onChanged();
   };
 
-  const row = "tap w-full min-h-[52px] text-left text-sm font-semibold border-b border-charcoal/[0.06] last:border-b-0";
+  const row = "tap w-full min-h-[52px] text-start text-sm font-semibold border-b border-charcoal/[0.06] last:border-b-0";
 
   const runConfirm = () => {
     const c = confirm;

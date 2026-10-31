@@ -232,7 +232,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
       type="button"
       onClick={onExpand}
       className="market-focus hit"
-      style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, width: "100%", padding: 0, border: 0, background: "none", font: "inherit", color: m.ink, textAlign: "left", cursor: "pointer" }}
+      style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, width: "100%", padding: 0, border: 0, background: "none", font: "inherit", color: m.ink, textAlign: "start", cursor: "pointer" }}
     >
       <span style={{ fontSize: textPx(13.5), lineHeight: linePx(19), fontWeight: 800 }}>{question}</span>
       <MaximizeIcon color={m.faint} />
@@ -465,7 +465,7 @@ export const ExpandedChart: React.FC<ExpandedChartProps> = ({ question, total, d
         aria-checked={compare}
         onClick={() => onCompareChange(!compare)}
         className="market-focus"
-        style={{ marginTop: 14, width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, border: `1px solid ${m.border}`, borderRadius: 14, background: m.card, padding: "10px 12px", font: "inherit", cursor: "pointer", textAlign: "left" }}
+        style={{ marginTop: 14, width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, border: `1px solid ${m.border}`, borderRadius: 14, background: m.card, padding: "10px 12px", font: "inherit", cursor: "pointer", textAlign: "start" }}
       >
         <span style={{ fontSize: textPx(13), fontWeight: 700, color: m.ink }}>Compare to previous period</span>
         <span aria-hidden style={{ width: 42, height: 26, borderRadius: 999, background: compare ? m.fill : m.swoff, position: "relative", flexShrink: 0 }}>

@@ -227,7 +227,7 @@ export const ListRows: React.FC<{
       const Icon = r.icon;
       const inner = (
         <>
-          {i > 0 && <span aria-hidden className="ob-row-rule" style={{ left: Icon ? 55 : 14 }} />}
+          {i > 0 && <span aria-hidden className="ob-row-rule" style={{ insetInlineStart: Icon ? 55 : 14 }} />}
           {Icon && (
             <span aria-hidden className="ob-row-ic">
               <Icon size={15} />

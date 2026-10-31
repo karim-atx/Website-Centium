@@ -45,7 +45,7 @@ import { t } from "../i18n/core";
 const keyOf = (p: Presentation) => JSON.stringify(presentationToRow(p));
 
 // The failure and what it means for the choice, as one sentence in the chosen
-// language (built when the save fails, so the language is set).
+// language (built as it is shown).
 const kept = (message: string) => t("{message} Your choice is kept on this device until it saves.", { message: t(message) });
 
 export function usePresentationSync({
@@ -133,7 +133,7 @@ export function usePresentationSync({
         if (owner.current !== id) return;
         if (result.status === "error") {
           setPending(true);
-          setSaveError({ owner: id, message: kept(result.message) });
+          setSaveError({ owner: id, message: result.message });
           retry.current = afterFailure(retry.current, result.permission, Date.now());
           clearRetryTimer();
           if (!retry.current.blocked) {
@@ -166,7 +166,7 @@ export function usePresentationSync({
       if (read.status === "error") {
         // Nothing is lost: the device copy stays applied. Say so only when a
         // change of this device's is waiting to be saved.
-        if (pendingRef.current) setSaveError({ owner: id, message: kept(read.message) });
+        if (pendingRef.current) setSaveError({ owner: id, message: read.message });
         return;
       }
       server.current = read.settings;
@@ -236,5 +236,6 @@ export function usePresentationSync({
     return () => window.removeEventListener("online", onOnline);
   }, [sync]);
 
-  return { saveError: saveError && saveError.owner === ownerId ? saveError.message : null };
+  // Translated as it is shown, so a message set before the language loaded follows it.
+  return { saveError: saveError && saveError.owner === ownerId ? kept(saveError.message) : null };
 }

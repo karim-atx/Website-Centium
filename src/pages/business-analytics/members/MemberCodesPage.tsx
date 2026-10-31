@@ -323,7 +323,7 @@ function businessGyms(data: MembersData) {
 }
 
 const FIELD =
-  "tap w-full h-[44px] rounded-[14px] bg-cream-card border border-solid border-charcoal/[0.11] dark:border-charcoal/[0.08] flex items-center justify-between gap-2 text-left text-[13px] leading-[18px] text-charcoal disabled:opacity-60";
+  "tap w-full h-[44px] rounded-[14px] bg-cream-card border border-solid border-charcoal/[0.11] dark:border-charcoal/[0.08] flex items-center justify-between gap-2 text-start text-[13px] leading-[18px] text-charcoal disabled:opacity-60";
 const FIELD_LABEL = "text-[11px] leading-[14px] font-bold text-charcoal-faint mb-[6px]";
 const HINT = "text-[11px] leading-[15px] text-charcoal-faint";
 

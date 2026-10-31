@@ -162,6 +162,8 @@ export const Nav: React.FC = () => {
       >
         <a
           id="nav-logo"
+          // The mark is the lockup's C: left to right in every language.
+          dir="ltr"
           href="/"
           aria-label={t("Centium home")}
           onClick={goHomeNav}

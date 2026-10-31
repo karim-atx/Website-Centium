@@ -91,7 +91,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
             <span />
             {sl.days!.map((d, dI) => (
               <span key={dI} style={{ textAlign: "center", fontSize: r.eF105, fontWeight: "700", color: "#756D63" }}>
-                {d}
+                {t(d)}
               </span>
             ))}
             {sl.cells!.map((ce, ceI) => (
@@ -298,7 +298,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
               <span />
               {sl.days!.map((d, dI) => (
                 <span key={dI}>
-                  {d}
+                  {t(d)}
                 </span>
               ))}
               {sl.cells!.map((ce, ceI) => (
