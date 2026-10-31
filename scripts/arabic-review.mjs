@@ -26,6 +26,9 @@ const AREAS = [
   ["notifications", "Notifications and errors"],
   ["services", "Service messages (errors, validation, notices)"],
   ["shared", "Shared popups, sheets and components"],
+  ["programmes", "Programmes: week notes, skip and move, check-in trend"],
+  ["safety", "Referrals, vouchers, reviews and first messages"],
+  ["venues", "Class no-shows, gym pass and member codes"],
 ];
 
 const rows = [];

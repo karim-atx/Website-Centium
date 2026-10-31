@@ -4,6 +4,7 @@ import {
   fetchOwnProgrammes,
   fetchProgrammeAssignments,
   fetchProgrammeSlots,
+  fetchWeekNotes,
   type Programme,
   type ProgrammeAssignmentRow,
 } from "../../../services/programmes";
@@ -11,7 +12,8 @@ import type { ProgrammeSlot } from "../../../services/programmes/model";
 
 // Round D · DT1: the professional's week-by-day programmes, their sessions and
 // their assignments, read together and re-read after every write (the tables
-// change only through the calls, so a re-read is the truth).
+// change only through the calls, so a re-read is the truth). Round F (DW1):
+// with each programme's week notes (a failed notes read leaves them empty).
 
 export interface ProgrammesState {
   status: "loading" | "ok" | "error";
@@ -19,6 +21,8 @@ export interface ProgrammesState {
   programmes: Programme[];
   slots: Record<string, ProgrammeSlot[]>;
   assignments: ProgrammeAssignmentRow[];
+  /** Round F: week notes, by programme then week. */
+  notes: Record<string, Record<number, string>>;
   reload: () => Promise<void>;
 }
 
@@ -29,6 +33,7 @@ export function useProgrammes(): ProgrammesState {
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [slots, setSlots] = useState<Record<string, ProgrammeSlot[]>>({});
   const [assignments, setAssignments] = useState<ProgrammeAssignmentRow[]>([]);
+  const [notes, setNotes] = useState<Record<string, Record<number, string>>>({});
 
   const load = useCallback(async () => {
     if (!authUserId) return;
@@ -38,7 +43,8 @@ export function useProgrammes(): ProgrammesState {
       setStatus("error");
       return;
     }
-    const s = await fetchProgrammeSlots(p.data.map((x) => x.id));
+    const ids = p.data.map((x) => x.id);
+    const [s, n] = await Promise.all([fetchProgrammeSlots(ids), fetchWeekNotes(ids)]);
     if (!s.ok) {
       setOffline(s.offline);
       setStatus("error");
@@ -47,6 +53,7 @@ export function useProgrammes(): ProgrammesState {
     setProgrammes(p.data);
     setAssignments(a.data);
     setSlots(s.data);
+    setNotes(n);
     setOffline(false);
     setStatus("ok");
   }, [authUserId]);
@@ -61,5 +68,5 @@ export function useProgrammes(): ProgrammesState {
     };
   }, [load]);
 
-  return { status, offline, programmes, slots, assignments, reload: load };
+  return { status, offline, programmes, slots, assignments, notes, reload: load };
 }

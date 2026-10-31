@@ -8,11 +8,19 @@
 // Dates mirror the server's programme_session_dates: week `join_week` is the
 // Monday-to-Sunday week holding starts_on, then whole weeks; sessions before
 // starts_on aren't scheduled; ends_on is the Sunday of the last week.
+//
+// Round F (DW1–DW3, Database 20261226000000): a week can carry the
+// professional's note; a session can be skipped (not planned, so never
+// missed) or moved to another day of its own week.
+
+import { programmeCodeMessage } from "./copy";
 
 export const MAX_WEEKS = 52;
 export const MAX_PER_DAY = 4;
 export const NAME_MAX = 120;
 export const TEXT_MAX = 2000;
+/** programme_week_notes.note: up to 280 characters. */
+export const WEEK_NOTE_MAX = 280;
 
 /** One programme_sessions row. */
 export interface ProgrammeSlot {
@@ -140,6 +148,10 @@ export interface ScheduleRow {
   routineId: string | null;
   /** null: a professional without the client's Workout activity consent. */
   done: boolean | null;
+  /** Round F: skipped (not planned, so never missed). A skipped session sits on its planned date. */
+  skipped: boolean;
+  /** Round F: the planned date when the session was moved to onDate, else null. */
+  movedFrom: string | null;
 }
 
 export interface ProgressRow {
@@ -147,9 +159,14 @@ export interface ProgressRow {
   weekStartsOn: string;
   workoutTemplateId: string;
   workoutName: string;
+  /** Skipped sessions excluded. */
   planned: number;
   /** null: not shared with this professional. */
   done: number | null;
+  /** Round F: sessions of this workout skipped that week. */
+  skipped: number;
+  /** Round F: the week's note (the same on every row of a week), or null. */
+  weekNote: string | null;
 }
 
 export interface ScheduleDay {
@@ -184,10 +201,15 @@ export const sessionsOn = (rows: ScheduleRow[], date: string): ScheduleRow[] =>
 export interface WeekProgress {
   week: number;
   weekStartsOn: string;
+  /** Skipped sessions excluded. */
   planned: number;
   /** null when the professional can't see it. */
   done: number | null;
-  byWorkout: { workoutTemplateId: string; workoutName: string; planned: number; done: number | null }[];
+  /** Round F: sessions skipped that week. */
+  skipped: number;
+  /** Round F: the professional's note for the week, or null. */
+  weekNote: string | null;
+  byWorkout: { workoutTemplateId: string; workoutName: string; planned: number; done: number | null; skipped: number }[];
 }
 
 /** programme_progress rows summed per week; a week's done is null when any row is. */
@@ -195,10 +217,109 @@ export function summariseProgress(rows: ProgressRow[]): WeekProgress[] {
   const out: WeekProgress[] = [];
   for (const r of [...rows].sort((a, b) => a.week - b.week || a.workoutName.localeCompare(b.workoutName))) {
     let w = out.find((x) => x.week === r.week);
-    if (!w) out.push((w = { week: r.week, weekStartsOn: r.weekStartsOn, planned: 0, done: 0, byWorkout: [] }));
+    if (!w) out.push((w = { week: r.week, weekStartsOn: r.weekStartsOn, planned: 0, done: 0, skipped: 0, weekNote: null, byWorkout: [] }));
     w.planned += r.planned;
     w.done = w.done === null || r.done === null ? null : w.done + r.done;
-    w.byWorkout.push({ workoutTemplateId: r.workoutTemplateId, workoutName: r.workoutName, planned: r.planned, done: r.done });
+    w.skipped += r.skipped;
+    w.weekNote ??= r.weekNote;
+    w.byWorkout.push({ workoutTemplateId: r.workoutTemplateId, workoutName: r.workoutName, planned: r.planned, done: r.done, skipped: r.skipped });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Round F: skipping and moving a session (skip_programme_session,
+// unskip_programme_session, move_programme_session), as the server checks them
+// ---------------------------------------------------------------------------
+
+/** A session that can still change: not done and not skipped. */
+export const isOpen = (r: ScheduleRow): boolean => !r.done && !r.skipped;
+
+/** The day a session was planned on (a moved one keeps its planned date in movedFrom). */
+export const plannedOn = (r: ScheduleRow): string => r.movedFrom ?? r.onDate;
+
+/**
+ * The client may skip a day of the current Monday-to-Sunday week (today, or
+ * any other day of it) that still has an unfinished session; another week is
+ * ATXP1. The professional may skip any day.
+ */
+export function clientMaySkip(onDate: string, sessions: ScheduleRow[], today: string): boolean {
+  return mondayOf(onDate) === mondayOf(today) && sessions.some(isOpen);
+}
+
+/**
+ * The skip_programme_session calls for "Skip this day": one call for the whole
+ * day (position null) when nothing on it is done, else one per unfinished
+ * session (a whole-day skip refuses a day holding a done workout, ATXP0).
+ */
+export function skipPositions(sessions: ScheduleRow[]): (number | null)[] {
+  const open = sessions.filter(isOpen);
+  if (open.length === 0) return [];
+  return sessions.some((s) => s.done) ? open.map((s) => s.position) : [null];
+}
+
+/**
+ * The unskip_programme_session calls that undo a skip, one per session. Undo
+ * is keyed by the PLANNED date and position, so a moved session that was
+ * skipped comes back on its planned day.
+ */
+export function unskipTargets(sessions: ScheduleRow[]): { onDate: string; position: number }[] {
+  return sessions.map((s) => ({ onDate: plannedOn(s), position: s.position }));
+}
+
+export interface MoveTarget {
+  date: string;
+  /** 1 = Monday … 7 = Sunday. */
+  day: number;
+  /** Sessions already on that day (skipped ones don't count). */
+  count: number;
+  /** Four already: ATXP3. */
+  full: boolean;
+  /** The session's own planned day: moving it back clears the move. */
+  planned: boolean;
+}
+
+/**
+ * Where a session may move: another day of its own Monday-to-Sunday week,
+ * today or later, within the assignment's dates (ATXP2), at most four a day
+ * (ATXP3). None for a done or skipped session (ATXP0, ATXP4).
+ */
+export function moveTargets(session: ScheduleRow, rows: ScheduleRow[], today: string, a: { startsOn: string; endsOn: string }): MoveTarget[] {
+  if (!isOpen(session)) return [];
+  const monday = mondayOf(plannedOn(session));
+  const out: MoveTarget[] = [];
+  for (let i = 0; i < 7; i += 1) {
+    const date = addDays(monday, i);
+    if (date === session.onDate || date < today || date < a.startsOn || date > a.endsOn) continue;
+    const count = rows.filter((r) => r.onDate === date && !r.skipped).length;
+    out.push({ date, day: i + 1, count, full: count >= MAX_PER_DAY, planned: date === session.movedFrom });
+  }
+  return out;
+}
+
+/** Whether a session may be dropped on `date`: a free day among its move targets. */
+export function canMoveTo(session: ScheduleRow, date: string, rows: ScheduleRow[], today: string, a: { startsOn: string; endsOn: string }): boolean {
+  return moveTargets(session, rows, today, a).some((t) => t.date === date && !t.full);
+}
+
+/**
+ * Round D D-S4: yesterday's unfinished sessions, for "Yesterday: {workout} ·
+ * Do it today" with "Skip". Only while yesterday is in this week (from
+ * Tuesday on): the client can't move or skip last Sunday's session.
+ */
+export function yesterdaysOpen(rows: ScheduleRow[], today: string): ScheduleRow[] {
+  if (isoDay(today) === 1) return [];
+  return sessionsOn(rows, addDays(today, -1)).filter(isOpen);
+}
+
+/** The builder's "Move to…": the other days of the week shown, each with its count (four is full, ATXP3). */
+export function builderMoveTargets(week: string[][] | undefined, fromDay: number): { day: number; count: number; full: boolean }[] {
+  const days = week ?? [];
+  const out: { day: number; count: number; full: boolean }[] = [];
+  for (let d = 1; d <= 7; d += 1) {
+    if (d === fromDay) continue;
+    const count = (days[d - 1] ?? []).length;
+    out.push({ day: d, count, full: count >= MAX_PER_DAY });
   }
   return out;
 }
@@ -237,11 +358,15 @@ export function assignmentStatus(
 
 /**
  * A short sentence for each refusal the programme calls raise (the codes and
- * texts in 20261223020000). Offline is decided by the caller.
+ * texts in 20261223020000, and Round F's in 20261226000000, whose sentences
+ * are translated in ./copy). Offline is decided by the caller.
  */
 export function programmeErrorMessage(error: { code?: string; message?: string } | null | undefined, fallback: string): string {
   const code = error?.code ?? "";
   const msg = (error?.message ?? "").toLowerCase();
+  // Round F (20261226000000): skipping, moving and week notes.
+  const f2 = programmeCodeMessage(code, msg);
+  if (f2) return f2;
   if (code === "ATX12") return "That person isn't your client any more.";
   if (code === "ATX09") {
     if (msg.includes("own workouts")) return "Only your own workouts can go in a programme.";

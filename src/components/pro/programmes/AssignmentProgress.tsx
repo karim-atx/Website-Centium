@@ -12,18 +12,24 @@ import { ProCardSkeleton, ProError } from "../states";
 import { Card, Chip, ListCard, SectionHead, type Tone } from "../client/kit";
 import { fmtDay } from "../client/clientFormat";
 import { DetailHeader, ErrorLine, FilterChip } from "../library/libraryUi";
-import { endProgrammeAssignment, fetchProgrammeProgress, fetchProgrammeSchedule } from "../../../services/programmes";
+import { Toast } from "../../ui/Toast";
+import { endProgrammeAssignment, fetchProgrammeProgress, fetchProgrammeSchedule, skipProgrammeSession, unskipProgrammeSession } from "../../../services/programmes";
 import {
   addDays,
   assignmentStatus,
   doneLine,
   groupSchedule,
+  isOpen,
+  isoDay,
+  skipPositions,
   summariseProgress,
   totalSoFar,
+  unskipTargets,
   weekDayOn,
   type ScheduleRow,
   type WeekProgress,
 } from "../../../services/programmes/model";
+import { daySkipped, movedFrom, skipDayLabel, skippedCount, skippedLabel, undoSkipLabel, weekdayName, workoutSkipped, yourWeekNote } from "../../../services/programmes/copy";
 import type { ProgrammesState } from "./useProgrammes";
 
 /**
@@ -40,6 +46,12 @@ import type { ProgrammesState } from "./useProgrammes";
  *   still shows, and every count says "Not shared", never 0.
  * - End programme (ConfirmCard): end_programme_assignment; the sessions after
  *   today leave the client's calendar and the routines stay theirs.
+ * - Round F (DW1–DW3): the week's note under the schedule tabs (read-only,
+ *   programme_progress.week_note); "Skip this day" on any day with an
+ *   unfinished session while the programme runs (the professional may skip
+ *   any day), with Undo in the toast and "Undo skip" on the session; skipped
+ *   sessions read "Skipped" in grey (never red: they are not planned, so not
+ *   missed), and a moved one says the day it came from.
  */
 export const AssignmentProgress: React.FC<{
   assignmentId: string;
@@ -56,6 +68,8 @@ export const AssignmentProgress: React.FC<{
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Round F: the last skip, for the toast's Undo.
+  const [skippedNow, setSkippedNow] = useState<ScheduleRow[] | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -98,8 +112,45 @@ export const AssignmentProgress: React.FC<{
   const shownWeek = week ?? (now && weeks.some((x) => x.week === now.week) ? now.week : weeks[0]?.week ?? null);
   const shown = weeks.find((x) => x.week === shownWeek) ?? null;
 
+  const weekNote = (progress ?? []).find((x) => x.week === shownWeek)?.weekNote ?? null;
+
+  /** Round F: skip the day's unfinished sessions (the professional: any day), then re-read. */
+  const skipDay = async (sessions: ScheduleRow[]) => {
+    setBusy(true);
+    setError(null);
+    const done: ScheduleRow[] = [];
+    for (const pos of skipPositions(sessions)) {
+      const r = await skipProgrammeSession(a.id, sessions[0].onDate, pos);
+      if (!r.ok) {
+        setError(r.message);
+        break;
+      }
+      done.push(...sessions.filter((s) => isOpen(s) && (pos === null || s.position === pos)));
+    }
+    setBusy(false);
+    if (done.length) setSkippedNow(done);
+    setNonce((n) => n + 1);
+  };
+  /** Round F: Undo, by each session's planned date and position. */
+  const unskip = async (sessions: ScheduleRow[]) => {
+    setSkippedNow(null);
+    setBusy(true);
+    setError(null);
+    for (const u of unskipTargets(sessions)) {
+      const r = await unskipProgrammeSession(a.id, u.onDate, u.position);
+      if (!r.ok) {
+        setError(r.message);
+        break;
+      }
+    }
+    setBusy(false);
+    setNonce((n) => n + 1);
+  };
+
   const cell = (wp: WeekProgress): { label: string; tone: Tone } | null => {
     if (wp.weekStartsOn > today) return null;
+    // Round F: a week of only skipped sessions planned nothing: grey, never missed.
+    if (wp.planned === 0) return wp.skipped > 0 ? { label: skippedLabel(), tone: "pau" } : null;
     if (wp.done === null) return null;
     if (wp.done >= wp.planned) return { label: "Done", tone: "done" };
     const ended = today > addDays(wp.weekStartsOn, 6);
@@ -143,6 +194,7 @@ export const AssignmentProgress: React.FC<{
                   meta: (
                     <>
                       {wp.weekStartsOn > today ? `${wp.planned} planned` : doneLine(wp.planned, wp.done)}
+                      {wp.skipped > 0 && ` · ${skippedCount(wp.skipped)}`}
                       {wp.byWorkout.length > 1 && (
                         <span className="block">
                           {wp.byWorkout.map((x) => `${x.workoutName} ${x.done === null || wp.weekStartsOn > today ? x.planned : `${x.done}/${x.planned}`}`).join(" · ")}
@@ -166,6 +218,12 @@ export const AssignmentProgress: React.FC<{
               ))}
             </div>
           )}
+          {weekNote && (
+            <div style={{ background: INK.soft, borderRadius: 14, padding: "10px 12px", marginBottom: 10 }}>
+              <p style={{ fontSize: textPx(11), fontWeight: 700, color: INK.chF, marginBottom: 2 }}>{yourWeekNote(shownWeek ?? 0)}</p>
+              <p style={{ fontSize: textPx(12.5), color: INK.ch, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{weekNote}</p>
+            </div>
+          )}
           {!shown ? (
             <p style={{ fontSize: textPx(12.5), color: INK.chF, marginBottom: 12 }}>Nothing scheduled.</p>
           ) : (
@@ -177,14 +235,46 @@ export const AssignmentProgress: React.FC<{
                     <span className="block" style={{ fontSize: textPx(11), color: d.onDate === today ? INK.prDeep : INK.chF, fontWeight: d.onDate === today ? 700 : 400 }}>
                       {d.onDate === today ? "Today" : fmtDay(d.onDate)}
                     </span>
+                    {/* Round F (DW2): the professional may skip any day of a running programme. */}
+                    {!a.endedAt && d.sessions.some(isOpen) && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void skipDay(d.sessions)}
+                        className="tap relative block text-start before:absolute before:-inset-2 before:content-['']"
+                        style={{ marginTop: 4, fontSize: textPx(11), fontWeight: 700, color: INK.prDeep }}
+                      >
+                        {skipDayLabel()}
+                      </button>
+                    )}
                   </span>
                   <span className="flex-1 min-w-0">
                     {d.sessions.map((s) => (
-                      <span key={`${s.onDate}-${s.position}`} className="flex items-center" style={{ gap: 8, minHeight: 26 }}>
-                        <span className="flex-1 min-w-0" style={{ fontSize: textPx(13), color: INK.ch, overflowWrap: "anywhere" }}>
+                      <span key={`${s.onDate}-${s.position}-${s.workoutTemplateId}`} className="flex items-center" style={{ gap: 8, minHeight: 26 }}>
+                        <span className="flex-1 min-w-0" style={{ fontSize: textPx(13), color: s.skipped ? INK.chF : INK.ch, overflowWrap: "anywhere" }}>
                           {s.workoutName}
+                          {s.movedFrom && (
+                            <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>
+                              {movedFrom(weekdayName(isoDay(s.movedFrom)))}
+                            </span>
+                          )}
                         </span>
-                        {s.done === null ? (
+                        {s.skipped ? (
+                          <span className="flex items-center" style={{ gap: 8 }}>
+                            <span style={{ fontSize: textPx(11), color: INK.chF }}>{skippedLabel()}</span>
+                            {!a.endedAt && (
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => void unskip([s])}
+                                className="tap relative before:absolute before:-inset-2 before:content-['']"
+                                style={{ fontSize: textPx(11), fontWeight: 700, color: INK.prDeep }}
+                              >
+                                {undoSkipLabel()}
+                              </button>
+                            )}
+                          </span>
+                        ) : s.done === null ? (
                           <span style={{ fontSize: textPx(11), color: INK.chF }}>Not shared</span>
                         ) : s.done ? (
                           <span className="flex items-center" style={{ gap: 3, fontSize: textPx(11), fontWeight: 700, color: INK.good }}>
@@ -232,6 +322,12 @@ export const AssignmentProgress: React.FC<{
           await state.reload();
           setNonce((n) => n + 1);
         }}
+      />
+      <Toast
+        open={!!skippedNow}
+        message={skippedNow?.length === 1 ? workoutSkipped(skippedNow[0].workoutName) : daySkipped()}
+        onUndo={() => skippedNow && void unskip(skippedNow)}
+        onExpire={() => setSkippedNow(null)}
       />
     </div>
   );
