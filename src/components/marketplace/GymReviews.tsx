@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Pencil, Star, ThumbsUp, User } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { PinnedCta } from "../ui/PinnedCta";
+import { PinnedCta, PinnedSlot } from "../ui/PinnedCta";
 import { MemberTag } from "./MemberTag";
 import { ReviewForm } from "./ReviewForm";
 import { MarketEmptyCard, MarketSkeleton } from "../market/MarketStates";
@@ -24,6 +24,8 @@ import {
 } from "../../services/venues";
 import { reviewAge, summaryOf } from "../../services/venues/venueLogic";
 import { useApp } from "../../context/AppContext";
+import { useReviewOpensAt } from "../../hooks/useReviewOpensAt";
+import { ReviewWaitNote } from "../reviews/ReviewWaitNote";
 
 // MO1.4.2.3 Gym page › Reviews (backend stage 4d): the rating summary with
 // its five bars, the sort chips, the review cards and "Write a review"
@@ -161,6 +163,9 @@ export function GymReviews({
   const maxCount = Math.max(1, ...(summary?.counts ?? [0]));
   const card: React.CSSProperties = { borderRadius: 18, border: `0.5px solid ${m.hair}`, background: m.card };
   const writeOff = reviews === null || (!!mine && mine.redacted);
+  // Round F (AB7): an account under 7 days old sees when it may, in the button's place.
+  const opensAt = useReviewOpensAt();
+  const waitFor = !mine && authUserId ? opensAt : null;
 
   return (
     <div data-gym-reviews="" style={{ marginTop: 8, display: "flex", flexDirection: "column", lineHeight: "normal", color: m.ink }}>
@@ -334,7 +339,18 @@ export function GymReviews({
       </div>
 
       {/* "Write a review" (Pencil 15); your own review is edited from the same button. */}
-      {pinned ? (
+      {waitFor ? (
+        pinned ? (
+          <>
+            <div aria-hidden style={{ height: 60 }} />
+            <PinnedSlot>
+              <ReviewWaitNote opensAt={waitFor} boxed />
+            </PinnedSlot>
+          </>
+        ) : (
+          <ReviewWaitNote opensAt={waitFor} boxed style={{ marginTop: 12 }} />
+        )
+      ) : pinned ? (
         <>
           <div aria-hidden style={{ height: 60 }} />
           <PinnedCta

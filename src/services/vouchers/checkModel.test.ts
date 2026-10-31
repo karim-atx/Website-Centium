@@ -104,8 +104,17 @@ test("mark: the first answer is used, a repeat already_used (idempotent); refusa
   assert.equal(markRefusal(prev, { code: "ATX15" })?.state, "not_valid_here");
   assert.equal(markRefusal(prev, { code: "ATX16" })?.state, "void");
   assert.equal(markRefusal(prev, { code: "ATX17" })?.state, "expired");
+  // Round F (AB3): staff's own voucher, at the till.
+  assert.equal(markRefusal(prev, { code: "ATXV4" })?.state, "own_voucher");
   assert.equal(markRefusal(prev, { code: "42501" }), null);
   assert.equal(dateTimeLabel("nope"), "");
+});
+
+test("own_voucher (Round F, AB3): check_voucher's state, worded for a colleague to check", () => {
+  const c = parseCheck([{ voucher_id: null, state: "own_voucher" }], "HWAE-PD5G-74KM")!;
+  assert.equal(c.state, "own_voucher");
+  const v = checkView(c, "business");
+  assert.deepEqual([v.tone, v.title, v.body, v.cta], ["caution", "Your own voucher", "Ask a colleague to check this voucher.", "Scan another"]);
 });
 
 test("DH: the holder's first name is the Member / Client row, between Offer and Valid until", () => {

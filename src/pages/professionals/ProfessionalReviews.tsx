@@ -3,7 +3,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { EllipsisVertical, Flag, LogIn, MessageSquareWarning, Pencil } from "lucide-react";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { BottomSheet } from "../../components/ui/BottomSheet";
-import { PinnedCta } from "../../components/ui/PinnedCta";
+import { PinnedCta, PinnedSlot } from "../../components/ui/PinnedCta";
+import { ReviewWaitNote } from "../../components/reviews/ReviewWaitNote";
+import { useReviewOpensAt } from "../../hooks/useReviewOpensAt";
 import { ReviewItem } from "../../components/professionals/ReviewItem";
 import { ReviewFormSheet, ReviewReportForm } from "../../components/professionals/ReviewForms";
 import { fetchListing, type DirectoryListing } from "../../services/directory";
@@ -57,6 +59,8 @@ export default function ProfessionalReviews() {
   }, [id]);
 
   const { mine, myStatus, others, error, canReview, signedOut, loading, save, withdraw, reload } = useProfessionalReviews(listing?.profileId ?? null);
+  // Round F (AB7): an account under 7 days old sees when it may in the button's place.
+  const opensAt = useReviewOpensAt();
 
   if (listing === undefined)
     return (
@@ -179,7 +183,11 @@ export default function ProfessionalReviews() {
         </div>
       )}
 
-      {(canWrite || canEdit) && (
+      {canWrite && opensAt ? (
+        <PinnedSlot>
+          <ReviewWaitNote opensAt={opensAt} boxed />
+        </PinnedSlot>
+      ) : (canWrite || canEdit) && (
         <PinnedCta
           size="base"
           primary={{

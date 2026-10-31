@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { t, tk } from "../../i18n/core";
+import { firstMessageCapLine } from "../safety/model";
 import { uploadPrivateFile, validateFileFor } from "../storage";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { parseCard, type MessageCard } from "./cards";
@@ -388,8 +389,13 @@ function describe(error: PostgrestError): string {
  * code for both directions on purpose — naming the block would tell someone
  * their target is there and reacting — so the app does not name it either.
  */
-export function describeRefusal(error: { code?: string; message?: string }): string | null {
+export function describeRefusal(error: { code?: string; message?: string; details?: string | null }): string | null {
   switch (error.code ?? "") {
+    // Round F (AB8): start_message_thread / start_venue_thread past the day's
+    // allowance of new people (10 in 24 hours, 3 for an account under 7 days
+    // old, so the sentence names no number); DETAIL is when the next frees.
+    case "ATXX0":
+      return firstMessageCapLine(error.details);
     case "ATX35":
       return t("You can't message this person.");
     case "ATX36":
@@ -452,7 +458,7 @@ export async function startVenueThread(gymId: string): Promise<StartThreadResult
   const rpc = (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as (
     fn: string,
     args: Record<string, unknown>
-  ) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>;
+  ) => PromiseLike<{ data: unknown; error: { code?: string; message: string; details?: string | null } | null }>;
   const { data, error } = await rpc("start_venue_thread", { p_gym_id: gymId });
   if (error) {
     console.error("[messaging] Could not start venue thread:", error.message);

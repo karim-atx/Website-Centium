@@ -25,8 +25,10 @@ import {
   type RedeemError,
   type RewardCategory,
 } from "./offersModel";
+import { parseVoucherEligibility, voucherRefusalLine, type VoucherEligibility } from "./voucherRules";
 
 export * from "./offersModel";
+export * from "./voucherRules";
 
 const subtypeLabel = (s: string): string => typeLabel(s as ProfessionalSubtype);
 
@@ -54,6 +56,17 @@ export function fetchShowcaseOffers(ownerType: "business" | "professional", owne
   return marketRpc("public_offers", { p_owner_kind: ownerType, p_owner_id: ownerId }, "Couldn't load offers.", (d) => parsePublicOffers(d, ownerType, ownerId));
 }
 
+/**
+ * Round F (AB2): voucher_eligibility(), whether the caller may buy a voucher
+ * now and why not (account age, points days, the weekly cap). Free, read on
+ * the offer page before the tap; null on any failure (the page then offers
+ * Redeem and redeem_offer decides).
+ */
+export async function fetchVoucherEligibility(): Promise<VoucherEligibility | null> {
+  const r = await marketRpc("voucher_eligibility", {}, "", parseVoucherEligibility);
+  return r.ok ? r.value : null;
+}
+
 export type RedeemResult = { ok: true; voucher: Voucher } | { ok: false; offline?: boolean; error?: RedeemError; message: string };
 
 /**
@@ -69,6 +82,9 @@ export async function redeemOffer(offerId: string, requestId: string): Promise<R
   if ("thrown" in res) return { ok: false, offline: isOffline(res.thrown), message: fallback };
   if (res.error) {
     if (isOffline(res.error)) return { ok: false, offline: true, message: fallback };
+    // Round F (AB2, AB3): ATXV0–ATXV3, worded from their DETAIL.
+    const f2 = voucherRefusalLine(res.error);
+    if (f2) return { ok: false, message: f2 };
     const k = redeemErrorOf(res.error);
     if (k) return { ok: false, error: k, message: REDEEM_ERROR_TEXT[k] };
     console.error("[offers] redeem_offer:", res.error.message);

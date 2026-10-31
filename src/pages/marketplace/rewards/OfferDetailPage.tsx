@@ -15,7 +15,8 @@ import { hexAlpha, liftInk } from "../../../components/market/marketColor";
 import { formatPoints } from "../../../components/market/pointsModel";
 import { FOCUS_CSS, usePress } from "../../../components/market/usePress";
 import { DIVIDER } from "../../../components/market/SegmentedTicketStrip";
-import { fetchOfferDetail, forAge, type OfferDetail } from "../../../services/offers";
+import { fetchOfferDetail, fetchVoucherEligibility, forAge, OWN_BUSINESS_OFFER_LINE, POINTS_KEEP_COLLECTING, voucherGateLine, type OfferDetail, type VoucherEligibility } from "../../../services/offers";
+import { t } from "../../../i18n/core";
 import { forumAccess } from "../../../services/forum/rules";
 import { recordListingEvent, recordProfessionalEvent } from "../../../services/marketplace/listingEvents";
 import type { MarketResult } from "../../../services/market/rpc";
@@ -66,6 +67,14 @@ import { OFFER_REPORT_NOTE_MAX, OFFER_REPORT_REASONS, hasReportedOffer, reportOf
 // note. One report per member per offer: once the member's own offer_reports
 // row exists (read back, or just sent) the row reads "You reported this
 // offer." Hidden on a professional's own offer.
+//
+// Round F (AB2, AB3; Database 20261226040000), not drawn: in Redeem's place,
+// the offer page says why it can't be bought yet. is_own_business (an owner's
+// or staff member's own business's offer): "This is your business's offer.
+// You can't redeem it." voucher_eligibility() not eligible (read on open,
+// free): the reason with its date or count, in redeem_offer's order (an
+// account under 30 days, points on fewer than 7 days, 3 vouchers this rolling
+// week), and that points keep collecting. Both in the locked line's style.
 
 const ICONS: React.ReactNode[] = [
   <>
@@ -108,6 +117,16 @@ export default function OfferDetailPage() {
   // Whether this member has reported the offer, keyed by the offer it was read for.
   const [reportedFor, setReportedFor] = useState<{ id: string; v: boolean | null } | null>(null);
   const reported = reportedFor?.id === offerId ? reportedFor.v : null;
+  // Round F (AB2): who may buy a voucher now; null until read or when the read fails.
+  const [eligibility, setEligibility] = useState<VoucherEligibility | null>(null);
+  useEffect(() => {
+    if (!authUserId) return;
+    let live = true;
+    void fetchVoucherEligibility().then((el) => live && setEligibility(el));
+    return () => {
+      live = false;
+    };
+  }, [offerId, authUserId]);
 
   const fetchIt = useCallback(() => {
     let live = true;
@@ -164,6 +183,8 @@ export default function OfferDetailPage() {
   const balance = pointsSummary?.balance ?? 0;
   const tier = tierStyle(tierRank(pointTiers, pointsSummary?.tierName), dark);
   const gate = summaryKnown ? redeemGate(o, balance) : { locked: true, line: null };
+  // Round F (AB2, AB3): the note that takes Redeem's place.
+  const blocked = o.isOwnBusiness ? t(OWN_BUSINESS_OFFER_LINE) : voucherGateLine(eligibility);
   const cells = offerCells(o);
   const ownOffer = o.ownerType === "professional" && !!authUserId && o.ownerId === authUserId;
   const ownerHref = o.ownerType === "business" ? (o.ownerId ? `/app/marketplace/business?id=${encodeURIComponent(o.ownerId)}` : null) : o.ownerId ? `/app/professionals/${encodeURIComponent(o.ownerId)}` : null;
@@ -283,36 +304,43 @@ export default function OfferDetailPage() {
       ) : null}
 
       <PinnedSlot>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, lineHeight: "normal" }}>
-          {gate.line ? (
-            <div id="offer-locked-line" style={{ textAlign: "center", fontSize: textPx(12), fontWeight: 600, color: m.ink2 }}>
-              {gate.line}
-            </div>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => !gate.locked && setSheetOpen(true)}
-            aria-disabled={gate.locked || undefined}
-            aria-describedby={gate.line ? "offer-locked-line" : undefined}
-            className="market-focus"
-            {...press.handlers}
-            style={{
-              height: 52,
-              borderRadius: 16,
-              border: 0,
-              background: m.fill,
-              color: m.onfill,
-              font: "inherit",
-              fontSize: textPx(15),
-              fontWeight: 800,
-              opacity: gate.locked ? 0.4 : 1,
-              cursor: gate.locked ? "default" : "pointer",
-              ...(gate.locked ? {} : press.style),
-            }}
-          >
-            Redeem for {formatPoints(o.pointsCost)} points
-          </button>
-        </div>
+        {blocked ? (
+          <div role="note" style={{ display: "flex", flexDirection: "column", gap: 4, lineHeight: "normal", textAlign: "center", borderRadius: 16, background: m.soft, padding: "14px 16px" }}>
+            <span style={{ fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 700, color: m.ink }}>{blocked}</span>
+            {o.isOwnBusiness ? null : <span style={{ fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: m.ink2 }}>{t(POINTS_KEEP_COLLECTING)}</span>}
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, lineHeight: "normal" }}>
+            {gate.line ? (
+              <div id="offer-locked-line" style={{ textAlign: "center", fontSize: textPx(12), fontWeight: 600, color: m.ink2 }}>
+                {gate.line}
+              </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => !gate.locked && setSheetOpen(true)}
+              aria-disabled={gate.locked || undefined}
+              aria-describedby={gate.line ? "offer-locked-line" : undefined}
+              className="market-focus"
+              {...press.handlers}
+              style={{
+                height: 52,
+                borderRadius: 16,
+                border: 0,
+                background: m.fill,
+                color: m.onfill,
+                font: "inherit",
+                fontSize: textPx(15),
+                fontWeight: 800,
+                opacity: gate.locked ? 0.4 : 1,
+                cursor: gate.locked ? "default" : "pointer",
+                ...(gate.locked ? {} : press.style),
+              }}
+            >
+              Redeem for {formatPoints(o.pointsCost)} points
+            </button>
+          </div>
+        )}
       </PinnedSlot>
 
       <BottomSheet open={reportOpen} onClose={() => setReportOpen(false)} title="Report this offer">

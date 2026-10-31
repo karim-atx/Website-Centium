@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Award, CircleAlert, CircleCheck, Copy, Check, Gift, Share, Sparkles } from "lucide-react";
+import { Award, CircleAlert, CircleCheck, Clock, Copy, Check, Gift, Share, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { CentredPopup } from "../ui/CentredPopup";
 import { useApp } from "../../context/AppContext";
@@ -10,7 +10,8 @@ import {
   previewReferralCode,
   type ReferralSummary,
 } from "../../services/redemption";
-import { appliedLine, isOwnReferralCode, previewOfferLine, redemptionsLine, REFUSAL_LINES, rewardLine } from "../../services/redemption/referralLogic";
+import { appliedLine, isOwnReferralCode, pendingFriendLines, previewOfferLine, REFERRAL_RULE_LINE, redemptionsLine, REFUSAL_LINES, rewardLine } from "../../services/redemption/referralLogic";
+import { t } from "../../i18n/core";
 import { fetchMyAmbassadorApplication, showEntryRow, statusCard, type AmbassadorStatus } from "../../services/ambassador";
 import { AmbassadorApplySheet } from "../ambassador/AmbassadorApplySheet";
 
@@ -52,6 +53,18 @@ import { AmbassadorApplySheet } from "../ambassador/AmbassadorApplySheet";
 //   line, the entry row "Share Centium often? Apply to be an ambassador"
 //   (hidden for ambassadors) opens AmbassadorApplySheet; while an application
 //   is pending, approved or recently declined the status card takes its place.
+//
+// ROUND F (AB1, Database 20261226030000): the referrer's points wait until the
+// friend has set up their account and used Centium on 3 different days within
+// 14 days (at most 10 rewarded a month). The reward row says "once they're set
+// up and active" with the rule under it; the progress line counts the pending
+// ("3 friends joined · 2 pending · 1,500 points earned"); each pending friend
+// has a row ("Rana · Pending until Nov 14" and why, from waiting_for); the
+// friend's applied line no longer promises the points at once. A lapsed
+// referral is silent. The points history reads the ledger, where pending
+// points aren't (they're written when paid), so it is unchanged. Not drawn:
+// the pending rows take the Rewards box's style. The new words come from
+// referralLogic (translated); the rest of this popup is still English.
 //
 // QA 11.0: shared across Client / Professional / Business More pages.
 /**
@@ -278,9 +291,10 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
             </div>
           ))}
         </div>
-        {/* The points are real: redeem_referral_code() writes them to the
-            referrer's points_ledger, shown under "from referrals" on both
+        {/* The points are real: once the friend qualifies (Round F, AB1)
+            they are written to the referrer's points_ledger, shown under "from referrals" on both
             tier cards. What they are for is a tier and, so far, nothing else. */}
+        <p className="mt-2 text-[12px] text-charcoal-faint">{t(REFERRAL_RULE_LINE)}</p>
         {colleague && <p className="mt-2 text-[12px] text-charcoal-faint">Clients and colleagues can both use your code.</p>}
         <p className="mt-2 text-[12px] text-charcoal-faint">Points count toward your tier. Rewards for points are coming soon.</p>
 
@@ -355,6 +369,25 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
             size measured, not given): referral_summary's redemptions and
             points_earned, once anybody has used the code. */}
         {progressLine && <p className="mt-4 text-[13px] text-charcoal">{progressLine}</p>}
+        {/* Round F (AB1): a row per friend whose points wait, in the Rewards box's style. */}
+        {summary && summary.pendingFriends.length > 0 && (
+          <ul className="mt-2 rounded-2xl border border-charcoal/[0.08] px-3.5">
+            {summary.pendingFriends.map((f, i) => {
+              const lines = pendingFriendLines(f);
+              return (
+                <li key={`${f.redeemedAt ?? ""}:${i}`} className={`flex items-center gap-3 py-3 ${i > 0 ? "border-t border-charcoal/[0.06]" : ""}`}>
+                  <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+                    <Clock size={15} strokeWidth={1.75} className="text-primary-accent" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[13px] font-bold text-charcoal">{lines.title}</span>
+                    <span className="block text-[12px] text-charcoal-faint">{lines.reason}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
         {/* BR (not drawn): the points history, for every account type (PLAN S4). */}
         {progressLine && (
           <button
