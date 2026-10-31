@@ -46,7 +46,7 @@
   --tm-menu-row-bd: #e5e6eb;
   --tm-menu-row-bg: #fafafb;
   --tm-trk-off: #d8d5de;
-  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
   color: var(--tm-ink);
   line-height: 1.4;
 }

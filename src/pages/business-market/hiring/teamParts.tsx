@@ -112,7 +112,7 @@ export function SheetNote({ children }: { children: React.ReactNode }) {
 export function CautionCard({ title, hint, action, onAction, id }: { title: string; hint: string; action: string; onAction: () => void; id?: string }) {
   const m = useMarketColors();
   return (
-    <div id={id} role="status" data-caution style={{ borderRadius: 14, background: m.cautionbg, padding: "12px 14px", textAlign: "start", lineHeight: "normal", fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif" }}>
+    <div id={id} role="status" data-caution style={{ borderRadius: 14, background: m.cautionbg, padding: "12px 14px", textAlign: "start", lineHeight: "normal", fontFamily: 'Manrope, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif' }}>
       <p style={{ margin: 0, fontSize: px(13), lineHeight: lh(18), fontWeight: 700, color: m.ink }}>{title}</p>
       <p style={{ margin: "4px 0 0", fontSize: px(12), lineHeight: lh(17), color: m.ink2 }}>{hint}</p>
       <button

@@ -130,7 +130,7 @@ export const MarketingLayout: React.FC = () => {
           flexDirection: "column",
           background: "#FFFFFF",
           color: "#221E1A",
-          fontFamily: '"Manrope",ui-sans-serif,system-ui,sans-serif',
+          fontFamily: '"Manrope","IBM Plex Sans Arabic",ui-sans-serif,system-ui,sans-serif',
           lineHeight: 1.5,
           WebkitFontSmoothing: "antialiased",
           fontVariantNumeric: "tabular-nums",

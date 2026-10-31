@@ -8,20 +8,22 @@ import { useViewportWidth } from "../landing/viewport";
 import { LG, SM } from "../landing/engine/env";
 import { WASH_BG, WEDGE_312, WEDGE_48 } from "../landing/wash";
 import { SITE_URL } from "../../config/site";
-import { linkPhrases, parsePolicy, type PolicyBlock, type PolicyPiece } from "../legal/policyDoc";
+import { linkPhrases, parsePolicy, type PolicyBlock, type PolicyDoc, type PolicyPiece } from "../legal/policyDoc";
 import { initialPolicyLang, PREVAILS_SECTION_ID, REFUND_POLICY_LINKS, REFUND_POLICY_PATH, type PolicyLang } from "../legal/refund";
 import { getLanguage } from "../../i18n/core";
 import EN_MD from "../../../docs/legal/refund-policy.md?raw";
-import AR_MD from "../../../docs/legal/refund-policy.ar.md?raw";
 
 // Round F (DN, undrawn): the Refund and Cancellation Policy in the Community
 // guidelines page's layout and literal values (LG1 v17): washed head, 68ch
 // column, h2 sections, dotted list items, closing card. One URL with an
 // "English · العربية" switch (F2); the Arabic is set right to left in IBM Plex
 // Sans Arabic, loaded only when shown. Both versions open with their own
-// section 13 (the Arabic version prevails).
+// section 13 (the Arabic version prevails). The Arabic text is a lazy chunk
+// (legal/refundAr), fetched only when shown, so English visitors never
+// download it.
 
-const DOCS = { en: parsePolicy(EN_MD), ar: parsePolicy(AR_MD) };
+const EN_DOC = parsePolicy(EN_MD);
+let arDoc: PolicyDoc | null = null;
 const AR_FONT_HREF = "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap";
 const AR_FAMILY = '"IBM Plex Sans Arabic", "Manrope", system-ui, sans-serif';
 const DOT = "#775FD7";
@@ -114,10 +116,32 @@ export const RefundPolicy: React.FC = () => {
   const [chosen, setLang] = useState<PolicyLang | null>(null);
   const lang = chosen ?? initialPolicyLang(search, getLanguage(), typeof navigator === "undefined" ? "" : navigator.language || "");
   useArabicFont(lang === "ar");
-  const doc = DOCS[lang];
-  const links = REFUND_POLICY_LINKS[lang];
   const ar = lang === "ar";
-  const prevails = useMemo(() => doc.sections.find((s) => s.id === PREVAILS_SECTION_ID), [doc]);
+  const [, setArLoaded] = useState(arDoc !== null);
+  useEffect(() => {
+    if (!ar || arDoc) return;
+    let live = true;
+    import("../legal/refundAr").then(
+      (m) => {
+        arDoc = m.default;
+        if (live) setArLoaded(true);
+      },
+      // Offline, or a chunk gone after a release: the English, rather than a
+      // page that never fills.
+      (e) => {
+        console.error("[refund-policy] Could not load the Arabic:", e);
+        if (!live) return;
+        setLang("en");
+        navigate({ search: "" }, { replace: true });
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [ar, navigate]);
+  const doc = ar ? arDoc : EN_DOC;
+  const links = REFUND_POLICY_LINKS[lang];
+  const prevails = useMemo(() => doc?.sections.find((s) => s.id === PREVAILS_SECTION_ID), [doc]);
 
   const choose = (l: PolicyLang) => {
     setLang(l);
@@ -180,58 +204,64 @@ export const RefundPolicy: React.FC = () => {
           {langBtn("en", "English", "en")}
           {langBtn("ar", "العربية", "ar")}
         </div>
-        <div lang={lang} dir={ar ? "rtl" : "ltr"} style={{ fontFamily: ar ? AR_FAMILY : undefined }}>
-          <h1 style={{ margin: "14px 0 0", fontWeight: "800", fontSize: r.h1, letterSpacing: ar ? "0" : "-.04em", lineHeight: ar ? "1.3" : "1.04", textWrap: "balance" }}>{doc.title}</h1>
-          <p style={{ margin: "12px 0 0", fontSize: "14px", fontWeight: "600", color: "#756D63" }}>{doc.updated}</p>
-        </div>
-      </div>
-      <div lang={lang} dir={ar ? "rtl" : "ltr"} style={{ position: "relative", maxWidth: "68ch", margin: "0 auto", textAlign: "start", fontFamily: ar ? AR_FAMILY : undefined }}>
-        {prevails && (
-          <div data-prevails style={{ padding: "14px 18px", borderRadius: "16px", background: "#F4F1FC", border: "1px solid rgba(125,103,217,.18)", marginBottom: "8px" }}>
-            {prevails.blocks.map((b, i) => (
-              <p key={i} style={{ fontSize: "15px", lineHeight: "1.65", fontWeight: 600, color: "#3B352D" }}>
-                {"p" in b ? <Pieces parts={b.p} /> : null}
-              </p>
-            ))}
+        {doc && (
+          <div lang={lang} dir={ar ? "rtl" : "ltr"} style={{ fontFamily: ar ? AR_FAMILY : undefined }}>
+            <h1 style={{ margin: "14px 0 0", fontWeight: "800", fontSize: r.h1, letterSpacing: ar ? "0" : "-.04em", lineHeight: ar ? "1.3" : "1.04", textWrap: "balance" }}>{doc.title}</h1>
+            <p style={{ margin: "12px 0 0", fontSize: "14px", fontWeight: "600", color: "#756D63" }}>{doc.updated}</p>
           </div>
         )}
-        <article style={{ paddingBottom: "44px", marginBottom: "44px", borderBottom: "1px solid #EDEAE4" }}>
-          {doc.intro.map((b, i) => (
-            <Block key={i} b={b} links={links} />
-          ))}
-          {doc.sections.map((s) => (
-            <section key={s.id} id={s.id} style={{ scrollMarginTop: "96px", marginTop: "30px" }}>
-              <h2 style={{ fontSize: "19px", fontWeight: "800", letterSpacing: ar ? "0" : "-.015em" }}>{s.h}</h2>
-              {s.blocks.map((b, i) => (
-                <Block key={i} b={b} links={links} />
+      </div>
+      {doc ? (
+        <div lang={lang} dir={ar ? "rtl" : "ltr"} style={{ position: "relative", maxWidth: "68ch", margin: "0 auto", textAlign: "start", fontFamily: ar ? AR_FAMILY : undefined }}>
+          {prevails && (
+            <div data-prevails style={{ padding: "14px 18px", borderRadius: "16px", background: "#F4F1FC", border: "1px solid rgba(125,103,217,.18)", marginBottom: "8px" }}>
+              {prevails.blocks.map((b, i) => (
+                <p key={i} style={{ fontSize: "15px", lineHeight: "1.65", fontWeight: 600, color: "#3B352D" }}>
+                  {"p" in b ? <Pieces parts={b.p} /> : null}
+                </p>
               ))}
-            </section>
-          ))}
-        </article>
-        <div style={{ padding: "24px", borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.14)" }}>
-          <h2 style={{ fontSize: "22px", fontWeight: "800", letterSpacing: ar ? "0" : "-.028em" }}>{ar ? "هل تحتاج إلى مساعدة في عملية شراء؟" : "Need help with a purchase?"}</h2>
-          <p style={{ marginTop: "10px", fontSize: "15.5px", lineHeight: "1.65", color: "#5B5349" }}>
-            {ar ? "اطلب الاسترداد من Apple أو Google، أو تواصل معنا وسنردّ خلال 5 أيام عمل." : "Ask Apple or Google for a refund, or contact us and we'll reply within 5 business days."}
-          </p>
-          <div style={{ marginTop: "16px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <a
-              href="/app"
-              className="cl-hbg"
-              style={{ padding: "13px 22px", borderRadius: "999px", background: "#775FD7", color: "#fff", fontWeight: 600, fontSize: "14.5px", "--hbg": "#6A54C4" } as React.CSSProperties}
-            >
-              {ar ? "العودة إلى التطبيق" : "Back to the app"}
-            </a>
-            <a
-              href="/contact"
-              onClick={pageLink("/contact")}
-              className="cl-hbd"
-              style={{ padding: "13px 22px", borderRadius: "999px", border: "1px solid #CFC5EA", color: "#221E1A", fontWeight: 600, fontSize: "14.5px", "--hbd": "#775FD7" } as React.CSSProperties}
-            >
-              {ar ? "تواصل معنا" : "Contact us"}
-            </a>
+            </div>
+          )}
+          <article style={{ paddingBottom: "44px", marginBottom: "44px", borderBottom: "1px solid #EDEAE4" }}>
+            {doc.intro.map((b, i) => (
+              <Block key={i} b={b} links={links} />
+            ))}
+            {doc.sections.map((s) => (
+              <section key={s.id} id={s.id} style={{ scrollMarginTop: "96px", marginTop: "30px" }}>
+                <h2 style={{ fontSize: "19px", fontWeight: "800", letterSpacing: ar ? "0" : "-.015em" }}>{s.h}</h2>
+                {s.blocks.map((b, i) => (
+                  <Block key={i} b={b} links={links} />
+                ))}
+              </section>
+            ))}
+          </article>
+          <div style={{ padding: "24px", borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.14)" }}>
+            <h2 style={{ fontSize: "22px", fontWeight: "800", letterSpacing: ar ? "0" : "-.028em" }}>{ar ? "هل تحتاج إلى مساعدة في عملية شراء؟" : "Need help with a purchase?"}</h2>
+            <p style={{ marginTop: "10px", fontSize: "15.5px", lineHeight: "1.65", color: "#5B5349" }}>
+              {ar ? "اطلب الاسترداد من Apple أو Google، أو تواصل معنا وسنردّ خلال 5 أيام عمل." : "Ask Apple or Google for a refund, or contact us and we'll reply within 5 business days."}
+            </p>
+            <div style={{ marginTop: "16px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <a
+                href="/app"
+                className="cl-hbg"
+                style={{ padding: "13px 22px", borderRadius: "999px", background: "#775FD7", color: "#fff", fontWeight: 600, fontSize: "14.5px", "--hbg": "#6A54C4" } as React.CSSProperties}
+              >
+                {ar ? "العودة إلى التطبيق" : "Back to the app"}
+              </a>
+              <a
+                href="/contact"
+                onClick={pageLink("/contact")}
+                className="cl-hbd"
+                style={{ padding: "13px 22px", borderRadius: "999px", border: "1px solid #CFC5EA", color: "#221E1A", fontWeight: 600, fontSize: "14.5px", "--hbd": "#775FD7" } as React.CSSProperties}
+              >
+                {ar ? "تواصل معنا" : "Contact us"}
+              </a>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div aria-busy="true" style={{ minHeight: "60vh" }} />
+      )}
     </section>
   );
 };

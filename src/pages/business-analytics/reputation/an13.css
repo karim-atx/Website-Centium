@@ -14,7 +14,7 @@
   --rp-field: #f5f5f6;
   --rp-input-bd: rgba(36, 31, 27, 0.1);
   --rp-press-high: #f6d5d0;
-  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
   color: var(--an-ink);
 }
 html.dark .rp {

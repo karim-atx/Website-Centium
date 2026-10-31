@@ -282,7 +282,7 @@ export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, styl
         overflow: "hidden",
         borderRadius: px(Math.max(10, 4 * u)),
         background: bg,
-        fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+        fontFamily: 'Manrope, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif',
         WebkitFontSmoothing: "antialiased",
         boxShadow: flat || (stk && bare) ? undefined : "0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(36,31,27,0.10)",
         textAlign: "start",
@@ -437,7 +437,7 @@ export const ShareLayer: React.FC<ShareLayerProps> = ({ spec: c, pro, client = "
   }
 
   return (
-    <div style={{ width: L.width, fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif", WebkitFontSmoothing: "antialiased", lineHeight: "normal", textAlign: "start", color: "#FFFFFF" }}>
+    <div style={{ width: L.width, fontFamily: 'Manrope, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif', WebkitFontSmoothing: "antialiased", lineHeight: "normal", textAlign: "start", color: "#FFFFFF" }}>
       <div style={{ display: "flex", alignItems: "center", gap: L.mark.gap }}>
         <CentiumMark height={L.mark.h} framing="png" label="Centium" style={{ width: L.mark.w, filter: `drop-shadow(0 ${L.mark.drop.y}px ${L.mark.drop.blur}px ${L.mark.drop.color})` }} />
         <div style={{ minWidth: 0 }}>

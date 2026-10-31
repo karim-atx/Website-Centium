@@ -99,7 +99,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                 {tOpt(ce.t)}
                 {ce.on ? (
                   <>
-                    <span data-w={ce.w} data-stamp="" style={{ position: "absolute", inset: "0", borderRadius: "7px", background: ce.c, color: ce.ink, fontFamily: "Manrope,sans-serif", fontSize: r.eF10, fontWeight: "800", display: "flex", alignItems: "center", padding: "0 6px", opacity: "0", whiteSpace: "nowrap", overflow: "hidden" }}>
+                    <span data-w={ce.w} data-stamp="" style={{ position: "absolute", inset: "0", borderRadius: "7px", background: ce.c, color: ce.ink, fontFamily: 'Manrope,"IBM Plex Sans Arabic",sans-serif', fontSize: r.eF10, fontWeight: "800", display: "flex", alignItems: "center", padding: "0 6px", opacity: "0", whiteSpace: "nowrap", overflow: "hidden" }}>
                       {tOpt(ce.n)}
                     </span>
                   </>
