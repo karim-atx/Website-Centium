@@ -17,11 +17,12 @@ import { appLocale } from "../i18n/format";
  */
 /**
  * A short date, month first everywhere in the app: "Oct 21", "Oct 21, 2026",
- * "Wed, Oct 21". Defaults to en-US for that order; the "Sept" → "Sep" pass
- * stays so any other locale passed in still gets the three-letter month every
- * frame uses.
+ * "Wed, Oct 21". Defaults to en-US for that order, or the Arabic locale when
+ * the app is in Arabic (Round F: Arabic month and day names, Western digits);
+ * the "Sept" → "Sep" pass stays so any other locale passed in still gets the
+ * three-letter month every frame uses.
  */
-export function formatShortDate(d: Date, opts: Intl.DateTimeFormatOptions, locale: string | undefined = "en-US"): string {
+export function formatShortDate(d: Date, opts: Intl.DateTimeFormatOptions, locale: string | undefined = appLocale("en-US")): string {
   return d.toLocaleDateString(locale, opts).replace(/\bSept\b/g, "Sep");
 }
 
