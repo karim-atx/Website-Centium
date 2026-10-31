@@ -6,8 +6,7 @@ import {
   canMoveTo,
   clientMaySkip,
   moveTargets,
-  skipPositions,
-  unskipTargets,
+  skipCalls,
   yesterdaysOpen,
   assignmentEnd,
   assignmentStatus,
@@ -108,6 +107,7 @@ const row = (p: Partial<ScheduleRow>): ScheduleRow => ({
   done: false,
   skipped: false,
   movedFrom: null,
+  sessionId: "s",
   ...p,
 });
 
@@ -194,19 +194,17 @@ test("clientMaySkip: a day of this week with an unfinished session (ATXP1 for an
   assert.equal(clientMaySkip("2026-10-26", [row({ skipped: true })], TODAY), false);
 });
 
-test("skipPositions: the whole day unless something on it is done", () => {
-  assert.deepEqual(skipPositions([row({}), row({ position: 1 })]), [null]);
-  assert.deepEqual(skipPositions([row({ done: true }), row({ position: 1 }), row({ position: 2, skipped: true })]), [1]);
-  assert.deepEqual(skipPositions([row({ done: true })]), []);
+test("skipCalls: the whole day unless something on it is done, then each open session by id", () => {
+  assert.deepEqual(skipCalls([row({ sessionId: "s1" }), row({ position: 1, sessionId: "s2" })]), { day: "2026-10-26" });
+  // Two sessions in the same position (one moved in) are told apart by id.
+  assert.deepEqual(
+    skipCalls([row({ done: true, sessionId: "s1" }), row({ sessionId: "s2" }), row({ movedFrom: "2026-10-27", sessionId: "s3" }), row({ position: 2, skipped: true, sessionId: "s4" })]),
+    { sessionIds: ["s2", "s3"] },
+  );
+  assert.equal(skipCalls([row({ done: true })]), null);
+  assert.equal(skipCalls([row({ skipped: true })]), null);
   // A professional without consent sees done as null: it is not done.
-  assert.deepEqual(skipPositions([row({ done: null })]), [null]);
-});
-
-test("unskipTargets: Undo goes by the planned date and position", () => {
-  assert.deepEqual(unskipTargets([row({ onDate: "2026-10-27", position: 1 }), row({ onDate: "2026-10-29", movedFrom: "2026-10-28", position: 0 })]), [
-    { onDate: "2026-10-27", position: 1 },
-    { onDate: "2026-10-28", position: 0 },
-  ]);
+  assert.deepEqual(skipCalls([row({ done: null })]), { day: "2026-10-26" });
 });
 
 test("moveTargets: its own week, today or later, within the dates, four a day at most (ATXP2, ATXP3)", () => {

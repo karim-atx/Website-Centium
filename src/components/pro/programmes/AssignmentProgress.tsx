@@ -13,7 +13,7 @@ import { Card, Chip, ListCard, SectionHead, type Tone } from "../client/kit";
 import { fmtDay } from "../client/clientFormat";
 import { DetailHeader, ErrorLine, FilterChip } from "../library/libraryUi";
 import { Toast } from "../../ui/Toast";
-import { endProgrammeAssignment, fetchProgrammeProgress, fetchProgrammeSchedule, skipProgrammeSession, unskipProgrammeSession } from "../../../services/programmes";
+import { endProgrammeAssignment, fetchProgrammeProgress, fetchProgrammeSchedule, skipProgrammeSessions, unskipProgrammeSession } from "../../../services/programmes";
 import {
   addDays,
   assignmentStatus,
@@ -21,10 +21,9 @@ import {
   groupSchedule,
   isOpen,
   isoDay,
-  skipPositions,
+  skipCalls,
   summariseProgress,
   totalSoFar,
-  unskipTargets,
   weekDayOn,
   type ScheduleRow,
   type WeekProgress,
@@ -118,26 +117,20 @@ export const AssignmentProgress: React.FC<{
   const skipDay = async (sessions: ScheduleRow[]) => {
     setBusy(true);
     setError(null);
-    const done: ScheduleRow[] = [];
-    for (const pos of skipPositions(sessions)) {
-      const r = await skipProgrammeSession(a.id, sessions[0].onDate, pos);
-      if (!r.ok) {
-        setError(r.message);
-        break;
-      }
-      done.push(...sessions.filter((s) => isOpen(s) && (pos === null || s.position === pos)));
-    }
+    const calls = skipCalls(sessions);
+    const r = calls ? await skipProgrammeSessions(a.id, calls) : null;
     setBusy(false);
-    if (done.length) setSkippedNow(done);
+    if (r && !r.ok) setError(r.message);
+    else if (r) setSkippedNow(sessions.filter(isOpen));
     setNonce((n) => n + 1);
   };
-  /** Round F: Undo, by each session's planned date and position. */
+  /** Round F: Undo, one call per session by its id (a moved one comes back on the day it was moved to). */
   const unskip = async (sessions: ScheduleRow[]) => {
     setSkippedNow(null);
     setBusy(true);
     setError(null);
-    for (const u of unskipTargets(sessions)) {
-      const r = await unskipProgrammeSession(a.id, u.onDate, u.position);
+    for (const s of sessions) {
+      const r = await unskipProgrammeSession(a.id, s.sessionId);
       if (!r.ok) {
         setError(r.message);
         break;
@@ -250,7 +243,7 @@ export const AssignmentProgress: React.FC<{
                   </span>
                   <span className="flex-1 min-w-0">
                     {d.sessions.map((s) => (
-                      <span key={`${s.onDate}-${s.position}-${s.workoutTemplateId}`} className="flex items-center" style={{ gap: 8, minHeight: 26 }}>
+                      <span key={s.sessionId} className="flex items-center" style={{ gap: 8, minHeight: 26 }}>
                         <span className="flex-1 min-w-0" style={{ fontSize: textPx(13), color: s.skipped ? INK.chF : INK.ch, overflowWrap: "anywhere" }}>
                           {s.workoutName}
                           {s.movedFrom && (

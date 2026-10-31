@@ -10,7 +10,7 @@ import {
   fetchProgrammeProgress,
   fetchProgrammeSchedule,
   moveProgrammeSession,
-  skipProgrammeSession,
+  skipProgrammeSessions,
   unskipProgrammeSession,
   type MyProgramme,
 } from "../../services/programmes";
@@ -24,11 +24,11 @@ import {
   mondayOf,
   moveTargets,
   sessionsOn,
-  skipPositions,
+  skipCalls,
   summariseProgress,
-  unskipTargets,
   yesterdaysOpen,
   type ScheduleRow,
+  type SkipCalls,
   type WeekProgress,
 } from "../../services/programmes/model";
 import {
@@ -166,32 +166,26 @@ export const ProgrammeSection: React.FC<{
   // Round F: skip, Undo and move. Each is written, then everything is re-read.
   // -------------------------------------------------------------------------
 
-  /** Skips these positions of one day (null: the whole day); `rows` are the sessions that go. */
-  const skip = async (assignmentId: string, date: string, positions: (number | null)[], gone: ScheduleRow[]) => {
+  /** Writes a skip (skipCalls' plan); `gone` are the sessions that go. */
+  const skip = async (assignmentId: string, calls: SkipCalls | null, gone: ScheduleRow[]) => {
     setMenu(null);
+    if (!calls) return;
     setBusy(true);
-    let ok = true;
-    for (const pos of positions) {
-      const r = await skipProgrammeSession(assignmentId, date, pos);
-      if (!r.ok) {
-        setToast({ message: r.message, tone: "error" });
-        ok = false;
-        break;
-      }
-    }
+    const r = await skipProgrammeSessions(assignmentId, calls);
     setBusy(false);
-    if (ok && gone.length) {
+    if (!r.ok) setToast({ message: r.message, tone: "error" });
+    else if (gone.length) {
       setToast({ message: gone.length === 1 ? workoutSkipped(gone[0].workoutName) : daySkipped(), undo: { assignmentId, sessions: gone } });
     }
     setNonce((n) => n + 1);
   };
-  const skipDay = (assignmentId: string, sessions: ScheduleRow[]) =>
-    void skip(assignmentId, sessions[0]?.onDate ?? today, skipPositions(sessions), sessions.filter(isOpen));
+  const skipDay = (assignmentId: string, sessions: ScheduleRow[]) => void skip(assignmentId, skipCalls(sessions), sessions.filter(isOpen));
+  /** Undo, one call per session by its id; a moved one comes back on the day it was moved to. */
   const undo = async (assignmentId: string, sessions: ScheduleRow[]) => {
     setToast(null);
     setBusy(true);
-    for (const u of unskipTargets(sessions)) {
-      const r = await unskipProgrammeSession(assignmentId, u.onDate, u.position);
+    for (const s of sessions) {
+      const r = await unskipProgrammeSession(assignmentId, s.sessionId);
       if (!r.ok) {
         setToast({ message: r.message, tone: "error" });
         break;
@@ -202,7 +196,7 @@ export const ProgrammeSection: React.FC<{
   };
   const move = async (assignmentId: string, session: ScheduleRow, toDate: string) => {
     setBusy(true);
-    const r = await moveProgrammeSession(assignmentId, session.onDate, session.position, toDate);
+    const r = await moveProgrammeSession(assignmentId, session.sessionId, toDate);
     setBusy(false);
     setMoveFor(null);
     setToast(r.ok ? { message: movedTo(session.workoutName, weekdayName(isoDay(toDate))) } : { message: r.message, tone: "error" });
@@ -310,7 +304,7 @@ export const ProgrammeSection: React.FC<{
               {/* Round D D-S4 (Round F DW2/DW3): yesterday's unfinished workout. */}
               {yesterday.map((s) => (
                 <div
-                  key={`y-${s.onDate}-${s.position}-${s.workoutTemplateId}`}
+                  key={`y-${s.sessionId}`}
                   className="flex items-center"
                   style={{ gap: 8, marginTop: 10, borderRadius: 12, background: coachColor("soft", dark), padding: "8px 10px", minHeight: 44 }}
                 >
@@ -329,7 +323,7 @@ export const ProgrammeSection: React.FC<{
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => void skip(p.assignmentId, s.onDate, [s.position], [s])}
+                    onClick={() => void skip(p.assignmentId, { sessionIds: [s.sessionId] }, [s])}
                     aria-label={skipYesterdayLabel(s.workoutName)}
                     className="tap relative shrink-0 before:absolute before:-inset-2 before:content-['']"
                     style={{ fontSize: textPx(12), fontWeight: 700, color: dark ? "#C3B3FB" : "rgb(var(--thi-7d6bb5))" }}
@@ -353,7 +347,7 @@ export const ProgrammeSection: React.FC<{
                 <div className="flex flex-col" style={{ gap: 6 }}>
                   {todays.map((s) => (
                     <SessionRow
-                      key={`${s.onDate}-${s.position}-${s.workoutTemplateId}`}
+                      key={s.sessionId}
                       s={s}
                       routine={s.routineId ? byId.get(s.routineId) : undefined}
                       dark={dark}
@@ -616,7 +610,7 @@ const WeekSheet: React.FC<{
                     const draggable = !busy && moveTargets(s, loaded.schedule, today, assignmentOf(loaded.programme)).length > 0;
                     return (
                       <div
-                        key={`${s.onDate}-${s.position}-${s.workoutTemplateId}`}
+                        key={s.sessionId}
                         onPointerDown={draggable ? (e) => e.pointerType !== "touch" && drag.begin(s, e) : undefined}
                         style={{ opacity: lifted ? 0.5 : 1, userSelect: drag.dragging ? "none" : undefined, cursor: draggable ? "grab" : undefined }}
                       >

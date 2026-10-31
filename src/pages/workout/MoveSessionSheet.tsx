@@ -59,7 +59,7 @@ export const MoveSessionSheet: React.FC<{
                 const on = i === pick;
                 return (
                   <button
-                    key={`${s.onDate}-${s.position}-${s.workoutTemplateId}`}
+                    key={s.sessionId}
                     type="button"
                     role="radio"
                     aria-checked={on}

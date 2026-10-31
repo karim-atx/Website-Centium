@@ -11,7 +11,8 @@
 //
 // Round F (DW1–DW3, Database 20261226000000): a week can carry the
 // professional's note; a session can be skipped (not planned, so never
-// missed) or moved to another day of its own week.
+// missed) or moved to another day of its own week. Both name the session by
+// its id (programme_schedule.session_id, Database 20261226130000).
 
 import { programmeCodeMessage } from "./copy";
 
@@ -148,10 +149,12 @@ export interface ScheduleRow {
   routineId: string | null;
   /** null: a professional without the client's Workout activity consent. */
   done: boolean | null;
-  /** Round F: skipped (not planned, so never missed). A skipped session sits on its planned date. */
+  /** Round F: skipped (not planned, so never missed). A skipped moved session keeps its move. */
   skipped: boolean;
   /** Round F: the planned date when the session was moved to onDate, else null. */
   movedFrom: string | null;
+  /** Round F: programme_sessions.id, which every skip and move names. It survives the builder's edits, but re-read it after one. */
+  sessionId: string;
 }
 
 export interface ProgressRow {
@@ -248,23 +251,16 @@ export function clientMaySkip(onDate: string, sessions: ScheduleRow[], today: st
 }
 
 /**
- * The skip_programme_session calls for "Skip this day": one call for the whole
- * day (position null) when nothing on it is done, else one per unfinished
- * session (a whole-day skip refuses a day holding a done workout, ATXP0).
+ * How "Skip this day" is written: skip_programme_sessions_on for the whole
+ * day when nothing on it is done (all or none), else skip_programme_session
+ * for each unfinished one (the whole-day call refuses a day holding a done
+ * workout, ATXP0). Null when nothing is left to skip.
  */
-export function skipPositions(sessions: ScheduleRow[]): (number | null)[] {
+export type SkipCalls = { day: string } | { sessionIds: string[] };
+export function skipCalls(sessions: ScheduleRow[]): SkipCalls | null {
   const open = sessions.filter(isOpen);
-  if (open.length === 0) return [];
-  return sessions.some((s) => s.done) ? open.map((s) => s.position) : [null];
-}
-
-/**
- * The unskip_programme_session calls that undo a skip, one per session. Undo
- * is keyed by the PLANNED date and position, so a moved session that was
- * skipped comes back on its planned day.
- */
-export function unskipTargets(sessions: ScheduleRow[]): { onDate: string; position: number }[] {
-  return sessions.map((s) => ({ onDate: plannedOn(s), position: s.position }));
+  if (open.length === 0) return null;
+  return sessions.some((s) => s.done) ? { sessionIds: open.map((s) => s.sessionId) } : { day: open[0].onDate };
 }
 
 export interface MoveTarget {
