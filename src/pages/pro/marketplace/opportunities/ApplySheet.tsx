@@ -216,7 +216,7 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
           aria-checked={available}
           onClick={() => setAvailable((v) => !v)}
           className="hit market-focus"
-          style={{ display: "flex", gap: 10, alignItems: "flex-start", borderRadius: 14, background: m.sgrey, padding: "12px 14px", border: 0, width: "100%", textAlign: "left", font: "inherit", color: m.ink, cursor: "pointer" }}
+          style={{ display: "flex", gap: 10, alignItems: "flex-start", borderRadius: 14, background: m.sgrey, padding: "12px 14px", border: 0, width: "100%", textAlign: "start", font: "inherit", color: m.ink, cursor: "pointer" }}
         >
           <span
             aria-hidden
@@ -235,7 +235,7 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
             {chips.map((c) => {
               const on = picked.has(c.key);
               return (
-                <button key={c.key} type="button" aria-pressed={on} onClick={() => toggle(c.key)} className="hit market-focus" style={{ ...sheetChipStyle(on), padding: "8px 12px", fontSize: px(13), fontFamily: "inherit", lineHeight: "normal", cursor: "pointer", whiteSpace: "normal", textAlign: "left" }}>
+                <button key={c.key} type="button" aria-pressed={on} onClick={() => toggle(c.key)} className="hit market-focus" style={{ ...sheetChipStyle(on), padding: "8px 12px", fontSize: px(13), fontFamily: "inherit", lineHeight: "normal", cursor: "pointer", whiteSpace: "normal", textAlign: "start" }}>
                   {c.label}
                 </button>
               );

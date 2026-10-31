@@ -157,7 +157,7 @@ export const AssignSheet: React.FC<{
                     return next;
                   });
                 }}
-                className="tap w-full flex items-center text-left"
+                className="tap w-full flex items-center text-start"
                 style={{ gap: 12, minHeight: 44, opacity: disabled && !on ? 0.85 : 1 }}
               >
                 <span className="flex items-center justify-center shrink-0" style={{ width: 24, height: 24, borderRadius: 9999, ...(on ? { background: INK.fill } : { border: `1.5px solid ${dark ? "#9A8CD6" : "#D1CAEB"}` }) }}>
@@ -168,7 +168,7 @@ export const AssignSheet: React.FC<{
                   {c.name}
                 </span>
               </button>
-              <p className="flex" style={{ gap: 6, margin: "6px 0 0 68px", fontSize: textPx(11.5), lineHeight: 1.45, color: colour, fontWeight: tone === "att" || tone === "req" ? 600 : 400 }}>
+              <p className="flex" style={{ gap: 6, marginBlock: "6px 0", marginInline: "68px 0", fontSize: textPx(11.5), lineHeight: 1.45, color: colour, fontWeight: tone === "att" || tone === "req" ? 600 : 400 }}>
                 {tone === "att" && <TriangleAlert size={12} strokeWidth={2.2} aria-hidden style={{ flexShrink: 0, marginTop: 2, ...NO_ICON_SCALE }} />}
                 {tone === "req" && <CircleAlert size={12} strokeWidth={2.2} aria-hidden style={{ flexShrink: 0, marginTop: 2, ...NO_ICON_SCALE }} />}
                 <span>{text}</span>

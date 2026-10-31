@@ -15,6 +15,8 @@
 // those to the id on the long page, and the page swaps the hash for it.
 
 import { HEALTH_ITEMS, INTRO, LIABILITY_TEXT, PRIVACY_GROUPS, TERMS_GROUPS, type LegalGroup } from "./text";
+import type * as ArabicText from "./text.ar";
+import { documentFor, t, tk } from "../../i18n/core";
 
 export type DocKey = "terms" | "privacy" | "health";
 export const DOC_KEYS: DocKey[] = ["terms", "privacy", "health"];
@@ -50,22 +52,22 @@ export const LEGAL_DOCS: LegalDoc[] = [
   {
     id: "terms",
     num: "01",
-    title: "Terms of Service",
+    title: tk("Terms of Service"),
     c: "#775FD7",
     intro: INTRO.terms,
     box: false,
     groups: withIds("terms", TERMS_GROUPS.concat([{ h: "Liability", items: [LIABILITY_TEXT] }])),
   },
-  { id: "privacy", num: "02", title: "Privacy Policy", c: "#457D79", intro: INTRO.privacy, box: false, groups: withIds("privacy", PRIVACY_GROUPS) },
+  { id: "privacy", num: "02", title: tk("Privacy Policy"), c: "#457D79", intro: INTRO.privacy, box: false, groups: withIds("privacy", PRIVACY_GROUPS) },
   {
     id: "health",
     num: "03",
-    title: "Health & Medical Disclaimer",
+    title: tk("Health & Medical Disclaimer"),
     c: "#775FD7",
     intro: INTRO.health,
     box: true,
     // "In detail": LG1's heading above the Health points (not legal text).
-    groups: withIds("health", [{ h: "In detail", items: HEALTH_ITEMS }]),
+    groups: withIds("health", [{ h: tk("In detail"), items: HEALTH_ITEMS }]),
   },
 ];
 
@@ -76,11 +78,38 @@ export interface TocEntry {
   doc: boolean;
 }
 
+const tocOf = (docs: LegalDoc[]): TocEntry[] =>
+  docs.flatMap((d) => [
+    { t: d.num + " " + d.title, h: "#" + d.id, doc: true },
+    ...(d.id === "health" ? [] : d.groups.map((g) => ({ t: g.h, h: "#" + g.id, doc: false }))),
+  ]);
+
 /** "On this page": each document, then its groups (Health lists none). */
-export const LEGAL_TOC: TocEntry[] = LEGAL_DOCS.flatMap((d) => [
-  { t: d.num + " " + d.title, h: "#" + d.id, doc: true },
-  ...(d.id === "health" ? [] : d.groups.map((g) => ({ t: g.h, h: "#" + g.id, doc: false }))),
-]);
+export const LEGAL_TOC: TocEntry[] = tocOf(LEGAL_DOCS);
+
+/**
+ * Round F (AV): the documents in the active language (call during render).
+ * The same ids (from the English headings), numbers, colours and order; in
+ * Arabic the words come from text.ar.ts, which has the same shape.
+ */
+export function legalDocsFor(): LegalDoc[] {
+  const AR = documentFor<typeof ArabicText>("legal.text");
+  if (!AR) return LEGAL_DOCS.map((d) => ({ ...d, title: t(d.title) }));
+  const words: LegalGroup[][] = [
+    AR.TERMS_GROUPS.concat([{ h: AR.LIABILITY_HEADING, items: [AR.LIABILITY_TEXT] }]),
+    AR.PRIVACY_GROUPS,
+    [{ h: t("In detail"), items: AR.HEALTH_ITEMS }],
+  ];
+  return LEGAL_DOCS.map((d, i) => ({
+    ...d,
+    title: t(d.title),
+    intro: AR.INTRO[d.id],
+    groups: d.groups.map((g, j) => ({ id: g.id, h: words[i][j].h, items: words[i][j].items })),
+  }));
+}
+
+/** "On this page" for legalDocsFor()'s documents. */
+export const legalTocFor = (docs: LegalDoc[]): TocEntry[] => tocOf(docs);
 
 /** Every id on the page a deep link can name. */
 export const LEGAL_IDS: ReadonlySet<string> = new Set(LEGAL_DOCS.flatMap((d) => [d.id as string, ...d.groups.map((g) => g.id)]));

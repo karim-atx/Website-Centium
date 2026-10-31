@@ -170,7 +170,7 @@ export const CareNetworkScreen: React.FC = () => {
           </span>
           <Chip label={chip.label} tone={chip.tone} />
         </div>
-        <p style={{ fontSize: textPx(13), color: INK.chS, lineHeight: 1.5, marginTop: 10, paddingLeft: 10, borderLeft: `2px solid ${INK.b10}`, overflowWrap: "anywhere" }}>{x.reason}</p>
+        <p style={{ fontSize: textPx(13), color: INK.chS, lineHeight: 1.5, marginTop: 10, paddingInlineStart: 10, borderInlineStart: `2px solid ${INK.b10}`, overflowWrap: "anywhere" }}>{x.reason}</p>
         <p style={{ fontSize: textPx(11.5), color: declined ? INK.hi : INK.chF, fontWeight: declined ? 700 : 400, marginTop: 8 }}>{whenLine}</p>
         {st === "sent" && (
           <div className="flex" style={{ gap: 8, marginTop: 12 }}>
@@ -397,7 +397,7 @@ const DeclineReferralPopup: React.FC<{ open: boolean; clientLabel: string; fromN
       icon={<UserX size={22} strokeWidth={2} aria-hidden />}
       body={reason ? `${fromName} sees your reason.` : `${fromName} is told you declined.`}
     >
-      <div className="text-left">
+      <div className="text-start">
         <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
           Reason (optional)
         </span>

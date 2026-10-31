@@ -3,6 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { ObSectionLabel, ObSwitch } from "../shell/ObBlocks";
 import { PUBLISH_STRINGS, publishDesc, publishState, usePublishLicence } from "../../../components/cv/licencePublishState";
 import type { Licence } from "../../../services/professional-cv";
+import { t } from "../../../i18n/core";
 
 /**
  * "Show on your profile", in the onboarding look (OURS-licence-publish). A
@@ -23,15 +24,15 @@ export const ProLicencePublish: React.FC<{
   if (!licences.length) return null;
   return (
     <div style={{ marginBottom: 14 }}>
-      <ObSectionLabel title="Show on your profile" tag="Your choice" margin={margin} />
+      <ObSectionLabel title={t("Show on your profile")} tag={t("Your choice")} margin={margin} />
       <p className="ob-tg-d" style={{ margin: "0 2px 4px" }}>
-        {PUBLISH_STRINGS.onboardingIntro}
+        {t(PUBLISH_STRINGS.onboardingIntro)}
       </p>
       {licences.map((l, k) => {
         const state = publishState(l);
         const on = !!l.publishedAt;
         const Icon = state === "public" ? Eye : EyeOff;
-        const title = l.name ?? (l.mirrorsCertification ? "Your certificate" : "Your degree or certificate");
+        const title = l.name ?? (l.mirrorsCertification ? t("Your certificate") : t("Your degree or certificate"));
         return (
           <div key={l.id} role="group" aria-label={title} className="ob-tg">
             {k > 0 && <span className="ob-tg-rule" />}
@@ -42,19 +43,19 @@ export const ProLicencePublish: React.FC<{
               <span className="ob-tg-t" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{title}</span>
                 <span className="obp-pill" data-tone={state === "public" ? "accent" : "soft"}>
-                  {state === "public" ? PUBLISH_STRINGS.public : PUBLISH_STRINGS.notPublic}
+                  {state === "public" ? t(PUBLISH_STRINGS.public) : t(PUBLISH_STRINGS.notPublic)}
                 </span>
               </span>
-              <span className="ob-tg-d">{state === "unnamed" && unnamedHint ? unnamedHint : publishDesc(state)}</span>
+              <span className="ob-tg-d">{state === "unnamed" && unnamedHint ? unnamedHint : t(publishDesc(state))}</span>
               {error?.id === l.id && (
                 <span role="alert" className="ob-tg-d" style={{ color: "var(--ob-high)", fontWeight: 600 }}>
-                  {error.message}
+                  {t(error.message)}
                 </span>
               )}
             </span>
             <ObSwitch
               on={on}
-              label={`${PUBLISH_STRINGS.label}: ${title}`}
+              label={`${t(PUBLISH_STRINGS.label)}: ${title}`}
               onChange={(next) => void toggle(l, next)}
               disabled={(state === "unnamed" && !on) || busyId === l.id}
             />

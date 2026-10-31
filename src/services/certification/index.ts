@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { deletePrivateFile, signedUrlFor, uploadPrivateFile } from "../storage";
+import { tk } from "../../i18n/core";
 
 // A professional's qualification document.
 //
@@ -67,7 +68,7 @@ export async function uploadCertification(
   // entry points inherit the same treatment by going through here.
   const upload = await uploadPrivateFile({ bucket: BUCKET, userId, file });
   if (!upload.ok || !upload.path) {
-    return { ok: false, message: upload.message ?? "That file couldn't be uploaded." };
+    return { ok: false, message: upload.message ?? tk("That file couldn't be uploaded.") };
   }
 
   const written = await setCertificationPath(userId, upload.path);
@@ -185,7 +186,7 @@ async function setCertificationPath(
 
   if (updated.error) {
     console.error("[certification] Could not update the row:", updated.error.message);
-    return { ok: false, message: "Couldn't save your certification. Try again." };
+    return { ok: false, message: tk("Couldn't save your certification. Try again.") };
   }
   if (updated.data && updated.data.length > 0) return { ok: true, message: "" };
 
@@ -197,7 +198,7 @@ async function setCertificationPath(
 
   if (inserted.error) {
     console.error("[certification] Could not create the row:", inserted.error.message);
-    return { ok: false, message: "Couldn't save your certification. Try again." };
+    return { ok: false, message: tk("Couldn't save your certification. Try again.") };
   }
   return { ok: true, message: "" };
 }

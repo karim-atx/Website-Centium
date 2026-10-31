@@ -354,11 +354,11 @@ export default function BusinessProfilePage() {
           {shownCover ? (
             <img src={shownCover} alt="" className="absolute inset-0 w-full h-full object-cover" />
           ) : (
-            <span className="absolute text-[11px] font-bold text-charcoal-faint" style={{ left: 12, top: 10 }}>
+            <span className="absolute text-[11px] font-bold text-charcoal-faint" style={{ insetInlineStart: 12, top: 10 }}>
               Add a cover photo
             </span>
           )}
-          <ImageApprovalBadge state={ownCover.image} className="absolute left-[10px] top-[10px]" />
+          <ImageApprovalBadge state={ownCover.image} className="absolute start-[10px] top-[10px]" />
           {uploading === "cover" && (
             <span className="absolute inset-0 flex items-center justify-center bg-black/20">
               <Loader2 size={32} className="animate-spin text-white" aria-label="Uploading" />
@@ -370,12 +370,12 @@ export default function BusinessProfilePage() {
             onClick={() => setMenu("cover")}
             disabled={!business}
             className="tap absolute flex items-center justify-center rounded-full text-white"
-            style={{ right: 10, bottom: 10, width: 32, height: 32, background: "rgba(36,31,27,0.55)" }}
+            style={{ insetInlineEnd: 10, bottom: 10, width: 32, height: 32, background: "rgba(36,31,27,0.55)" }}
           >
             <Camera size={15} strokeWidth={2.2} aria-hidden />
           </button>
         </div>
-        <div className="relative flex items-end" style={{ gap: 8, marginTop: -34, padding: "0 2px 0 14px" }}>
+        <div className="relative flex items-end" style={{ gap: 8, marginTop: -34, paddingBlock: "0", paddingInline: "14px 2px" }}>
           <button
             type="button"
             aria-label="Change logo"
@@ -395,7 +395,7 @@ export default function BusinessProfilePage() {
             <span
               aria-hidden
               className={clsx("absolute flex items-center justify-center rounded-full bg-cream-card border text-primary-dark", BORDER)}
-              style={{ right: -5, bottom: -5, width: 26, height: 26 }}
+              style={{ insetInlineEnd: -5, bottom: -5, width: 26, height: 26 }}
             >
               <Camera size={13} strokeWidth={2.2} />
             </span>
@@ -515,7 +515,7 @@ export default function BusinessProfilePage() {
             <span key={i} className="relative overflow-hidden" style={{ aspectRatio: "1", borderRadius: 12, background: stripes }}>
               {photo && <img src={photo.url} alt={photo.caption ?? ""} className="absolute inset-0 h-full w-full object-cover" />}
               {(photo?.caption || loc) && (
-                <span className="absolute text-[8.5px] leading-[10px] text-charcoal-faint" style={{ left: 6, bottom: 5, right: 4 }}>
+                <span className="absolute text-[8.5px] leading-[10px] text-charcoal-faint" style={{ insetInlineStart: 6, bottom: 5, insetInlineEnd: 4 }}>
                   {photo?.caption ?? loc?.name}
                 </span>
               )}
@@ -792,7 +792,7 @@ function PhotoMenu({
         role="menu"
         aria-label={kind === "cover" ? "Cover photo" : "Logo"}
         className="absolute z-50 bg-cream-card border border-th-aea1dc/50"
-        style={{ right: 0, top, width: 220, borderRadius: 14, boxShadow: "0 12px 32px rgba(95,80,147,0.18)", padding: 8 }}
+        style={{ insetInlineEnd: 0, top, width: 220, borderRadius: 14, boxShadow: "0 12px 32px rgba(95,80,147,0.18)", padding: 8 }}
       >
         <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-charcoal-faint" style={{ margin: "2px 4px 2px" }}>
           {kind === "cover" ? "Cover photo" : "Logo"}

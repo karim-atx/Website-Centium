@@ -15,6 +15,7 @@ import { formatShortDate } from "../../utils/date";
 import { formatPoints } from "../../components/market/pointsModel";
 import { num, rows, str } from "../market/parse";
 import { BLOCKED_TEXT } from "../moderation/text";
+import { appLocale } from "../../i18n/format";
 
 export type OfferVariant = "business" | "professional";
 export type OfferStatus = "active" | "scheduled" | "paused" | "expired";
@@ -333,7 +334,7 @@ export function typeLabel(t: OfferType, variant: OfferVariant): string {
 
 /** "$12" / "$12.50": whole dollars without cents. */
 export function money(n: number): string {
-  return Number.isInteger(n) ? `$${n.toLocaleString("en-US")}` : `$${n.toFixed(2)}`;
+  return Number.isInteger(n) ? `$${n.toLocaleString(appLocale("en-US"))}` : `$${n.toFixed(2)}`;
 }
 
 /** The preview's Value row: "15%", "$10", "Free". */

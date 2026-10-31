@@ -7,7 +7,8 @@ import { useApp } from "../../context/AppContext";
 import { fetchHideReadReceipts, setHideReadReceipts } from "../../services/preferences";
 import { DeleteAccountSheet } from "../../components/profile/DeleteAccountSheet";
 import { LegalFullLink, LegalIntro, LegalSections, LegalUpdated } from "../../components/settings/LegalText";
-import { LEGAL_LANGUAGE, PRIVACY_INTRO, PRIVACY_SECTIONS } from "./legalCopy";
+import { legalCopyFor, PRIVACY_SECTIONS } from "./legalCopy";
+import { t } from "../../i18n/core";
 import { SubHeader } from "../../components/business-more/kit";
 import { BusinessLegalSections } from "../../components/business-more/BusinessLegal";
 
@@ -71,27 +72,27 @@ export default function PrivacyPage() {
   return (
     <div>
       {/* v6 Batch 3 (OURS-MO1B-legal): business accounts take the More sub-page header. */}
-      {user.accountType === "business" ? <SubHeader title="Privacy" /> : <PageHeader title="Privacy" showBack sub tightBack />}
+      {user.accountType === "business" ? <SubHeader title={t("Privacy")} /> : <PageHeader title={t("Privacy")} showBack sub tightBack />}
 
       {/* MO1.8.7: 24 pt side insets; 16 under the 36 pt title. */}
       <SettingsBody className="-mt-1">
 
-      <SettingsSection label="Your controls">
+      <SettingsSection label={t("Your controls")}>
         {/* Customer only: a professional has no professionals of their own to
             share with, and their Professionals tab is their client roster. */}
         {user.accountType === "customer" && (
           <SettingsRow
             icon={Users}
-            title="Sharing with professionals"
-            subtitle="Manage what each professional can see"
+            title={t("Sharing with professionals")}
+            subtitle={t("Manage what each professional can see")}
             onClick={() => navigate("/app/professionals")}
           />
         )}
         {authUserId && hideReceipts !== null && (
           <SettingsRow
             icon={CheckCheck}
-            title="Read receipts"
-            subtitle="Turn off to stop sharing when you've read messages. You won't be able to see others' read receipts either."
+            title={t("Read receipts")}
+            subtitle={t("Turn off to stop sharing when you've read messages. You won't be able to see others' read receipts either.")}
             toggle={{ checked: !hideReceipts, onChange: (v) => void toggleReceipts(!v), disabled: savingReceipts }}
           />
         )}
@@ -100,8 +101,8 @@ export default function PrivacyPage() {
         <SettingsRow
           icon={Trash2}
           destructive
-          title={user.accountType === "business" ? "Delete business account" : "Delete my account"}
-          subtitle="Schedules deletion after a 30-day grace period"
+          title={user.accountType === "business" ? t("Delete business account") : t("Delete my account")}
+          subtitle={t("Schedules deletion after a 30-day grace period")}
           onClick={() => setDeleteOpen(true)}
         />
       </SettingsSection>
@@ -111,13 +112,13 @@ export default function PrivacyPage() {
           32 under the controls (the Settings section gap). */}
       <div className="mt-8">
         <LegalUpdated />
-        <LegalIntro className="mt-2">{PRIVACY_INTRO}</LegalIntro>
+        <LegalIntro className="mt-2">{legalCopyFor().PRIVACY_INTRO}</LegalIntro>
         <LegalSections doc="privacy" sections={PRIVACY_SECTIONS} className="mt-6" />
         {user.accountType === "business" && <BusinessLegalSections doc="privacy" />}
-        <p className="mt-6 text-[12px] leading-[18px] text-charcoal-faint">{LEGAL_LANGUAGE}</p>
+        <p className="mt-6 text-[12px] leading-[18px] text-charcoal-faint">{legalCopyFor().LEGAL_LANGUAGE}</p>
       </div>
 
-      <LegalFullLink href="/legal#privacy">Read the full Privacy Policy</LegalFullLink>
+      <LegalFullLink href="/legal#privacy">{t("Read the full Privacy Policy")}</LegalFullLink>
       </SettingsBody>
 
       <DeleteAccountSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} business={user.accountType === "business"} />

@@ -330,7 +330,7 @@ const FullScreenQr: React.FC<{ code: string; name: string; type: string | null; 
         onClick={onClose}
         autoFocus
         className="tap absolute flex items-center justify-center"
-        style={{ top: "calc(env(safe-area-inset-top) + 20px)", right: 20, width: 36, height: 36, borderRadius: 9999, background: INK.soft }}
+        style={{ top: "calc(env(safe-area-inset-top) + 20px)", insetInlineEnd: 20, width: 36, height: 36, borderRadius: 9999, background: INK.soft }}
       >
         <X size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
       </button>

@@ -1,6 +1,7 @@
 import { CloudOff } from "lucide-react";
 import { useOnline } from "../../hooks/useOnline";
 import { offlineBannerDetail } from "./offlineBannerText";
+import { t } from "../../i18n/core";
 
 /**
  * Shown on every screen while the browser reports no connection.
@@ -35,7 +36,7 @@ export const OfflineBanner: React.FC = () => {
       <div className="flex items-start gap-2.5">
         <CloudOff size={16} className="text-charcoal-soft shrink-0 mt-0.5" />
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-charcoal">You&rsquo;re offline</p>
+          <p className="text-[13px] font-semibold text-charcoal">{t("You’re offline")}</p>
           <p className="text-[11.5px] text-charcoal-soft mt-0.5">{offlineBannerDetail()}</p>
         </div>
       </div>

@@ -84,7 +84,7 @@ export const WaterBottleMini: React.FC<{ fraction: number; dark: boolean }> = ({
         ))}
       </svg>
       <span className="relative block rounded-full overflow-hidden" style={{ width: 70, height: 6, background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.9)" }} aria-hidden>
-        <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${f * 100}%`, background: "#6E8FC9" }} />
+        <span className="absolute inset-y-0 start-0 rounded-full" style={{ width: `${f * 100}%`, background: "#6E8FC9" }} />
       </span>
     </span>
   );
@@ -245,18 +245,18 @@ export const WeightJourneyStrip: React.FC<{ fraction: number | null; dark: boole
   return (
     <div ref={ref} className="relative" style={{ width: 240, height: 24 }} aria-hidden>
       <Keyframes />
-      <span className="absolute left-0 right-0 rounded-full" style={{ top: 10, height: 4, background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.9)" }} />
+      <span className="absolute start-0 end-0 rounded-full" style={{ top: 10, height: 4, background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.9)" }} />
       <span
-        className="absolute left-0 rounded-full"
+        className="absolute start-0 rounded-full"
         style={{ top: 10, height: 4, width: `${f * 100}%`, background: fill, ...anim(running, "hw-settle 3s ease-out infinite") }}
       />
-      <span className="absolute rounded-full" style={{ left: 0, top: 8, width: 8, height: 8, background: deep }} />
+      <span className="absolute rounded-full" style={{ insetInlineStart: 0, top: 8, width: 8, height: 8, background: deep }} />
       {fraction !== null && (
-        <span className="absolute rounded-full" style={{ right: 0, top: 7, width: 10, height: 10, background: card, border: `1.1px dashed ${deep}`, boxSizing: "border-box" }} />
+        <span className="absolute rounded-full" style={{ insetInlineEnd: 0, top: 7, width: 10, height: 10, background: card, border: `1.1px dashed ${deep}`, boxSizing: "border-box" }} />
       )}
       <span
         className="absolute"
-        style={{ left: `${f * 100}%`, top: 5, width: 14, height: 14, marginLeft: -7, ...anim(running, "hw-settle 3s ease-out infinite") }}
+        style={{ left: `${f * 100}%`, top: 5, width: 14, height: 14, marginInlineStart: -7, ...anim(running, "hw-settle 3s ease-out infinite") }}
       >
         <span className="absolute inset-0 rounded-full" style={{ background: fill, opacity: 0, ...anim(running, "hw-ring 3s ease-out infinite") }} />
         <span className="absolute inset-0 rounded-full" style={{ background: fill, border: `2.7px solid ${card}`, boxSizing: "border-box" }} />

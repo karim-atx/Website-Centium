@@ -1,5 +1,7 @@
 import { ALL_NUTRIENT_ROWS } from "../../data/nutrientSchema";
 import { OFFLINE_MESSAGE } from "../network-error";
+import { appLocale } from "../../i18n/format";
+import { t, tk } from "../../i18n/core";
 
 // Round D · DP, looking foods up online (search-foods-online, save_found_food,
 // submit_food_to_catalogue): the pure half. Parsing the function's answer,
@@ -202,7 +204,7 @@ export function formatNutrientAmount(n: number): string {
   if (a === 0) return "0";
   if (a < 0.1) return n.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
   if (a < 10) return (Math.round(n * 10) / 10).toString();
-  return Math.round(n).toLocaleString("en-US");
+  return Math.round(n).toLocaleString(appLocale("en-US"));
 }
 
 /** save_found_food's arguments for a confirmed result. */
@@ -263,11 +265,11 @@ export function suggestFoodMessage(code: string | undefined, offline: boolean): 
 // ---- the decision, told to the person (food_submission_reviewed) ----
 
 const REVIEW_REASON: Record<string, string> = {
-  duplicate: "The catalogue already has it.",
-  incorrect_values: "Its values didn't look right.",
-  not_a_food: "It isn't a food we list.",
-  not_allowed_content: "Its name isn't allowed.",
-  other: "It didn't meet our guidelines.",
+  duplicate: tk("The catalogue already has it."),
+  incorrect_values: tk("Its values didn't look right."),
+  not_a_food: tk("It isn't a food we list."),
+  not_allowed_content: tk("Its name isn't allowed."),
+  other: tk("It didn't meet our guidelines."),
 };
 
 /** The reason category in a sentence; the "other" sentence for anything unknown. */
@@ -275,18 +277,23 @@ export const reviewReasonText = (reason: unknown): string =>
   typeof reason === "string" && Object.prototype.hasOwnProperty.call(REVIEW_REASON, reason) ? REVIEW_REASON[reason] : REVIEW_REASON.other;
 
 /** The plain line, with no payload. */
-export const FOOD_REVIEW_COPY = { title: "Your food suggestion", body: "We've checked a food you suggested for the catalogue." };
+export const FOOD_REVIEW_COPY = { title: tk("Your food suggestion"), body: tk("We've checked a food you suggested for the catalogue.") };
 
 /** status (approved | rejected), name, reason_category; never the reviewer's note. */
 export function foodReviewCopy(status: unknown, name: unknown, reason: unknown): { title?: string; body?: string } {
   const food = typeof name === "string" && name.trim() !== "" ? name.trim() : null;
+  // Built when the notice is read (the inbox's fills), so in the chosen language.
   if (status === "approved") {
-    return { title: "Added to the catalogue", body: `${food ?? "Your food"} is in the catalogue now, so everyone can find it.` };
+    return {
+      title: tk("Added to the catalogue"),
+      body: food ? t("{food} is in the catalogue now, so everyone can find it.", { food }) : t("Your food is in the catalogue now, so everyone can find it."),
+    };
   }
   if (status === "rejected") {
+    const why = t(reviewReasonText(reason));
     return {
-      title: "Not added to the catalogue",
-      body: `${food ?? "Your food"} wasn't added. ${reviewReasonText(reason)} It's still in your own foods.`,
+      title: tk("Not added to the catalogue"),
+      body: food ? t("{food} wasn't added. {reason} It's still in your own foods.", { food, reason: why }) : t("Your food wasn't added. {reason} It's still in your own foods.", { reason: why }),
     };
   }
   return {};

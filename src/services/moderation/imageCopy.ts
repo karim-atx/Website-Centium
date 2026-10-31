@@ -1,3 +1,4 @@
+import { t, tk } from "../../i18n/core";
 // Image approval in words (Round C Release 2, Database 20261221040000): what
 // each surface's image is called, and what each rejection reason means. Pure.
 
@@ -25,56 +26,66 @@ export type ImageSurface = (typeof IMAGE_SURFACES)[number];
 export const isImageSurface = (s: unknown): s is ImageSurface => typeof s === "string" && (IMAGE_SURFACES as readonly string[]).includes(s);
 
 const SURFACE_WORD: Record<ImageSurface, string> = {
-  avatar: "profile photo",
-  professional_cover: "cover photo",
-  business_logo: "logo",
-  business_cover: "cover photo",
-  gym_cover: "venue cover photo",
-  class_cover: "class photo",
-  class_series_cover: "class photo",
-  showcase_image: "showcase photo",
-  plan_image: "plan photo",
-  service_image: "service photo",
-  venue_photo: "venue photo",
-  forum_photo: "forum photo",
-  course_cover: "course cover",
-  course_image: "lesson image",
-  group_photo: "group photo",
+  avatar: tk("profile photo"),
+  professional_cover: tk("cover photo"),
+  business_logo: tk("logo"),
+  business_cover: tk("cover photo"),
+  gym_cover: tk("venue cover photo"),
+  class_cover: tk("class photo"),
+  class_series_cover: tk("class photo"),
+  showcase_image: tk("showcase photo"),
+  plan_image: tk("plan photo"),
+  service_image: tk("service photo"),
+  venue_photo: tk("venue photo"),
+  forum_photo: tk("forum photo"),
+  course_cover: tk("course cover"),
+  course_image: tk("lesson image"),
+  group_photo: tk("group photo"),
 };
 
 /** "profile photo", "logo"...; "photo" for a surface this build doesn't know. */
-export const surfaceWord = (surface: unknown): string => (isImageSurface(surface) ? SURFACE_WORD[surface] : "photo");
+export const surfaceWord = (surface: unknown): string => (isImageSurface(surface) ? SURFACE_WORD[surface] : tk("photo"));
 
 export const REJECT_REASONS = ["not_allowed_content", "contact_details", "not_relevant", "low_quality", "other"] as const;
 export type RejectReason = (typeof REJECT_REASONS)[number];
 
 const REASON_TEXT: Record<RejectReason, string> = {
-  not_allowed_content: "It shows something our community guidelines don't allow.",
-  contact_details: "It shows contact details, which can't be shared in public places. Use messages for that.",
-  not_relevant: "It doesn't match what it's for.",
-  low_quality: "It's too hard to see clearly.",
-  other: "It doesn't meet our community guidelines.",
+  not_allowed_content: tk("It shows something our community guidelines don't allow."),
+  contact_details: tk("It shows contact details, which can't be shared in public places. Use messages for that."),
+  not_relevant: tk("It doesn't match what it's for."),
+  low_quality: tk("It's too hard to see clearly."),
+  other: tk("It doesn't meet our community guidelines."),
 };
 
 /** The reason category in a sentence; the "other" sentence for anything unknown. */
 export const reasonText = (reason: unknown): string =>
   typeof reason === "string" && (REJECT_REASONS as readonly string[]).includes(reason) ? REASON_TEXT[reason as RejectReason] : REASON_TEXT.other;
 
-export const PENDING_BADGE = "Waiting for approval";
-export const PENDING_LINE = "Only you can see this until our team approves it, usually within a day.";
-export const REJECTED_BADGE = "Not approved";
+export const PENDING_BADGE = tk("Waiting for approval");
+export const PENDING_LINE = tk("Only you can see this until our team approves it, usually within a day.");
+export const REJECTED_BADGE = tk("Not approved");
 
-/** The notice lines (member inbox, business inbox, professional hub). */
+/**
+ * The notice lines (member inbox, business inbox, professional hub). With no
+ * surface (and, rejected, no reason) the lines are fixed keys, because the
+ * inboxes build their plain tables from this at import time and translate
+ * where they show them; a line with a payload is built in the chosen language.
+ */
 export function imageNoticeCopy(approved: boolean, surface: unknown, reason: unknown): { title: string; body: string } {
-  const what = surfaceWord(surface);
-  return approved
-    ? { title: "Your photo is approved", body: `Your ${what} is approved. Others will see it in a few minutes.` }
-    : { title: "Your photo wasn't approved", body: `Your ${what} can't be used. ${reasonText(reason)} You can upload another.` };
+  const known = isImageSurface(surface);
+  if (approved) {
+    const title = tk("Your photo is approved");
+    if (!known) return { title, body: tk("Your photo is approved. Others will see it in a few minutes.") };
+    return { title, body: t("Your {what} is approved. Others will see it in a few minutes.", { what: t(surfaceWord(surface)) }) };
+  }
+  const title = tk("Your photo wasn't approved");
+  if (!known && reason == null) return { title, body: tk("Your photo can't be used. It doesn't meet our community guidelines. You can upload another.") };
+  return { title, body: t("Your {what} can't be used. {reason} You can upload another.", { what: t(surfaceWord(surface)), reason: t(reasonText(reason)) }) };
 }
 
 export const SUPPORT_NOTICE = {
-  title: "You're not alone",
-  body: "If something is hard right now, you can talk to someone today. Tap to see support lines.",
+  title: tk("You're not alone"),
+  body: tk("If something is hard right now, you can talk to someone today. Tap to see support lines."),
 };
 
 /**

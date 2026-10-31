@@ -18,6 +18,8 @@
 // posted), so nothing here looks a plan up to render it.
 
 import { planPriceLabel } from "../hires/clientLogic";
+import { t } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
 
 export type CardBilling = "daily" | "monthly" | "annually";
 
@@ -117,7 +119,7 @@ export function parseCard(raw: unknown): MessageCard | null {
     if (amount === null || !dueOn) return null;
     return {
       kind: "payment_reminder",
-      businessName: asText(p.business_name) ?? "Your gym or studio",
+      businessName: asText(p.business_name) ?? t("Your gym or studio"),
       amount,
       currency: asText(p.currency)?.toUpperCase() ?? "USD",
       method: asText(p.method),
@@ -132,7 +134,7 @@ export function parseCard(raw: unknown): MessageCard | null {
 export function cardMoney(amount: number, currency: string): string {
   const digits = Number.isInteger(amount) ? 0 : 2;
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: 2 }).format(amount);
+    return new Intl.NumberFormat(appLocale("en-US"), { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: 2 }).format(amount);
   } catch {
     return `${amount.toFixed(digits)} ${currency}`;
   }
@@ -146,7 +148,7 @@ export function cardPriceLine(price: number, billing: CardBilling): string {
 /** "Thu, Oct 1, 2026" (MO1.2.1.3.8's date line). A date-only string is read as a local date. */
 export function cardDate(isoOrDate: string): string {
   const d = /^\d{4}-\d{2}-\d{2}$/.test(isoOrDate) ? new Date(`${isoOrDate}T00:00:00`) : new Date(isoOrDate);
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 }
 
 /**

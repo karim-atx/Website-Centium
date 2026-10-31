@@ -87,7 +87,7 @@ export default function RevenuePage() {
                   type="button"
                   aria-label="Back to Analytics"
                   onClick={() => navigate("/app/business/analytics/overview")}
-                  className="tap w-[44px] h-[44px] -my-[5px] -ml-[5px] rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
+                  className="tap w-[44px] h-[44px] -my-[5px] -ms-[5px] rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
                 >
                   <span
                     className="w-[34px] h-[34px] rounded-full flex items-center justify-center"

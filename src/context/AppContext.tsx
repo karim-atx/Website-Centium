@@ -119,7 +119,10 @@ import {
   normalizeMacroSplit,
   rescaleEntry,
 } from "../services/nutrition";
-import { translations, type Language } from "../i18n/translations";
+import { isCatalogueLoaded, setActiveLanguage, t as translate, tk, type Language, type Vars } from "../i18n/core";
+import { loadLanguage } from "../i18n/load";
+import { ensureArabicFont } from "../i18n/fonts";
+import { readAccountLanguage, settleLanguage, writeAccountLanguage } from "../services/preferences/language";
 import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutRemote } from "../services/auth";
@@ -476,10 +479,11 @@ interface AppState {
   theme: "light" | "dark";
   toggleTheme: () => void;
 
-  // Future Supabase migration: app_preferences (syncs across all platforms).
+  // Round F (AV): app_preferences.language, synced across devices; the
+  // device's copy starts the app instantly.
   language: Language;
   setLanguage: (language: Language) => void;
-  t: (key: string) => string;
+  t: (key: string, vars?: Vars) => string;
 
   // device_presentation_settings, this website's 'web' row (Stage A1; per
   // platform, not shared with the phone), with a device copy that paints
@@ -2143,12 +2147,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
-  const [language, setLanguage] = usePersistentState<Language>("language", "en");
+  // Round F (AV): the chosen language, and the active one, which follows once
+  // its catalogue (a lazy chunk) has loaded. Until then the app waits rather
+  // than flashing English (see the return below). The account's language wins
+  // on sign-in (settleLanguage), and a change is saved to the account, so the
+  // Database's notifications and emails follow it (F12).
+  const [language, setLanguageState] = usePersistentState<Language>("language", "en");
+  const [activeLanguage, setActiveLanguageState] = useState<Language>(() => (isCatalogueLoaded(language) ? language : "en"));
   useEffect(() => {
-    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
-    document.documentElement.lang = language;
+    let alive = true;
+    loadLanguage(language)
+      .then(() => alive && setActiveLanguageState(language))
+      .catch((e: unknown) => {
+        console.error("[language] Could not load:", e);
+        if (!alive) return;
+        setActiveLanguageState("en");
+        setLanguageState("en");
+      });
+    return () => {
+      alive = false;
+    };
+    // setLanguageState is the persistent setter, stable for the provider's life.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]);
-  const t = (key: string) => translations[language][key] ?? key;
+  // The string module reads the active language; set it before children render.
+  setActiveLanguage(activeLanguage);
+  useEffect(() => {
+    document.documentElement.dir = activeLanguage === "ar" ? "rtl" : "ltr";
+    document.documentElement.lang = activeLanguage;
+    if (activeLanguage === "ar") ensureArabicFont();
+  }, [activeLanguage]);
+  const languageReady = activeLanguage === language;
+  const t = translate;
+  const setLanguage = useCallback(
+    (l: Language) => {
+      setLanguageState(l);
+      if (authUserId) void writeAccountLanguage(authUserId, l);
+    },
+    [authUserId, setLanguageState],
+  );
+  const languageSettledFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!authUserId || !profileReady || languageSettledFor.current === authUserId) return;
+    languageSettledFor.current = authUserId;
+    const local = language;
+    const onboarded = user.onboarded;
+    void readAccountLanguage(authUserId).then((account) => {
+      // A failed read settles nothing (and writes nothing); the next sign-in tries again.
+      if (account === undefined) {
+        languageSettledFor.current = null;
+        return;
+      }
+      const s = settleLanguage(local, account, onboarded);
+      if (s.use !== local) setLanguageState(s.use);
+      if (s.write) void writeAccountLanguage(authUserId, s.use);
+    });
+    // Once per signed-in account; the language and onboarding read are that moment's.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId, profileReady]);
   const toggleTheme = () => setThemeMode(theme === "dark" ? "light" : "dark");
 
 
@@ -6490,7 +6546,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!result.ok) {
       // Nothing is cleared and the session is untouched: claiming success on a
       // failed request is the exact bug being fixed.
-      return { ok: false, message: result.message ?? "Could not schedule deletion." };
+      return { ok: false, message: result.message ?? tk("Could not schedule deletion.") };
     }
 
     setDeletionRequestedAt(result.deletionRequestedAt ?? null);
@@ -6500,7 +6556,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const cancelDeletion: AppState["cancelDeletion"] = async () => {
     const result = await cancelAccountDeletionRemote();
-    if (!result.ok) return { ok: false, message: result.message ?? "Could not cancel." };
+    if (!result.ok) return { ok: false, message: result.message ?? tk("Could not cancel.") };
     setDeletionRequestedAt(result.deletionRequestedAt ?? null);
     return { ok: true };
   };
@@ -6929,7 +6985,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]
   );
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  // Round F (AV): a language change remounts the app in the new language
+  // (every screen reads t() as it renders); while a catalogue loads, nothing
+  // is drawn rather than the old language.
+  return <AppContext.Provider value={value}>{languageReady ? <React.Fragment key={activeLanguage}>{children}</React.Fragment> : null}</AppContext.Provider>;
 };
 
 export function useApp() {

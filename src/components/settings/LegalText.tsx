@@ -1,6 +1,7 @@
 import React from "react";
 import { ChevronRight } from "lucide-react";
-import { LEGAL_UPDATED, legalHref, type LegalSection } from "../../pages/settings/legalCopy";
+import { LEGAL_UPDATED, legalCopyFor, legalDate, legalHref, type LegalSection } from "../../pages/settings/legalCopy";
+import { t } from "../../i18n/core";
 
 // The shared parts of MO1.8.7 Privacy and MO1.8.8 Terms of Service, as both
 // frames draw them (measured on the 2x boards): the "Last updated" line
@@ -15,7 +16,7 @@ import { LEGAL_UPDATED, legalHref, type LegalSection } from "../../pages/setting
 // for the in-app browser.
 
 export const LegalUpdated: React.FC = () => (
-  <p className="text-[13px] leading-[19px] text-charcoal-faint">Last updated {LEGAL_UPDATED}</p>
+  <p className="text-[13px] leading-[19px] text-charcoal-faint">{t("Last updated {date}", { date: legalDate(LEGAL_UPDATED) })}</p>
 );
 
 export const LegalIntro: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
@@ -26,25 +27,32 @@ export const LegalSections: React.FC<{ doc: "privacy" | "terms"; sections: Legal
   doc,
   sections,
   className,
-}) => (
-  <div className={`space-y-6 ${className ?? ""}`}>
-    {sections.map((s) => (
-      <section key={s.heading}>
-        <h2 className="mb-1.5">
-          <a
-            href={legalHref(doc, s.heading)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[15px] font-bold leading-6 text-primary-accent"
-          >
-            {s.heading}
-          </a>
-        </h2>
-        <p className="text-[15px] leading-6 text-charcoal">{s.body}</p>
-      </section>
-    ))}
-  </div>
-);
+}) => {
+  // Round F (AV): the words in the active language (legalCopy.ar.ts, the same
+  // sections in the same order); the link always takes the English heading,
+  // whose slug is the website's id.
+  const local = legalCopyFor()[doc === "terms" ? "TERMS_SECTIONS" : "PRIVACY_SECTIONS"];
+  const shown = local.length === sections.length ? local : sections;
+  return (
+    <div className={`space-y-6 ${className ?? ""}`}>
+      {sections.map((s, i) => (
+        <section key={s.heading}>
+          <h2 className="mb-1.5">
+            <a
+              href={legalHref(doc, s.heading)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[15px] font-bold leading-6 text-primary-accent"
+            >
+              {shown[i].heading}
+            </a>
+          </h2>
+          <p className="text-[15px] leading-6 text-charcoal">{shown[i].body}</p>
+        </section>
+      ))}
+    </div>
+  );
+};
 
 /**
  * "Read the full …": 14 / 700 #7D67D9 on a 21 line with ChevronRight 16 / 2
@@ -61,6 +69,6 @@ export const LegalFullLink: React.FC<{ href: string; children: React.ReactNode }
     className="tap mt-7 flex items-start justify-between gap-3 border-t border-th-aea1dc/30 dark:border-charcoal/[0.06] pt-3.5 text-[14px] leading-[21px] font-bold text-primary-accent"
   >
     <span className="max-w-[150px]">{children}</span>
-    <ChevronRight size={16} strokeWidth={2} aria-hidden className="shrink-0 mt-[2.5px] rtl:-scale-x-100" />
+    <ChevronRight size={16} strokeWidth={2} aria-hidden className="shrink-0 mt-[2.5px]" />
   </a>
 );

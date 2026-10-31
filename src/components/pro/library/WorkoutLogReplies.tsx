@@ -196,7 +196,7 @@ export const WorkoutLogReplies: React.FC<{ sessionId: string; clientFirstName: s
             onClick={() => void setReviewed(false)}
             disabled={busy === "review"}
             className="tap disabled:opacity-40"
-            style={{ marginLeft: 8, minHeight: 32, fontWeight: 600, color: INK.chS }}
+            style={{ marginInlineStart: 8, minHeight: 32, fontWeight: 600, color: INK.chS }}
           >
             Undo
           </button>

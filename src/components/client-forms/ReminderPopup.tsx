@@ -47,7 +47,7 @@ export const ReminderPopup: React.FC<{
         <ReminderIcon kind={kind} tone={tn} proName={proName} proAvatarUrl={proAvatarUrl} />
       }
       titleAside={
-        <span style={{ position: "relative", top: -10, right: -4, fontSize: textPx(11), fontWeight: 700, color: INK.chF }}>
+        <span style={{ position: "relative", top: -10, insetInlineEnd: -4, fontSize: textPx(11), fontWeight: 700, color: INK.chF }}>
           {index + 1} of {count}
         </span>
       }

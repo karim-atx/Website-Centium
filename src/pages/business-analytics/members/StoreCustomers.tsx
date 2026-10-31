@@ -10,6 +10,7 @@ import { useAnalytics } from "../analyticsContext";
 import { rangeWords } from "../analyticsRange";
 import { AnAvatar, AnCard, AnEmptyCard, AnHeaderRow, AnHint, AnIndexRow, AnIndexSkeleton, AnListRow, AnStrip } from "./anKit";
 import { customersIndex, topCustomers, type CustomerOrder } from "./customersModel";
+import { appLocale } from "../../../i18n/format";
 
 // AN4-045 row 13 · Analytics › Customers for a Store (B11): who is a
 // customer is business_people(…, 'customers') (everyone who has ordered,
@@ -81,7 +82,7 @@ export function StoreCustomersIndex({ businessId }: { businessId: string | null 
       : `${plural(idx.inRange, "customer", "customers")} ordered in ${rangeWords(range)}.`
     : "Who ordered in this range.";
   const rows = [
-    { title: "Customers", value: idx ? idx.inRange.toLocaleString() : null, lead: inRangeLead },
+    { title: "Customers", value: idx ? idx.inRange.toLocaleString(appLocale()) : null, lead: inRangeLead },
     {
       title: "Ordered again",
       value: idx?.orderedAgainPct != null ? `${idx.orderedAgainPct}%` : null,
@@ -89,7 +90,7 @@ export function StoreCustomersIndex({ businessId }: { businessId: string | null 
     },
     {
       title: "New this week",
-      value: idx ? idx.newThisWeek.toLocaleString() : null,
+      value: idx ? idx.newThisWeek.toLocaleString(appLocale()) : null,
       lead: idx ? `${plural(idx.newThisWeek, "customer", "customers")} placed their first order this week.` : "Customers whose first order was this week.",
     },
   ];

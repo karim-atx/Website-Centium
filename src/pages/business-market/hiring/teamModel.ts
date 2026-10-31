@@ -7,6 +7,8 @@
 // (D-03, utils/time12), ISO weekdays 1 = Monday … 7 = Sunday (model.ts).
 
 import { formatShortDate } from "../../../utils/date";
+import { t } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
 import { clockParts, minutesOfDay } from "../../../utils/time12";
 import { type ProfessionalType, type TeamClass, type TeamHire, type TeamMember } from "../../../services/hiring/model";
 
@@ -24,7 +26,7 @@ export function parseDay(v: string | null | undefined): Date | null {
 /** "Oct 18, 2026" (always with the year). */
 export function fullDate(v: string | null | undefined): string {
   const d = parseDay(v);
-  return d ? formatShortDate(d, { month: "short", day: "numeric", year: "numeric" }) : "";
+  return d ? formatShortDate(d, { month: "short", day: "numeric", year: "numeric" }, appLocale("en-US")) : "";
 }
 
 /** "Oct 18" in the current year, "Oct 18, 2025" otherwise. */
@@ -114,9 +116,9 @@ export function removeConfirmBody(member: { source: "existing_team" | "hire"; hi
 
 /** "Sunday Spin instructor · Role · hired Oct 18, 2026". */
 export function feeRoleLine(roleTitle: string, type: "role" | "class_slot", hiredAt: string | null): string {
-  const parts = [roleTitle.trim(), type === "role" ? "Role" : "Class slot"].filter(Boolean);
+  const parts = [roleTitle.trim(), type === "role" ? t("Role") : t("Class slot")].filter(Boolean);
   const d = fullDate(hiredAt);
-  if (d) parts.push(`hired ${d}`);
+  if (d) parts.push(t("hired {date}", { date: d }));
   return parts.join(" · ");
 }
 

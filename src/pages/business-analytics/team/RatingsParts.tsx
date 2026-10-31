@@ -262,7 +262,7 @@ export function ReviewsSheet({
                         aria-expanded={menuFor?.review.id === r.id}
                         onClick={(e) => setMenuFor({ review: r, anchor: e.currentTarget })}
                         className="tap flex items-center justify-center rounded-full"
-                        style={{ width: 44, height: 44, margin: "-14px -6px -14px -12px", color: "var(--an-faint)" }}
+                        style={{ width: 44, height: 44, marginBlock: "-14px", marginInline: "-12px -6px", color: "var(--an-faint)" }}
                       >
                         <EllipsisVertical size={16} strokeWidth={1.75} aria-hidden />
                       </button>

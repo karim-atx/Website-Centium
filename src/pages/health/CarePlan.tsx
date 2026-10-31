@@ -63,7 +63,7 @@ export default function CarePlan() {
     <div className="pb-8" style={{ paddingTop: 16 }}>
       {/* Header: chevron-left 18/2 in 36, gap 6, m-bottom 14; title 19/700
           ls -0.03em; the "From …" line 11 #A79E93 m-top 3. */}
-      <div className="flex items-start" style={{ gap: 6, marginBottom: 14, marginLeft: -8 }}>
+      <div className="flex items-start" style={{ gap: 6, marginBottom: 14, marginInlineStart: -8 }}>
         <button
           type="button"
           onClick={back}

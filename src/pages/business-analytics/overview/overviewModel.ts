@@ -10,6 +10,7 @@ import type { ClockItem } from "./clockModel";
 import { f12, hoursOf } from "./clockModel";
 import { figuresFromRecords, isOwed, money, pctDelta, type PaymentRecord, type RevenueFigures } from "../../../services/business-revenue/model";
 import { pctChange, signed, type ClientOutcomes, type DayItem, type PeriodStat, type PeriodStats } from "../../../services/business-analytics/model";
+import { appLocale } from "../../../i18n/format";
 
 export type OverviewKind = "classes" | "gym" | "store";
 
@@ -127,7 +128,7 @@ export function headline(kind: OverviewKind, raw: OvRaw, range: Range): HeadCell
   if (s) {
     const n = s.members_net;
     // Active now against the end of the previous period is this period's net change.
-    active = !n ? null : raw.activeNow === null ? active : { label: "Active members", value: raw.activeNow.toLocaleString("en-US"), ...deltaOf(n, cmp, (v) => ({ t: signed(v), d: v })) };
+    active = !n ? null : raw.activeNow === null ? active : { label: "Active members", value: raw.activeNow.toLocaleString(appLocale("en-US")), ...deltaOf(n, cmp, (v) => ({ t: signed(v), d: v })) };
     net = !n || n.value === null ? null : { label: "Net members", value: signed(n.value), delta: `${s.members_joined?.value ?? 0} joined, ${s.members_ended?.value ?? 0} ended`, dir: "none" };
   }
 
@@ -150,7 +151,7 @@ export function headline(kind: OverviewKind, raw: OvRaw, range: Range): HeadCell
         ? booked
         : {
             label: "Booked spots",
-            value: b.value.toLocaleString("en-US"),
+            value: b.value.toLocaleString(appLocale("en-US")),
             ...deltaOf(b, cmp, (v, p) => {
               const t = pctChange(v, p);
               return t ? { t, d: v - p } : null;
@@ -281,7 +282,7 @@ export function insights(raw: OvRaw, rev: RevenueIn | null = null): Insight[] {
       ? {
           key: "reputation",
           value: r.average.toFixed(1),
-          delta: `★ ${r.total.toLocaleString("en-US")}`,
+          delta: `★ ${r.total.toLocaleString(appLocale("en-US"))}`,
           sub: r.inRange === null ? "Average rating" : `Average rating · ${r.inRange} new this period`,
           up: false,
         }
@@ -373,7 +374,7 @@ export function sharedProgress(o: ClientOutcomes, kind: OverviewKind): { boxes: 
   return {
     boxes: [
       { value: o.workoutsPerWeek === null ? "–" : o.workoutsPerWeek.toFixed(1), label: "Workouts a week" },
-      { value: o.dailySteps === null ? "–" : Math.round(o.dailySteps).toLocaleString("en-US"), label: "Daily steps" },
+      { value: o.dailySteps === null ? "–" : Math.round(o.dailySteps).toLocaleString(appLocale("en-US")), label: "Daily steps" },
       { value: o.restingBpm === null ? "–" : `${Math.round(o.restingBpm)} bpm`, label: "Resting heart rate" },
     ],
     note: `Averages of the ${o.sharing} clients who share their progress with you, over the last 28 days.${books}`,

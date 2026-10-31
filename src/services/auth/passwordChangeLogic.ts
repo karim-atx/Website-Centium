@@ -1,3 +1,4 @@
+import { tk } from "../../i18n/core";
 /**
  * Task J: the decisions behind Change password, kept pure so they are tested
  * without an auth server. Nothing here ever sees a password.
@@ -51,9 +52,9 @@ export function passwordChangeOutcome(code: string | undefined): ChangeOutcome |
     case "reauth_nonce_missing":
       return { status: "code_needed" };
     case "reauthentication_not_valid":
-      return { status: "error", message: "That code isn't right, or it has expired. Check your email or send a new one." };
+      return { status: "error", message: tk("That code isn't right, or it has expired. Check your email or send a new one.") };
     case "same_password":
-      return { status: "error", message: "Your new password must be different from your current one." };
+      return { status: "error", message: tk("Your new password must be different from your current one.") };
     default:
       return null;
   }

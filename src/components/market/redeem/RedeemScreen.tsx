@@ -351,18 +351,18 @@ const ResultBody: React.FC<{
       <div style={{ fontSize: textPx(20), fontWeight: 800, marginTop: 12 }}>{title}</div>
       <div style={{ fontSize: textPx(13), lineHeight: linePx(19), color: m.ink2, marginTop: 4, maxWidth: 300 }}>{body}</div>
       {rows.length > 0 ? (
-        <dl style={{ margin: "14px 0 0", width: "100%", boxSizing: "border-box", borderRadius: 14, background: m.sgrey, padding: "4px 14px", textAlign: "left" }}>
+        <dl style={{ margin: "14px 0 0", width: "100%", boxSizing: "border-box", borderRadius: 14, background: m.sgrey, padding: "4px 14px", textAlign: "start" }}>
           {rows.map((r, i) => (
             <div key={r.k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "9px 0", borderTop: i === 0 ? undefined : `0.5px solid ${m.div}`, fontSize: textPx(12.5) }}>
               <dt style={{ color: m.slabel }}>{r.k}</dt>
-              <dd style={{ margin: 0, fontWeight: 700, textAlign: "right", minWidth: 0, overflowWrap: "anywhere" }}>{r.v}</dd>
+              <dd style={{ margin: 0, fontWeight: 700, textAlign: "end", minWidth: 0, overflowWrap: "anywhere" }}>{r.v}</dd>
             </div>
           ))}
         </dl>
       ) : null}
       {/* DH (not drawn): the check-ID note, the rows' shape in Already used's caution colours. */}
       {note ? (
-        <p style={{ margin: "10px 0 0", width: "100%", boxSizing: "border-box", borderRadius: 14, background: m.cautionbg, padding: "10px 14px", textAlign: "left", fontSize: textPx(12.5), lineHeight: linePx(18), fontWeight: 600, color: m.caution }}>
+        <p style={{ margin: "10px 0 0", width: "100%", boxSizing: "border-box", borderRadius: 14, background: m.cautionbg, padding: "10px 14px", textAlign: "start", fontSize: textPx(12.5), lineHeight: linePx(18), fontWeight: 600, color: m.caution }}>
           {note}
         </p>
       ) : null}

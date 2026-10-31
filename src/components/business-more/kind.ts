@@ -1,4 +1,5 @@
 import type { BusinessTypeValue } from "../../services/business-more/types";
+import { tk } from "../../i18n/core";
 
 // The business's lane for the MO1B per-type rows (COPY.md "Type variants",
 // More (MO1)): Classes (stored "studio", D8), Gym, or a store (the five store
@@ -14,18 +15,18 @@ export function bizKindOf(type: string | null | undefined): BizKind {
 
 /** Business type labels (MO1B-015; D8 adds Classes, first). */
 export const BUSINESS_TYPE_OPTIONS: { value: BusinessTypeValue; label: string }[] = [
-  { value: "studio", label: "Classes" },
-  { value: "gym", label: "Gym" },
-  { value: "store", label: "Store" },
-  { value: "supplement_store", label: "Supplement Store" },
-  { value: "equipment_seller", label: "Equipment Seller" },
-  { value: "wellness_service", label: "Wellness Service" },
-  { value: "clothing_store", label: "Clothing Store" },
-  { value: "meal_prep_service", label: "Meal-Prepping Service" },
+  { value: "studio", label: tk("Classes") },
+  { value: "gym", label: tk("Gym") },
+  { value: "store", label: tk("Store") },
+  { value: "supplement_store", label: tk("Supplement Store") },
+  { value: "equipment_seller", label: tk("Equipment Seller") },
+  { value: "wellness_service", label: tk("Wellness Service") },
+  { value: "clothing_store", label: tk("Clothing Store") },
+  { value: "meal_prep_service", label: tk("Meal-Prepping Service") },
 ];
 
 export const typeLabel = (type: string | null | undefined): string =>
-  BUSINESS_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? "Business";
+  BUSINESS_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? tk("Business");
 
 /** COPY vocabulary: Staff. */
 export const STAFF_LABEL: Record<BizKind, string> = { classes: "Instructors", gym: "Team", store: "Staff" };
@@ -43,7 +44,7 @@ export function venueKindOf(type: string | null | undefined): "gym" | "studio" |
  * at most 5). The chips per lane are the keys that apply to it.
  */
 export const CATEGORY_LABEL: Record<string, string> = {
-  gym: "Gym",
+  gym: tk("Gym"),
   studio: "Studio",
   crossfit: "CrossFit",
   pilates: "Pilates",

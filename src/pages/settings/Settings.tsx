@@ -12,7 +12,7 @@ import { ForumBlocksSetting } from "../../components/forum/ForumBlocksSetting";
 import { useApp } from "../../context/AppContext";
 import { pushSupported } from "../../services/push";
 import { detectPlatform } from "../../components/health/IntegrationsCard";
-import { APP_LANGUAGES } from "../../i18n/languages";
+import { languageEntry } from "../../i18n/languages";
 import { pushUnavailableReason, watchPermission, type PermissionReading } from "./platform";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -44,6 +44,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import DevicesSourcesPage from "./DevicesSourcesPage";
 import BusinessSettings from "../business-more/BusinessSettings";
 import { PracticeSection } from "../../components/pro/settings/PracticeSection";
+import { tk } from "../../i18n/core";
 
 // MO1.8 Settings (R17, batch C; handover-complete pass). The board's layout:
 // labelled sections of flat icon-tile rows instead of cards, sub-screens as
@@ -67,9 +68,9 @@ import { PracticeSection } from "../../components/pro/settings/PracticeSection";
 
 /** What each permission is for: read to screen readers, not drawn (MO1.8). */
 const PERMISSION_PURPOSE = {
-  mic: "Needed for AI voice logging",
-  camera: "Needed for scanning biomarkers & photos",
-  location: "Needed to find gyms & businesses near you",
+  mic: tk("Needed for AI voice logging"),
+  camera: tk("Needed for scanning biomarkers & photos"),
+  location: tk("Needed to find gyms & businesses near you"),
 } as const;
 type PermissionKey = keyof typeof PERMISSION_PURPOSE;
 
@@ -189,11 +190,11 @@ function SettingsHub() {
     return undefined;
   };
 
-  // BR-07: switching a device on opens HealthKit / Health Connect / Whoop
-  // OAuth, and a cancel returns it to off. The web has none of the three
-  // (Apple Health and Health Connect are native-only; Whoop needs its OAuth
-  // backend), so the switch returns to off at once and says why.
-  const [deviceNote, setDeviceNote] = useState<"platform" | "whoop" | null>(null);
+  // BR-07: switching a device on opens HealthKit / Health Connect, and a
+  // cancel returns it to off. Both are native-only, so on the web the switch
+  // returns to off at once and says why. Round F (Karim, A7): WHOOP was
+  // dropped, and its row with it.
+  const [deviceNote, setDeviceNote] = useState<"platform" | null>(null);
 
   // Resolved once: installing the app or switching browser reloads the page.
   const [pushAvailable] = useState(pushSupported);
@@ -206,7 +207,9 @@ function SettingsHub() {
 
   const dark = useIsDark();
   const isIos = detectPlatform() === "ios";
-  const languageName = APP_LANGUAGES.find((l) => l.code === language)?.name ?? "English";
+  // Round F (F7): Arabic reads "العربية · Beta" until every area is translated.
+  const languageEntryNow = languageEntry(language);
+  const languageName = languageEntryNow.beta ? `${languageEntryNow.name} · ${t("Beta")}` : languageEntryNow.name;
 
   return (
     <div>
@@ -222,7 +225,7 @@ function SettingsHub() {
           icon={theme === "dark" ? Moon : Sun}
           title={t("Dark Mode")}
           subtitle={`${theme === "dark" ? t("Currently on") : t("Currently off")}. ${t("Applies throughout Centium")}`}
-          toggle={{ checked: theme === "dark", onChange: toggleTheme, label: "Dark mode" }}
+          toggle={{ checked: theme === "dark", onChange: toggleTheme, label: t("Dark mode") }}
           // MO1.8 draws no divider between Dark Mode and the colour theme.
           className="before:hidden"
         />
@@ -279,7 +282,7 @@ function SettingsHub() {
           Connect" is the Android name (C-11). */}
       {user.accountType === "customer" && (
         <SettingsSection id="devices" label={t("Connected devices")}>
-          {/* v6 (TK 4.6, decided: Apple Health / WHOOP later): no brand marks;
+          {/* v6 (TK 4.6): no brand marks;
               each row shows its neutral placeholder glyph on the standard
               Settings tile (DevicePlaceholders.ts). */}
           <SettingsRow
@@ -288,22 +291,13 @@ function SettingsHub() {
             subtitle={
               deviceNote === "platform"
                 ? isIos
-                  ? "Connects in the Centium app on iPhone"
-                  : "Connects in the Centium app on Android"
+                  ? t("Connects in the Centium app on iPhone")
+                  : t("Connects in the Centium app on Android")
                 : undefined
             }
             toggle={{
               checked: false,
               onChange: (next) => setDeviceNote(next ? "platform" : null),
-            }}
-          />
-          <SettingsRow
-            icon={DEVICE_PLACEHOLDER_ICON.whoop}
-            title="Whoop"
-            subtitle={deviceNote === "whoop" ? "Whoop sync isn't available yet" : undefined}
-            toggle={{
-              checked: false,
-              onChange: (next) => setDeviceNote(next ? "whoop" : null),
             }}
           />
         </SettingsSection>
@@ -326,9 +320,9 @@ function SettingsHub() {
           zone, Blocked members). Change password stays here, first (DECIDED),
           so Security keeps one row and no divider. This section's glyphs take
           #7D6BB5 / #C3B3FB (MO1.8 #49, #53, #60, #69). */}
-      <SettingsSection label="Data & account">
+      <SettingsSection label={t("Data & account")}>
         {/* Task J. */}
-        <SettingsRow icon={KeyRound} iconTone="dark" title="Change password" onClick={() => setChangePasswordOpen(true)} />
+        <SettingsRow icon={KeyRound} iconTone="dark" title={t("Change password")} onClick={() => setChangePasswordOpen(true)} />
         <StorageUsageRow />
         {/* Task T: the profile's time zone, for every account (#timezone),
             and the "Use device time zone" switch row (MO1.8.13). */}

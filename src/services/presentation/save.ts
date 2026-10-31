@@ -1,6 +1,7 @@
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { PRESENTATION_PLATFORM, rowToPresentation, type Presentation, type PresentationRow } from "./mapping";
 import { isPermissionCode } from "./retry";
+import { tk } from "../../i18n/core";
 
 // The write half of the presentation service, with the table handed in so
 // node --test can drive it without a Supabase client (index.ts passes the real
@@ -41,9 +42,9 @@ export function describePresentationError(error: unknown): string {
   if (isOffline(error)) return OFFLINE_MESSAGE;
   const code = (error as { code?: string } | null)?.code ?? "";
   if (isPermissionCode(code)) {
-    return "Your session expired. Sign in again to save this.";
+    return tk("Your session expired. Sign in again to save this.");
   }
-  return "Couldn't save your display settings. Try again.";
+  return tk("Couldn't save your display settings. Try again.");
 }
 
 function failed(error: unknown): PresentationSave {

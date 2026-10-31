@@ -150,7 +150,7 @@ export const InjurySheet: React.FC<{ open: boolean; injury: Injury | null; onClo
         <input id="injury-area" value={bodyArea} maxLength={INJURY_AREA_MAX} onChange={(e) => setBodyArea(e.target.value)} placeholder="e.g. Left knee" className="outline-none placeholder:text-charcoal-faint" style={fieldStyle(dark, hc)} />
         <FieldLabel style={{ marginTop: 16 }}>Since (optional)</FieldLabel>
         <div className="flex items-center" style={{ gap: 8 }}>
-          <button type="button" onClick={() => setCalendarOpen(true)} className="tap flex-1 flex items-center text-left" style={{ ...fieldStyle(dark, hc), gap: 8, color: since ? undefined : INK_FAINT }}>
+          <button type="button" onClick={() => setCalendarOpen(true)} className="tap flex-1 flex items-center text-start" style={{ ...fieldStyle(dark, hc), gap: 8, color: since ? undefined : INK_FAINT }}>
             <CalendarDays size={15} style={{ color: INK_FAINT }} aria-hidden />
             {since ? fmtDate(since) : "Choose a date"}
           </button>

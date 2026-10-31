@@ -44,7 +44,7 @@ export const HealthSafetyCard: React.FC<{
         padding: 16,
         background: alert ? (dark ? "#3C2A30" : "#FCEDEC") : soon ? "rgba(217,98,43,0.10)" : dark ? "#1C1F28" : "#FFFFFF",
         border: alert || soon ? undefined : `0.5px solid ${hairline(dark, hc)}`,
-        borderLeft: soon ? "3px solid #D9622B" : undefined,
+        borderInlineStart: soon ? "3px solid #D9622B" : undefined,
       }}
     >
       <div className="flex items-center" style={{ gap: 8 }}>

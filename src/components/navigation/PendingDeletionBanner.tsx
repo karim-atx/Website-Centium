@@ -4,6 +4,7 @@ import { useApp } from "../../context/AppContext";
 import { formatDisplayDate } from "../../utils/date";
 import { fetchDeletionSchedule } from "../../services/profile";
 import { deletionRunDate } from "../../services/profile/deletionDate";
+import { t } from "../../i18n/core";
 
 /**
  * Shown on every screen while an account is inside its deletion grace period.
@@ -54,7 +55,7 @@ export const PendingDeletionBanner: React.FC = () => {
     setBusy(true);
     const result = await cancelDeletion();
     setBusy(false);
-    if (!result.ok) setError(result.message ?? "Could not cancel the deletion.");
+    if (!result.ok) setError(result.message ? t(result.message) : t("Could not cancel the deletion."));
   };
 
   return (
@@ -63,12 +64,12 @@ export const PendingDeletionBanner: React.FC = () => {
         <AlertTriangle size={16} className="text-status-high shrink-0 mt-0.5" />
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-semibold text-charcoal">
-            Your account is scheduled for deletion
+            {t("Your account is scheduled for deletion")}
           </p>
           <p className="text-[11.5px] text-charcoal-soft mt-0.5">
             {loaded
-              ? `It will be deleted on ${formatDisplayDate(scheduledDate)}, along with your food logs, workouts and health data. Cancel any time before then to keep it.`
-              : "It will be deleted along with your food logs, workouts and health data. Cancel to keep it."}
+              ? t("It will be deleted on {date}, along with your food logs, workouts and health data. Cancel any time before then to keep it.", { date: formatDisplayDate(scheduledDate) })
+              : t("It will be deleted along with your food logs, workouts and health data. Cancel to keep it.")}
           </p>
           {error && (
             <p className="text-[11.5px] font-semibold text-status-high mt-1.5">{error}</p>
@@ -79,7 +80,7 @@ export const PendingDeletionBanner: React.FC = () => {
           disabled={busy}
           className="tap shrink-0 rounded-xl bg-cream-card text-charcoal text-[11.5px] font-semibold px-3 py-1.5 shadow-soft disabled:opacity-50"
         >
-          {busy ? "Cancelling…" : "Cancel deletion"}
+          {busy ? t("Cancelling…") : t("Cancel deletion")}
         </button>
       </div>
     </div>

@@ -9,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
+import { isRtl } from "../../i18n/core";
 import "./scrubChart.css";
 
 // ScrubChart (handoff/source/ScrubChart.dc.html, ported literally): a weekly
@@ -201,6 +202,10 @@ export const ScrubChart: React.FC<{
     else setHidePrev(!hidePrev);
   };
 
+  // Round F (F10): mirrored in right to left (scrubChart.css flips the drawing).
+  // A box anchored at the inline start shifts back towards it by `pct`.
+  const rtl = isRtl();
+  const shift = (pct: number) => (pct === 0 ? "0%" : `${rtl ? pct : -pct}%`);
   let svg: React.ReactNode = null;
   let yl: { t: string; top: string }[] = [];
   let tags: React.ReactNode[] = [];
@@ -449,11 +454,11 @@ export const ScrubChart: React.FC<{
           key={i}
           className="sc-tag"
           style={{
-            left: `calc(30px + ${(((X(m.i) - 30) / 290) * 100).toFixed(1)}% * 0.96)`,
+            insetInlineStart: `calc(30px + ${(((X(m.i) - 30) / 290) * 100).toFixed(1)}% * 0.96)`,
             ...(m.row ? { top: -2 + m.row * 20 } : {}),
             ...(m.fit
               ? {
-                  transform: `translateX(${(X(m.i) - 30) / 290 > 0.8 ? "-100%" : (X(m.i) - 30) / 290 < 0.15 ? "0%" : "-50%"})`,
+                  transform: `translateX(${shift((X(m.i) - 30) / 290 > 0.8 ? 100 : (X(m.i) - 30) / 290 < 0.15 ? 0 : 50)})`,
                 }
               : {}),
             background: bg,
@@ -469,7 +474,7 @@ export const ScrubChart: React.FC<{
 
   const toIdx = (e: React.PointerEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
-    const f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    const f = Math.max(0, Math.min(1, (rtl ? r.right - e.clientX : e.clientX - r.left) / r.width));
     return Math.round(f * (n - 1));
   };
   const pd = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -512,7 +517,7 @@ export const ScrubChart: React.FC<{
       e.preventDefault();
       const cur = pin ?? n - 1;
       setPin(
-        Math.max(0, Math.min(n - 1, cur + (e.key === "ArrowRight" ? 1 : -1))),
+        Math.max(0, Math.min(n - 1, cur + ((e.key === "ArrowRight") !== rtl ? 1 : -1))),
       );
     }
     if (e.key === "Escape") setPin(null);
@@ -650,8 +655,8 @@ export const ScrubChart: React.FC<{
               <div
                 className="sc-tip"
                 style={{
-                  left: `calc(30px + ${(frac * 100).toFixed(1)}% * 0.96)`,
-                  transform: `translateX(${frac > 0.6 ? "-100%" : frac < 0.25 ? "0%" : "-50%"})`,
+                  insetInlineStart: `calc(30px + ${(frac * 100).toFixed(1)}% * 0.96)`,
+                  transform: `translateX(${shift(frac > 0.6 ? 100 : frac < 0.25 ? 0 : 50)})`,
                 }}
               >
                 <p className="sc-tip-head">

@@ -152,21 +152,21 @@ export function VenueImagesCard({
             className="tap relative block w-full h-[132px] rounded-[18px] overflow-hidden bg-primary-pale disabled:cursor-default"
           >
             <VenueImage srcs={[pendingUrl(ownCover.image), current?.coverUrl]} className="absolute inset-0 w-full h-full" />
-            <ImageApprovalBadge state={ownCover.image} className="absolute left-[10px] top-[10px]" />
+            <ImageApprovalBadge state={ownCover.image} className="absolute start-[10px] top-[10px]" />
             {busy === "cover" ? (
               <span className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(36,31,27,0.55)" }}>
                 {spinner}
               </span>
             ) : (
               current && (
-                <span className="absolute w-[32px] h-[32px] rounded-full flex items-center justify-center text-white" style={{ right: 10, bottom: 10, background: "rgba(36,31,27,0.55)" }}>
+                <span className="absolute w-[32px] h-[32px] rounded-full flex items-center justify-center text-white" style={{ insetInlineEnd: 10, bottom: 10, background: "rgba(36,31,27,0.55)" }}>
                   <Camera size={15} strokeWidth={2.2} aria-hidden />
                 </span>
               )
             )}
           </button>
           {/* K21 logo, overlapping the cover by 34 */}
-          <div className="flex items-end gap-[10px]" style={{ marginTop: -34, paddingLeft: 14 }}>
+          <div className="flex items-end gap-[10px]" style={{ marginTop: -34, paddingInlineStart: 14 }}>
             <button
               type="button"
               aria-label="Change logo"
@@ -187,7 +187,7 @@ export function VenueImagesCard({
               {current && busy !== "logo" && (
                 <span
                   className="absolute w-[26px] h-[26px] rounded-full bg-cream-card border border-solid border-charcoal/[0.11] dark:border-charcoal/[0.08] flex items-center justify-center text-primary-dark"
-                  style={{ right: -2, bottom: -2 }}
+                  style={{ insetInlineEnd: -2, bottom: -2 }}
                 >
                   <Camera size={13} strokeWidth={2.2} aria-hidden />
                 </span>

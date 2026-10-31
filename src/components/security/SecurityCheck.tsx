@@ -1,4 +1,5 @@
 import type { TurnstileStatus } from "./useTurnstile";
+import { t } from "../../i18n/core";
 
 /**
  * Where a Turnstile widget sits on an auth screen: the widget's container,
@@ -13,7 +14,7 @@ export function SecurityCheck({ status, container }: { status: TurnstileStatus; 
       <div ref={container} className="w-full min-h-[65px] flex justify-center" data-security-check />
       {status === "failed" && (
         <p role="alert" className="text-[11px] font-semibold text-status-high text-center mt-1">
-          The security check couldn't load. Check your connection, then reload the page.
+          {t("The security check couldn't load. Check your connection, then reload the page.")}
         </p>
       )}
     </div>

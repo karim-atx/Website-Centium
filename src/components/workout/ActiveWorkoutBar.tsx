@@ -116,14 +116,14 @@ export const ActiveWorkoutBar: React.FC = () => {
         <button
           onClick={() => setLoggerFor(routine.id)}
           aria-label={`Open ${routine.name}: ${bar.subline}`}
-          className="tap fixed z-40 left-[calc(var(--app-gutter)+22px)] right-[calc(var(--app-gutter)+22px)] text-left bg-primary-fill"
+          className="tap fixed z-40 start-[calc(var(--app-gutter)+22px)] end-[calc(var(--app-gutter)+22px)] text-start bg-primary-fill"
           style={{
             bottom: "calc(env(safe-area-inset-bottom) + 84px)",
             height: BAR_HEIGHT,
             borderRadius: 14,
             boxShadow: "0 8px 20px rgba(36,31,27,0.2)",
             // A button centres its content: 8 + 30 (two lines) + 10 = 48 keeps it top-aligned.
-            padding: "8px 12px 10px 16px",
+            paddingBlock: "8px 10px", paddingInline: "16px 12px",
           }}
         >
           <span className="flex items-start" style={{ gap: 10 }}>
@@ -146,7 +146,7 @@ export const ActiveWorkoutBar: React.FC = () => {
           <span
             aria-hidden
             className="absolute block overflow-hidden"
-            style={{ left: 12, right: 12, bottom: 5, height: 2, borderRadius: 1, background: "rgb(var(--c-on-primary-fill) / 0.18)" }}
+            style={{ insetInlineStart: 12, insetInlineEnd: 12, bottom: 5, height: 2, borderRadius: 1, background: "rgb(var(--c-on-primary-fill) / 0.18)" }}
           >
             <span className="block h-full" style={{ width: `${Math.round(bar.progress * 1000) / 10}%`, background: "rgb(var(--c-on-primary-fill))", borderRadius: 1 }} />
           </span>

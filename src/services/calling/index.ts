@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { Database } from "../../../lib/supabase/database.types";
+import { tk } from "../../i18n/core";
 
 /**
  * Placing, answering and ending 1:1 calls.
@@ -66,24 +67,24 @@ export type EndCallResult =
 function describeCode(code: string): string {
   switch (code) {
     case "not_entitled":
-      return "You can only call someone you're actively working with.";
+      return tk("You can only call someone you're actively working with.");
     case "callee_unavailable":
     case "callee_not_found":
-      return "That account is no longer available.";
+      return tk("That account is no longer available.");
     case "callee_deletion_pending":
-      return "That account is being closed and can't take calls.";
+      return tk("That account is being closed and can't take calls.");
     case "already_resolved":
-      return "That call has already ended.";
+      return tk("That call has already ended.");
     case "not_the_callee":
-      return "That call isn't for you.";
+      return tk("That call isn't for you.");
     case "call_not_found":
-      return "That call no longer exists.";
+      return tk("That call no longer exists.");
     case "unauthenticated":
-      return "Your session expired. Sign in again to call.";
+      return tk("Your session expired. Sign in again to call.");
     case "not_configured":
-      return "Calling isn't switched on yet.";
+      return tk("Calling isn't switched on yet.");
     default:
-      return "Couldn't connect the call. Try again.";
+      return tk("Couldn't connect the call. Try again.");
   }
 }
 
@@ -163,7 +164,7 @@ function toStartResult(
   const d = r.data as Partial<CallCredentials> & { startedAt?: string | null };
   if (!d?.callId || !d.token || !d.roomName || !d.livekitUrl) {
     console.error("[calling] Incomplete credentials from the server.");
-    return { status: "error", message: "Couldn't connect the call. Try again." };
+    return { status: "error", message: tk("Couldn't connect the call. Try again.") };
   }
   return {
     status: "ok",

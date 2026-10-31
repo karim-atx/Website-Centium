@@ -1,4 +1,5 @@
 import { fileBadge, formatBytes } from "./fileMeta";
+import { t } from "../../i18n/core";
 
 /**
  * A document in a message (phase 2A, screen 2): a type badge, the file's name,
@@ -23,7 +24,7 @@ export const FileCard: React.FC<{
     <button
       type="button"
       onClick={onOpen}
-      className={`tap w-full flex items-center gap-2.5 rounded-[14px] bg-cream-card border border-charcoal/10 px-3 py-2.5 text-left text-charcoal ${
+      className={`tap w-full flex items-center gap-2.5 rounded-[14px] bg-cream-card border border-charcoal/10 px-3 py-2.5 text-start text-charcoal ${
         className ?? ""
       }`}
     >
@@ -33,7 +34,7 @@ export const FileCard: React.FC<{
         {badge.label}
       </span>
       <span className="flex flex-col gap-0.5 min-w-0">
-        <span className="text-[13.5px] font-bold truncate">{name ?? "File"}</span>
+        <span className="text-[13.5px] font-bold truncate">{name ?? t("File")}</span>
         {meta && <span className="text-xs text-charcoal-soft">{meta}</span>}
       </span>
     </button>

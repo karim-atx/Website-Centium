@@ -122,7 +122,7 @@ export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, f
         data-ts={stk ? "sticker" : "none"}
         style={{
           position: "absolute",
-          left: 0,
+          insetInlineStart: 0,
           top: 0,
           width: CARD_W,
           height: g.h,
@@ -142,7 +142,7 @@ export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, f
         <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column", justifyContent: stk ? "center" : "flex-start", padding: g.pad, boxSizing: "border-box" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 7, justifyContent: hj }}>
             <CardMarkSvg w={g.markW} h={g.markH} />
-            <div style={{ minWidth: 0, textShadow: ts, textAlign: "left" }}>
+            <div style={{ minWidth: 0, textShadow: ts, textAlign: "start" }}>
               <div data-p="t" style={{ fontSize: g.nameFs, fontWeight: 800, lineHeight: 1.15, color: c.ink, whiteSpace: "nowrap" }}>
                 Centium
               </div>
@@ -226,7 +226,7 @@ export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, f
  * White type; the OverlayEditor wrapper adds its 0 1px 8px shadow.
  */
 export const PhotoStatsLayer: React.FC<{ spec: ClientCardSpec; stats: ClientStat[]; innerRef?: React.Ref<HTMLDivElement> }> = ({ spec, stats, innerRef }) => (
-  <div ref={innerRef} data-layer-root="" style={{ width: 100, fontFamily: "Manrope, Helvetica, Arial, sans-serif", lineHeight: "normal", letterSpacing: "normal", textAlign: "left", color: "#FFFFFF", WebkitFontSmoothing: "antialiased" }}>
+  <div ref={innerRef} data-layer-root="" style={{ width: 100, fontFamily: "Manrope, Helvetica, Arial, sans-serif", lineHeight: "normal", letterSpacing: "normal", textAlign: "start", color: "#FFFFFF", WebkitFontSmoothing: "antialiased" }}>
     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
       <CardMarkSvg w={12.5} h={13.5} style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.35))" }} shadow="0,1,3,rgba(0,0,0,0.35)" />
       <span>

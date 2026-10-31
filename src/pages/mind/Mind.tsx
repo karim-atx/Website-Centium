@@ -275,7 +275,7 @@ export default function Mind() {
         <button
           onClick={back}
           aria-label="Back"
-          className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ml-1.5 mt-0.5 transition-colors"
+          className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ms-1.5 mt-0.5 transition-colors"
         >
           <ChevronLeft size={18} />
         </button>
@@ -365,8 +365,8 @@ export default function Mind() {
             <div className="flex-1 min-w-0">
               <p className="flex items-baseline min-w-0">
                 <span className="text-[26px] leading-none font-extrabold tracking-[-0.03em] text-charcoal tabular-nums">{lead.streakDays}</span>
-                <span className="ml-1 text-[12px] font-semibold text-charcoal-soft">{lead.streakDays === 1 ? "day" : "days"}</span>
-                <span className="ml-2 text-[12px] font-bold text-primary-dark truncate">{lead.label}</span>
+                <span className="ms-1 text-[12px] font-semibold text-charcoal-soft">{lead.streakDays === 1 ? "day" : "days"}</span>
+                <span className="ms-2 text-[12px] font-bold text-primary-dark truncate">{lead.label}</span>
               </p>
               <p className="mt-[5px] text-[10.5px] text-charcoal-muted dark:text-charcoal-faint">
                 Personal best · <span className="font-bold text-charcoal">{leadBest} {leadBest === 1 ? "day" : "days"}</span>
@@ -404,7 +404,7 @@ export default function Mind() {
               <button
                 onClick={() => setAutoOpen((v) => !v)}
                 aria-expanded={autoOpen}
-                className="tap w-full flex items-center gap-2 px-3.5 py-3 text-left border-b border-charcoal/[0.08]"
+                className="tap w-full flex items-center gap-2 px-3.5 py-3 text-start border-b border-charcoal/[0.08]"
                 style={{ background: "rgb(var(--th-aea1dc) / 0.08)" }}
               >
                 <span className="text-[10px] font-bold tracking-[.14em] uppercase text-charcoal-muted dark:text-charcoal-faint">Auto-tracked</span>
@@ -414,7 +414,7 @@ export default function Mind() {
                 </span>
                 <ChevronRight
                   size={15}
-                  className={clsx("ml-auto text-charcoal-faint transition-transform duration-200", autoOpen && "rotate-90")}
+                  className={clsx("ms-auto text-charcoal-faint transition-transform duration-200", autoOpen && "rotate-90")}
                 />
               </button>
               {autoOpen &&
@@ -452,7 +452,7 @@ export default function Mind() {
                   }
                   aria-expanded={!folded}
                   className={clsx(
-                    "tap w-full flex items-center gap-2 px-3.5 py-3 text-left border-b border-charcoal/[0.08]",
+                    "tap w-full flex items-center gap-2 px-3.5 py-3 text-start border-b border-charcoal/[0.08]",
                     // Under open Auto-tracked rows, its own rule on top.
                     gi === 0 && autoOpen && autoStreaks.length > 0 && "border-t border-t-charcoal/[0.08]"
                   )}
@@ -467,7 +467,7 @@ export default function Mind() {
                   </span>
                   <ChevronRight
                     size={15}
-                    className={clsx("ml-auto shrink-0 text-charcoal-faint transition-transform duration-200", !folded && "rotate-90")}
+                    className={clsx("ms-auto shrink-0 text-charcoal-faint transition-transform duration-200", !folded && "rotate-90")}
                   />
                 </button>
                 {!folded && g.habits.map((h, i) => habitRow(h, i > 0))}
@@ -482,8 +482,8 @@ export default function Mind() {
             <div aria-hidden>
               {[0, 1, 2].map((i) => (
                 <div key={i} className="flex items-stretch h-14">
-                  <div className="relative flex-1 min-w-0 flex items-center gap-3 pl-3.5 pr-2">
-                    {i > 0 && <span className="absolute left-[54px] right-0 top-0 h-px bg-charcoal/[0.05]" />}
+                  <div className="relative flex-1 min-w-0 flex items-center gap-3 ps-3.5 pe-2">
+                    {i > 0 && <span className="absolute start-[54px] end-0 top-0 h-px bg-charcoal/[0.05]" />}
                     <span className="w-7 h-7 rounded-lg bg-cream-soft shrink-0" />
                     <span className="h-3 w-28 rounded bg-cream-soft" />
                   </div>
@@ -495,7 +495,7 @@ export default function Mind() {
           {habits.length === 0 && !habitsLoading && (
             <button
               onClick={() => navigate("/app/mind/habits")}
-              className="tap w-full px-4 py-4 text-left text-[13px] text-charcoal-soft"
+              className="tap w-full px-4 py-4 text-start text-[13px] text-charcoal-soft"
             >
               No habits yet. <span className="font-bold text-primary-dark">Add one</span>
             </button>
@@ -591,8 +591,8 @@ function Row({
 }) {
   return (
     <div className="flex items-stretch h-14">
-      <div className="relative flex-1 min-w-0 flex items-center gap-3 pl-3.5 pr-2">
-        {divider && <span aria-hidden className="absolute left-[54px] right-0 top-0 h-px bg-charcoal/[0.05]" />}
+      <div className="relative flex-1 min-w-0 flex items-center gap-3 ps-3.5 pe-2">
+        {divider && <span aria-hidden className="absolute start-[54px] end-0 top-0 h-px bg-charcoal/[0.05]" />}
         <span
           className={clsx("w-7 h-7 rounded-lg flex items-center justify-center shrink-0", !shade && "bg-primary-pale")}
           style={shade ? { background: shade.tile } : undefined}
@@ -602,7 +602,7 @@ function Row({
         <span className="min-w-0 block text-[13.5px] font-semibold text-charcoal truncate">{label}</span>
       </div>
       {/* The strip: #EDF3F2 on the frame, #6F9993 at 12% (decision 22). */}
-      <div className="w-[110px] shrink-0 flex items-center justify-end gap-2.5 pr-3.5 bg-th-6f9993/[0.12] dark:bg-teal-pale">
+      <div className="w-[110px] shrink-0 flex items-center justify-end gap-2.5 pe-3.5 bg-th-6f9993/[0.12] dark:bg-teal-pale">
         {days !== null && (
           <span className="relative flex items-center gap-1">
             {/* MO1.1 (2x frame): a filled leaf about 10 × 18.5 pt, slit showing. */}

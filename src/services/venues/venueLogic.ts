@@ -5,6 +5,7 @@
 import { formatPrice } from "../../utils/price";
 import { formatShortDate } from "../../utils/date";
 import { BLOCKED_TEXT } from "../moderation/text";
+import { rateLimitMessage } from "../network-error";
 
 /** B7 MB-03 adds quarterly and semiannually to billing_period. */
 export type Billing = "daily" | "monthly" | "quarterly" | "semiannually" | "annually";
@@ -183,8 +184,9 @@ export function addDaysIso(iso: string, days: number): string {
 /**
  * Stage 4 ATX codes as a person reads them. The doc's own messages are terse
  * lower-case server strings ("no such venue"), so they are worded here, as
- * services/recoveryCodes does. ATX02 (rate limit) names its delay and is
- * shown as it is.
+ * services/recoveryCodes does. ATX02 (rate limit): the server's text names
+ * an internal action ("Too many review_gym attempts"), so only its delay is
+ * read (rateLimitMessage).
  */
 export function stage4Message(code: string | undefined, serverMessage: string, fallback: string): string {
   switch (code) {
@@ -194,7 +196,7 @@ export function stage4Message(code: string | undefined, serverMessage: string, f
     case "ATX01":
       return "Your session expired. Sign in again.";
     case "ATX02":
-      return serverMessage;
+      return rateLimitMessage(serverMessage);
     case "ATX79":
       return "This gym isn't available any more.";
     case "ATX81":

@@ -1,6 +1,7 @@
 import { CI, LF, OB, RC, type Shape } from "../shell/visuals";
 import type { LaneDef } from "../shell/lanes";
 import { BIZ_STEPS, type BizFlowKey, type BizLane } from "./lanes";
+import { tk } from "../../../i18n/core";
 
 export { BIZ_STEPS, type BizFlowKey };
 
@@ -34,9 +35,9 @@ export const BIZ_VIS: Record<BizLane, Shape[]> = {
 export const bizLaneId = (lane: BizLane) => `biz-${lane}`;
 
 export const BIZ_LANES: Record<string, LaneDef> = {
-  "biz-classes": { chip: "Classes", vis: BIZ_VIS.classes, steps: BIZ_STEPS },
-  "biz-gym": { chip: "Gym", vis: BIZ_VIS.gym, steps: BIZ_STEPS },
-  "biz-store": { chip: "Store", vis: BIZ_VIS.store, steps: BIZ_STEPS },
+  "biz-classes": { chip: tk("Classes"), vis: BIZ_VIS.classes, steps: BIZ_STEPS },
+  "biz-gym": { chip: tk("Gym"), vis: BIZ_VIS.gym, steps: BIZ_STEPS },
+  "biz-store": { chip: tk("Store"), vis: BIZ_VIS.store, steps: BIZ_STEPS },
 };
 
 /** The status screens' drawings (BizOnboardingV10 after submitting). */

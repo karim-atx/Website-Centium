@@ -93,7 +93,7 @@ export function AmenitiesSheet({ open, onClose, onSaved }: { open: boolean; onCl
                 minHeight: 52,
                 width: "100%",
                 boxSizing: "border-box",
-                textAlign: "left",
+                textAlign: "start",
                 color: c.ink,
                 fontFamily: "inherit",
                 cursor: "pointer",
@@ -150,7 +150,7 @@ export function FirstVisitSheet({ open, onClose, onSaved }: { open: boolean; onC
           maxLength={FIRST_VISIT_MAX}
           style={{ ...fieldStyle(c), minHeight: 120, resize: "vertical" }}
         />
-        <p style={{ fontSize: px(11.5), color: c.faint, textAlign: "right", marginTop: 6 }}>{`${text.length}/${FIRST_VISIT_MAX}`}</p>
+        <p style={{ fontSize: px(11.5), color: c.faint, textAlign: "end", marginTop: 6 }}>{`${text.length}/${FIRST_VISIT_MAX}`}</p>
       </SheetBox>
     </MasterSheet>
   );

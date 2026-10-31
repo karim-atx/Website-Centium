@@ -148,7 +148,7 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
         <style href="home-board-motion" precedence="default">{MOTION_CSS}</style>
         {editMode && (
           <span className="hw-chrome-in">
-            <div style={{ position: "absolute", top: 7, right: 7, display: "flex", gap: 4, zIndex: 10 }}>
+            <div style={{ position: "absolute", top: 7, insetInlineEnd: 7, display: "flex", gap: 4, zIndex: 10 }}>
               <button
                 {...control(onResize)}
                 className="tap"
@@ -203,7 +203,7 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
               style={{
                 position: "absolute",
                 bottom: 7,
-                left: 8,
+                insetInlineStart: 8,
                 color: "rgb(var(--c-charcoal) / 0.35)",
                 zIndex: 10,
                 display: "inline-flex",
@@ -215,7 +215,7 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
                 aria-hidden="true"
                 style={{
                   position: "absolute",
-                  left: "50%",
+                  insetInlineStart: "50%",
                   top: "50%",
                   transform: "translate(-50%, -50%)",
                   width: 44,

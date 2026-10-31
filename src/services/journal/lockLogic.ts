@@ -8,6 +8,8 @@
 // successful unlock, per folder. The screen treats a locked folder as open
 // while that moment is still ahead, and re-locks itself when it passes.
 
+import { rateLimitMessage } from "../network-error";
+
 /** Folder id → the ISO end of its unlock window, as unlock_journal_folder returned it. */
 export type UnlockWindows = Record<string, string>;
 
@@ -45,8 +47,8 @@ export function msUntilNextExpiry(windows: UnlockWindows, now: number): number |
 }
 
 /**
- * The sentence for a failed lock call. ATX02 (rate limited) is written to be
- * shown as it is and names the delay, so it passes through; a wrong password
+ * The sentence for a failed lock call. ATX02 (rate limited): the server's
+ * text names an internal action, so only its delay is read; a wrong password
  * never arrives here (it is `success = false`, whose message the caller shows
  * verbatim).
  */
@@ -55,7 +57,7 @@ export function describeLockError(code: string | undefined, message: string | un
     case "ATX01":
       return "Your session expired. Sign in again.";
     case "ATX02":
-      return message || "Too many tries. Wait a few minutes and try again.";
+      return rateLimitMessage(message);
     case "ATX77":
       return "This account signs in without a password, so there's no password to unlock this folder with.";
     case "ATX78":

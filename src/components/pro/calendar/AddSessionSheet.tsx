@@ -234,7 +234,7 @@ export const AddSessionSheet: React.FC<{
                 setStep("main");
               }}
               aria-pressed={c.id === clientId}
-              className="tap w-full flex items-center text-left"
+              className="tap w-full flex items-center text-start"
               style={{ gap: 12, padding: "11px 0", borderBottom: i < filtered.length - 1 ? `1px solid ${INK.b06}` : "none" }}
             >
               <Avatar name={c.name} url={c.avatarUrl} size={36} />
@@ -252,7 +252,7 @@ export const AddSessionSheet: React.FC<{
           <button
             type="button"
             onClick={() => onPersonal(date)}
-            className="tap w-full flex items-center text-left"
+            className="tap w-full flex items-center text-start"
             style={{ gap: 12, padding: "11px 0", borderTop: filtered.length ? `1px solid ${INK.b06}` : "none" }}
           >
             <span className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 9999, background: INK.soft }}>

@@ -16,6 +16,7 @@
 // drawn again under it). "Today" is the venue's own day (gyms.timezone).
 
 import { range12, time12 } from "../../utils/time12";
+import { appLocale } from "../../i18n/format";
 
 export interface HoursRow {
   /** 1 = Monday … 7 = Sunday (extract(isodow)). */
@@ -95,7 +96,7 @@ const WEEKDAY: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5
  */
 export function isoWeekdayIn(timeZone: string, now: Date = new Date()): number | null {
   try {
-    const w = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(now);
+    const w = new Intl.DateTimeFormat(appLocale("en-US"), { timeZone, weekday: "short" }).format(now);
     return WEEKDAY[w] ?? null;
   } catch {
     return null;

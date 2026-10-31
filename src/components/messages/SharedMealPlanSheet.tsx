@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { INK } from "../pro/proInk";
 import { textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { daysLabel, portionLabel, type SharedPlan } from "../../services/messaging/groupCardsModel";
 import { fetchSharedMealPlan } from "../../services/messaging/sharedMealPlan";
@@ -45,16 +46,16 @@ export const SharedMealPlanSheet: React.FC<{
   return (
     <BottomSheet open={open} onClose={onClose} title={plan?.name ?? fallbackName}>
       {!loaded ? (
-        <p style={{ fontSize: textPx(13), color: INK.chF }}>Opening the plan…</p>
+        <p style={{ fontSize: textPx(13), color: INK.chF }}>{t("Opening the plan…")}</p>
       ) : loaded.error ? (
         <div className="flex flex-col items-start" style={{ gap: 6 }}>
           <p style={{ fontSize: textPx(13), color: INK.hi }}>{loaded.error}</p>
-          <button type="button" onClick={() => setTick((t) => t + 1)} className="tap" style={{ minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}>
-            Try again
+          <button type="button" onClick={() => setTick((k) => k + 1)} className="tap" style={{ minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}>
+            {t("Try again")}
           </button>
         </div>
       ) : !plan ? (
-        <p style={{ fontSize: textPx(13), color: INK.chF }}>This plan isn't available any more.</p>
+        <p style={{ fontSize: textPx(13), color: INK.chF }}>{t("This plan isn't available any more.")}</p>
       ) : (
         <div className="flex flex-col" style={{ gap: 16 }}>
           {days && <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: -4 }}>{days}</p>}

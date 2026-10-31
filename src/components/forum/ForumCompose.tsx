@@ -250,7 +250,7 @@ export function ForumCompose({
                 style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
               >
                 {chosenCat && <span aria-hidden className="w-[7px] h-[7px] rounded-full shrink-0" style={{ background: categoryDot(chosenCat.key) }} />}
-                <span className="flex-1 min-w-0 text-left truncate">{chosenCat?.name ?? ""}</span>
+                <span className="flex-1 min-w-0 text-start truncate">{chosenCat?.name ?? ""}</span>
                 {/* MO1.3.2.1: ChevronUp 15 while the menu is open. */}
                 {menuOpen ? (
                   <ChevronUp size={15} className="shrink-0" style={{ color: fv("muted") }} />
@@ -306,13 +306,13 @@ export function ForumCompose({
                 {preview ? (
                   // The chosen photo: a 32 pt thumbnail (r8) in the corner,
                   // its remove x a 16 pt badge on a 44 pt target.
-                  <div className="relative ml-2 w-8 h-8 shrink-0">
+                  <div className="relative ms-2 w-8 h-8 shrink-0">
                     <img src={preview} alt="The photo you're adding" className="w-8 h-8 rounded-lg object-cover" />
                     <button
                       type="button"
                       onClick={removePhoto}
                       aria-label="Remove photo"
-                      className="tap absolute -top-3.5 -right-3.5 w-11 h-11 flex items-start justify-end p-1.5"
+                      className="tap absolute -top-3.5 -end-3.5 w-11 h-11 flex items-start justify-end p-1.5"
                     >
                       <span
                         aria-hidden

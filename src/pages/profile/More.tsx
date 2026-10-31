@@ -110,7 +110,7 @@ function PersonalMore() {
           {/* Mind: the hero. Habits, Journal and Meditation are all inside it. */}
           <button
             onClick={() => navigate("/app/mind")}
-            className="tap relative w-full overflow-hidden text-left block bg-th-ecf5f3 dark:bg-th-a2c8c2/[0.12] animate-fade-slide-up"
+            className="tap relative w-full overflow-hidden text-start block bg-th-ecf5f3 dark:bg-th-a2c8c2/[0.12] animate-fade-slide-up"
             style={{ minHeight: 169, borderRadius: 18, marginBottom: 7 }}
           >
             <img
@@ -119,7 +119,7 @@ function PersonalMore() {
               aria-hidden
               draggable={false}
               className="absolute pointer-events-none select-none dark:[filter:url(#more-brain-dark)]"
-              style={{ top: 0, right: 0, width: 214, height: 169 }}
+              style={{ top: 0, insetInlineEnd: 0, width: 214, height: 169 }}
             />
             <span className="relative flex flex-col justify-center" style={{ minHeight: 169, padding: "16px 20px" }}>
               <span className="flex items-center" style={{ gap: 14 }}>
@@ -165,14 +165,14 @@ function PersonalMore() {
           <button
             key={r.label}
             onClick={() => go(r)}
-            className="tap relative w-full flex items-center text-left"
-            style={{ minHeight: 56.6, padding: "6.7px 15px 9.3px 14px", gap: 11 }}
+            className="tap relative w-full flex items-center text-start"
+            style={{ minHeight: 56.6, paddingBlock: "6.7px 9.3px", paddingInline: "14px 15px", gap: 11 }}
           >
             {i > 0 && (
               <span
                 aria-hidden
                 className="absolute top-0 bg-th-ebeaf6 dark:bg-th-aea1dc/[0.16]"
-                style={{ left: 55, right: 15, height: 1 }}
+                style={{ insetInlineStart: 55, insetInlineEnd: 15, height: 1 }}
               />
             )}
             <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 10, background: "rgb(var(--th-8e7fd0))" }}>
@@ -199,7 +199,7 @@ function PersonalMore() {
 
       <button
         onClick={() => navigate("/app/subscription")}
-        className="tap w-full flex items-center justify-between gap-3.5 rounded-[15px] px-[15px] py-[13px] text-left"
+        className="tap w-full flex items-center justify-between gap-3.5 rounded-[15px] px-[15px] py-[13px] text-start"
         // Literal #241F1B — not the theme-reactive `charcoal` token, which in
         // dark mode holds a near-white TEXT value rather than a fill colour
         // and would invert this into the one bright card among dark ones.

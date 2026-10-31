@@ -20,6 +20,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { DARK_SURFACE, liftTo } from "../../data/folderColors";
 import { textPx } from "../../theme/textSize";
+import { appLocale } from "../../i18n/format";
 
 // Mobile v5.1 R3, dark mode (no light islands), as [light, dark]: the goal
 // button's border takes option-border dark and the reading rows surface.raised
@@ -44,7 +45,7 @@ const GOAL_OPTIONS = (["decrease", "increase", "maintain", "none"] as const).map
   label: GOAL_LABEL[value],
 }));
 
-const shortDate = (t: number) => new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const shortDate = (t: number) => new Date(t).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", timeZone: "UTC" });
 // The day it was measured, in the user's own time: a reading taken at 2:45 on
 // Sep 28 is a Sep 28 reading even where that instant is still Sep 27 in UTC.
 const dayOf = (r: MeasurementReading) => localDay(new Date(r.recordedAt));
@@ -115,7 +116,7 @@ export const MeasurementHistorySheet: React.FC<{
           <div className="flex items-start justify-between" style={{ gap: 12 }}>
             <p style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(24), fontWeight: 800, lineHeight: 1.1 }}>
               {latest.value}
-              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(15), fontWeight: 500, marginLeft: 4 }}>{unit}</span>
+              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(15), fontWeight: 500, marginInlineStart: 4 }}>{unit}</span>
             </p>
             <p style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11), marginTop: 4 }}>
               {readings.length} reading{readings.length === 1 ? "" : "s"}
@@ -226,7 +227,7 @@ export const MeasurementHistorySheet: React.FC<{
                         width: 76,
                         height: 32,
                         padding: "0 9px",
-                        textAlign: "right",
+                        textAlign: "end",
                         borderRadius: 8,
                         background: "rgb(var(--c-cream-card))",
                         border: "2px solid rgb(var(--th-aea1dc))",
@@ -246,7 +247,7 @@ export const MeasurementHistorySheet: React.FC<{
                       style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(14), fontWeight: 700 }}
                     >
                       {reading.value}
-                      <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11), fontWeight: 500, marginLeft: 3 }}>{unit}</span>
+                      <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11), fontWeight: 500, marginInlineStart: 3 }}>{unit}</span>
                     </button>
                   )}
                 </div>

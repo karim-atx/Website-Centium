@@ -23,6 +23,8 @@ import { SectionHostContext } from "../sectionHost";
 import { usePageLink } from "../navigation";
 import { REFUND_POLICY_PATH } from "../../legal/refund";
 import { clamp, eo } from "../engine/math";
+import { t, tk } from "../../../i18n/core";
+import { scrollToInline } from "../../../utils/inlineScroll";
 
 const PILL_GROUP: React.CSSProperties = {
   position: "relative",
@@ -103,8 +105,8 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
     if (!el || !dots.length) return;
     const cards = Array.from(el.children).filter((x) => x.tagName === "DIV") as HTMLElement[];
     if (!cards.length) return;
-    const cw = cards.length > 1 ? cards[1].offsetLeft - cards[0].offsetLeft : cards[0].offsetWidth,
-      pos = el.scrollLeft / Math.max(1, cw),
+    const cw = cards.length > 1 ? Math.abs(cards[1].offsetLeft - cards[0].offsetLeft) : cards[0].offsetWidth,
+      pos = Math.abs(el.scrollLeft) / Math.max(1, cw),
       act = Math.max(0, Math.min(dots.length - 1, Math.round(pos)));
     dots.forEach((d, j) => {
       const w = Math.max(0, 1 - Math.abs(pos - j));
@@ -130,8 +132,8 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
       }
     });
     const cards = Array.from(el.children).filter((x) => x.tagName === "DIV") as HTMLElement[];
-    const cw = cards.length > 1 ? cards[1].offsetLeft - cards[0].offsetLeft : el.clientWidth;
-    el.scrollTo({ left: j * cw, behavior: rm ? "auto" : "smooth" });
+    const cw = cards.length > 1 ? Math.abs(cards[1].offsetLeft - cards[0].offsetLeft) : el.clientWidth;
+    scrollToInline(el, j * cw, rm ? "auto" : "smooth");
   };
 
   // The one-time scroll hint on phones (prototype measure: IntersectionObserver, threshold .6).
@@ -151,10 +153,10 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
           // once the row has returned to 0.
           timers.push(
             window.setTimeout(() => {
-              if (el.scrollLeft > 1) return;
+              if (Math.abs(el.scrollLeft) > 1) return;
               const snap = el.style.scrollSnapType;
               el.style.scrollSnapType = "none";
-              el.scrollTo({ left: 56, behavior: "smooth" });
+              scrollToInline(el, 56, "smooth");
               timers.push(window.setTimeout(() => el.scrollTo({ left: 0, behavior: "smooth" }), 520));
               timers.push(window.setTimeout(() => (el.style.scrollSnapType = snap), 1100));
             }, 350),
@@ -186,9 +188,9 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
     <section id="pricing" data-screen-label="PC1 v6 Pricing" style={{ position: "relative", zIndex: "2", padding: `${r.pcY} ${r.px} ${r.secY}` }}>
       <div style={{ maxWidth: "1240px", margin: "0 auto" }}>
         <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <ChapterMark n="08" t="Pricing" size={r.chEy} />
-          <h2 style={{ marginTop: "14px", fontWeight: "800", fontSize: r.h2, lineHeight: "1.04", letterSpacing: "-.035em" }}>Whatever your role, Centium fits.</h2>
-          <p style={{ marginTop: "12px", fontSize: "17px", color: "#5B5349" }}>One app instead of a stack of subscriptions.</p>
+          <ChapterMark n="08" t={t("Pricing")} size={r.chEy} />
+          <h2 style={{ marginTop: "14px", fontWeight: "800", fontSize: r.h2, lineHeight: "1.04", letterSpacing: "-.035em" }}>{t("Whatever your role, Centium fits.")}</h2>
+          <p style={{ marginTop: "12px", fontSize: "17px", color: "#5B5349" }}>{t("One app instead of a stack of subscriptions.")}</p>
         </div>
         <div
           id="pc-ctl"
@@ -206,7 +208,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
             gap: "12px",
           }}
         >
-          <div role="tablist" aria-label="Audience" style={{ ...PILL_GROUP, gridTemplateColumns: "repeat(3,1fr)", width: r.audW, boxShadow: r.pillSh }}>
+          <div role="tablist" aria-label={t("Audience")} style={{ ...PILL_GROUP, gridTemplateColumns: "repeat(3,1fr)", width: r.audW, boxShadow: r.pillSh }}>
             <span style={{ ...THUMB, width: "calc((100% - 8px) / 3)", transform: `translateX(${aud * 100}%)` }} />
             {AUDIENCES.map((au, i) => (
               <button
@@ -225,19 +227,19 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                   transition: "color .3s",
                 }}
               >
-                {au.label}
+                {t(au.label)}
               </button>
             ))}
           </div>
           <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
-            <div role="group" aria-label="Billing period" style={{ ...PILL_GROUP, gridTemplateColumns: "1fr 1fr", boxShadow: r.pillSh }}>
+            <div role="group" aria-label={t("Billing period")} style={{ ...PILL_GROUP, gridTemplateColumns: "1fr 1fr", boxShadow: r.pillSh }}>
               <span style={{ ...THUMB, width: "calc(50% - 4px)", transform: `translateX(${annual ? "100%" : "0%"})` }} />
               {(
                 [
-                  ["monthly", "Monthly"],
-                  ["annual", "Annual"],
+                  ["monthly", tk("Monthly")],
+                  ["annual", tk("Annual")],
                 ] as const
-              ).map(([k, t]) => (
+              ).map(([k, label]) => (
                 <button
                   key={k}
                   aria-pressed={bill === k ? "true" : "false"}
@@ -254,7 +256,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                     transition: "color .3s",
                   }}
                 >
-                  {t}
+                  {t(label)}
                 </button>
               ))}
             </div>
@@ -264,7 +266,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                 position: r.saveBadgePos,
                 left: r.saveBadgeL,
                 top: r.saveBadgeT,
-                marginLeft: r.saveML,
+                marginInlineStart: r.saveML,
                 padding: "4px 10px",
                 borderRadius: "99px",
                 background: "#EDF4F3",
@@ -277,7 +279,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                 transition: "opacity .35s,transform .35s cubic-bezier(.22,1,.36,1)",
               }}
             >
-              {SAVE_BADGE}
+              {t(SAVE_BADGE)}
             </span>
           </div>
         </div>
@@ -331,7 +333,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                     : "0 1px 1px rgba(72,58,130,.04),0 10px 26px rgba(72,58,130,.06)",
                   display: "flex",
                   flexDirection: "column",
-                  textAlign: "left",
+                  textAlign: "start",
                 }}
               >
                 {hi && (
@@ -349,18 +351,18 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                       letterSpacing: ".14em",
                     }}
                   >
-                    RECOMMENDED
+                    {t("RECOMMENDED")}
                   </span>
                 )}
-                <div style={{ fontSize: "18px", fontWeight: "800", color: hi ? "#427C76" : "#221E1A" }}>{p.name}</div>
-                <div style={{ marginTop: "4px", fontSize: "12.5px", fontWeight: "700", color: "#756D63", minHeight: "19px" }}>{p.caption}</div>
+                <div style={{ fontSize: "18px", fontWeight: "800", color: hi ? "#427C76" : "#221E1A" }}>{t(p.name)}</div>
+                <div style={{ marginTop: "4px", fontSize: "12.5px", fontWeight: "700", color: "#756D63", minHeight: "19px" }}>{t(p.caption)}</div>
                 <div style={{ marginTop: "14px", display: "flex", alignItems: "baseline", gap: "5px", flexWrap: "wrap" }}>
                   <span data-pv={String(pr.value)} style={{ fontSize: r.priceF, fontWeight: "800", letterSpacing: "-.02em", lineHeight: "1.05" }}>
                     {pr.label}
                   </span>
-                  <span style={{ fontSize: "13px", fontWeight: "600", color: "#756D63" }}>{pr.unit}</span>
+                  <span style={{ fontSize: "13px", fontWeight: "600", color: "#756D63" }}>{t(pr.unit)}</span>
                 </div>
-                <div style={{ marginTop: "4px", fontSize: "12.5px", fontWeight: "600", color: pr.comingSoon ? "#6A54C4" : "#756D63", minHeight: "19px" }}>{pr.note}</div>
+                <div style={{ marginTop: "4px", fontSize: "12.5px", fontWeight: "600", color: pr.comingSoon ? "#6A54C4" : "#756D63", minHeight: "19px" }}>{t(pr.note)}</div>
                 <div style={{ margin: "18px 0 22px", display: "flex", flexDirection: "column", gap: "9px" }}>
                   {p.features.map((x) => (
                     <span key={x} style={{ display: "flex", gap: "8px", fontSize: "13.5px", lineHeight: "1.4" }}>
@@ -381,17 +383,17 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
                       >
                         ✓
                       </span>
-                      <span style={{ flex: "1", minWidth: "0" }}>{x}</span>
+                      <span style={{ flex: "1", minWidth: "0" }}>{t(x)}</span>
                     </span>
                   ))}
                 </div>
                 {p.business ? (
                   <a href="/contact" onClick={pageLink("/contact")} style={btn}>
-                    {p.cta}
+                    {t(p.cta)}
                   </a>
                 ) : (
                   <Link to="/app" style={btn}>
-                    {p.cta}
+                    {t(p.cta)}
                   </Link>
                 )}
               </div>
@@ -420,15 +422,15 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
               }}
             />
           ))}
-          <span id="pc-count" ref={countRef} style={{ marginLeft: "6px", fontSize: "13px", fontWeight: "700", color: "#5B5349", fontVariantNumeric: "tabular-nums" }}>
+          <span id="pc-count" ref={countRef} style={{ marginInlineStart: "6px", fontSize: "13px", fontWeight: "700", color: "#5B5349", fontVariantNumeric: "tabular-nums" }}>
             {"1 / " + n}
           </span>
         </div>
-        <p style={{ marginTop: "16px", textAlign: "center", fontSize: "13px", color: "#5B5349", maxWidth: "760px", marginLeft: "auto", marginRight: "auto" }}>
-          {A.footnote}{" "}
+        <p style={{ marginTop: "16px", textAlign: "center", fontSize: "13px", color: "#5B5349", maxWidth: "760px", marginInlineStart: "auto", marginInlineEnd: "auto" }}>
+          {t(A.footnote)}{" "}
           {/* Round F (DN): every place a plan is offered links the Refund and Cancellation Policy. */}
           <a href={REFUND_POLICY_PATH} onClick={pageLink(REFUND_POLICY_PATH)} style={{ fontWeight: 700, color: "#3B352D", textDecoration: "underline", textUnderlineOffset: "3px" }}>
-            Refund and cancellation policy
+            {t("Refund and cancellation policy")}
           </a>
         </p>
         <div style={{ marginTop: "22px", display: "flex", justifyContent: "center" }}>
@@ -453,7 +455,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
               } as React.CSSProperties
             }
           >
-            Compare all features
+            {t("Compare all features")}
             <span style={{ display: "inline-block", transform: cmp ? "rotate(45deg)" : "none", transition: "transform .3s cubic-bezier(.22,1,.36,1)", color: "#775FD7" }}>+</span>
           </button>
         </div>
@@ -461,29 +463,29 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
           <div style={{ overflow: "hidden" }}>
             <div style={{ marginTop: "18px", overflowX: "auto", borderRadius: "18px", border: "1px solid #EDEAE4" }}>
               <div style={{ minWidth: n === 5 ? "760px" : "480px", display: "grid", gridTemplateColumns: cmpCols, fontSize: "13px" }}>
-                <span style={{ padding: "12px 16px", background: "#FAF9FE", fontWeight: "800", fontSize: "11px", letterSpacing: ".12em", color: "#756D63" }}>FEATURE</span>
+                <span style={{ padding: "12px 16px", background: "#FAF9FE", fontWeight: "800", fontSize: "11px", letterSpacing: ".12em", color: "#756D63" }}>{t("FEATURE")}</span>
                 {A.plans.map((p) => (
                   <span key={p.name} style={{ padding: "12px 10px", background: "#FAF9FE", fontWeight: "800", textAlign: "center", color: p.recommended ? "#6A54C4" : "#221E1A" }}>
-                    {p.name}
+                    {t(p.name)}
                   </span>
                 ))}
                 {A.compare.map((row, ri) =>
-                  row.map((t, j) => (
+                  row.map((cell, j) => (
                     <span
                       key={ri + "-" + j}
                       style={
                         j === 0
-                          ? { padding: "11px 16px", borderTop: "1px solid #F0EDE8", textAlign: "left", fontWeight: 700, color: "#221E1A" }
+                          ? { padding: "11px 16px", borderTop: "1px solid #F0EDE8", textAlign: "start", fontWeight: 700, color: "#221E1A" }
                           : {
                               padding: "11px 10px",
                               borderTop: "1px solid #F0EDE8",
                               textAlign: "center",
-                              fontWeight: t === "✓" ? 800 : 600,
-                              color: t === "✓" ? "#2F5F58" : t === "–" ? "#756D63" : "#5B5349",
+                              fontWeight: cell === "✓" ? 800 : 600,
+                              color: cell === "✓" ? "#2F5F58" : cell === "–" ? "#756D63" : "#5B5349",
                             }
                       }
                     >
-                      {t}
+                      {t(cell)}
                     </span>
                   )),
                 )}

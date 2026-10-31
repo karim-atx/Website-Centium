@@ -131,7 +131,7 @@ function MonitoringPlan() {
       {!due && (
         <button
           onClick={() => setCheckInOpen(true)}
-          className="tap w-full flex items-center justify-between rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-4 py-3.5 mb-4 text-left"
+          className="tap w-full flex items-center justify-between rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-4 py-3.5 mb-4 text-start"
         >
           <span className="text-[13px] font-semibold text-charcoal">Mood check-in</span>
           <ChevronRight size={16} className="text-charcoal-faint" />
@@ -142,7 +142,7 @@ function MonitoringPlan() {
 
       <button
         onClick={() => setReminderOpen(true)}
-        className="tap w-full flex items-center justify-between rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-4 py-3.5 text-left"
+        className="tap w-full flex items-center justify-between rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-4 py-3.5 text-start"
       >
         <span className="flex items-center gap-2.5 text-[13px] font-semibold text-charcoal">
           <Bell size={16} className="text-primary-dark" />

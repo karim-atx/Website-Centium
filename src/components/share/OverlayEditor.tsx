@@ -356,15 +356,15 @@ export const OverlayEditor: React.FC<OverlayEditorProps> = ({
               <span aria-hidden style={{ position: "absolute", inset: 0, border: `1.5px solid ${SEL}`, borderRadius: 10, boxSizing: "border-box" }} />
               {["33.33%", "66.66%"].map((p) => (
                 <React.Fragment key={p}>
-                  <span aria-hidden style={{ position: "absolute", left: p, top: 0, bottom: 0, borderLeft: "1px solid rgba(255,255,255,0.55)" }} />
-                  <span aria-hidden style={{ position: "absolute", top: p, left: 0, right: 0, borderTop: "1px solid rgba(255,255,255,0.55)" }} />
+                  <span aria-hidden style={{ position: "absolute", left: p, top: 0, bottom: 0, borderInlineStart: "1px solid rgba(255,255,255,0.55)" }} />
+                  <span aria-hidden style={{ position: "absolute", top: p, insetInlineStart: 0, insetInlineEnd: 0, borderTop: "1px solid rgba(255,255,255,0.55)" }} />
                 </React.Fragment>
               ))}
             </>
           )}
           {moving && !photoOn && <span aria-hidden style={{ position: "absolute", inset: SHARE_TOKENS.safeMargin, border: "1px dashed rgba(174,161,220,0.7)", borderRadius: 6 }} />}
-          {moving && snap.v && <span aria-hidden style={{ position: "absolute", left: "50%", top: 0, bottom: 0, borderLeft: `1px solid ${SEL}` }} />}
-          {moving && snap.h && <span aria-hidden style={{ position: "absolute", top: "50%", left: 0, right: 0, borderTop: `1px solid ${SEL}` }} />}
+          {moving && snap.v && <span aria-hidden style={{ position: "absolute", insetInlineStart: "50%", top: 0, bottom: 0, borderInlineStart: `1px solid ${SEL}` }} />}
+          {moving && snap.h && <span aria-hidden style={{ position: "absolute", top: "50%", insetInlineStart: 0, insetInlineEnd: 0, borderTop: `1px solid ${SEL}` }} />}
 
           <div
             style={{
@@ -412,19 +412,19 @@ export const OverlayEditor: React.FC<OverlayEditorProps> = ({
           {rotating && (
             <span
               aria-live="polite"
-              style={{ position: "absolute", left: "50%", top: t.y - halfH - 34, transform: "translateX(-50%)", height: 22, padding: "0 9px", borderRadius: 999, background: SEL, color: "#FFFFFF", fontSize: textPx(10.5), fontWeight: 800, display: "flex", alignItems: "center", whiteSpace: "nowrap" }}
+              style={{ position: "absolute", insetInlineStart: "50%", top: t.y - halfH - 34, transform: "translateX(-50%)", height: 22, padding: "0 9px", borderRadius: 999, background: SEL, color: "#FFFFFF", fontSize: textPx(10.5), fontWeight: 800, display: "flex", alignItems: "center", whiteSpace: "nowrap" }}
             >
               {rotating.snapped || t.rotation === 0 ? "0° · snapped" : `${Math.round(t.rotation)}°`}
             </span>
           )}
           {hint &&
             (biz ? (
-              <span style={{ position: "absolute", left: "50%", top: 14, transform: "translateX(-50%)", whiteSpace: "nowrap", borderRadius: 999, background: "rgba(36,31,27,0.72)", color: "#FFFFFF", fontSize: textPx(10.5), fontWeight: 700, padding: "5px 10px", pointerEvents: "none" }}>
+              <span style={{ position: "absolute", insetInlineStart: "50%", top: 14, transform: "translateX(-50%)", whiteSpace: "nowrap", borderRadius: 999, background: "rgba(36,31,27,0.72)", color: "#FFFFFF", fontSize: textPx(10.5), fontWeight: 700, padding: "5px 10px", pointerEvents: "none" }}>
                 Pinch to resize · drag to move
               </span>
             ) : (
               <span
-                style={{ position: "absolute", left: "50%", top: "44%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 6, height: 30, padding: "0 12px", borderRadius: 999, background: "#FFFFFF", color: "#5F5093", fontSize: textPx(11), fontWeight: 800, whiteSpace: "nowrap", boxShadow: "0 6px 18px rgba(36,31,27,0.22)", pointerEvents: "none" }}
+                style={{ position: "absolute", insetInlineStart: "50%", top: "44%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 6, height: 30, padding: "0 12px", borderRadius: 999, background: "#FFFFFF", color: "#5F5093", fontSize: textPx(11), fontWeight: 800, whiteSpace: "nowrap", boxShadow: "0 6px 18px rgba(36,31,27,0.22)", pointerEvents: "none" }}
               >
                 {HAND}
                 Pinch to resize · drag to move
@@ -433,7 +433,7 @@ export const OverlayEditor: React.FC<OverlayEditorProps> = ({
           {toast && (
             <span
               role="status"
-              style={{ position: "absolute", left: "50%", top: 12, transform: "translateX(-50%)", height: 26, padding: "0 10px", borderRadius: 999, background: "#FFFFFF", color: "#2F5F58", fontSize: textPx(10.5), fontWeight: 800, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(36,31,27,0.18)", pointerEvents: "none" }}
+              style={{ position: "absolute", insetInlineStart: "50%", top: 12, transform: "translateX(-50%)", height: 26, padding: "0 10px", borderRadius: 999, background: "#FFFFFF", color: "#2F5F58", fontSize: textPx(10.5), fontWeight: 800, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(36,31,27,0.18)", pointerEvents: "none" }}
             >
               Back to default size and position
             </span>
@@ -460,7 +460,7 @@ export const OverlayEditor: React.FC<OverlayEditorProps> = ({
             );
           })}
         </div>
-        <span aria-live="polite" style={{ fontSize: textPx(biz ? 12 : 11.5), fontWeight: 700, color: m.ink2, minWidth: biz ? 36 : 40, textAlign: "right", fontVariantNumeric: biz ? undefined : "tabular-nums" }}>
+        <span aria-live="polite" style={{ fontSize: textPx(biz ? 12 : 11.5), fontWeight: 700, color: m.ink2, minWidth: biz ? 36 : 40, textAlign: "end", fontVariantNumeric: biz ? undefined : "tabular-nums" }}>
           {value}
         </span>
         <button

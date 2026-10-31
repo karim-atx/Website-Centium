@@ -45,7 +45,7 @@ const PersonRow: React.FC<{ name: string; line?: string; on: boolean; multi?: bo
     role={multi ? "checkbox" : "radio"}
     aria-checked={on}
     onClick={onClick}
-    className="tap w-full flex items-center text-left"
+    className="tap w-full flex items-center text-start"
     style={{ gap: 12, padding: "10px 12px", borderRadius: 14, border: `1px solid ${on ? INK.pr : INK.b10}`, background: on ? INK.prPale : INK.card, marginBottom: 8, minHeight: 44 }}
   >
     <span className="flex-1 min-w-0">

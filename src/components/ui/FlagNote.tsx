@@ -35,7 +35,7 @@ export const FlagNote: React.FC<{ tone: FlagTone; label: string; className?: str
 }) => (
   <div
     role={tone === "urgent" ? "alert" : undefined}
-    className={`rounded-xl px-3 py-2.5 border-l-[3px] ${TINT[tone]} ${className ?? ""}`}
+    className={`rounded-xl px-3 py-2.5 border-s-[3px] ${TINT[tone]} ${className ?? ""}`}
   >
     <p className={`text-[11px] font-bold ${INK[tone]}`}>{label}</p>
     {children}

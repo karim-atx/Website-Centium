@@ -18,6 +18,7 @@ import { linePx, textPx } from "../../theme/textSize";
 import { LoadErrorCard, SkeletonRows, YoursTag, matchesSearch, searchKey, useLibraryInk } from "../../components/workout/LibraryParts";
 import { Toast } from "../../components/ui/Toast";
 import { customExerciseUsage, isCustomExerciseRule } from "../../services/exercises";
+import { inlineScrolled } from "../../utils/inlineScroll";
 
 type ViewMode = "list" | "body";
 type SortMode = "alphabetical" | "muscleGroup" | "classification";
@@ -187,7 +188,7 @@ export default function LibraryTab() {
   const [filterMore, setFilterMore] = useState(false);
   const measureFilterRow = () => {
     const el = filterRowRef.current;
-    setFilterMore(!!el && el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    setFilterMore(!!el && inlineScrolled(el) + el.clientWidth < el.scrollWidth - 1);
   };
   useEffect(() => {
     measureFilterRow();
@@ -416,14 +417,14 @@ export default function LibraryTab() {
       </div>
 
       <div className="relative" style={{ marginBottom: 10 }}>
-        <Search size={15} className="absolute top-1/2 -translate-y-1/2" style={{ left: 14, color: "rgb(var(--c-charcoal-muted))" }} />
+        <Search size={15} className="absolute top-1/2 -translate-y-1/2" style={{ insetInlineStart: 14, color: "rgb(var(--c-charcoal-muted))" }} />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search exercises…"
           aria-label="Search exercises"
           className="w-full text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-          style={{ height: 40, borderRadius: 16, background: "rgb(var(--c-cream-soft))", paddingLeft: 36, paddingRight: 14, fontSize: textPx(14), lineHeight: linePx(21) }}
+          style={{ height: 40, borderRadius: 16, background: "rgb(var(--c-cream-soft))", paddingInlineStart: 36, paddingInlineEnd: 14, fontSize: textPx(14), lineHeight: linePx(21) }}
         />
       </div>
 
@@ -459,7 +460,7 @@ export default function LibraryTab() {
           {filterMore && (
             <span
               aria-hidden
-              className="absolute top-0 bottom-0 right-0 pointer-events-none"
+              className="absolute top-0 bottom-0 end-0 pointer-events-none"
               style={{ width: 28, background: "linear-gradient(to right, rgb(var(--c-cream) / 0), rgb(var(--c-cream)))" }}
             />
           )}
@@ -467,7 +468,7 @@ export default function LibraryTab() {
 
           {/* WO2 #20: "{n} exercises · {k} yours", the suffix only while the
               filtered list holds some of the user's own (O1). */}
-          <p style={{ margin: "0 0 8px 2px", fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 500, color: "rgb(var(--c-charcoal-muted))" }}>
+          <p style={{ marginBlock: "0 8px", marginInline: "2px 0", fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 500, color: "rgb(var(--c-charcoal-muted))" }}>
             {filtered.length} {filtered.length === 1 ? "exercise" : "exercises"}
             {yoursCount > 0 ? ` · ${yoursCount} yours` : ""}
           </p>
@@ -491,7 +492,7 @@ export default function LibraryTab() {
                     <button
                       key={e.id}
                       onClick={() => setEditingExercise(e)}
-                      className="tap w-full flex items-center justify-between text-left"
+                      className="tap w-full flex items-center justify-between text-start"
                       style={{ gap: 10, padding: "11px 16px", minHeight: 44 }}
                     >
                       <span className="min-w-0">
@@ -606,7 +607,7 @@ export default function LibraryTab() {
               alt={figureAlt}
               label={(zone) => ZONE_LABEL[zone]}
             />
-            <p className="absolute" style={{ left: 12, bottom: 10, margin: 0, fontSize: textPx(10), color: "#A79E93" }}>
+            <p className="absolute" style={{ insetInlineStart: 12, bottom: 10, margin: 0, fontSize: textPx(10), color: "#A79E93" }}>
               {figureAlt}
             </p>
           </div>
@@ -665,7 +666,7 @@ export default function LibraryTab() {
                     <button
                       key={e.id}
                       onClick={() => setEditingExercise(e)}
-                      className="tap w-full flex items-center justify-between text-left"
+                      className="tap w-full flex items-center justify-between text-start"
                       style={{
                         gap: 10,
                         border: "1px solid rgb(var(--c-charcoal) / 0.1)",

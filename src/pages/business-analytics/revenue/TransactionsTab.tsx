@@ -192,7 +192,7 @@ export const TransactionsTab: React.FC = () => {
                   setOpen(false);
                   setAll(false);
                 }}
-                className="tap w-full flex items-center gap-[8px] min-h-[44px] rounded-[8px] px-[10px] box-border text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
+                className="tap w-full flex items-center gap-[8px] min-h-[44px] rounded-[8px] px-[10px] box-border text-start focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
                 style={{
                   marginTop: i ? 6 : 0,
                   border: `1px solid ${sel ? v("primary") : v("option")}`,
@@ -257,7 +257,7 @@ export const TransactionsTab: React.FC = () => {
                 `${REVENUE_BASE}/transactions/${encodeURIComponent(t.key)}`,
               )
             }
-            className="tap w-full grid items-center text-left px-[16px] py-[12px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary-dark"
+            className="tap w-full grid items-center text-start px-[16px] py-[12px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary-dark"
             style={{
               gridTemplateColumns: "34px minmax(0,1fr) auto",
               columnGap: 10,

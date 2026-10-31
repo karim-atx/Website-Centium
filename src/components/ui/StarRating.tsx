@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { t, tn } from "../../i18n/core";
 
 /**
  * A tappable one-to-five rating.
@@ -25,7 +26,7 @@ export const StarRating: React.FC<{
   size?: number;
   disabled?: boolean;
 }> = ({ value, onChange, size = 30, disabled = false }) => (
-  <div className="flex items-center justify-center gap-2" role="radiogroup" aria-label="Rating">
+  <div className="flex items-center justify-center gap-2" role="radiogroup" aria-label={t("Rating")}>
     {Array.from({ length: 5 }, (_, i) => {
       const filled = i < value;
       return (
@@ -36,7 +37,7 @@ export const StarRating: React.FC<{
           aria-checked={value === i + 1}
           onClick={() => onChange(i + 1)}
           disabled={disabled}
-          aria-label={`${i + 1} star${i === 0 ? "" : "s"}`}
+          aria-label={tn(i + 1, "{n} star", "{n} stars")}
           className="tap disabled:opacity-50"
         >
           {/* MO1.8.11: Star 30 / 1.5. */}

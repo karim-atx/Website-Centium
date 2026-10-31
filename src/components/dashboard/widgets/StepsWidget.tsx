@@ -6,6 +6,7 @@ import { valueOn } from "../../../services/health-metrics/periods";
 import { NoDeviceSheet } from "../NoDeviceSheet";
 import { useSourceConnected, useStepsGoalOn } from "./data";
 import { FadeValue, HeaderPill, HomeCard, HomeKeyframes, Line, staleLine, useHomeMode, useLoadingTimeout } from "./kit";
+import { appLocale } from "../../../i18n/format";
 
 // HO1.W1 Steps (small and large) and HO1.W1·e. Literal values: home-handover.md
 // HO1.W1 tables; trail geometry measured from png/home/HO1.W1-S.png and
@@ -181,7 +182,7 @@ export const StepsWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
   const stale = metricsError || !online ? staleLine(metricsLoadedAt, online) : null;
 
   const graphic = <FootTrail size={size} filledCount={filled} reached={reached} dark={dark} reduce={reduce} />;
-  const ariaLabel = `Steps, ${steps.toLocaleString()} ${isToday ? "today" : "that day"}, ${pctLabel}% of ${stepsGoal.toLocaleString()}`;
+  const ariaLabel = `Steps, ${steps.toLocaleString(appLocale())} ${isToday ? "today" : "that day"}, ${pctLabel}% of ${stepsGoal.toLocaleString(appLocale())}`;
 
   return (
     <>
@@ -194,7 +195,7 @@ export const StepsWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
         label="Steps"
         onOpen={open}
         ariaLabel={ariaLabel}
-        value={<FadeValue k={steps} value={steps.toLocaleString()} />}
+        value={<FadeValue k={steps} value={steps.toLocaleString(appLocale())} />}
         // Small: value 36, trail 66, context 92 (header ends 31: gap 5).
         // Large: value 52.5 (header ends 33: gap 19.5), context 92.5, trail at 142, 51.5.
         bodyGap={isLarge ? 19.5 : 5}
@@ -205,16 +206,16 @@ export const StepsWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
         context={
           isLarge ? (
             <span className="block">
-              <Line>{stale ?? `of ${stepsGoal.toLocaleString()} · ${km} km`}</Line>
+              <Line>{stale ?? `of ${stepsGoal.toLocaleString(appLocale())} · ${km} km`}</Line>
               {/* Second line #5B5349 as drawn (PNG measured; the table lists both lines in the metric ink). */}
               {!stale && (
                 <Line style={{ marginTop: 6, color: "rgb(var(--c-charcoal-soft))" }}>
-                  {reached ? "Goal reached" : `${(stepsGoal - steps).toLocaleString()} to go`}
+                  {reached ? "Goal reached" : `${(stepsGoal - steps).toLocaleString(appLocale())} to go`}
                 </Line>
               )}
             </span>
           ) : (
-            <Line>{stale ?? `${pctLabel}% of ${stepsGoal.toLocaleString()}`}</Line>
+            <Line>{stale ?? `${pctLabel}% of ${stepsGoal.toLocaleString(appLocale())}`}</Line>
           )
         }
       />

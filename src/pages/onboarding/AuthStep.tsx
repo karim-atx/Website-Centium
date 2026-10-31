@@ -22,7 +22,9 @@ import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { useTurnstile } from "../../components/security/useTurnstile";
 import { useCooldown } from "../../components/security/useCooldown";
 import { SecurityCheck } from "../../components/security/SecurityCheck";
-import { cooldownMessage } from "../../services/auth/cooldown";
+import { formatCountdown } from "../../services/auth/cooldown";
+import { t, tk } from "../../i18n/core";
+import { rich } from "./shell/rich";
 import { meetsPasswordRule, shouldWarnPasswordMismatch } from "../../utils/password";
 import { ObFooter, ObHeader, ObLockup, ObPage, ObProgress, ObTitle, ObToast, useObToast } from "./shell/ObShell";
 import { ObField, ObStrength, ObTerms } from "./shell/ObBlocks";
@@ -53,13 +55,14 @@ type Mode = "signIn" | "signUp" | "forgot" | "checkEmail";
 // advances once a real session exists, driven by the session in AppContext
 // rather than by the submit handler.
 
-const OFFLINE = "You're offline. Connect and try again.";
+const OFFLINE = tk("You're offline. Connect and try again.");
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
 // Which messages belong under a field (OURS-sign-in-errors P1) rather than in
 // the footer slot (P2). One rule: the field at fault gets the field error.
-const EMAIL_FIELD_ERRORS = new Set(["Enter a valid email address."]);
-const PASSWORD_FIELD_ERRORS = new Set(["Email or password is incorrect.", "Enter your password."]);
+// The state holds the English (compared here); the screen shows it through t().
+const EMAIL_FIELD_ERRORS = new Set<string>([tk("Enter a valid email address.")]);
+const PASSWORD_FIELD_ERRORS = new Set<string>([tk("Email or password is incorrect."), tk("Enter your password.")]);
 
 export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode = "signIn" }) => {
   const { session, authReady, signOut, theme } = useApp();
@@ -168,7 +171,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
   // session lands on the return trip, picked up by the effect above.
   const handleGoogle = async () => {
     if (mode === "signUp" && !termsOn) {
-      setTermsError("Accept the Terms of Service and Privacy Policy to sign up.");
+      setTermsError(tk("Accept the Terms of Service and Privacy Policy to sign up."));
       return;
     }
     if (!online) return setError(OFFLINE);
@@ -183,8 +186,8 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
   };
 
   const handleSignIn = async () => {
-    if (!isValidEmail(email)) return setError("Enter a valid email address.");
-    if (!password) return setError("Enter your password.");
+    if (!isValidEmail(email)) return setError(tk("Enter a valid email address."));
+    if (!password) return setError(tk("Enter your password."));
     if (!online) return setError(OFFLINE);
     setError(null);
     // Recorded BEFORE the request: the cookie adapter reads it the moment
@@ -209,11 +212,11 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
   };
 
   const handleSignUp = async () => {
-    if (!isValidEmail(email)) return setError("Enter a valid email address.");
+    if (!isValidEmail(email)) return setError(tk("Enter a valid email address."));
     if (isBurner) return;
-    if (!meetsRule) return setError("Choose a stronger password. See the checklist below.");
-    if (password !== confirmPassword) return setError("Passwords don't match.");
-    if (!termsOn) return setTermsError("Accept the Terms of Service and Privacy Policy to sign up.");
+    if (!meetsRule) return setError(tk("Choose a stronger password. See the checklist below."));
+    if (password !== confirmPassword) return setError(tk("Passwords don't match."));
+    if (!termsOn) return setTermsError(tk("Accept the Terms of Service and Privacy Policy to sign up."));
     if (!online) return setError(OFFLINE);
     setError(null);
     setBusy(true);
@@ -253,7 +256,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
     else if (result.status === "error") setError(result.message);
     else {
       setResent(true);
-      showToast("Sent again. Check your inbox.");
+      showToast(t("Sent again. Check your inbox."));
     }
   };
 
@@ -274,15 +277,17 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
   };
 
   // The footer slot: the cooldown countdown wins, then offline, then the error.
+  // Shown through t(): the messages from services/auth translate once their
+  // area's catalogue has them.
   const footerError = (message: string | null): string | null => {
-    if (cooldown.active) return cooldownMessage(cooldown.left);
+    if (cooldown.active) return t("Too many attempts. Try again in {time}.", { time: formatCountdown(cooldown.left) });
     if (message === SUSPENDED_MESSAGE) return null;
     if (message && (EMAIL_FIELD_ERRORS.has(message) || PASSWORD_FIELD_ERRORS.has(message))) return null;
-    if (!online) return OFFLINE;
-    return message;
+    if (!online) return t(OFFLINE);
+    return message && t(message);
   };
-  const emailError = error && EMAIL_FIELD_ERRORS.has(error) ? error : isBurner ? DISPOSABLE_EMAIL_MESSAGE : null;
-  const passwordError = error && PASSWORD_FIELD_ERRORS.has(error) ? error : null;
+  const emailError = error && EMAIL_FIELD_ERRORS.has(error) ? t(error) : isBurner ? t(DISPOSABLE_EMAIL_MESSAGE) : null;
+  const passwordError = error && PASSWORD_FIELD_ERRORS.has(error) ? t(error) : null;
   const suspended = error === SUSPENDED_MESSAGE;
 
   // Restoring a session on load is async; showing the sign-in form meanwhile
@@ -296,7 +301,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
             <ObLockup />
           </div>
           <p role="status" style={{ textAlign: "center", fontSize: 13, lineHeight: "19.5px", fontWeight: 500, color: "var(--ob-faint)" }}>
-            Checking your session…
+            {t("Checking your session…")}
           </p>
         </div>
       </ObPage>
@@ -311,22 +316,16 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
         <div className="ob-body ob-step-in">
           <ObProgress count={3} index={1} variant="intro" />
           <ObHeader margin="intro" />
-          <ObTitle variant="intro" eyebrow="Welcome back" title="You're signed in" subtitle="Continue setting up your Centium account." />
+          <ObTitle variant="intro" eyebrow={t("Welcome back")} title={t("You're signed in")} subtitle={t("Continue setting up your Centium account.")} />
           <div className="ob-info">
             <MailCheck size={16} />
-            <span>
-              Signed in as <b>{session.user?.email ?? email}</b>
-            </span>
+            <span>{rich(t("Signed in as {email}"), { email: <b>{session.user?.email ?? email}</b> })}</span>
           </div>
         </div>
         <ObFooter
-          primary={{ label: "Continue", onClick: onNext }}
+          primary={{ label: t("Continue"), onClick: onNext }}
           link={{
-            node: (
-              <>
-                Not you? <b>Sign out</b>
-              </>
-            ),
+            node: <>{rich(t("Not you? {signOut}"), { signOut: <b>{t("Sign out")}</b> })}</>,
             onClick: () => {
               setError(null);
               void signOut();
@@ -350,16 +349,18 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
           <ObHeader margin="intro" />
           <ObTitle
             variant="intro"
-            eyebrow="Verify your email"
-            title="Check your email"
+            eyebrow={t("Verify your email")}
+            title={t("Check your email")}
             subtitle={
               fromSignUp ? (
                 // Enumeration-safe: Supabase answers a new address and one that
                 // already has an account identically.
-                "If an account doesn't already exist for this address, you'll get a confirmation link. Already registered? Sign in instead."
+                t("If an account doesn't already exist for this address, you'll get a confirmation link. Already registered? Sign in instead.")
               ) : (
                 <>
-                  Your account isn't confirmed yet. Open the confirmation link we sent to <b style={{ color: "var(--ob-ink)", fontWeight: 700 }}>{email}</b> to activate it.
+                  {rich(t("Your account isn't confirmed yet. Open the confirmation link we sent to {email} to activate it."), {
+                    email: <b style={{ color: "var(--ob-ink)", fontWeight: 700 }}>{email}</b>,
+                  })}
                 </>
               )
             }
@@ -374,15 +375,15 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
             </div>
             <p className="ob-mail-email">{email}</p>
             <p className="ob-mail-body">
-              An account isn't active until that link is clicked. You can leave this page open. Onboarding picks up where you left off when you return.
+              {t("An account isn't active until that link is clicked. You can leave this page open. Onboarding picks up where you left off when you return.")}
             </p>
           </div>
           <p className="ob-hint">
             {noPassword
-              ? "To resend, go back to sign in and sign up again with the same email."
+              ? t("To resend, go back to sign in and sign up again with the same email.")
               : resent
-                ? "Sent again just now. It can take a minute."
-                : "Nothing arrived? Check spam, then resend below."}
+                ? t("Sent again just now. It can take a minute.")
+                : t("Nothing arrived? Check spam, then resend below.")}
           </p>
           <div style={{ marginTop: 12 }}>
             <SecurityCheck status={captchaStatus} container={captchaContainer} />
@@ -393,19 +394,19 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
           primary={
             fromSignUp
               ? {
-                  label: "Sign in instead",
+                  label: t("Sign in instead"),
                   onClick: () => {
                     setError(null);
                     setMode("signIn");
                   },
                 }
-              : { label: busy ? "Sending…" : "Resend confirmation email", onClick: () => void singleFlight(handleResend), disabled: resendDisabled }
+              : { label: busy ? t("Sending…") : t("Resend confirmation email"), onClick: () => void singleFlight(handleResend), disabled: resendDisabled }
           }
           secondary={
-            fromSignUp ? { label: busy ? "Sending…" : "Resend confirmation email", onClick: () => void singleFlight(handleResend), disabled: resendDisabled } : undefined
+            fromSignUp ? { label: busy ? t("Sending…") : t("Resend confirmation email"), onClick: () => void singleFlight(handleResend), disabled: resendDisabled } : undefined
           }
           link={{
-            node: "Back to sign in",
+            node: t("Back to sign in"),
             onClick: () => {
               setError(null);
               setMode("signIn");
@@ -441,9 +442,9 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
             <>
               <ObTitle
                 variant="intro"
-                eyebrow="Reset password"
-                title="Check your email"
-                subtitle={`If an account exists for ${forgotEmail}, a reset link is on its way. It works in this browser only.`}
+                eyebrow={t("Reset password")}
+                title={t("Check your email")}
+                subtitle={t("If an account exists for {email}, a reset link is on its way. It works in this browser only.", { email: forgotEmail })}
               />
               <div className="ob-mail">
                 <div className="ob-mail-ring">
@@ -454,18 +455,19 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
                   </span>
                 </div>
                 <p className="ob-mail-email">{forgotEmail}</p>
-                <p className="ob-mail-body">Open the link to choose a new password. It expires in 1 hour.</p>
+                <p className="ob-mail-body">{t("Open the link to choose a new password. It expires in 1 hour.")}</p>
               </div>
-              <p className="ob-hint">Nothing arrived? Check spam, or send it again.</p>
+              <p className="ob-hint">{t("Nothing arrived? Check spam, or send it again.")}</p>
             </>
           ) : (
             <>
-              <ObTitle variant="intro" eyebrow="Reset password" title="Forgot your password?" subtitle="Enter the email on your account and we'll send a reset link." />
+              <ObTitle variant="intro" eyebrow={t("Reset password")} title={t("Forgot your password?")} subtitle={t("Enter the email on your account and we'll send a reset link.")} />
               <ObField
                 variant="intro"
                 icon={Mail}
                 type="email"
                 autoComplete="email"
+                // i18n-ignore (an example address)
                 placeholder="you@email.com"
                 value={forgotEmail}
                 readOnly={busy}
@@ -480,9 +482,9 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
         {resetSent ? (
           <ObFooter
             error={footerError(error)}
-            primary={{ label: "Back to sign in", onClick: back }}
+            primary={{ label: t("Back to sign in"), onClick: back }}
             secondary={{
-              label: busy ? "Sending…" : "Send again",
+              label: busy ? t("Sending…") : t("Send again"),
               disabled: busy || captchaPending || cooldown.active || !online,
               onClick: () => void singleFlight(handleSendReset),
             }}
@@ -490,8 +492,8 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
         ) : (
           <ObFooter
             error={footerError(error)}
-            primary={{ label: busy ? "Sending…" : "Send reset link", type: "submit", form: "ob-forgot", disabled: !canSendReset }}
-            link={{ node: "Back to sign in", onClick: back }}
+            primary={{ label: busy ? t("Sending…") : t("Send reset link"), type: "submit", form: "ob-forgot", disabled: !canSendReset }}
+            link={{ node: t("Back to sign in"), onClick: back }}
           />
         )}
       </ObPage>
@@ -527,14 +529,14 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
         <ObHeader margin="intro" />
         <ObTitle
           variant="intro"
-          eyebrow={signIn ? "Welcome back" : "Get started"}
-          title={signIn ? "Sign in to Centium" : "Create your account"}
-          subtitle={signIn ? "Pick up where you left off." : "One account for everything you do on Centium."}
+          eyebrow={signIn ? t("Welcome back") : t("Get started")}
+          title={signIn ? t("Sign in to Centium") : t("Create your account")}
+          subtitle={signIn ? t("Pick up where you left off.") : t("One account for everything you do on Centium.")}
         />
         {suspended && (
           <div className="ob-info" data-tone="high" role="alert" style={{ marginBottom: 14 }}>
             <ShieldAlert size={16} />
-            <span>{SUSPENDED_MESSAGE}</span>
+            <span>{t(SUSPENDED_MESSAGE)}</span>
           </div>
         )}
         <ObField
@@ -542,8 +544,9 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
           icon={Mail}
           type="email"
           autoComplete="email"
+          // i18n-ignore (an example address)
           placeholder="you@email.com"
-          aria-label="Email"
+          aria-label={t("Email")}
           value={email}
           readOnly={busy}
           error={emailError}
@@ -559,8 +562,8 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
           icon={Lock}
           type={showPassword ? "text" : "password"}
           autoComplete={signIn ? "current-password" : "new-password"}
-          placeholder="Password"
-          aria-label="Password"
+          placeholder={t("Password")}
+          aria-label={t("Password")}
           value={password}
           readOnly={busy}
           error={passwordError}
@@ -569,7 +572,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
             if (error && PASSWORD_FIELD_ERRORS.has(error)) setError(null);
           }}
           end={
-            <button type="button" className="hit" onClick={passwordVisibility.toggle} aria-label={showPassword ? "Hide password" : "Show password"} style={{ display: "flex" }}>
+            <button type="button" className="hit" onClick={passwordVisibility.toggle} aria-label={showPassword ? t("Hide password") : t("Show password")} style={{ display: "flex" }}>
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           }
@@ -582,7 +585,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
               <span
                 role="checkbox"
                 aria-checked={rememberMe}
-                aria-label="Remember me"
+                aria-label={t("Remember me")}
                 tabIndex={0}
                 className="ob-check hit"
                 data-on={rememberMe}
@@ -595,7 +598,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
               >
                 {rememberMe && <Check size={12} strokeWidth={3} />}
               </span>
-              Remember me
+              {t("Remember me")}
             </label>
             <button
               type="button"
@@ -606,7 +609,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
                 setMode("forgot");
               }}
             >
-              Forgot password?
+              {t("Forgot password?")}
             </button>
           </div>
         )}
@@ -617,17 +620,17 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
               icon={Lock}
               type={showPassword ? "text" : "password"}
               autoComplete="new-password"
-              placeholder="Confirm password"
-              aria-label="Confirm password"
+              placeholder={t("Confirm password")}
+              aria-label={t("Confirm password")}
               value={confirmPassword}
               readOnly={busy}
-              error={confirmMismatch ? "Passwords don't match" : null}
+              error={confirmMismatch ? t("Passwords don't match") : null}
               onChange={(e) => setConfirmPassword(e.target.value)}
               onBlur={() => setConfirmBlurred(true)}
             />
             {password && <ObStrength password={password} />}
             <div style={{ marginTop: 14 }}>
-              <ObTerms on={termsOn} onChange={setTerms} error={termsError} tail="." />
+              <ObTerms on={termsOn} onChange={setTerms} error={termsError && t(termsError)} tail="." />
             </div>
           </>
         )}
@@ -637,17 +640,13 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
       </form>
       <ObFooter
         error={footerError(error)}
-        primary={{ label: busy ? (signIn ? "Signing in…" : "Signing up…") : signIn ? "Sign in" : "Sign up", type: "submit", form: "ob-auth", disabled: submitDisabled }}
-        secondary={{ label: "Continue with Google", or: true, disabled: busy, onClick: () => void handleGoogle() }}
+        primary={{ label: busy ? (signIn ? t("Signing in…") : t("Signing up…")) : signIn ? t("Sign in") : t("Sign up"), type: "submit", form: "ob-auth", disabled: submitDisabled }}
+        secondary={{ label: t("Continue with Google"), or: true, disabled: busy, onClick: () => void handleGoogle() }}
         link={{
           node: signIn ? (
-            <>
-              Don't have an account? <b>Sign up</b>
-            </>
+            <>{rich(t("Don't have an account? {signUp}"), { signUp: <b>{t("Sign up")}</b> })}</>
           ) : (
-            <>
-              Already have an account? <b>Sign in</b>
-            </>
+            <>{rich(t("Already have an account? {signIn}"), { signIn: <b>{t("Sign in")}</b> })}</>
           ),
           onClick: switchMode,
         }}

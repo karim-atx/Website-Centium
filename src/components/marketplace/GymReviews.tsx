@@ -281,7 +281,7 @@ export function GymReviews({
                   )}
                   {/* The business's public reply: a 2px --fill rule, the head 11 / 800 --pdark, the text 12 / 17 --ink. */}
                   {r.reply && (
-                    <div style={{ marginTop: 10, borderLeft: `2px solid ${m.fill}`, paddingLeft: 10 }}>
+                    <div style={{ marginTop: 10, borderInlineStart: `2px solid ${m.fill}`, paddingInlineStart: 10 }}>
                       <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 800, color: m.pdark }}>{gymName} replied</p>
                       <p className="whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ margin: "2px 0 0", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink }}>
                         {r.reply.body}

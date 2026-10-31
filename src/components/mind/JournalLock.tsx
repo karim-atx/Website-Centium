@@ -164,14 +164,14 @@ export function JournalPasswordPopup({
           autoComplete="current-password"
           placeholder="Password"
           aria-invalid={!!error || undefined}
-          className={`w-full h-11 rounded-xl bg-cream-soft border border-charcoal/10 pl-3.5 pr-11 text-sm font-semibold text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary-accent focus:shadow-[0_0_0_0.5px_rgb(var(--c-primary-accent))] ${
+          className={`w-full h-11 rounded-xl bg-cream-soft border border-charcoal/10 ps-3.5 pe-11 text-sm font-semibold text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary-accent focus:shadow-[0_0_0_0.5px_rgb(var(--c-primary-accent))] ${
             error ? "!border-status-high focus:!shadow-[0_0_0_0.5px_rgb(var(--c-status-high))]" : ""
           }`}
         />
         <button
           type="button"
           onClick={visibility.toggle}
-          className="tap absolute right-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
+          className="tap absolute end-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
           aria-label={visibility.shown ? "Hide password" : "Show password"}
         >
           {visibility.shown ? <EyeOff size={16} /> : <Eye size={16} />}

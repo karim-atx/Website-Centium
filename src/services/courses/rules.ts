@@ -7,6 +7,7 @@
 // professional, and a certificate. So "locked" only ever applies to a quiz or
 // a PDF lesson, never to a video or reading.
 import { BLOCKED_TEXT } from "../moderation/text";
+import { appLocale } from "../../i18n/format";
 
 // Round D (20261223030000) adds an Image lesson and a Check-in lesson; both are
 // free to open, like a video or a reading.
@@ -95,7 +96,7 @@ export function minutesLabel(minutes: number): string | null {
  */
 export function enrolledLabel(enrolled: number): string | null {
   if (enrolled < 3) return null;
-  return `${enrolled.toLocaleString()} ${enrolled === 1 ? "learner" : "learners"}`;
+  return `${enrolled.toLocaleString(appLocale())} ${enrolled === 1 ? "learner" : "learners"}`;
 }
 
 export interface OrderedLesson {

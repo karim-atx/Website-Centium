@@ -28,6 +28,7 @@ import * as G from "../../services/cycle/guidance";
 import * as PG from "../../services/pregnancy/guidance";
 import { hasInAppHistory, useBack } from "../../hooks/useBack";
 import { heroPatternGenericUrl } from "../../utils/assetUrls";
+import { appLocale } from "../../i18n/format";
 
 // The cycle tracker (HE1.10 Cycle · HE1.10.a Insights · HE1.10.b Settings,
 // with HE1.10.b.1 and .b.3 as pages inside it and .b.4 / .b.5 as popups).
@@ -60,7 +61,7 @@ const todayISO = () => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-const monthShort = (d: Date) => d.toLocaleDateString("en-US", { month: "short" });
+const monthShort = (d: Date) => d.toLocaleDateString(appLocale("en-US"), { month: "short" });
 /** "Oct 4 to 10" or "Sep 28 to Oct 2": a range, always (the database gives one). */
 function shortRange(from: string, to: string): string {
   const f = new Date(`${from}T00:00:00`);
@@ -73,7 +74,7 @@ function shortRange(from: string, to: string): string {
 function longRange(from: string, to: string): string {
   const f = new Date(`${from}T00:00:00`);
   const t = new Date(`${to}T00:00:00`);
-  const m = (d: Date) => d.toLocaleDateString("en-US", { month: "long" });
+  const m = (d: Date) => d.toLocaleDateString(appLocale("en-US"), { month: "long" });
   if (from === to) return `${m(f)} ${f.getDate()}`;
   if (f.getMonth() === t.getMonth()) return `${m(f)} ${f.getDate()} to ${t.getDate()}`;
   return `${m(f)} ${f.getDate()} to ${m(t)} ${t.getDate()}`;
@@ -81,7 +82,7 @@ function longRange(from: string, to: string): string {
 /** "Thu, Oct 15". */
 const dayLabel = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  return d.toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
 };
 
 export default function Cycle() {
@@ -537,7 +538,7 @@ export default function Cycle() {
     : offsetDays === 0
       ? `Today · Day ${selectedDay}`
       : `Day ${selectedDay} · ${relative}`;
-  const scrubValueText = `${recovery ? "" : `Day ${selectedDay}, `}${phaseName.toLowerCase()}, ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
+  const scrubValueText = `${recovery ? "" : `Day ${selectedDay}, `}${phaseName.toLowerCase()}, ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString(appLocale("en-US"), {
     weekday: "long",
     day: "numeric",
     month: "long",

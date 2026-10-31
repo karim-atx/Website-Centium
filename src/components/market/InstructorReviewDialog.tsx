@@ -197,7 +197,7 @@ const ReviewCard: React.FC<Omit<InstructorReviewDialogProps, "target"> & { targe
           ))}
         </div>
 
-        <div style={{ marginTop: 14, textAlign: "left", background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
+        <div style={{ marginTop: 14, textAlign: "start", background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
           <label htmlFor={fieldId} style={{ display: "block", fontSize: textPx(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>
             Short review <span style={{ color: m.faint }}>optional</span>
           </label>

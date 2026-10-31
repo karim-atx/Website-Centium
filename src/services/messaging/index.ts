@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t, tk } from "../../i18n/core";
 import { uploadPrivateFile, validateFileFor } from "../storage";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { parseCard, type MessageCard } from "./cards";
@@ -300,11 +301,11 @@ export function describeMessage(m: {
 }): string {
   return (
     m.text?.trim() ||
-    (m.attachmentPath && m.voiceNoteSeconds ? "Voice note" : "") ||
-    (m.attachmentPath && m.attachmentKind === "file" ? m.attachmentName || "File" : "") ||
-    (m.attachmentPath ? "Photo" : "") ||
+    (m.attachmentPath && m.voiceNoteSeconds ? t("Voice note") : "") ||
+    (m.attachmentPath && m.attachmentKind === "file" ? m.attachmentName || t("File") : "") ||
+    (m.attachmentPath ? t("Photo") : "") ||
     describeRemoval(m) ||
-    "Message"
+    t("Message")
   );
 }
 
@@ -334,13 +335,13 @@ export function describeRemoval(m: {
   /** Unsent by its sender: nothing else about it matters any more. */
   deletedAt?: string | null;
 }): string | null {
-  if (m.deletedAt) return "This message was deleted";
+  if (m.deletedAt) return t("This message was deleted");
   const textRemoved = m.redactedAt !== null && !m.text?.trim();
   const attachmentRemoved = m.attachmentPurgedAt !== null;
 
-  if (textRemoved && attachmentRemoved) return "Message and attachment removed";
-  if (textRemoved) return "Message removed";
-  if (attachmentRemoved) return "Attachment removed";
+  if (textRemoved && attachmentRemoved) return t("Message and attachment removed");
+  if (textRemoved) return t("Message removed");
+  if (attachmentRemoved) return t("Attachment removed");
   return null;
 }
 
@@ -355,16 +356,16 @@ function describe(error: PostgrestError): string {
   if (isOffline(error)) return OFFLINE_MESSAGE;
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to send messages.";
+    return t("Your session expired. Sign in again to send messages.");
   }
-  if (code === "42501") return "You can't post to that conversation.";
+  if (code === "42501") return t("You can't post to that conversation.");
   // ATX05: messages_require_relationship_for_attachments. One of the two doors
   // the same rule is enforced at — the other is the Storage policy, which
   // cannot raise a SQLSTATE and is handled in services/storage. Reaching this
   // means the composer offered an attach button it should not have, so the
   // wording explains the rule rather than blaming the file.
   if (code === "ATX05") {
-    return "You can only send files to someone you're actively working with.";
+    return t("You can only send files to someone you're actively working with.");
   }
   // ATX06: messages_validate_reply_target. The composer only ever offers a
   // message from the open thread as a reply target, so reaching this means the
@@ -372,12 +373,12 @@ function describe(error: PostgrestError): string {
   // own sentence rather than a generic failure, because retrying will not fix
   // it.
   if (code === "ATX06") {
-    return "That message isn't part of this conversation any more.";
+    return t("That message isn't part of this conversation any more.");
   }
   // 23514 is messages_has_content_check — an empty message. The composer
   // refuses those first, so reaching this means the two disagree.
-  if (code === "23514") return "A message can't be empty.";
-  return describeRefusal(error) ?? "Something went wrong. Try again.";
+  if (code === "23514") return t("A message can't be empty.");
+  return describeRefusal(error) ?? t("Something went wrong. Try again.");
 }
 
 /**
@@ -390,16 +391,16 @@ function describe(error: PostgrestError): string {
 export function describeRefusal(error: { code?: string; message?: string }): string | null {
   switch (error.code ?? "") {
     case "ATX35":
-      return "You can't message this person.";
+      return t("You can't message this person.");
     case "ATX36":
       return /under 18/i.test(error.message ?? "")
         ? // Covers gyms and studios too: a minor can't cold-message a venue either.
-          "Accounts under 18 can only message professionals, gyms and studios they already work with."
-        : "You can't start a conversation with this account. You can message professionals and gyms listed in Explore, or the people you already work with.";
+          t("Accounts under 18 can only message professionals, gyms and studios they already work with.")
+        : t("You can't start a conversation with this account. You can message professionals and gyms listed in Explore, or the people you already work with.");
     case "ATX02":
-      return "You're sending messages too quickly. Wait a minute and try again.";
+      return t("You're sending messages too quickly. Wait a minute and try again.");
     case "ATX37":
-      return "That name is reserved. Choose a different name.";
+      return t("That name is reserved. Choose a different name.");
     default:
       return null;
   }
@@ -431,13 +432,13 @@ export async function startThread(otherUserId: string): Promise<StartThreadResul
     if (error.code === "ATX02") {
       return {
         ok: false,
-        message: "You've started several new conversations recently. Try again in a little while.",
+        message: t("You've started several new conversations recently. Try again in a little while."),
       };
     }
     return { ok: false, message: describe(error) };
   }
   const thread = data as { id?: string } | null;
-  if (!thread?.id) return { ok: false, message: "Could not open that conversation." };
+  if (!thread?.id) return { ok: false, message: t("Could not open that conversation.") };
   return { ok: true, threadId: thread.id };
 }
 
@@ -456,14 +457,14 @@ export async function startVenueThread(gymId: string): Promise<StartThreadResult
   if (error) {
     console.error("[messaging] Could not start venue thread:", error.message);
     if (error.code === "ATX02") {
-      return { ok: false, message: "You've started several new conversations recently. Try again in a little while." };
+      return { ok: false, message: t("You've started several new conversations recently. Try again in a little while.") };
     }
-    if (error.code === "ATX79") return { ok: false, message: "This gym isn't taking new messages right now." };
-    if (error.code === "22023") return { ok: false, message: "This is your own gym." };
+    if (error.code === "ATX79") return { ok: false, message: t("This gym isn't taking new messages right now.") };
+    if (error.code === "22023") return { ok: false, message: t("This is your own gym.") };
     return { ok: false, message: describe(error as Parameters<typeof describe>[0]) };
   }
   const id = typeof data === "string" ? data : (data as { id?: string } | null)?.id;
-  if (!id) return { ok: false, message: "Could not open that conversation." };
+  if (!id) return { ok: false, message: t("Could not open that conversation.") };
   return { ok: true, threadId: id };
 }
 
@@ -553,12 +554,12 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     // The operator who typed a reply (authored_by) is never read here.
     participantName:
       r.kind === "group"
-        ? r.thread_name?.trim() || "Group"
+        ? r.thread_name?.trim() || t("Group")
         : r.kind === "official_support"
-          ? "Centium Support"
+          ? t("Centium Support")
           : r.other_participant_id === null
-          ? "Deleted account"
-          : r.other_first_name?.trim() || "Someone",
+          ? t("Deleted account")
+          : r.other_first_name?.trim() || t("Someone"),
     participantAvatarUrl: r.kind === "group" ? null : r.other_avatar_url,
     // Compared, not cast: only the exact string earns the official treatment.
     kind: r.kind === "official_support" ? "official_support" : r.kind === "group" ? "group" : r.kind === "business" ? "business" : "peer",
@@ -599,7 +600,7 @@ export async function fetchThreads(): Promise<ThreadsResult> {
           ...base,
           // The member deleted their account: the thread and its messages stay,
           // with nobody on the other end (participant columns are SET NULL).
-          participantName: `${base.participantId === null ? "Former member" : base.participantName} · ${venue.name}`,
+          participantName: `${base.participantId === null ? t("Former member") : base.participantName} · ${venue.name}`,
         };
   });
   return { ok: true, threads: await withBusinessThreads(threads) };
@@ -618,7 +619,7 @@ export async function fetchThreads(): Promise<ThreadsResult> {
 // business_member_threads and are added to the list here.
 
 /** What the member sees when a business has no name set. */
-const MEMBER_SIDE_FALLBACK = "Your gym or studio";
+const MEMBER_SIDE_FALLBACK = tk("Your gym or studio");
 
 function businessOf(
   kind: string | null,
@@ -628,7 +629,7 @@ function businessOf(
   if (kind !== "business" || !v.business_id) return null;
   return {
     id: v.business_id,
-    name: v.business_name?.trim() || MEMBER_SIDE_FALLBACK,
+    name: v.business_name?.trim() || t(MEMBER_SIDE_FALLBACK),
     initials: v.business_initials?.trim() || (v.business_name?.trim().charAt(0).toUpperCase() ?? "") || "G",
     logoUrl: v.business_logo_url ?? null,
     memberSide: otherFirstName === null,
@@ -755,7 +756,7 @@ export async function memberThreadIsMinor(businessId: string, threadId: string):
 export async function startMemberThread(businessId: string, personId: string): Promise<{ ok: true; threadId: string } | { ok: false; message: string }> {
   const r = await loose().rpc("start_member_thread", { p_business_id: businessId, p_person_id: personId });
   if (r.error) {
-    if (r.error.code === "ATX96") return { ok: false, message: "You can message current members, and anyone who left in the last 90 days." };
+    if (r.error.code === "ATX96") return { ok: false, message: t("You can message current members, and anyone who left in the last 90 days.") };
     return { ok: false, message: describe(r.error) };
   }
   return { ok: true, threadId: String(r.data) };
@@ -966,7 +967,7 @@ export async function sendMessage(
   requestId?: string
 ): Promise<SendResult> {
   const body = text.trim();
-  if (!body) return { ok: false, message: "A message can't be empty." };
+  if (!body) return { ok: false, message: t("A message can't be empty.") };
 
   const sent = await insertMessage({
     thread_id: threadId,
@@ -1083,7 +1084,7 @@ export async function sendImageAttachment(
   file: File
 ): Promise<SendResult> {
   const check = validateFileFor("message-attachments", file);
-  if (!check.ok) return { ok: false, message: check.message ?? "That file can't be sent." };
+  if (!check.ok) return { ok: false, message: check.message ?? t("That file can't be sent.") };
   // Read before the upload strips metadata, from the file the person chose.
   const meta = await attachmentMeta(file);
 
@@ -1101,10 +1102,10 @@ export async function sendImageAttachment(
     if (upload.reason === "refused") {
       return {
         ok: false,
-        message: "You can only send files to someone you're actively working with.",
+        message: t("You can only send files to someone you're actively working with."),
       };
     }
-    return { ok: false, message: upload.message ?? "That file couldn't be sent." };
+    return { ok: false, message: upload.message ?? t("That file couldn't be sent.") };
   }
 
   const sent = await insertMessage({
@@ -1161,7 +1162,7 @@ export async function sendVoiceNote(
   waveform?: number[] | null
 ): Promise<SendResult> {
   const check = validateFileFor("message-attachments", file);
-  if (!check.ok) return { ok: false, message: check.message ?? "That recording can't be sent." };
+  if (!check.ok) return { ok: false, message: check.message ?? t("That recording can't be sent.") };
 
   const upload = await uploadPrivateFile({
     bucket: "message-attachments",
@@ -1173,10 +1174,10 @@ export async function sendVoiceNote(
     if (upload.reason === "refused") {
       return {
         ok: false,
-        message: "You can only send voice notes to someone you're actively working with.",
+        message: t("You can only send voice notes to someone you're actively working with."),
       };
     }
-    return { ok: false, message: upload.message ?? "That recording couldn't be sent." };
+    return { ok: false, message: upload.message ?? t("That recording couldn't be sent.") };
   }
 
   const sent = await insertMessage({
@@ -1307,7 +1308,7 @@ export async function blockUser(me: string, other: string): Promise<{ ok: true }
   // Already blocked is success: the state the person asked for is the state.
   if (error && error.code !== "23505") {
     console.error("[messaging] Could not block:", error.message);
-    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't block this person. Try again." };
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't block this person. Try again.") };
   }
   return { ok: true };
 }
@@ -1316,7 +1317,7 @@ export async function unblockUser(me: string, other: string): Promise<{ ok: true
   const { error } = await supabase.from("user_blocks").delete().eq("blocker_id", me).eq("blocked_id", other);
   if (error) {
     console.error("[messaging] Could not unblock:", error.message);
-    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't unblock this person. Try again." };
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't unblock this person. Try again.") };
   }
   return { ok: true };
 }
@@ -1325,11 +1326,11 @@ export type ReportReason = "harassment" | "spam" | "inappropriate_content" | "im
 
 /** The database's report_reason enum, in the order and words the report sheet offers them. */
 export const REPORT_REASONS: { value: ReportReason; label: string; hint: string }[] = [
-  { value: "safety_concern", label: "Safety concern", hint: "Someone may be at risk of harm" },
-  { value: "harassment", label: "Harassment", hint: "Bullying, threats or unwanted contact" },
-  { value: "inappropriate_content", label: "Inappropriate content", hint: "Sexual, violent or offensive material" },
-  { value: "impersonation", label: "Impersonation", hint: "Pretending to be someone else, or Centium" },
-  { value: "spam", label: "Spam", hint: "Advertising, scams or repeated unwanted messages" },
+  { value: "safety_concern", label: tk("Safety concern"), hint: tk("Someone may be at risk of harm") },
+  { value: "harassment", label: tk("Harassment"), hint: tk("Bullying, threats or unwanted contact") },
+  { value: "inappropriate_content", label: tk("Inappropriate content"), hint: tk("Sexual, violent or offensive material") },
+  { value: "impersonation", label: tk("Impersonation"), hint: tk("Pretending to be someone else, or Centium") },
+  { value: "spam", label: tk("Spam"), hint: tk("Advertising, scams or repeated unwanted messages") },
 ];
 
 /**
@@ -1356,10 +1357,10 @@ export async function reportMessage(input: {
   });
   if (error) {
     if (error.code === "23505") {
-      return { ok: false, already: true, message: "You've already reported this message. Our team has it." };
+      return { ok: false, already: true, message: t("You've already reported this message. Our team has it.") };
     }
     console.error("[messaging] Could not report:", error.message);
-    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't send your report. Try again." };
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't send your report. Try again.") };
   }
   return { ok: true };
 }
@@ -1419,12 +1420,12 @@ function describeEditRefusal(error: PostgrestError, verb: "edit" | "unsend"): st
   if (isOffline(error)) return OFFLINE_MESSAGE;
   if (error.code === "ATX40") {
     return verb === "edit"
-      ? "You can only edit a message within 15 minutes of sending it."
-      : "You can only delete a message for everyone within 15 minutes of sending it.";
+      ? t("You can only edit a message within 15 minutes of sending it.")
+      : t("You can only delete a message for everyone within 15 minutes of sending it.");
   }
-  if (error.code === "22023") return "A message can't be empty. To remove it, delete it for everyone.";
-  if (error.code === "ATX08") return "That message isn't available any more.";
-  return describeRefusal(error) ?? "Couldn't save that. Try again.";
+  if (error.code === "22023") return t("A message can't be empty. To remove it, delete it for everyone.");
+  if (error.code === "ATX08") return t("That message isn't available any more.");
+  return describeRefusal(error) ?? t("Couldn't save that. Try again.");
 }
 
 /**
@@ -1457,21 +1458,21 @@ export async function deleteForEveryone(messageId: string): Promise<{ ok: true }
 function describeForwardRefusal(code: string): string {
   switch (code) {
     case "ATX35":
-      return "You can't message this person.";
+      return t("You can't message this person.");
     case "ATX05":
-      return "Photos and files can only be sent to someone you're working with. You can still forward text.";
+      return t("Photos and files can only be sent to someone you're working with. You can still forward text.");
     case "ATX41":
-      return "That message can't be forwarded any more.";
+      return t("That message can't be forwarded any more.");
     case "ATX08":
-      return "That message or chat isn't available any more.";
+      return t("That message or chat isn't available any more.");
     case "ATX02":
-      return "You've forwarded a lot of messages recently. Try again in a little while.";
+      return t("You've forwarded a lot of messages recently. Try again in a little while.");
     case "copy_failed":
-      return "Couldn't copy the attachment. Try again.";
+      return t("Couldn't copy the attachment. Try again.");
     case "unauthenticated":
-      return "Your session expired. Sign in again to forward this.";
+      return t("Your session expired. Sign in again to forward this.");
     default:
-      return "Couldn't forward that. Try again.";
+      return t("Couldn't forward that. Try again.");
   }
 }
 

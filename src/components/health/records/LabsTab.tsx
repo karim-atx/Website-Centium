@@ -85,7 +85,7 @@ export const LabsTab: React.FC<{
         const n = results.filter((x) => x.panelId === r.id).length;
         const meta = [fmtDate(r.date), plural(n, "marker"), fileKind(r.filePath)].join(" · ");
         const row = (
-          <button type="button" onClick={() => onView(r)} className="tap w-full flex items-center text-left" style={{ minHeight: 60, padding: "9px 14px", gap: 11, background: "rgb(var(--c-cream-card))" }}>
+          <button type="button" onClick={() => onView(r)} className="tap w-full flex items-center text-start" style={{ minHeight: 60, padding: "9px 14px", gap: 11, background: "rgb(var(--c-cream-card))" }}>
             <RowTile icon={FileText} />
             <RowText title={r.name ?? REPORT_NAME_DEFAULT} meta={meta} />
             <ChevronRight size={16} style={{ color: INK_FAINT }} aria-hidden />
@@ -167,7 +167,7 @@ export const LabReportEditSheet: React.FC<{ report: LabReport | null; onClose: (
         <input id="report-name-edit" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} className="outline-none" style={fieldStyle(dark, hc, 600)} />
         {(name.trim().length < 1 || name.trim().length > 60) && <HelpLine error>Give the report a name.</HelpLine>}
         <FieldLabel style={{ marginTop: 16 }}>Date on the report</FieldLabel>
-        <button type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-left" style={{ ...fieldStyle(dark, hc), gap: 8 }}>
+        <button type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-start" style={{ ...fieldStyle(dark, hc), gap: 8 }}>
           <CalendarDays size={15} style={{ color: INK_FAINT }} aria-hidden />
           {fmtDate(date)}
         </button>

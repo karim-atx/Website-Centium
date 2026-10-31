@@ -22,6 +22,7 @@ import { SleepTrendChart } from "../insights/SleepCharts";
 import type { AccessCategory } from "../../../services/pro/access";
 import { CheckInsProgress, checkInsSummary, useClientCheckIns } from "../forms/CheckInsProgress";
 import { ClientWinsCard } from "../../share/ClientWinsCard";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · CL2 v5 Progress (Full coaching, Nutrition) and Trends
@@ -165,7 +166,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
         key: "nut",
         icon: UtensilsCrossed,
         title: "Nutrition",
-        summary: !access.has("food_diary") ? "Not shared" : rel?.nutrition ? `${Math.round(rel.nutrition.calories).toLocaleString("en-GB")} kcal on ${fmtDay(rel.nutrition.lastLoggedDate)}` : "Nothing logged yet",
+        summary: !access.has("food_diary") ? "Not shared" : rel?.nutrition ? `${Math.round(rel.nutrition.calories).toLocaleString(appLocale("en-GB"))} kcal on ${fmtDay(rel.nutrition.lastLoggedDate)}` : "Nothing logged yet",
         body: !access.has("food_diary") ? lock("Food diary", "food_diary") : <CaloriesMacrosChart clientId={clientId} today={today} initial={chartInitial} progressOn={access.has("progress")} />,
       });
   } else if (lane === "nutrition") {
@@ -176,7 +177,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
         key: "mac",
         icon: UtensilsCrossed,
         title: "Calories and macros",
-        summary: !access.has("food_diary") ? "Not shared" : rel?.nutrition ? `${Math.round(rel.nutrition.calories).toLocaleString("en-GB")} kcal on ${fmtDay(rel.nutrition.lastLoggedDate)}` : "Nothing logged yet",
+        summary: !access.has("food_diary") ? "Not shared" : rel?.nutrition ? `${Math.round(rel.nutrition.calories).toLocaleString(appLocale("en-GB"))} kcal on ${fmtDay(rel.nutrition.lastLoggedDate)}` : "Nothing logged yet",
         body: !access.has("food_diary") ? lock("Food diary", "food_diary") : <CaloriesMacrosChart clientId={clientId} today={today} initial={chartInitial} progressOn={access.has("progress")} />,
       },
       { key: "mic", icon: FlaskConical, title: "Micronutrients", summary: access.has("food_diary") ? "Fibre, salt, iron and more" : "Not shared", body: access.has("food_diary") ? <MicronutrientsBlock clientId={clientId} today={today} days={RANGE_DAYS[range]} firstName={firstName} /> : lock("Food diary", "food_diary") },
@@ -199,7 +200,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
         key: "vit",
         icon: HeartPulse,
         title: "Vitals",
-        summary: !access.has("blood_pressure") && !access.has("health_metrics") ? "Not shared" : bp[0] ? `BP ${bp[0].systolic}/${bp[0].diastolic} on ${fmtDay(bp[0].recordedAt)}` : v?.stepsAvg != null ? `${v.stepsAvg.toLocaleString("en-GB")} steps a day` : "No readings yet",
+        summary: !access.has("blood_pressure") && !access.has("health_metrics") ? "Not shared" : bp[0] ? `BP ${bp[0].systolic}/${bp[0].diastolic} on ${fmtDay(bp[0].recordedAt)}` : v?.stepsAvg != null ? `${v.stepsAvg.toLocaleString(appLocale("en-GB"))} steps a day` : "No readings yet",
         body:
           !access.has("blood_pressure") && !access.has("health_metrics") ? (
             lock("Blood pressure and Activity & vitals", "blood_pressure")
@@ -218,7 +219,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
               ) : (
                 lock("Blood pressure", "blood_pressure")
               )}
-              {access.has("health_metrics") && v?.stepsAvg != null && <p style={{ fontSize: textPx(13), color: INK.ch }}>{`Steps: ${v.stepsAvg.toLocaleString("en-GB")} a day on average`}</p>}
+              {access.has("health_metrics") && v?.stepsAvg != null && <p style={{ fontSize: textPx(13), color: INK.ch }}>{`Steps: ${v.stepsAvg.toLocaleString(appLocale("en-GB"))} a day on average`}</p>}
             </div>
           ),
       },
@@ -265,7 +266,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
       <button
         type="button"
         onClick={() => navigate(lane === "clinical_overview" ? `${PRO_ROUTES.insights}/vitals?client=${encodeURIComponent(clientId)}` : proClientPath(clientId, "insights"))}
-        className="tap w-full flex items-center text-left"
+        className="tap w-full flex items-center text-start"
         style={{ gap: 12, minHeight: 52, padding: "12px 16px", borderRadius: 20, background: INK.card, border: `1px solid ${INK.bCard}`, marginBottom: 10 }}
       >
         <span className="flex-1 min-w-0">
@@ -292,7 +293,7 @@ const GroupCard: React.FC<{ group: Group; open: boolean; onToggle: () => void }>
   const id = `grp-${group.key}`;
   return (
     <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20 }}>
-      <button type="button" aria-expanded={open} aria-controls={id} onClick={onToggle} className="tap w-full flex items-center text-left" style={{ gap: 12, padding: 14, minHeight: 64 }}>
+      <button type="button" aria-expanded={open} aria-controls={id} onClick={onToggle} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: 14, minHeight: 64 }}>
         <span className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 11, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
           <group.icon size={17} strokeWidth={1.75} aria-hidden style={{ color: INK.prAccent }} />
         </span>
@@ -335,7 +336,7 @@ const FlagList: React.FC<{ flags: BiomarkerFlag[] | null | undefined }> = ({ fla
                 {fmtDay(f.resultDate, true)}
               </span>
             </span>
-            <span style={{ textAlign: "right" }}>
+            <span style={{ textAlign: "end" }}>
               <span className="block" style={{ fontSize: textPx(14), fontWeight: 800, color: INK.ch, whiteSpace: "nowrap" }}>
                 {`${f.latestValue} `}
                 <span style={{ fontSize: textPx(10.5), fontWeight: 600, color: INK.chF }}>{f.unit}</span>

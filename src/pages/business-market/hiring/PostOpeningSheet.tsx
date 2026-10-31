@@ -222,7 +222,7 @@ export function OpeningFormFields({
                     min={todayLocal()}
                     value={form.startsOn ?? ""}
                     onChange={(e) => set({ startsOn: e.target.value || null })}
-                    style={{ position: "absolute", left: 0, bottom: 0, width: 1, height: 1, opacity: 0, pointerEvents: "none", border: 0, padding: 0 }}
+                    style={{ position: "absolute", insetInlineStart: 0, bottom: 0, width: 1, height: 1, opacity: 0, pointerEvents: "none", border: 0, padding: 0 }}
                   />
                 </div>
               </FieldBox>

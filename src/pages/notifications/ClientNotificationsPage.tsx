@@ -31,6 +31,7 @@ import {
   type MemberNotification,
   type NotificationCopyTable,
 } from "../../services/notifications";
+import { t, tk } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · the client's notifications (C-MO.4.10
 // `notifClient`, D-36; Client Explore Screens lines 680–700, script `NI`,
@@ -63,7 +64,7 @@ import {
 // (ours, not drawn).
 
 const PAGE = 30;
-const OFFLINE_NOTE = "You're offline. Try again when you're connected.";
+const OFFLINE_NOTE = tk("You're offline. Try again when you're connected.");
 
 type State = { s: "loading" } | { s: "ok"; list: MemberNotification[]; more: boolean } | { s: "error"; offline: boolean };
 
@@ -159,11 +160,11 @@ export default function ClientNotificationsPage() {
   return (
     <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "-4px 0 6px -10px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBlock: "-4px 6px", marginInline: "-10px 0" }}>
         <button
           type="button"
           onClick={back}
-          aria-label="Back"
+          aria-label={t("Back")}
           className="market-focus"
           style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", background: "none", border: 0, padding: 0, borderRadius: 12, color: m.ink, cursor: "pointer" }}
         >
@@ -172,8 +173,8 @@ export default function ClientNotificationsPage() {
           </svg>
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint, lineHeight: linePx(15.75) }}>Home</div>
-          <h1 style={{ margin: 0, fontSize: textPx(22), fontWeight: 800, lineHeight: linePx(28) }}>Notifications</h1>
+          <div style={{ fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint, lineHeight: linePx(15.75) }}>{t("Home")}</div>
+          <h1 style={{ margin: 0, fontSize: textPx(22), fontWeight: 800, lineHeight: linePx(28) }}>{t("Notifications")}</h1>
         </div>
         <button
           type="button"
@@ -182,16 +183,16 @@ export default function ClientNotificationsPage() {
           className="market-focus"
           style={{ minHeight: 44, padding: 0, background: "none", border: 0, font: "inherit", fontSize: textPx(12.5), fontWeight: 700, color: dark ? m.pdark : "#7D6BB5", whiteSpace: "nowrap", cursor: busy || unread === 0 ? "default" : "pointer", opacity: unread === 0 ? 0.4 : 1 }}
         >
-          Mark all read
+          {t("Mark all read")}
         </button>
       </div>
 
-      {failNote ? <ConfirmationStrip tone="error" text={failNote} style={{ marginTop: 6 }} /> : null}
+      {failNote ? <ConfirmationStrip tone="error" text={t(failNote)} style={{ marginTop: 6 }} /> : null}
 
       {state.s === "loading" ? (
-        <MarketSkeleton radius={20} rows={3} count={2} height={160} label="Loading your notifications" style={{ marginTop: 12 }} />
+        <MarketSkeleton radius={20} rows={3} count={2} height={160} label={t("Loading your notifications")} style={{ marginTop: 12 }} />
       ) : state.s === "error" ? (
-        <MarketError thing="your notifications" onRetry={() => setTick((x) => x + 1)} style={{ marginTop: 12 }} />
+        <MarketError thing={t("your notifications")} onRetry={() => setTick((x) => x + 1)} style={{ marginTop: 12 }} />
       ) : list.length === 0 ? (
         <NotificationsEmpty />
       ) : (
@@ -199,7 +200,7 @@ export default function ClientNotificationsPage() {
           {groupNotifications(list).map((g) => (
           <section key={g.heading} aria-labelledby={`notif-${g.heading}`}>
             <h2 id={`notif-${g.heading}`} style={{ margin: 0, padding: "12px 0 6px", fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint }}>
-              {g.heading}
+              {g.heading === "Today" ? t("Today") : t("Earlier")}
             </h2>
             <div style={{ borderRadius: 20, border: `1px solid ${dark ? m.border : "rgba(36,31,27,0.11)"}`, overflow: "hidden" }}>
               {g.items.map((n, k) => (
@@ -216,10 +217,10 @@ export default function ClientNotificationsPage() {
               className="market-focus"
               style={{ width: "100%", marginTop: 16, minHeight: 44, borderRadius: 12, border: `1px solid ${m.border}`, background: "none", font: "inherit", fontSize: textPx(12.5), fontWeight: 800, color: m.pdark, cursor: "pointer", opacity: loadingMore ? 0.6 : 1 }}
             >
-              {loadingMore ? "Loading…" : "Load more"}
+              {loadingMore ? t("Loading…") : t("Load more")}
             </button>
           ) : null}
-          {moreFailed ? <MarketError thing="more of your notifications" onRetry={() => void loadMore()} style={{ marginTop: 10 }} /> : null}
+          {moreFailed ? <MarketError thing={t("more of your notifications")} onRetry={() => void loadMore()} style={{ marginTop: 10 }} /> : null}
         </>
       )}
     </div>
@@ -253,20 +254,20 @@ export const NotificationRow: React.FC<{
       type="button"
       onClick={onOpen}
       className="market-focus"
-      aria-label={`${unread ? "Unread. " : ""}${copy.title}. ${copy.body ? copy.body + " " : ""}${when}`}
+      aria-label={[unread ? t("Unread.") : null, `${copy.title}.`, copy.body || null, when].filter(Boolean).join(" ")}
       style={{
         width: "100%",
         display: "flex",
         gap: 12,
         padding: "12px 14px",
         borderTop: first ? 0 : `0.5px solid ${dark ? m.div : "rgba(36,31,27,0.06)"}`,
-        borderLeft: 0,
-        borderRight: 0,
+        borderInlineStart: 0,
+        borderInlineEnd: 0,
         borderBottom: 0,
         background: unread ? (dark ? "rgba(169,145,254,0.08)" : "#FBFAFE") : dark ? m.card : "#FFFFFF",
         font: "inherit",
         color: m.ink,
-        textAlign: "left",
+        textAlign: "start",
         cursor: opens || unread ? "pointer" : "default",
       }}
     >
@@ -298,8 +299,8 @@ export const NotificationsEmpty: React.FC<{ body?: string }> = ({ body }) => {
           <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
         </svg>
       </span>
-      <h2 style={{ margin: 0, fontSize: textPx(16), fontWeight: 800, color: m.ink }}>No notifications yet</h2>
-      <p style={{ margin: 0, fontSize: textPx(13), lineHeight: 1.55, color: m.faint, maxWidth: 280 }}>{body ?? "Points, vouchers and booking updates will show here."}</p>
+      <h2 style={{ margin: 0, fontSize: textPx(16), fontWeight: 800, color: m.ink }}>{t("No notifications yet")}</h2>
+      <p style={{ margin: 0, fontSize: textPx(13), lineHeight: 1.55, color: m.faint, maxWidth: 280 }}>{body ?? t("Points, vouchers and booking updates will show here.")}</p>
     </div>
   );
 };

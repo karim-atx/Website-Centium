@@ -122,7 +122,7 @@ export function CancelClassDialog({
         {session.booked > 0 && (
           <p style={{ margin: "10px 0 0", fontSize: textPx(12.5), lineHeight: linePx(18), fontWeight: 600, color: m.ink2 }}>{notifiedText(people)}</p>
         )}
-        <div className="w-full text-left" style={{ marginTop: 12 }}>
+        <div className="w-full text-start" style={{ marginTop: 12 }}>
           <label htmlFor={`${titleId}-reason`} className="block" style={{ fontSize: textPx(12), fontWeight: 600, lineHeight: linePx(16), color: m.ink2, marginBottom: 6 }}>
             Reason (optional)
           </label>

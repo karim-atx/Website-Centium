@@ -76,6 +76,7 @@ import { setTargetText } from "../../services/workout/setTargets";
 import { MusicSection } from "../music/MusicSection";
 import { providerHeading } from "../../services/music/whichMusic";
 import { playlistServiceOf } from "../../services/music/playlistLink";
+import { appLocale } from "../../i18n/format";
 
 // Set-type colours (one definition, shared with WO10): see setTypeStyle.ts.
 // Super set (exercise level only) = soft coral: bracket #DB885D, badge
@@ -830,7 +831,7 @@ export const WorkoutSessionSheet: React.FC<{
             >
               <span style={{ width: 58 }}>Set</span>
               <span className="flex-1">Weight (kg)</span>
-              <span className="flex-1" style={{ marginLeft: 8 }}>Reps</span>
+              <span className="flex-1" style={{ marginInlineStart: 8 }}>Reps</span>
               <span style={{ width: 75 }} />
             </div>
             {ex.sets.map((s, setIdx) => {
@@ -1085,7 +1086,7 @@ export const WorkoutSessionSheet: React.FC<{
             <button
               type="button"
               onClick={() => setMusicOpen(true)}
-              className="tap flex items-center w-full text-left"
+              className="tap flex items-center w-full text-start"
               style={{ minHeight: 44, gap: 10, padding: "0 12px", borderRadius: 12, background: "rgb(var(--c-cream-soft))" }}
               aria-haspopup="dialog"
             >
@@ -1105,11 +1106,11 @@ export const WorkoutSessionSheet: React.FC<{
                       aria-hidden
                       className="absolute pointer-events-none"
                       style={{
-                        left: -8,
+                        insetInlineStart: -8,
                         top: 4,
                         bottom: 30,
                         width: 5,
-                        borderLeft: `1.5px solid ${SS_BRACKET}`,
+                        borderInlineStart: `1.5px solid ${SS_BRACKET}`,
                         borderTop: `1.5px solid ${SS_BRACKET}`,
                         borderBottom: `1.5px solid ${SS_BRACKET}`,
                         borderRadius: "5px 0 0 5px",
@@ -1177,7 +1178,7 @@ export const WorkoutSessionSheet: React.FC<{
                 Total volume
               </p>
               <p className="tabular-nums" style={{ margin: 0, fontSize: textPx(24), fontWeight: 800, color: "rgb(var(--c-charcoal))", letterSpacing: "-0.03em", lineHeight: linePx(30) }}>
-                {totalVolume.toLocaleString()} kg
+                {totalVolume.toLocaleString(appLocale())} kg
               </p>
             </div>
             <div className="flex items-center" style={{ gap: 8 }}>
@@ -1600,12 +1601,12 @@ const SetRow: React.FC<{
         ["--settle-to" as string]: t?.row ?? "transparent",
       }}
     >
-      {kind === "pr" && <span aria-hidden className="absolute left-0 top-0 bottom-0" style={{ width: 3, background: PR_BAR }} />}
+      {kind === "pr" && <span aria-hidden className="absolute start-0 top-0 bottom-0" style={{ width: 3, background: PR_BAR }} />}
       <button
         onClick={(e) => onType(e.currentTarget)}
         aria-label={`Set ${label} type: ${HANDOVER_SET_TYPES.find((x) => x.value === kind)?.label}`}
         className="tap relative flex-none flex items-center before:absolute before:-inset-y-[7px] before:inset-x-0 before:content-['']"
-        style={{ width: 40, height: 31, borderRight: "none" }}
+        style={{ width: 40, height: 31, borderInlineEnd: "none" }}
       >
         <span className="flex items-center" style={{ gap: 2 }}>
           {number !== null ? (
@@ -1622,9 +1623,9 @@ const SetRow: React.FC<{
           )}
           <ChevronDown size={10} style={{ color: t?.label ?? (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }} />
         </span>
-        <span aria-hidden className="absolute right-0" style={{ top: 7, bottom: 7, width: 1, background: sessionColor("divider", dark) }} />
+        <span aria-hidden className="absolute end-0" style={{ top: 7, bottom: 7, width: 1, background: sessionColor("divider", dark) }} />
       </button>
-      <div className="flex-1 flex min-w-0" style={{ gap: 8, marginLeft: 18 }}>
+      <div className="flex-1 flex min-w-0" style={{ gap: 8, marginInlineStart: 18 }}>
         <WeightField
           value={s.weightKg}
           onChange={(weightKg) => onChange({ weightKg })}
@@ -1649,11 +1650,11 @@ const SetRow: React.FC<{
         onClick={onOptions}
         aria-label={`Set ${label} options`}
         className="tap relative flex-none flex items-center justify-center before:absolute before:-inset-[8px] before:content-['']"
-        style={{ width: 28, height: 28, marginLeft: 8, color: s.notes || s.rpe ? playInk(family, dark) : "rgb(var(--c-charcoal-faint))" }}
+        style={{ width: 28, height: 28, marginInlineStart: 8, color: s.notes || s.rpe ? playInk(family, dark) : "rgb(var(--c-charcoal-faint))" }}
       >
         <EllipsisVertical size={15} />
       </button>
-      <div className="relative flex-none" style={{ width: 28, height: 28, marginLeft: 11 }}>
+      <div className="relative flex-none" style={{ width: 28, height: 28, marginInlineStart: 11 }}>
         {justTicked && (
           <span
             key={tickKey}
@@ -1677,14 +1678,14 @@ const SetRow: React.FC<{
         </button>
       </div>
       {kind === "skipped" && (
-        <span aria-hidden className="absolute pointer-events-none" style={{ left: 15, right: 15, top: "50%", height: 1, background: sessionColor("strike", dark) }} />
+        <span aria-hidden className="absolute pointer-events-none" style={{ insetInlineStart: 15, insetInlineEnd: 15, top: "50%", height: 1, background: sessionColor("strike", dark) }} />
       )}
       {target && (
         // CU1 v5: 10.5/14 under the fields (58 in), faint; the logged
         // difference in gold, 700.
         <p
           className="basis-full"
-          style={{ margin: "2px 0 1px 58px", fontSize: textPx(10.5), lineHeight: linePx(14), fontWeight: target.off ? 700 : 500, color: target.off ? offColor : targetColor }}
+          style={{ marginBlock: "2px 1px", marginInline: "58px 0", fontSize: textPx(10.5), lineHeight: linePx(14), fontWeight: target.off ? 700 : 500, color: target.off ? offColor : targetColor }}
         >
           {target.text}
           {target.off ? ` · logged ${target.off}` : ""}
@@ -1692,12 +1693,12 @@ const SetRow: React.FC<{
       )}
       {setTarget && (
         // Round D (TR11): quiet, in the target line's own size and ink.
-        <p className="basis-full" style={{ margin: "1px 0 1px 58px", fontSize: textPx(10.5), lineHeight: linePx(14), fontWeight: 500, color: targetColor }}>
+        <p className="basis-full" style={{ marginBlock: "1px", marginInline: "58px 0", fontSize: textPx(10.5), lineHeight: linePx(14), fontWeight: 500, color: targetColor }}>
           {setTarget}
         </p>
       )}
       {needsReps && (
-        <p id={`need-reps-${label}`} role="alert" className="basis-full" style={{ margin: "4px 0 0 58px", fontSize: textPx(10.5), fontWeight: 600, color: sessionColor("danger", dark) }}>
+        <p id={`need-reps-${label}`} role="alert" className="basis-full" style={{ marginBlock: "4px 0", marginInline: "58px 0", fontSize: textPx(10.5), fontWeight: 600, color: sessionColor("danger", dark) }}>
           Enter the reps you did to log this set.
         </p>
       )}

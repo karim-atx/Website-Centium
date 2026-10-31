@@ -17,6 +17,8 @@
 //   platform_settings (services/hiring fetchHiringFeeRules).
 
 import { bool, num, str } from "../market/parse";
+import { appLocale } from "../../i18n/format";
+import { t, tk } from "../../i18n/core";
 
 export type OpeningType = "role" | "class_slot";
 export type PayUnit = "per_class" | "per_month" | "per_slot";
@@ -80,7 +82,7 @@ export function parseFeeQuote(type: OpeningType, r: Record<string, unknown> | nu
 /** "8%", "7.5%". */
 export function ratePercent(rate: number): string {
   const p = Math.round(rate * 10000) / 100;
-  return `${p.toLocaleString("en-US", { maximumFractionDigits: 2 })}%`;
+  return `${p.toLocaleString(appLocale("en-US"), { maximumFractionDigits: 2 })}%`;
 }
 
 /** "$25", "$2.50": a floor shows cents only when it has some. */
@@ -88,30 +90,38 @@ const floorMoney = (n: number): string => payMoney(n);
 
 /** The board's footer notice on the opening form and the direct-offer sheet: "One-time 8% hiring fee (min. $25 per role, $3 per class slot) when you hire". */
 export function feeNotice(r: HiringFeeRules): string {
-  return `One-time ${ratePercent(r.rate)} hiring fee (min. ${floorMoney(r.minimumRole)} per role, ${floorMoney(r.minimumClass)} per class slot) when you hire`;
+  return t("One-time {rate} hiring fee (min. {role} per role, {slot} per class slot) when you hire", {
+    rate: ratePercent(r.rate),
+    role: floorMoney(r.minimumRole),
+    slot: floorMoney(r.minimumClass),
+  });
 }
 
-/** The notice before the rules have loaded (the numbers are the server's, so none are printed). */
-export const FEE_NOTICE_PLAIN = "One-time hiring fee when you hire";
+/** The notice before the rules have loaded (the numbers are the server's, so none are printed). Shown through t(). */
+export const FEE_NOTICE_PLAIN = tk("One-time hiring fee when you hire");
 
 /** The Fees page's explanation (ours), with the server's numbers. */
 export function feeExplanation(r: HiringFeeRules | null): string {
-  if (!r) return "Each hire through Centium has one fee, a share of the base or the minimum, whichever is higher. It shows here with how it was worked out.";
-  return `Each hire through Centium has one fee: ${ratePercent(r.rate)} of the base, or the minimum (${floorMoney(r.minimumRole)} per role, ${floorMoney(r.minimumClass)} per class slot), whichever is higher. It shows here with how it was worked out.`;
+  if (!r) return t("Each hire through Centium has one fee, a share of the base or the minimum, whichever is higher. It shows here with how it was worked out.");
+  return t("Each hire through Centium has one fee: {rate} of the base, or the minimum ({role} per role, {slot} per class slot), whichever is higher. It shows here with how it was worked out.", {
+    rate: ratePercent(r.rate),
+    role: floorMoney(r.minimumRole),
+    slot: floorMoney(r.minimumClass),
+  });
 }
 
 /** "$25.60": fees always show cents. */
 export function feeMoney(n: number): string {
-  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return "$" + n.toLocaleString(appLocale("en-US"), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /** "$320", "$37.50": pay and bases show cents only when there are some. */
 export function payMoney(n: number): string {
   const whole = Math.abs(n - Math.round(n)) < 0.005;
-  return "$" + n.toLocaleString("en-US", whole ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return "$" + n.toLocaleString(appLocale("en-US"), whole ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const basisText = (q: HiringFeeQuote) => (q.basis === "first_month_pay" ? "the first month's pay" : "the total pay for the slot");
+const basisText = (q: HiringFeeQuote) => (q.basis === "first_month_pay" ? t("the first month's pay") : t("the total pay for the slot"));
 
 /** "8% of": the rule's rate when known, else the share the server's own figures show. */
 function rateOf(q: HiringFeeQuote, rate: number | null): string {
@@ -125,27 +135,29 @@ function rateOf(q: HiringFeeQuote, rate: number | null): string {
  * $19.20".
  */
 export function feeCalcLine(q: HiringFeeQuote, rate: number | null): string {
-  const head = `${rateOf(q, rate)} of ${payMoney(q.base)}, ${basisText(q)}`;
-  return q.minimumApplied ? `${head}, is ${feeMoney(q.percentAmount)}` : head;
+  const head = t("{rate} of {base}, {basis}", { rate: rateOf(q, rate), base: payMoney(q.base), basis: basisText(q) });
+  return q.minimumApplied ? t("{calculation}, is {amount}", { calculation: head, amount: feeMoney(q.percentAmount) }) : head;
 }
 
 /** "The minimum for a role is $25." / "The minimum for a class slot is $3." (the quote's own floor). */
 export function minimumSentence(q: Pick<HiringFeeQuote, "type" | "minimum">): string {
-  return `The minimum for a ${q.type === "role" ? "role" : "class slot"} is ${floorMoney(q.minimum)}.`;
+  const amount = floorMoney(q.minimum);
+  return q.type === "role" ? t("The minimum for a role is {amount}.", { amount }) : t("The minimum for a class slot is {amount}.", { amount });
 }
 
 /** B-MA.8.5 rows: Base used, 8% of base, Minimum applied (my_hiring_fees' figures). */
 export function feeRows(q: HiringFeeQuote, rate: number | null): [string, string][] {
-  const basis = q.basis === "first_month_pay" ? "first month's pay" : "total pay for the slot";
+  const basis = q.basis === "first_month_pay" ? t("first month's pay") : t("total pay for the slot");
+  const minimum = floorMoney(q.minimum);
   return [
-    ["Base used", `${payMoney(q.base)} · ${basis}`],
-    [`${rateOf(q, rate)} of base`, feeMoney(q.percentAmount)],
-    ["Minimum applied", q.minimumApplied ? `Yes · ${floorMoney(q.minimum)}` : `No · minimum ${floorMoney(q.minimum)}`],
+    [t("Base used"), `${payMoney(q.base)} · ${basis}`],
+    [t("{rate} of base", { rate: rateOf(q, rate) }), feeMoney(q.percentAmount)],
+    [t("Minimum applied"), q.minimumApplied ? t("Yes · {amount}", { amount: minimum }) : t("No · minimum {amount}", { amount: minimum })],
   ];
 }
 
 /** "$80 per class", "$900 a month", "$60 for the slot" (B-MA.8 cards). */
 export function payText(pay: number, unit: PayUnit): string {
   const m = payMoney(pay);
-  return unit === "per_class" ? `${m} per class` : unit === "per_month" ? `${m} a month` : `${m} for the slot`;
+  return unit === "per_class" ? t("{price} per class", { price: m }) : unit === "per_month" ? t("{price} a month", { price: m }) : t("{price} for the slot", { price: m });
 }

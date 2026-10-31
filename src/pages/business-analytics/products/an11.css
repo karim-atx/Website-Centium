@@ -97,7 +97,7 @@ html.dark .pa {
   min-height: 52px;
   padding: 6px 0;
   border-radius: 10px;
-  text-align: left;
+  text-align: start;
   width: 100%;
 }
 .pa-top-row + .pa-top-row {
@@ -159,7 +159,7 @@ html.larger-text .pa-top-n {
   background: var(--an-tert);
 }
 .pa-top-v {
-  text-align: right;
+  text-align: end;
 }
 .pa-top-v b {
   display: block;
@@ -253,7 +253,7 @@ html.larger-text .pa-top-n {
   min-height: 72px;
   padding: 12px 14px 12px 16px;
   width: 100%;
-  text-align: left;
+  text-align: start;
 }
 .pa-ix + .pa-ix {
   border-top: 1px solid var(--an-divider);
@@ -298,7 +298,7 @@ html.larger-text .pa-top-n {
   text-wrap: pretty;
 }
 .pa-ix-v {
-  text-align: right;
+  text-align: end;
   max-width: 90px;
 }
 .pa-ix-v b {
@@ -400,7 +400,7 @@ html.high-contrast .pa-search input::placeholder {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: left;
+  text-align: start;
 }
 .pa-list {
   margin: -4px 0 12px;
@@ -428,7 +428,7 @@ html.high-contrast .pa-search input::placeholder {
   border: 1px solid var(--an-opt-border);
   background: var(--an-opt-bg);
   width: 100%;
-  text-align: left;
+  text-align: start;
   font-size: 13px;
   font-weight: 600;
   color: var(--an-ink);
@@ -471,7 +471,7 @@ html.dark .pa-opt[aria-selected="true"] {
   grid-template-columns: 40px minmax(0, 1fr) 16px;
   column-gap: 12px;
   width: 100%;
-  text-align: left;
+  text-align: start;
 }
 .pa-pcard.is-hidden {
   opacity: 0.7;
@@ -868,7 +868,7 @@ html.dark .pa-pill.is-low {
   border: 1px solid var(--an-border);
   overflow: hidden;
   width: 100%;
-  text-align: left;
+  text-align: start;
   display: block;
 }
 /* dInfo: ending soon = caution border; expired = opacity 0.85, footer soft. */

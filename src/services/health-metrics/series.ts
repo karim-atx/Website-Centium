@@ -1,4 +1,5 @@
 import type { HealthMetric, HealthMetricPoint } from "../../types";
+import { appLocale } from "../../i18n/format";
 
 // Turning stored readings into the shape the Health and Home widgets draw.
 //
@@ -171,7 +172,7 @@ export function formatMetric(type: HealthMetric["type"], value: number): string 
     const minutes = Math.round((value - hours) * 60);
     return `${hours}h${String(minutes).padStart(2, "0")}`;
   }
-  if (meta.precision === 0) return Math.round(value).toLocaleString();
+  if (meta.precision === 0) return Math.round(value).toLocaleString(appLocale());
   return formatNumber(value, meta.precision);
 }
 

@@ -45,7 +45,7 @@ export const SquareBtn = React.forwardRef<HTMLButtonElement, { icon: LucideIcon;
       {!!count && (
         <span
           className="absolute flex items-center justify-center"
-          style={{ top: -5, right: -5, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: INK.fill, color: INK.onFill, fontSize: textPx(9.5), fontWeight: 800 }}
+          style={{ top: -5, insetInlineEnd: -5, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: INK.fill, color: INK.onFill, fontSize: textPx(9.5), fontWeight: 800 }}
         >
           {count}
         </span>
@@ -95,8 +95,8 @@ export const LibCard: React.FC<{
 }> = ({ icon: Icon, colour, title, sub, meta, onOpen, onMenu, menuLabel }) => {
   const dark = useIsDark();
   return (
-    <div className="flex items-center" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "14px 14px 14px 16px", marginBottom: 8, gap: 12 }}>
-      <button type="button" onClick={onOpen} className="tap flex-1 min-w-0 flex items-center text-left" style={{ gap: 12 }}>
+    <div className="flex items-center" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, paddingBlock: "14px", paddingInline: "16px 14px", marginBottom: 8, gap: 12 }}>
+      <button type="button" onClick={onOpen} className="tap flex-1 min-w-0 flex items-center text-start" style={{ gap: 12 }}>
         <span className="flex items-center justify-center shrink-0" style={{ width: 38, height: 38, borderRadius: 12, background: colour ? tint(colour, dark) : dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
           <Icon size={17} strokeWidth={1.75} aria-hidden style={{ color: colour ?? INK.prAccent }} />
         </span>
@@ -131,7 +131,7 @@ export const LibCard: React.FC<{
 
 export const DetailHeader: React.FC<{ title: string; eyebrow?: string; onBack: () => void; right?: React.ReactNode }> = ({ title, eyebrow, onBack, right }) => (
   <div className="flex items-center" style={{ gap: 8, marginBottom: 10 }}>
-    <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, marginLeft: -12 }}>
+    <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, marginInlineStart: -12 }}>
       <ChevronLeft size={22} strokeWidth={2} aria-hidden style={{ color: INK.ch }} />
     </button>
     <div className="flex-1 min-w-0">
@@ -148,7 +148,7 @@ export const Fab: React.FC<{ label: string; onClick: () => void; icon: LucideIco
     onClick={onClick}
     aria-label={label}
     title={label}
-    className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+20px)] z-30 w-14 h-14 rounded-full flex items-center justify-center"
+    className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] end-[calc(var(--app-gutter)+20px)] z-30 w-14 h-14 rounded-full flex items-center justify-center"
     style={{ background: INK.fill, boxShadow: "0 10px 24px rgba(95,80,147,0.28)" }}
   >
     <Icon size={22} strokeWidth={2} aria-hidden style={{ color: INK.onFill }} />

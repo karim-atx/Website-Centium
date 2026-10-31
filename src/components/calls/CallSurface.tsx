@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Phone, PhoneOff, Video } from "lucide-react";
 import { useCall } from "../../context/CallContext";
+import { t } from "../../i18n/core";
 
 /**
  * Everything a call puts on screen, mounted once for the whole app.
@@ -76,7 +77,7 @@ const Toast: React.FC<{ text: string; onDismiss: () => void; label: string }> = 
   <button
     onClick={onDismiss}
     aria-label={label}
-    className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+96px+var(--active-bar,0px))] left-1/2 -translate-x-1/2 z-[60] max-w-[min(92vw,398px)] rounded-2xl bg-charcoal text-cream text-xs font-semibold px-4 py-3 shadow-lift text-left"
+    className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+96px+var(--active-bar,0px))] left-1/2 -translate-x-1/2 z-[60] max-w-[min(92vw,398px)] rounded-2xl bg-charcoal text-cream text-xs font-semibold px-4 py-3 shadow-lift text-start"
   >
     {text}
   </button>
@@ -86,7 +87,7 @@ const Toast: React.FC<{ text: string; onDismiss: () => void; label: string }> = 
 const Connecting: React.FC<{ name: string }> = ({ name }) => (
   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/75">
     <div className="w-12 h-12 rounded-full border-2 border-white/25 border-t-white/80 animate-spin" />
-    <p className="text-sm font-semibold text-white/85">Connecting to {name}…</p>
+    <p className="text-sm font-semibold text-white/85">{t("Connecting to {name}…", { name })}</p>
   </div>
 );
 
@@ -128,19 +129,19 @@ export const CallSurface: React.FC = () => {
   if (!call) {
     if (endedReason) {
       return createPortal(
-        <Toast text={endedReason} onDismiss={dismissEnded} label="Dismiss call notice" />,
+        <Toast text={t(endedReason)} onDismiss={dismissEnded} label={t("Dismiss call notice")} />,
         document.body
       );
     }
     if (error) {
       return createPortal(
-        <Toast text={error} onDismiss={dismissError} label="Dismiss message" />,
+        <Toast text={t(error)} onDismiss={dismissError} label={t("Dismiss message")} />,
         document.body
       );
     }
     return null;
   }
-  const name = call.row.caller_id && call.role === "callee" ? "your professional" : "them";
+  const name = call.row.caller_id && call.role === "callee" ? t("your professional") : t("them");
 
   // INCOMING: deliberately not full-screen. Until it is answered this is an
   // interruption, not a destination, and covering the whole app for something
@@ -156,9 +157,9 @@ export const CallSurface: React.FC = () => {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-charcoal truncate">
-                  Incoming {call.row.kind === "video" ? "video" : "voice"} call
+                  {call.row.kind === "video" ? t("Incoming video call") : t("Incoming voice call")}
                 </p>
-                <p className="text-[11px] text-charcoal-faint">Ringing…</p>
+                <p className="text-[11px] text-charcoal-faint">{t("Ringing…")}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -167,14 +168,14 @@ export const CallSurface: React.FC = () => {
                 disabled={busy}
                 className="tap flex-1 rounded-2xl bg-charcoal/5 text-charcoal py-3 text-sm font-semibold disabled:opacity-60"
               >
-                Decline
+                {t("Decline")}
               </button>
               <button
                 onClick={() => void answer()}
                 disabled={busy}
                 className="tap flex-1 rounded-2xl bg-status-good text-white dark:text-[#0D0B1A] py-3 text-sm font-semibold disabled:opacity-60"
               >
-                {busy ? "Answering…" : "Answer"}
+                {busy ? t("Answering…") : t("Answer")}
               </button>
             </div>
             {error && <p className="text-[11px] text-status-high mt-3">{error}</p>}
@@ -193,12 +194,12 @@ export const CallSurface: React.FC = () => {
           <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center">
             {call.row.kind === "video" ? <Video size={26} /> : <Phone size={26} />}
           </div>
-          <p className="text-sm font-semibold text-white/90">Ringing…</p>
-          <p className="text-xs text-white/55">Waiting for an answer</p>
+          <p className="text-sm font-semibold text-white/90">{t("Ringing…")}</p>
+          <p className="text-xs text-white/55">{t("Waiting for an answer")}</p>
           <button
             onClick={() => void hangUp()}
             disabled={busy}
-            aria-label="Cancel call"
+            aria-label={t("Cancel call")}
             className="tap mt-6 w-16 h-14 rounded-full bg-status-high text-white dark:text-[#0D0B1A] flex items-center justify-center disabled:opacity-60"
           >
             <PhoneOff size={22} />

@@ -106,7 +106,7 @@ export const ConflictDialog: React.FC<{
           {body}
         </p>
         {clashes.length ? (
-          <ul style={{ margin: "14px 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6, textAlign: "left" }}>
+          <ul style={{ margin: "14px 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6, textAlign: "start" }}>
             {clashes.map((c, i) => (
               <li key={i}>
                 <TicketRow title={c.title} sub={[c.time, c.place].filter(Boolean).join(" · ")} colour={DEFAULT_SESSION} badge={{ text: "Clash", ink: m.caution }} notchBg={m.sbody} />
@@ -114,7 +114,7 @@ export const ConflictDialog: React.FC<{
             ))}
           </ul>
         ) : null}
-        <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint, textAlign: "left" }}>
+        <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint, textAlign: "start" }}>
           {/* Not the board's "both stay on your calendar": accept_hire_offer(p_ack_conflicts) keeps the agreement and leaves the
               clashing sessions WITHOUT an instructor (an instructor can't be in two places; Database Release 2). Ours, flagged. */}
           If you continue, you're hired and the clashing sessions are left for the gym to cover. Your own sessions stay as they are.

@@ -283,9 +283,9 @@ export function LiveNowCard(p: LiveNowProps) {
           {it.st}
         </span>
       </div>
-      <p style={{ fontSize: textPx(11.5), lineHeight: linePx(15), color: c.inkSoft, fontVariantNumeric: "tabular-nums", paddingLeft: 16, margin: 0 }}>{it.when}</p>
+      <p style={{ fontSize: textPx(11.5), lineHeight: linePx(15), color: c.inkSoft, fontVariantNumeric: "tabular-nums", paddingInlineStart: 16, margin: 0 }}>{it.when}</p>
       {it.bar && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, paddingInlineStart: 16 }}>
           <div style={{ flex: 1, height: 5, borderRadius: 999, background: c.track, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${it.pct}%`, borderRadius: 999, background: it.col }} />
           </div>
@@ -324,7 +324,7 @@ export function LiveNowCard(p: LiveNowProps) {
             alignItems: "center",
             gap: 6,
             height: 30,
-            padding: "0 10px 0 9px",
+            paddingBlock: "0", paddingInline: "9px 10px",
             borderRadius: 999,
             background: p.listed ? c.goodBg : c.soft,
             color: p.listed ? c.good : c.faint,
@@ -335,7 +335,7 @@ export function LiveNowCard(p: LiveNowProps) {
             border: 0,
           }}
         >
-          <span aria-hidden style={{ position: "absolute", left: 0, right: 0, top: -7, bottom: -7 }} />
+          <span aria-hidden style={{ position: "absolute", insetInlineStart: 0, insetInlineEnd: 0, top: -7, bottom: -7 }} />
           {p.listed ? <Eye size={13} strokeWidth={2.4} aria-hidden /> : <EyeOff size={13} strokeWidth={2.4} aria-hidden />}
           {p.listed ? "Listed" : "Hidden"}
           <span style={{ fontWeight: 700, opacity: 0.8 }}>· Change</span>
@@ -381,7 +381,7 @@ export function LiveNowCard(p: LiveNowProps) {
                       border: 0,
                     }}
                   >
-                    <span aria-hidden style={{ position: "absolute", left: "50%", top: "50%", width: 44, height: 44, transform: "translate(-50%,-50%)" }} />
+                    <span aria-hidden style={{ position: "absolute", insetInlineStart: "50%", top: "50%", width: 44, height: 44, transform: "translate(-50%,-50%)" }} />
                     {pm ? m.pmLabel : m.amLabel}
                     {dot && (
                       <span data-count-dot style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 12, height: 12, padding: "0 3px", borderRadius: 999, background: c.liveTeal, color: "#FFFFFF", fontSize: 8, fontWeight: 800 }}>
@@ -406,12 +406,12 @@ export function LiveNowCard(p: LiveNowProps) {
               </span>
             ))}
           </div>
-          <div data-pill role="radiogroup" aria-label="Time format" style={{ position: "relative", width: 88, height: 44, flexShrink: 0, marginRight: -10, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span aria-hidden data-pill-track style={{ position: "absolute", left: 10, top: 7, width: 68, height: 30, borderRadius: 999, background: c.pillTrack, boxShadow: `inset 0 0 0 1px ${c.pillBorder}`, pointerEvents: "none" }} />
+          <div data-pill role="radiogroup" aria-label="Time format" style={{ position: "relative", width: 88, height: 44, flexShrink: 0, marginInlineEnd: -10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span aria-hidden data-pill-track style={{ position: "absolute", insetInlineStart: 10, top: 7, width: 68, height: 30, borderRadius: 999, background: c.pillTrack, boxShadow: `inset 0 0 0 1px ${c.pillBorder}`, pointerEvents: "none" }} />
             <span
               aria-hidden
               data-pill-thumb
-              style={{ position: "absolute", left: 12, top: 9, width: 32, height: 26, borderRadius: 999, background: c.half, boxShadow: c.pillThumbSh, transform: `translateX(${is24 ? 32 : 0}px)`, transition: rm ? "none" : "transform 0.2s cubic-bezier(0.22,1,0.36,1)", pointerEvents: "none" }}
+              style={{ position: "absolute", insetInlineStart: 12, top: 9, width: 32, height: 26, borderRadius: 999, background: c.half, boxShadow: c.pillThumbSh, transform: `translateX(${is24 ? 32 : 0}px)`, transition: rm ? "none" : "transform 0.2s cubic-bezier(0.22,1,0.36,1)", pointerEvents: "none" }}
             />
             {FMT.map((f) => {
               const on = is24 === f.v;
@@ -466,14 +466,14 @@ export function LiveNowCard(p: LiveNowProps) {
                       <path d={f.arc} />
                       <path d={f.arrow} />
                     </svg>
-                    <span aria-hidden style={{ position: "absolute", left: "50%", top: f.ny, transform: "translate(-50%,-50%)", fontSize: 7, fontWeight: 800, lineHeight: 1, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", pointerEvents: "none" }}>
+                    <span aria-hidden style={{ position: "absolute", insetInlineStart: "50%", top: f.ny, transform: "translate(-50%,-50%)", fontSize: 7, fontWeight: 800, lineHeight: 1, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", pointerEvents: "none" }}>
                       {f.num}
                     </span>
                   </span>
                   {tip === f.num && (
                     <span
                       role="tooltip"
-                      style={{ position: "absolute", bottom: "calc(100% + 2px)", right: 4, background: c.dark ? "#F5F3FA" : "#241F1B", color: c.dark ? "#121317" : "#FFFFFF", fontSize: textPx(11), fontWeight: 700, lineHeight: linePx(14), padding: "6px 9px", borderRadius: 9, whiteSpace: "nowrap", boxShadow: "0 6px 16px rgba(36,31,27,0.22)", pointerEvents: "none", zIndex: 2 }}
+                      style={{ position: "absolute", bottom: "calc(100% + 2px)", insetInlineEnd: 4, background: c.dark ? "#F5F3FA" : "#241F1B", color: c.dark ? "#121317" : "#FFFFFF", fontSize: textPx(11), fontWeight: 700, lineHeight: linePx(14), padding: "6px 9px", borderRadius: 9, whiteSpace: "nowrap", boxShadow: "0 6px 16px rgba(36,31,27,0.22)", pointerEvents: "none", zIndex: 2 }}
                     >
                       {f.name}
                     </span>
@@ -512,7 +512,7 @@ export function LiveNowCard(p: LiveNowProps) {
                   type="button"
                   aria-expanded={panelOpen}
                   onClick={() => setPanelOpen((v) => !v)}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, minHeight: 44, borderTop: `1px solid ${c.divider}`, fontSize: textPx(12), fontWeight: 800, color: c.pDark, cursor: "pointer", WebkitTapHighlightColor: "transparent", background: "none", borderLeft: 0, borderRight: 0, borderBottom: 0 }}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, minHeight: 44, borderTop: `1px solid ${c.divider}`, fontSize: textPx(12), fontWeight: 800, color: c.pDark, cursor: "pointer", WebkitTapHighlightColor: "transparent", background: "none", borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0 }}
                 >
                   {panelOpen ? "Show less" : `Show ${rowsB.length} more`}
                   <span style={{ display: "flex", transform: panelOpen ? "rotate(180deg)" : "none", transition: rm ? "none" : "transform 0.3s ease" }}>

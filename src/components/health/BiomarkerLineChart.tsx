@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx, linePx } from "../../theme/textSize";
+import { isRtl } from "../../i18n/core";
 
 // HE1.9.1 #27 (328.9 × 196) and HE1.9.3 #53 (310 × 96): every result as a
 // point on a date axis, the reference range as a band (secondary tint) with
@@ -55,6 +56,12 @@ export const BiomarkerLineChart: React.FC<{
   const band = "rgb(var(--c-teal) / 0.22)";
   const limit = dark ? "rgb(var(--c-teal))" : "rgb(var(--c-teal-dark))";
 
+  // Round F (F10): in right to left, time runs from right to left. Every x is
+  // mirrored; SVG text anchors are logical (start/end follow the direction), so
+  // the labels mirror on their own.
+  const rtl = isRtl();
+  const mx = (v: number) => (rtl ? width - v : v);
+
   const geo = useMemo(() => {
     const pad = full ? { top: 8, right: 8, bottom: 22, left: 30 } : { top: 6, right: 6, bottom: 22, left: 6 };
     const plotW = width - pad.left - pad.right;
@@ -73,7 +80,8 @@ export const BiomarkerLineChart: React.FC<{
     const span = t1 - t0;
     t0 -= span * 0.05;
     t1 += span * 0.05;
-    const x = (ms: number) => pad.left + ((ms - t0) / (t1 - t0)) * plotW;
+    const ux = (ms: number) => pad.left + ((ms - t0) / (t1 - t0)) * plotW;
+    const x = (ms: number) => (rtl ? width - ux(ms) : ux(ms));
     const y = (v: number) => pad.top + plotH - (Math.min(v, yMax) / yMax) * plotH;
     const years: { x: number; label: string }[] = [];
     const y0 = new Date(t0).getUTCFullYear();
@@ -86,7 +94,7 @@ export const BiomarkerLineChart: React.FC<{
     const ticks: number[] = [];
     for (let v = 0; v <= yMax + 1e-9; v += step) ticks.push(Math.round(v * 1000) / 1000);
     return { pad, plotW, plotH, x, y, yMax, years, ticks };
-  }, [points, low, high, width, height, full]);
+  }, [points, low, high, width, height, full, rtl]);
 
   if (points.length === 0) return null;
   const { pad, plotW, plotH, x, y, years, ticks } = geo;
@@ -112,24 +120,24 @@ export const BiomarkerLineChart: React.FC<{
       {full &&
         ticks.map((v) => (
           <g key={v}>
-            <line x1={pad.left} x2={width - pad.right} y1={y(v)} y2={y(v)} stroke={grid} strokeWidth={1} />
-            <text x={pad.left - 8} y={y(v) + 3.5} textAnchor="end" fill={axis} style={fs(9.5)}>
+            <line x1={mx(pad.left)} x2={mx(width - pad.right)} y1={y(v)} y2={y(v)} stroke={grid} strokeWidth={1} />
+            <text x={mx(pad.left - 8)} y={y(v) + 3.5} textAnchor="end" fill={axis} style={fs(9.5)}>
               {v}
             </text>
           </g>
         ))}
       {hasBand && (
-        <rect x={pad.left} width={plotW} y={Math.min(bandTop, bandBottom)} height={Math.abs(bandBottom - bandTop)} fill={band} />
+        <rect x={rtl ? pad.right : pad.left} width={plotW} y={Math.min(bandTop, bandBottom)} height={Math.abs(bandBottom - bandTop)} fill={band} />
       )}
       {low !== null && (
-        <line x1={pad.left} x2={width - pad.right} y1={y(low)} y2={y(low)} stroke={limit} strokeWidth={1.2} strokeDasharray="4 3" />
+        <line x1={mx(pad.left)} x2={mx(width - pad.right)} y1={y(low)} y2={y(low)} stroke={limit} strokeWidth={1.2} strokeDasharray="4 3" />
       )}
       {full && hasBand && (
-        <text x={pad.left + 8} y={Math.min(bandTop, bandBottom) + 13} fill={dark ? "rgb(var(--c-teal))" : "rgb(var(--c-teal-dark))"} style={fs(9.5)}>
+        <text x={mx(pad.left + 8)} y={Math.min(bandTop, bandBottom) + 13} fill={dark ? "rgb(var(--c-teal))" : "rgb(var(--c-teal-dark))"} style={fs(9.5)}>
           {low !== null && high !== null ? `Reference ${low} to ${high}` : high !== null ? `Reference under ${high}` : `Reference above ${low}`}
         </text>
       )}
-      <line x1={pad.left} x2={width - pad.right} y1={pad.top + plotH} y2={pad.top + plotH} stroke={grid} strokeWidth={1} />
+      <line x1={mx(pad.left)} x2={mx(width - pad.right)} y1={pad.top + plotH} y2={pad.top + plotH} stroke={grid} strokeWidth={1} />
       {years.map((yr) => (
         <text key={yr.label} x={yr.x} y={height - 4} textAnchor="middle" fill={axis} style={fs(9.5)}>
           {yr.label}
@@ -210,7 +218,7 @@ export const ChartTooltip: React.FC<{ value: string; date: string; report: strin
   </div>
 );
 
-/** Chart x of a point, for placing the tooltip (same scale as the chart). */
+/** Chart x of a point, for placing the tooltip (same scale as the chart, so mirrored in right to left: a physical `left`). */
 export function chartPointX(points: ChartPoint[], index: number, width: number, full: boolean): number {
   const pad = full ? { left: 30, right: 8 } : { left: 6, right: 6 };
   const plotW = width - pad.left - pad.right;
@@ -224,5 +232,6 @@ export function chartPointX(points: ChartPoint[], index: number, width: number, 
   const span = t1 - t0;
   t0 -= span * 0.05;
   t1 += span * 0.05;
-  return pad.left + ((t(points[index].date) - t0) / (t1 - t0)) * plotW;
+  const px = pad.left + ((t(points[index].date) - t0) / (t1 - t0)) * plotW;
+  return isRtl() ? width - px : px;
 }

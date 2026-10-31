@@ -7,6 +7,7 @@ import { textPx, linePx } from "../../../theme/textSize";
 import { HealthPopup } from "./HealthPopup";
 import { useWaterUnit, type WaterUnit } from "../../../services/preferences/units";
 import { PINNED_FILL_STYLE, mc, metricIconInk, metricTextInk, useHealthMode } from "./MetricKit";
+import { appLocale } from "../../../i18n/format";
 
 // Water's own sheets and popups (OURS-health-water-custom-popup,
 // OURS-health-overflow-menus #3 Units and #5 Water goal, OURS-health-delete-
@@ -27,10 +28,10 @@ export { useWaterUnit };
  * 2, handover "1.6" / "1.60 L"); ml is whole, fl oz one decimal under 10.
  */
 export function volume(ml: number, unit: WaterUnit, dp = 1): { num: string; unit: string } {
-  if (unit === "ml") return { num: Math.round(ml).toLocaleString("en-GB"), unit: "ml" };
+  if (unit === "ml") return { num: Math.round(ml).toLocaleString(appLocale("en-GB")), unit: "ml" };
   if (unit === "floz") {
     const oz = ml / ML_PER_FLOZ;
-    return { num: oz < 10 ? oz.toFixed(1) : Math.round(oz).toLocaleString("en-GB"), unit: "fl oz" };
+    return { num: oz < 10 ? oz.toFixed(1) : Math.round(oz).toLocaleString(appLocale("en-GB")), unit: "fl oz" };
   }
   return { num: (ml / 1000).toFixed(dp), unit: "L" };
 }
@@ -44,8 +45,8 @@ const amountOptions = (from: number, to: number, label: (v: number) => string): 
   for (let v = from; v <= to; v += 50) out.push({ value: v, label: label(v) });
   return out;
 };
-const DRINK_OPTIONS = amountOptions(50, 3000, (v) => v.toLocaleString("en-GB"));
-const TOTAL_OPTIONS = amountOptions(0, 5000, (v) => v.toLocaleString("en-GB"));
+const DRINK_OPTIONS = amountOptions(50, 3000, (v) => v.toLocaleString(appLocale("en-GB")));
+const TOTAL_OPTIONS = amountOptions(0, 5000, (v) => v.toLocaleString(appLocale("en-GB")));
 const GOAL_OPTIONS = amountOptions(500, 6000, (v) => (v / 1000).toFixed(2));
 
 const tile = (dark: boolean) => ({

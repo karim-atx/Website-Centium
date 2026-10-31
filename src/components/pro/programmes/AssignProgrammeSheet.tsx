@@ -109,7 +109,7 @@ export const AssignProgrammeSheet: React.FC<{
                   aria-checked={on}
                   disabled={busy}
                   onClick={() => setPickedClient(id)}
-                  className="tap w-full flex items-center text-left"
+                  className="tap w-full flex items-center text-start"
                   style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < roster.length - 1 ? `1px solid ${INK.b06}` : "none" }}
                 >
                   <span

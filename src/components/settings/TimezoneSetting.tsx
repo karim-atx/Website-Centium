@@ -7,8 +7,9 @@ import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { browserTimezone, knownTimezones } from "../../services/timezone";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { linePx, textPx } from "../../theme/textSize";
-import { buildZoneOptions, filterZones, zoneCity, zoneDisplay } from "./timezoneOptions";
+import { buildZoneOptions, filterZones, zoneDisplay, zonePlace } from "./timezoneOptions";
 import { TimezoneWheel } from "./TimezoneWheel";
+import { t, tk, tn } from "../../i18n/core";
 
 /**
  * Settings → Data & account → Time zone (MO1.8 #59–#73, MO1.8.13). Writes the
@@ -30,7 +31,7 @@ import { TimezoneWheel } from "./TimezoneWheel";
  */
 
 const SAVE_AFTER_SETTLE_MS = 400;
-const OFFLINE_TZ = "You're offline. Your time zone wasn't changed.";
+const OFFLINE_TZ = tk("You're offline. Your time zone wasn't changed.");
 
 export const TimezoneSetting: React.FC = () => {
   const { myTimezone, pickTimezone, followDeviceZone } = useApp();
@@ -60,7 +61,7 @@ export const TimezoneSetting: React.FC = () => {
   });
 
   const describe = (message?: string) =>
-    message === OFFLINE_MESSAGE ? OFFLINE_TZ : message ?? "Couldn't save your time zone. Try again.";
+    t(message === OFFLINE_MESSAGE ? OFFLINE_TZ : message ?? "Couldn't save your time zone. Try again.");
 
   const write = async (fn: () => Promise<{ ok: boolean; message?: string }>, revertBand: boolean) => {
     setBusy(true);
@@ -158,7 +159,7 @@ export const TimezoneSetting: React.FC = () => {
   };
 
   const fieldZone = open ? band : stored;
-  const fieldLabel = fieldZone ? zoneDisplay(fieldZone) : "Not set";
+  const fieldLabel = fieldZone ? zoneDisplay(fieldZone) : t("Not set");
   const bandVisible = shown.length > 0;
 
   return (
@@ -175,16 +176,16 @@ export const TimezoneSetting: React.FC = () => {
           {/* The title sits centred on the 36 tile (MO1.8 #61: 1079.4 on a
               1070.9 tile); the field is 10 under the tile (#62). */}
           <div className="min-h-9 flex items-center">
-            <span className="block text-[14px] font-semibold leading-[19px] text-charcoal">Time zone</span>
+            <span className="block text-[14px] font-semibold leading-[19px] text-charcoal">{t("Time zone")}</span>
           </div>
           <span className="sr-only">
-            Sets what counts as "today" for your streaks, meditation and cycle days, and when reminders are sent.
+            {t("Sets what counts as \"today\" for your streaks, meditation and cycle days, and when reminders are sent.")}
           </span>
           <div ref={wrapRef}>
             {loading ? (
               <div
                 aria-busy
-                aria-label="Time zone, loading"
+                aria-label={t("Time zone, loading")}
                 className="mt-2.5 h-11 rounded-xl bg-cream-card border-[0.5px] border-charcoal/[0.14] flex items-center px-3"
               >
                 <span className="block h-3 w-[60%] rounded-md bg-cream-soft animate-skeleton-pulse" />
@@ -195,7 +196,7 @@ export const TimezoneSetting: React.FC = () => {
                 type="button"
                 aria-haspopup="listbox"
                 aria-expanded={open}
-                aria-label={`Time zone, ${fieldLabel}`}
+                aria-label={t("Time zone, {zone}", { zone: fieldLabel })}
                 disabled={busy && !open}
                 onClick={() => (open ? closePicker() : openPicker())}
                 className={clsx(
@@ -242,14 +243,14 @@ export const TimezoneSetting: React.FC = () => {
                         closePicker();
                       }
                     }}
-                    placeholder="Search city or zone"
-                    aria-label="Search city or zone"
+                    placeholder={t("Search city or zone")}
+                    aria-label={t("Search city or zone")}
                     className="flex-1 min-w-0 bg-transparent outline-none text-charcoal placeholder:text-charcoal-faint caret-primary-dark [&::-webkit-search-cancel-button]:hidden"
                     style={{ fontSize: textPx(13), lineHeight: linePx(19.5) }}
                   />
                 </label>
                 <span className="sr-only" aria-live="polite">
-                  {query ? `${shown.length} time zones` : ""}
+                  {query ? tn(shown.length, "{n} time zones", "{n} time zones") : ""}
                 </span>
                 <div className="mt-1.5">
                   {bandVisible ? (
@@ -263,14 +264,14 @@ export const TimezoneSetting: React.FC = () => {
                         searchRef.current?.focus();
                       }}
                       reduceMotion={reduceMotion}
-                      label="Time zones"
+                      label={t("Time zones")}
                     />
                   ) : (
                     <p
                       className="flex items-center justify-center text-center text-charcoal-faint"
                       style={{ height: 150, fontSize: textPx(12.5), lineHeight: linePx(18.8) }}
                     >
-                      No time zones match.
+                      {t("No time zones match.")}
                     </p>
                   )}
                 </div>
@@ -291,7 +292,7 @@ export const TimezoneSetting: React.FC = () => {
               className="block mt-1.5 text-charcoal-faint"
               style={{ fontSize: textPx(11), lineHeight: linePx(15) }}
             >
-              {loading ? "" : chosen ? "Set by you. This device won't change it." : "Follows this device."}
+              {loading ? "" : chosen ? t("Set by you. This device won't change it.") : t("Follows this device.")}
             </span>
           </div>
         </div>
@@ -302,20 +303,20 @@ export const TimezoneSetting: React.FC = () => {
       <SettingsRow
         icon={Smartphone}
         iconTone="dark"
-        title="Use device time zone"
+        title={t("Use device time zone")}
         subtitle={
           <span className="block" style={{ fontSize: textPx(11), lineHeight: linePx(15) }}>
             {!device
-              ? "This browser doesn't share its time zone."
+              ? t("This browser doesn't share its time zone.")
               : chosen
-                ? "Off while a zone is set by you"
-                : `On · ${zoneCity(device)}`}
+                ? t("Off while a zone is set by you")
+                : t("On · {city}", { city: zonePlace(device) })}
           </span>
         }
         toggle={{
           checked: !loading && !chosen,
           disabled: loading || busy || !device,
-          label: "Use device time zone",
+          label: t("Use device time zone"),
           onChange: (next) => {
             if (next) {
               if (open) {

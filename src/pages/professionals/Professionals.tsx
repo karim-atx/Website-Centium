@@ -301,7 +301,7 @@ export default function Professionals() {
           trackStyle={{ marginTop: 12 }}
         />
         <SegmentedTabs
-          className="-mr-4"
+          className="-me-4"
           scroll
           items={[{ key: "all", label: "All" }, ...(Object.keys(subtypeLabels) as Subtype[]).map((t) => ({ key: t, label: subtypeLabels[t] }))]}
           activeKey={type ?? "all"}
@@ -316,7 +316,7 @@ export default function Professionals() {
             padding: 4,
             gap: 4,
             borderRadius: "12px 0 0 12px",
-            paddingRight: 16,
+            paddingInlineEnd: 16,
             background: dark ? "rgb(var(--c-seg-track))" : "rgb(var(--th-f4f3f9))",
           }}
           light={{
@@ -342,7 +342,7 @@ export default function Professionals() {
                 aria-expanded={!!sortEl && sortOpen}
                 onClick={() => setSortOpen((o) => !o)}
                 className="hit market-focus"
-                style={{ height: 32, padding: "0 8px 0 12px", borderRadius: 10, border: `0.5px solid ${m.border}`, background: "transparent", display: "inline-flex", alignItems: "center", gap: 3, font: "inherit", fontSize: textPx(12), fontWeight: 700, color: m.ink2, cursor: "pointer", whiteSpace: "nowrap" }}
+                style={{ height: 32, paddingBlock: "0", paddingInline: "12px 8px", borderRadius: 10, border: `0.5px solid ${m.border}`, background: "transparent", display: "inline-flex", alignItems: "center", gap: 3, font: "inherit", fontSize: textPx(12), fontWeight: 700, color: m.ink2, cursor: "pointer", whiteSpace: "nowrap" }}
               >
                 Sort: {sort}
                 <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={NO_ICON_SCALE}>
@@ -385,7 +385,7 @@ export default function Professionals() {
           onClick={openLinked}
           aria-label={`Your professional, ${linkedName}. Open profile`}
           className="market-focus"
-          style={{ width: "100%", marginBottom: 10, minHeight: 56, display: "flex", alignItems: "center", gap: 12, borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, padding: "10px 16px", textAlign: "left", font: "inherit", color: m.ink, cursor: "pointer" }}
+          style={{ width: "100%", marginBottom: 10, minHeight: 56, display: "flex", alignItems: "center", gap: 12, borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, padding: "10px 16px", textAlign: "start", font: "inherit", color: m.ink, cursor: "pointer" }}
         >
           <MarketAvatar id={linkedProfessionalId ?? "linked"} name={linkedName} photoUrl={linkedDetail?.avatarUrl ?? null} size={36} fontSize={13} />
           <span style={{ flex: 1, minWidth: 0 }}>

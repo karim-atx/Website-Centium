@@ -29,6 +29,7 @@ import {
 } from "./sleepModel";
 import { StatBoxes, type StatBox } from "./parts";
 import { useRead, type ReadState } from "./reads";
+import { isRtl } from "../../../i18n/core";
 
 /**
  * Release 3 · W9 Insights › Vitals › Sleep (TR9 v5 "Sleep · stages" and
@@ -61,6 +62,16 @@ import { useRead, type ReadState } from "./reads";
 
 const W = 320;
 
+/**
+ * Round F (F10): in right to left, time runs from right to left. Each chart
+ * mirrors every x it draws (SVG text anchors are logical, so the labels
+ * follow) and keeps the unmirrored x for the pointer and the tooltip side.
+ */
+const mirror = () => {
+  const rtl = isRtl();
+  return (v: number) => (rtl ? W - v : v);
+};
+
 const prDark = (dark: boolean) => (dark ? "#C3B3FB" : "#7D6BB5");
 
 // ---------------------------------------------------------------------------
@@ -88,13 +99,14 @@ const RangeTrack: React.FC<{ range: ChartRange; onRange: (r: ChartRange) => void
   </span>
 );
 
+/** The pinned tooltip, placed from the inline start (`x` unmirrored). */
 const Tip: React.FC<{ title: string; lines: string[]; x: number }> = ({ title, lines, x }) => {
   const dark = useIsDark();
   return (
     <div
       aria-live="polite"
       className="absolute z-[2]"
-      style={{ ...(x / W > 0.55 ? { right: 0 } : { left: `${Math.max(0, (x / W) * 100 - 24).toFixed(0)}%` }), top: -2, maxWidth: "calc(100% - 8px)", borderRadius: 12, background: dark ? "#F5F3FA" : "#241F1B", color: dark ? "#121317" : "#FFFFFF", padding: "7px 10px", boxShadow: "0 8px 20px rgba(0,0,0,0.22)" }}
+      style={{ ...(x / W > 0.55 ? { insetInlineEnd: 0 } : { insetInlineStart: `${Math.max(0, (x / W) * 100 - 24).toFixed(0)}%` }), top: -2, maxWidth: "calc(100% - 8px)", borderRadius: 12, background: dark ? "#F5F3FA" : "#241F1B", color: dark ? "#121317" : "#FFFFFF", padding: "7px 10px", boxShadow: "0 8px 20px rgba(0,0,0,0.22)" }}
     >
       <p className="flex items-center whitespace-nowrap" style={{ gap: 4, fontSize: textPx(10), fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.7 }}>
         <Pin size={10} strokeWidth={2.4} aria-hidden style={NO_ICON_SCALE} />
@@ -149,11 +161,13 @@ const KeyChip: React.FC<{ label: string; children: React.ReactNode }> = ({ label
 function useScrub(count: number, indexAt: (vx: number) => number, pin: number | null, setPin: (i: number | null) => void) {
   const ref = useRef<HTMLDivElement | null>(null);
   const drag = useRef<{ moved: boolean; start: number } | null>(null);
+  const rtl = isRtl();
+  // `indexAt` takes the unmirrored x: read from the inline start.
   const at = (clientX: number) => {
     const el = ref.current;
     if (!el) return 0;
     const r = el.getBoundingClientRect();
-    return indexAt(((clientX - r.left) / Math.max(1, r.width)) * W);
+    return indexAt(((rtl ? r.right - clientX : clientX - r.left) / Math.max(1, r.width)) * W);
   };
   const props = {
     ref,
@@ -184,7 +198,7 @@ function useScrub(count: number, indexAt: (vx: number) => number, pin: number | 
     onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => {
       if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
         e.preventDefault();
-        const dir = e.key === "ArrowRight" ? 1 : -1;
+        const dir = (e.key === "ArrowRight") !== rtl ? 1 : -1;
         setPin(Math.max(0, Math.min(count - 1, pin == null ? (dir > 0 ? 0 : count - 1) : pin + dir)));
       } else if (e.key === "Escape") setPin(null);
     },
@@ -212,7 +226,9 @@ export const StagesChart: React.FC<{ nights: NightStats[]; range: ChartRange; on
   const most = Math.max(0, ...agg.map((a) => (a ? (a.deep + a.rem + a.light + a.awake) / 60 : 0)));
   const mx = Math.max(9, Math.ceil(most / 3) * 3);
   const step = (W - 44) / (n - 1);
-  const X = (i: number) => 22 + i * step;
+  const mir = mirror();
+  const UX = (i: number) => 22 + i * step;
+  const X = (i: number) => mir(UX(i));
   const Y = (v: number) => 6 + ((mx - v) / mx) * (H - 24);
   const bw = Math.min(26, step * 0.7);
   const visible = STAGES.filter((s) => !off.has(s));
@@ -247,12 +263,12 @@ export const StagesChart: React.FC<{ nights: NightStats[]; range: ChartRange; on
       insight={stagesLine(staged, hm)}
     >
       <div {...scrub} aria-label={staged.length ? `Sleep stages: deep ${hm(mean((x) => x.deep ?? 0))}, REM ${hm(mean((x) => x.rem ?? 0))}, light ${hm(mean((x) => x.light ?? 0))} a night on average over ${staged.length} night${staged.length === 1 ? "" : "s"}.` : "Sleep stages"} style={{ paddingTop: tip ? 24 + tip.lines.length * 15 : 4 }}>
-        {tip && pin != null && <Tip title={tip.title} lines={tip.lines} x={X(pin)} />}
+        {tip && pin != null && <Tip title={tip.title} lines={tip.lines} x={UX(pin)} />}
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" aria-hidden style={{ display: "block", overflow: "visible", ...NO_ICON_SCALE }}>
           {grid.map((v) => (
             <g key={v}>
               <line x1={0} x2={W} y1={Y(v)} y2={Y(v)} stroke={INK.b06} />
-              <text x={W - 2} y={Y(v) - 3} textAnchor="end" fontSize={8.5} fill={INK.chT}>{`${v}h`}</text>
+              <text x={mir(W - 2)} y={Y(v) - 3} textAnchor="end" fontSize={8.5} fill={INK.chT}>{`${v}h`}</text>
             </g>
           ))}
           {agg.map((x, i) => {
@@ -305,7 +321,11 @@ export const BedtimeChart: React.FC<{ nights: NightStats[]; range: ChartRange; o
   const L = range === "W" ? 30 : 40;
   const H = b.length * rh + 18;
   const axis = bedtimeAxis(rows.filter((r): r is { bed: number; wake: number; n: number } => !!r));
-  const X = (m: number) => L + ((m - axis.from) / (axis.to - axis.from)) * (W - L - 8);
+  const mir = mirror();
+  const UX = (m: number) => L + ((m - axis.from) / (axis.to - axis.from)) * (W - L - 8);
+  const X = (m: number) => mir(UX(m));
+  /** A bar from `a` to `b` (`w` wide): its left edge, the end of the bar when mirrored. */
+  const barX = (a: number, w: number) => (isRtl() ? X(a) - w : X(a));
   const ticks: number[] = [];
   for (let m = axis.from; m <= axis.to; m += 180) ticks.push(m);
   const beds = nights.filter((x) => x.bed != null && x.date >= b[0].start && x.date <= today).map((x) => x.bed as number);
@@ -341,11 +361,11 @@ export const BedtimeChart: React.FC<{ nights: NightStats[]; range: ChartRange; o
             return (
               <g key={bk.start}>
                 {label && (
-                  <text x={0} y={y + (dense ? 6 : 9)} fontSize={9} fontWeight={700} fill={INK.chF}>
+                  <text x={mir(0)} y={y + (dense ? 6 : 9)} fontSize={9} fontWeight={700} fill={INK.chF}>
                     {label}
                   </text>
                 )}
-                {r && <rect x={X(r.bed)} y={y} width={Math.max(2, X(r.wake) - X(r.bed))} height={bar} rx={bar / 2} fill={on ? prDark(dark) : INK.pr} opacity={on ? 1 : 0.75} />}
+                {r && <rect x={barX(r.bed, Math.max(2, UX(r.wake) - UX(r.bed)))} y={y} width={Math.max(2, UX(r.wake) - UX(r.bed))} height={bar} rx={bar / 2} fill={on ? prDark(dark) : INK.pr} opacity={on ? 1 : 0.75} />}
               </g>
             );
           })}
@@ -367,7 +387,11 @@ export const Hypnogram: React.FC<{ night: NightStats; firstName: string }> = ({ 
   const h = useMemo(() => hypnogramOf(night.segments), [night.segments]);
   const H = 110;
   const total = h?.total ?? 1;
-  const X = (m: number) => 40 + (m / total) * (W - 44);
+  const mir = mirror();
+  const UX = (m: number) => 40 + (m / total) * (W - 44);
+  const X = (m: number) => mir(UX(m));
+  /** A block's left edge for width `w` from `a`: the end of the block when mirrored. */
+  const barX = (a: number, w: number) => (isRtl() ? X(a) - w : X(a));
   const Y = (l: number) => 8 + l * 22;
   // Scrub in 5-minute steps.
   const steps = Math.max(1, Math.ceil(total / 5) + 1);
@@ -406,12 +430,12 @@ export const Hypnogram: React.FC<{ night: NightStats; firstName: string }> = ({ 
       insight={hypnogramLine(h)}
     >
       <div {...scrub} aria-label={hypnogramLine(h) ?? "Hypnogram"} style={{ paddingTop: tipBlock ? 38 : 4 }}>
-        {pin != null && tipBlock && <Tip title={formatMinutes12(clockAt(minuteAt(pin)))} lines={[STAGE_LABEL[tipBlock.stage]]} x={X(minuteAt(pin))} />}
+        {pin != null && tipBlock && <Tip title={formatMinutes12(clockAt(minuteAt(pin)))} lines={[STAGE_LABEL[tipBlock.stage]]} x={UX(minuteAt(pin))} />}
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" aria-hidden style={{ display: "block", overflow: "visible", ...NO_ICON_SCALE }}>
           {HYPNO_LEVELS.map((s, i) => (
             <g key={s}>
-              <line x1={40} x2={W} y1={Y(i)} y2={Y(i)} stroke={INK.b06} />
-              <text x={0} y={Y(i) + 3} fontSize={9} fontWeight={700} fill={INK.chF}>
+              <line x1={mir(40)} x2={mir(W)} y1={Y(i)} y2={Y(i)} stroke={INK.b06} />
+              <text x={mir(0)} y={Y(i) + 3} fontSize={9} fontWeight={700} fill={INK.chF}>
                 {STAGE_LABEL[s]}
               </text>
             </g>
@@ -420,7 +444,7 @@ export const Hypnogram: React.FC<{ night: NightStats; firstName: string }> = ({ 
             const next = blocks[i + 1];
             return (
               <g key={i}>
-                <rect x={X(x.from)} y={Y(x.level) - 4} width={Math.max(1.5, X(x.to) - X(x.from))} height={8} rx={2} fill={col[x.stage]} />
+                <rect x={barX(x.from, Math.max(1.5, UX(x.to) - UX(x.from)))} y={Y(x.level) - 4} width={Math.max(1.5, UX(x.to) - UX(x.from))} height={8} rx={2} fill={col[x.stage]} />
                 {next && Math.abs(next.from - x.to) < 1 && <line x1={X(next.from)} x2={X(next.from)} y1={Y(x.level)} y2={Y(next.level)} stroke={col[next.stage]} strokeWidth={1.2} opacity={0.7} />}
               </g>
             );

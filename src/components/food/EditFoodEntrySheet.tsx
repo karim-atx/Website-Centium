@@ -295,7 +295,7 @@ export const EditFoodEntrySheet: React.FC<{
               <div
                 key={cell.caption}
                 className="text-center"
-                style={i > 0 ? { borderLeft: `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` } : undefined}
+                style={i > 0 ? { borderInlineStart: `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` } : undefined}
               >
                 <p style={{ margin: 0, fontSize: textPx(15.5), fontWeight: 800, color: cell.color }}>{cell.value}</p>
                 <p style={{ margin: "2px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{cell.caption}</p>

@@ -3,6 +3,7 @@ import { curvePoints, hormoneCurves, HORMONES, type Hormone } from "../../servic
 import { HORMONE_DISCLAIMER, HORMONE_EXPLAINER, HORMONE_LABEL, HORMONE_TITLE } from "../../services/cycle/guidance";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
+import { isRtl } from "../../i18n/core";
 
 // The typical hormone pattern, scaled to this user's cycle (HE1.10 #29-#37).
 //
@@ -45,7 +46,12 @@ export const HormoneGraph: React.FC<{
   const colors = dark ? COLORS_DARK : COLORS;
   const curves = hormoneCurves(cycleLength, ovulationDay);
   const length = Math.max(15, Math.min(90, Math.round(cycleLength)));
-  const xOf = (day: number) => ((day - 1) / Math.max(1, length - 1)) * WIDTH;
+  // Round F (F10): in right to left, the cycle runs from right to left. The
+  // curves are mirrored by their transform, the lines by their x; the "Day N"
+  // tag is placed from the inline start (so it takes the unmirrored fraction).
+  const rtl = isRtl();
+  const ux = (day: number) => ((day - 1) / Math.max(1, length - 1)) * WIDTH;
+  const xOf = (day: number) => (rtl ? WIDTH - ux(day) : ux(day));
   const markerX = selectedDay && selectedDay >= 1 && selectedDay <= length ? xOf(selectedDay) : null;
   const ovuX = xOf(Math.round(ovulationDay));
 
@@ -75,7 +81,7 @@ export const HormoneGraph: React.FC<{
         {HORMONES.map((h) => (
           <polyline
             key={h}
-            transform="translate(0 2)"
+            transform={rtl ? `matrix(-1 0 0 1 ${WIDTH} 2)` : "translate(0 2)"}
             points={curvePoints(curves[h], WIDTH, PLOT - 4, length)}
             fill="none"
             stroke={colors[h]}
@@ -97,8 +103,8 @@ export const HormoneGraph: React.FC<{
           <span
             className="absolute text-charcoal whitespace-nowrap"
             style={{
-              left: `${(markerX / WIDTH) * 100}%`,
-              transform: "translateX(-50%)",
+              insetInlineStart: `${(ux(selectedDay as number) / WIDTH) * 100}%`,
+              transform: rtl ? "translateX(50%)" : "translateX(-50%)",
               top: -(HEIGHT - PLOT) + 4,
               fontSize: textPx(9.5),
               lineHeight: linePx(12),

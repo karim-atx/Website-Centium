@@ -40,7 +40,7 @@ export const ActivityLevelSheet: React.FC<{ open: boolean; onClose: () => void }
               key={l.value}
               onClick={() => setSelected(l.value)}
               className={clsx(
-                "tap w-full flex items-center gap-3.5 text-left rounded-2xl p-4 border transition-colors",
+                "tap w-full flex items-center gap-3.5 text-start rounded-2xl p-4 border transition-colors",
                 active ? "bg-primary-pale border-primary" : "bg-cream-card border-charcoal/10"
               )}
             >

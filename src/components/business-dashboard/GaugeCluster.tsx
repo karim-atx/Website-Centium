@@ -392,7 +392,7 @@ export function GaugeCluster({
               >
                 {controls[i].name}
               </span>
-              <span style={{ width: 0, height: 0, borderLeft: "6px solid transparent", borderRight: "6px solid transparent", borderTop: `6px solid ${c.tipBg}` }} />
+              <span style={{ width: 0, height: 0, borderInlineStart: "6px solid transparent", borderInlineEnd: "6px solid transparent", borderTop: `6px solid ${c.tipBg}` }} />
             </span>
           );
         })()}

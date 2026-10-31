@@ -196,7 +196,7 @@ function RuleCard({
       disabled={disabled || busy}
       onClick={(e) => setMenu({ which, el: e.currentTarget })}
       className="market-focus shrink-0 inline-flex items-center whitespace-nowrap disabled:opacity-60"
-      style={{ minHeight: 40, padding: "0 10px 0 12px", borderRadius: 12, border: `1px solid ${m.border}`, gap: 5, fontSize: textPx(12), fontWeight: 800, color: m.ink }}
+      style={{ minHeight: 40, paddingBlock: "0", paddingInline: "12px 10px", borderRadius: 12, border: `1px solid ${m.border}`, gap: 5, fontSize: textPx(12), fontWeight: 800, color: m.ink }}
     >
       {value}
       <ChevronDown size={14} style={{ color: m.faint }} />

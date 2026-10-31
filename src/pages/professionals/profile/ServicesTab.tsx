@@ -44,7 +44,7 @@ export const ServicesTab: React.FC<{
         <EmptyBlock title="No services listed yet" body={`${firstName || "This professional"} hasn't added a session to book or a plan to hire.`} />
       ) : (
         rows.map((r) => (
-          <div key={r.key} style={{ borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, padding: "12px 12px 12px 14px", display: "flex", alignItems: "center", gap: 12, color: m.ink }}>
+          <div key={r.key} style={{ borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, paddingBlock: "12px", paddingInline: "14px 12px", display: "flex", alignItems: "center", gap: 12, color: m.ink }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: textPx(14), fontWeight: 700, overflowWrap: "anywhere" }}>{r.name}</div>
               {r.meta ? <div style={{ fontSize: textPx(11.5), color: m.faint, marginTop: 1, overflowWrap: "anywhere" }}>{r.meta}</div> : null}

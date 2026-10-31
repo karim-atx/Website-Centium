@@ -195,7 +195,7 @@ export function AddAppointmentSheet({
                     wheel.focus();
                   }
                 }}
-                className="absolute left-0 right-0 z-[6] bg-cream-card border border-solid border-th-aea1dc/50 dark:border-th-a991fe/50"
+                className="absolute start-0 end-0 z-[6] bg-cream-card border border-solid border-th-aea1dc/50 dark:border-th-a991fe/50"
                 style={{ top: wheel.offsetTop + wheel.offsetHeight + 6, borderRadius: 16, boxShadow: "0 12px 32px rgba(95,80,147,0.18)", padding: 6 }}
               >
                 <WheelPicker

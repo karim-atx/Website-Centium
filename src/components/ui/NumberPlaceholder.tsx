@@ -1,4 +1,5 @@
 import React from "react";
+import { t } from "../../i18n/core";
 
 /**
  * A neutral stand-in for a card whose numbers are not shown yet.
@@ -18,7 +19,7 @@ export const NumberPlaceholder: React.FC<{ height: number; className?: string; l
     className={`rounded-[22px] bg-cream-card border border-charcoal/[0.06] px-[17px] py-4 ${className ?? ""}`}
     style={{ height }}
     aria-busy="true"
-    aria-label={label ? `${label}, loading` : "Loading"}
+    aria-label={label ? t("{label}, loading", { label }) : t("Loading")}
   >
     {label && <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">{label}</p>}
     <div className="mt-3 h-4 w-24 rounded-full bg-charcoal/[0.07] animate-skeleton-pulse" />

@@ -21,6 +21,7 @@ import {
   saveVenues,
   submitForReview,
 } from "../../../services/business-onboarding";
+import { t } from "../../../i18n/core";
 
 // The business lanes (Classes, Gym, Store) inside the onboarding flow: the
 // type step ("bizType"), then the six numbered steps (bizBusiness … bizReview).
@@ -84,7 +85,7 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
   /** One step's server write; returns the draft patch it produced. */
   const writeStep = useCallback(
     async (k: BizFlowKey, d: BusinessLaneDraft): Promise<{ ok: true; patch: Partial<BusinessLaneDraft> } | { ok: false; message: string; offline?: boolean }> => {
-      if (!uid) return { ok: false, message: "You're signed out. Sign in again to save." }; // OURS
+      if (!uid) return { ok: false, message: t("You're signed out. Sign in again to save.") }; // OURS
       if (k === "bizBusiness") {
         const r = await saveBusinessBasics(uid, d);
         return r.ok ? { ok: true, patch: { businessId: r.value.id } } : r;
@@ -150,7 +151,7 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
         setBiz((b) => ({ ...b, reached: furthest(b.reached, k), unsynced: b.unsynced.includes(k) ? b.unsynced : [...b.unsynced, k] }));
       if (!online) {
         markUnsynced();
-        setSave({ busy: false, error: OB_STRINGS.offlineStep, offline: true });
+        setSave({ busy: false, error: t(OB_STRINGS.offlineStep), offline: true });
         onNext();
         return;
       }
@@ -159,11 +160,11 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
       if (!r.ok) {
         if (r.offline) {
           markUnsynced();
-          setSave({ busy: false, error: OB_STRINGS.offlineStep, offline: true });
+          setSave({ busy: false, error: t(OB_STRINGS.offlineStep), offline: true });
           onNext();
           return;
         }
-        setSave({ busy: false, error: r.message, offline: false });
+        setSave({ busy: false, error: t(r.message), offline: false });
         return;
       }
       setBiz(() => ({ ...r.d, reached: furthest(r.d.reached, k) }));
@@ -178,21 +179,21 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
     setSave({ busy: true, error: null, offline: false });
     const r = await flush(null);
     if (!r.ok) {
-      setSave({ busy: false, error: r.message, offline: !!r.offline });
+      setSave({ busy: false, error: t(r.message), offline: !!r.offline });
       return;
     }
     let d = r.d;
     if (!d.businessId) {
       const b = await writeStep("bizBusiness", d);
       if (!b.ok) {
-        setSave({ busy: false, error: b.message, offline: !!b.offline });
+        setSave({ busy: false, error: t(b.message), offline: !!b.offline });
         return;
       }
       d = { ...d, ...b.patch };
     }
     const sent = await submitForReview(uid, d.businessId!, d);
     if (!sent.ok) {
-      setSave({ busy: false, error: sent.message, offline: !!sent.offline });
+      setSave({ busy: false, error: t(sent.message), offline: !!sent.offline });
       return;
     }
     // The submitted files now belong to that submission: a later upload (after
@@ -205,7 +206,7 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
       /* the setup page reads the server draft first */
     }
     const done = await onSubmitted();
-    setSave({ busy: false, error: done.ok ? null : done.message ?? "Couldn't finish setting up your account. Try again.", offline: false });
+    setSave({ busy: false, error: done.ok ? null : done.message != null ? t(done.message) : t("Couldn't finish setting up your account. Try again."), offline: false });
   }, [flush, onSubmitted, save.busy, setBiz, uid, writeStep]);
 
   if (stepKey === "bizType" || !biz.lane) {

@@ -114,7 +114,7 @@ export function useMarkBookingPaid({ onDone }: { onDone: (entry: RosterEntry) =>
           className="pay-ref w-full block focus:outline-none"
           style={{ minHeight: 48, borderRadius: 14, background: m.sgrey, border: `1px solid ${m.border}`, padding: "0 14px", fontSize: textPx(14), lineHeight: linePx(20), fontWeight: 600, color: m.ink, caretColor: m.pdark }}
         />
-        <p className="tabular-nums" style={{ margin: "5px 2px 14px", textAlign: "right", fontSize: textPx(11), color: m.faint }}>
+        <p className="tabular-nums" style={{ margin: "5px 2px 14px", textAlign: "end", fontSize: textPx(11), color: m.faint }}>
           {reference.length}/{REFERENCE_MAX}
         </p>
         <button

@@ -191,7 +191,7 @@ export function OverviewTab() {
               background: "transparent",
               border: 0,
               borderTop: i ? `0.5px solid ${c.div}` : 0,
-              textAlign: "left",
+              textAlign: "start",
               color: c.ink,
               fontFamily: "inherit",
               lineHeight: "normal",

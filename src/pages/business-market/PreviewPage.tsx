@@ -75,7 +75,7 @@ function PreviewBody() {
 
   return (
     <div style={{ color: c.ink, marginTop: -4 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "-8px 0 10px -10px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBlock: "-8px 10px", marginInline: "-10px 0" }}>
         <button type="button" aria-label="Close preview" onClick={() => navigate(m.tabHref("overview"))} className="tap" style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: 0, color: c.ink }}>
           <X size={22} strokeWidth={2.2} aria-hidden />
         </button>

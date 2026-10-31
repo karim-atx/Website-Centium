@@ -37,6 +37,7 @@ import { useCareNetworkPending } from "../../../components/pro/care/useCareNetwo
 import { serviceAreaLine } from "../../../components/pro/profile/profileModel";
 import { clock12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
+import { appLocale } from "../../../i18n/format";
 
 // Release 3 W6 · MO1 v7 · the professional More (source/gen r19.js moreMenu19
 // over moreMenu18 / moreMenu16 / moreMenu15 / more.js moreScreen; the frame
@@ -98,7 +99,7 @@ function shortWhen(iso: string): string {
   const d = new Date(iso);
   const now = new Date();
   if (d.toDateString() === now.toDateString()) return clock12(d);
-  return d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
+  return d.toLocaleDateString(appLocale("en-US"), { day: "numeric", month: "short" });
 }
 
 function MessagesHero() {
@@ -131,14 +132,14 @@ function MessagesHero() {
       type="button"
       onClick={() => navigate("/app/messages")}
       aria-label={label}
-      className="tap relative block w-full overflow-hidden text-left animate-fade-slide-up"
+      className="tap relative block w-full overflow-hidden text-start animate-fade-slide-up"
       style={{ minHeight: 169, borderRadius: 18, marginBottom: 7, background: heroBg }}
     >
       {!stack && !empty && !s.loading && (
         <span
           aria-hidden
           className="absolute flex items-center justify-center"
-          style={{ top: 16, right: 16, width: 44, height: 44, borderRadius: 13, background: dark ? "rgba(162,200,194,0.18)" : "rgba(79,143,138,0.10)" }}
+          style={{ top: 16, insetInlineEnd: 16, width: 44, height: 44, borderRadius: 13, background: dark ? "rgba(162,200,194,0.18)" : "rgba(79,143,138,0.10)" }}
         >
           <MessagesGlyph color={dark ? "#93C1B9" : "#4F8F8A"} size={28} />
           {s.unread > 0 && (
@@ -146,7 +147,7 @@ function MessagesHero() {
               className="absolute flex items-center justify-center"
               style={{
                 top: -4,
-                right: -4,
+                insetInlineEnd: -4,
                 minWidth: 18,
                 height: 18,
                 padding: "0 5px",
@@ -167,7 +168,7 @@ function MessagesHero() {
         <span
           aria-hidden
           className="absolute"
-          style={{ right: 16, top: 70, bottom: 14, width: "calc(100% - 216px)", borderRadius: 14, background: INK.card, padding: "9px 10px", boxShadow: "0 1px 2px rgba(36,31,27,0.06)", overflow: "hidden" }}
+          style={{ insetInlineEnd: 16, top: 70, bottom: 14, width: "calc(100% - 216px)", borderRadius: 14, background: INK.card, padding: "9px 10px", boxShadow: "0 1px 2px rgba(36,31,27,0.06)", overflow: "hidden" }}
         >
           {card}
         </span>
@@ -218,7 +219,7 @@ function Tile({ icon: I, label, desc, onClick, abs }: { icon: Icon; label: strin
       </span>
       <span className="block text-charcoal" style={{ marginTop: 10, fontSize: textPx(12.5), fontWeight: 700, lineHeight: linePx(16), textWrap: "balance" }}>
         {label}
-        <span className="inline-block" style={{ verticalAlign: -2, marginLeft: 3 }}>
+        <span className="inline-block" style={{ verticalAlign: -2, marginInlineStart: 3 }}>
           <ChevronRight size={12} strokeWidth={2.6} />
         </span>
       </span>
@@ -257,10 +258,10 @@ function List({ rows, onGo }: { rows: Row[]; onGo: (r: Row) => void }) {
           key={r.label}
           type="button"
           onClick={() => onGo(r)}
-          className="tap relative w-full flex items-center text-left"
-          style={{ minHeight: 56.6, padding: "10px 16px 10px 14px", gap: 12 }}
+          className="tap relative w-full flex items-center text-start"
+          style={{ minHeight: 56.6, paddingBlock: "10px", paddingInline: "14px 16px", gap: 12 }}
         >
-          {i > 0 && <span aria-hidden className="absolute top-0 bg-th-ebeaf6 dark:bg-th-aea1dc/[0.16]" style={{ left: 56, right: 16, height: 1 }} />}
+          {i > 0 && <span aria-hidden className="absolute top-0 bg-th-ebeaf6 dark:bg-th-aea1dc/[0.16]" style={{ insetInlineStart: 56, insetInlineEnd: 16, height: 1 }} />}
           <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 10, background: "rgb(var(--th-8e7fd0))" }}>
             <r.icon size={22} strokeWidth={1.25} absoluteStrokeWidth className="text-white" />
           </span>
@@ -273,7 +274,7 @@ function List({ rows, onGo }: { rows: Row[]; onGo: (r: Row) => void }) {
               {r.desc}
             </span>
           </span>
-          <span className="flex items-center shrink-0" style={{ gap: 8, marginLeft: 4 }}>
+          <span className="flex items-center shrink-0" style={{ gap: 8, marginInlineStart: 4 }}>
             {r.trailing}
             <ChevronRight size={14} strokeWidth={2} className="text-th-9a94b3" />
           </span>
@@ -428,7 +429,7 @@ export default function ProfessionalMore() {
       <button
         type="button"
         onClick={() => navigate("/app/subscription")}
-        className="tap w-full flex items-center justify-between text-left"
+        className="tap w-full flex items-center justify-between text-start"
         style={{ gap: 14, borderRadius: 15, padding: "13px 15px", background: "#241F1B" }}
       >
         <span className="flex items-center" style={{ gap: 12 }}>

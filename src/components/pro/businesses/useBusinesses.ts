@@ -8,6 +8,7 @@ import { localIso } from "../../../services/pro/home";
 import { time12 } from "../../../utils/time12";
 import { formatShortDate } from "../../../utils/date";
 import { loadConsoleAccess } from "../../../services/business-console";
+import { appLocale } from "../../../i18n/format";
 
 export interface BusinessesData {
   employments: MyEmployment[];
@@ -80,7 +81,7 @@ export function typeLine(f: BusinessFacts | undefined): string {
 }
 
 /** "Thu 5:30 PM": a class's weekday and 12-hour start. */
-export const classWhen = (c: MyClass) => `${new Date(`${c.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short" })} ${time12(c.startTime)}`;
+export const classWhen = (c: MyClass) => `${new Date(`${c.date}T00:00:00`).toLocaleDateString(appLocale("en-GB"), { weekday: "short" })} ${time12(c.startTime)}`;
 /** "Jun 2026". */
 export const monthYear = (iso: string) => formatShortDate(new Date(iso), { month: "short", year: "numeric" });
 

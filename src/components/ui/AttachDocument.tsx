@@ -3,6 +3,7 @@ import { Camera, FileText, Eye, X } from "lucide-react";
 import { useFilePick, type PickResult } from "../../hooks/useFilePick";
 import { FileViewerSheet } from "../health/FileViewerSheet";
 import type { PrivateBucket } from "../../services/storage";
+import { t } from "../../i18n/core";
 
 /**
  * "Use camera" / "Upload file" for one private document, with its preview.
@@ -30,7 +31,7 @@ export const AttachDocument: React.FC<{
   label: string;
   busyLabel?: string;
   disabled?: boolean;
-}> = ({ bucket, path, pendingName, onClearPending, onFile, onRemove, label, busyLabel = "Uploading…", disabled }) => {
+}> = ({ bucket, path, pendingName, onClearPending, onFile, onRemove, label, busyLabel, disabled }) => {
   const pick = useFilePick(bucket, onFile);
   const [viewing, setViewing] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -55,28 +56,28 @@ export const AttachDocument: React.FC<{
       <input {...pick.fileInputProps} />
       <div className="grid grid-cols-2 gap-2.5">
         <button type="button" onClick={pick.openCamera} disabled={busy || disabled} className={buttonClass}>
-          <Camera size={16} className="shrink-0" /> Use camera
+          <Camera size={16} className="shrink-0" /> {t("Use camera")}
         </button>
         <button type="button" onClick={pick.openFiles} disabled={busy || disabled} className={buttonClass}>
-          <FileText size={16} className="shrink-0" /> {hasDocument ? "Replace file" : "Upload file"}
+          <FileText size={16} className="shrink-0" /> {hasDocument ? t("Replace file") : t("Upload file")}
         </button>
       </div>
 
-      {busy && <p className="text-xs font-semibold text-charcoal-faint mt-2.5">{removing ? "Removing…" : busyLabel}</p>}
-      {pick.error && !busy && <p className="text-xs font-semibold text-status-high mt-2.5">{pick.error}</p>}
+      {busy && <p className="text-xs font-semibold text-charcoal-faint mt-2.5">{removing ? t("Removing…") : busyLabel ?? t("Uploading…")}</p>}
+      {pick.error && !busy && <p className="text-xs font-semibold text-status-high mt-2.5">{t(pick.error)}</p>}
 
       {pendingName && !busy && (
         <div className="flex items-center gap-2 mt-2.5 min-h-[44px] rounded-xl bg-cream-soft px-3">
           <FileText size={14} className="text-charcoal-faint shrink-0" />
           <span className="flex-1 min-w-0 truncate text-xs text-charcoal-soft">
-            {pendingName} · uploads when you save
+            {t("{name} · uploads when you save", { name: pendingName })}
           </span>
           {onClearPending && (
             <button
               type="button"
               onClick={onClearPending}
-              aria-label="Remove the picked file"
-              className="tap w-11 h-11 -mr-3 flex items-center justify-center text-charcoal-faint"
+              aria-label={t("Remove the picked file")}
+              className="tap w-11 h-11 -me-3 flex items-center justify-center text-charcoal-faint"
             >
               <X size={14} />
             </button>
@@ -91,7 +92,7 @@ export const AttachDocument: React.FC<{
             onClick={() => setViewing(true)}
             className="tap inline-flex items-center gap-1.5 min-h-[44px] text-xs font-bold text-primary-deep-text"
           >
-            <Eye size={14} /> View document
+            <Eye size={14} /> {t("View document")}
           </button>
           {onRemove && (
             <button
@@ -100,7 +101,7 @@ export const AttachDocument: React.FC<{
               disabled={disabled}
               className="tap inline-flex items-center min-h-[44px] text-xs font-bold text-status-high disabled:opacity-40"
             >
-              Remove
+              {t("Remove")}
             </button>
           )}
         </div>

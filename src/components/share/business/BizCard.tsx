@@ -109,7 +109,7 @@ export const BizCard: React.FC<BizCardProps> = ({ brand, content: c, format, fil
         aria-hidden
         style={{
           position: "absolute",
-          left: 0,
+          insetInlineStart: 0,
           top: 0,
           width: CARD_W,
           height: h,
@@ -121,7 +121,7 @@ export const BizCard: React.FC<BizCardProps> = ({ brand, content: c, format, fil
           fontFamily: FONT,
           WebkitFontSmoothing: "antialiased",
           color: "#FFFFFF",
-          textAlign: "left",
+          textAlign: "start",
         }}
       >
         <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column", padding: 22, boxSizing: "border-box", textShadow: ts }}>
@@ -193,7 +193,7 @@ export const BizCard: React.FC<BizCardProps> = ({ brand, content: c, format, fil
               {c.rows.map((r) => (
                 <div key={r.key} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "6px 0", borderTop: "1px solid rgba(255,255,255,0.3)", fontSize: 10.5 }}>
                   <span style={{ opacity: 0.86, whiteSpace: "nowrap" }}>{r.k}</span>
-                  <span style={{ fontWeight: 700, textAlign: "right" }}>{r.v}</span>
+                  <span style={{ fontWeight: 700, textAlign: "end" }}>{r.v}</span>
                 </div>
               ))}
             </div>

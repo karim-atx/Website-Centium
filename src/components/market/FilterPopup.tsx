@@ -68,7 +68,7 @@ export const FilterTrigger = React.forwardRef<
         <path d="M7 12h10" />
         <path d="M10 18h4" />
       </svg>
-      {active ? <span aria-hidden style={{ position: "absolute", top: -3, right: -3, width: 9, height: 9, borderRadius: 999, background: dark ? DARK_ACCENT : "#6D50D3", border: `1.5px solid ${m.page}` }} /> : null}
+      {active ? <span aria-hidden style={{ position: "absolute", top: -3, insetInlineEnd: -3, width: 9, height: 9, borderRadius: 999, background: dark ? DARK_ACCENT : "#6D50D3", border: `1.5px solid ${m.page}` }} /> : null}
     </button>
   );
 });
@@ -237,7 +237,7 @@ export const FilterPopup: React.FC<FilterPopupProps> = ({ open, anchor, groups, 
                       display: "flex",
                       alignItems: "center",
                       gap: 9,
-                      textAlign: "left",
+                      textAlign: "start",
                       borderRadius: 8,
                       padding: "9px 10px",
                       cursor: "pointer",

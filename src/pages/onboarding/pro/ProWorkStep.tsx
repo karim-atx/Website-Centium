@@ -12,6 +12,7 @@ import { proLaneId } from "./proLanes";
 import { proChipLabel } from "./proModel";
 import { Field } from "./parts";
 import type { ProStepProps } from "./types";
+import { t, tx } from "../../../i18n/core";
 
 const NearbyMap = lazy(() => import("../../../components/professionals/NearbyMap"));
 
@@ -62,8 +63,8 @@ export const ProWorkStep: React.FC<ProStepProps> = ({ kind, pro, setPro, onNext,
   }, [areaText, pro.area]);
 
   const areaUnmatched = showArea && areaText.trim() !== "" && areaText.trim() !== pro.area?.label;
-  const areaError = tried && areaUnmatched ? "Pick your area from the list, or tap Pin." : null;
-  const codeError = tried && atBusiness && !pro.businessCode.trim() ? "Add the business ID." : null;
+  const areaError = tried && areaUnmatched ? t("Pick your area from the list, or tap Pin.") : null;
+  const codeError = tried && atBusiness && !pro.businessCode.trim() ? t("Add the business ID.") : null;
   const ok = workComplete(pro) && !areaUnmatched;
 
   const pickArea = (a: { label: string; lat: number; lng: number }) => {
@@ -81,31 +82,32 @@ export const ProWorkStep: React.FC<ProStepProps> = ({ kind, pro, setPro, onNext,
         onBack={() => setPinning(false)}
         onConfirm={(c) => {
           const near = nearestArea(c);
+          // "Pinned area" is stored as the area's label (data), so it stays English.
           pickArea({ label: near?.name ?? "Pinned area", lat: c.lat, lng: c.lng });
           setPinning(false);
-          showToast("Pin placed. Address updated.");
+          showToast(t("Pin placed. Address updated."));
         }}
       />
     );
   }
 
-  const homeArea = pro.area?.label ?? "your area";
+  const homeArea = pro.area?.label ?? t("your area");
 
   return (
     <ObStep
       lane={proLaneId(kind)}
       chipLabel={chipLabel}
       step="work"
-      title="Where you work"
-      subtitle="Clients filter by this, so they find you where you actually see people."
+      title={t("Where you work")}
+      subtitle={t("Clients filter by this, so they find you where you actually see people.")}
       onBack={onBack}
       footer={
         <>
           <ObFooter
-            error={tried && !ok ? (codeError ?? areaError ?? (!mode ? "Choose how you work to continue." : null)) : flow && !flow.online ? OB_STRINGS.offlineStep : null}
+            error={tried && !ok ? (codeError ?? areaError ?? (!mode ? t("Choose how you work to continue.") : null)) : flow && !flow.online ? t(OB_STRINGS.offlineStep) : null}
             errorTone={tried && !ok ? "error" : "info"}
             primary={{
-              label: "Continue",
+              label: t("Continue"),
               onClick: () => {
                 setTried(true);
                 if (ok) onNext();
@@ -118,33 +120,33 @@ export const ProWorkStep: React.FC<ProStepProps> = ({ kind, pro, setPro, onNext,
       }
     >
       <ObRows
-        label="How you work"
+        label={t("How you work")}
         rows={WORK_MODES.map((m) => ({
           key: m.value,
           kind: "radio",
-          title: m.title,
-          desc: m.description,
+          title: t(m.title),
+          desc: t(m.description),
           on: mode === m.value,
           onClick: () => setPro((p) => ({ ...p, workMode: m.value as WorkMode, homeVisitKm: m.value === "business" || m.value === "online" ? null : p.homeVisitKm })),
         }))}
       />
       {atBusiness && (
         <ObField
-          label="Business ID"
+          label={t("Business ID")}
           icon={Building2}
           value={pro.businessCode}
           onChange={(e) => setPro((p) => ({ ...p, businessCode: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 12) }))}
-          placeholder="6-character business ID"
+          placeholder={t("6-character business ID")}
           autoCapitalize="characters"
           autoComplete="off"
           error={codeError}
           // Sent on submit (ProLane: request_to_join_business).
-          help="We send your request when you submit. You join once the business approves it and you accept."
+          help={t("We send your request when you submit. You join once the business approves it and you accept.")}
         />
       )}
       {showArea && (
         <>
-          <ObSectionLabel title="Where you see clients" margin="10px 2px 12px" />
+          <ObSectionLabel title={t("Where you see clients")} margin="10px 2px 12px" />
           {/* dc F with no label still draws its empty label row: 6 above the box. */}
           <div className="ob-field" style={{ paddingTop: 6 }}>
             <div style={{ display: "flex", gap: 8 }}>
@@ -159,24 +161,24 @@ export const ProWorkStep: React.FC<ProStepProps> = ({ kind, pro, setPro, onNext,
                     setAreaMenu(true);
                   }}
                   onFocus={() => setAreaMenu(true)}
-                  placeholder="Search your area"
-                  aria-label="Where you see clients"
+                  placeholder={t("Search your area")}
+                  aria-label={t("Where you see clients")}
                   aria-invalid={!!areaError}
                   aria-autocomplete="list"
                   style={{ height: 50 }}
                 />
               </label>
-              <button type="button" onClick={() => setPinning(true)} aria-label="Place the pin on the map" className="obp-pin tap">
+              <button type="button" onClick={() => setPinning(true)} aria-label={t("Place the pin on the map")} className="obp-pin tap">
                 <MapPin size={16} strokeWidth={2.2} aria-hidden />
-                Pin
+                {tx("Pin", "map")}
               </button>
             </div>
             <div className="ob-help" data-err={areaError ? "true" : undefined}>
               <span role={areaError ? "alert" : undefined}>
                 {areaError ??
                   (kind === "physio"
-                    ? "Your clinic. Clients see the area, not the full address, until they book."
-                    : "Clients see the area, not the full address.")}
+                    ? t("Your clinic. Clients see the area, not the full address, until they book.")
+                    : t("Clients see the area, not the full address."))}
               </span>
             </div>
           </div>
@@ -197,10 +199,10 @@ export const ProWorkStep: React.FC<ProStepProps> = ({ kind, pro, setPro, onNext,
       {showHomeVisits && (
         <>
           <Field
-            label="Home visits cover"
-            tag="Optional"
-            value={pro.homeVisitKm ? `Up to ${pro.homeVisitKm} km from ${homeArea}` : ""}
-            placeholder="No home visits"
+            label={t("Home visits cover")}
+            tag={t("Optional")}
+            value={pro.homeVisitKm ? t("Up to {km} km from {area}", { km: pro.homeVisitKm, area: homeArea }) : ""}
+            placeholder={t("No home visits")}
             trailingIcon={ChevronDown}
             onPress={(el) => setKmMenu(el)}
           />
@@ -212,8 +214,8 @@ export const ProWorkStep: React.FC<ProStepProps> = ({ kind, pro, setPro, onNext,
             variant="field"
             selected={pro.homeVisitKm ? String(pro.homeVisitKm) : "none"}
             options={[
-              { value: "none", label: "No home visits" },
-              ...HOME_VISIT_KM.map((km) => ({ value: String(km), label: `Up to ${km} km from ${homeArea}` })),
+              { value: "none", label: t("No home visits") },
+              ...HOME_VISIT_KM.map((km) => ({ value: String(km), label: t("Up to {km} km from {area}", { km, area: homeArea }) })),
             ]}
             onSelect={(v) => setPro((p) => ({ ...p, homeVisitKm: v === "none" ? null : Number(v) }))}
           />
@@ -238,7 +240,7 @@ const PlacePin: React.FC<{
   const near = nearestArea(view);
   const locate = () => {
     if (!navigator.geolocation) {
-      setLocError("Location isn't available on this device.");
+      setLocError(t("Location isn't available on this device."));
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -248,7 +250,7 @@ const PlacePin: React.FC<{
         setView(c);
         setLocError(null);
       },
-      () => setLocError("Allow location to use where you are, or move the map."),
+      () => setLocError(t("Allow location to use where you are, or move the map.")),
       { timeout: 10000 }
     );
   };
@@ -257,11 +259,11 @@ const PlacePin: React.FC<{
       lane={proLaneId(kind)}
       chipLabel={chipLabel}
       step="work"
-      title="Place the pin"
-      subtitle="Drag the map so the pin sits where you see clients."
+      title={t("Place the pin")}
+      subtitle={t("Drag the map so the pin sits where you see clients.")}
       onBack={onBack}
       saveExit={false}
-      footer={<ObFooter primary={{ label: "Confirm pin", onClick: () => onConfirm(view) }} />}
+      footer={<ObFooter primary={{ label: t("Confirm pin"), onClick: () => onConfirm(view) }} />}
     >
       <div style={{ position: "relative", height: 420, borderRadius: 20, overflow: "hidden", marginBottom: 12, background: "var(--ob-soft)" }}>
         <Suspense fallback={<div style={{ position: "absolute", inset: 0, background: "var(--ob-soft)" }} />}>
@@ -270,26 +272,26 @@ const PlacePin: React.FC<{
             zoom={14}
             dark={dark}
             onViewChange={(c) => setView(c)}
-            ariaLabel="Map. Drag to move the pin to where you see clients."
+            ariaLabel={t("Map. Drag to move the pin to where you see clients.")}
             className="absolute inset-0"
             hideControls
           />
         </Suspense>
-        <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-100%)", display: "flex", color: "var(--ob-brand)", pointerEvents: "none" }}>
+        <span style={{ position: "absolute", insetInlineStart: "50%", top: "50%", transform: "translate(-50%,-100%)", display: "flex", color: "var(--ob-brand)", pointerEvents: "none" }}>
           <MapPin size={40} strokeWidth={2} aria-hidden />
         </span>
         <span
-          style={{ position: "absolute", left: "50%", top: "50%", width: 10, height: 4, borderRadius: 999, background: "rgba(0,0,0,0.25)", transform: "translate(-50%,-1px)", pointerEvents: "none" }}
+          style={{ position: "absolute", insetInlineStart: "50%", top: "50%", width: 10, height: 4, borderRadius: 999, background: "rgba(0,0,0,0.25)", transform: "translate(-50%,-1px)", pointerEvents: "none" }}
         />
         <button
           type="button"
-          aria-label="Use current location"
+          aria-label={t("Use current location")}
           onClick={locate}
           className="tap"
           // 12 from the edge as drawn, lifted above the map's credit line (it must stay visible).
           style={{
             position: "absolute",
-            right: 12,
+            insetInlineEnd: 12,
             bottom: 30,
             width: 44,
             height: 44,
@@ -307,7 +309,7 @@ const PlacePin: React.FC<{
       </div>
       <p className="obp-maparea">
         <MapPin size={14} aria-hidden style={{ color: "var(--ob-accent)", flex: "none" }} />
-        {near ? `Near ${near.name}` : "Clients see this area, about 1 km across."}
+        {near ? t("Near {place}", { place: near.name }) : t("Clients see this area, about 1 km across.")}
       </p>
       {locError && (
         <p role="alert" className="obp-maperr">

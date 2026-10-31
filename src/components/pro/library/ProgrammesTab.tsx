@@ -393,7 +393,7 @@ export const ProgrammesTab: React.FC = () => {
       {chip === "exercises" && fabLabel && (
         <span
           role="tooltip"
-          className="fixed z-30 bottom-[calc(env(safe-area-inset-bottom)+170px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+20px)]"
+          className="fixed z-30 bottom-[calc(env(safe-area-inset-bottom)+170px+var(--active-bar,0px))] end-[calc(var(--app-gutter)+20px)]"
           style={{ background: INK.ch, color: INK.card, borderRadius: 10, padding: "6px 10px", fontSize: textPx(12), fontWeight: 700 }}
         >
           Create exercise

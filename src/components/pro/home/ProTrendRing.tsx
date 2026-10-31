@@ -398,7 +398,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
           <span className="truncate">{p.focusLabel}</span>
           <ChevronDown size={13} strokeWidth={2} style={{ color: INK.chF, ...NO_ICON_SCALE }} aria-hidden />
         </button>
-        <div role="tablist" aria-label="Range" className="flex items-center ml-auto" style={{ gap: 3, padding: 3, borderRadius: 12, background: dark ? "#242730" : "#F3F3FD" }}>
+        <div role="tablist" aria-label="Range" className="flex items-center ms-auto" style={{ gap: 3, padding: 3, borderRadius: 12, background: dark ? "#242730" : "#F3F3FD" }}>
           {(["today", "week", "month"] as HubRange[]).map((r) => {
             const on = r === p.range;
             return (
@@ -461,7 +461,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
           />
           <div
             className="absolute flex flex-col items-center text-center"
-            style={{ left: "50%", top: "47%", transform: "translate(-50%, -50%)", width: "64%", pointerEvents: "none" }}
+            style={{ insetInlineStart: "50%", top: "47%", transform: "translate(-50%, -50%)", width: "64%", pointerEvents: "none" }}
           >
             <span style={{ fontSize: Math.round(bigSize * k), fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1, color: INK.ch, whiteSpace: "nowrap" }}>{big}</span>
             <span style={{ fontSize: textPx(12 * k), fontWeight: 700, color: INK.chS, marginTop: 5 * k, lineHeight: 1.25 }}>{caption}</span>
@@ -514,7 +514,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
                 onContextMenu={(e) => e.preventDefault()}
                 onClick={act.onClick}
                 className="tap absolute flex items-center justify-center"
-                style={{ left: `${((q[0] / G.vb) * 100).toFixed(2)}%`, top: `${((q[1] / G.vb) * 100).toFixed(2)}%`, width: 48, height: 48, margin: "-24px 0 0 -24px", opacity: dim ? 0.45 : 1 }}
+                style={{ left: `${((q[0] / G.vb) * 100).toFixed(2)}%`, top: `${((q[1] / G.vb) * 100).toFixed(2)}%`, width: 48, height: 48, marginBlock: "-24px 0", marginInline: "-24px 0", opacity: dim ? 0.45 : 1 }}
               >
                 <Icon size={20} strokeWidth={1.75} aria-hidden style={{ color: j === 0 ? INK.onFill : INK.prAccent, ...NO_ICON_SCALE }} />
                 {tip === j && (
@@ -523,7 +523,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
                     className="absolute"
                     style={{
                       bottom: 50,
-                      left: "50%",
+                      insetInlineStart: "50%",
                       transform: "translateX(-50%)",
                       whiteSpace: "nowrap",
                       padding: "6px 10px",
@@ -546,7 +546,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
               role="tooltip"
               className="absolute"
               style={{
-                left: "2%",
+                insetInlineStart: "2%",
                 top: -46,
                 width: "56%",
                 zIndex: 5,
@@ -569,7 +569,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
               role="dialog"
               aria-label="Session preview"
               className="absolute"
-              style={{ left: "-2%", right: "-2%", top: "22%", zIndex: 6, borderRadius: 18, background: INK.card, border: "1px solid rgba(143,104,246,0.22)", boxShadow: "0 16px 40px rgba(0,0,0,0.22)", padding: 14 }}
+              style={{ insetInlineStart: "-2%", insetInlineEnd: "-2%", top: "22%", zIndex: 6, borderRadius: 18, background: INK.card, border: "1px solid rgba(143,104,246,0.22)", boxShadow: "0 16px 40px rgba(0,0,0,0.22)", padding: 14 }}
               onPointerDown={(e) => e.stopPropagation()}
             >
               <div className="flex items-center" style={{ gap: 10 }}>

@@ -22,7 +22,7 @@ export function useOverlayStrip(): [React.ReactNode, (text: string, tone?: Strip
   }, [s]);
   const node = s
     ? createPortal(
-        <div style={{ position: "fixed", left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 95, top: "calc(env(safe-area-inset-top) + 12px)", padding: "0 16px", pointerEvents: "none" }}>
+        <div style={{ position: "fixed", insetInlineStart: 0, insetInlineEnd: 0, display: "flex", justifyContent: "center", zIndex: 95, top: "calc(env(safe-area-inset-top) + 12px)", padding: "0 16px", pointerEvents: "none" }}>
           <div style={{ width: "100%", maxWidth: 398, pointerEvents: "auto" }} data-strip>
             <ConfirmationStrip key={s.n} text={s.text} tone={s.tone} action="Done" onAction={() => setS(null)} />
           </div>

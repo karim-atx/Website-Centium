@@ -9,6 +9,8 @@
 // is null when "Show message previews" is off. Nothing here repeats those
 // rules: a row means "show it".
 
+import { t, tn } from "../../i18n/core";
+
 export interface MessagePopup {
   messageId: string;
   threadId: string;
@@ -54,20 +56,20 @@ export function parseMessagePopup(data: unknown): MessagePopup | null {
  * sender (or the thread's name, by my_conversations()'s masking) otherwise.
  */
 export function popupTitle(p: MessagePopup): string {
-  if (p.isSupport) return "Centium Support";
+  if (p.isSupport) return t("Centium Support");
   if (p.threadKind === "group") {
-    const group = p.threadName ?? "Group";
+    const group = p.threadName ?? t("Group");
     return p.senderLabel ? `${group} · ${p.senderLabel}` : group;
   }
-  return p.senderLabel ?? p.threadName ?? "New message";
+  return p.senderLabel ?? p.threadName ?? t("New message");
 }
 
 /** The pill's line: the preview, else what was sent, else "New message". */
 export function popupLine(p: MessagePopup): string {
   if (p.preview) return p.preview;
-  if (p.isVoiceNote) return "Voice note";
-  if (p.hasAttachment) return "Attachment";
-  return "New message";
+  if (p.isVoiceNote) return t("Voice note");
+  if (p.hasAttachment) return t("Attachment");
+  return t("New message");
 }
 
 export interface PopupCard {
@@ -95,7 +97,7 @@ export function enqueuePopup(queue: readonly PopupCard[], p: MessagePopup): Popu
   if (i >= 0) {
     const c = queue[i];
     const count = c.count + 1;
-    const next = { ...c, title: popupTitle(p), line: `${count} new messages`, count, stamp: p.messageId };
+    const next = { ...c, title: popupTitle(p), line: tn(count, "{n} new message", "{n} new messages"), count, stamp: p.messageId };
     return queue.map((x, j) => (j === i ? next : x));
   }
   const card: PopupCard = { threadId: p.threadId, title: popupTitle(p), line: popupLine(p), count: 1, isSupport: p.isSupport, stamp: p.messageId };

@@ -68,7 +68,7 @@ export const PlanSummary: React.FC<{ name: string; price: string; rows: { k: str
         {rows.map((r) => (
           <div key={r.k} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
             <span style={{ color: m.ink2, flexShrink: 0 }}>{r.k}</span>
-            <span style={{ fontWeight: 700, textAlign: "right", minWidth: 0 }}>{r.v}</span>
+            <span style={{ fontWeight: 700, textAlign: "end", minWidth: 0 }}>{r.v}</span>
           </div>
         ))}
       </div>
@@ -84,7 +84,7 @@ export const PlanSummary: React.FC<{ name: string; price: string; rows: { k: str
  */
 export const ClassTicketSummary: React.FC<{ title: string; place: string; when: string; booked: string; pct: number; price: string }> = ({ title, place, when, booked, pct, price }) => {
   const m = marketPalette(useIsDark());
-  const notch: React.CSSProperties = { position: "absolute", right: 65, width: 14, height: 14, borderRadius: 999, background: m.sbody };
+  const notch: React.CSSProperties = { position: "absolute", insetInlineEnd: 65, width: 14, height: 14, borderRadius: 999, background: m.sbody };
   return (
     <div role="group" aria-label="Class" style={{ position: "relative", display: "flex", borderRadius: 14, background: m.sgrey, overflow: "hidden", color: m.ink }}>
       <div style={{ flex: 1, minWidth: 0, padding: "12px 14px" }}>
@@ -97,7 +97,7 @@ export const ClassTicketSummary: React.FC<{ title: string; place: string; when: 
           <div style={{ height: "100%", width: `${Math.max(0, Math.min(100, pct))}%`, background: m.segactive }} />
         </div>
       </div>
-      <div style={{ width: 72, flexShrink: 0, borderLeft: `1.5px dashed ${m.fill}`, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 72, flexShrink: 0, borderInlineStart: `1.5px dashed ${m.fill}`, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <span style={{ fontSize: textPx(18), fontWeight: 800, color: m.pdark, whiteSpace: "nowrap" }}>{price}</span>
       </div>
       <span aria-hidden style={{ ...notch, top: -7 }} />
@@ -284,11 +284,11 @@ export const BookingDone: React.FC<BookingDoneProps> = ({ open, title, body, row
             {title}
           </h1>
           <p style={{ margin: 0, fontSize: textPx(13), lineHeight: linePx(19.5), color: m.ink2, maxWidth: 280 }}>{body}</p>
-          <div style={{ marginTop: 14, width: "100%", borderRadius: 16, background: m.soft, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6, fontSize: textPx(12.5), textAlign: "left", boxSizing: "border-box" }}>
+          <div style={{ marginTop: 14, width: "100%", borderRadius: 16, background: m.soft, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6, fontSize: textPx(12.5), textAlign: "start", boxSizing: "border-box" }}>
             {rows.map((r) => (
               <div key={r.k} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <span style={{ color: m.ink2, flexShrink: 0 }}>{r.k}</span>
-                <span style={{ fontWeight: 700, textAlign: "right", minWidth: 0 }}>{r.v}</span>
+                <span style={{ fontWeight: 700, textAlign: "end", minWidth: 0 }}>{r.v}</span>
               </div>
             ))}
           </div>

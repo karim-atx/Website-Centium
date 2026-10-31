@@ -7,15 +7,17 @@
  * refuse with (ATX49), and `free_period_ends_at` says when.
  */
 
+import { tk, tn } from "../../i18n/core";
+
 /** Shown in place of the invite/accept action once the month is over. */
-export const FREE_PERIOD_ENDED = "Your free month has ended. Upgrade to connect new clients.";
+export const FREE_PERIOD_ENDED = tk("Your free month has ended. Upgrade to connect new clients.");
 
 /**
  * Shown to a CLIENT whose code redemption was refused with ATX49. Never says
  * why: a professional's plan is their own business, so this is the same
  * sentence a full roster gets.
  */
-export const NOT_ACCEPTING_CLIENTS = "This professional isn't accepting new clients right now.";
+export const NOT_ACCEPTING_CLIENTS = tk("This professional isn't accepting new clients right now.");
 
 /** The pieces of my_professional_plan() the copy needs. */
 export interface FreePeriodFacts {
@@ -40,7 +42,7 @@ export function freePeriodLine(plan: FreePeriodFacts | null, now: Date = new Dat
   const msLeft = new Date(plan.freePeriodEndsAt).getTime() - now.getTime();
   if (!Number.isFinite(msLeft)) return null;
   const days = Math.max(1, Math.ceil(msLeft / DAY_MS));
-  return `Free plan: ${days} ${days === 1 ? "day" : "days"} left to connect clients`;
+  return tn(days, "Free plan: {n} day left to connect clients", "Free plan: {n} days left to connect clients");
 }
 
 /** Whether the invite and accept paths should show FREE_PERIOD_ENDED instead. */

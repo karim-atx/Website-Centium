@@ -332,7 +332,7 @@ function InviteRow({ invite, onOpen }: { invite: ExistingTeamInvite; onOpen: () 
       type="button"
       onClick={onOpen}
       className="market-focus"
-      style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: 44, borderRadius: 16, background: m.pale, padding: "12px 14px", border: 0, textAlign: "left", font: "inherit", color: m.pdark, cursor: "pointer" }}
+      style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: 44, borderRadius: 16, background: m.pale, padding: "12px 14px", border: 0, textAlign: "start", font: "inherit", color: m.pdark, cursor: "pointer" }}
     >
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: "block", fontSize: px(12.5), lineHeight: lh(18), fontWeight: 700 }}>{`Join ${invite.businessName || "a gym"}'s team?`}</span>
@@ -379,7 +379,7 @@ function GymCard({ o, applied, onApply }: { o: Opportunity; applied: boolean; on
         {rows.map(([k, v], i) => (
           <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: i ? `0.5px solid ${m.div}` : 0, fontSize: px(12) }}>
             <dt style={{ color: m.faint }}>{k}</dt>
-            <dd style={{ margin: 0, fontWeight: 700, textAlign: "right" }}>{v}</dd>
+            <dd style={{ margin: 0, fontWeight: 700, textAlign: "end" }}>{v}</dd>
           </div>
         ))}
       </dl>

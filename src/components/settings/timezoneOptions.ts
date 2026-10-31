@@ -1,3 +1,5 @@
+import { ARABIC_LOCALE, appLocale } from "../../i18n/format";
+import { getLanguage } from "../../i18n/core";
 // MO1.8 #64 / MO1.8.13 O11: the time zone label "(GMT±HH:MM) City", from
 // the engine's own data (Intl), with the offset in force right now (so it is
 // DST-aware). The board shows Rio Branco as GMT-03:00; it is -05:00, and this
@@ -7,7 +9,7 @@
 /** Minutes east of UTC for `zone` at `at`, or null when the engine can't say. */
 export function zoneOffsetMinutes(zone: string, at: Date = new Date()): number | null {
   try {
-    const parts = new Intl.DateTimeFormat("en-US", {
+    const parts = new Intl.DateTimeFormat(appLocale("en-US"), {
       timeZone: zone,
       hourCycle: "h23",
       year: "numeric",
@@ -43,10 +45,29 @@ export function zoneCity(zone: string): string {
   return last.replace(/_/g, " ");
 }
 
+/**
+ * The place as the app's language names it. In Arabic, the engine's own
+ * short name («توقيت لبنان», «توقيت نيويورك»), so nothing is translated by
+ * hand; where the engine has only an offset (UTC, Etc/*) or nothing, the
+ * English city. In English, the city.
+ */
+export function zonePlace(zone: string, lang: string = getLanguage()): string {
+  if (lang !== "ar") return zoneCity(zone);
+  try {
+    const name = new Intl.DateTimeFormat(ARABIC_LOCALE, { timeZone: zone, timeZoneName: "shortGeneric" })
+      .formatToParts(new Date())
+      .find((p) => p.type === "timeZoneName")?.value;
+    if (name && !/GMT|UTC|غرينتش|\d/.test(name)) return name;
+  } catch {
+    // An engine without the zone or the option: the city.
+  }
+  return zoneCity(zone);
+}
+
 /** "(GMT+03:00) Riyadh". A zone the engine can't resolve shows its city only. */
-export function zoneDisplay(zone: string, at: Date = new Date()): string {
+export function zoneDisplay(zone: string, at: Date = new Date(), lang: string = getLanguage()): string {
   const minutes = zoneOffsetMinutes(zone, at);
-  const city = zoneCity(zone);
+  const city = zonePlace(zone, lang);
   return minutes === null ? city : `(GMT${formatOffset(minutes)}) ${city}`;
 }
 
@@ -66,14 +87,15 @@ export function buildZoneOptions(
   all: string[],
   stored: string | null,
   device: string | null,
-  at: Date = new Date()
+  at: Date = new Date(),
+  lang: string = getLanguage()
 ): ZoneOption[] {
   const base = all.length > 0 ? all : ([stored, device].filter(Boolean) as string[]);
   const zones = new Set(base.filter((z) => !z.startsWith("Etc/") || z === stored));
   if (stored) zones.add(stored);
   return [...zones]
-    .map((zone) => ({ zone, label: zoneDisplay(zone, at), city: zoneCity(zone) }))
-    .sort((a, b) => a.city.localeCompare(b.city, "en") || a.zone.localeCompare(b.zone, "en"));
+    .map((zone) => ({ zone, label: zoneDisplay(zone, at, lang), city: zonePlace(zone, lang) }))
+    .sort((a, b) => a.city.localeCompare(b.city, lang === "ar" ? "ar" : "en") || a.zone.localeCompare(b.zone, "en"));
 }
 
 /**
@@ -88,10 +110,11 @@ export function filterZones(options: ZoneOption[], query: string): ZoneOption[] 
   // Rank: city starts with it, then a later word of the city, then the zone
   // name; A–Z within each (so "Ri" puts Riga, Rio Branco, Riyadh first).
   const rank = (o: ZoneOption): number => {
-    const city = o.city.toLowerCase();
+    // In Arabic the shown name and the English city both match.
+    const names = [o.city.toLowerCase(), zoneCity(o.zone).toLowerCase()];
     const zone = o.zone.toLowerCase().replace(/_/g, " ");
-    if (city.startsWith(q)) return 0;
-    if (city.split(/[\s-]+/).some((w) => w.startsWith(q))) return 1;
+    if (names.some((n) => n.startsWith(q))) return 0;
+    if (names.some((n) => n.split(/[\s-]+/).some((w) => w.startsWith(q)))) return 1;
     const segs = zone.split("/");
     return segs.some((_, i) => segs.slice(i).join("/").startsWith(q)) ? 2 : -1;
   };

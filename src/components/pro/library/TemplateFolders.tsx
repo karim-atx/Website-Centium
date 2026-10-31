@@ -149,7 +149,7 @@ export const TemplateFolders: React.FC<{
     const family = themedFamily(folderFamily(folder, workoutTemplateFolders.indexOf(folder)), dark);
     const item: DragItem = { kind: "folder", id: folder.id, parentId: folder.parentId ?? null, index };
     return (
-      <div key={folder.id} data-dnd-folder-block data-flip={`f:${folder.id}`} className="flex flex-col gap-1.5" style={{ marginLeft: depth * 16, display: hidden ? "none" : undefined }}>
+      <div key={folder.id} data-dnd-folder-block data-flip={`f:${folder.id}`} className="flex flex-col gap-1.5" style={{ marginInlineStart: depth * 16, display: hidden ? "none" : undefined }}>
         <FolderHeader
           folder={folder}
           family={family}
@@ -175,7 +175,7 @@ export const TemplateFolders: React.FC<{
           <div className="flex flex-col gap-1.5">
             {inside.length > 0 && <div>{inside.map(renderTemplate)}</div>}
             {addingSubfolderTo === folder.id && (
-              <div className="mb-2" style={{ marginLeft: 16 }}>
+              <div className="mb-2" style={{ marginInlineStart: 16 }}>
                 <div className="flex gap-2 mb-2">
                   <input
                     autoFocus

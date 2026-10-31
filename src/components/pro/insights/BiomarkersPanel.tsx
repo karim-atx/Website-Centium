@@ -3,6 +3,7 @@ import { ArrowDownRight, ArrowUpRight, ChevronRight, ClipboardPlus, FileText, Fl
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
+import { isRtl } from "../../../i18n/core";
 import { SegmentedTabs } from "../../ui/SegmentedTabs";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { BottomSheet } from "../../ui/BottomSheet";
@@ -377,7 +378,10 @@ const Spark: React.FC<{ m: Marker; t0: number; t1: number }> = ({ m, t0, t1 }) =
   const lo = m.low ?? 0;
   const mx = Math.max(...vals, hi) * 1.05;
   const mn = lo === 0 ? Math.min(...vals) * 0.6 : Math.min(...vals, lo) * 0.95;
-  const X = (d: string) => 3 + ((new Date(d).getTime() - t0) / Math.max(1, t1 - t0)) * (W - 6);
+  // Round F (F10): in right to left, time runs from right to left (every x mirrored).
+  const rtl = isRtl();
+  const ux = (d: string) => 3 + ((new Date(d).getTime() - t0) / Math.max(1, t1 - t0)) * (W - 6);
+  const X = (d: string) => (rtl ? W - ux(d) : ux(d));
   const Y = (v: number) => 3 + ((mx - Math.max(mn, Math.min(mx, v))) / (mx - mn || 1)) * (H - 6);
   return (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden style={{ flexShrink: 0, borderRadius: 6 }}>
@@ -396,7 +400,7 @@ const MarkerRow: React.FC<{ m: Marker; now: number; onOpen: () => void }> = ({ m
   const t0 = new Date(m.points[0].date).getTime() - 864e5 * 30;
   const t1 = now;
   return (
-    <button type="button" onClick={onOpen} className="tap w-full flex items-center text-left" style={{ gap: 10, background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, padding: "11px 12px", marginBottom: 8, minHeight: 64 }}>
+    <button type="button" onClick={onOpen} className="tap w-full flex items-center text-start" style={{ gap: 10, background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, padding: "11px 12px", marginBottom: 8, minHeight: 64 }}>
       <span className="flex-1 min-w-0">
         <span className="block" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>
           {m.name}
@@ -406,7 +410,7 @@ const MarkerRow: React.FC<{ m: Marker; now: number; onOpen: () => void }> = ({ m
         </span>
       </span>
       <Spark m={m} t0={t0} t1={t1} />
-      <span className="text-right shrink-0" style={{ minWidth: 58 }}>
+      <span className="text-end shrink-0" style={{ minWidth: 58 }}>
         <span className="block" style={{ fontSize: textPx(16), fontWeight: 800, color: statusInk(m.status, dark), fontVariantNumeric: "tabular-nums" }}>
           {last.value}
         </span>
@@ -586,7 +590,7 @@ const MarkerTrend: React.FC<{
           .reverse()
           .slice(0, all ? undefined : 3)
           .map((x, i) => (
-            <button key={x.id} type="button" onClick={() => setSheet(x)} className="tap w-full flex items-center text-left" style={{ gap: 10, padding: "11px 0", borderTop: i ? `1px solid ${INK.b06}` : "none", minHeight: 44 }}>
+            <button key={x.id} type="button" onClick={() => setSheet(x)} className="tap w-full flex items-center text-start" style={{ gap: 10, padding: "11px 0", borderTop: i ? `1px solid ${INK.b06}` : "none", minHeight: 44 }}>
               <span style={{ width: 10, height: 10, borderRadius: 9999, background: statusInk(markerStatus(x.value, x.low ?? m.low, x.high ?? m.high), dark), flexShrink: 0 }} />
               <span className="flex-1 min-w-0">
                 <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 700, color: INK.ch }}>
@@ -659,14 +663,14 @@ const ResultSheet: React.FC<{ point: Point | null; m: Marker; clinical: boolean;
           {rows.map(([l, v], j) => (
             <div key={l} className="flex justify-between" style={{ gap: 12, padding: "10px 0", borderTop: j ? `1px solid ${INK.b06}` : "none" }}>
               <span style={{ fontSize: textPx(12.5), color: INK.chF, flexShrink: 0 }}>{l}</span>
-              <span className="text-right" style={{ fontSize: textPx(13), fontWeight: 700, color: l === "Status" ? statusInk(st, dark) : INK.ch }}>
+              <span className="text-end" style={{ fontSize: textPx(13), fontWeight: 700, color: l === "Status" ? statusInk(st, dark) : INK.ch }}>
                 {v}
               </span>
             </div>
           ))}
         </div>
         {point.filePath && (
-          <button type="button" onClick={() => setViewing(true)} className="tap w-full flex items-center text-left" style={{ gap: 12, borderRadius: 14, background: INK.soft, padding: "10px 12px", marginTop: 8, minHeight: 44 }}>
+          <button type="button" onClick={() => setViewing(true)} className="tap w-full flex items-center text-start" style={{ gap: 12, borderRadius: 14, background: INK.soft, padding: "10px 12px", marginTop: 8, minHeight: 44 }}>
             <FileText size={18} strokeWidth={1.75} aria-hidden style={{ color: INK.chS }} />
             <span className="flex-1">
               <span className="block" style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>
@@ -748,7 +752,7 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
       />
       <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 10 }}>
         {chosen.map((m, i) => (
-          <span key={m.key} className="inline-flex items-center" style={{ gap: 6, height: 30, padding: "0 4px 0 10px", borderRadius: 10, background: INK.card, border: `1.5px solid ${cols[i]}`, fontSize: textPx(12), fontWeight: 700, color: INK.ch }}>
+          <span key={m.key} className="inline-flex items-center" style={{ gap: 6, height: 30, paddingBlock: "0", paddingInline: "10px 4px", borderRadius: 10, background: INK.card, border: `1.5px solid ${cols[i]}`, fontSize: textPx(12), fontWeight: 700, color: INK.ch }}>
             <span style={{ width: 8, height: 8, borderRadius: 9999, background: cols[i] }} />
             {short(m)}
             {chosen.length > 1 && (
@@ -944,7 +948,7 @@ const TestPage: React.FC<{
               const prev = idx > 0 ? m.points[idx - 1] : null;
               const line = statusLine(m, pt);
               return (
-                <button key={m.key} type="button" onClick={() => setOpen(m)} className="tap w-full flex items-center text-left" style={{ gap: 10, padding: "10px 0", borderTop: i ? `1px solid ${INK.b06}` : "none", marginTop: i ? 0 : 6, minHeight: 44 }}>
+                <button key={m.key} type="button" onClick={() => setOpen(m)} className="tap w-full flex items-center text-start" style={{ gap: 10, padding: "10px 0", borderTop: i ? `1px solid ${INK.b06}` : "none", marginTop: i ? 0 : 6, minHeight: 44 }}>
                   <span className="flex-1 min-w-0">
                     <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 700, color: INK.ch }}>
                       {m.name}
@@ -1008,8 +1012,8 @@ const CompareTests: React.FC<{ a: LabPanel; b: { id: string; date: string }; mar
       <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch, marginBottom: 6 }}>{`${dayLabel(a.date)} vs ${dayLabel(b.date)}`}</p>
       <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1fr) auto auto auto", gap: "6px 10px", fontSize: textPx(12) }}>
         <span style={{ color: INK.chF, fontWeight: 600 }}>Result</span>
-        <span style={{ color: INK.chF, fontWeight: 600, textAlign: "right" }}>{dayLabel(a.date)}</span>
-        <span style={{ color: INK.chF, fontWeight: 600, textAlign: "right" }}>{dayLabel(b.date)}</span>
+        <span style={{ color: INK.chF, fontWeight: 600, textAlign: "end" }}>{dayLabel(a.date)}</span>
+        <span style={{ color: INK.chF, fontWeight: 600, textAlign: "end" }}>{dayLabel(b.date)}</span>
         <span />
         {both.map(({ m, pa, pb }) => {
           const d = (pb as Point).value - (pa as Point).value;
@@ -1018,9 +1022,9 @@ const CompareTests: React.FC<{ a: LabPanel; b: { id: string; date: string }; mar
           return (
             <React.Fragment key={m.key}>
               <span className="truncate" style={{ color: INK.ch, fontWeight: 600 }}>{m.name}</span>
-              <span style={{ textAlign: "right", color: INK.chS }}>{(pa as Point).value}</span>
-              <span style={{ textAlign: "right", color: INK.ch, fontWeight: 700 }}>{(pb as Point).value}</span>
-              <span style={{ textAlign: "right", fontWeight: 800, color: toward ? INK.good : away ? INK.hi : INK.chF }}>{d === 0 ? "0" : signed(d)}</span>
+              <span style={{ textAlign: "end", color: INK.chS }}>{(pa as Point).value}</span>
+              <span style={{ textAlign: "end", color: INK.ch, fontWeight: 700 }}>{(pb as Point).value}</span>
+              <span style={{ textAlign: "end", fontWeight: 800, color: toward ? INK.good : away ? INK.hi : INK.chF }}>{d === 0 ? "0" : signed(d)}</span>
             </React.Fragment>
           );
         })}

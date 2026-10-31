@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { REFUND_POLICY_LABEL, REFUND_POLICY_PATH } from "../../marketing/legal/refund";
+import { t } from "../../i18n/core";
 
 /**
  * Round F (DN, F6): the Refund and cancellation policy link every plan screen
@@ -15,7 +16,7 @@ export function RefundPolicyLink({ style }: { style?: CSSProperties }) {
       data-refund-policy-link
       style={{ color: "inherit", fontWeight: 700, textDecoration: "underline", textUnderlineOffset: "2px", ...style }}
     >
-      {REFUND_POLICY_LABEL}
+      {t(REFUND_POLICY_LABEL)}
     </a>
   );
 }

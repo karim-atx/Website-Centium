@@ -593,7 +593,7 @@ export const OverviewTab: React.FC = () => {
               <div
                 key={s.l}
                 className="text-center px-[4px] min-w-0"
-                style={{ borderLeft: i ? `1px solid ${v("divider")}` : "none" }}
+                style={{ borderInlineStart: i ? `1px solid ${v("divider")}` : "none" }}
               >
                 <p
                   className="text-[10.5px] font-bold whitespace-nowrap"
@@ -739,7 +739,7 @@ const TopProducts: React.FC<{ rows: TopProduct[] }> = ({ rows }) => {
                   />
                 </span>
               </span>
-              <span className="text-right" aria-hidden>
+              <span className="text-end" aria-hidden>
                 <span
                   className="block text-[15px] font-extrabold leading-[18px] rv-num"
                   style={{ color: v("ink") }}

@@ -1,3 +1,4 @@
+import { tk } from "../../i18n/core";
 // Byte-level checks on a course PDF, before and after it is rewritten. Pure,
 // so the rule "no metadata survives" is tested on its own — the same split the
 // forum's photoBytes.ts uses for the same reason.
@@ -94,13 +95,13 @@ export function checkPdfInput(bytes: Uint8Array): PdfRefusal {
 export function describePdfRefusal(reason: Exclude<PdfRefusal, { ok: true }>["reason"]): string {
   switch (reason) {
     case "empty":
-      return "That file is empty.";
+      return tk("That file is empty.");
     case "too-large":
-      return "PDFs can be up to 20 MB.";
+      return tk("PDFs can be up to 20 MB.");
     case "not-pdf":
-      return "That isn't a PDF. Choose a .pdf file.";
+      return tk("That isn't a PDF. Choose a .pdf file.");
     case "metadata-remains":
       // The author can act on this: export a fresh copy, or flatten it.
-      return "We couldn't strip the hidden details from that PDF, so it wasn't uploaded. Try exporting it again from your editor.";
+      return tk("We couldn't strip the hidden details from that PDF, so it wasn't uploaded. Try exporting it again from your editor.");
   }
 }

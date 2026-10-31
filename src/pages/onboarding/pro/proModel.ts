@@ -4,6 +4,7 @@
 // pure rules the steps share. No React and no storage, so it is tested in node.
 
 import type { ProfessionalSubtype } from "../../../types";
+import { t, tk, tx } from "../../../i18n/core";
 
 /**
  * The handoff's own short keys for the specialties. Release 3 (Professional UI
@@ -45,13 +46,13 @@ export type ProStepKey = (typeof PRO_STEP_KEYS)[number];
 
 /** The lane chip text: the specialty (dc PT[1]); Other uses what they typed when they did. */
 export const PRO_LABEL: Record<ProKind, string> = {
-  trainer: "Personal Trainer",
-  physio: "Physiotherapist",
-  diet: "Dietitian",
-  nutritionist: "Nutritionist",
-  coach: "Coach or instructor",
-  doctor: "Doctor or GP",
-  other: "Other professional",
+  trainer: tk("Personal Trainer"),
+  physio: tk("Physiotherapist"),
+  diet: tk("Dietitian"),
+  nutritionist: tk("Nutritionist"),
+  coach: tk("Coach or instructor"),
+  doctor: tk("Doctor or GP"),
+  other: tk("Other professional"),
 };
 
 // ---------------------------------------------------------------------------
@@ -72,65 +73,69 @@ export const SPECIALTY_CARDS: SpecialtyCard[] = [
   {
     kind: "trainer",
     subtype: "trainer",
-    title: "Personal Trainer",
-    description: "Training plans and sessions.",
-    points: ["Build programs and track workouts", "Check in on every client"],
+    title: tk("Personal Trainer"),
+    description: tk("Training plans and sessions."),
+    points: [tk("Build programs and track workouts"), tk("Check in on every client")],
     tile: "pale",
   },
   {
     kind: "physio",
     subtype: "physiotherapist",
-    title: "Physiotherapist",
-    description: "Treatment, rehab and recovery.",
-    points: ["Rehab plans and progress notes", "See client health data, with consent"],
+    title: tk("Physiotherapist"),
+    description: tk("Treatment, rehab and recovery."),
+    points: [tk("Rehab plans and progress notes"), tk("See client health data, with consent")],
     tile: "tealPale",
   },
   {
     kind: "diet",
     subtype: "dietitian",
-    title: "Dietitian",
-    description: "Nutrition plans and coaching.",
-    points: ["Meal plans and food diaries", "Spot patterns in what clients eat"],
+    title: tk("Dietitian"),
+    description: tk("Nutrition plans and coaching."),
+    points: [tk("Meal plans and food diaries"), tk("Spot patterns in what clients eat")],
     tile: "pale",
   },
   // Release 3 (HANDOVER d): Nutritionist, Coach or instructor and Doctor or GP.
   {
     kind: "nutritionist",
     subtype: "nutritionist",
-    title: "Nutritionist",
-    description: "Healthy eating and nutrition coaching.",
-    points: ["Meal plans and food diaries", "Targets that fit each client"],
+    title: tk("Nutritionist"),
+    description: tk("Healthy eating and nutrition coaching."),
+    points: [tk("Meal plans and food diaries"), tk("Targets that fit each client")],
     tile: "tealPale",
   },
   {
     kind: "coach",
     subtype: "coach_instructor",
-    title: "Coach or instructor",
-    description: "Classes, coaching and movement.",
-    points: ["Build programs and run classes", "Check in on every client"],
+    title: tk("Coach or instructor"),
+    description: tk("Classes, coaching and movement."),
+    points: [tk("Build programs and run classes"), tk("Check in on every client")],
     tile: "pale",
   },
   {
     kind: "doctor",
     subtype: "doctor",
-    title: "Doctor or GP",
-    description: "Clinical care and follow-ups.",
-    points: ["Care plans and follow-ups", "See client health records, with consent"],
+    title: tk("Doctor or GP"),
+    description: tk("Clinical care and follow-ups."),
+    points: [tk("Care plans and follow-ups"), tk("See client health records, with consent")],
     tile: "tealPale",
   },
   {
     kind: "other",
     subtype: "other",
-    title: "Other health or fitness professional",
-    description: "Wellness and anything not listed above.",
-    points: ["Work with clients your way", "Messages and progress in one place"],
+    title: tk("Other health or fitness professional"),
+    description: tk("Wellness and anything not listed above."),
+    points: [tk("Work with clients your way"), tk("Messages and progress in one place")],
     tile: "tealPale",
   },
 ];
 
 /** The line under the cards (proType cardsNote): a regulated kind (doctor, physiotherapist, dietitian) is checked on its licence. */
 export const specialtyNote = (picked: ProKind | null): string =>
-  picked ? `Next: about you, your ${credentialWord(picked)} and your background.` : "Next: about you, your background, then a quick review.";
+  picked
+    ? credentialWord(picked) === "licence"
+      ? t("Next: about you, your licence and your background.")
+      : t("Next: about you, your certificate and your background.")
+    : t("Next: about you, your background, then a quick review.");
 
 // ---------------------------------------------------------------------------
 // Step content (BizOnboardingV10, PR branch)
@@ -138,45 +143,45 @@ export const specialtyNote = (picked: ProKind | null): string =>
 
 /** The tip under About you and Your background (GUIDE). */
 export const GUIDE: Record<ProKind, string> = {
-  trainer: "Strong trainer profiles name who they help, show one result, and list where they train.",
-  physio: "Strong physio profiles name the conditions you treat and how long a first session takes.",
-  diet: "Strong dietitian profiles explain your approach to food and who you work with most.",
-  nutritionist: "Strong nutritionist profiles explain your approach to food and who you work with most.",
-  coach: "Strong coach profiles say what a class or session feels like and who it suits.",
-  doctor: "Strong doctor profiles name the conditions you see and how long a first appointment takes.",
-  other: "Strong profiles say what a first session feels like and who it suits.",
+  trainer: tk("Strong trainer profiles name who they help, show one result, and list where they train."),
+  physio: tk("Strong physio profiles name the conditions you treat and how long a first session takes."),
+  diet: tk("Strong dietitian profiles explain your approach to food and who you work with most."),
+  nutritionist: tk("Strong nutritionist profiles explain your approach to food and who you work with most."),
+  coach: tk("Strong coach profiles say what a class or session feels like and who it suits."),
+  doctor: tk("Strong doctor profiles name the conditions you see and how long a first appointment takes."),
+  other: tk("Strong profiles say what a first session feels like and who it suits."),
 };
 
 /** The specialty chips (SPEC) and the extra option the "More" menu adds. */
 export const SPECIALTIES: Record<ProKind, string[]> = {
-  trainer: ["Strength", "Weight loss", "Mobility", "Pre and postnatal", "Sports performance", "Older adults"],
-  physio: ["Sports injuries", "Back and neck", "Post-surgery rehab", "Neurological", "Women's health", "Children"],
-  diet: ["Weight management", "Sports nutrition", "Diabetes", "Gut health", "Eating disorder support", "Children"],
-  nutritionist: ["Weight management", "Sports nutrition", "Healthy eating", "Gut health", "Plant-based eating", "Children"],
-  coach: ["Yoga", "Pilates", "Running", "Boxing", "Swimming", "Wellness coaching"],
-  doctor: ["General practice", "Sports medicine", "Women's health", "Weight management", "Diabetes", "Heart health"],
-  other: ["Yoga", "Pilates", "Mindfulness", "Breathwork", "Stretching", "Wellness coaching"],
+  trainer: [tk("Strength"), tk("Weight loss"), tk("Mobility"), tk("Pre and postnatal"), tk("Sports performance"), tk("Older adults")],
+  physio: [tk("Sports injuries"), tk("Back and neck"), tk("Post-surgery rehab"), tk("Neurological"), tk("Women's health"), tk("Children")],
+  diet: [tk("Weight management"), tk("Sports nutrition"), tk("Diabetes"), tk("Gut health"), tk("Eating disorder support"), tk("Children")],
+  nutritionist: [tk("Weight management"), tk("Sports nutrition"), tk("Healthy eating"), tk("Gut health"), tk("Plant-based eating"), tk("Children")],
+  coach: [tk("Yoga"), tk("Pilates"), tk("Running"), tk("Boxing"), tk("Swimming"), tk("Wellness coaching")],
+  doctor: [tk("General practice"), tk("Sports medicine"), tk("Women's health"), tk("Weight management"), tk("Diabetes"), tk("Heart health")],
+  other: [tk("Yoga"), tk("Pilates"), tk("Mindfulness"), tk("Breathwork"), tk("Stretching"), tk("Wellness coaching")],
 };
 export const MORE_SPECIALTIES: Record<ProKind, string[]> = {
-  trainer: ["Injury prevention"],
-  physio: ["Pelvic health"],
-  diet: ["Allergies"],
-  nutritionist: ["Allergies"],
-  coach: ["Meditation"],
-  doctor: ["Children"],
-  other: ["Meditation"],
+  trainer: [tk("Injury prevention")],
+  physio: [tk("Pelvic health")],
+  diet: [tk("Allergies")],
+  nutritionist: [tk("Allergies")],
+  coach: [tk("Meditation")],
+  doctor: [tk("Children")],
+  other: [tk("Meditation")],
 };
 export const MAX_SPECIALTIES = 5;
 
 /** "How you work with clients" chips (FMT). */
 export const FORMATS: Record<ProKind, string[]> = {
-  trainer: ["One to one", "Small group", "Online", "At a gym", "Home visits"],
-  physio: ["In clinic", "Home visits", "Online follow-ups"],
-  diet: ["Online", "In clinic", "Messages between sessions"],
-  nutritionist: ["Online", "One to one", "Messages between sessions"],
-  coach: ["Group classes", "One to one", "Small group", "Online", "Outdoors"],
-  doctor: ["In clinic", "Online follow-ups", "Home visits"],
-  other: ["Group classes", "One to one", "Online", "Outdoors"],
+  trainer: [tk("One to one"), tk("Small group"), tk("Online"), tk("At a gym"), tk("Home visits")],
+  physio: [tk("In clinic"), tk("Home visits"), tk("Online follow-ups")],
+  diet: [tk("Online"), tk("In clinic"), tk("Messages between sessions")],
+  nutritionist: [tk("Online"), tk("One to one"), tk("Messages between sessions")],
+  coach: [tk("Group classes"), tk("One to one"), tk("Small group"), tk("Online"), tk("Outdoors")],
+  doctor: [tk("In clinic"), tk("Online follow-ups"), tk("Home visits")],
+  other: [tk("Group classes"), tk("One to one"), tk("Online"), tk("Outdoors")],
 };
 
 /**
@@ -204,32 +209,32 @@ export function formatsForDb(chips: string[]): ("one_to_one" | "small_group" | "
 /** The two session-length boxes (NUMS) with their default minutes. */
 export const SESSION_BOXES: Record<ProKind, [{ label: string; min: number }, { label: string; min: number }]> = {
   trainer: [
-    { label: "Session, min", min: 60 },
-    { label: "Online session, min", min: 45 },
+    { label: tk("Session, min"), min: 60 },
+    { label: tk("Online session, min"), min: 45 },
   ],
   physio: [
-    { label: "First assessment, min", min: 45 },
-    { label: "Treatment, min", min: 30 },
+    { label: tk("First assessment, min"), min: 45 },
+    { label: tk("Treatment, min"), min: 30 },
   ],
   diet: [
-    { label: "First consultation, min", min: 60 },
-    { label: "Follow-up, min", min: 30 },
+    { label: tk("First consultation, min"), min: 60 },
+    { label: tk("Follow-up, min"), min: 30 },
   ],
   nutritionist: [
-    { label: "First consultation, min", min: 60 },
-    { label: "Follow-up, min", min: 30 },
+    { label: tk("First consultation, min"), min: 60 },
+    { label: tk("Follow-up, min"), min: 30 },
   ],
   coach: [
-    { label: "Session, min", min: 60 },
-    { label: "Online session, min", min: 45 },
+    { label: tk("Session, min"), min: 60 },
+    { label: tk("Online session, min"), min: 45 },
   ],
   doctor: [
-    { label: "First appointment, min", min: 30 },
-    { label: "Follow-up, min", min: 15 },
+    { label: tk("First appointment, min"), min: 30 },
+    { label: tk("Follow-up, min"), min: 15 },
   ],
   other: [
-    { label: "Session, min", min: 60 },
-    { label: "Online session, min", min: 45 },
+    { label: tk("Session, min"), min: 60 },
+    { label: tk("Online session, min"), min: 45 },
   ],
 };
 
@@ -256,10 +261,10 @@ export function lengthsForDb(lengths: number[]): number[] {
 export type WorkMode = "independent" | "business" | "online" | "mix";
 
 export const WORK_MODES: { value: WorkMode; title: string; description: string }[] = [
-  { value: "independent", title: "Independent", description: "Your own clients, your own place" },
-  { value: "business", title: "At a business", description: "Join a gym, studio or clinic with its business ID" },
-  { value: "online", title: "Online only", description: "Video sessions and messages" },
-  { value: "mix", title: "A mix", description: "Some in person, some online" },
+  { value: "independent", title: tk("Independent"), description: tk("Your own clients, your own place") },
+  { value: "business", title: tk("At a business"), description: tk("Join a gym, studio or clinic with its business ID") },
+  { value: "online", title: tk("Online only"), description: tk("Video sessions and messages") },
+  { value: "mix", title: tk("A mix"), description: tk("Some in person, some online") },
 ];
 
 /** professional_work_mode has three values: both "Independent" and "At a business" are in person. */
@@ -280,18 +285,18 @@ export const HOME_VISIT_KM = [2, 5, 8, 10, 15, 20, 30] as const;
 /** closest_group is its own type since Database 20261120020000: professional_group. */
 export type ClosestGroup = "fitness" | "clinical" | "nutrition" | "other";
 export const CLOSEST_GROUPS: { value: ClosestGroup; label: string }[] = [
-  { value: "fitness", label: "Fitness" },
-  { value: "clinical", label: "Clinical" },
-  { value: "nutrition", label: "Nutrition" },
-  { value: "other", label: "Other" },
+  { value: "fitness", label: tk("Fitness") },
+  { value: "clinical", label: tk("Clinical") },
+  { value: "nutrition", label: tk("Nutrition") },
+  { value: "other", label: tk("Other") },
 ];
 export const WHAT_YOU_DO_MAX = 40;
 
 /** The "What do you do?" error, or null. Empty is allowed (Optional). */
 export function whatYouDoError(v: string): string | null {
-  const t = v.trim();
-  if (t.length > WHAT_YOU_DO_MAX) return "Keep it under 40 characters.";
-  if (t.length === 1) return "Use at least 2 characters.";
+  const s = v.trim();
+  if (s.length > WHAT_YOU_DO_MAX) return t("Keep it under 40 characters.");
+  if (s.length === 1) return t("Use at least 2 characters.");
   return null;
 }
 
@@ -378,7 +383,7 @@ export function workComplete(d: Pick<ProLaneDraft, "workMode" | "businessCode">)
 
 /** The licence number rule for a regulated professional (OB-176). */
 export function licenceNumberError(v: string): string | null {
-  return v.trim() ? null : "Add your licence number as it appears on your card.";
+  return v.trim() ? null : t("Add your licence number as it appears on your card.");
 }
 
 /** Whether Credentials can continue (regulated: body, number and proof). */
@@ -391,16 +396,16 @@ export function credentialsComplete(
   return d.registeringBody.trim().length >= 2 && !licenceNumberError(d.licenceNumber) && proofUploaded;
 }
 
-/** The Review "Where you work" line, from the real answers. */
+/** The Review "Where you work" line, from the real answers (translated: called during render). */
 export function workSummary(d: Pick<ProLaneDraft, "workMode" | "area" | "homeVisitKm">, kind: ProKind): string {
-  const mode = WORK_MODES.find((m) => m.value === d.workMode)?.title ?? "Not set";
+  const mode = t(WORK_MODES.find((m) => m.value === d.workMode)?.title ?? "Not set");
   const parts = [mode];
   if (d.workMode !== "online" && d.area) {
-    parts.push((kind === "physio" || kind === "doctor") && d.workMode === "independent" ? `clinic in ${d.area.label}` : d.area.label);
+    parts.push((kind === "physio" || kind === "doctor") && d.workMode === "independent" ? t("clinic in {place}", { place: d.area.label }) : d.area.label);
   }
   let line = parts.join(" · ");
-  if (d.workMode === "mix") line += " and online";
-  if (d.homeVisitKm && d.workMode !== "online" && d.workMode !== "business") line += ", home visits";
+  if (d.workMode === "mix") line = t("{line} and online", { line });
+  if (d.homeVisitKm && d.workMode !== "online" && d.workMode !== "business") line = t("{line}, home visits", { line });
   return line;
 }
 
@@ -426,17 +431,17 @@ const CHIP_MAX = 22;
 
 /** The lane chip's text: the specialty, or an Other professional's own words (BizOnboardingV10 chip = PT[1]). */
 export function proChipLabel(kind: ProKind, whatYouDo: string): string {
-  const t = whatYouDo.trim();
-  if (kind !== "other" || t.length < 2 || t.length > WHAT_YOU_DO_MAX) return PRO_LABEL[kind];
+  const s = whatYouDo.trim();
+  if (kind !== "other" || s.length < 2 || s.length > WHAT_YOU_DO_MAX) return t(PRO_LABEL[kind]);
   // The chip is one line beside "Step n of 6": a long title is shortened there
   // (it shows in full on the profile).
-  return t.length > CHIP_MAX ? `${t.slice(0, CHIP_MAX - 1).trimEnd()}…` : t;
+  return s.length > CHIP_MAX ? `${s.slice(0, CHIP_MAX - 1).trimEnd()}…` : s;
 }
 
 /** "licence-card.jpg · 1.8 MB" */
 export function fileLine(name: string, bytes: number): string {
   const mb = bytes / (1024 * 1024);
-  return `${name} · ${mb >= 0.1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`}`;
+  return `${name} · ${mb >= 0.1 ? t("{n} MB", { n: mb.toFixed(1) }) : t("{n} KB", { n: Math.max(1, Math.round(bytes / 1024)) })}`;
 }
 
 /** The flow step keys of the professional lane (onboardingSteps.ts), mapped to the lane's own by ProLane. */
@@ -451,7 +456,7 @@ export const PLACE_TO_DB: Record<string, "at_gym" | "home_visit" | "in_clinic" |
   Outdoors: "outdoors",
   "Messages between sessions": "messages_between_sessions",
 };
-export const HOME_VISITS_CHIP = "Home visits";
+export const HOME_VISITS_CHIP = tk("Home visits");
 
 /**
  * The places to store. A home-visit radius and the Home visits place always
@@ -468,3 +473,6 @@ export function placesForDb(chips: string[], homeVisitKm: number | null): string
   return out;
 }
 
+
+/** A chip's shown text: "Online" here is a session format (not presence, as in Messages). */
+export const optionLabel = (o: string): string => (o === "Online" ? tx("Online", "session format") : t(o));

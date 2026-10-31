@@ -19,7 +19,7 @@ import type { BusinessRole } from "../../../services/business-team/types";
 /** cHead15: back 36 (-7 in), gap 6; the title 24 / 700 -0.03em on 1.25 (3 down), subtitle 13 text.faint 4 under; 16 below. */
 export const ExploreHead: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <div className="flex items-start" style={{ gap: 6, marginBottom: 16 }}>
-    <button type="button" onClick={onBack} aria-label="Back" className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginLeft: -7 }}>
+    <button type="button" onClick={onBack} aria-label="Back" className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -7 }}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ color: INK.chS }}>
         <path d="m15 18-6-6 6-6" />
       </svg>
@@ -41,7 +41,7 @@ export const AffiliationCard: React.FC<{ name: string; onOpen: () => void }> = (
   const dark = useIsDark();
   const sub = dark ? "#A5BDB9" : "#869595";
   return (
-    <button type="button" onClick={onOpen} className="tap w-full text-left" style={{ borderRadius: 20, padding: "14px 16px", marginBottom: 14, background: dark ? "rgba(162,200,194,0.12)" : "#ECF5F3" }}>
+    <button type="button" onClick={onOpen} className="tap w-full text-start" style={{ borderRadius: 20, padding: "14px 16px", marginBottom: 14, background: dark ? "rgba(162,200,194,0.12)" : "#ECF5F3" }}>
       <span className="flex items-center" style={{ gap: 12 }}>
         <span className="flex items-center justify-center shrink-0 rounded-full" style={{ width: 44, height: 44, background: INK.card }}>
           <Building2 size={20} strokeWidth={2} style={{ color: "#4F8F8A" }} aria-hidden />
@@ -149,7 +149,7 @@ export const BusinessCard: React.FC<{
   <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, overflow: "hidden", marginBottom: 10 }}>
     <button type="button" onClick={onOpen} aria-label={`Open ${name}`} className="tap block w-full" style={{ height: 84, background: `repeating-linear-gradient(45deg, ${INK.soft} 0 6px, ${INK.card} 6px 12px)` }} />
     <div className="flex items-end" style={{ padding: "10px 12px 12px", gap: 10 }}>
-      <button type="button" onClick={onOpen} className="tap flex-1 min-w-0 text-left">
+      <button type="button" onClick={onOpen} className="tap flex-1 min-w-0 text-start">
         <span className="block" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, overflowWrap: "anywhere" }}>
           {name}
         </span>
@@ -240,7 +240,7 @@ export const AskToJoinSheet: React.FC<{
               value={role}
               onChange={(e) => setRole(e.target.value as BusinessRole | "")}
               className="flex-1 min-w-0 h-full bg-transparent outline-none appearance-none"
-              style={{ fontSize: textPx(14), color: role ? INK.ch : INK.chF, paddingRight: 22 }}
+              style={{ fontSize: textPx(14), color: role ? INK.ch : INK.chF, paddingInlineEnd: 22 }}
             >
               <option value="">Choose a role</option>
               {(Object.keys(ROLE_LABEL) as BusinessRole[]).map((r) => (
@@ -249,7 +249,7 @@ export const AskToJoinSheet: React.FC<{
                 </option>
               ))}
             </select>
-            <ChevronDown size={14} strokeWidth={2} aria-hidden className="pointer-events-none absolute" style={{ right: 12, color: INK.chF }} />
+            <ChevronDown size={14} strokeWidth={2} aria-hidden className="pointer-events-none absolute" style={{ insetInlineEnd: 12, color: INK.chF }} />
           </span>
         </div>
         <div style={{ height: 12 }} />

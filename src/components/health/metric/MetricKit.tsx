@@ -107,7 +107,7 @@ export const MetricPage: React.FC<MetricPageProps> = ({ metric, title, range, on
   return (
     <div style={{ paddingBottom: cta ? 176 : 96 }} data-metric-page={metric}>
       <FixedHeader paddingBottom={14} fillClassName="bg-cream dark:bg-[#1C1F28]">
-        <div className="flex items-center" style={{ gap: 4, height: 36, marginLeft: -8 }}>
+        <div className="flex items-center" style={{ gap: 4, height: 36, marginInlineStart: -8 }}>
           <button
             type="button"
             onClick={back}
@@ -143,7 +143,7 @@ export const MetricPage: React.FC<MetricPageProps> = ({ metric, title, range, on
               aria-label="More options"
               aria-haspopup="menu"
               className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
-              style={{ width: 36, height: 36, marginRight: -8 }}
+              style={{ width: 36, height: 36, marginInlineEnd: -8 }}
             >
               <MoreVertical size={20} style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
             </button>
@@ -300,7 +300,7 @@ export const StatCard: React.FC<{
           className="flex-1 min-w-0 flex flex-col items-center justify-center"
           style={{
             padding: "0 6px",
-            borderLeft: i === 0 ? undefined : `0.5px solid ${hc ? "rgb(var(--c-charcoal) / 0.3)" : dark ? "#383B44" : "#E5E7EB"}`,
+            borderInlineStart: i === 0 ? undefined : `0.5px solid ${hc ? "rgb(var(--c-charcoal) / 0.3)" : dark ? "#383B44" : "#E5E7EB"}`,
           }}
         >
           <span className="flex items-center" style={{ gap: 5 }}>
@@ -569,7 +569,7 @@ export const HistoryCard: React.FC<{
                   </span>
                 )}
               </span>
-              <span className="shrink-0 flex flex-col items-end text-right">
+              <span className="shrink-0 flex flex-col items-end text-end">
                 <span style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "rgb(var(--c-charcoal))" }}>{it.value}</span>
                 {it.sub !== undefined && it.sub !== null && (
                   <span style={{ marginTop: 1, fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: it.subColor ?? "rgb(var(--c-charcoal-faint))" }}>{it.sub}</span>

@@ -180,7 +180,7 @@ export default function RewardsTab() {
           className="hit market-focus"
           style={{
             height: 32,
-            padding: "0 8px 0 12px",
+            paddingBlock: "0", paddingInline: "12px 8px",
             borderRadius: 10,
             border: `0.5px solid ${m.border}`,
             background: "transparent",
@@ -298,7 +298,7 @@ const rowStyle = (m: ReturnType<typeof marketPalette>, marginTop = 0): React.CSS
   gap: 12,
   font: "inherit",
   lineHeight: "normal",
-  textAlign: "left",
+  textAlign: "start",
   color: m.ink,
   cursor: "pointer",
 });

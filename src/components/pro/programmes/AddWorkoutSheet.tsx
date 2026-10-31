@@ -57,7 +57,7 @@ export const AddWorkoutSheet: React.FC<{
                 key={t.id}
                 type="button"
                 onClick={() => onPick(t.id)}
-                className="tap w-full flex items-center text-left"
+                className="tap w-full flex items-center text-start"
                 style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < list.length - 1 ? `1px solid ${INK.b06}` : "none" }}
               >
                 <span className="flex items-center justify-center shrink-0" style={{ width: 34, height: 34, borderRadius: 11, background: INK.prPale }}>

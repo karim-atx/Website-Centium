@@ -9,6 +9,7 @@ import { useApp } from "../../context/AppContext";
 import { SERVICES, SERVICE_LABEL, tidyPlaylistInput, type PlaylistService } from "../../services/music/playlistLink";
 import { fetchMusicPrefs, MUSIC_MOMENTS, publishMusicPrefs, saveMusicPrefs } from "../../services/music/prefs";
 import type { MusicMoment } from "../../services/music/whichMusic";
+import { t } from "../../i18n/core";
 
 // Round E · Settings › Your music (no handover frame: designed here in the
 // Language page's layout). The member's music app, and an optional favourite
@@ -77,32 +78,31 @@ export default function YourMusicPage() {
     setSaved(next);
     setDraft(next);
     publishMusicPrefs(r.prefs);
-    setSaveNote({ ok: true, text: "Saved." });
+    setSaveNote({ ok: true, text: t("Saved.") });
   };
 
   return (
     <div>
-      <PageHeader title="Your music" showBack sub tightBack />
+      <PageHeader title={t("Your music")} showBack sub tightBack />
       <SettingsBody className="-mt-1">
         <p className="text-[13px] leading-[19px] text-charcoal-soft mb-5">
-          Workout, Mind, Sleep and Cooking each show Play your music. It opens your favourite playlist for that moment, or your music app when you haven&apos;t
-          chosen one. Centium never signs in to your music service or reads your account, and only you see these.
+          {t("Workout, Mind, Sleep and Cooking each show Play your music. It opens your favourite playlist for that moment, or your music app when you haven't chosen one. Centium never signs in to your music service or reads your account, and only you see these.")}
         </p>
 
-        {loaded === "loading" && <p className="text-[13px] text-charcoal-faint">Loading…</p>}
+        {loaded === "loading" && <p className="text-[13px] text-charcoal-faint">{t("Loading…")}</p>}
         {loaded === "error" && (
           <div role="alert" className="flex items-center gap-3 text-[13px] text-charcoal-soft">
-            <span>Couldn&apos;t load your music settings.</span>
+            <span>{t("Couldn't load your music settings.")}</span>
             <button type="button" onClick={() => { setLoaded("loading"); setAttempt((n) => n + 1); }} className="tap font-bold text-primary-deep-text min-h-[44px]">
-              Try again
+              {t("Try again")}
             </button>
           </div>
         )}
 
         {loaded === "ok" && (
           <>
-            <SettingsSection label="Music app">
-              <div role="radiogroup" aria-label="Music app">
+            <SettingsSection label={t("Music app")}>
+              <div role="radiogroup" aria-label={t("Music app")}>
                 {[...SERVICES, null].map((s) => {
                   const selected = service === s;
                   return (
@@ -115,7 +115,7 @@ export default function YourMusicPage() {
                       className="tap relative w-full flex items-center gap-3 text-start [padding-block:calc(13px_+_var(--row-extra,0px)_/_2)] before:content-[''] before:absolute before:bottom-0 before:start-[34px] before:end-0 before:h-px before:bg-charcoal/[0.06] before:pointer-events-none last:before:hidden"
                     >
                       <span className="w-[22px] grid place-items-center shrink-0">{s ? <ServiceIcon service={s} size={20} /> : null}</span>
-                      <span className={`flex-1 text-[15px] leading-[19px] font-medium ${s ? "text-charcoal" : "text-charcoal-soft"}`}>{s ? SERVICE_LABEL[s] : "None"}</span>
+                      <span className={`flex-1 text-[15px] leading-[19px] font-medium ${s ? "text-charcoal" : "text-charcoal-soft"}`}>{s ? SERVICE_LABEL[s] : t("None")}</span>
                       {selected && <Check size={18} strokeWidth={2.4} className="text-primary shrink-0" aria-hidden />}
                     </button>
                   );
@@ -123,17 +123,17 @@ export default function YourMusicPage() {
               </div>
               {serviceError && (
                 <p role="alert" className="mt-2 text-[12px] text-status-high">
-                  {serviceError}
+                  {t(serviceError)}
                 </p>
               )}
             </SettingsSection>
 
-            <SettingsSection label="Favourite playlists">
+            <SettingsSection label={t("Favourite playlists")}>
               <div className="flex flex-col gap-4 pt-1 pb-2">
                 {MUSIC_MOMENTS.map((m) => (
                   <PlaylistField
                     key={m.key}
-                    label={`${m.label} (optional)`}
+                    label={t("{label} (optional)", { label: t(m.label) })}
                     value={draft[m.key]}
                     onChange={(v) => {
                       setSaveNote(null);
@@ -142,11 +142,11 @@ export default function YourMusicPage() {
                   />
                 ))}
                 <Button onClick={() => void saveFavourites()} disabled={!changed || !valid || saving} fullWidth>
-                  {saving ? "Saving…" : "Save favourites"}
+                  {saving ? t("Saving…") : t("Save favourites")}
                 </Button>
                 {saveNote && (
                   <p role={saveNote.ok ? "status" : "alert"} className={`text-[12px] ${saveNote.ok ? "text-charcoal-soft" : "text-status-high"}`}>
-                    {saveNote.text}
+                    {t(saveNote.text)}
                   </p>
                 )}
               </div>

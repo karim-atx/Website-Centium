@@ -397,7 +397,7 @@ function Field({
         display: "flex",
         alignItems: "center",
         gap: 8,
-        textAlign: "left",
+        textAlign: "start",
         color: placeholder || locked ? m.faint : m.ink,
         boxShadow: error ? `inset 0 0 0 1px ${m.high}` : focused ? `inset 0 0 0 1.5px ${m.fill}` : undefined,
         cursor: locked ? "default" : "pointer",

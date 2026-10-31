@@ -203,7 +203,7 @@ export function DayClock({
       {!loading && (
         <span
           aria-hidden
-          style={{ position: "absolute", left: "50%", top: `calc(50% + ${m.logo.y}px)`, width: m.logo.size, height: m.logo.size, transform: "translate(-50%,-50%)", opacity: m.logo.on ? 1 : 0, transition: "opacity 0.3s ease", pointerEvents: "none" }}
+          style={{ position: "absolute", insetInlineStart: "50%", top: `calc(50% + ${m.logo.y}px)`, width: m.logo.size, height: m.logo.size, transform: "translate(-50%,-50%)", opacity: m.logo.on ? 1 : 0, transition: "opacity 0.3s ease", pointerEvents: "none" }}
         >
           <span data-logo data-pulse style={{ display: "block", width: "100%", height: "100%", color: c.logoCol, animation: m.live && !rm ? "an1-logoPulse 3.5s ease-in-out infinite" : "none" }}>
             <svg width="100%" height="100%" viewBox="265 175 680 720" style={{ display: "block" }}>
@@ -219,7 +219,7 @@ export function DayClock({
         aria-hidden
         style={{
           position: "absolute",
-          left: "50%",
+          insetInlineStart: "50%",
           top: "50%",
           width: m.maskW,
           height: m.maskW,
@@ -233,7 +233,7 @@ export function DayClock({
         }}
       >
         {loading ? (
-          <span className="animate-skeleton-pulse" style={{ position: "absolute", left: "50%", top: "50%", width: 60, height: 10, borderRadius: 5, transform: "translate(-50%,-50%)", background: c.soft }} />
+          <span className="animate-skeleton-pulse" style={{ position: "absolute", insetInlineStart: "50%", top: "50%", width: 60, height: 10, borderRadius: 5, transform: "translate(-50%,-50%)", background: c.soft }} />
         ) : (
           m.layers.map((ly, i) => (
             <div key={i} data-layer={i} style={{ position: "absolute", inset: 0, transform: `translateX(${ly.off}px)`, transition: rdTr }}>
@@ -241,7 +241,7 @@ export function DayClock({
                 <p
                   key={k}
                   data-readout-line
-                  style={{ position: "absolute", left: "50%", top: `calc(50% + ${ln.y}px)`, transform: "translate(-50%,-50%)", textAlign: "center", fontSize: ly.fs, fontWeight: 800, lineHeight: `${ly.lh}px`, letterSpacing: "-0.01em", whiteSpace: "nowrap", margin: 0 }}
+                  style={{ position: "absolute", insetInlineStart: "50%", top: `calc(50% + ${ln.y}px)`, transform: "translate(-50%,-50%)", textAlign: "center", fontSize: ly.fs, fontWeight: 800, lineHeight: `${ly.lh}px`, letterSpacing: "-0.01em", whiteSpace: "nowrap", margin: 0 }}
                 >
                   {ln.t}
                 </p>
@@ -249,7 +249,7 @@ export function DayClock({
               {ly.sub && (
                 <p
                   data-readout-sub
-                  style={{ position: "absolute", left: "50%", top: `calc(50% + ${ly.subY}px)`, transform: "translate(-50%,-50%)", textAlign: "center", fontSize: ly.sfs, fontWeight: 600, lineHeight: `${ly.slh}px`, color: c.inkSoft, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", margin: 0 }}
+                  style={{ position: "absolute", insetInlineStart: "50%", top: `calc(50% + ${ly.subY}px)`, transform: "translate(-50%,-50%)", textAlign: "center", fontSize: ly.sfs, fontWeight: 600, lineHeight: `${ly.slh}px`, color: c.inkSoft, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", margin: 0 }}
                 >
                   {ly.sub}
                 </p>
@@ -270,7 +270,7 @@ export function DayClock({
         <span
           data-indicator
           aria-hidden
-          style={{ position: "absolute", left: "50%", top: "calc(50% + 36px)", transform: "translate(-50%,-50%)", display: "flex", alignItems: "baseline", gap: 3, fontSize: 9.5, fontWeight: 700, lineHeight: "11px", fontVariantNumeric: "tabular-nums", letterSpacing: "0.02em", color: c.faint, whiteSpace: "nowrap", pointerEvents: "none" }}
+          style={{ position: "absolute", insetInlineStart: "50%", top: "calc(50% + 36px)", transform: "translate(-50%,-50%)", display: "flex", alignItems: "baseline", gap: 3, fontSize: 9.5, fontWeight: 700, lineHeight: "11px", fontVariantNumeric: "tabular-nums", letterSpacing: "0.02em", color: c.faint, whiteSpace: "nowrap", pointerEvents: "none" }}
         >
           <span style={{ fontWeight: 800, color: LT }}>{m.indicator.now}</span>
           <span>/</span>
@@ -291,7 +291,7 @@ export function DayClock({
           onPointerLeave={h.onPointerCancel}
           onKeyDown={h.onKeyDown}
           className="focus-visible:shadow-focus-ring"
-          style={{ position: "absolute", left: "50%", top: "50%", width: 108, height: 108, borderRadius: "50%", transform: "translate(-50%,-50%)", touchAction: "pan-y", cursor: "pointer", WebkitTapHighlightColor: "transparent", outline: "none" }}
+          style={{ position: "absolute", insetInlineStart: "50%", top: "50%", width: 108, height: 108, borderRadius: "50%", transform: "translate(-50%,-50%)", touchAction: "pan-y", cursor: "pointer", WebkitTapHighlightColor: "transparent", outline: "none" }}
         />
       )}
     </div>

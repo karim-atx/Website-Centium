@@ -70,7 +70,7 @@ export const ConfirmationStrip: React.FC<ConfirmationStripProps> = ({ text, acti
           type="button"
           onClick={onAction}
           className="tap flex items-center justify-center shrink-0"
-          style={{ width: stub, boxSizing: "content-box", minHeight: 44, borderLeft: `1.5px dashed ${dot}`, fontSize: textPx(size), fontWeight: 800, color: ink }}
+          style={{ width: stub, boxSizing: "content-box", minHeight: 44, borderInlineStart: `1.5px dashed ${dot}`, fontSize: textPx(size), fontWeight: 800, color: ink }}
         >
           {action}
         </button>

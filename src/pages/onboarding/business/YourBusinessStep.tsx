@@ -21,6 +21,7 @@ import { removeBusinessImage, uploadBusinessImage } from "../../../services/busi
 import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../../components/moderation/ImageApproval";
 import { useImagePreview } from "./useImagePreview";
 import type { LaneStepProps } from "./laneTypes";
+import { t, tx } from "../../../i18n/core";
 
 // OB-218 / 248 / 281 (+ 220 activities menu, 250 contact, 251 field errors,
 // 283 cover photo source): Step 1 · Your business.
@@ -70,7 +71,7 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
     if (!file) return;
     const kind = pickFor.current;
     if (!uid) {
-      setUploadError("You're signed out. Sign in again to add photos."); // OURS
+      setUploadError(t("You're signed out. Sign in again to add photos.")); // OURS
       return;
     }
     setUploading(kind);
@@ -78,7 +79,7 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
     const res = await uploadBusinessImage(uid, kind, file);
     setUploading(null);
     if (!res.ok) {
-      setUploadError(res.message);
+      setUploadError(t(res.message));
       return;
     }
     setBiz((b) => (kind === "cover" ? { ...b, coverPath: res.value } : { ...b, logoPath: res.value }));
@@ -93,19 +94,19 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
   };
 
   const coverErr = !!shown.cover;
-  const help = uploadError ?? (coverErr ? shown.cover! : "Square logo, wide cover. Bright, real photos work best.");
+  const help = uploadError ?? (coverErr ? shown.cover! : t("Square logo, wide cover. Bright, real photos work best."));
   const helpIsError = !!uploadError || coverErr;
 
   return (
     <BizFrame
       step={flowKey}
       lane={lane}
-      title="Your business"
-      subtitle="This is what clients see first on Explore. Make it feel like you."
+      title={t("Your business")}
+      subtitle={t("This is what clients see first on Explore. Make it feel like you.")}
       onBack={onBack}
       saveExit={saveExit}
       footer={{
-        label: save.error && !save.offline ? "Try again" : "Continue",
+        label: save.error && !save.offline ? t("Try again") : t("Continue"),
         onClick: continueNow,
         disabled: (showErrors && errorCount > 0) || !!uploading,
         busy: save.busy,
@@ -120,14 +121,14 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
             open={menu?.kind === "photo"}
             onClose={() => setMenu(null)}
             anchor={menu?.anchor ?? null}
-            heading={menu?.kind === "photo" && menu.photo === "logo" ? "Logo" : "Cover photo"}
+            heading={menu?.kind === "photo" && menu.photo === "logo" ? t("Logo") : t("Cover photo")}
             align="right"
             width={200}
             options={[
-              { value: "camera", label: "Take a photo", icon: <Camera size={15} strokeWidth={2.2} /> },
-              { value: "library", label: "Choose from library", icon: <ImageIcon size={15} strokeWidth={2.2} /> },
+              { value: "camera", label: t("Take a photo"), icon: <Camera size={15} strokeWidth={2.2} /> },
+              { value: "library", label: t("Choose from library"), icon: <ImageIcon size={15} strokeWidth={2.2} /> },
               ...((menu?.kind === "photo" && (menu.photo === "cover" ? biz.coverPath : biz.logoPath))
-                ? [{ value: "remove", label: "Remove photo", icon: <Trash2 size={15} strokeWidth={2.2} /> }]
+                ? [{ value: "remove", label: t("Remove photo"), icon: <Trash2 size={15} strokeWidth={2.2} /> }]
                 : []),
             ]}
             onSelect={(v) => {
@@ -147,7 +148,7 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
               title={categoryLabel(lane)}
               anchor={menu.anchor}
               align="left"
-              options={cats.all.map((c) => ({ key: c, label: c, on: biz.categories.includes(c), disabled: !biz.categories.includes(c) && biz.categories.length >= MAX_CATEGORIES }))}
+              options={cats.all.map((c) => ({ key: c, label: t(c), on: biz.categories.includes(c), disabled: !biz.categories.includes(c) && biz.categories.length >= MAX_CATEGORIES }))}
               onToggle={(k) => toggleCategory(k)}
               onClose={() => setMenu(null)}
             />
@@ -159,50 +160,50 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
       <div className="mb-[18px]">
         <button
           type="button"
-          aria-label="Add a cover photo"
+          aria-label={t("Add a cover photo")}
           onClick={(e) => setMenu({ kind: "photo", photo: "cover", anchor: e.currentTarget.querySelector("[data-anchor]") as HTMLElement })}
-          className="relative block w-full h-[150px] rounded-[20px] overflow-hidden box-border text-left"
+          className="relative block w-full h-[150px] rounded-[20px] overflow-hidden box-border text-start"
           style={{
             background: coverUrl ? `center / cover no-repeat url("${coverUrl}")` : coverErr ? "rgb(var(--c-cream-card))" : stripes,
             border: coverErr ? "1.5px dashed rgb(var(--c-status-high))" : "none",
           }}
         >
-          {!coverUrl && !coverErr && <span className="absolute left-[14px] top-3 font-mono text-[10px] text-charcoal-faint">{coverLabel(lane)}</span>}
-          <ImageApprovalBadge state={coverState} className="absolute left-3 top-3" />
+          {!coverUrl && !coverErr && <span className="absolute start-[14px] top-3 font-mono text-[10px] text-charcoal-faint">{coverLabel(lane)}</span>}
+          <ImageApprovalBadge state={coverState} className="absolute start-3 top-3" />
           <span
             data-anchor
-            className="absolute right-3 bottom-3 h-[34px] px-3 rounded-full bg-cream-card text-primary-dark flex items-center gap-[6px] text-[12px] font-extrabold"
+            className="absolute end-3 bottom-3 h-[34px] px-3 rounded-full bg-cream-card text-primary-dark flex items-center gap-[6px] text-[12px] font-extrabold"
             style={{ boxShadow: "var(--ob-pill-shadow)" }}
           >
             <Camera size={14} strokeWidth={2.2} aria-hidden />
-            {uploading === "cover" ? "Uploading…" : biz.coverPath ? "Change cover" : "Add cover"}
+            {uploading === "cover" ? t("Uploading…") : biz.coverPath ? t("Change cover") : t("Add cover")}
           </span>
         </button>
-        <div className="flex items-end gap-3 -mt-9 ml-4 relative">
+        <div className="flex items-end gap-3 -mt-9 ms-4 relative">
           <button
             type="button"
-            aria-label={biz.logoPath ? "Change logo" : "Add a logo"}
+            aria-label={biz.logoPath ? t("Change logo") : t("Add a logo")}
             onClick={(e) => setMenu({ kind: "photo", photo: "logo", anchor: e.currentTarget })}
             className="relative w-[76px] h-[76px] rounded-[22px] bg-row-tile text-white flex items-center justify-center text-[22px] font-extrabold box-border shrink-0"
             style={{ boxShadow: "0 0 0 4px rgb(var(--c-cream))" }}
           >
             {logoUrl ? <img src={logoUrl} alt="" className="w-full h-full object-cover rounded-[22px]" /> : initials(biz.name)}
-            <span className="absolute -right-[6px] -bottom-[6px] w-7 h-7 rounded-full bg-cream-card border border-hair-11 text-primary-dark flex items-center justify-center">
+            <span className="absolute -end-[6px] -bottom-[6px] w-7 h-7 rounded-full bg-cream-card border border-hair-11 text-primary-dark flex items-center justify-center">
               <Camera size={13} strokeWidth={2.2} aria-hidden />
             </span>
           </button>
           <span className={helpIsError ? "pb-1 text-[11.5px] leading-[15px] font-semibold text-status-high text-pretty" : "pb-1 text-[11.5px] leading-[15px] font-medium text-charcoal-faint text-pretty"} role={helpIsError ? "alert" : undefined}>
-            {uploading === "logo" ? "Uploading…" : help}
+            {uploading === "logo" ? t("Uploading…") : help}
           </span>
         </div>
-        {logoState && <ImageApprovalBadge state={logoState} className="mt-2 ml-4" />}
+        {logoState && <ImageApprovalBadge state={logoState} className="mt-2 ms-4" />}
         {/* One "waiting" line covers both pictures; a refusal gives its own reason. */}
         <ImageApprovalNote state={coverState} className="mt-2" />
         {!(coverState?.status === "pending" && logoState?.status === "pending") && <ImageApprovalNote state={logoState} className="mt-2" />}
       </div>
 
       <BizField
-        label="Business name"
+        label={t("Business name")}
         value={biz.name}
         onChange={(v) => setBiz((b) => ({ ...b, name: v }))}
         placeholder={namePlaceholder(lane)}
@@ -211,26 +212,26 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
         error={shown.name}
       />
       <BizField
-        label="Short description"
+        label={t("Short description")}
         area
         value={biz.description}
         onChange={(v) => setBiz((b) => ({ ...b, description: v.slice(0, DESCRIPTION_MAX) }))}
         maxLength={DESCRIPTION_MAX}
         count={`${biz.description.length} / ${DESCRIPTION_MAX}`}
-        help="Say who it's for and what makes you different."
+        help={t("Say who it's for and what makes you different.")}
       />
       <BizChips
         label={categoryLabel(lane)}
-        tag="Up to 5"
+        tag={t("Up to 5")}
         options={chips}
         selected={biz.categories}
         onToggle={toggleCategory}
         max={MAX_CATEGORIES}
         onMore={(anchor) => setMenu({ kind: "cats", anchor })}
       />
-      <ObSectionLabel title="Contact" margin="14px 2px 12px" />
+      <ObSectionLabel title={tx("Contact", "section")} margin="14px 2px 12px" />
       <BizField
-        label="Phone"
+        label={t("Phone")}
         leading={<Phone size={16} aria-hidden />}
         value={biz.phone}
         onChange={(v) => setBiz((b) => ({ ...b, phone: v }))}
@@ -241,10 +242,11 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
         error={shown.phone}
       />
       <BizField
-        label="Email"
+        label={t("Email")}
         leading={<Mail size={16} aria-hidden />}
         value={biz.email}
         onChange={(v) => setBiz((b) => ({ ...b, email: v }))}
+        // i18n-ignore (an example address)
         placeholder="hello@example.com"
         inputMode="email"
         type="email"
@@ -252,21 +254,23 @@ export const YourBusinessStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey
         error={shown.email}
       />
       <BizField
+        // i18n-ignore (a brand name)
         label="Instagram"
-        tag="Optional"
+        tag={t("Optional")}
         leading={<InstagramGlyph />}
         value={biz.instagram}
         onChange={(v) => setBiz((b) => ({ ...b, instagram: v }))}
+        // i18n-ignore (an example handle)
         placeholder="@yourbusiness"
         error={shown.instagram}
       />
       <BizField
-        label="Website"
-        tag="Optional"
+        label={t("Website")}
+        tag={t("Optional")}
         leading={<Globe size={16} aria-hidden />}
         value={biz.website}
         onChange={(v) => setBiz((b) => ({ ...b, website: v }))}
-        placeholder="e.g. yourbusiness.com"
+        placeholder={t("e.g. yourbusiness.com")}
         inputMode="url"
         autoComplete="url"
       />

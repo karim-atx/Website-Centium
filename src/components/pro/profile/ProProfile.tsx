@@ -87,7 +87,7 @@ export const ProProfile: React.FC = () => {
   return (
     <div>
       <div className="flex items-start" style={{ gap: 6, marginBottom: 16 }}>
-        <button type="button" onClick={back} aria-label="Back" className="tap flex items-center justify-center shrink-0" style={{ width: 36, height: 36, marginLeft: -7, borderRadius: 9999, color: INK.chS }}>
+        <button type="button" onClick={back} aria-label="Back" className="tap flex items-center justify-center shrink-0" style={{ width: 36, height: 36, marginInlineStart: -7, borderRadius: 9999, color: INK.chS }}>
           <ChevronLeft size={18} strokeWidth={2} aria-hidden />
         </button>
         <h1 style={{ marginTop: 3, fontSize: textPx(24), fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.25, color: INK.ch }}>Profile</h1>
@@ -98,7 +98,7 @@ export const ProProfile: React.FC = () => {
           <span className="flex items-center justify-center overflow-hidden" style={{ width: 88, height: 88, borderRadius: 9999, background: INK.tealPale, fontSize: 28, fontWeight: 800, color: INK.tealDark }}>
             {picker.url ? <img src={picker.url} alt="" className="w-full h-full object-cover" /> : initials}
           </span>
-          <span className="absolute flex items-center justify-center" style={{ right: -2, bottom: -2, width: 32, height: 32, borderRadius: 9999, background: INK.fill, border: `3px solid ${INK.cream}` }}>
+          <span className="absolute flex items-center justify-center" style={{ insetInlineEnd: -2, bottom: -2, width: 32, height: 32, borderRadius: 9999, background: INK.fill, border: `3px solid ${INK.cream}` }}>
             <Camera size={14} strokeWidth={2} aria-hidden style={{ color: INK.onFill }} />
           </span>
         </button>
@@ -132,7 +132,7 @@ export const ProProfile: React.FC = () => {
 
         <SettingsSection label="Professional">
           <SettingsRow icon={Briefcase} title="Professional type" sub={typeAndLane(user.professionalSubtype)} right={<LockTile />} onClick={() => setSheet("locked")} ariaLabel={`Professional type, ${typeLabel(user.professionalSubtype)}. Locked`} />
-          <FootNote icon={Info} style={{ margin: "-4px 0 6px 50px" }}>
+          <FootNote icon={Info} style={{ marginBlock: "-4px 6px", marginInline: "50px 0" }}>
             {pending
               ? `Your request to change to ${typeLabel(pending)} is with our team.`
               : "Contact support to change your professional type. It sets your tools and how your licence is verified."}

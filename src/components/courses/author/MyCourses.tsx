@@ -188,14 +188,14 @@ function CourseCardView({ card: c, summary, cover, onOpen }: { card: CourseCard;
     <button
       type="button"
       onClick={onOpen}
-      className="tap w-full text-left overflow-hidden"
+      className="tap w-full text-start overflow-hidden"
       style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, marginBottom: 10 }}
       aria-label={`${c.title}, ${pub ? "published" : statusLabel(c.status).toLowerCase()}`}
     >
       <div className="relative overflow-hidden" style={{ height: 96, background: coverBackground(c.coverColour, dark) }}>
         {cover && <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" />}
-        <span aria-hidden className="absolute" style={{ left: 0, top: 0, bottom: 0, width: 6, background: tab === "Archived" ? INK.chF : tab === "Drafts" ? dot : INK.prAccent }} />
-        <span className="absolute" style={{ right: 10, top: 10, fontSize: textPx(11), fontWeight: 800, borderRadius: 8, padding: "3px 8px", background: INK.card, color: INK.ch }}>
+        <span aria-hidden className="absolute" style={{ insetInlineStart: 0, top: 0, bottom: 0, width: 6, background: tab === "Archived" ? INK.chF : tab === "Drafts" ? dot : INK.prAccent }} />
+        <span className="absolute" style={{ insetInlineEnd: 10, top: 10, fontSize: textPx(11), fontWeight: 800, borderRadius: 8, padding: "3px 8px", background: INK.card, color: INK.ch }}>
           {formatPrice(c.priceCents)}
         </span>
       </div>
@@ -210,7 +210,7 @@ function CourseCardView({ card: c, summary, cover, onOpen }: { card: CourseCard;
                 {c.enrolled} enrolled
               </span>
               {c.ratings > 0 && c.averageRating !== null && (
-                <span className="inline-flex items-center ml-auto" style={{ gap: 4 }}>
+                <span className="inline-flex items-center ms-auto" style={{ gap: 4 }}>
                   <Star size={12} strokeWidth={1.5} aria-hidden fill="#D9A441" style={{ color: "#D9A441" }} />
                   <b style={{ color: INK.ch }}>{c.averageRating.toFixed(1)}</b>
                 </span>
@@ -220,7 +220,7 @@ function CourseCardView({ card: c, summary, cover, onOpen }: { card: CourseCard;
             <span className="inline-flex items-center" style={{ gap: 5 }}>
               <span aria-hidden style={{ width: 6, height: 6, borderRadius: 9999, background: INK.chF }} />
               {c.enrolled} took it
-              {summary?.unpublishedAt && <span style={{ color: INK.chF, marginLeft: 7 }}>Unpublished {fmtDay(summary.unpublishedAt)}</span>}
+              {summary?.unpublishedAt && <span style={{ color: INK.chF, marginInlineStart: 7 }}>Unpublished {fmtDay(summary.unpublishedAt)}</span>}
             </span>
           ) : (
             <>

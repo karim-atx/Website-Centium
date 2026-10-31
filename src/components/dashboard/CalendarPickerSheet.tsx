@@ -6,6 +6,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { DAY_LETTERS, monthLeadingBlanks } from "../../utils/week";
+import { appLocale } from "../../i18n/format";
 
 // Monday first (v6 X-13), from utils/week.
 const WEEKDAYS = DAY_LETTERS;
@@ -145,7 +146,7 @@ export const CalendarPickerSheet: React.FC<{
     ...Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1)),
   ];
 
-  const monthLabel = cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const monthLabel = cursor.toLocaleDateString(appLocale("en-US"), { month: "long", year: "numeric" });
   const shown = confirm ? pending : selectedDate;
   // The next month is out of reach once its first day is past maxDate.
   const nextMonthBlocked = !!maxDate && toIso(new Date(year, month + 1, 1)) > maxDate;
@@ -310,7 +311,7 @@ const PartBCalendar: React.FC<{
     ...Array.from({ length: blanks }, () => null),
     ...Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1)),
   ];
-  const monthLabel = cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const monthLabel = cursor.toLocaleDateString(appLocale("en-US"), { month: "long", year: "numeric" });
   const nextBlocked = !!maxDate && toIso(new Date(year, month + 1, 1)) > maxDate;
   const prevBlocked = !!minDate && toIso(new Date(year, month, 0)) < minDate;
   const accent = dark ? "rgb(var(--c-primary-deep-text))" : "rgb(var(--thi-5b3fe4))";

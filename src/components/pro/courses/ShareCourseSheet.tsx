@@ -130,7 +130,7 @@ export const ShareCourseSheet: React.FC<{ course: CourseCard; onClose: () => voi
                 aria-checked={on}
                 disabled={already}
                 onClick={() => setPicked((p) => (on ? p.filter((x) => x !== c.clientId) : [...p, c.clientId!]))}
-                className="tap w-full flex items-center text-left disabled:cursor-default"
+                className="tap w-full flex items-center text-start disabled:cursor-default"
                 style={{ gap: 12, padding: "9px 0", borderTop: i ? `1px solid ${INK.b06}` : undefined }}
               >
                 <Avatar name={c.name} url={c.avatarUrl} size={36} />

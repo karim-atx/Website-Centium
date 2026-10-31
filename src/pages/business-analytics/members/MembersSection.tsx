@@ -13,6 +13,7 @@ import { MembersPage } from "./MembersPage";
 import { MemberCodesPage } from "./MemberCodesPage";
 import { VenueMembersPage } from "./VenueMembersPage";
 import { StoreCustomersIndex, TopCustomersPage } from "./StoreCustomers";
+import { appLocale } from "../../../i18n/format";
 
 // Analytics › Members (AN4): the section index (AN4-001), the section pages
 // (AN4-005 …, MembersPage), Member codes (OURS-AN4-member-codes with the
@@ -137,7 +138,7 @@ export function MembersSection() {
             first
             title="Member codes"
             lead={codesLine}
-            value={waiting === null ? null : waiting.toLocaleString()}
+            value={waiting === null ? null : waiting.toLocaleString(appLocale())}
             onClick={() => navigate(`${BASE}/codes`)}
             ariaLabel={`Member codes: ${waiting ?? 0} waiting to be used`}
           />
@@ -165,7 +166,7 @@ export function MembersSection() {
             first
             title="Venue members"
             lead={data.venues.length === 1 ? `${activeAtVenues} active at ${data.venues[0].name}` : `${activeAtVenues} active across ${data.venues.length} venues`}
-            value={activeAtVenues.toLocaleString()}
+            value={activeAtVenues.toLocaleString(appLocale())}
             onClick={() => navigate(`${BASE}/venue`)}
             ariaLabel={`Venue members: ${activeAtVenues} active`}
           />

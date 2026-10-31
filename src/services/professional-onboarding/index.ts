@@ -4,6 +4,7 @@ import type { Database } from "../../../lib/supabase/database.types";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { fetchMyCv, saveLicence, licenceStatus, type Licence, type LicenceDraft, type LicenceStatus } from "../professional-cv";
 import type { LicenceReviewRow } from "../professional-cv/licenceStatus";
+import { tk } from "../../i18n/core";
 
 // The professional onboarding lane's writes (Database B5, HANDOVER_API "## B5"
 // "The professional lanes"): the new professional_profiles columns, the
@@ -19,8 +20,8 @@ export type Fail = { ok: false; message: string };
 function describe(error: PostgrestError | null, fallback: string): string {
   if (error && isOffline(error)) return OFFLINE_MESSAGE;
   const code = error?.code ?? "";
-  if (code === "PGRST301" || /jwt|not authenticated/i.test(error?.message ?? "")) return "Your session expired. Sign in again.";
-  if (code === "23514") return "Check the details: one of them is outside what we can save.";
+  if (code === "PGRST301" || /jwt|not authenticated/i.test(error?.message ?? "")) return tk("Your session expired. Sign in again.");
+  if (code === "23514") return tk("Check the details: one of them is outside what we can save.");
   return fallback;
 }
 
@@ -54,7 +55,7 @@ export async function saveProLaneColumns(userId: string, cols: ProLaneColumns): 
   const updated = await db.from("professional_profiles").update(cols).eq("profile_id", userId).select("profile_id");
   if (updated.error) {
     console.error("[professional-onboarding] Could not save the lane answers:", updated.error.code, updated.error.message);
-    return { ok: false, message: describe(updated.error, "Couldn't save this step. Check your connection and try again.") };
+    return { ok: false, message: describe(updated.error, tk("Couldn't save this step. Check your connection and try again.")) };
   }
   if (updated.data && updated.data.length > 0) return { ok: true };
   const mirror = await mirroredDocument(userId);
@@ -65,7 +66,7 @@ export async function saveProLaneColumns(userId: string, cols: ProLaneColumns): 
     .single();
   if (inserted.error) {
     console.error("[professional-onboarding] Could not create the profile row:", inserted.error.code, inserted.error.message);
-    return { ok: false, message: describe(inserted.error, "Couldn't save this step. Check your connection and try again.") };
+    return { ok: false, message: describe(inserted.error, tk("Couldn't save this step. Check your connection and try again.")) };
   }
   return { ok: true };
 }
@@ -95,11 +96,11 @@ async function mirroredDocument(userId: string): Promise<string | null> {
  */
 export async function ensureProProfileRow(userId: string): Promise<Ok | Fail> {
   const found = await db.from("professional_profiles").select("profile_id").eq("profile_id", userId).maybeSingle();
-  if (found.error) return { ok: false, message: describe(found.error, "Couldn't load your details. Try again.") };
+  if (found.error) return { ok: false, message: describe(found.error, tk("Couldn't load your details. Try again.")) };
   if (found.data) return { ok: true };
   const mirror = await mirroredDocument(userId);
   const ins = await db.from("professional_profiles").insert({ profile_id: userId, ...(mirror ? { certification_url: mirror } : null) });
-  if (ins.error && ins.error.code !== "23505") return { ok: false, message: describe(ins.error, "Couldn't load your details. Try again.") };
+  if (ins.error && ins.error.code !== "23505") return { ok: false, message: describe(ins.error, tk("Couldn't load your details. Try again.")) };
   return { ok: true };
 }
 
@@ -110,7 +111,7 @@ export async function fetchProLaneColumns(userId: string): Promise<Ok<{ row: (Pr
     .select("other_discipline, closest_group, work_mode, home_visit_km, specialties, session_formats, session_lengths, specialty, listed_publicly")
     .eq("profile_id", userId)
     .maybeSingle();
-  if (error) return { ok: false, message: describe(error, "Couldn't load your details. Try again.") };
+  if (error) return { ok: false, message: describe(error, tk("Couldn't load your details. Try again.")) };
   return { ok: true, row: (data as (ProLaneColumns & { listed_publicly: boolean }) | null) ?? null };
 }
 
@@ -223,7 +224,7 @@ export async function saveRegistration(
 export async function saveCertificateIssuer(userId: string, certificate: Licence, issuer: string): Promise<Ok | Fail> {
   const v = issuer.trim();
   if ((certificate.issuingBody ?? "") === v) return { ok: true };
-  if (v.length === 1) return { ok: false, message: "Use at least 2 characters." };
+  if (v.length === 1) return { ok: false, message: tk("Use at least 2 characters.") };
   const r = await saveLicence(userId, { ...draftOf(certificate), issuingBody: v || null }, certificate, null, certificate.position);
   return r.ok ? { ok: true } : r;
 }
@@ -235,7 +236,7 @@ async function fetchReviewRows(userId: string, licenceId?: string): Promise<Ok<{
     .eq("professional_id", userId);
   if (licenceId) q = q.eq("licence_id", licenceId);
   const { data, error } = await q;
-  if (error) return { ok: false, message: describe(error, "Couldn't load your review status. Try again.") };
+  if (error) return { ok: false, message: describe(error, tk("Couldn't load your review status. Try again.")) };
   return {
     ok: true,
     rows: (data ?? []).map((r) => ({
@@ -306,7 +307,7 @@ async function goLiveFromRows(userId: string, regulated: boolean): Promise<Ok<{ 
 /** onboarding_progress items for an owner: done / dismissed by item key. */
 export async function fetchOwnerProgress(userId: string): Promise<Ok<{ items: Record<string, { done: boolean; dismissed: boolean }> }> | Fail> {
   const { data, error } = await db.from("onboarding_progress").select("item, done_at, dismissed_at").eq("owner_id", userId);
-  if (error) return { ok: false, message: describe(error, "Couldn't load your checklist. Try again.") };
+  if (error) return { ok: false, message: describe(error, tk("Couldn't load your checklist. Try again.")) };
   const items: Record<string, { done: boolean; dismissed: boolean }> = {};
   for (const r of (data ?? []) as { item: string; done_at: string | null; dismissed_at: string | null }[]) {
     items[r.item] = { done: !!r.done_at, dismissed: !!r.dismissed_at };
@@ -318,17 +319,17 @@ export async function fetchOwnerProgress(userId: string): Promise<Ok<{ items: Re
 export async function markOwnerItemDone(userId: string, item: string): Promise<Ok | Fail> {
   const now = new Date().toISOString();
   const updated = await db.from("onboarding_progress").update({ done_at: now }).eq("owner_id", userId).eq("item", item).select("id");
-  if (updated.error) return { ok: false, message: describe(updated.error, "Couldn't save that. Try again.") };
+  if (updated.error) return { ok: false, message: describe(updated.error, tk("Couldn't save that. Try again.")) };
   if (updated.data && updated.data.length > 0) return { ok: true };
   const inserted = await db.from("onboarding_progress").insert({ owner_id: userId, item, done_at: now });
-  if (inserted.error && inserted.error.code !== "23505") return { ok: false, message: describe(inserted.error, "Couldn't save that. Try again.") };
+  if (inserted.error && inserted.error.code !== "23505") return { ok: false, message: describe(inserted.error, tk("Couldn't save that. Try again.")) };
   return { ok: true };
 }
 
 /** Marks an owner checklist item dismissed (handled), keeping its done date. */
 export async function markOwnerItemDismissed(userId: string, item: string): Promise<Ok | Fail> {
   const { error } = await db.from("onboarding_progress").update({ dismissed_at: new Date().toISOString() }).eq("owner_id", userId).eq("item", item);
-  if (error) return { ok: false, message: describe(error, "Couldn't save that. Try again.") };
+  if (error) return { ok: false, message: describe(error, tk("Couldn't save that. Try again.")) };
   return { ok: true };
 }
 

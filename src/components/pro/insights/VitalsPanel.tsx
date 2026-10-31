@@ -34,6 +34,7 @@ import { ChipRow, InsightCard, NotShared, StatBoxes, type StatBox } from "./part
 import { readGate, useRead, type ReadState } from "./reads";
 import { PAGE_RANGE_DAYS } from "./panelProps";
 import type { PanelProps } from "./panelProps";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · W5 Insights › Vitals (TR9 v5 "Blood pressure · dumbbells and
@@ -63,7 +64,7 @@ import type { PanelProps } from "./panelProps";
  */
 
 type Sub = "bp" | "hr" | "weight" | "sleep" | "steps" | "water" | "calories";
-const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
+const fmt = (n: number) => Math.round(n).toLocaleString(appLocale("en-GB"));
 
 export const VitalsPanel: React.FC<PanelProps> = (p) => {
   const { clientId, firstName, access, range, onRange, today, pageRange } = p;

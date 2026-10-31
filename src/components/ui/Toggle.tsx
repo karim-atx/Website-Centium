@@ -91,7 +91,7 @@ export const Toggle: React.FC<{
             ),
         disabled && "opacity-40 cursor-not-allowed"
       )}
-      style={{ width: w, height: h, paddingLeft: pad, paddingRight: pad, ...(checked && onColor ? { background: onColor } : null) }}
+      style={{ width: w, height: h, paddingInlineStart: pad, paddingInlineEnd: pad, ...(checked && onColor ? { background: onColor } : null) }}
     >
       <span
         aria-hidden

@@ -1,6 +1,7 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t, tk, tn } from "../../i18n/core";
 import { stripPrivateExif } from "../storage/exif";
 import { stageAndSubmit, withdrawPending } from "../moderation/images";
 import { describeDescriptionError, descriptionToSend, GROUP_DESCRIPTION_MAX } from "./groupCardsModel";
@@ -51,35 +52,35 @@ export interface GroupState {
 }
 
 /** A refusal, by the database's code, in words. `doing` names the action for the generic case. */
-export function describeGroupError(error: { code?: string; message?: string }, doing = "do that"): string {
+export function describeGroupError(error: { code?: string; message?: string }, doing: string = tk("do that")): string {
   if (isOffline(error as PostgrestError)) return OFFLINE_MESSAGE;
   const msg = error.message ?? "";
   switch (error.code ?? "") {
     case "ATX44":
-      if (/professional/i.test(msg)) return "Only professionals can create groups and broadcast lists.";
-      if (/cannot leave|cannot remove themselves/i.test(msg)) return "As the host you can't leave the group. Close it instead.";
-      return "Only the group's host can do that.";
+      if (/professional/i.test(msg)) return t("Only professionals can create groups and broadcast lists.");
+      if (/cannot leave|cannot remove themselves/i.test(msg)) return t("As the host you can't leave the group. Close it instead.");
+      return t("Only the group's host can do that.");
     case "ATX45":
-      return "This group has been closed.";
+      return t("This group has been closed.");
     case "ATX46":
-      return "That person isn't in this group any more.";
+      return t("That person isn't in this group any more.");
     case "ATX43":
-      return /list/i.test(msg) ? "That list is full." : "This group is full.";
+      return /list/i.test(msg) ? t("That list is full.") : t("This group is full.");
     case "ATX36":
       return /under 18/i.test(msg)
-        ? "Accounts under 18 can't be added to a group."
-        : "You can only add your own connected clients.";
+        ? t("Accounts under 18 can't be added to a group.")
+        : t("You can only add your own connected clients.");
     case "ATX35":
-      return "This person can't be added.";
+      return t("This person can't be added.");
     case "ATX02":
-      return "You've done that a lot recently. Try again in a little while.";
+      return t("You've done that a lot recently. Try again in a little while.");
     case "ATX08":
-      return "That group isn't available any more.";
+      return t("That group isn't available any more.");
     case "22023":
-      if (/name/i.test(msg)) return `Give it a name of up to ${GROUP_NAME_MAX} characters.`;
-      return `Couldn't ${doing}. Check the details and try again.`;
+      if (/name/i.test(msg)) return tn(GROUP_NAME_MAX, "Give it a name of up to {n} character.", "Give it a name of up to {n} characters.");
+      return t("Couldn't {doing}. Check the details and try again.", { doing: t(doing) });
     default:
-      return `Couldn't ${doing}. Try again.`;
+      return t("Couldn't {doing}. Try again.", { doing: t(doing) });
   }
 }
 
@@ -91,9 +92,9 @@ function fail(error: PostgrestError, doing: string): Fail {
 /** Creates a group the caller (a professional) owns, and returns its thread id. */
 export async function createGroup(name: string): Promise<{ ok: true; threadId: string } | Fail> {
   const { data, error } = await supabase.rpc("create_group", { p_name: name });
-  if (error) return fail(error, "create the group");
+  if (error) return fail(error, tk("create the group"));
   const id = (data as { id?: string } | null)?.id;
-  return id ? { ok: true, threadId: id } : { ok: false, message: "Couldn't create the group. Try again." };
+  return id ? { ok: true, threadId: id } : { ok: false, message: t("Couldn't create the group. Try again.") };
 }
 
 /**
@@ -127,34 +128,34 @@ export async function inviteToGroup(
 
 export async function acceptInvitation(threadId: string): Promise<Ok | Fail> {
   const { error } = await supabase.rpc("accept_group_invitation", { p_thread_id: threadId });
-  return error ? fail(error, "join the group") : { ok: true };
+  return error ? fail(error, tk("join the group")) : { ok: true };
 }
 
 export async function declineInvitation(threadId: string): Promise<Ok | Fail> {
   const { error } = await supabase.rpc("decline_group_invitation", { p_thread_id: threadId });
-  return error ? fail(error, "decline the invitation") : { ok: true };
+  return error ? fail(error, tk("decline the invitation")) : { ok: true };
 }
 
 export async function leaveGroup(threadId: string): Promise<Ok | Fail> {
   const { error } = await supabase.rpc("leave_group", { p_thread_id: threadId });
-  return error ? fail(error, "leave the group") : { ok: true };
+  return error ? fail(error, tk("leave the group")) : { ok: true };
 }
 
 /** Removes a member, or withdraws an unanswered invitation. Host only. */
 export async function removeGroupMember(threadId: string, userId: string): Promise<Ok | Fail> {
   const { error } = await supabase.rpc("remove_group_member", { p_thread_id: threadId, p_user_id: userId });
-  return error ? fail(error, "remove them") : { ok: true };
+  return error ? fail(error, tk("remove them")) : { ok: true };
 }
 
 export async function renameGroup(threadId: string, name: string): Promise<Ok | Fail> {
   const { error } = await supabase.rpc("rename_group", { p_thread_id: threadId, p_name: name });
-  return error ? fail(error, "rename the group") : { ok: true };
+  return error ? fail(error, tk("rename the group")) : { ok: true };
 }
 
 /** Closes the group for everyone: it stays readable, and nobody can post. Host only. */
 export async function closeGroup(threadId: string): Promise<Ok | Fail> {
   const { error } = await supabase.rpc("close_group", { p_thread_id: threadId });
-  return error ? fail(error, "close the group") : { ok: true };
+  return error ? fail(error, tk("close the group")) : { ok: true };
 }
 
 /** Invitations waiting for the caller's answer, newest first. */
@@ -167,9 +168,9 @@ export async function fetchGroupInvitations(): Promise<GroupInvitation[]> {
   return (data ?? [])
     .map((r) => ({
       threadId: r.thread_id,
-      groupName: r.group_name?.trim() || "Group",
+      groupName: r.group_name?.trim() || t("Group"),
       invitedById: r.invited_by_id,
-      invitedByFirstName: r.invited_by_first_name?.trim() || "Someone",
+      invitedByFirstName: r.invited_by_first_name?.trim() || t("Someone"),
       invitedByAvatarUrl: r.invited_by_avatar_url,
       memberCount: Number(r.member_count ?? 0),
       invitedAt: r.invited_at,
@@ -189,7 +190,7 @@ export async function fetchGroupMembers(threadId: string): Promise<GroupMember[]
   }
   return (data ?? []).map((r) => ({
     userId: r.user_id,
-    firstName: r.first_name?.trim() || "Someone",
+    firstName: r.first_name?.trim() || t("Someone"),
     avatarUrl: r.avatar_url,
     role: r.role === "owner" ? "owner" : "member",
     status: r.status,
@@ -216,7 +217,7 @@ export async function fetchGroupState(threadId: string): Promise<GroupState | nu
   if (error?.code === "42703") ({ data, error } = await read("name, created_by, closed_at"));
   if (error || !data) return null;
   return {
-    name: data.name?.trim() || "Group",
+    name: data.name?.trim() || t("Group"),
     ownerId: data.created_by,
     closedAt: data.closed_at,
     photoPath: data.photo_path?.trim() || null,
@@ -308,15 +309,15 @@ async function downscale(file: File): Promise<File> {
  * until then (useOwnImage); members keep the previous photo, or none.
  */
 export async function submitGroupPhoto(me: string, threadId: string, file: File): Promise<Ok | Fail> {
-  if (!PHOTO_TYPES.includes(file.type)) return { ok: false, message: "Group photos need to be a JPEG, PNG or WebP." };
-  if (file.size > PHOTO_MAX_BYTES) return { ok: false, message: "That image is too large. Pick one under 5 MB." };
+  if (!PHOTO_TYPES.includes(file.type)) return { ok: false, message: t("Group photos need to be a JPEG, PNG or WebP.") };
+  if (file.size > PHOTO_MAX_BYTES) return { ok: false, message: t("That image is too large. Pick one under 5 MB.") };
   try {
     const stripped = await stripPrivateExif(await downscale(file));
     const r = await stageAndSubmit(me, "group_photo", threadId, stripped);
     return r.ok ? { ok: true } : { ok: false, message: r.message };
   } catch (e) {
     console.error("[groups] Could not send the photo:", e);
-    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : "That photo couldn't be uploaded. Check your connection and try again." };
+    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : t("That photo couldn't be uploaded. Check your connection and try again.") };
   }
 }
 
@@ -333,7 +334,7 @@ export async function withdrawGroupPhoto(threadId: string): Promise<Ok | Fail> {
  */
 export async function removeGroupPhoto(threadId: string): Promise<Ok | Fail> {
   const { error } = await untyped().rpc("remove_group_photo", { p_thread_id: threadId });
-  return error ? fail(error, "remove the photo") : { ok: true };
+  return error ? fail(error, tk("remove the photo")) : { ok: true };
 }
 
 /**
@@ -362,5 +363,5 @@ export interface GroupReader {
 export async function fetchGroupReaders(messageId: string): Promise<GroupReader[]> {
   const { data, error } = await supabase.rpc("group_message_readers", { p_message_id: messageId });
   if (error) return [];
-  return (data ?? []).map((r) => ({ userId: r.user_id, firstName: r.first_name?.trim() || "Someone", readAt: r.read_at }));
+  return (data ?? []).map((r) => ({ userId: r.user_id, firstName: r.first_name?.trim() || t("Someone"), readAt: r.read_at }));
 }

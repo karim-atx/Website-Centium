@@ -102,7 +102,7 @@ const SourceRows: React.FC<{ rows: SourceRow[]; onRun?: () => void }> = ({ rows,
             r.run();
             onRun?.();
           }}
-          className="tap w-full flex items-center text-left disabled:opacity-50"
+          className="tap w-full flex items-center text-start disabled:opacity-50"
           style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < rows.length - 1 ? `1px solid ${INK.b06}` : "none" }}
         >
           <span className="flex items-center justify-center shrink-0" style={{ width: 34, height: 34, borderRadius: 11, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
@@ -150,7 +150,7 @@ export const PhotoSourceSheet: React.FC<{ open: boolean; onClose: () => void; pi
             style={{ height: 96, borderRadius: 16, marginBottom: 8, background: cover.url ? INK.soft : `repeating-linear-gradient(45deg, ${INK.soft} 0 6px, ${INK.card} 6px 12px)`, border: `1px solid ${INK.bCard}` }}
           >
             {cover.url && <img src={cover.url} alt="Your cover photo" className="absolute inset-0 w-full h-full object-cover" />}
-            <ImageApprovalBadge state={cover.image} className="absolute left-2 top-2" />
+            <ImageApprovalBadge state={cover.image} className="absolute start-2 top-2" />
           </div>
           <SourceRows
             rows={[

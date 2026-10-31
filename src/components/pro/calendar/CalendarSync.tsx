@@ -46,7 +46,7 @@ export const SyncNote: React.FC<{ title: string; body: string; age: string; onCl
     };
   }, []);
   return createPortal(
-    <div className="fixed left-0 right-0 flex justify-center" style={{ zIndex: 95, top: "calc(env(safe-area-inset-top) + 12px)", padding: "0 12px", pointerEvents: "none" }}>
+    <div className="fixed start-0 end-0 flex justify-center" style={{ zIndex: 95, top: "calc(env(safe-area-inset-top) + 12px)", padding: "0 12px", pointerEvents: "none" }}>
       <style>{FOCUS_CSS}</style>
       <button
         type="button"
@@ -60,7 +60,7 @@ export const SyncNote: React.FC<{ title: string; body: string; age: string; onCl
           pointerEvents: "auto",
           width: "100%",
           maxWidth: 406,
-          textAlign: "left",
+          textAlign: "start",
           fontFamily: "inherit",
           borderRadius: 18,
           background: m.card,

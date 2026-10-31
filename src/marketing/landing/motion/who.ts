@@ -59,10 +59,10 @@ export class WhoMotion implements EngineSection {
     const row = this.row,
       c = this.cards;
     if (!row || c.length < 2 || !this.dots.length) return;
-    const stride = c[1].el.offsetLeft - c[0].el.offsetLeft || 1,
+    const stride = Math.abs(c[1].el.offsetLeft - c[0].el.offsetLeft) || 1,
       room = row.scrollWidth - row.clientWidth,
-      end = room > 2 && row.scrollLeft >= room - 2,
-      act = end ? this.dots.length - 1 : Math.max(0, Math.min(this.dots.length - 1, Math.round(row.scrollLeft / stride)));
+      end = room > 2 && Math.abs(row.scrollLeft) >= room - 2,
+      act = end ? this.dots.length - 1 : Math.max(0, Math.min(this.dots.length - 1, Math.round(Math.abs(row.scrollLeft) / stride)));
     this.dots.forEach((d, j) => {
       d.style.background = j === act ? "#775FD7" : "rgba(34,30,26,.18)";
       d.style.transform = j === act ? "none" : "scaleX(.4)";

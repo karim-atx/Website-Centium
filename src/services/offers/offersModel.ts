@@ -21,6 +21,7 @@
 
 import { formatShortDate } from "../../utils/date";
 import { num, rows, str } from "../market/parse";
+import { appLocale } from "../../i18n/format";
 
 // ---------------------------------------------------------------------------
 // Categories (C-MO.4.4 chips, `cats`)
@@ -261,11 +262,11 @@ export const voucherExpiryLabel = (days: number, cappedOn: string | null = null)
 
 /** The redeem sheet's line: "900 points will be deducted. New balance: 340." */
 export function deductionLine(cost: number, balance: number): string {
-  return `${cost.toLocaleString("en-US")} points will be deducted. New balance: ${Math.max(0, balance - cost).toLocaleString("en-US")}.`;
+  return `${cost.toLocaleString(appLocale("en-US"))} points will be deducted. New balance: ${Math.max(0, balance - cost).toLocaleString(appLocale("en-US"))}.`;
 }
 
 /** "You need 1,760 more points". */
-export const needMoreLine = (cost: number, balance: number): string => `You need ${Math.max(0, cost - balance).toLocaleString("en-US")} more points`;
+export const needMoreLine = (cost: number, balance: number): string => `You need ${Math.max(0, cost - balance).toLocaleString(appLocale("en-US"))} more points`;
 
 // ---------------------------------------------------------------------------
 // redeem_offer refusals: HANDOVER_API "Offers, vouchers, redemption" and the

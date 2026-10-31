@@ -20,6 +20,7 @@ import { clientsLabel, currentWeek, isActive } from "./libraryModel";
 import { todayLocal } from "../../../utils/date";
 import { reviewStateText } from "../../../services/workout/logReplyLogic";
 import { useReviewStates } from "./useReviewStates";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · W5 TR2 "Programme builder", as far as the schema goes.
@@ -107,11 +108,11 @@ export const ProgrammeDetail: React.FC<{
             key={s.id}
             type="button"
             onClick={() => onOpenLog(s.id)}
-            className="tap w-full text-left"
+            className="tap w-full text-start"
             style={{ padding: "8px 0", minHeight: 44, borderTop: `1px solid ${INK.b06}` }}
           >
             <span className="block" style={{ fontSize: textPx(12.5), fontWeight: 600, color: INK.ch }}>
-              {fmtDay(s.date)} · {formatDuration(s.durationSec)} · {Math.round(s.totalVolumeKg).toLocaleString()} kg
+              {fmtDay(s.date)} · {formatDuration(s.durationSec)} · {Math.round(s.totalVolumeKg).toLocaleString(appLocale())} kg
             </span>
             <span className="block truncate" style={{ fontSize: textPx(11.5), color: INK.chF }}>
               {s.exercises.map((e) => e.name).join(", ")}
@@ -145,7 +146,7 @@ export const ProgrammeDetail: React.FC<{
       <UnverifiedProgramNotice isVerified={template.isVerified} isPublic={template.isPublic} className="mb-3" />
       {actionError && <ErrorLine>{actionError}</ErrorLine>}
 
-      <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderLeft: `4px solid ${INK.pr}`, borderRadius: 18, padding: "14px 16px", marginBottom: 12 }}>
+      <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderInlineStart: `4px solid ${INK.pr}`, borderRadius: 18, padding: "14px 16px", marginBottom: 12 }}>
         <p style={{ fontSize: textPx(15), fontWeight: 700, color: INK.ch }}>{template.name}</p>
         <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 6 }}>
           {[`${template.exercises.length} exercise${template.exercises.length === 1 ? "" : "s"}`, template.durationMin ? `${template.durationMin} min` : null].filter(Boolean).join(" · ")}
@@ -191,7 +192,7 @@ export const ProgrammeDetail: React.FC<{
               .join(" · ");
             return (
               <div key={a.id} style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "12px 14px", marginBottom: 8 }}>
-                <button type="button" onClick={() => onOpenCopy(a.id)} className="tap w-full flex items-center text-left" style={{ gap: 12, minHeight: 44 }}>
+                <button type="button" onClick={() => onOpenCopy(a.id)} className="tap w-full flex items-center text-start" style={{ gap: 12, minHeight: 44 }}>
                   <Avatar name={c?.name ?? ""} url={c?.avatarUrl} size={34} />
                   <span className="flex-1 min-w-0">
                     <span className="block truncate" style={{ fontSize: textPx(13.5), fontWeight: 600, color: INK.ch }}>

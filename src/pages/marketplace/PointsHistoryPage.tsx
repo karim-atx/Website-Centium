@@ -11,6 +11,7 @@ import { FOCUS_CSS } from "../../components/market/usePress";
 import { hexAlpha, liftInk } from "../../components/market/marketColor";
 import { fetchLedger, groupLedger, ledgerCursor, ledgerLines, signedPoints, amountTone, type LedgerEntry } from "../../services/points";
 import { BackTitle } from "./BackTitle";
+import { appLocale } from "../../i18n/format";
 
 // Market + Share 3.0 · W2 · Points history (C-MO.4.7 `history`,
 // `historyReversal`, `historyEmpty`; Client Explore Screens lines 598–633,
@@ -109,8 +110,8 @@ export default function PointsHistoryPage() {
             </div>
           </section>
           <p style={{ margin: "8px 0 0", fontSize: textPx(11), lineHeight: linePx(16.5), color: m.faint }}>
-            {pointsSummary.achievementPoints.toLocaleString("en-US")} from achievements · {pointsSummary.referralPoints.toLocaleString("en-US")} from referrals
-            {pointsSummary.otherPoints !== 0 ? ` · ${pointsSummary.otherPoints.toLocaleString("en-US")} other` : ""}
+            {pointsSummary.achievementPoints.toLocaleString(appLocale("en-US"))} from achievements · {pointsSummary.referralPoints.toLocaleString(appLocale("en-US"))} from referrals
+            {pointsSummary.otherPoints !== 0 ? ` · ${pointsSummary.otherPoints.toLocaleString(appLocale("en-US"))} other` : ""}
           </p>
         </>
       ) : (
@@ -168,9 +169,9 @@ const LedgerRow: React.FC<{ entry: LedgerEntry; balanceAfter: number | null; lin
         <div style={{ fontSize: textPx(13.5), fontWeight: 700, color: m.ink }}>{lines.title}</div>
         <div style={{ fontSize: textPx(11), color: m.faint }}>{lines.kind}</div>
       </div>
-      <div style={{ textAlign: "right" }}>
+      <div style={{ textAlign: "end" }}>
         <div style={{ fontSize: textPx(14), fontWeight: 800, color: ink, fontVariantNumeric: "tabular-nums" }}>{signedPoints(entry.amount)}</div>
-        {balanceAfter !== null ? <div style={{ fontSize: textPx(11), color: m.faint, fontVariantNumeric: "tabular-nums" }}>{balanceAfter.toLocaleString("en-US")}</div> : null}
+        {balanceAfter !== null ? <div style={{ fontSize: textPx(11), color: m.faint, fontVariantNumeric: "tabular-nums" }}>{balanceAfter.toLocaleString(appLocale("en-US"))}</div> : null}
       </div>
     </div>
   );

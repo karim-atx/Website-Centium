@@ -16,11 +16,12 @@ import { ChevronLeft, ChevronRight, Plus, Clock, Users, Trash2, Check, X, Calend
 import clsx from "clsx";
 import { DAY_LETTERS, monthLeadingBlanks, mondayIndex } from "../../utils/week";
 import { range12 } from "../../utils/time12";
+import { appLocale } from "../../i18n/format";
 
 type View = "year" | "month" | "week" | "day";
 const classTypeOptions = ["Group fitness", "Yoga", "Spin", "HIIT", "Personal training", "Physio session"];
 
-const monthNames = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString("en-US", { month: "long" }));
+const monthNames = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString(appLocale("en-US"), { month: "long" }));
 const pad = (n: number) => String(n).padStart(2, "0");
 const toISO = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
 const addDaysISO = (iso: string, days: number) => {
@@ -166,7 +167,7 @@ export default function BusinessCalendarTab() {
   const selectedEvents = eventsByDate[selectedDate] ?? [];
   /** This account's real calendar_events rows falling on the selected day. */
   const calendarForDay = events.filter((e) => e.date === selectedDate);
-  const selectedDateLabel = new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
+  const selectedDateLabel = new Date(`${selectedDate}T00:00:00`).toLocaleDateString(appLocale("en-US"), {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -280,9 +281,9 @@ export default function BusinessCalendarTab() {
         (() => {
           const weekStart = startOfWeekISO(selectedDate);
           const weekDays = Array.from({ length: 7 }, (_, i) => addDaysISO(weekStart, i));
-          const rangeLabel = `${new Date(`${weekStart}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(
+          const rangeLabel = `${new Date(`${weekStart}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" })} – ${new Date(
             `${weekDays[6]}T00:00:00`
-          ).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+          ).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" })}`;
           return (
             <>
               <div className="flex items-center justify-between mb-4">
@@ -314,7 +315,7 @@ export default function BusinessCalendarTab() {
                         )}
                       >
                         <span className="text-[10px] font-bold uppercase tracking-wide">
-                          {d.toLocaleDateString("en-US", { weekday: "short" })}
+                          {d.toLocaleDateString(appLocale("en-US"), { weekday: "short" })}
                         </span>
                         <span className="text-base font-bold leading-none">{d.getDate()}</span>
                       </button>
@@ -380,7 +381,7 @@ export default function BusinessCalendarTab() {
                 one list would suggest they are the same kind of thing and
                 that the actions on one work on the other. */}
             {calendarForDay.map((e) => (
-              <Card key={e.id} className="space-y-2" style={{ borderLeft: `4px solid ${e.color ?? "#7D6BB5"}` }}>
+              <Card key={e.id} className="space-y-2" style={{ borderInlineStart: `4px solid ${e.color ?? "#7D6BB5"}` }}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">

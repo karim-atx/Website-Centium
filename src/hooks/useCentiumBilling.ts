@@ -18,6 +18,7 @@ import {
 } from "../services/centium-billing";
 import { fetchSubscriptionTiers } from "../services/subscription-tiers";
 import { OFFLINE_MESSAGE } from "../services/network-error";
+import { t } from "../i18n/core";
 
 export interface CentiumBilling {
   /** The console seat has settled and the first reads have answered. */
@@ -136,12 +137,12 @@ export function useBillingPeriod(ownerId: string | null, enabled: boolean): Bill
       // A BUSINESS base plan only: the function would switch whatever the
       // caller holds, and a professional's own plan is not this screen's.
       const tiers = await fetchSubscriptionTiers("business");
-      if (!tiers.ok) return alive && setState({ key, sub: null, prices: null, error: tiers.message === OFFLINE_MESSAGE ? OFFLINE_MESSAGE : "Couldn't load how you're billed." });
+      if (!tiers.ok) return alive && setState({ key, sub: null, prices: null, error: tiers.message === OFFLINE_MESSAGE ? OFFLINE_MESSAGE : t("Couldn't load how you're billed.") });
       const own = r.value;
       const isBusinessPlan = !!own?.tierId && tiers.tiers.some((t) => !t.isAddon && t.rowId === own.tierId);
       const sub = own && own.active && isBusinessPlan ? own : null;
       if (!sub || !sub.tierId) return alive && setState({ key, sub: null, prices: null, error: null });
-      const p = await fetchPeriodPrices(sub.tierId, sub.seatBlocks, "Couldn't load how you're billed.");
+      const p = await fetchPeriodPrices(sub.tierId, sub.seatBlocks, t("Couldn't load how you're billed."));
       if (alive) setState({ key, sub, prices: p.ok ? p.value : null, error: p.ok ? null : p.message });
     })();
     return () => {

@@ -9,6 +9,7 @@ import { proLaneId } from "./proLanes";
 import { proChipLabel } from "./proModel";
 import { Chips, Field, LinkLine, NumBoxes } from "./parts";
 import type { ProStepProps } from "./types";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Step 3 · Specialties and services (OB-144, OB-146, OB-169, OB-171, OB-172,
@@ -54,8 +55,8 @@ export const ProServicesStep: React.FC<ProStepProps> = ({ kind, pro, setPro, onN
   const [kmMenu, setKmMenu] = useState<HTMLElement | null>(null);
   const [tried, setTried] = useState(false);
   const homeVisits = pro.formats.includes(HOME_VISITS_CHIP) && pro.workMode !== "online" && pro.workMode !== "business";
-  const kmError = tried && homeVisits && !pro.homeVisitKm ? "Choose how far you travel for home visits." : null;
-  const area = pro.area?.label ?? "your area";
+  const kmError = tried && homeVisits && !pro.homeVisitKm ? t("Choose how far you travel for home visits.") : null;
+  const area = pro.area?.label ?? t("your area");
   const setLength = (i: 0 | 1, dir: 1 | -1) =>
     setPro((p) => {
       const next: [number, number] = [...p.lengths] as [number, number];
@@ -72,15 +73,15 @@ export const ProServicesStep: React.FC<ProStepProps> = ({ kind, pro, setPro, onN
       lane={proLaneId(kind)}
       chipLabel={chipLabel}
       step="services"
-      title="Specialties and services"
-      subtitle="What you're best at and how a session works. Clients compare on this."
+      title={t("Specialties and services")}
+      subtitle={t("What you're best at and how a session works. Clients compare on this.")}
       onBack={onBack}
       footer={
         <ObFooter
-          error={kmError ? "Fix 1 thing to continue." : flow && !flow.online ? OB_STRINGS.offlineStep : null}
+          error={kmError ? tn(1, "Fix {n} thing to continue.", "Fix {n} things to continue.") : flow && !flow.online ? t(OB_STRINGS.offlineStep) : null}
           errorTone={kmError ? "error" : "info"}
           primary={{
-            label: "Continue",
+            label: t("Continue"),
             onClick: () => {
               setTried(true);
               if (!(homeVisits && !pro.homeVisitKm)) onNext();
@@ -91,36 +92,36 @@ export const ProServicesStep: React.FC<ProStepProps> = ({ kind, pro, setPro, onN
       }
     >
       <div style={{ position: "relative" }}>
-        <span ref={setAnchor} aria-hidden style={{ position: "absolute", left: 0, top: 48, width: 0, height: 0 }} />
+        <span ref={setAnchor} aria-hidden style={{ position: "absolute", insetInlineStart: 0, top: 48, width: 0, height: 0 }} />
         <Chips
-          label="Specialties"
-          tag="Up to 5"
+          label={t("Specialties")}
+          tag={t("Up to 5")}
           options={[...spec, ...extra]}
           selected={pro.specialties}
           onToggle={toggleSpecialty}
           onMore={() => setMenu(true)}
-          error={capHit ? "You can pick up to 5. Untick one to swap it." : null}
+          error={capHit ? t("You can pick up to 5. Untick one to swap it.") : null}
         />
       </div>
       {menu && (
         <ObMenu
-          title="Specialties"
+          title={t("Specialties")}
           anchor={anchor}
           align="left"
           width={256}
-          options={all.map((s) => ({ key: s, label: s, on: pro.specialties.includes(s) }))}
+          options={all.map((s) => ({ key: s, label: t(s), on: pro.specialties.includes(s) }))}
           onToggle={toggleSpecialty}
           onClose={() => setMenu(false)}
         />
       )}
-      <Chips label="How you work with clients" tag="Pick any" options={FORMATS[kind]} selected={pro.formats} onToggle={toggleFormat} />
+      <Chips label={t("How you work with clients")} tag={t("Pick any")} options={FORMATS[kind]} selected={pro.formats} onToggle={toggleFormat} />
       {homeVisits && (
         <>
           <Field
-            label="Home visits cover"
-            tag="Required"
-            value={pro.homeVisitKm ? `Up to ${pro.homeVisitKm} km from ${area}` : ""}
-            placeholder="Choose a distance"
+            label={t("Home visits cover")}
+            tag={t("Required")}
+            value={pro.homeVisitKm ? t("Up to {km} km from {area}", { km: pro.homeVisitKm, area }) : ""}
+            placeholder={t("Choose a distance")}
             trailingIcon={ChevronDown}
             error={kmError}
             onPress={(el) => setKmMenu(el)}
@@ -132,15 +133,15 @@ export const ProServicesStep: React.FC<ProStepProps> = ({ kind, pro, setPro, onN
             matchWidth={kmMenu}
             variant="field"
             selected={pro.homeVisitKm ? String(pro.homeVisitKm) : null}
-            options={HOME_VISIT_KM.map((km) => ({ value: String(km), label: `Up to ${km} km from ${area}` }))}
+            options={HOME_VISIT_KM.map((km) => ({ value: String(km), label: t("Up to {km} km from {area}", { km, area }) }))}
             onSelect={(v) => setPro((p) => ({ ...p, homeVisitKm: Number(v) }))}
           />
         </>
       )}
-      <ObSectionLabel title="Session length" margin="6px 2px 12px" />
+      <ObSectionLabel title={t("Session length")} margin="6px 2px 12px" />
       <NumBoxes
         items={[0, 1].map((i) => ({
-          label: boxes[i].label,
+          label: t(boxes[i].label),
           value: pro.lengths[i],
           onLess: () => setLength(i as 0 | 1, -1),
           onMore: () => setLength(i as 0 | 1, 1),
@@ -148,7 +149,7 @@ export const ProServicesStep: React.FC<ProStepProps> = ({ kind, pro, setPro, onN
           moreDisabled: pro.lengths[i] >= max,
         }))}
       />
-      <LinkLine icon={Clock} text="Add packages and prices after you're live" margin="-4px 2px 8px" />
+      <LinkLine icon={Clock} text={t("Add packages and prices after you're live")} margin="-4px 2px 8px" />
     </ObStep>
   );
 };

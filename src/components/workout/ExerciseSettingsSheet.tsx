@@ -224,7 +224,7 @@ export const ExerciseSettingsSheet: React.FC<{
           <div className="flex items-center justify-between gap-3">
             <button
               onClick={() => setReplaceOpen(true)}
-              className="tap flex-1 flex items-center justify-between gap-2 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-left min-w-0"
+              className="tap flex-1 flex items-center justify-between gap-2 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-start min-w-0"
             >
               <span className="font-display font-semibold text-charcoal truncate">{exercise.name}</span>
               <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
@@ -256,7 +256,7 @@ export const ExerciseSettingsSheet: React.FC<{
                   className="rounded-full bg-primary-fill text-on-primary-fill text-[11px] font-semibold px-2.5 py-1"
                 >
                   {muscleGroupLabel[mg]}
-                  <span className="ml-0.5 text-[9px] align-super">1°</span>
+                  <span className="ms-0.5 text-[9px] align-super">1°</span>
                 </span>
               ))}
               {exercise.secondaryMuscleGroups?.map((mg) => (
@@ -265,7 +265,7 @@ export const ExerciseSettingsSheet: React.FC<{
                   className="rounded-full bg-primary-pale text-primary-dark text-[11px] font-semibold px-2.5 py-1"
                 >
                   {muscleGroupLabel[mg]}
-                  <span className="ml-0.5 text-[9px] align-super">2°</span>
+                  <span className="ms-0.5 text-[9px] align-super">2°</span>
                 </span>
               ))}
               {exercise.classification && (
@@ -456,7 +456,7 @@ export const ExerciseSettingsSheet: React.FC<{
                       key={m.value}
                       onClick={() => setDraft((d) => ({ ...d, repMaxUpdateMode: m.value }))}
                       className={clsx(
-                        "tap w-full text-left rounded-xl px-3.5 py-2.5 border transition-colors",
+                        "tap w-full text-start rounded-xl px-3.5 py-2.5 border transition-colors",
                         draft.repMaxUpdateMode === m.value
                           ? "bg-primary-pale border-primary"
                           : "bg-cream-soft border-transparent"
@@ -530,7 +530,7 @@ export const ExerciseSettingsSheet: React.FC<{
                 <button
                   type="button"
                   onClick={pro.targets.onOpen}
-                  className="tap w-full flex items-center justify-between rounded-2xl bg-cream-soft px-4 py-3 text-left"
+                  className="tap w-full flex items-center justify-between rounded-2xl bg-cream-soft px-4 py-3 text-start"
                   style={{ minHeight: 44 }}
                 >
                   <span className="min-w-0">

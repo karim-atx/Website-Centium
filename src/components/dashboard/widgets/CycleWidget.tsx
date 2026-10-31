@@ -288,7 +288,7 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
         centre = rt("Week", pregWeek);
       }
       ring = (
-        <Ring box={74} r={32.5} track={track} arc={arc} arcColor={arcColor} reduce={reduce} style={{ left: 16, top: 41 }}>
+        <Ring box={74} r={32.5} track={track} arc={arc} arcColor={arcColor} reduce={reduce} style={{ insetInlineStart: 16, top: 41 }}>
           {centre}
         </Ring>
       );
@@ -307,7 +307,7 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
         centre = <RingText label="Period" value={day} labelPx={8} valuePx={15} weight={800} ls={-0.4} gap={1} labelInk={dark ? "#F0B9CB" : ink.text} />;
       } else centre = <EyeOff size={16} style={{ color: dark ? "#F0B9CB" : ink.text }} aria-hidden />;
       ring = (
-        <Ring box={48} r={21.25} track={track} arc={arc} arcColor={ink.main} dot={dot} reduce={reduce} style={{ left: 12, top: 55 }}>
+        <Ring box={48} r={21.25} track={track} arc={arc} arcColor={ink.main} dot={dot} reduce={reduce} style={{ insetInlineStart: 12, top: 55 }}>
           {centre}
         </Ring>
       );
@@ -326,7 +326,7 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
         centre = rt("Week", pregWeek);
       }
       ring = (
-        <Ring box={56} r={23.25} track={track} arc={arc} arcColor={ink.main} reduce={reduce} style={{ left: 12, top: 42 }}>
+        <Ring box={56} r={23.25} track={track} arc={arc} arcColor={ink.main} reduce={reduce} style={{ insetInlineStart: 12, top: 42 }}>
           {centre}
         </Ring>
       );
@@ -342,7 +342,7 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
     ...extra,
   });
   const chevron = (
-    <ChevronRight size={16} aria-hidden className="absolute" data-cycle-chevron="" style={{ left: 150.5, top: 49, color: ink.faint }} />
+    <ChevronRight size={16} aria-hidden className="absolute" data-cycle-chevron="" style={{ insetInlineStart: 150.5, top: 49, color: ink.faint }} />
   );
   let text: React.ReactNode = null;
   let showChevron = false;
@@ -350,7 +350,7 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
     showChevron = true;
     if (kind === "nsu") {
       text = (
-        <p className="absolute" style={{ left: 12, top: 59.9, width: 138.5, ...t(12, 16.2, 700, ink.charcoal), ...oneLine }}>
+        <p className="absolute" style={{ insetInlineStart: 12, top: 59.9, width: 138.5, ...t(12, 16.2, 700, ink.charcoal), ...oneLine }}>
           Set up cycle tracking
         </p>
       );
@@ -365,7 +365,7 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
           // Text column centred on the ring (48 at 55: centre 79); the drawn
           // two lines sit at 65. Dark Default adds the "Estimate" line the
           // frame leaves out (safety), so the column is centred instead.
-          style={{ left: 70, right: 9, top: withEstimate ? 45 : 65, height: withEstimate ? 68 : undefined }}
+          style={{ insetInlineStart: 70, insetInlineEnd: 9, top: withEstimate ? 45 : 65, height: withEstimate ? 68 : undefined }}
           data-cycle-text=""
         >
           <span style={t(11, 13.8, 800, ink.charcoal, oneLine)}>{lines[0]}</span>
@@ -388,11 +388,11 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
           className="absolute flex flex-col"
           style={
             centred
-              ? { left: 78, right: 9, top: 31, height: 78, justifyContent: "center" }
+              ? { insetInlineStart: 78, insetInlineEnd: 9, top: 31, height: 78, justifyContent: "center" }
               : // 78.4 wide in the table; the lines below the chevron
                 // (150.5, 49-65) may run to its right inset (9) before they
                 // ellipsis, as "Period in 16 days" sets wider in Inter.
-                { left: 78, right: 9, top: 46.9 }
+                { insetInlineStart: 78, insetInlineEnd: 9, top: 46.9 }
           }
           data-cycle-text=""
         >
@@ -500,16 +500,16 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
 
     largeBody = (
       <>
-        <p className="absolute" data-cycle-title="" style={{ left: 104, top: 51, width: 238, ...t(13, 16.9, 700, ink.charcoal), ...oneLine }}>
+        <p className="absolute" data-cycle-title="" style={{ insetInlineStart: 104, top: 51, width: 238, ...t(13, 16.9, 700, ink.charcoal), ...oneLine }}>
           {title}
         </p>
         {kind === "nsu" && (
-          <p className="absolute" style={{ left: 104, top: 75.9, width: 220, ...t(11, 15.4, 500, ink.soft), ...clamp(2) }}>
+          <p className="absolute" style={{ insetInlineStart: 104, top: 75.9, width: 220, ...t(11, 15.4, 500, ink.soft), ...clamp(2) }}>
             Add your last period and usual cycle length.
           </p>
         )}
         {strip}
-        <div className="absolute flex items-center" data-cycle-bottom="" style={{ left: 16, right: 16, top: 118.3, height: 17.5, gap: 6 }}>
+        <div className="absolute flex items-center" data-cycle-bottom="" style={{ insetInlineStart: 16, insetInlineEnd: 16, top: 118.3, height: 17.5, gap: 6 }}>
           {bottom && (
             <span className="min-w-0" style={{ ...t(10.5, 13.7, 600, ink.soft), ...oneLine }}>
               {bottom}
@@ -526,7 +526,7 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
           )}
         </div>
         {kind === "nsu" && (
-          <span className="absolute" style={{ right: 16, top: 119.9, ...t(11, 14.3, 700, actionInk), whiteSpace: "nowrap" }}>
+          <span className="absolute" style={{ insetInlineEnd: 16, top: 119.9, ...t(11, 14.3, 700, actionInk), whiteSpace: "nowrap" }}>
             Set up ›
           </span>
         )}
@@ -543,7 +543,7 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
             }}
             onKeyDown={stop}
             className="tap absolute flex items-center justify-end"
-            style={{ left: 306.05, top: 105.05, width: 44, height: 44, paddingRight: 8.05, pointerEvents: "auto", ...t(11, 14.3, 700, actionInk), whiteSpace: "nowrap" }}
+            style={{ insetInlineStart: 306.05, top: 105.05, width: 44, height: 44, paddingInlineEnd: 8.05, pointerEvents: "auto", ...t(11, 14.3, 700, actionInk), whiteSpace: "nowrap" }}
           >
             + Log
           </button>

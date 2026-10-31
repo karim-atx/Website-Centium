@@ -267,7 +267,7 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
       type="button"
       onClick={onClick}
       className="market-focus"
-      style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 52, padding: "0 14px", borderRadius: 14, background: m.sgrey, border: 0, width: "100%", textAlign: "left", fontFamily: "inherit", fontSize: px(14), fontWeight: 600, color: danger ? m.high : m.ink, cursor: "pointer" }}
+      style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 52, padding: "0 14px", borderRadius: 14, background: m.sgrey, border: 0, width: "100%", textAlign: "start", fontFamily: "inherit", fontSize: px(14), fontWeight: 600, color: danger ? m.high : m.ink, cursor: "pointer" }}
     >
       {glyph}
       {label}
@@ -310,7 +310,7 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
               {photoBusy ? <span className="animate-skeleton-pulse" aria-hidden style={{ position: "absolute", inset: 0, borderRadius: 18, background: m.soft, opacity: 0.7 }} /> : null}
               <span
                 aria-hidden
-                style={{ position: "absolute", right: 6, bottom: 6, width: 26, height: 26, borderRadius: 999, background: m.card, display: "flex", alignItems: "center", justifyContent: "center", color: m.pdark, boxShadow: "0 1px 3px rgba(36,31,27,0.16)" }}
+                style={{ position: "absolute", insetInlineEnd: 6, bottom: 6, width: 26, height: 26, borderRadius: 999, background: m.card, display: "flex", alignItems: "center", justifyContent: "center", color: m.pdark, boxShadow: "0 1px 3px rgba(36,31,27,0.16)" }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: "none" }}>
                   <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />

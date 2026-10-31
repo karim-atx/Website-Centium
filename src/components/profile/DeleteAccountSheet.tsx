@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BottomSheet } from "../ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
+import { t } from "../../i18n/core";
 
 /**
  * The account-deletion confirm, shared by Settings and the Privacy page (it
@@ -28,18 +29,16 @@ export const DeleteAccountSheet: React.FC<{ open: boolean; onClose: () => void; 
       const result = await deleteAccount();
       setDeleting(false);
       if (!result.ok) {
-        setDeleteError("Couldn't schedule the deletion. Try again.");
+        setDeleteError(t("Couldn't schedule the deletion. Try again."));
         return;
       }
       onClose();
       navigate("/app/onboarding");
     };
     return (
-      <BottomSheet open={open} onClose={onClose} title="Delete business account" chrome="market" tone="business" headerHeight={58}>
+      <BottomSheet open={open} onClose={onClose} title={t("Delete business account")} chrome="market" tone="business" headerHeight={58}>
         <p className="text-[12.5px] leading-[18px] text-charcoal-soft" style={{ marginBottom: 12 }}>
-          Your account will be scheduled for deletion in 30 days. When it's deleted, your business closes: it leaves Explore and takes no
-          new bookings or sales. Nothing in the business is deleted, and members keep their records, receipts, bookings and reviews. You
-          can change your mind at any point in those 30 days: sign back in and choose Cancel deletion.
+          {t("Your account will be scheduled for deletion in 30 days. When it's deleted, your business closes: it leaves Explore and takes no new bookings or sales. Nothing in the business is deleted, and members keep their records, receipts, bookings and reviews. You can change your mind at any point in those 30 days: sign back in and choose Cancel deletion.")}
         </p>
         {deleteError && (
           <p role="alert" className="text-[12px] font-bold text-status-high" style={{ marginBottom: 6 }}>
@@ -53,7 +52,7 @@ export const DeleteAccountSheet: React.FC<{ open: boolean; onClose: () => void; 
           className="tap w-full flex items-center justify-center bg-status-high text-white dark:text-[#0D0B1A] text-[15px] font-extrabold disabled:opacity-60"
           style={{ marginTop: 6, minHeight: 52, borderRadius: 16 }}
         >
-          {deleting ? "Scheduling…" : "Schedule my account for deletion"}
+          {deleting ? t("Scheduling…") : t("Schedule my account for deletion")}
         </button>
         <button
           type="button"
@@ -61,22 +60,20 @@ export const DeleteAccountSheet: React.FC<{ open: boolean; onClose: () => void; 
           className="tap w-full flex items-center justify-center bg-cream-soft text-charcoal text-[14px] font-bold"
           style={{ marginTop: 8, minHeight: 48, borderRadius: 16 }}
         >
-          Cancel
+          {t("Cancel")}
         </button>
       </BottomSheet>
     );
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Delete account">
+    <BottomSheet open={open} onClose={onClose} title={t("Delete account")}>
       <div className="space-y-4 animate-fade-slide-up">
         <p className="text-sm text-charcoal-soft leading-relaxed">
-          Your account will be scheduled for deletion in 30 days. After that your food logs, workouts,
-          health metrics and connections are permanently removed.
+          {t("Your account will be scheduled for deletion in 30 days. After that your food logs, workouts, health metrics and connections are permanently removed.")}
         </p>
         <p className="text-sm text-charcoal-soft leading-relaxed">
-          You can change your mind at any point in those 30 days. Sign back in and choose “Cancel
-          deletion”.
+          {t("You can change your mind at any point in those 30 days. Sign back in and choose “Cancel deletion”.")}
         </p>
         {deleteError && <p className="text-xs font-semibold text-status-high text-center">{deleteError}</p>}
         <button
@@ -89,7 +86,7 @@ export const DeleteAccountSheet: React.FC<{ open: boolean; onClose: () => void; 
             // Only leave on a confirmed success. A failed request keeps the
             // user signed in with their data intact and says what happened.
             if (!result.ok) {
-              setDeleteError(result.message ?? "Could not schedule deletion.");
+              setDeleteError(result.message ? t(result.message) : t("Could not schedule deletion."));
               return;
             }
             onClose();
@@ -98,10 +95,10 @@ export const DeleteAccountSheet: React.FC<{ open: boolean; onClose: () => void; 
           disabled={deleting}
           className="tap w-full rounded-2xl bg-status-high text-white dark:text-[#0D0B1A] text-sm font-semibold py-3.5 disabled:opacity-60"
         >
-          {deleting ? "Scheduling…" : "Schedule my account for deletion"}
+          {deleting ? t("Scheduling…") : t("Schedule my account for deletion")}
         </button>
         <button onClick={onClose} className="tap w-full rounded-2xl bg-cream-soft text-charcoal text-sm font-semibold py-3.5">
-          Cancel
+          {t("Cancel")}
         </button>
       </div>
     </BottomSheet>

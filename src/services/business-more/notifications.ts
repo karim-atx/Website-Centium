@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { Result } from "./index";
+import { getLanguage } from "../../i18n/core";
 
 // The six business notification families (Database B4, HANDOVER_API "## B4"
 // "New switches"): app_preferences.notification_business_bookings / _members /
@@ -64,7 +65,7 @@ export async function setBusinessFamily(ownerId: string, family: BusinessFamily,
     if (updated.error) return failed(updated.error, save);
     let row = (updated.data as Record<string, unknown>[] | null)?.[0] ?? null;
     if (!row) {
-      const inserted = await db.from("app_preferences").insert({ owner_id: ownerId, ...patch }).select(SELECT).single();
+      const inserted = await db.from("app_preferences").insert({ owner_id: ownerId, language: getLanguage(), ...patch }).select(SELECT).single();
       if (inserted.error && inserted.error.code !== "23505") return failed(inserted.error, save);
       if (inserted.error) {
         // Another tab created the row first: update it.

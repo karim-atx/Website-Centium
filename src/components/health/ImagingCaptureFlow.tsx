@@ -132,7 +132,7 @@ export const ImagingCaptureFlow: React.FC<{
           })}
         </div>
         <FieldLabel style={{ marginTop: 16 }}>Date</FieldLabel>
-        <button type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-left" style={{ ...fieldStyle(dark, hc), gap: 8, color: date ? INK : INK_FAINT }}>
+        <button type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-start" style={{ ...fieldStyle(dark, hc), gap: 8, color: date ? INK : INK_FAINT }}>
           <CalendarDays size={15} style={{ color: INK_FAINT }} aria-hidden />
           {date ? fmtDate(date) : "Choose a date"}
         </button>

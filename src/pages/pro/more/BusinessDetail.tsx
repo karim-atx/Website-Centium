@@ -16,6 +16,7 @@ import { invitationState } from "../../../components/pro/businesses/invitationLo
 import { textPx } from "../../../theme/textSize";
 import { todayLocal } from "../../../utils/date";
 import { range12, time12 } from "../../../utils/time12";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · a business's page (/app/more/businesses/:id; MO13, gen/r13.js
@@ -65,7 +66,7 @@ export default function BusinessDetail() {
     key: c.id,
     icon: CalendarDays,
     title: c.title,
-    meta: `${new Date(`${c.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" })} · ${c.endTime ? range12(c.startTime, c.endTime) : time12(c.startTime)}`,
+    meta: `${new Date(`${c.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short", day: "numeric", month: "short" })} · ${c.endTime ? range12(c.startTime, c.endTime) : time12(c.startTime)}`,
     onClick: () => navigate(`/app/pro/calendar?day=${c.date}`),
   }));
   const contact: ListRow[] = [

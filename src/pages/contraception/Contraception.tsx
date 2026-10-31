@@ -23,6 +23,7 @@ import {
   type,
   useCycleMode,
 } from "../../components/cycle/cycleUi";
+import { appLocale } from "../../i18n/format";
 
 // HE1.10.b.2, the contraception tracker, in the open Settings layout.
 //
@@ -56,12 +57,12 @@ const METHOD_ICON = (m: Method): LucideIcon =>
 /** "Sep 25, 2026". */
 const shortDate = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  return `${d.toLocaleDateString("en-US", { month: "short" })} ${d.getDate()}, ${d.getFullYear()}`;
+  return `${d.toLocaleDateString(appLocale("en-US"), { month: "short" })} ${d.getDate()}, ${d.getFullYear()}`;
 };
 /** "Mon, Oct 5". */
 const dayLabel = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  return d.toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
 };
 
 export default function Contraception() {

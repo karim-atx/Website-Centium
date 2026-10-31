@@ -196,7 +196,7 @@ export const AddMeasurementsSheet: React.FC<{
                       className="w-full placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
                       style={{
                         height: 39,
-                        padding: "0 30px 0 12px",
+                        paddingBlock: "0", paddingInline: "12px 30px",
                         borderRadius: 10,
                         background: "rgb(var(--c-cream-soft))",
                         border: `1px solid ${c("fieldBorder")}`,
@@ -209,7 +209,7 @@ export const AddMeasurementsSheet: React.FC<{
                         number means is only ever what the label says. */}
                     <span
                       className="absolute pointer-events-none"
-                      style={{ right: 10, top: "50%", transform: "translateY(-50%)", color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10.5) }}
+                      style={{ insetInlineEnd: 10, top: "50%", transform: "translateY(-50%)", color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10.5) }}
                     >
                       {site.unit}
                     </span>

@@ -32,12 +32,12 @@ export const DIVIDER = "border-charcoal/[0.06]";
 
 /** K2 · Back row: 44 back + 13/700 faint label, margin -6 0 10 -10. */
 export const VBackRow: React.FC<{ label: string; onBack: () => void }> = ({ label, onBack }) => (
-  <div className="flex items-center" style={{ margin: "-6px 0 10px -10px" }}>
+  <div className="flex items-center" style={{ marginBlock: "-6px 10px", marginInline: "-10px 0" }}>
     <button
       type="button"
       onClick={onBack}
       aria-label={`Back to ${label}`}
-      className="tap flex items-center gap-[6px] min-h-[44px] pr-2 rounded-full focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
+      className="tap flex items-center gap-[6px] min-h-[44px] pe-2 rounded-full focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
     >
       <span className="w-[44px] h-[44px] flex items-center justify-center text-charcoal">
         <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
@@ -146,7 +146,7 @@ export const VNumberCard: React.FC<{ boxes: [NumberBox, NumberBox]; line?: React
 export const VGroupHeader: React.FC<{ left: string; right?: React.ReactNode; className?: string }> = ({ left, right, className }) => (
   <div className={clsx("flex items-baseline justify-between gap-3", className)} style={{ margin: "22px 4px 8px" }}>
     <h2 className="text-[10.5px] font-extrabold tracking-[0.08em] uppercase text-charcoal-faint">{left}</h2>
-    {right && <span className="text-[11px] text-charcoal-faint text-right">{right}</span>}
+    {right && <span className="text-[11px] text-charcoal-faint text-end">{right}</span>}
   </div>
 );
 
@@ -174,7 +174,7 @@ export const VListRow: React.FC<{
       <span className="relative w-[44px] h-[44px] rounded-[12px] overflow-hidden bg-primary-pale text-primary-dark flex items-center justify-center shrink-0 text-[14px] font-extrabold">
         {tile}
       </span>
-      <span className="min-w-0 flex-1 text-left">
+      <span className="min-w-0 flex-1 text-start">
         <span className="flex flex-wrap items-center gap-x-[6px] gap-y-[2px]">
           <span className="text-[14px] leading-[18px] font-extrabold text-charcoal [text-wrap:balance] [overflow-wrap:anywhere]">{title}</span>
           {pill}
@@ -282,7 +282,7 @@ export const VDetailRow: React.FC<{
   const inner = (
     <>
       {avatar}
-      <span className="min-w-0 flex-1 text-left">
+      <span className="min-w-0 flex-1 text-start">
         <span className="flex flex-wrap items-center gap-x-[6px] gap-y-[2px]">
           <span className={clsx("text-[13px] leading-[17px] text-charcoal [overflow-wrap:anywhere]", titleWeight === 800 ? "font-extrabold" : "font-bold")}>{title}</span>
           {titleExtra}
@@ -377,7 +377,7 @@ export const VAttentionBand: React.FC<{ icon: LucideIcon; title: React.ReactNode
       className
     )}
   >
-    <div className="flex items-start gap-[10px] bg-[#FCEFED] dark:bg-[#33242A] min-h-[52px]" style={{ padding: "13px 14px 13px 16px" }}>
+    <div className="flex items-start gap-[10px] bg-[#FCEFED] dark:bg-[#33242A] min-h-[52px]" style={{ paddingBlock: "13px", paddingInline: "16px 14px" }}>
       <Icon size={17} strokeWidth={2.2} aria-hidden className="shrink-0 mt-[1px] text-[#B8473A] dark:text-[#F09A8E]" />
       <div className="min-w-0">
         <p className="text-[14px] leading-[18px] font-extrabold text-[#8E2F24] dark:text-[#F6C3BB]">{title}</p>

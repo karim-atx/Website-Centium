@@ -127,7 +127,7 @@ export const StreaksBar: React.FC = () => {
       onClick={() => navigate("/app/mind")}
       role="button"
       tabIndex={0}
-      className="tap w-full text-left rounded-[22px] p-[18px] mb-[13px] overflow-hidden animate-fade-slide-up cursor-pointer"
+      className="tap w-full text-start rounded-[22px] p-[18px] mb-[13px] overflow-hidden animate-fade-slide-up cursor-pointer"
       style={{ background: "var(--gradient-board)" }}
     >
       <div className="relative flex items-center gap-4">
@@ -167,7 +167,7 @@ export const StreaksBar: React.FC = () => {
                   fill="#FFFFFF"
                   disabledHint={dayStreak > 0 ? null : "Nothing to share yet. Start a streak first."}
                   onPress={() => share.open(((f) => (f ? streakCard(f) : null))(streakFacts(sources, today)))}
-                  style={{ margin: "-9px -9px -9px -5px" }}
+                  style={{ marginBlock: "-9px", marginInline: "-5px -9px" }}
                 />
               )}
             </span>

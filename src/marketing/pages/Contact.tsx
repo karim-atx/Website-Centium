@@ -8,6 +8,7 @@ import { usePageLink } from "../landing/navigation";
 import { usePageMotion } from "../landing/pageMotion";
 import { useViewportWidth } from "../landing/viewport";
 import { LG, SM } from "../landing/engine/env";
+import { t, tk } from "../../i18n/core";
 
 // Centium landing v29: the Contact page (CT1 v17, handover
 // 02_pages/19-CT1), the prototype markup with its exact inline styles. ONLY
@@ -31,10 +32,10 @@ import { LG, SM } from "../landing/engine/env";
 
 /** The pill labels, and the enum the Edge Function validates against. */
 const topics: { label: string; value: ContactTopic }[] = [
-  { label: "General", value: "general" },
-  { label: "Professional", value: "professional" },
-  { label: "Business", value: "business" },
-  { label: "Press", value: "press" },
+  { label: tk("General"), value: "general" },
+  { label: tk("Professional"), value: "professional" },
+  { label: tk("Business"), value: "business" },
+  { label: tk("Press"), value: "press" },
 ];
 
 const SUPPORT_EMAIL = "support@atraxia.org";
@@ -62,17 +63,29 @@ const SUPPORT_EMAIL = "support@atraxia.org";
  */
 const ERROR_RED = "#C0392B";
 
+/** A translated sentence with the support address as a link where its {email} placeholder is. */
+const withEmail = (sentence: string, link: React.ReactNode) => {
+  const [before, after = ""] = sentence.split("{email}");
+  return (
+    <>
+      {before}
+      {link}
+      {after}
+    </>
+  );
+};
+
 type Status = "idle" | "sending" | "sent";
 type Field = "name" | "email" | "message";
 
 const FIELD_MESSAGE: Record<Field, string> = {
-  name: "Please enter your name.",
-  email: "Please enter a valid email address.",
-  message: "Please write a message.",
+  name: tk("Please enter your name."),
+  email: tk("Please enter a valid email address."),
+  message: tk("Please write a message."),
 };
 
 export const Contact: React.FC = () => {
-  useSEO("Contact", "Get in touch with the Centium team.");
+  useSEO(t("Contact"), t("Get in touch with the Centium team."));
   usePageMotion();
   const vw = useViewportWidth();
   const lg = vw >= LG,
@@ -182,13 +195,13 @@ export const Contact: React.FC = () => {
   const errorMessage = () => {
     switch (errorCode) {
       case "invalid_input":
-        return <>Please check your name, email and message, then try again.</>;
+        return <>{t("Please check your name, email and message, then try again.")}</>;
       case "captcha_failed":
-        return <>Verification didn't complete. Please try again.</>;
+        return <>{t("Verification didn't complete. Please try again.")}</>;
       case "rate_limited":
-        return <>You've sent several messages recently. Please wait a while, or email us at {errorMailtoLink}.</>;
+        return withEmail(t("You've sent several messages recently. Please wait a while, or email us at {email}."), errorMailtoLink);
       default:
-        return <>Your message wasn't sent. Your text is still here. Try again, or email us at {errorMailtoLink}.</>;
+        return withEmail(t("Your message wasn't sent. Your text is still here. Try again, or email us at {email}."), errorMailtoLink);
     }
   };
 
@@ -211,7 +224,7 @@ export const Contact: React.FC = () => {
   const fieldError = (f: Field) =>
     invalid[f] ? (
       <span id={"ct-err-" + f} style={{ fontSize: "12px", fontWeight: "600", color: ERROR_RED }}>
-        {FIELD_MESSAGE[f]}
+        {t(FIELD_MESSAGE[f])}
       </span>
     ) : null;
   const infoHead: React.CSSProperties = {
@@ -237,10 +250,10 @@ export const Contact: React.FC = () => {
   return (
     <section id="contact-page" data-screen-label="CT1 v17 Contact" style={{ position: "relative", zIndex: "2", padding: `${lg ? "96px" : "80px"} ${sm ? "40px" : "20px"} 96px` }}>
       <div style={{ textAlign: "center", maxWidth: "640px", margin: "0 auto 44px" }}>
-        <PageMark id="CONTACT" word="Contact" size={lg ? "20px" : "14px"} />
-        <h1 style={{ marginTop: "14px", fontWeight: "800", fontSize: lg ? "56px" : "40px", letterSpacing: "-.04em", lineHeight: "1.04" }}>Get in touch</h1>
+        <PageMark id="CONTACT" word={t("Contact")} size={lg ? "20px" : "14px"} />
+        <h1 style={{ marginTop: "14px", fontWeight: "800", fontSize: lg ? "56px" : "40px", letterSpacing: "-.04em", lineHeight: "1.04" }}>{t("Get in touch")}</h1>
         <p style={{ marginTop: "14px", fontSize: "18px", lineHeight: "1.6", color: "#5B5349" }}>
-          Questions about Centium, or interested in bringing your practice or business on board? Reach out.
+          {t("Questions about Centium, or interested in bringing your practice or business on board? Reach out.")}
         </p>
       </div>
       <div
@@ -256,15 +269,15 @@ export const Contact: React.FC = () => {
           boxShadow: "0 1px 1px rgba(72,58,130,.05),0 10px 24px rgba(72,58,130,.06),0 40px 80px rgba(92,72,168,.09)",
         }}
       >
-        <form onSubmit={handleSubmit} style={{ position: "relative", padding: ctPad, display: "flex", flexDirection: "column", gap: "14px", textAlign: "left" }}>
-          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".16em", color: "#756D63" }}>WHAT'S THIS ABOUT?</span>
+        <form onSubmit={handleSubmit} style={{ position: "relative", padding: ctPad, display: "flex", flexDirection: "column", gap: "14px", textAlign: "start" }}>
+          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".16em", color: "#756D63" }}>{t("WHAT'S THIS ABOUT?")}</span>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "4px" }}>
-            {topics.map((t, i) => {
+            {topics.map((tp, i) => {
               const active = topic === i;
               return (
                 <button
                   type="button"
-                  key={t.value}
+                  key={tp.value}
                   disabled={pillsDisabled}
                   aria-pressed={active ? "true" : "false"}
                   onClick={() => {
@@ -284,13 +297,13 @@ export const Contact: React.FC = () => {
                     transition: "background .2s,color .2s",
                   }}
                 >
-                  {t.label}
+                  {t(tp.label)}
                 </button>
               );
             })}
           </div>
           <label style={label}>
-            <span style={labelText}>Name</span>
+            <span style={labelText}>{t("Name")}</span>
             <input
               type="text"
               required
@@ -305,14 +318,14 @@ export const Contact: React.FC = () => {
               onInvalid={onInvalid("name")}
               aria-invalid={invalid.name || undefined}
               aria-describedby={invalid.name ? "ct-err-name" : undefined}
-              placeholder="Name"
+              placeholder={t("Name")}
               className="cl-ffield"
               style={{ ...field("name"), height: "48px", padding: "0 16px", boxShadow: "none" }}
             />
             {fieldError("name")}
           </label>
           <label style={label}>
-            <span style={labelText}>Email</span>
+            <span style={labelText}>{t("Email")}</span>
             <input
               type="email"
               required
@@ -327,7 +340,7 @@ export const Contact: React.FC = () => {
               onInvalid={onInvalid("email")}
               aria-invalid={invalid.email || undefined}
               aria-describedby={invalid.email ? "ct-err-email" : undefined}
-              placeholder="Email"
+              placeholder={t("Email")}
               className="cl-ffield"
               style={{ ...field("email"), height: "48px", padding: "0 16px" }}
             />
@@ -335,7 +348,7 @@ export const Contact: React.FC = () => {
           </label>
           <label style={label}>
             <span style={{ ...labelText, display: "flex", justifyContent: "space-between" }}>
-              Message
+              {t("Message")}
               <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "11px", fontWeight: "500", color: "#756D63" }}>{message.length} / 1500</span>
             </span>
             <textarea
@@ -352,13 +365,13 @@ export const Contact: React.FC = () => {
               aria-invalid={invalid.message || undefined}
               aria-describedby={invalid.message ? "ct-err-message" : undefined}
               rows={4}
-              placeholder="How can we help?"
+              placeholder={t("How can we help?")}
               className="cl-ffield"
               style={{ ...field("message"), padding: "14px 16px", lineHeight: "1.5", resize: "none" }}
             />
             {fieldError("message")}
           </label>
-          <p style={{ marginTop: "-4px", fontSize: "12px", color: "#756D63" }}>Please don't include medical details in this form.</p>
+          <p style={{ marginTop: "-4px", fontSize: "12px", color: "#756D63" }}>{t("Please don't include medical details in this form.")}</p>
 
           {/* THE HONEYPOT. Off-screen rather than display:none, because the
               simplest scrapers skip anything display:none and fill in
@@ -374,7 +387,7 @@ export const Contact: React.FC = () => {
             tabIndex={-1}
             autoComplete="off"
             aria-hidden="true"
-            style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", opacity: 0 }}
+            style={{ position: "absolute", insetInlineStart: "-9999px", width: "1px", height: "1px", opacity: 0 }}
           />
 
           {/* MOUNTED FOR THE WHOLE LIFE OF THE FORM, hidden rather than
@@ -392,11 +405,12 @@ export const Contact: React.FC = () => {
 
           {unavailable ? (
             <p style={{ padding: "12px 14px", borderRadius: "14px", background: "#FAF9F7", fontSize: "13px", lineHeight: "1.55", color: "#5B5349", textAlign: "center" }}>
-              The contact form is temporarily unavailable. Email us at{" "}
-              <a href={`mailto:${SUPPORT_EMAIL}`} style={{ fontWeight: 700, color: "#6A54C4" }}>
-                {SUPPORT_EMAIL}
-              </a>
-              .
+              {withEmail(
+                t("The contact form is temporarily unavailable. Email us at {email}."),
+                <a href={`mailto:${SUPPORT_EMAIL}`} style={{ fontWeight: 700, color: "#6A54C4" }}>
+                  {SUPPORT_EMAIL}
+                </a>,
+              )}
             </p>
           ) : status === "sent" ? (
             <div
@@ -427,7 +441,7 @@ export const Contact: React.FC = () => {
               >
                 ✓
               </span>
-              <p style={{ fontSize: "15px", fontWeight: "700" }}>Message sent. We'll reply by email.</p>
+              <p style={{ fontSize: "15px", fontWeight: "700" }}>{t("Message sent. We'll reply by email.")}</p>
               <button
                 type="button"
                 onClick={() => {
@@ -436,7 +450,7 @@ export const Contact: React.FC = () => {
                 }}
                 style={{ fontSize: "13px", fontWeight: "700", color: "#6A54C4", textDecoration: "underline" }}
               >
-                Send another message
+                {t("Send another message")}
               </button>
             </div>
           ) : (
@@ -473,7 +487,7 @@ export const Contact: React.FC = () => {
                     style={{ width: "16px", height: "16px", borderRadius: "99px", border: "2px solid rgba(255,255,255,.35)", borderTopColor: "#fff" }}
                   />
                 )}
-                {sending ? "Sending…" : "Send message"}
+                {sending ? t("Sending…") : t("Send message")}
               </button>
               {errorCode !== null && (
                 <p
@@ -499,13 +513,13 @@ export const Contact: React.FC = () => {
           style={{
             padding: `22px ${ctPad}`,
             background: "#FAF9FE",
-            borderLeft: "0",
+            borderInlineStart: "0",
             borderTop: "1px solid #EDEAE4",
             display: "grid",
             gridTemplateColumns: sm ? "repeat(2,minmax(0,1fr))" : "minmax(0,1fr)",
             gap: "18px 32px",
             alignItems: "start",
-            textAlign: "left",
+            textAlign: "start",
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -516,9 +530,9 @@ export const Contact: React.FC = () => {
                   <path d="M4 7l8 6 8-6" stroke="#6A54C4" />
                 </svg>
               </span>
-              EMAIL
+              {t("EMAIL")}
             </span>
-            <a href={`mailto:${SUPPORT_EMAIL}`} style={{ paddingLeft: "40px", fontSize: "14.5px", fontWeight: "700", color: "#6A54C4" }}>
+            <a href={`mailto:${SUPPORT_EMAIL}`} style={{ paddingInlineStart: "40px", fontSize: "14.5px", fontWeight: "700", color: "#6A54C4" }}>
               {SUPPORT_EMAIL}
             </a>
           </div>
@@ -530,9 +544,9 @@ export const Contact: React.FC = () => {
                   <path d="M12 7.5V12l3 2" stroke="#2F5F58" />
                 </svg>
               </span>
-              RESPONSE TIME
+              {t("RESPONSE TIME")}
             </span>
-            <p style={{ paddingLeft: "40px", fontSize: "14.5px", color: "#5B5349" }}>Within a few business days</p>
+            <p style={{ paddingInlineStart: "40px", fontSize: "14.5px", color: "#5B5349" }}>{t("Within a few business days")}</p>
           </div>
         </div>
       </div>
@@ -543,7 +557,7 @@ export const Contact: React.FC = () => {
           className="cl-hbg"
           style={{ padding: "15px 28px", borderRadius: "999px", background: "#775FD7", color: "#fff", fontWeight: 600, fontSize: "15px", "--hbg": "#6A54C4" } as React.CSSProperties}
         >
-          Back to home
+          {t("Back to home")}
         </a>
         <a
           href="/legal"
@@ -551,7 +565,7 @@ export const Contact: React.FC = () => {
           className="cl-hbd"
           style={{ padding: "15px 26px", borderRadius: "999px", border: "1px solid #CFC5EA", color: "#221E1A", fontWeight: 600, fontSize: "15px", "--hbd": "#775FD7" } as React.CSSProperties}
         >
-          Legal
+          {t("Legal")}
         </a>
       </div>
     </section>

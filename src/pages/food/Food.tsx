@@ -43,6 +43,7 @@ import { foodCard } from "../../components/share/client/clientCardModel";
 import { foodFacts } from "../../components/share/client/clientShareData";
 import { isQueuedEntry } from "../../services/food/provisional";
 import { removeQueued } from "../../services/health-log/offlineQueue";
+import { appLocale } from "../../i18n/format";
 
 /**
  * Dark mode: the meal cards follow the dark tokens. These are the colours
@@ -105,7 +106,7 @@ function DiaryShareButton({ share, date }: { share: ReturnType<typeof useClientS
       label="Share your food day"
       disabledHint={facts ? null : "Nothing to share yet. Log food for this day first."}
       onPress={() => facts && share.open(foodCard(facts))}
-      style={{ margin: "-8px -8px -8px 0" }}
+      style={{ marginBlock: "-8px", marginInline: "0 -8px" }}
     />
   );
 }
@@ -524,15 +525,15 @@ export default function Food() {
                 navigate("/app/food/nutrient-summary");
               }}
               aria-label="Open Nutrient Summary"
-              className="tap relative overflow-hidden rounded-[20px] px-4 py-[15px] mb-[13px] w-full text-left"
+              className="tap relative overflow-hidden rounded-[20px] px-4 py-[15px] mb-[13px] w-full text-start"
               style={{ background: "var(--gradient-food-hero)" }}
             >
               <div className="flex items-center gap-4">
                 <div className="shrink-0">
                   <p className="text-[26px] font-extrabold leading-none tracking-[-1px] text-white tabular-nums">
-                    {Math.round(totals.calories).toLocaleString()}
+                    {Math.round(totals.calories).toLocaleString(appLocale())}
                   </p>
-                  <p className="mt-1 text-[9.5px] leading-[14.3px] text-white/70 dark:text-white">of {targets.calories.toLocaleString()} kcal</p>
+                  <p className="mt-1 text-[9.5px] leading-[14.3px] text-white/70 dark:text-white">of {targets.calories.toLocaleString(appLocale())} kcal</p>
                   {/* SAYS WHOSE NUMBER IT IS. With no height or weight on
                       record the target is a published reference intake rather
                       than anything computed from this person. */}
@@ -548,7 +549,7 @@ export default function Food() {
                       : `${targets.calories - Math.round(totals.calories)} left`}
                   </p>
                 </div>
-                <div className="flex-1 min-w-0 flex flex-col gap-2 pr-5">
+                <div className="flex-1 min-w-0 flex flex-col gap-2 pe-5">
                   {macroRow("Protein", totals.protein, targets.protein)}
                   {macroRow("Carbs", totals.carbs, targets.carbs)}
                   {macroRow("Fat", totals.fat, targets.fat)}
@@ -558,7 +559,7 @@ export default function Food() {
                   glyph ending 18 from the card's edge (the 13 box ends 4.2
                   past the drawn stroke, so the box sits 13.8 in). The card
                   still opens Nutrient Summary. */}
-              <span aria-hidden className="absolute flex" style={{ right: 13.8, top: "50%", transform: "translateY(-50%)" }}>
+              <span aria-hidden className="absolute flex" style={{ insetInlineEnd: 13.8, top: "50%", transform: "translateY(-50%)" }}>
                 <ChevronRight size={13} strokeWidth={2.4} className="text-white" />
               </span>
             </button>
@@ -650,7 +651,7 @@ export default function Food() {
                     aria-label={collapsed ? `Expand ${mealLabels[meal]}` : `Collapse ${mealLabels[meal]}`}
                   >
                     <span className="flex-1 min-w-0 flex items-start" style={{ gap: 22 }}>
-                      <h3 className="min-w-0 text-left text-[13.5px] font-bold text-charcoal">{mealLabels[meal]}</h3>
+                      <h3 className="min-w-0 text-start text-[13.5px] font-bold text-charcoal">{mealLabels[meal]}</h3>
                       {/* FO1.1: the meal menu, with clear space after the title. */}
                       <button
                         onClick={(ev) => {
@@ -686,7 +687,7 @@ export default function Food() {
                       </span>
                     )}
                     {!hideNumbers && (
-                      <span className="w-[52px] shrink-0 text-right text-[11px] font-bold text-charcoal-soft tabular-nums">
+                      <span className="w-[52px] shrink-0 text-end text-[11px] font-bold text-charcoal-soft tabular-nums">
                         {Math.round(mealCal)}
                       </span>
                     )}
@@ -801,7 +802,7 @@ export default function Food() {
                                     setEditingEntry(e);
                                   }}
                                   className={clsx(
-                                    "tap relative w-full flex items-center justify-between gap-2.5 rounded-[11px] px-[11px] py-2 text-left",
+                                    "tap relative w-full flex items-center justify-between gap-2.5 rounded-[11px] px-[11px] py-2 text-start",
                                     flagged && "bg-status-high-bg"
                                   )}
                                   // FO1 #45: #AEA1DC@10% (dark #A991FE@10%).
@@ -921,7 +922,7 @@ export default function Food() {
           // the right edge of the centred 430px app column (01 GLOBAL).
           // FO1 #51-#52: #AEA1DC with its shadow, dark #A991FE without; the
           // plus is drawn #FFFFFF in dark, V6-02 keeps #0D0B1A on #A991FE.
-          className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] right-[calc(var(--app-gutter)+20px)] z-30 w-14 h-14 rounded-full bg-primary-fill text-on-primary-fill shadow-fab dark:shadow-none flex items-center justify-center"
+          className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] end-[calc(var(--app-gutter)+20px)] z-30 w-14 h-14 rounded-full bg-primary-fill text-on-primary-fill shadow-fab dark:shadow-none flex items-center justify-center"
         >
           <Plus size={22} />
         </button>

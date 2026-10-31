@@ -1,4 +1,5 @@
 import { useEffect, useSyncExternalStore } from "react";
+import { t, tn } from "../../i18n/core";
 import {
   createCustomCheck,
   deactivateReminder,
@@ -195,8 +196,9 @@ export function useHealthCheckStore(userId: string | null) {
 
 /** "Every month" / "Every year" / "Every {n} months" / "Once" (OURS-health-check-reminders). */
 export function repeatLabel(r: ReminderRepeat): string {
-  if (r.kind === "monthly") return "Every month";
-  if (r.kind === "yearly") return "Every year";
-  if (r.kind === "months") return `Every ${r.n} months`;
-  return "Once";
+  // Called while the reminders list renders, so in the chosen language.
+  if (r.kind === "monthly") return t("Every month");
+  if (r.kind === "yearly") return t("Every year");
+  if (r.kind === "months") return tn(r.n, "Every {n} month", "Every {n} months");
+  return t("Once");
 }

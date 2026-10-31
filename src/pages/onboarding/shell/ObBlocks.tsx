@@ -5,6 +5,7 @@ import { passwordChecks, passwordStrength } from "../../../utils/password";
 import "./onboarding.css";
 import { MARK_LEAF_PATH } from "../../../components/icons/CentiumMark";
 import { OB, type Shape, Shapes } from "./visuals";
+import { t, tk } from "../../../i18n/core";
 
 // The body blocks of the onboarding steps (BizOnboardingV10 `bl` kinds), one
 // component per kind, literal to the markup. Lanes compose steps from these;
@@ -163,7 +164,7 @@ export const ObCollapsible: React.FC<{
       <span className="ob-coll-s">{summary}</span>
     </span>
     <span className="ob-pilltag" data-tone={tag === "Optional" ? "opt" : tag === "Done" ? "done" : undefined}>
-      {tag}
+      {t(tag)}
     </span>
     <span className="ob-chev">{open ? <ChevronUp size={16} strokeWidth={2.2} /> : <ChevronDown size={16} strokeWidth={2.2} />}</span>
   </button>
@@ -192,7 +193,7 @@ export const ObRows: React.FC<{ rows: ObRowItem[]; label?: string; marginBottom?
         const hasIc = !!r.icon && r.kind !== "radio";
         const inner = (
           <>
-            {i > 0 && <span className="ob-row-rule" style={{ left: hasIc ? 55 : 14 }} />}
+            {i > 0 && <span className="ob-row-rule" style={{ insetInlineStart: hasIc ? 55 : 14 }} />}
             {hasIc && r.icon && (
               <span className="ob-row-ic">
                 <r.icon size={15} />
@@ -346,7 +347,7 @@ export const ObUnits: React.FC<{ items: ObUnitField[] }> = ({ items }) => (
             onChange={(e) => u.onChange(e.target.value)}
             style={{ whiteSpace: "nowrap" }}
           />
-          <span className="ob-unit-sw" role="radiogroup" aria-label={`${u.label} unit`}>
+          <span className="ob-unit-sw" role="radiogroup" aria-label={t("{label} unit", { label: u.label })}>
             {u.units.map((un) => (
               <button key={un.value} type="button" role="radio" aria-checked={u.unit === un.value} className="hit" onClick={() => u.onUnit(un.value)}>
                 {un.label}
@@ -373,7 +374,7 @@ export interface ObGoalTile {
 }
 
 export const ObGoalTiles: React.FC<{ items: ObGoalTile[] }> = ({ items }) => (
-  <div className="ob-goals" role="group" aria-label="Goal areas">
+  <div className="ob-goals" role="group" aria-label={t("Goal areas")}>
     {items.map((g) => (
       <div
         key={g.key}
@@ -535,10 +536,10 @@ export const ObStatus: React.FC<{
         <span
           key={s}
           className="ob-status-ring"
-          style={{ width: s, height: s, marginLeft: -s / 2, marginTop: -s / 2, opacity: i === 0 ? ringOpacity * 0.6 : ringOpacity, transform: `scale(${ringScale})` }}
+          style={{ width: s, height: s, marginInlineStart: -s / 2, marginTop: -s / 2, opacity: i === 0 ? ringOpacity * 0.6 : ringOpacity, transform: `scale(${ringScale})` }}
         />
       ))}
-      <span className="ob-status-glow" style={{ width: glowSize, height: glowSize, marginLeft: -glowSize / 2, marginTop: -glowSize / 2, opacity: glowOpacity }} />
+      <span className="ob-status-glow" style={{ width: glowSize, height: glowSize, marginInlineStart: -glowSize / 2, marginTop: -glowSize / 2, opacity: glowOpacity }} />
       {visNode ? (
         <svg viewBox="0 0 100 100" width={120} height={120} aria-hidden className="ob-status-svg" style={visStyle}>
           {visNode}
@@ -570,7 +571,7 @@ export const ObTerms: React.FC<{
   /** The sentence after the documents (default: the handover's ", and confirm these details are true."). */
   tail?: string;
   disabled?: boolean;
-}> = ({ on, onChange, error, doc = "Terms of Service", tail = ", and confirm these details are true.", disabled }) => (
+}> = ({ on, onChange, error, doc = tk("Terms of Service"), tail = tk(", and confirm these details are true."), disabled }) => (
   <div className="ob-terms">
     <div
       role="checkbox"
@@ -590,20 +591,27 @@ export const ObTerms: React.FC<{
         {on && <Check size={13} strokeWidth={3} />}
       </span>
       <span className="ob-terms-t">
-        I accept the{" "}
-        <a href="/legal#terms" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
-          {doc}
-        </a>{" "}
         {/* Round F (DN, F3): the Refund and Cancellation Policy is part of the Terms. */}
-        (including the{" "}
-        <a href="/legal/refund-policy" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
-          Refund and cancellation policy
-        </a>
-        ) and{" "}
-        <a href="/legal#privacy" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
-          Privacy Policy
-        </a>
-        {tail}
+        {t("I accept the {terms} (including the {refund}) and {privacy}")
+          .split(/(\{terms\}|\{refund\}|\{privacy\})/)
+          .map((piece, i) =>
+            piece === "{terms}" ? (
+              <a key={i} href="/legal#terms" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                {t(doc)}
+              </a>
+            ) : piece === "{refund}" ? (
+              <a key={i} href="/legal/refund-policy" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                {t("Refund and cancellation policy")}
+              </a>
+            ) : piece === "{privacy}" ? (
+              <a key={i} href="/legal#privacy" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                {t("Privacy Policy")}
+              </a>
+            ) : (
+              piece
+            )
+          )}
+        {t(tail)}
       </span>
     </div>
     {error && (
@@ -803,8 +811,8 @@ export const ObStrength: React.FC<{ password: string }> = ({ password }) => {
   return (
     <div className="ob-str" aria-live="polite">
       <div className="ob-str-head">
-        <span>Password strength</span>
-        <span style={{ color }}>{label}</span>
+        <span>{t("Password strength")}</span>
+        <span style={{ color }}>{t(label)}</span>
       </div>
       <div className="ob-str-bar">
         <span style={{ width: `${(passed / passwordChecks.length) * 100}%`, background: color }} />
@@ -815,7 +823,7 @@ export const ObStrength: React.FC<{ password: string }> = ({ password }) => {
           return (
             <span key={c.label} className="ob-str-ck" data-met={met}>
               <span>{met ? <Check size={9} strokeWidth={3.4} /> : <X size={9} strokeWidth={3.4} />}</span>
-              {c.label}
+              {t(c.label)}
             </span>
           );
         })}

@@ -85,14 +85,14 @@ export const BlockCard: React.FC<{
         background: colors.tint,
         // The rail. A border rather than a child element so it cannot be
         // scrolled away from its own card.
-        borderLeft: `4px solid ${colors.rail}`,
+        borderInlineStart: `4px solid ${colors.rail}`,
         margin: "6px 12px",
       }}
     >
       {React.createElement(
         onHeaderClick ? "button" : "div",
         {
-          ...(onHeaderClick ? { onClick: onHeaderClick, className: "tap w-full text-left" } : {}),
+          ...(onHeaderClick ? { onClick: onHeaderClick, className: "tap w-full text-start" } : {}),
           style: { display: "block", width: "100%", padding: "9px 12px 7px" },
         },
         <>

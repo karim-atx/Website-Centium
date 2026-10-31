@@ -446,7 +446,7 @@ const CarePlanEditor: React.FC<{ data: ClientPageData; plan: CarePlan; onClose: 
     <div className="fixed inset-0 overflow-y-auto" style={{ zIndex: 55, background: "rgb(var(--c-cream))" }} role="dialog" aria-label="Edit care plan">
       <div className="mx-auto" style={{ maxWidth: 430, padding: "16px 16px 180px" }}>
         <div className="flex items-start" style={{ gap: 10, marginBottom: 13 }}>
-          <button type="button" onClick={onClose} aria-label="Back" className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, marginLeft: -10 }}>
+          <button type="button" onClick={onClose} aria-label="Back" className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, marginInlineStart: -10 }}>
             <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
           </button>
           <div className="min-w-0">
@@ -469,7 +469,7 @@ const CarePlanEditor: React.FC<{ data: ClientPageData; plan: CarePlan; onClose: 
         <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "2px 12px" }}>
           {sections.map((s, i) => (
             <div key={s.key} style={{ borderBottom: i < sections.length - 1 ? `1px solid ${INK.b06}` : "none" }}>
-              <button type="button" aria-expanded={open === s.key} onClick={() => { setOpen((o) => (o === s.key ? null : s.key)); setDraft(""); }} className="tap w-full flex items-center text-left" style={{ gap: 10, padding: "11px 0", minHeight: 52 }}>
+              <button type="button" aria-expanded={open === s.key} onClick={() => { setOpen((o) => (o === s.key ? null : s.key)); setDraft(""); }} className="tap w-full flex items-center text-start" style={{ gap: 10, padding: "11px 0", minHeight: 52 }}>
                 <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 10, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
                   <s.icon size={14} strokeWidth={1.9} aria-hidden style={{ color: INK.prAccent }} />
                 </span>
@@ -619,7 +619,7 @@ const ReviewHistorySheet: React.FC<{ open: boolean; onClose: () => void; plan: C
               )}
             </div>
             {viewing === v.id && (
-              <ul style={{ margin: "6px 0 0 22px", fontSize: textPx(12), color: INK.chS, lineHeight: 1.5 }}>
+              <ul style={{ marginBlock: "6px 0", marginInline: "22px 0", fontSize: textPx(12), color: INK.chS, lineHeight: 1.5 }}>
                 {(v.snapshot.items ?? []).map((it, j) => (
                   <li key={j}>{`${it.kind === "goal" ? "Goal" : it.kind === "recommendation" ? "Recommendation" : "Monitoring"}: ${it.kind === "recommendation" ? splitRec(it.body).text : it.body}`}</li>
                 ))}

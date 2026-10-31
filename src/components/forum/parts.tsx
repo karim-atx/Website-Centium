@@ -350,5 +350,5 @@ export function DangerLine({ children, className }: { children: React.ReactNode;
 export function OwnPhotoBadge({ threadId }: { threadId: string }) {
   const { image } = useOwnImage("forum_photo", threadId);
   if (!image) return null;
-  return <ImageApprovalBadge state={image} className="absolute top-2 left-2 shadow-soft" />;
+  return <ImageApprovalBadge state={image} className="absolute top-2 start-2 shadow-soft" />;
 }

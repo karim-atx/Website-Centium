@@ -5,6 +5,8 @@ import { CentredPopup } from "../ui/CentredPopup";
 import { useApp } from "../../context/AppContext";
 import { MAX_DESCRIPTION, prepareBugScreenshot, submitBugReport } from "../../services/bug-reports";
 import { SCREENSHOT_ACCEPT } from "../../services/bug-reports/screenshotRules";
+import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 /**
  * MO1.8.10 Report a bug, as a centred popup (no ×; outside tap and Escape
@@ -35,6 +37,18 @@ import { SCREENSHOT_ACCEPT } from "../../services/bug-reports/screenshotRules";
  * THE ROUTE IS THE ONE CAPTURED AT OPEN. Settings keys this popup on `open`,
  * so a mount is an open: every opening starts empty, with no stale error.
  */
+/** The privacy line as whole sentences, one per case, so each reads naturally in Arabic. */
+function disclosure(route: string | null, withShot: boolean): string {
+  if (route) {
+    return withShot
+      ? t("Sent with this report: the page you were on ({route}), your browser version and your screenshot. Nothing from your health records is included unless your screenshot shows it.", { route })
+      : t("Sent with this report: the page you were on ({route}), your browser version. Nothing from your health records is included.", { route });
+  }
+  return withShot
+    ? t("Sent with this report: the page you were on, your browser version and your screenshot. Nothing from your health records is included unless your screenshot shows it.")
+    : t("Sent with this report: the page you were on, your browser version. Nothing from your health records is included.");
+}
+
 export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const { authUserId } = useApp();
   const location = useLocation();
@@ -80,7 +94,7 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
 
   const send = async () => {
     if (!authUserId) {
-      setError("You need to be signed in to send a report.");
+      setError(t("You need to be signed in to send a report."));
       return;
     }
     setBusy(true);
@@ -94,7 +108,7 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
     });
     setBusy(false);
     if (!result.ok) {
-      setError(result.message ?? "That report couldn't be sent.");
+      setError(t(result.message ?? "That report couldn't be sent."));
       return;
     }
     setSent(true);
@@ -111,9 +125,9 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
         open={open}
         onClose={onClose}
         className={pad}
-        title="Report sent"
+        title={t("Report sent")}
         icon={<Check size={22} strokeWidth={1.75} />}
-        body="Thank you. The team reads these when reviewing reports. You won’t get a reply here."
+        body={t("Thank you. The team reads these when reviewing reports. You won’t get a reply here.")}
       />
     );
   }
@@ -123,11 +137,11 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
       open={open}
       onClose={onClose}
       className={pad}
-      title="Report a bug"
+      title={t("Report a bug")}
       // MO1.8.10: Bug 22 / 1.75; the card the Foundations 342 wide (decision 23 flag).
       icon={<Bug size={22} strokeWidth={1.75} />}
       cta={{
-        label: "Send report",
+        label: t("Send report"),
         loading: busy,
         disabled: !description.trim() || tooLong || preparing,
         onClick: () => void send(),
@@ -136,13 +150,13 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
     >
       <label className="block">
         {/* MO1.8.10: the label in the muted grey (text.muted), the field 13 / 400. */}
-        <span className="block text-[12px] leading-[18px] font-semibold text-charcoal-muted mb-1.5">What happened?</span>
+        <span className="block text-[12px] leading-[18px] font-semibold text-charcoal-muted mb-1.5">{t("What happened?")}</span>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={4}
           aria-invalid={tooLong || undefined}
-          placeholder="The weight I logged this morning isn't showing on Home…"
+          placeholder={t("The weight I logged this morning isn't showing on Home…")}
           // 110 tall on the board (159 to 268.5 on the 2x crop).
           className={`h-[110px] w-full rounded-2xl bg-cream-soft border px-3.5 py-3 text-[13px] text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none ${
             tooLong ? "border-status-high" : "border-charcoal/10"
@@ -156,10 +170,10 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
         <div className="mt-1.5 flex items-start gap-2">
           {tooLong && (
             <p role="alert" className="flex-1 min-w-0 text-[12px] font-semibold text-status-high">
-              Too long: {description.length.toLocaleString("en-GB")} of {MAX_DESCRIPTION.toLocaleString("en-GB")} characters.
+              {t("Too long: {count} of {max} characters.", { count: description.length.toLocaleString(appLocale("en-GB")), max: MAX_DESCRIPTION.toLocaleString(appLocale("en-GB")) })}
             </p>
           )}
-          <p className={`ms-auto shrink-0 text-[11px] leading-[18px] text-right tabular-nums ${tooLong ? "text-status-high" : "text-charcoal-faint"}`}>
+          <p className={`ms-auto shrink-0 text-[11px] leading-[18px] text-end tabular-nums ${tooLong ? "text-status-high" : "text-charcoal-faint"}`}>
             {description.length} / {MAX_DESCRIPTION}
           </p>
         </div>
@@ -195,16 +209,16 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
             )}
           </span>
           <span className="flex-1 min-w-0 truncate text-[14px] leading-5 font-semibold text-charcoal">
-            {preparing ? "Preparing…" : shot ? shot.name : "Add screenshot"}
+            {preparing ? t("Preparing…") : shot ? shot.name : t("Add screenshot")}
           </span>
-          {!shot && <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />}
+          {!shot && <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-charcoal-faint" />}
         </button>
         {shot && (
           <button
             type="button"
             onClick={() => replaceShot(null)}
             disabled={busy}
-            aria-label="Remove screenshot"
+            aria-label={t("Remove screenshot")}
             className="tap shrink-0 text-charcoal-faint"
           >
             <X size={16} strokeWidth={1.75} />
@@ -213,7 +227,7 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
       </div>
       {shotError && (
         <p role="alert" className="-mt-1.5 text-[12px] font-semibold text-status-high">
-          {shotError}
+          {t(shotError)}
         </p>
       )}
 
@@ -221,9 +235,7 @@ export const ReportBugPopup: React.FC<{ open: boolean; onClose: () => void }> = 
           browser ride along with the words, and the screenshot only when
           one is added (privacy, exception 1). */}
       <p className="mt-1 text-[11px] text-charcoal-faint">
-        Sent with this report: the page you were on{route ? ` (${route})` : ""}, your browser
-        version{shot ? " and your screenshot" : ""}. Nothing from your health records is
-        included{shot ? " unless your screenshot shows it" : ""}.
+        {disclosure(route, !!shot)}
       </p>
 
       {error && (

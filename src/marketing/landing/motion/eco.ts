@@ -15,6 +15,7 @@
 import { clamp, prog, type Track } from "../engine/math";
 import type { EngineCtx, EngineSection } from "../engine/scrollEngine";
 import { anim, collect, type AnimItem } from "./anim";
+import { scrollToInline } from "../../../utils/inlineScroll";
 
 interface EcoSlide {
   el: HTMLElement;
@@ -46,7 +47,7 @@ export class EcoMotion implements EngineSection {
   private left = 0;
   private sw: number[] = [];
   private onSet = () => {
-    if (this.set) this.left = this.set.scrollLeft;
+    if (this.set) this.left = Math.abs(this.set.scrollLeft);
     this.invalidate();
   };
 
@@ -75,7 +76,7 @@ export class EcoMotion implements EngineSection {
       : [];
     this.cw = this.slides.length ? this.slides[0].el.getBoundingClientRect().width + 14 : 1;
     this.sw = this.slides.map((s) => s.el.offsetWidth);
-    this.left = set ? set.scrollLeft : 0;
+    this.left = set ? Math.abs(set.scrollLeft) : 0;
     this.count = document.getElementById("eco-count");
     this.progEl = document.getElementById("eco-prog");
     const view = document.getElementById("eco-view");
@@ -108,7 +109,7 @@ export class EcoMotion implements EngineSection {
       window.scrollTo({ top: this.track.t + this.track.span * (i / 4), behavior: "auto" });
     } else if (this.set && this.slides.length) {
       const cw = this.slides[0].el.getBoundingClientRect().width + 14;
-      this.set.scrollTo({ left: i * cw, behavior: this.rm ? "auto" : "smooth" });
+      scrollToInline(this.set, i * cw, this.rm ? "auto" : "smooth");
     }
   }
 

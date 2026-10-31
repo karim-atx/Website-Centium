@@ -50,7 +50,7 @@ function block(b: Block, i: number, linkColour: string | undefined): React.React
       );
     case "ul":
       return (
-        <ul key={i} className="m-0 pl-5 list-disc flex flex-col gap-1">
+        <ul key={i} className="m-0 ps-5 list-disc flex flex-col gap-1">
           {b.items.map((it, j) => (
             <li key={j}>{inlines(it, linkColour)}</li>
           ))}
@@ -58,7 +58,7 @@ function block(b: Block, i: number, linkColour: string | undefined): React.React
       );
     case "ol":
       return (
-        <ol key={i} start={b.start} className="m-0 pl-5 list-decimal flex flex-col gap-1">
+        <ol key={i} start={b.start} className="m-0 ps-5 list-decimal flex flex-col gap-1">
           {b.items.map((it, j) => (
             <li key={j}>{inlines(it, linkColour)}</li>
           ))}

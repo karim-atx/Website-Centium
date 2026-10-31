@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { ImageSurface } from "./imageCopy";
 import { latestApproval, parseApprovals, type ImageApproval } from "./imageModel";
+import { tk } from "../../i18n/core";
 
 // Every image others can see waits for an admin (Round C Release 2, Database
 // 20261221040000). The one way an image reaches a public surface now:
@@ -40,13 +41,13 @@ export function describeImageError(error: { code?: string; message?: string } | 
   if (isOffline(error)) return OFFLINE_MESSAGE;
   switch (error?.code ?? "") {
     case "ATX09":
-      return "You can't change this photo. Ask the account's owner.";
+      return tk("You can't change this photo. Ask the account's owner.");
     case "ATX02":
-      return "You've sent a lot of photos in the last hour. Try again later.";
+      return tk("You've sent a lot of photos in the last hour. Try again later.");
     case "ATX08":
-      return "That photo didn't finish uploading. Choose it again.";
+      return tk("That photo didn't finish uploading. Choose it again.");
     default:
-      return "Couldn't send that photo. Try again.";
+      return tk("Couldn't send that photo. Try again.");
   }
 }
 
@@ -57,7 +58,7 @@ export async function uploadToStaging(path: string, blob: Blob): Promise<Result<
     .upload(path, blob, { contentType: blob.type || "image/jpeg", upsert: false, cacheControl: "3600" });
   if (error) {
     console.error("[images] Could not stage the photo:", error.message);
-    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't upload that photo. Try again." };
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : tk("Couldn't upload that photo. Try again.") };
   }
   return { ok: true, value: path };
 }
@@ -135,7 +136,7 @@ export async function withdrawImage(approvalId: string): Promise<Result<null>> {
   const { error } = await rpc().rpc("withdraw_image", { p_approval_id: approvalId });
   if (error && error.code !== "ATX10") {
     console.error("[images] withdraw_image refused:", error.code, error.message);
-    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't remove that photo. Try again.", code: error.code };
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : tk("Couldn't remove that photo. Try again."), code: error.code };
   }
   return { ok: true, value: null };
 }

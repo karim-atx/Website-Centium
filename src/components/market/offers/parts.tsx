@@ -21,7 +21,7 @@ const FOCUS_WITHIN = ".market-focus-within:focus-within{outline:2px solid #AEA1D
 export const BackHeader: React.FC<{ eyebrow: string; title: string; onBack: () => void; backLabel: string }> = ({ eyebrow, title, onBack, backLabel }) => {
   const m = marketPalette(useIsDark());
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "-4px 0 12px -10px", color: m.ink, lineHeight: "normal" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBlock: "-4px 12px", marginInline: "-10px 0", color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
       <button
         type="button"

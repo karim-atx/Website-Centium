@@ -3,15 +3,16 @@ import { MARK_C_PATH, MARK_LEAF_PATH } from "../../components/icons/CentiumMark"
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { ObPage } from "./shell/ObShell";
 import { Composed, MarkSvg, OB, WORDMARK_FULL, Wordmark, type Composition } from "./shell/visuals";
+import { t, tk } from "../../i18n/core";
 
 // v6 (OB-001…006 Welcome, OB-033…050 logo animation): SharedOnboardingV4
 // screen "welcome" and screen "anim". Replaces the old launch (rings, bloom,
 // conic sweep, 750 ms) and the "CENTIUM · a product prototype" line (V6-71).
 
 const PANELS: { eb: string; h: string; s: string; comp: Composition }[] = [
-  { eb: "For you", h: "Look after your health, all in one place.", s: "Food, training, sleep and health metrics, shaped around you.", comp: "personal" },
-  { eb: "For professionals", h: "Coach and care for every client.", s: "Plans, check-ins, messages and progress, without the spreadsheets.", comp: "professional" },
-  { eb: "For businesses", h: "Run your classes, gym or store.", s: "Bookings, members, payments and your listing, in one app.", comp: "business" },
+  { eb: tk("For you"), h: tk("Look after your health, all in one place."), s: tk("Food, training, sleep and health metrics, shaped around you."), comp: "personal" },
+  { eb: tk("For professionals"), h: tk("Coach and care for every client."), s: tk("Plans, check-ins, messages and progress, without the spreadsheets."), comp: "professional" },
+  { eb: tk("For businesses"), h: tk("Run your classes, gym or store."), s: tk("Bookings, members, payments and your listing, in one app."), comp: "business" },
 ];
 
 /**
@@ -90,7 +91,8 @@ export const WelcomeStep: React.FC<{
     <ObPage>
       <div className="ob-welcome" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ position: "relative", minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
         <div style={{ ...aStyle, flex: 1, display: "flex", flexDirection: "column", visibility: kf && kf.a === 0 && k >= 2 ? "hidden" : undefined }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, marginTop: 56 }}>
+          {/* Left to right in every language: the mark is the lockup's C. */}
+          <div dir="ltr" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, marginTop: 56 }}>
             <MarkSvg size={26} />
             <Wordmark width={91} height={10} style={{ color: "var(--ob-ink)" }} />
           </div>
@@ -101,39 +103,39 @@ export const WelcomeStep: React.FC<{
                 aria-hidden
                 style={{
                   position: "absolute",
-                  left: "50%",
+                  insetInlineStart: "50%",
                   top: "50%",
                   width: s,
                   height: s,
-                  marginLeft: -s / 2,
+                  marginInlineStart: -s / 2,
                   marginTop: -s / 2,
                   borderRadius: 999,
                   border: `1px solid ${i === 0 ? "var(--ob-ring-outer)" : "var(--ob-ring)"}`,
                 }}
               />
             ))}
-            <span aria-hidden style={{ position: "absolute", left: "50%", top: "50%", width: 220, height: 220, margin: "-110px 0 0 -110px", borderRadius: 999, background: "var(--ob-halo)" }} />
+            <span aria-hidden style={{ position: "absolute", insetInlineStart: "50%", top: "50%", width: 220, height: 220, marginBlock: "-110px 0", marginInline: "-110px 0", borderRadius: 999, background: "var(--ob-halo)" }} />
             <Composed key={p.comp} comp={p.comp} w={p.comp === "personal" ? 150 : 230} h={150} style={{ position: "relative" }} />
           </div>
           <div style={{ margin: "22px 28px 0" }} aria-live="polite">
-            <p className="ob-eb">{p.eb}</p>
+            <p className="ob-eb">{t(p.eb)}</p>
             <h1 style={{ fontSize: 30, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.025em", marginTop: 10, textWrap: "pretty" }} className="ob-welcome-h">
-              {p.h}
+              {t(p.h)}
             </h1>
             <p style={{ fontSize: 15, lineHeight: "23px", fontWeight: 500, color: "var(--ob-ink-soft)", marginTop: 10, maxWidth: 310, textWrap: "pretty" }} className="ob-welcome-s">
-              {p.s}
+              {t(p.s)}
             </p>
           </div>
           <div style={{ flex: 1, minHeight: 24 }} />
           <div style={{ margin: "0 28px 36px" }}>
-            <div style={{ display: "flex", gap: 6, marginBottom: 22 }} role="tablist" aria-label="Welcome">
+            <div style={{ display: "flex", gap: 6, marginBottom: 22 }} role="tablist" aria-label={t("Welcome")}>
               {PANELS.map((pp, i) => (
                 <button
                   key={pp.eb}
                   type="button"
                   role="tab"
                   aria-selected={i === panel}
-                  aria-label={pp.eb}
+                  aria-label={t(pp.eb)}
                   className="hit"
                   onClick={() => setPanel(i)}
                   style={{ height: 6, width: i === panel ? 22 : 6, borderRadius: 999, background: i === panel ? "var(--ob-brand)" : "var(--ob-ring)", transition: "width 240ms cubic-bezier(0.22,1,0.36,1)" }}
@@ -146,10 +148,10 @@ export const WelcomeStep: React.FC<{
               onClick={start}
               style={{ height: 56, fontSize: 15.5, letterSpacing: "-0.01em", transform: `scale(${kf ? kf.btn : 1})`, transition: "transform 120ms ease" }}
             >
-              Get started
+              {t("Get started")}
             </button>
             <button type="button" onClick={onSignIn} className="hit" style={{ display: "block", width: "100%", textAlign: "center", fontSize: 14, lineHeight: "24px", fontWeight: 700, color: "var(--ob-ink-soft)", marginTop: 16, height: 24 }}>
-              I already have an account
+              {t("I already have an account")}
             </button>
           </div>
         </div>
@@ -175,11 +177,11 @@ const LogoAnimation: React.FC<{ k: number }> = ({ k }) => {
       <span
         style={{
           position: "absolute",
-          left: "50%",
+          insetInlineStart: "50%",
           top: 372,
           width: 300,
           height: 300,
-          margin: "-150px 0 0 -150px",
+          marginBlock: "-150px 0", marginInline: "-150px 0",
           borderRadius: 999,
           background: "radial-gradient(circle, var(--ob-glow) 0%, rgba(143,104,246,0) 68%)",
           opacity: moving ? 0 : kf.gl,
@@ -191,11 +193,11 @@ const LogoAnimation: React.FC<{ k: number }> = ({ k }) => {
         viewBox="270 180 690 730"
         style={{
           position: "absolute",
-          left: "50%",
+          insetInlineStart: "50%",
           top: cy,
           width: size,
           height: size,
-          marginLeft: -size / 2 + cx,
+          marginInlineStart: -size / 2 + cx,
           marginTop: -size / 2,
           overflow: "visible",
           transition: moving ? `all 450ms ${MOVE}` : undefined,
@@ -224,7 +226,7 @@ const LogoAnimation: React.FC<{ k: number }> = ({ k }) => {
         viewBox="48 44 1005 93"
         role="img"
         aria-label="Centium"
-        style={{ position: "absolute", left: "50%", top: 462, height: 13, width: 140, marginLeft: -70, overflow: "visible", color: "var(--ob-ink)" }}
+        style={{ position: "absolute", insetInlineStart: "50%", top: 462, height: 13, width: 140, marginInlineStart: -70, overflow: "visible", color: "var(--ob-ink)" }}
       >
         <g stroke="currentColor" strokeWidth={17} fill="none">
           {WORDMARK_FULL.map((d, i) => (

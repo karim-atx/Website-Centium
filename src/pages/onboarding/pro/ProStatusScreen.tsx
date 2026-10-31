@@ -12,6 +12,7 @@ import { ProfilePreview, SummaryCard, Timeline } from "./parts";
 import { formatShortDate } from "../../../utils/date";
 import { useCoverPicker } from "../../../components/pro/profile/useCoverPicker";
 import { ImageApprovalBadge } from "../../../components/moderation/ImageApproval";
+import { t } from "../../../i18n/core";
 
 export type ProStatus = "pending" | "live" | "verified" | "rejected";
 
@@ -80,17 +81,17 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, [celebrate, reduced]);
 
-  const nm = firstName.trim().split(/\s+/)[0] || "there";
+  const nm = firstName.trim().split(/\s+/)[0] || t("there");
   const reg = isRegulated(kind);
   // Every lane is listed once checked (14 Oct 2026): a licence for the
-  // regulated lanes, a certificate for Fitness / Other.
-  const doc = reg ? "licence" : "certificate";
+  // regulated lanes, a certificate for Fitness / Other. Whole sentences per
+  // document (word order differs in Arabic).
   const submittedRow = {
-    title: "Submitted",
+    title: t("Submitted"),
     desc: submittedAt
-      ? `${isToday(submittedAt) ? "Today" : formatShortDate(submittedAt, { day: "numeric", month: "short" })}, ${time12(hhmm(submittedAt))}`
-      : "Sent for review",
-    value: submittedAt && isToday(submittedAt) ? "Today" : "",
+      ? t("{day}, {time}", { day: isToday(submittedAt) ? t("Today") : formatShortDate(submittedAt, { day: "numeric", month: "short" }), time: time12(hhmm(submittedAt)) })
+      : t("Sent for review"),
+    value: submittedAt && isToday(submittedAt) ? t("Today") : "",
     state: "done" as const,
   };
 
@@ -101,7 +102,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
       <div className="ob-status" aria-busy={status === "loading"}>
         <div className="ob-status-vis" style={{ opacity: 0.5 }}>
           {[170, 132, 96].map((s, i) => (
-            <span key={s} className="ob-status-ring" style={{ width: s, height: s, marginLeft: -s / 2, marginTop: -s / 2, opacity: i === 0 ? 0.6 : 1 }} />
+            <span key={s} className="ob-status-ring" style={{ width: s, height: s, marginInlineStart: -s / 2, marginTop: -s / 2, opacity: i === 0 ? 0.6 : 1 }} />
           ))}
         </div>
         <div className="ob-skel" style={{ width: 200, height: 28, borderRadius: 8, margin: "14px auto 0" }} />
@@ -111,9 +112,9 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
     );
     footer =
       status === "error" ? (
-        <ObFooter error={OB_STRINGS.statusLoadError} primary={{ label: OB_STRINGS.tryAgain, onClick: () => onRetry?.() }} />
+        <ObFooter error={t(OB_STRINGS.statusLoadError)} primary={{ label: t(OB_STRINGS.tryAgain), onClick: () => onRetry?.() }} />
       ) : (
-        <ObFooter primary={{ label: "Go to my dashboard", onClick: onPrimary, disabled: true }} />
+        <ObFooter primary={{ label: t("Go to my dashboard"), onClick: onPrimary, disabled: true }} />
       );
   } else if (status === "pending" && noDocument && !reg) {
     // OURS: Fitness / Other submitted without a certificate. Nothing to check
@@ -122,59 +123,59 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
       <>
         <ObStatus
           vis={STATUS_PENDING_VIS}
-          eyebrow="Set up"
+          eyebrow={t("Set up")}
           eyebrowColor="var(--ob-accent)"
-          title="Add a certificate to go live"
-          body="Clients find you on Explore once we've checked a certificate. Add one in Edit public profile. You can set up your services now."
+          title={t("Add a certificate to go live")}
+          body={t("Clients find you on Explore once we've checked a certificate. Add one in Edit public profile. You can set up your services now.")}
         />
         <Timeline
           items={[
             submittedRow,
-            { title: "Certificate", desc: "Add one in Edit public profile", value: "Now", state: "now" },
-            { title: "Live and verified", desc: "Clients can find and book you", value: "", state: "next" },
+            { title: t("Certificate"), desc: t("Add one in Edit public profile"), value: t("Now"), state: "now" },
+            { title: t("Live and verified"), desc: t("Clients can find and book you"), value: "", state: "next" },
           ]}
         />
         {extra}
       </>
     );
-    footer = <ObFooter primary={{ label: "Go to my dashboard", onClick: onPrimary }} />;
+    footer = <ObFooter primary={{ label: t("Go to my dashboard"), onClick: onPrimary }} />;
   } else if (status === "pending") {
     body = (
       <>
         <ObStatus
           vis={STATUS_PENDING_VIS}
-          eyebrow="Submitted"
+          eyebrow={t("Submitted")}
           eyebrowColor="var(--ob-accent)"
-          title={`We're checking your ${doc}`}
-          body="Usually within 2 working days. We'll message and email you. You can set up your services while you wait."
+          title={reg ? t("We're checking your licence") : t("We're checking your certificate")}
+          body={t("Usually within 2 working days. We'll message and email you. You can set up your services while you wait.")}
         />
         <Timeline
           items={[
             submittedRow,
             reg
-              ? { title: "Licence check", desc: "With the registering body", value: "Now", state: "now" as const }
-              : { title: "Certificate check", desc: "With our team", value: "Now", state: "now" as const },
-            { title: "Live and verified", desc: "Clients can find and book you", value: "", state: "next" },
+              ? { title: t("Licence check"), desc: t("With the registering body"), value: t("Now"), state: "now" as const }
+              : { title: t("Certificate check"), desc: t("With our team"), value: t("Now"), state: "now" as const },
+            { title: t("Live and verified"), desc: t("Clients can find and book you"), value: "", state: "next" },
           ]}
         />
         {extra}
       </>
     );
-    footer = <ObFooter primary={{ label: "Go to my dashboard", onClick: onPrimary }} />;
+    footer = <ObFooter primary={{ label: t("Go to my dashboard"), onClick: onPrimary }} />;
   } else if (status === "rejected") {
     body = (
       <>
         <ObStatus
           vis={STATUS_REJECTED_VIS}
-          eyebrow="Needs changes"
+          eyebrow={t("Needs changes")}
           eyebrowColor="var(--ob-high)"
-          title={`We couldn't verify your ${doc}`}
-          body="Your profile isn't live yet. Fix these and send it again."
+          title={reg ? t("We couldn't verify your licence") : t("We couldn't verify your certificate")}
+          body={t("Your profile isn't live yet. Fix these and send it again.")}
         />
-        <SummaryCard n={4} heading="Credentials" lines={[rejectionReason?.trim() || "Not approved."]} action="Edit" onAction={onFix} bad />
+        <SummaryCard n={4} heading={t("Credentials")} lines={[rejectionReason?.trim() || t("Not approved.")]} action="Edit" onAction={onFix} bad />
       </>
     );
-    footer = <ObFooter primary={{ label: "Fix and resend", onClick: () => (onFix ? onFix() : onPrimary()) }} />;
+    footer = <ObFooter primary={{ label: t("Fix and resend"), onClick: () => (onFix ? onFix() : onPrimary()) }} />;
   } else {
     const a = K[k - 1];
     const vis: Shape[] = k === 1 ? STATUS_PENDING_VIS : statusFanVis(a.v);
@@ -183,13 +184,15 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
       <>
         <ObStatus
           vis={vis}
-          eyebrow={notListed ? "Set up" : verified ? "Verified" : "Live"}
+          eyebrow={notListed ? t("Set up") : verified ? t("Verified") : t("Live")}
           eyebrowColor="var(--ob-good)"
-          title={notListed ? `You're set up, ${nm}` : verified ? `You're verified, ${nm}` : `You're live, ${nm}`}
+          title={notListed ? t("You're set up, {name}", { name: nm }) : verified ? t("You're verified, {name}", { name: nm }) : t("You're live, {name}", { name: nm })}
           body={
             notListed
-              ? `${notListed} You can still work with the clients you add.`
-              : `Your ${doc} is checked. Clients can now find and book you.`
+              ? `${t(notListed)} ${t("You can still work with the clients you add.")}`
+              : reg
+              ? t("Your licence is checked. Clients can now find and book you.")
+              : t("Your certificate is checked. Clients can now find and book you.")
           }
           ringOpacity={a.ro}
           ringScale={a.rs}
@@ -205,7 +208,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
             coverUrl={coverUrl}
             coverBadge={coverImage && <ImageApprovalBadge state={coverImage} />}
             name={preview.name}
-            type={`${preview.label}${verified && reg ? " · Verified" : ""}`}
+            type={`${preview.label}${verified && reg ? ` · ${t("Verified")}` : ""}`}
             tags={preview.tags.slice(0, 2)}
             line={preview.line}
           />
@@ -215,7 +218,7 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
     );
     footer = (
       <div style={{ opacity: k < 3 ? 0.3 : 1, transition: "opacity 200ms" }}>
-        <ObFooter primary={{ label: "Go to my dashboard", onClick: onPrimary, disabled: k < 3 }} />
+        <ObFooter primary={{ label: t("Go to my dashboard"), onClick: onPrimary, disabled: k < 3 }} />
       </div>
     );
   }

@@ -61,7 +61,7 @@ function nextDueDay(doneOn: string | null, months: number | undefined, today: st
 /** Fixed header (HE1.8 #1-#3): back 36 (chevron 20 #5B5349), gap 6, title 24/30 700 ls-0.5; ⋮ 36 on the right when given. */
 const HeaderRow: React.FC<{ title: string; onBack: () => void; menu?: React.ReactNode }> = ({ title, onBack, menu }) => (
   <FixedHeader paddingBottom={10}>
-    <div className="flex items-center" style={{ gap: 6, marginLeft: -7.5, minHeight: 36 }}>
+    <div className="flex items-center" style={{ gap: 6, marginInlineStart: -7.5, minHeight: 36 }}>
       <button
         type="button"
         onClick={onBack}
@@ -128,8 +128,8 @@ export function GeneralPlan() {
       // account, topic-free), as on main, so a saved one can be changed or turned off;
       // per-check reminders (HE1.8.2) open from a row's menu, its bell and the edit form.
       onClick={() => setReminderOpen(true)}
-      className="tap relative w-full flex items-center bg-cream-card text-left"
-      style={{ ...card, marginTop: 10, minHeight: 58, padding: "10px 40px 10px 12px", gap: 12 }}
+      className="tap relative w-full flex items-center bg-cream-card text-start"
+      style={{ ...card, marginTop: 10, minHeight: 58, paddingBlock: "10px", paddingInline: "12px 40px", gap: 12 }}
     >
       <span className="shrink-0 grid place-items-center bg-th-f0edf9 dark:bg-th-303141 text-th-7d6bb5 dark:text-primary-deep-text" style={{ width: 32, height: 32, borderRadius: 10 }}>
         <Bell size={17} aria-hidden strokeWidth={1.9} />
@@ -137,7 +137,7 @@ export function GeneralPlan() {
       <span className="text-charcoal" style={{ fontSize: textPx(13.5), lineHeight: "20.3px", fontWeight: 600 }}>
         Set a personal reminder
       </span>
-      <ChevronRight size={17} className="absolute text-charcoal-faint" style={{ right: 14.5, top: "50%", marginTop: -8.5 }} aria-hidden />
+      <ChevronRight size={17} className="absolute text-charcoal-faint" style={{ insetInlineEnd: 14.5, top: "50%", marginTop: -8.5 }} aria-hidden />
     </button>
   );
 
@@ -155,7 +155,7 @@ export function GeneralPlan() {
             <AlertTriangle size={14} className="text-status-high shrink-0" />
             {PG.URGENT_TITLE}
           </p>
-          <ul className="mt-2 space-y-1 list-disc pl-5 text-[11.5px] leading-[1.45] text-charcoal-soft">
+          <ul className="mt-2 space-y-1 list-disc ps-5 text-[11.5px] leading-[1.45] text-charcoal-soft">
             {PG.URGENT_SIGNS.map((s) => (
               <li key={s}>{s}</li>
             ))}
@@ -182,7 +182,7 @@ export function GeneralPlan() {
         )}
         <section className="bg-cream-card overflow-hidden" style={{ ...card, marginTop: 12 }}>
           {PREGNANCY_SCHEDULE.map((c, i) => (
-            <div key={c.id} style={{ padding: "10px 14px 10px 12px", borderTop: i > 0 ? `0.5px solid ${hairAt(dark, 0.05)}` : undefined }}>
+            <div key={c.id} style={{ paddingBlock: "10px", paddingInline: "12px 14px", borderTop: i > 0 ? `0.5px solid ${hairAt(dark, 0.05)}` : undefined }}>
               <div className="flex items-start justify-between gap-3">
                 <p className="min-w-0 text-charcoal" style={{ margin: 0, fontSize: textPx(13.5), lineHeight: "18px", fontWeight: 600 }}>
                   {c.when}
@@ -279,7 +279,7 @@ export function GeneralPlan() {
     const body = (
       <div
         className="flex items-center bg-cream-card"
-        style={{ minHeight: 72, padding: "10px 14px 10px 12px", gap: 10, borderTop: i > 0 ? `0.5px solid ${hairAt(dark, 0.05)}` : undefined }}
+        style={{ minHeight: 72, paddingBlock: "10px", paddingInline: "12px 14px", gap: 10, borderTop: i > 0 ? `0.5px solid ${hairAt(dark, 0.05)}` : undefined }}
       >
         {ready && (
           <button
@@ -308,7 +308,7 @@ export function GeneralPlan() {
           {/* K5 / V6-09: the approved "who" line, for screen readers. */}
           {row.who && <span className="sr-only">{row.who}</span>}
         </div>
-        <div className="shrink-0 flex flex-col items-end text-right" style={{ gap: 2 }}>
+        <div className="shrink-0 flex flex-col items-end text-end" style={{ gap: 2 }}>
           <span className="flex items-center whitespace-nowrap" style={{ gap: 3, color: ink, ...sub, fontWeight: 700 }}>
             <StatusIcon size={12} aria-hidden strokeWidth={2.4} />
             {row.state.word}
@@ -370,7 +370,7 @@ export function GeneralPlan() {
               aria-label="More options"
               aria-haspopup="menu"
               className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
-              style={{ width: 36, height: 36, marginRight: -7.5 }}
+              style={{ width: 36, height: 36, marginInlineEnd: -7.5 }}
             >
               <MoreVertical size={20} className="text-charcoal-soft" aria-hidden />
             </button>

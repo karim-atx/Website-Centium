@@ -2,8 +2,11 @@
 // The text is docs/legal/refund-policy.md (English) and refund-policy.ar.md
 // (Arabic, which prevails), read by policyDoc.ts; nothing here restates it.
 
+import { tk } from "../../i18n/core";
+
 export const REFUND_POLICY_PATH = "/legal/refund-policy";
-export const REFUND_POLICY_LABEL = "Refund and cancellation policy";
+/** Shown as t(REFUND_POLICY_LABEL). */
+export const REFUND_POLICY_LABEL = tk("Refund and cancellation policy");
 /** The in-app article for clients and professionals (F5); the business one is in Help. */
 export const BILLING_HELP_PATH = "/app/settings/help/billing-and-refunds";
 

@@ -8,14 +8,15 @@ import React from "react";
 import { ChapterMark } from "./ChapterMark";
 import * as D from "./data/who";
 import type { SectionVals } from "./sectionVals";
+import { t } from "../../../i18n/core";
 
 export const Who: React.FC<{ r: SectionVals }> = ({ r }) => (
   <section id="who" data-screen-label="WH1 v6 Who it's for" style={{ position: "relative", zIndex: "2", padding: `${r.secY} ${r.px}` }}>
     <div style={{ maxWidth: "1240px", margin: "0 auto" }}>
       <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <ChapterMark n="05" t="Who it's for" size={r.chEy} />
+        <ChapterMark n="05" t={t("Who it's for")} size={r.chEy} />
         <h2 style={{ marginTop: "14px", fontWeight: "800", fontSize: r.h2, lineHeight: "1.04", letterSpacing: "-.035em" }}>
-          Built for people who show up.
+          {t("Built for people who show up.")}
         </h2>
       </div>
       <div id="who-cards" style={{ margin: r.fourM, display: "grid", gridTemplateColumns: r.four, gridAutoFlow: r.fourFlow, gridAutoColumns: r.fourAuto, gap: "16px", overflowX: r.fourOv, scrollSnapType: "x mandatory", overscrollBehaviorX: "contain", touchAction: "pan-x pan-y", scrollPadding: "0 20px", padding: r.fourP, scrollbarWidth: "none" }}>
@@ -38,16 +39,16 @@ export const Who: React.FC<{ r: SectionVals }> = ({ r }) => (
                 0
               </span>
               <span style={{ fontSize: r.eF10, fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
-                DAY STREAK
+                {t("DAY STREAK")}
               </span>
             </div>
           </div>
           <div>
             <div style={{ fontSize: "19px", fontWeight: "700", color: "#6A54C4" }}>
-              Principled
+              {t("Principled")}
             </div>
             <p style={{ marginTop: "6px", fontSize: "14px", lineHeight: "1.55", color: "#5B5349" }}>
-              Shows up, puts in the work, and wants a platform that keeps up.
+              {t("Shows up, puts in the work, and wants a platform that keeps up.")}
             </p>
             <div style={{ marginTop: "14px", display: "flex", justifyContent: r.instJust, gap: "5px" }}>
               {D.weekChecks.map((wc, wcI) => (
@@ -63,7 +64,7 @@ export const Who: React.FC<{ r: SectionVals }> = ({ r }) => (
               ))}
             </div>
             <div style={{ marginTop: "6px", fontSize: r.eF115, fontWeight: "700", color: "#756D63" }}>
-              6 of 7 days this week
+              {t("6 of 7 days this week")}
             </div>
           </div>
         </div>
@@ -90,16 +91,16 @@ export const Who: React.FC<{ r: SectionVals }> = ({ r }) => (
                 78.0
               </span>
               <span style={{ fontSize: r.eF11, fontWeight: "700", color: "#756D63" }}>
-                {" "}kg
+                {" "}{t("kg")}
               </span>
             </div>
           </div>
           <div>
             <div style={{ fontSize: "19px", fontWeight: "700", color: "#3D6E69" }}>
-              Determined
+              {t("Determined")}
             </div>
             <p style={{ marginTop: "6px", fontSize: "14px", lineHeight: "1.55", color: "#5B5349" }}>
-              Knows where they want to go and wants everything connected to get there.
+              {t("Knows where they want to go and wants everything connected to get there.")}
             </p>
             <svg viewBox="0 0 160 40" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: "38px", marginTop: "14px" }}>
               <line x1="0" y1="34" x2="160" y2="34" stroke="#CFE3DF" strokeDasharray="3 4" />
@@ -107,10 +108,10 @@ export const Who: React.FC<{ r: SectionVals }> = ({ r }) => (
             </svg>
             <div style={{ marginTop: "6px", display: "flex", justifyContent: "space-between", fontSize: r.eF115, fontWeight: "700", color: "#756D63" }}>
               <span>
-                12 weeks
+                {t("12 weeks")}
               </span>
               <span style={{ color: "#2F5F58" }}>
-                Goal 72.0 kg
+                {t("Goal 72.0 kg")}
               </span>
             </div>
           </div>
@@ -133,26 +134,26 @@ export const Who: React.FC<{ r: SectionVals }> = ({ r }) => (
                 </span>
               </span>
               <span style={{ fontSize: r.eF10, fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
-                G PROTEIN
+                {t("G PROTEIN")}
               </span>
             </div>
           </div>
           <div>
             <div style={{ fontSize: "19px", fontWeight: "700", color: "#6A54C4" }}>
-              Intentional
+              {t("Intentional")}
             </div>
             <p style={{ marginTop: "6px", fontSize: "14px", lineHeight: "1.55", color: "#5B5349" }}>
-              Pays attention to the details that shape their health and wants them all in one place.
+              {t("Pays attention to the details that shape their health and wants them all in one place.")}
             </p>
-            <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "6px", textAlign: "left" }}>
+            <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "6px", textAlign: "start" }}>
               {D.instMacros.map((im, imI) => (
                 <div key={imI}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: r.eF115, fontWeight: "700" }}>
                     <span>
-                      {im.k}
+                      {t(im.k)}
                     </span>
                     <span style={{ color: "#5B5349" }}>
-                      {im.v}
+                      {t(im.v)}
                     </span>
                   </div>
                   <div style={{ marginTop: "3px", height: "5px", borderRadius: "9px", background: "#F1EEF8", overflow: "hidden" }}>
@@ -173,43 +174,43 @@ export const Who: React.FC<{ r: SectionVals }> = ({ r }) => (
               <circle data-w="0.4 0.55" data-stamp="" cx="60" cy="64" r="6" fill="#775FD7" style={{ opacity: "0", transformOrigin: "60px 64px" }} />
               <circle data-w="0.75 0.9" data-stamp="" cx="104" cy="44" r="6" fill="#2F5F58" style={{ opacity: "0", transformOrigin: "104px 44px" }} />
               <text x="16" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#756D63" fontFamily="Manrope">
-                Mar
+                {t("Mar")}
               </text>
               <text x="60" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#756D63" fontFamily="Manrope">
-                Jun
+                {t("Jun")}
               </text>
               <text x="104" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#2F5F58" fontFamily="Manrope">
-                Sep
+                {t("Sep")}
               </text>
             </svg>
             <div style={{ position: "absolute", left: "0", right: "0", top: "4px", textAlign: "center", fontSize: r.eF10, fontWeight: "800", letterSpacing: ".1em", color: "#756D63" }}>
-              VITAMIN D
+              {t("VITAMIN D")}
             </div>
             <div style={{ position: "absolute", left: "0", right: "0", bottom: "0", display: "flex", justifyContent: "space-between", fontSize: r.eF105, fontWeight: "800" }}>
               <span data-w="0.05 0.2" data-op="" style={{ color: "#8D6F3F", opacity: "0" }}>
-                24 low
+                {t("24 low")}
               </span>
               <span data-w="0.4 0.55" data-op="" style={{ color: "#6A54C4", opacity: "0" }}>
-                retest
+                {t("retest")}
               </span>
               <span data-w="0.75 0.9" data-op="" style={{ color: "#2F5F58", opacity: "0" }}>
-                32 ok
+                {t("32 ok")}
               </span>
             </div>
           </div>
           <div>
             <div style={{ fontSize: "19px", fontWeight: "700", color: "#3D6E69" }}>
-              Proactive
+              {t("Proactive")}
             </div>
             <p style={{ marginTop: "6px", fontSize: "14px", lineHeight: "1.55", color: "#5B5349" }}>
-              Wants to understand their health, act on it, and keep moving forward.
+              {t("Wants to understand their health, act on it, and keep moving forward.")}
             </p>
             <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "6px", alignItems: r.instItems }}>
               <span data-w="0.5 0.65" data-stamp="" style={{ padding: "4px 10px", borderRadius: "99px", background: "#F4F1FB", color: "#5C48A8", fontSize: r.eF115, fontWeight: "800", opacity: "0" }}>
-                Retest booked · 14 Oct
+                {t("Retest booked · 14 Oct")}
               </span>
               <span data-w="0.8 0.95" data-stamp="" style={{ padding: "4px 10px", borderRadius: "99px", background: "#EDF4F3", color: "#2F5F58", fontSize: r.eF115, fontWeight: "800", opacity: "0" }}>
-                Back in range
+                {t("Back in range")}
               </span>
             </div>
           </div>

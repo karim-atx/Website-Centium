@@ -1,6 +1,7 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { supabase as typed } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { tk } from "../../i18n/core";
 
 // Marketplace (MA1) reads and the few writes MA1 owns today.
 //
@@ -127,7 +128,7 @@ export async function saveListingActive(businessId: string, active: boolean): Pr
   const { error } = await db.from("business_profiles").update({ active }).eq("id", businessId);
   if (error) {
     console.error("[marketplace] Could not change the listing:", error.message);
-    return fail(error, "Couldn't change your listing. Try again.");
+    return fail(error, tk("Couldn't change your listing. Try again."));
   }
   return { ok: true, value: null };
 }

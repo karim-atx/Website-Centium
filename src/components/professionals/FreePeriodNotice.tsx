@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Clock } from "lucide-react";
 import { UPGRADE_ACTION_LABEL } from "../../services/subscription-tiers/upgrade";
 import { FREE_PERIOD_ENDED, freePeriodLine, type FreePeriodFacts } from "../../services/subscription-tiers/freePeriodCopy";
+import { t } from "../../i18n/core";
 
 /**
  * Task G: the Free plan's month for connecting new clients.
@@ -32,13 +33,13 @@ export const FreePeriodNotice: React.FC<{ plan: FreePeriodFacts | null; classNam
 /** The friendly stop shown wherever a new connection would be attempted. */
 export const FreePeriodEnded: React.FC<{ className?: string; onContact?: () => void }> = ({ className, onContact }) => (
   <div className={`rounded-2xl bg-primary-pale px-4 py-3.5 ${className ?? ""}`} role="status">
-    <p className="text-sm font-semibold text-charcoal">{FREE_PERIOD_ENDED}</p>
+    <p className="text-sm font-semibold text-charcoal">{t(FREE_PERIOD_ENDED)}</p>
     <Link
       to="/contact"
       onClick={onContact}
       className="tap inline-flex items-center mt-1.5 text-sm font-bold text-primary-deep-text underline"
     >
-      {UPGRADE_ACTION_LABEL}
+      {t(UPGRADE_ACTION_LABEL)}
     </Link>
   </div>
 );

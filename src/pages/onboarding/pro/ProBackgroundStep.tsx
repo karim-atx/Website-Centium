@@ -21,6 +21,7 @@ import { proLaneId } from "./proLanes";
 import { proChipLabel } from "./proModel";
 import { ListRows } from "./parts";
 import type { ProStepProps } from "./types";
+import { t, tx } from "../../../i18n/core";
 
 type Section = "headline" | "licences" | "experience" | "education" | "skills" | "languages";
 type Sheet = { kind: "licence"; entry: Licence | null } | { kind: "experience" | "education"; entry: { id: string } | null } | { kind: "skills" } | null;
@@ -65,21 +66,21 @@ export const ProBackgroundStep: React.FC<ProStepProps> = ({ kind, pro, onNext, o
       return {
         key: l.id,
         icon: Award,
-        title: l.name ?? (l.mirrorsCertification ? "Certificate from Credentials" : "Unnamed licence"),
+        title: l.name ?? (l.mirrorsCertification ? t("Certificate from Credentials") : t("Unnamed licence")),
         // Public / Not public (20261120150000): the switch is in the licence sheet.
         description: [
-          l.mirrorsCertification && !l.issuingBody ? "Added from your certificate" : l.issuingBody,
-          publishState(l) === "public" ? PUBLISH_STRINGS.public : PUBLISH_STRINGS.notPublic,
+          l.mirrorsCertification && !l.issuingBody ? t("Added from your certificate") : l.issuingBody,
+          publishState(l) === "public" ? t(PUBLISH_STRINGS.public) : t(PUBLISH_STRINGS.notPublic),
         ]
           .filter(Boolean)
           .join(" · "),
         status:
           st.kind === "pending"
-            ? { text: "Pending check", tone: "warn" as const }
+            ? { text: t("Pending check"), tone: "warn" as const }
             : st.kind === "verified"
-            ? { text: "Verified", tone: "good" as const }
+            ? { text: t("Verified"), tone: "good" as const }
             : st.kind === "rejected"
-            ? { text: "Not approved", tone: "high" as const }
+            ? { text: t("Not approved"), tone: "high" as const }
             : undefined,
         onClick: () => setSheet({ kind: "licence", entry: l }),
       };
@@ -106,28 +107,28 @@ export const ProBackgroundStep: React.FC<ProStepProps> = ({ kind, pro, onNext, o
       lane={proLaneId(kind)}
       chipLabel={chipLabel}
       step="background"
-      title="Your professional background"
-      subtitle="Clients see this on your public profile. Everything here is optional."
+      title={t("Your professional background")}
+      subtitle={t("Clients see this on your public profile. Everything here is optional.")}
       onBack={onBack}
       loading={loading}
       footer={
         <ObFooter
-          error={error && !cv ? error : flow && !flow.online ? OB_STRINGS.offlineStep : null}
+          error={error && !cv ? t(error) : flow && !flow.online ? t(OB_STRINGS.offlineStep) : null}
           errorTone={error && !cv ? "error" : "info"}
-          primary={error && !cv ? { label: OB_STRINGS.tryAgain, onClick: () => void reload() } : { label: added ? "Continue" : "Skip", onClick: onNext }}
+          primary={error && !cv ? { label: t(OB_STRINGS.tryAgain), onClick: () => void reload() } : { label: added ? t("Continue") : t("Skip"), onClick: onNext }}
         />
       }
     >
       {!userId ? (
         <p className="ob-sub" style={{ margin: 0 }}>
-          Sign in again to add your background, or skip this for now.
+          {t("Sign in again to add your background, or skip this for now.")}
         </p>
       ) : cv ? (
         <>
           <ObCollapsible
             icon={Text}
-            title="Headline"
-            summary={cv.profile.headline || "One line on who you help and how."}
+            title={t("Headline")}
+            summary={cv.profile.headline || t("One line on who you help and how.")}
             open={open === "headline"}
             onToggle={() => toggle("headline")}
             controls="pro-bg-headline"
@@ -139,8 +140,8 @@ export const ProBackgroundStep: React.FC<ProStepProps> = ({ kind, pro, onNext, o
           )}
           <ObCollapsible
             icon={Award}
-            title="Licences and certifications"
-            summary={cv.licences.length ? cv.licences.map((l) => l.name ?? "Certificate").join(", ") : "None yet"}
+            title={t("Licences and certifications")}
+            summary={cv.licences.length ? cv.licences.map((l) => l.name ?? t("Certificate")).join(t(", ")) : t("None yet")}
             open={open === "licences"}
             onToggle={() => toggle("licences")}
             controls="pro-bg-licences"
@@ -150,15 +151,15 @@ export const ProBackgroundStep: React.FC<ProStepProps> = ({ kind, pro, onNext, o
               <ListRows
                 rows={[
                   ...licenceRowsFor(cv),
-                  { key: "add", icon: Plus, title: "Add a licence", onClick: () => setSheet({ kind: "licence", entry: null }) },
+                  { key: "add", icon: Plus, title: t("Add a licence"), onClick: () => setSheet({ kind: "licence", entry: null }) },
                 ]}
               />
             </div>
           )}
           <ObCollapsible
             icon={Briefcase}
-            title="Experience"
-            summary={first ? join(first.title, first.organisation).replace(" · ", ", ") : "None yet"}
+            title={t("Experience")}
+            summary={first ? join(first.title, first.organisation).replace(" · ", t(", ")) : t("None yet")}
             open={open === "experience"}
             onToggle={() => toggle("experience")}
             controls="pro-bg-experience"
@@ -174,15 +175,15 @@ export const ProBackgroundStep: React.FC<ProStepProps> = ({ kind, pro, onNext, o
                     description: join(e.organisation, formatRange(e.start, e.end, true)),
                     onClick: () => setSheet({ kind: "experience", entry: e }),
                   })),
-                  { key: "add", icon: Plus, title: "Add experience", onClick: () => setSheet({ kind: "experience", entry: null }) },
+                  { key: "add", icon: Plus, title: t("Add experience"), onClick: () => setSheet({ kind: "experience", entry: null }) },
                 ]}
               />
             </div>
           )}
           <ObCollapsible
             icon={GraduationCap}
-            title="Education"
-            summary={education[0] ? [education[0].degree, education[0].field].filter(Boolean).join(" ") || education[0].institution : "None yet"}
+            title={t("Education")}
+            summary={education[0] ? [education[0].degree, education[0].field].filter(Boolean).join(" ") || education[0].institution : t("None yet")}
             open={open === "education"}
             onToggle={() => toggle("education")}
             controls="pro-bg-education"
@@ -192,37 +193,37 @@ export const ProBackgroundStep: React.FC<ProStepProps> = ({ kind, pro, onNext, o
               <ListRows
                 rows={[
                   ...education.map((e) => {
-                    const t = [e.degree, e.field].filter(Boolean).join(" ");
+                    const degree = [e.degree, e.field].filter(Boolean).join(" ");
                     return {
                       key: e.id,
                       icon: GraduationCap,
-                      title: t || e.institution,
-                      description: join(t ? e.institution : null, formatRange(e.start, e.end, false)),
+                      title: degree || e.institution,
+                      description: join(degree ? e.institution : null, formatRange(e.start, e.end, false)),
                       onClick: () => setSheet({ kind: "education", entry: e }),
                     };
                   }),
-                  { key: "add", icon: Plus, title: "Add education", onClick: () => setSheet({ kind: "education", entry: null }) },
+                  { key: "add", icon: Plus, title: t("Add education"), onClick: () => setSheet({ kind: "education", entry: null }) },
                 ]}
               />
             </div>
           )}
           <ObCollapsible
             icon={Sparkles}
-            title="Skills"
-            summary={cv.profile.skills.length ? cv.profile.skills.join(", ") : "None yet"}
+            title={t("Skills")}
+            summary={cv.profile.skills.length ? cv.profile.skills.join(t(", ")) : t("None yet")}
             open={open === "skills"}
             onToggle={() => toggle("skills")}
             controls="pro-bg-skills"
           />
           {open === "skills" && (
             <div id="pro-bg-skills">
-              <ListRows rows={[{ key: "edit", icon: Plus, title: cv.profile.skills.length ? "Edit skills" : "Add skills", onClick: () => setSheet({ kind: "skills" }) }]} />
+              <ListRows rows={[{ key: "edit", icon: Plus, title: cv.profile.skills.length ? t("Edit skills") : t("Add skills"), onClick: () => setSheet({ kind: "skills" }) }]} />
             </div>
           )}
           <ObCollapsible
             icon={Languages}
-            title="Languages"
-            summary={cv.languages.length ? cv.languages.map((l) => l.language).join(", ") : "None yet"}
+            title={t("Languages")}
+            summary={cv.languages.length ? cv.languages.map((l) => l.language).join(t(", ")) : t("None yet")}
             open={open === "languages"}
             onToggle={() => toggle("languages")}
             controls="pro-bg-languages"
@@ -231,14 +232,14 @@ export const ProBackgroundStep: React.FC<ProStepProps> = ({ kind, pro, onNext, o
             <div id="pro-bg-languages">
               <ListRows
                 rows={[
-                  ...cv.languages.map((l) => ({ key: l.id, icon: Languages, title: l.language, description: proficiencyLabel(l.proficiency) })),
-                  { key: "edit", icon: Plus, title: cv.languages.length ? "Edit languages" : "Add languages", onClick: () => setSheet({ kind: "skills" }) },
+                  ...cv.languages.map((l) => ({ key: l.id, icon: Languages, title: l.language, description: tx(proficiencyLabel(l.proficiency), "language level") })),
+                  { key: "edit", icon: Plus, title: cv.languages.length ? t("Edit languages") : t("Add languages"), onClick: () => setSheet({ kind: "skills" }) },
                 ]}
               />
             </div>
           )}
           <ObTip icon={Lightbulb} margin="6px 0 0">
-            {GUIDE[kind]}
+            {t(GUIDE[kind])}
           </ObTip>
 
           {sheet?.kind === "licence" && (
@@ -342,10 +343,10 @@ const HeadlineArea: React.FC<{ userId: string; cv: MyCv; setCv: React.Dispatch<R
           value={value}
           maxLength={HEADLINE_MAX}
           rows={3}
-          aria-label="Headline"
+          aria-label={t("Headline")}
           aria-invalid={!!error}
           aria-describedby="pro-bg-headline-help"
-          placeholder="e.g. Strength coach for beginners and busy parents"
+          placeholder={t("e.g. Strength coach for beginners and busy parents")}
           onChange={(e) => {
             const text = e.target.value;
             setValue(text);
@@ -362,7 +363,7 @@ const HeadlineArea: React.FC<{ userId: string; cv: MyCv; setCv: React.Dispatch<R
       </label>
       <div className="ob-help" id="pro-bg-headline-help" data-err={error ? "true" : undefined}>
         <span role={error ? "alert" : undefined}>
-          {error ?? (state === "saving" ? "Saving…" : state === "saved" ? "Saved" : "One line on who you help and how.")}
+          {error ? t(error) : state === "saving" ? t("Saving…") : state === "saved" ? t("Saved") : t("One line on who you help and how.")}
         </span>
         <span className="ob-help-count">
           {value.length} / {HEADLINE_MAX}

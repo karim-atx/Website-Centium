@@ -357,11 +357,11 @@ function PhotosBody() {
   // One badge per tile: the uploader's own submission when there is one, else the row's status.
   const tileChip = (p: BusinessPhoto) =>
     ownPhotos.has(p.id) ? (
-      <ImageApprovalBadge state={ownPhotos.get(p.id) ?? null} className="absolute right-2 top-2" />
+      <ImageApprovalBadge state={ownPhotos.get(p.id) ?? null} className="absolute end-2 top-2" />
     ) : p.status === "in_review" ? (
-      <span style={{ position: "absolute", right: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.caution, background: c.cautionbg, borderRadius: 999, padding: "2px 8px" }}>In review</span>
+      <span style={{ position: "absolute", insetInlineEnd: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.caution, background: c.cautionbg, borderRadius: 999, padding: "2px 8px" }}>In review</span>
     ) : p.status === "rejected" ? (
-      <span style={{ position: "absolute", right: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.high, background: c.highbg, borderRadius: 999, padding: "2px 8px" }}>Not approved</span>
+      <span style={{ position: "absolute", insetInlineEnd: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.high, background: c.highbg, borderRadius: 999, padding: "2px 8px" }}>Not approved</span>
     ) : null;
 
   const optionsButton = (t: Target, label: string) => (
@@ -374,7 +374,7 @@ function PhotosBody() {
         setTarget(t);
         setSheet("options");
       }}
-      style={{ position: "absolute", right: 4, bottom: 4, width: 36, height: 36, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", color: c.ink, background: "transparent", border: 0, opacity: canOptions(t) ? 1 : 0.4 }}
+      style={{ position: "absolute", insetInlineEnd: 4, bottom: 4, width: 36, height: 36, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", color: c.ink, background: "transparent", border: 0, opacity: canOptions(t) ? 1 : 0.4 }}
     >
       <span style={{ width: 28, height: 28, borderRadius: 999, background: c.card, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Ellipsis size={16} strokeWidth={2.4} aria-hidden />
@@ -401,8 +401,8 @@ function PhotosBody() {
         {cover && (
           <div style={{ position: "relative", aspectRatio: "4 / 3", borderRadius: 16, overflow: "hidden", background: c.pale }}>
             <img src={cover} alt="Cover photo" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-            <span style={{ position: "absolute", left: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.onfill, background: c.fill, borderRadius: 999, padding: "2px 8px" }}>Cover</span>
-            <ImageApprovalBadge state={ownCover.image} className="absolute right-2 top-2" />
+            <span style={{ position: "absolute", insetInlineStart: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.onfill, background: c.fill, borderRadius: 999, padding: "2px 8px" }}>Cover</span>
+            <ImageApprovalBadge state={ownCover.image} className="absolute end-2 top-2" />
             {optionsButton({ kind: "cover" }, "Photo options, Cover photo")}
           </div>
         )}
@@ -432,10 +432,10 @@ function PhotosBody() {
             >
               {/* A teammate's photo waiting for approval has no public file yet: the tile shows its chip only. */}
               <img key={photoUrl(p)} src={photoUrl(p)} alt={p.caption ?? `Photo ${n}`} draggable={false} onError={(e) => (e.currentTarget.style.visibility = "hidden")} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }} />
-              {n === 1 && <span style={{ position: "absolute", left: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.onfill, background: c.fill, borderRadius: 999, padding: "2px 8px" }}>Cover</span>}
+              {n === 1 && <span style={{ position: "absolute", insetInlineStart: 8, top: 8, fontSize: px(10), fontWeight: 800, color: c.onfill, background: c.fill, borderRadius: 999, padding: "2px 8px" }}>Cover</span>}
               {tileChip(p)}
               {p.caption && (
-                <span style={{ position: "absolute", left: 8, bottom: 8, maxWidth: "calc(100% - 52px)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: px(10.5), fontWeight: 700, color: c.ink, background: c.card, borderRadius: 999, padding: "2px 8px" }}>
+                <span style={{ position: "absolute", insetInlineStart: 8, bottom: 8, maxWidth: "calc(100% - 52px)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: px(10.5), fontWeight: 700, color: c.ink, background: c.card, borderRadius: 999, padding: "2px 8px" }}>
                   {p.caption}
                 </span>
               )}
@@ -454,7 +454,7 @@ function PhotosBody() {
             style={{ position: "relative", aspectRatio: "4 / 3", borderRadius: 16, border: `1.5px dashed ${c.fill}`, background: "transparent", color: c.pdark, display: "flex", alignItems: "center", justifyContent: "center", opacity: (galleryLive ? canGallery : owner) ? 1 : 0.4 }}
           >
             <Plus size={22} strokeWidth={1.8} aria-hidden />
-            <span style={{ position: "absolute", left: 8, bottom: 8, fontSize: px(10.5), fontWeight: 700, color: c.ink, background: c.card, borderRadius: 999, padding: "2px 8px" }}>Add photos</span>
+            <span style={{ position: "absolute", insetInlineStart: 8, bottom: 8, fontSize: px(10.5), fontWeight: 700, color: c.ink, background: c.card, borderRadius: 999, padding: "2px 8px" }}>Add photos</span>
           </button>
         )}
       </div>
@@ -495,7 +495,7 @@ function PhotosBody() {
                 }
                 if (target.kind === "photo" && (row.k === "left" || row.k === "right")) move(target.photo, row.k === "left" ? -1 : 1);
               }}
-              style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 50, width: "100%", borderTop: i ? `1px solid ${c.div}` : "none", borderLeft: 0, borderRight: 0, borderBottom: 0, background: "transparent", color: row.k === "delete" ? c.high : c.ink, textAlign: "left" }}
+              style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 50, width: "100%", borderTop: i ? `1px solid ${c.div}` : "none", borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0, background: "transparent", color: row.k === "delete" ? c.high : c.ink, textAlign: "start" }}
             >
               <row.I size={18} strokeWidth={2.1} aria-hidden />
               <span style={{ flex: 1, fontSize: px(14), fontWeight: 700 }}>{row.t}</span>

@@ -7,6 +7,7 @@ import { journalStreak } from "../../../services/journal/streak";
 import { mondayFirstWeek } from "../../../utils/week";
 import { useJournalWeek } from "./data";
 import { DayDots, FadeValue, HeaderPill, HomeCard, HomeKeyframes, homeColors, Line, useHomeMode, useLoadingTimeout, WeekStrip } from "./kit";
+import { appLocale } from "../../../i18n/format";
 
 // HO1.W9 Journal (small), OURS-home-large-widgets §C (large) and
 // OURS-home-journal-empty. PRIVACY (home-backend §9, PB3 §6 #4): entry text
@@ -60,7 +61,7 @@ export const JournalWidget: React.FC<{ size: "small" | "large"; editMode: boolea
   );
   const writtenToday = journalEntries.some((e) => e.date === today);
   const fill = dark ? "#E0B360" : "#D4A84A";
-  const wordsLine = `${weekWords.toLocaleString()} words this week`;
+  const wordsLine = `${weekWords.toLocaleString(appLocale())} words this week`;
 
   return (
     <>

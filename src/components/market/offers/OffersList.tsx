@@ -141,7 +141,7 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
                           disabled={busy === o.id}
                           onClick={(e) => setMenu({ offer: o, anchor: e.currentTarget })}
                           className="market-focus hit"
-                          style={{ width: 32, height: 32, margin: "-6px -8px -6px 0", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: menu?.offer.id === o.id ? m.soft : "transparent", color: m.ink2, border: 0, padding: 0, cursor: "pointer", opacity: busy === o.id ? 0.4 : 1 }}
+                          style={{ width: 32, height: 32, marginBlock: "-6px", marginInline: "0 -8px", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: menu?.offer.id === o.id ? m.soft : "transparent", color: m.ink2, border: 0, padding: 0, cursor: "pointer", opacity: busy === o.id ? 0.4 : 1 }}
                         >
                           <MoreVertical size={18} strokeWidth={2.2} aria-hidden style={NO_ICON_SCALE} />
                         </button>

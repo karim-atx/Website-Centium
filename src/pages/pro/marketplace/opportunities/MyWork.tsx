@@ -149,7 +149,7 @@ function WorkCard({ w, now, onCalendar }: { w: WorkItem; now: Date; onCalendar: 
         type="button"
         onClick={onCalendar}
         className="hit market-focus"
-        style={{ width: "100%", padding: "10px 16px", border: 0, borderTop: `0.5px solid ${m.div}`, background: "transparent", display: "flex", alignItems: "center", gap: 8, fontSize: px(12.5), fontWeight: 800, color: m.pdark, fontFamily: "inherit", textAlign: "left", cursor: "pointer" }}
+        style={{ width: "100%", padding: "10px 16px", border: 0, borderTop: `0.5px solid ${m.div}`, background: "transparent", display: "flex", alignItems: "center", gap: 8, fontSize: px(12.5), fontWeight: 800, color: m.pdark, fontFamily: "inherit", textAlign: "start", cursor: "pointer" }}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={NO_ICON_SCALE}>
           <rect x="3" y="4" width="18" height="18" rx="2" />

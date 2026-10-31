@@ -9,6 +9,7 @@ import { GroupDetailsSheet } from "./GroupDetailsSheet";
 import { GroupPicker } from "./NewGroup";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { t, tn } from "../../i18n/core";
 import { AvatarPlaceholder } from "../icons/PartBIcons";
 import { ClientPicker, type PickableClient } from "./ClientPicker";
 import {
@@ -91,16 +92,16 @@ export const GroupInfoSection: React.FC<{
     setPicked(new Set());
     setNotice(
       [
-        result.sent > 0 ? `${result.sent} ${result.sent === 1 ? "invitation" : "invitations"} sent.` : "",
+        result.sent > 0 ? tn(result.sent, "{n} invitation sent.", "{n} invitations sent.") : "",
         ...result.refused.map((r) => `${r.name}: ${r.reason}`),
       ]
         .filter(Boolean)
-        .join(" ") || "Everyone you picked was already invited."
+        .join(" ") || t("Everyone you picked was already invited.")
     );
     onChanged();
   };
 
-  const row = "tap w-full min-h-[52px] text-left text-sm font-semibold border-b border-charcoal/[0.06] last:border-b-0";
+  const row = "tap w-full min-h-[52px] text-start text-sm font-semibold border-b border-charcoal/[0.06] last:border-b-0";
 
   const runConfirm = () => {
     const c = confirm;
@@ -145,10 +146,10 @@ export const GroupInfoSection: React.FC<{
 
   return (
     <>
-      <section className="rounded-2xl bg-cream-card border border-charcoal/[0.08] px-3.5 py-2 flex flex-col" aria-label="Members">
+      <section className="rounded-2xl bg-cream-card border border-charcoal/[0.08] px-3.5 py-2 flex flex-col" aria-label={t("Members")}>
         <div className="flex items-center justify-between min-h-[44px]">
           <h2 className="text-sm font-bold text-charcoal">
-            {joined.length} {joined.length === 1 ? "member" : "members"}
+            {tn(joined.length, "{n} member", "{n} members")}
           </h2>
           {isHost && open && (
             <button
@@ -156,7 +157,7 @@ export const GroupInfoSection: React.FC<{
               onClick={() => setAdding(true)}
               className="tap flex items-center gap-1.5 min-h-[44px] text-[13px] font-bold text-primary-deep-text"
             >
-              <UserPlus size={15} /> Add people
+              <UserPlus size={15} /> {t("Add people")}
             </button>
           )}
         </div>
@@ -175,8 +176,8 @@ export const GroupInfoSection: React.FC<{
               )}
             </span>
             <span className="flex-1 min-w-0 text-sm font-semibold text-charcoal truncate">
-              {m.userId === authUserId ? "You" : m.firstName}
-              {m.role === "owner" && <span className="ml-1.5 text-xs font-bold text-primary-deep-text">Host</span>}
+              {m.userId === authUserId ? t("You") : m.firstName}
+              {m.role === "owner" && <span className="ms-1.5 text-xs font-bold text-primary-deep-text">{t("Host")}</span>}
             </span>
             {isHost && open && m.role !== "owner" && (
               <button
@@ -184,13 +185,13 @@ export const GroupInfoSection: React.FC<{
                 onClick={() => setConfirm({ remove: m })}
                 className="tap min-h-[44px] px-2 text-[13px] font-semibold text-status-high"
               >
-                Remove
+                {t("Remove")}
               </button>
             )}
           </div>
         ))}
         <p className="text-xs text-charcoal-soft py-2">
-          Members see each other's first names and messages here, never health data, profiles or other chats.
+          {t("Members see each other's first names and messages here, never health data, profiles or other chats.")}
         </p>
       </section>
 
@@ -209,28 +210,28 @@ export const GroupInfoSection: React.FC<{
                 }}
                 className={`${row} text-charcoal`}
               >
-                Rename group
+                {t("Rename group")}
               </button>
               <button type="button" onClick={() => setConfirm("close")} className={`${row} text-status-high`}>
-                Close group
+                {t("Close group")}
               </button>
             </>
           ) : (
             <button type="button" onClick={() => setConfirm("leave")} className={`${row} text-status-high`}>
-              Leave group
+              {t("Leave group")}
             </button>
           )}
         </section>
       )}
 
-      <BottomSheet open={adding} onClose={() => setAdding(false)} title="Add people">
+      <BottomSheet open={adding} onClose={() => setAdding(false)} title={t("Add people")}>
         <div className="animate-fade-slide-up">
-          <p className="text-xs text-charcoal-soft mb-2">Each person gets an invitation and joins only if they accept.</p>
+          <p className="text-xs text-charcoal-soft mb-2">{t("Each person gets an invitation and joins only if they accept.")}</p>
           <ClientPicker
             clients={clients}
             selected={picked}
             disabled={inGroup}
-            disabledLabel="In the group"
+            disabledLabel={t("In the group")}
             onToggle={(id) =>
               setPicked((prev) => {
                 const next = new Set(prev);
@@ -246,18 +247,18 @@ export const GroupInfoSection: React.FC<{
             disabled={busy || picked.size === 0}
             className="tap w-full mt-3 h-12 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold disabled:opacity-40"
           >
-            {busy ? "Inviting…" : `Invite ${picked.size} ${picked.size === 1 ? "client" : "clients"}`}
+            {busy ? t("Inviting…") : tn(picked.size, "Invite {n} client", "Invite {n} clients")}
           </button>
         </div>
       </BottomSheet>
 
-      <BottomSheet open={renaming} onClose={() => setRenaming(false)} title="Rename group">
+      <BottomSheet open={renaming} onClose={() => setRenaming(false)} title={t("Rename group")}>
         <div className="animate-fade-slide-up flex flex-col gap-3">
           <input
             value={newName}
             maxLength={GROUP_NAME_MAX}
             onChange={(e) => setNewName(e.target.value)}
-            aria-label="Group name"
+            aria-label={t("Group name")}
             className="h-12 rounded-[14px] border border-charcoal/10 bg-cream-card px-3.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <button
@@ -266,7 +267,7 @@ export const GroupInfoSection: React.FC<{
             onClick={() => void run(() => renameGroup(threadId, newName.trim()), () => setRenaming(false))}
             className="tap h-12 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold disabled:opacity-40"
           >
-            Save
+            {t("Save")}
           </button>
         </div>
       </BottomSheet>
@@ -274,16 +275,16 @@ export const GroupInfoSection: React.FC<{
       <BottomSheet
         open={!!confirm}
         onClose={() => setConfirm(null)}
-        title={confirm === "close" ? "Close group" : confirm === "leave" ? "Leave group" : "Remove member"}
+        title={confirm === "close" ? t("Close group") : confirm === "leave" ? t("Leave group") : t("Remove member")}
       >
         <div className="animate-fade-slide-up">
           <p className="text-sm text-charcoal-soft mb-4">
             {confirm === "close"
-              ? "Nobody will be able to send messages here any more. Members keep what was already said, read-only."
+              ? t("Nobody will be able to send messages here any more. Members keep what was already said, read-only.")
               : confirm === "leave"
-                ? "You'll keep what was said while you were here, read-only, and won't see anything new. The host can invite you again."
+                ? t("You'll keep what was said while you were here, read-only, and won't see anything new. The host can invite you again.")
                 : confirm
-                  ? `${confirm.remove.firstName} will keep what was said while they were here, read-only, and won't see anything new.`
+                  ? t("{name} will keep what was said while they were here, read-only, and won't see anything new.", { name: confirm.remove.firstName })
                   : ""}
           </p>
           <button
@@ -304,10 +305,10 @@ export const GroupInfoSection: React.FC<{
             }}
             className="tap w-full rounded-xl bg-status-high text-white dark:text-[#0D0B1A] font-semibold text-sm py-3 disabled:opacity-50"
           >
-            {confirm === "close" ? "Close group" : confirm === "leave" ? "Leave group" : "Remove"}
+            {confirm === "close" ? t("Close group") : confirm === "leave" ? t("Leave group") : t("Remove")}
           </button>
           <button type="button" onClick={() => setConfirm(null)} className="tap w-full text-sm font-medium text-charcoal-soft py-3">
-            Cancel
+            {t("Cancel")}
           </button>
         </div>
       </BottomSheet>
@@ -375,14 +376,14 @@ const ProGroupInfo: React.FC<{
   const first = (s: string) => s.trim().split(/\s+/)[0] ?? s;
   return (
     <>
-      <section aria-label="Members" style={{ ...card, padding: "4px 14px" }}>
+      <section aria-label={t("Members")} style={{ ...card, padding: "4px 14px" }}>
         <div className="flex items-center justify-between" style={{ minHeight: 44 }}>
           <h2 style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>
-            {p.joined.length} {p.joined.length === 1 ? "member" : "members"}
+            {tn(p.joined.length, "{n} member", "{n} members")}
           </h2>
           {admin && (
             <button type="button" onClick={() => p.setAdding(true)} className="tap inline-flex items-center" style={{ gap: 6, minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}>
-              <UserPlus size={15} strokeWidth={2} aria-hidden /> Add people
+              <UserPlus size={15} strokeWidth={2} aria-hidden /> {t("Add people")}
             </button>
           )}
         </div>
@@ -390,17 +391,17 @@ const ProGroupInfo: React.FC<{
           <div key={m.userId} className="flex items-center" style={{ gap: 12, minHeight: 52, borderTop: `1px solid ${INK.b06}` }}>
             <Avatar name={m.firstName?.trim() || "?"} url={m.avatarUrl} size={36} />
             <span className="flex-1 min-w-0" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
-              {m.userId === p.authUserId ? "You" : m.firstName}
-              {m.role === "owner" && <span style={{ marginLeft: 6, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>Admin</span>}
+              {m.userId === p.authUserId ? t("You") : m.firstName}
+              {m.role === "owner" && <span style={{ marginInlineStart: 6, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{t("Admin")}</span>}
             </span>
             {admin && m.role !== "owner" && (
-              <button type="button" onClick={() => p.setConfirm({ remove: m })} className="tap shrink-0" style={{ minHeight: 44, paddingLeft: 8, fontSize: textPx(13), fontWeight: 600, color: INK.hi }}>
-                Remove
+              <button type="button" onClick={() => p.setConfirm({ remove: m })} className="tap shrink-0" style={{ minHeight: 44, paddingInlineStart: 8, fontSize: textPx(13), fontWeight: 600, color: INK.hi }}>
+                {t("Remove")}
               </button>
             )}
           </div>
         ))}
-        <p style={{ fontSize: textPx(12), color: INK.chS, padding: "8px 0", lineHeight: 1.45 }}>Members see each other's first names, photos and messages here, never health data, profiles or other chats.</p>
+        <p style={{ fontSize: textPx(12), color: INK.chS, padding: "8px 0", lineHeight: 1.45 }}>{t("Members see each other's first names, photos and messages here, never health data, profiles or other chats.")}</p>
       </section>
 
       {p.notice && (
@@ -418,22 +419,22 @@ const ProGroupInfo: React.FC<{
         <div>
           {p.isHost && (
             <section style={{ ...card, padding: "2px 14px", marginBottom: 10 }}>
-              <button type="button" onClick={p.startRename} className="tap w-full flex items-center text-left" style={{ gap: 12, minHeight: 52 }}>
+              <button type="button" onClick={p.startRename} className="tap w-full flex items-center text-start" style={{ gap: 12, minHeight: 52 }}>
                 <Pencil size={17} strokeWidth={1.75} aria-hidden style={{ color: INK.chS }} />
                 <span className="flex-1" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>
-                  Rename or edit description
+                  {t("Rename or edit description")}
                 </span>
                 <ChevronRight size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
               </button>
             </section>
           )}
           <section style={{ ...card, padding: "2px 14px" }}>
-            <button type="button" onClick={() => p.setConfirm(p.isHost ? "close" : "leave")} className="tap w-full flex items-center text-left" style={{ minHeight: 52, fontSize: textPx(14), fontWeight: 700, color: INK.hi }}>
-              {p.isHost ? "End group" : "Leave group"}
+            <button type="button" onClick={() => p.setConfirm(p.isHost ? "close" : "leave")} className="tap w-full flex items-center text-start" style={{ minHeight: 52, fontSize: textPx(14), fontWeight: 700, color: INK.hi }}>
+              {p.isHost ? t("End group") : t("Leave group")}
             </button>
           </section>
           {p.isHost && (
-            <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 8 }}>As the admin you can't leave; ending the group closes it for everyone. Calls aren't available in groups.</p>
+            <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 8 }}>{t("As the admin you can't leave; ending the group closes it for everyone. Calls aren't available in groups.")}</p>
           )}
         </div>
       )}
@@ -441,10 +442,10 @@ const ProGroupInfo: React.FC<{
       <BottomSheet
         open={p.adding}
         onClose={() => p.setAdding(false)}
-        title="Add people"
-        footer={<CtaButton className="w-full" size="sheet" label={`Invite ${n} ${n === 1 ? "client" : "clients"}`} disabled={n === 0} loading={p.busy} onClick={p.invite} />}
+        title={t("Add people")}
+        footer={<CtaButton className="w-full" size="sheet" label={tn(n, "Invite {n} client", "Invite {n} clients")} disabled={n === 0} loading={p.busy} onClick={p.invite} />}
       >
-        <p style={{ fontSize: textPx(12), color: INK.chS, marginBottom: 8 }}>Each person gets an invitation and joins only if they accept.</p>
+        <p style={{ fontSize: textPx(12), color: INK.chS, marginBottom: 8 }}>{t("Each person gets an invitation and joins only if they accept.")}</p>
         <GroupPicker
           clients={p.clients}
           selected={p.picked}
@@ -478,14 +479,14 @@ const ProGroupInfo: React.FC<{
         onClose={() => p.setConfirm(null)}
         alert
         icon={<Users size={22} strokeWidth={2} aria-hidden />}
-        title={c === "close" ? `End ${p.name}?` : c === "leave" ? "Leave group?" : c ? `Remove ${first(c.remove.firstName)}?` : ""}
+        title={c === "close" ? t("End {name}?", { name: p.name }) : c === "leave" ? t("Leave group?") : c ? t("Remove {name}?", { name: first(c.remove.firstName) }) : ""}
         body={
           c === "close"
-            ? "Nobody will be able to send messages here any more. Members keep what was already said, read-only."
+            ? t("Nobody will be able to send messages here any more. Members keep what was already said, read-only.")
             : c === "leave"
-              ? "You'll keep what was said while you were here, read-only, and won't see anything new. The host can invite you again."
+              ? t("You'll keep what was said while you were here, read-only, and won't see anything new. The host can invite you again.")
               : c
-                ? `${first(c.remove.firstName)} will keep what was said while they were here, read-only, and won't see anything new.`
+                ? t("{name} will keep what was said while they were here, read-only, and won't see anything new.", { name: first(c.remove.firstName) })
                 : undefined
         }
       >
@@ -497,9 +498,9 @@ const ProGroupInfo: React.FC<{
             className="tap w-full inline-flex items-center justify-center disabled:opacity-40"
             style={{ height: 48, borderRadius: 14, background: INK.hi, color: dark ? "#0D0B1A" : "#FFFFFF", fontSize: textPx(14), fontWeight: 700 }}
           >
-            {c === "close" ? "End group" : c === "leave" ? "Leave group" : "Remove"}
+            {c === "close" ? t("End group") : c === "leave" ? t("Leave group") : t("Remove")}
           </button>
-          <CtaButton size="page" variant="secondary" label={c === "close" ? "Keep group" : "Cancel"} onClick={() => p.setConfirm(null)} disabled={p.busy} />
+          <CtaButton size="page" variant="secondary" label={c === "close" ? t("Keep group") : t("Cancel")} onClick={() => p.setConfirm(null)} disabled={p.busy} />
         </div>
       </CentredPopup>
     </>

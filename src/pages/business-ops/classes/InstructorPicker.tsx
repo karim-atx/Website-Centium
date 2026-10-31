@@ -85,7 +85,7 @@ export function InstructorPicker({
       aria-label={`${name}. ${sub}`}
       onClick={onPick}
       tabIndex={onPick && (on || (key === firstKey && !ids.includes(pick))) ? 0 : -1}
-      className="market-focus flex items-center text-left w-full"
+      className="market-focus flex items-center text-start w-full"
       style={{ gap: 12, padding: "10px 12px", borderRadius: 14, background: m.sgrey, border: `1.5px solid ${on ? m.fill : "transparent"}`, color: m.ink, cursor: onPick ? "pointer" : "default", lineHeight: "normal", fontFamily: "inherit" }}
     >
       {avatar}

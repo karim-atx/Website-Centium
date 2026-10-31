@@ -43,7 +43,7 @@ export function WeekGrid({
   const mins = (t: string) => (minutesOfDay(t) ?? 0) / 60;
 
   return (
-    <div style={{ marginTop: 10, background: m.card, borderRadius: 20, border: `1px solid ${m.border}`, padding: "10px 8px 12px 4px", lineHeight: "normal" }}>
+    <div style={{ marginTop: 10, background: m.card, borderRadius: 20, border: `1px solid ${m.border}`, paddingBlock: "10px 12px", paddingInline: "4px 8px", lineHeight: "normal" }}>
       <div className="grid" style={{ gridTemplateColumns: `${GUTTER}px repeat(7, minmax(0, 1fr))`, columnGap: 3 }}>
         <span />
         {days.map((d, i) => {
@@ -70,7 +70,7 @@ export function WeekGrid({
       <div className="relative grid" style={{ gridTemplateColumns: `${GUTTER}px repeat(7, minmax(0, 1fr))`, columnGap: 3, height }}>
         <div className="relative">
           {hours.map((h) => (
-            <span key={h} className="absolute tabular-nums whitespace-nowrap" style={{ right: 4, top: (h - h0) * PX, transform: "translateY(-50%)", fontSize: 9.5, fontWeight: 700, color: m.faint }}>
+            <span key={h} className="absolute tabular-nums whitespace-nowrap" style={{ insetInlineEnd: 4, top: (h - h0) * PX, transform: "translateY(-50%)", fontSize: 9.5, fontWeight: 700, color: m.faint }}>
               {hourLabel(h)}
             </span>
           ))}
@@ -102,12 +102,12 @@ export function WeekGrid({
                       border: 0,
                       padding: 0,
                       background: s.cancelled ? m.highbg : m.pale,
-                      borderLeft: `2.5px solid ${s.cancelled ? m.high : m.fill}`,
+                      borderInlineStart: `2.5px solid ${s.cancelled ? m.high : m.fill}`,
                       opacity: s.cancelled ? 0.75 : ended ? 0.6 : 1,
                     }}
                   >
-                    {!s.cancelled && <span aria-hidden className="absolute left-0 bottom-0 w-full" style={{ height: `${fill}%`, background: m.fill, opacity: 0.45 }} />}
-                    {flagged && <span aria-hidden className="absolute" style={{ top: 2, right: 2, width: 6, height: 6, borderRadius: 999, background: m.high }} />}
+                    {!s.cancelled && <span aria-hidden className="absolute start-0 bottom-0 w-full" style={{ height: `${fill}%`, background: m.fill, opacity: 0.45 }} />}
+                    {flagged && <span aria-hidden className="absolute" style={{ top: 2, insetInlineEnd: 2, width: 6, height: 6, borderRadius: 999, background: m.high }} />}
                   </button>
                 );
               })}

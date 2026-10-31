@@ -64,7 +64,7 @@ export const RedeemVoucherTile: React.FC<RedeemVoucherTileProps> = ({ onPress, c
         font: "inherit",
         cursor: "pointer",
         borderRadius: 20,
-        textAlign: "left",
+        textAlign: "start",
         ...press.style,
         ...style,
       }}
@@ -78,7 +78,7 @@ export const RedeemVoucherTile: React.FC<RedeemVoucherTileProps> = ({ onPress, c
             display: "flex",
             alignItems: "center",
             gap: 6,
-            padding: "0 10px 0 12px",
+            paddingBlock: "0", paddingInline: "12px 10px",
             boxSizing: "border-box",
             WebkitMask: MASK,
             mask: MASK,
@@ -101,7 +101,7 @@ export const RedeemVoucherTile: React.FC<RedeemVoucherTileProps> = ({ onPress, c
               <path d="M12 21v-1" />
             </svg>
           </span>
-          <span style={{ width: 0, height: 72, flex: "none", borderLeft: "1.5px dashed rgba(255,255,255,0.4)" }} />
+          <span style={{ width: 0, height: 72, flex: "none", borderInlineStart: "1.5px dashed rgba(255,255,255,0.4)" }} />
           <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
             <span style={{ fontSize: textPx(17), lineHeight: linePx(22), fontWeight: 700, color: "#FFFFFF" }}>Redeem voucher</span>
             <span style={{ fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 400, color: "rgba(255,255,255,0.8)" }}>Scan or enter code</span>

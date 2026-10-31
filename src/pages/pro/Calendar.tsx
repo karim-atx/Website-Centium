@@ -74,6 +74,7 @@ import { acceptFor } from "../../services/storage";
 import { fetchEventCapacity, saveEventCapacity } from "../../services/messaging/sessionPlaces";
 import { parseCapacity } from "../../services/messaging/groupCardsModel";
 import { startThread } from "../../services/messaging";
+import { appLocale } from "../../i18n/format";
 
 /**
  * Release 3 · W4 Calendar (/app/pro/calendar; HANDOVER f "CA · Calendar",
@@ -110,7 +111,7 @@ import { startThread } from "../../services/messaging";
 type View = "year" | "month" | "week" | "day";
 const VIEWS: View[] = ["year", "month", "week", "day"];
 
-const monthNames = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString("en-US", { month: "long" }));
+const monthNames = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString(appLocale("en-US"), { month: "long" }));
 
 /** Signed at the click: the URL's lifetime is minutes. */
 async function openAttachment(path: string) {
@@ -213,7 +214,7 @@ export default function Calendar() {
     for (const d of days) {
       for (const i of items[d]) {
         if (i.kind !== "session" || !i.clientId || out[i.clientId] || `${d} ${i.start ?? ""}` < nowKey) continue;
-        out[i.clientId] = d === todayIso ? `Next today ${time12(i.start)}`.trim() : `Next ${new Date(`${d}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+        out[i.clientId] = d === todayIso ? `Next today ${time12(i.start)}`.trim() : `Next ${new Date(`${d}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" })}`;
       }
     }
     return out;
@@ -923,7 +924,7 @@ export default function Calendar() {
                     disabled={saving}
                     aria-label="Attach a file"
                     onChange={(e) => e.target.files?.[0] && void attach(e.target.files[0])}
-                    className="w-full text-xs text-charcoal-faint file:mr-3 file:rounded-lg file:border-0 file:bg-cream-soft file:px-3 file:py-2 file:text-xs file:font-semibold file:text-charcoal-soft"
+                    className="w-full text-xs text-charcoal-faint file:me-3 file:rounded-lg file:border-0 file:bg-cream-soft file:px-3 file:py-2 file:text-xs file:font-semibold file:text-charcoal-soft"
                   />
                   <span className="block text-[11px] text-charcoal-faint mt-1.5">Invitees can open whatever you attach here.</span>
                 </>

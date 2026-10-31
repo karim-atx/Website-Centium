@@ -5,6 +5,7 @@ import { Button } from "../ui/Button";
 import { useIsDark } from "../../hooks/useIsDark";
 import { currentTabLock, onTabLock, type TabLock } from "../../../lib/supabase/tabIdentity";
 import { textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 /**
  * The blocking notice for a tab whose account was changed from another tab
@@ -26,9 +27,9 @@ export const TabIdentityNotice: React.FC = () => {
 
   const title =
     lock.kind === "switched"
-      ? `You're now signed in as ${lock.label} in another tab.`
-      : "You've signed out in another tab.";
-  const action = lock.kind === "switched" ? `Continue as ${lock.label}` : "Sign in";
+      ? t("You're now signed in as {account} in another tab.", { account: lock.label })
+      : t("You've signed out in another tab.");
+  const action = lock.kind === "switched" ? t("Continue as {account}", { account: lock.label }) : t("Sign in");
 
   return createPortal(
     <div className="fixed inset-0 z-[1000] flex items-center justify-center px-6">
@@ -50,7 +51,7 @@ export const TabIdentityNotice: React.FC = () => {
           <p style={{ margin: 0, fontSize: textPx(16), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{title}</p>
         </div>
         <p style={{ margin: "10px 0 0", fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-muted))" }}>
-          Nothing more is saved from this tab until it reloads.
+          {t("Nothing more is saved from this tab until it reloads.")}
         </p>
         <Button className="w-full" style={{ marginTop: 18 }} onClick={() => window.location.reload()} autoFocus>
           {action}

@@ -78,7 +78,7 @@ export const WinPermissionPopup: React.FC<{
       iconWell={{ size: 38, radius: 12 }}
       icon={<ReminderIcon kind="share_request" tone={tn} proName={proName} proAvatarUrl={proAvatarUrl} />}
       titleAside={
-        <span style={{ position: "relative", display: "block", top: -10, right: -4, fontSize: textPx(11), lineHeight: "normal", fontWeight: 700, color: INK.chF }}>
+        <span style={{ position: "relative", display: "block", top: -10, insetInlineEnd: -4, fontSize: textPx(11), lineHeight: "normal", fontWeight: 700, color: INK.chF }}>
           {index + 1} of {count}
         </span>
       }

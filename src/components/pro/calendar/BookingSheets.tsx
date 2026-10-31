@@ -11,6 +11,7 @@ import { ComingSoon, ComingSoonPill } from "../ComingSoon";
 import { bookingHref, bookingUrl, saveBookingPolicy, saveReminderDefaults, type BookingAudience, type BookingPolicy } from "../../../services/pro/calendar";
 import { ChoiceCard, FieldButton, SettingsRow } from "./calendarFields";
 import type { AlertValue } from "./calendarModel";
+import { t, tk, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · W4 CA17 to CA23, the Booking rows' sheets (source/gen/r6a.js
@@ -27,26 +28,30 @@ import type { AlertValue } from "./calendarModel";
 export type BookingSheetKind = "link" | "who" | "notice" | "approvals" | "window" | "reminders" | "sync";
 
 export const BOOKING_TITLES: Record<BookingSheetKind, string> = {
-  link: "Booking link",
-  who: "Who can book",
-  notice: "Notice and cancellation",
-  approvals: "Booking approvals",
-  window: "Booking window",
-  reminders: "Reminders to clients",
-  sync: "Sync with your calendar",
+  link: tk("Booking link"),
+  who: tk("Who can book"),
+  notice: tk("Notice and cancellation"),
+  approvals: tk("Booking approvals"),
+  window: tk("Booking window"),
+  reminders: tk("Reminders to clients"),
+  sync: tk("Sync with your calendar"),
 };
 
 /** CA18 choices for the three audiences the database knows. */
 export const AUDIENCE: Record<BookingAudience, { title: string; sub: string }> = {
-  everyone: { title: "Everyone with the link", sub: "New people send a request first" },
-  approved_only: { title: "Active clients only", sub: "Clients you work with now" },
-  clients_only: { title: "All your clients", sub: "Clients in any stage" },
+  everyone: { title: tk("Everyone with the link"), sub: tk("New people send a request first") },
+  approved_only: { title: tk("Active clients only"), sub: tk("Clients you work with now") },
+  clients_only: { title: tk("All your clients"), sub: tk("Clients in any stage") },
 };
 
-const hoursLabel = (h: number) => (h === 0 ? "No notice" : h % 24 === 0 && h >= 48 ? `${h / 24} days` : `${h} hour${h === 1 ? "" : "s"}`);
-const beforeLabel = (h: number) => (h === 0 ? "Up to the start" : `${hoursLabel(h)} before`);
-const chargeLabel = (p: number) => (p === 0 ? "No charge" : p === 100 ? "Charge the full price" : `Charge ${p}% of the price`);
+// Called during render: the shown words, in the chosen language.
+const hoursLabel = (h: number) => (h === 0 ? t("No notice") : h % 24 === 0 && h >= 48 ? tn(h / 24, "{n} day", "{n} days") : tn(h, "{n} hour", "{n} hours"));
+const beforeLabel = (h: number) => (h === 0 ? t("Up to the start") : t("{time} before", { time: hoursLabel(h) }));
+const chargeLabel = (p: number) => (p === 0 ? t("No charge") : p === 100 ? t("Charge the full price") : t("Charge {p}% of the price", { p }));
+/** The window in English words (Practice settings and Calendar read it); windowText is the shown one. */
 export const windowLabel = (days: number) => (days % 7 === 0 ? `${days / 7} week${days === 7 ? "" : "s"} ahead` : `${days} days ahead`);
+
+const windowText = (days: number) => (days % 7 === 0 ? tn(days / 7, "{n} week ahead", "{n} weeks ahead") : t("{n} days ahead", { n: days }));
 
 const withCurrent = (list: number[], v: number) => (list.includes(v) ? list : [...list, v].sort((a, b) => a - b));
 const NOTICE = [0, 1, 2, 4, 12, 24, 48];
@@ -59,7 +64,7 @@ const NumberSelect: React.FC<{ label: string; value: number; options: number[]; 
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   return (
     <div>
-      <FieldButton label={label} value={text(value)} ariaLabel={`${label}, ${text(value)}`} open={!!anchor} onClick={(e) => setAnchor(e.currentTarget)} />
+      <FieldButton label={label} value={text(value)} ariaLabel={t("{label}, {value}", { label, value: text(value) })} open={!!anchor} onClick={(e) => setAnchor(e.currentTarget)} />
       <PopupMenu
         open={!!anchor}
         onClose={() => setAnchor(null)}
@@ -136,11 +141,11 @@ export const BookingSheet: React.FC<{
   const copy = () => {
     if (!url) return;
     void navigator.clipboard?.writeText(href).catch(() => {});
-    onToast("Link copied");
+    onToast(t("Link copied"));
   };
   const share = async () => {
     if (!url) return;
-    const data = { title: "Book a session", url: href };
+    const data = { title: t("Book a session"), url: href };
     if (navigator.share && (!navigator.canShare || navigator.canShare(data))) {
       try {
         await navigator.share(data);
@@ -152,7 +157,7 @@ export const BookingSheet: React.FC<{
     copy();
   };
 
-  const saveFooter = (onClick: () => void) => <CtaButton size="sheet" className="w-full" label="Save" loading={busy} onClick={onClick} />;
+  const saveFooter = (onClick: () => void) => <CtaButton size="sheet" className="w-full" label={t("Save")} loading={busy} onClick={onClick} />;
   // No backend: the row says so, and never shows a value it cannot keep.
   const soon = (key: string, icon: typeof Bell, title: string, last?: boolean) => (
     <SettingsRow key={key} icon={icon} title={title} muted right={<ComingSoonPill />} last={last} />
@@ -167,34 +172,34 @@ export const BookingSheet: React.FC<{
         <div className="flex flex-col items-center" style={{ gap: 12 }}>
           {url ? (
             <div className="flex items-center justify-center" style={{ width: 168, height: 168, borderRadius: 20, border: `1px solid ${INK.b10}`, background: "#FFFFFF" }}>
-              <PassQr value={href} size={136} label="Booking link QR code" failedText="Couldn't draw the QR code. Try again." />
+              <PassQr value={href} size={136} label={t("Booking link QR code")} failedText={t("Couldn't draw the QR code. Try again.")} />
             </div>
           ) : null}
           <p className="text-center" style={{ fontSize: textPx(12.5), color: INK.chS, maxWidth: 280, lineHeight: 1.55 }}>
-            Anyone with this link sees your open slots and session types, then books under your rules.
+            {t("Anyone with this link sees your open slots and session types, then books under your rules.")}
           </p>
         </div>
         <div className="flex flex-col" style={{ marginTop: 14, gap: 12 }}>
           {url ? (
             <div>
               <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-                Link
+                {t("Link")}
               </span>
-              <button type="button" onClick={copy} aria-label={`Copy link, ${url}`} className="tap w-full flex items-center justify-between text-left" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8, fontSize: textPx(14), color: INK.ch }}>
+              <button type="button" onClick={copy} aria-label={t("Copy link, {url}", { url })} className="tap w-full flex items-center justify-between text-start" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8, fontSize: textPx(14), color: INK.ch }}>
                 <span className="truncate">{url}</span>
                 <Copy size={16} strokeWidth={1.75} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} />
               </button>
             </div>
           ) : (
             <p style={{ borderRadius: 12, background: INK.soft, padding: 12, fontSize: textPx(12), color: INK.chS, lineHeight: 1.45 }}>
-              Choose your handle on your public profile to get your booking link.
+              {t("Choose your handle on your public profile to get your booking link.")}
             </p>
           )}
           <div className="flex items-center justify-between" style={{ height: 52, borderRadius: 12, background: INK.soft, padding: "0 12px" }}>
-            <span style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{p.bookingLinkEnabled ? "Link is on" : "Link is off"}</span>
+            <span style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{p.bookingLinkEnabled ? t("Link is on") : t("Link is off")}</span>
             <Toggle
               checked={p.bookingLinkEnabled}
-              label="Booking link"
+              label={t("Booking link")}
               disabled={busy}
               onChange={(v) => {
                 const next = { ...p, bookingLinkEnabled: v };
@@ -208,50 +213,50 @@ export const BookingSheet: React.FC<{
     );
     footer = (
       <div className="flex w-full" style={{ gap: 8 }}>
-        <CtaButton size="sheet" variant="secondary" className="flex-1" label="Copy link" icon={<Copy size={15} aria-hidden />} disabled={!url} onClick={copy} />
-        <CtaButton size="sheet" className="flex-1" label="Share" icon={<Share2 size={15} aria-hidden />} disabled={!url} onClick={() => void share()} />
+        <CtaButton size="sheet" variant="secondary" className="flex-1" label={t("Copy link")} icon={<Copy size={15} aria-hidden />} disabled={!url} onClick={copy} />
+        <CtaButton size="sheet" className="flex-1" label={t("Share")} icon={<Share2 size={15} aria-hidden />} disabled={!url} onClick={() => void share()} />
       </div>
     );
   } else if (kind === "who") {
     const order: BookingAudience[] = ["everyone", "approved_only", "clients_only"];
     body = (
-      <div role="radiogroup" aria-label="Who can book" className="flex flex-col" style={{ gap: 8 }}>
+      <div role="radiogroup" aria-label={t("Who can book")} className="flex flex-col" style={{ gap: 8 }}>
         {order.map((a) => (
-          <ChoiceCard key={a} title={AUDIENCE[a].title} sub={AUDIENCE[a].sub} on={p.whoCanBook === a} onClick={() => setP({ ...p, whoCanBook: a })} />
+          <ChoiceCard key={a} title={t(AUDIENCE[a].title)} sub={t(AUDIENCE[a].sub)} on={p.whoCanBook === a} onClick={() => setP({ ...p, whoCanBook: a })} />
         ))}
-        <ChoiceCard title="Selected clients" sub="Choose who in the list below" on={false} disabled trailing={<ComingSoonPill />} />
-        <ChoiceCard title="No one" sub="Only you can add sessions" on={false} disabled trailing={<ComingSoonPill />} />
+        <ChoiceCard title={t("Selected clients")} sub={t("Choose who in the list below")} on={false} disabled trailing={<ComingSoonPill />} />
+        <ChoiceCard title={t("No one")} sub={t("Only you can add sessions")} on={false} disabled trailing={<ComingSoonPill />} />
       </div>
     );
     footer = saveFooter(() => void savePolicy(p));
   } else if (kind === "notice") {
     body = (
       <div className="flex flex-col" style={{ gap: 14 }}>
-        <NumberSelect label="Minimum notice to book" value={p.minNoticeHours} options={NOTICE} text={hoursLabel} onChange={(n) => setP({ ...p, minNoticeHours: n })} />
-        <NumberSelect label="Free cancellation until" value={p.freeCancelHours} options={FREE_CANCEL} text={beforeLabel} onChange={(n) => setP({ ...p, freeCancelHours: n })} />
-        <NumberSelect label="Late cancellation" value={p.lateCancelPct} options={CHARGES} text={chargeLabel} onChange={(n) => setP({ ...p, lateCancelPct: n })} />
-        <NumberSelect label="No-show" value={p.noShowPct} options={CHARGES} text={chargeLabel} onChange={(n) => setP({ ...p, noShowPct: n })} />
-        <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5 }}>Clients see these rules before they book and in every reminder.</p>
+        <NumberSelect label={t("Minimum notice to book")} value={p.minNoticeHours} options={NOTICE} text={hoursLabel} onChange={(n) => setP({ ...p, minNoticeHours: n })} />
+        <NumberSelect label={t("Free cancellation until")} value={p.freeCancelHours} options={FREE_CANCEL} text={beforeLabel} onChange={(n) => setP({ ...p, freeCancelHours: n })} />
+        <NumberSelect label={t("Late cancellation")} value={p.lateCancelPct} options={CHARGES} text={chargeLabel} onChange={(n) => setP({ ...p, lateCancelPct: n })} />
+        <NumberSelect label={t("No-show")} value={p.noShowPct} options={CHARGES} text={chargeLabel} onChange={(n) => setP({ ...p, noShowPct: n })} />
+        <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5 }}>{t("Clients see these rules before they book and in every reminder.")}</p>
       </div>
     );
     footer = saveFooter(() => void savePolicy(p));
   } else if (kind === "approvals") {
     body = (
       <>
-        <SettingsRow icon={UserPlus} title="New clients" sub={p.newClientApproval ? "Need your OK" : "Booked automatically"} right={<Toggle checked={p.newClientApproval} label="New clients need your OK" onChange={(v) => setP({ ...p, newClientApproval: v })} />} />
-        {soon("repeat", Repeat, "Repeat bookings")}
-        {soon("outside", CalendarClock, "Bookings outside working hours")}
-        {soon("within", Clock, "Approve within", true)}
+        <SettingsRow icon={UserPlus} title={t("New clients")} sub={p.newClientApproval ? t("Need your OK") : t("Booked automatically")} right={<Toggle checked={p.newClientApproval} label={t("New clients need your OK")} onChange={(v) => setP({ ...p, newClientApproval: v })} />} />
+        {soon("repeat", Repeat, t("Repeat bookings"))}
+        {soon("outside", CalendarClock, t("Bookings outside working hours"))}
+        {soon("within", Clock, t("Approve within"), true)}
       </>
     );
     footer = saveFooter(() => void savePolicy(p));
   } else if (kind === "window") {
     body = (
       <div className="flex flex-col" style={{ gap: 14 }}>
-        <NumberSelect label="Clients can book up to" value={p.windowDays} options={WINDOW} text={windowLabel} onChange={(n) => setP({ ...p, windowDays: n })} />
+        <NumberSelect label={t("Clients can book up to")} value={p.windowDays} options={WINDOW} text={windowText} onChange={(n) => setP({ ...p, windowDays: n })} />
         <div>
-          {soon("step", Clock, "Slots start every")}
-          {soon("most", CalendarClock, "Most sessions a day", true)}
+          {soon("step", Clock, t("Slots start every"))}
+          {soon("most", CalendarClock, t("Most sessions a day"), true)}
         </div>
       </div>
     );
@@ -259,23 +264,23 @@ export const BookingSheet: React.FC<{
   } else if (kind === "reminders") {
     body = (
       <>
-        <SettingsRow icon={Bell} title="24 hours before" sub="Push notification" right={<Toggle checked={day} label="24 hours before" onChange={setDay} />} />
-        <SettingsRow icon={Bell} title="1 hour before" sub="Push notification" right={<Toggle checked={hour} label="1 hour before" onChange={setHour} />} />
-        {soon("email", Mail, "Email confirmation")}
-        {soon("note", MessageCircle, "Include your note", true)}
+        <SettingsRow icon={Bell} title={t("24 hours before")} sub={t("Push notification")} right={<Toggle checked={day} label={t("24 hours before")} onChange={setDay} />} />
+        <SettingsRow icon={Bell} title={t("1 hour before")} sub={t("Push notification")} right={<Toggle checked={hour} label={t("1 hour before")} onChange={setHour} />} />
+        {soon("email", Mail, t("Email confirmation"))}
+        {soon("note", MessageCircle, t("Include your note"), true)}
       </>
     );
     footer = saveFooter(() => void saveReminders());
   } else {
-    body = <ComingSoon line="Events from your other calendars block those times here, so clients can't book over them." />;
+    body = <ComingSoon line={t("Events from your other calendars block those times here, so clients can't book over them.")} />;
   }
 
   return (
-    <BottomSheet open={!!kind} onClose={onClose} title={BOOKING_TITLES[kind]} footer={footer ?? undefined}>
+    <BottomSheet open={!!kind} onClose={onClose} title={t(BOOKING_TITLES[kind])} footer={footer ?? undefined}>
       {body}
       {error && (
         <p role="alert" className="text-center" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginTop: 12 }}>
-          {error}
+          {t(error)}
         </p>
       )}
     </BottomSheet>

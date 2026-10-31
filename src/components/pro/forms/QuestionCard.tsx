@@ -181,7 +181,7 @@ export const QuestionCard: React.FC<{
     );
   }
 
-  const linkBtn: React.CSSProperties = { gap: 6, minHeight: 36, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, textAlign: "left" };
+  const linkBtn: React.CSSProperties = { gap: 6, minHeight: 36, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, textAlign: "start" };
   const showCondition = !!onCondition || !!conditionLine;
   const showProfile = !!onProfile || !!q.profileField;
   const extras =
@@ -248,9 +248,9 @@ export const QuestionCard: React.FC<{
             <span className="truncate">{typeLabel(q)}</span>
           </span>
           {readOnly ? (
-            q.required && <span className="ml-auto shrink-0" style={{ fontSize: textPx(11.5), color: INK.chF }}>Required</span>
+            q.required && <span className="ms-auto shrink-0" style={{ fontSize: textPx(11.5), color: INK.chF }}>Required</span>
           ) : (
-            <span className="ml-auto inline-flex items-center shrink-0" style={{ gap: 6, fontSize: textPx(11.5), color: INK.chF }}>
+            <span className="ms-auto inline-flex items-center shrink-0" style={{ gap: 6, fontSize: textPx(11.5), color: INK.chF }}>
               <span aria-hidden>Required</span>
               <Toggle checked={q.required} onChange={(v) => !locked && set({ required: v })} label={`Required: ${q.prompt || `question ${index + 1}`}`} disabled={locked} />
             </span>

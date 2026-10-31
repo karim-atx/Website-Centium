@@ -138,7 +138,7 @@ export default function MyRewardsPage() {
                   <span aria-hidden style={{ width: 44, height: 44, borderRadius: 12, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center", fontSize: textPx(12.5), fontWeight: 800, color: m.accent, flexShrink: 0 }}>
                     {ownerInitials(v.ownerName)}
                   </span>
-                  <span style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+                  <span style={{ flex: 1, minWidth: 0, textAlign: "start" }}>
                     <span style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>{v.offerHeadline}</span>
                     <span style={{ display: "block", fontSize: textPx(12), fontWeight: 600, color: m.accent }}>{v.ownerSubtitle}</span>
                     <span style={{ display: "block", fontSize: textPx(11.5), color: m.faint, marginTop: 1 }}>{row.meta}</span>

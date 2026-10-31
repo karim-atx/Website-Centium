@@ -4,6 +4,7 @@ import type { MembershipPlanRow } from "../../services/membership-plans/types";
 import type { Offering } from "../../services/business-offerings/types";
 import { offerLocked, placementView, type DbPromoTarget, type DbPromoType, type Placement, type PlacementView, type PromoStats, type PromoStatus, type Promotion } from "../../services/business-market/promoLogic";
 import { addDays, dayMonth, daysLeft, dowTime, notEnded } from "./model";
+import { appLocale } from "../../i18n/format";
 
 // Create promotion (MA1-099 to 104, OURS-MA1-promotion-type-menu,
 // OURS-MA1-gym-promotions): what can be promoted per type, the promotion
@@ -260,13 +261,13 @@ export function promoDates(p: Promotion, status: PromoStatus, audienceNew: strin
 /** "41" / "41 of 100"; "–" before it starts or without stats. */
 export function usesText(status: PromoStatus, s: PromoStats | undefined): string {
   if (status === "scheduled" || !s) return "–";
-  return s.useLimit ? `${s.uses.toLocaleString("en-US")} of ${s.useLimit.toLocaleString("en-US")}` : s.uses.toLocaleString("en-US");
+  return s.useLimit ? `${s.uses.toLocaleString(appLocale("en-US"))} of ${s.useLimit.toLocaleString(appLocale("en-US"))}` : s.uses.toLocaleString(appLocale("en-US"));
 }
 
-export const peopleText = (status: PromoStatus, s: PromoStats | undefined): string => (status === "scheduled" || !s ? "–" : s.people.toLocaleString("en-US"));
+export const peopleText = (status: PromoStatus, s: PromoStats | undefined): string => (status === "scheduled" || !s ? "–" : s.people.toLocaleString(appLocale("en-US")));
 
 /** "$1,230" / "$12.50". */
-export const money = (n: number): string => `$${n.toLocaleString("en-US", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}`;
+export const money = (n: number): string => `$${n.toLocaleString(appLocale("en-US"), { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}`;
 
 /** Recorded revenue line, only when the offer was used: the business's own payments, never Centium's. */
 export function recordedLine(s: PromoStats | undefined): string | null {
@@ -303,7 +304,7 @@ export function offerUsed(status: PromoStatus, on: boolean, s: PromoStats | unde
   if (!on) return "Off";
   if (status === "paused") return "Paused";
   if (status === "scheduled") return "Not started";
-  if (s && s.uses > 0) return `${s.uses.toLocaleString("en-US")} use${s.uses === 1 ? "" : "s"}`;
+  if (s && s.uses > 0) return `${s.uses.toLocaleString(appLocale("en-US"))} use${s.uses === 1 ? "" : "s"}`;
   return "Live now";
 }
 

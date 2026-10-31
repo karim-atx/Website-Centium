@@ -122,7 +122,7 @@ export function VenueHoursCard({
               <span className={`text-[13px] leading-[17px] text-charcoal ${l.today ? "font-extrabold" : "font-bold"}`}>{l.label.replace(/ \(today\)$/, "")}</span>
               {l.today && <VPill tone="pale" label="Today" />}
             </span>
-            <span className="text-[12.5px] leading-[17px] font-extrabold text-charcoal tabular-nums text-right">{l.value}</span>
+            <span className="text-[12.5px] leading-[17px] font-extrabold text-charcoal tabular-nums text-end">{l.value}</span>
           </div>
         ))}
       </VDetailCard>

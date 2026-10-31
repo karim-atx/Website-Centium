@@ -2,7 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums, Tables } from "../../../lib/supabase/database.types";
 import { NOT_ACCEPTING_CLIENTS } from "../subscription-tiers/freePeriodCopy";
-import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { isOffline, OFFLINE_MESSAGE, rateLimitMessage } from "../network-error";
 import {
   interpretPreviewReferral,
   interpretRedeemReferral,
@@ -14,6 +14,7 @@ import {
   type ReferralSummary,
   type ReferralSummaryRow,
 } from "./referralLogic";
+import { tk } from "../../i18n/core";
 
 export type { PreviewReferralOutcome, RedeemReferralOutcome, ReferralSummary } from "./referralLogic";
 
@@ -67,7 +68,8 @@ function describeRedemptionError(error: PostgrestError): string {
   const message = error.message ?? "";
 
   /* ATX02 = the 5-attempts-per-15-minutes limiter. Its message includes the
-   * retry-time hint, so surface it verbatim.
+   * retry-time hint; only its minutes are
+   * read (rateLimitMessage), since the text names an internal action.
    *
    * THE CODE ALONE, because a message match beside it was only ever redundant
    * here — not a bridge from before the code existed, which is what the
@@ -76,7 +78,7 @@ function describeRedemptionError(error: PostgrestError): string {
    * caller swallows it: redeem_client_code calls it with `perform` and catches
    * only `sqlstate 'ATX01'`, preview_client_code calls it with `select` and
    * catches nothing. So the code reaches PostgrestError.code intact. */
-  if (code === "ATX02") return message;
+  if (code === "ATX02") return rateLimitMessage(message);
 
   // Verified against staging: an unauthenticated redeem_* raises P0001
   // "authentication required", while the preview_* functions are not granted
@@ -88,9 +90,9 @@ function describeRedemptionError(error: PostgrestError): string {
     code === "42501" ||
     /jwt|not authenticated|authentication|permission denied/i.test(message)
   ) {
-    return "You need to be signed in to use a code. Sign in and try again.";
+    return tk("You need to be signed in to use a code. Sign in and try again.");
   }
-  return message || "Something went wrong redeeming that code. Try again.";
+  return message || tk("Something went wrong redeeming that code. Try again.");
 }
 
 /** Shared shape-check for a redeem_* composite response. */
@@ -101,13 +103,13 @@ function interpretRedeem(
   // success is `boolean | null` in the generated types, so an explicit
   // !== true keeps a null from ever reading as success.
   if (!data || data.success !== true) {
-    return { status: "failed", message: data?.message ?? "That code could not be redeemed." };
+    return { status: "failed", message: data?.message ?? tk("That code could not be redeemed.") };
   }
   // Follow-up 15: probe a specific field, not the composite object.
   if (!rowId) {
     return {
       status: "failed",
-      message: data.message ?? "That code was accepted but no record came back. Try again.",
+      message: data.message ?? tk("That code was accepted but no record came back. Try again."),
     };
   }
   return { status: "success", id: rowId, message: data.message };
@@ -135,7 +137,7 @@ export async function previewClientCode(code: string): Promise<PreviewResult<Cli
       },
     };
   } catch (e) {
-    return { status: "error", message: e instanceof Error ? e.message : "Could not check that code." };
+    return { status: "error", message: e instanceof Error ? e.message : tk("Could not check that code.") };
   }
 }
 
@@ -156,7 +158,7 @@ export async function redeemClientCode(code: string): Promise<RedeemResult> {
     } | null;
     return interpretRedeem(result, result?.relationship?.id);
   } catch (e) {
-    return { status: "error", message: e instanceof Error ? e.message : "Could not redeem that code." };
+    return { status: "error", message: e instanceof Error ? e.message : tk("Could not redeem that code.") };
   }
 }
 
@@ -179,7 +181,7 @@ const referralRpc = (): LooseRpc => (supabase as unknown as { rpc: (...a: unknow
 function describeReferralError(error: { code?: string; message: string }, fallback: string): string {
   if (isOffline(error)) return OFFLINE_MESSAGE;
   // ATX08: my_referral_code() found no profile to take the prefix from.
-  if (error.code === "ATX08") return "Your profile isn't set up yet, so a code can't be made. Try again later.";
+  if (error.code === "ATX08") return tk("Your profile isn't set up yet, so a code can't be made. Try again later.");
   // ATX01 (no session), ATX02 (5 tries per 15 minutes, its message carries the
   // retry hint) and a signed-out 42501 go through the shared mapper; anything
   // else gets the plain fallback rather than a raw database string.
@@ -193,7 +195,7 @@ function describeReferralError(error: { code?: string; message: string }, fallba
 export async function getReferralSummary(): Promise<
   { status: "ok"; summary: ReferralSummary } | { status: "error"; message: string }
 > {
-  const fallback = "Couldn't load your referrals. Try again.";
+  const fallback = tk("Couldn't load your referrals. Try again.");
   try {
     const { data, error } = await referralRpc()("referral_summary", {});
     if (error) return { status: "error", message: describeReferralError(error, fallback) };
@@ -208,7 +210,7 @@ export async function getReferralSummary(): Promise<
  *  returns the same one forever after. Called from "Get my code" only, never
  *  just to look. */
 export async function mintMyReferralCode(): Promise<{ status: "ok"; code: string } | { status: "error"; message: string }> {
-  const fallback = "Couldn't make your code. Try again.";
+  const fallback = tk("Couldn't make your code. Try again.");
   try {
     const { data, error } = await referralRpc()("my_referral_code", {});
     if (error) return { status: "error", message: describeReferralError(error, fallback) };
@@ -225,7 +227,7 @@ export async function mintMyReferralCode(): Promise<{ status: "ok"; code: string
 export async function redeemReferralCode(
   code: string
 ): Promise<RedeemReferralOutcome | { status: "error"; message: string }> {
-  const fallback = "Couldn't apply that code. Try again.";
+  const fallback = tk("Couldn't apply that code. Try again.");
   try {
     const { data, error } = await referralRpc()("redeem_referral_code", { p_code: code.trim() });
     if (error) return { status: "error", message: describeReferralError(error, fallback) };
@@ -242,7 +244,7 @@ export async function redeemReferralCode(
 export async function previewReferralCode(
   code: string
 ): Promise<PreviewReferralOutcome | { status: "error"; message: string }> {
-  const fallback = "Couldn't check that code. Try again.";
+  const fallback = tk("Couldn't check that code. Try again.");
   try {
     const { data, error } = await referralRpc()("preview_referral_code", { p_code: code.trim() });
     if (error) return { status: "error", message: describeReferralError(error, fallback) };

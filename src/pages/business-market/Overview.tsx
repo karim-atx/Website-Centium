@@ -156,9 +156,9 @@ export function Overview() {
           <RedeemVoucherTile onPress={() => navigate("/app/business/redeem")} />
           <ListingToggleTile variant="biz" on={business.active} disabled={!canSwitch} onChange={(on) => (on ? void sw.turnOn() : sw.requestOff())} />
         </div>
-        {switchNote ? <p style={{ fontSize: px(11.5), color: c.faint, lineHeight: "normal", margin: "8px 2px 0", textAlign: "right" }}>{switchNote}</p> : null}
+        {switchNote ? <p style={{ fontSize: px(11.5), color: c.faint, lineHeight: "normal", margin: "8px 2px 0", textAlign: "end" }}>{switchNote}</p> : null}
         {sw.error ? (
-          <p role="alert" style={{ fontSize: px(11.5), fontWeight: 700, color: c.high, lineHeight: "normal", margin: "8px 2px 0", textAlign: "right" }}>
+          <p role="alert" style={{ fontSize: px(11.5), fontWeight: 700, color: c.high, lineHeight: "normal", margin: "8px 2px 0", textAlign: "end" }}>
             {sw.error}
           </p>
         ) : null}
@@ -175,9 +175,9 @@ export function Overview() {
           <CapsLabel style={{ marginTop: 4 }}>Gym</CapsLabel>
           <div style={{ borderRadius: 24, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>
             <GymRow title="Memberships" sub={membershipsLine(gym.plans, gym.activeMemberships)} onOpen={() => navigate("/app/business/gym")} />
-            <div style={{ height: 1, background: c.div, marginLeft: 16 }} />
+            <div style={{ height: 1, background: c.div, marginInlineStart: 16 }} />
             <GymRow title="Classes" sub={classesLine(gym.sessionsThisWeek, gym.classBookingsThisWeek)} onOpen={() => navigate("/app/business/classes")} />
-            <div style={{ height: 1, background: c.div, marginLeft: 16 }} />
+            <div style={{ height: 1, background: c.div, marginInlineStart: 16 }} />
             <HiringRow businessId={business.id} tick={tick} />
           </div>
         </>
@@ -253,7 +253,7 @@ function GymRow({ title, sub, onOpen, badge }: { title: string; sub: string; onO
       type="button"
       onClick={onOpen}
       className="market-focus"
-      style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", width: "100%", background: "transparent", border: 0, textAlign: "left", color: c.ink, fontFamily: "inherit", lineHeight: "normal", cursor: "pointer", minHeight: 62, boxSizing: "border-box" }}
+      style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", width: "100%", background: "transparent", border: 0, textAlign: "start", color: c.ink, fontFamily: "inherit", lineHeight: "normal", cursor: "pointer", minHeight: 62, boxSizing: "border-box" }}
     >
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: "block", fontSize: px(14), fontWeight: 700 }}>{title}</span>

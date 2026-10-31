@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t } from "../../i18n/core";
 import type { FreePeriodFacts } from "./freePeriodCopy";
 
 export type MyProfessionalPlanResult =
@@ -25,7 +26,7 @@ export async function fetchMyProfessionalPlan(): Promise<MyProfessionalPlanResul
     if (error) {
       return {
         ok: false,
-        message: isOffline(error) ? OFFLINE_MESSAGE : "Could not load your plan. Try again.",
+        message: isOffline(error) ? OFFLINE_MESSAGE : t("Could not load your plan. Try again."),
       };
     }
     const row = Array.isArray(data) ? data[0] : data;
@@ -39,6 +40,6 @@ export async function fetchMyProfessionalPlan(): Promise<MyProfessionalPlanResul
       },
     };
   } catch (e) {
-    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : "Could not load your plan. Try again." };
+    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : t("Could not load your plan. Try again.") };
   }
 }

@@ -21,6 +21,7 @@ import { instagramUrl, xUrl, type SocialHandles } from "../../../services/profil
 import { shiftIso } from "../../../services/pro/home";
 import { mondayFirstWeek } from "../../../utils/week";
 import type { AccessCategory } from "../../../services/pro/access";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · CL2 v3 Tab 1 Overview (source gen/r6b.js cpTab6 'Overview'),
@@ -177,7 +178,7 @@ const Numbers: React.FC<{ data: ClientPageData; lane: ProLane; early: boolean }>
     const v = access.has("health_metrics") ? rel?.vitals : undefined;
     boxes = [
       bp ? <NumBox key="bp" label="Blood pressure" value={`${bp.systolic}/${bp.diastolic}`} sub={fmtDay(bp.recordedAt)} /> : dash("Blood pressure"),
-      v?.stepsAvg != null ? <NumBox key="st" label="Steps" value={v.stepsAvg.toLocaleString("en-GB")} sub="Daily average" /> : dash("Steps"),
+      v?.stepsAvg != null ? <NumBox key="st" label="Steps" value={v.stepsAvg.toLocaleString(appLocale("en-GB"))} sub="Daily average" /> : dash("Steps"),
       v?.sleepHours != null ? <NumBox key="sl" label="Sleep" value={`${Math.floor(v.sleepHours)}h ${Math.round((v.sleepHours % 1) * 60)}m`} sub="Nightly average" /> : dash("Sleep"),
     ];
   } else {
@@ -295,7 +296,7 @@ const RecentActivity: React.FC<{ data: ClientPageData; lane: ProLane }> = ({ dat
   const rows: ListRow[] = [];
   if (access.has("workout_activity") && rel?.workout) rows.push({ key: "w", icon: Dumbbell, title: "Logged a workout", meta: rel.workout.trainedToday ? "Today" : fmtDay(rel.workout.lastSessionDate) });
   if (access.has("food_diary") && rel?.nutrition)
-    rows.push({ key: "f", icon: UtensilsCrossed, title: `Logged ${rel.nutrition.entryCount} item${rel.nutrition.entryCount === 1 ? "" : "s"}`, meta: `${fmtDay(rel.nutrition.lastLoggedDate)} · ${Math.round(rel.nutrition.calories).toLocaleString("en-GB")} kcal` });
+    rows.push({ key: "f", icon: UtensilsCrossed, title: `Logged ${rel.nutrition.entryCount} item${rel.nutrition.entryCount === 1 ? "" : "s"}`, meta: `${fmtDay(rel.nutrition.lastLoggedDate)} · ${Math.round(rel.nutrition.calories).toLocaleString(appLocale("en-GB"))} kcal` });
   if (access.has("weight") && rel?.lastWeightKg != null) rows.push({ key: "kg", icon: Scale, title: `Weighed in at ${rel.lastWeightKg} kg`, meta: "Latest reading" });
   if (access.has("blood_pressure") && rel?.bloodPressure?.[0]) rows.push({ key: "bp", icon: HeartPulse, title: `Shared a BP reading: ${rel.bloodPressure[0].systolic}/${rel.bloodPressure[0].diastolic}`, meta: fmtDay(rel.bloodPressure[0].recordedAt) });
   if (!rows.length) return null;

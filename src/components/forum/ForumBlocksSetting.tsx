@@ -8,6 +8,8 @@ import { fetchMyForumBlocks, unblockForumBlock, type ForumBlock } from "../../se
 import { forumAccess } from "../../services/forum/rules";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { linePx, textPx } from "../../theme/textSize";
+import { appLocale } from "../../i18n/format";
+import { t, tk } from "../../i18n/core";
 
 // Settings › Data & account › "Blocked members" (MO1.8 BM, MO1.8.12,
 // MO1.8.12.1, MO1.8.12.e): a Part B centred popup (X-01: 350 / r24 / pad 20 /
@@ -26,23 +28,23 @@ import { linePx, textPx } from "../../theme/textSize";
 // Visible only to adults, never to businesses (K14 / K5). Read fresh on every
 // opening: a block made a minute ago belongs here (K1).
 
-const LINE = "They can't message you, reply to you or see your posts in the forum.";
-const UNBLOCK_LINE = "They'll be able to message you, reply to you and see your posts in the forum again.";
-const EMPTY = "You haven't blocked anyone.";
+const LINE = tk("They can't message you, reply to you or see your posts in the forum.");
+const UNBLOCK_LINE = tk("They'll be able to message you, reply to you and see your posts in the forum again.");
+const EMPTY = tk("You haven't blocked anyone.");
 
 /** "Blocked Sep 12", with the year when it isn't this year, in the profile's zone. */
 function blockedOn(iso: string, zone: string | null): string {
   const d = new Date(iso);
   const tz = zone ?? undefined;
-  const year = (x: Date) => new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone: tz }).format(x);
+  const year = (x: Date) => new Intl.DateTimeFormat(appLocale("en-US"), { year: "numeric", timeZone: tz }).format(x);
   const sameYear = year(d) === year(new Date());
-  const text = new Intl.DateTimeFormat("en-US", {
+  const text = new Intl.DateTimeFormat(appLocale("en-US"), {
     day: "numeric",
     month: "short",
     ...(sameYear ? {} : { year: "numeric" }),
     timeZone: tz,
   }).format(d);
-  return `Blocked ${text.replace(/Sept/, "Sep")}`;
+  return t("Blocked {date}", { date: text.replace(/Sept/, "Sep") });
 }
 
 function initial(label: string): string {
@@ -94,13 +96,13 @@ export function ForumBlocksSetting() {
     setBusy(false);
     setConfirm(null);
     if (!r.ok) {
-      setToast(r.message === OFFLINE_MESSAGE ? "You're offline. Try again when you're connected." : "Couldn't unblock. Try again.");
+      setToast(r.message === OFFLINE_MESSAGE ? t("You're offline. Try again when you're connected.") : t("Couldn't unblock. Try again."));
       return;
     }
     setLoad((prev) => {
       if (prev.state !== "ready") return prev;
       const blocks = prev.blocks.filter((b) => b.ref !== block.ref);
-      if (blocks.length === 0) setAnnounce(EMPTY);
+      if (blocks.length === 0) setAnnounce(t(EMPTY));
       return { state: "ready", blocks };
     });
   };
@@ -111,7 +113,7 @@ export function ForumBlocksSetting() {
   let content: React.ReactNode;
   if (load.state === "loading") {
     content = (
-      <ul aria-busy aria-label="Loading" style={{ marginTop: -6 }}>
+      <ul aria-busy aria-label={t("Loading")} style={{ marginTop: -6 }}>
         {[0, 1].map((i) => (
           <li key={i} className="flex items-center gap-[11px] py-2.5 [&+&]:border-t-[0.5px] [&+&]:border-hair-08">
             <span className="w-[38px] h-[38px] rounded-full bg-cream-soft animate-skeleton-pulse shrink-0" />
@@ -127,10 +129,10 @@ export function ForumBlocksSetting() {
     content = (
       <div className="text-center py-2">
         <p className="text-charcoal-soft" style={lineStyle(12.5, 18.8)}>
-          {load.offline ? "You're offline. Connect to see who you've blocked." : "Couldn't load blocked members."}
+          {load.offline ? t("You're offline. Connect to see who you've blocked.") : t("Couldn't load blocked members.")}
         </p>
         <button type="button" onClick={read} className="tap mt-1 font-bold text-primary-dark" style={lineStyle(12.5, 18.8)}>
-          Retry
+          {t("Retry")}
         </button>
       </div>
     );
@@ -142,7 +144,7 @@ export function ForumBlocksSetting() {
           <UserX size={accessibility.largerText ? 25.3 : 22} strokeWidth={1.75} />
         </span>
         <p className="mt-2 mb-2.5 font-semibold text-charcoal-soft" style={lineStyle(13.5, 20.3)}>
-          {EMPTY}
+          {t(EMPTY)}
         </p>
       </div>
     );
@@ -168,12 +170,12 @@ export function ForumBlocksSetting() {
             </span>
             <button
               type="button"
-              aria-label={`Unblock ${b.label}`}
+              aria-label={t("Unblock {name}", { name: b.label })}
               onClick={() => setConfirm(b)}
               className="tap shrink-0 h-8 px-3.5 rounded-full bg-cream-card border-[1.1px] border-primary [html.high-contrast_&]:border-primary-dark text-primary-dark font-bold"
               style={lineStyle(12, 18)}
             >
-              Unblock
+              {t("Unblock")}
             </button>
           </li>
         ))}
@@ -183,21 +185,21 @@ export function ForumBlocksSetting() {
 
   return (
     <>
-      <SettingsRow icon={UserX} iconTone="dark" title="Blocked members" onClick={openList} />
+      <SettingsRow icon={UserX} iconTone="dark" title={t("Blocked members")} onClick={openList} />
 
       <CentredPopup
         open={open}
         onClose={() => setOpen(false)}
-        title="Blocked members"
+        title={t("Blocked members")}
         geometry="partB"
         align="start"
         describeBody
         body={
           <span className="block font-normal text-charcoal-soft" style={{ ...lineStyle(12, 17.4), marginTop: -2 }}>
-            {LINE}
+            {t(LINE)}
           </span>
         }
-        cta={{ label: "Done", onClick: () => setOpen(false) }}
+        cta={{ label: t("Done"), onClick: () => setOpen(false) }}
       >
         {content}
         <span className="sr-only" aria-live="polite">
@@ -211,7 +213,7 @@ export function ForumBlocksSetting() {
         onClose={() => {
           if (!busy) setConfirm(null);
         }}
-        title={confirm ? `Unblock ${confirm.label}?` : ""}
+        title={confirm ? t("Unblock {name}?", { name: confirm.label }) : ""}
         geometry="partB"
         align="start"
         alert
@@ -219,7 +221,7 @@ export function ForumBlocksSetting() {
         titleClass="text-[17px] leading-[25.5px] tracking-[-0.3px] line-clamp-2 [overflow-wrap:anywhere]"
         body={
           <span className="block font-normal text-charcoal-soft" style={lineStyle(12.5, 18.8)}>
-            {UNBLOCK_LINE}
+            {t(UNBLOCK_LINE)}
           </span>
         }
       >
@@ -232,7 +234,7 @@ export function ForumBlocksSetting() {
             className="tap h-[46px] rounded-[14px] bg-cream-card border-[0.5px] border-charcoal/[0.14] text-charcoal-soft font-bold disabled:opacity-60"
             style={lineStyle(14, 21)}
           >
-            Cancel
+            {t("Cancel")}
           </button>
           <button
             type="button"
@@ -242,7 +244,7 @@ export function ForumBlocksSetting() {
             className="tap h-[46px] rounded-[14px] bg-fill-pinned text-on-primary-fill font-bold flex items-center justify-center"
             style={lineStyle(14, 21)}
           >
-            {busy ? <Loader2 size={18} aria-label="Unblocking" className="animate-spin" /> : "Unblock"}
+            {busy ? <Loader2 size={18} aria-label={t("Unblocking")} className="animate-spin" /> : t("Unblock")}
           </button>
         </div>
       </CentredPopup>

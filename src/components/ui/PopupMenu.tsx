@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Check, Minus, Plus, SquareCheck } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 export interface PopupMenuOption<V extends string = string> {
   value: V;
@@ -172,7 +173,7 @@ export function PopupMenu<V extends string>({
   matchWidth,
   clampTo,
   onDone,
-  doneLabel = "Done",
+  doneLabel = t("Done"),
   keepOpen,
   hairline,
   emptyNote,
@@ -312,7 +313,7 @@ export function PopupMenu<V extends string>({
                 onSelect(opt.value);
                 if (!multiSelect && !keepOpen) onClose();
               }}
-              className="tap w-full flex items-center text-left disabled:opacity-40"
+              className="tap w-full flex items-center text-start disabled:opacity-40"
               style={
                 plain
                   ? {
@@ -442,7 +443,7 @@ export const MenuStepper: React.FC<{
   label?: string;
   /** Both buttons disabled (the row's choice is not available yet). */
   disabled?: boolean;
-}> = ({ value, onChange, min = 1, max = 99, decreaseLabel = "Fewer", increaseLabel = "More", label, disabled }) => {
+}> = ({ value, onChange, min = 1, max = 99, decreaseLabel = t("Fewer"), increaseLabel = t("More"), label, disabled }) => {
   const dark = useIsDark();
   const glyph = dark ? "rgb(var(--th-c3b3fb))" : "rgb(var(--th-7d6bb5))";
   const btn: React.CSSProperties = {

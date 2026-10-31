@@ -163,7 +163,7 @@ export default function PlanDetailPage() {
               <div style={{ fontSize: textPx(13.5), fontWeight: 700 }}>{r.title}</div>
               <div style={{ fontSize: textPx(11.5), color: m.faint }}>{r.sub}</div>
             </div>
-            <span style={{ fontSize: textPx(12.5), fontWeight: 800, textAlign: "right" }}>{r.value}</span>
+            <span style={{ fontSize: textPx(12.5), fontWeight: 800, textAlign: "end" }}>{r.value}</span>
           </div>
         ))}
       </div>

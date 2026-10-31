@@ -38,7 +38,7 @@ export const PageHead: React.FC<{ title: string; sub?: string; onBack: () => voi
       onClick={onBack}
       aria-label="Back"
       className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']"
-      style={{ width: 36, height: 36, marginLeft: -7, borderRadius: 9999 }}
+      style={{ width: 36, height: 36, marginInlineStart: -7, borderRadius: 9999 }}
     >
       <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
     </button>
@@ -66,7 +66,7 @@ export const StepBar: React.FC<{ steps: readonly string[]; at: number; onStep?: 
       return (
         <span key={s} role="listitem" aria-current={i === at ? "step" : undefined} className="flex-1 min-w-0">
           {onStep && i < at ? (
-            <button type="button" onClick={() => onStep(i)} className="tap block w-full text-left">
+            <button type="button" onClick={() => onStep(i)} className="tap block w-full text-start">
               {body}
             </button>
           ) : (
@@ -202,7 +202,7 @@ export const RadioRows: React.FC<{ rows: RadioRow[]; on: string | null; onPick: 
           aria-checked={a}
           disabled={r.disabled || locked}
           onClick={() => onPick(r.key)}
-          className="tap flex items-center text-left disabled:cursor-default"
+          className="tap flex items-center text-start disabled:cursor-default"
           style={{ gap: 12, padding: "11px 12px", borderRadius: 14, border: `1px solid ${a ? INK.pr : INK.b10}`, background: a ? INK.prPale : INK.card, opacity: r.disabled ? 0.6 : 1 }}
         >
           <span className="flex items-center justify-center shrink-0" style={{ width: 20, height: 20, borderRadius: 9999, border: `2px solid ${a ? INK.prDeep : "rgb(var(--c-charcoal) / 0.11)"}` }}>
@@ -251,7 +251,7 @@ export const Group: React.FC<{ icon: LucideIcon; title: string; insight: string;
   const Chev = open ? ChevronUp : ChevronDown;
   return (
     <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, marginBottom: 10, overflow: "hidden" }}>
-      <button type="button" aria-expanded={open} onClick={onToggle} className="tap w-full flex items-center text-left" style={{ gap: 12, padding: "14px 16px" }}>
+      <button type="button" aria-expanded={open} onClick={onToggle} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "14px 16px" }}>
         <span className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 11, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
           <Icon size={17} strokeWidth={1.75} aria-hidden style={{ color: INK.prAccent }} />
         </span>

@@ -13,6 +13,7 @@ import { MarketError } from "../../components/market/MarketStates";
 import { DAILY_RULES, STREAK_MILESTONES, earnedToday, fetchLedger, fetchPointsRules, nextMilestone, todayLine, type PointsRules } from "../../services/points";
 import { BackTitle } from "./BackTitle";
 import { pickAchievements, streakNow } from "./howToEarnModel";
+import { appLocale } from "../../i18n/format";
 
 // Market + Share 3.0 · W2 · How to earn (C-MO.4.8 `earn`; Client Explore
 // Screens lines 635–677, script `daily`, `streaks`, `achievements`,
@@ -128,7 +129,7 @@ export default function HowToEarnPage() {
                 </svg>
               </span>
               <span style={{ flex: 1, fontSize: textPx(13), fontWeight: 600 }}>{label}</span>
-              <span style={{ fontSize: textPx(13), fontWeight: 800 }}>{pts !== undefined ? `+${pts.toLocaleString("en-US")}` : ""}</span>
+              <span style={{ fontSize: textPx(13), fontWeight: 800 }}>{pts !== undefined ? `+${pts.toLocaleString(appLocale("en-US"))}` : ""}</span>
             </div>
           );
         })}
@@ -137,7 +138,7 @@ export default function HowToEarnPage() {
               setRulesTry((x) => x + 1);
             }} style={{ marginTop: 10 }} /> : null}
         <p style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>
-          {rules ? `Each action counts once a day, up to ${rules.dailyCap.toLocaleString("en-US")} points. ` : "Each action counts once a day. "}Only entries logged for today earn points.
+          {rules ? `Each action counts once a day, up to ${rules.dailyCap.toLocaleString(appLocale("en-US"))} points. ` : "Each action counts once a day. "}Only entries logged for today earn points.
         </p>
       </Section>
 
@@ -146,8 +147,8 @@ export default function HowToEarnPage() {
           {next ? (
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: textPx(12.5) }}>
               <span style={{ fontWeight: 700 }}>Next: {next.days} days</span>
-              <span style={{ color: m.faint, textAlign: "right" }}>
-                {next.toGo} {next.toGo === 1 ? "day" : "days"} to go{next.points !== null ? ` · +${next.points.toLocaleString("en-US")}` : ""}
+              <span style={{ color: m.faint, textAlign: "end" }}>
+                {next.toGo} {next.toGo === 1 ? "day" : "days"} to go{next.points !== null ? ` · +${next.points.toLocaleString(appLocale("en-US"))}` : ""}
               </span>
             </div>
           ) : (
@@ -168,9 +169,9 @@ export default function HowToEarnPage() {
               const on = streak !== null && streak >= d;
               const p = milestonePoints(d);
               return (
-                <div key={d} style={{ borderRadius: 12, padding: "8px 0", textAlign: "center", background: on ? t.pill : m.soft }} aria-label={`${d} days${p !== null ? `, ${p.toLocaleString("en-US")} points` : ""}${on ? ", reached" : ""}`} role="img">
+                <div key={d} style={{ borderRadius: 12, padding: "8px 0", textAlign: "center", background: on ? t.pill : m.soft }} aria-label={`${d} days${p !== null ? `, ${p.toLocaleString(appLocale("en-US"))} points` : ""}${on ? ", reached" : ""}`} role="img">
                   <div style={{ fontSize: textPx(12), fontWeight: 800, color: on ? t.text : m.ink }}>{d} days</div>
-                  <div style={{ fontSize: textPx(11), color: m.faint }}>{p !== null ? `+${p.toLocaleString("en-US")}` : " "}</div>
+                  <div style={{ fontSize: textPx(11), color: m.faint }}>{p !== null ? `+${p.toLocaleString(appLocale("en-US"))}` : " "}</div>
                 </div>
               );
             })}
@@ -189,7 +190,7 @@ export default function HowToEarnPage() {
               <div key={a.key} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `0.5px solid ${m.div}` }}>
                 <span style={{ flex: 1, minWidth: 0, fontSize: textPx(13), fontWeight: 600, color: on ? m.ink : m.ink2 }}>{a.title}</span>
                 <span style={{ fontSize: textPx(11), fontWeight: 700, borderRadius: 999, padding: "2px 8px", background: on ? m.tealbg : m.pale, color: on ? m.tealink : m.pdark, whiteSpace: "nowrap" }}>{on ? "Unlocked" : "Locked"}</span>
-                <span style={{ width: 44, flexShrink: 0, textAlign: "right", fontSize: textPx(13), fontWeight: 800 }}>+{a.points.toLocaleString("en-US")}</span>
+                <span style={{ width: 44, flexShrink: 0, textAlign: "end", fontSize: textPx(13), fontWeight: 800 }}>+{a.points.toLocaleString(appLocale("en-US"))}</span>
               </div>
             );
           })
@@ -198,7 +199,7 @@ export default function HowToEarnPage() {
           type="button"
           onClick={() => navigate("/app/mind/achievements")}
           className="market-focus"
-          style={{ width: "100%", minHeight: 44, display: "flex", alignItems: "center", gap: 12, padding: 0, background: "none", border: 0, font: "inherit", fontSize: textPx(13), fontWeight: 700, color: m.pdark, cursor: "pointer", textAlign: "left" }}
+          style={{ width: "100%", minHeight: 44, display: "flex", alignItems: "center", gap: 12, padding: 0, background: "none", border: 0, font: "inherit", fontSize: textPx(13), fontWeight: 700, color: m.pdark, cursor: "pointer", textAlign: "start" }}
         >
           <span style={{ flex: 1 }}>All achievements</span>
           <ChevronRight size={15} aria-hidden style={NO_ICON_SCALE} />
@@ -219,7 +220,7 @@ export default function HowToEarnPage() {
                   </span>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: textPx(13), fontWeight: 700 }}>{tier.name}</span>
-                    <span style={{ display: "block", fontSize: textPx(11.5), color: m.faint }}>{tier.minPoints > 0 ? `From ${tier.minPoints.toLocaleString("en-US")} points` : "Where everyone starts"}</span>
+                    <span style={{ display: "block", fontSize: textPx(11.5), color: m.faint }}>{tier.minPoints > 0 ? `From ${tier.minPoints.toLocaleString(appLocale("en-US"))} points` : "Where everyone starts"}</span>
                   </span>
                   {current ? <span style={{ fontSize: textPx(11), fontWeight: 700, borderRadius: 999, padding: "2px 8px", background: ts.pill, color: ts.text, whiteSpace: "nowrap" }}>Your tier</span> : null}
                 </div>
@@ -248,7 +249,7 @@ const Section: React.FC<{ title: string; aside: string | null; t: TierStyle; fir
           aria-controls={id}
           onClick={() => setOpen((o) => !o)}
           className="market-focus"
-          style={{ width: "100%", minHeight: 54, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "0 14px", background: m.soft, border: 0, font: "inherit", color: m.ink, cursor: "pointer", textAlign: "left" }}
+          style={{ width: "100%", minHeight: 54, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "0 14px", background: m.soft, border: 0, font: "inherit", color: m.ink, cursor: "pointer", textAlign: "start" }}
         >
           <span style={{ fontSize: textPx(14), fontWeight: 800 }}>{title}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: textPx(12), fontWeight: 700, color: t.text, whiteSpace: "nowrap" }}>

@@ -1,6 +1,7 @@
 import React from "react";
 import { formatMinutes12, hourLabel12 } from "../../../utils/time12";
 import { mc, metricTextInk, useHealthMode } from "./MetricKit";
+import { isRtl } from "../../../i18n/core";
 
 // HE1.3 #35 (Week) and HE1.3.m #37 (Month): floating bedtime-to-wake bars on
 // a clock axis with the usual-bedtime line (Database B1 sleep_details
@@ -49,6 +50,11 @@ const DEFAULT_START = 600; // 10 PM
 const DEFAULT_SPAN = 600; // 10 hours
 const X0 = 2.4;
 const WEEK_X0 = 40.4;
+/** Round F (F10): in right to left, time runs from right to left: every x on the 326 grid is mirrored (SVG text anchors are logical, so the labels follow). */
+const mirrorX = () => {
+  const rtl = isRtl();
+  return (x: number) => (rtl ? 326 - x : x);
+};
 
 export const SleepBedChart: React.FC<{
   mode: "week" | "month";
@@ -69,6 +75,7 @@ export const SleepBedChart: React.FC<{
   const end = Math.max(start + DEFAULT_SPAN, Math.ceil(hi / 120) * 120);
   const y = (m: number) => TOP + ((m - start) / (end - start)) * (BOTTOM - TOP);
 
+  const mx = mirrorX();
   const x0 = mode === "week" ? WEEK_X0 : X0;
   const pitch = (326 - x0) / Math.max(1, nights.length);
   const w = mode === "week" ? 16 : 5.5;
@@ -87,15 +94,15 @@ export const SleepBedChart: React.FC<{
     <svg viewBox={`0 0 326 ${H}`} width="100%" height={H} aria-hidden style={{ display: "block", overflow: "visible" }} data-sleep-chart={mode}>
       {gridTimes.map((t) => (
         <g key={t}>
-          <line x1={WEEK_X0} x2={326} y1={y(t)} y2={y(t)} stroke={grid} strokeWidth={0.5} />
-          <text x={X0} y={y(t)} dominantBaseline="central" fontSize={10} fontWeight={600} fill={faint}>
+          <line x1={mx(WEEK_X0)} x2={mx(326)} y1={y(t)} y2={y(t)} stroke={grid} strokeWidth={0.5} />
+          <text x={mx(X0)} y={y(t)} dominantBaseline="central" fontSize={10} fontWeight={600} fill={faint}>
             {hourLabel12(((t + 720) % 1440) / 60)}
           </text>
         </g>
       ))}
-      {mode === "month" && <line x1={X0} x2={326} y1={118.5} y2={118.5} stroke={base} strokeWidth={1} />}
+      {mode === "month" && <line x1={mx(X0)} x2={mx(326)} y1={118.5} y2={118.5} stroke={base} strokeWidth={1} />}
       {nights.map((n, i) => {
-        const cx = x0 + pitch * (i + 0.5);
+        const cx = mx(x0 + pitch * (i + 0.5));
         let shape: React.ReactNode = null;
         if (n.bed !== null && n.wake !== null) {
           const top = y(n.bed);
@@ -136,8 +143,8 @@ export const SleepBedChart: React.FC<{
       })}
       {usualBed !== null && (
         <g data-usual-line>
-          <line x1={x0} x2={326} y1={y(usualBed)} y2={y(usualBed)} stroke={line} strokeWidth={1.5} strokeDasharray="4 4" />
-          <text x={326} y={y(usualBed) - 4.5} textAnchor="end" fontSize={10} fontWeight={700} fill={labelInk}>
+          <line x1={mx(x0)} x2={mx(326)} y1={y(usualBed)} y2={y(usualBed)} stroke={line} strokeWidth={1.5} strokeDasharray="4 4" />
+          <text x={mx(326)} y={y(usualBed) - 4.5} textAnchor="end" fontSize={10} fontWeight={700} fill={labelInk}>
             {`Usual bedtime ${clockFromNoon(usualBed)}`}
           </text>
         </g>
@@ -166,7 +173,8 @@ export const YearBedtimeLine: React.FC<{ months: (number | null)[] }> = ({ month
   const { from, to } = bedtimeScale(months);
   const yOf = (m: number) => 20 + ((m - from) / (to - from)) * 24;
   const pitch = 323.6 / 12;
-  const pts = months.map((m, i) => (m === null ? null : { x: X0 + pitch * (i + 0.5), y: yOf(m) })).filter((p): p is { x: number; y: number } => p !== null);
+  const mx = mirrorX();
+  const pts = months.map((m, i) => (m === null ? null : { x: mx(X0 + pitch * (i + 0.5)), y: yOf(m) })).filter((p): p is { x: number; y: number } => p !== null);
   if (!pts.length) return null;
   const ink = mc("sleep", "accent");
   return (
@@ -175,7 +183,7 @@ export const YearBedtimeLine: React.FC<{ months: (number | null)[] }> = ({ month
       {pts.map((p, i) => (
         <circle key={i} cx={p.x} cy={p.y} r={2.5} fill={ink} />
       ))}
-      <text x={326} y={19} textAnchor="end" fontSize={10} fontWeight={700} fill={metricTextInk("sleep", dark)}>
+      <text x={mx(326)} y={19} textAnchor="end" fontSize={10} fontWeight={700} fill={metricTextInk("sleep", dark)}>
         Avg bedtime
       </text>
     </g>

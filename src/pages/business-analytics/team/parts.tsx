@@ -22,7 +22,7 @@ export const Avatar: React.FC<{ name: string; seat: number; size?: number; font?
 /** Back row: 44 back (margin-left -10), crumb 11/700, title 18/800 (AN5-023 rows 10-13). */
 export const PageHeader: React.FC<{ crumb: string; title: string; backLabel: string; onBack: () => void }> = ({ crumb, title, backLabel, onBack }) => (
   <div className="an5-back-row">
-    <button type="button" className="an5-back tap rtl:-scale-x-100" aria-label={backLabel} onClick={onBack}>
+    <button type="button" className="an5-back tap" aria-label={backLabel} onClick={onBack}>
       <ChevronLeft size={20} aria-hidden />
     </button>
     <div className="min-w-0 flex-1">

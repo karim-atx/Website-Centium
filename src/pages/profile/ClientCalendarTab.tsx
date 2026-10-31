@@ -66,6 +66,7 @@ import {
 import clsx from "clsx";
 import { DAY_LETTERS, monthLeadingBlanks, startOfWeekISO } from "../../utils/week";
 import { useBack } from "../../hooks/useBack";
+import { appLocale } from "../../i18n/format";
 
 /** Opens an attachment in a new tab. Signed at the click — the TTL is minutes. */
 async function openAttachment(path: string) {
@@ -90,7 +91,7 @@ const NEW_EVENT_DARK_END: Record<string, string> = {
 };
 
 const monthNames = Array.from({ length: 12 }, (_, i) =>
-  new Date(2000, i, 1).toLocaleDateString("en-US", { month: "long" })
+  new Date(2000, i, 1).toLocaleDateString(appLocale("en-US"), { month: "long" })
 );
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -659,7 +660,7 @@ export default function ClientCalendarTab() {
   };
 
   const selectedEvents = eventsByDate[selectedDate] ?? [];
-  const selectedDateLabel = new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
+  const selectedDateLabel = new Date(`${selectedDate}T00:00:00`).toLocaleDateString(appLocale("en-US"), {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -739,7 +740,7 @@ export default function ClientCalendarTab() {
         className="rounded-[24px] p-5 space-y-2"
         style={{
           background: tint,
-          borderLeft: `3.8px solid ${bar}`,
+          borderInlineStart: `3.8px solid ${bar}`,
           // A declined event stays on the calendar, and looking different is
           // how it says so at a glance rather than only in its badge.
           opacity: status === "declined" ? 0.6 : undefined,
@@ -748,7 +749,7 @@ export default function ClientCalendarTab() {
         <div className="flex items-start justify-between gap-3">
           {/* Own events open the edit sheet; the rest the read-only detail
               (OURS-Calendar-event-detail). */}
-          <button className="min-w-0 text-left flex-1" onClick={() => openEvent(e)}>
+          <button className="min-w-0 text-start flex-1" onClick={() => openEvent(e)}>
             <p className="text-sm font-semibold text-charcoal">{e.title}</p>
             <p className="text-xs text-charcoal-faint">
               {e.allDay ? "All day" : range12(e.startTime, e.endTime)}
@@ -900,10 +901,10 @@ export default function ClientCalendarTab() {
   // here because the navigator sits in the fixed header.
   const weekStart = startOfWeekISO(selectedDate);
   const weekDays = Array.from({ length: 7 }, (_, i) => addDaysISO(weekStart, i));
-  const weekLabel = `${new Date(`${weekStart}T00:00:00`).toLocaleDateString("en-US", {
+  const weekLabel = `${new Date(`${weekStart}T00:00:00`).toLocaleDateString(appLocale("en-US"), {
     month: "short",
     day: "numeric",
-  })} – ${new Date(`${weekDays[6]}T00:00:00`).toLocaleDateString("en-US", {
+  })} – ${new Date(`${weekDays[6]}T00:00:00`).toLocaleDateString(appLocale("en-US"), {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -948,7 +949,7 @@ export default function ClientCalendarTab() {
             <button
               onClick={back}
               aria-label="Back"
-              className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ml-1.5 mt-0.5 transition-colors"
+              className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ms-1.5 mt-0.5 transition-colors"
             >
               <ChevronLeft size={18} />
             </button>
@@ -1031,7 +1032,7 @@ export default function ClientCalendarTab() {
                   <button data-today={isToday || undefined}
                     key={i}
                     onClick={() => setSelectedDate(iso)}
-                    aria-label={new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                    aria-label={new Date(`${iso}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" })}
                     aria-pressed={isSelected}
                     // v6 MO1.6 #16-#20: cells r12, 15 / 22.5. The selected day
                     // #AB9ED7 with white 600 (the theme's own in other themes;
@@ -1098,7 +1099,7 @@ export default function ClientCalendarTab() {
                   >
                     <span className="w-[3px] self-stretch min-h-8 rounded-full shrink-0" style={{ background: bar }} />
                     <span className="flex-1 min-w-0 flex flex-col gap-1">
-                      <button onClick={() => openEvent(e)} className="tap flex items-center gap-2 text-left min-w-0">
+                      <button onClick={() => openEvent(e)} className="tap flex items-center gap-2 text-start min-w-0">
                         <span className="flex-1 min-w-0">
                           <span className="block text-[12.5px] leading-[18.8px] font-bold text-charcoal truncate">{e.title}</span>
                           <span className="block text-[10px] leading-[15px] text-charcoal-tertiary truncate">
@@ -1157,7 +1158,7 @@ export default function ClientCalendarTab() {
                     setSelectedDate(iso);
                     setView("day");
                   }}
-                  aria-label={`${d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}, open in Day view`}
+                  aria-label={`${d.toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" })}, open in Day view`}
                   className={clsx(
                     "tap shrink-0 w-14 flex flex-col items-center justify-center py-2 gap-0.5",
                     isToday
@@ -1166,7 +1167,7 @@ export default function ClientCalendarTab() {
                   )}
                 >
                   <span className="text-[10px] leading-[15px] font-bold uppercase tracking-[0.3px]">
-                    {d.toLocaleDateString("en-US", { weekday: "short" })}
+                    {d.toLocaleDateString(appLocale("en-US"), { weekday: "short" })}
                   </span>
                   <span className="text-base font-bold leading-none">{d.getDate()}</span>
                 </button>
@@ -1228,13 +1229,13 @@ export default function ClientCalendarTab() {
 
           <div className="relative" style={{ height: HOUR_PX * 24 }}>
             {Array.from({ length: 24 }, (_, h) => (
-              <div key={h} data-hour={h} className="absolute left-0 right-0 border-t border-charcoal/[0.06] flex items-start" style={{ top: h * HOUR_PX }}>
-                <span className="text-[9px] text-charcoal-faint -mt-1.5 pr-1.5 w-9 text-right shrink-0">
+              <div key={h} data-hour={h} className="absolute start-0 end-0 border-t border-charcoal/[0.06] flex items-start" style={{ top: h * HOUR_PX }}>
+                <span className="text-[9px] text-charcoal-faint -mt-1.5 pe-1.5 w-9 text-end shrink-0">
                   {hourLabel12(h)}
                 </span>
               </div>
             ))}
-            <div className="absolute left-10 right-0 top-0 bottom-0">
+            <div className="absolute start-10 end-0 top-0 bottom-0">
               {timedEvents.map((e) => {
                 const start = minutesOf(e.startTime);
                 const end = Math.max(minutesOf(e.endTime), start + 20);
@@ -1249,21 +1250,21 @@ export default function ClientCalendarTab() {
                 return (
                   <div
                     key={occurrenceKey(e)}
-                    className="absolute left-0 right-1 rounded-xl overflow-hidden shadow-soft"
+                    className="absolute start-0 end-1 rounded-xl overflow-hidden shadow-soft"
                     style={{
                       top,
                       height,
                       background: tint,
-                      borderLeft: `3px solid ${bar}`,
+                      borderInlineStart: `3px solid ${bar}`,
                       opacity: e.invite?.status === "declined" ? 0.6 : undefined,
                     }}
                   >
                     <button
                       onClick={() => openEvent(e)}
                       className={clsx(
-                        "tap w-full h-full px-2.5 text-left",
+                        "tap w-full h-full px-2.5 text-start",
                         short ? "flex items-center gap-1.5 py-0" : "py-1.5",
-                        href && "pr-9"
+                        href && "pe-9"
                       )}
                     >
                       <p className={clsx("text-xs font-semibold text-charcoal truncate flex items-center gap-1", short && "min-w-0")}>
@@ -1290,7 +1291,7 @@ export default function ClientCalendarTab() {
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={`Open link, ${linkLabel(href)}`}
-                        className="tap absolute top-0.5 right-0.5 w-8 h-8 flex items-center justify-center text-primary-deep-text"
+                        className="tap absolute top-0.5 end-0.5 w-8 h-8 flex items-center justify-center text-primary-deep-text"
                       >
                         <LinkIcon size={13} />
                       </a>

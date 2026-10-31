@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef } from "react";
 import clsx from "clsx";
 import { CODE_LENGTH, codeAfterInput } from "./codeBoxesInput";
+import { t } from "../../i18n/core";
 
 // Mobile v5.1 handover, Foundations 2.5 "Code boxes": six boxes 48 x 52, gap
 // 8, radius 12, digits 20 / 800. The focused box takes a 1.5 px primary
@@ -78,7 +79,7 @@ export const CodeBoxes: React.FC<{
           inputMode="numeric"
           pattern="[0-9]*"
           autoComplete={i === 0 ? "one-time-code" : "off"}
-          aria-label={`Digit ${i + 1} of ${CODE_LENGTH}`}
+          aria-label={t("Digit {n} of {total}", { n: i + 1, total: CODE_LENGTH })}
           aria-invalid={error || undefined}
           // Wider than one character so a paste or an autofill arrives whole.
           maxLength={CODE_LENGTH}

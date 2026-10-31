@@ -4,6 +4,7 @@ import { X, ChevronLeft } from "lucide-react";
 import { linePx, textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { t } from "../../i18n/core";
 
 type ToneColours = { band: string; border: string; title: string; body: string };
 
@@ -378,7 +379,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
           <div
             className="shrink-0 flex items-center justify-between"
             {...swipeHandlers}
-            style={{ ...(titleWrap ? { minHeight: handle ? 46 : headerHeight, paddingTop: 8, paddingBottom: 8 } : { height: handle ? 46 : headerHeight }), paddingLeft: 18, paddingRight: 18, ...(swipeToClose ? { touchAction: "none" } : null) }}
+            style={{ ...(titleWrap ? { minHeight: handle ? 46 : headerHeight, paddingTop: 8, paddingBottom: 8 } : { height: handle ? 46 : headerHeight }), paddingInlineStart: 18, paddingInlineEnd: 18, ...(swipeToClose ? { touchAction: "none" } : null) }}
           >
             <div className="flex items-center shrink-0" style={{ width: 26 }}>
               {onBack && (
@@ -387,7 +388,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
                   onClick={onBack}
                   className="tap relative w-[26px] h-[26px] rounded-full flex items-center justify-center before:absolute before:-inset-[9px] before:content-['']"
                   style={{ color: "var(--sheet-back)" }}
-                  aria-label="Back"
+                  aria-label={t("Back")}
                 >
                   <ChevronLeft size={17} strokeWidth={2.6} />
                 </button>
@@ -413,7 +414,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
                 onClick={onClose}
                 className="tap relative w-[26px] h-[26px] shrink-0 rounded-full flex items-center justify-center before:absolute before:-inset-[9px] before:content-['']"
                 style={{ border: `${ring}px solid ${border}`, color: border }}
-                aria-label="Close"
+                aria-label={t("Close")}
               >
                 <X size={xSize} strokeWidth={2.6} />
               </button>

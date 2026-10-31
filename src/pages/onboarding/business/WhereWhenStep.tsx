@@ -18,6 +18,7 @@ import {
   type Location,
 } from "./lanes";
 import type { LaneStepProps } from "./laneTypes";
+import { t } from "../../../i18n/core";
 
 const NearbyMap = lazy(() => import("../../../components/professionals/NearbyMap"));
 
@@ -27,7 +28,7 @@ const NearbyMap = lazy(() => import("../../../components/professionals/NearbyMap
 const DEFAULT_CENTER = { lat: 33.89, lng: 35.5 };
 
 /** The address field's help line. */
-const pinHelp = (loc: Location) => (loc.lat != null ? "Pinned on the map" : "Type the address, or tap Pin to drop it on the map.");
+const pinHelp = (loc: Location) => (loc.lat != null ? t("Pinned on the map") : t("Type the address, or tap Pin to drop it on the map."));
 
 type PinTarget = { kind: "main" } | { kind: "extra"; index: number };
 
@@ -63,7 +64,7 @@ export const WhereWhenStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, o
           );
           setPinFor(null);
           // OURS wording: there is no geocoder, so the typed address is kept ("Address updated." would not be true).
-          setToast("Pin placed.");
+          setToast(t("Pin placed."));
         }}
       />
     );
@@ -73,12 +74,12 @@ export const WhereWhenStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, o
     <BizFrame
       step={flowKey}
       lane={lane}
-      title="Where and when"
-      subtitle={lane === "store" ? "Clients pick up here and see when you're open." : "Clients use this to find you and plan their visit."}
+      title={t("Where and when")}
+      subtitle={lane === "store" ? t("Clients pick up here and see when you're open.") : t("Clients use this to find you and plan their visit.")}
       onBack={onBack}
       saveExit={saveExit}
       footer={{
-        label: save.error && !save.offline ? "Try again" : "Continue",
+        label: save.error && !save.offline ? t("Try again") : t("Continue"),
         onClick: () => {
           if (errorCount) {
             setShowErrors(true);
@@ -94,12 +95,12 @@ export const WhereWhenStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, o
       // BizOnboardingV10 toastB: footer height + 8 (34 + 12 + 52 + 8).
       overlay={<ObToast message={toast} bottom={106} />}
     >
-      <ObSectionLabel title="Address" tag="Required" tagTone="accent" margin="0 2px 12px" />
+      <ObSectionLabel title={t("Address")} tag={t("Required")} tagTone="accent" margin="0 2px 12px" />
       <BizField
-        ariaLabel="Address"
+        ariaLabel={t("Address")}
         value={biz.location.address}
         onChange={(v) => setBiz((b) => ({ ...b, location: { ...b.location, address: v } }))}
-        placeholder="Street, building, area" /* OURS */
+        placeholder={t("Street, building, area")} /* OURS */
         leading={<Search size={16} aria-hidden />}
         pin={{ onClick: () => setPinFor({ kind: "main" }) }}
         autoComplete="street-address"
@@ -109,15 +110,15 @@ export const WhereWhenStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, o
       {biz.extraLocations.map((loc, i) => (
         <BizField
           key={i}
-          ariaLabel={`Location ${i + 2} address`}
+          ariaLabel={t("Location {n} address", { n: i + 2 })}
           value={loc.address}
           onChange={(v) => setBiz((b) => ({ ...b, extraLocations: b.extraLocations.map((l, j) => (j === i ? { ...l, address: v } : l)) }))}
-          placeholder="Street, building, area"
+          placeholder={t("Street, building, area")}
           leading={<Search size={16} aria-hidden />}
           trailing={
             <button
               type="button"
-              aria-label={`Remove location ${i + 2}`}
+              aria-label={t("Remove location {n}", { n: i + 2 })}
               onClick={() => setBiz((b) => ({ ...b, extraLocations: b.extraLocations.filter((_, j) => j !== i) }))}
               className="tap text-charcoal-faint"
             >
@@ -130,10 +131,10 @@ export const WhereWhenStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, o
       ))}
       <BizLink
         icon={Plus}
-        text="Add another location"
+        text={t("Add another location")}
         onClick={() => setBiz((b) => ({ ...b, extraLocations: [...b.extraLocations, { address: "", lat: null, lng: null }] }))}
       />
-      <ObSectionLabel title={lane === "store" ? "Pickup and opening hours" : "Opening hours"} tag="Required" tagTone="accent" />
+      <ObSectionLabel title={lane === "store" ? t("Pickup and opening hours") : t("Opening hours")} tag={t("Required")} tagTone="accent" />
       {shown.hours && (
         <p role="alert" className="-mt-1 mb-2 mx-[2px] text-[11.5px] font-semibold text-status-high">
           {shown.hours}
@@ -146,7 +147,7 @@ export const WhereWhenStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, o
         onCloseWheel={() => setWheel(null)}
         onChange={(f) => setHours("main", f)}
       />
-      <BizLink icon={Copy} text="Copy Monday to all weekdays" onClick={() => setHours("main", copyMondayToWeekdays)} className="mx-[2px] mb-3" />
+      <BizLink icon={Copy} text={t("Copy Monday to all weekdays")} onClick={() => setHours("main", copyMondayToWeekdays)} className="mx-[2px] mb-3" />
       {lane === "gym" && (
         <>
           {biz.areas.map((a, ai) => (
@@ -164,7 +165,7 @@ export const WhereWhenStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, o
           ))}
           <BizLink
             icon={biz.areas.length ? Plus : Clock}
-            text={biz.areas.length ? "Add an area" : "Some areas keep different hours"}
+            text={biz.areas.length ? t("Add an area") : t("Some areas keep different hours")}
             onClick={() => setBiz((b) => ({ ...b, areas: [...b.areas, { name: "", hours: b.hours.map((h) => ({ ...h })) }] }))}
             className="mx-[2px] mb-3"
           />
@@ -186,18 +187,18 @@ const AreaBlock: React.FC<{
 }> = ({ area, index, wheel, onWheel, onCloseWheel, onName, onHours, onRemove }) => (
   <div className="mt-2">
     <BizField
-      label="Area name"
+      label={t("Area name")}
       value={area.name}
       onChange={onName}
-      placeholder="e.g. Pool" /* OURS */
+      placeholder={t("e.g. Pool")} /* OURS */
       maxLength={40}
       trailing={
-        <button type="button" aria-label={`Remove area ${index + 1}`} onClick={onRemove} className="tap text-charcoal-faint">
+        <button type="button" aria-label={t("Remove area {n}", { n: index + 1 })} onClick={onRemove} className="tap text-charcoal-faint">
           <X size={16} strokeWidth={2} aria-hidden />
         </button>
       }
     />
-    <HoursList hours={area.hours} open={wheel} onOpenWheel={onWheel} onCloseWheel={onCloseWheel} onChange={onHours} label={area.name || `Area ${index + 1}`} />
+    <HoursList hours={area.hours} open={wheel} onOpenWheel={onWheel} onCloseWheel={onCloseWheel} onChange={onHours} label={area.name || t("Area {n}", { n: index + 1 })} />
   </div>
 );
 
@@ -210,14 +211,14 @@ const HoursList: React.FC<{
   onChange: (f: (h: DayHours[]) => DayHours[]) => void;
   label?: string;
 }> = ({ hours, open, onOpenWheel, onCloseWheel, onChange, label }) => (
-  <div className="bg-list rounded-[18px] py-1 px-[10px] mb-[10px]" role="group" aria-label={label ? `${label} hours` : "Opening hours"}>
+  <div className="bg-list rounded-[18px] py-1 px-[10px] mb-[10px]" role="group" aria-label={label ? t("{label} hours", { label }) : t("Opening hours")}>
     {hours.map((h, i) => {
-      const day = DAY_SHORT_MON[h.weekday - 1];
+      const day = t(DAY_SHORT_MON[h.weekday - 1]);
       const sel = open?.weekday === h.weekday ? open.which : null;
       const btn = (which: "opens" | "closes") => (
         <button
           type="button"
-          aria-label={`${which === "opens" ? "Opens" : "Closes"} on ${day}`}
+          aria-label={which === "opens" ? t("Opens on {day}", { day }) : t("Closes on {day}", { day })}
           aria-expanded={sel === which}
           disabled={!h.open}
           onClick={() => onOpenWheel(h.weekday, which)}
@@ -226,7 +227,7 @@ const HoursList: React.FC<{
             sel === which ? "bg-primary-pale border-primary-fill text-primary-deep-text" : "bg-cream-card border-hair-11 text-charcoal"
           )}
         >
-          {h.open ? fmt12(which === "opens" ? h.opens : h.closes) : "Closed"}
+          {h.open ? fmt12(which === "opens" ? h.opens : h.closes) : t("Closed")}
         </button>
       );
       return (
@@ -235,20 +236,20 @@ const HoursList: React.FC<{
             <span className="text-[12.5px] font-extrabold text-charcoal">{day}</span>
             <span className="flex items-center gap-1 min-w-0" style={{ opacity: h.open ? 1 : 0.5 }}>
               {btn("opens")}
-              <span className="text-charcoal-faint text-[11px] shrink-0">to</span>
+              <span className="text-charcoal-faint text-[11px] shrink-0">{t("to")}</span>
               {btn("closes")}
             </span>
             <Toggle
               size="business"
               knobShadow={false}
               checked={h.open}
-              label={`Open on ${day}`}
+              label={t("Open on {day}", { day })}
               onChange={(v) => onChange((all) => all.map((x) => (x.weekday === h.weekday ? { ...x, open: v } : x)))}
             />
           </div>
           {sel && (
             <TimeWheelCard
-              label={`${sel === "opens" ? "Opening" : "Closing"} time, ${day}`}
+              label={sel === "opens" ? t("Opening time, {day}", { day }) : t("Closing time, {day}", { day })}
               value={sel === "opens" ? h.opens : h.closes}
               left={sel === "opens" ? 36 : undefined}
               onChange={(v) => onChange((all) => all.map((x) => (x.weekday === h.weekday ? { ...x, [sel]: v } : x)))}
@@ -304,13 +305,13 @@ const TimeWheelCard: React.FC<{ label: string; value: string; left?: number; onC
       style={{ left: left ?? undefined, right: left === undefined ? 52 : undefined, border: "1px solid var(--menu-border)", boxShadow: "var(--shadow-menu)" }}
     >
       <div className="relative rounded-[10px] bg-cream-soft py-1 px-[6px] grid grid-cols-3 gap-[2px]">
-        <span aria-hidden className="absolute left-1 right-1 top-1/2 h-8 -translate-y-1/2 rounded-[9px] bg-cream-card" style={{ boxShadow: "0 1px 3px rgba(36,31,27,0.08)" }} />
-        <WheelCol label="Hour" items={HOURS12} index={hi} loop onPick={(i) => set(i, mi, pm)} />
-        <WheelCol label="Minutes" items={MINS} index={mi} loop onPick={(i) => set(hi, i, pm)} />
-        <WheelCol label="AM or PM" items={["AM", "PM"]} index={pm ? 1 : 0} onPick={(i) => set(hi, mi, i === 1)} />
+        <span aria-hidden className="absolute start-1 end-1 top-1/2 h-8 -translate-y-1/2 rounded-[9px] bg-cream-card" style={{ boxShadow: "0 1px 3px rgba(36,31,27,0.08)" }} />
+        <WheelCol label={t("Hour")} items={HOURS12} index={hi} loop onPick={(i) => set(i, mi, pm)} />
+        <WheelCol label={t("Minutes")} items={MINS} index={mi} loop onPick={(i) => set(hi, i, pm)} />
+        <WheelCol label={t("AM or PM")} items={[t("AM"), t("PM")]} index={pm ? 1 : 0} onPick={(i) => set(hi, mi, i === 1)} />
       </div>
       <button type="button" onClick={onDone} className="mt-2 w-full h-9 rounded-[10px] bg-primary-fill text-on-primary-fill flex items-center justify-center text-[12.5px] font-extrabold">
-        Done
+        {t("Done")}
       </button>
     </div>
   );
@@ -365,18 +366,18 @@ const WheelCol: React.FC<{ label: string; items: string[]; index: number; loop?:
       className="relative flex flex-col items-center outline-none rounded-[9px] focus-visible:ring-2 focus-visible:ring-brand-c touch-none"
     >
       {[-2, -1, 0, 1, 2].map((d) => {
-        const t = at(d);
+        const v = at(d);
         return (
           <button
             key={d}
             type="button"
             tabIndex={-1}
             aria-hidden
-            onClick={() => d !== 0 && t && step(d)}
+            onClick={() => d !== 0 && v && step(d)}
             className={clsx("h-[26px] flex items-center tabular-nums", d ? "text-[13px] font-semibold text-charcoal-faint" : "text-[16px] font-extrabold text-charcoal")}
-            style={{ opacity: !t ? 0 : Math.abs(d) === 2 ? 0.45 : 1 }}
+            style={{ opacity: !v ? 0 : Math.abs(d) === 2 ? 0.45 : 1 }}
           >
-            {t || " "}
+            {v || " "}
           </button>
         );
       })}
@@ -398,7 +399,7 @@ const PlacePin: React.FC<{
   const [locError, setLocError] = useState<string | null>(null);
   const locate = () => {
     if (!navigator.geolocation) {
-      setLocError("Location isn't available on this device."); // OURS
+      setLocError(t("Location isn't available on this device.")); // OURS
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -408,7 +409,7 @@ const PlacePin: React.FC<{
         setView(c);
         setLocError(null);
       },
-      () => setLocError("Allow location to use where you are, or move the map."), // OURS
+      () => setLocError(t("Allow location to use where you are, or move the map.")), // OURS
       { timeout: 10000 }
     );
   };
@@ -416,16 +417,16 @@ const PlacePin: React.FC<{
     <BizFrame
       step={step}
       lane={lane}
-      title="Place the pin"
-      subtitle="Drag the map so the pin sits on your entrance."
+      title={t("Place the pin")}
+      subtitle={t("Drag the map so the pin sits on your entrance.")}
       onBack={onBack}
       saveExit={false}
-      footer={{ label: "Confirm pin", onClick: () => onConfirm({ lat: Number(view.lat.toFixed(6)), lng: Number(view.lng.toFixed(6)) }) }}
+      footer={{ label: t("Confirm pin"), onClick: () => onConfirm({ lat: Number(view.lat.toFixed(6)), lng: Number(view.lng.toFixed(6)) }) }}
     >
       <div className="relative h-[420px] rounded-[20px] overflow-hidden mb-3 bg-cream-soft">
         <Suspense fallback={<div className="absolute inset-0 bg-cream-soft" />}>
           <div className="absolute inset-0">
-            <NearbyMap center={center} zoom={16} dark={dark} onViewChange={(c) => setView(c)} ariaLabel="Map. Drag to move the pin onto your entrance." className="h-full w-full" hideControls />
+            <NearbyMap center={center} zoom={16} dark={dark} onViewChange={(c) => setView(c)} ariaLabel={t("Map. Drag to move the pin onto your entrance.")} className="h-full w-full" hideControls />
           </div>
         </Suspense>
         <span className="absolute left-1/2 top-1/2 flex text-brand-c pointer-events-none" style={{ transform: "translate(-50%,-100%)" }}>
@@ -434,9 +435,9 @@ const PlacePin: React.FC<{
         <span className="absolute left-1/2 top-1/2 w-[10px] h-1 rounded-full pointer-events-none" style={{ background: "rgba(0,0,0,0.25)", transform: "translate(-50%,-1px)" }} />
         <button
           type="button"
-          aria-label="Use current location"
+          aria-label={t("Use current location")}
           onClick={locate}
-          className="absolute right-3 bottom-3 w-11 h-11 rounded-full bg-cream-card flex items-center justify-center text-primary-dark"
+          className="absolute end-3 bottom-3 w-11 h-11 rounded-full bg-cream-card flex items-center justify-center text-primary-dark"
           // 12 from the edge as drawn, lifted above the map's credit line (it must stay visible).
           style={{ boxShadow: "0 4px 12px rgba(0,0,0,0.18)", bottom: 30 }}
         >

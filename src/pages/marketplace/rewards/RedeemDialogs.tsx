@@ -9,6 +9,7 @@ import { FOCUS_CSS, usePress } from "../../../components/market/usePress";
 import { SheetBox } from "../PurchaseSheet";
 import { deductionLine, redeemOffer } from "../../../services/offers";
 import { newRequestId } from "./rewardsModel";
+import { appLocale } from "../../../i18n/format";
 
 // Market + Share 3.0 · W2 · C-MO.4.4.3 Redeem confirm (`redeem1`, `redeem2`):
 // the two-step MasterBottomSheet over the offer. Literal values, Client
@@ -83,7 +84,7 @@ export const RedeemSheet: React.FC<RedeemSheetProps> = ({ open, onClose, offerId
     navigate(`/app/marketplace/vouchers/${encodeURIComponent(r.voucher.id)}?new=1`);
   };
 
-  const primary = step === 1 ? "Continue" : `Redeem ${cost.toLocaleString("en-US")} points`;
+  const primary = step === 1 ? "Continue" : `Redeem ${cost.toLocaleString(appLocale("en-US"))} points`;
   const secondary = step === 1 ? "Cancel" : "Back";
 
   return (

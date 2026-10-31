@@ -12,6 +12,7 @@ import { achievementCard } from "../share/client/clientCardModel";
 import { marketPalette } from "../../theme/marketTokens";
 import { textPx } from "../../theme/textSize";
 import { localDayOf } from "../../utils/date";
+import { appLocale } from "../../i18n/format";
 
 // One badge, every rung of it. v6 MO1.1.3.1: a centred popup over the page
 // (tap outside, Escape or a swipe down closes; no ×, K1 / S1 / S2), on the
@@ -109,7 +110,7 @@ export const AchievementDetailSheet: React.FC<{
               />
             </div>
             <p className="mt-1.5 text-[11px] leading-[16.5px] font-semibold tabular-nums text-charcoal-faint">
-              {current.toLocaleString()} of {badge.next.threshold.toLocaleString()}
+              {current.toLocaleString(appLocale())} of {badge.next.threshold.toLocaleString(appLocale())}
             </p>
           </div>
         )}
@@ -137,7 +138,7 @@ export const AchievementDetailSheet: React.FC<{
                   <p className="text-[13px] leading-[18px] font-bold text-charcoal truncate">
                     {r.title}
                     {r.level && (
-                      <span className="ml-1.5 text-[11px] leading-[15px] font-normal text-charcoal-faint">
+                      <span className="ms-1.5 text-[11px] leading-[15px] font-normal text-charcoal-faint">
                         {LEVEL_LABEL[r.level]}
                       </span>
                     )}
@@ -146,17 +147,17 @@ export const AchievementDetailSheet: React.FC<{
                     {/* EARNED SHOWS WHEN, NOT WHAT IS LEFT. A streak that has
                         since broken keeps its date beside a bar that has
                         honestly gone down. */}
-                    {done ? `Earned ${formatEarnedAt(r.earnedAt!)}` : `${r.threshold.toLocaleString()} needed`}
+                    {done ? `Earned ${formatEarnedAt(r.earnedAt!)}` : `${r.threshold.toLocaleString(appLocale())} needed`}
                   </p>
                 </div>
                 {/* #68: 12 / 18 800; locked #8C8378 / #B8B3C7, earned the
                     key's ink. An explorer rung is worth zero on purpose
                     (self-reported), and says so. */}
                 <span
-                  className="shrink-0 max-w-[104px] text-right text-[12px] leading-[18px] font-extrabold tabular-nums"
+                  className="shrink-0 max-w-[104px] text-end text-[12px] leading-[18px] font-extrabold tabular-nums"
                   style={{ color: done ? keyInk(r.key, dark) : "rgb(var(--c-charcoal-faint))" }}
                 >
-                  {r.points > 0 ? `+${r.points.toLocaleString()}` : "No points, just bragging rights"}
+                  {r.points > 0 ? `+${r.points.toLocaleString(appLocale())}` : "No points, just bragging rights"}
                 </span>
               </div>
             );

@@ -156,7 +156,7 @@ export const ProgrammeBuilder: React.FC<{
                     type="button"
                     disabled={busy}
                     onClick={() => setAdding(day)}
-                    className="tap flex-1 flex items-center justify-between text-left"
+                    className="tap flex-1 flex items-center justify-between text-start"
                     style={{ minHeight: 40, borderRadius: 12, border: `1.5px dashed ${INK.b10}`, padding: "0 12px", color: INK.chF, fontSize: textPx(12.5), fontWeight: 600 }}
                     aria-label={`Rest day. Add a workout to ${DAY_LONG[i]}`}
                   >

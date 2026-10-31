@@ -285,7 +285,7 @@ export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, styl
         fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
         WebkitFontSmoothing: "antialiased",
         boxShadow: flat || (stk && bare) ? undefined : "0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(36,31,27,0.10)",
-        textAlign: "left",
+        textAlign: "start",
       }}
     >
       {!stk && P.lop ? (
@@ -294,7 +294,7 @@ export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, styl
         </span>
       ) : null}
       {((stk && !onChecker) || (!stk && style === "P")) && !photoUrl ? (
-        <span style={{ position: "absolute", right: px(4 * u), bottom: px(2.4 * u), textAlign: "right", fontFamily: "ui-monospace, Menlo, monospace", fontSize: px(Math.max(8, 2.6 * u)), color: "rgba(255,255,255,0.55)", letterSpacing: "0.04em" }}>
+        <span style={{ position: "absolute", right: px(4 * u), bottom: px(2.4 * u), textAlign: "end", fontFamily: "ui-monospace, Menlo, monospace", fontSize: px(Math.max(8, 2.6 * u)), color: "rgba(255,255,255,0.55)", letterSpacing: "0.04em" }}>
           your photo
         </span>
       ) : null}
@@ -437,7 +437,7 @@ export const ShareLayer: React.FC<ShareLayerProps> = ({ spec: c, pro, client = "
   }
 
   return (
-    <div style={{ width: L.width, fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif", WebkitFontSmoothing: "antialiased", lineHeight: "normal", textAlign: "left", color: "#FFFFFF" }}>
+    <div style={{ width: L.width, fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif", WebkitFontSmoothing: "antialiased", lineHeight: "normal", textAlign: "start", color: "#FFFFFF" }}>
       <div style={{ display: "flex", alignItems: "center", gap: L.mark.gap }}>
         <CentiumMark height={L.mark.h} framing="png" label="Centium" style={{ width: L.mark.w, filter: `drop-shadow(0 ${L.mark.drop.y}px ${L.mark.drop.blur}px ${L.mark.drop.color})` }} />
         <div style={{ minWidth: 0 }}>
@@ -510,7 +510,7 @@ export const ShareLayerComposite: React.FC<ShareLayerProps & { photoUrl: string;
       aria-label={`${layer.spec.eyebrow} card`}
       style={{ position: "relative", flex: "none", width, height: Math.round(frame.h * k), overflow: "hidden", borderRadius: 10, background: "#2A2B31", boxShadow: "0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(36,31,27,0.10)" }}
     >
-      <div style={{ position: "absolute", left: 0, top: 0, width: frame.w, height: frame.h, transform: `scale(${k})`, transformOrigin: "0 0" }}>
+      <div style={{ position: "absolute", insetInlineStart: 0, top: 0, width: frame.w, height: frame.h, transform: `scale(${k})`, transformOrigin: "0 0" }}>
         <img
           src={photoUrl}
           alt=""

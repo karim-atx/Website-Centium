@@ -140,7 +140,7 @@ export const LogWeightSheet: React.FC<{
           gap={4}
           separator={{ text: ".", size: 24 }}
           trailing={
-            <span className="text-th-7d6bb5 dark:text-primary-deep-text" style={{ marginLeft: 4, fontSize: textPx(14), lineHeight: "21px", fontWeight: 700 }}>
+            <span className="text-th-7d6bb5 dark:text-primary-deep-text" style={{ marginInlineStart: 4, fontSize: textPx(14), lineHeight: "21px", fontWeight: 700 }}>
               kg
             </span>
           }

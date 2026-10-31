@@ -517,7 +517,7 @@ export default function RoutinesTab() {
         data-dnd-folder-block
         data-flip={`f:${folder.id}`}
         className="flex flex-col gap-1.5"
-        style={{ marginLeft: depth * 16, display: hidden ? "none" : undefined }}
+        style={{ marginInlineStart: depth * 16, display: hidden ? "none" : undefined }}
       >
         <FolderHeader
           folder={folder}
@@ -554,7 +554,7 @@ export default function RoutinesTab() {
             </div>
 
             {addingSubfolderTo === folder.id && (
-              <div className="mb-2" style={{ marginLeft: 16 }}>
+              <div className="mb-2" style={{ marginInlineStart: 16 }}>
                 <div className="flex gap-2 mb-2">
                   <input
                     autoFocus
@@ -658,7 +658,7 @@ export default function RoutinesTab() {
           aria-expanded={newFolderOpen}
           // 30 × 30 r9 on a 44 hit area (WO1 #7).
           className="tap relative w-[30px] h-[30px] rounded-[9px] flex items-center justify-center before:absolute before:-inset-[7px] before:content-['']"
-          style={{ color: rc("newFolder", dark), margin: "-4px -6px -4px 0" }}
+          style={{ color: rc("newFolder", dark), marginBlock: "-4px", marginInline: "0 -6px" }}
         >
           <FolderPlus size={18} />
         </button>
@@ -1101,16 +1101,16 @@ const RoutineCardFace: React.FC<{
       data-drag-card
       {...press}
       className="flex items-center gap-[13px] min-h-[54px] rounded-[14px] select-none"
-      style={{ padding: "0 14px 0 0", background: family.row, WebkitTouchCallout: "none" }}
+      style={{ paddingBlock: "0", paddingInline: "0 14px", background: family.row, WebkitTouchCallout: "none" }}
     >
       <span
         className={clsx("w-1 h-8 rounded-full shrink-0 block", isOngoing && running && "animate-pulse")}
-        style={{ marginLeft: 15, background: isOngoing ? rc("ongoing", dark) : family.bar }}
+        style={{ marginInlineStart: 15, background: isOngoing ? rc("ongoing", dark) : family.bar }}
       />
       {renaming ? (
         <RenameField value={renameDraft ?? ""} onChange={(v) => onRenameDraft?.(v)} onCommit={() => onRenameCommit?.()} tone="dark" />
       ) : (
-        <button onClick={onToggle} className="hit flex-1 text-left min-w-0">
+        <button onClick={onToggle} className="hit flex-1 text-start min-w-0">
           <p className="text-[14.5px] font-bold flex items-center gap-1.5 truncate" style={{ color: "rgb(var(--c-charcoal))" }}>
             {/* The name ellipsizes on its own so the state badge is never cut (D18). */}
             <span className="truncate min-w-0">{routine.name}</span>
@@ -1154,7 +1154,7 @@ const RoutineCardFace: React.FC<{
         {isOngoing && running ? (
           <Pause size={13} fill={playInk} style={{ color: playInk }} />
         ) : (
-          <Play size={13} fill={playInk} style={{ color: playInk, marginLeft: 1 }} />
+          <Play size={13} fill={playInk} style={{ color: playInk, marginInlineStart: 1 }} />
         )}
       </button>
       <button

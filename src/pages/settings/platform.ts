@@ -1,5 +1,7 @@
 // Small platform checks shared by Settings and its Notifications page.
 
+import { tk } from "../../i18n/core";
+
 /**
  * Whether the app is running installed rather than in a browser tab.
  *
@@ -36,8 +38,8 @@ export function pushUnavailableReason(): string {
   return isIosLike() && !isInstalled()
     ? // On iOS the APIs appear once the app is installed to the Home Screen,
       // so this is a step the user can take, not a dead end.
-      "Add Centium to your Home Screen to receive call notifications when the app is closed"
-    : "Not available in this browser";
+      tk("Add Centium to your Home Screen to receive call notifications when the app is closed")
+    : tk("Not available in this browser");
 }
 
 export type PermissionName3 = "camera" | "microphone" | "geolocation";

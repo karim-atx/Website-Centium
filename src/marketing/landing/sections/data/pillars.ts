@@ -4,14 +4,16 @@
 // colour, percentage and animation window ("a b", read by motion/anim.ts as
 // data-w) is literal. The names and figures are approved demo data.
 
+import { tk } from "../../../../i18n/core";
+
 export { voice } from "./shared";
 
 export const pls = [
-  { n: "01", t: "Nutrition", line: "Log meals by voice, barcode or recipe.", c: "#4E3894" },
-  { n: "02", t: "Training", line: "Routines in folders, every set tracked.", c: "#2F5F58" },
-  { n: "03", t: "Health", line: "Heart rate, labs and cycle in one record.", c: "#4E3894" },
-  { n: "04", t: "Coaching", line: "Hire a verified professional, then message or call.", c: "#2F5F58" },
-  { n: "05", t: "Community", line: "Ask the forum, learn from professionals.", c: "#4E3894" },
+  { n: "01", t: tk("Nutrition"), line: tk("Log meals by voice, barcode or recipe."), c: "#4E3894" },
+  { n: "02", t: tk("Training"), line: tk("Routines in folders, every set tracked."), c: "#2F5F58" },
+  { n: "03", t: tk("Health"), line: tk("Heart rate, labs and cycle in one record."), c: "#4E3894" },
+  { n: "04", t: tk("Coaching"), line: tk("Hire a verified professional, then message or call."), c: "#2F5F58" },
+  { n: "05", t: tk("Community"), line: tk("Ask the forum, learn from professionals."), c: "#4E3894" },
 ];
 
 export const barcodeL = ["3px", "2px", "3px", "2px", "1px", "3px", "1px", "1px", "2px", "1px", "3px", "3px", "1px", "3px", "3px", "1px", "1px", "1px", "2px", "3px", "1px", "1px", "1px", "2px", "1px", "1px", "3px", "3px"];
@@ -19,9 +21,9 @@ export const barcodeL = ["3px", "2px", "3px", "2px", "1px", "3px", "1px", "1px",
 export const calHead = ["M", "T", "W", "T", "F", "S", "S"];
 
 export const coachChat = [
-  { t: "Hi Lara, can we start this week?", w: "0.68 0.74", side: "flex-end", bg: "#775FD7", ink: "#fff" },
-  { t: "Yes. I shared your plan. Video call now?", w: "0.74 0.8", side: "flex-start", bg: "#F3F9F7", ink: "#221E1A" },
-  { t: "Joining.", w: "0.8 0.86", side: "flex-end", bg: "#775FD7", ink: "#fff" },
+  { t: tk("Hi Lara, can we start this week?"), w: "0.68 0.74", side: "flex-end", bg: "#775FD7", ink: "#fff" },
+  { t: tk("Yes. I shared your plan. Video call now?"), w: "0.74 0.8", side: "flex-start", bg: "#F3F9F7", ink: "#221E1A" },
+  { t: tk("Joining."), w: "0.8 0.86", side: "flex-end", bg: "#775FD7", ink: "#fff" },
 ];
 
 export const cycCal = [
@@ -71,28 +73,28 @@ export const cycLenDots = [
 ];
 
 export const cycLenLab = [
-  { t: "May", x: "5%" },
-  { t: "Jun", x: "23%" },
-  { t: "Jul", x: "41%" },
-  { t: "Aug", x: "59%" },
-  { t: "Sep", x: "77%" },
-  { t: "Oct", x: "95%" },
+  { t: tk("May"), x: "5%" },
+  { t: tk("Jun"), x: "23%" },
+  { t: tk("Jul"), x: "41%" },
+  { t: tk("Aug"), x: "59%" },
+  { t: tk("Sep"), x: "77%" },
+  { t: tk("Oct"), x: "95%" },
 ];
 
 export const cycLenPts = "10.0,25.0 46.0,75.0 82.0,50.0 118.0,0.0 154.0,50.0 190.0,75.0";
 
 export const cycLogs = [
-  { t: "Mild cramps", bg: "#F4F1FB", ink: "#5C48A8", w: "0.50 0.62" },
-  { t: "Mood: calm", bg: "#EDF4F3", ink: "#2F5F58", w: "0.57 0.69" },
-  { t: "Energy: good", bg: "#EDF4F3", ink: "#2F5F58", w: "0.64 0.76" },
-  { t: "Slept 7 h 40", bg: "#F4F1FB", ink: "#5C48A8", w: "0.71 0.83" },
+  { t: tk("Mild cramps"), bg: "#F4F1FB", ink: "#5C48A8", w: "0.50 0.62" },
+  { t: tk("Mood: calm"), bg: "#EDF4F3", ink: "#2F5F58", w: "0.57 0.69" },
+  { t: tk("Energy: good"), bg: "#EDF4F3", ink: "#2F5F58", w: "0.64 0.76" },
+  { t: tk("Slept 7 h 40"), bg: "#F4F1FB", ink: "#5C48A8", w: "0.71 0.83" },
 ];
 
 export const cycPhases = [
-  { t: "Period", d: "Days 1 to 5", c: "#E7C9D6", bg: "transparent", fw: 700 },
-  { t: "Follicular", d: "Days 6 to 13", c: "#D9CFF5", bg: "#F4F1FB", fw: 800 },
-  { t: "Ovulation", d: "Days 14 to 16", c: "#BFDCD6", bg: "transparent", fw: 700 },
-  { t: "Luteal", d: "Days 17 to 28", c: "#EDE3CF", bg: "transparent", fw: 700 },
+  { t: tk("Period"), d: tk("Days 1 to 5"), c: "#E7C9D6", bg: "transparent", fw: 700 },
+  { t: tk("Follicular"), d: tk("Days 6 to 13"), c: "#D9CFF5", bg: "#F4F1FB", fw: 800 },
+  { t: tk("Ovulation"), d: tk("Days 14 to 16"), c: "#BFDCD6", bg: "transparent", fw: 700 },
+  { t: tk("Luteal"), d: tk("Days 17 to 28"), c: "#EDE3CF", bg: "transparent", fw: 700 },
 ];
 
 export const cycSeg = [
@@ -129,21 +131,21 @@ export const cycSeg = [
 export const cycTodayDeg = "109.3";
 
 export const facts = [
-  { k: "Energy", v: "310 kcal" },
-  { k: "Protein", v: "20 g" },
-  { k: "Fat", v: "22 g" },
-  { k: "Carbs", v: "8 g" },
+  { k: tk("Energy"), v: tk("310 kcal") },
+  { k: tk("Protein"), v: tk("20 g") },
+  { k: tk("Fat"), v: tk("22 g") },
+  { k: tk("Carbs"), v: tk("8 g") },
 ];
 
 export const feedPosts = [
   {
     i: "RH",
-    t: "Best pre-run breakfast?",
-    m: "Rami Haddad · Running · 2 h",
+    t: tk("Best pre-run breakfast?"),
+    m: tk("Rami Haddad · Running · 2 h"),
     pro: false,
     likes: "64",
     from: "12",
-    r: "4 replies",
+    r: tk("4 replies"),
     w: "0.05 0.20",
     lw: "0.1 0.9",
     bg: "#F4F1FB",
@@ -153,12 +155,12 @@ export const feedPosts = [
   },
   {
     i: "MA",
-    t: "Protein timing for runners",
-    m: "Maya Aoun · Nutrition",
+    t: tk("Protein timing for runners"),
+    m: tk("Maya Aoun · Nutrition"),
     pro: true,
     likes: "128",
     from: "96",
-    r: "18 replies",
+    r: tk("18 replies"),
     w: "0.13 0.28",
     lw: "0.1 0.9",
     bg: "#FFFFFF",
@@ -168,12 +170,12 @@ export const feedPosts = [
   },
   {
     i: "NS",
-    t: "First 10 km, done",
-    m: "Nour Saab · Running · 5 h",
+    t: tk("First 10 km, done"),
+    m: tk("Nour Saab · Running · 5 h"),
     pro: false,
     likes: "41",
     from: "20",
-    r: "9 replies",
+    r: tk("9 replies"),
     w: "0.21 0.36",
     lw: "0.1 0.9",
     bg: "#FFFFFF",
@@ -184,22 +186,22 @@ export const feedPosts = [
 ];
 
 export const forumCats = [
-  { t: "All", bg: "#F4F1FB", ink: "#5C48A8" },
-  { t: "Nutrition", bg: "#F4F1FB", ink: "#5C48A8" },
-  { t: "Running", bg: "#775FD7", ink: "#fff" },
-  { t: "Strength", bg: "#F4F1FB", ink: "#5C48A8" },
+  { t: tk("All"), bg: "#F4F1FB", ink: "#5C48A8" },
+  { t: tk("Nutrition"), bg: "#F4F1FB", ink: "#5C48A8" },
+  { t: tk("Running"), bg: "#775FD7", ink: "#fff" },
+  { t: tk("Strength"), bg: "#F4F1FB", ink: "#5C48A8" },
 ];
 
 export const hrCurve = "0.0,56.3 3.8,52.7 7.7,48.9 11.5,44.5 15.4,39.9 19.2,35.7 23.1,33.0 26.9,28.5 30.8,27.4 34.6,26.9 38.5,27.0 42.3,26.8 46.2,29.3 50.0,32.5 53.8,31.2 57.7,31.2 61.5,27.7 65.4,27.0 69.2,22.5 73.1,19.7 76.9,18.1 80.8,16.4 84.6,12.0 88.5,11.7 92.3,15.6 96.2,16.2 100.0,16.9 103.8,22.7 107.7,24.9 111.5,27.3 115.4,29.0 119.2,31.7 123.1,32.4 126.9,28.7 130.8,28.9 134.6,27.1 138.5,23.0 142.3,20.7 146.2,18.5 150.0,14.1 153.8,14.2 157.7,13.9 161.5,15.5 165.4,14.2 169.2,19.1 173.1,19.7 176.9,24.3 180.8,28.0 184.6,29.9 188.5,38.3 192.3,43.6 196.2,49.5 200.0,55.9";
 
 export const labPanels = [
   {
-    t: "LIPIDS",
+    t: tk("LIPIDS"),
     rows: [
       {
         k: "LDL",
         v: "138 mg/dL",
-        st: "High",
+        st: tk("High"),
         icon: "↑",
         sc: "#5C48A8",
         sbg: "#F4F1FB",
@@ -215,7 +217,7 @@ export const labPanels = [
       {
         k: "HDL",
         v: "52 mg/dL",
-        st: "In range",
+        st: tk("In range"),
         icon: "✓",
         sc: "#2F5F58",
         sbg: "#EDF4F3",
@@ -231,12 +233,12 @@ export const labPanels = [
     ],
   },
   {
-    t: "BLOOD COUNT",
+    t: tk("BLOOD COUNT"),
     rows: [
       {
-        k: "Haemoglobin",
+        k: tk("Haemoglobin"),
         v: "14.6 g/dL",
-        st: "In range",
+        st: tk("In range"),
         icon: "✓",
         sc: "#2F5F58",
         sbg: "#EDF4F3",
@@ -250,9 +252,9 @@ export const labPanels = [
         open: false,
       },
       {
-        k: "Ferritin",
+        k: tk("Ferritin"),
         v: "86 ng/mL",
-        st: "In range",
+        st: tk("In range"),
         icon: "✓",
         sc: "#2F5F58",
         sbg: "#EDF4F3",
@@ -268,12 +270,12 @@ export const labPanels = [
     ],
   },
   {
-    t: "VITAMINS",
+    t: tk("VITAMINS"),
     rows: [
       {
-        k: "Vitamin D",
+        k: tk("Vitamin D"),
         v: "32 ng/mL",
-        st: "In range",
+        st: tk("In range"),
         icon: "✓",
         sc: "#2F5F58",
         sbg: "#EDF4F3",
@@ -287,7 +289,7 @@ export const labPanels = [
         open: false,
       },
       {
-        k: "Omega-3 index",
+        k: tk("Omega-3 index"),
         v: "5.1 %",
         st: "",
         icon: "·",
@@ -307,30 +309,30 @@ export const labPanels = [
 ];
 
 export const laraPlan = [
-  { n: "1", t: "Goblet squat", sr: "3 × 10", w: "0.72 0.82" },
-  { n: "2", t: "Romanian deadlift", sr: "3 × 8", w: "0.79 0.89" },
-  { n: "3", t: "Dead bug", sr: "3 × 12", w: "0.86 0.96" },
+  { n: "1", t: tk("Goblet squat"), sr: "3 × 10", w: "0.72 0.82" },
+  { n: "2", t: tk("Romanian deadlift"), sr: "3 × 8", w: "0.79 0.89" },
+  { n: "3", t: tk("Dead bug"), sr: "3 × 12", w: "0.86 0.96" },
 ];
 
 export const lessons = [
-  { t: "1 · Hips and ankles", d: "08:12", done: true, w: "0.15 0.28", bg: "transparent", bd: "#D9D2EE" },
-  { t: "2 · Thoracic spine", d: "06:40", done: true, w: "0.25 0.38", bg: "transparent", bd: "#D9D2EE" },
-  { t: "3 · Shoulders", d: "09:05", done: true, w: "0.35 0.48", bg: "transparent", bd: "#D9D2EE" },
-  { t: "4 · Daily flow", d: "12:30", done: false, w: "0.45 0.58", bg: "#F4F1FB", bd: "#775FD7" },
-  { t: "5 · Desk reset", d: "05:20", done: false, w: "0.55 0.68", bg: "transparent", bd: "#D9D2EE" },
-  { t: "6 · Full routine", d: "14:10", done: false, w: "0.65 0.78", bg: "transparent", bd: "#D9D2EE" },
+  { t: tk("1 · Hips and ankles"), d: "08:12", done: true, w: "0.15 0.28", bg: "transparent", bd: "#D9D2EE" },
+  { t: tk("2 · Thoracic spine"), d: "06:40", done: true, w: "0.25 0.38", bg: "transparent", bd: "#D9D2EE" },
+  { t: tk("3 · Shoulders"), d: "09:05", done: true, w: "0.35 0.48", bg: "transparent", bd: "#D9D2EE" },
+  { t: tk("4 · Daily flow"), d: "12:30", done: false, w: "0.45 0.58", bg: "#F4F1FB", bd: "#775FD7" },
+  { t: tk("5 · Desk reset"), d: "05:20", done: false, w: "0.55 0.68", bg: "transparent", bd: "#D9D2EE" },
+  { t: tk("6 · Full routine"), d: "14:10", done: false, w: "0.65 0.78", bg: "transparent", bd: "#D9D2EE" },
 ];
 
 export const macroLegend = [
-  { k: "Protein", v: "128 / 165 g", c: "#775FD7" },
-  { k: "Carbs", v: "196 / 260 g", c: "#B9A9EE" },
-  { k: "Fat", v: "48 / 65 g", c: "#5D9C93" },
+  { k: tk("Protein"), v: tk("128 / 165 g"), c: "#775FD7" },
+  { k: tk("Carbs"), v: tk("196 / 260 g"), c: "#B9A9EE" },
+  { k: tk("Fat"), v: tk("48 / 65 g"), c: "#5D9C93" },
 ];
 
 export const mealLine = [
-  { t: "Labneh breakfast", m: "08:10 · labneh, zaatar, cucumber", k: "410", c: "#775FD7", w: "0.1 0.3" },
-  { t: "Fattoush lunch", m: "13:00 · with grilled halloumi", k: "480", c: "#B9A9EE", w: "0.3 0.5" },
-  { t: "Mujaddara dinner", m: "19:30 · lentils, rice, onions", k: "520", c: "#5D9C93", w: "0.5 0.7" },
+  { t: tk("Labneh breakfast"), m: tk("08:10 · labneh, zaatar, cucumber"), k: "410", c: "#775FD7", w: "0.1 0.3" },
+  { t: tk("Fattoush lunch"), m: tk("13:00 · with grilled halloumi"), k: "480", c: "#B9A9EE", w: "0.3 0.5" },
+  { t: tk("Mujaddara dinner"), m: tk("19:30 · lentils, rice, onions"), k: "520", c: "#5D9C93", w: "0.5 0.7" },
 ];
 
 export const ormBand = { l: "77.06%", t: "10.00%", h: "10.00%", lt: "calc(20.00% + 3px)" };
@@ -373,24 +375,24 @@ export const ormDots = [
 export const ormGrid = ["0", "33.33", "66.67"];
 
 export const ormLifts = [
-  { t: "Bench press", on: "true", bg: "#2F5F58", ink: "#FFFFFF" },
-  { t: "Back squat", on: "false", bg: "transparent", ink: "#3D6E69" },
-  { t: "Deadlift", on: "false", bg: "transparent", ink: "#3D6E69" },
+  { t: tk("Bench press"), on: "true", bg: "#2F5F58", ink: "#FFFFFF" },
+  { t: tk("Back squat"), on: "false", bg: "transparent", ink: "#3D6E69" },
+  { t: tk("Deadlift"), on: "false", bg: "transparent", ink: "#3D6E69" },
 ];
 
 export const ormPRs = [
-  { x: "32.11%", y: "56.67%", kg: "81.5", d: "6 Aug", lx: "6px", w: "0.350 0.450" },
-  { x: "67.89%", y: "20.00%", kg: "87.0", d: "14 Sep", lx: "-136px", w: "0.625 0.725" },
-  { x: "100.00%", y: "10.00%", kg: "88.5", d: "19 Oct", lx: "-136px", w: "0.875 0.975" },
+  { x: "32.11%", y: "56.67%", kg: "81.5", d: tk("6 Aug"), lx: "6px", w: "0.350 0.450" },
+  { x: "67.89%", y: "20.00%", kg: "87.0", d: tk("14 Sep"), lx: "-136px", w: "0.625 0.725" },
+  { x: "100.00%", y: "10.00%", kg: "88.5", d: tk("19 Oct"), lx: "-136px", w: "0.875 0.975" },
 ];
 
 export const ormTrend = "0.0,87.78 11.0,87.50 19.3,86.00 30.3,81.33 38.5,79.33 49.5,76.00 57.8,70.67 68.8,66.67 77.1,64.00 88.1,58.67 96.3,53.33 107.3,50.67 115.6,48.00 126.6,44.67 134.9,43.33 145.9,41.33 154.1,39.33 165.1,35.33 173.4,34.00 184.4,30.00 192.7,29.33 203.7,26.67 211.9,25.33 222.9,22.00 231.2,20.67 242.2,17.33 250.5,15.33 261.5,14.00 269.7,13.33 280.7,12.67 289.0,12.50 300.0,11.11";
 
 export const ormX = [
-  { t: "Jul", x: "0.00%", tx: "0%" },
-  { t: "Aug", x: "27.52%", tx: "-50%" },
-  { t: "Sep", x: "55.96%", tx: "-50%" },
-  { t: "Oct", x: "83.49%", tx: "-50%" },
+  { t: tk("Jul"), x: "0.00%", tx: "0%" },
+  { t: tk("Aug"), x: "27.52%", tx: "-50%" },
+  { t: tk("Sep"), x: "55.96%", tx: "-50%" },
+  { t: tk("Oct"), x: "83.49%", tx: "-50%" },
 ];
 
 export const plSets = [
@@ -401,39 +403,39 @@ export const plSets = [
 ];
 
 export const proFilters = [
-  { t: "All", bg: "#FFFFFF", ink: "#5B5349", bd: "#E0DDD6" },
-  { t: "Dietitian", bg: "#2F5F58", ink: "#fff", bd: "#2F5F58" },
-  { t: "Trainer", bg: "#FFFFFF", ink: "#5B5349", bd: "#E0DDD6" },
-  { t: "Physio", bg: "#FFFFFF", ink: "#5B5349", bd: "#E0DDD6" },
+  { t: tk("All"), bg: "#FFFFFF", ink: "#5B5349", bd: "#E0DDD6" },
+  { t: tk("Dietitian"), bg: "#2F5F58", ink: "#fff", bd: "#2F5F58" },
+  { t: tk("Trainer"), bg: "#FFFFFF", ink: "#5B5349", bd: "#E0DDD6" },
+  { t: tk("Physio"), bg: "#FFFFFF", ink: "#5B5349", bd: "#E0DDD6" },
 ];
 
 export const proList = [
   {
     i: "LK",
-    n: "Lara Khoury",
-    m: "Dietitian · Beirut · online",
+    n: tk("Lara Khoury"),
+    m: tk("Dietitian · Beirut · online"),
     w: "0.02 0.14",
     bd: "rgba(94,158,149,.45)",
     bg: "#F3F9F7",
     abg: "#DAEAE7",
     aink: "#3D6E69",
   },
-  { i: "HS", n: "Hadi Saleh", m: "Dietitian · Jounieh", w: "0.08 0.20", bd: "#F0EDE8", bg: "#FFFFFF", abg: "#DED4F4", aink: "#5C48A8" },
+  { i: "HS", n: tk("Hadi Saleh"), m: tk("Dietitian · Jounieh"), w: "0.08 0.20", bd: "#F0EDE8", bg: "#FFFFFF", abg: "#DED4F4", aink: "#5C48A8" },
 ];
 
 export const recTimeline = [
-  { d: "12 Mar", t: "GP visit notes", m: "Dr. Rami Nassar", w: "0.05 0.20", dot: "#D9D2EE", bd: "#F0EDE8", bg: "#FFFFFF" },
-  { d: "2 Jun", t: "Vitamin D retest", m: "Hayek Lab", w: "0.13 0.28", dot: "#D9D2EE", bd: "#F0EDE8", bg: "#FFFFFF" },
-  { d: "18 Jul", t: "Knee X-ray", m: "Clemenceau MC", w: "0.21 0.36", dot: "#D9D2EE", bd: "#F0EDE8", bg: "#FFFFFF" },
-  { d: "9 Sep", t: "Physio summary", m: "Dana Azar", w: "0.29 0.44", dot: "#D9D2EE", bd: "#F0EDE8", bg: "#FFFFFF" },
-  { d: "14 Oct", t: "Blood panel", m: "Hayek Lab · 20 markers", w: "0.37 0.52", dot: "#775FD7", bd: "rgba(125,103,217,.45)", bg: "#FAF9FE" },
+  { d: tk("12 Mar"), t: tk("GP visit notes"), m: tk("Dr. Rami Nassar"), w: "0.05 0.20", dot: "#D9D2EE", bd: "#F0EDE8", bg: "#FFFFFF" },
+  { d: tk("2 Jun"), t: tk("Vitamin D retest"), m: tk("Hayek Lab"), w: "0.13 0.28", dot: "#D9D2EE", bd: "#F0EDE8", bg: "#FFFFFF" },
+  { d: tk("18 Jul"), t: tk("Knee X-ray"), m: tk("Clemenceau MC"), w: "0.21 0.36", dot: "#D9D2EE", bd: "#F0EDE8", bg: "#FFFFFF" },
+  { d: tk("9 Sep"), t: tk("Physio summary"), m: tk("Dana Azar"), w: "0.29 0.44", dot: "#D9D2EE", bd: "#F0EDE8", bg: "#FFFFFF" },
+  { d: tk("14 Oct"), t: tk("Blood panel"), m: tk("Hayek Lab · 20 markers"), w: "0.37 0.52", dot: "#775FD7", bd: "rgba(125,103,217,.45)", bg: "#FAF9FE" },
 ];
 
 export const replies = [
   {
-    n: "Maya Aoun",
+    n: tk("Maya Aoun"),
     pro: true,
-    t: "Oats with labneh and honey, about 90 minutes before.",
+    t: tk("Oats with labneh and honey, about 90 minutes before."),
     likes: "48",
     bg: "#FAF9FE",
     bd: "rgba(125,103,217,.22)",
@@ -441,30 +443,30 @@ export const replies = [
     lw: "0.20 0.95",
   },
   {
-    n: "Lara Khoury",
+    n: tk("Lara Khoury"),
     pro: true,
-    t: "Keep it under 400 kcal and finish eating 90 minutes before you start.",
+    t: tk("Keep it under 400 kcal and finish eating 90 minutes before you start."),
     likes: "36",
     bg: "#FAF9FE",
     bd: "rgba(125,103,217,.22)",
     w: "0.28 0.46",
     lw: "0.38 0.95",
   },
-  { n: "Nour Saab", pro: false, t: "Banana and dates if I run early.", likes: "21", bg: "#FFFFFF", bd: "#F0EDE8", w: "0.46 0.64", lw: "0.56 0.95" },
-  { n: "Georges Karam", pro: false, t: "Same here, plus a small coffee.", likes: "9", bg: "#FFFFFF", bd: "#F0EDE8", w: "0.64 0.82", lw: "0.74 0.95" },
+  { n: tk("Nour Saab"), pro: false, t: tk("Banana and dates if I run early."), likes: "21", bg: "#FFFFFF", bd: "#F0EDE8", w: "0.46 0.64", lw: "0.56 0.95" },
+  { n: tk("Georges Karam"), pro: false, t: tk("Same here, plus a small coffee."), likes: "9", bg: "#FFFFFF", bd: "#F0EDE8", w: "0.64 0.82", lw: "0.74 0.95" },
 ];
 
 export const worked = [
-  { t: "Chest", w: "0.15 0.3" },
-  { t: "Shoulders", w: "0.3 0.45" },
-  { t: "Triceps", w: "0.42 0.57" },
-  { t: "Core", w: "0.6 0.75" },
+  { t: tk("Chest"), w: "0.15 0.3" },
+  { t: tk("Shoulders"), w: "0.3 0.45" },
+  { t: tk("Triceps"), w: "0.42 0.57" },
+  { t: tk("Core"), w: "0.6 0.75" },
 ];
 
 export const zoneTime = [
-  { z: "Z1", m: "6 min" },
-  { z: "Z2", m: "14 min" },
-  { z: "Z3", m: "18 min" },
-  { z: "Z4", m: "11 min" },
-  { z: "Z5", m: "3 min" },
+  { z: "Z1", m: tk("6 min") },
+  { z: "Z2", m: tk("14 min") },
+  { z: "Z3", m: tk("18 min") },
+  { z: "Z4", m: tk("11 min") },
+  { z: "Z5", m: tk("3 min") },
 ];

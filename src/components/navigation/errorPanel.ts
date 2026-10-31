@@ -1,3 +1,5 @@
+import { tk } from "../../i18n/core";
+
 /**
  * What the error boundary says about a render error (Round D O1, D-S19).
  *
@@ -33,7 +35,8 @@ export function errorPanelKind(error: unknown, online: boolean): ErrorPanelKind 
   return CHUNK_FAILURE.test(message) || FETCH_FAILURE.test(message) ? "connection" : "crash";
 }
 
+/** English keys (tk); the panel shows them through t(). */
 export const ERROR_PANEL_COPY: Record<ErrorPanelKind, { title: string; line: string; action: string }> = {
-  connection: { title: "This needs a connection", line: "Check your connection and try again", action: "Retry" },
-  crash: { title: "Something went wrong", line: "", action: "Try again" },
+  connection: { title: tk("This needs a connection"), line: tk("Check your connection and try again"), action: tk("Retry") },
+  crash: { title: tk("Something went wrong"), line: "", action: tk("Try again") },
 };

@@ -106,7 +106,7 @@ export const ClientRow: React.FC<ClientRowProps> = ({ name, avatarUrl, status, l
         if (onLongPress) e.preventDefault();
       }}
       aria-pressed={selecting ? !!picked : undefined}
-      className="tap w-full text-left flex items-center"
+      className="tap w-full text-start flex items-center"
       style={{
         gap: 12,
         minHeight: 76,
