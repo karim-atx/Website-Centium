@@ -7,7 +7,7 @@ import { useApp } from "../../context/AppContext";
 import { fetchHideReadReceipts, setHideReadReceipts } from "../../services/preferences";
 import { DeleteAccountSheet } from "../../components/profile/DeleteAccountSheet";
 import { LegalFullLink, LegalIntro, LegalSections, LegalUpdated } from "../../components/settings/LegalText";
-import { PRIVACY_INTRO, PRIVACY_SECTIONS } from "./legalCopy";
+import { LEGAL_LANGUAGE, PRIVACY_INTRO, PRIVACY_SECTIONS } from "./legalCopy";
 import { SubHeader } from "../../components/business-more/kit";
 import { BusinessLegalSections } from "../../components/business-more/BusinessLegal";
 
@@ -114,6 +114,7 @@ export default function PrivacyPage() {
         <LegalIntro className="mt-2">{PRIVACY_INTRO}</LegalIntro>
         <LegalSections doc="privacy" sections={PRIVACY_SECTIONS} className="mt-6" />
         {user.accountType === "business" && <BusinessLegalSections doc="privacy" />}
+        <p className="mt-6 text-[12px] leading-[18px] text-charcoal-faint">{LEGAL_LANGUAGE}</p>
       </div>
 
       <LegalFullLink href="/legal#privacy">Read the full Privacy Policy</LegalFullLink>

@@ -1,4 +1,6 @@
 import type { BizKind } from "../../../components/business-more/kind";
+import { BILLING_HELP_STEPS, BILLING_HELP_TITLE } from "../../../services/legal/billingHelp";
+import { REFUND_POLICY_LABEL, REFUND_POLICY_PATH } from "../../../marketing/legal/refund";
 
 // MO1B-050 to -070 · the business Help centre content. Source:
 // LEGAL_AND_HELP.md "Help centre" (the first article of each topic) and
@@ -15,6 +17,8 @@ export interface HelpArticle {
   id: string;
   title: string;
   steps: string[];
+  /** Round F: a page the article points to after its steps (the refund policy). */
+  link?: { label: string; href: string };
 }
 
 export interface HelpTopic {
@@ -151,6 +155,13 @@ export function helpTopics(kind: BizKind): HelpTopic[] {
         ]),
         a("refunds", "Refunds", ["Refunds are between you and your client, under your own policy.", "Record a cash refund on the payment so your numbers stay right."]),
       ],
+    },
+    // Round F (DN, F5): your own Centium plan, as the Refund and Cancellation Policy sets out.
+    {
+      id: "billing",
+      title: "Billing",
+      icon: "wallet",
+      articles: [{ ...a("billing-and-refunds", BILLING_HELP_TITLE, BILLING_HELP_STEPS), link: { label: REFUND_POLICY_LABEL, href: REFUND_POLICY_PATH } }],
     },
     !store && {
       id: "team",

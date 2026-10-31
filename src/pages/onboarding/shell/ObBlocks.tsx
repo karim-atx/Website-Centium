@@ -594,7 +594,12 @@ export const ObTerms: React.FC<{
         <a href="/legal#terms" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
           {doc}
         </a>{" "}
-        and{" "}
+        {/* Round F (DN, F3): the Refund and Cancellation Policy is part of the Terms. */}
+        (including the{" "}
+        <a href="/legal/refund-policy" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+          Refund and cancellation policy
+        </a>
+        ) and{" "}
         <a href="/legal#privacy" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
           Privacy Policy
         </a>

@@ -15,6 +15,7 @@ import { INK } from "../../../components/pro/proInk";
 import { ProCardSkeleton, ProError } from "../../../components/pro/states";
 import { textPx } from "../../../theme/textSize";
 import { ProBusinessBilling } from "./ProBusinessBilling";
+import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
 
 // Release 3 W6 · MO24 v3 Subscription (source/gen r16.js subscription16,
 // tierCard16, tierGlyph16; COPY MO24). The real professional tiers from
@@ -347,6 +348,10 @@ export default function ProSubscription() {
       )}
       <p className="text-center" style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.5 }}>
         Payments in the app are coming soon. Upgrades are confirmed by email.
+      </p>
+      {/* Round F (DN): every place a plan is offered links the policy. */}
+      <p className="text-center" style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.5, marginTop: 4 }}>
+        <RefundPolicyLink />
       </p>
       {target && <PinnedCta primary={{ label: `Ask to upgrade to ${target.name}`, icon: <Mail size={15} />, onClick: ask }} />}
     </div>

@@ -16,7 +16,7 @@ import { isOffline } from "../network-error";
 
 
 export type LegalDocument = "terms" | "privacy" | "health_disclaimer";
-export const LEGAL_VERSION = "2026-09-06";
+export const LEGAL_VERSION = "2026-10-31";
 
 export async function recordLegalAcceptances(
   profileId: string,

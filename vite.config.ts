@@ -34,7 +34,9 @@ function notFoundPage(): Plugin {
 // (git-ignored) whenever dev or build starts, so they are plain static files
 // fetched only when someone scans a report. They sit outside assets/, so the
 // offline precache below never downloads them and the first load is
-// unchanged. The folder name carries the versions, so a cached old worker can
+// unchanged. The library's own 17 KB loader is bundled as a lazy chunk; Round F
+// names it ocr-reader-<hash>.js (build.rolldownOptions below) so the precache
+// can leave it out too. The folder name carries the versions, so a cached old worker can
 // never meet a newer library.
 const pkgVersion = (name: string) =>
   (JSON.parse(readFileSync(join('node_modules', name, 'package.json'), 'utf8')) as { version: string }).version
@@ -102,7 +104,9 @@ export default defineConfig({
         // images, which degrade to their alt text. About 9.5 MB, downloaded
         // once per release.
         globPatterns: ["index.html", "assets/**/*.{js,css,wasm}"],
-        globIgnores: ["**/NearbyMap-*", "**/maplibre-gl-worker-*"],
+        // Round F: and the lab report reader's loader (ocr-reader-*), fetched
+        // only when someone scans.
+        globIgnores: ["**/NearbyMap-*", "**/maplibre-gl-worker-*", "**/ocr-reader-*"],
         // The app's pages chunk alone is about 6 MB.
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
       },
@@ -167,5 +171,16 @@ export default defineConfig({
   // this file, but it also names an icon (the notification icon and badge).
   // Handing it ICON_VERSION as a compile-time constant keeps every icon
   // reference on the one version number above.
+  build: {
+    rolldownOptions: {
+      output: {
+        // Round F: the chunk holding tesseract.js (the scan reader's loader)
+        // gets a name of its own for the precache to leave out; every other
+        // chunk keeps Vite's default name.
+        chunkFileNames: (c) =>
+          c.moduleIds.some((id) => /[\\/]node_modules[\\/]tesseract\.js[\\/]/.test(id)) ? 'assets/ocr-reader-[hash].js' : 'assets/[name]-[hash].js',
+      },
+    },
+  },
   define: { __ICON_VERSION__: JSON.stringify(ICON_VERSION), __OCR_BASE__: JSON.stringify(`/${OCR_DIR}`) },
 })

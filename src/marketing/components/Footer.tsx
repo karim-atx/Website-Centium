@@ -4,6 +4,7 @@ import { CentiumLockup } from "../../components/icons/CentiumMark";
 import { LG, reducedMotion } from "../landing/engine/env";
 import { usePageLink, useMarketingNav, useSectionLink } from "../landing/navigation";
 import { WASH_BG, WEDGE_312, WEDGE_48 } from "../landing/wash";
+import { REFUND_POLICY_PATH } from "../legal/refund";
 
 // Centium landing v29: FO1 v17, the centred footer (02_pages/22-FO1 and the
 // prototype markup, exact inline styles), replacing the previous footer.
@@ -302,6 +303,24 @@ export const Footer: React.FC = () => {
             }
           >
             Legal
+          </a>
+          {/* Round F (DN): the Refund and Cancellation Policy, beside Legal. */}
+          <span aria-hidden="true" style={{ width: "3px", height: "3px", borderRadius: "99px", background: "#B9B2A8" }} />
+          <a
+            href={REFUND_POLICY_PATH}
+            onClick={pageLink(REFUND_POLICY_PATH)}
+            className="cl-hc cl-uline"
+            style={
+              {
+                fontWeight: 700,
+                color: "#3B352D",
+                background: UNDERLINE,
+                transition: "background-size .3s cubic-bezier(.22,1,.36,1),color .2s",
+                "--hc": "#5C48A8",
+              } as React.CSSProperties
+            }
+          >
+            Refund policy
           </a>
         </div>
       </div>

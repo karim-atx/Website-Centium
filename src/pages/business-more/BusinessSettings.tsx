@@ -17,6 +17,7 @@ import {
   Smartphone,
   Star,
 } from "lucide-react";
+import { REFUND_POLICY_PATH } from "../../marketing/legal/refund";
 import { BizCard, BizLabel, BizRow, SubHeader, LIST_BG } from "../../components/business-more/kit";
 import { SettingsRowVariant } from "../../components/ui/settingsRowVariant";
 import { ContactUsPopup } from "../../components/profile/ContactUsPopup";
@@ -224,6 +225,8 @@ export default function BusinessSettings() {
         <BizRow icon={Accessibility} title={t("Accessibility")} desc="Larger text, reduced motion" onClick={() => navigate("/app/settings/accessibility")} />
         <BizRow icon={Lock} title={t("Privacy")} onClick={() => navigate("/app/settings/privacy")} />
         <BizRow icon={FileText} title={t("Terms of Service")} onClick={() => navigate("/app/settings/terms")} />
+        {/* Round F (DN): the Refund and Cancellation Policy, part of the Terms. */}
+        <BizRow icon={ScrollText} title={t("Refund and cancellation policy")} onClick={() => navigate(REFUND_POLICY_PATH)} />
         <BizRow icon={CircleHelp} title={t("Contact us")} onClick={() => setContactOpen(true)} />
         <BizRow icon={Bug} title={t("Report a bug")} onClick={() => setBugOpen(true)} />
         <BizRow icon={Star} title={t("Rate this app")} onClick={() => setRateOpen(true)} />

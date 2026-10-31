@@ -12,7 +12,7 @@ export interface LegalSection {
 }
 
 /** The website's "Last updated" date (the legal page writes LEGAL_VERSION month first: src/marketing/legal/anchors.ts legalDateFor). */
-export const LEGAL_UPDATED = "September 6, 2026";
+export const LEGAL_UPDATED = "October 31, 2026";
 
 /** The website's slug for a heading (src/marketing/legal/anchors.ts legalSlug, the handoff's legalSlug()). */
 export function legalSlug(heading: string): string {
@@ -49,7 +49,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
   {
     heading: "Third-party processors",
     body:
-      "Supabase (database and sign-in), LiveKit (calls), Resend (email) and Cloudflare (content delivery). Each works only on our instructions, under contract.",
+      "Supabase (database and sign-in), LiveKit (calls), Resend (email), Cloudflare (content delivery) and Groq (voice food logging). Each works only on our instructions, under contract. Food search sends only your search words to USDA FoodData Central and Open Food Facts.",
   },
   {
     heading: "International data transfers",
@@ -145,3 +145,6 @@ export const TERMS_SECTIONS: LegalSection[] = [
 
 export const TERMS_GOVERNING_LAW =
   "Governed by the laws of Lebanon. Disputes go to the courts of Beirut, subject to consumer rights in your country.";
+
+/** Round F (A11): under the Terms and the Privacy summaries, as on the website. */
+export const LEGAL_LANGUAGE = "Published in English and Arabic. If they differ, the Arabic version prevails.";

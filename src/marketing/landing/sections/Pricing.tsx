@@ -21,6 +21,7 @@ import type { SectionVals } from "./sectionVals";
 import { AUDIENCES, DEFAULT_BILLING, SAVE_BADGE, priceFor, type Billing } from "../../../content/pricing";
 import { SectionHostContext } from "../sectionHost";
 import { usePageLink } from "../navigation";
+import { REFUND_POLICY_PATH } from "../../legal/refund";
 import { clamp, eo } from "../engine/math";
 
 const PILL_GROUP: React.CSSProperties = {
@@ -423,7 +424,13 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
             {"1 / " + n}
           </span>
         </div>
-        <p style={{ marginTop: "16px", textAlign: "center", fontSize: "13px", color: "#5B5349", maxWidth: "760px", marginLeft: "auto", marginRight: "auto" }}>{A.footnote}</p>
+        <p style={{ marginTop: "16px", textAlign: "center", fontSize: "13px", color: "#5B5349", maxWidth: "760px", marginLeft: "auto", marginRight: "auto" }}>
+          {A.footnote}{" "}
+          {/* Round F (DN): every place a plan is offered links the Refund and Cancellation Policy. */}
+          <a href={REFUND_POLICY_PATH} onClick={pageLink(REFUND_POLICY_PATH)} style={{ fontWeight: 700, color: "#3B352D", textDecoration: "underline", textUnderlineOffset: "3px" }}>
+            Refund and cancellation policy
+          </a>
+        </p>
         <div style={{ marginTop: "22px", display: "flex", justifyContent: "center" }}>
           <button
             onClick={() => setCmp((v) => !v)}

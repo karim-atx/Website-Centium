@@ -152,6 +152,7 @@ export function HelpArticlePage() {
   const article = topic?.articles.find((x) => x.id === articleId);
   const [answered, setAnswered] = useState(false);
   const { openContact, node } = useContact();
+  const navigate = useNavigate();
   if (!laneSettled) return <HelpLoading />;
   if (!topic || !article) return <HelpCentrePage />;
   return (
@@ -166,6 +167,11 @@ export function HelpArticlePage() {
           </li>
         ))}
       </ol>
+      {article.link && (
+        <BizSection label="Read more">
+          <BizRow icon={FileText} title={article.link.label} onClick={() => navigate(article.link!.href)} />
+        </BizSection>
+      )}
       <p className="text-[12.5px] font-extrabold text-charcoal" style={{ margin: "14px 0 8px" }}>
         Was this helpful?
       </p>
