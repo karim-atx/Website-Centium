@@ -7,6 +7,12 @@ import { ConfirmCard } from "../ui/ConfirmCard";
 import { PassQr } from "./PassQr";
 import { MemberTag } from "./MemberTag";
 import { clock12 } from "../../utils/time12";
+import { useApp } from "../../context/AppContext";
+import { useOnline } from "../../hooks/useOnline";
+import { usePassCode } from "./usePassCode";
+import { PassDevicesSheet } from "./PassDevicesSheet";
+import { PASS_CODE_PERIOD_SECONDS } from "../../services/venues/passCode";
+import { t } from "../../i18n/core";
 
 // The adaptive membership pass (MO1.4.2.2.2 #2, with MO1.4.2.2.4 Tap and
 // MO1.4.2.2.5 Bluetooth), shown on the confirmed screen and in the member's
@@ -30,6 +36,15 @@ import { clock12 } from "../../utils/time12";
 // old code reads "not recognised" at the desk from then on. No frame: a 12/700
 // primary-dark text button (44 hit box) and the shared "decision" confirm
 // (OURS, strings flagged). Online only: an offline copy can't be rotated.
+//
+// Round F2 · AB5 (Karim F23): the QR carries a 30-second code the phone
+// computes from this device's secret ("pd:<device>:<code>", usePassCode), so
+// a screenshot stops working within a minute and the pass still works with
+// no signal. A thin ring around the QR runs down the 30 seconds. With no
+// secret (offline the first time, rate-limited) the static pass_token shows,
+// which the desk still accepts (phase one). "Get a new pass code" also
+// revokes every device secret, so the pass gets a new one after; "Your
+// devices" lists them, each removable (PassDevicesSheet).
 
 type Method = "qr" | "tap" | "bluetooth";
 
@@ -63,6 +78,11 @@ export function MembershipPass({
   const [asking, setAsking] = useState(false);
   const [rotating, setRotating] = useState(false);
   const [rotateNote, setRotateNote] = useState<{ text: string; error: boolean } | null>(null);
+  const { authUserId } = useApp();
+  const online = useOnline();
+  // AB5: the offline copy of the pass draws with the stored secret only (never issues).
+  const live = usePassCode({ userId: authUserId ?? null, membershipId: membership.id, online: online && !membership.cachedAt });
+  const [devicesOpen, setDevicesOpen] = useState(false);
   const rotate = async () => {
     setRotating(true);
     const r = await rotatePassToken(membership.id);
@@ -73,8 +93,11 @@ export function MembershipPass({
       return;
     }
     setRotated({ id: membership.id, token: r.value });
+    // Rotating revoked every device secret (20261226070000): get a new one.
+    live.renew();
     setRotateNote({ text: "Your pass has a new code. The old one no longer works.", error: false });
   };
+  const qrValue = live.value ?? token;
 
   return (
     <div className="flex flex-col items-center">
@@ -137,12 +160,20 @@ export function MembershipPass({
         </div>
 
         <div className="mt-4 flex flex-col items-center">
-          {method === "qr" && (
-            // The QR in a 200 box, 1.5 primary.soft edge, r16, padding 12.
-            <div className="rounded-2xl border-[1.5px] border-th-a79ad5 dark:border-primary-dark/50 bg-white p-3">
-              <PassQr value={token} size={176} />
-            </div>
-          )}
+          {method === "qr" &&
+            (live.value ? (
+              // AB5: the same box, its edge replaced by a thin ring that runs
+              // down the 30 seconds (2px, primary on the soft edge colour).
+              <div className="relative rounded-2xl bg-white p-3">
+                <PassRing left={live.left} />
+                <PassQr value={qrValue} size={176} />
+              </div>
+            ) : (
+              // The QR in a 200 box, 1.5 primary.soft edge, r16, padding 12.
+              <div className="rounded-2xl border-[1.5px] border-th-a79ad5 dark:border-primary-dark/50 bg-white p-3">
+                <PassQr value={qrValue} size={176} />
+              </div>
+            ))}
           {method === "tap" && (
             <NativePanel
               disc={<Nfc size={64} strokeWidth={1.5} className="text-th-7d67d9 dark:text-primary-accent" aria-hidden />}
@@ -166,12 +197,22 @@ export function MembershipPass({
       </div>
 
       <p className="mt-2.5 mb-0 text-center text-[12px] text-charcoal-faint">{UNDER[method]}</p>
-      {method === "qr" && !membership.cachedAt && (
-        <button type="button" onClick={() => setAsking(true)} className="tap mt-1 text-[12px] font-bold text-primary-dark" style={{ minHeight: 32 }}>
-          Get a new pass code
-        </button>
+      {method === "qr" && live.value && (
+        <p className="mt-1 mb-0 text-center text-[12px] text-charcoal-faint max-w-[300px]">{t("This code refreshes every 30 seconds. Screenshots won't work at the desk.")}</p>
       )}
-      {rotateNote && (
+      {method === "qr" && !membership.cachedAt && (
+        <div className="mt-1 flex items-center justify-center gap-4">
+          <button type="button" onClick={() => setAsking(true)} className="tap text-[12px] font-bold text-primary-dark" style={{ minHeight: 32 }}>
+            Get a new pass code
+          </button>
+          {online && (
+            <button type="button" onClick={() => setDevicesOpen(true)} className="tap text-[12px] font-bold text-primary-dark" style={{ minHeight: 32 }}>
+              {t("Your devices")}
+            </button>
+          )}
+        </div>
+      )}
+      <PassDevicesSheet open={devicesOpen} onClose={() => setDevicesOpen(false)} membershipId={membership.id} thisDeviceId={live.deviceId} onRemovedThis={live.renew} />      {rotateNote && (
         <p role={rotateNote.error ? "alert" : "status"} className={`mt-1 mb-0 text-center text-[12px] font-semibold ${rotateNote.error ? "text-status-high" : "text-charcoal-faint"}`}>
           {rotateNote.text}
         </p>
@@ -206,6 +247,31 @@ export function MembershipPass({
         {isIOS() ? "Add to Apple Wallet" : "Add to Google Wallet"}
       </button>
     </div>
+  );
+}
+
+/**
+ * AB5: the 30-second ring around the QR box (200 square, r16): the soft
+ * 1.5 edge as the track, and a 2px primary stroke for the seconds left,
+ * running down clockwise from the top. Decorative: the line under the pass
+ * says what it means.
+ */
+function PassRing({ left }: { left: number }) {
+  const share = Math.max(0, Math.min(1, left / PASS_CODE_PERIOD_SECONDS));
+  return (
+    <svg aria-hidden className="absolute inset-0 w-full h-full pointer-events-none overflow-visible" viewBox="0 0 200 200" preserveAspectRatio="none">
+      <rect x="0.75" y="0.75" width="198.5" height="198.5" rx="15.25" fill="none" strokeWidth="1.5" className="stroke-th-a79ad5 dark:stroke-primary-dark/50" opacity="0.35" />
+      <path
+        d="M100 1 H184 A15 15 0 0 1 199 16 V184 A15 15 0 0 1 184 199 H16 A15 15 0 0 1 1 184 V16 A15 15 0 0 1 16 1 Z"
+        pathLength={100}
+        fill="none"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeDasharray={`${share * 100} 100`}
+        className="stroke-th-7d67d9 dark:stroke-primary-accent"
+        style={{ transition: left >= PASS_CODE_PERIOD_SECONDS ? "none" : "stroke-dasharray 1s linear" }}
+      />
+    </svg>
   );
 }
 

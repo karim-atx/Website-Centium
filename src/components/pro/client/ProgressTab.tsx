@@ -80,7 +80,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
   const [chkNonce, setChkNonce] = useState(0);
   // Round D: every lane sends check-ins (clinical included, can_write_form).
   const checkIns = useClientCheckIns(clientId, true, chkNonce);
-  const checkInsGroup: Group = { key: "chk", icon: ClipboardCheck, title: "Check-ins", summary: checkInsSummary(checkIns), body: <CheckInsProgress data={checkIns} firstName={firstName} onRetry={() => setChkNonce((n) => n + 1)} /> };
+  const checkInsGroup: Group = { key: "chk", icon: ClipboardCheck, title: "Check-ins", summary: checkInsSummary(checkIns), body: <CheckInsProgress data={checkIns} clientId={clientId} firstName={firstName} onRetry={() => setChkNonce((n) => n + 1)} /> };
   const labsVisible = access.has("lab_results") || (access.access?.resultSharedCount ?? 0) > 0;
 
   useEffect(() => {

@@ -14,6 +14,8 @@ import { MemberCodesPage } from "./MemberCodesPage";
 import { VenueMembersPage } from "./VenueMembersPage";
 import { StoreCustomersIndex, TopCustomersPage } from "./StoreCustomers";
 import { appLocale } from "../../../i18n/format";
+import { useOpsToast } from "../../../components/marketplace/VenueKit";
+import { BookingPausesCard } from "./BookingPausesCard";
 
 // Analytics › Members (AN4): the section index (AN4-001), the section pages
 // (AN4-005 …, MembersPage), Member codes (OURS-AN4-member-codes with the
@@ -32,6 +34,7 @@ export function MembersSection() {
   const online = useOnline();
   const data = useMembersData();
   const access = useConsoleAccess();
+  const [toast, showToast] = useOpsToast();
   const vocab = useMemo(() => vocabOf(kind), [kind]);
   // OURS-AN4-classes-variant row 7: no plans and no members (once both are read) → no Plans row, "of 4".
   const hidePlans = kind === "classes" && !data.loading && !data.plansLoading && data.members !== null && data.plans.length === 0 && data.memberTotal === 0;
@@ -145,6 +148,9 @@ export function MembersSection() {
         </AnCard>
       )}
 
+      {/* Round F2 AB4 (F22): members whose class bookings are paused, with Lift pause (staff with members). */}
+      {known && <BookingPausesCard businessId={data.businessId} onToast={showToast} />}
+
       {/* AN1-026 K1 / V6-28: the Client outcomes screen, also reached from the Overview "More insights" card. The owner's (B7: it adds up the whole business). */}
       {known && !access.isStaff && (
         <AnCard className="mt-[12px]" label="Client outcomes">
@@ -172,6 +178,7 @@ export function MembersSection() {
           />
         </AnCard>
       )}
+      {toast}
     </div>
   );
 }

@@ -10,9 +10,11 @@ import {
   type CodePreview,
   type RedeemOutcome,
 } from "./codeLogic";
+import { CODE_COPY, codeActionMessage, redeemReasonLine } from "./codeCopy";
 import type { PlanKind } from "../membership-plans/types";
 
 export * from "./codeLogic";
+export * from "./codeCopy";
 
 // Business memberships: the walk-in relationship business_members holds.
 //
@@ -94,10 +96,43 @@ export interface MemberCode {
   membershipPlanId: string | null;
   /** CN: the gym a granted membership belongs to (null for a code with no plan). */
   gymId: string | null;
+  /** True once every use is taken (Round F2: uses reached max_uses). */
   redeemed: boolean;
   expiresAt: string;
   createdAt: string;
+  /** Round F2 AB6 (20261226050000): how many may join (1–50) and how many have; 1 / 0 on an older reader. */
+  maxUses: number;
+  uses: number;
+  /** Revoked or replaced: it stops working, and who joined keeps their membership. */
+  revokedAt: string | null;
 }
+
+/** business_member_codes' row as read and as the code writers return it. */
+type CodeRow = {
+  id: string;
+  code: string;
+  membership_plan_id: string | null;
+  gym_id: string | null;
+  redeemed: boolean;
+  expires_at: string;
+  created_at: string;
+  max_uses?: number | null;
+  uses?: number | null;
+  revoked_at?: string | null;
+};
+
+const toMemberCode = (c: CodeRow): MemberCode => ({
+  id: c.id,
+  code: c.code,
+  membershipPlanId: c.membership_plan_id,
+  gymId: c.gym_id ?? null,
+  redeemed: c.redeemed,
+  expiresAt: c.expires_at,
+  createdAt: c.created_at,
+  maxUses: typeof c.max_uses === "number" && c.max_uses > 0 ? c.max_uses : 1,
+  uses: typeof c.uses === "number" && c.uses > 0 ? c.uses : c.redeemed ? 1 : 0,
+  revokedAt: c.revoked_at ?? null,
+});
 
 type Row = {
   id: string;
@@ -162,17 +197,7 @@ type CodesTable = {
         column: string,
         options: { ascending: boolean }
       ) => PromiseLike<{
-        data:
-          | {
-              id: string;
-              code: string;
-              membership_plan_id: string | null;
-              gym_id: string | null;
-              redeemed: boolean;
-              expires_at: string;
-              created_at: string;
-            }[]
-          | null;
+        data: CodeRow[] | null;
         error: PgError;
       }>;
     };
@@ -380,48 +405,58 @@ export async function inviteMember(
  * membership or pass when redeemed (CN), and must know its gym: p_gym_id is
  * sent only when the caller names one (a business with several gyms); a
  * single gym is resolved by the server, and none raises ATXAC.
+ *
+ * Round F2 AB6: always create_business_member_code_with_uses(…, p_max_uses)
+ * (1–50; a new function, as an optional fifth argument on the old one would
+ * make its four-argument call ambiguous in PostgREST). Its five arguments
+ * have no defaults, so p_valid_for and p_gym_id go as null: the old
+ * function's 7 days and gym resolution apply inside it.
  */
 export async function createMemberCode(
   businessId: string,
   membershipPlanId: string | null,
-  gymId: string | null = null
+  gymId: string | null = null,
+  maxUses = 1
 ): Promise<{ ok: true; code: MemberCode } | { ok: false; message: string; code?: string }> {
-  const args: Record<string, unknown> = {
+  const { data, error } = await rpc().rpc("create_business_member_code_with_uses", {
     p_business_id: businessId,
     p_membership_plan_id: membershipPlanId,
-    // Left at the function's own default rather than restated here, so the
-    // validity window lives in one place.
     p_valid_for: null,
-  };
-  if (gymId) args.p_gym_id = gymId;
-  const { data, error } = await rpc().rpc("create_business_member_code", args);
+    p_gym_id: gymId,
+    p_max_uses: maxUses,
+  });
 
   if (error || !data) {
     console.error("[members] Could not create a member code:", error?.message);
     if (isBusinessClosedError(error)) return { ok: false, message: closureMessage(CLOSED_MEMBER_CODE, error?.message), code: error?.code };
     return { ok: false, message: describeCreateRefusal(error ?? {}, !!error && isOffline(error)), code: error?.code };
   }
-  const row = data as {
-    id: string;
-    code: string;
-    membership_plan_id: string | null;
-    gym_id: string | null;
-    redeemed: boolean;
-    expires_at: string;
-    created_at: string;
-  };
-  return {
-    ok: true,
-    code: {
-      id: row.id,
-      code: row.code,
-      membershipPlanId: row.membership_plan_id,
-      gymId: row.gym_id ?? null,
-      redeemed: row.redeemed,
-      expiresAt: row.expires_at,
-      createdAt: row.created_at,
-    },
-  };
+  return { ok: true, code: toMemberCode(data as CodeRow) };
+}
+
+/** Round F2 AB6: revoke_business_member_code(p_code_id); who joined keeps their membership. */
+export async function revokeMemberCode(codeId: string): Promise<{ ok: true; code: MemberCode } | { ok: false; message: string }> {
+  const { data, error } = await rpc().rpc("revoke_business_member_code", { p_code_id: codeId });
+  if (error || !data) {
+    console.error("[members] Could not revoke a member code:", error?.message);
+    if (error && isOffline(error)) return { ok: false, message: describeCreateRefusal(error, true) };
+    return { ok: false, message: codeActionMessage(error?.code, CODE_COPY.revokeFailed) };
+  }
+  return { ok: true, code: toMemberCode(data as CodeRow) };
+}
+
+/** Round F2 AB6: replace_business_member_code(p_code_id) → the new code (same plan, gym, uses and validity). */
+export async function replaceMemberCode(codeId: string): Promise<{ ok: true; code: MemberCode } | { ok: false; message: string }> {
+  const { data, error } = await rpc().rpc("replace_business_member_code", { p_code_id: codeId });
+  if (error || !data) {
+    console.error("[members] Could not replace a member code:", error?.message);
+    if (error && isOffline(error)) return { ok: false, message: describeCreateRefusal(error, true) };
+    if (isBusinessClosedError(error)) return { ok: false, message: closureMessage(CLOSED_MEMBER_CODE, error?.message) };
+    // The new code is minted by the create function, so its refusals (20 an hour, ATXAC) read the same.
+    if (error?.code === "ATX02" || error?.code === "ATXAC" || error?.code === "ATX25") return { ok: false, message: describeCreateRefusal(error, false) };
+    return { ok: false, message: codeActionMessage(error?.code, CODE_COPY.replaceFailed) };
+  }
+  return { ok: true, code: toMemberCode(data as CodeRow) };
 }
 
 /** Codes this business has issued, newest first. */
@@ -429,7 +464,7 @@ export async function fetchMyMemberCodes(
   businessId: string
 ): Promise<{ ok: true; codes: MemberCode[] } | { ok: false; message: string }> {
   const { data, error } = await codesTable()
-    .select("id, code, membership_plan_id, gym_id, redeemed, expires_at, created_at")
+    .select("id, code, membership_plan_id, gym_id, redeemed, expires_at, created_at, max_uses, uses, revoked_at")
     .eq("business_id", businessId)
     .order("created_at", { ascending: false });
 
@@ -437,18 +472,7 @@ export async function fetchMyMemberCodes(
     console.error("[members] Could not read member codes:", error.message);
     return { ok: false, message: "Couldn't load your codes. Try again." };
   }
-  return {
-    ok: true,
-    codes: (data ?? []).map((c) => ({
-      id: c.id,
-      code: c.code,
-      membershipPlanId: c.membership_plan_id,
-      gymId: c.gym_id ?? null,
-      redeemed: c.redeemed,
-      expiresAt: c.expires_at,
-      createdAt: c.created_at,
-    })),
-  };
+  return { ok: true, codes: (data ?? []).map(toMemberCode) };
 }
 
 /**
@@ -478,8 +502,9 @@ export async function redeemMemberCode(
     if (isBusinessClosedError(error)) return { ok: false, message: closureMessage(CLOSED_REDEEM_CODE, error.message) };
     return { ok: false, message: describeRedeemError(error, isOffline(error)) };
   }
-  const result = data as { success: boolean; message: string; membership: { business_id?: string } | null } | null;
-  if (!result?.success) return { ok: false, message: describeRedeemRefusal(result?.message) };
+  const result = data as { success: boolean; message: string; membership: { business_id?: string } | null; reason?: string | null } | null;
+  // Round F2 AB6: the stable reason first; the older message matching for a reader without it.
+  if (!result?.success) return { ok: false, message: redeemReasonLine(result?.reason, result?.message) ?? describeRedeemRefusal(result?.message) };
   return { ok: true, businessId: result.membership?.business_id ?? null, outcome: redeemOutcome(result.message) };
 }
 

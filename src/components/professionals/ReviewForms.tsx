@@ -17,6 +17,8 @@ import {
   type ReviewReportReason,
 } from "../../services/professional-reviews/rules";
 import { GuidelinesLink } from "../moderation/GuidelinesLink";
+import { useReviewOpensAt } from "../../hooks/useReviewOpensAt";
+import { ReviewWaitNote } from "../reviews/ReviewWaitNote";
 import { appLocale } from "../../i18n/format";
 
 // The review screens' shared parts: the reviewer's own card, the form that
@@ -78,6 +80,8 @@ export const MyReviewCard: React.FC<{
   const [armed, arm] = useArmed();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Round F (AB7): an account under 7 days old sees when it may in Rate & Review's place.
+  const opensAt = useReviewOpensAt();
 
   const withdrawn = status === "withdrawn";
   const editable = !!review && status === "editable";
@@ -106,7 +110,7 @@ export const MyReviewCard: React.FC<{
     <Card className={className}>
       <div className={`flex items-center gap-2 ${hideLabel ? (review ? "justify-end mb-1.5" : "hidden") : "justify-between mb-1.5"}`}>
         {!hideLabel && <p className="section-label text-charcoal-faint">My Review</p>}
-        {(!review || editable) &&
+        {((!review && !opensAt) || editable) &&
           (hideLabel ? (
             review && outline("Edit")
           ) : (
@@ -116,7 +120,9 @@ export const MyReviewCard: React.FC<{
           ))}
       </div>
       {!review ? (
-        hideLabel ? (
+        opensAt ? (
+          <ReviewWaitNote opensAt={opensAt} boxed />
+        ) : hideLabel ? (
           // MO1.2.1: the prompt and the outline button on one row.
           <div className="flex items-center justify-between gap-3">
             <p className="text-[13px] text-charcoal-faint">You haven't reviewed {firstName} yet</p>

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type React from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { BusinessClosedNote } from "../../components/marketplace/BusinessClosedNote";
+import { BookingPausedNote } from "../../components/marketplace/BookingPausedNote";
+import { useBookingPause } from "../../components/marketplace/useBookingPause";
 import { useBusinessStatus } from "../../hooks/useBusinessStatus";
 import { takesNewActivity } from "../../services/business-closure/logic";
 import { useApp } from "../../context/AppContext";
@@ -334,6 +336,8 @@ export function ClassPage({ classId }: { classId: string }) {
   });
   // CP: a closed or paused business takes no new bookings or waitlist places; a booking already made stays.
   const bizStatus = useBusinessStatus(c?.businessId);
+  // Round F2 AB4: my_booking_pauses for this class's business.
+  const bookingPause = useBookingPause(c?.businessId, !!authUserId);
   const settle = async (r: BookOutcome, fromSheet: boolean) => {
     if (r.kind === "terms") {
       setPopup(null);
@@ -341,6 +345,8 @@ export function ClassPage({ classId }: { classId: string }) {
     }
     if (r.kind === "error") {
       if (!r.message) return;
+      // ATXS0: paused after 3 no-shows; the page's sentence replaces Book.
+      if (r.code === "ATXS0") bookingPause.reload();
       // A refusal from the sheet stays in the sheet; one after the terms
       // (the sheet is gone) shows on the page.
       if (fromSheet) setSheetError(r.message);
@@ -1140,6 +1146,13 @@ export function ClassPage({ classId }: { classId: string }) {
       ) : !takesNewActivity(bizStatus) ? (
         <PinnedSlot>
           <BusinessClosedNote status={bizStatus} className="" />
+        </PinnedSlot>
+      ) : bookingPause.pause ? (
+        // Round F2 AB4: new bookings here are paused after 3 no-shows; the
+        // sentence replaces Book (and Join waitlist, whose offer books through
+        // book_class and would be refused).
+        <PinnedSlot>
+          <BookingPausedNote pause={bookingPause.pause} gym={c.businessName || null} />
         </PinnedSlot>
       ) : full ? (
         // Full: Other times (up to three) and "Join waitlist" (BR-10), on a

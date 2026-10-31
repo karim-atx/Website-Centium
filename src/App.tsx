@@ -31,7 +31,7 @@ const {
   BusinessMoreRoutes, TeamRoutes, SchedulePage, SessionPage, ClassRulesPage, BusinessOperationsTab,
   PlansRoutes, BusinessOrdersRoutes, StoreProductsRoute, BusinessAppointmentsRoutes, AppointmentServicesPage, StoreRoutes,
   AppointmentRoutes, BusinessVenueTab, BusinessCalendarTab, Profile, MyCv, Subscription,
-  More, ClientCalendarTab, Community, CourseBuilderPage, CoursePage, ForumNewPage,
+  More, ClientCalendarTab, Community, CertificatePage, CourseBuilderPage, CoursePage, ForumNewPage,
   ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage, Settings, NotificationsPage,
   HealthCheckRemindersPage, AccessibilityPage, PrivacyPage, TermsPage, LanguagePage, YourMusicPage, BillingHelpPage, TwoFactorPage,
   TwoFactorSetupPage, ResetPassword, PublicCertificate, InviteLanding, PublicProfile, PublicBooking,
@@ -559,6 +559,9 @@ function AppRoutes() {
             does not have to know that. */}
         <Route path="/app/forum/courses/mine" element={<MyCoursesPage />} />
         <Route path="/app/forum/courses/mine/:courseId" element={<CourseBuilderPage />} />
+        {/* Round F · 3: a certificate, from Courses › Certificates. Static
+            "certificates" outranks :courseId, as "mine" does above. */}
+        <Route path="/app/forum/courses/certificates/:certificateId" element={<CertificatePage />} />
         <Route path="/app/forum/courses/:courseId" element={<CoursePage />} />
         <Route path="/app/forum/courses/:courseId/lessons/:lessonId" element={<LessonPage />} />
         <Route path="/app/settings" element={<Settings />} />

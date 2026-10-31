@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { asReviewStatus, describeReviewError, type MyReviewStatus, type ReviewReportReason } from "./rules";
+import { reviewRefusalLine } from "../safety/model";
 
 // Reviews clients leave for professionals: the real professional_reviews rows,
 // the professional's one public reply under each, and the reviewer's own
@@ -228,7 +229,9 @@ export async function createReview(
 
   if (error) {
     console.error("[reviews] Could not create the review:", error.code, error.message);
-    return { ok: false, message: describeReviewError(error, "create") };
+    // Round F (AB7): the insert's trigger refuses an account under 7 days old
+    // (ATXW0, with when it may) and allows 5 a day (ATX02).
+    return { ok: false, message: reviewRefusalLine(error, { professional: true }) ?? describeReviewError(error, "create") };
   }
   return { ok: true };
 }

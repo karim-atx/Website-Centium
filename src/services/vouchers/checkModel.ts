@@ -16,14 +16,19 @@
 // (filled only for an age-restricted offer, today supplements; null
 // otherwise). check_voucher also returns offer_owner_name; nothing here draws
 // it. A row without the two columns still reads (no Member row, no note).
+// Round F (AB3, Database 20261226040000): check_voucher answers own_voucher
+// (a row with everything else null) and mark_voucher_used raises ATXV4 when
+// the voucher is the caller's own: "Ask a colleague to check this voucher."
 
 import { formatShortDate } from "../../utils/date";
 import { clock12 } from "../../utils/time12";
 import { rows, str } from "../market/parse";
+import { t } from "../../i18n/core";
+import { OWN_VOUCHER_LINE, OWN_VOUCHER_TITLE } from "../offers/voucherRules";
 
 export type CheckVariant = "business" | "professional";
 /** check_voucher's six states, and `used`: mark_voucher_used's success. */
-export type CheckState = "valid" | "already_used" | "expired" | "void" | "not_valid_here" | "not_found" | "used";
+export type CheckState = "valid" | "already_used" | "expired" | "void" | "not_valid_here" | "not_found" | "own_voucher" | "used";
 
 export interface VoucherCheck {
   state: CheckState;
@@ -87,7 +92,7 @@ export const notACode = (): VoucherCheck => ({ state: "not_found", voucherId: nu
 // ---------------------------------------------------------------------------
 // Results
 
-const STATES: readonly CheckState[] = ["valid", "already_used", "expired", "void", "not_valid_here", "not_found", "used"];
+const STATES: readonly CheckState[] = ["valid", "already_used", "expired", "void", "not_valid_here", "not_found", "own_voucher", "used"];
 
 /** check_voucher's row (with the code that was checked). */
 export function parseCheck(data: unknown, code: string | null = null): VoucherCheck | null {
@@ -131,7 +136,7 @@ export function mergeMark(prev: VoucherCheck, data: unknown): VoucherCheck | nul
 }
 
 /** mark_voucher_used's refusals → the state the sheet shows instead. */
-const MARK_CODES: Record<string, CheckState> = { ATX08: "not_found", ATX15: "not_valid_here", ATX16: "void", ATX17: "expired" };
+const MARK_CODES: Record<string, CheckState> = { ATX08: "not_found", ATX15: "not_valid_here", ATX16: "void", ATX17: "expired", ATXV4: "own_voucher" };
 
 export function markRefusal(prev: VoucherCheck, e: { code?: string | null }): VoucherCheck | null {
   const s = e.code ? MARK_CODES[e.code] : undefined;
@@ -225,6 +230,16 @@ export function checkView(c: VoucherCheck, variant: CheckVariant): CheckView {
         title: "Voucher cancelled",
         body: "Centium cancelled this voucher, so it can't be used.",
         rows: [...offer, ...codeRow],
+        cta: "Scan another",
+      };
+    case "own_voucher":
+      // Round F (AB3): staff can't mark their own voucher as used.
+      return {
+        tone: "caution",
+        icon: "x",
+        title: t(OWN_VOUCHER_TITLE),
+        body: t(OWN_VOUCHER_LINE),
+        rows: codeRow,
         cta: "Scan another",
       };
     case "not_found":

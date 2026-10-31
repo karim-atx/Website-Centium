@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   fetchAuthorNames,
   fetchCatalogue,
@@ -25,6 +25,8 @@ import { CoverPill, Instructor, RatingShort } from "./courseParts";
 import { coverBackground } from "./courseCover";
 import { coverUrl, fetchCourseExtras, type CourseExtras } from "../../services/courses/extras";
 import { useIsDark } from "../../hooks/useIsDark";
+import { CertificatesList } from "./certificates/CertificatesList";
+import { t } from "../../i18n/core";
 
 // Design screen 6: the Courses tab. Search, category chips, "Continue
 // learning" with progress, then the course cards.
@@ -71,6 +73,9 @@ async function load(userId: string): Promise<{ data: Data } | { error: string }>
 
 /** MO1.3.1's filter order; anything else sorts last. */
 const COURSE_ORDER = ["workouts", "nutrition", "progress", "motivation", "general"];
+/** Round F · 3: the last sub-tab, Your certificates (?view=certificates, so Profile can link to it). */
+const CERTIFICATES = "certificates";
+
 const order = (key: string) => {
   const i = COURSE_ORDER.indexOf(key);
   return i < 0 ? COURSE_ORDER.length : i;
@@ -81,6 +86,8 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
   const [result, setResult] = useState<{ data: Data } | { error: string } | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<string | null>(null);
+  const [params, setParams] = useSearchParams();
+  const certificates = params.get("view") === CERTIFICATES;
 
   useEffect(() => {
     let live = true;
@@ -144,7 +151,9 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
   return (
     // -mt-0.5: the search sits 10 under the Forum / Courses tabs (frame check).
     <div className="flex flex-col gap-3 pb-6 -mt-0.5" style={{ color: fv("text") }}>
-      {/* MO1.3.1 #3: 44 tall, padding 0 14, gap 8, Search 16/1.75. */}
+      {/* MO1.3.1 #3: 44 tall, padding 0 14, gap 8, Search 16/1.75. Not on
+          Certificates, which it does not search. */}
+      {!certificates && (
       <label
         className="flex items-center gap-2 h-11 rounded-[14px] px-[14px]"
         style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}
@@ -159,6 +168,7 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
           style={{ color: fv("text") }}
         />
       </label>
+      )}
 
       {data ? (
         // MO1.3.1 #4: FO3 sub-tabs, a 40 pt track (radius 12, padding 4, gap 4)
@@ -173,9 +183,14 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
               ...[...data.categories]
                 .sort((a, b) => order(a.key) - order(b.key))
                 .map((c) => ({ key: c.key, label: c.name })),
+              { key: CERTIFICATES, label: t("Certificates") },
             ]}
-            activeKey={filter ?? ""}
-            onChange={(k) => setFilter(k || null)}
+            activeKey={certificates ? CERTIFICATES : filter ?? ""}
+            onChange={(k) => {
+              if (k === CERTIFICATES) return setParams({ tab: "courses", view: CERTIFICATES }, { replace: true });
+              if (certificates) setParams({ tab: "courses" }, { replace: true });
+              setFilter(k || null);
+            }}
             labelSize={12}
             tabHeight={32}
             idleWeight={600}
@@ -192,7 +207,9 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
         <div className="h-10 rounded-xl animate-skeleton-pulse" aria-hidden="true" style={{ background: fv("track") }} />
       )}
 
-      {!data ? (
+      {certificates ? (
+        <CertificatesList userId={userId} />
+      ) : !data ? (
         <div className="flex flex-col gap-2.5" aria-busy="true">
           <ForumPlaceholder height={110} />
           <ForumPlaceholder height={190} />

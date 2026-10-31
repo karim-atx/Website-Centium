@@ -276,3 +276,32 @@ test("bars are proportional to the busiest hour (D1) and hours read 6a / 12p", (
   assert.deepEqual([6, 12, 18, 0].map(hourShort), ["6a", "12p", "6p", "12a"]);
   assert.equal(daysBetween("2026-10-14", "2026-10-13"), -1);
 });
+
+test("Round F2 AB5: the 30-second code reaches the server as scanned; a stale one says so, naming nobody", () => {
+  const D = "0a1b2c3d-0000-4000-8000-00000000abcd";
+  assert.equal(normalizePassToken(` PD:${D.toUpperCase()}:012345 `), `pd:${D}:012345`);
+  assert.equal(normalizePassToken(`pd:${D}:12345`), null);
+  assert.equal(normalizePassToken(`pd:not-a-uuid:012345`), null);
+  assert.equal(normalizePassToken(`pd:${D}:0123456`), null);
+  const stale = toPassCheck({ valid: false, pass_state: "code_expired", membership_id: null, gym_id: null, member_first_name: null, member_is_minor: null, expires_on: null });
+  assert.equal(stale.state, "code_expired");
+  assert.equal(stale.valid, false);
+  const view = scanResultView(stale, { checkInsLive: false, sellsDayPass: false });
+  assert.deepEqual([view.title, view.body, view.tone, view.minor], ["Code expired", "This code has expired. Ask the member to open their pass.", "high", false]);
+  // code_expired with a membership is not a state the server sends: unavailable, never valid.
+  assert.equal(toPassCheck({ valid: true, pass_state: "code_expired", membership_id: "m", gym_id: "g", member_first_name: "Mina", member_is_minor: false, expires_on: null }).state, "unavailable");
+  const row: CheckInRow = {
+    check_in_id: "c",
+    result: "denied",
+    deny_reason: "no_pass",
+    already_in: false,
+    membership_id: null,
+    member_first_name: null,
+    member_is_minor: null,
+    plan_name: null,
+    expires_on: null,
+    pass_state: "code_expired",
+  };
+  assert.equal(checkInView(toCheckIn(row)!, { sellsDayPass: false }).title, "Code expired");
+  assert.equal(checkInView(toCheckIn({ ...row, pass_state: null })!, { sellsDayPass: false }).title, "Pass not recognised");
+});

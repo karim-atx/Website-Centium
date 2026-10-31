@@ -14,6 +14,8 @@ import { useNavigate } from "react-router-dom";
 import { startMemberThread } from "../../services/messaging";
 import { DIVIDER, VAvatar, VCardError, VDetailCard, VDetailRow, VFooterLink, VOfflineLine, VPill, VSkeletonRows, VTextTabs, type PillTone } from "./VenueKit";
 import { appLocale } from "../../i18n/format";
+import { fetchBusinessBookingPauses, liftBookingPause, pausedChip, PAUSES_COPY, type MemberPause } from "../../services/no-shows";
+import { t } from "../../i18n/core";
 
 // A venue's member roster (stage A4, venue_members()): THE one roster
 // component (V6-163, Q-R1), in the OP1 083 "Booked members" language
@@ -28,6 +30,11 @@ import { appLocale } from "../../i18n/format";
 // pending (mark_gym_membership_paid, needs front_desk) and "Message" for
 // staff holding messages (B7 MB-02 start_member_thread: one thread per
 // member whoever presses it; it opens in Messages).
+//
+// Round F2 AB4 (Karim F22): for staff holding members, a member whose class
+// bookings are paused (business_booking_pauses, matched on person_id) shows
+// "Paused until {date}", and the row's menu offers "Lift pause"
+// (lift_booking_pause; the member is told).
 
 /** K8 tone for a member's tag (Valid good, Awaiting payment caution, else soft; an upcoming renewal "Starts {date}", MB-05). */
 function passPill(m: VenueMember): { tone: PillTone; label: string } {
@@ -67,6 +74,9 @@ export function VenueMembersRoster({
   const access = useConsoleAccess();
   const deskOk = access.meets("front_desk") || access.failed;
   const canMessage = access.meets("messages") && !!access.businessId;
+  const canPause = access.meets("members") && !!access.businessId;
+  const [pauses, setPauses] = useState<Map<string, MemberPause>>(new Map());
+  const [pauseTick, setPauseTick] = useState(0);
   const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>("all");
   const [offset, setOffset] = useState(0);
@@ -106,6 +116,32 @@ export function VenueMembersRoster({
   const fresh = page?.key === key;
   const members = current?.members ?? [];
   const total = current?.total ?? 0;
+
+  // AB4: the paused members, keyed by account (a failed read shows no chips).
+  const pauseBiz = canPause ? access.businessId : null;
+  useEffect(() => {
+    if (!pauseBiz) return;
+    let cancelled = false;
+    void fetchBusinessBookingPauses(pauseBiz).then((r) => {
+      if (!cancelled && r.ok) setPauses(new Map(r.value.map((p) => [p.memberId, p])));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [pauseBiz, pauseTick, refreshKey]);
+  const pauseOf = (m: VenueMember) => (canPause && m.personId ? (pauses.get(m.personId) ?? null) : null);
+
+  const liftPause = async (m: VenueMember) => {
+    setMenu(null);
+    if (busy || !access.businessId || !m.personId) return;
+    setBusy(true);
+    setRowError(null);
+    const r = await liftBookingPause(access.businessId, m.personId);
+    setBusy(false);
+    if (!r.ok) return setRowError(r.message);
+    onToast?.(t(PAUSES_COPY.lifted));
+    setPauseTick((x) => x + 1);
+  };
 
   const choose = (f: Filter) => {
     setFilter(f);
@@ -158,13 +194,21 @@ export function VenueMembersRoster({
         {members.map((m) => {
           const pill = passPill(m);
           // Recording cash is a desk action: mark_gym_membership_paid needs front_desk (Database b95ef5c).
-          const hasActions = (m.paymentStatus === "pending" && deskOk) || (canMessage && !!m.personId);
+          const paused = pauseOf(m);
+          const hasActions = (m.paymentStatus === "pending" && deskOk) || (canMessage && !!m.personId) || !!paused;
           return (
             <VDetailRow
               key={m.membershipId}
               avatar={isMaskedLabel(m.label) ? <VAvatar masked /> : <VAvatar initial={initials(m.label)} />}
               title={m.label}
-              titleExtra={m.isMinor && <VPill tone="pale" label="Under 18" />}
+              titleExtra={
+                (m.isMinor || paused) && (
+                  <>
+                    {m.isMinor && <VPill tone="pale" label="Under 18" />}
+                    {paused && <VPill tone="caution" label={pausedChip(paused.pausedUntil)} />}
+                  </>
+                )
+              }
               sub={memberFact(m)}
               sub2={memberDates(m)}
               right={<VPill tone={pill.tone} label={pill.label} />}
@@ -236,8 +280,9 @@ export function VenueMembersRoster({
         options={[
           ...(menu && menu.member.paymentStatus === "pending" && deskOk ? [{ value: "paid", label: "Mark as paid", disabled: !online }] : []),
           ...(menu && canMessage && menu.member.personId ? [{ value: "message", label: "Message", disabled: !online }] : []),
+          ...(menu && pauseOf(menu.member) ? [{ value: "lift", label: t(PAUSES_COPY.lift), disabled: !online }] : []),
         ]}
-        onSelect={(v) => menu && void (v === "message" ? message(menu.member) : markPaid(menu.member))}
+        onSelect={(v) => menu && void (v === "message" ? message(menu.member) : v === "lift" ? liftPause(menu.member) : markPaid(menu.member))}
       />
     </div>
   );

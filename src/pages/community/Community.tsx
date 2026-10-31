@@ -11,6 +11,7 @@ import { MyCourses } from "../../components/courses/author/MyCourses";
 import { CourseBuilder } from "../../components/courses/author/CourseBuilder";
 import { CourseDetailView } from "../../components/courses/CourseDetailView";
 import { LessonView } from "../../components/courses/LessonView";
+import { CertificateView } from "../../components/courses/certificates/CertificateView";
 import { ADULTS_ONLY_COURSES_TEXT, NEEDS_DOB_COURSES_TEXT } from "../../services/courses/rules";
 import { ForumPlaceholder } from "../../components/forum/parts";
 import { useBack } from "../../hooks/useBack";
@@ -351,6 +352,12 @@ export function ForumNicknamePage() {
 export function CoursePage() {
   const { courseId } = useParams();
   return <Gated section="courses" render={(ctx) => <CourseDetailView key={courseId} courseId={courseId ?? ""} userId={ctx.userId} />} />;
+}
+
+/** /app/forum/courses/certificates/:certificateId: one of the learner's certificates (Round F · 3). */
+export function CertificatePage() {
+  const { certificateId } = useParams();
+  return <Gated section="courses" render={() => <CertificateView key={certificateId} certificateId={certificateId ?? ""} />} />;
 }
 
 /**
