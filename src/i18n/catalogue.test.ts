@@ -16,6 +16,7 @@ import * as notifications from "./ar/notifications.ts";
 import * as services from "./ar/services.ts";
 import * as shared from "./ar/shared.ts";
 import * as programmes from "./ar/programmes.ts";
+import * as certificates from "./ar/certificates.ts";
 import * as safety from "./ar/safety.ts";
 import * as venues from "./ar/venues.ts";
 
@@ -24,7 +25,7 @@ import * as venues from "./ar/venues.ts";
 // the English placeholders, no English is left as bare JSX text or a bare
 // text attribute, and a key used by two areas has one Arabic.
 
-const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues };
+const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates };
 const SRC = join(import.meta.dirname, "..");
 
 // Words that are the same in both languages (names, never translated).

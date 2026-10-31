@@ -29,6 +29,7 @@ const AREAS = [
   ["programmes", "Programmes: week notes, skip and move, check-in trend"],
   ["safety", "Referrals, vouchers, reviews and first messages"],
   ["venues", "Class no-shows, gym pass and member codes"],
+  ["certificates", "Your certificates (Courses)"],
 ];
 
 const rows = [];

@@ -59,6 +59,8 @@ import { initials } from "../../components/professionals/typeColour";
 import { ProProfile } from "../../components/pro/profile/ProProfile";
 import { SharingYourWinsRow } from "../../components/share/client/SharingYourWinsSheet";
 import { signOutWarning, useOutbox } from "../../components/outbox/Outbox";
+import { forumAccess } from "../../services/forum/rules";
+import { t } from "../../i18n/core";
 
 const accountTypeLabel: Record<string, string> = {
   customer: "Customer",
@@ -479,6 +481,10 @@ function ClientProfile() {
           {[
             { icon: Package, label: "My orders", onClick: () => navigate("/app/store/orders") },
             { icon: CalendarCheck, label: "My appointments", onClick: () => navigate("/app/appointments") },
+            // Round F · 3: Courses › Certificates, for whoever can open Courses (adults).
+            ...(forumAccess(user.dateOfBirth) === "adult"
+              ? [{ icon: Award, label: t("My certificates"), onClick: () => navigate("/app/forum?tab=courses&view=certificates") }]
+              : []),
           ].map((r) => (
             <button
               key={r.label}
