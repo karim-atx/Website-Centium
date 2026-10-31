@@ -139,8 +139,8 @@ test("targets: the documented subject per client kind; other kinds open nothing 
   assert.equal(clientNotificationTarget({ kind: "x", subjectType: "offer", subjectId: O }), null);
 });
 
-test("kinds: the enum in order; the client's are a member's sixteen, never an owner's or a professional's own", () => {
-  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 30);
+test("kinds: the enum in order; the client's are a member's seventeen, never an owner's or a professional's own", () => {
+  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 31);
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(0, 4), [...RELEASE1_KINDS]);
   // Release B appends the ambassador decision (20261217000000), to the applicant.
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(18, 20), ["ambassador_application_approved", "ambassador_application_declined"]);
@@ -151,10 +151,12 @@ test("kinds: the enum in order; the client's are a member's sixteen, never an ow
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(24, 27), ["food_submission_reviewed", "workout_log_reply", "course_published"]);
   // Round F2 · AB4 appends the no-show notices (20261225230000), to the member.
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(27, 30), ["no_show_warning", "booking_paused", "booking_pause_lifted"]);
+  // Round F2 appends the removed-course notice (20261226120000).
+  assert.equal(MEMBER_NOTIFICATION_KINDS[30], "course_removed");
   assert.deepEqual([...CLIENT_KINDS], [
     "voucher_issued", "points_expiring", "class_cancelled", "review_prompt", "ambassador_application_approved", "ambassador_application_declined",
     "forum_nickname_reset", "support_resources", "image_approved", "image_rejected", "food_submission_reviewed", "workout_log_reply", "course_published",
-    "no_show_warning", "booking_paused", "booking_pause_lifted",
+    "no_show_warning", "booking_paused", "booking_pause_lifted", "course_removed",
   ]);
   for (const k of CLIENT_KINDS) assert.ok((MEMBER_NOTIFICATION_KINDS as readonly string[]).includes(k), k);
   const notMine = [
@@ -519,6 +521,13 @@ test("Round D: course_published names the author and the course, and opens the c
   assert.equal(clientNotificationTarget({ kind: "course_published", subjectType: "course", subjectId: C }), `/app/forum/courses/${C}`);
   assert.equal(clientNotificationTarget({ kind: "course_published", subjectType: "course", subjectId: null, payload: { course_id: "../x" } }), "/app/forum?tab=courses");
   assert.deepEqual(notifLook("course_published"), { tone: "lav", glyph: "app" });
+});
+
+test("Round F2: course_removed names the course when it can, and opens nothing", () => {
+  const c = (payload?: Record<string, unknown>) => notificationCopy({ titleKey: "course_removed", kind: "course_removed", payload });
+  assert.deepEqual(c({ title: "Strong knees" }), { title: "Course no longer available", body: "Strong knees is no longer available." });
+  assert.deepEqual(c({}), { title: "Course no longer available", body: "A course you joined is no longer available." });
+  assert.equal(clientNotificationTarget({ kind: "course_removed", subjectType: "course", subjectId: null, payload: { title: "Strong knees" } }), null);
 });
 
 test("Round F2 · AB4: the no-show notices name the business once the reader joins it, and open the bookings", () => {

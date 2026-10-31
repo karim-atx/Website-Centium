@@ -81,6 +81,10 @@ export const MEMBER_NOTIFICATION_KINDS = [
   "no_show_warning",
   "booking_paused",
   "booking_pause_lifted",
+  // Round F2 (Database 20261226120000): a course the member was enrolled in
+  // was deleted with its erased author (subject course, subject_id null;
+  // payload title). Nothing to open.
+  "course_removed",
 ] as const;
 export type MemberNotificationKind = (typeof MEMBER_NOTIFICATION_KINDS)[number];
 
@@ -121,6 +125,8 @@ export const CLIENT_KINDS: readonly MemberNotificationKind[] = [
   "no_show_warning",
   "booking_paused",
   "booking_pause_lifted",
+  // Round F2: a course the member was in is gone.
+  "course_removed",
 ];
 
 /** my_unread_notification_count's cap: the reader never counts past it. */
@@ -275,6 +281,8 @@ export const CLIENT_COPY: NotificationCopyTable = {
   no_show_warning: NO_SHOW_NOTICE_COPY.no_show_warning,
   booking_paused: NO_SHOW_NOTICE_COPY.booking_paused,
   booking_pause_lifted: NO_SHOW_NOTICE_COPY.booking_pause_lifted,
+  // Round F2 (payload title; Karim approved the copy 2026-10-31).
+  course_removed: { title: tk("Course no longer available"), body: tk("A course you joined is no longer available.") },
 };
 
 /** A key no table knows: a safe line, never the raw key. */
@@ -427,6 +435,10 @@ export const CLIENT_FILLS: NotificationFillTable = {
     const gym = pText(p, "business_name");
     return gym ? { body: liftedSentence(gym) } : {};
   },
+  course_removed: (p) => {
+    const title = pText(p, "title");
+    return title ? { body: t("{title} is no longer available.", { title }) } : {};
+  },
 };
 
 function own<T>(table: Readonly<Record<string, T>>, k: string): T | null {
@@ -533,6 +545,9 @@ export function clientNotificationTarget(
       return "/app/marketplace/bookings?tab=upcoming";
     case "booking_pause_lifted":
       return "/app/marketplace";
+    case "course_removed":
+      // Round F2: the course is gone, so there is nothing to open.
+      return null;
     default:
       return null;
   }
@@ -603,6 +618,8 @@ export function notifLook(kind: string): { tone: NotifTone; glyph: NotifGlyph } 
       return { tone: "red", glyph: "x" };
     case "booking_pause_lifted":
       return { tone: "teal", glyph: "app" };
+    case "course_removed":
+      return { tone: "lav", glyph: "app" };
     default:
       return { tone: "grey", glyph: "clock" };
   }

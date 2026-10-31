@@ -82,6 +82,9 @@ const notifications: Catalogue = {
   "Open it in Community › Courses.": "افتحها في المجتمع › الدورات.",
   "{name} published a course for you": "نشر {name} دورة لك",
   "{title} is ready to start.": "{title} جاهزة للبدء.",
+  "Course no longer available": "الدورة لم تعد متاحة",
+  "A course you joined is no longer available.": "دورة انضممت إليها لم تعد متاحة.",
+  "{title} is no longer available.": "{title} لم تعد متاحة.",
 
   // == Notifications › a business's rows (BUSINESS_COPY and its fills) ==
   "New application": "طلب توظيف جديد",
