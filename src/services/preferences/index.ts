@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { getLanguage } from "../../i18n/core";
 import {
   describeNotificationError,
   NOTIFICATION_SELECT,
@@ -117,7 +118,9 @@ export async function setHideReadReceipts(
 
     const inserted = await supabase
       .from("app_preferences")
-      .insert({ owner_id: ownerId, hide_read_receipts: hide })
+      // Database Round F1: a new row carries the language, or the column's
+      // default (en) turns an Arabic member's server text back to English.
+      .insert({ owner_id: ownerId, hide_read_receipts: hide, language: getLanguage() })
       .select("hide_read_receipts")
       .single();
 

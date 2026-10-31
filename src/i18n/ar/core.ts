@@ -53,7 +53,7 @@ const core: Catalogue = {
     "أضف Centium إلى الشاشة الرئيسية لتلقي إشعارات المكالمات عند إغلاق التطبيق",
   "Connected devices": "الأجهزة المتصلة",
   Security: "الأمان",
-  "Two-factor authentication": "المصادقة الثنائية",
+  "Two-factor authentication": "التحقق بخطوتين",
   General: "عام",
   Notifications: "الإشعارات",
   Language: "اللغة",

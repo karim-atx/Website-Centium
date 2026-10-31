@@ -190,11 +190,11 @@ function SettingsHub() {
     return undefined;
   };
 
-  // BR-07: switching a device on opens HealthKit / Health Connect / Whoop
-  // OAuth, and a cancel returns it to off. The web has none of the three
-  // (Apple Health and Health Connect are native-only; Whoop needs its OAuth
-  // backend), so the switch returns to off at once and says why.
-  const [deviceNote, setDeviceNote] = useState<"platform" | "whoop" | null>(null);
+  // BR-07: switching a device on opens HealthKit / Health Connect, and a
+  // cancel returns it to off. Both are native-only, so on the web the switch
+  // returns to off at once and says why. Round F (Karim, A7): WHOOP was
+  // dropped, and its row with it.
+  const [deviceNote, setDeviceNote] = useState<"platform" | null>(null);
 
   // Resolved once: installing the app or switching browser reloads the page.
   const [pushAvailable] = useState(pushSupported);
@@ -282,7 +282,7 @@ function SettingsHub() {
           Connect" is the Android name (C-11). */}
       {user.accountType === "customer" && (
         <SettingsSection id="devices" label={t("Connected devices")}>
-          {/* v6 (TK 4.6, decided: Apple Health / WHOOP later): no brand marks;
+          {/* v6 (TK 4.6): no brand marks;
               each row shows its neutral placeholder glyph on the standard
               Settings tile (DevicePlaceholders.ts). */}
           <SettingsRow
@@ -298,16 +298,6 @@ function SettingsHub() {
             toggle={{
               checked: false,
               onChange: (next) => setDeviceNote(next ? "platform" : null),
-            }}
-          />
-          <SettingsRow
-            icon={DEVICE_PLACEHOLDER_ICON.whoop}
-            // i18n-ignore (a brand name)
-            title="Whoop"
-            subtitle={deviceNote === "whoop" ? t("Whoop sync isn't available yet") : undefined}
-            toggle={{
-              checked: false,
-              onChange: (next) => setDeviceNote(next ? "whoop" : null),
             }}
           />
         </SettingsSection>

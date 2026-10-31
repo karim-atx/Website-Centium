@@ -442,11 +442,11 @@ const shared: Catalogue = {
   "Couldn't load this. Try again.": "تعذّر تحميل هذا. حاول مجددًا.",
 
   // == Terms of Service / Privacy Policy › Business sections ==
-  // note: legal text, translated with the vocabulary of src/marketing/legal/text.ar.ts (business «شركة», professional «مهنيّ», client «عميل», refund «استرداد»); the lawyer must confirm every entry in this group before release.
-  "For business accounts": "لحسابات الشركات", // note: lawyer must confirm
-  "Business accounts": "حسابات الشركات", // note: lawyer must confirm; also the Terms heading of the same name
+  // note: legal text, translated with the vocabulary of src/marketing/legal/text.ar.ts (business «نشاط تجاري», professional «مختص», client «عميل», refund «استرداد»: Karim, A1–A2); the lawyer must confirm every entry in this group before release.
+  "For business accounts": "لحسابات الأنشطة التجارية", // note: lawyer must confirm
+  "Business accounts": "حسابات الأنشطة التجارية", // note: lawyer must confirm; also the Terms heading of the same name
   "A business account must be opened by someone allowed to act for the business. You confirm you have that authority and that the business details you give are true.":
-    "يجب أن يفتح حسابَ الشركة شخصٌ مخوَّل بالتصرّف نيابةً عنها. وأنت تؤكّد أنك تملك هذه الصلاحية وأنّ بيانات الشركة التي تقدّمها صحيحة.", // note: lawyer must confirm
+    "يجب أن يفتح حسابَ النشاط التجاري شخصٌ مخوَّل بالتصرّف نيابةً عنه. وأنت تؤكّد أنك تملك هذه الصلاحية وأنّ بيانات النشاط التجاري التي تقدّمها صحيحة.", // note: lawyer must confirm
   "Your listing": "صفحتك على المنصة", // note: lawyer must confirm; "listing" is «صفحتك» in the app (auth.ts), «على المنصة» added so the heading stands alone
   "Keep your listing, classes, prices, photos and opening hours accurate and up to date. Don't show photos of a space that isn't yours.":
     "حافظ على دقّة صفحتك وحصصك وأسعارك وصورك وساعات العمل وعلى تحديثها. ولا تعرض صورًا لمكان لا يخصّك.", // note: lawyer must confirm
@@ -457,34 +457,34 @@ const shared: Catalogue = {
   "Your cancellation rules, waivers and class terms are yours. You're responsible for what they say and for applying them fairly.":
     "قواعد الإلغاء وإقرارات إخلاء المسؤولية وشروط الحصص خاصة بك. وأنت مسؤول عن مضمونها وعن تطبيقها بإنصاف.", // note: lawyer must confirm
   "Professionals join your business with your business ID and use a seat. You're responsible for how your staff behave on Centium.":
-    "ينضمّ المهنيون إلى شركتك برقم تعريف شركتك، ويشغل كلّ منهم مقعدًا. وأنت مسؤول عن سلوك موظفيك على Centium.", // note: lawyer must confirm; heading "Your team" reuses «فريقك» from another area
-  "Reviews of your business": "التقييمات المتعلّقة بشركتك", // note: lawyer must confirm
+    "ينضمّ المختصون إلى نشاطك التجاري برقم تعريف نشاطك التجاري، ويشغل كلّ منهم مقعدًا. وأنت مسؤول عن سلوك موظفيك على Centium.", // note: lawyer must confirm; heading "Your team" reuses «فريقك» from another area
+  "Reviews of your business": "التقييمات المتعلّقة بنشاطك التجاري", // note: lawyer must confirm
   "Don't post or pay for fake reviews. Reply to reviews politely and never share a client's private details in a reply.":
     "لا تنشر تقييمات مزيّفة ولا تدفع مقابلها. وردّ على التقييمات بلباقة، ولا تكشف أبدًا التفاصيل الخاصة لأيّ عميل في ردّك.", // note: lawyer must confirm
   "Promotions and featured placement": "العروض الترويجية والظهور المميَّز", // note: lawyer must confirm
   "Promotions must be honest. Paid featured placement is labelled as featured and doesn't change your rating.":
     "يجب أن تكون العروض الترويجية صادقة. ويُوسَم الظهور المميَّز المدفوع بأنه مميَّز، ولا يغيّر تقييمك.", // note: lawyer must confirm
-  "Suspending or closing a business account": "تعليق حساب الشركة أو إغلاقه", // note: lawyer must confirm
+  "Suspending or closing a business account": "تعليق حساب النشاط التجاري أو إغلاقه", // note: lawyer must confirm
   "We may suspend a business account that breaks these terms or puts clients at risk. You can close yours at any time from Settings.":
-    "يجوز لنا تعليق حساب أيّ شركة يخالف هذه الشروط أو يعرّض العملاء للخطر. ويمكنك إغلاق حسابك في أيّ وقت من الإعدادات.", // note: lawyer must confirm
-  "Business data we collect": "بيانات الشركات التي نجمعها", // note: lawyer must confirm
+    "يجوز لنا تعليق حساب أيّ نشاط تجاري يخالف هذه الشروط أو يعرّض العملاء للخطر. ويمكنك إغلاق حسابك في أيّ وقت من الإعدادات.", // note: lawyer must confirm
+  "Business data we collect": "بيانات الأنشطة التجارية التي نجمعها", // note: lawyer must confirm
   "Your business details, staff and roles, schedules, offerings, promotions and the transactions that run through Centium.":
-    "بيانات شركتك، وموظفوها وأدوارهم، والجداول، والخدمات المعروضة، والعروض الترويجية، والمعاملات التي تتمّ عبر Centium.", // note: lawyer must confirm
-  "Client data shared with a business": "بيانات العملاء التي تُشارَك مع الشركة", // note: lawyer must confirm
+    "بيانات نشاطك التجاري، وموظفوه وأدوارهم، والجداول، والخدمات المعروضة، والعروض الترويجية، والمعاملات التي تتمّ عبر Centium.", // note: lawyer must confirm
+  "Client data shared with a business": "بيانات العملاء التي تُشارَك مع النشاط التجاري", // note: lawyer must confirm
   "A business sees a client's name, bookings and membership status. Clients who haven't shared their profile show as a member number. Health data is never shared unless the client switches it on.":
-    "ترى الشركة اسم العميل وحجوزاته وحالة عضويته. ويظهر العملاء الذين لم يشاركوا ملفهم الشخصي برقم عضوية. ولا تُشارَك البيانات الصحية أبدًا ما لم يفعّل العميل مشاركتها.", // note: lawyer must confirm
-  "Your responsibilities as a business": "مسؤولياتك بوصفك شركة", // note: lawyer must confirm
+    "يرى النشاط التجاري اسم العميل وحجوزاته وحالة عضويته. ويظهر العملاء الذين لم يشاركوا ملفهم الشخصي برقم عضوية. ولا تُشارَك البيانات الصحية أبدًا ما لم يفعّل العميل مشاركتها.", // note: lawyer must confirm
+  "Your responsibilities as a business": "مسؤولياتك بوصفك نشاطًا تجاريًا", // note: lawyer must confirm
   "Use client data only to run your services. Don't export it for unrelated marketing, and keep staff access to the people who need it.":
     "لا تستخدم بيانات العملاء إلّا لتقديم خدماتك. ولا تصدّرها لأغراض تسويقية لا صلة لها بذلك، واقصر وصول الموظفين إليها على من يحتاجون إليه.", // note: lawyer must confirm
-  "Analytics for businesses": "التحليلات للشركات", // note: lawyer must confirm
+  "Analytics for businesses": "التحليلات للأنشطة التجارية", // note: lawyer must confirm
   "Reports show counts and trends across your clients, not the private details of any one person.":
     "تعرض التقارير أعدادًا واتجاهات على مستوى عملائك، لا التفاصيل الخاصة بأيّ فرد.", // note: lawyer must confirm
   "Payment data": "بيانات الدفع", // note: lawyer must confirm
   "Whish handles payments. We keep the amount, method and status of each payment, never full card or account numbers.":
     "تتولّى Whish معالجة المدفوعات. ونحتفظ بمبلغ كلّ دفعة وطريقتها وحالتها، ولا نحتفظ أبدًا بأرقام البطاقات أو الحسابات كاملة.", // note: lawyer must confirm
-  "Closing a business account": "إغلاق حساب الشركة", // note: lawyer must confirm
+  "Closing a business account": "إغلاق حساب النشاط التجاري", // note: lawyer must confirm
   "When a business account is closed, its listing and team access end at once. Business records are removed within the deletion period, except what the law requires us to keep.":
-    "عند إغلاق حساب الشركة، تنتهي صفحتها ووصول فريقها فورًا. وتُزال سجلات الشركة خلال فترة الحذف، باستثناء ما يُلزمنا القانون بالاحتفاظ به.", // note: lawyer must confirm
+    "عند إغلاق حساب النشاط التجاري، تنتهي صفحته ووصول فريقه فورًا. وتُزال سجلات النشاط التجاري خلال فترة الحذف، باستثناء ما يُلزمنا القانون بالاحتفاظ به.", // note: lawyer must confirm
 
   // == Business More › Close your business ==
   "Nothing is deleted. Members keep their records, receipts, bookings and reviews.": "لا يُحذف شيء. يحتفظ الأعضاء بسجلاتهم وإيصالاتهم وحجوزاتهم وتقييماتهم.",
@@ -526,7 +526,7 @@ const shared: Catalogue = {
   "STEP 2 OF 2": "الخطوة 2 من 2",
   "Enter the six-digit code your app shows.": "أدخل الرمز المكوّن من ستة أرقام الذي يعرضه تطبيقك.",
   "Each code works once if you lose your phone. Keep them somewhere safe.": "يعمل كل رمز مرة واحدة إن فقدت هاتفك. احتفظ بها في مكان آمن.",
-  "Two-factor is on": "المصادقة الثنائية مفعّلة",
+  "Two-factor is on": "التحقق بخطوتين مفعّل",
   "{left} of {n} codes left. Codes are only shown once, when they're made; generate new ones if you've lost them.": {
     zero: "تبقّى {left} من أصل {n} رمز. لا تظهر الرموز إلا مرة واحدة عند إنشائها؛ أنشئ رموزًا جديدة إن فقدتها.",
     one: "تبقّى {left} من أصل رمز واحد. لا تظهر الرموز إلا مرة واحدة عند إنشائها؛ أنشئ رموزًا جديدة إن فقدتها.",

@@ -165,7 +165,7 @@ const notifications: Catalogue = {
   Hire: "توظيف", // note: same Arabic as Messages (one key, one Arabic)
   "You have a new {rating}-star review": "لديك تقييم جديد ({rating} من 5)", // note: worded as "({rating} of 5)" so one form fits every rating
   "You have a new review": "لديك تقييم جديد",
-  Reviews: "الآراء", // note: same Arabic as the landing page; elsewhere a review is «تقييم» — Karim may prefer «التقييمات» in both
+  Reviews: "التقييمات",
   "{name} shared {category} with you": "شارك {name} {category} معك",
   "{name} shared more with you": "شارك {name} المزيد معك",
   "{name} chose not to share {category}": "اختار {name} عدم مشاركة {category}",

@@ -5,8 +5,7 @@ import type { Catalogue } from "../core";
 // checks every t/tn/tk key in them has Arabic here or in another area file,
 // and that no English is left outside t() in their JSX.
 //
-// Choices for Karim: file sizes keep their Latin units (B, KB, MB), as most
-// Arabic apps show them; "Centium Support" reads «دعم Centium»; the report
+// Choices: file sizes in sentences are written out («5 ميغابايت», Karim A9); "Centium Support" reads «دعم Centium»; the report
 // and block copy addresses the other person in the masculine, the register's
 // default (English "them").
 export const FILES: string[] = [
@@ -525,7 +524,7 @@ const messages: Catalogue = {
   "Couldn't {doing}. Try again.": "تعذّر {doing}. حاول مرة أخرى.",
   "Couldn't create the group. Try again.": "تعذّر إنشاء المجموعة. حاول مرة أخرى.",
   "Group photos need to be a JPEG, PNG or WebP.": "يجب أن تكون صور المجموعات بصيغة JPEG أو PNG أو WebP.",
-  "That image is too large. Pick one under 5 MB.": "هذه الصورة كبيرة جدًا. اختر صورة أصغر من 5 MB.", // note: MB stays in Latin letters, as file sizes do throughout Messages
+  "That image is too large. Pick one under 5 MB.": "هذه الصورة كبيرة جدًا. اختر صورة أصغر من 5 ميغابايت.",
   "That photo couldn't be uploaded. Check your connection and try again.": "تعذّر رفع هذه الصورة. تحقّق من اتصالك وحاول مرة أخرى.",
   "create the group": "إنشاء المجموعة", // note: the {doing} part of "Couldn't {doing}" — verbal nouns
   "join the group": "الانضمام إلى المجموعة",
@@ -610,7 +609,7 @@ const messages: Catalogue = {
   "Message…": "رسالة…",
   "Hold to record a voice note": "اضغط مطولًا لتسجيل رسالة صوتية",
   "Send message": "إرسال الرسالة",
-  "PDF, Word, Excel, PowerPoint, text or CSV, up to 25 MB": "PDF أو Word أو Excel أو PowerPoint أو نص أو CSV، حتى 25 MB",
+  "PDF, Word, Excel, PowerPoint, text or CSV, up to 25 MB": "PDF أو Word أو Excel أو PowerPoint أو نص أو CSV، حتى 25 ميغابايت",
   "Share to the group": "مشاركة مع المجموعة",
   "Share a playlist": "مشاركة قائمة تشغيل",
   "Message info": "معلومات الرسالة",

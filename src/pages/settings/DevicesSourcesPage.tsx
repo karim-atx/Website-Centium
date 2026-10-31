@@ -301,7 +301,7 @@ export default function DevicesSourcesPage() {
                 {t("No device connected")}
               </h2>
               <p className="mt-1.5 text-charcoal-soft" style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8) }}>
-                {t("Apple Health, Health Connect and WHOOP connect in the Centium app on your phone. Until then, what you log here is saved as your own entries.")}
+                {t("Apple Health and Health Connect connect in the Centium app on your phone. Until then, what you log here is saved as your own entries.")}
               </p>
               {/* V6-124: a note until the phone app ships (no store link yet). */}
               <button

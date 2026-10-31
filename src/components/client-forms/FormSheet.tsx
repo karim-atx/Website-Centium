@@ -39,7 +39,7 @@ import {
   type FormItem,
 } from "../../services/client-forms/logic";
 import { CONSENT_REQUIRED_MESSAGE, formPhotoUrls, removeFormPhoto, saveFormResponse, uploadFormPhoto, type ClientFormBundle } from "../../services/client-forms";
-import { consentBox, consentLine, DOCTOR_FOLLOW_UP, GET_SUPPORT, SEE_WARNING_SIGNS, SUPPORT_PROMPT, thanksLine, URGENT_NUMBER } from "./copy";
+import { consentBox, consentLine, DOCTOR_FOLLOW_UP, GET_SUPPORT, SEE_WARNING_SIGNS, SUPPORT_PROMPT, thanksLine, urgentNumbers } from "./copy";
 import { clearLocalDraft, readLocalDraft, writeLocalDraft } from "../../services/client-forms/localDraft";
 import { ProfileProposals } from "./ProfileProposals";
 import { appLocale } from "../../i18n/format";
@@ -476,14 +476,20 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
   );
 
   // What the client is shown the moment an answer matches (client_prompt).
+  const place = supportPlace(null, timezone ?? browserTimezone());
+  const urgent = urgentNumbers(place);
   const promptBlock = (p: ClientPrompt) =>
     p.kind === "urgent" ? (
       <div role="alert" data-client-prompt="urgent" style={{ marginTop: 10, borderRadius: 12, background: INK.hiBg, padding: "10px 12px 0" }}>
         <p style={{ fontSize: textPx(12.5), fontWeight: 700, lineHeight: 1.45, color: INK.hi, overflowWrap: "anywhere" }}>{p.message}</p>
-        <a href={`tel:${URGENT_NUMBER}`} className="tap inline-flex items-center" style={{ gap: 6, minHeight: 44, fontSize: textPx(13), fontWeight: 800, color: INK.hi }}>
-          <Phone size={14} strokeWidth={2} aria-hidden />
-          {`Call ${URGENT_NUMBER}`}
-        </a>
+        <div className="flex flex-wrap" style={{ columnGap: 16, paddingBottom: urgent.length ? 0 : 10 }}>
+          {urgent.map((n) => (
+            <a key={n} href={`tel:${n}`} className="tap inline-flex items-center" style={{ gap: 6, minHeight: 44, fontSize: textPx(13), fontWeight: 800, color: INK.hi }}>
+              <Phone size={14} strokeWidth={2} aria-hidden />
+              {`Call ${n}`}
+            </a>
+          ))}
+        </div>
       </div>
     ) : (
       <div aria-live="polite" data-client-prompt={p.kind} style={{ marginTop: 10, borderRadius: 12, background: "rgb(var(--c-charcoal) / 0.04)", padding: "10px 12px 0" }}>
@@ -625,7 +631,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
           )}
         </>
       )}
-      <GetSupportPopup open={supportOpen} onClose={() => setSupportOpen(false)} place={supportPlace(null, timezone ?? browserTimezone())} />
+      <GetSupportPopup open={supportOpen} onClose={() => setSupportOpen(false)} place={place} />
     </BottomSheet>
   );
 };

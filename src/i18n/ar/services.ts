@@ -129,18 +129,18 @@ const services: Catalogue = {
 
   // == Business set-up › Photos, verification and policies (services/business-onboarding, forum/photo, courses/pdf) ==
   "Couldn't load your business.": "تعذّر تحميل نشاطك التجاري.",
-  "This logo is too large. Choose one under 2 MB.": "هذا الشعار كبير جدًا. اختر شعارًا أصغر من 2 MB.",
-  "This photo is too large. Choose one under 5 MB.": "هذه الصورة كبيرة جدًا. اختر صورة أصغر من 5 MB.",
+  "This logo is too large. Choose one under 2 MB.": "هذا الشعار كبير جدًا. اختر شعارًا أصغر من 2 ميغابايت.",
+  "This photo is too large. Choose one under 5 MB.": "هذه الصورة كبيرة جدًا. اختر صورة أصغر من 5 ميغابايت.",
   "This photo is blurry. Retake it in good light so all 4 corners show.": "هذه الصورة غير واضحة. التقطها مجددًا في إضاءة جيدة بحيث تظهر زواياها الأربع.",
   "Choose a photo or a PDF.": "اختر صورة أو ملف PDF.",
-  "This file is over 10 MB. Choose a smaller one.": "حجم هذا الملف أكبر من 10 MB. اختر ملفًا أصغر.",
+  "This file is over 10 MB. Choose a smaller one.": "حجم هذا الملف أكبر من 10 ميغابايت. اختر ملفًا أصغر.",
   "Couldn't submit. Check your connection and try again.": "تعذّر الإرسال. تحقّق من اتصالك وحاول مرة أخرى.",
   "This photo couldn't be prepared safely, so it wasn't added. Try a different photo.": "تعذّر تجهيز هذه الصورة بأمان، فلم تُضف. جرّب صورة أخرى.",
   "This photo's format isn't supported here. Choose a JPEG, PNG or WebP photo.": "صيغة هذه الصورة غير مدعومة هنا. اختر صورة JPEG أو PNG أو WebP.",
   "Choose a JPEG, PNG or WebP photo.": "اختر صورة JPEG أو PNG أو WebP.",
   "We couldn't read that PDF. Try exporting it again from your editor.": "تعذّرت قراءة ملف PDF هذا. جرّب تصديره مجددًا من برنامج التحرير.",
   "That file is empty.": "هذا الملف فارغ.",
-  "PDFs can be up to 20 MB.": "يمكن أن يصل حجم ملفات PDF إلى 20 MB.",
+  "PDFs can be up to 20 MB.": "يمكن أن يصل حجم ملفات PDF إلى 20 ميغابايت.",
   "That isn't a PDF. Choose a .pdf file.": "هذا ليس ملف PDF. اختر ملفًا بامتداد .pdf.",
   "We couldn't strip the hidden details from that PDF, so it wasn't uploaded. Try exporting it again from your editor.":
     "تعذّرت إزالة البيانات المخفية من ملف PDF هذا، فلم يُرفع. جرّب تصديره مجددًا من برنامج التحرير.",

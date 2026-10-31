@@ -201,9 +201,9 @@ const plans: Catalogue = {
   "Ask to upgrade to {plan}": "طلب الترقية إلى {plan}",
 
   // == Subscription (professional) › Your business plan ==
-  "Your business plan": "خطة عملك",
+  "Your business plan": "خطة نشاطك التجاري",
   "{plan} + {n} seat blocks": { zero: "{plan} + {n} حزمة مقاعد", one: "{plan} + حزمة مقاعد واحدة", two: "{plan} + حزمتا مقاعد", few: "{plan} + {n} حزم مقاعد", many: "{plan} + {n} حزمة مقاعد", other: "{plan} + {n} حزمة مقاعد" },
-  "How your business plan is billed": "طريقة فوترة خطة عملك",
+  "How your business plan is billed": "طريقة فوترة خطة نشاطك التجاري",
 
   // == Business › More › Payment methods, Payouts, Invoices, Taxes ==
   "Payment methods": "طرق الدفع",

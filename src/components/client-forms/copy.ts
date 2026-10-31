@@ -5,6 +5,8 @@
 // components/health-checks/CheckInSheet.tsx). logic.test.ts checks they still
 // match that file.
 
+import type { SupportPlace } from "../../services/moderation/support";
+
 export const DOCTOR_FOLLOW_UP = "It may help to talk to a doctor about how you've been feeling.";
 export const SEE_WARNING_SIGNS = "See warning signs";
 
@@ -34,8 +36,12 @@ export const consentBox = (pro: string) => `Share these answers with ${pro === "
  */
 export const SUPPORT_PROMPT = "If things are hard right now, you can talk to someone. Only you see this.";
 export const GET_SUPPORT = "Get support";
-/** Under an urgent prompt: the number its message names. */
-export const URGENT_NUMBER = "112";
+/**
+ * Under an urgent prompt: the numbers its message names (Round F, Karim A13
+ * and the Database's C5): in Lebanon the Red Cross on 140, or 112; elsewhere
+ * the message says "call your local emergency number" and no number is offered.
+ */
+export const urgentNumbers = (place: SupportPlace): string[] => (place === "lebanon" ? ["140", "112"] : []);
 
 /** FINAL_PLAN 3 §6.2: no service promise. */
 export const thanksLine = (pro: string) => `Thanks. ${pro} will review it.`;

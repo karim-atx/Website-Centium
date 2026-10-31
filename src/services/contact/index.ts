@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { getLanguage } from "../../i18n/core";
 
 // The marketing site's contact form, which is the only thing in this app that
 // writes on behalf of somebody with no account.
@@ -57,7 +58,8 @@ export async function submitContact(submission: ContactSubmission): Promise<Cont
   try {
     const { data, error } = await supabase.functions.invoke<FnError & { ok?: boolean }>(
       "submit-contact",
-      { body: submission }
+      // Database Round F1: the acknowledgement email follows the site's language.
+      { body: { ...submission, language: getLanguage() } }
     );
 
     if (error) {
