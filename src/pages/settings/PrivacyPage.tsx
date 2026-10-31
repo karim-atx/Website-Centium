@@ -115,6 +115,7 @@ export default function PrivacyPage() {
         <LegalIntro className="mt-2">{legalCopyFor().PRIVACY_INTRO}</LegalIntro>
         <LegalSections doc="privacy" sections={PRIVACY_SECTIONS} className="mt-6" />
         {user.accountType === "business" && <BusinessLegalSections doc="privacy" />}
+        <p className="mt-6 text-[12px] leading-[18px] text-charcoal-faint">{legalCopyFor().LEGAL_LANGUAGE}</p>
       </div>
 
       <LegalFullLink href="/legal#privacy">{t("Read the full Privacy Policy")}</LegalFullLink>

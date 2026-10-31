@@ -35,7 +35,10 @@ import {
   ShieldCheck,
   KeyRound,
   Music2,
+  CreditCard,
+  ScrollText,
 } from "lucide-react";
+import { REFUND_POLICY_PATH, BILLING_HELP_PATH } from "../../marketing/legal/refund";
 import { DEVICE_PLACEHOLDER_ICON } from "../../components/settings/DevicePlaceholders";
 import { useIsDark } from "../../hooks/useIsDark";
 import DevicesSourcesPage from "./DevicesSourcesPage";
@@ -348,15 +351,23 @@ function SettingsHub() {
         {/* Round E: the music app and the Workout, Mind, Sleep and Cooking favourites. */}
         <SettingsRow icon={Music2} title={t("Your music")} onClick={() => navigate("/app/settings/music")} />
         <SettingsRow icon={Accessibility} title={t("Accessibility")} onClick={() => navigate("/app/settings/accessibility")} />
-        <SettingsRow icon={Lock} title={t("Privacy")} onClick={() => navigate("/app/settings/privacy")} />
-        {/* V9 (QA 9.0): for every account type; Settings is the one shared page. */}
-        <SettingsRow icon={FileText} title={t("Terms of Service")} onClick={() => navigate("/app/settings/terms")} />
-        {/* Round C Release 2 (PLAN S3): the support popup, and the guidelines every moderation message links to. */}
+        {/* Round C Release 2 (PLAN S3): the support popup. */}
         <SettingsRow icon={HeartHandshake} title={t("Get support now")} onClick={() => navigate("/app/get-support")} />
-        <SettingsRow icon={Users} title={t("Community guidelines")} onClick={() => navigate("/legal/community-guidelines")} />
+        {/* Round F (DN, F5): Billing and refunds, the help article for clients and professionals. */}
+        <SettingsRow icon={CreditCard} title={t("Billing and refunds")} onClick={() => navigate(BILLING_HELP_PATH)} />
         <SettingsRow icon={HelpCircle} title={t("Contact us")} onClick={() => setContactOpen(true)} />
         <SettingsRow icon={Bug} title={t("Report a bug")} onClick={() => setReportBugOpen(true)} />
         <SettingsRow icon={Star} title={t("Rate this app")} onClick={() => setRateAppOpen(true)} />
+      </SettingsSection>
+
+      {/* Round F (DN): the legal documents together. V9 (QA 9.0): for every
+          account type; Settings is the one shared page. The guidelines are the
+          ones every moderation message links to (Round C Release 2). */}
+      <SettingsSection label={t("Legal")}>
+        <SettingsRow icon={FileText} title={t("Terms of Service")} onClick={() => navigate("/app/settings/terms")} />
+        <SettingsRow icon={Lock} title={t("Privacy")} onClick={() => navigate("/app/settings/privacy")} />
+        <SettingsRow icon={ScrollText} title={t("Refund and cancellation policy")} onClick={() => navigate(REFUND_POLICY_PATH)} />
+        <SettingsRow icon={Users} title={t("Community guidelines")} onClick={() => navigate("/legal/community-guidelines")} />
       </SettingsSection>
 
       {/* MO1.8 #79: red, centred at the foot, one line, 12.5 / 18.8 600,

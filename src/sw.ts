@@ -10,7 +10,8 @@ declare const __ICON_VERSION__: string;
  * the app shell, so the app opens with no connection.
  *
  * WHAT IS CACHED, AND WHAT NEVER IS. Only the build's own static files: the
- * page (index.html), the scripts and styles, and the barcode / pass wasm
+ * page (index.html), the scripts and styles (except the map and the lab
+ * report reader, fetched only when used), and the barcode / pass wasm
  * (vite.config.ts lists them). They are precached at install under a cache
  * named after their revisions, and an old cache is deleted when a new
  * worker takes over. NO DATA IS EVER CACHED HERE: requests to Supabase, the

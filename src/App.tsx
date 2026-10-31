@@ -11,6 +11,7 @@ import { Home as MarketingHome } from "./marketing/pages/Home";
 import { Contact as MarketingContact } from "./marketing/pages/Contact";
 import { Legal as MarketingLegal } from "./marketing/pages/Legal";
 import { CommunityGuidelines } from "./marketing/pages/CommunityGuidelines";
+import { RefundPolicy } from "./marketing/pages/RefundPolicy";
 import { GetSupportPage } from "./pages/settings/GetSupportPage";
 import { NotFound as MarketingNotFound } from "./marketing/pages/NotFound";
 import { PublicReturnResume } from "./pages/public/PublicReturnResume";
@@ -32,7 +33,7 @@ const {
   AppointmentRoutes, BusinessVenueTab, BusinessCalendarTab, Profile, MyCv, Subscription,
   More, ClientCalendarTab, Community, CourseBuilderPage, CoursePage, ForumNewPage,
   ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage, Settings, NotificationsPage,
-  HealthCheckRemindersPage, AccessibilityPage, PrivacyPage, TermsPage, LanguagePage, YourMusicPage, TwoFactorPage,
+  HealthCheckRemindersPage, AccessibilityPage, PrivacyPage, TermsPage, LanguagePage, YourMusicPage, BillingHelpPage, TwoFactorPage,
   TwoFactorSetupPage, ResetPassword, PublicCertificate, InviteLanding, PublicProfile, PublicBooking,
   SharedCard, BusinessLinkPage, CarePlan, ConsoleGate, CallLink, LegacyCallLink,
 } = appPages;
@@ -370,6 +371,8 @@ function AppRoutes() {
         <Route path="/legal/terms" element={<Navigate to="/legal#terms" replace />} />
         {/* Round C Release 2: linked from every moderation and image-approval message. */}
         <Route path="/legal/community-guidelines" element={<CommunityGuidelines />} />
+        {/* Round F: the Refund and Cancellation Policy, English and Arabic on one URL. */}
+        <Route path="/legal/refund-policy" element={<RefundPolicy />} />
         {/* v3 landing handoff: branded 404 for anything else under the
             marketing site. Ranked below every explicit path above (and
             below /app/* below, a more specific splat) by React Router's own
@@ -568,6 +571,8 @@ function AppRoutes() {
         <Route path="/app/settings/terms" element={<TermsPage />} />
         <Route path="/app/settings/language" element={<LanguagePage />} />
         <Route path="/app/settings/music" element={<YourMusicPage />} />
+        {/* Round F (DN, F5): Billing and refunds for clients and professionals. */}
+        <Route path="/app/settings/help/billing-and-refunds" element={<BillingHelpPage />} />
         <Route path="/app/settings/two-factor" element={<TwoFactorPage />} />
         <Route path="/app/settings/two-factor/setup" element={<TwoFactorSetupPage />} />
       </Route>

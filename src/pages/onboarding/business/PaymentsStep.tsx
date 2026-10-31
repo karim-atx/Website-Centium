@@ -7,6 +7,7 @@ import { ObSectionLabel, ObTip } from "../shell";
 import { cashLine, money } from "./lanes";
 import type { LaneStepProps } from "./laneTypes";
 import { t } from "../../../i18n/core";
+import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
 
 // OB-232 / 266 / 294: Step 5 · Payments. Cash now (venue_payment_method cash);
 // Whish "Soon" and the payout account "Coming soon" (V6-42: no payouts are
@@ -49,9 +50,13 @@ export const PaymentsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
         title={t("Business plan")}
         sub={lane === "store" ? t("Add seats when your staff join") /* OURS (COPY: Store seats only once staff are added) */ : t("Includes 5 seats for your team")}
         price={price}
-        note={plan.error ? t("Couldn't load the plan price. It's shown again before you're charged.") /* OURS */ : t("A month · not charged until you're approved")}
+        note={plan.error ? t("Couldn't load the plan price. It's shown again before you're charged.") /* OURS */ : t("Plans and payment details are shown before you subscribe.") /* Round F (Karim) */}
       />
       <ObTip icon={Mail} margin="4px 0 0">{t("You'll get an email and a message when online payments open.")}</ObTip>
+      {/* Round F (DN): every place a plan is offered links the policy. */}
+      <p style={{ margin: "10px 0 0", fontSize: 12, lineHeight: "17px", color: "var(--ob-desc)", textAlign: "center" }}>
+        <RefundPolicyLink />
+      </p>
     </BizFrame>
   );
 };

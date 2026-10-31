@@ -41,10 +41,10 @@ test("each Arabic heading is the website's Arabic heading for the same section",
 test("legalCopyFor and legalDate follow the language; English is unchanged", () => {
   setActiveLanguage("en");
   assert.equal(EN.legalCopyFor().TERMS_SECTIONS, EN.TERMS_SECTIONS);
-  assert.equal(EN.legalDate(EN.LEGAL_UPDATED), "September 6, 2026");
+  assert.equal(EN.legalDate(EN.LEGAL_UPDATED), "October 31, 2026");
   setActiveLanguage("ar");
   assert.equal(EN.legalCopyFor().TERMS_SECTIONS, AR.TERMS_SECTIONS);
   const d = EN.legalDate(EN.LEGAL_UPDATED);
-  assert.ok(arabic(d) && d.includes("6") && d.includes("2026"), d);
+  assert.ok(arabic(d) && d.includes("31") && d.includes("2026"), d);
   setActiveLanguage("en");
 });

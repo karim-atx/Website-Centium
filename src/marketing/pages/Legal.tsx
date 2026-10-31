@@ -4,7 +4,7 @@ import { useSEO } from "../useSEO";
 import { LEGAL_VERSION } from "../../services/legal/acceptances";
 import * as EN from "../legal/text";
 import type * as ArabicText from "../legal/text.ar";
-import { documentFor, t } from "../../i18n/core";
+import { documentFor, t, tk } from "../../i18n/core";
 import { legalDate } from "../../pages/settings/legalCopy";
 import { LEGAL_IDS, legalAnchorFor, legalDateFor, legalDocsFor, legalTocFor } from "../legal/anchors";
 import { PageMark } from "../landing/sections/ChapterMark";
@@ -15,6 +15,7 @@ import { landingState } from "../landing/state";
 import { useViewportWidth } from "../landing/viewport";
 import { LG, SM } from "../landing/engine/env";
 import { WASH_BG, WEDGE_312, WEDGE_48 } from "../landing/wash";
+import { REFUND_POLICY_PATH } from "../legal/refund";
 
 // Centium landing v29: the Legal page (LG1 v17, handover 02_pages/20-LG1),
 // the prototype markup with its exact inline styles: ONE LONG PAGE (lead
@@ -59,6 +60,23 @@ function legalVals(vw: number) {
 
 const LEGAL_UPDATED = legalDateFor(LEGAL_VERSION);
 
+/** Round F (DN, F3): the Terms' link sentence names the policy; that name links to its page. */
+const POLICY_NAME = tk("Refund and Cancellation Policy");
+function withPolicyLink(text: string, pageLink: ReturnType<typeof usePageLink>): React.ReactNode {
+  const name = t(POLICY_NAME);
+  const at = text.indexOf(name);
+  if (at < 0) return text;
+  return (
+    <>
+      {text.slice(0, at)}
+      <a href={REFUND_POLICY_PATH} onClick={pageLink(REFUND_POLICY_PATH)} style={{ color: "#5B45C2", textDecoration: "underline", textUnderlineOffset: "3px" }}>
+        {name}
+      </a>
+      {text.slice(at + name.length)}
+    </>
+  );
+}
+
 export const Legal: React.FC = () => {
   useSEO(t("Legal"), t("Centium's Terms of Service, Privacy Policy, and Health & Medical Disclaimer."));
   usePageMotion();
@@ -69,7 +87,7 @@ export const Legal: React.FC = () => {
   // Round F (AV): the words in the active language; the ids stay the English ones.
   const docs = legalDocsFor();
   const toc = legalTocFor(docs);
-  const { ASK, GOVERNING } = documentFor<typeof ArabicText>("legal.text") ?? EN;
+  const { ASK, GOVERNING, LANGUAGE } = documentFor<typeof ArabicText>("legal.text") ?? EN;
 
   // The shim: an old-shape hash becomes the id it meant (the layout's
   // scroll-on-navigate then lands on it). An effect, not a layout effect:
@@ -193,6 +211,15 @@ export const Legal: React.FC = () => {
                   {lt.t}
                 </a>
               ))}
+              {/* Round F (DN): the Refund and Cancellation Policy is its own page, part of the Terms. */}
+              <a
+                href={REFUND_POLICY_PATH}
+                onClick={pageLink(REFUND_POLICY_PATH)}
+                className="cl-hc"
+                style={{ padding: "9px 0 4px", fontSize: "13.5px", fontWeight: 800, color: "#221E1A", lineHeight: "1.35", "--hc": "#6A54C4" } as React.CSSProperties}
+              >
+                {t(POLICY_NAME)}
+              </a>
             </div>
           </details>
         </nav>
@@ -214,7 +241,7 @@ export const Legal: React.FC = () => {
                   {lg.items.map((it) => (
                     <div key={it} style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
                       <span style={{ width: "6px", height: "6px", marginTop: "10px", flexShrink: "0", borderRadius: "99px", background: ld.c }} />
-                      <p style={{ fontSize: "15.5px", lineHeight: "1.7", color: "#3B352D" }}>{it}</p>
+                      <p style={{ fontSize: "15.5px", lineHeight: "1.7", color: "#3B352D" }}>{withPolicyLink(it, pageLink)}</p>
                     </div>
                   ))}
                 </section>
@@ -244,6 +271,8 @@ export const Legal: React.FC = () => {
             </div>
           </div>
           <p style={{ marginTop: "20px", fontSize: "12.5px", lineHeight: "1.6", color: "#5B5349" }}>{GOVERNING}</p>
+          {/* Round F (A11): unspecified in the handoff; the governing line's style. */}
+          <p style={{ marginTop: "8px", fontSize: "12.5px", lineHeight: "1.6", color: "#5B5349" }}>{LANGUAGE}</p>
         </div>
       </div>
     </section>

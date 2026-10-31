@@ -591,12 +591,17 @@ export const ObTerms: React.FC<{
         {on && <Check size={13} strokeWidth={3} />}
       </span>
       <span className="ob-terms-t">
-        {t("I accept the {terms} and {privacy}")
-          .split(/(\{terms\}|\{privacy\})/)
+        {/* Round F (DN, F3): the Refund and Cancellation Policy is part of the Terms. */}
+        {t("I accept the {terms} (including the {refund}) and {privacy}")
+          .split(/(\{terms\}|\{refund\}|\{privacy\})/)
           .map((piece, i) =>
             piece === "{terms}" ? (
               <a key={i} href="/legal#terms" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
                 {t(doc)}
+              </a>
+            ) : piece === "{refund}" ? (
+              <a key={i} href="/legal/refund-policy" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                {t("Refund and cancellation policy")}
               </a>
             ) : piece === "{privacy}" ? (
               <a key={i} href="/legal#privacy" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>

@@ -10,6 +10,7 @@ import { useHiringBusiness } from "./useHiringBusiness";
 import { HiringEmpty, NotForThisBusiness, PaleNote, RECEIPT_ICON } from "./teamParts";
 import { feeRoleLine } from "./teamModel";
 import { t } from "../../../i18n/core";
+import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
 
 // Market + Share 3.0 · W4-B · B-MA.8.5 Hiring fees (Business Hiring Screens
 // lines 187–208, `FEE()` / fees / feesEmpty; frame-check B-MA.8.5, 2 states).
@@ -54,7 +55,7 @@ export default function FeesPage() {
   }, [businessId, tick]);
   const retry = useCallback(() => setTick((t) => t + 1), []);
 
-  const note = <PaleNote>{t("One-time fees, charged when a hire is confirmed and added to your Centium bill. Nothing recurring. Pay for the work itself is between you and the professional.")}</PaleNote>;
+  const note = <PaleNote>{t("One-time fees, charged when a hire is confirmed and added to your Centium bill. Nothing recurring. Pay for the work itself is between you and the professional.")} <RefundPolicyLink /></PaleNote>;
 
   let body: React.ReactNode;
   if (biz.loading || (businessId && load.status === "loading")) {

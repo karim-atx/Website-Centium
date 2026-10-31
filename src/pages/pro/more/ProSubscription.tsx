@@ -17,6 +17,7 @@ import { textPx } from "../../../theme/textSize";
 import { ProBusinessBilling } from "./ProBusinessBilling";
 import { Slot } from "../../subscription/PlanRows";
 import { t, tn } from "../../../i18n/core";
+import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
 
 // Release 3 W6 · MO24 v3 Subscription (source/gen r16.js subscription16,
 // tierCard16, tierGlyph16; COPY MO24). The real professional tiers from
@@ -351,6 +352,10 @@ export default function ProSubscription() {
       )}
       <p className="text-center" style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.5 }}>
         {t("Payments in the app are coming soon. Upgrades are confirmed by email.")}
+      </p>
+      {/* Round F (DN): every place a plan is offered links the policy. */}
+      <p className="text-center" style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.5, marginTop: 4 }}>
+        <RefundPolicyLink />
       </p>
       {target && <PinnedCta primary={{ label: t("Ask to upgrade to {plan}", { plan: target.name }), icon: <Mail size={15} />, onClick: ask }} />}
     </div>

@@ -32,6 +32,7 @@ import {
   Sparkles,
   CalendarRange,
 } from "lucide-react";
+import { RefundPolicyLink } from "../../components/legal/RefundPolicyLink";
 
 // The subscription screen, for client and business accounts (professionals:
 // pages/pro/more/ProSubscription, MO24 v3).
@@ -102,6 +103,10 @@ const UpgradeFooter: React.FC<{ show?: boolean }> = ({ show = true }) => (
       </a>
     )}
     <p className="text-[11px] text-charcoal-faint text-center mt-4">{t(NO_PAYMENTS_NOTE)}</p>
+    {/* Round F (DN): every place a plan is offered links the policy. */}
+    <p className="text-[11px] text-charcoal-faint text-center mt-1.5">
+      <RefundPolicyLink />
+    </p>
   </>
 );
 

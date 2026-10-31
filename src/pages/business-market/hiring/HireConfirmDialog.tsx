@@ -7,6 +7,7 @@ import { feeCalcLine, feeMoney, quoteFee, type HiringFeeQuote, type OpeningType,
 import { useFeeRules } from "./hiringParts";
 import { feeNote, offerBody, offerPayText, offerTitle, startsText } from "./hubModel";
 import { t } from "../../../i18n/core";
+import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
 
 // Market + Share 3.0 · W4 · B-MA.8.3 Offer and hire (`hireConfirm`,
 // `hireConfirmMin`) and B-MA.8.6's "Send this offer?" (`dConfirm`): the W3
@@ -132,7 +133,9 @@ export default function HireConfirmDialog({
       </div>
       {q ? (
         <div style={{ marginTop: 8, fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>
-          {feeNote({ type: offer.type, minimum: q.minimum, minimumApplied: q.minimumApplied, onTeam: offer.onTeam, name: offer.name, direct })}
+          {feeNote({ type: offer.type, minimum: q.minimum, minimumApplied: q.minimumApplied, onTeam: offer.onTeam, name: offer.name, direct })}{" "}
+          {/* Round F (DN): every place a plan or charge is offered links the policy. */}
+          <RefundPolicyLink />
         </div>
       ) : null}
       {shownNote ? (

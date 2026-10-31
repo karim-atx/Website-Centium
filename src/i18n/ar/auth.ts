@@ -67,7 +67,8 @@ const auth: Catalogue = {
   // == Onboarding › Shared blocks ==
   "Goal areas": "مجالات الأهداف",
   "{label} unit": "وحدة {label}",
-  "I accept the {terms} and {privacy}": "أوافق على {terms} و{privacy}", // note: first person on purpose: the person ticks this box as their own statement. {terms} is "Terms of Service" (or "Business Terms"), {privacy} "Privacy Policy", both links.
+  "I accept the {terms} (including the {refund}) and {privacy}": "أوافق على {terms} (بما فيها {refund}) و{privacy}", // note: first person on purpose: the person ticks this box as their own statement. {terms} is "Terms of Service" (or "Business Terms"), {refund} "Refund and cancellation policy", {privacy} "Privacy Policy", all three links.
+  "Plans and payment details are shown before you subscribe.": "تُعرض الخطط وتفاصيل الدفع قبل أن تشترك.",
   ", and confirm these details are true.": "، وأؤكد صحة هذه البيانات.",
   "Privacy Policy": "سياسة الخصوصية",
   "Password strength": "قوة كلمة المرور",

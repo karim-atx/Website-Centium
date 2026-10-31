@@ -33,6 +33,7 @@ import { UPGRADE_ACTION_LABEL, UPGRADE_EMAIL, upgradeMailto } from "../../servic
 import { savingLabel } from "../../services/subscription-tiers/pricing";
 import { formatShortDate } from "../../utils/date";
 import { t, tn } from "../../i18n/core";
+import { RefundPolicyLink } from "../../components/legal/RefundPolicyLink";
 
 // OURS-MO1B-payment-methods, -payouts, -invoices, -taxes, -subscription
 // (BizMoreV8 screen="payments" / "payouts" / "invoices" / "taxes" /
@@ -355,7 +356,9 @@ export function SubscriptionPage() {
                 <BizRow icon={Repeat} title={t("Change plan")} desc={t("We'll help you switch")} onClick={() => (window.location.href = upgradeMailto())} />
                 <BizRow icon={XCircle} title={t("Cancel plan")} danger onClick={() => setCancelAsk(true)} />
               </BizSection>
-              <BizNote>{t("Plans are changed by the Centium team for now. Each request opens an email to {email}.", { email: UPGRADE_EMAIL })}</BizNote>
+              <BizNote>
+                {t("Plans are changed by the Centium team for now. Each request opens an email to {email}.", { email: UPGRADE_EMAIL })} <RefundPolicyLink />
+              </BizNote>
             </>
           )}
         </>
