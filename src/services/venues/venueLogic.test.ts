@@ -88,10 +88,10 @@ test("late cancellation is inside the window", () => {
   assert.equal(cancellationLine(1), "Free cancellation up to 1 hour before.");
 });
 
-test("stage4Message words the ATX codes and passes ATX02 through", () => {
+test("stage4Message words the ATX codes and ATX02 by its delay", () => {
   assert.equal(stage4Message("ATX83", "x", "f"), "You already have an active membership here.");
   assert.equal(stage4Message("ATXC4", "that plan is not currently on sale", "f"), "This plan isn't on sale right now.");
-  assert.equal(stage4Message("ATX02", "Try again in 5 minutes.", "f"), "Try again in 5 minutes.");
+  assert.equal(stage4Message("ATX02", "Too many review_gym attempts. Please try again in 5 minute(s).", "f"), "Too many tries. Try again in 5 minutes.");
   assert.equal(stage4Message("XX000", "x", "fallback"), "fallback");
 });
 

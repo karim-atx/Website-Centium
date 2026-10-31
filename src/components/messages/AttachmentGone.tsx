@@ -1,5 +1,6 @@
 import React from "react";
 import { Lock } from "lucide-react";
+import { t } from "../../i18n/core";
 
 /**
  * In place of a photo, voice note or file the viewer may no longer open.
@@ -19,7 +20,7 @@ export const AttachmentGone: React.FC<{ kind: "photo" | "voice" | "file"; classN
   >
     <Lock size={14} className="shrink-0" aria-hidden />
     <span>
-      {kind === "photo" ? "Photo" : kind === "voice" ? "Voice note" : "File"} · No longer available
+      {t("{kind} · No longer available", { kind: kind === "photo" ? t("Photo") : kind === "voice" ? t("Voice note") : t("File") })}
     </span>
   </span>
 );

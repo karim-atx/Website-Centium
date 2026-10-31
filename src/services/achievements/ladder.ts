@@ -17,6 +17,7 @@
 
 import type { Database } from "../../../lib/supabase/database.types";
 import type { PointsExtras } from "../points/pointsModel";
+import { appLocale } from "../../i18n/format";
 
 export type AchievementCategory = Database["public"]["Enums"]["achievement_category"];
 export type AchievementLevel = Database["public"]["Enums"]["achievement_level"];
@@ -202,7 +203,7 @@ function clamp01(n: number): number {
 export function nextRungLabel(badge: Badge): string | null {
   if (!badge.next || badge.remaining === null) return null;
   const name = badge.next.level ? LEVEL_LABEL[badge.next.level] : badge.next.title;
-  return `${badge.remaining.toLocaleString()} more to reach ${name}`;
+  return `${badge.remaining.toLocaleString(appLocale())} more to reach ${name}`;
 }
 
 /** Only the categories that actually have badges, in the catalogue's order. */

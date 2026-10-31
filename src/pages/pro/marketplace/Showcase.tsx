@@ -408,7 +408,7 @@ function ServiceCardRow({ card, editing, canEdit, onEdit, onHide, onDelete }: { 
           aria-expanded={menu}
           onClick={(e) => setAnchor(e.currentTarget)}
           className="hit market-focus"
-          style={{ width: 32, height: 32, margin: "-6px -8px -6px 0", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", color: c.ink2, background: "transparent", border: 0, padding: 0, cursor: "pointer", opacity: op, flexShrink: 0 }}
+          style={{ width: 32, height: 32, marginBlock: "-6px", marginInline: "0 -8px", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", color: c.ink2, background: "transparent", border: 0, padding: 0, cursor: "pointer", opacity: op, flexShrink: 0 }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden style={{ transform: "none" }}>
             <circle cx="12" cy="5" r="1" />

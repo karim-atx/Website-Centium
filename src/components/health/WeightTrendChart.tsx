@@ -1,6 +1,8 @@
 import React, { useId } from "react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { appLocale } from "../../i18n/format";
+import { isRtl } from "../../i18n/core";
 
 // Mobile v5.1 R3, dark mode (no light islands): the chart grid and axis text
 // as [light, dark], the dark values the v5.1 chart rules (grid
@@ -20,7 +22,7 @@ interface Point {
 }
 
 const shortDate = (iso: string) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  new Date(`${iso}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 
 export const WeightTrendChart: React.FC<{
   history: { date: string; value: number }[];
@@ -55,7 +57,11 @@ export const WeightTrendChart: React.FC<{
   const max = Math.max(...values);
   const range = max - min || 1;
 
-  const x = (i: number) => padding.left + (i / (points.length - 1)) * plotW;
+  // Round F (F10): in right to left, time runs from right to left. Every x is
+  // mirrored; SVG text anchors are logical, so the labels follow.
+  const rtl = isRtl();
+  const mx = (v: number) => (rtl ? width - v : v);
+  const x = (i: number) => mx(padding.left + (i / (points.length - 1)) * plotW);
   const y = (v: number) => padding.top + plotH - ((v - min) / range) * plotH;
 
   const actualPoints = points.filter((p) => !p.projected);
@@ -79,12 +85,12 @@ export const WeightTrendChart: React.FC<{
       {/* y-axis ticks */}
       {[min, (min + max) / 2, max].map((v, i) => (
         <g key={i}>
-          <text x={0} y={y(v) + 3} style={{ fontSize: textPx(9) }} fill={axis}>
+          <text x={mx(0)} y={y(v) + 3} style={{ fontSize: textPx(9) }} fill={axis}>
             {v.toFixed(0)}kg
           </text>
           <line
-            x1={padding.left}
-            x2={width - padding.right}
+            x1={mx(padding.left)}
+            x2={mx(width - padding.right)}
             y1={y(v)}
             y2={y(v)}
             stroke={grid}

@@ -9,6 +9,10 @@
 import React from "react";
 import type { Slide } from "./data";
 import type { SectionVals } from "../sectionVals";
+import { t } from "../../../../i18n/core";
+
+/** t() for an optional data field: a missing one stays missing (renders nothing), as before. */
+const tOpt = (s: string | undefined) => (s === undefined ? s : t(s));
 
 export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }) => (
   <div style={{ borderRadius: "18px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.12)", overflow: "hidden", flexDirection: "column", minHeight: "0", contain: "paint", display: r.mhFlex }}>
@@ -16,17 +20,17 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
       <span style={{ width: "7px", height: "7px", borderRadius: "9px", background: "#E4DCF8" }} />
       <span style={{ width: "7px", height: "7px", borderRadius: "9px", background: "#DDE8E5" }} />
       <span style={{ width: "7px", height: "7px", borderRadius: "9px", background: "#E7E3DC" }} />
-      <span style={{ marginLeft: "8px", fontSize: r.eF11, fontWeight: "700", color: "#756D63" }}>
+      <span style={{ marginInlineStart: "8px", fontSize: r.eF11, fontWeight: "700", color: "#756D63" }}>
         {sl.url}
       </span>
     </div>
     <div style={{ flex: "1", padding: "14px", display: "flex", flexDirection: "column", gap: "8px", minHeight: "0", overflow: "hidden" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
         <span style={{ fontSize: "15px", fontWeight: "800" }}>
-          {sl.head}
+          {tOpt(sl.head)}
         </span>
         <span style={{ fontSize: r.eF115, fontWeight: "700", color: sl.c, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "45%", flexShrink: "1" }}>
-          {sl.sub}
+          {tOpt(sl.sub)}
         </span>
       </div>
       {sl.isRows ? (
@@ -43,7 +47,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                 ) : null}
                 <div style={{ flex: "1", minWidth: "0" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: "800", whiteSpace: "nowrap", overflow: "hidden" }}>
-                    {rw.a}
+                    {tOpt(rw.a)}
                     {rw.ver ? (
                       <>
                         <span style={{ width: "13px", height: "13px", borderRadius: "99px", background: "#5D9C93", color: "#fff", fontSize: r.eF8, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -53,7 +57,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                     ) : null}
                   </div>
                   <div style={{ fontSize: r.eF11, color: "#756D63", fontWeight: "600", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {rw.m}
+                    {tOpt(rw.m)}
                   </div>
                   {rw.bar ? (
                     <>
@@ -74,7 +78,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                   </>
                 ) : null}
                 <span style={{ flexShrink: "0", padding: "3px 9px", borderRadius: "99px", fontSize: r.eF11, fontWeight: "800", background: rw.sb, color: rw.sc }}>
-                  {rw.s}
+                  {tOpt(rw.s)}
                 </span>
               </div>
             ))}
@@ -87,16 +91,16 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
             <span />
             {sl.days!.map((d, dI) => (
               <span key={dI} style={{ textAlign: "center", fontSize: r.eF105, fontWeight: "700", color: "#756D63" }}>
-                {d}
+                {t(d)}
               </span>
             ))}
             {sl.cells!.map((ce, ceI) => (
-              <span key={ceI} style={{ position: "relative", minHeight: "26px", borderRadius: "7px", background: ce.bg, fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF95, color: "#756D63", display: "flex", alignItems: "center", paddingLeft: "2px" }}>
-                {ce.t}
+              <span key={ceI} style={{ position: "relative", minHeight: "26px", borderRadius: "7px", background: ce.bg, fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF95, color: "#756D63", display: "flex", alignItems: "center", paddingInlineStart: "2px" }}>
+                {tOpt(ce.t)}
                 {ce.on ? (
                   <>
                     <span data-w={ce.w} data-stamp="" style={{ position: "absolute", inset: "0", borderRadius: "7px", background: ce.c, color: ce.ink, fontFamily: "Manrope,sans-serif", fontSize: r.eF10, fontWeight: "800", display: "flex", alignItems: "center", padding: "0 6px", opacity: "0", whiteSpace: "nowrap", overflow: "hidden" }}>
-                      {ce.n}
+                      {tOpt(ce.n)}
                     </span>
                   </>
                 ) : null}
@@ -115,7 +119,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                     {ib.i}
                   </span>
                   <span style={{ flex: "1", minWidth: "0", fontSize: r.eF115, fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {ib.n}
+                    {tOpt(ib.n)}
                   </span>
                   {ib.dot ? (
                     <>
@@ -128,15 +132,15 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
             <div style={{ display: "flex", flexDirection: "column", gap: "6px", justifyContent: "flex-end", padding: "8px", borderRadius: "12px", background: "#FAF9FE" }}>
               {sl.msgs!.map((mg, mgI) => (
                 <div key={mgI} data-w={mg.w} data-op="" style={{ alignSelf: mg.side, maxWidth: "86%", padding: "7px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: "600", background: mg.bg, color: mg.ink, opacity: "0" }}>
-                  {mg.t}
+                  {tOpt(mg.t)}
                 </div>
               ))}
               <div data-w="0.75 0.95" data-op="" style={{ display: "flex", justifyContent: "space-between", padding: "8px 10px", borderRadius: "10px", background: "#2F5F58", color: "#fff", fontSize: "12px", fontWeight: "700", opacity: "0" }}>
                 <span>
-                  Video call · Rami Haddad · Thu 18:00
+                  {t("Video call · Rami Haddad · Thu 18:00")}
                 </span>
                 <span>
-                  Join
+                  {t("Join")}
                 </span>
               </div>
             </div>
@@ -148,47 +152,48 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
           <div style={{ flex: "1", minHeight: "0", display: "flex", flexDirection: "column", gap: "8px" }}>
             <div style={{ position: "relative", height: "84px", borderRadius: "12px", background: "repeating-linear-gradient(135deg,#F4F1FB 0 10px,#ECE7F8 10px 20px)" }}>
               <span style={{ position: "absolute", left: "10px", top: "8px", fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF10, color: "#6B5E94" }}>
-                gym cover photo
+                {t("gym cover photo")}
               </span>
               <span style={{ position: "absolute", left: "14px", bottom: "-16px", width: "44px", height: "44px", borderRadius: "12px", background: "#4E3894", color: "#fff", fontSize: "13px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", border: "3px solid #fff" }}>
+                {/* i18n-ignore: initials */}
                 AF
               </span>
               <span data-w="0.25 0.45" data-stamp="" style={{ position: "absolute", right: "10px", top: "10px", padding: "3px 10px", borderRadius: "99px", background: "#2F5F58", color: "#fff", fontSize: r.eF11, fontWeight: "800", opacity: "0" }}>
-                Published
+                {t("Published")}
               </span>
             </div>
-            <div style={{ paddingLeft: "68px", fontSize: "15px", fontWeight: "800" }}>
-              Atlas Fitness
+            <div style={{ paddingInlineStart: "68px", fontSize: "15px", fontWeight: "800" }}>
+              {t("Atlas Fitness")}
               <div style={{ fontSize: r.eF115, fontWeight: "600", color: "#756D63" }}>
-                Achrafieh, Beirut · Gym and studio
+                {t("Achrafieh, Beirut · Gym and studio")}
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "8px", marginTop: "2px" }}>
               {sl.info!.map((inf, infI) => (
                 <div key={infI} data-w={inf.w} data-op="" style={{ padding: "8px 10px", borderRadius: "10px", border: "1px solid #F0EDE8", opacity: "0" }}>
                   <div style={{ fontSize: r.eF95, fontWeight: "800", letterSpacing: ".1em", color: "#756D63" }}>
-                    {inf.k}
+                    {tOpt(inf.k)}
                   </div>
                   <div style={{ fontSize: "12.5px", fontWeight: "800" }}>
-                    {inf.v}
+                    {tOpt(inf.v)}
                   </div>
                 </div>
               ))}
             </div>
             <div style={{ flex: "1", minHeight: "0", display: "flex", flexDirection: "column", gap: "6px" }}>
               <div style={{ fontSize: r.eF95, fontWeight: "800", letterSpacing: ".1em", color: "#756D63" }}>
-                TOMORROW ON THE TIMETABLE
+                {t("TOMORROW ON THE TIMETABLE")}
               </div>
               {sl.next!.map((nx, nxI) => (
                 <div key={nxI} data-w={nx.w} data-op="" style={{ flex: "1 1 0", minHeight: "30px", display: "flex", alignItems: "center", gap: "10px", padding: "0 10px", borderRadius: "10px", border: "1px solid #F0EDE8", opacity: "0" }}>
                   <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF11, color: "#756D63" }}>
-                    {nx.t}
+                    {tOpt(nx.t)}
                   </span>
                   <span style={{ flex: "1", minWidth: "0", fontSize: "12px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {nx.n}
+                    {tOpt(nx.n)}
                   </span>
                   <span style={{ fontSize: r.eF105, fontWeight: "800", color: nx.c }}>
-                    {nx.s}
+                    {tOpt(nx.s)}
                   </span>
                 </div>
               ))}
@@ -201,7 +206,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
           <div style={{ flex: "1", display: "grid", gridTemplateColumns: "150px 1fr", gap: "10px", minHeight: "0" }}>
             <div style={{ position: "relative", borderRadius: "12px", background: "repeating-linear-gradient(135deg,#EEF4F2 0 8px,#E5EEEB 8px 16px)", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "8px" }}>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF95, color: "#516E6A" }}>
-                scan member card
+                {t("scan member card")}
               </span>
               <span data-w="0.1 0.6" data-sweepy="110" style={{ position: "absolute", left: "8px", right: "8px", top: "8px", height: "2px", background: "#2F5F58", boxShadow: "0 0 0 3px rgba(47,95,88,.15)", opacity: "0" }} />
               <div style={{ marginTop: "6px", fontSize: "22px", fontWeight: "800", color: "#2F5F58" }}>
@@ -210,7 +215,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                 </span>
               </div>
               <div style={{ fontSize: r.eF10, fontWeight: "700", color: "#3D6E69" }}>
-                check-ins today
+                {t("check-ins today")}
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
@@ -220,13 +225,13 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                     {fd.i}
                   </span>
                   <span style={{ flex: "1", fontSize: "12px", fontWeight: "700" }}>
-                    {fd.n}
+                    {tOpt(fd.n)}
                   </span>
                   <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF105, color: "#756D63" }}>
-                    {fd.t}
+                    {tOpt(fd.t)}
                   </span>
                   <span style={{ fontSize: r.eF105, fontWeight: "800", color: fd.sc }}>
-                    {fd.s}
+                    {tOpt(fd.s)}
                   </span>
                 </div>
               ))}
@@ -239,13 +244,13 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
           <div style={{ flex: "1", display: "grid", gridTemplateColumns: r.planCols, gap: "5px", minHeight: "0" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
               <div style={{ fontSize: r.eF95, fontWeight: "800", letterSpacing: ".1em", color: "#756D63" }}>
-                LIBRARY
+                {t("LIBRARY")}
               </div>
               {sl.lib!.map((lb, lbI) => (
                 <span key={lbI} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 8px", borderRadius: "8px", border: `1px solid ${lb.bd}`, fontSize: r.eF11, fontWeight: "700", color: lb.ink, background: lb.bg }}>
                   <span style={{ width: "7px", height: "7px", flexShrink: "0", borderRadius: "99px", background: lb.c }} />
                   <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {lb.t}
+                    {tOpt(lb.t)}
                   </span>
                 </span>
               ))}
@@ -253,7 +258,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                 {sl.legend!.map((lg, lgI) => (
                   <span key={lgI} style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                     <span style={{ width: "7px", height: "7px", borderRadius: "99px", background: lg.c }} />
-                    {lg.t}
+                    {tOpt(lg.t)}
                   </span>
                 ))}
               </div>
@@ -262,7 +267,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
               <div key={clI} style={{ position: "relative", display: "flex", flexDirection: "column", gap: "5px", padding: "6px", borderRadius: "10px", background: cl.bg }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "4px" }}>
                   <span style={{ fontSize: r.eF10, fontWeight: "800", color: "#221E1A" }}>
-                    {cl.d}
+                    {tOpt(cl.d)}
                   </span>
                   <span style={{ fontSize: r.eF9, fontWeight: "800", color: cl.ink, whiteSpace: "nowrap" }}>
                     {cl.kc}
@@ -274,10 +279,10 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                 {cl.items.map((it, itI) => (
                   <span key={itI} data-w={it.w} data-tx={it.tx} style={{ padding: "5px 6px", borderRadius: "8px", background: it.bg, border: `1px solid ${it.bd}`, fontSize: r.eF10, fontWeight: "700", lineHeight: "1.25", color: it.ink, opacity: "0" }}>
                     <span style={{ display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {it.t}
+                      {tOpt(it.t)}
                     </span>
                     <span style={{ display: "block", fontSize: r.eF9, fontWeight: "600", color: "#5B5349", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {it.m}
+                      {tOpt(it.m)}
                     </span>
                   </span>
                 ))}
@@ -293,22 +298,22 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
               <span />
               {sl.days!.map((d, dI) => (
                 <span key={dI}>
-                  {d}
+                  {t(d)}
                 </span>
               ))}
               {sl.cells!.map((ce, ceI) => (
                 <span key={ceI} data-w={ce.w} data-op="" style={{ position: "relative", borderRadius: "5px", background: ce.bg, color: ce.ink, fontSize: r.eF9, fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", opacity: ce.op0 }}>
-                  {ce.t}
+                  {tOpt(ce.t)}
                 </span>
               ))}
             </div>
             <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: "8px", fontSize: r.eF10, fontWeight: "700", color: "#5B5349" }}>
               <span>
-                Capacity
+                {t("Capacity")}
               </span>
               <span style={{ flex: "1", maxWidth: "160px", height: "6px", borderRadius: "9px", background: "linear-gradient(90deg,#EFEAFB,#B9A9EE,#4E3894)" }} />
-              <span data-w="0.8 0.95" data-stamp="" style={{ marginLeft: "auto", padding: "2px 9px", borderRadius: "99px", background: "#F4F1FB", color: "#5C48A8", fontWeight: "800", opacity: "0" }}>
-                HIIT 45 Thu · Full, 3 waitlist
+              <span data-w="0.8 0.95" data-stamp="" style={{ marginInlineStart: "auto", padding: "2px 9px", borderRadius: "99px", background: "#F4F1FB", color: "#5C48A8", fontWeight: "800", opacity: "0" }}>
+                {t("HIIT 45 Thu · Full, 3 waitlist")}
               </span>
             </div>
           </div>
@@ -319,8 +324,8 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
           <div style={{ flex: "1", display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" }}>
             <div style={{ display: "flex", height: "34px", borderRadius: "10px", overflow: "hidden", gap: "2px" }}>
               {sl.seg!.map((sg, sgI) => (
-                <span key={sgI} data-w={sg.w} data-sx="" style={{ flex: sg.f, background: sg.c, transformOrigin: "left", transform: "scaleX(0)", display: "flex", alignItems: "center", paddingLeft: "8px", fontSize: r.eF105, fontWeight: "800", color: sg.ink, whiteSpace: "nowrap", overflow: "hidden" }}>
-                  {sg.t}
+                <span key={sgI} data-w={sg.w} data-sx="" style={{ flex: sg.f, background: sg.c, transformOrigin: "left", transform: "scaleX(0)", display: "flex", alignItems: "center", paddingInlineStart: "8px", fontSize: r.eF105, fontWeight: "800", color: sg.ink, whiteSpace: "nowrap", overflow: "hidden" }}>
+                  {tOpt(sg.t)}
                 </span>
               ))}
             </div>
@@ -329,13 +334,13 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                 <div key={sgI} data-w={sg.w} data-ty="10" data-op="" style={{ padding: "9px 10px", borderRadius: "12px", border: "1px solid #F0EDE8", opacity: "0" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: r.eF10, fontWeight: "800", letterSpacing: ".08em", color: "#756D63" }}>
                     <span style={{ width: "8px", height: "8px", borderRadius: "2px", background: sg.c }} />
-                    {sg.k}
+                    {tOpt(sg.k)}
                   </div>
                   <div style={{ fontSize: "17px", fontWeight: "800", marginTop: "2px" }}>
-                    {sg.n}
+                    {tOpt(sg.n)}
                   </div>
                   <div style={{ fontSize: r.eF10, fontWeight: "600", color: "#756D63" }}>
-                    {sg.m}
+                    {tOpt(sg.m)}
                   </div>
                 </div>
               ))}
@@ -346,14 +351,14 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
               </span>
               <div style={{ flex: "1" }}>
                 <div style={{ fontSize: r.eF10, fontWeight: "800", letterSpacing: ".1em", color: "#D9D0F5" }}>
-                  MEMBER CARD
+                  {t("MEMBER CARD")}
                 </div>
                 <div style={{ fontSize: "13px", fontWeight: "800" }}>
-                  Nour Saab · Quarterly
+                  {t("Nour Saab · Quarterly")}
                 </div>
               </div>
               <span style={{ fontSize: r.eF105, fontWeight: "700", color: "#D9D0F5" }}>
-                Renews 12 Dec
+                {t("Renews 12 Dec")}
               </span>
             </div>
           </div>
@@ -380,7 +385,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                   </span>
                   <div style={{ minWidth: "0" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: r.eF115, fontWeight: "800", whiteSpace: "nowrap" }}>
-                      {sf.n}
+                      {tOpt(sf.n)}
                       {sf.ver ? (
                         <>
                           <span style={{ width: "11px", height: "11px", borderRadius: "99px", background: "#5D9C93", color: "#fff", fontSize: "7px", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -390,13 +395,13 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                       ) : null}
                     </div>
                     <div style={{ fontSize: r.eF95, fontWeight: "600", color: "#756D63", whiteSpace: "nowrap" }}>
-                      {sf.r}
+                      {tOpt(sf.r)}
                     </div>
                   </div>
                 </div>
                 <div style={{ position: "relative", height: "22px", borderRadius: "6px", background: "repeating-linear-gradient(90deg,#FAF9FE 0 calc(100% / 17 - 1px),#F0EDE8 calc(100% / 17 - 1px) calc(100% / 17))" }}>
-                  <span data-w={sf.w} data-sx="" style={{ position: "absolute", top: "3px", bottom: "3px", left: sf.l, width: sf.wd, borderRadius: "5px", background: sf.c, transformOrigin: "left", transform: "scaleX(0)", fontSize: r.eF9, fontWeight: "800", color: "#fff", display: "flex", alignItems: "center", paddingLeft: "6px", whiteSpace: "nowrap", overflow: "hidden" }}>
-                    {sf.s}
+                  <span data-w={sf.w} data-sx="" style={{ position: "absolute", top: "3px", bottom: "3px", left: sf.l, width: sf.wd, borderRadius: "5px", background: sf.c, transformOrigin: "left", transform: "scaleX(0)", fontSize: r.eF9, fontWeight: "800", color: "#fff", display: "flex", alignItems: "center", paddingInlineStart: "6px", whiteSpace: "nowrap", overflow: "hidden" }}>
+                    {tOpt(sf.s)}
                   </span>
                 </div>
               </div>
@@ -404,15 +409,15 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
             <div style={{ marginTop: "auto", display: "flex", gap: "12px", fontSize: r.eF10, fontWeight: "700", color: "#5B5349" }}>
               <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                 <span style={{ width: "9px", height: "9px", borderRadius: "2px", background: "#4A7D76" }} />
-                Floor
+                {t("Floor")}
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                 <span style={{ width: "9px", height: "9px", borderRadius: "2px", background: "#775FD7" }} />
-                Classes
+                {t("Classes")}
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                 <span style={{ width: "9px", height: "9px", borderRadius: "2px", background: "#91642C" }} />
-                Front desk
+                {t("Front desk")}
               </span>
             </div>
           </div>
@@ -429,7 +434,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                 </span>
               </span>
               <span style={{ fontSize: r.eF11, fontWeight: "700", color: "#2F5F58" }}>
-                October, up $380 from September
+                {t("October, up $380 from September")}
               </span>
             </div>
             <div style={{ flex: "1", minHeight: "150px", display: "grid", gridTemplateColumns: "42px minmax(0,1fr)", gridTemplateRows: "minmax(0,1fr) 30px", columnGap: "6px" }}>
@@ -440,7 +445,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                   </span>
                 ))}
               </div>
-              <div style={{ position: "relative", borderLeft: "1px solid #E6E1EA", borderBottom: "1px solid #E6E1EA" }}>
+              <div style={{ position: "relative", borderInlineStart: "1px solid #E6E1EA", borderBottom: "1px solid #E6E1EA" }}>
                 {sl.ticks!.map((tk, tkI) => (
                   <span key={tkI} style={{ position: "absolute", left: "0", right: "0", top: tk.y, borderTop: "1px solid #F1EEF4" }} />
                 ))}
@@ -448,7 +453,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                   <React.Fragment key={wbI}>
                     <span data-w={wb.w} data-op="" data-ty="10" style={{ position: "absolute", left: wb.l, width: wb.wd, bottom: wb.b, height: wb.h, borderRadius: "5px", background: wb.c, opacity: "0" }}>
                       <span style={{ position: "absolute", left: "50%", bottom: "calc(100% + 4px)", transform: "translateX(-50%)", fontSize: r.eF105, fontWeight: "800", color: wb.ink, whiteSpace: "nowrap" }}>
-                        {wb.v}
+                        {tOpt(wb.v)}
                       </span>
                     </span>
                     <span data-w={wb.w} data-op="" style={{ position: "absolute", left: wb.cl, width: wb.cw, bottom: wb.ct, borderTop: "1.5px dashed #CFC5EA", opacity: "0" }} />
@@ -459,13 +464,13 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
               <div style={{ position: "relative" }}>
                 {sl.wf!.map((wb, wbI) => (
                   <span key={wbI} style={{ position: "absolute", left: wb.mid, top: "5px", transform: "translateX(-50%)", width: wb.wd, textAlign: "center", fontSize: r.eF95, fontWeight: "700", lineHeight: "1.2", color: "#5B5349" }}>
-                    {wb.t}
+                    {tOpt(wb.t)}
                   </span>
                 ))}
               </div>
             </div>
             <div style={{ fontSize: r.eF95, fontWeight: "600", color: "#756D63" }}>
-              US dollars. Paid through Centium. Axis starts at $1,500.
+              {t("US dollars. Paid through Centium. Axis starts at $1,500.")}
             </div>
           </div>
         </>

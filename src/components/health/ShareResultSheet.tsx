@@ -223,7 +223,7 @@ export const ShareResultSheet: React.FC<{
                 role="radio"
                 aria-checked={on}
                 onClick={() => setWho(p.professionalId)}
-                className="tap w-full flex items-center text-left"
+                className="tap w-full flex items-center text-start"
                 style={{ gap: 12, padding: "10px 12px", minHeight: 52, borderRadius: 14, marginBottom: 6, border: `1px solid ${on ? t.pr : t.b10}`, background: on ? t.prPale : t.card }}
               >
                 {p.avatarUrl ? (
@@ -259,7 +259,7 @@ export const ShareResultSheet: React.FC<{
               role="radio"
               aria-checked={on}
               onClick={() => setScope(key)}
-              className="tap w-full block text-left"
+              className="tap w-full block text-start"
               style={{ padding: "10px 12px", minHeight: 44, borderRadius: 12, marginBottom: 6, border: `1px solid ${on ? t.optOn : t.optOff}`, background: on ? t.optOnBg : t.optOffBg }}
             >
               <span className="block" style={{ fontSize: textPx(14), lineHeight: linePx(20), fontWeight: on ? 700 : 600, color: INK }}>

@@ -55,6 +55,7 @@ import { time12Split } from "../../utils/time12";
 import { formatShortDate } from "../../utils/date";
 import { BookingDone, PlanSummary, PurchaseSheet, confirmLabel } from "./PurchaseSheet";
 import { areaOf, gymHoursRows, includesText, longDay, planExpiryIso, planRowLine, sheetPlanName, startsToday } from "./gymDetailModel";
+import { appLocale } from "../../i18n/format";
 
 // Market + Share 3.0 · W2 · C-MO.4.2.1 Gym detail (`gymDetail`) and
 // C-MO.4.2.2 Membership purchase (`memberSheet`, `memberDone`). Literal
@@ -872,7 +873,7 @@ export function GymPage({ gymId }: { gymId: string }) {
                     }}
                   >
                     <span aria-hidden style={{ width: 39, height: 36, borderRadius: 10, background: m.pale, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0, lineHeight: 1 }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: m.pdark }}>{new Date(`${c.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" })}</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: m.pdark }}>{new Date(`${c.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short" })}</span>
                       <span style={{ marginTop: 2, fontSize: 13, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{t?.time ?? c.startTime}</span>
                       <span style={{ marginTop: 1, fontSize: 8.5, fontWeight: 800, color: m.ink2 }}>{t?.meridiem}</span>
                     </span>
@@ -968,7 +969,7 @@ function GymHero({ onBack, photos, m }: { onBack: () => void; photos: string[]; 
         className="hit market-focus"
         style={{
           position: "absolute",
-          left: 12,
+          insetInlineStart: 12,
           top: "calc(env(safe-area-inset-top) + 10px)",
           width: 36,
           height: 36,
@@ -1136,12 +1137,12 @@ function LocationHours({
   return (
     <section aria-labelledby="gym-hours-label">
       {/* The tag sits on the label's centre line without changing the board's 18 / 8 spacing. */}
-      <div style={{ marginTop: first ? 8 : 18, position: "relative", paddingRight: tag ? 96 : 0 }}>
+      <div style={{ marginTop: first ? 8 : 18, position: "relative", paddingInlineEnd: tag ? 96 : 0 }}>
         <Caps m={m} id="gym-hours-label">
           Location and hours
         </Caps>
         {tag && (
-          <span style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", display: "flex" }}>
+          <span style={{ position: "absolute", insetInlineEnd: 0, top: "50%", transform: "translateY(-50%)", display: "flex" }}>
             <MemberTag label={tag.label} tone={tag.tone} />
           </span>
         )}
@@ -1177,7 +1178,7 @@ function LocationHours({
             lines.map((l) => (
               <div key={l.key} data-hours-row="" style={{ display: "flex", justifyContent: "space-between", gap: 12, color: m.ink2 }}>
                 <span style={{ minWidth: 0 }}>{l.label}</span>
-                <span style={{ minWidth: 0, textAlign: "right" }}>{l.value}</span>
+                <span style={{ minWidth: 0, textAlign: "end" }}>{l.value}</span>
               </div>
             ))
           )}
@@ -1198,7 +1199,7 @@ function PlanRow({ m, plan, save, onJoin }: { m: MarketPalette; plan: VenuePlan;
   const press = usePress();
   const extra = [save !== null ? `Save ${save}%` : null, ...commitmentLines(plan.minimumTermMonths, plan.noticeDays)].filter(Boolean).join(" · ");
   return (
-    <div data-plan-row="" style={{ borderRadius: 16, border: `0.5px solid ${m.hair}`, background: m.card, padding: "12px 12px 12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+    <div data-plan-row="" style={{ borderRadius: 16, border: `0.5px solid ${m.hair}`, background: m.card, paddingBlock: "12px", paddingInline: "14px 12px", display: "flex", alignItems: "center", gap: 12 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: textPx(14), fontWeight: 700, color: m.ink }}>{plan.name}</div>
         <div style={{ fontSize: textPx(11.5), color: m.faint, marginTop: 1 }}>{planRowLine(plan)}</div>
@@ -1240,7 +1241,7 @@ function PlanRow({ m, plan, save, onJoin }: { m: MarketPalette; plan: VenuePlan;
 function MyPlanRow({ m, membership }: { m: MarketPalette; membership: GymMembership }) {
   const tag = memberTag(membership.passState);
   return (
-    <div data-my-plan="" style={{ borderRadius: 16, border: `0.5px solid ${m.hair}`, background: m.card, padding: "12px 12px 12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+    <div data-my-plan="" style={{ borderRadius: 16, border: `0.5px solid ${m.hair}`, background: m.card, paddingBlock: "12px", paddingInline: "14px 12px", display: "flex", alignItems: "center", gap: 12 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: textPx(14), fontWeight: 700, color: m.ink }}>{membership.planName || "Membership"}</div>
         <div style={{ fontSize: textPx(11.5), color: m.faint, marginTop: 1 }}>

@@ -6,6 +6,7 @@ import {
   type PaymentRecord,
 } from "../../../services/business-revenue";
 import { toCsvText } from "../../../utils/csv";
+import { appLocale } from "../../../i18n/format";
 
 // Small pieces shared by the Revenue pages (AnInsightsV3 and PaySeeAllV2
 // literal values through the .rv-scope tokens in revenue.css).
@@ -155,7 +156,7 @@ export const OfflineLine: React.FC<{ at: Date | null }> = ({ at }) =>
       style={{ color: v("ink-soft") }}
     >
       Offline. Showing what was loaded at{" "}
-      {at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}.
+      {at.toLocaleTimeString(appLocale("en-US"), { hour: "numeric", minute: "2-digit" })}.
     </p>
   ) : null;
 
@@ -165,7 +166,7 @@ export const PayHeader: React.FC<{
   title: string;
   onBack: () => void;
 }> = ({ crumb, title, onBack }) => (
-  <div className="flex items-center gap-[6px] -ml-[10px] mb-[6px]">
+  <div className="flex items-center gap-[6px] -ms-[10px] mb-[6px]">
     <button
       type="button"
       onClick={onBack}

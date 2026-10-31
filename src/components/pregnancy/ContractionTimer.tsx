@@ -12,6 +12,7 @@ import {
   type Contraction,
 } from "../../services/pregnancy";
 import * as G from "../../services/pregnancy/guidance";
+import { appLocale } from "../../i18n/format";
 
 // Timing contractions.
 //
@@ -136,8 +137,8 @@ export const ContractionTimer: React.FC<{ pregnancyId: string }> = ({ pregnancyI
         <div className="mt-3.5 border-t border-charcoal/8 pt-3">
           <div className="flex text-[9.5px] font-semibold text-charcoal-faint pb-1.5">
             <span className="flex-1">Started</span>
-            <span className="w-[74px] text-right">Lasted</span>
-            <span className="w-[86px] text-right">Apart</span>
+            <span className="w-[74px] text-end">Lasted</span>
+            <span className="w-[86px] text-end">Apart</span>
           </div>
           {finished.slice(0, 8).map((c, i) => {
             // The rows are newest first, so the PREVIOUS contraction is the
@@ -150,15 +151,15 @@ export const ContractionTimer: React.FC<{ pregnancyId: string }> = ({ pregnancyI
             return (
               <div key={c.id} className="flex text-[11px] py-1">
                 <span className="flex-1 text-charcoal-soft">
-                  {new Date(c.startedAt).toLocaleTimeString("en-US", {
+                  {new Date(c.startedAt).toLocaleTimeString(appLocale("en-US"), {
                     hour: "numeric",
                     minute: "2-digit",
                   })}
                 </span>
-                <span className="w-[74px] text-right text-charcoal font-semibold tabular-nums">
+                <span className="w-[74px] text-end text-charcoal font-semibold tabular-nums">
                   {lasted !== null ? formatDuration(lasted) : "–"}
                 </span>
-                <span className="w-[86px] text-right text-charcoal font-semibold tabular-nums">
+                <span className="w-[86px] text-end text-charcoal font-semibold tabular-nums">
                   {spacing !== null ? formatDuration(spacing) : "–"}
                 </span>
               </div>

@@ -252,7 +252,7 @@ export const ExerciseLibrarySheet: React.FC<{
                 <button
                   type="button"
                   onClick={() => setDetail(r)}
-                  className="tap flex-1 min-w-0 flex items-center text-left"
+                  className="tap flex-1 min-w-0 flex items-center text-start"
                   style={{ gap: 6 }}
                   aria-label={`${r.name}, details`}
                 >

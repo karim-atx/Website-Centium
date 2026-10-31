@@ -20,6 +20,7 @@ import { time12 } from "../../../utils/time12";
 import { bizShareHref, bizShareText, isBizSlug, type ShareLinkKind } from "../../../services/share-links/links";
 import type { MembershipPlanRow } from "../../../services/membership-plans/types";
 import { billingLabel, daysLabel, priceLine } from "../../../pages/business-ops/plans/planModel";
+import { appLocale } from "../../../i18n/format";
 
 export type BizTemplate = "schedule" | "class" | "offer" | "product" | "plan" | "profile" | "hiring";
 export type BizFormat = "story" | "post" | "sticker";
@@ -245,7 +246,7 @@ export function longDay(iso: string): string {
   return `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}`;
 }
 
-export const pointsText = (n: number) => Math.round(n).toLocaleString("en-US");
+export const pointsText = (n: number) => Math.round(n).toLocaleString(appLocale("en-US"));
 
 /** The TG lists, per template, from the item's own values. */
 export function toggleRows(data: TemplateData, brand: Pick<BizBrand, "name" | "category" | "location">): ToggleRow[] {

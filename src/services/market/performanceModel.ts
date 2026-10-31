@@ -27,6 +27,7 @@
 // as a calendar date; no client time-zone shift).
 
 import { num, rows } from "./parse";
+import { appLocale } from "../../i18n/format";
 
 export type PerfRange = "7D" | "30D" | "90D" | "12M";
 export const PERF_RANGES: readonly PerfRange[] = ["7D", "30D", "90D", "12M"];
@@ -121,7 +122,7 @@ export function longDate(iso: string): string {
 }
 
 /** Whole numbers with separators: "1,930". */
-export const fmtCount = (n: number): string => Math.round(n).toLocaleString("en-US");
+export const fmtCount = (n: number): string => Math.round(n).toLocaleString(appLocale("en-US"));
 
 /** "1 voucher" / "46 vouchers". */
 export const countOf = (n: number, one: string, many: string): string => `${fmtCount(n)} ${Math.round(n) === 1 ? one : many}`;

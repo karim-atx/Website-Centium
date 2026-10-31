@@ -5,6 +5,7 @@ import { useIsDark } from "../../../hooks/useIsDark";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import type { GrowthWeek } from "../../../services/business-analytics";
 import { canHide, growthChart, type SeriesKey } from "./membersModel";
+import { isRtl } from "../../../i18n/core";
 
 // AN4-005 rows 18-33 and S2-S7 (AnMembersV6 "growth chart v2", l.99-135 markup,
 // l.339-376 logic): active members as a line, joins above and ends below the
@@ -72,10 +73,20 @@ export function GrowthChart({ cur, prev, endsThisWeek, early = false, resetKey =
     setPin(i);
   };
   const shown = live ?? fading;
+  // Round F (F10): in right to left, time runs from right to left. The drawing
+  // (paths from growthChart) is mirrored in place by a flipping group around
+  // each run of shapes, so the paint order holds; the text is drawn upright at
+  // a mirrored x (SVG text anchors are logical, so the labels follow; the signed
+  // net counts keep "+3" reading left to right, centred as before). The tag
+  // is placed from the inline start, the pointer read from it, the arrows swap.
+  const rtl = isRtl();
+  const mx = (x: number) => (rtl ? 318 - x : x);
+  const flip = (node: React.ReactNode) => (rtl ? <g transform="matrix(-1 0 0 1 318 0)">{node}</g> : node);
+  const shift = (pct: number) => `translateX(${rtl ? pct : -pct}%)`;
 
   const idxAt = (ev: React.PointerEvent<HTMLElement>) => {
     const r0 = ev.currentTarget.getBoundingClientRect();
-    const fx = ((ev.clientX - r0.left) / r0.width) * 318;
+    const fx = ((rtl ? r0.right - ev.clientX : ev.clientX - r0.left) / r0.width) * 318;
     return Math.max(0, Math.min(last, Math.floor((fx - 28) / g.step)));
   };
   const toggle = (k: SeriesKey) =>
@@ -132,51 +143,59 @@ export function GrowthChart({ cur, prev, endsThisWeek, early = false, resetKey =
         <svg width="100%" height="178" viewBox="0 0 318 178" preserveAspectRatio="none" style={{ display: "block", overflow: "visible" }} aria-hidden>
           {g.ticks.map((tk) => (
             <g key={tk.t + tk.y}>
-              <line x1="28" x2="314" y1={tk.y} y2={tk.y} stroke={c.grid} strokeWidth="1" />
-              <text x="0" y={tk.ty} fontSize="8.5" fill={c.axis} style={{ fontVariantNumeric: "tabular-nums" }}>
+              {flip(<line x1="28" x2="314" y1={tk.y} y2={tk.y} stroke={c.grid} strokeWidth="1" />)}
+              <text x={rtl ? 318 : "0"} y={tk.ty} fontSize="8.5" fill={c.axis} style={{ fontVariantNumeric: "tabular-nums" }}>
                 {tk.t}
               </text>
             </g>
           ))}
-          <text x="0" y="114" fontSize="7.5" fontWeight="700" fill={c.good} opacity={g.jOp} style={{ transition: fade }}>
+          <text x={rtl ? 318 : "0"} y="114" fontSize="7.5" fontWeight="700" fill={c.good} opacity={g.jOp} style={{ transition: fade }}>
             Joined
           </text>
-          <text x="0" y="149" fontSize="7.5" fontWeight="700" fill={c.high} opacity={g.eOp} style={{ transition: fade }}>
+          <text x={rtl ? 318 : "0"} y="149" fontSize="7.5" fontWeight="700" fill={c.high} opacity={g.eOp} style={{ transition: fade }}>
             Ended
           </text>
-          <line x1="28" x2="314" y1="128" y2="128" stroke={c.axis} strokeWidth="1" />
-          {/* Each series is one group, so hiding fades the whole series (AN4-021 row 3). */}
-          <g data-series="joined" opacity={g.jG} style={{ transition: fade }}>
-            {g.bars.map((bb, i) => (
-              <rect key={i} x={bb.jx} width="8" rx="2" fill={c.good} opacity={bb.jo} style={{ y: `${bb.jy}px`, height: `${bb.jh}px`, transition: tr }} />
-            ))}
-          </g>
-          <g data-series="ended" opacity={g.eG} style={{ transition: fade }}>
-            {g.bars.map((bb, i) => (
-              <rect key={i} x={bb.ex} width="8" rx="2" fill={c.high} opacity={bb.eo} style={{ y: "129px", height: `${bb.eh}px`, transition: tr }} />
-            ))}
-          </g>
+          {flip(
+            <>
+              <line x1="28" x2="314" y1="128" y2="128" stroke={c.axis} strokeWidth="1" />
+              {/* Each series is one group, so hiding fades the whole series (AN4-021 row 3). */}
+              <g data-series="joined" opacity={g.jG} style={{ transition: fade }}>
+                {g.bars.map((bb, i) => (
+                  <rect key={i} x={bb.jx} width="8" rx="2" fill={c.good} opacity={bb.jo} style={{ y: `${bb.jy}px`, height: `${bb.jh}px`, transition: tr }} />
+                ))}
+              </g>
+              <g data-series="ended" opacity={g.eG} style={{ transition: fade }}>
+                {g.bars.map((bb, i) => (
+                  <rect key={i} x={bb.ex} width="8" rx="2" fill={c.high} opacity={bb.eo} style={{ y: "129px", height: `${bb.eh}px`, transition: tr }} />
+                ))}
+              </g>
+            </>,
+          )}
           {g.bars.map((bb, i) => (
-            <text key={i} x={bb.cx} y="96" fontSize="8.5" fontWeight="800" textAnchor="middle" fill={bb.n > 0 ? c.good : bb.n < 0 ? c.high : c.faint} opacity={bb.no} style={{ fontVariantNumeric: "tabular-nums", transition: fade }}>
+            <text key={i} x={mx(bb.cx)} y="96" direction={rtl ? "ltr" : undefined} fontSize="8.5" fontWeight="800" textAnchor="middle" fill={bb.n > 0 ? c.good : bb.n < 0 ? c.high : c.faint} opacity={bb.no} style={{ fontVariantNumeric: "tabular-nums", transition: fade }}>
               {bb.net}
             </text>
           ))}
-          {g.ghost && <path data-series="prev" d={g.ghost} fill="none" stroke={c.tert} strokeWidth="1.3" strokeDasharray="3 3" opacity={g.gOp} style={{ transition: fade }} />}
-          <g data-series="active" opacity={g.aOp} style={{ transition: fade }}>
-            <path d={g.area} fill={c.lineFill} />
-            <path d={g.line} fill="none" stroke={c.line} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-            {g.dots.map((dt, i) => (
-              <circle key={i} cx={dt.x} cy={dt.y} r={dt.r} fill={dt.last ? c.line : c.card} stroke={c.line} strokeWidth="1.5" />
-            ))}
-          </g>
-          {g.mk && (
+          {flip(
             <>
-              <line x1={g.mk.x} x2={g.mk.x} y1="8" y2="158" stroke={c.ink} strokeWidth="1" strokeDasharray="2 2" opacity="0.55" />
-              <circle cx={g.mk.x} cy={g.mk.y} r="5" fill={c.line} stroke={c.card} strokeWidth="2" opacity={g.aOp} />
-            </>
+              {g.ghost && <path data-series="prev" d={g.ghost} fill="none" stroke={c.tert} strokeWidth="1.3" strokeDasharray="3 3" opacity={g.gOp} style={{ transition: fade }} />}
+              <g data-series="active" opacity={g.aOp} style={{ transition: fade }}>
+                <path d={g.area} fill={c.lineFill} />
+                <path d={g.line} fill="none" stroke={c.line} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+                {g.dots.map((dt, i) => (
+                  <circle key={i} cx={dt.x} cy={dt.y} r={dt.r} fill={dt.last ? c.line : c.card} stroke={c.line} strokeWidth="1.5" />
+                ))}
+              </g>
+              {g.mk && (
+                <>
+                  <line x1={g.mk.x} x2={g.mk.x} y1="8" y2="158" stroke={c.ink} strokeWidth="1" strokeDasharray="2 2" opacity="0.55" />
+                  <circle cx={g.mk.x} cy={g.mk.y} r="5" fill={c.line} stroke={c.card} strokeWidth="2" opacity={g.aOp} />
+                </>
+              )}
+            </>,
           )}
           {g.xl.map((xl) => (
-            <text key={xl.a} x={xl.x} y="174" fontSize="8.5" fill={c.axis} textAnchor={xl.a}>
+            <text key={xl.a} x={mx(xl.x)} y="174" fontSize="8.5" fill={c.axis} textAnchor={xl.a}>
               {xl.t}
             </text>
           ))}
@@ -235,7 +254,7 @@ export function GrowthChart({ cur, prev, endsThisWeek, early = false, resetKey =
           onKeyDown={(ev) => {
             if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
               ev.preventDefault();
-              pinAt(Math.max(0, Math.min(last, (pin ?? last) + (ev.key === "ArrowRight" ? 1 : -1))));
+              pinAt(Math.max(0, Math.min(last, (pin ?? last) + ((ev.key === "ArrowRight") !== rtl ? 1 : -1))));
             }
             if (ev.key === "Escape") unpin();
           }}
@@ -249,8 +268,8 @@ export function GrowthChart({ cur, prev, endsThisWeek, early = false, resetKey =
             style={{
               position: "absolute",
               top: -4,
-              left: shown.tip.x,
-              transform: shown.mi <= 1 ? "translateX(-12%)" : shown.mi >= last - 1 ? "translateX(-88%)" : "translateX(-50%)",
+              insetInlineStart: shown.tip.x,
+              transform: shift(shown.mi <= 1 ? 12 : shown.mi >= last - 1 ? 88 : 50),
               minWidth: 164,
               width: "max-content",
               maxWidth: "100%",
@@ -285,7 +304,7 @@ export function GrowthChart({ cur, prev, endsThisWeek, early = false, resetKey =
                     <span style={{ width: 7, height: 7, borderRadius: 2, flexShrink: 0, background: r.k === "active" ? c.line : r.k === "joined" ? c.good : r.k === "ended" ? c.high : "transparent" }} />
                     {r.l}
                   </span>
-                  <span style={{ fontWeight: 800, textAlign: "right", fontVariantNumeric: "tabular-nums", color: r.k !== "net" ? c.ink : r.n > 0 ? c.good : r.n < 0 ? c.high : c.faint }}>{r.v}</span>
+                  <span style={{ fontWeight: 800, textAlign: "end", fontVariantNumeric: "tabular-nums", color: r.k !== "net" ? c.ink : r.n > 0 ? c.good : r.n < 0 ? c.high : c.faint }}>{r.v}</span>
                 </span>
               ))}
             </div>

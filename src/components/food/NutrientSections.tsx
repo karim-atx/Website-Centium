@@ -3,6 +3,7 @@ import { AlertCircle, AlertTriangle, ChevronDown } from "lucide-react";
 import { NUTRIENT_SECTIONS, CALC_KEYS, type NutrientRow, type NutrientSection } from "../../data/nutrientSchema";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { appLocale } from "../../i18n/format";
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands). Colours whose light value is
@@ -139,7 +140,7 @@ function formatAmount(v: number): string {
   const a = Math.abs(v);
   const dp = a >= 100 ? 0 : a >= 10 ? 1 : 2;
   const s = v.toFixed(dp).replace(/\.0+$/, "").replace(/(\.\d)0$/, "$1");
-  return Number(s).toLocaleString(undefined, { maximumFractionDigits: dp });
+  return Number(s).toLocaleString(appLocale(), { maximumFractionDigits: dp });
 }
 
 // ---- Row view model ---------------------------------------------------
@@ -259,7 +260,7 @@ function NutrientRowLine({ view, groupLabel }: { view: RowView; groupLabel?: str
         {showPercent && percent !== null ? (
           <span
             className="flex-none tabular-nums"
-            style={{ width: 42, textAlign: "right", fontSize: textPx(10), fontWeight: 700, color: isOver ? nsColor("over", dark) : nsColor("lav", dark) }}
+            style={{ width: 42, textAlign: "end", fontSize: textPx(10), fontWeight: 700, color: isOver ? nsColor("over", dark) : nsColor("lav", dark) }}
           >
             {Math.round(percent)}%
           </span>
@@ -382,7 +383,7 @@ function NutrientSectionBlock({
         style={{ padding: 0, background: "none" }}
         aria-label={expanded ? `Collapse ${section.name}` : `Expand ${section.name}`}
       >
-        <h3 className="flex-1 min-w-0 text-left text-[13.5px] font-bold text-charcoal">{section.name}</h3>
+        <h3 className="flex-1 min-w-0 text-start text-[13.5px] font-bold text-charcoal">{section.name}</h3>
         <span
           className="shrink-0 tabular-nums whitespace-nowrap"
           style={{
@@ -442,7 +443,7 @@ function formatDetailAmount(n: number): string {
   if (a === 0) return "0";
   if (a < 0.1) return n.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
   if (a < 10) return (Math.round(n * 10) / 10).toString();
-  return Math.round(n).toLocaleString();
+  return Math.round(n).toLocaleString(appLocale());
 }
 
 export interface NutrientDetailSectionsProps {
@@ -509,7 +510,7 @@ function NutrientDetailSection({
     <div style={{ background: "rgb(var(--c-cream-card))", border: "1px solid rgb(var(--th-aea1dc) / 0.34)", borderRadius: 12, overflow: "hidden" }}>
       <button
         onClick={onToggle}
-        className="tap w-full flex items-center text-left"
+        className="tap w-full flex items-center text-start"
         style={{ padding: "10px 12px", gap: 8, background: expanded ? "rgb(var(--th-aea1dc) / 0.12)" : "rgb(var(--c-cream-card))" }}
         aria-expanded={expanded}
       >
@@ -556,7 +557,7 @@ function NutrientDetailSection({
                     {LIMIT_NUTRIENTS.has(row.name) && (
                       <span
                         style={{
-                          marginLeft: 6,
+                          marginInlineStart: 6,
                           fontSize: textPx(9),
                           fontWeight: 700,
                           color: nsColor("goldText", dark),
@@ -571,7 +572,7 @@ function NutrientDetailSection({
                     {partial && (
                       <span
                         style={{
-                          marginLeft: 6,
+                          marginInlineStart: 6,
                           fontSize: textPx(9),
                           fontWeight: 700,
                           color: nsColor("goldText", dark),
@@ -594,7 +595,7 @@ function NutrientDetailSection({
                     className="shrink-0 tabular-nums"
                     style={{
                       width: 46,
-                      textAlign: "right",
+                      textAlign: "end",
                       fontSize: textPx(11.5),
                       fontWeight: 700,
                       color: percent === null ? "transparent" : overLimit ? nsColor("overLimit", dark) : nsColor("lav", dark),

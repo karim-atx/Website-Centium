@@ -211,7 +211,7 @@ function WheelColumnView({ column, look = "default", row = ROW }: { column: Whee
                 <span
                   aria-hidden={!on}
                   className="text-th-7d6bb5 dark:text-primary-deep-text"
-                  style={{ marginLeft: 5, fontSize: textPx(12), lineHeight: "18px", fontWeight: 700, visibility: on ? "visible" : "hidden" }}
+                  style={{ marginInlineStart: 5, fontSize: textPx(12), lineHeight: "18px", fontWeight: 700, visibility: on ? "visible" : "hidden" }}
                 >
                   {column.unit}
                 </span>

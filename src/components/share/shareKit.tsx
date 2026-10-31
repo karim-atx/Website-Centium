@@ -29,7 +29,7 @@ export const ShareIconButton: React.FC<{ on?: boolean; label: string; onClick: (
     onClick={onClick}
     disabled={disabled}
     className="tap flex items-center justify-center shrink-0 disabled:opacity-40"
-    style={{ width: 44, height: 44, margin: "-4px -8px -4px 0" }}
+    style={{ width: 44, height: 44, marginBlock: "-4px", marginInline: "0 -8px" }}
   >
     <span className="flex items-center justify-center" style={{ width: 34, height: 34, borderRadius: 9999, background: on ? INK.fill : INK.prPale }}>
       <Share2 size={15} strokeWidth={2} aria-hidden style={{ color: on ? INK.onFill : INK.prDeep }} />
@@ -64,7 +64,7 @@ export const PickRow: React.FC<{ icon: LucideIcon; tone: WinTone; label: string;
     type="button"
     onClick={onClick}
     disabled={disabled || !onClick}
-    className="tap w-full flex items-center text-left disabled:opacity-50"
+    className="tap w-full flex items-center text-start disabled:opacity-50"
     style={{ gap: 12, minHeight: 52, padding: "6px 0", borderTop: `1px solid ${INK.b06}` }}
   >
     <ToneTile icon={icon} tone={tone} size={32} radius={10} iconSize={16} />
@@ -78,7 +78,7 @@ export const PickRow: React.FC<{ icon: LucideIcon; tone: WinTone; label: string;
         </span>
       ) : null}
     </span>
-    <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: INK.chF }} className="shrink-0 rtl:-scale-x-100" />
+    <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: INK.chF }} className="shrink-0" />
   </button>
 );
 

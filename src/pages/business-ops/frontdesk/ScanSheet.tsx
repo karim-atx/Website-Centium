@@ -257,7 +257,7 @@ export const ScanSheet: React.FC<{
             <div
               aria-hidden
               className="absolute"
-              style={{ width: 200, height: 200, left: "50%", top: "50%", transform: "translate(-50%, -50%)", border: "2px solid rgba(255,255,255,0.85)", borderRadius: 14 }}
+              style={{ width: 200, height: 200, insetInlineStart: "50%", top: "50%", transform: "translate(-50%, -50%)", border: "2px solid rgba(255,255,255,0.85)", borderRadius: 14 }}
             />
             <div aria-hidden className="absolute inset-x-0 bottom-0" style={{ height: 56, background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%)" }} />
             <p role="status" className="absolute inset-x-0 text-center" style={{ bottom: 10, color: "rgba(255,255,255,0.85)", fontSize: textPx(12), fontWeight: 600 }}>

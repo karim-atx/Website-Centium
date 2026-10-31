@@ -9,6 +9,7 @@ import { money, reviewsLine, type VenueDashboard } from "../../services/venues/c
 import { openNowTag } from "../../services/venues/hours";
 import { MemberTag } from "../marketplace/MemberTag";
 import { linePx, textPx } from "../../theme/textSize";
+import { appLocale } from "../../i18n/format";
 
 // The per-type "Today" block under the gauge cluster (V6-52 / D-BU4-1):
 // BizTypeKit's glance screen (DA1-003 classes, DA1-007 gym, DA1-011 store)
@@ -124,7 +125,7 @@ export function VenueBoxes({ c, gymId }: { c: DashPalette; gymId: string }) {
       <div style={{ position: "relative" }}>
         <KitLabel c={c} label="This venue" />
         {open && (
-          <span style={{ position: "absolute", right: 2, top: 0 }}>
+          <span style={{ position: "absolute", insetInlineEnd: 2, top: 0 }}>
             <MemberTag label={open.label} tone={open.tone} />
           </span>
         )}
@@ -143,8 +144,8 @@ export function VenueBoxes({ c, gymId }: { c: DashPalette; gymId: string }) {
             c={c}
             cols={3}
             boxes={[
-              { value: d.activeMembers.toLocaleString(), label: "Active members" },
-              { value: d.membershipsAwaitingPayment.toLocaleString(), label: "Awaiting payment" },
+              { value: d.activeMembers.toLocaleString(appLocale()), label: "Active members" },
+              { value: d.membershipsAwaitingPayment.toLocaleString(appLocale()), label: "Awaiting payment" },
               // B15: null without "revenue": the two money boxes are left out, never "$0".
               ...(d.amountAwaitingPayment !== null && d.amountMarkedPaidThisMonth !== null
                 ? [
@@ -152,10 +153,10 @@ export function VenueBoxes({ c, gymId }: { c: DashPalette; gymId: string }) {
                     { value: money(d.amountMarkedPaidThisMonth), label: "Marked paid this month" },
                   ]
                 : []),
-              { value: d.classesThisWeek.toLocaleString(), label: "Classes this week" },
-              { value: d.bookingsThisWeek.toLocaleString(), label: "Bookings this week" },
-              { value: d.waitlistWaiting.toLocaleString(), label: "On waitlists" },
-              { value: d.cancellationsThisWeek.toLocaleString(), label: "Cancellations this week" },
+              { value: d.classesThisWeek.toLocaleString(appLocale()), label: "Classes this week" },
+              { value: d.bookingsThisWeek.toLocaleString(appLocale()), label: "Bookings this week" },
+              { value: d.waitlistWaiting.toLocaleString(appLocale()), label: "On waitlists" },
+              { value: d.cancellationsThisWeek.toLocaleString(appLocale()), label: "Cancellations this week" },
               { value: d.reviewsAverage === null ? "–" : d.reviewsAverage.toFixed(1), label: "Reviews", delta: reviewsLine(d.reviewsAverage, d.reviewsCount) },
             ]}
           />

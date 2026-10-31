@@ -335,7 +335,7 @@ export const FormBuilder: React.FC = () => {
                 type="button"
                 onClick={() => t.available && add(t.key)}
                 aria-disabled={!t.available || undefined}
-                className="tap flex items-center text-left"
+                className="tap flex items-center text-start"
                 style={{ gap: 10, padding: 10, borderRadius: 14, border: `1px solid ${INK.b10}`, background: INK.card, minHeight: 50, opacity: t.available ? 1 : 0.55 }}
               >
                 <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 9, background: INK.prPale }}>
@@ -534,7 +534,7 @@ export const FormBuilder: React.FC = () => {
 const Head: React.FC<{ title: string; onBack: () => void; onPreview: (() => void) | null }> = ({ title, onBack, onPreview }) => (
   <div className="flex items-center justify-between" style={{ gap: 8, marginBottom: 12 }}>
     <div className="flex items-center min-w-0" style={{ gap: 6 }}>
-      <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ width: 24, height: 24, marginLeft: -4 }}>
+      <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ width: 24, height: 24, marginInlineStart: -4 }}>
         <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
       </button>
       <h1 className="truncate" style={{ fontSize: textPx(17), fontWeight: 800, color: INK.ch }}>

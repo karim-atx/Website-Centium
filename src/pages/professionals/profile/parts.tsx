@@ -43,7 +43,7 @@ export const BackRow: React.FC<{ title?: string; eyebrow?: string; aside?: React
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: -7, minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginInlineStart: -7, minWidth: 0 }}>
         <button
           type="button"
           onClick={onBack ?? back}

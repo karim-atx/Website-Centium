@@ -159,7 +159,8 @@ export const SetOptionsSheet: React.FC<{
     if (!open || !coach) return;
     const row = rpeRowRef.current;
     const chip = row?.querySelector<HTMLElement>(`[data-rpe="${shownRpe ?? WARMUP_RPE}"]`);
-    if (row && chip) row.scrollLeft = Math.max(0, chip.offsetLeft - row.offsetLeft - 48);
+    // The browser clamps to the scroll range (negative in right to left).
+    if (row && chip) row.scrollLeft = chip.offsetLeft - row.offsetLeft - 48;
     // Only on opening, not on every pick.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, set]);

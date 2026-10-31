@@ -50,7 +50,7 @@ export function FoodFeedbackLine({ f, onReplied }: { f: EntryFeedback; onReplied
         <ProAvatar name={f.professionalName} size={20} />
         <span className="flex-1 min-w-0" style={{ fontSize: textPx(11.5), lineHeight: 1.45, color: "rgb(var(--c-charcoal-soft))" }}>
           {Icon && (
-            <span className="inline-flex text-status-good" style={{ verticalAlign: -2, marginRight: 4 }}>
+            <span className="inline-flex text-status-good" style={{ verticalAlign: -2, marginInlineEnd: 4 }}>
               <Icon size={12} strokeWidth={2.2} aria-hidden />
             </span>
           )}

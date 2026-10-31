@@ -13,6 +13,7 @@ import { ConnectionState } from "livekit-client";
 import { PhoneOff } from "lucide-react";
 import { useCallCountdown, formatDuration } from "../../hooks/useCallCountdown";
 import type { CallCredentials } from "../../services/calling";
+import { t } from "../../i18n/core";
 
 /**
  * The connected call, and THE ONLY MODULE IN THIS APP THAT IMPORTS LIVEKIT.
@@ -106,26 +107,26 @@ const CallStage: React.FC<{
             </div>
             <p className="text-sm font-semibold text-white/85">{participantName}</p>
             <p className="text-xs text-white/55">
-              {connected ? "Connected" : "Connecting…"}
+              {connected ? t("Connected") : t("Connecting…")}
             </p>
           </div>
         )}
 
         {video && hasPublication(mine) && (
-          <div className="absolute top-4 right-4 w-24 sm:w-32 aspect-[3/4] rounded-2xl overflow-hidden ring-1 ring-white/20 shadow-lift">
+          <div className="absolute top-4 end-4 w-24 sm:w-32 aspect-[3/4] rounded-2xl overflow-hidden ring-1 ring-white/20 shadow-lift">
             <VideoTrack trackRef={mine!} className="w-full h-full object-cover" />
           </div>
         )}
 
         {/* Elapsed time, and the countdown once the cap is close. Both read
             from the same wall clock, so they cannot disagree. */}
-        <div className="absolute top-4 left-4 flex items-center gap-2">
+        <div className="absolute top-4 start-4 flex items-center gap-2">
           <span className="text-xs font-semibold text-white/80 bg-black/35 rounded-full px-2.5 py-1 tabular-nums">
             {formatDuration(elapsedSeconds)}
           </span>
           {secondsLeft !== null && secondsLeft <= WARN_AT_SECONDS && (
             <span className="text-xs font-semibold text-white dark:text-[#0D0B1A] bg-status-high/90 rounded-full px-2.5 py-1 tabular-nums">
-              {formatDuration(secondsLeft)} left
+              {t("{time} left", { time: formatDuration(secondsLeft) })}
             </span>
           )}
         </div>
@@ -146,7 +147,7 @@ const CallStage: React.FC<{
         )}
         <button
           onClick={onHangUp}
-          aria-label="End call"
+          aria-label={t("End call")}
           className="tap w-16 h-14 rounded-full bg-status-high text-white dark:text-[#0D0B1A] flex items-center justify-center"
         >
           <PhoneOff size={22} />

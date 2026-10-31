@@ -12,6 +12,7 @@ import {
   type LiftRange,
 } from "../../services/workout/oneRepMax";
 import { linePx, textPx } from "../../theme/textSize";
+import { appLocale } from "../../i18n/format";
 
 const RANGES: LiftRange[] = ["3M", "6M", "All"];
 /** The frame shows the four most recent sessions. */
@@ -34,7 +35,7 @@ const CARD_GEOMETRY: TrendGeometry = {
 const PR_CHIP_BG = ["#F7EDD9", "#3A342C"] as const;
 
 const dayMs = (day: string) => Date.parse(`${day}T00:00:00Z`);
-const shortDate = (t: number) => new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const shortDate = (t: number) => new Date(t).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", timeZone: "UTC" });
 
 /**
  * Handover 2026-09-29 WO19: one lift's estimated 1RM. The current 1RM and the
@@ -58,7 +59,7 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
         <div className="flex items-baseline" style={{ gap: 10 }}>
           <p style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(30), fontWeight: 800, lineHeight: 1 }}>
             {kgWhole(lift.oneRm)}
-            <span style={{ color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(15), fontWeight: 700, marginLeft: 4 }}>kg</span>
+            <span style={{ color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(15), fontWeight: 700, marginInlineStart: 4 }}>kg</span>
           </p>
           <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>estimated 1RM</span>
         </div>
@@ -165,7 +166,7 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
               </span>
               <span className="flex-none" style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(15), fontWeight: 800 }}>
                 {kgWhole(s.oneRm)}
-                <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10), fontWeight: 600, marginLeft: 2 }}>kg</span>
+                <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10), fontWeight: 600, marginInlineStart: 2 }}>kg</span>
               </span>
             </li>
           ))}

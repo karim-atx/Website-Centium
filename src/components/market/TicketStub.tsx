@@ -122,7 +122,7 @@ export const TicketStub: React.FC<TicketStubProps> = ({
     boxSizing: "content-box",
     flexShrink: 0,
     background: stubFill,
-    borderLeft: `1.5px dashed ${c.perf}`,
+    borderInlineStart: `1.5px dashed ${c.perf}`,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -149,7 +149,7 @@ export const TicketStub: React.FC<TicketStubProps> = ({
     background: background === "none" ? undefined : (background ?? m.card),
     border: border === "none" ? undefined : (border ?? `0.5px solid ${m.hair}`),
     overflow: "hidden",
-    textAlign: "left",
+    textAlign: "start",
     color: m.ink,
     ...style,
   };
@@ -158,7 +158,7 @@ export const TicketStub: React.FC<TicketStubProps> = ({
   // buttons): its body is the button instead.
   const body =
     onPress && onStubPress ? (
-      <button type="button" onClick={onPress} aria-label={ariaLabel} {...press.handlers} style={{ flex: 1, minWidth: 0, padding: 0, font: "inherit", color: "inherit", textAlign: "left", background: "none", border: 0, cursor: "pointer", ...press.style, ...bodyStyle }}>
+      <button type="button" onClick={onPress} aria-label={ariaLabel} {...press.handlers} style={{ flex: 1, minWidth: 0, padding: 0, font: "inherit", color: "inherit", textAlign: "start", background: "none", border: 0, cursor: "pointer", ...press.style, ...bodyStyle }}>
         {children}
       </button>
     ) : (

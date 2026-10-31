@@ -3,6 +3,7 @@ import { ImageOff, RotateCw } from "lucide-react";
 import { attachmentUrl, knownRatio, rememberRatio } from "../../services/messaging/attachmentUrls";
 import { mayOpenAttachment } from "../../services/messaging";
 import { AttachmentGone } from "./AttachmentGone";
+import { t } from "../../i18n/core";
 
 // A photo in the chat log, shown as itself.
 //
@@ -101,7 +102,7 @@ export const InlineImage: React.FC<{
           void retry(true);
         }
       }}
-      aria-label={state === "failed" ? "Photo couldn't be loaded. Tap to try again" : "Photo. Tap to view full screen"}
+      aria-label={state === "failed" ? t("Photo couldn't be loaded. Tap to try again") : t("Photo. Tap to view full screen")}
       className={`tap relative block overflow-hidden rounded-xl bg-black/10 max-w-full ${className ?? ""}`}
       style={{ width, aspectRatio: String(ratio) }}
     >
@@ -132,9 +133,9 @@ export const InlineImage: React.FC<{
       {state === "failed" && (
         <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-3 text-center text-[12px] font-semibold opacity-80">
           <ImageOff size={18} aria-hidden />
-          Photo couldn't be loaded
+          {t("Photo couldn't be loaded")}
           <span className="inline-flex items-center gap-1 text-[11px] font-medium">
-            <RotateCw size={11} aria-hidden /> Tap to try again
+            <RotateCw size={11} aria-hidden /> {t("Tap to try again")}
           </span>
         </span>
       )}

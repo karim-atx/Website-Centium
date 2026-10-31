@@ -4,6 +4,7 @@ import { Toggle } from "../ui/Toggle";
 import { useApp } from "../../context/AppContext";
 import { TRACKER_OFF_KEEPS_DATA } from "../../services/cycle/guidance";
 import { TurnOffTrackingPopup } from "../cycle/TurnOffTrackingPopup";
+import { t } from "../../i18n/core";
 
 // Cycle tracking, the one switch every profile can reach for the cycle and
 // pregnancy section (handover 2026-09-29 MO11). Moved from Settings to the
@@ -49,15 +50,15 @@ export const CycleTrackingRow: React.FC = () => {
           <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-dark shrink-0" aria-hidden>
             <HealthScanIcon />
           </span>
-          <span className="block text-sm font-semibold text-charcoal">Cycle tracking</span>
+          <span className="block text-sm font-semibold text-charcoal">{t("Cycle tracking")}</span>
         </span>
-        <Toggle checked={cycleOn} onChange={(on) => void toggle(on)} label="Cycle tracking" disabled={busy || !cycleSettingsLoaded} />
+        <Toggle checked={cycleOn} onChange={(on) => void toggle(on)} label={t("Cycle tracking")} disabled={busy || !cycleSettingsLoaded} />
       </div>
       <p className="ps-12 mt-2.5 text-xs text-charcoal-faint leading-normal">
-        {cycleOn ? TRACKER_OFF_KEEPS_DATA : "Switch it on to start tracking."}
+        {cycleOn ? t(TRACKER_OFF_KEEPS_DATA) : t("Switch it on to start tracking.")}
       </p>
       {error && (
-        <p className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{error}</p>
+        <p className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{t(error)}</p>
       )}
       <TurnOffTrackingPopup open={confirmOff} onClose={() => setConfirmOff(false)} onError={(m) => setError(m)} />
     </div>

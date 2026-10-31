@@ -429,7 +429,7 @@ export function ClassPage({ classId }: { classId: string }) {
         display: "flex",
         alignItems: "center",
         gap: 6,
-        marginLeft: -7,
+        marginInlineStart: -7,
         marginTop: -20,
       }}
     >
@@ -1425,7 +1425,7 @@ export function ClassPage({ classId }: { classId: string }) {
                       background: m.card,
                       border: `0.5px solid ${m.hair}`,
                       font: "inherit",
-                      textAlign: "left",
+                      textAlign: "start",
                       cursor: "pointer",
                     }}
                   >

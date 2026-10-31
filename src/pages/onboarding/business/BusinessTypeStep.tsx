@@ -18,6 +18,7 @@ import { IntroChipFan, ObFooter, ObHeader, ObPage, ObPopup, ObProgress, ObSelect
 import { STORE_TYPES, storeTypeLabel, switchPopup, TYPE_CARDS, typeCardsNote, type BizLane, type StoreType } from "./lanes";
 import { hasTypeAnswers, withLane, type BusinessLaneDraft } from "./draft";
 import "./business-onboarding.css";
+import { t } from "../../../i18n/core";
 
 // OB-051…083 (+216 / 246 / 279): "What kind of business is this?" — the
 // SharedOnboardingV4 bizType screen on the shell's intro frame. Three cards,
@@ -61,13 +62,13 @@ export const BusinessTypeStep: React.FC<BizTypeStepProps> = ({ biz, setBiz, onNe
   const [phase, setPhase] = useState<Phase>(reduced ? "settled" : "in0");
   const timers = useRef<number[]>([]);
   useEffect(() => {
-    const t = timers.current;
-    if (reduced) return () => t.forEach(clearTimeout);
+    const ts = timers.current;
+    if (reduced) return () => ts.forEach(clearTimeout);
     const raf = requestAnimationFrame(() => requestAnimationFrame(() => setPhase("in1")));
-    t.push(window.setTimeout(() => setPhase("settled"), 240 + 120 + 40));
+    ts.push(window.setTimeout(() => setPhase("settled"), 240 + 120 + 40));
     return () => {
       cancelAnimationFrame(raf);
-      t.forEach(clearTimeout);
+      ts.forEach(clearTimeout);
     };
   }, [reduced]);
 
@@ -114,14 +115,14 @@ export const BusinessTypeStep: React.FC<BizTypeStepProps> = ({ biz, setBiz, onNe
         <ObHeader margin="intro" onBack={onBack} />
         <ObTitle
           variant="intro"
-          chip={{ label: "Business", vis: <IntroChipFan /> }}
+          chip={{ label: t("Business"), vis: <IntroChipFan /> }}
           chipStyle={{ transform: phase === "in0" ? "translateY(6px)" : "none", transition: reduced ? undefined : `transform 240ms ${EASE}` }}
-          eyebrow="Before step 1"
-          title="What kind of business is this?"
-          subtitle="This shapes your experience. You can adjust it later."
+          eyebrow={t("Before step 1")}
+          title={t("What kind of business is this?")}
+          subtitle={t("This shapes your experience. You can adjust it later.")}
           fade={titleFade}
         />
-        <div role="radiogroup" aria-label="Business type" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div role="radiogroup" aria-label={t("Business type")} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {TYPE_CARDS.map((card, i) => {
             const on = sel === card.key;
             const recede = sel !== null && !on;
@@ -138,7 +139,7 @@ export const BusinessTypeStep: React.FC<BizTypeStepProps> = ({ biz, setBiz, onNe
             return (
               <div key={card.key} style={enter}>
                 <ObSelectCard
-                  title={card.title}
+                  title={t(card.title)}
                   desc={
                     showType ? (
                       <span className="flex flex-wrap items-center gap-x-2 text-primary-dark font-bold">
@@ -149,15 +150,15 @@ export const BusinessTypeStep: React.FC<BizTypeStepProps> = ({ biz, setBiz, onNe
                           onClick={() => tapCard("store")}
                           className="hit inline-flex items-center gap-px text-[12px] font-bold text-primary-dark whitespace-nowrap"
                         >
-                          Change
+                          {t("Change")}
                           <ChevronDown size={13} strokeWidth={2.4} aria-hidden />
                         </button>
                       </span>
                     ) : (
-                      card.desc
+                      t(card.desc)
                     )
                   }
-                  points={card.points}
+                  points={card.points.map((p) => t(p))}
                   dot={card.key === "gym" ? OB.leaf : OB.brand}
                   tile={card.key === "gym" ? "teal" : "pale"}
                   tilt="-4deg"
@@ -180,11 +181,11 @@ export const BusinessTypeStep: React.FC<BizTypeStepProps> = ({ biz, setBiz, onNe
           {typeCardsNote(sel, storeConfirmed)}
         </p>
       </div>
-      <ObFooter primary={{ label: "Continue", onClick: continueNow, disabled: !canContinue && !out }} />
+      <ObFooter primary={{ label: t("Continue"), onClick: continueNow, disabled: !canContinue && !out }} />
       <BottomSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title="What kind of store?"
+        title={t("What kind of store?")}
         bodyPadding={{ top: 18, right: 20, bottom: 12, left: 20 }}
         footer={
           <button
@@ -198,12 +199,12 @@ export const BusinessTypeStep: React.FC<BizTypeStepProps> = ({ biz, setBiz, onNe
             className="w-full h-[52px] rounded-[16px] bg-primary-fill text-on-primary-fill flex items-center justify-center text-[14px] font-bold"
             style={{ opacity: sheetPick ? 1 : 0.4 }}
           >
-            {sheetPick ? `Confirm ${storeTypeLabel(sheetPick)}` : "Confirm"}
+            {sheetPick ? t("Confirm {type}", { type: storeTypeLabel(sheetPick) }) : t("Confirm")}
           </button>
         }
       >
-        <p className="text-[13px] leading-[19px] text-charcoal-soft mb-[14px]">Pick the one that fits best. Your categories and listings follow it.</p>
-        <div role="radiogroup" aria-label="Store type" className="flex flex-col gap-2">
+        <p className="text-[13px] leading-[19px] text-charcoal-soft mb-[14px]">{t("Pick the one that fits best. Your categories and listings follow it.")}</p>
+        <div role="radiogroup" aria-label={t("Store type")} className="flex flex-col gap-2">
           {STORE_TYPES.map((s) => {
             const on = sheetPick === s.key;
             const Art = STORE_ART[s.key];
@@ -215,7 +216,7 @@ export const BusinessTypeStep: React.FC<BizTypeStepProps> = ({ biz, setBiz, onNe
                 aria-checked={on}
                 onClick={() => setSheetPick(s.key)}
                 className={clsx(
-                  "w-full text-left flex items-center gap-3 rounded-[16px] py-[9px] pr-3 pl-[9px] box-border",
+                  "w-full text-start flex items-center gap-3 rounded-[16px] py-[9px] pe-3 ps-[9px] box-border",
                   on ? "border-[1.5px] border-solid border-brand-c bg-primary-pale shadow-[0_0_0_3px_rgb(var(--c-brand-c)/0.1)] dark:shadow-[0_0_0_3px_rgba(169,145,254,0.14)]" : "border border-solid border-hair-11 bg-cream-card"
                 )}
               >
@@ -223,8 +224,8 @@ export const BusinessTypeStep: React.FC<BizTypeStepProps> = ({ biz, setBiz, onNe
                   <Art size={44} style={{ transform: on ? "rotate(-4deg)" : "none", transformOrigin: "50% 70%", transition: reduced ? undefined : `transform 500ms ${EASE}` }} />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className={clsx("block text-[14px] leading-[19px] text-charcoal", on ? "font-extrabold" : "font-bold")}>{s.title}</span>
-                  <span className="block text-[11.5px] leading-[15px] text-charcoal-soft mt-px">{s.desc}</span>
+                  <span className={clsx("block text-[14px] leading-[19px] text-charcoal", on ? "font-extrabold" : "font-bold")}>{t(s.title)}</span>
+                  <span className="block text-[11.5px] leading-[15px] text-charcoal-soft mt-px">{t(s.desc)}</span>
                 </span>
                 <span
                   aria-hidden

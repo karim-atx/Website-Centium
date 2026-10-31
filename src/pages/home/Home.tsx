@@ -187,7 +187,7 @@ export default function Home() {
           one theme accent not already used elsewhere on Home (QA 12.0). */}
       <button
         onClick={() => navigate("/app/professionals")}
-        className="tap w-full flex items-center justify-between gap-3 rounded-[15px] bg-berry/[0.09] px-3.5 py-3 mb-4 animate-fade-slide-up text-left"
+        className="tap w-full flex items-center justify-between gap-3 rounded-[15px] bg-berry/[0.09] px-3.5 py-3 mb-4 animate-fade-slide-up text-start"
       >
         <div className="flex items-center gap-3 min-w-0">
           <Sparkles size={16} className="text-berry shrink-0" />
@@ -243,7 +243,7 @@ function HomeBell() {
       className="tap relative w-9 h-9 rounded-full flex items-center justify-center text-charcoal shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
     >
       <Bell size={20} strokeWidth={1.9} aria-hidden />
-      {unread > 0 && <span aria-hidden className="absolute rounded-full" style={{ top: 6, right: 7, width: 8, height: 8, background: "#8F68F6" }} />}
+      {unread > 0 && <span aria-hidden className="absolute rounded-full" style={{ top: 6, insetInlineEnd: 7, width: 8, height: 8, background: "#8F68F6" }} />}
     </button>
   );
 }

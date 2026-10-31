@@ -23,6 +23,7 @@ import { plural, sumMacros, templateLine, weekOfPlan } from "./nutritionModel";
 import { useNutritionOverview } from "./useNutritionOverview";
 import { AssignSheet } from "./AssignSheet";
 import type { NuArea } from "./nav";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · NU1 v6 "Meal plans library" (Nutrition) and "Library › Meal
@@ -126,7 +127,7 @@ export const LibraryHome: React.FC<{
               type="button"
               onClick={() => onArea(area)}
               aria-label={`${label}, ${value}`}
-              className="tap flex-1 min-w-0 flex flex-col text-left"
+              className="tap flex-1 min-w-0 flex flex-col text-start"
               style={{ borderRadius: 16, background: i === 0 ? INK.prPale : INK.soft, padding: 10, gap: 6 }}
             >
               <Icon size={16} strokeWidth={1.75} aria-hidden style={{ color: i === 0 ? INK.prDeep : INK.chS, ...NO_ICON_SCALE }} />
@@ -168,7 +169,7 @@ export const LibraryHome: React.FC<{
                   const totals = p.days.map((d) => sumMacros(d.items.map((it) => itemMacros(it, src))).kcal);
                   return (
                     <div key={p.id} className="flex items-start" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 16, marginBottom: 10, gap: 14 }}>
-                      <button type="button" onClick={() => onOpenPlan(p.id)} className="tap flex-1 min-w-0 flex items-start text-left" style={{ gap: 14 }}>
+                      <button type="button" onClick={() => onOpenPlan(p.id)} className="tap flex-1 min-w-0 flex items-start text-start" style={{ gap: 14 }}>
                         <span className="flex items-center justify-center shrink-0" style={{ width: 42, height: 42, borderRadius: 13, background: `${col}29` }}>
                           <UtensilsCrossed size={19} strokeWidth={1.75} aria-hidden style={{ color: col, ...NO_ICON_SCALE }} />
                         </span>
@@ -181,7 +182,7 @@ export const LibraryHome: React.FC<{
                           </span>
                         </span>
                       </button>
-                      <button type="button" aria-label={`${p.name} options`} onClick={(e) => setMenu({ plan: p, anchor: e.currentTarget })} className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, margin: "-12px -14px 0 0" }}>
+                      <button type="button" aria-label={`${p.name} options`} onClick={(e) => setMenu({ plan: p, anchor: e.currentTarget })} className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, marginBlock: "-12px 0", marginInline: "0 -14px" }}>
                         <EllipsisVertical size={18} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
                       </button>
                     </div>
@@ -201,9 +202,9 @@ export const LibraryHome: React.FC<{
                   {aList.map((a, i) => {
                     const wk = weekOfPlan(a.startsOn, today);
                     const pct = rings[a.clientId];
-                    const line = [wk ? `Week ${wk}` : `Starts ${new Date(`${a.startsOn}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`, pct != null ? `${pct}% on plan` : null].filter(Boolean).join(" · ");
+                    const line = [wk ? `Week ${wk}` : `Starts ${new Date(`${a.startsOn}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" })}`, pct != null ? `${pct}% on plan` : null].filter(Boolean).join(" · ");
                     return (
-                      <button key={a.id} type="button" onClick={() => onOpenPlan(a.planId)} className="tap w-full flex items-center text-left" style={{ gap: 12, padding: "11px 0", borderBottom: i < aList.length - 1 ? `1px solid ${INK.b06}` : "none" }}>
+                      <button key={a.id} type="button" onClick={() => onOpenPlan(a.planId)} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "11px 0", borderBottom: i < aList.length - 1 ? `1px solid ${INK.b06}` : "none" }}>
                         <span className="flex items-center justify-center shrink-0" style={{ width: 34, height: 34, borderRadius: 11, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
                           <UserRound size={16} strokeWidth={1.75} aria-hidden style={{ color: INK.prAccent }} />
                         </span>
@@ -225,7 +226,7 @@ export const LibraryHome: React.FC<{
               <SectionHead label="Recipes" right="See all" onRight={() => onArea("recipes")} />
               <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "4px 14px", marginBottom: 12 }}>
                 {rMatches.slice(0, 5).map((r, i) => (
-                  <button key={r.id} type="button" onClick={() => onArea("recipes")} className="tap w-full flex items-center text-left" style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < Math.min(5, rMatches.length) - 1 ? `1px solid ${INK.b06}` : "none" }}>
+                  <button key={r.id} type="button" onClick={() => onArea("recipes")} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < Math.min(5, rMatches.length) - 1 ? `1px solid ${INK.b06}` : "none" }}>
                     <span className="flex-1 min-w-0" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>{r.title}</span>
                     <ChevronRight size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
                   </button>

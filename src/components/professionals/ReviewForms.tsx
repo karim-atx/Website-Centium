@@ -17,6 +17,7 @@ import {
   type ReviewReportReason,
 } from "../../services/professional-reviews/rules";
 import { GuidelinesLink } from "../moderation/GuidelinesLink";
+import { appLocale } from "../../i18n/format";
 
 // The review screens' shared parts: the reviewer's own card, the form that
 // writes and edits a review, the report form and the professional's reply
@@ -36,7 +37,7 @@ const Counter: React.FC<{ text: string; max: number; id: string; nearLimitOnly?:
   const over = len > max;
   if (nearLimitOnly && len < max * 0.9) return null;
   return (
-    <p id={id} aria-live="polite" className={`text-[11px] font-semibold text-right mt-1 tabular-nums ${over ? "text-status-high" : "text-charcoal-faint"}`}>
+    <p id={id} aria-live="polite" className={`text-[11px] font-semibold text-end mt-1 tabular-nums ${over ? "text-status-high" : "text-charcoal-faint"}`}>
       {counterLabel(text, max)}
     </p>
   );
@@ -254,7 +255,7 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
       </div>
       {over && (
         <p className="text-xs font-semibold text-status-high">
-          A review can be up to {REVIEW_BODY_MAX.toLocaleString("en")} characters.
+          A review can be up to {REVIEW_BODY_MAX.toLocaleString(appLocale("en"))} characters.
         </p>
       )}
       {error && (
@@ -432,7 +433,7 @@ function ReplyForm({ onClose, existing, onSave }: ReplyProps) {
       </label>
       {over && (
         <p className="text-xs font-semibold text-status-high">
-          A reply can be up to {REPLY_BODY_MAX.toLocaleString("en")} characters.
+          A reply can be up to {REPLY_BODY_MAX.toLocaleString(appLocale("en"))} characters.
         </p>
       )}
       {error && (

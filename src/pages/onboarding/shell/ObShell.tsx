@@ -5,6 +5,7 @@ import "./onboarding.css";
 import { LeafBackdrop, MarkSvg, Shapes, Wordmark, type Shape } from "./visuals";
 import { OB_STRINGS, useOnboardingFlow } from "./flow";
 import { LANES, laneProgress } from "./lanes";
+import { t } from "../../../i18n/core";
 
 // v6 Batch 3: the onboarding shell. Every numbered step of every lane renders
 // through <ObStep>; the intro screens (Sign in / up, Check your email, account
@@ -34,7 +35,7 @@ export const ObPage: React.FC<{ backdrop?: boolean; children: React.ReactNode; c
 export const ObProgress: React.FC<{ count: number; index: number; variant?: "intro" | "lane" }> = ({ count, index, variant = "lane" }) => {
   const segs = Array.from({ length: count }, (_, i) => (i < index ? "done" : variant === "lane" && i === index ? "now" : "rest"));
   return variant === "lane" ? (
-    <div className="ob-bar" role="progressbar" aria-label="Setup progress" aria-valuenow={index + 1} aria-valuemin={1} aria-valuemax={count}>
+    <div className="ob-bar" role="progressbar" aria-label={t("Setup progress")} aria-valuenow={index + 1} aria-valuemin={1} aria-valuemax={count}>
       {segs.map((s, i) => (
         <span key={i} data-s={s} />
       ))}
@@ -48,9 +49,9 @@ export const ObProgress: React.FC<{ count: number; index: number; variant?: "int
   );
 };
 
-/** The 22×22 mark + 78×8.5 wordmark lockup. */
+/** The 22×22 mark + 78×8.5 wordmark lockup (left to right in every language: the mark is its C). */
 export const ObLockup = React.forwardRef<HTMLSpanElement, { style?: React.CSSProperties }>(({ style }, ref) => (
-  <span ref={ref} className="ob-lockup" style={style}>
+  <span ref={ref} className="ob-lockup" dir="ltr" style={style}>
     <MarkSvg size={22} className="ob-lockup-mark" />
     <Wordmark width={78} height={8.5} className="ob-lockup-word" />
   </span>
@@ -75,7 +76,7 @@ export const ObHeader: React.FC<{
   return (
     <div className="ob-head" data-m={margin}>
       {onBack ? (
-        <button type="button" className="ob-back hit" onClick={onBack} aria-label="Back">
+        <button type="button" className="ob-back hit" onClick={onBack} aria-label={t("Back")}>
           <ChevronLeft size={20} />
         </button>
       ) : (
@@ -84,7 +85,7 @@ export const ObHeader: React.FC<{
       <ObLockup ref={lockupRef} style={lockupStyle} />
       {saveExit ? (
         <button ref={exitRef} type="button" className="ob-exit hit" onClick={() => setFinishLater(true)}>
-          {OB_STRINGS.saveAndExit}
+          {t(OB_STRINGS.saveAndExit)}
         </button>
       ) : (
         <span className="ob-head-gap" />
@@ -186,7 +187,7 @@ export const ObFooter: React.FC<{
         {secondary.or && (
           <div className="ob-or" aria-hidden>
             <span />
-            <span className="ob-or-t">OR</span>
+            <span className="ob-or-t">{t("OR")}</span>
             <span />
           </div>
         )}
@@ -240,8 +241,8 @@ export const ObStep: React.FC<{
         <ObHeader margin={p ? "lane" : "nobar"} onBack={onBack} saveExit={saveExit && !!flow} />
         <ObTitle
           variant="lane"
-          chip={def ? { label: chipLabel || def.chip, vis: def.vis } : undefined}
-          eyebrow={p ? `Step ${p.index + 1} of ${p.count}` : undefined}
+          chip={def ? { label: chipLabel || t(def.chip), vis: def.vis } : undefined}
+          eyebrow={p ? t("Step {n} of {count}", { n: p.index + 1, count: p.count }) : undefined}
           title={title}
           subtitle={subtitle}
         />
@@ -254,7 +255,7 @@ export const ObStep: React.FC<{
 
 /** OURS-step-states row 1: field 342×52 r16, collapsible ×58 r18, row group r18, 14 gap. */
 export const ObSkeleton: React.FC<{ blocks?: ("field" | "coll" | "rows")[] }> = ({ blocks = ["field", "field", "coll", "rows"] }) => (
-  <div aria-busy="true" aria-label="Loading" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+  <div aria-busy="true" aria-label={t("Loading")} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
     {blocks.map((b, i) => (
       <div key={i} className="ob-skel" style={{ height: b === "field" ? 52 : b === "coll" ? 58 : 162, borderRadius: b === "field" ? 16 : 18 }} />
     ))}
@@ -317,21 +318,21 @@ export const ObFinishLater: React.FC<{ onClose: () => void }> = ({ onClose }) =>
     setError(null);
     const r = await flow.saveAndExit();
     setBusy(false);
-    if (!r.ok) setError(OB_STRINGS.finishLaterError);
+    if (!r.ok) setError(t(OB_STRINGS.finishLaterError));
   };
   return (
     <ObPopup
       icon={<Bookmark size={20} strokeWidth={2.2} />}
-      title={OB_STRINGS.finishLaterTitle}
+      title={t(OB_STRINGS.finishLaterTitle)}
       body={
         <>
-          {OB_STRINGS.finishLaterBody}
-          {offline && <> {OB_STRINGS.finishLaterOffline}</>}
+          {t(OB_STRINGS.finishLaterBody)}
+          {offline && <> {t(OB_STRINGS.finishLaterOffline)}</>}
         </>
       }
       error={error}
-      action={{ label: error ? OB_STRINGS.tryAgain : OB_STRINGS.saveAndExit, onClick: () => void run(), disabled: busy }}
-      keep={{ label: OB_STRINGS.keepGoing, onClick: onClose }}
+      action={{ label: error ? t(OB_STRINGS.tryAgain) : t(OB_STRINGS.saveAndExit), onClick: () => void run(), disabled: busy }}
+      keep={{ label: t(OB_STRINGS.keepGoing), onClick: onClose }}
     />
   );
 };

@@ -92,7 +92,7 @@ export const LeafStreak: React.FC<LeafStreakProps> = ({ title, current, best, la
             <span style={{ fontSize: textPx(12), fontWeight: 700, color: INK.chS }}>{label}</span>
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-end">
           <p style={{ fontSize: textPx(11), color: INK.chF }}>Best</p>
           <p style={{ fontSize: textPx(16), fontWeight: 800, color: INK.ch }}>{best}</p>
         </div>

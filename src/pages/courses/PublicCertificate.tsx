@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetchPublicCertificate, type PublicCertificate as Cert } from "../../services/courses";
 import { CentiumLockup } from "../../components/icons/CentiumMark";
+import { appLocale } from "../../i18n/format";
 
 // The public certificate page: /certificate/:serial
 //
@@ -119,7 +120,7 @@ export default function PublicCertificate() {
   }
 
   const { cert } = state;
-  const completed = new Date(`${cert.completedOn}T00:00:00`).toLocaleDateString("en-US", {
+  const completed = new Date(`${cert.completedOn}T00:00:00`).toLocaleDateString(appLocale("en-US"), {
     day: "numeric",
     month: "long",
     year: "numeric",

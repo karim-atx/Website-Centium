@@ -14,6 +14,7 @@ import { ImageApprovalBadge, ImageApprovalNote, type OwnImageState } from "../..
 import { ChipRow, Field, FieldError, Label, Note, TextBox } from "./courseUi";
 import { fieldBox } from "./courseStyles";
 import { TITLE_MIN, titleError } from "./courseModel";
+import { appLocale } from "../../../i18n/format";
 
 export interface BasicsDraft {
   title: string;
@@ -117,7 +118,7 @@ export const BasicsStep: React.FC<{
             <span style={{ fontSize: textPx(11), color: INK.chS, background: INK.card, padding: "0 6px", borderRadius: 6 }}>16 by 9 works best</span>
           </>
         )}
-        {own && <ImageApprovalBadge state={own} className="absolute top-2 left-2" />}
+        {own && <ImageApprovalBadge state={own} className="absolute top-2 start-2" />}
       </button>
       <input ref={input} type="file" accept={IMAGE_ACCEPT} className="sr-only" tabIndex={-1} aria-hidden onChange={(e) => {
           pickCover(e.target.files?.[0]);
@@ -216,7 +217,7 @@ export const BasicsStep: React.FC<{
           className="tap flex items-center justify-between disabled:opacity-60"
           style={{ ...fieldBox(!!menu), gap: 8 }}
         >
-          <span className="flex-1 min-w-0 text-left truncate">{cat?.name ?? ""}</span>
+          <span className="flex-1 min-w-0 text-start truncate">{cat?.name ?? ""}</span>
           <ChevronDown size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
         </button>
         {showErrors && !draft.categoryKey && <FieldError>Choose a category</FieldError>}
@@ -257,7 +258,7 @@ export const BasicsStep: React.FC<{
         placeholder="What the course covers and who it's for"
       />
       <Note mt={6}>
-        Up to {DESCRIPTION_MAX.toLocaleString("en-US")} characters. {draft.description.length > DESCRIPTION_MAX - 200 ? `${(DESCRIPTION_MAX - draft.description.length).toLocaleString("en-US")} left.` : ""}
+        Up to {DESCRIPTION_MAX.toLocaleString(appLocale("en-US"))} characters. {draft.description.length > DESCRIPTION_MAX - 200 ? `${(DESCRIPTION_MAX - draft.description.length).toLocaleString(appLocale("en-US"))} left.` : ""}
       </Note>
       {draft.focus.length > FOCUS_MAX && <FieldError>The focus is up to {FOCUS_MAX} characters.</FieldError>}
 

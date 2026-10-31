@@ -140,7 +140,7 @@ export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory
         ) : (
           <div className="flex flex-col" style={{ gap: 8 }}>
             {templates.map((t) => (
-              <button key={t.id} type="button" onClick={() => setSheet({ note: null, body: t.body })} className="tap text-left" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 14 }}>
+              <button key={t.id} type="button" onClick={() => setSheet({ note: null, body: t.body })} className="tap text-start" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 14 }}>
                 <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.ch }}>{t.title}</p>
                 <p className="line-clamp-3" style={{ fontSize: textPx(13), color: INK.chS, lineHeight: 1.5, marginTop: 6 }}>
                   {t.body}
@@ -160,7 +160,7 @@ export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory
           {shown.map((n) => {
             const edited = new Date(n.updatedAt).getTime() - new Date(n.createdAt).getTime() > 60000;
             return (
-              <button key={n.id} type="button" onClick={() => setSheet({ note: n })} className="tap text-left" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 14 }}>
+              <button key={n.id} type="button" onClick={() => setSheet({ note: n })} className="tap text-start" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 14 }}>
                 <span className="flex items-center justify-between" style={{ gap: 8 }}>
                   <span style={{ fontSize: textPx(12), fontWeight: 700, color: INK.ch }}>{`${n.sharedWithClient || n.eventId ? `${KIND_WORD[n.kind]} note` : "Private"} · ${fmtDay(n.createdAt)}`}</span>
                   {n.eventId ? (

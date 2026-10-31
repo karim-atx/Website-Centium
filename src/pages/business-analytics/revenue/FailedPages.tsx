@@ -403,7 +403,7 @@ export const FailedDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
         extra={
           <>
             <div
-              className="mt-[12px] rounded-[14px] px-[14px] py-[4px] text-left"
+              className="mt-[12px] rounded-[14px] px-[14px] py-[4px] text-start"
               style={{ background: v("soft") }}
             >
               {[

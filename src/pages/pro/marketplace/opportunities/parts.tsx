@@ -82,11 +82,11 @@ export function InitialsTile({ text }: { text: string }) {
 export function DialogRows({ rows }: { rows: [string, string][] }) {
   const m = useMarketColors();
   return (
-    <dl style={{ margin: "14px 0 0", borderRadius: 14, background: m.sgrey, padding: "4px 14px", textAlign: "left" }}>
+    <dl style={{ margin: "14px 0 0", borderRadius: 14, background: m.sgrey, padding: "4px 14px", textAlign: "start" }}>
       {rows.map(([k, v], i) => (
         <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "9px 0", borderTop: i ? `0.5px solid ${m.div}` : 0, fontSize: px(12.5), lineHeight: "normal" }}>
           <dt style={{ color: m.slabel }}>{k}</dt>
-          <dd style={{ margin: 0, fontWeight: 700, textAlign: "right", color: m.ink }}>{v}</dd>
+          <dd style={{ margin: 0, fontWeight: 700, textAlign: "end", color: m.ink }}>{v}</dd>
         </div>
       ))}
     </dl>

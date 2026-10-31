@@ -34,17 +34,17 @@ export const AnIndexRow: React.FC<{
     onClick={onClick}
     aria-label={ariaLabel}
     className={clsx(
-      "w-full grid items-center text-left min-h-[76px] active:bg-cream-soft [html.high-contrast_&]:active:outline [html.high-contrast_&]:active:outline-1 [html.high-contrast_&]:active:outline-charcoal-faint focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary-dark",
+      "w-full grid items-center text-start min-h-[76px] active:bg-cream-soft [html.high-contrast_&]:active:outline [html.high-contrast_&]:active:outline-1 [html.high-contrast_&]:active:outline-charcoal-faint focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary-dark",
       !first && "border-t",
       DIV
     )}
-    style={{ gridTemplateColumns: "minmax(0,1fr) auto 16px", columnGap: 12, padding: "14px 14px 14px 20px" }}
+    style={{ gridTemplateColumns: "minmax(0,1fr) auto 16px", columnGap: 12, paddingBlock: "14px", paddingInline: "20px 14px" }}
   >
     <span className="min-w-0">
       <span className="block text-[13.5px] leading-[18px] font-extrabold text-charcoal">{title}</span>
       <span className="block text-[11.5px] leading-[16px] text-charcoal-soft mt-[3px] [text-wrap:pretty]">{lead}</span>
     </span>
-    <span className="text-right max-w-[98px]">
+    <span className="text-end max-w-[98px]">
       <span className={clsx("block text-[20px] leading-[22px] font-extrabold tracking-[-0.02em] tabular-nums whitespace-nowrap", value === null ? "text-charcoal-tertiary" : "text-charcoal")}>
         {value ?? "–"}
       </span>
@@ -73,7 +73,7 @@ export const AnHeaderRow: React.FC<{
       type="button"
       onClick={onBack}
       aria-label={backLabel}
-      className="tap w-[44px] h-[44px] -ml-[10px] shrink-0 rounded-full flex items-center justify-center text-charcoal-soft focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
+      className="tap w-[44px] h-[44px] -ms-[10px] shrink-0 rounded-full flex items-center justify-center text-charcoal-soft focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
     >
       <ChevronLeft size={20} aria-hidden />
     </button>
@@ -85,7 +85,7 @@ export const AnHeaderRow: React.FC<{
           aria-haspopup="listbox"
           aria-expanded={picker.open}
           onClick={(e) => picker.onToggle(e.currentTarget)}
-          className="tap relative inline-flex items-center gap-[4px] min-h-[32px] text-[18px] leading-[23px] font-extrabold tracking-[-0.01em] text-charcoal text-left"
+          className="tap relative inline-flex items-center gap-[4px] min-h-[32px] text-[18px] leading-[23px] font-extrabold tracking-[-0.01em] text-charcoal text-start"
         >
           <span aria-hidden className="absolute inset-x-0 -inset-y-[6px]" />
           {title}
@@ -281,13 +281,13 @@ export const AnEmptyCard: React.FC<{
 export const AnIndexSkeleton: React.FC<{ rows: number }> = ({ rows }) => (
   <div role="status" aria-label="Loading">
     {Array.from({ length: rows }).map((_, i) => (
-      <div key={i} className={clsx("flex items-center justify-between min-h-[76px]", i > 0 && "border-t", DIV)} style={{ padding: "14px 14px 14px 20px" }}>
+      <div key={i} className={clsx("flex items-center justify-between min-h-[76px]", i > 0 && "border-t", DIV)} style={{ paddingBlock: "14px", paddingInline: "20px 14px" }}>
         <span className="space-y-[6px]">
           <span className="block w-[90px] h-[12px] rounded-[6px] bg-cream-soft animate-skeleton-pulse" />
           <span className="block w-[200px] h-[10px] rounded-[5px] bg-cream-soft animate-skeleton-pulse" />
           <span className="block w-[150px] h-[10px] rounded-[5px] bg-cream-soft animate-skeleton-pulse" />
         </span>
-        <span className="block w-[40px] h-[18px] rounded-[6px] bg-cream-soft animate-skeleton-pulse mr-[28px]" />
+        <span className="block w-[40px] h-[18px] rounded-[6px] bg-cream-soft animate-skeleton-pulse me-[28px]" />
       </div>
     ))}
   </div>
@@ -324,7 +324,7 @@ export const AnSection: React.FC<{ title: string; line: React.ReactNode; intro: 
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((o) => !o)}
-        className="relative w-full flex items-center gap-[8px] min-h-[24px] text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark rounded-[8px]"
+        className="relative w-full flex items-center gap-[8px] min-h-[24px] text-start focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark rounded-[8px]"
       >
         <span aria-hidden className="absolute inset-x-0 -inset-y-[10px]" />
         <span className="flex-1 min-w-0 text-[12.5px] leading-[17px] font-extrabold text-charcoal">{title}</span>

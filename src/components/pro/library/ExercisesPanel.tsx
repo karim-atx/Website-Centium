@@ -129,7 +129,7 @@ export const ExercisesPanel: React.FC<{ query: string; templates: WorkoutTemplat
             key={r.key}
             type="button"
             onClick={() => setDetail(r)}
-            className={`tap w-full flex flex-col text-left ${i > 0 ? "border-t-[0.5px] border-charcoal/[0.08]" : ""}`}
+            className={`tap w-full flex flex-col text-start ${i > 0 ? "border-t-[0.5px] border-charcoal/[0.08]" : ""}`}
             style={{ padding: "12px 4px", minHeight: 44 }}
             aria-label={`${r.name}, details`}
           >

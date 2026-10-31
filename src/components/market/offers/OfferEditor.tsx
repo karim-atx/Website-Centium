@@ -217,7 +217,7 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
           {rows.map((r, i) => (
             <div key={r.k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "10px 0", borderTop: i === 0 ? undefined : `0.5px solid ${m.div}`, fontSize: textPx(12.5) }}>
               <dt style={{ color: m.faint }}>{r.k}</dt>
-              <dd style={{ margin: 0, fontWeight: 700, textAlign: "right", minWidth: 0, overflowWrap: "anywhere" }}>{r.v}</dd>
+              <dd style={{ margin: 0, fontWeight: 700, textAlign: "end", minWidth: 0, overflowWrap: "anywhere" }}>{r.v}</dd>
             </div>
           ))}
         </dl>
@@ -447,7 +447,7 @@ const AppliesSelect: React.FC<{ value: string | null; onChange: (v: string) => v
             boxSizing: "border-box",
             borderRadius: 14,
             border: error ? `1.5px solid ${m.high}` : `1px solid ${m.border}`,
-            padding: "0 40px 0 14px",
+            paddingBlock: "0", paddingInline: "14px 40px",
             margin: 0,
             fontFamily: "inherit",
             fontSize: textPx(14),
@@ -467,7 +467,7 @@ const AppliesSelect: React.FC<{ value: string | null; onChange: (v: string) => v
             </option>
           ))}
         </select>
-        <span aria-hidden style={{ position: "absolute", right: 14, top: 0, bottom: 0, display: "flex", alignItems: "center", pointerEvents: "none" }}>
+        <span aria-hidden style={{ position: "absolute", insetInlineEnd: 14, top: 0, bottom: 0, display: "flex", alignItems: "center", pointerEvents: "none" }}>
           <ChevronDown size={14} strokeWidth={2.4} color={m.faint} style={NO_ICON_SCALE} />
         </span>
       </div>

@@ -45,7 +45,7 @@ export const SearchOnlineButton: React.FC<{ variant: "row" | "empty"; onClick: (
       <button
         type="button"
         onClick={onClick}
-        className="tap w-full flex items-center text-left shrink-0"
+        className="tap w-full flex items-center text-start shrink-0"
         style={{ gap: 10, margin: "4px 0 8px", padding: "11px 13px", borderRadius: 14, border: `1px dashed ${dark ? FOOD_DARK.outline : "#D9D5E8"}`, color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(13) }}
       >
         <Globe size={16} className="shrink-0" style={{ color: dark ? FOOD_DARK.lavInk : "rgb(var(--thi-7d67d9))" }} />
@@ -156,7 +156,7 @@ export const OnlineResults: React.FC<{
                 key={`${f.source}:${f.ref}`}
                 type="button"
                 onClick={() => onPick(f)}
-                className="tap w-full flex items-center text-left shrink-0"
+                className="tap w-full flex items-center text-start shrink-0"
                 style={{ gap: 10, padding: "10px 0", borderBottom: `1px solid ${dark ? FOOD_DARK.rule : "#EFEFF2"}` }}
               >
                 <span className="flex-1 min-w-0">
@@ -260,7 +260,7 @@ export const FoundFoodCard: React.FC<{
             type="button"
             onClick={() => setNutrientsOpen((v) => !v)}
             aria-expanded={nutrientsOpen}
-            className="tap w-full flex items-center text-left"
+            className="tap w-full flex items-center text-start"
             style={{ gap: 8, padding: "6px 2px" }}
           >
             <span style={{ flex: 1, fontSize: textPx(12.5), fontWeight: 700, color: "rgb(var(--c-charcoal-soft))" }}>Vitamins and minerals</span>

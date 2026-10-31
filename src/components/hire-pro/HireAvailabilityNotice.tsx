@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { FREE_PERIOD_ENDED } from "../../services/subscription-tiers/freePeriodCopy";
 import type { HireGate } from "../../services/hires/proLogic";
+import { t } from "../../i18n/core";
 
 // A3: tells a professional, in their own console, that clients cannot hire
 // them right now — before a client meets the hire sheet's "not taking new
@@ -29,12 +30,12 @@ export const HireAvailabilityNotice: React.FC<{
     <div className={`rounded-2xl bg-primary-pale px-4 py-3.5 ${className ?? ""}`} role="status">
       {gate === "free_period" ? (
         <>
-          <p className="text-sm font-semibold text-charcoal">{FREE_PERIOD_ENDED}</p>
+          <p className="text-sm font-semibold text-charcoal">{t(FREE_PERIOD_ENDED)}</p>
           <p className="text-xs text-charcoal-soft mt-1">
             Clients who try to hire you are told you're not taking new clients right now.
           </p>
           <Link to="/contact" className="tap inline-flex items-center mt-1.5 text-sm font-bold text-primary-deep-text underline">
-            {UPGRADE_ACTION_LABEL}
+            {t(UPGRADE_ACTION_LABEL)}
           </Link>
         </>
       ) : (
@@ -46,7 +47,7 @@ export const HireAvailabilityNotice: React.FC<{
             {capLine ? `${capLine}. ` : ""}Clients who try to hire you are told you're not taking new clients right
             now. Disconnect a client to free a place, or{" "}
             <a href={upgradeMailto()} className="font-bold text-primary-deep-text underline">
-              {UPGRADE_ACTION_LABEL.toLowerCase()}
+              {t(UPGRADE_ACTION_LABEL).toLowerCase()}
             </a>
             .
           </p>

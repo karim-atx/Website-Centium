@@ -29,6 +29,7 @@ import {
 import { checkRange, checkText, checkUrl, firstProblem } from "../../services/professional-cv/validate";
 import { currentMonth } from "../../services/professional-cv/cvDates";
 import { nextPosition } from "./useMyCv";
+import { t, tx } from "../../i18n/core";
 
 // The CV's add/edit sheets. Every save goes to the server and the sheet closes
 // only when it lands; the caller then patches its state with the returned row.
@@ -106,7 +107,7 @@ const EntryFrame: React.FC<{
   onDelete?: () => Promise<boolean>;
   deleteLabel?: string;
   children: React.ReactNode;
-}> = ({ open, onClose, title, saveLabel, busy, error, onSave, onDelete, deleteLabel = "Delete", children }) => {
+}> = ({ open, onClose, title, saveLabel, busy, error, onSave, onDelete, deleteLabel, children }) => {
   const [confirm, setConfirm] = useState(false);
   const timer = useRef<number | null>(null);
 
@@ -129,9 +130,9 @@ const EntryFrame: React.FC<{
       size="tall"
       footer={
         <div>
-          {error && <p className="text-xs font-semibold text-status-high mb-2.5 text-center">{error}</p>}
+          {error && <p className="text-xs font-semibold text-status-high mb-2.5 text-center">{t(error)}</p>}
           <Button fullWidth size="lg" onClick={onSave} disabled={busy}>
-            {busy ? "Saving…" : saveLabel}
+            {busy ? t("Saving…") : saveLabel}
           </Button>
         </div>
       }
@@ -145,7 +146,7 @@ const EntryFrame: React.FC<{
             disabled={busy}
             className="tap w-full min-h-[44px] flex items-center justify-center gap-1.5 text-xs font-semibold text-status-high"
           >
-            <Trash2 size={13} /> {confirm ? "Tap again to confirm" : deleteLabel}
+            <Trash2 size={13} /> {confirm ? t("Tap again to confirm") : (deleteLabel ?? t("Delete"))}
           </button>
         )}
       </div>
@@ -221,8 +222,8 @@ export const ExperienceSheet: React.FC<SheetProps<SectionEntry<"experience">>> =
     <EntryFrame
       open={p.open}
       onClose={p.onClose}
-      title={e ? "Edit experience" : "Add experience"}
-      saveLabel="Save experience"
+      title={e ? t("Edit experience") : t("Add experience")}
+      saveLabel={t("Save experience")}
       busy={x.busy}
       error={x.error}
       onDelete={x.remove}
@@ -240,14 +241,14 @@ export const ExperienceSheet: React.FC<SheetProps<SectionEntry<"experience">>> =
         )
       }
     >
-      <Field id="exp-title" label="Title" value={title} onChange={setTitle} placeholder="e.g. Head Coach" maxLength={200} />
-      <Field id="exp-org" label="Organisation" value={organisation} onChange={setOrganisation} placeholder="Gym, clinic or company" maxLength={200} />
-      <Field id="exp-location" label="Location" value={location} onChange={setLocation} placeholder="Optional" maxLength={200} />
+      <Field id="exp-title" label={tx("Title", "job title")} value={title} onChange={setTitle} placeholder={t("e.g. Head Coach")} maxLength={200} />
+      <Field id="exp-org" label={t("Organisation")} value={organisation} onChange={setOrganisation} placeholder={t("Gym, clinic or company")} maxLength={200} />
+      <Field id="exp-location" label={t("Location")} value={location} onChange={setLocation} placeholder={t("Optional")} maxLength={200} />
       <div className="grid grid-cols-2 gap-2.5">
-        <MonthYearField id="exp-start" label="Start" value={start} onChange={setStart} />
-        <MonthYearField id="exp-end" label="End" value={end} onChange={setEnd} allowPresent present={!end} />
+        <MonthYearField id="exp-start" label={t("Start")} value={start} onChange={setStart} />
+        <MonthYearField id="exp-end" label={t("End")} value={end} onChange={setEnd} allowPresent present={!end} />
       </div>
-      <Field id="exp-desc" label="What you did" value={description} onChange={setDescription} placeholder="Optional" multiline maxLength={4000} />
+      <Field id="exp-desc" label={t("What you did")} value={description} onChange={setDescription} placeholder={t("Optional")} multiline maxLength={4000} />
     </EntryFrame>
   );
 };
@@ -266,8 +267,8 @@ export const EducationSheet: React.FC<SheetProps<SectionEntry<"education">>> = (
     <EntryFrame
       open={p.open}
       onClose={p.onClose}
-      title={e ? "Edit education" : "Add education"}
-      saveLabel="Save education"
+      title={e ? t("Edit education") : t("Add education")}
+      saveLabel={t("Save education")}
       busy={x.busy}
       error={x.error}
       onDelete={x.remove}
@@ -284,15 +285,15 @@ export const EducationSheet: React.FC<SheetProps<SectionEntry<"education">>> = (
         )
       }
     >
-      <Field id="edu-inst" label="Institution" value={institution} onChange={setInstitution} placeholder="University, college or school" maxLength={200} />
-      <Field id="edu-degree" label="Degree" value={degree} onChange={setDegree} placeholder="e.g. BSc (optional)" maxLength={200} />
-      <Field id="edu-field" label="Field of study" value={field} onChange={setField} placeholder="e.g. Sports Science (optional)" maxLength={200} />
+      <Field id="edu-inst" label={t("Institution")} value={institution} onChange={setInstitution} placeholder={t("University, college or school")} maxLength={200} />
+      <Field id="edu-degree" label={t("Degree")} value={degree} onChange={setDegree} placeholder={t("e.g. BSc (optional)")} maxLength={200} />
+      <Field id="edu-field" label={t("Field of study")} value={field} onChange={setField} placeholder={t("e.g. Sports Science (optional)")} maxLength={200} />
       <div className="grid grid-cols-2 gap-2.5">
-        <MonthYearField id="edu-start" label="Start" value={start} onChange={setStart} optional />
-        <MonthYearField id="edu-end" label="End" value={end} onChange={setEnd} optional toYear={Number(currentMonth().slice(0, 4)) + 6} />
+        <MonthYearField id="edu-start" label={t("Start")} value={start} onChange={setStart} optional />
+        <MonthYearField id="edu-end" label={t("End")} value={end} onChange={setEnd} optional toYear={Number(currentMonth().slice(0, 4)) + 6} />
       </div>
-      <p className="text-[11.5px] text-charcoal-soft -mt-2">Dates are optional.</p>
-      <Field id="edu-desc" label="Description" value={description} onChange={setDescription} placeholder="Optional" multiline maxLength={4000} />
+      <p className="text-[11.5px] text-charcoal-soft -mt-2">{t("Dates are optional.")}</p>
+      <Field id="edu-desc" label={t("Description")} value={description} onChange={setDescription} placeholder={t("Optional")} multiline maxLength={4000} />
     </EntryFrame>
   );
 };
@@ -309,8 +310,8 @@ export const AwardSheet: React.FC<SheetProps<SectionEntry<"awards">>> = (p) => {
     <EntryFrame
       open={p.open}
       onClose={p.onClose}
-      title={e ? "Edit award" : "Add award"}
-      saveLabel="Save award"
+      title={e ? t("Edit award") : t("Add award")}
+      saveLabel={t("Save award")}
       busy={x.busy}
       error={x.error}
       onDelete={x.remove}
@@ -325,10 +326,10 @@ export const AwardSheet: React.FC<SheetProps<SectionEntry<"awards">>> = (p) => {
         )
       }
     >
-      <Field id="award-title" label="Award name" value={title} onChange={setTitle} maxLength={200} />
-      <Field id="award-issuer" label="Awarded by" value={issuer} onChange={setIssuer} placeholder="Optional" maxLength={200} />
-      <MonthYearField id="award-date" label="Date" value={awarded} onChange={setAwarded} optional />
-      <Field id="award-desc" label="Description" value={description} onChange={setDescription} placeholder="Optional" multiline maxLength={4000} />
+      <Field id="award-title" label={t("Award name")} value={title} onChange={setTitle} maxLength={200} />
+      <Field id="award-issuer" label={t("Awarded by")} value={issuer} onChange={setIssuer} placeholder={t("Optional")} maxLength={200} />
+      <MonthYearField id="award-date" label={t("Date")} value={awarded} onChange={setAwarded} optional />
+      <Field id="award-desc" label={t("Description")} value={description} onChange={setDescription} placeholder={t("Optional")} multiline maxLength={4000} />
     </EntryFrame>
   );
 };
@@ -346,8 +347,8 @@ export const PublicationSheet: React.FC<SheetProps<SectionEntry<"publications">>
     <EntryFrame
       open={p.open}
       onClose={p.onClose}
-      title={e ? "Edit publication" : "Add publication"}
-      saveLabel="Save publication"
+      title={e ? t("Edit publication") : t("Add publication")}
+      saveLabel={t("Save publication")}
       busy={x.busy}
       error={x.error}
       onDelete={x.remove}
@@ -363,11 +364,11 @@ export const PublicationSheet: React.FC<SheetProps<SectionEntry<"publications">>
         )
       }
     >
-      <Field id="pub-title" label="Title" value={title} onChange={setTitle} maxLength={300} />
-      <Field id="pub-publisher" label="Publisher" value={publisher} onChange={setPublisher} placeholder="Optional" maxLength={200} />
-      <MonthYearField id="pub-date" label="Published" value={published} onChange={setPublished} optional />
-      <Field id="pub-url" label="Link" value={url} onChange={setUrl} placeholder="https:// (optional)" type="url" inputMode="url" maxLength={2000} />
-      <Field id="pub-desc" label="Description" value={description} onChange={setDescription} placeholder="Optional" multiline maxLength={4000} />
+      <Field id="pub-title" label={t("Title")} value={title} onChange={setTitle} maxLength={300} />
+      <Field id="pub-publisher" label={t("Publisher")} value={publisher} onChange={setPublisher} placeholder={t("Optional")} maxLength={200} />
+      <MonthYearField id="pub-date" label={tx("Published", "publication date")} value={published} onChange={setPublished} optional />
+      <Field id="pub-url" label={t("Link")} value={url} onChange={setUrl} placeholder={t("https:// (optional)")} type="url" inputMode="url" maxLength={2000} />
+      <Field id="pub-desc" label={t("Description")} value={description} onChange={setDescription} placeholder={t("Optional")} multiline maxLength={4000} />
     </EntryFrame>
   );
 };
@@ -385,8 +386,8 @@ export const VolunteeringSheet: React.FC<SheetProps<SectionEntry<"volunteering">
     <EntryFrame
       open={p.open}
       onClose={p.onClose}
-      title={e ? "Edit volunteering" : "Add volunteering"}
-      saveLabel="Save volunteering"
+      title={e ? t("Edit volunteering") : t("Add volunteering")}
+      saveLabel={t("Save volunteering")}
       busy={x.busy}
       error={x.error}
       onDelete={x.remove}
@@ -402,13 +403,13 @@ export const VolunteeringSheet: React.FC<SheetProps<SectionEntry<"volunteering">
         )
       }
     >
-      <Field id="vol-role" label="Role" value={role} onChange={setRole} maxLength={200} />
-      <Field id="vol-org" label="Organisation" value={organisation} onChange={setOrganisation} maxLength={200} />
+      <Field id="vol-role" label={t("Role")} value={role} onChange={setRole} maxLength={200} />
+      <Field id="vol-org" label={t("Organisation")} value={organisation} onChange={setOrganisation} maxLength={200} />
       <div className="grid grid-cols-2 gap-2.5">
-        <MonthYearField id="vol-start" label="Start" value={start} onChange={setStart} optional />
-        <MonthYearField id="vol-end" label="End" value={end} onChange={setEnd} allowPresent present={!!start && !end} optional />
+        <MonthYearField id="vol-start" label={t("Start")} value={start} onChange={setStart} optional />
+        <MonthYearField id="vol-end" label={t("End")} value={end} onChange={setEnd} allowPresent present={!!start && !end} optional />
       </div>
-      <Field id="vol-desc" label="Description" value={description} onChange={setDescription} placeholder="Optional" multiline maxLength={4000} />
+      <Field id="vol-desc" label={t("Description")} value={description} onChange={setDescription} placeholder={t("Optional")} multiline maxLength={4000} />
     </EntryFrame>
   );
 };
@@ -423,8 +424,8 @@ export const LinkSheet: React.FC<SheetProps<SectionEntry<"links">>> = (p) => {
     <EntryFrame
       open={p.open}
       onClose={p.onClose}
-      title={e ? "Edit link" : "Add link"}
-      saveLabel="Save link"
+      title={e ? t("Edit link") : t("Add link")}
+      saveLabel={t("Save link")}
       busy={x.busy}
       error={x.error}
       onDelete={x.remove}
@@ -432,8 +433,8 @@ export const LinkSheet: React.FC<SheetProps<SectionEntry<"links">>> = (p) => {
         void x.save({ label, url }, firstProblem(checkText("Label", label, 1, 80, true), checkUrl("Link", url, true)))
       }
     >
-      <Field id="link-label" label="Label" value={label} onChange={setLabel} placeholder="e.g. Portfolio" maxLength={80} />
-      <Field id="link-url" label="Link" value={url} onChange={setUrl} placeholder="https://" type="url" inputMode="url" maxLength={2000} />
+      <Field id="link-label" label={t("Label")} value={label} onChange={setLabel} placeholder={t("e.g. Portfolio")} maxLength={80} />
+      <Field id="link-url" label={t("Link")} value={url} onChange={setUrl} placeholder={t("https://")} type="url" inputMode="url" maxLength={2000} />
     </EntryFrame>
   );
 };
@@ -522,32 +523,32 @@ export const LicenceSheet: React.FC<{
     <EntryFrame
       open={open}
       onClose={onClose}
-      title={licence ? "Edit licence" : "Add a licence"}
-      saveLabel="Save licence"
+      title={licence ? t("Edit licence") : t("Add a licence")}
+      saveLabel={t("Save licence")}
       busy={busy}
       error={error}
       onSave={() => void save()}
       onDelete={remove}
-      deleteLabel="Delete licence"
+      deleteLabel={t("Delete licence")}
     >
       {status && status.kind !== "none" && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-charcoal-soft">Review</span>
+            <span className="text-xs font-semibold text-charcoal-soft">{t("Review")}</span>
             <LicenceStatusBadge status={status} />
           </div>
           {status.kind === "rejected" && <RejectionNote reason={status.reason} />}
-          {status.kind === "verified" && <p className="text-xs text-charcoal-soft">{REPLACE_RESETS_REVIEW}</p>}
+          {status.kind === "verified" && <p className="text-xs text-charcoal-soft">{t(REPLACE_RESETS_REVIEW)}</p>}
         </div>
       )}
 
-      <Field id="lic-name" label="Name" value={name} onChange={setName} placeholder="e.g. Certified Personal Trainer" maxLength={200} />
-      <Field id="lic-issuer" label="Issuing organisation" value={issuer} onChange={setIssuer} placeholder="Who issued it" maxLength={200} />
+      <Field id="lic-name" label={t("Name")} value={name} onChange={setName} placeholder={t("e.g. Certified Personal Trainer")} maxLength={200} />
+      <Field id="lic-issuer" label={t("Issuing organisation")} value={issuer} onChange={setIssuer} placeholder={t("Who issued it")} maxLength={200} />
       <div className="grid grid-cols-2 gap-2.5">
-        <MonthYearField id="lic-issued" label="Issued" value={issued} onChange={setIssued} optional />
+        <MonthYearField id="lic-issued" label={t("Issued")} value={issued} onChange={setIssued} optional />
         <MonthYearField
           id="lic-expires"
-          label="Expires"
+          label={t("Expires")}
           value={noExpiry ? null : expires}
           onChange={setExpires}
           optional
@@ -556,34 +557,34 @@ export const LicenceSheet: React.FC<{
           toYear={thisYear + 15}
         />
       </div>
-      <ToggleRow label="Doesn't expire" checked={noExpiry} onChange={setNoExpiry} />
+      <ToggleRow label={t("Doesn't expire")} checked={noExpiry} onChange={setNoExpiry} />
 
       <Field
         id="lic-cid"
-        label="Credential ID"
+        label={t("Credential ID")}
         value={credentialId}
         onChange={setCredentialId}
-        placeholder="Optional"
+        placeholder={t("Optional")}
         maxLength={120}
         note={
           <p className="flex items-center gap-1.5 text-xs text-charcoal-soft">
-            <Lock size={13} className="shrink-0" /> Only you and our review team can see this
+            <Lock size={13} className="shrink-0" /> {t("Only you and our review team can see this")}
           </p>
         }
       />
       <Field
         id="lic-url"
-        label="Credential link"
+        label={t("Credential link")}
         value={credentialUrl}
         onChange={setCredentialUrl}
-        placeholder="https:// (optional, shown to clients)"
+        placeholder={t("https:// (optional, shown to clients)")}
         type="url"
         inputMode="url"
         maxLength={2000}
       />
 
       <div className="flex flex-col gap-2">
-        <p className="text-xs font-semibold text-charcoal-soft">Document for verification</p>
+        <p className="text-xs font-semibold text-charcoal-soft">{t("Document for verification")}</p>
         <AttachDocument
           bucket="certifications"
           path={current?.documentPath ?? null}
@@ -604,18 +605,18 @@ export const LicenceSheet: React.FC<{
                 }
               : undefined
           }
-          label={name.trim() || "Licence document"}
+          label={name.trim() || t("Licence document")}
           disabled={busy}
         />
         <p className="text-xs text-charcoal-soft leading-[1.4]">
-          Private: only our review team sees the document. Clients see a Verified badge once it's approved.
+          {t("Private: only our review team sees the document. Clients see a Verified badge once it's approved.")}
         </p>
       </div>
 
       {!noExpiry && (
         <ToggleRow
-          label="Show to clients after it expires"
-          sub="Off: expired licences are hidden from clients"
+          label={t("Show to clients after it expires")}
+          sub={t("Off: expired licences are hidden from clients")}
           checked={showWhenExpired}
           onChange={setShowWhenExpired}
         />
@@ -631,7 +632,7 @@ export const LicenceSheet: React.FC<{
           }}
         />
       ) : (
-        <p className="text-xs text-charcoal-soft leading-[1.4]">{PUBLISH_STRINGS.newLicence}</p>
+        <p className="text-xs text-charcoal-soft leading-[1.4]">{t(PUBLISH_STRINGS.newLicence)}</p>
       )}
     </EntryFrame>
   );
@@ -670,7 +671,7 @@ export const SkillsLanguagesSheet: React.FC<{
       return;
     }
     if (cv.languages.some((l) => l.language.toLowerCase() === language.trim().toLowerCase())) {
-      setError("That language is already on your CV.");
+      setError(t("That language is already on your CV."));
       return;
     }
     setBusy(true);
@@ -709,40 +710,40 @@ export const SkillsLanguagesSheet: React.FC<{
     "min-h-[44px] rounded-xl bg-cream-soft border border-charcoal/10 px-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20";
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Skills and languages" size="tall">
+    <BottomSheet open={open} onClose={onClose} title={t("Skills and languages")} size="tall">
       <div className="space-y-6">
         <ChipInput
           id="cv-skills"
-          label="Skills"
+          label={t("Skills")}
           values={cv.profile.skills}
           onChange={(v) => void saveSkills(v)}
-          placeholder="e.g. Mobility"
+          placeholder={t("e.g. Mobility")}
           max={30}
           maxTotal={900}
         />
 
         <div>
-          <p className="text-xs font-semibold text-charcoal-soft mb-1.5">Languages</p>
+          <p className="text-xs font-semibold text-charcoal-soft mb-1.5">{t("Languages")}</p>
           <div className="space-y-2">
             {cv.languages.map((l) => (
               <div key={l.id} className="flex items-center gap-2">
                 <span className="flex-1 min-w-0 truncate text-sm font-semibold text-charcoal">{l.language}</span>
                 <select
-                  aria-label={`${l.language} level`}
+                  aria-label={t("{language} level", { language: l.language })}
                   value={l.proficiency}
                   onChange={(e) => void changeLevel(l.id, e.target.value as Proficiency)}
                   className={SELECT}
                 >
                   {PROFICIENCIES.map((p) => (
                     <option key={p.value} value={p.value}>
-                      {p.label}
+                      {tx(p.label, "language level")}
                     </option>
                   ))}
                 </select>
                 <button
                   type="button"
                   onClick={() => void removeLanguage(l.id)}
-                  aria-label={`Remove ${l.language}`}
+                  aria-label={t("Remove {language}", { language: l.language })}
                   className="tap w-11 h-11 flex items-center justify-center text-charcoal-faint shrink-0"
                 >
                   <Trash2 size={15} />
@@ -753,7 +754,7 @@ export const SkillsLanguagesSheet: React.FC<{
           <div className="flex items-end gap-2 mt-3">
             <div className="flex-1 min-w-0 flex flex-col gap-1.5">
               <label htmlFor="cv-lang" className="text-[11.5px] text-charcoal-soft">
-                Add a language
+                {t("Add a language")}
               </label>
               <input
                 id="cv-lang"
@@ -766,30 +767,30 @@ export const SkillsLanguagesSheet: React.FC<{
                     void addLanguage();
                   }
                 }}
-                placeholder="e.g. Arabic"
+                placeholder={t("e.g. Arabic")}
                 className={`${INPUT} !min-h-[44px]`}
               />
             </div>
             <select
-              aria-label="Level"
+              aria-label={t("Level")}
               value={proficiency}
               onChange={(e) => setProficiency(e.target.value as Proficiency)}
               className={`${SELECT} max-w-[42%]`}
             >
               {PROFICIENCIES.map((p) => (
                 <option key={p.value} value={p.value}>
-                  {p.label}
+                  {tx(p.label, "language level")}
                 </option>
               ))}
             </select>
           </div>
           <Button fullWidth variant="outline" className="mt-2.5" disabled={busy || !language.trim()} onClick={() => void addLanguage()}>
-            {busy ? "Adding…" : "Add language"}
+            {busy ? t("Adding…") : t("Add language")}
           </Button>
         </div>
 
-        {error && <p className="text-xs font-semibold text-status-high">{error}</p>}
-        <p className="text-[11.5px] text-charcoal-soft">Changes save as you make them.</p>
+        {error && <p className="text-xs font-semibold text-status-high">{t(error)}</p>}
+        <p className="text-[11.5px] text-charcoal-soft">{t("Changes save as you make them.")}</p>
       </div>
     </BottomSheet>
   );

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { t } from "../../i18n/core";
 
 /**
  * Load-on-scroll for a list whose frame draws no "Show more" / "More results"
@@ -49,7 +50,7 @@ export const LoadMoreSentinel: React.FC<{ busy: boolean; count: number; onMore: 
         disabled={busy}
         className="tap sr-only focus:not-sr-only min-h-[44px] w-full text-[13px] font-semibold text-primary-deep-text disabled:opacity-50"
       >
-        {busy ? "Loading…" : label}
+        {busy ? t("Loading…") : label}
       </button>
     </div>
   );

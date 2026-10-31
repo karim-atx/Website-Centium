@@ -13,6 +13,7 @@
 // No React and no Supabase here, so the node test project loads it.
 
 import type { ProfessionalSubtype } from "../../types";
+import { tk } from "../../i18n/core";
 
 export type ProLane = "full_coaching" | "nutrition" | "clinical_overview";
 
@@ -69,9 +70,9 @@ export const proClientPath = (clientId: string, tab?: string): string =>
  */
 export type Slot4Glyph = "workout" | "food" | "heart";
 export const SLOT4: Record<ProLane, { label: string; to: string; glyph: Slot4Glyph }> = {
-  full_coaching: { label: "Library", to: PRO_ROUTES.library, glyph: "workout" },
-  nutrition: { label: "Meal plans", to: PRO_ROUTES.mealPlans, glyph: "food" },
-  clinical_overview: { label: "Insights", to: PRO_ROUTES.insights, glyph: "heart" },
+  full_coaching: { label: tk("Library"), to: PRO_ROUTES.library, glyph: "workout" },
+  nutrition: { label: tk("Meal plans"), to: PRO_ROUTES.mealPlans, glyph: "food" },
+  clinical_overview: { label: tk("Insights"), to: PRO_ROUTES.insights, glyph: "heart" },
 };
 
 // ---------------------------------------------------------------------------

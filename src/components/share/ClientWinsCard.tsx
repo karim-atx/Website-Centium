@@ -177,9 +177,9 @@ export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstNam
                   </span>
                   {right(r)}
                 </div>
-                {n && <p style={{ fontSize: textPx(11.5), lineHeight: 1.45, color: INK.chS, margin: "8px 0 0 48px" }}>{n}</p>}
+                {n && <p style={{ fontSize: textPx(11.5), lineHeight: 1.45, color: INK.chS, marginBlock: "8px 0", marginInline: "48px 0" }}>{n}</p>}
                 {r.held && !r.removal && (
-                  <div style={{ margin: "8px 0 0 48px" }}>
+                  <div style={{ marginBlock: "8px 0", marginInline: "48px 0" }}>
                     <HeldShareNote reason={r.held} />
                   </div>
                 )}

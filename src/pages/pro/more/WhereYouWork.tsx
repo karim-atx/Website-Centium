@@ -196,11 +196,11 @@ export default function WhereYouWork() {
                     style={{ height: 200, borderRadius: 18, background: `repeating-linear-gradient(45deg, ${INK.soft} 0 8px, ${INK.card} 8px 16px)`, border: `1px solid ${INK.b10}`, marginBottom: 10 }}
                   >
                     {inPerson && (
-                      <span className="absolute" style={{ left: "50%", top: "50%", width: circle, height: circle, margin: `${-circle / 2}px 0 0 ${-circle / 2}px`, borderRadius: 9999, background: "rgba(174,161,220,0.22)", border: `2px solid ${INK.pr}` }} />
+                      <span className="absolute" style={{ insetInlineStart: "50%", top: "50%", width: circle, height: circle, margin: `${-circle / 2}px 0 0 ${-circle / 2}px`, borderRadius: 9999, background: "rgba(174,161,220,0.22)", border: `2px solid ${INK.pr}` }} />
                     )}
-                    <span className="absolute" style={{ left: "50%", top: "50%", width: 14, height: 14, margin: "-7px 0 0 -7px", borderRadius: 9999, background: INK.prDeep, border: `3px solid ${INK.card}` }} />
+                    <span className="absolute" style={{ insetInlineStart: "50%", top: "50%", width: 14, height: 14, marginBlock: "-7px 0", marginInline: "-7px 0", borderRadius: 9999, background: INK.prDeep, border: `3px solid ${INK.card}` }} />
                     {listing?.location && (
-                      <span className="absolute" style={{ left: 8, bottom: 8, fontSize: 10, color: INK.chF, background: INK.card, padding: "2px 6px", borderRadius: 6 }}>
+                      <span className="absolute" style={{ insetInlineStart: 8, bottom: 8, fontSize: 10, color: INK.chF, background: INK.card, padding: "2px 6px", borderRadius: 6 }}>
                         {listing.location}
                       </span>
                     )}
@@ -210,7 +210,7 @@ export default function WhereYouWork() {
                     <b style={{ color: INK.ch }}>{shownKm ? `${shownKm} km` : "Not set"}</b>
                   </div>
                   <div className="relative" style={{ marginTop: 8, height: 24 }}>
-                    <span aria-hidden className="absolute block" style={{ left: 0, right: 0, top: 8, height: 8, borderRadius: 9999, background: `linear-gradient(to right, ${INK.pr} ${fill * 100}%, ${INK.soft} ${fill * 100}%)` }} />
+                    <span aria-hidden className="absolute block" style={{ insetInlineStart: 0, insetInlineEnd: 0, top: 8, height: 8, borderRadius: 9999, background: `linear-gradient(to right, ${INK.pr} ${fill * 100}%, ${INK.soft} ${fill * 100}%)` }} />
                     <input
                       type="range"
                       min={0}

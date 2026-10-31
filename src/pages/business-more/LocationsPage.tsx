@@ -525,11 +525,11 @@ function PinMap({
           {online && (
             <>
               {/* The fixed pin: map-pin 40 / 2, bottom-centre on the map centre, with its shadow ellipse. */}
-              <span aria-hidden className="pointer-events-none absolute flex flex-col items-center text-primary-dark" style={{ left: "50%", top: "50%", transform: "translate(-50%,-100%)", zIndex: 2 }}>
+              <span aria-hidden className="pointer-events-none absolute flex flex-col items-center text-primary-dark" style={{ insetInlineStart: "50%", top: "50%", transform: "translate(-50%,-100%)", zIndex: 2 }}>
                 <MapPin size={40} strokeWidth={2} />
               </span>
-              <span aria-hidden className="pointer-events-none absolute rounded-full" style={{ left: "50%", top: "50%", width: 10, height: 4, background: "rgba(0,0,0,0.25)", transform: "translate(-50%,-1px)", zIndex: 2 }} />
-              <div className="absolute" style={{ left: 12, right: 68, top: 12, zIndex: 3 }}>
+              <span aria-hidden className="pointer-events-none absolute rounded-full" style={{ insetInlineStart: "50%", top: "50%", width: 10, height: 4, background: "rgba(0,0,0,0.25)", transform: "translate(-50%,-1px)", zIndex: 2 }} />
+              <div className="absolute" style={{ insetInlineStart: 12, insetInlineEnd: 68, top: 12, zIndex: 3 }}>
                 <label className="flex items-center bg-cream-card text-charcoal-soft" style={{ height: 44, borderRadius: 14, boxShadow: "0 4px 12px rgba(0,0,0,0.12)", padding: "0 12px", gap: 8 }}>
                   <Search size={16} aria-hidden />
                   <input value={q} onChange={(e) => { setQ(e.target.value); setTyped(true); }} aria-label="Search an area" placeholder="Search an area" className="flex-1 min-w-0 bg-transparent outline-none text-[13px] font-semibold text-charcoal placeholder:text-charcoal-faint" />
@@ -559,7 +559,7 @@ function PinMap({
                 aria-label="Use current location"
                 className="tap absolute flex items-center justify-center rounded-full bg-cream-card text-primary-dark"
                 // Bottom 34 (frame 12) so the map's credit line stays readable under it.
-                style={{ right: 12, bottom: 34, width: 44, height: 44, boxShadow: "0 4px 12px rgba(0,0,0,0.18)", zIndex: 3 }}
+                style={{ insetInlineEnd: 12, bottom: 34, width: 44, height: 44, boxShadow: "0 4px 12px rgba(0,0,0,0.18)", zIndex: 3 }}
               >
                 <LocateFixed size={20} strokeWidth={2} aria-hidden />
               </button>

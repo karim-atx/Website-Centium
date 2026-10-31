@@ -32,6 +32,7 @@ import { DietStrip, Flag, NuHead } from "./kit";
 import { useDietaryNeeds, useNuRoster } from "./hooks";
 import { useNutritionOverview, JOURNAL_DAYS } from "./useNutritionOverview";
 import { SLOT_LABEL, SLOT_ORDER, dayDate, dayRange, daysAgo, journalBox, plural, shiftDate, worstConflict, type ConflictRow, type QueueRow } from "./nutritionModel";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · NU5 v2 "Food journal review queue" (source gen r6c.js
@@ -96,7 +97,7 @@ const QueueCard: React.FC<{ row: QueueRow; name: string; avatarUrl: string | nul
   const flagged = (row.proteinUnder ?? 0) > 0;
   const n = row.days.length;
   return (
-    <button type="button" onClick={onOpen} className="tap w-full flex text-left" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "12px 14px", marginBottom: 8, gap: 12 }}>
+    <button type="button" onClick={onOpen} className="tap w-full flex text-start" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "12px 14px", marginBottom: 8, gap: 12 }}>
       <Avatar name={name} url={avatarUrl} size={38} tone={flagged ? "gold" : "pr"} />
       <span className="flex-1 min-w-0">
         <span className="flex justify-between" style={{ gap: 8 }}>
@@ -254,7 +255,7 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
       ) : (
         <>
           <div className="flex" style={{ gap: 8, marginBottom: 12 }}>
-            <JBox label="Calories" value={Math.round(totals.kcal).toLocaleString("en-GB")} unit="kcal" target={data.target?.kcal ?? null} raw={totals.kcal} accent={dark ? "#C3B3FB" : "#7D6BB5"} unitTarget="" />
+            <JBox label="Calories" value={Math.round(totals.kcal).toLocaleString(appLocale("en-GB"))} unit="kcal" target={data.target?.kcal ?? null} raw={totals.kcal} accent={dark ? "#C3B3FB" : "#7D6BB5"} unitTarget="" />
             <JBox label="Protein" value={String(Math.round(totals.protein))} unit="g" target={data.target?.protein ?? null} raw={totals.protein} accent="#7D6BB5" unitTarget=" g" />
           </div>
           {entries.length === 0 ? (
@@ -327,7 +328,7 @@ const JBox: React.FC<{ label: string; value: string; unit: string; target: numbe
   const b = journalBox(raw, target);
   return (
     <div className="flex-1 min-w-0 relative overflow-hidden" style={{ borderRadius: 18, background: INK.card, border: `1px solid ${b.over ? (dark ? "rgba(240,154,142,0.4)" : "rgba(192,57,43,0.3)") : INK.bCard}`, padding: "14px 14px 12px" }}>
-      <span aria-hidden className="absolute" style={{ left: 0, top: 0, bottom: 0, width: 4, background: accent }} />
+      <span aria-hidden className="absolute" style={{ insetInlineStart: 0, top: 0, bottom: 0, width: 4, background: accent }} />
       <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.chS }}>{label}</p>
       <p className="flex items-baseline flex-wrap" style={{ gap: 4, marginTop: 6 }}>
         <span style={{ fontSize: textPx(28), fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1, fontVariantNumeric: "tabular-nums", color: INK.ch }}>{value}</span>
@@ -337,7 +338,7 @@ const JBox: React.FC<{ label: string; value: string; unit: string; target: numbe
         <span className="block" style={{ height: "100%", width: `${b.pct}%`, borderRadius: 9999, background: b.over ? INK.hi : accent }} />
       </span>
       <p className="flex justify-between flex-wrap" style={{ gap: 6, fontSize: textPx(11), color: INK.chF, marginTop: 6 }}>
-        <span>{target ? `Target ${Math.round(target).toLocaleString("en-GB")}${unitTarget}` : "No target set"}</span>
+        <span>{target ? `Target ${Math.round(target).toLocaleString(appLocale("en-GB"))}${unitTarget}` : "No target set"}</span>
         {b.left && <b style={{ color: b.over ? INK.hi : INK.good, whiteSpace: "nowrap" }}>{b.left}</b>}
       </p>
     </div>

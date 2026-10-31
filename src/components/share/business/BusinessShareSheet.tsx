@@ -344,7 +344,7 @@ export const BusinessShareSheet: React.FC<{
                         aria-checked={on}
                         onClick={() => chooseBg(k)}
                         className="tap relative inline-flex items-center whitespace-nowrap before:absolute before:-inset-y-[9px] before:inset-x-0 before:content-['']"
-                        style={{ gap: 6, borderRadius: 999, padding: "5px 10px 5px 6px", fontSize: textPx(11), lineHeight: linePx(14), fontWeight: on ? 700 : 600, border: `1px solid ${on ? m.fill : m.border}`, background: on ? m.fill : m.card, color: on ? m.onfill : m.ink2 }}
+                        style={{ gap: 6, borderRadius: 999, paddingBlock: "5px", paddingInline: "6px 10px", fontSize: textPx(11), lineHeight: linePx(14), fontWeight: on ? 700 : 600, border: `1px solid ${on ? m.fill : m.border}`, background: on ? m.fill : m.card, color: on ? m.onfill : m.ink2 }}
                       >
                         <span aria-hidden style={{ width: 14, height: 14, borderRadius: 999, background: sw, boxShadow: "0 0 0 1px rgba(36,31,27,0.1)", flex: "none" }} />
                         {BG_LABEL[k]}
@@ -365,7 +365,7 @@ export const BusinessShareSheet: React.FC<{
             {rows.map((r) => {
               const on = r.lock || !hide.includes(r.key);
               const text = (
-                <span className="flex-1 min-w-0 text-left">
+                <span className="flex-1 min-w-0 text-start">
                   <span className="block" style={{ fontSize: textPx(14), color: m.ink }}>
                     {r.title}
                   </span>
@@ -433,7 +433,7 @@ export const BusinessShareSheet: React.FC<{
       {/* The export's measure copy: the same card, unscaled, off screen (paintBizCard draws from it). */}
       {open &&
         createPortal(
-          <div ref={measure} aria-hidden style={{ position: "fixed", left: -10000, top: 0, width: 300, pointerEvents: "none", opacity: 0 }}>
+          <div ref={measure} aria-hidden style={{ position: "fixed", insetInlineStart: -10000, top: 0, width: 300, pointerEvents: "none", opacity: 0 }}>
             <BizCard
               brand={brand}
               content={content}

@@ -306,10 +306,10 @@ export const FixedCta: React.FC<{
         <div
           aria-hidden
           className="fixed z-[19] pointer-events-none bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,#FFFFFF_42%)] dark:bg-[linear-gradient(180deg,rgba(18,19,23,0)_0%,#121317_42%)]"
-          style={{ left: "var(--app-gutter, 0px)", right: "var(--app-gutter, 0px)", bottom: 0, height: "calc(150px + env(safe-area-inset-bottom))" }}
+          style={{ insetInlineStart: "var(--app-gutter, 0px)", insetInlineEnd: "var(--app-gutter, 0px)", bottom: 0, height: "calc(150px + env(safe-area-inset-bottom))" }}
         />
       )}
-      <div className="fixed z-20" style={{ left: "calc(var(--app-gutter, 0px) + 16px)", right: "calc(var(--app-gutter, 0px) + 16px)", bottom: "calc(env(safe-area-inset-bottom) + 88px)" }}>
+      <div className="fixed z-20" style={{ insetInlineStart: "calc(var(--app-gutter, 0px) + 16px)", insetInlineEnd: "calc(var(--app-gutter, 0px) + 16px)", bottom: "calc(env(safe-area-inset-bottom) + 88px)" }}>
         {note && (
           <p role="status" className="text-center text-[11.5px] font-semibold leading-[16px] text-charcoal-faint" style={{ marginBottom: 8 }}>
             {note}

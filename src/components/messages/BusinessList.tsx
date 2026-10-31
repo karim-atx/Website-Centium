@@ -8,6 +8,7 @@ import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import { MemberTag } from "../marketplace/MemberTag";
 import type { MessageThread } from "../../services/messaging";
 import { BottomSheet } from "../ui/BottomSheet";
+import { t } from "../../i18n/core";
 
 /**
  * The business Messages list in ClientChatV2's language (OP1-190; source
@@ -93,7 +94,7 @@ export const BizListHeader: React.FC<{ title: string; onBack?: () => void; onNew
           type="button"
           onClick={onBack}
           aria-label={t("Back")}
-          className="tap w-11 h-11 -ml-2.5 rounded-full flex items-center justify-center text-charcoal shrink-0"
+          className="tap w-11 h-11 -ms-2.5 rounded-full flex items-center justify-center text-charcoal shrink-0"
         >
           <BackIcon size={20} strokeWidth={2.2} aria-hidden />
         </button>
@@ -103,8 +104,8 @@ export const BizListHeader: React.FC<{ title: string; onBack?: () => void; onNew
         <button
           type="button"
           onClick={onNew}
-          aria-label="New message"
-          title="New message"
+          aria-label={t("New message")}
+          title={t("New message")}
           data-new-message=""
           className="tap w-11 h-11 rounded-full flex items-center justify-center text-primary-dark shrink-0"
         >
@@ -118,7 +119,7 @@ export const BizListHeader: React.FC<{ title: string; onBack?: () => void; onNew
 /** O1 (OURS): four 72 rows in the business row's geometry, a 48 circle and two bars. */
 export const BizListSkeleton: React.FC = () => (
   <div aria-busy="true" data-biz-skeleton="">
-    <span className="sr-only">Loading messages</span>
+    <span className="sr-only">{t("Loading messages")}</span>
     {[0, 1, 2, 3].map((i) => (
       <div
         key={i}
@@ -164,10 +165,10 @@ export const BizEmptyCard: React.FC<{ title: string; helper?: string; icon?: Rea
 export const BizListError: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
   <div role="alert" data-biz-error="" className="flex flex-col items-center text-center pt-8 pb-4 gap-1">
     <p className="max-w-[280px] text-[13px] leading-[19px] text-charcoal-soft">
-      Couldn't load your messages. Check your connection and try again.
+      {t("Couldn't load your messages. Check your connection and try again.")}
     </p>
     <button type="button" onClick={onRetry} className="tap min-h-[44px] px-3 text-[13px] font-bold text-primary-dark">
-      Retry
+      {t("Retry")}
     </button>
   </div>
 );
@@ -180,7 +181,7 @@ export const BizListError: React.FC<{ onRetry: () => void }> = ({ onRetry }) => 
 export const BizOfflineBanner: React.FC = () => (
   <div role="status" data-biz-offline="" className="mb-1.5 rounded-[14px] bg-primary-pale px-3 py-[9px] flex items-center gap-2">
     <WifiOff size={15} strokeWidth={2.2} className="text-primary-dark shrink-0" aria-hidden />
-    <span className="text-[12px] leading-[16px] font-bold text-primary-deep-text">You're offline. Showing your chats as last loaded.</span>
+    <span className="text-[12px] leading-[16px] font-bold text-primary-deep-text">{t("You're offline. Showing your chats as last loaded.")}</span>
   </div>
 );
 
@@ -246,7 +247,7 @@ export const BizNewMessageSheet: React.FC<{
   const shown = people && people.key === peopleKey ? people : null;
   const teamShown = (team ?? []).filter((m) => !search || m.name.toLowerCase().includes(search.toLowerCase()));
   return (
-    <BottomSheet open={open} onClose={onClose} title="New message">
+    <BottomSheet open={open} onClose={onClose} title={t("New message")}>
       <div className="animate-fade-slide-up" data-biz-new-sheet="">
         {(error || loadError) && (
           <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3 py-2 mb-2">{error ?? loadError}</p>
@@ -255,26 +256,26 @@ export const BizNewMessageSheet: React.FC<{
           // The list's search field (OP1-190 row 3): h44 r14 card, 1px border, padding 0 12, gap 8, search 16 faint.
           <label data-new-search="" className="flex items-center gap-2 h-11 rounded-[14px] px-3 mb-3 bg-cream-card border border-charcoal/[0.08]">
             <Search size={16} className="shrink-0 text-charcoal-faint" aria-hidden />
-            <span className="sr-only">Search your team, members and customers</span>
+            <span className="sr-only">{t("Search your team, members and customers")}</span>
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value.slice(0, 60))}
-              placeholder="Search"
+              placeholder={t("Search")}
               className="flex-1 min-w-0 bg-transparent text-[14px] text-charcoal placeholder:text-charcoal-faint focus:outline-none"
             />
           </label>
         )}
-        <p className="text-[12px] leading-[16px] font-bold text-charcoal-faint mb-1">Your team</p>
-        {team === null && !loadError && <p className="text-[13px] text-charcoal-soft py-4">Loading your team…</p>}
-        {team && team.length === 0 && <p className="text-[13px] text-charcoal-soft py-4">No one on your team yet.</p>}
-        {team && team.length > 0 && teamShown.length === 0 && <p className="text-[13px] text-charcoal-soft py-4">No one matches your search.</p>}
+        <p className="text-[12px] leading-[16px] font-bold text-charcoal-faint mb-1">{t("Your team")}</p>
+        {team === null && !loadError && <p className="text-[13px] text-charcoal-soft py-4">{t("Loading your team…")}</p>}
+        {team && team.length === 0 && <p className="text-[13px] text-charcoal-soft py-4">{t("No one on your team yet.")}</p>}
+        {team && team.length > 0 && teamShown.length === 0 && <p className="text-[13px] text-charcoal-soft py-4">{t("No one matches your search.")}</p>}
         {teamShown.map((m) => (
           <button
             key={m.professionalId}
             type="button"
             disabled={busy}
             onClick={() => onPick(m.professionalId)}
-            className="tap w-full flex items-center gap-3 min-h-[56px] text-left border-b border-charcoal/[0.06] disabled:opacity-60"
+            className="tap w-full flex items-center gap-3 min-h-[56px] text-start border-b border-charcoal/[0.06] disabled:opacity-60"
           >
             <span className="w-10 h-10 rounded-full bg-primary-pale text-primary-dark flex items-center justify-center shrink-0 text-[14px] font-extrabold">
               {bizInitials(m.name)}
@@ -284,11 +285,11 @@ export const BizNewMessageSheet: React.FC<{
         ))}
         {bizId && !shown?.pending && (
           <div data-new-members="">
-            <p className="text-[12px] leading-[16px] font-bold text-charcoal-faint mb-1 mt-4">Your members and customers</p>
-            {!shown && <p className="text-[13px] text-charcoal-soft py-4">Loading your members…</p>}
+            <p className="text-[12px] leading-[16px] font-bold text-charcoal-faint mb-1 mt-4">{t("Your members and customers")}</p>
+            {!shown && <p className="text-[13px] text-charcoal-soft py-4">{t("Loading your members…")}</p>}
             {shown?.error && <p className="text-[13px] text-charcoal-soft py-4">{shown.error}</p>}
             {shown?.list && shown.list.length === 0 && (
-              <p className="text-[13px] text-charcoal-soft py-4">{search ? "No one matches your search." : "No members or customers yet."}</p>
+              <p className="text-[13px] text-charcoal-soft py-4">{search ? t("No one matches your search.") : t("No members or customers yet.")}</p>
             )}
             {shown?.list?.map((p) => (
               <button
@@ -297,7 +298,7 @@ export const BizNewMessageSheet: React.FC<{
                 disabled={busy}
                 data-new-member=""
                 onClick={() => onPickMember(bizId, p.personId)}
-                className="tap w-full flex items-center gap-3 min-h-[56px] text-left border-b border-charcoal/[0.06] disabled:opacity-60"
+                className="tap w-full flex items-center gap-3 min-h-[56px] text-start border-b border-charcoal/[0.06] disabled:opacity-60"
               >
                 {/* The masked member avatar (BizAvatar "member": 40 maskBg, user-round 18/2 inkSoft). */}
                 <span data-biz-avatar="member" className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-charcoal-soft" style={{ background: c.maskBg }}>
@@ -305,7 +306,7 @@ export const BizNewMessageSheet: React.FC<{
                 </span>
                 <span className="flex-1 min-w-0 flex items-center" style={{ gap: 6 }}>
                   <span className="min-w-0 text-[15px] leading-[19px] font-bold text-charcoal truncate">{p.label}</span>
-                  {p.isMinor && <MemberTag label="Under 18" tone="muted" />}
+                  {p.isMinor && <MemberTag label={t("Under 18")} tone="muted" />}
                 </span>
               </button>
             ))}

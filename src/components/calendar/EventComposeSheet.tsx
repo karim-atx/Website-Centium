@@ -12,6 +12,7 @@ import { ALERT_OPTIONS, alertLabel, type EventAlert } from "./eventAlert";
 import { fieldTime, fromParts, minuteOptions, minutesOf, fromMinutes, toParts, type Meridiem, type TimeParts } from "./calendarTime";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { PlaylistField } from "../music/PlaylistField";
+import { appLocale } from "../../i18n/format";
 
 // MO1.6.4 New event (and MO1.6.4.1, its date popup), in the lavender-header
 // sheet. Field order as the frame draws it: Title, Location, Date with All
@@ -63,7 +64,7 @@ const LABEL = "text-xs font-semibold text-charcoal-soft mb-1.5 block";
 
 /** MO1.6.4's date. The frame drew it numeric (DD/MM/YYYY); dates read "Oct 1, 2026" everywhere (Karim, 21 Oct). */
 const dateLabel = (isoDate: string) =>
-  new Date(`${isoDate}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }).replace(/Sept/g, "Sep");
+  new Date(`${isoDate}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" }).replace(/Sept/g, "Sep");
 
 /**
  * A Starts / Ends field with its wheel opening under it. Exported for the
@@ -111,7 +112,7 @@ export function TimeField({
         onClick={open ? onClose : onOpen}
         aria-expanded={open}
         aria-label={`${label}, ${fieldTime(value)}`}
-        className={`tap ${fieldClass} flex items-center justify-between text-left`}
+        className={`tap ${fieldClass} flex items-center justify-between text-start`}
       >
         <span className="tabular-nums">{fieldTime(value)}</span>
         <Clock size={16} strokeWidth={1.75} className="text-charcoal-faint shrink-0" />
@@ -120,7 +121,7 @@ export function TimeField({
         <>
           {/* Tap outside closes (MO1.6.4's rule); the wheel updates as it turns. */}
           <div className="fixed inset-0 z-[5]" onClick={onClose} aria-hidden />
-          <div className="absolute left-0 right-0 top-full mt-1.5 z-[6] rounded-2xl bg-cream-card border border-team-nav-accent/[0.22] shadow-lift p-1.5">
+          <div className="absolute start-0 end-0 top-full mt-1.5 z-[6] rounded-2xl bg-cream-card border border-team-nav-accent/[0.22] shadow-lift p-1.5">
             <WheelPicker
               columns={[
                 {
@@ -230,8 +231,8 @@ export const EventComposeSheet: React.FC<{
             <button
               type="button"
               onClick={() => setDateOpen(true)}
-              aria-label={`Date, ${new Date(`${draft.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`}
-              className={`tap ${FIELD} flex items-center justify-between text-left`}
+              aria-label={`Date, ${new Date(`${draft.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`}
+              className={`tap ${FIELD} flex items-center justify-between text-start`}
             >
               <span className="tabular-nums">{dateLabel(draft.date)}</span>
               <CalendarIcon size={16} strokeWidth={1.75} className="text-charcoal-faint shrink-0" />
@@ -321,7 +322,7 @@ export const EventComposeSheet: React.FC<{
               aria-haspopup="menu"
               aria-expanded={!!repeatAnchor}
               aria-label={`Repeat, ${REPEAT_OPTIONS.find((r) => r.value === draft.repeat)?.label ?? "Never"}`}
-              className={`tap ${FIELD} flex items-center justify-between gap-2 text-left`}
+              className={`tap ${FIELD} flex items-center justify-between gap-2 text-start`}
             >
               <span className="truncate">{REPEAT_OPTIONS.find((r) => r.value === draft.repeat)?.label ?? "Never"}</span>
               <ChevronDown size={14} className="text-charcoal-faint shrink-0" aria-hidden />
@@ -349,7 +350,7 @@ export const EventComposeSheet: React.FC<{
               aria-haspopup="menu"
               aria-expanded={!!alertAnchor}
               aria-label={`Alert, ${alertLabel(draft.alert)}`}
-              className={`tap ${FIELD} flex items-center justify-between gap-2 text-left`}
+              className={`tap ${FIELD} flex items-center justify-between gap-2 text-start`}
             >
               <span className="truncate">{alertLabel(draft.alert)}</span>
               <ChevronDown size={14} className="text-charcoal-faint shrink-0" aria-hidden />
@@ -383,8 +384,8 @@ export const EventComposeSheet: React.FC<{
               onClick={(e) => setEndsAnchor(e.currentTarget)}
               aria-haspopup="menu"
               aria-expanded={!!endsAnchor}
-              aria-label={`Repeat ends, ${draft.repeatUntil ? new Date(`${draft.repeatUntil}T00:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "never"}`}
-              className={`tap ${FIELD} flex items-center justify-between gap-2 text-left`}
+              aria-label={`Repeat ends, ${draft.repeatUntil ? new Date(`${draft.repeatUntil}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "long", day: "numeric", year: "numeric" }) : "never"}`}
+              className={`tap ${FIELD} flex items-center justify-between gap-2 text-start`}
             >
               <span className="truncate tabular-nums">{draft.repeatUntil ? `On ${dateLabel(draft.repeatUntil)}` : "Never"}</span>
               <ChevronDown size={14} className="text-charcoal-faint shrink-0" aria-hidden />

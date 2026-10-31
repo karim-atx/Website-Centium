@@ -19,6 +19,7 @@ import { UploadRow, type UploadState } from "./parts";
 import { ProLicencePublish } from "./ProLicencePublish";
 import type { Licence } from "../../../services/professional-cv";
 import type { ProStepProps } from "./types";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Step 4 · Credentials (OB-147, OB-173, OB-175, OB-176, OB-204).
@@ -167,9 +168,9 @@ export const ProCredentialsStep: React.FC<ProStepProps> = ({ kind, shared, setSh
   };
 
   const proofUploaded = !!rows?.registration?.documentPath;
-  const bodyError = reg && tried && pro.registeringBody.trim().length < 2 ? "Add your registering body." : null;
+  const bodyError = reg && tried && pro.registeringBody.trim().length < 2 ? t("Add your registering body.") : null;
   const numberError = reg && tried ? licenceNumberError(pro.licenceNumber) : null;
-  const missingProof = reg && tried && !proofUploaded ? "Add a photo or file of your registration." : null;
+  const missingProof = reg && tried && !proofUploaded ? t("Add a photo or file of your registration.") : null;
   const errorCount = [bodyError, numberError, missingProof].filter(Boolean).length;
   const ok = credentialsComplete(kind, pro, proofUploaded);
 
@@ -221,22 +222,23 @@ export const ProCredentialsStep: React.FC<ProStepProps> = ({ kind, shared, setSh
   const certSaved = reg ? !!rows?.degree : !!certPath;
   const certSubtitle = certSaved
     ? pro.certificateFile
-      ? `${pro.certificateFile.name} · saved to your account`
-      : "Saved to your account"
+      ? t("{file} · saved to your account", { file: pro.certificateFile.name })
+      : t("Saved to your account")
     : reg
-    ? "Add a file"
-    : "Take a photo or upload a file";
+    ? t("Add a file")
+    : t("Take a photo or upload a file");
 
+  // Upload and save errors hold English (OB_STRINGS or the service's message); shown through t().
   const footerError = loadError
-    ? OB_STRINGS.saveError
+    ? t(OB_STRINGS.saveError)
     : saveError
-    ? saveError
+    ? t(saveError)
     : tried && errorCount > 0
     ? errorCount === 1 && numberError
-      ? "Add your licence number to continue."
-      : `Fix ${errorCount} thing${errorCount === 1 ? "" : "s"} to continue.`
+      ? t("Add your licence number to continue.")
+      : tn(errorCount, "Fix {n} thing to continue.", "Fix {n} things to continue.")
     : offline
-    ? OB_STRINGS.offlineStep
+    ? t(OB_STRINGS.offlineStep)
     : null;
 
   return (
@@ -244,15 +246,15 @@ export const ProCredentialsStep: React.FC<ProStepProps> = ({ kind, shared, setSh
       lane={proLaneId(kind)}
       chipLabel={chipLabel}
       step="creds"
-      title="Credentials"
+      title={t("Credentials")}
       subtitle={
         kind === "physio"
-          ? "Physiotherapy is regulated, so we check your licence before your profile goes live."
+          ? t("Physiotherapy is regulated, so we check your licence before your profile goes live.")
           : kind === "diet"
-          ? "Dietetics is regulated, so we check your registration before your profile goes live."
+          ? t("Dietetics is regulated, so we check your registration before your profile goes live.")
           : kind === "doctor"
-          ? "Medicine is regulated, so we check your licence before your profile goes live."
-          : "We check your certificate before your profile goes live. It adds a badge clients trust too."
+          ? t("Medicine is regulated, so we check your licence before your profile goes live.")
+          : t("We check your certificate before your profile goes live. It adds a badge clients trust too.")
       }
       onBack={onBack}
       loading={loading}
@@ -262,92 +264,92 @@ export const ProCredentialsStep: React.FC<ProStepProps> = ({ kind, shared, setSh
           errorTone={loadError || saveError || (tried && errorCount > 0) ? "error" : "info"}
           primary={
             loadError
-              ? { label: OB_STRINGS.tryAgain, onClick: () => setReload((n) => n + 1) }
-              : { label: saveError ? OB_STRINGS.tryAgain : "Continue", onClick: () => void go(), disabled: busy || loading || (tried && errorCount > 0) }
+              ? { label: t(OB_STRINGS.tryAgain), onClick: () => setReload((n) => n + 1) }
+              : { label: saveError ? t(OB_STRINGS.tryAgain) : t("Continue"), onClick: () => void go(), disabled: busy || loading || (tried && errorCount > 0) }
           }
         />
       }
     >
       {reg ? (
         <>
-          <ObSectionLabel title="Registration" tag="Required" tagTone="accent" margin="0 2px 12px" />
+          <ObSectionLabel title={t("Registration")} tag={t("Required")} tagTone="accent" margin="0 2px 12px" />
           <ObField
-            label="Registering body"
+            label={t("Registering body")}
             value={pro.registeringBody}
             onChange={(e) => setPro((p) => ({ ...p, registeringBody: e.target.value }))}
-            placeholder="The board or council you're registered with"
+            placeholder={t("The board or council you're registered with")}
             maxLength={200}
             error={bodyError}
           />
           <ObField
-            label="Licence or registration number"
+            label={t("Licence or registration number")}
             icon={Hash}
             value={pro.licenceNumber}
             onChange={(e) => setPro((p) => ({ ...p, licenceNumber: e.target.value }))}
-            placeholder="e.g. PT-00000"
+            placeholder={t("e.g. PT-00000")}
             maxLength={120}
             autoComplete="off"
             error={numberError}
           />
           <UploadRow
             icon={IdCard}
-            title="Proof of registration"
+            title={t("Proof of registration")}
             subtitle={
               proofUploaded
                 ? pro.proofFile
                   ? fileLine(pro.proofFile.name, pro.proofFile.bytes)
-                  : "Saved to your account"
-                : "Take a photo or upload a file"
+                  : t("Saved to your account")
+                : t("Take a photo or upload a file")
             }
             state={proofState}
-            error={proofError ?? missingProof}
+            error={proofError ? t(proofError) : missingProof}
             onPick={(f) => void pickProof(f)}
             disabled={!userId}
           />
-          <ObSectionLabel title="Other certificates" tag="Optional" />
+          <ObSectionLabel title={t("Other certificates")} tag={t("Optional")} />
           <UploadRow
             icon={Award}
-            title="Degree or certificate"
+            title={t("Degree or certificate")}
             subtitle={certSubtitle}
             state={certState}
-            error={certError}
+            error={certError && t(certError)}
             onPick={(f) => void pickDegree(f)}
             disabled={!userId || loading}
           />
           <ObTip icon={ShieldCheck} margin="4px 0 0">
-            Usually checked within 2 working days. You can finish setting up while you wait.
+            {t("Usually checked within 2 working days. You can finish setting up while you wait.")}
           </ObTip>
         </>
       ) : (
         <>
-          <ObSectionLabel title="Certification" tag="To go live" margin="0 2px 12px" />
+          <ObSectionLabel title={t("Certification")} tag={t("To go live")} margin="0 2px 12px" />
           <UploadRow
             icon={Award}
-            title="Certificate"
+            title={t("Certificate")}
             subtitle={certSubtitle}
             state={certState}
-            error={certError}
+            error={certError && t(certError)}
             onPick={(f) => void pickCertificate(f)}
             disabled={!userId || certPath === undefined}
           />
           <ObField
-            label="Issued by"
-            tag="Optional"
+            label={t("Issued by")}
+            tag={t("Optional")}
             value={pro.issuedBy}
             onChange={(e) => setPro((p) => ({ ...p, issuedBy: e.target.value }))}
-            placeholder="e.g. NASM, ACE, Yoga Alliance"
+            placeholder={t("e.g. NASM, ACE, Yoga Alliance")}
             maxLength={200}
-            help={!rows?.certificate && pro.issuedBy.trim() ? "Saved with your certificate once you add it." : undefined}
+            help={!rows?.certificate && pro.issuedBy.trim() ? t("Saved with your certificate once you add it.") : undefined}
           />
           <ObTip icon={BadgeCheck} margin="4px 0 0">
-            Usually checked within 2 working days. You go live and get the Certified badge once it's checked.
+            {t("Usually checked within 2 working days. You go live and get the Certified badge once it's checked.")}
           </ObTip>
         </>
       )}
       <ProLicencePublish
         licences={created}
         onChanged={publishChanged}
-        unnamedHint="Give it a name in the next step, Your background, to show it on your profile."
+        unnamedHint={t("Give it a name in the next step, Your background, to show it on your profile.")}
         margin="20px 2px 4px"
       />
     </ObStep>

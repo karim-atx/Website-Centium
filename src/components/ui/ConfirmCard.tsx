@@ -4,6 +4,7 @@ import { Trash2 } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
+import { t } from "../../i18n/core";
 
 /**
  * The shared confirmation. Three layouts:
@@ -101,14 +102,14 @@ export const ConfirmCard: React.FC<{
   open,
   title,
   subtitle,
-  confirmLabel = "Delete",
+  confirmLabel = t("Delete"),
   busy,
   onCancel,
   onConfirm,
   layout = "row",
   tone = "primary",
   icon,
-  cancelLabel = "Cancel",
+  cancelLabel = t("Cancel"),
   secondary,
   frame = "ops",
   cancelVariant = "text",

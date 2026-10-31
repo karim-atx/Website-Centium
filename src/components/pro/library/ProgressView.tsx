@@ -86,7 +86,7 @@ export const ProgressView: React.FC<{ template: WorkoutTemplate; onBack: () => v
   const grid = (rows: { key: string; name: string; url?: string | null; cells: WeekCell[] | null }[]) => (
     <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "12px 14px", marginBottom: 16, overflowX: "auto" }}>
       <div style={{ minWidth: 100 + length * 30 }}>
-        <div className="flex" style={{ gap: 4, paddingLeft: 96, paddingBottom: 8, borderBottom: `1px solid ${INK.b06}` }}>
+        <div className="flex" style={{ gap: 4, paddingInlineStart: 96, paddingBottom: 8, borderBottom: `1px solid ${INK.b06}` }}>
           {weeksRow.map((w) => (
             <span key={w} className="flex-1 text-center" style={{ fontSize: textPx(10.5), color: INK.chF, minWidth: 26 }}>{`W${w}`}</span>
           ))}

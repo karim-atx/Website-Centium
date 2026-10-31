@@ -134,7 +134,7 @@ export function NicknameScreen({
           </span>
         )}
         {/* Frame check: text at x 29 (13 in), 19 pt lines, 6 between rules. */}
-        <ul id="nickname-rules" className="m-0 pl-[13px] text-[12.5px] leading-[19px] list-disc space-y-1.5" style={{ color: fv("body") }}>
+        <ul id="nickname-rules" className="m-0 ps-[13px] text-[12.5px] leading-[19px] list-disc space-y-1.5" style={{ color: fv("body") }}>
           <li>3 to 20 letters, numbers or underscores</li>
           <li>Not your real name, and not a name that sounds official, like "Doctor" or "Support"</li>
           <li>You can change it once every 30 days, from the forum or Profile › Credentials</li>

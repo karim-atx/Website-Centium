@@ -73,7 +73,7 @@ export const ListCard: React.FC<{ rows: ListRow[]; more?: { label: string; onCli
                 <r.icon size={16} strokeWidth={1.75} aria-hidden style={{ color: t ? t.ink : INK.prAccent }} />
               </span>
             )}
-            <span className="flex-1 min-w-0 text-left">
+            <span className="flex-1 min-w-0 text-start">
               <span className="block" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
                 {r.title}
               </span>

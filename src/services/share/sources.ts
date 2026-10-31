@@ -22,6 +22,7 @@ import { fetchServicePlans } from "../pro/profile";
 import { clock12 } from "../../utils/time12";
 import type { ClientWin, WinKind } from "../../components/share/shareCardModel";
 import type { Read } from "./index";
+import { appLocale } from "../../i18n/format";
 
 const from = (table: string) => supabase.from(table as never);
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
@@ -118,7 +119,7 @@ export async function fetchWeekSlots(me: string, now: Date): Promise<Read<string
     kept.push(x.s);
     free = x.e.getTime();
   }
-  const times = kept.map((t) => `${t.toLocaleDateString("en-US", { weekday: "short" })} ${clock12(t)}`);
+  const times = kept.map((t) => `${t.toLocaleDateString(appLocale("en-US"), { weekday: "short" })} ${clock12(t)}`);
   return { ok: true, data: times };
 }
 

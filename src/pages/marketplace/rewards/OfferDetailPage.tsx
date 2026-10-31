@@ -212,7 +212,7 @@ export default function OfferDetailPage() {
                 gap: 5,
                 textAlign: "center",
                 background: dark ? hexAlpha(ink, 0.16) : bg,
-                borderLeft: c.i % 2 ? divider : 0,
+                borderInlineStart: c.i % 2 ? divider : 0,
                 borderTop: c.i > 1 ? divider : 0,
               }}
             >
@@ -224,10 +224,10 @@ export default function OfferDetailPage() {
             </div>
           );
         })}
-        <span aria-hidden style={{ ...notch, left: -7, top: -7 }} />
-        <span aria-hidden style={{ ...notch, right: -7, top: -7 }} />
-        <span aria-hidden style={{ ...notch, left: -7, bottom: -7 }} />
-        <span aria-hidden style={{ ...notch, right: -7, bottom: -7 }} />
+        <span aria-hidden style={{ ...notch, insetInlineStart: -7, top: -7 }} />
+        <span aria-hidden style={{ ...notch, insetInlineEnd: -7, top: -7 }} />
+        <span aria-hidden style={{ ...notch, insetInlineStart: -7, bottom: -7 }} />
+        <span aria-hidden style={{ ...notch, insetInlineEnd: -7, bottom: -7 }} />
       </div>
 
       {/* Terms */}

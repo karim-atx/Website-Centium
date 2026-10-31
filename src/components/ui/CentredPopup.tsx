@@ -208,7 +208,7 @@ export const CentredPopup: React.FC<{
             {title}
           </h2>
           {titleAside && (
-            <span className="absolute" style={{ top: partB ? 23.7 : 24, right: 20 }}>
+            <span className="absolute" style={{ top: partB ? 23.7 : 24, insetInlineEnd: 20 }}>
               {titleAside}
             </span>
           )}

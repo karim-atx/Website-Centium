@@ -10,6 +10,7 @@ import { linkLabel, normaliseLink } from "./calendarTime";
 import { range12 } from "../../utils/time12";
 import type { ClientCalendarEvent } from "../../services/calendar";
 import { PlaylistCard } from "../music/PlaylistCard";
+import { appLocale } from "../../i18n/format";
 
 /**
  * OURS-Calendar-event-detail: the read-only sheet for an event this account
@@ -58,7 +59,7 @@ export const EventDetailSheet: React.FC<{
 
   const { bar } = eventColours(e.color, dark);
   const status = e.invite?.status;
-  const dateLabel = new Date(`${e.date}T00:00:00`).toLocaleDateString("en-US", {
+  const dateLabel = new Date(`${e.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -187,7 +188,7 @@ export const EventDetailSheet: React.FC<{
               aria-haspopup="menu"
               aria-expanded={!!alertAnchor}
               aria-label={`Your reminder, ${alertLabel(e.invite.alert)}`}
-              className="tap w-full h-10 rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm text-charcoal flex items-center justify-between gap-2 text-left disabled:opacity-60"
+              className="tap w-full h-10 rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm text-charcoal flex items-center justify-between gap-2 text-start disabled:opacity-60"
             >
               <span className="truncate">{alertLabel(e.invite.alert)}</span>
               <ChevronDown size={14} className="text-charcoal-faint shrink-0" aria-hidden />

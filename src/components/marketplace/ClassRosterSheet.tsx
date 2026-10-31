@@ -177,8 +177,8 @@ export function ClassRosterSheet({
     >
       <div className="space-y-[14px]">
         {session && (
-          <div className="relative rounded-[16px] bg-cream-soft overflow-hidden" style={{ padding: "12px 14px 12px 18px" }}>
-            <span aria-hidden className="absolute left-0 top-0 bottom-0 w-[4px] bg-primary-fill" />
+          <div className="relative rounded-[16px] bg-cream-soft overflow-hidden" style={{ paddingBlock: "12px", paddingInline: "18px 14px" }}>
+            <span aria-hidden className="absolute start-0 top-0 bottom-0 w-[4px] bg-primary-fill" />
             <p className="text-[13.5px] font-extrabold text-charcoal">
               {weekdayDayMonth(session.date)} · {range12(session.startTime, session.endTime)}
             </p>

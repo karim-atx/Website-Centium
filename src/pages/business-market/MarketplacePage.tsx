@@ -93,7 +93,7 @@ export function MarketTabsScreen({ title, tab, onTab, subtitleReady = true }: { 
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
         <h1 style={{ fontSize: px(27), fontWeight: 800, letterSpacing: "-0.022em", lineHeight: lh(34), color: c.ink, margin: 0 }}>{title}</h1>
         {/* Market + Share 3.0 B-SH.1 / B-SH.4: share the business's profile card (Find us on Centium); the Overview figures never go on it. */}
-        <BizShareButton label="Share your profile: Find us on Centium" style={{ margin: "-5px -5px -5px 0" }} getData={async (id) => ({ t: "profile", d: { rating: await fetchRatingLine(id) } })} />
+        <BizShareButton label="Share your profile: Find us on Centium" style={{ marginBlock: "-5px", marginInline: "0 -5px" }} getData={async (id) => ({ t: "profile", d: { rating: await fetchRatingLine(id) } })} />
       </div>
       {subtitleReady ? (
         <p style={{ fontSize: px(13), fontWeight: 500, color: c.faint, marginTop: 4, lineHeight: lh(19) }}>{m.v.subtitle}</p>

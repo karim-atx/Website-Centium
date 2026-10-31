@@ -1,9 +1,10 @@
+import { appLocale } from "../../i18n/format";
 // Market + Share 3.0 · points and ledger rules shared by OfferCard,
 // PointsFigure and StatLedger. Pure, from the screen files' script (Client
 // Explore Screens `offers`: note / noteInk / pct / line).
 
 /** Points as the board writes them: "1,240". */
-export const formatPoints = (n: number): string => Math.round(n).toLocaleString("en-US");
+export const formatPoints = (n: number): string => Math.round(n).toLocaleString(appLocale("en-US"));
 
 /** How far a balance is toward a cost, 0..1 (a free offer is reached). */
 export function progressFraction(balance: number, cost: number): number {

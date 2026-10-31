@@ -3,6 +3,7 @@ import { Check, CircleCheck, Receipt } from "lucide-react";
 import { CentiumMark } from "../icons/CentiumMark";
 import { cardDate, cardMoney, cardPriceLine, planButtonState, type MessageCard } from "../../services/messaging/cards";
 import type { RecommendationCard } from "../../services/messaging/recommendation";
+import { t } from "../../i18n/core";
 
 /**
  * The two A3 chat cards, drawn in place of their message's text bubble.
@@ -53,10 +54,10 @@ export const ChatCard: React.FC<{
 }> = ({ card, mine, senderName, createdAt, meta, hiredPlanIds, onChoose, added, adding, onAdd }) => {
   const title =
     card.kind === "plans_offer"
-      ? mine ? "Your plans" : `${senderName}'s plans`
+      ? mine ? t("Your plans") : t("{name}'s plans", { name: senderName })
       : card.kind === "recommendation"
-        ? mine ? "Your recommendation" : `${senderName}'s recommendation`
-        : card.kind === "payment_reminder" ? "Payment reminder" : "Plan confirmed";
+        ? mine ? t("Your recommendation") : t("{name}'s recommendation", { name: senderName })
+        : card.kind === "payment_reminder" ? t("Payment reminder") : t("Plan confirmed");
   // CU9 (r26 recCard26): padded and spaced like the plans offer.
   const roomy = card.kind === "plans_offer" || card.kind === "recommendation";
 
@@ -104,7 +105,7 @@ export const ChatCard: React.FC<{
             (added ? (
               <span className="mt-3 h-[33px] w-full rounded-[10px] bg-primary-pale text-primary-deep-text text-[12.5px] font-bold flex items-center justify-center gap-1.5">
                 <CircleCheck size={15} strokeWidth={2} aria-hidden />
-                Added to your week
+                {t("Added to your week")}
               </span>
             ) : (
               <button
@@ -112,11 +113,11 @@ export const ChatCard: React.FC<{
                 disabled={adding}
                 onClick={onAdd}
                 onPointerDown={(e) => e.stopPropagation()}
-                aria-label={`Add ${card.title} to my week`}
+                aria-label={t("Add {title} to my week", { title: card.title })}
                 className="tap mt-[6.5px] -mb-[5.5px] h-11 w-full flex items-center disabled:opacity-60"
               >
                 <span className="h-[33px] w-full rounded-[10px] text-[12.5px] font-bold bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill flex items-center justify-center">
-                  Add to my week
+                  {t("Add to my week")}
                 </span>
               </button>
             ))}
@@ -144,7 +145,7 @@ export const ChatCard: React.FC<{
                   (state === "selected" ? (
                     <span className="mt-3 h-[33px] w-full rounded-[10px] bg-primary-pale text-primary-deep-text text-[12.5px] font-bold flex items-center justify-center gap-1.5">
                       <CircleCheck size={15} strokeWidth={2} aria-hidden />
-                      Selected
+                      {t("Selected")}
                     </span>
                   ) : (
                     <button
@@ -153,14 +154,14 @@ export const ChatCard: React.FC<{
                       onClick={() => onChoose(plan.planId)}
                       // A press on the button is not the start of a long press on the card.
                       onPointerDown={(e) => e.stopPropagation()}
-                      aria-label={`Choose ${plan.name}`}
+                      aria-label={t("Choose {plan}", { plan: plan.name })}
                       className={`tap mt-3 h-[33px] w-full rounded-[10px] text-[12.5px] font-bold ${
                         state === "disabled"
                           ? "bg-cream-soft text-charcoal-tertiary"
                           : "bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill"
                       }`}
                     >
-                      Choose
+                      {t("Choose")}
                     </button>
                   ))}
               </div>
@@ -176,11 +177,11 @@ export const ChatCard: React.FC<{
           </span>
           <span className="min-w-0 flex flex-col">
             <span className="text-[13.5px] font-bold text-charcoal break-words">
-              {cardMoney(card.amount, card.currency)} owed to {card.businessName}
+              {t("{amount} owed to {business}", { amount: cardMoney(card.amount, card.currency), business: card.businessName })}
             </span>
             <span className="text-[11.5px] text-charcoal-faint">
-              Due {cardDate(card.dueOn)}
-              {card.method === "cash" ? ` · Pay at ${card.businessName}` : ""}
+              {t("Due {date}", { date: cardDate(card.dueOn) })}
+              {card.method === "cash" ? ` · ${t("Pay at {business}", { business: card.businessName })}` : ""}
             </span>
           </span>
         </div>
@@ -195,7 +196,7 @@ export const ChatCard: React.FC<{
             </span>
             <span className="text-[11.5px] text-charcoal-faint">
               {cardDate(createdAt)}
-              {card.expiresOn ? ` · until ${cardDate(card.expiresOn)}` : ""}
+              {card.expiresOn ? ` · ${t("until {date}", { date: cardDate(card.expiresOn) })}` : ""}
             </span>
           </span>
         </div>

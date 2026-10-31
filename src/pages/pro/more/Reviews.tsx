@@ -13,6 +13,7 @@ import { useReviewsAboutMe } from "../../../hooks/useProfessionalReviews";
 import { editReply, removeReply, replyToReview, reportReview } from "../../../services/professional-reviews";
 import { ratingDistribution } from "../../../services/professional-reviews/rules";
 import { textPx } from "../../../theme/textSize";
+import { appLocale } from "../../../i18n/format";
 
 const GOLD = "#D9A441";
 const EMPTY_STAR = "rgba(140,131,120,0.35)";
@@ -25,7 +26,7 @@ const Stars: React.FC<{ n: number; size: number; label?: string }> = ({ n, size,
   </span>
 );
 
-const dayMonth = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const dayMonth = (iso: string) => new Date(iso).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 
 /**
  * Release 3 · W6 MO6 Reviews (/app/more/reviews; more.js reviews), the
@@ -94,7 +95,7 @@ export default function Reviews() {
                     <span className="flex-1 overflow-hidden" style={{ height: 6, borderRadius: 9999, background: INK.soft }} role="img" aria-label={`${star} stars: ${n}`}>
                       <span className="block h-full" style={{ width: `${counted.length ? (n / counted.length) * 100 : 0}%`, background: GOLD, borderRadius: 9999 }} />
                     </span>
-                    <span className="text-right" style={{ width: 14 }}>
+                    <span className="text-end" style={{ width: 14 }}>
                       {n}
                     </span>
                   </div>

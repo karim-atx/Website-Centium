@@ -8,6 +8,7 @@ import { METHOD_LABEL } from "../../services/contraception/guidance";
 import type { Pregnancy } from "../../services/pregnancy";
 import { gestationOn } from "../../services/pregnancy";
 import type { Method } from "../../services/contraception";
+import { zonePlace } from "../settings/timezoneOptions";
 import { CycleCard, CycleFooter, CycleHelp, CycleRow, CycleSection, OptionButton, type, useCycleMode } from "./cycleUi";
 
 // HE1.10.b, the Settings tab, in the open Settings layout: lavender section
@@ -44,7 +45,7 @@ export const CycleSettingsTab: React.FC<{
 }> = (p) => {
   const { settings } = p;
   const pregnancyWeek = p.pregnancy ? gestationOn(p.today, p.pregnancy) : null;
-  const zoneCity = p.timezone ? p.timezone.split("/").pop()!.replace(/_/g, " ") : G.SETTINGS_TIMEZONE_NOT_SET;
+  const zoneCity = p.timezone ? zonePlace(p.timezone) : G.SETTINGS_TIMEZONE_NOT_SET;
 
   return (
     <div data-cycle-tab="settings">
@@ -156,7 +157,7 @@ export const CycleSettingsTab: React.FC<{
           toggle={{ checked: settings.periodReminder, onChange: (on) => void p.save({ periodReminder: on }), disabled: p.busy, label: G.PERIOD_REMINDER_TITLE }}
         />
         {settings.periodReminder && (
-          <div style={{ padding: "0 0 12px 50px" }}>
+          <div style={{ paddingBlock: "0 12px", paddingInline: "50px 0" }}>
             <div className="flex" role="radiogroup" aria-label={G.PERIOD_REMINDER_DAYS_LABEL} style={{ gap: 6 }}>
               {Array.from({ length: PERIOD_REMINDER_DAYS.max - PERIOD_REMINDER_DAYS.min + 1 }, (_, i) => PERIOD_REMINDER_DAYS.min + i).map((d) => (
                 <OptionButton
@@ -327,7 +328,7 @@ const NumberRow: React.FC<{
                 onClick={() => void done()}
                 disabled={!valid}
                 className="tap text-primary-dark"
-                style={{ marginLeft: 2, opacity: valid ? 1 : 0.5, ...type(13, 19.5, 700) }}
+                style={{ marginInlineStart: 2, opacity: valid ? 1 : 0.5, ...type(13, 19.5, 700) }}
               >
                 Done
               </button>
@@ -336,7 +337,7 @@ const NumberRow: React.FC<{
         }
       />
       {editing && !valid && (
-        <p id={errorId} role="alert" className="flex items-center" style={{ gap: 5, margin: "-6px 0 4px 50px", color: errorInk, ...type(11.5, 17.3, 600) }}>
+        <p id={errorId} role="alert" className="flex items-center" style={{ gap: 5, marginBlock: "-6px 4px", marginInline: "50px 0", color: errorInk, ...type(11.5, 17.3, 600) }}>
           <AlertCircle size={13} aria-hidden className="shrink-0" />
           {G.LENGTH_RANGE_ERROR(limits.min, limits.max)}
         </p>

@@ -1,5 +1,6 @@
 import type { HealthMetricPoint } from "../../types";
 import { averageOf, HEALTH_METRIC_META, withinDays, type MetricReadings } from "./series";
+import { appLocale } from "../../i18n/format";
 
 // Day / Week / Month / Year, aggregated from readings that exist.
 //
@@ -43,7 +44,7 @@ export interface PeriodBucket {
 }
 
 const MONTH_NAMES = Array.from({ length: 12 }, (_, i) =>
-  new Date(2000, i, 1).toLocaleDateString("en-US", { month: "short" })
+  new Date(2000, i, 1).toLocaleDateString(appLocale("en-US"), { month: "short" })
 );
 
 /**
@@ -87,7 +88,7 @@ function bucketOf(point: HealthMetricPoint, period: Period): { key: string; labe
   if (period === "weekly") {
     return {
       key: point.date,
-      label: new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "short" }),
+      label: new Date(y, m - 1, d).toLocaleDateString(appLocale("en-US"), { weekday: "short" }),
     };
   }
   if (period === "monthly") {

@@ -105,7 +105,7 @@ export function AllergiesSheet({
                 role="checkbox"
                 aria-checked={on}
                 onClick={() => toggle(a.value)}
-                className="tap flex-1 min-w-0 flex items-center text-left"
+                className="tap flex-1 min-w-0 flex items-center text-start"
                 style={{ gap: 12, minHeight: 44 }}
               >
                 <span

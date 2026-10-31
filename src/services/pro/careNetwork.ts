@@ -34,7 +34,8 @@ function message(error: unknown, fallback: string): string {
   if (e?.code === "ATX12") return "That person isn't your client any more.";
   if (e?.code === "ATX09") return "Refer only to colleagues in your care network.";
   if (e?.code === "ATX08") return "This has already been answered.";
-  if (e?.code === "22023" && e.message) return e.message.charAt(0).toUpperCase() + e.message.slice(1) + ".";
+  // 22023: the function's own raised text is not shown (a raw server message); logged, and the fallback said.
+  if (e?.code === "22023") console.warn("[care-network] refused:", e.message);
   return fallback;
 }
 

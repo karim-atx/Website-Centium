@@ -1,3 +1,4 @@
+import { appLocale } from "../../i18n/format";
 // Release 3 · W7 (CU1): the client's "From your coach" section, as pure logic.
 // Kept apart from ./programmes (which talks to Supabase) so it can be tested.
 //
@@ -35,7 +36,7 @@ export function daysBetween(a: string, b: string): number {
 
 /** "Sep 28": the app's short date (HistoryTab's shortDate). */
 export function shortDay(iso: string): string {
-  return new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 }
 
 /** Running or not started yet: not ended, and its last day is today or later. */

@@ -37,6 +37,7 @@ import { recordLegalAcceptances, LEGAL_VERSION, type LegalDocument } from "../..
 import { savePreferredActivities } from "../../services/onboarding/clientProfile";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { t } from "../../i18n/core";
 
 export interface OnboardingDraft {
   email: string;
@@ -351,7 +352,7 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
   useEffect(() => {
     if (online && !wasOnline.current) {
       void syncNow();
-      if (step > steps.indexOf("auth")) showToast(OB_STRINGS.backOnline);
+      if (step > steps.indexOf("auth")) showToast(t(OB_STRINGS.backOnline));
     }
     wasOnline.current = online;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -391,7 +392,7 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
       return { ok: true };
     }
     const ok = await syncNow();
-    if (!ok) return { ok: false, message: OB_STRINGS.finishLaterError };
+    if (!ok) return { ok: false, message: t(OB_STRINGS.finishLaterError) };
     await signOut();
     return { ok: true };
   }, [online, owner, draft, stepKey, navigate, syncNow, signOut]);
@@ -418,8 +419,8 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
       return { ok: false };
     }
     if (!authUserId) {
-      setFinishError("You're signed out. Go back and sign in again to finish.");
-      return { ok: false, message: "You're signed out. Go back and sign in again to finish." };
+      setFinishError(t("You're signed out. Go back and sign in again to finish."));
+      return { ok: false, message: t("You're signed out. Go back and sign in again to finish.") };
     }
     setFinishing(true);
     setFinishError(null);
@@ -438,8 +439,8 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
       const legal = await recordLegalAcceptances(authUserId, docs, draft.legalVersion ?? LEGAL_VERSION);
       if (!legal.ok) {
         setFinishing(false);
-        setFinishError(legal.offline ? OFFLINE_MESSAGE : "Couldn't finish setting up your account. Try again.");
-        return { ok: false, message: legal.offline ? OFFLINE_MESSAGE : "Couldn't finish setting up your account. Try again." };
+        setFinishError(legal.offline ? t(OFFLINE_MESSAGE) : t("Couldn't finish setting up your account. Try again."));
+        return { ok: false, message: legal.offline ? t(OFFLINE_MESSAGE) : t("Couldn't finish setting up your account. Try again.") };
       }
     }
 
@@ -473,8 +474,8 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
     const saved = await updateProfileFromOnboarding(authUserId, resolved);
     if (!saved.ok) {
       setFinishing(false);
-      setFinishError(saved.message ?? "Couldn't finish setting up your account. Try again.");
-      return { ok: false, message: saved.message ?? "Couldn't finish setting up your account. Try again." };
+      setFinishError(saved.message ? t(saved.message) : t("Couldn't finish setting up your account. Try again."));
+      return { ok: false, message: saved.message ? t(saved.message) : t("Couldn't finish setting up your account. Try again.") };
     }
     if (isClient && draft.activities.length) await savePreferredActivities(authUserId, activitiesToSave(draft.activities));
 
@@ -510,7 +511,7 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
         }
       } else {
         setFinishNotice(
-          result.status === "error" ? result.message : `${result.message} You can add a professional later from the Professionals tab.`
+          result.status === "error" ? t(result.message) : `${t(result.message)} ${t("You can add a professional later from the Professionals tab.")}`
         );
         setFinishing(false);
         return { ok: true };

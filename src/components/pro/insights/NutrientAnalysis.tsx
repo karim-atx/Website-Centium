@@ -41,6 +41,7 @@ import {
 import { DetailHead, Group, InsightLine, QuietLine, RangeTabs } from "./parts";
 import { readGate, useRead } from "./reads";
 import { PAGE_RANGE_DAYS, type PageRange } from "./panelProps";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · W5 NU7 Nutrient analysis (NU7 v3 Macros, best and worst days,
@@ -64,7 +65,7 @@ import { PAGE_RANGE_DAYS, type PageRange } from "./panelProps";
  */
 
 type Tab = "macros" | "intake" | "micros";
-const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
+const fmt = (n: number) => Math.round(n).toLocaleString(appLocale("en-GB"));
 const MACRO_COLOURS = ["#7D6BB5", "#AEA1DC", "#A2C8C2"];
 const SLOT_LABEL: Record<MealSlot, string> = { breakfast: "Breakfast", lunch: "Lunch", snack: "Snacks", dinner: "Dinner" };
 

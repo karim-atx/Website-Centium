@@ -258,8 +258,8 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
             <div key={r.open.kind === "foods" ? r.open.food.id : r.open.id} className="flex items-center" style={{ background: t.row, borderRadius: 12 }}>
               <button
                 onClick={() => setOpened(r.open)}
-                className="tap flex-1 min-w-0 flex items-center text-left"
-                style={{ gap: 12, padding: "10px 0 10px 12px", minHeight: 56 }}
+                className="tap flex-1 min-w-0 flex items-center text-start"
+                style={{ gap: 12, paddingBlock: "10px", paddingInline: "12px 0", minHeight: 56 }}
               >
                 <span
                   className="flex items-center justify-center flex-none"
@@ -298,8 +298,8 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
         onClick={() => setCreating(sub)}
         className="tap fixed z-20 inline-flex items-center justify-center"
         style={{
-          left: "calc(var(--app-gutter) + 16px)",
-          right: "calc(var(--app-gutter) + 16px)",
+          insetInlineStart: "calc(var(--app-gutter) + 16px)",
+          insetInlineEnd: "calc(var(--app-gutter) + 16px)",
           bottom: "calc(env(safe-area-inset-bottom) + 96px + var(--active-bar, 0px))",
           height: 44,
           gap: 7,

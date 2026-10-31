@@ -113,7 +113,7 @@ export const ClientShareSheet: React.FC<ClientShareSheetProps> = ({ spec, onClos
       )}
       {strip &&
         createPortal(
-          <div className="fixed left-0 right-0 z-[60] mx-auto w-full max-w-[430px]" style={{ top: "calc(env(safe-area-inset-top) + 10px)", padding: "0 16px" }}>
+          <div className="fixed start-0 end-0 z-[60] mx-auto w-full max-w-[430px]" style={{ top: "calc(env(safe-area-inset-top) + 10px)", padding: "0 16px" }}>
             <ConfirmationStrip text={strip.text} action="Done" onAction={finish} tone={strip.tone} />
           </div>,
           document.body,
@@ -387,7 +387,7 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
                         style={{
                           gap: 6,
                           borderRadius: 999,
-                          padding: "5px 10px 5px 6px",
+                          paddingBlock: "5px", paddingInline: "6px 10px",
                           fontSize: textPx(11),
                           lineHeight: linePx(14),
                           fontWeight: a ? 700 : 600,
@@ -460,7 +460,7 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
 
       {/* The export sources: the same card unscaled (300 wide), the sticker and the photo layer, off screen. */}
       {createPortal(
-        <div aria-hidden style={{ position: "fixed", left: -10000, top: 0, pointerEvents: "none", visibility: "hidden" }}>
+        <div aria-hidden style={{ position: "fixed", insetInlineStart: -10000, top: 0, pointerEvents: "none", visibility: "hidden" }}>
           <ClientShareCard innerRef={cardSrc} spec={spec} stats={stats} format={format} background={background === "P" ? "B" : background} width={300} flat square />
           <ClientShareCard innerRef={stickerSrc} spec={spec} stats={stats} format="sticker" background="B" width={300} flat square />
           <div style={{ textShadow: "0 1px 8px rgba(0,0,0,0.42)", color: "#FFFFFF" }}>

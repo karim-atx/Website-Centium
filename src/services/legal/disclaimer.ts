@@ -1,3 +1,4 @@
+import { tk } from "../../i18n/core";
 /**
  * Task Y2: the app-wide health disclaimer, one sentence pair, the same
  * everywhere it appears -- the Sources page, every health screen (Health,
@@ -6,4 +7,4 @@
  * Medical Disclaimer (src/marketing/legal/text.ts INTRO.health) carries the same words.
  */
 export const HEALTH_DISCLAIMER =
-  "Centium supports your health journey. It does not provide medical diagnosis or treatment.";
+  tk("Centium supports your health journey. It does not provide medical diagnosis or treatment.");

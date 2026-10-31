@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import { KeyRound } from "lucide-react";
+import { t, tk, tn } from "../../i18n/core";
 
 /** What the recovery-codes backend reports: unused codes and the set's size. */
 export interface RecoveryCodesStatus {
@@ -47,7 +48,7 @@ export const RecoveryCodesCard: React.FC<{
 
   return (
     <section
-      aria-label="Recovery codes"
+      aria-label={t("Recovery codes")}
       className={clsx(
         "rounded-[20px] p-4",
         fade,
@@ -62,7 +63,7 @@ export const RecoveryCodesCard: React.FC<{
           active ? "text-th-2f5f58 dark:text-teal-deep-text" : "text-charcoal-faint opacity-40"
         )}
       >
-        Recovery codes
+        {t("Recovery codes")}
       </p>
       <div className={clsx("mt-2.5 flex gap-3", fade, !active && "opacity-40")}>
         <span
@@ -80,9 +81,9 @@ export const RecoveryCodesCard: React.FC<{
           />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[16px] font-extrabold text-charcoal">Recovery codes</p>
+          <p className="text-[16px] font-extrabold text-charcoal">{t("Recovery codes")}</p>
           <p className="mt-1 text-[13.5px] font-bold text-charcoal">
-            {active ? (status.total > 0 ? `${status.left} of ${status.total} codes left` : "No codes yet") : "–– codes left"}
+            {active ? (status.total > 0 ? tn(status.total, "{left} of {n} codes left", "{left} of {n} codes left", { left: status.left }) : t("No codes yet")) : t("–– codes left")}
           </p>
           <div aria-hidden className={clsx("mt-1.5 h-1 rounded-full overflow-hidden", active ? "bg-cream-card" : "bg-charcoal/10")}>
             <div className="h-full rounded-full bg-th-6f9993 dark:bg-teal-dark" style={{ width: `${share * 100}%` }} />
@@ -101,8 +102,8 @@ export const RecoveryCodesCard: React.FC<{
           <div className="mt-2.5 flex flex-wrap gap-2">
             {(
               [
-                ["View codes", onViewCodes],
-                ["Generate new", onGenerateNew],
+                [tk("View codes"), onViewCodes],
+                [tk("Generate new"), onGenerateNew],
               ] as const
             ).map(([label, onClick]) =>
               active && onClick ? (
@@ -112,7 +113,7 @@ export const RecoveryCodesCard: React.FC<{
                   onClick={onClick}
                   className="tap h-9 px-4 rounded-xl border border-th-6f9993 dark:border-teal-dark bg-cream-card text-[13px] font-semibold text-th-2f5f58 dark:text-teal-deep-text"
                 >
-                  {label}
+                  {t(label)}
                 </button>
               ) : (
                 // Not tappable (Foundations: off widgets' buttons are disabled).
@@ -124,7 +125,7 @@ export const RecoveryCodesCard: React.FC<{
                     active ? "border-th-6f9993 text-th-2f5f58 opacity-40" : "border-charcoal/10 text-charcoal-faint"
                   )}
                 >
-                  {label}
+                  {t(label)}
                 </span>
               )
             )}
@@ -132,12 +133,12 @@ export const RecoveryCodesCard: React.FC<{
         </div>
       </div>
       {!enabled ? (
-        <p className="mt-2.5 text-[12px] text-charcoal-faint">Turn on two-factor to use this.</p>
+        <p className="mt-2.5 text-[12px] text-charcoal-faint">{t("Turn on two-factor to use this.")}</p>
       ) : (
         !active && (
           // The count couldn't be read: say so, with the support route.
           <p className="mt-2.5 text-[12px] text-charcoal-faint">
-            Couldn't read your recovery codes. If you lose your phone, contact support.
+            {t("Couldn't read your recovery codes. If you lose your phone, contact support.")}
           </p>
         )
       )}

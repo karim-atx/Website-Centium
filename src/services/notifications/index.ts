@@ -4,6 +4,7 @@
 // rows through the same calls with its own kinds and copy table.
 // Professionals keep professional_notifications (D-37).
 
+import { t } from "../../i18n/core";
 import { marketRpc, type MarketResult } from "../market/rpc";
 import { parseMarkedCount, parseMemberNotifications, parseUnreadCount, type MemberNotification, type NotificationCursor } from "./notificationsModel";
 
@@ -33,7 +34,7 @@ export async function fetchMyNotifications(cursor: NotificationCursor | null = n
   const r = await marketRpc(
     "my_notifications",
     { p_before: cursor?.before ?? null, p_limit: take + 1, p_before_id: cursor?.beforeId ?? null, p_kinds: kindsArg(kinds) },
-    "Couldn't load your notifications.",
+    t("Couldn't load your notifications."),
     parseMemberNotifications
   );
   if (!r.ok) return r;
@@ -50,7 +51,7 @@ export function markNotificationsRead(ids: readonly string[] | null, kinds?: rea
   return marketRpc(
     "mark_notifications_read",
     { p_ids: ids ? [...ids] : null, p_kinds: kindsArg(kinds) },
-    ids ? "Couldn't update this notification." : "Couldn't mark your notifications as read.",
+    ids ? t("Couldn't update this notification.") : t("Couldn't mark your notifications as read."),
     parseMarkedCount
   );
 }
@@ -61,5 +62,5 @@ export function markNotificationsRead(ids: readonly string[] | null, kinds?: rea
  * shows "99+" there).
  */
 export function fetchUnreadNotificationCount(kinds?: readonly string[] | null): Promise<MarketResult<number>> {
-  return marketRpc("my_unread_notification_count", { p_kinds: kindsArg(kinds) }, "Couldn't check your notifications.", parseUnreadCount);
+  return marketRpc("my_unread_notification_count", { p_kinds: kindsArg(kinds) }, t("Couldn't check your notifications."), parseUnreadCount);
 }

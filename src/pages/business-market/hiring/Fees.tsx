@@ -9,6 +9,7 @@ import { TagChip, useFeeRules } from "./hiringParts";
 import { useHiringBusiness } from "./useHiringBusiness";
 import { HiringEmpty, NotForThisBusiness, PaleNote, RECEIPT_ICON } from "./teamParts";
 import { feeRoleLine } from "./teamModel";
+import { t } from "../../../i18n/core";
 import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
 
 // Market + Share 3.0 · W4-B · B-MA.8.5 Hiring fees (Business Hiring Screens
@@ -54,14 +55,14 @@ export default function FeesPage() {
   }, [businessId, tick]);
   const retry = useCallback(() => setTick((t) => t + 1), []);
 
-  const note = <PaleNote>One-time fees, charged when a hire is confirmed and added to your Centium bill. Nothing recurring. Pay for the work itself is between you and the professional. <RefundPolicyLink /></PaleNote>;
+  const note = <PaleNote>{t("One-time fees, charged when a hire is confirmed and added to your Centium bill. Nothing recurring. Pay for the work itself is between you and the professional.")} <RefundPolicyLink /></PaleNote>;
 
   let body: React.ReactNode;
   if (biz.loading || (businessId && load.status === "loading")) {
     body = (
       <>
         {note}
-        <MarketSkeleton radius={20} rows={4} height={170} count={2} label="Loading your hiring fees" style={{ marginTop: 12 }} />
+        <MarketSkeleton radius={20} rows={4} height={170} count={2} label={t("Loading your hiring fees")} style={{ marginTop: 12 }} />
       </>
     );
   } else if (!biz.canHire || !businessId) {
@@ -70,7 +71,7 @@ export default function FeesPage() {
     body = (
       <>
         {note}
-        <MarketError thing="your hiring fees" onRetry={retry} style={{ marginTop: 12 }} />
+        <MarketError thing={t("your hiring fees")} onRetry={retry} style={{ marginTop: 12 }} />
       </>
     );
   } else if (load.status === "pending" || (load.status === "ok" && load.fees.length === 0)) {
@@ -79,7 +80,7 @@ export default function FeesPage() {
         {note}
         <HiringEmpty
           icon={RECEIPT_ICON}
-          title="No hiring fees"
+          title={t("No hiring fees")}
           body={feeExplanation(rules)}
           top={36}
         />
@@ -97,16 +98,16 @@ export default function FeesPage() {
                   <div style={{ fontSize: px(14), fontWeight: 800, color: m.ink }}>{f.professionalName}</div>
                   <div style={{ fontSize: px(11.5), color: m.faint }}>{feeRoleLine(f.roleTitle, f.type, f.hiredAt)}</div>
                 </div>
-                <div style={{ textAlign: "right" }}>
+                <div style={{ textAlign: "end" }}>
                   <div style={{ fontSize: px(16), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: m.ink }}>{feeMoney(f.quote.fee)}</div>
-                  <TagChip tag={f.status} style={{ padding: "2px 8px" }} />
+                  <TagChip tag={f.status} label={f.status === "PAID" ? t("PAID") : t("DUE")} style={{ padding: "2px 8px" }} />
                 </div>
               </div>
               <div style={{ marginTop: 10, borderRadius: 12, background: m.soft, padding: "2px 12px" }}>
                 {feeRows(f.quote, null).map(([k, v], i) => (
                   <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "7px 0", borderTop: i ? `0.5px solid ${m.div}` : 0, fontSize: px(12) }}>
                     <span style={{ color: m.faint }}>{k}</span>
-                    <span style={{ fontWeight: 700, textAlign: "right", color: m.ink }}>{v}</span>
+                    <span style={{ fontWeight: 700, textAlign: "end", color: m.ink }}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -120,7 +121,7 @@ export default function FeesPage() {
   return (
     <div style={{ color: m.ink, lineHeight: "normal", paddingBottom: 32 }}>
       <style>{FOCUS_CSS}</style>
-      <BackHeader eyebrow="Hiring" title="Hiring fees" onBack={() => navigate(HIRING_ROUTES.hub)} backLabel="Back to Hiring" />
+      <BackHeader eyebrow={t("Hiring")} title={t("Hiring fees")} onBack={() => navigate(HIRING_ROUTES.hub)} backLabel={t("Back to Hiring")} />
       {body}
     </div>
   );

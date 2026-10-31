@@ -4,6 +4,7 @@ import { CalendarClock, Globe2, Phone, Receipt, ShieldCheck } from "lucide-react
 import { SettingsRow, SettingsSection } from "../../ui/SettingsRows";
 import { useApp } from "../../../context/AppContext";
 import { fetchPracticeSettings, saveCallsWithHiredClients } from "../../../services/pro/practice";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 W6 · MO23 v3 "Settings · as the client UI, with Practice"
@@ -25,7 +26,7 @@ export function PracticeSection() {
     void fetchPracticeSettings(authUserId).then((r) => {
       if (!live) return;
       if (r.ok) setCalls(r.data.callsWithHiredClients);
-      else setError(r.offline ? "Offline, showing last update" : "Couldn't load this setting.");
+      else setError(r.offline ? t("Offline, showing last update") : t("Couldn't load this setting."));
     });
     return () => {
       live = false;
@@ -42,24 +43,24 @@ export function PracticeSection() {
     setBusy(false);
     if (!r.ok) {
       setCalls(prev);
-      setError(r.message);
+      setError(t(r.message));
     }
   };
 
   const go = (p: string) => () => navigate(`/app/more/practice/${p}`);
 
   return (
-    <SettingsSection label="Practice">
-      <SettingsRow icon={CalendarClock} title="Booking defaults" subtitle="Notice, buffers and cancellation window" onClick={go("booking-defaults")} />
-      <SettingsRow icon={ShieldCheck} title="Default data requests" subtitle="What new clients are asked to share" onClick={go("data-requests")} />
-      <SettingsRow icon={Receipt} title="Invoice details" subtitle="Name on invoices, tax number, numbering" onClick={go("invoice")} />
+    <SettingsSection label={t("Practice")}>
+      <SettingsRow icon={CalendarClock} title={t("Booking defaults")} subtitle={t("Notice, buffers and cancellation window")} onClick={go("booking-defaults")} />
+      <SettingsRow icon={ShieldCheck} title={t("Default data requests")} subtitle={t("What new clients are asked to share")} onClick={go("data-requests")} />
+      <SettingsRow icon={Receipt} title={t("Invoice details")} subtitle={t("Name on invoices, tax number, numbering")} onClick={go("invoice")} />
       <SettingsRow
         icon={Phone}
-        title="Calls with hired clients"
-        subtitle={error ?? "Voice and video in client chats"}
-        toggle={{ checked: calls ?? true, onChange: (v) => void toggleCalls(v), disabled: calls === null || busy, label: "Calls with hired clients" }}
+        title={t("Calls with hired clients")}
+        subtitle={error ?? t("Voice and video in client chats")}
+        toggle={{ checked: calls ?? true, onChange: (v) => void toggleCalls(v), disabled: calls === null || busy, label: t("Calls with hired clients") }}
       />
-      <SettingsRow icon={Globe2} title="Public listing" subtitle="Whether clients can find you in Explore" onClick={go("listing")} />
+      <SettingsRow icon={Globe2} title={t("Public listing")} subtitle={t("Whether clients can find you in Explore")} onClick={go("listing")} />
     </SettingsSection>
   );
 }

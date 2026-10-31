@@ -3,6 +3,7 @@ import { getSupabaseConfig } from "../../../lib/supabase/config";
 import { AuthError } from "@supabase/supabase-js";
 import { describeAuthError, isAuthRateLimited } from "./index";
 import { passwordChangeOutcome, type ChangeOutcome } from "./passwordChangeLogic";
+import { tk } from "../../i18n/core";
 
 // Task J: Change password, from Settings → Data & account.
 //
@@ -58,7 +59,7 @@ export async function verifyCurrentPassword(email: string, password: string, cap
     const error = new AuthError(body?.msg ?? body?.error_description ?? "", res.status, code);
     return { status: "error", message: describeAuthError(error), rateLimited: isAuthRateLimited(error) };
   } catch {
-    return { status: "error", message: "Couldn't reach Centium. Check your connection and try again." };
+    return { status: "error", message: tk("Couldn't reach Centium. Check your connection and try again.") };
   }
 }
 

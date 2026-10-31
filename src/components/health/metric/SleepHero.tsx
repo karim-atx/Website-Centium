@@ -180,7 +180,7 @@ export const SleepStagesCard: React.FC<{ stages: StageMinutes | null; right: str
                 <span className="shrink-0 rounded-full" style={{ width: 9, height: 9, background: r.color }} />
                 <span className="flex-1" style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{r.key}</span>
                 <span style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "rgb(var(--c-charcoal))" }}>{hm(r.min)}</span>
-                <span className="text-right" style={{ width: 36, fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 600, color: ink("#3E716D") }}>
+                <span className="text-end" style={{ width: 36, fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 600, color: ink("#3E716D") }}>
                   {Math.round((r.min / total) * 100)}%
                 </span>
               </div>

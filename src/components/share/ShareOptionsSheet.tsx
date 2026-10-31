@@ -302,7 +302,7 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
         <div aria-busy={draw === "drawing" || !!busy || undefined}>
           {preview}
           {draw === "error" ? (
-            <div role="alert" className="flex items-center justify-between" style={{ gap: 10, borderRadius: 14, background: INK.hiBg, padding: "4px 4px 4px 12px", marginBottom: 12 }}>
+            <div role="alert" className="flex items-center justify-between" style={{ gap: 10, borderRadius: 14, background: INK.hiBg, paddingBlock: "4px", paddingInline: "12px 4px", marginBottom: 12 }}>
               <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi }}>Couldn't draw the card. Try again.</p>
               <button type="button" onClick={() => setAttempt((a) => a + 1)} className="tap shrink-0" style={{ minHeight: 44, padding: "0 12px", fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
                 Retry

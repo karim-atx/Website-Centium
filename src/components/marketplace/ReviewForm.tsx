@@ -5,6 +5,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { marketPalette } from "../../theme/marketTokens";
 import { linePx, textPx } from "../../theme/textSize";
 import { GuidelinesLink } from "../moderation/GuidelinesLink";
+import { appLocale } from "../../i18n/format";
 
 // MO1.2.1.2's review flow (34 pt stars on a 44 pitch, the text, Submit),
 // shared by the gym page's "Write a review" (GymReviews), a venue-less
@@ -93,7 +94,7 @@ export function ReviewForm({
           style={{ display: "block", width: "100%", height: 180, boxSizing: "border-box", resize: "none", borderRadius: 10, border: 0, background: m.card, padding: "11px 13px", font: "inherit", fontSize: textPx(14), lineHeight: linePx(20), color: m.ink, outlineOffset: 0 }}
         />
       </label>
-      {over && <p style={{ margin: 0, fontSize: textPx(12), fontWeight: 600, color: m.high }}>A review can be up to {REVIEW_BODY_MAX.toLocaleString("en")} characters.</p>}
+      {over && <p style={{ margin: 0, fontSize: textPx(12), fontWeight: 600, color: m.high }}>A review can be up to {REVIEW_BODY_MAX.toLocaleString(appLocale("en"))} characters.</p>}
       {error && (
         <p role="alert" style={{ margin: 0, fontSize: textPx(12), fontWeight: 600, color: m.high }}>
           {error}

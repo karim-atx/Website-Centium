@@ -1,3 +1,5 @@
+import { appLocale } from "../../../i18n/format";
+import { t, tk, tn } from "../../../i18n/core";
 // The business onboarding lanes (Classes, Gym, Store): what each lane asks,
 // its literal wording and sample-free defaults, and the pure rules (validation,
 // summaries, the mapping onto the database). Pure (no React, no storage) so it
@@ -7,6 +9,12 @@
 // source/BizOnboardingV10.dc.html (the steps) and SharedOnboardingV4.dc.html
 // (the type step), COPY.md "Business onboarding lanes". Where a value is ours
 // (not in the handover) it says OURS next to it.
+//
+// Round F: display labels in constants are tk() keys, shown through t(); the
+// functions that build display text call t() (they run during render). Option
+// values (category chips, amenities, plan types) stay English in the draft and
+// the database; the policy templates' `lines` are the stored document body and
+// stay English (see policyDocs).
 
 export type BizLane = "classes" | "gym" | "store";
 
@@ -41,60 +49,63 @@ export type BizFlowKey = (typeof BIZ_STEPS)[number];
 export const BIZ_STEP_KEYS = ["business", "where", "essentials", "policies", "payments", "review"] as const;
 export type BizStepKey = (typeof BIZ_STEP_KEYS)[number];
 
+/** English keys (reviewItems matches a reviewer's step name against them); shown through t(). */
 export function bizStepNames(lane: BizLane): Record<BizStepKey, string> {
   return {
-    business: "Your business",
-    where: "Where and when",
-    essentials: lane === "gym" ? "Gym essentials" : lane === "classes" ? "Class essentials" : "Store essentials",
-    policies: "Policies and verification",
-    payments: "Payments",
-    review: "Review and submit",
+    business: tk("Your business"),
+    where: tk("Where and when"),
+    essentials: lane === "gym" ? tk("Gym essentials") : lane === "classes" ? tk("Class essentials") : tk("Store essentials"),
+    policies: tk("Policies and verification"),
+    payments: tk("Payments"),
+    review: tk("Review and submit"),
   };
 }
 
-export const LANE_CHIP: Record<BizLane, string> = { classes: "Classes", gym: "Gym", store: "Store" };
+export const LANE_CHIP: Record<BizLane, string> = { classes: tk("Classes"), gym: tk("Gym"), store: tk("Store") };
 
 // ---------------------------------------------------------------------------
 // The type step (SharedOnboardingV4 bizType)
 
 export const TYPE_CARDS: { key: BizLane; title: string; desc: string; points: [string, string] }[] = [
-  { key: "classes", title: "Classes", desc: "A studio with a class schedule.", points: ["Schedule sessions and take bookings", "Manage instructors and class sizes"] },
-  { key: "gym", title: "Gym", desc: "Memberships, day passes and open gym.", points: ["Sell plans and day passes", "Check members in at the door"] },
-  { key: "store", title: "Store", desc: "Products or services to buy.", points: ["List products with prices and stock", "Offer pickup or delivery"] },
+  { key: "classes", title: tk("Classes"), desc: tk("A studio with a class schedule."), points: [tk("Schedule sessions and take bookings"), tk("Manage instructors and class sizes")] },
+  { key: "gym", title: tk("Gym"), desc: tk("Memberships, day passes and open gym."), points: [tk("Sell plans and day passes"), tk("Check members in at the door")] },
+  { key: "store", title: tk("Store"), desc: tk("Products or services to buy."), points: [tk("List products with prices and stock"), tk("Offer pickup or delivery")] },
 ];
 
 export const STORE_TYPES: { key: StoreType; title: string; desc: string }[] = [
-  { key: "store", title: "Store", desc: "General store, a bit of everything" },
-  { key: "supplement_store", title: "Supplement Store", desc: "Protein, vitamins, pre-workout" },
-  { key: "equipment_seller", title: "Equipment Seller", desc: "Weights, machines and gear" },
-  { key: "wellness_service", title: "Wellness Service", desc: "Massage, spa and recovery" },
-  { key: "clothing_store", title: "Clothing Store", desc: "Activewear and shoes" },
-  { key: "meal_prep_service", title: "Meal-Prepping Service", desc: "Ready meals and weekly plans" },
+  { key: "store", title: tk("Store"), desc: tk("General store, a bit of everything") },
+  { key: "supplement_store", title: tk("Supplement Store"), desc: tk("Protein, vitamins, pre-workout") },
+  { key: "equipment_seller", title: tk("Equipment Seller"), desc: tk("Weights, machines and gear") },
+  { key: "wellness_service", title: tk("Wellness Service"), desc: tk("Massage, spa and recovery") },
+  { key: "clothing_store", title: tk("Clothing Store"), desc: tk("Activewear and shoes") },
+  { key: "meal_prep_service", title: tk("Meal-Prepping Service"), desc: tk("Ready meals and weekly plans") },
 ];
 
-export const storeTypeLabel = (t: StoreType | null): string =>
-  STORE_TYPES.find((s) => s.key === t)?.title ?? "Store";
+/** The store sub-type's name, translated (shown). */
+export const storeTypeLabel = (s: StoreType | null): string => t(STORE_TYPES.find((x) => x.key === s)?.title ?? "Store");
 
 export function typeCardsNote(sel: BizLane | null, storeConfirmed: boolean): string {
-  if (sel === "classes") return "Next, set up your classes: class types, a first class, booking policies and class sizes.";
-  if (sel === "gym") return "Next, set up your gym: amenities, hours, plans, day passes and entry rules.";
-  if (sel === "store" && storeConfirmed) return "Next, set up your store: what you sell, a first listing, delivery and returns.";
-  return "The next steps adapt to the type you pick.";
+  if (sel === "classes") return t("Next, set up your classes: class types, a first class, booking policies and class sizes.");
+  if (sel === "gym") return t("Next, set up your gym: amenities, hours, plans, day passes and entry rules.");
+  if (sel === "store" && storeConfirmed) return t("Next, set up your store: what you sell, a first listing, delivery and returns.");
+  return t("The next steps adapt to the type you pick.");
 }
 
 /** "Switch to {type}?" pop-up: what the old type loses (SharedOnboardingV4 `change`). */
 export function switchPopup(from: BizLane, to: BizLane): { title: string; body: string; confirm: string; keep: string } {
   const lost: Record<BizLane, string> = {
-    gym: "amenities, hours by area, membership plans, day passes, entry rules and your waiver",
+    gym: tk("amenities, hours by area, membership plans, day passes, entry rules and your waiver"),
     // OURS: the Classes and Store lists (only Gym → Classes is drawn).
-    classes: "class types, booking policies, class sizes, intro offer and your waiver and class terms",
-    store: "what you sell, delivery and pickup, returns and your store policies",
+    classes: tk("class types, booking policies, class sizes, intro offer and your waiver and class terms"),
+    store: tk("what you sell, delivery and pickup, returns and your store policies"),
   };
+  const toType = t(LANE_CHIP[to]);
+  const fromType = t(LANE_CHIP[from]);
   return {
-    title: `Switch to ${LANE_CHIP[to]}?`,
-    body: `Your ${LANE_CHIP[from]} setup answers will be cleared: ${lost[from]}. Basics, location and photos stay.`,
-    confirm: `Switch to ${LANE_CHIP[to]}`,
-    keep: `Keep ${LANE_CHIP[from]}`,
+    title: t("Switch to {type}?", { type: toType }),
+    body: t("Your {type} setup answers will be cleared: {lost}. Basics, location and photos stay.", { type: fromType, lost: t(lost[from]) }),
+    confirm: t("Switch to {type}", { type: toType }),
+    keep: t("Keep {type}", { type: fromType }),
   };
 }
 
@@ -102,21 +113,21 @@ export function switchPopup(from: BizLane, to: BizLane): { title: string; body: 
 // Step 1 · Your business
 
 export function categoryLabel(lane: BizLane): string {
-  return lane === "gym" ? "Training styles" : lane === "classes" ? "Activities" : "What you sell";
+  return lane === "gym" ? t("Training styles") : lane === "classes" ? t("Activities") : t("What you sell");
 }
 
-/** The full list behind More; the first `shown` are chips on the page. */
+/** The full list behind More; the first `shown` are chips on the page. Values (English, stored); shown through t(). */
 export function categoryOptions(lane: BizLane, storeType: StoreType | null): { all: string[]; shown: number } {
-  if (lane === "gym") return { all: ["Strength", "HIIT", "Spin", "Boxing", "CrossFit", "Swimming", "Mobility"], shown: 5 };
-  if (lane === "classes") return { all: ["Yoga", "Pilates", "Barre", "Breathwork", "Dance", "Meditation", "Mobility"], shown: 5 };
+  if (lane === "gym") return { all: [tk("Strength"), tk("HIIT"), tk("Spin"), tk("Boxing"), tk("CrossFit"), tk("Swimming"), tk("Mobility")], shown: 5 };
+  if (lane === "classes") return { all: [tk("Yoga"), tk("Pilates"), tk("Barre"), tk("Breathwork"), tk("Dance"), tk("Meditation"), tk("Mobility")], shown: 5 };
   const lists: Record<StoreType, string[]> = {
-    supplement_store: ["Protein", "Vitamins and minerals", "Pre-workout", "Recovery", "Snacks and bars", "Weight gainers"],
+    supplement_store: [tk("Protein"), tk("Vitamins and minerals"), tk("Pre-workout"), tk("Recovery"), tk("Snacks and bars"), tk("Weight gainers")],
     // OURS: the other five sub-types' lists (COPY: "categories from the store sub-type"; only Supplement Store is drawn).
-    store: ["Supplements", "Equipment", "Activewear", "Snacks and drinks", "Accessories", "Recovery"],
-    equipment_seller: ["Weights", "Machines", "Cardio", "Mats and accessories", "Recovery tools", "Bags and gear"],
-    wellness_service: ["Massage", "Spa", "Recovery", "Stretching", "Physiotherapy", "Nutrition advice"],
-    clothing_store: ["Activewear", "Shoes", "Sportswear", "Accessories", "Swimwear", "Outerwear"],
-    meal_prep_service: ["Ready meals", "Weekly plans", "High protein", "Vegetarian", "Snacks", "Juices"],
+    store: [tk("Supplements"), tk("Equipment"), tk("Activewear"), tk("Snacks and drinks"), tk("Accessories"), tk("Recovery")],
+    equipment_seller: [tk("Weights"), tk("Machines"), tk("Cardio"), tk("Mats and accessories"), tk("Recovery tools"), tk("Bags and gear")],
+    wellness_service: [tk("Massage"), tk("Spa"), tk("Recovery"), tk("Stretching"), tk("Physiotherapy"), tk("Nutrition advice")],
+    clothing_store: [tk("Activewear"), tk("Shoes"), tk("Sportswear"), tk("Accessories"), tk("Swimwear"), tk("Outerwear")],
+    meal_prep_service: [tk("Ready meals"), tk("Weekly plans"), tk("High protein"), tk("Vegetarian"), tk("Snacks"), tk("Juices")],
   };
   return { all: lists[storeType ?? "supplement_store"], shown: 4 };
 }
@@ -163,11 +174,11 @@ export function dbCategories(businessType: string | null, picked: string[]): str
 }
 
 export function namePlaceholder(lane: BizLane): string {
-  return lane === "gym" ? "e.g. Iron Peak Gym" : lane === "classes" ? "e.g. Studio One" : "e.g. Green Leaf Supplements";
+  return lane === "gym" ? t("e.g. Iron Peak Gym") : lane === "classes" ? t("e.g. Studio One") : t("e.g. Green Leaf Supplements");
 }
 
 export function coverLabel(lane: BizLane): string {
-  return lane === "classes" ? "studio cover photo" : lane === "gym" ? "gym cover photo" : "store cover photo";
+  return lane === "classes" ? t("studio cover photo") : lane === "gym" ? t("gym cover photo") : t("store cover photo");
 }
 
 export const NAME_MAX = 60;
@@ -214,18 +225,18 @@ export interface BusinessBasics {
 /** Step 1's field errors, in order; empty when it can continue. */
 export function yourBusinessErrors(b: BusinessBasics): { cover?: string; name?: string; phone?: string; email?: string; instagram?: string } {
   const e: { cover?: string; name?: string; phone?: string; email?: string; instagram?: string } = {};
-  if (!b.coverPath) e.cover = "Add a cover photo. It's the first thing clients see.";
-  if (!b.name.trim()) e.name = "Add your business name.";
-  if (!phoneValid(b.phone)) e.phone = "Add the country code, like +000 00 000 000.";
+  if (!b.coverPath) e.cover = t("Add a cover photo. It's the first thing clients see.");
+  if (!b.name.trim()) e.name = t("Add your business name.");
+  if (!phoneValid(b.phone)) e.phone = t("Add the country code, like +000 00 000 000.");
   // OURS: the email and Instagram messages (COPY: "Email (required, valid)").
-  if (!emailValid(b.email)) e.email = "Add an email clients can reach you at.";
-  if (!instagramValid(b.instagram)) e.instagram = "Use your Instagram handle, like @yourbusiness.";
+  if (!emailValid(b.email)) e.email = t("Add an email clients can reach you at.");
+  if (!instagramValid(b.instagram)) e.instagram = t("Use your Instagram handle, like @yourbusiness.");
   return e;
 }
 
 /** "Fix 3 things to continue." */
 export function fixCountLine(n: number): string {
-  return n === 1 ? "Fix 1 thing to continue." : `Fix ${n} things to continue.`;
+  return tn(n, "Fix {n} thing to continue.", "Fix {n} things to continue.");
 }
 
 // ---------------------------------------------------------------------------
@@ -240,7 +251,8 @@ export interface DayHours {
   closes: string;
 }
 
-export const DAY_SHORT_MON = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/** English keys; shown through t(). */
+export const DAY_SHORT_MON = [tk("Mon"), tk("Tue"), tk("Wed"), tk("Thu"), tk("Fri"), tk("Sat"), tk("Sun")];
 
 /** The drawn defaults: weekdays per lane, Saturday 8 to 2, Sunday open except Gym. */
 export function defaultHours(lane: BizLane): DayHours[] {
@@ -262,7 +274,7 @@ export function copyMondayToWeekdays(hours: DayHours[]): DayHours[] {
 /** 12-hour label "6:00 AM" from "06:00". */
 export function fmt12(hhmm: string): string {
   const [H, M] = hhmm.split(":").map(Number);
-  return `${H % 12 || 12}:${String(M).padStart(2, "0")} ${H < 12 ? "AM" : "PM"}`;
+  return `${H % 12 || 12}:${String(M).padStart(2, "0")} ${H < 12 ? t("AM") : t("PM")}`;
 }
 
 export interface Location {
@@ -278,38 +290,39 @@ export interface Area {
 
 export function whereErrors(loc: Location, hours: DayHours[]): { address?: string; hours?: string } {
   const e: { address?: string; hours?: string } = {};
-  if (!loc.address.trim()) e.address = "Add your address.";
+  if (!loc.address.trim()) e.address = t("Add your address.");
   // OURS: a venue row needs coordinates (gyms.lat / lng NOT NULL), so the pin is required.
-  else if (loc.lat == null || loc.lng == null) e.address = "Place the pin on the map so clients can find your entrance.";
-  if (!hours.some((h) => h.open)) e.hours = "Open at least one day.";
+  else if (loc.lat == null || loc.lng == null) e.address = t("Place the pin on the map so clients can find your entrance.");
+  if (!hours.some((h) => h.open)) e.hours = t("Open at least one day.");
   return e;
 }
 
 /** "Mon to Fri 6:00 AM to 9:00 PM" for the review summary (first open run). */
 export function hoursSummary(hours: DayHours[]): string {
   const open = hours.filter((h) => h.open);
-  if (open.length === 0) return "Closed every day";
+  if (open.length === 0) return t("Closed every day");
   const first = open[0];
   let last = first;
   for (const h of open.slice(1)) {
     if (h.weekday === last.weekday + 1 && h.opens === first.opens && h.closes === first.closes) last = h;
     else break;
   }
-  const days = first === last ? DAY_SHORT_MON[first.weekday - 1] : `${DAY_SHORT_MON[first.weekday - 1]} to ${DAY_SHORT_MON[last.weekday - 1]}`;
-  return `${days} ${fmt12(first.opens)} to ${fmt12(first.closes)}`;
+  const day = (w: number) => t(DAY_SHORT_MON[w - 1]);
+  const days = first === last ? day(first.weekday) : t("{from} to {to}", { from: day(first.weekday), to: day(last.weekday) });
+  return t("{days} {opens} to {closes}", { days, opens: fmt12(first.opens), closes: fmt12(first.closes) });
 }
 
 // ---------------------------------------------------------------------------
 // Step 3 · Essentials
 
-export const CLASS_TYPES = ["Yoga", "Pilates", "Barre", "Spin", "Meditation", "Dance", "Mobility", "Breathwork"];
+export const CLASS_TYPES = [tk("Yoga"), tk("Pilates"), tk("Barre"), tk("Spin"), tk("Meditation"), tk("Dance"), tk("Mobility"), tk("Breathwork")];
 // OURS: the extra class types behind More (the frame shows the More chip only).
-export const CLASS_TYPES_MORE = ["Strength", "HIIT", "Boxing", "Stretching", "Prenatal"];
-export const AMENITIES = ["Showers", "Lockers", "Towels", "Parking", "Sauna", "Pool", "Wi-Fi", "Café"];
+export const CLASS_TYPES_MORE = [tk("Strength"), tk("HIIT"), tk("Boxing"), tk("Stretching"), tk("Prenatal")];
+export const AMENITIES = [tk("Showers"), tk("Lockers"), tk("Towels"), tk("Parking"), tk("Sauna"), tk("Pool"), tk("Wi-Fi"), tk("Café")];
 // OURS: the extra amenities behind More, each one amenity_vocabulary() can hold
 // (B13 MK-02: gyms.amenities is a fixed list; "Steam room" and "Juice bar"
 // had no key, so they were replaced).
-export const AMENITIES_MORE = ["Changing rooms", "Drinking water", "Childcare", "Accessible entrance"];
+export const AMENITIES_MORE = [tk("Changing rooms"), tk("Drinking water"), tk("Childcare"), tk("Accessible entrance")];
 
 /** The onboarding chip labels as amenity_vocabulary() keys (gyms_amenities_known). */
 const AMENITY_KEY_OF: Record<string, string> = {
@@ -341,14 +354,15 @@ export type CancelHours = (typeof CANCEL_OPTIONS)[number];
 
 export type ReturnsRule = "returns_14" | "exchanges_only" | "no_returns";
 export const RETURNS_OPTIONS: { key: ReturnsRule; title: string; desc?: string }[] = [
-  { key: "returns_14", title: "Returns within 14 days", desc: "Unopened items only" },
-  { key: "exchanges_only", title: "Exchanges only" },
-  { key: "no_returns", title: "No returns" },
+  { key: "returns_14", title: tk("Returns within 14 days"), desc: tk("Unopened items only") },
+  { key: "exchanges_only", title: tk("Exchanges only") },
+  { key: "no_returns", title: tk("No returns") },
 ];
 
+/** Stored values (English); shown through t(). */
 export type PlanType = "Monthly" | "Visit pack" | "Annual";
-export const PLAN_TYPES: PlanType[] = ["Monthly", "Visit pack", "Annual"];
-export const PLAN_INCLUDES = ["Main floor", "Pool", "Sauna", "Classes"];
+export const PLAN_TYPES: PlanType[] = [tk("Monthly"), tk("Visit pack"), tk("Annual")];
+export const PLAN_INCLUDES = [tk("Main floor"), tk("Pool"), tk("Sauna"), tk("Classes")];
 
 export interface StarterPlan {
   type: PlanType;
@@ -428,47 +442,49 @@ export function defaultEssentials(lane: BizLane, storeType: StoreType | null): E
 
 export function essentialsErrors(lane: BizLane, e: Essentials, categories: string[]): string[] {
   const out: string[] = [];
-  if (lane === "classes" && e.classTypes.length === 0) out.push("Pick at least one class type."); // OURS
-  if (lane === "gym" && e.amenities.length === 0) out.push("Pick at least one facility."); // OURS (V6-132: required)
+  if (lane === "classes" && e.classTypes.length === 0) out.push(t("Pick at least one class type.")); // OURS
+  if (lane === "gym" && e.amenities.length === 0) out.push(t("Pick at least one facility.")); // OURS (V6-132: required)
   if (lane === "store") {
-    if (categories.length === 0) out.push("Pick at least one thing you sell."); // OURS
-    if (!e.sellsProducts && !e.offersAppointments) out.push("Turn on Sells products or Offers appointments.");
-    if (e.sellsProducts && !e.pickup && !e.delivery) out.push("Turn on pickup or delivery."); // OURS (COPY: "at least one on")
+    if (categories.length === 0) out.push(t("Pick at least one thing you sell.")); // OURS
+    if (!e.sellsProducts && !e.offersAppointments) out.push(t("Turn on Sells products or Offers appointments."));
+    if (e.sellsProducts && !e.pickup && !e.delivery) out.push(t("Turn on pickup or delivery.")); // OURS (COPY: "at least one on")
   }
   return out;
 }
 
 /** The collapsible summaries (the line under each title). */
 export function essentialsSummaries(lane: BizLane, e: Essentials, categories: string[], address: string) {
-  const list = (a: string[]) => (a.length ? a.join(", ") : "Nothing picked yet"); // OURS empty line
+  // The picked values are English (stored); each is shown through t().
+  const list = (a: string[]) => (a.length ? a.map((x) => t(x)).join(t(", ")) : t("Nothing picked yet")); // OURS empty line
   if (lane === "classes") {
     return {
       a: list(e.classTypes),
-      b: `Free cancel until ${e.cancelHours} hours before · book ${e.bookAheadDays} days ahead`,
-      c: `${e.spots} spots · waitlist of ${e.waitlist}`,
-      d: e.introOn ? (e.introKind === "first_free" ? "First class free" : `Intro pack${e.introPrice ? ` · $${e.introPrice}` : ""}`) : "Off",
+      b: t("Free cancel until {hours} hours before · book {days} days ahead", { hours: e.cancelHours, days: e.bookAheadDays }),
+      c: t("{spots} spots · waitlist of {waitlist}", { spots: e.spots, waitlist: e.waitlist }),
+      d: e.introOn ? (e.introKind === "first_free" ? t("First class free") : e.introPrice ? t("Intro pack · ${price}", { price: e.introPrice }) : t("Intro pack")) : t("Off"),
     };
   }
   if (lane === "gym") {
-    const checks = ["QR check-in", `${e.minAge} and over`].filter(Boolean).join(" · ");
+    const checks = [t("QR check-in"), t("{age} and over", { age: e.minAge })].filter(Boolean).join(" · ");
     return {
       a: list(e.amenities).replace(/(^|, )\w/g, (m) => m.toLowerCase()).replace(/^./, (m) => m.toUpperCase()),
       b: checks,
-      c: e.starterPlan ? `${e.starterPlan.name} · $${e.starterPlan.price}` : e.planSkipped ? "Skipped for now" : "Not added yet",
-      d: e.dayPassOn ? `On${e.dayPassPrice ? ` · $${e.dayPassPrice}` : ""}` : "Off",
+      c: e.starterPlan ? `${e.starterPlan.name} · $${e.starterPlan.price}` : e.planSkipped ? t("Skipped for now") : t("Not added yet"),
+      d: e.dayPassOn ? (e.dayPassPrice ? t("On · ${price}", { price: e.dayPassPrice }) : t("On")) : t("Off"),
     };
   }
-  const offer = [e.sellsProducts ? "Sells products" : null, e.offersAppointments ? "Appointments" : null, e.delivery ? "Delivery" : null, e.pickup ? "Pickup" : null]
+  const offer = [e.sellsProducts ? t("Sells products") : null, e.offersAppointments ? t("Appointments") : null, e.delivery ? t("Delivery") : null, e.pickup ? t("Pickup") : null]
     .filter(Boolean)
     .join(" · ");
-  const delivery = [e.pickup ? "Pickup in store" : null, e.delivery ? `delivery${e.deliveryFee ? ` $${e.deliveryFee}` : ""}` : null].filter(Boolean).join(" · ") || "Off";
-  const returns = e.returnsRule === "returns_14" ? "14 days, unopened" : e.returnsRule === "exchanges_only" ? "Exchanges only" : "No returns";
+  const delivery =
+    [e.pickup ? t("Pickup in store") : null, e.delivery ? (e.deliveryFee ? t("delivery ${fee}", { fee: e.deliveryFee }) : t("delivery")) : null].filter(Boolean).join(" · ") || t("Off");
+  const returns = e.returnsRule === "returns_14" ? t("14 days, unopened") : e.returnsRule === "exchanges_only" ? t("Exchanges only") : t("No returns");
   return {
-    o: offer || "Nothing on yet",
+    o: offer || t("Nothing on yet"),
     a: list(categories),
     b: delivery,
-    c: e.allowExchanges && e.returnsRule !== "no_returns" ? `${returns} · exchanges in 30 days` : returns,
-    d: e.offersAppointments ? `${e.sessionLength} min sessions` : "Off",
+    c: e.allowExchanges && e.returnsRule !== "no_returns" ? t("{returns} · exchanges in 30 days", { returns }) : returns,
+    d: e.offersAppointments ? t("{n} min sessions", { n: e.sessionLength }) : t("Off"),
     address,
   };
 }
@@ -480,11 +496,16 @@ export type PolicyKind = "waiver" | "class_terms" | "house_rules" | "returns" | 
 
 export interface PolicyDoc {
   kind: PolicyKind;
+  /** tk() keys, shown through t(). */
   title: string;
   sub: string;
   icon: "file-check" | "file-text" | "scroll-text" | "rotate-ccw" | "truck";
   optional?: boolean;
-  /** The document's text; template until the owner edits it. */
+  /**
+   * The document's text; template until the owner edits it. Stored as the
+   * policy body (docBody), so it stays English: a translated template is a
+   * legal decision (Round F report).
+   */
   lines: string[];
 }
 
@@ -492,14 +513,14 @@ export interface PolicyDoc {
 export function policyDocs(lane: BizLane, storeType: StoreType | null, e?: Essentials): PolicyDoc[] {
   if (lane === "classes") {
     return [
-      { kind: "waiver", title: "Liability waiver", sub: "Accepted once, before the first booking", icon: "file-check", lines: ["Liability waiver", "Before your first class", "• Tell your instructor about any injury or condition.", "• Use props and equipment only as shown.", "• Stop if you feel pain or dizziness.", "By booking, you accept that exercise carries some risk."] },
-      { kind: "class_terms", title: "Class terms", sub: "Shown at checkout", icon: "file-text", lines: ["Class terms", "Bookings and cancellations", `• Cancel free until ${e?.cancelHours ?? 12} hours before class.`, "• Late cancels count as a used class."] },
+      { kind: "waiver", title: tk("Liability waiver"), sub: tk("Accepted once, before the first booking"), icon: "file-check", lines: ["Liability waiver", "Before your first class", "• Tell your instructor about any injury or condition.", "• Use props and equipment only as shown.", "• Stop if you feel pain or dizziness.", "By booking, you accept that exercise carries some risk."] },
+      { kind: "class_terms", title: tk("Class terms"), sub: tk("Shown at checkout"), icon: "file-text", lines: ["Class terms", "Bookings and cancellations", `• Cancel free until ${e?.cancelHours ?? 12} hours before class.`, "• Late cancels count as a used class."] },
     ];
   }
   if (lane === "gym") {
     return [
-      { kind: "waiver", title: "Liability waiver", sub: "Accepted once, before the first visit", icon: "file-check", lines: ["Liability waiver", "Before your first visit", "• Tell staff about any injury or condition.", "• Use equipment only as shown.", "• Under 16s need a parent or guardian.", "By joining, you accept that exercise carries some risk."] },
-      { kind: "house_rules", title: "House rules", sub: "Optional · shown at the front desk", icon: "scroll-text", optional: true, lines: ["House rules", "On the floor", "• Wipe equipment after use.", "• Re-rack weights when you're done."] },
+      { kind: "waiver", title: tk("Liability waiver"), sub: tk("Accepted once, before the first visit"), icon: "file-check", lines: ["Liability waiver", "Before your first visit", "• Tell staff about any injury or condition.", "• Use equipment only as shown.", "• Under 16s need a parent or guardian.", "By joining, you accept that exercise carries some risk."] },
+      { kind: "house_rules", title: tk("House rules"), sub: tk("Optional · shown at the front desk"), icon: "scroll-text", optional: true, lines: ["House rules", "On the floor", "• Wipe equipment after use.", "• Re-rack weights when you're done."] },
     ];
   }
   // "Built from your answers": the returns and delivery lines follow Step 3.
@@ -521,12 +542,12 @@ export function policyDocs(lane: BizLane, storeType: StoreType | null, e?: Essen
     "• Someone must be there to receive the order.",
   ];
   const docs: PolicyDoc[] = [
-    { kind: "returns", title: "Returns policy", sub: "Built from your answers", icon: "rotate-ccw", lines: ["Returns policy", "Returns", ...returnsLines, ...(storeType === "supplement_store" && rule !== "no_returns" ? ["Opened supplements can't be returned for safety."] : [])] },
-    { kind: "delivery", title: "Delivery terms", sub: "Shown at checkout", icon: "truck", lines: ["Delivery terms", "Delivery", ...deliveryLines] },
+    { kind: "returns", title: tk("Returns policy"), sub: tk("Built from your answers"), icon: "rotate-ccw", lines: ["Returns policy", "Returns", ...returnsLines, ...(storeType === "supplement_store" && rule !== "no_returns" ? ["Opened supplements can't be returned for safety."] : [])] },
+    { kind: "delivery", title: tk("Delivery terms"), sub: tk("Shown at checkout"), icon: "truck", lines: ["Delivery terms", "Delivery", ...deliveryLines] },
   ];
   // COPY: Wellness Service adds a waiver for appointments.
   if (storeType === "wellness_service") {
-    docs.push({ kind: "appointment_waiver", title: "Appointment waiver", sub: "Accepted once, before the first appointment", icon: "file-check", lines: ["Appointment waiver", "Before your first appointment", "• Tell your therapist about any injury or condition.", "• Stop if you feel pain or dizziness.", "By booking, you accept that treatments carry some risk."] });
+    docs.push({ kind: "appointment_waiver", title: tk("Appointment waiver"), sub: tk("Accepted once, before the first appointment"), icon: "file-check", lines: ["Appointment waiver", "Before your first appointment", "• Tell your therapist about any injury or condition.", "• Stop if you feel pain or dizziness.", "By booking, you accept that treatments carry some risk."] });
   }
   return docs;
 }
@@ -557,7 +578,7 @@ export function ageFrom(dob: string, now: Date = new Date()): number | null {
 // Step 5 · Payments
 
 export function cashLine(lane: BizLane): string {
-  return lane === "store" ? "Paid at pickup or on delivery" : lane === "classes" ? "Paid at the studio" : "Paid at the front desk";
+  return lane === "store" ? t("Paid at pickup or on delivery") : lane === "classes" ? t("Paid at the studio") : t("Paid at the front desk");
 }
 
 /** "$29" from a tier price: no cents when whole. */
@@ -577,14 +598,15 @@ export function listingLine(lane: BizLane, hours: DayHours[], e: Essentials, are
   if (lane === "gym") {
     const today = ((new Date().getDay() + 6) % 7) + 1;
     const h = hours.find((x) => x.weekday === today);
-    return h && h.open ? `Open today ${fmt12(h.opens)} to ${fmt12(h.closes)}` : "Closed today";
+    return h && h.open ? t("Open today {opens} to {closes}", { opens: fmt12(h.opens), closes: fmt12(h.closes) }) : t("Closed today");
   }
   if (lane === "classes") {
     const first = hours.find((h) => h.open);
-    return first ? `Classes from ${["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][first.weekday - 1]}, ${fmt12(first.opens)}` : "Classes schedule coming soon";
+    const dayNames = [tk("Monday"), tk("Tuesday"), tk("Wednesday"), tk("Thursday"), tk("Friday"), tk("Saturday"), tk("Sunday")];
+    return first ? t("Classes from {day}, {time}", { day: t(dayNames[first.weekday - 1]), time: fmt12(first.opens) }) : t("Classes schedule coming soon");
   }
-  const parts = [e.pickup ? `Pickup in ${area}` : null, e.delivery ? "Delivery" : null].filter(Boolean);
-  return parts.length ? parts.join(" · ") : "Appointments";
+  const parts = [e.pickup ? t("Pickup in {area}", { area }) : null, e.delivery ? t("Delivery") : null].filter(Boolean);
+  return parts.length ? parts.join(" · ") : t("Appointments");
 }
 
 /** The neighbourhood part of an address: the last comma part. */
@@ -593,26 +615,30 @@ export function areaOf(address: string): string {
   return parts.length > 1 ? parts[parts.length - 1] : parts[0] ?? "";
 }
 
-export const TERMS_ERROR = "Accept the Business Terms and Privacy Policy to submit.";
+export const TERMS_ERROR = tk("Accept the Business Terms and Privacy Policy to submit.");
 
 // ---------------------------------------------------------------------------
 // After submitting
 
 export function approvedBody(lane: BizLane, name: string): string {
-  return `${name} is on Explore. ${lane === "classes" ? "Clients can book your classes." : lane === "gym" ? "People can join and buy day passes." : "Clients can order for pickup or delivery."}`;
+  return lane === "classes"
+    ? t("{name} is on Explore. Clients can book your classes.", { name })
+    : lane === "gym"
+    ? t("{name} is on Explore. People can join and buy day passes.", { name })
+    : t("{name} is on Explore. Clients can order for pickup or delivery.", { name });
 }
 
-/** "Gym", "Classes", or the store sub-type's name. */
+/** "Gym", "Classes", or the store sub-type's name (translated). */
 export function laneTypeLabel(lane: BizLane | null, storeType: StoreType | null): string {
-  return lane === "gym" ? "Gym" : lane === "classes" ? "Classes" : storeTypeLabel(storeType);
+  return lane === "gym" ? t("Gym") : lane === "classes" ? t("Classes") : storeTypeLabel(storeType);
 }
 
 /** "Today, 10:42 AM" / "Oct 12, 10:42 AM" (12-hour) and its day column. */
 export function submittedLabel(iso: string | null, now: Date = new Date()): { line: string; day: string } {
   if (!iso) return { line: "", day: "" };
   const d = new Date(iso);
-  const t = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const time = d.toLocaleTimeString(appLocale("en-US"), { hour: "numeric", minute: "2-digit" });
   const same = d.toDateString() === now.toDateString();
-  const day = same ? "Today" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return { line: `${day}, ${t}`, day };
+  const day = same ? t("Today") : d.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
+  return { line: t("{day}, {time}", { day, time }), day };
 }

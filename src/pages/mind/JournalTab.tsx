@@ -32,6 +32,7 @@ import { isFolderOpen, type UnlockWindows } from "../../services/journal/lockLog
 import { JournalPasswordPopup, LockedFolderView, type PasswordPurpose } from "../../components/mind/JournalLock";
 import { entryMenuTarget } from "../../components/mind/entryMenu";
 import { MusicSection } from "../../components/music/MusicSection";
+import { appLocale } from "../../i18n/format";
 
 type FolderOption = "rename" | "move" | "lock" | "unlock" | "delete";
 
@@ -55,7 +56,7 @@ const FIELD_ERROR = "!border-status-high focus:!shadow-[0_0_0_0.5px_rgb(var(--c-
 
 const dateLabel = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  return d.toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
 };
 
 /** MO1.1.2 S9: the virtual "Recently" tab's key (never a folder id: those are uuids). */
@@ -553,7 +554,7 @@ export default function JournalTab() {
           }}
           aria-label="New folder"
           aria-expanded={naming === "new"}
-          className="tap relative w-[30px] h-[30px] -my-1 -mr-1.5 rounded-[9px] flex items-center justify-center text-th-6b41ef dark:text-primary-dark after:absolute after:-inset-[7px] after:content-['']"
+          className="tap relative w-[30px] h-[30px] -my-1 -me-1.5 rounded-[9px] flex items-center justify-center text-th-6b41ef dark:text-primary-dark after:absolute after:-inset-[7px] after:content-['']"
         >
           <FolderPlus size={18} />
         </button>
@@ -643,7 +644,7 @@ export default function JournalTab() {
                       aria-label={`${e.title}, more options`}
                       aria-haspopup="menu"
                       aria-expanded={entryMenu?.entry.id === e.id}
-                      className="tap relative -mr-1.5 w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent after:absolute after:-inset-2.5 after:content-['']"
+                      className="tap relative -me-1.5 w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent after:absolute after:-inset-2.5 after:content-['']"
                     >
                       <EllipsisVertical size={16} aria-hidden />
                     </button>
@@ -839,7 +840,7 @@ export default function JournalTab() {
               onClick={() => setMenu("picker")}
               aria-haspopup="menu"
               aria-expanded={menu === "picker"}
-              className={`tap flex items-center gap-2 px-3 text-left font-semibold ${field} ${FOCUS_RING}`}
+              className={`tap flex items-center gap-2 px-3 text-start font-semibold ${field} ${FOCUS_RING}`}
             >
               {/* MO1.1.2.3 (2x frame, measured): Folder in #7D6BB5
                   (primary.deep), the value 14/600 #241F1B (Inputs'
@@ -897,7 +898,7 @@ export default function JournalTab() {
             {!text && (
               <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 px-[17px] py-[15px] text-sm text-charcoal-faint">
                 <span className="block">How was your day?</span>
-                <span className="block mt-1.5 text-right" dir="rtl">
+                <span className="block mt-1.5 text-end" dir="rtl">
                   شو صار معك اليوم؟
                 </span>
               </div>

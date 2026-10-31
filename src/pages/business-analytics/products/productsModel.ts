@@ -8,6 +8,7 @@ import {
   previousOf,
   type AnalyticsRange,
 } from "../analyticsRange";
+import { appLocale } from "../../../i18n/format";
 
 // AN11 numbers from real store orders (B11 store_orders / store_order_items)
 // only. Until B11 is on the database the screens show their empty states,
@@ -208,8 +209,8 @@ export function price(v: number | null): string {
   return (
     "$" +
     (Number.isInteger(v)
-      ? v.toLocaleString("en-US")
-      : v.toLocaleString("en-US", {
+      ? v.toLocaleString(appLocale("en-US"))
+      : v.toLocaleString(appLocale("en-US"), {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         }))

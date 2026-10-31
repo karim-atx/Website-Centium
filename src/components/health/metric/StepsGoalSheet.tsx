@@ -4,6 +4,7 @@ import { CtaButton } from "../../ui/PinnedCta";
 import { WheelPicker, type WheelOption } from "../../ui/WheelPicker";
 import { textPx, linePx } from "../../../theme/textSize";
 import { PINNED_FILL_STYLE, metricTextInk, useHealthMode } from "./MetricKit";
+import { appLocale } from "../../../i18n/format";
 
 // HE1.2.1 "Step goal": the shared Part B log sheet shell (lavender header
 // with ×, pinned Save), measured from HE1.2.1.png: "Daily goal" 12.5/18.8
@@ -17,7 +18,7 @@ import { PINNED_FILL_STYLE, metricTextInk, useHealthMode } from "./MetricKit";
 const CHIPS = [6000, 8000, 10000, 12000];
 const OPTIONS: WheelOption<number>[] = Array.from({ length: (40000 - 1000) / 500 + 1 }, (_, i) => {
   const v = 1000 + i * 500;
-  return { value: v, label: v.toLocaleString("en-GB") };
+  return { value: v, label: v.toLocaleString(appLocale("en-GB")) };
 });
 
 export const StepsGoalSheet: React.FC<{ open: boolean; goal: number; todaySteps: number | null; onClose: () => void; onSave: (goal: number) => void }> = ({
@@ -63,10 +64,10 @@ export const StepsGoalSheet: React.FC<{ open: boolean; goal: number; todaySteps:
       <div className="flex flex-col items-center text-center">
         <p style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>Daily goal</p>
         <p data-goal-value style={{ marginTop: 2, fontSize: 48, lineHeight: "52px", fontWeight: 800, letterSpacing: -1.6, fontVariantNumeric: "tabular-nums", color: "rgb(var(--c-charcoal))" }}>
-          {value.toLocaleString("en-GB")}
+          {value.toLocaleString(appLocale("en-GB"))}
         </p>
         <p style={{ marginTop: 2, fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 600, color: metricTextInk("steps", dark) }}>
-          {todaySteps !== null ? `steps a day · today ${todaySteps.toLocaleString("en-GB")} (${pct}%)` : "steps a day"}
+          {todaySteps !== null ? `steps a day · today ${todaySteps.toLocaleString(appLocale("en-GB"))} (${pct}%)` : "steps a day"}
         </p>
         <div role="radiogroup" aria-label="Daily step goal" className="flex flex-wrap justify-center" style={{ marginTop: 16, gap: 8 }}>
           {CHIPS.map((c) => {
@@ -84,7 +85,7 @@ export const StepsGoalSheet: React.FC<{ open: boolean; goal: number; todaySteps:
                   setValue(c);
                 }}
               >
-                {c.toLocaleString("en-GB")}
+                {c.toLocaleString(appLocale("en-GB"))}
               </button>
             );
           })}

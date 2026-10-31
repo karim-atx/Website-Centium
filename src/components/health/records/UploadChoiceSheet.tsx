@@ -66,7 +66,7 @@ export const UploadChoiceSheet: React.FC<{
           key={r.key}
           type="button"
           onClick={r.onClick}
-          className="tap w-full flex items-center text-left"
+          className="tap w-full flex items-center text-start"
           style={{ minHeight: 56, gap: 12, borderTop: i ? rowRule(dark, hc, 0.08) : undefined }}
         >
           <span aria-hidden className="grid place-items-center shrink-0" style={{ width: 40, height: 40, borderRadius: 12, background: tileFill(dark) }}>

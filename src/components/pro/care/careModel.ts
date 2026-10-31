@@ -2,6 +2,7 @@
 
 import { SUBTYPE_SINGULAR } from "../../professionals/subtypeLabels";
 import type { Tone } from "../client/clientFormat";
+import { appLocale } from "../../../i18n/format";
 export type ReferralStatus = "awaiting_client" | "declined_by_client" | "sent" | "accepted" | "declined" | "withdrawn" | "disputed" | "closed";
 
 /** "Dietitian", "Physiotherapist", "Doctor" (the colleague's type as a label). */
@@ -121,5 +122,5 @@ export function whenWord(iso: string, now = new Date(), clock?: (d: Date) => str
   y.setDate(now.getDate() - 1);
   if (d.toDateString() === now.toDateString()) return clock ? `today, ${clock(d)}` : "today";
   if (d.toDateString() === y.toDateString()) return "yesterday";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 }

@@ -2,6 +2,7 @@
 // the components so Fast refresh keeps working).
 
 import { INK } from "../proInk";
+import { appLocale } from "../../../i18n/format";
 
 export type Tone = "req" | "onb" | "act" | "att" | "pau" | "done" | "pr";
 
@@ -34,7 +35,7 @@ export function initialsOf(name: string): string {
 export function fmtDay(iso: string | null | undefined, withYear = false): string {
   if (!iso) return "";
   const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
-  return d.toLocaleDateString("en-US", withYear ? { month: "short", day: "numeric", year: "numeric" } : { month: "short", day: "numeric" });
+  return d.toLocaleDateString(appLocale("en-US"), withYear ? { month: "short", day: "numeric", year: "numeric" } : { month: "short", day: "numeric" });
 }
 
 export const ALLERGEN_LABEL: Record<string, string> = {

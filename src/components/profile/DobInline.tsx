@@ -4,6 +4,7 @@ import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { useApp } from "../../context/AppContext";
 import { updateDateOfBirth } from "../../services/profile";
+import { t } from "../../i18n/core";
 import { ageFromDateOfBirth, isoDateYearsAgo, MAX_AGE, MIN_AGE, validateDateOfBirth } from "../../utils/date";
 
 /**
@@ -50,7 +51,7 @@ export const DobInline: React.FC<{
   const field = (
     <>
       <label className="block">
-        <span className="text-xs font-semibold text-charcoal-soft mb-1 block">Date of birth</span>
+        <span className="text-xs font-semibold text-charcoal-soft mb-1 block">{t("Date of birth")}</span>
         <input
           type="date"
           value={dob}
@@ -63,16 +64,16 @@ export const DobInline: React.FC<{
           className="w-full rounded-xl bg-cream-card border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </label>
-      {error && <p className="text-xs font-semibold text-status-high">{error}</p>}
+      {error && <p className="text-xs font-semibold text-status-high">{t(error)}</p>}
       <Button size="sm" onClick={() => void save()} disabled={!dob || saving}>
-        {saving ? "Saving…" : "Save date of birth"}
+        {saving ? t("Saving…") : t("Save date of birth")}
       </Button>
     </>
   );
 
   if (setup)
     return (
-      <div className="rounded-[24px] bg-primary-pale px-5 pt-[18px] pb-2.5 flex flex-col gap-2" role="region" aria-label="Date of birth">
+      <div className="rounded-[24px] bg-primary-pale px-5 pt-[18px] pb-2.5 flex flex-col gap-2" role="region" aria-label={t("Date of birth")}>
         <p className="text-[15px] font-extrabold text-charcoal">{title}</p>
         <p className="text-[12.5px] leading-[18px] text-charcoal-soft">{body}</p>
         {field}
@@ -85,7 +86,7 @@ export const DobInline: React.FC<{
     // 17/1.5 #7D6BB5 in a 36 #F0EDF9 tile, the title 14/600 beside it, and
     // the rest under the title's x, 10 below, 12/400 on an 18 line.
     return (
-      <Card padded={false} className="!rounded-[18px] pt-4 px-4 pb-[18px]" role="region" aria-label="Date of birth">
+      <Card padded={false} className="!rounded-[18px] pt-4 px-4 pb-[18px]" role="region" aria-label={t("Date of birth")}>
         <span className="flex items-center gap-3 min-w-0">
           <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
             <CalendarDays size={17} strokeWidth={1.5} className="text-primary-dark" />
@@ -100,7 +101,7 @@ export const DobInline: React.FC<{
     );
 
   return (
-    <div className="rounded-xl bg-gold-pale/60 border border-gold/30 px-3.5 py-3 flex flex-col gap-2" role="region" aria-label="Date of birth">
+    <div className="rounded-xl bg-gold-pale/60 border border-gold/30 px-3.5 py-3 flex flex-col gap-2" role="region" aria-label={t("Date of birth")}>
       <p className="text-sm font-semibold text-charcoal">{title}</p>
       <p className="text-[11.5px] text-charcoal-soft leading-relaxed">{body}</p>
       {field}

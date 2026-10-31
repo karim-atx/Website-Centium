@@ -490,7 +490,7 @@ function ClientProfile() {
                 <r.icon size={16} strokeWidth={1.75} className="text-primary-dark" />
               </span>
               <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">{r.label}</span>
-              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
             </button>
           ))}
         </div>
@@ -547,7 +547,7 @@ function ClientProfile() {
                     {/* Release 3 W7 (Karim answer 1): addition under the row's own line. */}
                     {p.licenceVerified === false && <LicencePendingTag className="mt-1" />}
                   </span>
-                  <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+                  <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
                 </button>
               ))}
               {/* Release 3 W8 CU30: "Sharing your wins", after the professional rows. */}
@@ -569,7 +569,7 @@ function ClientProfile() {
                     <Plus size={16} strokeWidth={1.75} className="text-primary-dark" />
                   </span>
                   <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">Connect with a professional code</span>
-                  <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+                  <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
                 </button>
               )}
             </div>
@@ -602,7 +602,7 @@ function ClientProfile() {
                   <s.icon size={14} strokeWidth={1.75} className="text-primary-dark" />
                 </span>
                 <span className="flex-1 min-w-0 text-[13px] font-semibold leading-tight text-charcoal">{s.label}</span>
-                <ChevronRight size={14} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+                <ChevronRight size={14} className="text-charcoal-faint shrink-0" aria-hidden />
               </button>
             ))}
           </div>
@@ -634,7 +634,7 @@ function ClientProfile() {
             {safetyOpen ? (
               <ChevronDown size={14} aria-hidden className="text-charcoal-faint shrink-0 me-1" />
             ) : (
-              <ChevronRight size={14} aria-hidden className="text-charcoal-faint shrink-0 me-1 rtl:-scale-x-100" />
+              <ChevronRight size={14} aria-hidden className="text-charcoal-faint shrink-0 me-1" />
             )}
           </button>
           {safetyOpen && (
@@ -791,7 +791,7 @@ function ClientProfile() {
                 key={option}
                 onClick={() => void saveSex(option)}
                 disabled={sexSaving}
-                className={`tap w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold capitalize disabled:opacity-40 ${
+                className={`tap w-full rounded-2xl px-4 py-3 text-start text-sm font-semibold capitalize disabled:opacity-40 ${
                   user.sex === option
                     ? "bg-primary-fill text-on-primary-fill"
                     : "bg-cream-soft text-charcoal"
@@ -825,9 +825,9 @@ function ClientProfile() {
               }}
               onKeyDown={(e) => e.key === "Enter" && void saveMetric()}
               inputMode="decimal"
-              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 pr-12 text-charcoal focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 pe-12 text-charcoal focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-charcoal-faint">
+            <span className="absolute end-4 top-1/2 -translate-y-1/2 text-sm text-charcoal-faint">
               {metricOpen === "weightKg" ? "kg" : "cm"}
             </span>
           </label>

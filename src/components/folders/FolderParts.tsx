@@ -106,7 +106,7 @@ export const ColorPopover: React.FC<{ value: string | undefined; onPick: (c: str
   onDone,
 }) => (
   <div
-    className="absolute right-0 top-7 z-20 bg-cream-card rounded-2xl shadow-lift border border-charcoal/[0.06] p-3 animate-fade-slide-up"
+    className="absolute end-0 top-7 z-20 bg-cream-card rounded-2xl shadow-lift border border-charcoal/[0.06] p-3 animate-fade-slide-up"
     onClick={(ev) => ev.stopPropagation()}
   >
     <div className="mb-2">
@@ -245,7 +245,7 @@ export const FolderHeader: React.FC<{
         <RenameField value={renameDraft ?? ""} onChange={(v) => onRenameDraft?.(v)} onCommit={() => onRenameCommit?.()} tone={ink === "#FFFFFF" ? "light" : "dark"} ink={ink} />
       ) : (
         <>
-          <button onClick={onToggle} className="tap flex items-center gap-[13px] flex-1 text-left min-w-0 self-stretch">
+          <button onClick={onToggle} className="tap flex items-center gap-[13px] flex-1 text-start min-w-0 self-stretch">
             <span
               className="w-[33px] h-[33px] rounded-[10px] flex items-center justify-center shrink-0"
               style={{ background: family.tile }}

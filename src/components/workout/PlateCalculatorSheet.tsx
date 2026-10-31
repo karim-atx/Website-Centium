@@ -219,7 +219,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
                 style={{
                   top: 3,
                   bottom: 3,
-                  left: 3,
+                  insetInlineStart: 3,
                   width: "calc(50% - 3px)",
                   borderRadius: 999,
                   background: "rgb(var(--c-primary-fill))",
@@ -317,10 +317,10 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
               </p>
               <p className="tabular-nums" style={{ margin: 0, lineHeight: linePx(36) }}>
                 <span style={{ fontSize: textPx(30), fontWeight: 800, color: pc("resultValue", dark), letterSpacing: "-0.02em" }}>{load ? fmt(load.working) : "–"}</span>
-                {load && <span style={{ fontSize: textPx(13), fontWeight: 600, color: pc("resultLabel", dark), marginLeft: 4 }}>{u}</span>}
+                {load && <span style={{ fontSize: textPx(13), fontWeight: 600, color: pc("resultLabel", dark), marginInlineStart: 4 }}>{u}</span>}
               </p>
             </div>
-            <div className="text-right flex-none">
+            <div className="text-end flex-none">
               <p className="uppercase" style={{ margin: 0, fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.1em", color: pc("resultLabel", dark) }}>
                 Per side
               </p>

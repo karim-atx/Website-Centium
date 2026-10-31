@@ -30,6 +30,7 @@ import {
   type NotificationCursor,
 } from "../../services/notifications";
 import { NotificationRow, NotificationsEmpty } from "./ClientNotificationsPage";
+import { t, tk } from "../../i18n/core";
 
 // Market + Share 3.0 · W4 · B-MA.9 the business's notifications (Business
 // Hiring Screens `notifBiz`, markup lines 340–358, script `NI`, `NT`,
@@ -65,8 +66,8 @@ import { NotificationRow, NotificationsEmpty } from "./ClientNotificationsPage";
 // never sample rows.
 
 const PAGE = 30;
-const OFFLINE_NOTE = "You're offline. Try again when you're connected.";
-const BUSINESS_NOTIF_EMPTY = "Applications, offer replies, hiring fees, vouchers and reviews will show here.";
+const OFFLINE_NOTE = tk("You're offline. Try again when you're connected.");
+const BUSINESS_NOTIF_EMPTY = tk("Applications, offer replies, hiring fees, vouchers and reviews will show here.");
 
 type Read = { ok: true; items: MemberNotification[]; more: boolean } | { ok: false; offline: boolean };
 
@@ -170,11 +171,11 @@ export default function BusinessNotificationsPage() {
   return (
     <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "-4px 0 6px -10px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBlock: "-4px 6px", marginInline: "-10px 0" }}>
         <button
           type="button"
           onClick={back}
-          aria-label="Back"
+          aria-label={t("Back")}
           className="market-focus"
           style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", background: "none", border: 0, padding: 0, borderRadius: 12, color: m.ink, cursor: "pointer" }}
         >
@@ -184,9 +185,9 @@ export default function BusinessNotificationsPage() {
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div aria-hidden={!eyebrow || undefined} style={{ fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint, lineHeight: linePx(15.75), minHeight: linePx(15.75) }}>
-            {eyebrow}
+            {eyebrow && t(eyebrow)}
           </div>
-          <h1 style={{ margin: 0, fontSize: textPx(22), fontWeight: 800, lineHeight: linePx(28) }}>Notifications</h1>
+          <h1 style={{ margin: 0, fontSize: textPx(22), fontWeight: 800, lineHeight: linePx(28) }}>{t("Notifications")}</h1>
         </div>
         <button
           type="button"
@@ -195,26 +196,26 @@ export default function BusinessNotificationsPage() {
           className="market-focus"
           style={{ minHeight: 44, padding: 0, background: "none", border: 0, font: "inherit", fontSize: textPx(12.5), fontWeight: 700, color: dark ? m.pdark : "#7D6BB5", whiteSpace: "nowrap", cursor: busy || unread === 0 ? "default" : "pointer", opacity: unread === 0 ? 0.4 : 1 }}
         >
-          Mark all read
+          {t("Mark all read")}
         </button>
       </div>
 
-      {failNote ? <ConfirmationStrip tone="error" text={failNote} style={{ marginTop: 6 }} /> : null}
+      {failNote ? <ConfirmationStrip tone="error" text={t(failNote)} style={{ marginTop: 6 }} /> : null}
 
       {state.s === "loading" ? (
-        <MarketSkeleton radius={20} rows={3} count={2} height={160} label="Loading your notifications" style={{ marginTop: 12 }} />
+        <MarketSkeleton radius={20} rows={3} count={2} height={160} label={t("Loading your notifications")} style={{ marginTop: 12 }} />
       ) : state.s === "error" ? (
-        <MarketError thing="your notifications" onRetry={() => {
+        <MarketError thing={t("your notifications")} onRetry={() => {
             setState({ s: "loading" });
             setTick((x) => x + 1);
           }} style={{ marginTop: 12 }} />
       ) : (
         <>
-          {list.length === 0 ? <NotificationsEmpty body={BUSINESS_NOTIF_EMPTY} /> : null}
+          {list.length === 0 ? <NotificationsEmpty body={t(BUSINESS_NOTIF_EMPTY)} /> : null}
           {groupNotifications(list).map((g) => (
             <section key={g.heading} aria-labelledby={`biz-notif-${g.heading}`}>
               <h2 id={`biz-notif-${g.heading}`} style={{ margin: 0, padding: "12px 0 6px", fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint }}>
-                {g.heading}
+                {g.heading === "Today" ? t("Today") : t("Earlier")}
               </h2>
               <div style={{ borderRadius: 20, border: `1px solid ${dark ? m.border : "rgba(36,31,27,0.11)"}`, overflow: "hidden" }}>
                 {g.items.map((n, k) => (
@@ -231,10 +232,10 @@ export default function BusinessNotificationsPage() {
               className="market-focus"
               style={{ width: "100%", marginTop: 16, minHeight: 44, borderRadius: 12, border: `1px solid ${m.border}`, background: "none", font: "inherit", fontSize: textPx(12.5), fontWeight: 800, color: m.pdark, cursor: "pointer", opacity: loadingMore ? 0.6 : 1 }}
             >
-              {loadingMore ? "Loading…" : "Load more"}
+              {loadingMore ? t("Loading…") : t("Load more")}
             </button>
           ) : null}
-          {moreFailed ? <MarketError thing="more of your notifications" onRetry={() => void loadMore()} style={{ marginTop: 10 }} /> : null}
+          {moreFailed ? <MarketError thing={t("more of your notifications")} onRetry={() => void loadMore()} style={{ marginTop: 10 }} /> : null}
         </>
       )}
     </div>

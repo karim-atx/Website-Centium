@@ -137,7 +137,7 @@ html.high-contrast.dark .an3 {
   font-size: 10.5px;
   color: var(--k-faint);
   margin-left: auto;
-  text-align: right;
+  text-align: end;
 }
 
 .an3-card {
@@ -384,7 +384,7 @@ html.high-contrast.dark .an3 {
 .an3-val {
   font-size: 12px;
   font-weight: 800;
-  text-align: right;
+  text-align: end;
   font-variant-numeric: tabular-nums;
 }
 .an3-avatar {
@@ -409,7 +409,7 @@ html.high-contrast.dark .an3 {
   align-items: center;
   padding: 10px 0;
   width: 100%;
-  text-align: left;
+  text-align: start;
   border-radius: 12px;
   min-height: 44px;
 }
@@ -465,7 +465,7 @@ html.high-contrast.dark .an3 {
 }
 .an3-detail-row > span:last-child {
   font-weight: 700;
-  text-align: right;
+  text-align: end;
 }
 .an3-link {
   display: inline-flex;
@@ -502,7 +502,7 @@ html.high-contrast.dark .an3 {
   gap: 8px;
   min-height: 24px;
   width: 100%;
-  text-align: left;
+  text-align: start;
 }
 .an3-coll-title {
   flex: 1;
@@ -632,7 +632,7 @@ html.high-contrast.dark .an3 {
 }
 .an3-pill-thumb {
   position: absolute;
-  left: 2px;
+  inset-inline-start: 2px;
   top: 9px;
   width: 72px;
   height: 26px;
@@ -715,7 +715,7 @@ html.high-contrast.dark .an3 {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  text-align: left;
+  text-align: start;
   width: 100%;
 }
 .an3-listing-title {

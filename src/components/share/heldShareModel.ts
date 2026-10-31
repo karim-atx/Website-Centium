@@ -1,3 +1,4 @@
+import { t, tk } from "../../i18n/core";
 // Round D · DV: a share card the word lists held, as its owner sees it
 // (HANDOVER_API "DV · A held share card, for its owner", Database
 // 20261222030000; PLAN.md D-S21). Pure: the hub notice, the options sheet,
@@ -27,10 +28,10 @@ export const readHeldReason = (v: unknown): HeldReason => ((HELD_REASONS as read
  * not_relevant; everything else the lists hold is not_allowed_content.
  */
 const REASON_WORDS: Record<HeldReason, string> = {
-  contact_details: "It shows contact details",
-  not_relevant: "It looks like advertising",
-  not_allowed_content: "It may break our community guidelines",
-  other: "It's being checked",
+  contact_details: tk("It shows contact details"),
+  not_relevant: tk("It looks like advertising"),
+  not_allowed_content: tk("It may break our community guidelines"),
+  other: tk("It's being checked"),
 };
 
 export const heldReasonWords = (reason: unknown): string => REASON_WORDS[readHeldReason(reason)];
@@ -77,7 +78,7 @@ export function itemAllows(state: SharedItemState, linkLive: boolean): ItemAllow
 
 /** The hub notice pro.share.held (kind update, payload shared_item_id and reason). */
 export function heldNoticeText(reason: unknown): { title: string; line: string } {
-  return { title: "Your shared card is held for review", line: `${heldReasonWords(reason)}. Its link is paused until our team checks it.` };
+  return { title: tk("Your shared card is held for review"), line: t("{reason}. Its link is paused until our team checks it.", { reason: t(heldReasonWords(reason)) }) };
 }
 
 /** Which of several exports of one card the owner sees: a hold first, then the newest. */
@@ -91,4 +92,4 @@ export function strongestState<T extends { state: SharedItemState; createdAt: st
 }
 
 /** The hub notice pro.share.released (kind update, payload shared_item_id): the hold ended and the card is live again. */
-export const RELEASED_NOTICE = { title: "Your shared card is live again", line: "Our team checked it. Its link and QR work again." } as const;
+export const RELEASED_NOTICE = { title: tk("Your shared card is live again"), line: tk("Our team checked it. Its link and QR work again.") } as const;

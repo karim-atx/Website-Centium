@@ -33,6 +33,7 @@ import { startThread } from "../../services/messaging";
 import { shiftIso } from "../../services/pro/home";
 import { time12 } from "../../utils/time12";
 import type { AccessCategory } from "../../services/pro/access";
+import { appLocale } from "../../i18n/format";
 
 /**
  * Release 3 · the client page (/app/pro/clients/:id/:tab, CL2). The frames'
@@ -139,7 +140,7 @@ export default function ClientPage() {
   const followDue = patient && !!data.carePlan?.plan?.followUps.some((f) => (f.status === "planned" || f.status === "booked") && f.dueOn <= data.today);
   const attention = stage === "active" && !!data.flags && (data.flags.atRisk || data.flags.goneQuiet);
   const status: { label: string; tone: Tone } = followDue ? { label: "Follow-up due", tone: "att" } : attention ? { label: "Needs attention", tone: "att" } : { label: STAGE_LABEL[stage], tone: STAGE_TONE[stage] };
-  const nextLabel = next ? `${next.date === data.today ? "Today" : next.date === shiftIso(data.today, 1) ? "Tomorrow" : new Date(`${next.date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })} ${time12(next.startTime)}` : null;
+  const nextLabel = next ? `${next.date === data.today ? "Today" : next.date === shiftIso(data.today, 1) ? "Tomorrow" : new Date(`${next.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" })} ${time12(next.startTime)}` : null;
   const sharesAnything = !!data.access.access && (data.access.access.categories.length > 0 || data.access.access.imagingSharedCount > 0 || data.access.access.resultSharedCount > 0);
 
   return (

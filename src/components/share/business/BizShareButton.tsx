@@ -99,7 +99,7 @@ export const BizShareButton: React.FC<BizShareButtonProps> = ({ getData, emptyHi
             style={{ position: "fixed", zIndex: 95, top: tip.top, right: tip.right, width: 228, maxWidth: "calc(100vw - 32px)", borderRadius: 12, background: "#241F1B", color: "#FFFFFF", padding: "10px 12px", fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, boxShadow: "0 8px 24px rgba(0,0,0,0.2)" }}
           >
             {tip.text}
-            <span aria-hidden style={{ position: "absolute", top: -6, right: 22, width: 12, height: 12, background: "#241F1B", transform: "rotate(45deg)" }} />
+            <span aria-hidden style={{ position: "absolute", top: -6, insetInlineEnd: 22, width: 12, height: 12, background: "#241F1B", transform: "rotate(45deg)" }} />
           </div>,
           document.body,
         )}

@@ -93,7 +93,7 @@ export const ShareEntryButton: React.FC<ShareEntryButtonProps> = ({ onPress, lab
           style={{
             position: "absolute",
             top: "calc(100% + 8px)",
-            right: -2,
+            insetInlineEnd: -2,
             width: 220,
             zIndex: 30,
             borderRadius: 12,
@@ -104,11 +104,11 @@ export const ShareEntryButton: React.FC<ShareEntryButtonProps> = ({ onPress, lab
             lineHeight: linePx(17),
             fontWeight: 600,
             boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-            textAlign: "left",
+            textAlign: "start",
           }}
         >
           {disabledHint}
-          <span aria-hidden style={{ position: "absolute", top: -6, right: 22, width: 12, height: 12, background: dark ? "rgb(48 49 65)" : "#241F1B", transform: "rotate(45deg)" }} />
+          <span aria-hidden style={{ position: "absolute", top: -6, insetInlineEnd: 22, width: 12, height: 12, background: dark ? "rgb(48 49 65)" : "#241F1B", transform: "rotate(45deg)" }} />
         </span>
       )}
     </span>

@@ -15,6 +15,8 @@ import { INK } from "../../../components/pro/proInk";
 import { ProCardSkeleton, ProError } from "../../../components/pro/states";
 import { textPx } from "../../../theme/textSize";
 import { ProBusinessBilling } from "./ProBusinessBilling";
+import { Slot } from "../../subscription/PlanRows";
+import { t, tn } from "../../../i18n/core";
 import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
 
 // Release 3 W6 · MO24 v3 Subscription (source/gen r16.js subscription16,
@@ -28,7 +30,7 @@ import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
 
 const money2 = (v: number) => (Number.isInteger(v) ? formatPrice(v) : `$${v.toFixed(2)}`);
 const savePct = (t: SubscriptionTier) => (t.yearlyPrice && t.monthlyPrice > 0 ? Math.round((1 - t.yearlyPrice / (t.monthlyPrice * 12)) * 100) : 0);
-const clientsWord = (n: number) => `${n} client${n === 1 ? "" : "s"}`;
+const clientsWord = (n: number) => tn(n, "{n} client", "{n} clients");
 
 /** tierGlyph16: n leaves (1 to 3 fanned from a stem, 4 and 5 as a flower). */
 function TierGlyph({ n, color, size }: { n: number; color: string; size: number }) {
@@ -60,20 +62,20 @@ function TierCard({ tier, rank, yearly, current, recommended }: { tier: Subscrip
   const sub = black ? "rgba(255,255,255,0.68)" : INK.chF;
   const gl = black ? "#C8BFE9" : dark ? "#C3B3FB" : "#7D6BB5";
   const free = tier.monthlyPrice === 0;
-  const price = free ? "Free" : yearly && tier.yearlyPrice != null ? money2(tier.yearlyPrice) : money2(tier.monthlyPrice);
-  const per = free ? "No card needed" : yearly && tier.yearlyPrice != null ? `a year · ${money2(tier.yearlyPrice / 12)} a month` : "a month";
+  const price = free ? t("Free") : yearly && tier.yearlyPrice != null ? money2(tier.yearlyPrice) : money2(tier.monthlyPrice);
+  const per = free ? t("No card needed") : yearly && tier.yearlyPrice != null ? t("a year · {price} a month", { price: money2(tier.yearlyPrice / 12) }) : t("a month");
   const save = yearly ? savePct(tier) : 0;
   const cap = tier.maxClients;
   const inc: [string, boolean][] = [
-    [cap == null ? "Unlimited active clients" : `Up to ${cap} active client${cap === 1 ? "" : "s"}`, true],
-    ["Every tool for your professional type", false],
-    ["Messages, groups and calls with hired clients", false],
-    ["Care network and public profile", false],
+    [cap == null ? t("Unlimited active clients") : tn(cap, "Up to {n} active client", "Up to {n} active clients"), true],
+    [t("Every tool for your professional type"), false],
+    [t("Messages, groups and calls with hired clients"), false],
+    [t("Care network and public profile"), false],
   ];
   const badge = (text: string, bg: string, color: string) => (
     <span
       className="absolute"
-      style={{ top: -10, left: 16, fontSize: textPx(10), fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", borderRadius: 9999, padding: "3px 9px", background: bg, color }}
+      style={{ top: -10, insetInlineStart: 16, fontSize: textPx(10), fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", borderRadius: 9999, padding: "3px 9px", background: bg, color }}
     >
       {text}
     </span>
@@ -90,23 +92,23 @@ function TierCard({ tier, rank, yearly, current, recommended }: { tier: Subscrip
         border: current ? `2px solid ${INK.pr}` : `1px solid ${black ? "#241F1B" : INK.bCard}`,
         color: ink,
       }}
-      aria-label={`${tier.name}${current ? ", your current plan" : recommended ? ", recommended for you" : ""}`}
+      aria-label={current ? t("{plan}, your current plan", { plan: tier.name }) : recommended ? t("{plan}, recommended for you", { plan: tier.name }) : tier.name}
     >
-      {current ? badge("Current", INK.pr, "#FFFFFF") : recommended ? badge("Recommended for you", "#C8BFE9", "#241F1B") : null}
+      {current ? badge(t("Current"), INK.pr, "#FFFFFF") : recommended ? badge(t("Recommended for you"), "#C8BFE9", "#241F1B") : null}
       <div className="flex items-center" style={{ gap: 12, marginTop: 4 }}>
         <span className="flex items-center justify-center" style={{ width: 48, height: 48, borderRadius: 15, background: black ? "rgba(174,161,220,0.22)" : INK.prPale }}>
           <TierGlyph n={rank} color={gl} size={36} />
         </span>
         <span>
           <span className="block" style={{ fontSize: textPx(18), fontWeight: 800 }}>{tier.name}</span>
-          <span className="block" style={{ fontSize: textPx(12), color: sub }}>{cap == null ? "No client limit" : clientsWord(cap)}</span>
+          <span className="block" style={{ fontSize: textPx(12), color: sub }}>{cap == null ? t("No client limit") : clientsWord(cap)}</span>
         </span>
       </div>
       <p className="flex items-baseline flex-wrap" style={{ marginTop: 14, gap: 6 }}>
         <span style={{ fontSize: textPx(28), fontWeight: 800, letterSpacing: "-0.02em" }}>{price}</span>
         {save > 0 && (
           <span style={{ fontSize: textPx(10.5), fontWeight: 800, borderRadius: 9999, padding: "2px 7px", background: black ? "rgba(127,199,156,0.2)" : INK.goodBg, color: black ? "#7FC79C" : INK.good }}>
-            Save {save}%
+            {t("Save {percent}%", { percent: save })}
           </span>
         )}
       </p>
@@ -192,17 +194,17 @@ export default function ProSubscription() {
       <button
         type="button"
         onClick={back}
-        aria-label="Back"
+        aria-label={t("Back")}
         className="tap flex items-center justify-center"
-        style={{ width: 44, height: 44, marginLeft: -12, marginBottom: 0, color: INK.chS }}
+        style={{ width: 44, height: 44, marginInlineStart: -12, marginBottom: 0, color: INK.chS }}
       >
         <ChevronLeft size={20} strokeWidth={2} />
       </button>
       <div className="text-center" style={{ margin: "-30px 0 14px" }}>
         <CentiumLockup width={64} className="mx-auto" style={{ marginBottom: 10 }} />
-        <p style={{ fontSize: textPx(25), fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.15, color: INK.ch }}>Grow your client roster.</p>
+        <p style={{ fontSize: textPx(25), fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.15, color: INK.ch }}>{t("Grow your client roster.")}</p>
         <p style={{ fontSize: textPx(13.5), color: INK.chS, margin: "6px auto 0", maxWidth: 300, lineHeight: 1.5 }}>
-          Centium for professionals scales with how many clients you manage.
+          {t("Centium for professionals scales with how many clients you manage.")}
         </p>
       </div>
 
@@ -210,15 +212,17 @@ export default function ProSubscription() {
         {planLoading ? (
           <ProCardSkeleton lines={2} />
         ) : planError ? (
-          <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.hi }}>{planError}</p>
+          <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.hi }}>{t(planError)}</p>
         ) : current ? (
           <>
             <div className="flex justify-between items-baseline" style={{ gap: 8 }}>
               <p style={{ fontSize: textPx(14), color: tone }}>
-                You're on <b>{seat && effective?.viaBusinessName ? `${current.name} (via ${effective.viaBusinessName})` : current.name}</b>
+                <Slot text={t("You're on {plan}")} slot="plan">
+                  <b>{seat && effective?.viaBusinessName ? t("{plan} (via {business})", { plan: current.name, business: effective.viaBusinessName }) : current.name}</b>
+                </Slot>
               </p>
               <p className="whitespace-nowrap" style={{ fontSize: textPx(13), fontWeight: 800, color: tone, fontVariantNumeric: "tabular-nums" }}>
-                {cap == null ? clientsWord(used) : `${used} of ${clientsWord(cap)}`}
+                {cap == null ? clientsWord(used) : tn(cap, "{used} of {n} client", "{used} of {n} clients", { used })}
               </p>
             </div>
             {segs > 0 && (
@@ -238,25 +242,25 @@ export default function ProSubscription() {
             )}
             <p style={{ fontSize: textPx(12), color: atCap ? INK.hi : INK.chS, marginTop: 8, fontWeight: atCap ? 700 : 500 }}>
               {atCap
-                ? "You're at your limit. New hire requests can't be accepted until you upgrade."
+                ? t("You're at your limit. New hire requests can't be accepted until you upgrade.")
                 : seat
-                  ? "This plan comes with your business seat. Your own plan would replace it."
+                  ? t("This plan comes with your business seat. Your own plan would replace it.")
                   : left != null && next
-                    ? `${left} place${left === 1 ? "" : "s"} left. ${next.name} takes you to ${next.maxClients ?? "no limit"}.`
+                    ? tn(left, "{n} place left. {plan} takes you to {limit}.", "{n} places left. {plan} takes you to {limit}.", { plan: next.name, limit: next.maxClients ?? t("no limit") })
                     : left != null
-                      ? `${left} place${left === 1 ? "" : "s"} left.`
-                      : "No client limit on your plan."}
+                      ? tn(left, "{n} place left.", "{n} places left.")
+                      : t("No client limit on your plan.")}
             </p>
           </>
         ) : (
-          <p style={{ fontSize: textPx(13), color: INK.prDeep }}>Your plan couldn't be identified.</p>
+          <p style={{ fontSize: textPx(13), color: INK.prDeep }}>{t("Your plan couldn't be identified.")}</p>
         )}
       </div>
 
       {/* Batch 2 · CS (Karim): a professional who holds a business plan chooses its billing here. */}
       <ProBusinessBilling />
 
-      <div className="flex" role="radiogroup" aria-label="Billing period" style={{ gap: 8, marginBottom: 14 }}>
+      <div className="flex" role="radiogroup" aria-label={t("Billing period")} style={{ gap: 8, marginBottom: 14 }}>
         {(["monthly", "yearly"] as const).map((p) => {
           const on = period === p;
           return (
@@ -269,7 +273,7 @@ export default function ProSubscription() {
               className="tap flex-1 flex items-center justify-center"
               style={{ minHeight: 44, borderRadius: 12, padding: "10px 0", gap: 6, fontSize: textPx(12), fontWeight: 700, background: on ? INK.fill : INK.soft, color: on ? INK.onFill : INK.chF }}
             >
-              {p === "monthly" ? "Monthly" : "Yearly"}
+              {p === "monthly" ? t("Monthly") : t("Yearly")}
               {p === "yearly" && bestSave > 0 && (
                 <span style={{ fontSize: textPx(10), fontWeight: 700, borderRadius: 9999, padding: "2px 6px", background: on ? "rgba(255,255,255,0.22)" : "rgb(var(--c-teal))", color: "#FFFFFF" }}>
                   {`−${bestSave}%`}
@@ -281,7 +285,7 @@ export default function ProSubscription() {
       </div>
 
       {error ? (
-        <ProError onRetry={() => window.location.reload()} message={error} />
+        <ProError onRetry={() => window.location.reload()} message={t(error)} />
       ) : loading ? (
         <ProCardSkeleton lines={4} height={260} />
       ) : (
@@ -304,20 +308,20 @@ export default function ProSubscription() {
             ))}
           </div>
           <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, overflow: "hidden", marginBottom: 10 }}>
-            <button type="button" aria-expanded={compare} onClick={() => setCompare((c) => !c)} className="tap w-full flex items-center justify-between text-left" style={{ padding: "13px 16px", minHeight: 44 }}>
-              <span style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>All plans at a glance</span>
+            <button type="button" aria-expanded={compare} onClick={() => setCompare((c) => !c)} className="tap w-full flex items-center justify-between text-start" style={{ padding: "13px 16px", minHeight: 44 }}>
+              <span style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{t("All plans at a glance")}</span>
               {compare ? <ChevronUp size={16} strokeWidth={2} style={{ color: INK.chF }} /> : <ChevronDown size={16} strokeWidth={2} style={{ color: INK.chF }} />}
             </button>
             {compare && (
               <div style={{ padding: "0 12px 10px" }}>
-                {[null, ...tiers].map((t, i) => {
-                  const me = !!t && t.id === current?.id;
-                  const cells = t
-                    ? [t.name, t.maxClients == null ? "No limit" : String(t.maxClients), t.monthlyPrice === 0 ? "Free" : yearly && t.yearlyPrice != null ? money2(t.yearlyPrice) : money2(t.monthlyPrice)]
-                    : ["Plan", "Clients", yearly ? "Yearly" : "Monthly"];
+                {[null, ...tiers].map((tier, i) => {
+                  const me = !!tier && tier.id === current?.id;
+                  const cells = tier
+                    ? [tier.name, tier.maxClients == null ? t("No limit") : String(tier.maxClients), tier.monthlyPrice === 0 ? t("Free") : yearly && tier.yearlyPrice != null ? money2(tier.yearlyPrice) : money2(tier.monthlyPrice)]
+                    : [t("Plan"), t("Clients"), yearly ? t("Yearly") : t("Monthly")];
                   return (
                     <div
-                      key={t?.id ?? "head"}
+                      key={tier?.id ?? "head"}
                       className="grid"
                       style={{
                         gridTemplateColumns: "1.3fr 1fr 1fr",
@@ -332,28 +336,28 @@ export default function ProSubscription() {
                       }}
                     >
                       <span className="flex items-center" style={{ gap: 6 }}>
-                        {t && <TierGlyph n={Math.min(5, i)} color={dark ? "#C3B3FB" : "#7D6BB5"} size={16} />}
+                        {tier && <TierGlyph n={Math.min(5, i)} color={dark ? "#C3B3FB" : "#7D6BB5"} size={16} />}
                         {cells[0]}
                       </span>
                       <span className="text-center">{cells[1]}</span>
-                      <span className="text-right">{cells[2]}</span>
+                      <span className="text-end">{cells[2]}</span>
                     </div>
                   );
                 })}
-                <p style={{ fontSize: textPx(10.5), color: INK.chF, marginTop: 6 }}>Plans differ only by how many active clients you can have.</p>
+                <p style={{ fontSize: textPx(10.5), color: INK.chF, marginTop: 6 }}>{t("Plans differ only by how many active clients you can have.")}</p>
               </div>
             )}
           </div>
         </>
       )}
       <p className="text-center" style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.5 }}>
-        Payments in the app are coming soon. Upgrades are confirmed by email.
+        {t("Payments in the app are coming soon. Upgrades are confirmed by email.")}
       </p>
       {/* Round F (DN): every place a plan is offered links the policy. */}
       <p className="text-center" style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.5, marginTop: 4 }}>
         <RefundPolicyLink />
       </p>
-      {target && <PinnedCta primary={{ label: `Ask to upgrade to ${target.name}`, icon: <Mail size={15} />, onClick: ask }} />}
+      {target && <PinnedCta primary={{ label: t("Ask to upgrade to {plan}", { plan: target.name }), icon: <Mail size={15} />, onClick: ask }} />}
     </div>
   );
 }

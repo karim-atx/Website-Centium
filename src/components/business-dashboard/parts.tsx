@@ -109,13 +109,13 @@ export function KitList({ c, rows }: { c: DashPalette; rows: KitRow[] }) {
       {rows.map((r, k) => {
         const inner = (
           <>
-            {k > 0 && <span style={{ position: "absolute", top: 0, left: r.Icon ? 48 : 0, right: 0, height: 1, background: c.listRule }} />}
+            {k > 0 && <span style={{ position: "absolute", top: 0, left: r.Icon ? 48 : 0, insetInlineEnd: 0, height: 1, background: c.listRule }} />}
             {r.Icon && (
               <span style={{ width: 36, height: 36, borderRadius: 11, background: c.pale, color: c.pDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <r.Icon size={17} strokeWidth={1.75} aria-hidden />
               </span>
             )}
-            <span style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+            <span style={{ flex: 1, minWidth: 0, textAlign: "start" }}>
               <span style={{ display: "block", fontSize: textPx(13.5), fontWeight: 700, lineHeight: linePx(18), whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: c.ink }}>{r.title}</span>
               <span style={{ display: "block", fontSize: textPx(11.5), lineHeight: linePx(16), color: c.faint, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.detail}</span>
             </span>

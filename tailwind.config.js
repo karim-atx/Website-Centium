@@ -22,8 +22,10 @@ export default {
       fontFamily: {
         // V5 (QA 5.0): all fonts unified to one face (was Roboto).
         // V7 (QA 7.0): switched that shared face to Manrope.
-        display: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
-        sans: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Round F (AV, F11): IBM Plex Sans Arabic draws the Arabic letters
+        // (Manrope has none); loaded only once Arabic is on (i18n/fonts.ts).
+        display: ["Manrope", "IBM Plex Sans Arabic", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["Manrope", "IBM Plex Sans Arabic", "ui-sans-serif", "system-ui", "sans-serif"],
         // Centium landing v29 (01_tokens font.mono). Namespaced: the app's own
         // font-mono stays Tailwind's default. JetBrains Mono is loaded by
         // MarketingLayout for the marketing routes only.

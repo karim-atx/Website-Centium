@@ -12,6 +12,7 @@
 import { calculateTDEEFromParts, servingMultiplier, gramsInServingLabel } from "../../../services/nutrition";
 import type { ConflictKind } from "../proRules";
 import { DAY_LONG, DAY_SHORT, mondayIndex } from "../../../utils/week";
+import { appLocale } from "../../../i18n/format";
 
 export type MealSlot = "breakfast" | "lunch" | "snack" | "dinner";
 /** The builder's meal order (frame NU2: Breakfast, Lunch, Snacks, Dinner). */
@@ -111,7 +112,7 @@ export function dayTotalView(total: Macros, plan: { kcalTarget: number | null; p
 export function templateLine(daysCount: number, dayTotals: number[], kcalTarget: number | null): string {
   const days = `${daysCount} ${daysCount === 1 ? "day" : "days"}`;
   const filled = dayTotals.filter((k) => k > 0).map((k) => Math.round(k));
-  const fmt = (n: number) => n.toLocaleString("en-GB");
+  const fmt = (n: number) => n.toLocaleString(appLocale("en-GB"));
   if (filled.length) {
     const lo = Math.min(...filled);
     const hi = Math.max(...filled);
@@ -165,12 +166,12 @@ export function dayLabels(dayIndex: number, startsOn: string | null): { tab: str
 /** "Mon, Oct 5" (FINAL_PLAN 3 {day_date}: weekday and date from one value). */
 export function dayDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
-  return `${DAY_SHORT[mondayIndex(d.getDay())]}, ${d.toLocaleDateString("en-US", { month: "short" })} ${d.getDate()}`;
+  return `${DAY_SHORT[mondayIndex(d.getDay())]}, ${d.toLocaleDateString(appLocale("en-US"), { month: "short" })} ${d.getDate()}`;
 }
 
 /** "Oct 5" and "Oct 5 to 7" / "Sep 30 to Oct 2" (NU5). */
 export function shortDay(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(`${iso}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 }
 export function dayRange(first: string, last: string): string {
   if (first === last) return shortDay(first);
@@ -326,7 +327,7 @@ export function journalBox(value: number, target: number | null): { pct: number;
   const v = Math.round(value);
   const t = Math.round(target);
   const over = v > t;
-  return { pct: Math.min(100, (v / t) * 100), over, left: over ? `${(v - t).toLocaleString("en-GB")} over` : `${(t - v).toLocaleString("en-GB")} to go` };
+  return { pct: Math.min(100, (v / t) * 100), over, left: over ? `${(v - t).toLocaleString(appLocale("en-GB"))} over` : `${(t - v).toLocaleString(appLocale("en-GB"))} to go` };
 }
 
 // ---------------------------------------------------------------------------

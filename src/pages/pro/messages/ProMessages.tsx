@@ -49,6 +49,7 @@ import {
 } from "../../../services/messaging/chatFeatures";
 import { fetchClientStages, STAGE_LABEL, type ClientStage } from "../../../services/pro/clients";
 import { fetchCardKinds, fetchMemberCounts } from "../../../services/pro/messages";
+import { t, tk } from "../../../i18n/core";
 
 /**
  * Release 3 · Messages for professionals (MO22 v5 lists, MO22 v2 chats, MO27
@@ -72,7 +73,7 @@ import { fetchCardKinds, fetchMemberCounts } from "../../../services/pro/message
  */
 
 type View = "list" | "archived" | "starred" | "newGroup" | "broadcast" | "invitation";
-const OFFLINE_TOAST = "You're offline. Try again when you're connected.";
+const OFFLINE_TOAST = tk("You're offline. Try again when you're connected.");
 const TONES = ["pr", "teal", "gold", "sky"] as const;
 const toneOf = (id: string) => TONES[[...id].reduce((a, ch) => (a + ch.charCodeAt(0)) % 997, 0) % 4];
 const DOT_COLOUR: Record<Dot, string> = {
@@ -352,7 +353,7 @@ export default function ProMessages() {
 
   const failToast = (message: string) => {
     const offline = (typeof navigator !== "undefined" && navigator.onLine === false) || message === OFFLINE_MESSAGE;
-    setToast(offline ? OFFLINE_TOAST : message.startsWith("You can pin") ? message : "Couldn't save. Try again.");
+    setToast(offline ? t(OFFLINE_TOAST) : message === t("You can pin up to 5 chats. Unpin one to pin this.") ? message : t("Couldn't save. Try again."));
   };
   const writeSettings = async (t: MessageThread, patch: Parameters<typeof saveThreadSettings>[2], next: Partial<ThreadSettings>) => {
     if (!authUserId) return;
@@ -388,25 +389,25 @@ export default function ProMessages() {
   };
 
   const confirmDelete = async () => {
-    const t = deleteTarget;
-    if (!t) return;
+    const target = deleteTarget;
+    if (!target) return;
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
       setDeleteTarget(null);
-      setToast(OFFLINE_TOAST);
+      setToast(t(OFFLINE_TOAST));
       return;
     }
     setDeleteBusy(true);
-    const r = await deleteConversationForMe(t.id);
+    const r = await deleteConversationForMe(target.id);
     setDeleteBusy(false);
     setDeleteTarget(null);
     if (!r.ok) {
-      setToast(r.message === OFFLINE_MESSAGE ? OFFLINE_TOAST : "Couldn't delete. Try again.");
+      setToast(r.message === OFFLINE_MESSAGE ? t(OFFLINE_TOAST) : "Couldn't delete. Try again.");
       return;
     }
     setAnnounce("Conversation deleted.");
-    setThreads((all) => all.filter((x) => x.id !== t.id));
+    setThreads((all) => all.filter((x) => x.id !== target.id));
     unread.refresh();
-    if (open?.id === t.id) {
+    if (open?.id === target.id) {
       setOpen(null);
       setFocusId(null);
     }
@@ -572,7 +573,7 @@ export default function ProMessages() {
 
       {/* K1: Archived, at the top of the list (it scrolls away). */}
       {view === "list" && !loading && archived.length > 0 && (
-        <button type="button" onClick={() => setView("archived")} data-archived-row="" className="tap w-full flex items-center text-left" style={{ gap: 12, padding: "10px 8px", minHeight: 56, borderBottom: `1px solid ${INK.b06}` }}>
+        <button type="button" onClick={() => setView("archived")} data-archived-row="" className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "10px 8px", minHeight: 56, borderBottom: `1px solid ${INK.b06}` }}>
           <span className="flex items-center justify-center shrink-0 rounded-full" style={{ width: 36, height: 36, background: INK.prPale }}>
             <Archive size={17} style={{ color: INK.prDeep }} aria-hidden />
           </span>
@@ -652,7 +653,7 @@ export default function ProMessages() {
           aria-label="New group"
           data-fab=""
           className="tap fixed z-30 rounded-full flex items-center justify-center bg-primary-fill text-on-primary-fill dark:shadow-none lg:bottom-8"
-          style={{ width: 52, height: 52, right: 18, bottom: "calc(env(safe-area-inset-bottom) + 104px)", boxShadow: "0 8px 22px rgba(95,80,147,0.28)" }}
+          style={{ width: 52, height: 52, insetInlineEnd: 18, bottom: "calc(env(safe-area-inset-bottom) + 104px)", boxShadow: "0 8px 22px rgba(95,80,147,0.28)" }}
         >
           <Plus size={22} strokeWidth={2.4} aria-hidden />
         </button>
@@ -680,7 +681,7 @@ export default function ProMessages() {
                 setNewOpen(null);
                 o.go();
               }}
-              className="tap w-full flex items-center text-left"
+              className="tap w-full flex items-center text-start"
               style={{ gap: 12, minHeight: 60, padding: "0 4px", borderBottom: `1px solid ${INK.b06}` }}
             >
               <span className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 11, background: INK.prPale }}>

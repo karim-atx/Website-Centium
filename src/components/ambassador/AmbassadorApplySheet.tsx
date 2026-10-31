@@ -146,7 +146,7 @@ function ApplyForm({ status, onClose, onSent }: { status: AmbassadorStatus; onCl
             className="market-focus"
             style={{ ...fieldStyle(m), resize: "none" }}
           />
-          <div id={ids.count} style={{ ...hint, textAlign: "right" }}>
+          <div id={ids.count} style={{ ...hint, textAlign: "end" }}>
             {motivation.length} / {MOTIVATION_MAX}
           </div>
         </div>

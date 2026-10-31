@@ -12,6 +12,8 @@
 // At the real numbers, $9.99 × 12 = $119.88 against $99.99 is 16.6%, so both
 // were wrong, in opposite directions, about the same plan.
 
+import { t, tk, tn } from "../../i18n/core";
+
 /** Money as it is written on a plan: "$9.99", "$0" for free. */
 export function formatPrice(amount: number): string {
   if (amount === 0) return "$0";
@@ -63,7 +65,7 @@ export function yearlySaving(
 }
 
 /** "Save 16%" — the badge, in one place so every surface agrees. */
-export const savingLabel = (saving: YearlySaving): string => `Save ${saving.percent}%`;
+export const savingLabel = (saving: YearlySaving): string => t("Save {percent}%", { percent: saving.percent });
 
 /**
  * The per-month figure a yearly plan works out to.
@@ -90,10 +92,10 @@ export function priceLabel(
   yearlyPrice: number | null | undefined,
   period: BillingPeriod
 ): string {
-  if (monthlyPrice === 0) return "Free";
-  if (period === "monthly") return `${formatPrice(monthlyPrice)}/mo`;
-  if (yearlyPrice == null) return `${formatPrice(monthlyPrice)}/mo`;
-  return `${formatPrice(yearlyPrice)}/yr`;
+  if (monthlyPrice === 0) return t("Free");
+  if (period === "monthly") return t("{price}/mo", { price: formatPrice(monthlyPrice) });
+  if (yearlyPrice == null) return t("{price}/mo", { price: formatPrice(monthlyPrice) });
+  return t("{price}/yr", { price: formatPrice(yearlyPrice) });
 }
 
 /**
@@ -122,10 +124,12 @@ export function businessSummary(params: {
   revenueSharePct: number;
 }): string {
   const { basePrice, seatPrice, seatsPerBlock, revenueSharePct } = params;
-  return (
-    `${formatPrice(basePrice)}/mo base + ${formatPrice(seatPrice)} per ${seatsPerBlock} professionals` +
-    ` + ${formatPercent(revenueSharePct)} marketplace fee`
-  );
+  return t("{base}/mo base + {seat} per {n} professionals + {fee} marketplace fee", {
+    base: formatPrice(basePrice),
+    seat: formatPrice(seatPrice),
+    n: seatsPerBlock,
+    fee: formatPercent(revenueSharePct),
+  });
 }
 
 /**
@@ -141,9 +145,9 @@ export function professionalSummary(
 ): string {
   const free =
     freeCap == null
-      ? "Free for unlimited clients"
-      : `Free for ${freeCap} ${freeCap === 1 ? "client" : "clients"}`;
-  return cheapestPaid == null ? free : `${free} · paid plans from ${formatPrice(cheapestPaid)}`;
+      ? t("Free for unlimited clients")
+      : tn(freeCap, "Free for {n} client", "Free for {n} clients");
+  return cheapestPaid == null ? free : t("{free} · paid plans from {price}", { free, price: formatPrice(cheapestPaid) });
 }
 
 
@@ -160,10 +164,10 @@ export function limitLabel(tier: {
   maxEmployees: number | null;
 }): string | null {
   if (tier.maxClients !== null) {
-    return `Up to ${tier.maxClients} client${tier.maxClients === 1 ? "" : "s"}`;
+    return tn(tier.maxClients, "Up to {n} client", "Up to {n} clients");
   }
   if (tier.maxEmployees !== null) {
-    return `Up to ${tier.maxEmployees} professional${tier.maxEmployees === 1 ? "" : "s"}`;
+    return tn(tier.maxEmployees, "Up to {n} professional", "Up to {n} professionals");
   }
   return null;
 }
@@ -176,8 +180,7 @@ export function limitLabel(tier: {
  * disagreed about what was possible, one of them promising "no payment will
  * be processed" under a button that looked exactly like a purchase.
  */
-export const NO_PAYMENTS_NOTE =
-  "Payments aren't available in the app yet. We'll set up your plan for you.";
+export const NO_PAYMENTS_NOTE = tk("Payments aren't available in the app yet. We'll set up your plan for you.");
 
 /**
  * How a plan is named wherever one appears.
@@ -212,8 +215,8 @@ export function effectivePlanLabel(
 ): string {
   if (source !== "business_seat") return planLabel(name);
   return viaBusinessName
-    ? `${name} (via ${viaBusinessName})`
-    : `${name} (via your business)`;
+    ? t("{plan} (via {business})", { plan: name, business: viaBusinessName })
+    : t("{plan} (via your business)", { plan: name });
 }
 /**
  * A business's plan, named with the seats it actually bought.
@@ -231,7 +234,7 @@ export function businessPlanLabel(plan: {
   baseName: string | null;
   totalSeats: number;
 }): string {
-  if (!plan.active) return "No plan";
+  if (!plan.active) return t("No plan");
   const base = plan.baseName ?? "Base";
-  return `${base} · ${plan.totalSeats} seat${plan.totalSeats === 1 ? "" : "s"}`;
+  return tn(plan.totalSeats, "{plan} · {n} seat", "{plan} · {n} seats", { plan: base });
 }

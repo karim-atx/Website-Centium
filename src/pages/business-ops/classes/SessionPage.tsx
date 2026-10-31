@@ -271,7 +271,7 @@ export default function SessionPage() {
                   {method && <span className="shrink-0" style={{ fontSize: textPx(11.5), color: m.faint }}>{method}</span>}
                 </>
               );
-              const style: React.CSSProperties = { display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", minHeight: 52, width: "100%", textAlign: "left", borderTop: i ? `0.5px solid ${m.div}` : 0, background: "transparent" };
+              const style: React.CSSProperties = { display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", minHeight: 52, width: "100%", textAlign: "start", borderTop: i ? `0.5px solid ${m.div}` : 0, background: "transparent" };
               return markable ? (
                 <button
                   key={`${e.label}-${e.at}-${i}`}
@@ -298,8 +298,8 @@ export default function SessionPage() {
             <button
               type="button"
               onClick={() => setRosterOpen(true)}
-              className="market-focus hit w-full text-left"
-              style={{ display: "block", padding: "10px 16px", minHeight: 38, borderTop: `0.5px solid ${m.div}`, fontSize: textPx(12), fontWeight: 800, color: m.pdark, background: "transparent", borderLeft: 0, borderRight: 0, borderBottom: 0 }}
+              className="market-focus hit w-full text-start"
+              style={{ display: "block", padding: "10px 16px", minHeight: 38, borderTop: `0.5px solid ${m.div}`, fontSize: textPx(12), fontWeight: 800, color: m.pdark, background: "transparent", borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0 }}
             >
               See all {bookedList.length}
             </button>
@@ -326,7 +326,7 @@ export default function SessionPage() {
         <button
           type="button"
           onClick={() => (session.professionalId ? navigate(`/app/business/employees/${session.professionalId}`) : !cancelled && !ended && actions.openSubstitute(id))}
-          className="market-focus w-full flex items-center text-left"
+          className="market-focus w-full flex items-center text-start"
           style={{ gap: 12, padding: "12px 16px", minHeight: 56, background: "transparent", border: 0 }}
         >
           {session.professionalId ? (

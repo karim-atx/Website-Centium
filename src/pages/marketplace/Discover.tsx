@@ -267,14 +267,14 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
       <style>{FOCUS_CSS}</style>
       {tab !== "rewards" && (
         <div className="relative" style={{ marginTop: 14 }}>
-          <Search size={16} strokeWidth={1.75} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: m.faint }} aria-hidden />
+          <Search size={16} strokeWidth={1.75} className="absolute start-3.5 top-1/2 -translate-y-1/2" style={{ color: m.faint }} aria-hidden />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search classes, places or a location"
             aria-label="Search classes, places or a location"
             className="w-full focus:outline-none focus:ring-2 focus:ring-primary/20"
-            style={{ height: 44, borderRadius: 14, background: m.soft, paddingLeft: 38, paddingRight: 14, fontSize: textPx(14), color: m.ink, border: 0 }}
+            style={{ height: 44, borderRadius: 14, background: m.soft, paddingInlineStart: 38, paddingInlineEnd: 14, fontSize: textPx(14), color: m.ink, border: 0 }}
           />
         </div>
       )}
@@ -389,7 +389,7 @@ function GymCard({ v, from, mine, rating, km, query }: { v: Venue; from: string 
         className="market-focus"
         {...press.handlers}
         aria-label={`${v.name}. ${rated ? `Rated ${rated}` : "No reviews yet"}${where ? `, ${where}` : ""}${from ? `. ${from}` : ""}`}
-        style={{ display: "block", width: "100%", textAlign: "left", borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, overflow: "hidden", padding: 0, font: "inherit", color: m.ink, cursor: "pointer", ...press.style }}
+        style={{ display: "block", width: "100%", textAlign: "start", borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, overflow: "hidden", padding: 0, font: "inherit", color: m.ink, cursor: "pointer", ...press.style }}
       >
         <span style={{ position: "relative", height: 84, background: m.soft, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
           <VenueImage
@@ -401,7 +401,7 @@ function GymCard({ v, from, mine, rating, km, query }: { v: Venue; from: string 
               </span>
             }
           />
-          {tag && <MemberTag label={tag.label} tone={tag.tone} className="absolute top-2.5 right-2.5" />}
+          {tag && <MemberTag label={tag.label} tone={tag.tone} className="absolute top-2.5 end-2.5" />}
         </span>
         <span style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ flex: 1, minWidth: 0 }}>

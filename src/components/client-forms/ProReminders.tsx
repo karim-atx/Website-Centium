@@ -312,7 +312,7 @@ export const ProReminders: React.FC = () => {
   return (
     <>
       {(status === "error" || status === "offline") && (
-        <div className="flex items-center animate-fade-slide-up" style={{ gap: 10, borderRadius: 16, background: INK.soft, padding: "6px 6px 6px 14px", marginBottom: 13 }}>
+        <div className="flex items-center animate-fade-slide-up" style={{ gap: 10, borderRadius: 16, background: INK.soft, paddingBlock: "6px", paddingInline: "14px 6px", marginBottom: 13 }}>
           <p className="flex-1 min-w-0" style={{ fontSize: textPx(12), lineHeight: 1.45, color: INK.chS }}>
             {status === "offline" ? "You're offline. Updates from your professional show when you're back online." : "Couldn't load updates from your professional."}
           </p>

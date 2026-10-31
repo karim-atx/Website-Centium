@@ -1,6 +1,7 @@
 import { MessageCircle } from "lucide-react";
 import { Button } from "../ui/Button";
 import { useOpenThread } from "./useOpenThread";
+import { t } from "../../i18n/core";
 
 /**
  * Opens the real conversation with someone, creating it only if needed.
@@ -37,7 +38,7 @@ export const MessageProfessionalButton: React.FC<{
   return (
     <div className={className}>
       <Button fullWidth variant={variant} onClick={() => void open()} disabled={busy}>
-        <MessageCircle size={15} /> {busy ? "Opening…" : firstName ? `Message ${firstName}` : "Message"}
+        <MessageCircle size={15} /> {busy ? t("Opening…") : firstName ? t("Message {name}", { name: firstName }) : t("Message")}
       </Button>
       {error && (
         <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5 mt-2">

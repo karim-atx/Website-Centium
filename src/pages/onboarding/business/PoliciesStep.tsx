@@ -10,6 +10,7 @@ import { docCardLines, type PolicyDoc } from "./lanes";
 import { docsFor, emptySlot, type UploadSlot } from "./draft";
 import { removeVerificationFile, uploadVerificationFile } from "../../../services/business-onboarding";
 import type { LaneStepProps } from "./laneTypes";
+import { t, tk, tn } from "../../../i18n/core";
 
 // OB-228 / 262 / 291 (+ 230 / 264 waiver preview, 231 verification, 265 ID
 // photo blurry, 293 returns preview): Step 4 · Policies and verification.
@@ -33,12 +34,13 @@ const DOC_ICON: Record<PolicyDoc["icon"], LucideIcon> = {
 
 type SlotKey = "proof" | "idFront" | "idBack";
 const SLOTS: { key: SlotKey; title: string; icon: LucideIcon }[] = [
-  { key: "proof", title: "Proof of business", icon: FileText },
-  { key: "idFront", title: "Owner ID, front", icon: IdCard },
-  { key: "idBack", title: "Owner ID, back", icon: IdCard },
+  { key: "proof", title: tk("Proof of business"), icon: FileText },
+  { key: "idFront", title: tk("Owner ID, front"), icon: IdCard },
+  { key: "idBack", title: tk("Owner ID, back"), icon: IdCard },
 ];
 
-const sizeLabel = (n: number | null) => (n == null ? "" : n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+const sizeLabel = (n: number | null) =>
+  n == null ? "" : n >= 1024 * 1024 ? t("{n} MB", { n: (n / 1024 / 1024).toFixed(1) }) : t("{n} KB", { n: Math.max(1, Math.round(n / 1024)) });
 
 
 export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, onContinue, onBack, saveExit, save, uid, dob, setDob, dobLocked, online }) => {
@@ -65,7 +67,7 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
     const key = pickFor.current;
     if (!uid) return;
     if (!online) {
-      setSlotError((e) => ({ ...e, [key]: { message: "Connect to the internet to upload.", sub: file.name, blurry: false } })); // OURS
+      setSlotError((e) => ({ ...e, [key]: { message: t("Connect to the internet to upload."), sub: file.name, blurry: false } })); // OURS
       return;
     }
     // The submission these files are grouped under, made on the first upload.
@@ -85,7 +87,7 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
     if (!res.ok) {
       const blurry = res.code === "BLURRY";
       setFlaggedBlurry((m) => ({ ...m, [key]: blurry }));
-      setSlotError((e) => ({ ...e, [key]: { message: res.message, sub: blurry ? `${file.name} · blurry` : file.name, blurry } }));
+      setSlotError((e) => ({ ...e, [key]: { message: t(res.message), sub: blurry ? t("{file} · blurry", { file: file.name }) : file.name, blurry } }));
       return;
     }
     setFlaggedBlurry((m) => ({ ...m, [key]: false }));
@@ -108,12 +110,12 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
     <BizFrame
       step={flowKey}
       lane={lane}
-      title="Policies and verification"
-      subtitle="What clients accept before they book, and a quick check that you own the business."
+      title={t("Policies and verification")}
+      subtitle={t("What clients accept before they book, and a quick check that you own the business.")}
       onBack={onBack}
       saveExit={saveExit}
       footer={{
-        label: save.error && !save.offline ? "Try again" : "Continue",
+        label: save.error && !save.offline ? t("Try again") : t("Continue"),
         onClick: () => canContinue && onContinue(),
         disabled: !canContinue,
         busy: save.busy,
@@ -147,13 +149,13 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
             open={!!menu}
             onClose={() => setMenu(null)}
             anchor={menu?.anchor ?? null}
-            heading={SLOTS.find((s) => s.key === menu?.key)?.title}
+            heading={t(SLOTS.find((s) => s.key === menu?.key)?.title ?? "")}
             align="right"
             width={200}
             options={[
-              { value: "camera", label: "Take a photo", icon: <Camera size={15} strokeWidth={2.2} /> },
-              { value: "file", label: "Choose a file", icon: <FolderOpen size={15} strokeWidth={2.2} /> },
-              { value: "remove", label: "Remove file", icon: <Trash2 size={15} strokeWidth={2.2} />, destructive: true },
+              { value: "camera", label: t("Take a photo"), icon: <Camera size={15} strokeWidth={2.2} /> },
+              { value: "file", label: t("Choose a file"), icon: <FolderOpen size={15} strokeWidth={2.2} /> },
+              { value: "remove", label: t("Remove file"), icon: <Trash2 size={15} strokeWidth={2.2} />, destructive: true },
             ]}
             onSelect={(v) => {
               const key = menu?.key;
@@ -168,7 +170,7 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
           <BottomSheet
             open={!!preview}
             onClose={() => setPreview(null)}
-            title={preview?.title ?? ""}
+            title={preview ? t(preview.title) : ""}
             bodyPadding={{ top: 18, right: 20, bottom: 12, left: 20 }}
             footer={
               <button
@@ -179,15 +181,16 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
                 }}
                 className="w-full h-[52px] rounded-[16px] bg-primary-fill text-on-primary-fill flex items-center justify-center text-[14px] font-bold"
               >
-                {preview && biz.docEdits[preview.kind] ? "Use this document" : "Use this template"}
+                {preview && biz.docEdits[preview.kind] ? t("Use this document") : t("Use this template")}
               </button>
             }
           >
             {preview && (
               <div className="rounded-[14px] bg-surface-raised border border-list-rule py-[14px] px-4 text-[13px] leading-5 text-charcoal-soft mb-3">
-                {preview.lines.map((t, i) => (
+                {/* The document's own text (the stored body; templates stay English, see lanes.ts policyDocs). */}
+                {preview.lines.map((line, i) => (
                   <p key={i} className={i === 0 ? "font-extrabold text-charcoal mb-2" : i === 1 ? "font-extrabold mb-1" : ""}>
-                    {t}
+                    {line}
                   </p>
                 ))}
               </div>
@@ -196,7 +199,7 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
           <BottomSheet
             open={!!edit}
             onClose={() => setEdit(null)}
-            title={edit ? `Edit ${edit.doc.title.toLowerCase()}` : ""}
+            title={edit ? t("Edit {doc}", { doc: t(edit.doc.title).toLowerCase() }) : ""}
             bodyPadding={{ top: 18, right: 20, bottom: 12, left: 20 }}
             footer={
               <button
@@ -210,15 +213,15 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
                 }}
                 className="w-full h-[52px] rounded-[16px] bg-primary-fill text-on-primary-fill flex items-center justify-center text-[14px] font-bold disabled:opacity-40"
               >
-                Save
+                {t("Save")}
               </button>
             }
           >
             {edit && (
               <>
-                <p className="text-[12px] leading-[17px] text-charcoal-soft mb-3">Clients see this before they book. Start lines with • for a bullet.</p>
+                <p className="text-[12px] leading-[17px] text-charcoal-soft mb-3">{t("Clients see this before they book. Start lines with • for a bullet.")}</p>
                 <textarea
-                  aria-label={edit.doc.title}
+                  aria-label={t(edit.doc.title)}
                   value={edit.text}
                   onChange={(e) => setEdit({ ...edit, text: e.target.value.slice(0, 5000) })}
                   rows={10}
@@ -230,20 +233,20 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
         </>
       }
     >
-      <ObSectionLabel title={lane === "store" ? "Store policies" : "Documents"} margin="0 2px 12px" />
+      <ObSectionLabel title={lane === "store" ? t("Store policies") : t("Documents")} margin="0 2px 12px" />
       {docs.map((d, i) => (
         <BizDocCard
           key={d.kind}
           icon={DOC_ICON[d.icon]}
-          title={d.title}
-          sub={d.sub}
+          title={t(d.title)}
+          sub={t(d.sub)}
           status={docStatus(d, i)}
           lines={docCardLines(d)}
           onPreview={() => setPreview(d)}
           onEdit={() => setEdit({ doc: d, text: d.lines.join("\n") })}
         />
       ))}
-      <ObSectionLabel title="Verification" tag="Clients never see these" margin="14px 2px 12px" />
+      <ObSectionLabel title={t("Verification")} tag={t("Clients never see these")} margin="14px 2px 12px" />
       {SLOTS.map((s) => {
         const slot = biz[s.key];
         const err = slotError[s.key];
@@ -253,15 +256,15 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
           <BizUpload
             key={s.key}
             icon={s.icon}
-            title={s.title}
+            title={t(s.title)}
             sub={
               up
                 ? `${up.name} · ${Math.round(up.progress * 100)}%`
                 : err
                 ? err.sub
                 : slot.path
-                ? `${slot.fileName ?? "file"} · ${sizeLabel(slot.sizeBytes)}`
-                : "Take a photo or upload a file"
+                ? `${slot.fileName ?? t("file")} · ${sizeLabel(slot.sizeBytes)}`
+                : t("Take a photo or upload a file")
             }
             state={state}
             progress={up?.progress}
@@ -280,7 +283,7 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
       <div className="mb-[14px]">
         <div className="flex items-center justify-between mb-[6px]">
           <label htmlFor="ob-owner-dob" className="text-[12px] font-bold text-charcoal-soft">
-            Owner's date of birth
+            {t("Owner's date of birth")}
           </label>
         </div>
         <div
@@ -301,7 +304,7 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
             aria-invalid={!!dobProblem}
             aria-describedby="ob-owner-dob-help"
             onChange={(e) => setDob(e.target.value)}
-            className="flex-1 min-w-0 bg-transparent outline-none text-[15px] leading-[22px] text-charcoal [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0"
+            className="flex-1 min-w-0 bg-transparent outline-none text-[15px] leading-[22px] text-charcoal [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:end-0"
           />
           <Calendar size={16} strokeWidth={2} className="text-charcoal-faint shrink-0 pointer-events-none" aria-hidden />
         </div>
@@ -311,10 +314,10 @@ export const PoliciesStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
           className={dobProblem ? "mt-[6px] text-[11.5px] leading-[15px] font-semibold text-status-high" : "mt-[6px] text-[11.5px] leading-[15px] font-medium text-charcoal-faint"}
         >
           {dobProblem
-            ? dobProblem
+            ? t(dobProblem)
             : dobOk
-            ? `${ageFromDateOfBirth(dob)} years old. Every Centium account needs one.`
-            : "Required. It can't be changed later without contacting support."}
+            ? tn(ageFromDateOfBirth(dob) ?? 0, "{n} years old. Every Centium account needs one.", "{n} years old. Every Centium account needs one.")
+            : t("Required. It can't be changed later without contacting support.")}
         </p>
       </div>
     </BizFrame>

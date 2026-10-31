@@ -1,4 +1,5 @@
 import { checkPdfInput, describePdfRefusal, isPdf, pdfCarriesMetadata } from "./pdfBytes";
+import { tk } from "../../i18n/core";
 
 // Preparing a course PDF: every identifying field removed, or no PDF at all.
 //
@@ -83,7 +84,7 @@ export async function preparePdf(file: Blob): Promise<PreparedPdf> {
   } catch {
     return {
       ok: false,
-      message: "We couldn't read that PDF. Try exporting it again from your editor.",
+      message: tk("We couldn't read that PDF. Try exporting it again from your editor."),
     };
   }
 

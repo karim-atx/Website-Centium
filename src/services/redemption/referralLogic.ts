@@ -1,3 +1,5 @@
+import { appLocale } from "../../i18n/format";
+import { t, tk, tn } from "../../i18n/core";
 // A6 Referrals: the pure parts, tested without a database
 // (referralLogic.test.ts). The I/O lives in ./index.ts.
 //
@@ -80,7 +82,8 @@ export const STANDARD_REFERRER_POINTS = 1500;
  */
 export function rewardLine(referrerPoints: number | null | undefined, colleague = false): string {
   const n = referrerPoints && referrerPoints > 0 ? referrerPoints : STANDARD_REFERRER_POINTS;
-  return `${n.toLocaleString("en-US")} points per ${colleague ? "colleague or client" : "friend"} who joins`;
+  const points = n.toLocaleString(appLocale("en-US"));
+  return colleague ? t("{n} points per colleague or client who joins", { n: points }) : t("{n} points per friend who joins", { n: points });
 }
 
 /** redeem_referral_code()'s stable machine strings. */
@@ -108,26 +111,26 @@ export type RedeemReferralOutcome =
  *  promised until one is. The points are the referrer's, so they are named as
  *  the friend's. */
 export function appliedLine(pointsAwarded = 0): string {
-  return pointsAwarded > 0 ? `Code applied. ${pointsAwarded.toLocaleString("en-US")} points for your friend.` : "Code applied.";
+  return pointsAwarded > 0 ? t("Code applied. {n} points for your friend.", { n: pointsAwarded.toLocaleString(appLocale("en-US")) }) : tk("Code applied.");
 }
 
 /** MO1.10.2's refusal lines, chosen from `reason` (never from `message`).
  *  own_code and already_referred are the frame's own words; not_valid and
  *  already_used are not drawn on the board. */
 export const REFUSAL_LINES: Record<Exclude<RedeemReason, "redeemed">, string> = {
-  not_valid: "Code not found. Check it and try again.",
-  already_used: "That code has already been used.",
-  own_code: "You can't use your own code.",
-  already_referred: "This code has already been used on your account.",
+  not_valid: tk("Code not found. Check it and try again."),
+  already_used: tk("That code has already been used."),
+  own_code: tk("You can't use your own code."),
+  already_referred: tk("This code has already been used on your account."),
 };
 
-export const UNKNOWN_REFUSAL_LINE = "That code could not be applied. Try again.";
+export const UNKNOWN_REFUSAL_LINE = tk("That code could not be applied. Try again.");
 
 /**
  * DM: whether the typed code is the caller's own, compared the way the
  * server reads codes (upper(btrim(code))). preview_referral_code answers
  * not_valid for your own code on purpose (no lookup oracle), so without this
- * check MO1.10.2's "You can't use your own code." was never shown. Checked
+ * check MO1.10.2's tk("You can't use your own code.") was never shown. Checked
  * before the preview, so it spends no rate-limit attempt.
  */
 export function isOwnReferralCode(draft: string, myCode: string | null | undefined): boolean {
@@ -157,9 +160,10 @@ export function interpretRedeemReferral(row: RedeemReferralRow | null | undefine
  *  needs the D25 reward model, which this stage does not add). */
 export function redemptionsLine(summary: Pick<ReferralSummary, "redemptions" | "pointsEarned">): string | null {
   if (summary.redemptions <= 0) return null;
-  const friends = summary.redemptions === 1 ? "1 friend joined" : `${summary.redemptions} friends joined`;
-  const points = summary.pointsEarned > 0 ? ` · ${summary.pointsEarned.toLocaleString("en-US")} points earned` : "";
-  return `${friends} with your code${points}`;
+  const n = summary.redemptions;
+  if (summary.pointsEarned <= 0) return tn(n, "{n} friend joined with your code", "{n} friends joined with your code");
+  const points = summary.pointsEarned.toLocaleString(appLocale("en-US"));
+  return tn(n, "{n} friend joined with your code · {points} points earned", "{n} friends joined with your code · {points} points earned", { points });
 }
 
 /**
@@ -183,8 +187,8 @@ export type PreviewReferralOutcome =
   | { status: "refused"; reason: Exclude<PreviewReason, "found"> | "unknown"; line: string };
 
 export const PREVIEW_REFUSAL_LINES: Record<Exclude<PreviewReason, "found">, string> = {
-  not_valid: "That code isn't valid. Check it and try again.",
-  already_referred: "This code has already been used on your account.",
+  not_valid: tk("That code isn't valid. Check it and try again."),
+  already_referred: tk("This code has already been used on your account."),
 };
 
 export function interpretPreviewReferral(row: PreviewReferralRow | null | undefined): PreviewReferralOutcome {
@@ -206,5 +210,5 @@ export function interpretPreviewReferral(row: PreviewReferralRow | null | undefi
 /** The confirm row's second line. Points only (BR): the previewed discount
  *  rates are never promised, since no bill applies them. */
 export function previewOfferLine(p: { referrerFirstName: string }): string {
-  return `${p.referrerFirstName} earns points when you join with their code.`;
+  return t("{name} earns points when you join with their code.", { name: p.referrerFirstName });
 }

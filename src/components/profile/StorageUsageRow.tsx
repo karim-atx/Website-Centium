@@ -3,6 +3,7 @@ import { SettingsRow } from "../ui/SettingsRows";
 import { HardDrive } from "lucide-react";
 import { getStorageUsage, type StorageUsage } from "../../services/storage";
 import { linePx, textPx } from "../../theme/textSize";
+import { t, tk } from "../../i18n/core";
 
 /**
  * How much Storage this account holds, against its cap. A Settings row in the
@@ -25,6 +26,9 @@ import { linePx, textPx } from "../../theme/textSize";
  */
 const WARN_AT = 0.8;
 
+/** Left-to-right isolate (LRI … PDI) round a Latin figure. */
+const ltr = (s: string) => `⁦${s}⁩`;
+
 /** Binary units, one decimal above 1 MB (backend doc §1): "21 KB", "4.2 MB", "2 GB". */
 function formatBytes(bytes: number): string {
   const KB = 1024;
@@ -40,7 +44,7 @@ function formatBytes(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / KB))} KB`;
 }
 
-const EXPLAINER = "Lab reports, scans and other files you upload.";
+const EXPLAINER = tk("Lab reports, scans and other files you upload.");
 
 export const StorageUsageRow: React.FC = () => {
   const [usage, setUsage] = useState<StorageUsage | null>(null);
@@ -70,8 +74,8 @@ export const StorageUsageRow: React.FC = () => {
     <SettingsRow
       icon={HardDrive}
       iconTone="dark"
-      title="Storage"
-      srDescription={EXPLAINER}
+      title={t("Storage")}
+      srDescription={t(EXPLAINER)}
       subtitle={
         <>
           {usage ? (
@@ -83,7 +87,7 @@ export const StorageUsageRow: React.FC = () => {
               aria-valuenow={pct}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-label="Storage used"
+              aria-label={t("Storage used")}
             >
               {/* A visible sliver for any non-zero usage: a bar that renders as
                   nothing says "empty", and 4 MB of 2 GB is not empty. */}
@@ -95,20 +99,20 @@ export const StorageUsageRow: React.FC = () => {
           ) : (
             <span aria-hidden className="mt-1.5 block h-[5px] rounded-full bg-cream-soft animate-skeleton-pulse" />
           )}
-          {/* <bdi>: the English figure keeps its own order inside Arabic (RTL)
-              pages (kept-list 144). */}
+          {/* Each size is isolated left to right ("21 KB"), so the sentence
+              round them keeps the page's direction ("21 KB من 2 GB" in
+              Arabic); a <bdi> round the whole sentence turned it left to
+              right (kept-list 144). */}
           <span className={`block mt-[5px] ${warning ? "text-status-high" : "text-charcoal-faint"}`} style={small}>
             {usage ? (
-              <bdi>
-                {formatBytes(usage.usedBytes)} of {formatBytes(usage.capBytes)}
-              </bdi>
+              t("{used} of {cap}", { used: ltr(formatBytes(usage.usedBytes)), cap: ltr(formatBytes(usage.capBytes)) })
             ) : (
-              <span aria-label="Loading">–</span>
+              <span aria-label={t("Loading")}>–</span>
             )}
           </span>
           {warning && (
             <span className="block mt-[5px] text-status-high" style={small}>
-              You're running low. Remove a lab report or scan you no longer need to free up space.
+              {t("You're running low. Remove a lab report or scan you no longer need to free up space.")}
             </span>
           )}
         </>

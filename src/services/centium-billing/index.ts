@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t } from "../../i18n/core";
 import { isMissingFunction, seatPurchaseRefusal, toCharge, toPlanSummary, type CentiumCharge, type ChargeRow, type PlanSummary, type PlanSummaryRow } from "./model";
 import { periodSwitchRefusal, priceOrNull, SUBSCRIPTION_PERIODS, toSubscriptionPeriod, type PeriodSwitchRefusal, type SubscriptionPeriod } from "./period";
 
@@ -38,23 +39,23 @@ const readFail = <T>(error: { code?: string; message?: string }, fallback: strin
 export async function fetchPlanSummary(businessId: string): Promise<Read<PlanSummary>> {
   try {
     const { data, error } = await rpc<PlanSummaryRow[]>("business_plan_summary", { p_business_id: businessId });
-    if (error) return readFail(error, "Couldn't load your plan.");
+    if (error) return readFail(error, t("Couldn't load your plan."));
     const row = Array.isArray(data) ? data[0] : (data as PlanSummaryRow | null);
-    if (!row) return { ok: false, missing: false, denied: true, message: "Couldn't load your plan." };
+    if (!row) return { ok: false, missing: false, denied: true, message: t("Couldn't load your plan.") };
     return { ok: true, value: toPlanSummary(row) };
   } catch (e) {
-    return { ok: false, missing: false, denied: false, message: isOffline(e) ? OFFLINE_MESSAGE : "Couldn't load your plan." };
+    return { ok: false, missing: false, denied: false, message: isOffline(e) ? OFFLINE_MESSAGE : t("Couldn't load your plan.") };
   }
 }
 
 export async function fetchBillingHistory(businessId: string, limit = 50, offset = 0): Promise<Read<{ charges: CentiumCharge[]; total: number }>> {
   try {
     const { data, error } = await rpc<ChargeRow[]>("centium_billing_history", { p_business_id: businessId, p_limit: limit, p_offset: offset });
-    if (error) return readFail(error, "Couldn't load your billing history.");
+    if (error) return readFail(error, t("Couldn't load your billing history."));
     const rows = data ?? [];
     return { ok: true, value: { charges: rows.map(toCharge), total: Number(rows[0]?.total_count ?? 0) } };
   } catch (e) {
-    return { ok: false, missing: false, denied: false, message: isOffline(e) ? OFFLINE_MESSAGE : "Couldn't load your billing history." };
+    return { ok: false, missing: false, denied: false, message: isOffline(e) ? OFFLINE_MESSAGE : t("Couldn't load your billing history.") };
   }
 }
 
@@ -134,10 +135,10 @@ export async function fetchMyBillingPeriod(ownerId: string): Promise<Read<MyBill
       .select("billing_period, renews_at, tier_id, seat_blocks, status")
       .eq("owner_id", ownerId)
       .maybeSingle();
-    if (error) return readFail(error, "Couldn't load how you're billed.");
+    if (error) return readFail(error, t("Couldn't load how you're billed."));
     return { ok: true, value: data ? toMyBillingPeriod(data as PeriodStateRow) : null };
   } catch (e) {
-    return { ok: false, missing: false, denied: false, message: isOffline(e) ? OFFLINE_MESSAGE : "Couldn't load how you're billed." };
+    return { ok: false, missing: false, denied: false, message: isOffline(e) ? OFFLINE_MESSAGE : t("Couldn't load how you're billed.") };
   }
 }
 
@@ -145,7 +146,7 @@ export async function fetchMyBillingPeriod(ownerId: string): Promise<Read<MyBill
  * subscription_price_for for both periods: the tier plus `seatBlocks` seat
  * blocks at the add-on's price for the SAME period. NULL stays null.
  */
-export async function fetchPeriodPrices(tierId: string, seatBlocks = 0, fallback = "Couldn't load the prices."): Promise<Read<Record<SubscriptionPeriod, number | null>>> {
+export async function fetchPeriodPrices(tierId: string, seatBlocks = 0, fallback = t("Couldn't load the prices.")): Promise<Read<Record<SubscriptionPeriod, number | null>>> {
   try {
     const [m, y] = await Promise.all(
       SUBSCRIPTION_PERIODS.map((p) => rpc<number | string | null>("subscription_price_for", { p_tier_id: tierId, p_billing_period: p, p_seat_blocks: seatBlocks }))

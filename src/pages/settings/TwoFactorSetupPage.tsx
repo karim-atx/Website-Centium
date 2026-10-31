@@ -18,6 +18,7 @@ import {
 import { generateRecoveryCodes } from "../../services/recoveryCodes";
 import { RecoveryCodesView } from "../../components/security/RecoveryCodesView";
 import { BusinessRecoveryCodesView, BusinessTwoFactorSetupView } from "../business-more/BusinessTwoFactorViews";
+import { t } from "../../i18n/core";
 
 // MO1.8.4.1 Set up two-factor, on one page (R18; scan and verify used to be
 // two steps of a sheet): Step 1 of 2, the QR on white with the setup key in
@@ -135,7 +136,7 @@ export default function TwoFactorSetupPage() {
         // Both factors are verified; either one signs in. Say so rather than
         // pretending the swap finished.
         setBusy(false);
-        setError(`Your new app works, but the old one couldn't be removed: ${removed.message}`);
+        setError(t("Your new app works, but the old one couldn't be removed: {reason}", { reason: t(removed.message) }));
         await refreshMfaState();
         return;
       }
@@ -199,20 +200,20 @@ export default function TwoFactorSetupPage() {
 
   return (
     <div className="pb-[172px]">
-      <PageHeader title="Set up two-factor" showBack sub tightBack />
+      <PageHeader title={t("Set up two-factor")} showBack sub tightBack />
 
       {/* MO1.8.4.1: 24 pt side insets; "Step 1 of 2" 16 under the 36 pt title. */}
       <SettingsBody className="-mt-1">
 
       {startError ? (
         <p role="alert" className="text-[12px] font-semibold text-status-high">
-          {startError}
+          {t(startError)}
         </p>
       ) : !enrollment ? (
         // Foundations loading state: skeleton blocks at the anatomy positions
         // (surface.soft, each block's radius): the step label, the QR card,
         // the key row and the code boxes.
-        <div aria-busy="true" aria-label="Loading two-factor setup">
+        <div aria-busy="true" aria-label={t("Loading two-factor setup")}>
           <div className="h-[18px] w-24 rounded bg-cream-soft" />
           <div className="mt-2.5 mx-auto w-[180px] h-[180px] rounded-[18px] bg-cream-soft" />
           <div className="mt-[43px] flex gap-2">
@@ -229,16 +230,16 @@ export default function TwoFactorSetupPage() {
         <>
           {/* MO1.8.4.1 section label: 12 / 700 #7D67D9 (new since the
               redesign, so the handover's colour), 18 tall, 10 above the QR. */}
-          <p className="text-xs leading-[18px] font-bold text-primary-accent uppercase tracking-wide">Step 1 of 2</p>
+          <p className="text-xs leading-[18px] font-bold text-primary-accent uppercase tracking-wide">{t("Step 1 of 2")}</p>
           {/* On white in both themes, so any phone camera can read it. The
               card is 180 × 180 at radius 18 (MO1.8.4.1), the code inside it,
               ringed 1.5 px in primary.fill #9A8CD6 (measured). */}
           <div className="mt-2.5 mx-auto w-[180px] h-[180px] rounded-[18px] border-[1.5px] border-th-9a8cd6 dark:border-primary bg-white p-2">
-            <img src={enrollment.qrCode} alt="QR code for two-factor setup" className="w-full h-full" />
+            <img src={enrollment.qrCode} alt={t("QR code for two-factor setup")} className="w-full h-full" />
           </div>
           {/* MO1.8.4.1: 15 under the QR card (285 to 300), 19 tall; the key
               row 9 under it (328). */}
-          <p className="mt-[15px] text-center text-[13px] leading-[19px] font-semibold text-charcoal-soft">Can't scan? Copy the setup key</p>
+          <p className="mt-[15px] text-center text-[13px] leading-[19px] font-semibold text-charcoal-soft">{t("Can't scan? Copy the setup key")}</p>
           <div className="mt-[9px] flex items-center gap-2">
             {/* MO1.8.4.1: the key in the app font, 13 / 700; it wraps between
                 its groups of four. */}
@@ -248,7 +249,7 @@ export default function TwoFactorSetupPage() {
             <button
               type="button"
               onClick={() => void copySecret()}
-              aria-label="Copy setup key"
+              aria-label={t("Copy setup key")}
               // MO1.8.4.1: a 48 × 48 primary.tint tile, Copy in #7D67D9 (measured).
               className="tap w-12 h-12 rounded-xl bg-th-f0edf9 dark:bg-primary-pale text-primary-accent flex items-center justify-center shrink-0"
             >
@@ -257,7 +258,7 @@ export default function TwoFactorSetupPage() {
           </div>
 
           <p className="mt-6 text-xs leading-[18px] font-bold text-primary-accent uppercase tracking-wide">
-            Step 2 of 2: Enter the 6-digit code from your app
+            {t("Step 2 of 2: Enter the 6-digit code from your app")}
           </p>
           <form
             noValidate
@@ -278,18 +279,18 @@ export default function TwoFactorSetupPage() {
               }}
               error={!!error}
               disabled={busy}
-              label="Six-digit authentication code"
+              label={t("Six-digit authentication code")}
             />
             {error && (
               <p role="alert" className="mt-3 text-center text-[12px] font-semibold text-status-high">
-                {error}
+                {t(error)}
               </p>
             )}
           </form>
 
           <PinnedCta
             primary={{
-              label: "Verify",
+              label: t("Verify"),
               loading: busy,
               disabled: code.length !== CODE_LENGTH,
               onClick: () => void singleFlight(verify),

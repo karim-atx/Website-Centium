@@ -4,6 +4,7 @@ import { BottomSheet } from "./BottomSheet";
 import { Button } from "./Button";
 import { WheelPicker, type WheelColumn } from "./WheelPicker";
 import { currentMonth, formatMonth, isMonthValue, MONTH_NAMES, type MonthValue } from "../../services/professional-cv/cvDates";
+import { t } from "../../i18n/core";
 
 const PRESENT = "present";
 
@@ -47,7 +48,7 @@ export const MonthYearField: React.FC<{
   const [draft, setDraft] = useState(initial);
 
   const years: { value: string; label: string }[] = [];
-  if (allowPresent) years.push({ value: PRESENT, label: "Present" });
+  if (allowPresent) years.push({ value: PRESENT, label: t("Present") });
   for (let y = last; y >= first; y--) years.push({ value: String(y), label: String(y) });
 
   // The month stays selectable while "Present" is chosen, and is simply not
@@ -55,7 +56,7 @@ export const MonthYearField: React.FC<{
   // drop the month whenever the wheel opened on Present.
   const columns: WheelColumn<string>[] = [
     {
-      label: "Month",
+      label: t("Month"),
       flex: 1.2,
       value: draft.month,
       onChange: (m) => setDraft((d) => ({ ...d, month: m })),
@@ -65,14 +66,14 @@ export const MonthYearField: React.FC<{
       })),
     },
     {
-      label: "Year",
+      label: t("Year"),
       value: draft.year,
       onChange: (y) => setDraft((d) => ({ ...d, year: y })),
       options: years,
     },
   ];
 
-  const shown = isMonthValue(value) ? formatMonth(value) : allowPresent && present ? "Present" : "";
+  const shown = isMonthValue(value) ? formatMonth(value) : allowPresent && present ? t("Present") : "";
 
   return (
     <div className="flex flex-col gap-1.5 min-w-0">
@@ -87,10 +88,10 @@ export const MonthYearField: React.FC<{
           setDraft(initial());
           setOpen(true);
         }}
-        className="tap w-full min-h-[48px] flex items-center justify-between gap-2 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 text-left text-sm disabled:opacity-60"
+        className="tap w-full min-h-[48px] flex items-center justify-between gap-2 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 text-start text-sm disabled:opacity-60"
       >
         <span className={shown ? "text-charcoal truncate" : "text-charcoal-faint truncate"}>
-          {shown || "Month, year"}
+          {shown || t("Month, year")}
         </span>
         <CalendarDays size={15} className="text-charcoal-faint shrink-0" />
       </button>
@@ -111,7 +112,7 @@ export const MonthYearField: React.FC<{
                   setOpen(false);
                 }}
               >
-                Clear
+                {t("Clear")}
               </Button>
             )}
             <Button
@@ -122,7 +123,7 @@ export const MonthYearField: React.FC<{
                 setOpen(false);
               }}
             >
-              Done
+              {t("Done")}
             </Button>
           </div>
         }

@@ -6,6 +6,7 @@ import { ObFooter, ObStep } from "../shell/ObShell";
 import { ObGoalTiles, ObMenu, ObRowLink, ObScale, ObSectionLabel, ObTip } from "../shell/ObBlocks";
 import { OB_STRINGS, useOnboardingFlow } from "../shell/flow";
 import { ACTIVITIES, ACTIVITY_SCALE, MAX_GOAL_AREAS, goalAreas, type GoalArea } from "./clientModel";
+import { t, tn } from "../../../i18n/core";
 
 interface Props {
   draft: OnboardingDraft;
@@ -60,31 +61,31 @@ export const GoalsStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
       return { ...d, subGoals: { ...d.subGoals, [a]: cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s] } };
     });
 
-  const tipText = [flags.rs ? "Weight goals are hidden." : "", flags.cy ? "Cycle is in Health." : ""].filter(Boolean).join(" ");
+  const tipText = [flags.rs ? t("Weight goals are hidden.") : "", flags.cy ? t("Cycle is in Health.") : ""].filter(Boolean).join(" ");
   const level = ACTIVITY_SCALE.find((l) => l.value === draft.activityLevel) ?? null;
-  const actLabels = ACTIVITIES.filter((a) => draft.activities.includes(a.key)).map((a) => a.label);
+  const actLabels = ACTIVITIES.filter((a) => draft.activities.includes(a.key)).map((a) => t(a.label));
   const refineDef = refine ? areas.find((a) => a.key === refine) : null;
 
   return (
     <ObStep
       lane="client"
       step="goals"
-      title="Goals and activity"
-      subtitle="Pick what matters most right now. Your Home is built around it."
+      title={t("Goals and activity")}
+      subtitle={t("Pick what matters most right now. Your Home is built around it.")}
       onBack={onBack}
-      footer={<ObFooter error={!flow?.online ? OB_STRINGS.offlineStep : null} errorTone="info" primary={{ label: "Continue", onClick: onNext }} />}
+      footer={<ObFooter error={!flow?.online ? t(OB_STRINGS.offlineStep) : null} errorTone="info" primary={{ label: t("Continue"), onClick: onNext }} />}
     >
-      <ObSectionLabel title="Your goals" tag={`Pick up to 3 · ${picked.length} picked`} tagTone="accent" margin="0 2px 12px" />
+      <ObSectionLabel title={t("Your goals")} tag={tn(picked.length, "Pick up to 3 · {n} picked", "Pick up to 3 · {n} picked")} tagTone="accent" margin="0 2px 12px" />
       <ObGoalTiles
         items={areas.map((a) => {
           const on = picked.includes(a.key);
           return {
             key: a.key,
             icon: a.icon,
-            title: a.title,
+            title: t(a.title),
             on,
             dim: cap && !on,
-            refine: `Refine · ${subsOf(a.key).length}`,
+            refine: t("Refine · {n}", { n: subsOf(a.key).length }),
             onToggle: () => toggleArea(a.key),
             onRefine: () => setRefine(a.key),
           };
@@ -92,34 +93,34 @@ export const GoalsStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
       />
       {cap ? (
         <ObTip icon={Info} margin="-6px 0 14px" role="status">
-          That's 3. Untick one to swap it for another.
+          {t("That's 3. Untick one to swap it for another.")}
         </ObTip>
       ) : tipText ? (
         <ObTip icon={HeartHandshake} margin="-6px 0 14px">
           {tipText}
         </ObTip>
       ) : null}
-      <ObSectionLabel title="How active you are" tag="Optional" margin="4px 2px 12px" />
+      <ObSectionLabel title={t("How active you are")} tag={t("Optional")} margin="4px 2px 12px" />
       <ObScale
-        label="How active you are"
-        items={ACTIVITY_SCALE}
+        label={t("How active you are")}
+        items={ACTIVITY_SCALE.map((l) => ({ ...l, label: t(l.label) }))}
         value={draft.activityLevel}
         onChange={(v) => setDraft((d) => ({ ...d, activityLevel: d.activityLevel === v ? null : v }))}
-        caption={level ? { title: level.label, desc: level.desc } : null}
+        caption={level ? { title: t(level.label), desc: t(level.desc) } : null}
       />
       <ObRowLink
         ref={setActsEl}
         icon={Heart}
-        title="Activities you enjoy"
-        desc={actLabels.length ? actLabels.join(", ") : "Tap to choose, optional"}
+        title={t("Activities you enjoy")}
+        desc={actLabels.length ? actLabels.join(t(", ")) : t("Tap to choose, optional")}
         expanded={menuOpen}
         onClick={() => setMenuOpen(true)}
       />
       {menuOpen && (
         <ObMenu
-          title="Activities you enjoy"
+          title={t("Activities you enjoy")}
           anchor={actsEl}
-          options={ACTIVITIES.map((a) => ({ key: a.key, label: a.label, on: draft.activities.includes(a.key) }))}
+          options={ACTIVITIES.map((a) => ({ key: a.key, label: t(a.label), on: draft.activities.includes(a.key) }))}
           onToggle={(k) =>
             setDraft((d) => ({ ...d, activities: d.activities.includes(k) ? d.activities.filter((x) => x !== k) : [...d.activities, k] }))
           }
@@ -133,7 +134,7 @@ export const GoalsStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
         <BottomSheet
           open={!!refine}
           onClose={() => setRefine(null)}
-          title={refineDef.title}
+          title={t(refineDef.title)}
           bodyPadding={{ top: 18, right: 20, bottom: 12, left: 20 }}
           footer={
             <div className="ob-vars">
@@ -143,16 +144,16 @@ export const GoalsStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
                 style={{ background: "var(--ob-fill)", color: "var(--ob-on-fill)" }}
                 onClick={() => setRefine(null)}
               >
-                Done
+                {t("Done")}
               </button>
             </div>
           }
         >
           <div className="ob-vars" style={{ marginBottom: 12 }}>
             <p className="ob-label" style={{ marginBottom: 6 }}>
-              Pick any that fit
+              {t("Pick any that fit")}
             </p>
-            <div className="ob-chips" role="group" aria-label="Pick any that fit">
+            <div className="ob-chips" role="group" aria-label={t("Pick any that fit")}>
               {refineDef.subs.map((s) => {
                 const on = subsOf(refineDef.key).includes(s);
                 return (
@@ -164,7 +165,7 @@ export const GoalsStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
                     onClick={() => toggleSub(refineDef.key, s)}
                     style={{ minHeight: 36, padding: "8px 12px", lineHeight: "16px", fontWeight: 600 }}
                   >
-                    {s}
+                    {t(s)}
                   </button>
                 );
               })}

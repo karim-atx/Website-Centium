@@ -6,6 +6,7 @@ import { useApp } from "../../../context/AppContext";
 import { habitIcon } from "../../../utils/icons";
 import { useHabitColours, type HabitColourKey } from "./data";
 import { FadeValue, HeaderPill, HomeCard, HomeKeyframes, homeColors, Line, linePx, textPx, useHomeMode, useLoadingTimeout } from "./kit";
+import { inlineScrolled } from "../../../utils/inlineScroll";
 
 // HO1.W8 Habits (small), OURS-home-large-widgets §B (large) and
 // OURS-home-habits-empty. The purple follows the theme primary (th-/thi-);
@@ -68,7 +69,7 @@ const HabitGrid: React.FC<{ habits: HabitItem[]; day: string; today: string; dar
       <span
         className="flex no-scrollbar"
         style={{ overflowX: "auto", scrollSnapType: "x mandatory", height: 88 }}
-        onScroll={(e) => setPage(Math.round(e.currentTarget.scrollLeft / Math.max(1, e.currentTarget.clientWidth)))}
+        onScroll={(e) => setPage(Math.round(inlineScrolled(e.currentTarget) / Math.max(1, e.currentTarget.clientWidth)))}
         onClick={(e) => e.stopPropagation()}
       >
         {pages.map((items, p) => (
@@ -117,7 +118,7 @@ const HabitGrid: React.FC<{ habits: HabitItem[]; day: string; today: string; dar
       {pages.length > 1 && (
         // Main's hint, verbatim, back beside the dots as main laid them out
         // (hint left, dots right; release review O1). Dots keep top 91.
-        <span className="absolute flex items-center justify-between" style={{ left: 0, right: 0, top: 87.5, height: 11, gap: 10 }}>
+        <span className="absolute flex items-center justify-between" style={{ insetInlineStart: 0, insetInlineEnd: 0, top: 87.5, height: 11, gap: 10 }}>
           <span className="whitespace-nowrap" style={{ fontSize: textPx(8.5), lineHeight: linePx(11), fontWeight: 600, color: deep, opacity: dark ? 1 : 0.68 }}>
             For more habits, swipe.
           </span>

@@ -240,10 +240,10 @@ export const CreateRoutineSheet: React.FC<{
       <GripVertical size={14} className="text-charcoal-faint shrink-0" />
       <button
         onClick={() => setSettingsIndex(i)}
-        className="flex-1 flex items-center justify-between text-left min-w-0"
+        className="flex-1 flex items-center justify-between text-start min-w-0"
       >
         <span className="text-sm font-medium text-charcoal truncate">{ex.name}</span>
-        <Settings2 size={13} className="text-charcoal-faint shrink-0 ml-2" />
+        <Settings2 size={13} className="text-charcoal-faint shrink-0 ms-2" />
       </button>
       <button onClick={() => removeExercise(ex.id)} className="tap text-charcoal-faint shrink-0">
         <X size={14} />
@@ -298,7 +298,7 @@ export const CreateRoutineSheet: React.FC<{
         ) : (
           <GripVertical size={14} className="text-charcoal-faint shrink-0" />
         )}
-        <button onClick={() => setSettingsIndex(i)} className="flex-1 text-left min-w-0">
+        <button onClick={() => setSettingsIndex(i)} className="flex-1 text-start min-w-0">
           <span className="block text-sm font-medium text-charcoal truncate">{ex.name}</span>
           {line && <span className="block text-[11px] text-charcoal-faint truncate">{line}</span>}
         </button>
@@ -408,12 +408,12 @@ export const CreateRoutineSheet: React.FC<{
             </div>
 
             <div className="relative mb-2.5">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
+              <Search size={14} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search for exercise…"
-                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 pl-9 pr-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 ps-9 pe-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             {searchResults.length > 0 && (
@@ -434,7 +434,7 @@ export const CreateRoutineSheet: React.FC<{
                           : { name: r.name, classification: r.classification }
                       )
                     }
-                    className="tap w-full flex items-center justify-between rounded-xl px-3 py-2 bg-primary-pale/60 hover:bg-primary-pale text-left"
+                    className="tap w-full flex items-center justify-between rounded-xl px-3 py-2 bg-primary-pale/60 hover:bg-primary-pale text-start"
                   >
                     <span className="text-sm font-medium text-charcoal">{r.name}</span>
                     <span className="text-xs font-semibold text-primary">+ Add</span>
@@ -585,7 +585,7 @@ export const CreateRoutineSheet: React.FC<{
                 aria-label="Coach note"
                 className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
               />
-              <p className="text-[11px] text-charcoal-faint text-right tabular-nums">
+              <p className="text-[11px] text-charcoal-faint text-end tabular-nums">
                 {(noteFor?.text.length ?? 0)}/{NOTE_MAX}
               </p>
               <Button

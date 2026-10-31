@@ -2,6 +2,7 @@ import React from "react";
 import type { MetricKey } from "../MetricWidget";
 import { mc, useHealthMode } from "./MetricKit";
 import { daysOf, monthLetter, monthlyAverages, type Period } from "./periods";
+import { isRtl } from "../../../i18n/core";
 
 // The rounded-bar range chart (HE1.2 week pattern), shared by Steps, Water,
 // Sleep (duration fallback) and Calories burned. Geometry measured from the
@@ -63,12 +64,16 @@ export const GoalBarChart: React.FC<{
   const ink = dark ? "#B8B3C7" : mc(metric, "ink");
   const ghostTop = yOf(goal ?? ghostValue ?? ref);
   const labelEvery = mode === "month" ? 7 : 1;
+  // Round F (F10): in right to left, time runs from right to left. Every x on
+  // the 326 grid is mirrored; SVG text anchors are logical, so the labels follow.
+  const rtl = isRtl();
+  const mx = (v: number) => (rtl ? 326 - v : v);
 
   return (
     <svg viewBox="0 0 326 146" width="100%" height={146} role="img" aria-hidden style={{ display: "block", overflow: "visible" }}>
-      <line x1={X0} x2={326} y1={BASE + 0.5} y2={BASE + 0.5} stroke={baseStroke} strokeWidth={1} />
+      <line x1={mx(X0)} x2={mx(326)} y1={BASE + 0.5} y2={BASE + 0.5} stroke={baseStroke} strokeWidth={1} />
       {bars.map((b, i) => {
-        const cx = X0 + pitch * (i + 0.5);
+        const cx = mx(X0 + pitch * (i + 0.5));
         const x = cx - width / 2;
         let shape: React.ReactNode = null;
         if (b.value !== null && b.value > 0) {
@@ -116,9 +121,9 @@ export const GoalBarChart: React.FC<{
       })}
       {goal != null && (
         <>
-          <line x1={X0} x2={326} y1={yOf(goal)} y2={yOf(goal)} stroke={ink} strokeWidth={1.5} strokeDasharray="4 4" />
+          <line x1={mx(X0)} x2={mx(326)} y1={yOf(goal)} y2={yOf(goal)} stroke={ink} strokeWidth={1.5} strokeDasharray="4 4" />
           {goalLabel && (
-            <text x={326} y={yOf(goal) - 6} textAnchor="end" fontSize={10} fontWeight={700} fill={ink}>
+            <text x={mx(326)} y={yOf(goal) - 6} textAnchor="end" fontSize={10} fontWeight={700} fill={ink}>
               {goalLabel}
             </text>
           )}

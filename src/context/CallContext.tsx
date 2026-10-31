@@ -9,6 +9,7 @@ import {
   type CallKind,
   type CallRow,
 } from "../services/calling";
+import { tk } from "../i18n/core";
 
 /**
  * The one place that knows whether a call is happening.
@@ -101,15 +102,15 @@ const TERMINAL = new Set(["declined", "missed", "completed", "cap_ended", "faile
 function endedMessage(status: string, role: "caller" | "callee"): string {
   switch (status) {
     case "declined":
-      return role === "caller" ? "Call declined." : "Call declined.";
+      return role === "caller" ? tk("Call declined.") : tk("Call declined.");
     case "missed":
-      return role === "caller" ? "No answer." : "Missed call.";
+      return role === "caller" ? tk("No answer.") : tk("Missed call.");
     case "cap_ended":
-      return "Call ended: time limit reached.";
+      return tk("Call ended: time limit reached.");
     case "failed":
-      return "The call couldn't be set up.";
+      return tk("The call couldn't be set up.");
     default:
-      return "Call ended.";
+      return tk("Call ended.");
   }
 }
 
@@ -263,7 +264,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Idle the moment the call is over, not when the notice times out — the
       // user may want to call straight back, and until this is idle they
       // cannot, nor can anyone reach them.
-      setEndedReason(reason === "declined" ? "Call declined." : "Call ended.");
+      setEndedReason(reason === "declined" ? tk("Call declined.") : tk("Call ended."));
       setCallState(null, "idle");
     },
     [setCallState]

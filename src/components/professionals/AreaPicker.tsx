@@ -42,7 +42,7 @@ export const AreaPicker: React.FC<{
                 type="button"
                 onClick={() => onPick(a)}
                 aria-pressed={selectedId === a.id}
-                className="tap w-full flex items-center justify-between gap-3 min-h-[48px] px-1 text-left text-sm font-semibold text-charcoal border-b border-charcoal/[0.06]"
+                className="tap w-full flex items-center justify-between gap-3 min-h-[48px] px-1 text-start text-sm font-semibold text-charcoal border-b border-charcoal/[0.06]"
               >
                 {a.name}
                 {selectedId === a.id && <Check size={16} className="text-primary-deep-text shrink-0" aria-hidden />}

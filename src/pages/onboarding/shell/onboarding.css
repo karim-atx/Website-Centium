@@ -119,7 +119,7 @@ html.high-contrast :is(.ob, .ob-vars) :is(.ob-box, .ob-card, .ob-btn-secondary, 
    top 70, the leaf outline in water, stroke 3. */
 .ob-backdrop {
   position: absolute;
-  right: -70px;
+  inset-inline-end: -70px;
   top: 70px;
   width: 260px;
   height: 260px;
@@ -174,7 +174,7 @@ html.high-contrast :is(.ob, .ob-vars) :is(.ob-box, .ob-card, .ob-btn-secondary, 
 .ob-back {
   width: 36px;
   height: 36px;
-  margin-left: -8px;
+  margin-inline-start: -8px;
   border-radius: 999px;
   display: flex;
   align-items: center;
@@ -567,7 +567,7 @@ html.high-contrast .ob .ob-btn-primary:disabled {
   background: var(--ob-list);
   border: 1px solid transparent;
   padding: 12px 14px;
-  text-align: left;
+  text-align: start;
 }
 .ob-coll[aria-expanded="true"] {
   background: var(--ob-card);
@@ -640,12 +640,12 @@ html.high-contrast .ob .ob-btn-primary:disabled {
   padding: 7px 14px;
   gap: 11px;
   width: 100%;
-  text-align: left;
+  text-align: start;
 }
 .ob-row-rule {
   position: absolute;
   top: 0;
-  right: 14px;
+  inset-inline-end: 14px;
   height: 1px;
   background: var(--ob-rule);
 }
@@ -765,8 +765,8 @@ html.high-contrast .ob .ob-btn-primary:disabled {
 .ob-tg-rule {
   position: absolute;
   top: 0;
-  left: 50px;
-  right: 0;
+  inset-inline-start: 50px;
+  inset-inline-end: 0;
   height: 1px;
   background: var(--ob-rule);
 }
@@ -879,7 +879,7 @@ html.high-contrast .ob .ob-btn-primary:disabled {
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  text-align: left;
+  text-align: start;
   transition: opacity 150ms;
 }
 .ob-goal[aria-checked="true"] {
@@ -942,7 +942,7 @@ html.high-contrast .ob .ob-btn-primary:disabled {
   line-height: 16px;
   color: var(--ob-accent);
   white-space: nowrap;
-  text-align: left;
+  text-align: start;
 }
 
 /* ---- Activity scale (isScale) --------------------------------------------------------------- */
@@ -997,7 +997,7 @@ html.high-contrast .ob .ob-btn-primary:disabled {
   background: var(--ob-card);
   padding: 10px 12px;
   margin-bottom: 12px;
-  text-align: left;
+  text-align: start;
 }
 .ob-rowlink-t {
   display: block;
@@ -1028,13 +1028,13 @@ html.high-contrast .ob .ob-btn-primary:disabled {
   gap: 12px;
   min-height: 54px;
   width: 100%;
-  text-align: left;
+  text-align: start;
 }
 .ob-trk-rule {
   position: absolute;
   top: 0;
-  left: 48px;
-  right: 0;
+  inset-inline-start: 48px;
+  inset-inline-end: 0;
   height: 1px;
   background: var(--ob-rule);
 }
@@ -1091,7 +1091,7 @@ html.high-contrast .ob .ob-btn-primary:disabled {
   border: 1px solid var(--ob-border);
   box-shadow: var(--ob-card-sh);
   padding: 14px 16px;
-  text-align: left;
+  text-align: start;
   width: 100%;
   transition:
     opacity 180ms var(--ob-ease),
@@ -1220,7 +1220,7 @@ html.high-contrast .ob .ob-btn-primary:disabled {
   font-size: 12px;
   font-weight: 600;
   line-height: 15px;
-  text-align: left;
+  text-align: start;
 }
 .ob-card-sub[aria-pressed="true"] {
   background: var(--ob-fill);
@@ -1580,7 +1580,7 @@ html.high-contrast .ob .ob-btn-primary:disabled {
   font-size: 12.5px;
   line-height: 18.75px;
   font-weight: 500;
-  text-align: left;
+  text-align: start;
   color: var(--ob-ink);
 }
 .ob-menu-o + .ob-menu-o {

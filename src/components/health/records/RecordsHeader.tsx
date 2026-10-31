@@ -41,7 +41,7 @@ export const RecordsHeader: React.FC<{
   const [open, setOpen] = useState(false);
   return (
     <FixedHeader paddingBottom={14} fillClassName="bg-cream dark:bg-[#1C1F28]">
-      <div className="flex items-center" style={{ gap: 6, minHeight: 36, marginLeft: -8 }}>
+      <div className="flex items-center" style={{ gap: 6, minHeight: 36, marginInlineStart: -8 }}>
         <button
           type="button"
           onClick={onBack}
@@ -62,7 +62,7 @@ export const RecordsHeader: React.FC<{
             aria-label="More options"
             aria-haspopup="menu"
             className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
-            style={{ width: 36, height: 36, marginRight: -8 }}
+            style={{ width: 36, height: 36, marginInlineEnd: -8 }}
           >
             <MoreVertical size={20} style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
           </button>
@@ -73,7 +73,7 @@ export const RecordsHeader: React.FC<{
         <div
           data-records-shared
           className="flex items-center"
-          style={{ marginTop: 12, gap: 10, borderRadius: 14, padding: "0 0 0 12px", minHeight: 44, background: dark ? "#293339" : "#EAF4F2" }}
+          style={{ marginTop: 12, gap: 10, borderRadius: 14, paddingBlock: "0", paddingInline: "12px 0", minHeight: 44, background: dark ? "#293339" : "#EAF4F2" }}
         >
           <ShieldCheck size={16} strokeWidth={2} className="shrink-0" style={{ color: dark ? "#B2D4CF" : "#3C6B65" }} aria-hidden />
           <span className="flex-1 min-w-0" style={{ padding: "10px 0", fontSize: textPx(12.5), lineHeight: 1.4, fontWeight: 600, color: INK }}>

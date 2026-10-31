@@ -60,12 +60,12 @@ export const GoalsEditSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               key={g.value}
               onClick={() => toggle(g.value)}
               className={clsx(
-                "tap relative text-left rounded-2xl p-4 border transition-colors",
+                "tap relative text-start rounded-2xl p-4 border transition-colors",
                 active ? "bg-primary-pale border-primary" : "bg-cream-soft border-transparent"
               )}
             >
               {active && (
-                <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                <div className="absolute top-2.5 end-2.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
                   <Check size={12} className="text-white" strokeWidth={3} />
                 </div>
               )}

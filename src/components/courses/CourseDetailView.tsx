@@ -324,7 +324,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
             {/* Foundations `label.section` (decision 20), 4 in. Decision 23
                 (item 13): the frame's muted grey rgb(140,131,120) in light;
                 dark keeps the forum's muted. */}
-            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: dark ? fv("muted") : "rgb(var(--c-charcoal-faint))" }}>
+            <span className="ps-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: dark ? fv("muted") : "rgb(var(--c-charcoal-faint))" }}>
               Syllabus
             </span>
             <div className="rounded-[18px] overflow-hidden flex flex-col" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
@@ -374,7 +374,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
         {paidCourse && !hasPaid && (
           <div className="flex flex-col gap-2">
             {/* Decision 23 (item 14): the same label in the frame's muted grey. */}
-            <span className="pl-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: dark ? fv("muted") : "rgb(var(--c-charcoal-faint))" }}>
+            <span className="ps-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: dark ? fv("muted") : "rgb(var(--c-charcoal-faint))" }}>
               Choose how to take it
             </span>
             <div className="flex gap-2">
@@ -743,7 +743,7 @@ function RateSection({
           setOpen(true);
         }}
         aria-haspopup="dialog"
-        className="tap w-full min-h-11 rounded-[18px] p-[14px] flex items-center gap-2.5 text-left"
+        className="tap w-full min-h-11 rounded-[18px] p-[14px] flex items-center gap-2.5 text-start"
         style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("text") }}
       >
         <span className="text-sm font-extrabold grow">{initial ? "Your rating" : "Rate this course"}</span>

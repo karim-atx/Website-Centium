@@ -7,6 +7,8 @@
 import React, { forwardRef, useId, useRef } from "react";
 import { Camera, Check, ChevronRight, Loader2, Minus, Plus, RotateCcw, Upload, type LucideIcon } from "lucide-react";
 import "./pro.css";
+import { t, tk } from "../../../i18n/core";
+import { optionLabel } from "./proModel";
 
 // ---------------------------------------------------------------------------
 // F: a field (label row, 52 tall box, help / count / error foot)
@@ -103,7 +105,7 @@ export const Field = forwardRef<HTMLDivElement, FieldProps>(function Field(
             className="ob-box tap"
             data-icon={Lead ? "" : undefined}
             data-err={error ? "true" : undefined}
-            style={{ flex: 3, minWidth: 0, width: "100%", textAlign: "left", color: value ? undefined : "var(--ob-faint)" }}
+            style={{ flex: 3, minWidth: 0, width: "100%", textAlign: "start", color: value ? undefined : "var(--ob-faint)" }}
           >
             {lead}
             <span style={{ flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value || placeholder}</span>
@@ -184,14 +186,14 @@ export const Chips: React.FC<{
           return (
             <button key={o} type="button" aria-pressed={on} onClick={() => onToggle(o)} className="ob-chip-b tap">
               {on && <Check size={13} strokeWidth={2.8} aria-hidden />}
-              {o}
+              {optionLabel(o)}
             </button>
           );
         })}
         {onMore && (
           <button type="button" onClick={(e) => onMore(e.currentTarget)} aria-haspopup="menu" className="ob-chip-b obp-more tap">
             <Plus size={13} strokeWidth={2.6} aria-hidden />
-            More
+            {t("More")}
           </button>
         )}
       </div>
@@ -225,7 +227,7 @@ export const ListRows: React.FC<{
       const Icon = r.icon;
       const inner = (
         <>
-          {i > 0 && <span aria-hidden className="ob-row-rule" style={{ left: Icon ? 55 : 14 }} />}
+          {i > 0 && <span aria-hidden className="ob-row-rule" style={{ insetInlineStart: Icon ? 55 : 14 }} />}
           {Icon && (
             <span aria-hidden className="ob-row-ic">
               <Icon size={15} />
@@ -274,10 +276,10 @@ export const NumBoxes: React.FC<{
         </p>
         <p className="obp-num-l">{n.label}</p>
         <div className="obp-num-btns">
-          <button type="button" aria-label={`Less, ${n.label}`} onClick={n.onLess} disabled={n.lessDisabled} className="hit">
+          <button type="button" aria-label={t("Less, {label}", { label: n.label })} onClick={n.onLess} disabled={n.lessDisabled} className="hit">
             <Minus size={14} strokeWidth={2.6} aria-hidden />
           </button>
-          <button type="button" aria-label={`More, ${n.label}`} onClick={n.onMore} disabled={n.moreDisabled} className="hit">
+          <button type="button" aria-label={t("More, {label}", { label: n.label })} onClick={n.onMore} disabled={n.moreDisabled} className="hit">
             <Plus size={14} strokeWidth={2.6} aria-hidden />
           </button>
         </div>
@@ -330,14 +332,14 @@ export const UploadRow: React.FC<{
   const errId = useId();
   const action =
     state === "done"
-      ? { text: "Uploaded", Icon: Check }
+      ? { text: t("Uploaded"), Icon: Check }
       : state === "busy"
-      ? { text: "Uploading…", Icon: Loader2 }
+      ? { text: t("Uploading…"), Icon: Loader2 }
       : state === "err"
       ? failure === "photo"
-        ? { text: "Retake", Icon: Camera }
-        : { text: "Retry", Icon: RotateCcw }
-      : { text: "Upload", Icon: Upload };
+        ? { text: t("Retake"), Icon: Camera }
+        : { text: t("Retry"), Icon: RotateCcw }
+      : { text: t("Upload"), Icon: Upload };
   return (
     <div className="obp-up">
       <button
@@ -396,7 +398,7 @@ export const SummaryCard: React.FC<{
   onAction?: () => void;
   flag?: string;
   bad?: boolean;
-}> = ({ n, heading, lines, action = "Edit", onAction, flag, bad }) => (
+}> = ({ n, heading, lines, action = tk("Edit"), onAction, flag, bad }) => (
   <div className="obp-sum" data-bad={bad ? "true" : undefined}>
     <div className="obp-sum-head">
       <span aria-hidden className="obp-sum-n">
@@ -404,8 +406,8 @@ export const SummaryCard: React.FC<{
       </span>
       <span className="obp-sum-h">{heading}</span>
       {onAction && (
-        <button type="button" onClick={onAction} aria-label={`${action}: ${heading}`} className="obp-sum-a hit">
-          {action}
+        <button type="button" onClick={onAction} aria-label={`${t(action)}: ${heading}`} className="obp-sum-a hit">
+          {t(action)}
         </button>
       )}
     </div>
@@ -444,11 +446,11 @@ export const ProfilePreview: React.FC<{
         business onboarding's "Change cover". */}
     <div className="obp-prev-cover" style={coverUrl ? { background: "var(--ob-list)" } : undefined}>
       {coverUrl && <img src={coverUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
-      <span className="obp-prev-badge">New on Explore</span>
-      {coverBadge && <span style={{ position: "absolute", left: 10, top: 10 }}>{coverBadge}</span>}
+      <span className="obp-prev-badge">{t("New on Explore")}</span>
+      {coverBadge && <span style={{ position: "absolute", insetInlineStart: 10, top: 10 }}>{coverBadge}</span>}
       {onCover && (
-        <button type="button" onClick={onCover} disabled={coverBusy} className="obp-prev-badge hit" style={{ right: "auto", top: "auto", left: 10, bottom: 10, border: 0, cursor: "pointer", opacity: coverBusy ? 0.6 : 1 }}>
-          {coverBusy ? "Uploading…" : coverUrl ? "Change cover" : "Add a cover"}
+        <button type="button" onClick={onCover} disabled={coverBusy} className="obp-prev-badge hit" style={{ insetInlineEnd: "auto", top: "auto", insetInlineStart: 10, bottom: 10, border: 0, cursor: "pointer", opacity: coverBusy ? 0.6 : 1 }}>
+          {coverBusy ? t("Uploading…") : coverUrl ? t("Change cover") : t("Add a cover")}
         </button>
       )}
     </div>

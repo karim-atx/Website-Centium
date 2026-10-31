@@ -5,6 +5,7 @@ import { range12 } from "../../utils/time12";
 import { DAY_SHORT, startOfWeekISO, weekdayColumn } from "../../utils/week";
 import { localDayOf, shiftDate } from "../../utils/date";
 import type { PublicDetails } from "../../services/business-team/types";
+import { appLocale } from "../../i18n/format";
 
 // v6 Batch 4 · Team. Pure rules for the team page, person page and sheets
 // (OpsTabsV4 logic lines 462-481, 499-545, 605-611), with the sample data
@@ -102,7 +103,7 @@ export const isAccepted = (p: TeamPerson) => !!p.acceptedAt;
 export function shortDay(iso: string, now: Date = new Date()): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", ...(d.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }) });
+  return d.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", ...(d.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }) });
 }
 
 export type InviteState = "pending" | "expired" | "withdrawn" | "unknown";

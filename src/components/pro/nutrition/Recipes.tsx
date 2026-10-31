@@ -11,6 +11,7 @@ import { INK, NO_ICON_SCALE } from "../proInk";
 import { EmptyState } from "../EmptyState";
 import { ProError } from "../states";
 import { NuHead, SearchField, SquareButton } from "./kit";
+import { appLocale } from "../../../i18n/format";
 
 /**
  * Release 3 · NU9 v2 "Recipe library" (source gen r6c.js nuRecipes6): head
@@ -78,13 +79,13 @@ export const Recipes: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       ) : (
         <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10 }}>
           {list.map(({ r, per }) => (
-            <button key={r.id} type="button" onClick={() => setOpen(r.id)} className="tap text-left overflow-hidden" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18 }}>
+            <button key={r.id} type="button" onClick={() => setOpen(r.id)} className="tap text-start overflow-hidden" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18 }}>
               <span className="flex items-center justify-center" style={{ aspectRatio: "4 / 3", background: INK.soft }}>
                 <ChefHat size={26} strokeWidth={1.5} aria-hidden style={{ color: INK.prAccent }} />
               </span>
               <span className="block" style={{ padding: "10px 12px" }}>
                 <span className="block" style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch, lineHeight: 1.3, overflowWrap: "anywhere" }}>{r.title}</span>
-                <span className="block" style={{ fontSize: textPx(11), color: INK.chF, marginTop: 2 }}>{`${Math.round(per.kcal).toLocaleString("en-GB")} kcal · ${Math.round(per.p)} g protein`}</span>
+                <span className="block" style={{ fontSize: textPx(11), color: INK.chF, marginTop: 2 }}>{`${Math.round(per.kcal).toLocaleString(appLocale("en-GB"))} kcal · ${Math.round(per.p)} g protein`}</span>
               </span>
             </button>
           ))}

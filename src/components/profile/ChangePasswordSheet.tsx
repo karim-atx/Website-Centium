@@ -9,7 +9,8 @@ import { useApp } from "../../context/AppContext";
 import { useTurnstile } from "../security/useTurnstile";
 import { useCooldown } from "../security/useCooldown";
 import { SecurityCheck } from "../security/SecurityCheck";
-import { cooldownMessage } from "../../services/auth/cooldown";
+import { formatCountdown } from "../../services/auth/cooldown";
+import { t } from "../../i18n/core";
 import {
   changePassword,
   sendReauthenticationCode,
@@ -26,7 +27,7 @@ import {
 } from "../../utils/password";
 
 const inputClass =
-  "w-full rounded-2xl bg-cream-card border border-charcoal/10 pl-10 pr-11 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10";
+  "w-full rounded-2xl bg-cream-card border border-charcoal/10 ps-10 pe-11 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10";
 
 type Step = "loading" | "google" | "form" | "code" | "done";
 
@@ -120,7 +121,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
       if (verified.status === "error" && verified.rateLimited) cooldown.start();
       if (verified.status !== "ok") {
         setBusy(false);
-        setError(verified.status === "wrong" ? "Your current password isn't right." : verified.message);
+        setError(verified.status === "wrong" ? t("Your current password isn't right.") : t(verified.message));
         return;
       }
     }
@@ -129,7 +130,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
       const sent = await sendReauthenticationCode();
       setBusy(false);
       if (!sent.ok) {
-        setError(sent.message);
+        setError(t(sent.message));
         return;
       }
       setStep("code");
@@ -137,7 +138,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
     }
     if (result.status === "error") {
       setBusy(false);
-      setError(result.message);
+      setError(t(result.message));
       return;
     }
     await finish();
@@ -153,7 +154,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
     if (result.status !== "ok") {
       setBusy(false);
       setCode("");
-      setError(result.status === "code_needed" ? "Enter the code from your email to continue." : result.message);
+      setError(result.status === "code_needed" ? t("Enter the code from your email to continue.") : t(result.message));
       return;
     }
     await finish();
@@ -166,25 +167,27 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
     setError(null);
     const sent = await sendReauthenticationCode();
     setBusy(false);
-    if (sent.ok) setNotice(`We sent a new code to ${email}.`);
-    else setError(sent.message);
+    if (sent.ok) setNotice(t("We sent a new code to {email}.", { email }));
+    else setError(t(sent.message));
   };
 
-  const title = step === "google" || settingFirst ? "Set a password" : "Change password";
+  const title = step === "google" || settingFirst ? t("Set a password") : t("Change password");
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={step === "code" ? "Confirm it's you" : title}>
+    <BottomSheet open={open} onClose={onClose} title={step === "code" ? t("Confirm it's you") : title}>
       <div className="animate-fade-slide-up">
-        {step === "loading" && <p className="text-sm text-charcoal-faint py-6 text-center">Checking your account…</p>}
+        {step === "loading" && <p className="text-sm text-charcoal-faint py-6 text-center">{t("Checking your account…")}</p>}
 
         {step === "google" && (
           <div className="space-y-4 py-1">
             <div className="rounded-2xl bg-cream-card px-4 py-3.5">
-              <p className="text-sm font-semibold text-charcoal">You sign in with Google</p>
+              <p className="text-sm font-semibold text-charcoal">{t("You sign in with Google")}</p>
               {/* Makes no claim about whether a password exists: one set here
                   earlier is invisible on the user object (see hasEmailPassword). */}
               <p className="text-xs text-charcoal-soft mt-1 leading-relaxed">
-                If you'd also like to sign in with {email || "your email"} and a password, you can set one here.
+                {email
+                  ? t("If you'd also like to sign in with {email} and a password, you can set one here.", { email })
+                  : t("If you'd also like to sign in with your email and a password, you can set one here.")}
               </p>
             </div>
             <Button
@@ -195,7 +198,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
                 setStep("form");
               }}
             >
-              Set a password
+              {t("Set a password")}
             </Button>
           </div>
         )}
@@ -214,12 +217,12 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
 
             {!settingFirst && (
               <label className="block relative">
-                <span className="sr-only">Current password</span>
-                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
+                <span className="sr-only">{t("Current password")}</span>
+                <Lock size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
                 <input
                   value={current}
                   onChange={(e) => setCurrent(e.target.value)}
-                  placeholder="Current password"
+                  placeholder={t("Current password")}
                   autoComplete="current-password"
                   autoFocus
                   type={currentVisibility.shown ? "text" : "password"}
@@ -228,8 +231,8 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
                 <button
                   type="button"
                   onClick={currentVisibility.toggle}
-                  className="tap absolute right-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
-                  aria-label={currentVisibility.shown ? "Hide current password" : "Show current password"}
+                  className="tap absolute end-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
+                  aria-label={currentVisibility.shown ? t("Hide current password") : t("Show current password")}
                 >
                   {currentVisibility.shown ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -237,12 +240,12 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
             )}
 
             <label className="block relative">
-              <span className="sr-only">New password</span>
-              <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
+              <span className="sr-only">{t("New password")}</span>
+              <Lock size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
               <input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="New password"
+                placeholder={t("New password")}
                 autoComplete="new-password"
                 autoFocus={settingFirst}
                 type={newVisibility.shown ? "text" : "password"}
@@ -251,21 +254,21 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
               <button
                 type="button"
                 onClick={newVisibility.toggle}
-                className="tap absolute right-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
-                aria-label={newVisibility.shown ? "Hide new password" : "Show new password"}
+                className="tap absolute end-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
+                aria-label={newVisibility.shown ? t("Hide new password") : t("Show new password")}
               >
                 {newVisibility.shown ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </label>
 
             <label className="block relative">
-              <span className="sr-only">Confirm new password</span>
-              <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
+              <span className="sr-only">{t("Confirm new password")}</span>
+              <Lock size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
               <input
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 onBlur={() => setConfirmBlurred(true)}
-                placeholder="Confirm new password"
+                placeholder={t("Confirm new password")}
                 autoComplete="new-password"
                 type={newVisibility.shown ? "text" : "password"}
                 className={inputClass}
@@ -273,15 +276,15 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
             </label>
 
             {mismatch && (
-              <p className="text-[11px] font-semibold text-status-high -mt-1.5 pl-1">Passwords don't match</p>
+              <p className="text-[11px] font-semibold text-status-high -mt-1.5 ps-1">{t("Passwords don't match")}</p>
             )}
 
             {password && (
               <div className="rounded-2xl bg-cream-card px-4 py-3.5">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-charcoal-soft">Password strength</span>
+                  <span className="text-xs font-semibold text-charcoal-soft">{t("Password strength")}</span>
                   <span className="text-xs font-bold" style={{ color: strengthColor }}>
-                    {strengthLabel}
+                    {t(strengthLabel)}
                   </span>
                 </div>
                 <div className="h-1.5 rounded-full bg-cream-soft overflow-hidden mb-3">
@@ -296,7 +299,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
                     return (
                       <div key={c.label} className="flex items-center gap-1.5 text-[11px]">
                         {ok ? <Check size={11} className="text-primary-dark" /> : <X size={11} className="text-charcoal-faint" />}
-                        <span className={ok ? "text-charcoal-soft" : "text-charcoal-faint"}>{c.label}</span>
+                        <span className={ok ? "text-charcoal-soft" : "text-charcoal-faint"}>{t(c.label)}</span>
                       </div>
                     );
                   })}
@@ -308,12 +311,12 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
 
             {(cooldown.active || error) && (
               <p className="text-xs font-semibold text-status-high text-center" role="alert">
-                {cooldown.active ? cooldownMessage(cooldown.left) : error}
+                {cooldown.active ? t("Too many attempts. Try again in {time}.", { time: formatCountdown(cooldown.left) }) : error}
               </p>
             )}
 
             <Button type="submit" fullWidth size="lg" disabled={!canSubmit}>
-              {busy ? "Saving…" : settingFirst ? "Set password" : "Change password"}
+              {busy ? t("Saving…") : settingFirst ? t("Set password") : t("Change password")}
             </Button>
           </form>
         )}
@@ -330,7 +333,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
             <div className="flex items-start gap-2.5 rounded-2xl bg-primary-pale px-4 py-3.5">
               <Mail size={16} className="shrink-0 mt-0.5 text-primary-dark" />
               <p className="text-sm text-primary-dark leading-relaxed">
-                For your security, we emailed a 6-digit code to {email}. Enter it to finish changing your password.
+                {t("For your security, we emailed a 6-digit code to {email}. Enter it to finish changing your password.", { email })}
               </p>
             </div>
             {/* Six boxes (Foundations 2.5), as on every code screen. */}
@@ -343,7 +346,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
               error={!!error}
               disabled={busy}
               autoFocus
-              label="Six-digit code from your email"
+              label={t("Six-digit code from your email")}
             />
             {notice && <p className="text-xs text-charcoal-soft text-center">{notice}</p>}
             {error && (
@@ -352,7 +355,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
               </p>
             )}
             <Button type="submit" fullWidth size="lg" disabled={busy || code.length !== 6}>
-              {busy ? "Checking…" : "Confirm"}
+              {busy ? t("Checking…") : t("Confirm")}
             </Button>
             <button
               type="button"
@@ -360,7 +363,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
               disabled={busy}
               className="tap w-full text-center text-xs font-semibold text-charcoal-soft disabled:opacity-40"
             >
-              Send a new code
+              {t("Send a new code")}
             </button>
           </form>
         )}
@@ -371,12 +374,12 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
               <Check size={16} className="shrink-0 mt-0.5 text-primary-dark" />
               <p className="text-sm text-primary-dark leading-relaxed">
                 {settingFirst
-                  ? `Password set. You can now also sign in with ${email} and this password.`
-                  : "Password changed. You're still signed in here, and other devices will be asked to sign in again."}
+                  ? t("Password set. You can now also sign in with {email} and this password.", { email })
+                  : t("Password changed. You're still signed in here, and other devices will be asked to sign in again.")}
               </p>
             </div>
             <Button fullWidth size="lg" onClick={onClose} autoFocus>
-              Done
+              {t("Done")}
             </Button>
           </div>
         )}

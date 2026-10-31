@@ -17,7 +17,7 @@ import { ownerInitials } from "../../../services/offers";
 export const BackRow: React.FC<{ onBack: () => void; title?: string; eyebrow?: string; trailing?: React.ReactNode }> = ({ onBack, title, eyebrow, trailing }) => {
   const m = marketPalette(useIsDark());
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: -7, lineHeight: "normal" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginInlineStart: -7, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
       <button
         type="button"
@@ -36,7 +36,7 @@ export const BackRow: React.FC<{ onBack: () => void; title?: string; eyebrow?: s
           {eyebrow}
         </div>
       ) : null}
-      {trailing ? <span style={{ marginLeft: "auto" }}>{trailing}</span> : null}
+      {trailing ? <span style={{ marginInlineStart: "auto" }}>{trailing}</span> : null}
     </div>
   );
 };

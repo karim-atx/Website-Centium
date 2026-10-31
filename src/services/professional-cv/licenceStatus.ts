@@ -1,3 +1,4 @@
+import { tk } from "../../i18n/core";
 // A licence's review status, as its owner sees it.
 //
 // THE SAME RULE AS licence_is_verified() IN THE DATABASE, applied to the rows
@@ -38,7 +39,7 @@ export function licenceStatus(
     (a, b) => b.submittedAt.localeCompare(a.submittedAt) || b.id.localeCompare(a.id)
   )[0];
   if (latest?.rejectedAt) {
-    return { kind: "rejected", reason: latest.rejectionReason?.trim() || "Not approved." };
+    return { kind: "rejected", reason: latest.rejectionReason?.trim() || tk("Not approved.") };
   }
   // A document with no review row yet is still waiting for one: the row is
   // opened by a trigger on the same write, so this is only ever momentary.

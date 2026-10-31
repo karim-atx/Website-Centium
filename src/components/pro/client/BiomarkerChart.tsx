@@ -94,7 +94,8 @@ export const BiomarkerChart: React.FC<{
 
       <div className="relative" style={{ paddingTop: sel ? 44 : 0 }}>
         {sel && (
-          <div className="absolute" style={{ right: 0, top: 0, borderRadius: 12, background: dark ? "#F5F3FA" : "#241F1B", color: dark ? "#121317" : "#FFFFFF", padding: "6px 10px", whiteSpace: "nowrap" }}>
+          // Round F (F10): pinned at the inline end, over the latest tests (the chart runs from right to left in Arabic).
+          <div className="absolute" style={{ insetInlineEnd: 0, top: 0, borderRadius: 12, background: dark ? "#F5F3FA" : "#241F1B", color: dark ? "#121317" : "#FFFFFF", padding: "6px 10px", whiteSpace: "nowrap" }}>
             <p className="flex items-center" style={{ gap: 4, fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.7 }}>
               <Pin size={10} strokeWidth={2.4} aria-hidden />
               {fmtDay(sel.date, true)}

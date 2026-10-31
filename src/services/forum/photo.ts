@@ -1,4 +1,5 @@
 import { jpegCarriesMetadata, stripEncoderSegments } from "./photoBytes";
+import { tk } from "../../i18n/core";
 
 // Preparing a forum photo: every byte of metadata removed, or no photo at all.
 //
@@ -33,14 +34,14 @@ export const FORUM_PHOTO_ACCEPT = ACCEPTED.join(",");
 
 export type PreparedPhoto = { ok: true; file: File } | { ok: false; message: string };
 
-export const PHOTO_NOT_PREPARED =
-  "This photo couldn't be prepared safely, so it wasn't added. Try a different photo.";
+export const PHOTO_NOT_PREPARED: string =
+  tk("This photo couldn't be prepared safely, so it wasn't added. Try a different photo.");
 
 /** Formats a phone may hand over that the browser itself may still be able to decode. */
 const MAYBE_DECODABLE = ["image/heic", "image/heif", ""];
 
-export const PHOTO_FORMAT_UNSUPPORTED =
-  "This photo's format isn't supported here. Choose a JPEG, PNG or WebP photo.";
+export const PHOTO_FORMAT_UNSUPPORTED: string =
+  tk("This photo's format isn't supported here. Choose a JPEG, PNG or WebP photo.");
 
 type Drawable = { source: CanvasImageSource; width: number; height: number; done: () => void };
 
@@ -87,7 +88,7 @@ export async function prepareForumPhoto(file: File): Promise<PreparedPhoto> {
   // Android browsers do for camera shots). Those are tried, not refused:
   // whether this browser can decode them is the real question.
   if (!ACCEPTED.includes(file.type) && !MAYBE_DECODABLE.includes(file.type)) {
-    return refuse("type", "Choose a JPEG, PNG or WebP photo.");
+    return refuse("type", tk("Choose a JPEG, PNG or WebP photo."));
   }
   let picture: Drawable;
   try {
@@ -120,7 +121,7 @@ export async function prepareForumPhoto(file: File): Promise<PreparedPhoto> {
     if (!bytes) return refuse("encode-shape");
     if (jpegCarriesMetadata(bytes)) return refuse("metadata");
     if (bytes.length > FORUM_PHOTO_MAX_BYTES) {
-      return { ok: false, message: "This photo is too large. Choose one under 5 MB." };
+      return { ok: false, message: tk("This photo is too large. Choose one under 5 MB.") };
     }
     return { ok: true, file: new File([bytes as BlobPart], "photo.jpg", { type: "image/jpeg" }) };
   } catch {

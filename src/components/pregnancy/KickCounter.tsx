@@ -10,6 +10,7 @@ import {
   type KickSession,
 } from "../../services/pregnancy";
 import * as G from "../../services/pregnancy/guidance";
+import { appLocale } from "../../i18n/format";
 
 // Counting movements.
 //
@@ -150,12 +151,12 @@ export const KickCounter: React.FC<{ pregnancyId: string }> = ({ pregnancyId }) 
             return (
               <div key={s.id} className="flex items-center justify-between text-[11px]">
                 <span className="text-charcoal-soft">
-                  {new Date(s.startedAt).toLocaleDateString("en-US", {
+                  {new Date(s.startedAt).toLocaleDateString(appLocale("en-US"), {
                     month: "short",
                     day: "numeric",
                   })}
                   {" · "}
-                  {new Date(s.startedAt).toLocaleTimeString("en-US", {
+                  {new Date(s.startedAt).toLocaleTimeString(appLocale("en-US"), {
                     hour: "numeric",
                     minute: "2-digit",
                   })}

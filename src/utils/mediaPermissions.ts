@@ -33,6 +33,8 @@
  * same reason useVoiceRecorder releases so carefully.
  */
 
+import { t } from "../i18n/core";
+
 export type MediaKind = "camera" | "microphone";
 
 export type MediaDenialKind =
@@ -52,7 +54,25 @@ export interface MediaDenial {
 
 export type MediaCheck = { ok: true } | { ok: false; denial: MediaDenial };
 
-const NOUN: Record<MediaKind, string> = { camera: "camera", microphone: "microphone" };
+// One whole sentence per device (Round F): the device word changes the
+// sentence around it in Arabic, so it is never slotted into one sentence.
+// Called when a request fails, so in the chosen language.
+const SAY: Record<MediaKind, Record<"denied" | "no-device" | "in-use" | "unsupported-constraints" | "failed", () => string>> = {
+  camera: {
+    denied: () => t("Access to your camera is blocked. Allow it in your browser settings."),
+    "no-device": () => t("No camera found on this device."),
+    "in-use": () => t("Another app is using your camera. Close it and try again."),
+    "unsupported-constraints": () => t("Your camera doesn't support what this call needs."),
+    failed: () => t("Couldn't start your camera."),
+  },
+  microphone: {
+    denied: () => t("Access to your microphone is blocked. Allow it in your browser settings."),
+    "no-device": () => t("No microphone found on this device."),
+    "in-use": () => t("Another app is using your microphone. Close it and try again."),
+    "unsupported-constraints": () => t("Your microphone doesn't support what this call needs."),
+    failed: () => t("Couldn't start your microphone."),
+  },
+};
 
 /**
  * Turns a getUserMedia rejection into a sentence naming the right device.
@@ -64,37 +84,25 @@ const NOUN: Record<MediaKind, string> = { camera: "camera", microphone: "microph
  */
 export function describeMediaDenial(err: unknown, device: MediaKind): MediaDenial {
   const name = (err as { name?: string })?.name ?? "";
-  const noun = NOUN[device];
+  const say = SAY[device];
 
   switch (name) {
     case "NotAllowedError":
     case "SecurityError":
-      return {
-        kind: "denied",
-        device,
-        message: `Access to your ${noun} is blocked. Allow it in your browser settings.`,
-      };
+      return { kind: "denied", device, message: say.denied() };
     case "NotFoundError":
     case "DevicesNotFoundError":
-      return { kind: "no-device", device, message: `No ${noun} found on this device.` };
+      return { kind: "no-device", device, message: say["no-device"]() };
     case "NotReadableError":
     case "TrackStartError":
       // Deliberately does NOT say "try again": retrying changes nothing while
       // another program holds the device.
-      return {
-        kind: "in-use",
-        device,
-        message: `Another app is using your ${noun}. Close it and try again.`,
-      };
+      return { kind: "in-use", device, message: say["in-use"]() };
     case "OverconstrainedError":
     case "ConstraintNotSatisfiedError":
-      return {
-        kind: "unsupported-constraints",
-        device,
-        message: `Your ${noun} doesn't support what this call needs.`,
-      };
+      return { kind: "unsupported-constraints", device, message: say["unsupported-constraints"]() };
     default:
-      return { kind: "failed", device, message: `Couldn't start your ${noun}.` };
+      return { kind: "failed", device, message: say.failed() };
   }
 }
 
@@ -116,7 +124,7 @@ async function probe(device: MediaKind): Promise<MediaCheck> {
       denial: {
         kind: "unsupported",
         device,
-        message: "This browser can't access your camera or microphone.",
+        message: t("This browser can't access your camera or microphone."),
       },
     };
   }
@@ -183,6 +191,6 @@ export async function checkCallMedia(kind: "video" | "voice"): Promise<CallMedia
     audio,
     video,
     degradedToVoice: true,
-    message: `${video.denial.message} Starting as a voice call.`,
+    message: t("{reason} Starting as a voice call.", { reason: video.denial.message }),
   };
 }

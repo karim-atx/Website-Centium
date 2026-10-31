@@ -5,7 +5,7 @@
 
 import React from "react";
 
-export const ChapterMark: React.FC<{ n: string; t: string; size: string }> = ({ n, t, size }) => (
+export const ChapterMark: React.FC<{ n: string; t: string; size: string }> = ({ n, t: title, size }) => (
   <div
     data-chm={n}
     style={{ display: "flex", alignItems: "baseline", gap: ".42em", justifyContent: "inherit", fontSize: size, fontWeight: "700", lineHeight: "1.25", letterSpacing: ".005em" }}
@@ -16,7 +16,7 @@ export const ChapterMark: React.FC<{ n: string; t: string; size: string }> = ({ 
       </span>
     </span>
     <span data-cht="" style={{ color: "#7A7168", opacity: "0" }}>
-      · {t}
+      · {title}
     </span>
   </div>
 );

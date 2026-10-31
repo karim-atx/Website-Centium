@@ -16,7 +16,7 @@ export const BackTitle: React.FC<{ title: string; parent: string; children?: Rea
   const m = marketPalette(useIsDark());
   const back = useBack(parent);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: -7, lineHeight: "normal" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginInlineStart: -7, lineHeight: "normal" }}>
       <button
         type="button"
         onClick={back}

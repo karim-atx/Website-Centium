@@ -30,7 +30,7 @@ export const FieldLabel: React.FC<{ children: React.ReactNode; htmlFor?: string;
     htmlFor={htmlFor}
     id={id}
     className="block text-charcoal-faint"
-    style={{ margin: "0 0 6px 2px", fontSize: textPx(12), lineHeight: "16px", fontWeight: 600, ...style }}
+    style={{ marginBlock: "0 6px", marginInline: "2px 0", fontSize: textPx(12), lineHeight: "16px", fontWeight: 600, ...style }}
   >
     {children}
   </label>
@@ -54,7 +54,7 @@ export const WhenField: React.FC<{ value: string; onClick: () => void; ariaLabel
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
-      className="tap w-full flex items-center bg-cream-soft text-left"
+      className="tap w-full flex items-center bg-cream-soft text-start"
       style={{ minHeight: 44, borderRadius: 12, padding: "0 12px", gap: 8, border: `0.5px solid ${hairAt(dark, 0.1)}`, ...style }}
     >
       {icon ?? <CalendarDays size={15} className="shrink-0 text-charcoal-faint" aria-hidden />}

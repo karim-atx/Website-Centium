@@ -11,6 +11,7 @@ import { planLabel } from "../../../services/subscription-tiers/pricing";
 import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../../services/subscription-tiers/upgrade";
 import { freePeriodBlocksConnecting } from "../../../services/subscription-tiers/freePeriodCopy";
 import { FreePeriodEnded, FreePeriodNotice } from "../../professionals/FreePeriodNotice";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · HO1 "Client code" row (FINAL_PLAN Q-B1 and 2.4: client codes
@@ -78,7 +79,7 @@ export const ClientCodeSheet: React.FC<{ open: boolean; onClose: () => void; onB
             {capLabel(capReached, professionalClients.length)}. Disconnect a client to free a place, or ask us to move you to a bigger plan.
           </p>
           <a href={upgradeMailto()} className="tap w-full flex items-center justify-center rounded-2xl bg-primary-fill text-on-primary-fill text-sm font-semibold h-12 mb-2.5">
-            {UPGRADE_ACTION_LABEL}
+            {t(UPGRADE_ACTION_LABEL)}
           </a>
           <button
             type="button"

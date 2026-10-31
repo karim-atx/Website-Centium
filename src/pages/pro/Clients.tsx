@@ -45,6 +45,7 @@ import { declineRequestWithReason, DECLINE_REASONS, type DeclineReason, type Rec
 import { acceptHireRequest, rejectHireRequest } from "../../services/hire-inbox";
 import { fetchThreads, startThread } from "../../services/messaging";
 import type { ProfessionalClient } from "../../types";
+import { appLocale } from "../../i18n/format";
 
 /**
  * Release 3 · CL3 v6 Clients (Patients for Clinical overview), source
@@ -123,7 +124,7 @@ function planLine(p: ClientPlan | undefined): string | null {
 
 function nextLabel(s: RangeSession | undefined, today: string): string | null {
   if (!s) return null;
-  const day = s.date === today ? "Today" : s.date === shiftIso(today, 1) ? "Tomorrow" : new Date(`${s.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const day = s.date === today ? "Today" : s.date === shiftIso(today, 1) ? "Tomorrow" : new Date(`${s.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
   return `${day} ${time12(s.startTime)}${s.location ? `, ${s.location}` : s.url ? ", online" : ""}`;
 }
 
@@ -452,7 +453,7 @@ export default function Clients() {
     <>
       <h1 style={{ marginBottom: 13, fontSize: textPx(19), lineHeight: 1.5, fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch }}>{patients ? "Patients" : "Clients"}</h1>
       <div className="flex" style={{ gap: 8, marginBottom: 12 }}>
-        <label className="flex-1 min-w-0 flex items-center" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${query ? INK.pr : INK.b10}`, padding: "0 4px 0 12px", gap: 8 }}>
+        <label className="flex-1 min-w-0 flex items-center" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${query ? INK.pr : INK.b10}`, paddingBlock: "0", paddingInline: "12px 4px", gap: 8 }}>
           <Search size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
           <input
             type="search"
@@ -634,7 +635,7 @@ export default function Clients() {
       {selecting && (
         <div
           className="fixed flex"
-          style={{ left: "max(16px, calc(50% - 199px))", right: "max(16px, calc(50% - 199px))", bottom: 92, zIndex: 30, gap: 6, padding: 6, borderRadius: 18, background: INK.card, boxShadow: "0 10px 40px rgba(36,31,27,0.18)" }}
+          style={{ insetInlineStart: "max(16px, calc(50% - 199px))", insetInlineEnd: "max(16px, calc(50% - 199px))", bottom: 92, zIndex: 30, gap: 6, padding: 6, borderRadius: 18, background: INK.card, boxShadow: "0 10px 40px rgba(36,31,27,0.18)" }}
         >
           <CtaButton
             className="flex-1"
@@ -780,7 +781,7 @@ export default function Clients() {
   );
 
   function rowLine(e: ClientEntry): string {
-    if (e.status === "onboarding" && !e.plan) return `Joined ${new Date(e.joinedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+    if (e.status === "onboarding" && !e.plan) return `Joined ${new Date(e.joinedAt).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" })}`;
     const parts = [planLine(e.plan)];
     const ago = agoLabel(e.numbers?.flags?.lastActivityAt ?? null);
     if (ago) parts.push(`active ${ago}`);
@@ -803,7 +804,7 @@ const SquareButton: React.FC<{ icon: typeof UserPlus; label: string; onClick: ()
       <span
         aria-hidden
         className="absolute flex items-center justify-center"
-        style={{ top: -5, right: -5, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: INK.fill, color: INK.onFill, fontSize: 9.5, fontWeight: 800 }}
+        style={{ top: -5, insetInlineEnd: -5, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: INK.fill, color: INK.onFill, fontSize: 9.5, fontWeight: 800 }}
       >
         {count}
       </span>
@@ -891,7 +892,7 @@ const ClientPreview: React.FC<{
         role="dialog"
         aria-label={`Preview of ${entry.name}`}
         className="absolute"
-        style={{ left: "max(16px, calc(50% - 199px))", right: "max(16px, calc(50% - 199px))", top: 190, background: INK.card, borderRadius: 20, boxShadow: "0 10px 40px rgba(36,31,27,0.18)", padding: 16 }}
+        style={{ insetInlineStart: "max(16px, calc(50% - 199px))", insetInlineEnd: "max(16px, calc(50% - 199px))", top: 190, background: INK.card, borderRadius: 20, boxShadow: "0 10px 40px rgba(36,31,27,0.18)", padding: 16 }}
       >
         <div className="flex items-center" style={{ gap: 12 }}>
           <Avatar name={entry.name} url={entry.rel.avatarUrl} size={44} tone={entry.status === "onboarding" ? "sky" : att ? "gold" : "pr"} />
@@ -907,7 +908,7 @@ const ClientPreview: React.FC<{
             aria-haspopup="menu"
             onClick={() => menuRef.current && onMenu(menuRef.current)}
             className="tap flex items-center justify-center shrink-0"
-            style={{ width: 36, height: 44, marginRight: -8 }}
+            style={{ width: 36, height: 44, marginInlineEnd: -8 }}
           >
             <MoreVertical size={16} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
           </button>

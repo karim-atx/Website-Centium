@@ -155,7 +155,7 @@ export const ResultFormSheet: React.FC<{
         {markerFixed ? (
           <p style={{ ...fieldStyle(dark, hc, 600), display: "flex", alignItems: "center" }}>{draft.name}</p>
         ) : (
-          <button type="button" onClick={() => setPickerOpen(true)} className="tap flex items-center justify-between text-left" style={{ ...fieldStyle(dark, hc, 600), color: draft.name ? INK : INK_FAINT }}>
+          <button type="button" onClick={() => setPickerOpen(true)} className="tap flex items-center justify-between text-start" style={{ ...fieldStyle(dark, hc, 600), color: draft.name ? INK : INK_FAINT }}>
             {draft.name || "Choose a marker"}
             <ChevronDown size={16} style={{ color: INK_FAINT }} aria-hidden />
           </button>
@@ -212,7 +212,7 @@ export const ResultFormSheet: React.FC<{
         </HelpLine>
         {draft.low && draft.high && Number(draft.low) > Number(draft.high) && <HelpLine error>The low end is higher than the high end.</HelpLine>}
         <FieldLabel style={{ marginTop: 16 }}>Date</FieldLabel>
-        <button type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-left" style={{ ...fieldStyle(dark, hc), gap: 8 }}>
+        <button type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-start" style={{ ...fieldStyle(dark, hc), gap: 8 }}>
           <CalendarDays size={15} style={{ color: INK_FAINT }} aria-hidden />
           {fmtDate(date)}
         </button>

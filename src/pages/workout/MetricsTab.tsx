@@ -41,6 +41,7 @@ import { useClientShare } from "../../components/share/client/useClientShare";
 import { ShareEntryButton } from "../../components/share/client/ShareEntryButton";
 import { prCard } from "../../components/share/client/clientCardModel";
 import { isNewPr, prFacts } from "../../components/share/client/clientShareData";
+import { appLocale } from "../../i18n/format";
 
 // Handover 2026-09-29 WO4.1: the volume hero (per workout or per week, with
 // the scrubbed point's stats), One-rep maxes (the six highest; All opens
@@ -353,7 +354,7 @@ export default function MetricsTab() {
           // Decision 10: all six stats fit without scrolling, as two rows of
           // three (one row needed 392px, more than the card at 360-430).
           <div className="grid grid-cols-3" style={{ columnGap: 12, rowGap: 10, padding: "12px 16px" }}>
-            <HeroFigure value={stats ? stats.volumeKg.toLocaleString() : null} unit="kg" label="Volume" accent />
+            <HeroFigure value={stats ? stats.volumeKg.toLocaleString(appLocale()) : null} unit="kg" label="Volume" accent />
             <HeroFigure value={stats?.oneRmKg != null ? kgWhole(stats.oneRmKg) : null} unit="kg" label="1RM" />
             <HeroFigure value={stats?.maxWeightKg ?? null} unit="kg" label="Max weight" />
             <HeroFigure value={stats ? stats.sets : null} label="Sets" />
@@ -388,15 +389,15 @@ export default function MetricsTab() {
               <span key={lift.key} className="relative min-w-0 flex">
               <button
                 onClick={() => setLiftDetail(lift)}
-                className="tap text-left min-w-0 flex-1"
+                className="tap text-start min-w-0 flex-1"
                 style={{ background: c("tealTile"), borderRadius: 10, padding: "8px 9px", minHeight: 55, boxShadow: fresh ? `0 0 0 1.5px ${dark ? "#A991FE" : "#AEA1DC"}` : undefined }}
               >
-                <span className="block truncate" style={{ color: c("teal"), fontSize: textPx(11), fontWeight: 500, paddingRight: fresh ? 26 : 0 }}>
+                <span className="block truncate" style={{ color: c("teal"), fontSize: textPx(11), fontWeight: 500, paddingInlineEnd: fresh ? 26 : 0 }}>
                   {lift.name}
                 </span>
                 <span className="block" style={{ color: c("teal"), fontSize: textPx(15), fontWeight: 800, marginTop: 2 }}>
                   {kgWhole(lift.oneRm)}
-                  <span style={{ color: c("tealUnit"), fontSize: textPx(10), fontWeight: 600, marginLeft: 2 }}>kg</span>
+                  <span style={{ color: c("tealUnit"), fontSize: textPx(10), fontWeight: 600, marginInlineStart: 2 }}>kg</span>
                 </span>
               </button>
               {fresh && (
@@ -405,7 +406,7 @@ export default function MetricsTab() {
                   ring={false}
                   label={`Share your ${lift.name} personal best`}
                   onPress={() => share.open(prCard(prFacts(lift, today)))}
-                  style={{ position: "absolute", right: 0, top: 0 }}
+                  style={{ position: "absolute", insetInlineEnd: 0, top: 0 }}
                 />
               )}
               </span>
@@ -472,7 +473,7 @@ export default function MetricsTab() {
           ) : (
             <span style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(20), fontWeight: 800 }}>
               {frequency.perWeek}
-              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11), fontWeight: 500, marginLeft: 3 }}>/ week</span>
+              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11), fontWeight: 500, marginInlineStart: 3 }}>/ week</span>
             </span>
           )
         }
@@ -545,13 +546,13 @@ export default function MetricsTab() {
                     key={site.type}
                     onClick={() => setHistoryType(site.type)}
                     aria-label={`${site.label} history`}
-                    className="tap text-left min-w-0"
+                    className="tap text-start min-w-0"
                     style={{ background: c("tealTile"), borderRadius: 10, padding: "9px 10px" }}
                   >
                     <span className="flex items-start justify-between" style={{ gap: 4 }}>
                       <span style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(16), fontWeight: 800, whiteSpace: "nowrap" }}>
                         {latest.value}
-                        <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10), fontWeight: 500, marginLeft: 2 }}>{unit}</span>
+                        <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10), fontWeight: 500, marginInlineStart: 2 }}>{unit}</span>
                       </span>
                       {/* The trend, where there is one to draw. Two points is
                           the minimum that says anything. */}
@@ -688,7 +689,7 @@ const HERO_GEOMETRY: TrendGeometry = {
 };
 
 const shortDay = (day: string) =>
-  new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  new Date(`${day}T00:00:00Z`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", timeZone: "UTC" });
 
 /** One figure in the hero's band: "—" when the point has none. */
 function HeroFigure({ value, unit, label, accent }: { value: React.ReactNode; unit?: string; label: string; accent?: boolean }) {
@@ -700,7 +701,7 @@ function HeroFigure({ value, unit, label, accent }: { value: React.ReactNode; un
     <div className="min-w-0">
       <p style={{ color: ink, fontSize: textPx(17), fontWeight: 800, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
         {value ?? "–"}
-        {value != null && unit && <span style={{ fontSize: textPx(11), fontWeight: 600, marginLeft: 2 }}>{unit}</span>}
+        {value != null && unit && <span style={{ fontSize: textPx(11), fontWeight: 600, marginInlineStart: 2 }}>{unit}</span>}
       </p>
       <p style={{ color: accent ? accentInk : "var(--hero-label)", fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.08em", marginTop: 2 }}>
         {label.toUpperCase()}

@@ -166,7 +166,7 @@ export function SaveError({ children, style }: { children: React.ReactNode; styl
 export function BackHeader({ eyebrow, title, onBack, backLabel, aside }: { eyebrow: string; title: string; onBack: () => void; backLabel: string; aside?: React.ReactNode }) {
   const m = useMarketColors();
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "-4px 0 12px -10px", color: m.ink }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBlock: "-4px 12px", marginInline: "-10px 0", color: m.ink }}>
       <button type="button" onClick={onBack} aria-label={backLabel} className="tap market-focus" style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", color: m.ink, background: "transparent", border: 0, flexShrink: 0, cursor: "pointer" }}>
         <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
       </button>
@@ -419,7 +419,7 @@ export function useStrip(): [React.ReactNode, (text: string, tone?: StripTone, a
   }, [s]);
   const node = s
     ? createPortal(
-        <div className="fixed left-0 right-0 flex justify-center" style={{ zIndex: 95, top: "calc(env(safe-area-inset-top) + 12px)", padding: "0 16px", pointerEvents: "none" }}>
+        <div className="fixed start-0 end-0 flex justify-center" style={{ zIndex: 95, top: "calc(env(safe-area-inset-top) + 12px)", padding: "0 16px", pointerEvents: "none" }}>
           <div style={{ width: "100%", maxWidth: 398, pointerEvents: "auto" }} data-strip>
             <ConfirmationStrip
               key={s.n}
@@ -461,7 +461,7 @@ export function StrengthCard({ items, emptyLine, highlight, onItem }: { items: S
         aria-label={`Listing strength, ${done} of ${total} done`}
         onClick={() => setOpen((o) => !o)}
         className="market-focus"
-        style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", width: "100%", background: "transparent", border: 0, textAlign: "left", color: m.ink, cursor: "pointer", fontFamily: "inherit" }}
+        style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", width: "100%", background: "transparent", border: 0, textAlign: "start", color: m.ink, cursor: "pointer", fontFamily: "inherit" }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
@@ -496,11 +496,11 @@ export function StrengthCard({ items, emptyLine, highlight, onItem }: { items: S
                 padding: "8px 16px",
                 width: "100%",
                 borderTop: i ? `1px solid ${m.div}` : "none",
-                borderLeft: 0,
-                borderRight: 0,
+                borderInlineStart: 0,
+                borderInlineEnd: 0,
                 borderBottom: 0,
                 background: highlight === x.key ? m.goodbg : "transparent",
-                textAlign: "left",
+                textAlign: "start",
                 color: m.ink,
                 cursor: "pointer",
                 fontFamily: "inherit",
@@ -538,7 +538,7 @@ export function StrengthCard({ items, emptyLine, highlight, onItem }: { items: S
               onClick={() => setAll((a) => !a)}
               aria-expanded={all}
               className="market-focus"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, minHeight: 44, width: "100%", borderTop: `1px solid ${m.div}`, borderLeft: 0, borderRight: 0, borderBottom: 0, background: "transparent", fontSize: px(12.5), fontWeight: 800, color: m.pdark, cursor: "pointer", fontFamily: "inherit" }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, minHeight: 44, width: "100%", borderTop: `1px solid ${m.div}`, borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0, background: "transparent", fontSize: px(12.5), fontWeight: 800, color: m.pdark, cursor: "pointer", fontFamily: "inherit" }}
             >
               {all ? "Show less" : `Show all ${total}`}
               {all ? <ChevronUp size={14} strokeWidth={2.4} aria-hidden /> : <ChevronDown size={14} strokeWidth={2.4} aria-hidden />}
@@ -649,7 +649,7 @@ export function YourCard({
   const m = useMarketColors();
   return (
     <Card style={{ overflow: "hidden" }} data-yourcard>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 12px 0 16px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBlock: "12px 0", paddingInline: "16px 12px" }}>
         <CapsLabel as="p">Your card</CapsLabel>
         <TextLink onClick={onPreview}>
           <Eye size={14} strokeWidth={2.2} aria-hidden />
@@ -680,7 +680,7 @@ export function PhotosCard({ photos, line, onOpen }: { photos: string[]; line: s
     <Card style={{ padding: "14px 16px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <p style={{ fontSize: px(14), fontWeight: 700, color: m.ink, lineHeight: "normal" }}>Photos</p>
-        <TextLink onClick={onOpen} style={{ gap: 2, marginRight: -4 }}>
+        <TextLink onClick={onOpen} style={{ gap: 2, marginInlineEnd: -4 }}>
           {photos.length ? "Manage" : "Add photos"}
           <ChevronRight size={14} aria-hidden />
         </TextLink>
@@ -691,7 +691,7 @@ export function PhotosCard({ photos, line, onOpen }: { photos: string[]; line: s
             <span key={i} style={{ position: "relative", aspectRatio: "4 / 3", borderRadius: 12, overflow: "hidden", background: m.soft }}>
               {/* A teammate's photo waiting for approval has no public file yet: the tile stays empty. */}
               <img key={photos[i]} src={photos[i]} alt="" onError={(e) => (e.currentTarget.style.visibility = "hidden")} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              {i === 0 && <span style={{ position: "absolute", left: 4, top: 4, fontSize: px(9), fontWeight: 800, background: m.card, color: m.ink, borderRadius: 999, padding: "1px 5px" }}>Cover</span>}
+              {i === 0 && <span style={{ position: "absolute", insetInlineStart: 4, top: 4, fontSize: px(9), fontWeight: 800, background: m.card, color: m.ink, borderRadius: 999, padding: "1px 5px" }}>Cover</span>}
             </span>
           ) : (
             <button
@@ -803,7 +803,7 @@ export function CategoriesCard({
               flexWrap: "wrap",
               background: m.sgrey,
               cursor: canEdit ? "pointer" : "default",
-              textAlign: "left",
+              textAlign: "start",
               fontFamily: "inherit",
               opacity: canEdit ? 1 : 0.6,
             }}
@@ -813,7 +813,7 @@ export function CategoriesCard({
                 {t}
               </span>
             ))}
-            <span style={{ marginLeft: "auto", display: "flex", color: m.faint }}>
+            <span style={{ marginInlineStart: "auto", display: "flex", color: m.faint }}>
               <ChevronDown size={16} strokeWidth={2.4} aria-hidden />
             </span>
           </button>
@@ -824,8 +824,8 @@ export function CategoriesCard({
               aria-label={title}
               style={{
                 position: "absolute",
-                left: 0,
-                right: 0,
+                insetInlineStart: 0,
+                insetInlineEnd: 0,
                 ...(up ? { bottom: 56 } : { top: 62 }),
                 zIndex: 5,
                 background: m.card,
@@ -835,7 +835,7 @@ export function CategoriesCard({
                 padding: 8,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "0 0 2px 4px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBlock: "0 2px", marginInline: "4px 0" }}>
                 <CapsLabel as="p">{`${title} · ${draft.length} chosen`}</CapsLabel>
                 <button type="button" aria-label="Close" onClick={() => setOpen(false)} className="tap market-focus" style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", color: m.faint, background: "transparent", border: 0 }}>
                   <X size={16} strokeWidth={2.4} aria-hidden />
@@ -865,7 +865,7 @@ export function CategoriesCard({
                       minHeight: 44,
                       boxSizing: "border-box",
                       width: "100%",
-                      textAlign: "left",
+                      textAlign: "start",
                       color: m.ink,
                       opacity: blocked ? 0.45 : 1,
                       cursor: blocked ? "not-allowed" : "pointer",
@@ -907,7 +907,7 @@ export function RatingCard({ average, count, onOpen }: { average: number | null;
       onClick={onOpen}
       aria-label={few ? "No reviews yet" : `Rated ${average.toFixed(1)} from ${count} reviews`}
       className="market-focus"
-      style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, width: "100%", borderRadius: 24, background: m.card, border: `1px solid ${m.border}`, textAlign: "left", color: m.ink, cursor: "pointer", fontFamily: "inherit", lineHeight: "normal", boxSizing: "border-box" }}
+      style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, width: "100%", borderRadius: 24, background: m.card, border: `1px solid ${m.border}`, textAlign: "start", color: m.ink, cursor: "pointer", fontFamily: "inherit", lineHeight: "normal", boxSizing: "border-box" }}
     >
       {few ? (
         <span style={{ flex: 1, fontSize: px(14), fontWeight: 700 }}>No reviews yet</span>

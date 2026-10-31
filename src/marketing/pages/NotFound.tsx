@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useSEO } from "../useSEO";
+import { getLanguage, t } from "../../i18n/core";
 import { MARK_LEAF_PATH } from "../landing/paths";
 import { placeDot } from "../landing/loading/title";
 import { landingState } from "../landing/state";
@@ -27,7 +28,7 @@ import type { Num404 } from "../landing/lines/bands";
 // already wraps every page in <main>.
 
 export const NotFound: React.FC = () => {
-  useSEO("Page not found", "This page doesn't exist, or it moved. Your health hub is still right where you left it.", { noindex: true });
+  useSEO(t("Page not found"), t("This page doesn't exist, or it moved. Your health hub is still right where you left it."), { noindex: true });
   const vw = useViewportWidth(),
     vh = useViewportHeight();
   const lg = vw >= LG,
@@ -169,7 +170,7 @@ export const NotFound: React.FC = () => {
         padding: lg ? "112px 40px 88px" : vh < 780 ? "84px 20px 48px" : "104px 20px 72px",
       }}
     >
-      <canvas id="nf-lines" ref={cvRef} aria-hidden="true" style={{ position: "absolute", left: "0", top: "0", width: "100%", height: "100%", display: "block", pointerEvents: "none" }} />
+      <canvas id="nf-lines" ref={cvRef} aria-hidden="true" style={{ position: "absolute", insetInlineStart: "0", top: "0", width: "100%", height: "100%", display: "block", pointerEvents: "none" }} />
       <div
         id="nf-block"
         ref={blkRef}
@@ -198,7 +199,7 @@ export const NotFound: React.FC = () => {
         <div id="nf-txt" ref={txtRef} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", opacity: still ? "1" : "0", transition: "opacity .6s ease" }}>
           <h1
             id="nf-title"
-            aria-label="This page skipped a beat."
+            aria-label={t("This page skipped a beat.")}
             style={{
               display: "block",
               width: "100%",
@@ -211,9 +212,18 @@ export const NotFound: React.FC = () => {
               textWrap: "balance",
             }}
           >
-            <span aria-hidden="true">This page </span>
-            <span style={{ whiteSpace: "nowrap" }}>
-              <span aria-hidden="true">sk</span>
+            {/* Round F: the leaf lands as the dot of the i in "skipped", which
+                only the English title has; the Arabic title is one plain run
+                of whole words (no dot; the dot code skips a missing wrap). */}
+            {getLanguage() === "ar" ? (
+              <span aria-hidden="true">{t("This page skipped a beat.")}</span>
+            ) : (
+              <>
+                {/* i18n-ignore: the English title only */}
+                <span aria-hidden="true">This page </span>
+                <span style={{ whiteSpace: "nowrap" }}>
+                  {/* i18n-ignore */}
+                  <span aria-hidden="true">sk</span>
               <span id="nf-iwrap" ref={wrapRef} aria-hidden="true" style={{ position: "relative", display: "inline-block" }}>
                 ı
                 <span
@@ -222,7 +232,7 @@ export const NotFound: React.FC = () => {
                   aria-hidden="true"
                   style={{
                     position: "absolute",
-                    left: "0",
+                    insetInlineStart: "0",
                     top: "0",
                     width: ".2em",
                     height: ".2em",
@@ -236,12 +246,16 @@ export const NotFound: React.FC = () => {
                   </svg>
                 </span>
               </span>
-              <span aria-hidden="true">pped</span>
-            </span>
-            <span aria-hidden="true"> a beat.</span>
+                  {/* i18n-ignore */}
+                  <span aria-hidden="true">pped</span>
+                </span>
+                {/* i18n-ignore */}
+                <span aria-hidden="true"> a beat.</span>
+              </>
+            )}
           </h1>
           <p style={{ margin: (vw < 640 ? "10px" : "16px") + " 0 0", maxWidth: "440px", fontSize: lg ? "17px" : "15.5px", lineHeight: "1.6", color: "#5B5349", textWrap: "pretty" }}>
-            We couldn't find the page you were looking for.
+            {t("We couldn't find the page you were looking for.")}
           </p>
           <div
             id="nf-actions"
@@ -260,7 +274,7 @@ export const NotFound: React.FC = () => {
               className="cl-hbg cl-lift cl-fo3"
               style={{ ...btn, background: "#775FD7", color: "#FFFFFF", transform: "none", boxShadow: "none", "--hbg": "#6A54C4" } as React.CSSProperties}
             >
-              Back to home
+              {t("Back to home")}
             </a>
             <a
               id="nf-contact"
@@ -280,7 +294,7 @@ export const NotFound: React.FC = () => {
                 } as React.CSSProperties
               }
             >
-              Contact us
+              {t("Contact us")}
             </a>
           </div>
         </div>

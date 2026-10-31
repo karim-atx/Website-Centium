@@ -136,13 +136,13 @@ export function PayView({ state, vocab, onBack, onCard }: { state: TeamState; vo
                       <div style={{ height: 7, borderRadius: 999, background: "var(--an-track)" }}>
                         <div style={{ height: "100%", width: `${Math.round((Math.max(0, x.rev) / mxR) * 100)}%`, borderRadius: 999, background: "var(--an-fill)" }} />
                       </div>
-                      <span style={{ fontSize: 10.5, fontWeight: 800, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{money(x.rev)}</span>
+                      <span style={{ fontSize: 10.5, fontWeight: 800, textAlign: "end", fontVariantNumeric: "tabular-nums" }}>{money(x.rev)}</span>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 40px", columnGap: 8, alignItems: "center", marginTop: 4 }}>
                       <div style={{ height: 7, borderRadius: 999, background: "var(--an-track)" }}>
                         <div style={{ height: "100%", width: `${Math.round((x.r.rate / mxR) * 100)}%`, borderRadius: 999, background: "var(--an-tert)" }} />
                       </div>
-                      <span style={{ fontSize: 10.5, fontWeight: 800, textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--an-ink-soft)" }}>{money(x.r.rate)}</span>
+                      <span style={{ fontSize: 10.5, fontWeight: 800, textAlign: "end", fontVariantNumeric: "tabular-nums", color: "var(--an-ink-soft)" }}>{money(x.r.rate)}</span>
                     </div>
                   </div>
                 ))}

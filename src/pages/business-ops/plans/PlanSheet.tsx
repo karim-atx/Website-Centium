@@ -167,7 +167,8 @@ const ChipRow: React.FC<{ labelledBy: string; selected: string | null; children:
     const on = el?.querySelector<HTMLElement>('[aria-checked="true"]');
     if (!el || !on) return;
     const left = on.offsetLeft;
-    if (left < el.scrollLeft + 14) el.scrollLeft = Math.max(0, left - 14);
+    // offsetLeft and scrollLeft share one axis in both directions; the browser clamps to the range.
+    if (left < el.scrollLeft + 14) el.scrollLeft = left - 14;
     else if (left + on.offsetWidth > el.scrollLeft + el.clientWidth - 14) el.scrollLeft = left + on.offsetWidth - el.clientWidth + 14;
   }, [selected]);
   return (
@@ -207,7 +208,7 @@ const Picker = React.forwardRef<HTMLButtonElement, { value: string; open: boolea
         aria-describedby={describedBy}
         onClick={(e) => onOpen(e.currentTarget)}
         className="market-focus"
-        style={{ ...fieldStyle(m, invalid), display: "flex", alignItems: "center", gap: 8, textAlign: "left", cursor: "pointer", boxShadow: open ? `inset 0 0 0 1px ${m.fill}` : invalid ? `inset 0 0 0 1px ${m.high}` : undefined }}
+        style={{ ...fieldStyle(m, invalid), display: "flex", alignItems: "center", gap: 8, textAlign: "start", cursor: "pointer", boxShadow: open ? `inset 0 0 0 1px ${m.fill}` : invalid ? `inset 0 0 0 1px ${m.high}` : undefined }}
       >
         <span id={valueId} style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {value}
@@ -714,7 +715,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
           aria-controls={ids.more}
           onClick={() => setMore((x) => !x)}
           className="tap market-focus"
-          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "transparent", border: 0, padding: 0, textAlign: "left", fontFamily: "inherit", color: m.ink, cursor: "pointer" }}
+          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "transparent", border: 0, padding: 0, textAlign: "start", fontFamily: "inherit", color: m.ink, cursor: "pointer" }}
         >
           <span>
             <span style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>More options</span>

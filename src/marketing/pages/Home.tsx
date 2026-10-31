@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useSEO } from "../useSEO";
+import { t } from "../../i18n/core";
 import { Intro } from "../landing/sections/Intro";
 import { introVals } from "../landing/sections/introVals";
 import { sectionVals } from "../landing/sections/sectionVals";
@@ -31,7 +32,7 @@ const BelowFold = lazy(loadBelowFold);
 const subscribeViewport = () => ({ vw: window.innerWidth, vh: window.innerHeight });
 
 export const Home: React.FC = () => {
-  useSEO("Your health, all in one place", "Centium brings nutrition tracking, workout logging, health tracking and community into one place.");
+  useSEO(t("Your health, all in one place"), t("Centium brings nutrition tracking, workout logging, health tracking and community into one place."));
   const location = useLocation();
   const [entry] = useState(() => loaderEntryFor(location.key, location.pathname, location.hash));
   const [view, setView] = useState(subscribeViewport);

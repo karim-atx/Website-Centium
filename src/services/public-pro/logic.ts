@@ -5,6 +5,7 @@
 import { rangeClock12 } from "../../utils/time12";
 import type { ReviewRow } from "../professional-reviews/types";
 import { PAST_MIDNIGHT_CODE, PAST_MIDNIGHT_MESSAGE } from "../booking/pastMidnight";
+import { appLocale } from "../../i18n/format";
 
 /** The error codes the booking readers and request raise (HANDOVER_API Release 3). */
 export const NOT_TAKING_BOOKINGS = "This professional isn't taking bookings from you.";
@@ -88,7 +89,7 @@ export function slotLabel(s: Slot): string {
 export function dayLabel(key: string): string {
   const [y, m, d] = key.split("-").map(Number);
   const date = new Date(y, m - 1, d);
-  const month = date.toLocaleDateString("en-US", { month: "short" });
+  const month = date.toLocaleDateString(appLocale("en-US"), { month: "short" });
   return `${WEEKDAY_SHORT[(date.getDay() + 6) % 7]}, ${month} ${d}`;
 }
 

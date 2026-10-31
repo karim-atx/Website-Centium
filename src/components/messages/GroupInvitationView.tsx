@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
+import { t, tn } from "../../i18n/core";
 import { acceptInvitation, declineInvitation, type GroupInvitation } from "../../services/messaging/groups";
 
 /**
@@ -39,31 +40,31 @@ export const GroupInvitationView: React.FC<{
         <button
           type="button"
           onClick={onBack}
-          aria-label="Back"
-          className="tap relative w-8 h-8 -ml-2 rounded-full flex items-center justify-center text-charcoal shrink-0 before:absolute before:-inset-1.5 before:content-['']"
+          aria-label={t("Back")}
+          className="tap relative w-8 h-8 -ms-2 rounded-full flex items-center justify-center text-charcoal shrink-0 before:absolute before:-inset-1.5 before:content-['']"
         >
           <ChevronLeft size={22} aria-hidden />
         </button>
         <span className="flex flex-col min-w-0">
           <span className="text-[15px] font-bold text-charcoal truncate">{invitation.groupName}</span>
           <span className="text-xs text-charcoal-soft truncate">
-            {invitation.invitedByFirstName} (host) · {members} {members === 1 ? "member" : "members"}
+            {t("{name} (host)", { name: invitation.invitedByFirstName })} · {tn(members, "{n} member", "{n} members")}
           </span>
         </span>
       </div>
 
       <section
-        aria-label="Group invitation"
+        aria-label={t("Group invitation")}
         className="rounded-[18px] border border-primary/40 bg-cream-card p-4 flex flex-col gap-2.5"
       >
-        <p className="text-xs font-extrabold uppercase tracking-[0.06em] text-primary-deep-text">Invitation</p>
+        <p className="text-xs font-extrabold uppercase tracking-[0.06em] text-primary-deep-text">{t("Invitation")}</p>
         <h1 className="text-base font-extrabold text-charcoal">
-          {invitation.invitedByFirstName} invited you to "{invitation.groupName}"
+          {t('{name} invited you to "{group}"', { name: invitation.invitedByFirstName, group: invitation.groupName })}
         </h1>
-        <ul className="list-disc pl-[18px] text-[13px] leading-[1.55] text-charcoal-soft">
-          <li>Other members will see your first name and messages you send here.</li>
-          <li>They won't see your health data, profile or other chats.</li>
-          <li>You can leave or report at any time.</li>
+        <ul className="list-disc ps-[18px] text-[13px] leading-[1.55] text-charcoal-soft">
+          <li>{t("Other members will see your first name and messages you send here.")}</li>
+          <li>{t("They won't see your health data, profile or other chats.")}</li>
+          <li>{t("You can leave or report at any time.")}</li>
         </ul>
         {error && <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3 py-2">{error}</p>}
         <div className="grid grid-cols-2 gap-2.5">
@@ -73,7 +74,7 @@ export const GroupInvitationView: React.FC<{
             disabled={!!busy}
             className="tap h-[46px] rounded-[14px] border border-primary/40 bg-cream-card text-primary-deep-text text-sm font-bold disabled:opacity-50"
           >
-            {busy === "decline" ? "Declining…" : "Decline"}
+            {busy === "decline" ? t("Declining…") : t("Decline")}
           </button>
           <button
             type="button"
@@ -81,7 +82,7 @@ export const GroupInvitationView: React.FC<{
             disabled={!!busy}
             className="tap h-[46px] rounded-[14px] bg-primary-fill text-on-primary-fill text-sm font-bold disabled:opacity-50"
           >
-            {busy === "join" ? "Joining…" : "Join group"}
+            {busy === "join" ? t("Joining…") : t("Join group")}
           </button>
         </div>
       </section>

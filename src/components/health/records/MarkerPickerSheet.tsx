@@ -85,8 +85,8 @@ export const MarkerPickerSheet: React.FC<{
                   onPick(m);
                   close();
                 }}
-                className="tap w-full text-left block"
-                style={{ minHeight: 48, padding: "6px 14px 6px 2px", borderTop: i ? rowRule(dark, hc, 0.08) : undefined }}
+                className="tap w-full text-start block"
+                style={{ minHeight: 48, paddingBlock: "6px", paddingInline: "2px 14px", borderTop: i ? rowRule(dark, hc, 0.08) : undefined }}
               >
                 <span className="block" style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 600, color: INK }}>
                   {m.displayName}
@@ -106,7 +106,7 @@ export const MarkerPickerSheet: React.FC<{
           onOther(q);
           close();
         }}
-        className="tap w-full text-left"
+        className="tap w-full text-start"
         style={{ minHeight: 48, marginTop: 10, padding: "0 2px", fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 600, color: deepInk(dark) }}
       >
         {q ? `Other: "${q}"` : "Other (not on the list)"}

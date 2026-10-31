@@ -9,6 +9,7 @@ import { approvedBody, submittedLabel } from "./lanes";
 import { Toggle } from "../../../components/ui/Toggle";
 import { STATUS_REJECTED_VIS, STATUS_SUBMITTED_VIS, statusFan } from "./bizLanes";
 import type { ReviewItem } from "../../../services/business-onboarding";
+import { t } from "../../../i18n/core";
 
 // After submitting (OB-238…243, 271…276, 299…304) and the approval
 // celebration (OB-307…314): Pending review, You're live, A few things to fix.
@@ -17,25 +18,25 @@ import type { ReviewItem } from "../../../services/business-onboarding";
 /** The status timeline (isTimeline). */
 const Timeline: React.FC<{ items: { title: string; desc: string; value: string; state: "done" | "now" | "next" }[] }> = ({ items }) => (
   <ol className="rounded-[20px] bg-list px-4 py-1 mb-[14px]">
-    {items.map((t, i) => (
-      <li key={t.title} className="flex items-center gap-3 min-h-[54px]" style={{ borderTop: i ? "1px solid var(--list-rule)" : "none" }}>
+    {items.map((it, i) => (
+      <li key={it.title} className="flex items-center gap-3 min-h-[54px]" style={{ borderTop: i ? "1px solid var(--list-rule)" : "none" }}>
         <span
           aria-hidden
           className={clsx(
             "w-6 h-6 rounded-full border-2 flex items-center justify-center box-border shrink-0 text-on-primary-fill",
-            t.state === "done" ? "bg-primary-fill border-primary-fill" : t.state === "now" ? "border-primary-fill" : "border-desc"
+            it.state === "done" ? "bg-primary-fill border-primary-fill" : it.state === "now" ? "border-primary-fill" : "border-desc"
           )}
         >
-          {t.state === "done" && <Check size={12} strokeWidth={3} />}
+          {it.state === "done" && <Check size={12} strokeWidth={3} />}
         </span>
         <span className="flex-1 min-w-0">
-          <span className={clsx("block text-[13px]", t.state === "now" ? "font-extrabold" : "font-semibold", t.state === "next" ? "text-charcoal-faint" : "text-charcoal")}>
-            {t.title}
-            <span className="sr-only">{t.state === "done" ? ", done" : t.state === "now" ? ", in progress" : ", next"}</span>
+          <span className={clsx("block text-[13px]", it.state === "now" ? "font-extrabold" : "font-semibold", it.state === "next" ? "text-charcoal-faint" : "text-charcoal")}>
+            {it.title}
+            <span className="sr-only">{it.state === "done" ? t(", done") : it.state === "now" ? t(", in progress") : t(", next")}</span>
           </span>
-          <span className="block text-[11px] text-charcoal-faint">{t.desc}</span>
+          <span className="block text-[11px] text-charcoal-faint">{it.desc}</span>
         </span>
-        <span className={clsx("text-[11.5px] font-bold", t.state === "now" ? "text-primary-dark" : "text-charcoal-faint")}>{t.value}</span>
+        <span className={clsx("text-[11.5px] font-bold", it.state === "now" ? "text-primary-dark" : "text-charcoal-faint")}>{it.value}</span>
       </li>
     ))}
   </ol>
@@ -44,9 +45,9 @@ const Timeline: React.FC<{ items: { title: string; desc: string; value: string; 
 /** OURS-step-states #9: the status screen while the review state loads. */
 export const StatusLoading: React.FC<{ footer: BizFooter }> = ({ footer }) => (
   <BizFrame footer={footer}>
-    <div className="text-center pt-2 pb-1" aria-busy="true" aria-label="Loading">
+    <div className="text-center pt-2 pb-1" aria-busy="true" aria-label={t("Loading")}>
       <div className="relative w-[200px] h-[170px] mx-auto" style={{ opacity: 0.5 }}>
-        <Shapes shapes={STATUS_SUBMITTED_VIS} size={120} style={{ position: "absolute", left: 40, top: 25 }} />
+        <Shapes shapes={STATUS_SUBMITTED_VIS} size={120} style={{ position: "absolute", insetInlineStart: 40, top: 25 }} />
       </div>
       <div className="flex flex-col items-center gap-2 mt-[6px]">
         <span className="ob-skel w-[200px] h-7 rounded-[8px]" />
@@ -64,20 +65,20 @@ export const PendingScreen: React.FC<{ name: string; submittedAt: string | null;
     <BizFrame footer={footer}>
       <ObStatus
         vis={STATUS_SUBMITTED_VIS}
-        eyebrow="Submitted"
+        eyebrow={t("Submitted")}
         eyebrowColor="var(--ob-accent)"
-        title={`We're reviewing ${name}`}
-        body="Usually 1 to 2 working days. We'll message and email you."
+        title={t("We're reviewing {name}", { name })}
+        body={t("Usually 1 to 2 working days. We'll message and email you.")}
       />
       <Timeline
         items={[
-          { title: "Submitted", desc: s.line, value: s.day, state: "done" },
-          { title: "In review", desc: "Checking your documents and listing", value: "Now", state: "now" },
-          { title: "Live on Explore", desc: "Clients can find and book you", value: "", state: "next" },
+          { title: t("Submitted"), desc: s.line, value: s.day, state: "done" },
+          { title: t("In review"), desc: t("Checking your documents and listing"), value: t("Now"), state: "now" },
+          { title: t("Live on Explore"), desc: t("Clients can find and book you"), value: "", state: "next" },
         ]}
       />
-      <ObTip icon={Sparkles} heading="While you wait,">
-        explore your Dashboard and finish the Get set up list. Changes go live with your listing.
+      <ObTip icon={Sparkles} heading={t("While you wait,")}>
+        {t("explore your Dashboard and finish the Get set up list. Changes go live with your listing.")}
       </ObTip>
     </BizFrame>
   );
@@ -127,20 +128,20 @@ export const ApprovedScreen: React.FC<{
       const r = requestAnimationFrame(() => setFade(1));
       return () => cancelAnimationFrame(r);
     }
-    const t = [window.setTimeout(() => setK(2), 300), window.setTimeout(() => setK(3), 650), window.setTimeout(() => setK(4), 1100)];
-    return () => t.forEach(clearTimeout);
+    const timers = [window.setTimeout(() => setK(2), 300), window.setTimeout(() => setK(3), 650), window.setTimeout(() => setK(4), 1100)];
+    return () => timers.forEach(clearTimeout);
   }, [animate, reduced]);
   const A = A_FRAMES[k - 1];
   return (
     <div style={{ opacity: fade, transition: "opacity 200ms" }} className="ob-approve">
-      <BizFrame footer={{ label: "Open Dashboard", onClick: onOpenDashboard, opacity: k < 3 ? 0.3 : 1, link: { label: "Share your listing", onClick: onShare } }}>
+      <BizFrame footer={{ label: t("Open Dashboard"), onClick: onOpenDashboard, opacity: k < 3 ? 0.3 : 1, link: { label: t("Share your listing"), onClick: onShare } }}>
         <div aria-live="polite">
           <ObStatus
             vis={k === 1 ? STATUS_SUBMITTED_VIS : statusFan(A.v)}
-            eyebrow="Approved"
+            eyebrow={t("Approved")}
             eyebrowColor="var(--ob-good)"
-            title="You're live"
-            body={listed ? approvedBody(lane, name) : `${name} is approved. Turn on Show on Explore so people can find you.`}
+            title={t("You're live")}
+            body={listed ? approvedBody(lane, name) : t("{name} is approved. Turn on Show on Explore so people can find you.", { name })}
             ringOpacity={A.ro}
             ringScale={A.rs}
             glowOpacity={A.gl}
@@ -149,15 +150,15 @@ export const ApprovedScreen: React.FC<{
           />
         </div>
         {!listed && k >= 3 && (
-          <div className="rounded-[20px] bg-list px-4 mb-[14px]" role="group" aria-label="Show on Explore">
+          <div className="rounded-[20px] bg-list px-4 mb-[14px]" role="group" aria-label={t("Show on Explore")}>
             <div className="flex items-center gap-3 min-h-[62px]">
               <span className="flex-1 min-w-0">
-                <span className="block text-[14px] leading-[19px] font-bold text-charcoal">Show on Explore</span>
-                <span className="block text-[11.5px] leading-[16px] text-charcoal-faint mt-[1px]">Hidden: clients can't find you on Explore.</span>
+                <span className="block text-[14px] leading-[19px] font-bold text-charcoal">{t("Show on Explore")}</span>
+                <span className="block text-[11.5px] leading-[16px] text-charcoal-faint mt-[1px]">{t("Hidden: clients can't find you on Explore.")}</span>
               </span>
-              <Toggle checked={false} onChange={() => void turnOn()} label="Show on Explore" size="business-lg" disabled={busy || !onShowOnExplore} />
+              <Toggle checked={false} onChange={() => void turnOn()} label={t("Show on Explore")} size="business-lg" disabled={busy || !onShowOnExplore} />
             </div>
-            {showError && <p role="alert" className="text-[12px] font-bold text-status-high pb-3">{showError}</p>}
+            {showError && <p role="alert" className="text-[12px] font-bold text-status-high pb-3">{t(showError)}</p>}
           </div>
         )}
         {k >= 3 && <BizListingPreview {...preview} />}
@@ -174,11 +175,18 @@ export const RejectedScreen: React.FC<{
   <BizFrame footer={footer}>
     <ObStatus
       vis={STATUS_REJECTED_VIS}
-      eyebrow="Needs changes"
+      eyebrow={t("Needs changes")}
       eyebrowColor="var(--ob-high)"
-      title="A few things to fix"
-      body={items.length === 1 ? "Fix this one and resubmit. Everything else is saved." : `Fix these ${items.length === 2 ? "two" : items.length} and resubmit. Everything else is saved.`}
+      title={t("A few things to fix")}
+      body={
+        items.length === 1
+          ? t("Fix this one and resubmit. Everything else is saved.")
+          : items.length === 2
+          ? t("Fix these two and resubmit. Everything else is saved.")
+          : t("Fix these {n} and resubmit. Everything else is saved.", { n: items.length })
+      }
     />
+    {/* field / problem / fix are the reviewer's own words (business_verifications.items): shown as written. */}
     {items.map((it, i) => (
       <BizSummary key={i} n={it.n} title={it.field} lines={[it.problem]} action={it.action} onAction={it.onAction} flag={it.fix} bad />
     ))}

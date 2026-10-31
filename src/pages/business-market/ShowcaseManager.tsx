@@ -222,7 +222,7 @@ function StockFigures({ items }: { items: { v: string; l: string }[] }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: `repeat(${items.length}, minmax(0,1fr))`, borderRadius: 20, background: c.card, border: `1px solid ${c.border}` }}>
       {items.map((x, i) => (
-        <div key={x.l} style={{ padding: "12px 14px", borderLeft: i ? `1.5px dashed ${c.border}` : 0, minWidth: 0 }}>
+        <div key={x.l} style={{ padding: "12px 14px", borderInlineStart: i ? `1.5px dashed ${c.border}` : 0, minWidth: 0 }}>
           <div style={{ fontSize: px(16), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: c.ink }}>{x.v}</div>
           <div style={{ fontSize: px(11.5), color: c.faint, marginTop: 2 }}>{x.l}</div>
         </div>
@@ -392,7 +392,7 @@ function ItemList({
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
-                padding: "10px 14px 10px 8px",
+                paddingBlock: "10px", paddingInline: "8px 14px",
                 borderTop: i ? `0.5px solid ${c.div}` : 0,
                 position: "relative",
                 background: lifted ? c.card : undefined,
@@ -422,7 +422,7 @@ function ItemList({
                 onClick={() => onOpen(p)}
                 aria-label={`${p.name}${p.visible ? "" : ", hidden"}${chip && chip.label !== "Hidden" ? `, ${chip.label} stock` : ""}. Edit item`}
                 className="market-focus"
-                style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10, padding: 0, border: 0, background: "transparent", textAlign: "left", fontFamily: "inherit", color: c.ink, cursor: "pointer" }}
+                style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10, padding: 0, border: 0, background: "transparent", textAlign: "start", fontFamily: "inherit", color: c.ink, cursor: "pointer" }}
               >
                 <span style={{ width: 52, height: 52, borderRadius: 12, background: c.soft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, opacity: op, overflow: "hidden" }}>
                   {photo ? <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : <ImageIcon size={18} strokeWidth={1.8} color={c.tert} aria-hidden />}

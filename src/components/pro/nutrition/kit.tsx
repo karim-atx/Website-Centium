@@ -29,7 +29,7 @@ export const NuHead: React.FC<{ title: string; eyebrow?: string; onBack?: () => 
   <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 13 }}>
     <div className="flex items-start min-w-0" style={{ gap: 10 }}>
       {onBack && (
-        <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginLeft: -6, marginTop: 2 }}>
+        <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -6, marginTop: 2 }}>
           <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
         </button>
       )}
@@ -58,7 +58,7 @@ export const SquareButton: React.FC<{ icon: LucideIcon; label: string; onClick: 
 );
 
 export const SearchField: React.FC<{ value: string; onChange: (v: string) => void; placeholder: string; autoFocus?: boolean; height?: number; radius?: number }> = ({ value, onChange, placeholder, autoFocus, height = 40, radius = 12 }) => (
-  <label className="flex-1 min-w-0 flex items-center" style={{ minHeight: height, borderRadius: radius, background: INK.soft, border: `1px solid ${value ? INK.pr : INK.b10}`, padding: "0 4px 0 12px", gap: 8 }}>
+  <label className="flex-1 min-w-0 flex items-center" style={{ minHeight: height, borderRadius: radius, background: INK.soft, border: `1px solid ${value ? INK.pr : INK.b10}`, paddingBlock: "0", paddingInline: "12px 4px", gap: 8 }}>
     <Search size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
     <input
       type="search"
@@ -109,7 +109,7 @@ export const Flag: React.FC<{ row: ConflictRow | null; onClick?: () => void }> =
           ? `Not ${restrictionLabel(row.restriction ?? "").toLowerCase()}`
           : restrictionLabel(row.restriction ?? "");
   const Icon = red ? AlertTriangle : AlertCircle;
-  const style: React.CSSProperties = { gap: 3, marginLeft: 6, fontSize: textPx(10.5), fontWeight: red ? 800 : 700, color: red ? INK.hi : row.kind === "preference" ? INK.chF : INK.goldInk, whiteSpace: "nowrap" };
+  const style: React.CSSProperties = { gap: 3, marginInlineStart: 6, fontSize: textPx(10.5), fontWeight: red ? 800 : 700, color: red ? INK.hi : row.kind === "preference" ? INK.chF : INK.goldInk, whiteSpace: "nowrap" };
   const inner = (
     <>
       {row.kind !== "preference" && <Icon size={11} strokeWidth={red ? 2.4 : 2.2} aria-hidden style={NO_ICON_SCALE} />}
@@ -174,7 +174,7 @@ export const NuFab: React.FC<{ label: string; onClick: () => void }> = ({ label,
     onClick={onClick}
     aria-label={label}
     title={label}
-    className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] left-[calc(var(--app-gutter)+20px)] z-30 w-14 h-14 rounded-full bg-primary-fill text-on-primary-fill shadow-fab dark:shadow-none flex items-center justify-center"
+    className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] start-[calc(var(--app-gutter)+20px)] z-30 w-14 h-14 rounded-full bg-primary-fill text-on-primary-fill shadow-fab dark:shadow-none flex items-center justify-center"
   >
     <Plus size={22} strokeWidth={2} aria-hidden />
   </button>

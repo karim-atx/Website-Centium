@@ -31,6 +31,7 @@ import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { commitmentLines, dayMonthYear, membershipTag, validRange } from "../../services/venues/venueLogic";
 import { GRANTED_LABEL } from "../../services/venues/consoleLogic";
 import { Check, ChevronRight, Dumbbell, LogOut, MoreVertical, Plus, Store, Trash2, X } from "lucide-react";
+import { appLocale } from "../../i18n/format";
 
 // The member's side of a business membership: answer an invitation, redeem a
 // code, leave. MO1.5 / MO1.5.1 layout (R15, batch C, C8).
@@ -76,7 +77,7 @@ import { Check, ChevronRight, Dumbbell, LogOut, MoreVertical, Plus, Store, Trash
 // upcoming renewal says "Starts {date}" (membershipTag) and grants nothing yet.
 
 const dateLabel = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  new Date(iso).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" });
 
 export const MembershipsCard: React.FC = () => {
   const { authUserId, profileReady } = useApp();
@@ -508,7 +509,7 @@ export const MembershipsCard: React.FC = () => {
                 <Plus size={16} strokeWidth={1.75} className="text-primary-dark" />
               </span>
               <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">Join another gym or studio</span>
-              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
             </button>
           )}
         </div>

@@ -43,7 +43,7 @@ export const ChooseClients: React.FC<{ picked: string[]; onChange: (ids: string[
                 aria-checked={on}
                 disabled={disabled || (!on && full)}
                 onClick={() => onChange(on ? picked.filter((x) => x !== c.clientId) : [...picked, c.clientId!])}
-                className="tap w-full flex items-center text-left disabled:opacity-60"
+                className="tap w-full flex items-center text-start disabled:opacity-60"
                 style={{ gap: 12, padding: "9px 0", borderTop: i ? `1px solid ${INK.b06}` : undefined }}
               >
                 <Avatar name={c.name} url={c.avatarUrl} size={36} />

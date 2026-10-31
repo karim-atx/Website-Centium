@@ -7,7 +7,6 @@ import { useApp } from "../../context/AppContext";
 import { useBusinessPlan } from "../../hooks/useBusinessPlan";
 import { useBillingPeriod, useCentiumBilling } from "../../hooks/useCentiumBilling";
 import {
-  blocksText,
   chargeStatusText,
   chargeTitle,
   chargeTone,
@@ -19,7 +18,6 @@ import {
   NOT_AVAILABLE,
   periodSaving,
   perMonthText,
-  perPeriod,
   renewalAfterSwitch,
   renewalDayText,
   switchConfirm,
@@ -31,9 +29,10 @@ import { fetchPlanRenewal } from "../../services/business-more";
 import { fetchPaymentSettings, type PaymentSettings } from "../../services/business-revenue";
 import { useBusiness } from "../../components/business-more/useBusiness";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
-import { UPGRADE_EMAIL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
+import { UPGRADE_ACTION_LABEL, UPGRADE_EMAIL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { savingLabel } from "../../services/subscription-tiers/pricing";
 import { formatShortDate } from "../../utils/date";
+import { t, tn } from "../../i18n/core";
 import { RefundPolicyLink } from "../../components/legal/RefundPolicyLink";
 
 // OURS-MO1B-payment-methods, -payouts, -invoices, -taxes, -subscription
@@ -83,23 +82,24 @@ export function PaymentMethodsPage() {
   }, [business?.id]);
   const cashOn = settings?.cashEnabled ?? true;
   return (
-    <BizPage title="Payment methods" sub="Choose how clients can pay you.">
-      <BizSection label="Accepted payment methods">
+    <BizPage title={t("Payment methods")} sub={t("Choose how clients can pay you.")}>
+      <BizSection label={t("Accepted payment methods")}>
         <BizRow
           title={
             <>
+              {/* i18n-ignore */}
               Whish
               <SoonChip />
             </>
           }
-          desc="Online · paid when booking"
+          desc={t("Online · paid when booking")}
           toggle={{ checked: false, onChange: () => undefined, disabled: true, label: "Whish" }}
           dim
         />
-        <BizRow title="Cash" desc="Your only method for now" toggle={{ checked: cashOn, onChange: () => undefined, disabled: true, label: "Cash" }} />
+        <BizRow title={t("Cash")} desc={t("Your only method for now")} toggle={{ checked: cashOn, onChange: () => undefined, disabled: true, label: t("Cash") }} />
       </BizSection>
-      <BizSection label="Payout account">
-        <BizRow icon={Landmark} title="Whish payouts" desc="Coming soon. You'll add your Whish account here." />
+      <BizSection label={t("Payout account")}>
+        <BizRow icon={Landmark} title={t("Whish payouts")} desc={t("Coming soon. You'll add your Whish account here.")} />
       </BizSection>
     </BizPage>
   );
@@ -107,21 +107,21 @@ export function PaymentMethodsPage() {
 
 export function PayoutsPage() {
   return (
-    <BizPage title="Payouts">
-      <ComingCard icon={Landmark} title="Whish payouts are coming" body="Cash you take stays with you. When Whish is live, online payments are paid out here every week." />
+    <BizPage title={t("Payouts")}>
+      <ComingCard icon={Landmark} title={t("Whish payouts are coming")} body={t("Cash you take stays with you. When Whish is live, online payments are paid out here every week.")} />
     </BizPage>
   );
 }
 
 export function InvoicesPage() {
   return (
-    <BizPage title="Invoices and receipts">
-      <BizSection label="Receipts to clients" footer="Coming soon.">
-        <BizRow title="Email a receipt after each payment" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
-        <BizRow title="Include your VAT number" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
+    <BizPage title={t("Invoices and receipts")}>
+      <BizSection label={t("Receipts to clients")} footer={t("Coming soon.")}>
+        <BizRow title={t("Email a receipt after each payment")} toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
+        <BizRow title={t("Include your VAT number")} toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
       </BizSection>
-      <BizSection label="Recent">
-        <BizRow title="No receipts yet" desc="Receipts show here once payments are recorded in the app." />
+      <BizSection label={t("Recent")}>
+        <BizRow title={t("No receipts yet")} desc={t("Receipts show here once payments are recorded in the app.")} />
       </BizSection>
     </BizPage>
   );
@@ -129,12 +129,12 @@ export function InvoicesPage() {
 
 export function TaxesPage() {
   return (
-    <BizPage title="Taxes" sub="How tax shows on your prices and receipts.">
-      <BizSection label="VAT" footer="Coming soon.">
-        <BizRow title="Prices include VAT" desc="Clients see one total price" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
-        <BizRow title="VAT rate" dim />
-        <BizRow title="VAT number" dim />
-        <BizRow title="Show VAT on receipts" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
+    <BizPage title={t("Taxes")} sub={t("How tax shows on your prices and receipts.")}>
+      <BizSection label={t("VAT")} footer={t("Coming soon.")}>
+        <BizRow title={t("Prices include VAT")} desc={t("Clients see one total price")} toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
+        <BizRow title={t("VAT rate")} dim />
+        <BizRow title={t("VAT number")} dim />
+        <BizRow title={t("Show VAT on receipts")} toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
       </BizSection>
     </BizPage>
   );
@@ -221,63 +221,67 @@ export function SubscriptionPage() {
   // period (with the seat blocks they hold); staff, business_plan_summary's
   // total for its period. NULL is "not available", never $0.
   const priceLine = (): string | null => {
-    if (isOwner && ownSub) return ownTotal !== null ? `${money(ownTotal)} ${perPeriod(ownSub.period)}` : missingPriceText(ownSub.period);
+    if (isOwner && ownSub) return ownTotal !== null ? periodPriceText(ownTotal, ownSub.period, money) : missingPriceText(ownSub.period);
     if (isOwner && !period.ready) return null;
     // Staff: the summary's plan_price (and seat_block_price with blocks held)
     // for its period. NULL (251ab70: no fallback to the monthly figure) reads
     // "Not available".
-    if (s) return s.total !== null ? `${money(s.total)} ${perPeriod(s.period)}` : missingPriceText(s.period);
-    return `${money(plan?.monthlyTotal ?? 0)} a month`;
+    if (s) return s.total !== null ? periodPriceText(s.total, s.period, money) : missingPriceText(s.period);
+    return t("{price} a month", { price: money(plan?.monthlyTotal ?? 0) });
   };
   const confirm = periodAsk ? switchConfirm({ to: periodAsk.to, price: periodAsk.price, seatBlocks: ownSub?.seatBlocks ?? 0, renewal: periodAsk.at, money }) : null;
 
   return (
-    <BizPage title="Centium subscription">
-      {error && <LoadError message="Couldn't load your plan." onRetry={live ? billing.reload : () => window.location.reload()} />}
-      {loading && <RowsSkeleton rows={2} label="Loading your plan" />}
-      {hidden && <BizNote>The business owner manages the Centium plan.</BizNote>}
+    <BizPage title={t("Centium subscription")}>
+      {error && <LoadError message={t("Couldn't load your plan.")} onRetry={live ? billing.reload : () => window.location.reload()} />}
+      {loading && <RowsSkeleton rows={2} label={t("Loading your plan")} />}
+      {hidden && <BizNote>{t("The business owner manages the Centium plan.")}</BizNote>}
       {(s || plan) && (
         <>
           {active ? (
             <BizHero
-              label="Your plan"
+              label={t("Your plan")}
               value={s ? s.planName : (plan?.base?.name ?? "Business")}
               sub={[
                 priceLine(),
-                renewsAt ? `renews ${renewalDayText(renewsAt)}` : null,
-                `${blocks} seat block${blocks === 1 ? "" : "s"} (${s ? s.capacity : plan?.totalSeats} seats)`,
+                renewsAt ? t("renews {date}", { date: renewalDayText(renewsAt) }) : null,
+                tn(blocks, "{n} seat block ({seats} seats)", "{n} seat blocks ({seats} seats)", { seats: String(s ? s.capacity : plan?.totalSeats) }),
               ]
                 .filter(Boolean)
                 .join(" · ")}
-              actions={!live || billing.isOwner ? [{ label: "Add seats", icon: Plus, primary: true, onClick: () => navigate("/app/business/more/seats") }] : []}
+              actions={!live || billing.isOwner ? [{ label: t("Add seats"), icon: Plus, primary: true, onClick: () => navigate("/app/business/more/seats") }] : []}
             />
           ) : (
             <BizHero
-              label="Your plan"
-              value="No plan yet"
+              label={t("Your plan")}
+              value={t("No plan yet")}
               sub={
                 planCharge
-                  ? `Your first month, ${money(planCharge.amount)}, is awaiting payment.`
+                  ? t("Your first month, {price}, is awaiting payment.", { price: money(planCharge.amount) })
                   : planPrice !== null
-                    ? `The Business plan is ${money(planPrice)} ${perPeriod(s ? s.period : "monthly")}.`
+                    ? (s ? s.period : "monthly") === "monthly"
+                      ? t("The Business plan is {price} a month.", { price: money(planPrice) })
+                      : t("The Business plan is {price} a year.", { price: money(planPrice) })
                     : s
                       ? // business_plan_summary's plan_price is NULL (251ab70: no
                         // fallback to another period's price): said, never $0.
-                        `The Business plan's ${s.period} price: ${NOT_AVAILABLE}.`
+                        s.period === "monthly"
+                        ? t("The Business plan's monthly price: Not available.")
+                        : t("The Business plan's yearly price: Not available.")
                       : undefined
               }
-              actions={planCharge ? [] : [{ label: "Contact us to upgrade", icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}
+              actions={planCharge ? [] : [{ label: t(UPGRADE_ACTION_LABEL), icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}
             />
           )}
           {active && isOwner && (
             <>
               {period.error ? (
-                <LoadError message={period.error} onRetry={period.reload} />
+                <LoadError message={t(period.error)} onRetry={period.reload} />
               ) : !period.ready ? (
-                <RowsSkeleton rows={2} label="Loading how you're billed" />
+                <RowsSkeleton rows={2} label={t("Loading how you're billed")} />
               ) : ownSub && period.prices ? (
-                <BizSection label="Billing" footer="Seat blocks follow your plan's billing. Switching charges nothing now, and your next renewal moves to a month or a year from the day you switch.">
-                  <div role="radiogroup" aria-label="How you're billed">
+                <BizSection label={t("Billing")} footer={t("Seat blocks follow your plan's billing. Switching charges nothing now, and your next renewal moves to a month or a year from the day you switch.")}>
+                  <div role="radiogroup" aria-label={t("How you're billed")}>
                     {periodOptions(ownSub.period, period.prices).map((o) => (
                       <BizRow
                         key={o.period}
@@ -292,7 +296,7 @@ export function SubscriptionPage() {
                             ? `${periodPriceText(o.price, o.period, money)} · ${perMonthText(o.price, money)}`
                             : periodPriceText(o.price, o.period, money))
                         }
-                        value={o.price === null ? "Not available" : o.period === "yearly" && saving ? savingLabel(saving) : undefined}
+                        value={o.price === null ? t(NOT_AVAILABLE) : o.period === "yearly" && saving ? savingLabel(saving) : undefined}
                         valueTone={o.price === null ? "faint" : "good"}
                         disabled={!o.current && !o.selectable}
                         dim={!o.current && !o.selectable}
@@ -308,20 +312,20 @@ export function SubscriptionPage() {
                   className={clsx("text-[12px] font-semibold leading-[18px]", periodNote.tone === "error" ? "text-status-high" : "text-charcoal-soft")}
                   style={{ margin: "0 4px 14px", textWrap: "pretty" } as React.CSSProperties}
                 >
-                  {periodNote.text}
+                  {t(periodNote.text)}
                 </p>
               )}
             </>
           )}
           {s && s.pendingCharges > 0 && billing.canSeeBilling && (
             <BizNote>
-              {money(s.pendingAmount)} is awaiting payment to Centium. Pay by cash or bank transfer; your plan and seats update once Centium records the payment.
+              {t("{price} is awaiting payment to Centium. Pay by cash or bank transfer; your plan and seats update once Centium records the payment.", { price: money(s.pendingAmount) })}
             </BizNote>
           )}
           {(!live || billing.canSeeBilling) && (
-            <BizSection label="Billing history">
+            <BizSection label={t("Billing history")}>
               {live && billing.historyError && !billing.history ? (
-                <LoadError message="Couldn't load your billing history." onRetry={billing.reload} />
+                <LoadError message={t("Couldn't load your billing history.")} onRetry={billing.reload} />
               ) : live && billing.history && billing.history.length > 0 ? (
                 billing.history.map((c) => {
                   const cancellable = billing.isOwner && c.product === "seat_block" && !c.isRenewal && c.status === "pending";
@@ -331,29 +335,29 @@ export function SubscriptionPage() {
                       key={c.id}
                       icon={c.product === "seat_block" ? Armchair : CalendarClock}
                       title={chargeTitle(c)}
-                      desc={[c.periodStart && c.periodEnd ? `${fmtDay(c.periodStart)} to ${fmtDay(c.periodEnd)}` : fmt(c.createdAt), chargeStatusText(c)].join(" · ")}
+                      desc={[c.periodStart && c.periodEnd ? t("{start} to {end}", { start: fmtDay(c.periodStart), end: fmtDay(c.periodEnd) }) : fmt(c.createdAt), chargeStatusText(c)].join(" · ")}
                       value={money(c.amount)}
                       valueTone={VALUE_TONE[tone]}
                       dim={tone === "void"}
                       onClick={cancellable ? () => setOrderAsk(c) : undefined}
-                      ariaLabel={cancellable ? `${chargeTitle(c)}, ${money(c.amount)}, awaiting payment. Cancel order` : undefined}
+                      ariaLabel={cancellable ? t("{item}, {price}, awaiting payment. Cancel order", { item: chargeTitle(c), price: money(c.amount) }) : undefined}
                     />
                   );
                 })
               ) : (
-                <BizRow icon={CalendarClock} title="Nothing billed in the app yet" desc="Billing history shows here once your plan is billed in the app." />
+                <BizRow icon={CalendarClock} title={t("Nothing billed in the app yet")} desc={t("Billing history shows here once your plan is billed in the app.")} />
               )}
             </BizSection>
           )}
-          {orderError && <BizNote>{orderError}</BizNote>}
+          {orderError && <BizNote>{t(orderError)}</BizNote>}
           {active && (!live || billing.isOwner) && (
             <>
-              <BizSection label="Change or cancel">
-                <BizRow icon={Repeat} title="Change plan" desc="We'll help you switch" onClick={() => (window.location.href = upgradeMailto())} />
-                <BizRow icon={XCircle} title="Cancel plan" danger onClick={() => setCancelAsk(true)} />
+              <BizSection label={t("Change or cancel")}>
+                <BizRow icon={Repeat} title={t("Change plan")} desc={t("We'll help you switch")} onClick={() => (window.location.href = upgradeMailto())} />
+                <BizRow icon={XCircle} title={t("Cancel plan")} danger onClick={() => setCancelAsk(true)} />
               </BizSection>
               <BizNote>
-                Plans are changed by the Centium team for now. Each request opens an email to {UPGRADE_EMAIL}. <RefundPolicyLink />
+                {t("Plans are changed by the Centium team for now. Each request opens an email to {email}.", { email: UPGRADE_EMAIL })} <RefundPolicyLink />
               </BizNote>
             </>
           )}
@@ -362,10 +366,14 @@ export function SubscriptionPage() {
       <BizConfirm
         open={cancelAsk}
         icon={Trash2}
-        title="Cancel Centium Business?"
-        body={`Your plan stays active until ${renewsAt ? renewalDayText(renewsAt) : "the end of the period"}. Seats above the free plan stop working then.`}
-        action="Cancel plan"
-        cancel="Keep my plan"
+        title={t("Cancel Centium Business?")}
+        body={
+          renewsAt
+            ? t("Your plan stays active until {date}. Seats above the free plan stop working then.", { date: renewalDayText(renewsAt) })
+            : t("Your plan stays active until the end of the period. Seats above the free plan stop working then.")
+        }
+        action={t("Cancel plan")}
+        cancel={t("Keep my plan")}
         onCancel={() => setCancelAsk(false)}
         onAction={() => {
           setCancelAsk(false);
@@ -375,10 +383,14 @@ export function SubscriptionPage() {
       <BizConfirm
         open={!!orderAsk}
         icon={XCircle}
-        title="Cancel this seat order?"
-        body={`${orderAsk ? blocksText(orderAsk.quantity) : "The seat blocks"} won't be added. You can order seats again any time.`}
-        action="Cancel order"
-        cancel="Keep order"
+        title={t("Cancel this seat order?")}
+        body={
+          orderAsk
+            ? tn(orderAsk.quantity, "{n} seat block won't be added. You can order seats again any time.", "{n} seat blocks won't be added. You can order seats again any time.")
+            : t("The seat blocks won't be added. You can order seats again any time.")
+        }
+        action={t("Cancel order")}
+        cancel={t("Keep order")}
         busy={orderBusy}
         onCancel={() => setOrderAsk(null)}
         onAction={() => void cancelOrder()}
@@ -393,7 +405,7 @@ export function SubscriptionPage() {
         title={confirm?.title ?? ""}
         subtitle={confirm?.body}
         confirmLabel={confirm?.action}
-        cancelLabel="Keep my billing"
+        cancelLabel={t("Keep my billing")}
         busy={periodBusy}
         onCancel={() => setPeriodAsk(null)}
         onConfirm={() => void switchPeriod()}

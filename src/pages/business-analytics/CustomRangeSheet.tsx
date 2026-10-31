@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { Toggle } from "../../components/ui/Toggle";
 import { dateOf, dayMonth, daysBetween, isoOf, pickRangeDay, previousOf, type AnalyticsRange } from "./analyticsRange";
+import { appLocale } from "../../i18n/format";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -86,7 +87,7 @@ export function CustomRangeSheet({
       onClick={() => setEnd(which)}
       aria-pressed={end === which}
       className={clsx(
-        "tap text-left rounded-[14px] bg-cream-card border-solid",
+        "tap text-start rounded-[14px] bg-cream-card border-solid",
         end === which ? "border-[1.5px] border-primary-fill" : "border border-charcoal/[0.11] dark:border-charcoal/[0.08]"
       )}
       style={{ padding: "8px 12px" }}
@@ -115,7 +116,7 @@ export function CustomRangeSheet({
           </span>
         </button>
         <p className="text-[14px] font-extrabold text-charcoal" aria-live="polite">
-          {month.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+          {month.toLocaleDateString(appLocale("en-GB"), { month: "long", year: "numeric" })}
         </p>
         <button
           type="button"
@@ -150,17 +151,17 @@ export function CustomRangeSheet({
               key={iso}
               className={clsx("relative h-[38px] flex items-center justify-center", inRange && !(isStart && isEnd) && "bg-primary-pale")}
               style={{
-                borderTopLeftRadius: inRange && (isStart || col === 0) ? 999 : 0,
-                borderBottomLeftRadius: inRange && (isStart || col === 0) ? 999 : 0,
-                borderTopRightRadius: inRange && (isEnd || col === 6) ? 999 : 0,
-                borderBottomRightRadius: inRange && (isEnd || col === 6) ? 999 : 0,
+                borderStartStartRadius: inRange && (isStart || col === 0) ? 999 : 0,
+                borderEndStartRadius: inRange && (isStart || col === 0) ? 999 : 0,
+                borderStartEndRadius: inRange && (isEnd || col === 6) ? 999 : 0,
+                borderEndEndRadius: inRange && (isEnd || col === 6) ? 999 : 0,
               }}
             >
               <button
                 type="button"
                 disabled={disabled}
                 onClick={() => pick(iso)}
-                aria-label={`${d.toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long" })}${isStart ? ", range start" : isEnd ? ", range end" : ""}`}
+                aria-label={`${d.toLocaleDateString(appLocale("en-US"), { weekday: "long", day: "numeric", month: "long" })}${isStart ? ", range start" : isEnd ? ", range end" : ""}`}
                 aria-pressed={isStart || isEnd}
                 className={clsx(
                   "w-[36px] h-[36px] rounded-full text-[13px] tabular-nums disabled:opacity-30",

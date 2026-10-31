@@ -24,6 +24,7 @@
 import { signedNum } from "../proRules";
 import { DAY_LONG } from "../../../utils/week";
 import { time12 } from "../../../utils/time12";
+import { appLocale } from "../../../i18n/format";
 
 export type DbQuestionType = "number" | "scale" | "choice" | "multi" | "text" | "long_text" | "photo" | "date";
 export type SafetyTopic = "pain" | "injury" | "illness" | "symptoms";
@@ -556,7 +557,7 @@ export function photoPaths(v: unknown): string[] {
 
 const fmtDate = (iso: string) => {
   const d = new Date(`${iso.slice(0, 10)}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" });
 };
 
 /** An answer as text (photos are drawn, not written). */

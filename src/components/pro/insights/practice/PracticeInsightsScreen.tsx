@@ -34,6 +34,7 @@ import {
   type Outcome,
   type StageChange,
 } from "./practiceModel";
+import { appLocale } from "../../../../i18n/format";
 
 interface Session {
   date: string;
@@ -50,7 +51,7 @@ const RANGE_START: Record<PageRange, (today: string) => string> = {
   month: (t) => `${t.slice(0, 8)}01`,
 };
 const RANGE_WORD: Record<PageRange, string> = { today: "Today", week: "This week", month: "This month" };
-const fmtShort = (iso: string) => new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const fmtShort = (iso: string) => new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 
 /**
@@ -359,7 +360,7 @@ const FunnelBars: React.FC<{ pipe: ReturnType<typeof funnel>; dark: boolean }> =
         return (
           <React.Fragment key={s.label}>
             {i > 0 && (
-              <div className="flex items-center" style={{ gap: 6, padding: "4px 0 4px 10px" }}>
+              <div className="flex items-center" style={{ gap: 6, paddingBlock: "4px", paddingInline: "10px 0" }}>
                 <ArrowDown size={12} strokeWidth={2.4} aria-hidden style={{ color: INK.chF }} />
                 <span style={{ fontSize: textPx(11.5), fontWeight: 800, color: INK.ch }}>{pct == null ? "–" : `${pct}%`}</span>
                 <span style={{ fontSize: textPx(11), color: INK.chF }}>{i === 1 ? "hire you" : "stay past the first month"}</span>

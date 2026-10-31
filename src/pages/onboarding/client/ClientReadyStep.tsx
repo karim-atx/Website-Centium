@@ -9,6 +9,7 @@ import { ObFooter, ObHeader, ObPage } from "../shell/ObShell";
 import { ObChipStatic, ObSectionLabel, ObStatus, ObTerms, ObTip } from "../shell/ObBlocks";
 import { OB } from "../shell/visuals";
 import { goalAreas, startingPointSummary, trackingToSave } from "./clientModel";
+import { t, tk } from "../../../i18n/core";
 
 // v6 (OB-109…111): Client lane · You're all set (BizOnboardingV10 step
 // "done", motion/client-complete: a single leaf grows and settles over about
@@ -46,18 +47,18 @@ export const ClientReadyStep: React.FC<{
   const [askTerms] = useState(() => !draft.legalAcceptedAt);
   useEffect(() => {
     if (reduced) return;
-    const t = [window.setTimeout(() => setK(2), 300), window.setTimeout(() => setK(3), 600), window.setTimeout(() => setK(4), 900)];
-    return () => t.forEach((x) => window.clearTimeout(x));
+    const timers = [window.setTimeout(() => setK(2), 300), window.setTimeout(() => setK(3), 600), window.setTimeout(() => setK(4), 900)];
+    return () => timers.forEach((x) => window.clearTimeout(x));
   }, [reduced]);
   const a = A[k - 1];
   const flags = { rs: draft.recoverySensitive, cy: draft.cycleTracking };
   const areas = goalAreas(flags).filter((x) => draft.goalAreas.includes(x.key));
   const summary = startingPointSummary(trackingToSave(draft.tracking, flags), draft.activityLevel, flags);
-  const t = reduced ? "none" : "transform 300ms cubic-bezier(0.22,1,0.36,1), opacity 300ms ease";
+  const trans = reduced ? "none" : "transform 300ms cubic-bezier(0.22,1,0.36,1), opacity 300ms ease";
 
   const go = () => {
     if (askTerms && !draft.legalAcceptedAt) {
-      setTermsError("Accept the Terms of Service and Privacy Policy to continue.");
+      setTermsError(tk("Accept the Terms of Service and Privacy Policy to continue."));
       return;
     }
     onFinish();
@@ -78,17 +79,17 @@ export const ClientReadyStep: React.FC<{
             ) : (
               <>
                 {[0, -45, -90].map((r, i) => (
-                  <g key={r} style={{ transform: `rotate(${r * a.v}deg)`, transformOrigin: "50px 80px", transition: t }}>
+                  <g key={r} style={{ transform: `rotate(${r * a.v}deg)`, transformOrigin: "50px 80px", transition: trans }}>
                     <path d={MARK_LEAF_PATH} fill={[OB.leaf, OB.lav, OB.brand][i]} transform="translate(50 80) scale(0.12) translate(-566 -884)" />
                   </g>
                 ))}
               </>
             )
           }
-          eyebrow="Welcome to Centium"
+          eyebrow={t("Welcome to Centium")}
           eyebrowColor="var(--ob-good)"
-          title={`You're all set, ${draft.firstName.trim().split(/\s+/)[0] || "friend"}`}
-          body="We've built your Home around your goals. Let's take a look."
+          title={t("You're all set, {name}", { name: draft.firstName.trim().split(/\s+/)[0] || t("friend") })}
+          body={t("We've built your Home around your goals. Let's take a look.")}
           ringOpacity={a.ro}
           ringScale={a.rs}
           glowOpacity={a.gl}
@@ -99,10 +100,10 @@ export const ClientReadyStep: React.FC<{
           <div className={reduced ? undefined : "ob-fade-in"}>
             {areas.length > 0 && (
               <>
-                <ObSectionLabel title="Your starting point" margin="4px 2px 12px" />
+                <ObSectionLabel title={t("Your starting point")} margin="4px 2px 12px" />
                 <div className="ob-chips" style={{ marginBottom: 16 }}>
                   {areas.map((x) => (
-                    <ObChipStatic key={x.key} label={x.title} />
+                    <ObChipStatic key={x.key} label={t(x.title)} />
                   ))}
                 </div>
               </>
@@ -125,7 +126,7 @@ export const ClientReadyStep: React.FC<{
                     setTermsError(null);
                     setDraft((d) => ({ ...d, legalAcceptedAt: on ? new Date().toISOString() : null, legalVersion: on ? LEGAL_VERSION : null }));
                   }}
-                  error={termsError}
+                  error={termsError && t(termsError)}
                   tail="."
                 />
               </div>
@@ -136,7 +137,7 @@ export const ClientReadyStep: React.FC<{
       <ObFooter
         error={error}
         primary={{
-          label: busy ? "Setting up…" : error ? "Try again" : notice ? "Continue anyway" : "Let's go",
+          label: busy ? t("Setting up…") : error ? t("Try again") : notice ? t("Continue anyway") : t("Let's go"),
           onClick: go,
           disabled: busy || k < 3,
           // The settling animation draws the button at 0.3 until C3.

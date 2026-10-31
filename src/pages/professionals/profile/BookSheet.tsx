@@ -150,7 +150,7 @@ export const BookSheet: React.FC<{
   });
 
   const price = session ? priceLabel(session.price, session.currency) : "";
-  const notch: React.CSSProperties = { position: "absolute", right: 65, width: 14, height: 14, borderRadius: 999, background: m.sbody };
+  const notch: React.CSSProperties = { position: "absolute", insetInlineEnd: 65, width: 14, height: 14, borderRadius: 999, background: m.sbody };
   const arrow = (dir: "left" | "right", disabled: boolean, onClick: () => void, label: string) => (
     <button
       type="button"
@@ -174,7 +174,7 @@ export const BookSheet: React.FC<{
           {chosenSlot ? `${sessionWhen(chosenSlot.startsAt)} · ${sessionLine(session.durationMin, session.locationKind)}` : sessionLine(session.durationMin, session.locationKind)}
         </div>
       </div>
-      <div style={{ width: 72, flexShrink: 0, borderLeft: `1.5px dashed ${m.fill}`, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 72, flexShrink: 0, borderInlineStart: `1.5px dashed ${m.fill}`, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <span style={{ fontSize: textPx(18), fontWeight: 800, color: m.pdark, whiteSpace: "nowrap" }}>{price}</span>
       </div>
       <span aria-hidden style={{ ...notch, top: -7 }} />

@@ -481,7 +481,7 @@ export default function Home() {
               <span
                 aria-hidden
                 className="absolute flex items-center justify-center"
-                style={{ top: -4, right: -4, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: INK.hi, color: dark ? "#0D0B1A" : "#FFFFFF", fontSize: 9, fontWeight: 700 }}
+                style={{ top: -4, insetInlineEnd: -4, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: INK.hi, color: dark ? "#0D0B1A" : "#FFFFFF", fontSize: 9, fontWeight: 700 }}
               >
                 {inbox.unread}
               </span>

@@ -23,6 +23,7 @@ import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { INK } from "../../../components/pro/proInk";
 import { ProCardSkeleton } from "../../../components/pro/states";
 import { textPx } from "../../../theme/textSize";
+import { t, tn } from "../../../i18n/core";
 
 // Batch 2 · CS, Karim's decision (21 Oct): a PROFESSIONAL who owns a business
 // and holds its business plan gets the same monthly / yearly choice as a
@@ -54,16 +55,16 @@ export function ProBusinessBilling() {
   if (own.error && !sub) {
     return (
       <div role="alert" className="flex items-center justify-between" style={{ gap: 12, marginBottom: 14 }}>
-        <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi }}>{own.error}</p>
+        <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi }}>{t(own.error)}</p>
         <button type="button" onClick={own.reload} className="tap shrink-0" style={{ minHeight: 44, padding: "0 8px", fontSize: textPx(12), fontWeight: 800, color: INK.prDeep }}>
-          Retry
+          {t("Retry")}
         </button>
       </div>
     );
   }
   if (!sub) return null;
 
-  const planName = tiers.find((t) => t.rowId === sub.tierId)?.name ?? "Business";
+  const planName = tiers.find((tier) => tier.rowId === sub.tierId)?.name ?? "Business";
   const prices = own.prices;
   const total = prices ? prices[sub.period] : undefined;
   const options = prices ? periodOptions(sub.period, prices) : [];
@@ -86,29 +87,29 @@ export function ProBusinessBilling() {
   return (
     <section aria-labelledby="pro-biz-plan" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
       <p id="pro-biz-plan" style={{ fontSize: textPx(14), fontWeight: 800, color: INK.ch }}>
-        Your business plan
+        {t("Your business plan")}
       </p>
       <p style={{ fontSize: textPx(12), color: INK.chS, marginTop: 4, lineHeight: 1.5 }}>
         {[
-          blocks > 0 ? `${planName} + ${blocks} seat block${blocks === 1 ? "" : "s"}` : planName,
-          `Billed ${sub.period}`,
-          total === undefined ? null : total === null ? missingPriceText(sub.period) : `${formatPrice(total)} ${perPeriod(sub.period)} in total`,
-          sub.renewsAt ? `renews ${renewalDayText(sub.renewsAt)}` : null,
+          blocks > 0 ? tn(blocks, "{plan} + {n} seat block", "{plan} + {n} seat blocks", { plan: planName }) : planName,
+          sub.period === "monthly" ? t("Billed monthly") : t("Billed yearly"),
+          total === undefined ? null : total === null ? missingPriceText(sub.period) : t("{price} in total", { price: `${formatPrice(total)} ${perPeriod(sub.period)}` }),
+          sub.renewsAt ? t("renews {date}", { date: renewalDayText(sub.renewsAt) }) : null,
         ]
           .filter(Boolean)
           .join(" · ")}
       </p>
       {own.error && (
         <div role="alert" className="flex items-center justify-between" style={{ gap: 12, marginTop: 8 }}>
-          <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi }}>{own.error}</p>
+          <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi }}>{t(own.error)}</p>
           <button type="button" onClick={own.reload} className="tap shrink-0" style={{ minHeight: 44, padding: "0 8px", fontSize: textPx(12), fontWeight: 800, color: INK.prDeep }}>
-            Retry
+            {t("Retry")}
           </button>
         </div>
       )}
       {!prices && !own.error && <ProCardSkeleton lines={2} />}
       {prices && (
-        <div role="radiogroup" aria-label="How your business plan is billed" style={{ marginTop: 10, display: "grid", gap: 8 }}>
+        <div role="radiogroup" aria-label={t("How your business plan is billed")} style={{ marginTop: 10, display: "grid", gap: 8 }}>
           {options.map((o) => (
             <button
               key={o.period}
@@ -121,7 +122,7 @@ export function ProBusinessBilling() {
                 setNote(null);
                 if (o.selectable && o.price !== null) setAsk({ to: o.period, price: o.price, at: renewalAfterSwitch(new Date(), o.period) });
               }}
-              className="tap w-full flex items-center justify-between text-left"
+              className="tap w-full flex items-center justify-between text-start"
               style={{
                 minHeight: 44,
                 gap: 10,
@@ -142,7 +143,7 @@ export function ProBusinessBilling() {
                   </span>
                 )}
               </span>
-              <span className="flex flex-col items-end" style={{ textAlign: "right" }}>
+              <span className="flex flex-col items-end" style={{ textAlign: "end" }}>
                 <span style={{ fontSize: textPx(12), fontWeight: 700, color: o.price === null ? INK.chF : INK.chS }}>{periodPriceText(o.price, o.period, formatPrice)}</span>
                 {o.period === "yearly" && o.price !== null && saving && (
                   <span style={{ fontSize: textPx(11), fontWeight: 600, color: INK.chF }}>{perMonthText(o.price, formatPrice)}</span>
@@ -153,13 +154,13 @@ export function ProBusinessBilling() {
           <p style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.5 }}>
             {options.find((o) => !o.current && o.price === null)
               ? noPriceText(options.find((o) => !o.current && o.price === null)!.period)
-              : "Seat blocks follow your plan's billing. Switching charges nothing now."}
+              : t("Seat blocks follow your plan's billing. Switching charges nothing now.")}
           </p>
         </div>
       )}
       {note && (
         <p role={note.tone === "error" ? "alert" : "status"} style={{ fontSize: textPx(12), fontWeight: 700, marginTop: 8, color: note.tone === "error" ? INK.hi : INK.prDeep }}>
-          {note.text}
+          {t(note.text)}
         </p>
       )}
       <ConfirmCard
@@ -171,7 +172,7 @@ export function ProBusinessBilling() {
         title={confirm?.title ?? ""}
         subtitle={confirm?.body}
         confirmLabel={confirm?.action}
-        cancelLabel="Keep my billing"
+        cancelLabel={t("Keep my billing")}
         busy={busy}
         onCancel={() => setAsk(null)}
         onConfirm={() => void doSwitch()}

@@ -111,7 +111,7 @@ export const TemplateEditor: React.FC<{
           <button
             type="button"
             onClick={(e) => setPickerAnchor(e.currentTarget)}
-            className="tap w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-left text-sm"
+            className="tap w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-start text-sm"
             style={{ minHeight: 44, color: names.length ? INK.ch : INK.chF }}
             aria-haspopup="listbox"
           >

@@ -5,6 +5,7 @@ import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { MetricHero, HeroPill, hairline, mc, metricIconInk, metricTextInk, useHealthMode, type Stat } from "./MetricKit";
 import { daysOf, monthLetter, type MetricRange, type Period } from "./periods";
 import { HR_ALERT_COPY } from "../../../services/health-metrics/clinicalCopy";
+import { isRtl } from "../../../i18n/core";
 
 // Heart rate (HE1.5 family) hero, charts and the HE1.5.a notice card.
 // Literal values from health-handover.md HE1.5 / .d / .m / .y / .a; chart
@@ -133,7 +134,7 @@ export const HeartRateHero: React.FC<{ data: HrHeroData | null; loading?: boolea
               />
             )}
           </svg>
-          <div className="absolute" style={{ left: 0, right: 0, top: 26, height: 14, borderRadius: 7, background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.85)" }} />
+          <div className="absolute" style={{ insetInlineStart: 0, insetInlineEnd: 0, top: 26, height: 14, borderRadius: 7, background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.85)" }} />
           {!single && (
             <div
               className="absolute"
@@ -155,7 +156,7 @@ export const HeartRateHero: React.FC<{ data: HrHeroData | null; loading?: boolea
               top: 23,
               width: 20,
               height: 20,
-              marginLeft: -10,
+              marginInlineStart: -10,
               left: `${(stripX(data.marker) / 326) * 100}%`,
               borderRadius: 9999,
               background: dark ? mc(K, "main") : mc(K, "accent"),
@@ -301,22 +302,26 @@ export const HeartRateChart: React.FC<{
     fontWeight: bold ? 800 : 600,
     fill: bold ? "rgb(var(--c-charcoal))" : "rgb(var(--c-charcoal-faint))",
   });
+  // Round F (F10): in right to left, time runs from right to left. Every x on
+  // the 326 grid is mirrored; SVG text anchors are logical, so the labels follow.
+  const rtl = isRtl();
+  const mx = (v: number) => (rtl ? 326 - v : v);
 
   if (range === "day") {
     const v = day?.value ?? null;
     const xEnd = 326 * (day?.elapsed ?? 1);
     return (
       <svg viewBox="0 0 326 146" width="100%" style={{ display: "block", height: "auto" }} data-hr-chart="day">
-        {xEnd < 326 && <rect x={xEnd} y={0} width={326 - xEnd} height={HR_AXIS.base} fill={dark ? "rgba(255,255,255,0.03)" : "#FAFAFA"} />}
+        {xEnd < 326 && <rect x={rtl ? 0 : xEnd} y={0} width={326 - xEnd} height={HR_AXIS.base} fill={dark ? "rgba(255,255,255,0.03)" : "#FAFAFA"} />}
         <line x1={0} x2={326} y1={HR_AXIS.base} y2={HR_AXIS.base} stroke={axis} strokeWidth={1} />
         {v !== null && (
           <>
             <line x1={0} x2={326} y1={hrY(v)} y2={hrY(v)} stroke={avgInk} strokeWidth={1.5} strokeDasharray="4 4" />
-            <circle cx={Math.max(6, xEnd - 6)} cy={hrY(v)} r={4} fill={mc(K, "main")} stroke={ring} strokeWidth={1.5} />
+            <circle cx={mx(Math.max(6, xEnd - 6))} cy={hrY(v)} r={4} fill={mc(K, "main")} stroke={ring} strokeWidth={1.5} />
           </>
         )}
         {["12am", "6am", "12pm", "6pm"].map((t, i) => (
-          <text key={t} x={i * 81.5} y={LABEL_Y} textAnchor="start" style={labelStyle(false)}>
+          <text key={t} x={mx(i * 81.5)} y={LABEL_Y} textAnchor="start" style={labelStyle(false)}>
             {t}
           </text>
         ))}
@@ -342,7 +347,7 @@ export const HeartRateChart: React.FC<{
     <svg viewBox="0 0 326 146" width="100%" style={{ display: "block", height: "auto" }} data-hr-chart={range}>
       <line x1={0} x2={326} y1={HR_AXIS.base} y2={HR_AXIS.base} stroke={axis} strokeWidth={1} />
       {units.map((u, i) => {
-        const cx = geo.x(i);
+        const cx = mx(geo.x(i));
         if (u.low === null || u.high === null) {
           if (!u.ahead || range === "month") return null;
           const top = hrY(gHigh) - r;
@@ -362,14 +367,14 @@ export const HeartRateChart: React.FC<{
       {average !== null && (
         <>
           <line x1={0} x2={326} y1={hrY(average)} y2={hrY(average)} stroke={avgInk} strokeWidth={1.5} strokeDasharray="4 4" data-avg-line />
-          <text x={326} y={hrY(average) - 6} textAnchor="end" style={{ fontSize: `calc(10.5px + var(--text-boost, 0px))`, fontWeight: 700, fill: metricTextInk(K, dark) }}>
+          <text x={mx(326)} y={hrY(average) - 6} textAnchor="end" style={{ fontSize: `calc(10.5px + var(--text-boost, 0px))`, fontWeight: 700, fill: metricTextInk(K, dark) }}>
             {averageLabel}
           </text>
         </>
       )}
       {units.map((u, i) =>
         range === "month" && !monthTicks.has(i) ? null : (
-          <text key={`l${u.key}`} x={geo.x(i)} y={LABEL_Y} textAnchor="middle" style={labelStyle(u.current)}>
+          <text key={`l${u.key}`} x={mx(geo.x(i))} y={LABEL_Y} textAnchor="middle" style={labelStyle(u.current)}>
             {range === "week" ? DOW_LETTER[new Date(`${u.key}T12:00:00`).getDay()] : range === "month" ? String(i + 1) : u.label}
           </text>
         )

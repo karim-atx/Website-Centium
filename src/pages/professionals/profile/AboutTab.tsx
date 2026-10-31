@@ -209,21 +209,21 @@ export const AboutTab: React.FC<{
                   key={o.id}
                   onClick={() => navigate(`/app/marketplace/rewards/${encodeURIComponent(o.id)}`)}
                   aria-label={`${o.headline}. ${formatPoints(o.pointsCost)} points. ${p.note}`}
-                  style={{ ...card, position: "relative", overflow: "hidden", width: "100%", textAlign: "left", font: "inherit", lineHeight: "normal", cursor: "pointer", padding: "12px 14px 14px", display: "flex", gap: 12 }}
+                  style={{ ...card, position: "relative", overflow: "hidden", width: "100%", textAlign: "start", font: "inherit", lineHeight: "normal", cursor: "pointer", padding: "12px 14px 14px", display: "flex", gap: 12 }}
                 >
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: textPx(14), lineHeight: linePx(20), fontWeight: 700, overflowWrap: "anywhere" }}>{o.headline}</span>
                     {o.endsOn ? <span style={{ display: "block", fontSize: textPx(11.5), color: m.faint, marginTop: 1 }}>Ends {dayText(o.endsOn)}</span> : null}
                   </span>
-                  <span style={{ alignSelf: "flex-end", textAlign: "right", flexShrink: 0 }}>
+                  <span style={{ alignSelf: "flex-end", textAlign: "end", flexShrink: 0 }}>
                     <span style={{ display: "inline-flex", alignItems: "baseline", gap: 3, whiteSpace: "nowrap" }}>
                       <span style={{ fontSize: textPx(17), fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{formatPoints(o.pointsCost)}</span>
                       <PointsLeaf height={12} />
                     </span>
                     <span style={{ display: "block", fontSize: textPx(11), lineHeight: linePx(15), color: p.can ? m.tealink : m.faint, fontWeight: p.can ? 700 : 500 }}>{p.note}</span>
                   </span>
-                  <span aria-hidden style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 2, background: m.div }} />
-                  <span aria-hidden style={{ position: "absolute", left: 0, bottom: 0, height: 2, width: `${p.pct}%`, background: p.can ? m.teal : m.fill }} />
+                  <span aria-hidden style={{ position: "absolute", insetInlineStart: 0, insetInlineEnd: 0, bottom: 0, height: 2, background: m.div }} />
+                  <span aria-hidden style={{ position: "absolute", insetInlineStart: 0, bottom: 0, height: 2, width: `${p.pct}%`, background: p.can ? m.teal : m.fill }} />
                 </PressButton>
               );
             })}
@@ -251,9 +251,9 @@ export const AboutTab: React.FC<{
                   {open ? <Chevron color={m.faint} /> : null}
                 </>
               );
-              const row: React.CSSProperties = { display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderTop: i ? `0.5px solid ${m.div}` : 0, width: "100%", textAlign: "left", font: "inherit", color: m.ink, lineHeight: "normal" };
+              const row: React.CSSProperties = { display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderTop: i ? `0.5px solid ${m.div}` : 0, width: "100%", textAlign: "start", font: "inherit", color: m.ink, lineHeight: "normal" };
               return open ? (
-                <button key={`${c.seriesId ?? c.title}${i}`} type="button" onClick={open} className="market-focus" style={{ ...row, background: "none", borderLeft: 0, borderRight: 0, borderBottom: 0, cursor: "pointer" }}>
+                <button key={`${c.seriesId ?? c.title}${i}`} type="button" onClick={open} className="market-focus" style={{ ...row, background: "none", borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0, cursor: "pointer" }}>
                   {inner}
                 </button>
               ) : (

@@ -8,6 +8,7 @@ import { textPx } from "../../theme/textSize";
 import { useApp } from "../../context/AppContext";
 import { useHealthCheckStore, type CustomCheck } from "../../services/health-checks/checkStore";
 import { screeningRows } from "../../services/health-checks/screening";
+import { t, tn } from "../../i18n/core";
 
 /** A check's name by id: every catalogue check (both sexes, the widest ages) and the user's own. */
 export function checkNameOf(id: string, custom: CustomCheck[]): string {
@@ -31,8 +32,8 @@ export function checkNameOf(id: string, custom: CustomCheck[]): string {
 
 /** "1 reminder · Bowel cancer screening" / "2 reminders · Blood pressure, Bowel cancer screening" / "No reminders yet". */
 export function reminderCountLine(names: string[]): string {
-  if (names.length === 0) return "No reminders yet";
-  return `${names.length} reminder${names.length === 1 ? "" : "s"} · ${names.join(", ")}`;
+  if (names.length === 0) return t("No reminders yet");
+  return tn(names.length, "{n} reminder · {names}", "{n} reminders · {names}", { names: names.join(t(", ")) });
 }
 
 export const HealthChecksNotificationRow: React.FC<{
@@ -51,17 +52,17 @@ export const HealthChecksNotificationRow: React.FC<{
         <ClipboardCheck size={18} strokeWidth={1.75} />
       </span>
       <span className="flex-1 min-w-0">
-        <span className="block text-[14px] font-semibold leading-[19px] text-charcoal">Health checks</span>
+        <span className="block text-[14px] font-semibold leading-[19px] text-charcoal">{t("Health checks")}</span>
         <button
           type="button"
           onClick={() => navigate("/app/settings/notifications/health-checks")}
-          className="tap block max-w-full truncate text-left text-charcoal-faint"
+          className="tap block max-w-full truncate text-start text-charcoal-faint"
           style={{ fontSize: textPx(11), lineHeight: "15px" }}
         >
           {store.status === "ready" ? reminderCountLine(names) : " "}
         </button>
       </span>
-      <Toggle checked={checked} onChange={onChange} disabled={disabled} label="Health checks" />
+      <Toggle checked={checked} onChange={onChange} disabled={disabled} label={t("Health checks")} />
     </div>
   );
 };

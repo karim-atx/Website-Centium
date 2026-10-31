@@ -231,7 +231,7 @@ export const ShareImagingSheet: React.FC<{
                     return next;
                   })
                 }
-                className="tap w-full flex items-center text-left"
+                className="tap w-full flex items-center text-start"
                 style={{ minHeight: 56, gap: 12, borderTop: rule }}
               >
                 {avatar(p)}
@@ -259,7 +259,7 @@ export const ShareImagingSheet: React.FC<{
           type="button"
           onClick={() => void doExport()}
           disabled={!record.filePath || exporting}
-          className="tap w-full flex items-center text-left disabled:opacity-50"
+          className="tap w-full flex items-center text-start disabled:opacity-50"
           style={{ minHeight: 52, gap: 12, borderTop: rule }}
         >
           <span aria-hidden className="grid place-items-center shrink-0" style={{ width: 40, height: 40, borderRadius: 12, background: tileFill(dark) }}>

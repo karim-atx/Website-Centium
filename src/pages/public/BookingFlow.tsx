@@ -23,6 +23,7 @@ import {
   type Slot,
 } from "../../services/public-pro";
 import { SignInButtons } from "./publicKit";
+import { appLocale } from "../../i18n/format";
 
 // Release 3 · W7 booking a professional's session: the public booking page
 // (/p/{handle}/book) and the client profile's "Book a session" (the same flow
@@ -190,7 +191,7 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
     </div>
   );
 
-  const weekTitle = `${days[0].toLocaleDateString("en-US", { month: "short" })} ${days[0].getDate()} to ${days[6].toLocaleDateString("en-US", { month: "short" })} ${days[6].getDate()}`;
+  const weekTitle = `${days[0].toLocaleDateString(appLocale("en-US"), { month: "short" })} ${days[0].getDate()} to ${days[6].toLocaleDateString(appLocale("en-US"), { month: "short" })} ${days[6].getDate()}`;
 
   return (
     <div className="flex flex-col">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { describeMediaDenial, type MediaDenialKind } from "../utils/mediaPermissions";
+import { t } from "../i18n/core";
 
 /**
  * Microphone capture for voice notes. No dependency — MediaRecorder is native.
@@ -99,7 +100,7 @@ export function useVoiceRecorder() {
     if (!mimeType || !navigator.mediaDevices?.getUserMedia) {
       setError({
         kind: "unsupported",
-        message: "This browser can't record audio. Try a different one.",
+        message: t("This browser can't record audio. Try a different one."),
       });
       return false;
     }

@@ -5,6 +5,7 @@ import { BottomSheet } from "../../ui/BottomSheet";
 import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { MetricHero, HeroPill, hairline, metricTextInk, useHealthMode } from "./MetricKit";
 import { daysOf, monthLetter, type MetricRange, type Period } from "./periods";
+import { isRtl } from "../../../i18n/core";
 
 // Weight trend (HE1.7 family): journey hero with the BMI row, the four range
 // charts and the Units sheet. Literal values from health-handover.md HE1.7 /
@@ -173,35 +174,35 @@ export const WeightHero: React.FC<{
         {data.startKg !== null && (
           <div data-wt-journey style={{ marginTop: 18 }}>
             <div className="relative" style={{ height: 18 }}>
-              <span className="absolute left-0" style={num}>{fmtW(data.startKg, u)}</span>
+              <span className="absolute start-0" style={num}>{fmtW(data.startKg, u)}</span>
               {pos > 0.12 && pos < 0.88 && (
                 <span className="absolute" style={{ ...num, left: pct, transform: "translateX(-50%)" }}>
                   {fmtW(data.nowKg, u)}
                 </span>
               )}
               {hasGoal ? (
-                <span className="absolute right-0" style={num}>{fmtW(data.goalKg as number, u)}</span>
+                <span className="absolute end-0" style={num}>{fmtW(data.goalKg as number, u)}</span>
               ) : (
-                pos >= 0.88 && <span className="absolute right-0" style={num}>{fmtW(data.nowKg, u)}</span>
+                pos >= 0.88 && <span className="absolute end-0" style={num}>{fmtW(data.nowKg, u)}</span>
               )}
             </div>
             <div className="relative" style={{ marginTop: 9, height: 8 }}>
               <div className="absolute inset-0" style={{ borderRadius: 4, background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.85)" }} />
-              <div className="absolute left-0 top-0 bottom-0" data-wt-fill style={{ width: pct, borderRadius: 4, background: fill, transformOrigin: "left", animation: anim }} />
-              <span className="absolute" style={{ left: 0, top: -3, width: 14, height: 14, borderRadius: 9999, background: dotDark }} />
+              <div className="absolute start-0 top-0 bottom-0" data-wt-fill style={{ width: pct, borderRadius: 4, background: fill, transformOrigin: "left", animation: anim }} />
+              <span className="absolute" style={{ insetInlineStart: 0, top: -3, width: 14, height: 14, borderRadius: 9999, background: dotDark }} />
               {hasGoal && (
                 <span
                   className="absolute"
-                  style={{ right: 0, top: -3, width: 14, height: 14, borderRadius: 9999, background: dark ? "#1C1F28" : "#FFFFFF", border: `1.6px dashed ${dotDark}`, boxSizing: "border-box" }}
+                  style={{ insetInlineEnd: 0, top: -3, width: 14, height: 14, borderRadius: 9999, background: dark ? "#1C1F28" : "#FFFFFF", border: `1.6px dashed ${dotDark}`, boxSizing: "border-box" }}
                 />
               )}
-              <span className="absolute" style={{ left: pct, top: -7, width: 22, height: 22, marginLeft: -11, animation: anim }} data-wt-now>
+              <span className="absolute" style={{ left: pct, top: -7, width: 22, height: 22, marginInlineStart: -11, animation: anim }} data-wt-now>
                 {running && <span className="absolute inset-0" style={{ borderRadius: 9999, background: fill, animation: "wtRing 3s ease-out infinite" }} />}
                 <span className="absolute inset-0" style={{ borderRadius: 9999, background: fill, border: `3.8px solid ${dark ? "#1C1F28" : "#FFFFFF"}`, boxSizing: "border-box" }} />
               </span>
             </div>
             <div className="relative" style={{ marginTop: 11, height: 16 }}>
-              <span className="absolute left-0" style={{ ...lbl, color: primaryInk }}>{data.startLabel}</span>
+              <span className="absolute start-0" style={{ ...lbl, color: primaryInk }}>{data.startLabel}</span>
               <span
                 className="absolute"
                 style={{ ...lbl, fontWeight: 700, color: primaryInk, ...(pos >= 0.88 ? { right: hasGoal ? 40 : 0 } : { left: pct, transform: "translateX(-50%)" }) }}
@@ -209,12 +210,12 @@ export const WeightHero: React.FC<{
                 Now
               </span>
               {hasGoal ? (
-                <span className="absolute right-0" style={{ ...lbl, color: primaryInk }}>Goal</span>
+                <span className="absolute end-0" style={{ ...lbl, color: primaryInk }}>Goal</span>
               ) : (
                 <button
                   type="button"
                   onClick={onSetGoal}
-                  className="tap absolute right-0 before:absolute before:-inset-y-[14px] before:-inset-x-1 before:content-['']"
+                  className="tap absolute end-0 before:absolute before:-inset-y-[14px] before:-inset-x-1 before:content-['']"
                   style={{ ...lbl, fontWeight: 700, color: primaryInk, top: 0, display: pos >= 0.88 ? "none" : undefined }}
                 >
                   Set a goal
@@ -251,7 +252,7 @@ export const WeightHero: React.FC<{
                       width: 3,
                       height: 13,
                       borderRadius: 2,
-                      marginLeft: -1.5,
+                      marginInlineStart: -1.5,
                       background: dotDark,
                       left: `calc((100% - 6px) * ${Math.min(40, Math.max(0, data.bmi.bmi)) / 40} + ${[18.5, 25, 30].filter((b) => data.bmi && data.bmi.kind === "value" && data.bmi.bmi >= b).length * 2}px)`,
                     }}
@@ -323,6 +324,11 @@ export const WeightChart: React.FC<{
     fill: bold ? "rgb(var(--c-charcoal))" : "rgb(var(--c-charcoal-faint))",
   });
   const valLabel: React.CSSProperties = { fontSize: "calc(10.5px + var(--text-boost, 0px))", fontWeight: 700, fill: "rgb(var(--c-charcoal))" };
+  // Round F (F10): in right to left, time runs from right to left: Week, Month
+  // and Year mirror every x on the 326 grid (SVG text anchors are logical, so
+  // the labels follow). Day is a weight scale, not a time axis: as drawn.
+  const rtl = isRtl();
+  const mx = (v: number) => (rtl ? 326 - v : v);
   const goalText = goalKg !== null ? `Goal ${fmtW(goalKg, unit)} ${unit}` : "";
   const days = daysOf(period).filter((d) => byDay[d] !== undefined);
   const scaleVals = (vals: number[]) => {
@@ -376,7 +382,7 @@ export const WeightChart: React.FC<{
         <line x1={0} x2={326} y1={118.9} y2={118.9} stroke={axis} strokeWidth={1} />
         {goalY !== null && <GoalLine y={goalY} ink={ink} text={goalText} />}
         {all.map((d, i) => {
-          const cx = 25.4 + 46.6 * i;
+          const cx = mx(25.4 + 46.6 * i);
           const v = byDay[d];
           if (v === undefined) return d > today ? <circle key={d} cx={cx} cy={vals.length ? y(vals[vals.length - 1]) : 60} r={5} fill="none" stroke={ghost} strokeWidth={1} data-ghost /> : null;
           return (
@@ -389,7 +395,7 @@ export const WeightChart: React.FC<{
           );
         })}
         {all.map((d, i) => (
-          <text key={`l${d}`} x={25.4 + 46.6 * i} y={139} textAnchor="middle" style={label(d === today)}>
+          <text key={`l${d}`} x={mx(25.4 + 46.6 * i)} y={139} textAnchor="middle" style={label(d === today)}>
             {["S", "M", "T", "W", "T", "F", "S"][new Date(`${d}T12:00:00`).getDay()]}
           </text>
         ))}
@@ -399,7 +405,7 @@ export const WeightChart: React.FC<{
 
   if (range === "month") {
     const n = daysOf(period).length;
-    const x = (d: string) => 8 + ((Number(d.slice(8, 10)) - 1) * 310) / Math.max(1, n - 1);
+    const x = (d: string) => mx(8 + ((Number(d.slice(8, 10)) - 1) * 310) / Math.max(1, n - 1));
     const vals = days.map((d) => byDay[d]);
     const y = vals.length ? scaleVals(vals) : () => 60;
     // Smoothed trend: the 7-day trailing average of weigh-ins at each weigh-in.
@@ -418,7 +424,7 @@ export const WeightChart: React.FC<{
           <circle key={d} cx={x(d)} cy={y(byDay[d])} r={4.5} fill={ring} stroke={main} strokeWidth={2} data-dot />
         ))}
         {[1, 8, 15, 22, 29].filter((dn) => dn <= n).map((dn) => (
-          <text key={dn} x={8 + ((dn - 1) * 310) / Math.max(1, n - 1)} y={139} textAnchor="middle" style={label(false)}>
+          <text key={dn} x={mx(8 + ((dn - 1) * 310) / Math.max(1, n - 1))} y={139} textAnchor="middle" style={label(false)}>
             {dn}
           </text>
         ))}
@@ -436,7 +442,7 @@ export const WeightChart: React.FC<{
   const startKg = startDay && startDay.startsWith(yr) ? byDay[startDay] : null;
   const vals = months.filter((m) => m.v !== null).map((m) => m.v as number);
   const y = vals.length ? scaleVals(startKg !== null && startKg !== undefined ? [...vals, startKg] : vals) : () => 60;
-  const cx = (i: number) => 16.2 + 27.2 * i;
+  const cx = (i: number) => mx(16.2 + 27.2 * i);
   const pts = months.filter((m) => m.v !== null);
   const goalY = goalKg !== null && vals.length ? y(goalKg) : null;
   const startMonth = startDay && startDay.startsWith(yr) ? Number(startDay.slice(5, 7)) - 1 : null;
@@ -450,8 +456,8 @@ export const WeightChart: React.FC<{
       ))}
       {startMonth !== null && startKg !== null && startKg !== undefined && (
         <g data-start>
-          <circle cx={cx(startMonth) - 9} cy={y(startKg)} r={5.5} fill={ink} />
-          <text x={cx(startMonth) - 9} y={y(startKg) - 10} textAnchor="middle" style={{ ...valLabel, fill: ink }}>{`Start ${fmtW(startKg, unit)}`}</text>
+          <circle cx={cx(startMonth) - (rtl ? -9 : 9)} cy={y(startKg)} r={5.5} fill={ink} />
+          <text x={cx(startMonth) - (rtl ? -9 : 9)} y={y(startKg) - 10} textAnchor="middle" style={{ ...valLabel, fill: ink }}>{`Start ${fmtW(startKg, unit)}`}</text>
         </g>
       )}
       {months.filter((m) => m.ahead).map((m) => (
@@ -469,7 +475,7 @@ export const WeightChart: React.FC<{
 const GoalLine: React.FC<{ y: number; ink: string; text: string }> = ({ y, ink, text }) => (
   <g data-goal-line>
     <line x1={0} x2={326} y1={y} y2={y} stroke={ink} strokeWidth={1.5} strokeDasharray="4 4" />
-    <text x={326} y={y - 6} textAnchor="end" style={{ fontSize: "calc(10.5px + var(--text-boost, 0px))", fontWeight: 700, fill: ink }}>
+    <text x={isRtl() ? 0 : 326} y={y - 6} textAnchor="end" style={{ fontSize: "calc(10.5px + var(--text-boost, 0px))", fontWeight: 700, fill: ink }}>
       {text}
     </text>
   </g>

@@ -5,6 +5,7 @@ import { Megaphone } from "lucide-react";
 import { useMessagePopup } from "../../context/UnreadContext";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import type { PopupCard } from "../../services/messaging/popupModel";
+import { t } from "../../i18n/core";
 
 // AX, the in-app message pop-up (Round C Release 1; PLAN S5, undrawn, in the
 // AchievementUnlockToast anatomy). A pill at the top for a new chat or
@@ -140,7 +141,7 @@ const Pill: React.FC<{ card: PopupCard; onDone: () => void }> = ({ card, onDone 
         // never focused on its own.
         role="button"
         tabIndex={0}
-        aria-label={`New message from ${card.title}: ${card.line}. Open conversation`}
+        aria-label={t("New message from {name}: {line}. Open conversation", { name: card.title, line: card.line })}
         className="pointer-events-auto w-full flex items-center gap-2.5 rounded-2xl bg-cream-card shadow-popup border-[0.5px] border-charcoal/[0.08] px-3 py-2.5 cursor-pointer select-none touch-none focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
         style={{
           maxWidth: 420,
@@ -162,7 +163,7 @@ const Pill: React.FC<{ card: PopupCard; onDone: () => void }> = ({ card, onDone 
           <span className="block text-[13px] leading-[18px] font-bold text-charcoal truncate">{card.title}</span>
           <span className="block text-[12.5px] leading-[17px] font-medium text-charcoal-soft truncate">{card.line}</span>
         </span>
-        <span className="shrink-0 self-start mt-px text-[11px] leading-[16px] text-charcoal-faint">now</span>
+        <span className="shrink-0 self-start mt-px text-[11px] leading-[16px] text-charcoal-faint">{t("now")}</span>
       </div>
     </div>,
     document.body

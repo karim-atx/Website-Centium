@@ -76,7 +76,7 @@ export const DeclineRequestPopup: React.FC<{
       icon={<UserX size={22} strokeWidth={2} aria-hidden />}
       body={`${first} sees the reason you choose with the decline.`}
     >
-      <div className="text-left">
+      <div className="text-start">
         <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
           Reason (optional)
         </span>

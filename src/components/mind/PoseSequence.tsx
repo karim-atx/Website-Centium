@@ -299,7 +299,7 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
   // #10: 11/16.5 800 primary-dark, 150 wide at y 111.5 in the graphic.
   const countLabel = (
     <span
-      className="absolute left-0 w-full text-center text-[11px] leading-[16.5px] font-extrabold text-primary-dark tabular-nums"
+      className="absolute start-0 w-full text-center text-[11px] leading-[16.5px] font-extrabold text-primary-dark tabular-nums"
       style={{ top: 111.5 }}
     >
       {timed ? `${leftS}s` : "Hold"}
@@ -310,7 +310,7 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
     // #14: m 14, pad 12 0 0 0, border-top 0.547723 px primary-dark @16%.
     // The line is a 0.547723 px tall layer, not a border: Chromium snaps
     // border widths under 1 px up to 1 px, a layer keeps the literal height.
-    "tap relative w-full mt-3.5 pt-[12.547723px] flex items-center gap-2 text-left";
+    "tap relative w-full mt-3.5 pt-[12.547723px] flex items-center gap-2 text-start";
   const nextRule = <span aria-hidden className="absolute inset-x-0 top-0 h-[0.547723px] bg-primary-dark/[0.16]" />;
   const nextLabelClass = "text-[10.5px] leading-[15.8px] font-bold tracking-[0.8px] uppercase text-charcoal-muted shrink-0";
   const nextNameClass = "flex-1 min-w-0 text-[12.5px] leading-[18.8px] font-semibold text-charcoal truncate";
@@ -396,7 +396,7 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
               {nextRule}
               <span className={nextLabelClass}>Next</span>
               <span className={nextNameClass}>{next ? next.name : "Finish"}</span>
-              <ChevronRight size={14} className="text-charcoal-faint shrink-0 rtl:rotate-180" aria-hidden />
+              <ChevronRight size={14} className="text-charcoal-faint shrink-0" aria-hidden />
             </button>
           </div>
         )}
@@ -418,14 +418,14 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
               aria-current={current ? "step" : undefined}
               className={clsx(
                 // #19 / #27: r16, padding 12 14, border 1.09545 px.
-                "tap relative w-full text-left rounded-[16px] px-3.5 py-3 border-[1.09545px]",
+                "tap relative w-full text-start rounded-[16px] px-3.5 py-3 border-[1.09545px]",
                 current ? "bg-cream-card border-primary" : "bg-cream-soft border-transparent"
               )}
             >
               {/* #22 / #30: the number dot, 16 across, 9/13.5 800, 10 / 8 in. */}
               <span
                 className={clsx(
-                  "absolute left-2.5 top-2 z-10 w-4 h-4 rounded-full text-[9px] leading-[13.5px] font-extrabold flex items-center justify-center",
+                  "absolute start-2.5 top-2 z-10 w-4 h-4 rounded-full text-[9px] leading-[13.5px] font-extrabold flex items-center justify-center",
                   current
                     ? "bg-primary-fill text-on-primary-fill"
                     : "bg-cream-card text-primary-dark shadow-[0_1px_2px_rgba(36,31,27,0.12)] dark:shadow-none"
@@ -474,7 +474,7 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
               </span>
               {current && (
                 // #26: m 10 0 2 56, 12/19.2 #5B5349 / #B8B3C7.
-                <span className="block mt-2.5 mb-0.5 ml-14 text-[12px] leading-[19.2px] text-charcoal-soft">{p.instructions}</span>
+                <span className="block mt-2.5 mb-0.5 ms-14 text-[12px] leading-[19.2px] text-charcoal-soft">{p.instructions}</span>
               )}
             </button>
           );

@@ -33,6 +33,7 @@ import { useClientShare } from "../../components/share/client/useClientShare";
 import { ShareGlyph } from "../../components/share/client/ShareEntryButton";
 import { workoutCard } from "../../components/share/client/clientCardModel";
 import { weightOn, workoutFacts } from "../../components/share/client/clientShareData";
+import { appLocale } from "../../i18n/format";
 
 // WO3.1 · History as a card stack: a hero summary for the chosen period
 // (Total volume, Time taken, the comparison phrase, workouts and sets), then
@@ -44,7 +45,7 @@ import { weightOn, workoutFacts } from "../../components/share/client/clientShar
 
 const PERIODS: HistoryPeriod[] = ["week", "month", "year", "all", "day", "custom"];
 const shortDate = (iso: string) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  new Date(`${iso}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 
 type ToastState = { message: string; undo?: () => void; icon?: React.ReactNode; commit?: () => Promise<string | undefined> };
 
@@ -230,11 +231,11 @@ export default function HistoryTab() {
                   TOTAL VOLUME
                 </p>
                 <p className="flex items-baseline" style={{ margin: "3px 0 0", height: 28, whiteSpace: "nowrap" }}>
-                  <span style={{ fontSize: textPx(24), lineHeight: linePx(28), fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{summary.volumeKg.toLocaleString()}</span>
-                  <span style={{ fontSize: textPx(11), lineHeight: linePx(14), fontWeight: 600, color: "rgba(255,255,255,0.86)", marginLeft: 4 }}>kg</span>
+                  <span style={{ fontSize: textPx(24), lineHeight: linePx(28), fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{summary.volumeKg.toLocaleString(appLocale())}</span>
+                  <span style={{ fontSize: textPx(11), lineHeight: linePx(14), fontWeight: 600, color: "rgba(255,255,255,0.86)", marginInlineStart: 4 }}>kg</span>
                 </p>
               </div>
-              <div className="text-right flex-none">
+              <div className="text-end flex-none">
                 <p style={{ margin: 0, fontSize: textPx(8.5), lineHeight: linePx(12), fontWeight: 700, letterSpacing: "0.14em", color: "rgba(255,255,255,0.72)" }}>
                   TIME TAKEN
                 </p>
@@ -257,7 +258,7 @@ export default function HistoryTab() {
             <span className="flex items-center" style={{ gap: 6, color: "var(--hero-label)", fontWeight: 500 }}>
               <Dumbbell size={12} />
               <span>
-                <b style={{ color: "var(--hero-value)", fontWeight: 800 }}>{summary.sets.toLocaleString()}</b> {summary.sets === 1 ? "set" : "sets"}
+                <b style={{ color: "var(--hero-value)", fontWeight: 800 }}>{summary.sets.toLocaleString(appLocale())}</b> {summary.sets === 1 ? "set" : "sets"}
               </span>
             </span>
           </div>
@@ -356,7 +357,7 @@ export default function HistoryTab() {
       <ConfirmCard
         open={!!deleting}
         title="Delete this workout?"
-        subtitle={deleting ? `${deleting.routineName} · ${shortDate(deleting.date)} · ${deleting.totalVolumeKg.toLocaleString()} kg` : undefined}
+        subtitle={deleting ? `${deleting.routineName} · ${shortDate(deleting.date)} · ${deleting.totalVolumeKg.toLocaleString(appLocale())} kg` : undefined}
         onCancel={() => setDeleting(null)}
         onConfirm={confirmDelete}
       />
@@ -440,17 +441,17 @@ const SessionCard: React.FC<{
           >
             <span style={{ fontSize: textPx(19), lineHeight: linePx(20), fontWeight: 800 }}>{d.getDate()}</span>
             <span style={{ fontSize: textPx(11), lineHeight: linePx(13), fontWeight: 700, marginTop: 2 }}>
-              {d.toLocaleDateString("en-US", { month: "short" })}
+              {d.toLocaleDateString(appLocale("en-US"), { month: "short" })}
             </span>
             <span style={{ fontSize: textPx(8.5), lineHeight: linePx(10), fontWeight: 600, color: headInkSoft(family) }}>{d.getFullYear()}</span>
           </button>
-          <button onClick={onToggle} aria-expanded={expanded} className="tap flex-1 min-w-0 flex items-center text-left" style={{ padding: "0 14px 0 15px", gap: 10 }}>
+          <button onClick={onToggle} aria-expanded={expanded} className="tap flex-1 min-w-0 flex items-center text-start" style={{ paddingBlock: "0", paddingInline: "15px 14px", gap: 10 }}>
             <span className="flex-1 min-w-0">
               <span className="block truncate" style={{ fontSize: textPx(14), lineHeight: linePx(18), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
                 {session.routineName}
               </span>
               <span className="block truncate" style={{ marginTop: 3, fontSize: textPx(11.5), lineHeight: linePx(15), color: "rgb(var(--c-charcoal-muted))" }}>
-                {session.totalVolumeKg.toLocaleString()} kg · {formatCompactDuration(session.durationSec)} · {exercises.length} ex
+                {session.totalVolumeKg.toLocaleString(appLocale())} kg · {formatCompactDuration(session.durationSec)} · {exercises.length} ex
               </span>
               {sentText && (
                 // CU1 v4: 6 under the meta, send 12 and 11.5/700 in the
@@ -475,7 +476,7 @@ const SessionCard: React.FC<{
         {replies && replies.length > 0 && (
           // Round D · TR22 (D-S5): "Reply from {pro}" under "Sent to {pro}",
           // in the received message bubble; two lines until the card opens.
-          <div className="flex flex-col" style={{ gap: 6, padding: "0 14px 11px 71px" }}>
+          <div className="flex flex-col" style={{ gap: 6, paddingBlock: "0 11px", paddingInline: "71px 14px" }}>
             {replies.map((r) => (
               <div
                 key={r.id}
@@ -497,7 +498,7 @@ const SessionCard: React.FC<{
         )}
 
         {expanded && (
-          <div style={{ borderTop: "1px solid rgb(var(--c-charcoal) / 0.07)", padding: "5px 24px 11px 14px" }}>
+          <div style={{ borderTop: "1px solid rgb(var(--c-charcoal) / 0.07)", paddingBlock: "5px 11px", paddingInline: "14px 24px" }}>
             {shown.map((ex) => {
               const top = topSet(ex);
               const done = ex.sets.filter((s) => s.completed).length;
@@ -518,7 +519,7 @@ const SessionCard: React.FC<{
               <button
                 onClick={() => setShowAll(true)}
                 className="tap flex items-center"
-                style={{ padding: "7px 0 0 2px", gap: 12, fontSize: textPx(12), lineHeight: linePx(16), fontWeight: 600, color: dark ? liftTo(family.tile, family.row) /* text: 4.5:1 on the dark row */ : family.tile }}
+                style={{ paddingBlock: "7px 0", paddingInline: "2px 0", gap: 12, fontSize: textPx(12), lineHeight: linePx(16), fontWeight: 600, color: dark ? liftTo(family.tile, family.row) /* text: 4.5:1 on the dark row */ : family.tile }}
               >
                 <Plus size={12} strokeWidth={2.4} /> {more} more {more === 1 ? "exercise" : "exercises"}
               </button>

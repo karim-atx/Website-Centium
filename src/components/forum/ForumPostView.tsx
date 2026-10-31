@@ -29,6 +29,7 @@ import { fv } from "./forumColor";
 import { PopupMenu, type PopupMenuOption } from "../ui/PopupMenu";
 import { useIsDark } from "../../hooks/useIsDark";
 import { categoryColours } from "./categoryColour";
+import { appLocale } from "../../i18n/format";
 
 // Design screen 2: one post, its replies, and the reply bar, restyled to
 // mobile v5.1 MO1.3.3: a "Post" top bar, the post's header card in its
@@ -351,7 +352,7 @@ export function ForumPostView({
             className="relative overflow-hidden rounded-[20px] px-4 pt-4 pb-[18px] flex flex-col gap-3"
             style={{ background: postColours.strong, color: postColours.onStrong }}
           >
-            <span aria-hidden className="absolute -right-10 -top-8 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.10)" }} />
+            <span aria-hidden className="absolute -end-10 -top-8 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.10)" }} />
             <div className="relative flex items-center gap-3">
               {/* MO1.3.3: a 52 pt avatar, measured from the frame (2x, 106 px
                   across), as a 3 pt white ring round 46. */}
@@ -490,7 +491,7 @@ export function ForumPostView({
             // MO1.3.3 #9: "Reply as" 11.5/400, gap 6, and a 26 pt chip at 12/700
             // (12 measured from the frame).
             // Inset 6 from the pill's edge, as drawn (x 23; frame check).
-            <span className="pl-1.5 flex items-center gap-1.5 text-[11.5px]" style={{ color: fv("muted") }}>
+            <span className="ps-1.5 flex items-center gap-1.5 text-[11.5px]" style={{ color: fv("muted") }}>
               Reply as
               {/* MO1.3.3: a chip that opens the choice (was a native select). */}
               <button
@@ -507,11 +508,11 @@ export function ForumPostView({
               </button>
             </span>
           )}
-          {replyError && <DangerLine className="pl-1.5">{replyError}</DangerLine>}
+          {replyError && <DangerLine className="ps-1.5">{replyError}</DangerLine>}
           <div className="flex gap-2 items-center">
             {/* MO1.3.3 #10: 49 tall, padding 5 5 5 6, gap 8; the letter 13/700, Send 15. */}
             <label
-              className="grow min-w-0 h-[49px] rounded-full flex items-center gap-2 py-[5px] pl-1.5 pr-[5px]"
+              className="grow min-w-0 h-[49px] rounded-full flex items-center gap-2 py-[5px] ps-1.5 pe-[5px]"
               style={{ border: `1px solid ${fv("border")}` }}
             >
               <span
@@ -656,8 +657,8 @@ type Loaded = {
 /** MO1.3.3's absolute time: "9:14 AM · Aug 24, 2026". */
 function postTime(iso: string): string {
   const d = new Date(iso);
-  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const time = d.toLocaleTimeString(appLocale("en-US"), { hour: "numeric", minute: "2-digit" });
+  const date = d.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" });
   return `${time} · ${date}`;
 }
 
@@ -777,7 +778,7 @@ function ReplyRow({
               aria-label="More options"
               aria-haspopup="menu"
               onClick={(e) => openMenu(e.currentTarget)}
-              className="sr-only focus:not-sr-only focus:ml-auto focus:w-8 focus:h-8 focus:-my-1.5 focus:flex focus:items-center focus:justify-center focus:shrink-0"
+              className="sr-only focus:not-sr-only focus:ms-auto focus:w-8 focus:h-8 focus:-my-1.5 focus:flex focus:items-center focus:justify-center focus:shrink-0"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill={fv("muted")} aria-hidden="true">
                 <circle cx="5" cy="12" r="1.8" />

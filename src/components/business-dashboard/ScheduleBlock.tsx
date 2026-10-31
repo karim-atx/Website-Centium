@@ -222,13 +222,13 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
                   <Clock size={13} aria-hidden />
                   <span>{range12(featured.time, featured.end)}</span>
                   {featured.status && (
-                    <span style={{ marginLeft: "auto", fontSize: textPx(10), fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", background: "rgba(255,255,255,0.92)", color: t.typeInk, borderRadius: 999, padding: "2px 8px" }}>{featured.status}</span>
+                    <span style={{ marginInlineStart: "auto", fontSize: textPx(10), fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", background: "rgba(255,255,255,0.92)", color: t.typeInk, borderRadius: 999, padding: "2px 8px" }}>{featured.status}</span>
                   )}
                 </div>
               )}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 10, fontSize: textPx(12), lineHeight: linePx(16), color: "rgba(255,255,255,0.82)" }}>
                 <span>{featured.ev ? featured.loc : featured.who ? `With ${featured.who}` : ""}</span>
-                <span style={{ textAlign: "right" }}>{countLine() + (isToday || featured.ev ? "" : ` · ${clsD.reduce((a, k) => a + k.b, 0)} booked`)}</span>
+                <span style={{ textAlign: "end" }}>{countLine() + (isToday || featured.ev ? "" : ` · ${clsD.reduce((a, k) => a + k.b, 0)} booked`)}</span>
               </div>
               {later && !expanded && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.16)", fontSize: textPx(11.5), lineHeight: linePx(15), color: "rgba(255,255,255,0.9)" }}>
@@ -297,7 +297,7 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
                     <p style={{ fontSize: textPx(12), fontWeight: 800, lineHeight: linePx(16), color: c.deep, margin: 0 }}>{time12(tm)}</p>
                     {multi && <p style={{ fontSize: textPx(9.5), fontWeight: 700, lineHeight: linePx(13), color: c.faint, marginTop: 2, marginBottom: 0 }}>{`${g.length} at once`}</p>}
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0, paddingLeft: multi ? 10 : 0, borderLeft: multi ? `2px solid ${c.tert}` : "none" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0, paddingInlineStart: multi ? 10 : 0, borderInlineStart: multi ? `2px solid ${c.tert}` : "none" }}>
                     {g.map((x) => {
                       const tt = x.ev ? TY.ev : TY.cls;
                       const done = isToday && (minutesOfDay(x.end) ?? 0) <= nowMin;
@@ -319,7 +319,7 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
                               </div>
                             )}
                           </div>
-                          <span style={{ fontSize: textPx(12), fontWeight: 700, textAlign: "right", color: x.ev ? tt.accentInk : f < 0.7 && !done ? c.caution : c.ink, alignSelf: "center" }}>
+                          <span style={{ fontSize: textPx(12), fontWeight: 700, textAlign: "end", color: x.ev ? tt.accentInk : f < 0.7 && !done ? c.caution : c.ink, alignSelf: "center" }}>
                             {x.ev ? x.status : `${x.b}/${x.cap}`}
                           </span>
                         </div>

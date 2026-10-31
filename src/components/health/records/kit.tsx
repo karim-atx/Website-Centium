@@ -117,7 +117,7 @@ export const RowText: React.FC<{ title: React.ReactNode; meta?: React.ReactNode 
 
 /** Field label 12/16 600 #8C8378, m 0 0 6 2. */
 export const FieldLabel: React.FC<{ children: React.ReactNode; htmlFor?: string; style?: React.CSSProperties }> = ({ children, htmlFor, style }) => (
-  <label htmlFor={htmlFor} className="block" style={{ margin: "0 0 6px 2px", fontSize: textPx(12), lineHeight: linePx(16), fontWeight: 600, color: INK_FAINT, ...style }}>
+  <label htmlFor={htmlFor} className="block" style={{ marginBlock: "0 6px", marginInline: "2px 0", fontSize: textPx(12), lineHeight: linePx(16), fontWeight: 600, color: INK_FAINT, ...style }}>
     {children}
   </label>
 );
@@ -142,7 +142,7 @@ export function fieldStyle(dark: boolean, hc: boolean, weight: 400 | 600 = 400):
 export const HelpLine: React.FC<{ children: React.ReactNode; error?: boolean; style?: React.CSSProperties }> = ({ children, error, style }) => {
   const { dark } = useHealthMode();
   return (
-    <p style={{ margin: "5px 0 0 2px", fontSize: textPx(11), lineHeight: linePx(16), fontWeight: 400, color: error ? (dark ? "#F09A8E" : "#C0392B") : INK_FAINT, ...style }} role={error ? "alert" : undefined}>
+    <p style={{ marginBlock: "5px 0", marginInline: "2px 0", fontSize: textPx(11), lineHeight: linePx(16), fontWeight: 400, color: error ? (dark ? "#F09A8E" : "#C0392B") : INK_FAINT, ...style }} role={error ? "alert" : undefined}>
       {children}
     </p>
   );
@@ -259,7 +259,7 @@ export const SectionCaps: React.FC<{ children: React.ReactNode; style?: React.CS
 export const SheetCaps: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => {
   const { dark } = useHealthMode();
   return (
-    <h3 className="uppercase" style={{ margin: "0 0 4px 2px", fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, letterSpacing: 1.4, color: dark ? "rgb(var(--th-c3b3fb))" : "rgb(var(--th-5f5093))", ...style }}>
+    <h3 className="uppercase" style={{ marginBlock: "0 4px", marginInline: "2px 0", fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, letterSpacing: 1.4, color: dark ? "rgb(var(--th-c3b3fb))" : "rgb(var(--th-5f5093))", ...style }}>
       {children}
     </h3>
   );

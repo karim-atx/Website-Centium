@@ -172,7 +172,7 @@ function TimeWheelCard({
       <div className="relative bg-cream-soft rounded-[10px]" style={{ padding: "4px 6px", height: ROW * 5 + 8 }}>
         <span
           aria-hidden
-          className="absolute left-[6px] right-[6px] bg-cream-card rounded-[9px] pointer-events-none"
+          className="absolute start-[6px] end-[6px] bg-cream-card rounded-[9px] pointer-events-none"
           style={{ top: 4 + ROW * 2 - 3, height: 32, boxShadow: "0 1px 3px rgba(36,31,27,0.08)" }}
         />
         <div className="relative flex h-full">
@@ -462,12 +462,12 @@ export function VenueHoursSheet({
                   <DaySwitch on={d.shape === "range" || d.shape === "open24h"} onChange={(v) => toggleDay(d, v)} label={`Open on ${day}`} />
                 </div>
                 {draftWrapsMidnight(d) && (
-                  <p className="text-[11px] leading-[15px] text-charcoal-faint pb-[8px]" style={{ paddingLeft: 54 }}>
+                  <p className="text-[11px] leading-[15px] text-charcoal-faint pb-[8px]" style={{ paddingInlineStart: 54 }}>
                     Closes the next day at {label12(d.closesAt)}.
                   </p>
                 )}
                 {err && (
-                  <p className="text-[11.5px] font-bold text-status-high pb-[8px] -mt-[2px]" style={{ paddingLeft: 54 }}>
+                  <p className="text-[11.5px] font-bold text-status-high pb-[8px] -mt-[2px]" style={{ paddingInlineStart: 54 }}>
                     {err}
                   </p>
                 )}
@@ -490,7 +490,7 @@ export function VenueHoursSheet({
                 setQuery("");
                 setZoneOpen(true);
               }}
-              className="tap w-full min-h-[48px] rounded-[14px] bg-cream-soft border border-solid border-[#DEDDDE] dark:border-[#343740] flex items-center justify-between gap-2 text-left"
+              className="tap w-full min-h-[48px] rounded-[14px] bg-cream-soft border border-solid border-[#DEDDDE] dark:border-[#343740] flex items-center justify-between gap-2 text-start"
               style={{ padding: "0 14px" }}
             >
               <span className="text-[14px] leading-[20px] font-bold text-charcoal [overflow-wrap:anywhere]">{zone}</span>
@@ -542,7 +542,7 @@ export function VenueHoursSheet({
                 setZone(z);
                 setZoneOpen(false);
               }}
-              className={clsx("tap w-full flex items-center justify-between gap-2 min-h-[44px] text-left text-[13px] font-bold text-charcoal", i > 0 && "border-t", DIVIDER)}
+              className={clsx("tap w-full flex items-center justify-between gap-2 min-h-[44px] text-start text-[13px] font-bold text-charcoal", i > 0 && "border-t", DIVIDER)}
               style={{ padding: "10px 16px" }}
             >
               <span className="[overflow-wrap:anywhere]">{z.replace(/_/g, " ")}</span>

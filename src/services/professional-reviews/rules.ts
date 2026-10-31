@@ -2,6 +2,7 @@
 // the 30-day edit window, what a rating shows as, and what a refusal says.
 // Kept free of the Supabase client so they can be tested under node.
 import { BLOCKED_TEXT } from "../moderation/text";
+import { appLocale } from "../../i18n/format";
 
 /** professional_reviews_body_check: length(btrim(body)) between 1 and 4000. */
 export const REVIEW_BODY_MAX = 4000;
@@ -25,7 +26,7 @@ export function bodyLength(text: string): number {
 
 /** "3,812 / 4,000". */
 export function counterLabel(text: string, max: number): string {
-  return `${bodyLength(text).toLocaleString("en")} / ${max.toLocaleString("en")}`;
+  return `${bodyLength(text).toLocaleString(appLocale("en"))} / ${max.toLocaleString(appLocale("en"))}`;
 }
 
 export type RatingLabel = { kind: "new" } | { kind: "average"; value: string; count: number };
@@ -167,8 +168,8 @@ export function describeReviewError(error: { code?: string; message?: string }, 
     case "23514":
       if (/body/i.test(msg)) {
         return isReply
-          ? `A reply can be up to ${REPLY_BODY_MAX.toLocaleString("en")} characters.`
-          : `A review can be up to ${REVIEW_BODY_MAX.toLocaleString("en")} characters.`;
+          ? `A reply can be up to ${REPLY_BODY_MAX.toLocaleString(appLocale("en"))} characters.`
+          : `A review can be up to ${REVIEW_BODY_MAX.toLocaleString(appLocale("en"))} characters.`;
       }
       return "A review needs a rating from 1 to 5.";
   }

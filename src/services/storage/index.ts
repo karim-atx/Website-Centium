@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { getSupabaseConfig } from "../../../lib/supabase/config";
 import { TAB_IDENTITY_REFUSAL, TAB_USER_ID, currentTabLock, shouldRefuse } from "../../../lib/supabase/tabIdentity";
 import { stripPrivateExif } from "./exif";
+import { t, tk, tx } from "../../i18n/core";
 
 // Uploads and reads for the private Storage buckets.
 //
@@ -99,15 +100,15 @@ const BUCKETS: Record<
     maxBytes: 10 * 1024 * 1024,
     mimeTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
     label: "lab report",
-    accepts: "a JPEG, PNG, WebP or PDF",
-    refused: "That file couldn't be saved to your account.",
+    accepts: tk("a JPEG, PNG, WebP or PDF"),
+    refused: tk("That file couldn't be saved to your account."),
   },
   "medical-imaging": {
     maxBytes: 25 * 1024 * 1024,
     mimeTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
     label: "imaging file",
-    accepts: "a JPEG, PNG, WebP or PDF",
-    refused: "That file couldn't be saved to your account.",
+    accepts: tk("a JPEG, PNG, WebP or PDF"),
+    refused: tk("That file couldn't be saved to your account."),
   },
   // The only bucket taking Word documents, and it is not an oversight: a
   // qualification arrives as whatever the awarding body sent, which is as
@@ -129,8 +130,8 @@ const BUCKETS: Record<
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ],
     label: "file",
-    accepts: "an image, a PDF or a Word document",
-    refused: "That file couldn't be shared with this person.",
+    accepts: tk("an image, a PDF or a Word document"),
+    refused: tk("That file couldn't be shared with this person."),
   },
   "calendar-attachments": {
     maxBytes: 10 * 1024 * 1024,
@@ -143,8 +144,8 @@ const BUCKETS: Record<
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ],
     label: "attachment",
-    accepts: "an image, a PDF or a Word document",
-    refused: "That file couldn't be attached to this event.",
+    accepts: tk("an image, a PDF or a Word document"),
+    refused: tk("That file couldn't be attached to this event."),
   },
   certifications: {
     maxBytes: 10 * 1024 * 1024,
@@ -157,8 +158,8 @@ const BUCKETS: Record<
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ],
     label: "certification",
-    accepts: "an image, a PDF or a Word document",
-    refused: "That document couldn't be saved to your account.",
+    accepts: tk("an image, a PDF or a Word document"),
+    refused: tk("That document couldn't be saved to your account."),
   },
   // 10 MB, matching the migration. Audio is here because a recorded voice
   // note arrives through this same function as an audio/* blob; it is NOT
@@ -188,8 +189,8 @@ const BUCKETS: Record<
       "text/csv",
     ],
     label: "attachment",
-    accepts: "a photo, a PDF, a Word, Excel or PowerPoint file, or a text file",
-    refused: "That file couldn't be attached to this conversation.",
+    accepts: tk("a photo, a PDF, a Word, Excel or PowerPoint file, or a text file"),
+    refused: tk("That file couldn't be attached to this conversation."),
   },
 };
 
@@ -295,10 +296,10 @@ export async function getStorageUsage(): Promise<StorageUsageResult> {
   const { data, error } = await supabase.rpc("storage_usage");
   if (error) {
     console.error("[storage] Could not read usage:", error.message);
-    return { ok: false, message: "Couldn't load your storage usage." };
+    return { ok: false, message: tk("Couldn't load your storage usage.") };
   }
   const row = data?.[0];
-  if (!row) return { ok: false, message: "Couldn't load your storage usage." };
+  if (!row) return { ok: false, message: tk("Couldn't load your storage usage.") };
 
   const usedBytes = Number(row.used_bytes);
   const capBytes = Number(row.cap_bytes);
@@ -418,11 +419,12 @@ function isPolicyRefusal(error: unknown): boolean {
 async function capExceededMessage(): Promise<string> {
   const usage = await getStorageUsage();
   if (!usage.ok) {
-    return "You're out of storage space. Remove a file you no longer need, then try again.";
+    return tk("You're out of storage space. Remove a file you no longer need, then try again.");
   }
-  return `You're out of storage space: ${humanSize(usage.usage.usedBytes)} of ${humanSize(
-    usage.usage.capBytes
-  )} used. Remove a file you no longer need, then try again.`;
+  return t("You're out of storage space: {used} of {cap} used. Remove a file you no longer need, then try again.", {
+    used: humanSize(usage.usage.usedBytes),
+    cap: humanSize(usage.usage.capBytes),
+  });
 }
 
 /**
@@ -491,17 +493,17 @@ export function validateFileFor(bucket: PrivateBucket, file: File): FileCheckRes
       // "JPEG, PNG, WebP or PDF" for every bucket, which was true while there
       // were only two and both took the same set — and became wrong the
       // moment a bucket took audio and no PDF.
-      message: `That file type isn't supported. Use ${config.accepts}.`,
+      message: t("That file type isn't supported. Use {types}.", { types: t(config.accepts) }),
     };
   }
   if (file.size > config.maxBytes) {
     return {
       ok: false,
-      message: `That ${config.label} is ${humanSize(file.size)}. The limit is ${humanSize(config.maxBytes)}.`,
+      message: t("That {file} is {size}. The limit is {limit}.", { file: tx(config.label, "upload"), size: humanSize(file.size), limit: humanSize(config.maxBytes) }),
     };
   }
   if (file.size === 0) {
-    return { ok: false, message: "That file is empty." };
+    return { ok: false, message: tk("That file is empty.") };
   }
   return { ok: true };
 }
@@ -682,7 +684,7 @@ export async function uploadPrivateFile(params: UploadParams, progress?: UploadP
         // the last behaviour this should have.
         upsert: false,
       });
-  if (error && (error as { aborted?: boolean }).aborted) return { ok: false, reason: "unknown", message: "Upload cancelled." };
+  if (error && (error as { aborted?: boolean }).aborted) return { ok: false, reason: "unknown", message: tk("Upload cancelled.") };
 
   if (error) {
     console.error("[storage] Upload failed:", error.message);
@@ -707,7 +709,7 @@ export async function uploadPrivateFile(params: UploadParams, progress?: UploadP
     return {
       ok: false,
       reason: "unknown",
-      message: "That file couldn't be uploaded. Check your connection and try again.",
+      message: tk("That file couldn't be uploaded. Check your connection and try again."),
     };
   }
   return { ok: true, path };
@@ -739,7 +741,7 @@ export async function signedUrlFor(
   const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, ttl);
   if (error || !data?.signedUrl) {
     console.error("[storage] Could not sign URL:", error?.message);
-    return { ok: false, message: "That file couldn't be opened." };
+    return { ok: false, message: tk("That file couldn't be opened.") };
   }
   return { ok: true, url: data.signedUrl };
 }
@@ -769,7 +771,7 @@ export async function deletePrivateFile(
   const { error } = await supabase.storage.from(bucket).remove([path]);
   if (error) {
     console.error("[storage] Could not delete object:", error.message);
-    return { ok: false, message: "That file couldn't be removed." };
+    return { ok: false, message: tk("That file couldn't be removed.") };
   }
   return { ok: true };
 }

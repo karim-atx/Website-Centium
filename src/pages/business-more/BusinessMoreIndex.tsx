@@ -302,7 +302,7 @@ export default function BusinessMoreIndex() {
       <button
         type="button"
         onClick={sub("subscription")}
-        className="tap w-full flex items-center justify-between text-left"
+        className="tap w-full flex items-center justify-between text-start"
         // Literal #241F1B in both modes, as the client Premium card.
         style={{ gap: 14, borderRadius: 15, padding: "13px 15px", background: "#241F1B", marginBottom: 16 }}
       >
@@ -325,7 +325,7 @@ export default function BusinessMoreIndex() {
             </span>
           </span>
         </span>
-        <ChevronRight size={14} className="shrink-0 rtl:-scale-x-100" style={{ color: "rgb(var(--thi-c8bfe9))" }} />
+        <ChevronRight size={14} className="shrink-0" style={{ color: "rgb(var(--thi-c8bfe9))" }} />
       </button>
 
       <ReferralPopup open={referralOpen} onClose={() => setReferralOpen(false)} />

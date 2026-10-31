@@ -13,6 +13,7 @@
 // its window.
 
 import { clamp, eo } from "../engine/math";
+import { appLocale } from "../../../i18n/format";
 
 export interface AnimItem {
   el: HTMLElement | SVGElement;
@@ -49,7 +50,7 @@ export function anim(list: AnimItem[], U: number, rm: boolean) {
         from = +(d.from || 0),
         dec = +(d.dec || 0),
         v = from + (to - from) * u;
-      it.el.textContent = dec ? v.toFixed(dec) : Math.round(v).toLocaleString("en-US");
+      it.el.textContent = dec ? v.toFixed(dec) : Math.round(v).toLocaleString(appLocale("en-US"));
     }
     if (d.ring != null) it.el.setAttribute("stroke-dashoffset", (1 - +d.ring * u).toFixed(4));
     if (d.draw != null) it.el.setAttribute("stroke-dashoffset", (1 - u).toFixed(4));

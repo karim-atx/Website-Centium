@@ -13,6 +13,7 @@
 // within one visit are.
 
 import { reducedMotion } from "../engine/env";
+import { getLanguage } from "../../../i18n/core";
 import { chooseLoader, pageOf, type LoaderEntry, type MarketingPage } from "./loaderChoice";
 
 export { anchorHash, pageOf, type LoaderEntry, type LoaderKind, type LoaderMode, type MarketingPage } from "./loaderChoice";
@@ -46,7 +47,12 @@ export function pickLoader(page: MarketingPage, hash: string): LoaderEntry {
   } catch {
     /* storage blocked */
   }
-  return chooseLoader({ page, hash, navType: navigationType(), saved, returning, inSession, rm: reducedMotion() });
+  const entry = chooseLoader({ page, hash, navType: navigationType(), saved, returning, inSession, rm: reducedMotion() });
+  // Round F: LO1 lands the leaf as the dot of the i in "lives", which only the
+  // English intro title has (the Arabic title is split into whole words, with
+  // no dotless i to land on), so an Arabic visit gets LO2 (leaf, C, wordmark).
+  if (entry.kind === "lo1" && getLanguage() === "ar") return { ...entry, kind: "lo2", why: entry.why + " (Arabic: no dot to land on)" };
+  return entry;
 }
 
 const entries = new Map<string, LoaderEntry>();

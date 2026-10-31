@@ -142,7 +142,7 @@ export const TargetsSheet: React.FC<{
                   <span className="flex-1 truncate" style={{ fontSize: textPx(15), fontWeight: 600, color: INK.ch }}>{c.name}</span>
                   <span style={{ fontSize: textPx(12.5), color: INK.chF }}>{rm != null ? `1RM ${fmtKg(rm)} kg` : "No 1RM yet"}</span>
                 </div>
-                <div className="flex items-center rounded-xl bg-cream-soft border border-charcoal/10" style={{ padding: "0 8px 0 12px", gap: 8, minHeight: 44 }}>
+                <div className="flex items-center rounded-xl bg-cream-soft border border-charcoal/10" style={{ paddingBlock: "0", paddingInline: "12px 8px", gap: 8, minHeight: 44 }}>
                   <input
                     value={shown}
                     onChange={(e) => setOverride((p) => ({ ...p, [a.clientId]: e.target.value.replace(/[^\d.]/g, "") }))}

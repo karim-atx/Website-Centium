@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase as typed } from "../../../lib/supabase/client";
 import { playlistSaveError, type PlaylistService } from "./playlistLink";
 import type { MusicMoment, MusicPrefs } from "./whichMusic";
+import { getLanguage } from "../../i18n/core";
 
 // Round E · "Your music" (Database 20261224040000): on app_preferences, the
 // member's own row (app_preferences_select_own; no professional, business or
@@ -63,7 +64,7 @@ export async function saveMusicPrefs(ownerId: string, patch: MusicPatch): Promis
   const updated = await db.from("app_preferences").update(row).eq("owner_id", ownerId).select(COLS);
   if (updated.error) return fail(updated.error.code, updated.error.message);
   if (updated.data && updated.data.length > 0) return { ok: true, prefs: toPrefs(updated.data[0] as Row) };
-  const inserted = await db.from("app_preferences").insert({ owner_id: ownerId, ...row }).select(COLS).single();
+  const inserted = await db.from("app_preferences").insert({ owner_id: ownerId, language: getLanguage(), ...row }).select(COLS).single();
   if (!inserted.error) return { ok: true, prefs: toPrefs(inserted.data as Row) };
   if (inserted.error.code === "23505") {
     const retry = await db.from("app_preferences").update(row).eq("owner_id", ownerId).select(COLS);

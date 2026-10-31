@@ -16,6 +16,7 @@ import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { getMfaStatus, unenrollFactor, verifyTotp } from "../../services/mfa";
 import { BusinessGenerateConfirm, BusinessRecoveryCodesView, BusinessTwoFactorView } from "../business-more/BusinessTwoFactorViews";
 import { formatShortDate } from "../../utils/date";
+import { t } from "../../i18n/core";
 
 // MO1.8.4 / MO1.8.4.3 Two-factor authentication, as a page (R18; it was a
 // sheet). A toggle row, then two widgets 16 apart: Authenticator app (greyed
@@ -167,23 +168,23 @@ export default function TwoFactorPage() {
     <CentredPopup
       open={genOpen}
       onClose={() => !genBusy && setGenOpen(false)}
-      title="Make new recovery codes?"
+      title={t("Make new recovery codes?")}
       icon={<KeyRound size={22} strokeWidth={1.75} />}
-      body="Your current codes stop working as soon as the new ones are made, including any you've saved or printed."
+      body={t("Your current codes stop working as soon as the new ones are made, including any you've saved or printed.")}
     >
       {genError && (
         <p role="alert" className="text-center text-[12px] font-semibold text-status-high">
-          {genError}
+          {t(genError)}
         </p>
       )}
-      <CtaButton size="page" className="mt-5" label="Generate new" loading={genBusy} onClick={() => void singleFlight(generate)} />
+      <CtaButton size="page" className="mt-5" label={t("Generate new")} loading={genBusy} onClick={() => void singleFlight(generate)} />
       <button
         type="button"
         onClick={() => setGenOpen(false)}
         disabled={genBusy}
         className="tap mt-3 w-full text-center text-sm font-semibold text-charcoal-soft"
       >
-        Keep my codes
+        {t("Keep my codes")}
       </button>
     </CentredPopup>
   );
@@ -273,14 +274,14 @@ export default function TwoFactorPage() {
 
   return (
     <div>
-      <PageHeader title="Two-factor authentication" showBack sub tightBack />
+      <PageHeader title={t("Two-factor authentication")} showBack sub tightBack />
 
       {/* MO1.8.4: 24 pt side insets; the label 16 under the 36 pt title. */}
       <SettingsBody className="-mt-1">
-      <SettingsSection label="Protection">
+      <SettingsSection label={t("Protection")}>
         <SettingsRow
           icon={ShieldCheck}
-          title="Two-factor authentication"
+          title={t("Two-factor authentication")}
           toggle={{
             checked: enabled,
             disabled: loading,
@@ -297,8 +298,8 @@ export default function TwoFactorPage() {
         {user.accountType === "professional" && twoFactorNudgeDismissed && !loading && !enabled && (
           <SettingsRow
             icon={BellRing}
-            title="Remind me about two-factor"
-            subtitle="You dismissed the reminder on your dashboard."
+            title={t("Remind me about two-factor")}
+            subtitle={t("You dismissed the reminder on your dashboard.")}
             toggle={{ checked: !twoFactorNudgeDismissed, onChange: () => setTwoFactorNudgeDismissed(false) }}
           />
         )}
@@ -308,14 +309,14 @@ export default function TwoFactorPage() {
           affected element (the toggle that couldn't read its state). */}
       {loadError && (
         <p role="alert" className="mt-2 text-[12px] font-semibold text-status-high">
-          {loadError}
+          {t(loadError)}
         </p>
       )}
 
       {loading ? (
         // Foundations loading state: skeleton blocks at the widgets' places
         // (surface.soft, radius 20; 200 and 230 tall as MO1.8.4 draws them).
-        <div aria-busy="true" aria-label="Loading two-factor status">
+        <div aria-busy="true" aria-label={t("Loading two-factor status")}>
           <div className="mt-5 h-[200px] rounded-[20px] bg-cream-soft" />
           <div className="mt-4 h-[230px] rounded-[20px] bg-cream-soft" />
         </div>
@@ -329,7 +330,7 @@ export default function TwoFactorPage() {
               13.5 / 700, added 12 / 400. On and off cross-fade their colours
               over 300 ms, none with Reduce motion. */}
           <section
-            aria-label="Authenticator app"
+            aria-label={t("Authenticator app")}
             className={clsx(
               "mt-5 rounded-[20px] p-4",
               fade,
@@ -347,7 +348,7 @@ export default function TwoFactorPage() {
                 enabled ? "text-primary-accent" : "text-charcoal-faint opacity-40"
               )}
             >
-              Authenticator app
+              {t("Authenticator app")}
             </p>
             <div className={clsx("mt-2.5 flex gap-3", fade, !enabled && "opacity-40")}>
               <span
@@ -362,15 +363,15 @@ export default function TwoFactorPage() {
                 <Smartphone size={19} strokeWidth={1.75} className={enabled ? "text-primary-accent" : "text-charcoal-faint"} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[16px] font-extrabold text-charcoal">Authenticator app</p>
+                <p className="text-[16px] font-extrabold text-charcoal">{t("Authenticator app")}</p>
                 {enabled ? (
                   <>
                     <p className="mt-1 flex items-center gap-1.5 text-[13.5px] font-bold text-charcoal">
                       {/* MO1.8.4.3: CircleCheck 16 / 2 in the theme secondary (teal-dark follows the colour theme). */}
                       <CircleCheck size={16} strokeWidth={2} className="text-teal-dark shrink-0" aria-hidden />
-                      Connected
+                      {t("Connected")}
                     </p>
-                    <p className="mt-0.5 text-[12px] text-charcoal-faint">Added {addedLabel(factor.created_at)}</p>
+                    <p className="mt-0.5 text-[12px] text-charcoal-faint">{t("Added {date}", { date: addedLabel(factor.created_at) })}</p>
                     <button
                       type="button"
                       onClick={() => navigate("/app/settings/two-factor/setup?change=1")}
@@ -379,20 +380,20 @@ export default function TwoFactorPage() {
                       // two-line wrap is an artefact.
                       className="tap mt-3 h-9 px-4 rounded-xl border border-th-aea1dc dark:border-primary/40 bg-cream-card text-[13px] font-semibold text-primary-accent"
                     >
-                      Change app
+                      {t("Change app")}
                     </button>
                   </>
                 ) : (
                   <>
                     {/* MO1.8.4: status 13.5 / 700 in the main ink (at the card's
                         40%), the button white like the on state. */}
-                    <p className="mt-1 text-[13.5px] font-bold text-charcoal">Status: ––</p>
-                    <p className="mt-0.5 text-[12px] text-charcoal-faint">Added ––</p>
+                    <p className="mt-1 text-[13.5px] font-bold text-charcoal">{t("Status: {status}", { status: "––" })}</p>
+                    <p className="mt-0.5 text-[12px] text-charcoal-faint">{t("Added {date}", { date: "––" })}</p>
                     <span
                       aria-disabled="true"
                       className="mt-3 inline-flex h-9 px-4 items-center rounded-xl border border-charcoal/10 bg-cream-card text-[13px] font-semibold text-charcoal-faint"
                     >
-                      Change app
+                      {t("Change app")}
                     </span>
                   </>
                 )}
@@ -400,7 +401,7 @@ export default function TwoFactorPage() {
             </div>
             {/* Measured full-strength #8C8378 on the off card (MO1.8.4), 10
                 under the button. */}
-            {!enabled && <p className="mt-2.5 text-[12px] text-charcoal-faint">Turn on two-factor to use this.</p>}
+            {!enabled && <p className="mt-2.5 text-[12px] text-charcoal-faint">{t("Turn on two-factor to use this.")}</p>}
           </section>
 
           {/* Stage 1: the count, View codes (MO1.8.4.2, masked) and
@@ -426,9 +427,9 @@ export default function TwoFactorPage() {
       <CentredPopup
         open={offOpen}
         onClose={closeOff}
-        title="Turn off two-factor?"
+        title={t("Turn off two-factor?")}
         icon={<ShieldCheck size={22} strokeWidth={1.75} />}
-        body="Enter the 6-digit code from your authenticator app. Without two-factor, your password alone gets into your account, including your health data."
+        body={t("Enter the 6-digit code from your authenticator app. Without two-factor, your password alone gets into your account, including your health data.")}
       >
         <CodeBoxes
           value={code}
@@ -439,23 +440,23 @@ export default function TwoFactorPage() {
           error={!!offError}
           disabled={busy}
           autoFocus
-          label="Six-digit authentication code"
+          label={t("Six-digit authentication code")}
         />
         {offError && (
           <p role="alert" className="mt-3 text-center text-[12px] font-semibold text-status-high">
-            {offError}
+            {t(offError)}
           </p>
         )}
         <CtaButton
           size="page"
           className="mt-5"
-          label="Turn off"
+          label={t("Turn off")}
           loading={busy}
           disabled={code.length !== CODE_LENGTH}
           onClick={() => void singleFlight(turnOff)}
         />
         <button type="button" onClick={closeOff} disabled={busy} className="tap mt-3 w-full text-center text-sm font-semibold text-charcoal-soft">
-          Keep it on
+          {t("Keep it on")}
         </button>
       </CentredPopup>
     </div>

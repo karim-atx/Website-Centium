@@ -1,5 +1,6 @@
 import { clock12 } from "../../utils/time12";
 import { DAY_SHORT, mondayIndex } from "../../utils/week";
+import { appLocale } from "../../i18n/format";
 
 // Display helpers for orders, returns and appointments (12-hour, Monday-first
 // week names, money from recorded amounts only).
@@ -8,12 +9,12 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 /** "$58.00", "$1,240.00": the order screens' two-decimal form (OP1-005 row 8). */
 export function money(n: number): string {
-  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return "$" + n.toLocaleString(appLocale("en-US"), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /** "$58", "$42.50": the product list's form (OP1-008 row 8 draws whole dollars). */
 export function moneyShort(n: number): string {
-  return "$" + (Number.isInteger(n) ? n.toLocaleString("en-US") : n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  return "$" + (Number.isInteger(n) ? n.toLocaleString(appLocale("en-US")) : n.toLocaleString(appLocale("en-US"), { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 }
 
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();

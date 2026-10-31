@@ -170,7 +170,7 @@ export const CoachSection: React.FC<{
         <button
           type="button"
           onClick={onPast}
-          className="tap w-full flex items-center justify-between text-left"
+          className="tap w-full flex items-center justify-between text-start"
           style={{ gap: 10, padding: "12px 14px", borderRadius: 14, background: coachColor("soft", dark), marginTop: groups.length ? 6 : 0 }}
         >
           <span className="min-w-0">

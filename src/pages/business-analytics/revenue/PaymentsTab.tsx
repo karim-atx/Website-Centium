@@ -259,7 +259,7 @@ export const PaymentsTab: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => openOwed(o)}
-                    className="tap w-full grid items-center text-left px-[16px] py-[12px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary-dark"
+                    className="tap w-full grid items-center text-start px-[16px] py-[12px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary-dark"
                     style={{
                       gridTemplateColumns: "34px minmax(0,1fr) auto",
                       columnGap: 10,
@@ -306,7 +306,7 @@ export const PaymentsTab: React.FC = () => {
                       onClick={() => remind.open(o)}
                       className={
                         followCls +
-                        " tap absolute right-[16px] bottom-[12px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
+                        " tap absolute end-[16px] bottom-[12px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
                       }
                       style={{
                         border: `1px solid ${v("primary")}`,

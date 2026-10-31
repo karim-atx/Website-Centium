@@ -17,8 +17,15 @@ import { ecoSets } from "./eco/data";
 import type { SectionVals } from "./sectionVals";
 import { SectionHostContext } from "../sectionHost";
 import { EcoMotion } from "../motion/eco";
+import { t, tk } from "../../../i18n/core";
 
-const SEGS = ["Professionals", "Businesses"];
+const SEGS = [tk("Professionals"), tk("Businesses")];
+
+/** A slide kicker ("01 · CLIENTS"): the number stays, the label shows in the page language. */
+const kicker = (k: string) => {
+  const i = k.indexOf(" · ");
+  return i < 0 ? t(k) : k.slice(0, i + 3) + t(k.slice(i + 3));
+};
 
 /** The prototype's mobile two-line clamp of the slide copy (ecoTidy), in the markup. */
 const CLAMP2: React.CSSProperties = { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" };
@@ -80,13 +87,13 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
         style={{ position: r.pinPos, top: "0", minHeight: r.pinMin, padding: `${r.pinPad} 0`, display: "flex", flexDirection: "column", justifyContent: "center", overflow: "hidden" }}
       >
         <div style={{ maxWidth: "1240px", margin: "0 auto", width: "100%", padding: `0 ${r.px}`, textAlign: "center" }}>
-          <ChapterMark n="06" t="Beyond the individual" size={r.chEy} />
-          <h2 style={{ marginTop: "14px", fontWeight: "800", fontSize: r.h2, lineHeight: "1.04", letterSpacing: "-.035em" }}>The ecosystem built around your health.</h2>
+          <ChapterMark n="06" t={t("Beyond the individual")} size={r.chEy} />
+          <h2 style={{ marginTop: "14px", fontWeight: "800", fontSize: r.h2, lineHeight: "1.04", letterSpacing: "-.035em" }}>{t("The ecosystem built around your health.")}</h2>
         </div>
         <div style={{ display: "flex", justifyContent: "center", marginTop: "24px" }}>
           <div
             role="tablist"
-            aria-label="Audience"
+            aria-label={t("Audience")}
             style={{
               position: "relative",
               display: "grid",
@@ -113,9 +120,9 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
                 transition: "transform .45s cubic-bezier(.22,1,.36,1)",
               }}
             />
-            {SEGS.map((t, i) => (
+            {SEGS.map((seg0, i) => (
               <button
-                key={t}
+                key={seg0}
                 type="button"
                 role="tab"
                 aria-selected={seg === i ? "true" : "false"}
@@ -134,7 +141,7 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
                   transition: "color .3s",
                 }}
               >
-                {t}
+                {t(seg0)}
               </button>
             ))}
           </div>
@@ -142,8 +149,8 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
         <div
           id="eco-view"
           tabIndex={0}
-          aria-roledescription="carousel"
-          aria-label={seg ? "Businesses slides" : "Professionals slides"}
+          aria-roledescription={t("carousel")}
+          aria-label={seg ? t("Businesses slides") : t("Professionals slides")}
           onKeyDown={onKey}
           style={{ position: "relative", marginTop: "28px", height: r.ecoViewH, outline: "none", touchAction: r.ecoTouch, cursor: r.ecoCursor }}
         >
@@ -174,7 +181,7 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
                     top: "0",
                     width: r.slW,
                     height: cardH,
-                    marginLeft: r.slML,
+                    marginInlineStart: r.slML,
                     flex: `0 0 ${r.slW}`,
                     scrollSnapAlign: "center",
                     transformOrigin: "50% 50%",
@@ -193,14 +200,14 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
                       background: sl.bg,
                       border: "1px solid rgba(125,103,217,.16)",
                       boxShadow: r.slSh,
-                      textAlign: "left",
+                      textAlign: "start",
                       overflow: "hidden",
                     }}
                   >
                     <div style={{ display: "flex", flexDirection: "column", justifyContent: r.slTxtJ, minHeight: "0", height: r.slTxtH, position: "relative", zIndex: "1" }}>
-                      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF11, color: sl.c }}>{sl.k}</span>
-                      <div style={{ marginTop: "8px", fontSize: r.slT, fontWeight: "800", letterSpacing: "-.025em", lineHeight: r.slTL }}>{sl.t}</div>
-                      <p style={{ marginTop: "8px", fontSize: r.slP, lineHeight: r.slPL, color: "#5B5349", ...(r.lg ? null : CLAMP2) }}>{sl.d}</p>
+                      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF11, color: sl.c }}>{kicker(sl.k)}</span>
+                      <div style={{ marginTop: "8px", fontSize: r.slT, fontWeight: "800", letterSpacing: "-.025em", lineHeight: r.slTL }}>{t(sl.t)}</div>
+                      <p style={{ marginTop: "8px", fontSize: r.slP, lineHeight: r.slPL, color: "#5B5349", ...(r.lg ? null : CLAMP2) }}>{t(sl.d)}</p>
                     </div>
                     {r.lg ? <DesktopGraphic sl={sl} r={r} /> : <MobileGraphic sl={sl} r={r} />}
                   </div>
@@ -213,7 +220,7 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
           <button
             type="button"
             onClick={() => step(-1)}
-            aria-label="Previous slide"
+            aria-label={t("Previous slide")}
             className="cl-hbg"
             style={
               {
@@ -239,7 +246,7 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
           <button
             type="button"
             onClick={() => step(1)}
-            aria-label="Next slide"
+            aria-label={t("Next slide")}
             className="cl-hbg"
             style={
               {

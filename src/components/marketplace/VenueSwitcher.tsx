@@ -4,6 +4,7 @@ import { initials } from "../professionals/typeColour";
 import { hostedImageUrl, dayMonthYear } from "../../services/venues/venueLogic";
 import type { MyVenue } from "../../services/venues/consoleLogic";
 import { VAttentionBand, VBar, VChevron, VGroupHeader, VListCard, VListRow, VPickButton, VPill, DIVIDER } from "./VenueKit";
+import { appLocale } from "../../i18n/format";
 
 // The venue console's list / switcher (stage A4, my_venues()), restyled per
 // OURS-OP1-venue-switcher (K6 group header, K7 list card and rows, K8 pills,
@@ -22,7 +23,7 @@ export function venuePill(v: Pick<MyVenue, "hiddenAt" | "isOpenNow">): { tone: "
 }
 
 const countLine = (v: MyVenue) =>
-  `${v.activeMembers.toLocaleString()} active member${v.activeMembers === 1 ? "" : "s"} · ${v.upcomingClasses.toLocaleString()} upcoming class${v.upcomingClasses === 1 ? "" : "es"}`;
+  `${v.activeMembers.toLocaleString(appLocale())} active member${v.activeMembers === 1 ? "" : "s"} · ${v.upcomingClasses.toLocaleString(appLocale())} upcoming class${v.upcomingClasses === 1 ? "" : "es"}`;
 
 export function VenueSwitcher({
   venues,

@@ -124,7 +124,7 @@ export const WaterHero: React.FC<{
           <div className="relative shrink-0" style={{ width: 92, height: 161 }}>
             <span
               className="absolute whitespace-nowrap"
-              style={{ right: "calc(100% + 2px)", top: 43.5, fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 700, color: ink }}
+              style={{ insetInlineEnd: "calc(100% + 2px)", top: 43.5, fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 700, color: ink }}
             >
               Goal
             </span>

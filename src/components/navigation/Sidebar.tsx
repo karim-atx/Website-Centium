@@ -33,9 +33,10 @@ import { Flame, HeartPulse } from "lucide-react";
 import { useUnread } from "../../context/UnreadContext";
 import { UnreadBadge } from "../messages/UnreadBadge";
 import { PlanLine } from "./PlanLine";
-import { currentDayStreak, dayStreakLabel } from "../../services/streaks/dayStreak";
+import { currentDayStreak } from "../../services/streaks/dayStreak";
 import { forumAccess } from "../../services/forum/rules";
 import { CentiumMark } from "../icons/CentiumMark";
+import { tn } from "../../i18n/core";
 
 const NAV_ACCENT = "rgb(var(--c-team-nav-accent))";
 const NAV_IDLE = "rgb(var(--c-nav-idle))";
@@ -172,7 +173,7 @@ export const Sidebar: React.FC = () => {
   return (
     // OURS-NAV-desktop-sidebar row 1: w256, #FFFFFF (dark #121317), right
     // hairline charcoal 6%, pad 24 16.
-    <aside className="hidden lg:flex flex-col w-64 shrink-0 h-[100dvh] sticky top-0 border-r border-charcoal/[0.06] bg-white dark:bg-cream px-4 py-6 overflow-y-auto">
+    <aside className="hidden lg:flex flex-col w-64 shrink-0 h-[100dvh] sticky top-0 border-e border-charcoal/[0.06] bg-white dark:bg-cream px-4 py-6 overflow-y-auto">
       {/* v6 (TK 4.1, X-24): the one vector mark in the theme's brand pair,
           framed as the PNG it replaces (30 tall, centium-mark.png's canvas).
           Row 2: + Centium 20/700, mb 32. */}
@@ -223,7 +224,8 @@ export const Sidebar: React.FC = () => {
         <div className="rounded-3xl bg-primary-pale p-4 mt-4">
           <div className="flex items-center gap-2 text-primary-dark font-semibold text-sm mb-1">
             <Flame size={16} className="text-teal" />
-            {dayStreakLabel(dayStreak)}
+            {/* dayStreakLabel's English, translated here (services/streaks returns English). */}
+            {dayStreak <= 0 ? t("Start a streak today") : tn(dayStreak, "{n} day streak", "{n} day streak")}
           </div>
           {/* "Keep logging to unlock rewards 🎁" PROMISED A REWARD, and there
               is not one to unlock. Logging does earn something real now — the
@@ -231,8 +233,8 @@ export const Sidebar: React.FC = () => {
               credits points at every rung — so the line names that instead. */}
           <p className="text-xs text-primary-dark/70">
             {dayStreak > 0
-              ? "Keep logging to earn achievements 🏆"
-              : "Log two of food, water, a workout or a journal entry."}
+              ? t("Keep logging to earn achievements 🏆")
+              : t("Log two of food, water, a workout or a journal entry.")}
           </p>
         </div>
       )}

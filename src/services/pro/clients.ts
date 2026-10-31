@@ -23,6 +23,7 @@ import { rpc } from "./rpc";
 import { fetchAdherencePct, localIso, shiftIso } from "./home";
 import { fetchClientAccess } from "./access";
 import { readWinSharing, type WinSharingSetting } from "../../components/share/shareCardModel";
+import { appLocale } from "../../i18n/format";
 
 export type ClientStage = "onboarding" | "active" | "paused" | "completed";
 export const CLIENT_STAGES: ClientStage[] = ["onboarding", "active", "paused", "completed"];
@@ -212,7 +213,7 @@ export async function fetchActiveMealPlans(me: string): Promise<Read<ClientPlan[
   for (const r of (data ?? []) as unknown as Row[]) {
     if (seen.has(r.client_id)) continue;
     seen.add(r.client_id);
-    const kcal = r.meal_plans?.kcal_target ? `, ${Math.round(Number(r.meal_plans.kcal_target)).toLocaleString("en-GB")} kcal` : "";
+    const kcal = r.meal_plans?.kcal_target ? `, ${Math.round(Number(r.meal_plans.kcal_target)).toLocaleString(appLocale("en-GB"))} kcal` : "";
     out.push({ clientId: r.client_id, name: `${r.meal_plans?.name ?? ""}${kcal}`, week: weekOf(r.starts_on, 1, null, today), endsOn: r.ends_on });
   }
   return { ok: true, data: out };
@@ -301,5 +302,5 @@ export function agoLabel(iso: string | null, now = new Date()): string | null {
   if (localIso(at) === shiftIso(localIso(now), -1)) return "yesterday";
   const days = Math.round((new Date(`${localIso(now)}T00:00:00`).getTime() - new Date(`${localIso(at)}T00:00:00`).getTime()) / 86400000);
   if (days < 7) return `${days} days ago`;
-  return at.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return at.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 }
