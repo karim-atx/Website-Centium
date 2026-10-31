@@ -31,6 +31,7 @@ import { getSupportPath } from "../moderation/support";
 import { FOOD_REVIEW_COPY, foodReviewCopy } from "../food/onlineSearchModel";
 import { appLocale } from "../../i18n/format";
 import { t, tk, tn } from "../../i18n/core";
+import { liftedSentence, NO_SHOW_NOTICE_COPY, pausedSentence, warningSentence } from "../no-shows/noShowModel";
 
 /** member_notification_kind, the whole enum in its declared order (20261210600000). */
 export const MEMBER_NOTIFICATION_KINDS = [
@@ -73,6 +74,13 @@ export const MEMBER_NOTIFICATION_KINDS = [
   // of was first published (subject course; payload course_id, title,
   // author_first_name). Sent once per course.
   "course_published",
+  // Round F2 · AB4 (Database 20261225230000 / 20261226060000): class
+  // no-shows at a business (subject business; payload business_id, and
+  // no_shows / until): the 2nd warns, the 3rd pauses new bookings for 7 days,
+  // and an early end (staff, or a corrected mark) is told.
+  "no_show_warning",
+  "booking_paused",
+  "booking_pause_lifted",
 ] as const;
 export type MemberNotificationKind = (typeof MEMBER_NOTIFICATION_KINDS)[number];
 
@@ -109,6 +117,10 @@ export const CLIENT_KINDS: readonly MemberNotificationKind[] = [
   "workout_log_reply",
   // Round D · courses: a course for the member was published.
   "course_published",
+  // Round F2 · AB4: the no-show warning, the booking pause and its early end.
+  "no_show_warning",
+  "booking_paused",
+  "booking_pause_lifted",
 ];
 
 /** my_unread_notification_count's cap: the reader never counts past it. */
@@ -171,6 +183,34 @@ export function parseMemberNotifications(data: unknown): MemberNotification[] {
   });
 }
 
+/**
+ * Round F2 · AB4: the kinds whose sentence names the business ("You missed 2
+ * classes at {gym}…") but whose payload carries only business_id. The reader
+ * joins business_name on from the subject (subject_type 'business').
+ */
+export const BUSINESS_NAMED_KINDS: readonly string[] = ["no_show_warning", "booking_paused", "booking_pause_lifted"];
+
+/** The business ids those rows need a name for (none already named). */
+export function businessIdsToName(items: readonly MemberNotification[]): string[] {
+  const ids = items.flatMap((n) => {
+    if (!BUSINESS_NAMED_KINDS.includes(n.kind) || typeof n.payload.business_name === "string") return [];
+    const id = typeof n.payload.business_id === "string" ? n.payload.business_id : n.subjectType === "business" ? n.subjectId : null;
+    return id ? [id] : [];
+  });
+  return [...new Set(ids)];
+}
+
+/** The rows with business_name joined into the payload where the name is known. */
+export function withBusinessNames(items: MemberNotification[], names: ReadonlyMap<string, string>): MemberNotification[] {
+  if (names.size === 0) return items;
+  return items.map((n) => {
+    if (!BUSINESS_NAMED_KINDS.includes(n.kind) || typeof n.payload.business_name === "string") return n;
+    const id = typeof n.payload.business_id === "string" ? n.payload.business_id : n.subjectType === "business" ? n.subjectId : null;
+    const name = id ? names.get(id) : undefined;
+    return name ? { ...n, payload: { ...n.payload, business_name: name } } : n;
+  });
+}
+
 /** The (p_before, p_before_id) keyset cursor: the last row shown. */
 export interface NotificationCursor {
   before: string;
@@ -230,6 +270,11 @@ export const CLIENT_COPY: NotificationCopyTable = {
   workout_log_reply: { title: tk("Your coach replied to your workout"), body: tk("Read it in your workout history.") },
   // Round D · courses (payload course_id, title, author_first_name).
   course_published: { title: tk("A new course for you"), body: tk("Open it in Community › Courses.") },
+  // Round F2 · AB4 (services/no-shows): the business's name joins the payload
+  // from the subject when it can be read (withBusinessNames, ./index.ts).
+  no_show_warning: NO_SHOW_NOTICE_COPY.no_show_warning,
+  booking_paused: NO_SHOW_NOTICE_COPY.booking_paused,
+  booking_pause_lifted: NO_SHOW_NOTICE_COPY.booking_pause_lifted,
 };
 
 /** A key no table knows: a safe line, never the raw key. */
@@ -367,6 +412,21 @@ export const CLIENT_FILLS: NotificationFillTable = {
     const on = pDate(p, "next_eligible_on");
     return on ? { body: t("We've replied to your application. You can apply again from {date}.", { date: formatNoticeDate(on) }) } : {};
   },
+  // Round F2 · AB4: payload business_id (+ no_shows / until); business_name
+  // is joined on by the reader (./index.ts) and may be missing.
+  no_show_warning: (p) => {
+    const gym = pText(p, "business_name");
+    return gym ? { body: warningSentence(gym) } : {};
+  },
+  booking_paused: (p) => {
+    const gym = pText(p, "business_name");
+    const until = pText(p, "until");
+    return gym || until ? { body: pausedSentence(gym, until) } : {};
+  },
+  booking_pause_lifted: (p) => {
+    const gym = pText(p, "business_name");
+    return gym ? { body: liftedSentence(gym) } : {};
+  },
 };
 
 function own<T>(table: Readonly<Record<string, T>>, k: string): T | null {
@@ -467,6 +527,12 @@ export function clientNotificationTarget(
       const course = typeof n.payload?.course_id === "string" && UUID.test(n.payload.course_id) ? n.payload.course_id : n.subjectType === "course" ? id : null;
       return course ? `/app/forum/courses/${course}` : "/app/forum?tab=courses";
     }
+    case "no_show_warning":
+    case "booking_paused":
+      // Round F2 · AB4: the member's bookings (the ones kept are there).
+      return "/app/marketplace/bookings?tab=upcoming";
+    case "booking_pause_lifted":
+      return "/app/marketplace";
     default:
       return null;
   }
@@ -531,6 +597,12 @@ export function notifLook(kind: string): { tone: NotifTone; glyph: NotifGlyph } 
       return { tone: "lav", glyph: "user" };
     case "course_published":
       return { tone: "lav", glyph: "app" };
+    case "no_show_warning":
+      return { tone: "gold", glyph: "clock" };
+    case "booking_paused":
+      return { tone: "red", glyph: "x" };
+    case "booking_pause_lifted":
+      return { tone: "teal", glyph: "app" };
     default:
       return { tone: "grey", glyph: "clock" };
   }

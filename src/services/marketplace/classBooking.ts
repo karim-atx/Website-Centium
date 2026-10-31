@@ -1,6 +1,7 @@
 import { formatShortDate } from "../../utils/date";
 import { stage4Message } from "../venues/venueLogic";
 import { BUSINESS_CLOSED_CODE, CLOSED_BOOK_CLASS, closureMessage } from "../business-closure/logic";
+import { noShowMessage } from "../no-shows/noShowModel";
 
 // B9 (Database docs/HANDOVER_API.md "B9 · Classes and schedule"), the
 // member's side, as pure functions so node:test can hold them: the venue
@@ -48,10 +49,14 @@ export function sortClassPolicies<T extends { kind: VenuePolicyKind }>(docs: T[]
  * Centium spots), in words, then the stage 4 codes
  * (stage4Message) for everything older. ATXE2 carries the window in the
  * server's message ("bookings for this class open 14 days before it
- * starts"); the number is read from it when it is there.
+ * starts"); the number is read from it when it is there. Round F2 AB4:
+ * ATXS0, new bookings at this business paused after 3 no-shows, with the end
+ * in the error's DETAIL (`detail`).
  */
-export function classErrorMessage(code: string | undefined, serverMessage: string, fallback: string): string {
+export function classErrorMessage(code: string | undefined, serverMessage: string, fallback: string, detail?: string | null): string {
   switch (code) {
+    case "ATXS0":
+      return noShowMessage("book", code, detail, fallback);
     case "ATXE0":
       return "This class was cancelled by the venue.";
     case "ATXE2": {

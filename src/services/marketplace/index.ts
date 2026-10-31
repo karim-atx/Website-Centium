@@ -342,7 +342,7 @@ async function call<T>(fn: string, args: Record<string, unknown>, fallback: stri
   const { data, error } = await rpc<T>(fn, args);
   if (error) {
     console.error(`[marketplace] ${fn} failed:`, error.message);
-    return { ok: false, code: error.code, message: classErrorMessage(error.code, error.message, fallback) };
+    return { ok: false, code: error.code, message: classErrorMessage(error.code, error.message, fallback, error.details) };
   }
   return { ok: true, value: data as T };
 }

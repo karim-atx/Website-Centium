@@ -19,6 +19,7 @@ import {
   RotateCcw,
   Trash2,
   Truck,
+  UserX,
 } from "lucide-react";
 import { BizButton, BizDropdown, BizField, BizFieldButton, BizPage, BizRow, BizSection, BizSheet, BizConfirm, LoadError, RowsSkeleton, LIST_BG, BORDER } from "../../components/business-more/kit";
 import { useBizToast } from "../../components/business-more/useBizToast";
@@ -40,6 +41,8 @@ import { formatShortDate } from "../../utils/date";
 import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import { fetchBookingPolicies, setBookingPolicy } from "../../services/business-classes/schedule";
 import { daysAhead, effectiveRules, minutesBefore, policyFor, POLICY_FALLBACK, type BookingPolicy, type PolicyField } from "../../services/business-classes/scheduleRules";
+import { fetchNoShowPause, POLICY_COPY, setNoShowPause } from "../../services/no-shows";
+import { t } from "../../i18n/core";
 
 // MO1B-001 / -003 / -005 and OURS-MO1B-booking-policies, -waiver-editor,
 // -store-policies-edit. One sub-page row for all of them (V6-109: BizMoreV8's
@@ -53,6 +56,11 @@ import { daysAhead, effectiveRules, minutesBefore, policyFor, POLICY_FALLBACK, t
 // late-cancel counting and fees, offering freed spots automatically and
 // class reminders; those rows are shown, dimmed, with "Coming soon" and do
 // nothing. No sample values ($5) ship.
+//
+// Round F2 AB4 (Karim F20): "Pause bookings after 3 no-shows" is live, on by
+// default: business_profiles.no_show_pause, written by set_no_show_pause
+// (staff with schedule). It is on the business, not a booking-policy row
+// (that table has a row per class type), so it has its own read and write.
 
 const fmtDate = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" });
 
@@ -152,6 +160,22 @@ function usePolicyDefault(bizId: string | null) {
   return { rows, setRows, error, reload: () => setTick((t) => t + 1) };
 }
 
+/** AB4: business_profiles.no_show_pause (null until read; a failed read leaves the toggle off and disabled). */
+function useNoShowPause(bizId: string | null) {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!bizId) return;
+    let cancelled = false;
+    void fetchNoShowPause(bizId).then((r) => {
+      if (!cancelled && r.ok) setOn(r.value);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bizId]);
+  return { on, setOn };
+}
+
 // ---------------------------------------------------------------------------
 // MO1B-001 / -003 · Booking policies (Gym: Entry rules) summary
 
@@ -160,6 +184,7 @@ export function BookingPoliciesPage() {
   const { business, kind, kindKnown } = useBusiness();
   const { locs, error, reload } = useLocations(business?.id ?? null);
   const pol = usePolicyDefault(business?.id ?? null);
+  const noShow = useNoShowPause(business?.id ?? null);
   const gym = kind === "gym";
   const venueHours = locs?.[0]?.cancellationHours ?? null;
   const own = pol.rows ? policyFor(pol.rows, null)?.cancellationHours ?? null : null;
@@ -188,6 +213,17 @@ export function BookingPoliciesPage() {
               onClick={() => navigate("/app/business/more/policies/edit?section=cancellations")}
             />
           </BizSection>
+          {/* AB4: the no-show pause, set in the editor. */}
+          {noShow.on !== null && (
+            <BizSection label={t(POLICY_COPY.section)}>
+              <BizRow
+                icon={UserX}
+                title={t(noShow.on ? POLICY_COPY.title : POLICY_COPY.summaryOff)}
+                desc={noShow.on ? t(POLICY_COPY.desc) : undefined}
+                onClick={() => navigate("/app/business/more/policies/edit?section=late")}
+              />
+            </BizSection>
+          )}
           <BizSection label="Documents">
             <BizRow
               icon={FileCheck}
@@ -221,6 +257,7 @@ export function BookingPoliciesEditor() {
   const { business, kind, kindKnown } = useBusiness();
   const { locs, error, reload } = useLocations(business?.id ?? null);
   const pol = usePolicyDefault(business?.id ?? null);
+  const noShow = useNoShowPause(business?.id ?? null);
   const access = useConsoleAccess();
   const [toast, showToast] = useBizToast();
   const [busy, setBusy] = useState(false);
@@ -256,8 +293,28 @@ export function BookingPoliciesEditor() {
     showToast(done);
   };
 
+  const writeNoShow = async (on: boolean) => {
+    if (!business?.id || busy) return;
+    setBusy(true);
+    const r = await setNoShowPause(business.id, on);
+    setBusy(false);
+    if (!r.ok) {
+      showToast(r.message);
+      return;
+    }
+    noShow.setOn(r.value);
+    showToast(t(r.value ? POLICY_COPY.on : POLICY_COPY.off));
+  };
+
   const soon = "Coming soon";
   const off = !canWrite || busy;
+  const noShowRow = (
+    <BizRow
+      title={t(POLICY_COPY.title)}
+      desc={t(POLICY_COPY.desc)}
+      toggle={{ checked: noShow.on === true, onChange: (v) => void writeNoShow(v), disabled: off || noShow.on === null }}
+    />
+  );
   return (
     <BizPage title={!kindKnown ? "Policies" : gym ? "Entry rules" : "Booking policies"} sub="Applied to every class unless a class type overrides it.">
       {loadError && (
@@ -287,9 +344,10 @@ export function BookingPoliciesEditor() {
           </BizSection>
           {!gym && (
             <>
-              <BizSection id="pol-late" label="Late cancels and no-shows" footer={soon}>
+              <BizSection id="pol-late" label="Late cancels and no-shows" footer={t(POLICY_COPY.lateSoon)}>
                 <BizRow title="Count a late cancel as a used class" desc="For packs and limited memberships" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
                 <BizRow title="Charge a late-cancel fee" desc="Paid with the next booking" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
+                {noShowRow}
               </BizSection>
               <BizSection id="pol-window" label="Booking window">
                 <BizRow title="How far ahead clients can book" value={daysAhead(eff.bookingWindowDays)} drop onClick={() => setMenu(menu === "ahead" ? null : "ahead")} disabled={off} />
@@ -336,6 +394,12 @@ export function BookingPoliciesEditor() {
                 <BizRow title="When" dim />
               </BizSection>
             </>
+          )}
+          {/* AB4: a gym's classes take the same pause (book_class is the same for every business). */}
+          {gym && (
+            <BizSection id="pol-late" label={t(POLICY_COPY.section)}>
+              {noShowRow}
+            </BizSection>
           )}
           <BizSection id="pol-terms" label="Terms and waivers">
             <BizRow

@@ -12,6 +12,8 @@ import { range12 } from "../../utils/time12";
 import { useOnline } from "../../hooks/useOnline";
 import { CARD, DIVIDER, VAvatar, VCardError, VDetailRow, VOfflineLine, VPill, VSkeletonRows, VTextTabs, type PillTone } from "./VenueKit";
 import { useMarkBookingPaid } from "./useMarkBookingPaid";
+import { ATTENDANCE_LABEL, attendanceOpen, canUndo, fetchAttendanceMarks, markClassAttendance, ROSTER_COPY, type Attendance } from "../../services/no-shows";
+import { t } from "../../i18n/core";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -32,6 +34,14 @@ const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // PopupMenu with "Message" for a seat with `messages`: start_member_thread
 // with venue_class_roster's person_id (customers count as own customers),
 // then the thread (VenueMembersRoster's pattern). One menu holds both actions.
+//
+// Round F2 AB4 (Karim F20–F22): once the class has started, a booked row's
+// menu also marks it Attended or No-show (mark_class_attendance, staff with
+// schedule or front desk, as the roster itself is gated), and Undo clears the
+// mark within 24 hours of it (when the mark was made is read for the desk;
+// the server answers ATXS1 / ATXS2 otherwise). The mark shows as a pill
+// beside the payment one. A desk check-in that day marks attended by itself.
+const ATT_TONE: Record<Attendance, PillTone> = { attended: "good", no_show: "high" };
 
 const PAY: Record<string, { label: string; tone: PillTone }> = {
   paid: { label: "Paid", tone: "good" },
@@ -93,6 +103,26 @@ export function ClassRosterSheet({
   const [msgBusy, setMsgBusy] = useState(false);
   const [msgError, setMsgError] = useState<string | null>(null);
   const messageable = (e: RosterEntry) => canMessage && e.kind === "booked" && !!e.personId;
+  // AB4: staff with schedule or front desk mark attendance once the class has started.
+  const canMark = access.ready && (access.meets("front_desk") || access.meets("schedule"));
+  const [marks, setMarks] = useState<Map<string, string | null>>(new Map());
+  const [attBusy, setAttBusy] = useState(false);
+  const [attNote, setAttNote] = useState<{ text: string; error: boolean } | null>(null);
+  const markable = (e: RosterEntry) => canMark && e.kind === "booked" && !!e.bookingId && attendanceOpen(session);
+  const undoable = (e: RosterEntry) => markable(e) && !!e.attendance && canUndo(e.bookingId ? marks.get(e.bookingId) : null);
+  const mark = async (e: RosterEntry, a: Attendance | null) => {
+    setMenu(null);
+    if (attBusy || !e.bookingId) return;
+    setAttBusy(true);
+    setAttNote(null);
+    const r = await markClassAttendance(e.bookingId, a);
+    setAttBusy(false);
+    if (!r.ok) return setAttNote({ text: r.message, error: true });
+    const id = e.bookingId;
+    setMarks((m) => new Map(m).set(id, a ? new Date().toISOString() : null));
+    setAttNote({ text: t(a === "attended" ? ROSTER_COPY.markedAttended : a === "no_show" ? ROSTER_COPY.markedNoShow : ROSTER_COPY.undone), error: false });
+    setTick((x) => x + 1);
+  };
   const message = async (e: RosterEntry) => {
     setMenu(null);
     if (msgBusy || !access.businessId || !e.personId) return;
@@ -116,6 +146,12 @@ export function ClassRosterSheet({
       }
       setError(null);
       setState({ classId, entries: r.value });
+      // AB4: when each mark was made, for Undo's 24 hours (the desk can read it).
+      const marked = r.value.flatMap((e) => (e.attendance && e.bookingId ? [e.bookingId] : []));
+      if (marked.length > 0) {
+        const m = await fetchAttendanceMarks(marked);
+        if (!cancelled) setMarks((prev) => new Map([...prev, ...m]));
+      }
     })();
     return () => {
       cancelled = true;
@@ -137,8 +173,9 @@ export function ClassRosterSheet({
 
   const row = (e: RosterEntry, i: number) => {
     const tag = e.paymentStatus ? PAY[e.paymentStatus] : null;
-    const markable = pay.can(e);
-    const actionable = markable || messageable(e);
+    const payable = pay.can(e);
+    const actionable = payable || messageable(e) || markable(e);
+    const att = e.attendance ? { label: t(ATTENDANCE_LABEL[e.attendance]), tone: ATT_TONE[e.attendance] } : null;
     const price = e.priceAgreed !== null ? (e.priceAgreed > 0 ? money(e.priceAgreed) : "Free") : null;
     const sub =
       e.kind === "booked"
@@ -151,7 +188,14 @@ export function ClassRosterSheet({
         title={e.label}
         titleExtra={e.isMinor && <VPill tone="pale" label="Under 18" />}
         sub={sub}
-        right={e.kind === "booked" && tag ? <VPill tone={tag.tone} label={tag.label} /> : undefined}
+        right={
+          e.kind === "booked" && (tag || att) ? (
+            <span className="flex items-center gap-[6px]">
+              {att && <VPill tone={att.tone} label={att.label} />}
+              {tag && <VPill tone={tag.tone} label={tag.label} />}
+            </span>
+          ) : undefined
+        }
         onClick={
           actionable
             ? (ev) => {
@@ -160,8 +204,8 @@ export function ClassRosterSheet({
               }
             : undefined
         }
-        ariaLabel={actionable ? `${e.label}${tag ? `, ${tag.label}` : ""}. Actions` : undefined}
-        disabled={actionable ? pay.busy || msgBusy : undefined}
+        ariaLabel={actionable ? `${e.label}${att ? `, ${att.label}` : ""}${tag ? `, ${tag.label}` : ""}. Actions` : undefined}
+        disabled={actionable ? pay.busy || msgBusy || attBusy : undefined}
       />
     );
   };
@@ -216,6 +260,15 @@ export function ClassRosterSheet({
               {pay.error ?? msgError}
             </p>
           )}
+          {attNote && !pay.error && !msgError && (
+            <p
+              className={`border-t ${DIVIDER} text-[11.5px] font-bold leading-[16px] ${attNote.error ? "text-status-high" : "text-charcoal-faint"}`}
+              role={attNote.error ? "alert" : "status"}
+              style={{ padding: "10px 16px" }}
+            >
+              {attNote.text}
+            </p>
+          )}
         </div>
       </div>
       <PopupMenu
@@ -232,12 +285,21 @@ export function ClassRosterSheet({
                 { value: "ref", label: "Add a reference", disabled: !online },
               ]
             : []),
+          ...(menu && markable(menu.entry)
+            ? [
+                ...(menu.entry.attendance !== "attended" ? [{ value: "attended", label: t(ROSTER_COPY.markAttended), disabled: !online }] : []),
+                ...(menu.entry.attendance !== "no_show" ? [{ value: "no_show", label: t(ROSTER_COPY.markNoShow), disabled: !online }] : []),
+                ...(undoable(menu.entry) ? [{ value: "undo", label: t(ROSTER_COPY.undo), disabled: !online }] : []),
+              ]
+            : []),
           ...(menu && messageable(menu.entry) ? [{ value: "message", label: "Message", disabled: !online }] : []),
         ]}
         onSelect={(v) => {
           if (!menu) return;
           const e = menu.entry;
           setMenu(null);
+          if (v === "attended" || v === "no_show") return void mark(e, v);
+          if (v === "undo") return void mark(e, null);
           if (v === "ref") return pay.openReference(e);
           void (v === "message" ? message(e) : pay.run(e));
         }}

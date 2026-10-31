@@ -398,6 +398,7 @@ export default function SessionPage() {
       <ClassRosterSheet
         classId={rosterOpen && rosterAllowed ? id : null}
         title={session.title}
+        session={{ date: session.date, startTime: session.startTime, endTime: session.endTime, maxCapacity: session.maxCapacity }}
         onClose={() => setRosterOpen(false)}
         onMarkedPaid={() => {
           setTick((t) => t + 1);

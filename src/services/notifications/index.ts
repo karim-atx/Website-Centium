@@ -6,7 +6,8 @@
 
 import { t } from "../../i18n/core";
 import { marketRpc, type MarketResult } from "../market/rpc";
-import { parseMarkedCount, parseMemberNotifications, parseUnreadCount, type MemberNotification, type NotificationCursor } from "./notificationsModel";
+import { supabase } from "../../../lib/supabase/client";
+import { businessIdsToName, parseMarkedCount, parseMemberNotifications, parseUnreadCount, withBusinessNames, type MemberNotification, type NotificationCursor } from "./notificationsModel";
 
 export * from "./notificationsModel";
 
@@ -38,7 +39,27 @@ export async function fetchMyNotifications(cursor: NotificationCursor | null = n
     parseMemberNotifications
   );
   if (!r.ok) return r;
-  return { ok: true, value: { items: r.value.slice(0, take), more: r.value.length > take } };
+  const items = await namedBusinesses(r.value.slice(0, take));
+  return { ok: true, value: { items, more: r.value.length > take } };
+}
+
+/**
+ * Round F2 · AB4: the no-show notices carry only business_id, so the
+ * business's name is read (business_profiles is public for an active
+ * business) and joined into the payload. A failed or empty read leaves the
+ * rows as they are: their lines then say "there" instead of the name.
+ */
+async function namedBusinesses(items: MemberNotification[]): Promise<MemberNotification[]> {
+  const ids = businessIdsToName(items);
+  if (ids.length === 0) return items;
+  type Loose = { from: (t: string) => { select: (c: string) => { in: (col: string, v: string[]) => PromiseLike<{ data: { id: string; business_name: string | null }[] | null; error: unknown }> } } };
+  try {
+    const { data, error } = await (supabase as unknown as Loose).from("business_profiles").select("id, business_name").in("id", ids);
+    if (error || !data) return items;
+    return withBusinessNames(items, new Map(data.flatMap((b) => (b.business_name?.trim() ? [[b.id, b.business_name.trim()] as [string, string]] : []))));
+  } catch {
+    return items;
+  }
 }
 
 /**

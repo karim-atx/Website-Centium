@@ -96,4 +96,6 @@ export function useMembersData(): MembersData {
 /** Roster page size (list_business_members p_limit). */
 const PAGE = 100;
 
-export const liveCodes = (codes: MemberCode[], now = Date.now()) => codes.filter((c) => !c.redeemed && new Date(c.expiresAt).getTime() > now);
+/** Codes that still work: not used up, not revoked (Round F2 AB6), not expired. */
+export const liveCodes = (codes: MemberCode[], now = Date.now()) =>
+  codes.filter((c) => !c.redeemed && c.uses < c.maxUses && !c.revokedAt && new Date(c.expiresAt).getTime() > now);

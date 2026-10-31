@@ -290,7 +290,8 @@ function InviteToActive({ figures, data, dark }: { figures: MembersFigures; data
   const pending = Math.max(0, f.issued - f.redeemed - f.expiredUnused);
   const ended = figures.stats?.members_ended?.value ?? null;
   const pct = f.issued > 0 ? Math.round((act / f.issued) * 100) : null;
-  const redeemed = codes.filter((c) => c.redeemed).length;
+  // AB6: a code with uses left counts once it has been used at all.
+  const redeemed = codes.filter((c) => c.uses > 0).length;
   const rows: AnSectionRow[] = [
     { key: "active", n: String(act), col: TEAL, t: "Active", s: pct === null ? undefined : `${pct}% of invites accepted.`, share: act },
     { key: "pending", n: String(pending), col: PRIMARY, t: "Pending", s: "Invited but not answered yet.", share: pending },

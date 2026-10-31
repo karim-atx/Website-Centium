@@ -139,8 +139,8 @@ test("targets: the documented subject per client kind; other kinds open nothing 
   assert.equal(clientNotificationTarget({ kind: "x", subjectType: "offer", subjectId: O }), null);
 });
 
-test("kinds: the enum in order; the client's are a member's thirteen, never an owner's or a professional's own", () => {
-  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 27);
+test("kinds: the enum in order; the client's are a member's sixteen, never an owner's or a professional's own", () => {
+  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 30);
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(0, 4), [...RELEASE1_KINDS]);
   // Release B appends the ambassador decision (20261217000000), to the applicant.
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(18, 20), ["ambassador_application_approved", "ambassador_application_declined"]);
@@ -148,10 +148,13 @@ test("kinds: the enum in order; the client's are a member's thirteen, never an o
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(20, 24), ["forum_nickname_reset", "support_resources", "image_approved", "image_rejected"]);
   // Round D · PR 1 appends the catalogue decision on a suggested food (20261222000000);
   // PR 2 a professional's reply to a logged workout, then a course published for the member.
-  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(24), ["food_submission_reviewed", "workout_log_reply", "course_published"]);
+  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(24, 27), ["food_submission_reviewed", "workout_log_reply", "course_published"]);
+  // Round F2 · AB4 appends the no-show notices (20261225230000), to the member.
+  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(27, 30), ["no_show_warning", "booking_paused", "booking_pause_lifted"]);
   assert.deepEqual([...CLIENT_KINDS], [
     "voucher_issued", "points_expiring", "class_cancelled", "review_prompt", "ambassador_application_approved", "ambassador_application_declined",
     "forum_nickname_reset", "support_resources", "image_approved", "image_rejected", "food_submission_reviewed", "workout_log_reply", "course_published",
+    "no_show_warning", "booking_paused", "booking_pause_lifted",
   ]);
   for (const k of CLIENT_KINDS) assert.ok((MEMBER_NOTIFICATION_KINDS as readonly string[]).includes(k), k);
   const notMine = [
@@ -516,4 +519,27 @@ test("Round D: course_published names the author and the course, and opens the c
   assert.equal(clientNotificationTarget({ kind: "course_published", subjectType: "course", subjectId: C }), `/app/forum/courses/${C}`);
   assert.equal(clientNotificationTarget({ kind: "course_published", subjectType: "course", subjectId: null, payload: { course_id: "../x" } }), "/app/forum?tab=courses");
   assert.deepEqual(notifLook("course_published"), { tone: "lav", glyph: "app" });
+});
+
+test("Round F2 · AB4: the no-show notices name the business once the reader joins it, and open the bookings", () => {
+  const B = "22222222-3333-4444-8555-666666666666";
+  const row = (kind: string, payload: Record<string, unknown>) => ({ id: kind, kind, subjectType: "business", subjectId: B, actorId: null, titleKey: kind, payload, readAt: null, createdAt: "2026-11-07T18:00:00Z" });
+  const rows = [row("no_show_warning", { business_id: B, no_shows: 2 }), row("booking_paused", { business_id: B, until: "2026-11-14T18:30:00Z" }), row("voucher_issued", {})];
+  assert.deepEqual(rt.businessIdsToName(rows), [B]);
+  const named = rt.withBusinessNames(rows, new Map([[B, "Pulse Gym"]]));
+  assert.equal(named[0].payload.business_name, "Pulse Gym");
+  assert.equal(named[2], rows[2]);
+  assert.deepEqual(rt.businessIdsToName(named), []);
+  const c = (kind: string, payload?: Record<string, unknown>) => notificationCopy({ titleKey: kind, kind, payload });
+  assert.deepEqual(c("no_show_warning", named[0].payload), {
+    title: "You missed 2 classes",
+    body: "You missed 2 classes at Pulse Gym in the last 30 days. After 3, new bookings there pause for 7 days.",
+  });
+  assert.match(c("booking_paused", named[1].payload).body, /^You missed 3 classes at Pulse Gym in 30 days, so new bookings there are paused until Nov 14, .+\. Your existing bookings are kept\.$/);
+  assert.match(c("booking_paused", { until: "2026-11-14T18:30:00Z" }).body, /^You missed 3 classes here in 30 days/);
+  assert.equal(c("booking_pause_lifted", { business_name: "Pulse Gym" }).body, "You can book classes at Pulse Gym again.");
+  assert.equal(c("booking_pause_lifted", {}), CLIENT_COPY.booking_pause_lifted);
+  assert.equal(clientNotificationTarget({ kind: "booking_paused", subjectType: "business", subjectId: B }), "/app/marketplace/bookings?tab=upcoming");
+  assert.equal(clientNotificationTarget({ kind: "booking_pause_lifted", subjectType: "business", subjectId: B }), "/app/marketplace");
+  assert.deepEqual(notifLook("booking_paused"), { tone: "red", glyph: "x" });
 });

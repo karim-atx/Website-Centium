@@ -226,6 +226,15 @@ test("roster CL-08: booking_id on booked rows only, and which rows can be marked
   assert.equal(canMarkBookingPaid(waiting), false);
 });
 
+test("roster F2 AB4: attendance on booked rows only, and nothing else read as a mark", () => {
+  const base = { client_label: "Sam", client_is_minor: false, payment_method: "cash", payment_status: "paid", price_agreed: 20, at: "t1" } as const;
+  assert.equal(toRosterEntry({ ...base, entry_kind: "booked", waitlist_position: null, booking_id: "b1", attendance: "no_show" }).attendance, "no_show");
+  assert.equal(toRosterEntry({ ...base, entry_kind: "booked", waitlist_position: null, booking_id: "b1", attendance: "attended" }).attendance, "attended");
+  assert.equal(toRosterEntry({ ...base, entry_kind: "booked", waitlist_position: null, booking_id: "b1", attendance: "late" }).attendance, null);
+  assert.equal(toRosterEntry({ ...base, entry_kind: "booked", waitlist_position: null, booking_id: "b1" }).attendance, null);
+  assert.equal(toRosterEntry({ ...base, entry_kind: "waitlist", waitlist_position: 1, attendance: "attended" }).attendance, null);
+});
+
 // ---- hours editor
 
 const tableRow = (weekday: number, over: Partial<GymHoursTableRow> = {}): GymHoursTableRow => ({
