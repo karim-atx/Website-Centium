@@ -26,6 +26,9 @@ import { t, tk } from "../../i18n/core";
  */
 const WARN_AT = 0.8;
 
+/** Left-to-right isolate (LRI … PDI) round a Latin figure. */
+const ltr = (s: string) => `⁦${s}⁩`;
+
 /** Binary units, one decimal above 1 MB (backend doc §1): "21 KB", "4.2 MB", "2 GB". */
 function formatBytes(bytes: number): string {
   const KB = 1024;
@@ -96,13 +99,13 @@ export const StorageUsageRow: React.FC = () => {
           ) : (
             <span aria-hidden className="mt-1.5 block h-[5px] rounded-full bg-cream-soft animate-skeleton-pulse" />
           )}
-          {/* <bdi>: the English figure keeps its own order inside Arabic (RTL)
-              pages (kept-list 144). */}
+          {/* Each size is isolated left to right ("21 KB"), so the sentence
+              round them keeps the page's direction ("21 KB من 2 GB" in
+              Arabic); a <bdi> round the whole sentence turned it left to
+              right (kept-list 144). */}
           <span className={`block mt-[5px] ${warning ? "text-status-high" : "text-charcoal-faint"}`} style={small}>
             {usage ? (
-              <bdi>
-                {t("{used} of {cap}", { used: formatBytes(usage.usedBytes), cap: formatBytes(usage.capBytes) })}
-              </bdi>
+              t("{used} of {cap}", { used: ltr(formatBytes(usage.usedBytes)), cap: ltr(formatBytes(usage.capBytes)) })
             ) : (
               <span aria-label={t("Loading")}>–</span>
             )}

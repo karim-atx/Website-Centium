@@ -8,6 +8,7 @@ import { METHOD_LABEL } from "../../services/contraception/guidance";
 import type { Pregnancy } from "../../services/pregnancy";
 import { gestationOn } from "../../services/pregnancy";
 import type { Method } from "../../services/contraception";
+import { zonePlace } from "../settings/timezoneOptions";
 import { CycleCard, CycleFooter, CycleHelp, CycleRow, CycleSection, OptionButton, type, useCycleMode } from "./cycleUi";
 
 // HE1.10.b, the Settings tab, in the open Settings layout: lavender section
@@ -44,7 +45,7 @@ export const CycleSettingsTab: React.FC<{
 }> = (p) => {
   const { settings } = p;
   const pregnancyWeek = p.pregnancy ? gestationOn(p.today, p.pregnancy) : null;
-  const zoneCity = p.timezone ? p.timezone.split("/").pop()!.replace(/_/g, " ") : G.SETTINGS_TIMEZONE_NOT_SET;
+  const zoneCity = p.timezone ? zonePlace(p.timezone) : G.SETTINGS_TIMEZONE_NOT_SET;
 
   return (
     <div data-cycle-tab="settings">

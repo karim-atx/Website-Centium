@@ -7,7 +7,7 @@ import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { browserTimezone, knownTimezones } from "../../services/timezone";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { linePx, textPx } from "../../theme/textSize";
-import { buildZoneOptions, filterZones, zoneCity, zoneDisplay } from "./timezoneOptions";
+import { buildZoneOptions, filterZones, zoneDisplay, zonePlace } from "./timezoneOptions";
 import { TimezoneWheel } from "./TimezoneWheel";
 import { t, tk, tn } from "../../i18n/core";
 
@@ -310,7 +310,7 @@ export const TimezoneSetting: React.FC = () => {
               ? t("This browser doesn't share its time zone.")
               : chosen
                 ? t("Off while a zone is set by you")
-                : t("On · {city}", { city: zoneCity(device) })}
+                : t("On · {city}", { city: zonePlace(device) })}
           </span>
         }
         toggle={{
