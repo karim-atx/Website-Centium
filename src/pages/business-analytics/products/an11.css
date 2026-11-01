@@ -3,7 +3,7 @@
    dark, Larger text (px sizes) and High contrast apply. */
 
 .pa {
-  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
   color: var(--an-ink);
   /* Source c.axis: L #A79E93, D #B8B3C7 (chart axis, dashed ghost, expired uses bar). */
   --pa-axis: #a79e93;

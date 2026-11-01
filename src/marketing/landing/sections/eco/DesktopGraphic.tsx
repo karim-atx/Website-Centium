@@ -95,11 +95,11 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
               </span>
             ))}
             {sl.cells!.map((ce, ceI) => (
-              <span key={ceI} style={{ position: "relative", minHeight: "26px", borderRadius: "7px", background: ce.bg, fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF95, color: "#756D63", display: "flex", alignItems: "center", paddingInlineStart: "2px" }}>
+              <span key={ceI} style={{ position: "relative", minHeight: "26px", borderRadius: "7px", background: ce.bg, fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: r.eF95, color: "#756D63", display: "flex", alignItems: "center", paddingInlineStart: "2px" }}>
                 {tOpt(ce.t)}
                 {ce.on ? (
                   <>
-                    <span data-w={ce.w} data-stamp="" style={{ position: "absolute", inset: "0", borderRadius: "7px", background: ce.c, color: ce.ink, fontFamily: "Manrope,sans-serif", fontSize: r.eF10, fontWeight: "800", display: "flex", alignItems: "center", padding: "0 6px", opacity: "0", whiteSpace: "nowrap", overflow: "hidden" }}>
+                    <span data-w={ce.w} data-stamp="" style={{ position: "absolute", inset: "0", borderRadius: "7px", background: ce.c, color: ce.ink, fontFamily: 'Manrope,"IBM Plex Sans Arabic",sans-serif', fontSize: r.eF10, fontWeight: "800", display: "flex", alignItems: "center", padding: "0 6px", opacity: "0", whiteSpace: "nowrap", overflow: "hidden" }}>
                       {tOpt(ce.n)}
                     </span>
                   </>
@@ -151,7 +151,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
         <>
           <div style={{ flex: "1", minHeight: "0", display: "flex", flexDirection: "column", gap: "8px" }}>
             <div style={{ position: "relative", height: "84px", borderRadius: "12px", background: "repeating-linear-gradient(135deg,#F4F1FB 0 10px,#ECE7F8 10px 20px)" }}>
-              <span style={{ position: "absolute", left: "10px", top: "8px", fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF10, color: "#6B5E94" }}>
+              <span style={{ position: "absolute", left: "10px", top: "8px", fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: r.eF10, color: "#6B5E94" }}>
                 {t("gym cover photo")}
               </span>
               <span style={{ position: "absolute", left: "14px", bottom: "-16px", width: "44px", height: "44px", borderRadius: "12px", background: "#4E3894", color: "#fff", fontSize: "13px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", border: "3px solid #fff" }}>
@@ -186,7 +186,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
               </div>
               {sl.next!.map((nx, nxI) => (
                 <div key={nxI} data-w={nx.w} data-op="" style={{ flex: "1 1 0", minHeight: "30px", display: "flex", alignItems: "center", gap: "10px", padding: "0 10px", borderRadius: "10px", border: "1px solid #F0EDE8", opacity: "0" }}>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF11, color: "#756D63" }}>
+                  <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: r.eF11, color: "#756D63" }}>
                     {tOpt(nx.t)}
                   </span>
                   <span style={{ flex: "1", minWidth: "0", fontSize: "12px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -205,7 +205,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
         <>
           <div style={{ flex: "1", display: "grid", gridTemplateColumns: "150px 1fr", gap: "10px", minHeight: "0" }}>
             <div style={{ position: "relative", borderRadius: "12px", background: "repeating-linear-gradient(135deg,#EEF4F2 0 8px,#E5EEEB 8px 16px)", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "8px" }}>
-              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF95, color: "#516E6A" }}>
+              <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: r.eF95, color: "#516E6A" }}>
                 {t("scan member card")}
               </span>
               <span data-w="0.1 0.6" data-sweepy="110" style={{ position: "absolute", left: "8px", right: "8px", top: "8px", height: "2px", background: "#2F5F58", boxShadow: "0 0 0 3px rgba(47,95,88,.15)", opacity: "0" }} />
@@ -227,7 +227,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                   <span style={{ flex: "1", fontSize: "12px", fontWeight: "700" }}>
                     {tOpt(fd.n)}
                   </span>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF105, color: "#756D63" }}>
+                  <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: r.eF105, color: "#756D63" }}>
                     {tOpt(fd.t)}
                   </span>
                   <span style={{ fontSize: r.eF105, fontWeight: "800", color: fd.sc }}>
@@ -346,7 +346,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
               ))}
             </div>
             <div data-w="0.75 0.95" data-ty="10" data-op="" style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "14px", background: "#4E3894", color: "#fff", opacity: "0" }}>
-              <span style={{ width: "34px", height: "34px", flexShrink: "0", borderRadius: "8px", background: "repeating-linear-gradient(45deg,#5C48A8 0 4px,#6A54C4 4px 8px)", fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF8, display: "flex", alignItems: "center", justifyContent: "center", color: "#F4F1FB" }}>
+              <span style={{ width: "34px", height: "34px", flexShrink: "0", borderRadius: "8px", background: "repeating-linear-gradient(45deg,#5C48A8 0 4px,#6A54C4 4px 8px)", fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: r.eF8, display: "flex", alignItems: "center", justifyContent: "center", color: "#F4F1FB" }}>
                 QR
               </span>
               <div style={{ flex: "1" }}>

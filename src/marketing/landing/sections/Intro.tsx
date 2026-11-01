@@ -181,10 +181,10 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                 border: "1px solid #E9E5DC",
                 boxShadow: FRAG_SHADOW,
                 padding: "10px 12px 12px",
-                fontFamily: "'JetBrains Mono',ui-monospace,monospace",
+                fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',ui-monospace,monospace",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "7px", fontFamily: "Manrope,sans-serif", marginBottom: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "7px", fontFamily: 'Manrope,"IBM Plex Sans Arabic",sans-serif', marginBottom: "8px" }}>
                 {appIcon({ background: "#EFEBE2", boxShadow: "inset 0 -6px 0 #FBFAF7,inset 0 0 0 1px #CFC8B8" })}
                 <span style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: ".02em", color: "#6B6356" }}>{t("Notes")}</span>
               </div>

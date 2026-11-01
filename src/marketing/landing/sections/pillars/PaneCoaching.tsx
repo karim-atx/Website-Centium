@@ -129,7 +129,7 @@ export const PaneCoaching: React.FC<{ r: SectionVals }> = ({ r }) => (
               <span style={{ flex: "1", minWidth: "0", fontSize: "12px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {t(lp.t)}
               </span>
-              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "11px", color: "#2F5F58", whiteSpace: "nowrap" }}>
+              <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "11px", color: "#2F5F58", whiteSpace: "nowrap" }}>
                 {lp.sr}
               </span>
             </div>
@@ -170,10 +170,10 @@ export const PaneCoaching: React.FC<{ r: SectionVals }> = ({ r }) => (
         </div>
         <div data-w="0.86 0.95" data-op="" style={{ position: "relative", flex: "1", borderRadius: "16px", overflow: "hidden", background: "repeating-linear-gradient(135deg,#EEF4F2 0 10px,#E5EEEB 10px 20px)", minHeight: r.vidH, flexDirection: "column", justifyContent: "space-between", padding: "9px 12px", opacity: "0", display: r.mhBlock }}>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: "#516E6A" }}>
+            <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "10px", color: "#516E6A" }}>
               {t("video call")}
             </span>
-            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "11px", color: "#2F5F58" }}>
+            <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "11px", color: "#2F5F58" }}>
               00:42
             </span>
           </div>

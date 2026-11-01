@@ -63,7 +63,7 @@ export interface BizCardProps {
   artboardH?: number;
 }
 
-const FONT = "Manrope, Helvetica, Arial, sans-serif";
+const FONT = 'Manrope, "IBM Plex Sans Arabic", Helvetica, Arial, sans-serif';
 
 const cardBackground = (fill: CardFill, brand: Pick<BizBrand, "c1" | "c2">) =>
   fill === "biz" ? bizGradient(brand.c1, brand.c2) : fill === "cen" ? CEN_GRADIENT : "transparent";

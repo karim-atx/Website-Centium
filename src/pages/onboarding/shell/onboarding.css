@@ -57,14 +57,14 @@
   --ob-opt-on-sh: var(--ob-focus), 0 14px 30px rgb(var(--th-5f5093) / 0.14);
   --ob-store-sel-sh: 0 0 0 3px rgb(var(--c-brand-c) / 0.1);
   --ob-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
 }
 .ob {
   position: relative;
   min-height: 100dvh;
   background: var(--ob-page);
   color: var(--ob-ink);
-  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
   line-height: 1.5;
   overflow-x: clip;
 }
@@ -1632,7 +1632,7 @@ html.high-contrast .ob .ob-btn-primary:disabled {
   padding: 22px 20px 16px;
   text-align: center;
   box-shadow: 0 20px 48px rgba(36, 31, 27, 0.28);
-  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
 }
 .ob-pop-ic {
   width: 44px;

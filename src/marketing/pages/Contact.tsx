@@ -349,7 +349,7 @@ export const Contact: React.FC = () => {
           <label style={label}>
             <span style={{ ...labelText, display: "flex", justifyContent: "space-between" }}>
               {t("Message")}
-              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "11px", fontWeight: "500", color: "#756D63" }}>{message.length} / 1500</span>
+              <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "11px", fontWeight: "500", color: "#756D63" }}>{message.length} / 1500</span>
             </span>
             <textarea
               required

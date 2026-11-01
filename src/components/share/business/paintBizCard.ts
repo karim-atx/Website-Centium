@@ -22,6 +22,7 @@ import { qrRows } from "../ShareQr";
 import { photoRect, type OverlayTransform, type PhotoCrop, type Size } from "../overlayModel";
 import { CARD_LEAF_PATH } from "./bizArt";
 import { CARD_W, EXPORT_W, exportH, type BizFormat } from "./bizCardModel";
+import { loadArabicForCanvas } from "../../../i18n/fonts";
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -91,13 +92,16 @@ async function prepare(root: HTMLElement): Promise<Pick<Paint, "images" | "qr">>
   });
   // Every face the card uses, loaded with the text it draws.
   const fonts = new Set<string>();
+  let text = "";
   root.querySelectorAll<HTMLElement>("*").forEach((el) => {
     if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim())) return;
     const cs = getComputedStyle(el);
     fonts.add(`${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`);
+    text += el.textContent ?? "";
   });
   await document.fonts.ready;
   jobs.push(...[...fonts].map((f) => document.fonts.load(f).catch(() => [])));
+  jobs.push(loadArabicForCanvas(fonts, text));
   await Promise.all(jobs);
   return { images, qr };
 }

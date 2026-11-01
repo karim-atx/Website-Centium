@@ -131,7 +131,7 @@ export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, f
           overflow: "hidden",
           borderRadius: square ? 0 : 12,
           background: c.bg,
-          fontFamily: "Manrope, Helvetica, Arial, sans-serif",
+          fontFamily: 'Manrope, "IBM Plex Sans Arabic", Helvetica, Arial, sans-serif',
           WebkitFontSmoothing: "antialiased",
           textAlign: stk ? "center" : "left",
           lineHeight: "normal",
@@ -226,7 +226,7 @@ export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, f
  * White type; the OverlayEditor wrapper adds its 0 1px 8px shadow.
  */
 export const PhotoStatsLayer: React.FC<{ spec: ClientCardSpec; stats: ClientStat[]; innerRef?: React.Ref<HTMLDivElement> }> = ({ spec, stats, innerRef }) => (
-  <div ref={innerRef} data-layer-root="" style={{ width: 100, fontFamily: "Manrope, Helvetica, Arial, sans-serif", lineHeight: "normal", letterSpacing: "normal", textAlign: "start", color: "#FFFFFF", WebkitFontSmoothing: "antialiased" }}>
+  <div ref={innerRef} data-layer-root="" style={{ width: 100, fontFamily: 'Manrope, "IBM Plex Sans Arabic", Helvetica, Arial, sans-serif', lineHeight: "normal", letterSpacing: "normal", textAlign: "start", color: "#FFFFFF", WebkitFontSmoothing: "antialiased" }}>
     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
       <CardMarkSvg w={12.5} h={13.5} style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.35))" }} shadow="0,1,3,rgba(0,0,0,0.35)" />
       <span>

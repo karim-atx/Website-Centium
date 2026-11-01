@@ -29,7 +29,7 @@ export default {
         // Centium landing v29 (01_tokens font.mono). Namespaced: the app's own
         // font-mono stays Tailwind's default. JetBrains Mono is loaded by
         // MarketingLayout for the marketing routes only.
-        "centium-mono": ["JetBrains Mono", "ui-monospace", "monospace"],
+        "centium-mono": ["JetBrains Mono", "IBM Plex Sans Arabic", "ui-monospace", "monospace"],
       },
       colors: {
         // Centium landing v29 (handover 01_tokens/tokens.json), namespaced under

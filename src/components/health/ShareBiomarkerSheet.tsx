@@ -2,8 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import type { BloodMarker } from "../../types";
+import { hasArabic, loadArabicForCanvas } from "../../i18n/fonts";
 import { Download, Share2 } from "lucide-react";
 
+// Manrope, and the Arabic face for a marker name, unit or date in Arabic.
+const FAMILY = 'Manrope, "IBM Plex Sans Arabic", sans-serif';
+const FAMILY_WEIGHTS = [500, 600, 700].map((w) => `${w} 16px ${FAMILY}`);
 const CARD_W = 640;
 const CARD_H = 800;
 
@@ -29,7 +33,7 @@ const NEUTRAL_GRADIENT: [string, string] = ["#6E6A66", "#3A3735"];
 function fitTitleFontSize(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxPx: number, minPx: number) {
   let size = maxPx;
   while (size > minPx) {
-    ctx.font = `700 ${size}px Manrope, sans-serif`;
+    ctx.font = `700 ${size}px ${FAMILY}`;
     if (ctx.measureText(text).width <= maxWidth) break;
     size -= 2;
   }
@@ -64,14 +68,14 @@ function drawCard(canvas: HTMLCanvasElement, marker: BloodMarker) {
   // headroom above it for that size's ascenders.
   ctx.fillStyle = "rgba(255,255,255,0.92)";
   const titleSize = fitTitleFontSize(ctx, marker.name.toUpperCase(), CARD_W - 96, 100, 56);
-  ctx.font = `700 ${titleSize}px Manrope, sans-serif`;
+  ctx.font = `700 ${titleSize}px ${FAMILY}`;
   ctx.fillText(marker.name.toUpperCase(), 48, titleSize * 0.8);
 
   // value
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = "700 96px Manrope, sans-serif";
+  ctx.font = `700 96px ${FAMILY}`;
   ctx.fillText(`${marker.value}`, 48, 300);
-  ctx.font = "600 32px Manrope, sans-serif";
+  ctx.font = `600 32px ${FAMILY}`;
   ctx.fillStyle = "rgba(255,255,255,0.8)";
   ctx.fillText(marker.unit, 48, 340);
 
@@ -84,13 +88,13 @@ function drawCard(canvas: HTMLCanvasElement, marker: BloodMarker) {
     ctx.roundRect(48, pillY, 160, 44, 22);
     ctx.fill();
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "700 18px Manrope, sans-serif";
+    ctx.font = `700 18px ${FAMILY}`;
     ctx.fillText(marker.status.toUpperCase(), 78, pillY + 29);
   }
 
   // history
   ctx.fillStyle = "rgba(255,255,255,0.65)";
-  ctx.font = "600 16px Manrope, sans-serif";
+  ctx.font = `600 16px ${FAMILY}`;
   ctx.fillText("HISTORY", 48, 470);
 
   const historyY = 500;
@@ -110,7 +114,7 @@ function drawCard(canvas: HTMLCanvasElement, marker: BloodMarker) {
   });
   ctx.stroke();
 
-  ctx.font = "500 14px Manrope, sans-serif";
+  ctx.font = `500 14px ${FAMILY}`;
   ctx.fillStyle = "rgba(255,255,255,0.55)";
   marker.history.forEach((h, i) => {
     const x = 48 + (i / (marker.history.length - 1 || 1)) * chartW;
@@ -119,7 +123,7 @@ function drawCard(canvas: HTMLCanvasElement, marker: BloodMarker) {
 
   // footer
   ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.font = "500 15px Manrope, sans-serif";
+  ctx.font = `500 15px ${FAMILY}`;
   ctx.fillText("Prototype health tracking, not a diagnosis.", 48, CARD_H - 48);
 }
 
@@ -146,7 +150,7 @@ function drawSummaryCard(canvas: HTMLCanvasElement, markers: BloodMarker[]) {
   // please remove" — promoted to the card's title in place of the wordmark.
   // V10 (QA 10.0): "should be bigger and more readable."
   ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.font = "700 44px Manrope, sans-serif";
+  ctx.font = `700 44px ${FAMILY}`;
   ctx.fillText("BIOMARKER SUMMARY", 48, 80);
 
   const statusDot: Record<"low" | "normal" | "high", string> = {
@@ -173,11 +177,11 @@ function drawSummaryCard(canvas: HTMLCanvasElement, markers: BloodMarker[]) {
     ctx.fill();
 
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "600 22px Manrope, sans-serif";
+    ctx.font = `600 22px ${FAMILY}`;
     ctx.fillText(m.name, 80, y + rowH / 2 - 4);
 
     ctx.fillStyle = "rgba(255,255,255,0.6)";
-    ctx.font = "500 14px Manrope, sans-serif";
+    ctx.font = `500 14px ${FAMILY}`;
     ctx.fillText(`Range: ${m.range} ${m.unit}`, 80, y + rowH / 2 + 20);
 
     const last = m.history[m.history.length - 1]?.value ?? m.value;
@@ -186,16 +190,16 @@ function drawSummaryCard(canvas: HTMLCanvasElement, markers: BloodMarker[]) {
 
     ctx.textAlign = "right";
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "700 26px Manrope, sans-serif";
+    ctx.font = `700 26px ${FAMILY}`;
     ctx.fillText(`${m.value} ${arrow}`, CARD_W - 48, y + rowH / 2 + 2);
-    ctx.font = "500 14px Manrope, sans-serif";
+    ctx.font = `500 14px ${FAMILY}`;
     ctx.fillStyle = "rgba(255,255,255,0.6)";
     ctx.fillText(m.unit, CARD_W - 48, y + rowH / 2 + 22);
     ctx.textAlign = "left";
   });
 
   ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.font = "500 15px Manrope, sans-serif";
+  ctx.font = `500 15px ${FAMILY}`;
   ctx.fillText("Prototype health tracking, not a diagnosis.", 48, canvas.height - 24);
 }
 
@@ -214,15 +218,29 @@ export const ShareBiomarkerSheet: React.FC<{
       setReady(false);
       return;
     }
-    if (marker) {
-      drawCard(canvasRef.current, marker);
-      setReady(true);
-    } else if (markers?.length) {
-      drawSummaryCard(canvasRef.current, markers);
-      setReady(true);
-    } else {
+    if (!marker && !markers?.length) {
       setReady(false);
+      return;
     }
+    const canvas = canvasRef.current;
+    const draw = () => {
+      if (marker) drawCard(canvas, marker);
+      else if (markers) drawSummaryCard(canvas, markers);
+      setReady(true);
+    };
+    const text = JSON.stringify(marker ?? markers);
+    // Without Arabic, drawn at once as before; with it, once the face is in
+    // (a canvas never redraws when a font arrives later).
+    if (!hasArabic(text)) {
+      draw();
+      return;
+    }
+    let live = true;
+    setReady(false);
+    void loadArabicForCanvas(FAMILY_WEIGHTS, text).then(() => live && draw());
+    return () => {
+      live = false;
+    };
   }, [open, marker, markers]);
 
   // NEUTRAL NAMES. The file name and the share sheet's title are seen before

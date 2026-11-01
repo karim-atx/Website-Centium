@@ -101,7 +101,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
             6px: at 6px the glyph boxes were 7.0px apart at every width. */}
         {sl.mb!.map((m, mI) => (
           <div key={mI} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <span style={{ width: "44px", flexShrink: "0", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#5B5349" }}>
+            <span style={{ width: "44px", flexShrink: "0", fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "12px", color: "#5B5349" }}>
               {tOpt(m.t)}
             </span>
             <span style={{ width: "10px", height: "10px", flexShrink: "0", borderRadius: "99px", background: m.c, boxShadow: "0 0 0 4px #F7F5FC,0 0 0 5px #E4DCF8" }} />
@@ -132,7 +132,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
             <span style={{ fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
               {tOpt(m.n)}
             </span>
-            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#4E3894" }}>
+            <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "12px", color: "#4E3894" }}>
               {tOpt(m.s)}
             </span>
           </div>
@@ -141,7 +141,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
           <span style={{ fontSize: "14px", fontWeight: "700", color: "#4E3894" }}>
             {tOpt(sl.mx)}
           </span>
-          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#4E3894" }}>
+          <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "12px", color: "#4E3894" }}>
             {tOpt(sl.mxs)}
           </span>
         </div>
@@ -232,7 +232,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
         {sl.mb!.map((m, mI) => (
           <div key={mI} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <span style={{ width: "44px", flexShrink: "0", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#5B5349" }}>
+              <span style={{ width: "44px", flexShrink: "0", fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "12px", color: "#5B5349" }}>
                 {tOpt(m.t)}
               </span>
               <div style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "7px" }}>
@@ -274,7 +274,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
             <span style={{ flex: "1", fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>
               {tOpt(m.n)}
             </span>
-            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#5B5349" }}>
+            <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "12px", color: "#5B5349" }}>
               {tOpt(m.t)}
             </span>
           </div>
@@ -331,7 +331,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
     ) : null}
     {sl.mGym ? (
       <>
-        <div style={{ height: "64px", borderRadius: "10px", background: "repeating-linear-gradient(135deg,#EDE8FB 0 10px,#F4F1FB 10px 20px)", display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: "6px 8px", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#6B5E94" }}>
+        <div style={{ height: "64px", borderRadius: "10px", background: "repeating-linear-gradient(135deg,#EDE8FB 0 10px,#F4F1FB 10px 20px)", display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: "6px 8px", fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "12px", color: "#6B5E94" }}>
           {t("gym photo")}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
@@ -344,7 +344,7 @@ export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }
         </div>
         {sl.mb!.map((m, mI) => (
           <div key={mI} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <span style={{ width: "44px", flexShrink: "0", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#5B5349" }}>
+            <span style={{ width: "44px", flexShrink: "0", fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "12px", color: "#5B5349" }}>
               {tOpt(m.t)}
             </span>
             <span style={{ flex: "1", minWidth: "0", fontSize: "14px", fontWeight: "700", color: "#221E1A" }}>

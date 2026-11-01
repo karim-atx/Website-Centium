@@ -72,7 +72,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
         </div>
         <div style={{ flex: "1", minHeight: "0", borderRadius: "16px", border: "1px solid rgba(125,103,217,.14)", background: "#FFFFFF", padding: "10px 12px", flexDirection: "column", gap: "7px", display: r.mhFlex }}>
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <span style={{ width: "44px", height: "44px", flexShrink: "0", borderRadius: "11px", background: "repeating-linear-gradient(135deg,#F4F1FB 0 8px,#ECE7F8 8px 16px)", display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: "3px", fontFamily: "'JetBrains Mono',monospace", fontSize: "7px", color: "#6B5E94" }}>
+            <span style={{ width: "44px", height: "44px", flexShrink: "0", borderRadius: "11px", background: "repeating-linear-gradient(135deg,#F4F1FB 0 8px,#ECE7F8 8px 16px)", display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: "3px", fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "7px", color: "#6B5E94" }}>
               {t("cover")}
             </span>
             <div style={{ flex: "1", minWidth: "0" }}>
@@ -115,7 +115,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
                   </span>
                 </div>
               </div>
-              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: "#5B5349", whiteSpace: "nowrap" }}>
+              <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "10px", color: "#5B5349", whiteSpace: "nowrap" }}>
                 <span data-w="0.5 0.95" data-cnt="7" data-from="0">
                   0
                 </span>
@@ -138,7 +138,7 @@ export const PaneCommunity: React.FC<{ r: SectionVals }> = ({ r }) => (
                 <span style={{ flex: "1" }}>
                   {t(ls.t)}
                 </span>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: "#6C655C" }}>
+                <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "10px", color: "#6C655C" }}>
                   {ls.d}
                 </span>
               </div>
