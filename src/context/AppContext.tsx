@@ -2175,7 +2175,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     document.documentElement.dir = activeLanguage === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = activeLanguage;
-    if (activeLanguage === "ar") ensureArabicFont();
+    if (activeLanguage === "ar") void ensureArabicFont();
   }, [activeLanguage]);
   const languageReady = activeLanguage === language;
   const t = translate;

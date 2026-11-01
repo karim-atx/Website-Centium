@@ -24,7 +24,7 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
               {t("Your day, in rhythm.")}
             </h2>
           </div>
-          <div aria-label={t("Time")} style={{ display: "flex", alignItems: "flex-end", gap: "2px", fontFamily: "'JetBrains Mono',monospace", fontSize: r.clock, lineHeight: "1", color: "#221E1A" }}>
+          <div aria-label={t("Time")} style={{ display: "flex", alignItems: "flex-end", gap: "2px", fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: r.clock, lineHeight: "1", color: "#221E1A" }}>
             {D.clockCols.map((cc, ccI) => (
               <React.Fragment key={ccI}>
                 {cc.digit ? (
@@ -58,7 +58,7 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
                 <span style={{ position: "relative", width: "12px", height: "12px", flexShrink: "0", borderRadius: "99px", background: "#FFFFFF", border: "2px solid #D9D2EE" }}>
                   <span data-rd={mo.i} style={{ position: "absolute", inset: "-2px", borderRadius: "99px", background: "#775FD7", opacity: "0" }} />
                 </span>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "11px", color: "#756D63" }}>
+                <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "11px", color: "#756D63" }}>
                   {mo.t}
                 </span>
                 {/* Active state: motion/day.ts sets the current moment to 800
@@ -76,7 +76,7 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
             <span style={{ fontSize: "10.5px", fontWeight: "700", letterSpacing: ".22em", color: "#775FD7" }}>
               {t("01 · YOUR DAY, IN RHYTHM")}
             </span>
-            <span id="day-clock-m" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "15px", color: "#221E1A" }}>
+            <span id="day-clock-m" style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "15px", color: "#221E1A" }}>
               08:10
             </span>
           </div>
@@ -93,7 +93,7 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
         <div style={{ position: "relative", width: "100%", height: r.stepH, textAlign: "start" }}>
           {D.dayStepsTxt.map((ds, dsI) => (
             <div key={dsI} data-dstep={ds.i} style={{ position: "absolute", left: "0", right: "0", top: r.stepTop, transform: "translateY(-50%)", opacity: "0" }}>
-              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: ds.c }}>
+              <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "12px", color: ds.c }}>
                 {ds.t}
               </span>
               <h3 style={{ marginTop: "8px", fontSize: r.stepT, fontWeight: "800", letterSpacing: "-.025em", lineHeight: "1.12" }}>

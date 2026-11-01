@@ -1,6 +1,7 @@
 import { MARK_C_PATH, MARK_LEAF_PATH } from "../icons/CentiumMark";
 import { STREAK_LEAF_PATH } from "../icons/StreakLeaf";
 import { qrRows } from "./ShareQr";
+import { loadArabicForCanvas } from "../../i18n/fonts";
 import { EXPORT_WIDTH, PALETTE, cardFont, cardHeight, cardLink, cardQrValue, fillClient, fitLinkSize, type CardPro, type CardSpec, type ShareFormat, type ShareStyle } from "./shareCardModel";
 import { photoRect, toExport } from "./overlayModel";
 import { LAYER, layoutShareLayer, type CardBox, type CardLayout, type CardMeasure, type CardOp, type Drop, type LayerInput, type LayerPlacement } from "./shareLayerModel";
@@ -771,6 +772,7 @@ export async function drawShareCard(canvas: HTMLCanvasElement, o: DrawShareCardO
   // Fonts: lay out once to learn every font and its text, load those faces, then lay out for real.
   await document.fonts.ready;
   const first = layoutShareCard(input, canvasMeasure(ctx));
+  await loadArabicForCanvas(first.fonts.keys(), [...first.fonts.values()].join(""));
   await Promise.all([...first.fonts].map(([font, text]) => document.fonts.load(font, text).catch(() => [])));
   const layout = layoutShareCard(input, canvasMeasure(ctx));
 
@@ -808,6 +810,7 @@ export async function drawShareLayerCard(canvas: HTMLCanvasElement, o: DrawShare
 
   await document.fonts.ready;
   const first = layoutShareLayer(input, canvasMeasure(ctx));
+  await loadArabicForCanvas(first.fonts.keys(), [...first.fonts.values()].join(""));
   await Promise.all([...first.fonts].map(([font, text]) => document.fonts.load(font, text).catch(() => [])));
   const layout = layoutShareLayer(input, canvasMeasure(ctx));
   const qr = await qrPromise;

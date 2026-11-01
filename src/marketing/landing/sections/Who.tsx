@@ -79,10 +79,10 @@ export const Who: React.FC<{ r: SectionVals }> = ({ r }) => (
                 </g>
               </g>
               <circle cx="60" cy="78" r="3.5" fill="#221E1A" />
-              <text x="14" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#756D63" fontFamily="Manrope">
+              <text x="14" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#756D63" fontFamily='Manrope, "IBM Plex Sans Arabic"'>
                 78.0
               </text>
-              <text x="106" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#2F5F58" fontFamily="Manrope">
+              <text x="106" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#2F5F58" fontFamily='Manrope, "IBM Plex Sans Arabic"'>
                 72.0
               </text>
             </svg>
@@ -173,13 +173,13 @@ export const Who: React.FC<{ r: SectionVals }> = ({ r }) => (
               <circle data-w="0.05 0.2" data-stamp="" cx="16" cy="82" r="6" fill="#C9A36A" style={{ opacity: "0", transformOrigin: "16px 82px" }} />
               <circle data-w="0.4 0.55" data-stamp="" cx="60" cy="64" r="6" fill="#775FD7" style={{ opacity: "0", transformOrigin: "60px 64px" }} />
               <circle data-w="0.75 0.9" data-stamp="" cx="104" cy="44" r="6" fill="#2F5F58" style={{ opacity: "0", transformOrigin: "104px 44px" }} />
-              <text x="16" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#756D63" fontFamily="Manrope">
+              <text x="16" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#756D63" fontFamily='Manrope, "IBM Plex Sans Arabic"'>
                 {t("Mar")}
               </text>
-              <text x="60" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#756D63" fontFamily="Manrope">
+              <text x="60" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#756D63" fontFamily='Manrope, "IBM Plex Sans Arabic"'>
                 {t("Jun")}
               </text>
-              <text x="104" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#2F5F58" fontFamily="Manrope">
+              <text x="104" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#2F5F58" fontFamily='Manrope, "IBM Plex Sans Arabic"'>
                 {t("Sep")}
               </text>
             </svg>

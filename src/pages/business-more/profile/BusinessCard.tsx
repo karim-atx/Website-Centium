@@ -6,6 +6,7 @@ import { copyText } from "../../../components/business-more/share";
 import { NO_LINK_HINT } from "../../../components/share/business/BizShareButton";
 import { ShareQr, qrRows } from "../../../components/share/ShareQr";
 import { bizProfileLink } from "../../../services/share-links/links";
+import { loadArabicForCanvas } from "../../../i18n/fonts";
 
 // MO1B-026 / -027 / -028 · the business card (BizMoreV8 `hasShare`, line 151):
 // left / right 20, centred, r24, shadow 0 20px 48px rgba(36,31,27,0.28); a 96
@@ -215,10 +216,15 @@ async function renderCardPng(d: CardData, link: { href: string; text: string } |
   try {
     const W = 350;
     const S = 2;
-    const font = "Manrope, ui-sans-serif, system-ui, sans-serif";
-    const mono = "ui-monospace, Menlo, monospace";
+    const font = 'Manrope, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif';
+    const mono = 'ui-monospace, Menlo, "IBM Plex Sans Arabic", monospace';
     const measure = document.createElement("canvas").getContext("2d");
     if (!measure) return false;
+    // The Arabic face, when the card has Arabic, loaded before measuring and drawing.
+    await loadArabicForCanvas(
+      [`400 12px ${font}`, `600 11.5px ${font}`, `700 11.5px ${font}`, `800 18px ${font}`, `800 20px ${font}`, `700 11px ${mono}`],
+      [d.name, d.type, d.initials, ...d.rows.map((r) => r.text), link?.text ?? ""].join(" "),
+    );
     // With a link the rows share the width with the 96 QR (gap 12).
     const qr = link ? await qrRows(link.href) : null;
     measure.font = `600 11.5px ${font}`;

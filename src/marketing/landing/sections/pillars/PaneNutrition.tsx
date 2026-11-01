@@ -95,7 +95,7 @@ export const PaneNutrition: React.FC<{ r: SectionVals }> = ({ r }) => (
       </div>
       <div style={{ gridColumn: "1 / -1", gridTemplateColumns: r.scanCols, gap: "12px", alignItems: "stretch", display: r.mhGrid }}>
         <div style={{ position: "relative", padding: "12px", borderRadius: "16px", background: "repeating-linear-gradient(135deg,#FBFAF7 0 10px,#F5F2EC 10px 20px)", border: "1px solid #EDEAE4", overflow: "hidden" }}>
-          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: "#6C655C" }}>
+          <div style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "10px", color: "#6C655C" }}>
             {t("LABNEH · 200 g")}
           </div>
           <div style={{ marginTop: "8px", display: "flex", gap: "2px", height: "40px" }}>
@@ -103,7 +103,7 @@ export const PaneNutrition: React.FC<{ r: SectionVals }> = ({ r }) => (
               <span key={bcI} style={{ width: bc, background: "#3B352D" }} />
             ))}
           </div>
-          <div style={{ marginTop: "4px", fontFamily: "'JetBrains Mono',monospace", fontSize: "9.5px", color: "#6C655C", letterSpacing: ".2em" }}>
+          <div style={{ marginTop: "4px", fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "9.5px", color: "#6C655C", letterSpacing: ".2em" }}>
             5 281027 410036
           </div>
           <span data-w="0.4 0.75" data-sweep="200" style={{ position: "absolute", left: "10px", top: "8px", bottom: "8px", width: "2px", background: "#775FD7", boxShadow: "0 0 0 3px rgba(125,103,217,.16)", opacity: "0" }} />

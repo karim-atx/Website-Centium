@@ -181,7 +181,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                 border: "1px solid #E9E5DC",
                 boxShadow: FRAG_SHADOW,
                 padding: "10px 12px 12px",
-                fontFamily: "'JetBrains Mono',ui-monospace,monospace",
+                fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',ui-monospace,monospace",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "7px", fontFamily: 'Manrope,"IBM Plex Sans Arabic",sans-serif', marginBottom: "8px" }}>

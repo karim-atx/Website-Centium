@@ -27,7 +27,7 @@ export const Coaching: React.FC<{ r: SectionVals }> = ({ r }) => (
               <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
                 {t("CLIENT VIEW · RAMI")}
               </span>
-              <span id="co-lstep" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10.5px", color: "#756D63" }}>
+              <span id="co-lstep" style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "10.5px", color: "#756D63" }}>
                 1 / 6
               </span>
             </div>
@@ -196,7 +196,7 @@ export const Coaching: React.FC<{ r: SectionVals }> = ({ r }) => (
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "6px" }}>
                 {D.bookSlots.map((bs, bsI) => (
-                  <div key={bsI} style={{ position: "relative", padding: "9px 0", borderRadius: "10px", border: "1px solid #EDEAE4", textAlign: "center", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#5B5349" }}>
+                  <div key={bsI} style={{ position: "relative", padding: "9px 0", borderRadius: "10px", border: "1px solid #EDEAE4", textAlign: "center", fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "12px", color: "#5B5349" }}>
                     {bs.t}
                     {bs.on ? (
                       <>
@@ -214,10 +214,10 @@ export const Coaching: React.FC<{ r: SectionVals }> = ({ r }) => (
             </div>
             <div data-cl="5" style={{ position: "absolute", left: "20px", right: "20px", top: "48px", bottom: "20px", opacity: "0", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "10px" }}>
               <div style={{ position: "relative", flex: "1", borderRadius: "16px", background: "repeating-linear-gradient(135deg,#EEF4F2 0 10px,#E5EEEB 10px 20px)", overflow: "hidden", padding: "12px" }}>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: "#516E6A" }}>
+                <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "10px", color: "#516E6A" }}>
                   {t("video: Lara Khoury")}
                 </span>
-                <span style={{ position: "absolute", right: "12px", bottom: "12px", width: "76px", height: "96px", borderRadius: "12px", background: "repeating-linear-gradient(135deg,#F4F1FB 0 8px,#ECE7F8 8px 16px)", border: "2px solid #fff", display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: "6px", fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", color: "#6B5E94" }}>
+                <span style={{ position: "absolute", right: "12px", bottom: "12px", width: "76px", height: "96px", borderRadius: "12px", background: "repeating-linear-gradient(135deg,#F4F1FB 0 8px,#ECE7F8 8px 16px)", border: "2px solid #fff", display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: "6px", fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "9px", color: "#6B5E94" }}>
                   {t("you")}
                 </span>
               </div>
@@ -230,7 +230,7 @@ export const Coaching: React.FC<{ r: SectionVals }> = ({ r }) => (
                     <span key={vcI} data-w={vc.w} data-sy="" style={{ flex: "1", height: vc.h, borderRadius: "2px", background: "#8AC4BA", transformOrigin: "center", transform: "scaleY(0)" }} />
                   ))}
                 </div>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "12px" }}>
+                <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "12px" }}>
                   12:04
                 </span>
               </div>
@@ -259,7 +259,7 @@ export const Coaching: React.FC<{ r: SectionVals }> = ({ r }) => (
               <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#3D6E69" }}>
                 {t("PROFESSIONAL VIEW · LARA")}
               </span>
-              <span id="co-rstep" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10.5px", color: "#756D63" }}>
+              <span id="co-rstep" style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "10.5px", color: "#756D63" }}>
                 1 / 6
               </span>
             </div>
@@ -396,7 +396,7 @@ export const Coaching: React.FC<{ r: SectionVals }> = ({ r }) => (
               </div>
               {D.laraDay.map((ld, ldI) => (
                 <div key={ldI} style={{ position: "relative", display: "flex", gap: "10px", alignItems: "center", padding: "9px 12px", borderRadius: "12px", border: "1px solid #EDEAE4" }}>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "11.5px", color: "#756D63", width: "42px" }}>
+                  <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "11.5px", color: "#756D63", width: "42px" }}>
                     {ld.t}
                   </span>
                   <span style={{ fontSize: "13px", fontWeight: "700" }}>
@@ -405,7 +405,7 @@ export const Coaching: React.FC<{ r: SectionVals }> = ({ r }) => (
                   {ld.on ? (
                     <>
                       <span data-w="0.3 0.55" data-op="" style={{ position: "absolute", inset: "-1px", borderRadius: "12px", background: "#2F5F58", color: "#fff", display: "flex", alignItems: "center", gap: "10px", padding: "0 12px", opacity: "0" }}>
-                        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "11.5px", width: "42px" }}>
+                        <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "11.5px", width: "42px" }}>
                           {ld.t}
                         </span>
                         <span style={{ fontSize: "13px", fontWeight: "700" }}>
@@ -422,7 +422,7 @@ export const Coaching: React.FC<{ r: SectionVals }> = ({ r }) => (
                 <span style={{ fontSize: "15px", fontWeight: "800" }}>
                   {t("Session notes")}
                 </span>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "13px", color: "#2F5F58" }}>
+                <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "13px", color: "#2F5F58" }}>
                   ● 12:04
                 </span>
               </div>

@@ -205,7 +205,7 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
                     }}
                   >
                     <div style={{ display: "flex", flexDirection: "column", justifyContent: r.slTxtJ, minHeight: "0", height: r.slTxtH, position: "relative", zIndex: "1" }}>
-                      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: r.eF11, color: sl.c }}>{kicker(sl.k)}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: r.eF11, color: sl.c }}>{kicker(sl.k)}</span>
                       <div style={{ marginTop: "8px", fontSize: r.slT, fontWeight: "800", letterSpacing: "-.025em", lineHeight: r.slTL }}>{t(sl.t)}</div>
                       <p style={{ marginTop: "8px", fontSize: r.slP, lineHeight: r.slPL, color: "#5B5349", ...(r.lg ? null : CLAMP2) }}>{t(sl.d)}</p>
                     </div>
@@ -240,7 +240,7 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
           <div style={{ flex: "1", height: "3px", borderRadius: "9px", background: "#EFEAFB", overflow: "hidden" }}>
             <div id="eco-prog" style={{ height: "100%", width: "100%", background: "#775FD7", transformOrigin: "left", transform: "scaleX(.2)" }} />
           </div>
-          <span id="eco-count" aria-live="polite" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "13px", color: "#5B5349", minWidth: "62px", textAlign: "center" }}>
+          <span id="eco-count" aria-live="polite" style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "13px", color: "#5B5349", minWidth: "62px", textAlign: "center" }}>
             01 / 05
           </span>
           <button

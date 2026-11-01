@@ -2,6 +2,7 @@ import { METRIC_IDENTITY } from "../../../theme/marketTokens";
 import { photoRect, toExport, type OverlayTransform, type PhotoCrop, type Size } from "../overlayModel";
 import { CARD_W, EXPORT_K, exportSize, type ClientFormat, type IdentityKey } from "./clientCardModel";
 import { baselineY, clampRadius, cssGradientLine, hexAlpha, lineHeightPx, parseShadows, wrapWords, type PaintShadow } from "./paintMath";
+import { loadArabicForCanvas } from "../../../i18n/fonts";
 
 // Market + Share 3.0 · C-SH.3 / C-SH.4 / C-SH.5: the client card as a PNG,
 // following the repo's drawShareCard rules (HANDOVER §12): drawn on the
@@ -17,7 +18,7 @@ import { baselineY, clampRadius, cssGradientLine, hexAlpha, lineHeightPx, parseS
 // switched off leaves the preview and the export together, and the layer
 // reflows the same way in both.
 
-const FONT_FAMILY = "Manrope, sans-serif";
+const FONT_FAMILY = 'Manrope, "IBM Plex Sans Arabic", sans-serif';
 
 interface PaintCtx {
   ctx: CanvasRenderingContext2D;
@@ -214,7 +215,7 @@ async function paintSvg(p: PaintCtx, el: SVGSVGElement, root: HTMLElement) {
   p.ctx.restore();
 }
 
-/** Waits for Manrope in every weight and size the element uses. */
+/** Waits for Manrope (and the Arabic face, when the card has Arabic) in every weight and size the element uses. */
 async function loadFonts(root: HTMLElement) {
   await document.fonts?.ready;
   const wanted = new Map<string, string>();
@@ -223,6 +224,7 @@ async function loadFonts(root: HTMLElement) {
     const f = `${cs.fontWeight} ${parseFloat(cs.fontSize)}px ${FONT_FAMILY}`;
     wanted.set(f, (wanted.get(f) ?? "") + (el.textContent ?? ""));
   });
+  await loadArabicForCanvas(wanted.keys(), [...wanted.values()].join(""));
   await Promise.all([...wanted].map(([f, t]) => document.fonts?.load(f, t).catch(() => []) ?? Promise.resolve([])));
 }
 

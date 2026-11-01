@@ -160,7 +160,7 @@ export function cardHeight(format: ShareFormat, width: number): number {
 export const EXPORT_WIDTH = 1080;
 
 /** The canvas font for a weight and size (drawShareCard, the layer layout, the link fit). */
-export const cardFont = (weight: number, size: number) => `${weight} ${size}px Manrope, sans-serif`;
+export const cardFont = (weight: number, size: number) => `${weight} ${size}px Manrope, "IBM Plex Sans Arabic", sans-serif`;
 
 /** The profile link printed on the card (FINAL_PLAN section 3 {profile_url}): the site address + /p/{handle} (config/site); the QR opens the full link. */
 export const cardLink = (handle: string) => siteText(`/p/${handle}`);
