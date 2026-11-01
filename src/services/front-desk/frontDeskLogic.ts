@@ -13,6 +13,7 @@ import { dayMonthYear, type PassState } from "../venues/venueLogic";
 import type { VenueMember } from "../venues/consoleLogic";
 import { clock12 } from "../../utils/time12";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 // ---------------------------------------------------------------------------
 // Dates
@@ -53,9 +54,12 @@ export type VerifyRow = {
  * no membership is the foreign or made-up token the reader answers by design
  * ("not recognised"); 'unknown' WITH a membership, or any value the app does
  * not know, is the terminal state that should never appear: "unavailable",
- * logged, never valid.
+ * logged, never valid. Round F2 AB5: 'code_expired' is a real device's
+ * 30-second code that is neither the current nor the previous one, said only
+ * to the membership's own venue (anyone else hears 'unknown'); no member is
+ * named.
  */
-export type ScanState = Exclude<PassState, "unknown"> | "unknown" | "unavailable";
+export type ScanState = Exclude<PassState, "unknown"> | "unknown" | "unavailable" | "code_expired";
 
 export interface PassCheck {
   valid: boolean;
@@ -80,6 +84,7 @@ export function toPassCheck(row: VerifyRow | null | undefined): PassCheck {
     state = "unavailable";
   } else if ((KNOWN as readonly string[]).includes(raw)) state = raw as ScanState;
   else if (raw === "unknown" && !row?.membership_id) state = "unknown";
+  else if (raw === "code_expired" && !row?.membership_id) state = "code_expired";
   else {
     console.error(`[front desk] verify_gym_pass returned pass_state '${raw}' for a membership; shown as unavailable.`);
     state = "unavailable";
@@ -97,10 +102,16 @@ export function toPassCheck(row: VerifyRow | null | undefined): PassCheck {
   };
 }
 
-/** A pass token as the member's QR carries it: 32 lowercase hex characters. */
+/**
+ * A pass as the member's QR carries it: the static pass_token (32 lowercase
+ * hex characters, still accepted: phase one of its retirement), or Round F2
+ * AB5's 30-second code "pd:<device id>:<6 digits>" (20261226070000), passed
+ * to check_in_with_pass / verify_gym_pass's p_token as it is, lowercased.
+ */
 export function normalizePassToken(raw: string): string | null {
-  const t = raw.trim().toLowerCase();
-  return /^[0-9a-f]{32}$/.test(t) ? t : null;
+  const s = raw.trim().toLowerCase();
+  if (/^[0-9a-f]{32}$/.test(s)) return s;
+  return /^pd:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:[0-9]{6}$/.test(s) ? s : null;
 }
 
 export type ResultTone = "good" | "warn" | "high" | "primary" | "soft";
@@ -130,7 +141,7 @@ export interface ScanResultView {
  */
 export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; sellsDayPass: boolean }): ScanResultView {
   const name = check.firstName ?? "This member";
-  const minor = check.isMinor && check.state !== "unknown";
+  const minor = check.isMinor && check.state !== "unknown" && check.state !== "code_expired";
   const until = check.expiresOn ? dayMonthYear(check.expiresOn) : null;
   const base = { minor, primary: "scan-next" as const, primaryLabel: "Scan next" };
   switch (check.state) {
@@ -229,6 +240,19 @@ export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; 
         secondary: "check-in",
         secondaryLabel: "Check someone in",
       };
+    case "code_expired":
+      // Round F2 AB5: a screenshot, or a phone whose clock is off.
+      return {
+        ...base,
+        minor: false,
+        kind: "code_expired",
+        tone: "high",
+        icon: "scan",
+        title: t("Code expired"),
+        body: t("This code has expired. Ask the member to open their pass."),
+        secondary: "check-in",
+        secondaryLabel: "Check someone in",
+      };
   }
 }
 
@@ -309,6 +333,8 @@ export function checkInView(c: CheckIn, opts: { sellsDayPass: boolean; alreadyAt
         minor: false,
       };
     default: {
+      // Round F2 AB5: a stale 30-second code at its own venue (denied no_pass, nobody named).
+      if (!c.membershipId && c.passState === "code_expired") return scanResultView({ ...asCheck("code_expired"), membershipId: null }, live);
       // no_pass: a cancelled or refunded membership keeps its own pop-up; an
       // unknown, foreign or made-up token reads "not recognised" (R8).
       const st = c.membershipId && (c.passState === "cancelled" || c.passState === "refunded") ? c.passState : "unknown";

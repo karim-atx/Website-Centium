@@ -32,6 +32,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import type { Read, Write } from "./clients";
 import { parseResponseNotes, type ResponseNote } from "../../components/pro/forms/reviewModel";
+import { parseTrend, type TrendWeek } from "../../components/pro/forms/nutritionTrendModel";
 import { diffQuestions, fromRow, isLocalKey, showIfRow, toRow, type FormAssignment, type FormKind, type FormSummary, type FormTemplate, type QuestionDraft, type QuestionRow } from "../../components/pro/forms/formModel";
 
 export type { FormAssignment, FormSummary, FormTemplate };
@@ -382,6 +383,20 @@ export async function fetchConfirmedAnswers(responseId: string): Promise<Confirm
     return [];
   }
   return parseConfirmedAnswers(data);
+}
+
+/**
+ * Round F (DW4): nutrition_check_in_trend(p_client_id, p_weeks), the caller's
+ * own weekly nutrition check-ins (forms.template_key
+ * 'weekly_nutrition_check_in', copied since 20261226010000) sent to this
+ * client: per local week due / submitted / missed and each submitted
+ * check-in's scale answers. Not in database.types (production hasn't F2), so
+ * through the untyped rpc.
+ */
+export async function fetchNutritionTrend(clientId: string, weeks = 12): Promise<Read<TrendWeek[]>> {
+  const { data, error } = await rpc("nutrition_check_in_trend", { p_client_id: clientId, p_weeks: weeks });
+  if (error) return readFail(error);
+  return { ok: true, data: parseTrend(data) };
 }
 
 /**

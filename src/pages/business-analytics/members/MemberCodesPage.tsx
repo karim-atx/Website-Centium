@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { isMaskedLabel } from "../../../services/venues/consoleLogic";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Check, ChevronDown, Copy, Plus, Share2, Ticket, UserMinus, Users, XCircle } from "lucide-react";
+import { Check, ChevronDown, Copy, Minus, MoreHorizontal, Plus, RefreshCw, Share2, Ticket, UserMinus, Users, XCircle } from "lucide-react";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
@@ -9,7 +9,26 @@ import { MemberTag } from "../../../components/marketplace/MemberTag";
 import { useOpsToast } from "../../../components/marketplace/VenueKit";
 import { copyText, shareOrCopy } from "../../../components/business-more/share";
 import { useOnline } from "../../../hooks/useOnline";
-import { createBlock, createMemberCode, endMembership, grantsLine, gymArg, KIND_WORD, maskedMemberLabel, type MemberCode, type Membership } from "../../../services/business-members";
+import {
+  clampUses,
+  CODE_COPY,
+  createBlock,
+  createMemberCode,
+  endMembership,
+  grantsLine,
+  gymArg,
+  KIND_WORD,
+  maskedMemberLabel,
+  MAX_USES,
+  MIN_USES,
+  replaceMemberCode,
+  revokeMemberCode,
+  usesLine,
+  usesValue,
+  type MemberCode,
+  type Membership,
+} from "../../../services/business-members";
+import { t } from "../../../i18n/core";
 import { KIND_LABEL } from "../../business-ops/plans/planModel";
 import { AnAvatar, AnCard, AnCountLine, AnHeaderRow, AnLead, AnListRow, AnNoneRow, AnNumberBoxes, AnRowButton, AnSeeAll, AnStrip } from "./anKit";
 import type { MembersVocab } from "./membersModel";
@@ -39,6 +58,12 @@ const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct
 // then; one gym is resolved by the server, and none is said up front. Each
 // code names what it grants. A granted membership is never revenue (price
 // 0.00, no ledger row).
+//
+// Round F2 AB6 (Karim F24): a "Can be used" stepper when creating (1–50,
+// default 1; create_business_member_code_with_uses), "Used {n} of {max}" on
+// each code, and a menu on each code with Revoke and Replace (confirmed; the
+// replacement keeps the plan, gym, uses and validity, and the new code shows
+// in a toast). Members who already joined keep their membership.
 
 const BASE = "/app/business/analytics/members";
 
@@ -79,6 +104,11 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
   const [ending, setEnding] = useState<Membership | null>(null);
   const [endBusy, setEndBusy] = useState(false);
   const [endError, setEndError] = useState<string | null>(null);
+  // AB6: the code menu, and the Revoke / Replace confirm.
+  const [codeMenu, setCodeMenu] = useState<{ code: MemberCode; anchor: HTMLElement } | null>(null);
+  const [codeAsk, setCodeAsk] = useState<{ kind: "revoke" | "replace"; code: MemberCode } | null>(null);
+  const [codeBusy, setCodeBusy] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
 
   const codes = data.codes ?? [];
   const waiting = liveCodes(codes);
@@ -86,7 +116,8 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
   const memberCount = Math.max(data.memberTotal, members.length);
   const memberName = (m: Membership) => m.label ?? maskedMemberLabel(m.id);
   const memberCountLabel = `${memberCount} ${memberCount === 1 ? "member" : "members"}`;
-  const redeemed = codes.filter((c) => c.redeemed).length;
+  // AB6: a code with uses left counts once it has been used at all.
+  const redeemed = codes.filter((c) => c.uses > 0).length;
   const pct = codes.length > 0 ? Math.round((redeemed / codes.length) * 100) : null;
   const gyms = businessGyms(data);
 
@@ -112,6 +143,25 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
     data.reload();
   };
 
+  const confirmCode = async () => {
+    if (!codeAsk || codeBusy) return;
+    setCodeBusy(true);
+    setCodeError(null);
+    const { kind, code } = codeAsk;
+    const r = kind === "revoke" ? await revokeMemberCode(code.id) : await replaceMemberCode(code.id);
+    setCodeBusy(false);
+    if (!r.ok) {
+      setCodeError(r.message);
+      return;
+    }
+    setCodeAsk(null);
+    data.setCodes((prev) => {
+      const rest = prev.map((c) => (c.id === code.id ? { ...c, revokedAt: c.revokedAt ?? new Date().toISOString() } : c));
+      return kind === "replace" ? [r.code, ...rest] : rest;
+    });
+    showToast(kind === "revoke" ? t(CODE_COPY.revoked) : t(CODE_COPY.replaced, { code: r.code.code }));
+  };
+
   const codeRow = (c: MemberCode, i: number) => (
     <AnListRow
       key={c.id}
@@ -119,17 +169,69 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
       mono
       avatar={<AnAvatar icon={Ticket} tone="caution" />}
       name={c.code}
-      fact={`Expires ${dMMM(c.expiresAt)} · ${grantsLine(c, data.plans, gyms)}`}
+      fact={`Expires ${dMMM(c.expiresAt)} · ${usesLine(c.uses, c.maxUses)} · ${grantsLine(c, data.plans, gyms)}`}
       trailing={
-        <AnRowButton
-          icon={copied === c.code ? Check : Copy}
-          label={copied === c.code ? "Copied" : "Copy"}
-          ariaLabel={`Copy ${c.code}`}
-          onClick={() => void copy(c.code)}
-        />
+        <span className="flex items-center gap-[6px]">
+          <AnRowButton
+            icon={copied === c.code ? Check : Copy}
+            label={copied === c.code ? "Copied" : "Copy"}
+            ariaLabel={`Copy ${c.code}`}
+            onClick={() => void copy(c.code)}
+          />
+          <button
+            type="button"
+            aria-label={t(CODE_COPY.menu)}
+            aria-haspopup="menu"
+            disabled={!online}
+            onClick={(e) => setCodeMenu({ code: c, anchor: e.currentTarget })}
+            className="tap w-[40px] h-[40px] rounded-[12px] border border-solid border-charcoal/[0.11] dark:border-charcoal/[0.08] inline-flex items-center justify-center text-charcoal-soft disabled:opacity-60"
+          >
+            <MoreHorizontal size={16} aria-hidden />
+          </button>
+        </span>
       }
     />
   );
+
+  function codePopups() {
+    const ask = codeAsk;
+    return (
+      <>
+        <PopupMenu
+          open={!!codeMenu}
+          onClose={() => setCodeMenu(null)}
+          anchor={codeMenu?.anchor ?? null}
+          variant="field"
+          width={204}
+          heading={codeMenu?.code.code}
+          options={[
+            { value: "replace", label: t(CODE_COPY.replace), disabled: !online },
+            { value: "revoke", label: t(CODE_COPY.revoke), disabled: !online },
+          ]}
+          onSelect={(v) => {
+            if (!codeMenu) return;
+            setCodeError(null);
+            setCodeAsk({ kind: v === "revoke" ? "revoke" : "replace", code: codeMenu.code });
+            setCodeMenu(null);
+          }}
+        />
+        <ConfirmCard
+          open={!!ask}
+          layout="stacked"
+          frame="kit"
+          tone={ask?.kind === "revoke" ? "destructive" : undefined}
+          icon={ask?.kind === "revoke" ? <XCircle size={20} strokeWidth={2.2} /> : <RefreshCw size={20} strokeWidth={2.2} />}
+          title={t(ask?.kind === "revoke" ? CODE_COPY.revokeTitle : CODE_COPY.replaceTitle)}
+          subtitle={[t(ask?.kind === "revoke" ? CODE_COPY.revokeBody : CODE_COPY.replaceBody), codeError].filter(Boolean).join(" ")}
+          confirmLabel={t(ask?.kind === "revoke" ? CODE_COPY.revokeConfirm : CODE_COPY.replaceConfirm)}
+          cancelLabel={t(CODE_COPY.keep)}
+          busy={codeBusy || !online}
+          onCancel={() => !codeBusy && setCodeAsk(null)}
+          onConfirm={() => void confirmCode()}
+        />
+      </>
+    );
+  }
 
   const memberRow = (m: Membership, i: number) => {
     const st = STATUS[m.status];
@@ -202,6 +304,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
           </p>
         )}
         {endPopup()}
+        {codePopups()}
         {toast}
       </div>
     );
@@ -311,6 +414,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
         onCopyFailed={() => showToast("Couldn't copy. Select the code and copy it yourself.")}
       />
       {endPopup()}
+      {codePopups()}
       {toast}
     </div>
   );
@@ -345,6 +449,7 @@ function CreateCodeSheet({
   const online = useOnline();
   const [planId, setPlanId] = useState<string>("");
   const [gymId, setGymId] = useState<string>("");
+  const [uses, setUses] = useState(MIN_USES);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<MemberCode | null>(null);
@@ -361,6 +466,7 @@ function CreateCodeSheet({
     if (open) {
       setPlanId("");
       setGymId("");
+      setUses(MIN_USES);
       setError(null);
       setCreated(null);
       setCopied(false);
@@ -385,7 +491,7 @@ function CreateCodeSheet({
     setCreating(true);
     setError(null);
     const p = plan ? plan.id : null;
-    const r = await createMemberCode(data.businessId, p, gymArg(p, gym ? gym.gymId : null, gyms.length));
+    const r = await createMemberCode(data.businessId, p, gymArg(p, gym ? gym.gymId : null, gyms.length), clampUses(uses));
     setCreating(false);
     if (!r.ok) {
       setError(r.message);
@@ -427,6 +533,9 @@ function CreateCodeSheet({
         <div className="text-center py-[8px]">
           <p className="text-[24px] font-extrabold tabular-nums tracking-[0.12em] text-charcoal">{created.code}</p>
           <p className="text-[12.5px] leading-[18px] text-charcoal-soft mt-[4px]">Expires {dMMMyyyy(created.expiresAt)}.</p>
+          <p className="text-[12.5px] leading-[18px] text-charcoal-soft mt-[2px]">
+            {t(CODE_COPY.usesLabel)}: {usesValue(created.maxUses)}
+          </p>
           <p className="text-[12.5px] leading-[18px] text-charcoal-soft mt-[2px]">
             {createdGrant ? `Comes with ${createdGrant}.` : "A member code only. It doesn't come with a membership or pass."}
           </p>
@@ -569,6 +678,34 @@ function CreateCodeSheet({
               )}
             </>
           )}
+          {/* AB6: "Can be used", 1–50 people, default 1 (a 44 stepper in the field's style). */}
+          <div>
+            <p className={FIELD_LABEL}>{t(CODE_COPY.usesLabel)}</p>
+            <div className={FIELD} style={{ padding: "0 4px" }} role="group" aria-label={t(CODE_COPY.usesLabel)}>
+              <button
+                type="button"
+                aria-label={t(CODE_COPY.fewer)}
+                disabled={uses <= MIN_USES}
+                onClick={() => setUses((n) => clampUses(n - 1))}
+                className="tap w-[40px] h-[40px] rounded-[12px] inline-flex items-center justify-center text-primary-dark disabled:text-charcoal-tertiary"
+              >
+                <Minus size={16} aria-hidden />
+              </button>
+              <span className="flex-1 text-center tabular-nums font-bold" aria-live="polite">
+                {usesValue(uses)}
+              </span>
+              <button
+                type="button"
+                aria-label={t(CODE_COPY.more)}
+                disabled={uses >= MAX_USES}
+                onClick={() => setUses((n) => clampUses(n + 1))}
+                className="tap w-[40px] h-[40px] rounded-[12px] inline-flex items-center justify-center text-primary-dark disabled:text-charcoal-tertiary"
+              >
+                <Plus size={16} aria-hidden />
+              </button>
+            </div>
+            <p className={`${HINT} mt-[6px]`}>{t(CODE_COPY.usesHint)}</p>
+          </div>
           <p className={HINT}>The code works for 7 days.</p>
         </div>
       )}

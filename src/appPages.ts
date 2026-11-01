@@ -73,7 +73,7 @@ export { default as MyCv } from "./pages/profile/MyCv";
 export { default as Subscription } from "./pages/subscription/Subscription";
 export { default as More } from "./pages/profile/More";
 export { default as ClientCalendarTab } from "./pages/profile/ClientCalendarTab";
-export { default as Community, CourseBuilderPage, CoursePage, ForumNewPage, ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage } from "./pages/community/Community";
+export { default as Community, CertificatePage, CourseBuilderPage, CoursePage, ForumNewPage, ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage } from "./pages/community/Community";
 export { default as Settings } from "./pages/settings/Settings";
 export { default as NotificationsPage } from "./pages/settings/NotificationsPage";
 export { default as HealthCheckRemindersPage } from "./pages/settings/HealthCheckRemindersPage";

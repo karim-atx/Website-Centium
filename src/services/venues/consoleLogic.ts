@@ -320,6 +320,8 @@ export interface RosterEntry {
    * mark_class_booking_paid. Null on waitlist rows, and without the column.
    */
   bookingId: string | null;
+  /** Round F2 AB4 (Database 20261226060000): Attended / No-show, or not marked. Null on waitlist rows. */
+  attendance: "attended" | "no_show" | null;
 }
 
 export type RosterRow = {
@@ -334,6 +336,8 @@ export type RosterRow = {
   waitlist_position: number | null;
   /** CL-08: appended as the last column; read by name. */
   booking_id?: string | null;
+  /** Round F2 AB4: appended after booking_id. */
+  attendance?: string | null;
 };
 
 export function toRosterEntry(r: RosterRow): RosterEntry {
@@ -349,6 +353,7 @@ export function toRosterEntry(r: RosterRow): RosterEntry {
     waitlistPosition: r.waitlist_position,
     // A waitlist row is never a booking, whatever the row carries.
     bookingId: r.entry_kind === "booked" ? (r.booking_id ?? null) : null,
+    attendance: r.entry_kind === "booked" && (r.attendance === "attended" || r.attendance === "no_show") ? r.attendance : null,
   };
 }
 

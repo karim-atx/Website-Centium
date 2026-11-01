@@ -14,6 +14,7 @@ import { SafetyBanner } from "./ResponseScreen";
 import { photoAnswers, responseMarker, seriesOverTime, type PositionedQuestion, type ResponseNote } from "./reviewModel";
 import { fetchQuestions, fetchResponseNotes, fetchResponses, type FormResponse } from "../../../services/pro/forms";
 import { FORMS_PATH } from "./formsList";
+import { NutritionCheckInTrend } from "./NutritionCheckInTrend";
 
 export interface CheckIns {
   responses: FormResponse[];
@@ -63,8 +64,11 @@ type Span = "6W" | "3M" | "All";
  * 3 §6.2; urgent since 20261222080000); the list marks each "Urgent" or "Flagged".
  * Decision 6: answers sent in a check-in are read for that check-in only;
  * nothing here reads health_metrics.
+ * Round F (DW4): the "Weekly nutrition check-in" block (NutritionCheckInTrend,
+ * its own read) sits above the charts, outside their three-series cap, and
+ * shows even before a check-in is sent back (missed and due weeks count).
  */
-export const CheckInsProgress: React.FC<{ data: CheckIns | null | undefined; firstName: string; onRetry: () => void }> = ({ data, firstName, onRetry }) => {
+export const CheckInsProgress: React.FC<{ data: CheckIns | null | undefined; clientId?: string; firstName: string; onRetry: () => void }> = ({ data, clientId, firstName, onRetry }) => {
   const navigate = useNavigate();
   const dark = useIsDark();
   const [span, setSpan] = useState<Span>("6W");
@@ -91,7 +95,14 @@ export const CheckInsProgress: React.FC<{ data: CheckIns | null | undefined; fir
 
   if (data === undefined) return <ProCardSkeleton lines={3} />;
   if (data === null) return <ProError onRetry={onRetry} />;
-  if (!data.responses.length) return <p style={{ fontSize: textPx(12), color: INK.chF }}>{`${firstName} hasn't sent a check-in yet.`}</p>;
+  const trend = clientId ? <NutritionCheckInTrend clientId={clientId} firstName={firstName} /> : null;
+  if (!data.responses.length)
+    return (
+      <>
+        {trend}
+        <p style={{ fontSize: textPx(12), color: INK.chF }}>{`${firstName} hasn't sent a check-in yet.`}</p>
+      </>
+    );
 
   const latest = data.responses[0];
   const withPhotos = data.responses.filter((r) => photoAnswers(data.questions[r.formId] ?? [], r).length > 0);
@@ -102,6 +113,7 @@ export const CheckInsProgress: React.FC<{ data: CheckIns | null | undefined; fir
   return (
     <div>
       <SafetyBanner response={latest} firstName={firstName} notes={notes?.id === latest.id ? notes.list : []} />
+      {trend}
       {total < 2 && <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 10 }}>Charts start after the second check-in.</p>}
       {(total < 2 ? [] : series.slice(0, 3)).map((s, si) => {
         const vals = s.points.map((p) => p.value);

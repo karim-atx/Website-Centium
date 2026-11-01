@@ -1,5 +1,6 @@
 import { appLocale } from "../../i18n/format";
 import { t, tk, tn } from "../../i18n/core";
+import { dayLabel, instant } from "../safety/model";
 // A6 Referrals: the pure parts, tested without a database
 // (referralLogic.test.ts). The I/O lives in ./index.ts.
 //
@@ -11,6 +12,14 @@ import { t, tk, tn } from "../../i18n/core";
 // expiry) and a referrals row is only the redemption record, "X referred Y".
 // Nothing here reads referrals.code or referrals.expires_at: both are being
 // retired (phase two drops them once every app has stopped reading them).
+//
+// Round F (AB1, Database 20261226030000): the referrer's points wait until the
+// friend has finished onboarding and been active on 3 different days within
+// 14 days of redeeming (Karim F18); at most 10 are rewarded a calendar month,
+// the rest wait for a month with room. referral_summary() adds pending,
+// pending_points, lapsed and pending_friends (first_name, redeemed_at,
+// lapses_at, waiting_for onboarding | active_days | monthly_cap). A lapsed
+// referral is silent: counted by the summary, shown nowhere.
 
 /** One row of referral_summary(). Always exactly one, nulls and zeroes for an
  *  account that has done nothing. */
@@ -28,6 +37,24 @@ export interface ReferralSummaryRow {
   referrer_points?: number | null;
   /** B3: what a friend gets. Read by nothing here: points only (BR). */
   friend_discount_pct?: number | string | null;
+  /** Round F (AB1): redemptions whose points wait, and how many. */
+  pending?: number | null;
+  pending_points?: number | null;
+  /** Round F (AB1): not qualified within 14 days. Silent: read by nothing here. */
+  lapsed?: number | null;
+  /** Round F (AB1): one object per pending friend, oldest first. */
+  pending_friends?: unknown;
+}
+
+/** Why a friend's points still wait (referral_summary pending_friends[].waiting_for). */
+export type WaitingFor = "onboarding" | "active_days" | "monthly_cap";
+
+export interface PendingFriend {
+  firstName: string | null;
+  redeemedAt: string | null;
+  /** When it lapses if they don't qualify; null once qualified (waiting for a month with room). */
+  lapsesAt: string | null;
+  waitingFor: WaitingFor;
 }
 
 export interface ReferralSummary {
@@ -43,6 +70,24 @@ export interface ReferralSummary {
   isAmbassador: boolean;
   /** B3: points per friend who joins, from the server; null when it named none. */
   referrerPoints: number | null;
+  /** Round F (AB1): friends whose points wait, and the points waiting. */
+  pending: number;
+  pendingPoints: number;
+  pendingFriends: PendingFriend[];
+}
+
+const WAITING: readonly WaitingFor[] = ["onboarding", "active_days", "monthly_cap"];
+
+/** pending_friends as sent (a jsonb array); an unknown waiting_for reads as active_days, the usual wait. */
+export function toPendingFriends(value: unknown): PendingFriend[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((v) => {
+    if (!v || typeof v !== "object") return [];
+    const r = v as Record<string, unknown>;
+    const s = (x: unknown) => (typeof x === "string" && x.trim() ? x : null);
+    const w = WAITING.includes(r.waiting_for as WaitingFor) ? (r.waiting_for as WaitingFor) : "active_days";
+    return [{ firstName: s(r.first_name), redeemedAt: s(r.redeemed_at), lapsesAt: s(r.lapses_at), waitingFor: w }];
+  });
 }
 
 /** numeric arrives from PostgREST as a number or a string; either way, or null. */
@@ -67,6 +112,9 @@ export function toReferralSummary(row: ReferralSummaryRow | null | undefined): R
     myDiscountPct: toPct(row?.my_discount_pct),
     isAmbassador: row?.is_ambassador === true,
     referrerPoints: typeof row?.referrer_points === "number" && row.referrer_points > 0 ? row.referrer_points : null,
+    pending: row?.pending ?? 0,
+    pendingPoints: row?.pending_points ?? 0,
+    pendingFriends: toPendingFriends(row?.pending_friends),
   };
 }
 
@@ -75,15 +123,37 @@ export const STANDARD_REFERRER_POINTS = 1500;
 
 /**
  * The popup's "You" reward row (PLAN S4), from referral_summary's
- * referrer_points: "2,000 points per friend who joins" for an ambassador,
- * "1,500 …" otherwise. POINTS ONLY (Karim, BR): friend_discount_pct is never
- * shown, since no bill applies it. Until the summary answers (or when it names
- * no figure) the standard 1,500.
+ * referrer_points: "2,000 points per friend, once they're set up and active"
+ * for an ambassador, "1,500 …" otherwise (Round F, AB1: the points wait for
+ * the friend; REFERRAL_RULE_LINE says exactly when). POINTS ONLY (Karim, BR):
+ * friend_discount_pct is never shown, since no bill applies it. Until the
+ * summary answers (or when it names no figure) the standard 1,500.
  */
 export function rewardLine(referrerPoints: number | null | undefined, colleague = false): string {
   const n = referrerPoints && referrerPoints > 0 ? referrerPoints : STANDARD_REFERRER_POINTS;
   const points = n.toLocaleString(appLocale("en-US"));
-  return colleague ? t("{n} points per colleague or client who joins", { n: points }) : t("{n} points per friend who joins", { n: points });
+  return colleague
+    ? t("{n} points per colleague or client, once they're set up and active", { n: points })
+    : t("{n} points per friend, once they're set up and active", { n: points });
+}
+
+/** Round F (AB1): the rule under the reward row, as the Database built it (F18; 10 rewarded a month). */
+export const REFERRAL_RULE_LINE = tk(
+  "Points arrive once your friend has set up their account and used Centium on 3 different days within 14 days of joining. Up to 10 friends a month earn points."
+);
+
+/** Round F (AB1): a pending friend's two lines, "Rana · Pending until Nov 14" and why. */
+export function pendingFriendLines(f: PendingFriend, now: Date = new Date()): { title: string; reason: string } {
+  const name = f.firstName ?? t("A friend");
+  const lapses = instant(f.lapsesAt);
+  const title = lapses ? t("{name} · Pending until {date}", { name, date: dayLabel(lapses, now) }) : t("{name} · Pending", { name });
+  const reason =
+    f.waitingFor === "onboarding"
+      ? t("Waiting for them to finish setting up their account.")
+      : f.waitingFor === "monthly_cap"
+        ? t("10 friends have earned you points this month. These points arrive next month.")
+        : t("Waiting for them to use Centium on 3 different days.");
+  return { title, reason };
 }
 
 /** redeem_referral_code()'s stable machine strings. */
@@ -105,13 +175,17 @@ export type RedeemReferralOutcome =
   | { status: "redeemed"; line: string; discountPct: number | null; pointsAwarded: number }
   | { status: "refused"; reason: RedeemReason | "unknown"; line: string };
 
-/** MO1.10.1's row: "Code applied. 1,500 points for your friend." POINTS ONLY
+/** MO1.10.1's row: "Code applied. Your friend gets 1,500 points once you've
+ *  set up your account and used Centium on 3 different days." POINTS ONLY
  *  (Karim, BR, 2026-10-27): the row still carries referee_discount_pct, but no
  *  bill ever applied it (billing is in the app stores), so no discount is
  *  promised until one is. The points are the referrer's, so they are named as
- *  the friend's. */
+ *  the friend's; since Round F (AB1) they are paid later, so nothing promises
+ *  them now (points_awarded is still the referrer's figure). */
 export function appliedLine(pointsAwarded = 0): string {
-  return pointsAwarded > 0 ? t("Code applied. {n} points for your friend.", { n: pointsAwarded.toLocaleString(appLocale("en-US")) }) : tk("Code applied.");
+  return pointsAwarded > 0
+    ? t("Code applied. Your friend gets {n} points once you've set up your account and used Centium on 3 different days.", { n: pointsAwarded.toLocaleString(appLocale("en-US")) })
+    : tk("Code applied.");
 }
 
 /** MO1.10.2's refusal lines, chosen from `reason` (never from `message`).
@@ -155,15 +229,17 @@ export function interpretRedeemReferral(row: RedeemReferralRow | null | undefine
   return { status: "refused", reason: "unknown", line: UNKNOWN_REFUSAL_LINE };
 }
 
-/** The line in the frame's progress-line slot: what the code has done so far.
- *  null when nobody has used it yet (the frame's own "N of 12 discount rewards"
- *  needs the D25 reward model, which this stage does not add). */
-export function redemptionsLine(summary: Pick<ReferralSummary, "redemptions" | "pointsEarned">): string | null {
+/** The line in the frame's progress-line slot: what the code has done so far,
+ *  "3 friends joined · 2 pending · 1,500 points earned" (Round F, AB1; each
+ *  later part only when it isn't zero). null when nobody has used it yet (the
+ *  frame's own "N of 12 discount rewards" needs the D25 reward model, which
+ *  this stage does not add). Lapsed referrals are not named. */
+export function redemptionsLine(summary: Pick<ReferralSummary, "redemptions" | "pointsEarned"> & { pending?: number }): string | null {
   if (summary.redemptions <= 0) return null;
-  const n = summary.redemptions;
-  if (summary.pointsEarned <= 0) return tn(n, "{n} friend joined with your code", "{n} friends joined with your code");
-  const points = summary.pointsEarned.toLocaleString(appLocale("en-US"));
-  return tn(n, "{n} friend joined with your code · {points} points earned", "{n} friends joined with your code · {points} points earned", { points });
+  const parts = [tn(summary.redemptions, "{n} friend joined", "{n} friends joined")];
+  if (summary.pending && summary.pending > 0) parts.push(t("{n} pending", { n: summary.pending }));
+  if (summary.pointsEarned > 0) parts.push(t("{points} points earned", { points: summary.pointsEarned.toLocaleString(appLocale("en-US")) }));
+  return parts.join(" · ");
 }
 
 /**

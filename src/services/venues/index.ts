@@ -8,6 +8,7 @@ import { readPassCache, writePassCache } from "./passCache";
 import type { PlanKind } from "../membership-plans/types";
 import { coarsePoint, type Coords } from "../geo/distance";
 import { contactRefusal } from "../moderation/text";
+import { reviewRefusalLine } from "../safety/model";
 
 // Venues, gym memberships and the pass: v5.1 backend stage 4a and 4b
 // (Database docs/HANDOVER_API.md, "4a · Venues" and "4b · Memberships,
@@ -720,6 +721,9 @@ export async function writeGymReview(gymId: string, rating: number, body: string
   const contact = contactRefusal(body);
   if (contact) return { ok: false, message: contact };
   const { data, error } = await rpc<string>("write_gym_review", { p_gym_id: gymId, p_rating: rating, p_body: body.trim() || null });
+  // Round F (AB7): an account under 7 days old (ATXW0) and the venue's own owner or staff (ATX03).
+  const f2 = error && reviewRefusalLine(error, { insider: true });
+  if (f2) return { ok: false, code: error?.code, message: f2 };
   if (error) return fail(error, "Couldn't post your review. Try again.");
   return { ok: true, value: data ?? "" };
 }
@@ -746,6 +750,9 @@ export async function writeBusinessReview(businessId: string, rating: number, bo
   if (contact) return { ok: false, message: contact };
   const { data, error } = await rpc<string>("write_business_review", { p_business_id: businessId, p_rating: rating, p_body: body.trim() || null });
   if (error) {
+    // Round F (AB7): an account under 7 days old (ATXW0, with when it may).
+    const young = reviewRefusalLine(error);
+    if (young) return { ok: false, code: error.code, message: young };
     const own =
       error.code === "ATX92"
         ? "You've already reviewed this business."
@@ -771,6 +778,9 @@ export async function writeClassReview(bookingId: string, rating: number, body: 
   if (contact) return { ok: false, message: contact };
   const { data, error } = await rpc<string>("write_class_review", { p_booking_id: bookingId, p_rating: rating, p_body: body.trim() || null });
   if (error) {
+    // Round F (AB7): an account under 7 days old (ATXW0, with when it may).
+    const young = reviewRefusalLine(error);
+    if (young) return { ok: false, code: error.code, message: young };
     const own =
       error.code === "ATX10"
         ? "You can rate a class once it has happened."

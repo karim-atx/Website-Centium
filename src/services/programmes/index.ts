@@ -14,11 +14,22 @@
 // end_programme_assignment. Both: programme_schedule, programme_progress
 // (`done` is null for a professional without workout_activity consent).
 // Client: my_programmes().
+//
+// Round F (DW1–DW3, Database 20261226000000): week notes (read from
+// programme_week_notes; written by set_programme_week_note, an empty note
+// deletes it), skipping a session or a whole day (skip_programme_session,
+// skip_programme_sessions_on; Undo is unskip_programme_session), moving one to
+// another day of its week (move_programme_session), each by the session's id
+// (20261226130000), and the builder's drag between days
+// (move_programme_day_session). programme_schedule gains skipped,
+// moved_from and session_id; programme_progress gains skipped (planned excludes it) and
+// week_note; my_programmes gains week_note (this week's).
 
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
-import { programmeErrorMessage, type ProgrammeSlot, type ProgressRow, type ScheduleRow } from "./model";
+import { programmeErrorMessage, type ProgrammeSlot, type ProgressRow, type ScheduleRow, type SkipCalls } from "./model";
 import { playlistSaveError } from "../music/playlistLink";
+import { moveFailed, noteSaveFailed, skipFailed, undoFailed } from "./copy";
 
 type PgError = { code?: string; message: string } | null;
 type Rpc = { rpc: (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: PgError }> };
@@ -83,6 +94,8 @@ export interface MyProgramme {
   professionalFirstName: string | null;
   /** Round E: the programme's playlist (my_programmes, Database 20261224050000), or null. */
   playlistUrl: string | null;
+  /** Round F: the professional's note for this week, or null. */
+  weekNote: string | null;
 }
 
 type ProgrammeDbRow = {
@@ -166,6 +179,19 @@ export async function fetchProgrammeAssignments(me: string, clientId?: string): 
   return { ok: true, data: ((data ?? []) as AssignmentDbRow[]).map(toAssignment) };
 }
 
+/**
+ * Round F: the week notes of these programmes, by programme then week. A
+ * failed read gives none (the builder still works; the field starts empty).
+ */
+export async function fetchWeekNotes(programmeIds: string[]): Promise<Record<string, Record<number, string>>> {
+  if (programmeIds.length === 0) return {};
+  const { data, error } = await db().from("programme_week_notes").select("programme_id, week, note").in("programme_id", programmeIds);
+  if (error) return {};
+  const out: Record<string, Record<number, string>> = {};
+  for (const r of (data ?? []) as { programme_id: string; week: number; note: string }[]) (out[r.programme_id] ??= {})[r.week] = r.note;
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Professional writes
 // ---------------------------------------------------------------------------
@@ -235,6 +261,35 @@ export async function copyProgrammeWeek(id: string, from: number, to: number): P
   return { ok: true, data: (data as number) ?? 0 };
 }
 
+/** Round F: sets one week's note (up to 280 characters); an empty note deletes it. */
+export async function setProgrammeWeekNote(id: string, week: number, note: string): Promise<Done> {
+  const { error } = await db().rpc("set_programme_week_note", { p_programme_id: id, p_week: week, p_note: note.trim() });
+  if (error) return writeFail(error, noteSaveFailed());
+  return { ok: true, data: undefined };
+}
+
+/**
+ * Round F: the builder's drag. Moves one session to another day in one step;
+ * it goes last on that day (four at most, ATXP3) and the source day closes
+ * up. Returns its new position.
+ */
+export async function moveProgrammeDaySession(
+  id: string,
+  from: { week: number; day: number; position: number },
+  to: { week: number; day: number }
+): Promise<Done<number>> {
+  const { data, error } = await db().rpc("move_programme_day_session", {
+    p_programme_id: id,
+    p_from_week: from.week,
+    p_from_day: from.day,
+    p_from_position: from.position,
+    p_to_week: to.week,
+    p_to_day: to.day,
+  });
+  if (error) return writeFail(error, moveFailed());
+  return { ok: true, data: (data as number) ?? 0 };
+}
+
 export async function assignProgramme(id: string, clientId: string, startsOn: string, joinWeek: number): Promise<Done<string>> {
   const { data, error } = await db().rpc("assign_programme_to_client", {
     p_programme_id: id,
@@ -256,6 +311,60 @@ export async function endProgrammeAssignment(assignmentId: string): Promise<Done
 // Both sides
 // ---------------------------------------------------------------------------
 
+/**
+ * Round F: skips one session of an assignment, by its id. The client: a day
+ * of this week (ATXP1); the professional: any day. A done session is refused
+ * (ATXP0); one already skipped is left as it is.
+ */
+export async function skipProgrammeSession(assignmentId: string, sessionId: string): Promise<Done> {
+  const { error } = await db().rpc("skip_programme_session", { p_assignment_id: assignmentId, p_session_id: sessionId });
+  if (error) return writeFail(error, skipFailed());
+  return { ok: true, data: undefined };
+}
+
+/**
+ * Round F: "Skip this day", every session on that date as the client sees it
+ * (moves included), all or none, by skip_programme_session's rules. Returns
+ * how many; ATX08 when none is left to skip.
+ */
+export async function skipProgrammeDay(assignmentId: string, onDate: string): Promise<Done<number>> {
+  const { data, error } = await db().rpc("skip_programme_sessions_on", { p_assignment_id: assignmentId, p_on_date: onDate });
+  if (error) return writeFail(error, skipFailed());
+  return { ok: true, data: (data as number) ?? 0 };
+}
+
+/** Round F: writes skipCalls' plan: the whole day in one call, or each session; stops at the first refusal. */
+export async function skipProgrammeSessions(assignmentId: string, calls: SkipCalls): Promise<Done> {
+  if ("day" in calls) {
+    const r = await skipProgrammeDay(assignmentId, calls.day);
+    return r.ok ? { ok: true, data: undefined } : r;
+  }
+  for (const id of calls.sessionIds) {
+    const r = await skipProgrammeSession(assignmentId, id);
+    if (!r.ok) return r;
+  }
+  return { ok: true, data: undefined };
+}
+
+/** Round F: Undo a skip, by the session's id. A moved session comes back on the day it was moved to. */
+export async function unskipProgrammeSession(assignmentId: string, sessionId: string): Promise<Done> {
+  const { error } = await db().rpc("unskip_programme_session", { p_assignment_id: assignmentId, p_session_id: sessionId });
+  if (error) return writeFail(error, undoFailed());
+  return { ok: true, data: undefined };
+}
+
+/**
+ * Round F: moves one session, by its id, to another day of its own week
+ * (a future week too), today or later (ATXP2), four a day at most (ATXP3);
+ * not a done (ATXP0) or skipped (ATXP4) one. Back to its planned day clears
+ * the move.
+ */
+export async function moveProgrammeSession(assignmentId: string, sessionId: string, toDate: string): Promise<Done> {
+  const { error } = await db().rpc("move_programme_session", { p_assignment_id: assignmentId, p_session_id: sessionId, p_to_date: toDate });
+  if (error) return writeFail(error, moveFailed());
+  return { ok: true, data: undefined };
+}
+
 export async function fetchProgrammeSchedule(assignmentId: string): Promise<Read<ScheduleRow[]>> {
   const { data, error } = await db().rpc("programme_schedule", { p_assignment_id: assignmentId });
   if (error) return readFail(error);
@@ -271,6 +380,9 @@ export async function fetchProgrammeSchedule(assignmentId: string): Promise<Read
         workout_name: string;
         routine_id: string | null;
         done: boolean | null;
+        skipped?: boolean | null;
+        moved_from?: string | null;
+        session_id: string;
       }[]
     ).map((r) => ({
       week: r.week,
@@ -281,6 +393,9 @@ export async function fetchProgrammeSchedule(assignmentId: string): Promise<Read
       workoutName: r.workout_name,
       routineId: r.routine_id,
       done: r.done,
+      skipped: r.skipped ?? false,
+      movedFrom: r.moved_from ?? null,
+      sessionId: r.session_id,
     })),
   };
 }
@@ -298,6 +413,8 @@ export async function fetchProgrammeProgress(assignmentId: string): Promise<Read
         workout_name: string;
         planned: number;
         done: number | null;
+        skipped?: number | null;
+        week_note?: string | null;
       }[]
     ).map((r) => ({
       week: r.week,
@@ -306,6 +423,8 @@ export async function fetchProgrammeProgress(assignmentId: string): Promise<Read
       workoutName: r.workout_name,
       planned: r.planned,
       done: r.done,
+      skipped: r.skipped ?? 0,
+      weekNote: r.week_note ?? null,
     })),
   };
 }
@@ -335,6 +454,7 @@ export async function fetchMyProgrammes(): Promise<Read<MyProgramme[]>> {
         professional_id: string;
         professional_first_name: string | null;
         playlist_url?: string | null;
+        week_note?: string | null;
       }[]
     ).map((r) => ({
       assignmentId: r.assignment_id,
@@ -351,6 +471,7 @@ export async function fetchMyProgrammes(): Promise<Read<MyProgramme[]>> {
       professionalId: r.professional_id,
       professionalFirstName: r.professional_first_name,
       playlistUrl: r.playlist_url ?? null,
+      weekNote: r.week_note ?? null,
     })),
   };
 }

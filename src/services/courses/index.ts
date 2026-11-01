@@ -385,6 +385,50 @@ export async function fetchMyCertificate(enrolmentId: string): Promise<Certifica
   return data ? { id: data.id, serial: data.serial, issuedAt: data.issued_at, shared: data.shared } : null;
 }
 
+export interface MyCertificate extends Certificate {
+  /** Null once the course is deleted: the certificate stays, so link nowhere. */
+  courseId: string | null;
+  /** The course's last title, stored on the certificate (Database #52). */
+  courseTitle: string;
+}
+
+const MY_CERTIFICATE_COLUMNS = "id, serial, issued_at, shared, course_id, course_title";
+
+// Through unknown: the generated types (read from production) predate
+// Database #52's course_title, so they type the select as an error.
+type MyCertificateRow = { id: string; serial: string; issued_at: string; shared: boolean; course_id: string | null; course_title: string };
+
+const toMyCertificate = (r: MyCertificateRow): MyCertificate => ({
+  id: r.id,
+  serial: r.serial,
+  issuedAt: r.issued_at,
+  shared: r.shared,
+  courseId: r.course_id,
+  courseTitle: r.course_title,
+});
+
+/**
+ * Every certificate the learner holds, newest first: read by learner_id, the
+ * Database's reader for them (RLS: their own), because fetchMyCertificate goes
+ * by enrolment and a deleted course takes its enrolments with it.
+ */
+export async function fetchMyCertificates(userId: string): Promise<Result<MyCertificate[]>> {
+  const { data, error } = await supabase
+    .from("course_certificates")
+    .select(MY_CERTIFICATE_COLUMNS)
+    .eq("learner_id", userId)
+    .order("issued_at", { ascending: false });
+  if (error) return fail(error, "read");
+  return { ok: true, value: ((data ?? []) as unknown as MyCertificateRow[]).map(toMyCertificate) };
+}
+
+/** One of the learner's certificates; null when it is not theirs or not there. */
+export async function fetchMyCertificateById(certificateId: string): Promise<Result<MyCertificate | null>> {
+  const { data, error } = await supabase.from("course_certificates").select(MY_CERTIFICATE_COLUMNS).eq("id", certificateId).maybeSingle();
+  if (error) return fail(error, "read");
+  return { ok: true, value: data ? toMyCertificate(data as unknown as MyCertificateRow) : null };
+}
+
 /**
  * The switch, per certificate rather than per account, so publishing one course
  * does not volunteer the rest.

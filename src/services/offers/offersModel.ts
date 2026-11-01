@@ -76,6 +76,8 @@ export interface CatalogOffer {
   ownerLogoUrl: string | null;
   pointsCost: number;
   endsOn: string | null;
+  /** Round F (AB3, 20261226040000): offer_catalogue / offer_detail is_own_business, the caller's own business's offer (redeem_offer refuses it, ATXV3). */
+  isOwnBusiness?: boolean;
 }
 
 /** The date part of an ISO date or timestamp. */
@@ -107,7 +109,7 @@ function parseCard(r: Record<string, unknown>, label: SubtypeLabel): CatalogOffe
   const headline = str(r.headline);
   const cost = num(r.points_cost);
   if (!offerId || !headline || cost === null) return null;
-  return { offerId, headline, category: str(r.category) ?? "", ...ownerOf(r, label), pointsCost: cost, endsOn: ymdOf(r.ends_on) };
+  return { offerId, headline, category: str(r.category) ?? "", ...ownerOf(r, label), pointsCost: cost, endsOn: ymdOf(r.ends_on), ...(r.is_own_business === true ? { isOwnBusiness: true } : {}) };
 }
 
 /** offer_catalogue rows, in the server's order (points_cost, then id). */

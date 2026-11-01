@@ -76,7 +76,9 @@ export function PassQr({
     };
   }, [value]);
 
-  const current = state && state.value === value ? state : null;
+  // Round F2 AB5: the 30-second code changes the value in place; the last
+  // drawing stays up while the next one is written, so the QR never blinks.
+  const current = state && (state.value === value || (!state.failed && state.rows)) ? state : null;
   if (!current) return <div aria-busy="true" className="rounded-lg bg-cream-soft animate-skeleton-pulse" style={{ width: size, height: size }} />;
   if (current.failed || !current.rows) {
     return (

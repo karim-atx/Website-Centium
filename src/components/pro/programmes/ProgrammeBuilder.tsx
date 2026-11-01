@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
-import { ArrowUp, ClipboardList, Copy, EllipsisVertical, Eraser, Pencil, Plus, Send, Trash2, UserRound, X } from "lucide-react";
+import { ArrowUp, Copy, EllipsisVertical, Eraser, GripVertical, Pencil, Plus, Send, Trash2, UserRound, X } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { Button } from "../../ui/Button";
@@ -14,12 +14,19 @@ import { ProCardSkeleton, ProError } from "../states";
 import { Card, ListCard, SectionHead } from "../client/kit";
 import { fmtDay } from "../client/clientFormat";
 import { DetailHeader, ErrorLine, FilterChip, SquareBtn } from "../library/libraryUi";
-import { copyProgrammeWeek, deleteProgramme, setProgrammeDay } from "../../../services/programmes";
-import { addToDay, assignmentStatus, buildGrid, moveInDay, programmeMeta, removeFromDay, weekCount } from "../../../services/programmes/model";
+import { copyProgrammeWeek, deleteProgramme, moveProgrammeDaySession, setProgrammeDay, setProgrammeWeekNote } from "../../../services/programmes";
+import { moveGripLabel } from "../../../services/programmes/copy";
+import { addToDay, assignmentStatus, buildGrid, MAX_PER_DAY, moveInDay, programmeMeta, removeFromDay, weekCount } from "../../../services/programmes/model";
 import type { ProgrammesState } from "./useProgrammes";
 import { AddWorkoutSheet } from "./AddWorkoutSheet";
 import { AssignProgrammeSheet } from "./AssignProgrammeSheet";
 import { ProgrammeDetailsSheet } from "./ProgrammeDetailsSheet";
+import { WeekNoteField } from "./WeekNoteField";
+import { BuilderMoveSheet } from "./BuilderMoveSheet";
+import { useDayDrag } from "./useDayDrag";
+
+/** A workout card being moved: its day and position in the week shown. */
+type CardRef = { day: number; position: number; name: string };
 
 /**
  * Round D · DT1 TR2 Programme builder (Library › Programmes ›
@@ -31,9 +38,18 @@ import { ProgrammeDetailsSheet } from "./ProgrammeDetailsSheet";
  * - Scrolling "Week 1…n" tabs, and the week's ⋮ (D-S2): "Copy this week
  *   to…" (copy_programme_week REPLACES the target week, so the sheet says so
  *   before it copies) and "Clear this week" (a ConfirmCard first).
+ * - Round F (DW1): "Note for week {n} (clients see this)" under the tabs
+ *   (set_programme_week_note on blur; copying a week copies its note on the
+ *   server, and the re-read after the copy shows it).
  * - Mon–Sun rows: each day's workouts in order (up to four), with move up
  *   and remove; a dashed "Rest day +" when empty. Every change is one
  *   set_programme_day call that replaces the whole day.
+ * - Round F (DW3): each card's grip drags it onto another day of the week
+ *   shown (move_programme_day_session: last on that day, four at most, the
+ *   source day closes up). Pressing the grip without dragging (or with the
+ *   keyboard) opens "Move to…", the same move as a day picker. The builder
+ *   holds no unsaved state (every change is written, then re-read), so a
+ *   move is one call and a re-read, like the rest.
  * - Assigned to clients: the active assignments; a row opens the client's
  *   progress (?view=programme-client&id=).
  *
@@ -61,6 +77,7 @@ export const ProgrammeBuilder: React.FC<{
   const [confirm, setConfirm] = useState<"delete" | "clear" | null>(null);
   const [copying, setCopying] = useState(false);
   const [copyTo, setCopyTo] = useState(2);
+  const [moving, setMoving] = useState<CardRef | null>(null);
   const menuRef = useRef<HTMLButtonElement>(null);
   const weekRef = useRef<HTMLButtonElement>(null);
 
@@ -69,6 +86,32 @@ export const ProgrammeBuilder: React.FC<{
   const grid = buildGrid(weeks, state.slots[programmeId] ?? []);
   const own = useMemo(() => workoutTemplates.filter((t) => !t.isPublic), [workoutTemplates]);
   const byId = useMemo(() => new Map(workoutTemplates.map((t) => [t.id, t])), [workoutTemplates]);
+  const w = Math.min(Math.max(week, 1), weeks);
+
+  /** One write, then a re-read; errors stay on screen until the next write. */
+  const write = async (fn: () => Promise<{ ok: true } | { ok: false; message: string }>) => {
+    setBusy(true);
+    setError(null);
+    const r = await fn();
+    if (!r.ok) setError(r.message);
+    await state.reload();
+    setBusy(false);
+    return r.ok;
+  };
+  /** Round F (DW3): one move_programme_day_session call, then the re-read. */
+  const moveCard = async (c: CardRef, to: number) => {
+    setMoving(null);
+    if (!programme) return;
+    await write(async () => {
+      const r = await moveProgrammeDaySession(programme.id, { week: w, day: c.day, position: c.position }, { week: w, day: to });
+      return r.ok ? { ok: true as const } : r;
+    });
+  };
+  // Round F (DW3): a card's grip drags it onto another day of the week shown.
+  const drag = useDayDrag<CardRef>(
+    (c, day) => Number(day) !== c.day && (grid[w - 1]?.[Number(day) - 1]?.length ?? 0) < MAX_PER_DAY,
+    (c, day) => void moveCard(c, Number(day))
+  );
 
   if (state.status === "loading") return <ProCardSkeleton lines={4} height={220} />;
   if (state.status === "error" && !programme) return <ProError onRetry={() => void state.reload()} />;
@@ -81,21 +124,10 @@ export const ProgrammeBuilder: React.FC<{
     );
   }
 
-  const w = Math.min(Math.max(week, 1), weeks);
   const days = grid[w - 1] ?? [];
   const active = state.assignments.filter((a) => a.programmeId === programme.id && !a.endedAt);
   const clientName = (id: string) => professionalClients.find((c) => c.clientId === id)?.name ?? "A former client";
 
-  /** One write, then a re-read; errors stay on screen until the next write. */
-  const write = async (fn: () => Promise<{ ok: true } | { ok: false; message: string }>) => {
-    setBusy(true);
-    setError(null);
-    const r = await fn();
-    if (!r.ok) setError(r.message);
-    await state.reload();
-    setBusy(false);
-    return r.ok;
-  };
   const saveDay = (day: number, ids: string[]) => void write(() => setProgrammeDay(programme.id, w, day, ids));
 
   const clearWeek = async () => {
@@ -144,11 +176,28 @@ export const ProgrammeBuilder: React.FC<{
         <SquareBtn ref={weekRef} icon={EllipsisVertical} label={`Week ${w} options`} onClick={() => setWeekAnchor(weekRef.current)} />
       </div>
 
+      <WeekNoteField
+        key={`${programme.id}-${w}-${state.notes[programme.id]?.[w] ?? ""}`}
+        week={w}
+        note={state.notes[programme.id]?.[w] ?? ""}
+        disabled={busy}
+        onSave={(note) => write(() => setProgrammeWeekNote(programme.id, w, note))}
+      />
+
       <Card pad="4px 14px">
         {days.map((ids, i) => {
           const day = i + 1;
+          const over = drag.over === String(day);
           return (
-            <div key={day} style={{ padding: "10px 0", borderBottom: i < 6 ? `1px solid ${INK.b06}` : "none" }}>
+            <div
+              key={day}
+              data-drop-day={day}
+              style={{
+                padding: "10px 0",
+                borderBottom: i < 6 ? `1px solid ${INK.b06}` : "none",
+                ...(over ? { background: INK.prPale, outline: `1.5px dashed ${INK.pr}`, borderRadius: 12 } : null),
+              }}
+            >
               <div className="flex items-center justify-between" style={{ gap: 8, marginBottom: ids.length ? 6 : 0 }}>
                 <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch, minWidth: 36 }}>{DAY_SHORT[i]}</span>
                 {ids.length === 0 ? (
@@ -180,9 +229,29 @@ export const ProgrammeBuilder: React.FC<{
               </div>
               {ids.map((id, k) => {
                 const t = byId.get(id);
+                const card: CardRef = { day, position: k, name: t?.name ?? "A workout" };
+                const lifted = drag.dragging?.day === day && drag.dragging.position === k;
                 return (
-                  <div key={`${id}-${k}`} className="flex items-center" style={{ gap: 10, background: INK.soft, borderRadius: 12, padding: "8px 10px", marginTop: k ? 6 : 0 }}>
-                    <ClipboardList size={15} strokeWidth={1.75} aria-hidden style={{ color: INK.prAccent, flexShrink: 0 }} />
+                  <div
+                    key={`${id}-${k}`}
+                    className="flex items-center"
+                    style={{ gap: 10, background: INK.soft, borderRadius: 12, padding: "8px 10px", marginTop: k ? 6 : 0, opacity: lifted ? 0.5 : 1 }}
+                  >
+                    {/* Round F (DW3): drag by the grip; press it (or Enter) for "Move to…". */}
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onPointerDown={(e) => drag.begin(card, e)}
+                      onClick={() => {
+                        if (!drag.clickAfterDrag()) setMoving(card);
+                      }}
+                      aria-label={moveGripLabel(card.name)}
+                      title={moveGripLabel(card.name)}
+                      className="tap relative shrink-0 flex items-center justify-center before:absolute before:-inset-2 before:content-['']"
+                      style={{ width: 24, height: 28, color: INK.chT, touchAction: "none", cursor: busy ? undefined : "grab" }}
+                    >
+                      <GripVertical size={14} strokeWidth={2} aria-hidden />
+                    </button>
                     <span className="flex-1 min-w-0">
                       <span className="block" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
                         {t?.name ?? "A workout"}
@@ -283,6 +352,17 @@ export const ProgrammeBuilder: React.FC<{
           const next = addToDay(days[day - 1] ?? [], templateId);
           if (next) saveDay(day, next);
           else setError("A day can hold up to four workouts.");
+        }}
+      />
+      <BuilderMoveSheet
+        open={moving !== null}
+        workoutName={moving?.name ?? ""}
+        week={days}
+        fromDay={moving?.day ?? 0}
+        busy={busy}
+        onClose={() => setMoving(null)}
+        onPick={(to) => {
+          if (moving) void moveCard(moving, to);
         }}
       />
       <ProgrammeDetailsSheet open={editing} onClose={() => setEditing(false)} programme={programme} onSaved={() => void state.reload()} />

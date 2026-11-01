@@ -9,6 +9,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { marketRpc, marketRpcRaw, isPendingError, type MarketResult } from "../market/rpc";
 import { isOffline } from "../network-error";
+import { reviewRefusalLine } from "../safety/model";
 import { findPast, isOver, parseClassBookings, REVIEW_ERROR_TEXT, reviewErrorOf, targetOf, type PastBooking, type ReviewError, type ReviewTarget } from "./model";
 import { contactRefusal } from "../moderation/text";
 
@@ -68,6 +69,9 @@ export async function reviewInstructor(classId: string, rating: number, text: st
   if (res.error) {
     if (isPendingError(res.error)) return { ok: false, pending: true, message: "Instructor reviews are coming soon. Nothing was sent." };
     if (isOffline(res.error)) return { ok: false, offline: true, message: "You're offline. Your review wasn't sent." };
+    // Round F (AB7): an account under 7 days old (ATXW0, with when it may).
+    const young = reviewRefusalLine(res.error);
+    if (young) return { ok: false, message: young };
     const k = reviewErrorOf(res.error);
     if (k) return { ok: false, error: k, message: REVIEW_ERROR_TEXT[k] };
     console.error("[instructor-reviews] review_instructor:", res.error.message);
