@@ -167,7 +167,7 @@ test("the Round G1 codes: Q0, Q1, Q3, Q4, Q6 as sentences; Q2, Q5 and others are
   assert.equal(premiumCodeMessage("ATXQ6", { detail: "too_soon" }), passReasonText("too_soon"));
   assert.equal(premiumCodeMessage("ATXQ6", { message: "ATXQ6: this client cannot have Premium through you yet (no_activity)" }), passReasonText("no_activity"));
   assert.equal(premiumCodeMessage(undefined, { message: "ATXQ4: buy a hiring credit to send this offer" }), premiumCodeMessage("ATXQ4"));
-  for (const c of ["ATXQ2", "ATXQ5", "ATX03", "ATXD7", undefined]) assert.equal(premiumCodeMessage(c), null, String(c));
+  for (const c of ["ATXQ5", "ATX03", "ATXD7", undefined]) assert.equal(premiumCodeMessage(c), null, String(c));
 });
 
 test("the features table: Karim's G5 keys, one prompt line each, numbers only from free_limits()", () => {

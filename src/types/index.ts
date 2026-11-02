@@ -1502,6 +1502,8 @@ export interface Recipe {
   steps?: string;
   /** Round E: the recipe's "Cook-along" playlist link (recipes.playlist_url), if any. */
   playlistUrl?: string;
+  /** Round G2: a professional wrote it for you (recipes.scoped_to_client_id); it never counts toward the free plan's recipes. */
+  fromProfessional?: boolean;
 }
 
 // V2: Journal — organized into folders, entries retain their date.
