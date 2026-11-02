@@ -40,8 +40,14 @@ import {
   photosAddable,
   photosVisible,
   takenOnValid,
+  PREMIUM_DB_THEMES,
+  parseColorThemes,
+  themeAccess,
   type PlanItem,
 } from "./g4.ts";
+import { COLOR_THEMES, PREMIUM_COLOR_THEMES, isPremiumTheme, normalizeColorTheme } from "../../theme/colorThemes.ts";
+import { fromDbColorTheme, toDbColorTheme } from "../presentation/mapping.ts";
+import { isPremiumThemeRefusal } from "../presentation/save.ts";
 
 // ---- hidden while off ----
 
@@ -272,4 +278,35 @@ test("photos come newest first, and a pair is shown earlier first with the days 
   assert.equal(pairReady("a", "a"), false);
   assert.equal(pairReady("a", null), false);
   assert.equal(photoErrorText("ATX08"), "Choose two of your own photos.");
+});
+
+// ---- colour themes ----
+
+test("a Premium theme is hidden while the switch is off or unlisted, locked without Premium, open with it; the five stay free", () => {
+  const rows = parseColorThemes([
+    { theme: "centium", premium: false, locked: false },
+    { theme: "forest_sage", premium: true, locked: true },
+    { theme: "midnight_indigo", premium: true, locked: false },
+    { theme: null },
+  ]);
+  assert.equal(rows.length, 3);
+  assert.equal(themeAccess("forest_sage", { premiumOn: true, rows }), "locked");
+  assert.equal(themeAccess("midnight_indigo", { premiumOn: true, rows }), "open");
+  assert.equal(themeAccess("plum_lilac", { premiumOn: true, rows }), "hidden"); // not listed
+  assert.equal(themeAccess("forest_sage", { premiumOn: false, rows }), "hidden");
+  assert.equal(themeAccess("forest_sage", { premiumOn: true, rows: null }), "hidden"); // loading or unknown
+  assert.deepEqual(PREMIUM_DB_THEMES, ["forest_sage", "midnight_indigo", "plum_lilac"]);
+  // The app's ids, the Database's values, and the five unchanged.
+  assert.deepEqual(COLOR_THEMES.map((t) => t.value), ["centium", "sky", "rose", "gold", "coral"]);
+  assert.deepEqual(PREMIUM_COLOR_THEMES.map((t) => [t.value, toDbColorTheme(t.value)]), [["forest", "forest_sage"], ["midnight", "midnight_indigo"], ["plum", "plum_lilac"]]);
+  for (const t of PREMIUM_COLOR_THEMES) {
+    assert.equal(fromDbColorTheme(t.db), t.value);
+    assert.equal(normalizeColorTheme(t.value), t.value); // a chosen Premium theme stays the member's
+    assert.equal(isPremiumTheme(t.value), true);
+  }
+  assert.equal(isPremiumTheme("sky"), false);
+  // ATXQ1 (or ATXQ0) from saving device_presentation_settings is the prompt, not a retry.
+  assert.equal(isPremiumThemeRefusal({ code: "ATXQ1" }), true);
+  assert.equal(isPremiumThemeRefusal({ code: "P0001", message: "ATXQ0: not yet" }), true);
+  assert.equal(isPremiumThemeRefusal({ code: "42501" }), false);
 });
