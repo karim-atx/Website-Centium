@@ -117,7 +117,7 @@ const premium: Catalogue = {
   "Include Premium": "إضافة Premium",
   "Take back": "استرجاع",
   "Take back Premium?": "استرجاع Premium؟",
-  "Ending": "ينتهي",
+  "Ending|premium pass": "ينتهي",
   "Ends {date}": "ينتهي في {date}",
   "Since {date}": "منذ {date}",
   "{name} now has Centium Premium.": "أصبح لدى {name} الآن Centium Premium.",
@@ -152,7 +152,7 @@ const premium: Catalogue = {
   Base: "Base", // note: plan name, kept Latin
   "Base + {n} seats": { zero: "Base + {n} مقعد", one: "Base + مقعد واحد", two: "Base + مقعدان", few: "Base + {n} مقاعد", many: "Base + {n} مقعدًا", other: "Base + {n} مقعد" },
   "Base + {n} seat blocks": { zero: "Base + {n} حزمة مقاعد", one: "Base + حزمة مقاعد واحدة", two: "Base + حزمتا مقاعد", few: "Base + {n} حزم مقاعد", many: "Base + {n} حزمة مقاعد", other: "Base + {n} حزمة مقاعد" },
-  "{n} seats": { zero: "{n} مقعد", one: "مقعد واحد", two: "مقعدان", few: "{n} مقاعد", many: "{n} مقعدًا", other: "{n} مقعد" },
+  "{n} seats": { zero: "0 مقاعد", one: "مقعد واحد", two: "مقعدان", few: "{n} مقاعد", many: "{n} مقعدًا", other: "{n} مقعد" },
   Current: "الحالية",
   "From your next renewal": "من تجديدك التالي",
   "From your next renewal: {level}, billed monthly.": "من تجديدك التالي: {level}، بفوترة شهرية.",

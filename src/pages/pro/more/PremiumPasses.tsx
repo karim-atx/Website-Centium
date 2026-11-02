@@ -24,7 +24,7 @@ import {
   type PassCandidate,
   type PassHolder,
 } from "../../../services/premium";
-import { t } from "../../../i18n/core";
+import { t, tx } from "../../../i18n/core";
 
 // undrawn (Round G, no handover)
 // Round G1 · EA: "Premium passes" under the professional's plan
@@ -97,7 +97,7 @@ export default function PremiumPasses() {
     title: h.name || t("Your client"),
     meta: h.endsAt ? t("Ends {date}", { date: premiumDate(h.endsAt) }) : h.startsAt ? t("Since {date}", { date: premiumDate(h.startsAt) }) : undefined,
     trailing: h.endsAt ? (
-      <Chip label={t("Ending")} tone="att" />
+      <Chip label={tx("Ending", "premium pass")} tone="att" />
     ) : (
       <button type="button" onClick={() => setEnding(h)} disabled={!!busy} className="tap min-h-[44px] disabled:opacity-50" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
         {t("Take back")}
