@@ -98,4 +98,5 @@ export { default as CentiumProgrammesPage } from "./pages/workout/centium/Centiu
 export { default as CentiumProgrammePage } from "./pages/workout/centium/CentiumProgrammePage";
 export { default as MindLibraryPage } from "./pages/mind/library/MindLibraryPage";
 export { default as LibrarySessionPage } from "./pages/mind/library/LibrarySessionPage";
+export { default as WeeklyReviewPage } from "./pages/home/review/WeeklyReviewPage";
 export { ConsoleGate } from "./components/business-console/ConsoleGate";
