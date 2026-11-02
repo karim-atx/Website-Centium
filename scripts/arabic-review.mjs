@@ -33,6 +33,7 @@ const AREAS = [
   ["sharedbiz", "Shared business service text (classes, listing, venues, store, team, hiring)"],
   ["sharedmember", "Shared member service text (marketplace, offers, vouchers, reviews, utilities)"],
   ["sharedfood", "Shared food and workout service text"],
+  ["sharedpro", "Shared professional service text (programmes, courses, pro marketplace)"],
   ["sharedhealth", "Shared health service text (labs, blood pressure, cycle templates, metrics, health log)"],
 ];
 

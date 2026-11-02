@@ -23,13 +23,14 @@ import * as sharedbiz from "./ar/sharedbiz.ts";
 import * as sharedmember from "./ar/sharedmember.ts";
 import * as sharedfood from "./ar/sharedfood.ts";
 import * as sharedhealth from "./ar/sharedhealth.ts";
+import * as sharedpro from "./ar/sharedpro.ts";
 
 // Round F (AV): the translated areas (F7) stay translated. For every source
 // file an area lists, every t/tn/tk key has Arabic, every Arabic entry keeps
 // the English placeholders, no English is left as bare JSX text or a bare
 // text attribute, and a key used by two areas has one Arabic.
 
-const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, sharedbiz, sharedmember, sharedfood, sharedhealth };
+const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, sharedbiz, sharedmember, sharedfood, sharedhealth, sharedpro };
 const SRC = join(import.meta.dirname, "..");
 
 // Words that are the same in both languages (names, never translated).

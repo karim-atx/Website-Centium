@@ -15,6 +15,7 @@
 // its id (programme_schedule.session_id, Database 20261226130000).
 
 import { programmeCodeMessage } from "./copy";
+import { t, tn } from "../../i18n/core";
 
 export const MAX_WEEKS = 52;
 export const MAX_PER_DAY = 4;
@@ -73,8 +74,6 @@ export function lastUsedWeek(grid: WeekGrid[]): number {
   return 0;
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-
 /**
  * "{n} workouts a week" over the weeks that have any: one number when they
  * agree, else the range ("2–4 workouts a week"); null when nothing is planned.
@@ -84,15 +83,15 @@ export function workoutsAWeek(grid: WeekGrid[]): string | null {
   if (counts.length === 0) return null;
   const lo = Math.min(...counts);
   const hi = Math.max(...counts);
-  return lo === hi ? `${plural(lo, "workout", "workouts")} a week` : `${lo}–${hi} workouts a week`;
+  return lo === hi ? tn(lo, "{n} workout a week", "{n} workouts a week") : t("{lo}–{hi} workouts a week", { lo, hi });
 }
 
 /** The builder header and the library card: "{n} weeks · {n} workouts a week · used by {n} clients". */
 export function programmeMeta(weeks: number, grid: WeekGrid[], clients?: number): string {
-  const parts = [plural(weeks, "week", "weeks")];
+  const parts = [tn(weeks, "{n} week", "{n} weeks")];
   const perWeek = workoutsAWeek(grid);
-  parts.push(perWeek ?? "No workouts yet");
-  if (clients !== undefined && clients > 0) parts.push(`used by ${plural(clients, "client", "clients")}`);
+  parts.push(perWeek ?? t("No workouts yet"));
+  if (clients !== undefined && clients > 0) parts.push(tn(clients, "used by {n} client", "used by {n} clients"));
   return parts.join(" · ");
 }
 
@@ -330,8 +329,8 @@ export function totalSoFar(weeks: WeekProgress[], today: string): { planned: num
 
 /** "{n} of {n} sessions done", or "Not shared" when done is unknown (never a 0). */
 export function doneLine(planned: number, done: number | null): string {
-  if (done === null) return "Not shared";
-  return `${done} of ${planned} ${planned === 1 ? "session" : "sessions"} done`;
+  if (done === null) return t("Not shared");
+  return tn(planned, "{done} of {n} session done", "{done} of {n} sessions done", { done });
 }
 
 /** "Week {n} of {n}" / "Starts {date}" / "Ended" for an assignment on `today`. */
@@ -341,11 +340,11 @@ export function assignmentStatus(
   today: string,
   fmt: (iso: string) => string
 ): string {
-  if (a.endedAt) return "Ended";
-  if (today < a.startsOn) return `Starts ${fmt(a.startsOn)}`;
-  if (today > a.endsOn) return "Finished";
+  if (a.endedAt) return t("Ended");
+  if (today < a.startsOn) return t("Starts {date}", { date: fmt(a.startsOn) });
+  if (today > a.endsOn) return t("Finished");
   const wd = weekDayOn(a, today);
-  return wd ? `Week ${wd.week} of ${weeks}` : "";
+  return wd ? t("Week {n} of {of}", { n: wd.week, of: weeks }) : "";
 }
 
 // ---------------------------------------------------------------------------
@@ -363,23 +362,23 @@ export function programmeErrorMessage(error: { code?: string; message?: string }
   // Round F (20261226000000): skipping, moving and week notes.
   const f2 = programmeCodeMessage(code, msg);
   if (f2) return f2;
-  if (code === "ATX12") return "That person isn't your client any more.";
+  if (code === "ATX12") return t("That person isn't your client any more.");
   if (code === "ATX09") {
-    if (msg.includes("own workouts")) return "Only your own workouts can go in a programme.";
-    if (msg.includes("professional")) return "Programmes are built by professionals.";
-    return "Only the professional who made this programme can change it.";
+    if (msg.includes("own workouts")) return t("Only your own workouts can go in a programme.");
+    if (msg.includes("professional")) return t("Programmes are built by professionals.");
+    return t("Only the professional who made this programme can change it.");
   }
-  if (code === "ATX08") return "This programme isn't available any more.";
-  if (code === "ATX06") return "Sign in again to continue.";
+  if (code === "ATX08") return t("This programme isn't available any more.");
+  if (code === "ATX06") return t("Sign in again to continue.");
   if (code === "22023") {
     const week = /week (\d+) has sessions/.exec(msg);
-    if (week) return `Week ${week[1]} has workouts. Clear it before shortening the programme.`;
-    if (msg.includes("nothing is scheduled")) return "Nothing is planned from that week on. Pick an earlier week or add workouts.";
-    if (msg.includes("join week")) return "Pick a week within the programme.";
-    if (msg.includes("four workouts")) return "A day can hold up to four workouts.";
-    if (msg.includes("copy one week")) return "Pick a different week to copy to.";
-    if (msg.includes("week 1 to")) return "That day isn't in the programme.";
-    if (msg.includes("name")) return "Give the programme a name (up to 120 characters) and 1 to 52 weeks.";
+    if (week) return t("Week {n} has workouts. Clear it before shortening the programme.", { n: week[1] });
+    if (msg.includes("nothing is scheduled")) return t("Nothing is planned from that week on. Pick an earlier week or add workouts.");
+    if (msg.includes("join week")) return t("Pick a week within the programme.");
+    if (msg.includes("four workouts")) return t("A day can hold up to four workouts.");
+    if (msg.includes("copy one week")) return t("Pick a different week to copy to.");
+    if (msg.includes("week 1 to")) return t("That day isn't in the programme.");
+    if (msg.includes("name")) return t("Give the programme a name (up to 120 characters) and 1 to 52 weeks.");
   }
   return fallback;
 }

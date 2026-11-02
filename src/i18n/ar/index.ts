@@ -17,12 +17,13 @@ import sharedbiz from "./sharedbiz";
 import sharedmember from "./sharedmember";
 import sharedfood from "./sharedfood";
 import sharedhealth from "./sharedhealth";
+import sharedpro from "./sharedpro";
 
 // Round F (AV): the Arabic catalogue, one file per area, loaded as one lazy
 // chunk when Arabic is chosen. Every entry is in design-handover/round-f/
 // ARABIC_REVIEW.md for Karim's review before merge. A key in two areas has
 // the same Arabic in both (the catalogue test checks).
-const ar: Catalogue = { ...core, ...landing, ...legal, ...auth, ...settings, ...plans, ...messages, ...notifications, ...services, ...shared, ...programmes, ...safety, ...venues, ...certificates, ...sharedbiz, ...sharedmember, ...sharedfood, ...sharedhealth };
+const ar: Catalogue = { ...core, ...landing, ...legal, ...auth, ...settings, ...plans, ...messages, ...notifications, ...services, ...shared, ...programmes, ...safety, ...venues, ...certificates, ...sharedbiz, ...sharedmember, ...sharedfood, ...sharedhealth, ...sharedpro };
 
 export default ar;
 

@@ -502,6 +502,19 @@ const sharedbiz: Catalogue = {
   },
   "Team of {n}": "فريق من {n}",
   "Post openings and build your Team": "انشر وظائف شاغرة وابنِ فريقك",
+
+  // == services/business-console/access.ts · staffAreas (the console's areas) ==
+  "Members, member codes and plans": "الأعضاء ورموز الأعضاء والخطط",
+  "Check members in and see passes": "تسجيل حضور الأعضاء والاطلاع على البطاقات",
+  "Classes, times and instructors": "الحصص والمواعيد والمدرّبون",
+  "Products and orders": "المنتجات والطلبات",
+  "Your store's products and orders": "منتجات متجرك وطلباته",
+  "Offers, discounts and promotions": "العروض والخصومات والترويج",
+  "Who works here and what they can do": "من يعمل هنا وما يمكنه فعله",
+  Locations: "الأماكن",
+  "Venue names, addresses and time zones": "أسماء الأماكن وعناوينها ومناطقها الزمنية",
+  Revenue: "الإيرادات",
+  "Payments recorded at the desk": "المدفوعات المسجّلة في الاستقبال",
 };
 
 export default sharedbiz;

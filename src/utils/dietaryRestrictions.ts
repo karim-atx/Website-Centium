@@ -4,6 +4,8 @@
 // not compatible with the restriction." A prototype stand-in for a real
 // per-food ingredient tag system: flags a food by matching its name
 // against a small keyword list per restriction.
+import { t, tk } from "../i18n/core";
+
 export type DietaryRestriction =
   | "vegetarian"
   | "vegan"
@@ -17,15 +19,15 @@ export type DietaryRestriction =
   | "kosher";
 
 export const dietaryRestrictionOptions: { value: DietaryRestriction; label: string }[] = [
-  { value: "vegetarian", label: "Vegetarian" },
-  { value: "vegan", label: "Vegan" },
-  { value: "gluten_free", label: "Gluten-Free" },
-  { value: "dairy_free", label: "Dairy-Free" },
-  { value: "nut_free", label: "Nut-Free" },
-  { value: "low_carb", label: "Low-Carb" },
-  { value: "pescatarian", label: "Pescatarian" },
-  { value: "halal", label: "Halal" },
-  { value: "kosher", label: "Kosher" },
+  { value: "vegetarian", label: tk("Vegetarian") },
+  { value: "vegan", label: tk("Vegan") },
+  { value: "gluten_free", label: tk("Gluten-Free") },
+  { value: "dairy_free", label: tk("Dairy-Free") },
+  { value: "nut_free", label: tk("Nut-Free") },
+  { value: "low_carb", label: tk("Low-Carb") },
+  { value: "pescatarian", label: tk("Pescatarian") },
+  { value: "halal", label: tk("Halal") },
+  { value: "kosher", label: tk("Kosher") },
 ];
 
 /**
@@ -36,7 +38,7 @@ export const dietaryRestrictionOptions: { value: DietaryRestriction; label: stri
 export function dietLabel(value: string | null | undefined): string {
   if (!value) return "";
   const known = dietaryRestrictionOptions.find((o) => o.value === value);
-  if (known) return known.label;
+  if (known) return t(known.label);
   const words = value.replace(/[_-]+/g, " ").trim();
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : "";
 }

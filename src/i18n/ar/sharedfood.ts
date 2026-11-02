@@ -32,6 +32,8 @@ export const FILES: string[] = [
   "data/levelColors.ts",
   "utils/muscleGroups.ts",
   "context/AppContext.tsx",
+  "utils/dietaryRestrictions.ts",
+  "services/music/playlistLink.ts",
 ];
 
 // note (whole file): the food and workout words follow feat/eh-food-workout-mind:
@@ -292,6 +294,20 @@ const sharedfood: Catalogue = {
   "Drink water": "شرب الماء",
   "10,000 steps": "10,000 خطوة",
   Meditate: "التأمل",
+
+  // == utils/dietaryRestrictions.ts ==
+  Vegan: "نباتية صرفة",
+  "Gluten-Free": "خالية من الغلوتين",
+  "Dairy-Free": "خالية من الألبان",
+  "Nut-Free": "خالية من المكسرات",
+  "Low-Carb": "قليلة الكربوهيدرات",
+  Pescatarian: "نباتية مع الأسماك",
+  Halal: "حلال",
+  Kosher: "كوشر",
+
+  // == services/music/playlistLink.ts ==
+  "Paste the full playlist link, starting with https://": "الصق رابط قائمة التشغيل كاملًا، بدءًا بـ https://",
+  "That link isn't a playlist or an album.": "هذا الرابط ليس قائمة تشغيل ولا ألبومًا.",
 };
 
 export default sharedfood;

@@ -130,13 +130,13 @@ export const laneOf = (businessType: string | null): "gym" | "classes" | "store"
 export function staffAreas(seat: ConsoleSeat, type: "gym" | "classes" | "store" | "unknown" = laneOf(seat.businessType)): StaffArea[] {
   const out: StaffArea[] = [];
   const add = (a: StaffArea) => seatCan(seat, a.need) && out.push(a);
-  add({ key: "members", label: type === "classes" ? "Clients" : type === "store" ? "Customers" : "Members", desc: "Members, member codes and plans", to: "/app/business/analytics/members", need: "members" });
-  if (type === "gym") add({ key: "frontdesk", label: tk("Front desk"), desc: "Check members in and see passes", to: "/app/business/operations", need: "front_desk" });
-  if (type !== "store") add({ key: "schedule", label: "Schedule", desc: "Classes, times and instructors", to: "/app/business/classes", need: "schedule" });
-  if (type === "store") add({ key: "store", label: "Products and orders", desc: "Your store's products and orders", to: "/app/business/products", need: "store" });
-  add({ key: "marketing", label: "Marketplace", desc: "Offers, discounts and promotions", to: type === "store" ? "/app/business/products?tab=promotions" : "/app/business/marketplace", need: "marketing" });
-  if (type !== "store") add({ key: "team", label: type === "classes" ? "Instructors" : "Team", desc: "Who works here and what they can do", to: "/app/business/employees", need: "members" });
-  add({ key: "venues", label: "Locations", desc: "Venue names, addresses and time zones", to: "/app/business/more/locations", need: "venues" });
-  add({ key: "revenue", label: "Revenue", desc: "Payments recorded at the desk", to: "/app/business/analytics/revenue", need: "revenue" });
+  add({ key: "members", label: type === "classes" ? tk("Clients") : type === "store" ? tk("Customers") : tk("Members"), desc: tk("Members, member codes and plans"), to: "/app/business/analytics/members", need: "members" });
+  if (type === "gym") add({ key: "frontdesk", label: tk("Front desk"), desc: tk("Check members in and see passes"), to: "/app/business/operations", need: "front_desk" });
+  if (type !== "store") add({ key: "schedule", label: tk("Schedule"), desc: tk("Classes, times and instructors"), to: "/app/business/classes", need: "schedule" });
+  if (type === "store") add({ key: "store", label: tk("Products and orders"), desc: tk("Your store's products and orders"), to: "/app/business/products", need: "store" });
+  add({ key: "marketing", label: tk("Marketplace"), desc: tk("Offers, discounts and promotions"), to: type === "store" ? "/app/business/products?tab=promotions" : "/app/business/marketplace", need: "marketing" });
+  if (type !== "store") add({ key: "team", label: type === "classes" ? tk("Instructors") : tk("Team"), desc: tk("Who works here and what they can do"), to: "/app/business/employees", need: "members" });
+  add({ key: "venues", label: tk("Locations"), desc: tk("Venue names, addresses and time zones"), to: "/app/business/more/locations", need: "venues" });
+  add({ key: "revenue", label: tk("Revenue"), desc: tk("Payments recorded at the desk"), to: "/app/business/analytics/revenue", need: "revenue" });
   return out;
 }
