@@ -36,6 +36,7 @@ const AREAS = [
   ["member", "Member home, profile and calendar"],
   ["community", "Community, forum, courses, client forms and appointments"],
   ["findpros", "Finding professionals, their profiles and public pages"],
+  ["misc", "Other member screens (hire, folders, music, reminders, outbox)"],
 ];
 
 const rows = [];

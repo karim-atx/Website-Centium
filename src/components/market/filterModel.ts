@@ -6,6 +6,8 @@
 // (the choices joined with " · "). The board's preset choices are its demo
 // frames; the real state starts closed and empty.
 
+import { t, tx } from "../../i18n/core";
+
 export interface FilterState {
   open: boolean;
   selected: string[];
@@ -22,7 +24,15 @@ export const toggleOption = (s: FilterState, value: string): FilterState => ({
 });
 
 export const filterActive = (selected: readonly string[]): boolean => selected.length > 0;
-export const filterSummary = (selected: readonly string[]): string => selected.join(" · ");
+/**
+ * An option as shown: the options are English keys (tk() at the caller) or
+ * names (user data, which t() leaves as they are). "Online" in the
+ * Professionals filter is the session format, not presence, so it reads with
+ * its context key; the value matched in code stays "Online".
+ */
+export const filterOptionLabel = (o: string): string => (o === "Online" ? tx("Online", "session format") : t(o));
+
+export const filterSummary = (selected: readonly string[]): string => selected.map(filterOptionLabel).join(" · ");
 
 export interface FilterGroupDef<T> {
   heading: string;

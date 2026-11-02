@@ -14,6 +14,7 @@ import {
   priceShort,
   type MyHire,
 } from "../../services/hires";
+import { t } from "../../i18n/core";
 
 // A3-client (kept, PLAN §3.2), restyled for C-MO.4.9 (Market + Share 3.0 W5):
 // the client's live hire with this professional, on the profile's Services
@@ -41,7 +42,7 @@ export function YourHireCard({ hire, onChanged }: { hire: MyHire; /** Reload my_
     setBusy(false);
     setConfirming(false);
     if (!r.ok) {
-      setError(r.code ? describeClientCancelError(r.code) : r.message);
+      setError(t(r.code ? describeClientCancelError(r.code) : r.message));
       if (r.code === "ATXA1") onChanged();
       return;
     }
@@ -49,24 +50,24 @@ export function YourHireCard({ hire, onChanged }: { hire: MyHire; /** Reload my_
   };
 
   return (
-    <section aria-label="Your plan" style={{ lineHeight: "normal" }}>
-      <Caps>Your plan</Caps>
+    <section aria-label={t("Your plan")} style={{ lineHeight: "normal" }}>
+      <Caps>{t("Your plan")}</Caps>
       <div style={{ marginTop: 8, borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, padding: "12px 14px", color: m.ink }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: textPx(14), fontWeight: 700, overflowWrap: "anywhere" }}>{hire.planName}</div>
             <div style={{ fontSize: textPx(11.5), color: m.faint, marginTop: 1, fontVariantNumeric: "tabular-nums" }}>
-              {[priceShort(hire.priceAgreed), hire.paymentMethod === "whish" ? "Whish Money" : "Cash", until].filter(Boolean).join(" · ")}
+              {[priceShort(hire.priceAgreed), hire.paymentMethod === "whish" ? "Whish Money" : t("Cash"), until].filter(Boolean).join(" · ")}
             </div>
           </div>
           <span style={{ flexShrink: 0, borderRadius: 999, padding: "4px 10px", fontSize: textPx(12), fontWeight: 700, whiteSpace: "nowrap", background: pending ? m.cautionbg : m.tealbg, color: pending ? m.caution : m.tealink }}>
-            {hireStatusLabel(hire)}
+            {t(hireStatusLabel(hire))}
           </span>
         </div>
         {pending && (
           <p style={{ margin: "8px 0 0", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
-            {hire.paymentMethod === "cash" ? `Pay ${hire.professionalFirstName || "them"} in person. ` : ""}
-            Your hire becomes active once they confirm they've been paid.
+            {hire.paymentMethod === "cash" ? `${hire.professionalFirstName ? t("Pay {name} in person.", { name: hire.professionalFirstName }) : t("Pay them in person.")} ` : ""}
+            {t("Your hire becomes active once they confirm they've been paid.")}
           </p>
         )}
         <button
@@ -78,21 +79,21 @@ export function YourHireCard({ hire, onChanged }: { hire: MyHire; /** Reload my_
           className="hit market-focus"
           style={{ marginTop: 8, height: 32, padding: 0, background: "none", border: 0, font: "inherit", fontSize: textPx(12.5), fontWeight: 700, color: m.high, cursor: "pointer" }}
         >
-          Cancel hire
+          {t("Cancel hire")}
         </button>
         {error && (
           <p role="alert" style={{ margin: "4px 0 0", fontSize: textPx(12.5), fontWeight: 600, color: m.high }}>
-            {error}
+            {t(error)}
           </p>
         )}
       </div>
 
       <CentredDialog
         open={confirming}
-        title="Cancel this hire?"
+        title={t("Cancel this hire?")}
         body={cancelPromptLine(hire)}
-        cancel="Keep my plan"
-        action="Cancel hire"
+        cancel={t("Keep my plan")}
+        action={t("Cancel hire")}
         busy={busy}
         onAction={() => void cancel()}
         onCancel={() => !busy && setConfirming(false)}
