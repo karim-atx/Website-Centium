@@ -119,7 +119,7 @@ export function ScriptRunner({ slug, contentId, script, minutes }: { slug: strin
           </Button>
         ) : (
           <Button variant="primary" size="lg" fullWidth onClick={start} className="flex items-center justify-center gap-2">
-            <Play size={15} aria-hidden /> {finished ? t("Start again") : started ? t("Resume") : t("Start")}
+            <Play size={15} aria-hidden /> {finished ? t("Start again") : started ? t("Resume") : t("Begin")}
           </Button>
         )}
         {started && !finished && (

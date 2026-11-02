@@ -15,12 +15,13 @@ import venues from "./venues";
 import certificates from "./certificates";
 import premium from "./premium";
 import premium2 from "./premium2";
+import premium3 from "./premium3";
 
 // Round F (AV): the Arabic catalogue, one file per area, loaded as one lazy
 // chunk when Arabic is chosen. Every entry is in design-handover/round-f/
 // ARABIC_REVIEW.md for Karim's review before merge. A key in two areas has
 // the same Arabic in both (the catalogue test checks).
-const ar: Catalogue = { ...core, ...landing, ...legal, ...auth, ...settings, ...plans, ...messages, ...notifications, ...services, ...shared, ...programmes, ...safety, ...venues, ...certificates, ...premium, ...premium2 };
+const ar: Catalogue = { ...core, ...landing, ...legal, ...auth, ...settings, ...plans, ...messages, ...notifications, ...services, ...shared, ...programmes, ...safety, ...venues, ...certificates, ...premium, ...premium2, ...premium3 };
 
 export default ar;
 

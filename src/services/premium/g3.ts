@@ -420,7 +420,7 @@ export function stepAt(steps: readonly ScriptStep[], elapsed: number): { index: 
 }
 
 /** "3 min". */
-export const minutesLabel = (n: number): string => tn(n, "{n} min", "{n} min");
+export const minutesLabel = (n: number): string => t("{n} min", { n });
 
 // ---- journal prompts ----
 

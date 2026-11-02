@@ -113,7 +113,7 @@ function SummaryScreen() {
           <LockedRow feature="doctor_summary" title={t("Summary for your doctor")} meta={t("Part of Centium Premium")} />
         ) : (
           <div className="rounded-2xl bg-cream-card shadow-soft px-4 py-4">
-            <p className="text-[12.5px] font-bold text-charcoal">{t("Period")}</p>
+            <p className="text-[12.5px] font-bold text-charcoal">{t("Dates covered")}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {[
                 { n: 90, label: t("Last 90 days") },

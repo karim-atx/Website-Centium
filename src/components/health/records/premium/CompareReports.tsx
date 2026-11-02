@@ -9,7 +9,7 @@ import { compareLabReports } from "../../../../services/premium/g3Calls";
 import { comparePairReady, compareRowsView, statusWord, type CompareRowView, type MarkerStatus } from "../../../../services/premium/g3";
 import type { LabPanel } from "../../../../services/labs/results";
 import { formatShortDate } from "../../../../utils/date";
-import { t } from "../../../../i18n/core";
+import { t, tx } from "../../../../i18n/core";
 
 // undrawn (Round G, no handover)
 // Round G3 · comparing two lab reports (compare_my_lab_reports(a, b), the
@@ -118,8 +118,8 @@ function CompareSheet({ panels, onClose }: { panels: LabPanel[]; onClose: () => 
               <thead>
                 <tr className="text-charcoal-faint">
                   <th className="text-start font-bold py-1.5 pe-2">{t("Marker")}</th>
-                  <th className="text-end font-bold py-1.5 px-2">{t("Earlier")}</th>
-                  <th className="text-end font-bold py-1.5 px-2">{t("Later")}</th>
+                  <th className="text-end font-bold py-1.5 px-2">{tx("Earlier", "lab report column")}</th>
+                  <th className="text-end font-bold py-1.5 px-2">{tx("Later", "lab report column")}</th>
                   <th className="text-end font-bold py-1.5 ps-2">{t("Change")}</th>
                 </tr>
               </thead>

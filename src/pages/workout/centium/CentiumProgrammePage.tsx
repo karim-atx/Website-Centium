@@ -265,7 +265,7 @@ function ProgrammeView({ programme: p }: { programme: CentiumProgramme }) {
         minDate={win.min}
         maxDate={win.max}
         confirm
-        confirmLabel={t("Start")}
+        confirmLabel={t("Start on this day")}
         title={t("When do you want to start?")}
         onSelect={(d) => void start(d)}
       />
