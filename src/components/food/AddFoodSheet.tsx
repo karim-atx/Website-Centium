@@ -1282,7 +1282,7 @@ export const AddFoodSheet: React.FC<{
                 bg: dark ? "linear-gradient(150deg,rgb(var(--th-796eac)),rgb(var(--th-4f437b)))" : "linear-gradient(150deg,rgb(var(--th-9184ce)),rgb(var(--th-5f5093)))",
                 onClick: () => setCustomMode(true),
               },
-            ].map(({ label, icon, bg, onClick }) => (
+            ].map(({ label, icon, bg, onClick }, tile) => (
               <button
                 key={label}
                 onClick={onClick}
@@ -1291,7 +1291,8 @@ export const AddFoodSheet: React.FC<{
               >
                 {icon}
                 <span className="text-[11px] font-semibold">{label}</span>
-                {label === "AI Voice" && voiceLock.locked && <PremiumLabel className="-mt-1" />}
+                {/* Round G2: the first tile is AI Voice. */}
+                {tile === 0 && voiceLock.locked && <PremiumLabel className="-mt-1" />}
               </button>
             ))}
           </div>

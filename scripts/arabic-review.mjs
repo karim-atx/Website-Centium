@@ -31,6 +31,7 @@ const AREAS = [
   ["venues", "Class no-shows, gym pass and member codes"],
   ["certificates", "Your certificates (Courses)"],
   ["premium", "Round G1: Premium, passes, business plan levels and hiring credits"],
+  ["premium2", "Round G2: free limits, the full export and Premium perks"],
 ];
 
 const rows = [];
