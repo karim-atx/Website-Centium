@@ -16,7 +16,7 @@ import {
   type ItemKind,
   type MealSlot,
 } from "../../../services/premium/g4";
-import { t } from "../../../i18n/core";
+import { t, tx } from "../../../i18n/core";
 
 // undrawn (Round G, no handover)
 // Round G4 · adding to (or editing) a day and meal of the member's own meal
@@ -214,7 +214,7 @@ function SheetBody({ initial, initialFoodName, meal: meal0, dayLabel, locked, on
               </>
             )}
             <div className="mt-3">
-              <SheetField label={t("Amount")} value={quantity} onChange={setQuantity} placeholder="1" numeric />
+              <SheetField label={tx("Amount", "food quantity")} value={quantity} onChange={setQuantity} placeholder="1" numeric />
             </div>
             <div role="radiogroup" aria-label={t("Unit")} className="mt-2 flex flex-wrap gap-1.5">
               {FOOD_UNITS.map((u) => (

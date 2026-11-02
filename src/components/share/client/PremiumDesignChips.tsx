@@ -9,7 +9,7 @@ import { askLocked } from "../../premium/g3/useG3";
 import { useG4Available, useShareDesigns } from "../../premium/g4/useG4";
 import { PremiumLabel } from "../../premium/PremiumAskHost";
 import { PREMIUM_BACKGROUND, PREMIUM_SWATCH, type PremiumBackground } from "./premiumDesigns";
-import { t } from "../../../i18n/core";
+import { t, tx } from "../../../i18n/core";
 
 // undrawn (Round G, no handover)
 // Round G4 · the three Premium share-card designs as more chips in the share
@@ -20,7 +20,7 @@ import { t } from "../../../i18n/core";
 // label and opens the prompt instead of being chosen.
 
 const NAME: Record<PremiumDesign, () => string> = {
-  bold: () => t("Bold"),
+  bold: () => tx("Bold", "share card design"),
   gradient: () => t("Gradient"),
   premium_badge: () => t("Premium badge"),
 };

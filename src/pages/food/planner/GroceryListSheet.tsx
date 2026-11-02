@@ -70,7 +70,7 @@ function SheetBody({ planId, onClose }: { planId: string; onClose: () => void })
                 <ul className="flex flex-col">{v.toBuy.map(row)}</ul>
                 {v.done.length > 0 && (
                   <>
-                    <p className="mt-4 mb-1 text-[9.5px] font-bold uppercase tracking-[1.9px] rtl:tracking-normal text-charcoal-muted">{t("Got it")}</p>
+                    <p className="mt-4 mb-1 text-[9.5px] font-bold uppercase tracking-[1.9px] rtl:tracking-normal text-charcoal-muted">{t("In the basket")}</p>
                     <ul className="flex flex-col">{v.done.map(row)}</ul>
                   </>
                 )}

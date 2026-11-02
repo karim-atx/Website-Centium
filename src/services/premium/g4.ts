@@ -13,7 +13,7 @@
 //   - progress photos show NOWHERE in recovery-sensitive mode: no button, no
 //     list and no reader call (photosVisible).
 
-import { t, tn } from "../../i18n/core";
+import { t, tn, tx } from "../../i18n/core";
 import { addDays, mondayOf } from "./g3";
 import { isMissingFunction } from "./g2";
 import type { MyPremium } from "./model";
@@ -415,13 +415,13 @@ const isPose = (v: unknown): v is Pose => typeof v === "string" && (POSES as rea
 export function poseName(p: Pose): string {
   switch (p) {
     case "front":
-      return t("Front");
+      return tx("Front", "photo pose");
     case "side":
-      return t("Side");
+      return tx("Side", "photo pose");
     case "back":
-      return t("Back");
+      return tx("Back", "photo pose");
     default:
-      return t("Other");
+      return tx("Other", "photo pose");
   }
 }
 
