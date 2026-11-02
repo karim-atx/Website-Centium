@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Award, BadgePercent, CalendarClock, CalendarX2, ChartColumn, Copy, Ellipsis, Gift, Megaphone, Pause, Pencil, Percent, Play, Plus, Trash2, X, type LucideIcon } from "lucide-react";
+import { Award, BadgePercent, CalendarX2, ChartColumn, Copy, Ellipsis, Gift, Megaphone, Pause, Pencil, Percent, Play, Plus, Trash2, X, type LucideIcon } from "lucide-react";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { initialsOf } from "../../components/business-more/kind";
 import { MarketEmptyCard, MarketError, MarketSkeleton } from "../../components/market/MarketStates";
@@ -30,17 +30,15 @@ import {
   promoDates,
   promotables,
   recordedLine,
-  retryStart,
   sortPromotions,
   usesText,
   type ChipKey,
   type IconKey,
   type PromoAction,
   type PromoDraft,
-  type Promotable,
 } from "./promoModel";
 import { PromotionSheet, type PromoEdit } from "./PromotionSheet";
-import { FeatureSheet, PaySheet, ResultsSheet, type FeatureRetry } from "./FeatureSheets";
+import { FeatureSheet, ResultsSheet } from "./FeatureSheets";
 import { usePromotions } from "./usePromotions";
 
 // Market + Share 3.0 · W3 (D-13): the live promotions, the perk and the
@@ -71,9 +69,10 @@ import { usePromotions } from "./usePromotions";
 // / End / Cancel / Run again. Each running promotion is also an offer on the
 // listing whose switch is show_on_listing.
 // B13 MK-06: my_featured_placements as cards (awaiting payment, scheduled,
-// featured, ended, payment not received with Pick new dates), the Featured
-// card's line, and Feature for a week (owner only). Pending (the table or
-// function absent): the earlier empty states.
+// featured, ended, payment not received), the Featured card's line, and
+// Feature for a week (owner only), which is bought in the Centium app (G
+// fixes 4: no web request, no new dates for an unpaid week). Pending (the
+// table or function absent): the earlier empty states.
 // `?promote={id}` opens Create promotion on that item; `?offer=new` opens Add
 // an offer.
 
@@ -100,8 +99,7 @@ export function PromotionsTab() {
   const [offerSheet, setOfferSheet] = useState<{ mode: "add" | "edit"; row?: OfferRow } | null>(params.get("offer") === "new" ? { mode: "add" } : null);
   const [menuFor, setMenuFor] = useState<{ row: OfferRow; el: HTMLElement } | null>(null);
   const [removeRow, setRemoveRow] = useState<{ row: OfferRow; step: 1 | 2 } | null>(null);
-  const [feature, setFeature] = useState<{ item: string | null; from?: string; retry?: FeatureRetry } | null>(null);
-  const [pay, setPay] = useState<{ itemId: string; from: string; price: Parameters<typeof PaySheet>[0]["price"]; retry?: FeatureRetry } | null>(null);
+  const [feature, setFeature] = useState(false);
   const [results, setResults] = useState<Placement | null>(null);
   const [confirm, setConfirm] = useState<{ kind: "end" | "cancel"; p: Promotion; step: 1 | 2 } | null>(null);
   const [showSheet, setShowSheet] = useState<Promotion | null>(null);
@@ -162,7 +160,7 @@ export function PromotionsTab() {
   const featLine = featuredLine(data.placements, placementTitle, today);
   /** The read answered and there is no business row (not loading, not an error). */
   const noRow = !business && !m.loading && !m.error;
-  const sheetOpen = !!create || !!edit || !!offerSheet || !!feature || !!pay || !!removeRow || !!results || !!confirm || !!showSheet;
+  const sheetOpen = !!create || !!edit || !!offerSheet || feature || !!removeRow || !!results || !!confirm || !!showSheet;
   const canWrite = online && canMarket && !!business;
 
   const flash = (id: string) => {
@@ -270,11 +268,9 @@ export function PromotionsTab() {
               borderColor={card.view === "featured" ? c.segactive : undefined}
               line={card.line}
               actions={
-                card.view === "unpaid"
-                  ? [{ key: "retry", icon: CalendarClock, label: "Pick new dates", disabled: !online || !m.isOwner, onClick: () => setFeature({ item: p.targetId, from: retryStart(p, today), retry: { placementId: p.id, itemId: p.targetId } }) }]
-                  : card.view === "awaiting"
-                    ? []
-                    : [{ key: "results", icon: ChartColumn, label: "Results", onClick: () => setResults(p) }]
+                card.view === "unpaid" || card.view === "awaiting"
+                  ? []
+                  : [{ key: "results", icon: ChartColumn, label: "Results", onClick: () => setResults(p) }]
               }
             />
           ) : null
@@ -441,7 +437,7 @@ export function PromotionsTab() {
               </div>
             ) : (
               <>
-                <OutlineButton onClick={() => setFeature({ item: null })} disabled={!online || !m.isOwner} style={{ width: "100%", marginTop: 10, minHeight: 44 }}>
+                <OutlineButton onClick={() => setFeature(true)} disabled={!online || !m.isOwner} style={{ width: "100%", marginTop: 10, minHeight: 44 }}>
                   Feature for a week
                 </OutlineButton>
                 {!m.isOwner && business && <p style={{ fontSize: px(11.5), color: c.faint, lineHeight: lh(16), marginTop: 8, textAlign: "center" }}>{OWNER_ONLY}</p>}
@@ -518,35 +514,7 @@ export function PromotionsTab() {
           }}
         />
       )}
-      {feature && (
-        <FeatureSheet
-          open
-          items={withRetryItem(items, feature.retry, data.placements, placementTitle)}
-          initialItem={feature.item}
-          initialFrom={feature.from}
-          retry={feature.retry ?? null}
-          onClose={() => setFeature(null)}
-          onContinue={(item, from, p) => {
-            setPay({ itemId: item.id, from, price: p, retry: feature.retry });
-            setFeature(null);
-          }}
-        />
-      )}
-      {pay && (
-        <PaySheet
-          open
-          item={withRetryItem(items, pay.retry, data.placements, placementTitle).find((i) => i.id === pay.itemId) ?? null}
-          from={pay.from}
-          price={pay.price}
-          retry={pay.retry ?? null}
-          onClose={() => setPay(null)}
-          onRequested={(msg) => {
-            setPay(null);
-            data.reload();
-            showToast(msg);
-          }}
-        />
-      )}
+      {feature && <FeatureSheet open onClose={() => setFeature(false)} />}
       {results && <ResultsSheet open item={placementTitle(results)} from={results.startsOn} to={results.endsOn} onClose={() => setResults(null)} />}
       <PopupMenu
         open={!!menuFor && !sheetOpen}
@@ -630,16 +598,6 @@ export function PromotionsTab() {
 
 const ACTION_ICON: Record<PromoAction, LucideIcon> = { edit: Pencil, pause: Pause, resume: Play, end: CalendarX2, cancel: X, again: Copy };
 const ACTION_LABEL: Record<PromoAction, string> = { edit: "Edit", pause: "Pause", resume: "Resume", end: "End", cancel: "Cancel", again: "Run again" };
-
-/** Pick new dates: the unpaid week's own target, even when it isn't in the list (a past class, the business itself). */
-function withRetryItem(items: Promotable[], retry: FeatureRetry | undefined, placements: Placement[], title: (p: Placement) => string): Promotable[] {
-  if (!retry || items.some((i) => i.id === retry.itemId)) return items;
-  const p = placements.find((x) => x.id === retry.placementId);
-  if (!p) return items;
-  const t = title(p);
-  const kind: Promotable["kind"] = p.targetKind === "class" ? "class" : p.targetKind === "product" ? "offering" : "offer";
-  return [{ id: p.targetId, kind, title: t, field: t, sub: p.targetKind === "class" ? "Class" : p.targetKind === "product" ? "Offering" : "Your listing", preview: "" }, ...items];
-}
 
 /** The status chips as the offer chips (OfferCard manager): Active / Scheduled / Paused / Ended; featured --pale, awaiting --caution, unpaid --high. */
 function chipTone(chip: ChipKey, m: MarketPalette): [string, string] {

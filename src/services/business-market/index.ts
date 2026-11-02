@@ -105,19 +105,19 @@ export interface FeaturePrice {
 }
 
 /**
- * B13 feature_price_for(area, on): the price in force on that day (USD only,
- * the feature_prices check). Null = not on sale (or the function is absent).
+ * B13 feature_price_for(area): today's price (USD only, the feature_prices
+ * check). Null = not on sale (or the function is absent).
  */
-export async function fetchFeaturePrice(area: FeatureArea, on?: string): Promise<FeaturePrice | null> {
-  const { data, error } = await db.rpc("feature_price_for", on ? { p_area: area, p_on: on } : { p_area: area });
+export async function fetchFeaturePrice(area: FeatureArea): Promise<FeaturePrice | null> {
+  const { data, error } = await db.rpc("feature_price_for", { p_area: area });
   if (error || data === null || data === undefined) return null;
   const amount = Number(data);
   return Number.isFinite(amount) && amount > 0 ? { amount, currency: "USD" } : null;
 }
 
-export function priceLabel(p: FeaturePrice, cents = false): string {
+export function priceLabel(p: FeaturePrice): string {
   const sym = p.currency === "USD" ? "$" : `${p.currency} `;
-  return `${sym}${cents ? p.amount.toFixed(2) : Number.isInteger(p.amount) ? String(p.amount) : p.amount.toFixed(2)}`;
+  return `${sym}${Number.isInteger(p.amount) ? String(p.amount) : p.amount.toFixed(2)}`;
 }
 
 // ---------------------------------------------------------------------------

@@ -331,7 +331,6 @@ export function TeamPage({ data }: { data: TeamData }) {
           setFullOpen(false);
           setInviteOpen(true);
         }}
-        onChanged={data.reload}
       />
       {buying && (
         <SeatPurchaseSheet
@@ -339,7 +338,6 @@ export function TeamPage({ data }: { data: TeamData }) {
           pending={counts.invited}
           fallback={{ capacity: total, planActive: total > 0, blocks: capacity?.seatBlocks ?? 0, perBlock: per, blockPrice: null }}
           onClose={() => setBuying(false)}
-          onChanged={data.reload}
         />
       )}
       {toast}

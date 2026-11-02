@@ -7,8 +7,9 @@ import { hiringCreditPricesText } from "../../services/premium/features";
 
 // undrawn (Round G, no handover)
 // Round G1 · "Buy in the Centium app" (CF; decisions G7 b and G10): the one
-// block shown wherever Premium, a hiring credit or a business plan level (G
-// fixes 2) is offered. The web never sells any of them: the prices are the
+// block shown wherever Premium, a hiring credit, a business plan level (G
+// fixes 2), a seat block or a featured week (G fixes 4: nothing paid to
+// Centium is bought on the web) is offered. The web never sells any of them: the prices are the
 // Database's (hiring credits': HIRING_CREDIT_PRICES, G fixes 3), the store
 // buttons are disabled and say "Coming soon" until STORE_APPS_LIVE, the
 // trial and the billing are Apple's or Google's, and the refund policy is
@@ -19,7 +20,9 @@ type Props =
   /** Hiring credits: the prices are HIRING_CREDIT_PRICES (services/premium/features); the store sets the real price. */
   | { product: "hiring_credits"; compact?: boolean; className?: string }
   /** A business plan level: `line` is the picked level's price ("$29 a month"), or null before a pick. */
-  | { product: "business_plan"; line: string | null; compact?: boolean; className?: string };
+  | { product: "business_plan"; line: string | null; compact?: boolean; className?: string }
+  /** G fixes 4: seat blocks and featured weeks; `line` is a price the app already read, or null (never invented). */
+  | { product: "seat_blocks" | "featured_week"; line: string | null; compact?: boolean; className?: string };
 
 function priceLine(p: Props): string | null {
   if (p.product === "premium") {
@@ -30,7 +33,7 @@ function priceLine(p: Props): string | null {
     if (y) return t("{price} a year", { price: y });
     return null;
   }
-  if (p.product === "business_plan") return p.line;
+  if (p.product !== "hiring_credits") return p.line;
   return hiringCreditPricesText();
 }
 

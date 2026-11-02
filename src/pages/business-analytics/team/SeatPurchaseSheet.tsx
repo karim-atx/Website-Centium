@@ -6,27 +6,24 @@ import type { SeatInfo } from "./teamData";
 import "../shell/analytics.css";
 import "./an5.css";
 
-// The AN5 057-060 Add seats flow, mounted on its own for the screens outside
+// The AN5 Add seats sheet, mounted on its own for the screens outside
 // Analytics that open it (OP1 Team "Add seats" and "All seats in use",
-// OP1-053 S4 / OP1-070 row 5 / OP1-127 row 8: "Opens the Add seats flow (AN5
-// 057-060)"). It reads B8 RV-06 itself (business_plan_summary for the seats
-// and block price, the order awaiting payment), so it is mounted only while
-// open. Without RV-06 on the database, `fallback` draws the seats and the
-// flow keeps its email path.
+// OP1-053 S4 / OP1-070 row 5 / OP1-127 row 8). It reads B8 RV-06 itself
+// (business_plan_summary for the seats and block price), so it is mounted
+// only while open. Without RV-06 on the database, `fallback` draws the seats.
+// G fixes 4: seat blocks are bought in the Centium app only (SeatsSheet).
 
 export function SeatPurchaseSheet({
   used,
   pending,
   fallback,
   onClose,
-  onChanged,
 }: {
   used: number;
   pending: number;
   /** The seats as the screen already knows them, for a database without RV-06. */
   fallback: SeatInfo | null;
   onClose: () => void;
-  onChanged?: () => void;
 }) {
   const navigate = useNavigate();
   const billing = useCentiumBilling();
@@ -40,14 +37,9 @@ export function SeatPurchaseSheet({
       seats={seats}
       used={used}
       pending={pending}
-      billing={billing}
-      businessId={billing.businessId}
+      isOwner={!billing.available || billing.isOwner}
       onClose={onClose}
       onPlan={() => navigate("/app/business/more/subscription")}
-      onChanged={() => {
-        billing.reload();
-        onChanged?.();
-      }}
     />
   );
 }

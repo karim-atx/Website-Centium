@@ -228,13 +228,6 @@ export function placementView(p: Pick<Placement, "status">): PlacementView {
   }
 }
 
-/** request_featured_week takes a business, one of its classes or one of its offerings (products). */
-export function placementTarget(itemKind: string, itemId: string, businessId: string): { kind: PlacementTarget; id: string } {
-  if (itemKind === "class") return { kind: "class", id: itemId };
-  if (itemKind === "offering") return { kind: "product", id: itemId };
-  return { kind: "business", id: businessId };
-}
-
 // ---------------------------------------------------------------------------
 // Errors in plain sentences
 
@@ -261,26 +254,6 @@ export function promoErrorMessage(e: { code?: string; message?: string }, fallba
       return "You don't have permission to change promotions.";
     case "ATX08":
       return "That promotion is no longer there. Refresh and try again.";
-    default:
-      return fallback;
-  }
-}
-
-export function featureErrorMessage(e: { code?: string; message?: string }, fallback = "Couldn't send your request. Try again."): string {
-  const msg = e.message ?? "";
-  switch (e.code) {
-    case "ATXF7":
-      return msg.includes("not on sale") ? "Featuring isn't on sale for that week." : "That week is fully booked. Pick another start day.";
-    case "ATX03":
-      return "Only the owner can feature your business.";
-    case "ATX10":
-      return "Only a week that wasn't paid for can get new dates.";
-    case "ATX08":
-      return "That's no longer available. Refresh and try again.";
-    case "22023":
-      if (msg.includes("on Explore")) return "Turn on your listing first. Only businesses on Explore can be featured.";
-      if (msg.includes("90 days")) return "Pick a start day in the next 90 days.";
-      return fallback;
     default:
       return fallback;
   }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Clock3, Copy, IdCard, Plus, Share2, User, UserPlus, UserX, Users } from "lucide-react";
+import { Copy, IdCard, Plus, Share2, User, UserPlus, UserX, Users } from "lucide-react";
 import { BizHero, BizNote, BizPage, BizRow, BizSection, LoadError, RowsSkeleton } from "../../components/business-more/kit";
 import { useBizToast } from "../../components/business-more/useBizToast";
 import { copyText, shareOrCopy } from "../../components/business-more/share";
@@ -14,7 +14,6 @@ import "../business-analytics/team/an5.css";
 import { personUsesSeat } from "../../services/business-team/seats";
 import { fetchJoinRequests, fetchSeatCapacity, fetchTeam, type JoinRequest, type SeatCapacity, type TeamPerson } from "../../services/business-team/team";
 import { ROLE_LABEL, inviteState, inviteWhen, isWithdrawn, lowerFirst, roleAndProfession, shortDay, withdrawnPeople } from "../business-team/teamLogic";
-import { formatShortDate } from "../../utils/date";
 
 // OURS-MO1B-employees, -roles, -join-requests, -seats, -business-id
 // (BizMoreV8 screen="employees" / "roles" / "joins" / "seats" / "bizid").
@@ -27,11 +26,9 @@ import { formatShortDate } from "../../utils/date";
 //   the person page (set_employee_terms, B6 follow-up).
 // - Seats: capacity from business_plan_summary (B8 RV-06: included seats +
 //   blocks × seats per block); invitations hold no seat (B0); Add seats opens
-//   the AN5 purchase flow (buy_seat_blocks, owner only), and an order
-//   awaiting payment to Centium shows with its amount.
+//   the AN5 sheet, where seat blocks are bought in the Centium app only (G
+//   fixes 4).
 // - Business ID: the B5 code, plus the waiting join requests (B6).
-
-const fmt = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short" });
 
 function useTeam() {
   const { business, loading: bizLoading } = useBusiness();
@@ -110,14 +107,12 @@ export function RolesPage() {
 // ---------------------------------------------------------------------------
 // Seats
 
-const money = (n: number) => `$${n.toFixed(2)}`;
-
 export function SeatsPage() {
   const navigate = useNavigate();
-  const { business, rows, capacity, error, reload } = useTeam();
+  const { rows, capacity, error, reload } = useTeam();
   // B8 RV-06: business_plan_summary is the seat answer (capacity, blocks,
-  // block price); the order awaiting payment comes from the billing history.
-  // Without RV-06 on the database the earlier reads stay (pending rule).
+  // block price). Without RV-06 on the database the earlier reads stay
+  // (pending rule). G fixes 4: seat blocks are bought in the Centium app only.
   const billing = useCentiumBilling();
   const legacy = useBusinessPlan();
   const [sheet, setSheet] = useState(false);
@@ -139,7 +134,6 @@ export function SeatsPage() {
   const planActive = live ? s.active : !!plan?.active;
   const blockPrice = live ? s.seatBlockPrice : (plan?.seatAddon?.monthlyPrice ?? null);
   const canAdd = live ? planActive && billing.isOwner && s.seatsPerBlock !== null : !!plan?.seatAddon;
-  const order = live ? billing.pendingSeat : null;
   const ready = !!rows && (live ? true : !!plan && !!capacity);
   const loadError = error || (live ? billing.summaryError : legacy.error);
 
@@ -166,16 +160,6 @@ export function SeatsPage() {
             }
             actions={canAdd ? [{ label: "Add seats", icon: Plus, primary: true, onClick: () => setSheet(true) }] : []}
           />
-          {order && (
-            <BizSection label="Seat order">
-              <BizRow
-                icon={Clock3}
-                title={`${order.quantity} seat block${order.quantity === 1 ? "" : "s"} awaiting payment`}
-                desc={`${money(order.amount)} · ordered ${fmt(order.createdAt)}. Seats are added once Centium records your payment.`}
-                onClick={() => setSheet(true)}
-              />
-            </BizSection>
-          )}
           {Array.from({ length: groups }, (_, b) => {
             const members = accepted.slice(b * per, (b + 1) * per);
             return (
@@ -213,22 +197,16 @@ export function SeatsPage() {
           {accepted.length > total && (
             <BizNote>{accepted.length - total} on your team without a seat. Add a seat block to cover them.</BizNote>
           )}
-          {/* Add seats: the drawn AN5 057-060 flow (TeamFlowsV4), one purchase path for every entry point. */}
+          {/* Add seats: the AN5 sheet, one path for every entry point (bought in the Centium app). */}
           <SeatsSheet
             open={sheet}
             mode="add"
             seats={{ capacity: total, planActive, blocks, perBlock: per, blockPrice, period: live ? s.period : "monthly" }}
             used={accepted.length}
             pending={invited.length}
-            billing={billing}
-            businessId={business?.id ?? null}
-            doneLabel="Done"
+            isOwner={!live || billing.isOwner}
             onClose={() => setSheet(false)}
             onPlan={() => navigate("/app/business/more/subscription")}
-            onChanged={() => {
-              billing.reload();
-              reload();
-            }}
           />
         </>
       )}

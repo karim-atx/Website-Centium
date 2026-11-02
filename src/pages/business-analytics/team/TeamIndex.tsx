@@ -13,7 +13,7 @@ import { payRowsOf } from "./payRows";
 import { money } from "./fmt";
 
 // AN5-001 (index, tinted bento tiles), AN5-003 (early data), AN5-005 (no
-// instructors yet), AN5-011 (free seat), AN5-060 hero message, OURS join
+// instructors yet), AN5-011 (free seat), OURS join
 // requests row, OURS loading / error / offline.
 
 type ScorecardRows = Parameters<typeof payRowsOf>[0];
@@ -29,10 +29,6 @@ const TILE_META: Record<TileKey, { title: string; icon: LucideIcon; acc: string 
   pay: { title: "Pay", icon: Wallet, acc: "var(--an-pdark)" },
 };
 
-/** AN5-060 O1: the hero line under the blocks while seats are on their way. */
-const requestedLine = (n: number, live: boolean) =>
-  live ? `${n === 1 ? "1 seat block" : `${n} seat blocks`} awaiting payment` : n === 1 ? "1 seat block requested" : `${n} seat blocks requested`;
-
 const inRangePhrase = (r: AnalyticsRange) =>
   r.key === "week" ? "this week" : r.key === "4w" ? "in 4 weeks" : r.key === "12w" ? "in 12 weeks" : "in this range";
 
@@ -47,8 +43,6 @@ export function TeamIndex({
   onSeat,
   onRequests,
   onPlan,
-  requestedBlocks,
-  requestedLive = false,
   canAddSeats = true,
 }: {
   state: TeamState;
@@ -62,10 +56,7 @@ export function TeamIndex({
   onSeat: (p: TeamPerson) => void;
   onRequests: () => void;
   onPlan: () => void;
-  requestedBlocks: number;
-  /** B8 RV-06: requestedBlocks is a real order awaiting payment to Centium (else the email path's count). */
-  requestedLive?: boolean;
-  /** Add seats shows for the owner (RV-06 buying is the owner's); always on the email path. */
+  /** Add seats shows for the owner (seat blocks are the owner's, bought in the Centium app); always without RV-06. */
   canAddSeats?: boolean;
 }) {
   const [sel, setSel] = useState(0);
@@ -131,7 +122,6 @@ export function TeamIndex({
             )}
           </div>
         )}
-        {requestedBlocks > 0 && <p className="an5-new-msg is-faint">{requestedLine(requestedBlocks, requestedLive)}</p>}
         {team.requests > 0 && <RequestsRow n={team.requests} onClick={onRequests} standalone />}
       </div>
     );
@@ -229,7 +219,6 @@ export function TeamIndex({
             </button>
           )}
         </div>
-        {requestedBlocks > 0 && <p className="an5-new-msg is-faint">{requestedLine(requestedBlocks, requestedLive)}</p>}
 
         {cur &&
           (cur.kind === "free" ? (
