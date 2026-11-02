@@ -4,6 +4,9 @@ import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription
 import { FREE_PERIOD_ENDED } from "../../services/subscription-tiers/freePeriodCopy";
 import type { HireGate } from "../../services/hires/proLogic";
 import { t } from "../../i18n/core";
+import { useProPlanInApp } from "../../services/premium/hooks";
+import { proPlanPath } from "../../services/premium/model";
+import { BuyInApp } from "../premium/BuyInApp";
 
 // A3: tells a professional, in their own console, that clients cannot hire
 // them right now — before a client meets the hire sheet's "not taking new
@@ -25,6 +28,9 @@ export const HireAvailabilityNotice: React.FC<{
   capLine?: string | null;
   className?: string;
 }> = ({ gate, planLabel, capLine, className }) => {
+  // Round G5: while plans_in_app, the plan is bought in the Centium app (no
+  // contact link, no mailto); off, loading or no G5: exactly today's notice.
+  const viaApp = proPlanPath(useProPlanInApp()) === "app";
   if (!gate) return null;
   return (
     <div className={`rounded-2xl bg-primary-pale px-4 py-3.5 ${className ?? ""}`} role="status">
@@ -34,23 +40,39 @@ export const HireAvailabilityNotice: React.FC<{
           <p className="text-xs text-charcoal-soft mt-1">
             {t("Clients who try to hire you are told you're not taking new clients right now.")}
           </p>
-          <Link to="/contact" className="tap inline-flex items-center mt-1.5 text-sm font-bold text-primary-deep-text underline">
-            {t(UPGRADE_ACTION_LABEL)}
-          </Link>
+          {viaApp ? (
+            // undrawn (Round G, no handover): G5's Buy block in place of the contact link.
+            <BuyInApp product="professional_plan" line={null} compact className="mt-2.5 !shadow-none" />
+          ) : (
+            <Link to="/contact" className="tap inline-flex items-center mt-1.5 text-sm font-bold text-primary-deep-text underline">
+              {t(UPGRADE_ACTION_LABEL)}
+            </Link>
+          )}
         </>
       ) : (
         <>
           <p className="text-sm font-semibold text-charcoal">
             {planLabel ? t("You've reached the client limit on your {plan} plan.", { plan: planLabel }) : t("You've reached the client limit on your plan.")}
           </p>
-          <p className="text-xs text-charcoal-soft mt-1">
-            {capLine ? `${capLine}. ` : ""}
-            {t("Clients who try to hire you are told you're not taking new clients right now.")} {t("Disconnect a client to free a place, or")}{" "}
-            <a href={upgradeMailto()} className="font-bold text-primary-deep-text underline">
-              {t(UPGRADE_ACTION_LABEL).toLowerCase()}
-            </a>
-            .
-          </p>
+          {viaApp ? (
+            <>
+              <p className="text-xs text-charcoal-soft mt-1">
+                {capLine ? `${capLine}. ` : ""}
+                {t("Clients who try to hire you are told you're not taking new clients right now.")} {t("Disconnect a client to free a place, or buy a bigger plan in the Centium app.")}
+              </p>
+              {/* undrawn (Round G, no handover): G5's Buy block in place of the emailed request. */}
+              <BuyInApp product="professional_plan" line={null} compact className="mt-2.5 !shadow-none" />
+            </>
+          ) : (
+            <p className="text-xs text-charcoal-soft mt-1">
+              {capLine ? `${capLine}. ` : ""}
+              {t("Clients who try to hire you are told you're not taking new clients right now.")} {t("Disconnect a client to free a place, or")}{" "}
+              <a href={upgradeMailto()} className="font-bold text-primary-deep-text underline">
+                {t(UPGRADE_ACTION_LABEL).toLowerCase()}
+              </a>
+              .
+            </p>
+          )}
         </>
       )}
     </div>

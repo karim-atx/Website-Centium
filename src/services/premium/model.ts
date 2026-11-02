@@ -635,3 +635,59 @@ export function premiumCodeMessage(code: string | null | undefined, opts: { deta
       return null;
   }
 }
+
+// ---- professional plans in the app (Round G5) ----
+
+/**
+ * my_professional_plan_in_app(): plans_in_app is the business plans switch
+ * for the caller (their plan is bought in the Centium app, and no emailed
+ * upgrade request is shown); bought_in_app says their plan in force is a
+ * store purchase. Null: no row (not a professional), loading, a failed read
+ * or a database without G5, which every caller reads as off (today's email).
+ * my_professional_plan() is unchanged and still gives the plan in force.
+ */
+export interface ProPlanInApp {
+  plansInApp: boolean;
+  boughtInApp: boolean;
+  tierId: string | null;
+  tierName: string | null;
+  billingPeriod: PlanPeriod | null;
+  renewsAt: string | null;
+}
+
+export function parseProPlanInApp(data: unknown): ProPlanInApp | null {
+  const r = firstRow(data);
+  if (!r) return null;
+  const bp = r.billing_period;
+  return {
+    plansInApp: bool(r.plans_in_app),
+    boughtInApp: bool(r.bought_in_app),
+    tierId: strOrNull(r.tier_id),
+    tierName: strOrNull(r.tier_name),
+    billingPeriod: bp === "monthly" || bp === "yearly" ? bp : null,
+    renewsAt: strOrNull(r.renews_at),
+  };
+}
+
+/**
+ * Where a professional plan upgrade or change goes: "app" (the Buy in the
+ * Centium app block, no mailto and no "Ask to upgrade") only while
+ * plans_in_app; "mailto" (exactly today's emailed request) otherwise,
+ * including null.
+ */
+export type ProPlanPath = "app" | "mailto";
+
+export const proPlanPath = (p: Pick<ProPlanInApp, "plansInApp"> | null | undefined): ProPlanPath => (p?.plansInApp === true ? "app" : "mailto");
+
+/**
+ * "Bought in the Centium app"'s detail: "Growth · Yearly · renews 9 November
+ * 2027". Only while plans_in_app and the plan is a store purchase; null
+ * otherwise (today's screen).
+ */
+export function proPlanBoughtLine(p: ProPlanInApp | null | undefined): string | null {
+  if (!p || proPlanPath(p) !== "app" || !p.boughtInApp || !p.tierName) return null;
+  const parts = [p.tierName];
+  if (p.billingPeriod) parts.push(p.billingPeriod === "monthly" ? t("Monthly") : t("Yearly"));
+  if (p.renewsAt) parts.push(t("renews {date}", { date: premiumDate(p.renewsAt) }));
+  return parts.join(" · ");
+}

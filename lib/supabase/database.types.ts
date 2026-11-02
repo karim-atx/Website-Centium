@@ -30573,6 +30573,17 @@ export type Database = {
           tier_name: string
         }[]
       }
+      my_professional_plan_in_app: {
+        Args: never
+        Returns: {
+          billing_period: Database["public"]["Enums"]["subscription_billing_period"]
+          bought_in_app: boolean
+          plans_in_app: boolean
+          renews_at: string
+          tier_id: string
+          tier_name: string
+        }[]
+      }
       my_professional_subtype: { Args: never; Returns: string }
       my_progress_photos: {
         Args: never

@@ -12,6 +12,9 @@ import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../../services/subscript
 import { freePeriodBlocksConnecting } from "../../../services/subscription-tiers/freePeriodCopy";
 import { FreePeriodEnded, FreePeriodNotice } from "../../professionals/FreePeriodNotice";
 import { t } from "../../../i18n/core";
+import { useProPlanInApp } from "../../../services/premium/hooks";
+import { proPlanPath } from "../../../services/premium/model";
+import { BuyInApp } from "../../premium/BuyInApp";
 
 /**
  * Release 3 · HO1 "Client code" row (FINAL_PLAN Q-B1 and 2.4: client codes
@@ -24,6 +27,9 @@ import { t } from "../../../i18n/core";
  * (ATX49), and at the effective plan's client cap the sheet says so with the
  * mailto way out (there is nothing to buy in the app). An unknown tier blocks
  * nothing; the database still enforces the cap at redemption.
+ *
+ * Round G5: while plans_in_app the plan is bought in the Centium app, so the
+ * Buy block replaces the mailto at the cap; off, loading or no G5: today's.
  */
 export const ClientCodeSheet: React.FC<{ open: boolean; onClose: () => void; onBack?: () => void }> = ({ open, onClose, onBack }) => {
   const { generateClientCode, professionalClients } = useApp();
@@ -31,6 +37,7 @@ export const ClientCodeSheet: React.FC<{ open: boolean; onClose: () => void; onB
   const { effective } = useEffectiveProfessionalTier();
   const tier = effective?.tier;
   const { plan } = useMyProfessionalPlan();
+  const viaApp = proPlanPath(useProPlanInApp()) === "app";
   const capReached = tier && tier.maxClients !== null && professionalClients.length >= tier.maxClients ? tier : null;
   const [code, setCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -75,12 +82,24 @@ export const ClientCodeSheet: React.FC<{ open: boolean; onClose: () => void; onB
           <p className="text-sm font-bold text-charcoal mb-1.5">
             You've reached the client limit on your {effective ? effectiveTierLabel(effective) : planLabel(capReached.name)} plan.
           </p>
-          <p className="text-sm text-charcoal-soft mb-4">
-            {capLabel(capReached, professionalClients.length)}. Disconnect a client to free a place, or ask us to move you to a bigger plan.
-          </p>
-          <a href={upgradeMailto()} className="tap w-full flex items-center justify-center rounded-2xl bg-primary-fill text-on-primary-fill text-sm font-semibold h-12 mb-2.5">
-            {t(UPGRADE_ACTION_LABEL)}
-          </a>
+          {viaApp ? (
+            <>
+              <p className="text-sm text-charcoal-soft mb-4">
+                {capLabel(capReached, professionalClients.length)}. {t("Disconnect a client to free a place, or buy a bigger plan in the Centium app.")}
+              </p>
+              {/* undrawn (Round G, no handover): G5's Buy block in place of the emailed request. */}
+              <BuyInApp product="professional_plan" line={null} compact className="mb-2.5 text-start" />
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-charcoal-soft mb-4">
+                {capLabel(capReached, professionalClients.length)}. Disconnect a client to free a place, or ask us to move you to a bigger plan.
+              </p>
+              <a href={upgradeMailto()} className="tap w-full flex items-center justify-center rounded-2xl bg-primary-fill text-on-primary-fill text-sm font-semibold h-12 mb-2.5">
+                {t(UPGRADE_ACTION_LABEL)}
+              </a>
+            </>
+          )}
           <button
             type="button"
             onClick={() => {

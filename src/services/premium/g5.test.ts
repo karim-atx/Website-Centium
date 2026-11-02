@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { noCreditKind, offerCredit, offerUsesClassCredit, offerUsesCredit, parseClassCredits, parseHiringCredits, premiumCodeMessage } from "./model.ts";
+import { noCreditKind, offerCredit, offerUsesClassCredit, offerUsesCredit, parseClassCredits, parseHiringCredits, parseProPlanInApp, premiumCodeMessage, proPlanBoughtLine, proPlanPath } from "./model.ts";
 import { CLASS_CREDIT_PRICES, HIRING_CREDIT_PRICES, classCreditPricesText } from "./features.ts";
 import { HIRING_ERROR_TEXT, creditRefusalFor, hiringErrorOf } from "../hiring/model.ts";
 
@@ -74,4 +74,36 @@ test("ATXQ4 splits by the offer kind, else by the message: class credit or hirin
   assert.equal(noCreditKind({ type: "role", message: cls.message }), "hiring");
   assert.equal(noCreditKind({ message: cls.message }), "class");
   assert.equal(noCreditKind({}), "hiring");
+});
+
+// ---- professional plans in the app ----
+
+const PLAN_ROW = { plans_in_app: true, bought_in_app: true, tier_id: "t-growth", tier_name: "Growth", billing_period: "yearly", renews_at: "2027-11-09T12:00:00Z" };
+
+test("my_professional_plan_in_app parses; no row (not a professional) is null", () => {
+  const p = parseProPlanInApp([PLAN_ROW]);
+  assert.deepEqual(p, { plansInApp: true, boughtInApp: true, tierId: "t-growth", tierName: "Growth", billingPeriod: "yearly", renewsAt: "2027-11-09T12:00:00Z" });
+  assert.equal(parseProPlanInApp([]), null);
+  assert.equal(parseProPlanInApp(null), null);
+  assert.equal(parseProPlanInApp([{ ...PLAN_ROW, billing_period: "weekly" }])?.billingPeriod, null);
+});
+
+test("the plan page: in the app only while plans_in_app, else exactly today's mailto", () => {
+  assert.equal(proPlanPath(parseProPlanInApp([PLAN_ROW])), "app");
+  assert.equal(proPlanPath(parseProPlanInApp([{ ...PLAN_ROW, bought_in_app: false }])), "app");
+  // Off, loading (null), a non-professional or no G5: the emailed request.
+  assert.equal(proPlanPath(parseProPlanInApp([{ ...PLAN_ROW, plans_in_app: false }])), "mailto");
+  assert.equal(proPlanPath(null), "mailto");
+  assert.equal(proPlanPath(undefined), "mailto");
+});
+
+test("Bought in the Centium app: the plan name and renewal, only when bought in the app under the switch", () => {
+  const line = proPlanBoughtLine(parseProPlanInApp([PLAN_ROW]));
+  assert.ok(line?.startsWith("Growth · Yearly · renews "), line ?? "null");
+  assert.ok(line?.includes("2027"));
+  assert.equal(proPlanBoughtLine(parseProPlanInApp([{ ...PLAN_ROW, bought_in_app: false }])), null);
+  // Off: today's page, nothing new.
+  assert.equal(proPlanBoughtLine(parseProPlanInApp([{ ...PLAN_ROW, plans_in_app: false }])), null);
+  assert.equal(proPlanBoughtLine(null), null);
+  assert.equal(proPlanBoughtLine(parseProPlanInApp([{ ...PLAN_ROW, billing_period: null, renews_at: null }])), "Growth");
 });

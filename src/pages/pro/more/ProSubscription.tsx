@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Gift, Mail } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Gift, Mail, Smartphone } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useBack } from "../../../hooks/useBack";
@@ -19,8 +19,9 @@ import { ProBusinessBilling } from "./ProBusinessBilling";
 import { Slot } from "../../subscription/PlanRows";
 import { t, tn } from "../../../i18n/core";
 import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
-import { useSwitches } from "../../../services/premium/hooks";
-import { premiumOn } from "../../../services/premium/model";
+import { useProPlanInApp, useSwitches } from "../../../services/premium/hooks";
+import { premiumOn, proPlanBoughtLine, proPlanPath } from "../../../services/premium/model";
+import { BuyInApp } from "../../../components/premium/BuyInApp";
 
 // Release 3 W6 · MO24 v3 Subscription (source/gen r16.js subscription16,
 // tierCard16, tierGlyph16; COPY MO24). The real professional tiers from
@@ -30,6 +31,12 @@ import { premiumOn } from "../../../services/premium/model";
 // swipeable plan cards with Current and Recommended for you, All plans at a
 // glance, and no in-app payment: the CTA is the upgrade email (FreePeriodNotice
 // stays where W2 shows it). Replaces the old professional branch of Subscription.tsx.
+//
+// Round G5: while my_professional_plan_in_app() says plans_in_app, the plan
+// is bought in the Centium app: the "Buy in the Centium app" block replaces
+// the emailed request (no mailto, no "Ask to upgrade", no "confirmed by
+// email" line), and a store-bought plan says "Bought in the Centium app" with
+// its name and renewal. Off, loading or no G5: exactly today's page.
 
 const money2 = (v: number) => (Number.isInteger(v) ? formatPrice(v) : `$${v.toFixed(2)}`);
 const savePct = (t: SubscriptionTier) => (t.yearlyPrice && t.monthlyPrice > 0 ? Math.round((1 - t.yearlyPrice / (t.monthlyPrice * 12)) * 100) : 0);
@@ -141,6 +148,10 @@ export default function ProSubscription() {
   const navigate = useNavigate();
   // Round G1 (EA): Premium passes, only while the Premium switch is on.
   const passesOn = premiumOn(useSwitches().switches);
+  // Round G5: the app or today's email.
+  const inApp = useProPlanInApp();
+  const viaApp = proPlanPath(inApp) === "app";
+  const boughtLine = proPlanBoughtLine(inApp);
 
   const tiers = useMemo(() => all.filter((t) => !t.isAddon), [all]);
   const current = effective?.tier ?? null;
@@ -185,9 +196,14 @@ export default function ProSubscription() {
 
   const target = centred != null && centred > curIdx ? tiers[centred] : recIdx >= 0 ? tiers[recIdx] : null;
   const ask = () => {
-    if (!target) return;
+    // Round G5: never an emailed request while the plan is bought in the app.
+    if (!target || viaApp) return;
     window.location.href = `mailto:${UPGRADE_EMAIL}?subject=${encodeURIComponent(`${UPGRADE_SUBJECT} to ${target.name}`)}`;
   };
+
+  // The plan to buy in the app and its price for the period shown ("Growth · $19 a month"); null with no plan above.
+  const targetPrice = target && target.monthlyPrice > 0 ? (yearly && target.yearlyPrice != null ? t("{price} a year", { price: money2(target.yearlyPrice) }) : t("{price} a month", { price: money2(target.monthlyPrice) })) : null;
+  const buyLine = target ? (targetPrice ? `${target.name} · ${targetPrice}` : target.name) : null;
 
   const next = recIdx >= 0 ? tiers[recIdx] : null;
   const left = cap != null ? Math.max(0, cap - used) : null;
@@ -196,7 +212,7 @@ export default function ProSubscription() {
   const tone = atCap ? INK.hi : INK.prDeep;
 
   return (
-    <div style={{ paddingBottom: target ? 72 : 0 }}>
+    <div style={{ paddingBottom: target && !viaApp ? 72 : 0 }}>
       <button
         type="button"
         onClick={back}
@@ -262,6 +278,17 @@ export default function ProSubscription() {
           <p style={{ fontSize: textPx(13), color: INK.prDeep }}>{t("Your plan couldn't be identified.")}</p>
         )}
       </div>
+
+      {/* undrawn (Round G, no handover): G5's store-bought plan, in the Premium passes row's look. */}
+      {boughtLine && (
+        <div data-pro-plan-bought className="flex items-center" style={{ gap: 12, minHeight: 56, borderRadius: 18, padding: "12px 16px", marginBottom: 14, background: INK.card, border: `1px solid ${INK.bCard}` }}>
+          <Smartphone size={18} strokeWidth={1.9} style={{ color: INK.prDeep }} aria-hidden />
+          <span className="flex-1 min-w-0">
+            <span className="block" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{t("Bought in the Centium app")}</span>
+            <span className="block" style={{ fontSize: textPx(12), color: INK.chS, marginTop: 2 }}>{boughtLine}</span>
+          </span>
+        </div>
+      )}
 
       {/* Batch 2 · CS (Karim): a professional who holds a business plan chooses its billing here. */}
       <ProBusinessBilling />
@@ -373,14 +400,21 @@ export default function ProSubscription() {
           </div>
         </>
       )}
-      <p className="text-center" style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.5 }}>
-        {t("Payments in the app are coming soon. Upgrades are confirmed by email.")}
-      </p>
-      {/* Round F (DN): every place a plan is offered links the policy. */}
-      <p className="text-center" style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.5, marginTop: 4 }}>
-        <RefundPolicyLink />
-      </p>
-      {target && <PinnedCta primary={{ label: t("Ask to upgrade to {plan}", { plan: target.name }), icon: <Mail size={15} />, onClick: ask }} />}
+      {viaApp ? (
+        // undrawn (Round G, no handover): G5, the plan is bought in the Centium app (the block links the refund policy).
+        <BuyInApp product="professional_plan" line={buyLine} />
+      ) : (
+        <>
+          <p className="text-center" style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.5 }}>
+            {t("Payments in the app are coming soon. Upgrades are confirmed by email.")}
+          </p>
+          {/* Round F (DN): every place a plan is offered links the policy. */}
+          <p className="text-center" style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.5, marginTop: 4 }}>
+            <RefundPolicyLink />
+          </p>
+        </>
+      )}
+      {target && !viaApp && <PinnedCta primary={{ label: t("Ask to upgrade to {plan}", { plan: target.name }), icon: <Mail size={15} />, onClick: ask }} />}
     </div>
   );
 }
