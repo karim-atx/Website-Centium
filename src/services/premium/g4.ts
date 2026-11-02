@@ -651,14 +651,24 @@ export interface CycleInsights {
   phase: string | null;
   cycleDay: number | null;
   insights: CycleInsight[];
-  /** The general note (cycle.note), shown under the insights; or on its own. */
+  /** The general note (cycle.note), for every member: under the insights, beside the lock, or on its own. */
   note: CycleNote | null;
+  /**
+   * The phase's insights are Premium and this member is free (G fixes 2: the
+   * Database's `insights_locked`, or `locked`), so the insights list is empty
+   * and only they are locked; the note still comes.
+   */
+  locked: boolean;
 }
 
-/** my_cycle_insights(): phase, cycle_day, insights [{key, area, title, body}] and note {key, body} (Database copy, English for now). */
+/**
+ * my_cycle_insights(): phase, cycle_day, insights [{key, area, title, body}],
+ * note {key, body} and (the Database's fix, G fixes 2) insights_locked, in the
+ * member's language. Tolerant: `locked` is read too, and a missing flag is false.
+ */
 export function parseCycleInsights(data: unknown): CycleInsights {
   const r = rowsOf(data)[0] ?? obj(data);
-  if (!r) return { phase: null, cycleDay: null, insights: [], note: null };
+  if (!r) return { phase: null, cycleDay: null, insights: [], note: null, locked: false };
   const list = Array.isArray(r.insights) ? r.insights : [];
   const n = obj(r.note);
   const noteBody = n ? str(n.body) : null;
@@ -672,6 +682,7 @@ export function parseCycleInsights(data: unknown): CycleInsights {
       return title && body ? [{ key: str(i.key), area: area && (AREAS as readonly string[]).includes(area) ? (area as InsightArea) : null, title, body }] : [];
     }),
     note: noteBody ? { key: n ? str(n.key) : null, body: noteBody } : null,
+    locked: r.insights_locked === true || r.locked === true,
   };
 }
 
@@ -692,24 +703,29 @@ export function insightAreaLabel(area: InsightArea | null): string | null {
 }
 
 /**
- * What the cycle tracker shows (G fixes):
- * - an empty list and a null note (not tracking, insights turned off,
- *   pregnant, no copy; the Database asks no Premium): NOTHING at all;
- * - only the note (not predictable yet, hormonal contraception, no phase):
- *   just the note, with no Premium label;
- * - otherwise the insights (one per area, labelled) and the note;
- * - ATXQ1 (a free member): the locked card with the label and the prompt;
+ * What the cycle tracker shows (G fixes; G fixes 2: the general note is for
+ * every member, and only the phase's insights are Premium):
+ * - an empty list, no lock and a null note (not tracking, insights turned
+ *   off, pregnant, no copy; the Database asks no Premium): NOTHING at all;
+ * - the insights (one per area, labelled), when there are any;
+ * - the lock (the Premium label and the prompt) in their place for a free
+ *   member: the Database's insights_locked, or today's ATXQ1;
+ * - the note, whenever it is returned, always outside the lock;
  * - ATXQ0, the switch off, loading, a Database without G4 or a failure:
  *   nothing.
+ * Until the Database's fix lands, a free member's ATXQ1 carries no note, so
+ * it is the lock alone.
  */
-export type InsightsView = { kind: "none" } | { kind: "locked" } | { kind: "note"; note: CycleNote } | { kind: "card"; value: CycleInsights };
+export type InsightsView =
+  | { kind: "none" }
+  | { kind: "show"; phase: string | null; cycleDay: number | null; insights: CycleInsight[]; locked: boolean; note: CycleNote | null };
 export function insightsView(state: { kind: string; value?: CycleInsights }): InsightsView {
-  if (state.kind === "premium") return { kind: "locked" };
+  if (state.kind === "premium") return { kind: "show", phase: null, cycleDay: null, insights: [], locked: true, note: null };
   if (state.kind !== "ready" || !state.value) return { kind: "none" };
   const v = state.value;
-  if (v.insights.length > 0) return { kind: "card", value: v };
-  if (v.note) return { kind: "note", note: v.note };
-  return { kind: "none" };
+  const locked = v.locked && v.insights.length === 0;
+  if (v.insights.length === 0 && !locked && !v.note) return { kind: "none" };
+  return { kind: "show", phase: v.phase, cycleDay: v.cycleDay, insights: v.insights, locked, note: v.note };
 }
 
 /** The phase in words. */

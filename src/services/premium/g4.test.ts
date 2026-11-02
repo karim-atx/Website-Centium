@@ -374,16 +374,26 @@ test("the three Premium share designs: hidden while off or unlisted, locked with
 
 // ---- cycle insights ----
 
-test("cycle insights (G fixes): nothing, just the note, or the four insights and the note; the lock for a free member", () => {
+test("cycle insights (G fixes 2): the note for every member, outside the lock; only the phase's insights are Premium", () => {
   // An empty list and a null note (not tracking, turned off, pregnant, no copy): nothing at all.
   const empty = parseCycleInsights([{ phase: "luteal", cycle_day: 21, insights: [], note: null }]);
-  assert.deepEqual(empty, { phase: "luteal", cycleDay: 21, insights: [], note: null });
+  assert.deepEqual(empty, { phase: "luteal", cycleDay: 21, insights: [], note: null, locked: false });
   assert.deepEqual(insightsView({ kind: "ready", value: empty }), { kind: "none" });
-  // Only the note (not predictable yet, contraception, no phase): just the note, no Premium label.
+  // Only the note (not predictable yet, contraception, no phase): just the note, no lock.
   const noteOnly = parseCycleInsights([{ phase: null, cycle_day: null, insights: [], note: { key: "cycle.note", body: "Everyone's cycle is different." } }]);
-  assert.deepEqual(insightsView({ kind: "ready", value: noteOnly }), { kind: "note", note: { key: "cycle.note", body: "Everyone's cycle is different." } });
-  // A free member (ATXQ1): the locked card. ATXQ0, off, loading, failed: nothing.
-  assert.deepEqual(insightsView({ kind: "premium" }), { kind: "locked" });
+  assert.deepEqual(insightsView({ kind: "ready", value: noteOnly }), { kind: "show", phase: null, cycleDay: null, insights: [], locked: false, note: { key: "cycle.note", body: "Everyone's cycle is different." } });
+  // The Database's fix: a free member gets the note and insights_locked (or locked): the lock for the insights, the note outside it.
+  for (const flag of ["insights_locked", "locked"]) {
+    const free = parseCycleInsights([{ phase: "luteal", cycle_day: 21, insights: [], note: { key: "cycle.note", body: "Everyone's cycle is different." }, [flag]: true }]);
+    assert.equal(free.locked, true, flag);
+    assert.deepEqual(insightsView({ kind: "ready", value: free }), { kind: "show", phase: "luteal", cycleDay: 21, insights: [], locked: true, note: { key: "cycle.note", body: "Everyone's cycle is different." } }, flag);
+  }
+  // locked without a note still shows the lock; a flag that isn't true is no lock
+  assert.equal(insightsView({ kind: "ready", value: parseCycleInsights([{ phase: "luteal", insights: [], note: null, insights_locked: true }]) }).kind, "show");
+  assert.equal(parseCycleInsights([{ insights: [], insights_locked: "yes" }]).locked, false);
+  // Today's Database: a free member's ATXQ1 is the lock alone, with no note.
+  assert.deepEqual(insightsView({ kind: "premium" }), { kind: "show", phase: null, cycleDay: null, insights: [], locked: true, note: null });
+  // ATXQ0, off, loading, failed: nothing.
   for (const kind of ["hidden", "loading", "error"]) assert.deepEqual(insightsView({ kind }), { kind: "none" }, kind);
   // Otherwise the four insights, one per area, and the note.
   const full = parseCycleInsights([
@@ -407,11 +417,16 @@ test("cycle insights (G fixes): nothing, just the note, or the four insights and
   assert.equal(full.cycleDay, 8);
   assert.equal(full.note?.body, "Everyone's cycle is different.");
   const view = insightsView({ kind: "ready", value: full });
-  assert.equal(view.kind, "card");
+  assert.equal(view.kind, "show");
+  assert.equal(view.kind === "show" && view.locked, false);
+  assert.equal(view.kind === "show" && view.note?.body, "Everyone's cycle is different.");
+  // insights that came back are never hidden behind a stray flag
+  const strayView = insightsView({ kind: "ready", value: { ...full, locked: true } });
+  assert.equal(strayView.kind === "show" && strayView.locked, false);
   assert.deepEqual(full.insights.map((i) => insightAreaLabel(i.area)), ["Training", "Food", "Sleep", "Mood", null]);
   // A note without a body is no note.
   assert.equal(parseCycleInsights([{ insights: [], note: { key: "cycle.note" } }]).note, null);
-  assert.deepEqual(parseCycleInsights(null), { phase: null, cycleDay: null, insights: [], note: null });
+  assert.deepEqual(parseCycleInsights(null), { phase: null, cycleDay: null, insights: [], note: null, locked: false });
   // The member's switch: only while the Premium switch is on, G4 is there and the value could be read.
   const on = { premiumOn: true };
   assert.equal(insightsToggleShown(on, true, true), true);
