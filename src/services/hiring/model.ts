@@ -406,7 +406,7 @@ export type HiringError =
   | "not_your_business" // ATXB8 · 42501
   | "rate_limited" // ATX02 (check_rate_limit)
   | "invalid_opening" // 23514 (a title / description / requirements CHECK)
-  | "no_hiring_credit" // ATXQ4 (Round G1: on the business plans switch a role offer needs a hiring credit free)
+  | "no_hiring_credit" // ATXQ4 (Round G1: on the business plans switch a role offer needs a hiring credit left)
   | "instructor_not_on_team"; // ATX76 (Database #38 business_team_professional: save_class_series, edit_class, assign_class_instructor and the business_classes trigger name only a Team professional)
 
 const ATXH: Record<number, HiringError> = {
@@ -493,7 +493,7 @@ export const HIRING_ERROR_TEXT: Record<HiringError, string> = {
   no_seats: "All seats are in use. Buy a seat block or remove somebody first.",
   instructor_not_on_team: "Only your Team can be named. Add people through Hiring.",
   // Round G1: the same words as premiumCodeMessage("ATXQ4").
-  no_hiring_credit: "No hiring credit free. A role offer needs one.",
+  no_hiring_credit: "No hiring credit left. A role offer needs one.",
 };
 
 /** The caution card under an applicant or a result after an offer (B-MA.8.6): their busy times. */

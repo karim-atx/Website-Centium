@@ -19,7 +19,7 @@ export function HiringCreditsCard({ credits, className }: { credits: HiringCredi
       <div className="flex items-center gap-2.5">
         <Ticket size={18} className="text-primary-dark shrink-0" aria-hidden />
         <p className="flex-1 min-w-0 text-[14px] font-extrabold text-charcoal">{t("Hiring credits")}</p>
-        <p className="text-[13px] font-bold text-primary-dark whitespace-nowrap">{tn(credits.free, "{n} free to use", "{n} free to use")}</p>
+        <p className="text-[13px] font-bold text-primary-dark whitespace-nowrap">{tn(credits.free, "{n} left to use", "{n} left to use")}</p>
       </div>
       <p className="text-[12px] leading-[17px] text-charcoal-soft mt-1.5">{t("Each role hire uses 1 hiring credit instead of the hiring fee. Class-slot hires are billed as before.")}</p>
       {packs.length > 0 && (
