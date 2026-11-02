@@ -598,7 +598,7 @@ export default function BusinessProfilePage() {
             className="absolute pointer-events-none uppercase"
             style={{ top: -10, insetInlineEnd: 16, fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", lineHeight: "14px", padding: "3px 8px", borderRadius: 999, background: "rgb(var(--c-primary))", color: "rgb(var(--c-on-primary-fill))" }}
           >
-            {`From ${from}`}
+            {from === "Dashboard" ? t("From Dashboard") : t("From Analytics")}
           </span>
         )}
         {/* AN3-076 row 6: a 1px primary-dark border and a 4px ring while highlighted (box-shadow 0.3s ease). */}

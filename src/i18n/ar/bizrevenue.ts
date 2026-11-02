@@ -68,6 +68,7 @@ export const FILES: string[] = [
 // Store, classes and gym screens pick a whole sentence per kind rather than
 // splicing an English noun into a sentence. No health wording in this area.
 const bizrevenue: Catalogue = {
+  "Open {name}'s ratings": "فتح تقييمات {name}",
   // == Revenue: the page and shared pieces ==
   Revenue: "الإيرادات",
   "Money coming in, and from where": "الأموال الواردة ومصدرها",

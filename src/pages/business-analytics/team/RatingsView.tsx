@@ -130,7 +130,7 @@ export function RatingsView({
             {rows.length > 0 && <div className="an5-divider" />}
             <div>
               {rows.map((p) => (
-                <button key={p.id} type="button" className="an5-barrow tap" aria-label={`Open ${p.name}'s ratings`} onClick={() => onCard(p.id)}>
+                <button key={p.id} type="button" className="an5-barrow tap" aria-label={t("Open {name}'s ratings", { name: p.name })} onClick={() => onCard(p.id)}>
                   <Avatar name={p.name} seat={p.seat} />
                   <span className="min-w-0 block">
                     <span className="an5-barrow-head">

@@ -50,6 +50,8 @@ export const FILES: string[] = [
 // «منشور»); "wk" in "vs last wk" is written out «الأسبوع الماضي». {who} and
 // {what} are a person's label and a class, plan or product name (data).
 const business: Catalogue = {
+  "From Analytics": "من التحليلات",
+  "From Dashboard": "من لوحة التحكم",
   // == Console access (components/business-console) ==
   "Couldn't check your access": "تعذّر التحقق من صلاحياتك",
   "You don't have access to this": "ليست لديك صلاحية الوصول إلى هذا",
