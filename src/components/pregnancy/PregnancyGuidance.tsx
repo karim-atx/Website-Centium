@@ -12,6 +12,7 @@ import {
 } from "../../services/pregnancy/weight";
 import * as G from "../../services/pregnancy/guidance";
 import { PREGNANCY_COLOR } from "./PregnancyRing";
+import { t } from "../../i18n/core";
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PREGNANCY_CHECKS_COPY, pregnancyChecksDone, pregnancyComingUp } from "../../services/pregnancy/checks";
@@ -34,7 +35,7 @@ const todayISO = () => {
 
 const ProviderLine: React.FC = () => (
   <p className="mt-3 text-[10px] leading-[1.45] font-semibold text-charcoal-soft">
-    {G.PROVIDER_FIRST}
+    {t(G.PROVIDER_FIRST)}
   </p>
 );
 
@@ -79,9 +80,9 @@ export const PregnancyNutritionCard: React.FC<{ pregnancy: Pregnancy }> = ({ pre
 
   return (
     <Card className="mb-3">
-      <p className="text-[13px] font-bold text-charcoal">Eating for pregnancy</p>
+      <p className="text-[13px] font-bold text-charcoal">{t("Eating for pregnancy")}</p>
       <p className="mt-0.5 text-[11px] text-charcoal-faint">
-        Week {g.week} · trimester {g.trimester}
+        {t("Week {week} · trimester {trimester}", { week: g.week, trimester: g.trimester })}
       </p>
 
       {!hideNumbers && (
@@ -98,7 +99,7 @@ export const PregnancyNutritionCard: React.FC<{ pregnancy: Pregnancy }> = ({ pre
             ) : (
               <>
                 <p className="text-[15px] font-extrabold text-charcoal tabular-nums">
-                  +{offered} kcal a day
+                  {t("+{n} kcal a day", { n: offered })}
                 </p>
                 <p className="mt-1 text-[10.5px] leading-[1.45] text-charcoal-soft">
                   {G.APPLY_TARGETS_EXPLAINER}
@@ -114,7 +115,7 @@ export const PregnancyNutritionCard: React.FC<{ pregnancy: Pregnancy }> = ({ pre
                       size="sm"
                       onClick={() => setNutritionGoal({ ...nutritionGoal, pregnancyKcal: offered })}
                     >
-                      {G.APPLY_TARGETS_CTA}
+                      {t(G.APPLY_TARGETS_CTA)}
                     </Button>
                   )}
                   {applied > 0 && (
@@ -123,7 +124,7 @@ export const PregnancyNutritionCard: React.FC<{ pregnancy: Pregnancy }> = ({ pre
                       variant="secondary"
                       onClick={() => setNutritionGoal({ ...nutritionGoal, pregnancyKcal: 0 })}
                     >
-                      {G.APPLY_TARGETS_UNDO}
+                      {t(G.APPLY_TARGETS_UNDO)}
                     </Button>
                   )}
                 </div>
@@ -133,7 +134,7 @@ export const PregnancyNutritionCard: React.FC<{ pregnancy: Pregnancy }> = ({ pre
         </>
       )}
 
-      <p className="mt-3.5 text-[11px] font-bold text-charcoal mb-1.5">Every day</p>
+      <p className="mt-3.5 text-[11px] font-bold text-charcoal mb-1.5">{t("Every day")}</p>
       <ul className="space-y-1.5">
         {G.NUTRIENTS.map((n) => (
           <li key={n.name} className="flex items-start justify-between gap-3">
@@ -150,7 +151,7 @@ export const PregnancyNutritionCard: React.FC<{ pregnancy: Pregnancy }> = ({ pre
         ))}
       </ul>
 
-      <p className="mt-3.5 text-[11px] font-bold text-charcoal mb-1.5">Limit or avoid</p>
+      <p className="mt-3.5 text-[11px] font-bold text-charcoal mb-1.5">{t("Limit or avoid")}</p>
       <Bullets items={G.NUTRITION_LIMITS} />
 
       <ProviderLine />
@@ -168,30 +169,30 @@ export const PregnancyWorkoutCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregn
 
   return (
     <Card className="mb-3">
-      <p className="text-[13px] font-bold text-charcoal">Moving in pregnancy</p>
+      <p className="text-[13px] font-bold text-charcoal">{t("Moving in pregnancy")}</p>
       <p className="mt-0.5 text-[11px] text-charcoal-faint">
-        Week {g.week} · trimester {g.trimester}
+        {t("Week {week} · trimester {trimester}", { week: g.week, trimester: g.trimester })}
       </p>
 
       <p className="mt-2.5 text-[14px] font-extrabold text-charcoal">{G.EXERCISE_HEADLINE}</p>
       <p className="mt-1.5 text-[11.5px] leading-relaxed text-charcoal-soft">{G.TALK_TEST}</p>
 
-      <p className="mt-3.5 text-[11px] font-bold text-charcoal mb-1.5">Good choices</p>
+      <p className="mt-3.5 text-[11px] font-bold text-charcoal mb-1.5">{t("Good choices")}</p>
       <Bullets items={G.EXERCISE_GOOD} />
 
       <p className="mt-3 text-[11px] font-bold text-charcoal mb-1.5">
-        If they were already part of your routine
+        {t("If they were already part of your routine")}
       </p>
       <Bullets items={G.EXERCISE_IF_ALREADY} />
       <p className="mt-1 text-[10.5px] leading-[1.45] text-charcoal-faint">
         {G.EXERCISE_IF_ALREADY_NOTE}
       </p>
 
-      <p className="mt-3 text-[11px] font-bold text-charcoal mb-1.5">Avoid</p>
+      <p className="mt-3 text-[11px] font-bold text-charcoal mb-1.5">{t("Avoid")}</p>
       <Bullets items={G.EXERCISE_AVOID} />
 
       <div className="mt-3.5 rounded-xl bg-status-high-bg px-3.5 py-3">
-        <p className="text-[11.5px] font-bold text-charcoal mb-1.5">{G.EXERCISE_STOP_TITLE}</p>
+        <p className="text-[11.5px] font-bold text-charcoal mb-1.5">{t(G.EXERCISE_STOP_TITLE)}</p>
         <Bullets items={G.EXERCISE_STOP_SIGNS} color="rgb(var(--c-status-high))" />
       </div>
 
@@ -243,15 +244,15 @@ export const PregnancyHealthCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregna
 
   return (
     <Card className="mb-3">
-      <p className="text-[13px] font-bold text-charcoal">Pregnancy health</p>
+      <p className="text-[13px] font-bold text-charcoal">{t("Pregnancy health")}</p>
       <p className="mt-0.5 text-[11px] text-charcoal-faint">
-        Week {g.week} · trimester {g.trimester}
+        {t("Week {week} · trimester {trimester}", { week: g.week, trimester: g.trimester })}
       </p>
 
       {/* --- weight gain --- */}
       {hideNumbers ? null : (
         <>
-          <p className="mt-3 text-[11px] font-bold text-charcoal mb-1.5">Weight gain</p>
+          <p className="mt-3 text-[11px] font-bold text-charcoal mb-1.5">{t("Weight gain")}</p>
           {!range || !expected ? (
             <p className="text-[11.5px] leading-relaxed text-charcoal-soft">
               {G.WEIGHT_GAIN_NEEDS_DATA}
@@ -259,31 +260,35 @@ export const PregnancyHealthCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregna
           ) : (
             <>
               <p className="text-[11.5px] text-charcoal-soft">
-                Pre-pregnancy BMI {range.bmi} ({range.range.label}) · {range.minKg}–{range.maxKg} kg
-                recommended in total
+                {t("Pre-pregnancy BMI {bmi} ({band}) · {min}–{max} kg recommended in total", {
+                  bmi: range.bmi,
+                  band: range.range.label,
+                  min: range.minKg,
+                  max: range.maxKg,
+                })}
               </p>
               <div className="mt-2 rounded-xl bg-cream-soft px-3.5 py-3">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-[10.5px] text-charcoal-faint">Expected by week {g.week}</span>
+                  <span className="text-[10.5px] text-charcoal-faint">{t("Expected by week {n}", { n: g.week })}</span>
                   <span className="text-[11.5px] font-bold text-charcoal tabular-nums">
-                    {expected.minKg}–{expected.maxKg} kg
+                    <bdi>{t("{min}–{max} kg", { min: expected.minKg, max: expected.maxKg })}</bdi>
                   </span>
                 </div>
                 <div className="mt-1.5 flex items-baseline justify-between">
-                  <span className="text-[10.5px] text-charcoal-faint">So far</span>
+                  <span className="text-[10.5px] text-charcoal-faint">{t("So far")}</span>
                   {/* A DASH, NOT A ZERO, when there is no current weight — an
                       unlogged weight is not a gain of nothing. */}
                   <span className="text-[11.5px] font-bold text-charcoal tabular-nums">
-                    {actual !== null ? `${actual > 0 ? "+" : ""}${actual} kg` : "–"}
+                    {actual !== null ? <bdi>{t("{n} kg", { n: `${actual > 0 ? "+" : ""}${actual}` })}</bdi> : "–"}
                   </span>
                 </div>
                 {verdict && (
                   <p className="mt-1.5 text-[10.5px] text-charcoal-soft">
                     {verdict === "within"
-                      ? "Within the expected range for this week."
+                      ? t("Within the expected range for this week.")
                       : verdict === "below"
-                        ? "Below the expected range for this week."
-                        : "Above the expected range for this week."}
+                        ? t("Below the expected range for this week.")
+                        : t("Above the expected range for this week.")}
                   </p>
                 )}
               </div>
@@ -296,7 +301,7 @@ export const PregnancyHealthCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregna
       )}
 
       {/* --- appointments --- */}
-      <p className="mt-3.5 text-[11px] font-bold text-charcoal mb-1.5">Coming up</p>
+      <p className="mt-3.5 text-[11px] font-bold text-charcoal mb-1.5">{t("Coming up")}</p>
       <Bullets
         items={[...(next ? [PREGNANCY_CHECKS_COPY.comingUp(next.weekLabel, next.short)] : []), G.VACCINES]}
       />
@@ -305,7 +310,7 @@ export const PregnancyHealthCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregna
         className="tap mt-1.5 flex items-center gap-1 min-h-[44px] text-[11.5px] font-semibold text-primary-dark"
       >
         {PREGNANCY_CHECKS_COPY.heading}
-        <ChevronRight size={13} aria-hidden />
+        <ChevronRight size={13} aria-hidden className="rtl:-scale-x-100" />
       </button>
 
       {/* --- the urgent signs --- */}
@@ -316,9 +321,9 @@ export const PregnancyHealthCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregna
           className="tap w-full flex items-center gap-2 text-start"
         >
           <AlertTriangle size={14} className="text-status-high shrink-0" />
-          <span className="flex-1 text-[11.5px] font-bold text-charcoal">{G.URGENT_TITLE}</span>
+          <span className="flex-1 text-[11.5px] font-bold text-charcoal">{t(G.URGENT_TITLE)}</span>
           <span className="text-[11px] font-semibold text-charcoal-faint">
-            {signsOpen ? "Hide" : "Show"}
+            {signsOpen ? t("Hide") : t("Show")}
           </span>
         </button>
         {signsOpen && (

@@ -31,11 +31,16 @@
 // silently raised somebody's calorie target because a date passed would be
 // prescribing.
 
+
+import { t, tk } from "../../i18n/core";
+
+// UI labels below are marked with tk() and translated where they are shown; the
+// paragraphs stay English for clinical review (F13).
 // ---------------------------------------------------------------------------
 // The line on every pregnancy screen
 // ---------------------------------------------------------------------------
 
-export const PROVIDER_FIRST = "General guidance · your provider's advice comes first";
+export const PROVIDER_FIRST = tk("General guidance · your provider's advice comes first");
 
 export const PROVIDER_FIRST_LONG =
   "These are general figures for an uncomplicated single pregnancy. Your midwife, " +
@@ -93,8 +98,8 @@ export const ENERGY_EXPLAINER =
   "Most people need no extra energy in the first trimester, about 340 kcal a day more " +
   "in the second, and about 450 in the third.";
 
-export const APPLY_TARGETS_CTA = "Apply to my targets";
-export const APPLY_TARGETS_UNDO = "Remove from my targets";
+export const APPLY_TARGETS_CTA = tk("Apply to my targets");
+export const APPLY_TARGETS_UNDO = tk("Remove from my targets");
 
 /**
  * Shown beside the button, both before and after.
@@ -108,7 +113,7 @@ export const APPLY_TARGETS_EXPLAINER =
   "and you can take it off again at any time.";
 
 export const APPLY_TARGETS_APPLIED = (kcal: number) =>
-  `Applied · +${kcal} kcal a day is included in your target.`;
+  t("Applied · +{kcal} kcal a day is included in your target.", { kcal });
 
 export const APPLY_TARGETS_FIRST_TRIMESTER =
   "No extra energy is recommended in the first trimester, so there is nothing to apply yet.";
@@ -161,7 +166,7 @@ export const EXERCISE_STOP_SIGNS: readonly string[] = [
   "Calf pain or swelling",
 ];
 
-export const EXERCISE_STOP_TITLE = "Stop exercising and contact your provider if you have";
+export const EXERCISE_STOP_TITLE = tk("Stop exercising and contact your provider if you have");
 
 // ---------------------------------------------------------------------------
 // Health — ACOG, CDC
@@ -254,7 +259,7 @@ export const URGENT_SIGNS: readonly string[] = [
   "Thoughts of harming yourself or your baby",
 ];
 
-export const URGENT_TITLE = "Get help right away if you have";
+export const URGENT_TITLE = tk("Get help right away if you have");
 export const URGENT_ACTION =
   "Contact your provider now; if you can't, go to emergency care.";
 
@@ -275,7 +280,7 @@ export const URGENT_ACTION =
 export const KICKS_FROM_WEEK = 24;
 export const CONTRACTIONS_FROM_WEEK = 28;
 
-export const KICKS_TITLE = "Movements";
+export const KICKS_TITLE = tk("Movements");
 export const KICKS_EXPLAINER =
   "Counting movements is a way of getting to know what's usual for your baby. What " +
   "matters most is a change from their normal pattern.";
@@ -284,7 +289,7 @@ export const KICKS_CHANGE_NOTE =
   "If your baby's movements slow down or stop, contact your provider straight away. " +
   "Don't wait for a count to finish.";
 
-export const CONTRACTIONS_TITLE = "Contractions";
+export const CONTRACTIONS_TITLE = tk("Contractions");
 export const CONTRACTIONS_EXPLAINER =
   "Time from the start of one contraction to the start of the next. Bring these " +
   "numbers to your provider. When to go in depends on your pregnancy.";
@@ -297,27 +302,27 @@ export const CONTRACTIONS_NO_RULE =
 // Starting and ending
 // ---------------------------------------------------------------------------
 
-export const START_TITLE = "Start pregnancy tracking";
+export const START_TITLE = tk("Start pregnancy tracking");
 export const START_BODY =
   "Cycle predictions pause while this is on. You can turn it off at any time, and " +
   "nothing you've already logged is deleted.";
-export const START_FROM_LMP = "Work it out from my last period";
-export const START_FROM_DUE = "I know my due date";
+export const START_FROM_LMP = tk("Work it out from my last period");
+export const START_FROM_DUE = tk("I know my due date");
 export const DUE_DATE_HELP =
   "If a scan has changed your due date, enter the date from the scan. It's more " +
   "accurate than counting from a period.";
 /** HE1.10.b.1 labels (the board's; the field label follows the chosen way in). */
-export const START_LMP_LABEL = "First day of your last period";
-export const START_DUE_LABEL = "Due date";
-export const START_DUE_SECTION = "If you know your due date";
-export const START_CTA = "Start tracking";
+export const START_LMP_LABEL = tk("First day of your last period");
+export const START_DUE_LABEL = tk("Due date");
+export const START_DUE_SECTION = tk("If you know your due date");
+export const START_CTA = tk("Start tracking");
 /** A last period more than 42 weeks back (handover HE1.10.b.1 Error, an assumption). */
-export const START_LMP_TOO_LONG_AGO = "That date is too long ago for this pregnancy.";
+export const START_LMP_TOO_LONG_AGO = tk("That date is too long ago for this pregnancy.");
 /** HE1.10.b.1's worked-out line: "Due date: 21 June 2027" / "Last period: about 14 September 2026". */
-export const START_DERIVED_DUE = (date: string) => `Due date: ${date}`;
-export const START_DERIVED_LMP = (date: string) => `Last period: about ${date}`;
+export const START_DERIVED_DUE = (date: string) => t("Due date: {date}", { date });
+export const START_DERIVED_LMP = (date: string) => t("Last period: about {date}", { date });
 
-export const END_TITLE = "End pregnancy tracking";
+export const END_TITLE = tk("End pregnancy tracking");
 /**
  * THE THREE OUTCOMES, WORDED FLATLY.
  *
@@ -328,12 +333,12 @@ export const END_TITLE = "End pregnancy tracking";
  * database's enum lists them.
  */
 export const END_OUTCOME_LABEL: Record<"birth" | "loss" | "other", string> = {
-  birth: "My baby was born",
-  loss: "I lost my pregnancy",
-  other: "Something else",
+  birth: tk("My baby was born"),
+  loss: tk("I lost my pregnancy"),
+  other: tk("Something else"),
 };
 
-export const END_CONFIRM = "End tracking";
+export const END_CONFIRM = tk("End tracking");
 
 /**
  * After birth.
@@ -353,7 +358,7 @@ export const END_CONFIRM = "End tracking";
  */
 export const POSTPARTUM_WEEKS = 12;
 
-export const POSTPARTUM_TITLE = "After birth";
+export const POSTPARTUM_TITLE = tk("After birth");
 export const POSTPARTUM_BODY =
   "Periods can take a while to come back, and they're often irregular at first, " +
   "especially while you're breastfeeding. Estimates will be rough until a few cycles " +
@@ -367,14 +372,14 @@ export const POSTPARTUM_BODY =
  * one, on a screen they opened for another reason. The choice is theirs and
  * there is no prompt nudging either way.
  */
-export const LOSS_TITLE = "We're here when you're ready";
+export const LOSS_TITLE = tk("We're here when you're ready");
 export const LOSS_BODY =
   "Cycle predictions are paused. Turn them back on whenever you want to. There's no " +
   "rush, and nothing you've logged has been deleted.";
 export const LOSS_SUPPORT =
   "Your provider can talk you through what happens next, physically and otherwise. " +
   "Please reach out to them.";
-export const LOSS_RESUME = "Turn predictions back on";
+export const LOSS_RESUME = tk("Turn predictions back on");
 
 /**
  * HOW "PAUSED" IS ACTUALLY STORED: cycle_settings.tracker_enabled = false.
@@ -398,4 +403,4 @@ export const LOSS_PAUSE_EXPLAINER =
 /** Replaces the cycle-phase note while a pregnancy is active. */
 export const WORKOUT_STRIP_NOTE =
   "About 150 minutes a week of moderate activity, at a level where you can still talk.";
-export const WORKOUT_STRIP_LINK = "Read the guidance";
+export const WORKOUT_STRIP_LINK = tk("Read the guidance");

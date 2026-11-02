@@ -38,7 +38,10 @@ import {
   daysInMonth,
   daysOf,
   dayLabel,
+  dayWord,
   isCurrentPeriod,
+  longDate,
+  monthLong,
   monthShort,
   periodLabel,
   periodOf,
@@ -53,6 +56,7 @@ import { GoalBarChart, LegendDash, LegendDot, LegendGhost, buildGoalBars } from 
 import { SyncedNoDevice } from "../../../components/health/metric/StepsNoDevice";
 import { CaloriesHero, ESTIMATED_INCL_WORKOUTS } from "../../../components/health/metric/CaloriesHero";
 import { appLocale } from "../../../i18n/format";
+import { t, tk, tn } from "../../../i18n/core";
 
 // HE1.4 Calories burned (Week), HE1.4.d, HE1.4.m, HE1.4.y.
 //
@@ -66,7 +70,7 @@ import { appLocale } from "../../../i18n/format";
 // Source tag, freshness line and Delete on synced rows are native.
 
 const KCAL_GOAL = 2600;
-const MONTH_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
 const n = (v: number) => Math.round(v).toLocaleString(appLocale("en-GB"));
 const iconInk = { color: "rgb(var(--th-7d6bb5))" };
 
@@ -117,9 +121,9 @@ export default function CaloriesPage() {
 
   const menu = [
     hasAny
-      ? { value: "sources", label: "Sources", icon: <RefreshCw size={17} style={iconInk} />, onSelect: () => navigate("/app/settings/devices") }
-      : { value: "connect", label: "Connect a source", icon: <Link2 size={17} style={iconInk} />, onSelect: () => navigate("/app/settings/devices") },
-    { value: "date", label: "Go to date", icon: <CalendarDays size={17} style={iconInk} />, onSelect: () => setDateOpen(true) },
+      ? { value: "sources", label: t("Sources"), icon: <RefreshCw size={17} style={iconInk} />, onSelect: () => navigate("/app/settings/devices") }
+      : { value: "connect", label: t("Connect a source"), icon: <Link2 size={17} style={iconInk} />, onSelect: () => navigate("/app/settings/devices") },
+    { value: "date", label: t("Go to date"), icon: <CalendarDays size={17} style={iconInk} />, onSelect: () => setDateOpen(true) },
   ];
   const picker = (
     <CalendarPickerSheet
@@ -128,7 +132,7 @@ export default function CaloriesPage() {
       selectedDate={anchor}
       today={today}
       maxDate={today}
-      title="Go to date"
+      title={t("Go to date")}
       variant="partB"
       markers={Object.keys(byDay)}
       onSelect={(d) => {
@@ -142,17 +146,17 @@ export default function CaloriesPage() {
   // Held while the setting is still being read, so a kcal figure never flashes.
   if (hideNumbers) {
     return (
-      <MetricPage metric="calories" title="Calories burned" range={range} onRangeChange={setRange} menu={menu.filter((m) => m.value !== "date")}>
-        <MetricHero metric="calories" pattern={2} padding="16px" loading={recoveryModePending} ariaLabel="Calorie numbers hidden">
+      <MetricPage metric="calories" title={t("Calories burned")} range={range} onRangeChange={setRange} menu={menu.filter((m) => m.value !== "date")}>
+        <MetricHero metric="calories" pattern={2} padding="16px" loading={recoveryModePending} ariaLabel={t("Calorie numbers hidden")}>
           <div data-cal-recovery style={{ padding: "18px 0" }}>
-            <p style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>Calorie numbers are hidden while recovery-sensitive mode is on.</p>
+            <p style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>{t("Calorie numbers are hidden while recovery-sensitive mode is on.")}</p>
             <button
               type="button"
               onClick={() => navigate("/app/profile")}
               className="tap relative before:absolute before:-inset-y-[13px] before:-inset-x-1 before:content-['']"
               style={{ marginTop: 8, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: metricTextInk("calories", dark) }}
             >
-              Change in Profile
+              {t("Change in Profile")}
             </button>
           </div>
         </MetricHero>
@@ -164,16 +168,16 @@ export default function CaloriesPage() {
     return (
       <MetricPage
         metric="calories"
-        title="Calories burned"
+        title={t("Calories burned")}
         range={range}
         onRangeChange={setRange}
         menu={menu}
-        cta={{ label: "Connect a source", icon: <Link2 size={16} />, onClick: () => navigate("/app/settings/devices") }}
+        cta={{ label: t("Connect a source"), icon: <Link2 size={16} />, onClick: () => navigate("/app/settings/devices") }}
       >
         {metricsError ? (
           <ErrorCard onRetry={retryMetrics} />
         ) : (
-          <SyncedNoDevice metric="calories" icon={Flame} bodyName="Calories burned" footName="calories" range={range} today={today} />
+          <SyncedNoDevice metric="calories" icon={Flame} bodyName={tk("Calories burned")} footName="calories" range={range} today={today} />
         )}
         {picker}
       </MetricPage>
@@ -187,18 +191,27 @@ export default function CaloriesPage() {
     return mean ?? 0;
   })();
   const reached = heroValue >= goal;
-  const sub = range === "month" ? `avg a day in ${MONTH_LONG[Number(p.start.slice(5, 7)) - 1]}` : range === "year" ? `avg a day in ${p.start.slice(0, 4)}` : `of ${n(goal)} kcal`;
+  const sub =
+    range === "month"
+      ? t("avg a day in {month}", { month: monthLong(Number(p.start.slice(5, 7))) })
+      : range === "year"
+        ? t("avg a day in {year}", { year: p.start.slice(0, 4) })
+        : t("of {n} kcal", { n: n(goal) });
   // HE1.4.m hero pill: the month counts days at goal ("4 days at goal"); the other ranges show the share of the goal.
   const daysAtGoal = rows.filter((r) => r.value >= goal).length;
   const pills = [
-    range === "month" ? `${daysAtGoal} ${daysAtGoal === 1 ? "day" : "days"} at goal` : reached ? "Goal reached" : `${Math.round((heroValue / goal) * 100)}% of goal`,
-    ESTIMATED_INCL_WORKOUTS,
+    range === "month"
+      ? tn(daysAtGoal, "{n} day at goal", "{n} days at goal")
+      : reached
+        ? t("Goal reached")
+        : t("{pct}% of goal", { pct: Math.round((heroValue / goal) * 100) }),
+    t(ESTIMATED_INCL_WORKOUTS),
   ];
   // HE1.4 / HE1.4.d hero: the workouts share of the day and its legend (B1 workout_sessions.kcal).
   const workoutKcal = workouts.reduce((a, w) => a + w.kcal, 0);
   const heroWorkouts =
     (range === "day" || range === "week") && workoutKcal > 0 && heroValue > 0
-      ? { pct: workoutKcal / goal, workoutsLabel: `Workouts ${n(workoutKcal)}`, restLabel: `Rest of day ${n(Math.max(0, heroValue - workoutKcal))}` }
+      ? { pct: workoutKcal / goal, workoutsLabel: t("Workouts {n}", { n: n(workoutKcal) }), restLabel: t("Rest of day {n}", { n: n(Math.max(0, heroValue - workoutKcal)) }) }
       : null;
 
   // ---- tiles ----------------------------------------------------------------
@@ -209,16 +222,16 @@ export default function CaloriesPage() {
       const wa = avg(wr.map((r) => r.value));
       const la = avg(valuesIn(byDay, previousPeriod(wk)).map((r) => r.value));
       return [
-        { icon: Activity, value: wa === null ? <StatEmpty /> : `${n(wa)} kcal`, label: `Week avg · ${wr.length} ${wr.length === 1 ? "day" : "days"} logged` },
-        { icon: History, value: la === null ? <StatEmpty /> : `${n(la)} kcal`, label: "Last week avg" },
+        { icon: Activity, value: wa === null ? <StatEmpty /> : t("{n} kcal", { n: n(wa) }), label: tn(wr.length, "Week avg · {n} day logged", "Week avg · {n} days logged") },
+        { icon: History, value: la === null ? <StatEmpty /> : t("{n} kcal", { n: n(la) }), label: t("Last week avg") },
       ];
     }
     if (range === "month") {
       const k = rows.filter((r) => r.value >= goal).length;
       const b = best(rows);
       return [
-        { icon: Target, value: empty ? <StatEmpty /> : `${k} ${k === 1 ? "day" : "days"}`, label: `At goal in ${MONTH_LONG[Number(p.start.slice(5, 7)) - 1]}` },
-        { icon: Award, value: b ? `${n(b.value)} kcal` : <StatEmpty />, label: b ? `Best day · ${shortDate(b.date)}` : "Best day" },
+        { icon: Target, value: empty ? <StatEmpty /> : tn(k, "{n} day", "{n} days"), label: t("At goal in {month}", { month: monthLong(Number(p.start.slice(5, 7))) }) },
+        { icon: Award, value: b ? t("{n} kcal", { n: n(b.value) }) : <StatEmpty />, label: b ? t("Best day · {date}", { date: shortDate(b.date) }) : t("Best day") },
       ];
     }
     const monthAvgs = Array.from({ length: 12 }, (_, i) => avg(rows.filter((r) => Number(r.date.slice(5, 7)) === i + 1).map((r) => r.value)));
@@ -228,25 +241,29 @@ export default function CaloriesPage() {
     });
     const total = rows.reduce((s, r) => s + r.value, 0);
     return [
-      { icon: Award, value: bi < 0 ? <StatEmpty /> : `${n(monthAvgs[bi] as number)} kcal`, label: bi < 0 ? "Best month" : `Best month · ${MONTH_LONG[bi]}` },
-      { icon: Sigma, value: n(total), label: `kcal in ${p.start.slice(0, 4)}` },
+      { icon: Award, value: bi < 0 ? <StatEmpty /> : t("{n} kcal", { n: n(monthAvgs[bi] as number) }), label: bi < 0 ? t("Best month") : t("Best month · {month}", { month: monthLong(bi + 1) }) },
+      { icon: Sigma, value: n(total), label: t("kcal in {year}", { year: p.start.slice(0, 4) }) },
     ];
   })();
 
   // ---- chart --------------------------------------------------------------
   const ink = mc("calories", "ink");
-  const chartTitle = current ? periodTitle(p, today) : range === "month" ? MONTH_LONG[Number(p.start.slice(5, 7)) - 1] : periodLabel(p);
+  const chartTitle = current ? periodTitle(p, today) : range === "month" ? monthLong(Number(p.start.slice(5, 7))) : periodLabel(p);
   let foot: string | undefined;
   let summary = "";
   let legend: { label: string; swatch: React.ReactNode }[] = [];
   if (range === "week") {
     const ahead = daysOf(p).filter((d) => d > today).length;
-    foot = empty ? "No calories synced this week" : undefined;
-    summary = `Calories burned ${current ? "this week" : `in ${periodLabel(p)}`}. ${empty ? "Nothing synced." : rows.map((r) => `${dayLabel(r.date).split(" ")[0]} ${n(r.value)} of ${n(goal)}`).join(", ") + "."}${ahead ? ` ${ahead} ${ahead === 1 ? "day" : "days"} ahead.` : ""}`;
+    foot = empty ? t("No calories synced this week") : undefined;
+    summary = [
+      current ? t("Calories burned this week.") : t("Calories burned in {period}.", { period: periodLabel(p) }),
+      empty ? t("Nothing synced.") : rows.map((r) => t("{day} {n} of {goal}", { day: dayWord(r.date), n: n(r.value), goal: n(goal) })).join(", ") + ".",
+      ...(ahead ? [tn(ahead, "{n} day ahead.", "{n} days ahead.")] : []),
+    ].join(" ");
     legend = [
-      { label: "Burned", swatch: <LegendDot color={mc("calories", "main")} /> },
-      { label: "Days ahead", swatch: <LegendGhost /> },
-      { label: "Goal", swatch: <LegendDash color={ink} /> },
+      { label: t("Burned"), swatch: <LegendDot color={mc("calories", "main")} /> },
+      { label: t("Days ahead"), swatch: <LegendGhost /> },
+      { label: t("Goal"), swatch: <LegendDash color={ink} /> },
     ];
   } else if (range === "month") {
     const y = Number(p.start.slice(0, 4));
@@ -256,14 +273,21 @@ export default function CaloriesPage() {
     const b = best(rows);
     const mw = monthWorkouts.reduce((a, w) => a + w.kcal, 0);
     foot = empty
-      ? "No calories synced this month"
-      : `${rows.length} of ${span} days logged${monthWorkouts.length ? ` · workouts ${monthWorkouts.length} ${monthWorkouts.length === 1 ? "session" : "sessions"}, ${n(mw)} kcal` : ""}`;
-    summary = empty
-      ? `Calories burned in ${MONTH_LONG[m - 1]}. Nothing synced.`
-      : `Calories burned in ${MONTH_LONG[m - 1]}. Average ${n(mean ?? 0)} a day. Goal reached on ${k} ${k === 1 ? "day" : "days"}. Best day ${MONTH_LONG[m - 1]} ${Number(b!.date.slice(8))}, ${n(b!.value)}.`;
+      ? t("No calories synced this month")
+      : `${t("{n} of {span} days logged", { n: rows.length, span })}${monthWorkouts.length ? ` · ${tn(monthWorkouts.length, "workouts {n} session, {kcal} kcal", "workouts {n} sessions, {kcal} kcal", { kcal: n(mw) })}` : ""}`;
+    summary = (
+      empty
+        ? [t("Calories burned in {month}.", { month: monthLong(m) }), t("Nothing synced.")]
+        : [
+            t("Calories burned in {month}.", { month: monthLong(m) }),
+            t("Average {n} a day.", { n: n(mean ?? 0) }),
+            tn(k, "Goal reached on {n} day.", "Goal reached on {n} days."),
+            t("Best day {date}, {n}.", { date: longDate(b!.date), n: n(b!.value) }),
+          ]
+    ).join(" ");
     legend = [
-      { label: "Burned a day", swatch: <LegendDot color={mc("calories", "main", 0.75)} /> },
-      { label: "Goal", swatch: <LegendDash color={ink} /> },
+      { label: t("Burned a day"), swatch: <LegendDot color={mc("calories", "main", 0.75)} /> },
+      { label: t("Goal"), swatch: <LegendDash color={ink} /> },
     ];
   } else if (range === "year") {
     const y = Number(p.start.slice(0, 4));
@@ -271,13 +295,17 @@ export default function CaloriesPage() {
     const curM = Number(today.slice(5, 7));
     const total = rows.reduce((s, r) => s + r.value, 0);
     foot = empty
-      ? "No calories synced this year"
-      : `${months.length === 1 ? monthShort(months[0]) : `${monthShort(months[0])} to ${monthShort(months[months.length - 1])}`}${current && months.includes(curM) ? ` · ${MONTH_LONG[curM - 1]} so far` : ""}`;
-    summary = empty ? `Calories burned in ${y}. Nothing synced.` : `Calories burned in ${y}. Average ${n(mean ?? 0)} a day. ${n(total)} so far.`;
+      ? t("No calories synced this year")
+      : `${months.length === 1 ? monthShort(months[0]) : t("{start} to {end}", { start: monthShort(months[0]), end: monthShort(months[months.length - 1]) })}${current && months.includes(curM) ? ` · ${t("{month} so far", { month: monthLong(curM) })}` : ""}`;
+    summary = (
+      empty
+        ? [t("Calories burned in {year}.", { year: y }), t("Nothing synced.")]
+        : [t("Calories burned in {year}.", { year: y }), t("Average {n} a day.", { n: n(mean ?? 0) }), t("{n} so far.", { n: n(total) })]
+    ).join(" ");
     legend = [
-      { label: "Average a day", swatch: <LegendDot color={mc("calories", "main")} /> },
-      { label: "Months ahead", swatch: <LegendGhost /> },
-      { label: "Goal", swatch: <LegendDash color={ink} /> },
+      { label: t("Average a day"), swatch: <LegendDot color={mc("calories", "main")} /> },
+      { label: t("Months ahead"), swatch: <LegendGhost /> },
+      { label: t("Goal"), swatch: <LegendDash color={ink} /> },
     ];
   }
 
@@ -292,16 +320,16 @@ export default function CaloriesPage() {
       return {
         key: d,
         title: rel,
-        meta: [rel === dayLabel(d) ? "Day total" : dayLabel(d), syncedRemove.sourceOf(d) === "Logged by you" ? null : syncedRemove.sourceOf(d)].filter(Boolean).join(" · "),
+        meta: [rel === dayLabel(d) ? t("Day total") : dayLabel(d), syncedRemove.sourceOf(d) === t("Logged by you") ? null : syncedRemove.sourceOf(d)].filter(Boolean).join(" · "),
         value: n(byDay[d]),
-        sub: "kcal",
+        sub: t("kcal"),
         onClick: () => openDay(d),
         onDelete: syncedRemove.onDelete(d),
       };
     });
 
   return (
-    <MetricPage sourceTag={metricSource.tag} onSourceTag={() => navigate("/app/settings/devices")} metric="calories" title="Calories burned" range={range} onRangeChange={setRange} menu={menu}>
+    <MetricPage sourceTag={metricSource.tag} onSourceTag={() => navigate("/app/settings/devices")} metric="calories" title={t("Calories burned")} range={range} onRangeChange={setRange} menu={menu}>
       <CaloriesHero
         pct={heroValue / goal}
         value={n(heroValue)}
@@ -310,9 +338,9 @@ export default function CaloriesPage() {
         pills={pills}
         workouts={heroWorkouts}
         loading={loading}
-        ariaLabel={`${n(heroValue)} kcal ${range === "month" || range === "year" ? sub : `of ${n(goal)}`}. ${pills.join(". ")}${heroWorkouts ? `. ${heroWorkouts.workoutsLabel}. ${heroWorkouts.restLabel}` : ""}`}
+        ariaLabel={`${range === "month" || range === "year" ? t("{n} kcal {sub}", { n: n(heroValue), sub }) : t("{n} kcal of {goal}", { n: n(heroValue), goal: n(goal) })}. ${pills.join(". ")}${heroWorkouts ? `. ${heroWorkouts.workoutsLabel}. ${heroWorkouts.restLabel}` : ""}`}
       />
-      {!online && <FreshnessLine offline>{OFFLINE_CACHED}</FreshnessLine>}
+      {!online && <FreshnessLine offline>{t(OFFLINE_CACHED)}</FreshnessLine>}
       {metricSource.freshness}
       {(range === "day" || range === "week") && (
         <FromWorkoutsCard sessions={workouts} dayTotal={byDay[workoutDay] ?? 0} onOpen={() => navigate("/app/workout?tab=history")} />
@@ -320,18 +348,18 @@ export default function CaloriesPage() {
       {range === "day" && hourly.some((h) => h.kcal !== null) && (
         <ChartCard
           metric="calories"
-          title={anchor === today ? "Today by hour" : `${dayLabel(anchor)} by hour`}
+          title={anchor === today ? t("Today by hour") : t("{day} by hour", { day: dayLabel(anchor) })}
           periodLabel={periodLabel(p)}
           onPrev={() => setAnchor(stepAnchor(range, anchor, -1))}
           onNext={() => setAnchor(stepAnchor(range, anchor, 1))}
           nextDisabled={current}
-          summary={`Calories burned by hour, ${dayLabel(anchor)}.`}
+          summary={t("Calories burned by hour, {day}.", { day: dayLabel(anchor) })}
         >
           <HourlyBars
             metric="calories"
             values={Array.from({ length: 24 }, (_, h) => hourly.find((x) => x.hour === h)?.kcal ?? null)}
             nowHour={anchor === today ? new Date().getHours() : null}
-            label={(h, v) => `${hourLabel12(h)}, ${v === null ? "nothing synced" : `${n(v)} kcal`}`}
+            label={(h, v) => (v === null ? t("{hour}, nothing synced", { hour: hourLabel12(h) }) : t("{hour}, {n} kcal", { hour: hourLabel12(h), n: n(v) }))}
           />
         </ChartCard>
       )}
@@ -356,18 +384,18 @@ export default function CaloriesPage() {
               mode={range}
               bars={buildGoalBars(p, byDay, today)}
               goal={goal}
-              goalLabel={`Goal ${n(goal)}`}
+              goalLabel={t("Goal {n}", { n: n(goal) })}
               onBarTap={range === "month" ? openDay : undefined}
-              barLabel={(b) => (b.value === null ? `${b.key}, nothing synced` : `${b.key}, ${n(b.value)} kcal`)}
+              barLabel={(b) => (b.value === null ? t("{date}, nothing synced", { date: b.key }) : t("{date}, {n} kcal", { date: b.key, n: n(b.value) }))}
             />
           </ChartCard>
         ))}
       <StatCard metric="calories" stats={stats} valueSize={17} style={{ marginTop: 10 }} />
-      <CapsLabel>History</CapsLabel>
-      <HistoryCard metric="calories" icon={Flame} items={items} loading={loading} empty="No calories synced yet" />
+      <CapsLabel>{t("History")}</CapsLabel>
+      <HistoryCard metric="calories" icon={Flame} items={items} loading={loading} empty={t("No calories synced yet")} />
       {picker}
       {syncedRemove.popup}
-      <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+      <Toast open={!!toast} message={toast ? t(toast) : ""} onExpire={() => setToast(null)} />
     </MetricPage>
   );
 }

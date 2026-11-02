@@ -24,6 +24,7 @@ import {
   useCycleMode,
 } from "../../components/cycle/cycleUi";
 import { appLocale } from "../../i18n/format";
+import { getLanguage, t, tx } from "../../i18n/core";
 
 // HE1.10.b.2, the contraception tracker, in the open Settings layout.
 //
@@ -57,6 +58,7 @@ const METHOD_ICON = (m: Method): LucideIcon =>
 /** "Sep 25, 2026". */
 const shortDate = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
+  if (getLanguage() === "ar") return d.toLocaleDateString(appLocale(), { month: "short", day: "numeric", year: "numeric" });
   return `${d.toLocaleDateString(appLocale("en-US"), { month: "short" })} ${d.getDate()}, ${d.getFullYear()}`;
 };
 /** "Mon, Oct 5". */
@@ -105,7 +107,7 @@ export default function Contraception() {
 
   const header = (
     <FixedHeader paddingBottom={10}>
-      <CycleTitleRow title={G.PAGE_TITLE} onBack={back} sub />
+      <CycleTitleRow title={t(G.PAGE_TITLE)} onBack={back} sub />
     </FixedHeader>
   );
 
@@ -114,7 +116,7 @@ export default function Contraception() {
       {header}
       {children}
       <MethodSetupSheet open={setupOpen} onClose={() => setSetupOpen(false)} plan={plan ?? null} onSaved={planChanged} />
-      <Toast open={toast !== null} message={toast ?? ""} onExpire={() => setToast(null)} />
+      <Toast open={toast !== null} message={toast ? t(toast) : ""} onExpire={() => setToast(null)} />
     </div>
   );
 
@@ -122,8 +124,8 @@ export default function Contraception() {
   if (contraceptionPlanLoaded && !plan) {
     return page(
       <>
-        <CycleSection label={G.YOUR_METHOD} style={{ marginTop: 8.5 }}>
-          <CycleRow icon={Pill} title={G.SETUP_TITLE} subtitle={G.SETUP_BODY} onClick={() => setSetupOpen(true)} last />
+        <CycleSection label={t(G.YOUR_METHOD)} style={{ marginTop: 8.5 }}>
+          <CycleRow icon={Pill} title={t(G.SETUP_TITLE)} subtitle={G.SETUP_BODY} onClick={() => setSetupOpen(true)} last />
         </CycleSection>
         <p className="text-center text-charcoal-faint" style={type(10.5, 15.8, 400, { marginTop: 12 })}>
           {G.NOT_A_PRESCRIBER}
@@ -135,7 +137,7 @@ export default function Contraception() {
   // --- loading (O1): the grid as skeletons -----------------------------------
   if (!plan) {
     return page(
-      <div aria-busy="true" aria-label="Loading" style={{ marginTop: 20 }}>
+      <div aria-busy="true" aria-label={t("Loading")} style={{ marginTop: 20 }}>
         <Skeleton width="60%" height={14} />
         <div className="grid" style={{ gridTemplateColumns: "repeat(7, 1fr)", rowGap: 8, marginTop: 20 }}>
           {Array.from({ length: 28 }, (_, i) => (
@@ -151,7 +153,7 @@ export default function Contraception() {
   // THE FUNCTION'S ANSWER, LABEL AND ALL: no second opinion is computed.
   const next = contraceptionStatus?.nextEventOn
     ? {
-        label: G.NEXT_KIND_LABEL[contraceptionStatus.nextEventKind ?? ""] ?? G.NEXT_TITLE,
+        label: t(G.NEXT_KIND_LABEL[contraceptionStatus.nextEventKind ?? ""] ?? G.NEXT_TITLE),
         date: contraceptionStatus.nextEventOn,
         daysUntil: contraceptionStatus.daysUntil ?? 0,
       }
@@ -162,10 +164,10 @@ export default function Contraception() {
 
   return page(
     <>
-      <CycleSection label={G.YOUR_METHOD} style={{ marginTop: 8.5 }}>
+      <CycleSection label={t(G.YOUR_METHOD)} style={{ marginTop: 8.5 }}>
         <CycleRow
           icon={METHOD_ICON(plan.method)}
-          title={G.METHOD_LABEL[plan.method]}
+          title={t(G.METHOD_LABEL[plan.method])}
           subtitle={G.STARTED_ON(shortDate(plan.startedOn))}
           trailing={
             <button
@@ -174,7 +176,7 @@ export default function Contraception() {
               className="tap shrink-0 text-primary-dark text-end"
               style={{ maxWidth: 101, minHeight: 44, ...type(13, 19.5, 700) }}
             >
-              {G.CHANGE_METHOD}
+              {t(G.CHANGE_METHOD)}
             </button>
           }
           last
@@ -184,7 +186,7 @@ export default function Contraception() {
       {/* --- the pill --------------------------------------------------- */}
       {isPill(plan.method) && (
         <>
-          <CycleSection label={G.PACK_TITLE} style={{ marginTop: 32 }}>
+          <CycleSection label={t(G.PACK_TITLE)} style={{ marginTop: 32 }}>
             <div style={{ marginTop: 8 }}>
               <PillPack
                 plan={plan}
@@ -195,18 +197,18 @@ export default function Contraception() {
                 onSelectDay={(d) => setLogDay(d === logDay ? today : d)}
               />
             </div>
-            <CycleHelp style={{ marginTop: 2 }}>{G.PACK_LEGEND}</CycleHelp>
+            <CycleHelp style={{ marginTop: 2 }}>{t(G.PACK_LEGEND)}</CycleHelp>
           </CycleSection>
 
-          <CycleSection label={logDay === today ? G.TODAY_TITLE : dayLabel(logDay)} style={{ marginTop: 32 }}>
+          <CycleSection label={logDay === today ? t(G.TODAY_TITLE) : dayLabel(logDay)} style={{ marginTop: 32 }}>
             <div className="flex items-center" style={{ gap: 8, marginTop: 12 }}>
               <p className="flex-1 min-w-0 text-charcoal-soft" style={type(13.5, 20.3, 400)}>
-                {!pillOnDay ? G.TODAY_UNLOGGED : null}
+                {!pillOnDay ? t(G.TODAY_UNLOGGED) : null}
               </p>
-              <div className="flex shrink-0" role="radiogroup" aria-label={logDay === today ? G.TODAY_TITLE : dayLabel(logDay)} style={{ gap: 6 }}>
+              <div className="flex shrink-0" role="radiogroup" aria-label={logDay === today ? t(G.TODAY_TITLE) : dayLabel(logDay)} style={{ gap: 6 }}>
                 {PILL_CHOICES.map((e) => (
                   <OptionButton key={e} role="radio" size="sheet" selected={pillOnDay?.event === e} disabled={busy} onClick={() => void log(e)} style={{ minHeight: 34 }}>
-                    {G.EVENT_LABEL[e]}
+                    {tx(G.EVENT_LABEL[e], "contraception")}
                   </OptionButton>
                 ))}
               </div>
@@ -215,7 +217,7 @@ export default function Contraception() {
             {(pillOnDay?.event === "pill_missed" || pillOnDay?.event === "pill_late") && (
               <div style={{ marginTop: 16, padding: "12px 14px", borderRadius: 14, background: dark ? "rgb(169 145 254 / 0.12)" : "rgb(var(--c-fill-pinned) / 0.12)" }}>
                 <p className="text-charcoal" style={type(13, 19.5, 700)}>
-                  {G.MISSED_PILL_TITLE}
+                  {t(G.MISSED_PILL_TITLE)}
                 </p>
                 <p className="text-charcoal-soft" style={type(12, 18, 400, { marginTop: 2 })}>
                   {G.MISSED_PILL_BODY}
@@ -228,12 +230,12 @@ export default function Contraception() {
 
       {/* --- everything with a next date (K1) ----------------------------- */}
       {next && (
-        <CycleSection label={G.NEXT_TITLE} style={{ marginTop: 32 }}>
+        <CycleSection label={t(G.NEXT_TITLE)} style={{ marginTop: 32 }}>
           <CycleRow
             icon={CalendarClock}
             title={next.label}
             subtitle={`${dayLabel(next.date)} ${new Date(`${next.date}T00:00:00`).getFullYear()} · ${
-              next.daysUntil === 0 ? G.NEXT_TODAY : next.daysUntil < 0 ? G.NEXT_OVERDUE(Math.abs(next.daysUntil)) : G.NEXT_IN(next.daysUntil)
+              next.daysUntil === 0 ? t(G.NEXT_TODAY) : next.daysUntil < 0 ? G.NEXT_OVERDUE(Math.abs(next.daysUntil)) : G.NEXT_IN(next.daysUntil)
             }`}
             last
           />
@@ -242,7 +244,7 @@ export default function Contraception() {
             <div className="flex flex-wrap" style={{ gap: 6, marginTop: 10 }}>
               {eventsFor(plan.method).map((e) => (
                 <OptionButton key={e} size="sheet" selected={false} disabled={busy} onClick={() => void log(e)}>
-                  {G.EVENT_LABEL[e]}
+                  {tx(G.EVENT_LABEL[e], "contraception")}
                 </OptionButton>
               ))}
             </div>
@@ -254,15 +256,15 @@ export default function Contraception() {
       <ReminderSettings plan={plan} onError={(m) => setToast(m)} />
 
       {/* --- history ----------------------------------------------------- */}
-      <CycleSection label={G.HISTORY_TITLE} style={{ marginTop: 32 }}>
+      <CycleSection label={t(G.HISTORY_TITLE)} style={{ marginTop: 32 }}>
         {contraceptionEvents.length === 0 ? (
-          <CycleHelp style={{ marginTop: 12 }}>{G.HISTORY_EMPTY}</CycleHelp>
+          <CycleHelp style={{ marginTop: 12 }}>{t(G.HISTORY_EMPTY)}</CycleHelp>
         ) : (
           <ul>
             {contraceptionEvents.slice(0, 30).map((e, i, all) => (
               <li key={e.id} className="relative flex items-center" style={{ gap: 14, padding: "12px 0" }}>
                 <span className="flex-1 min-w-0 text-charcoal" style={type(14, 19, 600)}>
-                  {G.EVENT_LABEL[e.event]}
+                  {tx(G.EVENT_LABEL[e.event], "contraception")}
                 </span>
                 <span className="shrink-0 text-charcoal-faint" style={type(12, 18, 400)}>
                   {dayLabel(e.occurredOn)}
@@ -283,7 +285,7 @@ export default function Contraception() {
         className="tap w-full text-status-high"
         style={{ marginTop: 22, minHeight: 44, ...type(13, 19.5, 700) }}
       >
-        {G.STOP_TITLE}
+        {t(G.STOP_TITLE)}
       </button>
       <p className="text-center text-charcoal-faint" style={type(10.5, 15.8, 400, { marginTop: 12 })}>
         {G.NOT_A_PRESCRIBER}
@@ -300,7 +302,7 @@ export default function Contraception() {
             setStopError(null);
           }
         }}
-        title={G.STOP_TITLE}
+        title={t(G.STOP_TITLE)}
         geometry="ours"
         align="start"
       >
@@ -314,12 +316,12 @@ export default function Contraception() {
         )}
         <div style={{ marginTop: 16 }}>
           <PopupButtons
-            cancel={G.STOP_KEEP}
+            cancel={t(G.STOP_KEEP)}
             onCancel={() => {
               setStopOpen(false);
               setStopError(null);
             }}
-            confirm={G.STOP_CONFIRM}
+            confirm={t(G.STOP_CONFIRM)}
             destructive
             busy={busy}
             onConfirm={async () => {
@@ -328,7 +330,7 @@ export default function Contraception() {
               const result = await endPlan(plan.id, today);
               setBusy(false);
               if (!result.ok) {
-                setStopError(G.SAVE_FAILED);
+                setStopError(t(G.SAVE_FAILED));
                 return;
               }
               setStopOpen(false);

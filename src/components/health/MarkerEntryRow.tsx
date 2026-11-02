@@ -15,6 +15,7 @@ import { SwipeActions } from "../ui/SwipeActions";
 import { textPx, linePx } from "../../theme/textSize";
 import { asNumber, numeric, type MarkerDraft } from "./markerDraft";
 import { useHealthMode, hairline, fieldFill, rangeText, INK, INK_SOFT, INK_FAINT } from "./records/kit";
+import { t, tx } from "../../i18n/core";
 
 const fmt = (n: number | null) => (n === null ? "" : String(n));
 
@@ -124,7 +125,7 @@ export const MarkerEntryRow: React.FC<{
           type="button"
           role="checkbox"
           aria-checked={draft.ticked}
-          aria-label={`Include result ${n}${draft.name ? `, ${draft.name}` : ""}`}
+          aria-label={draft.name ? t("Include result {n}, {name}", { n, name: draft.name }) : t("Include result {n}", { n })}
           onClick={() => onChange({ ticked: !draft.ticked })}
           className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-[11px] before:content-['']"
           style={draft.ticked ? { width: 22, height: 22, background: "rgb(var(--c-fill-pinned))" } : { width: 22, height: 22, border: `1.1px solid ${ring}` }}
@@ -136,10 +137,10 @@ export const MarkerEntryRow: React.FC<{
           onClick={onChooseMarker}
           className="tap flex items-center min-w-0 text-start"
           style={{ flex: "1 1 125px", gap: 3, minHeight: 44, outline: missingName ? `1px solid ${red}` : undefined, borderRadius: 6 }}
-          aria-label={`Marker ${n}: ${draft.name || "Choose a marker"}`}
+          aria-label={t("Marker {n}: {name}", { n, name: draft.name || t("Choose a marker") })}
         >
           <span className="truncate" style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 600, color: draft.name ? INK : INK_FAINT }}>
-            {draft.name || "Choose a marker"}
+            {draft.name || t("Choose a marker")}
           </span>
           <ChevronDown size={13} className="shrink-0" style={{ color: INK_FAINT }} aria-hidden />
         </button>
@@ -148,7 +149,7 @@ export const MarkerEntryRow: React.FC<{
           onChange={(e) => onChange({ value: numeric(e.target.value) })}
           placeholder="–"
           inputMode="decimal"
-          aria-label={`Marker ${n} value`}
+          aria-label={t("Marker {n} value", { n })}
           className="shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           style={{ ...box, outline: missingValue ? `1px solid ${red}` : undefined }}
         />
@@ -158,9 +159,9 @@ export const MarkerEntryRow: React.FC<{
           onClick={() => (marker && marker.units.length > 1 ? setUnitOpen(true) : setExpanded(true))}
           className="tap shrink-0 text-start truncate"
           style={{ ...small, width: 42, minHeight: 44 }}
-          aria-label={`Marker ${n} unit${draft.unit ? `, ${draft.unit}` : ""}`}
+          aria-label={draft.unit ? t("Marker {n} unit, {unit}", { n, unit: draft.unit }) : t("Marker {n} unit", { n })}
         >
-          {draft.unit || "unit"}
+          {draft.unit || t("unit")}
         </button>
         <button
           type="button"
@@ -168,7 +169,7 @@ export const MarkerEntryRow: React.FC<{
           aria-expanded={expanded}
           className="tap shrink-0 text-end truncate"
           style={{ width: 56, minHeight: 44, fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 400, color: INK_FAINT }}
-          aria-label={`Marker ${n} reference range, ${rangeText(asNumber(draft.low), asNumber(draft.high))}`}
+          aria-label={t("Marker {n} reference range, {range}", { n, range: rangeText(asNumber(draft.low), asNumber(draft.high)) })}
         >
           {rangeText(asNumber(draft.low), asNumber(draft.high))}
         </button>
@@ -183,9 +184,9 @@ export const MarkerEntryRow: React.FC<{
             onClick={onRemove}
             className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']"
             style={{ fontSize: textPx(11), lineHeight: linePx(16), fontWeight: 700, color: INK_SOFT }}
-            aria-label={`Remove result ${n}${draft.name ? `, ${draft.name}` : ""}`}
+            aria-label={draft.name ? t("Remove result {n}, {name}", { n, name: draft.name }) : t("Remove result {n}", { n })}
           >
-            Remove
+            {t("Remove")}
           </button>
         </div>
       )}
@@ -196,16 +197,16 @@ export const MarkerEntryRow: React.FC<{
               <input
                 value={draft.name}
                 onChange={(e) => onChange({ name: e.target.value, other: true })}
-                placeholder="Marker name, as on your report"
-                aria-label={`Marker ${n} name`}
+                placeholder={t("Marker name, as on your report")}
+                aria-label={t("Marker {n} name", { n })}
                 className="flex-1 min-w-0 outline-none"
                 style={{ ...box, width: "auto", textAlign: "start", padding: "0 10px", fontSize: textPx(13), fontWeight: 600 }}
               />
               <input
                 value={draft.unit}
                 onChange={(e) => onChange({ unit: e.target.value })}
-                placeholder="Unit"
-                aria-label={`Marker ${n} unit`}
+                placeholder={t("Unit")}
+                aria-label={t("Marker {n} unit", { n })}
                 className="outline-none"
                 style={{ ...box, width: 72, fontSize: textPx(12), fontWeight: 600 }}
               />
@@ -214,51 +215,51 @@ export const MarkerEntryRow: React.FC<{
           {askPhase && (
             <label className="block" style={{ marginBottom: 8 }}>
               <span className="block" style={{ ...small, marginBottom: 4 }}>
-                Cycle phase when the sample was taken
+                {t("Cycle phase when the sample was taken")}
               </span>
               <select
                 value={draft.phase ?? ""}
                 onChange={(e) => e.target.value && setPhase(e.target.value as LabPhase)}
-                aria-label={`Marker ${n} cycle phase`}
+                aria-label={t("Marker {n} cycle phase", { n })}
                 className="w-full outline-none"
                 style={{ ...box, width: "100%", textAlign: "start", padding: "0 10px", fontSize: textPx(13), fontWeight: 600 }}
               >
                 <option value="" disabled>
-                  Choose a phase
+                  {t("Choose a phase")}
                 </option>
                 {LAB_PHASES.map((p) => (
                   <option key={p.value} value={p.value}>
-                    {p.label}
+                    {t(p.label)}
                   </option>
                 ))}
               </select>
               <span className="block" style={{ marginTop: 4, fontSize: textPx(11), lineHeight: linePx(16), color: INK_FAINT }}>
                 {draft.phaseSuggested
-                  ? "Suggested from your cycle tracker. The normal range depends on the phase."
-                  : "The normal range depends on the phase."}
+                  ? t("Suggested from your cycle tracker. The normal range depends on the phase.")
+                  : t("The normal range depends on the phase.")}
               </span>
             </label>
           )}
           <span className="block" style={{ ...small, marginBottom: 4 }}>
-            Reference range
+            {t("Reference range")}
           </span>
           <div className="flex items-center" style={{ gap: 8 }}>
             <input
               value={draft.low}
               onChange={(e) => onChange({ low: numeric(e.target.value), rangeFrom: "you" })}
-              placeholder="Low"
+              placeholder={t("Low")}
               inputMode="decimal"
-              aria-label={`Marker ${n} range low`}
+              aria-label={t("Marker {n} range low", { n })}
               className="outline-none"
               style={box}
             />
-            <span style={small}>to</span>
+            <span style={small}>{tx("to", "range")}</span>
             <input
               value={draft.high}
               onChange={(e) => onChange({ high: numeric(e.target.value), rangeFrom: "you" })}
-              placeholder="High"
+              placeholder={t("High")}
               inputMode="decimal"
-              aria-label={`Marker ${n} range high`}
+              aria-label={t("Marker {n} range high", { n })}
               className="outline-none"
               style={box}
             />
@@ -269,14 +270,14 @@ export const MarkerEntryRow: React.FC<{
                 always editable: the range printed on the report wins. A
                 one-sided range leaves Low or High empty. */}
             {draft.rangeFrom === "list"
-              ? "Use the range printed on your report. Pre-filled from Centium's standard list."
-              : "Enter the range printed on your report."}
-            {" If it gives only one limit, leave the other empty."}
-            {noRange && " The standard list has no range for this marker."}
+              ? t("Use the range printed on your report. Pre-filled from Centium's standard list.")
+              : t("Enter the range printed on your report.")}
+            {` ${t("If it gives only one limit, leave the other empty.")}`}
+            {noRange && ` ${t("The standard list has no range for this marker.")}`}
           </p>
           {draft.low && draft.high && Number(draft.low) > Number(draft.high) && (
             <p role="alert" style={{ marginTop: 4, fontSize: textPx(11), lineHeight: linePx(16), fontWeight: 600, color: red }}>
-              The low end is higher than the high end.
+              {t("The low end is higher than the high end.")}
             </p>
           )}
         </div>
@@ -305,8 +306,8 @@ export const MarkerEntryRow: React.FC<{
         tileMax={45}
         tileRadius={12}
         edgeInset={8}
-        keyboardLabel={`Result ${n}${draft.name ? `, ${draft.name}` : ""}`}
-        actions={[{ key: "delete", label: `Remove result ${n}`, icon: <Trash2 size={16} />, onClick: onRemove, destructive: true }]}
+        keyboardLabel={draft.name ? t("Result {n}, {name}", { n, name: draft.name }) : t("Result {n}", { n })}
+        actions={[{ key: "delete", label: t("Remove result {n}", { n }), icon: <Trash2 size={16} />, onClick: onRemove, destructive: true }]}
       >
         {row}
       </SwipeActions>
