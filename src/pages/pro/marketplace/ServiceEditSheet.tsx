@@ -32,7 +32,7 @@ import {
   type ShelfItem,
 } from "../../../services/pro-market";
 import { MasterSheet, PrimaryButton, SaveError, SheetBox, SheetSwitch, fieldStyle, px, useMarketColors } from "../../business-market/listingParts";
-import { t, tk, tx } from "../../../i18n/core";
+import { t, tk, tx, tn } from "../../../i18n/core";
 
 // Market + Share 3.0 · W3 · P-MA.2 "Edit service" (Professional Marketplace
 // Screens lines 551–576 and `sheet` scServiceEdit / scServicePhoto;
@@ -455,7 +455,7 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
                   `${ids}-dur`,
                   durations.map((d) => (
                     <button key={d} type="button" role="radio" aria-checked={duration === d} onClick={() => setDuration(d)} className="market-focus" style={chip(duration === d)}>
-                      {t("{n} min", { n: d })}
+                      {tn(d, "{n} min", "{n} min")}
                     </button>
                   ))
                 )}
@@ -466,7 +466,7 @@ function ServiceForm({ target, plans, shelf = [], audience, onClose, onSaved, on
                   `${ids}-buf`,
                   buffers.map((b) => (
                     <button key={b} type="button" role="radio" aria-checked={buffer === b} onClick={() => setBuffer(b)} className="market-focus" style={chip(buffer === b)}>
-                      {b === 0 ? t("None") : t("{n} min", { n: b })}
+                      {b === 0 ? t("None") : tn(b, "{n} min", "{n} min")}
                     </button>
                   ))
                 )}

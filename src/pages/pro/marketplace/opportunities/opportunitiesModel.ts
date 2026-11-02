@@ -243,7 +243,7 @@ export function classTicket(o: Opportunity & OpportunityExtras): { time: { time:
   const spots = o.capacity != null && o.capacity > 0 ? tn(o.capacity, "{n} spot", "{n} spots") : null;
   return {
     time: at ? clockSplit(clockOf(at)) : null,
-    dur: o.durationMin != null && o.durationMin > 0 ? t("{n} min", { n: o.durationMin }) : null,
+    dur: o.durationMin != null && o.durationMin > 0 ? tn(o.durationMin, "{n} min", "{n} min") : null,
     eyebrow: o.specialty?.trim() || o.className?.trim() || null,
     title: o.title,
     place: [o.businessName, at ? dayDate(at) : null].filter(Boolean).join(" · "),

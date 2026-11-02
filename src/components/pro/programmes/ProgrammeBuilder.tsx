@@ -260,7 +260,7 @@ export const ProgrammeBuilder: React.FC<{
                       </span>
                       {tpl && (
                         <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>
-                          {[tn(tpl.exercises.length, "{n} exercise", "{n} exercises"), tpl.durationMin ? t("{n} min", { n: tpl.durationMin }) : null].filter(Boolean).join(" · ")}
+                          {[tn(tpl.exercises.length, "{n} exercise", "{n} exercises"), tpl.durationMin ? tn(tpl.durationMin, "{n} min", "{n} min") : null].filter(Boolean).join(" · ")}
                         </span>
                       )}
                     </span>
