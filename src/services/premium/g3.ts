@@ -419,6 +419,9 @@ export function stepAt(steps: readonly ScriptStep[], elapsed: number): { index: 
   return { index: Math.max(0, steps.length - 1), progress: 1, finished: true };
 }
 
+/** A library session's type in words. */
+export const libraryTypeLabel = (s: Pick<LibrarySession, "type">): string => (s.type === "breathing" ? t("Breathing") : t("Meditation"));
+
 /** "3 min". */
 export const minutesLabel = (n: number): string => t("{n} min", { n });
 

@@ -3,7 +3,7 @@ import { ArrowLeftRight, ChevronRight } from "lucide-react";
 import { BottomSheet } from "../../../ui/BottomSheet";
 import { Button } from "../../../ui/Button";
 import { usePremium } from "../../../../services/premium/hooks";
-import { askLocked, useG3On } from "../../../premium/g3/useG3";
+import { askLocked, useG3Available } from "../../../premium/g3/useG3";
 import { PremiumLabel } from "../../../premium/PremiumAskHost";
 import { compareLabReports } from "../../../../services/premium/g3Calls";
 import { comparePairReady, compareRowsView, statusWord, type CompareRowView, type MarkerStatus } from "../../../../services/premium/g3";
@@ -27,7 +27,7 @@ const day = (ymd: string) => formatShortDate(new Date(`${ymd}T12:00:00`), { day:
 const panelLabel = (p: LabPanel) => `${p.name ?? t("Lab report")} · ${day(p.date)}`;
 
 export function CompareReports({ panels, className = "" }: { panels: LabPanel[]; className?: string }) {
-  const on = useG3On();
+  const on = useG3Available();
   const { premium } = usePremium();
   const [open, setOpen] = useState(false);
   if (!on || panels.length < 2) return null;

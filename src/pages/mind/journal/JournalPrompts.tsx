@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronRight, PenLine, Sparkles } from "lucide-react";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { usePremium } from "../../../services/premium/hooks";
-import { useG3, useG3On } from "../../../components/premium/g3/useG3";
+import { useG3, useG3Available } from "../../../components/premium/g3/useG3";
 import { G3Body, LockedRow } from "../../../components/premium/g3/parts";
 import { PremiumLabel } from "../../../components/premium/PremiumAskHost";
 import { fetchPromptLibrary, fetchPromptOfTheDay } from "../../../services/premium/g3Calls";
@@ -20,7 +20,7 @@ import { t, tn } from "../../../i18n/core";
 // Nothing at all while the switch is off.
 
 export function JournalPrompts({ onWrite, className = "" }: { onWrite: (heading: string) => void; className?: string }) {
-  const on = useG3On();
+  const on = useG3Available();
   const { premium } = usePremium();
   const isPremium = !!premium?.premium;
   const today = useG3(fetchPromptOfTheDay, "prompt-of-the-day", isPremium);

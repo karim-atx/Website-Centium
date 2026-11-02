@@ -5,11 +5,10 @@ import { BreathingRunner } from "../../../components/mind/BreathingRunner";
 import { useContentLines, useG3 } from "../../../components/premium/g3/useG3";
 import { G3Body, G3Route, LockedRow } from "../../../components/premium/g3/parts";
 import { fetchMindLibrary } from "../../../services/premium/g3Calls";
-import { libraryKind, minutesLabel, type LibrarySession } from "../../../services/premium/g3";
+import { libraryKind, libraryTypeLabel as typeLabel, minutesLabel, type LibrarySession } from "../../../services/premium/g3";
 import { GET_SUPPORT_PATH } from "../../../services/premium/model";
 import type { BreathingPattern } from "../../../data/mockMindContent";
 import { ScriptRunner } from "./ScriptRunner";
-import { typeLabel } from "./MindLibraryPage";
 import { t } from "../../../i18n/core";
 
 // undrawn (Round G, no handover)

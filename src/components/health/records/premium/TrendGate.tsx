@@ -1,10 +1,9 @@
 import React from "react";
 import { TrendingUp } from "lucide-react";
 import { usePremium } from "../../../../services/premium/hooks";
-import { askLocked, useG3 } from "../../../premium/g3/useG3";
+import { askLocked, useG3Available } from "../../../premium/g3/useG3";
 import { PremiumLabel } from "../../../premium/PremiumAskHost";
-import { fetchBiomarkerTrend } from "../../../../services/premium/g3Calls";
-import { g3On, trendKey, trendLocked, trendResults, type MarkerStatus } from "../../../../services/premium/g3";
+import { trendLocked } from "../../../../services/premium/g3";
 import { t } from "../../../../i18n/core";
 
 // undrawn (Round G, no handover)
@@ -18,7 +17,9 @@ import { t } from "../../../../i18n/core";
 /** The trend view, or the Premium card in its place. */
 export function TrendGate({ results, children, className = "" }: { results: number; children: React.ReactNode; className?: string }) {
   const { premium } = usePremium();
-  if (!trendLocked(premium, results)) return <>{children}</>;
+  // A Database without G3 keeps today's chart too.
+  const available = useG3Available();
+  if (!available || !trendLocked(premium, results)) return <>{children}</>;
   return (
     <button
       type="button"
@@ -34,21 +35,4 @@ export function TrendGate({ results, children, className = "" }: { results: numb
       <PremiumLabel className="shrink-0" />
     </button>
   );
-}
-
-/**
- * The chart's results: with the switch on and Premium, the trend reader's
- * points (oldest first) lined up with the page's own results; otherwise the
- * page's results as today.
- */
-export function useTrendResults<R extends { id: string; panelId: string | null; date: string; value: number; unit: string; status: MarkerStatus }>(
-  marker: { markerKey?: string | null; name: string },
-  results: R[]
-): R[] {
-  const { premium } = usePremium();
-  const key = trendKey(marker);
-  const on = g3On(premium) && !!premium?.premium && results.length > 1;
-  const { state } = useG3(() => fetchBiomarkerTrend(key), `trend:${key}:${results.length}`, on);
-  if (!on || state.kind !== "ready" || state.value.length === 0) return results;
-  return trendResults(state.value, results);
 }

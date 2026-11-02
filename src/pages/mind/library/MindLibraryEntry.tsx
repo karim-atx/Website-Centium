@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Library } from "lucide-react";
-import { useG3On } from "../../../components/premium/g3/useG3";
+import { useG3Available } from "../../../components/premium/g3/useG3";
 import { t } from "../../../i18n/core";
 
 // undrawn (Round G, no handover)
@@ -9,7 +9,7 @@ import { t } from "../../../i18n/core";
 // stretching and yoga stay exactly as they are.
 
 export function MindLibraryEntry({ className = "" }: { className?: string }) {
-  const on = useG3On();
+  const on = useG3Available();
   const navigate = useNavigate();
   if (!on) return null;
   return (

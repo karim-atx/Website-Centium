@@ -41,6 +41,7 @@ export const FILES: string[] = [
   "pages/health/doctor/DoctorSummaryEntry.tsx",
   "pages/health/doctor/DoctorSummaryPage.tsx",
   "components/health/records/premium/TrendGate.tsx",
+  "components/health/records/premium/useTrendResults.ts",
   "components/health/records/premium/CompareReports.tsx",
 ];
 

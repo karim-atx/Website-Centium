@@ -1,11 +1,10 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 import { Lock } from "lucide-react";
-import { usePremium } from "../../../services/premium/hooks";
-import { g3On, type G3State } from "../../../services/premium/g3";
+import type { G3State } from "../../../services/premium/g3";
 import type { PremiumFeature } from "../../../services/premium/features";
 import { PremiumLabel } from "../PremiumAskHost";
-import { askLocked } from "./useG3";
+import { askLocked, useG3Probe } from "./useG3";
 import { t } from "../../../i18n/core";
 
 // undrawn (Round G, no handover)
@@ -13,13 +12,14 @@ import { t } from "../../../i18n/core";
 // style (cream cards, the soft shadow, the Premium label from Round G2).
 
 /**
- * A G3 route: while the switch loads, nothing; with it off (or unknown), the
- * route doesn't exist and sends the member back where it came from.
+ * A G3 route: while the switch (and the Database's G3) loads, a loading
+ * line; with the switch off, a Database without G3, or unknown, the route
+ * doesn't exist and sends the member back where it came from.
  */
 export function G3Route({ fallback, children }: { fallback: string; children: React.ReactNode }) {
-  const { premium, loading } = usePremium();
-  if (loading) return <p className="py-10 text-center text-[13px] text-charcoal-faint">{t("Loading…")}</p>;
-  if (!g3On(premium)) return <Navigate to={fallback} replace />;
+  const probe = useG3Probe();
+  if (probe === "loading") return <p className="py-10 text-center text-[13px] text-charcoal-faint">{t("Loading…")}</p>;
+  if (probe === "no") return <Navigate to={fallback} replace />;
   return <>{children}</>;
 }
 

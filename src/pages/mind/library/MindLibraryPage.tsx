@@ -4,7 +4,7 @@ import { PageHeader } from "../../../components/ui/PageHeader";
 import { useG3 } from "../../../components/premium/g3/useG3";
 import { G3Body, G3Route, LockedRow } from "../../../components/premium/g3/parts";
 import { fetchMindLibrary } from "../../../services/premium/g3Calls";
-import { minutesLabel, type LibrarySession } from "../../../services/premium/g3";
+import { libraryTypeLabel as typeLabel, minutesLabel } from "../../../services/premium/g3";
 import { t } from "../../../i18n/core";
 
 // undrawn (Round G, no handover)
@@ -13,8 +13,6 @@ import { t } from "../../../i18n/core";
 // sleep are free). A locked session shows the Premium label and opens the
 // prompt. The route doesn't exist while the switch is off, and Meditation's
 // own breathing, stretching and yoga stay exactly as they are.
-
-export const typeLabel = (s: Pick<LibrarySession, "type">): string => (s.type === "breathing" ? t("Breathing") : t("Meditation"));
 
 export default function MindLibraryPage() {
   return (

@@ -149,9 +149,9 @@ function SummaryScreen() {
             <Button variant="primary" size="lg" fullWidth className="mt-4" disabled={busy || !valid} onClick={() => void make()}>
               {summary ? t("Make it again") : t("Make the summary")}
             </Button>
-            {message && (
+            {(message || !valid) && (
               <p role="alert" className="mt-2 text-[12px] font-semibold text-status-high">
-                {message}
+                {message ?? t("Choose a period of up to two years.")}
               </p>
             )}
           </div>

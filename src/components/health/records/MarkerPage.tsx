@@ -20,7 +20,8 @@ import type { BloodMarker } from "../../../types";
 import { textPx, linePx } from "../../../theme/textSize";
 import { RecordsHeader } from "./RecordsHeader";
 import { ResultFormSheet } from "./ResultFormSheet";
-import { TrendGate, useTrendResults } from "./premium/TrendGate";
+import { TrendGate } from "./premium/TrendGate";
+import { useTrendResults } from "./premium/useTrendResults";
 import {
   useHealthMode,
   hairline,

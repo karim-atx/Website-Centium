@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
-import { useG3, useG3On } from "../../../components/premium/g3/useG3";
+import { useG3, useG3Available } from "../../../components/premium/g3/useG3";
 import { G3Caps } from "../../../components/premium/g3/parts";
 import { PremiumLabel } from "../../../components/premium/PremiumAskHost";
 import { fetchMyCentiumProgrammes } from "../../../services/premium/g3Calls";
@@ -21,7 +21,7 @@ import { t } from "../../../i18n/core";
 const day = (ymd: string) => formatShortDate(new Date(`${ymd}T12:00:00`), { weekday: "short", day: "numeric", month: "short" });
 
 export function CentiumProgrammesEntry() {
-  const on = useG3On();
+  const on = useG3Available();
   const dark = useIsDark();
   const navigate = useNavigate();
   const { state } = useG3(fetchMyCentiumProgrammes, "mine");

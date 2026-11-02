@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { CalendarCheck, ChevronRight } from "lucide-react";
 import { usePremium } from "../../../services/premium/hooks";
-import { askLocked, useG3On } from "../../../components/premium/g3/useG3";
+import { askLocked, useG3Available } from "../../../components/premium/g3/useG3";
 import { PremiumLabel } from "../../../components/premium/PremiumAskHost";
 import { t } from "../../../i18n/core";
 
@@ -13,7 +13,7 @@ import { t } from "../../../i18n/core";
 // Nothing while the switch is off or loading.
 
 export function WeeklyReviewCard({ className = "" }: { className?: string }) {
-  const on = useG3On();
+  const on = useG3Available();
   const { premium } = usePremium();
   const navigate = useNavigate();
   if (!on) return null;
