@@ -1,4 +1,5 @@
-import { appLocale } from "../../i18n/format";
+import { ARABIC_LOCALE, appLocale } from "../../i18n/format";
+import { getLanguage, t, tk, tn } from "../../i18n/core";
 // Release B · B2 Ambassador applications (PLAN S3, Database
 // 20261217040000_applying_to_be_an_ambassador): the pure parts, tested
 // without a database (ambassadorLogic.test.ts). The I/O lives in ./index.ts.
@@ -84,6 +85,7 @@ export function shortDayMonth(value: string): string | null {
   const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   const d = day ? new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3])) : new Date(value);
   if (Number.isNaN(d.getTime())) return null;
+  if (getLanguage() === "ar") return d.toLocaleDateString(ARABIC_LOCALE, { day: "numeric", month: "long" });
   return `${d.toLocaleDateString(appLocale("en-US"), { month: "short" })} ${d.getDate()}`;
 }
 
@@ -94,7 +96,7 @@ export function shortDayMonth(value: string): string | null {
 export const AMBASSADOR_REFERRER_POINTS = 2000;
 
 export function whatYouGetLine(points = AMBASSADOR_REFERRER_POINTS): string {
-  return `${points.toLocaleString(appLocale("en-US"))} points per friend who joins`;
+  return t("{points} points per friend who joins", { points: points.toLocaleString(appLocale("en-US")) });
 }
 
 export interface ChecklistRow {
@@ -106,10 +108,10 @@ export interface ChecklistRow {
 /** "Who can apply": the server's booleans, worded with its own thresholds. */
 export function checklistRows(s: AmbassadorStatus): ChecklistRow[] {
   return [
-    { key: "adult", label: "18 or older", done: s.confirmedAdult },
-    { key: "account_age", label: `On Centium for ${s.requiredAccountDays} days`, done: s.accountOldEnough },
-    { key: "referrals", label: `${s.requiredReferrals} friends joined with your code`, done: s.enoughReferrals },
-    { key: "suspension", label: "No suspensions on record", done: s.noSuspension },
+    { key: "adult", label: t("18 or older"), done: s.confirmedAdult },
+    { key: "account_age", label: tn(s.requiredAccountDays, "On Centium for {n} day", "On Centium for {n} days"), done: s.accountOldEnough },
+    { key: "referrals", label: tn(s.requiredReferrals, "{n} friend joined with your code", "{n} friends joined with your code"), done: s.enoughReferrals },
+    { key: "suspension", label: t("No suspensions on record"), done: s.noSuspension },
   ];
 }
 
@@ -117,7 +119,7 @@ export function checklistRows(s: AmbassadorStatus): ChecklistRow[] {
 export function friendsToGoLine(s: AmbassadorStatus): string | null {
   if (s.enoughReferrals) return null;
   const n = Math.max(1, s.requiredReferrals - s.successfulReferrals);
-  return n === 1 ? "1 more friend to go." : `${n} more friends to go.`;
+  return tn(n, "1 more friend to go.", "{n} more friends to go.");
 }
 
 export type StatusCard =
@@ -141,16 +143,16 @@ export function statusCard(s: AmbassadorStatus): StatusCard | null {
   const a = s.application;
   if (a?.status === "pending") {
     const sent = shortDayMonth(a.createdAt);
-    return { kind: "pending", heading: "Application under review", line: `${sent ? `Sent ${sent}. ` : ""}We'll let you know.` };
+    return { kind: "pending", heading: t("Application under review"), line: sent ? t("Sent {date}. We'll let you know.", { date: sent }) : t("We'll let you know.") };
   }
   if ((a?.status === "approved" || a?.status === "closed") && s.isAmbassador) {
-    return { kind: "approved", heading: "You're a Centium Ambassador", line: "Your new rewards apply to friends who join from now on." };
+    return { kind: "approved", heading: t("You're a Centium Ambassador"), line: t("Your new rewards apply to friends who join from now on.") };
   }
   if (a?.status === "declined" && s.nextEligibleAt) {
     const again = shortDayMonth(s.nextEligibleAt);
     const reason = a.reason ? (/[.!?]$/.test(a.reason) ? a.reason : `${a.reason}.`) : null;
-    const parts = [reason, again ? `You can apply again from ${again}.` : null].filter(Boolean);
-    return { kind: "declined", heading: "Not this time", line: parts.join(" ") };
+    const parts = [reason, again ? t("You can apply again from {date}.", { date: again }) : null].filter(Boolean);
+    return { kind: "declined", heading: t("Not this time"), line: parts.join(" ") };
   }
   return null;
 }
@@ -169,7 +171,7 @@ export const LINK_MAX = 300;
 export function linkProblem(link: string): string | null {
   const v = link.trim();
   if (!v) return null;
-  if (v.length > LINK_MAX || !/^https?:\/\/\S+$/i.test(v)) return "Start the link with https:// (or http://).";
+  if (v.length > LINK_MAX || !/^https?:\/\/\S+$/i.test(v)) return t("Start the link with https:// (or http://).");
   return null;
 }
 
@@ -184,27 +186,27 @@ export function canSend(s: AmbassadorStatus, form: { motivation: string; link: s
  * to plain lines. ATXJ2 carries the date in its HINT ("YYYY-MM-DD").
  */
 export const APPLY_REFUSALS: Readonly<Record<string, string>> = {
-  ATX10: "You're already a Centium Ambassador.",
-  ATXJ1: "You've already applied. We'll let you know.",
-  ATXJ2: "You can apply again later.",
-  ATX47: "Ambassadors need to be 18 or older.",
-  ATX48: "Add your date of birth to your profile before you apply.",
-  ATXJ3: "You can apply once you've been on Centium for 30 days.",
-  ATXJ4: "You can apply once 3 friends have joined with your code.",
-  ATXJ5: "Accounts with a suspension on record can't apply.",
-  ATXJ0: "Agree to the Ambassador terms to send your application.",
-  "22023": "Check your answer: up to 500 characters, and a link that starts with https://.",
-  ATX02: "Please wait a little before trying again.",
+  ATX10: tk("You're already a Centium Ambassador."),
+  ATXJ1: tk("You've already applied. We'll let you know."),
+  ATXJ2: tk("You can apply again later."),
+  ATX47: tk("Ambassadors need to be 18 or older."),
+  ATX48: tk("Add your date of birth to your profile before you apply."),
+  ATXJ3: tk("You can apply once you've been on Centium for 30 days."),
+  ATXJ4: tk("You can apply once 3 friends have joined with your code."),
+  ATXJ5: tk("Accounts with a suspension on record can't apply."),
+  ATXJ0: tk("Agree to the Ambassador terms to send your application."),
+  "22023": tk("Check your answer: up to 500 characters, and a link that starts with https://."),
+  ATX02: tk("Please wait a little before trying again."),
 };
 
-export const APPLY_FALLBACK = "Couldn't send your application. Try again.";
+export const APPLY_FALLBACK = tk("Couldn't send your application. Try again.");
 
 export function applyRefusalLine(error: { code?: string; hint?: string | null }): string {
   const code = error.code ?? "";
   if (code === "ATXJ2") {
     const again = error.hint ? shortDayMonth(error.hint.trim()) : null;
-    return again ? `You can apply again from ${again}.` : APPLY_REFUSALS.ATXJ2;
+    return again ? t("You can apply again from {date}.", { date: again }) : t(APPLY_REFUSALS.ATXJ2);
   }
-  if (code === "ATX06" || code === "42501" || code === "PGRST301") return "You need to be signed in to apply. Sign in and try again.";
-  return Object.prototype.hasOwnProperty.call(APPLY_REFUSALS, code) ? APPLY_REFUSALS[code] : APPLY_FALLBACK;
+  if (code === "ATX06" || code === "42501" || code === "PGRST301") return t("You need to be signed in to apply. Sign in and try again.");
+  return t(Object.prototype.hasOwnProperty.call(APPLY_REFUSALS, code) ? APPLY_REFUSALS[code] : APPLY_FALLBACK);
 }

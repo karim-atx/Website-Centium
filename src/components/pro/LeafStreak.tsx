@@ -5,6 +5,7 @@ import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { STREAK_LEAF_PATH } from "../icons/StreakLeaf";
 import { textPx } from "../../theme/textSize";
 import { INK, NO_ICON_SCALE } from "./proInk";
+import { t } from "../../i18n/core";
 
 /**
  * Release 3 · LeafStreak (HANDOVER e; TR9 v5 "leaf streak, one fixed
@@ -83,7 +84,7 @@ export const LeafStreak: React.FC<LeafStreakProps> = ({ title, current, best, la
 
   return (
     <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 14, marginBottom: 12 }}>
-      <style>{`@keyframes pro-leaf-in{from{opacity:0}to{opacity:1}}.pro-leaf-in{animation:pro-leaf-in 380ms ease-out backwards}@media (prefers-reduced-motion: reduce){.pro-leaf-in{animation:none}}html.reduce-motion .pro-leaf-in{animation:none}`}</style>
+      <style>{"@keyframes pro-leaf-in{from{opacity:0}to{opacity:1}}.pro-leaf-in{animation:pro-leaf-in 380ms ease-out backwards}@media (prefers-reduced-motion: reduce){.pro-leaf-in{animation:none}}html.reduce-motion .pro-leaf-in{animation:none}"}</style>
       <div className="flex items-end justify-between" style={{ gap: 10 }}>
         <div>
           <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>{title}</p>
@@ -93,11 +94,11 @@ export const LeafStreak: React.FC<LeafStreakProps> = ({ title, current, best, la
           </p>
         </div>
         <div className="text-end">
-          <p style={{ fontSize: textPx(11), color: INK.chF }}>Best</p>
+          <p style={{ fontSize: textPx(11), color: INK.chF }}>{t("Best")}</p>
           <p style={{ fontSize: textPx(16), fontWeight: 800, color: INK.ch }}>{best}</p>
         </div>
       </div>
-      <svg viewBox="0 0 300 120" width="100%" role="img" aria-label={`${current} ${label}, best ${best}`} style={{ display: "block", marginTop: 6, overflow: "visible", ...NO_ICON_SCALE }}>
+      <svg viewBox="0 0 300 120" width="100%" role="img" aria-label={t("{current} {label}, best {best}", { current, label, best })} style={{ display: "block", marginTop: 6, overflow: "visible", ...NO_ICON_SCALE }}>
         <path
           d={`M${STEM[0].join(" ")} C ${STEM[1].join(" ")}, ${STEM[2].join(" ")}, ${STEM[3].join(" ")}`}
           fill="none"
@@ -130,10 +131,10 @@ export const LeafStreak: React.FC<LeafStreakProps> = ({ title, current, best, la
       {bloom && (
         <p className="flex items-center" style={{ gap: 6, fontSize: textPx(12), fontWeight: 700, color: INK.goldInk, marginTop: 2 }}>
           <Flower2 size={13} strokeWidth={2} aria-hidden />
-          Milestone: {current} in a row
+          {t("Milestone: {current} in a row", { current })}
         </p>
       )}
-      <p style={{ fontSize: textPx(11), fontWeight: 600, color: INK.chF, marginTop: 8 }}>Last 4 weeks</p>
+      <p style={{ fontSize: textPx(11), fontWeight: 600, color: INK.chF, marginTop: 8 }}>{t("Last 4 weeks")}</p>
       <div className="grid" style={{ gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 4, marginTop: 10 }}>
         {WEEKDAYS.map((d, i) => (
           <span key={`h${i}`} aria-hidden className="text-center" style={{ fontSize: textPx(9.5), fontWeight: 700, color: INK.chT }}>
@@ -157,9 +158,9 @@ export const LeafStreak: React.FC<LeafStreakProps> = ({ title, current, best, la
         ))}
       </div>
       <div className="flex" style={{ gap: 12, marginTop: 8, fontSize: textPx(10.5), color: INK.chF }}>
-        <span>Leaf: done</span>
-        <span style={{ color: INK.prDeep, fontWeight: 700 }}>Purple: today</span>
-        <span>Empty: missed</span>
+        <span>{t("Leaf: done")}</span>
+        <span style={{ color: INK.prDeep, fontWeight: 700 }}>{t("Purple: today")}</span>
+        <span>{t("Empty: missed")}</span>
       </div>
     </div>
   );

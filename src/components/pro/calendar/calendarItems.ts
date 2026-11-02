@@ -7,6 +7,7 @@ import type { BookingRow, DueFollowUp, SessionExtras } from "../../../services/p
 import type { ProCalendarData } from "./useProCalendar";
 import { isoOf, minutes } from "./calendarModel";
 import { classBadge, mergeClasses, type ClassInfo } from "./classModel";
+import { t } from "../../../i18n/core";
 
 export type ItemKind = "session" | "event" | "invite" | "class" | "request" | "followup" | "programme";
 export type ItemBadge = "completed" | "cancelled" | "updated" | "followup" | "request" | "invitation" | "going" | "declined" | "scheduled" | null;
@@ -39,7 +40,7 @@ export const REQUEST_GOLD = "#D9A441";
 export const FOLLOW_UP_PLUM = "#9C4F7C";
 export const DEFAULT_SESSION = "#7D6BB5";
 
-const placeOf = (e: { location?: string; url?: string }) => (e.location ? e.location : e.url ? "Online" : null);
+const placeOf = (e: { location?: string; url?: string }) => (e.location ? e.location : e.url ? t("Online") : null);
 const localHHMM = (iso: string) => {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -140,7 +141,7 @@ export function buildItems(d: ProCalendarData, from: string, to: string): Record
       date: f.dueOn,
       allDay: true,
       name: d.names[f.clientId] || null,
-      title: f.note || "Follow-up",
+      title: f.note || t("Follow-up"),
       place: null,
       colour: FOLLOW_UP_PLUM,
       badge: "followup",

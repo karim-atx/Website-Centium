@@ -335,6 +335,7 @@ const OffersList: React.FC<{
           ownerInitials={ownerInitials(o.ownerName)}
           ownerLogoUrl={o.ownerLogoUrl}
           balance={balance}
+          premiumOnly={o.premiumOnly}
           onPress={() => onOpen(o)}
         />
       ))}

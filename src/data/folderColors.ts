@@ -1,5 +1,6 @@
 import type { Routine, RoutineFolder } from "../types";
 import { THEME_MAP } from "../styles/themeMap";
+import { tk } from "../i18n/core";
 
 /**
  * Folder colour families, handover 2026-09-29 02 "Folder colour tokens":
@@ -53,18 +54,18 @@ export function unfiledFamily(): FolderFamily {
  * colour picker reads this one list, and every entry has a family below.
  */
 export const FOLDER_SWATCHES: readonly { color: string; name: string }[] = [
-  { color: "#7D6BB5", name: "Lavender" },
-  { color: "#6F9993", name: "Teal" },
-  { color: "#4C8FD1", name: "Blue" },
-  { color: "#5B5FC7", name: "Indigo" },
-  { color: "#7A4E9C", name: "Plum" },
-  { color: "#9C4F7C", name: "Berry" },
-  { color: "#D9695F", name: "Coral" },
-  { color: "#B8683F", name: "Terracotta" },
-  { color: "#D9A441", name: "Gold" },
-  { color: "#5E9A6B", name: "Sage" },
-  { color: "#5A6B7D", name: "Slate" },
-  { color: "#241F1B", name: "Black" },
+  { color: "#7D6BB5", name: tk("Lavender") },
+  { color: "#6F9993", name: tk("Teal") },
+  { color: "#4C8FD1", name: tk("Blue") },
+  { color: "#5B5FC7", name: tk("Indigo") },
+  { color: "#7A4E9C", name: tk("Plum") },
+  { color: "#9C4F7C", name: tk("Berry") },
+  { color: "#D9695F", name: tk("Coral") },
+  { color: "#B8683F", name: tk("Terracotta") },
+  { color: "#D9A441", name: tk("Gold") },
+  { color: "#5E9A6B", name: tk("Sage") },
+  { color: "#5A6B7D", name: tk("Slate") },
+  { color: "#241F1B", name: tk("Black") },
 ];
 
 // Lavender and teal are the handover's two families, literally. The other

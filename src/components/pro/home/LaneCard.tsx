@@ -8,6 +8,7 @@ import { ComingSoonPill } from "../ComingSoon";
 import { ProError } from "../states";
 import { Initials } from "./ProTrendRing";
 import { initialsOf } from "./initials";
+import { t, tk, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · the one card under the hero, collapsed by default (CL1 v6,
@@ -27,9 +28,9 @@ export interface LaneCardRow {
 }
 
 const TITLE: Record<ProLane, string> = {
-  full_coaching: "Programmes ending soon",
-  nutrition: "Meal plans ending soon",
-  clinical_overview: "Referrals and results",
+  full_coaching: tk("Programmes ending soon"),
+  nutrition: tk("Meal plans ending soon"),
+  clinical_overview: tk("Referrals and results"),
 };
 
 export const LaneCard: React.FC<{
@@ -44,7 +45,7 @@ export const LaneCard: React.FC<{
   const [open, setOpen] = useState(false);
   const wired = rows !== undefined;
   const n = rows?.length ?? 0;
-  const sub = !wired ? null : rows === null ? "" : n === 0 ? "Nothing yet" : `${n} end${n === 1 ? "s" : ""} in the next 14 days`;
+  const sub = !wired ? null : rows === null ? "" : n === 0 ? t("Nothing yet") : tn(n, "{n} ends in the next 14 days", "{n} end in the next 14 days");
   const Icon = lane === "clinical_overview" ? Send : CalendarClock;
   return (
     <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, overflow: "hidden" }}>
@@ -60,7 +61,7 @@ export const LaneCard: React.FC<{
         </span>
         <span className="flex-1 min-w-0">
           <span className="block" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>
-            {TITLE[lane]}
+            {t(TITLE[lane])}
           </span>
           {wired ? (
             <span className="block" style={{ fontSize: textPx(12), color: INK.chF, minHeight: 16 }}>
@@ -81,11 +82,9 @@ export const LaneCard: React.FC<{
               <ProError onRetry={onRetry} />
             </div>
           ) : !wired ? (
-            <p style={{ fontSize: textPx(12), color: INK.chF, padding: "10px 0" }}>
-              Referrals awaiting a reply and results due will show here.
-            </p>
+            <p style={{ fontSize: textPx(12), color: INK.chF, padding: "10px 0" }}>{t("Referrals awaiting a reply and results due will show here.")}</p>
           ) : n === 0 ? (
-            <p style={{ fontSize: textPx(12), color: INK.chF, padding: "10px 0" }}>Nothing ending yet. Plans show here two weeks before they end.</p>
+            <p style={{ fontSize: textPx(12), color: INK.chF, padding: "10px 0" }}>{t("Nothing ending yet. Plans show here two weeks before they end.")}</p>
           ) : (
             <>
               {rows!.map((r, i) => (
@@ -109,7 +108,7 @@ export const LaneCard: React.FC<{
                 </button>
               ))}
               <button type="button" onClick={onSeeAll} className="tap flex items-center" style={{ gap: 2, paddingTop: 10, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
-                See all
+                {t("See all")}
                 <ChevronRight size={12} strokeWidth={2.4} aria-hidden style={NO_ICON_SCALE} />
               </button>
             </>

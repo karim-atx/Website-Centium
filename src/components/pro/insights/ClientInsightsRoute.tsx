@@ -5,6 +5,7 @@ import { proClientPath, type ProLane } from "../subtypeLanes";
 import { InsightsScreen } from "./InsightsScreen";
 import { tabsForLane, type InsightsTab } from "./panelProps";
 import type { PickerClient } from "./parts";
+import { tk } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 "Client insights" (NU14 / v2 / v3; the same Insights for
@@ -31,7 +32,7 @@ export const ClientInsightsRoute: React.FC<{ clientId: string; lane: ProLane }> 
   return (
     <InsightsScreen
       lane={lane}
-      title="Client insights"
+      title={tk("Client insights")}
       clients={clients}
       clientId={clientId}
       onClient={(id) => id && go(id, tab)}

@@ -4,14 +4,15 @@
 // rules (workStub, workRoleLine, workDates). No Supabase import (node:test).
 
 import { workDates, workStub, type WorkEntry } from "../../../services/pro-profile/model";
+import { t, tn } from "../../../i18n/core";
 
 /** "2 roles · 1 class slot" (the head row's count, 11.5 / 700 --tealink); "" with none. */
 export function workCountLine(list: readonly Pick<WorkEntry, "type">[]): string {
   const roles = list.filter((e) => e.type === "role").length;
   const slots = list.filter((e) => e.type === "class_slot").length;
   const parts: string[] = [];
-  if (roles) parts.push(`${roles} ${roles === 1 ? "role" : "roles"}`);
-  if (slots) parts.push(`${slots} ${slots === 1 ? "class slot" : "class slots"}`);
+  if (roles) parts.push(tn(roles, "{n} role", "{n} roles"));
+  if (slots) parts.push(tn(slots, "{n} class slot", "{n} class slots"));
   return parts.join(" · ");
 }
 
@@ -23,5 +24,5 @@ export function workCountLine(list: readonly Pick<WorkEntry, "type">[]): string 
  */
 export function workMetaLine(e: Pick<WorkEntry, "type" | "from" | "to">, today: string): string {
   const dates = workDates(e, today);
-  return workStub(e, today) === "Ended" ? `${dates} · ended` : dates;
+  return workStub(e, today) === "Ended" ? t("{dates} · ended", { dates }) : dates;
 }

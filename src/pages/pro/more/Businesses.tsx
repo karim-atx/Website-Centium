@@ -19,6 +19,7 @@ import { invitationState } from "../../../components/pro/businesses/invitationLo
 import { fmtDay } from "../../../components/pro/client/clientFormat";
 import { textPx } from "../../../theme/textSize";
 import { todayLocal } from "../../../utils/date";
+import { t, tx } from "../../../i18n/core";
 
 /**
  * Release 3 · Businesses (/app/more/businesses; MO9 v3, decision 1: a
@@ -70,7 +71,7 @@ export default function Businesses() {
       if (kind !== undefined) reload();
       return;
     }
-    setToast(`You joined ${e.businessName}.`);
+    setToast(t("You joined {business}.", { business: e.businessName }));
     invalidateConsoleAccess();
     reload();
   };
@@ -80,7 +81,7 @@ export default function Businesses() {
     setBusy(null);
     setDecline(null);
     if (!r.ok) return setToast(r.message);
-    setToast(`You declined ${e.businessName}'s invitation.`);
+    setToast(t("You declined {business}'s invitation.", { business: e.businessName }));
     invalidateConsoleAccess();
     reload();
   };
@@ -90,7 +91,7 @@ export default function Businesses() {
     const r = await removeMyEmployment(e.businessId);
     setBusy(null);
     if (!r.ok) return setToast(r.message);
-    setToast("Invitation removed.");
+    setToast(t("Invitation removed."));
     reload();
   };
   const withdraw = async (id: string) => {
@@ -98,7 +99,7 @@ export default function Businesses() {
     const r = await withdrawJoinRequest(id);
     setBusy(null);
     if (!r.ok) return setToast(r.message);
-    setToast("Request withdrawn.");
+    setToast(t("Request withdrawn."));
     reload();
   };
 
@@ -108,10 +109,10 @@ export default function Businesses() {
           key: r.id,
           icon: Clock,
           title: r.businessName,
-          meta: `Sent ${fmtDay(r.createdAt)} · waiting for reply`,
+          meta: t("Sent {date} · waiting for reply", { date: fmtDay(r.createdAt) }),
           trailing: (
             <span className="flex flex-col items-end shrink-0" style={{ gap: 2 }}>
-              <Chip label="Pending" tone="req" />
+              <Chip label={t("Pending")} tone="req" />
               <button
                 type="button"
                 onClick={() => void withdraw(r.id)}
@@ -119,7 +120,7 @@ export default function Businesses() {
                 className="tap min-h-[32px] disabled:opacity-50"
                 style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}
               >
-                Withdraw
+                {t("Withdraw")}
               </button>
             </span>
           ),
@@ -129,15 +130,15 @@ export default function Businesses() {
           icon: X,
           title: r.businessName,
           meta: (
-            <span style={{ color: INK.hi, fontWeight: 700 }}>{`Declined ${fmtDay(r.resolvedAt ?? r.createdAt)}`}</span>
+            <span style={{ color: INK.hi, fontWeight: 700 }}>{t("Declined {when}", { when: fmtDay(r.resolvedAt ?? r.createdAt) })}</span>
           ),
-          trailing: <Chip label="Declined" tone="att" />,
+          trailing: <Chip label={t("Declined")} tone="att" />,
         }
   );
 
   return (
     <div data-pro-businesses="">
-      <PageHead title="Businesses" sub="Where you work with a business" onBack={back} />
+      <PageHead title={t("Businesses")} sub={t("Where you work with a business")} onBack={back} />
       {offline && <OfflineLine />}
       {failed ? (
         <ProError onRetry={reload} />
@@ -146,8 +147,8 @@ export default function Businesses() {
       ) : (
         <>
           {invites.length > 0 && (
-            <section aria-label="Invitations">
-              <SectionHead label="Invitations" />
+            <section aria-label={t("Invitations")}>
+              <SectionHead label={t("Invitations")} />
               {invites.map((e) => (
                 <InvitationCard
                   key={e.businessId}
@@ -162,28 +163,28 @@ export default function Businesses() {
             </section>
           )}
 
-          <section aria-label="Connected">
-            <SectionHead label="Connected" />
+          <section aria-label={tx("Connected", "businesses")}>
+            <SectionHead label={tx("Connected", "businesses")} />
             {[...owned, ...teams].map((e) => (
               <BizCard key={e.businessId} e={e} facts={data.facts[e.businessId]} upcoming={upcomingAt(e.businessId)} onOpen={() => navigate(`/app/more/businesses/${e.businessId}`)} />
             ))}
             {owned.length + teams.length === 0 && (
               <div style={{ marginBottom: 12 }}>
-                <EmptyState icon={Building2} title="You're not on a business's team yet." line="Enter a business ID below, or ask to join one from Explore." />
+                <EmptyState icon={Building2} title={t("You're not on a business's team yet.")} line={t("Enter a business ID below, or ask to join one from Explore.")} />
               </div>
             )}
           </section>
 
           {requestRows.length > 0 && (
-            <section aria-label="Requests sent">
-              <SectionHead label="Requests sent" />
+            <section aria-label={t("Requests sent")}>
+              <SectionHead label={t("Requests sent")} />
               <ListCard rows={requestRows} />
             </section>
           )}
 
-          <section aria-label="Join a business">
-            <SectionHead label="Join a business" />
-            <JoinById hint="Ask the business for its ID. They confirm your credentials before you appear on their team." onSent={reload} onToast={setToast} />
+          <section aria-label={t("Join a business")}>
+            <SectionHead label={t("Join a business")} />
+            <JoinById hint={t("Ask the business for its ID. They confirm your credentials before you appear on their team.")} onSent={reload} onToast={setToast} />
           </section>
         </>
       )}

@@ -16,7 +16,8 @@
 import type { SubscriptionPeriod } from "./period";
 import { t, tk, tn } from "../../i18n/core";
 
-export type CentiumProduct = "business_plan" | "seat_block" | "featured_week";
+// Round G1 (Database 20261226170000): 'hiring_credits', a pack bought in the Centium app.
+export type CentiumProduct = "business_plan" | "seat_block" | "featured_week" | "hiring_credits";
 export type CentiumChargeStatus = "pending" | "paid" | "failed" | "waived" | "cancelled" | "payment_not_received";
 export type CentiumChargeMethod = "whish" | "cash" | "transfer" | "manual";
 
@@ -185,6 +186,8 @@ export function chargeTitle(c: CentiumCharge): string {
       return c.isRenewal ? tn(c.quantity, "{n} seat block renewal", "{n} seat blocks renewal") : blocksText(c.quantity);
     case "featured_week":
       return tn(c.quantity, "Featured listing, {n} week", "Featured listing, {n} weeks");
+    case "hiring_credits":
+      return tn(c.quantity, "{n} hiring credit", "{n} hiring credits");
   }
 }
 
@@ -229,8 +232,11 @@ export function seatPurchaseRefusal(
   code: string | undefined,
   action: "buy" | "cancel" = "buy",
   serverMessage?: string
-): { kind: "already_pending" | "no_plan" | "no_price" | "not_on_sale" | "not_owner" | "range" | "final" | "not_found" | "failed"; message: string } {
+): { kind: "in_app" | "already_pending" | "no_plan" | "no_price" | "not_on_sale" | "not_owner" | "range" | "final" | "not_found" | "failed"; message: string } {
   switch (code) {
+    case "ATXQ3":
+      // G fixes 4: this business pays for its seats in the Centium app.
+      return { kind: "in_app", message: t("Buy seat blocks in the Centium app. The seats are added once your purchase is confirmed.") };
     case "ATXD7":
       return { kind: "already_pending", message: t("A seat order is already waiting for payment.") };
     case "ATXD6": {

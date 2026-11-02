@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { localDayOf } from "../../utils/date";
+import { t, tk } from "../../i18n/core";
 import { isAlreadySaved, requestColumn } from "../health-log/requestId";
 
 // A client's own body metrics, in public.health_metrics: weight and water
@@ -78,12 +79,12 @@ export interface MetricWriteResult {
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to save this.";
+    return tk("Your session expired. Sign in again to save this.");
   }
   if (code === "23514" || code === "22003") {
-    return "That number is outside the range this can store.";
+    return tk("That number is outside the range this can store.");
   }
-  return "Couldn't save that. Check your connection and try again.";
+  return tk("Couldn't save that. Check your connection and try again.");
 }
 
 /**
@@ -129,12 +130,12 @@ export async function logHealthMetric(params: {
   const limit = LIMITS[kind];
 
   if (!Number.isFinite(value)) {
-    return { ok: false, message: "That doesn't look like a number." };
+    return { ok: false, message: tk("That doesn't look like a number.") };
   }
   if (value < limit.min || value > limit.max) {
     return {
       ok: false,
-      message: `Enter a value between ${limit.min} and ${limit.max} ${limit.unit}.`,
+      message: t("Enter a value between {min} and {max} {unit}.", { min: limit.min, max: limit.max, unit: t(limit.unit) }),
     };
   }
 

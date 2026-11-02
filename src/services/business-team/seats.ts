@@ -1,4 +1,5 @@
 import type { BusinessRole } from "./types";
+import { t, tk } from "../../i18n/core";
 
 // Pure (no client import), so pages and tests can use it without Supabase.
 /**
@@ -33,12 +34,12 @@ export const personUsesSeat = (p: { role: BusinessRole; usesSeat?: boolean | nul
   typeof p.usesSeat === "boolean" ? p.usesSeat : roleUsesSeat(p.role);
 
 const SUBTYPE: Record<string, string> = {
-  trainer: "Personal trainer",
-  dietitian: "Dietitian",
-  physiotherapist: "Physiotherapist",
-  doctor: "Doctor",
+  trainer: tk("Personal trainer"),
+  dietitian: tk("Dietitian"),
+  physiotherapist: tk("Physiotherapist"),
+  doctor: tk("Doctor"),
 };
-const GROUP: Record<string, string> = { fitness: "Fitness", clinical: "Clinical", nutrition: "Nutrition" };
+const GROUP: Record<string, string> = { fitness: tk("Fitness"), clinical: tk("Clinical"), nutrition: tk("Nutrition") };
 
 /**
  * The person's profession for the team list and person page (shown next to the
@@ -46,8 +47,8 @@ const GROUP: Record<string, string> = { fitness: "Fitness", clinical: "Clinical"
  * they typed, else their closest group; null when nothing is known.
  */
 export function professionLabel(p: { subtype?: string | null; otherDiscipline?: string | null; closestGroup?: string | null }): string | null {
-  if (p.subtype && SUBTYPE[p.subtype]) return SUBTYPE[p.subtype];
+  if (p.subtype && SUBTYPE[p.subtype]) return t(SUBTYPE[p.subtype]);
   if (p.subtype === "other" && p.otherDiscipline?.trim()) return p.otherDiscipline.trim();
-  if (p.closestGroup && GROUP[p.closestGroup]) return GROUP[p.closestGroup];
+  if (p.closestGroup && GROUP[p.closestGroup]) return t(GROUP[p.closestGroup]);
   return null;
 }

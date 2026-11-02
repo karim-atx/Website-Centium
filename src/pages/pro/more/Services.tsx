@@ -13,6 +13,7 @@ import { useApp } from "../../../context/AppContext";
 import { useProSubtype } from "../../../hooks/useProSubtype";
 import { fetchBookingPolicy, fetchSessionTypes, DEFAULT_POLICY, type BookingAudience, type SessionType } from "../../../services/pro/calendar";
 import { fetchServicePlans, type ServicePlan } from "../../../services/pro/profile";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · W6 MO5 Services and pricing (/app/more/services; more.js
@@ -63,19 +64,19 @@ export default function Services() {
   const sorted = (plans ?? []).slice().sort((a, b) => a.position - b.position || a.createdAt.localeCompare(b.createdAt));
 
   return (
-    <SubPage title="Services and pricing" subtitle="What clients can book and buy" bottomPad={172}>
+    <SubPage title={t("Services and pricing")} subtitle={t("What clients can book and buy")} bottomPad={172}>
       {state.offline && !loading && <OfflineLine />}
       {state.error && loading ? (
         <ProError onRetry={() => void load()} />
       ) : loading ? (
-        <div className="flex flex-col" style={{ gap: 12 }} role="status" aria-label="Loading">
+        <div className="flex flex-col" style={{ gap: 12 }} role="status" aria-label={t("Loading")}>
           <ProCardSkeleton lines={4} height={200} />
           <ProCardSkeleton lines={2} height={120} />
         </div>
       ) : (
         <>
-          <Section label="Session types" first>
-            {types!.length === 0 && <StateLine>No session types yet. Add one so clients can book you.</StateLine>}
+          <Section label={t("Session types")} first>
+            {types!.length === 0 && <StateLine>{t("No session types yet. Add one so clients can book you.")}</StateLine>}
             {types!.map((t, i) => (
               <SettingsRow
                 key={t.id}
@@ -89,14 +90,14 @@ export default function Services() {
             ))}
           </Section>
 
-          <Section label="Packages and plans">
-            {sorted.length === 0 && <StateLine>No plans yet. Add one so clients can hire you.</StateLine>}
+          <Section label={t("Packages and plans")}>
+            {sorted.length === 0 && <StateLine>{t("No plans yet. Add one so clients can hire you.")}</StateLine>}
             {sorted.map((p, i) => (
               <SettingsRow
                 key={p.id}
                 icon={p.sessionCount !== null ? Package : Repeat}
                 title={p.name}
-                sub={p.active ? planLine(p.features, p.sessionCount) : "Not offered"}
+                sub={p.active ? planLine(p.features, p.sessionCount) : t("Not offered")}
                 value={planPrice(p.price, p.billing)}
                 muted={!p.active}
                 onClick={() => setSheet({ plan: p })}
@@ -105,13 +106,13 @@ export default function Services() {
             ))}
           </Section>
 
-          <Section label="Rates">
+          <Section label={t("Rates")}>
             <SettingsRow
               icon={Banknote}
-              title="Monthly and consultation rates"
+              title={t("Monthly and consultation rates")}
               sub={
                 facts
-                  ? [facts.monthlyRate != null ? `$${facts.monthlyRate}/mo` : null, facts.consultationRate != null ? `$${facts.consultationRate} a consultation` : null].filter(Boolean).join(" · ") || "Not set yet"
+                  ? [facts.monthlyRate != null ? t("{price}/mo", { price: `$${facts.monthlyRate}` }) : null, facts.consultationRate != null ? t("{price} a consultation", { price: `$${facts.consultationRate}` }) : null].filter(Boolean).join(" · ") || t("Not set yet")
                   : undefined
               }
               onClick={() => setRatesOpen(true)}
@@ -123,7 +124,7 @@ export default function Services() {
 
       {!loading && (
         <PinnedSlot>
-          <CtaButton label="Add a service" icon={Plus} onClick={() => setSheet({ plan: null })} full />
+          <CtaButton label={t("Add a service")} icon={Plus} onClick={() => setSheet({ plan: null })} full />
         </PinnedSlot>
       )}
 
@@ -135,7 +136,7 @@ export default function Services() {
         audience={audience}
         onOpenAvailability={() => navigate("/app/pro/calendar/availability")}
         onSaved={(name, isNew) => {
-          if (isNew) navigate("/app/more/public-profile", { state: { toast: `${name} added to your profile` } });
+          if (isNew) navigate("/app/more/public-profile", { state: { toast: t("{name} added to your profile", { name }) } });
           else void load();
         }}
       />

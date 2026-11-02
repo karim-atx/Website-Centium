@@ -16,6 +16,7 @@ import { ProgrammesTab } from "../../components/pro/library/ProgrammesTab";
 import { LibraryMealPlans } from "../../components/pro/nutrition/LibraryMealPlans";
 import { programmesDetailOpen } from "../../components/pro/library/libraryModel";
 import { isMealPlansSubview } from "../../components/pro/nutrition/nav";
+import { t, tk } from "../../i18n/core";
 
 /**
  * Release 3 · Library (/app/pro/library/:tab, Full coaching only; TR1 v7 and
@@ -27,8 +28,8 @@ import { isMealPlansSubview } from "../../components/pro/nutrition/nav";
  * (search params) have their own back header, so the title and tabs hide there.
  */
 const LABEL: Record<(typeof LIBRARY_TABS)[number], string> = {
-  programmes: "Programmes",
-  "meal-plans": "Meal plans",
+  programmes: tk("Programmes"),
+  "meal-plans": tk("Meal plans"),
 };
 
 export default function Library() {
@@ -57,11 +58,11 @@ export default function Library() {
               marginBottom: 13,
             }}
           >
-            Library
+            {t("Library")}
           </h1>
           <SegmentedTabs
             className="mb-3"
-            items={LIBRARY_TABS.map((k) => ({ key: k, label: LABEL[k] }))}
+            items={LIBRARY_TABS.map((k) => ({ key: k, label: t(LABEL[k]) }))}
             activeKey={current}
             onChange={(k) =>
               navigate(`${PRO_ROUTES.library}/${k}`, { replace: true })

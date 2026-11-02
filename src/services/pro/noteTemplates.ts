@@ -8,6 +8,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { Read, Write } from "./clients";
+import { tk } from "../../i18n/core";
 
 const from = (table: string) => supabase.from(table as never);
 
@@ -30,7 +31,7 @@ export async function fetchMyNoteTemplates(me: string): Promise<Read<NoteTemplat
   };
 }
 
-const fail = (error: unknown): Write => ({ ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't save the template. Try again." });
+const fail = (error: unknown): Write => ({ ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : tk("Couldn't save the template. Try again.") });
 
 export async function saveNoteTemplate(me: string, id: string | null, kind: TemplateKind, title: string, body: string): Promise<Write> {
   const row = { kind, title: title.trim(), body };
@@ -40,5 +41,5 @@ export async function saveNoteTemplate(me: string, id: string | null, kind: Temp
 
 export async function deleteNoteTemplate(id: string): Promise<Write> {
   const { error } = await from("note_templates").delete().eq("id", id);
-  return error ? { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't remove the template. Try again." } : { ok: true };
+  return error ? { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : tk("Couldn't remove the template. Try again.") } : { ok: true };
 }

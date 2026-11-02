@@ -14,6 +14,8 @@
 
 import { bool, num, rows, str } from "../market/parse";
 import { BLOCKED_TEXT } from "../moderation/text";
+import { getLanguage, t, tk } from "../../i18n/core";
+import { ARABIC_LOCALE } from "../../i18n/format";
 
 // ---------------------------------------------------------------- my_class_bookings (DB4)
 
@@ -132,13 +134,13 @@ export function findPast(list: readonly PastBooking[], bookingId: string, sessio
 export const firstName = (name: string): string => name.trim().split(/\s+/)[0] ?? "";
 
 /** "How was Rana's class?" */
-export const reviewTitle = (name: string): string => `How was ${firstName(name)}'s class?`;
+export const reviewTitle = (name: string): string => t("How was {name}'s class?", { name: firstName(name) });
 
 /** "Shown on Rana's profile with your first name and the gym's name." */
-export const reviewNote = (name: string): string => `Shown on ${firstName(name)}'s profile with your first name and the gym's name.`;
+export const reviewNote = (name: string): string => t("Shown on {name}'s profile with your first name and the gym's name.", { name: firstName(name) });
 
 /** "Review sent · it shows on Rana's profile with Hamra Strength Club" */
-export const sentText = (name: string, gym: string): string => `Review sent · it shows on ${firstName(name)}'s profile with ${gym}`;
+export const sentText = (name: string, gym: string): string => t("Review sent · it shows on {name}'s profile with {gym}", { name: firstName(name), gym });
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -148,6 +150,7 @@ export function shortDay(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
+  if (getLanguage() === "ar") return d.toLocaleDateString(ARABIC_LOCALE, { weekday: "short", month: "short", day: "numeric" });
   return `${WD[d.getDay()]}, ${MO[d.getMonth()]} ${d.getDate()}`;
 }
 
@@ -158,8 +161,8 @@ export function contextLine(t: Pick<ReviewTarget, "title" | "gymName" | "startsA
 
 /** The Past row's meta tail: "Rate your instructor" until reviewed, then "you rated 5" (or nothing when the rating isn't known). */
 export function reviewMetaTail(state: { reviewed: boolean; rating: number | null }): string | null {
-  if (!state.reviewed) return "Rate your instructor";
-  return state.rating ? `you rated ${state.rating}` : null;
+  if (!state.reviewed) return t("Rate your instructor");
+  return state.rating ? t("you rated {n}", { n: state.rating }) : null;
 }
 
 // ---------------------------------------------------------------- the stars
@@ -219,12 +222,12 @@ export function reviewErrorOf(e: { code?: string | null; message?: string | null
 
 /** Not drawn on the board: written in its voice. */
 export const REVIEW_ERROR_TEXT: Record<ReviewError, string> = {
-  not_attended: "You can review a class once you've been to it.",
-  not_yet: "You can rate a class once it has happened.",
-  no_instructor: "This class had no instructor from the gym's team to review.",
-  bad_rating: "Choose from 1 to 5 stars.",
-  too_long: "Keep it under 2,000 characters.",
-  rate_limited: "Too many reviews in a short time. Try again later.",
+  not_attended: tk("You can review a class once you've been to it."),
+  not_yet: tk("You can rate a class once it has happened."),
+  no_instructor: tk("This class had no instructor from the gym's team to review."),
+  bad_rating: tk("Choose from 1 to 5 stars."),
+  too_long: tk("Keep it under 2,000 characters."),
+  rate_limited: tk("Too many reviews in a short time. Try again later."),
   // Round C Release 2: the word lists.
   blocked: BLOCKED_TEXT,
 };

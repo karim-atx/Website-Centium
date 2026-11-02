@@ -1,5 +1,8 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline } from "../network-error";
+import { askPremium } from "../premium/asks";
+import { edgeRefusalOf } from "../premium/g2";
+import { t } from "../../i18n/core";
 import { getFoodsByIds, type FoodSearchResult } from "./index";
 import {
   onlineFailureKind,
@@ -53,6 +56,11 @@ export async function searchFoodsOnline(query: string): Promise<OnlineSearchOutc
       }
     }
     // No HTTP response at all: supabase-js reports that as FunctionsFetchError.
+    // Round G2: 403 premium_required (online food search is Premium while the free limits apply).
+    if (edgeRefusalOf(status, code)) {
+      askPremium("online_food_search", "refusal");
+      return { ok: false, kind: "error", message: t("That's part of Centium Premium.") };
+    }
     const offline = status === 0 && ((error as { name?: string }).name === "FunctionsFetchError" || browserOffline());
     const kind = onlineFailureKind(status, code, offline);
     if (kind === "error") console.error("[food] online search failed:", status, code);

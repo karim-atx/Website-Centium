@@ -27,6 +27,10 @@ import {
   type ClientFormat,
 } from "./clientCardModel";
 import { useShareLocks } from "./useShareLocks";
+import { usePremium } from "../../../services/premium/hooks";
+import { showPremiumBadge } from "../../../services/premium/model";
+import { PremiumDesignChips } from "./PremiumDesignChips";
+import { FREE_BACKGROUND } from "./premiumDesigns";
 
 // Market + Share 3.0 · C-SH.2 the client share sheet, C-SH.5 "Your photo",
 // C-SH.6 the confirmations. Literal values from the Client Sharing screen
@@ -154,6 +158,8 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
   const m = marketPalette(dark);
   const { authUserId } = useApp();
   const locks = useShareLocks();
+  // Round G1 (G9): the member's own share card carries the Premium badge, only with the switch on and Premium held.
+  const premiumBadge = showPremiumBadge(usePremium().premium);
   const [step, setStep] = useState<"edit" | "dest">("edit");
   const [format, setFormat] = useState<ClientFormat>("story");
   const [background, setBackground] = useState<ClientBackground>("B");
@@ -308,7 +314,7 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
       </button>
     );
 
-  const preview = (width: number) => <ClientShareCard spec={spec} stats={stats} format={format} background={background === "P" ? "B" : background} width={width} />;
+  const preview = (width: number) => <ClientShareCard spec={spec} stats={stats} format={format} background={background === "P" ? "B" : background} width={width} premium={premiumBadge} />;
 
   return (
     <>
@@ -349,7 +355,7 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
                   key={photo.url}
                   format={format === "post" ? "post" : "story"}
                   photoUrl={photo.url}
-                  layer={<PhotoStatsLayer spec={spec} stats={stats} />}
+                  layer={<PhotoStatsLayer spec={spec} stats={stats} premium={premiumBadge} />}
                   layerWidth={100}
                   anchor="corner"
                   chrome="client"
@@ -368,13 +374,15 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
               <>
                 {label("Background")}
                 <div role="radiogroup" aria-label="Background" className="flex flex-wrap" style={{ gap: 6 }}>
+                  {/* Today's three free backgrounds, by the Database's design keys (centium, pattern, photo; Round G4 fixes). */}
                   {(
                     [
-                      ["B", "Centium", BRAND_SWATCH],
-                      ["I", spec.patternLabel, METRIC_IDENTITY[spec.id][0]],
-                      ["P", "Your photo", PHOTO_SWATCH],
+                      ["centium", "Centium", BRAND_SWATCH],
+                      ["pattern", spec.patternLabel, METRIC_IDENTITY[spec.id][0]],
+                      ["photo", "Your photo", PHOTO_SWATCH],
                     ] as const
-                  ).map(([k, n, sw]) => {
+                  ).map(([design, n, sw]) => {
+                    const k = FREE_BACKGROUND[design];
                     const a = k === "P" ? photoMode : background === k;
                     return (
                       <button
@@ -382,6 +390,7 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
                         type="button"
                         role="radio"
                         aria-checked={a}
+                        data-design={design}
                         onClick={() => (k === "P" ? pickPhoto() : setBackground(k))}
                         className="tap inline-flex items-center"
                         style={{
@@ -401,6 +410,8 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
                       </button>
                     );
                   })}
+                  {/* Round G4: the Premium designs (nothing while the switch is off). */}
+                  <PremiumDesignChips background={background} onPick={setBackground} />
                 </div>
                 <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => void onFile(e)} />
               </>
@@ -461,10 +472,10 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
       {/* The export sources: the same card unscaled (300 wide), the sticker and the photo layer, off screen. */}
       {createPortal(
         <div aria-hidden style={{ position: "fixed", insetInlineStart: -10000, top: 0, pointerEvents: "none", visibility: "hidden" }}>
-          <ClientShareCard innerRef={cardSrc} spec={spec} stats={stats} format={format} background={background === "P" ? "B" : background} width={300} flat square />
-          <ClientShareCard innerRef={stickerSrc} spec={spec} stats={stats} format="sticker" background="B" width={300} flat square />
+          <ClientShareCard innerRef={cardSrc} spec={spec} stats={stats} format={format} background={background === "P" ? "B" : background} width={300} flat square premium={premiumBadge} />
+          <ClientShareCard innerRef={stickerSrc} spec={spec} stats={stats} format="sticker" background="B" width={300} flat square premium={premiumBadge} />
           <div style={{ textShadow: "0 1px 8px rgba(0,0,0,0.42)", color: "#FFFFFF" }}>
-            <PhotoStatsLayer innerRef={layerSrc} spec={spec} stats={stats} />
+            <PhotoStatsLayer innerRef={layerSrc} spec={spec} stats={stats} premium={premiumBadge} />
           </div>
         </div>,
         document.body,

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { HistoryWindowLine } from "../../components/premium/HistoryWindowLine";
 import { useSearchParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useWorkoutReplies } from "./useWorkoutReplies";
@@ -200,6 +201,8 @@ export default function HistoryTab() {
 
   return (
     <div className="animate-fade-slide-up">
+      {/* Round G2: a free member's history shows 14 days; one quiet line says so (nothing while the switch is off). */}
+      <HistoryWindowLine className="mb-3" />
       <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
         <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Summary</p>
         <button

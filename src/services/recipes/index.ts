@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
+import { premiumRefusalMessage } from "../premium/asks";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { findCatalogFoodByName, isUuid } from "../food";
 import type { PostgrestError } from "@supabase/supabase-js";
@@ -38,6 +39,10 @@ async function resolveItemSource(
 }
 
 function describe(error: PostgrestError): string {
+  // Round G2: a free limit (ATXQ2) or a Premium-only refusal (ATXQ1) asks for
+  // the prompt and says so plainly; what was typed stays on screen.
+  const premiumRefusal = premiumRefusalMessage(error);
+  if (premiumRefusal) return premiumRefusal;
   if (error.code === "42501") return "You don't have permission to do that.";
   if (isOffline(error)) return OFFLINE_MESSAGE;
   return "Something went wrong. Please try again.";
@@ -97,6 +102,8 @@ interface RecipeRow {
   servings: number;
   steps: string | null;
   playlist_url: string | null;
+  /** Round G2: set on a recipe a professional wrote for one client. */
+  scoped_to_client_id?: string | null;
   recipe_items: ItemRow[];
 }
 
@@ -139,7 +146,15 @@ function toRecipe(row: RecipeRow): Recipe {
     })
     .filter((i): i is RecipeItem => i !== null);
 
-  return { id: row.id, title: row.title, items, servings: row.servings, steps: row.steps ?? undefined, playlistUrl: row.playlist_url ?? undefined };
+  return {
+    id: row.id,
+    title: row.title,
+    items,
+    servings: row.servings,
+    steps: row.steps ?? undefined,
+    playlistUrl: row.playlist_url ?? undefined,
+    ...(row.scoped_to_client_id ? { fromProfessional: true } : {}),
+  };
 }
 
 /**
@@ -151,7 +166,7 @@ function toRecipe(row: RecipeRow): Recipe {
 export async function getRecipes(userId: string): Promise<RecipesResult> {
   const { data, error } = await db
     .from("recipes")
-    .select(`id, title, servings, steps, playlist_url, recipe_items(${ITEM_SELECT})`)
+    .select(`id, title, servings, steps, playlist_url, scoped_to_client_id, recipe_items(${ITEM_SELECT})`)
     .or(`owner_id.eq.${userId},scoped_to_client_id.eq.${userId}`)
     .order("created_at", { ascending: false });
 

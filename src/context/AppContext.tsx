@@ -1149,8 +1149,6 @@ interface AppState {
   // V8 (QA 8.0): gym membership purchases — day passes expire after 24h and
   // stack with an active monthly/annual plan, which stays active until
   // explicitly cancelled.
-  premiumPlan: "monthly" | "yearly" | null;
-  setPremiumPlan: (plan: "monthly" | "yearly" | null) => void;
 
   // GYM PASSES AND THE CART ARE GONE, and payments are why.
   //
@@ -1317,11 +1315,11 @@ const AppContext = createContext<AppState | undefined>(undefined);
 // untouched set. They live here now as a list the Habits tab OFFERS: nothing
 // is created until somebody taps one, and then it is theirs.
 const HABIT_SUGGESTIONS: { label: string; icon: HabitIconKey }[] = [
-  { label: "Drink water", icon: "water" },
-  { label: "10,000 steps", icon: "steps" },
-  { label: "Workout", icon: "workout" },
-  { label: "Journal", icon: "journal" },
-  { label: "Meditate", icon: "meditation" },
+  { label: tk("Drink water"), icon: "water" },
+  { label: tk("10,000 steps"), icon: "steps" },
+  { label: tk("Workout"), icon: "workout" },
+  { label: tk("Journal"), icon: "journal" },
+  { label: tk("Meditate"), icon: "meditation" },
 ];
 
 // HOW OFTEN THE ACHIEVEMENT EVALUATOR MAY RUN.
@@ -3738,8 +3736,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     },
     []
   );
-
-  const [premiumPlan, setPremiumPlan] = usePersistentState<"monthly" | "yearly" | null>("premiumPlan", null);
 
   // `membershipPlans` and `discounts` are gone from here — real
   // membership_plans and (since B16) promotions rows now. The plans in particular
@@ -6803,8 +6799,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unlockQueue,
       dismissUnlock,
       noteFeatureMilestone,
-      premiumPlan,
-      setPremiumPlan,
       generateClientCode,
       rosterLoading,
       rosterError,
@@ -6974,7 +6968,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unlockQueue,
       dismissUnlock,
       noteFeatureMilestone,
-      premiumPlan,
       professionalClients,
       calendarEvents,
       workoutTemplates,

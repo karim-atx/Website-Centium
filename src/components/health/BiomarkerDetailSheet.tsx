@@ -9,6 +9,7 @@ import { useLabCatalogue } from "./useLabCatalogue";
 import { useCheckFlags } from "../health-checks/useCheckFlags";
 import { CheckFlagNote } from "../health-checks/CheckFlag";
 import { BiomarkerLineChart } from "./BiomarkerLineChart";
+import { TrendGate } from "./records/premium/TrendGate";
 import { statusFor } from "../../services/labs";
 import type { LabResult } from "../../services/labs/results";
 import { textPx, linePx } from "../../theme/textSize";
@@ -186,8 +187,9 @@ export const BiomarkerDetailSheet: React.FC<{
             <RangeBar value={latest.value} low={latest.rangeLow} high={latest.rangeHigh} status={status} width={310} height={8} dot={14} border={1.6} labels="ends" />
           </div>
         )}
+        {/* Round G3 (decision G5): with the Premium switch on and no Premium, the trend is Premium (TrendGate); off, as today. */}
         {list.length > 1 && (
-          <>
+          <TrendGate results={list.length} className="mt-3">
             <p style={{ marginTop: 12, fontSize: textPx(11.5), lineHeight: linePx(17.3), fontWeight: 700, color: INK_SOFT }}>History</p>
             <div style={{ marginTop: 4 }}>
               <BiomarkerLineChart
@@ -199,7 +201,7 @@ export const BiomarkerDetailSheet: React.FC<{
                 label={`${marker.name}, ${list.length} results`}
               />
             </div>
-          </>
+          </TrendGate>
         )}
         <p style={{ marginTop: 12, fontSize: textPx(11.5), lineHeight: linePx(17.3), fontWeight: 700, color: INK_SOFT }}>{list.length > 1 ? "Last 3 results" : "Last result"}</p>
         <div style={{ marginTop: 4 }}>

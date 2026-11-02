@@ -133,6 +133,10 @@ const plans: Catalogue = {
   "This order couldn't be found.": "تعذّر العثور على هذا الطلب.",
   "Couldn't place the order. Try again.": "تعذّر تقديم الطلب. حاول مرة أخرى.",
   "Couldn't cancel the order. Try again.": "تعذّر إلغاء الطلب. حاول مرة أخرى.",
+  // G fixes 4: a business that pays in the app (the switch on, or a store plan) buys these in the Centium app
+  "Buy seat blocks in the Centium app. The seats are added once your purchase is confirmed.": "اشترِ حزم المقاعد من تطبيق Centium. تُضاف المقاعد بعد تأكيد عملية الشراء.",
+  "Buy a featured week in the Centium app. Your week starts once your purchase is confirmed.": "اشترِ أسبوع تمييز من تطبيق Centium. يبدأ أسبوعك بعد تأكيد عملية الشراء.",
+  "Earlier Centium charges of {price} are still open. The Centium team will contact you about them.": "رسوم Centium سابقة بقيمة {price} لا تزال مفتوحة. سيتواصل معك فريق Centium بشأنها.",
 
   // == Subscription (client and business) ==
   "AI food logging": "تسجيل الطعام بالذكاء الاصطناعي",

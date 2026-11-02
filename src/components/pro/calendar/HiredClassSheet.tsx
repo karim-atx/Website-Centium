@@ -9,6 +9,7 @@ import { useIsDark } from "../../../hooks/useIsDark";
 import { time12Split } from "../../../utils/time12";
 import { bookedText, durationText, payText, ticketTones, whenText } from "../../../services/calendar-sync/model";
 import type { ClassInfo } from "./classModel";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W5 · P-CA.4 Event detail: the Class sheet (Professional
 // Calendar Screens lines 116–136). MasterBottomSheet "Class"; the ticket
@@ -68,27 +69,27 @@ export const HiredClassSheet: React.FC<{
   const [kept, setKept] = useState<ClassInfo | null>(info);
   if (info && info !== kept) setKept(info);
   const c = info ?? kept;
-  if (!c) return <MasterSheet open={false} onClose={onClose} title="Class">{null}</MasterSheet>;
+  if (!c) return <MasterSheet open={false} onClose={onClose} title={t("Class")}>{null}</MasterSheet>;
   const tones = ticketTones(c.colour);
   const bg = dark ? hexAlpha(c.colour, 0.16) : tones.bg;
   const ink = dark ? liftInk(c.colour) : tones.ink;
   const perf = dark ? liftInk(c.colour) : c.colour;
-  const t = time12Split(c.start);
+  const tm = time12Split(c.start);
   const rows: [string, string, string?][] = [];
-  if (c.location) rows.push(["Location", c.location]);
-  rows.push(["When", whenText(c.date, c.start, c.end)]);
+  if (c.location) rows.push([t("Location"), c.location]);
+  rows.push([t("When"), whenText(c.date, c.start, c.end)]);
   const dur = durationText(c.start, c.end);
-  if (dur) rows.push(["Duration", dur]);
-  if (c.recurrence) rows.push(["Repeats", c.recurrence]);
+  if (dur) rows.push([t("Duration"), dur]);
+  if (c.recurrence) rows.push([t("Repeats"), c.recurrence]);
   const booked = bookedText(c.booked, c.capacity);
-  if (booked) rows.push(["Booked", booked]);
+  if (booked) rows.push([t("Booked"), booked]);
   const pay = payText(c.pay);
-  if (pay) rows.push(["Pay per session", pay]);
-  if (c.status !== "scheduled") rows.push(["Status", c.status === "cancelled" ? "Cancelled" : "Completed", c.status === "cancelled" ? m.high : m.good]);
-  if (c.notes) rows.push(["Notes", c.notes]);
-  const mark = c.hired ? ["Hired via Centium", c.roleTitle].filter(Boolean).join(" · ") : null;
+  if (pay) rows.push([t("Pay per session"), pay]);
+  if (c.status !== "scheduled") rows.push([t("Status"), c.status === "cancelled" ? t("Cancelled") : t("Completed"), c.status === "cancelled" ? m.high : m.good]);
+  if (c.notes) rows.push([t("Notes"), c.notes]);
+  const mark = c.hired ? [t("Hired via Centium"), c.roleTitle].filter(Boolean).join(" · ") : null;
   return (
-    <MasterSheet open={!!info} onClose={onClose} title="Class">
+    <MasterSheet open={!!info} onClose={onClose} title={t("Class")}>
       <style>{FOCUS_CSS}</style>
       <div style={{ color: m.ink, lineHeight: "normal" }}>
         <div style={{ position: "relative", display: "flex", borderRadius: 14, background: bg, overflow: "hidden" }} data-class-ticket>
@@ -103,10 +104,10 @@ export const HiredClassSheet: React.FC<{
             ) : null}
           </div>
           <div style={{ width: 76, flex: "none", borderInlineStart: `1.5px dashed ${perf}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            {t ? (
+            {tm ? (
               <>
-                <span style={{ fontSize: px(17), fontWeight: 800, color: ink }}>{t.time}</span>
-                <span style={{ fontSize: px(10), fontWeight: 700, color: ink }}>{t.meridiem}</span>
+                <span style={{ fontSize: px(17), fontWeight: 800, color: ink }}>{tm.time}</span>
+                <span style={{ fontSize: px(10), fontWeight: 700, color: ink }}>{tm.meridiem}</span>
               </>
             ) : null}
           </div>
@@ -119,12 +120,12 @@ export const HiredClassSheet: React.FC<{
           ))}
         </div>
         <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
-          <LinkTile label="View class" icon={<Eye size={18} strokeWidth={2} />} onClick={() => onViewClass(c.sessionId)} />
-          <LinkTile label="Message gym" icon={<MessageCircle size={18} strokeWidth={2} />} disabled={!c.businessId || !onMessageGym} onClick={() => c.businessId && onMessageGym?.(c.businessId)} />
-          <LinkTile label="Directions" icon={<Navigation size={18} strokeWidth={2} />} disabled={!c.location} onClick={(el) => setDirAnchor(el)} />
+          <LinkTile label={t("View class")} icon={<Eye size={18} strokeWidth={2} />} onClick={() => onViewClass(c.sessionId)} />
+          <LinkTile label={t("Message gym")} icon={<MessageCircle size={18} strokeWidth={2} />} disabled={!c.businessId || !onMessageGym} onClick={() => c.businessId && onMessageGym?.(c.businessId)} />
+          <LinkTile label={t("Directions")} icon={<Navigation size={18} strokeWidth={2} />} disabled={!c.location} onClick={(el) => setDirAnchor(el)} />
         </div>
         <p style={{ margin: "12px 0 0", fontSize: px(11.5), lineHeight: lh(16), color: m.faint }}>
-          {`Added by ${c.businessName || "the gym"} when they assigned you this class. Changes the gym makes show here on their own.`}
+          {t("Added by {business} when they assigned you this class. Changes the gym makes show here on their own.", { business: c.businessName || t("the gym") })}
         </p>
       </div>
       <DirectionsMenu open={!!dirAnchor} onClose={() => setDirAnchor(null)} anchor={dirAnchor} address={c.location} coords={null} onCopied={onNote} />
