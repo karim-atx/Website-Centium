@@ -83,7 +83,7 @@ export const LogWeightSheet: React.FC<{
     if (!authUserId) return;
     if (browserOffline()) {
       enqueueLog(authUserId, { kind: "weight", kg: value, day, note: note.trim() || null });
-      setToast(QUEUED_COPY);
+      setToast(t(QUEUED_COPY));
       onClose();
       return;
     }
@@ -93,7 +93,7 @@ export const LogWeightSheet: React.FC<{
     if (!result.ok) {
       if (isOfflineFailure(result)) {
         enqueueLog(authUserId, { kind: "weight", kg: value, day, note: note.trim() || null });
-        setToast(QUEUED_COPY);
+        setToast(t(QUEUED_COPY));
         onClose();
         return;
       }

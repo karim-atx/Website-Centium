@@ -142,7 +142,7 @@ async function reread(): Promise<void> {
 const sortRows = (rows: BusinessClassRow[]) =>
   [...rows].sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
 
-type Fail = { ok: false; message: string; code?: "capacity" | "permission" | "busy" };
+type Fail = { ok: false; message: string; code?: "capacity" | "permission" | "busy"; busyDay?: string | null };
 
 /** business_activity kinds that change the schedule (bookings, a member's cancel). */
 const SCHEDULE_KINDS = ["booking", "cancel"] as const;
@@ -214,7 +214,7 @@ export function useSchedule() {
     const f = classFieldsOf(draft);
     if (!f.ok) return f;
     const r = await saveClassSeries(state.businessId, f.fields, rule);
-    if (!r.ok) return { ok: false, message: r.message, code: r.refusal === "busy" ? "busy" : r.refusal === "denied" ? "permission" : undefined };
+    if (!r.ok) return { ok: false, message: r.message, code: r.refusal === "busy" ? "busy" : r.refusal === "denied" ? "permission" : undefined, busyDay: r.busyDay };
     await reread();
     const created = sortRows(state.classes.filter((c) => c.seriesId === r.value));
     return { ok: true, seriesId: r.value, created };
@@ -240,7 +240,7 @@ export function useSchedule() {
       const timesChanged = draft.startTime !== before.startTime || draft.endTime !== before.endTime;
       if (scope === "this" && (draft.date !== before.date || timesChanged)) {
         const m = await moveClassSession(classId, draft.date, draft.startTime, draft.endTime);
-        if (!m.ok) return { ok: false, message: m.message, code: m.refusal === "busy" ? "busy" : undefined };
+        if (!m.ok) return { ok: false, message: m.message, code: m.refusal === "busy" ? "busy" : undefined, busyDay: m.busyDay };
         told = m.value;
       }
       if (scope === "this") {
@@ -254,6 +254,7 @@ export function useSchedule() {
           ok: false,
           message: r.message,
           code: r.refusal === "capacity" ? "capacity" : r.refusal === "denied" ? "permission" : r.refusal === "busy" ? "busy" : undefined,
+          busyDay: r.busyDay,
         };
       }
       if (before.professionalId !== (draft.professionalId || null)) covers.delete(classId);

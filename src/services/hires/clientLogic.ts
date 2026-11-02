@@ -228,26 +228,26 @@ export function describePlansCardError(code: string | undefined, offline = false
   if (offline) return OFFLINE_MESSAGE;
   switch (code) {
     case "ATX08":
-      return "You can't send plans in this conversation.";
+      return t("You can't send plans in this conversation.");
     case "ATX98":
-      return "You have no active plans to offer. Add one under your hire plans first.";
+      return t("You have no active plans to offer. Add one under your hire plans first.");
     case "ATXA2":
-      return "Plans can't be offered to someone under 18.";
+      return t("Plans can't be offered to someone under 18.");
     case "22023":
       // Two causes share the code: a venue thread, or more than five plans
       // (the server refuses a sixth even when p_plan_ids is null).
-      return "Plans can't be sent here. A card holds at most five plans, and none can go in a venue conversation.";
+      return t("Plans can't be sent here. A card holds at most five plans, and none can go in a venue conversation.");
     case "ATX35":
       // A block, either way round; the same sentence messaging uses, which
       // deliberately does not say who blocked whom.
-      return "You can't message this person.";
+      return t("You can't message this person.");
     case "ATX02":
       // The message posts through the ordinary rate limiter.
-      return "You're sending messages too quickly. Wait a minute and try again.";
+      return t("You're sending messages too quickly. Wait a minute and try again.");
     case "ATX01":
-      return "Your session expired. Sign in again.";
+      return t("Your session expired. Sign in again.");
     default:
-      return "Couldn't send your plans. Try again.";
+      return t("Couldn't send your plans. Try again.");
   }
 }
 

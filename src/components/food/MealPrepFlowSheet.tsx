@@ -299,7 +299,7 @@ const DetailScreen: React.FC<{
                   )}
                 </span>
                 <span className="flex-none text-[11.5px]" style={{ color: PREP_FAINT }}>
-                  {rItem.quantity} {rItem.unit ?? "serving"}
+                  {rItem.quantity} {rItem.unit ?? t("serving")}
                 </span>
                 {!hideNumbers && (
                   <span className="flex-none w-12 text-end text-[11.5px] font-semibold tabular-nums" style={{ color: PREP_SOFT }}>

@@ -407,7 +407,7 @@ const messages: Catalogue = {
   // == Messages › Chat list ==
   Coach: "مدرّب",
   Nutritionist: "أخصائي تغذية",
-  Physiotherapist: "أخصائي علاج فيزيائي",
+  Physiotherapist: "أخصائي العلاج الفيزيائي",
   Doctor: "طبيب",
   Professional: "مختص",
   Official: "رسمي",

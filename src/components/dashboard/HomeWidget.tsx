@@ -431,7 +431,7 @@ export const HomeWidget: React.FC<{
           const queue = () => {
             if (!authUserId) return;
             enqueueLog(authUserId, { kind: "water", ml: WATER_QUICK_ADD_ML, day: selectedDate, loggedAt: loggedAt.toISOString() }, requestId);
-            setWaterToast({ message: SAVED_ON_DEVICE, error: false });
+            setWaterToast({ message: t(SAVED_ON_DEVICE), error: false });
           };
           if (browserOffline()) return queue();
           setAddingWater(true);

@@ -95,7 +95,7 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
         <div className="flex" style={{ gap: 8, marginTop: 12 }}>
           <BellOff size={14} aria-hidden className="shrink-0 text-charcoal-faint" style={{ marginTop: 2 }} />
           <div className="min-w-0">
-            <CycleHelp>{!supported ? t(G.PUSH_UNSUPPORTED) : pushAllowed === false ? G.PUSH_BLOCKED : t(G.PUSH_NEEDED)}</CycleHelp>
+            <CycleHelp>{!supported ? t(G.PUSH_UNSUPPORTED) : pushAllowed === false ? t(G.PUSH_BLOCKED) : t(G.PUSH_NEEDED)}</CycleHelp>
             {supported && pushAllowed !== false && (
               <button
                 type="button"
@@ -189,7 +189,7 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
           </OptionButton>
         ))}
       </div>
-      <CycleHelp style={{ marginTop: 6 }}>{G.DETAIL_HELP[cycleSettings.notificationDetail]}</CycleHelp>
+      <CycleHelp style={{ marginTop: 6 }}>{t(G.DETAIL_HELP[cycleSettings.notificationDetail])}</CycleHelp>
       {/* The zone is set in general Settings (task T) and governs every
           reminder; the Cycle Settings Time zone row shows which. */}
       <CycleHelp>{t(G.TIMEZONE_HELP)}.</CycleHelp>

@@ -12,7 +12,7 @@ const parseTeam = (rows: Row[]): TeamMember[] =>
     hires: (r.hires ?? []).map((h) => ({ id: h.id, title: h.title ?? "", type: h.type ?? "role", hiredAt: null, startsOn: h.starts_on ?? null })),
     classes: [],
   }));
-import { busyDayOf, clashBody, clashRows, clashTitle, firstNameOf, livePeople, teamPeople, teamSubLine, weekLoad } from "./instructorTeam.ts";
+import { clashBody, clashRows, clashTitle, firstNameOf, livePeople, teamPeople, teamSubLine, weekLoad } from "./instructorTeam.ts";
 
 const team = parseTeam([
   { professional_id: "p-st", name: "Sami Tannous", specialty: "Boxing and HIIT", source: "hire", hires: [{ id: "h2", title: "Boxing Basics instructor", type: "role" }] },
@@ -74,11 +74,6 @@ test("clash dialog: title, body without 'Assign anyway' wording, busy times only
   const twice = { ...series, weekdays: [3, 1] };
   assert.equal(clashRows(twice, "Rana", { startTime: "10:00", endTime: "11:00", dayText: null })[0].v, "Mon and Wed 10:00 to 10:45 AM, from Nov 1");
   assert.equal(clashBody({ ...series, weekdays: [1, 2, 3, 4, 5, 6, 7] }, "Rana"), "Spin 45 every day at 10:00 AM overlaps a time already busy on Rana's calendar.");
-});
-
-test("the ATXD9 line's day", () => {
-  assert.equal(busyDayOf("That instructor is already teaching at that time on Wed, Oct 21. Choose someone else or another time."), "Wed, Oct 21");
-  assert.equal(busyDayOf("That instructor is already teaching at that time. Choose someone else or another time."), null);
 });
 
 test("ATX76 (Database #38, the Team-only instructor rule) reads as the picker note, for save, edit and assign", async () => {

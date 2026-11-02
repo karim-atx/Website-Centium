@@ -26,8 +26,6 @@ function serviceLine(label: string): string {
   return m[2] === "album" ? t("{service} album", { service: m[1] }) : t("{service} playlist", { service: m[1] });
 }
 function problemLine(message: string): string {
-  const m = /^That's a (.+) link, but not a playlist or an album.$/.exec(message);
-  if (m && m[1] !== "music") return t("That's a {service} link, but not a playlist or an album.", { service: m[1] });
   return t(message);
 }
 

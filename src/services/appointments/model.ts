@@ -2,6 +2,7 @@ import { stage4Message } from "../venues/venueLogic";
 import { PAST_MIDNIGHT_CODE, PAST_MIDNIGHT_MESSAGE } from "../booking/pastMidnight";
 import { BUSINESS_CLOSED_CODE, CLOSED_ADD_APPOINTMENT, CLOSED_BOOK_APPOINTMENT, closureMessage } from "../business-closure/logic";
 import { num, str, type Row } from "../store/mapping";
+import { tk, tn } from "../../i18n/core";
 
 // B12 · Appointments (Database docs/HANDOVER_API.md "B12 · Appointments",
 // migrations 20261121270000 / 20261121280000): the rows the functions return
@@ -135,7 +136,7 @@ export const toSlot = (r: Row): Slot => ({
   endsAt: String(r.ends_at),
 });
 
-export const ANY_AVAILABLE = "Any available";
+export const ANY_AVAILABLE = tk("Any available");
 
 /** A slot's person as the client sees them. */
 export const staffLabel = (name: string | null) => name ?? ANY_AVAILABLE;
@@ -206,28 +207,28 @@ export const toStaffHours = (r: Row): StaffHours => ({
 export function apptChip(s: ApptStatus): { label: string; tone: "good" | "soft" | "bad" | "warn" } {
   switch (s) {
     case "booked":
-      return { label: "Booked", tone: "good" };
+      return { label: tk("Booked"), tone: "good" };
     case "completed":
-      return { label: "Done", tone: "soft" };
+      return { label: tk("Done"), tone: "soft" };
     case "cancelled":
-      return { label: "Cancelled", tone: "bad" };
+      return { label: tk("Cancelled"), tone: "bad" };
     case "no_show":
-      return { label: "No-show", tone: "warn" };
+      return { label: tk("No-show"), tone: "warn" };
   }
 }
 
 /** The client's words (OURS-customer-appointments row 14). */
 export function apptWords(a: Pick<MyAppt, "status" | "startsAt">, now = Date.now()): { label: string; tone: "good" | "soft" | "bad" | "warn" } {
-  if (a.status === "cancelled") return { label: "Cancelled", tone: "bad" };
-  if (a.status === "no_show") return { label: "Missed", tone: "warn" };
-  if (a.status === "completed") return { label: "Done", tone: "soft" };
-  return new Date(a.startsAt).getTime() > now ? { label: "Booked", tone: "good" } : { label: "Booked", tone: "soft" };
+  if (a.status === "cancelled") return { label: tk("Cancelled"), tone: "bad" };
+  if (a.status === "no_show") return { label: tk("Missed"), tone: "warn" };
+  if (a.status === "completed") return { label: tk("Done"), tone: "soft" };
+  return new Date(a.startsAt).getTime() > now ? { label: tk("Booked"), tone: "good" } : { label: tk("Booked"), tone: "soft" };
 }
 
 /** Payment, as recorded by the business (Centium processes no money: cash at the visit). */
 export function payWords(p: PayStatus): string | null {
-  if (p === "paid") return "Paid";
-  if (p === "refunded") return "Refunded";
+  if (p === "paid") return tk("Paid");
+  if (p === "refunded") return tk("Refunded");
   return null;
 }
 
@@ -238,21 +239,21 @@ export function payWords(p: PayStatus): string | null {
 export function bookErrorMessage(code: string | undefined, serverMessage: string, fallback: string): string {
   switch (code) {
     case "ATXF2":
-      return "That time is outside their hours. Pick another.";
+      return tk("That time is outside their hours. Pick another.");
     case "ATXF3":
-      return "That time was just booked. Pick another.";
+      return tk("That time was just booked. Pick another.");
     case "ATXF4":
-      return "This service isn't available any more.";
+      return tk("This service isn't available any more.");
     case "ATXE2": {
       const n = /open (\d+) days?/i.exec(serverMessage)?.[1];
-      return n ? `Bookings open ${n} ${n === "1" ? "day" : "days"} ahead.` : "Bookings for that day aren't open yet.";
+      return n ? tn(Number(n), "Bookings open {n} day ahead.", "Bookings open {n} days ahead.") : tk("Bookings for that day aren't open yet.");
     }
     case "ATXE3":
-      return "Bookings for that time have closed. Pick a later one.";
+      return tk("Bookings for that time have closed. Pick a later one.");
     case "ATXE4":
-      return "Accept this place's terms before booking.";
+      return tk("Accept this place's terms before booking.");
     case "ATX76":
-      return "That person doesn't work here any more. Pick another time.";
+      return tk("That person doesn't work here any more. Pick another time.");
     case PAST_MIDNIGHT_CODE:
       return PAST_MIDNIGHT_MESSAGE;
     case BUSINESS_CLOSED_CODE:
@@ -269,15 +270,15 @@ export function bookErrorMessage(code: string | undefined, serverMessage: string
 export function bookForErrorMessage(code: string | undefined, serverMessage: string, fallback: string): string {
   switch (code) {
     case "ATX96":
-      return "You can book for your own clients only: people seen in the last 90 days.";
+      return tk("You can book for your own clients only: people seen in the last 90 days.");
     case "ATXF2":
-      return "That time is outside their hours. Pick another.";
+      return tk("That time is outside their hours. Pick another.");
     case "ATXF3":
-      return "That time is no longer free. Pick another.";
+      return tk("That time is no longer free. Pick another.");
     case "ATXF4":
-      return "That service isn't available. Check it's shown for booking.";
+      return tk("That service isn't available. Check it's shown for booking.");
     case "ATX76":
-      return "That person isn't on your team any more. Pick another.";
+      return tk("That person isn't on your team any more. Pick another.");
     case PAST_MIDNIGHT_CODE:
       return PAST_MIDNIGHT_MESSAGE;
     case BUSINESS_CLOSED_CODE:

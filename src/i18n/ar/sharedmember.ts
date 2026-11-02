@@ -5,6 +5,7 @@ import type { Catalogue } from "../core";
 // English that screens in several areas show; the screens wrap it in t(), and
 // the modules mark their text with tk() (constants) or call t() (sentences).
 export const FILES: string[] = [
+  "services/venues/venueLogic.ts",
   "services/marketplace/classBooking.ts",
   "services/marketplace/index.ts",
   "services/marketplace/listingLogic.ts",
@@ -42,9 +43,9 @@ export const FILES: string[] = [
 // nickname is «الاسم المستعار» and the ambassador «سفير Centium», as the
 // notifications already say. Times use «ص» / «م» and a range «من … إلى …»
 // (utils/time12, through the existing "AM", "PM" and "{start} to {end}").
-// Two files keep their keys here without being listed, because another area
-// will list them: components/outbox/Outbox.tsx (signOutWarning only) and
-// services/forum/rules.ts (the nickname refusals only).
+// services/forum/rules.ts keeps its nickname refusals here without being
+// listed, because another area lists it. components/outbox/Outbox.tsx is
+// listed under misc (EH final); its signOutWarning keys stay here.
 const sharedmember: Catalogue = {
   // == Class booking (services/marketplace) ==
   "This class was cancelled by the venue.": "ألغى المكان هذه الحصة.",
@@ -380,6 +381,12 @@ const sharedmember: Catalogue = {
   "Drag or use arrow keys to read values": "اسحب أو استخدم مفاتيح الأسهم لقراءة القيم",
   "The trend starts after 2 weeks of data.": "يبدأ الاتجاه بعد أسبوعين من البيانات.",
   "Nothing to show yet.": "لا شيء لعرضه بعد.",
+  // == EH final · a gym's cheapest plan (services/venues membershipFromLine), whole sentences ==
+  "Membership from {price}/{period}": "الاشتراك ابتداءً من {price}/{period}",
+  "From {price}/{period}": "ابتداءً من {price}/{period}",
+  "day|per period": "يوم",
+  "month|per period": "شهر",
+  "year|per period": "سنة",
 };
 
 export default sharedmember;

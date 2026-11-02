@@ -246,7 +246,7 @@ export const CapsLabel: React.FC<{ children: React.ReactNode; style?: React.CSSP
 export const PrivacyLine: React.FC<{ style?: React.CSSProperties }> = ({ style }) => (
   <p className="flex items-start text-charcoal-soft" style={{ gap: 6, ...type(11, 16, 400), ...style }}>
     <Lock size={12} aria-hidden className="shrink-0" style={{ marginTop: 2 }} />
-    <span>{PRIVACY_LINE}</span>
+    <span>{t(PRIVACY_LINE)}</span>
   </p>
 );
 

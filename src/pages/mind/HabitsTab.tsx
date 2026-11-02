@@ -269,9 +269,11 @@ export default function HabitsTab() {
   }, [panel]);
 
   // WHAT IS STILL ON OFFER (K2). A suggestion the account already has a habit
-  // for is not offered again, matched on the label it would create.
+  // for is not offered again, matched on the label it would create. A
+  // suggestion is shown, and saved, in the language on screen (the name is
+  // then the member's own text), so either language's label counts as taken.
   const taken = new Set(habits.map((h) => h.label.trim().toLowerCase()));
-  const suggestions = habitSuggestions.filter((s) => !taken.has(s.label.toLowerCase()));
+  const suggestions = habitSuggestions.filter((s) => !taken.has(s.label.toLowerCase()) && !taken.has(t(s.label).toLowerCase()));
 
   const retry = async () => {
     setRetrying(true);
@@ -612,14 +614,14 @@ export default function HabitsTab() {
                         key={s.label}
                         type="button"
                         onClick={() => {
-                          setNewLabel(s.label);
+                          setNewLabel(t(s.label));
                           setNewIcon(s.icon);
                           setPanelError(null);
                         }}
                         className="tap shrink-0 flex items-center gap-1.5 h-[26px] rounded-full bg-cream-soft px-3 text-[12px] leading-[18px] font-semibold text-charcoal-soft"
                       >
                         <Icon size={13} className="text-primary-dark" />
-                        {s.label}
+                        {t(s.label)}
                         <Plus size={12} className="text-charcoal-faint" />
                       </button>
                     );

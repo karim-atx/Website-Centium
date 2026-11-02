@@ -8,7 +8,7 @@ import { INK } from "../proInk";
 import { Avatar } from "../client/kit";
 import { LogoTile } from "./BusinessParts";
 import { FieldInput, FieldLabel, wellStyle } from "../calendar/calendarFields";
-import { ROLE_LABEL } from "../../../pages/business-team/teamLogic";
+import { ROLE_LABEL, roleLabel } from "../../../pages/business-team/teamLogic";
 import type { BusinessRole } from "../../../services/business-team/types";
 import { t } from "../../../i18n/core";
 
@@ -246,7 +246,7 @@ export const AskToJoinSheet: React.FC<{
               <option value="">{t("Choose a role")}</option>
               {(Object.keys(ROLE_LABEL) as BusinessRole[]).map((r) => (
                 <option key={r} value={r}>
-                  {t(ROLE_LABEL[r])}
+                  {roleLabel(r)}
                 </option>
               ))}
             </select>

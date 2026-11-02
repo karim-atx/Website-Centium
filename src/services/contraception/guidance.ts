@@ -56,9 +56,9 @@ export const EVENT_LABEL: Record<EventKind, string> = {
 };
 
 export const SETUP_TITLE = tk("Set up your method");
-export const SETUP_BODY =
-  "Tell the app what you use and when it started, and it will keep track of the pack, " +
-  "the dates and any reminders you want.";
+export const SETUP_BODY = tk(
+  "Tell the app what you use and when it started, and it will keep track of the pack, the dates and any reminders you want.",
+);
 
 /** Said under the method picker, once. */
 export const NOT_A_PRESCRIBER =
@@ -143,9 +143,9 @@ export const REMINDER_TIME_NOT_SET = tk("Not set");
 export const PUSH_NEEDED =
   tk("Reminders arrive as notifications, so this device needs permission first.");
 export const PUSH_ENABLE = tk("Turn on notifications");
-export const PUSH_BLOCKED =
-  "Notifications are blocked for Centium in this browser. You can allow them again " +
-  "in your browser's site settings.";
+export const PUSH_BLOCKED = tk(
+  "Notifications are blocked for Centium in this browser. You can allow them again in your browser's site settings.",
+);
 export const PUSH_UNSUPPORTED =
   tk("This browser can't receive notifications, so reminders aren't available here.");
 
@@ -165,8 +165,8 @@ export const DETAIL_LABEL: Record<"neutral" | "detailed", string> = {
 };
 
 export const DETAIL_HELP: Record<"neutral" | "detailed", string> = {
-  neutral: "Hides the reason on your lock screen. It just says you have a reminder.",
-  detailed: "Says what the reminder is for, so it's readable to anyone who sees your screen.",
+  neutral: tk("Hides the reason on your lock screen. It just says you have a reminder."),
+  detailed: tk("Says what the reminder is for, so it's readable to anyone who sees your screen."),
 };
 
 export const TIMEZONE_HELP = tk("Reminders are sent at your local time in your time zone, set in Settings");
@@ -177,8 +177,9 @@ export const TIMEZONE_HELP = tk("Reminders are sent at your local time in your t
 
 export const CHANGE_METHOD = tk("Change method");
 export const STOP_TITLE = tk("Stop tracking this method");
-export const STOP_BODY =
-  "Your history is kept. Set up a new method whenever you want to.";
+export const STOP_BODY = tk(
+  "Your history is kept. Set up a new method whenever you want to.",
+);
 export const STOP_CONFIRM = tk("Stop tracking");
 /** OURS-contraception-stop-confirm: the cancel. */
 export const STOP_KEEP = tk("Keep");

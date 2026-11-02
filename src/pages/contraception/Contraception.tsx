@@ -125,7 +125,7 @@ export default function Contraception() {
     return page(
       <>
         <CycleSection label={t(G.YOUR_METHOD)} style={{ marginTop: 8.5 }}>
-          <CycleRow icon={Pill} title={t(G.SETUP_TITLE)} subtitle={G.SETUP_BODY} onClick={() => setSetupOpen(true)} last />
+          <CycleRow icon={Pill} title={t(G.SETUP_TITLE)} subtitle={t(G.SETUP_BODY)} onClick={() => setSetupOpen(true)} last />
         </CycleSection>
         <p className="text-center text-charcoal-faint" style={type(10.5, 15.8, 400, { marginTop: 12 })}>
           {G.NOT_A_PRESCRIBER}
@@ -307,7 +307,7 @@ export default function Contraception() {
         align="start"
       >
         <p className="text-charcoal-soft" style={type(13, 19.5, 400, { marginTop: -6 })}>
-          {G.STOP_BODY}
+          {t(G.STOP_BODY)}
         </p>
         {stopError && (
           <p role="alert" className="text-status-high" style={type(11.5, 17.3, 600, { marginTop: 10 })}>

@@ -320,7 +320,7 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
               <GymCard
                 key={v.id}
                 v={v}
-                from={v.businessId ? membershipFromLine(gymPlans.filter((p) => p.businessId === v.businessId)) : null}
+                from={v.businessId ? membershipFromLine(gymPlans.filter((p) => p.businessId === v.businessId), true) : null}
                 mine={currentMembership(gymMemberships, v.id)}
                 rating={ratings.get(v.id) ?? null}
                 km={gymKm(v)}
@@ -416,7 +416,7 @@ function GymCard({ v, from, mine, rating, km, query }: { v: Venue; from: string 
               </svg>
               <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{line}</span>
             </span>
-            {from && <span style={{ display: "block", fontSize: textPx(12.5), fontWeight: 700, color: m.accent, marginTop: 2 }}>{from.replace(/^Membership from/, "From")}</span>}
+            {from && <span style={{ display: "block", fontSize: textPx(12.5), fontWeight: 700, color: m.accent, marginTop: 2 }}>{from}</span>}
           </span>
           <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={m.faint} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden className="rtl:-scale-x-100" style={{ flex: "none", ...NO_ICON_SCALE }}>
             <path d="m9 18 6-6-6-6" />

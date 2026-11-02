@@ -6,7 +6,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { ConfirmCard } from "../ui/ConfirmCard";
 import { describeQueued, OUTBOX_EVENT, queuedLogs, type QueuedLog } from "../../services/health-log/offlineQueue";
 import { OUTBOX_DROPPED_EVENT } from "../health/log/useLogQueue";
-import { tn } from "../../i18n/core";
+import { t, tk, tn, tx } from "../../i18n/core";
 
 // The offline outbox on screen (Round D, D22 / D23; PLAN D-S20, undrawn, in
 // the existing chip and sheet styles).
@@ -37,14 +37,14 @@ export function useOutbox(): QueuedLog[] {
 }
 
 const ROW_WORD: Record<QueuedLog["kind"], string> = {
-  water: "Water",
-  weight: "Weight",
-  bp: "Blood pressure",
-  food: "Food",
-  habit: "Habit",
-  workout: "Workout",
-  message: "Message",
-  goal: "Goal",
+  water: tk("Water"),
+  weight: tk("Weight"),
+  bp: tk("Blood pressure"),
+  food: tk("Food"),
+  habit: tk("Habit"),
+  workout: tk("Workout"),
+  message: tk("Message"),
+  goal: tk("Goal"),
 };
 
 /** One line per waiting entry. Numbers are left out on purpose (recovery mode, and the sheet is a status, not a log). */
@@ -57,11 +57,11 @@ function rowLine(q: QueuedLog): string {
     case "message":
       return q.text.length > 60 ? `${q.text.slice(0, 57)}…` : q.text;
     case "habit":
-      return q.done ? "Ticked" : "Unticked";
+      return q.done ? t("Ticked") : t("Unticked");
     case "goal":
-      return q.metric === "water" ? "Water goal" : "Steps goal";
+      return q.metric === "water" ? t("Water goal") : t("Steps goal");
     default:
-      return "Logged";
+      return tx("Logged", "outbox entry");
   }
 }
 
@@ -74,7 +74,8 @@ export const OutboxStatus: React.FC = () => {
   useEffect(() => {
     const onDropped = (e: Event) => {
       const d = (e as CustomEvent<{ kind: QueuedLog["kind"]; message?: string }>).detail;
-      setDropped(`${ROW_WORD[d.kind]} couldn't be saved${d.message ? `: ${d.message}` : "."}`);
+      const what = t(ROW_WORD[d.kind]);
+      setDropped(d.message ? t("{what} couldn't be saved: {message}", { what, message: d.message }) : t("{what} couldn't be saved.", { what }));
     };
     window.addEventListener(OUTBOX_DROPPED_EVENT, onDropped);
     return () => window.removeEventListener(OUTBOX_DROPPED_EVENT, onDropped);
@@ -88,29 +89,35 @@ export const OutboxStatus: React.FC = () => {
           type="button"
           onClick={() => setOpen(true)}
           className="tap inline-flex items-center gap-1.5 min-h-[32px] rounded-full px-3 bg-status-caution-bg text-status-caution text-[12px] font-bold"
-          aria-label={`${items.length} waiting to save. Show what is waiting`}
+          aria-label={tn(items.length, "{n} waiting to save. Show what is waiting", "{n} waiting to save. Show what is waiting")}
         >
           <CloudUpload size={14} aria-hidden />
-          {online ? "Saving…" : `${items.length} waiting to save`}
+          {online ? t("Saving…") : tn(items.length, "{n} waiting to save", "{n} waiting to save")}
         </button>
       )}
       {dropped && (
         <p role="alert" className="text-[12px] font-semibold text-status-high">
           {dropped}{" "}
           <button type="button" className="underline" onClick={() => setDropped(null)}>
-            Dismiss
+            {t("Dismiss")}
           </button>
         </p>
       )}
-      <BottomSheet open={open} onClose={() => setOpen(false)} title="Waiting to save">
+      <BottomSheet open={open} onClose={() => setOpen(false)} title={t("Waiting to save")}>
         <p className="text-[13px] leading-[19px] text-charcoal-soft">
-          {describeQueued(items) || "Nothing is waiting."} {items.length === 1 ? "is" : "are"} kept on this device and will save
-          when you reconnect. Keep this app open or open it again once you're online.
+          {items.length === 0
+            ? t("Nothing is waiting.")
+            : tn(
+                items.length,
+                "{what} is kept on this device and will save when you reconnect. Keep this app open or open it again once you're online.",
+                "{what} are kept on this device and will save when you reconnect. Keep this app open or open it again once you're online.",
+                { what: describeQueued(items) },
+              )}
         </p>
         <ul className="mt-3 flex flex-col divide-y divide-charcoal/[0.06] rounded-2xl border border-charcoal/[0.08] bg-cream-card">
           {items.map((q) => (
             <li key={q.id} className="flex items-center gap-3 px-3.5 min-h-[44px]">
-              <span className="w-24 shrink-0 text-[12px] font-bold text-charcoal-faint">{ROW_WORD[q.kind]}</span>
+              <span className="w-24 shrink-0 text-[12px] font-bold text-charcoal-faint">{t(ROW_WORD[q.kind])}</span>
               <span className="flex-1 min-w-0 truncate text-[13px] text-charcoal">{rowLine(q)}</span>
             </li>
           ))}
@@ -137,10 +144,10 @@ export function useSignOutGuard(signOut: () => unknown): { requestSignOut: () =>
     <ConfirmCard
       open={asking}
       tone="destructive"
-      title={`${what.charAt(0).toUpperCase()}${what.slice(1)} ${items.length === 1 ? "hasn't" : "haven't"} saved yet`}
-      subtitle="Signing out removes them from this device. Connect to the internet first to keep them."
-      confirmLabel="Sign out anyway"
-      cancelLabel="Stay signed in"
+      title={tn(items.length, "{what} hasn't saved yet", "{what} haven't saved yet", { what: `${what.charAt(0).toUpperCase()}${what.slice(1)}` })}
+      subtitle={t("Signing out removes them from this device. Connect to the internet first to keep them.")}
+      confirmLabel={t("Sign out anyway")}
+      cancelLabel={t("Stay signed in")}
       onCancel={() => setAsking(false)}
       onConfirm={() => {
         setAsking(false);

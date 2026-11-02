@@ -6,7 +6,7 @@ import { formatPrice } from "../../utils/price";
 import { formatShortDate } from "../../utils/date";
 import { BLOCKED_TEXT } from "../moderation/text";
 import { rateLimitMessage } from "../network-error";
-import { t, tn } from "../../i18n/core";
+import { t, tn, tx } from "../../i18n/core";
 
 /** B7 MB-03 adds quarterly and semiannually to billing_period. */
 export type Billing = "daily" | "monthly" | "quarterly" | "semiannually" | "annually";
@@ -19,7 +19,21 @@ export interface PlanLite {
 }
 
 /** The unit a plan's price is per: "$45/month". */
-export const PERIOD: Record<Billing, string> = { daily: "day", monthly: "month", quarterly: "3 months", semiannually: "6 months", annually: "year" };
+/** A billing period as the word after a price ("$45/month"), in the app's language. */
+export function periodWord(b: Billing): string {
+  switch (b) {
+    case "daily":
+      return tx("day", "per period");
+    case "monthly":
+      return tx("month", "per period");
+    case "annually":
+      return tx("year", "per period");
+    case "quarterly":
+      return t("3 months");
+    case "semiannually":
+      return t("6 months");
+  }
+}
 
 /** Plans cheapest first, so the list and the default selection are stable. */
 export function sortPlans<T extends PlanLite>(plans: T[]): T[] {
@@ -31,12 +45,14 @@ export function sortPlans<T extends PlanLite>(plans: T[]): T[] {
  * one (the frame's line is always per month); otherwise the cheapest plan in
  * its own unit. Null when the business sells no plans.
  */
-export function membershipFromLine(plans: PlanLite[]): string | null {
+export function membershipFromLine(plans: PlanLite[], short = false): string | null {
   if (plans.length === 0) return null;
   const monthly = plans.filter((p) => p.billing === "monthly");
   const pool = monthly.length > 0 ? monthly : plans;
   const cheapest = sortPlans(pool)[0];
-  return `Membership from ${formatPrice(cheapest.price)}/${PERIOD[cheapest.billing]}`;
+  const vars = { price: formatPrice(cheapest.price), period: periodWord(cheapest.billing) };
+  // The venue card's short form ("From $45/month") is its own sentence, so Arabic reads whole.
+  return short ? t("From {price}/{period}", vars) : t("Membership from {price}/{period}", vars);
 }
 
 /**

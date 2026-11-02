@@ -392,7 +392,7 @@ export default function Cycle() {
         <div className="flex" style={{ marginTop: -4, gap: 10, padding: "12px 14px", borderRadius: 14, background: dark ? "#3C2A30" : "#FCEDEC" }}>
           <Info size={16} aria-hidden className="shrink-0 text-status-high" style={{ marginTop: 1 }} />
           <p className="text-charcoal" style={type(12.5, 18.8, 400)}>
-            {G.DELETE_ALL_BODY}
+            {t(G.DELETE_ALL_BODY)}
           </p>
         </div>
         {deleteError && (
@@ -444,7 +444,7 @@ export default function Cycle() {
         {header(false)}
         {heroMessage(
           t(G.TRACKER_OFF_TITLE),
-          G.TRACKER_OFF_BODY,
+          t(G.TRACKER_OFF_BODY),
           <button
             type="button"
             disabled={busy}
@@ -630,7 +630,7 @@ export default function Cycle() {
                     {t(G.TURN_BACK_ON)}
                   </button>
                 )
-            : heroMessage(t(G.SETUP_TITLE), G.SETUP_BODY)}
+            : heroMessage(t(G.SETUP_TITLE), t(G.SETUP_BODY))}
           {startPregnancyLink}
           <CycleFooter />
           {!trackerOff && pinnedCta({ label: t(G.LOG_THIS_DAY), onClick: () => openLog(today) })}

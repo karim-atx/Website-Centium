@@ -584,6 +584,8 @@ const food: Catalogue = {
   "Dietary restriction": "القيود الغذائية",
   "{diet} active. Incompatible Diary items are highlighted. Tap to clear.": "{diet} مفعّل. العناصر غير المتوافقة في السجل مميّزة. انقر للمسح.",
   "Couldn't load your allergies.": "تعذّر تحميل الحساسية لديك.",
+  // == EH final · the diary's allergy badge, read aloud ==
+  "{allergy}, {severity}": "{allergy}، {severity}", // note: health wording (an allergy and its recorded severity, as the badge shows)
 };
 
 export default food;

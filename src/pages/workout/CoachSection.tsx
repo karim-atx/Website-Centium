@@ -126,7 +126,8 @@ export const CoachSection: React.FC<{
                 </span>
                 {info?.role && (
                   <span className="block truncate" style={{ fontSize: textPx(11.5), color: coachColor("faint", dark) }}>
-                    {info.role}
+                    {/* the role is a tk() label (connected-professional), or a specialty the professional typed, which t() leaves as written */}
+                    {t(info.role)}
                   </span>
                 )}
               </span>

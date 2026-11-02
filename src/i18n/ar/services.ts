@@ -379,6 +379,12 @@ const services: Catalogue = {
   "Nothing recurring.": "لا شيء متكرر.",
   "Class slot": "حصة",
   "hired {date}": "عُيّن في {date}",
+  // == EH final · offering plans in a chat (services/hires describePlansCardError) ==
+  "You can't send plans in this conversation.": "لا يمكنك إرسال الخطط في هذه المحادثة.",
+  "You have no active plans to offer. Add one under your hire plans first.": "ليس لديك خطط نشطة لعرضها. أضف خطة ضمن خطط التوظيف أولًا.",
+  "Plans can't be offered to someone under 18.": "لا يمكن عرض الخطط على من هم دون 18 عامًا.",
+  "Plans can't be sent here. A card holds at most five plans, and none can go in a venue conversation.": "لا يمكن إرسال الخطط هنا. تتسع البطاقة لخمس خطط على الأكثر، ولا يمكن إرسالها في محادثة مع مكان.",
+  "Couldn't send your plans. Try again.": "تعذّر إرسال خططك. حاول مرة أخرى.",
 };
 
 export default services;

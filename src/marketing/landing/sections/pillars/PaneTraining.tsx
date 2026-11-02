@@ -66,7 +66,7 @@ export const PaneTraining: React.FC<{ r: SectionVals }> = ({ r }) => (
               <img src="/body/male-back.png" alt={t("Back body")} width={370} height={759} loading="lazy" decoding="async" style={{ position: "relative", display: "block", height: "100%", width: "auto" }} />
             </div>
             <span style={{ fontSize: "10px", fontWeight: "700", color: "#756D63" }}>
-              {/* "Back" is already a key (the back button, «رجوع»); the body side needs its own Arabic. */}
+              {/* i18n-ok: English branch only. "Back" is already a key (the back button, «رجوع»); the body side needs its own Arabic. */}
               {getLanguage() === "ar" ? t("Back (body side)") : "Back"}
             </span>
           </div>

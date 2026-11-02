@@ -322,9 +322,9 @@ const landing: Catalogue = {
   Trainer: "مدرّب",
   Physio: "علاج فيزيائي",
   "Lara Khoury": "لارا خوري",
-  "Dietitian · Beirut · online": "أخصائية تغذية · بيروت · عن بُعد", // note: Lara is a woman, so the feminine «أخصائية» here
+  "Dietitian · Beirut · online": "أخصائية تغذية علاجية · بيروت · عن بُعد", // note: Lara is a woman, so the feminine «أخصائية» here
   "Hadi Saleh": "هادي صالح",
-  "Dietitian · Jounieh": "أخصائي تغذية · جونية",
+  "Dietitian · Jounieh": "أخصائي تغذية علاجية · جونية",
   Verified: "موثّق",
   CERTIFICATIONS: "الشهادات",
   "MSc Clinical Nutrition, LDA registered": "ماجستير في التغذية السريرية، مسجّلة في نقابة اختصاصيي التغذية", // note: LDA (Lebanese Dietetic Association) spelled out in Arabic; please confirm the body's usual Arabic name
@@ -390,7 +390,7 @@ const landing: Catalogue = {
   // == Landing › 04 Coaching ==
   "Real professionals in your corner.": "مختصون حقيقيون إلى جانبك.",
   "CLIENT VIEW · RAMI": "ما يراه العضو · رامي",
-  "Dietitian · Beirut": "أخصائية تغذية · بيروت",
+  "Dietitian · Beirut": "أخصائية تغذية علاجية · بيروت",
   "MSc Clinical Nutrition,  credentials verified": "ماجستير في التغذية السريرية، الشهادات موثّقة", // note: the English has a double space after the comma (prototype data); the Arabic has one
   "Sports nutrition,  8 years in clinic": "التغذية الرياضية، 8 سنوات في العيادة",
   "Mediterranean meal planning": "تخطيط وجبات متوسطية",
@@ -694,7 +694,7 @@ const landing: Catalogue = {
   "Floor 06:00": "الصالة 06:00",
   Coach: "مدرّب",
   "Spin, Pilates": "سبين، بيلاتس",
-  "Physio, linked": "علاج فيزيائي، مرتبط",
+  "Physio, linked": "أخصائية العلاج الفيزيائي، مرتبطة", // note: Dana Azar is a woman, so the feminine, as on the other women's cards
   Sessions: "الجلسات",
   "Sami Tannous": "سامي طنّوس",
   "Desk 14:00": "الاستقبال 14:00",
@@ -721,7 +721,7 @@ const landing: Catalogue = {
   "Elie Frem": "إيلي فرم",
   Client: "عميل", // note: a review's role line; shared with Messages («عميل»). The reviewer is a Centium member, so «عضو» would be closer if Karim prefers a separate key
   "Gym owner": "صاحب نادٍ",
-  Physiotherapist: "أخصائي علاج فيزيائي",
+  Physiotherapist: "أخصائي العلاج الفيزيائي",
 
   // == Landing › 08 Pricing ==
   // note: prices, plans and the table come from src/content/pricing.ts and

@@ -240,9 +240,9 @@ export const FLAGS_HEADING = tk("Worth a conversation");
 // ---------------------------------------------------------------------------
 
 export const SETUP_TITLE = tk("When did your last period start?");
-export const SETUP_BODY =
-  "That's all it takes to start. Everything else (cycle length, phases, estimates) " +
-  "is worked out from the days you log.";
+export const SETUP_BODY = tk(
+  "That's all it takes to start. Everything else (cycle length, phases, estimates) is worked out from the days you log.",
+);
 export const SETUP_CTA = tk("Log my last period");
 
 export const NO_PREDICTION =
@@ -377,9 +377,9 @@ export const POSITIVE_TEST_CTA = tk("Start pregnancy tracking");
  * without a row.
  */
 export const TRACKER_OFF_TITLE = tk("Cycle tracking is off");
-export const TRACKER_OFF_BODY =
-  "It's off by default for this profile. Switch it on if you want to track a cycle. " +
-  "Everything stays private to you unless you share it.";
+export const TRACKER_OFF_BODY = tk(
+  "It's off by default for this profile. Switch it on if you want to track a cycle. Everything stays private to you unless you share it.",
+);
 export const TRACKER_OFF_CTA = tk("Turn on cycle tracking");
 
 export const TIMEZONE_TITLE = tk("Time zone");
@@ -393,15 +393,14 @@ export const CONDITION_LABEL: Record<string, string> = {
   other: tk("Other"),
 };
 
-export const CONDITIONS_HELP =
-  "Recorded so estimates can be read in context. Nothing here is a diagnosis, and " +
-  "nothing is shared unless you switch sharing on.";
+export const CONDITIONS_HELP = tk(
+  "Recorded so estimates can be read in context. Nothing here is a diagnosis, and nothing is shared unless you switch sharing on.",
+);
 
 export const DELETE_ALL_TITLE = tk("Delete all cycle data");
-export const DELETE_ALL_BODY =
-  "This removes every day you've logged, your cycle settings and any pregnancy record. " +
-  "It cannot be undone, and anyone you're sharing with stops seeing your phase " +
-  "immediately.";
+export const DELETE_ALL_BODY = tk(
+  "This removes every day you've logged, your cycle settings and any pregnancy record. It cannot be undone, and anyone you're sharing with stops seeing your phase immediately.",
+);
 export const DELETE_ALL_CONFIRM = tk("Delete everything");
 
 /** Shown when the tracker is switched off, rather than deleting anything. */
@@ -424,13 +423,14 @@ export const DELETE_ALL_FAILED = tk("Couldn't delete. Try again.");
  * The privacy line under every cycle tab (V6-12: the handover line, extended
  * because sharing can be switched on in two places now).
  */
-export const PRIVACY_LINE =
-  "Cycle data is private. It isn't shared with professionals unless you turn it on in " +
-  "Who can see your cycle or Profile › Connected professionals.";
+export const PRIVACY_LINE = tk(
+  "Cycle data is private. It isn't shared with professionals unless you turn it on in Who can see your cycle or Profile › Connected professionals.",
+);
 
 /** Under the three lengths (HE1.10.b, drawn under Luteal length). */
-export const LENGTHS_HELP =
-  "Your estimates are worked out from the days you log. These lengths are a starting point.";
+export const LENGTHS_HELP = tk(
+  "Your estimates are worked out from the days you log. These lengths are a starting point.",
+);
 /** Typing a length out of range (HE1.10.b #22). */
 export const LENGTH_RANGE_ERROR = (min: number, max: number) => t("Enter a number from {min} to {max} days.", { min, max });
 
@@ -456,8 +456,9 @@ export const INSIGHTS_STRIPS_NOTE = (n: number) =>
 export const INSIGHTS_AVG_CYCLE = tk("Avg cycle");
 export const INSIGHTS_AVG_PERIOD = tk("Avg period");
 export const INSIGHTS_VARIATION = tk("Variation");
-export const INSIGHTS_AVERAGES_NOTE =
-  "Averages come from the cycles you've logged. Your next cycle length is an estimate.";
+export const INSIGHTS_AVERAGES_NOTE = tk(
+  "Averages come from the cycles you've logged. Your next cycle length is an estimate.",
+);
 export const SYMPTOMS_BY_PHASE = tk("Symptoms by phase");
 export const SYMPTOMS_GRID_NOTE = tk("Days you logged each symptom, grouped by the phase it happened in.");
 /** The grid's column heads, abbreviated as drawn (HE1.10.a #34). */
@@ -519,9 +520,9 @@ export const SHARING_TITLE = tk("Who can see your cycle");
  * SEX_ACTIVITY_PRIVACY's own rule ("Sexual activity is private: never
  * shared."), which is what no sharing category covers.
  */
-export const SHARING_INTRO =
-  "Professionals you choose see only the phase name or the trimester. Logged days, " +
-  "symptoms and notes stay with you. Sexual activity is private: never shared.";
+export const SHARING_INTRO = tk(
+  "Professionals you choose see only the phase name or the trimester. Logged days, symptoms and notes stay with you. Sexual activity is private: never shared.",
+);
 export const SHARING_MIRRORED = tk("The same switches are in Profile › Connected professionals.");
 export const SHARING_NONE = tk("You haven't connected any professionals.");
 export const SHARING_FIND = tk("Find a professional");

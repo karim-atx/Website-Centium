@@ -199,7 +199,7 @@ const ServiceForm: React.FC<React.ComponentProps<typeof ServiceSheet>> = ({ onCl
             </div>
             <div>
               {label(t("Billed"))}
-              <SegmentedTabs items={BILLING_OPTIONS.map((b) => ({ key: b.value, label: b.label }))} activeKey={billing} onChange={(k) => setBilling(k as PlanBilling)} tabHeight={36} labelSize={12} />
+              <SegmentedTabs items={BILLING_OPTIONS.map((b) => ({ key: b.value, label: t(b.label) }))} activeKey={billing} onChange={(k) => setBilling(k as PlanBilling)} tabHeight={36} labelSize={12} />
             </div>
             <div>
               {label(t("What's included (up to {PLAN_FEATURES_MAX})", { PLAN_FEATURES_MAX }))}

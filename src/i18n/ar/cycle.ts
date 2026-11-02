@@ -64,8 +64,11 @@ export const FILES: string[] = [
 // phase" reads «المرحلة: {phase}», which agrees with every phase name. Moods
 // are masculine adjectives as main's "Mood: calm" «المزاج: هادئ»; energy levels
 // are feminine (الطاقة). The guidance paragraphs (phase descriptions,
-// confidence reasons, flags, hormone, pregnancy and contraception advice,
-// privacy and data paragraphs) stay English for clinical review (F13). The
+// confidence reasons, flags, hormone, pregnancy and contraception advice) stay
+// English for clinical review (F13). EH final: the app text around them (the
+// privacy line, setup, tracker-off, delete-all, conditions, sharing, lengths
+// and averages notes, the contraception setup, stop, push-blocked and
+// notification-detail lines) is in Arabic, each marked as health wording. The
 // unit after a number ("28 d", "5 days") is a plural whose forms carry no
 // number: «يوم / أيام / يومًا».
 const cycle: Catalogue = {
@@ -480,6 +483,20 @@ const cycle: Catalogue = {
   "Stop tracking": "إيقاف التتبّع", // note: health wording
   "Your method": "وسيلتك", // note: health wording
   "Started {date}": "بدأت في {date}", // note: health wording
+  // == EH final · app text in the cycle and contraception screens (not clinical guidance, so in Arabic) ==
+  "That's all it takes to start. Everything else (cycle length, phases, estimates) is worked out from the days you log.": "هذا كل ما يلزم للبدء. كل ما عدا ذلك (طول الدورة والمراحل والتقديرات) يُحسب من الأيام التي تسجّلها.", // note: health wording
+  "It's off by default for this profile. Switch it on if you want to track a cycle. Everything stays private to you unless you share it.": "التتبّع متوقف افتراضيًا لهذا الملف الشخصي. شغّله إن أردت تتبّع دورة. يبقى كل شيء خاصًا بك ما لم تشاركه.", // note: health wording
+  "Recorded so estimates can be read in context. Nothing here is a diagnosis, and nothing is shared unless you switch sharing on.": "تُسجَّل لتُقرأ التقديرات في سياقها. لا شيء هنا تشخيص، ولا يُشارك شيء ما لم تشغّل المشاركة.", // note: health wording (the conditions help; "not a diagnosis" kept)
+  "This removes every day you've logged, your cycle settings and any pregnancy record. It cannot be undone, and anyone you're sharing with stops seeing your phase immediately.": "يحذف هذا كل يوم سجّلته وإعدادات دورتك وأي سجل حمل. لا يمكن التراجع عن ذلك، ويتوقف كل من تشاركه عن رؤية مرحلتك فورًا.", // note: health wording
+  "Cycle data is private. It isn't shared with professionals unless you turn it on in Who can see your cycle or Profile › Connected professionals.": "بيانات الدورة خاصة. لا تُشارك مع المختصين ما لم تشغّلها في «من يمكنه رؤية دورتك» أو «الملف الشخصي › المختصون المتصلون».", // note: health wording (the privacy line)
+  "Your estimates are worked out from the days you log. These lengths are a starting point.": "تُحسب تقديراتك من الأيام التي تسجّلها. هذه الأطوال نقطة بداية.", // note: health wording
+  "Averages come from the cycles you've logged. Your next cycle length is an estimate.": "تأتي المتوسطات من الدورات التي سجّلتها. طول دورتك القادمة تقدير.", // note: health wording
+  "Professionals you choose see only the phase name or the trimester. Logged days, symptoms and notes stay with you. Sexual activity is private: never shared.": "لا يرى المختصون الذين تختارهم إلا اسم المرحلة أو الثلث. تبقى الأيام المسجّلة والأعراض والملاحظات معك. النشاط الجنسي خاص: لا يُشارك أبدًا.", // note: health wording (the sharing intro)
+  "Tell the app what you use and when it started, and it will keep track of the pack, the dates and any reminders you want.": "أخبر التطبيق بما تستخدمه ومتى بدأت استخدامه، وسيتابع العلبة والتواريخ وأي تذكيرات تريدها.", // note: health wording (contraception setup)
+  "Your history is kept. Set up a new method whenever you want to.": "يُحتفظ بسجلك. أعدّ وسيلة جديدة متى شئت.", // note: health wording (stopping a contraception method)
+  "Notifications are blocked for Centium in this browser. You can allow them again in your browser's site settings.": "الإشعارات محظورة لـ Centium في هذا المتصفح. يمكنك السماح بها مجددًا من إعدادات الموقع في متصفحك.", // note: health wording (contraception reminders)
+  "Hides the reason on your lock screen. It just says you have a reminder.": "يخفي السبب على شاشة القفل. يقول فقط إن لديك تذكيرًا.", // note: health wording (neutral reminder detail: privacy)
+  "Says what the reminder is for, so it's readable to anyone who sees your screen.": "يذكر الغرض من التذكير، فيمكن لأي شخص يرى شاشتك قراءته.", // note: health wording (detailed reminder detail: privacy)
 };
 
 export default cycle;

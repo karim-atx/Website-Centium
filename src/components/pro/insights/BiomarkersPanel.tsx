@@ -191,7 +191,8 @@ export const BiomarkersPanel: React.FC<PanelProps & { onMessage: () => void }> =
     visible,
     async () => {
       const [res, shared, flags] = await Promise.all([getLabResults(clientId), sharedCount > 0 && authUserId ? fetchSharedResults(authUserId, clientId) : Promise.resolve(null), fetchBiomarkerFlags(clientId)]);
-      if (!res.ok) return { ok: false as const, offline: /connection|offline|reach/i.test(res.message) };
+      // The device's own state, never the (translated) message's words.
+      if (!res.ok) return { ok: false as const, offline: typeof navigator !== "undefined" && navigator.onLine === false };
       const ids = new Set(res.results.map((r) => r.id));
       const extra: (LabResult & { note: string | null; sharedAt: string | null })[] = [];
       const notes = new Map<string, { note: string | null; sharedAt: string }>();

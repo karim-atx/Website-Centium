@@ -100,7 +100,7 @@ export const FilesTab: React.FC<{ data: ClientPageData }> = ({ data }) => {
                 // 20261222080000: an urgent (or flagged) intake says so first, as the check-ins list does.
                 tone: responseMarker(intake) ? ("att" as const) : undefined,
                 title: t("Intake form"),
-                meta: `${responseMarker(intake) ? `${responseMarker(intake)} · ` : ""}${tn(Object.keys(intake.answers).length, "Completed {date} · {n} answer", "Completed {date} · {n} answers", { date: fmtDay(intake.submittedAt) })}`,
+                meta: `${responseMarker(intake) ? `${t(responseMarker(intake) ?? "")} · ` : ""}${tn(Object.keys(intake.answers).length, "Completed {date} · {n} answer", "Completed {date} · {n} answers", { date: fmtDay(intake.submittedAt) })}`,
                 onClick: () => navigate(`${FORMS_PATH}/responses/${intake.id}`),
               }
             : { key: "intake", icon: ClipboardList, title: t("Intake form"), meta: intake === undefined ? t("Loading…") : t("No intake form answered yet"), onClick: () => navigate(FORMS_PATH) },

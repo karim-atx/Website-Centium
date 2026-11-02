@@ -153,7 +153,6 @@ const settings: Catalogue = {
   },
 
   // == Settings ==
-  Beta: "تجريبية",
   "Dark mode": "الوضع الداكن",
   "Connects in the Centium app on iPhone": "يتصل من تطبيق Centium على iPhone",
   "Connects in the Centium app on Android": "يتصل من تطبيق Centium على Android",
@@ -165,8 +164,6 @@ const settings: Catalogue = {
 
   // == Settings › Language ==
   "App language": "لغة التطبيق",
-  "Arabic is in beta: some screens are still in English while we translate them.":
-    "العربية في مرحلة تجريبية: بعض الشاشات ما زالت بالإنجليزية ريثما نترجمها.",
 
   // == Settings › Notifications ==
   "Allow notifications": "السماح بالإشعارات",

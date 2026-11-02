@@ -1,8 +1,7 @@
 // Round F (AV): the app's own string system (F8: no library). English is the
 // key: a screen writes t("Save") or t("{n} friends joined", { n }), and the
 // Arabic catalogue maps that English to Arabic. Anything not yet translated
-// shows its English, so a partly translated release never blanks a screen
-// (Arabic is "beta" until every area is in, F7).
+// shows its English, so a missing entry never blanks a screen.
 //
 // Plurals: tn(n, one, other) picks the English form; in Arabic the catalogue
 // holds the six CLDR forms under the English "other" form, chosen with

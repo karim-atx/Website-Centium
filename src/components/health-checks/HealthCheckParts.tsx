@@ -2,6 +2,7 @@ import React from "react";
 import { ClipboardCheck, Droplet, Droplets, HeartPulse, Stethoscope, TestTube } from "lucide-react";
 import { textPx } from "../../theme/textSize";
 import { useIsDark } from "../../hooks/useIsDark";
+import { t } from "../../i18n/core";
 
 // Shared pieces of the HE1.8 family (health-b-handover.md 79-521): the icon
 // per check, the lavender tile, the info box, the Part B two-button row and
@@ -83,7 +84,7 @@ export const ButtonRow: React.FC<{
         className={`tap flex-1 min-w-0 disabled:opacity-40 ${destructive ? "bg-status-high text-on-destructive" : "bg-fill-pinned"}`}
         style={{ ...base, color: destructive ? undefined : "rgb(var(--c-on-primary-fill))" }}
       >
-        {primary.loading ? "Saving…" : primary.label}
+        {primary.loading ? t("Saving…") : primary.label}
       </button>
     </div>
   );

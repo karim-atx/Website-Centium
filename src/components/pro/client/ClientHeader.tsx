@@ -88,7 +88,7 @@ export const ClientHeader: React.FC<{
           <div className="flex-1 min-w-0">
             <p style={{ fontSize: textPx(13.5), fontWeight: 700, color: INK.ch }}>{t("Pending payment")}</p>
             <p style={{ fontSize: textPx(12), color: INK.chS, lineHeight: 1.45 }}>
-              {`${h.planName} · ${formatPrice(h.priceAgreed) || "$0"} · ${paymentMethodLabel(h.paymentMethod)}`}
+              {`${h.planName} · ${formatPrice(h.priceAgreed) || "$0"} · ${t(paymentMethodLabel(h.paymentMethod))}`}
             </p>
             {error && busy === null && (
               <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginTop: 4 }}>

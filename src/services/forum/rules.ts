@@ -7,13 +7,13 @@ import { ageFromDateOfBirth, detailDate, formatShortDate } from "../../utils/dat
 import { t, tk } from "../../i18n/core";
 
 /** Design screen 1, and the brief's wording for an under-18 who opens the link. */
-export const ADULTS_ONLY_TEXT = "The community is for adults. You can join the forum from age 18.";
+export const ADULTS_ONLY_TEXT = tk("The community is for adults. You can join the forum from age 18.");
 /**
  * An older account with no date of birth on file. The server refuses it too
  * (user_is_confirmed_adult needs a date to do the arithmetic on), so the page
  * says what would let them in rather than calling them a minor.
  */
-export const NEEDS_DOB_TEXT = "Add your date of birth in Profile to join the forum.";
+export const NEEDS_DOB_TEXT = tk("Add your date of birth in Profile to join the forum.");
 
 export type ForumAccess = "adult" | "minor" | "unknown-age";
 
@@ -147,28 +147,28 @@ export function describeForumError(
   const message = error.message ?? "";
   switch (error.code ?? "") {
     case "ATX55":
-      return ADULTS_ONLY_TEXT;
+      return t(ADULTS_ONLY_TEXT);
     case "ATX56":
       return t(NICKNAME_PROBLEM_TEXT.reserved);
     case "ATX57": {
       const until = detailDate(error.details) ?? /paused until (.+)$/i.exec(message)?.[1]?.trim();
       return until
-        ? `Your access to the community forum is paused until ${until}.`
-        : "Your access to the community forum is paused for now.";
+        ? t("Your access to the community forum is paused until {date}.", { date: until })
+        : t("Your access to the community forum is paused for now.");
     }
     case "ATX58":
       return t("Choose a forum nickname before posting under one.");
     case "ATX59":
-      return "Professionals post under their own name.";
+      return t("Professionals post under their own name.");
     case "ATX60":
-      return "That contains a word this community doesn't allow. Edit it and try again.";
+      return t("That contains a word this community doesn't allow. Edit it and try again.");
     // One refusal for every reason, on purpose (it does not say whether the
     // post exists or whose it is). From the author's own menu, the only
     // ordinary cause is the 30-minute edit window.
     case "ATX62":
       return action === "edit"
-        ? "This can no longer be edited. Posts can be edited for 30 minutes after posting."
-        : "This couldn't be withdrawn. It may already have been removed.";
+        ? t("This can no longer be edited. Posts can be edited for 30 minutes after posting.")
+        : t("This couldn't be withdrawn. It may already have been removed.");
     case "ATX63":
       return t("That nickname is taken. Choose a different one.");
     // Release 1 (Database 20261220030000): one change in 30 days, the next
@@ -180,23 +180,23 @@ export function describeForumError(
     case "ATXK2":
       return t("A nickname can't contain a phone number or other contact details.");
     case "ATX64":
-      return "That photo couldn't be attached. Add it again.";
+      return t("That photo couldn't be attached. Add it again.");
     case "ATX65":
-      return "That post isn't available any more.";
+      return t("That post isn't available any more.");
     case "ATX08":
-      return "That post isn't available any more.";
+      return t("That post isn't available any more.");
     case "ATX02":
       switch (action) {
         case "post":
-          return "You've reached the limit of 5 posts an hour. Try again later.";
+          return t("You've reached the limit of 5 posts an hour. Try again later.");
         case "reply":
-          return "You've reached the limit of 20 replies an hour. Try again later.";
+          return t("You've reached the limit of 20 replies an hour. Try again later.");
         case "report":
-          return "You've sent a lot of reports in the last hour. Try again later.";
+          return t("You've sent a lot of reports in the last hour. Try again later.");
         case "photo":
-          return "Too many photos were started in the last hour. Try again later.";
+          return t("Too many photos were started in the last hour. Try again later.");
         default:
-          return "That's too many in a short time. Try again later.";
+          return t("That's too many in a short time. Try again later.");
       }
     default:
       return null;
@@ -251,9 +251,9 @@ export type ReportReasonKey =
 
 /** Design screen 5's five reasons, in its order, mapped to report_reason values. */
 export const FORUM_REPORT_REASONS: { value: ReportReasonKey; label: string }[] = [
-  { value: "harmful_health_advice", label: "Harmful or unsafe health advice" },
-  { value: "harassment", label: "Harassment or bullying" },
-  { value: "inappropriate_content", label: "Inappropriate content" },
-  { value: "impersonation", label: "Pretending to be someone else" },
-  { value: "spam", label: "Spam" },
+  { value: "harmful_health_advice", label: tk("Harmful or unsafe health advice") },
+  { value: "harassment", label: tk("Harassment or bullying") },
+  { value: "inappropriate_content", label: tk("Inappropriate content") },
+  { value: "impersonation", label: tk("Pretending to be someone else") },
+  { value: "spam", label: tk("Spam") },
 ];

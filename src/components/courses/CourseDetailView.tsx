@@ -281,7 +281,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
           <div className="flex flex-col gap-1.5">
             {state.extras?.focus && (
               <span className="text-[12px] font-bold" style={{ color: fv("muted") }}>
-                {t("Focus: {focus}", { focus: state.extras.focus })}
+                {t("Focus: {focus}", { focus: t(state.extras.focus) })}
               </span>
             )}
             {state.extras?.description && (
