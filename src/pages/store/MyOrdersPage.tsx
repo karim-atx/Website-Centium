@@ -9,6 +9,7 @@ import { isOpen } from "../../services/store/orderSteps";
 import { dayWord, money } from "../../services/store/format";
 import { useLive } from "../business-ops/store/storeShared";
 import { ClientCard, ClientEmpty, ClientRow, InfoNote, RetryLine, SkeletonCards, type ClientTone } from "./clientKit";
+import { t, tx } from "../../i18n/core";
 
 // OURS-customer-store-orders · order history (Designed by us), B11 my_orders.
 // Entry: Profile › My orders; after checkout.
@@ -17,19 +18,19 @@ import { ClientCard, ClientEmpty, ClientRow, InfoNote, RetryLine, SkeletonCards,
 export function customerStatus(o: Pick<StoreOrder, "status" | "fulfilment">): { label: string; tone: ClientTone } {
   switch (o.status) {
     case "placed":
-      return { label: "Placed", tone: "pale" };
+      return { label: t("Placed"), tone: "pale" };
     case "packed":
-      return { label: "Packed", tone: "pale" };
+      return { label: t("Packed"), tone: "pale" };
     case "out_for_delivery":
-      return { label: "On its way", tone: "pale" };
+      return { label: t("On its way"), tone: "pale" };
     case "ready_for_pickup":
-      return { label: "Ready to collect", tone: "good" };
+      return { label: t("Ready to collect"), tone: "good" };
     case "completed":
-      return { label: o.fulfilment === "delivery" ? "Delivered" : "Picked up", tone: "soft" };
+      return { label: o.fulfilment === "delivery" ? t("Delivered") : t("Picked up"), tone: "soft" };
     case "cancelled":
-      return { label: "Cancelled", tone: "bad" };
+      return { label: t("Cancelled"), tone: "bad" };
     case "returned":
-      return { label: "Returned", tone: "soft" };
+      return { label: tx("Returned", "order"), tone: "soft" };
   }
 }
 
@@ -43,11 +44,11 @@ export default function MyOrdersPage() {
 
   return (
     <div>
-      <PageHeader title="My orders" showBack sub />
+      <PageHeader title={t("My orders")} showBack sub />
       <SegmentedTabs
         items={[
-          { key: "active", label: "Active" },
-          { key: "past", label: "Past" },
+          { key: "active", label: tx("Active", "orders") },
+          { key: "past", label: tx("Past", "orders") },
         ]}
         activeKey={tab}
         onChange={(v) => setTab(v as "active" | "past")}
@@ -55,26 +56,26 @@ export default function MyOrdersPage() {
       />
       <div style={{ marginTop: 16 }}>
         {s.status === "loading" ? (
-          <SkeletonCards label="Loading your orders" />
+          <SkeletonCards label={t("Loading your orders")} />
         ) : s.status === "error" ? (
-          <RetryLine text="Couldn't load your orders." onRetry={live.reload} />
+          <RetryLine text={t("Couldn't load your orders.")} onRetry={live.reload} />
         ) : list.length === 0 ? (
           <>
             <ClientEmpty
               icon={Package}
-              title={tab === "active" ? "No orders on the way" : "No past orders"}
-              line={tab === "active" ? "Orders you place in stores on Explore show here until they're done." : "Delivered, collected and cancelled orders show here."}
+              title={tab === "active" ? t("No orders on the way") : t("No past orders")}
+              line={tab === "active" ? t("Orders you place in stores on Explore show here until they're done.") : t("Delivered, collected and cancelled orders show here.")}
             />
-            {s.status === "pending" && <InfoNote>Ordering from stores is coming soon.</InfoNote>}
+            {s.status === "pending" && <InfoNote>{t("Ordering from stores is coming soon.")}</InfoNote>}
           </>
         ) : (
-          <ClientCard label={tab === "active" ? "Active orders" : "Past orders"}>
+          <ClientCard label={tab === "active" ? t("Active orders") : t("Past orders")}>
             {list.map((o) => (
               <ClientRow
                 key={o.id}
                 icon={o.fulfilment === "delivery" ? Truck : Package}
-                title={o.storeName ?? `Order #${o.number}`}
-                sub={`Order #${o.number} · ${dayWord(o.placedAt)} · ${money(o.total)}`}
+                title={o.storeName ?? t("Order #{number}", { number: o.number })}
+                sub={`${t("Order #{number}", { number: o.number })} · ${dayWord(o.placedAt)} · ${money(o.total)}`}
                 pill={customerStatus(o)}
                 onClick={() => navigate(`/app/store/orders/${o.id}`)}
               />

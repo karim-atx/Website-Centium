@@ -11,6 +11,7 @@ import {
   fetchLedgerPayment,
   ledgerItem,
   markTarget,
+  money,
   moneyCents,
   monthYear,
   parseRefundAmount,
@@ -26,6 +27,8 @@ import { PayDetail, type DetailAction, type HistRow } from "./PayKit";
 import { owedChip, REVENUE_BASE } from "./payModel";
 import { useRevenue } from "./revenueContext";
 import { useMarkPaid } from "./OwedPages";
+import { t } from "../../../i18n/core";
+import { labelText, monthName } from "../../../services/business-revenue/model";
 
 // One ledger transaction (AN14-044 layout), reached from Transactions
 // (/transactions/:paymentId) once transactions_page answers (B8 RV-01).
@@ -43,21 +46,7 @@ import { useMarkPaid } from "./OwedPages";
 // revenue permission. Every string in the refund pop-up, its toast and the
 // detail's refund facts and history is OURS.
 
-const MONTH = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-const monthOf = (iso: string) => MONTH[Number(iso.slice(5, 7)) - 1];
+const monthOf = (iso: string) => monthName(iso);
 
 interface RefundSubject {
   paymentId: string;
@@ -105,12 +94,12 @@ function useRefund(onDone: () => void) {
           bg: "rgb(var(--c-primary-pale))",
           ink: "rgb(var(--c-primary-dark))",
         }}
-        title={subject ? `Refund ${moneyCents(shown)} to ${subject.label}?` : ""}
+        title={subject ? t("Refund {amount} to {name}?", { amount: moneyCents(shown), name: subject.label }) : ""}
         subtitle={
           err
             ? undefined
             : subject
-              ? `Records money you gave back for ${subject.item}. It comes off your revenue.`
+              ? t("Records money you gave back for {item}. It comes off your revenue.", { item: subject.item })
               : undefined
         }
         extra={
@@ -122,7 +111,7 @@ function useRefund(onDone: () => void) {
                   className="text-[13px] font-bold mt-[6px] text-center"
                   style={{ color: "#C0392B" }}
                 >
-                  {err}
+                  {t(err)}
                 </p>
               )}
               <label className="block mt-[14px]">
@@ -130,7 +119,7 @@ function useRefund(onDone: () => void) {
                   className="block text-[12px] font-bold mb-[6px]"
                   style={{ color: v("ink-soft") }}
                 >
-                  Amount
+                  {t("Amount")}
                 </span>
                 <span
                   className="flex items-center gap-[4px] h-[46px] rounded-[14px] px-[12px]"
@@ -162,7 +151,7 @@ function useRefund(onDone: () => void) {
                   className="block text-[11.5px] leading-[16px] mt-[4px]"
                   style={{ color: fieldErr ? "#C0392B" : v("faint") }}
                 >
-                  {fieldErr ?? `Up to ${moneyCents(subject.max)}.`}
+                  {fieldErr ?? t("Up to {amount}.", { amount: moneyCents(subject.max) })}
                 </span>
               </label>
               <label className="block mt-[10px]">
@@ -170,7 +159,7 @@ function useRefund(onDone: () => void) {
                   className="block text-[12px] font-bold mb-[6px]"
                   style={{ color: v("ink-soft") }}
                 >
-                  Reason (optional)
+                  {t("Reason (optional)")}
                 </span>
                 <input
                   value={reason}
@@ -184,7 +173,7 @@ function useRefund(onDone: () => void) {
             </div>
           ) : undefined
         }
-        confirmLabel="Record refund"
+        confirmLabel={t("Record refund")}
         busy={busy}
         onCancel={() => {
           if (busy) return;
@@ -207,13 +196,13 @@ function useRefund(onDone: () => void) {
           }
           const done = subject;
           setSubject(null);
-          setToast(`Refund of ${moneyCents(p.value)} to ${done.label} recorded.`);
+          setToast(t("Refund of {amount} to {name} recorded.", { amount: moneyCents(p.value), name: done.label }));
           onDone();
         }}
       />
       <Toast
         open={!!toast}
-        message={toast ?? ""}
+        message={toast ? t(toast) : ""}
         variant="business"
         shape="market"
         duration={4000}
@@ -225,7 +214,7 @@ function useRefund(onDone: () => void) {
 }
 
 const DetailLoading: React.FC = () => (
-  <div className="pt-[12px] pb-[120px]" role="status" aria-label="Loading">
+  <div className="pt-[12px] pb-[120px]" role="status" aria-label={t("Loading")}>
     <div
       className="rounded-[22px] pt-[18px] px-[16px] pb-[16px] flex flex-col items-center gap-[8px]"
       style={{ background: v("card"), border: `1px solid ${v("border")}` }}
@@ -274,8 +263,8 @@ export const TransactionDetailPage: React.FC<{ paymentId: string }> = ({
     setTick((t) => t + 1);
     reloadRevenue();
   }, [reloadRevenue]);
-  const mark = useMarkPaid((_s, message) => {
-    setToast(message.replace(" Removed from Money owed.", ""));
+  const mark = useMarkPaid((s) => {
+    setToast(t("{amount} from {name} marked as paid.", { amount: money(s.amount), name: s.label }));
     reload();
   });
   const refund = useRefund(reload);
@@ -283,8 +272,8 @@ export const TransactionDetailPage: React.FC<{ paymentId: string }> = ({
   if (error && !read)
     return (
       <div className="pt-[12px] pb-[120px]">
-        <PayHeader crumb="Revenue · Transactions" title="Payment" onBack={() => navigate(back)} />
-        <ErrorLine message="Couldn't load this payment." onRetry={reload} />
+        <PayHeader crumb={`${t("Revenue")} · ${t("Transactions")}`} title={t("Payment")} onBack={() => navigate(back)} />
+        <ErrorLine message={t("Couldn't load this payment.")} onRetry={reload} />
       </div>
     );
   if (!read) return <DetailLoading />;
@@ -296,7 +285,7 @@ export const TransactionDetailPage: React.FC<{ paymentId: string }> = ({
   const rec = recKey ? data?.records.find((r) => r.key === recKey) : undefined;
   const item = ledgerItem(p.priceType, rec);
   const membership = p.sourceKind === "membership";
-  const sub = membership && rec?.startedOn ? `Member since ${monthYear(rec.startedOn)}` : item;
+  const sub = membership && rec?.startedOn ? t("Member since {date}", { date: monthYear(rec.startedOn) }) : item;
   const masked = isMaskedLabel(p.label);
   const pending = p.status === "pending";
   const left = refundable(p.status, p.amount, p.refunded);
@@ -307,42 +296,42 @@ export const TransactionDetailPage: React.FC<{ paymentId: string }> = ({
     const c = owedChip({ overdue, dueOn: p.dueOn });
     chip = c.late
       ? { t: c.long, bg: v("caution-bg"), ink: v("pay-caution") }
-      : { t: "Unpaid, cash", bg: v("caution-bg"), ink: v("pay-caution") };
+      : { t: t("Unpaid, cash"), bg: v("caution-bg"), ink: v("pay-caution") };
   } else if (p.status === "paid")
     chip = p.refunded > 0
-      ? { t: "Part refunded", bg: v("soft"), ink: v("ink-soft") }
-      : { t: p.paidOn ? `Paid ${dMon(p.paidOn)}` : "Paid", bg: v("good-bg"), ink: v("good") };
-  else if (p.status === "refunded") chip = { t: "Refunded", bg: v("soft"), ink: v("ink-soft") };
-  else if (p.status === "failed") chip = { t: "Failed", bg: v("high-bg"), ink: v("high") };
-  else chip = { t: "Void", bg: v("soft"), ink: v("ink-soft") };
+      ? { t: t("Part refunded"), bg: v("soft"), ink: v("ink-soft") }
+      : { t: p.paidOn ? t("Paid {date}", { date: dMon(p.paidOn) }) : t("Paid"), bg: v("good-bg"), ink: v("good") };
+  else if (p.status === "refunded") chip = { t: t("Refunded"), bg: v("soft"), ink: v("ink-soft") };
+  else if (p.status === "failed") chip = { t: t("Failed"), bg: v("high-bg"), ink: v("high") };
+  else chip = { t: t("Void"), bg: v("soft"), ink: v("ink-soft") };
 
   const facts = [
-    { l: "Item", v: membership && p.dueOn ? `${item} · ${monthOf(p.dueOn)}` : item },
-    ...(pending && p.dueOn ? [{ l: overdue > 0 ? "Was due" : "Due", v: dddDMon(p.dueOn) }] : []),
+    { l: t("Item"), v: membership && p.dueOn ? `${item} · ${monthOf(p.dueOn)}` : item },
+    ...(pending && p.dueOn ? [{ l: overdue > 0 ? t("Was due") : t("Due"), v: dddDMon(p.dueOn) }] : []),
     {
-      l: pending ? "Expected method" : "Method",
-      v: p.method === "whish" ? "Whish" : "Cash at the desk",
+      l: pending ? t("Expected method") : t("Method"),
+      v: p.method === "whish" ? "Whish" : t("Cash at the desk"),
     },
-    ...(p.paidOn ? [{ l: "Paid on", v: dddDMon(p.paidOn) }] : []),
+    ...(p.paidOn ? [{ l: t("Paid on"), v: dddDMon(p.paidOn) }] : []),
     ...(p.refunded > 0
       ? [
-          { l: "Refunded", v: moneyCents(p.refunded) },
-          { l: "Kept", v: moneyCents(Math.max(0, p.amount - p.refunded)) },
+          { l: t("Refunded"), v: moneyCents(p.refunded) },
+          { l: t("Kept"), v: moneyCents(Math.max(0, p.amount - p.refunded)) },
         ]
       : []),
   ];
   const hist: HistRow[] = [
     ...p.refunds.map((r) => ({
-      t: `Refunded ${moneyCents(r.amount)}`,
-      s: r.reason ?? "No reason given",
+      t: t("Refunded {amount}", { amount: moneyCents(r.amount) }),
+      s: r.reason ?? t("No reason given"),
       d: dMon(r.on),
       kind: "info" as const,
     })),
     ...(pending && overdue > 0 && p.dueOn
       ? [
           {
-            t: "Not paid at the desk",
-            s: "Cash payments can't be retried",
+            t: t("Not paid at the desk"),
+            s: t("Cash payments can't be retried"),
             d: dMon(p.dueOn),
             kind: "warn" as const,
           },
@@ -354,12 +343,12 @@ export const TransactionDetailPage: React.FC<{ paymentId: string }> = ({
     ...(pending && canMark && target
       ? [
           {
-            t: "Mark as paid",
+            t: t("Mark as paid"),
             icon: BadgeCheck,
             primary: true,
             onClick: () =>
               mark.open({
-                label: p.label,
+                label: labelText(p.label),
                 amount: p.amount,
                 item,
                 membership,
@@ -372,9 +361,9 @@ export const TransactionDetailPage: React.FC<{ paymentId: string }> = ({
     ...(left > 0 && canRefund
       ? [
           {
-            t: "Refund",
+            t: t("Refund"),
             icon: Undo2,
-            onClick: () => refund.open({ paymentId: p.id, label: p.label, item, max: left }),
+            onClick: () => refund.open({ paymentId: p.id, label: labelText(p.label), item, max: left }),
           },
         ]
       : []),
@@ -382,23 +371,23 @@ export const TransactionDetailPage: React.FC<{ paymentId: string }> = ({
 
   return (
     <div className="pt-[12px] pb-[120px]">
-      <PayHeader crumb="Revenue · Transactions" title={p.label} onBack={() => navigate(back)} />
+      <PayHeader crumb={`${t("Revenue")} · ${t("Transactions")}`} title={labelText(p.label)} onBack={() => navigate(back)} />
       <PayDetail
         who={masked ? null : p.label}
-        name={p.label}
+        name={labelText(p.label)}
         sub={sub}
         amt={moneyCents(p.amount)}
         amtInk={p.status === "refunded" ? v("faint") : undefined}
         chip={chip}
         facts={facts}
-        histTitle={p.refunds.length ? "Refunds" : "Recent payments"}
+        histTitle={p.refunds.length ? t("Refunds") : t("Recent payments")}
         hist={hist}
         actions={actions}
         note={
           pending
-            ? "Cash payments are recorded by hand. Whish payments are coming."
+            ? t("Cash payments are recorded by hand. Whish payments are coming.")
             : left > 0 && canRefund
-              ? "A refund records money you gave back. Centium doesn't send it."
+              ? t("A refund records money you gave back. Centium doesn't send it.")
               : undefined
         }
       />
@@ -406,7 +395,7 @@ export const TransactionDetailPage: React.FC<{ paymentId: string }> = ({
       {refund.ui}
       <Toast
         open={!!toast}
-        message={toast ?? ""}
+        message={toast ? t(toast) : ""}
         variant="business"
         shape="market"
         duration={4000}

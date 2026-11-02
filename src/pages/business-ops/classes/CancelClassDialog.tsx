@@ -7,6 +7,7 @@ import { useIsDark } from "../../../hooks/useIsDark";
 import { FOCUS_CSS } from "../../../components/market/usePress";
 import { scrimOf, useMarketColours } from "./parts";
 import { cancelExtras, cancelText, notifiedText, type Session } from "./scheduleModel";
+import { t } from "../../../i18n/core";
 
 // B-MA.6 Cancel class (Business Marketplace Screens `classCancel`, markup
 // lines 450–464): the board draws its own dialog, not the CentredDialog: a
@@ -114,7 +115,7 @@ export function CancelClassDialog({
         <span aria-hidden className="flex items-center justify-center shrink-0" style={{ width: 48, height: 48, borderRadius: 999, background: m.highbg, color: m.high }}>
           <CalendarX size={20} strokeWidth={2.2} />
         </span>
-        <h2 id={titleId} style={{ margin: "12px 0 0", fontSize: textPx(17), fontWeight: 800, color: m.ink }}>{`Cancel ${session.title}?`}</h2>
+        <h2 id={titleId} style={{ margin: "12px 0 0", fontSize: textPx(17), fontWeight: 800, color: m.ink }}>{t("Cancel {class}?", { class: session.title })}</h2>
         <p id={bodyId} style={{ margin: "4px 0 0", fontSize: textPx(12.5), lineHeight: linePx(18), color: m.ink2 }}>
           {cancelText(session.date, session.startTime, session.booked)}
           {extras ? ` ${extras}` : ""}
@@ -124,7 +125,7 @@ export function CancelClassDialog({
         )}
         <div className="w-full text-start" style={{ marginTop: 12 }}>
           <label htmlFor={`${titleId}-reason`} className="block" style={{ fontSize: textPx(12), fontWeight: 600, lineHeight: linePx(16), color: m.ink2, marginBottom: 6 }}>
-            Reason (optional)
+            {t("Reason (optional)")}
           </label>
           <input
             id={`${titleId}-reason`}
@@ -132,14 +133,14 @@ export function CancelClassDialog({
             maxLength={300}
             disabled={busy}
             onChange={(e) => onReason(e.target.value)}
-            placeholder="Only your team sees this"
+            placeholder={t("Only your team sees this")}
             className="market-focus w-full"
             style={{ height: 44, borderRadius: 12, background: m.soft, border: `1px solid ${m.border}`, padding: "0 12px", fontSize: textPx(14), color: m.ink, outline: "none" }}
           />
         </div>
         {(error || offline) && (
           <p role="alert" style={{ margin: "10px 0 0", fontSize: textPx(12.5), lineHeight: linePx(17), fontWeight: 600, color: m.high }}>
-            {offline ? "You're offline. Connect to cancel this class." : error}
+            {offline ? t("You're offline. Connect to cancel this class.") : error}
           </p>
         )}
         <button
@@ -150,7 +151,7 @@ export function CancelClassDialog({
           className="market-focus w-full flex items-center justify-center disabled:opacity-40"
           style={{ marginTop: 14, height: 48, borderRadius: 14, background: m.highbg, color: m.high, fontSize: textPx(14), fontWeight: 800, border: 0 }}
         >
-          {busy ? "Cancelling…" : error ? "Try again" : "Cancel class"}
+          {busy ? t("Cancelling…") : error ? t("Try again") : t("Cancel class")}
         </button>
         <button
           ref={keepRef}
@@ -160,7 +161,7 @@ export function CancelClassDialog({
           className="market-focus w-full flex items-center justify-center"
           style={{ height: 44, fontSize: textPx(14), fontWeight: 700, color: m.ink2, background: "transparent", border: 0, borderRadius: 14 }}
         >
-          Keep class
+          {t("Keep class")}
         </button>
       </div>
     </div>,

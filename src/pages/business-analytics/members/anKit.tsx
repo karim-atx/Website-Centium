@@ -2,6 +2,7 @@ import React from "react";
 import clsx from "clsx";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, UserRound, WifiOff, type LucideIcon } from "lucide-react";
+import { t } from "../../../i18n/core";
 
 // AN4 (AnMembersV6) parts, literal values from AN4-001 / -005 / -025 / -043 /
 // -046 through the app tokens (page #FFFFFF · #121317, card #FFFFFF ·
@@ -209,7 +210,7 @@ export const AnRowButton: React.FC<{ icon: LucideIcon; label: string; onClick: (
 /** AN4-025 L10 · "See all {n}". */
 export const AnSeeAll: React.FC<{ n: number; onClick: () => void }> = ({ n, onClick }) => (
   <button type="button" onClick={onClick} className={clsx("tap w-full min-h-[44px] border-t flex items-center justify-center gap-[4px] rounded-[10px] text-[12px] font-extrabold text-primary-dark", DIV)}>
-    See all {n} <ChevronRight size={14} aria-hidden />
+    {t("See all {n}", { n })} <ChevronRight size={14} aria-hidden />
   </button>
 );
 
@@ -236,7 +237,7 @@ export const AnStrip: React.FC<{ offline?: boolean; text: string; onRetry?: () =
     <p className="flex-1 text-[12px] leading-[17px] text-charcoal">{text}</p>
     {onRetry && (
       <button type="button" onClick={onRetry} className="tap min-h-[44px] px-1 text-[12px] font-extrabold text-primary-dark">
-        Retry
+        {t("Retry")}
       </button>
     )}
   </div>
@@ -279,7 +280,7 @@ export const AnEmptyCard: React.FC<{
 
 /** AN4-001 O1 · skeleton index rows. */
 export const AnIndexSkeleton: React.FC<{ rows: number }> = ({ rows }) => (
-  <div role="status" aria-label="Loading">
+  <div role="status" aria-label={t("Loading")}>
     {Array.from({ length: rows }).map((_, i) => (
       <div key={i} className={clsx("flex items-center justify-between min-h-[76px]", i > 0 && "border-t", DIV)} style={{ paddingBlock: "14px", paddingInline: "20px 14px" }}>
         <span className="space-y-[6px]">

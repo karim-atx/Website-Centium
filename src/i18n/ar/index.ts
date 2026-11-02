@@ -13,6 +13,12 @@ import programmes from "./programmes";
 import safety from "./safety";
 import venues from "./venues";
 import certificates from "./certificates";
+import business from "./business";
+import bizanalytics from "./bizanalytics";
+import bizrevenue from "./bizrevenue";
+import bizops from "./bizops";
+import bizmarket from "./bizmarket";
+import bizteam from "./bizteam";
 import sharedbiz from "./sharedbiz";
 import sharedmember from "./sharedmember";
 import sharedfood from "./sharedfood";
@@ -40,7 +46,7 @@ import premium4 from "./premium4";
 // chunk when Arabic is chosen. Every entry is in design-handover/round-f/
 // ARABIC_REVIEW.md for Karim's review before merge. A key in two areas has
 // the same Arabic in both (the catalogue test checks).
-const ar: Catalogue = { ...core, ...landing, ...legal, ...auth, ...settings, ...plans, ...messages, ...notifications, ...services, ...shared, ...programmes, ...safety, ...venues, ...certificates, ...sharedbiz, ...sharedmember, ...sharedfood, ...sharedhealth, ...sharedpro, ...pro, ...proclients, ...proprofile, ...procalendar, ...promessages, ...prolibrary, ...pronutrition, ...proforms, ...proinsights, ...provitals, ...procourses, ...pronetwork, ...promarket, ...premium, ...premium2, ...premium3, ...premium4 };
+const ar: Catalogue = { ...core, ...landing, ...legal, ...auth, ...settings, ...plans, ...messages, ...notifications, ...services, ...shared, ...programmes, ...safety, ...venues, ...certificates, ...business, ...bizanalytics, ...bizrevenue, ...bizops, ...bizmarket, ...bizteam, ...sharedbiz, ...sharedmember, ...sharedfood, ...sharedhealth, ...sharedpro, ...pro, ...proclients, ...proprofile, ...procalendar, ...promessages, ...prolibrary, ...pronutrition, ...proforms, ...proinsights, ...provitals, ...procourses, ...pronetwork, ...promarket, ...premium, ...premium2, ...premium3, ...premium4 };
 
 export default ar;
 

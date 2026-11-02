@@ -20,7 +20,8 @@ import { PermissionsCard, RoleCard } from "./PersonTerms";
 import { SeatsFullSheet } from "./TeamSheets";
 import { Avatar, BackRow, DCard, Notice, Row, TeamScope, isOfflineNow, useTeamToast } from "./parts";
 import { inviteState, inviteWhen, isWithdrawn, jobRow, shortDay, specialtySub } from "./teamLogic";
-import { ROLE_LABEL, roleAndProfession, teamTitle, seatCounts, clashOf, dayDate, dayWord, firstWord, isAccepted, longDate, weekRange } from "./teamLogic";
+import { t, tn, tx } from "../../i18n/core";
+import { roleLabel, roleAndProfession, teamTitle, seatCounts, clashOf, dayDate, dayWord, firstWord, isAccepted, longDate, weekRange } from "./teamLogic";
 import type { TeamData } from "./useTeamData";
 
 // OP1-061 / 130 (person page), 063 / 132 (credentials), 064 (remove
@@ -85,8 +86,8 @@ export function PersonPage({ data }: { data: TeamData }) {
     void fetchReviewsFor(id).then((r) => {
       if (cancelled || !r.ok) return;
       const n = r.reviews.length;
-      if (n < MIN_REVIEWS_FOR_AVERAGE) setRating("No reviews yet");
-      else setRating(`${(r.reviews.reduce((a, x) => a + x.rating, 0) / n).toFixed(1)} average rating`);
+      if (n < MIN_REVIEWS_FOR_AVERAGE) setRating(t("No reviews yet"));
+      else setRating(t("{rating} average rating", { rating: (r.reviews.reduce((a, x) => a + x.rating, 0) / n).toFixed(1) }));
     });
     return () => {
       cancelled = true;
@@ -120,14 +121,14 @@ export function PersonPage({ data }: { data: TeamData }) {
               <span className="tm-empty-tile">
                 <UserMinus size={22} />
               </span>
-              <p className="tm-empty-t">This person is no longer on your team.</p>
+              <p className="tm-empty-t">{t("This person is no longer on your team.")}</p>
               <button type="button" className="tm-link tap" onClick={back}>
-                Back to team
+                {t("Back to team")}
               </button>
             </div>
           </div>
         )}
-        {!error && !people && <p className="tm-subtitle">Loading…</p>}
+        {!error && !people && <p className="tm-subtitle">{t("Loading…")}</p>}
       </TeamScope>
     );
   }
@@ -143,16 +144,16 @@ export function PersonPage({ data }: { data: TeamData }) {
   const acts = withdrawn
     ? readOnly
       ? []
-      : [{ t: reinviting ? "Sending…" : "Invite again", i: <Send size={17} strokeWidth={2.1} />, on: () => void doReinvite(), dis: offline || reinviting, red: false }]
+      : [{ t: reinviting ? t("Sending…") : t("Invite again"), i: <Send size={17} strokeWidth={2.1} />, on: () => void doReinvite(), dis: offline || reinviting, red: false }]
     : accepted
     ? [
-        { t: "Message", i: <MessageCircle size={17} strokeWidth={2.1} />, on: () => void openChat(), dis: chatBusy, red: false },
-        { t: "Schedule", i: <CalendarDays size={17} strokeWidth={2.1} />, on: () => navigate("/app/business/classes"), dis: false, red: false },
+        { t: t("Message"), i: <MessageCircle size={17} strokeWidth={2.1} />, on: () => void openChat(), dis: chatBusy, red: false },
+        { t: t("Schedule"), i: <CalendarDays size={17} strokeWidth={2.1} />, on: () => navigate("/app/business/classes"), dis: false, red: false },
         {
-          t: "Cover",
+          t: tx("Cover", "session"),
           i: <Repeat2 size={17} strokeWidth={2.1} />,
           on: (el: HTMLElement) => {
-            if (toCover.length === 0) showToast(`${first} has no upcoming sessions to cover.`);
+            if (toCover.length === 0) showToast(t("{name} has no upcoming sessions to cover.", { name: first }));
             else if (toCover.length === 1) sessionActions.openSubstitute(toCover[0].id);
             else setCoverMenu(el);
           },
@@ -161,15 +162,15 @@ export function PersonPage({ data }: { data: TeamData }) {
         },
       ]
     : [
-        { t: "Message", i: <MessageCircle size={17} strokeWidth={2.1} />, on: () => void openChat(), dis: chatBusy, red: false },
+        { t: t("Message"), i: <MessageCircle size={17} strokeWidth={2.1} />, on: () => void openChat(), dis: chatBusy, red: false },
         // B7: business_employees writes stay the owner's. Batch 2 CO: Resend
         // (resend_team_invite) and Withdraw (revoke_team_invite) replace the
         // old Cancel invite, which deleted the pending row.
         ...(readOnly
           ? []
           : [
-              { t: resending ? "Resending…" : "Resend", i: <Send size={17} strokeWidth={2.1} />, on: () => void doResend(), dis: offline || resending, red: false },
-              { t: "Withdraw", i: <UserX size={17} strokeWidth={2.1} />, on: () => setConfirm(true), dis: offline || resending, red: true },
+              { t: resending ? t("Resending…") : t("Resend"), i: <Send size={17} strokeWidth={2.1} />, on: () => void doResend(), dis: offline || resending, red: false },
+              { t: t("Withdraw"), i: <UserX size={17} strokeWidth={2.1} />, on: () => setConfirm(true), dis: offline || resending, red: true },
             ]),
       ];
 
@@ -194,7 +195,7 @@ export function PersonPage({ data }: { data: TeamData }) {
         )
       );
     }
-    showToast(r.at ? `Invite resent. It now expires ${shortDay(r.at)}.` : "Invite resent.");
+    showToast(r.at ? t("Invite resent. It now expires {date}.", { date: shortDay(r.at) }) : t("Invite resent."));
   };
 
   const doReinvite = async () => {
@@ -225,7 +226,7 @@ export function PersonPage({ data }: { data: TeamData }) {
           : p
       )
     );
-    showToast(r.at ? `Invite sent again. It expires ${shortDay(r.at)}.` : "Invite sent again.");
+    showToast(r.at ? t("Invite sent again. It expires {date}.", { date: shortDay(r.at) }) : t("Invite sent again."));
   };
 
   const doRemove = async () => {
@@ -236,7 +237,7 @@ export function PersonPage({ data }: { data: TeamData }) {
     if (accepted) {
       const r = await removeTeamMember(businessId, id);
       setBusy(false);
-      if (!r.ok) return setRemoveError(r.message ?? "Couldn't remove them. Try again.");
+      if (!r.ok) return setRemoveError(r.message ?? t("Couldn't remove them. Try again."));
     } else {
       const r = await revokeTeamInvite(businessId, id);
       if (r.ok) revokedAt = r.at;
@@ -262,48 +263,54 @@ export function PersonPage({ data }: { data: TeamData }) {
           )
     );
     navigate("/app/business/employees", {
-      state: { toast: accepted ? `${name} was removed from your team.` : `${name}'s invite was withdrawn.` },
+      state: { toast: accepted ? t("{name} was removed from your team.", { name }) : t("{name}'s invite was withdrawn.", { name }) },
     });
   };
 
   const futureCount = upcoming.length;
   const removeBody = accepted
     ? futureCount > 0
-      ? `Their ${futureCount} upcoming session${futureCount === 1 ? "" : "s"} will need a new instructor. This frees a seat.`
-      : "This frees a seat."
-    : "The invite stops working and they won't be able to accept it.";
+      ? tn(futureCount, "Their 1 upcoming session will need a new instructor. This frees a seat.", "Their {n} upcoming sessions will need a new instructor. This frees a seat.")
+      : t("This frees a seat.")
+    : t("The invite stops working and they won't be able to accept it.");
 
   return (
     <TeamScope detail>
       <BackRow label={teamTitle(kind, data.kindKnown)} onBack={back} />
-      {offline && <Notice message="You're offline." />}
+      {offline && <Notice message={t("You're offline.")} />}
       <div className="tm-dhead">
         <Avatar name={name} url={accepted ? person.avatarUrl : null} className={accepted ? "tm-dav" : "tm-dav invited"} />
         <div className="tm-dhead-b">
           <p className="tm-dname">
             <b>{name}</b>
-            <span className={accepted ? "tm-pill" : expired || withdrawn ? "tm-pill exp" : "tm-pill inv"}>{accepted ? "Active" : withdrawn ? "Withdrawn" : expired ? "Expired" : "Invited"}</span>
+            <span className={accepted ? "tm-pill" : expired || withdrawn ? "tm-pill exp" : "tm-pill inv"}>{accepted ? tx("Active", "person") : withdrawn ? t("Withdrawn") : expired ? tx("Expired", "invite") : tx("Invited", "person")}</span>
           </p>
           <p className="tm-ds1">
-            {(accepted ? `${roleAndProfession(person)} · joined ${longDate(person.acceptedAt!)}` : `${ROLE_LABEL[person.role]} · invited ${dayDate(localDayOf(person.invitedAt))}`) + (personUsesSeat(person) ? "" : " · no seat needed")}
+            {(accepted
+              ? `${roleAndProfession(person)} · ${t("joined {date}", { date: longDate(person.acceptedAt!) })}`
+              : `${roleLabel(person.role)} · ${t("invited {date}", { date: dayDate(localDayOf(person.invitedAt)) })}`) + (personUsesSeat(person) ? "" : ` · ${t("no seat needed")}`)}
           </p>
           <p className="tm-ds2">
-            {accepted ? `${weekCount} session${weekCount === 1 ? "" : "s"} this week` + (rating ? ` · ${rating}` : "") : withdrawn ? (when ?? "Withdrawn") : "Hasn't accepted yet" + (when ? ` · ${when}` : "")}
+            {accepted
+              ? tn(weekCount, "1 session this week", "{n} sessions this week") + (rating ? ` · ${rating}` : "")
+              : withdrawn
+                ? (when ?? t("Withdrawn"))
+                : t("Hasn't accepted yet") + (when ? ` · ${when}` : "")}
           </p>
         </div>
       </div>
 
       {acts.length > 0 && <div className="tm-acts" style={{ gridTemplateColumns: `repeat(${acts.length}, minmax(0, 1fr))` }}>
         {acts.map((a) => (
-          <button key={a.t} type="button" className={a.red ? "tm-act red tap" : "tm-act tap"} disabled={a.dis} onClick={(e) => a.on(e.currentTarget)} aria-haspopup={a.t === "Cover" && toCover.length > 1 ? "menu" : undefined}>
+          <button key={a.t} type="button" className={a.red ? "tm-act red tap" : "tm-act tap"} disabled={a.dis} onClick={(e) => a.on(e.currentTarget)} aria-haspopup={a.t === tx("Cover", "session") && toCover.length > 1 ? "menu" : undefined}>
             {a.i}
             {a.t}
           </button>
         ))}
       </div>}
       {chatError && <Notice message={chatError} />}
-      {expired && !readOnly && <p className="tm-note" role="note" style={{ marginTop: 10, borderTop: "none", padding: "0 2px" }}>{`This invite has expired, so ${first} can't accept it. Resend it to give them another 14 days.`}</p>}
-      {withdrawn && <p className="tm-note" role="note" style={{ marginTop: 10, borderTop: "none", padding: "0 2px" }}>{readOnly ? `This invite was withdrawn, so ${first} can't accept it.` : `This invite was withdrawn, so ${first} can't accept it. Invite them again to give them another 14 days.`}</p>}
+      {expired && !readOnly && <p className="tm-note" role="note" style={{ marginTop: 10, borderTop: "none", padding: "0 2px" }}>{t("This invite has expired, so {name} can't accept it. Resend it to give them another 14 days.", { name: first })}</p>}
+      {withdrawn && <p className="tm-note" role="note" style={{ marginTop: 10, borderTop: "none", padding: "0 2px" }}>{readOnly ? t("This invite was withdrawn, so {name} can't accept it.", { name: first }) : t("This invite was withdrawn, so {name} can't accept it. Invite them again to give them another 14 days.", { name: first })}</p>}
 
       <RoleCard
         person={person}
@@ -314,20 +321,20 @@ export function PersonPage({ data }: { data: TeamData }) {
         onNoSeats={() => setFull(true)}
       />
 
-      <DCard title="Credentials" right={`From ${first}'s profile`}>
-        {!accepted && <Row icon={<FileBadge size={16} />} title="Certification" sub={`Shows once ${first} accepts the invite.`} />}
-        {accepted && details && specialtySub(details, today) && <Row icon={<Dumbbell size={16} />} title="Specialty" sub={specialtySub(details, today)!} />}
+      <DCard title={t("Credentials")} right={t("From {name}'s profile", { name: first })}>
+        {!accepted && <Row icon={<FileBadge size={16} />} title={t("Certification")} sub={t("Shows once {name} accepts the invite.", { name: first })} />}
+        {accepted && details && specialtySub(details, today) && <Row icon={<Dumbbell size={16} />} title={t("Specialty")} sub={specialtySub(details, today)!} />}
         {accepted &&
           details?.experience.map((job, i) => {
             const j = jobRow(job);
             return <Row key={`job-${i}`} icon={<Briefcase size={16} />} title={j.title} sub={j.sub ?? undefined} />;
           })}
-        {accepted && credError && <Row title="Couldn't load credentials." />}
-        {accepted && !credError && creds === null && <Row title="Loading…" />}
+        {accepted && credError && <Row title={t("Couldn't load credentials.")} />}
+        {accepted && !credError && creds === null && <Row title={t("Loading…")} />}
         {accepted &&
           creds &&
           (creds.filter((c) => c.licenceName).length === 0 ? (
-            <Row icon={<FileBadge size={16} />} title="Certification" sub="Not added yet" />
+            <Row icon={<FileBadge size={16} />} title={t("Certification")} sub={t("Not added yet")} />
           ) : (
             creds
               .filter((c) => c.licenceName)
@@ -338,21 +345,21 @@ export function PersonPage({ data }: { data: TeamData }) {
                   title={c.licenceName!}
                   sub={[
                     c.issuingBody,
-                    c.issuedOn ? `Issued ${c.issuedOn.slice(0, 4)}` : null,
-                    c.verified ? "Verified by Centium" : "Not verified yet",
+                    c.issuedOn ? t("Issued {year}", { year: c.issuedOn.slice(0, 4) }) : null,
+                    c.verified ? t("Verified by Centium") : t("Not verified yet"),
                   ]
                     .filter(Boolean)
                     .join(" · ")}
                 />
               ))
           ))}
-        {accepted && details?.bio && <Row icon={<Quote size={16} />} title="Bio" sub={details.bio} />}
-        <p className="tm-note">{`Added by ${name} in their professional profile. Only they can change it.`}</p>
+        {accepted && details?.bio && <Row icon={<Quote size={16} />} title={t("Bio")} sub={details.bio} />}
+        <p className="tm-note">{t("Added by {name} in their professional profile. Only they can change it.", { name })}</p>
       </DCard>
 
       {accepted && (
-        <DCard title="Upcoming sessions" right={`${weekCount} this week`}>
-          {firstThree.length === 0 && <Row icon={<CalendarClock size={16} />} title="No upcoming sessions" />}
+        <DCard title={t("Upcoming sessions")} right={t("{n} this week", { n: weekCount })}>
+          {firstThree.length === 0 && <Row icon={<CalendarClock size={16} />} title={t("No upcoming sessions")} />}
           {firstThree.map((s) => {
             const clash = clashOf(s, upcoming);
             const b = booked[s.id];
@@ -363,14 +370,20 @@ export function PersonPage({ data }: { data: TeamData }) {
                 title={s.title}
                 sub={
                   `${dayWord(s.date, today)} · ${range12(s.start, s.end)}` +
-                  (clash ? ` · clashes with ${clash.title}` : b === undefined || b === null ? "" : b >= s.capacity ? " · full" : ` · ${b} of ${s.capacity} booked`)
+                  (clash
+                    ? ` · ${t("clashes with {title}", { title: clash.title })}`
+                    : b === undefined || b === null
+                      ? ""
+                      : b >= s.capacity
+                        ? ` · ${t("full")}`
+                        : ` · ${t("{booked} of {capacity} booked", { booked: b, capacity: s.capacity })}`)
                 }
               />
             );
           })}
           {upcoming.length > 3 && (
             <button type="button" className="tm-more tap" onClick={() => navigate("/app/business/classes")}>
-              {`See all ${upcoming.length}`}
+              {t("See all {n}", { n: upcoming.length })}
             </button>
           )}
         </DCard>
@@ -393,7 +406,7 @@ export function PersonPage({ data }: { data: TeamData }) {
       {accepted && !readOnly && (
         <button type="button" className="tm-danger tap" disabled={offline} onClick={() => setConfirm(true)}>
           <UserMinus size={16} strokeWidth={2.2} />
-          Remove from team
+          {t("Remove from team")}
         </button>
       )}
 
@@ -406,11 +419,11 @@ export function PersonPage({ data }: { data: TeamData }) {
         initialFocus="cancel"
         scrimBlur
         icon={accepted ? <UserMinus size={20} strokeWidth={2.2} /> : <UserX size={20} strokeWidth={2.2} />}
-        title={accepted ? `Remove ${name} from your team?` : `Withdraw ${name}'s invite?`}
+        title={accepted ? t("Remove {name} from your team?", { name }) : t("Withdraw {name}'s invite?", { name })}
         subtitle={removeBody}
         extra={removeError ? <p className="tm-sh-err" role="alert" style={{ color: "rgb(var(--c-status-high))" }}>{removeError}</p> : undefined}
-        confirmLabel={busy ? (accepted ? "Removing…" : "Withdrawing…") : accepted ? "Remove" : "Withdraw invite"}
-        cancelLabel="Keep it"
+        confirmLabel={busy ? (accepted ? t("Removing…") : t("Withdrawing…")) : accepted ? t("Remove") : t("Withdraw invite")}
+        cancelLabel={t("Keep it")}
         busy={busy}
         onCancel={() => {
           setConfirm(false);
@@ -423,12 +436,12 @@ export function PersonPage({ data }: { data: TeamData }) {
         open={!!coverMenu}
         anchor={coverMenu}
         onClose={() => setCoverMenu(null)}
-        heading="Which session?"
+        heading={t("Which session?")}
         width={240}
         options={toCover.slice(0, 8).map((s) => ({
           value: s.id,
           label: s.title,
-          note: `${s.date === today ? "Today" : shortDate(s.date)} · ${time12(s.startTime)}`,
+          note: `${s.date === today ? t("Today") : shortDate(s.date)} · ${time12(s.startTime)}`,
         }))}
         onSelect={(v) => {
           setCoverMenu(null);

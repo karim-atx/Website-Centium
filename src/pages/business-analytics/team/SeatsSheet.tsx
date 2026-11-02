@@ -7,7 +7,7 @@ import { formatShortDate } from "../../../utils/date";
 import { Buttons, ErrLine, LeadRow, RowsCard, Sheet } from "./parts";
 import { money } from "./fmt";
 import type { SeatInfo } from "./teamData";
-import { t } from "../../../i18n/core";
+import { t, tn } from "../../../i18n/core";
 import { BuyInApp } from "../../../components/premium/BuyInApp";
 import { usePlanLevel } from "../../../components/premium/usePlanLevel";
 import { paysInApp } from "../../../services/premium";
@@ -42,7 +42,8 @@ import { paysInApp } from "../../../services/premium";
 export type SeatsMode = "noseats" | "add" | "noplan";
 type Step = "intro" | "choose" | "confirm" | "pay" | "done" | "pending" | "cancel";
 
-const blocksWord = (n: number) => (n === 1 ? "1 block" : `${n} blocks`);
+const blocksWord = (n: number) => tn(n, "1 block", "{n} blocks");
+const seatsWord = (n: number) => tn(n, "{n} seat", "{n} seats");
 const dayMonth = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short" });
 
 export function SeatsSheet({
@@ -53,7 +54,7 @@ export function SeatsSheet({
   pending,
   billing,
   businessId,
-  doneLabel = "Back to Team",
+  doneLabel,
   onClose,
   onPlan,
   onRequested,
@@ -105,9 +106,9 @@ export function SeatsSheet({
   // charges that period's price); NULL is "Not available", never $0.
   const period = seats.period ?? "monthly";
   const each = (amount: number) => `${money(amount)} ${perPeriod(period)}`;
-  const priceRow = { l: "Price per block", v: price !== null ? each(price) : t(NOT_AVAILABLE) };
+  const priceRow = { l: t("Price per block"), v: price !== null ? each(price) : t(NOT_AVAILABLE) };
   const total = seats.capacity + n * per;
-  const have = seats.blocks > 0 ? `${blocksWord(seats.blocks)} · ${seats.capacity} seats` : `${seats.capacity} seats`;
+  const have = seats.blocks > 0 ? `${blocksWord(seats.blocks)} · ${seatsWord(seats.capacity)}` : seatsWord(seats.capacity);
   const amountOf = (k: number) => (price !== null ? Math.round(k * price * 100) / 100 : null);
   const toAdd = () => setStep(order ? "pending" : "choose");
 
@@ -153,24 +154,24 @@ export function SeatsSheet({
 
   if (mode === "noplan" && step === "intro") {
     return (
-      <Sheet open={open} onClose={onClose} title="Seats come with the Business plan">
-        <LeadRow icon={Armchair}>Each seat block adds {per} seats.</LeadRow>
-        <Buttons alt={{ label: "Not now", onClick: onClose }} primary={{ label: "See the Business plan", onClick: onPlan }} marginTop={16} />
+      <Sheet open={open} onClose={onClose} title={t("Seats come with the Business plan")}>
+        <LeadRow icon={Armchair}>{t("Each seat block adds {n} seats.", { n: per })}</LeadRow>
+        <Buttons alt={{ label: t("Not now"), onClick: onClose }} primary={{ label: t("See the Business plan"), onClick: onPlan }} marginTop={16} />
       </Sheet>
     );
   }
 
   if (mode === "noseats" && step === "intro") {
     return (
-      <Sheet open={open} onClose={onClose} title={`All ${seats.capacity} seats are in use`}>
-        <LeadRow icon={Armchair}>Add a seat block to invite another professional. Each block adds {per} seats.</LeadRow>
+      <Sheet open={open} onClose={onClose} title={t("All {n} seats are in use", { n: seats.capacity })}>
+        <LeadRow icon={Armchair}>{t("Add a seat block to invite another professional. Each block adds {n} seats.", { n: per })}</LeadRow>
         <RowsCard
           rows={[
-            { l: "Seats", v: pending > 0 ? `${used} used · ${pending} pending` : `${used} used` },
+            { l: t("Seats"), v: pending > 0 ? t("{used} used · {pending} pending", { used, pending }) : t("{used} used", { used }) },
             ...(live || price !== null ? [priceRow] : []),
           ]}
         />
-        <Buttons alt={{ label: "Not now", onClick: onClose }} primary={{ label: "Add seats", onClick: toAdd }} marginTop={16} />
+        <Buttons alt={{ label: t("Not now"), onClick: onClose }} primary={{ label: t("Add seats"), onClick: toAdd }} marginTop={16} />
       </Sheet>
     );
   }
@@ -191,19 +192,19 @@ export function SeatsSheet({
 
   if (step === "pending" && order) {
     return (
-      <Sheet open={open} onClose={onClose} title="Seats awaiting payment">
-        <LeadRow icon={Clock3}>Pay Centium by cash or bank transfer. The seats are added once your payment is recorded.</LeadRow>
+      <Sheet open={open} onClose={onClose} title={t("Seats awaiting payment")}>
+        <LeadRow icon={Clock3}>{t("Pay Centium by cash or bank transfer. The seats are added once your payment is recorded.")}</LeadRow>
         <RowsCard
           rows={[
-            { l: "Order", v: `${blocksWord(order.quantity)} · ${order.quantity * per} seats` },
-            { l: "Ordered", v: dayMonth(order.createdAt) },
-            { l: "Amount", v: money(order.amount), bold: true },
+            { l: t("Order"), v: `${blocksWord(order.quantity)} · ${seatsWord(order.quantity * per)}` },
+            { l: t("Ordered"), v: dayMonth(order.createdAt) },
+            { l: t("Amount"), v: money(order.amount), bold: true },
           ]}
         />
-        {err && <ErrLine text={err} />}
+        {err && <ErrLine text={t(err)} />}
         <Buttons
-          alt={billing?.isOwner ? { label: "Cancel order", onClick: () => setStep("cancel") } : undefined}
-          primary={{ label: "Done", onClick: onClose }}
+          alt={billing?.isOwner ? { label: t("Cancel order"), onClick: () => setStep("cancel") } : undefined}
+          primary={{ label: t("Done"), onClick: onClose }}
           marginTop={16}
         />
       </Sheet>
@@ -212,33 +213,33 @@ export function SeatsSheet({
 
   if (step === "cancel" && order) {
     return (
-      <Sheet open={open} onClose={onClose} title="Cancel this order?">
-        <LeadRow>{order.quantity === 1 ? "1 seat block won't be added." : `${order.quantity} seat blocks won't be added.`} You can order seats again any time.</LeadRow>
-        {err && <ErrLine text={err} />}
-        <Buttons alt={{ label: "Keep order", onClick: () => setStep("pending") }} primary={{ label: "Cancel order", tone: "danger", busy, onClick: () => void cancelOrder() }} marginTop={16} />
+      <Sheet open={open} onClose={onClose} title={t("Cancel this order?")}>
+        <LeadRow>{tn(order.quantity, "1 seat block won't be added.", "{n} seat blocks won't be added.")} {t("You can order seats again any time.")}</LeadRow>
+        {err && <ErrLine text={t(err)} />}
+        <Buttons alt={{ label: t("Keep order"), onClick: () => setStep("pending") }} primary={{ label: t("Cancel order"), tone: "danger", busy, onClick: () => void cancelOrder() }} marginTop={16} />
       </Sheet>
     );
   }
 
   if (step === "confirm") {
     return (
-      <Sheet open={open} onClose={onClose} title={n === 1 ? "Confirm 1 seat block" : `Confirm ${n} seat blocks`}>
-        <LeadRow>Billed with your Business plan from today.</LeadRow>
+      <Sheet open={open} onClose={onClose} title={tn(n, "Confirm 1 seat block", "Confirm {n} seat blocks")}>
+        <LeadRow>{t("Billed with your Business plan from today.")}</LeadRow>
         <RowsCard
           rows={[
-            { l: "Add", v: `${blocksWord(n)} · ${n * per} seats` },
+            { l: t("Add"), v: `${blocksWord(n)} · ${seatsWord(n * per)}` },
             ...(price !== null
               ? [
-                  { l: "Today", v: money(amountOf(n) ?? 0) },
-                  { l: "Then", v: `+${each(amountOf(n) ?? 0)}` },
+                  { l: t("Today"), v: money(amountOf(n) ?? 0) },
+                  { l: t("Then"), v: `+${each(amountOf(n) ?? 0)}` },
                 ]
               : live
                 ? [priceRow]
                 : []),
-            { l: "New total", v: `${total} seats`, bold: true },
+            { l: t("New total"), v: seatsWord(total), bold: true },
           ]}
         />
-        <Buttons alt={{ label: "Back", onClick: () => setStep("choose") }} primary={{ label: "Confirm and pay", onClick: () => setStep("pay") }} marginTop={16} />
+        <Buttons alt={{ label: t("Back"), onClick: () => setStep("choose") }} primary={{ label: t("Confirm and pay"), onClick: () => setStep("pay") }} marginTop={16} />
       </Sheet>
     );
   }
@@ -247,14 +248,14 @@ export function SeatsSheet({
     const a = amountOf(n);
     const amount = a !== null ? money(a) : null;
     return (
-      <Sheet open={open} onClose={onClose} title={amount ? `Pay ${amount}` : "Pay for seats"}>
-        <LeadRow icon={CreditCard}>Choose how you pay for the new {n === 1 ? "block" : "blocks"}.</LeadRow>
+      <Sheet open={open} onClose={onClose} title={amount ? t("Pay {amount}", { amount }) : t("Pay for seats")}>
+        <LeadRow icon={CreditCard}>{n === 1 ? t("Choose how you pay for the new block.") : t("Choose how you pay for the new blocks.")}</LeadRow>
         <RowsCard
-          rows={[{ l: "Method", v: live ? "Cash or bank transfer" : "Request by email" }, ...(amount ? [{ l: "Amount", v: amount, bold: true }] : [])]}
+          rows={[{ l: t("Method"), v: live ? t("Cash or bank transfer") : t("Request by email") }, ...(amount ? [{ l: t("Amount"), v: amount, bold: true }] : [])]}
         />
         <Buttons
-          alt={{ label: "Back", onClick: () => setStep("confirm") }}
-          primary={{ label: "Pay with Whish", onClick: () => undefined, disabled: true, trailing: <span className="an5-soon">Soon</span> }}
+          alt={{ label: t("Back"), onClick: () => setStep("confirm") }}
+          primary={{ label: t("Pay with Whish"), onClick: () => undefined, disabled: true, trailing: <span className="an5-soon">{t("Soon")}</span> }}
           marginTop={16}
         />
         {live ? (
@@ -268,12 +269,12 @@ export function SeatsSheet({
                 onClick={() => void place()}
               >
                 <Banknote size={15} aria-hidden />
-                Pay by cash or bank transfer
+                {t("Pay by cash or bank transfer")}
               </button>
-              {err && <ErrLine text={err} />}
+              {err && <ErrLine text={t(err)} />}
             </>
           ) : (
-            <ErrLine text="Only the business owner can buy seats." />
+            <ErrLine text={t("Only the business owner can buy seats.")} />
           )
         ) : (
           <a
@@ -287,7 +288,7 @@ export function SeatsSheet({
             }}
           >
             <Mail size={15} aria-hidden />
-            Ask Centium to add seats
+            {t("Ask Centium to add seats")}
           </a>
         )}
       </Sheet>
@@ -296,28 +297,28 @@ export function SeatsSheet({
 
   if (step === "done") {
     return (
-      <Sheet open={open} onClose={onClose} title={placed ? "Seats ordered" : "Request sent"}>
+      <Sheet open={open} onClose={onClose} title={placed ? t("Seats ordered") : t("Request sent")}>
         <LeadRow icon={Check} tone="good">
           {placed
-            ? `${placed.amount !== null ? `Pay Centium ${money(placed.amount)} by cash or bank transfer.` : "Pay Centium by cash or bank transfer."} Your ${placed.n * per} new seats are added once the payment is recorded.`
-            : "Your seats are added once Centium confirms the request."}
+            ? `${placed.amount !== null ? t("Pay Centium {amount} by cash or bank transfer.", { amount: money(placed.amount) }) : t("Pay Centium by cash or bank transfer.")} ${t("Your {n} new seats are added once the payment is recorded.", { n: placed.n * per })}`
+            : t("Your seats are added once Centium confirms the request.")}
         </LeadRow>
-        <Buttons primary={{ label: doneLabel, onClick: onClose }} marginTop={16} />
+        <Buttons primary={{ label: doneLabel ?? t("Back to Team"), onClick: onClose }} marginTop={16} />
       </Sheet>
     );
   }
 
   // step === "choose"
   return (
-    <Sheet open={open} onClose={onClose} title="Add seats">
-      <LeadRow>Each block adds {per} seats for professionals.</LeadRow>
+    <Sheet open={open} onClose={onClose} title={t("Add seats")}>
+      <LeadRow>{t("Each block adds {n} seats for professionals.", { n: per })}</LeadRow>
       <div className="an5-stepper">
         <div className="min-w-0">
-          <p className="an5-stepper-t">Seat blocks to add</p>
-          <p className="an5-stepper-s">{per} professionals per block</p>
+          <p className="an5-stepper-t">{t("Seat blocks to add")}</p>
+          <p className="an5-stepper-s">{tn(per, "{n} professional per block", "{n} professionals per block")}</p>
         </div>
         <div className="an5-stepper-c">
-          <button type="button" className="an5-stepbtn tap" aria-label="Fewer blocks" disabled={n <= 1} onClick={() => setN((x) => Math.max(1, x - 1))}>
+          <button type="button" className="an5-stepbtn tap" aria-label={t("Fewer blocks")} disabled={n <= 1} onClick={() => setN((x) => Math.max(1, x - 1))}>
             <Minus size={16} strokeWidth={2.4} aria-hidden />
           </button>
           <span className="an5-stepval" aria-live="polite">
@@ -326,7 +327,7 @@ export function SeatsSheet({
           <button
             type="button"
             className="an5-stepbtn tap"
-            aria-label="More blocks"
+            aria-label={t("More blocks")}
             disabled={n >= MAX_BLOCKS_PER_PURCHASE}
             onClick={() => setN((x) => Math.min(MAX_BLOCKS_PER_PURCHASE, x + 1))}
           >
@@ -337,11 +338,11 @@ export function SeatsSheet({
       <RowsCard
         rows={[
           ...(live || price !== null ? [priceRow] : []),
-          { l: "You have", v: have },
-          { l: "New total", v: `${total} seats`, bold: true },
+          { l: t("You have"), v: have },
+          { l: t("New total"), v: seatsWord(total), bold: true },
         ]}
       />
-      <Buttons alt={{ label: "Cancel", onClick: onClose }} primary={{ label: "Continue", onClick: () => setStep("confirm") }} marginTop={16} />
+      <Buttons alt={{ label: t("Cancel"), onClick: onClose }} primary={{ label: t("Continue"), onClick: () => setStep("confirm") }} marginTop={16} />
     </Sheet>
   );
 }

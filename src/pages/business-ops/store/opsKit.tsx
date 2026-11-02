@@ -6,6 +6,7 @@ import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { Toast } from "../../../components/ui/Toast";
 import { useBack } from "../../../hooks/useBack";
+import { t } from "../../../i18n/core";
 
 // v6 Batch 4 · the BizTypeKit kit for Store orders, products and
 // appointments (OP1-001 to OP1-020 and their OURS files). Every value is the
@@ -41,12 +42,12 @@ export const OpsHeader: React.FC<{ kicker: string; title: string; sub?: string |
         <button
           type="button"
           onClick={typeof back === "function" ? back : goBack}
-          aria-label="Back"
+          aria-label={t("Back")}
           // 40 drawn; .tap gives the 44 hit box (OP1-005 O6).
           className="tap flex items-center justify-center shrink-0 rounded-full text-charcoal-soft"
           style={{ width: 40, height: 40, marginInlineStart: -8 }}
         >
-          <ChevronLeft size={20} aria-hidden />
+          <ChevronLeft size={20} aria-hidden className="rtl:-scale-x-100" />
         </button>
       )}
       <div className="flex-1 min-w-0">
@@ -69,22 +70,22 @@ export const OpsHeader: React.FC<{ kicker: string; title: string; sub?: string |
 export function TextTabs<K extends string>({ tabs, active, onChange, label }: { tabs: { key: K; label: string }[]; active: K; onChange: (k: K) => void; label: string }) {
   return (
     <div role="tablist" aria-label={label} className="flex overflow-x-auto [scrollbar-width:none] border-b border-th-ebeaf6 dark:border-th-aea1dc/[0.16]" style={{ gap: 20, margin: "0 0 16px" }}>
-      {tabs.map((t) => {
-        const on = t.key === active;
+      {tabs.map((tab) => {
+        const on = tab.key === active;
         return (
           <button
-            key={t.key}
+            key={tab.key}
             type="button"
             role="tab"
             aria-selected={on}
-            onClick={() => onChange(t.key)}
+            onClick={() => onChange(tab.key)}
             className={clsx(
               "tap shrink-0 whitespace-nowrap text-[13.5px] leading-[20.25px] border-b-2",
               on ? clsx("font-extrabold text-charcoal", FILL_LINE) : "font-semibold text-charcoal-faint border-transparent"
             )}
             style={{ padding: "8px 0 10px", marginBottom: -1 }}
           >
-            {t.label}
+            {tab.label}
           </button>
         );
       })}
@@ -200,7 +201,7 @@ export interface KitRowProps {
 export const KitRow: React.FC<KitRowProps> = ({ icon, title, sub, subWrap, chip, value, onClick, ariaLabel, disabled, trailing }) => {
   const body = (
     <>
-      <span aria-hidden className={clsx("kit-rule absolute top-0 end-0 h-px", RULE)} style={{ left: icon ? 48 : 0 }} />
+      <span aria-hidden className={clsx("kit-rule absolute top-0 end-0 h-px", RULE)} style={{ insetInlineStart: icon ? 48 : 0 }} />
       {icon && <KitTile icon={icon} />}
       <span className="flex-1 min-w-0">
         <span className={clsx("block text-[13.5px] font-bold leading-[18px] text-charcoal", ONE_LINE)}>{title}</span>
@@ -259,8 +260,8 @@ export const KitTip: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 // ---------------------------------------------------------------------------
 // States (OP1-001 O1 / O2)
 
-export const ListSkeleton: React.FC<{ rows?: number; label?: string }> = ({ rows = 3, label = "Loading" }) => (
-  <div aria-busy="true" aria-label={label} className={LIST} style={{ borderRadius: 18, padding: "2px 14px", marginBottom: 14 }}>
+export const ListSkeleton: React.FC<{ rows?: number; label?: string }> = ({ rows = 3, label }) => (
+  <div aria-busy="true" aria-label={label ?? t("Loading")} className={LIST} style={{ borderRadius: 18, padding: "2px 14px", marginBottom: 14 }}>
     {Array.from({ length: rows }, (_, i) => (
       <div key={i} className="flex items-center" style={{ gap: 12, minHeight: 58, padding: "8px 0" }}>
         <span aria-hidden className={clsx("block shrink-0 animate-skeleton-pulse", PALE)} style={{ width: 36, height: 36, borderRadius: 11 }} />
@@ -277,7 +278,7 @@ export const ErrorCard: React.FC<{ text: string; onRetry: () => void }> = ({ tex
   <div role="alert" className={LIST} style={{ borderRadius: 18, padding: 14, marginBottom: 14 }}>
     <p className="text-[12.5px] leading-[18px] text-charcoal-soft">{text}</p>
     <button type="button" onClick={onRetry} className={clsx("tap text-[12px] font-bold", P_DARK)} style={{ minHeight: 44 }}>
-      Try again
+      {t("Try again")}
     </button>
   </div>
 );
@@ -332,20 +333,20 @@ export const CtaSpacer: React.FC = () => <div aria-hidden style={{ height: 50 }}
 // bottom 150 over a fixed CTA, 88 without (OP1-007 #1).
 
 export function useOpsToast(): [React.ReactNode, (message: string, overCta?: boolean) => void] {
-  const [t, setT] = useState<{ m: string; cta: boolean; k: number } | null>(null);
+  const [toast, setToast] = useState<{ m: string; cta: boolean; k: number } | null>(null);
   const k = useRef(0);
-  const show = useCallback((m: string, overCta = true) => setT({ m, cta: overCta, k: ++k.current }), []);
-  const node = t ? (
+  const show = useCallback((m: string, overCta = true) => setToast({ m, cta: overCta, k: ++k.current }), []);
+  const node = toast ? (
     <Toast
-      key={t.k}
+      key={toast.k}
       open
       variant="business"
       shape="more"
-      bottom={t.cta ? 150 : 88}
+      bottom={toast.cta ? 150 : 88}
       duration={5000}
-      message={t.m}
+      message={toast.m}
       icon={<Check size={15} strokeWidth={2.6} aria-hidden className="flex-none" />}
-      onExpire={() => setT(null)}
+      onExpire={() => setToast(null)}
     />
   ) : null;
   return [node, show];

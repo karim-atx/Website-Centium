@@ -1,7 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { Result } from "./index";
-import { getLanguage } from "../../i18n/core";
+import { getLanguage, t } from "../../i18n/core";
 
 // The six business notification families (Database B4, HANDOVER_API "## B4"
 // "New switches"): app_preferences.notification_business_bookings / _members /
@@ -49,17 +49,17 @@ const failed = <T>(error: { code?: string; message?: string } | null, fallback: 
 export async function fetchBusinessFamilies(): Promise<Result<BusinessFamilyPrefs>> {
   try {
     const { data, error } = await db.from("app_preferences").select(SELECT).maybeSingle();
-    if (error) return failed(error, "Couldn't load this. Try again.");
+    if (error) return failed(error, t("Couldn't load this. Try again."));
     const prefs = toPrefs(data as Record<string, unknown> | null);
-    return prefs ? { ok: true, value: prefs } : { ok: false, message: "Couldn't load this. Try again." };
+    return prefs ? { ok: true, value: prefs } : { ok: false, message: t("Couldn't load this. Try again.") };
   } catch (e) {
-    return failed(e as { message?: string }, "Couldn't load this. Try again.");
+    return failed(e as { message?: string }, t("Couldn't load this. Try again."));
   }
 }
 
 export async function setBusinessFamily(ownerId: string, family: BusinessFamily, on: boolean): Promise<Result<BusinessFamilyPrefs>> {
   const patch = { [column(family)]: on };
-  const save = "Couldn't save that. Try again.";
+  const save = t("Couldn't save that. Try again.");
   try {
     const updated = await db.from("app_preferences").update(patch).eq("owner_id", ownerId).select(SELECT);
     if (updated.error) return failed(updated.error, save);
