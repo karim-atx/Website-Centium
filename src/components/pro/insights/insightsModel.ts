@@ -20,6 +20,8 @@
 
 import { DAY_LONG, mondayIndex } from "../../../utils/week";
 import { appLocale } from "../../../i18n/format";
+import { t, tk } from "../../../i18n/core";
+import { weekdayLong, weekdayNarrow } from "../proDates";
 
 export type ChartRange = "W" | "M" | "3M" | "Y";
 export const RANGE_DAYS: Record<ChartRange, number> = { W: 7, M: 30, "3M": 91, Y: 365 };
@@ -125,26 +127,31 @@ export function sumByBucket(buckets: Bucket[], rows: { day: string; value: numbe
   return out;
 }
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-export const monthShort = (iso: string) => MONTHS[Number(iso.slice(5, 7)) - 1];
+// Labels in the app's language (Round G, EH4b): English output is exactly
+// the old hand-built "Oct 8" / "Oct 8, 2026" / "Thu, Oct 8"; Arabic gets
+// Arabic month and day names with Western digits.
+const noon = (iso: string) => new Date(`${iso}T12:00:00`);
+const dateIn = (iso: string, o: Intl.DateTimeFormatOptions) => noon(iso).toLocaleDateString(appLocale("en-US"), o);
+/** "Oct" */
+export const monthShort = (iso: string) => dateIn(`${iso.slice(0, 7)}-01`, { month: "short" });
 /** "Oct 8" */
-export const dayLabel = (iso: string) => `${monthShort(iso)} ${Number(iso.slice(8, 10))}`;
+export const dayLabel = (iso: string) => dateIn(iso, { month: "short", day: "numeric" });
 /** "Oct 8, 2026" */
-export const dateLong = (iso: string) => `${dayLabel(iso)}, ${iso.slice(0, 4)}`;
+export const dateLong = (iso: string) => dateIn(iso, { month: "short", day: "numeric", year: "numeric" });
 /** "Thu, Oct 8" (the tooltip caps line). */
-export const tipDay = (iso: string) => `${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][weekdayIndex(iso)]}, ${monthShort(iso)} ${Number(iso.slice(8, 10))}`;
+export const tipDay = (iso: string) => dateIn(iso, { weekday: "short", month: "short", day: "numeric" });
 
 /** The x label for a bucket: weekday letter (W), day (M), week start (3M), month (Y). */
 export function bucketLabel(range: ChartRange, b: Bucket): string {
-  if (range === "W") return ["M", "T", "W", "T", "F", "S", "S"][weekdayIndex(b.start)];
+  if (range === "W") return weekdayNarrow(weekdayIndex(b.start));
   if (range === "Y") return monthShort(b.start);
   return dayLabel(b.start);
 }
 
 export function bucketTitle(range: ChartRange, b: Bucket): string {
   if (range === "W" || range === "M") return tipDay(b.start);
-  if (range === "Y") return `${monthShort(b.start)} ${b.start.slice(0, 4)}`;
-  return `Week of ${dayLabel(b.start)}`;
+  if (range === "Y") return dateIn(`${b.start.slice(0, 7)}-01`, { month: "short", year: "numeric" });
+  return t("Week of {date}", { date: dayLabel(b.start) });
 }
 
 // ---------------------------------------------------------------------------
@@ -294,7 +301,7 @@ export function mealClockOf(entries: TimedEntry[]): MealClock {
 export function hm(minutes: number): string {
   const m = Math.max(0, Math.round(minutes));
   const h = Math.floor(m / 60);
-  return h ? `${h}h ${m % 60}m` : `${m % 60}m`;
+  return h ? t("{h}h {m}m", { h, m: m % 60 }) : t("{m}m", { m: m % 60 });
 }
 
 // ---------------------------------------------------------------------------
@@ -443,15 +450,16 @@ export function markerPattern(points: { value: number }[], low: number | null, h
   return last > first ? "rising" : "falling";
 }
 
+/** English keys (tk); show them with t(). */
 export const PATTERN_LABEL: Record<MarkerPattern, string> = {
-  one: "One test",
-  returning: "Returning to range",
-  rising_out: "Rising, out of range",
-  falling_out: "Falling, out of range",
-  out: "Out of range",
-  stable: "Stable",
-  rising: "Rising",
-  falling: "Falling",
+  one: tk("One test"),
+  returning: tk("Returning to range"),
+  rising_out: tk("Rising, out of range"),
+  falling_out: tk("Falling, out of range"),
+  out: tk("Out of range"),
+  stable: tk("Stable"),
+  rising: tk("Rising"),
+  falling: tk("Falling"),
 };
 
 /** Change flag (HANDOVER i): more than 50% between consecutive tests. */
@@ -478,7 +486,8 @@ export function roundMarker(v: number): number {
 // Insight lines (T rules: facts only; null when the data isn't there)
 // ---------------------------------------------------------------------------
 
-const plural = (w: string) => `${w}s`;
+/** "Saturdays" in English, «أيام السبت» in Arabic, from the English weekday commonWeekday returns. */
+const weekdays = (english: string) => t("{weekday}s", { weekday: weekdayLong(DAY_LONG.indexOf(english)) });
 
 /** The weekday most of the misses share: ≥ 2 misses and ≥ 50% of them on that weekday. */
 export function commonWeekday(days: string[]): string | null {
@@ -496,7 +505,8 @@ export function aboveGoalLine(values: { day: string; value: number }[], goal: nu
   const above = values.filter((v) => v.value >= goal).length;
   const dips = values.filter((v) => v.value < goal).map((v) => v.day);
   const wd = commonWeekday(dips);
-  return `${above} of ${values.length} days above goal.${wd ? ` Dips fall on ${plural(wd)}.` : ""}`;
+  const head = t("{above} of {n} days above goal.", { above, n: values.length });
+  return wd ? `${head} ${t("Dips fall on {weekdays}.", { weekdays: weekdays(wd) })}` : head;
 }
 
 /** "On plan {n} of {n} logged days." + "{n} misses, most on {weekday}s." */
@@ -505,7 +515,8 @@ export function onPlanLine(days: { day: string; kcal: number }[], band: { low: n
   const on = days.filter((d) => d.kcal >= band.low && d.kcal <= band.high);
   const misses = days.filter((d) => !on.includes(d)).map((d) => d.day);
   const wd = misses.length >= 2 ? commonWeekday(misses) : null;
-  return `On plan ${on.length} of ${days.length} logged days.${wd ? ` ${misses.length} misses, most on ${plural(wd)}.` : ""}`;
+  const head = t("On plan {on} of {n} logged days.", { on: on.length, n: days.length });
+  return wd ? `${head} ${t("{misses} misses, most on {weekdays}.", { misses: misses.length, weekdays: weekdays(wd) })}` : head;
 }
 
 /** "{n} of {n} days in the band; {weekday}s run {n} to {n} over." */
@@ -514,13 +525,18 @@ export function inBandLine(days: { day: string; kcal: number }[], band: { low: n
   const inBand = days.filter((d) => d.kcal >= band.low && d.kcal <= band.high).length;
   const over = days.filter((d) => d.kcal > band.high);
   const wd = commonWeekday(over.map((d) => d.day));
-  let tail = "";
   if (wd) {
     const target = (band.low + band.high) / 2;
     const amounts = over.filter((d) => DAY_LONG[weekdayIndex(d.day)] === wd).map((d) => Math.round((d.kcal - target) / 10) * 10);
-    tail = `; ${plural(wd)} run ${Math.min(...amounts).toLocaleString(appLocale("en-GB"))} to ${Math.max(...amounts).toLocaleString(appLocale("en-GB"))} over`;
+    return t("{inBand} of {n} days in the band; {weekdays} run {low} to {high} over.", {
+      inBand,
+      n: days.length,
+      weekdays: weekdays(wd),
+      low: Math.min(...amounts).toLocaleString(appLocale("en-GB")),
+      high: Math.max(...amounts).toLocaleString(appLocale("en-GB")),
+    });
   }
-  return `${inBand} of ${days.length} days in the band${tail}.`;
+  return t("{inBand} of {n} days in the band.", { inBand, n: days.length });
 }
 
 /** "{weekday}s have the fewest logged meals ({n} on average)." Needs 2 weeks of data. */
@@ -537,7 +553,7 @@ export function fewestMealsLine(days: { day: string; meals: number }[]): string 
   if (!Number.isFinite(min)) return null;
   const others = avg.filter((a) => a !== min && Number.isFinite(a));
   if (!others.length || others.every((a) => a === min)) return null;
-  return `${plural(DAY_LONG[avg.indexOf(min)])} have the fewest logged meals (${Math.round(min * 10) / 10} on average).`;
+  return t("{weekdays} have the fewest logged meals ({n} on average).", { weekdays: weekdays(DAY_LONG[avg.indexOf(min)]), n: Math.round(min * 10) / 10 });
 }
 
 /** "{food_name} tops fat; {food_name} tops protein" (top contributor in range). */

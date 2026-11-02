@@ -35,6 +35,23 @@ const AREAS = [
   ["sharedfood", "Shared food and workout service text"],
   ["sharedpro", "Shared professional service text (programmes, courses, pro marketplace)"],
   ["sharedhealth", "Shared health service text (labs, blood pressure, cycle templates, metrics, health log)"],
+  ["pro", "Professional tools: Home, notifications and shared parts"],
+  ["proclients", "Professional tools: Clients and a client's page"],
+  ["proprofile", "Professional tools: More, profile, services and credentials"],
+  ["procalendar", "Professional tools: Calendar"],
+  ["promessages", "Professional tools: Messages"],
+  ["prolibrary", "Professional tools: Library, templates and programmes"],
+  ["pronutrition", "Professional tools: Nutrition library and meal plans"],
+  ["proforms", "Professional tools: Forms and check-ins"],
+  ["proinsights", "Professional tools: Client and practice insights"],
+  ["provitals", "Professional tools: Biomarkers, vitals and sleep"],
+  ["procourses", "Professional tools: Courses"],
+  ["pronetwork", "Professional tools: Care network and businesses"],
+  ["promarket", "Professional tools: Marketplace"],
+  ["premium", "Round G1: Premium, passes, business plan levels and hiring credits"],
+  ["premium2", "Round G2: free limits, the full export and Premium perks"],
+  ["premium3", "Round G3: Premium content (programmes, meditations, journal prompts) and the Premium readers"],
+  ["premium4", "Round G4: the meal planner and grocery list, progress photos, Premium themes and share designs, cycle insights"],
 ];
 
 const rows = [];

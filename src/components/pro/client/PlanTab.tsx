@@ -32,9 +32,11 @@ import {
   type ClientTargets,
 } from "../../../services/pro/clientPage";
 import { setNutritionCoaching } from "../../../services/pro/clients";
-import { mondayFirstWeek, DAY_SHORT } from "../../../utils/week";
+import { mondayFirstWeek } from "../../../utils/week";
+import { weekdayShort } from "../proDates";
 import type { AccessCategory } from "../../../services/pro/access";
 import { appLocale } from "../../../i18n/format";
+import { t, tk, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · CL2 v4 Tab 2 Plan (Full coaching) and Meal plan (Nutrition),
@@ -118,7 +120,7 @@ const ProgrammeSection: React.FC<{ data: ClientPageData; programmes: { list: Cli
   const toLibrary = () => navigate(`${PRO_ROUTES.library}/programmes`);
   const n = active ? weekOfProgramme(active, today) : null;
   const of = active?.durationWeeks ?? null;
-  const chip: { label: string; tone: Tone } | null = adh == null ? null : adh >= 70 ? { label: "On track", tone: "act" } : adh >= 40 ? { label: "Slipping", tone: "req" } : { label: "Off track", tone: "att" };
+  const chip: { label: string; tone: Tone } | null = adh == null ? null : adh >= 70 ? { label: t("On track"), tone: "act" } : adh >= 40 ? { label: t("Slipping"), tone: "req" } : { label: t("Off track"), tone: "att" };
 
   return (
     <>
@@ -126,9 +128,9 @@ const ProgrammeSection: React.FC<{ data: ClientPageData; programmes: { list: Cli
         <Card>
           <div className="flex justify-between items-start" style={{ gap: 8 }}>
             <div className="min-w-0">
-              <p style={{ fontSize: textPx(10.5), fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: INK.chF }}>Programme</p>
+              <p style={{ fontSize: textPx(10.5), fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: INK.chF }}>{t("Programme")}</p>
               <p style={{ fontSize: textPx(16), fontWeight: 800, color: INK.ch, marginTop: 2, overflowWrap: "anywhere" }}>{active.name}</p>
-              <p style={{ fontSize: textPx(12), color: INK.chF }}>{[n && of ? `Week ${Math.min(n, of)} of ${of}` : n ? `Week ${n}` : null, active.endsOn ? `ends ${fmtDay(active.endsOn)}` : null, `${firstName}'s copy`].filter(Boolean).join(" · ")}</p>
+              <p style={{ fontSize: textPx(12), color: INK.chF }}>{[n && of ? t("Week {n} of {of}", { n: Math.min(n, of), of }) : n ? t("Week {n}", { n }) : null, active.endsOn ? t("ends {date}", { date: fmtDay(active.endsOn) }) : null, t("{firstName}'s copy", { firstName })].filter(Boolean).join(" · ")}</p>
             </div>
             {chip && <Chip label={chip.label} tone={chip.tone} />}
           </div>
@@ -140,16 +142,16 @@ const ProgrammeSection: React.FC<{ data: ClientPageData; programmes: { list: Cli
             </div>
           )}
           <div className="flex flex-wrap" style={{ gap: 8, marginTop: 12 }}>
-            <CtaButton className="flex-1 min-w-[150px]" size="base" variant="secondary" icon={<Pencil size={15} />} label={`Edit ${firstName}'s copy`} onClick={toLibrary} />
-            <CtaButton className="flex-1 min-w-[150px]" size="base" variant="outline" icon={<ClipboardPlus size={15} />} label="Assign another" onClick={toLibrary} />
+            <CtaButton className="flex-1 min-w-[150px]" size="base" variant="secondary" icon={<Pencil size={15} />} label={t("Edit {firstName}'s copy", { firstName })} onClick={toLibrary} />
+            <CtaButton className="flex-1 min-w-[150px]" size="base" variant="outline" icon={<ClipboardPlus size={15} />} label={t("Assign another")} onClick={toLibrary} />
           </div>
         </Card>
       ) : (
         <Card>
-          <p style={{ fontSize: textPx(10.5), fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: INK.chF }}>Programme</p>
-          <p style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, marginTop: 4 }}>{`No programme assigned to ${firstName} yet.`}</p>
+          <p style={{ fontSize: textPx(10.5), fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: INK.chF }}>{t("Programme")}</p>
+          <p style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, marginTop: 4 }}>{t("No programme assigned to {firstName} yet.", { firstName })}</p>
           <div className="flex" style={{ marginTop: 10 }}>
-            <CtaButton size="base" variant="secondary" icon={<ClipboardPlus size={15} />} label="Assign a programme" onClick={toLibrary} />
+            <CtaButton size="base" variant="secondary" icon={<ClipboardPlus size={15} />} label={t("Assign a programme")} onClick={toLibrary} />
           </div>
         </Card>
       )}
@@ -157,36 +159,34 @@ const ProgrammeSection: React.FC<{ data: ClientPageData; programmes: { list: Cli
       {/* Round D · DT1: week-by-day programmes (components/pro/programmes). */}
       <ClientWeekProgrammes clientId={clientId} today={today} />
 
-      <SectionHead label="This week" />
+      <SectionHead label={t("This week")} />
       {!shares ? (
         <LockLine
           className="mb-3"
-          what="Workout activity"
+          what={t("Workout activity")}
           clientFirstName={firstName}
           action={
-            <button type="button" onClick={() => onAsk("workout_activity")} className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.prDeep }}>
-              Ask to share
-            </button>
+            <button type="button" onClick={() => onAsk("workout_activity")} className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.prDeep }}>{t("Ask to share")}</button>
           }
         />
       ) : week === undefined ? (
         <ProCardSkeleton lines={3} />
       ) : !week || week.every((d) => d.planned === 0) ? (
-        <SoftLine icon={Dumbbell}>No workouts planned this week.</SoftLine>
+        <SoftLine icon={Dumbbell}>{t("No workouts planned this week.")}</SoftLine>
       ) : (
         <ListCard
           rows={week
-            .map((d, i) => ({ ...d, label: DAY_SHORT[i] }))
+            .map((d, i) => ({ ...d, label: weekdayShort(i) }))
             .filter((d) => d.planned > 0)
             .map((d): ListRow => {
               const done = d.completed >= d.planned;
               const isToday = d.day === today;
-              const chipEl = done ? <Chip label="Done" tone="done" /> : isToday ? <Chip label="Today" tone="pr" /> : d.day < today ? <Chip label="Missed" tone="att" /> : undefined;
+              const chipEl = done ? <Chip label={t("Done")} tone="done" /> : isToday ? <Chip label={t("Today")} tone="pr" /> : d.day < today ? <Chip label={t("Missed")} tone="att" /> : undefined;
               return {
                 key: d.day,
                 icon: Dumbbell,
-                title: `${d.label} · ${d.planned} workout${d.planned === 1 ? "" : "s"}`,
-                meta: done ? `${d.completed} of ${d.planned} logged` : isToday ? "Planned for today" : d.day < today ? `${d.completed} of ${d.planned} logged` : "Planned",
+                title: `${d.label} · ${tn(d.planned, "{n} workout", "{n} workouts")}`,
+                meta: done ? t("{completed} of {planned} logged", { completed: d.completed, planned: d.planned }) : isToday ? t("Planned for today") : d.day < today ? t("{completed} of {planned} logged", { completed: d.completed, planned: d.planned }) : t("Planned"),
                 trailing: chipEl,
               };
             })}
@@ -195,8 +195,8 @@ const ProgrammeSection: React.FC<{ data: ClientPageData; programmes: { list: Cli
 
       {past.length > 0 && (
         <>
-          <SectionHead label="Past programmes" />
-          <ListCard rows={past.map((p) => ({ key: p.id, icon: Dumbbell, title: p.name, meta: `Ended ${fmtDay(p.endedAt, true)}` }))} />
+          <SectionHead label={t("Past programmes")} />
+          <ListCard rows={past.map((p) => ({ key: p.id, icon: Dumbbell, title: p.name, meta: t("Ended {date}", { date: fmtDay(p.endedAt, true) }) }))} />
         </>
       )}
       <HabitAssign data={data} />
@@ -212,17 +212,17 @@ const HabitAssign: React.FC<{ data: ClientPageData }> = ({ data }) => {
   return (
     <>
       <div className="flex" style={{ marginBottom: 12 }}>
-        <CtaButton size="base" variant="outline" icon={<Plus size={15} />} label="Assign a habit" onClick={() => { setLabel(""); setMsg(null); setOpen(true); }} />
+        <CtaButton size="base" variant="outline" icon={<Plus size={15} />} label={t("Assign a habit")} onClick={() => { setLabel(""); setMsg(null); setOpen(true); }} />
       </div>
       <BottomSheet
         open={open}
         onClose={() => setOpen(false)}
-        title="Assign a habit"
+        title={t("Assign a habit")}
         footer={
           <CtaButton
             size="sheet"
             className="w-full"
-            label="Assign"
+            label={t("Assign")}
             loading={busy}
             onClick={async () => {
               setBusy(true);
@@ -235,13 +235,13 @@ const HabitAssign: React.FC<{ data: ClientPageData }> = ({ data }) => {
           />
         }
       >
-        <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 12 }}>{`${data.firstName} can tick it off and archive it, but not rename it.`}</p>
+        <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 12 }}>{t("{firstName} can tick it off and archive it, but not rename it.", { firstName: data.firstName })}</p>
         <input
           value={label}
           maxLength={60}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="e.g. Walk 30 min"
-          aria-label="Habit"
+          placeholder={t("e.g. Walk 30 min")}
+          aria-label={t("Habit")}
           className="w-full outline-none placeholder:text-charcoal-faint"
           style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", fontSize: textPx(14), color: INK.ch }}
         />
@@ -281,13 +281,13 @@ const NutritionSection: React.FC<{
   };
   return (
     <>
-      <SectionHead label="Nutrition" right={on ? "Open builder" : undefined} onRight={on ? () => navigate(`${PRO_ROUTES.library}/meal-plans`) : undefined} />
+      <SectionHead label={t("Nutrition")} right={on ? t("Open builder") : undefined} onRight={on ? () => navigate(`${PRO_ROUTES.library}/meal-plans`) : undefined} />
       <div className="flex items-center justify-between" style={{ gap: 16, borderRadius: 14, background: INK.soft, padding: "10px 12px", marginBottom: on ? 10 : 6 }}>
         <span className="min-w-0">
-          <span className="block" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>Include nutrition coaching</span>
-          <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>{on ? `Meal plan, targets and journal review for ${firstName}` : `Off for ${firstName}. Nutrition sections are hidden.`}</span>
+          <span className="block" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{t("Include nutrition coaching")}</span>
+          <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>{on ? t("Meal plan, targets and journal review for {firstName}", { firstName }) : t("Off for {firstName}. Nutrition sections are hidden.", { firstName })}</span>
         </span>
-        <Toggle checked={on} onChange={(v) => void toggle(v)} label="Include nutrition coaching" />
+        <Toggle checked={on} onChange={(v) => void toggle(v)} label={t("Include nutrition coaching")} />
       </div>
       {err && (
         <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginBottom: 8 }}>
@@ -299,7 +299,7 @@ const NutritionSection: React.FC<{
   );
 };
 
-const SLOT_LABEL: Record<string, string> = { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack", snacks: "Snacks" };
+const SLOT_LABEL: Record<string, string> = { breakfast: tk("Breakfast"), lunch: tk("Lunch"), dinner: tk("Dinner"), snack: tk("Snack"), snacks: tk("Snacks") };
 
 const MealPlanSection: React.FC<{
   data: ClientPageData;
@@ -349,33 +349,31 @@ const MealPlanSection: React.FC<{
   const toJournal = () => navigate(mealPlansHref(lane, "journals", { client: data.clientId }));
   const diaryShared = data.access.has("food_diary");
   const weekN = plan?.startsOn ? Math.floor(Math.max(0, Math.round((new Date(`${today}T00:00:00`).getTime() - new Date(`${plan.startsOn}T00:00:00`).getTime()) / 86400000)) / 7) + 1 : null;
-  const kcal = plan?.kcal ? `${Math.round(plan.kcal).toLocaleString(appLocale("en-GB"))} kcal` : null;
+  const kcal = plan?.kcal ? t("{kcal} kcal", { kcal: Math.round(plan.kcal).toLocaleString(appLocale("en-GB")) }) : null;
 
   // my_client_nutrition_targets: the targets you set, no switch needed.
   const targetsRow: ListRow =
     targets === undefined
-      ? { key: "t", icon: Target, title: "Targets", meta: "Loading…" }
+      ? { key: "t", icon: Target, title: t("Targets"), meta: t("Loading…") }
       : !targets
-        ? { key: "t", icon: Target, title: "No targets set by you", meta: "Set calories and macros", onClick: toTargets }
+        ? { key: "t", icon: Target, title: t("No targets set by you"), meta: t("Set calories and macros"), onClick: toTargets }
         : {
             key: "t",
             icon: Target,
-            title: "Targets set by you",
-            meta: [targets.calories ? `${Math.round(targets.calories).toLocaleString(appLocale("en-GB"))} kcal` : null, targets.proteinPct ? `${targets.proteinPct}% protein` : null, targets.locked ? `locked for ${firstName}` : null].filter(Boolean).join(" · "),
+            title: t("Targets set by you"),
+            meta: [targets.calories ? t("{kcal} kcal", { kcal: Math.round(targets.calories).toLocaleString(appLocale("en-GB")) }) : null, targets.proteinPct ? t("{pct}% protein", { pct: targets.proteinPct }) : null, targets.locked ? t("locked for {firstName}", { firstName }) : null].filter(Boolean).join(" · "),
             onClick: toTargets,
           };
   // The diary reaches you only through the Food diary switch.
   const journalRow: ListRow = diaryShared
-    ? { key: "j", icon: BookOpenCheck, title: "Food journal", meta: "Review and feedback", onClick: toJournal }
+    ? { key: "j", icon: BookOpenCheck, title: t("Food journal"), meta: t("Review and feedback"), onClick: toJournal }
     : {
         key: "j",
         icon: BookOpenCheck,
-        title: "Food journal",
-        meta: "Food diary isn't shared.",
+        title: t("Food journal"),
+        meta: t("Food diary isn't shared."),
         trailing: (
-          <button type="button" onClick={() => onAsk("food_diary")} className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.prDeep }}>
-            Ask to share
-          </button>
+          <button type="button" onClick={() => onAsk("food_diary")} className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.prDeep }}>{t("Ask to share")}</button>
         ),
       };
 
@@ -385,7 +383,7 @@ const MealPlanSection: React.FC<{
         rows={[
           plan
             ? { key: "mp", icon: UtensilsCrossed, title: [plan.name, kcal].filter(Boolean).join(" · "), meta: macroLine(plan), onClick: toCopy }
-            : { key: "mp", icon: UtensilsCrossed, title: "No meal plan yet", meta: "Assign one from Meal plans", onClick: toPlans },
+            : { key: "mp", icon: UtensilsCrossed, title: t("No meal plan yet"), meta: t("Assign one from Meal plans"), onClick: toPlans },
           targetsRow,
           journalRow,
         ]}
@@ -400,15 +398,15 @@ const MealPlanSection: React.FC<{
           <>
             <div className="flex justify-between items-start" style={{ gap: 8 }}>
               <div className="min-w-0">
-                <p style={{ fontSize: textPx(10.5), fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: INK.chF }}>Meal plan</p>
+                <p style={{ fontSize: textPx(10.5), fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: INK.chF }}>{t("Meal plan")}</p>
                 <p style={{ fontSize: textPx(16), fontWeight: 800, color: INK.ch, marginTop: 2, overflowWrap: "anywhere" }}>{plan.name}</p>
-                <p style={{ fontSize: textPx(12), color: INK.chF }}>{[weekN ? `Week ${weekN}` : null, kcal, plan.endsOn ? `ends ${fmtDay(plan.endsOn)}` : null].filter(Boolean).join(" · ")}</p>
+                <p style={{ fontSize: textPx(12), color: INK.chF }}>{[weekN ? t("Week {n}", { n: weekN }) : null, kcal, plan.endsOn ? t("ends {date}", { date: fmtDay(plan.endsOn) }) : null].filter(Boolean).join(" · ")}</p>
               </div>
             </div>
             {[
-              ["Protein", plan.proteinPct, "#7D6BB5"],
-              ["Carbs", plan.carbsPct, "#AEA1DC"],
-              ["Fat", plan.fatPct, "#A2C8C2"],
+              [t("Protein"), plan.proteinPct, "#7D6BB5"],
+              [t("Carbs"), plan.carbsPct, "#AEA1DC"],
+              [t("Fat"), plan.fatPct, "#A2C8C2"],
             ]
               .filter(([, p]) => p != null)
               .map(([label, pct, colour]) => {
@@ -424,16 +422,16 @@ const MealPlanSection: React.FC<{
                 );
               })}
             <div className="flex flex-wrap" style={{ gap: 8, marginTop: 14 }}>
-              <CtaButton className="flex-1 min-w-[150px]" size="base" variant="secondary" icon={<Pencil size={15} />} label="Edit plan" onClick={toCopy} />
-              <CtaButton className="flex-1 min-w-[150px]" size="base" variant="outline" icon={<ClipboardPlus size={15} />} label="Assign another" onClick={toPlans} />
+              <CtaButton className="flex-1 min-w-[150px]" size="base" variant="secondary" icon={<Pencil size={15} />} label={t("Edit plan")} onClick={toCopy} />
+              <CtaButton className="flex-1 min-w-[150px]" size="base" variant="outline" icon={<ClipboardPlus size={15} />} label={t("Assign another")} onClick={toPlans} />
             </div>
           </>
         ) : (
           <>
-            <p style={{ fontSize: textPx(10.5), fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: INK.chF }}>Meal plan</p>
-            <p style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, marginTop: 4 }}>{`No meal plan assigned to ${firstName} yet.`}</p>
+            <p style={{ fontSize: textPx(10.5), fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: INK.chF }}>{t("Meal plan")}</p>
+            <p style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, marginTop: 4 }}>{t("No meal plan assigned to {firstName} yet.", { firstName })}</p>
             <div className="flex" style={{ marginTop: 10 }}>
-              <CtaButton size="base" variant="secondary" icon={<ClipboardPlus size={15} />} label="Assign a meal plan" onClick={toPlans} />
+              <CtaButton size="base" variant="secondary" icon={<ClipboardPlus size={15} />} label={t("Assign a meal plan")} onClick={toPlans} />
             </div>
           </>
         )}
@@ -444,26 +442,26 @@ const MealPlanSection: React.FC<{
           {items === undefined ? (
             <ProCardSkeleton lines={3} />
           ) : !items || items.length === 0 ? (
-            <SoftLine icon={Apple}>Nothing planned for today.</SoftLine>
+            <SoftLine icon={Apple}>{t("Nothing planned for today.")}</SoftLine>
           ) : (
             <ListCard
               rows={items.map((it, i) => ({
                 key: `${i}`,
                 icon: Apple,
-                title: `${SLOT_LABEL[it.slot] ?? it.slot} · ${it.name}`,
-                meta: [it.kcal != null ? `${Math.round(it.kcal)} kcal` : null, it.protein != null ? `${Math.round(it.protein)} g protein` : null].filter(Boolean).join(" · "),
+                title: `${t(SLOT_LABEL[it.slot] ?? it.slot)} · ${it.name}`,
+                meta: [it.kcal != null ? t("{kcal} kcal", { kcal: Math.round(it.kcal) }) : null, it.protein != null ? t("{g} g protein", { g: Math.round(it.protein) }) : null].filter(Boolean).join(" · "),
               }))}
             />
           )}
         </>
       )}
-      <SectionHead label="Targets and journal" />
+      <SectionHead label={t("Targets and journal")} />
       <ListCard rows={[targetsRow, journalRow]} />
     </>
   );
 };
 
 function macroLine(p: ClientMealPlan): string {
-  const parts = [p.proteinPct != null ? `${p.proteinPct}% protein` : null, p.carbsPct != null ? `${p.carbsPct}% carbs` : null, p.fatPct != null ? `${p.fatPct}% fat` : null, p.startsOn ? `since ${fmtDay(p.startsOn)}` : null];
+  const parts = [p.proteinPct != null ? t("{pct}% protein", { pct: p.proteinPct }) : null, p.carbsPct != null ? t("{pct}% carbs", { pct: p.carbsPct }) : null, p.fatPct != null ? t("{pct}% fat", { pct: p.fatPct }) : null, p.startsOn ? t("since {date}", { date: fmtDay(p.startsOn) }) : null];
   return parts.filter(Boolean).join(" · ");
 }

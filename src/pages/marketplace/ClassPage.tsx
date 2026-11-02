@@ -88,6 +88,7 @@ import {
   shortDate,
   venueOf,
 } from "../../components/marketplace/classCardModel";
+import { ClassPremiumLines } from "../../components/premium/PremiumBooking";
 
 // Market + Share 3.0 · W2 · Class detail (C-MO.4.3.1 `classDetail`,
 // `classDetailUnlisted`, `classDetailAlmost`) and Class booking (C-MO.4.3.2
@@ -947,6 +948,10 @@ export function ClassPage({ classId }: { classId: string }) {
         >
           {windowLine}
         </p>
+      )}
+      {/* Round G2: Premium's early booking and waitlist priority (only with the switch on). */}
+      {!mine && (
+        <ClassPremiumLines businessId={c.businessId} startsAt={live?.startsAt ?? c.startsAt ?? null} windowDays={live?.rules?.bookingWindowDays ?? null} waitlist={full || position !== null} />
       )}
 
       {/* Location: the venue's address and coordinates (PB-O-50); opens Directions. */}

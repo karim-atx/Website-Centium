@@ -22,6 +22,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
+import { t } from "../../i18n/core";
 import type { Read, Write } from "./clients";
 import type { SleepNight, SleepStage } from "../../components/pro/insights/sleepModel";
 
@@ -213,7 +214,7 @@ export async function fetchWorkouts(clientId: string, since: string): Promise<Re
     ok: true,
     data: r.rows.map((w) => ({
       id: w.id,
-      name: w.routine_name ?? "Workout",
+      name: w.routine_name ?? t("Workout"),
       day: w.activity_date ?? localDay(w.started_at),
       startedAt: w.started_at,
       durationMin: num(w.duration_sec) != null ? Math.round((num(w.duration_sec) as number) / 60) : null,
@@ -325,7 +326,7 @@ export async function askWithMessage(clientId: string, category: "lab_results" |
   if (!error) return { ok: true };
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
   const text = (error as { message?: string }).message ?? "";
-  if (/already asked/.test(text)) return { ok: false, message: "You've already asked. It's waiting for them." };
-  if (/already share/.test(text)) return { ok: false, message: "They already share this with you." };
-  return { ok: false, message: "Couldn't send the request. Try again." };
+  if (/already asked/.test(text)) return { ok: false, message: t("You've already asked. It's waiting for them.") };
+  if (/already share/.test(text)) return { ok: false, message: t("They already share this with you.") };
+  return { ok: false, message: t("Couldn't send the request. Try again.") };
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { licenceHiddenByExpiry, setLicencePublished, type Licence } from "../../services/professional-cv";
 import { todayLocal } from "../../utils/date";
+import { tk } from "../../i18n/core";
 
 // A licence is not public until its owner says so (20261120150000):
 // professional_licences.published_at, null = not public. Saving a licence never
@@ -11,16 +12,16 @@ import { todayLocal } from "../../utils/date";
 // onboarding look (pages/onboarding/pro/ProLicencePublish).
 
 export const PUBLISH_STRINGS = {
-  label: "Show on my profile",
-  public: "Public",
-  notPublic: "Not public",
+  label: tk("Show on my profile"),
+  public: tk("Public"),
+  notPublic: tk("Not public"),
   publicDesc:
-    "Clients see its name, issuer and dates on your profile, with a Verified badge once it's approved. The document and credential ID stay private.",
-  notPublicDesc: "Only you and our review team can see it. Clients don't see it on your profile.",
-  unnamedDesc: "Add its name to show it on your profile.",
-  expiredDesc: "It has expired, so clients don't see it. Turn on Show to clients after it expires to keep it on your profile.",
-  onboardingIntro: "Licences start hidden. Switch one on and clients see it on your profile. You can change this any time in Edit public profile.",
-  newLicence: "New licences start hidden from clients. Once it's saved, you choose whether to show it on your profile.",
+    tk("Clients see its name, issuer and dates on your profile, with a Verified badge once it's approved. The document and credential ID stay private."),
+  notPublicDesc: tk("Only you and our review team can see it. Clients don't see it on your profile."),
+  unnamedDesc: tk("Add its name to show it on your profile."),
+  expiredDesc: tk("It has expired, so clients don't see it. Turn on Show to clients after it expires to keep it on your profile."),
+  onboardingIntro: tk("Licences start hidden. Switch one on and clients see it on your profile. You can change this any time in Edit public profile."),
+  newLicence: tk("New licences start hidden from clients. Once it's saved, you choose whether to show it on your profile."),
 } as const;
 
 export type PublishState = "public" | "expired" | "not-public" | "unnamed";

@@ -18,6 +18,7 @@ import { CtaButton } from "../../ui/PinnedCta";
 import { INK } from "../proInk";
 import { Field, Note } from "./courseUi";
 import { lessonMeta } from "./courseModel";
+import { t, tn, tx } from "../../../i18n/core";
 
 const KIND_ICON: Record<string, LucideIcon> = { video: PlayCircle, reading: FileText, pdf: FileDown, quiz: ListChecks, check: ClipboardList, image: ImageIcon, check_in: ClipboardCheck };
 
@@ -85,7 +86,7 @@ export const StructureStep: React.FC<{
 
   return (
     <div>
-      {modules.length === 0 && <Note mt={0}>A course is organised into weeks, and each week holds its lessons. Add the first one.</Note>}
+      {modules.length === 0 && <Note mt={0}>{t("A course is organised into weeks, and each week holds its lessons. Add the first one.")}</Note>}
       {modules.map((m, i) => {
         const list = lessons.filter((l) => l.moduleId === m.id).sort((a, b) => a.position - b.position);
         const isRenaming = renaming?.id === m.id;
@@ -95,7 +96,7 @@ export const StructureStep: React.FC<{
               {isRenaming ? (
                 <div className="flex-1 flex items-end" style={{ gap: 8 }}>
                   <div className="flex-1">
-                    <Field id={`week-${m.id}`} ariaLabel="Week title" value={renaming.title} onChange={(v) => setRenaming({ id: m.id, title: v })} maxLength={LIMITS.moduleTitle.max} />
+                    <Field id={`week-${m.id}`} ariaLabel={t("Week title")} value={renaming.title} onChange={(v) => setRenaming({ id: m.id, title: v })} maxLength={LIMITS.moduleTitle.max} />
                   </div>
                   <button
                     type="button"
@@ -104,7 +105,7 @@ export const StructureStep: React.FC<{
                     className="tap disabled:opacity-40"
                     style={{ height: 40, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}
                   >
-                    Save
+                    {t("Save")}
                   </button>
                 </div>
               ) : (
@@ -112,18 +113,18 @@ export const StructureStep: React.FC<{
                   type="button"
                   disabled={!editable}
                   onClick={() => setRenaming({ id: m.id, title: m.title })}
-                  aria-label={`Rename week ${i + 1}, ${m.title}`}
+                  aria-label={t("Rename week {n}, {title}", { n: i + 1, title: m.title })}
                   className="tap flex-1 min-w-0 text-start disabled:cursor-default"
                   style={{ fontSize: textPx(14), fontWeight: 800, color: INK.ch, overflowWrap: "anywhere" }}
                 >
-                  Week {i + 1} · {m.title}
+                  {t("Week {n} · {title}", { n: i + 1, title: m.title })}
                 </button>
               )}
               {editable && !isRenaming && (
                 <span className="flex items-center shrink-0" style={{ gap: 4 }}>
-                  {iconBtn(`Move week ${i + 1} up`, ChevronUp, () => moveWeek(i, -1), i === 0)}
-                  {iconBtn(`Move week ${i + 1} down`, ChevronDown, () => moveWeek(i, 1), i === modules.length - 1)}
-                  {iconBtn(`Delete week ${i + 1}`, Trash2, () => setRemoveWeek(m), false, 15)}
+                  {iconBtn(t("Move week {n} up", { n: i + 1 }), ChevronUp, () => moveWeek(i, -1), i === 0)}
+                  {iconBtn(t("Move week {n} down", { n: i + 1 }), ChevronDown, () => moveWeek(i, 1), i === modules.length - 1)}
+                  {iconBtn(t("Delete week {n}", { n: i + 1 }), Trash2, () => setRemoveWeek(m), false, 15)}
                 </span>
               )}
             </div>
@@ -147,7 +148,7 @@ export const StructureStep: React.FC<{
                   {editable && (
                     <button
                       type="button"
-                      aria-label={`Options for ${l.title}`}
+                      aria-label={t("Options for {title}", { title: l.title })}
                       onClick={(e) => setMenu({ anchor: e.currentTarget, lesson: l, index: k, count: list.length })}
                       className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-3 before:content-['']"
                       style={{ width: 22, height: 22 }}
@@ -166,7 +167,7 @@ export const StructureStep: React.FC<{
                 style={{ gap: 4, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep, paddingTop: 8, borderTop: `1px solid ${INK.b06}`, minHeight: 36 }}
               >
                 <Plus size={13} strokeWidth={2.4} aria-hidden />
-                Add lesson
+                {t("Add lesson")}
               </button>
             )}
           </div>
@@ -182,16 +183,16 @@ export const StructureStep: React.FC<{
             style={{ gap: 6, height: 44, borderRadius: 14, border: `1.5px dashed rgb(var(--c-charcoal) / 0.11)`, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}
           >
             <Plus size={14} strokeWidth={2.4} aria-hidden />
-            Add week
+            {t("Add week")}
           </button>
         ) : (
           <div style={{ borderRadius: 14, border: `1.5px dashed rgb(var(--c-charcoal) / 0.11)`, padding: 12 }}>
-            <Field id="new-week" label={`Week ${modules.length + 1} title`} value={adding} onChange={setAdding} maxLength={LIMITS.moduleTitle.max} />
+            <Field id="new-week" label={t("Week {n} title", { n: modules.length + 1 })} value={adding} onChange={setAdding} maxLength={LIMITS.moduleTitle.max} />
             <div className="flex" style={{ gap: 8, marginTop: 10 }}>
-              <CtaButton size="base" variant="secondary" label="Cancel" onClick={() => setAdding(null)} />
+              <CtaButton size="base" variant="secondary" label={t("Cancel")} onClick={() => setAdding(null)} />
               <CtaButton
                 size="base"
-                label="Add week"
+                label={t("Add week")}
                 loading={busy}
                 disabled={adding.trim().length < LIMITS.moduleTitle.min}
                 onClick={() => void onAddWeek(adding.trim()).then((ok) => ok && setAdding(null))}
@@ -199,7 +200,7 @@ export const StructureStep: React.FC<{
             </div>
           </div>
         ))}
-      <Note>Every week needs at least one lesson before you publish.</Note>
+      <Note>{t("Every week needs at least one lesson before you publish.")}</Note>
       {revisionId && <Note mt={4}>{RENAME_RESETS_PROGRESS}</Note>}
 
       <PopupMenu<"edit" | "up" | "down" | "delete">
@@ -209,10 +210,10 @@ export const StructureStep: React.FC<{
         options={
           menu
             ? [
-                { value: "edit", label: "Edit" },
-                ...(menu.index > 0 ? [{ value: "up" as const, label: "Move up" }] : []),
-                ...(menu.index < menu.count - 1 ? [{ value: "down" as const, label: "Move down" }] : []),
-                { value: "delete", label: "Delete lesson", destructive: true },
+                { value: "edit", label: t("Edit") },
+                ...(menu.index > 0 ? [{ value: "up" as const, label: t("Move up") }] : []),
+                ...(menu.index < menu.count - 1 ? [{ value: "down" as const, label: t("Move down") }] : []),
+                { value: "delete", label: t("Delete lesson"), destructive: true },
               ]
             : []
         }
@@ -231,34 +232,34 @@ export const StructureStep: React.FC<{
       <CentredPopup
         open={!!removeWeek}
         onClose={() => setRemoveWeek(null)}
-        title={`Delete ${removeWeek?.title ?? ""}?`}
+        title={t("Delete {title}?", { title: removeWeek?.title ?? "" })}
         icon={<Trash2 size={22} strokeWidth={2} aria-hidden />}
         body={removeWeek ? weekRemovalLine(removeWeek, lessons) : ""}
       >
         <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
           <DangerCta
-            label="Delete week"
+            label={t("Delete week")}
             onClick={() => {
               const w = removeWeek;
               setRemoveWeek(null);
               if (w) void run(() => removeModule(w.id));
             }}
           />
-          <CtaButton size="page" variant="outline" label="Keep it" onClick={() => setRemoveWeek(null)} />
+          <CtaButton size="page" variant="outline" label={tx("Keep it", "masculine object")} onClick={() => setRemoveWeek(null)} />
         </div>
       </CentredPopup>
 
-      <CentredPopup open={!!removeL} onClose={() => setRemoveL(null)} title={`Delete ${removeL?.title ?? ""}?`} icon={<Trash2 size={22} strokeWidth={2} aria-hidden />} body={revisionId ? RENAME_RESETS_PROGRESS : undefined}>
+      <CentredPopup open={!!removeL} onClose={() => setRemoveL(null)} title={t("Delete {title}?", { title: removeL?.title ?? "" })} icon={<Trash2 size={22} strokeWidth={2} aria-hidden />} body={revisionId ? t(RENAME_RESETS_PROGRESS) : undefined}>
         <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
           <DangerCta
-            label="Delete lesson"
+            label={t("Delete lesson")}
             onClick={() => {
               const l = removeL;
               setRemoveL(null);
               if (l) void run(() => removeLesson(l.id));
             }}
           />
-          <CtaButton size="page" variant="outline" label="Keep it" onClick={() => setRemoveL(null)} />
+          <CtaButton size="page" variant="outline" label={tx("Keep it", "masculine object")} onClick={() => setRemoveL(null)} />
         </div>
       </CentredPopup>
       {footer}
@@ -268,7 +269,7 @@ export const StructureStep: React.FC<{
 
 const weekRemovalLine = (m: BuilderModule, lessons: BuilderLesson[]) => {
   const n = lessons.filter((l) => l.moduleId === m.id).length;
-  return `Deleting "${m.title}" deletes its ${n} ${n === 1 ? "lesson" : "lessons"} too.`;
+  return tn(n, "Deleting \"{title}\" deletes its {n} lesson too.", "Deleting \"{title}\" deletes its {n} lessons too.", { title: m.title });
 };
 
 export const DangerCta: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (

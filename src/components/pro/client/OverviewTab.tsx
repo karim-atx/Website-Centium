@@ -22,6 +22,7 @@ import { shiftIso } from "../../../services/pro/home";
 import { mondayFirstWeek } from "../../../utils/week";
 import type { AccessCategory } from "../../../services/pro/access";
 import { appLocale } from "../../../i18n/format";
+import { t, tk, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · CL2 v3 Tab 1 Overview (source gen/r6b.js cpTab6 'Overview'),
@@ -44,33 +45,33 @@ import { appLocale } from "../../../i18n/format";
 
 const SHARED_SETS: Record<ProLane, { label: string; cats: AccessCategory[] }[]> = {
   full_coaching: [
-    { label: "Workouts", cats: ["workout_activity"] },
-    { label: "Food diary", cats: ["food_diary"] },
-    { label: "Weight", cats: ["weight"] },
-    { label: "Progress", cats: ["progress"] },
-    { label: "Habits", cats: ["habits"] },
-    { label: "Vitals", cats: ["health_metrics"] },
+    { label: tk("Workouts"), cats: ["workout_activity"] },
+    { label: tk("Food diary"), cats: ["food_diary"] },
+    { label: tk("Weight"), cats: ["weight"] },
+    { label: tk("Progress"), cats: ["progress"] },
+    { label: tk("Habits"), cats: ["habits"] },
+    { label: tk("Vitals"), cats: ["health_metrics"] },
   ],
   nutrition: [
-    { label: "Food diary", cats: ["food_diary"] },
-    { label: "Weight", cats: ["weight"] },
-    { label: "Workouts", cats: ["workout_activity"] },
-    { label: "Lab results", cats: ["lab_results"] },
-    { label: "Vitals", cats: ["health_metrics"] },
+    { label: tk("Food diary"), cats: ["food_diary"] },
+    { label: tk("Weight"), cats: ["weight"] },
+    { label: tk("Workouts"), cats: ["workout_activity"] },
+    { label: tk("Lab results"), cats: ["lab_results"] },
+    { label: tk("Vitals"), cats: ["health_metrics"] },
   ],
   clinical_overview: [
-    { label: "Vitals", cats: ["health_metrics"] },
-    { label: "Weight", cats: ["weight"] },
-    { label: "Blood pressure", cats: ["blood_pressure"] },
-    { label: "Food diary", cats: ["food_diary"] },
-    { label: "Workouts", cats: ["workout_activity"] },
-    { label: "Lab results", cats: ["lab_results"] },
+    { label: tk("Vitals"), cats: ["health_metrics"] },
+    { label: tk("Weight"), cats: ["weight"] },
+    { label: tk("Blood pressure"), cats: ["blood_pressure"] },
+    { label: tk("Food diary"), cats: ["food_diary"] },
+    { label: tk("Workouts"), cats: ["workout_activity"] },
+    { label: tk("Lab results"), cats: ["lab_results"] },
   ],
 };
 
 function joinWords(list: string[]): string {
   if (list.length <= 1) return list.join("");
-  return `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`;
+  return t("{list} and {last}", { list: list.slice(0, -1).join(t(", ")), last: list[list.length - 1] });
 }
 
 export const OverviewTab: React.FC<{ data: ClientPageData; lane: ProLane; onMessage: () => void; onSchedule: () => void; onAsk: (c: AccessCategory) => void }> = ({ data, lane, onMessage, onSchedule, onAsk }) => {
@@ -82,7 +83,7 @@ export const OverviewTab: React.FC<{ data: ClientPageData; lane: ProLane; onMess
 
   const singles = access.access?.resultSharedCount ?? 0;
   const sets = SHARED_SETS[lane].map((s) => ({ label: s.label, on: s.cats.some((c) => access.has(c)) }));
-  if (singles > 0 && !access.has("lab_results")) sets.push({ label: singles === 1 ? "1 result shared" : `${singles} results shared`, on: true });
+  if (singles > 0 && !access.has("lab_results")) sets.push({ label: singles === 1 ? t("1 result shared") : t("{n} results shared", { n: singles }), on: true });
   const unshared = sets.filter((s) => !s.on && !(s.label === "Lab results" && singles > 0)).map((s) => s.label);
 
   if (access.loading) return <ProCardSkeleton lines={4} height={300} />;
@@ -93,17 +94,17 @@ export const OverviewTab: React.FC<{ data: ClientPageData; lane: ProLane; onMess
         <div className="flex" style={{ borderRadius: 20, background: INK.skyPale, padding: "14px 16px", marginBottom: 12, gap: 12 }}>
           <Sprout size={18} strokeWidth={2} aria-hidden style={{ color: INK.sky, flexShrink: 0 }} />
           <span>
-            <span className="block" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{`New ${lane === "clinical_overview" ? "patient" : "client"}`}</span>
-            <span className="block" style={{ fontSize: textPx(12), color: INK.chS, lineHeight: 1.45 }}>{`Goals, history and shared data appear once ${firstName} shares them with you.`}</span>
+            <span className="block" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{lane === "clinical_overview" ? t("New patient") : t("New client")}</span>
+            <span className="block" style={{ fontSize: textPx(12), color: INK.chS, lineHeight: 1.45 }}>{t("Goals, history and shared data appear once {firstName} shares them with you.", { firstName })}</span>
           </span>
         </div>
-        <SectionHead label="Shared with you" />
-        <SoftLine icon={Lock}>{`${firstName} hasn't shared any data yet. You see only what ${firstName} chooses to share.`}</SoftLine>
-        <SectionHead label="Next steps" />
+        <SectionHead label={t("Shared with you")} />
+        <SoftLine icon={Lock}>{t("{firstName} hasn't shared any data yet. You see only what {firstName} chooses to share.", { firstName })}</SoftLine>
+        <SectionHead label={t("Next steps")} />
         <ListCard
           rows={[
-            { key: "book", icon: CalendarPlus, title: lane === "clinical_overview" ? "Book a first appointment" : "Book a first session", meta: "From your calendar", onClick: onSchedule },
-            { key: "hello", icon: MessageCircle, title: "Say hello", meta: "Messages are open", onClick: onMessage },
+            { key: "book", icon: CalendarPlus, title: lane === "clinical_overview" ? t("Book a first appointment") : t("Book a first session"), meta: t("From your calendar"), onClick: onSchedule },
+            { key: "hello", icon: MessageCircle, title: t("Say hello"), meta: t("Messages are open"), onClick: onMessage },
           ]}
         />
         <AboutCard data={data} lane={lane} />
@@ -116,14 +117,14 @@ export const OverviewTab: React.FC<{ data: ClientPageData; lane: ProLane; onMess
       <Numbers data={data} lane={lane} early={early} />
       <WeeksChart data={data} lane={lane} early={early} />
       <RecentActivity data={data} lane={lane} />
-      <SectionHead label="Shared with you" />
+      <SectionHead label={t("Shared with you")} />
       <div style={{ marginBottom: 8 }}>
-        <SharedChips items={sets} />
+        <SharedChips items={sets.map((s) => ({ ...s, label: t(s.label) }))} />
       </div>
       {unshared.length > 0 && (
         <LockLine
           className="mb-3"
-          what={joinWords(unshared)}
+          what={joinWords(unshared.map((u) => t(u)))}
           clientFirstName={firstName}
           action={
             unshared.length === 1 ? (
@@ -132,9 +133,7 @@ export const OverviewTab: React.FC<{ data: ClientPageData; lane: ProLane; onMess
                 onClick={() => onAsk(SHARED_SETS[lane].find((s) => s.label === unshared[0])!.cats[0])}
                 className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']"
                 style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.prDeep }}
-              >
-                Ask to share
-              </button>
+              >{t("Ask to share")}</button>
             ) : undefined
           }
         />
@@ -169,24 +168,24 @@ const Numbers: React.FC<{ data: ClientPageData; lane: ProLane; early: boolean }>
     };
   }, [clientId, lane, counted, today]);
 
-  const dash = (label: string) => <NumBox key={label} label={label} value="–" sub={early ? "After a week" : "No shared data yet"} />;
-  const weight = access.has("weight") && rel?.lastWeightKg != null ? <NumBox key="w" label="Weight" value={`${rel.lastWeightKg}`} sub="kg, latest" /> : dash("Weight");
+  const dash = (label: string) => <NumBox key={label} label={label} value="–" sub={early ? t("After a week") : t("No shared data yet")} />;
+  const weight = access.has("weight") && rel?.lastWeightKg != null ? <NumBox key="w" label={t("Weight")} value={`${rel.lastWeightKg}`} sub={t("kg, latest")} /> : dash(t("Weight"));
 
   let boxes: React.ReactNode[];
   if (lane === "clinical_overview") {
     const bp = access.has("blood_pressure") ? rel?.bloodPressure?.[0] : undefined;
     const v = access.has("health_metrics") ? rel?.vitals : undefined;
     boxes = [
-      bp ? <NumBox key="bp" label="Blood pressure" value={`${bp.systolic}/${bp.diastolic}`} sub={fmtDay(bp.recordedAt)} /> : dash("Blood pressure"),
-      v?.stepsAvg != null ? <NumBox key="st" label="Steps" value={v.stepsAvg.toLocaleString(appLocale("en-GB"))} sub="Daily average" /> : dash("Steps"),
-      v?.sleepHours != null ? <NumBox key="sl" label="Sleep" value={`${Math.floor(v.sleepHours)}h ${Math.round((v.sleepHours % 1) * 60)}m`} sub="Nightly average" /> : dash("Sleep"),
+      bp ? <NumBox key="bp" label={t("Blood pressure")} value={`${bp.systolic}/${bp.diastolic}`} sub={fmtDay(bp.recordedAt)} /> : dash(t("Blood pressure")),
+      v?.stepsAvg != null ? <NumBox key="st" label={t("Steps")} value={v.stepsAvg.toLocaleString(appLocale("en-GB"))} sub={t("Daily average")} /> : dash(t("Steps")),
+      v?.sleepHours != null ? <NumBox key="sl" label={t("Sleep")} value={`${Math.floor(v.sleepHours)}h ${Math.round((v.sleepHours % 1) * 60)}m`} sub={t("Nightly average")} /> : dash(t("Sleep")),
     ];
   } else {
-    const adhLabel = lane === "nutrition" ? "Plan adherence" : "Adherence";
-    const wkLabel = lane === "nutrition" ? "Targets met" : "Workouts";
+    const adhLabel = lane === "nutrition" ? t("Plan adherence") : t("Adherence");
+    const wkLabel = lane === "nutrition" ? t("Targets met") : t("Workouts");
     boxes = [
-      early || !counted ? dash(adhLabel) : adh === undefined ? <NumBox key="a" label={adhLabel} value="…" /> : adh?.pct != null ? <NumBox key="a" label={adhLabel} value={`${adh.pct}%`} sub="Last 14 days" /> : dash(adhLabel),
-      !counted ? dash(wkLabel) : week === undefined ? <NumBox key="wk" label={wkLabel} value="…" /> : week ? <NumBox key="wk" label={wkLabel} value={`${week.completed} of ${week.planned}`} sub={lane === "nutrition" ? "Days, last 7" : "This week"} /> : dash(wkLabel),
+      early || !counted ? dash(adhLabel) : adh === undefined ? <NumBox key="a" label={adhLabel} value="…" /> : adh?.pct != null ? <NumBox key="a" label={adhLabel} value={`${adh.pct}%`} sub={t("Last 14 days")} /> : dash(adhLabel),
+      !counted ? dash(wkLabel) : week === undefined ? <NumBox key="wk" label={wkLabel} value="…" /> : week ? <NumBox key="wk" label={wkLabel} value={t("{completed} of {planned}", { completed: week.completed, planned: week.planned })} sub={lane === "nutrition" ? t("Days, last 7") : t("This week")} /> : dash(wkLabel),
       weight,
     ];
   }
@@ -224,8 +223,8 @@ const WeeksChart: React.FC<{ data: ClientPageData; lane: ProLane; early: boolean
     if (weekly.filter(Boolean).length < 2) {
       return (
         <Card>
-          <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>Blood pressure, last 6 weeks</p>
-          <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 10 }}>{readings.length ? "Trends start after two weeks of readings." : `${firstName} hasn't logged blood pressure yet.`}</p>
+          <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>{t("Blood pressure, last 6 weeks")}</p>
+          <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 10 }}>{readings.length ? t("Trends start after two weeks of readings.") : t("{firstName} hasn't logged blood pressure yet.", { firstName })}</p>
         </Card>
       );
     }
@@ -233,22 +232,22 @@ const WeeksChart: React.FC<{ data: ClientPageData; lane: ProLane; early: boolean
     return (
       <div style={{ marginBottom: 12 }}>
         <ProChart
-          title="Blood pressure, last 6 weeks"
+          title={t("Blood pressure, last 6 weeks")}
           x={x}
           min={Math.max(0, Math.min(...vals) - 10)}
           max={Math.max(...vals) + 10}
           series={[
-            { key: "s", label: "Systolic", type: "line", color: "rgb(var(--th-7d6bb5))", values: weekly.map((w) => w?.s ?? null) },
-            { key: "d", label: "Diastolic", type: "line", color: INK.tealDark, values: weekly.map((w) => w?.d ?? null) },
+            { key: "s", label: t("Systolic"), type: "line", color: "rgb(var(--th-7d6bb5))", values: weekly.map((w) => w?.s ?? null) },
+            { key: "d", label: t("Diastolic"), type: "line", color: INK.tealDark, values: weekly.map((w) => w?.d ?? null) },
           ]}
-          tooltip={(i) => (weekly[i] ? { title: x[i], lines: [`${weekly[i]!.s}/${weekly[i]!.d} · avg of ${weekly[i]!.n}`] } : null)}
-          summary="Weekly average blood pressure over six weeks."
+          tooltip={(i) => (weekly[i] ? { title: x[i], lines: [t("{s}/{d} · avg of {n}", { s: weekly[i]!.s, d: weekly[i]!.d, n: weekly[i]!.n })] } : null)}
+          summary={t("Weekly average blood pressure over six weeks.")}
         />
       </div>
     );
   }
 
-  const title = lane === "nutrition" ? "Calorie targets met, last 6 weeks" : "Workouts completed, last 6 weeks";
+  const title = lane === "nutrition" ? t("Calorie targets met, last 6 weeks") : t("Workouts completed, last 6 weeks");
   if (!counted) return null;
   if (early) {
     return (
@@ -259,7 +258,7 @@ const WeeksChart: React.FC<{ data: ClientPageData; lane: ProLane; early: boolean
             <span key={i} className="flex-1" style={{ height: i === 5 ? "40%" : "100%", borderRadius: 6, ...(i === 5 ? { background: INK.pr } : { border: `1.5px dashed ${INK.b10}` }) }} />
           ))}
         </div>
-        <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 10 }}>Trends start after the first full week.</p>
+        <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 10 }}>{t("Trends start after the first full week.")}</p>
       </Card>
     );
   }
@@ -268,7 +267,7 @@ const WeeksChart: React.FC<{ data: ClientPageData; lane: ProLane; early: boolean
     return (
       <Card>
         <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>{title}</p>
-        <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 10 }}>{lane === "nutrition" ? "Nothing planned in these weeks." : "No workouts planned in these weeks."}</p>
+        <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 10 }}>{lane === "nutrition" ? t("Nothing planned in these weeks.") : t("No workouts planned in these weeks.")}</p>
       </Card>
     );
   }
@@ -281,11 +280,11 @@ const WeeksChart: React.FC<{ data: ClientPageData; lane: ProLane; early: boolean
         min={0}
         max={max}
         series={[
-          { key: "done", label: "Actual", type: "line", color: "rgb(var(--th-7d6bb5))", values: rows.map((r) => r?.completed ?? null) },
-          { key: "plan", label: "Planned", type: "line", color: INK.tealDark, dashed: true, values: rows.map((r) => r?.planned ?? null) },
+          { key: "done", label: t("Actual"), type: "line", color: "rgb(var(--th-7d6bb5))", values: rows.map((r) => r?.completed ?? null) },
+          { key: "plan", label: t("Planned"), type: "line", color: INK.tealDark, dashed: true, values: rows.map((r) => r?.planned ?? null) },
         ]}
-        tooltip={(i) => (rows[i] ? { title: x[i], lines: [`${rows[i]!.completed} of ${rows[i]!.planned} done`] } : null)}
-        summary={`${title}: ${rows.map((r, i) => `${x[i]} ${r?.completed ?? 0} of ${r?.planned ?? 0}`).join(", ")}.`}
+        tooltip={(i) => (rows[i] ? { title: x[i], lines: [t("{completed} of {planned} done", { completed: rows[i]!.completed, planned: rows[i]!.planned })] } : null)}
+        summary={`${title}: ${rows.map((r, i) => t("{day} {completed} of {planned}", { day: x[i], completed: r?.completed ?? 0, planned: r?.planned ?? 0 })).join(t(", "))}.`}
       />
     </div>
   );
@@ -294,15 +293,15 @@ const WeeksChart: React.FC<{ data: ClientPageData; lane: ProLane; early: boolean
 const RecentActivity: React.FC<{ data: ClientPageData; lane: ProLane }> = ({ data }) => {
   const { rel, access } = data;
   const rows: ListRow[] = [];
-  if (access.has("workout_activity") && rel?.workout) rows.push({ key: "w", icon: Dumbbell, title: "Logged a workout", meta: rel.workout.trainedToday ? "Today" : fmtDay(rel.workout.lastSessionDate) });
+  if (access.has("workout_activity") && rel?.workout) rows.push({ key: "w", icon: Dumbbell, title: t("Logged a workout"), meta: rel.workout.trainedToday ? t("Today") : fmtDay(rel.workout.lastSessionDate) });
   if (access.has("food_diary") && rel?.nutrition)
-    rows.push({ key: "f", icon: UtensilsCrossed, title: `Logged ${rel.nutrition.entryCount} item${rel.nutrition.entryCount === 1 ? "" : "s"}`, meta: `${fmtDay(rel.nutrition.lastLoggedDate)} · ${Math.round(rel.nutrition.calories).toLocaleString(appLocale("en-GB"))} kcal` });
-  if (access.has("weight") && rel?.lastWeightKg != null) rows.push({ key: "kg", icon: Scale, title: `Weighed in at ${rel.lastWeightKg} kg`, meta: "Latest reading" });
-  if (access.has("blood_pressure") && rel?.bloodPressure?.[0]) rows.push({ key: "bp", icon: HeartPulse, title: `Shared a BP reading: ${rel.bloodPressure[0].systolic}/${rel.bloodPressure[0].diastolic}`, meta: fmtDay(rel.bloodPressure[0].recordedAt) });
+    rows.push({ key: "f", icon: UtensilsCrossed, title: tn(rel.nutrition.entryCount, "Logged {n} item", "Logged {n} items"), meta: `${fmtDay(rel.nutrition.lastLoggedDate)} · ${t("{kcal} kcal", { kcal: Math.round(rel.nutrition.calories).toLocaleString(appLocale("en-GB")) })}` });
+  if (access.has("weight") && rel?.lastWeightKg != null) rows.push({ key: "kg", icon: Scale, title: t("Weighed in at {lastWeightKg} kg", { lastWeightKg: rel.lastWeightKg }), meta: t("Latest reading") });
+  if (access.has("blood_pressure") && rel?.bloodPressure?.[0]) rows.push({ key: "bp", icon: HeartPulse, title: t("Shared a BP reading: {systolic}/{diastolic}", { systolic: rel.bloodPressure[0].systolic, diastolic: rel.bloodPressure[0].diastolic }), meta: fmtDay(rel.bloodPressure[0].recordedAt) });
   if (!rows.length) return null;
   return (
     <>
-      <SectionHead label="Recent activity" />
+      <SectionHead label={t("Recent activity")} />
       <ListCard rows={rows.slice(0, 3)} />
     </>
   );
@@ -311,10 +310,10 @@ const RecentActivity: React.FC<{ data: ClientPageData; lane: ProLane }> = ({ dat
 // ---------------------------------------------------------------------------
 
 const PREF_FIELDS: { key: keyof CommunicationPreferences; label: string; placeholder: string; short: string }[] = [
-  { key: "pronouns", label: "Pronouns", placeholder: "e.g. she/her", short: "Pronouns" },
-  { key: "contactStyle", label: "Preferred contact style", placeholder: "e.g. Direct and brief", short: "Contact style" },
-  { key: "reminderPreference", label: "Reminder preference", placeholder: "e.g. Weekly, not daily", short: "Reminders" },
-  { key: "communicationBoundaries", label: "Communication boundaries", placeholder: "e.g. No messages after 8 PM", short: "Boundaries" },
+  { key: "pronouns", label: tk("Pronouns"), placeholder: tk("e.g. she/her"), short: tk("Pronouns") },
+  { key: "contactStyle", label: tk("Preferred contact style"), placeholder: tk("e.g. Direct and brief"), short: tk("Contact style") },
+  { key: "reminderPreference", label: tk("Reminder preference"), placeholder: tk("e.g. Weekly, not daily"), short: tk("Reminders") },
+  { key: "communicationBoundaries", label: tk("Communication boundaries"), placeholder: tk("e.g. No messages after 8 PM"), short: tk("Boundaries") },
 ];
 
 const AboutCard: React.FC<{ data: ClientPageData; lane: ProLane }> = ({ data }) => {
@@ -378,14 +377,14 @@ const AboutCard: React.FC<{ data: ClientPageData; lane: ProLane }> = ({ data }) 
   };
 
   const label: React.CSSProperties = { fontSize: textPx(10.5), fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: INK.chF };
-  const pregnancyWord = preg?.pregnant ? (preg.week ? `Pregnant, week ${preg.week}` : "Pregnant") : null;
+  const pregnancyWord = preg?.pregnant ? (preg.week ? t("Pregnant, week {week}", { week: preg.week }) : t("Pregnant")) : null;
 
   return (
     <>
-      <SectionHead label="About" />
+      <SectionHead label={t("About")} />
       <Card>
         <div className="flex items-center justify-between" style={{ gap: 8 }}>
-          <p style={label}>Communication preferences</p>
+          <p style={label}>{t("Communication preferences")}</p>
           {rel && (
             <button
               type="button"
@@ -399,7 +398,7 @@ const AboutCard: React.FC<{ data: ClientPageData; lane: ProLane }> = ({ data }) 
               style={{ gap: 4, fontSize: textPx(11), fontWeight: 700, color: INK.prDeep }}
             >
               {!editing && <Pencil size={11} strokeWidth={2.2} aria-hidden />}
-              {editing ? "Cancel" : "Edit"}
+              {editing ? t("Cancel") : t("Edit")}
             </button>
           )}
         </div>
@@ -408,12 +407,12 @@ const AboutCard: React.FC<{ data: ClientPageData; lane: ProLane }> = ({ data }) 
             {PREF_FIELDS.map((f) => (
               <label key={f.key} className="block">
                 <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-                  {f.label}
+                  {t(f.label)}
                 </span>
                 <input
                   value={draft[f.key] ?? ""}
                   onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
-                  placeholder={f.placeholder}
+                  placeholder={t(f.placeholder)}
                   maxLength={120}
                   className="w-full outline-none placeholder:text-charcoal-faint focus:ring-2 focus:ring-primary/20"
                   style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", fontSize: textPx(14), color: INK.ch }}
@@ -425,32 +424,30 @@ const AboutCard: React.FC<{ data: ClientPageData; lane: ProLane }> = ({ data }) 
                 {error}
               </p>
             )}
-            <CtaButton size="base" label="Save" loading={busy} onClick={() => void save()} />
+            <CtaButton size="base" label={t("Save")} loading={busy} onClick={() => void save()} />
           </div>
         ) : anyPref ? (
           <div className="flex flex-col" style={{ gap: 4, marginTop: 8 }}>
             {PREF_FIELDS.filter((f) => current[f.key]).map((f) => (
               <p key={f.key} style={{ fontSize: textPx(13), color: INK.chS, overflowWrap: "anywhere" }}>
-                <span style={{ fontWeight: 600, color: INK.ch }}>{f.short}:</span> {current[f.key]}
+                <span style={{ fontWeight: 600, color: INK.ch }}>{t(f.short)}:</span> {current[f.key]}
               </p>
             ))}
           </div>
         ) : (
-          <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 8 }}>Nothing set yet.</p>
+          <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 8 }}>{t("Nothing set yet.")}</p>
         )}
 
         {handles && (handles.instagram || handles.x) && (
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${INK.b06}` }}>
-            <p style={label}>Social</p>
+            <p style={label}>{t("Social")}</p>
             <div className="flex flex-wrap" style={{ gap: "6px 16px", marginTop: 8 }}>
               {handles.instagram && (
-                <a href={instagramUrl(handles.instagram)} target="_blank" rel="noopener noreferrer" aria-label={`Instagram @${handles.instagram} (opens in a new tab)`} className="underline underline-offset-2" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch }}>
-                  Instagram @{handles.instagram}
-                </a>
+                <a href={instagramUrl(handles.instagram)} target="_blank" rel="noopener noreferrer" aria-label={t("Instagram @{instagram} (opens in a new tab)", { instagram: handles.instagram })} className="underline underline-offset-2" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch }}>{t("Instagram @{instagram}", { instagram: handles.instagram })}</a>
               )}
               {handles.x && (
-                <a href={xUrl(handles.x)} target="_blank" rel="noopener noreferrer" aria-label={`X @${handles.x} (opens in a new tab)`} className="underline underline-offset-2" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch }}>
-                  X @{handles.x}
+                <a href={xUrl(handles.x)} target="_blank" rel="noopener noreferrer" aria-label={t("X @{x} (opens in a new tab)", { x: handles.x })} className="underline underline-offset-2" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch }}>
+                  {`X @${handles.x}`}
                 </a>
               )}
             </div>
@@ -460,20 +457,18 @@ const AboutCard: React.FC<{ data: ClientPageData; lane: ProLane }> = ({ data }) 
         {(phaseOn || pregOn) && (
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${INK.b06}` }}>
             <p className="flex items-center" style={{ ...label, gap: 6 }}>
-              <Moon size={12} strokeWidth={2} aria-hidden />
-              Cycle
-            </p>
+              <Moon size={12} strokeWidth={2} aria-hidden />{t("Cycle")}</p>
             <div className="flex flex-wrap" style={{ gap: 6, marginTop: 8 }}>
               {phaseOn &&
                 (phase === undefined ? (
-                  <span style={{ fontSize: textPx(12), color: INK.chF }}>Loading…</span>
+                  <span style={{ fontSize: textPx(12), color: INK.chF }}>{t("Loading…")}</span>
                 ) : phase === null ? (
-                  <span style={{ fontSize: textPx(12), color: INK.chF }}>Couldn't load the cycle phase.</span>
+                  <span style={{ fontSize: textPx(12), color: INK.chF }}>{t("Couldn't load the cycle phase.")}</span>
                 ) : phase === "unavailable" ? (
-                  <span style={{ fontSize: textPx(12), color: INK.chF }}>{PHASE_UNAVAILABLE}</span>
+                  <span style={{ fontSize: textPx(12), color: INK.chF }}>{t(PHASE_UNAVAILABLE)}</span>
                 ) : (
                   <span className="inline-block" style={{ fontSize: textPx(11), fontWeight: 700, borderRadius: 9999, padding: "4px 10px", color: phaseThemeColor(phase as CyclePhase), background: phaseThemeColor(phase as CyclePhase, 0.12) }}>
-                    {`${PHASE_LABEL[phase as CyclePhase] ?? phase}${phase === "menstrual" || phase === "pregnant" || phase === "hormonal_contraception" ? "" : " phase"}`}
+                    {phase === "menstrual" || phase === "pregnant" || phase === "hormonal_contraception" ? t(PHASE_LABEL[phase as CyclePhase] ?? phase) : t("{phase} phase", { phase: t(PHASE_LABEL[phase as CyclePhase] ?? phase) })}
                   </span>
                 ))}
               {pregOn && preg !== undefined && pregnancyWord && (
@@ -481,7 +476,7 @@ const AboutCard: React.FC<{ data: ClientPageData; lane: ProLane }> = ({ data }) 
                   {pregnancyWord}
                 </span>
               )}
-              {pregOn && preg !== undefined && !pregnancyWord && !phaseOn && <span style={{ fontSize: textPx(12), color: INK.chF }}>No pregnancy recorded.</span>}
+              {pregOn && preg !== undefined && !pregnancyWord && !phaseOn && <span style={{ fontSize: textPx(12), color: INK.chF }}>{t("No pregnancy recorded.")}</span>}
             </div>
           </div>
         )}
@@ -506,24 +501,22 @@ const HabitsCard: React.FC<{ data: ClientPageData; lane: ProLane; onAsk: () => v
 
   return (
     <>
-      <SectionHead label="Habits" />
+      <SectionHead label={t("Habits")} />
       {!on ? (
         <LockLine
           className="mb-3"
-          what="Habits"
+          what={t("Habits")}
           clientFirstName={firstName}
           action={
-            <button type="button" onClick={onAsk} className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.prDeep }}>
-              Ask to share
-            </button>
+            <button type="button" onClick={onAsk} className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.prDeep }}>{t("Ask to share")}</button>
           }
         />
       ) : habits === undefined ? (
         <ProCardSkeleton lines={2} />
       ) : habits === null ? (
-        <SoftLine icon={Activity}>Couldn't load habits.</SoftLine>
+        <SoftLine icon={Activity}>{t("Couldn't load habits.")}</SoftLine>
       ) : habits.length === 0 ? (
-        <SoftLine icon={Activity}>{`${firstName} isn't tracking any habits yet.`}</SoftLine>
+        <SoftLine icon={Activity}>{t("{firstName} isn't tracking any habits yet.", { firstName })}</SoftLine>
       ) : (
         <ListCard
           rows={habits.map((h) => {
@@ -536,8 +529,8 @@ const HabitsCard: React.FC<{ data: ClientPageData; lane: ProLane; onAsk: () => v
               key: h.id,
               icon: Activity,
               title: h.label,
-              meta: `${h.doneDates.length} of the last 14 days${streak > 1 ? ` · ${streak} days in a row` : ""}`,
-              trailing: h.assignedByMe ? <span style={{ fontSize: textPx(10.5), fontWeight: 700, color: INK.tealDark }}>From you</span> : undefined,
+              meta: `${t("{n} of the last 14 days", { n: h.doneDates.length })}${streak > 1 ? ` · ${t("{n} days in a row", { n: streak })}` : ""}`,
+              trailing: h.assignedByMe ? <span style={{ fontSize: textPx(10.5), fontWeight: 700, color: INK.tealDark }}>{t("From you")}</span> : undefined,
             };
           })}
         />

@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { premiumRefusalMessage } from "../premium/asks";
 import { statusFor } from "./index";
 import { fileTypeOf, type FileMeta } from "../storage/fileMeta";
 import { tk } from "../../i18n/core";
@@ -172,7 +173,8 @@ export async function saveLabReport(input: {
   const { data, error } = await db.rpc("save_lab_report", { p_panel, p_markers: input.results.map((m) => ({ ...markerPayload(m), entry_method })) });
   if (error) {
     console.error("[labs] save_lab_report failed:", error.code, error.message);
-    return { ok: false, message: tk("Couldn't save. Try again.") };
+    // Round G2: a scanned report is Premium while the free limits apply (ATXQ1); typing stays free.
+    return { ok: false, message: premiumRefusalMessage(error, "lab_report_scanning") ?? tk("Couldn't save. Try again.") };
   }
   return { ok: true, panelId: data as string };
 }

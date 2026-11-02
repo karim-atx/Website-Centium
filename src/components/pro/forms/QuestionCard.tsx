@@ -4,6 +4,7 @@ import { textPx } from "../../../theme/textSize";
 import { Toggle } from "../../ui/Toggle";
 import { INK } from "../proInk";
 import type { GripProps } from "./useReorder";
+import { t } from "../../../i18n/core";
 import { OPTIONS_MAX, PROFILE_FIELD_LABEL, PROMPT_MAX, SAFETY_LABEL, SECTION_MAX, UNIT_MAX, isYesNo, typeLabel, uiTypeOf, type QuestionDraft, type UiType } from "./formModel";
 
 /** The add-a-question glyphs (gen/r18.js QT18). */
@@ -75,15 +76,15 @@ export const QuestionCard: React.FC<{
 
   let body: React.ReactNode;
   if (q.type === "text") {
-    body = <span className="block" style={{ height: 40, borderRadius: 10, background: INK.soft, padding: "0 12px", lineHeight: "40px", fontSize: textPx(13), color: INK.chT }}>Short answer</span>;
+    body = <span className="block" style={{ height: 40, borderRadius: 10, background: INK.soft, padding: "0 12px", lineHeight: "40px", fontSize: textPx(13), color: INK.chT }}>{t("Short answer")}</span>;
   } else if (q.type === "long_text") {
-    body = <span className="block" style={{ height: 72, borderRadius: 10, background: INK.soft, padding: "10px 12px", fontSize: textPx(13), color: INK.chT }}>Long answer</span>;
+    body = <span className="block" style={{ height: 72, borderRadius: 10, background: INK.soft, padding: "10px 12px", fontSize: textPx(13), color: INK.chT }}>{t("Long answer")}</span>;
   } else if ((q.type === "choice" || q.type === "multi") && yesNo) {
     body = (
       <div className="flex" style={{ gap: 6 }}>
         {["Yes", "No"].map((x) => (
           <span key={x} className="flex-1 flex items-center justify-center" style={{ height: 36, borderRadius: 10, background: INK.soft, fontSize: textPx(13), fontWeight: 700, color: INK.chS }}>
-            {x}
+            {t(x)}
           </span>
         ))}
       </div>
@@ -104,14 +105,14 @@ export const QuestionCard: React.FC<{
               readOnly={fixed.has(o)}
               maxLength={120}
               onChange={(e) => set({ options: opts.map((x, j) => (j === i ? e.target.value : x)) })}
-              placeholder={`Answer ${i + 1}`}
-              aria-label={`Answer ${i + 1}`}
+              placeholder={t("Answer {n}", { n: i + 1 })}
+              aria-label={t("Answer {n}", { n: i + 1 })}
               className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-tertiary"
               style={{ fontSize: textPx(13), color: INK.ch, height: 28 }}
             />
-            {fixed.has(o) && <Lock size={12} strokeWidth={2} aria-label="Can't be renamed" style={{ color: INK.chF, flexShrink: 0 }} />}
+            {fixed.has(o) && <Lock size={12} strokeWidth={2} aria-label={t("Can't be renamed")} style={{ color: INK.chF, flexShrink: 0 }} />}
             {!locked && !fixed.has(o) && opts.length > 2 && (
-              <button type="button" onClick={() => set({ options: opts.filter((_, j) => j !== i) })} aria-label={`Remove answer ${i + 1}`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-2 before:content-['']" style={{ width: 28, height: 28 }}>
+              <button type="button" onClick={() => set({ options: opts.filter((_, j) => j !== i) })} aria-label={t("Remove answer {n}", { n: i + 1 })} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-2 before:content-['']" style={{ width: 28, height: 28 }}>
                 <X size={13} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
               </button>
             )}
@@ -119,13 +120,13 @@ export const QuestionCard: React.FC<{
         ))}
         {fixed.size > 0 && (
           <p style={{ fontSize: textPx(11.5), lineHeight: 1.45, color: INK.chF, marginTop: 2 }}>
-            Answers with a lock can't be renamed or removed: recovery-sensitive mode, a note for you or a safety message depends on them.
+            {t("Answers with a lock can't be renamed or removed: recovery-sensitive mode, a note for you or a safety message depends on them.")}
           </p>
         )}
         {!locked && opts.length < OPTIONS_MAX && (
           <button type="button" onClick={() => set({ options: [...opts, ""] })} className="tap self-start flex items-center relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-['']" style={{ gap: 4, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, marginTop: 2 }}>
             <Plus size={12} strokeWidth={2.4} aria-hidden />
-            Add an answer
+            {t("Add an answer")}
           </button>
         )}
       </div>
@@ -139,8 +140,8 @@ export const QuestionCard: React.FC<{
           disabled={locked}
           maxLength={UNIT_MAX}
           onChange={(e) => set({ unit: e.target.value })}
-          placeholder="Unit"
-          aria-label="Unit"
+          placeholder={t("Unit")}
+          aria-label={t("Unit")}
           className="bg-transparent outline-none placeholder:text-charcoal-tertiary"
           style={{ width: 90, fontSize: textPx(13), fontWeight: 700, color: INK.chS, height: 32 }}
         />
@@ -160,8 +161,8 @@ export const QuestionCard: React.FC<{
           ))}
         </div>
         <div className="flex justify-between" style={{ fontSize: textPx(10.5), color: INK.chF, marginTop: 4 }}>
-          <span>Very low</span>
-          <span>Very high</span>
+          <span>{t("Very low")}</span>
+          <span>{t("Very high")}</span>
         </div>
       </>
     );
@@ -169,14 +170,14 @@ export const QuestionCard: React.FC<{
     body = (
       <span className="inline-flex items-center" style={{ gap: 8, height: 40, borderRadius: 10, background: INK.soft, padding: "0 12px", fontSize: textPx(13), color: INK.chT }}>
         <Calendar size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
-        Pick a date
+        {t("Pick a date")}
       </span>
     );
   } else {
     body = (
       <span className="flex items-center justify-center" style={{ gap: 8, height: 56, borderRadius: 12, border: "1.5px dashed rgb(var(--c-charcoal) / 0.11)", fontSize: textPx(12.5), fontWeight: 700, color: INK.chS }}>
         <Camera size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
-        Add photos or a file
+        {t("Add photos or a file")}
       </span>
     );
   }
@@ -190,19 +191,19 @@ export const QuestionCard: React.FC<{
         {showCondition && (
           <button type="button" disabled={locked || !onCondition} onClick={onCondition} className="tap flex items-center" style={{ ...linkBtn, color: conditionLine ? INK.ch : INK.prDeep }}>
             <GitBranch size={13} strokeWidth={2.2} aria-hidden style={{ color: INK.prDeep, flexShrink: 0 }} />
-            <span style={{ overflowWrap: "anywhere" }}>{conditionLine ?? "Only ask if…"}</span>
+            <span style={{ overflowWrap: "anywhere" }}>{conditionLine ?? t("Only ask if…")}</span>
           </button>
         )}
         {showProfile && (
           <button type="button" disabled={locked || !onProfile} onClick={onProfile} className="tap flex items-center" style={{ ...linkBtn, color: q.profileField ? INK.ch : INK.prDeep }}>
             <UserRoundPlus size={13} strokeWidth={2.2} aria-hidden style={{ color: INK.prDeep, flexShrink: 0 }} />
-            {q.profileField ? `Carry into the profile: ${PROFILE_FIELD_LABEL[q.profileField]}` : "Carry into the profile"}
+            {q.profileField ? t("Carry into the profile: {field}", { field: t(PROFILE_FIELD_LABEL[q.profileField]) }) : t("Carry into the profile")}
           </button>
         )}
         {q.sectionTitle == null && !locked && (
           <button type="button" onClick={() => set({ sectionTitle: "" })} className="tap flex items-center" style={linkBtn}>
             <Plus size={13} strokeWidth={2.4} aria-hidden style={{ flexShrink: 0 }} />
-            Start a section here
+            {t("Start a section here")}
           </button>
         )}
       </div>
@@ -212,7 +213,7 @@ export const QuestionCard: React.FC<{
     q.sectionTitle == null ? null : (
       <div style={{ margin: index ? "14px 0 8px" : "0 0 8px" }}>
         <span className="block" style={{ fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: INK.chF, marginBottom: 2 }}>
-          {`Section ${section ?? 1}`}
+          {t("Section {n}", { n: section ?? 1 })}
         </span>
         {locked ? (
           <p style={{ fontSize: textPx(15), fontWeight: 800, color: INK.ch, overflowWrap: "anywhere" }}>{q.sectionTitle}</p>
@@ -222,12 +223,12 @@ export const QuestionCard: React.FC<{
               value={q.sectionTitle}
               maxLength={SECTION_MAX}
               onChange={(e) => set({ sectionTitle: e.target.value })}
-              placeholder="Section title"
-              aria-label={`Section ${section ?? 1} title`}
+              placeholder={t("Section title")}
+              aria-label={t("Section {n} title", { n: section ?? 1 })}
               className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-tertiary"
               style={{ fontSize: textPx(15), fontWeight: 800, color: INK.ch, height: 36, borderBottom: `1px solid ${INK.b10}` }}
             />
-            <button type="button" onClick={() => set({ sectionTitle: null })} aria-label={`Remove section ${section ?? 1}`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-2 before:content-['']" style={{ width: 28, height: 28 }}>
+            <button type="button" onClick={() => set({ sectionTitle: null })} aria-label={t("Remove section {n}", { n: section ?? 1 })} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-2 before:content-['']" style={{ width: 28, height: 28 }}>
               <X size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
             </button>
           </span>
@@ -240,7 +241,7 @@ export const QuestionCard: React.FC<{
       {sectionHead}
       <div style={{ background: INK.card, border: `1px solid ${problem ? INK.hi : INK.bCard}`, borderRadius: 16, padding: "12px 12px 10px", marginBottom: 8 }}>
         <div className="flex items-center" style={{ gap: 8, marginBottom: 8 }}>
-          {!readOnly && <button type="button" aria-label={`Move question ${index + 1} of ${count}. Use the arrow keys.`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-3 before:content-['']" {...grip} style={{ width: 14, height: 20, ...grip.style }}>
+          {!readOnly && <button type="button" aria-label={t("Move question {n} of {count}. Use the arrow keys.", { n: index + 1, count })} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-3 before:content-['']" {...grip} style={{ width: 14, height: 20, ...grip.style }}>
             <GripVertical size={14} strokeWidth={2} aria-hidden style={{ color: INK.chT }} />
           </button>}
           <span className="inline-flex items-center min-w-0 whitespace-nowrap" style={{ gap: 4, fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: INK.prDeep }}>
@@ -248,15 +249,15 @@ export const QuestionCard: React.FC<{
             <span className="truncate">{typeLabel(q)}</span>
           </span>
           {readOnly ? (
-            q.required && <span className="ms-auto shrink-0" style={{ fontSize: textPx(11.5), color: INK.chF }}>Required</span>
+            q.required && <span className="ms-auto shrink-0" style={{ fontSize: textPx(11.5), color: INK.chF }}>{t("Required")}</span>
           ) : (
             <span className="ms-auto inline-flex items-center shrink-0" style={{ gap: 6, fontSize: textPx(11.5), color: INK.chF }}>
-              <span aria-hidden>Required</span>
-              <Toggle checked={q.required} onChange={(v) => !locked && set({ required: v })} label={`Required: ${q.prompt || `question ${index + 1}`}`} disabled={locked} />
+              <span aria-hidden>{t("Required")}</span>
+              <Toggle checked={q.required} onChange={(v) => !locked && set({ required: v })} label={t("Required: {question}", { question: q.prompt || t("question {n}", { n: index + 1 }) })} disabled={locked} />
             </span>
           )}
           {!locked && (
-            <button type="button" onClick={onRemove} aria-label={`Remove question ${index + 1}`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-2 before:content-['']" style={{ width: 28, height: 28 }}>
+            <button type="button" onClick={onRemove} aria-label={t("Remove question {n}", { n: index + 1 })} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-2 before:content-['']" style={{ width: 28, height: 28 }}>
               <Trash2 size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
             </button>
           )}
@@ -265,14 +266,14 @@ export const QuestionCard: React.FC<{
           <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, marginBottom: 8, lineHeight: 1.4, overflowWrap: "anywhere" }}>{q.prompt}</p>
         ) : (
           <>
-            <label htmlFor={id} className="sr-only">{`Question ${index + 1}`}</label>
+            <label htmlFor={id} className="sr-only">{t("Question {n}", { n: index + 1 })}</label>
             <textarea
               id={id}
               value={q.prompt}
               rows={1}
               maxLength={PROMPT_MAX}
               onChange={(e) => set({ prompt: e.target.value })}
-              placeholder="Write your question"
+              placeholder={t("Write your question")}
               className="block w-full bg-transparent outline-none resize-none placeholder:text-charcoal-tertiary [field-sizing:content]"
               style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, marginBottom: 8, lineHeight: 1.4 }}
             />
@@ -281,7 +282,7 @@ export const QuestionCard: React.FC<{
         {!readOnly && q.safetyTopic && (
           <p className="flex items-start" style={{ gap: 6, fontSize: textPx(11.5), color: INK.chS, lineHeight: 1.45, marginBottom: 8 }}>
             <ShieldAlert size={13} strokeWidth={2} aria-hidden style={{ color: INK.hi, flexShrink: 0, marginTop: 2 }} />
-            {`Safety question: answers that suggest ${SAFETY_LABEL[q.safetyTopic]} flag the check-in for you, so it can't be turned off.`}
+            {t("Safety question: answers that suggest {topic} flag the check-in for you, so it can't be turned off.", { topic: t(SAFETY_LABEL[q.safetyTopic]) })}
           </p>
         )}
         {readOnly && conditionLine && (

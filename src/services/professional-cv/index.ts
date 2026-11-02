@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { directoryCall, directoryErrorText, parseDirectoryCv } from "../directory/eg";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums, Tables } from "../../../lib/supabase/database.types";
 import { deletePrivateFile, uploadPrivateFile } from "../storage";
@@ -683,32 +684,40 @@ export async function fetchPublicCv(professionalId: string): Promise<{ ok: true;
       .eq("professional_id", professionalId)
       .order("position");
 
-  const [licences, experience, education, languages, awards, publications, volunteering, links] = await Promise.all([
-    q("public_professional_licences"),
-    q("public_professional_experience"),
-    q("public_professional_education"),
-    q("public_professional_languages"),
-    q("public_professional_awards"),
-    q("public_professional_publications"),
-    q("public_professional_volunteering"),
-    q("public_professional_links"),
-  ]);
-  const failed = [licences, experience, education, languages, awards, publications, volunteering, links].find((r) => r.error);
-  if (failed?.error) {
-    console.error("[professional-cv] Could not read a public CV:", failed.error.message);
-    return { ok: false, message: isOffline(failed.error) ? OFFLINE_MESSAGE : tk("Couldn't load their CV.") };
+  // Round G2 (EG): one counting call for the eight sections, each ordered by position.
+  const read = await directoryCall<unknown>("directory_professional_cv", { p_profile_id: professionalId }, async () => {
+    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
+    const all = await Promise.all([
+      q("public_professional_licences"),
+      q("public_professional_experience"),
+      q("public_professional_education"),
+      q("public_professional_languages"),
+      q("public_professional_awards"),
+      q("public_professional_publications"),
+      q("public_professional_volunteering"),
+      q("public_professional_links"),
+    ]);
+    const bad = all.find((r) => r.error);
+    if (bad?.error) return { data: null, error: bad.error };
+    const [licences, experience, education, languages, awards, publications, volunteering, links] = all.map((r) => r.data ?? []);
+    return { data: { licences, experience, education, languages, awards, publications, volunteering, links }, error: null };
+  });
+  if (read.error) {
+    console.error("[professional-cv] Could not read a public CV:", read.error.message);
+    return { ok: false, message: isOffline(read.error) ? OFFLINE_MESSAGE : (directoryErrorText(read.error) ?? tk("Couldn't load their CV.")) };
   }
+  const cv = parseDirectoryCv(read.data);
 
   // Every view column is nullable to the type generator; rows without the
   // fields a section cannot render without are dropped below.
-  const L = (licences.data ?? []) as unknown as Tables<"public_professional_licences">[];
-  const E = (experience.data ?? []) as unknown as Tables<"public_professional_experience">[];
-  const Ed = (education.data ?? []) as unknown as Tables<"public_professional_education">[];
-  const La = (languages.data ?? []) as unknown as Tables<"public_professional_languages">[];
-  const A = (awards.data ?? []) as unknown as Tables<"public_professional_awards">[];
-  const P = (publications.data ?? []) as unknown as Tables<"public_professional_publications">[];
-  const V = (volunteering.data ?? []) as unknown as Tables<"public_professional_volunteering">[];
-  const Li = (links.data ?? []) as unknown as Tables<"public_professional_links">[];
+  const L = cv.licences as Tables<"public_professional_licences">[];
+  const E = cv.experience as Tables<"public_professional_experience">[];
+  const Ed = cv.education as Tables<"public_professional_education">[];
+  const La = cv.languages as Tables<"public_professional_languages">[];
+  const A = cv.awards as Tables<"public_professional_awards">[];
+  const P = cv.publications as Tables<"public_professional_publications">[];
+  const V = cv.volunteering as Tables<"public_professional_volunteering">[];
+  const Li = cv.links as Tables<"public_professional_links">[];
 
   return {
     ok: true,

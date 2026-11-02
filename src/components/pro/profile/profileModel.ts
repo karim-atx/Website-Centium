@@ -6,6 +6,7 @@
 import { licenceStatus, type LicenceReviewRow } from "../../../services/professional-cv/licenceStatus";
 import { siteHref, siteText } from "../../../config/site";
 import { appLocale } from "../../../i18n/format";
+import { t, tk, tn } from "../../../i18n/core";
 
 type WorkModeDb = "in_person" | "online" | "both";
 type LicenceLike = { id: string; documentPath: string | null };
@@ -129,10 +130,10 @@ export const radiusAtPosition = (pos: number) =>
  * plain subtitle).
  */
 export function serviceAreaLine(areaLabel: string | null, km: number | null, workMode: WorkModeDb | null): string | null {
-  if (workMode === "online") return "Online only";
+  if (workMode === "online") return t("Online only");
   const area = areaLabel?.trim();
   if (!area) return null;
-  return km ? `${area} and ${km} km around` : area;
+  return km ? t("{area} and {km} km around", { area, km }) : area;
 }
 
 // ---------------------------------------------------------------------------
@@ -140,12 +141,12 @@ export function serviceAreaLine(areaLabel: string | null, km: number | null, wor
 // ---------------------------------------------------------------------------
 
 export function priceLabel(price: number, currency = "USD"): string {
-  if (!price) return "Free";
+  if (!price) return t("Free");
   const sym = currency === "USD" ? "$" : `${currency} `;
   return `${sym}${Number.isInteger(price) ? price : price.toFixed(2)}`;
 }
 
-const PER: Record<string, string> = { daily: "day", monthly: "mo", annually: "yr", quarterly: "qtr", semiannually: "6 mo" };
+const PER: Record<string, string> = { daily: tk("{price}/day"), monthly: tk("{price}/mo"), annually: tk("{price}/yr"), quarterly: tk("{price}/qtr"), semiannually: tk("{price}/6 mo") };
 
 /**
  * "$120/mo" (S218 `{price}/mo`): every hire plan is billed by its period
@@ -154,18 +155,18 @@ const PER: Record<string, string> = { daily: "day", monthly: "mo", annually: "yr
  */
 export function planPrice(price: number, billing: string): string {
   const p = priceLabel(price);
-  return price ? `${p}/${PER[billing] ?? billing}` : p;
+  return price ? (PER[billing] ? t(PER[billing], { price: p }) : `${p}/${billing}`) : p;
 }
 
 /** The plan row's line: the package size first, then what's included. */
 export function planLine(features: string[], sessionCount: number | null): string {
-  const parts = [sessionCount !== null ? plural(sessionCount, "session") : null, ...features].filter(Boolean) as string[];
-  return parts.length ? parts.slice(0, 2).join(" · ") : "No details yet";
+  const parts = [sessionCount !== null ? tn(sessionCount, "{n} session", "{n} sessions") : null, ...features].filter(Boolean) as string[];
+  return parts.length ? parts.slice(0, 2).join(" · ") : t("No details yet");
 }
 
 export function sessionLine(durationMin: number, locationKind: string | null): string {
-  const where = locationKind === "online" ? "Online" : locationKind === "in_person" ? "In person" : locationKind === "home_visit" ? "Home visit" : locationKind === "phone" ? "Phone" : "In person or online";
-  return `${durationMin} min · ${where}`;
+  const where = locationKind === "online" ? t("Online") : locationKind === "in_person" ? t("In person") : locationKind === "home_visit" ? t("Home visit") : locationKind === "phone" ? t("Phone") : t("In person or online");
+  return t("{n} min · {where}", { n: durationMin, where });
 }
 
 export const DURATIONS = [15, 20, 30, 45, 60, 75, 90, 120] as const;
@@ -213,5 +214,5 @@ export function averageOf(rows: { rating: number; redactedAt: string | null }[])
 
 /** "Jane S." from a first name and an optional last initial; "A client" when hidden. */
 export function reviewerLabel(name: string | null): string {
-  return name?.trim() ? name.trim() : "A client";
+  return name?.trim() ? name.trim() : t("A client");
 }

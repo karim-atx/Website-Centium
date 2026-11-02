@@ -93,4 +93,14 @@ export { default as PublicBooking } from "./pages/public/PublicBooking";
 export { default as SharedCard } from "./pages/share/SharedCard";
 export { default as BusinessLinkPage } from "./pages/share/BusinessLinkPage";
 export { default as CarePlan } from "./pages/health/CarePlan";
+// Round G3: the Premium content and readers (hidden while the switch is off).
+export { default as CentiumProgrammesPage } from "./pages/workout/centium/CentiumProgrammesPage";
+export { default as CentiumProgrammePage } from "./pages/workout/centium/CentiumProgrammePage";
+export { default as MindLibraryPage } from "./pages/mind/library/MindLibraryPage";
+export { default as LibrarySessionPage } from "./pages/mind/library/LibrarySessionPage";
+export { default as WeeklyReviewPage } from "./pages/home/review/WeeklyReviewPage";
+export { default as DoctorSummaryPage } from "./pages/health/doctor/DoctorSummaryPage";
+// Round G4.
+export { default as MealPlannerPage } from "./pages/food/planner/MealPlannerPage";
+export { default as ProgressPhotosPage } from "./pages/workout/photos/ProgressPhotosPage";
 export { ConsoleGate } from "./components/business-console/ConsoleGate";

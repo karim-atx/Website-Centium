@@ -3,6 +3,8 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import type { Exercise, Routine, WorkoutBlock } from "../../types";
 import { useApp } from "../../context/AppContext";
+import { useFreeLimit } from "../premium/useFreeLimit";
+import { ownRoutineCount } from "../../services/premium/g2";
 import { ExerciseLibrarySheet, type ExercisePick } from "./ExerciseLibrarySheet";
 import { ExerciseSettingsSheet, type ExerciseSettingsPro } from "./ExerciseSettingsSheet";
 import { BlockCard } from "./BlockCard";
@@ -85,7 +87,19 @@ export const CreateRoutineSheet: React.FC<{
   folderId: string | null;
   pro?: RoutineSheetPro;
 }> = ({ open, onClose, folderId, pro }) => {
-  const { addRoutine, customExercises, exerciseCatalog } = useApp();
+  const { addRoutine, customExercises, exerciseCatalog, routines } = useApp();
+  // Round G2: a new routine past the free plan's own routines opens the
+  // prompt instead of a form that would fail (members only; nothing while
+  // the switch is off). A professional's copies never count.
+  const { reached, ask } = useFreeLimit();
+  const limitHit = open && !pro && reached("own_routines", ownRoutineCount(routines));
+  useEffect(() => {
+    if (!limitHit) return;
+    ask("own_routines");
+    onClose();
+    // Once per opening.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [limitHit]);
   const [name, setName] = useState("");
   const [duration, setDuration] = useState("45");
   const [color, setColor] = useState(colorOptions[0]);

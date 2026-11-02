@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronUp, Mail } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Gift, Mail } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useBack } from "../../../hooks/useBack";
@@ -18,6 +19,8 @@ import { ProBusinessBilling } from "./ProBusinessBilling";
 import { Slot } from "../../subscription/PlanRows";
 import { t, tn } from "../../../i18n/core";
 import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
+import { useSwitches } from "../../../services/premium/hooks";
+import { premiumOn } from "../../../services/premium/model";
 
 // Release 3 W6 · MO24 v3 Subscription (source/gen r16.js subscription16,
 // tierCard16, tierGlyph16; COPY MO24). The real professional tiers from
@@ -135,6 +138,9 @@ export default function ProSubscription() {
   const [compare, setCompare] = useState(false);
   const [centred, setCentred] = useState<number | null>(null);
   const track = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  // Round G1 (EA): Premium passes, only while the Premium switch is on.
+  const passesOn = premiumOn(useSwitches().switches);
 
   const tiers = useMemo(() => all.filter((t) => !t.isAddon), [all]);
   const current = effective?.tier ?? null;
@@ -259,6 +265,23 @@ export default function ProSubscription() {
 
       {/* Batch 2 · CS (Karim): a professional who holds a business plan chooses its billing here. */}
       <ProBusinessBilling />
+
+      {/* undrawn (Round G, no handover): the way into Premium passes. */}
+      {passesOn && (
+        <button
+          type="button"
+          onClick={() => navigate("/app/more/premium-passes")}
+          className="tap w-full flex items-center text-start"
+          style={{ gap: 12, minHeight: 56, borderRadius: 18, padding: "12px 16px", marginBottom: 14, background: INK.card, border: `1px solid ${INK.bCard}` }}
+        >
+          <Gift size={18} strokeWidth={1.9} style={{ color: INK.prDeep }} aria-hidden />
+          <span className="flex-1 min-w-0">
+            <span className="block" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{t("Premium passes")}</span>
+            <span className="block" style={{ fontSize: textPx(12), color: INK.chS, marginTop: 2 }}>{t("Include Centium Premium for your clients")}</span>
+          </span>
+          <ChevronRight size={16} strokeWidth={2} style={{ color: INK.chF }} aria-hidden />
+        </button>
+      )}
 
       <div className="flex" role="radiogroup" aria-label={t("Billing period")} style={{ gap: 8, marginBottom: 14 }}>
         {(["monthly", "yearly"] as const).map((p) => {

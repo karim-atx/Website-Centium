@@ -4,6 +4,7 @@ import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { initialsOf, toneOf, type Tone } from "./clientFormat";
+import { t } from "../../../i18n/core";
 
 export type { Tone } from "./clientFormat";
 
@@ -151,7 +152,7 @@ export const SharedChips: React.FC<{ items: { label: string; on: boolean }[] }> 
         >
           {x.on ? <ShieldCheck size={11} strokeWidth={2.2} aria-hidden /> : <Lock size={11} strokeWidth={2.2} aria-hidden />}
           {x.label}
-          <span className="sr-only">{x.on ? ", shared" : ", not shared"}</span>
+          <span className="sr-only">{x.on ? t(", shared") : t(", not shared")}</span>
         </span>
       ))}
     </div>

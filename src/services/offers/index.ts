@@ -27,6 +27,7 @@ import {
   type RewardCategory,
 } from "./offersModel";
 import { parseVoucherEligibility, voucherRefusalLine, type VoucherEligibility } from "./voucherRules";
+import { premiumRefusalMessage } from "../premium/asks";
 
 export * from "./offersModel";
 export * from "./voucherRules";
@@ -83,6 +84,9 @@ export async function redeemOffer(offerId: string, requestId: string): Promise<R
   if ("thrown" in res) return { ok: false, offline: isOffline(res.thrown), message: fallback };
   if (res.error) {
     if (isOffline(res.error)) return { ok: false, offline: true, message: fallback };
+    // Round G2: a Premium-only offer and no Premium (ATXQ1): the prompt.
+    const premiumOnly = premiumRefusalMessage(res.error, "premium_offers");
+    if (premiumOnly) return { ok: false, message: premiumOnly };
     // Round F (AB2, AB3): ATXV0–ATXV3, worded from their DETAIL.
     const f2 = voucherRefusalLine(res.error);
     if (f2) return { ok: false, message: f2 };

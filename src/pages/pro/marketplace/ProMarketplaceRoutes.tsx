@@ -6,6 +6,7 @@ import { useBack } from "../../../hooks/useBack";
 import { textPx, linePx } from "../../../theme/textSize";
 import { marketPalette } from "../../../theme/marketTokens";
 import { FOCUS_CSS } from "../../../components/market/usePress";
+import { t, tk } from "../../../i18n/core";
 import { OverviewTab } from "./Overview";
 import { ShowcaseTab } from "./Showcase";
 import { OffersTab } from "./Offers";
@@ -36,16 +37,16 @@ import MyWorkPage from "./opportunities/MyWork";
 export const PRO_MARKET_HOME = "/app/pro/marketplace";
 
 export const PRO_MARKET_TABS = [
-  { key: "overview", label: "Overview" },
-  { key: "showcase", label: "Showcase" },
-  { key: "offers", label: "Offers" },
-  { key: "opportunities", label: "Opportunities" },
-  { key: "performance", label: "Performance" },
+  { key: "overview", label: tk("Overview") },
+  { key: "showcase", label: tk("Showcase") },
+  { key: "offers", label: tk("Offers") },
+  { key: "opportunities", label: tk("Opportunities") },
+  { key: "performance", label: tk("Performance") },
 ] as const;
 
 export type ProMarketTab = (typeof PRO_MARKET_TABS)[number]["key"];
 
-const isTab = (t: string | undefined): t is ProMarketTab => PRO_MARKET_TABS.some((x) => x.key === t);
+const isTab = (v: string | undefined): v is ProMarketTab => PRO_MARKET_TABS.some((x) => x.key === v);
 
 export default function ProMarketplaceRoutes() {
   return (
@@ -88,33 +89,33 @@ function ProMarketplacePage() {
         <button
           type="button"
           onClick={back}
-          aria-label="Back to More"
+          aria-label={t("Back to More")}
           className="market-focus hit"
           style={{ width: 36, height: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: m.ink2, background: "transparent", border: 0, padding: 0, cursor: "pointer", }}
         >
-          <ChevronLeft size={18} strokeWidth={2} aria-hidden />
+          <ChevronLeft size={18} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />
         </button>
         <div style={{ minWidth: 0 }}>
-          <h1 style={{ fontSize: textPx(27), fontWeight: 800, letterSpacing: "-0.022em", lineHeight: linePx(34), margin: 0 }}>Marketplace</h1>
-          <p style={{ fontSize: textPx(13), fontWeight: 500, color: m.faint, marginTop: 4, lineHeight: linePx(19) }}>How clients and gyms find you</p>
+          <h1 style={{ fontSize: textPx(27), fontWeight: 800, letterSpacing: "-0.022em", lineHeight: linePx(34), margin: 0 }}>{t("Marketplace")}</h1>
+          <p style={{ fontSize: textPx(13), fontWeight: 500, color: m.faint, marginTop: 4, lineHeight: linePx(19) }}>{t("How clients and gyms find you")}</p>
         </div>
       </div>
-      <div role="tablist" aria-label="Marketplace" style={{ margin: "16px 0 18px", display: "flex", gap: 3, padding: 4, borderRadius: 16, background: m.segtrack, overflowX: "auto", scrollbarWidth: "none" }}>
-        {PRO_MARKET_TABS.map((t, i) => {
-          const on = t.key === tab;
+      <div role="tablist" aria-label={t("Marketplace")} style={{ margin: "16px 0 18px", display: "flex", gap: 3, padding: 4, borderRadius: 16, background: m.segtrack, overflowX: "auto", scrollbarWidth: "none" }}>
+        {PRO_MARKET_TABS.map((tb, i) => {
+          const on = tb.key === tab;
           return (
             <button
-              key={t.key}
+              key={tb.key}
               ref={(el) => {
                 refs.current[i] = el;
               }}
               type="button"
               role="tab"
-              id={`pm-tab-${t.key}`}
+              id={`pm-tab-${tb.key}`}
               aria-selected={on}
-              aria-controls={`pm-panel-${t.key}`}
+              aria-controls={`pm-panel-${tb.key}`}
               tabIndex={on ? 0 : -1}
-              onClick={() => go(t.key)}
+              onClick={() => go(tb.key)}
               onKeyDown={(e) => onKey(e, i)}
               className="market-focus hit"
               style={{
@@ -135,7 +136,7 @@ function ProMarketplacePage() {
                 cursor: "pointer",
               }}
             >
-              {t.label}
+              {t(tb.label)}
             </button>
           );
         })}

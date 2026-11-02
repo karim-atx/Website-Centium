@@ -3,6 +3,7 @@ import { ChevronLeft, EllipsisVertical, type LucideIcon } from "lucide-react";
 import { INK } from "../proInk";
 import { textPx } from "../../../theme/textSize";
 import { useIsDark } from "../../../hooks/useIsDark";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 Library › Programmes: the board's pieces for TR1 to TR22,
@@ -118,7 +119,7 @@ export const LibCard: React.FC<{
         <button
           type="button"
           onClick={(e) => onMenu(e.currentTarget)}
-          aria-label={menuLabel ?? `Options for ${title}`}
+          aria-label={menuLabel ?? t("Options for {title}", { title })}
           className="tap relative shrink-0 self-start flex items-center justify-center before:absolute before:-inset-3 before:content-['']"
           style={{ width: 20, height: 20 }}
         >
@@ -131,8 +132,8 @@ export const LibCard: React.FC<{
 
 export const DetailHeader: React.FC<{ title: string; eyebrow?: string; onBack: () => void; right?: React.ReactNode }> = ({ title, eyebrow, onBack, right }) => (
   <div className="flex items-center" style={{ gap: 8, marginBottom: 10 }}>
-    <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, marginInlineStart: -12 }}>
-      <ChevronLeft size={22} strokeWidth={2} aria-hidden style={{ color: INK.ch }} />
+    <button type="button" onClick={onBack} aria-label={t("Back")} className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, marginInlineStart: -12 }}>
+      <ChevronLeft size={22} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: INK.ch }} />
     </button>
     <div className="flex-1 min-w-0">
       {eyebrow && <p style={{ fontSize: textPx(11), fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: INK.chF }}>{eyebrow}</p>}

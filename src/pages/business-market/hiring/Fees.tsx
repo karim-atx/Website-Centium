@@ -11,6 +11,8 @@ import { HiringEmpty, NotForThisBusiness, PaleNote, RECEIPT_ICON } from "./teamP
 import { feeRoleLine } from "./teamModel";
 import { t } from "../../../i18n/core";
 import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
+import { HiringCreditsCard } from "../../../components/premium/HiringCreditsCard";
+import { useHiringCredits } from "../../../components/premium/usePlanLevel";
 
 // Market + Share 3.0 · W4-B · B-MA.8.5 Hiring fees (Business Hiring Screens
 // lines 187–208, `FEE()` / fees / feesEmpty; frame-check B-MA.8.5, 2 states).
@@ -39,6 +41,8 @@ export default function FeesPage() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [tick, setTick] = useState(0);
   const businessId = biz.canHire ? biz.businessId : null;
+  // Round G1 (#15): the hiring credit balance and packs, only when credits_on.
+  const { credits } = useHiringCredits(businessId);
   const rules = useFeeRules();
 
   useEffect(() => {
@@ -122,6 +126,7 @@ export default function FeesPage() {
     <div style={{ color: m.ink, lineHeight: "normal", paddingBottom: 32 }}>
       <style>{FOCUS_CSS}</style>
       <BackHeader eyebrow={t("Hiring")} title={t("Hiring fees")} onBack={() => navigate(HIRING_ROUTES.hub)} backLabel={t("Back to Hiring")} />
+      <HiringCreditsCard credits={credits} className="mb-3" />
       {body}
     </div>
   );

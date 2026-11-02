@@ -21,18 +21,19 @@ import { confirmedAnswerRow, type ConfirmedAnswer, type ProposalField } from "..
 import { startThread } from "../../../services/messaging";
 import { time12 } from "../../../utils/time12";
 import { FORMS_PATH } from "./FormsHome";
+import { t, tk } from "../../../i18n/core";
 
-const OFFLINE = "You're offline. Try again when you're connected.";
-/** HO20 quick replies (COPY HO20). */
-const QUICK = ["Great work", "Let's talk", "Adjusting your plan"];
+const OFFLINE = tk("You're offline. Try again when you're connected.");
+/** HO20 quick replies (COPY HO20). English keys (tk): shown and written in the app's language with t(). */
+const QUICK = [tk("Great work"), tk("Let's talk"), tk("Adjusting your plan")];
 
 function dayWord(iso: string): string {
   const d = new Date(iso);
   const today = new Date();
   const y = new Date();
   y.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return "today";
-  if (d.toDateString() === y.toDateString()) return "yesterday";
+  if (d.toDateString() === today.toDateString()) return t("today");
+  if (d.toDateString() === y.toDateString()) return t("yesterday");
   return fmtDay(iso);
 }
 const hhmm = (iso: string) => {
@@ -87,9 +88,9 @@ export const ResponseScreen: React.FC = () => {
         <ProCardSkeleton lines={4} height={200} />
       </div>
     );
-  if (data === null) return <ComingSoon line="This response isn't available any more." />;
+  if (data === null) return <ComingSoon line={t("This response isn't available any more.")} />;
   const rel = professionalClients.find((c) => c.clientId === data.response.clientId);
-  const name = rel?.name ?? "A client";
+  const name = rel?.name ?? t("A client");
   const asked = askedQuestions(data.questions, data.response.answers);
   const noteList = notes?.id === data.response.id ? notes.list : [];
   return data.response.formKind === "check_in" ? (
@@ -114,7 +115,7 @@ const Photos: React.FC<{ paths: string[]; label: string }> = ({ paths, label }) 
     <div className="grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6, marginTop: 8 }}>
       {paths.map((p, i) => (
         <span key={p} className="block overflow-hidden" style={{ height: 96, borderRadius: 12, background: `repeating-linear-gradient(45deg, ${INK.soft} 0 6px, ${INK.card} 6px 12px)` }}>
-          {urls[p] && <img src={urls[p]} alt={`${label}, photo ${i + 1}`} className="w-full h-full object-cover" />}
+          {urls[p] && <img src={urls[p]} alt={t("{label}, photo {n}", { label, n: i + 1 })} className="w-full h-full object-cover" />}
         </span>
       ))}
     </div>
@@ -142,7 +143,7 @@ const AnswerRows: React.FC<{ questions: PositionedQuestion[]; answers: Record<st
 const AboutLine: React.FC<{ prompt: string }> = ({ prompt }) =>
   prompt.trim() ? (
     <span className="block" style={{ fontSize: textPx(11.5), color: INK.chS, marginTop: 2, overflowWrap: "anywhere" }}>
-      {`About: ${prompt.trim()}`}
+      {t("About: {question}", { question: prompt.trim() })}
     </span>
   ) : null;
 
@@ -166,7 +167,7 @@ export const SafetyBanner: React.FC<{ response: Pick<FormResponse, "urgent" | "s
       <div className="min-w-0 flex flex-col" style={{ gap: 6, fontSize: textPx(12.5), color: INK.ch, lineHeight: 1.45 }}>
         {w.urgent && (
           <>
-            <span style={{ fontWeight: 800, color: INK.hi }}>Urgent</span>
+            <span style={{ fontWeight: 800, color: INK.hi }}>{t("Urgent")}</span>
             {urgentNotes.length ? (
               urgentNotes.map((n) => (
                 <span key={n.questionId} className="block">
@@ -175,7 +176,7 @@ export const SafetyBanner: React.FC<{ response: Pick<FormResponse, "urgent" | "s
                 </span>
               ))
             ) : (
-              <span className="block">{`${firstName} gave an answer this form marks urgent.`}</span>
+              <span className="block">{t("{name} gave an answer this form marks urgent.", { name: firstName })}</span>
             )}
           </>
         )}
@@ -199,9 +200,9 @@ const NotesForYou: React.FC<{ notes: ResponseNote[] }> = ({ notes }) => {
     <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, padding: "12px 14px", marginBottom: 12 }}>
       <p className="flex items-center" style={{ gap: 6, fontSize: textPx(13), fontWeight: 800, color: INK.ch }}>
         <StickyNote size={14} strokeWidth={2} aria-hidden style={{ color: INK.prDeep }} />
-        Notes for you
+        {t("Notes for you")}
       </p>
-      <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 2 }}>Only you see these.</p>
+      <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 2 }}>{t("Only you see these.")}</p>
       {list.map((n, i) => (
         <p key={n.questionId} style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch, lineHeight: 1.45, padding: "8px 0 0", marginTop: i ? 8 : 6, borderTop: i ? `1px solid ${INK.b06}` : "none", overflowWrap: "anywhere" }}>
           {n.note}
@@ -253,26 +254,26 @@ const CheckInReview: React.FC<{ response: FormResponse; questions: PositionedQue
 
   const mark = async () => {
     if (busy) return;
-    if (!online) return setErr(OFFLINE);
+    if (!online) return setErr(t(OFFLINE));
     setBusy(true);
     setErr(null);
     const r = await reviewResponse(response.id, reply);
     setBusy(false);
-    if (!r.ok) return setErr(r.message);
+    if (!r.ok) return setErr(t(r.message));
     onReviewed();
   };
-  const nextName = next ? professionalClients.find((c) => c.clientId === next.clientId)?.name ?? "A client" : null;
+  const nextName = next ? professionalClients.find((c) => c.clientId === next.clientId)?.name ?? t("A client") : null;
 
   return (
     <div style={{ paddingBottom: 172 }}>
-      <DetailHead eyebrow={`${response.reviewedAt ? "" : "To review · "}Week ${week}`} title={`${name} · ${response.formTitle}`} onBack={back} />
+      <DetailHead eyebrow={response.reviewedAt ? t("Week {n}", { n: week }) : t("To review · Week {n}", { n: week })} title={`${name} · ${response.formTitle}`} onBack={back} />
       <p style={{ fontSize: textPx(12), color: INK.chF, margin: "-6px 0 12px" }}>
-        {`Submitted ${dayWord(response.submittedAt)}, ${time12(hhmm(response.submittedAt))}${hasPrev ? " · compared with the last check-in" : ""}`}
+        {(hasPrev ? t("Submitted {day}, {time} · compared with the last check-in", { day: dayWord(response.submittedAt), time: time12(hhmm(response.submittedAt)) }) : t("Submitted {day}, {time}", { day: dayWord(response.submittedAt), time: time12(hhmm(response.submittedAt)) }))}
       </p>
       <SafetyBanner response={response} firstName={first} notes={notes} />
       <NotesForYou notes={notes} />
       <AddedToProfile responseId={response.id} firstName={first} />
-      {boxes.length > 0 && <NumBoxes boxes={boxes.map((b) => ({ label: b.label, value: b.value, unit: b.unit, delta: b.delta, dir: null, line: b.was == null ? "First answer" : `Was ${b.was}`, spark: b.spark }))} />}
+      {boxes.length > 0 && <NumBoxes boxes={boxes.map((b) => ({ label: b.label, value: b.value, unit: b.unit, delta: b.delta, dir: null, line: b.was == null ? t("First answer") : t("Was {value}", { value: b.was }), spark: b.spark }))} />}
       {photos.map((p) => (
         <div key={p.q.id} style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, padding: "12px 14px", marginBottom: 10 }}>
           <p style={{ fontSize: textPx(12), color: INK.chF }}>{p.q.prompt}</p>
@@ -283,12 +284,12 @@ const CheckInReview: React.FC<{ response: FormResponse; questions: PositionedQue
       {response.reviewedAt ? (
         <div className="flex items-start" style={{ gap: 8, borderRadius: 14, background: INK.goodBg, padding: "10px 12px" }}>
           <CircleCheck size={15} strokeWidth={2} aria-hidden style={{ color: INK.good, flexShrink: 0, marginTop: 2 }} />
-          <span style={{ fontSize: textPx(12.5), color: INK.ch, lineHeight: 1.45 }}>{response.reply ? `Reviewed. ${first} got your reply: "${response.reply}"` : `Reviewed. ${first} was told you reviewed it.`}</span>
+          <span style={{ fontSize: textPx(12.5), color: INK.ch, lineHeight: 1.45 }}>{response.reply ? t("Reviewed. {name} got your reply: \"{reply}\"", { name: first, reply: response.reply }) : t("Reviewed. {name} was told you reviewed it.", { name: first })}</span>
         </div>
       ) : (
         <>
           <label htmlFor="ho20-reply" className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-            {`Reply to ${first}`}
+            {t("Reply to {name}", { name: first })}
           </label>
           <textarea
             id="ho20-reply"
@@ -301,8 +302,8 @@ const CheckInReview: React.FC<{ response: FormResponse; questions: PositionedQue
           />
           <div className="flex flex-wrap" style={{ gap: 6, marginTop: 8 }}>
             {QUICK.map((x) => (
-              <button key={x} type="button" onClick={() => setReply(x)} className="tap inline-flex items-center relative before:absolute before:inset-x-0 before:-inset-y-[7px] before:content-['']" style={{ height: 30, padding: "0 10px", borderRadius: 10, background: INK.soft, fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>
-                {x}
+              <button key={x} type="button" onClick={() => setReply(t(x))} className="tap inline-flex items-center relative before:absolute before:inset-x-0 before:-inset-y-[7px] before:content-['']" style={{ height: 30, padding: "0 10px", borderRadius: 10, background: INK.soft, fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>
+                {t(x)}
               </button>
             ))}
           </div>
@@ -310,9 +311,9 @@ const CheckInReview: React.FC<{ response: FormResponse; questions: PositionedQue
       )}
       {err && <div style={{ marginTop: 10 }}><ErrorLine>{err}</ErrorLine></div>}
       {!response.reviewedAt ? (
-        <PinnedCta primary={{ label: "Mark as reviewed", icon: <Check size={15} />, loading: busy, onClick: () => void mark() }} />
+        <PinnedCta primary={{ label: t("Mark as reviewed"), icon: <Check size={15} />, loading: busy, onClick: () => void mark() }} />
       ) : next && nextName ? (
-        <PinnedCta primary={{ label: `Next check-in · ${nextName}`, icon: <ArrowRight size={15} />, onClick: () => navigate(`${FORMS_PATH}/responses/${next.id}`, { replace: true }) }} />
+        <PinnedCta primary={{ label: t("Next check-in · {name}", { name: nextName }), icon: <ArrowRight size={15} className="rtl:-scale-x-100" />, onClick: () => navigate(`${FORMS_PATH}/responses/${next.id}`, { replace: true }) }} />
       ) : null}
     </div>
   );
@@ -348,7 +349,7 @@ const AddedToProfile: React.FC<{ responseId: string; firstName: string }> = ({ r
     <div style={{ borderRadius: 16, background: INK.tealPale, padding: "12px 14px", marginBottom: 12 }}>
       <p className="flex items-center" style={{ gap: 6, fontSize: textPx(13), fontWeight: 800, color: ink }}>
         <ArrowDownToLine size={14} strokeWidth={2} color={ink} aria-hidden />
-        {`Added to ${firstName}’s profile`}
+        {t("Added to {name}’s profile", { name: firstName })}
       </p>
       <div className="flex flex-col" style={{ gap: 6, marginTop: 8 }}>
         {list.map((a) => {
@@ -390,15 +391,15 @@ const IntakeAnswers: React.FC<{ response: FormResponse; questions: PositionedQue
   const photos = photoAnswers(questions, response);
   const rows = questions.filter((q) => q.type !== "photo" || !photos.some((p) => p.q.id === q.id));
   const message = async () => {
-    if (!online) return setErr(OFFLINE);
+    if (!online) return setErr(t(OFFLINE));
     const r = await startThread(response.clientId);
     if (r.ok) navigate("/app/messages", { state: { threadId: r.threadId } });
-    else setErr(r.message);
+    else setErr(t(r.message));
   };
   return (
     <div style={{ paddingBottom: 120 }}>
-      <DetailHead eyebrow={response.formTitle} title={name} onBack={back} right={<RoundBtn icon={MessageCircle} label={`Message ${first}`} onClick={() => void message()} />} />
-      <p style={{ fontSize: textPx(12), color: INK.chF, margin: "-6px 0 12px" }}>{`Submitted ${fmtDay(response.submittedAt, true)} · ${answeredCount(questions, response.answers)} of ${questions.length} answered`}</p>
+      <DetailHead eyebrow={response.formTitle} title={name} onBack={back} right={<RoundBtn icon={MessageCircle} label={t("Message {name}", { name: first })} onClick={() => void message()} />} />
+      <p style={{ fontSize: textPx(12), color: INK.chF, margin: "-6px 0 12px" }}>{t("Submitted {date} · {answered} of {total} answered", { date: fmtDay(response.submittedAt, true), answered: answeredCount(questions, response.answers), total: questions.length })}</p>
       <SafetyBanner response={response} firstName={first} notes={notes} />
       {err && <ErrorLine>{err}</ErrorLine>}
       <NotesForYou notes={notes} />

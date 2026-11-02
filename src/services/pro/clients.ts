@@ -24,14 +24,24 @@ import { fetchAdherencePct, localIso, shiftIso } from "./home";
 import { fetchClientAccess } from "./access";
 import { readWinSharing, type WinSharingSetting } from "../../components/share/shareCardModel";
 import { appLocale } from "../../i18n/format";
+import { t, tn } from "../../i18n/core";
 
 export type ClientStage = "onboarding" | "active" | "paused" | "completed";
 export const CLIENT_STAGES: ClientStage[] = ["onboarding", "active", "paused", "completed"];
+/** The stage names, in the app's language (getters, so each read follows the language). */
 export const STAGE_LABEL: Record<ClientStage, string> = {
-  onboarding: "Onboarding",
-  active: "Active",
-  paused: "Paused",
-  completed: "Completed",
+  get onboarding() {
+    return t("Onboarding");
+  },
+  get active() {
+    return t("Active");
+  },
+  get paused() {
+    return t("Paused");
+  },
+  get completed() {
+    return t("Completed");
+  },
 };
 
 export type Read<T> = { ok: true; data: T } | { ok: false; offline: boolean };
@@ -78,7 +88,7 @@ export async function fetchClientStages(): Promise<Read<StageRow[]>> {
 
 export async function setClientStage(clientId: string, stage: ClientStage): Promise<Write> {
   const { error } = await rpc("set_client_stage", { p_client_id: clientId, p_stage: stage });
-  return error ? failed(error, "Couldn't change the stage. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't change the stage. Try again.")) : { ok: true };
 }
 
 export interface ClientFlags {
@@ -213,7 +223,7 @@ export async function fetchActiveMealPlans(me: string): Promise<Read<ClientPlan[
   for (const r of (data ?? []) as unknown as Row[]) {
     if (seen.has(r.client_id)) continue;
     seen.add(r.client_id);
-    const kcal = r.meal_plans?.kcal_target ? `, ${Math.round(Number(r.meal_plans.kcal_target)).toLocaleString(appLocale("en-GB"))} kcal` : "";
+    const kcal = r.meal_plans?.kcal_target ? `${t(", ")}${t("{kcal} kcal", { kcal: Math.round(Number(r.meal_plans.kcal_target)).toLocaleString(appLocale("en-GB")) })}` : "";
     out.push({ clientId: r.client_id, name: `${r.meal_plans?.name ?? ""}${kcal}`, week: weekOf(r.starts_on, 1, null, today), endsOn: r.ends_on });
   }
   return { ok: true, data: out };
@@ -245,23 +255,23 @@ export async function fetchActiveCarePlans(me: string): Promise<Read<ClientPlan[
 export const TAG_MAX = 30;
 
 export async function addTag(me: string, clientId: string, tag: string): Promise<Write> {
-  const t = tag.trim();
-  if (!t) return { ok: false, message: "Type a tag first." };
-  if (t.length > TAG_MAX) return { ok: false, message: `Keep tags to ${TAG_MAX} characters.` };
-  const { error } = await supabase.from("professional_client_tags" as never).insert({ professional_id: me, client_id: clientId, tag: t } as never);
+  const clean = tag.trim();
+  if (!clean) return { ok: false, message: t("Type a tag first.") };
+  if (clean.length > TAG_MAX) return { ok: false, message: t("Keep tags to {max} characters.", { max: TAG_MAX }) };
+  const { error } = await supabase.from("professional_client_tags" as never).insert({ professional_id: me, client_id: clientId, tag: clean } as never);
   if (error && (error as { code?: string }).code === "23505") return { ok: true };
-  return error ? failed(error, "Couldn't add the tag. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't add the tag. Try again.")) : { ok: true };
 }
 
 export async function removeTag(me: string, clientId: string, tag: string): Promise<Write> {
   const { error } = await supabase.from("professional_client_tags" as never).delete().eq("professional_id", me).eq("client_id", clientId).eq("tag", tag);
-  return error ? failed(error, "Couldn't remove the tag. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't remove the tag. Try again.")) : { ok: true };
 }
 
 /** CL2 "Include nutrition coaching" (Full coaching only). */
 export async function setNutritionCoaching(relationshipId: string, on: boolean): Promise<Write> {
   const { error } = await supabase.from("professional_clients").update({ nutrition_coaching: on } as never).eq("id", relationshipId);
-  return error ? failed(error, "Couldn't save. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't save. Try again.")) : { ok: true };
 }
 
 export interface CommunicationPreferences {
@@ -287,7 +297,7 @@ export async function saveCommunicationPreferences(relationshipId: string, p: Co
       communication_boundaries: clean(p.communicationBoundaries),
     })
     .eq("id", relationshipId);
-  return error ? failed(error, "Couldn't save. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't save. Try again.")) : { ok: true };
 }
 
 /** "2h ago", "yesterday", "6 days ago", "Oct 3" (activity lines). */
@@ -295,12 +305,12 @@ export function agoLabel(iso: string | null, now = new Date()): string | null {
   if (!iso) return null;
   const at = new Date(iso);
   const mins = Math.round((now.getTime() - at.getTime()) / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 1) return t("just now");
+  if (mins < 60) return t("{mins} min ago", { mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24 && localIso(at) === localIso(now)) return `${hours}h ago`;
-  if (localIso(at) === shiftIso(localIso(now), -1)) return "yesterday";
+  if (hours < 24 && localIso(at) === localIso(now)) return t("{hours}h ago", { hours });
+  if (localIso(at) === shiftIso(localIso(now), -1)) return t("yesterday");
   const days = Math.round((new Date(`${localIso(now)}T00:00:00`).getTime() - new Date(`${localIso(at)}T00:00:00`).getTime()) / 86400000);
-  if (days < 7) return `${days} days ago`;
+  if (days < 7) return tn(days, "{n} day ago", "{n} days ago");
   return at.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 }

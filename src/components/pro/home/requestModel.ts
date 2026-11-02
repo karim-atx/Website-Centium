@@ -6,16 +6,17 @@
 //   (undo_client_request_decline; ATXH2 once the window has passed).
 
 import { formatPrice } from "../../../utils/price";
+import { t, tk } from "../../../i18n/core";
 
 export const UNDO_WINDOW_MS = 5 * 60 * 1000;
 
 /** The billing words after a plan price. HO7 draws "$120 a month"; the others follow it. */
 const PER: Record<string, string> = {
-  daily: " a day",
-  monthly: " a month",
-  quarterly: " every 3 months",
-  semiannually: " every 6 months",
-  annually: " a year",
+  daily: tk("{price} a day"),
+  monthly: tk("{price} a month"),
+  quarterly: tk("{price} every 3 months"),
+  semiannually: tk("{price} every 6 months"),
+  annually: tk("{price} a year"),
 };
 
 /** "Monthly coaching · $120 a month", or null when the request names no plan. */
@@ -23,7 +24,9 @@ export function requestPlanLine(planName: string | null, price: number | null, b
   const name = planName?.trim();
   if (!name) return null;
   if (price === null || !Number.isFinite(price)) return name;
-  return `${name} · ${formatPrice(price) || "$0"}${(billing && PER[billing]) ?? ""}`;
+  const amount = formatPrice(price) || "$0";
+  const per = billing ? PER[billing] : undefined;
+  return `${name} · ${per ? t(per, { price: amount }) : amount}`;
 }
 
 /** Whether a decline at `resolvedAt` can still be undone at `now`. */

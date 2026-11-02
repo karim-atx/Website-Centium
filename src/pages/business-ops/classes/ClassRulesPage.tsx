@@ -14,6 +14,7 @@ import { MarketError, MarketOffline, MarketSkeleton } from "../../../components/
 import { BackHeader, BoardSwitch, useMarketColours } from "./parts";
 import { useSchedule } from "./useSchedule";
 import { todayIso } from "./scheduleModel";
+import { PremiumBookingSetting } from "../../../components/premium/PremiumBooking";
 
 // Waitlist and late cancels (OP1-094; OpsTabsV4 view=settings), one card per
 // class type (V6-160: rules per class type).
@@ -112,6 +113,8 @@ export default function ClassRulesPage() {
       )}
       {!api.online && <MarketOffline loaded style={{ marginTop: 12 }} />}
       <div style={{ height: 14 }} aria-hidden />
+      {/* Round G2: early booking and waitlist priority for Premium members (only with the switch on). */}
+      {api.businessId && <PremiumBookingSetting businessId={api.businessId} canWrite={canWrite && api.online} />}
 
       {loading ? (
         <MarketSkeleton radius={20} rows={3} count={2} gap={12} label="Loading your class rules" />
