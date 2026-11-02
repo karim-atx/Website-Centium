@@ -28,10 +28,9 @@ import { t } from "../../../i18n/core";
 // (my_weekly_review(p_week_start), last week by default, Monday to Sunday,
 // with week navigation) and the target suggestions (my_target_suggestions()).
 //
-// THE ROUTE: the Monday push ("Your week in Centium", queue_weekly_summary)
-// opens /app today (send-reminder-push deepLinkFor has no weekly_summary
-// entry), so Home carries the way in (WeeklyReviewCard); this route is the
-// one to add to deepLinkFor (a Database need, in the PR).
+// THE ROUTE: the Monday push (kind weekly_summary, queue_weekly_summary)
+// opens /app/weekly-review (send-reminder-push deepLinkFor, Database G3
+// fixes), exactly this path; the Home card that stood in for it is gone.
 //
 // - Counts always; the numbers (average steps, sleep, meditation minutes)
 //   only when the review isn't hiding them (numbers_hidden in

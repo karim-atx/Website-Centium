@@ -36,7 +36,6 @@ export const FILES: string[] = [
   "pages/mind/library/LibrarySessionPage.tsx",
   "pages/mind/library/ScriptRunner.tsx",
   "pages/mind/journal/JournalPrompts.tsx",
-  "pages/home/review/WeeklyReviewCard.tsx",
   "pages/home/review/WeeklyReviewPage.tsx",
   "pages/health/doctor/DoctorSummaryEntry.tsx",
   "pages/health/doctor/DoctorSummaryPage.tsx",
@@ -120,7 +119,6 @@ const premium3: Catalogue = {
 
   // == The weekly review and goal suggestions (pages/home/review) ==
   "Your week": "أسبوعك",
-  "Last week at a glance, with goal suggestions": "أسبوعك الماضي في لمحة، مع اقتراحات لأهدافك",
   "Week before": "الأسبوع السابق",
   "Week after": "الأسبوع التالي",
   "Nothing to show for this week.": "لا شيء لعرضه لهذا الأسبوع.",
