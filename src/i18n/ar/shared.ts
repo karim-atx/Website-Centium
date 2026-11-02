@@ -290,7 +290,7 @@ const shared: Catalogue = {
   "{service} album": "ألبوم {service}",
   "{n} weeks": { zero: "0 أسابيع", one: "أسبوع واحد", two: "أسبوعان", few: "{n} أسابيع", many: "{n} أسبوعًا", other: "{n} أسبوع" },
   "{n} exercises": { zero: "0 تمارين", one: "تمرين واحد", two: "تمرينان", few: "{n} تمارين", many: "{n} تمرينًا", other: "{n} تمرين" },
-  "{n} min": "{n} دقيقة",
+  "{n} min": { zero: "0 دقيقة", one: "دقيقة واحدة", two: "دقيقتان", few: "{n} دقائق", many: "{n} دقيقةً", other: "{n} دقيقة" },
 
   // == Settings › Practice › Booking sheets ==
   "Booking link": "رابط الحجز",

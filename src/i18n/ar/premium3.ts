@@ -52,7 +52,7 @@ const premium3: Catalogue = {
 
   // == Shared G3 parts (components/premium/g3, services/premium/g3Calls) ==
   "Week {n}": "الأسبوع {n}",
-  "{n} min": "{n} دقيقة",
+  "{n} min": { zero: "0 دقيقة", one: "دقيقة واحدة", two: "دقيقتان", few: "{n} دقائق", many: "{n} دقيقةً", other: "{n} دقيقة" },
 
   // == Centium programmes (pages/workout/centium) ==
   "Centium programmes": "برامج Centium",
