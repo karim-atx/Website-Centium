@@ -1,7 +1,7 @@
 import React from "react";
 import type { MetricKey } from "../MetricWidget";
 import { mc, useHealthMode } from "./MetricKit";
-import { daysOf, monthLetter, monthlyAverages, type Period } from "./periods";
+import { daysOf, monthLetter, monthlyAverages, weekLetter, type Period } from "./periods";
 import { isRtl } from "../../../i18n/core";
 
 // The rounded-bar range chart (HE1.2 week pattern), shared by Steps, Water,
@@ -154,8 +154,6 @@ export const LegendDash: React.FC<{ color: string; strokeWidth?: number; dash?: 
   </svg>
 );
 
-/** "M T W T F S S" for a Monday week. */
-export const WEEK_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
 
 /**
  * Bars for a week / month / year period from a day-keyed series (logged days
@@ -171,7 +169,7 @@ export function buildGoalBars(
   if (p.range === "week" || p.range === "month") {
     return daysOf(p).map((d, i) => ({
       key: d,
-      label: p.range === "week" ? WEEK_LETTERS[i] : String(Number(d.slice(8))),
+      label: p.range === "week" ? weekLetter(i) : String(Number(d.slice(8))),
       value: logged(d),
       ghost: d > today,
       current: d === today,

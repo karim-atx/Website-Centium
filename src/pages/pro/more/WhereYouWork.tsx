@@ -18,12 +18,13 @@ import { useIsDark } from "../../../hooks/useIsDark";
 import { fetchMyProfile, NEEDS_DOB, type ProfessionalProfile } from "../../../services/professional-profile";
 import { fetchEmployments, saveServiceRadius, saveShowTeamWorkplaces, saveWorkMode, type Employment } from "../../../services/pro/profile";
 import { textPx } from "../../../theme/textSize";
+import { t, tk } from "../../../i18n/core";
 
 const TABS: { key: WorkTab; label: string }[] = [
-  { key: "independent", label: "Independent" },
-  { key: "business", label: "Business" },
-  { key: "online", label: "Online" },
-  { key: "mix", label: "Mix" },
+  { key: "independent", label: tk("Independent") },
+  { key: "business", label: tk("Business") },
+  { key: "online", label: tk("Online") },
+  { key: "mix", label: tk("Mix") },
 ];
 
 /**
@@ -138,19 +139,19 @@ export default function WhereYouWork() {
   const circle = 40 + 150 * fill;
 
   return (
-    <SubPage title="Where you work" subtitle="How and where clients can see you" bottomPad={172}>
+    <SubPage title={t("Where you work")} subtitle={t("How and where clients can see you")} bottomPad={172}>
       {offline && facts && <OfflineLine />}
       {error && !facts ? (
         <ProError onRetry={() => void reload()} />
       ) : loading ? (
-        <div className="flex flex-col" style={{ gap: 12 }} role="status" aria-label="Loading">
+        <div className="flex flex-col" style={{ gap: 12 }} role="status" aria-label={t("Loading")}>
           <ProCardSkeleton lines={3} height={170} />
           <ProCardSkeleton lines={2} height={220} />
         </div>
       ) : (
         <>
           <SegmentedTabs
-            items={TABS}
+            items={TABS.map((x) => ({ ...x, label: t(x.label) }))}
             activeKey={shownTab ?? ""}
             onChange={(k) => {
               setTab(k as WorkTab);
@@ -162,32 +163,32 @@ export default function WhereYouWork() {
           />
 
           <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "4px 14px", marginBottom: 12 }}>
-            {own && <SettingsRow icon={MapPin} title={listing?.location || "Your own space"} sub="Your own space" last={!(jobs ?? []).length && !online} />}
+            {own && <SettingsRow icon={MapPin} title={listing?.location || t("Your own space")} sub={t("Your own space")} last={!(jobs ?? []).length && !online} />}
             {(jobs ?? []).map((j, i) => (
-              <SettingsRow key={j.businessId} icon={Store} title={j.businessName} sub="Connected business" onClick={() => navigate(`/app/more/businesses/${j.businessId}`)} last={i === jobs!.length - 1 && !online} />
+              <SettingsRow key={j.businessId} icon={Store} title={j.businessName} sub={t("Connected business")} onClick={() => navigate(`/app/more/businesses/${j.businessId}`)} last={i === jobs!.length - 1 && !online} />
             ))}
-            {online && <SettingsRow icon={Video} title="Online" sub="Video sessions" last />}
+            {online && <SettingsRow icon={Video} title={t("Online")} sub={t("Video sessions")} last />}
             {!own && !online && !(jobs ?? []).length && (
-              <StateLine>{shownTab === "business" ? "You're not working at a business yet. Join one from Businesses." : "Choose how you work above."}</StateLine>
+              <StateLine>{shownTab === "business" ? t("You're not working at a business yet. Join one from Businesses.") : t("Choose how you work above.")}</StateLine>
             )}
           </div>
           {(jobs ?? []).length > 0 && facts && (
             <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "4px 14px", marginBottom: 12 }}>
               <SettingsRow
                 icon={Globe}
-                title="Show on your public profile"
-                sub="Teams you joined. A business that hired you through Centium always shows."
-                right={<Toggle checked={facts.showTeamWorkplaces} onChange={(v) => void setShowTeam(v)} disabled={teamBusy} label="Show on your public profile" />}
+                title={t("Show on your public profile")}
+                sub={t("Teams you joined. A business that hired you through Centium always shows.")}
+                right={<Toggle checked={facts.showTeamWorkplaces} onChange={(v) => void setShowTeam(v)} disabled={teamBusy} label={t("Show on your public profile")} />}
                 last
               />
             </div>
           )}
           {shownTab === "business" && !(jobs ?? []).length && (
-            <SettingsRow icon={Building2} title="Businesses" sub="Join a business or answer an invitation" onClick={() => navigate("/app/more/businesses")} last />
+            <SettingsRow icon={Building2} title={t("Businesses")} sub={t("Join a business or answer an invitation")} onClick={() => navigate("/app/more/businesses")} last />
           )}
 
           <div ref={areaRef} style={{ scrollMarginTop: 16 }}>
-            <SectionHead label="Service area" />
+            <SectionHead label={t("Service area")} />
               {areaTab === "radius" ? (
                 <>
                   <div
@@ -206,8 +207,8 @@ export default function WhereYouWork() {
                     )}
                   </div>
                   <div className="flex justify-between" style={{ fontSize: textPx(12), color: INK.chS }}>
-                    <span id="radius-label">Radius</span>
-                    <b style={{ color: INK.ch }}>{shownKm ? `${shownKm} km` : "Not set"}</b>
+                    <span id="radius-label">{t("Radius")}</span>
+                    <b style={{ color: INK.ch }}>{shownKm ? `${shownKm} km` : t("Not set")}</b>
                   </div>
                   <div className="relative" style={{ marginTop: 8, height: 24 }}>
                     <span aria-hidden className="absolute block" style={{ insetInlineStart: 0, insetInlineEnd: 0, top: 8, height: 8, borderRadius: 9999, background: `linear-gradient(to right, ${INK.pr} ${fill * 100}%, ${INK.soft} ${fill * 100}%)` }} />
@@ -218,7 +219,7 @@ export default function WhereYouWork() {
                       step={1}
                       value={radiusPosition(shownKm)}
                       aria-labelledby="radius-label"
-                      aria-valuetext={shownKm ? `${shownKm} km` : "Not set"}
+                      aria-valuetext={shownKm ? `${shownKm} km` : t("Not set")}
                       onChange={(e) => {
                         setKm(radiusAtPosition(Number(e.target.value)));
                         setSaved(false);
@@ -232,8 +233,8 @@ export default function WhereYouWork() {
                 <div>
                   {dobAsk && (
                     <DobInline
-                      title="Add your date of birth"
-                      body={`${NEEDS_DOB} It's kept private: clients never see it.`}
+                      title={t("Add your date of birth")}
+                      body={`${t(NEEDS_DOB)} ${t("It's kept private: clients never see it.")}`}
                       onSaved={() => {
                         const retry = dobAsk.retry;
                         setDobAsk(null);
@@ -244,12 +245,12 @@ export default function WhereYouWork() {
                   <MapAreaSection mapArea={listing.mapArea} disabled={false} dark={dark} onChanged={(next) => setListing((p) => (p ? { ...p, mapArea: next } : p))} onNeedsDob={(retry) => setDobAsk({ retry })} />
                 </div>
               ) : (
-                <StateLine>Save your profile details first. There's nothing to show on the map yet.</StateLine>
+                <StateLine>{t("Save your profile details first. There's nothing to show on the map yet.")}</StateLine>
               )}
               <SegmentedTabs
                 items={[
-                  { key: "radius", label: "Radius" },
-                  { key: "areas", label: "Areas" },
+                  { key: "radius", label: t("Radius") },
+                  { key: "areas", label: t("Areas") },
                 ]}
                 activeKey={areaTab}
                 onChange={(k) => setAreaTab(k as "radius" | "areas")}
@@ -261,15 +262,14 @@ export default function WhereYouWork() {
           {saveError && <ErrorLine>{saveError}</ErrorLine>}
           {saved && !dirty && (
             <p role="status" className="flex items-center" style={{ gap: 6, marginTop: 10, fontSize: textPx(12), fontWeight: 600, color: INK.good }}>
-              <Check size={13} aria-hidden /> Saved
-            </p>
+              <Check size={13} aria-hidden />{" "}{t("Saved")}</p>
           )}
         </>
       )}
 
       {!loading && (
         <PinnedSlot>
-          <CtaButton label="Save" icon={Check} onClick={() => void save()} disabled={!dirty} busy={busy} full />
+          <CtaButton label={t("Save")} icon={Check} onClick={() => void save()} disabled={!dirty} busy={busy} full />
         </PinnedSlot>
       )}
     </SubPage>

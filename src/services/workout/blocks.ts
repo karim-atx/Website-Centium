@@ -1,4 +1,5 @@
 import type { BlockKind, Exercise, WorkoutBlock } from "../../types";
+import { t } from "../../i18n/core";
 
 // Grouping exercises into blocks, and moving them without breaking one.
 //
@@ -75,13 +76,13 @@ export function normalizeBlock(block: WorkoutBlock): WorkoutBlock {
 export function checkBlock(block: WorkoutBlock, memberCount: number): string | null {
   if (memberCount === 0) return null; // memberless is legal, and transient
   if (block.kind === "superset" && memberCount < 2) {
-    return "A superset needs at least two exercises.";
+    return t("A superset needs at least two exercises.");
   }
-  if (block.kind === "amrap" && !block.timeCapSeconds) return "Set how long the AMRAP runs for.";
+  if (block.kind === "amrap" && !block.timeCapSeconds) return t("Set how long the AMRAP runs for.");
   if (block.kind === "emom" && (!block.intervalSeconds || !block.rounds)) {
-    return "An EMOM needs an interval and a number of rounds.";
+    return t("An EMOM needs an interval and a number of rounds.");
   }
-  if (block.kind === "for_time" && !block.rounds) return "Set how many rounds.";
+  if (block.kind === "for_time" && !block.rounds) return t("Set how many rounds.");
   return null;
 }
 
@@ -97,22 +98,22 @@ export function canGroup(
   exercises: Exercise[],
   selectedIds: string[]
 ): { ok: true } | { ok: false; message: string } {
-  if (selectedIds.length < 2) return { ok: false, message: "Pick at least two exercises." };
+  if (selectedIds.length < 2) return { ok: false, message: t("Pick at least two exercises.") };
   const indices = selectedIds
     .map((id) => exercises.findIndex((e) => e.id === id))
     .filter((i) => i >= 0)
     .sort((a, b) => a - b);
   if (indices.length !== selectedIds.length) {
-    return { ok: false, message: "Something in that selection is no longer here." };
+    return { ok: false, message: t("Something in that selection is no longer here.") };
   }
   if (indices[indices.length - 1] - indices[0] + 1 !== indices.length) {
     // Deliberately not the toolbar’s idle hint, which says the same thing in
     // the same words: a refusal that reads identically to the standing
     // instruction looks like the tap did nothing at all.
-    return { ok: false, message: "There is a gap in that selection. A block has to be one unbroken run." };
+    return { ok: false, message: t("There is a gap in that selection. A block has to be one unbroken run.") };
   }
   if (indices.some((i) => exercises[i].blockId)) {
-    return { ok: false, message: "Ungroup those first. They're already in a block." };
+    return { ok: false, message: t("Ungroup those first. They're already in a block.") };
   }
   return { ok: true };
 }

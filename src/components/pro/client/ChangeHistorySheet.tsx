@@ -8,6 +8,7 @@ import { Avatar } from "./kit";
 import { fmtDay } from "./clientFormat";
 import { fetchChangeHistory, type ChangeEntry } from "../../../services/pro/clientPage";
 import { clock12 } from "../../../utils/time12";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · CL4 Change history (source gen/r6b.js auditSheet6): a
@@ -31,16 +32,16 @@ export const ChangeHistorySheet: React.FC<{ open: boolean; onClose: () => void; 
       live = false;
     };
   }, [open, authUserId, clientId, firstName, nonce]);
-  const me = user.firstName?.trim() || "You";
+  const me = user.firstName?.trim() || t("You");
   return (
-    <BottomSheet open={open} onClose={onClose} title="Change history">
-      <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 8 }}>{`Every change to ${firstName}'s plans, sharing and stage, newest first.`}</p>
+    <BottomSheet open={open} onClose={onClose} title={t("Change history")}>
+      <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 8 }}>{t("Every change to {name}'s plans, sharing and stage, newest first.", { name: firstName })}</p>
       {rows.error ? (
         <ProError onRetry={() => setNonce((n) => n + 1)} />
       ) : !rows.list ? (
         <ProCardSkeleton lines={4} />
       ) : rows.list.length === 0 ? (
-        <p style={{ padding: "10px 0", fontSize: textPx(12.5), color: INK.chF }}>No changes yet.</p>
+        <p style={{ padding: "10px 0", fontSize: textPx(12.5), color: INK.chF }}>{t("No changes yet.")}</p>
       ) : (
         rows.list.map((r, i) => (
           <div key={r.id} className="flex" style={{ gap: 12, padding: "10px 0", borderBottom: i < rows.list!.length - 1 ? `1px solid ${INK.b06}` : "none" }}>

@@ -115,6 +115,9 @@ test("billing history wording: titles and statuses never name a member's payment
 });
 
 test("seat purchase refusals and the missing-function rule", () => {
+  assert.equal(seatPurchaseRefusal("ATXQ3").kind, "in_app");
+  assert.match(seatPurchaseRefusal("ATXQ3").message, /Centium app/);
+  assert.doesNotMatch(seatPurchaseRefusal("ATXQ3").message, /cash|bank transfer/i);
   assert.equal(seatPurchaseRefusal("ATXD7").kind, "already_pending");
   assert.equal(seatPurchaseRefusal("ATXD6").kind, "no_plan");
   assert.equal(seatPurchaseRefusal("ATXD6", "buy", "seat blocks need an active business plan").message, "Seats need an active Business plan.");

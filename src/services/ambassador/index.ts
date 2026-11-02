@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { APPLY_FALLBACK, applyRefusalLine, toAmbassadorStatus, type AmbassadorStatus, type MyAmbassadorApplicationRow } from "./ambassadorLogic";
+import { t } from "../../i18n/core";
 
 export * from "./ambassadorLogic";
 
@@ -102,9 +103,9 @@ export async function applyForAmbassador(input: { motivation: string; link: stri
       p_accept_terms: input.acceptTerms,
     });
     if (error) return { ok: false, code: error.code ?? null, message: isOffline(error) ? OFFLINE_MESSAGE : applyRefusalLine(error) };
-    if (typeof data !== "string" || !data) return { ok: false, code: null, message: APPLY_FALLBACK };
+    if (typeof data !== "string" || !data) return { ok: false, code: null, message: t(APPLY_FALLBACK) };
     return { ok: true, id: data };
   } catch (e) {
-    return { ok: false, code: null, message: isOffline(e) ? OFFLINE_MESSAGE : APPLY_FALLBACK };
+    return { ok: false, code: null, message: isOffline(e) ? OFFLINE_MESSAGE : t(APPLY_FALLBACK) };
   }
 }

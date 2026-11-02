@@ -12,8 +12,8 @@ export const PRESENTATION_PLATFORM = "web" as const;
 /** theme_mode: light / dark / auto ('auto' follows the operating system). */
 export type ThemeMode = "light" | "dark" | "auto";
 
-/** The five color_theme values the contract says to offer. Never ocean, sunset or berry. */
-export type DbColorTheme = "centium" | "sky_slate" | "rose_blush" | "gold_amber" | "coral_terracotta";
+/** The five color_theme values the contract says to offer, plus Round G4's three Premium ones (offered only with the switch on). Never ocean, sunset or berry. */
+export type DbColorTheme = "centium" | "sky_slate" | "rose_blush" | "gold_amber" | "coral_terracotta" | "forest_sage" | "midnight_indigo" | "plum_lilac";
 
 /** Everything this device shows, as the app holds it. */
 export interface Presentation {
@@ -55,6 +55,9 @@ const TO_DB: Record<ColorTheme, DbColorTheme> = {
   rose: "rose_blush",
   gold: "gold_amber",
   coral: "coral_terracotta",
+  forest: "forest_sage",
+  midnight: "midnight_indigo",
+  plum: "plum_lilac",
 };
 
 /** The app's theme id as the color_theme enum value. */

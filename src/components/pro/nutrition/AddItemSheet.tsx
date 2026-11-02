@@ -12,11 +12,12 @@ import { listFoods, searchFoods, type FoodSearchResult } from "../../../services
 import { fetchConflicts, type ItemDraft } from "../../../services/pro/nutrition";
 import type { DietaryNeeds } from "../../../services/pro/clientPage";
 import { DietStrip, Flag, SearchField } from "./kit";
-import { allergenLabel, restrictionLabel } from "./nuFormat";
+import { conflictBody, conflictTitle, restrictionLabel } from "./nuFormat";
 import { useTileBg } from "./hooks";
 import { perServing } from "./itemFacts";
 import { SLOT_CHIP_ORDER, SLOT_LABEL, gramsAllowed, portionMultiplier, scaleMacros, worstConflict, type ConflictRow, type ItemKind, type MealSlot } from "./nutritionModel";
 import { appLocale } from "../../../i18n/format";
+import { t, tk, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · NU3 v2 "Add food with conflict flags" and NU4 v2 "Add food ·
@@ -54,10 +55,10 @@ export interface AddContext {
 type Pick = { kind: ItemKind; id: string; name: string; sub: string; per: { kcal: number; p: number; c: number; f: number }; servingLabel: string | null };
 type Filter = "all" | "recipes" | "foods" | "meals";
 const FILTERS: { key: Filter; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "recipes", label: "Recipes" },
-  { key: "foods", label: "Foods" },
-  { key: "meals", label: "Meals" },
+  { key: "all", label: tk("All") },
+  { key: "recipes", label: tk("Recipes") },
+  { key: "foods", label: tk("Foods") },
+  { key: "meals", label: tk("Meals") },
 ];
 
 
@@ -127,19 +128,19 @@ export const AddItemSheet: React.FC<{
       .filter((r) => match(r.title))
       .map((r) => {
         const base = perServing("recipe", r.id, null, { recipes, customMeals })!;
-        return { kind: "recipe", id: r.id, name: r.title, sub: `Your recipe · ${r.servings} ${r.servings === 1 ? "serving" : "servings"}`, per: base.per, servingLabel: null };
+        return { kind: "recipe", id: r.id, name: r.title, sub: tn(r.servings, "Your recipe · {n} serving", "Your recipe · {n} servings"), per: base.per, servingLabel: null };
       });
     const meals: Pick[] = customMeals
       .filter((m) => match(m.title))
       .map((m) => {
         const base = perServing("custom_meal", m.id, null, { recipes, customMeals })!;
-        return { kind: "custom_meal", id: m.id, name: m.title, sub: `Your meal · ${m.items.length} ${m.items.length === 1 ? "food" : "foods"}`, per: base.per, servingLabel: null };
+        return { kind: "custom_meal", id: m.id, name: m.title, sub: tn(m.items.length, "Your meal · {n} food", "Your meal · {n} foods"), per: base.per, servingLabel: null };
       });
     const fd: Pick[] = (foods ?? []).slice(0, 60).map((f) => ({
       kind: f.source === "custom" ? "custom_food" : "food",
       id: f.id,
       name: f.name,
-      sub: f.source === "custom" ? `${f.servingLabel} · your food` : `${f.servingLabel}${f.isVerified ? " · verified" : ""}`,
+      sub: f.source === "custom" ? t("{serving} · your food", { serving: f.servingLabel }) : f.isVerified ? t("{serving} · verified", { serving: f.servingLabel }) : f.servingLabel,
       per: { kcal: f.calories, p: f.protein, c: f.carbs, f: f.fat },
       servingLabel: f.servingLabel,
     }));
@@ -198,8 +199,8 @@ export const AddItemSheet: React.FC<{
     else onClose();
   };
 
-  const label = ctx.swapItemName ? "Swap" : warn ? "Add anyway" : ctx.clientId ? `Add to ${first}'s plan` : "Add to plan";
-  const banner = [ctx.clientName, ctx.planName, `${ctx.dayShort} ${SLOT_LABEL[ctx.slot].toLowerCase()}`].filter(Boolean).join(" · ");
+  const label = ctx.swapItemName ? t("Swap") : warn ? t("Add anyway") : ctx.clientId ? t("Add to {name}'s plan", { name: first }) : t("Add to plan");
+  const banner = [ctx.clientName, ctx.planName, t("{day} {meal}", { day: ctx.dayShort, meal: t(SLOT_LABEL[ctx.slot]).toLowerCase() })].filter(Boolean).join(" · ");
   const grey: React.CSSProperties = { borderRadius: 14, background: dark ? "#242730" : "#F4F4F6", padding: "12px 14px", marginBottom: 10 };
   const chip = (on: boolean): React.CSSProperties => ({ whiteSpace: "nowrap", borderRadius: 10, padding: "8px 12px", minHeight: 36, fontSize: textPx(13), fontWeight: on ? 700 : 500, background: on ? INK.fill : INK.card, color: on ? INK.onFill : INK.ch });
 
@@ -208,7 +209,7 @@ export const AddItemSheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={onClose}
-        title={ctx.swapItemName ? "Choose a swap" : "Add Food"}
+        title={ctx.swapItemName ? t("Choose a swap") : t("Add Food")}
         onBack={picked ? () => setPicked(null) : undefined}
         footer={
           picked ? (
@@ -223,14 +224,14 @@ export const AddItemSheet: React.FC<{
             <div className="flex items-center" style={{ gap: 8, borderRadius: 12, background: INK.prPale, padding: "9px 12px", marginBottom: 12, fontSize: textPx(12), fontWeight: 600, color: INK.prDeep }}>
               <UserRound size={13} strokeWidth={2} aria-hidden style={NO_ICON_SCALE} />
               <span className="min-w-0" style={{ overflowWrap: "anywhere" }}>
-                {ctx.swapItemName ? `Swapping ${ctx.swapItemName} · ${banner}` : `Adding to ${banner}`}
+                {ctx.swapItemName ? t("Swapping {item} · {where}", { item: ctx.swapItemName, where: banner }) : t("Adding to {where}", { where: banner })}
               </span>
             </div>
             {ctx.clientId && needs && <DietStrip name={ctx.clientName ?? ""} {...needs} />}
             <div className="flex" style={{ marginBottom: 16 }}>
-              <SearchField value={query} onChange={setQuery} placeholder="Search foods, recipes and meals" height={48} radius={16} />
+              <SearchField value={query} onChange={setQuery} placeholder={t("Search foods, recipes and meals")} height={48} radius={16} />
             </div>
-            <div className="flex overflow-x-auto no-scrollbar" style={{ gap: 6, padding: "6px 0", margin: "-6px 0 2px" }} role="tablist" aria-label="Show">
+            <div className="flex overflow-x-auto no-scrollbar" style={{ gap: 6, padding: "6px 0", margin: "-6px 0 2px" }} role="tablist" aria-label={t("Show")}>
               {FILTERS.map((f) => {
                 const on = f.key === filter;
                 return (
@@ -243,17 +244,17 @@ export const AddItemSheet: React.FC<{
                     className="tap relative whitespace-nowrap before:absolute before:inset-x-0 before:-inset-y-[6px] before:content-['']"
                     style={{ flex: "none", borderRadius: 9999, padding: "6px 12px", minHeight: 32, fontSize: textPx(12), border: `1px solid ${on ? INK.fill : "rgb(var(--c-charcoal) / 0.11)"}`, background: on ? INK.fill : INK.card, color: on ? INK.onFill : INK.chS, fontWeight: on ? 700 : 600 }}
                   >
-                    {f.label}
+                    {t(f.label)}
                   </button>
                 );
               })}
             </div>
             {foods === null && filter !== "recipes" && filter !== "meals" && results.length === 0 ? (
               <p role="status" style={{ textAlign: "center", padding: "16px 0", fontSize: textPx(13), color: INK.chF }}>
-                Searching…
+                {t("Searching…")}
               </p>
             ) : results.length === 0 ? (
-              <p style={{ textAlign: "center", padding: "16px 0", fontSize: textPx(13), color: INK.chF }}>{foodsError ? "Couldn't search foods. Check your connection and try again." : query.trim() ? "Nothing matches that search." : "Nothing here yet."}</p>
+              <p style={{ textAlign: "center", padding: "16px 0", fontSize: textPx(13), color: INK.chF }}>{foodsError ? t("Couldn't search foods. Check your connection and try again.") : query.trim() ? t("Nothing matches that search.") : t("Nothing here yet.")}</p>
             ) : (
               <div className="flex flex-col">
                 {results.map((r) => {
@@ -275,9 +276,9 @@ export const AddItemSheet: React.FC<{
                           {r.name}
                           <Flag row={c} />
                         </span>
-                        <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>{isBlocked ? `${r.sub} · blocked` : r.sub}</span>
+                        <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>{isBlocked ? t("{line} · blocked", { line: r.sub }) : r.sub}</span>
                       </span>
-                      <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, whiteSpace: "nowrap" }}>{`${Math.round(r.per.kcal).toLocaleString(appLocale("en-GB"))} kcal`}</span>
+                      <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, whiteSpace: "nowrap" }}>{t("{n} kcal", { n: Math.round(r.per.kcal).toLocaleString(appLocale("en-GB")) })}</span>
                     </button>
                   );
                 })}
@@ -304,22 +305,22 @@ export const AddItemSheet: React.FC<{
                 <AlertCircle size={16} strokeWidth={2.2} aria-hidden style={{ color: INK.goldInk, flexShrink: 0, marginTop: 1 }} />
                 <span>
                   <span className="block" style={{ fontSize: textPx(13), fontWeight: 800, color: INK.goldInk }}>
-                    {warn.kind === "restriction" ? `${picked.name} isn't ${restrictionLabel(warn.restriction ?? "").toLowerCase()}` : `${picked.name} may contain ${allergenLabel(warn.allergen ?? "").toLowerCase()}. Check this.`}
+                    {conflictTitle(picked.name, warn)}
                   </span>
                   <span className="block" style={{ fontSize: textPx(12), color: INK.chS, lineHeight: 1.45 }}>
-                    {warn.kind === "restriction" ? `${first} follows ${restrictionLabel(warn.restriction ?? "")}.` : `The name suggests it. Check the ingredients with ${first}.`}
+                    {warn.kind === "restriction" ? t("{name} follows {restriction}.", { name: first, restriction: restrictionLabel(warn.restriction ?? "") }) : t("The name suggests it. Check the ingredients with {name}.", { name: first })}
                   </span>
                 </span>
               </div>
             )}
             <div className="flex items-center" style={{ ...grey, gap: 12 }}>
               <span className="flex-none whitespace-nowrap" style={{ fontSize: textPx(14.5), fontWeight: 500, color: dark ? "#B8B3C7" : "#575863" }}>
-                {ctx.clientId ? `Portion for ${first}` : "Portion"}
+                {ctx.clientId ? t("Portion for {name}", { name: first }) : t("Portion")}
               </span>
               <input
                 value={qty}
                 inputMode="decimal"
-                aria-label={unit === "g" ? "Portion in grams" : "Portion in servings"}
+                aria-label={unit === "g" ? t("Portion in grams") : t("Portion in servings")}
                 onChange={(e) => setQty(e.target.value.replace(/[^\d.]/g, "").replace(/(?<=\..*)\./g, ""))}
                 className="flex-1 min-w-0 text-center outline-none"
                 style={{ background: INK.card, border: "none", borderRadius: 10, padding: "10px 12px", fontSize: textPx(15), fontWeight: 700, color: INK.ch }}
@@ -327,22 +328,22 @@ export const AddItemSheet: React.FC<{
             </div>
             {isFood && gramsAllowed(picked.servingLabel) && (
               <div style={grey}>
-                <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>Unit</p>
+                <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>{t("Unit")}</p>
                 <div className="flex" style={{ gap: 7, marginTop: 9 }}>
                   {(["serving", "g"] as const).map((u) => (
                     <button key={u} type="button" aria-pressed={unit === u} onClick={() => { setUnit(u); setQty(u === "g" ? "100" : "1"); }} className="tap" style={chip(unit === u)}>
-                      {u}
+                      {u === "g" ? t("g") : t("serving")}
                     </button>
                   ))}
                 </div>
               </div>
             )}
             <div style={grey}>
-              <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>Meal</p>
+              <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>{t("Meal")}</p>
               <div className="flex" style={{ gap: 6, marginTop: 9 }}>
                 {SLOT_CHIP_ORDER.map((m) => (
                   <button key={m} type="button" aria-pressed={slot === m} onClick={() => setSlot(m)} className="tap flex-1 min-w-0" style={{ ...chip(slot === m), padding: "8px 4px", textAlign: "center" }}>
-                    {SLOT_LABEL[m]}
+                    {t(SLOT_LABEL[m])}
                   </button>
                 ))}
               </div>
@@ -350,10 +351,10 @@ export const AddItemSheet: React.FC<{
             {shown && (
               <div className="grid" style={{ ...grey, gridTemplateColumns: "repeat(4, minmax(0, 1fr))", padding: "13px 0", marginBottom: 12 }}>
                 {[
-                  [Math.round(shown.kcal).toLocaleString(appLocale("en-GB")), INK.ch, "kcal"],
-                  [`${Math.round(shown.p)}g`, dark ? "#C3B3FB" : "#7D6BB5", "protein"],
-                  [`${Math.round(shown.c)}g`, dark ? "#B7ABDE" : "#8175C2", "carbs"],
-                  [`${Math.round(shown.f)}g`, dark ? "#8FB0F0" : "#4274D7", "fat"],
+                  [Math.round(shown.kcal).toLocaleString(appLocale("en-GB")), INK.ch, t("kcal")],
+                  [`${Math.round(shown.p)}${t("g")}`, dark ? "#C3B3FB" : "#7D6BB5", t("protein")],
+                  [`${Math.round(shown.c)}${t("g")}`, dark ? "#B7ABDE" : "#8175C2", t("carbs")],
+                  [`${Math.round(shown.f)}${t("g")}`, dark ? "#8FB0F0" : "#4274D7", t("fat")],
                 ].map(([v, col, l], i) => (
                   <div key={l} style={{ textAlign: "center", borderInlineStart: i ? `1px solid ${dark ? "rgba(245,243,250,0.08)" : "#E2E3E7"}` : "none" }}>
                     <p style={{ fontSize: textPx(15.5), fontWeight: 800, color: col }}>{v}</p>
@@ -365,21 +366,21 @@ export const AddItemSheet: React.FC<{
             {ctx.templateId && !ctx.swapItemName && (
               <div className="flex items-center justify-between" style={{ ...grey, gap: 12 }}>
                 <span className="min-w-0">
-                  <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 600, color: INK.ch }}>Also add to the template</span>
-                  <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>{`${ctx.planName}, for all clients on it`}</span>
+                  <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 600, color: INK.ch }}>{t("Also add to the template")}</span>
+                  <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>{t("{plan}, for all clients on it", { plan: ctx.planName ?? "" })}</span>
                 </span>
-                <Toggle checked={alsoTemplate} onChange={setAlsoTemplate} label="Also add to the template" />
+                <Toggle checked={alsoTemplate} onChange={setAlsoTemplate} label={t("Also add to the template")} />
               </div>
             )}
             {ctx.templateId && !ctx.swapItemName && alsoTemplate && (
-              <p style={{ fontSize: textPx(11.5), color: INK.chF, marginBottom: 8 }}>Clients already on the plan keep their own copy. The template change applies to new assignments.</p>
+              <p style={{ fontSize: textPx(11.5), color: INK.chF, marginBottom: 8 }}>{t("Clients already on the plan keep their own copy. The template change applies to new assignments.")}</p>
             )}
             {error && (
               <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi }}>
                 {error}
               </p>
             )}
-            {!(q > 0) && <p style={{ fontSize: textPx(11.5), color: INK.chF }}>Enter a portion above 0.</p>}
+            {!(q > 0) && <p style={{ fontSize: textPx(11.5), color: INK.chF }}>{t("Enter a portion above 0.")}</p>}
           </div>
         )}
       </BottomSheet>
@@ -387,10 +388,10 @@ export const AddItemSheet: React.FC<{
       <CentredPopup
         open={!!blocked}
         onClose={() => setBlocked(null)}
-        title={blocked ? `${blocked.pick.name} contains ${allergenLabel(blocked.row.allergen ?? "").toLowerCase()}` : ""}
+        title={blocked ? conflictTitle(blocked.pick.name, blocked.row) : ""}
         icon={<ConflictTile red />}
         iconBare
-        body={blocked ? `${first} is allergic to ${allergenLabel(blocked.row.allergen ?? "").toLowerCase()}${blocked.row.severity ? ` (${blocked.row.severity})` : ""}. Foods with an allergen are blocked by default.` : undefined}
+        body={blocked ? conflictBody(first, blocked.row) : undefined}
       >
         <BlockedActions first={first} onSwap={() => setBlocked(null)} onKeepOut={() => setBlocked(null)} />
       </CentredPopup>
@@ -406,10 +407,10 @@ export const ConflictTile: React.FC<{ red?: boolean }> = ({ red }) => (
 );
 
 /** NU11's two buttons and footnote (r7 nuConflict7). */
-export const BlockedActions: React.FC<{ first: string; onSwap: () => void; onKeepOut: () => void; keepOutLabel?: string }> = ({ first, onSwap, onKeepOut, keepOutLabel = "Keep it out" }) => (
+export const BlockedActions: React.FC<{ first: string; onSwap: () => void; onKeepOut: () => void; keepOutLabel?: string }> = ({ first, onSwap, onKeepOut, keepOutLabel }) => (
   <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
-    <CtaButton size="page" icon={<Repeat size={15} />} label="Choose a swap" onClick={onSwap} />
-    <CtaButton size="page" variant="secondary" label={keepOutLabel} onClick={onKeepOut} />
-    <p style={{ fontSize: textPx(11.5), color: INK.chF, textAlign: "center", lineHeight: 1.5 }}>{`To allow it, ${first} must update their allergies first.`}</p>
+    <CtaButton size="page" icon={<Repeat size={15} />} label={t("Choose a swap")} onClick={onSwap} />
+    <CtaButton size="page" variant="secondary" label={keepOutLabel ?? t("Keep it out")} onClick={onKeepOut} />
+    <p style={{ fontSize: textPx(11.5), color: INK.chF, textAlign: "center", lineHeight: 1.5 }}>{t("To allow it, {name} must update their allergies first.", { name: first })}</p>
   </div>
 );

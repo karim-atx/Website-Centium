@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { textPx } from "../../theme/textSize";
+import { t, tx } from "../../i18n/core";
 
 // Design refinement §6.6: a real metronome mark, drawn at lucide's stroke
 // weight so it sits with the rest of the set — replaces the generic timer
@@ -134,7 +135,7 @@ export const Metronome: React.FC = () => {
           "tap w-[34px] h-[34px] rounded-full flex items-center justify-center shadow-soft",
           running ? "bg-teal-fill text-on-primary-fill" : "bg-cream-card text-charcoal-soft"
         )}
-        aria-label="Metronome"
+        aria-label={t("Metronome")}
         aria-expanded={open}
       >
         <MetronomeIcon size={16} />
@@ -149,24 +150,24 @@ export const Metronome: React.FC = () => {
             className="uppercase"
             style={{ margin: "0 0 8px", fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", color: "rgb(var(--c-charcoal-muted))" }}
           >
-            Metronome
+            {t("Metronome")}
           </p>
           <Pendulum angle={angle} swingSeconds={swingSeconds} beat={beat} showDot={running} pulse={beat > 0} soft={reducedMotion} />
           <div className="flex items-center justify-between" style={{ margin: "12px 0" }}>
             <button
               onClick={() => setBpm((b) => Math.max(30, b - 5))}
-              aria-label="Slower"
+              aria-label={t("Slower")}
               className={stepButton}
               style={{ width: 28, height: 28, background: "rgb(var(--c-cream-soft))", color: stepInk }}
             >
               <Minus size={13} />
             </button>
             <span className="tabular-nums" style={{ fontSize: textPx(20), fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>
-              {bpm} BPM
+              {`${bpm} BPM`}
             </span>
             <button
               onClick={() => setBpm((b) => Math.min(200, b + 5))}
-              aria-label="Faster"
+              aria-label={t("Faster")}
               className={stepButton}
               style={{ width: 28, height: 28, background: "rgb(var(--c-cream-soft))", color: stepInk }}
             >
@@ -188,7 +189,7 @@ export const Metronome: React.FC = () => {
               fontWeight: 700,
             }}
           >
-            {running ? "Stop" : "Start"}
+            {running ? t("Stop") : tx("Start", "button")}
           </button>
         </div>
       )}

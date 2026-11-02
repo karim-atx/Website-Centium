@@ -5,6 +5,7 @@ import type { Offering } from "../../services/business-offerings/types";
 import { offerLocked, placementView, type DbPromoTarget, type DbPromoType, type Placement, type PlacementView, type PromoStats, type PromoStatus, type Promotion } from "../../services/business-market/promoLogic";
 import { addDays, dayMonth, daysLeft, dowTime, notEnded } from "./model";
 import { appLocale } from "../../i18n/format";
+import { fill, t, tk, tn, tx, type Vars } from "../../i18n/core";
 
 // Create promotion (MA1-099 to 104, OURS-MA1-promotion-type-menu,
 // OURS-MA1-gym-promotions): what can be promoted per type, the promotion
@@ -40,26 +41,26 @@ export function promotables(
         kind: "class",
         title: x.title,
         field: `${x.title} · ${when}`,
-        sub: `Class · ${when} · ${b} of ${x.maxCapacity} booked`,
-        preview: `${who ? `With ${who} · ` : ""}${left} spot${left === 1 ? "" : "s"} left`,
+        sub: t("Class · {when} · {booked} of {max} booked", { when, booked: b, max: x.maxCapacity }),
+        preview: `${who ? `${t("With {name}", { name: who })} · ` : ""}${tn(left, "{n} spot left", "{n} spots left")}`,
       });
     }
   }
-  for (const o of input.offers) out.push({ id: `offer:${o}`, kind: "offer", title: o, field: o, sub: "Offer", preview: "On your listing" });
+  for (const o of input.offers) out.push({ id: `offer:${o}`, kind: "offer", title: o, field: o, sub: t("Offer"), preview: t("On your listing") });
   if (kind === "gym") {
     for (const p of input.plans) {
       const day = p.kind === "day_pass";
-      out.push({ id: p.id, kind: day ? "day_pass" : "plan", title: p.name, field: p.name, sub: `${day ? "Day pass" : "Plan"} · ${p.price}${day ? "" : billingWord(p.billing)}`, preview: p.price });
+      out.push({ id: p.id, kind: day ? "day_pass" : "plan", title: p.name, field: p.name, sub: day ? `${t("Day pass")} · ${p.price}` : `${t("Plan")} · ${billingWord(p.price, p.billing)}`, preview: p.price });
     }
   }
   for (const o of input.offerings) {
-    const label = kind === "store" ? "Product" : "Class pack";
+    const label = kind === "store" ? t("Product") : t("Class pack");
     out.push({ id: o.id, kind: "offering", title: o.title, field: o.title, sub: o.price ? `${label} · ${o.price}` : label, preview: o.price || label });
   }
   return out;
 }
 
-const billingWord = (b: string): string => (b === "monthly" ? " a month" : b === "annually" ? " a year" : "");
+const billingWord = (price: string, b: string): string => (b === "monthly" ? t("{price} a month", { price }) : b === "annually" ? t("{price} a year", { price }) : price);
 
 /** The app's promotion types are the DB's promo_type (OURS "7 days free" has no DB type and was removed). */
 export type PromoType = DbPromoType;
@@ -72,31 +73,39 @@ export interface PromoTypeOption {
 
 /** OURS-MA1-promotion-type-menu rows 2-6 per type. */
 export function promoTypes(kind: BizKind): PromoTypeOption[] {
-  const pct: PromoTypeOption = { value: "percent_off", label: "Percent off", note: "Choose 5% to 90%" };
-  if (kind === "store") return [pct, { value: "free_delivery", label: "Free delivery" }];
-  if (kind === "gym") return [pct, { value: "first_free", label: "First visit free" }, { value: "bring_friend", label: "Bring a friend free" }];
-  return [pct, { value: "first_free", label: "First class free" }, { value: "first_n_free", label: "First 2 classes free" }, { value: "bring_friend", label: "Bring a friend free" }];
+  const pct: PromoTypeOption = { value: "percent_off", label: t("Percent off"), note: t("Choose 5% to 90%") };
+  if (kind === "store") return [pct, { value: "free_delivery", label: t("Free delivery") }];
+  if (kind === "gym") return [pct, { value: "first_free", label: t("First visit free") }, { value: "bring_friend", label: t("Bring a friend free") }];
+  return [pct, { value: "first_free", label: t("First class free") }, { value: "first_n_free", label: t("First 2 classes free") }, { value: "bring_friend", label: t("Bring a friend free") }];
 }
 
 /** first_n_free's n: the menu offers 2 (row 4); a row may hold another n (1 to 50). */
 export const FIRST_N = 2;
 
-/** The field text and the Explore chip for a type. */
+/** The field text and the Explore chip for a type, in the app's language. */
 export function promoText(kind: BizKind, type: PromoType | null, value: number | null): { field: string; chip: string } {
-  if (!type) return { field: "Choose a type", chip: "Offer" };
+  return promoTextIn(t, kind, type, value);
+}
+
+/**
+ * The same in English or in the app's language: promotions.name (promoName) is
+ * stored, so it is always written in English, whatever the owner's language.
+ */
+function promoTextIn(tr: (key: string, vars?: Vars) => string, kind: BizKind, type: PromoType | null, value: number | null): { field: string; chip: string } {
+  if (!type) return { field: tr(tk("Choose a type")), chip: tr(tk("Offer")) };
   switch (type) {
     case "percent_off":
-      return value ? { field: `${value}% off`, chip: `${value}% off` } : { field: "Percent off", chip: "Offer" };
+      return value ? { field: tr(tk("{value}% off"), { value }), chip: tr(tk("{value}% off"), { value }) } : { field: tr(tk("Percent off")), chip: tr(tk("Offer")) };
     case "first_free":
-      return { field: kind === "gym" ? "First visit free" : "First class free", chip: "1 free" };
+      return { field: kind === "gym" ? tr(tk("First visit free")) : tr(tk("First class free")), chip: tr(tk("1 free")) };
     case "first_n_free": {
       const n = value ?? FIRST_N;
-      return { field: `First ${n} classes free`, chip: `${n} free` };
+      return { field: tr(tk("First {n} classes free"), { n }), chip: tr(tk("{n} free"), { n }) };
     }
     case "bring_friend":
-      return { field: "Bring a friend free", chip: "Free friend" };
+      return { field: tr(tk("Bring a friend free")), chip: tr(tk("Free friend")) };
     case "free_delivery":
-      return { field: "Free delivery", chip: "Free delivery" };
+      return { field: tr(tk("Free delivery")), chip: tr(tk("Free delivery")) };
   }
 }
 
@@ -122,10 +131,10 @@ export interface PromoErrors {
 export function validatePromo(d: PromoDraft, whatError: string): PromoErrors {
   const e: PromoErrors = {};
   if (!d.what) e.what = whatError;
-  if (!d.type) e.type = "Pick a promotion type.";
-  if (d.type === "percent_off" && (!d.value || d.value < 5 || d.value > 90)) e.value = "Choose 5% to 90%";
-  if (!d.to) e.to = "Choose an end date.";
-  else if (d.from && d.to < d.from) e.to = "The end date must be after the start date.";
+  if (!d.type) e.type = t("Pick a promotion type.");
+  if (d.type === "percent_off" && (!d.value || d.value < 5 || d.value > 90)) e.value = t("Choose 5% to 90%");
+  if (!d.to) e.to = t("Choose an end date.");
+  else if (d.from && d.to < d.from) e.to = t("The end date must be after the start date.");
   return e;
 }
 
@@ -155,7 +164,7 @@ const lowerFirst = (s: string): string => (s ? s[0].toLowerCase() + s.slice(1) :
 
 /** promotions.name (1 to 60): "Strength Basics, 25% off"; an offer named like its type keeps its own name. */
 export function promoName(kind: BizKind, title: string, type: PromoType, value: number | null): string {
-  const field = promoText(kind, type, value).field;
+  const field = promoTextIn(fill, kind, type, value).field;
   const name = title.trim().toLowerCase() === field.toLowerCase() ? title.trim() : `${title.trim()}, ${lowerFirst(field)}`;
   return name.length <= 60 ? name : `${name.slice(0, 59).trimEnd()}…`;
 }
@@ -169,15 +178,15 @@ export const nameTitle = (name: string): string => name.split(", ")[0] || name;
  */
 export function itemForPromotion(p: Pick<Promotion, "targetKind" | "targetId" | "name">, items: Promotable[], titles: Map<string, string>): Promotable {
   if (p.targetKind === "any" || !p.targetId) {
-    const t = nameTitle(p.name);
-    const offer = items.find((i) => i.kind === "offer" && i.title === t);
-    return offer ?? { id: ANY_ID, kind: "offer", title: t, field: t, sub: "Offer", preview: "On your listing" };
+    const nt = nameTitle(p.name);
+    const offer = items.find((i) => i.kind === "offer" && i.title === nt);
+    return offer ?? { id: ANY_ID, kind: "offer", title: nt, field: nt, sub: t("Offer"), preview: t("On your listing") };
   }
   const hit = items.find((i) => i.id === p.targetId);
   if (hit) return hit;
-  const t = titles.get(p.targetId) ?? nameTitle(p.name);
+  const nt = titles.get(p.targetId) ?? nameTitle(p.name);
   const kind: Promotable["kind"] = p.targetKind === "class" ? "class" : p.targetKind === "plan" ? "plan" : p.targetKind === "day_pass" ? "day_pass" : p.targetKind === "product" ? "offering" : "offer";
-  return { id: p.targetId, kind, title: t, field: t, sub: kind === "class" ? "Class" : kind === "offering" ? "Offering" : kind === "plan" ? "Plan" : "Offer", preview: "On your listing" };
+  return { id: p.targetId, kind, title: nt, field: nt, sub: kind === "class" ? t("Class") : kind === "offering" ? t("Offering") : kind === "plan" ? t("Plan") : t("Offer"), preview: t("On your listing") };
 }
 
 export function draftOf(p: Promotion, item: Promotable): PromoDraft {
@@ -224,22 +233,34 @@ export function editPatch(
 export type ChipKey = "active" | "scheduled" | "paused" | "ended" | "featured" | "awaiting" | "unpaid";
 
 export const CHIP_LABEL: Record<ChipKey, string> = {
-  active: "Active",
-  scheduled: "Scheduled",
-  paused: "Paused",
-  ended: "Ended",
-  featured: "Featured",
-  awaiting: "Awaiting payment",
-  unpaid: "Payment not received",
+  active: tk("Active"),
+  scheduled: tk("Scheduled"),
+  paused: tk("Paused"),
+  ended: tk("Ended"),
+  featured: tk("Featured"),
+  awaiting: tk("Awaiting payment"),
+  unpaid: tk("Payment not received"),
 };
 
 export const chipOfStatus = (s: PromoStatus): ChipKey => (s === "live" ? "active" : s);
 
+/** A chip's words in the app's language ("Active" here is a running promotion, not a person). */
+export const chipLabel = (k: ChipKey): string => (k === "active" ? tx("Active", "promotion") : t(CHIP_LABEL[k]));
+
 export type IconKey = "percent" | "gift" | "megaphone" | "award";
 export const iconOfType = (t: PromoType): IconKey => (t === "percent_off" ? "percent" : t === "free_delivery" ? "megaphone" : "gift");
 
-/** "new clients" / "new members" / "new customers" from the audience option. */
-export const audienceWord = (audienceNew: string, a: "new" | "everyone"): string => (a === "everyone" ? "everyone" : audienceNew.replace(/ only$/, "").toLowerCase());
+/** "new clients" / "new members" / "new customers" from the audience option (vocab audienceNew, already in the app's language). */
+export const audienceWord = (audienceNew: string, a: "new" | "everyone"): string =>
+  a === "everyone"
+    ? t("everyone")
+    : audienceNew === t("New members only")
+      ? t("new members")
+      : audienceNew === t("New customers only")
+        ? t("new customers")
+        : audienceNew === t("New clients only")
+          ? t("new clients")
+          : audienceNew.replace(/ only$/, "").toLowerCase();
 
 /** The real end: the day it was ended early, else the end date. */
 export function realEnd(p: Pick<Promotion, "endsOn" | "endedAt">): string | null {
@@ -254,14 +275,14 @@ export function realEnd(p: Pick<Promotion, "endsOn" | "endedAt">): string | null
 /** Dates line: "28 Sep to 31 Oct · new clients"; scheduled "From 12 Oct · everyone"; ended early shows the real end. */
 export function promoDates(p: Promotion, status: PromoStatus, audienceNew: string): string {
   const end = realEnd(p);
-  const span = status === "scheduled" || !end ? `From ${dayMonth(p.startsOn)}` : `${dayMonth(p.startsOn)} to ${dayMonth(end)}`;
+  const span = status === "scheduled" || !end ? t("From {date}", { date: dayMonth(p.startsOn) }) : t("{from} to {to}", { from: dayMonth(p.startsOn), to: dayMonth(end) });
   return `${span} · ${audienceWord(audienceNew, p.audience)}`;
 }
 
 /** "41" / "41 of 100"; "–" before it starts or without stats. */
 export function usesText(status: PromoStatus, s: PromoStats | undefined): string {
   if (status === "scheduled" || !s) return "–";
-  return s.useLimit ? `${s.uses.toLocaleString(appLocale("en-US"))} of ${s.useLimit.toLocaleString(appLocale("en-US"))}` : s.uses.toLocaleString(appLocale("en-US"));
+  return s.useLimit ? t("{n} of {max}", { n: s.uses.toLocaleString(appLocale("en-US")), max: s.useLimit.toLocaleString(appLocale("en-US")) }) : s.uses.toLocaleString(appLocale("en-US"));
 }
 
 export const peopleText = (status: PromoStatus, s: PromoStats | undefined): string => (status === "scheduled" || !s ? "–" : s.people.toLocaleString(appLocale("en-US")));
@@ -272,7 +293,7 @@ export const money = (n: number): string => `$${n.toLocaleString(appLocale("en-U
 /** Recorded revenue line, only when the offer was used: the business's own payments, never Centium's. */
 export function recordedLine(s: PromoStats | undefined): string | null {
   if (!s || s.uses === 0) return null;
-  return `${money(s.recorded)} recorded on the payments that used it`;
+  return t("{amount} recorded on the payments that used it", { amount: money(s.recorded) });
 }
 
 export type PromoAction = "edit" | "pause" | "resume" | "end" | "cancel" | "again";
@@ -301,15 +322,15 @@ export function sortPromotions<T extends { status: PromoStatus; p: Pick<Promotio
 
 /** OF2 right text: `34 uses`, `Live now`, `Off`; paused / scheduled say so. */
 export function offerUsed(status: PromoStatus, on: boolean, s: PromoStats | undefined): string {
-  if (!on) return "Off";
-  if (status === "paused") return "Paused";
-  if (status === "scheduled") return "Not started";
-  if (s && s.uses > 0) return `${s.uses.toLocaleString(appLocale("en-US"))} use${s.uses === 1 ? "" : "s"}`;
-  return "Live now";
+  if (!on) return t("Off");
+  if (status === "paused") return t("Paused");
+  if (status === "scheduled") return t("Not started");
+  if (s && s.uses > 0) return tn(s.uses, "{n} use", "{n} uses", { n: s.uses.toLocaleString(appLocale("en-US")) });
+  return t("Live now");
 }
 
 /** OF1 sub: "Promotion · ends 31 Oct". */
-export const offerSub = (p: Pick<Promotion, "endsOn">): string => (p.endsOn ? `Promotion · ends ${dayMonth(p.endsOn)}` : "Promotion");
+export const offerSub = (p: Pick<Promotion, "endsOn">): string => (p.endsOn ? t("Promotion · ends {date}", { date: dayMonth(p.endsOn) }) : t("Promotion"));
 
 // ---------------------------------------------------------------------------
 // Featured weeks
@@ -325,10 +346,10 @@ export interface PlacementCard {
 export function placementCard(p: Placement, today: string): PlacementCard | null {
   const view = placementView(p);
   if (!view) return null;
-  const span = `${dayMonth(p.startsOn)} to ${dayMonth(p.endsOn)}`;
+  const span = t("{from} to {to}", { from: dayMonth(p.startsOn), to: dayMonth(p.endsOn) });
   switch (view) {
     case "awaiting":
-      return { view, chip: "awaiting", dates: `Starts ${dayMonth(p.startsOn)} once paid`, line: null };
+      return { view, chip: "awaiting", dates: t("Starts {date} once paid", { date: dayMonth(p.startsOn) }), line: null };
     case "scheduled":
       return { view, chip: "scheduled", dates: span, line: null };
     case "featured":
@@ -336,21 +357,21 @@ export function placementCard(p: Placement, today: string): PlacementCard | null
     case "ended":
       return { view, chip: "ended", dates: span, line: null };
     case "unpaid":
-      return { view, chip: "unpaid", dates: span, line: "Your start date passed without a payment." };
+      return { view, chip: "unpaid", dates: span, line: t("Your start date passed without a payment.") };
   }
 }
 
 /** MA1-007 F2 / OURS-MA1-feature-payment-cash row 12: the line on the Featured card, from the most relevant week. */
 export function featuredLine(placements: Placement[], title: (p: Placement) => string, today: string): { text: string; right: string | null } | null {
   const live = placements.find((p) => p.status === "live");
-  if (live) return { text: `${title(live)} is featured`, right: daysLeft(today, live.endsOn) };
+  if (live) return { text: t("{name} is featured", { name: title(live) }), right: daysLeft(today, live.endsOn) };
   const awaiting = placements.find((p) => p.status === "requested");
-  if (awaiting) return { text: `${title(awaiting)}: awaiting payment`, right: null };
+  if (awaiting) return { text: t("{name}: awaiting payment", { name: title(awaiting) }), right: null };
   return null;
 }
 
 /** request_featured_week is the owner's (ATX03 for anyone else). */
-export const OWNER_ONLY = "Only the owner can feature your business.";
+export const OWNER_ONLY = tk("Only the owner can feature your business.");
 
 /** A start day for Pick new dates: the old one if still ahead, else today. */
 export const retryStart = (p: Pick<Placement, "startsOn">, today: string): string => (p.startsOn >= today ? p.startsOn : today);

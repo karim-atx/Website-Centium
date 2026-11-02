@@ -11,6 +11,7 @@ import { presetRange, rangeLine, type AnalyticsRange, type RangeKey } from "./an
 import { CustomRangeSheet } from "./CustomRangeSheet";
 import { toCsvText } from "../../utils/csv";
 import { FULL_PAGE_SECTIONS, PUSHED_VIEWS, SECTION_NEED, SECTION_VIEWS, pushedFor, sectionTabs, type SectionKey } from "./sections";
+import { t, tk } from "../../i18n/core";
 
 // The Analytics shell (AN5-001 / AN4-001 rows 1-8, shared by AN1, AN3, AN4,
 // AN5): title "Analytics" 27/700, subtitle, section tabs per type
@@ -32,10 +33,10 @@ export function downloadCsv(filename: string, rows: CsvRow[]) {
 }
 
 const RANGE_TABS: { key: RangeKey; label: string }[] = [
-  { key: "week", label: "This week" },
-  { key: "4w", label: "4 weeks" },
-  { key: "12w", label: "12 weeks" },
-  { key: "custom", label: "Custom" },
+  { key: "week", label: tk("This week") },
+  { key: "4w", label: tk("4 weeks") },
+  { key: "12w", label: tk("12 weeks") },
+  { key: "custom", label: tk("Custom") },
 ];
 
 export default function AnalyticsShell() {
@@ -49,7 +50,7 @@ export default function AnalyticsShell() {
   // permissions allow (SECTION_NEED); the owner sees every tab.
   const staffView = user.accountType !== "business";
   const allowed = (key: string) => !staffView || access.meets(SECTION_NEED[key] ?? "owner");
-  const tabs = sectionTabs(kind).filter((t) => allowed(t.key));
+  const tabs = sectionTabs(kind).filter((tb) => allowed(tb.key));
   const section = (param ?? (staffView ? (tabs[0]?.key ?? "overview") : "overview")) as SectionKey;
   const [range, setRange] = useState<AnalyticsRange>(() => presetRange("4w"));
   const [customOpen, setCustomOpen] = useState(false);
@@ -71,14 +72,14 @@ export default function AnalyticsShell() {
   if (!typeKnown) {
     const failed = !biz.loading && !biz.business && !!biz.error;
     return (
-      <div className="pb-6" role="status" aria-label={failed ? undefined : "Loading"}>
-        <h1 className="text-[27px] leading-[40.5px] font-bold tracking-[-0.022em] text-charcoal">Analytics</h1>
-        <p className="text-[13px] leading-[19.5px] font-medium text-charcoal-faint mt-[6px]">How your business is doing over time</p>
+      <div className="pb-6" role="status" aria-label={failed ? undefined : t("Loading")}>
+        <h1 className="text-[27px] leading-[40.5px] font-bold tracking-[-0.022em] text-charcoal">{t("Analytics")}</h1>
+        <p className="text-[13px] leading-[19.5px] font-medium text-charcoal-faint mt-[6px]">{t("How your business is doing over time")}</p>
         {failed ? (
           <div role="alert" className="mt-[18px] flex items-center gap-3 rounded-[16px] bg-status-high-bg px-[14px] min-h-[44px]">
             <p className="flex-1 text-[12.5px] leading-[18px] text-status-high my-[12px]">{biz.error}</p>
             <button type="button" onClick={biz.reload} className="tap min-h-[44px] px-1 text-[12px] font-bold text-primary-dark">
-              Retry
+              {t("Retry")}
             </button>
           </div>
         ) : (
@@ -93,7 +94,7 @@ export default function AnalyticsShell() {
   const push = PUSHED_VIEWS[section];
   const pushedOk = !!push && pushed.includes(section);
   const fullPage = FULL_PAGE_SECTIONS.includes(section);
-  if (!fullPage && !pushedOk && !tabs.some((t) => t.key === section)) return <Navigate to={`/app/business/analytics/${tabs[0]?.key ?? "overview"}`} replace />;
+  if (!fullPage && !pushedOk && !tabs.some((tb) => tb.key === section)) return <Navigate to={`/app/business/analytics/${tabs[0]?.key ?? "overview"}`} replace />;
   if (fullPage) {
     const Full = SECTION_VIEWS[section];
     return (
@@ -107,7 +108,7 @@ export default function AnalyticsShell() {
     <SegmentedTabs
       className="mt-[10px]"
       size="compact"
-      items={RANGE_TABS.map((t) => ({ key: t.key, label: t.label }))}
+      items={RANGE_TABS.map((tb) => ({ key: tb.key, label: t(tb.label) }))}
       activeKey={range.key}
       onChange={(k) => (k === "custom" ? setCustomOpen(true) : setRange(presetRange(k as Exclude<RangeKey, "custom">)))}
     />
@@ -133,16 +134,16 @@ export default function AnalyticsShell() {
         <div className="flex items-start gap-[10px] mb-[4px]">
           <button
             type="button"
-            aria-label="Back"
+            aria-label={t("Back")}
             onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/app/business/analytics/overview"))}
             className="tap shrink-0 w-[40px] h-[40px] -ms-[8px] rounded-full flex items-center justify-center text-charcoal-soft"
           >
             <ChevronLeft size={20} aria-hidden />
           </button>
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] leading-[16.5px] font-bold text-charcoal-faint">Analytics</p>
-            <h1 className="text-[24px] leading-[30px] font-bold tracking-[-0.02em] text-charcoal">{push.title}</h1>
-            <p className="text-[12.5px] leading-[18px] text-charcoal-faint mt-[2px] [text-wrap:pretty]">{push.sub}</p>
+            <p className="text-[11px] leading-[16.5px] font-bold text-charcoal-faint">{t("Analytics")}</p>
+            <h1 className="text-[24px] leading-[30px] font-bold tracking-[-0.02em] text-charcoal">{t(push.title)}</h1>
+            <p className="text-[12.5px] leading-[18px] text-charcoal-faint mt-[2px] [text-wrap:pretty]">{t(push.sub)}</p>
           </div>
         </div>
         {rangeTabs}
@@ -151,7 +152,7 @@ export default function AnalyticsShell() {
           {push.exportable && csv && (
             <button type="button" onClick={() => downloadCsv(csv.name, csv.rows)} className="tap relative shrink-0 inline-flex items-center gap-[5px] text-[11.5px] font-semibold text-primary-dark">
               <span aria-hidden className="absolute -inset-y-[15px] -inset-x-[6px]" />
-              <Download size={13} aria-hidden /> Export CSV
+              <Download size={13} aria-hidden /> {t("Export CSV")}
             </button>
           )}
         </div>
@@ -164,12 +165,12 @@ export default function AnalyticsShell() {
 
   return (
     <div className="pb-6">
-      <h1 className="text-[27px] leading-[40.5px] font-bold tracking-[-0.022em] text-charcoal">Analytics</h1>
-      <p className="text-[13px] leading-[19.5px] font-medium text-charcoal-faint mt-[6px]">How your business is doing over time</p>
+      <h1 className="text-[27px] leading-[40.5px] font-bold tracking-[-0.022em] text-charcoal">{t("Analytics")}</h1>
+      <p className="text-[13px] leading-[19.5px] font-medium text-charcoal-faint mt-[6px]">{t("How your business is doing over time")}</p>
 
       <SegmentedTabs
         className="mt-[18px]"
-        items={tabs.map((t) => ({ key: t.key, label: t.label }))}
+        items={tabs.map((tb) => ({ key: tb.key, label: tb.label }))}
         activeKey={section}
         onChange={(k) => navigate(`/app/business/analytics/${k}`)}
       />
@@ -183,7 +184,7 @@ export default function AnalyticsShell() {
             className="tap relative shrink-0 inline-flex items-center gap-[5px] text-[11.5px] font-semibold text-primary-dark"
           >
             <span aria-hidden className="absolute -inset-y-[15px] -inset-x-[6px]" />
-            <Download size={13} aria-hidden /> Export CSV
+            <Download size={13} aria-hidden /> {t("Export CSV")}
           </button>
         )}
       </div>

@@ -7,6 +7,8 @@ import { disciplineSummary } from "../../utils/exerciseTags";
 import { classificationLabel } from "../../utils/exerciseClassification";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
+import { muscleLabel } from "./muscleLabel";
 
 export interface BuiltInExercise {
   name: string;
@@ -72,11 +74,11 @@ export const BuiltInExerciseSheet: React.FC<{
             className="tap w-full flex items-center justify-center disabled:opacity-60"
             style={{ height: 48, borderRadius: 14, background: c("infoBg"), border: `1px solid ${c("infoBorder")}`, color: c("ink"), gap: 8, fontSize: textPx(14), fontWeight: 700 }}
           >
-            <Eye size={18} /> Information
+            <Eye size={18} /> {t("Information")}
           </button>
 
           <div>
-            <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Muscle Group</span>
+            <span className="text-xs font-semibold text-charcoal-soft mb-2 block">{t("Muscle Group")}</span>
             <div className="flex flex-wrap gap-2" aria-readonly>
               {SELECTABLE_MUSCLE_GROUPS.map((mg) => {
                 const primary = exercise.muscleGroups.includes(mg);
@@ -93,7 +95,7 @@ export const BuiltInExerciseSheet: React.FC<{
                           : { background: "rgb(var(--c-cream-card))", borderColor: "rgb(var(--c-charcoal) / 0.07)", color: c("offInk") }
                     }
                   >
-                    {MUSCLE_GROUP_LABEL[mg]}
+                    {muscleLabel(MUSCLE_GROUP_LABEL[mg])}
                     {secondary && <span className="ms-1 text-[9px] align-super">2°</span>}
                   </span>
                 );
@@ -103,15 +105,15 @@ export const BuiltInExerciseSheet: React.FC<{
 
           <div className="grid grid-cols-2" style={{ gap: 11 }}>
             <div className="min-w-0">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Classification</span>
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Classification")}</span>
               <p className="flex items-center truncate" style={{ ...fieldStyle(dark), margin: 0 }}>
                 {classificationLabel(exercise.classification)}
               </p>
             </div>
             <div className="min-w-0">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Discipline</span>
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Discipline")}</span>
               <p className="flex items-center truncate" style={{ ...fieldStyle(dark), margin: 0 }}>
-                {disciplineSummary(exercise.tags) ?? "None"}
+                {disciplineSummary(exercise.tags) ?? t("None")}
               </p>
             </div>
           </div>
@@ -122,7 +124,7 @@ export const BuiltInExerciseSheet: React.FC<{
             className="tap w-full flex items-center justify-center disabled:opacity-60"
             style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", gap: 8, fontSize: textPx(14), fontWeight: 700 }}
           >
-            <BookOpen size={18} /> History
+            <BookOpen size={18} /> {t("History")}
           </button>
         </div>
       )}

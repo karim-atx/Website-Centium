@@ -27,6 +27,7 @@ import {
   type SeriesOption,
   type SessionOption,
 } from "./hubModel";
+import { t, tk } from "../../../i18n/core";
 
 // Market + Share 3.0 · W4 · B-MA.8.1 Post an opening (`postRole`, `postSlot`)
 // in the W3 MasterSheet (band --sband, 1px --sborder, radius 32; 53 title
@@ -66,13 +67,13 @@ export function useLiveClasses(): { series: SeriesOption[]; sessions: SessionOpt
 }
 
 const TYPES = [
-  { key: "role" as const, label: "Role · ongoing" },
-  { key: "class_slot" as const, label: "Class slot · one-off" },
+  { key: "role" as const, label: tk("Role · ongoing") },
+  { key: "class_slot" as const, label: tk("Class slot · one-off") },
 ];
 
 const UNITS: { value: FormPayUnit; label: string }[] = [
-  { value: "per_class", label: "per class" },
-  { value: "per_month", label: "a month" },
+  { value: "per_class", label: tk("per class") },
+  { value: "per_month", label: tk("a month") },
 ];
 
 /** The opening form's fields (Post opening, and the direct offer's "Offer to …"). */
@@ -127,7 +128,7 @@ export function OpeningFormFields({
 
   const positions =
     mode === "post" ? (
-      <FieldBox label="Positions" htmlFor={ids.positions} half>
+      <FieldBox label={t("Positions")} htmlFor={ids.positions} half>
         <FieldInput id={ids.positions} value={form.positions} onChange={(v) => set({ positions: v.replace(/[^\d]/g, "").slice(0, 2) })} inputMode="numeric" />
       </FieldBox>
     ) : null;
@@ -137,12 +138,12 @@ export function OpeningFormFields({
       type="button"
       aria-haspopup="menu"
       aria-expanded={menu?.kind === "unit"}
-      aria-label={`Pay unit: ${UNITS.find((u) => u.value === form.payUnit)?.label}`}
+      aria-label={t("Pay unit: {unit}", { unit: t(UNITS.find((u) => u.value === form.payUnit)?.label ?? "") })}
       onClick={(e) => setMenu({ kind: "unit", anchor: e.currentTarget })}
       className="hit market-focus"
       style={{ display: "inline-flex", alignItems: "center", gap: 2, border: 0, background: "transparent", padding: 0, fontFamily: "inherit", fontSize: textPx(12), fontWeight: 700, color: m.pdark, cursor: "pointer", whiteSpace: "nowrap" }}
     >
-      {UNITS.find((u) => u.value === form.payUnit)?.label}
+      {t(UNITS.find((u) => u.value === form.payUnit)?.label ?? "")}
       <ChevronDown size={12} strokeWidth={2.4} aria-hidden style={NO_ICON_SCALE} />
     </button>
   );
@@ -151,25 +152,25 @@ export function OpeningFormFields({
     <div ref={setGrid}>
       <FieldGrid>
         {person ? <PersonRow p={person.p} line={person.line} muted={person.muted} /> : null}
-        <FieldBox label="Type" labelId={ids.type} hint={typeLocked ? "The type can't change once posted." : undefined}>
+        <FieldBox label={t("Type")} labelId={ids.type} hint={typeLocked ? t("The type can't change once posted.") : undefined}>
           <ChipSet
             labelId={ids.type}
             kind="radio"
-            options={typeLocked ? TYPES.filter((t) => t.key === form.type) : TYPES}
+            options={(typeLocked ? TYPES.filter((x) => x.key === form.type) : TYPES).map((x) => ({ ...x, label: t(x.label) }))}
             isOn={(k) => form.type === k}
             onToggle={(k) => (typeLocked ? undefined : set({ type: k, requirements: form.requirements.filter((r) => REQUIREMENTS[k].includes(r)) }))}
           />
         </FieldBox>
         {role ? (
           <>
-            <FieldBox label="Role title" htmlFor={ids.title}>
+            <FieldBox label={t("Role title")} htmlFor={ids.title}>
               <FieldInput id={ids.title} value={form.title} onChange={(v) => set({ title: v })} maxLength={80} />
             </FieldBox>
-            <FieldBox label="Classes" labelId={ids.classes} half={mode === "post"}>
+            <FieldBox label={t("Classes")} labelId={ids.classes} half={mode === "post"}>
               <PickerField
                 ref={classesRef}
                 value={chosen.length ? chosen.map((s) => s.label).join(", ") : null}
-                placeholder="Choose"
+                placeholder={t("Choose")}
                 labelledBy={ids.classes}
                 open={menu?.kind === "classes"}
                 onOpen={() => classesRef.current && setMenu({ kind: "classes", anchor: classesRef.current })}
@@ -179,13 +180,13 @@ export function OpeningFormFields({
             <div style={{ gridColumn: "span 1", background: m.sgrey, borderRadius: 14, padding: "12px 14px", lineHeight: "normal", minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 8 }}>
                 <label htmlFor={ids.pay} style={{ fontSize: textPx(13), fontWeight: 500, color: m.slabel }}>
-                  Pay
+                  {t("Pay")}
                 </label>
                 {unitButton}
               </div>
               <FieldInput id={ids.pay} value={form.pay} onChange={(v) => set({ pay: v.replace(/[^\d.]/g, "").slice(0, 9) })} inputMode="decimal" prefix="$" />
             </div>
-            <FieldBox label="Classes a month" htmlFor={ids.perMonth} half>
+            <FieldBox label={t("Classes a month")} htmlFor={ids.perMonth} half>
               <FieldInput
                 id={ids.perMonth}
                 value={form.classesPerMonth}
@@ -197,11 +198,11 @@ export function OpeningFormFields({
               />
             </FieldBox>
             {mode === "offer" ? (
-              <FieldBox label="Starts" labelId={ids.starts}>
+              <FieldBox label={t("Starts")} labelId={ids.starts}>
                 <div style={{ position: "relative" }}>
                   <PickerField
                     value={form.startsOn ? startsText(form.startsOn) : null}
-                    placeholder="Choose a date"
+                    placeholder={t("Choose a date")}
                     labelledBy={ids.starts}
                     open={false}
                     onOpen={() => {
@@ -230,17 +231,17 @@ export function OpeningFormFields({
           </>
         ) : (
           <>
-            <FieldBox label="Linked class" labelId={ids.linked}>
+            <FieldBox label={t("Linked class")} labelId={ids.linked}>
               <PickerField
                 ref={linkedRef}
                 value={session?.label ?? null}
-                placeholder="Choose"
+                placeholder={t("Choose")}
                 labelledBy={ids.linked}
                 open={menu?.kind === "linked"}
                 onOpen={() => linkedRef.current && setMenu({ kind: "linked", anchor: linkedRef.current })}
               />
             </FieldBox>
-            <FieldBox label="Pay for the slot" htmlFor={ids.pay} half={mode === "post"}>
+            <FieldBox label={t("Pay for the slot")} htmlFor={ids.pay} half={mode === "post"}>
               <FieldInput id={ids.pay} value={form.pay} onChange={(v) => set({ pay: v.replace(/[^\d.]/g, "").slice(0, 9) })} inputMode="decimal" prefix="$" />
             </FieldBox>
             {positions}
@@ -248,16 +249,16 @@ export function OpeningFormFields({
         )}
         {mode === "post" ? (
           <>
-            <FieldBox label="Requirements" labelId={ids.req}>
+            <FieldBox label={t("Requirements")} labelId={ids.req}>
               <ChipSet
                 labelId={ids.req}
                 kind="check"
-                options={REQUIREMENTS[form.type].map((r) => ({ key: r, label: r }))}
+                options={REQUIREMENTS[form.type].map((r) => ({ key: r, label: t(r) }))}
                 isOn={(k) => form.requirements.includes(k)}
                 onToggle={(k) => set({ requirements: form.requirements.includes(k) ? form.requirements.filter((x) => x !== k) : [...form.requirements, k] })}
               />
             </FieldBox>
-            <ToggleBox label="Allow pay proposals" hint={form.allowProposals ? PROPOSALS_HINT.on : PROPOSALS_HINT.off} on={form.allowProposals} onChange={(v) => set({ allowProposals: v })} />
+            <ToggleBox label={t("Allow pay proposals")} hint={form.allowProposals ? t(PROPOSALS_HINT.on) : t(PROPOSALS_HINT.off)} on={form.allowProposals} onChange={(v) => set({ allowProposals: v })} />
           </>
         ) : null}
       </FieldGrid>
@@ -271,7 +272,7 @@ export function OpeningFormFields({
         options={series.map((s) => ({ value: s.id, label: s.label }))}
         onSelect={toggleSeries}
         onDone={() => undefined}
-        emptyNote={series.length ? undefined : <p style={{ margin: "6px 4px", fontSize: textPx(12.5), color: m.faint }}>No repeating classes yet.</p>}
+        emptyNote={series.length ? undefined : <p style={{ margin: "6px 4px", fontSize: textPx(12.5), color: m.faint }}>{t("No repeating classes yet.")}</p>}
         onClose={() => setMenu(null)}
       />
       <PopupMenu
@@ -282,7 +283,7 @@ export function OpeningFormFields({
         selected={form.sessionId}
         options={sessions.map((s) => ({ value: s.id, label: s.label }))}
         onSelect={(id) => set({ sessionId: id })}
-        emptyNote={sessions.length ? undefined : <p style={{ margin: "6px 4px", fontSize: textPx(12.5), color: m.faint }}>No upcoming classes.</p>}
+        emptyNote={sessions.length ? undefined : <p style={{ margin: "6px 4px", fontSize: textPx(12.5), color: m.faint }}>{t("No upcoming classes.")}</p>}
         onClose={() => setMenu(null)}
       />
       <PopupMenu
@@ -290,7 +291,7 @@ export function OpeningFormFields({
         anchor={menu?.kind === "unit" ? menu.anchor : null}
         width={120}
         selected={form.payUnit}
-        options={UNITS}
+        options={UNITS.map((u) => ({ ...u, label: t(u.label) }))}
         rowLineHeight={17}
         onSelect={(u) => set({ payUnit: u })}
         onClose={() => setMenu(null)}
@@ -369,7 +370,7 @@ export default function PostOpeningSheet({
     <MasterSheet
       open={open}
       onClose={onClose}
-      title={editing ? "Edit opening" : "Post opening"}
+      title={editing ? t("Edit opening") : t("Post opening")}
       footer={
         <>
           <FeeNoticeRow text={feeNoticeText(rules)} />
@@ -379,7 +380,7 @@ export default function PostOpeningSheet({
             </p>
           ) : null}
           <PrimaryButton onClick={() => void post()} disabled={!parsed || !businessId} busy={busy}>
-            {editing ? "Save changes" : "Post opening"}
+            {editing ? t("Save changes") : t("Post opening")}
           </PrimaryButton>
         </>
       }

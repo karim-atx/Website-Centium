@@ -21,9 +21,11 @@
 // isn't yet your client shows without a name (reported).
 
 import { supabase } from "../../../lib/supabase/client";
+import { directoryCall, professionalsByIds, type DirRead } from "../directory/eg";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import type { Read, Write } from "./clients";
+import { t } from "../../i18n/core";
 
 const from = (table: string) => supabase.from(table as never);
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
@@ -31,9 +33,9 @@ const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(e
 function message(error: unknown, fallback: string): string {
   if (isOffline(error)) return OFFLINE_MESSAGE;
   const e = error as { code?: string; message?: string } | null;
-  if (e?.code === "ATX12") return "That person isn't your client any more.";
-  if (e?.code === "ATX09") return "Refer only to colleagues in your care network.";
-  if (e?.code === "ATX08") return "This has already been answered.";
+  if (e?.code === "ATX12") return t("That person isn't your client any more.");
+  if (e?.code === "ATX09") return t("Refer only to colleagues in your care network.");
+  if (e?.code === "ATX08") return t("This has already been answered.");
   // 22023: the function's own raised text is not shown (a raw server message); logged, and the fallback said.
   if (e?.code === "22023") console.warn("[care-network] refused:", e.message);
   return fallback;
@@ -53,7 +55,12 @@ export interface Colleague {
 export async function fetchColleagues(ids: string[]): Promise<Record<string, Colleague>> {
   const uniq = [...new Set(ids)].filter(Boolean);
   if (!uniq.length) return {};
-  const { data, error } = await from("public_professional_directory").select("profile_id, first_name, avatar_url, professional_subtype, specialty").in("profile_id", uniq);
+  type Row = { profile_id: string; first_name: string | null; avatar_url: string | null; professional_subtype: string | null; specialty: string | null };
+  // Round G2 (EG): the counting function.
+  const { data, error } = await professionalsByIds<Row>(uniq, () =>
+    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
+    from("public_professional_directory").select("profile_id, first_name, avatar_url, professional_subtype, specialty").in("profile_id", uniq) as unknown as PromiseLike<DirRead<Row[]>>
+  );
   if (error) return {};
   const out: Record<string, Colleague> = {};
   for (const r of (data ?? []) as unknown as { profile_id: string; first_name: string | null; avatar_url: string | null; professional_subtype: string | null; specialty: string | null }[])
@@ -63,10 +70,19 @@ export async function fetchColleagues(ids: string[]): Promise<Record<string, Col
 
 /** Listed professionals by first name, for "Add a colleague". */
 export async function searchColleagues(me: string, q: string): Promise<Read<Colleague[]>> {
-  let req = from("public_professional_directory").select("profile_id, first_name, avatar_url, professional_subtype, specialty").neq("profile_id", me).order("first_name").limit(20);
+  type Row = { profile_id: string; first_name: string | null; avatar_url: string | null; professional_subtype: string | null; specialty: string | null };
   const term = q.trim().replace(/[%_,()]/g, "");
-  if (term) req = req.ilike("first_name", `%${term}%`);
-  const { data, error } = await req;
+  // Round G2 (EG): the counting function gives the directory by first name;
+  // not me, the name match and the first 20 are applied here.
+  const read = await directoryCall<Row[]>("directory_professionals", { p_profile_id: null }, () => {
+    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
+    let req = from("public_professional_directory").select("profile_id, first_name, avatar_url, professional_subtype, specialty").neq("profile_id", me).order("first_name").limit(20);
+    if (term) req = req.ilike("first_name", `%${term}%`);
+    return req as unknown as PromiseLike<DirRead<Row[]>>;
+  });
+  const needle = term.toLocaleLowerCase();
+  const data = (read.data ?? []).filter((r) => r.profile_id !== me && (!needle || (r.first_name ?? "").toLocaleLowerCase().includes(needle))).slice(0, 20);
+  const error = read.error;
   if (error) return readFail(error);
   return {
     ok: true,
@@ -159,17 +175,17 @@ export async function fetchLinks(me: string): Promise<Read<CareLink[]>> {
 
 export async function requestLink(professionalId: string): Promise<Write> {
   const { error } = await rpc("request_care_link", { p_professional: professionalId });
-  return error ? { ok: false, message: message(error, "Couldn't send the request. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, t("Couldn't send the request. Try again.")) } : { ok: true };
 }
 
 export async function respondLink(linkId: string, accept: boolean): Promise<Write> {
   const { error } = await rpc("respond_care_link", { p_link_id: linkId, p_accept: accept });
-  return error ? { ok: false, message: message(error, "Couldn't answer. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, t("Couldn't answer. Try again.")) } : { ok: true };
 }
 
 export async function removeLink(linkId: string): Promise<Write> {
   const { error } = await rpc("remove_care_link", { p_link_id: linkId });
-  return error ? { ok: false, message: message(error, "Couldn't remove it. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, t("Couldn't remove it. Try again.")) } : { ok: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -240,7 +256,7 @@ export async function fetchReferrals(me: string): Promise<Read<{ received: Refer
 
 export async function referClient(clientId: string, toProfessional: string, reason: string): Promise<Write> {
   const { error } = await rpc("refer_client", { p_client_id: clientId, p_to_professional: toProfessional, p_reason: reason.trim() });
-  return error ? { ok: false, message: message(error, "Couldn't send the referral. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, t("Couldn't send the referral. Try again.")) } : { ok: true };
 }
 
 /**
@@ -252,17 +268,17 @@ export async function referClient(clientId: string, toProfessional: string, reas
 export async function respondReferral(id: string, accept: boolean, reason?: string | null): Promise<Write> {
   const why = !accept ? (reason ?? "").trim() : "";
   const { error } = await rpc("respond_care_referral", { p_referral_id: id, p_accept: accept, p_reason: why || null });
-  return error ? { ok: false, message: message(error, "Couldn't answer the referral. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, t("Couldn't answer the referral. Try again.")) } : { ok: true };
 }
 
 export async function withdrawReferral(id: string): Promise<Write> {
   const { error } = await rpc("withdraw_care_referral", { p_referral_id: id });
-  return error ? { ok: false, message: message(error, "Couldn't withdraw it. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, t("Couldn't withdraw it. Try again.")) } : { ok: true };
 }
 
 export async function disputeReferral(id: string, reason: string): Promise<Write> {
   const { error } = await rpc("dispute_care_referral", { p_referral_id: id, p_reason: reason.trim() });
-  return error ? { ok: false, message: message(error, "Couldn't send it to support. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, t("Couldn't send it to support. Try again.")) } : { ok: true };
 }
 
 /** Received items that need my answer: referrals the client agreed to, and colleagues asking to connect. */

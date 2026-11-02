@@ -17,6 +17,8 @@ import { fieldDate, hhmmOf, isoWeekday, minutes, money, remindersLabel, weeklyDa
 import { DEFAULT_SESSION } from "./calendarItems";
 import { PlaylistField, playlistFieldValid } from "../../music/PlaylistField";
 import { tidyPlaylistInput } from "../../../services/music/playlistLink";
+import { t } from "../../../i18n/core";
+import { weekdayLong } from "../proDates";
 
 /**
  * Release 3 · W4 + Add session (CA10 Choose client, CA11 Session type
@@ -39,7 +41,7 @@ export interface SessionClient {
   line: string;
 }
 
-const WEEKDAY_LONG = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
 
 const REMINDER_CHOICES: [AlertValue, AlertValue][] = [
   ["day_1", "hour_1"],
@@ -155,18 +157,18 @@ export const AddSessionSheet: React.FC<{
     setEnd(hhmmOf(minutes(v) + len));
   };
 
-  const typeLine = (t: SessionType) => [t.name, `${t.durationMin} min`, t.price > 0 ? money(t.price, t.currency) : null].filter(Boolean).join(" · ");
-  const typeNote = (t: SessionType) =>
-    [`${t.durationMin} min`, t.price > 0 ? money(t.price, t.currency) : null, t.locationKind === "online" ? "Online" : t.locationKind === "in_person" ? "In person" : t.locationKind === null ? "In person or online" : null]
+  const typeLine = (st: SessionType) => [st.name, t("{durationMin} min", { durationMin: st.durationMin }), st.price > 0 ? money(st.price, st.currency) : null].filter(Boolean).join(" · ");
+  const typeNote = (st: SessionType) =>
+    [t("{durationMin} min", { durationMin: st.durationMin }), st.price > 0 ? money(st.price, st.currency) : null, st.locationKind === "online" ? t("Online") : st.locationKind === "in_person" ? t("In person") : st.locationKind === null ? t("In person or online") : null]
       .filter(Boolean)
       .join(" · ");
-  const repeatLabel = times > 1 ? `Weekly · ${times} times` : "Never";
+  const repeatLabel = times > 1 ? t("Weekly · {n} times", { n: times }) : t("Never");
 
   const save = async () => {
     if (!client || !type || saving) return;
     const url = kind === "online" ? normaliseLink(link) : null;
     if (kind === "online" && link.trim() && !url) {
-      setError("Links need to be a web address (http or https).");
+      setError(t("Links need to be a web address (http or https)."));
       return;
     }
     // The playlist field already says what's wrong with the link.
@@ -209,21 +211,21 @@ export const AddSessionSheet: React.FC<{
   // ---- CA10 Choose client ----
   if (step === "client") {
     return (
-      <BottomSheet open={open} onClose={close} title="Choose client" onBack={client ? () => setStep("main") : undefined}>
+      <BottomSheet open={open} onClose={close} title={t("Choose client")} onBack={client ? () => setStep("main") : undefined}>
         <label className="flex items-center" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${query ? INK.pr : INK.b10}`, padding: "0 12px", gap: 8 }}>
           <Search size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search clients"
-            aria-label="Search clients"
+            placeholder={t("Search clients")}
+            aria-label={t("Search clients")}
             className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-faint"
             style={{ fontSize: textPx(14), color: INK.ch }}
           />
         </label>
         <div style={{ marginTop: 8 }}>
           {filtered.length === 0 && (
-            <p style={{ padding: "16px 0", fontSize: textPx(13), color: INK.chF }}>{clients.length === 0 ? "Clients you work with appear here." : "No clients match your search."}</p>
+            <p style={{ padding: "16px 0", fontSize: textPx(13), color: INK.chF }}>{clients.length === 0 ? t("Clients you work with appear here.") : t("No clients match your search.")}</p>
           )}
           {filtered.map((c, i) => (
             <button
@@ -259,12 +261,8 @@ export const AddSessionSheet: React.FC<{
               <CalendarPlus size={16} strokeWidth={1.75} aria-hidden style={{ color: INK.chS }} />
             </span>
             <span className="flex-1 min-w-0">
-              <span className="block" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>
-                Event without a client
-              </span>
-              <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>
-                A meeting, a class or time for yourself
-              </span>
+              <span className="block" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{t("Event without a client")}</span>
+              <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>{t("A meeting, a class or time for yourself")}</span>
             </span>
           </button>
         </div>
@@ -278,18 +276,18 @@ export const AddSessionSheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={close}
-        title="New session"
+        title={t("New session")}
         onBack={() => setStep("main")}
-        footer={<CtaButton size="sheet" className="w-full" label="Save session" loading={saving} disabled={!client || !type} onClick={() => void save()} />}
+        footer={<CtaButton size="sheet" className="w-full" label={t("Save session")} loading={saving} disabled={!client || !type} onClick={() => void save()} />}
       >
         <div className="flex flex-col" style={{ gap: 16 }}>
           <div>
-            <FieldLabel>Location</FieldLabel>
+            <FieldLabel>{t("Location")}</FieldLabel>
             <SegmentedTabs
               items={[
-                { key: "in_person", label: "In person" },
-                { key: "online", label: "Online" },
-                { key: "business", label: "At a business" },
+                { key: "in_person", label: t("In person") },
+                { key: "online", label: t("Online") },
+                { key: "business", label: t("At a business") },
               ]}
               activeKey={kind}
               onChange={(k) => setKind(k as Kind)}
@@ -297,12 +295,12 @@ export const AddSessionSheet: React.FC<{
               labelSize={12}
               className="mb-2"
             />
-            {kind === "in_person" && <FieldInput value={place} onChange={setPlace} icon={MapPin} ariaLabel="Address" placeholder="Address" maxLength={200} />}
-            {kind === "online" && <FieldInput value={link} onChange={setLink} icon={LinkIcon} ariaLabel="Meeting link" placeholder="Add a link" type="url" inputMode="url" autoCapitalize="off" />}
+            {kind === "in_person" && <FieldInput value={place} onChange={setPlace} icon={MapPin} ariaLabel={t("Address")} placeholder={t("Address")} maxLength={200} />}
+            {kind === "online" && <FieldInput value={link} onChange={setLink} icon={LinkIcon} ariaLabel={t("Meeting link")} placeholder={t("Add a link")} type="url" inputMode="url" autoCapitalize="off" />}
             {kind === "business" &&
               (businesses.length ? (
                 <>
-                  <FieldButton value={business ?? "Choose a business"} placeholder={!business} ariaLabel={`Business, ${business ?? "none chosen"}`} open={!!bizAnchor} onClick={(e) => setBizAnchor(e.currentTarget)} />
+                  <FieldButton value={business ?? t("Choose a business")} placeholder={!business} ariaLabel={t("Business, {business}", { business: business ?? t("none chosen") })} open={!!bizAnchor} onClick={(e) => setBizAnchor(e.currentTarget)} />
                   <PopupMenu
                     open={!!bizAnchor}
                     onClose={() => setBizAnchor(null)}
@@ -317,17 +315,17 @@ export const AddSessionSheet: React.FC<{
                   />
                 </>
               ) : (
-                <p style={{ fontSize: textPx(12), color: INK.chF }}>Businesses you work at appear here.</p>
+                <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("Businesses you work at appear here.")}</p>
               ))}
           </div>
           <div>
-            <FieldButton label="Repeat" labelIcon={Repeat} value={repeatLabel} ariaLabel={`Repeat, ${repeatLabel}`} open={!!repeatAnchor} onClick={(e) => setRepeatAnchor(e.currentTarget)} />
+            <FieldButton label={t("Repeat")} labelIcon={Repeat} value={repeatLabel} ariaLabel={t("Repeat, {repeatLabel}", { repeatLabel })} open={!!repeatAnchor} onClick={(e) => setRepeatAnchor(e.currentTarget)} />
             <PopupMenu
               open={!!repeatAnchor}
               onClose={() => setRepeatAnchor(null)}
               anchor={repeatAnchor}
               matchWidth={repeatAnchor}
-              options={[{ value: "1", label: "Never" }, ...REPEAT_TIMES.map((n) => ({ value: String(n), label: `Weekly · ${n} times` }))]}
+              options={[{ value: "1", label: t("Never") }, ...REPEAT_TIMES.map((n) => ({ value: String(n), label: t("Weekly · {n} times", { n }) }))]}
               selected={String(times)}
               onSelect={(v) => {
                 setTimes(Number(v));
@@ -337,10 +335,10 @@ export const AddSessionSheet: React.FC<{
           </div>
           <div>
             <FieldButton
-              label={`Reminder to ${first}`}
+              label={t("Reminder to {first}", { first })}
               labelIcon={Bell}
               value={remindersLabel(alerts[0], alerts[1])}
-              ariaLabel={`Reminder to ${first}, ${remindersLabel(alerts[0], alerts[1])}`}
+              ariaLabel={t("Reminder to {first}, {v}", { first, v: remindersLabel(alerts[0], alerts[1]) })}
               open={!!remindAnchor}
               onClick={(e) => setRemindAnchor(e.currentTarget)}
             />
@@ -358,11 +356,11 @@ export const AddSessionSheet: React.FC<{
               }}
             />
           </div>
-          <FieldInput label={`Notes for ${first}`} value={notes} onChange={setNotes} maxLength={2000} />
-          <PlaylistField value={playlist} onChange={setPlaylist} hint={`${first} sees it on the session and opens it in their own app.`} />
+          <FieldInput label={t("Notes for {first}", { first })} value={notes} onChange={setNotes} maxLength={2000} />
+          <PlaylistField value={playlist} onChange={setPlaylist} hint={t("{first} sees it on the session and opens it in their own app.", { first })} />
           <div className="flex items-center" style={{ gap: 10, borderRadius: 12, background: INK.soft, padding: 12 }}>
             <Info size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} />
-            <span style={{ fontSize: textPx(12), color: INK.chS, lineHeight: 1.45 }}>{`${first} gets an invitation to accept. It shows in their calendar once accepted.`}</span>
+            <span style={{ fontSize: textPx(12), color: INK.chS, lineHeight: 1.45 }}>{t("{first} gets an invitation to accept. It shows in their calendar once accepted.", { first })}</span>
           </div>
           {error && (
             <p role="alert" className="text-center" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi }}>
@@ -375,28 +373,28 @@ export const AddSessionSheet: React.FC<{
   }
 
   // ---- CA5 v2 / CA11 Client, type, date and time ----
-  const weekday = WEEKDAY_LONG[isoWeekday(date)];
+  const weekday = weekdayLong(isoWeekday(date) - 1);
   return (
     <BottomSheet
       open={open}
       onClose={close}
-      title="New session"
-      footer={<CtaButton size="sheet" className="w-full" label="Continue" disabled={!client || !type} onClick={() => setStep("more")} />}
+      title={t("New session")}
+      footer={<CtaButton size="sheet" className="w-full" label={t("Continue")} disabled={!client || !type} onClick={() => setStep("more")} />}
     >
       <div className="flex flex-col" style={{ gap: 16 }}>
         <div>
           <FieldButton
-            label="Client"
-            value={client?.name ?? "Choose client"}
+            label={t("Client")}
+            value={client?.name ?? t("Choose client")}
             placeholder={!client}
             lead={client ? <Avatar name={client.name} url={client.avatarUrl} size={24} /> : undefined}
-            ariaLabel={`Client, ${client?.name ?? "none chosen"}`}
+            ariaLabel={t("Client, {name}", { name: client?.name ?? t("none chosen") })}
             onClick={() => setStep("client")}
           />
           {pack && (
             <p className="flex items-center" style={{ gap: 6, marginTop: 6, fontSize: textPx(11), color: INK.chF }}>
               <Package size={12} strokeWidth={2} aria-hidden />
-              {`${pack.count}-session pack · ${pack.left} left`}
+              {t("{count}-session pack · {left} left", { count: pack.count, left: pack.left })}
             </p>
           )}
         </div>
@@ -404,11 +402,11 @@ export const AddSessionSheet: React.FC<{
           {types.length ? (
             <>
               <FieldButton
-                label="Session type"
-                value={type ? typeLine(type) : "Choose a session type"}
+                label={t("Session type")}
+                value={type ? typeLine(type) : t("Choose a session type")}
                 placeholder={!type}
                 lead={<span aria-hidden style={{ width: 10, height: 10, borderRadius: 9999, background: type?.colour ?? DEFAULT_SESSION, flexShrink: 0 }} />}
-                ariaLabel={`Session type, ${type ? typeLine(type) : "none chosen"}`}
+                ariaLabel={t("Session type, {v}", { v: type ? typeLine(type) : t("none chosen") })}
                 open={!!typeAnchor}
                 onClick={(e) => setTypeAnchor(e.currentTarget)}
               />
@@ -417,7 +415,7 @@ export const AddSessionSheet: React.FC<{
                 onClose={() => setTypeAnchor(null)}
                 anchor={typeAnchor}
                 matchWidth={typeAnchor}
-                heading="Session type"
+                heading={t("Session type")}
                 options={types.map((t) => ({
                   value: t.id,
                   label: t.name,
@@ -434,22 +432,20 @@ export const AddSessionSheet: React.FC<{
             </>
           ) : (
             <>
-              <FieldLabel>Session type</FieldLabel>
+              <FieldLabel>{t("Session type")}</FieldLabel>
               <div className="flex items-center justify-between" style={{ minHeight: 40, borderRadius: 12, background: INK.soft, padding: "0 12px", gap: 8 }}>
-                <span style={{ fontSize: textPx(13), color: INK.chF }}>No session types yet</span>
-                <button type="button" onClick={onAddType} className="tap" style={{ fontSize: textPx(13), fontWeight: 700, color: INK.prDeep, minHeight: 44 }}>
-                  Add session type
-                </button>
+                <span style={{ fontSize: textPx(13), color: INK.chF }}>{t("No session types yet")}</span>
+                <button type="button" onClick={onAddType} className="tap" style={{ fontSize: textPx(13), fontWeight: 700, color: INK.prDeep, minHeight: 44 }}>{t("Add session type")}</button>
               </div>
             </>
           )}
         </div>
-        <FieldButton label="Date" value={fieldDate(date)} icon={CalendarIcon} ariaLabel={`Date, ${fieldDate(date)}`} onClick={() => setDateOpen(true)} />
-        <SwitchRow title="Repeat weekly" sub={times > 1 ? `Every ${weekday}, ${times} times` : `Every ${weekday}`} checked={times > 1} onChange={(v) => setTimes(v ? 8 : 1)} />
+        <FieldButton label={t("Date")} value={fieldDate(date)} icon={CalendarIcon} ariaLabel={t("Date, {v}", { v: fieldDate(date) })} onClick={() => setDateOpen(true)} />
+        <SwitchRow title={t("Repeat weekly")} sub={times > 1 ? t("Every {weekday}, {n} times", { weekday, n: times }) : t("Every {weekday}", { weekday })} checked={times > 1} onChange={(v) => setTimes(v ? 8 : 1)} />
         <div>
           <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
             <TimeField
-              label="Starts"
+              label={t("Starts")}
               value={start}
               open={wheel === "start"}
               onOpen={() => setWheel("start")}
@@ -459,7 +455,7 @@ export const AddSessionSheet: React.FC<{
               fieldClass="w-full h-10 rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm text-charcoal"
             />
             <TimeField
-              label="Ends"
+              label={t("Ends")}
               value={end}
               open={wheel === "end"}
               onOpen={() => setWheel("end")}
@@ -472,11 +468,11 @@ export const AddSessionSheet: React.FC<{
           </div>
           {wheel && <div aria-hidden style={{ height: 150 }} />}
           {type && type.bufferMin > 0 && (
-            <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 8 }}>{`Includes a ${type.bufferMin} min buffer after`}</p>
+            <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 8 }}>{t("Includes a {bufferMin} min buffer after", { bufferMin: type.bufferMin })}</p>
           )}
         </div>
       </div>
-      <CalendarPickerSheet open={dateOpen} onClose={() => setDateOpen(false)} title="Date" selectedDate={date} today={todayIso} onSelect={(d) => setDate(d)} />
+      <CalendarPickerSheet open={dateOpen} onClose={() => setDateOpen(false)} title={t("Date")} selectedDate={date} today={todayIso} onSelect={(d) => setDate(d)} />
     </BottomSheet>
   );
 };

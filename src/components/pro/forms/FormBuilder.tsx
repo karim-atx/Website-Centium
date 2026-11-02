@@ -32,6 +32,7 @@ import {
   sheetCondition,
   sheetShowIf,
   type ShowIfOp,
+  answerLabel,
   profileFieldsFor,
   questionProblem,
   questionsFor,
@@ -44,8 +45,9 @@ import {
 } from "./formModel";
 import { archiveForm, canWriteForm, fetchForm, saveForm, type FormAssignment } from "../../../services/pro/forms";
 import { FORMS_PATH } from "./FormsHome";
+import { t, tk, tx } from "../../../i18n/core";
 
-const OFFLINE = "You're offline. Try again when you're connected.";
+const OFFLINE = tk("You're offline. Try again when you're connected.");
 
 /**
  * Release 3 · MO29 Form builder and Check-in builder (gen/r18.js builder18,
@@ -140,7 +142,7 @@ export const FormBuilder: React.FC = () => {
   const dirty =
     title.trim() !== savedTitle.trim() || description.trim() !== savedDescription.trim() || onHire !== savedOnHire || JSON.stringify(saved) !== JSON.stringify(draft);
   const problems = useMemo(() => draft.map((q, i) => questionProblem(q) ?? conditionProblem(draft, i)), [draft]);
-  const titleProblem = !title.trim() ? "Give the form a title." : title.trim().length > TITLE_MAX ? `Keep the title under ${TITLE_MAX} characters.` : null;
+  const titleProblem = !title.trim() ? t("Give the form a title.") : title.trim().length > TITLE_MAX ? t("Keep the title under {n} characters.", { n: TITLE_MAX }) : null;
   const blocked = !!titleProblem || problems.some(Boolean) || draft.length === 0;
   const ready = !!formId && !dirty;
 
@@ -152,13 +154,13 @@ export const FormBuilder: React.FC = () => {
   const save = async () => {
     setTried(true);
     if (blocked || busy || !authUserId) return;
-    if (!online) return setErr(OFFLINE);
+    if (!online) return setErr(t(OFFLINE));
     setBusy(true);
     setErr(null);
     const r = await saveForm(authUserId, formId, { kind, title, description, sendOnHire: kind === "intake" && onHire }, saved, draft);
     setBusy(false);
-    if (!r.ok) return setErr(r.message);
-    setToast("Saved.");
+    if (!r.ok) return setErr(t(r.message));
+    setToast(t("Saved."));
     setTried(false);
     if (!formId) navigate(`${FORMS_PATH}/${r.id}`, { replace: true });
     else setNonce((n) => n + 1);
@@ -166,12 +168,12 @@ export const FormBuilder: React.FC = () => {
 
   const remove = async () => {
     if (!formId || busy) return;
-    if (!online) return setErr(OFFLINE);
+    if (!online) return setErr(t(OFFLINE));
     setBusy(true);
     const r = await archiveForm(formId);
     setBusy(false);
     setConfirm(null);
-    if (!r.ok) return setErr(r.message);
+    if (!r.ok) return setErr(t(r.message));
     navigate(kind === "check_in" ? `${FORMS_PATH}?tab=check-ins` : FORMS_PATH, { replace: true });
   };
 
@@ -202,17 +204,17 @@ export const FormBuilder: React.FC = () => {
   if (state === "missing")
     return (
       <div>
-        <Head title="Form" onBack={() => navigate(FORMS_PATH)} onPreview={null} />
-        <ComingSoon line="This form isn't available any more." />
+        <Head title={t("Form")} onBack={() => navigate(FORMS_PATH)} onPreview={null} />
+        <ComingSoon line={t("This form isn't available any more.")} />
       </div>
     );
 
-  const heading = title.trim() || (kind === "check_in" ? "New check-in" : "New form");
+  const heading = title.trim() || (kind === "check_in" ? t("New check-in") : t("New form"));
   if (allowed === false)
     return (
       <div>
         <Head title={heading} onBack={() => navigate(FORMS_PATH)} onPreview={null} />
-        <p style={{ fontSize: textPx(13), color: INK.chS }}>Only professionals can write and send forms.</p>
+        <p style={{ fontSize: textPx(13), color: INK.chS }}>{t("Only professionals can write and send forms.")}</p>
       </div>
     );
 
@@ -233,12 +235,12 @@ export const FormBuilder: React.FC = () => {
     <div style={{ paddingBottom: 172 }}>
       <Head title={heading} onBack={back} onPreview={draft.length ? () => setSheet("preview") : null} />
       <label htmlFor={titleId} className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-        Title
+        {t("Title")}
       </label>
       <input id={titleId} value={title} maxLength={TITLE_MAX} onChange={(e) => setTitle(e.target.value)} className="outline-none focus:border-primary" style={{ ...fieldStyle(), height: 40 }} />
       {tried && titleProblem && <ErrorLine>{titleProblem}</ErrorLine>}
       <label htmlFor={descId} className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, margin: "12px 0 6px" }}>
-        Description <span style={{ fontWeight: 500, color: INK.chF }}>(optional)</span>
+        {t("Description")} <span style={{ fontWeight: 500, color: INK.chF }}>{t("(optional)")}</span>
       </label>
       <textarea
         id={descId}
@@ -246,7 +248,7 @@ export const FormBuilder: React.FC = () => {
         maxLength={DESCRIPTION_MAX}
         rows={2}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="What it's for, shown to the client above the questions"
+        placeholder={t("What it's for, shown to the client above the questions")}
         className="block w-full outline-none resize-none focus:border-primary placeholder:text-charcoal-tertiary [field-sizing:content]"
         style={{ ...fieldStyle(), minHeight: 64, padding: "10px 12px", lineHeight: 1.45 }}
       />
@@ -254,17 +256,17 @@ export const FormBuilder: React.FC = () => {
         <div className="flex items-center justify-between" style={{ gap: 12, marginTop: 12, minHeight: 44 }}>
           <span className="min-w-0">
             <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 700, color: INK.ch }}>
-              Send when someone hires you
+              {t("Send when someone hires you")}
             </span>
             <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 2 }}>
-              Due 3 days after they hire you
+              {t("Due 3 days after they hire you")}
             </span>
           </span>
-          <Toggle checked={onHire} onChange={setOnHire} label="Send when someone hires you" />
+          <Toggle checked={onHire} onChange={setOnHire} label={t("Send when someone hires you")} />
         </div>
       )}
       <div style={{ height: 14 }} />
-      <SectionHead label={`Questions · ${draft.length}`} />
+      <SectionHead label={t("Questions · {n}", { n: draft.length })} />
       {draft.map((q, i) => {
         const canPickCondition = !q.safetyTopic && (!!q.showIf || conditionParents(draft, i).length > 0);
         const canPickProfile = !q.safetyTopic && profileFieldsFor(q).length > 0;
@@ -286,7 +288,7 @@ export const FormBuilder: React.FC = () => {
           />
         );
       })}
-      {tried && draft.length === 0 && <ErrorLine>Add at least one question.</ErrorLine>}
+      {tried && draft.length === 0 && <ErrorLine>{t("Add at least one question.")}</ErrorLine>}
       <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8, marginTop: 4 }}>
         {(["question", "section"] as const).map((what) => (
           <button
@@ -300,7 +302,7 @@ export const FormBuilder: React.FC = () => {
             style={{ gap: 6, height: 44, borderRadius: 14, border: "1.5px dashed rgb(var(--c-charcoal) / 0.11)", fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}
           >
             <Plus size={14} strokeWidth={2.4} aria-hidden />
-            {what === "question" ? "Add question" : "Add section"}
+            {what === "question" ? t("Add question") : t("Add section")}
           </button>
         ))}
       </div>
@@ -308,13 +310,13 @@ export const FormBuilder: React.FC = () => {
       {formId && (
         <button type="button" onClick={() => setConfirm("remove")} className="tap flex items-center mx-auto" style={{ gap: 6, marginTop: 20, minHeight: 44, fontSize: textPx(12.5), fontWeight: 700, color: INK.hi }}>
           <Trash2 size={14} strokeWidth={2} aria-hidden />
-          Remove form
+          {t("Remove form")}
         </button>
       )}
 
       <PinnedCta
-        primary={{ label: "Save", icon: <Check size={15} />, loading: busy, onClick: () => void save(), disabled: !dirty && !!formId }}
-        secondary={{ label: kind === "check_in" ? "Schedule" : "Sending", icon: kind === "check_in" ? <CalendarClock size={15} /> : <Send size={15} />, onClick: () => setSheet("send") }}
+        primary={{ label: t("Save"), icon: <Check size={15} />, loading: busy, onClick: () => void save(), disabled: !dirty && !!formId }}
+        secondary={{ label: kind === "check_in" ? t("Schedule") : tx("Sending", "form delivery"), icon: kind === "check_in" ? <CalendarClock size={15} /> : <Send size={15} />, onClick: () => setSheet("send") }}
       />
 
       <BottomSheet
@@ -323,27 +325,27 @@ export const FormBuilder: React.FC = () => {
           setSheet(null);
           setAddAsSection(false);
         }}
-        title={addAsSection ? "Add a section" : "Add a question"}
+        title={addAsSection ? t("Add a section") : t("Add a question")}
       >
-        {addAsSection && <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginBottom: 10 }}>A section starts with a question. Choose its first one, then give the section a title.</p>}
+        {addAsSection && <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginBottom: 10 }}>{t("A section starts with a question. Choose its first one, then give the section a title.")}</p>}
         <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8 }}>
-          {UI_TYPES.map((t) => {
-            const Icon = TYPE_ICON[t.key];
+          {UI_TYPES.map((ut) => {
+            const Icon = TYPE_ICON[ut.key];
             return (
               <button
-                key={t.key}
+                key={ut.key}
                 type="button"
-                onClick={() => t.available && add(t.key)}
-                aria-disabled={!t.available || undefined}
+                onClick={() => ut.available && add(ut.key)}
+                aria-disabled={!ut.available || undefined}
                 className="tap flex items-center text-start"
-                style={{ gap: 10, padding: 10, borderRadius: 14, border: `1px solid ${INK.b10}`, background: INK.card, minHeight: 50, opacity: t.available ? 1 : 0.55 }}
+                style={{ gap: 10, padding: 10, borderRadius: 14, border: `1px solid ${INK.b10}`, background: INK.card, minHeight: 50, opacity: ut.available ? 1 : 0.55 }}
               >
                 <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 9, background: INK.prPale }}>
                   <Icon size={15} strokeWidth={2} aria-hidden style={{ color: INK.prDeep }} />
                 </span>
                 <span className="flex-1 min-w-0" style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>
-                  {t.label}
-                  {!t.available && (
+                  {t(ut.label)}
+                  {!ut.available && (
                     <span className="block" style={{ marginTop: 2 }}>
                       <ComingSoonPill />
                     </span>
@@ -355,26 +357,26 @@ export const FormBuilder: React.FC = () => {
         </div>
       </BottomSheet>
 
-      <BottomSheet open={picking?.what === "condition" && !!pickQ} onClose={closePicker} title="Only ask if…">
+      <BottomSheet open={picking?.what === "condition" && !!pickQ} onClose={closePicker} title={t("Only ask if…")}>
         {pickQ && !parent && (
           <>
-            <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginBottom: 10 }}>The client sees this question only when an earlier answer matches. Otherwise it's skipped.</p>
+            <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginBottom: 10 }}>{t("The client sees this question only when an earlier answer matches. Otherwise it's skipped.")}</p>
             {parents.length ? (
               <RadioRows
-                label="Earlier question"
+                label={t("Earlier question")}
                 value={pickQ.showIf?.questionId ?? null}
                 onChange={(v) => setPickParent(v)}
-                rows={parents.map((p) => ({ value: p.id, title: p.prompt.trim(), line: p.type === "multi" ? "Multiple choice" : p.type === "scale" ? "Scale" : "Single choice" }))}
+                rows={parents.map((p) => ({ value: p.id, title: p.prompt.trim(), line: p.type === "multi" ? t("Multiple choice") : p.type === "scale" ? t("Scale") : t("Single choice") }))}
               />
             ) : (
-              <p style={{ fontSize: textPx(12.5), color: INK.chS }}>Add a choice, yes or no, or scale question above this one first.</p>
+              <p style={{ fontSize: textPx(12.5), color: INK.chS }}>{t("Add a choice, yes or no, or scale question above this one first.")}</p>
             )}
             {pickQ.showIf && (
               <CtaButton
                 className="w-full mt-3"
                 size="sheet"
                 variant="secondary"
-                label="Always ask"
+                label={t("Always ask")}
                 onClick={() => {
                   update(pickQ.id, { showIf: null });
                   closePicker();
@@ -388,17 +390,17 @@ export const FormBuilder: React.FC = () => {
             <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch, marginBottom: 2, overflowWrap: "anywhere" }}>{parent.prompt.trim()}</p>
             {cond && (
               <>
-                <FieldLabel top={8}>Condition</FieldLabel>
+                <FieldLabel top={8}>{tx("Condition", "form logic")}</FieldLabel>
                 <ChoiceChips
-                  label="Condition"
+                  label={tx("Condition", "form logic")}
                   value={cond.op}
                   onChange={(op) => setPickCond({ parent: parent.id, op, picked: op === "in" ? cond.picked : cond.picked.slice(0, 1) })}
-                  items={opsFor(parent).map((op) => ({ value: op, label: OP_LABEL[op] }))}
+                  items={opsFor(parent).map((op) => ({ value: op, label: t(OP_LABEL[op]) }))}
                 />
-                <FieldLabel top={10}>{cond.op === "in" ? "Any of these answers" : "This answer"}</FieldLabel>
+                <FieldLabel top={10}>{cond.op === "in" ? t("Any of these answers") : t("This answer")}</FieldLabel>
                 {cond.op === "in" ? (
                   <>
-                    <div role="group" aria-label="Any of these answers" className="flex flex-wrap" style={{ gap: 6 }}>
+                    <div role="group" aria-label={t("Any of these answers")} className="flex flex-wrap" style={{ gap: 6 }}>
                       {conditionValues(parent).map((v) => {
                         const on = cond.picked.includes(v);
                         return (
@@ -410,44 +412,44 @@ export const FormBuilder: React.FC = () => {
                             className="tap inline-flex items-center relative before:absolute before:inset-x-0 before:-inset-y-[6px] before:content-['']"
                             style={{ height: 32, padding: "0 12px", borderRadius: 10, fontSize: textPx(12.5), fontWeight: 700, background: on ? INK.fill : INK.soft, color: on ? INK.onFill : INK.chS }}
                           >
-                            {v}
+                            {answerLabel(v)}
                           </button>
                         );
                       })}
                     </div>
-                    <CtaButton className="w-full mt-3" size="sheet" label="Save condition" disabled={cond.picked.length === 0} onClick={() => saveCondition("in", cond.picked)} />
+                    <CtaButton className="w-full mt-3" size="sheet" label={t("Save condition")} disabled={cond.picked.length === 0} onClick={() => saveCondition("in", cond.picked)} />
                   </>
                 ) : (
                   <ChoiceChips
-                    label="This answer"
+                    label={t("This answer")}
                     value={cond.picked[0] ?? ""}
                     onChange={(v) => saveCondition(cond.op, [v])}
-                    items={conditionValues(parent).map((v) => ({ value: v, label: v }))}
+                    items={conditionValues(parent).map((v) => ({ value: v, label: answerLabel(v) }))}
                   />
                 )}
               </>
             )}
             <button type="button" onClick={() => setPickParent(null)} className="tap flex items-center" style={{ minHeight: 44, marginTop: 8, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
-              Choose another question
+              {t("Choose another question")}
             </button>
           </>
         )}
       </BottomSheet>
 
-      <BottomSheet open={picking?.what === "profile" && !!pickQ} onClose={closePicker} title="Carry into the profile">
+      <BottomSheet open={picking?.what === "profile" && !!pickQ} onClose={closePicker} title={t("Carry into the profile")}>
         {pickQ && (
           <>
             <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginBottom: 10 }}>
-              After sending, the client is asked whether to add this answer to their profile. Nothing is added unless they confirm it. Weight is never offered while they use recovery-sensitive mode.
+              {t("After sending, the client is asked whether to add this answer to their profile. Nothing is added unless they confirm it. Weight is never offered while they use recovery-sensitive mode.")}
             </p>
             <RadioRows<ProfileField | "none">
-              label="Carry into the profile"
+              label={t("Carry into the profile")}
               value={pickQ.profileField ?? "none"}
               onChange={(v) => {
                 update(pickQ.id, { profileField: v === "none" ? null : v });
                 closePicker();
               }}
-              rows={[{ value: "none" as const, title: "Don't carry it" }, ...profileFieldsFor(pickQ).map((f) => ({ value: f, title: PROFILE_FIELD_LABEL[f] }))]}
+              rows={[{ value: "none" as const, title: t("Don't carry it") }, ...profileFieldsFor(pickQ).map((f) => ({ value: f, title: t(PROFILE_FIELD_LABEL[f]) }))]}
             />
           </>
         )}
@@ -465,7 +467,7 @@ export const FormBuilder: React.FC = () => {
             setOnHire(v);
             setSavedOnHire(v);
           }}
-          onSent={(t) => { setSheet(null); setToast(t); }}
+          onSent={(msg) => { setSheet(null); setToast(msg); }}
         />
       ) : (
         <ScheduleSheet
@@ -475,9 +477,9 @@ export const FormBuilder: React.FC = () => {
           ready={ready}
           lane={lane ?? "full_coaching"}
           series={series}
-          onDone={(t) => {
+          onDone={(msg) => {
             setSheet(null);
-            setToast(t);
+            setToast(msg);
             setNonce((n) => n + 1);
           }}
         />
@@ -506,23 +508,23 @@ export const FormBuilder: React.FC = () => {
       <CentredPopup
         open={confirm === "discard"}
         onClose={() => setConfirm(null)}
-        title="Discard your changes?"
-        body="What you changed since the last save is lost."
+        title={t("Discard your changes?")}
+        body={t("What you changed since the last save is lost.")}
       >
         <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
-          <CtaButton size="page" label="Discard" onClick={() => navigate(kind === "check_in" ? `${FORMS_PATH}?tab=check-ins` : FORMS_PATH)} />
-          <CtaButton size="page" variant="secondary" label="Keep editing" onClick={() => setConfirm(null)} />
+          <CtaButton size="page" label={t("Discard")} onClick={() => navigate(kind === "check_in" ? `${FORMS_PATH}?tab=check-ins` : FORMS_PATH)} />
+          <CtaButton size="page" variant="secondary" label={t("Keep editing")} onClick={() => setConfirm(null)} />
         </div>
       </CentredPopup>
       <CentredPopup
         open={confirm === "remove"}
         onClose={() => setConfirm(null)}
-        title={`Remove ${heading}?`}
-        body="It leaves your forms. Answers clients already sent stay on their pages."
+        title={t("Remove {name}?", { name: heading })}
+        body={t("It leaves your forms. Answers clients already sent stay on their pages.")}
       >
         <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
-          <CtaButton size="page" label="Remove form" loading={busy} onClick={() => void remove()} />
-          <CtaButton size="page" variant="secondary" label="Keep it" onClick={() => setConfirm(null)} />
+          <CtaButton size="page" label={t("Remove form")} loading={busy} onClick={() => void remove()} />
+          <CtaButton size="page" variant="secondary" label={t("Keep it")} onClick={() => setConfirm(null)} />
         </div>
       </CentredPopup>
       <TopToast icon={CircleCheck} text={toast} onDone={() => setToast(null)} />
@@ -534,8 +536,8 @@ export const FormBuilder: React.FC = () => {
 const Head: React.FC<{ title: string; onBack: () => void; onPreview: (() => void) | null }> = ({ title, onBack, onPreview }) => (
   <div className="flex items-center justify-between" style={{ gap: 8, marginBottom: 12 }}>
     <div className="flex items-center min-w-0" style={{ gap: 6 }}>
-      <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ width: 24, height: 24, marginInlineStart: -4 }}>
-        <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
+      <button type="button" onClick={onBack} aria-label={t("Back")} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ width: 24, height: 24, marginInlineStart: -4 }}>
+        <ChevronLeft size={18} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: INK.chS }} />
       </button>
       <h1 className="truncate" style={{ fontSize: textPx(17), fontWeight: 800, color: INK.ch }}>
         {title}
@@ -543,7 +545,7 @@ const Head: React.FC<{ title: string; onBack: () => void; onPreview: (() => void
     </div>
     {onPreview && (
       <button type="button" onClick={onPreview} className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}>
-        Preview
+        {t("Preview")}
       </button>
     )}
   </div>

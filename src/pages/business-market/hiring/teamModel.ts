@@ -7,7 +7,7 @@
 // (D-03, utils/time12), ISO weekdays 1 = Monday … 7 = Sunday (model.ts).
 
 import { formatShortDate } from "../../../utils/date";
-import { t } from "../../../i18n/core";
+import { getLanguage, t, tk, tn } from "../../../i18n/core";
 import { appLocale } from "../../../i18n/format";
 import { clockParts, minutesOfDay } from "../../../utils/time12";
 import { type ProfessionalType, type TeamClass, type TeamHire, type TeamMember } from "../../../services/hiring/model";
@@ -52,14 +52,14 @@ export function hireLine(hires: TeamHire[], now: Date = new Date()): string | nu
   if (!dated.length) return null;
   const first = dated[0];
   const last = dated[dated.length - 1];
-  let line = `Hired via Centium · ${fullDate(first.hiredAt)}`;
-  if (dated.length > 1) line += ` · rehired ${shortDate(last.hiredAt, now)}`;
-  if (last.type === "class_slot") line += " · class slot";
+  let line = t("Hired via Centium · {date}", { date: fullDate(first.hiredAt) });
+  if (dated.length > 1) line += ` · ${t("rehired {date}", { date: shortDate(last.hiredAt, now) })}`;
+  if (last.type === "class_slot") line += ` · ${t("class slot")}`;
   return line;
 }
 
 /** The B-MA.8.8 label an existing-team member carries on Team. */
-export const EXISTING_TEAM_LABEL = "Free · existing team";
+export const EXISTING_TEAM_LABEL = tk("Free · existing team");
 
 const DAY_CAPS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -73,17 +73,17 @@ const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Satu
 export function classTile(c: Pick<TeamClass, "weekday" | "startTime">): { time: string; day: string } {
   const mins = minutesOfDay(c.startTime);
   const p = mins == null ? null : clockParts(mins);
-  const day = c.weekday != null && c.weekday >= 1 && c.weekday <= 7 ? DAY_CAPS[c.weekday - 1] : "";
+  const day = c.weekday != null && c.weekday >= 1 && c.weekday <= 7 ? (getLanguage() === "en" ? DAY_CAPS[c.weekday - 1] : t(DAY_NAMES[c.weekday - 1])) : "";
   return {
     time: p ? `${p.hour}:${String(p.minute).padStart(2, "0")}` : "",
-    day: [day, p?.meridiem ?? ""].filter(Boolean).join(" · "),
+    day: [day, p ? t(p.meridiem) : ""].filter(Boolean).join(" · "),
   };
 }
 
 /** The class row's second line: the reader's own label, else "Every Friday". */
 export function classLine(c: Pick<TeamClass, "weekday" | "label">): string {
   if (c.label) return c.label;
-  return c.weekday != null && c.weekday >= 1 && c.weekday <= 7 ? `Every ${DAY_NAMES[c.weekday - 1]}` : "";
+  return c.weekday != null && c.weekday >= 1 && c.weekday <= 7 ? t("Every {days}", { days: t(DAY_NAMES[c.weekday - 1]) }) : "";
 }
 
 /** "Sami" from "Sami Tannous" (the remove dialog's title). */
@@ -97,8 +97,8 @@ export const firstName = (name: string): string => name.trim().split(/\s+/)[0] |
 export function removeSentence(classes: Pick<TeamClass, "title">[]): string | null {
   const titles = [...new Set(classes.map((c) => c.title.trim()).filter(Boolean))];
   if (!titles.length) return null;
-  const list = titles.length === 1 ? titles[0] : `${titles.slice(0, -1).join(", ")} and ${titles[titles.length - 1]}`;
-  return `${list} will show Instructor not listed to clients until you name someone else.`;
+  const list = titles.length === 1 ? titles[0] : t("{a} and {b}", { a: titles.slice(0, -1).join(getLanguage() === "en" ? ", " : "، "), b: titles[titles.length - 1] });
+  return t("{classes} will show Instructor not listed to clients until you name someone else.", { classes: list });
 }
 
 /**
@@ -108,7 +108,7 @@ export function removeSentence(classes: Pick<TeamClass, "title">[]): string | nu
  */
 export function removeConfirmBody(member: { source: "existing_team" | "hire"; hires: unknown[] }): string {
   const charged = member.source === "hire" || member.hires.length > 0;
-  return charged ? "This can't be undone. The hiring fee already charged isn't refunded." : "This can't be undone.";
+  return charged ? t("This can't be undone. The hiring fee already charged isn't refunded.") : t("This can't be undone.");
 }
 
 // ---------------------------------------------------------------------------
@@ -127,8 +127,8 @@ export function feeRoleLine(roleTitle: string, type: "role" | "class_slot", hire
 
 /** The countdown's big figure and its unit: "24" "days left", "1" "day left"; 0 or less: "Last day". */
 export function countdownParts(daysLeft: number): { figure: string; unit: string } {
-  if (daysLeft <= 0) return { figure: "Last day", unit: "" };
-  return { figure: String(daysLeft), unit: daysLeft === 1 ? "day left" : "days left" };
+  if (daysLeft <= 0) return { figure: t("Last day"), unit: "" };
+  return { figure: String(daysLeft), unit: tn(daysLeft, "day left", "days left") };
 }
 
 /** The progress bar's width: the share of the 30 days used ("24 days left" → "20%"). */
@@ -137,23 +137,23 @@ export function windowPct(used: number): string {
 }
 
 /** "Add 3 professionals · free", "Add 1 professional · free". */
-export const addCta = (n: number): string => `Add ${n} ${n === 1 ? "professional" : "professionals"} · free`;
+export const addCta = (n: number): string => tn(n, "Add {n} professional · free", "Add {n} professionals · free");
 /** "Add 3 professionals to your team?" */
-export const addTitle = (n: number): string => `Add ${n} ${n === 1 ? "professional" : "professionals"} to your team?`;
+export const addTitle = (n: number): string => tn(n, "Add {n} professional to your team?", "Add {n} professionals to your team?");
 /** "3 professionals added to your team · free" */
-export const addedStrip = (n: number): string => `${n} ${n === 1 ? "professional" : "professionals"} added to your team · free`;
+export const addedStrip = (n: number): string => tn(n, "{n} professional added to your team · free", "{n} professionals added to your team · free");
 
 /** The invite note: "Free · existing team. No hiring fee. The invite must be accepted by Nov 14, 2026." */
 export function inviteNote(closesAt: string | null): string {
   const d = fullDate(closesAt);
-  return d ? `Free · existing team. No hiring fee. The invite must be accepted by ${d}.` : "Free · existing team. No hiring fee.";
+  return d ? t("Free · existing team. No hiring fee. The invite must be accepted by {date}.", { date: d }) : t("Free · existing team. No hiring fee.");
 }
 
 export const PRO_TYPE_CHIPS: { key: ProfessionalType; label: string }[] = [
-  { key: "trainer", label: "Trainer" },
-  { key: "dietitian", label: "Dietitian" },
-  { key: "physiotherapist", label: "Physiotherapist" },
-  { key: "other", label: "Other" },
+  { key: "trainer", label: tk("Trainer") },
+  { key: "dietitian", label: tk("Dietitian") },
+  { key: "physiotherapist", label: tk("Physiotherapist") },
+  { key: "other", label: tk("Other") },
 ];
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -188,13 +188,11 @@ export function inviteIdentifierKind(v: string): "email" | "code" | "other" {
 // ---------------------------------------------------------------------------
 // B-MA.1 the Gym card's Hiring row
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-
 /** "3 openings · 3 new applicants · Team of 3". */
 export function hiringRowLine(openings: number, newApplicants: number, team: number): string {
-  return `${plural(openings, "opening", "openings")} · ${plural(newApplicants, "new applicant", "new applicants")} · Team of ${team}`;
+  return `${tn(openings, "{n} opening", "{n} openings")} · ${tn(newApplicants, "{n} new applicant", "{n} new applicants")} · ${t("Team of {n}", { n: team })}`;
 }
 
 /** The line while Hiring hasn't landed (DB8 pending): a calm description, never zeros. */
-export const HIRING_ROW_PENDING = "Post openings and build your Team";
+export const HIRING_ROW_PENDING = tk("Post openings and build your Team");
 

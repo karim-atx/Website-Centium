@@ -8,6 +8,7 @@ import { fmtDay } from "./clientFormat";
 import { formatPrice } from "../../../utils/price";
 import { paymentMethodLabel } from "../../../services/hires/proLogic";
 import type { ClientPendingHire } from "../../../services/pro/clientPage";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · CL2 client page header (source gen/r6b.js cpHead6 with
@@ -43,18 +44,18 @@ export const ClientHeader: React.FC<{
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const sinceLine = isNew
-    ? `Joined ${fmtDay(joinedAt, true)} · ${next ? `Next ${next}` : "Not booked yet"}`
-    : `${patient ? "Patient" : "Client"} since ${fmtDay(joinedAt, true)}${next ? ` · Next ${next}` : ""}`;
+    ? t("Joined {date} · {next}", { date: fmtDay(joinedAt, true), next: next ? t("Next {when}", { when: next }) : t("Not booked yet") })
+    : `${patient ? t("Patient since {date}", { date: fmtDay(joinedAt, true) }) : t("Client since {date}", { date: fmtDay(joinedAt, true) })}${next ? ` · ${t("Next {when}", { when: next })}` : ""}`;
   return (
     <>
       <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 13 }}>
-        <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, marginInlineStart: -10, marginTop: -2 }}>
+        <button type="button" onClick={onBack} aria-label={t("Back")} className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, marginInlineStart: -10, marginTop: -2 }}>
           <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
         </button>
         <div className="flex" style={{ gap: 8 }}>
-          <RoundBtn icon={MessageCircle} label="Message" onClick={onMessage} />
-          <RoundBtn icon={CalendarPlus} label="Schedule" onClick={onSchedule} />
-          <RoundBtn ref={moreRef} icon={MoreHorizontal} label="More" onClick={() => moreRef.current && onMore(moreRef.current)} />
+          <RoundBtn icon={MessageCircle} label={t("Message")} onClick={onMessage} />
+          <RoundBtn icon={CalendarPlus} label={t("Schedule")} onClick={onSchedule} />
+          <RoundBtn ref={moreRef} icon={MoreHorizontal} label={t("More")} onClick={() => moreRef.current && onMore(moreRef.current)} />
         </div>
       </div>
       <div className="flex items-center" style={{ gap: 14, marginBottom: 10 }}>
@@ -79,15 +80,13 @@ export const ClientHeader: React.FC<{
           className="tap inline-flex items-center relative before:absolute before:-inset-y-2 before:inset-x-0 before:content-['']"
           style={{ gap: 3, fontSize: textPx(11), fontWeight: 700, padding: "3px 9px", borderRadius: 7, border: `1px dashed ${INK.b10}`, color: INK.chF }}
         >
-          <Plus size={10} strokeWidth={2.6} aria-hidden />
-          Tag
-        </button>
+          <Plus size={10} strokeWidth={2.6} aria-hidden />{t("Tag")}</button>
       </div>
       {pendingHires.map((h) => (
         <div key={h.id} role="status" className="flex items-start" style={{ gap: 12, borderRadius: 20, background: INK.goldPale, padding: "12px 14px", marginBottom: 12 }}>
           <Clock3 size={18} strokeWidth={2} aria-hidden style={{ color: INK.goldInk, flexShrink: 0, marginTop: 2 }} />
           <div className="flex-1 min-w-0">
-            <p style={{ fontSize: textPx(13.5), fontWeight: 700, color: INK.ch }}>Pending payment</p>
+            <p style={{ fontSize: textPx(13.5), fontWeight: 700, color: INK.ch }}>{t("Pending payment")}</p>
             <p style={{ fontSize: textPx(12), color: INK.chS, lineHeight: 1.45 }}>
               {`${h.planName} · ${formatPrice(h.priceAgreed) || "$0"} · ${paymentMethodLabel(h.paymentMethod)}`}
             </p>
@@ -99,7 +98,7 @@ export const ClientHeader: React.FC<{
             <div className="flex" style={{ marginTop: 8 }}>
               <CtaButton
                 size="base"
-                label="Confirm payment"
+                label={t("Confirm payment")}
                 loading={busy === h.id}
                 onClick={async () => {
                   setBusy(h.id);

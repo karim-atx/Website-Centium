@@ -30,6 +30,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { programmeErrorMessage, type ProgrammeSlot, type ProgressRow, type ScheduleRow, type SkipCalls } from "./model";
 import { playlistSaveError } from "../music/playlistLink";
 import { moveFailed, noteSaveFailed, skipFailed, undoFailed } from "./copy";
+import { t } from "../../i18n/core";
 
 type PgError = { code?: string; message: string } | null;
 type Rpc = { rpc: (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: PgError }> };
@@ -212,13 +213,13 @@ const fieldArgs = (f: ProgrammeFields) => ({
 
 export async function createProgramme(f: ProgrammeFields): Promise<Done<string>> {
   const { data, error } = await db().rpc("create_programme", fieldArgs(f));
-  if (error) return writeFail(error, "Couldn't create the programme. Try again.");
+  if (error) return writeFail(error, t("Couldn't create the programme. Try again."));
   return { ok: true, data: data as string };
 }
 
 export async function updateProgramme(id: string, f: ProgrammeFields): Promise<Done> {
   const { error } = await db().rpc("update_programme", { p_programme_id: id, ...fieldArgs(f) });
-  if (error) return writeFail(error, "Couldn't save the programme. Try again.");
+  if (error) return writeFail(error, t("Couldn't save the programme. Try again."));
   return { ok: true, data: undefined };
 }
 
@@ -231,14 +232,14 @@ export async function setProgrammePlaylist(id: string, url: string | null): Prom
   const { error } = await db().rpc("set_programme_playlist", { p_programme_id: id, p_playlist_url: url || null });
   if (error) {
     const playlist = playlistSaveError(error.code);
-    return playlist ? { ok: false, message: playlist } : writeFail(error, "Couldn't save the playlist. Try again.");
+    return playlist ? { ok: false, message: playlist } : writeFail(error, t("Couldn't save the playlist. Try again."));
   }
   return { ok: true, data: undefined };
 }
 
 export async function deleteProgramme(id: string): Promise<Done> {
   const { error } = await db().rpc("delete_programme", { p_programme_id: id });
-  if (error) return writeFail(error, "Couldn't delete the programme. Try again.");
+  if (error) return writeFail(error, t("Couldn't delete the programme. Try again."));
   return { ok: true, data: undefined };
 }
 
@@ -250,14 +251,14 @@ export async function setProgrammeDay(id: string, week: number, day: number, wor
     p_day: day,
     p_workout_template_ids: workoutTemplateIds,
   });
-  if (error) return writeFail(error, "Couldn't save that day. Try again.");
+  if (error) return writeFail(error, t("Couldn't save that day. Try again."));
   return { ok: true, data: undefined };
 }
 
 /** Replaces week `to` with a copy of week `from`; returns the sessions copied. */
 export async function copyProgrammeWeek(id: string, from: number, to: number): Promise<Done<number>> {
   const { data, error } = await db().rpc("copy_programme_week", { p_programme_id: id, p_from_week: from, p_to_week: to });
-  if (error) return writeFail(error, "Couldn't copy the week. Try again.");
+  if (error) return writeFail(error, t("Couldn't copy the week. Try again."));
   return { ok: true, data: (data as number) ?? 0 };
 }
 
@@ -297,13 +298,13 @@ export async function assignProgramme(id: string, clientId: string, startsOn: st
     p_starts_on: startsOn,
     p_join_week: joinWeek,
   });
-  if (error) return writeFail(error, "Couldn't assign the programme. Try again.");
+  if (error) return writeFail(error, t("Couldn't assign the programme. Try again."));
   return { ok: true, data: data as string };
 }
 
 export async function endProgrammeAssignment(assignmentId: string): Promise<Done> {
   const { error } = await db().rpc("end_programme_assignment", { p_assignment_id: assignmentId });
-  if (error) return writeFail(error, "Couldn't end the programme. Try again.");
+  if (error) return writeFail(error, t("Couldn't end the programme. Try again."));
   return { ok: true, data: undefined };
 }
 

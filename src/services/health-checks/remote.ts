@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { tk } from "../../i18n/core";
 
 /**
  * Database stage B2 (HANDOVER_API.md "Health checks are stored now — and only
@@ -41,8 +42,8 @@ export type Result<T = undefined> = { ok: true; data: T } | { ok: false; message
 function fail(error: { code?: string; message?: string } | null): { ok: false; message: string; code?: string } {
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE, code: "offline" };
   const code = error?.code ?? "";
-  if (code === "23505") return { ok: false, message: "You already have this check.", code };
-  return { ok: false, message: "Couldn't save. Try again.", code };
+  if (code === "23505") return { ok: false, message: tk("You already have this check."), code };
+  return { ok: false, message: tk("Couldn't save. Try again."), code };
 }
 
 export async function fetchHealthCheckData(): Promise<Result<{ states: StateRow[]; custom: CustomRow[]; reminders: ReminderRow[] }>> {

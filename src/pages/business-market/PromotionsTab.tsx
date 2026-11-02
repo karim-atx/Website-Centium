@@ -15,7 +15,7 @@ import { useMarket } from "./MarketContext";
 import { Card, CapsLabel, CentredDialog, fieldStyle, lh, MasterSheet, OutlineButton, PrimaryButton, px, SaveError, SheetBox, SheetSwitch, useMarketColors, useStrip } from "./listingParts";
 import { classFlag, dayMonth, dowTime, isoOf, whenFromNow } from "./model";
 import {
-  CHIP_LABEL,
+  chipLabel,
   chipOfStatus,
   draftOf,
   featuredLine,
@@ -42,6 +42,7 @@ import {
 import { PromotionSheet, type PromoEdit } from "./PromotionSheet";
 import { FeatureSheet, PaySheet, ResultsSheet, type FeatureRetry } from "./FeatureSheets";
 import { usePromotions } from "./usePromotions";
+import { isRtl, t, tk } from "../../i18n/core";
 
 // Market + Share 3.0 · W3 (D-13): the live promotions, the perk and the
 // featured weeks are KEPT on the Offers tab under the drawn point offers
@@ -130,14 +131,14 @@ export function PromotionsTab() {
   );
   /** Titles of everything a row can point at (past classes too). */
   const titles = useMemo(() => {
-    const t = new Map<string, string>();
-    for (const x of m.classes.classes) t.set(x.id, x.title);
-    for (const o of m.offerings.offerings) t.set(o.id, o.title);
-    for (const p of m.plans.plans) t.set(p.id, p.name);
-    if (business) t.set(business.id, business.name);
-    return t;
+    const map = new Map<string, string>();
+    for (const x of m.classes.classes) map.set(x.id, x.title);
+    for (const o of m.offerings.offerings) map.set(o.id, o.title);
+    for (const p of m.plans.plans) map.set(p.id, p.name);
+    if (business) map.set(business.id, business.name);
+    return map;
   }, [m.classes.classes, m.offerings.offerings, m.plans.plans, business]);
-  const placementTitle = (p: Placement) => titles.get(p.targetId) ?? (p.targetKind === "business" ? business?.name ?? "Your listing" : "Your listing");
+  const placementTitle = (p: Placement) => titles.get(p.targetId) ?? (p.targetKind === "business" ? business?.name ?? t("Your listing") : t("Your listing"));
 
   const rows = useMemo(() => sortPromotions(data.promotions.map((p) => ({ p, status: promotionStatus(p, today) }))), [data.promotions, today]);
   const running = rows.filter((r) => r.status !== "ended");
@@ -196,7 +197,7 @@ export function PromotionsTab() {
     setRemoveRow(null);
     if (!r.ok) return showToast(r.message, true);
     m.setPerk(null);
-    showToast(`${row.label} is off your listing.`);
+    showToast(t("{name} is off your listing.", { name: row.label }));
   };
 
   const onPause = async (p: Promotion, paused: boolean) => {
@@ -204,7 +205,7 @@ export function PromotionsTab() {
     const r = await pausePromotion(p.id, paused);
     setRowBusy(null);
     if (!r.ok) return showToast(r.message, true);
-    applied(r.value, paused ? `${r.value.name} is paused. It's hidden from Explore until you resume it.` : `${r.value.name} is live on Explore.`);
+    applied(r.value, paused ? t("{name} is paused. It's hidden from Explore until you resume it.", { name: r.value.name }) : t("{name} is live on Explore.", { name: r.value.name }));
   };
 
   const onConfirm = async () => {
@@ -219,13 +220,13 @@ export function PromotionsTab() {
       data.setPromotions((list) => list.filter((x) => x.id !== p.id));
       data.reload();
       m.reloadListingPromos();
-      return showToast(`${p.name} is cancelled.`);
+      return showToast(t("{name} is cancelled.", { name: p.name }));
     }
     const r = await endPromotion(p.id);
     setBusy(false);
     setConfirm(null);
     if (!r.ok) return showToast(r.message, true);
-    applied(r.value, `${r.value.name} has ended.`);
+    applied(r.value, t("{name} has ended.", { name: r.value.name }));
   };
 
   const onListing = async (p: Promotion, on: boolean) => {
@@ -236,7 +237,7 @@ export function PromotionsTab() {
     data.setPromotions((list) => list.map((x) => (x.id === p.id ? r.value : x)));
     m.reloadListingPromos();
     if (on) flash(`offer:${p.id}`);
-    showToast(on ? `${p.name} is now on your listing.` : `${p.name} is off your listing.`);
+    showToast(on ? t("{name} is now on your listing.", { name: p.name }) : t("{name} is off your listing.", { name: p.name }));
   };
 
   const act = (a: PromoAction, p: Promotion, status: PromoStatus) => {
@@ -251,11 +252,11 @@ export function PromotionsTab() {
 
   const promoBlock =
     data.loading && data.promotions.length === 0 && placementCards.length === 0 ? (
-      <MarketSkeleton radius={20} rows={3} height={181} count={2} gap={10} label="Loading your promotions" />
+      <MarketSkeleton radius={20} rows={3} height={181} count={2} gap={10} label={t("Loading your promotions")} />
     ) : data.error ? (
       <MarketError thing="your promotions" onRetry={data.reload} />
     ) : rows.length === 0 && placementCards.length === 0 ? (
-      <MarketEmptyCard title="No promotions yet" body={v.promosEmpty} />
+      <MarketEmptyCard title={t("No promotions yet")} body={v.promosEmpty} />
     ) : (
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {placementCards.map(({ p, card }) =>
@@ -264,17 +265,17 @@ export function PromotionsTab() {
               key={p.id}
               c={c}
               icon={Award}
-              title={`${placementTitle(p)}, featured`}
+              title={t("{name}, featured", { name: placementTitle(p) })}
               dates={card.dates}
               chip={card.chip}
               borderColor={card.view === "featured" ? c.segactive : undefined}
               line={card.line}
               actions={
                 card.view === "unpaid"
-                  ? [{ key: "retry", icon: CalendarClock, label: "Pick new dates", disabled: !online || !m.isOwner, onClick: () => setFeature({ item: p.targetId, from: retryStart(p, today), retry: { placementId: p.id, itemId: p.targetId } }) }]
+                  ? [{ key: "retry", icon: CalendarClock, label: t("Pick new dates"), disabled: !online || !m.isOwner, onClick: () => setFeature({ item: p.targetId, from: retryStart(p, today), retry: { placementId: p.id, itemId: p.targetId } }) }]
                   : card.view === "awaiting"
                     ? []
-                    : [{ key: "results", icon: ChartColumn, label: "Results", onClick: () => setResults(p) }]
+                    : [{ key: "results", icon: ChartColumn, label: t("Results"), onClick: () => setResults(p) }]
               }
             />
           ) : null
@@ -292,13 +293,13 @@ export function PromotionsTab() {
               glow={glow === p.id}
               stats={[
                 { label: v.statLabel, value: usesText(status, s) },
-                { label: "People", value: peopleText(status, s) },
+                { label: t("People"), value: peopleText(status, s) },
               ]}
               line={recordedLine(s)}
               actions={promoActions(status).map((a) => ({
                 key: a,
                 icon: ACTION_ICON[a],
-                label: ACTION_LABEL[a],
+                label: t(ACTION_LABEL[a]),
                 warn: a === "end" || a === "cancel",
                 disabled: !canWrite || rowBusy === p.id,
                 onClick: () => act(a, p, status),
@@ -314,24 +315,24 @@ export function PromotionsTab() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, color: c.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <CapsLabel>Your promotions</CapsLabel>
+      <CapsLabel>{t("Your promotions")}</CapsLabel>
       {promoBlock}
       <OutlineButton onClick={() => setCreate({ what: null })} disabled={!canWrite} style={{ width: "100%", minHeight: 44 }}>
         <Plus size={15} strokeWidth={2.4} aria-hidden />
-        Create promotion
+        {t("Create promotion")}
       </OutlineButton>
 
-      <CapsLabel style={{ marginTop: 6 }}>Offers on your listing</CapsLabel>
+      <CapsLabel style={{ marginTop: 6 }}>{t("Offers on your listing")}</CapsLabel>
       {noRow ? (
         // No business_profiles row: offers attach to it (main's discounts gate, NOTHING_LOST LOST 3).
         <>
-          <MarketEmptyCard title="No offers yet" body="Save your business profile first to start adding offers." />
+          <MarketEmptyCard title={t("No offers yet")} body={t("Save your business profile first to start adding offers.")} />
           <OutlineButton onClick={() => navigate("/app/business/profile")} style={{ width: "100%", minHeight: 44 }}>
-            Set up business profile
+            {t("Set up business profile")}
           </OutlineButton>
         </>
       ) : offers.length === 0 && running.length === 0 ? (
-        <MarketEmptyCard title="No offers yet" body={v.offersEmpty} />
+        <MarketEmptyCard title={t("No offers yet")} body={v.offersEmpty} />
       ) : (
         <>
           {offers.map((o) => (
@@ -340,12 +341,12 @@ export function PromotionsTab() {
               c={c}
               icon={o.perk ? Percent : BadgePercent}
               title={o.label}
-              sub={o.perk ? "Your listing perk" : "Discount"}
+              sub={o.perk ? t("Your listing perk") : t("Discount")}
               on
               switchDisabled
               chip={o.label}
               teal={glow === o.id}
-              menu={{ label: `Options for ${o.label}`, disabled: !online || !canMarket, onOpen: (el) => setMenuFor({ row: o, el }) }}
+              menu={{ label: t("Options for {name}", { name: o.label }), disabled: !online || !canMarket, onOpen: (el) => setMenuFor({ row: o, el }) }}
             />
           ))}
           {running.map(({ p, status }) => (
@@ -390,18 +391,18 @@ export function PromotionsTab() {
         }}
       >
         <Plus size={15} strokeWidth={2.4} aria-hidden />
-        Add an offer
+        {t("Add an offer")}
       </button>
 
       {sugg.length > 0 && (
         <>
-          <CapsLabel style={{ marginTop: 6 }}>Worth promoting</CapsLabel>
+          <CapsLabel style={{ marginTop: 6 }}>{t("Worth promoting")}</CapsLabel>
           <Card r={20} style={{ overflow: "hidden" }}>
             {sugg.map((s, i) => (
               <div key={s.x.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderTop: i ? `1px solid ${c.div}` : "none" }}>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: px(13.5), fontWeight: 700, color: c.ink, lineHeight: lh(19) }}>{`${s.x.title} · ${dowTime(s.x.date, s.x.startTime)}`}</span>
-                  <span style={{ display: "block", fontSize: px(11.5), color: c.caution, fontWeight: 700, lineHeight: lh(16) }}>{`${s.b} of ${s.x.maxCapacity} booked · ${whenFromNow(s.start, now, today, s.x.date)}`}</span>
+                  <span style={{ display: "block", fontSize: px(11.5), color: c.caution, fontWeight: 700, lineHeight: lh(16) }}>{`${t("{booked} of {max} booked", { booked: s.b, max: s.x.maxCapacity })} · ${whenFromNow(s.start, now, today, s.x.date)}`}</span>
                 </span>
                 <button
                   type="button"
@@ -411,7 +412,7 @@ export function PromotionsTab() {
                   style={{ height: 34, padding: "0 12px", borderRadius: 10, background: "transparent", color: c.pdark, border: `1px solid ${c.fill}`, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", fontSize: px(12), fontWeight: 800, whiteSpace: "nowrap", cursor: canWrite ? "pointer" : "default", opacity: canWrite ? 1 : 0.4 }}
                 >
                   <Megaphone size={13} strokeWidth={2.4} aria-hidden />
-                  Promote
+                  {t("Promote")}
                 </button>
               </div>
             ))}
@@ -421,7 +422,7 @@ export function PromotionsTab() {
 
       {hasSomething && (
         <>
-          <CapsLabel style={{ marginTop: 6 }}>Featured on Explore</CapsLabel>
+          <CapsLabel style={{ marginTop: 6 }}>{t("Featured on Explore")}</CapsLabel>
           <Card r={20} style={{ padding: "14px 16px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ width: 36, height: 36, borderRadius: 11, background: c.cautionbg, color: c.gold, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -429,7 +430,7 @@ export function PromotionsTab() {
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: "block", fontSize: px(14), fontWeight: 800, color: c.ink, lineHeight: lh(20) }}>{v.featureTitle}</span>
-                <span style={{ display: "block", fontSize: px(11.5), color: c.faint, lineHeight: lh(16) }}>Shown first in your area for 7 days</span>
+                <span style={{ display: "block", fontSize: px(11.5), color: c.faint, lineHeight: lh(16) }}>{t("Shown first in your area for 7 days")}</span>
               </span>
               {price && <span style={{ fontSize: px(14), fontWeight: 800, color: c.ink }}>{price}</span>}
             </div>
@@ -442,9 +443,9 @@ export function PromotionsTab() {
             ) : (
               <>
                 <OutlineButton onClick={() => setFeature({ item: null })} disabled={!online || !m.isOwner} style={{ width: "100%", marginTop: 10, minHeight: 44 }}>
-                  Feature for a week
+                  {t("Feature for a week")}
                 </OutlineButton>
-                {!m.isOwner && business && <p style={{ fontSize: px(11.5), color: c.faint, lineHeight: lh(16), marginTop: 8, textAlign: "center" }}>{OWNER_ONLY}</p>}
+                {!m.isOwner && business && <p style={{ fontSize: px(11.5), color: c.faint, lineHeight: lh(16), marginTop: 8, textAlign: "center" }}>{t(OWNER_ONLY)}</p>}
               </>
             )}
           </Card>
@@ -485,7 +486,7 @@ export function PromotionsTab() {
           }}
           onEnded={(p) => {
             setEdit(null);
-            applied(p, `${p.name} has ended.`);
+            applied(p, t("{name} has ended.", { name: p.name }));
           }}
         />
       )}
@@ -502,7 +503,7 @@ export function PromotionsTab() {
             setOfferSheet(null);
             clearParam();
             if (id) flash(id);
-            showToast(`${label} is now on your listing.`);
+            showToast(t("{name} is now on your listing.", { name: label }));
           }}
         />
       )}
@@ -552,11 +553,11 @@ export function PromotionsTab() {
         open={!!menuFor && !sheetOpen}
         onClose={() => setMenuFor(null)}
         anchor={menuFor?.el ?? null}
-        align="right"
+        align={isRtl() ? "left" : "right"}
         width={180}
         options={[
-          ...(menuFor?.row.perk ? [{ value: "edit", label: "Edit" }] : []),
-          { value: "remove", label: "Remove", destructive: true, icon: <Trash2 size={15} aria-hidden /> },
+          ...(menuFor?.row.perk ? [{ value: "edit", label: t("Edit") }] : []),
+          { value: "remove", label: t("Remove"), destructive: true, icon: <Trash2 size={15} aria-hidden /> },
         ]}
         onSelect={(k) => {
           const row = menuFor?.row;
@@ -568,57 +569,61 @@ export function PromotionsTab() {
       />
       <CentredDialog
         open={removeRow?.step === 1}
-        title={`Remove ${removeRow?.row.label ?? ""}?`}
-        body="It comes off your card on Explore. You can add it again any time."
-        action="Remove"
-        cancel="Keep it"
+        title={t("Remove {name}?", { name: removeRow?.row.label ?? "" })}
+        body={t("It comes off your card on Explore. You can add it again any time.")}
+        action={t("Remove")}
+        cancel={t("Keep it")}
         onAction={() => removeRow && setRemoveRow({ ...removeRow, step: 2 })}
         onCancel={() => setRemoveRow(null)}
       />
       <CentredDialog
         open={removeRow?.step === 2}
-        title="Confirm remove"
-        body={`${removeRow?.row.label ?? ""} comes off your listing now.`}
-        action="Remove"
-        cancel="Keep it"
+        title={t("Confirm remove")}
+        body={t("{name} comes off your listing now.", { name: removeRow?.row.label ?? "" })}
+        action={t("Remove")}
+        cancel={t("Keep it")}
         busy={busy}
         onAction={() => removeRow && void doRemove(removeRow.row)}
         onCancel={() => setRemoveRow(null)}
       />
       <CentredDialog
         open={confirm?.kind === "end" && confirm.step === 1}
-        title="End this promotion now?"
-        body={`${confirm?.p.name ?? ""} will stop showing on Explore today instead of ${confirm?.p.endsOn ? dayMonth(confirm.p.endsOn) : "its end date"}. People who already claimed it keep it.`}
-        action="End promotion"
-        cancel="Keep it running"
+        title={t("End this promotion now?")}
+        body={
+          confirm?.p.endsOn
+            ? t("{name} will stop showing on Explore today instead of {date}. People who already claimed it keep it.", { name: confirm.p.name, date: dayMonth(confirm.p.endsOn) })
+            : t("{name} will stop showing on Explore today instead of its end date. People who already claimed it keep it.", { name: confirm?.p.name ?? "" })
+        }
+        action={t("End promotion")}
+        cancel={t("Keep it running")}
         onAction={() => confirm && setConfirm({ ...confirm, step: 2 })}
         onCancel={() => setConfirm(null)}
       />
       <CentredDialog
         open={confirm?.kind === "end" && confirm.step === 2}
-        title="Confirm end"
-        body="This can't be undone."
-        action="End promotion"
-        cancel="Keep it running"
+        title={t("Confirm end")}
+        body={t("This can't be undone.")}
+        action={t("End promotion")}
+        cancel={t("Keep it running")}
         busy={busy}
         onAction={() => void onConfirm()}
         onCancel={() => setConfirm(null)}
       />
       <CentredDialog
         open={confirm?.kind === "cancel" && confirm.step === 1}
-        title="Cancel this promotion?"
-        body={`It won't start on ${confirm ? dayMonth(confirm.p.startsOn) : ""}.`}
-        action="Cancel promotion"
-        cancel="Keep it"
+        title={t("Cancel this promotion?")}
+        body={t("It won't start on {date}.", { date: confirm ? dayMonth(confirm.p.startsOn) : "" })}
+        action={t("Cancel promotion")}
+        cancel={t("Keep it")}
         onAction={() => confirm && setConfirm({ ...confirm, step: 2 })}
         onCancel={() => setConfirm(null)}
       />
       <CentredDialog
         open={confirm?.kind === "cancel" && confirm.step === 2}
-        title="Confirm cancel"
-        body="This can't be undone."
-        action="Cancel promotion"
-        cancel="Keep it"
+        title={t("Confirm cancel")}
+        body={t("This can't be undone.")}
+        action={t("Cancel promotion")}
+        cancel={t("Keep it")}
         busy={busy}
         onAction={() => void onConfirm()}
         onCancel={() => setConfirm(null)}
@@ -629,16 +634,16 @@ export function PromotionsTab() {
 }
 
 const ACTION_ICON: Record<PromoAction, LucideIcon> = { edit: Pencil, pause: Pause, resume: Play, end: CalendarX2, cancel: X, again: Copy };
-const ACTION_LABEL: Record<PromoAction, string> = { edit: "Edit", pause: "Pause", resume: "Resume", end: "End", cancel: "Cancel", again: "Run again" };
+const ACTION_LABEL: Record<PromoAction, string> = { edit: tk("Edit"), pause: tk("Pause"), resume: tk("Resume"), end: tk("End"), cancel: tk("Cancel"), again: tk("Run again") };
 
 /** Pick new dates: the unpaid week's own target, even when it isn't in the list (a past class, the business itself). */
 function withRetryItem(items: Promotable[], retry: FeatureRetry | undefined, placements: Placement[], title: (p: Placement) => string): Promotable[] {
   if (!retry || items.some((i) => i.id === retry.itemId)) return items;
   const p = placements.find((x) => x.id === retry.placementId);
   if (!p) return items;
-  const t = title(p);
+  const name = title(p);
   const kind: Promotable["kind"] = p.targetKind === "class" ? "class" : p.targetKind === "product" ? "offering" : "offer";
-  return [{ id: p.targetId, kind, title: t, field: t, sub: p.targetKind === "class" ? "Class" : p.targetKind === "product" ? "Offering" : "Your listing", preview: "" }, ...items];
+  return [{ id: p.targetId, kind, title: name, field: name, sub: p.targetKind === "class" ? t("Class") : p.targetKind === "product" ? t("Offering") : t("Your listing"), preview: "" }, ...items];
 }
 
 /** The status chips as the offer chips (OfferCard manager): Active / Scheduled / Paused / Ended; featured --pale, awaiting --caution, unpaid --high. */
@@ -694,7 +699,7 @@ function PromoCard({
           <span style={{ display: "block", fontSize: px(14), fontWeight: 800, lineHeight: lh(20), color: c.ink }}>{title}</span>
           <span style={{ display: "block", fontSize: px(11.5), color: c.faint, marginTop: 2, lineHeight: lh(16) }}>{dates}</span>
         </span>
-        <span style={{ fontSize: px(10.5), fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: bg, color: ink, whiteSpace: "nowrap" }}>{CHIP_LABEL[chip]}</span>
+        <span style={{ fontSize: px(10.5), fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: bg, color: ink, whiteSpace: "nowrap" }}>{chipLabel(chip)}</span>
       </div>
       {stats && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginTop: 12 }}>
@@ -781,10 +786,10 @@ function OfferCard({
           <span style={{ display: "block", fontSize: px(14), fontWeight: 800, color: c.ink, lineHeight: lh(20) }}>{title}</span>
           <span style={{ display: "block", fontSize: px(11.5), color: c.faint, lineHeight: lh(16) }}>{sub}</span>
         </span>
-        <SheetSwitch on={on} onChange={(x) => onSwitch?.(x)} label={on ? `Turn off ${title}` : `Turn on ${title}`} disabled={switchDisabled || !onSwitch} />
+        <SheetSwitch on={on} onChange={(x) => onSwitch?.(x)} label={on ? t("Turn off {name}", { name: title }) : t("Turn on {name}", { name: title })} disabled={switchDisabled || !onSwitch} />
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${c.div}` }}>
-        <span style={{ fontSize: px(11), fontWeight: 600, color: c.faint }}>On your card:</span>
+        <span style={{ fontSize: px(11), fontWeight: 600, color: c.faint }}>{t("On your card:")}</span>
         <span style={{ fontSize: px(10.5), fontWeight: 800, color: on ? c.pdark : c.faint, background: on ? c.pale : c.soft, opacity: on ? 1 : 0.6, borderRadius: 999, padding: "2px 8px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{chip}</span>
         {used && <span style={{ marginInlineStart: "auto", fontSize: px(11), color: c.faint, whiteSpace: "nowrap" }}>{used}</span>}
         {menu && (
@@ -814,16 +819,16 @@ function ShowSheet({ promo, shown, busy, onClose, onTurnOn }: { promo: Promotion
     <MasterSheet
       open
       onClose={onClose}
-      title={`Show ${promo.name}`}
+      title={t("Show {name}", { name: promo.name })}
       footer={
         <PrimaryButton disabled={!online} busy={busy} onClick={onTurnOn}>
-          Turn on
+          {t("Turn on")}
         </PrimaryButton>
       }
     >
-      <p style={{ fontSize: px(13), fontWeight: 500, color: c.slabel, marginBottom: 8 }}>How it appears on Explore</p>
+      <p style={{ fontSize: px(13), fontWeight: 500, color: c.slabel, marginBottom: 8 }}>{t("How it appears on Explore")}</p>
       <Preview c={c} name={business?.name ?? ""} existing={shown.filter((l) => l !== promo.name)} added={promo.name} />
-      <p style={{ fontSize: px(12), color: c.faint, marginTop: 10, lineHeight: lh(17) }}>{`New ${v.people} see it on your card${m.kind === "classes" ? " and class pages" : ""}. You can turn it off any time.`}</p>
+      <p style={{ fontSize: px(12), color: c.faint, marginTop: 10, lineHeight: lh(17) }}>{m.kind === "classes" ? v.newSeeClasses : v.newSee}</p>
     </MasterSheet>
   );
 }
@@ -856,41 +861,41 @@ function OfferSheet({ mode, row, offers, onClose, onSaved }: { mode: "add" | "ed
   const [text, setText] = useState(row?.label ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const t = text.trim();
+  const perkText = text.trim();
   const existing = offers.filter((o) => o.id !== row?.id).map((o) => o.label);
   const save = async () => {
-    if (!business || !t) return;
+    if (!business || !perkText) return;
     setBusy(true);
     setError(null);
     // The perk is the listing's free-text offer (business_profiles.perk); this
     // sheet only sets it. Further offers are promotions (B13; B16 retired
     // business_discounts).
-    const r = await saveListingPerk(business.id, t);
+    const r = await saveListingPerk(business.id, perkText);
     setBusy(false);
     if (!r.ok) return setError(r.message);
     m.setPerk(r.value);
-    onSaved(t, "perk");
+    onSaved(perkText, "perk");
   };
   return (
     <MasterSheet
       open
       onClose={onClose}
-      title={mode === "edit" ? "Edit offer" : "Add an offer"}
+      title={mode === "edit" ? t("Edit offer") : t("Add an offer")}
       footer={
         <>
-          <PrimaryButton disabled={!t || (mode === "edit" && t === row?.label)} busy={busy} onClick={() => void save()}>
-            Save
+          <PrimaryButton disabled={!perkText || (mode === "edit" && perkText === row?.label)} busy={busy} onClick={() => void save()}>
+            {t("Save")}
           </PrimaryButton>
           {error && <SaveError>{error}</SaveError>}
         </>
       }
     >
-      <SheetBox label="Offer" htmlFor="perk-offer">
-        <input id="perk-offer" value={text} onChange={(e) => setText(e.target.value)} maxLength={120} placeholder="10% off with Centium" className="market-focus" style={fieldStyle(c)} />
+      <SheetBox label={t("Offer")} htmlFor="perk-offer">
+        <input id="perk-offer" value={text} onChange={(e) => setText(e.target.value)} maxLength={120} placeholder={t("10% off with Centium")} className="market-focus" style={fieldStyle(c)} />
       </SheetBox>
-      <p style={{ fontSize: px(13), fontWeight: 500, color: c.slabel, margin: "16px 0 8px" }}>How it appears on Explore</p>
-      <Preview c={c} name={business?.name ?? ""} existing={existing} added={t} />
-      <p style={{ fontSize: px(12), color: c.faint, marginTop: 10, lineHeight: lh(17) }}>{`New ${v.people} see it on your card${m.kind === "classes" ? " and class pages" : ""}. You can turn it off any time.`}</p>
+      <p style={{ fontSize: px(13), fontWeight: 500, color: c.slabel, margin: "16px 0 8px" }}>{t("How it appears on Explore")}</p>
+      <Preview c={c} name={business?.name ?? ""} existing={existing} added={perkText} />
+      <p style={{ fontSize: px(12), color: c.faint, marginTop: 10, lineHeight: lh(17) }}>{m.kind === "classes" ? v.newSeeClasses : v.newSee}</p>
     </MasterSheet>
   );
 }

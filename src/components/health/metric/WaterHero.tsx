@@ -3,6 +3,7 @@ import { Plus, SlidersHorizontal } from "lucide-react";
 import { textPx, linePx } from "../../../theme/textSize";
 import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { HeroPill, MetricHero, mc, metricTextInk, useHealthMode } from "./MetricKit";
+import { t } from "../../../i18n/core";
 
 // HE1.1 #8-#21 hero: tint card 358 r22 pad 16 with p0.svg; the bottle (asset
 // svg/illustrations/inline/water-bottle-hero.svg, viewBox 0 0 80 140 drawn
@@ -67,7 +68,7 @@ export const WaterBottle: React.FC<{ pct: number; goalMl: number; running: boole
       <line x1={4} y1={44} x2={76} y2={44} stroke={stroke} strokeWidth={1.5} strokeDasharray="3 3" />
       {litres.map((l) => (
         <text key={l} x={78} y={136 - (92 * l * 1000) / goalMl + 3} fontSize={7} fontWeight={700} fill={stroke}>
-          {l} L
+          {t("{n} L", { n: l })}
         </text>
       ))}
       <style>{`
@@ -126,7 +127,7 @@ export const WaterHero: React.FC<{
               className="absolute whitespace-nowrap"
               style={{ insetInlineEnd: "calc(100% + 2px)", top: 43.5, fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 700, color: ink }}
             >
-              Goal
+              {t("Goal")}
             </span>
             <WaterBottle pct={pct} goalMl={goalMl} running={running} />
           </div>
@@ -154,12 +155,12 @@ export const WaterHero: React.FC<{
               type="button"
               disabled={quickDisabled}
               onClick={() => onQuickAdd(ml)}
-              aria-label={`Add ${ml} ml today`}
+              aria-label={t("Add {n} ml today", { n: ml })}
               className="tap relative inline-flex items-center bg-th-f0edf9 dark:bg-th-303141 text-primary-deep-text disabled:opacity-40 before:absolute before:-inset-y-[5px] before:inset-x-0 before:content-['']"
               style={chipStyle(dark)}
             >
               <Plus size={13} aria-hidden />
-              {ml} ml
+              {t("{n} ml", { n: ml })}
             </button>
           ))}
           <button
@@ -170,7 +171,7 @@ export const WaterHero: React.FC<{
             style={chipStyle(dark)}
           >
             <SlidersHorizontal size={13} aria-hidden />
-            Custom
+            {t("Custom")}
           </button>
         </div>
       </MetricHero>

@@ -11,6 +11,7 @@ import {
   type ProgrammeAssignment,
 } from "../../services/routines/programmeLogic";
 import { fetchConnectedProfessional, professionalRole } from "../../services/connected-professional";
+import { t } from "../../i18n/core";
 
 // Release 3 · W7 (CU1): the model behind Routines › "From your coach".
 
@@ -152,7 +153,7 @@ export function useCoachProgrammes(routines: Routine[], userId: string | null, t
         const r = await fetchConnectedProfessional(id);
         if (r.ok && r.professional) {
           const p = r.professional;
-          coachCache.set(id, { name: p.firstName?.trim() || "Your coach", role: professionalRole(p), avatarUrl: p.avatarUrl });
+          coachCache.set(id, { name: p.firstName?.trim() || t("Your coach"), role: professionalRole(p), avatarUrl: p.avatarUrl });
         }
       })
     ).then(() => {

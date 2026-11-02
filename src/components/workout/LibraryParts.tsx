@@ -1,6 +1,7 @@
 import React from "react";
 import { linePx, textPx } from "../../theme/textSize";
 import { useApp } from "../../context/AppContext";
+import { t } from "../../i18n/core";
 
 /**
  * Pieces shared by the Exercise Library sheet (WO1.3) and the Library tab
@@ -20,7 +21,7 @@ export const YoursTag: React.FC = () => {
       className="shrink-0 inline-flex items-center bg-th-f0edf9 dark:bg-th-303141"
       style={{ padding: "3px 7px", borderRadius: 9999, fontSize: textPx(10), lineHeight: linePx(10), fontWeight: 700, color: ink }}
     >
-      Yours
+      {t("Yours")}
     </span>
   );
 };
@@ -101,7 +102,7 @@ export const LoadErrorCard: React.FC<{ message: string; onRetry: () => void; car
         className="tap relative shrink-0 before:absolute before:-inset-[12px] before:content-['']"
         style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: ink }}
       >
-        Retry
+        {t("Retry")}
       </button>
     </div>
   );

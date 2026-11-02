@@ -14,12 +14,13 @@ import { editReply, removeReply, replyToReview, reportReview } from "../../../se
 import { ratingDistribution } from "../../../services/professional-reviews/rules";
 import { textPx } from "../../../theme/textSize";
 import { appLocale } from "../../../i18n/format";
+import { t, tn } from "../../../i18n/core";
 
 const GOLD = "#D9A441";
 const EMPTY_STAR = "rgba(140,131,120,0.35)";
 
 const Stars: React.FC<{ n: number; size: number; label?: string }> = ({ n, size, label }) => (
-  <span className="inline-flex shrink-0" style={{ gap: 2 }} role="img" aria-label={label ?? `${n} out of 5 stars`}>
+  <span className="inline-flex shrink-0" style={{ gap: 2 }} role="img" aria-label={label ?? t("{n} out of 5 stars", { n })}>
     {[0, 1, 2, 3, 4].map((i) => (
       <Star key={i} size={size} strokeWidth={1.5} aria-hidden style={{ color: i < Math.round(n) ? GOLD : EMPTY_STAR, fill: i < Math.round(n) ? GOLD : "none" }} />
     ))}
@@ -64,7 +65,7 @@ export default function Reviews() {
   const link = "tap relative inline-flex items-center before:absolute before:-inset-y-3 before:-inset-x-1 before:content-['']";
 
   return (
-    <SubPage title="Reviews" subtitle="From clients who worked with you">
+    <SubPage title={t("Reviews")} subtitle={t("From clients who worked with you")}>
       {error && reviews.length === 0 ? (
         <ProError onRetry={() => void reload()} />
       ) : loading && reviews.length === 0 ? (
@@ -73,17 +74,17 @@ export default function Reviews() {
           <ListSkeleton rows={2} />
         </div>
       ) : reviews.length === 0 ? (
-        <EmptyState icon={Star} title="No reviews yet" line="Clients you've worked with can review you from your profile. Their reviews show here." />
+        <EmptyState icon={Star} title={t("No reviews yet")} line={t("Clients you've worked with can review you from your profile. Their reviews show here.")} />
       ) : (
         <>
           <div className="flex items-center" style={{ gap: 18, padding: "4px 0 16px" }}>
             <div className="text-center shrink-0">
               <p style={{ fontSize: textPx(40), fontWeight: 800, letterSpacing: "-0.03em", color: INK.ch, lineHeight: 1 }}>{avg !== null ? avg.toFixed(1) : "–"}</p>
               <div style={{ marginTop: 6 }}>
-                <Stars n={avg ?? 0} size={13} label={avg !== null ? `${avg.toFixed(1)} out of 5` : "No average yet"} />
+                <Stars n={avg ?? 0} size={13} label={avg !== null ? t("{v} out of 5", { v: avg.toFixed(1) }) : t("No average yet")} />
               </div>
               <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 4 }}>
-                {counted.length} {counted.length === 1 ? "review" : "reviews"}
+                {tn(counted.length, "{n} review", "{n} reviews")}
               </p>
             </div>
             <div className="flex-1 min-w-0 flex flex-col" style={{ gap: 5 }}>
@@ -106,9 +107,9 @@ export default function Reviews() {
 
           <SegmentedTabs
             items={[
-              { key: "all", label: "All" },
-              { key: "needs", label: "Needs reply" },
-              { key: "replied", label: "Replied" },
+              { key: "all", label: t("All") },
+              { key: "needs", label: t("Needs reply") },
+              { key: "replied", label: t("Replied") },
             ]}
             activeKey={tab}
             onChange={(k) => setTab(k as ReviewTab)}
@@ -118,7 +119,7 @@ export default function Reviews() {
           />
 
           {shown.length === 0 && (
-            <p style={{ padding: "12px 0", fontSize: textPx(12.5), color: INK.chF, textAlign: "center" }}>{tab === "needs" ? "You've replied to every review." : "No replies yet."}</p>
+            <p style={{ padding: "12px 0", fontSize: textPx(12.5), color: INK.chF, textAlign: "center" }}>{tab === "needs" ? t("You've replied to every review.") : t("No replies yet.")}</p>
           )}
           {shown.map((r) => {
             const name = reviewerLabel(r.reviewerName);
@@ -142,17 +143,15 @@ export default function Reviews() {
                   <Stars n={r.rating} size={12} />
                 </div>
                 <p style={{ fontSize: textPx(13), color: INK.chS, lineHeight: 1.5, marginTop: 10, overflowWrap: "anywhere", fontStyle: r.redactedAt ? "italic" : undefined }}>
-                  {r.redactedAt ? "Removed by our team." : r.body || "No written review."}
+                  {r.redactedAt ? t("Removed by our team.") : r.body || t("No written review.")}
                 </p>
                 {reply ? (
                   <div style={{ marginTop: 10, borderRadius: 12, background: INK.raised, padding: "10px 12px" }}>
-                    <p style={{ fontSize: textPx(11), fontWeight: 700, color: INK.prDeep }}>Your reply</p>
-                    <p style={{ fontSize: textPx(12.5), color: INK.chS, marginTop: 2, overflowWrap: "anywhere" }}>{reply.redactedAt ? "(removed)" : reply.body}</p>
+                    <p style={{ fontSize: textPx(11), fontWeight: 700, color: INK.prDeep }}>{t("Your reply")}</p>
+                    <p style={{ fontSize: textPx(12.5), color: INK.chS, marginTop: 2, overflowWrap: "anywhere" }}>{reply.redactedAt ? t("(removed)") : reply.body}</p>
                     {!reply.redactedAt && (
                       <div className="flex items-center" style={{ gap: 16, marginTop: 6 }}>
-                        <button type="button" onClick={() => setReplying({ reviewId: r.id, existing: reply.body })} className={link} style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
-                          Edit reply
-                        </button>
+                        <button type="button" onClick={() => setReplying({ reviewId: r.id, existing: reply.body })} className={link} style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{t("Edit reply")}</button>
                         <RemoveReplyButton
                           onRemove={async () => {
                             const res = await removeReply(r.id);
@@ -169,15 +168,11 @@ export default function Reviews() {
                   <div className="flex items-center justify-between" style={{ marginTop: 10 }}>
                     {!reply ? (
                       <button type="button" onClick={() => setReplying({ reviewId: r.id, existing: null })} className={link} style={{ gap: 5, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
-                        <Reply size={13} strokeWidth={2.2} aria-hidden />
-                        Reply
-                      </button>
+                        <Reply size={13} strokeWidth={2.2} aria-hidden />{t("Reply")}</button>
                     ) : (
                       <span />
                     )}
-                    <button type="button" onClick={() => setReportingId(r.id)} className={link} style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chF }} aria-label={`Report the review from ${name}`}>
-                      Report
-                    </button>
+                    <button type="button" onClick={() => setReportingId(r.id)} className={link} style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chF }} aria-label={t("Report the review from {name}", { name })}>{t("Report")}</button>
                   </div>
                 )}
               </article>
@@ -187,7 +182,7 @@ export default function Reviews() {
       )}
 
       <ReplySheet open={!!replying} onClose={() => setReplying(null)} existing={replying?.existing ?? null} onSave={saveReply} />
-      <BottomSheet open={!!reportingId} onClose={() => setReportingId(null)} title="Report this review">
+      <BottomSheet open={!!reportingId} onClose={() => setReportingId(null)} title={t("Report this review")}>
         <ReviewReportForm
           onSend={async (reason, detail) => {
             if (!reportingId) return null;

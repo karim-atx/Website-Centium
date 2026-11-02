@@ -3,6 +3,8 @@ import { supabase as db } from "../../../lib/supabase/client";
 import { useApp } from "../../context/AppContext";
 import { readSources } from "../../pages/settings/sourcesData";
 import { clock12 } from "../../utils/time12";
+import { t, tk } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
 
 // Database stage B1 "Health data model" (HANDOVER_API.md "## B1"), read for
 // the Health A pages: raw health_metrics rows (note, context, device_name,
@@ -107,9 +109,9 @@ export async function hideSyncedReading(userId: string, row: Pick<RawMetricRow, 
   return !del.error;
 }
 
-/** "Apple Health", "Health Connect", "WHOOP", or "Logged by you". */
+/** "Apple Health", "Health Connect", "WHOOP", or "Logged by you" (translated; call at render time). */
 export const sourceName = (s: MetricSource | string | null | undefined) =>
-  s === "apple_health" ? "Apple Health" : s === "android_health" ? "Health Connect" : s === "whoop" ? "WHOOP" : "Logged by you";
+  s === "apple_health" ? "Apple Health" : s === "android_health" ? "Health Connect" : s === "whoop" ? "WHOOP" : t("Logged by you");
 
 // ---------------------------------------------------------------------------
 // water_intakes
@@ -353,17 +355,24 @@ export function syncState(s: HealthSource): "access_off" | "error" | "ok" {
   return "ok";
 }
 
-/** "today at 8:40 AM", "yesterday at 9:10 PM", "on 5 Oct at 7:02 AM" (12-hour, X-14). */
+/** "today at 8:40 AM", "yesterday at 9:10 PM", "on Oct 5 at 7:02 AM" (12-hour, X-14), in the app's language. */
 export function whenText(iso: string, today: string): string {
   const day = localDay(iso);
   const [y, m, d] = today.split("-").map(Number);
   const yest = localDay(new Date(y, m - 1, d - 1, 12).toISOString());
-  const t = clock12(iso);
-  if (day === today) return `today at ${t}`;
-  if (day === yest) return `yesterday at ${t}`;
+  const time = clock12(iso);
+  if (day === today) return t("today at {time}", { time });
+  if (day === yest) return t("yesterday at {time}", { time });
   const dt = new Date(iso);
-  return `on ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.getMonth()]} ${dt.getDate()} at ${t}`;
+  const loc = appLocale();
+  const date = loc
+    ? dt.toLocaleDateString(loc, { month: "short", day: "numeric" })
+    : `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.getMonth()]} ${dt.getDate()}`;
+  return t("on {date} at {time}", { date, time });
 }
+
+/** A session without a routine name (a catalogue key: FromWorkoutsCard shows it through t()). */
+export const WORKOUT_FALLBACK = tk("Workout");
 
 export interface WorkoutKcalSession {
   id: string;
@@ -390,7 +399,7 @@ export function useWorkoutSessionsKcal(day: string, toDay?: string) {
             ? []
             : (data ?? []).map((r: Record<string, unknown>) => ({
                 id: r.id as string,
-                name: (r.routine_name as string | null) ?? "Workout",
+                name: (r.routine_name as string | null) ?? WORKOUT_FALLBACK,
                 startedAt: r.started_at as string,
                 durationSec: num(r.duration_sec),
                 kcal: Number(r.kcal),

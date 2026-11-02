@@ -1,10 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
+import { premiumRefusalMessage } from "../premium/asks";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { findCatalogFoodByName, isUuid } from "../food";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
 import type { Recipe, RecipeItem, Food, ServingUnit } from "../../types";
+import { t } from "../../i18n/core";
 
 // Recipe DEFINITIONS. Mirrors src/services/custom-meals/index.ts exactly —
 // same "this file is the opposite of ../food's snapshot rule" doctrine
@@ -38,9 +40,13 @@ async function resolveItemSource(
 }
 
 function describe(error: PostgrestError): string {
-  if (error.code === "42501") return "You don't have permission to do that.";
+  // Round G2: a free limit (ATXQ2) or a Premium-only refusal (ATXQ1) asks for
+  // the prompt and says so plainly; what was typed stays on screen.
+  const premiumRefusal = premiumRefusalMessage(error);
+  if (premiumRefusal) return premiumRefusal;
+  if (error.code === "42501") return t("You don't have permission to do that.");
   if (isOffline(error)) return OFFLINE_MESSAGE;
-  return "Something went wrong. Please try again.";
+  return t("Something went wrong. Please try again.");
 }
 
 export interface RecipesResult {
@@ -97,6 +103,8 @@ interface RecipeRow {
   servings: number;
   steps: string | null;
   playlist_url: string | null;
+  /** Round G2: set on a recipe a professional wrote for one client. */
+  scoped_to_client_id?: string | null;
   recipe_items: ItemRow[];
 }
 
@@ -139,7 +147,15 @@ function toRecipe(row: RecipeRow): Recipe {
     })
     .filter((i): i is RecipeItem => i !== null);
 
-  return { id: row.id, title: row.title, items, servings: row.servings, steps: row.steps ?? undefined, playlistUrl: row.playlist_url ?? undefined };
+  return {
+    id: row.id,
+    title: row.title,
+    items,
+    servings: row.servings,
+    steps: row.steps ?? undefined,
+    playlistUrl: row.playlist_url ?? undefined,
+    ...(row.scoped_to_client_id ? { fromProfessional: true } : {}),
+  };
 }
 
 /**
@@ -151,7 +167,7 @@ function toRecipe(row: RecipeRow): Recipe {
 export async function getRecipes(userId: string): Promise<RecipesResult> {
   const { data, error } = await db
     .from("recipes")
-    .select(`id, title, servings, steps, playlist_url, recipe_items(${ITEM_SELECT})`)
+    .select(`id, title, servings, steps, playlist_url, scoped_to_client_id, recipe_items(${ITEM_SELECT})`)
     .or(`owner_id.eq.${userId},scoped_to_client_id.eq.${userId}`)
     .order("created_at", { ascending: false });
 
@@ -176,7 +192,7 @@ async function writeItems(recipeId: string, items: RecipeItem[]): Promise<string
 
   for (const [index, item] of items.entries()) {
     const source = await resolveItemSource(item);
-    if (!source) return `"${item.food.name}" isn't in the food database yet, so this recipe can't be saved.`;
+    if (!source) return t("“{food}” isn't in the food database yet, so this recipe can't be saved.", { food: item.food.name });
     rows.push({
       recipe_id: recipeId,
       ...source,
@@ -221,7 +237,7 @@ export async function createRecipe(
 
   if (error || !data) {
     console.error("[recipes] Could not create recipe:", error?.message);
-    return { ok: false, message: error ? describe(error) : "Something went wrong. Please try again." };
+    return { ok: false, message: error ? describe(error) : t("Something went wrong. Please try again.") };
   }
 
   const itemError = await writeItems(data.id, items);

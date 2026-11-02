@@ -19,6 +19,7 @@ import { localDayOf, shiftDate } from "../../utils/date";
 import { mondayFirstWeek } from "../../utils/week";
 import { time12 } from "../../utils/time12";
 import { dayLabel } from "./dashboardModel";
+import { t } from "../../i18n/core";
 
 export const ACTIVITY_KINDS: readonly ActivityKind[] = ["booking", "cancel", "join", "end", "check_in", "order", "payment", "appointment", "review"];
 
@@ -43,7 +44,8 @@ export function toActivityRow(r: Partial<RawActivity> | null | undefined): Activ
   return {
     id: Number(r.id),
     kind: r.kind as ActivityKind,
-    label: r.label ?? "Guest",
+    // Round G (EH5): the server's "Guest" (no person shared) reads in the app's language.
+    label: r.label === null || r.label === undefined || r.label === "Guest" ? t("Guest") : r.label,
     isMinor: r.is_minor ?? null,
     refKind: r.ref_kind ?? null,
     refId: r.ref_id ?? null,
@@ -91,7 +93,7 @@ function classLine(ctx: ActivityContext, refId: string | null, withCount: boolea
   const c = refId ? ctx.classes.find((k) => k.id === refId) : undefined;
   if (!c) return "";
   const when = `${dayLabel(c.date, ctx.today)} ${time12(c.start)}`;
-  return withCount ? `${when} · ${ctx.booked[c.id] ?? 0} of ${c.cap} now booked` : when;
+  return withCount ? `${when} · ${t("{n} of {cap} now booked", { n: ctx.booked[c.id] ?? 0, cap: c.cap })}` : when;
 }
 
 /** A row as the card draws it: title, sub, day group. */
@@ -102,36 +104,36 @@ export function activityEvent(r: ActivityRow, ctx: ActivityContext): ActivityEve
   let sub = "";
   switch (r.kind) {
     case "booking":
-      title = `${who} booked ${s ?? "a class"}`;
+      title = s ? t("{who} booked {what}", { who, what: s }) : t("{who} booked a class", { who });
       sub = classLine(ctx, r.refId, true);
       break;
     case "cancel":
-      title = `${who} cancelled ${s ?? "a class"}`;
+      title = s ? t("{who} cancelled {what}", { who, what: s }) : t("{who} cancelled a class", { who });
       sub = classLine(ctx, r.refId, false);
       break;
     case "join":
-      title = `${who} joined`;
-      sub = s ?? "No plan";
+      title = t("{who} joined", { who });
+      sub = s ?? t("No plan");
       break;
     case "end":
-      title = `${who} ended their membership`;
+      title = t("{who} ended their membership", { who });
       sub = s ?? "";
       break;
     case "check_in":
-      title = `${who} checked in`;
+      title = t("{who} checked in", { who });
       sub = (r.refId && ctx.venueNames[r.refId]) || "";
       break;
     case "order":
-      title = s ? `${who} placed ${s}` : `${who} placed an order`;
+      title = s ? t("{who} placed {what}", { who, what: s }) : t("{who} placed an order", { who });
       break;
     case "payment":
-      title = s ? `${who} paid ${s}` : `${who} paid`;
+      title = s ? t("{who} paid {what}", { who, what: s }) : t("{who} paid", { who });
       break;
     case "appointment":
-      title = `${who} booked ${s ?? "an appointment"}`;
+      title = s ? t("{who} booked {what}", { who, what: s }) : t("{who} booked an appointment", { who });
       break;
     case "review":
-      title = `${who} left a review`;
+      title = t("{who} left a review", { who });
       sub = s ?? "";
       break;
   }
@@ -174,10 +176,10 @@ export function weekTotals(classBased: boolean, totalsRows: Pick<ActivityRow, "k
     return { type, label, n: days.reduce((a, b) => a + b, 0), prev: prev.reduce((a, b) => a + b, 0), days };
   };
   const daysOf = (kind: ActivityKind) => totalsRows.filter((r) => r.kind === kind).map((r) => localDayOf(r.at));
-  const out: WeekTotal[] = [mk("join", "Joined", daysOf("join")), mk("end", "Ended", daysOf("end"))];
+  const out: WeekTotal[] = [mk("join", t("Joined"), daysOf("join")), mk("end", t("Ended"), daysOf("end"))];
   if (classBased) {
-    out.push(mk("booking", "Booked", daysOf("booking")));
-    out.push(mk("created", "Classes", classes.map((c) => localDayOf(c.createdAt))));
+    out.push(mk("booking", t("Booked"), daysOf("booking")));
+    out.push(mk("created", t("Classes"), classes.map((c) => localDayOf(c.createdAt))));
   }
   return out;
 }

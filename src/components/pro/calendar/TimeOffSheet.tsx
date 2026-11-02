@@ -12,6 +12,7 @@ import { INK } from "../proInk";
 import { addTimeOff, deleteTimeOff, replaceTimeOff } from "../../../services/pro/calendar";
 import { FieldButton, FieldInput, SwitchRow } from "./calendarFields";
 import { dayDate, fieldDate, timeOffDates, type TimeOffEntry, type TimeOffRepeat } from "./calendarModel";
+import { t, tk } from "../../../i18n/core";
 
 /**
  * Release 3 · W4 CA14 Time off · Detail and edit and CA15 Delete
@@ -26,12 +27,12 @@ import { dayDate, fieldDate, timeOffDates, type TimeOffEntry, type TimeOffRepeat
  */
 
 const REPEATS: { value: TimeOffRepeat; label: string }[] = [
-  { value: "none", label: "Does not repeat" },
-  { value: "daily", label: "Every day" },
-  { value: "weekdays", label: "Every weekday" },
-  { value: "weekly", label: "Every week" },
+  { value: "none", label: tk("Does not repeat") },
+  { value: "daily", label: tk("Every day") },
+  { value: "weekdays", label: tk("Every weekday") },
+  { value: "weekly", label: tk("Every week") },
 ];
-const repeatLabel = (r: TimeOffRepeat) => REPEATS.find((x) => x.value === r)!.label;
+const repeatLabel = (r: TimeOffRepeat) => t(REPEATS.find((x) => x.value === r)!.label);
 
 export const TimeOffSheet: React.FC<{
   open: boolean;
@@ -73,7 +74,7 @@ export const TimeOffSheet: React.FC<{
     setConfirm(false);
   }, [open, entry, date]);
 
-  const title = name.trim() || (allDay ? "Time off" : "Break");
+  const title = name.trim() || (allDay ? t("Time off") : t("Break"));
   const Icon = allDay ? Plane : Coffee;
   const dates = repeat === "none" ? [first] : timeOffDates(first, repeat, until);
   const canSave = !busy && (repeat === "none" || !!until) && (allDay || start < end);
@@ -102,8 +103,8 @@ export const TimeOffSheet: React.FC<{
 
   // CA15: "Lunch, every weekday 12:00 to 12:45" (times through range12).
   const whenLine = entry
-    ? `${entry.reason || (entry.start === null ? "Time off" : "Break")}, ${[
-        entry.repeat !== "none" ? repeatLabel(entry.repeat).toLowerCase() : entry.dates.length > 1 ? `${dayDate(entry.dates[0])} to ${dayDate(entry.dates[entry.dates.length - 1])}` : dayDate(entry.dates[0]),
+    ? `${entry.reason || (entry.start === null ? t("Time off") : t("Break"))}, ${[
+        entry.repeat !== "none" ? repeatLabel(entry.repeat).toLowerCase() : entry.dates.length > 1 ? t("{from} to {to}", { from: dayDate(entry.dates[0]), to: dayDate(entry.dates[entry.dates.length - 1]) }) : dayDate(entry.dates[0]),
         entry.start ? range12(entry.start, entry.end) : null,
       ]
         .filter(Boolean)
@@ -117,8 +118,8 @@ export const TimeOffSheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={onClose}
-        title="Time off"
-        footer={<CtaButton size="sheet" className="w-full" label={entry ? "Save changes" : "Save time off"} loading={busy} disabled={!canSave} onClick={() => void save()} />}
+        title={t("Time off")}
+        footer={<CtaButton size="sheet" className="w-full" label={entry ? t("Save changes") : t("Save time off")} loading={busy} disabled={!canSave} onClick={() => void save()} />}
       >
         <div className="flex items-center" style={{ gap: 12, borderRadius: 16, background: INK.raised, padding: 12, marginBottom: 16 }}>
           <span className="flex items-center justify-center shrink-0" style={{ width: 40, height: 40, borderRadius: 12, background: INK.soft }}>
@@ -128,31 +129,29 @@ export const TimeOffSheet: React.FC<{
             <span className="block truncate" style={{ fontSize: textPx(15), fontWeight: 800, color: INK.ch }}>
               {title}
             </span>
-            <span className="block" style={{ fontSize: textPx(12), color: INK.chF }}>
-              Clients can't book this time
-            </span>
+            <span className="block" style={{ fontSize: textPx(12), color: INK.chF }}>{t("Clients can't book this time")}</span>
           </span>
         </div>
         <div className="flex flex-col" style={{ gap: 14 }}>
-          <FieldButton label="Date" value={fieldDate(first)} icon={CalendarIcon} ariaLabel={`Date, ${fieldDate(first)}`} onClick={() => setPicker("first")} />
-          <SwitchRow title="All day" checked={allDay} onChange={(v) => { setWheel(null); setAllDay(v); }} />
+          <FieldButton label={t("Date")} value={fieldDate(first)} icon={CalendarIcon} ariaLabel={t("Date, {v}", { v: fieldDate(first) })} onClick={() => setPicker("first")} />
+          <SwitchRow title={t("All day")} checked={allDay} onChange={(v) => { setWheel(null); setAllDay(v); }} />
           {!allDay && (
             <div>
               <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
-                <TimeField label="From" value={start} open={wheel === "start"} onOpen={() => setWheel("start")} onClose={() => setWheel(null)} onChange={setStart} minuteStep={15} />
-                <TimeField label="To" value={end} open={wheel === "end"} onOpen={() => setWheel("end")} onClose={() => setWheel(null)} onChange={setEnd} notBefore={start} minuteStep={15} />
+                <TimeField label={t("From")} value={start} open={wheel === "start"} onOpen={() => setWheel("start")} onClose={() => setWheel(null)} onChange={setStart} minuteStep={15} />
+                <TimeField label={t("To")} value={end} open={wheel === "end"} onOpen={() => setWheel("end")} onClose={() => setWheel(null)} onChange={setEnd} notBefore={start} minuteStep={15} />
               </div>
               {wheel && <div aria-hidden style={{ height: 150 }} />}
             </div>
           )}
           <div>
-            <FieldButton label="Repeat" labelIcon={Repeat} value={repeatLabel(repeat)} ariaLabel={`Repeat, ${repeatLabel(repeat)}`} open={!!repeatAnchor} onClick={(e) => setRepeatAnchor(e.currentTarget)} />
+            <FieldButton label={t("Repeat")} labelIcon={Repeat} value={repeatLabel(repeat)} ariaLabel={t("Repeat, {v}", { v: repeatLabel(repeat) })} open={!!repeatAnchor} onClick={(e) => setRepeatAnchor(e.currentTarget)} />
             <PopupMenu
               open={!!repeatAnchor}
               onClose={() => setRepeatAnchor(null)}
               anchor={repeatAnchor}
               matchWidth={repeatAnchor}
-              options={REPEATS.map((r) => ({ value: r.value, label: r.label }))}
+              options={REPEATS.map((r) => ({ value: r.value, label: t(r.label) }))}
               selected={repeat}
               onSelect={(v) => {
                 setRepeat(v);
@@ -161,9 +160,9 @@ export const TimeOffSheet: React.FC<{
             />
           </div>
           {repeat !== "none" && (
-            <FieldButton label="Until" value={until ? fieldDate(until) : "Choose a date"} placeholder={!until} icon={CalendarIcon} ariaLabel={`Until, ${until ? fieldDate(until) : "no date chosen"}`} onClick={() => setPicker("until")} />
+            <FieldButton label={t("Until")} value={until ? fieldDate(until) : t("Choose a date")} placeholder={!until} icon={CalendarIcon} ariaLabel={t("Until, {v}", { v: until ? fieldDate(until) : t("no date chosen") })} onClick={() => setPicker("until")} />
           )}
-          <FieldInput label="Note" value={name} onChange={setName} placeholder="Only you see this" maxLength={200} />
+          <FieldInput label={t("Note")} value={name} onChange={setName} placeholder={t("Only you see this")} maxLength={200} />
         </div>
         {error && (
           <p role="alert" className="text-center" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginTop: 12 }}>
@@ -171,16 +170,14 @@ export const TimeOffSheet: React.FC<{
           </p>
         )}
         {entry && (
-          <button type="button" onClick={() => setConfirm(true)} className="tap block w-full text-center" style={{ marginTop: 20, minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.hi }}>
-            Delete time off
-          </button>
+          <button type="button" onClick={() => setConfirm(true)} className="tap block w-full text-center" style={{ marginTop: 20, minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.hi }}>{t("Delete time off")}</button>
         )}
       </BottomSheet>
 
       <CalendarPickerSheet
         open={picker !== null}
         onClose={() => setPicker(null)}
-        title={picker === "until" ? "Until" : "Date"}
+        title={picker === "until" ? t("Until") : t("Date")}
         selectedDate={picker === "until" ? until ?? first : first}
         today={todayIso}
         onSelect={(d) => {
@@ -195,20 +192,20 @@ export const TimeOffSheet: React.FC<{
       <CentredPopup
         open={confirm && !!entry}
         onClose={() => setConfirm(false)}
-        title="Delete this time off?"
+        title={t("Delete this time off?")}
         icon={<CalendarX size={22} strokeWidth={2} aria-hidden />}
-        body={`${whenLine}. Clients can book this time again.`}
+        body={t("{when}. Clients can book this time again.", { when: whenLine })}
       >
         <div className="flex flex-col" style={{ gap: 8 }}>
           {entry && entry.dates.length > 1 ? (
             <>
-              <CtaButton size="page" label={entry.repeat === "none" ? "Delete every day" : `Delete for ${repeatLabel(entry.repeat).toLowerCase()}`} loading={busy} onClick={() => void remove(entry.ids)} />
-              {thisRow && oneDay && <CtaButton size="page" variant="secondary" label={`Only ${dayDate(oneDay)}`} disabled={busy} onClick={() => void remove([thisRow])} />}
+              <CtaButton size="page" label={entry.repeat === "none" ? t("Delete every day") : t("Delete for {repeat}", { repeat: repeatLabel(entry.repeat).toLowerCase() })} loading={busy} onClick={() => void remove(entry.ids)} />
+              {thisRow && oneDay && <CtaButton size="page" variant="secondary" label={t("Only {date}", { date: dayDate(oneDay) })} disabled={busy} onClick={() => void remove([thisRow])} />}
             </>
           ) : (
-            entry && <CtaButton size="page" label="Delete time off" loading={busy} onClick={() => void remove(entry.ids)} />
+            entry && <CtaButton size="page" label={t("Delete time off")} loading={busy} onClick={() => void remove(entry.ids)} />
           )}
-          <CtaButton size="page" variant="outline" label="Keep it" disabled={busy} onClick={() => setConfirm(false)} />
+          <CtaButton size="page" variant="outline" label={t("Keep it")} disabled={busy} onClick={() => setConfirm(false)} />
         </div>
       </CentredPopup>
     </>

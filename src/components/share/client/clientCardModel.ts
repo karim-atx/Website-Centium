@@ -15,12 +15,13 @@ import { METRIC_IDENTITY, SHARE_TOKENS } from "../../../theme/marketTokens";
 import { statAllowed, statDefaultOn, visibleStats, type ShareLocks } from "../shareLocks";
 import { appLocale } from "../../../i18n/format";
 import { getLanguage, t, tn, tx } from "../../../i18n/core";
+import { isPremiumBackground, premiumColours, type PremiumBackground } from "./premiumDesigns";
 
 export type ClientTemplate = "workout" | "pr" | "streak" | "achievement" | "steps" | "sleep" | "water" | "food";
 export type IdentityKey = keyof typeof METRIC_IDENTITY;
 export type ClientFormat = "story" | "post" | "sticker";
 /** The Background chips: Centium (gradient), {metric} pattern (identity), Your photo. */
-export type ClientBackground = "B" | "I" | "P";
+export type ClientBackground = "B" | "I" | "P" | PremiumBackground;
 
 export type CardVis =
   | { kind: "bars"; values: number[] }
@@ -105,6 +106,8 @@ export function identityBg(id: IdentityKey): string {
 export function cardColours(id: IdentityKey, format: ClientFormat, bg: ClientBackground): CardColours {
   const stk = format === "sticker";
   const ink2 = METRIC_IDENTITY[id][1];
+  // Round G4: the three Premium designs (premiumDesigns.ts); never on the sticker.
+  if (!stk && isPremiumBackground(bg)) return premiumColours(bg);
   if (stk || bg !== "I") {
     // The sticker (white, card() "white"), the Centium gradient (PAL.B) and the photo layer (PAL.P) are all white type.
     return {

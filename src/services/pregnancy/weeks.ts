@@ -1,3 +1,5 @@
+import { t, tn, tx } from "../../i18n/core";
+
 // Where a pregnancy is, in weeks and days.
 //
 // PURE, so the dating can be checked against a wheel without a database, and
@@ -108,12 +110,12 @@ export function gestationOn(
  * an alarm: most pregnancies that reach 40 weeks continue a little past it.
  */
 export function dueLabel(g: Gestation): string {
-  if (g.daysUntilDue === 0) return "Due today";
+  if (g.daysUntilDue === 0) return tx("Due today", "due date");
   if (g.daysUntilDue > 0) {
-    return `Due in ${g.daysUntilDue} day${g.daysUntilDue === 1 ? "" : "s"}`;
+    return tn(g.daysUntilDue, "Due in {n} day", "Due in {n} days");
   }
   const over = Math.abs(g.daysUntilDue);
-  return `${over} day${over === 1 ? "" : "s"} past your due date`;
+  return tn(over, "{n} day past your due date", "{n} days past your due date");
 }
 
 // ---------------------------------------------------------------------------
@@ -148,8 +150,8 @@ export function contractionDurationSeconds(
 
 /** "1m 05s" / "45s". */
 export function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 60) return t("{s}s", { s: seconds });
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
-  return `${m}m ${String(s).padStart(2, "0")}s`;
+  return t("{m}m {s}s", { m, s: String(s).padStart(2, "0") });
 }

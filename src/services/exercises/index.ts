@@ -8,6 +8,7 @@ import type {
   MuscleGroup,
 } from "../../types";
 import { readTags } from "../../utils/exerciseTags";
+import { t, tk } from "../../i18n/core";
 
 // The exercise library: the public catalog, and a user's own movements.
 //
@@ -141,12 +142,12 @@ const categoryOf = (item: CustomExerciseLibraryItem): MuscleGroup | null =>
  * (ATXB2, case-insensitive, trimmed).
  */
 export const CUSTOM_EXERCISE_COPY = {
-  duplicate: "You already have an exercise with this name.",
-  nameShort: "Use at least 2 characters.",
-  nameLong: "Use up to 60 characters.",
+  duplicate: tk("You already have an exercise with this name."),
+  nameShort: tk("Use at least 2 characters."),
+  nameLong: tk("Use up to 60 characters."),
   /** OURS: the database's name CHECK, which does not say which end failed. */
-  nameRange: "Use 2 to 60 characters.",
-  muscle: "Pick at least one main muscle group.",
+  nameRange: tk("Use 2 to 60 characters."),
+  muscle: tk("Pick at least one main muscle group."),
 } as const;
 
 /** True for a sentence that states one of the rules above (shown as is, not as a generic failure). */
@@ -162,9 +163,9 @@ function describe(error: PostgrestError): string {
   if (error.code === "23514" && message.includes("custom_exercise_library_items_name_check")) return CUSTOM_EXERCISE_COPY.nameRange;
   if (error.code === "23514" && message.includes("custom_exercise_library_items_muscle_groups_check")) return CUSTOM_EXERCISE_COPY.muscle;
   // 42501 is a privilege violation, not an expired session — see ../food.
-  if (error.code === "42501") return "You don't have permission to do that.";
+  if (error.code === "42501") return t("You don't have permission to do that.");
   if (isOffline(error)) return OFFLINE_MESSAGE;
-  return "Something went wrong. Please try again.";
+  return t("Something went wrong. Please try again.");
 }
 
 export interface CatalogResult {
@@ -271,7 +272,7 @@ export async function createCustomExercise(
     console.error("[exercises] Could not create custom exercise:", error?.message);
     return {
       ok: false,
-      message: error ? describe(error) : "Something went wrong. Please try again.",
+      message: error ? describe(error) : t("Something went wrong. Please try again."),
     };
   }
   return { ok: true, exercise: fromCustom(data as CustomRow) };

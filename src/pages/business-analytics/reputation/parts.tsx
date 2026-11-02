@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { BizReply, BizReview } from "../../../services/reputation";
 import { ago } from "./reputationModel";
+import { t } from "../../../i18n/core";
 
 // AN13 parts shared by the Metrics and Reviews views and the sheets.
 
@@ -35,28 +36,16 @@ export const Stars: React.FC<{
   </span>
 );
 
-/**
- * The handover's injury wording, verbatim (KEEP-SAFETY, SW-36), shown when
- * business_reviews_page's flag_kind is 'injury' (B14 follow-up): the flag
- * card's reason line, and the notes in Message privately and Post a reply
- * (ReviewComposer `injury`). Never reworded.
- */
-export const INJURY_LINE =
-  "Mentions an injury. Read it yourself; Centium never answers these automatically.";
-export const INJURY_MESSAGE_NOTE =
-  "This review mentions an injury. Centium never answers these automatically. Contact the member privately first, then reply publicly if you choose.";
-export const INJURY_REPLY_NOTE =
-  "This review mentions an injury. Your reply is public, so keep it short and offer to talk privately.";
 
 /** AN13-011 row 4d. A reply Centium removed keeps its place (it can't be edited, deleted or replaced). */
 export const ReplyBlock: React.FC<{ reply: BizReply }> = ({ reply }) => (
   <div className="rp-reply">
     <p className="rp-reply-h">
-      Your reply · {ago(reply.at).replace("Today", "today")}
+      {t("Your reply · {when}", { when: ago(reply.at).replace("Today", "today") })}
     </p>
     {reply.redacted ? (
       <p className="rp-reply-t" style={{ fontStyle: "italic" }}>
-        Centium removed this reply.
+        {t("Centium removed this reply.")}
       </p>
     ) : (
       <p className="rp-reply-t">{reply.body}</p>
@@ -76,7 +65,7 @@ export const ReviewRow: React.FC<{
   if (review.redacted)
     return (
       <div className="rp-row">
-        <p className="rp-removed">This review was removed by Centium.</p>
+        <p className="rp-removed">{t("This review was removed by Centium.")}</p>
       </div>
     );
   const who = review.label;
@@ -84,7 +73,7 @@ export const ReviewRow: React.FC<{
   return (
     <div
       className="rp-row"
-      aria-label={`${who}, ${rating} of 5 stars, ${ago(review.createdAt)}`}
+      aria-label={t("{who}, {n} of 5 stars, {when}", { who, n: rating, when: ago(review.createdAt) })}
       role="group"
     >
       {top}
@@ -104,7 +93,7 @@ export const ReviewRow: React.FC<{
             type="button"
             className="rp-pill tap"
             onClick={action.onClick}
-            aria-label={`${action.label} to ${who}`}
+            aria-label={t("{action} to {who}", { action: action.label, who })}
           >
             <Reply size={13} strokeWidth={2.4} aria-hidden />
             {action.label}
@@ -114,7 +103,7 @@ export const ReviewRow: React.FC<{
           <button
             type="button"
             className="rp-dots tap"
-            aria-label={`More for the review by ${who}`}
+            aria-label={t("More for the review by {who}", { who })}
             aria-haspopup="menu"
             onClick={(e) => menu(e.currentTarget)}
           >

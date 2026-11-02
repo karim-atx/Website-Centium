@@ -1,4 +1,5 @@
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 // Handover 2026-09-29 WO4.1, "Measured on": the Add measurements date field
 // opens the standard calendar popup with a wheel time picker below it (hours,
 // minutes in fives, AM/PM). No future: later days, and on today later hours,
@@ -63,5 +64,5 @@ export function pickedInstant(day: string, t: TimeParts, now: Date): Date {
 export function formatMeasured(d: Date): string {
   const date = d.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" });
   const { hour, meridiem } = timeParts(d);
-  return `${date} · ${hour}:${pad(d.getMinutes())} ${meridiem}`;
+  return `${date} · ${hour}:${pad(d.getMinutes())} ${t(meridiem)}`;
 }

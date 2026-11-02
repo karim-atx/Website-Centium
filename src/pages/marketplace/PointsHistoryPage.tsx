@@ -11,6 +11,7 @@ import { FOCUS_CSS } from "../../components/market/usePress";
 import { hexAlpha, liftInk } from "../../components/market/marketColor";
 import { fetchLedger, groupLedger, ledgerCursor, ledgerLines, signedPoints, amountTone, type LedgerEntry } from "../../services/points";
 import { BackTitle } from "./BackTitle";
+import { DoubledChip, DoublePointsLine } from "../../components/premium/PointsPerks";
 import { appLocale } from "../../i18n/format";
 import { t, tk } from "../../i18n/core";
 
@@ -117,6 +118,8 @@ export default function PointsHistoryPage() {
             })}
             {pointsSummary.otherPoints !== 0 ? ` · ${t("{n} other", { n: pointsSummary.otherPoints.toLocaleString(appLocale("en-US")) })}` : ""}
           </p>
+          {/* Round G2: for a free member, Premium doubles points (nothing while the switch is off). */}
+          <DoublePointsLine className="mt-1" />
         </>
       ) : (
         <div aria-hidden className="animate-skeleton-pulse" style={{ marginTop: 12, height: 106, borderRadius: 20, background: m.soft }} />
@@ -172,6 +175,7 @@ const LedgerRow: React.FC<{ entry: LedgerEntry; balanceAfter: number | null; lin
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: textPx(13.5), fontWeight: 700, color: m.ink }}>{lines.title}</div>
         <div style={{ fontSize: textPx(11), color: m.faint }}>{lines.kind}</div>
+        <DoubledChip multiplier={entry.multiplier} />
       </div>
       <div style={{ textAlign: "end" }}>
         <div style={{ fontSize: textPx(14), fontWeight: 800, color: ink, fontVariantNumeric: "tabular-nums" }}>{signedPoints(entry.amount)}</div>

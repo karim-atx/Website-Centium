@@ -38,6 +38,7 @@ import { serviceAreaLine } from "../../../components/pro/profile/profileModel";
 import { clock12 } from "../../../utils/time12";
 import { linePx, textPx } from "../../../theme/textSize";
 import { appLocale } from "../../../i18n/format";
+import { t, tn } from "../../../i18n/core";
 
 // Release 3 W6 · MO1 v7 · the professional More (source/gen r19.js moreMenu19
 // over moreMenu18 / moreMenu16 / moreMenu15 / more.js moreScreen; the frame
@@ -126,7 +127,7 @@ function MessagesHero() {
     </>
   );
 
-  const label = `Messages, ${s.unread} unread, ${s.newEnquiries} enquiries waiting`;
+  const label = t("Messages, {unread} unread, {newEnquiries} enquiries waiting", { unread: s.unread, newEnquiries: s.newEnquiries });
   return (
     <button
       type="button"
@@ -178,21 +179,21 @@ function MessagesHero() {
         style={{ justifyContent: empty ? "center" : "flex-start", minHeight: 169, padding: `${empty ? 16 : 24}px 20px 16px` }}
       >
         <span className="flex items-center" style={{ gap: 14 }}>
-          <span style={{ fontSize: textPx(38), fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em", color: title }}>Messages</span>
+          <span style={{ fontSize: textPx(38), fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em", color: title }}>{t("Messages")}</span>
           <ChevronRight size={18} strokeWidth={2.6} className="shrink-0" style={{ color: title }} />
         </span>
         <span className="block" style={{ marginTop: 12, maxWidth: 160, fontSize: textPx(17), fontWeight: 500, lineHeight: linePx(22), color: sub }}>
           {s.loading ? (
             <span aria-hidden className="block rounded bg-current opacity-20" style={{ width: 110, height: 16 }} />
           ) : empty ? (
-            "Chat with clients and answer enquiries"
+            t("Chat with clients and answer enquiries")
           ) : clear ? (
-            "All caught up"
+            t("All caught up")
           ) : (
             <>
-              <b style={{ color: INK.prDeep, fontWeight: 800 }}>{s.unread} unread</b>
+              <b style={{ color: INK.prDeep, fontWeight: 800 }}>{t("{unread} unread", { unread: s.unread })}</b>
               <br />
-              {s.newEnquiries === 1 ? "1 new enquiry" : `${s.newEnquiries} new enquiries`}
+              {s.newEnquiries === 1 ? t("1 new enquiry") : t("{newEnquiries} new enquiries", { newEnquiries: s.newEnquiries })}
             </>
           )}
         </span>
@@ -287,16 +288,14 @@ function List({ rows, onGo }: { rows: Row[]; onGo: (r: Row) => void }) {
 function VerifiedTag() {
   return (
     <span className="inline-flex items-center" style={{ gap: 3, fontSize: textPx(10), fontWeight: 700, color: INK.good }}>
-      <BadgeCheck size={12} strokeWidth={2} />
-      Verified
-    </span>
+      <BadgeCheck size={12} strokeWidth={2} />{t("Verified")}</span>
   );
 }
 
 function Stars({ average }: { average: number }) {
   const full = Math.round(average);
   return (
-    <span className="inline-flex" aria-label={`${average.toFixed(1)} out of 5`} style={{ gap: 1 }}>
+    <span className="inline-flex" aria-label={t("{v} out of 5", { v: average.toFixed(1) })} style={{ gap: 1 }}>
       {[0, 1, 2, 3, 4].map((i) => (
         <Star key={i} size={10} strokeWidth={2} style={{ color: STAR_GOLD }} fill={i < full ? STAR_GOLD : "none"} />
       ))}
@@ -307,7 +306,7 @@ function Stars({ average }: { average: number }) {
 function CountBadge({ n }: { n: number }) {
   return (
     <span
-      aria-label={`${n} waiting`}
+      aria-label={t("{n} waiting", { n })}
       className="inline-flex items-center justify-center"
       style={{ minWidth: 18, height: 18, padding: "0 6px", borderRadius: 9999, background: INK.fill, color: INK.onFill, fontSize: 10, fontWeight: 700 }}
     >
@@ -346,85 +345,83 @@ export default function ProfessionalMore() {
   const co = lane === "clinical_overview";
   const nt = lane === "nutrition";
 
-  const where = sum?.businesses ? (sum.businesses.length ? sum.businesses.join(" · ") : "Independent") : "Independent, businesses & online";
+  const where = sum?.businesses ? (sum.businesses.length ? sum.businesses.join(" · ") : t("Independent")) : t("Independent, businesses & online");
   // PLAN S2 (drawn copy): "{area_label} and {n} km around" from the map area and service_radius_km.
-  const area = (sum && serviceAreaLine(sum.areaLabel, sum.serviceRadiusKm, sum.workMode)) || "Where clients can find you";
+  const area = (sum && serviceAreaLine(sum.areaLabel, sum.serviceRadiusKm, sum.workMode)) || t("Where clients can find you");
   const reviewsLine =
     sum?.rating && sum.rating.count > 0 && sum.rating.average != null
-      ? `${sum.rating.average.toFixed(1)} average · ${sum.rating.count} ${sum.rating.count === 1 ? "review" : "reviews"}`
-      : "What clients say about you";
+      ? tn(sum.rating.count, "{avg} average · {n} review", "{avg} average · {n} reviews", { avg: sum.rating.average.toFixed(1) })
+      : t("What clients say about you");
 
   const practice: Row[] = [
-    { icon: Globe2, label: "Public profile", desc: "Preview it as clients see it", to: "/app/more/public-profile" },
-    { icon: BadgeCheck, label: co ? "Registration and licence" : "Credentials and licence", desc: "Licence number and verification", to: "/app/more/credentials", tag: sum?.verified ? <VerifiedTag /> : undefined },
-    { icon: Tag, label: "Services and pricing", desc: co ? "Appointment types & fees" : "Session types, packages & offers", to: "/app/more/services" },
-    { icon: Building2, label: "Where you work", desc: where, to: "/app/more/where-you-work" },
-    { icon: MapPin, label: "Service area", desc: area, to: "/app/more/where-you-work/area" },
+    { icon: Globe2, label: t("Public profile"), desc: t("Preview it as clients see it"), to: "/app/more/public-profile" },
+    { icon: BadgeCheck, label: co ? t("Registration and licence") : t("Credentials and licence"), desc: t("Licence number and verification"), to: "/app/more/credentials", tag: sum?.verified ? <VerifiedTag /> : undefined },
+    { icon: Tag, label: t("Services and pricing"), desc: co ? t("Appointment types & fees") : t("Session types, packages & offers"), to: "/app/more/services" },
+    { icon: Building2, label: t("Where you work"), desc: where, to: "/app/more/where-you-work" },
+    { icon: MapPin, label: t("Service area"), desc: area, to: "/app/more/where-you-work/area" },
   ];
   const forms: Row[] = [
     {
       icon: ClipboardList,
-      label: co ? "Intake and health history forms" : nt ? "Intake and food journal prompts" : "Intake and check-in forms",
-      desc: "What new clients fill in",
+      label: co ? t("Intake and health history forms") : nt ? t("Intake and food journal prompts") : t("Intake and check-in forms"),
+      desc: t("What new clients fill in"),
       to: "/app/more/forms",
     },
-    { icon: ShieldCheck, label: "Consent and data sharing", desc: "What clients share with you & why", to: "/app/more/consent" },
-    { icon: QrCode, label: "Invite clients", desc: "Share it so clients can connect", to: `${PRO_ROUTES.home}/invite` },
+    { icon: ShieldCheck, label: t("Consent and data sharing"), desc: t("What clients share with you & why"), to: "/app/more/consent" },
+    { icon: QrCode, label: t("Invite clients"), desc: t("Share it so clients can connect"), to: `${PRO_ROUTES.home}/invite` },
   ];
   const templates: Row[] = co
     ? [
-        { icon: FileText, label: "Clinical note templates", desc: "Consultation & follow-up notes", to: "/app/more/note-templates" },
-        { icon: Send, label: "Referral templates", desc: "Letters to dietitians, trainers & physios", to: "/app/more/templates?tab=referrals" },
+        { icon: FileText, label: t("Clinical note templates"), desc: t("Consultation & follow-up notes"), to: "/app/more/note-templates" },
+        { icon: Send, label: t("Referral templates"), desc: t("Letters to dietitians, trainers & physios"), to: "/app/more/templates?tab=referrals" },
       ]
     : nt
       ? [
-          { icon: UtensilsCrossed, label: "Meal-plan templates", desc: "Reusable meal plans", to: "/app/more/templates?tab=meal-plans" },
-          { icon: FileText, label: "Note templates", desc: "Nutrition and session notes", to: "/app/more/note-templates" },
+          { icon: UtensilsCrossed, label: t("Meal-plan templates"), desc: t("Reusable meal plans"), to: "/app/more/templates?tab=meal-plans" },
+          { icon: FileText, label: t("Note templates"), desc: t("Nutrition and session notes"), to: "/app/more/note-templates" },
         ]
       : [
-          { icon: Dumbbell, label: "Programme templates", desc: "Workouts & multi-week programmes", to: "/app/more/templates?tab=programmes" },
-          { icon: UtensilsCrossed, label: "Meal-plan templates", desc: "Reusable meal plans", to: "/app/more/templates?tab=meal-plans" },
-          { icon: FileText, label: "Note templates", desc: "Training and session notes", to: "/app/more/note-templates" },
+          { icon: Dumbbell, label: t("Programme templates"), desc: t("Workouts & multi-week programmes"), to: "/app/more/templates?tab=programmes" },
+          { icon: UtensilsCrossed, label: t("Meal-plan templates"), desc: t("Reusable meal plans"), to: "/app/more/templates?tab=meal-plans" },
+          { icon: FileText, label: t("Note templates"), desc: t("Training and session notes"), to: "/app/more/note-templates" },
         ];
   const reputation: Row[] = [
-    { icon: Star, label: "Reviews", desc: reviewsLine, to: "/app/more/reviews", trailing: sum?.rating?.count && sum.rating.average != null ? <Stars average={sum.rating.average} /> : undefined },
-    { icon: Send, label: "Care network", desc: "Sent to and received from colleagues", to: "/app/more/care-network", trailing: care.count > 0 ? <CountBadge n={care.count} /> : undefined },
+    { icon: Star, label: t("Reviews"), desc: reviewsLine, to: "/app/more/reviews", trailing: sum?.rating?.count && sum.rating.average != null ? <Stars average={sum.rating.average} /> : undefined },
+    { icon: Send, label: t("Care network"), desc: t("Sent to and received from colleagues"), to: "/app/more/care-network", trailing: care.count > 0 ? <CountBadge n={care.count} /> : undefined },
   ];
   const billing: Row[] = [
-    { icon: Banknote, label: "Payments and billing", desc: "Methods, payouts, invoices & receipts", to: "/app/more/payments" },
-    { icon: Store, label: "Businesses", desc: "Where you are connected & join requests", to: "/app/more/businesses" },
+    { icon: Banknote, label: t("Payments and billing"), desc: t("Methods, payouts, invoices & receipts"), to: "/app/more/payments" },
+    { icon: Store, label: t("Businesses"), desc: t("Where you are connected & join requests"), to: "/app/more/businesses" },
     // FINAL_PLAN W6 "plus kept rows": the venue console for owners and staff.
-    ...(venues.length > 0 ? [{ icon: Building2, label: "Venues", desc: "Members, classes, hours & photos", to: "/app/business/venue" }] : []),
+    ...(venues.length > 0 ? [{ icon: Building2, label: t("Venues"), desc: t("Members, classes, hours & photos"), to: "/app/business/venue" }] : []),
   ];
   const account: Row[] = [
-    { icon: UserIcon, label: "Profile", desc: "Your account, details & sign out", to: "/app/profile" },
-    { icon: ReferralLeafIcon as Icon, label: "Referral", desc: "Share your code, earn rewards", onClick: () => setReferralOpen(true) },
-    { icon: Settings, label: "Settings", desc: "Notifications, security, help & legal", to: "/app/settings" },
+    { icon: UserIcon, label: t("Profile"), desc: t("Your account, details & sign out"), to: "/app/profile" },
+    { icon: ReferralLeafIcon as Icon, label: t("Referral"), desc: t("Share your code, earn rewards"), onClick: () => setReferralOpen(true) },
+    { icon: Settings, label: t("Settings"), desc: t("Notifications, security, help & legal"), to: "/app/settings" },
   ];
 
   return (
     <div>
-      <p className="text-charcoal" style={{ marginBottom: 13, fontSize: 19, lineHeight: "28.5px", fontWeight: 700, letterSpacing: "-0.03em" }}>
-        More
-      </p>
+      <p className="text-charcoal" style={{ marginBottom: 13, fontSize: 19, lineHeight: "28.5px", fontWeight: 700, letterSpacing: "-0.03em" }}>{t("More")}</p>
       <MessagesHero />
       <div className={forumAllowed ? "grid grid-cols-3" : "grid grid-cols-2"} style={{ gap: 9, marginBottom: 24 }}>
         {/* Market + Share 3.0 D-39: Explore opens the professional Marketplace (P-MA); the live ProfessionalExplore stays reachable from its Overview ("Gyms and colleagues"). */}
-        <Tile icon={ExploreLeafIcon as Icon} label="Explore" desc="Your Showcase, offers and performance" onClick={() => navigate("/app/pro/marketplace")} />
-        {forumAllowed && <Tile icon={CommunityLeafIcon as Icon} label="Community" desc="Forum discussions & fitness courses" onClick={() => navigate("/app/forum")} />}
-        <Tile icon={LineChart} abs label="Practice insights" desc="Clients, sessions, retention & reviews" onClick={() => navigate("/app/more/practice-insights")} />
+        <Tile icon={ExploreLeafIcon as Icon} label={t("Explore")} desc={t("Your Showcase, offers and performance")} onClick={() => navigate("/app/pro/marketplace")} />
+        {forumAllowed && <Tile icon={CommunityLeafIcon as Icon} label={t("Community")} desc={t("Forum discussions & fitness courses")} onClick={() => navigate("/app/forum")} />}
+        <Tile icon={LineChart} abs label={t("Practice insights")} desc={t("Clients, sessions, retention & reviews")} onClick={() => navigate("/app/more/practice-insights")} />
       </div>
-      <SectionLabel>Practice</SectionLabel>
+      <SectionLabel>{t("Practice")}</SectionLabel>
       <List rows={practice} onGo={go} />
-      <SectionLabel>{co ? "Patients and forms" : "Clients and forms"}</SectionLabel>
+      <SectionLabel>{co ? t("Patients and forms") : t("Clients and forms")}</SectionLabel>
       <List rows={forms} onGo={go} />
-      <SectionLabel>Templates</SectionLabel>
+      <SectionLabel>{t("Templates")}</SectionLabel>
       <List rows={templates} onGo={go} />
-      <SectionLabel>Reputation</SectionLabel>
+      <SectionLabel>{t("Reputation")}</SectionLabel>
       <List rows={reputation} onGo={go} />
-      <SectionLabel>Business and billing</SectionLabel>
+      <SectionLabel>{t("Business and billing")}</SectionLabel>
       <List rows={billing} onGo={go} />
-      <SectionLabel>Account</SectionLabel>
+      <SectionLabel>{t("Account")}</SectionLabel>
       <List rows={account} onGo={go} />
       <button
         type="button"
@@ -437,8 +434,8 @@ export default function ProfessionalMore() {
             <PremiumLeafIcon size={22} style={{ color: "#C8BFE9" }} />
           </span>
           <span>
-            <span className="block text-white" style={{ fontSize: textPx(12.5), fontWeight: 800 }}>Centium Professional</span>
-            <span className="block" style={{ fontSize: textPx(10), color: "rgba(255,255,255,0.6)" }}>Your plan, client limit &amp; upgrades</span>
+            <span className="block text-white" style={{ fontSize: textPx(12.5), fontWeight: 800 }}>{t("Centium Professional")}</span>
+            <span className="block" style={{ fontSize: textPx(10), color: "rgba(255,255,255,0.6)" }}>{t("Your plan, client limit & upgrades")}</span>
           </span>
         </span>
         <ChevronRight size={14} strokeWidth={2} style={{ color: "#C8BFE9" }} className="shrink-0" />

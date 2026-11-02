@@ -10,6 +10,9 @@ import { Users, User as UserIcon, ChevronRight, Settings, MessageCircle, Calenda
 import { linePx, textPx } from "../../theme/textSize";
 import { t, tk } from "../../i18n/core";
 import BusinessMoreIndex from "../business-more/BusinessMoreIndex";
+import { usePremium } from "../../services/premium/hooks";
+import { showBuyInApp } from "../../services/premium/model";
+import { BuyInApp } from "../../components/premium/BuyInApp";
 import ProfessionalMore from "../pro/more/ProfessionalMore";
 
 // MO1.4 · More (handover 2026-09-30 More supplement, assets/MO1.4.png, built in
@@ -59,6 +62,7 @@ function PersonalMore() {
   const navigate = useNavigate();
   const { user } = useApp();
   const unread = useUnread();
+  const { premium } = usePremium();
   const forumAllowed = forumAccess(user.dateOfBirth) === "adult";
   // Release B: an ambassador decision notice opens here with ?open=referral
   // (clientNotificationTarget), on the popup that carries the status card.
@@ -222,6 +226,12 @@ function PersonalMore() {
         </div>
         <ChevronRight size={14} style={{ color: "rgb(var(--thi-c8bfe9))" }} className="shrink-0 rtl:-scale-x-100" />
       </button>
+      {/* Round G1: with the Premium switch on and no Premium yet, the card is
+          followed by "Buy in the Centium app" (never in recovery-sensitive
+          mode: may_prompt_upgrade is false there). Off: as today. */}
+      {showBuyInApp(premium) && premium?.mayPromptUpgrade && (
+        <BuyInApp product="premium" monthly={premium.monthlyPrice} yearly={premium.yearlyPrice} trialDays={premium.trialDays} compact className="mt-[7px]" />
+      )}
 
       <ReferralPopup open={referralOpen} onClose={() => setReferralOpen(false)} />
     </div>

@@ -6,6 +6,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { FOOD_DARK } from "./foodDark";
 import { textPx } from "../../theme/textSize";
 import { useCameraCodeReader } from "./useCameraCodeReader";
+import { t } from "../../i18n/core";
 
 /**
  * The camera barcode scanner (FO3.2, reused by HO2.1's Barcode button): the
@@ -20,7 +21,7 @@ export const BarcodeScanner: React.FC<{
   onClose: () => void;
   onCode: (gtin: string) => void;
   title?: string;
-}> = ({ open, onClose, onCode, title = "Scan barcode" }) => {
+}> = ({ open, onClose, onCode, title }) => {
   const dark = useIsDark();
   const [typed, setTyped] = useState("");
   const [typedError, setTypedError] = useState<string | null>(null);
@@ -42,7 +43,7 @@ export const BarcodeScanner: React.FC<{
   const submitTyped = () => {
     const gtin = normalizeGtin(typed);
     if (!gtin) {
-      setTypedError("That isn't a valid barcode. Check the digits under the bars.");
+      setTypedError(t("That isn't a valid barcode. Check the digits under the bars."));
       return;
     }
     stop();
@@ -52,7 +53,7 @@ export const BarcodeScanner: React.FC<{
   const showCamera = camera === "starting" || camera === "scanning";
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={title}>
+    <BottomSheet open={open} onClose={onClose} title={title ?? t("Scan barcode")}>
       <div className="animate-fade-slide-up">
         {showCamera ? (
           <div className="relative overflow-hidden" style={{ borderRadius: 18, background: "rgb(var(--th-1e1834))", aspectRatio: "4 / 3" }}>
@@ -67,7 +68,7 @@ export const BarcodeScanner: React.FC<{
               className="absolute inset-x-0 text-center"
               style={{ bottom: 10, color: "rgba(255,255,255,0.85)", fontSize: textPx(12), fontWeight: 600 }}
             >
-              {camera === "starting" ? "Starting the camera…" : "Point the camera at the barcode"}
+              {camera === "starting" ? t("Starting the camera…") : t("Point the camera at the barcode")}
             </p>
           </div>
         ) : (
@@ -75,13 +76,13 @@ export const BarcodeScanner: React.FC<{
             <ScanLine size={18} className="flex-none" style={{ color: dark ? FOOD_DARK.lavInk : "rgb(var(--thi-7d67d9))", marginTop: 1 }} />
             <p style={{ margin: 0, fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-soft))", lineHeight: 1.45 }}>
               {camera === "denied"
-                ? "Camera access is off for this site. Allow it in your browser settings, or type the number below."
-                : "This browser can't use the camera for scanning. Type the number under the barcode instead."}
+                ? t("Camera access is off for this site. Allow it in your browser settings, or type the number below.")
+                : t("This browser can't use the camera for scanning. Type the number under the barcode instead.")}
             </p>
           </div>
         )}
 
-        <p style={{ margin: "16px 0 6px", fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>Or type the number</p>
+        <p style={{ margin: "16px 0 6px", fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>{t("Or type the number")}</p>
         <div className="flex" style={{ gap: 8 }}>
           <input
             value={typed}
@@ -91,8 +92,8 @@ export const BarcodeScanner: React.FC<{
             }}
             onKeyDown={(e) => e.key === "Enter" && submitTyped()}
             inputMode="numeric"
-            placeholder="Enter number manually"
-            aria-label="Barcode number"
+            placeholder={t("Enter number manually")}
+            aria-label={t("Barcode number")}
             className="flex-1 min-w-0 focus:outline-none"
             style={{ height: 46, padding: "0 14px", borderRadius: 12, border: `1px solid ${dark ? FOOD_DARK.outline : "#E7E7EC"}`, background: "rgb(var(--c-cream-card))", fontSize: textPx(14), color: "rgb(var(--c-charcoal))" }}
           />
@@ -102,7 +103,7 @@ export const BarcodeScanner: React.FC<{
             className="tap flex-none disabled:opacity-50"
             style={{ height: 46, padding: "0 16px", borderRadius: 12, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(14), fontWeight: 700 }}
           >
-            Use
+            {t("Use")}
           </button>
         </div>
         {typedError && (

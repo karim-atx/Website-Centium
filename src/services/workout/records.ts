@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Json } from "../../../lib/supabase/database.types";
+import { t } from "../../i18n/core";
 
 // Personal records, and the paused sessions that are not records of anything.
 //
@@ -48,11 +49,11 @@ export interface WriteResult {
 
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
-  if (code === "42501") return "You don't have permission to do that.";
-  if (code === "23503") return "That exercise no longer exists.";
-  if (code === "23514") return "That number is outside the range this can store.";
+  if (code === "42501") return t("You don't have permission to do that.");
+  if (code === "23503") return t("That exercise no longer exists.");
+  if (code === "23514") return t("That number is outside the range this can store.");
   if (isOffline(error)) return OFFLINE_MESSAGE;
-  return "Something went wrong. Please try again.";
+  return t("Something went wrong. Please try again.");
 }
 
 const DEFINITION = "id, name";

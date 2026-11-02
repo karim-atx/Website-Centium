@@ -4,6 +4,7 @@
 // df67bd8). Kept free of the Supabase client so it can be tested directly.
 
 import { ageFromDateOfBirth, detailDate, formatShortDate } from "../../utils/date";
+import { t, tk } from "../../i18n/core";
 
 /** Design screen 1, and the brief's wording for an under-18 who opens the link. */
 export const ADULTS_ONLY_TEXT = "The community is for adults. You can join the forum from age 18.";
@@ -109,9 +110,9 @@ export function nicknameNextChange(details: string | null | undefined, now: Date
 }
 
 export const NICKNAME_PROBLEM_TEXT: Record<Exclude<NicknameProblem, null>, string> = {
-  format: "Use 3 to 20 letters, numbers or underscores.",
-  reserved: "That sounds like an official account. Choose a different nickname.",
-  "real-name": "That looks like your real name. Choose a nickname that isn't.",
+  format: tk("Use 3 to 20 letters, numbers or underscores."),
+  reserved: tk("That sounds like an official account. Choose a different nickname."),
+  "real-name": tk("That looks like your real name. Choose a nickname that isn't."),
 };
 
 // ---------------------------------------------------------------------------
@@ -148,7 +149,7 @@ export function describeForumError(
     case "ATX55":
       return ADULTS_ONLY_TEXT;
     case "ATX56":
-      return NICKNAME_PROBLEM_TEXT.reserved;
+      return t(NICKNAME_PROBLEM_TEXT.reserved);
     case "ATX57": {
       const until = detailDate(error.details) ?? /paused until (.+)$/i.exec(message)?.[1]?.trim();
       return until
@@ -156,7 +157,7 @@ export function describeForumError(
         : "Your access to the community forum is paused for now.";
     }
     case "ATX58":
-      return "Choose a forum nickname before posting under one.";
+      return t("Choose a forum nickname before posting under one.");
     case "ATX59":
       return "Professionals post under their own name.";
     case "ATX60":
@@ -169,15 +170,15 @@ export function describeForumError(
         ? "This can no longer be edited. Posts can be edited for 30 minutes after posting."
         : "This couldn't be withdrawn. It may already have been removed.";
     case "ATX63":
-      return "That nickname is taken. Choose a different one.";
+      return t("That nickname is taken. Choose a different one.");
     // Release 1 (Database 20261220030000): one change in 30 days, the next
     // allowed time in DETAIL; and no contact details, links or digit runs.
     case "ATXK1": {
       const on = nicknameNextChange(error.details);
-      return on ? `You can change your nickname again on ${on}.` : "You can change your nickname once every 30 days.";
+      return on ? t("You can change your nickname again on {date}.", { date: on }) : t("You can change your nickname once every 30 days.");
     }
     case "ATXK2":
-      return "A nickname can't contain a phone number or other contact details.";
+      return t("A nickname can't contain a phone number or other contact details.");
     case "ATX64":
       return "That photo couldn't be attached. Add it again.";
     case "ATX65":

@@ -9,6 +9,7 @@ import { businessRange, type AnalyticsRange } from "../analyticsRange";
 import { ErrorLine, RCard, SecLabel, Skel, v } from "./kit";
 import { useRevenue } from "./revenueContext";
 import { useRecordedRevenue } from "./useRecordedRevenue";
+import { t, tn } from "../../../i18n/core";
 
 // AN14-013 to -018 (AnInsightsV3 sub "streams"): two collapsible cards,
 // "Revenue by stream" and "Revenue by membership plan" (Classes: "plan or
@@ -84,9 +85,9 @@ async function salesByCategory(businessId: string, range: AnalyticsRange): Promi
   if (top.status !== "ok" || prods.status !== "ok") return null;
   const cat = new Map(prods.value.products.map((p) => [p.id, p.category]));
   const by = new Map<string, number>();
-  for (const t of top.value) {
-    const k = (t.offeringId && cat.get(t.offeringId)) || "No category";
-    by.set(k, (by.get(k) ?? 0) + t.sales);
+  for (const p of top.value) {
+    const k = (p.offeringId && cat.get(p.offeringId)) || t("No category");
+    by.set(k, (by.get(k) ?? 0) + p.sales);
   }
   return [...by.entries()].map(([label, value]) => ({ label, value })).filter((x) => x.value > 0).sort((a, b) => b.value - a.value);
 }
@@ -123,28 +124,28 @@ export const StreamsTab: React.FC = () => {
   const catLines = cats && cats.key === catKey ? cats.value : null;
 
   if (rec.error && !f)
-    return <ErrorLine message="Couldn't load revenue." onRetry={rec.reload} />;
+    return <ErrorLine message={t("Couldn't load revenue.")} onRetry={rec.reload} />;
   if (!f)
     return (
-      <div role="status" aria-label="Loading">
-        <SecLabel>Revenue by stream</SecLabel>
+      <div role="status" aria-label={t("Loading")}>
+        <SecLabel>{t("Revenue by stream")}</SecLabel>
         <Skel h={74} r={24} />
-        <SecLabel>Revenue by membership plan</SecLabel>
+        <SecLabel>{t("Revenue by membership plan")}</SecLabel>
         <Skel h={75} r={24} />
       </div>
     );
 
   const denied = f.denied
-    ? "Revenue shows here for people with the Revenue permission."
+    ? t("Revenue shows here for people with the Revenue permission.")
     : null;
   let aLine: string;
   if (denied) aLine = denied;
-  else if (!total) aLine = "No revenue yet.";
+  else if (!total) aLine = t("No revenue yet.");
   else if (rows.length === 1)
-    aLine = `All revenue comes from ${rows[0].label.toLowerCase()}.`;
+    aLine = t("All revenue comes from {stream}.", { stream: rows[0].label.toLowerCase() });
   else {
     const top = rows.slice().sort((a, b) => b.value - a.value)[0];
-    aLine = `${top.label} bring in ${Math.round((top.value / total) * 100)}%.`;
+    aLine = t("{stream} bring in {pct}%.", { stream: top.label, pct: Math.round((top.value / total) * 100) });
   }
   const hasPlans = (data?.plans.length ?? 0) > 0;
   // The plan that brings in the most (the reader's order); "Classes and other" only when no plan earned.
@@ -152,18 +153,18 @@ export const StreamsTab: React.FC = () => {
   const bLine = denied
     ? denied
     : !hasPlans && kind === "gym"
-      ? "No membership plans yet."
+      ? t("No membership plans yet.")
       : topPlan
-        ? `${topPlan.label} brings in the most: ${money(topPlan.value)} from ${topPlan.n} ${topPlan.n === 1 ? "payment" : "payments"}.`
+        ? tn(topPlan.n, "{plan} brings in the most: {amount} from {n} payment.", "{plan} brings in the most: {amount} from {n} payments.", { plan: topPlan.label, amount: money(topPlan.value) })
         : kind === "classes"
-          ? "No plan or pack revenue yet."
-          : "No membership revenue yet.";
+          ? t("No plan or pack revenue yet.")
+          : t("No membership revenue yet.");
 
   return (
     <div>
-      <SecLabel>Revenue by stream</SecLabel>
+      <SecLabel>{t("Revenue by stream")}</SecLabel>
       <Collapsible
-        title="Where does your revenue come from?"
+        title={t("Where does your revenue come from?")}
         line={aLine}
         open={aOpen}
         onToggle={() => setAOpen((o) => !o)}
@@ -174,7 +175,7 @@ export const StreamsTab: React.FC = () => {
               className="py-[10px] text-[12px] leading-[17px]"
               style={{ color: v("faint") }}
             >
-              Revenue shows here once payments are recorded.
+              {t("Revenue shows here once payments are recorded.")}
             </p>
           )}
           {rows.map((r, i) => {
@@ -247,7 +248,7 @@ export const StreamsTab: React.FC = () => {
                           className="text-[10.5px] font-bold mt-[4px]"
                           style={{ color: v("faint") }}
                         >
-                          By category, from orders placed
+                          {t("By category, from orders placed")}
                         </span>
                         {catLines.map((c) => (
                           <span
@@ -275,14 +276,14 @@ export const StreamsTab: React.FC = () => {
           className="flex justify-between pt-[10px] text-[13px] font-extrabold"
           style={{ borderTop: `1px solid ${v("divider")}`, color: v("ink") }}
         >
-          <span>Net revenue</span>
+          <span>{t("Net revenue")}</span>
           <span className="rv-num">{money(total)}</span>
         </p>
         <p
           className="text-[11px] leading-[15px] mt-[6px]"
           style={{ color: v("faint") }}
         >
-          Tap a stream for its breakdown.
+          {t("Tap a stream for its breakdown.")}
         </p>
       </Collapsible>
 
@@ -290,11 +291,11 @@ export const StreamsTab: React.FC = () => {
         <>
           <SecLabel>
             {kind === "classes"
-              ? "Revenue by plan or pack"
-              : "Revenue by membership plan"}
+              ? t("Revenue by plan or pack")
+              : t("Revenue by membership plan")}
           </SecLabel>
           <Collapsible
-            title="Which plans bring in the most?"
+            title={t("Which plans bring in the most?")}
             line={bLine}
             open={bOpen}
             onToggle={() => setBOpen((o) => !o)}
@@ -305,7 +306,7 @@ export const StreamsTab: React.FC = () => {
                   className="text-[12px] leading-[17px]"
                   style={{ color: v("ink-soft") }}
                 >
-                  No membership plans yet.
+                  {t("No membership plans yet.")}
                 </p>
                 <button
                   type="button"
@@ -313,7 +314,7 @@ export const StreamsTab: React.FC = () => {
                   className="tap min-h-[44px] text-[12.5px] font-extrabold"
                   style={{ color: v("pdark") }}
                 >
-                  Add a plan
+                  {t("Add a plan")}
                 </button>
               </div>
             ) : plans.length === 0 ? (
@@ -321,7 +322,7 @@ export const StreamsTab: React.FC = () => {
                 className="mt-[12px] text-[12px] leading-[17px]"
                 style={{ color: v("faint") }}
               >
-                Plans show here once their payments are recorded with a date.
+                {t("Plans show here once their payments are recorded with a date.")}
               </p>
             ) : (
               <div className="flex flex-col gap-[12px] mt-[12px]">
@@ -352,8 +353,8 @@ export const StreamsTab: React.FC = () => {
                       className="text-[11px] mt-[3px]"
                       style={{ color: v("faint") }}
                     >
-                      {p.n} {p.n === 1 ? "payment" : "payments"}
-                      {p.each !== null ? ` · ${money(p.each)} each` : ""}
+                      {tn(p.n, "{n} payment", "{n} payments")}
+                      {p.each !== null ? ` · ${t("{amount} each", { amount: money(p.each) })}` : ""}
                     </p>
                   </div>
                 ))}

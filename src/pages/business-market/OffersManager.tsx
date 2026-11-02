@@ -4,6 +4,7 @@ import { OffersList } from "../../components/market/offers/OffersList";
 import { Caps } from "../../components/market/offers/parts";
 import { useMarket } from "./MarketContext";
 import { PromotionsTab } from "./PromotionsTab";
+import { t } from "../../i18n/core";
 
 // Market + Share 3.0 · W3 · B-MA.3 Offers tab (Business Marketplace Screens
 // `offersList`): the drawn point offers first (the shared OffersList, its
@@ -41,7 +42,7 @@ export function OffersTab() {
         onOpen={(id) => navigate(`${mk.base}/offers/${encodeURIComponent(id)}`)}
         flash={flash}
       />
-      <Caps style={{ marginTop: 24, marginBottom: 10 }}>Promotions</Caps>
+      <Caps style={{ marginTop: 24, marginBottom: 10 }}>{t("Promotions")}</Caps>
       <PromotionsTab />
     </div>
   );

@@ -11,6 +11,8 @@ import { useAnalytics } from "../analyticsContext";
 import { isoOf, rangeWords } from "../analyticsRange";
 import { RenewalsCard } from "./RenewalsCard";
 import { GrowthChart } from "./GrowthChart";
+import { t, tn, tx } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
 
 // A Members section page (AN4-005 rows 10-17: back 44, crumb, the picker
 // title (AN4-046 / -047: one navigation pattern, the picker), "{i} of {n}",
@@ -48,12 +50,12 @@ export function MembersEmptyCard({ vocab, ghost, children }: { vocab: MembersVoc
     <AnEmptyCard
       icon={Users}
       ghost={ghost}
-      title={classes ? "No clients yet" : `No ${vocab.people} yet`}
-      body={classes ? "Clients appear here after their first booking. Add a class to get started." : "Invite members with a code. Growth, first-90-day health, engagement and plans appear once people join."}
+      title={classes ? t("No clients yet") : t("No members yet")}
+      body={classes ? t("Clients appear here after their first booking. Add a class to get started.") : t("Invite members with a code. Growth, first-90-day health, engagement and plans appear once people join.")}
       button={
         classes
-          ? { label: "Create class", icon: Plus, onClick: () => navigate("/app/business/classes?create=1") }
-          : { label: "Invite members", icon: MailPlus, onClick: () => navigate(`${BASE}/codes?create=1`) }
+          ? { label: t("Create class"), icon: Plus, onClick: () => navigate("/app/business/classes?create=1") }
+          : { label: t("Invite members"), icon: MailPlus, onClick: () => navigate(`${BASE}/codes?create=1`) }
       }
     >
       {children}
@@ -78,15 +80,15 @@ function footOf(page: MembersPageDef, vocab: MembersVocab): string | null {
   const classes = vocab.label === "Clients";
   switch (page.key) {
     case "growth":
-      return classes ? null : "Members with a current membership.";
+      return classes ? null : t("Members with a current membership.");
     case "first90":
-      return classes ? null : "Based on joins, ends and bookings in this period.";
+      return classes ? null : t("Based on joins, ends and bookings in this period.");
     case "engagement":
-      return "Based on booked spots in this period.";
+      return t("Based on booked spots in this period.");
     case "atrisk":
-      return `Based on each ${vocab.one}'s bookings.`;
+      return classes ? t("Based on each client's bookings.") : t("Based on each member's bookings.");
     case "plans":
-      return "Based on current memberships and plans.";
+      return t("Based on current memberships and plans.");
     default:
       return null;
   }
@@ -129,11 +131,11 @@ export function MembersPage({
   return (
     <div>
       <AnHeaderRow
-        crumb={vocab.label}
-        backLabel={`Back to ${vocab.label}`}
+        crumb={t(vocab.label)}
+        backLabel={vocab.label === "Clients" ? t("Back to Clients") : t("Back to Members")}
         onBack={() => navigate(BASE)}
         title={page.title}
-        position={`${i + 1} of ${pages.length}`}
+        position={t("{n} of {total}", { n: i + 1, total: pages.length })}
         picker={{ open: !!picker, onToggle: (el) => setPicker((p) => (p ? null : el)) }}
       />
       <PopupMenu
@@ -143,7 +145,7 @@ export function MembersPage({
         variant="field"
         width={224}
         align="left"
-        heading={`${vocab.label} sections`}
+        heading={vocab.label === "Clients" ? t("Clients sections") : t("Members sections")}
         options={pages.map((p) => ({ value: p.key, label: p.title }))}
         selected={page.key}
         onSelect={(key) => {
@@ -156,7 +158,7 @@ export function MembersPage({
         <MembersEmptyCard vocab={vocab} ghost={page.key === "growth"} />
       ) : (
         <>
-          {early && <AnEarlyHint>{EARLY_LINE}</AnEarlyHint>}
+          {early && <AnEarlyHint>{t(EARLY_LINE)}</AnEarlyHint>}
           <AnCard label={page.title}>
             <AnNumberBoxes
               boxes={[
@@ -184,14 +186,14 @@ export function MembersPage({
             {(bars.length > 0 || noPlans) && (
               <div data-plan-bars className="border-t border-charcoal/[0.06]" style={{ padding: "12px 16px 10px" }}>
                 {bars.map((b, j) => (
-                  <PlanBar key={b.key} t={b.t} n={b.n} w={b.w} color={(dark ? PLAN_D : PLAN_L)[j % 3]} track={dark ? "#262932" : "#F5F5F6"} aria={`${b.t}: ${b.n} ${b.n === 1 ? vocab.one : vocab.people}`} />
+                  <PlanBar key={b.key} t={b.t} n={b.n} w={b.w} color={(dark ? PLAN_D : PLAN_L)[j % 3]} track={dark ? "#262932" : "#F5F5F6"} aria={vocab.label === "Clients" ? tn(b.n, "{plan}: 1 client", "{plan}: {n} clients", { plan: b.t }) : tn(b.n, "{plan}: 1 member", "{plan}: {n} members", { plan: b.t })} />
                 ))}
                 {/* AN4-013 O3: no plans → one "No plan" row with every active member. */}
                 {noPlans && activeNow !== null && (
                   <>
-                    <PlanBar t="No plan" n={activeNow} w={activeNow > 0 ? "100%" : "0%"} color={TERT[k]} track={dark ? "#262932" : "#F5F5F6"} aria={`No plan: ${activeNow} ${activeNow === 1 ? vocab.one : vocab.people}`} />
+                    <PlanBar t={t("No plan")} n={activeNow} w={activeNow > 0 ? "100%" : "0%"} color={TERT[k]} track={dark ? "#262932" : "#F5F5F6"} aria={vocab.label === "Clients" ? tn(activeNow, "No plan: 1 client", "No plan: {n} clients") : tn(activeNow, "No plan: 1 member", "No plan: {n} members")} />
                     <p data-no-plan-line className="text-[11px] leading-[15px] text-charcoal-faint" style={{ marginTop: 4 }}>
-                      Add a membership plan to see how members split.
+                      {t("Add a membership plan to see how members split.")}
                     </p>
                   </>
                 )}
@@ -243,15 +245,15 @@ function JoinsAndEnds({ figures, early }: { figures: MembersFigures; early: bool
   // The source's lines: early "9 joined, none left so far."; otherwise the range's joins and ends (NEW STRING).
   const line =
     j === null || e === null
-      ? "New memberships and ended memberships in each week."
+      ? t("New memberships and ended memberships in each week.")
       : early && e === 0
-        ? `${j} joined, none left so far.`
-        : `${j} joined and ${e} left ${inRange(range.key, rangeWords(range, isoOf(new Date())))}.`;
+        ? t("{n} joined, none left so far.", { n: j })
+        : t("{joined} joined and {left} left {when}.", { joined: j, left: e, when: inRange(range.key, rangeWords(range, isoOf(new Date()))) });
   // UNSPECIFIED: more than 6 weeks would overlap the 9.5 labels; every n-th week is labelled.
   const every = Math.ceil(cols.length / 6);
   const grid = { display: "grid", gridTemplateColumns: `repeat(${cols.length},minmax(0,1fr))`, gap: 8 } as const;
   return (
-    <AnSection title="Joins and ends by week" line={line} intro="New memberships accepted (green) and memberships ended (red) in each week of the period.">
+    <AnSection title={t("Joins and ends by week")} line={line} intro={t("New memberships accepted (green) and memberships ended (red) in each week of the period.")}>
       <div data-joins-bars style={{ ...grid, alignItems: "end", height: 90 }}>
         {cols.map((b) => (
           <div key={b.key} role="img" aria-label={b.aria} style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", height: "100%", gap: 2 }}>
@@ -293,17 +295,17 @@ function InviteToActive({ figures, data, dark }: { figures: MembersFigures; data
   // AB6: a code with uses left counts once it has been used at all.
   const redeemed = codes.filter((c) => c.uses > 0).length;
   const rows: AnSectionRow[] = [
-    { key: "active", n: String(act), col: TEAL, t: "Active", s: pct === null ? undefined : `${pct}% of invites accepted.`, share: act },
-    { key: "pending", n: String(pending), col: PRIMARY, t: "Pending", s: "Invited but not answered yet.", share: pending },
-    { key: "declined", n: null, col: HIGH, t: "Declined", s: "Turned the invitation down." },
-    { key: "ended", n: ended === null ? null : String(ended), col: TERT, t: "Ended", s: "Memberships that ended this period.", share: ended },
+    { key: "active", n: String(act), col: TEAL, t: tx("Active", "members chart"), s: pct === null ? undefined : t("{pct}% of invites accepted.", { pct }), share: act },
+    { key: "pending", n: String(pending), col: PRIMARY, t: t("Pending"), s: t("Invited but not answered yet."), share: pending },
+    { key: "declined", n: null, col: HIGH, t: t("Declined"), s: t("Turned the invitation down.") },
+    { key: "ended", n: ended === null ? null : String(ended), col: TERT, t: t("Ended"), s: t("Memberships that ended this period."), share: ended },
   ];
-  if (codes.length > 0) rows.push({ key: "codes", n: `${redeemed}/${codes.length}`, col: PDARK, t: "Member codes redeemed", s: "Codes handed out at the desk and used to join." });
+  if (codes.length > 0) rows.push({ key: "codes", n: `${redeemed}/${codes.length}`, col: PDARK, t: t("Member codes redeemed"), s: t("Codes handed out at the desk and used to join.") });
   return (
     <AnSection
-      title="Invite to active"
-      line={pct === null ? "No invites were sent this period." : `${pct}% of this period's invites became active members.`}
-      intro="Invites sent this period and where each one is now. Ended counts memberships that ended in the period."
+      title={t("Invite to active")}
+      line={pct === null ? t("No invites were sent this period.") : t("{pct}% of this period's invites became active members.", { pct })}
+      intro={t("Invites sent this period and where each one is now. Ended counts memberships that ended in the period.")}
     >
       <div data-invite-rows>
         <AnSectionRows rows={rows} stack dark={dark} />
@@ -312,7 +314,8 @@ function InviteToActive({ figures, data, dark }: { figures: MembersFigures; data
   );
 }
 
-const DAY = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+/** Weekday d (0 = Monday) in the app's language; 1 Jan 2024 was a Monday. */
+const dayName = (d: number, weekday: "long" | "narrow" = "long") => new Date(2024, 0, 1 + d).toLocaleDateString(appLocale("en-US"), { weekday });
 const fmtEntries = (v: number) => (v >= 10 ? String(Math.round(v)) : String(Math.round(v * 10) / 10));
 
 /**
@@ -348,13 +351,13 @@ function EntriesByDay({ data, dark }: { data: MembersData; dark: boolean }) {
   const max = Math.max(...days);
   const top = days.indexOf(max);
   // NEW STRINGS (the line under the title; not drawn).
-  const line = max <= 0 ? (weeks === 1 ? "No entries in the last week." : `No entries in the last ${weeks} weeks.`) : `${DAY[top]}s are busiest, with about ${fmtEntries(max)} entries.`;
+  const line = max <= 0 ? (weeks === 1 ? t("No entries in the last week.") : t("No entries in the last {n} weeks.", { n: weeks })) : t("{day}s are busiest, with about {n} entries.", { day: dayName(top), n: fmtEntries(max) });
   const grid = { display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 8 } as const;
   return (
-    <AnSection title="Entries by day" line={line} intro="Which days are busiest?">
-      <div data-entries-bars role="img" aria-label={`Average entries by day: ${days.map((v, d) => `${DAY[d]} ${fmtEntries(v)}`).join(", ")}`} style={{ ...grid, alignItems: "end", height: 90 }}>
+    <AnSection title={t("Entries by day")} line={line} intro={t("Which days are busiest?")}>
+      <div data-entries-bars role="img" aria-label={t("Average entries by day: {list}", { list: days.map((v, d) => `${dayName(d)} ${fmtEntries(v)}`).join(t(", ")) })} style={{ ...grid, alignItems: "end", height: 90 }}>
         {days.map((v, d) => (
-          <div key={DAY[d]} style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", height: "100%", gap: 2 }}>
+          <div key={d} style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", height: "100%", gap: 2 }}>
             <span className="text-charcoal" style={{ fontSize: 9.5, fontWeight: 800, lineHeight: "normal" }}>
               {v > 0 ? fmtEntries(v) : ""}
             </span>
@@ -364,9 +367,9 @@ function EntriesByDay({ data, dark }: { data: MembersData; dark: boolean }) {
         ))}
       </div>
       <div aria-hidden style={{ ...grid, marginTop: 4 }}>
-        {["M", "T", "W", "T", "F", "S", "S"].map((l, d) => (
+        {[0, 1, 2, 3, 4, 5, 6].map((d) => (
           <span key={d} style={{ fontSize: 9.5, textAlign: "center", color: AXIS[k] }}>
-            {l}
+            {dayName(d, "narrow")}
           </span>
         ))}
       </div>

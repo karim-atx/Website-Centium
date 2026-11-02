@@ -6,6 +6,7 @@ import { mapMetrics } from "../../../services/reputation/mapping";
 import { LISTING_PROMO_COLS, liveOnListing, type PromotionRow } from "../../../services/business-market/promoLogic";
 import { activeAtWeekOf, fetchBusinessDay, fetchMemberGrowth, fetchPeriodStats, mondayOf, type Read } from "../../../services/business-analytics";
 import { addDays, type OvBooking, type OvClass, type OvRaw, type OvReviews, type Range } from "./overviewModel";
+import { t } from "../../../i18n/core";
 
 // AN1 Overview reads. The headline is B15's: business_period_stats (DI-02)
 // for the range and business_member_growth for Active members; the Live now
@@ -31,7 +32,7 @@ export type OverviewLoad = { ok: true; raw: OvRaw } | { ok: false; message: stri
 
 const fail = (what: string, e: Err): OverviewLoad => {
   console.error(`[analytics-overview] Could not read ${what}:`, e?.message);
-  return { ok: false, message: "Couldn't load your numbers." };
+  return { ok: false, message: t("Couldn't load your numbers.") };
 };
 
 /**

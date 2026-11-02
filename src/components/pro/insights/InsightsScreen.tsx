@@ -24,6 +24,7 @@ import { VitalsPanel } from "./VitalsPanel";
 import { BiomarkersPanel } from "./BiomarkersPanel";
 import { NutrientAnalysis } from "./NutrientAnalysis";
 import { TargetsReadOnly } from "../nutrition/Targets";
+import { t, tk } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 the Insights screen (TR9 v3/v4/v5, TR16 v3, NU10, NU14 /
@@ -41,7 +42,21 @@ import { TargetsReadOnly } from "../nutrition/Targets";
  * (useClientAccess; each panel reads only its switches).
  */
 
-const TAB_LABEL: Record<InsightsTab, string> = { activity: "Activity", nutrition: "Nutrition", vitals: "Vitals", biomarkers: "Biomarkers" };
+const TAB_LABEL: Record<InsightsTab, string> = { activity: tk("Activity"), nutrition: tk("Nutrition"), vitals: tk("Vitals"), biomarkers: tk("Biomarkers") };
+
+/** The empty roster's line, per lane and tab (whole sentences, so each reads in Arabic). */
+const emptyLine = (patient: boolean, tab: InsightsTab): string =>
+  patient
+    ? tab === "vitals"
+      ? t("Insights fill in when a patient shares blood pressure or activity and vitals with you.")
+      : tab === "nutrition"
+        ? t("Insights fill in when a patient shares their food diary with you.")
+        : t("Insights fill in when a patient shares activity and vitals with you.")
+    : tab === "vitals"
+      ? t("Insights fill in when a client shares blood pressure or activity and vitals with you.")
+      : tab === "nutrition"
+        ? t("Insights fill in when a client shares their food diary with you.")
+        : t("Insights fill in when a client shares activity and vitals with you.");
 const TAB_CATS: Record<InsightsTab, AccessCategory[]> = {
   activity: ["health_metrics", "workout_activity"],
   nutrition: ["food_diary"],
@@ -78,12 +93,12 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ lane, title, cli
   }, [loading, clientId, allPatients, clients, onClient]);
 
   const head = onBack ? (
-    <DetailHead title={title} onBack={onBack} />
+    <DetailHead title={t(title)} onBack={onBack} />
   ) : (
-    <h1 style={{ marginBottom: 13, fontSize: textPx(19), lineHeight: 1.5, fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch }}>{title}</h1>
+    <h1 style={{ marginBottom: 13, fontSize: textPx(19), lineHeight: 1.5, fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch }}>{t(title)}</h1>
   );
   const tabBar = (
-    <SegmentedTabs className="mb-[10px]" items={tabs.map((t) => ({ key: t, label: TAB_LABEL[t] }))} activeKey={tab} onChange={(k) => onTab(k as InsightsTab)} labelSize={11.5} />
+    <SegmentedTabs className="mb-[10px]" items={tabs.map((k) => ({ key: k, label: t(TAB_LABEL[k]) }))} activeKey={tab} onChange={(k) => onTab(k as InsightsTab)} labelSize={11.5} />
   );
 
   if (loading && !clients.length)
@@ -100,15 +115,15 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ lane, title, cli
       <div>
         {head}
         {tabBar}
-        <EmptyState icon={Activity} title="No shared data yet" line={`Insights fill in when a ${patient ? "patient" : "client"} shares ${tab === "vitals" ? "blood pressure or activity and vitals" : tab === "nutrition" ? "their food diary" : "activity and vitals"} with you.`}>
-          <CtaButton size="base" variant="secondary" icon={<Send size={15} />} label={`Ask a ${patient ? "patient" : "client"} to share`} onClick={() => navigate(PRO_ROUTES.clients)} />
+        <EmptyState icon={Activity} title={t("No shared data yet")} line={emptyLine(patient, tab)}>
+          <CtaButton size="base" variant="secondary" icon={<Send size={15} />} label={patient ? t("Ask a patient to share") : t("Ask a client to share")} onClick={() => navigate(PRO_ROUTES.clients)} />
         </EmptyState>
       </div>
     );
 
   const range5 = (
     <div className="flex items-center" style={{ gap: 8, marginBottom: 10 }}>
-      <ClientPicker clients={clients} value={clientId} onChange={(id) => onClient(id || null)} allLabel={allPatients ? "All patients" : undefined} patient={patient} />
+      <ClientPicker clients={clients} value={clientId} onChange={(id) => onClient(id || null)} allLabel={allPatients ? t("All patients") : undefined} patient={patient} />
       <RangeTabs
         value={range}
         onChange={(r) => {
@@ -155,14 +170,14 @@ const ClientInsights: React.FC<{ lane: ProLane; clientId: string; client: Picker
 
   if (access.loading) return <ProCardSkeleton lines={4} height={220} />;
   if (access.error && !access.access) return <ProError onRetry={access.retry} />;
-  if (access.notConnected) return <EmptyState icon={UserX} title={lane === "clinical_overview" ? "Not one of your patients" : "Not one of your clients"} line="They may have ended the connection, or the link is out of date." />;
+  if (access.notConnected) return <EmptyState icon={UserX} title={lane === "clinical_overview" ? t("Not one of your patients") : t("Not one of your clients")} line={t("They may have ended the connection, or the link is out of date.")} />;
 
   const onAsk = async (c: AccessCategory) => {
-    if (asked.includes(c)) return setToast(`You've already asked. It's waiting for ${firstName}.`);
+    if (asked.includes(c)) return setToast(t("You've already asked. It's waiting for {firstName}.", { firstName }));
     const r = await askToShare(clientId, c);
     if (r.ok) {
       setAsked((a) => [...a, c]);
-      setToast(`Asked ${firstName} to share.`);
+      setToast(t("Asked {firstName} to share.", { firstName }));
     } else setToast(r.message);
   };
   const onMessage = async () => {
@@ -184,7 +199,7 @@ const ClientInsights: React.FC<{ lane: ProLane; clientId: string; client: Picker
     onAsk: (c) => void onAsk(c),
     openClient: (t) => navigate(proClientPath(clientId, t)),
   };
-  const badges = TAB_CATS[tab].map((c) => ({ label: CATEGORY_LABEL[c] ?? c, on: c === "lab_results" ? access.has(c) || (access.access?.resultSharedCount ?? 0) > 0 : access.has(c) }));
+  const badges = TAB_CATS[tab].map((c) => ({ label: t(CATEGORY_LABEL[c] ?? c), on: c === "lab_results" ? access.has(c) || (access.access?.resultSharedCount ?? 0) > 0 : access.has(c) }));
 
   return (
     <>

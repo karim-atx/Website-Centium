@@ -10,7 +10,6 @@ import {
   dddDMon,
   longDay,
   money,
-  monthYear,
   renewalAmountOf,
   renewalAmountText,
   renewals as renewalsOf,
@@ -34,6 +33,8 @@ import {
 import { paidHistRows, REVENUE_BASE } from "./payModel";
 import { usePaidHistory } from "./usePaidHistory";
 import { useRevenue } from "./revenueContext";
+import { t, tn, tx } from "../../../i18n/core";
+import { monShortYear } from "../../../services/business-revenue/model";
 
 // Renewals by week (AN14-062 to -067, -070 to -072: PaySeeAllV2 kind
 // "renewals") and the plan detail (AN14-068). A renewal is an active
@@ -87,26 +88,25 @@ export const RenewalsPage: React.FC = () => {
   }, [target, data]);
 
   let line: string;
-  if (empty) line = "No renewals in the next 30 days.";
+  if (empty) line = t("No renewals in the next 30 days.");
   else if (plan !== "all")
-    line =
-      "Filtered by plan. Renewals keep the payment method the member last used.";
+    line = t("Filtered by plan. Renewals keep the payment method the member last used.");
   else if (busiest)
-    line = `${longDay(busiest.day)} is the busiest day: ${busiest.n} renewals.`;
-  else line = "Renewals keep the payment method the member last used.";
+    line = tn(busiest.n, "{day} is the busiest day: {n} renewal.", "{day} is the busiest day: {n} renewals.", { day: longDay(busiest.day) });
+  else line = t("Renewals keep the payment method the member last used.");
 
   return (
     <div className="pt-[12px] pb-[120px]">
       <PayHeader
-        crumb="Revenue · Payments · next 30 days"
-        title="Renewals"
+        crumb={`${t("Revenue")} · ${t("Payments")} · ${t("next 30 days")}`}
+        title={t("Renewals")}
         onBack={() => navigate(`${REVENUE_BASE}/payments`)}
       />
       {!online && <OfflineLine at={loadedAt} />}
       {error && !data ? (
-        <ErrorLine message="Couldn't load renewals." onRetry={reload} />
+        <ErrorLine message={t("Couldn't load renewals.")} onRetry={reload} />
       ) : loading && !data ? (
-        <div role="status" aria-label="Loading">
+        <div role="status" aria-label={t("Loading")}>
           <Skel h={118} r={22} />
           <Skel h={300} r={20} className="mt-[60px]" />
         </div>
@@ -114,8 +114,8 @@ export const RenewalsPage: React.FC = () => {
         <>
           <PayBoxes
             boxes={[
-              { l: "Renewals due", v: String(n), faint: empty },
-              { l: "Expected", v: money(total), faint: empty },
+              { l: t("Renewals due"), v: String(n), faint: empty },
+              { l: t("Expected"), v: money(total), faint: empty },
             ]}
             line={line}
           />
@@ -129,12 +129,12 @@ export const RenewalsPage: React.FC = () => {
                 icon: CalendarRange,
                 label:
                   week === "all"
-                    ? "All weeks"
-                    : (weeks[Number(week)]?.label ?? "All weeks"),
+                    ? t("All weeks")
+                    : (weeks[Number(week)]?.label ?? t("All weeks")),
                 menuLeft: 0,
                 active: week !== "all",
                 options: [
-                  { value: "all", label: "All weeks", header: "Week" },
+                  { value: "all", label: t("All weeks"), header: t("Week") },
                   ...weeks.map((w, i) => ({
                     value: String(i),
                     label: w.label,
@@ -146,11 +146,11 @@ export const RenewalsPage: React.FC = () => {
               {
                 key: "filter",
                 icon: SlidersHorizontal,
-                label: plan === "all" ? "All plans" : plan,
+                label: plan === "all" ? t("All plans") : plan,
                 menuLeft: 102,
                 active: plan !== "all",
                 options: [
-                  { value: "all", label: "All plans", header: "Plan" },
+                  { value: "all", label: t("All plans"), header: t("Plan") },
                   ...plans.map((p) => ({ value: p, label: p })),
                 ],
                 selected: [plan],
@@ -161,14 +161,14 @@ export const RenewalsPage: React.FC = () => {
           {empty ? (
             <PayEmpty
               icon={CalendarCheck}
-              title="No renewals coming up"
-              body="Memberships renewing in the next 30 days show here, grouped by week."
+              title={t("No renewals coming up")}
+              body={t("Memberships renewing in the next 30 days show here, grouped by week.")}
             />
           ) : groups.length === 0 ? (
             <PayEmpty
               icon={CalendarCheck}
-              title="No renewals here"
-              body="Try another filter."
+              title={t("No renewals here")}
+              body={t("Try another filter.")}
             />
           ) : (
             groups.map((g) => (
@@ -186,8 +186,8 @@ export const RenewalsPage: React.FC = () => {
                     dot: dotOf(r.rec.item),
                     // CN: a granted membership stays listed, labelled: it was
                     // never paid for, and renewing it charges the plan price.
-                    sub: `${r.rec.item} · renews ${dddDMon(r.on)}${r.rec.granted ? ` · ${grantedRenewal(r.amount, money)}` : ""}`,
-                    s2: r.rec.granted ? "Granted" : r.rec.method === "whish" ? "Whish" : "Cash",
+                    sub: `${r.rec.item} · ${t("renews {date}", { date: dddDMon(r.on) })}${r.rec.granted ? ` · ${grantedRenewal(r.amount, money)}` : ""}`,
+                    s2: r.rec.granted ? tx("Granted", "membership") : r.rec.method === "whish" ? "Whish" : t("Cash"),
                     amt: renewalAmountText(r),
                     onClick: () =>
                       navigate(
@@ -231,16 +231,16 @@ export const RenewalDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
     return (
       <div className="pt-[12px] pb-[120px]">
         <PayHeader
-          crumb="Renewals"
-          title="Renewal"
+          crumb={t("Renewals")}
+          title={t("Renewal")}
           onBack={() => navigate(back)}
         />
-        <ErrorLine message="Couldn't load this renewal." onRetry={reload} />
+        <ErrorLine message={t("Couldn't load this renewal.")} onRetry={reload} />
       </div>
     );
   if (loading && !data)
     return (
-      <div className="pt-[12px] pb-[120px]" role="status" aria-label="Loading">
+      <div className="pt-[12px] pb-[120px]" role="status" aria-label={t("Loading")}>
         <Skel h={220} r={22} />
       </div>
     );
@@ -251,41 +251,41 @@ export const RenewalDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
   const amt = renewalAmountText({ rec, amount });
   return (
     <div className="pt-[12px] pb-[120px]">
-      <PayHeader crumb="Renewals" title={name} onBack={() => navigate(back)} />
+      <PayHeader crumb={t("Renewals")} title={name} onBack={() => navigate(back)} />
       <PayDetail
         who={rec.who}
         name={name}
         sub={
           rec.startedOn
-            ? `${rec.item} · member since ${monthYear(rec.startedOn).replace(/^(\w{3})\w*/, "$1")}`
+            ? `${rec.item} · ${t("member since {date}", { date: monShortYear(rec.startedOn) })}`
             : rec.item
         }
         amt={amt}
         chip={{
-          t: `Renews ${dddDMon(rec.expiresOn)}`,
+          t: t("Renews {date}", { date: dddDMon(rec.expiresOn) }),
           bg: v("teal-pale"),
           ink: v("teal-ink"),
         }}
         facts={[
-          { l: "Plan", v: rec.item },
+          { l: t("Plan"), v: rec.item },
           ...(rec.granted
             ? [
-                { l: "How they got it", v: "Granted with a code" },
-                { l: "Renewing", v: amount !== null ? `Charges ${amt}` : "Charges the plan price" },
+                { l: t("How they got it"), v: t("Granted with a code") },
+                { l: t("Renewing"), v: amount !== null ? t("Charges {amount}", { amount: amt }) : t("Charges the plan price") },
               ]
             : [
-                { l: "Price", v: amt },
-                { l: "Payment method", v: rec.method === "whish" ? "Whish" : "Cash" },
+                { l: t("Price"), v: amt },
+                { l: t("Payment method"), v: rec.method === "whish" ? "Whish" : t("Cash") },
               ]),
-          { l: "Current period ends", v: dddDMon(rec.expiresOn) },
+          { l: t("Current period ends"), v: dddDMon(rec.expiresOn) },
         ]}
-        histTitle="Last payments"
+        histTitle={t("Last payments")}
         hist={paid ? paidHistRows(paid, "renewal") : undefined}
         actions={
           personId
             ? [
                 {
-                  t: "Message member",
+                  t: t("Message member"),
                   icon: MessageCircle,
                   disabled: busy,
                   onClick: () => void message(),
@@ -296,7 +296,7 @@ export const RenewalDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
       />
       <Toast
         open={!!toast}
-        message={toast ?? ""}
+        message={toast ? t(toast) : ""}
         variant="business"
         shape="market"
         duration={4000}

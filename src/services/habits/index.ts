@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { premiumRefusalMessage } from "../premium/asks";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { HabitColour, HabitIconKey } from "../../types";
 
@@ -9,6 +10,7 @@ export * from "./coachGroups";
 import { toHabitIcon, validateHabitIcon } from "./icons";
 import { toHabitColour } from "./colours";
 import { requestColumn } from "../health-log/requestId";
+import { tk } from "../../i18n/core";
 
 // Habits, in public.habit_items and public.habit_completions.
 //
@@ -54,15 +56,16 @@ export interface HabitsSnapshot {
 export const HABIT_LIMITS = { labelMax: 40, maxHabits: 30 } as const;
 
 /** MO1.1.1 O4: the handover's write-failure copy (tick, colour, edit, delete). */
-export const HABIT_SAVE_FAILED = "Couldn't save. Try again.";
+// These stay English here (the screen compares them) and show through t().
+export const HABIT_SAVE_FAILED: string = tk("Couldn't save. Try again.");
 
 /** ATXG4, as HANDOVER_API words it: a coach's habit can't be renamed by the client. */
-export const COACH_HABIT_LOCKED = "This habit was set by your coach. Ask them to change it.";
+export const COACH_HABIT_LOCKED: string = tk("This habit was set by your coach. Ask them to change it.");
 
 /** MO1.1.1.1 O3: the handover's duplicate-name line. */
-export const DUPLICATE_HABIT = "You already have a habit with this name.";
+export const DUPLICATE_HABIT: string = tk("You already have a habit with this name.");
 /** MO1.1.1.1 O4 (OURS): at the 30-habit limit. */
-export const TOO_MANY_HABITS = "You can keep up to 30 habits.";
+export const TOO_MANY_HABITS: string = tk("You can keep up to 30 habits.");
 
 /** True when the label matches another habit's name, ignoring case and outer spaces. */
 export function isDuplicateLabel(label: string, others: { id: string; label: string }[], exceptId?: string): boolean {
@@ -74,6 +77,10 @@ export type Result<T> = { ok: true; value: T } | { ok: false; message: string };
 export type WriteResult = { ok: true } | { ok: false; message: string };
 
 function describe(error: PostgrestError): string {
+  // Round G2: a free limit (ATXQ2) or a Premium-only refusal (ATXQ1) asks for
+  // the prompt and says so plainly; what was typed stays on screen.
+  const premiumRefusal = premiumRefusalMessage(error);
+  if (premiumRefusal) return premiumRefusal;
   const code = error.code ?? "";
   const message = error.message ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(message)) {

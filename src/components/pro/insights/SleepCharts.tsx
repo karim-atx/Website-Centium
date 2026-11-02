@@ -29,7 +29,7 @@ import {
 } from "./sleepModel";
 import { StatBoxes, type StatBox } from "./parts";
 import { useRead, type ReadState } from "./reads";
-import { isRtl } from "../../../i18n/core";
+import { isRtl, t, tn, tx } from "../../../i18n/core";
 
 /**
  * Release 3 · W9 Insights › Vitals › Sleep (TR9 v5 "Sleep · stages" and
@@ -79,7 +79,7 @@ const prDark = (dark: boolean) => (dark ? "#C3B3FB" : "#7D6BB5");
 // ---------------------------------------------------------------------------
 
 const RangeTrack: React.FC<{ range: ChartRange; onRange: (r: ChartRange) => void }> = ({ range, onRange }) => (
-  <span role="tablist" aria-label="Range" className="flex" style={{ gap: 2, padding: 2, borderRadius: 9, background: INK.soft }}>
+  <span role="tablist" aria-label={t("Range")} className="flex" style={{ gap: 2, padding: 2, borderRadius: 9, background: INK.soft }}>
     {PRO_CHART_RANGES.map((r) => {
       const on = r === range;
       return (
@@ -92,7 +92,7 @@ const RangeTrack: React.FC<{ range: ChartRange; onRange: (r: ChartRange) => void
           className="relative flex items-center justify-center before:absolute before:inset-x-0 before:-inset-y-[10px] before:content-['']"
           style={{ height: 24, minWidth: 28, padding: "0 6px", borderRadius: 7, fontSize: textPx(10.5), fontWeight: 800, background: on ? INK.card : "transparent", color: on ? INK.ch : INK.chF, boxShadow: on ? "0 1px 2px rgba(0,0,0,0.08)" : undefined }}
         >
-          {r}
+          {tx(r, "chart range")}
         </button>
       );
     })}
@@ -143,7 +143,7 @@ const Card: React.FC<{ title: string; question?: string; right?: React.ReactNode
     {scrub && (
       <p aria-hidden className="flex items-center" style={{ gap: 5, fontSize: textPx(10), color: INK.chT, marginTop: 6 }}>
         <MoveHorizontal size={11} strokeWidth={2} />
-        Drag sideways to scrub, tap to pin
+        {t("Drag sideways to scrub, tap to pin")}
       </p>
     )}
   </div>
@@ -234,20 +234,20 @@ export const StagesChart: React.FC<{ nights: NightStats[]; range: ChartRange; on
   const visible = STAGES.filter((s) => !off.has(s));
   const scrub = useScrub(b.length, (vx) => Math.max(0, Math.min(b.length - 1, Math.round((vx - 22) / step))), pin, onPin);
   const a = pin != null ? agg[pin] : null;
-  const tip = pin != null ? { title: bucketTitle(range, b[pin]), lines: a ? [`${hm(a.asleep)} asleep · ${hm(a.awake)} awake`, `Deep ${hm(a.deep)} · REM ${hm(a.rem)}`, ...(a.n > 1 ? [`Average of ${a.n} nights`] : [])] : ["No stages this night"] } : null;
+  const tip = pin != null ? { title: bucketTitle(range, b[pin]), lines: a ? [t("{asleep} asleep · {awake} awake", { asleep: hm(a.asleep), awake: hm(a.awake) }), t("Deep {deep} · REM {rem}", { deep: hm(a.deep), rem: hm(a.rem) }), ...(a.n > 1 ? [tn(a.n, "Average of {n} nights", "Average of {n} nights")] : [])] : [t("No stages this night")] } : null;
   const grid = Array.from({ length: mx / 3 }, (_, i) => (i + 1) * 3);
   const staged = nights.filter((x) => x.hasStages && x.date >= b[0].start && x.date <= today);
   const mean = (f: (x: NightStats) => number) => (staged.length ? staged.reduce((s, x) => s + f(x), 0) / staged.length : 0);
   return (
     <Card
-      title="Sleep stages"
-      question={`Is ${firstName} getting enough deep and REM sleep?`}
+      title={t("Sleep stages")}
+      question={t("Is {firstName} getting enough deep and REM sleep?", { firstName })}
       right={<RangeTrack range={range} onRange={onRange} />}
       legend={STAGES.map((s) => (
         <LegendChip
           key={s}
           on={!off.has(s)}
-          label={STAGE_LABEL[s]}
+          label={t(STAGE_LABEL[s])}
           onClick={() =>
             setOff((prev) => {
               const next = new Set(prev);
@@ -262,13 +262,13 @@ export const StagesChart: React.FC<{ nights: NightStats[]; range: ChartRange; on
       ))}
       insight={stagesLine(staged, hm)}
     >
-      <div {...scrub} aria-label={staged.length ? `Sleep stages: deep ${hm(mean((x) => x.deep ?? 0))}, REM ${hm(mean((x) => x.rem ?? 0))}, light ${hm(mean((x) => x.light ?? 0))} a night on average over ${staged.length} night${staged.length === 1 ? "" : "s"}.` : "Sleep stages"} style={{ paddingTop: tip ? 24 + tip.lines.length * 15 : 4 }}>
+      <div {...scrub} aria-label={staged.length ? tn(staged.length, "Sleep stages: deep {deep}, REM {rem}, light {light} a night on average over {n} night.", "Sleep stages: deep {deep}, REM {rem}, light {light} a night on average over {n} nights.", { deep: hm(mean((x) => x.deep ?? 0)), rem: hm(mean((x) => x.rem ?? 0)), light: hm(mean((x) => x.light ?? 0)) }) : t("Sleep stages")} style={{ paddingTop: tip ? 24 + tip.lines.length * 15 : 4 }}>
         {tip && pin != null && <Tip title={tip.title} lines={tip.lines} x={UX(pin)} />}
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" aria-hidden style={{ display: "block", overflow: "visible", ...NO_ICON_SCALE }}>
           {grid.map((v) => (
             <g key={v}>
               <line x1={0} x2={W} y1={Y(v)} y2={Y(v)} stroke={INK.b06} />
-              <text x={mir(W - 2)} y={Y(v) - 3} textAnchor="end" fontSize={8.5} fill={INK.chT}>{`${v}h`}</text>
+              <text x={mir(W - 2)} y={Y(v) - 3} textAnchor="end" fontSize={8.5} fill={INK.chT}>{t("{n}h", { n: v })}</text>
             </g>
           ))}
           {agg.map((x, i) => {
@@ -332,18 +332,18 @@ export const BedtimeChart: React.FC<{ nights: NightStats[]; range: ChartRange; o
   const avg = beds.length ? Math.round(beds.reduce((s, x) => s + x, 0) / beds.length) : null;
   return (
     <Card
-      title="Bedtime"
-      question="How regular are bedtime and wake time?"
+      title={t("Bedtime")}
+      question={t("How regular are bedtime and wake time?")}
       right={<RangeTrack range={range} onRange={onRange} />}
       legend={
-        <KeyChip label="Asleep">
+        <KeyChip label={t("Asleep")}>
           <Swatch kind="bar" color={INK.pr} on />
         </KeyChip>
       }
       insight={bedtimeLine(beds)}
       scrub={false}
     >
-      <div role="img" aria-label={avg != null ? `Bedtime ${formatMinutes12(avg % 1440)} on average over ${beds.length} night${beds.length === 1 ? "" : "s"}.` : "Bedtime"} style={{ paddingTop: 4 }}>
+      <div role="img" aria-label={avg != null ? tn(beds.length, "Bedtime {time} on average over {n} night.", "Bedtime {time} on average over {n} nights.", { time: formatMinutes12(avg % 1440) }) : t("Bedtime")} style={{ paddingTop: 4 }}>
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" aria-hidden style={{ display: "block", overflow: "visible", ...NO_ICON_SCALE }}>
           {ticks.map((m) => (
             <g key={m}>
@@ -408,13 +408,13 @@ export const Hypnogram: React.FC<{ night: NightStats; firstName: string }> = ({ 
   const tipBlock = pin != null ? blockAt(minuteAt(pin)) : null;
   return (
     <Card
-      title={`Night of ${tipDay(night.date)}`}
-      question={`Hypnogram: when ${firstName} woke and how sleep cycled.`}
+      title={t("Night of {date}", { date: tipDay(night.date) })}
+      question={t("Hypnogram: when {firstName} woke and how sleep cycled.", { firstName })}
       legend={STAGES.map((s) => (
         <LegendChip
           key={s}
           on={!off.has(s)}
-          label={STAGE_LABEL[s]}
+          label={t(STAGE_LABEL[s])}
           onClick={() =>
             setOff((prev) => {
               const next = new Set(prev);
@@ -429,14 +429,14 @@ export const Hypnogram: React.FC<{ night: NightStats; firstName: string }> = ({ 
       ))}
       insight={hypnogramLine(h)}
     >
-      <div {...scrub} aria-label={hypnogramLine(h) ?? "Hypnogram"} style={{ paddingTop: tipBlock ? 38 : 4 }}>
-        {pin != null && tipBlock && <Tip title={formatMinutes12(clockAt(minuteAt(pin)))} lines={[STAGE_LABEL[tipBlock.stage]]} x={UX(minuteAt(pin))} />}
+      <div {...scrub} aria-label={hypnogramLine(h) ?? t("Hypnogram")} style={{ paddingTop: tipBlock ? 38 : 4 }}>
+        {pin != null && tipBlock && <Tip title={formatMinutes12(clockAt(minuteAt(pin)))} lines={[t(STAGE_LABEL[tipBlock.stage])]} x={UX(minuteAt(pin))} />}
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" aria-hidden style={{ display: "block", overflow: "visible", ...NO_ICON_SCALE }}>
           {HYPNO_LEVELS.map((s, i) => (
             <g key={s}>
               <line x1={mir(40)} x2={mir(W)} y1={Y(i)} y2={Y(i)} stroke={INK.b06} />
               <text x={mir(0)} y={Y(i) + 3} fontSize={9} fontWeight={700} fill={INK.chF}>
-                {STAGE_LABEL[s]}
+                {t(STAGE_LABEL[s])}
               </text>
             </g>
           ))}
@@ -467,12 +467,12 @@ export const Hypnogram: React.FC<{ night: NightStats; firstName: string }> = ({ 
 
 /** The empty stages card ("No sleep stages yet"), in the vcard14 shell. */
 const NoStages: React.FC<{ firstName: string }> = ({ firstName }) => (
-  <Card title="Sleep stages" scrub={false}>
-    <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5 }}>{`No sleep stages yet. They fill in when ${firstName}'s sleep syncs with stages from a wearable.`}</p>
+  <Card title={t("Sleep stages")} scrub={false}>
+    <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5 }}>{t("No sleep stages yet. They fill in when {firstName}'s sleep syncs with stages from a wearable.", { firstName })}</p>
   </Card>
 );
 
-const signedMin = (d: number) => signedNum(Math.round(d), (a) => `${a}m`);
+const signedMin = (d: number) => signedNum(Math.round(d), (a) => t("{n}m", { n: a }));
 
 /**
  * The Sleep sub-tab: the stages chart when any night has stages (else the
@@ -526,20 +526,20 @@ export const SleepView: React.FC<{
   const bd = bedNow != null && bedPrev != null ? bedNow - bedPrev : null;
   const bedParts = bedNow != null ? clockParts(bedNow % 1440) : null;
   const boxes: StatBox[] = [
-    { label: "Sleep per night", value: m != null ? hm(m) : "–", delta: sd != null && Math.round(sd) !== 0 ? signedMin(sd) : null, dir: sd == null || Math.round(sd) === 0 ? null : sd > 0 ? "up" : "down", sub: `${winDays}-day average` },
+    { label: t("Sleep per night"), value: m != null ? hm(m) : "–", delta: sd != null && Math.round(sd) !== 0 ? signedMin(sd) : null, dir: sd == null || Math.round(sd) === 0 ? null : sd > 0 ? "up" : "down", sub: t("{n}-day average", { n: winDays }) },
     ...(anyBed
       ? [
           {
-            label: "Bedtime",
+            label: t("Bedtime"),
             value: bedParts ? `${bedParts.hour}:${String(bedParts.minute).padStart(2, "0")}` : "–",
             unit: bedParts?.meridiem,
             delta: bd != null && Math.round(bd) !== 0 ? signedMin(bd) : null,
             dir: bd == null || Math.round(bd) === 0 ? null : bd > 0 ? "down" : "up",
-            sub: "Average",
+            sub: t("Average"),
           } as StatBox,
         ]
       : []),
-    { label: "Nights under 6 h", value: slept.some(([d]) => inWin(d)) ? String(short) : "–", delta: anyPrev && short !== shortPrev ? signedNum(short - shortPrev) : null, dir: !anyPrev || short === shortPrev ? null : short > shortPrev ? "down" : "up", sub: winDays === 1 ? "Last night" : `Last ${winDays} days` },
+    { label: t("Nights under 6 h"), value: slept.some(([d]) => inWin(d)) ? String(short) : "–", delta: anyPrev && short !== shortPrev ? signedNum(short - shortPrev) : null, dir: !anyPrev || short === shortPrev ? null : short > shortPrev ? "down" : "up", sub: winDays === 1 ? t("Last night") : tn(winDays, "Last {n} days", "Last {n} days") },
   ];
 
   return (
@@ -588,7 +588,7 @@ export const SleepTrendChart: React.FC<{ clientId: string; today: string; initia
   }
   const stats = nights.data.map(nightStats);
   const per = [...asleepByDay(stats, dur.data.map((r) => ({ day: r.day, value: r.value }))).entries()].map(([day, v]) => ({ day, value: v / 60 }));
-  if (!per.length) return <p style={{ fontSize: textPx(12), color: INK.chF }}>No sleep logged yet.</p>;
+  if (!per.length) return <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("No sleep logged yet.")}</p>;
   const b = bucketsFor(range, today);
   const g = bucketsFor(range, today, 1);
   const v = meanByBucket(b, per).map((x) => (x == null ? null : Math.round(x * 10) / 10));
@@ -604,21 +604,21 @@ export const SleepTrendChart: React.FC<{ clientId: string; today: string; initia
     <>
       <ProChart
         flat
-        title="Sleep per night (h)"
+        title={t("Sleep per night (h)")}
         range={range}
         onRangeChange={setRange}
         x={b.map((x) => bucketLabel(range, x))}
         min={lo}
         max={hi}
         series={[
-          { key: "a", label: "Actual", type: "line", color: dark ? "#C3B3FB" : "#5F5093", values: v },
-          { key: "g", label: "Previous period", type: "line", color: INK.chT, ghost: true, values: gv },
+          { key: "a", label: t("Actual"), type: "line", color: dark ? "#C3B3FB" : "#5F5093", values: v },
+          { key: "g", label: t("Previous period"), type: "line", color: INK.chT, ghost: true, values: gv },
         ]}
-        tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [v[i] != null ? `${hm((v[i] as number) * 60)} asleep` : "No sleep logged"] })}
-        summary={avg != null ? `Sleep per night ${hm(avg * 60)} on average.` : undefined}
+        tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [v[i] != null ? t("{time} asleep", { time: hm((v[i] as number) * 60) }) : t("No sleep logged")] })}
+        summary={avg != null ? t("Sleep per night {time} on average.", { time: hm(avg * 60) }) : undefined}
       />
       <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginTop: 8 }}>
-        {staged.length ? `Stages: Deep ${hm(sm((x) => x.deep ?? 0))} · REM ${hm(sm((x) => x.rem ?? 0))} · Light ${hm(sm((x) => x.light ?? 0))} a night on average.` : "No sleep stages yet."}
+        {staged.length ? t("Stages: Deep {deep} · REM {rem} · Light {light} a night on average.", { deep: hm(sm((x) => x.deep ?? 0)), rem: hm(sm((x) => x.rem ?? 0)), light: hm(sm((x) => x.light ?? 0)) }) : t("No sleep stages yet.")}
       </p>
     </>
   );

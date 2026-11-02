@@ -1,6 +1,7 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t } from "../../i18n/core";
 import { CLOSED_CHECK_IN, CLOSED_RENEW_MEMBERSHIP, CLOSED_SELL_DAY_PASS, closureMessage, isBusinessClosedError, type ClosureWords } from "../business-closure/logic";
 import { fetchHoursTable, fetchMyVenues, fetchVenueMembers } from "../venues/console";
 import { consoleMessage } from "../venues/consoleLogic";
@@ -130,7 +131,7 @@ export async function deskFindMember(gymId: string, search: string, limit = 6): 
   const { data, error } = await rpc<DeskMemberRow[]>("desk_find_member", { p_gym_id: gymId, p_search: search.trim(), p_limit: limit });
   if (error) {
     console.error("[front desk] Could not search members:", error.message);
-    return fail(error, "Couldn't search right now. Try again.");
+    return fail(error, t("Couldn't search right now. Try again."));
   }
   return { ok: true, value: (data ?? []).map(toDeskMember) };
 }
@@ -145,7 +146,7 @@ export async function verifyPass(token: string): Promise<Result<PassCheck>> {
   const { data, error } = await rpc<VerifyRow[] | VerifyRow>("verify_gym_pass", { p_token: token });
   if (error) {
     console.error("[front desk] Could not verify a pass:", error.message);
-    return fail(error, "Couldn't check this pass.");
+    return fail(error, t("Couldn't check this pass."));
   }
   const row = Array.isArray(data) ? data[0] : data;
   return { ok: true, value: toPassCheck(row) };
@@ -156,7 +157,7 @@ export async function markMembershipPaid(membershipId: string): Promise<Result<n
   const { error } = await rpc<null>("mark_gym_membership_paid", { p_membership_id: membershipId });
   if (error) {
     console.error("[front desk] Could not mark a membership paid:", error.message);
-    return fail(error, "Couldn't mark it as paid. Try again.");
+    return fail(error, t("Couldn't mark it as paid. Try again."));
   }
   return { ok: true, value: null };
 }
@@ -171,7 +172,7 @@ export async function fetchRenewalsDue(gymId: string, days: number): Promise<Res
   const { data, error } = await rpc<RenewalDueRow[]>("venue_renewals_due", { p_gym_id: gymId, p_days: days });
   if (error) {
     console.error("[front desk] Could not read renewals:", error.message);
-    return fail(error, "Couldn't load renewals.");
+    return fail(error, t("Couldn't load renewals."));
   }
   return { ok: true, value: (data ?? []).map((r) => toRenewalDue(r, gymId)) };
 }
@@ -191,7 +192,7 @@ export async function fetchRenewalStats(gymId: string, from: string, to: string)
   const { data, error } = await rpc<RenewalStatsRow[] | RenewalStatsRow>("venue_renewal_stats", { p_gym_id: gymId, p_from: from, p_to: to });
   if (error) {
     console.error("[front desk] Could not read renewal stats:", error.message);
-    return fail(error, "Couldn't load renewals.");
+    return fail(error, t("Couldn't load renewals."));
   }
   const row = Array.isArray(data) ? data[0] : data;
   return { ok: true, value: row ? toRenewalStats(row) : null };
@@ -256,17 +257,17 @@ const first = <T>(data: T[] | T | null): T | null => (Array.isArray(data) ? data
 /** check_in_with_pass(gym, token, method): scans a pass; decides and records (denials too). */
 export async function checkInWithPass(gymId: string, token: string, method: CheckInMethod = "qr"): Promise<Desk<CheckIn>> {
   const { data, error } = await rpc<CheckInRow[]>("check_in_with_pass", { p_gym_id: gymId, p_token: token, p_method: method });
-  if (error) return deskFail(error, "check a pass in", "Couldn't check this pass.", CLOSED_CHECK_IN);
+  if (error) return deskFail(error, "check a pass in", t("Couldn't check this pass."), CLOSED_CHECK_IN);
   const c = toCheckIn(first(data));
-  return c ? { ok: true, value: c } : { ok: false, message: "Couldn't check this pass." };
+  return c ? { ok: true, value: c } : { ok: false, message: t("Couldn't check this pass.") };
 }
 
 /** check_in_member(gym, membership, method): the check-in from desk_find_member. */
 export async function checkInMember(gymId: string, membershipId: string, method: CheckInMethod = "manual"): Promise<Desk<CheckIn>> {
   const { data, error } = await rpc<CheckInRow[]>("check_in_member", { p_gym_id: gymId, p_membership_id: membershipId, p_method: method });
-  if (error) return deskFail(error, "check a member in", "Couldn't check them in. Try again.", CLOSED_CHECK_IN);
+  if (error) return deskFail(error, "check a member in", t("Couldn't check them in. Try again."), CLOSED_CHECK_IN);
   const c = toCheckIn(first(data));
-  return c ? { ok: true, value: c } : { ok: false, message: "Couldn't check them in. Try again." };
+  return c ? { ok: true, value: c } : { ok: false, message: t("Couldn't check them in. Try again.") };
 }
 
 export interface GuestCheckIn {
@@ -284,11 +285,11 @@ export async function checkInGuest(gymId: string, hostMembershipId: string, labe
     p_guest_label: label.trim().slice(0, GUEST_LABEL_MAX),
   });
   if (error) {
-    if (error.code === "22023") return { ok: false, code: error.code, message: `Write the guest's name, up to ${GUEST_LABEL_MAX} characters.` };
-    return deskFail(error, "check a guest in", "Couldn't check the guest in. Try again.", CLOSED_CHECK_IN);
+    if (error.code === "22023") return { ok: false, code: error.code, message: t("Write the guest's name, up to {n} characters.", { n: GUEST_LABEL_MAX }) };
+    return deskFail(error, "check a guest in", t("Couldn't check the guest in. Try again."), CLOSED_CHECK_IN);
   }
   const row = first(data);
-  if (!row) return { ok: false, message: "Couldn't check the guest in. Try again." };
+  if (!row) return { ok: false, message: t("Couldn't check the guest in. Try again.") };
   const result = row.result === "in" ? "in" : "denied";
   return {
     ok: true,
@@ -317,38 +318,38 @@ export async function sellDayPass(
       return {
         ok: false,
         code: error.code,
-        message: "personId" in buyer ? "This person isn't one of your members. Sell to them as a guest by name." : `Write the guest's name, up to ${GUEST_LABEL_MAX} characters.`,
+        message: "personId" in buyer ? t("This person isn't one of your members. Sell to them as a guest by name.") : t("Write the guest's name, up to {n} characters.", { n: GUEST_LABEL_MAX }),
       };
-    return deskFail(error, "sell a day pass", "Couldn't sell the day pass. Try again.", CLOSED_SELL_DAY_PASS);
+    return deskFail(error, "sell a day pass", t("Couldn't sell the day pass. Try again."), CLOSED_SELL_DAY_PASS);
   }
-  return data ? { ok: true, value: data } : { ok: false, message: "Couldn't sell the day pass. Try again." };
+  return data ? { ok: true, value: data } : { ok: false, message: t("Couldn't sell the day pass. Try again.") };
 }
 
 /** mark_desk_sale_paid(sale): a day pass sold "pay later" is paid. */
 export async function markDeskSalePaid(saleId: string): Promise<Desk<null>> {
   const { error } = await rpc<null>("mark_desk_sale_paid", { p_sale_id: saleId });
-  if (error) return deskFail(error, "mark a desk sale paid", "Couldn't mark it as paid. Try again.");
+  if (error) return deskFail(error, "mark a desk sale paid", t("Couldn't mark it as paid. Try again."));
   return { ok: true, value: null };
 }
 
 /** desk_entries(gym, day = venue today): newest first, first names (the check-in screen). */
 export async function fetchDeskEntries(gymId: string, limit = 500): Promise<Desk<Entry[]>> {
   const { data, error } = await rpc<EntryRow[]>("desk_entries", { p_gym_id: gymId, p_day: null, p_limit: limit, p_offset: 0 });
-  if (error) return deskFail(error, "read entries", "Couldn't load entries.");
+  if (error) return deskFail(error, "read entries", t("Couldn't load entries."));
   return { ok: true, value: (data ?? []).map(toEntry) };
 }
 
 /** desk_summary(gym): the boxes; right_now null = no history. */
 export async function fetchDeskSummary(gymId: string): Promise<Desk<DeskSummary>> {
   const { data, error } = await rpc<SummaryRow[]>("desk_summary", { p_gym_id: gymId });
-  if (error) return deskFail(error, "read the desk summary", "Couldn't load entries.");
+  if (error) return deskFail(error, "read the desk summary", t("Couldn't load entries."));
   return { ok: true, value: toDeskSummary(first(data)) };
 }
 
 /** venue_busy_times(gym, weeks): 7 × 24 averages, grid[weekday - 1][hour]. */
 export async function fetchBusyTimes(gymId: string, weeks = 4): Promise<Desk<number[][]>> {
   const { data, error } = await rpc<BusyRow[]>("venue_busy_times", { p_gym_id: gymId, p_weeks: weeks });
-  if (error) return deskFail(error, "read busy times", "Couldn't load busy times.");
+  if (error) return deskFail(error, "read busy times", t("Couldn't load busy times."));
   return { ok: true, value: toBusyGrid(data ?? []) };
 }
 
@@ -392,7 +393,7 @@ export async function fetchWeekDeskSales(gymId: string, now: Date = new Date()):
     .order("sold_at", { ascending: false });
   if (error) {
     if (!["42P01", "PGRST205"].includes(error.code)) console.error("[front desk] Could not read desk sales:", error.message);
-    return fail(error, "Couldn't load day passes.");
+    return fail(error, t("Couldn't load day passes."));
   }
   return { ok: true, value: ((data ?? []) as DeskSaleRow[]).map(toDeskSale) };
 }

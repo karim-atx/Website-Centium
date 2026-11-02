@@ -17,7 +17,7 @@ import { BUSY_WARNING_TEXT, type Opening, type ProCard } from "../../../services
 import type { MarketResult } from "../../../services/market/rpc";
 import { FEE_NOTICE_PLAIN, feeNotice, fetchHiringFeeRules, type HiringFeeRules } from "../../../services/hiring";
 import { footLine, hiredLine, openingTag, payLine, personRating, scheduleLine, type HiringTag } from "./hubModel";
-import { t } from "../../../i18n/core";
+import { isRtl, t, tk } from "../../../i18n/core";
 
 // Market + Share 3.0 · W4 · pieces shared by the B-MA.8 pages (W4-A owns this
 // file; the other W4 pages import from it). Literal values from Business
@@ -160,7 +160,7 @@ export function useHiringStrip(): [React.ReactNode, (text: string, o?: StripOpti
               key={s.n}
               text={s.text}
               tone={s.o.tone ?? "success"}
-              action={s.o.action ?? "Done"}
+              action={s.o.action ?? t("Done")}
               onAction={() => {
                 setS(null);
                 s.o.onAction?.();
@@ -307,14 +307,14 @@ KebabButton.displayName = "KebabButton";
 export type OpeningAction = "edit" | "share" | "pause" | "delete" | "reopen";
 
 const OPENING_MENU: PopupMenuOption<OpeningAction>[] = [
-  { value: "edit", label: "Edit" },
-  { value: "share", label: "Share" },
-  { value: "pause", label: "Pause" },
-  { value: "delete", label: "Delete", destructive: true },
+  { value: "edit", label: tk("Edit") },
+  { value: "share", label: tk("Share") },
+  { value: "pause", label: tk("Pause") },
+  { value: "delete", label: tk("Delete"), destructive: true },
 ];
 
 /** Ours (Karim: Pause = close, reopenable): a closed opening's ⋮ has Reopen alone. */
-export const CLOSED_OPENING_MENU: PopupMenuOption<OpeningAction>[] = [{ value: "reopen", label: "Reopen" }];
+export const CLOSED_OPENING_MENU: PopupMenuOption<OpeningAction>[] = [{ value: "reopen", label: tk("Reopen") }];
 
 /**
  * The opening's ⋮ (B-SH.1 "Hiring · opening menu"): the app PopupMenu at the
@@ -345,7 +345,7 @@ export function OpeningMenuButton({
   }, [open]);
   return (
     <>
-      <KebabButton ref={btn} label={`Opening options: ${title}`} open={open} onOpen={() => setAnchor(btn.current)} style={style} />
+      <KebabButton ref={btn} label={t("Opening options: {title}", { title })} open={open} onOpen={() => setAnchor(btn.current)} style={style} />
       <PopupMenu
         open={open}
         anchor={anchor}
@@ -355,7 +355,8 @@ export function OpeningMenuButton({
           setAnchor(null);
           btn.current?.focus();
         }}
-        options={options}
+        align={isRtl() ? "left" : "right"}
+        options={options.map((o) => ({ ...o, label: t(o.label) }))}
         onSelect={(a) => onAction(a)}
       />
     </>
@@ -399,7 +400,7 @@ export function OpeningCard({ o, justPosted, onOpen, menu }: { o: Opening; justP
       {menu ? <div style={{ position: "absolute", top: 8, insetInlineEnd: 8 }}>{menu}</div> : null}
       <div aria-hidden style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", borderTop: `0.5px solid ${m.div}`, position: "relative", pointerEvents: "none" }}>
         <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12), fontWeight: 700, color: footInk }}>{foot.text}</span>
-        <ChevronRight size={16} strokeWidth={2} color={m.faint} aria-hidden style={NO_ICON_SCALE} />
+        <ChevronRight size={16} strokeWidth={2} color={m.faint} aria-hidden style={isRtl() ? { transform: "scaleX(-1)" } : NO_ICON_SCALE} />
       </div>
     </div>
   );
@@ -610,10 +611,10 @@ export function BusyWarning({ lines, style }: { lines: string[]; style?: React.C
   if (!lines.length) return null;
   return (
     <div role="status" style={{ borderRadius: 14, background: m.cautionbg, padding: "12px 14px", lineHeight: "normal", textAlign: "start", ...style }}>
-      <div style={{ fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 700, color: m.ink }}>{BUSY_WARNING_TEXT}</div>
+      <div style={{ fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 700, color: m.ink }}>{t(BUSY_WARNING_TEXT)}</div>
       {lines.map((l) => (
         <div key={l} style={{ fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2, marginTop: 4 }}>
-          {`Busy ${l}`}
+          {t("Busy {time}", { time: l })}
         </div>
       ))}
     </div>

@@ -3,7 +3,7 @@ import { ArrowDownRight, ArrowUpRight, ChevronRight, ClipboardPlus, FileText, Fl
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
-import { isRtl } from "../../../i18n/core";
+import { isRtl, t, tk, tn, tx } from "../../../i18n/core";
 import { SegmentedTabs } from "../../ui/SegmentedTabs";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { BottomSheet } from "../../ui/BottomSheet";
@@ -52,17 +52,20 @@ import type { PanelProps } from "./panelProps";
  * have no dated link to a marker (see the W5 report).
  */
 
+/** English keys (tk); panelLabel() shows them in the active language. */
 const PANEL_LABEL: Record<string, string> = {
-  blood_count: "Blood count",
-  lipids: "Lipids",
-  liver: "Liver",
-  kidney: "Kidney",
-  hormones: "Hormones",
-  metabolic: "Metabolic",
-  vitamins_minerals: "Vitamins and minerals",
-  thyroid: "Thyroid",
-  other: "Other",
+  blood_count: tk("Blood count"),
+  lipids: tk("Lipids"),
+  liver: tk("Liver"),
+  kidney: tk("Kidney"),
+  hormones: tk("Hormones"),
+  metabolic: tk("Metabolic"),
+  vitamins_minerals: tk("Vitamins and minerals"),
+  thyroid: tk("Thyroid"),
+  other: tk("Other"),
 };
+/** A category's label in the active language; an unknown category shows as stored. */
+const panelLabel = (c: string): string => (PANEL_LABEL[c] ? t(PANEL_LABEL[c]) : c);
 const NUTRITION_KEYS = new Set(["glucose", "hba1c", "iron", "ferritin", "vitamin_d"]);
 
 interface Point {
@@ -156,16 +159,18 @@ function buildMarkers(results: (LabResult & { note?: string | null; sharedAt?: s
 }
 
 const statusInk = (s: MarkerStatus, dark: boolean) => (s === "in" ? INK.good : s === "border" ? (dark ? "#E0B360" : "#9A7424") : s === "out" ? INK.hi : INK.chS);
-const statusWord = (s: MarkerStatus) => (s === "in" ? "In range" : s === "border" ? "Borderline" : s === "out" ? "Out of range" : "No range");
-const rangeText = (lo: number | null, hi: number | null, unit: string) => (lo != null && hi != null && lo > 0 ? `${lo} to ${hi} ${unit}` : hi != null ? `under ${hi} ${unit}` : lo != null ? `above ${lo} ${unit}` : null);
+const statusWord = (s: MarkerStatus) => (s === "in" ? t("In range") : s === "border" ? t("Borderline") : s === "out" ? t("Out of range") : t("No range"));
+/** The range as a phrase ("4 to 6 mmol/L", "under 5 mmol/L"); `start` gives the sentence-start form ("Under 5 mmol/L"). */
+const rangeText = (lo: number | null, hi: number | null, unit: string, start = false) =>
+  lo != null && hi != null && lo > 0 ? t("{low} to {high} {unit}", { low: lo, high: hi, unit }) : hi != null ? (start ? t("Under {high} {unit}", { high: hi, unit }) : t("under {high} {unit}", { high: hi, unit })) : lo != null ? (start ? t("Above {low} {unit}", { low: lo, unit }) : t("above {low} {unit}", { low: lo, unit })) : null;
 const signed = (n: number) => signedNum(roundMarker(n));
 const ago = (date: string, today: string) => {
   const d = daysBetween(date, today);
-  if (d <= 0) return "Today";
-  if (d < 14) return `${d} day${d === 1 ? "" : "s"} ago`;
-  if (d < 60) return `${Math.round(d / 7)} weeks ago`;
+  if (d <= 0) return t("Today");
+  if (d < 14) return tn(d, "{n} day ago", "{n} days ago");
+  if (d < 60) return tn(Math.round(d / 7), "{n} weeks ago", "{n} weeks ago");
   const m = Math.round(d / 30.4);
-  return m < 24 ? `${m} months ago` : `${Math.round(d / 365)} years ago`;
+  return m < 24 ? tn(m, "{n} months ago", "{n} months ago") : tn(Math.round(d / 365), "{n} years ago", "{n} years ago");
 };
 
 type View = { kind: "list" } | { kind: "trend"; key: string } | { kind: "compare"; keys: string[] } | { kind: "test"; panelId: string; date: string };
@@ -209,8 +214,8 @@ export const BiomarkersPanel: React.FC<PanelProps & { onMessage: () => void }> =
   if (!visible)
     return (
       <>
-        <EmptyState icon={FlaskConical} title="No lab results shared" line={`Trends appear here when ${firstName} shares a test with you, or a single result.`}>
-          <CtaButton size="base" variant="secondary" icon={<Send size={15} />} label={p.asked.includes("lab_results") || toast ? "Asked" : `Ask ${firstName} to share a test`} disabled={p.asked.includes("lab_results") || !!toast} onClick={() => setAsking(true)} />
+        <EmptyState icon={FlaskConical} title={t("No lab results shared")} line={t("Trends appear here when {firstName} shares a test with you, or a single result.", { firstName })}>
+          <CtaButton size="base" variant="secondary" icon={<Send size={15} />} label={p.asked.includes("lab_results") || toast ? t("Asked") : t("Ask {firstName} to share a test", { firstName })} disabled={p.asked.includes("lab_results") || !!toast} onClick={() => setAsking(true)} />
         </EmptyState>
         {askSheet}
       </>
@@ -219,7 +224,7 @@ export const BiomarkersPanel: React.FC<PanelProps & { onMessage: () => void }> =
   if (gate) return <>{gate}</>;
   if (!markers.length)
     return (
-      <EmptyState icon={FlaskConical} title="No results shared yet." line={`Results ${firstName} shares appear here.`} />
+      <EmptyState icon={FlaskConical} title={t("No results shared yet.")} line={t("Results {firstName} shares appear here.", { firstName })} />
     );
 
   if (view.kind === "trend") {
@@ -265,7 +270,7 @@ export const BiomarkersPanel: React.FC<PanelProps & { onMessage: () => void }> =
   }
 
   // ---- the list (TR16 v3) ----
-  const cats = [...new Set(markers.map((m) => m.category))].sort((a, b) => (PANEL_LABEL[a] ?? a).localeCompare(PANEL_LABEL[b] ?? b));
+  const cats = [...new Set(markers.map((m) => m.category))].sort((a, b) => panelLabel(a).localeCompare(panelLabel(b)));
   const shown = markers.filter((m) => (filter === "all" ? true : filter === "out" ? m.status === "out" : filter === "changing" ? m.changing || m.pattern === "rising" || m.pattern === "falling" || m.pattern === "rising_out" || m.pattern === "falling_out" : m.category === filter));
   const lastDate = markers.reduce<string | null>((a, m) => m.points.reduce<string | null>((b, x) => (!b || x.date > b ? x.date : b), a), null);
   const outNow = markers.filter((m) => m.status === "out");
@@ -283,23 +288,23 @@ export const BiomarkersPanel: React.FC<PanelProps & { onMessage: () => void }> =
       {read.offline && <OfflineLine />}
       {!labsOn && (
         <SoftLine icon={Info} action={undefined}>
-          {`Lab results aren't shared. ${firstName} shared ${sharedCount === 1 ? "this result" : "these results"} with you one at a time, and can stop at any time. `}
+          {`${sharedCount === 1 ? t("Lab results aren't shared. {firstName} shared this result with you one at a time, and can stop at any time.", { firstName }) : t("Lab results aren't shared. {firstName} shared these results with you one at a time, and can stop at any time.", { firstName })} `}
           <button type="button" onClick={() => setAsking(true)} className="tap" style={{ fontWeight: 700, color: INK.prDeep }}>
-            {`Ask ${firstName} to share the whole test`}
+            {t("Ask {firstName} to share the whole test", { firstName })}
           </button>
         </SoftLine>
       )}
       <ChipRow
-        label="Filter"
-        items={[{ key: "all", label: "All" }, { key: "out", label: "Out of range" }, { key: "changing", label: "Changing" }, ...cats.map((c) => ({ key: c, label: PANEL_LABEL[c] ?? c }))]}
+        label={t("Filter")}
+        items={[{ key: "all", label: t("All") }, { key: "out", label: t("Out of range") }, { key: "changing", label: t("Changing") }, ...cats.map((c) => ({ key: c, label: panelLabel(c) }))]}
         active={filter}
         onChange={setFilter}
       />
       <div className="grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginBottom: 12 }}>
         {[
-          { l: "Last test", v: lastDate ? dayLabel(lastDate) : "–", s: lastDate ? ago(lastDate, today) : "", hi: false },
-          { l: "Out of range", v: String(outNow.length), s: newOut != null && prevTest ? `${signedNum(newOut)} since ${monthShort(prevTest)}` : "Latest results", hi: outNow.length > 0 },
-          { l: "Improving", v: String(improving.length), s: improving.map((m) => m.name.replace(/ cholesterol$/i, "")).join(", ") || "None yet", hi: false },
+          { l: t("Last test"), v: lastDate ? dayLabel(lastDate) : "–", s: lastDate ? ago(lastDate, today) : "", hi: false },
+          { l: t("Out of range"), v: String(outNow.length), s: newOut != null && prevTest ? t("{change} since {date}", { change: signedNum(newOut), date: monthShort(prevTest) }) : t("Latest results"), hi: outNow.length > 0 },
+          { l: t("Improving"), v: String(improving.length), s: improving.map((m) => m.name.replace(/ cholesterol$/i, "")).join(t(", ")) || t("None yet"), hi: false },
         ].map((x) => (
           <div key={x.l} className="min-w-0" style={{ borderRadius: 16, background: x.hi ? INK.hiBg : INK.card, border: `1px solid ${x.hi ? "transparent" : INK.bCard}`, padding: 11 }}>
             <p style={{ fontSize: textPx(11), fontWeight: 600, color: INK.chS }}>{x.l}</p>
@@ -309,41 +314,41 @@ export const BiomarkersPanel: React.FC<PanelProps & { onMessage: () => void }> =
         ))}
       </div>
       <SectionHead
-        label={filter === "out" ? "Out of range or critical" : "Trends"}
+        label={filter === "out" ? t("Out of range or critical") : t("Trends")}
         right={
           markers.length > 1 ? (
             <span className="inline-flex items-center" style={{ gap: 4 }}>
               <Layers size={12} strokeWidth={2.2} aria-hidden />
-              Compare
+              {t("Compare")}
             </span>
           ) : undefined
         }
         onRight={markers.length > 1 ? () => setView({ kind: "compare", keys: defaultCompare(markers, shown[0]?.key ?? markers[0].key) }) : undefined}
       />
       {shown.length === 0 ? (
-        <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 12 }}>No results match this filter.</p>
+        <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 12 }}>{t("No results match this filter.")}</p>
       ) : (
         shown.map((m) => <MarkerRow key={m.key} m={m} now={new Date(`${today}T23:59:59`).getTime()} onOpen={() => setView({ kind: "trend", key: m.key })} />)
       )}
-      <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 4, marginBottom: 14 }}>{`Points sit on their real test dates. Ranges are the reporting lab's; where a lab gives none, Centium's reference range for ${firstName}'s sex and age is used.`}</p>
+      <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 4, marginBottom: 14 }}>{t("Points sit on their real test dates. Ranges are the reporting lab's; where a lab gives none, Centium's reference range for {firstName}'s sex and age is used.", { firstName })}</p>
       {testRows.length > 0 && (
         <>
-          <SectionHead label="Tests" />
+          <SectionHead label={t("Tests")} />
           <ListCard
-            rows={testRows.map((t) => {
-              const inTest = markers.filter((m) => m.points.some((x) => x.panelId === t.id));
+            rows={testRows.map((tp) => {
+              const inTest = markers.filter((m) => m.points.some((x) => x.panelId === tp.id));
               const out = inTest.filter((m) => {
-                const pt = m.points.find((x) => x.panelId === t.id);
+                const pt = m.points.find((x) => x.panelId === tp.id);
                 return pt && markerStatus(pt.value, pt.low ?? m.low, pt.high ?? m.high) === "out";
               }).length;
               return {
-                key: t.id,
+                key: tp.id,
                 icon: FileText,
-                title: dateLong(t.date),
-                meta: `${t.name ?? "Lab report"} · ${inTest.length} result${inTest.length === 1 ? "" : "s"}`,
-                trailing: out ? <Chip label={`${out} out of range`} tone="att" /> : undefined,
-                onClick: () => setView({ kind: "test", panelId: t.id, date: t.date }),
-                ariaLabel: `Open test, ${dateLong(t.date)}`,
+                title: dateLong(tp.date),
+                meta: `${tp.name ?? t("Lab report")} · ${tn(inTest.length, "{n} result", "{n} results")}`,
+                trailing: out ? <Chip label={t("{n} out of range", { n: out })} tone="att" /> : undefined,
+                onClick: () => setView({ kind: "test", panelId: tp.id, date: tp.date }),
+                ariaLabel: t("Open test, {date}", { date: dateLong(tp.date) }),
               };
             })}
           />
@@ -406,7 +411,7 @@ const MarkerRow: React.FC<{ m: Marker; now: number; onOpen: () => void }> = ({ m
           {m.name}
         </span>
         <span className="flex items-center" style={{ gap: 6, marginTop: 3 }}>
-          <Chip label={PATTERN_LABEL[m.pattern]} tone={PATTERN_TONE[m.pattern]} />
+          <Chip label={t(PATTERN_LABEL[m.pattern])} tone={PATTERN_TONE[m.pattern]} />
         </span>
       </span>
       <Spark m={m} t0={t0} t1={t1} />
@@ -426,7 +431,7 @@ const MarkerRow: React.FC<{ m: Marker; now: number; onOpen: () => void }> = ({ m
 // TR21 · one marker over time
 // ---------------------------------------------------------------------------
 
-const Track: React.FC<{ items: string[]; value: string; onChange: (v: string) => void; label: string }> = ({ items, value, onChange, label }) => (
+const Track: React.FC<{ items: string[]; value: string; onChange: (v: string) => void; label: string; show?: (v: string) => string }> = ({ items, value, onChange, label, show = (v) => v }) => (
   <span role="tablist" aria-label={label} className="flex shrink-0" style={{ gap: 2, padding: 2, borderRadius: 9, background: INK.soft }}>
     {items.map((r) => {
       const on = r === value;
@@ -440,7 +445,7 @@ const Track: React.FC<{ items: string[]; value: string; onChange: (v: string) =>
           className="relative flex items-center justify-center whitespace-nowrap before:absolute before:inset-x-0 before:-inset-y-[10px] before:content-['']"
           style={{ height: 24, minWidth: 28, padding: "0 7px", borderRadius: 7, fontSize: textPx(10.5), fontWeight: 800, background: on ? INK.card : "transparent", color: on ? INK.ch : INK.chF, boxShadow: on ? "0 1px 2px rgba(0,0,0,0.08)" : undefined }}
         >
-          {r}
+          {show(r)}
         </button>
       );
     })}
@@ -479,7 +484,7 @@ const MarkerTrend: React.FC<{
   const hi = k(m.high);
   const st = m.status;
   const rng = rangeText(lo != null ? roundMarker(lo) : null, hi != null ? roundMarker(hi) : null, unit);
-  const src = m.rangeSource === "reference" ? "Centium reference range" : L.report ?? "reported by the lab";
+  const src = m.rangeSource === "reference" ? t("Centium reference range") : L.report ?? t("reported by the lab");
   const months = Math.round(daysBetween(F.date, L.date) / 30.4);
   const years = daysBetween(F.date, L.date) / 365.25;
 
@@ -509,15 +514,15 @@ const MarkerTrend: React.FC<{
   })();
 
   const series: ProChartSeries[] = [
-    { key: "line", label: "Results", type: "line", color: dark ? "rgba(178,173,196,0.45)" : "rgba(92,85,80,0.45)", values: vals.map(roundMarker), noPoints: true, noLegend: true, labels: n > 1 ? [vals.length - 2, vals.length - 1].filter((i) => i >= 0) : [] },
-    { key: "in", label: "In range", type: "points", filled: true, swatch: "dot", color: colourOf("in"), values: only(["in", "none"]), pointColor: (i) => colourOf(stOf(i)) },
-    { key: "border", label: "Borderline", type: "points", filled: true, swatch: "dot", color: colourOf("border"), values: only(["border"]) },
-    { key: "out", label: "Out of range", type: "points", filled: true, swatch: "dot", color: colourOf("out"), values: only(["out"]) },
+    { key: "line", label: t("Results"), type: "line", color: dark ? "rgba(178,173,196,0.45)" : "rgba(92,85,80,0.45)", values: vals.map(roundMarker), noPoints: true, noLegend: true, labels: n > 1 ? [vals.length - 2, vals.length - 1].filter((i) => i >= 0) : [] },
+    { key: "in", label: t("In range"), type: "points", filled: true, swatch: "dot", color: colourOf("in"), values: only(["in", "none"]), pointColor: (i) => colourOf(stOf(i)) },
+    { key: "border", label: t("Borderline"), type: "points", filled: true, swatch: "dot", color: colourOf("border"), values: only(["border"]) },
+    { key: "out", label: t("Out of range"), type: "points", filled: true, swatch: "dot", color: colourOf("out"), values: only(["out"]) },
   ];
 
   return (
     <>
-      <DetailHead eyebrow={`${name} · ${PANEL_LABEL[m.category] ?? "Other"}`} title={m.name} onBack={onBack} right={<RoundBtn icon={Layers} label="Compare" onClick={onCompare} />} />
+      <DetailHead eyebrow={`${name} · ${PANEL_LABEL[m.category] ? t(PANEL_LABEL[m.category]) : t("Other")}`} title={m.name} onBack={onBack} right={<RoundBtn icon={Layers} label={t("Compare")} onClick={onCompare} />} />
       <div className="flex items-end justify-between" style={{ gap: 10, marginBottom: 10 }}>
         <div className="min-w-0">
           <p className="flex items-baseline" style={{ gap: 6 }}>
@@ -529,14 +534,14 @@ const MarkerTrend: React.FC<{
               <span className="inline-flex items-center flex-wrap" style={{ gap: 4, fontSize: textPx(12), fontWeight: 800, color: INK.ch }}>
                 {L.value >= P.value ? <ArrowUpRight size={13} strokeWidth={2.4} aria-hidden style={{ color: INK.chS }} /> : <ArrowDownRight size={13} strokeWidth={2.4} aria-hidden style={{ color: INK.chS }} />}
                 {`${signed((k(L.value) as number) - (k(P.value) as number))} ${unit}`}
-                <span style={{ fontWeight: 600, color: INK.chF }}>{`(${signedNum(P.value ? Math.round(((L.value - P.value) / P.value) * 100) : 0)}%) since ${dayLabel(P.date)}`}</span>
+                <span style={{ fontWeight: 600, color: INK.chF }}>{t("({pct}%) since {date}", { pct: signedNum(P.value ? Math.round(((L.value - P.value) / P.value) * 100) : 0), date: dayLabel(P.date) })}</span>
               </span>
             ) : (
-              <span style={{ fontSize: textPx(12), color: INK.chF }}>First test</span>
+              <span style={{ fontSize: textPx(12), color: INK.chF }}>{t("First test")}</span>
             )}
           </p>
-          {n > 2 && years > 0 && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 2 }}>{`Over ${months} months: ${signed((k(L.value) as number) - (k(F.value) as number))} · about ${signed(((k(L.value) as number) - (k(F.value) as number)) / years)} a year`}</p>}
-          {rng && <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 2 }}>{`Lab range ${rng} · ${src}`}</p>}
+          {n > 2 && years > 0 && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 2 }}>{tn(months, "Over {n} months: {change} · about {perYear} a year", "Over {n} months: {change} · about {perYear} a year", { change: signed((k(L.value) as number) - (k(F.value) as number)), perYear: signed(((k(L.value) as number) - (k(F.value) as number)) / years) })}</p>}
+          {rng && <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 2 }}>{t("Lab range {range} · {source}", { range: rng, source: src })}</p>}
         </div>
         {st !== "none" && (
           <span className="inline-flex items-center whitespace-nowrap shrink-0" style={{ gap: 4, fontSize: textPx(11), fontWeight: 800, padding: "4px 9px", borderRadius: 9999, background: st === "in" ? INK.goodBg : st === "border" ? INK.goldPale : INK.hiBg, color: statusInk(st, dark) }}>
@@ -545,11 +550,11 @@ const MarkerTrend: React.FC<{
         )}
       </div>
       <ProChart
-        title="Over time"
+        title={t("Over time")}
         right={
           <span className="flex items-center" style={{ gap: 6 }}>
-            {units.length > 1 && <Track label="Unit" items={units.slice(0, 2)} value={unit} onChange={setUnit} />}
-            <Track label="Range" items={["1Y", "2Y", "All"]} value={span} onChange={setSpan} />
+            {units.length > 1 && <Track label={t("Unit")} items={units.slice(0, 2)} value={unit} onChange={setUnit} />}
+            <Track label={t("Range")} items={["1Y", "2Y", "All"]} value={span} onChange={setSpan} show={(v) => (v === "All" ? t("All") : tx(v, "chart range"))} />
           </span>
         }
         x={pts.map((x) => x.date)}
@@ -558,7 +563,7 @@ const MarkerTrend: React.FC<{
         min={bottom - padV}
         max={top + padV}
         height={176}
-        band={lo != null || hi != null ? { low: lo ?? bottom - padV, high: hi ?? top + padV, label: "Lab range" } : undefined}
+        band={lo != null || hi != null ? { low: lo ?? bottom - padV, high: hi ?? top + padV, label: t("Lab range") } : undefined}
         refs={[...(hi != null ? [{ value: hi, label: fmtV(hi), side: "right" as const, dashed: false }] : []), ...(lo != null && lo > 0 ? [{ value: lo, label: fmtV(lo), side: "right" as const, dashed: false }] : [])]}
         series={series}
         defaultPin={n > 1 ? pts.length - 1 : null}
@@ -570,21 +575,21 @@ const MarkerTrend: React.FC<{
             title: dateLong(x.date),
             lines: [
               `${fmtV(v)} ${unit} · ${statusWord(stOf(i))}`,
-              ...(prev ? [`${signed(v - (k(prev.value) as number))} since ${dayLabel(prev.date)} (${signedNum(prev.value ? Math.round(((x.value - prev.value) / prev.value) * 100) : 0)}%)`] : []),
-              x.report ?? "Lab report",
+              ...(prev ? [t("{change} since {date} ({pct}%)", { change: signed(v - (k(prev.value) as number)), date: dayLabel(prev.date), pct: signedNum(prev.value ? Math.round(((x.value - prev.value) / prev.value) * 100) : 0) })] : []),
+              x.report ?? t("Lab report"),
             ],
           };
         }}
-        scrubHint={n > 1 ? "Drag sideways to scrub, tap a point to pin it" : undefined}
-        summary={`${m.name}: ${n} result${n === 1 ? "" : "s"}, latest ${fmtV(k(L.value) as number)} ${unit}${rng ? `, lab range ${rng}` : ""}.`}
+        scrubHint={n > 1 ? t("Drag sideways to scrub, tap a point to pin it") : undefined}
+        summary={rng ? tn(n, "{name}: {n} result, latest {value} {unit}, lab range {range}.", "{name}: {n} results, latest {value} {unit}, lab range {range}.", { name: m.name, value: fmtV(k(L.value) as number), unit, range: rng }) : tn(n, "{name}: {n} result, latest {value} {unit}.", "{name}: {n} results, latest {value} {unit}.", { name: m.name, value: fmtV(k(L.value) as number), unit })}
       />
       {n === 1 && (
         <p className="flex" style={{ gap: 6, fontSize: textPx(12), color: INK.chS, lineHeight: 1.45, margin: "-4px 2px 12px" }}>
           <Info size={13} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0, marginTop: 2 }} />
-          {`One test so far, so there is no trend yet. It draws once ${firstName} shares a second result.`}
+          {t("One test so far, so there is no trend yet. It draws once {firstName} shares a second result.", { firstName })}
         </p>
       )}
-      <SectionHead label="All results" right={`${n} test${n === 1 ? "" : "s"}`} />
+      <SectionHead label={t("All results")} right={tn(n, "{n} test", "{n} tests")} />
       <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "2px 14px", marginBottom: 12 }}>
         {[...m.points]
           .reverse()
@@ -597,7 +602,7 @@ const MarkerTrend: React.FC<{
                   {dateLong(x.date)}
                 </span>
                 <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>
-                  {[x.report ?? (x.sharedAt ? "Shared result" : "Lab report"), x.note].filter(Boolean).join(" · ")}
+                  {[x.report ?? (x.sharedAt ? t("Shared result") : t("Lab report")), x.note].filter(Boolean).join(" · ")}
                 </span>
               </span>
               <span style={{ fontSize: textPx(14), fontWeight: 800, color: INK.ch, fontVariantNumeric: "tabular-nums" }}>
@@ -609,16 +614,16 @@ const MarkerTrend: React.FC<{
           ))}
         {n > 3 && !all && (
           <button type="button" onClick={() => setAll(true)} className="tap w-full text-center" style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep, padding: "10px 0 8px", borderTop: `1px solid ${INK.b06}`, minHeight: 44 }}>
-            {`See all ${n}`}
+            {t("See all {n}", { n })}
           </button>
         )}
       </div>
       <div className="flex" style={{ gap: 8 }}>
-        <CtaButton className="flex-1" size="base" variant="secondary" icon={<FileText size={15} />} label="Add to note" onClick={onNote} />
+        <CtaButton className="flex-1" size="base" variant="secondary" icon={<FileText size={15} />} label={t("Add to note")} onClick={onNote} />
         {clinical ? (
-          <CtaButton className="flex-1" size="base" variant="outline" icon={<ClipboardPlus size={15} />} label="Care plan" onClick={onCarePlan} />
+          <CtaButton className="flex-1" size="base" variant="outline" icon={<ClipboardPlus size={15} />} label={t("Care plan")} onClick={onCarePlan} />
         ) : (
-          <CtaButton className="flex-1" size="base" variant="outline" icon={<MessageCircle size={15} />} label={`Message ${firstName}`} onClick={onMessage} />
+          <CtaButton className="flex-1" size="base" variant="outline" icon={<MessageCircle size={15} />} label={t("Message {name}", { name: firstName })} onClick={onMessage} />
         )}
       </div>
       <ResultSheet point={sheet} m={m} clinical={clinical} onClose={() => setSheet(null)} onNote={onNote} onCarePlan={onCarePlan} />
@@ -637,14 +642,14 @@ const ResultSheet: React.FC<{ point: Point | null; m: Marker; clinical: boolean;
   const st = markerStatus(point.value, lo, hi);
   const alt = m.entry?.units.find((u) => u.unit !== m.unit && m.entry?.units.some((x) => x.unit === m.unit));
   const altV = alt ? convert(point.value, m.unit, alt.unit, m.entry) : null;
-  const r = rangeText(lo, hi, m.unit);
+  const r = rangeText(lo, hi, m.unit, true);
   const rows: [string, string][] = [
-    ["Value", `${point.value} ${m.unit}${alt && altV != null ? ` · ${roundMarker(altV)} ${alt.unit}` : ""}`],
-    ["Status", statusWord(st)],
-    ["Lab range", r ? `${r.charAt(0).toUpperCase()}${r.slice(1)} · ${point.low != null || point.high != null ? "reported by the lab" : "Centium reference range"}` : "None given"],
-    ...(prev ? ([["Change", `${signed(point.value - prev.value)} ${m.unit} (${prev.value ? Math.round(((point.value - prev.value) / prev.value) * 100) : 0}%) since ${dateLong(prev.date)}`]] as [string, string][]) : []),
-    ["Lab and date", `${point.report ?? "Lab report"} · drawn ${dateLong(point.date)}`],
-    ...(point.note ? ([["Note", point.note]] as [string, string][]) : []),
+    [t("Value"), `${point.value} ${m.unit}${alt && altV != null ? ` · ${roundMarker(altV)} ${alt.unit}` : ""}`],
+    [t("Status"), statusWord(st)],
+    [t("Lab range"), r ? `${r} · ${point.low != null || point.high != null ? t("reported by the lab") : t("Centium reference range")}` : t("None given")],
+    ...(prev ? ([[t("Change"), t("{change} {unit} ({pct}%) since {date}", { change: signed(point.value - prev.value), unit: m.unit, pct: prev.value ? Math.round(((point.value - prev.value) / prev.value) * 100) : 0, date: dateLong(prev.date) })]] as [string, string][]) : []),
+    [t("Lab and date"), t("{report} · drawn {date}", { report: point.report ?? t("Lab report"), date: dateLong(point.date) })],
+    ...(point.note ? ([[t("Note"), point.note]] as [string, string][]) : []),
   ];
   return (
     <>
@@ -654,8 +659,8 @@ const ResultSheet: React.FC<{ point: Point | null; m: Marker; clinical: boolean;
         title={`${m.name} · ${dayLabel(point.date)}`}
         footer={
           <div className="flex w-full" style={{ gap: 8 }}>
-            <CtaButton className="flex-1" size="sheet" variant="secondary" icon={<FileText size={15} />} label="Add to note" onClick={onNote} />
-            {clinical && <CtaButton className="flex-1" size="sheet" icon={<ClipboardPlus size={15} />} label="Care plan" onClick={onCarePlan} />}
+            <CtaButton className="flex-1" size="sheet" variant="secondary" icon={<FileText size={15} />} label={t("Add to note")} onClick={onNote} />
+            {clinical && <CtaButton className="flex-1" size="sheet" icon={<ClipboardPlus size={15} />} label={t("Care plan")} onClick={onCarePlan} />}
           </div>
         }
       >
@@ -663,7 +668,7 @@ const ResultSheet: React.FC<{ point: Point | null; m: Marker; clinical: boolean;
           {rows.map(([l, v], j) => (
             <div key={l} className="flex justify-between" style={{ gap: 12, padding: "10px 0", borderTop: j ? `1px solid ${INK.b06}` : "none" }}>
               <span style={{ fontSize: textPx(12.5), color: INK.chF, flexShrink: 0 }}>{l}</span>
-              <span className="text-end" style={{ fontSize: textPx(13), fontWeight: 700, color: l === "Status" ? statusInk(st, dark) : INK.ch }}>
+              <span className="text-end" style={{ fontSize: textPx(13), fontWeight: 700, color: j === 1 ? statusInk(st, dark) : INK.ch }}>
                 {v}
               </span>
             </div>
@@ -674,17 +679,17 @@ const ResultSheet: React.FC<{ point: Point | null; m: Marker; clinical: boolean;
             <FileText size={18} strokeWidth={1.75} aria-hidden style={{ color: INK.chS }} />
             <span className="flex-1">
               <span className="block" style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>
-                Source document
+                {t("Source document")}
               </span>
               <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>
-                Lab report
+                {t("Lab report")}
               </span>
             </span>
             <ChevronRight size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
           </button>
         )}
       </BottomSheet>
-      <FileViewerScreen open={viewing} onClose={() => setViewing(false)} path={point.filePath} bucket="lab-reports" title={point.report ?? "Lab report"} />
+      <FileViewerScreen open={viewing} onClose={() => setViewing(false)} path={point.filePath} bucket="lab-reports" title={point.report ?? t("Lab report")} />
     </>
   );
 };
@@ -700,7 +705,7 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
   const [pinDate, setPinDate] = useState<string | null>(null);
   const cols = [dark ? "#C3B3FB" : "#5F5093", INK.tealDark, dark ? "#E0B360" : "#9A7424", INK.sky];
   const chosen = keys.map((k) => all.find((m) => m.key === k)).filter((m): m is Marker => !!m);
-  const cat = chosen.length && chosen.every((m) => m.category === chosen[0].category) ? PANEL_LABEL[chosen[0].category] : null;
+  const cat = chosen.length && chosen.every((m) => m.category === chosen[0].category) ? panelLabel(chosen[0].category) : null;
   const dates = [...new Set(chosen.flatMap((m) => m.points.map((x) => x.date)))].sort();
   const t0 = dates.length ? new Date(dates[0]).getTime() : 0;
   const t1 = Math.max(new Date(`${today}T23:59:59`).getTime(), t0 + 864e5);
@@ -720,9 +725,9 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
   const fell = chosen.filter((m) => dir(m) === "fell").map(short);
   const rose = chosen.filter((m) => dir(m) === "rose").map(short);
   const same = chosen.filter((m) => dir(m) === "same").map(short);
-  const join = (a: string[]) => (a.length <= 1 ? a.join("") : `${a.slice(0, -1).join(", ")} and ${a[a.length - 1]}`);
+  const join = (a: string[]) => (a.length <= 1 ? a.join("") : t("{list} and {last}", { list: a.slice(0, -1).join(t(", ")), last: a[a.length - 1] }));
   const since = dates.length ? monthShort(dates[0]) : "";
-  const insight = [fell.length ? `${join(fell)} fell since ${since}` : null, rose.length ? `${join(rose)} rose since ${since}` : null, same.length ? `${join(same)} did not change` : null].filter(Boolean).join("; ");
+  const insight = [fell.length ? t("{names} fell since {date}", { names: join(fell), date: since }) : null, rose.length ? t("{names} rose since {date}", { names: join(rose), date: since }) : null, same.length ? t("{names} did not change", { names: join(same) }) : null].filter(Boolean).join(t("; "));
   const ticks = (() => {
     const out: { pos: number; label: string }[] = [];
     const start = new Date(t0 - pad);
@@ -734,16 +739,16 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
     }
     return out.slice(-5);
   })();
-  const numberWord = ["", "One chart", "Two charts", "Three charts", "Four charts"][chosen.length] ?? `${chosen.length} charts`;
+  const numberWord = ["", t("One chart"), t("Two charts"), t("Three charts"), t("Four charts")][chosen.length] ?? tn(chosen.length, "{n} charts", "{n} charts");
 
   return (
     <>
-      <DetailHead eyebrow={name} title={cat ? `Compare ${cat.toLowerCase()}` : "Compare results"} onBack={onBack} />
+      <DetailHead eyebrow={name} title={cat ? t("Compare {category}", { category: cat.toLowerCase() }) : t("Compare results")} onBack={onBack} />
       <SegmentedTabs
         className="mb-[10px]"
         items={[
-          { key: "range", label: "Against range" },
-          { key: "own", label: "Own scales" },
+          { key: "range", label: t("Against range") },
+          { key: "own", label: t("Own scales") },
         ]}
         activeKey={mode}
         onChange={(k) => setMode(k as "range" | "own")}
@@ -756,7 +761,7 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
             <span style={{ width: 8, height: 8, borderRadius: 9999, background: cols[i] }} />
             {short(m)}
             {chosen.length > 1 && (
-              <button type="button" aria-label={`Remove ${m.name}`} onClick={() => onKeys(keys.filter((k) => k !== m.key))} className="tap flex items-center justify-center relative before:absolute before:-inset-2 before:content-['']" style={{ width: 22, height: 22 }}>
+              <button type="button" aria-label={t("Remove {name}", { name: m.name })} onClick={() => onKeys(keys.filter((k) => k !== m.key))} className="tap flex items-center justify-center relative before:absolute before:-inset-2 before:content-['']" style={{ width: 22, height: 22 }}>
                 <X size={11} strokeWidth={2.4} aria-hidden style={{ color: INK.chF }} />
               </button>
             )}
@@ -765,7 +770,7 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
         {chosen.length < 4 && all.length > chosen.length && (
           <button type="button" onClick={(e) => setAddEl(e.currentTarget)} className="tap inline-flex items-center" style={{ gap: 4, height: 30, padding: "0 10px", borderRadius: 10, background: INK.soft, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
             <Plus size={12} strokeWidth={2.4} aria-hidden />
-            Add
+            {t("Add")}
           </button>
         )}
       </div>
@@ -784,8 +789,8 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
       {mode === "range" ? (
         <>
           <ProChart
-            title="Position in each lab range"
-            question={`Are ${cat ? `the ${cat.toLowerCase()}` : "these results"} moving together?`}
+            title={t("Position in each lab range")}
+            question={cat ? t("Are the {category} moving together?", { category: cat.toLowerCase() }) : t("Are these results moving together?")}
             questionIcon
             x={dates}
             xPos={dates.map(pos)}
@@ -793,10 +798,10 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
             min={-20}
             max={170}
             height={180}
-            band={{ low: 0, high: 100, label: "Inside each lab range" }}
+            band={{ low: 0, high: 100, label: t("Inside each lab range") }}
             refs={[
-              { value: 100, label: "Upper limit", side: "right", dashed: false },
-              { value: 0, label: "Lower limit", side: "right", dashed: false },
+              { value: 100, label: t("Upper limit"), side: "right", dashed: false },
+              { value: 0, label: t("Lower limit"), side: "right", dashed: false },
             ]}
             series={chosen.map((m, i) => ({
               key: m.key,
@@ -818,16 +823,16 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
               lines: chosen
                 .map((m) => {
                   const pt = m.points.find((x) => x.date === dates[j]);
-                  return pt ? `${short(m)} ${pt.value} ${m.unit} · ${Math.round(rangePosition(pt.value, m.low, topOf(m)))}% of range` : null;
+                  return pt ? t("{name} {value} {unit} · {pct}% of range", { name: short(m), value: pt.value, unit: m.unit, pct: Math.round(rangePosition(pt.value, m.low, topOf(m))) }) : null;
                 })
                 .filter((l): l is string => !!l),
             })}
             defaultPin={dates.length - 1}
-            insight={insight ? `${insight}. Filled points are outside their range.` : undefined}
-            scrubHint="Drag sideways to scrub, tap a point to pin it"
+            insight={insight ? t("{insight}. Filled points are outside their range.", { insight }) : undefined}
+            scrubHint={t("Drag sideways to scrub, tap a point to pin it")}
           />
           <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5 }}>
-            {`Each line is placed against its own lab range: 0 is the lower limit, 100 the upper.${noTop.map((m) => ` ${m.name} has no upper limit, so ${roundMarker(topOf(m))} ${m.unit} is used as its top.`).join("")}`}
+            {`${t("Each line is placed against its own lab range: 0 is the lower limit, 100 the upper.")}${noTop.map((m) => ` ${t("{name} has no upper limit, so {value} {unit} is used as its top.", { name: m.name, value: roundMarker(topOf(m)), unit: m.unit })}`).join("")}`}
           </p>
         </>
       ) : (
@@ -848,7 +853,7 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
                 min={bottom - padV}
                 max={top + padV}
                 height={96}
-                band={m.low != null || m.high != null ? { low: m.low ?? bottom - padV, high: m.high ?? top + padV, label: "Lab range" } : undefined}
+                band={m.low != null || m.high != null ? { low: m.low ?? bottom - padV, high: m.high ?? top + padV, label: t("Lab range") } : undefined}
                 series={[{ key: "v", label: short(m), type: "line", color: cols[i], values: vals, noLegend: true, pointColor: (j: number) => statusInk(markerStatus(vals[j], m.points[j].low ?? m.low, m.points[j].high ?? m.high), dark) }]}
                 pinned={idx >= 0 ? idx : null}
                 onPinnedChange={(j) => setPinDate(j == null ? null : m.points[j].date)}
@@ -857,7 +862,7 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
             );
           })}
           <p className="flex" style={{ gap: 6, fontSize: textPx(12), color: INK.chS, lineHeight: 1.45 }}>
-            {`${numberWord} on one time axis, each on its own scale.${chosen.length > 1 ? ` Scrubbing one moves the pin on ${chosen.length === 2 ? "both" : `all ${chosen.length === 3 ? "three" : "four"}`}.` : ""}`}
+            {`${t("{charts} on one time axis, each on its own scale.", { charts: numberWord })}${chosen.length > 1 ? ` ${chosen.length === 2 ? t("Scrubbing one moves the pin on both.") : chosen.length === 3 ? t("Scrubbing one moves the pin on all three.") : t("Scrubbing one moves the pin on all four.")}` : ""}`}
           </p>
         </>
       )}
@@ -901,8 +906,8 @@ const TestPage: React.FC<{
     const lo = pt.low ?? m.low;
     const hi = pt.high ?? m.high;
     const s = markerStatus(pt.value, lo, hi);
-    if (s === "out") return hi != null && pt.value > hi ? `Above ${hi} ${m.unit}` : `Below ${lo} ${m.unit}`;
-    if (s === "border") return hi != null && pt.value > hi - (lo != null ? (hi - lo) * 0.1 : hi * 0.1) ? "Within 10% of the upper limit" : "Within 10% of the lower limit";
+    if (s === "out") return hi != null && pt.value > hi ? t("Above {low} {unit}", { low: hi, unit: m.unit }) : t("Below {low} {unit}", { low: lo ?? "", unit: m.unit });
+    if (s === "border") return hi != null && pt.value > hi - (lo != null ? (hi - lo) * 0.1 : hi * 0.1) ? t("Within 10% of the upper limit") : t("Within 10% of the lower limit");
     return null;
   };
   const toBlood = (m: Marker): BloodMarker => {
@@ -912,35 +917,35 @@ const TestPage: React.FC<{
 
   return (
     <>
-      <DetailHead eyebrow={`${name} · Biomarkers`} title={`Test · ${dateLong(date)}`} onBack={onBack} />
+      <DetailHead eyebrow={`${name} · ${t("Biomarkers")}`} title={t("Test · {date}", { date: dateLong(date) })} onBack={onBack} />
       <p style={{ fontSize: textPx(12), color: INK.chS, marginBottom: 10 }}>
-        {labsOn ? `Shared as part of ${firstName}'s lab history` : sharedAt ? `${inTest.length} result${inTest.length === 1 ? "" : "s"} shared individually by ${firstName} on ${dateLong(sharedAt.slice(0, 10))}` : `Shared by ${firstName}`}
+        {labsOn ? t("Shared as part of {firstName}'s lab history", { firstName }) : sharedAt ? tn(inTest.length, "{n} result shared individually by {firstName} on {date}", "{n} results shared individually by {firstName} on {date}", { firstName, date: dateLong(sharedAt.slice(0, 10)) }) : t("Shared by {firstName}", { firstName })}
       </p>
       {!labsOn && (
         <SoftLine icon={Info}>
-          {"Only the results shared one at a time show here. "}
+          {`${t("Only the results shared one at a time show here.")} `}
           <button type="button" onClick={onAsk} className="tap" style={{ fontWeight: 700, color: INK.prDeep }}>
-            {`Ask ${firstName} to share the whole test`}
+            {t("Ask {firstName} to share the whole test", { firstName })}
           </button>
         </SoftLine>
       )}
       {others.length > 0 && (
         <>
-          <p style={{ fontSize: textPx(11), fontWeight: 600, color: INK.chF, marginBottom: 6 }}>Compare with</p>
-          <ChipRow label="Compare with" items={[{ key: "", label: "None" }, ...others.map((o) => ({ key: o.id, label: dayLabel(o.date) }))]} active={other ?? ""} onChange={(k) => setOther(k || null)} />
+          <p style={{ fontSize: textPx(11), fontWeight: 600, color: INK.chF, marginBottom: 6 }}>{t("Compare with")}</p>
+          <ChipRow label={t("Compare with")} items={[{ key: "", label: t("None") }, ...others.map((o) => ({ key: o.id, label: dayLabel(o.date) }))]} active={other ?? ""} onChange={(k) => setOther(k || null)} />
         </>
       )}
       {otherPanel && <CompareTests a={otherPanel} b={{ id: panelId, date }} markers={markers} />}
       {panel?.filePath && (
-        <ListCard rows={[{ key: "rep", icon: FileText, title: "Lab report", meta: `${panel.fileType === "pdf" ? `PDF${panel.filePages ? ` · ${panel.filePages} pages` : ""}` : "Image"} · opens in the viewer`, onClick: () => setViewing(true) }]} />
+        <ListCard rows={[{ key: "rep", icon: FileText, title: t("Lab report"), meta: t("{kind} · opens in the viewer", { kind: panel.fileType === "pdf" ? (panel.filePages ? tn(panel.filePages, "PDF · {n} pages", "PDF · {n} pages") : "PDF") : t("Image") }), onClick: () => setViewing(true) }]} />
       )}
       {[...byCat.entries()].map(([cat, rows]) => {
         const flagged = rows.filter((r) => markerStatus(r.pt.value, r.pt.low ?? r.m.low, r.pt.high ?? r.m.high) !== "in").length;
         return (
           <div key={cat} style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "12px 14px 4px", marginBottom: 10 }}>
             <p className="flex justify-between" style={{ gap: 8 }}>
-              <span style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{PANEL_LABEL[cat] ?? cat}</span>
-              <span style={{ fontSize: textPx(11.5), color: INK.chF }}>{`${rows.length} result${rows.length === 1 ? "" : "s"}${flagged ? ` · ${flagged} flagged` : ""}`}</span>
+              <span style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{panelLabel(cat)}</span>
+              <span style={{ fontSize: textPx(11.5), color: INK.chF }}>{`${tn(rows.length, "{n} result", "{n} results")}${flagged ? ` · ${t("{n} flagged", { n: flagged })}` : ""}`}</span>
             </p>
             {rows.map(({ m, pt }, i) => {
               const s = markerStatus(pt.value, pt.low ?? m.low, pt.high ?? m.high);
@@ -955,7 +960,7 @@ const TestPage: React.FC<{
                     </span>
                     {(line || prev) && (
                       <span className="block" style={{ fontSize: textPx(11.5), color: line ? statusInk(s, dark) : INK.chF }}>
-                        {[line, prev ? `Was ${prev.value} · ${signed(pt.value - prev.value)}` : null].filter(Boolean).join(" · ")}
+                        {[line, prev ? t("Was {value} · {change}", { value: prev.value, change: signed(pt.value - prev.value) }) : null].filter(Boolean).join(" · ")}
                       </span>
                     )}
                   </span>
@@ -971,14 +976,14 @@ const TestPage: React.FC<{
         );
       })}
       <div className="flex" style={{ gap: 8, marginTop: 4 }}>
-        <CtaButton className="flex-1" size="base" variant="secondary" icon={<MessageCircle size={15} />} label={`Message ${firstName}`} onClick={onMessage} aria-label={`Message ${firstName}`} />
+        <CtaButton className="flex-1" size="base" variant="secondary" icon={<MessageCircle size={15} />} label={t("Message {name}", { name: firstName })} onClick={onMessage} aria-label={t("Message {name}", { name: firstName })} />
       </div>
       <BiomarkerChart
         open={!!open}
         onClose={() => setOpen(null)}
         marker={open ? toBlood(open) : null}
         flag={open?.flag ?? null}
-        panel={open ? PANEL_LABEL[open.category] ?? null : null}
+        panel={open ? (PANEL_LABEL[open.category] ? t(PANEL_LABEL[open.category]) : null) : null}
         sharedNote={open ? open.points.find((x) => x.note)?.note ?? null : null}
         firstName={firstName}
         onNote={() => {
@@ -994,7 +999,7 @@ const TestPage: React.FC<{
             : undefined
         }
       />
-      <FileViewerScreen open={viewing} onClose={() => setViewing(false)} path={panel?.filePath ?? null} bucket="lab-reports" title={panel?.name ?? "Lab report"} />
+      <FileViewerScreen open={viewing} onClose={() => setViewing(false)} path={panel?.filePath ?? null} bucket="lab-reports" title={panel?.name ?? t("Lab report")} />
       {askSheet}
     </>
   );
@@ -1009,9 +1014,9 @@ const CompareTests: React.FC<{ a: LabPanel; b: { id: string; date: string }; mar
   const dist = (m: Marker, v: number) => (m.high != null && v > m.high ? v - m.high : m.low != null && v < m.low ? m.low - v : 0);
   return (
     <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "12px 14px", marginBottom: 12 }}>
-      <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch, marginBottom: 6 }}>{`${dayLabel(a.date)} vs ${dayLabel(b.date)}`}</p>
+      <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch, marginBottom: 6 }}>{t("{a} vs {b}", { a: dayLabel(a.date), b: dayLabel(b.date) })}</p>
       <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1fr) auto auto auto", gap: "6px 10px", fontSize: textPx(12) }}>
-        <span style={{ color: INK.chF, fontWeight: 600 }}>Result</span>
+        <span style={{ color: INK.chF, fontWeight: 600 }}>{t("Result")}</span>
         <span style={{ color: INK.chF, fontWeight: 600, textAlign: "end" }}>{dayLabel(a.date)}</span>
         <span style={{ color: INK.chF, fontWeight: 600, textAlign: "end" }}>{dayLabel(b.date)}</span>
         <span />
@@ -1029,7 +1034,7 @@ const CompareTests: React.FC<{ a: LabPanel; b: { id: string; date: string }; mar
           );
         })}
       </div>
-      <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 8, lineHeight: 1.5 }}>{`Green: moved toward range. Red: moved away.${onlyB ? ` ${onlyB} result${onlyB === 1 ? "" : "s"} from ${dayLabel(b.date)} were not in the ${monthShort(a.date)} test.` : ""}`}</p>
+      <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 8, lineHeight: 1.5 }}>{`${t("Green: moved toward range. Red: moved away.")}${onlyB ? ` ${tn(onlyB, "{n} result from {date} were not in the {month} test.", "{n} results from {date} were not in the {month} test.", { date: dayLabel(b.date), month: monthShort(a.date) })}` : ""}`}</p>
     </div>
   );
 };

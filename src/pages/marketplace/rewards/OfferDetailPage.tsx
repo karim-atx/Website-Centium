@@ -26,6 +26,10 @@ import { RedeemSheet } from "./RedeemDialogs";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { ReviewReportForm } from "../../../components/professionals/ReviewForms";
 import { OFFER_REPORT_NOTE_MAX, OFFER_REPORT_REASONS, hasReportedOffer, reportOffer } from "../../../services/offers/report";
+import { PremiumLabel } from "../../../components/premium/PremiumAskHost";
+import { PremiumOfferNote } from "../../../components/premium/OfferPremium";
+import { usePremium } from "../../../services/premium/hooks";
+import { offerNeedsPremium } from "../../../services/premium/g2";
 
 // Market + Share 3.0 · W2 · C-MO.4.4.2 Offer detail (`offer`, `offerLocked`)
 // at /app/marketplace/rewards/:offerId. Literal values, Client Explore
@@ -107,6 +111,7 @@ export default function OfferDetailPage() {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const back = useBack("/app/marketplace?tab=rewards");
+  const { premium } = usePremium();
   const reduce = useReducedMotion();
   const press = usePress();
   const termsId = useId();
@@ -185,6 +190,8 @@ export default function OfferDetailPage() {
   const gate = summaryKnown ? redeemGate(o, balance) : { locked: true, line: null };
   // Round F (AB2, AB3): the note that takes Redeem's place.
   const blocked = o.isOwnBusiness ? t(OWN_BUSINESS_OFFER_LINE) : voucherGateLine(eligibility);
+  // Round G2: a free member meets "Premium members only" and the prompt in Redeem's place.
+  const needsPremium = !o.isOwnBusiness && offerNeedsPremium(o.premiumOnly, premium);
   const cells = offerCells(o);
   const ownOffer = o.ownerType === "professional" && !!authUserId && o.ownerId === authUserId;
   const ownerHref = o.ownerType === "business" ? (o.ownerId ? `/app/marketplace/business?id=${encodeURIComponent(o.ownerId)}` : null) : o.ownerId ? `/app/professionals/${encodeURIComponent(o.ownerId)}` : null;
@@ -208,6 +215,8 @@ export default function OfferDetailPage() {
       </div>
 
       <h1 style={{ margin: "12px 0 0", fontSize: textPx(24), lineHeight: linePx(30), fontWeight: 800 }}>{o.headline}</h1>
+      {/* Round G2: an offer kept for Premium members (only while the switch is on). */}
+      {o.premiumOnly ? <PremiumLabel className="mt-1.5" /> : null}
 
       {/* The cost, in the client's tier colours */}
       <div style={{ marginTop: 12, borderRadius: 18, background: tier.fill, border: `0.5px solid ${tier.border}`, padding: "14px 16px", display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
@@ -304,7 +313,9 @@ export default function OfferDetailPage() {
       ) : null}
 
       <PinnedSlot>
-        {blocked ? (
+        {needsPremium ? (
+          <PremiumOfferNote />
+        ) : blocked ? (
           <div role="note" style={{ display: "flex", flexDirection: "column", gap: 4, lineHeight: "normal", textAlign: "center", borderRadius: 16, background: m.soft, padding: "14px 16px" }}>
             <span style={{ fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 700, color: m.ink }}>{blocked}</span>
             {o.isOwnBusiness ? null : <span style={{ fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: m.ink2 }}>{t(POINTS_KEEP_COLLECTING)}</span>}

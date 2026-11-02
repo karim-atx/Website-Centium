@@ -5,6 +5,7 @@ import type {
   EnduranceTarget,
 } from "../../types";
 import { formatStep } from "./prescription";
+import { t, tk } from "../../i18n/core";
 
 // Building and checking an endurance plan, client-side.
 //
@@ -45,20 +46,20 @@ export function checkTarget(target: EnduranceTarget, where: string): string | nu
     case "hr_zone":
       return isPositiveInt(target.zone) && target.zone <= 5
         ? null
-        : `${where}: pick a heart-rate zone from 1 to 5.`;
+        : t("{step}: pick a heart-rate zone from 1 to 5.", { step: t(where) });
     case "rpe":
       return isPositiveInt(target.value) && target.value <= 10
         ? null
-        : `${where}: effort runs from 1 to 10.`;
+        : t("{step}: effort runs from 1 to 10.", { step: t(where) });
     case "pace": {
       if (!isPositiveInt(target.min_sec_per_km) || !isPositiveInt(target.max_sec_per_km)) {
-        return `${where}: enter both ends of the pace range.`;
+        return t("{step}: enter both ends of the pace range.", { step: t(where) });
       }
       // The SQL says min <= max. Said here as "the faster end first", which is
       // what the two fields mean to somebody writing a session.
       return target.min_sec_per_km <= target.max_sec_per_km
         ? null
-        : `${where}: the faster pace goes first.`;
+        : t("{step}: the faster pace goes first.", { step: t(where) });
     }
   }
 }
@@ -66,9 +67,9 @@ export function checkTarget(target: EnduranceTarget, where: string): string | nu
 /** Mirrors valid_endurance_step(). */
 export function checkStep(step: EnduranceStep, where: string): string | null {
   if (step.measure === "time") {
-    if (!isPositiveInt(step.seconds)) return `${where}: set a time longer than zero.`;
+    if (!isPositiveInt(step.seconds)) return t("{step}: set a time longer than zero.", { step: t(where) });
   } else {
-    if (!isPositiveInt(step.meters)) return `${where}: set a distance longer than zero.`;
+    if (!isPositiveInt(step.meters)) return t("{step}: set a distance longer than zero.", { step: t(where) });
   }
   return checkTarget(step.target, where);
 }
@@ -81,25 +82,25 @@ export function checkStep(step: EnduranceStep, where: string): string | null {
  * somebody to ignore all six.
  */
 export function checkPlan(plan: EndurancePlan): string | null {
-  if (plan.version !== 1) return "This plan was written by a newer version of Centium.";
+  if (plan.version !== 1) return t("This plan was written by a newer version of Centium.");
   if (plan.warmup) {
-    const problem = checkStep(plan.warmup, "Warm-up");
+    const problem = checkStep(plan.warmup, tk("Warm-up"));
     if (problem) return problem;
   }
   if (plan.main.type === "steady") {
-    const problem = checkStep(plan.main.step, "Main set");
+    const problem = checkStep(plan.main.step, tk("Main set"));
     if (problem) return problem;
   } else {
     if (!isPositiveInt(plan.main.repeats) || plan.main.repeats > 100) {
-      return "Main set: repeats run from 1 to 100.";
+      return t("Main set: repeats run from 1 to 100.");
     }
-    const work = checkStep(plan.main.work, "Work");
+    const work = checkStep(plan.main.work, tk("Work"));
     if (work) return work;
-    const recovery = checkStep(plan.main.recovery, "Recovery");
+    const recovery = checkStep(plan.main.recovery, tk("Recovery"));
     if (recovery) return recovery;
   }
   if (plan.cooldown) {
-    const problem = checkStep(plan.cooldown, "Cool-down");
+    const problem = checkStep(plan.cooldown, tk("Cool-down"));
     if (problem) return problem;
   }
   return null;
@@ -191,21 +192,21 @@ interface Row {
 /** The plan flattened into the steps somebody actually performs, in order. */
 export function planRows(plan: EndurancePlan): Row[] {
   const rows: Row[] = [];
-  if (plan.warmup) rows.push({ key: "warmup", label: "Warm-up", detail: formatStep(plan.warmup) });
+  if (plan.warmup) rows.push({ key: "warmup", label: t("Warm-up"), detail: formatStep(plan.warmup) });
   if (plan.main.type === "steady") {
-    rows.push({ key: "main", label: "Main set", detail: formatStep(plan.main.step) });
+    rows.push({ key: "main", label: t("Main set"), detail: formatStep(plan.main.step) });
   } else {
     const { repeats, work, recovery } = plan.main;
     for (let i = 0; i < repeats; i++) {
-      rows.push({ key: `work-${i}`, label: `Rep ${i + 1} of ${repeats}`, detail: formatStep(work as EnduranceStep) });
+      rows.push({ key: `work-${i}`, label: t("Rep {n} of {total}", { n: i + 1, total: repeats }), detail: formatStep(work as EnduranceStep) });
       // The last recovery is left off: nobody jogs a recovery lap after the
       // final rep of a session that has a cool-down of its own.
       if (i < repeats - 1) {
-        rows.push({ key: `rec-${i}`, label: "Recovery", detail: formatStep(recovery as EnduranceStep) });
+        rows.push({ key: `rec-${i}`, label: t("Recovery"), detail: formatStep(recovery as EnduranceStep) });
       }
     }
   }
-  if (plan.cooldown) rows.push({ key: "cooldown", label: "Cool-down", detail: formatStep(plan.cooldown) });
+  if (plan.cooldown) rows.push({ key: "cooldown", label: t("Cool-down"), detail: formatStep(plan.cooldown) });
   return rows;
 }
 

@@ -10,8 +10,10 @@ import { AIVoiceLogger } from "../../components/food/AIVoiceLogger";
 import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet";
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
 import { DobPromptCard } from "../../components/profile/DobPromptCard";
-import { ChevronRight, ArrowRight, Sparkles, Store, Crown, HeartHandshake, X, Bell } from "lucide-react";
-import { CLIENT_KINDS, fetchUnreadNotificationCount, unreadBadge } from "../../services/notifications";
+import { ChevronRight, ArrowRight, Sparkles, Store, HeartHandshake, X, Bell } from "lucide-react";
+import { PremiumBadge } from "../../components/premium/PremiumBadge";
+import { clientKinds, fetchUnreadNotificationCount, unreadBadge } from "../../services/notifications";
+import { useSwitches } from "../../services/premium/hooks";
 import { useNavigate } from "react-router-dom";
 import BusinessDashboard from "../marketplace/BusinessDashboard";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
@@ -19,6 +21,8 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { useInboxRealtime } from "../../hooks/useInboxRealtime";
 import { ProReminders } from "../../components/client-forms/ProReminders";
 import { t, tk } from "../../i18n/core";
+import { StreakShieldsLine } from "../../components/premium/StreakShields";
+import { WeeklyReviewCard } from "./review/WeeklyReviewCard";
 
 // The streaks card's height, so its placeholder does not shift the page.
 const STREAKS_PLACEHOLDER_HEIGHT = 176;
@@ -33,7 +37,6 @@ function getGreeting() {
 export default function Home() {
   const {
     user,
-    premiumPlan,
     recoverySensitive,
     recoveryModePending,
     recoverySensitiveIntroSeen,
@@ -73,7 +76,8 @@ export default function Home() {
             {t(getGreeting())}
             {t(", ")}
             {user.firstName}
-            {premiumPlan && <Crown size={16} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
+            {/* Round G1 (G9): the Premium badge reads my_premium(), not browser storage. */}
+            <PremiumBadge />
           </h1>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -146,8 +150,17 @@ export default function Home() {
       {recoveryModePending ? (
         <NumberPlaceholder height={STREAKS_PLACEHOLDER_HEIGHT} label={t("Streaks")} className="mb-[13px]" />
       ) : (
-        !recoverySensitive && <StreaksBar />
+        !recoverySensitive && (
+          <>
+            <StreaksBar />
+            {/* Round G2: Premium's streak shields (nothing while the switch is off or without Premium). */}
+            <StreakShieldsLine className="mb-[13px]" />
+          </>
+        )
       )}
+
+      {/* Round G3: the weekly review, where the Monday push lands (nothing while the Premium switch is off). */}
+      {!isBusiness && <WeeklyReviewCard className="mb-[13px]" />}
 
       {isBusiness && (
         <Card
@@ -227,16 +240,17 @@ function HomeBell() {
   const { authUserId } = useApp();
   const [unread, setUnread] = useState(0);
   const [tick, setTick] = useState(0);
+  const kinds = clientKinds(!!useSwitches().switches?.premiumOn);
   useEffect(() => {
     let cancelled = false;
-    void fetchUnreadNotificationCount(CLIENT_KINDS).then((r) => {
+    void fetchUnreadNotificationCount(kinds).then((r) => {
       if (!cancelled && r.ok) setUnread(r.value);
     });
     return () => {
       cancelled = true;
     };
-  }, [tick]);
-  useInboxRealtime(authUserId, "bell", CLIENT_KINDS, () => setTick((t) => t + 1));
+  }, [tick, kinds]);
+  useInboxRealtime(authUserId, "bell", kinds, () => setTick((t) => t + 1));
   return (
     <button
       type="button"

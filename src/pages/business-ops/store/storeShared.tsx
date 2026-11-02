@@ -9,6 +9,7 @@ import { startMemberThread } from "../../../services/messaging";
 import type { Load } from "../../../services/store/backend";
 import type { StepGlyph } from "../../../services/store/orderSteps";
 import type { StoreOrder } from "../../../services/store/orders";
+import { t, tk } from "../../../i18n/core";
 
 export const STEP_ICON: Record<StepGlyph, LucideIcon> = {
   check: Check,
@@ -23,9 +24,9 @@ export const STEP_ICON: Record<StepGlyph, LucideIcon> = {
 };
 
 export const STEP_CHIP = {
-  done: { label: "Done", tone: "good" },
-  next: { label: "Next", tone: "pale" },
-  later: { label: "Later", tone: "soft" },
+  done: { label: tk("Done"), tone: "good" },
+  next: { label: tk("Next"), tone: "pale" },
+  later: { label: tk("Later"), tone: "soft" },
 } as const;
 
 /**
@@ -34,15 +35,15 @@ export const STEP_CHIP = {
  * name, or "Guest" for a desk sale). Never formatted here.
  */
 export function customerLabel(o: { customerLabel: string | null }): string {
-  return o.customerLabel ?? "Customer";
+  return o.customerLabel ?? t("Customer");
 }
 
 /** The label plus the safeguarding flag for list subs ("Member #0042 · Under 18"). */
 export function customerWho(o: { customerLabel: string | null; customerIsMinor?: boolean }): string {
-  return o.customerIsMinor ? `${customerLabel(o)} · Under 18` : customerLabel(o);
+  return o.customerIsMinor ? `${customerLabel(o)} · ${t("Under 18")}` : customerLabel(o);
 }
 
-export const methodWord = (o: Pick<StoreOrder, "fulfilment">) => (o.fulfilment === "delivery" ? "Delivery" : "Pickup");
+export const methodWord = (o: Pick<StoreOrder, "fulfilment">) => (o.fulfilment === "delivery" ? t("Delivery") : t("Pickup"));
 
 /** The business row this owner manages (id + type), from the B5 business read. */
 export function useStoreBusiness() {

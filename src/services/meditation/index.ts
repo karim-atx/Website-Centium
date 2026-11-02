@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { MeditationSummary } from "./logic";
+import { tk } from "../../i18n/core";
 
 // The meditation log (Database 20261006000000..40000).
 //
@@ -23,6 +24,8 @@ export interface MeditationSessionInput {
   cyclesCompleted?: number;
   /** B3 (PB-O-21): poses finished in a Stretching / Yoga sequence (0 to 500). */
   posesCompleted?: number;
+  /** Round G3: the library session (mind_library().content_id), when the run is one. Today's sessions send none. */
+  contentId?: string;
 }
 
 /** The table's CHECK: null, or a whole number 0 to 500. */
@@ -40,16 +43,19 @@ export async function logMeditationSession(input: MeditationSessionInput): Promi
       // B3 columns, INSERT-granted; not in the production-generated types yet.
       cycles_completed: count(input.cyclesCompleted),
       poses_completed: count(input.posesCompleted),
+      // Round G3: meditation_sessions.content_id (INSERT-granted since 20261116000000), only for a library session.
+      ...(input.contentId ? { content_id: input.contentId } : {}),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     if (!error) return { ok: true };
     if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
     // ATX02: 20 sessions an hour. Real use does not reach it.
-    if (error.code === "ATX02") return { ok: false, message: "That's a lot of sessions in an hour. Try again a little later." };
+    // Messages stay English here (the runners compare them); the screen shows them through t().
+    if (error.code === "ATX02") return { ok: false, message: tk("That's a lot of sessions in an hour. Try again a little later.") };
     console.error("[meditation] Could not save a session:", error.code, error.message);
-    return { ok: false, message: "Couldn't save. Try again." };
+    return { ok: false, message: tk("Couldn't save. Try again.") };
   } catch (e) {
-    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : "Couldn't save. Try again." };
+    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : tk("Couldn't save. Try again.") };
   }
 }
 

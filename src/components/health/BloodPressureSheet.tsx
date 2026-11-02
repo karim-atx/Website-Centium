@@ -32,6 +32,7 @@ import { browserOffline, enqueueLog, isOfflineFailure, QUEUED_COPY } from "../..
 import { FieldLabel, MeasuredOnPopup, Segmented, WhenField, hairAt, isoDay, partBSheetTone, whenLabel } from "./log/LogSheetParts";
 import type { BloodPressureInput } from "../../services/blood-pressure/reading";
 import { AlertTriangle, Info, Trash2 } from "lucide-react";
+import { t, tk } from "../../i18n/core";
 
 // HE1.6.1 "Log blood pressure" (health-b-handover.md 3014-3145): the shared
 // Log sheet for one reading. Systolic / Diastolic / Pulse boxes in one row,
@@ -55,14 +56,14 @@ import { AlertTriangle, Info, Trash2 } from "lucide-react";
 // - Editing and deleting a reading.
 
 const ARMS: { value: BpArm; label: string }[] = [
-  { value: "left", label: "Left" },
-  { value: "right", label: "Right" },
+  { value: "left", label: tk("Left") },
+  { value: "right", label: tk("Right") },
 ];
 // V6-167: "Lying" (was "Lying down").
 const POSITIONS: { value: BpPosition; label: string }[] = [
-  { value: "sitting", label: "Sitting" },
-  { value: "standing", label: "Standing" },
-  { value: "lying", label: "Lying" },
+  { value: "sitting", label: tk("Sitting") },
+  { value: "standing", label: tk("Standing") },
+  { value: "lying", label: tk("Lying") },
 ];
 
 const digitsOnly = (v: string, max: number) => v.replace(/\D/g, "").slice(0, max);
@@ -130,7 +131,7 @@ export const BloodPressureSheet: React.FC<{
 
   const save = async () => {
     if (systolic === null || diastolic === null) {
-      setError("Enter both numbers.");
+      setError(t("Enter both numbers."));
       return;
     }
     const reading = {
@@ -145,11 +146,11 @@ export const BloodPressureSheet: React.FC<{
     // fields rather than after a round trip.
     const invalid = validateBloodPressure(reading);
     if (invalid) {
-      setError(invalid);
+      setError(t(invalid));
       return;
     }
     if (!authUserId) {
-      setError("You need to be signed in to save a reading.");
+      setError(t("You need to be signed in to save a reading."));
       return;
     }
     const recordedAt = when.toISOString();
@@ -183,7 +184,7 @@ export const BloodPressureSheet: React.FC<{
         queue();
         return;
       }
-      setError(result.message);
+      setError(t(result.message));
       return;
     }
     onSaved();
@@ -201,7 +202,7 @@ export const BloodPressureSheet: React.FC<{
     const result = await deleteBloodPressure(editing.id);
     setSaving(false);
     if (!result.ok) {
-      setError(result.message);
+      setError(t(result.message));
       return;
     }
     onSaved();
@@ -229,7 +230,7 @@ export const BloodPressureSheet: React.FC<{
       <BottomSheet
         open={open && !veryHigh && !howToOpen}
         onClose={onClose}
-        title={editing ? "Edit reading" : "Log blood pressure"}
+        title={editing ? t("Edit reading") : t("Log blood pressure")}
         chrome="partB"
         tone={partBSheetTone(dark)}
         footerBottom={30}
@@ -253,7 +254,7 @@ export const BloodPressureSheet: React.FC<{
               </p>
             )}
             <CtaButton
-              label={editing ? "Save changes" : "Save reading"}
+              label={editing ? t("Save changes") : t("Save reading")}
               disabled={sys === "" || dia === ""}
               loading={saving}
               onClick={() => void save()}
@@ -266,7 +267,7 @@ export const BloodPressureSheet: React.FC<{
         <div className="flex items-start">
           <label className="block shrink-0" style={{ width: 100.3 }}>
             <p className="text-center text-charcoal-faint" style={valueLabel}>
-              Systolic
+              {t("Systolic")}
             </p>
             <input
               autoFocus={!editing}
@@ -278,12 +279,12 @@ export const BloodPressureSheet: React.FC<{
               }}
               inputMode="numeric"
               placeholder="–"
-              aria-label="Systolic, in mmHg"
+              aria-label={t("Systolic, in mmHg")}
               className={boxClass}
               style={box(sys !== "")}
             />
             <p className={unitClass} style={unit}>
-              mmHg
+              {t("mmHg")}
             </p>
           </label>
           <span
@@ -295,7 +296,7 @@ export const BloodPressureSheet: React.FC<{
           </span>
           <label className="block shrink-0" style={{ width: 100 }}>
             <p className="text-center text-charcoal-faint" style={valueLabel}>
-              Diastolic
+              {t("Diastolic")}
             </p>
             <input
               ref={diaRef}
@@ -307,18 +308,18 @@ export const BloodPressureSheet: React.FC<{
               }}
               inputMode="numeric"
               placeholder="–"
-              aria-label="Diastolic, in mmHg"
+              aria-label={t("Diastolic, in mmHg")}
               className={boxClass}
               style={box(dia !== "")}
             />
             <p className={unitClass} style={unit}>
-              mmHg
+              {t("mmHg")}
             </p>
           </label>
           <span className="flex-1" />
           <label className="block shrink-0" style={{ width: 100 }}>
             <p className="text-center text-charcoal-faint whitespace-nowrap" style={valueLabel}>
-              Pulse (optional)
+              {t("Pulse (optional)")}
             </p>
             <input
               ref={pulseRef}
@@ -326,12 +327,12 @@ export const BloodPressureSheet: React.FC<{
               onChange={(e) => setPulse(digitsOnly(e.target.value, 3))}
               inputMode="numeric"
               placeholder="–"
-              aria-label="Pulse, in beats per minute (optional)"
+              aria-label={t("Pulse, in beats per minute (optional)")}
               className={boxClass}
               style={box(pulse !== "")}
             />
             <p className={unitClass} style={unit}>
-              bpm
+              {t("bpm")}
             </p>
           </label>
         </div>
@@ -346,28 +347,28 @@ export const BloodPressureSheet: React.FC<{
 
         {/* --- arm and position (HE1.6.1 #60-#63, S7) --------------------- */}
         <div style={{ marginTop: 16 }}>
-          <FieldLabel>Arm</FieldLabel>
-          <Segmented label="Arm" options={ARMS} value={arm} onChange={setArm} clearable />
+          <FieldLabel>{t("Arm")}</FieldLabel>
+          <Segmented label={t("Arm")} options={ARMS} value={arm} onChange={setArm} clearable />
         </div>
         <div style={{ marginTop: 16 }}>
-          <FieldLabel>Position</FieldLabel>
-          <Segmented label="Position" options={POSITIONS} value={position} onChange={setPosition} clearable />
+          <FieldLabel>{t("Position")}</FieldLabel>
+          <Segmented label={t("Position")} options={POSITIONS} value={position} onChange={setPosition} clearable />
         </div>
 
         {/* --- when (HE1.6.1 #64-#68) -------------------------------------- */}
         <div style={{ marginTop: 16 }}>
-          <FieldLabel>When</FieldLabel>
-          <WhenField value={whenLabel(when, today)} onClick={() => setWhenOpen(true)} ariaLabel={`When: ${whenLabel(when, today)}`} />
+          <FieldLabel>{t("When")}</FieldLabel>
+          <WhenField value={whenLabel(when, today)} onClick={() => setWhenOpen(true)} ariaLabel={t("When: {when}", { when: whenLabel(when, today) })} />
         </div>
 
         {/* --- note (HE1.6.1 #69-#70) -------------------------------------- */}
         <div style={{ marginTop: 16 }}>
-          <FieldLabel htmlFor="bp-note">Note</FieldLabel>
+          <FieldLabel htmlFor="bp-note">{t("Note")}</FieldLabel>
           <textarea
             id="bp-note"
             value={notes}
             onChange={(e) => setNotes(e.target.value.slice(0, BP_LIMITS.notesMaxLength))}
-            placeholder="e.g. after a walk, felt dizzy"
+            placeholder={t("e.g. after a walk, felt dizzy")}
             className="block w-full bg-cream-soft text-charcoal placeholder:text-charcoal-faint resize-none focus:outline-none"
             style={{ height: 70, borderRadius: 12, padding: 12, fontSize: textPx(14), lineHeight: "20px", border: `0.5px solid ${hairAt(dark, 0.1)}` }}
           />
@@ -393,10 +394,10 @@ export const BloodPressureSheet: React.FC<{
           <div className="mt-3">
             {confirmDelete ? (
               <div className="rounded-2xl bg-cream-soft px-3.5 py-3">
-                <p className="text-[12px] text-charcoal-soft mb-2.5">Delete this reading? It won't be recoverable.</p>
+                <p className="text-[12px] text-charcoal-soft mb-2.5">{t("Delete this reading? It won't be recoverable.")}</p>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setConfirmDelete(false)} className="tap flex-1 h-10 rounded-xl text-[13px] font-bold text-charcoal-soft border border-charcoal/[0.14]">
-                    Keep it
+                    {t("Keep it")}
                   </button>
                   <button
                     type="button"
@@ -404,7 +405,7 @@ export const BloodPressureSheet: React.FC<{
                     disabled={saving}
                     className="tap flex-1 h-10 rounded-xl text-[13px] font-bold bg-status-high text-on-destructive disabled:opacity-40"
                   >
-                    Delete
+                    {t("Delete")}
                   </button>
                 </div>
               </div>
@@ -414,7 +415,7 @@ export const BloodPressureSheet: React.FC<{
                 onClick={() => setConfirmDelete(true)}
                 className="tap w-full flex items-center justify-center gap-1.5 py-2 text-[12px] font-semibold text-status-high"
               >
-                <Trash2 size={13} /> Delete this reading
+                <Trash2 size={13} /> {t("Delete this reading")}
               </button>
             )}
           </div>

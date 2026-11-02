@@ -18,6 +18,7 @@
 import type { Database } from "../../../lib/supabase/database.types";
 import type { PointsExtras } from "../points/pointsModel";
 import { appLocale } from "../../i18n/format";
+import { t, tk } from "../../i18n/core";
 
 export type AchievementCategory = Database["public"]["Enums"]["achievement_category"];
 export type AchievementLevel = Database["public"]["Enums"]["achievement_level"];
@@ -101,14 +102,14 @@ export interface Badge {
 }
 
 export const CATEGORY_LABEL: Record<AchievementCategory, string> = {
-  getting_started: "Getting started",
-  nutrition: "Nutrition",
-  training: "Training",
-  health: "Health",
-  mind: "Mind",
-  consistency: "Consistency",
-  community: "Community",
-  explorer: "Explorer",
+  getting_started: tk("Getting started"),
+  nutrition: tk("Nutrition"),
+  training: tk("Training"),
+  health: tk("Health"),
+  mind: tk("Mind"),
+  consistency: tk("Consistency"),
+  community: tk("Community"),
+  explorer: tk("Explorer"),
 };
 
 /** The catalogue's own category order, which sort_order is assigned within. */
@@ -124,9 +125,9 @@ export const CATEGORY_ORDER: AchievementCategory[] = [
 ];
 
 export const LEVEL_LABEL: Record<AchievementLevel, string> = {
-  bronze: "Bronze",
-  silver: "Silver",
-  gold: "Gold",
+  bronze: tk("Bronze"),
+  silver: tk("Silver"),
+  gold: tk("Gold"),
 };
 
 function isEarned(a: Achievement): boolean {
@@ -202,8 +203,9 @@ function clamp01(n: number): number {
  */
 export function nextRungLabel(badge: Badge): string | null {
   if (!badge.next || badge.remaining === null) return null;
-  const name = badge.next.level ? LEVEL_LABEL[badge.next.level] : badge.next.title;
-  return `${badge.remaining.toLocaleString(appLocale())} more to reach ${name}`;
+  // The level is a UI label (translated); a title is catalogue content (English, F13).
+  const name = badge.next.level ? t(LEVEL_LABEL[badge.next.level]) : badge.next.title;
+  return t("{n} more to reach {name}", { n: badge.remaining.toLocaleString(appLocale()), name });
 }
 
 /** Only the categories that actually have badges, in the catalogue's order. */

@@ -413,7 +413,7 @@ html.reduce-motion .rp-chev {
   top: 2px;
   bottom: 2px;
   width: 3px;
-  margin-left: -1.5px;
+  margin-inline-start: -1.5px;
   border-radius: 2px;
 }
 .rp-h-axis {
@@ -982,8 +982,8 @@ html.high-contrast .rp-area::placeholder {
 }
 .rp-prev-reply {
   margin-top: 10px;
-  border-left: 2px solid var(--an-primary);
-  padding-left: 10px;
+  border-inline-start: 2px solid var(--an-primary);
+  padding-inline-start: 10px;
 }
 .rp-prev-reply p:first-child {
   font-size: 11px;
@@ -1051,7 +1051,7 @@ html.dark .rp-foot .rp-cta {
 }
 .rp-menu {
   position: absolute;
-  right: 0;
+  inset-inline-end: 0;
   top: 40px;
   z-index: 5;
   min-width: 190px;
@@ -1068,4 +1068,11 @@ html.dark .rp-foot .rp-cta {
 }
 .rp-handled:disabled {
   opacity: 0.4;
+}
+
+/* Round G (EH5): right to left, a part-filled star fills from the right. */
+[dir="rtl"] .rp-star-fill {
+  left: auto;
+  right: 0;
+  justify-content: flex-end;
 }

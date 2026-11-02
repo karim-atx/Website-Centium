@@ -29,6 +29,7 @@ import {
 } from "../../../services/business-classes/schedule";
 import type { RepeatRule } from "../../../services/business-classes/scheduleRules";
 import type { Session } from "./scheduleModel";
+import { t } from "../../../i18n/core";
 import { useActivityRefresh } from "../useActivityRefresh";
 
 // The Schedule's data: this business's classes, the bookings on them, the
@@ -197,7 +198,7 @@ export function useSchedule() {
   }, [data.classes, data.bookings]);
 
   const create = useCallback(async (draft: ClassDraft) => {
-    if (!state.businessId) return { ok: false as const, message: "Save your business profile first. Classes are scheduled under it." };
+    if (!state.businessId) return { ok: false as const, message: t("Save your business profile first. Classes are scheduled under it.") };
     const r = await createClass(state.businessId, draft);
     if (r.ok) set({ classes: sortRows([...state.classes.filter((c) => c.id !== r.created.id), r.created]) });
     return r;
@@ -209,7 +210,7 @@ export function useSchedule() {
    * refuses the whole save). Returns the classes it made so far, in order.
    */
   const createSeries = useCallback(async (draft: ClassDraft, rule: RepeatRule): Promise<{ ok: true; seriesId: string; created: BusinessClassRow[] } | Fail> => {
-    if (!state.businessId) return { ok: false, message: "Save your business profile first. Classes are scheduled under it." };
+    if (!state.businessId) return { ok: false, message: t("Save your business profile first. Classes are scheduled under it.") };
     const f = classFieldsOf(draft);
     if (!f.ok) return f;
     const r = await saveClassSeries(state.businessId, f.fields, rule);
@@ -231,7 +232,7 @@ export function useSchedule() {
   const edit = useCallback(
     async (classId: string, scope: "this" | "future", draft: ClassDraft): Promise<{ ok: true; changed: number; told: number; seriesId: string | null } | Fail> => {
       const before = state.classes.find((c) => c.id === classId);
-      if (!before) return { ok: false, message: "This class isn't on your schedule any more." };
+      if (!before) return { ok: false, message: t("This class isn't on your schedule any more.") };
       const f = classFieldsOf(draft);
       if (!f.ok) return f;
       const fields = { ...f.fields };
@@ -306,10 +307,10 @@ export function useSchedule() {
     // right before deleting, so a booking made since the page loaded is never
     // removed with it.
     const fresh = await fetchClassBookings([classId]);
-    if (!fresh.ok) return { ok: false as const, message: "Couldn't delete the class. Check your connection and try again." };
+    if (!fresh.ok) return { ok: false as const, message: t("Couldn't delete the class. Check your connection and try again.") };
     if (fresh.bookings.length > 0) {
       set({ bookings: [...state.bookings.filter((b) => b.classId !== classId), ...fresh.bookings] });
-      return { ok: false as const, message: "Someone has booked this class, so it can't be deleted. Cancel it instead." };
+      return { ok: false as const, message: t("Someone has booked this class, so it can't be deleted. Cancel it instead.") };
     }
     const r = await deleteClass(classId);
     if (r.ok) set({ classes: state.classes.filter((c) => c.id !== classId), bookings: state.bookings.filter((b) => b.classId !== classId) });
@@ -317,7 +318,7 @@ export function useSchedule() {
   }, []);
 
   const nameOf = useCallback(
-    (id: string | null) => (id ? data.instructors.find((i) => i.professionalId === id)?.firstName ?? "Unnamed" : ""),
+    (id: string | null) => (id ? data.instructors.find((i) => i.professionalId === id)?.firstName ?? t("Unnamed") : ""),
     [data.instructors]
   );
 

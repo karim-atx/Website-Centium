@@ -1,3 +1,4 @@
+import { t, tn } from "../../i18n/core";
 // Market + Share 3.0 · W3 · B-MA.2 Showcase Manager: pure rules (node:test
 // loads this file). Items are business_offerings rows (D-17), read in the
 // shelf order (sort, then newest first, then id: public_showcase's).
@@ -13,7 +14,7 @@ export interface ShowcaseRowItem {
 }
 
 /** "5 items · drag to reorder" (the caps header), "1 item" singular. */
-export const itemsHeader = (n: number): string => `${n} ${n === 1 ? "item" : "items"} · drag to reorder`;
+export const itemsHeader = (n: number): string => `${tn(n, "{n} item", "{n} items")} · ${t("drag to reorder")}`;
 
 /** The display price as the board writes it ("$48", "$12.50"), or "" when none. */
 export function priceText(price: number | null): string {
@@ -23,9 +24,9 @@ export function priceText(price: number | null): string {
 
 /** The row's price line: "$48", plus the store's live stock figure ("$48 · 12 left"); "No price" when a store item has none. */
 export function priceLine(item: Pick<ShowcaseRowItem, "price" | "stock">, store: boolean): string {
-  const p = priceText(item.price) || (store ? "No price" : "");
+  const p = priceText(item.price) || (store ? t("No price") : "");
   if (!store || item.stock === null) return p;
-  return p ? `${p} · ${item.stock} left` : `${item.stock} left`;
+  return p ? `${p} · ${t("{n} left", { n: item.stock })}` : t("{n} left", { n: item.stock });
 }
 
 const OTHER = "Other";
