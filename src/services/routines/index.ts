@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { premiumRefusalMessage } from "../premium/asks";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { playlistSaveError } from "../music/playlistLink";
 import { t, tk } from "../../i18n/core";
@@ -87,6 +88,10 @@ export function resolveExerciseRef(ex: Exercise, lookup: ExerciseLookup): Exerci
 export const ROUTINE_NAME_RULE = tk("A routine name is 1 to 60 characters.");
 
 function describe(error: PostgrestError): string {
+  // Round G2: a free limit (ATXQ2) or a Premium-only refusal (ATXQ1) asks for
+  // the prompt and says so plainly; what was typed stays on screen.
+  const premiumRefusal = premiumRefusalMessage(error);
+  if (premiumRefusal) return premiumRefusal;
   const code = error.code ?? "";
   // Round E: the playlist link refused (ATXN0 / ATXN1 / ATXN2).
   const playlist = playlistSaveError(code);

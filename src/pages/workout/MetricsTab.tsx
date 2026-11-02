@@ -36,6 +36,7 @@ import { Toast } from "../../components/ui/Toast";
 import { MEASUREMENT_SITES, type MeasurementType } from "../../services/measurements/sites";
 import { AddMeasurementsSheet } from "../../components/workout/AddMeasurementsSheet";
 import { MeasurementHistorySheet } from "../../components/workout/MeasurementHistorySheet";
+import { ProgressPhotosEntry } from "./photos/ProgressPhotosEntry";
 import { textPx } from "../../theme/textSize";
 import { useClientShare } from "../../components/share/client/useClientShare";
 import { ShareEntryButton } from "../../components/share/client/ShareEntryButton";
@@ -580,6 +581,9 @@ export default function MetricsTab() {
           )
         )}
       </MetricCard>
+
+      {/* Round G4: the member's own progress photos, beside the measurements (nothing in recovery-sensitive mode or with the switch off). */}
+      <ProgressPhotosEntry />
 
       {share.sheet}
       <OneRepMaxesSheet open={oneRmOpen} onClose={() => setOneRmOpen(false)} onSelect={setLiftDetail} />

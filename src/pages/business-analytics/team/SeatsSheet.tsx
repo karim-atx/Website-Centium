@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Armchair, Banknote, Check, Clock3, CreditCard, Mail, Minus, Plus } from "lucide-react";
+import { Armchair, Banknote, Check, Clock3, CreditCard, Mail, Minus, Plus, Smartphone } from "lucide-react";
 import { upgradeMailto } from "../../../services/subscription-tiers/upgrade";
 import { MAX_BLOCKS_PER_PURCHASE, NOT_AVAILABLE, perPeriod, type CentiumCharge } from "../../../services/centium-billing";
 import type { CentiumBilling } from "../../../hooks/useCentiumBilling";
@@ -8,6 +8,9 @@ import { Buttons, ErrLine, LeadRow, RowsCard, Sheet } from "./parts";
 import { money } from "./fmt";
 import type { SeatInfo } from "./teamData";
 import { t, tn } from "../../../i18n/core";
+import { BuyInApp } from "../../../components/premium/BuyInApp";
+import { usePlanLevel } from "../../../components/premium/usePlanLevel";
+import { paysInApp } from "../../../services/premium";
 
 // AN5-022 (no free seats), AN5-057 (choose blocks), AN5-058 (confirm),
 // AN5-059 (pay: Whish shown as Soon, X-29), AN5-060 (done) and AN5-057 O1
@@ -27,6 +30,14 @@ import { t, tn } from "../../../i18n/core";
 // PENDING RULE: without RV-06 on the database (billing.available false) the
 // earlier path stays: the pay step offers the upgrade email and nothing is
 // recorded.
+//
+// G fixes 4 (the Database's G1 rule): a business that PAYS IN THE APP (the
+// business plans switch on for it, or a store plan: paysInApp on
+// business_plan_level) buys seat blocks in the Centium app only: past the
+// intro, the sheet explains what a block adds and shows the "Buy in the
+// Centium app" block, with no order, cash or bank transfer. buy_seat_blocks
+// answering ATXQ3 (a business created under the switch while it is off) lands
+// on the same step. Any other business keeps today's flow above.
 
 export type SeatsMode = "noseats" | "add" | "noplan";
 type Step = "intro" | "choose" | "confirm" | "pay" | "done" | "pending" | "cancel";
@@ -73,6 +84,9 @@ export function SeatsSheet({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [placed, setPlaced] = useState<{ n: number; amount: number | null } | null>(null);
+  const planLevel = usePlanLevel(live ? businessId : null);
+  const [refusedInApp, setRefusedInApp] = useState(false);
+  const inApp = paysInApp(planLevel.level) || refusedInApp;
 
   useEffect(() => {
     if (!open) return;
@@ -80,6 +94,7 @@ export function SeatsSheet({
     setN(1);
     setErr(null);
     setBusy(false);
+    setRefusedInApp(false);
     // The open moment decides the first step; a reload while open must not reset it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode]);
@@ -104,6 +119,11 @@ export function SeatsSheet({
     const r = await billing.buy(businessId, n);
     setBusy(false);
     if (!r.ok) {
+      if (r.kind === "in_app") {
+        // ATXQ3: this business pays in the app.
+        setRefusedInApp(true);
+        return;
+      }
       if (r.kind === "already_pending") {
         // Another device placed one: show it.
         onChanged?.();
@@ -152,6 +172,20 @@ export function SeatsSheet({
           ]}
         />
         <Buttons alt={{ label: t("Not now"), onClick: onClose }} primary={{ label: t("Add seats"), onClick: toAdd }} marginTop={16} />
+      </Sheet>
+    );
+  }
+
+  if (inApp && step !== "intro") {
+    return (
+      <Sheet open={open} onClose={onClose} title={t("Add seats")}>
+        <LeadRow icon={Smartphone}>
+          {t("Each block adds {n} seats for professionals.", { n: per })} {t("Buy seat blocks in the Centium app. The seats are added once your purchase is confirmed.")}
+        </LeadRow>
+        <RowsCard rows={[...(price !== null ? [{ l: t("Price per block"), v: each(price) }] : []), { l: t("You have"), v: have }]} />
+        <BuyInApp product="seat_blocks" line={null} className="mt-4" />
+        {billing && !billing.isOwner && <ErrLine text={t("Only the business owner can buy seats.")} />}
+        <Buttons primary={{ label: t("Done"), onClick: onClose }} marginTop={16} />
       </Sheet>
     );
   }

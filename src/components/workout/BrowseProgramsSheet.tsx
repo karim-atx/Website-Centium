@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
+import { useFreeLimit } from "../premium/useFreeLimit";
+import { ownRoutineCount } from "../../services/premium/g2";
 import { getPublicTemplates } from "../../services/templates";
 import type { TemplateLevel, WorkoutTemplate } from "../../types";
 import { ChevronLeft, Check } from "lucide-react";
@@ -52,7 +54,8 @@ export const BrowseProgramsSheet: React.FC<{
   open: boolean;
   onClose: () => void;
 }> = ({ open, onClose }) => {
-  const { authUserId, adoptTemplate } = useApp();
+  const { authUserId, adoptTemplate, routines } = useApp();
+  const { blocked } = useFreeLimit();
   const dark = useIsDark();
 
   const [programs, setPrograms] = useState<WorkoutTemplate[]>([]);
@@ -95,6 +98,8 @@ export const BrowseProgramsSheet: React.FC<{
   };
 
   const adopt = async (program: WorkoutTemplate) => {
+    // Round G2: adopting a Centium programme counts as one of your own routines.
+    if (blocked("own_routines", ownRoutineCount(routines))) return;
     setAdopting(true);
     setAdoptError(null);
     const message = await adoptTemplate(program.id);

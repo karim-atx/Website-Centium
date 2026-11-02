@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { HistoryWindowLine } from "../../premium/HistoryWindowLine";
 import { useLocation } from "react-router-dom";
 import { ChevronLeft, ChevronRight, MoreVertical, Pencil, RefreshCw, Trash2, WifiOff } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
@@ -159,6 +160,8 @@ export const MetricPage: React.FC<MetricPageProps> = ({ metric, title, range, on
           darkTone="partB"
           idleInk="rgb(var(--c-charcoal-soft))"
         />
+        {/* Round G2: a free member's charts show 14 days; one quiet line says so (nothing while the switch is off). */}
+        <HistoryWindowLine className="mt-2" />
       </FixedHeader>
       {children}
       {menu && menu.length > 0 && (

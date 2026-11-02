@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { directoryCall, directoryErrorText, type DirRead } from "../directory/eg";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { formatPrice } from "../../utils/price";
 import { t } from "../../i18n/core";
@@ -281,10 +282,14 @@ const venuesView = () =>
 export async function fetchMarketplaceClasses(): Promise<
   { ok: true; classes: MarketplaceClass[] } | { ok: false; message: string }
 > {
-  const { data, error } = await classesView().select(CLASS_COLUMNS);
+  // Round G2 (EG): the counting function, the same rows.
+  const { data, error } = await directoryCall<ClassRow[]>("directory_classes", { p_business_id: null, p_gym_id: null }, () =>
+    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
+    classesView().select(CLASS_COLUMNS) as PromiseLike<DirRead<ClassRow[]>>
+  );
   if (error) {
     console.error("[marketplace] Could not read classes:", error.message);
-    return { ok: false, message: t("Couldn't load classes right now.") };
+    return { ok: false, message: directoryErrorText(error) ?? t("Couldn't load classes right now.") };
   }
   // The view sorts featured first; kept here too, as PostgREST does not
   // promise a view's ORDER BY.
@@ -295,10 +300,14 @@ export async function fetchMarketplaceClasses(): Promise<
 export async function fetchMarketplaceVenues(): Promise<
   { ok: true; venues: MarketplaceVenue[] } | { ok: false; message: string }
 > {
-  const { data, error } = await venuesView().select(VENUE_COLUMNS);
+  // Round G2 (EG): the counting function, the same rows.
+  const { data, error } = await directoryCall<VenueRow[]>("directory_venues", { p_kind: null }, () =>
+    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
+    venuesView().select(VENUE_COLUMNS) as PromiseLike<DirRead<VenueRow[]>>
+  );
   if (error) {
     console.error("[marketplace] Could not read venues:", error.message);
-    return { ok: false, message: t("Couldn't load places right now.") };
+    return { ok: false, message: directoryErrorText(error) ?? t("Couldn't load places right now.") };
   }
   return { ok: true, venues: featuredFirst((data ?? []).map(toVenue), (v) => v.isFeatured) };
 }

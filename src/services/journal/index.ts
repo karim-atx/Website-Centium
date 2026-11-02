@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { premiumRefusalMessage } from "../premium/asks";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { hasEmailPassword } from "../auth/passwordChangeLogic";
 import { describeLockError } from "./lockLogic";
@@ -305,7 +306,8 @@ export async function lockJournalFolderRemote(folderId: string): Promise<WriteRe
   const { error } = await rpc<null>("lock_journal_folder", { p_folder_id: folderId });
   if (error) {
     console.error("[journal] Could not lock the folder:", error.code, error.message);
-    return { ok: false, message: describeLockError(error.code, error.message) };
+    // Round G2: the free plan's one locked folder (ATXQ2) asks for the prompt.
+    return { ok: false, message: premiumRefusalMessage(error) ?? describeLockError(error.code, error.message) };
   }
   return { ok: true };
 }

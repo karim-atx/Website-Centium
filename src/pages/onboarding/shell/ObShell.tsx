@@ -229,8 +229,10 @@ export const ObStep: React.FC<{
   loading?: boolean;
   /** The chip's text when it is the person's own words (an Other professional's "What do you do?", OB-195). Added by OB-B; unset = the lane's chip. */
   chipLabel?: string;
+  /** The eyebrow in place of "Step n of N" (a screen before a numbered step, e.g. "Before step 2"). Added by Round G1. */
+  eyebrow?: string;
   children?: React.ReactNode;
-}> = ({ lane, step, title, subtitle, onBack, saveExit = true, footer, loading, chipLabel, children }) => {
+}> = ({ lane, step, title, subtitle, onBack, saveExit = true, footer, loading, chipLabel, eyebrow, children }) => {
   const flow = useOnboardingFlow();
   const p = laneProgress(lane, step);
   const def = LANES[lane];
@@ -242,7 +244,7 @@ export const ObStep: React.FC<{
         <ObTitle
           variant="lane"
           chip={def ? { label: chipLabel || t(def.chip), vis: def.vis } : undefined}
-          eyebrow={p ? t("Step {n} of {count}", { n: p.index + 1, count: p.count }) : undefined}
+          eyebrow={eyebrow ?? (p ? t("Step {n} of {count}", { n: p.index + 1, count: p.count }) : undefined)}
           title={title}
           subtitle={subtitle}
         />

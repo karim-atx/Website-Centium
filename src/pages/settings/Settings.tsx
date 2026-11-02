@@ -1,5 +1,6 @@
 import { PageHeader } from "../../components/ui/PageHeader";
 import { SettingsBody, SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
+import { ExportDataRow } from "../../components/premium/ExportDataRow";
 import { ColorThemePicker } from "../../components/profile/ColorThemePicker";
 import { ContactUsPopup } from "../../components/profile/ContactUsPopup";
 import { ReportBugPopup } from "../../components/profile/ReportBugPopup";
@@ -322,6 +323,8 @@ function SettingsHub() {
         {/* Task J. */}
         <SettingsRow icon={KeyRound} iconTone="dark" title={t("Change password")} onClick={() => setChangePasswordOpen(true)} />
         <StorageUsageRow />
+        {/* Round G2: the full export, always free whatever the Premium switch. */}
+        <ExportDataRow />
         {/* Task T: the profile's time zone, for every account (#timezone),
             and the "Use device time zone" switch row (MO1.8.13). */}
         <TimezoneSetting />

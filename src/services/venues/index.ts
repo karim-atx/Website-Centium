@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { directoryCall, directoryErrorText, type DirRead } from "../directory/eg";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { hostedImageUrl, stage4Message, storagePath, type Billing, type GymMembershipStatus, type PassState, type PlanLite } from "./venueLogic";
 import type { HoursRow } from "./hours";
@@ -245,15 +246,20 @@ const fail = <T>(error: PostgrestError, fallback: string): Result<T> => ({
  */
 export async function fetchVenues(): Promise<Result<Venue[]>> {
   type Listed = { venue_id: string; is_featured: boolean | null };
-  const listed = await (supabase as unknown as {
-    from: (v: "marketplace_venues") => { select: (c: string) => { eq: (k: string, v: string) => PromiseLike<{ data: Listed[] | null; error: PostgrestError | null }> } };
-  })
-    .from("marketplace_venues")
-    .select("venue_id, is_featured")
-    .eq("kind", "gym");
+  // Round G2 (EG): the counting function, the gyms only.
+  const listed = await directoryCall<Listed[]>("directory_venues", { p_kind: "gym" }, () =>
+    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
+    (supabase as unknown as {
+      from: (v: "marketplace_venues") => { select: (c: string) => { eq: (k: string, v: string) => PromiseLike<DirRead<Listed[]>> } };
+    })
+      .from("marketplace_venues")
+      .select("venue_id, is_featured")
+      .eq("kind", "gym")
+  );
   if (listed.error) {
     console.error("[venues] Could not read the listed venues:", listed.error.message);
-    return fail(listed.error, "Couldn't load gyms right now.");
+    const busy = directoryErrorText(listed.error);
+    return busy ? { ok: false, code: listed.error.code, message: busy } : fail(listed.error as PostgrestError, "Couldn't load gyms right now.");
   }
   const featured = new Map((listed.data ?? []).map((r) => [r.venue_id, r.is_featured === true]));
   if (featured.size === 0) return { ok: true, value: [] };

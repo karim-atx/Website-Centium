@@ -83,6 +83,7 @@ import {
 import { useCoachProgrammes } from "./useCoachProgrammes";
 import { CoachSection } from "./CoachSection";
 import { ProgrammeSection } from "./ProgrammeSection";
+import { CentiumProgrammesEntry } from "./centium/CentiumProgrammesEntry";
 import { coachColor } from "./coachColors";
 import { fullGroupIndex, shortDay } from "../../services/routines/programmeLogic";
 import { ROUTINE_NAME_RULE } from "../../services/routines";
@@ -640,6 +641,9 @@ export default function RoutinesTab() {
         capsInk={capsInk}
         onStart={(r) => (activeSession?.routineId === r.id && activeSession.status === "paused" ? resumeActive() : startRoutine(r))}
       />
+
+      {/* Round G3: Centium programmes (nothing while the Premium switch is off). */}
+      <CentiumProgrammesEntry />
 
       <CoachSection
         coach={coach}

@@ -22,6 +22,9 @@ import {
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { useOnline } from "../../hooks/useOnline";
+import { usePremiumOnly } from "../premium/useFreeLimit";
+import { PremiumLabel } from "../premium/PremiumAskHost";
+import { scansLeftText } from "../../services/premium/g2";
 import { NutritionDetails } from "./NutritionDetails";
 import { getFoodNutrientsById } from "../../services/food-nutrients";
 import { fetchFoodConflicts } from "../../services/nutrition/client";
@@ -193,6 +196,13 @@ export const AddFoodSheet: React.FC<{
   const [barcodeState, setBarcodeState] = useState<"idle" | "looking" | "miss">("idle");
   const [barcodeDraft, setBarcodeDraft] = useState(emptyBarcodeDraft);
   const [barcodeError, setBarcodeError] = useState<string | null>(null);
+  // Round G2: "2 free scans left today" under a catalogue match (null shows nothing).
+  const [scansLeft, setScansLeft] = useState<string | null>(null);
+  // Round G2: online food search and AI voice logging are Premium while the
+  // free limits apply; their entry points show a "Premium" label and open
+  // the prompt instead (nothing changes while the switch is off).
+  const onlineLock = usePremiumOnly("online_food_search");
+  const voiceLock = usePremiumOnly("ai_voice_food_logging");
   const [creating, setCreating] = useState(false);
   // HO2.1: the camera scanner over this sheet, and an Open Food Facts product
   // waiting for the user to confirm it. The attribution travels with the one
@@ -214,6 +224,7 @@ export const AddFoodSheet: React.FC<{
   const [foundFood, setFoundFood] = useState<OnlineFood | null>(null);
   const onlineRun = useRef(0);
   const searchOnline = (term: string) => {
+    if (onlineLock.locked) return onlineLock.ask();
     const run = ++onlineRun.current;
     setOnlineTerm(term);
     setOnlineResult(null);
@@ -615,11 +626,13 @@ export const AddFoodSheet: React.FC<{
     setBarcode(gtin);
     setBarcodeError(null);
     setScanResultFood(null);
+    setScansLeft(null);
     setOffProduct(null);
     setBarcodeState("looking");
     const result = await resolveBarcode(gtin);
     if (result.kind === "catalog") {
       setScanResultFood(result.food);
+      setScansLeft(scansLeftText(result.scansLeft ?? null));
       setBarcodeState("idle");
     } else if (result.kind === "off") {
       setOffProduct(result.product);
@@ -628,7 +641,7 @@ export const AddFoodSheet: React.FC<{
       setBarcodeDraft(emptyBarcodeDraft);
       setBarcodeState("miss");
     } else {
-      setBarcodeError(result.kind === "error" ? result.message : t("That isn't a valid barcode."));
+      setBarcodeError(result.kind === "error" || result.kind === "limit" ? result.message : t("That isn't a valid barcode."));
       setBarcodeState("idle");
     }
   };
@@ -1004,6 +1017,8 @@ export const AddFoodSheet: React.FC<{
             </div>
           )}
 
+          {scanResultFood && scansLeft && <p className="text-[11.5px] text-charcoal-faint">{scansLeft}</p>}
+
           {/* 2. Found on Open Food Facts: confirmed before anything is logged. */}
           {offProduct && (
             <OffProductCard product={offProduct} onConfirm={() => chooseOffProduct(offProduct)} onManual={enterManually} />
@@ -1247,7 +1262,7 @@ export const AddFoodSheet: React.FC<{
               Barcode x0.635, Custom x0.835). */}
           <div className="grid grid-cols-4 mb-4" style={{ gap: 9 }}>
             {[
-              { label: t("AI Voice"), icon: <Mic size={17} />, bg: dark ? "linear-gradient(150deg,rgb(var(--th-647b77)),rgb(var(--th-445e5a)))" : "linear-gradient(150deg,rgb(var(--th-a2c8c2)),rgb(var(--th-6f9993)))", onClick: () => setVoiceOpen(true) },
+              { label: t("AI Voice"), icon: <Mic size={17} />, bg: dark ? "linear-gradient(150deg,rgb(var(--th-647b77)),rgb(var(--th-445e5a)))" : "linear-gradient(150deg,rgb(var(--th-a2c8c2)),rgb(var(--th-6f9993)))", onClick: () => (voiceLock.locked ? voiceLock.ask() : setVoiceOpen(true)) },
               {
                 label: t("AI Scan"),
                 icon: (
@@ -1271,7 +1286,7 @@ export const AddFoodSheet: React.FC<{
                 bg: dark ? "linear-gradient(150deg,rgb(var(--th-796eac)),rgb(var(--th-4f437b)))" : "linear-gradient(150deg,rgb(var(--th-9184ce)),rgb(var(--th-5f5093)))",
                 onClick: () => setCustomMode(true),
               },
-            ].map(({ label, icon, bg, onClick }) => (
+            ].map(({ label, icon, bg, onClick }, tile) => (
               <button
                 key={label}
                 onClick={onClick}
@@ -1280,6 +1295,8 @@ export const AddFoodSheet: React.FC<{
               >
                 {icon}
                 <span className="text-[11px] font-semibold">{label}</span>
+                {/* Round G2: the first tile is AI Voice. */}
+                {tile === 0 && voiceLock.locked && <PremiumLabel className="-mt-1" />}
               </button>
             ))}
           </div>
@@ -1386,7 +1403,7 @@ export const AddFoodSheet: React.FC<{
             )}
             {/* Round D · DP (D17): "Search online" as a row under the results. */}
             {onlineQuery(query) && !loading && filtered.length > 0 && !multi && (
-              <SearchOnlineButton variant="row" onClick={() => searchOnline(query.trim())} />
+              <SearchOnlineButton variant="row" premium={onlineLock.locked} onClick={() => searchOnline(query.trim())} />
             )}
             {query.trim() !== "" && !loading && filtered.length === 0 && (
               <div className="flex flex-col" style={{ gap: 4, padding: "24px 0 16px" }}>
@@ -1396,7 +1413,7 @@ export const AddFoodSheet: React.FC<{
                 {/* …and in the nothing-found state (not when the search itself couldn't run). */}
                 {!searchFailed && onlineQuery(query) && (
                   <div className="flex justify-center" style={{ marginTop: 10 }}>
-                    <SearchOnlineButton variant="empty" onClick={() => searchOnline(query.trim())} />
+                    <SearchOnlineButton variant="empty" premium={onlineLock.locked} onClick={() => searchOnline(query.trim())} />
                   </div>
                 )}
               </div>
