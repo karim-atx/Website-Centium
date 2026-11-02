@@ -39,6 +39,7 @@ const AREAS = [
   ["pronutrition", "Professional tools: Nutrition library and meal plans"],
   ["proforms", "Professional tools: Forms and check-ins"],
   ["proinsights", "Professional tools: Client and practice insights"],
+  ["provitals", "Professional tools: Biomarkers, vitals and sleep"],
 ];
 
 const rows = [];
