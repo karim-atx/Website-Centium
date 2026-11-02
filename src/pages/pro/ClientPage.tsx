@@ -34,6 +34,7 @@ import { shiftIso } from "../../services/pro/home";
 import { time12 } from "../../utils/time12";
 import type { AccessCategory } from "../../services/pro/access";
 import { appLocale } from "../../i18n/format";
+import { t, tk } from "../../i18n/core";
 
 /**
  * Release 3 · the client page (/app/pro/clients/:id/:tab, CL2). The frames'
@@ -56,9 +57,9 @@ import { appLocale } from "../../i18n/format";
  */
 
 const TAB_LABEL: Record<ProLane, Record<string, string>> = {
-  full_coaching: { overview: "Overview", plan: "Plan", progress: "Progress", sessions: "Sessions", notes: "Notes", files: "Files" },
-  nutrition: { overview: "Overview", plan: "Meal plan", progress: "Progress", sessions: "Sessions", notes: "Notes", files: "Files" },
-  clinical_overview: { overview: "Overview", "care-plan": "Care plan", "health-records": "Health records", trends: "Trends", appointments: "Appointments", notes: "Notes" },
+  full_coaching: { overview: tk("Overview"), plan: tk("Plan"), progress: tk("Progress"), sessions: tk("Sessions"), notes: tk("Notes"), files: tk("Files") },
+  nutrition: { overview: tk("Overview"), plan: tk("Meal plan"), progress: tk("Progress"), sessions: tk("Sessions"), notes: tk("Notes"), files: tk("Files") },
+  clinical_overview: { overview: tk("Overview"), "care-plan": tk("Care plan"), "health-records": tk("Health records"), trends: tk("Trends"), appointments: tk("Appointments"), notes: tk("Notes") },
 };
 
 const STAGE_TONE: Record<ClientStage, Tone> = { onboarding: "onb", active: "act", paused: "pau", completed: "done" };
@@ -101,9 +102,9 @@ export default function ClientPage() {
   if (data.missing) {
     return (
       <div>
-        <EmptyState icon={UserX} title={patient ? "Not one of your patients" : "Not one of your clients"} line="They may have ended the connection, or the link is out of date." />
+        <EmptyState icon={UserX} title={patient ? t("Not one of your patients") : t("Not one of your clients")} line={t("They may have ended the connection, or the link is out of date.")} />
         <div className="flex" style={{ marginTop: 8 }}>
-          <CtaButton className="flex-1" size="page" label={patient ? "Back to patients" : "Back to clients"} onClick={() => navigate(PRO_ROUTES.clients)} />
+          <CtaButton className="flex-1" size="page" label={patient ? t("Back to patients") : t("Back to clients")} onClick={() => navigate(PRO_ROUTES.clients)} />
         </div>
       </div>
     );
@@ -119,7 +120,7 @@ export default function ClientPage() {
   }
 
   const message = async () => {
-    if (!online) return setToast("You're offline. Try again when you're connected.");
+    if (!online) return setToast(t("You're offline. Try again when you're connected."));
     const r = await startThread(id);
     if (r.ok) navigate("/app/messages", { state: { threadId: r.threadId } });
     else setToast(r.message);
@@ -127,11 +128,11 @@ export default function ClientPage() {
   // W4: Add session opens on the calendar with this client chosen.
   const schedule = () => navigate(`${PRO_ROUTES.calendar}?new=1&client=${encodeURIComponent(id)}`);
   const ask = async (c: AccessCategory) => {
-    if (asked.includes(c)) return setToast(`You've already asked. It's waiting for ${data.firstName}.`);
+    if (asked.includes(c)) return setToast(t("You've already asked. It's waiting for {name}.", { name: data.firstName }));
     const r = await askToShare(id, c);
     if (r.ok) {
       setAsked((a) => [...a, c]);
-      setToast(`Asked ${data.firstName} to share.`);
+      setToast(t("Asked {name} to share.", { name: data.firstName }));
     } else setToast(r.message);
   };
   const go = (t: string) => navigate(proClientPath(id, t), { replace: true });
@@ -139,8 +140,8 @@ export default function ClientPage() {
   const stage = data.stage?.stage ?? "active";
   const followDue = patient && !!data.carePlan?.plan?.followUps.some((f) => (f.status === "planned" || f.status === "booked") && f.dueOn <= data.today);
   const attention = stage === "active" && !!data.flags && (data.flags.atRisk || data.flags.goneQuiet);
-  const status: { label: string; tone: Tone } = followDue ? { label: "Follow-up due", tone: "att" } : attention ? { label: "Needs attention", tone: "att" } : { label: STAGE_LABEL[stage], tone: STAGE_TONE[stage] };
-  const nextLabel = next ? `${next.date === data.today ? "Today" : next.date === shiftIso(data.today, 1) ? "Tomorrow" : new Date(`${next.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" })} ${time12(next.startTime)}` : null;
+  const status: { label: string; tone: Tone } = followDue ? { label: t("Follow-up due"), tone: "att" } : attention ? { label: t("Needs attention"), tone: "att" } : { label: STAGE_LABEL[stage], tone: STAGE_TONE[stage] };
+  const nextLabel = next ? `${next.date === data.today ? t("Today") : next.date === shiftIso(data.today, 1) ? t("Tomorrow") : new Date(`${next.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" })} ${time12(next.startTime)}` : null;
   const sharesAnything = !!data.access.access && (data.access.access.categories.length > 0 || data.access.access.imagingSharedCount > 0 || data.access.access.resultSharedCount > 0);
 
   return (
@@ -163,7 +164,7 @@ export default function ClientPage() {
         onConfirmPayment={async (h) => {
           const r = await confirmHirePayment(h.id, h.planName);
           if (!r.ok) return r.message;
-          setToast(`Payment confirmed. ${data.firstName} is now active on ${h.planName}.`);
+          setToast(t("Payment confirmed. {name} is now active on {plan}.", { name: data.firstName, plan: h.planName }));
           data.reload();
           return null;
         }}
@@ -173,7 +174,7 @@ export default function ClientPage() {
 
       <SegmentedTabs
         className="mb-3"
-        items={tabs.map((t) => ({ key: t, label: TAB_LABEL[lane][t] ?? t }))}
+        items={tabs.map((tab) => ({ key: tab, label: TAB_LABEL[lane][tab] ? t(TAB_LABEL[lane][tab]) : tab }))}
         activeKey={current}
         onChange={go}
         scroll
@@ -196,11 +197,11 @@ export default function ClientPage() {
         onClose={() => setMoreEl(null)}
         anchor={moreEl}
         options={[
-          { value: "history", label: "Change history", icon: <History size={15} /> },
-          { value: "stage", label: "Change stage", icon: <ClipboardList size={15} /> },
-          { value: "tags", label: "Tags", icon: <Tag size={15} /> },
-          { value: "message", label: "Message", icon: <MessageCircle size={15} /> },
-          { value: "end", label: "End coaching", icon: <UserMinus size={15} />, destructive: true },
+          { value: "history", label: t("Change history"), icon: <History size={15} /> },
+          { value: "stage", label: t("Change stage"), icon: <ClipboardList size={15} /> },
+          { value: "tags", label: t("Tags"), icon: <Tag size={15} /> },
+          { value: "message", label: t("Message"), icon: <MessageCircle size={15} /> },
+          { value: "end", label: t("End coaching"), icon: <UserMinus size={15} />, destructive: true },
         ]}
         onSelect={(v) => {
           if (v === "history") setHistoryOpen(true);
@@ -216,14 +217,14 @@ export default function ClientPage() {
         open={!!stageEl}
         onClose={() => setStageEl(null)}
         anchor={stageEl}
-        heading="Stage"
-        options={CLIENT_STAGES.map((s) => ({ value: s, label: STAGE_LABEL[s], note: s === stage ? "Now" : undefined }))}
+        heading={t("Stage")}
+        options={CLIENT_STAGES.map((s) => ({ value: s, label: STAGE_LABEL[s], note: s === stage ? t("Now") : undefined }))}
         selected={stage}
         onSelect={async (v) => {
           if (v === stage) return;
           const r = await setClientStage(id, v as ClientStage);
           if (!r.ok) return setToast(r.message);
-          setToast(`${data.firstName} is now ${STAGE_LABEL[v as ClientStage]}. What they share is unchanged.`);
+          setToast(t("{name} is now {stage}. What they share is unchanged.", { name: data.firstName, stage: STAGE_LABEL[v as ClientStage] }));
           data.reload();
         }}
         width={220}
@@ -236,7 +237,7 @@ export default function ClientPage() {
         targets={[{ clientId: id, name: data.name, tags: data.stage?.tags ?? [] }]}
         known={(data.stage?.tags ?? []).map((t) => ({ tag: t, count: 1 }))}
         onApply={async (changes) => {
-          if (!authUserId) return "Couldn't save. Try again.";
+          if (!authUserId) return t("Couldn't save. Try again.");
           for (const ch of changes) {
             for (const t of ch.add) {
               const r = await addTag(authUserId, ch.clientId, t);
@@ -256,9 +257,9 @@ export default function ClientPage() {
         patient={patient}
         onClose={() => setEnding(false)}
         onEnd={async () => {
-          if (!online) return "You're offline. Try again when you're connected.";
+          if (!online) return t("You're offline. Try again when you're connected.");
           const r = await removeProfessionalClient(data.rel!.id);
-          if (!r.ok) return r.message ?? "Couldn't end coaching. Try again.";
+          if (!r.ok) return r.message ?? t("Couldn't end coaching. Try again.");
           setEnding(false);
           navigate(PRO_ROUTES.clients, { replace: true });
           return null;

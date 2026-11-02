@@ -46,6 +46,7 @@ import { acceptHireRequest, rejectHireRequest } from "../../services/hire-inbox"
 import { fetchThreads, startThread } from "../../services/messaging";
 import type { ProfessionalClient } from "../../types";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tn } from "../../i18n/core";
 
 /**
  * Release 3 · CL3 v6 Clients (Patients for Clinical overview), source
@@ -77,13 +78,13 @@ import { appLocale } from "../../i18n/format";
 
 type StatusKey = "all" | "requests" | "onboarding" | "active" | "attention" | "paused" | "completed";
 const STATUS_LABEL: Record<StatusKey, string> = {
-  all: "All",
-  requests: "Requests",
-  onboarding: "Onboarding",
-  active: "Active",
-  attention: "Needs attention",
-  paused: "Paused",
-  completed: "Completed",
+  all: tk("All"),
+  requests: tk("Requests"),
+  onboarding: tk("Onboarding"),
+  active: tk("Active"),
+  attention: tk("Needs attention"),
+  paused: tk("Paused"),
+  completed: tk("Completed"),
 };
 const STATUS_ORDER: StatusKey[] = ["all", "requests", "onboarding", "active", "attention", "paused", "completed"];
 const TONE_FOR: Record<Exclude<StatusKey, "all">, ClientStatusTone> = { requests: "req", onboarding: "onb", active: "act", attention: "att", paused: "pau", completed: "done" };
@@ -119,13 +120,13 @@ const fullName = (c: ProfessionalClient) => `${c.prefix ? `${c.prefix} ` : ""}${
 
 function planLine(p: ClientPlan | undefined): string | null {
   if (!p || !p.name) return null;
-  return p.week ? `${p.name}, week ${p.week.n}` : p.name;
+  return p.week ? t("{name}, week {n}", { name: p.name, n: p.week.n }) : p.name;
 }
 
 function nextLabel(s: RangeSession | undefined, today: string): string | null {
   if (!s) return null;
-  const day = s.date === today ? "Today" : s.date === shiftIso(today, 1) ? "Tomorrow" : new Date(`${s.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
-  return `${day} ${time12(s.startTime)}${s.location ? `, ${s.location}` : s.url ? ", online" : ""}`;
+  const day = s.date === today ? t("Today") : s.date === shiftIso(today, 1) ? t("Tomorrow") : new Date(`${s.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
+  return `${day} ${time12(s.startTime)}${s.location ? `, ${s.location}` : s.url ? t(", online") : ""}`;
 }
 
 export default function Clients() {
@@ -135,8 +136,7 @@ export default function Clients() {
   const { authUserId, professionalClients, rosterLoading, refreshRoster, removeProfessionalClient, accessibility } = useApp();
   const k = accessibility.largerText ? 1.2 : 1;
   const patients = lane === "clinical_overview";
-  const word = patients ? "patients" : "clients";
-  const one = patients ? "patient" : "client";
+
   const today = localIso(new Date());
 
   // ---- reads ----
@@ -232,19 +232,19 @@ export default function Clients() {
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
 
-  const planTitle = lane === "clinical_overview" ? "Care plan" : lane === "nutrition" ? "Meal plan" : "Programme";
+  const planTitle = lane === "clinical_overview" ? t("Care plan") : lane === "nutrition" ? t("Meal plan") : t("Programme");
   const groups: FilterGroup[] = useMemo(() => {
     const out: FilterGroup[] = [];
     const planNames = [...new Set(plans.map((p) => p.name).filter(Boolean))].sort();
     if (planNames.length) out.push({ key: "plan", title: planTitle, options: planNames.map((p) => ({ value: p, label: p })) });
     out.push(
       patients
-        ? { key: "ring", title: "Records shared", options: [{ value: "none", label: "Not sharing" }, { value: "some", label: "Some shared" }, { value: "all", label: "All 6 shared" }] }
-        : { key: "ring", title: "Adherence", options: [{ value: "low", label: "Below 70%" }, { value: "mid", label: "70 to 90%" }, { value: "high", label: "Above 90%" }] }
+        ? { key: "ring", title: t("Records shared"), options: [{ value: "none", label: t("Not sharing") }, { value: "some", label: t("Some shared") }, { value: "all", label: t("All 6 shared") }] }
+        : { key: "ring", title: t("Adherence"), options: [{ value: "low", label: t("Below 70%") }, { value: "mid", label: t("70 to 90%") }, { value: "high", label: t("Above 90%") }] }
     );
-    out.push({ key: "last", title: "Last activity", options: [{ value: "today", label: "Today" }, { value: "week", label: "This week" }, { value: "old", label: "7+ days ago" }] });
+    out.push({ key: "last", title: t("Last activity"), options: [{ value: "today", label: t("Today") }, { value: "week", label: t("This week") }, { value: "old", label: t("7+ days ago") }] });
     const tags = [...new Set(clients.flatMap((c) => c.tags))].sort();
-    if (tags.length) out.push({ key: "tags", title: "Tags", options: tags.map((t) => ({ value: t, label: t })) });
+    if (tags.length) out.push({ key: "tags", title: t("Tags"), options: tags.map((t) => ({ value: t, label: t })) });
     return out;
   }, [plans, planTitle, patients, clients]);
 
@@ -310,11 +310,11 @@ export default function Clients() {
   const shownCount = visible.filter((e) => e.kind !== "declined").length;
 
   const SORTS: { value: SortKey; label: string }[] = [
-    { value: "next", label: "Next session" },
-    { value: "last", label: "Last activity" },
-    { value: "name", label: "Name, A to Z" },
-    { value: "ring", label: patients ? "Records shared, fewest first" : "Adherence, lowest first" },
-    { value: "newest", label: "Newest" },
+    { value: "next", label: t("Next session") },
+    { value: "last", label: t("Last activity") },
+    { value: "name", label: t("Name, A to Z") },
+    { value: "ring", label: patients ? t("Records shared, fewest first") : t("Adherence, lowest first") },
+    { value: "newest", label: t("Newest") },
   ];
 
   // ---- actions ----
@@ -341,7 +341,7 @@ export default function Clients() {
   const [declineError, setDeclineError] = useState<string | null>(null);
 
   const message = async (clientId: string) => {
-    if (!online) return setToast("You're offline. Try again when you're connected.");
+    if (!online) return setToast(t("You're offline. Try again when you're connected."));
     const r = await startThread(clientId);
     if (r.ok) navigate("/app/messages", { state: { threadId: r.threadId } });
     else setToast(r.message);
@@ -354,7 +354,7 @@ export default function Clients() {
   }, [clients]);
 
   const applyTags = async (changes: { clientId: string; add: string[]; remove: string[] }[]) => {
-    if (!authUserId) return "Couldn't save. Try again.";
+    if (!authUserId) return t("Couldn't save. Try again.");
     for (const ch of changes) {
       for (const t of ch.add) {
         const r = await addTag(authUserId, ch.clientId, t);
@@ -368,7 +368,7 @@ export default function Clients() {
     setNonce((n) => n + 1);
     setSelecting(false);
     setPicked(new Set());
-    setToast("Tags saved.");
+    setToast(t("Tags saved."));
     return null;
   };
 
@@ -378,7 +378,7 @@ export default function Clients() {
     if (!r.ok) return setToast(r.message);
     setPreview(null);
     setNonce((n) => n + 1);
-    setToast(`${c.name} is now ${STAGE_LABEL[s]}.`);
+    setToast(t("{name} is now {stage}.", { name: c.name, stage: STAGE_LABEL[s] }));
   };
 
   const accept = async () => {
@@ -392,14 +392,14 @@ export default function Clients() {
       setAccepting(null);
       if (res.status === "ok") {
         await refreshRoster();
-        setToast(`${req.name} is now in Onboarding.`);
+        setToast(t("{name} is now in Onboarding.", { name: req.name }));
       }
       inbox.reload();
       return;
     }
-    if (res.status === "tier_limit_reached") return setAcceptError("You've reached the client limit on your plan.");
-    if (res.status === "free_period_ended") return setAcceptError("Your free period has ended. Choose a plan to add clients.");
-    setAcceptError(res.status === "permission_denied" ? "You don't have permission to answer that request." : res.message);
+    if (res.status === "tier_limit_reached") return setAcceptError(t("You've reached the client limit on your plan."));
+    if (res.status === "free_period_ended") return setAcceptError(t("Your free period has ended. Choose a plan to add clients."));
+    setAcceptError(res.status === "permission_denied" ? t("You don't have permission to answer that request.") : res.message);
   };
 
   const decline = async (reason: DeclineReason | null, msg: string) => {
@@ -415,7 +415,7 @@ export default function Clients() {
     } else {
       const r = await rejectHireRequest(target.id);
       gone = r.status === "already_resolved" || r.status === "not_found";
-      if (r.status !== "ok" && !gone) err = r.status === "error" ? r.message : "Couldn't decline. Try again.";
+      if (r.status !== "ok" && !gone) err = r.status === "error" ? r.message : t("Couldn't decline. Try again.");
     }
     setDeclineBusy(false);
     if (err && !gone) return setDeclineError(err);
@@ -423,7 +423,7 @@ export default function Clients() {
     if (!err) {
       const label = reason ? DECLINE_REASONS.find((x) => x.value === reason)?.label : null;
       // The client hears about it only once the 5-minute undo window has passed.
-      const text = `${label ? `Request declined: ${label}.` : "Request declined."} ${target.name} is told in 5 minutes.`;
+      const text = t("{head} {who} is told in 5 minutes.", { head: label ? t("Request declined: {reason}.", { reason: t(label) }) : t("Request declined."), who: target.name });
       setToast(text);
       setToastUndo({ id: target.id, name: target.name, text });
     }
@@ -433,7 +433,7 @@ export default function Clients() {
   const undoDecline = async (id: string, name: string) => {
     setToastUndo(null);
     const r = await inbox.undoDecline(id);
-    setToast(r.ok ? `${name}'s request is back in Requests.` : r.message);
+    setToast(r.ok ? t("{name}'s request is back in Requests.", { name }) : r.message);
   };
 
   const pickedEntries = clients.filter((c) => picked.has(c.clientId));
@@ -441,7 +441,7 @@ export default function Clients() {
     if (lane === "full_coaching") return navigate(`${PRO_ROUTES.library}/programmes`);
     if (lane === "nutrition") return navigate(PRO_ROUTES.mealPlans);
     if (pickedEntries.length === 1) return navigate(proClientPath(pickedEntries[0].clientId, "notes"));
-    setToast("Pick one patient to add a care note.");
+    setToast(t("Pick one patient to add a care note."));
   };
 
   // ---- render ----
@@ -451,7 +451,7 @@ export default function Clients() {
 
   const head = (
     <>
-      <h1 style={{ marginBottom: 13, fontSize: textPx(19), lineHeight: 1.5, fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch }}>{patients ? "Patients" : "Clients"}</h1>
+      <h1 style={{ marginBottom: 13, fontSize: textPx(19), lineHeight: 1.5, fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch }}>{patients ? t("Patients") : t("Clients")}</h1>
       <div className="flex" style={{ gap: 8, marginBottom: 12 }}>
         <label className="flex-1 min-w-0 flex items-center" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${query ? INK.pr : INK.b10}`, paddingBlock: "0", paddingInline: "12px 4px", gap: 8 }}>
           <Search size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
@@ -459,19 +459,19 @@ export default function Clients() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Search ${word}`}
-            aria-label={`Search ${word}`}
+            placeholder={patients ? t("Search patients") : t("Search clients")}
+            aria-label={patients ? t("Search patients") : t("Search clients")}
             className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-faint"
             style={{ fontSize: textPx(14), color: INK.ch }}
           />
           {query && (
-            <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="tap flex items-center justify-center" style={{ width: 36, height: 36 }}>
+            <button type="button" onClick={() => setQuery("")} aria-label={t("Clear search")} className="tap flex items-center justify-center" style={{ width: 36, height: 36 }}>
               <X size={16} strokeWidth={1.75} aria-hidden style={{ color: INK.chF }} />
             </button>
           )}
         </label>
-        <SquareButton icon={UserPlus} label={`Add ${one}`} onClick={() => setAddOpen(true)} />
-        {!empty && <SquareButton icon={SlidersHorizontal} label="Filter" on={panelOpen || filtering} count={Object.values(filters).reduce((n, v) => n + v.length, 0)} onClick={() => setPanelOpen((v) => !v)} />}
+        <SquareButton icon={UserPlus} label={patients ? t("Add patient") : t("Add client")} onClick={() => setAddOpen(true)} />
+        {!empty && <SquareButton icon={SlidersHorizontal} label={t("Filter")} on={panelOpen || filtering} count={Object.values(filters).reduce((n, v) => n + v.length, 0)} onClick={() => setPanelOpen((v) => !v)} />}
       </div>
     </>
   );
@@ -482,9 +482,9 @@ export default function Clients() {
     return (
       <div>
         {head}
-        <EmptyState icon={Users} title={`No ${word} yet`} line={`Add your first ${one} to run their plans, sessions and progress from here.`} />
+        <EmptyState icon={Users} title={patients ? t("No patients yet") : t("No clients yet")} line={patients ? t("Add your first patient to run their plans, sessions and progress from here.") : t("Add your first client to run their plans, sessions and progress from here.")} />
         <div className="flex" style={{ marginTop: 8 }}>
-          <CtaButton className="flex-1" size="page" icon={<UserPlus size={15} />} label={`Add your first ${one}`} onClick={() => setAddOpen(true)} />
+          <CtaButton className="flex-1" size="page" icon={<UserPlus size={15} />} label={patients ? t("Add your first patient") : t("Add your first client")} onClick={() => setAddOpen(true)} />
         </div>
         <SentInvitesSection reloadKey={`${nonce}:${invitesKey}`} />
         <AddClientFlows
@@ -494,7 +494,7 @@ export default function Clients() {
           pendingCount={requests.length}
           onInviteClients={() => navigate(`${PRO_ROUTES.home}/invite`)}
           onPendingRequests={() => setStatus("requests")}
-          onOfflineAdded={(name) => setToast(`${name} added.`)}
+          onOfflineAdded={(name) => setToast(t("{name} added.", { name }))}
         />
         <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
       </div>
@@ -504,8 +504,8 @@ export default function Clients() {
   return (
     <div style={{ paddingBottom: selecting ? 96 : 0 }}>
       {head}
-      <StatusTabs tabs={STATUS_ORDER.map((key) => ({ key, label: STATUS_LABEL[key], count: counts[key] }))} active={status} onChange={setStatus} k={k} />
-      <ScrollRow label="Filters">
+      <StatusTabs tabs={STATUS_ORDER.map((key) => ({ key, label: t(STATUS_LABEL[key]), count: counts[key] }))} active={status} onChange={setStatus} k={k} />
+      <ScrollRow label={t("Filters")}>
         {groups.map((g) => (
           <QuickFilter
             key={g.key}
@@ -523,7 +523,7 @@ export default function Clients() {
       <div className="flex items-center justify-between" style={{ gap: 12, marginBottom: 10, minHeight: 32 }}>
         {selecting ? (
           <>
-            <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch, whiteSpace: "nowrap" }}>{`${picked.size} selected`}</span>
+            <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch, whiteSpace: "nowrap" }}>{t("{n} selected", { n: picked.size })}</span>
             <button
               type="button"
               onClick={() => {
@@ -532,9 +532,7 @@ export default function Clients() {
               }}
               className="tap relative before:absolute before:-inset-3 before:content-['']"
               style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}
-            >
-              Cancel
-            </button>
+            >{t("Cancel")}</button>
           </>
         ) : (
           <>
@@ -547,15 +545,13 @@ export default function Clients() {
               style={{ gap: 4, fontSize: textPx(12), fontWeight: 600, color: INK.chS, whiteSpace: "nowrap" }}
             >
               <ArrowUpDown size={13} strokeWidth={2} aria-hidden />
-              {`Sort: ${SORTS.find((s) => s.value === sort)?.label}`}
+              {t("Sort: {sort}", { sort: SORTS.find((s) => s.value === sort)?.label ?? "" })}
               <ChevronDown size={12} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
             </button>
             <span className="flex items-center" style={{ gap: 12 }}>
-              <span style={{ fontSize: textPx(11.5), color: INK.chF, whiteSpace: "nowrap" }} aria-live="polite">{`${shownCount} ${shownCount === 1 ? one : word}`}</span>
+              <span style={{ fontSize: textPx(11.5), color: INK.chF, whiteSpace: "nowrap" }} aria-live="polite">{patients ? tn(shownCount, "{n} patient", "{n} patients") : tn(shownCount, "{n} client", "{n} clients")}</span>
               {clients.length > 0 && (
-                <button type="button" onClick={() => setSelecting(true)} className="tap relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
-                  Select
-                </button>
+                <button type="button" onClick={() => setSelecting(true)} className="tap relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{t("Select")}</button>
               )}
             </span>
           </>
@@ -569,14 +565,14 @@ export default function Clients() {
       ) : visible.length === 0 ? (
         q ? (
           <>
-            <EmptyState icon={SearchX} title={`No ${word} match "${query.trim()}"`} line="Try a name, a tag or a plan. Tags are searchable too." />
+            <EmptyState icon={SearchX} title={patients ? t("No patients match \"{query}\"", { query: query.trim() }) : t("No clients match \"{query}\"", { query: query.trim() })} line={t("Try a name, a tag or a plan. Tags are searchable too.")} />
             <div className="flex" style={{ gap: 8 }}>
-              <CtaButton className="flex-1" size="base" variant="secondary" label="Clear search" onClick={() => setQuery("")} />
-              <CtaButton className="flex-1" size="base" icon={<UserPlus size={15} />} label="Add new" onClick={() => setAddOpen(true)} />
+              <CtaButton className="flex-1" size="base" variant="secondary" label={t("Clear search")} onClick={() => setQuery("")} />
+              <CtaButton className="flex-1" size="base" icon={<UserPlus size={15} />} label={t("Add new")} onClick={() => setAddOpen(true)} />
             </div>
           </>
         ) : (
-          <EmptyState icon={Users} title={filtering ? `No ${word} match these filters` : `No ${STATUS_LABEL[status].toLowerCase()} ${word}`} line={filtering ? "Clear a filter to see more." : undefined} />
+          <EmptyState icon={Users} title={filtering ? (patients ? t("No patients match these filters") : t("No clients match these filters")) : patients ? t("No {status} patients", { status: t(STATUS_LABEL[status]).toLowerCase() }) : t("No {status} clients", { status: t(STATUS_LABEL[status]).toLowerCase() })} line={filtering ? t("Clear a filter to see more.") : undefined} />
         )
       ) : (
         <div className="flex flex-col" style={{ gap: 8 }} role="list">
@@ -593,8 +589,8 @@ export default function Clients() {
                   <ClientRow
                     name={e.req.name}
                     avatarUrl={e.req.avatarUrl}
-                    status={{ label: "Requests", tone: "req" }}
-                    line={`Asked to work with you ${agoLabel(e.req.requestedAt) ?? ""}`.trim()}
+                    status={{ label: t("Requests"), tone: "req" }}
+                    line={t("Asked to work with you {ago}", { ago: agoLabel(e.req.requestedAt) ?? "" }).trim()}
                     ring={null}
                     lane={lane}
                     onClick={() => setStatus("requests")}
@@ -606,7 +602,7 @@ export default function Clients() {
                 <ClientRow
                   name={e.name}
                   avatarUrl={e.rel.avatarUrl}
-                  status={{ label: STATUS_LABEL[e.status], tone: TONE_FOR[e.status] }}
+                  status={{ label: t(STATUS_LABEL[e.status]), tone: TONE_FOR[e.status] }}
                   line={rowLine(e)}
                   ring={e.numbers ? e.numbers.ring : null}
                   lane={lane}
@@ -641,17 +637,17 @@ export default function Clients() {
             className="flex-1"
             size="base"
             icon={<MessageCircle size={15} />}
-            label="Message"
+            label={t("Message")}
             disabled={picked.size === 0}
             onClick={() => (pickedEntries.length === 1 ? void message(pickedEntries[0].clientId) : navigate("/app/messages"))}
           />
-          <CtaButton className="flex-1" size="base" variant="secondary" icon={<ClipboardPlus size={15} />} label={lane === "nutrition" ? "Meal plan" : patients ? "Care note" : "Template"} disabled={picked.size === 0} onClick={bulkPlan} />
+          <CtaButton className="flex-1" size="base" variant="secondary" icon={<ClipboardPlus size={15} />} label={lane === "nutrition" ? t("Meal plan") : patients ? t("Care note") : t("Template")} disabled={picked.size === 0} onClick={bulkPlan} />
           <CtaButton
             className="flex-1"
             size="base"
             variant="secondary"
             icon={<Tag size={15} />}
-            label="Tag"
+            label={t("Tag")}
             disabled={picked.size === 0}
             onClick={() => setTagTargets(pickedEntries.map((c) => ({ clientId: c.clientId, name: c.name, tags: c.tags })))}
           />
@@ -665,7 +661,7 @@ export default function Clients() {
         onToggle={(g, v) => setFilters((f) => ({ ...f, [g]: (f[g] ?? []).includes(v) ? (f[g] ?? []).filter((x) => x !== v) : [...(f[g] ?? []), v] }))}
         onClear={() => setFilters({})}
         onClose={() => setPanelOpen(false)}
-        showLabel={`Show ${clients.filter((c) => (status === "all" || c.status === status) && passes(c) && matchesQuery(c)).length} ${word}`}
+        showLabel={(patients ? t("Show {n} patients", { n: clients.filter((c) => (status === "all" || c.status === status) && passes(c) && matchesQuery(c)).length }) : t("Show {n} clients", { n: clients.filter((c) => (status === "all" || c.status === status) && passes(c) && matchesQuery(c)).length }))}
       />
       <PopupMenu
         open={!!quick}
@@ -684,7 +680,7 @@ export default function Clients() {
         open={!!sortEl}
         onClose={() => setSortEl(null)}
         anchor={sortEl}
-        heading="Sort by"
+        heading={t("Sort by")}
         options={SORTS}
         selected={sort}
         onSelect={(v) => setSort(v as SortKey)}
@@ -710,10 +706,10 @@ export default function Clients() {
         onClose={() => setMenuEl(null)}
         anchor={menuEl}
         options={[
-          { value: "message", label: "Message", icon: <MessageCircle size={15} /> },
-          { value: "stage", label: "Change stage", icon: <ClipboardList size={15} /> },
-          { value: "tags", label: "Tags", icon: <Tag size={15} /> },
-          { value: "end", label: "End coaching", icon: <X size={15} />, destructive: true },
+          { value: "message", label: t("Message"), icon: <MessageCircle size={15} /> },
+          { value: "stage", label: t("Change stage"), icon: <ClipboardList size={15} /> },
+          { value: "tags", label: t("Tags"), icon: <Tag size={15} /> },
+          { value: "end", label: t("End coaching"), icon: <X size={15} />, destructive: true },
         ]}
         onSelect={(v) => {
           const p = preview;
@@ -730,7 +726,7 @@ export default function Clients() {
         open={!!stageEl && !!preview}
         onClose={() => setStageEl(null)}
         anchor={stageEl}
-        heading="Stage"
+        heading={t("Stage")}
         options={CLIENT_STAGES.map((s) => ({ value: s, label: STAGE_LABEL[s] }))}
         selected={preview?.stage ?? null}
         onSelect={(v) => preview && void changeStage(preview, v as ClientStage)}
@@ -745,10 +741,10 @@ export default function Clients() {
         onClose={() => setEnding(null)}
         onEnd={async () => {
           if (!ending) return null;
-          if (!online) return "You're offline. Try again when you're connected.";
+          if (!online) return t("You're offline. Try again when you're connected.");
           const r = await removeProfessionalClient(ending.rel.id);
-          if (!r.ok) return r.message ?? "Couldn't end coaching. Try again.";
-          setToast(`Coaching with ${ending.name} ended.`);
+          if (!r.ok) return r.message ?? t("Couldn't end coaching. Try again.");
+          setToast(t("Coaching with {name} ended.", { name: ending.name }));
           setEnding(null);
           setPreview(null);
           return null;
@@ -766,7 +762,7 @@ export default function Clients() {
           setAddOpen(false);
           setStatus("requests");
         }}
-        onOfflineAdded={(name) => setToast(`${name} added.`)}
+        onOfflineAdded={(name) => setToast(t("{name} added.", { name }))}
       />
       <Toast
         open={!!toast}
@@ -781,10 +777,10 @@ export default function Clients() {
   );
 
   function rowLine(e: ClientEntry): string {
-    if (e.status === "onboarding" && !e.plan) return `Joined ${new Date(e.joinedAt).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" })}`;
+    if (e.status === "onboarding" && !e.plan) return t("Joined {date}", { date: new Date(e.joinedAt).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" }) });
     const parts = [planLine(e.plan)];
     const ago = agoLabel(e.numbers?.flags?.lastActivityAt ?? null);
-    if (ago) parts.push(`active ${ago}`);
+    if (ago) parts.push(t("active {ago}", { ago }));
     return parts.filter(Boolean).join(" · ");
   }
 }
@@ -819,13 +815,13 @@ const RequestCard: React.FC<{ req: ProRequest; onAccept: () => void; onDecline: 
       <Avatar name={req.name} url={req.avatarUrl} size={40} tone="gold" />
       <div className="flex-1 min-w-0">
         <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, overflowWrap: "anywhere" }}>{req.name}</p>
-        <p style={{ fontSize: textPx(12), color: INK.chS }}>{req.planName ? `Asked for ${req.planName}` : "Asked to work with you"}</p>
-        <p style={{ fontSize: textPx(11), color: INK.chF }}>{`Requested ${agoLabel(req.requestedAt) ?? ""}`}</p>
+        <p style={{ fontSize: textPx(12), color: INK.chS }}>{req.planName ? t("Asked for {plan}", { plan: req.planName }) : t("Asked to work with you")}</p>
+        <p style={{ fontSize: textPx(11), color: INK.chF }}>{t("Requested {ago}", { ago: agoLabel(req.requestedAt) ?? "" })}</p>
       </div>
     </div>
     <div className="flex" style={{ gap: 8, marginTop: 12 }}>
-      <CtaButton className="flex-1" size="base" variant="secondary" icon={<X size={15} />} label="Decline" onClick={onDecline} />
-      <CtaButton className="flex-1" size="base" icon={<Check size={15} />} label="Accept" onClick={onAccept} />
+      <CtaButton className="flex-1" size="base" variant="secondary" icon={<X size={15} />} label={t("Decline")} onClick={onDecline} />
+      <CtaButton className="flex-1" size="base" icon={<Check size={15} />} label={t("Accept")} onClick={onAccept} />
     </div>
   </div>
 );
@@ -837,17 +833,13 @@ const DeclinedCard: React.FC<{ d: RecentDecline; onUndo: () => void }> = ({ d, o
       <Avatar name={d.name} url={d.avatarUrl} size={40} tone="gold" />
       <div className="flex-1 min-w-0">
         <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, overflowWrap: "anywhere" }}>{d.name}</p>
-        <p className="flex items-center flex-wrap" style={{ fontSize: textPx(12), color: INK.chS, columnGap: 4 }}>
-          Declined ·
-          <button
+        <p className="flex items-center flex-wrap" style={{ fontSize: textPx(12), color: INK.chS, columnGap: 4 }}>{t("Declined ·")}<button
             type="button"
             onClick={onUndo}
-            aria-label={`Undo declining ${d.name}`}
+            aria-label={t("Undo declining {name}", { name: d.name })}
             className="tap relative before:absolute before:-inset-x-2 before:-inset-y-3 before:content-['']"
             style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}
-          >
-            Undo
-          </button>
+          >{t("Undo")}</button>
         </p>
       </div>
     </div>
@@ -877,20 +869,20 @@ const ClientPreview: React.FC<{
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-  const plan = entry.plan ? (entry.plan.week ? `${entry.plan.name}, week ${entry.plan.week.n}${entry.plan.week.of ? ` of ${entry.plan.week.of}` : ""}` : entry.plan.name) : "None yet";
+  const plan = entry.plan ? (entry.plan.week ? (entry.plan.week.of ? t("{name}, week {n} of {of}", { name: entry.plan.name, n: entry.plan.week.n, of: entry.plan.week.of }) : t("{name}, week {n}", { name: entry.plan.name, n: entry.plan.week.n })) : entry.plan.name) : t("None yet");
   const rows: [typeof CalendarDays, string, string][] = [
-    [CalendarDays, patients ? "Next appointment" : "Next session", nextLabel(entry.next, today) ?? "Not booked"],
+    [CalendarDays, patients ? t("Next appointment") : t("Next session"), nextLabel(entry.next, today) ?? t("Not booked")],
     [ClipboardList, planTitle, plan],
-    [Tag, "Tags", entry.tags.length ? entry.tags.join(", ") : "No tags"],
-    [MessageCircle, "Messages", entry.unread ? `${entry.unread} unread` : "No unread messages"],
+    [Tag, t("Tags"), entry.tags.length ? entry.tags.join(t(", ")) : t("No tags")],
+    [MessageCircle, t("Messages"), entry.unread ? t("{n} unread", { n: entry.unread }) : t("No unread messages")],
   ];
   const att = entry.status === "attention";
   return (
     <div className="fixed inset-0" style={{ zIndex: 60 }}>
-      <button type="button" aria-label="Close preview" className="absolute inset-0" style={{ background: "rgba(36,31,27,0.4)" }} onClick={onClose} />
+      <button type="button" aria-label={t("Close preview")} className="absolute inset-0" style={{ background: "rgba(36,31,27,0.4)" }} onClick={onClose} />
       <div
         role="dialog"
-        aria-label={`Preview of ${entry.name}`}
+        aria-label={t("Preview of {name}", { name: entry.name })}
         className="absolute"
         style={{ insetInlineStart: "max(16px, calc(50% - 199px))", insetInlineEnd: "max(16px, calc(50% - 199px))", top: 190, background: INK.card, borderRadius: 20, boxShadow: "0 10px 40px rgba(36,31,27,0.18)", padding: 16 }}
       >
@@ -898,13 +890,13 @@ const ClientPreview: React.FC<{
           <Avatar name={entry.name} url={entry.rel.avatarUrl} size={44} tone={entry.status === "onboarding" ? "sky" : att ? "gold" : "pr"} />
           <div className="flex-1 min-w-0">
             <p style={{ fontSize: textPx(16), fontWeight: 800, color: INK.ch, overflowWrap: "anywhere" }}>{entry.name}</p>
-            <p style={{ fontSize: textPx(12), fontWeight: 600, color: att ? INK.hi : INK.chS }}>{STATUS_LABEL[entry.status]}</p>
+            <p style={{ fontSize: textPx(12), fontWeight: 600, color: att ? INK.hi : INK.chS }}>{t(STATUS_LABEL[entry.status])}</p>
           </div>
           <StatusRing value={entry.numbers ? entry.numbers.ring : null} lane={lane} />
           <button
             ref={menuRef}
             type="button"
-            aria-label={`More actions for ${entry.name}`}
+            aria-label={t("More actions for {name}", { name: entry.name })}
             aria-haspopup="menu"
             onClick={() => menuRef.current && onMenu(menuRef.current)}
             className="tap flex items-center justify-center shrink-0"
@@ -929,8 +921,8 @@ const ClientPreview: React.FC<{
           ))}
         </div>
         <div className="flex" style={{ gap: 8, marginTop: 12 }}>
-          <CtaButton className="flex-1" size="base" variant="secondary" icon={<MessageCircle size={15} />} label="Message" onClick={onMessage} />
-          <CtaButton className="flex-1" size="base" icon={<ArrowRight size={15} />} label="Open" onClick={onOpen} />
+          <CtaButton className="flex-1" size="base" variant="secondary" icon={<MessageCircle size={15} />} label={t("Message")} onClick={onMessage} />
+          <CtaButton className="flex-1" size="base" icon={<ArrowRight size={15} />} label={t("Open")} onClick={onOpen} />
         </div>
       </div>
     </div>
