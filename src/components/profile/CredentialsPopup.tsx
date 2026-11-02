@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import clsx from "clsx";
+import { t } from "../../i18n/core";
 import { KeyRound, Mail, Phone } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
 import { useApp } from "../../context/AppContext";
@@ -128,7 +129,7 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
     if ((phone.trim() || "") !== (user.phone ?? "")) {
       const r = await updatePhone(authUserId, phone);
       if (r.ok) updateProfile({ phone: phone.trim() || undefined });
-      else next.phone = r.message ?? "Couldn't save your phone number.";
+      else next.phone = r.message ?? t("Couldn't save your phone number.");
     }
     // Only when the stored pair was read (never blanks over a failed read),
     // both are well formed, and something changed.
@@ -218,7 +219,7 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
     <CentredPopup
       open={open}
       onClose={onClose}
-      title="Credentials"
+      title={t("Credentials")}
       // MO1.5.4 (2x frame): the fields 18 in, the icon tile 22 under the top
       // (y 656 → 700) and Save 18 above the bottom (y 1893 → 1929); KeyRound
       // 22/1.75 in #7D6BB5 on the #F0EDF9 tile (new popup, decision 22).
@@ -231,7 +232,7 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
       // #AEA1DC under decisions 7 / 15). Dark keeps primary-fill and its ink,
       // as ReferralPopup's filled button does.
       cta={{
-        label: done ? "Saved" : busy ? "Saving…" : "Save",
+        label: done ? t("Saved") : busy ? t("Saving…") : t("Save"),
         disabled: busy || done,
         onClick: () => void save(),
         // Restore round 2: "Saved" stays untappable but at full ink (not the
@@ -247,14 +248,14 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
       <div className="space-y-4">
         {/* MO1.5.4 icons: Mail 15/1.75, Phone 15/1.75. */}
         {field("email", <Mail size={15} strokeWidth={1.75} />, user.email, () => {}, {
-          placeholder: "Email",
-          label: "Email",
+          placeholder: t("Email"),
+          label: t("Email"),
           readOnly: true,
           visibleLabel: true,
         })}
         {field("phone", <Phone size={15} strokeWidth={1.75} />, phone, setPhone, {
-          placeholder: "Phone number",
-          label: "Phone",
+          placeholder: t("Phone number"),
+          label: t("Phone"),
           inputMode: "tel",
           visibleLabel: true,
         })}
@@ -263,22 +264,22 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
       {/* MO1.5.4 row 10: "Social" 10.5/700 (cap height 7.5 on the 2x frame),
           16 under the Phone field and 14 above the pair (y 1241 / 1280–1295 /
           1330). */}
-      <p className="mt-4 mb-3.5 text-[10.5px] leading-[14px] font-bold text-charcoal-faint uppercase tracking-wide">Social</p>
+      <p className="mt-4 mb-3.5 text-[10.5px] leading-[14px] font-bold text-charcoal-faint uppercase tracking-wide">{t("Social")}</p>
       <div className="grid grid-cols-2 gap-2.5">
         {/* MO1.5.4: a fixed "@" prefix and lowercase placeholders. */}
         {/* Read-only until the stored pair has loaded (and if it failed), so
             nothing typed is overwritten by the load or silently not saved. */}
         {field("instagram", <InstagramMark />, instagram, setInstagram, {
           placeholder: "instagram",
-          label: "Instagram handle",
+          label: t("Instagram handle"),
           prefix: true,
           readOnly: !savedHandles,
         })}
-        {field("x", <XMark />, x, setX, { placeholder: "x", label: "X handle", prefix: true, readOnly: !savedHandles })}
+        {field("x", <XMark />, x, setX, { placeholder: "x", label: t("X handle"), prefix: true, readOnly: !savedHandles })}
       </div>
       {savedHandles === null && (
         <p role="alert" className="mt-2 text-[11px] font-semibold text-status-high">
-          Couldn't load your Instagram and X. Close and open Credentials to try again.
+          {t("Couldn't load your Instagram and X. Close and open Credentials to try again.")}
         </p>
       )}
       {errors.social && (
@@ -292,20 +293,19 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
           (profiles_select_own, client_social_handles). Said as it is
           (privacy, exception 1). */}
       <p className="mt-2 text-[11px] text-charcoal-faint">
-        Your phone number, Instagram and X are saved to your account. Only professionals you're connected
-        with can see your Instagram and X.
+        {t("Your phone number, Instagram and X are saved to your account. Only professionals you're connected with can see your Instagram and X.")}
       </p>
 
       {showNickname && (
         <div className="mt-4 pt-4 border-t border-charcoal/[0.06]">
           {/* MO1.5.4: no icon, a fixed "@" prefix, placeholder "nickname". */}
           {field("nickname", null, nickname, setNicknameDraft, {
-            placeholder: "nickname",
-            label: "Forum nickname",
+            placeholder: t("nickname"),
+            label: t("Forum nickname"),
             prefix: true,
             visibleLabel: true,
           })}
-          <p className="mt-1.5 text-[11px] text-charcoal-faint">Shown on your Community posts and replies.</p>
+          <p className="mt-1.5 text-[11px] text-charcoal-faint">{t("Shown on your Community posts and replies.")}</p>
         </div>
       )}
     </CentredPopup>

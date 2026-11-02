@@ -20,7 +20,10 @@ import {
   tooltipLeft,
 } from "./chartModel";
 import { appLocale } from "../../i18n/format";
-import { isRtl } from "../../i18n/core";
+import { isRtl, t } from "../../i18n/core";
+
+/** The range unit ("week", "30 days") in the app's language; the keys are in ar/market.ts. */
+const unitText = (unit: string) => (unit ? t(unit) : unit);
 
 // Market + Share 3.0 · ChartCard (HANDOVER §4 B-MA.7, P-MA.6, §5: kind line |
 // bar | funnel, range, series, scrub / tap, tooltip). Markup and behaviour
@@ -260,7 +263,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
         aria-valuemin={0}
         aria-valuemax={Math.max(0, n - 1)}
         aria-valuenow={has ? i : undefined}
-        aria-valuetext={has ? tip : "Tap or drag the chart"}
+        aria-valuetext={has ? tip : t("Tap or drag the chart")}
         onPointerDown={(e) => fromPointer(e, scrubIndex)}
         onPointerMove={(e) => fromPointer(e, scrubIndex)}
         onKeyDown={sliderKeys(i, n, setI, rtl)}
@@ -291,7 +294,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
         aria-valuemin={0}
         aria-valuemax={Math.max(0, n - 1)}
         aria-valuenow={has ? i : undefined}
-        aria-valuetext={has ? tip : "Tap a bar"}
+        aria-valuetext={has ? tip : t("Tap a bar")}
         onPointerDown={(e) => fromPointer(e, barIndexAt)}
         onKeyDown={sliderKeys(i, n, setI, rtl)}
         className="market-focus"
@@ -325,7 +328,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
           <span style={{ fontSize: textPx(26), lineHeight: linePx(32), fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{total}</span>
         )}
         {delta ? <span style={{ fontSize: textPx(12), fontWeight: 700, color: tone === "high" ? m.high : tone === "faint" ? m.faint : m.good }}>{delta}</span> : null}
-        {note === null ? null : <span style={{ fontSize: textPx(11), color: m.faint }}>{note ?? `vs previous ${unit}`}</span>}
+        {note === null ? null : <span style={{ fontSize: textPx(11), color: m.faint }}>{note ?? t("vs previous {unit}", { unit: unitText(unit) })}</span>}
       </div>
       {plot}
       {axis ? (
@@ -358,7 +361,7 @@ const Funnel: React.FC<{ steps: readonly FunnelStep[]; rateSeries: readonly numb
           </div>
         ))}
       </div>
-      <div style={{ marginTop: 14, fontSize: textPx(10.5), fontWeight: 700, color: m.faint }}>Rate over time</div>
+      <div style={{ marginTop: 14, fontSize: textPx(10.5), fontWeight: 700, color: m.faint }}>{t("Rate over time")}</div>
       <svg width={w} height={36} viewBox={`0 0 ${w} 36`} aria-hidden style={{ display: "block", marginTop: 4, ...(rtl ? FLIP : NO_ICON_SCALE) }}>
         <path d={lineGeo(rateSeries, w, 36).line} fill="none" stroke="#AEA1DC" strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round" />
       </svg>
@@ -371,11 +374,11 @@ const Funnel: React.FC<{ steps: readonly FunnelStep[]; rateSeries: readonly numb
 // track --subtrack, padding 4, radius 12, gap 4; buttons 44 × 32 radius 9
 // 12px; active --subactive / --onfill 700, idle transparent / --subink 600.
 
-export const ChartRangeControl = <R extends string>({ ranges, value, onChange, label = "Range" }: { ranges: readonly R[]; value: R; onChange: (r: R) => void; label?: string }) => {
+export const ChartRangeControl = <R extends string>({ ranges, value, onChange, label }: { ranges: readonly R[]; value: R; onChange: (r: R) => void; label?: string }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
   return (
-    <div role="radiogroup" aria-label={label} style={{ flex: "none", display: "inline-flex", gap: 4, padding: 4, borderRadius: 12, background: m.subtrack }}>
+    <div role="radiogroup" aria-label={label ?? t("Range")} style={{ flex: "none", display: "inline-flex", gap: 4, padding: 4, borderRadius: 12, background: m.subtrack }}>
       <style>{FOCUS_CSS}</style>
       {ranges.map((r) => {
         const on = r === value;
@@ -445,7 +448,7 @@ export const ExpandedChart: React.FC<ExpandedChartProps> = ({ question, total, d
   const bw = W / Math.max(1, n);
   const gx = has ? (bars ? (i! + 0.5) * bw : g.px(i!)) : 0;
   const gy = has ? g.py(series[i!]) : 0;
-  const tip = has ? `${labels[i!] ?? ""} · ${formatValue(series[i!])}${compare && prev[i!] !== undefined ? ` · before ${formatValue(prev[i!])}` : ""}` : "";
+  const tip = has ? `${labels[i!] ?? ""} · ${formatValue(series[i!])}${compare && prev[i!] !== undefined ? ` · ${t("before {value}", { value: formatValue(prev[i!]) })}` : ""}` : "";
   const tone = deltaTone(delta);
   const compareInk = dark ? m.teal : "#6F9993";
   const [ax0, ax1, ax2] = axisLabels(labels);
@@ -457,7 +460,7 @@ export const ExpandedChart: React.FC<ExpandedChartProps> = ({ question, total, d
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
         <span style={{ fontSize: textPx(34), lineHeight: linePx(40), fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{total}</span>
         {delta ? <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: tone === "high" ? m.high : tone === "faint" ? m.faint : m.good }}>{delta}</span> : null}
-        {note === null ? null : <span style={{ fontSize: textPx(11.5), color: m.faint }}>{note ?? `vs previous ${unit}`}</span>}
+        {note === null ? null : <span style={{ fontSize: textPx(11.5), color: m.faint }}>{note ?? t("vs previous {unit}", { unit: unitText(unit) })}</span>}
       </div>
       <button
         type="button"
@@ -467,7 +470,7 @@ export const ExpandedChart: React.FC<ExpandedChartProps> = ({ question, total, d
         className="market-focus"
         style={{ marginTop: 14, width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, border: `1px solid ${m.border}`, borderRadius: 14, background: m.card, padding: "10px 12px", font: "inherit", cursor: "pointer", textAlign: "start" }}
       >
-        <span style={{ fontSize: textPx(13), fontWeight: 700, color: m.ink }}>Compare to previous period</span>
+        <span style={{ fontSize: textPx(13), fontWeight: 700, color: m.ink }}>{t("Compare to previous period")}</span>
         <span aria-hidden style={{ width: 42, height: 26, borderRadius: 999, background: compare ? m.fill : m.swoff, position: "relative", flexShrink: 0 }}>
           <span style={{ position: "absolute", insetInlineStart: compare ? 18 : 2, top: 2, width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)", transition: "inset-inline-start 140ms ease" }} />
         </span>
@@ -475,11 +478,11 @@ export const ExpandedChart: React.FC<ExpandedChartProps> = ({ question, total, d
       <div style={{ marginTop: 12, display: "flex", gap: 16, fontSize: textPx(11), color: m.ink2 }}>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span aria-hidden style={{ width: 16, height: 3, borderRadius: 2, background: "#AEA1DC" }} />
-          This {unit}
+          {t("This {unit}", { unit: unitText(unit) })}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 6, opacity: compare ? 1 : 0 }} aria-hidden={!compare}>
           <span aria-hidden style={{ width: 16, height: 0, borderTop: `2px dashed ${compareInk}` }} />
-          Previous {unit}
+          {t("Previous {unit}", { unit: unitText(unit) })}
         </span>
       </div>
       <div
@@ -490,7 +493,7 @@ export const ExpandedChart: React.FC<ExpandedChartProps> = ({ question, total, d
         aria-valuemin={0}
         aria-valuemax={Math.max(0, n - 1)}
         aria-valuenow={has ? i : undefined}
-        aria-valuetext={has ? tip : "Tap or drag the chart"}
+        aria-valuetext={has ? tip : t("Tap or drag the chart")}
         onPointerDown={(e) => setI(scrubIndex(inlineX(e, rtl), e.currentTarget.getBoundingClientRect().width, n))}
         onPointerMove={(e) => setI(scrubIndex(inlineX(e, rtl), e.currentTarget.getBoundingClientRect().width, n))}
         onKeyDown={sliderKeys(i, n, setI, rtl)}

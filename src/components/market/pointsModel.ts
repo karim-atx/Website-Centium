@@ -1,4 +1,5 @@
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 // Market + Share 3.0 · points and ledger rules shared by OfferCard,
 // PointsFigure and StatLedger. Pure, from the screen files' script (Client
 // Explore Screens `offers`: note / noteInk / pct / line).
@@ -24,8 +25,8 @@ export const pointsToGo = (balance: number, cost: number): number => Math.max(0,
 export function offerProgress(balance: number, cost: number): { can: boolean; note: string; pct: number } {
   const can = balance >= cost;
   return can
-    ? { can, note: "You can redeem", pct: 100 }
-    : { can, note: `${formatPoints(pointsToGo(balance, cost))} to go`, pct: Math.round(progressFraction(balance, cost) * 100) };
+    ? { can, note: t("You can redeem"), pct: 100 }
+    : { can, note: t("{points} to go", { points: formatPoints(pointsToGo(balance, cost)) }), pct: Math.round(progressFraction(balance, cost) * 100) };
 }
 
 /**

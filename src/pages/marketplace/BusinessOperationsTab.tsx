@@ -9,6 +9,7 @@ import { MembershipsTab } from "../business-ops/plans";
 import StoreOrdersPage from "../business-ops/store/StoreOrdersPage";
 import AppointmentsPage from "../business-ops/appointments/AppointmentsPage";
 import SchedulePage from "../business-ops/classes/SchedulePage";
+import { t } from "../../i18n/core";
 
 // v6 (V6-54, HANDOVER §5): the business navbar's per-type tab at
 // /app/business/operations. ONE SHELL, ONE BRANCH PER TYPE: each Batch 4 area
@@ -46,19 +47,19 @@ function OperationsLanding() {
   const navigate = useNavigate();
   const items = [
     // Stage A4: the venue console (hours, logo and cover, members, rosters).
-    { icon: Store, label: "Venues", desc: "Members, classes, hours & photos", to: "/app/business/venue" },
-    { icon: KeyRound, label: "Gym", desc: "Manage membership plans & pricing", to: "/app/business/gym" },
-    { icon: Users, label: "Employees", desc: "Affiliate professionals via your business ID", to: "/app/business/employees" },
-    { icon: CalendarDays, label: "Classes", desc: "Schedule classes for affiliated professionals", to: "/app/business/classes" },
+    { key: "venues", icon: Store, label: t("Venues"), desc: t("Members, classes, hours & photos"), to: "/app/business/venue" },
+    { key: "gym", icon: KeyRound, label: t("Gym"), desc: t("Manage membership plans & pricing"), to: "/app/business/gym" },
+    { key: "employees", icon: Users, label: t("Employees"), desc: t("Affiliate professionals via your business ID"), to: "/app/business/employees" },
+    { key: "classes", icon: CalendarDays, label: t("Classes"), desc: t("Schedule classes for affiliated professionals"), to: "/app/business/classes" },
   ];
 
   return (
     <div>
-      <PageHeader title="Operations" />
+      <PageHeader title={t("Operations")} />
       <div className="space-y-2.5">
         {items.map((item) => (
           <Card
-            key={item.label}
+            key={item.key}
             interactive
             onClick={() => navigate(item.to)}
             className="flex items-center justify-between animate-fade-slide-up"
@@ -72,7 +73,7 @@ function OperationsLanding() {
                 <p className="text-xs text-charcoal-faint">{item.desc}</p>
               </div>
             </div>
-            <ChevronRight size={16} className="text-charcoal-faint" />
+            <ChevronRight size={16} className="text-charcoal-faint rtl:-scale-x-100" />
           </Card>
         ))}
       </div>

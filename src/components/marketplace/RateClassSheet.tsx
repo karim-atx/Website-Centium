@@ -5,6 +5,7 @@ import { ReviewForm } from "./ReviewForm";
 import { writeClassReview } from "../../services/venues";
 import { useReviewOpensAt } from "../../hooks/useReviewOpensAt";
 import { ReviewWaitNote } from "../reviews/ReviewWaitNote";
+import { t } from "../../i18n/core";
 
 // B14 RP-04 "Rate your visit" from a class booking (write_class_review).
 // One review per person per venue (or business): writing again edits the
@@ -34,29 +35,29 @@ export function RateClassSheet({
   };
 
   return (
-    <BottomSheet open={open && !!bookingId} onClose={close} title={`Rate ${classTitle}`}>
+    <BottomSheet open={open && !!bookingId} onClose={close} title={t("Rate {title}", { title: classTitle })}>
       {done ? (
         <div className="space-y-5">
           <p role="status" className="m-0 text-[13px] leading-[1.55] text-charcoal-soft">
-            Thanks. Your review is posted.
+            {t("Thanks. Your review is posted.")}
           </p>
-          <CtaButton size="page" label="Done" onClick={close} className="!bg-fill-pinned !text-on-primary-fill" />
+          <CtaButton size="page" label={t("Done")} onClick={close} className="!bg-fill-pinned !text-on-primary-fill" />
         </div>
       ) : opensAt ? (
         <div className="space-y-5">
           <ReviewWaitNote opensAt={opensAt} boxed />
-          <CtaButton size="page" label="Done" onClick={close} className="!bg-fill-pinned !text-on-primary-fill" />
+          <CtaButton size="page" label={t("Done")} onClick={close} className="!bg-fill-pinned !text-on-primary-fill" />
         </div>
       ) : (
         <>
           <p className="mt-0 mb-4 text-[12px] leading-[1.5] text-charcoal-faint">
-            If you've already reviewed {businessName}, this updates that review.
+            {t("If you've already reviewed {business}, this updates that review.", { business: businessName })}
           </p>
           {bookingId && (
             <ReviewForm
               key={bookingId}
-              placeholder={`How was ${classTitle}?`}
-              submitLabel="Submit review"
+              placeholder={t("How was {title}?", { title: classTitle })}
+              submitLabel={t("Submit review")}
               // Database #38: write_class_review takes a rating alone (the text is optional).
               textOptional
               onSubmit={async (rating, text) => {

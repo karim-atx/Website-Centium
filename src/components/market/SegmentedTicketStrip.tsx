@@ -4,6 +4,7 @@ import { textPx, linePx } from "../../theme/textSize";
 import { NO_ICON_SCALE } from "../pro/proInk";
 import { SEGMENT_STEPS, highContrast, marketPalette } from "../../theme/marketTokens";
 import { darkenForWhite, hexAlpha } from "./marketColor";
+import { isRtl } from "../../i18n/core";
 
 // Market + Share 3.0 · SegmentedTicketStrip (HANDOVER §5: items 2–4, active,
 // step colours 1–4; tokens.json segmentSteps, divider 1.5px dashed
@@ -73,8 +74,11 @@ export function SegmentedTicketStrip<K extends string>({
   const onKey = (e: React.KeyboardEvent, i: number) => {
     const n = items.length;
     let j = -1;
-    if (e.key === "ArrowRight") j = (i + 1) % n;
-    else if (e.key === "ArrowLeft") j = (i - 1 + n) % n;
+    // Right to left: the next item is to the left.
+    const next = isRtl() ? "ArrowLeft" : "ArrowRight";
+    const prev = isRtl() ? "ArrowRight" : "ArrowLeft";
+    if (e.key === next) j = (i + 1) % n;
+    else if (e.key === prev) j = (i - 1 + n) % n;
     else if (e.key === "Home") j = 0;
     else if (e.key === "End") j = n - 1;
     if (j < 0) return;

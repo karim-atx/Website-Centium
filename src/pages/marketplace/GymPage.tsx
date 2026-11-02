@@ -56,6 +56,7 @@ import { formatShortDate } from "../../utils/date";
 import { BookingDone, PlanSummary, PurchaseSheet, confirmLabel } from "./PurchaseSheet";
 import { areaOf, gymHoursRows, includesText, longDay, planExpiryIso, planRowLine, sheetPlanName, startsToday } from "./gymDetailModel";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tn, tx } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · C-MO.4.2.1 Gym detail (`gymDetail`) and
 // C-MO.4.2.2 Membership purchase (`memberSheet`, `memberDone`). Literal
@@ -96,9 +97,9 @@ import { appLocale } from "../../i18n/format";
 
 type Tab = "about" | "classes" | "reviews";
 const TABS: { key: Tab; label: string }[] = [
-  { key: "about", label: "About" },
-  { key: "classes", label: "Classes" },
-  { key: "reviews", label: "Reviews" },
+  { key: "about", label: tk("About") },
+  { key: "classes", label: tk("Classes") },
+  { key: "reviews", label: tk("Reviews") },
 ];
 
 /** Local calendar date as YYYY-MM-DD. */
@@ -109,8 +110,8 @@ const todayIso = () => {
 
 /** A class group's caps label: "Today", "Tomorrow", "Mon, Oct 12" (D-02). */
 const dayLabel = (iso: string, today: string) => {
-  if (iso === today) return "Today";
-  if (iso === addDaysIso(today, 1)) return "Tomorrow";
+  if (iso === today) return t("Today");
+  if (iso === addDaysIso(today, 1)) return t("Tomorrow");
   return formatShortDate(new Date(`${iso}T00:00:00`), { weekday: "short", day: "numeric", month: "short" });
 };
 
@@ -412,7 +413,7 @@ export function GymPage({ gymId }: { gymId: string }) {
           <span aria-hidden className="animate-skeleton-pulse" style={{ display: "block", height: 28, width: "55%", borderRadius: 999, background: m.soft }} />
           <span aria-hidden className="animate-skeleton-pulse" style={{ display: "block", height: 14, width: "40%", borderRadius: 999, background: m.soft }} />
         </div>
-        <MarketSkeleton radius={18} rows={4} label="Loading this gym" style={{ marginTop: 18 }} />
+        <MarketSkeleton radius={18} rows={4} label={tk("Loading this gym")} style={{ marginTop: 18 }} />
       </div>
     );
   }
@@ -421,10 +422,10 @@ export function GymPage({ gymId }: { gymId: string }) {
       <div style={{ lineHeight: "normal" }}>
         <GymHero onBack={back} photos={[]} m={m} />
         {loadFailed ? (
-          <MarketError thing="this gym" onRetry={retry} style={{ marginTop: 16 }} />
+          <MarketError thing={tk("this gym")} onRetry={retry} style={{ marginTop: 16 }} />
         ) : (
           // K16 (KEEP-SAFETY): hidden or missing, copy unchanged.
-          <p style={{ margin: "24px 0 0", textAlign: "center", fontSize: textPx(13), color: m.faint }}>This gym isn't listed on Explore right now.</p>
+          <p style={{ margin: "24px 0 0", textAlign: "center", fontSize: textPx(13), color: m.faint }}>{t("This gym isn't listed on Explore right now.")}</p>
         )}
       </div>
     );
@@ -437,7 +438,7 @@ export function GymPage({ gymId }: { gymId: string }) {
   const call = (v: string) => {
     if (v === "copy") {
       void navigator.clipboard?.writeText(gym.phones[0]).then(
-        () => flash("Number copied"),
+        () => flash(t("Number copied")),
         () => undefined
       );
       return;
@@ -453,7 +454,7 @@ export function GymPage({ gymId }: { gymId: string }) {
   const tag = mine ? memberTag(mine.passState) : null;
   const buyable = !!gym.businessId;
   const ctaClass = "!bg-fill-pinned !text-on-primary-fill";
-  const passCta = { label: "Show membership pass", icon: <QrCode size={16} strokeWidth={1.75} aria-hidden />, onClick: () => setPassOpen(true), className: ctaClass };
+  const passCta = { label: t("Show membership pass"), icon: <QrCode size={16} strokeWidth={1.75} aria-hidden />, onClick: () => setPassOpen(true), className: ctaClass };
 
   // K11: the pinned CTA per state. About and Classes: a non-member is sent to
   // the plans; a paid member books a class; a member whose membership isn't
@@ -463,10 +464,10 @@ export function GymPage({ gymId }: { gymId: string }) {
       ? null
       : mine
         ? mine.passValid && takesNew
-          ? { label: "Book a class", icon: <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />, onClick: () => void openBook(), className: ctaClass }
+          ? { label: t("Book a class"), icon: <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />, onClick: () => void openBook(), className: ctaClass }
           : passCta
         : takesNew && buyable && (plans?.length ?? 0) > 0
-          ? { label: "View memberships", icon: <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />, onClick: () => viewPlans(), className: ctaClass }
+          ? { label: t("View memberships"), icon: <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />, onClick: () => viewPlans(), className: ctaClass }
           : null;
 
   const join = (p: VenuePlan) => {
@@ -510,11 +511,11 @@ export function GymPage({ gymId }: { gymId: string }) {
   const sheetPlan = plan;
   const sheetRows = sheetPlan
     ? [
-        { k: "Starts", v: startsToday(today) },
-        { k: "Valid until", v: longDay(planExpiryIso(today, sheetPlan.validForDays, sheetPlan.billing)) },
-        ...(includesText(sheetPlan.includes, true) ? [{ k: "Includes", v: includesText(sheetPlan.includes, true) as string }] : []),
+        { k: t("Starts"), v: startsToday(today) },
+        { k: t("Valid until"), v: longDay(planExpiryIso(today, sheetPlan.validForDays, sheetPlan.billing)) },
+        ...(includesText(sheetPlan.includes, true) ? [{ k: t("Includes"), v: includesText(sheetPlan.includes, true) as string }] : []),
         ...(commitmentLines(sheetPlan.minimumTermMonths, sheetPlan.noticeDays).length > 0
-          ? [{ k: "Commitment", v: commitmentLines(sheetPlan.minimumTermMonths, sheetPlan.noticeDays).join(" · ") }]
+          ? [{ k: t("Commitment"), v: commitmentLines(sheetPlan.minimumTermMonths, sheetPlan.noticeDays).join(" · ") }]
           : []),
       ]
     : [];
@@ -537,12 +538,16 @@ export function GymPage({ gymId }: { gymId: string }) {
         >
           {gym.name}
         </h1>
-        {tag && <MemberTag label={tag.label} tone={tag.tone} className="mt-[3px]" />}
+        {tag && <MemberTag label={t(tag.label)} tone={tag.tone} className="mt-[3px]" />}
       </div>
       {ratingLine && (
         <div
           data-rating-line=""
-          aria-label={summary && summary.total > 0 ? `Rated ${summary.average.toFixed(1)} from ${summary.total} ${summary.total === 1 ? "review" : "reviews"}. ${[gymDistance, areaOf(gym.location)].filter(Boolean).join(", ")}` : undefined}
+          aria-label={
+            summary && summary.total > 0
+              ? [tn(summary.total, "Rated {rating} from {n} review", "Rated {rating} from {n} reviews", { rating: summary.average.toFixed(1) }), [gymDistance, areaOf(gym.location)].filter(Boolean).join(t(", "))].filter(Boolean).join(". ")
+              : undefined
+          }
           style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 4, fontSize: textPx(12), color: m.faint }}
         >
           {summary && summary.total > 0 && (
@@ -556,10 +561,10 @@ export function GymPage({ gymId }: { gymId: string }) {
 
       {/* Kept (not drawn): Directions, Call, Message, as three --soft buttons. */}
       <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
-        <ActionButton m={m} label="Directions" Icon={Navigation} menu onClick={gym.location || hasCoords ? (e) => openDirections(e.currentTarget) : null} />
+        <ActionButton m={m} label={t("Directions")} Icon={Navigation} menu onClick={gym.location || hasCoords ? (e) => openDirections(e.currentTarget) : null} />
         <ActionButton
           m={m}
-          label="Call"
+          label={t("Call")}
           Icon={Phone}
           menu
           onClick={
@@ -574,7 +579,7 @@ export function GymPage({ gymId }: { gymId: string }) {
         {/* MO1.4.2.6 (4d): a customer may start the venue's thread; the server's message under the row when refused. */}
         <ActionButton
           m={m}
-          label="Message"
+          label={t("Message")}
           Icon={MessageCircle}
           onClick={
             owner && !msgBusy && online
@@ -606,7 +611,7 @@ export function GymPage({ gymId }: { gymId: string }) {
           pinned under the compact header with one hairline while pinned. */}
       <div ref={setTabsSentinel} aria-hidden style={{ height: 1, marginBottom: -1 }} />
       <div ref={setTrackEl} data-gym-tabs="" data-stuck={stuck ? "true" : "false"} className="sticky z-20 -mx-4 px-4" style={{ top: headerH, paddingTop: 14, paddingBottom: 10, background: m.page }}>
-        <SegTrack m={m} tabs={TABS} active={tab} onChange={selectTab} />
+        <SegTrack m={m} tabs={TABS.map((x) => ({ ...x, label: t(x.label) }))} active={tab} onChange={selectTab} />
         {stuck && <span aria-hidden data-tabs-hairline="" className="absolute inset-x-0 bottom-0" style={{ height: 1, background: m.hair }} />}
       </div>
 
@@ -617,7 +622,7 @@ export function GymPage({ gymId }: { gymId: string }) {
             {gym.bio && (
               <>
                 <Caps m={m} style={{ marginTop: 8 }}>
-                  About
+                  {t("About")}
                 </Caps>
                 <p className="whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ margin: "6px 0 0", fontSize: textPx(13), lineHeight: linePx(19.5), color: m.ink2 }}>
                   {gym.bio}
@@ -629,9 +634,9 @@ export function GymPage({ gymId }: { gymId: string }) {
             {housePlaylist && (
               <>
                 <Caps m={m} style={{ marginTop: gym.bio ? 18 : 8 }}>
-                  Music
+                  {t("Music")}
                 </Caps>
-                <PlaylistCard url={housePlaylist} heading="House playlist" style={{ marginTop: 8 }} />
+                <PlaylistCard url={housePlaylist} heading={t("House playlist")} style={{ marginTop: 8 }} />
               </>
             )}
 
@@ -650,12 +655,12 @@ export function GymPage({ gymId }: { gymId: string }) {
             {amenities.length > 0 && (
               <>
                 <Caps m={m} style={{ marginTop: 18 }}>
-                  Amenities
+                  {t("Amenities")}
                 </Caps>
                 <ul data-amenities="" style={{ margin: "8px 0 0", padding: 0, listStyle: "none", display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {amenities.map((k) => (
                     <li key={k} data-amenity={k} style={{ padding: "5px 10px", borderRadius: 999, background: m.pale, color: m.pdark, fontSize: textPx(11.5), fontWeight: 700 }}>
-                      {AMENITY_LABELS[k]}
+                      {t(AMENITY_LABELS[k])}
                     </li>
                   ))}
                 </ul>
@@ -666,7 +671,7 @@ export function GymPage({ gymId }: { gymId: string }) {
             {firstVisit && (
               <>
                 <Caps m={m} style={{ marginTop: 18 }}>
-                  First visit
+                  {t("First visit")}
                 </Caps>
                 <p data-first-visit="" className="whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ margin: "6px 0 0", fontSize: textPx(13), lineHeight: linePx(19.5), color: m.ink2 }}>
                   {firstVisit}
@@ -676,22 +681,22 @@ export function GymPage({ gymId }: { gymId: string }) {
 
             <section ref={setPlansEl} data-gym-plans="" aria-labelledby="gym-plans-label">
               <Caps m={m} id="gym-plans-label" style={{ marginTop: 18 }}>
-                Memberships and day passes
+                {t("Memberships and day passes")}
               </Caps>
               <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
                 {plans === null ? (
-                  <MarketSkeleton radius={18} rows={2} count={2} gap={8} label="Loading memberships" />
+                  <MarketSkeleton radius={18} rows={2} count={2} gap={8} label={tk("Loading memberships")} />
                 ) : plansError ? (
-                  <MarketError thing="memberships" onRetry={retry} />
+                  <MarketError thing={tk("memberships")} onRetry={retry} />
                 ) : (
                   <>
                     {mine && <MyPlanRow m={m} membership={mine} />}
                     {!mine && !takesNew ? (
-                      <MarketEmptyCard title="No new memberships" body={closedLine(bizStatus, "bookings") ?? undefined} />
+                      <MarketEmptyCard title={tk("No new memberships")} body={closedLine(bizStatus, "bookings") ?? undefined} />
                     ) : !buyable ? (
-                      <MarketEmptyCard title="No memberships yet" body="This gym doesn't sell memberships on Centium yet." />
+                      <MarketEmptyCard title={tk("No memberships yet")} body={tk("This gym doesn't sell memberships on Centium yet.")} />
                     ) : plans.length === 0 ? (
-                      !mine && <MarketEmptyCard title="No memberships yet" body="Plans from this gym will show here." />
+                      !mine && <MarketEmptyCard title={tk("No memberships yet")} body={tk("Plans from this gym will show here.")} />
                     ) : (
                       plans.map((p) => <PlanRow key={p.id} m={m} plan={p} save={planSaving(p, plans)} onJoin={!mine && takesNew ? () => join(p) : null} />)
                     )}
@@ -701,19 +706,19 @@ export function GymPage({ gymId }: { gymId: string }) {
             </section>
 
             {/* "Classes at this gym": 52 tall r16 --soft, 13.5 / 700, the 16 chevron --faint; opens the Classes tab. */}
-            <WideRow m={m} label="Classes at this gym" onClick={() => selectTab("classes")} />
+            <WideRow m={m} label={t("Classes at this gym")} onClick={() => selectTab("classes")} />
           </div>
         )}
 
         {tab === "classes" && (
           // The venue's upcoming classes in place (28 days, grouped by day).
           <div data-gym-classes="" style={{ display: "flex", flexDirection: "column" }}>
-            <p style={{ margin: "8px 0 0", fontSize: textPx(13), lineHeight: linePx(19.5), color: m.ink2 }}>Upcoming classes at {gym.name}.</p>
+            <p style={{ margin: "8px 0 0", fontSize: textPx(13), lineHeight: linePx(19.5), color: m.ink2 }}>{t("Upcoming classes at {gym}.", { gym: gym.name })}</p>
             {classes === null ? (
-              <MarketSkeleton radius={18} rows={3} count={3} label="Loading classes" style={{ marginTop: 18 }} />
+              <MarketSkeleton radius={18} rows={3} count={3} label={tk("Loading classes")} style={{ marginTop: 18 }} />
             ) : classesFailed && classes.length === 0 ? (
               <MarketError
-                thing="classes"
+                thing={tk("classes")}
                 onRetry={() => {
                   setClasses(null);
                   setClassesFailed(false);
@@ -721,7 +726,7 @@ export function GymPage({ gymId }: { gymId: string }) {
                 style={{ marginTop: 14 }}
               />
             ) : classes.length === 0 ? (
-              <MarketEmptyCard title="No classes coming up" body="Classes at this gym will show here." style={{ marginTop: 14 }} />
+              <MarketEmptyCard title={tk("No classes coming up")} body={tk("Classes at this gym will show here.")} style={{ marginTop: 14 }} />
             ) : (
               groups.map((g) => (
                 <section key={g.day}>
@@ -780,7 +785,7 @@ export function GymPage({ gymId }: { gymId: string }) {
         width={220}
         options={[
           ...gym.phones.map((p, i) => ({ value: String(i), label: p, icon: <Phone size={16} strokeWidth={1.75} /> })),
-          ...(gym.phones.length > 0 ? [{ value: "copy", label: "Copy number", icon: <Copy size={16} strokeWidth={1.75} /> }] : []),
+          ...(gym.phones.length > 0 ? [{ value: "copy", label: t("Copy number"), icon: <Copy size={16} strokeWidth={1.75} /> }] : []),
         ]}
         onSelect={call}
       />
@@ -789,17 +794,17 @@ export function GymPage({ gymId }: { gymId: string }) {
       <PurchaseSheet
         open={checkoutOpen && !!sheetPlan}
         onClose={() => setCheckoutOpen(false)}
-        title={`Join ${gym.name}`}
+        title={t("Join {gym}", { gym: gym.name })}
         summary={sheetPlan ? <PlanSummary name={sheetPlanName(sheetPlan.name)} price={priceOf(sheetPlan)} rows={sheetRows} /> : null}
-        cashHint="Pay at the front desk on your first visit"
-        ctaLabel={sheetPlan && sheetPlan.price > 0 ? confirmLabel(priceOf(sheetPlan)) : "Confirm"}
+        cashHint={t("Pay at the front desk on your first visit")}
+        ctaLabel={sheetPlan && sheetPlan.price > 0 ? confirmLabel(priceOf(sheetPlan)) : t("Confirm")}
         busy={busy}
         disabled={!online}
         error={checkoutError}
         note={
           <>
-            <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: m.faint }}>Your pass works once the gym marks it paid.</p>
-            {!online && <p style={{ margin: 0, fontSize: textPx(12), fontWeight: 600, color: m.ink2 }}>You're offline.</p>}
+            <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: m.faint }}>{t("Your pass works once the gym marks it paid.")}</p>
+            {!online && <p style={{ margin: 0, fontSize: textPx(12), fontWeight: 600, color: m.ink2 }}>{t("You're offline.")}</p>}
           </>
         }
         onConfirm={() => void confirm()}
@@ -808,9 +813,9 @@ export function GymPage({ gymId }: { gymId: string }) {
       {/* C-MO.4.2.2 memberDone, in place of the old confirmed screen. */}
       <BookingDone
         open={!!done}
-        title="You're a member"
-        body={done ? `Your ${sheetPlanName(done.planName)} at ${gym.name} starts today.` : ""}
-        rows={done ? [{ k: "Plan", v: done.planName }, { k: "Valid until", v: longDay(done.until) }, { k: "Payment", v: `${done.price} · Cash at the front desk` }] : []}
+        title={t("You're a member")}
+        body={done ? t("Your {plan} at {gym} starts today.", { plan: sheetPlanName(done.planName), gym: gym.name }) : ""}
+        rows={done ? [{ k: t("Plan"), v: done.planName }, { k: t("Valid until"), v: longDay(done.until) }, { k: tx("Payment", "how it is paid"), v: t("{price} · Cash at the front desk", { price: done.price }) }] : []}
         bookingsTab="memberships"
         onDone={closeDone}
       />
@@ -819,7 +824,7 @@ export function GymPage({ gymId }: { gymId: string }) {
       <CentredPopup open={passOpen && !!mine} onClose={() => setPassOpen(false)} title={gym.name} geometry="ours">
         {mine && <MembershipPass membership={mine} gymLocation={gym.location} memberName={user.firstName} />}
         <button type="button" onClick={() => setPassOpen(false)} className="tap market-focus" style={{ marginTop: 8, width: "100%", height: 48, border: 0, background: "none", font: "inherit", fontSize: textPx(14), fontWeight: 700, color: m.ink2 }}>
-          Done
+          {t("Done")}
         </button>
       </CentredPopup>
 
@@ -827,26 +832,26 @@ export function GymPage({ gymId }: { gymId: string }) {
       <CentredPopup
         open={bookOpen}
         onClose={() => !busy && !booking.busy && setBookOpen(false)}
-        title="Book a class"
+        title={t("Book a class")}
         icon={<CalendarPlus size={22} strokeWidth={1.75} />}
-        body={`${gym.name} · this week's classes`}
+        body={t("{gym} · this week's classes", { gym: gym.name })}
         bodyWeight={400}
         geometry="ours"
       >
         <div className="text-start">
-          <Caps m={m}>This week</Caps>
+          <Caps m={m}>{t("This week")}</Caps>
           {week === null ? (
-            <MarketSkeleton radius={18} rows={2} label="Loading this week's classes" style={{ marginTop: 10 }} />
+            <MarketSkeleton radius={18} rows={2} label={tk("Loading this week's classes")} style={{ marginTop: 10 }} />
           ) : week.length === 0 ? (
             <p role={weekError ? "alert" : undefined} style={{ margin: "10px 0 0", fontSize: textPx(12.5), fontWeight: weekError ? 600 : 400, color: weekError ? m.high : m.faint }}>
-              {weekError ?? "No classes here this week."}
+              {weekError ?? t("No classes here this week.")}
             </p>
           ) : (
-            <div role="radiogroup" aria-label="This week" style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div role="radiogroup" aria-label={t("This week")} style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
               {week.map((c) => {
                 const on = c.classId === classId;
                 const full = c.seatsLeft <= 0;
-                const t = time12Split(c.startTime);
+                const tm = time12Split(c.startTime);
                 return (
                   <button
                     key={c.classId}
@@ -874,14 +879,14 @@ export function GymPage({ gymId }: { gymId: string }) {
                   >
                     <span aria-hidden style={{ width: 39, height: 36, borderRadius: 10, background: m.pale, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0, lineHeight: 1 }}>
                       <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: m.pdark }}>{new Date(`${c.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short" })}</span>
-                      <span style={{ marginTop: 2, fontSize: 13, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{t?.time ?? c.startTime}</span>
-                      <span style={{ marginTop: 1, fontSize: 8.5, fontWeight: 800, color: m.ink2 }}>{t?.meridiem}</span>
+                      <span style={{ marginTop: 2, fontSize: 13, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{tm?.time ?? c.startTime}</span>
+                      <span style={{ marginTop: 1, fontSize: 8.5, fontWeight: 800, color: m.ink2 }}>{tm?.meridiem}</span>
                     </span>
                     <span style={{ minWidth: 0, flex: 1 }}>
                       <span className="truncate" style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>
                         {c.title}
                       </span>
-                      <span style={{ display: "block", fontSize: textPx(11.5), color: m.faint }}>{full ? "Full" : `${c.seatsLeft} ${c.seatsLeft === 1 ? "spot" : "spots"} left`}</span>
+                      <span style={{ display: "block", fontSize: textPx(11.5), color: m.faint }}>{full ? t("Full") : tn(c.seatsLeft, "{n} spot left", "{n} spots left")}</span>
                     </span>
                     <span style={{ fontSize: textPx(14), fontWeight: 800, whiteSpace: "nowrap" }}>{c.price}</span>
                   </button>
@@ -898,7 +903,7 @@ export function GymPage({ gymId }: { gymId: string }) {
         {week && week.length > 0 && (
           <CtaButton
             size="page"
-            label="Confirm booking"
+            label={t("Confirm booking")}
             loading={booking.busy}
             disabled={!classId || !online}
             className={`mt-5 ${ctaClass}`}
@@ -910,7 +915,7 @@ export function GymPage({ gymId }: { gymId: string }) {
             }}
           />
         )}
-        {week && week.length > 0 && !online && <p style={{ margin: "8px 0 0", textAlign: "center", fontSize: textPx(12), fontWeight: 600, color: m.ink2 }}>You're offline.</p>}
+        {week && week.length > 0 && !online && <p style={{ margin: "8px 0 0", textAlign: "center", fontSize: textPx(12), fontWeight: 600, color: m.ink2 }}>{t("You're offline.")}</p>}
         <button
           type="button"
           onClick={() => {
@@ -920,7 +925,7 @@ export function GymPage({ gymId }: { gymId: string }) {
           className="tap market-focus"
           style={{ marginTop: 8, width: "100%", height: 36, border: 0, background: "none", font: "inherit", fontSize: textPx(14), fontWeight: 700, color: m.accent }}
         >
-          See all classes
+          {t("See all classes")}
         </button>
       </CentredPopup>
 
@@ -940,7 +945,7 @@ export function GymPage({ gymId }: { gymId: string }) {
 
       <Toast open={!!copied} message={copied ?? ""} onExpire={() => setCopied(null)} duration={1600} />
       {/* O-TOAST: a write that failed for no stated reason; nothing changed on screen. */}
-      <Toast open={saveFailed} message="Couldn't save. Try again." tone="error" onExpire={() => setSaveFailed(false)} />
+      <Toast open={saveFailed} message={t("Couldn't save. Try again.")} tone="error" onExpire={() => setSaveFailed(false)} />
     </div>
   );
 }
@@ -965,7 +970,7 @@ function GymHero({ onBack, photos, m }: { onBack: () => void; photos: string[]; 
       <button
         type="button"
         onClick={onBack}
-        aria-label="Back"
+        aria-label={t("Back")}
         className="hit market-focus"
         style={{
           position: "absolute",
@@ -984,7 +989,7 @@ function GymHero({ onBack, photos, m }: { onBack: () => void; photos: string[]; 
           cursor: "pointer",
         }}
       >
-        <ChevronLeft size={18} strokeWidth={2} aria-hidden />
+        <ChevronLeft size={18} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />
       </button>
     </div>
   );
@@ -1008,7 +1013,8 @@ function Caps({ m, children, style, id }: { m: MarketPalette; children: React.Re
 function SegTrack<K extends string>({ m, tabs, active, onChange }: { m: MarketPalette; tabs: { key: K; label: string }[]; active: K; onChange: (k: K) => void }) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const onKey = (e: React.KeyboardEvent, i: number) => {
-    const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+    const rtl = document.documentElement.dir === "rtl";
+    const d = e.key === "ArrowRight" ? (rtl ? -1 : 1) : e.key === "ArrowLeft" ? (rtl ? 1 : -1) : 0;
     if (!d) return;
     e.preventDefault();
     const n = (i + d + tabs.length) % tabs.length;
@@ -1016,12 +1022,12 @@ function SegTrack<K extends string>({ m, tabs, active, onChange }: { m: MarketPa
     refs.current[n]?.focus();
   };
   return (
-    <div role="tablist" aria-label="Gym sections" style={{ display: "flex", gap: 5, padding: 6, borderRadius: 16, background: m.segtrack }}>
-      {tabs.map((t, i) => {
-        const on = t.key === active;
+    <div role="tablist" aria-label={t("Gym sections")} style={{ display: "flex", gap: 5, padding: 6, borderRadius: 16, background: m.segtrack }}>
+      {tabs.map((tb, i) => {
+        const on = tb.key === active;
         return (
           <button
-            key={t.key}
+            key={tb.key}
             ref={(el) => {
               refs.current[i] = el;
             }}
@@ -1029,7 +1035,7 @@ function SegTrack<K extends string>({ m, tabs, active, onChange }: { m: MarketPa
             role="tab"
             aria-selected={on}
             tabIndex={on ? 0 : -1}
-            onClick={() => onChange(t.key)}
+            onClick={() => onChange(tb.key)}
             onKeyDown={(e) => onKey(e, i)}
             className="hit market-focus"
             style={{
@@ -1047,7 +1053,7 @@ function SegTrack<K extends string>({ m, tabs, active, onChange }: { m: MarketPa
               whiteSpace: "nowrap",
             }}
           >
-            {t.label}
+            {tb.label}
           </button>
         );
       })}
@@ -1139,11 +1145,11 @@ function LocationHours({
       {/* The tag sits on the label's centre line without changing the board's 18 / 8 spacing. */}
       <div style={{ marginTop: first ? 8 : 18, position: "relative", paddingInlineEnd: tag ? 96 : 0 }}>
         <Caps m={m} id="gym-hours-label">
-          Location and hours
+          {t("Location and hours")}
         </Caps>
         {tag && (
           <span style={{ position: "absolute", insetInlineEnd: 0, top: "50%", transform: "translateY(-50%)", display: "flex" }}>
-            <MemberTag label={tag.label} tone={tag.tone} />
+            <MemberTag label={t(tag.label)} tone={tag.tone} />
           </span>
         )}
       </div>
@@ -1153,7 +1159,7 @@ function LocationHours({
             type="button"
             onClick={(e) => onMap(e.currentTarget)}
             aria-haspopup="menu"
-            aria-label={address ? `Directions to ${address}` : "Directions"}
+            aria-label={address ? t("Directions to {address}", { address }) : t("Directions")}
             className="market-focus"
             style={{ display: "block", width: "100%", padding: 0, border: 0, background: "none", cursor: "pointer" }}
           >
@@ -1163,7 +1169,7 @@ function LocationHours({
         <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6, fontSize: textPx(12.5) }}>
           {address && <div style={{ fontWeight: 700, color: m.ink }}>{address}</div>}
           {rows === undefined ? (
-            <div role="status" aria-busy="true" aria-label="Loading opening hours" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div role="status" aria-busy="true" aria-label={t("Loading opening hours")} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {[0, 1].map((i) => (
                 <span key={i} aria-hidden className="animate-skeleton-pulse" style={{ display: "block", height: 17, borderRadius: 999, background: m.soft }} />
               ))}
@@ -1173,12 +1179,12 @@ function LocationHours({
               {error}
             </p>
           ) : lines.length === 0 ? (
-            <p style={{ margin: 0, color: m.faint }}>This gym hasn't published its opening hours yet.</p>
+            <p style={{ margin: 0, color: m.faint }}>{t("This gym hasn't published its opening hours yet.")}</p>
           ) : (
             lines.map((l) => (
               <div key={l.key} data-hours-row="" style={{ display: "flex", justifyContent: "space-between", gap: 12, color: m.ink2 }}>
                 <span style={{ minWidth: 0 }}>{l.label}</span>
-                <span style={{ minWidth: 0, textAlign: "end" }}>{l.value}</span>
+                <span style={{ minWidth: 0, textAlign: "end" }}>{t(l.value)}</span>
               </div>
             ))
           )}
@@ -1197,7 +1203,7 @@ function LocationHours({
  */
 function PlanRow({ m, plan, save, onJoin }: { m: MarketPalette; plan: VenuePlan; save: number | null; onJoin: (() => void) | null }) {
   const press = usePress();
-  const extra = [save !== null ? `Save ${save}%` : null, ...commitmentLines(plan.minimumTermMonths, plan.noticeDays)].filter(Boolean).join(" · ");
+  const extra = [save !== null ? t("Save {n}%", { n: save }) : null, ...commitmentLines(plan.minimumTermMonths, plan.noticeDays)].filter(Boolean).join(" · ");
   return (
     <div data-plan-row="" style={{ borderRadius: 16, border: `0.5px solid ${m.hair}`, background: m.card, paddingBlock: "12px", paddingInline: "14px 12px", display: "flex", alignItems: "center", gap: 12 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -1210,7 +1216,7 @@ function PlanRow({ m, plan, save, onJoin }: { m: MarketPalette; plan: VenuePlan;
         <button
           type="button"
           onClick={onJoin}
-          aria-label={`Join: ${plan.name}, ${priceOf(plan)}`}
+          aria-label={t("Join: {plan}, {price}", { plan: plan.name, price: priceOf(plan) })}
           className="hit market-focus"
           {...press.handlers}
           style={{
@@ -1230,7 +1236,7 @@ function PlanRow({ m, plan, save, onJoin }: { m: MarketPalette; plan: VenuePlan;
             ...press.style,
           }}
         >
-          Join
+          {t("Join")}
         </button>
       )}
     </div>
@@ -1243,13 +1249,13 @@ function MyPlanRow({ m, membership }: { m: MarketPalette; membership: GymMembers
   return (
     <div data-my-plan="" style={{ borderRadius: 16, border: `0.5px solid ${m.hair}`, background: m.card, paddingBlock: "12px", paddingInline: "14px 12px", display: "flex", alignItems: "center", gap: 12 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: textPx(14), fontWeight: 700, color: m.ink }}>{membership.planName || "Membership"}</div>
+        <div style={{ fontSize: textPx(14), fontWeight: 700, color: m.ink }}>{membership.planName || tx("Membership", "subscription")}</div>
         <div style={{ fontSize: textPx(11.5), color: m.faint, marginTop: 1 }}>
-          {membership.expiresOn ? `Your plan · valid until ${longDay(membership.expiresOn)}` : "Your plan · no end date"}
+          {membership.expiresOn ? t("Your plan · valid until {date}", { date: longDay(membership.expiresOn) }) : t("Your plan · no end date")}
         </div>
       </div>
       <div style={{ fontSize: textPx(14), fontWeight: 800, whiteSpace: "nowrap", color: m.ink, fontVariantNumeric: "tabular-nums" }}>{formatPrice(membership.priceAgreed) || "$0"}</div>
-      <MemberTag label={tag.label} tone={tag.tone} />
+      <MemberTag label={t(tag.label)} tone={tag.tone} />
     </div>
   );
 }
@@ -1284,7 +1290,7 @@ function WideRow({ m, label, onClick }: { m: MarketPalette; label: string; onCli
       }}
     >
       {label}
-      <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={m.faint} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
+      <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={m.faint} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden className="rtl:-scale-x-100" style={{ flexShrink: 0 }}>
         <path d="m9 18 6-6-6-6" />
       </svg>
     </button>

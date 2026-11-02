@@ -11,6 +11,7 @@ import { FORUM_PHOTO_ACCEPT } from "../../services/forum/photo";
 import { fetchVenueImages, removeVenueImage, uploadVenueImage, type VenueImages } from "../../services/venues/console";
 import { VCardError, VDetailCard } from "./VenueKit";
 import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../moderation/ImageApproval";
+import { t } from "../../i18n/core";
 
 // The business logo and the venue cover (stage A4), owner only, rebuilt from
 // the MO1 Business Profile hero (OURS-OP1-venue-images: K21 cover 132 r18 with
@@ -99,7 +100,7 @@ export function VenueImagesCard({
       return;
     }
     (kind === "logo" ? ownLogo : ownCover).refresh();
-    onToast?.(kind === "logo" ? "Logo sent for approval." : "Cover photo sent for approval.");
+    onToast?.(kind === "logo" ? t("Logo sent for approval.") : t("Cover photo sent for approval."));
   };
 
   const remove = async (kind: Kind) => {
@@ -114,7 +115,7 @@ export function VenueImagesCard({
     }
     setImages({ gymId, value: kind === "logo" ? { ...current, logoPath: null, logoUrl: null } : { ...current, coverPath: null, coverUrl: null } });
     (kind === "logo" ? ownLogo : ownCover).refresh();
-    onToast?.(kind === "logo" ? "Logo removed." : "Cover photo removed.");
+    onToast?.(kind === "logo" ? t("Logo removed.") : t("Cover photo removed."));
   };
 
   const pick = (action: Action) => {
@@ -129,23 +130,23 @@ export function VenueImagesCard({
   const has = (kind: Kind) =>
     kind === "logo" ? !!current?.logoPath || ownLogo.image?.status === "pending" : !!current?.coverPath || ownCover.image?.status === "pending";
   const options: { value: Action; label: string; destructive?: boolean }[] = [
-    ...(hasCamera() ? [{ value: "camera" as const, label: "Take a photo" }] : []),
-    { value: "library", label: "Choose from library" },
-    ...(menu && has(menu.kind) ? [{ value: "remove" as const, label: "Remove photo", destructive: true }] : []),
+    ...(hasCamera() ? [{ value: "camera" as const, label: t("Take a photo") }] : []),
+    { value: "library", label: t("Choose from library") },
+    ...(menu && has(menu.kind) ? [{ value: "remove" as const, label: t("Remove photo"), destructive: true }] : []),
   ];
 
   const spinner = <LoaderCircle size={20} aria-hidden className="text-white animate-spin" />;
 
   return (
-    <VDetailCard id={id} title="Logo and cover" right="Shown on Explore">
+    <VDetailCard id={id} title={t("Logo and cover")} right={t("Shown on Explore")}>
       {loadError && !current ? (
-        <VCardError title="Couldn't load the logo and cover" message={loadError} onRetry={() => setTick((t) => t + 1)} />
+        <VCardError title={t("Couldn't load the logo and cover")} message={loadError} onRetry={() => setTick((t) => t + 1)} />
       ) : (
         <div style={{ padding: "6px 16px 16px" }}>
           {/* K21 cover */}
           <button
             type="button"
-            aria-label="Change cover photo"
+            aria-label={t("Change cover photo")}
             aria-haspopup="menu"
             disabled={disabled}
             onClick={(e) => setMenu({ kind: "cover", anchor: e.currentTarget })}
@@ -169,7 +170,7 @@ export function VenueImagesCard({
           <div className="flex items-end gap-[10px]" style={{ marginTop: -34, paddingInlineStart: 14 }}>
             <button
               type="button"
-              aria-label="Change logo"
+              aria-label={t("Change logo")}
               aria-haspopup="menu"
               disabled={disabled}
               onClick={(e) => setMenu({ kind: "logo", anchor: e.currentTarget })}
@@ -196,19 +197,19 @@ export function VenueImagesCard({
             <ImageApprovalBadge state={ownLogo.image} className="mb-[4px]" />
           </div>
           <div className="mt-[10px] space-y-[2px]">
-            <p className="text-[12px] leading-[16px] text-charcoal-soft">Business logo · Shown on all your venues.</p>
-            <p className="text-[12px] leading-[16px] text-charcoal-soft">Cover photo for {venueName} · The wide photo at the top of this venue's page.</p>
-            <p className="text-[11px] leading-[15px] text-charcoal-faint">JPEG, PNG or WebP. Logo under 2 MB, cover under 5 MB.</p>
+            <p className="text-[12px] leading-[16px] text-charcoal-soft">{t("Business logo · Shown on all your venues.")}</p>
+            <p className="text-[12px] leading-[16px] text-charcoal-soft">{t("Cover photo for {venue} · The wide photo at the top of this venue's page.", { venue: venueName })}</p>
+            <p className="text-[11px] leading-[15px] text-charcoal-faint">{t("JPEG, PNG or WebP. Logo under 2 MB, cover under 5 MB.")}</p>
           </div>
           {/* One "waiting" line covers both pictures; a refusal gives its own reason. */}
           <ImageApprovalNote state={ownLogo.image} className="mt-[10px]" />
           {!(ownCover.image?.status === "pending" && ownLogo.image?.status === "pending") && <ImageApprovalNote state={ownCover.image} className="mt-[10px]" />}
           {error && <p className="mt-[10px] text-[11.5px] leading-[16px] font-bold text-status-high">{error}</p>}
-          {!online && <p className="mt-[10px] text-[11.5px] leading-[16px] text-charcoal-faint">You're offline. Showing what was loaded last.</p>}
+          {!online && <p className="mt-[10px] text-[11.5px] leading-[16px] text-charcoal-faint">{t("You're offline. Showing what was loaded last.")}</p>}
         </div>
       )}
       <p className={clsx("border-t border-charcoal/[0.06] text-[11.5px] leading-[16px] text-charcoal-faint")} style={{ padding: "10px 16px 14px" }}>
-        Location and camera details are removed from every photo before it's uploaded.
+        {t("Location and camera details are removed from every photo before it's uploaded.")}
       </p>
 
       <input
@@ -243,7 +244,7 @@ export function VenueImagesCard({
         variant="field"
         width={204}
         align="left"
-        heading={menu?.kind === "cover" ? "Cover photo" : "Logo"}
+        heading={menu?.kind === "cover" ? t("Cover photo") : t("Logo")}
         options={options}
         onSelect={pick}
       />
@@ -253,14 +254,14 @@ export function VenueImagesCard({
         frame="kit"
         tone="destructive"
         icon={<Trash2 size={20} strokeWidth={2.2} />}
-        title={confirming === "logo" ? "Remove the logo?" : "Remove the cover photo?"}
+        title={confirming === "logo" ? t("Remove the logo?") : t("Remove the cover photo?")}
         subtitle={
           confirming === "logo"
-            ? "Your venues will show your initials instead. You can upload a new logo at any time."
-            : "This venue's page will show its colour instead. You can upload a new cover at any time."
+            ? t("Your venues will show your initials instead. You can upload a new logo at any time.")
+            : t("This venue's page will show its colour instead. You can upload a new cover at any time.")
         }
-        confirmLabel="Remove"
-        cancelLabel="Keep it"
+        confirmLabel={t("Remove")}
+        cancelLabel={t("Keep it")}
         busy={!!busy}
         onCancel={() => !busy && setConfirming(null)}
         onConfirm={() => {

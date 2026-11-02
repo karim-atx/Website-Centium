@@ -11,6 +11,7 @@ import { FOCUS_CSS } from "../market/usePress";
 import { time12 } from "../../utils/time12";
 import { FeaturedChip } from "./FeaturedChip";
 import { classCardLines, shortDate, venueOf } from "./classCardModel";
+import { t } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · the class ticket card (C-MO.4.3 `classes`,
 // Client Explore Screens lines 240–256), shared by Explore › Classes, the gym
@@ -61,7 +62,7 @@ export function ClassCard({
   const m = marketPalette(dark);
   const l = classCardLines(c, { booked, hideVenue });
   const when = [shortDate(c.date), time12(c.startTime)].filter(Boolean).join(" ");
-  const label = `${c.title}${hideVenue ? "" : `, ${venueOf(c)}`}, ${when}. ${booked ? "Booked" : l.stub === "full" ? "Full" : l.price}. Open class`;
+  const label = `${c.title}${hideVenue ? "" : `${t(", ")}${venueOf(c)}`}${t(", ")}${when}. ${booked ? t("Booked") : l.stub === "full" ? t("Full") : l.price}. ${t("Open class")}`;
   const one = { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } as const;
   const stub =
     l.stub === "booked" ? (
@@ -69,7 +70,7 @@ export function ClassCard({
         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={NO_ICON_SCALE}>
           <path d="M20 6 9 17l-5-5" />
         </svg>
-        <span style={{ fontSize: textPx(12), fontWeight: 800 }}>Booked</span>
+        <span style={{ fontSize: textPx(12), fontWeight: 800 }}>{t("Booked")}</span>
       </span>
     ) : undefined;
   return (
@@ -78,7 +79,7 @@ export function ClassCard({
       <TicketStub
         stubWidth={72}
         tone={l.stub === "booked" ? "teal" : l.stub === "full" ? "muted" : "pale"}
-        stubLabel={l.stub === "full" ? "Full" : l.price}
+        stubLabel={l.stub === "full" ? t("Full") : l.price}
         stub={stub}
         minHeight={88}
         onPress={() => onOpen(c)}
@@ -92,7 +93,7 @@ export function ClassCard({
               {l.time ? (
                 <>
                   {l.time.time}
-                  <span style={{ fontSize: textPx(11), lineHeight: 1, fontWeight: 700 }}>{` ${l.time.meridiem}`}</span>
+                  <span style={{ fontSize: textPx(11), lineHeight: 1, fontWeight: 700 }}>{` ${t(l.time.meridiem)}`}</span>
                 </>
               ) : (
                 c.startTime
@@ -114,7 +115,7 @@ export function ClassCard({
             {l.extra && (
               <>
                 {" · "}
-                <span style={{ fontWeight: 700, color: l.extra === "Full" ? m.high : m.ink2 }}>{l.extra}</span>
+                <span style={{ fontWeight: 700, color: l.stub === "full" ? m.high : m.ink2 }}>{l.extra}</span>
               </>
             )}
           </span>
@@ -157,7 +158,7 @@ export function RetryLine({ message, onRetry, className }: { message: string; on
   const online = useOnline();
   return (
     <div className={className}>
-      <ConfirmationStrip tone={online ? "error" : "neutral"} text={message} action={onRetry ? "Retry" : undefined} onAction={onRetry} still />
+      <ConfirmationStrip tone={online ? "error" : "neutral"} text={message} action={onRetry ? t("Retry") : undefined} onAction={onRetry} still />
     </div>
   );
 }

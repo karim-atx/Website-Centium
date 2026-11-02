@@ -14,6 +14,7 @@ import { PointsFigure } from "../../components/market/PointsFigure";
 import { FOCUS_CSS, usePress } from "../../components/market/usePress";
 import { PointsHero } from "./PointsHero";
 import { appLocale } from "../../i18n/format";
+import { t, tn } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · client Explore (C-MO.4.1 Marketplace Home; HANDOVER
 // §4 Client Marketplace; Client Explore Screens lines 26–81).
@@ -53,17 +54,17 @@ export default function Marketplace() {
         <div className="flex items-start gap-1.5">
           <button
             onClick={back}
-            aria-label="Back"
+            aria-label={t("Back")}
             className="tap w-9 h-9 mt-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 -ms-[7px]"
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={18} className="rtl:-scale-x-100" />
           </button>
           <div className="min-w-0 flex-1">
             <h1 className="m-0" style={{ fontSize: textPx(27), lineHeight: linePx(40.5), fontWeight: 700, letterSpacing: "-0.6px" }}>
-              <span className="text-charcoal">Explore</span>
+              <span className="text-charcoal">{t("Explore")}</span>
             </h1>
             <p className="m-0 text-charcoal-faint" style={{ fontSize: textPx(13), lineHeight: linePx(19.5) }}>
-              Gyms, classes and rewards
+              {t("Gyms, classes and rewards")}
             </p>
           </div>
           {params.get("tab") === "rewards" ? <HeaderBalance /> : null}
@@ -84,7 +85,7 @@ function HeaderBalance() {
   const { pointsSummary } = useApp();
   if (!pointsSummary) return null;
   return (
-    <span className="shrink-0 self-center" aria-label={`${pointsSummary.balance.toLocaleString(appLocale("en-US"))} points`}>
+    <span className="shrink-0 self-center" aria-label={tn(pointsSummary.balance, "{n} point", "{n} points", { n: pointsSummary.balance.toLocaleString(appLocale("en-US")) })}>
       <PointsFigure value={pointsSummary.balance} mark="leaf" size={17} />
     </span>
   );
@@ -108,10 +109,10 @@ function ExploreLinks() {
     </button>
   );
   return (
-    <nav aria-label="Your bookings and rewards" style={{ marginTop: 10, display: "flex", gap: 5, padding: 6, borderRadius: 16, background: m.segtrack }}>
+    <nav aria-label={t("Your bookings and rewards")} style={{ marginTop: 10, display: "flex", gap: 5, padding: 6, borderRadius: 16, background: m.segtrack }}>
       <style>{FOCUS_CSS}</style>
-      {item("My bookings", "/app/marketplace/bookings", a)}
-      {item("My rewards", "/app/marketplace/rewards/mine", b)}
+      {item(t("My bookings"), "/app/marketplace/bookings", a)}
+      {item(t("My rewards"), "/app/marketplace/rewards/mine", b)}
     </nav>
   );
 }

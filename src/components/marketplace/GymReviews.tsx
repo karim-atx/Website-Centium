@@ -26,6 +26,7 @@ import { reviewAge, summaryOf } from "../../services/venues/venueLogic";
 import { useApp } from "../../context/AppContext";
 import { useReviewOpensAt } from "../../hooks/useReviewOpensAt";
 import { ReviewWaitNote } from "../reviews/ReviewWaitNote";
+import { t, tk, tn } from "../../i18n/core";
 
 // MO1.4.2.3 Gym page › Reviews (backend stage 4d): the rating summary with
 // its five bars, the sort chips, the review cards and "Write a review"
@@ -56,16 +57,16 @@ import { ReviewWaitNote } from "../reviews/ReviewWaitNote";
 //   becomes "Edit your review" instead of answering ATX92.
 
 const SORTS: { key: ReviewSort; label: string }[] = [
-  { key: "recent", label: "Most recent" },
-  { key: "highest", label: "Highest" },
-  { key: "lowest", label: "Lowest" },
+  { key: "recent", label: tk("Most recent") },
+  { key: "highest", label: tk("Highest") },
+  { key: "lowest", label: tk("Lowest") },
 ];
 const PAGE = 20;
 
 /** Five stars: --gold for the rating, --swoff for the rest. */
 function Stars({ value, size, m }: { value: number; size: number; m: MarketPalette }) {
   return (
-    <span style={{ display: "inline-flex", gap: 2 }} aria-label={`${Math.round(value)} out of 5 stars`} role="img">
+    <span style={{ display: "inline-flex", gap: 2 }} aria-label={t("{n} out of 5 stars", { n: Math.round(value) })} role="img">
       {Array.from({ length: 5 }, (_, i) => {
         const c = i < Math.round(value) ? m.gold : m.swoff;
         return <Star key={i} size={size} strokeWidth={1.5} aria-hidden fill={c} color={c} />;
@@ -181,10 +182,10 @@ export function GymReviews({
             <Stars value={summary?.average ?? 0} size={13} m={m} />
           </span>
           <span style={{ marginTop: 4, fontSize: textPx(11.5), color: m.faint }}>
-            {total} {total === 1 ? "review" : "reviews"}
+            {tn(total, "{n} review", "{n} reviews")}
           </span>
         </div>
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }} aria-label="Ratings breakdown">
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }} aria-label={t("Ratings breakdown")}>
           {[5, 4, 3, 2, 1].map((n, i) => {
             const c = summary?.counts[i] ?? 0;
             return (
@@ -202,7 +203,7 @@ export function GymReviews({
 
       {/* The sort, on the board's sub-segmented track (--subtrack r12 p4 gap 4;
           34 tall r9 12; active --subactive / --onfill 700, idle --subink 600). */}
-      <div role="radiogroup" aria-label="Sort reviews" style={{ marginTop: 12, display: "flex", gap: 4, padding: 4, borderRadius: 12, background: m.subtrack }}>
+      <div role="radiogroup" aria-label={t("Sort reviews")} style={{ marginTop: 12, display: "flex", gap: 4, padding: 4, borderRadius: 12, background: m.subtrack }}>
         {SORTS.map((s) => {
           const on = s.key === sort;
           return (
@@ -231,7 +232,7 @@ export function GymReviews({
                 cursor: "pointer",
               }}
             >
-              {s.label}
+              {t(s.label)}
             </button>
           );
         })}
@@ -245,9 +246,9 @@ export function GymReviews({
 
       <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
         {reviews === null ? (
-          <MarketSkeleton radius={18} rows={3} count={2} label="Loading reviews" />
+          <MarketSkeleton radius={18} rows={3} count={2} label={tk("Loading reviews")} />
         ) : reviews.length === 0 ? (
-          <MarketEmptyCard title="No reviews yet" body={`Reviews of ${gymName} will show here.`} />
+          <MarketEmptyCard title={t("No reviews yet")} body={t("Reviews of {gym} will show here.", { gym: gymName })} />
         ) : (
           reviews.map((r) => (
             // A review: radius 18, 0.5px --hair, --card, padding 14 16; the 30
@@ -255,7 +256,7 @@ export function GymReviews({
             // --faint, the text 13 / 19.5 --ink2, "Helpful · N" 11.5 / 600.
             <article key={r.id} style={{ ...card, padding: "14px 16px" }}>
               {r.redacted ? (
-                <p style={{ margin: 0, fontSize: textPx(13), fontStyle: "italic", color: m.faint }}>This review was removed.</p>
+                <p style={{ margin: 0, fontSize: textPx(13), fontStyle: "italic", color: m.faint }}>{t("This review was removed.")}</p>
               ) : (
                 <>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -265,15 +266,15 @@ export function GymReviews({
                     <span style={{ minWidth: 0, flex: 1 }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span className="truncate" style={{ fontSize: textPx(13.5), fontWeight: 700 }}>
-                          {r.isMine ? "You" : (r.authorName ?? "Anonymous reviewer")}
+                          {r.isMine ? t("You") : (r.authorName ?? t("Anonymous reviewer"))}
                         </span>
-                        {r.authorIsMember && <MemberTag label="Member" tone="member" />}
+                        {r.authorIsMember && <MemberTag label={t("Member")} tone="member" />}
                       </span>
                       <span style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
                         <Stars value={r.rating ?? 0} size={13} m={m} />
                         <span style={{ fontSize: textPx(11), color: m.faint }}>
                           {reviewAge(r.createdAt)}
-                          {r.editedAt ? " · edited" : ""}
+                          {r.editedAt ? ` · ${t("edited")}` : ""}
                           {r.classTitle ? ` · ${r.classTitle}` : ""}
                         </span>
                       </span>
@@ -287,7 +288,7 @@ export function GymReviews({
                   {/* The business's public reply: a 2px --fill rule, the head 11 / 800 --pdark, the text 12 / 17 --ink. */}
                   {r.reply && (
                     <div style={{ marginTop: 10, borderInlineStart: `2px solid ${m.fill}`, paddingInlineStart: 10 }}>
-                      <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 800, color: m.pdark }}>{gymName} replied</p>
+                      <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 800, color: m.pdark }}>{t("{name} replied", { name: gymName })}</p>
                       <p className="whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ margin: "2px 0 0", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink }}>
                         {r.reply.body}
                       </p>
@@ -317,7 +318,7 @@ export function GymReviews({
                         }}
                       >
                         <ThumbsUp size={13} strokeWidth={1.75} aria-hidden fill={r.viewerFoundHelpful ? "currentColor" : "none"} />
-                        Helpful · {r.helpfulCount}
+                        {t("Helpful")} · {r.helpfulCount}
                       </button>
                     </div>
                   )}
@@ -333,7 +334,7 @@ export function GymReviews({
             className="hit market-focus"
             style={{ height: 40, border: 0, background: "none", font: "inherit", fontSize: textPx(13), fontWeight: 700, color: m.accent, cursor: "pointer" }}
           >
-            Show more reviews
+            {t("Show more reviews")}
           </button>
         )}
       </div>
@@ -355,7 +356,7 @@ export function GymReviews({
           <div aria-hidden style={{ height: 60 }} />
           <PinnedCta
             primary={{
-              label: mine && !mine.redacted ? "Edit your review" : "Write a review",
+              label: mine && !mine.redacted ? t("Edit your review") : t("Write a review"),
               icon: <Pencil size={15} strokeWidth={1.75} aria-hidden />,
               onClick: () => setWriteOpen(true),
               disabled: writeOff,
@@ -376,13 +377,13 @@ export function GymReviews({
               <Pencil size={17} aria-hidden />
             </span>
             <span className="truncate" style={{ minWidth: 0, flex: 1, fontSize: textPx(14), fontWeight: 600 }}>
-              {mine && !mine.redacted ? "Edit your review" : "Write a review"}
+              {mine && !mine.redacted ? t("Edit your review") : t("Write a review")}
             </span>
           </button>
         )
       )}
 
-      <BottomSheet open={writeOpen} onClose={() => setWriteOpen(false)} title={`Rate ${gymName}`}>
+      <BottomSheet open={writeOpen} onClose={() => setWriteOpen(false)} title={t("Rate {title}", { title: gymName })}>
         <GymReviewForm
           key={mine?.id ?? "new"}
           gymName={gymName}
@@ -407,8 +408,8 @@ function GymReviewForm({ gymId, businessId, gymName, existing, onDone }: { gymId
     <ReviewForm
       initialRating={existing?.rating ?? 5}
       initialText={existing?.body ?? ""}
-      placeholder={`How has ${gymName} been?`}
-      submitLabel={existing ? "Save changes" : "Submit review"}
+      placeholder={t("How has {gym} been?", { gym: gymName })}
+      submitLabel={existing ? t("Save changes") : t("Submit review")}
       // Stars alone are a review (write_gym_review / write_business_review since Database #38).
       textOptional
       onSubmit={async (rating, text) => {

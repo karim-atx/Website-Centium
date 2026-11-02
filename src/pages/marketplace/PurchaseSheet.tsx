@@ -9,6 +9,7 @@ import { textPx, linePx } from "../../theme/textSize";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
 import { marketPalette } from "../../theme/marketTokens";
 import { FOCUS_CSS, usePress } from "../../components/market/usePress";
+import { t, tk } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · the purchase / booking sheet (C-MO.4.2.2
 // `memberSheet`, C-MO.4.3.2 `classSheet`; HANDOVER §4 "Purchase / booking
@@ -39,7 +40,7 @@ import { FOCUS_CSS, usePress } from "../../components/market/usePress";
 const PAY_ROWS: { key: "store" | "whish" | "cash"; name: string }[] = [
   { key: "store", name: "App Store / Google Play" },
   { key: "whish", name: "Whish Money" },
-  { key: "cash", name: "Cash" },
+  { key: "cash", name: tk("Cash") },
 ];
 
 /** A labelled --sgrey box (the sheet's sections). */
@@ -59,7 +60,7 @@ export const SheetBox: React.FC<{ label: string; children: React.ReactNode; id?:
 export const PlanSummary: React.FC<{ name: string; price: string; rows: { k: string; v: string }[] }> = ({ name, price, rows }) => {
   const m = marketPalette(useIsDark());
   return (
-    <SheetBox label="Plan" id="purchase-plan">
+    <SheetBox label={t("Plan")} id="purchase-plan">
       <div style={{ background: m.card, borderRadius: 10, padding: "11px 13px", display: "flex", flexDirection: "column", gap: 6, fontSize: textPx(12.5), color: m.ink }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
           <span style={{ fontWeight: 800, fontSize: textPx(14), minWidth: 0 }}>{name}</span>
@@ -86,9 +87,9 @@ export const ClassTicketSummary: React.FC<{ title: string; place: string; when: 
   const m = marketPalette(useIsDark());
   const notch: React.CSSProperties = { position: "absolute", insetInlineEnd: 65, width: 14, height: 14, borderRadius: 999, background: m.sbody };
   return (
-    <div role="group" aria-label="Class" style={{ position: "relative", display: "flex", borderRadius: 14, background: m.sgrey, overflow: "hidden", color: m.ink }}>
+    <div role="group" aria-label={t("Class")} style={{ position: "relative", display: "flex", borderRadius: 14, background: m.sgrey, overflow: "hidden", color: m.ink }}>
       <div style={{ flex: 1, minWidth: 0, padding: "12px 14px" }}>
-        <div style={{ fontSize: textPx(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>Class</div>
+        <div style={{ fontSize: textPx(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>{t("Class")}</div>
         <div style={{ fontSize: textPx(15), fontWeight: 800 }}>{title}</div>
         <div style={{ fontSize: textPx(12), fontWeight: 600, color: m.accent }}>{place}</div>
         <div style={{ fontSize: textPx(12), color: m.ink2, marginTop: 2 }}>{when}</div>
@@ -110,7 +111,7 @@ export const ClassTicketSummary: React.FC<{ title: string; place: string; when: 
 export const PaymentMethods: React.FC<{ cashHint: string }> = ({ cashHint }) => {
   const m = marketPalette(useIsDark());
   return (
-    <SheetBox label="Payment method" id="purchase-payment">
+    <SheetBox label={t("Payment method")} id="purchase-payment">
       <div role="radiogroup" aria-labelledby="purchase-payment" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {PAY_ROWS.map((r) => {
           const on = r.key === "cash";
@@ -134,8 +135,8 @@ export const PaymentMethods: React.FC<{ cashHint: string }> = ({ cashHint }) => 
             >
               <span aria-hidden style={{ width: 20, height: 20, borderRadius: 999, boxSizing: "border-box", border: on ? `6px solid ${m.segactive}` : `1.5px solid ${m.border}`, flexShrink: 0 }} />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: textPx(14), fontWeight: 700, color: m.ink }}>{r.name}</div>
-                <div style={{ fontSize: textPx(11), color: m.faint }}>{on ? cashHint : "Coming soon"}</div>
+                <div style={{ fontSize: textPx(14), fontWeight: 700, color: m.ink }}>{r.key === "cash" ? t(r.name) : r.name}</div>
+                <div style={{ fontSize: textPx(11), color: m.faint }}>{on ? cashHint : t("Coming soon")}</div>
               </div>
             </div>
           );
@@ -170,7 +171,7 @@ export interface PurchaseSheetProps {
  * of the board's "Confirm and pay $X": the app charges nothing; the member
  * pays cash at the venue).
  */
-export const confirmLabel = (price: string): string => `Confirm · ${price}`;
+export const confirmLabel = (price: string): string => t("Confirm · {price}", { price });
 
 export const PurchaseSheet: React.FC<PurchaseSheetProps> =({ open, onClose, title, summary, cashHint, ctaLabel, busy, disabled, error, note, onConfirm }) => {
   const dark = useIsDark();
@@ -208,7 +209,7 @@ export const PurchaseSheet: React.FC<PurchaseSheetProps> =({ open, onClose, titl
               ...(off ? {} : press.style),
             }}
           >
-            {busy ? "One moment…" : ctaLabel}
+            {busy ? t("One moment…") : ctaLabel}
           </button>
         </>
       }
@@ -296,7 +297,7 @@ export const BookingDone: React.FC<BookingDoneProps> = ({ open, title, body, row
             <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={NO_ICON_SCALE}>
               <path d="M20 6 9 17l-5-5" />
             </svg>
-            Saved to My Bookings
+            {t("Saved to My Bookings")}
           </span>
           {extra}
         </div>
@@ -311,10 +312,10 @@ export const BookingDone: React.FC<BookingDoneProps> = ({ open, title, body, row
             }}
             style={{ height: 52, borderRadius: 16, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: textPx(15), fontWeight: 800, cursor: "pointer", ...press.style }}
           >
-            View My Bookings
+            {t("View My Bookings")}
           </button>
           <button type="button" className="market-focus" onClick={onDone} style={{ height: 48, border: 0, background: "none", font: "inherit", fontSize: textPx(14), fontWeight: 700, color: m.ink2, cursor: "pointer" }}>
-            Done
+            {t("Done")}
           </button>
         </div>
       </div>

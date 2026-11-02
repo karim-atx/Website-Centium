@@ -9,6 +9,8 @@
 // per occurrence for the event's OWNER (owner's timezone; all-day counts back
 // from 09:00; over an hour late is dropped; no push subscription, no alert).
 
+import { t, tk } from "../../i18n/core";
+
 export type EventAlert =
   | "none"
   | "at_time"
@@ -23,17 +25,17 @@ export type EventAlert =
   | "week_1";
 
 export const ALERT_OPTIONS: { value: EventAlert; label: string }[] = [
-  { value: "none", label: "None" },
-  { value: "at_time", label: "At time of event" },
-  { value: "min_5", label: "5 minutes before" },
-  { value: "min_10", label: "10 minutes before" },
-  { value: "min_15", label: "15 minutes before" },
-  { value: "min_30", label: "30 minutes before" },
-  { value: "hour_1", label: "1 hour before" },
-  { value: "hour_2", label: "2 hours before" },
-  { value: "day_1", label: "1 day before" },
-  { value: "day_2", label: "2 days before" },
-  { value: "week_1", label: "1 week before" },
+  { value: "none", label: tk("None") },
+  { value: "at_time", label: tk("At time of event") },
+  { value: "min_5", label: tk("5 minutes before") },
+  { value: "min_10", label: tk("10 minutes before") },
+  { value: "min_15", label: tk("15 minutes before") },
+  { value: "min_30", label: tk("30 minutes before") },
+  { value: "hour_1", label: tk("1 hour before") },
+  { value: "hour_2", label: tk("2 hours before") },
+  { value: "day_1", label: tk("1 day before") },
+  { value: "day_2", label: tk("2 days before") },
+  { value: "week_1", label: tk("1 week before") },
 ];
 
 /**
@@ -53,4 +55,5 @@ export const toEventAlert = (v: string | null | undefined): EventAlert =>
 export const alertNeedsWrite = (stored: EventAlert, wanted: EventAlert | undefined): wanted is EventAlert =>
   wanted !== undefined && wanted !== stored;
 
-export const alertLabel =(v: EventAlert): string => ALERT_OPTIONS.find((o) => o.value === v)?.label ?? "None";
+/** The option's label in the app's language. */
+export const alertLabel = (v: EventAlert): string => t(ALERT_OPTIONS.find((o) => o.value === v)?.label ?? "None");

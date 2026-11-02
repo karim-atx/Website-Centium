@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bluetooth, DoorOpen, Nfc, QrCode, User } from "lucide-react";
 import { initials } from "../professionals/typeColour";
-import { membershipTag, planLine, validRange } from "../../services/venues/venueLogic";
+import { dayMonthYear, membershipTag } from "../../services/venues/venueLogic";
 import { rotatePassToken, type GymMembership } from "../../services/venues";
 import { ConfirmCard } from "../ui/ConfirmCard";
 import { PassQr } from "./PassQr";
@@ -12,7 +12,7 @@ import { useOnline } from "../../hooks/useOnline";
 import { usePassCode } from "./usePassCode";
 import { PassDevicesSheet } from "./PassDevicesSheet";
 import { PASS_CODE_PERIOD_SECONDS } from "../../services/venues/passCode";
-import { t } from "../../i18n/core";
+import { t, tk } from "../../i18n/core";
 
 // The adaptive membership pass (MO1.4.2.2.2 #2, with MO1.4.2.2.4 Tap and
 // MO1.4.2.2.5 Bluetooth), shown on the confirmed screen and in the member's
@@ -49,10 +49,30 @@ import { t } from "../../i18n/core";
 type Method = "qr" | "tap" | "bluetooth";
 
 const UNDER: Record<Method, string> = {
-  qr: "Show this QR code at reception to enter.",
-  tap: "Tap at the reception reader to enter.",
-  bluetooth: "Stand near the entrance and tap Unlock entry.",
+  qr: tk("Show this QR code at reception to enter."),
+  tap: tk("Tap at the reception reader to enter."),
+  bluetooth: tk("Stand near the entrance and tap Unlock entry."),
 };
+
+/** membershipTag()'s label (services/venues/venueLogic memberTag, shared), in the app's language. */
+function passTagText(m: Pick<GymMembership, "passState" | "startedOn">): string {
+  switch (m.passState) {
+    case "valid":
+      return t("Member");
+    case "awaiting_payment":
+      return t("Pay on your first visit");
+    case "expired":
+      return t("Expired");
+    case "cancelled":
+      return t("Cancelled");
+    case "refunded":
+      return t("Refunded");
+    case "upcoming":
+      return t("Starts {date}", { date: dayMonthYear(m.startedOn) });
+    default:
+      return t("Status unavailable");
+  }
+}
 
 const isIOS = () => typeof navigator !== "undefined" && /iPhone|iPad|iPod/.test(navigator.userAgent);
 
@@ -67,11 +87,12 @@ export function MembershipPass({
 }) {
   const methods: { key: Method; label: string; Icon: typeof QrCode }[] = [
     ...(membership.access.qr ? [{ key: "qr" as const, label: "QR", Icon: QrCode }] : []),
-    ...(membership.access.nfc ? [{ key: "tap" as const, label: "Tap", Icon: Nfc }] : []),
+    ...(membership.access.nfc ? [{ key: "tap" as const, label: t("Tap"), Icon: Nfc }] : []),
     ...(membership.access.bluetooth ? [{ key: "bluetooth" as const, label: "Bluetooth", Icon: Bluetooth }] : []),
   ];
   const [method, setMethod] = useState<Method>(methods[0]?.key ?? "qr");
-  const tag = membershipTag(membership);
+  const tag0 = membershipTag(membership);
+  const tag = { ...tag0, label: passTagText(membership) };
   // The rotated token shows at once; the next read of my_gym_memberships carries it too.
   const [rotated, setRotated] = useState<{ id: string; token: string } | null>(null);
   const token = rotated?.id === membership.id ? rotated.token : membership.passToken;
@@ -95,7 +116,7 @@ export function MembershipPass({
     setRotated({ id: membership.id, token: r.value });
     // Rotating revoked every device secret (20261226070000): get a new one.
     live.renew();
-    setRotateNote({ text: "Your pass has a new code. The old one no longer works.", error: false });
+    setRotateNote({ text: t("Your pass has a new code. The old one no longer works."), error: false });
   };
   const qrValue = live.value ?? token;
 
@@ -106,7 +127,7 @@ export function MembershipPass({
         {methods.length > 1 && (
           // The method switch: 39 tall in #F3F3FD r14, padding 4; the active
           // pill #A79AD5 with white 12/700; others #5B5349 (text.secondary).
-          <div role="tablist" aria-label="Entry method" className="mb-4 h-[39px] rounded-[14px] bg-th-f3f3fd dark:bg-cream-soft p-1 flex gap-1">
+          <div role="tablist" aria-label={t("Entry method")} className="mb-4 h-[39px] rounded-[14px] bg-th-f3f3fd dark:bg-cream-soft p-1 flex gap-1">
             {methods.map((m) => {
               const on = method === m.key;
               return (
@@ -151,11 +172,11 @@ export function MembershipPass({
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-bold text-charcoal truncate">{memberName}</span>
-            <span className="block text-[12px] text-charcoal-soft truncate">{membership.planName ? planLine(membership.planName) : "Membership"}</span>
+            <span className="block text-[12px] text-charcoal-soft truncate">{membership.planName ? (/membership/i.test(membership.planName) ? membership.planName : t("{plan} membership", { plan: membership.planName })) : t("Membership")}</span>
           </span>
           <span className="shrink-0 text-end">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-charcoal-faint">Valid</span>
-            <span className="block text-[12px] font-bold text-charcoal tabular-nums">{validRange(membership.startedOn, membership.expiresOn)}</span>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-charcoal-faint">{t("Valid")}</span>
+            <span className="block text-[12px] font-bold text-charcoal tabular-nums">{membership.expiresOn ? t("{start} to {end}", { start: dayMonthYear(membership.startedOn), end: dayMonthYear(membership.expiresOn) }) : t("From {date}", { date: dayMonthYear(membership.startedOn) })}</span>
           </span>
         </div>
 
@@ -177,8 +198,8 @@ export function MembershipPass({
           {method === "tap" && (
             <NativePanel
               disc={<Nfc size={64} strokeWidth={1.5} className="text-th-7d67d9 dark:text-primary-accent" aria-hidden />}
-              title="Hold your phone near the reader"
-              line="Tap entry works in the Centium app on your phone."
+              title={t("Hold your phone near the reader")}
+              line={t("Tap entry works in the Centium app on your phone.")}
             />
           )}
           {method === "bluetooth" && (
@@ -186,24 +207,24 @@ export function MembershipPass({
               disc={
                 <span className="w-[100px] h-[100px] rounded-full bg-th-9a8cd6 dark:bg-primary-fill text-white dark:text-on-primary-fill flex flex-col items-center justify-center gap-1 opacity-60">
                   <DoorOpen size={26} strokeWidth={1.75} aria-hidden />
-                  <span className="text-[11px] font-bold">Unlock entry</span>
+                  <span className="text-[11px] font-bold">{t("Unlock entry")}</span>
                 </span>
               }
-              title="Bluetooth entry"
-              line="Bluetooth entry works in the Centium app on your phone."
+              title={t("Bluetooth entry")}
+              line={t("Bluetooth entry works in the Centium app on your phone.")}
             />
           )}
         </div>
       </div>
 
-      <p className="mt-2.5 mb-0 text-center text-[12px] text-charcoal-faint">{UNDER[method]}</p>
+      <p className="mt-2.5 mb-0 text-center text-[12px] text-charcoal-faint">{t(UNDER[method])}</p>
       {method === "qr" && live.value && (
         <p className="mt-1 mb-0 text-center text-[12px] text-charcoal-faint max-w-[300px]">{t("This code refreshes every 30 seconds. Screenshots won't work at the desk.")}</p>
       )}
       {method === "qr" && !membership.cachedAt && (
         <div className="mt-1 flex items-center justify-center gap-4">
           <button type="button" onClick={() => setAsking(true)} className="tap text-[12px] font-bold text-primary-dark" style={{ minHeight: 32 }}>
-            Get a new pass code
+            {t("Get a new pass code")}
           </button>
           {online && (
             <button type="button" onClick={() => setDevicesOpen(true)} className="tap text-[12px] font-bold text-primary-dark" style={{ minHeight: 32 }}>
@@ -220,10 +241,10 @@ export function MembershipPass({
       <ConfirmCard
         open={asking}
         layout="decision"
-        title="Get a new pass code?"
-        subtitle="Your current code stops working straight away. Do this if someone else may have a copy of your pass."
-        confirmLabel={rotating ? "Getting a code…" : "Get a new code"}
-        cancelLabel="Keep this one"
+        title={t("Get a new pass code?")}
+        subtitle={t("Your current code stops working straight away. Do this if someone else may have a copy of your pass.")}
+        confirmLabel={rotating ? t("Getting a code…") : t("Get a new code")}
+        cancelLabel={t("Keep this one")}
         busy={rotating}
         onCancel={() => setAsking(false)}
         onConfirm={() => void rotate()}
@@ -231,7 +252,7 @@ export function MembershipPass({
       {/* V6-30: the device's short-lived offline copy is showing. */}
       {membership.cachedAt && (
         <p role="status" className="mt-1 mb-0 text-center text-[12px] font-semibold text-charcoal-faint">
-          Offline. Last updated {clock12(membership.cachedAt)}.
+          {t("Offline. Last updated {time}.", { time: clock12(membership.cachedAt) })}
         </p>
       )}
 
@@ -241,10 +262,10 @@ export function MembershipPass({
         type="button"
         disabled
         aria-disabled="true"
-        title="Available in the Centium phone app"
+        title={t("Available in the Centium phone app")}
         className="mt-2.5 w-[201px] h-[46px] rounded-xl bg-black text-white text-[14px] font-semibold disabled:opacity-40"
       >
-        {isIOS() ? "Add to Apple Wallet" : "Add to Google Wallet"}
+        {isIOS() ? t("Add to Apple Wallet") : t("Add to Google Wallet")}
       </button>
     </div>
   );

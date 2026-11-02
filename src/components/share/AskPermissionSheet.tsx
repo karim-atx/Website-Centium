@@ -9,6 +9,7 @@ import { ShareCard } from "./ShareCard";
 import { EditorLabel } from "./shareKit";
 import { cardPayload, clientShownAs, type CardPro, type CardSpec, type ClientWin, type Visibility } from "./shareCardModel";
 import { askErrorMessage, askToShareWin, type ShareRequest } from "../../services/share";
+import { t } from "../../i18n/core";
 
 /**
  * Release 3 · W8 SH5 "Ask {client} for permission" (source/gen/r31.js
@@ -44,7 +45,7 @@ export const AskPermissionSheet: React.FC<{
     setError(null);
     const r = await askToShareWin(win.clientId, win.winId, cardPayload(spec, "post", "B", shownAs), visibility);
     setBusy(false);
-    if (!r.ok) return setError(r.offline ? "You're offline. Try again when you're back online." : askErrorMessage(r.code, r.message, first));
+    if (!r.ok) return setError(r.offline ? t("You're offline. Try again when you're back online.") : askErrorMessage(r.code, r.message, first));
     onSent(r.data);
   };
 
@@ -52,29 +53,29 @@ export const AskPermissionSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={`Ask ${first} for permission`}
+      title={t("Ask {name} for permission", { name: first })}
       titleWrap
       size="tall"
-      footer={<CtaButton label="Send request" icon={<Send size={15} strokeWidth={2} aria-hidden />} loading={busy} disabled={busy} onClick={() => void send()} />}
+      footer={<CtaButton label={t("Send request")} icon={<Send size={15} strokeWidth={2} aria-hidden />} loading={busy} disabled={busy} onClick={() => void send()} />}
     >
       <div className="flex justify-center" style={{ marginBottom: 12 }}>
         <ShareCard spec={spec} pro={pro} format="post" style="B" width={190} client={shownAs} />
       </div>
-      <p style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.chS, textAlign: "center", marginBottom: 14 }}>{`${first} sees exactly this card before you can share it.`}</p>
-      <EditorLabel first>{`Show ${first} as`}</EditorLabel>
+      <p style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.chS, textAlign: "center", marginBottom: 14 }}>{t("{name} sees exactly this card before you can share it.", { name: first })}</p>
+      <EditorLabel first>{t("Show {name} as", { name: first })}</EditorLabel>
       <SegmentedTabs
         items={[
-          { key: "name", label: "Name" },
-          { key: "initials", label: "Initials" },
-          { key: "none", label: "Nothing" },
+          { key: "name", label: t("Name") },
+          { key: "initials", label: t("Initials") },
+          { key: "none", label: t("Nothing") },
         ]}
         activeKey={visibility}
         onChange={(k) => setVisibility(k as Visibility)}
         className="mb-3"
       />
       <div style={{ borderRadius: 14, background: INK.soft, padding: 12 }}>
-        <p style={{ fontSize: textPx(12), fontWeight: 800, color: INK.ch, marginBottom: 4 }}>{`${first} can answer`}</p>
-        <p style={{ fontSize: textPx(12), lineHeight: 1.55, color: INK.chS }}>{`Allow, Allow without my name, or Decline. You'll get a notification. If ${first} declines, you can't ask again for this win.`}</p>
+        <p style={{ fontSize: textPx(12), fontWeight: 800, color: INK.ch, marginBottom: 4 }}>{t("{name} can answer", { name: first })}</p>
+        <p style={{ fontSize: textPx(12), lineHeight: 1.55, color: INK.chS }}>{t("Allow, Allow without my name, or Decline. You'll get a notification. If {name} declines, you can't ask again for this win.", { name: first })}</p>
       </div>
       {error && (
         <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginTop: 10 }}>

@@ -1,4 +1,5 @@
 import type { EventAlert } from "./eventAlert";
+import { t, tk } from "../../i18n/core";
 
 // CU7 (Release 3): the two lines a professional's session invitation gains on
 // the client's calendar. Pure, so the wording is tested without Supabase.
@@ -9,15 +10,15 @@ import type { EventAlert } from "./eventAlert";
 
 /** How far before, as the frames write it ("1 h"); null for none and at_time. */
 const SHORT: Partial<Record<EventAlert, string>> = {
-  min_5: "5 min",
-  min_10: "10 min",
-  min_15: "15 min",
-  min_30: "30 min",
-  hour_1: "1 h",
-  hour_2: "2 h",
-  day_1: "1 day",
-  day_2: "2 days",
-  week_1: "1 week",
+  min_5: tk("5 min"),
+  min_10: tk("10 min"),
+  min_15: tk("15 min"),
+  min_30: tk("30 min"),
+  hour_1: tk("1 h"),
+  hour_2: tk("2 h"),
+  day_1: tk("1 day"),
+  day_2: tk("2 days"),
+  week_1: tk("1 week"),
 };
 
 /** Minutes before the start, to put the earlier reminder first. */
@@ -43,17 +44,22 @@ const OFFSET: Record<EventAlert, number> = {
 export function reminderPhrase(a: EventAlert, b: EventAlert): string | null {
   const set = [...new Set([a, b])].filter((x) => x !== "none").sort((x, y) => OFFSET[y] - OFFSET[x]);
   if (set.length === 0) return null;
-  const before = set.filter((x) => x !== "at_time").map((x) => SHORT[x]).filter(Boolean) as string[];
+  const before = set
+    .filter((x) => x !== "at_time")
+    .map((x) => SHORT[x])
+    .filter((k): k is string => !!k)
+    .map((k) => t(k));
   const parts: string[] = [];
-  if (before.length) parts.push(`${before.join(" and ")} before`);
-  if (set.includes("at_time")) parts.push("at the start");
-  return parts.join(" and ");
+  if (before.length === 1) parts.push(t("{a} before", { a: before[0] }));
+  else if (before.length > 1) parts.push(t("{a} and {b} before", { a: before[0], b: before[1] }));
+  if (set.includes("at_time")) parts.push(t("at the start"));
+  return parts.length > 1 ? t("{a} and {b}", { a: parts[0], b: parts[1] }) : parts[0];
 }
 
 /** Day / Week card line: "Alex reminds you 1 h before". */
 export function reminderLine(first: string, a: EventAlert, b: EventAlert): string | null {
   const phrase = reminderPhrase(a, b);
-  return phrase ? `${first} reminds you ${phrase}` : null;
+  return phrase ? t("{name} reminds you {phrase}", { name: first, phrase }) : null;
 }
 
 /** Month agenda line: "Reminder 1 h before · from Alex" (two: "Reminders …"). */
@@ -61,10 +67,10 @@ export function monthReminderLine(first: string, a: EventAlert, b: EventAlert): 
   const phrase = reminderPhrase(a, b);
   if (!phrase) return null;
   const two = a !== "none" && b !== "none" && a !== b;
-  return `${two ? "Reminders" : "Reminder"} ${phrase} · from ${first}`;
+  return two ? t("Reminders {phrase} · from {name}", { phrase, name: first }) : t("Reminder {phrase} · from {name}", { phrase, name: first });
 }
 
 /** "$60 from your session pack · 6 left"; without a price, "From your session pack · 6 left". */
 export function packLine(price: string, left: number): string {
-  return price ? `${price} from your session pack · ${left} left` : `From your session pack · ${left} left`;
+  return price ? t("{price} from your session pack · {n} left", { price, n: left }) : t("From your session pack · {n} left", { n: left });
 }

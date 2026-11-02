@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../../context/AppContext";
 import { WeightScaleIcon } from "../../icons/PartBIcons";
 import { trendLabel, withinDays } from "../../../services/health-metrics/series";
-import { isRtl } from "../../../i18n/core";
+import { isRtl, t, tn } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
 import { FadeValue, HeaderPill, HomeCard, HomeKeyframes, Line, staleLine, textPx, useHomeMode, useLoadingTimeout } from "./kit";
 
 // HO1.W2 Weight (small, large) and HO1.W2·e. Colours: the metric table
@@ -11,10 +12,9 @@ import { FadeValue, HeaderPill, HomeCard, HomeKeyframes, Line, staleLine, textPx
 // Recovery-sensitive mode hides the widget from the board (WidgetBoard, KEEP-SAFETY);
 // while the setting is unknown the shared skeleton stands in (no number).
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const shortDate = (iso: string) => {
-  const [, m, d] = iso.split("-").map(Number);
-  return `${MONTHS[m - 1]} ${d}`;
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 };
 const kg = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
 
@@ -91,7 +91,7 @@ const TrendChart: React.FC<{ points: { date: string; value: number }[]; goal: nu
         <>
           <line x1={0} x2={200} y1={66.5} y2={66.5} stroke={dark ? "rgba(195,179,251,0.35)" : "#CCC6E0"} strokeWidth={1} strokeDasharray="4 4" />
           <text x={mx(200)} y={62} textAnchor="end" style={{ fontSize: textPx(8), fontWeight: 700 }} fill={deep}>
-            Goal {kg(goal).replace(/\.0$/, "")}
+            {t("Goal {n}", { n: kg(goal).replace(/\.0$/, "") })}
           </text>
         </>
       )}
@@ -147,10 +147,10 @@ export const WeightWidget: React.FC<{ size: "small" | "large"; editMode: boolean
         editMode={editMode}
         metric="weight"
         icon={WeightScaleIcon}
-        label="Weight"
+        label={t("Weight")}
         state={state}
-        emptyTitle="No readings yet"
-        emptyHint={isLarge ? "Log your weight to start tracking" : "Log your weight"}
+        emptyTitle={t("No readings yet")}
+        emptyHint={isLarge ? t("Log your weight to start tracking") : t("Log your weight")}
         onRetry={reloadMetrics}
         // HE1.7.1 Log weight opens from the Weight page (Health B owns the sheet's entry points).
         onOpen={recoveryModePending ? undefined : () => navigate("/app/health/weight")}
@@ -165,15 +165,16 @@ export const WeightWidget: React.FC<{ size: "small" | "large"; editMode: boolean
   const value = kg(weight);
   const toGoal = goal !== null ? Math.abs(weight - goal) : null;
 
-  const smallContext = [weekly, goal !== null ? `goal ${kg(goal).replace(/\.0$/, "")}` : null].filter(Boolean).join(" · ");
+  const goalShort = goal !== null ? kg(goal).replace(/\.0$/, "") : null;
+  const smallContext = [weekly, goalShort !== null ? (weekly ? t("goal {n}", { n: goalShort }) : t("Goal {n}", { n: goalShort })) : null].filter(Boolean).join(" · ");
   const change5 = last5.length >= 2 ? last5[last5.length - 1].value - last5[0].value : null;
   const changeLine =
     change5 === null
       ? null
       : change5 === 0
-      ? `No change in ${last5.length} weigh-ins`
-      : `${change5 < 0 ? "↓" : "↑"} ${kg(Math.abs(change5))} kg in ${last5.length} weigh-ins`;
-  const goalLine = toGoal === null ? null : toGoal < 0.05 ? "At your goal" : `${kg(toGoal)} kg to goal`;
+      ? tn(last5.length, "No change in {n} weigh-in", "No change in {n} weigh-ins")
+      : tn(last5.length, "{arrow} {kg} kg in {n} weigh-in", "{arrow} {kg} kg in {n} weigh-ins", { arrow: change5 < 0 ? "↓" : "↑", kg: kg(Math.abs(change5)) });
+  const goalLine = toGoal === null ? null : toGoal < 0.05 ? t("At your goal") : t("{kg} kg to goal", { kg: kg(toGoal) });
 
   return (
     <>
@@ -183,11 +184,11 @@ export const WeightWidget: React.FC<{ size: "small" | "large"; editMode: boolean
         editMode={editMode}
         metric="weight"
         icon={WeightScaleIcon}
-        label="Weight"
+        label={t("Weight")}
         onOpen={() => navigate("/app/health/weight")}
-        ariaLabel={`Weight, ${value} kilograms${weekly ? `, ${weekly}` : ""}${goal !== null ? `, goal ${kg(goal)} kilograms` : ""}`}
+        ariaLabel={[t("Weight, {value} kilograms", { value }), weekly, goal !== null ? t("goal {kg} kilograms", { kg: kg(goal) }) : null].filter(Boolean).join(t(", "))}
         value={<FadeValue k={value} value={value} />}
-        unit="kg"
+        unit={t("kg")}
         // Small: value 49 (header ends 31: gap 18), context 79; sparkline 52 x 20 at 111.5, 51.
         // Large: value 52.5 (gap 19.5), context 92.5; trend 200 x 90 at 142, 42.5.
         bodyGap={isLarge ? 19.5 : 18}
@@ -218,7 +219,7 @@ export const WeightWidget: React.FC<{ size: "small" | "large"; editMode: boolean
               {!stale && goalLine && <Line style={{ marginTop: 6, color: "rgb(var(--c-charcoal-soft))" }}>{goalLine}</Line>}
             </span>
           ) : stale || smallContext ? (
-            <Line>{stale ?? (weekly ? smallContext : smallContext.replace(/^goal/, "Goal"))}</Line>
+            <Line>{stale ?? smallContext}</Line>
           ) : undefined
         }
       />

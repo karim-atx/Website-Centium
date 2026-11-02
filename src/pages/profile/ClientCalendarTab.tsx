@@ -64,7 +64,9 @@ import {
   Bell,
 } from "lucide-react";
 import clsx from "clsx";
-import { DAY_LETTERS, monthLeadingBlanks, startOfWeekISO } from "../../utils/week";
+import { monthLeadingBlanks, startOfWeekISO } from "../../utils/week";
+import { weekLetters } from "../../components/dashboard/widgets/weekLetters";
+import { t, tk, tx } from "../../i18n/core";
 import { useBack } from "../../hooks/useBack";
 import { appLocale } from "../../i18n/format";
 
@@ -90,9 +92,14 @@ const NEW_EVENT_DARK_END: Record<string, string> = {
   coral: "#BB4103",
 };
 
-const monthNames = Array.from({ length: 12 }, (_, i) =>
-  new Date(2000, i, 1).toLocaleDateString(appLocale("en-US"), { month: "long" })
-);
+/** "October 2026", in the app's language (read when drawn). */
+const monthYear = (year: number, month: number) => new Date(year, month, 1).toLocaleDateString(appLocale("en-US"), { month: "long", year: "numeric" });
+
+const VIEW_LABEL: Record<View, string> = { year: tk("Year"), month: tk("Month"), week: tk("Week"), day: tk("Day") };
+
+/** " · repeats weekly" on the event lines. */
+const REPEATS_LINE: Record<string, string> = { daily: tk("repeats daily"), weekly: tk("repeats weekly"), monthly: tk("repeats monthly") };
+const repeatsLine = (r: string) => ` · ${REPEATS_LINE[r] ? t(REPEATS_LINE[r]) : `repeats ${r}`}`;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const toISO = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
@@ -393,7 +400,7 @@ export default function ClientCalendarTab() {
         // Same note shape as the professional's overlay — who it is with,
         // then whatever the class itself said — with the wording corrected for
         // direction: the client booked this, nobody scheduled it for them.
-        notes: `Booked with ${c.businessName}${c.notes ? `: ${c.notes}` : ""}`,
+        notes: `${t("Booked with {name}", { name: c.businessName })}${c.notes ? `: ${c.notes}` : ""}`,
         // The same gold the professional's tab gives business classes, so one
         // entity reads the same on both calendars.
         color: "#D9A441",
@@ -543,7 +550,7 @@ export default function ClientCalendarTab() {
       const r = await saveRepeating(authUserId, editingSeries, editingOccurrence ?? editingSeries.date, scope, payload);
       setSaving(false);
       if (!r.ok) {
-        setSaveError(r.message ?? "Couldn't save your changes. Try again.");
+        setSaveError(r.message ?? t("Couldn't save your changes. Try again."));
         return;
       }
       await load();
@@ -596,7 +603,7 @@ export default function ClientCalendarTab() {
           : await setOccurrence(editingId, occ, { cancelled: true });
       setSaving(false);
       if (!r.ok) {
-        setSaveError(r.message ?? "Couldn't delete that event. Try again.");
+        setSaveError(r.message ?? t("Couldn't delete that event. Try again."));
         return;
       }
       await load();
@@ -608,7 +615,7 @@ export default function ClientCalendarTab() {
     const result = await deleteEvent(authUserId, editingId);
     setSaving(false);
     if (!result.ok) {
-      setSaveError(result.message ?? "Couldn't delete that event.");
+      setSaveError(result.message ?? t("Couldn't delete that event."));
       return;
     }
     setEvents((prev) => prev.filter((e) => e.id !== editingId));
@@ -645,7 +652,7 @@ export default function ClientCalendarTab() {
     const r = await setInviteAlert(e.invite.id, alert);
     setAlertSaving(false);
     if (!r.ok) {
-      setToast(r.message ?? "Couldn't save your reminder. Try again.");
+      setToast(r.message ?? t("Couldn't save your reminder. Try again."));
       return;
     }
     setEvents((prev) =>
@@ -671,9 +678,9 @@ export default function ClientCalendarTab() {
   const invitedEvents = selectedEvents.filter((e) => !!e.invite);
 
   const inviteLabel: Record<string, string> = {
-    pending: "Invitation",
-    accepted: "Going",
-    declined: "Declined",
+    pending: t("Invitation"),
+    accepted: t("Going"),
+    declined: t("Declined"),
   };
 
   /** A tappable link on an event, in every view (MO1.6.4 note; B38). */
@@ -752,8 +759,8 @@ export default function ClientCalendarTab() {
           <button className="min-w-0 text-start flex-1" onClick={() => openEvent(e)}>
             <p className="text-sm font-semibold text-charcoal">{e.title}</p>
             <p className="text-xs text-charcoal-faint">
-              {e.allDay ? "All day" : range12(e.startTime, e.endTime)}
-              {e.repeat !== "none" && ` · repeats ${e.repeat}`}
+              {e.allDay ? t("All day") : range12(e.startTime, e.endTime)}
+              {e.repeat !== "none" && repeatsLine(e.repeat)}
             </p>
             {e.location && (
               <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-1">
@@ -793,13 +800,13 @@ export default function ClientCalendarTab() {
             // one the client typed, and a tap that does nothing with no
             // explanation reads as a broken screen.
             <span className="shrink-0 flex items-center gap-1 text-[11px] font-semibold text-teal-dark dark:text-teal-deep-text">
-              <Dumbbell size={11} aria-hidden /> Scheduled
+              <Dumbbell size={11} aria-hidden /> {t("Scheduled")}
             </span>
           ) : booked || e.sourceKind ? (
             // Same reasoning as the badge above, for the other kind of card
             // this screen cannot edit (a booking made it: B3 source_kind).
             <span className="shrink-0 flex items-center gap-1 text-[11px] font-semibold text-[#9A7424] dark:text-[#CAB082]">
-              <Ticket size={11} aria-hidden /> Booked
+              <Ticket size={11} aria-hidden /> {t("Booked")}
             </span>
           ) : null}
         </div>
@@ -821,7 +828,7 @@ export default function ClientCalendarTab() {
             onClick={() => void openAttachment(e.attachmentPath!)}
             className="tap flex items-center gap-1 text-xs font-semibold text-primary-deep-text"
           >
-            <Paperclip size={11} /> Open attachment
+            <Paperclip size={11} /> {t("Open attachment")}
           </button>
         )}
 
@@ -833,7 +840,7 @@ export default function ClientCalendarTab() {
             up who it is with. */}
         {booked && !booked.businessActive && (
           <p className="text-xs text-charcoal-faint italic">
-            {booked.businessName} is no longer listed on Explore. Your booking still stands.
+            {t("{name} is no longer listed on Explore. Your booking still stands.", { name: booked.businessName })}
           </p>
         )}
 
@@ -849,14 +856,14 @@ export default function ClientCalendarTab() {
             <CtaButton
               size="page"
               variant="secondary"
-              label={status === "declined" ? "Declined" : "Decline"}
+              label={status === "declined" ? t("Declined") : t("Decline")}
               icon={<X size={15} aria-hidden />}
               disabled={respondingTo === e.invite.id || status === "declined"}
               onClick={() => void respond(e, false)}
             />
             <CtaButton
               size="page"
-              label={status === "accepted" ? "Going" : "Accept"}
+              label={status === "accepted" ? t("Going") : t("Accept")}
               icon={<Check size={15} aria-hidden />}
               disabled={respondingTo === e.invite.id || status === "accepted"}
               onClick={() => void respond(e, true)}
@@ -878,12 +885,12 @@ export default function ClientCalendarTab() {
   const headerCard = (label: string, onPrev: () => void, onNext: () => void, prevLabel: string, nextLabel: string) => (
     <div className="flex items-center gap-2 rounded-2xl h-10 px-3" style={{ background: dark ? "rgb(var(--th-2b2c3a))" : "rgb(var(--th-f6f4fe))" }}>
       <button onClick={onPrev} aria-label={prevLabel} className="tap w-[26px] h-[26px] flex items-center justify-center text-th-5b3fe4 dark:text-th-b7abde shrink-0">
-        <ChevronLeft size={16} strokeWidth={2.2} />
+        <ChevronLeft size={16} strokeWidth={2.2} className="rtl:-scale-x-100" />
       </button>
       <p className="flex-1 min-w-0 text-center text-[15px] leading-[22.5px] font-semibold text-charcoal truncate">{label}</p>
       {jump.show && <JumpToToday onClick={jump.jump} />}
       <button onClick={onNext} aria-label={nextLabel} className="tap w-[26px] h-[26px] flex items-center justify-center text-th-5b3fe4 dark:text-th-b7abde shrink-0">
-        <ChevronRight size={16} strokeWidth={2.2} />
+        <ChevronRight size={16} strokeWidth={2.2} className="rtl:-scale-x-100" />
       </button>
     </div>
   );
@@ -919,7 +926,7 @@ export default function ClientCalendarTab() {
         className="flex items-center gap-3 rounded-[15px] bg-white dark:bg-[#1C1F28] border-[0.5px] border-team-nav-accent/[0.16] px-3.5 py-3 mb-[13px]"
       >
         <p className="flex-1 min-w-0 text-[12.5px] leading-[18.8px] font-semibold text-charcoal">
-          {!online ? "You're offline. Showing what was loaded." : "Couldn't load your calendar."}
+          {!online ? t("You're offline. Showing what was loaded.") : t("Couldn't load your calendar.")}
         </p>
         {online && (
           <button
@@ -927,7 +934,7 @@ export default function ClientCalendarTab() {
             onClick={() => void load()}
             className="tap h-11 -my-3 shrink-0 text-[12.5px] font-bold text-th-5b3fe4 dark:text-th-b7abde"
           >
-            Retry
+            {t("Retry")}
           </button>
         )}
       </div>
@@ -948,16 +955,16 @@ export default function ClientCalendarTab() {
           <div className="flex items-start gap-2.5">
             <button
               onClick={back}
-              aria-label="Back"
+              aria-label={t("Back")}
               className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ms-1.5 mt-0.5 transition-colors"
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={18} className="rtl:-scale-x-100" />
             </button>
-            <h1 className="text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal mt-[5px]">Calendar</h1>
+            <h1 className="text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal mt-[5px]">{t("Calendar")}</h1>
           </div>
           <button
             onClick={openCompose}
-            aria-label="New event"
+            aria-label={t("New event")}
             className="tap w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0"
             style={{
               background: dark
@@ -976,7 +983,7 @@ export default function ClientCalendarTab() {
             tap on Year while in Year scrolls back to today's year (MO1.6.1). */}
         <SegmentedTabs
           className="mt-[13px]"
-          items={VIEWS.map((v) => ({ key: v, label: v[0].toUpperCase() + v.slice(1) }))}
+          items={VIEWS.map((v) => ({ key: v, label: tx(VIEW_LABEL[v], "calendar view") }))}
           activeKey={view}
           onChange={(k) => {
             if (k === "year" && view === "year") {
@@ -992,12 +999,12 @@ export default function ClientCalendarTab() {
 
         {view === "week" && (
           <div className="mt-[13px]">
-            {headerCard(weekLabel, () => setSelectedDate(addDaysISO(selectedDate, -7)), () => setSelectedDate(addDaysISO(selectedDate, 7)), "Previous week", "Next week")}
+            {headerCard(weekLabel, () => setSelectedDate(addDaysISO(selectedDate, -7)), () => setSelectedDate(addDaysISO(selectedDate, 7)), t("Previous week"), t("Next week"))}
           </div>
         )}
         {view === "day" && (
           <div className="mt-[13px]">
-            {headerCard(selectedDateLabel, () => setSelectedDate(addDaysISO(selectedDate, -1)), () => setSelectedDate(addDaysISO(selectedDate, 1)), "Previous day", "Next day")}
+            {headerCard(selectedDateLabel, () => setSelectedDate(addDaysISO(selectedDate, -1)), () => setSelectedDate(addDaysISO(selectedDate, 1)), t("Previous day"), t("Next day"))}
           </div>
         )}
       </FixedHeader>
@@ -1009,13 +1016,13 @@ export default function ClientCalendarTab() {
           {/* MO1.6 #10: 358 wide, r15, padding 13 14, white with a 0.5
               #8F68F6@16% border (dark #1C1F28, the same border). */}
           <div className="rounded-[15px] bg-white dark:bg-[#1C1F28] border-[0.5px] border-team-nav-accent/[0.16] px-3.5 py-[13px] mb-[13px]">
-            {headerCard(`${monthNames[cursor.month]} ${cursor.year}`, () => goMonth(-1), () => goMonth(1), "Previous month", "Next month")}
+            {headerCard(monthYear(cursor.year, cursor.month), () => goMonth(-1), () => goMonth(1), t("Previous month"), t("Next month"))}
 
             {/* MO1.6 #15: weekday letters Monday first, 13 / 19.5 600 with 6
                 above and below (31.5), #5B3FE4 (dark #B7ABDE, V6-92), 2 above
                 the first row of days. */}
             <div className="grid grid-cols-7 gap-[2px] mt-2.5 mb-[2px]">
-              {DAY_LETTERS.map((d, i) => (
+              {weekLetters().map((d, i) => (
                 <div key={i} className="py-1.5 leading-[19.5px] flex items-center justify-center text-[13px] font-semibold text-th-5b3fe4 dark:text-th-b7abde">
                   {d}
                 </div>
@@ -1078,7 +1085,7 @@ export default function ClientCalendarTab() {
               {skeleton("h-[57.7px] rounded-[15px]")}
             </div>
           ) : selectedEvents.length === 0 ? (
-            <p className="text-[11.5px] text-charcoal-faint">No events</p>
+            <p className="text-[11.5px] text-charcoal-faint">{t("No events")}</p>
           ) : (
             <div className="flex flex-col gap-[7px]">
               {selectedEvents.map((e) => {
@@ -1103,8 +1110,8 @@ export default function ClientCalendarTab() {
                         <span className="flex-1 min-w-0">
                           <span className="block text-[12.5px] leading-[18.8px] font-bold text-charcoal truncate">{e.title}</span>
                           <span className="block text-[10px] leading-[15px] text-charcoal-tertiary truncate">
-                            {e.allDay ? "All day" : range12(e.startTime, e.endTime)}
-                            {e.repeat !== "none" && ` · repeats ${e.repeat}`}
+                            {e.allDay ? t("All day") : range12(e.startTime, e.endTime)}
+                            {e.repeat !== "none" && repeatsLine(e.repeat)}
                             {e.location && ` · ${e.location}`}
                             {/* WHO IT IS WITH, ON THE DEFAULT VIEW. This compact
                                 card is what Month renders — not eventCard — so the
@@ -1113,14 +1120,14 @@ export default function ClientCalendarTab() {
                                 from several optional parts; the business is one
                                 more, and the delisted note rides with it because
                                 there is nowhere else on this card to put it. */}
-                            {booked && ` · ${booked.businessName}${booked.businessActive ? "" : " (no longer on Explore)"}`}
+                            {booked && ` · ${booked.businessActive ? booked.businessName : t("{name} (no longer on Explore)", { name: booked.businessName })}`}
                           </span>
                         </span>
                         {/* K3 / K4: the invitation check in the time line's
                             #A79E93, the booked Ticket in Foundations gold.text
                             #9A7424 / #CAB082. */}
-                        {e.invite && <Check size={12} aria-label="Invitation" className="text-charcoal-tertiary shrink-0" />}
-                        {booked && <Ticket size={12} aria-label="Booked" className="text-[#9A7424] dark:text-[#CAB082] shrink-0" />}
+                        {e.invite && <Check size={12} aria-label={t("Invitation")} className="text-charcoal-tertiary shrink-0" />}
+                        {booked && <Ticket size={12} aria-label={t("Booked")} className="text-[#9A7424] dark:text-[#CAB082] shrink-0" />}
                       </button>
                       {remind && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-charcoal-faint">
@@ -1158,7 +1165,7 @@ export default function ClientCalendarTab() {
                     setSelectedDate(iso);
                     setView("day");
                   }}
-                  aria-label={`${d.toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" })}, open in Day view`}
+                  aria-label={t("{date}, open in Day view", { date: d.toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" }) })}
                   className={clsx(
                     "tap shrink-0 w-14 flex flex-col items-center justify-center py-2 gap-0.5",
                     isToday
@@ -1176,7 +1183,7 @@ export default function ClientCalendarTab() {
                     // OURS O-LD: a 290 x 16 r8 bar beside each real day box.
                     skeleton("h-4 rounded-lg")
                   ) : dayEvents.length === 0 ? (
-                    <p className="text-xs text-charcoal-faint">No events</p>
+                    <p className="text-xs text-charcoal-faint">{t("No events")}</p>
                   ) : (
                     <div className="space-y-2">{dayEvents.map(eventCard)}</div>
                   )}
@@ -1214,7 +1221,7 @@ export default function ClientCalendarTab() {
           {invitedEvents.length > 0 && (
             <div className="space-y-2 mb-4">
               <p className="text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42] [.high-contrast_&]:text-charcoal">
-                Invitations
+                {t("Invitations")}
               </p>
               {invitedEvents.map(eventCard)}
             </div>
@@ -1222,7 +1229,7 @@ export default function ClientCalendarTab() {
 
           {allDayEvents.length > 0 && (
             <div className="space-y-2 mb-4">
-              <p className="text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42] [.high-contrast_&]:text-charcoal">All day</p>
+              <p className="text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42] [.high-contrast_&]:text-charcoal">{t("All day")}</p>
               {allDayEvents.map(eventCard)}
             </div>
           )}
@@ -1281,7 +1288,7 @@ export default function ClientCalendarTab() {
                       <p className="text-[10px] text-charcoal-faint truncate">
                         {range12(e.startTime, e.endTime)}
                         {e.location ? ` · ${e.location}` : ""}
-                        {booked && ` · ${booked.businessName}${booked.businessActive ? "" : " (no longer on Explore)"}`}
+                        {booked && ` · ${booked.businessActive ? booked.businessName : t("{name} (no longer on Explore)", { name: booked.businessName })}`}
                       </p>
                       )}
                     </button>
@@ -1290,7 +1297,7 @@ export default function ClientCalendarTab() {
                         href={href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        aria-label={`Open link, ${linkLabel(href)}`}
+                        aria-label={t("Open link, {link}", { link: linkLabel(href) })}
                         className="tap absolute top-0.5 end-0.5 w-8 h-8 flex items-center justify-center text-primary-deep-text"
                       >
                         <LinkIcon size={13} />
@@ -1384,9 +1391,9 @@ export default function ClientCalendarTab() {
       <InstructorReviewDialog
         target={reviewTarget}
         onClose={() => setReviewTarget(null)}
-        onSent={(t) => {
+        onSent={(target) => {
           setReviewTarget(null);
-          showReviewStrip(sentText(t.professionalName, t.gymName), "success", { label: "View", onPress: () => navigate(`/app/professionals/${encodeURIComponent(t.professionalId)}`) });
+          showReviewStrip(sentText(target.professionalName, target.gymName), "success", { label: t("View"), onPress: () => navigate(`/app/professionals/${encodeURIComponent(target.professionalId)}`) });
         }}
       />
       {reviewStrip}
@@ -1395,7 +1402,7 @@ export default function ClientCalendarTab() {
           danger icon (#C0392B / #F09A8E). */}
       <Toast
         open={respondFailed}
-        message="Couldn't save your response. Try again."
+        message={t("Couldn't save your response. Try again.")}
         icon={<AlertCircle size={15} strokeWidth={2.4} aria-hidden className="flex-none text-status-high" />}
         onExpire={() => setRespondFailed(false)}
       />

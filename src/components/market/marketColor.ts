@@ -1,4 +1,5 @@
 import { SEGMENT_STEPS, highContrast, type MarketPalette } from "../../theme/marketTokens";
+import { t, tx } from "../../i18n/core";
 
 // Market + Share 3.0 · colour helpers for the dark (readable, D-05) versions
 // of the board's fixed step / identity colours.
@@ -82,6 +83,10 @@ export function stubColors(tone: StubTone, m: MarketPalette, dark: boolean): { b
 // Scheduled pale, Paused warn, Expired soft).
 
 export type OfferStatus = "active" | "scheduled" | "paused" | "expired";
+
+/** The status chip's word, in the app's language ("Active" here is an offer's state, not a person's activity). */
+export const offerStatusLabel = (s: OfferStatus): string =>
+  s === "active" ? tx("Active", "offer status") : s === "scheduled" ? t("Scheduled") : s === "paused" ? t("Paused") : t("Expired");
 
 export function statusChip(status: OfferStatus, m: MarketPalette): [string, string] {
   return status === "active" ? [m.goodbg, m.good] : status === "scheduled" ? [m.pale, m.pdark] : status === "paused" ? [m.cautionbg, m.caution] : [m.soft, m.faint];

@@ -4,9 +4,10 @@
 
 import { dayValue, NOT_PUBLISHED, type HoursRow } from "../../services/venues/hours";
 import { formatShortDate } from "../../utils/date";
+import { t, tk, tn } from "../../i18n/core";
 import type { Billing } from "../../services/venues/venueLogic";
 
-const FULL = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const FULL = [tk("Monday"), tk("Tuesday"), tk("Wednesday"), tk("Thursday"), tk("Friday"), tk("Saturday"), tk("Sunday")];
 
 /**
  * The board's "Location and hours" rows (Client Explore Screens lines
@@ -25,7 +26,12 @@ export function gymHoursRows(rows: HoursRow[]): { key: string; label: string; va
   for (let i = 1; i <= 7; i++) {
     if (i < 7 && values[i] === values[start]) continue;
     const n = i - start;
-    const label = n === 1 ? FULL[start] : n === 2 ? `${FULL[start]} and ${FULL[i - 1]}` : `${FULL[start]} to ${FULL[i - 1]}`;
+    const label =
+      n === 1
+        ? t(FULL[start])
+        : n === 2
+          ? t("{first} and {last}", { first: t(FULL[start]), last: t(FULL[i - 1]) })
+          : t("{first} to {last}", { first: t(FULL[start]), last: t(FULL[i - 1]) });
     out.push({ key: `d${start + 1}-${i}`, label, value: values[start] });
     start = i;
   }
@@ -91,12 +97,16 @@ const dateOf = (iso: string) => {
 export const longDay = (iso: string): string => formatShortDate(dateOf(iso), { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 
 /** The sheet's "Starts" value: "Today, Oct 16" (D-02, month first). */
-export const startsToday = (iso: string): string => `Today, ${formatShortDate(dateOf(iso), { month: "short", day: "numeric", timeZone: "UTC" })}`;
+export const startsToday = (iso: string): string => t("Today, {date}", { date: formatShortDate(dateOf(iso), { month: "short", day: "numeric", timeZone: "UTC" }) });
 
 /** How long one purchase lasts, for the plan row's line: "30 days", "1 month", "3 months", "1 year", "1 day". */
 export function durationText(validForDays: number | null | undefined, billing: Billing): string {
-  if (validForDays && validForDays > 0) return validForDays === 1 ? "1 day" : `${validForDays} days`;
-  return { daily: "1 day", monthly: "1 month", quarterly: "3 months", semiannually: "6 months", annually: "1 year" }[billing];
+  if (validForDays && validForDays > 0) return tn(validForDays, "{n} day", "{n} days");
+  if (billing === "daily") return tn(1, "{n} day", "{n} days");
+  if (billing === "monthly") return tn(1, "{n} month", "{n} months");
+  if (billing === "quarterly") return tn(3, "{n} month", "{n} months");
+  if (billing === "semiannually") return tn(6, "{n} month", "{n} months");
+  return tn(1, "{n} year", "{n} years");
 }
 
 const lowerFirst = (s: string) => (s.length > 1 && s[1] === s[1].toUpperCase() && /[A-Za-z]/.test(s[1]) ? s : s.charAt(0).toLowerCase() + s.slice(1));
@@ -127,5 +137,5 @@ export function planRowLine(p: { validForDays?: number | null; billing: Billing;
  * "Annual membership") stays as it is.
  */
 export function sheetPlanName(name: string): string {
-  return /membership|pass|pack|trial|drop[- ]?in/i.test(name) ? name : `${name} membership`;
+  return /membership|pass|pack|trial|drop[- ]?in/i.test(name) ? name : t("{name} membership", { name });
 }

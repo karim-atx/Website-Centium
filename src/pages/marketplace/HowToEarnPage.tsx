@@ -14,6 +14,7 @@ import { DAILY_RULES, STREAK_MILESTONES, earnedToday, fetchLedger, fetchPointsRu
 import { BackTitle } from "./BackTitle";
 import { pickAchievements, streakNow } from "./howToEarnModel";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tn } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · How to earn (C-MO.4.8 `earn`; Client Explore
 // Screens lines 635–677, script `daily`, `streaks`, `achievements`,
@@ -67,7 +68,7 @@ export default function HowToEarnPage() {
     if (!known) refreshAchievements();
   }, [known, refreshAchievements]);
   const rank = tierRank(pointTiers, pointsSummary?.tierName);
-  const t = tierStyle(rank, dark);
+  const tier = tierStyle(rank, dark);
 
   // Today's ticks: my_points_ledger's newest page, the logging sources with
   // a net award on today's day (a same-day reversal cancels its kind).
@@ -111,9 +112,9 @@ export default function HowToEarnPage() {
   return (
     <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <BackTitle title="How to earn" parent="/app/marketplace" />
+      <BackTitle title={t("How to earn")} parent="/app/marketplace" />
 
-      <Section title="Daily logging" aside={pointsSummary?.extras ? todayLine(pointsSummary.extras) : null} t={t} first bodyPadding="4px 14px 12px">
+      <Section title={t("Daily logging")} aside={pointsSummary?.extras ? todayLine(pointsSummary.extras) : null} tier={tier} first bodyPadding="4px 14px 12px">
         {DAILY_RULES.map(([source, label]) => {
           const on = ticks.has(source);
           const pts = rules?.values[source];
@@ -121,66 +122,69 @@ export default function HowToEarnPage() {
             <div key={source} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `0.5px solid ${m.div}` }}>
               <span
                 role="img"
-                aria-label={on ? "Earned today" : "Not earned today"}
+                aria-label={on ? t("Earned today") : t("Not earned today")}
                 style={{ width: 22, height: 22, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", background: on ? m.good : "transparent", border: on ? 0 : `1.5px solid ${m.border}`, color: dark ? m.onfill : "#FFFFFF", boxSizing: "border-box", flexShrink: 0 }}
               >
                 <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={{ opacity: on ? 1 : 0, ...NO_ICON_SCALE }} aria-hidden>
                   <path d="M20 6 9 17l-5-5" />
                 </svg>
               </span>
-              <span style={{ flex: 1, fontSize: textPx(13), fontWeight: 600 }}>{label}</span>
+              <span style={{ flex: 1, fontSize: textPx(13), fontWeight: 600 }}>{t(label)}</span>
               <span style={{ fontSize: textPx(13), fontWeight: 800 }}>{pts !== undefined ? `+${pts.toLocaleString(appLocale("en-US"))}` : ""}</span>
             </div>
           );
         })}
-        {rulesFailed ? <MarketError thing="the points values" onRetry={() => {
+        {rulesFailed ? <MarketError thing={tk("the points values")} onRetry={() => {
               setRulesFailed(false);
               setRulesTry((x) => x + 1);
             }} style={{ marginTop: 10 }} /> : null}
         <p style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>
-          {rules ? `Each action counts once a day, up to ${rules.dailyCap.toLocaleString(appLocale("en-US"))} points. ` : "Each action counts once a day. "}Only entries logged for today earn points.
+          {rules
+            ? t("Each action counts once a day, up to {n} points. Only entries logged for today earn points.", { n: rules.dailyCap.toLocaleString(appLocale("en-US")) })
+            : t("Each action counts once a day. Only entries logged for today earn points.")}
         </p>
       </Section>
 
       {!hideNumbers && (
-        <Section title="Streak milestones" aside={streak !== null ? `${streak}-day streak` : null} t={t} bodyPadding="12px 14px">
+        <Section title={t("Streak milestones")} aside={streak !== null ? t("{days}-day streak", { days: streak }) : null} tier={tier} bodyPadding="12px 14px">
           {next ? (
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: textPx(12.5) }}>
-              <span style={{ fontWeight: 700 }}>Next: {next.days} days</span>
+              <span style={{ fontWeight: 700 }}>{t("Next: {n} days", { n: next.days })}</span>
               <span style={{ color: m.faint, textAlign: "end" }}>
-                {next.toGo} {next.toGo === 1 ? "day" : "days"} to go{next.points !== null ? ` · +${next.points.toLocaleString(appLocale("en-US"))}` : ""}
+                {tn(next.toGo, "{n} day to go", "{n} days to go")}
+                {next.points !== null ? ` · +${next.points.toLocaleString(appLocale("en-US"))}` : ""}
               </span>
             </div>
           ) : (
-            <div style={{ fontSize: textPx(12.5), fontWeight: 700 }}>{streak === null ? "Your streak will show here." : "Every milestone reached"}</div>
+            <div style={{ fontSize: textPx(12.5), fontWeight: 700 }}>{streak === null ? t("Your streak will show here.") : t("Every milestone reached")}</div>
           )}
           <div
             role="progressbar"
-            aria-label="Streak towards the next milestone"
+            aria-label={t("Streak towards the next milestone")}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={next ? next.pct : streak === null ? 0 : 100}
-            style={{ marginTop: 8, height: 5, borderRadius: 999, background: t.track, overflow: "hidden" }}
+            style={{ marginTop: 8, height: 5, borderRadius: 999, background: tier.track, overflow: "hidden" }}
           >
-            <div style={{ height: "100%", width: `${next ? next.pct : streak === null ? 0 : 100}%`, borderRadius: 999, background: t.ink }} />
+            <div style={{ height: "100%", width: `${next ? next.pct : streak === null ? 0 : 100}%`, borderRadius: 999, background: tier.ink }} />
           </div>
           <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
             {STREAK_MILESTONES.map((d) => {
               const on = streak !== null && streak >= d;
               const p = milestonePoints(d);
               return (
-                <div key={d} style={{ borderRadius: 12, padding: "8px 0", textAlign: "center", background: on ? t.pill : m.soft }} aria-label={`${d} days${p !== null ? `, ${p.toLocaleString(appLocale("en-US"))} points` : ""}${on ? ", reached" : ""}`} role="img">
-                  <div style={{ fontSize: textPx(12), fontWeight: 800, color: on ? t.text : m.ink }}>{d} days</div>
+                <div key={d} style={{ borderRadius: 12, padding: "8px 0", textAlign: "center", background: on ? tier.pill : m.soft }} aria-label={[t("{n} days", { n: d }), p !== null ? tn(p, "{n} point", "{n} points", { n: p.toLocaleString(appLocale("en-US")) }) : null, on ? t("reached") : null].filter(Boolean).join(t(", "))} role="img">
+                  <div style={{ fontSize: textPx(12), fontWeight: 800, color: on ? tier.text : m.ink }}>{t("{n} days", { n: d })}</div>
                   <div style={{ fontSize: textPx(11), color: m.faint }}>{p !== null ? `+${p.toLocaleString(appLocale("en-US"))}` : " "}</div>
                 </div>
               );
             })}
           </div>
-          <p style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>Each milestone pays once per streak. It can be earned again after a streak breaks and is rebuilt.</p>
+          <p style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>{t("Each milestone pays once per streak. It can be earned again after a streak breaks and is rebuilt.")}</p>
         </Section>
       )}
 
-      <Section title="Achievements" aside={shownAchievements ? `${earnedCount} of ${shownAchievements.length}` : null} t={t} bodyPadding="4px 14px 8px">
+      <Section title={t("Achievements")} aside={shownAchievements ? t("{n} of {total}", { n: earnedCount, total: shownAchievements.length }) : null} tier={tier} bodyPadding="4px 14px 8px">
         {picked === null ? (
           <div aria-hidden className="animate-skeleton-pulse" style={{ margin: "10px 0", height: 120, borderRadius: 12, background: m.soft }} />
         ) : (
@@ -189,7 +193,7 @@ export default function HowToEarnPage() {
             return (
               <div key={a.key} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `0.5px solid ${m.div}` }}>
                 <span style={{ flex: 1, minWidth: 0, fontSize: textPx(13), fontWeight: 600, color: on ? m.ink : m.ink2 }}>{a.title}</span>
-                <span style={{ fontSize: textPx(11), fontWeight: 700, borderRadius: 999, padding: "2px 8px", background: on ? m.tealbg : m.pale, color: on ? m.tealink : m.pdark, whiteSpace: "nowrap" }}>{on ? "Unlocked" : "Locked"}</span>
+                <span style={{ fontSize: textPx(11), fontWeight: 700, borderRadius: 999, padding: "2px 8px", background: on ? m.tealbg : m.pale, color: on ? m.tealink : m.pdark, whiteSpace: "nowrap" }}>{on ? t("Unlocked") : t("Locked")}</span>
                 <span style={{ width: 44, flexShrink: 0, textAlign: "end", fontSize: textPx(13), fontWeight: 800 }}>+{a.points.toLocaleString(appLocale("en-US"))}</span>
               </div>
             );
@@ -201,13 +205,13 @@ export default function HowToEarnPage() {
           className="market-focus"
           style={{ width: "100%", minHeight: 44, display: "flex", alignItems: "center", gap: 12, padding: 0, background: "none", border: 0, font: "inherit", fontSize: textPx(13), fontWeight: 700, color: m.pdark, cursor: "pointer", textAlign: "start" }}
         >
-          <span style={{ flex: 1 }}>All achievements</span>
-          <ChevronRight size={15} aria-hidden style={NO_ICON_SCALE} />
+          <span style={{ flex: 1 }}>{t("All achievements")}</span>
+          <ChevronRight size={15} aria-hidden className="rtl:-scale-x-100" style={NO_ICON_SCALE} />
         </button>
       </Section>
 
       {pointTiers.length > 0 ? (
-        <Section title="Tiers" aside={pointsSummary?.tierName ?? null} t={t} bodyPadding="4px 14px 8px">
+        <Section title={t("Tiers")} aside={pointsSummary?.tierName ?? null} tier={tier} bodyPadding="4px 14px 8px">
           {[...pointTiers]
             .sort((a, b) => a.sortOrder - b.sortOrder)
             .map((tier, i, all) => {
@@ -220,9 +224,9 @@ export default function HowToEarnPage() {
                   </span>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: textPx(13), fontWeight: 700 }}>{tier.name}</span>
-                    <span style={{ display: "block", fontSize: textPx(11.5), color: m.faint }}>{tier.minPoints > 0 ? `From ${tier.minPoints.toLocaleString(appLocale("en-US"))} points` : "Where everyone starts"}</span>
+                    <span style={{ display: "block", fontSize: textPx(11.5), color: m.faint }}>{tier.minPoints > 0 ? t("From {n} points", { n: tier.minPoints.toLocaleString(appLocale("en-US")) }) : t("Where everyone starts")}</span>
                   </span>
-                  {current ? <span style={{ fontSize: textPx(11), fontWeight: 700, borderRadius: 999, padding: "2px 8px", background: ts.pill, color: ts.text, whiteSpace: "nowrap" }}>Your tier</span> : null}
+                  {current ? <span style={{ fontSize: textPx(11), fontWeight: 700, borderRadius: 999, padding: "2px 8px", background: ts.pill, color: ts.text, whiteSpace: "nowrap" }}>{t("Your tier")}</span> : null}
                 </div>
               );
             })}
@@ -230,13 +234,14 @@ export default function HowToEarnPage() {
       ) : null}
 
       <p style={{ margin: "14px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>
-        {rules ? `Points expire ${rules.expiryMonths} ${rules.expiryMonths === 1 ? "month" : "months"} after they are earned. ` : ""}Points have no cash value.
+        {rules ? `${tn(rules.expiryMonths, "Points expire {n} month after they are earned.", "Points expire {n} months after they are earned.")} ` : ""}
+        {t("Points have no cash value.")}
       </p>
     </div>
   );
 }
 
-const Section: React.FC<{ title: string; aside: string | null; t: TierStyle; first?: boolean; bodyPadding: string; children: React.ReactNode }> = ({ title, aside, t, first, bodyPadding, children }) => {
+const Section: React.FC<{ title: string; aside: string | null; tier: TierStyle; first?: boolean; bodyPadding: string; children: React.ReactNode }> = ({ title, aside, tier, first, bodyPadding, children }) => {
   const m = marketPalette(useIsDark());
   const [open, setOpen] = useState(true);
   const id = useId();
@@ -252,7 +257,7 @@ const Section: React.FC<{ title: string; aside: string | null; t: TierStyle; fir
           style={{ width: "100%", minHeight: 54, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "0 14px", background: m.soft, border: 0, font: "inherit", color: m.ink, cursor: "pointer", textAlign: "start" }}
         >
           <span style={{ fontSize: textPx(14), fontWeight: 800 }}>{title}</span>
-          <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: textPx(12), fontWeight: 700, color: t.text, whiteSpace: "nowrap" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: textPx(12), fontWeight: 700, color: tier.text, whiteSpace: "nowrap" }}>
             {aside}
             <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={m.faint} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ ...NO_ICON_SCALE, transform: open ? "rotate(180deg)" : "none" }}>
               <path d="m6 9 6 6 6-6" />

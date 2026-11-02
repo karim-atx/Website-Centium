@@ -7,6 +7,7 @@ import { marketPalette } from "../../theme/marketTokens";
 import { MarketAvatar, TicketCheck } from "./ProfessionalCard";
 import { ratingLine } from "./peopleModel";
 import { FOCUS_CSS, usePress } from "./usePress";
+import { isRtl, t } from "../../i18n/core";
 
 // Market + Share 3.0 · InstructorCard (HANDOVER §4 C-MO.4 "Class detail", §5;
 // Client Explore Screens lines 303–316):
@@ -60,8 +61,8 @@ export const InstructorCard: React.FC<InstructorCardProps> = (props) => {
           </svg>
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <span style={caps}>INSTRUCTOR</span>
-          <span style={{ display: "block", fontSize: textPx(14.5), fontWeight: 700, lineHeight: linePx(20), color: m.ink2 }}>Instructor not listed</span>
+          <span style={caps}>{t("INSTRUCTOR")}</span>
+          <span style={{ display: "block", fontSize: textPx(14.5), fontWeight: 700, lineHeight: linePx(20), color: m.ink2 }}>{t("Instructor not listed")}</span>
         </div>
       </div>
     );
@@ -74,24 +75,24 @@ export const InstructorCard: React.FC<InstructorCardProps> = (props) => {
       <style>{FOCUS_CSS}</style>
       <Link
         to={p.to}
-        aria-label={`Open ${p.name}'s profile`}
+        aria-label={t("Open {name}'s profile", { name: p.name })}
         {...press.handlers}
         className={`market-focus ${p.className ?? ""}`}
         style={{ ...row, border: `0.5px solid ${m.hair}`, background: m.card, color: m.ink, textDecoration: "none", cursor: "pointer", ...press.style, ...p.style }}
       >
         <MarketAvatar id={p.id} name={p.name} photoUrl={p.photoUrl} size={48} fontSize={15} />
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={caps}>INSTRUCTOR</span>
+          <span style={caps}>{t("INSTRUCTOR")}</span>
           <span style={{ display: "block", fontSize: textPx(14.5), fontWeight: 800, lineHeight: linePx(20) }}>{p.name}</span>
           <span style={{ display: "block", fontSize: textPx(12), color: m.ink2 }}>{detail}</span>
           {p.hiredViaCentium ? (
             <span style={{ marginTop: 3, display: "inline-flex", alignItems: "center", gap: 4, fontSize: textPx(11), fontWeight: 700, color: m.tealink }}>
               <TicketCheck size={12} />
-              Hired via Centium
+              {t("Hired via Centium")}
             </span>
           ) : null}
         </span>
-        <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={m.faint} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: "none", ...NO_ICON_SCALE }}>
+        <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={m.faint} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: "none", ...(isRtl() ? { transform: "scaleX(-1)" } : NO_ICON_SCALE) }}>
           <path d="m9 18 6-6-6-6" />
         </svg>
       </Link>

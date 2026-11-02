@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { monthLeadingBlanks } from "../../utils/week";
 import { appLocale } from "../../i18n/format";
+import { tn } from "../../i18n/core";
 
 // MO1.6.1, Calendar · Year: one continuous vertical scroll of years, as in
 // Apple Calendar. Each year is a 30/800 heading over a rule and three columns
@@ -15,7 +16,8 @@ import { appLocale } from "../../i18n/format";
 // of the per-month count line; the count stays in the month's label for
 // screen readers.
 
-const MONTHS = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString(appLocale("en-US"), { month: "short" }));
+// Read when drawn, so the names follow the app's language.
+const monthShort = (i: number) => new Date(2000, i, 1).toLocaleDateString(appLocale("en-US"), { month: "short" });
 
 const iso = (y: number, m: number, d: number) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
@@ -41,14 +43,18 @@ function MiniMonth({
     <button
       type="button"
       onClick={onOpen}
-      aria-label={`${new Date(year, month, 1).toLocaleDateString(appLocale("en-US"), { month: "long", year: "numeric" })}${count ? `, ${count} ${count === 1 ? "day" : "days"} with events` : ""}`}
+      aria-label={
+        count
+          ? tn(count, "{month}, {n} day with events", "{month}, {n} days with events", { month: new Date(year, month, 1).toLocaleDateString(appLocale("en-US"), { month: "long", year: "numeric" }) })
+          : new Date(year, month, 1).toLocaleDateString(appLocale("en-US"), { month: "long", year: "numeric" })
+      }
       className="tap self-start flex flex-col items-stretch text-start min-w-0"
     >
       {/* MO1.6.1 anatomy row 7: the current month in the primary accent
           #7D67D9 (new since pre-R1, whose year view had no current month:
           decision 22, the handover's own colour). */}
       <span className={`block text-[15px] font-semibold leading-tight ${isCurrent ? "text-primary-accent" : "text-charcoal"}`}>
-        {MONTHS[month]}
+        {monthShort(month)}
       </span>
       {/* MO1.6.1 (2x frame): the first row's centre 24.5 under the name's,
           rows 17 apart (y 535 → 569); today a 15 circle (x 158–187). The

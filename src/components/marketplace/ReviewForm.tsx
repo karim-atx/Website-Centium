@@ -6,6 +6,7 @@ import { marketPalette } from "../../theme/marketTokens";
 import { linePx, textPx } from "../../theme/textSize";
 import { GuidelinesLink } from "../moderation/GuidelinesLink";
 import { appLocale } from "../../i18n/format";
+import { t, tn } from "../../i18n/core";
 
 // MO1.2.1.2's review flow (34 pt stars on a 44 pitch, the text, Submit),
 // shared by the gym page's "Write a review" (GymReviews), a venue-less
@@ -71,11 +72,11 @@ export function ReviewForm({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, lineHeight: "normal", color: m.ink }}>
       <style>{FOCUS_CSS}</style>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }} role="radiogroup" aria-label="Rating">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }} role="radiogroup" aria-label={t("Rating")}>
         {Array.from({ length: 5 }, (_, i) => {
           const c = i < rating ? m.gold : m.swoff;
           return (
-            <button key={i} type="button" role="radio" aria-checked={rating === i + 1} onClick={() => setRating(i + 1)} aria-label={`${i + 1} star${i === 0 ? "" : "s"}`} className="hit market-focus" style={{ padding: 0, border: 0, background: "none", cursor: "pointer", borderRadius: 8 }}>
+            <button key={i} type="button" role="radio" aria-checked={rating === i + 1} onClick={() => setRating(i + 1)} aria-label={tn(i + 1, "{n} star", "{n} stars")} className="hit market-focus" style={{ padding: 0, border: 0, background: "none", cursor: "pointer", borderRadius: 8 }}>
               <Star size={34} strokeWidth={1.5} fill={c} color={c} aria-hidden />
             </button>
           );
@@ -83,7 +84,7 @@ export function ReviewForm({
       </div>
       {/* The sheet's --sgrey box (radius 14, padding 12 14, the label 13 / 500 --slabel) with a --sfield text area (radius 10). */}
       <label style={{ display: "block", background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
-        <span style={{ display: "block", marginBottom: 8, fontSize: textPx(13), fontWeight: 500, color: m.slabel }}>Your review</span>
+        <span style={{ display: "block", marginBottom: 8, fontSize: textPx(13), fontWeight: 500, color: m.slabel }}>{t("Your review")}</span>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -94,7 +95,7 @@ export function ReviewForm({
           style={{ display: "block", width: "100%", height: 180, boxSizing: "border-box", resize: "none", borderRadius: 10, border: 0, background: m.card, padding: "11px 13px", font: "inherit", fontSize: textPx(14), lineHeight: linePx(20), color: m.ink, outlineOffset: 0 }}
         />
       </label>
-      {over && <p style={{ margin: 0, fontSize: textPx(12), fontWeight: 600, color: m.high }}>A review can be up to {REVIEW_BODY_MAX.toLocaleString(appLocale("en"))} characters.</p>}
+      {over && <p style={{ margin: 0, fontSize: textPx(12), fontWeight: 600, color: m.high }}>{t("A review can be up to {n} characters.", { n: REVIEW_BODY_MAX.toLocaleString(appLocale("en")) })}</p>}
       {error && (
         <p role="alert" style={{ margin: 0, fontSize: textPx(12), fontWeight: 600, color: m.high }}>
           {error}
@@ -111,11 +112,11 @@ export function ReviewForm({
         {...press.handlers}
         style={{ width: "100%", height: 50, borderRadius: 16, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: textPx(15), fontWeight: 700, cursor: off ? "default" : "pointer", opacity: over || empty ? 0.4 : 1, ...(off ? {} : press.style) }}
       >
-        {busy ? "One moment…" : submitLabel}
+        {busy ? t("One moment…") : submitLabel}
       </button>
       {onDelete && (
         <button type="button" onClick={() => void remove()} disabled={busy} className="market-focus" style={{ minHeight: 44, width: "100%", border: 0, background: "none", font: "inherit", fontSize: textPx(12.5), fontWeight: 700, color: m.high, cursor: "pointer" }}>
-          {confirmDelete ? "Tap again to delete your review" : "Delete review"}
+          {confirmDelete ? t("Tap again to delete your review") : t("Delete review")}
         </button>
       )}
     </div>

@@ -7,6 +7,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline } from "../network-error";
 import { marketRpc, type MarketResult } from "../market/rpc";
+import { t } from "../../i18n/core";
 import { parseLedgerRows, parsePointsRules, type LedgerCursor, type LedgerEntry, type PointsRules } from "./pointsModel";
 
 export * from "./pointsModel";
@@ -33,7 +34,7 @@ export async function fetchLedger(cursor: LedgerCursor | null = null, limit = 50
   const r = await marketRpc(
     "my_points_ledger",
     { p_before: cursor?.before ?? null, p_before_id: cursor?.beforeId ?? null, p_limit: ask },
-    "Couldn't load your points history.",
+    t("Couldn't load your points history."),
     parseLedgerRows
   );
   if (!r.ok) return r;
@@ -58,7 +59,7 @@ let rules: Promise<MarketResult<PointsRules>> | null = null;
  */
 export function fetchPointsRules(): Promise<MarketResult<PointsRules>> {
   if (rules) return rules;
-  const fallback = "Couldn't load the points rules.";
+  const fallback = t("Couldn't load the points rules.");
   const request = (async (): Promise<MarketResult<PointsRules>> => {
     try {
       const { data, error } = await settings.from("platform_settings").select(RULES_COLUMNS).maybeSingle();

@@ -3,6 +3,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { marketPalette, SHARE_TOKENS } from "../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../pro/proInk";
+import * as i18n from "../../i18n/core";
 import {
   DEFAULT_CROP,
   EDITOR_W,
@@ -117,7 +118,7 @@ export const OverlayEditor: React.FC<OverlayEditorProps> = ({
   onChange,
   hintKey,
   layerStyle,
-  targets = ["Stats", "Photo"],
+  targets = [i18n.tk("Stats"), i18n.tk("Photo")],
   layerLabel,
 }) => {
   const dark = useIsDark();
@@ -312,7 +313,7 @@ export const OverlayEditor: React.FC<OverlayEditorProps> = ({
           ref={frameRef}
           role="application"
           tabIndex={0}
-          aria-label={`${layerLabel} on your photo. ${photoOn ? "Drag to move the photo, pinch to zoom it." : "Drag to move, pinch to resize, two fingers to rotate."} Arrow keys move, plus and minus resize${photoOn ? "" : ", brackets rotate"}.`}
+          aria-label={`${i18n.t("{layer} on your photo.", { layer: layerLabel })} ${photoOn ? i18n.t("Drag to move the photo, pinch to zoom it.") : i18n.t("Drag to move, pinch to resize, two fingers to rotate.")} ${photoOn ? i18n.t("Arrow keys move, plus and minus resize.") : i18n.t("Arrow keys move, plus and minus resize, brackets rotate.")}`}
           onPointerDown={down}
           onPointerMove={move}
           onPointerUp={up}
@@ -363,7 +364,7 @@ export const OverlayEditor: React.FC<OverlayEditorProps> = ({
             </>
           )}
           {moving && !photoOn && <span aria-hidden style={{ position: "absolute", inset: SHARE_TOKENS.safeMargin, border: "1px dashed rgba(174,161,220,0.7)", borderRadius: 6 }} />}
-          {moving && snap.v && <span aria-hidden style={{ position: "absolute", insetInlineStart: "50%", top: 0, bottom: 0, borderInlineStart: `1px solid ${SEL}` }} />}
+          {moving && snap.v && <span aria-hidden style={{ position: "absolute", left: "50%", top: 0, bottom: 0, borderLeft: `1px solid ${SEL}` }} />}
           {moving && snap.h && <span aria-hidden style={{ position: "absolute", top: "50%", insetInlineStart: 0, insetInlineEnd: 0, borderTop: `1px solid ${SEL}` }} />}
 
           <div
@@ -412,37 +413,37 @@ export const OverlayEditor: React.FC<OverlayEditorProps> = ({
           {rotating && (
             <span
               aria-live="polite"
-              style={{ position: "absolute", insetInlineStart: "50%", top: t.y - halfH - 34, transform: "translateX(-50%)", height: 22, padding: "0 9px", borderRadius: 999, background: SEL, color: "#FFFFFF", fontSize: textPx(10.5), fontWeight: 800, display: "flex", alignItems: "center", whiteSpace: "nowrap" }}
+              style={{ position: "absolute", left: "50%", top: t.y - halfH - 34, transform: "translateX(-50%)", height: 22, padding: "0 9px", borderRadius: 999, background: SEL, color: "#FFFFFF", fontSize: textPx(10.5), fontWeight: 800, display: "flex", alignItems: "center", whiteSpace: "nowrap" }}
             >
-              {rotating.snapped || t.rotation === 0 ? "0° · snapped" : `${Math.round(t.rotation)}°`}
+              {rotating.snapped || t.rotation === 0 ? i18n.t("0° · snapped") : `${Math.round(t.rotation)}°`}
             </span>
           )}
           {hint &&
             (biz ? (
-              <span style={{ position: "absolute", insetInlineStart: "50%", top: 14, transform: "translateX(-50%)", whiteSpace: "nowrap", borderRadius: 999, background: "rgba(36,31,27,0.72)", color: "#FFFFFF", fontSize: textPx(10.5), fontWeight: 700, padding: "5px 10px", pointerEvents: "none" }}>
-                Pinch to resize · drag to move
+              <span style={{ position: "absolute", left: "50%", top: 14, transform: "translateX(-50%)", whiteSpace: "nowrap", borderRadius: 999, background: "rgba(36,31,27,0.72)", color: "#FFFFFF", fontSize: textPx(10.5), fontWeight: 700, padding: "5px 10px", pointerEvents: "none" }}>
+                {i18n.t("Pinch to resize · drag to move")}
               </span>
             ) : (
               <span
-                style={{ position: "absolute", insetInlineStart: "50%", top: "44%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 6, height: 30, padding: "0 12px", borderRadius: 999, background: "#FFFFFF", color: "#5F5093", fontSize: textPx(11), fontWeight: 800, whiteSpace: "nowrap", boxShadow: "0 6px 18px rgba(36,31,27,0.22)", pointerEvents: "none" }}
+                style={{ position: "absolute", left: "50%", top: "44%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 6, height: 30, padding: "0 12px", borderRadius: 999, background: "#FFFFFF", color: "#5F5093", fontSize: textPx(11), fontWeight: 800, whiteSpace: "nowrap", boxShadow: "0 6px 18px rgba(36,31,27,0.22)", pointerEvents: "none" }}
               >
                 {HAND}
-                Pinch to resize · drag to move
+                {i18n.t("Pinch to resize · drag to move")}
               </span>
             ))}
           {toast && (
             <span
               role="status"
-              style={{ position: "absolute", insetInlineStart: "50%", top: 12, transform: "translateX(-50%)", height: 26, padding: "0 10px", borderRadius: 999, background: "#FFFFFF", color: "#2F5F58", fontSize: textPx(10.5), fontWeight: 800, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(36,31,27,0.18)", pointerEvents: "none" }}
+              style={{ position: "absolute", left: "50%", top: 12, transform: "translateX(-50%)", height: 26, padding: "0 10px", borderRadius: 999, background: "#FFFFFF", color: "#2F5F58", fontSize: textPx(10.5), fontWeight: 800, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(36,31,27,0.18)", pointerEvents: "none" }}
             >
-              Back to default size and position
+              {i18n.t("Back to default size and position")}
             </span>
           )}
         </div>
       </div>
 
       <div className="flex items-center" style={{ marginTop: 10, gap: 8 }}>
-        <div role="radiogroup" aria-label="What to edit" className="flex" style={{ flex: 1, gap: 4, padding: 4, borderRadius: 12, background: m.subtrack }}>
+        <div role="radiogroup" aria-label={i18n.t("What to edit")} className="flex" style={{ flex: 1, gap: 4, padding: 4, borderRadius: 12, background: m.subtrack }}>
           {targets.map((label, i) => {
             const on = target === i;
             return (
@@ -455,7 +456,7 @@ export const OverlayEditor: React.FC<OverlayEditorProps> = ({
                 className="tap relative flex items-center justify-center before:absolute before:-inset-y-[7px] before:inset-x-0 before:content-['']"
                 style={{ flex: 1, height: 30, borderRadius: 9, fontSize: textPx(12), fontWeight: on ? 700 : 600, background: on ? m.subactive : "transparent", color: on ? "#FFFFFF" : m.ink2 }}
               >
-                {label}
+                {i18n.t(label)}
               </button>
             );
           })}
@@ -465,7 +466,7 @@ export const OverlayEditor: React.FC<OverlayEditorProps> = ({
         </span>
         <button
           type="button"
-          aria-label="Reset"
+          aria-label={i18n.t("Reset")}
           aria-disabled={atDefault}
           onClick={reset}
           className="tap relative inline-flex items-center before:absolute before:-inset-y-[7px] before:inset-x-0 before:content-['']"
@@ -487,7 +488,7 @@ export const OverlayEditor: React.FC<OverlayEditorProps> = ({
             <path d={biz ? "M3 12a9 9 0 1 0 3-6.7L3 8" : "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"} />
             <path d="M3 3v5h5" />
           </svg>
-          Reset
+          {i18n.t("Reset")}
         </button>
       </div>
     </div>

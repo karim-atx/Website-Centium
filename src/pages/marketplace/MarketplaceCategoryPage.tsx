@@ -15,6 +15,8 @@ import type { MarketplaceCategoryId } from "../../types";
 import { ClassPage } from "./ClassPage";
 import { GymPage } from "./GymPage";
 import { ShowcasePage } from "./rewards/ShowcasePage";
+import { categoryLabel } from "./venueTypes";
+import { t } from "../../i18n/core";
 
 // V4: tapping a category on Explore now lands here — a listing of the
 // matching services, each showing rating + location, instead of one flat
@@ -87,7 +89,7 @@ function CategoryListing({ category }: { category: string | undefined }) {
           Proximity / Discounts) is gone. It set a value nothing read, so it
           sorted nothing; "Ranked by rating" went with it, as nothing on this
           page is ranked. */}
-      <PageHeader title={meta?.label ?? "Explore"} showBack />
+      <PageHeader title={meta ? categoryLabel(meta.id) : t("Explore")} showBack />
 
       <div className="space-y-2.5">
         {/* THE THREE FABRICATED LISTS THAT LIVED HERE ARE GONE: rankedGyms,
@@ -99,11 +101,12 @@ function CategoryListing({ category }: { category: string | undefined }) {
         {(id === "gyms" || id === "classes") && (
           <Card className="text-center py-8">
             <p className="text-sm font-semibold text-charcoal">
-              {id === "gyms" ? "Gyms" : "Classes"} live on Explore now
+              {id === "gyms" ? t("Gyms live on Explore now") : t("Classes live on Explore now")}
             </p>
             <p className="text-xs text-charcoal-faint mt-1 leading-relaxed max-w-xs mx-auto">
-              Real {id === "gyms" ? "gym listings" : "classes you can book"} are on the Explore
-              screen, with live availability.
+              {id === "gyms"
+                ? t("Real gym listings are on the Explore screen, with live availability.")
+                : t("Real classes you can book are on the Explore screen, with live availability.")}
             </p>
           </Card>
         )}
@@ -111,7 +114,7 @@ function CategoryListing({ category }: { category: string | undefined }) {
         {id !== "gyms" && id !== "classes" && businessListingsForCategory.length > 0 && (
           <>
             <p className="section-label text-charcoal-faint pt-2">
-              From Centium businesses
+              {t("From Centium businesses")}
             </p>
             {businessListingsForCategory.map((o) => (
               <OfferingCard key={o.id} offering={o} Icon={Icon} seller={{ name: o.businessName, location: o.businessLocation }} />

@@ -5,6 +5,7 @@ import { cardPayload, type CardPro, type CardSpec, type ShareFormat } from "./sh
 import type { HeldReason } from "./heldShareModel";
 import { fetchMyOwnedSharedItems, recordErrorMessage, recordSharedItem, sharedItemPath, type ItemKind } from "../../services/share";
 import { siteHref } from "../../config/site";
+import { t } from "../../i18n/core";
 
 /**
  * Release 3 · W8: one share, from the SH6 editor to the SH7 options. Each
@@ -44,7 +45,7 @@ export const ShareFlow: React.FC<{
   };
 
   const onRecord = async (format: ShareFormat): Promise<RecordResult> => {
-    if (!result) return { ok: false, message: "Couldn't share the card. Try again." };
+    if (!result) return { ok: false, message: t("Couldn't share the card. Try again.") };
     const shown = { ...spec, stats: spec.stats.filter((_, i) => !result.hide.includes(i)) };
     const payload = cardPayload(shown, format, result.style, win ? (result.client ?? null) : null);
     const key = JSON.stringify(payload);
@@ -52,7 +53,7 @@ export const ShareFlow: React.FC<{
     const hit = recorded.current.get(key);
     if (hit) return { ok: true, link: hit.held ? null : link(hit.id), held: hit.held };
     const r = await recordSharedItem(kind, format, payload, win?.requestId ?? null);
-    if (!r.ok) return { ok: false, message: r.offline ? "You're offline. Try again when you're back online." : recordErrorMessage(r.code, r.message) };
+    if (!r.ok) return { ok: false, message: r.offline ? t("You're offline. Try again when you're back online.") : recordErrorMessage(r.code, r.message) };
     // DV: was it held as it was recorded? A failed read lets the export go ahead.
     const mine = await fetchMyOwnedSharedItems();
     const item = mine.ok ? mine.data.find((it) => it.id === r.data) : undefined;

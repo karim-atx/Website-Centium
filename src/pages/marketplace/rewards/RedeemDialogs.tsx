@@ -10,6 +10,7 @@ import { SheetBox } from "../PurchaseSheet";
 import { deductionLine, redeemOffer } from "../../../services/offers";
 import { newRequestId } from "./rewardsModel";
 import { appLocale } from "../../../i18n/format";
+import { t, tn } from "../../../i18n/core";
 
 // Market + Share 3.0 · W2 · C-MO.4.4.3 Redeem confirm (`redeem1`, `redeem2`):
 // the two-step MasterBottomSheet over the offer. Literal values, Client
@@ -84,14 +85,14 @@ export const RedeemSheet: React.FC<RedeemSheetProps> = ({ open, onClose, offerId
     navigate(`/app/marketplace/vouchers/${encodeURIComponent(r.voucher.id)}?new=1`);
   };
 
-  const primary = step === 1 ? "Continue" : `Redeem ${cost.toLocaleString(appLocale("en-US"))} points`;
-  const secondary = step === 1 ? "Cancel" : "Back";
+  const primary = step === 1 ? t("Continue") : tn(cost, "Redeem {n} point", "Redeem {n} points", { n: cost.toLocaleString(appLocale("en-US")) });
+  const secondary = step === 1 ? t("Cancel") : t("Back");
 
   return (
     <BottomSheet
       open={open}
       onClose={() => !busy && onClose()}
-      title={step === 1 ? "Redeem this offer" : "Confirm redemption"}
+      title={step === 1 ? t("Redeem this offer") : t("Confirm redemption")}
       footerRule
       footer={
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -105,7 +106,7 @@ export const RedeemSheet: React.FC<RedeemSheetProps> = ({ open, onClose, offerId
             {...press.handlers}
             style={{ width: "100%", height: 50, borderRadius: 16, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: textPx(15), fontWeight: 700, cursor: busy ? "default" : "pointer", ...(busy ? {} : press.style) }}
           >
-            {busy ? "One moment…" : primary}
+            {busy ? t("One moment…") : primary}
           </button>
           <button
             type="button"
@@ -129,8 +130,8 @@ export const RedeemSheet: React.FC<RedeemSheetProps> = ({ open, onClose, offerId
           <span style={{ flex: 1, height: 4, borderRadius: 999, background: m.segactive }} />
           <span style={{ flex: 1, height: 4, borderRadius: 999, background: step === 2 ? m.segactive : m.soft }} />
         </div>
-        <span className="sr-only">{`Step ${step} of 2`}</span>
-        <SheetBox label="Offer" id="redeem-offer">
+        <span className="sr-only">{t("Step {n} of {count}", { n: step, count: 2 })}</span>
+        <SheetBox label={t("Offer")} id="redeem-offer">
           <div style={{ background: m.card, borderRadius: 10, padding: "11px 13px" }}>
             <div style={{ fontSize: textPx(14), fontWeight: 800 }}>{headline}</div>
             <div style={{ fontSize: textPx(12), fontWeight: 600, color: m.accent, marginTop: 1 }}>{owner}</div>
@@ -140,10 +141,10 @@ export const RedeemSheet: React.FC<RedeemSheetProps> = ({ open, onClose, offerId
         {step === 2 ? (
           <div style={{ marginTop: 12, display: "flex", gap: 10, alignItems: "flex-start", borderRadius: 14, padding: "10px 12px", background: m.cautionbg }}>
             <span aria-hidden style={{ width: 6, height: 6, borderRadius: 999, background: m.caution, marginTop: 6, flexShrink: 0 }} />
-            <span style={{ fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: m.caution }}>Points are non-refundable once the voucher is issued.</span>
+            <span style={{ fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: m.caution }}>{t("Points are non-refundable once the voucher is issued.")}</span>
           </div>
         ) : (
-          <div style={{ marginTop: 12, fontSize: textPx(12), lineHeight: linePx(17), color: m.faint }}>Points are non-refundable once the voucher is issued.</div>
+          <div style={{ marginTop: 12, fontSize: textPx(12), lineHeight: linePx(17), color: m.faint }}>{t("Points are non-refundable once the voucher is issued.")}</div>
         )}
         {error ? (
           <p role="alert" style={{ margin: "12px 0 0", fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: m.high }}>

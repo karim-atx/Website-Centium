@@ -5,6 +5,7 @@ import { textPx, linePx } from "../../../theme/textSize";
 import { marketPalette } from "../../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../pro/proInk";
 import { FOCUS_CSS } from "../usePress";
+import { isRtl, t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W3 · the Offers Manager's and Redeem page's shared
 // pieces, literal from Business Marketplace Screens lines 160–300 and
@@ -96,7 +97,7 @@ export const FieldLabel: React.FC<{ htmlFor?: string; id?: string; children: Rea
   return (
     <label htmlFor={htmlFor} id={id} style={{ display: "block", fontSize: textPx(12), fontWeight: 700, color: m.ink2, marginBottom: 6, lineHeight: "normal", ...style }}>
       {children}
-      {optional ? <span style={{ fontWeight: 500, color: m.faint }}> optional</span> : null}
+      {optional ? <span style={{ fontWeight: 500, color: m.faint }}> {t("optional")}</span> : null}
     </label>
   );
 };
@@ -188,7 +189,10 @@ export function SubSegment<K extends string>({ labelId, options, value, onChange
   const refs = React.useRef<(HTMLButtonElement | null)[]>([]);
   const onKey = (e: React.KeyboardEvent, i: number) => {
     const n = options.length;
-    const j = e.key === "ArrowRight" || e.key === "ArrowDown" ? (i + 1) % n : e.key === "ArrowLeft" || e.key === "ArrowUp" ? (i - 1 + n) % n : -1;
+    // Right to left: the next option is to the left.
+    const fwd = isRtl() ? "ArrowLeft" : "ArrowRight";
+    const back = isRtl() ? "ArrowRight" : "ArrowLeft";
+    const j = e.key === fwd || e.key === "ArrowDown" ? (i + 1) % n : e.key === back || e.key === "ArrowUp" ? (i - 1 + n) % n : -1;
     if (j < 0) return;
     e.preventDefault();
     onChange(options[j].key);
@@ -298,7 +302,7 @@ export const FundingCheck: React.FC<{ checked: boolean; onChange: (v: boolean) =
           </svg>
         ) : null}
       </span>
-      <span style={{ fontSize: textPx(12.5), lineHeight: linePx(18), fontWeight: 700, color: preview ? m.pdark : m.ink }}>{FUNDING_TEXT}</span>
+      <span style={{ fontSize: textPx(12.5), lineHeight: linePx(18), fontWeight: 700, color: preview ? m.pdark : m.ink }}>{t("You fund this discount in full. Centium does not reimburse redemptions.")}</span>
     </label>
   );
 };
@@ -336,7 +340,7 @@ export const PrimaryButton: React.FC<{ label: string; onPress: () => void; disab
         ...style,
       }}
     >
-      {busy ? "One moment…" : label}
+      {busy ? t("One moment…") : label}
     </button>
   );
 };

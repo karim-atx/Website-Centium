@@ -10,6 +10,7 @@ import { Initials } from "../pro/home/ProTrendRing";
 import { initialsOf } from "../pro/home/initials";
 import { whenLabel } from "../pro/home/notificationText";
 import { HubCta, HubCtaRow } from "../pro/home/HubCta";
+import { t } from "../../i18n/core";
 
 // A3: hires waiting for the professional to confirm they were paid — the
 // handover's "Cash hires stay 'Pending payment' until the professional confirms
@@ -85,7 +86,7 @@ export const PendingHiresSection: React.FC<{
       setHires((prev) => prev.filter((h) => h.id !== hire.id));
       setNotice({
         tone: "ok",
-        text: `${hire.clientFirstName || "The client"}'s payment is confirmed. They're now one of your clients.`,
+        text: hire.clientFirstName ? t("{name}'s payment is confirmed. They're now one of your clients.", { name: hire.clientFirstName }) : t("The client's payment is confirmed. They're now one of your clients."),
       });
       await onConfirmed?.();
       await reload();
@@ -99,7 +100,7 @@ export const PendingHiresSection: React.FC<{
   if (hires.length === 0 && !loadError && !notice) return null;
 
   return (
-    <section aria-label="Pending payment">
+    <section aria-label={t("Pending payment")}>
       {loadError && (
         <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, padding: "8px 0" }}>
           {loadError}
@@ -111,7 +112,7 @@ export const PendingHiresSection: React.FC<{
         </p>
       )}
       {hires.map((h) => {
-        const name = h.clientFirstName || "A client";
+        const name = h.clientFirstName || t("A client");
         return (
           <div key={h.id} className="flex" style={{ gap: 10, padding: "12px 0", borderBottom: `1px solid ${INK.b06}` }}>
             <span aria-hidden className="shrink-0" style={{ width: 8, height: 8, borderRadius: 9999, background: INK.pr, marginTop: 6 }} />
@@ -122,12 +123,12 @@ export const PendingHiresSection: React.FC<{
                 <span style={{ fontSize: textPx(11), color: INK.chT, whiteSpace: "nowrap" }}>{whenLabel(h.createdAt, now)}</span>
               </div>
               <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>
-                {[h.planName, formatPrice(h.priceAgreed) || "$0", h.paymentMethod === "cash" ? paymentMethodLabel(h.paymentMethod) : null].filter(Boolean).join(" · ")}
+                {[h.planName, formatPrice(h.priceAgreed) || "$0", h.paymentMethod === "cash" ? t(paymentMethodLabel(h.paymentMethod)) : null].filter(Boolean).join(" · ")}
               </p>
-              <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 2, lineHeight: 1.4 }}>Pending payment</p>
+              <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 2, lineHeight: 1.4 }}>{t("Pending payment")}</p>
               <HubCtaRow>
-                <HubCta variant="secondary" icon={X} label="Decline" ariaLabel={`Decline ${name}'s hire`} disabled={!!busy} onClick={() => onDecline(h)} />
-                <HubCta icon={Check} label={busy === h.id ? "Confirming…" : "Confirm payment"} ariaLabel={`Confirm ${name}'s payment`} disabled={!!busy} onClick={() => void confirm(h)} />
+                <HubCta variant="secondary" icon={X} label={t("Decline")} ariaLabel={t("Decline {name}'s hire", { name })} disabled={!!busy} onClick={() => onDecline(h)} />
+                <HubCta icon={Check} label={busy === h.id ? t("Confirming…") : t("Confirm payment")} ariaLabel={t("Confirm {name}'s payment", { name })} disabled={!!busy} onClick={() => void confirm(h)} />
               </HubCtaRow>
             </div>
           </div>

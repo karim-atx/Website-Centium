@@ -36,16 +36,16 @@ const REASON_WORDS: Record<HeldReason, string> = {
 
 export const heldReasonWords = (reason: unknown): string => REASON_WORDS[readHeldReason(reason)];
 
-export const HELD_TITLE = "Held for review.";
-export const HELD_CHIP = "Held for review";
+export const HELD_TITLE = tk("Held for review.");
+export const HELD_CHIP = tk("Held for review");
 
 /** D-S21's note after "Held for review." (the Community guidelines link follows it). */
-export const heldNoteLine = (reason: unknown): string => `${heldReasonWords(reason)}. Only you can see this card until our team checks it, usually within a day.`;
+export const heldNoteLine = (reason: unknown): string => t("{reason}. Only you can see this card until our team checks it, usually within a day.", { reason: t(heldReasonWords(reason)) });
 
 /** The paused link button and the line under it. */
-export const PAUSED_LINK_LABEL = "Copy link (works once approved)";
-export const PAUSED_LINE = "The link and QR are paused while our team reviews the card.";
-export const REMOVED_LINE = "This card was removed. Its link no longer works.";
+export const PAUSED_LINK_LABEL = tk("Copy link (works once approved)");
+export const PAUSED_LINE = tk("The link and QR are paused while our team reviews the card.");
+export const REMOVED_LINE = tk("This card was removed. Its link no longer works.");
 
 export interface ItemAllows {
   /** The public link (and its QR) can be handed out. */
@@ -68,9 +68,9 @@ export function itemAllows(state: SharedItemState, linkLive: boolean): ItemAllow
     case "held_for_review":
       return { link: false, share: false, chip: { label: HELD_CHIP, tone: "gold" }, line: PAUSED_LINE };
     case "removed":
-      return { link: false, share: false, chip: { label: "Removed", tone: "soft" }, line: REMOVED_LINE };
+      return { link: false, share: false, chip: { label: tk("Removed"), tone: "soft" }, line: REMOVED_LINE };
     case "removal_requested":
-      return { link: linkLive, share: false, chip: { label: "Removal asked", tone: "gold" }, line: linkLive ? null : PAUSED_LINE };
+      return { link: linkLive, share: false, chip: { label: tk("Removal asked"), tone: "gold" }, line: linkLive ? null : PAUSED_LINE };
     case "live":
       return { link: linkLive, share: true, chip: null, line: linkLive ? null : PAUSED_LINE };
   }

@@ -78,7 +78,7 @@ export const PickRow: React.FC<{ icon: LucideIcon; tone: WinTone; label: string;
         </span>
       ) : null}
     </span>
-    <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: INK.chF }} className="shrink-0" />
+    <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: INK.chF }} className="shrink-0 rtl:-scale-x-100" />
   </button>
 );
 

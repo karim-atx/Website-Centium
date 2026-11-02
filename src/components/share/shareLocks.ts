@@ -1,3 +1,5 @@
+import { t } from "../../i18n/core";
+
 // Market + Share 3.0 · D-28, the client share locks, pure (shareLocks.test.ts).
 //
 // Body weight, body fat, biomarkers and average heart rate are OFF by default
@@ -51,7 +53,7 @@ export function shareLocks({ recovery, age }: ShareLockInput): ShareLocks {
     foodDayLocked: recovery,
     streakHidden: recovery,
     communityHidden: minor || !COMMUNITY_IMAGE_POSTS,
-    lockLine: !sensitiveLocked ? null : recovery ? "Not shared while recovery-sensitive mode is on." : "Not available on cards for under-18s.",
+    lockLine: !sensitiveLocked ? null : recovery ? t("Not shared while recovery-sensitive mode is on.") : t("Not available on cards for under-18s."),
   };
 }
 

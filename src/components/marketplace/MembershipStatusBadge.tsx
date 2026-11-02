@@ -1,6 +1,7 @@
 import React from "react";
 import clsx from "clsx";
 import type { MembershipStatus } from "../../services/business-members";
+import { t, tk } from "../../i18n/core";
 
 // One badge for the four membership states, used on both sides.
 //
@@ -19,10 +20,10 @@ const style: Record<MembershipStatus, string> = {
 };
 
 const label: Record<MembershipStatus, string> = {
-  pending: "Invited",
-  active: "Member",
-  declined: "Declined",
-  ended: "Ended",
+  pending: tk("Invited"),
+  active: tk("Member"),
+  declined: tk("Declined"),
+  ended: tk("Ended"),
 };
 
 export const MembershipStatusBadge: React.FC<{ status: MembershipStatus; className?: string }> = ({
@@ -36,6 +37,6 @@ export const MembershipStatusBadge: React.FC<{ status: MembershipStatus; classNa
       className
     )}
   >
-    {label[status]}
+    {t(label[status])}
   </span>
 );

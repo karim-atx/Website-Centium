@@ -5,6 +5,7 @@ import { useApp } from "../../../context/AppContext";
 import { valueOn } from "../../../services/health-metrics/periods";
 import { HeartRateEKG } from "../../health/HeartRateEKG";
 import { NoDeviceSheet } from "../NoDeviceSheet";
+import { t, tx } from "../../../i18n/core";
 import { useHeartRateDay, useRestingBpm, useSourceConnected } from "./data";
 import { FadeValue, HeaderPill, HomeCard, HomeKeyframes, Line, linePx, staleLine, textPx, useHomeMode, useLoadingTimeout } from "./kit";
 
@@ -31,7 +32,7 @@ export const HeartRateWidget: React.FC<{ size: "small" | "large"; editMode: bool
   const day = useHeartRateDay(selectedDate, metricsLoadedAt);
   // B1: activity_daily.resting_bpm when a source reported it ("Resting"); else the latest sample, "Latest" (V6-21).
   const resting = useRestingBpm(selectedDate);
-  const word = resting !== null ? "Resting" : "Latest";
+  const word = resting !== null ? tx("Resting", "heart rate") : t("Latest");
   const latest = resting ?? (day.samples.length ? day.samples[day.samples.length - 1] : valueOn(healthSeries.heartRate, selectedDate));
   const loading = latest === null && ((metricsLoadedAt === null && !metricsError) || day.loading);
   const timedOut = useLoadingTimeout(loading);
@@ -41,7 +42,7 @@ export const HeartRateWidget: React.FC<{ size: "small" | "large"; editMode: bool
     let state: "empty" | "loading" | "error" | "offline" = "empty";
     if (loading && !timedOut) state = online ? "loading" : "offline";
     else if (metricsError || day.error || timedOut) state = online ? "error" : "offline";
-    const hint = connected ? "Nothing synced today" : isLarge ? "Connect a source to see your heart rate" : "Connect a source";
+    const hint = connected ? t("Nothing synced today") : isLarge ? t("Connect a source to see your heart rate") : t("Connect a source");
     return (
       <>
         <HomeCard
@@ -49,13 +50,13 @@ export const HeartRateWidget: React.FC<{ size: "small" | "large"; editMode: bool
           editMode={editMode}
           metric="heart-rate"
           icon={HeartPulse}
-          label="Heart rate"
+          label={t("Heart rate")}
           state={state}
-          emptyTitle="No readings yet"
+          emptyTitle={t("No readings yet")}
           emptyHint={hint}
           onRetry={reloadMetrics}
           onOpen={state === "empty" && !connected ? () => setSheet(true) : open}
-          ariaLabel={state === "empty" ? `Heart rate, no readings yet. ${hint}` : undefined}
+          ariaLabel={state === "empty" ? t("Heart rate, no readings yet. {hint}", { hint }) : undefined}
         />
         <NoDeviceSheet open={sheet} metric="heart-rate" onClose={() => setSheet(false)} />
       </>
@@ -66,12 +67,12 @@ export const HeartRateWidget: React.FC<{ size: "small" | "large"; editMode: bool
   const low = day.samples.length > 1 ? Math.round(Math.min(...day.samples)) : null;
   const high = day.samples.length > 1 ? Math.round(Math.max(...day.samples)) : null;
   const stale = metricsError || !online ? staleLine(metricsLoadedAt, online) : null;
-  const when = isToday ? " today" : "";
-  const smallContext = stale ?? (low !== null && high !== null ? `${word} · ${low} to ${high}${when}` : word);
+  const range = low !== null && high !== null ? (isToday ? t("{low} to {high} today", { low, high }) : t("{low} to {high}", { low, high })) : null;
+  const smallContext = stale ?? (range ? `${word} · ${range}` : word);
   // Card red #962F2F (dark: the HE1 table's #E2827E, V6-56).
   const ink = "rgb(var(--metric-heart-rate-ink))";
   const traceState = metricsError ? "error" : "ready";
-  const ariaLabel = `Heart rate ${bpm} bpm, ${word.toLowerCase()}${low !== null ? `, ${low} to ${high}${when}` : ""}`;
+  const ariaLabel = range ? t("Heart rate {bpm} bpm, {word}, {range}", { bpm, word: word.toLowerCase(), range }) : t("Heart rate {bpm} bpm, {word}", { bpm, word: word.toLowerCase() });
 
   return (
     <>
@@ -81,11 +82,11 @@ export const HeartRateWidget: React.FC<{ size: "small" | "large"; editMode: bool
         editMode={editMode}
         metric="heart-rate"
         icon={HeartPulse}
-        label="Heart rate"
+        label={t("Heart rate")}
         onOpen={open}
         ariaLabel={ariaLabel}
         value={<FadeValue k={bpm} value={bpm} />}
-        unit="bpm"
+        unit={t("bpm")}
         // Small: value 38 (gap 7), ECG 151 x 16 at 68, context 90.
         // Large: value 43.5 (gap 10.5), context 83.5; ECG 170 x 40 at 172, 49.5; range 107.5; labels 119.5.
         bodyGap={isLarge ? 10.5 : 7}
@@ -107,17 +108,17 @@ export const HeartRateWidget: React.FC<{ size: "small" | "large"; editMode: bool
                 <span
                   className="absolute inset-y-0 rounded-full"
                   style={{
-                    left: `${at(low) * 100}%`,
+                    insetInlineStart: `${at(low) * 100}%`,
                     width: `${Math.max(0, at(high) - at(low)) * 100}%`,
                     background: "rgb(var(--metric-heart-rate-main))",
                     opacity: 0.6,
-                    transition: "left 300ms cubic-bezier(0.22, 1, 0.36, 1), width 300ms cubic-bezier(0.22, 1, 0.36, 1)",
+                    transition: "inset-inline-start 300ms cubic-bezier(0.22, 1, 0.36, 1), width 300ms cubic-bezier(0.22, 1, 0.36, 1)",
                   }}
                 />
                 <span
                   className="absolute rounded-full"
                   style={{
-                    left: `${at(bpm) * 100}%`,
+                    insetInlineStart: `${at(bpm) * 100}%`,
                     top: -2,
                     width: 12,
                     height: 12,
@@ -132,9 +133,9 @@ export const HeartRateWidget: React.FC<{ size: "small" | "large"; editMode: bool
                 className="flex justify-between"
                 style={{ marginTop: 4, fontSize: textPx(10), lineHeight: linePx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-faint))" }}
               >
-                <span>Low {low}</span>
-                <span>{isToday ? "Range today" : "Range"}</span>
-                <span>High {high}</span>
+                <span>{t("Low {n}", { n: low })}</span>
+                <span>{isToday ? tx("Range today", "heart rate") : tx("Range", "heart rate")}</span>
+                <span>{t("High {n}", { n: high })}</span>
               </span>
             </span>
           ) : undefined

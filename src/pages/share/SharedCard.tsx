@@ -11,6 +11,7 @@ import { professionalByHandle, rememberPublicReturn } from "../../services/publi
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { textPx } from "../../theme/textSize";
 import { PublicCard, PublicFrame, PublicMessage } from "../public/publicKit";
+import { t } from "../../i18n/core";
 
 /**
  * Release 3 · W8 the public shared card, {site}/s/{id} (the link a
@@ -30,10 +31,10 @@ type State =
 
 function reportError(code: string | null, offline: boolean): string {
   if (offline) return OFFLINE_MESSAGE;
-  if (code === "ATX08") return "This card is no longer shared.";
-  if (code === "ATX02") return "You've sent a lot of reports today. Try again tomorrow.";
-  if (code === "ATX01") return "Sign in to report this card.";
-  return "Couldn't send your report. Try again.";
+  if (code === "ATX08") return t("This card is no longer shared.");
+  if (code === "ATX02") return t("You've sent a lot of reports today. Try again tomorrow.");
+  if (code === "ATX01") return t("Sign in to report this card.");
+  return t("Couldn't send your report. Try again.");
 }
 
 export default function SharedCard() {
@@ -54,11 +55,11 @@ export default function SharedCard() {
       const handle = r.data.professionalHandle;
       const pro = handle ? await professionalByHandle(handle) : null;
       if (!live) return;
-      const proName = (pro?.ok && pro.data?.firstName?.trim()) || "A Centium professional";
+      const proName = (pro?.ok && pro.data?.firstName?.trim()) || t("A Centium professional");
       const card = specFromPayload(r.data.card, proName);
       if (!card) return setState({ status: "missing" });
       const shown = (r.data.card as { name_display?: unknown } | null)?.name_display;
-      setState({ status: "found", ...card, handle, proName, client: typeof shown === "string" && shown.trim() ? shown : "A client" });
+      setState({ status: "found", ...card, handle, proName, client: typeof shown === "string" && shown.trim() ? shown : t("A client") });
     })();
     return () => {
       live = false;
@@ -72,7 +73,7 @@ export default function SharedCard() {
   if (state.status === "loading") {
     return (
       <PublicFrame>
-        <div aria-busy="true" role="status" aria-label="Loading" className="flex flex-col items-center gap-4">
+        <div aria-busy="true" role="status" aria-label={t("Loading")} className="flex flex-col items-center gap-4">
           <span aria-hidden className="w-[280px] h-[350px] max-w-full rounded-[14px] bg-cream-soft animate-skeleton-pulse" />
           <span aria-hidden className="w-full h-[96px] rounded-[20px] bg-cream-soft animate-skeleton-pulse" />
         </div>
@@ -82,7 +83,7 @@ export default function SharedCard() {
   if (state.status === "error") {
     return (
       <PublicFrame>
-        <PublicMessage title="Couldn't load this card" line={state.offline ? OFFLINE_MESSAGE : "Something went wrong. Try again."} onRetry={() => {
+        <PublicMessage title={t("Couldn't load this card")} line={state.offline ? OFFLINE_MESSAGE : t("Something went wrong. Try again.")} onRetry={() => {
             setState({ status: "loading" });
             setReload((n) => n + 1);
           }} />
@@ -92,14 +93,14 @@ export default function SharedCard() {
   if (state.status === "missing") {
     return (
       <PublicFrame>
-        <PublicMessage title="This card is no longer shared." />
+        <PublicMessage title={t("This card is no longer shared.")} />
       </PublicFrame>
     );
   }
 
   const tall = state.format === "story" || state.format === "sticker";
   return (
-    <PublicFrame label={`${state.proName}'s card`}>
+    <PublicFrame label={t("{name}'s card", { name: state.proName })}>
       <div className="flex justify-center">
         <ShareCard
           spec={state.spec}
@@ -119,7 +120,7 @@ export default function SharedCard() {
             className="tap w-full h-12 rounded-[14px] bg-primary-fill text-on-primary-fill inline-flex items-center justify-center gap-[7px] font-bold"
             style={{ fontSize: textPx(14) }}
           >
-            <UserRound size={15} strokeWidth={2} aria-hidden /> {`See ${state.proName}'s profile`}
+            <UserRound size={15} strokeWidth={2} aria-hidden /> {t("See {name}'s profile", { name: state.proName })}
           </Link>
         )}
         {authUserId ? (
@@ -129,17 +130,17 @@ export default function SharedCard() {
             className="tap w-full min-h-11 inline-flex items-center justify-center gap-[6px] font-bold text-charcoal-soft"
             style={{ fontSize: textPx(13) }}
           >
-            <Flag size={14} strokeWidth={2} aria-hidden /> Report
+            <Flag size={14} strokeWidth={2} aria-hidden /> {t("Report")}
           </button>
         ) : (
           <Link to="/app/onboarding?auth=signin" onClick={() => rememberPublicReturn(`/s/${id}`)} className="tap w-full min-h-11 inline-flex items-center justify-center font-bold text-primary-accent" style={{ fontSize: textPx(13) }}>
-            Sign in to report this card
+            {t("Sign in to report this card")}
           </Link>
         )}
       </PublicCard>
 
       {authUserId && (
-        <BottomSheet open={reportOpen} onClose={() => setReportOpen(false)} title="Report this card">
+        <BottomSheet open={reportOpen} onClose={() => setReportOpen(false)} title={t("Report this card")}>
           {reportOpen && (
             <ReviewReportForm
               onSend={async (reason, detail) => {

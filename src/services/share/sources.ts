@@ -23,6 +23,7 @@ import { clock12 } from "../../utils/time12";
 import type { ClientWin, WinKind } from "../../components/share/shareCardModel";
 import type { Read } from "./index";
 import { appLocale } from "../../i18n/format";
+import { t, tn } from "../../i18n/core";
 
 const from = (table: string) => supabase.from(table as never);
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
@@ -52,7 +53,6 @@ export interface PromoItem {
   days?: number;
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 export async function fetchPromoItems(me: string, lane: "full_coaching" | "nutrition"): Promise<Read<PromoItem[]>> {
   const out: PromoItem[] = [];
@@ -60,22 +60,22 @@ export async function fetchPromoItems(me: string, lane: "full_coaching" | "nutri
     const { data, error } = await from("workout_templates").select("id, name, duration_weeks, level, updated_at").eq("owner_id", me).order("updated_at", { ascending: false });
     if (error) return readFail(error);
     for (const r of (data ?? []) as unknown as { id: string; name: string; duration_weeks: number | null; level: string | null }[]) {
-      out.push({ id: r.id, kind: "programme", title: r.name, sub: [r.duration_weeks ? plural(r.duration_weeks, "week", "weeks") : null, r.level].filter(Boolean).join(" · ") || "Programme", weeks: r.duration_weeks, level: r.level });
+      out.push({ id: r.id, kind: "programme", title: r.name, sub: [r.duration_weeks ? tn(r.duration_weeks, "{n} week", "{n} weeks") : null, r.level].filter(Boolean).join(" · ") || t("Programme"), weeks: r.duration_weeks, level: r.level });
     }
   } else {
-    const t = await fetchTemplates(me);
-    if (!t.ok) return t;
-    for (const p of t.data) out.push({ id: p.id, kind: "meal_plan", title: p.name, sub: plural(p.daysCount, "day", "days"), days: p.daysCount });
+    const tpl = await fetchTemplates(me);
+    if (!tpl.ok) return tpl;
+    for (const p of tpl.data) out.push({ id: p.id, kind: "meal_plan", title: p.name, sub: tn(p.daysCount, "{n} day", "{n} days"), days: p.daysCount });
   }
   const c = await fetchCourseCards(me);
   if (!c.ok) return c;
   for (const k of c.data.filter((x) => x.status === "published")) {
-    out.push({ id: k.id, kind: "course", title: k.title, sub: `Course · ${plural(k.weeks, "week", "weeks")} · ${plural(k.lessons, "lesson", "lessons")}`, weeks: k.weeks, lessons: k.lessons, level: k.level, price: k.priceCents / 100, rating: k.averageRating, ratings: k.ratings });
+    out.push({ id: k.id, kind: "course", title: k.title, sub: `${t("Course")} · ${tn(k.weeks, "{n} week", "{n} weeks")} · ${tn(k.lessons, "{n} lesson", "{n} lessons")}`, weeks: k.weeks, lessons: k.lessons, level: k.level, price: k.priceCents / 100, rating: k.averageRating, ratings: k.ratings });
   }
   const s = await fetchServicePlans(me);
   if (!s.ok) return s;
   for (const p of s.data.filter((x) => x.active && x.sessionCount != null)) {
-    out.push({ id: p.id, kind: "package", title: p.name, sub: `Package · ${plural(p.sessionCount ?? 0, "session", "sessions")}`, sessions: p.sessionCount, price: p.price, priceIsMonthly: p.billing });
+    out.push({ id: p.id, kind: "package", title: p.name, sub: `${t("Package")} · ${tn(p.sessionCount ?? 0, "{n} session", "{n} sessions")}`, sessions: p.sessionCount, price: p.price, priceIsMonthly: p.billing });
   }
   return { ok: true, data: out };
 }

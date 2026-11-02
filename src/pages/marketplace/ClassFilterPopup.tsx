@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { marketPalette } from "../../theme/marketTokens";
+import { t } from "../../i18n/core";
 import { FilterPopup, FilterSummary, FilterTrigger, type FilterGroup } from "../../components/market/FilterPopup";
 
 // Market + Share 3.0 · W2 · the Classes tab's filter row (C-MO.4.3 `classes`,
@@ -33,7 +34,7 @@ export function ClassFilterPopup({ countLine, groups, filter }: { countLine: str
         <span role="status" style={{ fontSize: textPx(12), fontWeight: 600, color: m.faint, minWidth: 0 }}>
           {countLine}
         </span>
-        <FilterTrigger ref={setAnchor} active={filter.active} open={filter.open} onPress={filter.toggleFilter} label="Filter classes" />
+        <FilterTrigger ref={setAnchor} active={filter.active} open={filter.open} onPress={filter.toggleFilter} label={t("Filter classes")} />
       </div>
       {filter.active ? <FilterSummary summary={filter.summary} onShowAll={filter.clearFilter} style={{ marginTop: 10 }} /> : null}
       <FilterPopup open={filter.open} anchor={anchor} groups={groups} selected={filter.selected} onToggle={filter.toggleOption} onClose={filter.closeFilter} />

@@ -5,12 +5,14 @@ import { useApp } from "../../../context/AppContext";
 import { MetricWidget, type MetricWidgetState } from "../../health/MetricWidget";
 import { CycleCalendarIcon } from "../../icons/PartBIcons";
 import { LogDaySheet } from "../../cycle/LogDaySheet";
-import { PHASE_LABEL } from "../../../services/cycle/guidance";
 import { daysBetween, shiftDay } from "../../../services/cycle/insights";
 import type { CyclePhase } from "../../../services/cycle/types";
 import { gestationOn } from "../../../services/pregnancy/weeks";
 import { heroPatternUrl } from "../../../utils/assetUrls";
-import { DAY_LETTERS, DAY_SHORT, mondayFirstWeek, weekdayColumn } from "../../../utils/week";
+import { mondayFirstWeek } from "../../../utils/week";
+import { t, tk, tn } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
+import { weekLetters } from "./weekLetters";
 import { textPx, linePx } from "../../../theme/textSize";
 import { useOnline } from "../../../hooks/useOnline";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
@@ -36,20 +38,30 @@ import { useReducedMotion } from "../../../hooks/useReducedMotion";
 
 type Kind = "nsu" | "default" | "period" | "recovery" | "unavailable" | "hormonal" | "pregnant";
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const DAYS_LONG = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
 
-/** "Wed, Oct 21" (Monday-first weekday table). */
-const shortDate = (iso: string) => {
-  const d = new Date(`${iso}T00:00:00`);
-  return `${DAY_SHORT[weekdayColumn(d)]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
+/** "Wed, Oct 21", in the app's language. */
+const shortDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
+const longDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" });
+
+// The phase names (services/cycle/guidance PHASE_LABEL's words), as catalogue keys.
+const PHASE_NAME: Record<CyclePhase, string> = {
+  menstrual: tk("Period"),
+  follicular: tk("Follicular"),
+  ovulatory: tk("Ovulation"),
+  luteal: tk("Luteal"),
+  hormonal_contraception: tk("On hormonal contraception"),
+  pregnant: tk("Pregnant"),
+  unavailable: tk("Not enough data"),
 };
-const longDate = (iso: string) => {
-  const d = new Date(`${iso}T00:00:00`);
-  return `${DAYS_LONG[weekdayColumn(d)]}, ${MONTHS_LONG[d.getMonth()]} ${d.getDate()}`;
+// "{phase} phase" for the three phases that read with the word (the others read alone).
+const PHASE_TITLE: Partial<Record<CyclePhase, string>> = {
+  follicular: tk("Follicular phase"),
+  ovulatory: tk("Ovulation phase"),
+  luteal: tk("Luteal phase"),
 };
+const phaseName = (p: CyclePhase) => t(PHASE_NAME[p]);
+const phaseTitle = (p: CyclePhase) => t(PHASE_TITLE[p] ?? PHASE_NAME[p]);
 
 // The header glyph: the calendar-flower icon at the table's own size (12 on
 // the Default grids, 13 on the small 22-tile states), coloured by MetricWidget.
@@ -215,7 +227,7 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
   const phase: CyclePhase = p?.phase ?? "unavailable";
   const nextFrom = p?.nextPeriodFrom ?? p?.nextPeriodStart ?? null;
   const daysToNext = nextFrom ? daysBetween(today, nextFrom) : null;
-  const countdown = daysToNext === null ? null : daysToNext <= 0 ? "Period due" : `Period in ${daysToNext} day${daysToNext === 1 ? "" : "s"}`;
+  const countdown = daysToNext === null ? null : daysToNext <= 0 ? t("Period due") : tn(daysToNext, "Period in {n} day", "Period in {n} days");
   const periodStart = day !== null ? shiftDay(today, -(day - 1)) : null;
   const periodEnd = periodStart ? shiftDay(periodStart, periodLength - 1) : null;
   const pregWeek = p?.pregnancyWeek ?? gestation?.week ?? null;
@@ -250,18 +262,22 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
   // ---- one sentence for screen readers ---------------------------------------
-  let aria = "Cycle";
-  if (widgetState === "loading") aria = "Cycle, loading";
-  else if (widgetState === "error") aria = "Cycle, couldn't update, tap to retry";
-  else if (widgetState === "offline") aria = "Cycle, you're offline";
-  else if (kind === "nsu") aria = "Cycle, set up cycle tracking";
-  else if (kind === "recovery") aria = `Cycle, ${PHASE_LABEL[phase].toLowerCase()}${phase === "menstrual" || phase === "unavailable" ? "" : " phase"}, countdown hidden`;
+  let aria = t("Cycle");
+  if (widgetState === "loading") aria = t("Cycle, loading");
+  else if (widgetState === "error") aria = t("Cycle, couldn't update, tap to retry");
+  else if (widgetState === "offline") aria = t("Cycle, you're offline");
+  else if (kind === "nsu") aria = t("Cycle, set up cycle tracking");
+  else if (kind === "recovery") aria = t("Cycle, {phase}, countdown hidden", { phase: phaseTitle(phase).toLowerCase() });
   else if (kind === "period")
-    aria = `Cycle, period, day ${day}${large && periodEnd && periodEnd >= today ? `, period likely ends ${longDate(periodEnd)}, estimate` : ""}`;
-  else if (kind === "default") aria = `Cycle, day ${day}, ${PHASE_LABEL[phase].toLowerCase()} phase, ${countdown?.toLowerCase()}, estimate`;
-  else if (kind === "unavailable") aria = `Cycle, ${day !== null ? `day ${day}, ` : ""}not enough data yet`;
-  else if (kind === "hormonal") aria = "Cycle, on hormonal contraception";
-  else if (kind === "pregnant") aria = `Cycle, pregnant${pregWeek !== null ? `, week ${pregWeek}` : ""}${trimester ? `, trimester ${trimester}` : ""}`;
+    aria =
+      large && periodEnd && periodEnd >= today
+        ? t("Cycle, period, day {day}, period likely ends {date}, estimate", { day: day ?? "", date: longDate(periodEnd) })
+        : t("Cycle, period, day {day}", { day: day ?? "" });
+  else if (kind === "default") aria = t("Cycle, day {day}, {phase}, {countdown}, estimate", { day: day ?? "", phase: phaseTitle(phase).toLowerCase(), countdown: countdown?.toLowerCase() ?? "" });
+  else if (kind === "unavailable") aria = day !== null ? t("Cycle, day {day}, not enough data yet", { day }) : t("Cycle, not enough data yet");
+  else if (kind === "hormonal") aria = t("Cycle, on hormonal contraception");
+  else if (kind === "pregnant")
+    aria = [t("Cycle, pregnant"), pregWeek !== null ? t("week {n}", { n: pregWeek }) : null, trimester ? t("trimester {n}", { n: trimester }) : null].filter(Boolean).join(t(", "));
 
   // ---- the ring --------------------------------------------------------------
   const ringCentreGlyph = (px: number) => <CycleCalendarIcon size={px} style={{ color: ink.text }} />;
@@ -275,17 +291,17 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
       const rt = (l: string, v: React.ReactNode) => <RingText label={l} value={v} labelPx={8.5} valuePx={22} weight={600} ls={-0.7} labelInk={ink.widget} />;
       if (kind === "default") {
         arc = day! / cycleLength;
-        centre = rt("Day", day);
+        centre = rt(t("Day"), day);
       } else if (kind === "period") {
         arc = day! / cycleLength;
         arcColor = dark ? ink.main : "#B8607F";
-        centre = rt("Period", day);
+        centre = rt(t("Period"), day);
       } else if (kind === "recovery") centre = <EyeOff size={22} style={{ color: ink.widget }} aria-hidden />;
-      else if (kind === "unavailable") centre = day !== null ? rt("Day", day) : ringCentreGlyph(22);
+      else if (kind === "unavailable") centre = day !== null ? rt(t("Day"), day) : ringCentreGlyph(22);
       else if (kind === "hormonal") centre = <Pill size={22} style={{ color: ink.text }} aria-hidden />;
       else if (kind === "pregnant" && pregWeek !== null) {
         arc = pregWeek / 40;
-        centre = rt("Week", pregWeek);
+        centre = rt(t("Week"), pregWeek);
       }
       ring = (
         <Ring box={74} r={32.5} track={track} arc={arc} arcColor={arcColor} reduce={reduce} style={{ insetInlineStart: 16, top: 41 }}>
@@ -300,11 +316,11 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
       if (kind === "default") {
         arc = day! / cycleLength;
         dot = arc;
-        centre = <RingText label="Day" value={day} labelPx={7.5} valuePx={15} weight={800} ls={-0.4} gap={1} labelInk="#F0B9CB" />;
+        centre = <RingText label={t("Day")} value={day} labelPx={7.5} valuePx={15} weight={800} ls={-0.4} gap={1} labelInk="#F0B9CB" />;
       } else if (kind === "period") {
         arc = Math.max(day!, periodLength) / cycleLength;
         dot = day! / cycleLength;
-        centre = <RingText label="Period" value={day} labelPx={8} valuePx={15} weight={800} ls={-0.4} gap={1} labelInk={dark ? "#F0B9CB" : ink.text} />;
+        centre = <RingText label={t("Period")} value={day} labelPx={8} valuePx={15} weight={800} ls={-0.4} gap={1} labelInk={dark ? "#F0B9CB" : ink.text} />;
       } else centre = <EyeOff size={16} style={{ color: dark ? "#F0B9CB" : ink.text }} aria-hidden />;
       ring = (
         <Ring box={48} r={21.25} track={track} arc={arc} arcColor={ink.main} dot={dot} reduce={reduce} style={{ insetInlineStart: 12, top: 55 }}>
@@ -318,12 +334,12 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
       const rt = (l: string, v: React.ReactNode) => <RingText label={l} value={v} labelPx={8.5} valuePx={18} weight={600} ls={-0.5} labelInk={ink.widget} />;
       if (kind === "default") {
         arc = day! / cycleLength;
-        centre = rt("Day", day);
-      } else if (kind === "unavailable") centre = day !== null ? rt("Day", day) : ringCentreGlyph(16);
+        centre = rt(t("Day"), day);
+      } else if (kind === "unavailable") centre = day !== null ? rt(t("Day"), day) : ringCentreGlyph(16);
       else if (kind === "hormonal") centre = <Pill size={16} style={{ color: ink.text }} aria-hidden />;
       else if (kind === "pregnant" && pregWeek !== null) {
         arc = pregWeek / 40;
-        centre = rt("Week", pregWeek);
+        centre = rt(t("Week"), pregWeek);
       }
       ring = (
         <Ring box={56} r={23.25} track={track} arc={arc} arcColor={ink.main} reduce={reduce} style={{ insetInlineStart: 12, top: 42 }}>
@@ -334,7 +350,7 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
   }
 
   // ---- the text --------------------------------------------------------------
-  const t = (px: number, line: number, weight: number, color: string, extra?: React.CSSProperties): React.CSSProperties => ({
+  const sty = (px: number, line: number, weight: number, color: string, extra?: React.CSSProperties): React.CSSProperties => ({
     fontSize: textPx(px),
     lineHeight: linePx(line),
     fontWeight: weight,
@@ -342,7 +358,7 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
     ...extra,
   });
   const chevron = (
-    <ChevronRight size={16} aria-hidden className="absolute" data-cycle-chevron="" style={{ insetInlineStart: 150.5, top: 49, color: ink.faint }} />
+    <ChevronRight size={16} aria-hidden className="absolute rtl:-scale-x-100" data-cycle-chevron="" style={{ insetInlineStart: 150.5, top: 49, color: ink.faint }} />
   );
   let text: React.ReactNode = null;
   let showChevron = false;
@@ -350,14 +366,14 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
     showChevron = true;
     if (kind === "nsu") {
       text = (
-        <p className="absolute" style={{ insetInlineStart: 12, top: 59.9, width: 138.5, ...t(12, 16.2, 700, ink.charcoal), ...oneLine }}>
-          Set up cycle tracking
+        <p className="absolute" style={{ insetInlineStart: 12, top: 59.9, width: 138.5, ...sty(12, 16.2, 700, ink.charcoal), ...oneLine }}>
+          {t("Set up cycle tracking")}
         </p>
       );
     } else if (smallDrawn48) {
       // Lines 11/13.8: first 800 ink, second the pink ink (drawn), 600.
       const lines: [string, string] =
-        kind === "period" ? ["Period", `Day ${day}`] : kind === "recovery" ? [PHASE_LABEL[phase], "Phase only"] : [PHASE_LABEL[phase], countdown ?? ""];
+        kind === "period" ? [t("Period"), t("Day {n}", { n: day ?? "" })] : kind === "recovery" ? [phaseName(phase), t("Phase only")] : [phaseName(phase), countdown ?? ""];
       const withEstimate = kind === "default";
       text = (
         <div
@@ -368,20 +384,20 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
           style={{ insetInlineStart: 70, insetInlineEnd: 9, top: withEstimate ? 45 : 65, height: withEstimate ? 68 : undefined }}
           data-cycle-text=""
         >
-          <span style={t(11, 13.8, 800, ink.charcoal, oneLine)}>{lines[0]}</span>
-          <span style={t(11, 13.8, 600, dark ? "#F0B9CB" : ink.text, oneLine)}>{lines[1]}</span>
-          {withEstimate && <span style={t(10, 13, 600, ink.faint, oneLine)}>Estimate</span>}
+          <span style={sty(11, 13.8, 800, ink.charcoal, oneLine)}>{lines[0]}</span>
+          <span style={sty(11, 13.8, 600, dark ? "#F0B9CB" : ink.text, oneLine)}>{lines[1]}</span>
+          {withEstimate && <span style={sty(10, 13, 600, ink.faint, oneLine)}>{t("Estimate")}</span>}
         </div>
       );
     } else {
       // Default grid (56 ring): title 12/15.6 700, gap 3, lines 10/13 600.
-      let title = PHASE_LABEL[phase];
+      let title = phaseName(phase);
       let lines: React.ReactNode[] = [];
-      if (kind === "default") lines = [<span key="c" style={{ color: pinkInk }}>{countdown}</span>, <span key="e" style={{ color: ink.faint }}>Estimate</span>];
+      if (kind === "default") lines = [<span key="c" style={{ color: pinkInk }}>{countdown}</span>, <span key="e" style={{ color: ink.faint }}>{t("Estimate")}</span>];
       else if (kind === "unavailable") {
-        title = PHASE_LABEL.unavailable;
-        lines = [<span key="h" style={{ color: ink.widget, ...clamp(3) }}>Log your period to see an estimate</span>];
-      } else if (kind === "pregnant" && trimester) lines = [<span key="t" style={{ color: ink.widget }}>Trimester {trimester}</span>];
+        title = phaseName("unavailable");
+        lines = [<span key="h" style={{ color: ink.widget, ...clamp(3) }}>{t("Log your period to see an estimate")}</span>];
+      } else if (kind === "pregnant" && trimester) lines = [<span key="t" style={{ color: ink.widget }}>{t("Trimester {n}", { n: trimester })}</span>];
       const centred = kind !== "default";
       text = (
         <div
@@ -399,9 +415,9 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
           {/* Default: kept clear of the chevron (150.5). The OURS states wrap
               to 2 lines ("On hormonal / contraception"), the first line
               short enough to end before it. */}
-          <span style={t(12, 15.6, 700, ink.charcoal, kind === "default" ? { maxWidth: 72.5, ...oneLine } : clamp(2))}>{title}</span>
+          <span style={sty(12, 15.6, 700, ink.charcoal, kind === "default" ? { maxWidth: 72.5, ...oneLine } : clamp(2))}>{title}</span>
           {lines.length > 0 && (
-            <span className="flex flex-col" style={{ marginTop: 3, ...t(10, 13, 600, ink.widget) }}>
+            <span className="flex flex-col" style={{ marginTop: 3, ...sty(10, 13, 600, ink.widget) }}>
               {lines.map((l, i) => (
                 <span key={i} style={kind === "unavailable" ? undefined : oneLine}>
                   {l}
@@ -417,15 +433,14 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
   // ---- large: title, strip, bottom row ---------------------------------------
   let largeBody: React.ReactNode = null;
   if (widgetState === "ready" && large) {
-    const phaseTitle = phase === "menstrual" ? PHASE_LABEL.menstrual : `${PHASE_LABEL[phase]} phase`;
     let title = "";
-    if (kind === "nsu") title = "Set up cycle tracking";
-    else if (kind === "default") title = phaseTitle;
-    else if (kind === "period") title = `Period · Day ${day}`;
-    else if (kind === "recovery") title = phase === "unavailable" ? PHASE_LABEL.unavailable : phaseTitle;
-    else if (kind === "unavailable") title = "Not enough data yet";
-    else if (kind === "hormonal") title = PHASE_LABEL.hormonal_contraception;
-    else if (kind === "pregnant") title = pregWeek !== null ? `Pregnant · week ${pregWeek}` : PHASE_LABEL.pregnant;
+    if (kind === "nsu") title = t("Set up cycle tracking");
+    else if (kind === "default") title = phaseTitle(phase);
+    else if (kind === "period") title = t("Period · Day {n}", { n: day ?? "" });
+    else if (kind === "recovery") title = phaseTitle(phase);
+    else if (kind === "unavailable") title = t("Not enough data yet");
+    else if (kind === "hormonal") title = phaseName("hormonal_contraception");
+    else if (kind === "pregnant") title = pregWeek !== null ? t("Pregnant · week {n}", { n: pregWeek }) : phaseName("pregnant");
 
     // The Monday-first strip (cycleLogs + nextPeriodFrom/To).
     const showStrip = kind !== "nsu" && kind !== "pregnant";
@@ -453,15 +468,15 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
               <span
                 className="absolute text-center"
                 data-cycle-letter={isToday ? "today" : ""}
-                style={{ left: x, top: 75.9, width: 14, ...t(8.5, letterLine, isToday ? 700 : 600, isToday ? ink.charcoal : ink.faint) }}
+                style={{ insetInlineStart: x, top: 75.9, width: 14, ...sty(8.5, letterLine, isToday ? 700 : 600, isToday ? ink.charcoal : ink.faint) }}
               >
-                {DAY_LETTERS[i]}
+                {weekLetters()[i]}
               </span>
               <span
                 className="absolute rounded-full"
                 data-cycle-dot={logged ? "logged" : predicted ? "predicted" : "day"}
                 style={{
-                  left: x,
+                  insetInlineStart: x,
                   top: dotTop,
                   width: 14,
                   height: 14,
@@ -486,32 +501,32 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
     let bottom: string | null = null;
     let estimate = false;
     if (kind === "default" && nextFrom) {
-      bottom = `Next period · ${shortDate(nextFrom)}`;
+      bottom = t("Next period · {date}", { date: shortDate(nextFrom) });
       estimate = true;
     } else if (kind === "period") {
-      if (periodEnd && periodEnd >= today) bottom = `Period likely ends · ${shortDate(periodEnd)}`;
-      else if (nextFrom) bottom = `Next period · ${shortDate(nextFrom)}`;
+      if (periodEnd && periodEnd >= today) bottom = t("Period likely ends · {date}", { date: shortDate(periodEnd) });
+      else if (nextFrom) bottom = t("Next period · {date}", { date: shortDate(nextFrom) });
       estimate = bottom !== null;
-    } else if (kind === "recovery") bottom = "Countdown hidden";
-    else if (kind === "unavailable") bottom = "Log 2 periods for an estimate";
-    else if (kind === "hormonal") bottom = "No period estimate while on hormonal contraception";
-    else if (kind === "pregnant" && trimester) bottom = `Trimester ${trimester}`;
+    } else if (kind === "recovery") bottom = t("Countdown hidden");
+    else if (kind === "unavailable") bottom = t("Log 2 periods for an estimate");
+    else if (kind === "hormonal") bottom = t("No period estimate while on hormonal contraception");
+    else if (kind === "pregnant" && trimester) bottom = t("Trimester {n}", { n: trimester });
     const canLog = kind !== "nsu" && kind !== "pregnant";
 
     largeBody = (
       <>
-        <p className="absolute" data-cycle-title="" style={{ insetInlineStart: 104, top: 51, width: 238, ...t(13, 16.9, 700, ink.charcoal), ...oneLine }}>
+        <p className="absolute" data-cycle-title="" style={{ insetInlineStart: 104, top: 51, width: 238, ...sty(13, 16.9, 700, ink.charcoal), ...oneLine }}>
           {title}
         </p>
         {kind === "nsu" && (
-          <p className="absolute" style={{ insetInlineStart: 104, top: 75.9, width: 220, ...t(11, 15.4, 500, ink.soft), ...clamp(2) }}>
-            Add your last period and usual cycle length.
+          <p className="absolute" style={{ insetInlineStart: 104, top: 75.9, width: 220, ...sty(11, 15.4, 500, ink.soft), ...clamp(2) }}>
+            {t("Add your last period and usual cycle length.")}
           </p>
         )}
         {strip}
         <div className="absolute flex items-center" data-cycle-bottom="" style={{ insetInlineStart: 16, insetInlineEnd: 16, top: 118.3, height: 17.5, gap: 6 }}>
           {bottom && (
-            <span className="min-w-0" style={{ ...t(10.5, 13.7, 600, ink.soft), ...oneLine }}>
+            <span className="min-w-0" style={{ ...sty(10.5, 13.7, 600, ink.soft), ...oneLine }}>
               {bottom}
             </span>
           )}
@@ -519,15 +534,15 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
             <span
               className="shrink-0 rounded-full"
               data-cycle-estimate=""
-              style={{ padding: "4px 8px", background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.85)", ...t(9.5, 9.5, 700, ink.soft), whiteSpace: "nowrap" }}
+              style={{ padding: "4px 8px", background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.85)", ...sty(9.5, 9.5, 700, ink.soft), whiteSpace: "nowrap" }}
             >
-              Estimate
+              {t("Estimate")}
             </span>
           )}
         </div>
         {kind === "nsu" && (
-          <span className="absolute" style={{ insetInlineEnd: 16, top: 119.9, ...t(11, 14.3, 700, actionInk), whiteSpace: "nowrap" }}>
-            Set up ›
+          <span className="absolute" style={{ insetInlineEnd: 16, top: 119.9, ...sty(11, 14.3, 700, actionInk), whiteSpace: "nowrap" }}>
+            {t("Set up ›")}
           </span>
         )}
         {canLog && (
@@ -543,9 +558,9 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
             }}
             onKeyDown={stop}
             className="tap absolute flex items-center justify-end"
-            style={{ insetInlineStart: 306.05, top: 105.05, width: 44, height: 44, paddingInlineEnd: 8.05, pointerEvents: "auto", ...t(11, 14.3, 700, actionInk), whiteSpace: "nowrap" }}
+            style={{ insetInlineStart: 306.05, top: 105.05, width: 44, height: 44, paddingInlineEnd: 8.05, pointerEvents: "auto", ...sty(11, 14.3, 700, actionInk), whiteSpace: "nowrap" }}
           >
-            + Log
+            {t("+ Log")}
           </button>
         )}
       </>
@@ -563,13 +578,13 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
       size={size}
       metric="cycle"
       icon={twentyTwo ? Glyph13 : Glyph12}
-      label="Cycle"
+      label={t("Cycle")}
       colors={{ tint: widgetState === "ready" ? tint : "rgb(var(--metric-cycle-tint))", tile, label: widgetState === "ready" ? label : dark ? "#F0B9CB" : ink.widget, icon: glyph, ink: ink.widget }}
       headerGeometry={twentyTwo && widgetState === "ready" ? { tile: 22, tileRadius: 7, gap: 6, labelLine: 13.5 } : undefined}
       headerRight={
         large && widgetState === "ready" && kind !== "nsu" && kind !== "pregnant" ? (
-          <span className="shrink-0" data-cycle-legend="" style={{ ...t(9.5, 12.4, 700, ink.faint), whiteSpace: "nowrap" }}>
-            Logged · predicted
+          <span className="shrink-0" data-cycle-legend="" style={{ ...sty(9.5, 12.4, 700, ink.faint), whiteSpace: "nowrap" }}>
+            {t("Logged · predicted")}
           </span>
         ) : undefined
       }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { fetchMyHandle } from "../../services/share";
 import type { CardPro } from "./shareCardModel";
+import { t } from "../../i18n/core";
 
 /**
  * The professional as a card shows them: the name the public profile shows
@@ -20,5 +21,5 @@ export function useSharePro(): CardPro | null {
     };
   }, [authUserId]);
   if (!authUserId || handle === undefined) return null;
-  return { name: (user.firstName ?? "").trim() || "Your name", handle };
+  return { name: (user.firstName ?? "").trim() || t("Your name"), handle };
 }

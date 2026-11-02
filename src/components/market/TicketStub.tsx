@@ -130,7 +130,7 @@ export const TicketStub: React.FC<TicketStubProps> = ({
   };
   const notch: React.CSSProperties = {
     position: "absolute",
-    right: stubWidth - 7,
+    insetInlineEnd: stubWidth - 7,
     width: 14,
     height: 14,
     borderRadius: 999,

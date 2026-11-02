@@ -8,6 +8,7 @@ import { marketPalette } from "../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../pro/proInk";
 import { MarketAvatar } from "./ProfessionalCard";
 import { FOCUS_CSS, usePress } from "./usePress";
+import { t, tn } from "../../i18n/core";
 import {
   canSend,
   contextLine,
@@ -181,7 +182,7 @@ const ReviewCard: React.FC<Omit<InstructorReviewDialogProps, "target"> & { targe
           {contextLine(target)}
         </p>
 
-        <div role="radiogroup" aria-label="Your rating" style={{ marginTop: 14, display: "flex", justifyContent: "center", gap: 8 }}>
+        <div role="radiogroup" aria-label={t("Your rating")} style={{ marginTop: 14, display: "flex", justifyContent: "center", gap: 8 }}>
           {[1, 2, 3, 4, 5].map((n) => (
             <StarButton
               key={n}
@@ -203,7 +204,7 @@ const ReviewCard: React.FC<Omit<InstructorReviewDialogProps, "target"> & { targe
 
         <div style={{ marginTop: 14, textAlign: "start", background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
           <label htmlFor={fieldId} style={{ display: "block", fontSize: textPx(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>
-            Short review <span style={{ color: m.faint }}>optional</span>
+            {t("Short review")} <span style={{ color: m.faint }}>{t("optional")}</span>
           </label>
           <textarea
             id={fieldId}
@@ -211,7 +212,7 @@ const ReviewCard: React.FC<Omit<InstructorReviewDialogProps, "target"> & { targe
             value={text}
             onChange={(e) => setText(e.target.value.slice(0, REVIEW_TEXT_MAX))}
             maxLength={REVIEW_TEXT_MAX}
-            placeholder="What stood out?"
+            placeholder={t("What stood out?")}
             disabled={busy}
             rows={2}
             style={{
@@ -241,14 +242,14 @@ const ReviewCard: React.FC<Omit<InstructorReviewDialogProps, "target"> & { targe
           </p>
         ) : !online ? (
           <p role="status" style={{ margin: "12px 0 0", fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: m.ink2 }}>
-            You're offline. Send it once you're back online.
+            {t("You're offline. Send it once you're back online.")}
           </p>
         ) : null}
 
         {opensAt ? <ReviewWaitNote opensAt={opensAt} boxed style={{ marginTop: 16 }} /> : null}
         <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
           <button type="button" onClick={close} disabled={busy} className="market-focus" style={btn(m.cancelbg, m.cancelink)}>
-            Not now
+            {t("Not now")}
           </button>
           {opensAt ? null : <SendButton ready={ready && online} busy={busy} fill={m.fill} ink={m.onfill} style={btn(m.fill, m.onfill)} onSend={() => void send()} />}
         </div>
@@ -277,7 +278,7 @@ const StarButton: React.FC<{
       type="button"
       role="radio"
       aria-checked={checked}
-      aria-label={n === 1 ? "1 star" : `${n} stars`}
+      aria-label={tn(n, "{n} star", "{n} stars")}
       tabIndex={focusable ? 0 : -1}
       disabled={disabled}
       onClick={onPick}
@@ -308,7 +309,7 @@ const SendButton: React.FC<{ ready: boolean; busy: boolean; fill: string; ink: s
       {...(ready ? press.handlers : {})}
       style={{ ...style, opacity: busy ? 0.6 : ready ? 1 : 0.4, cursor: ready ? "pointer" : "default", ...(ready ? press.style : null) }}
     >
-      {busy ? "Sending…" : "Send review"}
+      {busy ? t("Sending…") : t("Send review")}
     </button>
   );
 };

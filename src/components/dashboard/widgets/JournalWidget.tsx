@@ -8,6 +8,7 @@ import { mondayFirstWeek } from "../../../utils/week";
 import { useJournalWeek } from "./data";
 import { DayDots, FadeValue, HeaderPill, HomeCard, HomeKeyframes, homeColors, Line, useHomeMode, useLoadingTimeout, WeekStrip } from "./kit";
 import { appLocale } from "../../../i18n/format";
+import { t, tn } from "../../../i18n/core";
 
 // HO1.W9 Journal (small), OURS-home-large-widgets §C (large) and
 // OURS-home-journal-empty. PRIVACY (home-backend §9, PB3 §6 #4): entry text
@@ -40,13 +41,13 @@ export const JournalWidget: React.FC<{ size: "small" | "large"; editMode: boolea
         editMode={editMode}
         colors={colors}
         icon={BookOpen}
-        label="Journal"
+        label={t("Journal")}
         state={state}
-        emptyTitle="No entries yet"
-        emptyHint={isLarge ? (hideNumbers ? "Write your first entry" : "Write your first entry to start a streak") : "Write your first"}
+        emptyTitle={t("No entries yet")}
+        emptyHint={isLarge ? (hideNumbers ? t("Write your first entry") : t("Write your first entry to start a streak")) : t("Write your first")}
         onRetry={() => void reloadJournal()}
         onOpen={open}
-        ariaLabel={state === "empty" ? "Journal, no entries yet. Write your first" : undefined}
+        ariaLabel={state === "empty" ? t("Journal, no entries yet. Write your first") : undefined}
       />
     );
   }
@@ -61,7 +62,7 @@ export const JournalWidget: React.FC<{ size: "small" | "large"; editMode: boolea
   );
   const writtenToday = journalEntries.some((e) => e.date === today);
   const fill = dark ? "#E0B360" : "#D4A84A";
-  const wordsLine = `${weekWords.toLocaleString(appLocale())} words this week`;
+  const wordsLine = tn(weekWords, "{n} word this week", "{n} words this week", { n: weekWords.toLocaleString(appLocale()) });
 
   return (
     <>
@@ -71,19 +72,23 @@ export const JournalWidget: React.FC<{ size: "small" | "large"; editMode: boolea
         editMode={editMode}
         colors={colors}
         icon={BookOpen}
-        label="Journal"
+        label={t("Journal")}
         onOpen={open}
         ariaLabel={
           hideNumbers
-            ? `Journal, ${writtenToday ? "written today" : "not written today"}, ${wordsLine}`
-            : `Journal, ${streak} day streak, ${wordsLine}${writtenToday ? ", written today" : ""}`
+            ? writtenToday
+              ? t("Journal, written today, {words}", { words: wordsLine })
+              : t("Journal, not written today, {words}", { words: wordsLine })
+            : writtenToday
+              ? t("Journal, {streak}, {words}, written today", { streak: tn(streak, "{n} day streak", "{n} day streak"), words: wordsLine })
+              : t("Journal, {streak}, {words}", { streak: tn(streak, "{n} day streak", "{n} day streak"), words: wordsLine })
         }
-        value={hideNumbers ? (writtenToday ? "Written" : "Not yet") : <FadeValue k={streak} value={streak} />}
-        unit={hideNumbers ? "today" : "day streak"}
+        value={hideNumbers ? (writtenToday ? t("Written") : t("Not yet")) : <FadeValue k={streak} value={streak} />}
+        unit={hideNumbers ? t("today") : tn(streak, "day streak", "day streak")}
         // Small: value 42 (gap 11), dots 72 (8 x 8), context 86. Large: value 52.5 (gap 19.5), context 92.5; strip 200 x 52 at 142, 61.
         bodyGap={isLarge ? 19.5 : 11}
         // Recovery mode: the value already says it, so no pill to repeat it.
-        headerRight={isLarge && !hideNumbers ? <HeaderPill ink={c.label} dark={dark}>{writtenToday ? "Written today" : "Not written today"}</HeaderPill> : undefined}
+        headerRight={isLarge && !hideNumbers ? <HeaderPill ink={c.label} dark={dark}>{writtenToday ? t("Written today") : t("Not written today")}</HeaderPill> : undefined}
         // Not written: an outline in the dot colour at partial strength (measured ring ≈ #E2C584).
         graphic={isLarge ? undefined : <DayDots days={days} size={8} gap={4} fill={fill} ring={dark ? "rgba(224,179,96,0.6)" : "rgba(212,168,74,0.6)"} />}
         graphicHeight={8}

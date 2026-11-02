@@ -11,6 +11,7 @@ import { cardStyleOf, usesOverlay, type CardPro, type CardSpec, type EditorStyle
 import { PAUSED_LINE, type HeldReason } from "./heldShareModel";
 import { HeldShareNote, PausedLink } from "./HeldShareParts";
 import { GuidelinesLink } from "../moderation/GuidelinesLink";
+import { t, tx } from "../../i18n/core";
 
 // Release 3 · W8 SH7 "Share options · browser fallback" and "Shared ·
 // confirmation" (source/gen/r31.js shareOpts31). Centium is a web app, so
@@ -152,7 +153,7 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
   }, [open, drawToken, spec, pro, format, style, client, qr, hideKey, photoUrl, placement, layered, copyable]);
 
   const ready = draw === "ready" && !busy;
-  const clientLine = clientFirstName ? ` ${clientFirstName} can see what you shared in their Sharing your wins list.` : "";
+  const clientLine = clientFirstName ? ` ${t("{name} can see what you shared in their Sharing your wins list.", { name: clientFirstName })}` : "";
 
   const download = () => {
     const canvas = canvasRef.current;
@@ -167,11 +168,11 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
     try {
       return await onRecord(f);
     } catch {
-      return { ok: false, message: "Couldn't share. Check your connection and try again." };
+      return { ok: false, message: t("Couldn't share. Check your connection and try again.") };
     }
   };
 
-  const saved: Done = { heading: "Image saved", body: `Find it in your photos. Add it to your Story in Instagram.${clientLine}` };
+  const saved: Done = { heading: t("Image saved"), body: `${t("Find it in your photos. Add it to your Story in Instagram.")}${clientLine}` };
 
   const onSave = async () => {
     if (!ready) return;
@@ -215,7 +216,7 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
       try {
         await navigator.share({ files: [file], title: SHARE_TITLE, ...(r.link ? { url: r.link } : null) });
         setBusy(null);
-        setDone({ heading: "Card shared", body: `It's on its way.${clientLine}` });
+        setDone({ heading: t("Card shared"), body: `${t("It's on its way.")}${clientLine}` });
         return;
       } catch (e) {
         if ((e as Error)?.name === "AbortError") {
@@ -253,12 +254,12 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
     })();
     try {
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      setDone({ heading: "Sticker copied", body: `Paste it onto your own photo or video in Instagram.${clientLine}` });
+      setDone({ heading: t("Sticker copied"), body: `${t("Paste it onto your own photo or video in Instagram.")}${clientLine}` });
     } catch {
       // A hold, then a refused record, win over the clipboard's own error.
       await blob.catch(() => null);
       if (heldNow) setHeld(heldNow);
-      else setMessage(refused ?? "Couldn't copy the sticker. Save the image instead.");
+      else setMessage(refused ?? t("Couldn't copy the sticker. Save the image instead."));
     }
     setBusy(null);
   };
@@ -281,7 +282,7 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
   );
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={done ? "Shared" : "Share"} footer={done || held ? <CtaButton label="Done" size="sheet" onClick={finish} /> : undefined}>
+    <BottomSheet open={open} onClose={onClose} title={done ? tx("Shared", "share done") : t("Share")} footer={done || held ? <CtaButton label={t("Done")} size="sheet" onClick={finish} /> : undefined}>
       {held && !done ? (
         <div>
           {preview}
@@ -303,30 +304,30 @@ export const ShareOptionsSheet: React.FC<ShareOptionsSheetProps> = ({ open, onCl
           {preview}
           {draw === "error" ? (
             <div role="alert" className="flex items-center justify-between" style={{ gap: 10, borderRadius: 14, background: INK.hiBg, paddingBlock: "4px", paddingInline: "12px 4px", marginBottom: 12 }}>
-              <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi }}>Couldn't draw the card. Try again.</p>
+              <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi }}>{t("Couldn't draw the card. Try again.")}</p>
               <button type="button" onClick={() => setAttempt((a) => a + 1)} className="tap shrink-0" style={{ minHeight: 44, padding: "0 12px", fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
-                Retry
+                {t("Retry")}
               </button>
             </div>
           ) : null}
           <div className="flex items-start" style={{ gap: 10, borderRadius: 14, background: INK.soft, padding: 12, marginBottom: 12 }}>
             <Info size={15} strokeWidth={2} aria-hidden style={{ ...NO_ICON_SCALE, color: INK.chS, flex: "none", marginTop: 1 }} />
             <p style={{ fontSize: textPx(12), lineHeight: 1.5, color: INK.chS }}>
-              Instagram can't open from a browser. Save the image or copy the sticker, then add it to your Story in Instagram. More opens your device's share options.
+              {t("Instagram can't open from a browser. Save the image or copy the sticker, then add it to your Story in Instagram. More opens your device's share options.")}
             </p>
           </div>
           {message ? (
             <p role="alert" className="text-center" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginBottom: 8 }}>
-              {message}
+              {t(message)}
               <GuidelinesLink message={message} />
             </p>
           ) : null}
           <div className="grid" style={{ gap: 8 }}>
-            <CtaButton label="Save image" icon={<Download size={15} aria-hidden />} size="sheet" onClick={onSave} disabled={!ready} loading={busy === "save"} />
+            <CtaButton label={t("Save image")} icon={<Download size={15} aria-hidden />} size="sheet" onClick={onSave} disabled={!ready} loading={busy === "save"} />
           </div>
           <div className="grid" style={{ gridTemplateColumns: copyable ? "repeat(2, minmax(0, 1fr))" : "minmax(0, 1fr)", gap: 8, marginTop: 8 }}>
-            {copyable ? <Tile label="Copy sticker" icon={<Sticker size={18} strokeWidth={2} aria-hidden style={iconStyle} />} onClick={onCopy} disabled={!ready} busy={busy === "copy"} /> : null}
-            <Tile label="More" icon={<Share2 size={18} strokeWidth={2} aria-hidden style={iconStyle} />} onClick={onMore} disabled={!ready} busy={busy === "more"} />
+            {copyable ? <Tile label={t("Copy sticker")} icon={<Sticker size={18} strokeWidth={2} aria-hidden style={iconStyle} />} onClick={onCopy} disabled={!ready} busy={busy === "copy"} /> : null}
+            <Tile label={t("More")} icon={<Share2 size={18} strokeWidth={2} aria-hidden style={iconStyle} />} onClick={onMore} disabled={!ready} busy={busy === "more"} />
           </div>
         </div>
       )}

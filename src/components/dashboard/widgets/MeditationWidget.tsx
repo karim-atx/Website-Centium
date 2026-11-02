@@ -4,6 +4,7 @@ import { useApp } from "../../../context/AppContext";
 import { useHideNumbers } from "../../../hooks/useHideNumbers";
 import { mondayFirstWeek } from "../../../utils/week";
 import { LotusGlyph } from "../LotusGlyph";
+import { t, tn } from "../../../i18n/core";
 import { useMeditationWeek } from "./data";
 import { DayDots, FadeValue, HeaderPill, HomeCard, HomeKeyframes, homeColors, Line, useHomeMode, useLoadingTimeout, WeekStrip } from "./kit";
 
@@ -39,21 +40,21 @@ export const MeditationWidget: React.FC<{ size: "small" | "large"; editMode: boo
         editMode={editMode}
         colors={colors}
         icon={Lotus}
-        label="Meditation"
+        label={t("Meditation")}
         state={state}
-        emptyTitle="No sessions this week"
-        emptyHint="Start a session"
+        emptyTitle={t("No sessions this week")}
+        emptyHint={t("Start a session")}
         // Retry: the summary is read by AppContext; opening Meditation reads it again.
         onRetry={open}
         onOpen={open}
-        ariaLabel={state === "empty" ? "Meditation, no sessions this week. Start a session" : undefined}
+        ariaLabel={state === "empty" ? t("Meditation, no sessions this week. Start a session") : undefined}
       />
     );
   }
 
   const minutesToday = Math.round(s.secondsToday / 60);
   const minutesWeek = Math.round(s.secondsThisWeek / 60);
-  const sessions = `${s.sessionsThisWeek} session${s.sessionsThisWeek === 1 ? "" : "s"} this week`;
+  const sessions = tn(s.sessionsThisWeek, "{n} session this week", "{n} sessions this week");
   const fill = "#8DBFB0";
   const dots = days ?? week.map(() => false);
 
@@ -65,15 +66,15 @@ export const MeditationWidget: React.FC<{ size: "small" | "large"; editMode: boo
         editMode={editMode}
         colors={colors}
         icon={Lotus}
-        label="Meditation"
+        label={t("Meditation")}
         onOpen={open}
-        ariaLabel={`Meditation, ${minutesToday} minutes today, ${sessions}`}
+        ariaLabel={t("Meditation, {minutes} minutes today, {sessions}", { minutes: minutesToday, sessions })}
         value={<FadeValue k={minutesToday} value={minutesToday} />}
-        unit="min today"
+        unit={t("min today")}
         // Small: value 42 (gap 11), dots 72, context 86. Large: value 52.5 (gap 19.5), context x2 from 92.5 (gap 6); strip 142, 61.
         bodyGap={isLarge ? 19.5 : 11}
         // Recovery-sensitive mode (AJ R7): no streak pill.
-        headerRight={isLarge && !hideNumbers && s.streakDays > 0 ? <HeaderPill ink={c.label} dark={dark}>{`${s.streakDays} day streak`}</HeaderPill> : undefined}
+        headerRight={isLarge && !hideNumbers && s.streakDays > 0 ? <HeaderPill ink={c.label} dark={dark}>{tn(s.streakDays, "{n} day streak", "{n} day streak")}</HeaderPill> : undefined}
         // Empty ring measured ≈ #AFD3C8: the dot colour at partial strength.
         graphic={isLarge ? undefined : <DayDots days={dots} size={8} gap={4} fill={fill} ring="rgba(141,191,176,0.6)" />}
         graphicHeight={8}
@@ -81,7 +82,7 @@ export const MeditationWidget: React.FC<{ size: "small" | "large"; editMode: boo
           isLarge ? (
             <span className="block">
               <Line>{sessions}</Line>
-              <Line style={{ marginTop: 6 }}>{`${minutesWeek} min this week`}</Line>
+              <Line style={{ marginTop: 6 }}>{tn(minutesWeek, "{n} min this week", "{n} min this week")}</Line>
             </span>
           ) : (
             <Line>{sessions}</Line>

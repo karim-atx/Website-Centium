@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { qrModules } from "../../services/venues/venueLogic";
+import { t } from "../../i18n/core";
 
 // Release 3 · W8: the share card's QR to the profile link (cardQrValue). The same
 // zxing-wasm writer as marketplace/PassQr.tsx (no new dependency), loaded
@@ -44,7 +45,7 @@ export async function qrRows(value: string): Promise<boolean[][] | null> {
 }
 
 /** `label` (More › Business card) defaults to the share card's wording. */
-export const ShareQr: React.FC<{ value: string; size: number; label?: string }> = ({ value, size, label = "QR code to the profile" }) => {
+export const ShareQr: React.FC<{ value: string; size: number; label?: string }> = ({ value, size, label = t("QR code to the profile") }) => {
   const [state, setState] = useState<{ value: string; rows: boolean[][] | null } | null>(() => (cache.has(value) ? { value, rows: cache.get(value)! } : null));
   useEffect(() => {
     let live = true;

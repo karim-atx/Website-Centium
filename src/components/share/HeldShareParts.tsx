@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Link2 } from "lucide-react";
 import { INK, NO_ICON_SCALE } from "../pro/proInk";
 import { textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 import { HELD_TITLE, heldNoteLine, PAUSED_LINK_LABEL } from "./heldShareModel";
 
 /**
@@ -14,9 +15,9 @@ import { HELD_TITLE, heldNoteLine, PAUSED_LINK_LABEL } from "./heldShareModel";
  */
 export const HeldShareNote: React.FC<{ reason: unknown; onNavigate?: () => void }> = ({ reason, onNavigate }) => (
   <p role="status" style={{ borderRadius: 12, background: INK.goldPale, color: INK.goldInk, padding: "10px 12px", fontSize: textPx(12), lineHeight: 1.5 }}>
-    <span style={{ fontWeight: 700 }}>{HELD_TITLE}</span> <span style={{ fontWeight: 600 }}>{heldNoteLine(reason)}</span>{" "}
+    <span style={{ fontWeight: 700 }}>{t(HELD_TITLE)}</span> <span style={{ fontWeight: 600 }}>{heldNoteLine(reason)}</span>{" "}
     <Link to="/legal/community-guidelines" onClick={onNavigate} className="underline" style={{ fontWeight: 700, color: "inherit" }}>
-      Community guidelines
+      {t("Community guidelines")}
     </Link>
   </p>
 );
@@ -34,10 +35,10 @@ export const PausedLink: React.FC<{ line: string; label?: string }> = ({ line, l
         style={{ minHeight: 48, gap: 8, borderRadius: 14, border: "1px solid rgb(var(--c-charcoal) / 0.11)", background: INK.card, fontSize: textPx(13), fontWeight: 700, color: INK.ch }}
       >
         <Link2 size={16} strokeWidth={2} aria-hidden style={{ ...NO_ICON_SCALE, color: INK.prDeep, flex: "none" }} />
-        {label}
+        {t(label)}
       </button>
       <p id={id} className="text-center" style={{ fontSize: textPx(12), lineHeight: 1.45, color: INK.chS, marginTop: 6 }}>
-        {line}
+        {t(line)}
       </p>
     </div>
   );

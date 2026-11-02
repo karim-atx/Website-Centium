@@ -4,6 +4,7 @@ import { ChevronLeft, Copy, MapPin, Navigation } from "lucide-react";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { inlineScrolled } from "../../utils/inlineScroll";
+import { t } from "../../i18n/core";
 
 // Pieces the class page (MO1.4.4) and the gym page (MO1.4.2.1 / .s) share
 // (v6 Part B "Hero pages": the hero scrolls away and a compact header takes
@@ -189,11 +190,11 @@ export function CompactHeader({
         <button
           type="button"
           onClick={onBack}
-          aria-label="Back"
+          aria-label={t("Back")}
           tabIndex={shown ? 0 : -1}
           className="tap relative w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-charcoal-soft before:content-[''] before:absolute before:-inset-1"
         >
-          <ChevronLeft size={20} strokeWidth={2} aria-hidden />
+          <ChevronLeft size={20} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />
         </button>
         <p className="m-0 min-w-0 flex-1 truncate text-[17px] leading-[36px] font-bold tracking-[-0.3px] text-charcoal">{title}</p>
       </div>
@@ -237,7 +238,7 @@ export function MapCard({
   return (
     <div className="flex flex-col gap-2">
       {onOpen ? (
-        <button type="button" onClick={onOpen} aria-haspopup="menu" aria-label={address ? `Directions to ${address}` : "Directions"} className="tap block w-full text-start rounded-2xl">
+        <button type="button" onClick={onOpen} aria-haspopup="menu" aria-label={address ? t("Directions to {address}", { address }) : t("Directions")} className="tap block w-full text-start rounded-2xl">
           {card}
         </button>
       ) : (
@@ -308,7 +309,7 @@ export function DirectionsMenu({
     if (d === "copy") {
       if (!address) return;
       void navigator.clipboard?.writeText(address).then(
-        () => onCopied("Address copied"),
+        () => onCopied(t("Address copied")),
         () => undefined
       );
       return;
@@ -328,7 +329,7 @@ export function DirectionsMenu({
       options={[
         ...(isIOS() ? [{ value: "apple" as const, label: "Apple Maps", icon: <Navigation size={15} strokeWidth={1.75} /> }] : []),
         { value: "google" as const, label: "Google Maps", icon: <Navigation size={15} strokeWidth={1.75} /> },
-        ...(address ? [{ value: "copy" as const, label: "Copy address", note: address, icon: <Copy size={15} strokeWidth={1.75} /> }] : []),
+        ...(address ? [{ value: "copy" as const, label: t("Copy address"), note: address, icon: <Copy size={15} strokeWidth={1.75} /> }] : []),
       ]}
       onSelect={pick}
     />

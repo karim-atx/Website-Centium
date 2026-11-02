@@ -13,6 +13,7 @@ import { storagePath } from "../../../services/venues/venueLogic";
 import { marketRpc, type MarketResult } from "../../../services/market/rpc";
 import type { Product } from "../../../services/store/types";
 import { parseShelf } from "./rewardsModel";
+import { t } from "../../../i18n/core";
 
 export interface ShowcaseExtras {
   website: string | null;
@@ -56,6 +57,6 @@ export async function fetchShowcaseExtras(businessId: string): Promise<ShowcaseE
  * the projection has no stock and no store category).
  */
 export function fetchPublicShelf(ownerKind: "business" | "professional", ownerId: string): Promise<MarketResult<Product[]>> {
-  return marketRpc("public_showcase", { p_owner_kind: ownerKind, p_owner_id: ownerId }, "Couldn't load the products.", parseShelf);
+  return marketRpc("public_showcase", { p_owner_kind: ownerKind, p_owner_id: ownerId }, t("Couldn't load the products."), parseShelf);
 }
 

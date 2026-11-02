@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { qrModules } from "../../services/venues/venueLogic";
 import { onPassCached } from "../../services/venues/passCache";
+import { t } from "../../i18n/core";
 
 // The membership pass's QR (MO1.4.2.2.2), a real, scannable code: the
 // pass_token from my_gym_memberships() (32 hex characters, the doc's bearer
@@ -45,8 +46,8 @@ onPassCached(() => {
 export function PassQr({
   value,
   size,
-  label = "Membership pass QR code",
-  failedText = "Couldn't draw your pass. Close it and try again.",
+  label,
+  failedText,
 }: {
   value: string;
   size: number;
@@ -83,13 +84,13 @@ export function PassQr({
   if (current.failed || !current.rows) {
     return (
       <p role="alert" className="m-0 flex items-center justify-center text-center text-[12px] font-semibold text-status-high" style={{ width: size, height: size }}>
-        {failedText}
+        {failedText ?? t("Couldn't draw your pass. Close it and try again.")}
       </p>
     );
   }
   const n = current.rows.length;
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${n} ${n}`} shapeRendering="crispEdges" role="img" aria-label={label}>
+    <svg width={size} height={size} viewBox={`0 0 ${n} ${n}`} shapeRendering="crispEdges" role="img" aria-label={label ?? t("Membership pass QR code")}>
       <rect width={n} height={n} fill="#FFFFFF" />
       {current.rows.flatMap((row, y) => row.map((dark, x) => (dark ? <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill="#241F1B" /> : null)))}
     </svg>

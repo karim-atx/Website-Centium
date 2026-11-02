@@ -174,6 +174,8 @@ function paintText(ctx: Ctx, el: HTMLElement, cs: CSSStyleDeclaration, ox: numbe
   ctx.fillStyle = cs.color;
   ctx.textBaseline = "alphabetic";
   ctx.textAlign = "left";
+  // Round G (EH3): each line at its own left edge, in the element's direction (Arabic lines read right to left).
+  ctx.direction = cs.direction === "rtl" ? "rtl" : "ltr";
   ctx.globalAlpha = alpha;
   const shadows = parseShadows(cs.textShadow);
   const upper = cs.textTransform === "uppercase";

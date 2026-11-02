@@ -5,11 +5,12 @@ import { JumpToToday } from "../ui/JumpToToday";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
-import { DAY_LETTERS, monthLeadingBlanks } from "../../utils/week";
+import { monthLeadingBlanks } from "../../utils/week";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
+import { weekLetters } from "./widgets/weekLetters";
 
-// Monday first (v6 X-13), from utils/week.
-const WEEKDAYS = DAY_LETTERS;
+// Monday first (v6 X-13), one letter each in the app's language (widgets/kit).
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands): the lavender chrome as
@@ -93,7 +94,7 @@ export const CalendarPickerSheet: React.FC<{
    * charcoal (#F5F3FA) either way.
    */
   dayInk?: "black" | "ink";
-}> = ({ open, onClose, selectedDate, today, onSelect, title = "Choose a date", markers, maxDate, confirm, confirmLabel = "Done", children, variant = "default", minDate, dayInk = "black" }) => {
+}> = ({ open, onClose, selectedDate, today, onSelect, title = t("Choose a date"), markers, maxDate, confirm, confirmLabel = t("Done"), children, variant = "default", minDate, dayInk = "black" }) => {
   // Batch E (E5): the phone's back closes this first.
   useBackCloses(open, onClose);
   const dark = useIsDark();
@@ -187,9 +188,9 @@ export const CalendarPickerSheet: React.FC<{
                 onClick={() => setCursor(new Date(year, month - 1, 1))}
                 className="tap flex items-center justify-center"
                 style={{ width: 26, height: 26, color: cal("accent") }}
-                aria-label="Previous month"
+                aria-label={t("Previous month")}
               >
-                <ChevronLeft size={16} strokeWidth={2.2} />
+                <ChevronLeft size={16} strokeWidth={2.2} className="rtl:-scale-x-100" />
               </button>
               <span className="flex items-center" style={{ gap: 8 }}>
                 <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{monthLabel}</p>
@@ -200,14 +201,14 @@ export const CalendarPickerSheet: React.FC<{
                 disabled={nextMonthBlocked}
                 className="tap flex items-center justify-center disabled:opacity-30"
                 style={{ width: 26, height: 26, color: cal("accent") }}
-                aria-label="Next month"
+                aria-label={t("Next month")}
               >
-                <ChevronRight size={16} strokeWidth={2.2} />
+                <ChevronRight size={16} strokeWidth={2.2} className="rtl:-scale-x-100" />
               </button>
             </div>
 
             <div className="grid grid-cols-7" style={{ gap: 2, marginBottom: 2 }}>
-              {WEEKDAYS.map((w, i) => (
+              {weekLetters().map((w, i) => (
                 <div
                   key={i}
                   className="text-center"
@@ -338,9 +339,9 @@ const PartBCalendar: React.FC<{
             disabled={prevBlocked}
             className="tap relative flex items-center justify-center disabled:opacity-30 before:absolute before:-inset-[9px] before:content-['']"
             style={{ width: 26, height: 26, color: accent }}
-            aria-label="Previous month"
+            aria-label={t("Previous month")}
           >
-            <ChevronLeft size={16} strokeWidth={2.2} />
+            <ChevronLeft size={16} strokeWidth={2.2} className="rtl:-scale-x-100" />
           </button>
           <p style={{ margin: 0, fontSize: textPx(15), lineHeight: "22.5px", fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{monthLabel}</p>
           <button
@@ -348,13 +349,13 @@ const PartBCalendar: React.FC<{
             disabled={nextBlocked}
             className="tap relative flex items-center justify-center disabled:opacity-30 before:absolute before:-inset-[9px] before:content-['']"
             style={{ width: 26, height: 26, color: accent }}
-            aria-label="Next month"
+            aria-label={t("Next month")}
           >
-            <ChevronRight size={16} strokeWidth={2.2} />
+            <ChevronRight size={16} strokeWidth={2.2} className="rtl:-scale-x-100" />
           </button>
         </div>
         <div className="grid grid-cols-7" style={{ gap: 2, marginTop: 6 }}>
-          {WEEKDAYS.map((w, i) => (
+          {weekLetters().map((w, i) => (
             <div key={i} className="text-center" style={{ padding: "4px 0", fontSize: textPx(13), lineHeight: "19.5px", fontWeight: 600, color: accent }}>
               {w}
             </div>
@@ -404,7 +405,7 @@ const PartBCalendar: React.FC<{
             className="tap flex-1 min-w-0 flex items-center justify-center bg-cream-card"
             style={{ ...btn, border: `0.5px solid ${dark ? "rgba(245,243,250,0.14)" : "rgba(36,31,27,0.14)"}`, color: "rgb(var(--c-charcoal-soft))" }}
           >
-            Cancel
+            {t("Cancel")}
           </button>
           <button onClick={onDone} className="tap flex-1 min-w-0 flex items-center justify-center bg-fill-pinned" style={{ ...btn, color: "rgb(var(--c-on-primary-fill))" }}>
             {confirmLabel}

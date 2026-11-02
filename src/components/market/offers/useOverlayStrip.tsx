@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ConfirmationStrip, type StripTone } from "../ConfirmationStrip";
+import { t } from "../../../i18n/core";
 
 export const STRIP_MS = 2600;
 
@@ -24,7 +25,7 @@ export function useOverlayStrip(): [React.ReactNode, (text: string, tone?: Strip
     ? createPortal(
         <div style={{ position: "fixed", insetInlineStart: 0, insetInlineEnd: 0, display: "flex", justifyContent: "center", zIndex: 95, top: "calc(env(safe-area-inset-top) + 12px)", padding: "0 16px", pointerEvents: "none" }}>
           <div style={{ width: "100%", maxWidth: 398, pointerEvents: "auto" }} data-strip>
-            <ConfirmationStrip key={s.n} text={s.text} tone={s.tone} action="Done" onAction={() => setS(null)} />
+            <ConfirmationStrip key={s.n} text={s.text} tone={s.tone} action={t("Done")} onAction={() => setS(null)} />
           </div>
         </div>,
         document.body

@@ -38,6 +38,7 @@ import { reviewsLine } from "../../services/venues/consoleLogic";
 import { hostedImageUrl } from "../../services/venues/venueLogic";
 import { fetchThreads } from "../../services/messaging";
 import { range12 } from "../../utils/time12";
+import { t, tn } from "../../i18n/core";
 
 // The venue console (backend stage A4, BU2-21), restyled per
 // OURS-OP1-venue-console-page as an OpsTabsV4 detail page about one venue:
@@ -115,7 +116,7 @@ export default function BusinessVenueTab() {
     let cancelled = false;
     void fetchThreads().then((r) => {
       if (cancelled || !r.ok) return;
-      setHasVenueThreads(new Set(r.threads.flatMap((t) => (t.venue && !t.venue.memberSide ? [t.venue.id] : []))));
+      setHasVenueThreads(new Set(r.threads.flatMap((th) => (th.venue && !th.venue.memberSide ? [th.venue.id] : []))));
     });
     return () => {
       cancelled = true;
@@ -131,20 +132,20 @@ export default function BusinessVenueTab() {
   if (membersPage) {
     return (
       <div className="pb-6">
-        <VBackRow label={selected?.name ?? "Venue"} onBack={() => navigate("/app/business/venue", { replace: true })} />
+        <VBackRow label={selected?.name ?? t("Venue")} onBack={() => navigate("/app/business/venue", { replace: true })} />
         {selected ? (
           <>
             <div className="mb-[16px]">
-              <h1 className="text-[22px] leading-[27px] font-extrabold tracking-[-0.02em] text-charcoal">Members</h1>
+              <h1 className="text-[22px] leading-[27px] font-extrabold tracking-[-0.02em] text-charcoal">{t("Members")}</h1>
               <p className="text-[13px] leading-[18px] text-charcoal-soft mt-[3px]">{selected.name}</p>
-              <p className="text-[12px] leading-[16px] text-charcoal-faint">First names only. Members under 18 are marked.</p>
+              <p className="text-[12px] leading-[16px] text-charcoal-faint">{t("First names only. Members under 18 are marked.")}</p>
             </div>
             <VenueMembersRoster gymId={selected.gymId} mode="page" onToast={showToast} />
           </>
         ) : loading ? (
           <VSkeletonRows rows={6} pill />
         ) : (
-          <VEmptyCard icon={Store} title="No venues yet" body="You don't run or work at a venue on Centium yet." />
+          <VEmptyCard icon={Store} title={t("No venues yet")} body={t("You don't run or work at a venue on Centium yet.")} />
         )}
         {toast}
       </div>
@@ -155,20 +156,20 @@ export default function BusinessVenueTab() {
   const pill = selected ? venuePill(selected) : null;
   const tiles = selected
     ? [
-        { icon: Clock, label: "Hours", onClick: () => (scrollTo("venue-hours"), canHours && setHoursSignal((s) => s + 1)) },
-        ...(isOwner ? [{ icon: ImageIcon, label: "Photos", onClick: () => scrollTo("venue-photos") }] : []),
-        ...(hasVenueThreads.has(selected.gymId) ? [{ icon: MessageCircle, label: "Message", onClick: () => navigate("/app/messages") }] : []),
+        { icon: Clock, label: t("Hours"), onClick: () => (scrollTo("venue-hours"), canHours && setHoursSignal((s) => s + 1)) },
+        ...(isOwner ? [{ icon: ImageIcon, label: t("Photos"), onClick: () => scrollTo("venue-photos") }] : []),
+        ...(hasVenueThreads.has(selected.gymId) ? [{ icon: MessageCircle, label: t("Message"), onClick: () => navigate("/app/messages") }] : []),
       ]
     : [];
 
   return (
     <div className="pb-6">
-      <VBackRow label={businessAccount ? "Business Profile" : "More"} onBack={back} />
+      <VBackRow label={businessAccount ? t("Business Profile") : t("More")} onBack={back} />
 
       {error && venues.length === 0 && (
-        <VAttentionBand icon={online ? TriangleAlert : WifiOff} title="Couldn't load your venues" sub={error}>
+        <VAttentionBand icon={online ? TriangleAlert : WifiOff} title={t("Couldn't load your venues")} sub={error}>
           <div className="bg-cream-card" style={{ padding: "10px 16px 14px" }}>
-            <VPickButton label="Retry" onClick={reload} />
+            <VPickButton label={t("Retry")} onClick={reload} />
           </div>
         </VAttentionBand>
       )}
@@ -177,21 +178,21 @@ export default function BusinessVenueTab() {
       {!loading && venues.length === 0 && !error && (
         <VEmptyCard
           icon={Store}
-          title="No venues yet"
+          title={t("No venues yet")}
           body={
             <>
-              You don't run or work at a venue on Centium yet.
-              {businessAccount && !store && " Add a location in Business Profile."}
+              {t("You don't run or work at a venue on Centium yet.")}
+              {businessAccount && !store && ` ${t("Add a location in Business Profile.")}`}
             </>
           }
         >
-          {businessAccount && !store && <VPickButton label="Add a location" icon={Plus} onClick={() => navigate("/app/business/more/locations?add=1")} className="mt-[12px]" />}
+          {businessAccount && !store && <VPickButton label={t("Add a location")} icon={Plus} onClick={() => navigate("/app/business/more/locations?add=1")} className="mt-[12px]" />}
         </VEmptyCard>
       )}
 
       <VenueSwitcher venues={venues} selected={selected} onSelect={select} loading={loading} />
       {loading && venues.length === 0 && !error && (
-        <div role="status" aria-label="Loading" className="flex items-start gap-[14px]">
+        <div role="status" aria-label={t("Loading")} className="flex items-start gap-[14px]">
           <VBar w={60} h={60} r={16} className="!bg-primary-pale" />
           <span className="space-y-[8px] pt-[4px]">
             <VBar w={160} h={20} />
@@ -207,13 +208,13 @@ export default function BusinessVenueTab() {
             tile={<VenueImage srcs={[hostedImageUrl(selected.logoUrl)]} className="absolute inset-0 w-full h-full" fallback={initials(selected.name)} />}
             title={selected.name}
             pill={pill && <VPill tone={pill.tone} label={pill.label} size="head" />}
-            sub={`${selected.location ? `${selected.location} · ` : ""}${selected.kind === "studio" ? "Studio" : "Gym"}`}
+            sub={`${selected.location ? `${selected.location} · ` : ""}${selected.kind === "studio" ? t("Studio") : t("Gym")}`}
             sub2={
               selected.reviewsAverage !== null && selected.reviewsCount > 0 ? (
                 <span className="inline-flex items-center gap-[4px]">
                   <Star size={13} strokeWidth={2.4} aria-hidden className="text-primary-dark" />
                   <span className="text-[11.5px] font-bold text-charcoal">{selected.reviewsAverage.toFixed(1)}</span>
-                  <span>{selected.reviewsCount === 1 ? "1 review" : `${selected.reviewsCount} reviews`}</span>
+                  <span>{tn(selected.reviewsCount, "{n} review", "{n} reviews")}</span>
                 </span>
               ) : (
                 reviewsLine(selected.reviewsAverage, selected.reviewsCount)
@@ -224,9 +225,13 @@ export default function BusinessVenueTab() {
           <VenueHiddenNotice venue={selected} onContact={() => navigate(businessAccount ? "/app/business/more/help" : "/app/messages")} />
           {!isOwner && (
             <p className="text-[11px] leading-[15px] text-charcoal-faint text-center mt-[10px]">
-              {canHours || canVenue
-                ? `You're staff at this venue. You can change its ${canHours && canVenue ? "opening hours and time zone" : canHours ? "opening hours" : "time zone"}. The owner changes the rest.`
-                : "You're staff at this venue, so you can view it but only the owner can change it."}
+              {canHours && canVenue
+                ? t("You're staff at this venue. You can change its opening hours and time zone. The owner changes the rest.")
+                : canHours
+                  ? t("You're staff at this venue. You can change its opening hours. The owner changes the rest.")
+                  : canVenue
+                    ? t("You're staff at this venue. You can change its time zone. The owner changes the rest.")
+                    : t("You're staff at this venue, so you can view it but only the owner can change it.")}
             </p>
           )}
           {tiles.length > 0 && <VActionTiles items={tiles} />}
@@ -245,22 +250,22 @@ export default function BusinessVenueTab() {
 
           {!store && (
             <VDetailCard
-              title="Upcoming classes"
-              right={venueClasses ? `${venueClasses.length} from today` : undefined}
-              footer={venueClasses && venueClasses.length > 3 && !allClasses ? <VFooterLink label={`See all ${venueClasses.length}`} onClick={() => setAllClasses(true)} /> : null}
+              title={t("Upcoming classes")}
+              right={venueClasses ? t("{n} from today", { n: venueClasses.length }) : undefined}
+              footer={venueClasses && venueClasses.length > 3 && !allClasses ? <VFooterLink label={t("See all {n}", { n: venueClasses.length })} onClick={() => setAllClasses(true)} /> : null}
             >
               {!venueClasses && !classesError && <VSkeletonRows rows={3} />}
-              {classesError && !venueClasses && <VCardError title="Couldn't load classes" message={classesError} onRetry={() => setClassesTick((t) => t + 1)} />}
-              {venueClasses && venueClasses.length === 0 && <VDetailRow avatar={<VAvatar icon={CalendarX} />} title="No upcoming classes at this venue." />}
+              {classesError && !venueClasses && <VCardError title={t("Couldn't load classes")} message={classesError} onRetry={() => setClassesTick((x) => x + 1)} />}
+              {venueClasses && venueClasses.length === 0 && <VDetailRow avatar={<VAvatar icon={CalendarX} />} title={t("No upcoming classes at this venue.")} />}
               {shownClasses?.map((c) => (
                 <VDetailRow
                   key={c.id}
                   avatar={<VAvatar icon={CalendarClock} />}
                   title={c.title}
-                  sub={`${weekdayDayMonth(c.date)} · ${range12(c.startTime, c.endTime)} · Up to ${c.maxCapacity}`}
+                  sub={`${weekdayDayMonth(c.date)} · ${range12(c.startTime, c.endTime)} · ${t("Up to {n}", { n: c.maxCapacity })}`}
                   right={<VChevron size={16} />}
                   onClick={() => setRoster(c)}
-                  ariaLabel={`${c.title}, ${weekdayDayMonth(c.date)}. Open the roster`}
+                  ariaLabel={t("{name}, {date}. Open the roster", { name: c.title, date: weekdayDayMonth(c.date) })}
                 />
               ))}
             </VDetailCard>
@@ -285,7 +290,7 @@ export default function BusinessVenueTab() {
         title={roster?.title ?? ""}
         session={roster ? { date: roster.date, startTime: roster.startTime, endTime: roster.endTime, maxCapacity: roster.maxCapacity } : null}
         onClose={() => setRoster(null)}
-        onMarkedPaid={() => showToast("Marked as paid.")}
+        onMarkedPaid={() => showToast(t("Marked as paid."))}
       />
       {toast}
     </div>

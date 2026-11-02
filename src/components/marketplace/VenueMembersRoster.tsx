@@ -6,7 +6,7 @@ import { initials } from "../professionals/typeColour";
 import { fetchVenueMembers, markMembershipPaid } from "../../services/venues/console";
 import { offerPromotionUsed } from "../../components/promotions/promotionUsed";
 
-import { GRANTED_LABEL, MEMBER_FILTERS, MEMBERS_PAGE_SIZE, methodLabel, money, pageLine, paidLine, venueMemberTag, isMaskedLabel, type MembershipStatus, type VenueMember } from "../../services/venues/consoleLogic";
+import { MEMBER_FILTERS, MEMBERS_PAGE_SIZE, methodLabel, money, venueMemberTag, isMaskedLabel, type MembershipStatus, type VenueMember } from "../../services/venues/consoleLogic";
 import { dayMonthYear } from "../../services/venues/venueLogic";
 import { useOnline } from "../../hooks/useOnline";
 import { useConsoleAccess } from "../../hooks/useConsoleAccess";
@@ -15,7 +15,8 @@ import { startMemberThread } from "../../services/messaging";
 import { DIVIDER, VAvatar, VCardError, VDetailCard, VDetailRow, VFooterLink, VOfflineLine, VPill, VSkeletonRows, VTextTabs, type PillTone } from "./VenueKit";
 import { appLocale } from "../../i18n/format";
 import { fetchBusinessBookingPauses, liftBookingPause, pausedChip, PAUSES_COPY, type MemberPause } from "../../services/no-shows";
-import { t } from "../../i18n/core";
+import { t, tn, tx } from "../../i18n/core";
+import { formatShortDate } from "../../utils/date";
 
 // A venue's member roster (stage A4, venue_members()): THE one roster
 // component (V6-163, Q-R1), in the OP1 083 "Booked members" language
@@ -38,17 +39,60 @@ import { t } from "../../i18n/core";
 
 /** K8 tone for a member's tag (Valid good, Awaiting payment caution, else soft; an upcoming renewal "Starts {date}", MB-05). */
 function passPill(m: VenueMember): { tone: PillTone; label: string } {
-  const t = venueMemberTag(m);
-  return { label: t.label, tone: t.tone === "member" ? "good" : t.tone === "pending" ? "caution" : "soft" };
+  const tag = venueMemberTag(m);
+  // venueMemberTag()'s label (consoleLogic passStateTag, shared with the business pages), in the app's language.
+  const label =
+    m.passState === "upcoming"
+      ? t("Starts {date}", { date: dayMonthYear(m.startedOn) })
+      : m.passState === "valid"
+        ? tx("Valid", "pass state")
+        : m.passState === "awaiting_payment"
+          ? t("Awaiting payment")
+          : m.passState === "expired"
+            ? t("Expired")
+            : m.passState === "cancelled"
+              ? t("Cancelled")
+              : m.passState === "refunded"
+                ? t("Refunded")
+                : t("Status unavailable");
+  return { label, tone: tag.tone === "member" ? "good" : tag.tone === "pending" ? "caution" : "soft" };
 }
 
 // "Paid {d Mon}" from venue_members.paid_at (20261120080000); a fact about the
 // row, never a sum (Revenue sums B8's payment ledger, not these rows). CN: a
 // membership granted by a member code was never sold, so it shows the label
 // instead of a $0 cash payment.
+/** "Paid Oct 2" (consoleLogic paidLine's rule), in the app's language. */
+function paidText(m: Pick<VenueMember, "paidAt" | "paymentStatus">): string | null {
+  if (!m.paidAt || m.paymentStatus !== "paid") return null;
+  const d = new Date(m.paidAt);
+  return Number.isNaN(d.getTime()) ? null : t("Paid {date}", { date: formatShortDate(d, { day: "numeric", month: "short" }) });
+}
+
 const memberFact = (m: VenueMember) =>
-  (m.granted ? [m.planName, GRANTED_LABEL] : [m.planName, money(m.priceAgreed), methodLabel(m.paymentMethod), paidLine(m)]).filter(Boolean).join(" · ");
-const memberDates = (m: VenueMember) => (m.expiresOn ? `${dayMonthYear(m.startedOn)} to ${dayMonthYear(m.expiresOn)}` : `From ${dayMonthYear(m.startedOn)}`);
+  (m.granted ? [m.planName, t("Granted with a code")] : [m.planName, money(m.priceAgreed), methodLabel(m.paymentMethod) ? t(methodLabel(m.paymentMethod)) : "", paidText(m)]).filter(Boolean).join(" · ");
+const memberDates = (m: VenueMember) =>
+  m.expiresOn ? t("{start} to {end}", { start: dayMonthYear(m.startedOn), end: dayMonthYear(m.expiresOn) }) : t("From {date}", { date: dayMonthYear(m.startedOn) });
+
+/** "1–20 of 64" (consoleLogic pageLine's rule). */
+const pageText = (offset: number, shown: number, total: number) =>
+  total === 0 || shown === 0 ? "" : t("{from}–{to} of {total}", { from: offset + 1, to: offset + shown, total });
+
+/** "12 active memberships" for the page header under a status filter. */
+function statusCount(s: MembershipStatus, n: number, count: string): string {
+  if (s === "active") return tn(n, "{count} active membership", "{count} active memberships", { count });
+  if (s === "expired") return tn(n, "{count} expired membership", "{count} expired memberships", { count });
+  if (s === "cancelled") return tn(n, "{count} cancelled membership", "{count} cancelled memberships", { count });
+  return tn(n, "{count} upcoming membership", "{count} upcoming memberships", { count });
+}
+
+/** "No active memberships at this venue." */
+const noneWith = (s: MembershipStatus) =>
+  s === "active" ? t("No active memberships at this venue.") : s === "expired" ? t("No expired memberships at this venue.") : s === "cancelled" ? t("No cancelled memberships at this venue.") : t("No upcoming memberships at this venue.");
+
+/** A status word for the filter tabs and the header ("Active" is a membership's state here). */
+const statusLabel = (s: MembershipStatus | null) =>
+  s === null ? t("All") : s === "active" ? tx("Active", "membership status") : s === "expired" ? t("Expired") : s === "cancelled" ? t("Cancelled") : t("Upcoming");
 
 type Filter = "all" | MembershipStatus;
 
@@ -159,7 +203,7 @@ export function VenueMembersRoster({
       setRowError(r.message);
       return;
     }
-    onToast?.(`Marked as paid. ${m.label}'s pass is valid now.`);
+    onToast?.(t("Marked as paid. {name}'s pass is valid now.", { name: m.label }));
     offerPromotionUsed({ kind: "membership", sourceId: m.membershipId });
     setTick((t) => t + 1);
     onChanged?.();
@@ -176,18 +220,19 @@ export function VenueMembersRoster({
     navigate("/app/messages", { state: { threadId: r.threadId } });
   };
 
-  const statusWord = status ? `${status} ` : "";
-  const header = card ? "Members" : `${total.toLocaleString(appLocale())} ${statusWord}membership${total === 1 ? "" : "s"}`;
-  const right = card ? (current ? `${total.toLocaleString(appLocale())} membership${total === 1 ? "" : "s"}` : undefined) : "Unpaid first";
+  const count = total.toLocaleString(appLocale());
+  const memberships = tn(total, "{count} membership", "{count} memberships", { count });
+  const header = card ? t("Members") : status ? statusCount(status, total, count) : memberships;
+  const right = card ? (current ? memberships : undefined) : t("Unpaid first");
 
   const rows = (
     <>
       {!current && !error && <VSkeletonRows rows={card ? 3 : 6} pill />}
-      {error && !current && <VCardError title="Couldn't load members" message={error} onRetry={() => setTick((t) => t + 1)} />}
+      {error && !current && <VCardError title={t("Couldn't load members")} message={error} onRetry={() => setTick((t) => t + 1)} />}
       {current && fresh && members.length === 0 && (
         <VDetailRow
           avatar={<VAvatar icon={Users} />}
-          title={status ? `No ${status} memberships at this venue.` : "No memberships at this venue yet."}
+          title={status ? noneWith(status) : t("No memberships at this venue yet.")}
         />
       )}
       <div className={clsx(!fresh && current && "opacity-60")} aria-busy={!fresh}>
@@ -204,7 +249,7 @@ export function VenueMembersRoster({
               titleExtra={
                 (m.isMinor || paused) && (
                   <>
-                    {m.isMinor && <VPill tone="pale" label="Under 18" />}
+                    {m.isMinor && <VPill tone="pale" label={t("Under 18")} />}
                     {paused && <VPill tone="caution" label={pausedChip(paused.pausedUntil)} />}
                   </>
                 )
@@ -213,7 +258,7 @@ export function VenueMembersRoster({
               sub2={memberDates(m)}
               right={<VPill tone={pill.tone} label={pill.label} />}
               onClick={hasActions ? (e) => setMenu({ member: m, anchor: e.currentTarget }) : undefined}
-              ariaLabel={hasActions ? `${m.label}, ${pill.label}. Actions` : undefined}
+              ariaLabel={hasActions ? `${m.label}${t(", ")}${pill.label}. ${t("Actions")}` : undefined}
               disabled={busy}
             />
           );
@@ -232,16 +277,16 @@ export function VenueMembersRoster({
           onClick={() => setOffset((o) => Math.max(0, o - MEMBERS_PAGE_SIZE))}
           className="tap justify-self-start inline-flex items-center gap-1 min-h-[44px] px-2 text-[12.5px] font-extrabold text-primary-dark disabled:text-charcoal-tertiary"
         >
-          <ChevronLeft size={14} aria-hidden /> Previous
+          <ChevronLeft size={14} aria-hidden /> {t("Previous")}
         </button>
-        <span className="text-center text-[11.5px] text-charcoal-faint tabular-nums">{pageLine(offset, members.length, total)}</span>
+        <span className="text-center text-[11.5px] text-charcoal-faint tabular-nums">{pageText(offset, members.length, total)}</span>
         <button
           type="button"
           disabled={offset + MEMBERS_PAGE_SIZE >= total}
           onClick={() => setOffset((o) => o + MEMBERS_PAGE_SIZE)}
           className="tap justify-self-end inline-flex items-center gap-1 min-h-[44px] px-2 text-[12.5px] font-extrabold text-primary-dark disabled:text-charcoal-tertiary"
         >
-          Next <ChevronRight size={14} aria-hidden />
+          {t("Next")} <ChevronRight size={14} aria-hidden />
         </button>
       </div>
     ) : null;
@@ -250,10 +295,10 @@ export function VenueMembersRoster({
     <div id={id}>
       {!card && (
         <VTextTabs
-          label="Membership status"
+          label={t("Membership status")}
           value={filter}
           onChange={choose}
-          tabs={MEMBER_FILTERS.map((f) => ({ value: (f.value ?? "all") as Filter, label: f.label }))}
+          tabs={MEMBER_FILTERS.map((f) => ({ value: (f.value ?? "all") as Filter, label: statusLabel(f.value) }))}
         />
       )}
       {!online && <VOfflineLine className="mb-[8px]" />}
@@ -264,7 +309,7 @@ export function VenueMembersRoster({
         footer={
           <>
             {paging}
-            {card && onSeeAll && total > 3 && <VFooterLink label={`See all ${total.toLocaleString(appLocale())}`} onClick={onSeeAll} />}
+            {card && onSeeAll && total > 3 && <VFooterLink label={t("See all {count}", { count })} onClick={onSeeAll} />}
           </>
         }
       >
@@ -278,8 +323,8 @@ export function VenueMembersRoster({
         width={204}
         heading={menu?.member.label}
         options={[
-          ...(menu && menu.member.paymentStatus === "pending" && deskOk ? [{ value: "paid", label: "Mark as paid", disabled: !online }] : []),
-          ...(menu && canMessage && menu.member.personId ? [{ value: "message", label: "Message", disabled: !online }] : []),
+          ...(menu && menu.member.paymentStatus === "pending" && deskOk ? [{ value: "paid", label: t("Mark as paid"), disabled: !online }] : []),
+          ...(menu && canMessage && menu.member.personId ? [{ value: "message", label: t("Message"), disabled: !online }] : []),
           ...(menu && pauseOf(menu.member) ? [{ value: "lift", label: t(PAUSES_COPY.lift), disabled: !online }] : []),
         ]}
         onSelect={(v) => menu && void (v === "message" ? message(menu.member) : v === "lift" ? liftPause(menu.member) : markPaid(menu.member))}

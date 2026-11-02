@@ -17,11 +17,14 @@ import clsx from "clsx";
 import { DAY_LETTERS, monthLeadingBlanks, mondayIndex } from "../../utils/week";
 import { range12 } from "../../utils/time12";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tn } from "../../i18n/core";
 
 type View = "year" | "month" | "week" | "day";
-const classTypeOptions = ["Group fitness", "Yoga", "Spin", "HIIT", "Personal training", "Physio session"];
+// The stored values stay English; the picker shows them through t().
+const classTypeOptions: string[] = [tk("Group fitness"), tk("Yoga"), tk("Spin"), tk("HIIT"), tk("Personal training"), tk("Physio session")];
 
-const monthNames = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString(appLocale("en-US"), { month: "long" }));
+// Read when drawn (not at import), so they follow the app's language.
+const monthNamesOf = (month: "long" | "short") => Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString(appLocale("en-US"), { month }));
 const pad = (n: number) => String(n).padStart(2, "0");
 const toISO = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
 const addDaysISO = (iso: string, days: number) => {
@@ -105,7 +108,7 @@ export default function BusinessCalendarTab() {
     setResponding(null);
     if (!result.ok) {
       const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-      setRespondError({ id: inviteId, message: offline ? OFFLINE_MESSAGE : result.message ?? "Couldn't save your response. Try again." });
+      setRespondError({ id: inviteId, message: offline ? t(OFFLINE_MESSAGE) : result.message ?? t("Couldn't save your response. Try again.") });
       return;
     }
     await reload();
@@ -116,6 +119,8 @@ export default function BusinessCalendarTab() {
   const [selectedDate, setSelectedDate] = useState(toISO(today.getFullYear(), today.getMonth(), today.getDate()));
   const [composeOpen, setComposeOpen] = useState(false);
   const [draft, setDraft] = useState(blankDraft(selectedDate));
+  const monthNames = monthNamesOf("long");
+  const monthShort = monthNamesOf("short");
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, BusinessClassRow[]> = {};
@@ -185,10 +190,10 @@ export default function BusinessCalendarTab() {
             {professional ? ` · ${professional.name}` : ""}
           </p>
           <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
-            <Users size={11} /> Max {c.maxCapacity}
+            <Users size={11} /> {t("Max {n}", { n: c.maxCapacity })}
           </p>
         </div>
-        <button onClick={() => void removeBusinessClass(c.id)} aria-label={`Delete ${c.title}`} className="tap text-charcoal-faint shrink-0">
+        <button onClick={() => void removeBusinessClass(c.id)} aria-label={t("Delete {name}", { name: c.title })} className="tap text-charcoal-faint shrink-0">
           <Trash2 size={14} />
         </button>
       </Card>
@@ -205,9 +210,9 @@ export default function BusinessCalendarTab() {
       {/* v6 Batch 3 (OURS-MO1B-calendar): the More sub-page header. */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <SubHeader title="Calendar" />
+          <SubHeader title={t("Calendar")} />
         </div>
-        <button onClick={openCompose} disabled={!businessId} className="tap w-10 h-10 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-soft disabled:opacity-40 shrink-0" aria-label="New event">
+        <button onClick={openCompose} disabled={!businessId} className="tap w-10 h-10 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-soft disabled:opacity-40 shrink-0" aria-label={t("New event")}>
           <Plus size={18} />
         </button>
       </div>
@@ -219,7 +224,7 @@ export default function BusinessCalendarTab() {
             onClick={() => setView(v)}
             className={clsx("tap px-4 py-1.5 rounded-full text-xs font-bold capitalize", view === v ? "bg-primary-fill text-on-primary-fill" : "text-charcoal-faint")}
           >
-            {v}
+            {v === "year" ? t("Year") : v === "month" ? t("Month") : v === "week" ? t("Week") : t("Day")}
           </button>
         ))}
       </div>
@@ -232,14 +237,14 @@ export default function BusinessCalendarTab() {
       {view === "month" && (
         <>
           <div className="flex items-center justify-between mb-3">
-            <button onClick={() => goMonth(-1)} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <ChevronLeft size={16} />
+            <button onClick={() => goMonth(-1)} aria-label={t("Previous month")} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
+              <ChevronLeft size={16} className="rtl:-scale-x-100" />
             </button>
             <p className="font-display font-semibold text-charcoal">
               {monthNames[cursor.month]} {cursor.year}
             </p>
-            <button onClick={() => goMonth(1)} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <ChevronRight size={16} />
+            <button onClick={() => goMonth(1)} aria-label={t("Next month")} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
+              <ChevronRight size={16} className="rtl:-scale-x-100" />
             </button>
           </div>
           <div className="grid grid-cols-7 gap-1 mb-1">
@@ -287,12 +292,12 @@ export default function BusinessCalendarTab() {
           return (
             <>
               <div className="flex items-center justify-between mb-4">
-                <button onClick={() => setSelectedDate(addDaysISO(selectedDate, -7))} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-                  <ChevronLeft size={16} />
+                <button onClick={() => setSelectedDate(addDaysISO(selectedDate, -7))} aria-label={t("Previous week")} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
+                  <ChevronLeft size={16} className="rtl:-scale-x-100" />
                 </button>
                 <p className="font-display font-semibold text-charcoal">{rangeLabel}</p>
-                <button onClick={() => setSelectedDate(addDaysISO(selectedDate, 7))} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-                  <ChevronRight size={16} />
+                <button onClick={() => setSelectedDate(addDaysISO(selectedDate, 7))} aria-label={t("Next week")} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
+                  <ChevronRight size={16} className="rtl:-scale-x-100" />
                 </button>
               </div>
               {/* V10 (QA 10.0): "have all the dates from sunday to saturday
@@ -321,7 +326,7 @@ export default function BusinessCalendarTab() {
                       </button>
                       <div className="flex-1 min-w-0 pt-2">
                         {dayEvents.length === 0 ? (
-                          <p className="text-xs text-charcoal-faint">No events</p>
+                          <p className="text-xs text-charcoal-faint">{t("No events")}</p>
                         ) : (
                           <div className="space-y-2">{dayEvents.map(eventCard)}</div>
                         )}
@@ -345,9 +350,12 @@ export default function BusinessCalendarTab() {
               }}
               className="tap rounded-2xl bg-cream-card border border-charcoal/[0.06] shadow-soft py-4 flex flex-col items-center gap-1"
             >
-              <span className="text-sm font-semibold text-charcoal">{name.slice(0, 3)}</span>
+              <span className="text-sm font-semibold text-charcoal">{monthShort[m]}</span>
               <span className="text-[10px] text-charcoal-faint">
-                {Object.keys(eventsByDate).filter((d) => d.startsWith(`${cursor.year}-${pad(m + 1)}`)).length} events
+                {(() => {
+                  const n = Object.keys(eventsByDate).filter((d) => d.startsWith(`${cursor.year}-${pad(m + 1)}`)).length;
+                  return tn(n, "{n} event", "{n} events");
+                })()}
               </span>
             </button>
           ))}
@@ -357,18 +365,18 @@ export default function BusinessCalendarTab() {
       {view === "day" && (
         <>
           <div className="flex items-center justify-between mb-4">
-            <button onClick={() => setSelectedDate(addDaysISO(selectedDate, -1))} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <ChevronLeft size={16} />
+            <button onClick={() => setSelectedDate(addDaysISO(selectedDate, -1))} aria-label={t("Previous day")} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
+              <ChevronLeft size={16} className="rtl:-scale-x-100" />
             </button>
             <p className="font-display font-semibold text-charcoal">{selectedDateLabel}</p>
-            <button onClick={() => setSelectedDate(addDaysISO(selectedDate, 1))} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <ChevronRight size={16} />
+            <button onClick={() => setSelectedDate(addDaysISO(selectedDate, 1))} aria-label={t("Next day")} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
+              <ChevronRight size={16} className="rtl:-scale-x-100" />
             </button>
           </div>
           <div className="space-y-2.5">
             {selectedEvents.length === 0 && calendarForDay.length === 0 ? (
               <Card className="text-center py-8">
-                <p className="text-sm text-charcoal-faint">No events this day.</p>
+                <p className="text-sm text-charcoal-faint">{t("No events this day.")}</p>
               </Card>
             ) : (
               selectedEvents.map(eventCard)
@@ -389,7 +397,7 @@ export default function BusinessCalendarTab() {
                       {e.title}
                     </p>
                     <p className="text-xs text-charcoal-faint">
-                      {e.allDay ? "All day" : range12(e.startTime, e.endTime)}
+                      {e.allDay ? t("All day") : range12(e.startTime, e.endTime)}
                       {e.location ? ` · ${e.location}` : ""}
                     </p>
                     {e.notes && <p className="text-xs text-charcoal-faint mt-1">{e.notes}</p>}
@@ -406,10 +414,10 @@ export default function BusinessCalendarTab() {
                       )}
                     >
                       {e.invite.status === "accepted"
-                        ? "Going"
+                        ? t("Going")
                         : e.invite.status === "declined"
-                        ? "Declined"
-                        : "Invitation"}
+                        ? t("Declined")
+                        : t("Invitation")}
                     </span>
                   )}
                 </div>
@@ -422,7 +430,7 @@ export default function BusinessCalendarTab() {
                       disabled={responding === e.invite.id || e.invite.status === "accepted"}
                       onClick={() => void respond(e.invite!.id, true)}
                     >
-                      <Check size={13} /> Accept
+                      <Check size={13} /> {t("Accept")}
                     </Button>
                     <Button
                       size="sm"
@@ -431,7 +439,7 @@ export default function BusinessCalendarTab() {
                       disabled={responding === e.invite.id || e.invite.status === "declined"}
                       onClick={() => void respond(e.invite!.id, false)}
                     >
-                      <X size={13} /> Decline
+                      <X size={13} /> {t("Decline")}
                     </Button>
                   </div>
                 )}
@@ -446,35 +454,35 @@ export default function BusinessCalendarTab() {
         </>
       )}
 
-      <BottomSheet open={composeOpen} onClose={() => setComposeOpen(false)} title="New Event">
+      <BottomSheet open={composeOpen} onClose={() => setComposeOpen(false)} title={t("New Event")}>
         <div className="space-y-4 animate-fade-slide-up">
           <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Title</span>
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Title")}</span>
             <input
               value={draft.title}
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-              placeholder="Morning HIIT"
+              placeholder={t("Morning HIIT")}
               className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
           <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Class type</span>
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Class type")}</span>
             <select
               value={draft.classType}
               onChange={(e) => setDraft((d) => ({ ...d, classType: e.target.value }))}
               className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
-              {classTypeOptions.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              {classTypeOptions.map((o) => (
+                <option key={o} value={o}>
+                  {t(o)}
                 </option>
               ))}
             </select>
           </label>
 
           <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Date</span>
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Date")}</span>
             <input
               type="date"
               value={draft.date}
@@ -485,7 +493,7 @@ export default function BusinessCalendarTab() {
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Starts</span>
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Starts")}</span>
               <input
                 type="time"
                 value={draft.startTime}
@@ -494,7 +502,7 @@ export default function BusinessCalendarTab() {
               />
             </label>
             <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Ends</span>
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Ends")}</span>
               <input
                 type="time"
                 value={draft.endTime}
@@ -506,7 +514,7 @@ export default function BusinessCalendarTab() {
 
           {employees.length > 0 && (
             <div>
-              <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Affiliated professional</span>
+              <span className="text-xs font-semibold text-charcoal-soft mb-2 block">{t("Affiliated professional")}</span>
               <div className="flex flex-wrap gap-2">
                 {employees.map((e) => (
                   <button
@@ -525,18 +533,18 @@ export default function BusinessCalendarTab() {
           )}
 
           <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Notes</span>
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Notes")}</span>
             <textarea
               value={draft.notes}
               onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
               rows={3}
-              placeholder="Anything to remember…"
+              placeholder={t("Anything to remember…")}
               className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
             />
           </label>
 
           <Button fullWidth size="lg" onClick={() => void save()} disabled={!draft.title.trim() || savingClass}>
-            {savingClass ? "Saving…" : "Save event"}
+            {savingClass ? t("Saving…") : t("Save event")}
           </Button>
         </div>
       </BottomSheet>

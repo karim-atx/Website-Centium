@@ -13,14 +13,15 @@ import { OverlayEditor } from "./OverlayEditor";
 import { EDITOR_W, editorHeight } from "./overlayModel";
 import { LAYER, type LayerPlacement } from "./shareLayerModel";
 import { EditorLabel, StyleChip } from "./shareKit";
+import { t, tk } from "../../i18n/core";
 import {
   EDITOR_STYLES,
-  EDITOR_STYLE_LABEL,
   FORMATS,
-  FORMAT_LABEL,
   cardLink,
   cardStyleOf,
   clientShownAs,
+  editorStyleLabel,
+  formatLabel,
   usesOverlay,
   type CardPro,
   type CardSpec,
@@ -53,7 +54,7 @@ export interface WinConsent {
 }
 
 const RANK: Record<Visibility, number> = { none: 0, initials: 1, name: 2 };
-const VIS_LABEL: Record<Visibility, string> = { name: "Name", initials: "Initials", none: "Nothing" };
+const VIS_LABEL: Record<Visibility, string> = { name: tk("Name"), initials: tk("Initials"), none: tk("Nothing") };
 
 /**
  * Release 3 · W8 SH6 Share editor (source/gen/r31.js editor31), a tall
@@ -156,18 +157,18 @@ export const ShareEditorSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={win ? "Share this win" : "Share this card"}
+      title={win ? t("Share this win") : t("Share this card")}
       size="tall"
       footer={
         <CtaButton
-          label="Share"
+          label={t("Share")}
           icon={<Share2 size={15} strokeWidth={2} aria-hidden />}
           disabled={needsPhoto || (overlay && !placement)}
           onClick={() => onShare({ format, style, hide, qr, client: shownAs, visibility: win ? visibility : null, photoUrl, placement: overlay ? placement : null })}
         />
       }
     >
-      <SegmentedTabs items={FORMATS.map((f) => ({ key: f, label: FORMAT_LABEL[f] }))} activeKey={format} onChange={(k) => setFormat(k as ShareFormat)} className="mb-3" />
+      <SegmentedTabs items={FORMATS.map((f) => ({ key: f, label: formatLabel(f) }))} activeKey={format} onChange={(k) => setFormat(k as ShareFormat)} className="mb-3" />
       {overlay && photoUrl ? (
         // P-SH.3 ADDED: Your photo replaces the card preview with the overlay editor (the yp* frames).
         <div style={{ marginBottom: 14 }}>
@@ -179,7 +180,7 @@ export const ShareEditorSheet: React.FC<{
             anchor="corner"
             chrome="client"
             hintKey={authUserId ? `centium.overlayHint.${authUserId}` : null}
-            layerLabel="Your card"
+            layerLabel={t("Your card")}
             onChange={setPlacement}
           />
         </div>
@@ -198,19 +199,19 @@ export const ShareEditorSheet: React.FC<{
         </div>
       )}
 
-      <EditorLabel first>Style</EditorLabel>
-      <div role="radiogroup" aria-label="Style" className="flex flex-wrap" style={{ gap: 6 }}>
+      <EditorLabel first>{t("Style")}</EditorLabel>
+      <div role="radiogroup" aria-label={t("Style")} className="flex flex-wrap" style={{ gap: 6 }}>
         {EDITOR_STYLES.map((k) => (
-          <StyleChip key={k} on={k === style} label={EDITOR_STYLE_LABEL[k]} onClick={() => setStyle(k)} />
+          <StyleChip key={k} on={k === style} label={editorStyleLabel(k)} onClick={() => setStyle(k)} />
         ))}
       </div>
       {(style === "P" || style === "Y") && format !== "sticker" && (
         <>
-          <EditorLabel>Background photo</EditorLabel>
+          <EditorLabel>{t("Background photo")}</EditorLabel>
           <div className="grid grid-cols-2" style={{ gap: 8 }}>
             {[
-              { icon: Camera, label: "Take a photo", ref: camera },
-              { icon: Images, label: "Choose from library", ref: gallery },
+              { icon: Camera, label: t("Take a photo"), ref: camera },
+              { icon: Images, label: t("Choose from library"), ref: gallery },
             ].map((b) => (
               <button
                 key={b.label}
@@ -226,30 +227,30 @@ export const ShareEditorSheet: React.FC<{
           </div>
           <input ref={camera} type="file" accept="image/*" capture="environment" className="hidden" onChange={pick} />
           <input ref={gallery} type="file" accept="image/*" className="hidden" onChange={pick} />
-          <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 6 }}>Use your own photo. A client's photo needs that client's permission for photos.</p>
+          <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 6 }}>{t("Use your own photo. A client's photo needs that client's permission for photos.")}</p>
         </>
       )}
       {format === "sticker" && (
         <>
-          <p style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: INK.chF, marginTop: 10 }}>The sticker has no background. Copy it, then paste it onto your own photo or video in Instagram.</p>
+          <p style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: INK.chF, marginTop: 10 }}>{t("The sticker has no background. Copy it, then paste it onto your own photo or video in Instagram.")}</p>
           {/* P-SH.3 ADDED (stLight): the preview well on the light checker; the copied / saved sticker stays transparent. */}
           <div style={{ marginTop: 8 }}>
-            {trow("Check on a light background", "Preview only. The copied sticker stays transparent.", <Toggle checked={lightCheck} onChange={setLightCheck} label="Check on a light background" />, "light")}
+            {trow(t("Check on a light background"), t("Preview only. The copied sticker stays transparent."), <Toggle checked={lightCheck} onChange={setLightCheck} label={t("Check on a light background")} />, "light")}
           </div>
         </>
       )}
 
       {(win || rows.length > 0) && (
         <>
-          <EditorLabel>Show on the card</EditorLabel>
+          <EditorLabel>{t("Show on the card")}</EditorLabel>
           <div>
             {win &&
               trow(
                 winLabel ?? spec.subject ?? spec.title ?? spec.eyebrow,
-                "The win itself",
+                t("The win itself"),
                 <span className="inline-flex items-center shrink-0" style={{ gap: 4, fontSize: textPx(11), fontWeight: 600, color: INK.chF }}>
                   <Lock size={12} strokeWidth={2} aria-hidden />
-                  Always on
+                  {t("Always on")}
                 </span>,
                 "win"
               )}
@@ -257,7 +258,7 @@ export const ShareEditorSheet: React.FC<{
               trow(
                 r.title,
                 r.sub,
-                <Toggle checked={!hide.includes(i)} onChange={(on) => setHide((h) => (on ? h.filter((x) => x !== i) : [...h, i]))} label={`Show ${r.title} on the card`} />,
+                <Toggle checked={!hide.includes(i)} onChange={(on) => setHide((h) => (on ? h.filter((x) => x !== i) : [...h, i]))} label={t("Show {title} on the card", { title: r.title })} />,
                 `s${i}`
               )
             )}
@@ -267,9 +268,9 @@ export const ShareEditorSheet: React.FC<{
 
       {win && (
         <>
-          <EditorLabel>{`${win.firstName} shown as`}</EditorLabel>
+          <EditorLabel>{t("{name} shown as", { name: win.firstName })}</EditorLabel>
           <SegmentedTabs
-            items={(["name", "initials", "none"] as Visibility[]).map((v) => ({ key: v, label: RANK[v] <= RANK[win.allowed] ? VIS_LABEL[v] : `${VIS_LABEL[v]} · off` }))}
+            items={(["name", "initials", "none"] as Visibility[]).map((v) => ({ key: v, label: RANK[v] <= RANK[win.allowed] ? t(VIS_LABEL[v]) : t("{label} · off", { label: t(VIS_LABEL[v]) }) }))}
             activeKey={visibility}
             onChange={(k) => {
               // A level above what the client allowed stays off ("Name · off").
@@ -280,7 +281,7 @@ export const ShareEditorSheet: React.FC<{
           {win.allowed !== "name" && (
             <p className="flex items-center" style={{ gap: 5, fontSize: textPx(11.5), color: INK.chF, marginTop: 6 }}>
               <Lock size={12} strokeWidth={2} aria-hidden className="shrink-0" />
-              {win.allowed === "none" ? `${win.firstName} allowed sharing without their name.` : `${win.firstName} allowed sharing by their initials.`}
+              {win.allowed === "none" ? t("{name} allowed sharing without their name.", { name: win.firstName }) : t("{name} allowed sharing by their initials.", { name: win.firstName })}
             </p>
           )}
         </>
@@ -288,8 +289,8 @@ export const ShareEditorSheet: React.FC<{
 
       {pro.handle && (
         <>
-          <EditorLabel>Link</EditorLabel>
-          <div>{trow("QR code and link to your profile", cardLink(pro.handle), <Toggle checked={qr} onChange={setQr} label="QR code and link to your profile" />, "qr")}</div>
+          <EditorLabel>{t("Link")}</EditorLabel>
+          <div>{trow(t("QR code and link to your profile"), cardLink(pro.handle), <Toggle checked={qr} onChange={setQr} label={t("QR code and link to your profile")} />, "qr")}</div>
         </>
       )}
     </BottomSheet>

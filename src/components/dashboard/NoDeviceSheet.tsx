@@ -5,6 +5,7 @@ import { Footprints, HeartPulse, Moon, X } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { textPx, linePx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 // OURS-home-no-device-connected §2 (V6-63 b): the web's answer to "Connect a
 // source" on the empty Steps, Sleep and Heart rate widgets. Nothing syncs on
@@ -58,7 +59,7 @@ export const NoDeviceSheet: React.FC<{ open: boolean; metric: NoDeviceMetric; on
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close"
+          aria-label={t("Close")}
           className="tap absolute grid place-items-center rounded-full"
           style={{ top: 12, insetInlineEnd: 12, width: 26, height: 26, border: `1.09545px solid ${dark ? "#B8B3C7" : "#8C8378"}`, color: dark ? "#B8B3C7" : "#8C8378" }}
         >
@@ -77,10 +78,10 @@ export const NoDeviceSheet: React.FC<{ open: boolean; metric: NoDeviceMetric; on
           className="text-center"
           style={{ margin: "0 0 6px", fontSize: textPx(17), lineHeight: linePx(24), fontWeight: 700, letterSpacing: -0.3, color: "rgb(var(--c-charcoal))" }}
         >
-          No device connected
+          {t("No device connected")}
         </h2>
         <p className="text-center" style={{ margin: "0 0 16px", fontSize: textPx(12.5), lineHeight: linePx(18), fontWeight: 500, color: "rgb(var(--c-charcoal-soft))" }}>
-          Steps, sleep and heart rate come from Apple Health or Health Connect on your phone. Syncing from the Centium phone app is coming.
+          {t("Steps, sleep and heart rate come from Apple Health or Health Connect on your phone. Syncing from the Centium phone app is coming.")}
         </p>
         <button
           type="button"
@@ -91,7 +92,7 @@ export const NoDeviceSheet: React.FC<{ open: boolean; metric: NoDeviceMetric; on
           className="tap block w-full text-center"
           style={{ marginBottom: 8, minHeight: 44, fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 700, color: dark ? "rgb(var(--thi-c3b3fb))" : "rgb(var(--thi-5f5093))" }}
         >
-          See devices and sources
+          {t("See devices and sources")}
         </button>
         <button
           type="button"
@@ -106,7 +107,7 @@ export const NoDeviceSheet: React.FC<{ open: boolean; metric: NoDeviceMetric; on
             background: dark ? "rgb(var(--th-303141))" : "rgb(var(--th-f0edf9))",
           }}
         >
-          Got it
+          {t("Got it")}
         </button>
       </div>
     </div>,

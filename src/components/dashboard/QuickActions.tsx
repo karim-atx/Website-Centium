@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
+import { t } from "../../i18n/core";
 
 interface QuickActionsProps {
   onLogFood: () => void;
@@ -132,9 +133,10 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onLogFood, onLogWork
   };
   return (
     <div className="animate-fade-slide-up">
-      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">Quick actions</p>
+      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">{t("Quick actions")}</p>
 
-      <div ref={rowRef} className="relative flex" style={{ height: px(BOTTOM - TOP), marginTop: -8, marginBottom: -12 }}>
+      {/* One drawing with its taps on fixed sides: kept left to right in Arabic too. */}
+      <div ref={rowRef} dir="ltr" className="relative flex" style={{ height: px(BOTTOM - TOP), marginTop: -8, marginBottom: -12 }}>
         {/* The drawing: both sides (pill and wing as one outline) and the
             bottom arc, under the transparent buttons. */}
         <svg
@@ -152,7 +154,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onLogFood, onLogWork
         {/* Log food: the left pill, its glyph 22.6px in from the centre. */}
         <button
           onClick={onLogFood}
-          aria-label="Log food"
+          aria-label={t("Log food")}
           className="tap"
           // Tucks 2px under the centre so no sub-pixel seam shows at the join.
           style={{ ...pill, marginInlineEnd: -2, borderRadius: `${px(PILL_H) / 2}px 0 0 ${px(PILL_H) / 2}px` }}
@@ -167,7 +169,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onLogFood, onLogWork
         {/* Log workout: the right pill. */}
         <button
           onClick={onLogWorkout}
-          aria-label="Log workout"
+          aria-label={t("Log workout")}
           className="tap"
           style={{ ...pill, marginInlineStart: -2, borderRadius: `0 ${px(PILL_H) / 2}px ${px(PILL_H) / 2}px 0` }}
         >
@@ -177,7 +179,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onLogFood, onLogWork
         {/* The mic: a fixed teal circle over the centre. */}
         <button
           onClick={onVoiceLog}
-          aria-label="Tell Centium what you ate"
+          aria-label={t("Tell Centium what you ate")}
           className="tap absolute flex items-center justify-center"
           style={{
             insetInlineStart: "50%",
@@ -197,7 +199,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onLogFood, onLogWork
         {/* Add metric: the bottom arc (its shape above takes taps too). */}
         <button
           onClick={onAddMetric}
-          aria-label="Add metric"
+          aria-label={t("Add metric")}
           className="tap absolute flex items-start justify-center"
           style={{
             insetInlineStart: "50%",

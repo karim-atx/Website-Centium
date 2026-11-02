@@ -30,6 +30,19 @@ import { exploreSource, type ListingEvent } from "../../../services/marketplace/
 import { typeLabel } from "../venueTypes";
 import { businessesForCategory } from "./rewardsModel";
 import { CapsLabel, OwnerTile, RowChevron } from "./rewardsParts";
+import { t, tk } from "../../../i18n/core";
+
+/** REWARD_CATEGORIES' and REWARD_SORTS' English names, translated where shown. */
+const CATEGORY_LABEL: Record<string, string> = {
+  all: tk("All"),
+  professionals: tk("Professionals"),
+  clothing: tk("Clothing"),
+  equipment: tk("Equipment"),
+  supplements: tk("Supplements"),
+  meal_prep: tk("Meal Prep"),
+  wellness: tk("Wellness"),
+};
+const SORT_LABEL: Record<string, string> = { featured: tk("Featured"), lowest: tk("Fewest points"), highest: tk("Most points") };
 
 // Market + Share 3.0 · W2 · C-MO.4.4 Rewards (`rewards`, `rewardsPros`): what
 // sits under Explore's Gyms · Classes · Rewards track when Rewards is on (the
@@ -120,7 +133,7 @@ export default function RewardsTab() {
     chipRefs.current[c]?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: reduce ? "auto" : "smooth" });
   };
 
-  const sortLabel = REWARD_SORTS.find((s) => s.key === sort)?.label ?? "Featured";
+  const sortLabel = t(SORT_LABEL[sort] ?? REWARD_SORTS.find((s) => s.key === sort)?.label ?? "Featured");
   const shownBusinesses = venues.state === "done" ? businessesForCategory(venues.list, category) : [];
 
   return (
@@ -130,7 +143,7 @@ export default function RewardsTab() {
       {/* Category chips */}
       <div
         role="group"
-        aria-label="Reward categories"
+        aria-label={t("Reward categories")}
         className="rewards-chips"
         style={{ marginTop: 10, display: "flex", gap: 4, padding: 4, borderRadius: 12, background: m.subtrack, overflowX: "auto" }}
       >
@@ -163,7 +176,7 @@ export default function RewardsTab() {
                 cursor: "pointer",
               }}
             >
-              {c.label}
+              {t(CATEGORY_LABEL[c.key] ?? c.label)}
             </button>
           );
         })}
@@ -195,7 +208,7 @@ export default function RewardsTab() {
             whiteSpace: "nowrap",
           }}
         >
-          Sort: {sortLabel}
+          {t("Sort: {sort}", { sort: sortLabel })}
           <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={NO_ICON_SCALE}>
             <path d="m6 9 6 6 6-6" />
           </svg>
@@ -205,7 +218,7 @@ export default function RewardsTab() {
           onClose={() => setSortOpen(false)}
           anchor={sortEl}
           align="left"
-          options={REWARD_SORTS.map((s) => ({ value: s.key, label: s.label }))}
+          options={REWARD_SORTS.map((s) => ({ value: s.key, label: t(SORT_LABEL[s.key] ?? s.label) }))}
           selected={sort}
           onSelect={(v) => {
             setSort(v);
@@ -220,19 +233,19 @@ export default function RewardsTab() {
           className="hit market-focus"
           style={{ display: "flex", alignItems: "center", gap: 8, font: "inherit", fontSize: textPx(12.5), fontWeight: 700, color: m.ink2, background: "none", border: 0, padding: 0, cursor: "pointer", whiteSpace: "nowrap" }}
         >
-          Affordable now
+          {t("Affordable now")}
           <span aria-hidden style={{ width: 42, height: 26, borderRadius: 999, background: affordable ? m.segactive : m.swoff, position: "relative", flexShrink: 0, transition: reduce ? undefined : "background 140ms ease" }}>
             <span
               style={{
                 position: "absolute",
-                left: affordable ? 18 : 2,
+                insetInlineStart: affordable ? 18 : 2,
                 top: 2,
                 width: 22,
                 height: 22,
                 borderRadius: 999,
                 background: "#FFFFFF",
                 boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
-                transition: reduce ? undefined : "left 140ms ease",
+                transition: reduce ? undefined : "inset-inline-start 140ms ease",
               }}
             />
           </span>
@@ -247,7 +260,7 @@ export default function RewardsTab() {
       {/* D-21: business sections */}
       {category === "professionals" ? (
         <section aria-labelledby="rewards-pros-heading" style={{ marginTop: 18 }}>
-          <CapsLabel id="rewards-pros-heading">Professionals</CapsLabel>
+          <CapsLabel id="rewards-pros-heading">{t("Professionals")}</CapsLabel>
           <button type="button" onClick={() => navigate("/app/professionals")} className="market-focus" style={rowStyle(m, 8)}>
             <span aria-hidden style={{ width: 44, height: 44, borderRadius: 12, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center", color: m.accent, flexShrink: 0 }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" style={NO_ICON_SCALE}>
@@ -256,24 +269,24 @@ export default function RewardsTab() {
               </svg>
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>Find a professional</span>
-              <span style={{ display: "block", fontSize: textPx(12), fontWeight: 600, color: m.accent }}>Trainers, dietitians and more</span>
+              <span style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>{t("Find a professional")}</span>
+              <span style={{ display: "block", fontSize: textPx(12), fontWeight: 600, color: m.accent }}>{t("Trainers, dietitians and more")}</span>
             </span>
             <RowChevron />
           </button>
         </section>
       ) : (
         <section aria-labelledby="rewards-biz-heading" style={{ marginTop: 18 }}>
-          <CapsLabel id="rewards-biz-heading">Businesses</CapsLabel>
+          <CapsLabel id="rewards-biz-heading">{t("Businesses")}</CapsLabel>
           <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
             {venues.state === "loading" ? (
-              <MarketSkeleton radius={18} count={2} rows={2} label="Loading businesses" />
+              <MarketSkeleton radius={18} count={2} rows={2} label={tk("Loading businesses")} />
             ) : !venues.ok ? (
-              <MarketError thing="businesses" onRetry={loadVenues} />
+              <MarketError thing={tk("businesses")} onRetry={loadVenues} />
             ) : shownBusinesses.length === 0 ? (
               <MarketEmptyCard
-                title={venues.list.length === 0 ? "No businesses yet" : "No businesses here yet"}
-                body={venues.list.length === 0 ? "Shops and studios near you will show here." : "Try another category, or All."}
+                title={venues.list.length === 0 ? tk("No businesses yet") : tk("No businesses here yet")}
+                body={venues.list.length === 0 ? tk("Shops and studios near you will show here.") : tk("Try another category, or All.")}
               />
             ) : (
               shownBusinesses.map((v) => <BusinessRow key={v.venueId} venue={v} onOpen={() => navigate(`/app/marketplace/business?id=${encodeURIComponent(v.venueId)}&src=${exploreSource({ featured: v.isFeatured })}`)} />)
@@ -313,16 +326,16 @@ const OffersList: React.FC<{
   onRetry: () => void;
   onOpen: (o: CatalogOffer) => void;
 }> = ({ state, adult, sort, affordable, balance, onRetry, onOpen }) => {
-  if (state.state === "loading") return <MarketSkeleton radius={18} count={3} rows={2} label="Loading rewards" />;
+  if (state.state === "loading") return <MarketSkeleton radius={18} count={3} rows={2} label={tk("Loading rewards")} />;
   const r = state.result;
   if (!r.ok) {
     if (r.offline) return <MarketOffline loaded={false} onRetry={onRetry} force />;
-    return <MarketError thing="rewards" onRetry={onRetry} />;
+    return <MarketError thing={tk("rewards")} onRetry={onRetry} />;
   }
   const list = forAge(r.value, adult);
-  if (list.length === 0) return <MarketEmptyCard title="No rewards here yet" body="New offers show here as businesses add them. Try another category." />;
+  if (list.length === 0) return <MarketEmptyCard title={tk("No rewards here yet")} body={tk("New offers show here as businesses add them. Try another category.")} />;
   const shown = arrangeOffers(list, sort, affordable, balance);
-  if (shown.length === 0) return <MarketEmptyCard title="Nothing you can redeem yet" body="Turn off Affordable now to see every reward and how many points each needs." />;
+  if (shown.length === 0) return <MarketEmptyCard title={tk("Nothing you can redeem yet")} body={tk("Turn off Affordable now to see every reward and how many points each needs.")} />;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {shown.map((o) => (

@@ -6,6 +6,7 @@ import { distanceKm, type Coords } from "../../../services/geo/distance";
 import { distanceText } from "../../../services/marketplace/classBooking";
 import { toProduct, type Row } from "../../../services/store/mapping";
 import type { Product } from "../../../services/store/types";
+import { t, tk, tx } from "../../../i18n/core";
 import {
   REDEEM_ERROR_TEXT,
   categoryOfType,
@@ -37,7 +38,18 @@ export function businessesForCategory<T extends { venueType: string }>(list: rea
 // Showcase (C-MO.4.4.1)
 
 /** The showcase's type line, the business_type enum in words: "clothing_store" → "Clothing Store" (the board's). */
+const SHOWCASE_TYPES: Record<string, string> = {
+  gym: tk("Gym"),
+  studio: tk("Studio"),
+  store: tk("Store"),
+  supplement_store: tk("Supplement Store"),
+  equipment_seller: tk("Equipment Seller"),
+  wellness_service: tk("Wellness Service"),
+  clothing_store: tk("Clothing Store"),
+  meal_prep_service: tk("Meal Prep Service"),
+};
 export function showcaseTypeLabel(venueType: string): string {
+  if (SHOWCASE_TYPES[venueType]) return t(SHOWCASE_TYPES[venueType]);
   return venueType
     .split("_")
     .filter(Boolean)
@@ -47,20 +59,20 @@ export function showcaseTypeLabel(venueType: string): string {
 
 /** A website as the board writes it: "https://www.outlineactive.com/" → "outlineactive.com". */
 export function websiteHost(url: string | null | undefined): string | null {
-  const t = url?.trim();
-  if (!t) return null;
-  const bare = t.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").replace(/^www\./i, "");
+  const u = url?.trim();
+  if (!u) return null;
+  const bare = u.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").replace(/^www\./i, "");
   const host = bare.split(/[/?#]/)[0];
   return host || null;
 }
 
 /** An https link for the Online panel ("outlineactive.com" → "https://outlineactive.com"). */
 export function websiteHref(url: string | null | undefined): string | null {
-  const t = url?.trim();
-  if (!t) return null;
-  if (/^https?:\/\//i.test(t)) return t;
-  if (/^[a-z][a-z0-9+.-]*:/i.test(t)) return null;
-  return `https://${t}`;
+  const u = url?.trim();
+  if (!u) return null;
+  if (/^https?:\/\//i.test(u)) return u;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(u)) return null;
+  return `https://${u}`;
 }
 
 /** The nearest of a business's places to the device, as "1.4 km from you"; null without a position or coordinates. */
@@ -68,8 +80,8 @@ export function distanceLine(here: Coords | null, places: readonly { lat: number
   if (!here) return null;
   const kms = places.filter((p) => p.lat !== null && p.lng !== null).map((p) => distanceKm(here, { lat: p.lat as number, lng: p.lng as number }));
   if (kms.length === 0) return null;
-  const t = distanceText(Math.min(...kms));
-  return t ? `${t} from you` : null;
+  const d = distanceText(Math.min(...kms));
+  return d ? t("{distance} from you", { distance: d }) : null;
 }
 
 export type ShowcaseSegKey = "shop" | "loc" | "web";
@@ -101,17 +113,17 @@ export function showcaseSegments(p: { website: string | null; location: string |
   const host = websiteHost(p.website);
   const out: ShowcaseSegment[] = [
     host
-      ? { key: "shop", label: "Shop", step: 1, value: "In store and online", line: "Vouchers work at the counter and at online checkout." }
-      : { key: "shop", label: "Shop", step: 1, value: "In store", line: "Vouchers work at the counter." },
+      ? { key: "shop", label: t("Shop"), step: 1, value: t("In store and online"), line: t("Vouchers work at the counter and at online checkout.") }
+      : { key: "shop", label: t("Shop"), step: 1, value: t("In store"), line: t("Vouchers work at the counter.") },
   ];
   const loc = p.location?.trim();
-  if (loc) out.push({ key: "loc", label: "Location", step: 2, value: loc, line: p.distance });
-  if (host) out.push({ key: "web", label: "Online", step: 4, value: host, line: "Enter your voucher code at checkout.", href: websiteHref(p.website) ?? undefined });
+  if (loc) out.push({ key: "loc", label: t("Location"), step: 2, value: loc, line: p.distance });
+  if (host) out.push({ key: "web", label: tx("Online", "shop"), step: 4, value: host, line: t("Enter your voucher code at checkout."), href: websiteHref(p.website) ?? undefined });
   return out;
 }
 
 /** The Products header's note: the board's "Display prices. Buy in store or online.", or "… Buy in store." without a website (ours). */
-export const productsNote = (website: string | null): string => (websiteHost(website) ? "Display prices. Buy in store or online." : "Display prices. Buy in store.");
+export const productsNote = (website: string | null): string => (websiteHost(website) ? t("Display prices. Buy in store or online.") : t("Display prices. Buy in store."));
 
 // ---------------------------------------------------------------------------
 // Offer detail (C-MO.4.4.2 `offerRows` / `offer.cells`)
@@ -131,10 +143,11 @@ export interface OfferCell {
  */
 export function offerCells(d: Pick<OfferDetail, "startsOn" | "endsOn" | "where" | "perMemberLimit" | "voucherDays" | "voucherCappedOn">): OfferCell[] {
   return [
-    { key: "Valid", value: validRange(d.startsOn, d.endsOn) ?? "While it lasts", i: 0 },
-    { key: "Where to use", value: whereLabel(d.where) ?? "See terms", i: 1 },
-    { key: "Limit", value: limitLabel(d.perMemberLimit) ?? "No limit", i: 2 },
-    { key: "Voucher expires", value: voucherExpiryLabel(d.voucherDays, d.voucherCappedOn), i: 3 },
+    // `key` is the English label (shown through t()); the values are already words.
+    { key: tk("Valid"), value: validRange(d.startsOn, d.endsOn) ?? t("While it lasts"), i: 0 },
+    { key: tk("Where to use"), value: whereLabel(d.where) ?? t("See terms"), i: 1 },
+    { key: tk("Limit"), value: limitLabel(d.perMemberLimit) ?? t("No limit"), i: 2 },
+    { key: tk("Voucher expires"), value: voucherExpiryLabel(d.voucherDays, d.voucherCappedOn), i: 3 },
   ];
 }
 
