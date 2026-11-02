@@ -4,6 +4,7 @@ import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { CtaButton } from "../../ui/PinnedCta";
 import { INK } from "../proInk";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · CL3 v6 roster controls (source gen/r8.js scrollRow8, segs8,
@@ -41,7 +42,7 @@ export interface StatusTab<K extends string> {
 
 export function StatusTabs<K extends string>({ tabs, active, onChange, k }: { tabs: StatusTab<K>[]; active: K; onChange: (k: K) => void; k: number }) {
   return (
-    <ScrollRow label="Status" role="tablist">
+    <ScrollRow label={t("Status")} role="tablist">
       {tabs.map((t) => {
         const on = t.key === active;
         return (
@@ -117,10 +118,10 @@ export const FilterPanel: React.FC<{
   if (!open) return null;
   return (
     <div className="fixed inset-0" style={{ zIndex: 60 }}>
-      <button type="button" aria-label="Close filters" className="absolute inset-0" style={{ background: "rgba(36,31,27,0.18)" }} onClick={onClose} />
+      <button type="button" aria-label={t("Close filters")} className="absolute inset-0" style={{ background: "rgba(36,31,27,0.18)" }} onClick={onClose} />
       <div
         role="dialog"
-        aria-label="Filter"
+        aria-label={t("Filter")}
         className="absolute overflow-y-auto"
         style={{
           top: 116,
@@ -166,7 +167,7 @@ export const FilterPanel: React.FC<{
           </div>
         ))}
         <div className="flex" style={{ gap: 8, marginTop: 14 }}>
-          <CtaButton className="flex-1" variant="secondary" size="base" label="Clear" onClick={onClear} />
+          <CtaButton className="flex-1" variant="secondary" size="base" label={t("Clear")} onClick={onClear} />
           <CtaButton className="flex-1" size="base" label={showLabel} onClick={onClose} />
         </div>
       </div>

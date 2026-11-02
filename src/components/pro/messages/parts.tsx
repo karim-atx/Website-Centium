@@ -4,6 +4,7 @@ import { useIsDark } from "../../../hooks/useIsDark";
 import { linePx, textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { TAB_LABEL, type ProTab } from "./messagesModel";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · MO22 v5 building blocks, literal from gen/r19.js (messages19
@@ -20,7 +21,7 @@ export const MessagesHead: React.FC<{ title: string; onBack: () => void; right?:
       <button
         type="button"
         onClick={onBack}
-        aria-label="Back"
+        aria-label={t("Back")}
         className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']"
         style={{ width: 36, height: 36, marginInlineStart: -7 }}
       >
@@ -47,16 +48,16 @@ export const MessagesHead: React.FC<{ title: string; onBack: () => void; right?:
 export const MsgTabs: React.FC<{ tabs: ProTab[]; active: ProTab; unread: Partial<Record<ProTab, boolean>>; onChange: (t: ProTab) => void }> = ({ tabs, active, unread, onChange }) => {
   const dark = useIsDark();
   return (
-    <div role="tablist" aria-label="Conversations" className="flex items-center no-scrollbar" style={{ overflowX: "auto", background: dark ? "#242730" : "#F3F3FD", borderRadius: 16, padding: 6, gap: 5, marginBottom: 16 }}>
-      {tabs.map((t) => {
-        const on = t === active;
+    <div role="tablist" aria-label={t("Conversations")} className="flex items-center no-scrollbar" style={{ overflowX: "auto", background: dark ? "#242730" : "#F3F3FD", borderRadius: 16, padding: 6, gap: 5, marginBottom: 16 }}>
+      {tabs.map((tab) => {
+        const on = tab === active;
         return (
           <button
-            key={t}
+            key={tab}
             type="button"
             role="tab"
             aria-selected={on}
-            onClick={() => onChange(t)}
+            onClick={() => onChange(tab)}
             // Labels never truncate: with Businesses as a fourth tab at 360 and
             // Larger text, the track scrolls sideways instead (OURS).
             className="tap flex items-center justify-center whitespace-nowrap"
@@ -73,8 +74,8 @@ export const MsgTabs: React.FC<{ tabs: ProTab[]; active: ProTab; unread: Partial
               color: on ? (dark ? "#0D0B1A" : "#FFFFFF") : dark ? "#B7ABDE" : "#6D50D3",
             }}
           >
-            <span>{TAB_LABEL[t]}</span>
-            {!on && unread[t] && <span aria-label="Unread" className="rounded-full shrink-0" style={{ width: 6, height: 6, background: "#8F68F6" }} />}
+            <span>{t(TAB_LABEL[tab])}</span>
+            {!on && unread[tab] && <span aria-label={t("Unread")} className="rounded-full shrink-0" style={{ width: 6, height: 6, background: "#8F68F6" }} />}
           </button>
         );
       })}
@@ -86,11 +87,11 @@ export const MsgTabs: React.FC<{ tabs: ProTab[]; active: ProTab; unread: Partial
 export const SearchField: React.FC<{ value: string; onChange: (v: string) => void }> = ({ value, onChange }) => (
   <label data-search-field="" className="flex items-center" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8 }}>
     <Search size={15} strokeWidth={2} style={{ color: INK.chF }} className="shrink-0" aria-hidden />
-    <span className="sr-only">Search messages and chats</span>
+    <span className="sr-only">{t("Search messages and chats")}</span>
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder="Search"
+      placeholder={t("Search")}
       className="flex-1 min-w-0 bg-transparent focus:outline-none placeholder:text-charcoal-faint"
       style={{ fontSize: textPx(14), color: INK.ch }}
     />

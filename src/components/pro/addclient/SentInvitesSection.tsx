@@ -7,6 +7,7 @@ import { SectionHead } from "../client/kit";
 import { OfflineLine, ProCardSkeleton, ProError } from "../states";
 import { fetchSentInvites, type SentInviteRow } from "../../../services/pro/invites";
 import { SENT_INVITES_SHOWN, sentInviteView } from "./sentInvitesModel";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 W9 post-review · Clients "Invites sent" (no frame draws it; Karim
@@ -51,19 +52,19 @@ export const SentInvitesSection: React.FC<{ reloadKey?: string | number }> = ({ 
   const more = views.length > SENT_INVITES_SHOWN;
 
   return (
-    <section aria-label="Invites sent" style={{ marginTop: 20 }}>
-      <SectionHead label="Invites sent" right={more ? (showAll ? "Show less" : `See all ${views.length}`) : undefined} onRight={more ? () => setShowAll((v) => !v) : undefined} />
+    <section aria-label={t("Invites sent")} style={{ marginTop: 20 }}>
+      <SectionHead label={t("Invites sent")} right={more ? (showAll ? t("Show less") : t("See all {n}", { n: views.length })) : undefined} onRight={more ? () => setShowAll((v) => !v) : undefined} />
       {rows === null ? (
         error ? (
-          <ProError onRetry={() => setNonce((n) => n + 1)} message={offline ? "You're offline. Your invites load when you're connected." : "Couldn't load your invites. Check your connection and try again."} />
+          <ProError onRetry={() => setNonce((n) => n + 1)} message={offline ? t("You're offline. Your invites load when you're connected.") : t("Couldn't load your invites. Check your connection and try again.")} />
         ) : (
-          <div role="status" aria-label="Loading">
+          <div role="status" aria-label={t("Loading")}>
             <ProCardSkeleton lines={2} />
           </div>
         )
       ) : (
         <>
-          {error && (offline ? <OfflineLine /> : <ProError onRetry={() => setNonce((n) => n + 1)} message="Couldn't refresh your invites. Check your connection and try again." />)}
+          {error && (offline ? <OfflineLine /> : <ProError onRetry={() => setNonce((n) => n + 1)} message={t("Couldn't refresh your invites. Check your connection and try again.")} />)}
           <div className="flex flex-col" style={{ gap: 8 }} role="list">
             {shown.map((v) => {
               const Icon = v.channel === "Phone" ? Smartphone : Mail;

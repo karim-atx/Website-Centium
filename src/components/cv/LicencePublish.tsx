@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { Toggle } from "../ui/Toggle";
 import type { Licence } from "../../services/professional-cv";
 import { PUBLISH_STRINGS, publishDesc, publishState, usePublishLicence, type PublishState } from "./licencePublishState";
+import { t } from "../../i18n/core";
 
 // The CV look of the publish choice; the rules and copy are in licencePublishState.ts.
 
@@ -16,7 +17,7 @@ export const PublishPill: React.FC<{ state: PublishState }> = ({ state }) => {
         on ? "bg-primary/15 text-primary-deep-text" : "bg-charcoal/[0.06] text-charcoal-soft"
       )}
     >
-      {on ? PUBLISH_STRINGS.public : PUBLISH_STRINGS.notPublic}
+      {on ? t(PUBLISH_STRINGS.public) : t(PUBLISH_STRINGS.notPublic)}
     </span>
   );
 };
@@ -40,16 +41,16 @@ export const LicencePublishRow: React.FC<{
         <div className="min-w-0 flex flex-col gap-1">
           <span className="flex items-center gap-2 flex-wrap">
             <span id={id} className="text-[13px] font-bold text-charcoal">
-              {PUBLISH_STRINGS.label}
+              {t(PUBLISH_STRINGS.label)}
             </span>
             <PublishPill state={state} />
           </span>
-          <span className="text-xs leading-[1.4] text-charcoal-soft">{publishDesc(state)}</span>
+          <span className="text-xs leading-[1.4] text-charcoal-soft">{t(publishDesc(state))}</span>
         </div>
         <Toggle
           checked={!!licence.publishedAt}
           onChange={(on) => void toggle(licence, on)}
-          label={`${PUBLISH_STRINGS.label}: ${licence.name ?? "licence"}`}
+          label={`${t(PUBLISH_STRINGS.label)}: ${licence.name ?? t("licence")}`}
           disabled={(state === "unnamed" && !licence.publishedAt) || busyId === licence.id}
         />
       </div>

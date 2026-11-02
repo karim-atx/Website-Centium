@@ -9,6 +9,7 @@ import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { linePx, textPx } from "../../../theme/textSize";
 import { MARKET_MOTION, marketPalette } from "../../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../proInk";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W5 · the calendar sync pieces that aren't the strip
 // (the strip is the shared ConfirmationStrip, compact = P-CA's):
@@ -101,11 +102,9 @@ export const HiredEmpty: React.FC<{ onBrowse: () => void }> = ({ onBrowse }) => 
         <TicketCheck size={17} />
       </span>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: textPx(13.5), fontWeight: 800 }}>No hired classes yet</div>
-        <div style={{ fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2, marginTop: 2 }}>When a gym hires you and assigns classes, every session shows here on its own.</div>
-        <button type="button" onClick={onBrowse} className="hit market-focus" style={{ marginTop: 8, padding: 0, border: 0, background: "transparent", fontFamily: "inherit", fontSize: textPx(12.5), fontWeight: 800, color: m.pdark, cursor: "pointer" }}>
-          Browse opportunities
-        </button>
+        <div style={{ fontSize: textPx(13.5), fontWeight: 800 }}>{t("No hired classes yet")}</div>
+        <div style={{ fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2, marginTop: 2 }}>{t("When a gym hires you and assigns classes, every session shows here on its own.")}</div>
+        <button type="button" onClick={onBrowse} className="hit market-focus" style={{ marginTop: 8, padding: 0, border: 0, background: "transparent", fontFamily: "inherit", fontSize: textPx(12.5), fontWeight: 800, color: m.pdark, cursor: "pointer" }}>{t("Browse opportunities")}</button>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { useApp } from "../../context/AppContext";
 import type { ProLane } from "./subtypeLanes";
 import { INK, NO_ICON_SCALE } from "./proInk";
 import { ringStatus, type RingStatus } from "./proRules";
+import { t, tk } from "../../i18n/core";
 
 /**
  * Release 3 · StatusRing (HANDOVER e; CL3 v6 "bigger ring number", source
@@ -27,7 +28,7 @@ export interface StatusRingProps {
 }
 
 const STATUS_INK: Record<RingStatus, string> = { good: INK.good, watch: INK.gold, poor: INK.hi };
-const STATUS_WORD: Record<RingStatus, string> = { good: "good", watch: "needs watching", poor: "poor" };
+const STATUS_WORD: Record<RingStatus, string> = { good: tk("good"), watch: tk("needs watching"), poor: tk("poor") };
 
 export const StatusRing: React.FC<StatusRingProps> = ({ value, lane, scale = 1 }) => {
   const { accessibility } = useApp();
@@ -42,7 +43,7 @@ export const StatusRing: React.FC<StatusRingProps> = ({ value, lane, scale = 1 }
   const v = none ? 0 : Math.max(0, Math.round(value));
   const frac = none ? 0 : co ? Math.min(1, v / 6) : Math.min(1, v / 100);
   const col = co ? INK.tealDark : STATUS_INK[ringStatus(v)];
-  const label = none ? "No data yet" : co ? `${v} of 6 record types shared` : `Adherence ${v}, ${STATUS_WORD[ringStatus(v)]}`;
+  const label = none ? t("No data yet") : co ? t("{v} of 6 record types shared", { v }) : t("Adherence {v}, {status}", { v, status: t(STATUS_WORD[ringStatus(v)]) });
 
   return (
     <span role="img" aria-label={label} className="relative flex items-center justify-center shrink-0" style={{ width: S, height: S }}>

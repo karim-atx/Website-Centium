@@ -19,13 +19,18 @@ import * as programmes from "./ar/programmes.ts";
 import * as certificates from "./ar/certificates.ts";
 import * as safety from "./ar/safety.ts";
 import * as venues from "./ar/venues.ts";
+import * as pro from "./ar/pro.ts";
+import * as proclients from "./ar/proclients.ts";
+import * as proprofile from "./ar/proprofile.ts";
+import * as procalendar from "./ar/procalendar.ts";
+import * as promessages from "./ar/promessages.ts";
 
 // Round F (AV): the translated areas (F7) stay translated. For every source
 // file an area lists, every t/tn/tk key has Arabic, every Arabic entry keeps
 // the English placeholders, no English is left as bare JSX text or a bare
 // text attribute, and a key used by two areas has one Arabic.
 
-const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates };
+const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, pro, proclients, proprofile, procalendar, promessages };
 const SRC = join(import.meta.dirname, "..");
 
 // Words that are the same in both languages (names, never translated).

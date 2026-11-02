@@ -13,6 +13,7 @@ import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { CtaButton, ErrorLine } from "./kit";
 import { DURATIONS, parsePriceInput } from "./profileModel";
+import { t, tk } from "../../../i18n/core";
 
 // Release 3 · W6 MO16 Add service (r13 addService13; ui.js field, segTabs, cta):
 // Name; Type (Session / Package / Programme, 36 high, 12); for a session
@@ -30,9 +31,9 @@ import { DURATIONS, parsePriceInput } from "./profileModel";
 export type ServiceKind = "session" | "package" | "programme";
 
 const AUDIENCE_LABEL: Record<BookingAudience, string> = {
-  everyone: "Everyone with the link",
-  clients_only: "Your clients only",
-  approved_only: "People you approve",
+  everyone: tk("Everyone with the link"),
+  clients_only: tk("Your clients only"),
+  approved_only: tk("People you approve"),
 };
 
 export const ServiceSheet: React.FC<{
@@ -67,7 +68,7 @@ const ServiceForm: React.FC<React.ComponentProps<typeof ServiceSheet>> = ({ onCl
     if (!authUserId || busy) return;
     setError(null);
     const p = parsePriceInput(price);
-    if (p === null) return setError("Enter the price as a number, for example 60, or leave it empty for Free.");
+    if (p === null) return setError(t("Enter the price as a number, for example 60, or leave it empty for Free."));
     setBusy(true);
     if (kind === "session") {
       const r = await addSessionService(authUserId, { name, durationMin: duration, price: p, locationKind: where === "online" ? "online" : "in_person", description });
@@ -79,7 +80,7 @@ const ServiceForm: React.FC<React.ComponentProps<typeof ServiceSheet>> = ({ onCl
     const count = kind === "package" ? Number(sessions) : null;
     if (kind === "package" && (!Number.isInteger(count) || (count ?? 0) < 1)) {
       setBusy(false);
-      return setError("Enter how many sessions the package holds.");
+      return setError(t("Enter how many sessions the package holds."));
     }
     const position = plan ? plan.position : plans.reduce((m, x) => Math.max(m, x.position + 1), 0);
     const r = await savePlan(authUserId, plan?.id ?? null, { name, price: String(p), billing, features, active, sessionCount: count }, position);
@@ -117,29 +118,29 @@ const ServiceForm: React.FC<React.ComponentProps<typeof ServiceSheet>> = ({ onCl
     <BottomSheet
       open
       onClose={onClose}
-      title={editing ? "Edit service" : "Add service"}
+      title={editing ? t("Edit service") : t("Add service")}
       size="tall"
       footer={
         <>
           {error && <ErrorLine>{error}</ErrorLine>}
           <div style={{ marginTop: error ? 10 : 0 }}>
-            <CtaButton label={editing ? "Save" : "Add to profile"} icon={editing ? undefined : Plus} size="sheet" onClick={() => void save()} disabled={atBusiness} busy={busy} full />
+            <CtaButton label={editing ? t("Save") : t("Add to profile")} icon={editing ? undefined : Plus} size="sheet" onClick={() => void save()} disabled={atBusiness} busy={busy} full />
           </div>
         </>
       }
     >
       <div className="flex flex-col" style={{ gap: 14 }}>
-        <FieldInput label="Name" value={name} onChange={setName} maxLength={kind === "session" ? 60 : PLAN_NAME_MAX} />
+        <FieldInput label={t("Name")} value={name} onChange={setName} maxLength={kind === "session" ? 60 : PLAN_NAME_MAX} />
         <div>
-          {label("Type")}
+          {label(t("Type"))}
           {editing ? (
-            <p style={{ fontSize: textPx(14), color: INK.ch }}>{kind === "package" ? "Package" : "Programme"}</p>
+            <p style={{ fontSize: textPx(14), color: INK.ch }}>{kind === "package" ? t("Package") : t("Programme")}</p>
           ) : (
             <SegmentedTabs
               items={[
-                { key: "session", label: "Session" },
-                { key: "package", label: "Package" },
-                { key: "programme", label: "Programme" },
+                { key: "session", label: t("Session") },
+                { key: "package", label: t("Package") },
+                { key: "programme", label: t("Programme") },
               ]}
               activeKey={kind}
               onChange={(k) => setKind(k as ServiceKind)}
@@ -152,15 +153,15 @@ const ServiceForm: React.FC<React.ComponentProps<typeof ServiceSheet>> = ({ onCl
         {kind === "session" ? (
           <>
             <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
-              <FieldButton label="Duration" value={`${duration} min`} open={!!durEl} ariaLabel={`Duration, ${duration} minutes`} onClick={(e) => setDurEl(e.currentTarget)} />
-              <FieldInput label="Price" value={price} onChange={setPrice} placeholder="Free" inputMode="decimal" />
+              <FieldButton label={t("Duration")} value={t("{duration} min", { duration })} open={!!durEl} ariaLabel={t("Duration, {duration} minutes", { duration })} onClick={(e) => setDurEl(e.currentTarget)} />
+              <FieldInput label={t("Price")} value={price} onChange={setPrice} placeholder={t("Free")} inputMode="decimal" />
             </div>
             <PopupMenu
               open={!!durEl}
               onClose={() => setDurEl(null)}
               anchor={durEl}
               matchWidth={durEl}
-              options={DURATIONS.map((d) => ({ value: String(d), label: `${d} min` }))}
+              options={DURATIONS.map((d) => ({ value: String(d), label: t("{d} min", { d }) }))}
               selected={String(duration)}
               onSelect={(v) => {
                 setDuration(Number(v));
@@ -168,12 +169,12 @@ const ServiceForm: React.FC<React.ComponentProps<typeof ServiceSheet>> = ({ onCl
               }}
             />
             <div>
-              {label("Location")}
+              {label(t("Location"))}
               <SegmentedTabs
                 items={[
-                  { key: "in_person", label: "In person" },
-                  { key: "online", label: "Online" },
-                  { key: "business", label: "At a business" },
+                  { key: "in_person", label: t("In person") },
+                  { key: "online", label: t("Online") },
+                  { key: "business", label: t("At a business") },
                 ]}
                 activeKey={where}
                 onChange={(k) => setWhere(k as typeof where)}
@@ -181,35 +182,33 @@ const ServiceForm: React.FC<React.ComponentProps<typeof ServiceSheet>> = ({ onCl
                 labelSize={11.5}
               />
               {atBusiness && (
-                <p style={{ marginTop: 8, fontSize: textPx(12), lineHeight: 1.5, color: INK.chS }}>
-                  Sessions you run at a business are set by that business. Pick In person or Online for your own.
-                </p>
+                <p style={{ marginTop: 8, fontSize: textPx(12), lineHeight: 1.5, color: INK.chS }}>{t("Sessions you run at a business are set by that business. Pick In person or Online for your own.")}</p>
               )}
             </div>
             <div className="min-w-0">
-              <FieldLabel htmlFor="svc-desc">Description</FieldLabel>
+              <FieldLabel htmlFor="svc-desc">{t("Description")}</FieldLabel>
               <input id="svc-desc" value={description} maxLength={500} onChange={(e) => setDescription(e.target.value)} className="w-full outline-none" style={{ ...wellStyle(), height: 40 }} />
             </div>
-            <FieldButton label="Who can book" value={AUDIENCE_LABEL[audience]} ariaLabel={`Who can book: ${AUDIENCE_LABEL[audience]}. Change it in Availability`} onClick={onOpenAvailability} />
+            <FieldButton label={t("Who can book")} value={t(AUDIENCE_LABEL[audience])} ariaLabel={t("Who can book: {audience}. Change it in Availability", { audience: t(AUDIENCE_LABEL[audience]) })} onClick={onOpenAvailability} />
           </>
         ) : (
           <>
             <div className="grid" style={{ gridTemplateColumns: kind === "package" ? "minmax(0,1fr) minmax(0,1fr)" : "minmax(0,1fr)", gap: 12 }}>
-              <FieldInput label="Price" value={price} onChange={setPrice} placeholder="Free" inputMode="decimal" />
-              {kind === "package" && <FieldInput label="Sessions" value={sessions} onChange={(v) => setSessions(v.replace(/\D/g, ""))} inputMode="numeric" />}
+              <FieldInput label={t("Price")} value={price} onChange={setPrice} placeholder={t("Free")} inputMode="decimal" />
+              {kind === "package" && <FieldInput label={t("Sessions")} value={sessions} onChange={(v) => setSessions(v.replace(/\D/g, ""))} inputMode="numeric" />}
             </div>
             <div>
-              {label("Billed")}
+              {label(t("Billed"))}
               <SegmentedTabs items={BILLING_OPTIONS.map((b) => ({ key: b.value, label: b.label }))} activeKey={billing} onChange={(k) => setBilling(k as PlanBilling)} tabHeight={36} labelSize={12} />
             </div>
             <div>
-              {label(`What's included (up to ${PLAN_FEATURES_MAX})`)}
+              {label(t("What's included (up to {PLAN_FEATURES_MAX})", { PLAN_FEATURES_MAX }))}
               <div className="flex flex-col" style={{ gap: 8 }}>
                 {features.map((f, i) => (
                   <div key={i} className="flex items-center" style={{ gap: 8 }}>
                     <input
                       value={f}
-                      aria-label={`Included ${i + 1}`}
+                      aria-label={t("Included {n}", { n: i + 1 })}
                       onChange={(e) => setFeatures((fs) => fs.map((x, k) => (k === i ? e.target.value : x)))}
                       className="flex-1 min-w-0 outline-none"
                       style={{ ...wellStyle(), height: 40 }}
@@ -217,7 +216,7 @@ const ServiceForm: React.FC<React.ComponentProps<typeof ServiceSheet>> = ({ onCl
                     <button
                       type="button"
                       onClick={() => setFeatures((fs) => (fs.length > 1 ? fs.filter((_, k) => k !== i) : [""]))}
-                      aria-label={`Remove included ${i + 1}`}
+                      aria-label={t("Remove included {n}", { n: i + 1 })}
                       className="tap flex items-center justify-center shrink-0"
                       style={{ width: 36, height: 36, borderRadius: 9999, background: INK.soft, color: INK.chF }}
                     >
@@ -228,29 +227,22 @@ const ServiceForm: React.FC<React.ComponentProps<typeof ServiceSheet>> = ({ onCl
               </div>
               {features.length < PLAN_FEATURES_MAX && (
                 <button type="button" onClick={() => setFeatures((fs) => [...fs, ""])} className="tap inline-flex items-center" style={{ gap: 4, marginTop: 8, minHeight: 36, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}>
-                  <Plus size={13} strokeWidth={2.4} aria-hidden /> Add a line
-                </button>
+                  <Plus size={13} strokeWidth={2.4} aria-hidden />{" "}{t("Add a line")}</button>
               )}
             </div>
             <div className="flex items-center justify-between" style={{ gap: 12 }}>
               <span className="min-w-0">
-                <span className="block" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>
-                  Offered
-                </span>
-                <span className="block" style={{ fontSize: textPx(12), color: INK.chF }}>
-                  Clients only see plans that are switched on.
-                </span>
+                <span className="block" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{t("Offered")}</span>
+                <span className="block" style={{ fontSize: textPx(12), color: INK.chF }}>{t("Clients only see plans that are switched on.")}</span>
               </span>
-              <Toggle checked={active} onChange={setActive} label="Offered" />
+              <Toggle checked={active} onChange={setActive} label={t("Offered")} />
             </div>
             {editing && plans.length > 1 && (
               <div className="flex" style={{ gap: 8 }}>
                 <button type="button" onClick={() => void move(-1)} disabled={busy} className="tap inline-flex items-center disabled:opacity-50" style={{ gap: 4, minHeight: 36, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
-                  <ChevronUp size={14} aria-hidden /> Move up
-                </button>
+                  <ChevronUp size={14} aria-hidden />{" "}{t("Move up")}</button>
                 <button type="button" onClick={() => void move(1)} disabled={busy} className="tap inline-flex items-center disabled:opacity-50" style={{ gap: 4, minHeight: 36, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
-                  <ChevronDown size={14} aria-hidden /> Move down
-                </button>
+                  <ChevronDown size={14} aria-hidden />{" "}{t("Move down")}</button>
               </div>
             )}
           </>

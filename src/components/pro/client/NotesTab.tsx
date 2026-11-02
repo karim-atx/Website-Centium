@@ -14,6 +14,7 @@ import { fmtDay } from "./clientFormat";
 import type { ClientPageData } from "./useClientPage";
 import type { ProLane } from "../subtypeLanes";
 import { createNote, deleteNote, fetchNotes, fetchNoteTemplates, NOTE_MAX, updateNote, type NoteKind, type NoteTemplate, type SessionNote } from "../../../services/pro/clientPage";
+import { t, tk } from "../../../i18n/core";
 
 /**
  * Release 3 · CL2 v3 Tab 5 Notes (source gen/r6b.js cpTab6 'Notes', r8
@@ -33,7 +34,7 @@ import { createNote, deleteNote, fetchNotes, fetchNoteTemplates, NOTE_MAX, updat
  */
 
 const KIND_FOR: Record<ProLane, NoteKind> = { full_coaching: "training", nutrition: "nutrition", clinical_overview: "clinical" };
-const KIND_WORD: Record<NoteKind, string> = { training: "Training", nutrition: "Nutrition", clinical: "Clinical", body: "Body" };
+const KIND_WORD: Record<NoteKind, string> = { training: tk("Training"), nutrition: tk("Nutrition"), clinical: tk("Clinical"), body: tk("Body") };
 type Filter = "all" | "session" | "private" | "templates";
 
 export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory: () => void }> = ({ data, lane, onHistory }) => {
@@ -65,7 +66,7 @@ export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory
     const personality = old?.personalityType?.trim();
     if (!injuries && !personality) return;
     imported.current = true;
-    const body = ["From your earlier Health metrics notes:", injuries ? `Current injuries: ${injuries}` : null, personality ? `Personality type: ${personality}` : null].filter(Boolean).join("\n");
+    const body = [t("From your earlier Health metrics notes:"), injuries ? t("Current injuries: {injuries}", { injuries }) : null, personality ? t("Personality type: {personality}", { personality }) : null].filter(Boolean).join("\n");
     void createNote(authUserId, clientId, KIND_FOR[lane], body.slice(0, NOTE_MAX), false).then((r) => {
       if (!r.ok) {
         imported.current = false;
@@ -88,12 +89,12 @@ export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory
   );
 
   const chips: { key: Filter; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "session", label: "Session" },
-    { key: "private", label: "Private" },
-    { key: "templates", label: "Templates" },
+    { key: "all", label: t("All") },
+    { key: "session", label: t("Session") },
+    { key: "private", label: t("Private") },
+    { key: "templates", label: t("Templates") },
   ];
-  const me = user.firstName?.trim() || "You";
+  const me = user.firstName?.trim() || t("You");
 
   return (
     <>
@@ -103,13 +104,13 @@ export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search notes"
-          aria-label="Search notes"
+          placeholder={t("Search notes")}
+          aria-label={t("Search notes")}
           className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-faint"
           style={{ fontSize: textPx(14), color: INK.ch }}
         />
       </label>
-      <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 12 }} role="tablist" aria-label="Show">
+      <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 12 }} role="tablist" aria-label={t("Show")}>
         {chips.map((c) => {
           const on = filter === c.key;
           return (
@@ -128,7 +129,7 @@ export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory
         })}
       </div>
       <div className="flex" style={{ marginBottom: 12 }}>
-        <CtaButton size="base" variant="secondary" icon={<Plus size={15} />} label="Add a note" onClick={() => setSheet({ note: null })} />
+        <CtaButton size="base" variant="secondary" icon={<Plus size={15} />} label={t("Add a note")} onClick={() => setSheet({ note: null })} />
       </div>
       {notes.offline && <OfflineLine />}
 
@@ -136,7 +137,7 @@ export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory
         templates === null ? (
           <ProCardSkeleton lines={2} />
         ) : templates.length === 0 ? (
-          <EmptyState icon={FileText} title="No templates yet" line="Save templates in More, Note templates, to start notes faster." />
+          <EmptyState icon={FileText} title={t("No templates yet")} line={t("Save templates in More, Note templates, to start notes faster.")} />
         ) : (
           <div className="flex flex-col" style={{ gap: 8 }}>
             {templates.map((t) => (
@@ -154,7 +155,7 @@ export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory
       ) : notes.list === null ? (
         <ListSkeleton rows={2} row={() => <ProCardSkeleton lines={3} />} />
       ) : shown.length === 0 ? (
-        <EmptyState icon={FileText} title={q || filter !== "all" ? "No notes match" : "No notes yet"} line={q || filter !== "all" ? "Try another word or filter." : `Notes are private to you unless you share one with ${firstName}.`} />
+        <EmptyState icon={FileText} title={q || filter !== "all" ? t("No notes match") : t("No notes yet")} line={q || filter !== "all" ? t("Try another word or filter.") : t("Notes are private to you unless you share one with {firstName}.", { firstName })} />
       ) : (
         <div className="flex flex-col" style={{ gap: 8 }}>
           {shown.map((n) => {
@@ -162,22 +163,20 @@ export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory
             return (
               <button key={n.id} type="button" onClick={() => setSheet({ note: n })} className="tap text-start" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 14 }}>
                 <span className="flex items-center justify-between" style={{ gap: 8 }}>
-                  <span style={{ fontSize: textPx(12), fontWeight: 700, color: INK.ch }}>{`${n.sharedWithClient || n.eventId ? `${KIND_WORD[n.kind]} note` : "Private"} · ${fmtDay(n.createdAt)}`}</span>
+                  <span style={{ fontSize: textPx(12), fontWeight: 700, color: INK.ch }}>{`${n.sharedWithClient || n.eventId ? t("{kind} note", { kind: t(KIND_WORD[n.kind]) }) : t("Private")} · ${fmtDay(n.createdAt)}`}</span>
                   {n.eventId ? (
-                    <Chip label="Session" tone="pr" />
+                    <Chip label={t("Session")} tone="pr" />
                   ) : n.sharedWithClient ? (
-                    <Chip label={`${firstName} sees this`} tone="done" />
+                    <Chip label={t("{firstName} sees this", { firstName })} tone="done" />
                   ) : (
                     <span className="inline-flex items-center" style={{ gap: 3, fontSize: textPx(10.5), fontWeight: 700, color: INK.chF }}>
-                      <Lock size={11} strokeWidth={2} aria-hidden />
-                      Only you
-                    </span>
+                      <Lock size={11} strokeWidth={2} aria-hidden />{t("Only you")}</span>
                   )}
                 </span>
                 <span className="block" style={{ fontSize: textPx(13), color: INK.chS, lineHeight: 1.5, marginTop: 6, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
                   {n.body}
                 </span>
-                <span className="block" style={{ fontSize: textPx(10.5), color: INK.chT, marginTop: 8 }}>{`${me}${edited ? " · edited" : ""}`}</span>
+                <span className="block" style={{ fontSize: textPx(10.5), color: INK.chT, marginTop: 8 }}>{`${me}${edited ? t(" · edited") : ""}`}</span>
               </button>
             );
           })}
@@ -185,9 +184,7 @@ export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory
       )}
 
       <button type="button" onClick={onHistory} className="tap flex items-center" style={{ gap: 6, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep, padding: "6px 2px", minHeight: 44, marginTop: 4 }}>
-        <History size={14} strokeWidth={2} aria-hidden />
-        Change history
-      </button>
+        <History size={14} strokeWidth={2} aria-hidden />{t("Change history")}</button>
 
       <NoteSheet
         key={sheet ? sheet.note?.id ?? `new:${sheet.body ?? ""}` : "closed"}
@@ -198,7 +195,7 @@ export const NotesTab: React.FC<{ data: ClientPageData; lane: ProLane; onHistory
         templates={templates ?? []}
         onClose={() => setSheet(null)}
         onSave={async (body, shared) => {
-          if (!authUserId) return "Couldn't save the note. Try again.";
+          if (!authUserId) return t("Couldn't save the note. Try again.");
           const r = sheet?.note ? await updateNote(sheet.note.id, body, shared) : await createNote(authUserId, clientId, KIND_FOR[lane], body, shared);
           if (!r.ok) return r.message;
           setSheet(null);
@@ -245,8 +242,8 @@ const NoteSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={note ? "Edit note" : "New note"}
-      footer={<CtaButton size="sheet" className="w-full" label="Save note" loading={busy} disabled={!body.trim()} onClick={() => void run(() => onSave(body, shared))} />}
+      title={note ? t("Edit note") : t("New note")}
+      footer={<CtaButton size="sheet" className="w-full" label={t("Save note")} loading={busy} disabled={!body.trim()} onClick={() => void run(() => onSave(body, shared))} />}
     >
       {!note && templates.length > 0 && (
         <button
@@ -256,25 +253,23 @@ const NoteSheet: React.FC<{
           className="tap flex items-center relative before:absolute before:-inset-3 before:content-['']"
           style={{ gap: 6, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep, marginBottom: 10 }}
         >
-          <FileText size={14} strokeWidth={2} aria-hidden />
-          Start from a template
-        </button>
+          <FileText size={14} strokeWidth={2} aria-hidden />{t("Start from a template")}</button>
       )}
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
         maxLength={NOTE_MAX}
         rows={7}
-        aria-label="Note"
-        placeholder="Write the note"
+        aria-label={t("Note")}
+        placeholder={t("Write the note")}
         className="w-full outline-none placeholder:text-charcoal-faint resize-y"
         style={{ minHeight: 140, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "10px 12px", fontSize: textPx(14), color: INK.ch, lineHeight: 1.45 }}
       />
       <div className="flex items-center justify-between" style={{ gap: 16, borderRadius: 12, background: INK.soft, padding: "10px 12px", marginTop: 12 }}>
-        <span style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{`${firstName} can see this`}</span>
-        <Toggle checked={shared} onChange={setShared} label={`${firstName} can see this`} />
+        <span style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{t("{firstName} can see this", { firstName })}</span>
+        <Toggle checked={shared} onChange={setShared} label={t("{firstName} can see this", { firstName })} />
       </div>
-      <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 6 }}>Off keeps the note private to you.</p>
+      <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 6 }}>{t("Off keeps the note private to you.")}</p>
       {error && (
         <p role="alert" style={{ marginTop: 8, fontSize: textPx(12), fontWeight: 600, color: INK.hi }}>
           {error}
@@ -288,14 +283,14 @@ const NoteSheet: React.FC<{
           style={{ gap: 6, marginTop: 14, minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.hi }}
         >
           <Trash2 size={14} strokeWidth={2} aria-hidden />
-          {confirmDelete ? "Tap again to delete" : "Delete note"}
+          {confirmDelete ? t("Tap again to delete") : t("Delete note")}
         </button>
       )}
       <PopupMenu
         open={!!tplEl}
         onClose={() => setTplEl(null)}
         anchor={tplEl}
-        heading="Templates"
+        heading={t("Templates")}
         options={templates.map((t) => ({ value: t.id, label: t.title }))}
         onSelect={(id) => {
           const t = templates.find((x) => x.id === id);

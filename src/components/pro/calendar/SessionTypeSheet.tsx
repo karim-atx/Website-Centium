@@ -11,6 +11,7 @@ import { deleteSessionType, saveSessionType, type LocationKind, type SessionType
 import { FieldButton, FieldInput, FieldLabel } from "./calendarFields";
 import { DEFAULT_SESSION } from "./calendarItems";
 import { Trash2 } from "lucide-react";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · W4 CA16 Session type · Detail and edit (source/gen/r6a.js
@@ -94,20 +95,20 @@ export const SessionTypeSheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={onClose}
-        title="Session type"
-        footer={<CtaButton size="sheet" className="w-full" label="Save session type" loading={busy} disabled={!valid} onClick={() => void save()} />}
+        title={t("Session type")}
+        footer={<CtaButton size="sheet" className="w-full" label={t("Save session type")} loading={busy} disabled={!valid} onClick={() => void save()} />}
       >
         <div className="flex flex-col" style={{ gap: 14 }}>
-          <FieldInput label="Name" value={name} onChange={setName} maxLength={60} />
+          <FieldInput label={t("Name")} value={name} onChange={setName} maxLength={60} />
           <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
             <div className="min-w-0">
-              <FieldButton label="Duration" value={`${duration} min`} ariaLabel={`Duration, ${duration} min`} open={!!durAnchor} onClick={(e) => setDurAnchor(e.currentTarget)} />
+              <FieldButton label={t("Duration")} value={t("{duration} min", { duration })} ariaLabel={t("Duration, {duration} min", { duration })} open={!!durAnchor} onClick={(e) => setDurAnchor(e.currentTarget)} />
               <PopupMenu
                 open={!!durAnchor}
                 onClose={() => setDurAnchor(null)}
                 anchor={durAnchor}
                 matchWidth={durAnchor}
-                options={durations.map((d) => ({ value: String(d), label: `${d} min` }))}
+                options={durations.map((d) => ({ value: String(d), label: t("{d} min", { d }) }))}
                 selected={String(duration)}
                 onSelect={(v) => {
                   setDuration(Number(v));
@@ -116,14 +117,14 @@ export const SessionTypeSheet: React.FC<{
               />
             </div>
             <div className="min-w-0">
-              <FieldButton label="Buffer after" value={`${buffer} min`} ariaLabel={`Buffer after, ${buffer} min`} open={!!bufAnchor} onClick={(e) => setBufAnchor(e.currentTarget)} />
+              <FieldButton label={t("Buffer after")} value={t("{buffer} min", { buffer })} ariaLabel={t("Buffer after, {buffer} min", { buffer })} open={!!bufAnchor} onClick={(e) => setBufAnchor(e.currentTarget)} />
               <PopupMenu
                 open={!!bufAnchor}
                 onClose={() => setBufAnchor(null)}
                 anchor={bufAnchor}
                 matchWidth={bufAnchor}
                 align="right"
-                options={buffers.map((d) => ({ value: String(d), label: `${d} min` }))}
+                options={buffers.map((d) => ({ value: String(d), label: t("{d} min", { d }) }))}
                 selected={String(buffer)}
                 onSelect={(v) => {
                   setBuffer(Number(v));
@@ -132,14 +133,14 @@ export const SessionTypeSheet: React.FC<{
               />
             </div>
           </div>
-          <FieldInput label="Price" value={price} onChange={setPrice} inputMode="decimal" placeholder={type?.currency === "USD" || !type ? "$0" : "0"} />
+          <FieldInput label={t("Price")} value={price} onChange={setPrice} inputMode="decimal" placeholder={type?.currency === "USD" || !type ? "$0" : "0"} />
           <div>
-            <FieldLabel>Location</FieldLabel>
+            <FieldLabel>{t("Location")}</FieldLabel>
             <SegmentedTabs
               items={[
-                { key: "in_person", label: "In person" },
-                { key: "online", label: "Online" },
-                { key: "both", label: "Both" },
+                { key: "in_person", label: t("In person") },
+                { key: "online", label: t("Online") },
+                { key: "both", label: t("Both") },
               ]}
               activeKey={loc}
               onChange={(k) => setLoc(k as Loc)}
@@ -148,17 +149,15 @@ export const SessionTypeSheet: React.FC<{
             />
           </div>
           <div>
-            <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 8 }}>
-              Colour
-            </span>
-            <div className="flex flex-wrap" role="radiogroup" aria-label="Colour" style={{ gap: 8 }}>
+            <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 8 }}>{t("Colour")}</span>
+            <div className="flex flex-wrap" role="radiogroup" aria-label={t("Colour")} style={{ gap: 8 }}>
               {EVENT_SWATCHES.map((c) => (
                 <button
                   key={c}
                   type="button"
                   role="radio"
                   aria-checked={colour === c}
-                  aria-label={`Colour ${c}`}
+                  aria-label={t("Colour {c}", { c })}
                   onClick={() => setColour(c)}
                   className="tap shrink-0 rounded-full"
                   style={{ width: 32, height: 32, background: c, boxShadow: colour === c ? `0 0 0 1px rgb(var(--c-cream)), 0 0 0 3px ${INK.ch}` : "inset 0 0 0 1px rgba(36,31,27,0.12)" }}
@@ -173,21 +172,19 @@ export const SessionTypeSheet: React.FC<{
           </p>
         )}
         {type && (
-          <button type="button" onClick={() => setConfirm(true)} className="tap block w-full text-center" style={{ marginTop: 18, minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.hi }}>
-            Delete session type
-          </button>
+          <button type="button" onClick={() => setConfirm(true)} className="tap block w-full text-center" style={{ marginTop: 18, minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.hi }}>{t("Delete session type")}</button>
         )}
       </BottomSheet>
       <CentredPopup
         open={confirm}
         onClose={() => setConfirm(false)}
-        title="Delete this session type?"
+        title={t("Delete this session type?")}
         icon={<Trash2 size={22} strokeWidth={2} aria-hidden />}
-        body="Clients can't book it any more. Sessions already booked stay on your calendar."
+        body={t("Clients can't book it any more. Sessions already booked stay on your calendar.")}
       >
         <div className="flex flex-col" style={{ gap: 8 }}>
-          <CtaButton size="page" label="Delete session type" loading={busy} onClick={() => void remove()} />
-          <CtaButton size="page" variant="secondary" label="Keep it" disabled={busy} onClick={() => setConfirm(false)} />
+          <CtaButton size="page" label={t("Delete session type")} loading={busy} onClick={() => void remove()} />
+          <CtaButton size="page" variant="secondary" label={t("Keep it")} disabled={busy} onClick={() => setConfirm(false)} />
         </div>
       </CentredPopup>
     </>

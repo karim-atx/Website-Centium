@@ -3,6 +3,7 @@
 // by lane", Karim's answer 6). Pure, so the node tests load it.
 
 import type { ProLane } from "../subtypeLanes";
+import { t, tk, tn } from "../../../i18n/core";
 
 export type HubRange = "today" | "week" | "month";
 
@@ -44,26 +45,26 @@ export interface RingModel {
 }
 
 const TODAY_CAPTION: Record<ProLane, string> = {
-  full_coaching: "workouts logged so far",
-  nutrition: "meals logged so far",
-  clinical_overview: "appointments and follow-ups done",
+  full_coaching: tk("workouts logged so far"),
+  nutrition: tk("meals logged so far"),
+  clinical_overview: tk("appointments and follow-ups done"),
 };
 
 const PERIOD_CAPTION: Record<ProLane, string> = {
-  full_coaching: "workouts on plan",
-  nutrition: "meal-plan adherence",
-  clinical_overview: "on plan",
+  full_coaching: tk("workouts on plan"),
+  nutrition: tk("meal-plan adherence"),
+  clinical_overview: tk("on plan"),
 };
 
 /** Legend for the bars (CL1 "Workouts logged", "Meals logged"; Clinical per the follow-up). */
 export const TODAY_LEGEND: Record<ProLane, string> = {
-  full_coaching: "Workouts logged",
-  nutrition: "Meals logged",
-  clinical_overview: "Appointments and follow-ups",
+  full_coaching: tk("Workouts logged"),
+  nutrition: tk("Meals logged"),
+  clinical_overview: tk("Appointments and follow-ups"),
 };
 
-export const NO_SHARED_DATA = "No shared data yet";
-export const EARLY_CAPTION = "trends start after a week of logs";
+export const NO_SHARED_DATA = tk("No shared data yet");
+export const EARLY_CAPTION = tk("trends start after a week of logs");
 
 /** Completed items by the end of an hour bucket (hub_trend('today') pct is cumulative). */
 const doneBy = (b: Bucket | undefined) => (b && b.pct !== null && b.planned > 0 ? Math.round((b.pct * b.planned) / 100) : 0);
@@ -83,9 +84,9 @@ export function todayModel(rows: Bucket[], lane: ProLane, nowHour: number): Ring
     todayIdx: Math.min(DAY_LAST_HOUR, Math.max(DAY_FIRST_HOUR, nowHour)) - DAY_FIRST_HOUR,
     headline: {
       big: String(done),
-      caption: TODAY_CAPTION[lane],
+      caption: t(TODAY_CAPTION[lane]),
       delta: null,
-      line: planned > 0 ? (lane === "nutrition" ? `of ${planned} main meals today` : lane === "clinical_overview" ? `of ${planned} today` : `of ${planned} planned today`) : "Nothing planned today",
+      line: planned > 0 ? (lane === "nutrition" ? t("of {planned} main meals today", { planned }) : lane === "clinical_overview" ? t("of {planned} today", { planned }) : t("of {planned} planned today", { planned })) : t("Nothing planned today"),
       early: false,
       noData: false,
     },
@@ -108,7 +109,7 @@ export function periodModel(rows: Bucket[], lane: ProLane, todayIdx: number): Ri
     todayIdx,
     headline: {
       big: cur === null || early ? "–" : `${cur}%`,
-      caption: noData ? NO_SHARED_DATA : early ? EARLY_CAPTION : PERIOD_CAPTION[lane],
+      caption: t(noData ? NO_SHARED_DATA : early ? EARLY_CAPTION : PERIOD_CAPTION[lane]),
       delta: !early && cur !== null && prev !== null ? cur - prev : null,
       line: null,
       early,
@@ -119,7 +120,7 @@ export function periodModel(rows: Bucket[], lane: ProLane, todayIdx: number): Ri
 
 /** "9 up · 4 down · 2 steady" (CL1) or "2 new clients" (CL1 Early data). */
 export function stripCounts(trends: ("up" | "down" | "flat" | "new" | null)[], noun = "client"): string {
-  const n = (t: string) => trends.filter((x) => x === t).length;
-  if (trends.length > 0 && trends.every((t) => t === "new")) return `${trends.length} new ${noun}${trends.length === 1 ? "" : "s"}`;
-  return `${n("up")} up · ${n("down")} down · ${n("flat")} steady`;
+  const n = (k: string) => trends.filter((x) => x === k).length;
+  if (trends.length > 0 && trends.every((x) => x === "new")) return noun === "patient" ? tn(trends.length, "{n} new patient", "{n} new patients") : tn(trends.length, "{n} new client", "{n} new clients");
+  return t("{up} up · {down} down · {flat} steady", { up: n("up"), down: n("down"), flat: n("flat") });
 }

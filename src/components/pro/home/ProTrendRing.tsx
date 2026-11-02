@@ -17,13 +17,15 @@ import { textPx } from "../../../theme/textSize";
 import { INK, NO_ICON_SCALE } from "../proInk";
 import type { ProLane } from "../subtypeLanes";
 import { minutesOfDay, range12, time12 } from "../../../utils/time12";
-import { DAY_LETTERS, DAY_SHORT, mondayIndex } from "../../../utils/week";
+import { weekdayNarrow } from "../proDates";
+import { appLocale } from "../../../i18n/format";
 import type { RangeSession } from "../../../services/pro/home";
 import { initialsOf } from "./initials";
 import { G, LEAF_D, actionSectors, arc, barLayout, barMid, barStart, hourAngle, pol, polarOf, sector } from "./ringGeometry";
 import { DAY_FIRST_HOUR, DAY_LAST_HOUR, TODAY_LEGEND, type HubRange, type RingModel } from "./trendModel";
 import { hourLabel12 } from "../../../utils/time12";
 import { signedNum } from "../proRules";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · ProTrendRing (HANDOVER e, CL1 v6; source gen/hub5.js
@@ -212,7 +214,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
     for (let d = 0; d <= 7; d++) {
       const ad = -G.span + d * ((2 * G.span) / 7);
       tick(`t${d}`, ad, G.rTm, INK.chT, 0.6, 1);
-      if (d < 7) labels.push({ a: ad + G.span / 7, text: DAY_LETTERS[d], bold: p.days[d] === p.todayIso });
+      if (d < 7) labels.push({ a: ad + G.span / 7, text: weekdayNarrow(d), bold: p.days[d] === p.todayIso });
     }
   } else {
     for (let m = 1; m <= n; m++) {
@@ -332,7 +334,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
   const h = model?.headline;
   const big = p.empty ? "0" : h?.big ?? "–";
   const bigSize = big.length > 4 ? 38 : 50;
-  const caption = p.empty ? (p.lane === "clinical_overview" ? "patients yet" : "clients yet") : h?.caption ?? "";
+  const caption = p.empty ? (p.lane === "clinical_overview" ? t("patients yet") : t("clients yet")) : h?.caption ?? "";
   const prevSession = p.next;
 
   // ---- scrub tooltip text ----
@@ -344,21 +346,26 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
         ? p.sessions.filter((s) => Math.floor((minutesOfDay(s.startTime) ?? 0) / 60) === DAY_FIRST_HOUR + scrub)
         : p.sessions.filter((s) => s.date === p.days[scrub]);
     const title = p.range === "today" ? hourLabel12(DAY_FIRST_HOUR + scrub) : dayTitle(p.days[scrub]);
-    const word = p.lane === "clinical_overview" ? "appointment" : "session";
+    const appts = p.lane === "clinical_overview";
+    const list = sessOf
+      .slice(0, 3)
+      .map((s) => `${s.client?.name ?? s.title} ${time12(s.startTime)}`)
+      .join(t(", "));
     const sessions = sessOf.length
-      ? `${sessOf.length} ${word}${sessOf.length === 1 ? "" : "s"}: ${sessOf
-          .slice(0, 3)
-          .map((s) => `${s.client?.name ?? s.title} ${time12(s.startTime)}`)
-          .join(", ")}`
-      : `No ${word}s`;
+      ? appts
+        ? tn(sessOf.length, "{n} appointment: {list}", "{n} appointments: {list}", { list })
+        : tn(sessOf.length, "{n} session: {list}", "{n} sessions: {list}", { list })
+      : appts
+        ? t("No appointments")
+        : t("No sessions");
     if (p.range === "today") {
-      tooltip = { title, line: b?.value === null || b === undefined ? "Nothing yet" : `${b.value} logged`, sub: "", sessions };
+      tooltip = { title, line: b?.value === null || b === undefined ? t("Nothing yet") : t("{n} logged", { n: b.value }), sub: "", sessions };
     } else {
       const cur = b?.value ?? null;
       const prev = b?.ghost ?? null;
-      const line = cur === null ? "No shared data" : `${cur}% on plan${prev !== null ? ` · ${p.prevWord} ${prev}%` : ""}`;
+      const line = cur === null ? t("No shared data") : prev !== null ? t("{cur}% on plan · {prevWord} {prev}%", { cur, prevWord: p.prevWord, prev }) : t("{cur}% on plan", { cur });
       const d = cur !== null && prev !== null ? cur - prev : null;
-      const sub = d === null ? "" : d === 0 ? "No change" : `${d > 0 ? "Up" : "Down"} ${Math.abs(d)} point${Math.abs(d) === 1 ? "" : "s"}`;
+      const sub = d === null ? "" : d === 0 ? t("No change") : d > 0 ? tn(Math.abs(d), "Up {n} point", "Up {n} points") : tn(Math.abs(d), "Down {n} point", "Down {n} points");
       tooltip = { title, line, sub, sessions };
     }
   }
@@ -377,7 +384,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
         <button
           type="button"
           aria-haspopup="listbox"
-          aria-label={`Client focus, ${p.focusLabel}`}
+          aria-label={t("Client focus, {focus}", { focus: p.focusLabel })}
           onClick={(e) => p.onPicker(e.currentTarget)}
           className="tap inline-flex items-center shrink-0 min-w-0"
           style={{
@@ -398,7 +405,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
           <span className="truncate">{p.focusLabel}</span>
           <ChevronDown size={13} strokeWidth={2} style={{ color: INK.chF, ...NO_ICON_SCALE }} aria-hidden />
         </button>
-        <div role="tablist" aria-label="Range" className="flex items-center ms-auto" style={{ gap: 3, padding: 3, borderRadius: 12, background: dark ? "#242730" : "#F3F3FD" }}>
+        <div role="tablist" aria-label={t("Range")} className="flex items-center ms-auto" style={{ gap: 3, padding: 3, borderRadius: 12, background: dark ? "#242730" : "#F3F3FD" }}>
           {(["today", "week", "month"] as HubRange[]).map((r) => {
             const on = r === p.range;
             return (
@@ -425,7 +432,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
                   color: on ? (dark ? INK.onFill : "#FFFFFF") : dark ? "#B7ABDE" : "#6D50D3",
                 }}
               >
-                {r === "today" ? "Today" : r === "week" ? "Week" : "Month"}
+                {r === "today" ? t("Today") : r === "week" ? t("Week") : t("Month")}
               </button>
             );
           })}
@@ -449,7 +456,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
           <div
             role="slider"
             tabIndex={p.empty ? -1 : 0}
-            aria-label="Trend, use the arrow keys to move through the range"
+            aria-label={t("Trend, use the arrow keys to move through the range")}
             aria-valuemin={0}
             aria-valuemax={n - 1}
             aria-valuenow={scrub ?? Math.max(0, todayIdx)}
@@ -480,13 +487,13 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
             {!p.empty && prevSession && (
               <button
                 type="button"
-                aria-label="Next session, open Calendar"
+                aria-label={t("Next session, open Calendar")}
                 onClick={p.onNext}
                 className="tap inline-flex items-center"
                 style={{ pointerEvents: "auto", marginTop: 7 * k, gap: 3, fontSize: textPx(10.5 * k), fontWeight: 700, color: INK.prDeep, whiteSpace: "nowrap", minHeight: 24 }}
               >
                 <CalendarDays size={Math.round(11 * k)} strokeWidth={2} aria-hidden style={NO_ICON_SCALE} />
-                Next {time12(prevSession.startTime)} · {prevSession.client?.name ?? prevSession.title}
+                {t("Next {time} · {name}", { time: time12(prevSession.startTime), name: prevSession.client?.name ?? prevSession.title })}
                 <ChevronRight size={Math.round(11 * k)} strokeWidth={2.4} aria-hidden style={NO_ICON_SCALE} />
               </button>
             )}
@@ -567,7 +574,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
           {pv && (
             <div
               role="dialog"
-              aria-label="Session preview"
+              aria-label={t("Session preview")}
               className="absolute"
               style={{ insetInlineStart: "-2%", insetInlineEnd: "-2%", top: "22%", zIndex: 6, borderRadius: 18, background: INK.card, border: "1px solid rgba(143,104,246,0.22)", boxShadow: "0 16px 40px rgba(0,0,0,0.22)", padding: 14 }}
               onPointerDown={(e) => e.stopPropagation()}
@@ -584,22 +591,20 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
                   {(pv.location || pv.url) && (
                     <p className="flex items-center" style={{ gap: 4, fontSize: textPx(11.5), color: INK.chF }}>
                       {pv.url ? <Video size={11} strokeWidth={2} aria-hidden /> : <MapPin size={11} strokeWidth={2} aria-hidden />}
-                      {pv.url ? "Online video call" : pv.location}
+                      {pv.url ? t("Online video call") : pv.location}
                     </p>
                   )}
                 </div>
                 {p.next?.key === pv.key && (
-                  <span style={{ fontSize: textPx(10), fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: INK.prDeep }}>Next</span>
+                  <span style={{ fontSize: textPx(10), fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: INK.prDeep }}>{t("Next")}</span>
                 )}
               </div>
               <div className="flex" style={{ gap: 6, marginTop: 12 }}>
-                <PreviewBtn label="Open" onClick={() => p.onSession(pv, "open")} />
-                <PreviewBtn label="Reschedule" onClick={() => p.onSession(pv, "reschedule")} />
-                {pv.client && <PreviewBtn label="Message" primary icon onClick={() => p.onSession(pv, "message")} />}
+                <PreviewBtn label={t("Open")} onClick={() => p.onSession(pv, "open")} />
+                <PreviewBtn label={t("Reschedule")} onClick={() => p.onSession(pv, "reschedule")} />
+                {pv.client && <PreviewBtn label={t("Message")} primary icon onClick={() => p.onSession(pv, "message")} />}
               </div>
-              <button type="button" aria-label="Close preview" onClick={() => setPreview(null)} className="sr-only focus:not-sr-only">
-                Close
-              </button>
+              <button type="button" aria-label={t("Close preview")} onClick={() => setPreview(null)} className="sr-only focus:not-sr-only">{t("Close")}</button>
             </div>
           )}
         </div>
@@ -639,11 +644,11 @@ const Delta: React.FC<{ value: number }> = ({ value }) => {
 const Legend: React.FC<{ lane: ProLane; range: HubRange; prevWord: string }> = ({ lane, range, prevWord }) => {
   const dark = useIsDark();
   const items: [React.ReactNode, string][] = [
-    [<span key="a" style={{ width: 9, height: 9, borderRadius: 2, background: INK.pr }} />, range === "today" ? TODAY_LEGEND[lane] : "Adherence"],
+    [<span key="a" style={{ width: 9, height: 9, borderRadius: 2, background: INK.pr }} />, range === "today" ? t(TODAY_LEGEND[lane]) : t("Adherence")],
   ];
   if (range !== "today") items.push([<span key="g" style={{ width: 12, height: 0, borderTop: `1.6px dashed ${INK.tealDark}` }} />, prevWord.charAt(0).toUpperCase() + prevWord.slice(1)]);
-  items.push([<span key="d" style={{ width: 8, height: 8, borderRadius: 9999, background: INK.tealDark }} />, "Done"]);
-  items.push([<span key="s" style={{ width: 8, height: 8, borderRadius: 9999, border: `1.6px solid ${dark ? "#C3B3FB" : "#7D6BB5"}` }} />, lane === "clinical_overview" ? "Appointments" : "Sessions"]);
+  items.push([<span key="d" style={{ width: 8, height: 8, borderRadius: 9999, background: INK.tealDark }} />, t("Done")]);
+  items.push([<span key="s" style={{ width: 8, height: 8, borderRadius: 9999, border: `1.6px solid ${dark ? "#C3B3FB" : "#7D6BB5"}` }} />, lane === "clinical_overview" ? t("Appointments") : t("Sessions")]);
   return (
     <div className="flex flex-wrap justify-center" style={{ gap: "4px 12px", marginTop: 4 }}>
       {items.map(([mark, label]) => (
@@ -670,9 +675,8 @@ export const Initials: React.FC<{ text: string; size: number; tone?: "pr" | "gol
   );
 };
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 function dayTitle(iso: string | undefined): string {
   if (!iso) return "";
   const d = new Date(`${iso}T00:00:00`);
-  return `${DAY_SHORT[mondayIndex(d.getDay())]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  return d.toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
 }

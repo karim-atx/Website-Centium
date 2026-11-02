@@ -6,6 +6,7 @@ import type { Trend } from "../../../services/pro/home";
 import { Initials } from "./ProTrendRing";
 import { initialsOf } from "./initials";
 import { stripCounts } from "./trendModel";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · CL1 client strip (gen/hub5.js strip5): only clients who share.
@@ -31,21 +32,21 @@ export const ClientStrip: React.FC<{ entries: StripEntry[]; noun: string; onOpen
     <div className="flex items-center" style={{ gap: 10, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${INK.b06}` }}>
       <div className="flex" style={{ gap: 6 }}>
         {shown.map((e) => {
-          const t = e.trend;
-          const c = t === "up" ? INK.good : t === "down" ? INK.hi : INK.chT;
-          const Icon = t === "up" ? ArrowUpRight : t === "down" ? ArrowDownRight : t === "new" ? Plus : ArrowRight;
-          const word = t === "up" ? "up" : t === "down" ? "down" : t === "new" ? "new" : t === "flat" ? "flat" : null;
+          const trend = e.trend;
+          const c = trend === "up" ? INK.good : trend === "down" ? INK.hi : INK.chT;
+          const Icon = trend === "up" ? ArrowUpRight : trend === "down" ? ArrowDownRight : trend === "new" ? Plus : ArrowRight;
+          const word = trend === "up" ? t("up") : trend === "down" ? t("down") : trend === "new" ? t("new") : trend === "flat" ? t("flat") : null;
           return (
             <button
               key={e.clientId}
               type="button"
               onClick={() => onOpen(e.clientId)}
-              aria-label={`${e.name}${word ? `, trend ${word}` : ""}. Open profile`}
+              aria-label={word ? t("{name}, trend {word}. Open profile", { name: e.name, word }) : t("{name}. Open profile", { name: e.name })}
               className="tap relative shrink-0"
               style={{ width: 30, height: 30, minHeight: 30 }}
             >
-              <Initials text={initialsOf(e.name)} size={30} tone={t === "down" ? "gold" : t === "up" ? "teal" : "pr"} />
-              {t && (
+              <Initials text={initialsOf(e.name)} size={30} tone={trend === "down" ? "gold" : trend === "up" ? "teal" : "pr"} />
+              {trend && (
                 <span
                   aria-hidden
                   className="absolute flex items-center justify-center"
@@ -93,7 +94,7 @@ export const FocusRow: React.FC<{ name: string; line: string; onOpen: () => void
       </span>
     </span>
     <span className="flex items-center" style={{ gap: 2, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
-      Profile
+      {t("Profile")}
       <ChevronRight size={12} strokeWidth={2.4} aria-hidden style={NO_ICON_SCALE} />
     </span>
   </button>

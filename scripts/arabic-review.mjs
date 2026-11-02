@@ -30,6 +30,11 @@ const AREAS = [
   ["safety", "Referrals, vouchers, reviews and first messages"],
   ["venues", "Class no-shows, gym pass and member codes"],
   ["certificates", "Your certificates (Courses)"],
+  ["pro", "Professional tools: Home, notifications and shared parts"],
+  ["proclients", "Professional tools: Clients and a client's page"],
+  ["proprofile", "Professional tools: More, profile, services and credentials"],
+  ["procalendar", "Professional tools: Calendar"],
+  ["promessages", "Professional tools: Messages"],
 ];
 
 const rows = [];

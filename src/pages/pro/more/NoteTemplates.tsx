@@ -19,13 +19,14 @@ import { moveItem, useReorder } from "../../../components/pro/forms/useReorder";
 import { NOTE_BODY_MAX, NOTE_TITLE_MAX, SECTION_MAX, bodyOf, sectionsOf, templateMeta } from "../../../components/pro/forms/noteTemplateModel";
 import { deleteNoteTemplate, fetchMyNoteTemplates, saveNoteTemplate, type NoteTemplateRow, type TemplateKind } from "../../../services/pro/noteTemplates";
 import { PRO_ROUTES } from "../../../components/pro/subtypeLanes";
+import { t, tk } from "../../../i18n/core";
 
-const OFFLINE = "You're offline. Try again when you're connected.";
+const OFFLINE = tk("You're offline. Try again when you're connected.");
 type Tab = "training" | "nutrition" | "clinical";
 const TABS: { key: Tab; label: string }[] = [
-  { key: "training", label: "Training" },
-  { key: "nutrition", label: "Nutrition" },
-  { key: "clinical", label: "Clinical" },
+  { key: "training", label: tk("Training") },
+  { key: "nutrition", label: tk("Nutrition") },
+  { key: "clinical", label: tk("Clinical") },
 ];
 const Row: React.FC = () => <ProCardSkeleton lines={2} />;
 
@@ -74,8 +75,8 @@ export default function NoteTemplates() {
   const shown = (list ?? []).filter((t) => t.kind === tab);
   return (
     <div style={{ paddingBottom: 120 }}>
-      <PageHeader title="Note templates" subtitle="Start notes the same way every time" showBack onBack={back} />
-      <SegmentedTabs className="mb-3" items={TABS} activeKey={tab} onChange={(k) => setTab(k as Tab)} tabHeight={36} labelSize={12} />
+      <PageHeader title={t("Note templates")} subtitle={t("Start notes the same way every time")} showBack onBack={back} />
+      <SegmentedTabs className="mb-3" items={TABS.map((x) => ({ ...x, label: t(x.label) }))} activeKey={tab} onChange={(k) => setTab(k as Tab)} tabHeight={36} labelSize={12} />
       {state === "offline" && list && <OfflineLine />}
       {state === "loading" && !list ? (
         <ListSkeleton rows={3} row={Row} />
@@ -84,9 +85,9 @@ export default function NoteTemplates() {
       ) : shown.length ? (
         <ListCard rows={shown.map((t) => ({ key: t.id, icon: FileText, title: t.title, meta: templateMeta(t.body), onClick: () => setEditing(t) }))} />
       ) : (
-        <EmptyState icon={FileText} title="No templates yet" line="Make one with +. It shows in the Templates filter when you write a note on a client's page." />
+        <EmptyState icon={FileText} title={t("No templates yet")} line={t("Make one with +. It shows in the Templates filter when you write a note on a client's page.")} />
       )}
-      <Fab label="New template" icon={Plus} onClick={() => setEditing("new")} />
+      <Fab label={t("New template")} icon={Plus} onClick={() => setEditing("new")} />
       <EditTemplateSheet
         open={editing !== null}
         row={editing === "new" ? null : editing}
@@ -129,77 +130,69 @@ export const EditTemplateSheet: React.FC<{ open: boolean; row: NoteTemplateRow |
 
   const save = async () => {
     if (!authUserId || busy) return;
-    if (!name.trim()) return setErr("Give the template a name.");
-    if (!body.trim()) return setErr(sections === null ? "Write the template." : "Add at least one section.");
-    if (body.length > NOTE_BODY_MAX) return setErr("The template is too long.");
-    if (!online) return setErr(OFFLINE);
+    if (!name.trim()) return setErr(t("Give the template a name."));
+    if (!body.trim()) return setErr(sections === null ? t("Write the template.") : t("Add at least one section."));
+    if (body.length > NOTE_BODY_MAX) return setErr(t("The template is too long."));
+    if (!online) return setErr(t(OFFLINE));
     setBusy(true);
     setErr(null);
     const r = await saveNoteTemplate(authUserId, row?.id ?? null, row?.kind ?? kind, name, body);
     setBusy(false);
     if (!r.ok) return setErr(r.message);
-    onSaved("Template saved.");
+    onSaved(t("Template saved."));
   };
   const remove = async () => {
     if (!row || busy) return;
-    if (!online) return setErr(OFFLINE);
+    if (!online) return setErr(t(OFFLINE));
     setBusy(true);
     const r = await deleteNoteTemplate(row.id);
     setBusy(false);
     if (!r.ok) return setErr(r.message);
-    onSaved("Template removed.");
+    onSaved(t("Template removed."));
   };
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={row ? "Edit template" : "New template"} footer={<CtaButton className="w-full" size="sheet" label="Save template" loading={busy} onClick={() => void save()} />}>
-      <label htmlFor={nameId} className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-        Name
-      </label>
+    <BottomSheet open={open} onClose={onClose} title={row ? t("Edit template") : t("New template")} footer={<CtaButton className="w-full" size="sheet" label={t("Save template")} loading={busy} onClick={() => void save()} />}>
+      <label htmlFor={nameId} className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>{t("Name")}</label>
       <input id={nameId} value={name} maxLength={NOTE_TITLE_MAX} onChange={(e) => setName(e.target.value)} className="outline-none focus:border-primary" style={{ ...fieldStyle(), height: 40 }} />
       <div style={{ height: 12 }} />
       {sections === null ? (
         <>
-          <label htmlFor={textId} className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-            Template
-          </label>
+          <label htmlFor={textId} className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>{t("Template")}</label>
           <textarea id={textId} value={text} maxLength={NOTE_BODY_MAX} rows={8} onChange={(e) => setText(e.target.value)} className="block w-full outline-none resize-none focus:border-primary" style={{ ...fieldStyle(), padding: "10px 12px", lineHeight: 1.45 }} />
         </>
       ) : (
         <>
-          <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 8 }}>Sections</p>
+          <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 8 }}>{t("Sections")}</p>
           {sections.map((s, i) => {
             const grip = gripProps(i);
             return (
               <div key={i} ref={register(i)} className="flex items-center" style={{ gap: 8, background: INK.soft, borderRadius: 12, padding: "10px 12px", marginBottom: 6 }}>
-                <button type="button" aria-label={`Move section ${i + 1} of ${sections.length}. Use the arrow keys.`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-3 before:content-['']" {...grip} style={{ width: 14, height: 20, ...grip.style }}>
+                <button type="button" aria-label={t("Move section {n} of {total}. Use the arrow keys.", { n: i + 1, total: sections.length })} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-3 before:content-['']" {...grip} style={{ width: 14, height: 20, ...grip.style }}>
                   <GripVertical size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
                 </button>
                 <input
                   value={s}
                   maxLength={SECTION_MAX}
                   onChange={(e) => setSections((cur) => (cur ? cur.map((x, j) => (j === i ? e.target.value : x)) : cur))}
-                  placeholder="Section name"
-                  aria-label={`Section ${i + 1}`}
+                  placeholder={t("Section name")}
+                  aria-label={t("Section {n}", { n: i + 1 })}
                   className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-tertiary"
                   style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, height: 24 }}
                 />
-                <button type="button" onClick={() => setSections((cur) => (cur ? cur.filter((_, j) => j !== i) : cur))} aria-label={`Remove section ${i + 1}`} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ width: 20, height: 20 }}>
+                <button type="button" onClick={() => setSections((cur) => (cur ? cur.filter((_, j) => j !== i) : cur))} aria-label={t("Remove section {n}", { n: i + 1 })} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ width: 20, height: 20 }}>
                   <X size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
                 </button>
               </div>
             );
           })}
           <button type="button" onClick={() => setSections((cur) => [...(cur ?? []), ""])} className="tap flex items-center relative before:absolute before:-inset-y-3 before:inset-x-0 before:content-['']" style={{ gap: 4, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep, marginTop: 6 }}>
-            <Plus size={13} strokeWidth={2.4} aria-hidden />
-            Add section
-          </button>
+            <Plus size={13} strokeWidth={2.4} aria-hidden />{t("Add section")}</button>
         </>
       )}
       {row && (
         <button type="button" onClick={() => void remove()} disabled={busy} className="tap flex items-center" style={{ gap: 6, marginTop: 18, minHeight: 44, fontSize: textPx(12.5), fontWeight: 700, color: INK.hi }}>
-          <Trash2 size={14} strokeWidth={2} aria-hidden />
-          Remove template
-        </button>
+          <Trash2 size={14} strokeWidth={2} aria-hidden />{t("Remove template")}</button>
       )}
       {err && (
         <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginTop: 10 }}>

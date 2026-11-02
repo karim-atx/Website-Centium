@@ -17,9 +17,10 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
-import type { Read, Write, ClientStage } from "./clients";
+import { STAGE_LABEL, type Read, type Write, type ClientStage } from "./clients";
 import type { AccessCategory } from "./access";
 import { ACCESS_CATEGORIES } from "../consent";
+import { t, tx } from "../../i18n/core";
 
 const failed = (error: unknown, fallback: string): Write => ({ ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : fallback });
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
@@ -69,21 +70,21 @@ export async function fetchNotes(me: string, clientId: string): Promise<Read<Ses
 
 export async function createNote(me: string, clientId: string, kind: NoteKind, body: string, shared: boolean): Promise<Write> {
   const text = body.trim();
-  if (!text) return { ok: false, message: "Write something first." };
+  if (!text) return { ok: false, message: t("Write something first.") };
   const { error } = await from("session_notes").insert({ professional_id: me, client_id: clientId, kind, body: text, shared_with_client: shared } as never);
-  return error ? failed(error, "Couldn't save the note. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't save the note. Try again.")) : { ok: true };
 }
 
 export async function updateNote(id: string, body: string, shared: boolean): Promise<Write> {
   const text = body.trim();
-  if (!text) return { ok: false, message: "Write something first." };
+  if (!text) return { ok: false, message: t("Write something first.") };
   const { error } = await from("session_notes").update({ body: text, shared_with_client: shared } as never).eq("id", id);
-  return error ? failed(error, "Couldn't save the note. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't save the note. Try again.")) : { ok: true };
 }
 
 export async function deleteNote(id: string): Promise<Write> {
   const { error } = await from("session_notes").delete().eq("id", id);
-  return error ? failed(error, "Couldn't delete the note. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't delete the note. Try again.")) : { ok: true };
 }
 
 export interface NoteTemplate {
@@ -113,7 +114,12 @@ export interface ChangeEntry {
 }
 
 /** W3-4: the sharing switch names, as the client's own sharing screen words them. */
-const SHARING_WORD: Record<string, string> = Object.fromEntries(ACCESS_CATEGORIES.map((c) => [c.category, c.label.toLowerCase()]));
+const sharingWord = (category: string): string | undefined => {
+  const c = ACCESS_CATEGORIES.find((x) => x.category === category);
+  if (!c) return undefined;
+  const label = t(c.label);
+  return label === c.label ? label.toLowerCase() : label;
+};
 
 /**
  * W3-4 (20261216070000): the client_access_grants trigger writes subject_type
@@ -123,11 +129,11 @@ const SHARING_WORD: Record<string, string> = Object.fromEntries(ACCESS_CATEGORIE
  */
 export function sharingLine(firstName: string, summary: Record<string, unknown>): string {
   const cat = typeof summary.category === "string" ? summary.category : "";
-  const word = SHARING_WORD[cat] ?? (cat ? cat.replace(/_/g, " ") : "their");
-  return `${firstName.trim() || "Your client"} changed ${word} sharing`;
+  const word = sharingWord(cat) ?? (cat ? cat.replace(/_/g, " ") : t("their"));
+  return t("{name} changed {word} sharing", { name: firstName.trim() || t("Your client"), word });
 }
 
-const STAGE_WORD: Record<ClientStage, string> = { onboarding: "Onboarding", active: "Active", paused: "Paused", completed: "Completed" };
+const STAGE_WORD = STAGE_LABEL;
 
 /** pro_change_log.summary is jsonb written by the assign, plan and target functions; this reads the keys it can. */
 export function changeLine(subjectType: string, summary: Record<string, unknown>): string {
@@ -137,15 +143,17 @@ export function changeLine(subjectType: string, summary: Record<string, unknown>
   const name = str("name") ?? str("title") ?? str("programme") ?? str("plan");
   // W5: the subject words for the Release 3 writers (template_assignment, meal_plan,
   // nutrition_targets, routine = the client's copy edited by the professional).
-  const SUBJECT: Record<string, string> = { template_assignment: "programme", meal_plan: "meal plan", nutrition_targets: "nutrition targets", routine: "their copy of a programme" };
+  const SUBJECT: Record<string, string> = { template_assignment: t("programme"), meal_plan: t("meal plan"), nutrition_targets: t("nutrition targets"), routine: t("their copy of a programme") };
   const subject = SUBJECT[subjectType] ?? subjectType.replace(/_/g, " ");
   if (subjectType === "care_plan" && action === "published") {
-    const v = typeof summary.version === "number" ? ` (version ${summary.version})` : "";
-    return `Published the care plan${v}`;
+    return typeof summary.version === "number" ? t("Published the care plan (version {v})", { v: summary.version }) : t("Published the care plan");
   }
+  // The actions the database writes (assigned, edited, ended, published, set,
+  // connected_by_referral) read in the app's language; anything else stays as written.
+  const VERB: Record<string, string> = { assigned: t("Assigned"), edited: t("Edited"), ended: tx("Ended", "history"), published: t("Published"), set: tx("Set", "history"), connected_by_referral: t("Connected by referral") };
   const verb = action ? action.replace(/_/g, " ") : "Changed";
-  const cap = verb.charAt(0).toUpperCase() + verb.slice(1);
-  return name ? `${cap} ${subject}: ${name}` : `${cap} ${subject}`;
+  const cap = (action && VERB[action]) ?? (action ? verb.charAt(0).toUpperCase() + verb.slice(1) : t("Changed"));
+  return name ? t("{verb} {subject}: {name}", { verb: cap, subject, name }) : t("{verb} {subject}", { verb: cap, subject });
 }
 
 export async function fetchChangeHistory(me: string, clientId: string, clientFirstName: string): Promise<Read<ChangeEntry[]>> {
@@ -167,7 +175,7 @@ export async function fetchChangeHistory(me: string, clientId: string, clientFir
     out.push({
       id: `stage:${r.id}`,
       at: r.changed_at,
-      line: r.from_stage ? `Changed the stage from ${STAGE_WORD[r.from_stage]} to ${STAGE_WORD[r.to_stage]}` : `Started in ${STAGE_WORD[r.to_stage]}`,
+      line: r.from_stage ? t("Changed the stage from {from} to {to}", { from: STAGE_WORD[r.from_stage], to: STAGE_WORD[r.to_stage] }) : t("Started in {stage}", { stage: STAGE_WORD[r.to_stage] }),
       by: "pro",
     });
   }
@@ -279,18 +287,18 @@ export async function fetchCarePlan(me: string, clientId: string): Promise<Read<
 }
 
 export async function createCarePlan(me: string, clientId: string, title: string): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
-  const t = title.trim();
-  if (!t) return { ok: false, message: "Give the plan a name." };
-  const { data, error } = await from("care_plans").insert({ professional_id: me, client_id: clientId, title: t } as never).select("id").single();
-  if (error || !data) return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't create the care plan. Try again." };
+  const clean = title.trim();
+  if (!clean) return { ok: false, message: t("Give the plan a name.") };
+  const { data, error } = await from("care_plans").insert({ professional_id: me, client_id: clientId, title: clean } as never).select("id").single();
+  if (error || !data) return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't create the care plan. Try again.") };
   return { ok: true, id: (data as unknown as { id: string }).id };
 }
 
 export async function renameCarePlan(id: string, title: string): Promise<Write> {
-  const t = title.trim();
-  if (!t) return { ok: false, message: "Give the plan a name." };
-  const { error } = await from("care_plans").update({ title: t } as never).eq("id", id);
-  return error ? failed(error, "Couldn't save. Try again.") : { ok: true };
+  const clean = title.trim();
+  if (!clean) return { ok: false, message: t("Give the plan a name.") };
+  const { error } = await from("care_plans").update({ title: clean } as never).eq("id", id);
+  return error ? failed(error, t("Couldn't save. Try again.")) : { ok: true };
 }
 
 export interface CareItemDraft {
@@ -304,7 +312,7 @@ export interface CareItemDraft {
 
 export async function addCareItem(planId: string, d: CareItemDraft, position: number): Promise<Write> {
   const body = d.body.trim();
-  if (!body) return { ok: false, message: "Write the item first." };
+  if (!body) return { ok: false, message: t("Write the item first.") };
   const { error } = await from("care_plan_items").insert({
     care_plan_id: planId,
     kind: d.kind,
@@ -315,7 +323,7 @@ export async function addCareItem(planId: string, d: CareItemDraft, position: nu
     threshold_high: d.thresholdHigh ?? null,
     position,
   } as never);
-  return error ? failed(error, "Couldn't save. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't save. Try again.")) : { ok: true };
 }
 
 export async function updateCareItem(id: string, patch: Partial<CareItemDraft>): Promise<Write> {
@@ -324,28 +332,28 @@ export async function updateCareItem(id: string, patch: Partial<CareItemDraft>):
   if (patch.visibleToClient !== undefined) row.visible_to_client = patch.visibleToClient;
   if (patch.kind !== undefined) row.kind = patch.kind;
   const { error } = await from("care_plan_items").update(row as never).eq("id", id);
-  return error ? failed(error, "Couldn't save. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't save. Try again.")) : { ok: true };
 }
 
 export async function deleteCareItem(id: string): Promise<Write> {
   const { error } = await from("care_plan_items").delete().eq("id", id);
-  return error ? failed(error, "Couldn't remove it. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't remove it. Try again.")) : { ok: true };
 }
 
 export async function addFollowUp(planId: string, dueOn: string, note: string): Promise<Write> {
   const { error } = await from("follow_ups").insert({ care_plan_id: planId, due_on: dueOn, note: note.trim() || null } as never);
-  return error ? failed(error, "Couldn't add the follow-up. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't add the follow-up. Try again.")) : { ok: true };
 }
 
 export async function setFollowUpStatus(id: string, status: FollowUp["status"]): Promise<Write> {
   const { error } = await from("follow_ups").update({ status } as never).eq("id", id);
-  return error ? failed(error, "Couldn't save. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't save. Try again.")) : { ok: true };
 }
 
 /** "Save and mark reviewed" (CL6): publish_care_plan snapshots a new version and tells the client. */
 export async function publishCarePlan(id: string, note: string): Promise<{ ok: true; version: number } | { ok: false; message: string }> {
   const { data, error } = await rpc("publish_care_plan", { p_care_plan_id: id, p_note: note.trim() || null });
-  if (error) return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't publish. Try again." };
+  if (error) return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't publish. Try again.") };
   return { ok: true, version: Number(data) };
 }
 
@@ -579,20 +587,20 @@ export async function fetchTermsAcceptance(me: string, clientId: string): Promis
 /** create_client_file registers the row and returns the path; the object is uploaded there (client_files_insert_registered). */
 export async function uploadClientFile(clientId: string, kind: ClientFile["kind"], title: string, file: File): Promise<Write> {
   const { data, error } = await rpc("create_client_file", { p_other_party: clientId, p_kind: kind, p_title: title.trim(), p_filename: file.name });
-  if (error) return failed(error, "Couldn't add the file. Try again.");
+  if (error) return failed(error, t("Couldn't add the file. Try again."));
   const row = ((data ?? []) as { file_id: string; path: string }[])[0];
-  if (!row) return { ok: false, message: "Couldn't add the file. Try again." };
+  if (!row) return { ok: false, message: t("Couldn't add the file. Try again.") };
   const up = await supabase.storage.from("client-files").upload(row.path, file, { contentType: file.type, upsert: false });
   if (up.error) {
     await rpc("delete_client_file", { p_file_id: row.file_id });
-    return { ok: false, message: isOffline(up.error) ? OFFLINE_MESSAGE : "Couldn't upload the file. Try again." };
+    return { ok: false, message: isOffline(up.error) ? OFFLINE_MESSAGE : t("Couldn't upload the file. Try again.") };
   }
   return { ok: true };
 }
 
 export async function deleteClientFile(id: string, path: string): Promise<Write> {
   const { error } = await rpc("delete_client_file", { p_file_id: id });
-  if (error) return failed(error, "Couldn't remove the file. Try again.");
+  if (error) return failed(error, t("Couldn't remove the file. Try again."));
   await supabase.storage.from("client-files").remove([path]);
   return { ok: true };
 }
@@ -605,9 +613,9 @@ export async function askToShare(clientId: string, category: AccessCategory): Pr
   const { error } = await rpc("request_client_access", { p_client_id: clientId, p_category: category, p_message: null });
   if (!error) return { ok: true };
   const msg = (error as { message?: string }).message ?? "";
-  if (/already asked/.test(msg)) return { ok: false, message: "You've already asked. It's waiting for them." };
-  if (/already share/.test(msg)) return { ok: false, message: "They already share this with you." };
-  return failed(error, "Couldn't send the request. Try again.");
+  if (/already asked/.test(msg)) return { ok: false, message: t("You've already asked. It's waiting for them.") };
+  if (/already share/.test(msg)) return { ok: false, message: t("They already share this with you.") };
+  return failed(error, t("Couldn't send the request. Try again."));
 }
 
 export async function fetchPendingAccessRequests(me: string, clientId: string): Promise<AccessCategory[]> {
@@ -768,10 +776,10 @@ export async function fetchClientTargets(clientId: string): Promise<Read<ClientT
 
 /** assign_habit (Full coaching): the client can tick and archive it, not rename it (ATXG4). */
 export async function assignHabit(clientId: string, label: string): Promise<Write> {
-  const t = label.trim();
-  if (!t) return { ok: false, message: "Name the habit first." };
-  const { error } = await rpc("assign_habit", { p_client_id: clientId, p_label: t, p_icon: "custom", p_colour: "lavender" });
-  return error ? failed(error, "Couldn't add the habit. Try again.") : { ok: true };
+  const clean = label.trim();
+  if (!clean) return { ok: false, message: t("Name the habit first.") };
+  const { error } = await rpc("assign_habit", { p_client_id: clientId, p_label: clean, p_icon: "custom", p_colour: "lavender" });
+  return error ? failed(error, t("Couldn't add the habit. Try again.")) : { ok: true };
 }
 
 /** calendar_events.outcome (DB-4) for the sessions listed: completed, no_show, late_cancel. */

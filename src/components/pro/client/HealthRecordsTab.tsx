@@ -24,6 +24,7 @@ import { fetchBiomarkerFlags, fetchSharedResults, type BiomarkerFlag, type Share
 import { formatRange } from "../../../services/labs";
 import type { AccessCategory } from "../../../services/pro/access";
 import type { BloodMarker, ImagingRecord, LabReport, Medication, Surgery } from "../../../types";
+import { t, tk } from "../../../i18n/core";
 
 /**
  * Release 3 · CL2 v4 Tab 3 Health records (Clinical overview; source
@@ -54,15 +55,15 @@ import type { BloodMarker, ImagingRecord, LabReport, Medication, Surgery } from 
 type Sub = "biomarkers" | "labs" | "imaging" | "history";
 
 const PANEL_LABEL: Record<string, string> = {
-  blood_count: "Blood count",
-  lipids: "Lipids",
-  liver: "Liver",
-  kidney: "Kidney",
-  hormones: "Hormones",
-  metabolic: "Metabolic",
-  vitamins_minerals: "Vitamins and minerals",
-  thyroid: "Thyroid",
-  other: "Other",
+  blood_count: tk("Blood count"),
+  lipids: tk("Lipids"),
+  liver: tk("Liver"),
+  kidney: tk("Kidney"),
+  hormones: tk("Hormones"),
+  metabolic: tk("Metabolic"),
+  vitamins_minerals: tk("Vitamins and minerals"),
+  thyroid: tk("Thyroid"),
+  other: tk("Other"),
 };
 
 function sharedToMarker(s: SharedResult): BloodMarker {
@@ -124,7 +125,7 @@ export const HealthRecordsTab: React.FC<{
         results: results.ok ? results.results : [],
         reports: results.ok ? results.panels.filter((p) => !!p.filePath).map((p) => ({ id: p.id, date: p.date, filePath: p.filePath as string, name: p.name, fileName: p.fileName, fileType: p.fileType, filePages: p.filePages, fileBytes: p.fileBytes })).reverse() : [],
         shared: sharedList,
-        error: !markers.ok && !merged.length ? "Couldn't load the results." : null,
+        error: !markers.ok && !merged.length ? t("Couldn't load the results.") : null,
       });
       setFlags(f.ok ? f.data : []);
     })();
@@ -169,12 +170,12 @@ export const HealthRecordsTab: React.FC<{
   const nothing = !access.loading && !labsVisible && !historyOn && imagingCount === 0;
   const onInk = dark ? "#B2D4CF" : "#3C6B65";
   const chips: { label: string; on: boolean }[] = [
-    { label: "Lab results", on: labsOn },
-    { label: "Medical history", on: historyOn },
-    { label: imagingCount ? `Imaging, ${imagingCount} shared` : "Imaging", on: imagingCount > 0 },
-    { label: "Blood pressure", on: access.has("blood_pressure") },
-    { label: "Activity & vitals", on: access.has("health_metrics") },
-    { label: "Body measurements", on: access.has("body_measurements") },
+    { label: t("Lab results"), on: labsOn },
+    { label: t("Medical history"), on: historyOn },
+    { label: imagingCount ? t("Imaging, {imagingCount} shared", { imagingCount }) : t("Imaging"), on: imagingCount > 0 },
+    { label: t("Blood pressure"), on: access.has("blood_pressure") },
+    { label: t("Activity & vitals"), on: access.has("health_metrics") },
+    { label: t("Body measurements"), on: access.has("body_measurements") },
   ];
 
   const locked = (kind: "labs" | "history") => (
@@ -182,47 +183,47 @@ export const HealthRecordsTab: React.FC<{
       <span className="inline-flex items-center justify-center" style={{ width: 44, height: 44, borderRadius: 14, background: INK.soft }}>
         <Lock size={20} strokeWidth={1.75} aria-hidden style={{ color: INK.chF }} />
       </span>
-      <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, marginTop: 10 }}>{kind === "labs" ? "Lab results aren't shared" : "Medical history isn't shared"}</p>
+      <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, marginTop: 10 }}>{kind === "labs" ? t("Lab results aren't shared") : t("Medical history isn't shared")}</p>
       <p style={{ fontSize: textPx(12), color: INK.chS, marginTop: 4, lineHeight: 1.5 }}>
         {kind === "labs"
-          ? `Blood panels, markers and lab report documents stay private until ${firstName} turns on Lab results for you.`
-          : `Medications, surgeries, conditions and imaging stay private until ${firstName} turns on Medical history for you.`}
+          ? t("Blood panels, markers and lab report documents stay private until {firstName} turns on Lab results for you.", { firstName })
+          : t("Medications, surgeries, conditions and imaging stay private until {firstName} turns on Medical history for you.", { firstName })}
       </p>
       <div className="flex justify-center" style={{ marginTop: 12 }}>
         {(() => {
           const c: AccessCategory = kind === "labs" ? "lab_results" : "medical_history";
           const done = asked.includes(c);
-          return <CtaButton size="base" variant="secondary" icon={<Send size={15} />} label={done ? "Asked" : `Ask ${firstName} to share`} disabled={done} onClick={() => onAsk(c)} />;
+          return <CtaButton size="base" variant="secondary" icon={<Send size={15} />} label={done ? t("Asked") : t("Ask {firstName} to share", { firstName })} disabled={done} onClick={() => onAsk(c)} />;
         })()}
       </div>
     </div>
   );
 
-  if (nothing) return <HealthDataPending label="Health records" />;
+  if (nothing) return <HealthDataPending label={t("Health records")} />;
 
   return (
     <>
       <div style={{ borderRadius: 16, background: INK.soft, padding: "10px 12px", marginBottom: 12 }}>
-        <p style={{ fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: INK.chF, marginBottom: 6 }}>{`Shared by ${firstName}`}</p>
+        <p style={{ fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: INK.chF, marginBottom: 6 }}>{t("Shared by {firstName}", { firstName })}</p>
         <div className="flex flex-wrap" style={{ gap: 5 }}>
           {chips.map((s) => (
             <span key={s.label} className="inline-flex items-center whitespace-nowrap" style={{ gap: 4, height: 24, padding: "0 8px", borderRadius: 8, fontSize: textPx(11), fontWeight: 700, background: s.on ? INK.tealPale : INK.card, color: s.on ? onInk : INK.chF }}>
               {s.on ? <ShieldCheck size={11} strokeWidth={2.2} aria-hidden /> : <Lock size={11} strokeWidth={2.2} aria-hidden />}
               {s.label}
-              <span className="sr-only">{s.on ? ", shared" : ", not shared"}</span>
+              <span className="sr-only">{s.on ? t(", shared") : t(", not shared")}</span>
             </span>
           ))}
         </div>
-        <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 6, lineHeight: 1.45 }}>{`Read only. You see records from the moment ${firstName} turns sharing on, and lose access as soon as it's turned off.`}</p>
+        <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 6, lineHeight: 1.45 }}>{t("Read only. You see records from the moment {firstName} turns sharing on, and lose access as soon as it's turned off.", { firstName })}</p>
       </div>
 
       <SegmentedTabs
         className="mb-3"
         items={[
-          { key: "biomarkers", label: "Biomarkers" },
-          { key: "labs", label: "Labs" },
-          { key: "imaging", label: "Imaging" },
-          { key: "history", label: "History" },
+          { key: "biomarkers", label: t("Biomarkers") },
+          { key: "labs", label: t("Labs") },
+          { key: "imaging", label: t("Imaging") },
+          { key: "history", label: t("History") },
         ]}
         activeKey={sub}
         onChange={(k) => setSub(k as Sub)}
@@ -238,11 +239,11 @@ export const HealthRecordsTab: React.FC<{
             {!labsOn && (
               <div className="flex items-start" style={{ gap: 8, borderRadius: 14, background: INK.soft, padding: "10px 12px", marginBottom: 12 }}>
                 <Info size={13} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0, marginTop: 3 }} />
-                <p style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: INK.chS }}>{`Lab results aren't shared. ${firstName} shared ${sharedCount === 1 ? "this result" : "these results"} with you one at a time, and can stop at any time.`}</p>
+                <p style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: INK.chS }}>{sharedCount === 1 ? t("Lab results aren't shared. {firstName} shared this result with you one at a time, and can stop at any time.", { firstName }) : t("Lab results aren't shared. {firstName} shared these results with you one at a time, and can stop at any time.", { firstName })}</p>
               </div>
             )}
             {panels.length > 1 && (
-              <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 10 }} role="group" aria-label="Panels">
+              <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 10 }} role="group" aria-label={t("Panels")}>
                 {[["", labs?.markers.length ?? 0] as [string, number], ...panels].map(([key, n]) => {
                   const on = (panel ?? "") === key;
                   return (
@@ -254,7 +255,7 @@ export const HealthRecordsTab: React.FC<{
                       className="tap whitespace-nowrap relative before:absolute before:inset-x-0 before:-inset-y-[7px] before:content-['']"
                       style={{ borderRadius: 10, padding: "6px 12px", fontSize: textPx(12), border: `1px solid ${on ? INK.fill : "rgb(var(--c-charcoal) / 0.11)"}`, background: on ? INK.fill : INK.card, color: on ? INK.onFill : INK.chS, fontWeight: on ? 700 : 600 }}
                     >
-                      {`${key ? PANEL_LABEL[key] ?? key : "All panels"} ${n}`}
+                      {`${key ? t(PANEL_LABEL[key] ?? key) : t("All panels")} ${n}`}
                     </button>
                   );
                 })}
@@ -275,7 +276,7 @@ export const HealthRecordsTab: React.FC<{
               onOpen={setOpen}
               confirmation={null}
               highlight={new Set()}
-              professional={{ emptyTitle: "No results shared yet.", emptyBody: `Results ${firstName} shares appear here.` }}
+              professional={{ emptyTitle: t("No results shared yet."), emptyBody: t("Results {firstName} shares appear here.", { firstName }) }}
             />
           </>
         ))}
@@ -294,8 +295,8 @@ export const HealthRecordsTab: React.FC<{
             onEdit={() => undefined}
             onDelete={() => undefined}
             readOnly={{
-              emptyTitle: "No lab reports shared.",
-              emptyBody: labsOn ? `Reports ${firstName} uploads appear here.` : `A single result never opens its report. ${firstName} can share a whole report or turn on Lab results.`,
+              emptyTitle: t("No lab reports shared."),
+              emptyBody: labsOn ? t("Reports {firstName} uploads appear here.", { firstName }) : t("A single result never opens its report. {firstName} can share a whole report or turn on Lab results.", { firstName }),
             }}
           />
         ))}
@@ -314,7 +315,7 @@ export const HealthRecordsTab: React.FC<{
             onShare={() => undefined}
             onEdit={() => undefined}
             onDelete={() => undefined}
-            readOnly={{ emptyTitle: "No scans shared yet.", emptyBody: `${firstName} shares each scan from their own Imaging tab.` }}
+            readOnly={{ emptyTitle: t("No scans shared yet."), emptyBody: t("{firstName} shares each scan from their own Imaging tab.", { firstName }) }}
           />
         ))}
 
@@ -338,7 +339,7 @@ export const HealthRecordsTab: React.FC<{
         onClose={() => setOpen(null)}
         marker={open}
         flag={open ? flagOf(open) : null}
-        panel={open ? PANEL_LABEL[entryOf(open)?.category ?? ""] ?? null : null}
+        panel={open ? (PANEL_LABEL[entryOf(open)?.category ?? ""] ? t(PANEL_LABEL[entryOf(open)?.category ?? ""]) : null) : null}
         sharedNote={open ? labs?.shared.find((s) => s.markerId === open.id)?.note ?? null : null}
         firstName={firstName}
         onNote={() => {

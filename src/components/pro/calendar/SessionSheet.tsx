@@ -22,6 +22,7 @@ import {
 } from "../../../services/pro/calendar";
 import { dayDate, money } from "./calendarModel";
 import type { CalItem } from "./calendarItems";
+import { t, tk } from "../../../i18n/core";
 
 /**
  * Release 3 · W4 CA6 Session details and outcome (source/gen/cal.js
@@ -41,12 +42,12 @@ import type { CalItem } from "./calendarItems";
  * removed with its invitation.
  */
 
-const NOTE_LABEL: Record<ProLane, string> = { full_coaching: "Training note", nutrition: "Nutrition note", clinical_overview: "Clinical note" };
+const NOTE_LABEL: Record<ProLane, string> = { full_coaching: tk("Training note"), nutrition: tk("Nutrition note"), clinical_overview: tk("Clinical note") };
 const NOTE_KIND: Record<ProLane, NoteKind> = { full_coaching: "training", nutrition: "nutrition", clinical_overview: "clinical" };
 const OUTCOMES: { key: Outcome; label: string }[] = [
-  { key: "completed", label: "Completed" },
-  { key: "no_show", label: "No-show" },
-  { key: "late_cancel", label: "Late cancel" },
+  { key: "completed", label: tk("Completed") },
+  { key: "no_show", label: tk("No-show") },
+  { key: "late_cancel", label: tk("Late cancel") },
 ];
 
 export const SessionSheet: React.FC<{
@@ -145,7 +146,7 @@ export const SessionSheet: React.FC<{
     setBusy(false);
     if (!r.ok) {
       setConfirm(false);
-      setError(r.message ?? "Couldn't cancel this session. Try again.");
+      setError(r.message ?? t("Couldn't cancel this session. Try again."));
       return;
     }
     setConfirm(false);
@@ -167,11 +168,11 @@ export const SessionSheet: React.FC<{
       <BottomSheet
         open={!!item}
         onClose={onClose}
-        title="Session"
+        title={t("Session")}
         footer={
           <div className="flex w-full" style={{ gap: 8 }}>
-            {clientId && <CtaButton size="sheet" variant="secondary" className="flex-1" label="Message" icon={<MessageCircle size={15} aria-hidden />} onClick={() => onMessage(clientId)} />}
-            <CtaButton size="sheet" className="flex-1" label="Save outcome" loading={busy} disabled={!changed} onClick={() => void save()} />
+            {clientId && <CtaButton size="sheet" variant="secondary" className="flex-1" label={t("Message")} icon={<MessageCircle size={15} aria-hidden />} onClick={() => onMessage(clientId)} />}
+            <CtaButton size="sheet" className="flex-1" label={t("Save outcome")} loading={busy} disabled={!changed} onClick={() => void save()} />
           </div>
         }
       >
@@ -182,9 +183,7 @@ export const SessionSheet: React.FC<{
               <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{name}</p>
               {planLine && <p style={{ fontSize: textPx(12), color: INK.chF }}>{planLine}</p>}
             </div>
-            <button type="button" onClick={() => onProfile(clientId)} className="tap flex items-center" style={{ gap: 2, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, minHeight: 44 }}>
-              Profile
-              <ChevronRight size={12} strokeWidth={2.4} aria-hidden />
+            <button type="button" onClick={() => onProfile(clientId)} className="tap flex items-center" style={{ gap: 2, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, minHeight: 44 }}>{t("Profile")}<ChevronRight size={12} strokeWidth={2.4} aria-hidden />
             </button>
           </div>
         )}
@@ -199,37 +198,33 @@ export const SessionSheet: React.FC<{
               </a>
             )}
           {/* Round E: the session's playlist, as the client sees it. */}
-          {e.playlistUrl && <PlaylistCard url={e.playlistUrl} heading="Session playlist" />}
+          {e.playlistUrl && <PlaylistCard url={e.playlistUrl} heading={t("Session playlist")} />}
           {price !== null &&
             line(
               <Banknote {...ic} />,
-              `${money(price, type?.currency ?? "USD")} · ${paid ? "Paid" : "Not paid yet"}`,
+              `${money(price, type?.currency ?? "USD")} · ${paid ? t("Paid") : t("Not paid yet")}`,
               <button type="button" onClick={() => void togglePaid()} disabled={busy} className="tap" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, minHeight: 32 }}>
-                {paid ? "Mark as unpaid" : "Mark as paid"}
+                {paid ? t("Mark as unpaid") : t("Mark as paid")}
               </button>
             )}
           {e.attachmentPath &&
             line(
               <Paperclip {...ic} />,
-              <button type="button" onClick={() => onOpenAttachment(e.attachmentPath!)} className="tap" style={{ fontWeight: 600, color: INK.prDeep }}>
-                Open attachment
-              </button>
+              <button type="button" onClick={() => onOpenAttachment(e.attachmentPath!)} className="tap" style={{ fontWeight: 600, color: INK.prDeep }}>{t("Open attachment")}</button>
             )}
         </div>
 
         {started && (
           <>
-            <p style={{ fontSize: textPx(11), fontWeight: 600, lineHeight: "14px", textTransform: "uppercase", letterSpacing: "0.14em", paddingBottom: 7.5, borderBottom: `1.5px solid ${INK.pr}`, color: INK.chF, marginBottom: 10 }}>
-              How did it go?
-            </p>
-            <SegmentedTabs items={OUTCOMES} activeKey={outcome ?? ""} onChange={(k) => setOutcome(k as Outcome)} tabHeight={38} labelSize={12} className="mb-4" />
+            <p style={{ fontSize: textPx(11), fontWeight: 600, lineHeight: "14px", textTransform: "uppercase", letterSpacing: "0.14em", paddingBottom: 7.5, borderBottom: `1.5px solid ${INK.pr}`, color: INK.chF, marginBottom: 10 }}>{t("How did it go?")}</p>
+            <SegmentedTabs items={OUTCOMES.map((o) => ({ ...o, label: t(o.label) }))} activeKey={outcome ?? ""} onChange={(k) => setOutcome(k as Outcome)} tabHeight={38} labelSize={12} className="mb-4" />
           </>
         )}
 
         {clientId && (
           <>
             <label htmlFor="session-note" className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-              {NOTE_LABEL[lane]}
+              {t(NOTE_LABEL[lane])}
             </label>
             <textarea
               id="session-note"
@@ -240,9 +235,7 @@ export const SessionSheet: React.FC<{
               style={{ minHeight: 96, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "10px 12px", fontSize: textPx(14), color: INK.ch, lineHeight: 1.45 }}
             />
             <p className="flex items-center" style={{ gap: 6, fontSize: textPx(11), color: INK.chF, marginTop: 8 }}>
-              <EyeOff size={12} strokeWidth={2} aria-hidden />
-              Only you can see session notes
-            </p>
+              <EyeOff size={12} strokeWidth={2} aria-hidden />{t("Only you can see session notes")}</p>
           </>
         )}
 
@@ -253,29 +246,25 @@ export const SessionSheet: React.FC<{
         )}
 
         {onEdit && !booking && (
-          <button type="button" onClick={onEdit} className="tap block w-full text-center" style={{ marginTop: 16, minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}>
-            Edit details
-          </button>
+          <button type="button" onClick={onEdit} className="tap block w-full text-center" style={{ marginTop: 16, minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}>{t("Edit details")}</button>
         )}
-        <button type="button" onClick={() => setConfirm(true)} className="tap block w-full text-center" style={{ marginTop: onEdit && !booking ? 0 : 16, minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.hi }}>
-          Cancel session
-        </button>
+        <button type="button" onClick={() => setConfirm(true)} className="tap block w-full text-center" style={{ marginTop: onEdit && !booking ? 0 : 16, minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.hi }}>{t("Cancel session")}</button>
       </BottomSheet>
 
       <CentredPopup
         open={confirm}
         onClose={() => setConfirm(false)}
-        title="Cancel this session?"
+        title={t("Cancel this session?")}
         icon={<CalendarX size={22} strokeWidth={2} aria-hidden />}
         body={
           booking || !clientId
-            ? `${name || "Your client"} gets a notification and the slot opens for booking again.`
-            : `${name} is taken off this session and the slot opens for booking again.`
+            ? t("{name} gets a notification and the slot opens for booking again.", { name: name || t("Your client") })
+            : t("{name} is taken off this session and the slot opens for booking again.", { name })
         }
       >
         <div className="flex flex-col" style={{ gap: 8 }}>
-          <CtaButton size="page" label="Cancel session" loading={busy} onClick={() => void cancel()} />
-          <CtaButton size="page" variant="secondary" label="Keep session" disabled={busy} onClick={() => setConfirm(false)} />
+          <CtaButton size="page" label={t("Cancel session")} loading={busy} onClick={() => void cancel()} />
+          <CtaButton size="page" variant="secondary" label={t("Keep session")} disabled={busy} onClick={() => setConfirm(false)} />
         </div>
       </CentredPopup>
     </>

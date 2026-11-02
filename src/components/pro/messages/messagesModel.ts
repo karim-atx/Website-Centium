@@ -1,3 +1,4 @@
+import { t, tk } from "../../../i18n/core";
 // Release 3 · W6 MO22 v5: which tab a professional's conversation sits in, its
 // section and its quiet status line. Pure, so it is tested without a browser.
 //
@@ -28,7 +29,7 @@ type MessageThread = ThreadLike;
 
 export type ProTab = "clients" | "groups" | "enquiries" | "businesses";
 export const PRO_TABS: ProTab[] = ["clients", "groups", "enquiries", "businesses"];
-export const TAB_LABEL: Record<ProTab, string> = { clients: "Clients", groups: "Groups", enquiries: "Enquiries", businesses: "Businesses" };
+export const TAB_LABEL: Record<ProTab, string> = { clients: tk("Clients"), groups: tk("Groups"), enquiries: tk("Enquiries"), businesses: tk("Businesses") };
 
 /** professional_subtype values other_role can carry: a colleague, not an enquiry. */
 const PRO_ROLES = new Set(["trainer", "dietitian", "physiotherapist", "doctor", "nutritionist", "coach_instructor", "other"]);
@@ -65,13 +66,13 @@ export function dotFor(label: string): Dot {
  * nothing when their message was read and not answered yet (no claim).
  */
 export function enquiryStatus(
-  t: Pick<MessageThread, "lastMessageId" | "lastMessageSenderId" | "unreadCount">,
+  th: Pick<MessageThread, "lastMessageId" | "lastMessageSenderId" | "unreadCount">,
   me: string | null,
   cardKinds: Readonly<Record<string, string>>
 ): Status | null {
-  if (enquiryWaiting(t, me)) return { label: "New", dot: "gold" };
-  if (t.lastMessageId && t.lastMessageSenderId === me) {
-    return cardKinds[t.lastMessageId] === "plans_offer" ? { label: "Plans sent", dot: "prDark" } : { label: "Replied", dot: "chF" };
+  if (enquiryWaiting(th, me)) return { label: t("New"), dot: "gold" };
+  if (th.lastMessageId && th.lastMessageSenderId === me) {
+    return cardKinds[th.lastMessageId] === "plans_offer" ? { label: t("Plans sent"), dot: "prDark" } : { label: t("Replied"), dot: "chF" };
   }
   return null;
 }
