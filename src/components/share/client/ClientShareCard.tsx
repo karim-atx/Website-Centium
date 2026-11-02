@@ -48,9 +48,11 @@ export interface ClientShareCardProps {
   /** The root's ref (the export reads the layout from an unscaled card). */
   innerRef?: React.Ref<HTMLDivElement>;
   className?: string;
+  /** Round G1 (G9): the member holds Premium with the switch on; the head reads "Centium Premium". */
+  premium?: boolean;
 }
 
-export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, format, background, width, flat, square, innerRef, className }) => {
+export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, format, background, width, flat, square, innerRef, className, premium }) => {
   const k = width / CARD_W;
   const g = cardMetrics(format);
   const c = cardColours(spec.id, format, format === "sticker" ? "B" : background);
@@ -144,7 +146,7 @@ export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, f
             <CardMarkSvg w={g.markW} h={g.markH} />
             <div style={{ minWidth: 0, textShadow: ts, textAlign: "start" }}>
               <div data-p="t" style={{ fontSize: g.nameFs, fontWeight: 800, lineHeight: 1.15, color: c.ink, whiteSpace: "nowrap" }}>
-                Centium
+                {premium ? "Centium Premium" : "Centium"}
               </div>
               <div data-p="t" style={{ fontSize: g.handleFs, fontWeight: 600, lineHeight: 1.25, color: c.sub, whiteSpace: "nowrap" }}>
                 {spec.date}
@@ -225,13 +227,13 @@ export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, f
  * eyebrow, the number, the subject and the switched-on stats over a rule.
  * White type; the OverlayEditor wrapper adds its 0 1px 8px shadow.
  */
-export const PhotoStatsLayer: React.FC<{ spec: ClientCardSpec; stats: ClientStat[]; innerRef?: React.Ref<HTMLDivElement> }> = ({ spec, stats, innerRef }) => (
+export const PhotoStatsLayer: React.FC<{ spec: ClientCardSpec; stats: ClientStat[]; innerRef?: React.Ref<HTMLDivElement>; premium?: boolean }> = ({ spec, stats, innerRef, premium }) => (
   <div ref={innerRef} data-layer-root="" style={{ width: 100, fontFamily: 'Manrope, "IBM Plex Sans Arabic", Helvetica, Arial, sans-serif', lineHeight: "normal", letterSpacing: "normal", textAlign: "start", color: "#FFFFFF", WebkitFontSmoothing: "antialiased" }}>
     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
       <CardMarkSvg w={12.5} h={13.5} style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.35))" }} shadow="0,1,3,rgba(0,0,0,0.35)" />
       <span>
         <span data-p="t" style={{ display: "block", fontSize: 7.5, fontWeight: 800, lineHeight: 1.1 }}>
-          Centium
+          {premium ? "Centium Premium" : "Centium"}
         </span>
         <span data-p="t" style={{ display: "block", fontSize: 6, fontWeight: 600, opacity: 0.94 }}>
           {spec.date}

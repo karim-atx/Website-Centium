@@ -1149,8 +1149,6 @@ interface AppState {
   // V8 (QA 8.0): gym membership purchases — day passes expire after 24h and
   // stack with an active monthly/annual plan, which stays active until
   // explicitly cancelled.
-  premiumPlan: "monthly" | "yearly" | null;
-  setPremiumPlan: (plan: "monthly" | "yearly" | null) => void;
 
   // GYM PASSES AND THE CART ARE GONE, and payments are why.
   //
@@ -3738,8 +3736,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     },
     []
   );
-
-  const [premiumPlan, setPremiumPlan] = usePersistentState<"monthly" | "yearly" | null>("premiumPlan", null);
 
   // `membershipPlans` and `discounts` are gone from here — real
   // membership_plans and (since B16) promotions rows now. The plans in particular
@@ -6803,8 +6799,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unlockQueue,
       dismissUnlock,
       noteFeatureMilestone,
-      premiumPlan,
-      setPremiumPlan,
       generateClientCode,
       rosterLoading,
       rosterError,
@@ -6974,7 +6968,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unlockQueue,
       dismissUnlock,
       noteFeatureMilestone,
-      premiumPlan,
       professionalClients,
       calendarEvents,
       workoutTemplates,

@@ -10,7 +10,8 @@ import { AIVoiceLogger } from "../../components/food/AIVoiceLogger";
 import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet";
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
 import { DobPromptCard } from "../../components/profile/DobPromptCard";
-import { ChevronRight, ArrowRight, Sparkles, Store, Crown, HeartHandshake, X, Bell } from "lucide-react";
+import { ChevronRight, ArrowRight, Sparkles, Store, HeartHandshake, X, Bell } from "lucide-react";
+import { PremiumBadge } from "../../components/premium/PremiumBadge";
 import { CLIENT_KINDS, fetchUnreadNotificationCount, unreadBadge } from "../../services/notifications";
 import { useNavigate } from "react-router-dom";
 import BusinessDashboard from "../marketplace/BusinessDashboard";
@@ -33,7 +34,6 @@ export default function Home() {
   const {
     user,
     t,
-    premiumPlan,
     recoverySensitive,
     recoveryModePending,
     recoverySensitiveIntroSeen,
@@ -71,7 +71,8 @@ export default function Home() {
           {/* HO1.1 #1 (Home shell context): 19/28.5 700 ls -0.6. */}
           <h1 className="font-display text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal flex items-center gap-1.5">
             {t(getGreeting())}, {user.firstName}
-            {premiumPlan && <Crown size={16} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
+            {/* Round G1 (G9): the Premium badge reads my_premium(), not browser storage. */}
+            <PremiumBadge />
           </h1>
         </div>
         <div className="flex items-center gap-2 shrink-0">
