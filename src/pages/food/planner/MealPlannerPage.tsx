@@ -44,13 +44,15 @@ import {
   type PlanItem,
 } from "../../../services/premium/g4";
 import { PlanItemSheet } from "./PlanItemSheet";
+import { GroceryListSheet } from "./GroceryListSheet";
 import { appLocale } from "../../../i18n/format";
 import { t } from "../../../i18n/core";
 
 // undrawn (Round G, no handover)
 // Round G4 · /app/food/planner, the member's own meal planner: one plan per
 // week (Monday start), each day's meals with recipes (servings), foods
-// (amount and unit) and notes, reordered, edited and deleted here.
+// (amount and unit) and notes, reordered, edited and deleted here, and the
+// week's grocery list (GroceryListSheet).
 //
 // - Separate from the coach-assigned meal plan (MealPlanCard, PlanBuilder),
 //   which is unchanged.
@@ -160,6 +162,7 @@ function PlanWeek({ plan, locked, onDeleted }: { plan: MealPlan; locked: boolean
   const items = useG3(() => fetchPlanItems(plan.id), `items:${plan.id}`);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [groceryOpen, setGroceryOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone?: "error" } | null>(null);
   const days = weekDays(plan.weekStart);
@@ -221,6 +224,19 @@ function PlanWeek({ plan, locked, onDeleted }: { plan: MealPlan; locked: boolean
 
   return (
     <>
+      <button
+        type="button"
+        data-g4="grocery-open"
+        onClick={() => setGroceryOpen(true)}
+        className="tap mb-4 w-full flex items-center gap-3 rounded-2xl bg-cream-card px-4 py-3 text-start shadow-soft"
+      >
+        <span className="flex-1 min-w-0">
+          <span className="block text-[13.5px] font-bold text-charcoal">{t("Grocery list")}</span>
+          <span className="block text-[11.5px] text-charcoal-faint">{t("Everything this week's plan needs")}</span>
+        </span>
+        {locked ? <PremiumLabel className="shrink-0" /> : <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />}
+      </button>
+
       <G3Body state={items.state} onRetry={items.reload}>
         {(list) => (
           <div className="flex flex-col gap-3">
@@ -308,6 +324,8 @@ function PlanWeek({ plan, locked, onDeleted }: { plan: MealPlan; locked: boolean
           </div>
         )}
       </G3Body>
+
+      <GroceryListSheet open={groceryOpen} planId={plan.id} onClose={() => setGroceryOpen(false)} />
 
       <ConfirmCard
         open={confirmDelete}

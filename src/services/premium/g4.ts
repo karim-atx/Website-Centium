@@ -120,7 +120,7 @@ export interface PlanItem {
 }
 
 /** The item's kind, from which reference it holds (the Database allows one). */
-export function itemKind(r: { recipe_id?: unknown; food_id?: unknown; custom_food_id?: unknown }): ItemKind {
+export function itemKind(r: { recipe_id?: unknown; food_id?: unknown; custom_food_id?: unknown; note?: unknown }): ItemKind {
   if (str(r.recipe_id)) return "recipe";
   if (str(r.food_id)) return "food";
   if (str(r.custom_food_id)) return "custom_food";

@@ -21,6 +21,10 @@ import {
   planWeekOf,
   shiftWeek,
   weekDays,
+  amountText,
+  groceryView,
+  parseGrocery,
+  withChecked,
   type PlanItem,
 } from "./g4.ts";
 
@@ -157,4 +161,33 @@ test("calories show only where they can be worked out, and never while numbers a
   assert.equal(itemKcal(recipe, hidden), null);
   assert.equal(itemKcal(milk, hidden), null);
   assert.equal(dayKcal([500, 120], true), null);
+});
+
+// ---- the grocery list ----
+
+test("the grocery list shows what's left to buy first, amounts in words, the recipes each line is for, and notes without an amount", () => {
+  const lines = parseGrocery([
+    { item_key: "c:milk:ml", name: "Milk", quantity: "600", unit: "ml", from_recipes: ["Porridge"], checked: false },
+    { item_key: "n:1", name: "Lemons", quantity: null, unit: null, from_recipes: [], checked: false },
+    { item_key: "c:oats:g", name: "Oats", quantity: 80, unit: "g", from_recipes: ["Porridge", "Flapjack"], checked: true },
+    { item_key: "f:egg:serving", name: "Eggs", quantity: 1, unit: "serving", from_recipes: [], checked: false },
+    { item_key: "f:x:cup", name: "Rice", quantity: 2.5, unit: "cup", from_recipes: null, checked: false },
+    { item_key: "", name: "No key" },
+    { item_key: "k", name: "" },
+  ]);
+  assert.equal(lines.length, 5);
+  const v = groceryView(lines, "en-US");
+  assert.deepEqual(v.toBuy.map((l) => [l.name, l.amount, l.from]), [
+    ["Milk", "600 ml", "For Porridge"],
+    ["Lemons", null, null],
+    ["Eggs", "1 serving", null],
+    ["Rice", "2.5 cups", null],
+  ]);
+  assert.deepEqual(v.done.map((l) => [l.name, l.amount, l.from, l.checked]), [["Oats", "80 g", "For Porridge, Flapjack", true]]);
+  // A tick moves a line at once (and back if the save fails).
+  const ticked = withChecked(lines, "n:1", true);
+  assert.deepEqual(groceryView(ticked).done.map((l) => l.name), ["Lemons", "Oats"]);
+  assert.deepEqual(groceryView(withChecked(ticked, "n:1", false)).done.map((l) => l.name), ["Oats"]);
+  assert.equal(amountText(1, "cup"), "1 cup");
+  assert.equal(amountText(2, "tbsp"), "2 tbsp");
 });
