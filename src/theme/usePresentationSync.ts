@@ -164,7 +164,7 @@ export function usePresentationSync({
     } finally {
       saving.current = false;
     }
-  }, [setPending]);
+  }, [setPending, applyQuietly]);
 
   const sync = useCallback(async () => {
     const id = owner.current;
