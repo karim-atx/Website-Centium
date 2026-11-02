@@ -988,3 +988,8 @@ export function sessionDone(n: number, p: Pick<MyCentiumProgramme, "done" | "nex
   if (p.nextSessionNumber === null) return p.done > 0;
   return n < p.nextSessionNumber;
 }
+
+/** A lab status in words ("below range", "in range", "above range"); null for none. */
+export function statusWord(s: string | null | undefined): string | null {
+  return s && STATUS_WORD[s] ? t(STATUS_WORD[s]) : null;
+}
