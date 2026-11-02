@@ -4,11 +4,10 @@
 // counted"), with the same rows the views give, so screens don't change.
 //
 // THE FUNCTION FIRST. Each reader passes today's view read as `fallback`,
-// which runs ONLY when the function is missing (PGRST202 / 42883 / 404: a
-// Database without G2), so the Website ships before or after the Database.
-// Any other failure is the function's own answer: ATX02 ("too many directory
-// requests -- try again in N minutes", once the Database turns its limit on)
-// is worded calmly by directoryErrorText.
+// which runs on any failure of the function except ATX02 ("too many directory
+// requests -- try again in N minutes", once the Database turns its limit on),
+// which directoryErrorText words calmly. Missing, refused or failing, the
+// view still answers until the Database's phase 2 revokes it.
 //
 // supabase-js calls .rpc() by POST, which the counting needs (a GET is
 // read-only and goes through uncounted). professional_by_handle,
@@ -26,7 +25,7 @@ const rpc: Rpc = (fn, args) => (supabase.rpc as unknown as Rpc).call(supabase, f
 
 /**
  * Calls a counting directory function; `fallback` (today's view read, marked
- * at each reader) runs only when the function is missing.
+ * at each reader) runs on any failure except ATX02.
  */
 export async function directoryCall<T>(fn: "directory_professionals" | "directory_professional_cv" | "directory_venues" | "directory_classes", args: Record<string, unknown>, fallback: () => PromiseLike<DirRead<T>>): Promise<DirRead<T>> {
   try {
@@ -74,8 +73,8 @@ export function parseDirectoryCv(data: unknown): DirectoryCv {
 /**
  * directory_professionals rows for these profile ids: one call each for a
  * few, or one call for the whole directory filtered here for many (each call
- * counts). `fallback` (today's view read, marked at the reader) runs only
- * when the function is missing.
+ * counts). `fallback` (today's view read, marked at the reader) runs on any
+ * failure except ATX02.
  */
 export async function professionalsByIds<T extends { profile_id?: string | null }>(ids: string[], fallback: () => PromiseLike<DirRead<T[]>>): Promise<DirRead<T[]>> {
   const uniq = [...new Set(ids)].filter(Boolean);
