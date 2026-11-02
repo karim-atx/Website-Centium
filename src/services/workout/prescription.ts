@@ -8,6 +8,7 @@ import type {
   ExerciseClassification,
   WorkoutBlock,
 } from "../../types";
+import { t, tk, tn } from "../../i18n/core";
 
 // ONE FORMATTER, FOR EVERY PLACE A PRESCRIPTION IS SHOWN.
 //
@@ -53,15 +54,15 @@ const EN = "–";
 
 /** Seconds as the shortest honest thing: "45 s", "10 min", "1 min 30 s". */
 export function formatSeconds(total: number): string {
-  if (total < 60) return `${total} s`;
+  if (total < 60) return t("{n} s", { n: total });
   const minutes = Math.floor(total / 60);
   const seconds = total % 60;
-  return seconds === 0 ? `${minutes} min` : `${minutes} min ${seconds} s`;
+  return seconds === 0 ? t("{n} min", { n: minutes }) : t("{m} min {s} s", { m: minutes, s: seconds });
 }
 
 /** Metres as "800 m" or "5 km" — km only when it divides exactly. */
 export function formatMeters(meters: number): string {
-  return meters >= 1000 && meters % 1000 === 0 ? `${meters / 1000} km` : `${meters} m`;
+  return meters >= 1000 && meters % 1000 === 0 ? t("{n} km", { n: meters / 1000 }) : t("{n} m", { n: meters });
 }
 
 /** Seconds per km as a pace clock: 260 -> "4:20". */
@@ -83,28 +84,28 @@ export function formatTarget(target: EnduranceTarget): string {
     case "pace": {
       const lo = formatPace(target.min_sec_per_km);
       const hi = formatPace(target.max_sec_per_km);
-      return lo === hi ? `@ ${lo} /km` : `@ ${lo}${EN}${hi} /km`;
+      return t("@ {pace} /km", { pace: lo === hi ? lo : `${lo}${EN}${hi}` });
     }
     case "hr_zone":
-      return `Zone ${target.zone}`;
+      return t("Zone {zone}", { zone: target.zone });
     case "rpe":
-      return `RPE ${target.value}`;
+      return t("RPE {value}", { value: target.value });
     case "open":
       return "";
   }
 }
 
 const MODE_LABEL: Record<EnduranceMode, string> = {
-  run: "run",
-  jog: "jog",
-  walk: "walk",
-  rest: "rest",
+  run: tk("run"),
+  jog: tk("jog"),
+  walk: tk("walk"),
+  rest: tk("rest"),
 };
 
 /** One step: amount, then how it is covered, then what to hold. */
 export function formatStep(step: EnduranceStep): string {
   const amount = step.measure === "time" ? formatSeconds(step.seconds) : formatMeters(step.meters);
-  return [amount, step.mode ? MODE_LABEL[step.mode] : "", formatTarget(step.target)]
+  return [amount, step.mode ? t(MODE_LABEL[step.mode]) : "", formatTarget(step.target)]
     .filter(Boolean)
     .join(" ");
 }
@@ -115,13 +116,13 @@ export function formatStep(step: EnduranceStep): string {
  */
 export function formatEndurancePlan(plan: EndurancePlan): string {
   const parts: string[] = [];
-  if (plan.warmup) parts.push(`Warm-up ${formatStep(plan.warmup)}`);
+  if (plan.warmup) parts.push(t("Warm-up {step}", { step: formatStep(plan.warmup) }));
   parts.push(
     plan.main.type === "steady"
       ? formatStep(plan.main.step)
-      : `${plan.main.repeats} × ${formatStep(plan.main.work)}, ${formatStep(plan.main.recovery)}`
+      : t("{n} × {work}, {recovery}", { n: plan.main.repeats, work: formatStep(plan.main.work), recovery: formatStep(plan.main.recovery) })
   );
-  if (plan.cooldown) parts.push(`Cool-down ${formatStep(plan.cooldown)}`);
+  if (plan.cooldown) parts.push(t("Cool-down {step}", { step: formatStep(plan.cooldown) }));
   return parts.join(" · ");
 }
 
@@ -134,10 +135,10 @@ export function formatEndurancePlan(plan: EndurancePlan): string {
  */
 function formatLegacyCardio(ex: Exercise): string {
   const parts: string[] = [];
-  if (ex.cardioDurationMin) parts.push(`${ex.cardioDurationMin} min`);
-  if (ex.cardioDistanceKm) parts.push(`${ex.cardioDistanceKm} km`);
-  if (ex.cardioPaceMinPerKm) parts.push(`@ ${ex.cardioPaceMinPerKm} min/km`);
-  if (ex.cardioInclinePct) parts.push(`${ex.cardioInclinePct}% incline`);
+  if (ex.cardioDurationMin) parts.push(t("{n} min", { n: ex.cardioDurationMin }));
+  if (ex.cardioDistanceKm) parts.push(t("{n} km", { n: ex.cardioDistanceKm }));
+  if (ex.cardioPaceMinPerKm) parts.push(t("@ {pace} min/km", { pace: ex.cardioPaceMinPerKm }));
+  if (ex.cardioInclinePct) parts.push(t("{n}% incline", { n: ex.cardioInclinePct }));
   if (ex.cardioAvgHeartRate) parts.push(`${ex.cardioAvgHeartRate} bpm`);
   return parts.join(" · ");
 }
@@ -146,10 +147,10 @@ function formatLegacyCardio(ex: Exercise): string {
 function formatSets(ex: Exercise): string {
   const min = ex.minSets;
   const max = ex.maxSets;
-  if (min && max && min !== max) return `${min}${EN}${max} sets`;
+  if (min && max && min !== max) return t("{range} sets", { range: `${min}${EN}${max}` });
   const one = min ?? max ?? ex.sets;
   if (!one) return "";
-  return `${one} ${one === 1 ? "set" : "sets"}`;
+  return tn(one, "{n} set", "{n} sets");
 }
 
 /**
@@ -162,10 +163,10 @@ function formatSets(ex: Exercise): string {
 function formatReps(ex: Exercise): string {
   const min = ex.minReps;
   const max = ex.maxReps;
-  if (min && max) return min === max ? `${min} reps` : `${min}${EN}${max} reps`;
-  if (min) return `${min}+ reps (AMRAP)`;
-  if (max) return `up to ${max} reps`;
-  if (ex.reps) return `${ex.reps} ${ex.reps === 1 ? "rep" : "reps"}`;
+  if (min && max) return min === max ? tn(min, "{n} reps", "{n} reps") : t("{range} reps", { range: `${min}${EN}${max}` });
+  if (min) return t("{n}+ reps (AMRAP)", { n: min });
+  if (max) return t("up to {n} reps", { n: max });
+  if (ex.reps) return tn(ex.reps, "{n} rep", "{n} reps");
   return "AMRAP";
 }
 
@@ -203,12 +204,12 @@ export function prescriptionLine(ex: Exercise, options: PrescriptionOptions = {}
     if (plan) parts.push(plan);
   } else if (ex.classification === "duration") {
     if (setsClause) parts.push(setsClause);
-    if (ex.durationSeconds) parts.push(`${formatSeconds(ex.durationSeconds)} hold`);
+    if (ex.durationSeconds) parts.push(t("{time} hold", { time: formatSeconds(ex.durationSeconds) }));
   } else {
     if (setsClause) parts.push(setsClause);
     if (isRepBased(ex.classification)) {
       const reps = formatReps(ex);
-      parts.push(options.perRound ? `${reps} per round` : reps);
+      parts.push(options.perRound ? t("{reps} per round", { reps }) : reps);
     }
   }
 
@@ -218,13 +219,13 @@ export function prescriptionLine(ex: Exercise, options: PrescriptionOptions = {}
   // its own targets per step.
   if (ex.classification !== "cardio") {
     if (ex.intensityPct) parts.push(`@ ${ex.intensityPct}%`);
-    if (ex.repMaxKg) parts.push(`${ex.repMaxKg} kg rep max`);
-    else if (ex.weightKg === 0) parts.push("Bodyweight");
+    if (ex.repMaxKg) parts.push(t("{n} kg rep max", { n: ex.repMaxKg }));
+    else if (ex.weightKg === 0) parts.push(t("Bodyweight"));
     else if (ex.weightKg) parts.push(`${ex.weightKg} kg`);
-    if (ex.rpe) parts.push(`RPE ${ex.rpe}`);
-    if (ex.tempo) parts.push(`Tempo ${ex.tempo}`);
+    if (ex.rpe) parts.push(t("RPE {value}", { value: ex.rpe }));
+    if (ex.tempo) parts.push(t("Tempo {tempo}", { tempo: ex.tempo }));
   }
-  if (ex.restSeconds && !options.noRest) parts.push(`Rest ${formatSeconds(ex.restSeconds)}`);
+  if (ex.restSeconds && !options.noRest) parts.push(t("Rest {time}", { time: formatSeconds(ex.restSeconds) }));
 
   return parts.join(" · ");
 }
@@ -272,18 +273,18 @@ export function blockHeading(block: WorkoutBlock, ordinal = 0): string {
   if (block.label?.trim()) return block.label.trim();
   switch (block.kind) {
     case "superset":
-      return `Superset ${supersetLetter(ordinal)}`;
+      return t("Superset {letter}", { letter: supersetLetter(ordinal) });
     case "amrap":
-      return `AMRAP · ${block.timeCapSeconds ? formatSeconds(block.timeCapSeconds) : "no cap set"}`;
+      return `AMRAP · ${block.timeCapSeconds ? formatSeconds(block.timeCapSeconds) : t("no cap set")}`;
     case "emom": {
       const every = block.intervalSeconds ? formatClock(block.intervalSeconds) : "?";
-      return `EMOM · every ${every}${block.rounds ? ` × ${block.rounds}` : ""}`;
+      return `${t("EMOM · every {every}", { every })}${block.rounds ? ` × ${block.rounds}` : ""}`;
     }
     case "for_time": {
-      const rounds = block.rounds ? `${block.rounds} ${block.rounds === 1 ? "round" : "rounds"}` : "for time";
+      const rounds = block.rounds ? tn(block.rounds, "{n} round", "{n} rounds") : t("for time");
       return block.timeCapSeconds
-        ? `For Time · ${rounds} (cap ${formatSeconds(block.timeCapSeconds)})`
-        : `For Time · ${rounds}`;
+        ? t("For Time · {rounds} (cap {time})", { rounds, time: formatSeconds(block.timeCapSeconds) })
+        : t("For Time · {rounds}", { rounds });
     }
   }
 }

@@ -11,6 +11,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t } from "../../i18n/core";
 import type { Allergen, AllergySeverity, ConflictRow, MealPlanDetailRow, MyAllergy, ProfessionalTargets } from "./clientNutritionModel";
 import { allergyDiff, assignmentIsCurrent } from "./clientNutritionModel";
 import type { WeightGoalType } from "../../types";
@@ -175,7 +176,7 @@ export async function fetchMyAllergies(userId: string): Promise<Read<MyAllergy[]
 /** Saves the sheet: inserts what was ticked, updates changed severities, deletes what was unticked. */
 export async function saveMyAllergies(userId: string, before: MyAllergy[], after: MyAllergy[]): Promise<Write> {
   const d = allergyDiff(before, after);
-  const fail = (error: unknown): Write => ({ ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't save your allergies. Try again." });
+  const fail = (error: unknown): Write => ({ ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't save your allergies. Try again.") });
   if (d.insert.length) {
     const { error } = await supabase.from("allergies").insert(d.insert.map((a) => ({ user_id: userId, allergen: a.allergen, severity: a.severity })));
     if (error) return fail(error);
@@ -281,10 +282,10 @@ export async function fetchEntryFeedback(userId: string, entryIds: string[]): Pr
 
 export async function replyToFeedback(feedbackId: string, reply: string): Promise<Write> {
   const text = reply.trim();
-  if (!text) return { ok: false, message: "Write something first." };
+  if (!text) return { ok: false, message: t("Write something first.") };
   const { error } = await supabase.rpc("reply_to_food_feedback", { p_feedback_id: feedbackId, p_reply: text });
   if (!error) return { ok: true };
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  if (error.code === "ATX08") return { ok: false, message: "This feedback is no longer available." };
-  return { ok: false, message: "Couldn't send your reply. Try again." };
+  if (error.code === "ATX08") return { ok: false, message: t("This feedback is no longer available.") };
+  return { ok: false, message: t("Couldn't send your reply. Try again.") };
 }

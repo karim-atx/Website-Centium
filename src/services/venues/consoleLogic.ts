@@ -11,6 +11,7 @@ import { formatPrice } from "../../utils/price";
 import { formatShortDate } from "../../utils/date";
 import { dayMonthYear, memberTag, stage4Message, storagePath, type GymMembershipStatus, type PassState } from "./venueLogic";
 import type { HoursRow } from "./hours";
+import { t, tk, tn } from "../../i18n/core";
 
 // ---------------------------------------------------------------------------
 // my_venues()
@@ -87,8 +88,8 @@ export function pickVenue(venues: MyVenue[], rememberedId: string | null): MyVen
 
 /** "4.0 (3 reviews)", or "No reviews yet" when the average is null. */
 export function reviewsLine(average: number | null, count: number): string {
-  if (average === null || count === 0) return "No reviews yet";
-  return `${average.toFixed(1)} (${count} ${count === 1 ? "review" : "reviews"})`;
+  if (average === null || count === 0) return t("No reviews yet");
+  return tn(count, "{avg} ({n} review)", "{avg} ({n} reviews)", { avg: average.toFixed(1) });
 }
 
 // ---------------------------------------------------------------------------
@@ -224,7 +225,7 @@ export type VenueMemberRow = {
 };
 
 /** CN: how a membership granted by a member code is labelled where memberships are listed. */
-export const GRANTED_LABEL = "Granted with a code";
+export const GRANTED_LABEL = tk("Granted with a code");
 
 export function toVenueMember(r: VenueMemberRow): VenueMember {
   return {
@@ -256,7 +257,7 @@ export function paidLine(m: Pick<VenueMember, "paidAt" | "paymentStatus">): stri
   if (!m.paidAt || m.paymentStatus !== "paid") return null;
   const d = new Date(m.paidAt);
   if (Number.isNaN(d.getTime())) return null;
-  return `Paid ${formatShortDate(d, { day: "numeric", month: "short" })}`;
+  return t("Paid {date}", { date: formatShortDate(d, { day: "numeric", month: "short" }) });
 }
 
 /** total_count rides on every row; an empty page has none, so it is 0 then. */
@@ -270,34 +271,34 @@ export const MEMBERS_PAGE_SIZE = 50;
 /** "1–50 of 120", or "" for an empty roster. */
 export function pageLine(offset: number, shown: number, total: number): string {
   if (total === 0 || shown === 0) return "";
-  return `${offset + 1}–${offset + shown} of ${total}`;
+  return t("{from}–{to} of {total}", { from: offset + 1, to: offset + shown, total });
 }
 
 /** The status filter's choices: null is every status (p_status = null). */
 export const MEMBER_FILTERS: { value: MembershipStatus | null; label: string }[] = [
-  { value: null, label: "All" },
-  { value: "active", label: "Active" },
-  { value: "expired", label: "Expired" },
-  { value: "cancelled", label: "Cancelled" },
-  { value: "upcoming", label: "Upcoming" },
+  { value: null, label: tk("All") },
+  { value: "active", label: tk("Active") },
+  { value: "expired", label: tk("Expired") },
+  { value: "cancelled", label: tk("Cancelled") },
+  { value: "upcoming", label: tk("Upcoming") },
 ];
 
 /** A roster row's tag: an upcoming renewal says when it starts (MB-05), else the pass state. */
 export function venueMemberTag(m: { passState: PassState; startedOn: string }): { label: string; tone: "member" | "pending" | "muted" } {
   // pass_state 'upcoming' outranks 'awaiting_payment' (20261121020000); the
   // roster's own payment line says whether it is paid.
-  if (m.passState === "upcoming") return { label: `Starts ${dayMonthYear(m.startedOn)}`, tone: "muted" };
+  if (m.passState === "upcoming") return { label: t("Starts {date}", { date: dayMonthYear(m.startedOn) }), tone: "muted" };
   return passStateTag(m.passState);
 }
 
 /** The pass state as the member sees it, worded for the desk. */
 export function passStateTag(state: PassState): { label: string; tone: "member" | "pending" | "muted" } {
-  if (state === "awaiting_payment") return { label: "Awaiting payment", tone: "pending" };
+  if (state === "awaiting_payment") return { label: tk("Awaiting payment"), tone: "pending" };
   if (state === "valid") return { label: "Valid", tone: "member" };
   return memberTag(state);
 }
 
-export const PAYMENT_METHOD_LABEL: Record<string, string> = { cash: "Cash", whish: "Whish Money" };
+export const PAYMENT_METHOD_LABEL: Record<string, string> = { cash: tk("Cash"), whish: tk("Whish Money") };
 export const methodLabel = (m: string | null): string => (m ? (PAYMENT_METHOD_LABEL[m] ?? m) : "");
 
 // ---------------------------------------------------------------------------
@@ -452,22 +453,22 @@ export function validateDrafts(drafts: DayDraft[]): Record<number, string> {
   const seen = new Set<number>();
   for (const d of drafts) {
     if (d.weekday < 1 || d.weekday > 7 || seen.has(d.weekday)) {
-      errors[d.weekday] = "Each day can only appear once.";
+      errors[d.weekday] = t("Each day can only appear once.");
       continue;
     }
     seen.add(d.weekday);
     if (d.shape === null) {
-      errors[d.weekday] = "Choose Closed, Open 24 hours or a time range.";
+      errors[d.weekday] = t("Choose Closed, Open 24 hours or a time range.");
     } else if (d.shape === "range") {
       if (!HHMM.test(d.opensAt) || !HHMM.test(d.closesAt)) {
-        errors[d.weekday] = "Enter an opening and a closing time.";
+        errors[d.weekday] = t("Enter an opening and a closing time.");
       } else if (d.opensAt === d.closesAt) {
-        errors[d.weekday] = "Opening and closing times are the same. Choose Open 24 hours instead.";
+        errors[d.weekday] = t("Opening and closing times are the same. Choose Open 24 hours instead.");
       }
     }
   }
   for (let w = 1; w <= 7; w++) {
-    if (!seen.has(w) && !errors[w]) errors[w] = "Choose Closed, Open 24 hours or a time range.";
+    if (!seen.has(w) && !errors[w]) errors[w] = t("Choose Closed, Open 24 hours or a time range.");
   }
   return errors;
 }
@@ -548,15 +549,15 @@ export function replacedObject(previous: string | null | undefined, uid: string,
 export function consoleMessage(code: string | undefined, serverMessage: string, fallback: string): string {
   switch (code) {
     case "ATX08":
-      return "That venue or class couldn't be found.";
+      return t("That venue or class couldn't be found.");
     case "ATX03":
-      return "You don't manage this venue.";
+      return t("You don't manage this venue.");
     case "42501":
-      return "You don't have access to change this. Ask the owner.";
+      return t("You don't have access to change this. Ask the owner.");
     case "23514":
-      return "That wasn't saved: each day must be closed, open 24 hours, or a from–to time.";
+      return t("That wasn't saved: each day must be closed, open 24 hours, or a from–to time.");
     case "23505":
-      return "Those hours changed in another window. Reload and try again.";
+      return t("Those hours changed in another window. Reload and try again.");
     default:
       return stage4Message(code, serverMessage, fallback);
   }

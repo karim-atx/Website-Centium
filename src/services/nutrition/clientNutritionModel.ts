@@ -6,6 +6,7 @@
 
 import type { MacroSplit, NutritionGoal, WeightGoalType } from "../../types";
 import { appLocale } from "../../i18n/format";
+import { getLanguage, t, tk, tn } from "../../i18n/core";
 
 // ---------------------------------------------------------------------------
 // Allergens (the 14 regulated allergens, enum `allergen`)
@@ -37,26 +38,26 @@ export type AllergySeverity = "mild" | "moderate" | "severe";
  * name an allergen the same way.
  */
 export const ALLERGENS: { value: Allergen; label: string }[] = [
-  { value: "tree_nuts", label: "Tree nuts" },
-  { value: "peanuts", label: "Peanuts" },
-  { value: "milk", label: "Milk" },
-  { value: "eggs", label: "Eggs" },
-  { value: "cereals_gluten", label: "Gluten (cereals)" },
-  { value: "soya", label: "Soya" },
-  { value: "fish", label: "Fish" },
-  { value: "crustaceans", label: "Crustaceans" },
-  { value: "molluscs", label: "Molluscs" },
-  { value: "sesame", label: "Sesame" },
-  { value: "celery", label: "Celery" },
-  { value: "mustard", label: "Mustard" },
-  { value: "lupin", label: "Lupin" },
-  { value: "sulphites", label: "Sulphites" },
+  { value: "tree_nuts", label: tk("Tree nuts") },
+  { value: "peanuts", label: tk("Peanuts") },
+  { value: "milk", label: tk("Milk") },
+  { value: "eggs", label: tk("Eggs") },
+  { value: "cereals_gluten", label: tk("Gluten (cereals)") },
+  { value: "soya", label: tk("Soya") },
+  { value: "fish", label: tk("Fish") },
+  { value: "crustaceans", label: tk("Crustaceans") },
+  { value: "molluscs", label: tk("Molluscs") },
+  { value: "sesame", label: tk("Sesame") },
+  { value: "celery", label: tk("Celery") },
+  { value: "mustard", label: tk("Mustard") },
+  { value: "lupin", label: tk("Lupin") },
+  { value: "sulphites", label: tk("Sulphites") },
 ];
 
 export const SEVERITIES: { value: AllergySeverity; label: string }[] = [
-  { value: "mild", label: "Mild" },
-  { value: "moderate", label: "Moderate" },
-  { value: "severe", label: "Severe" },
+  { value: "mild", label: tk("Mild") },
+  { value: "moderate", label: tk("Moderate") },
+  { value: "severe", label: tk("Severe") },
 ];
 
 export const allergenLabel = (a: string | null | undefined): string => ALLERGENS.find((x) => x.value === a)?.label ?? (a ?? "");
@@ -91,17 +92,20 @@ export function allergyLine(allergies: MyAllergy[], sharedWith: string[]): strin
   const order = (a: Allergen) => ALLERGENS.findIndex((x) => x.value === a);
   const list = [...allergies]
     .sort((x, y) => order(x.allergen) - order(y.allergen))
-    .map((a) => `${allergenLabel(a.allergen)} (${a.severity})`)
-    .join(", ");
-  const head = `${allergies.length === 1 ? "Allergy" : "Allergies"}: ${list}.`;
+    .map((a) => `${t(allergenLabel(a.allergen))} (${t(severityLabel(a.severity)).toLowerCase()})`)
+    .join(listSep());
+  const head = allergies.length === 1 ? t("Allergy: {list}.", { list }) : t("Allergies: {list}.", { list });
   if (sharedWith.length === 0) return head;
-  return `${head} Shared with ${joinNames(sharedWith)}.`;
+  return `${head} ${t("Shared with {names}.", { names: joinNames(sharedWith) })}`;
 }
 
 export function joinNames(names: string[]): string {
   if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return t("{a} and {b}", { a: names.slice(0, -1).join(listSep()), b: names[names.length - 1] });
 }
+
+/** ", " in English, the Arabic comma in Arabic. */
+const listSep = () => (getLanguage() === "ar" ? "، " : ", ");
 
 // ---------------------------------------------------------------------------
 // food_conflicts -> what the client sees
@@ -148,7 +152,7 @@ export function badgeFor(row: ConflictRow, restrictionLabel: (r: string) => stri
       return {
         kind: "allergy_confirmed",
         tone: "red",
-        text: `Allergy: ${allergenLabel(row.allergen).toLowerCase()}`,
+        text: t("Allergy: {name}", { name: t(allergenLabel(row.allergen)).toLowerCase() }),
         blocks: true,
         severity: sev,
         allergen: (row.allergen as Allergen) ?? null,
@@ -156,13 +160,13 @@ export function badgeFor(row: ConflictRow, restrictionLabel: (r: string) => stri
       };
     }
     case "allergy_check":
-      return { kind: "allergy_check", tone: "amber", text: "Check this", blocks: false, severity: null, allergen: null, restriction: null };
+      return { kind: "allergy_check", tone: "amber", text: t("Check this"), blocks: false, severity: null, allergen: null, restriction: null };
     case "restriction": {
-      const label = row.restriction ? restrictionLabel(row.restriction) : "";
-      return { kind: "restriction", tone: "amber", text: label ? `Not ${label.toLowerCase()}` : "Not compatible", blocks: false, severity: null, allergen: null, restriction: row.restriction };
+      const label = row.restriction ? t(restrictionLabel(row.restriction)) : "";
+      return { kind: "restriction", tone: "amber", text: label ? t("Not {restriction}", { restriction: label.toLowerCase() }) : t("Not compatible"), blocks: false, severity: null, allergen: null, restriction: row.restriction };
     }
     case "preference": {
-      const label = row.restriction ? restrictionLabel(row.restriction) : "Preference";
+      const label = row.restriction ? t(restrictionLabel(row.restriction)) : t("Preference");
       return { kind: "preference", tone: "soft", text: label, blocks: false, severity: null, allergen: null, restriction: row.restriction };
     }
     default:
@@ -194,14 +198,17 @@ export function addNotice(
   restrictionLabel?: (r: string) => string
 ): { tone: "red" | "amber" | "soft"; title: string; body: string; blocks: boolean; addAnyway: boolean } | null {
   const all = badgesFor(rows, restrictionLabel);
+  const nameOf = restrictionLabel ?? ((r: string) => r);
   const b = all[0];
   if (!b) return null;
   if (b.kind === "allergy_confirmed") {
-    const what = allergenLabel(b.allergen).toLowerCase();
+    const what = t(allergenLabel(b.allergen)).toLowerCase();
     return {
       tone: "red",
-      title: `${foodName} contains ${what}`,
-      body: `You're allergic to ${what}${b.severity ? ` (${b.severity})` : ""}. Foods with an allergen you've recorded can't be added. To add it, update your allergies first.`,
+      title: t("{food} contains {allergen}", { food: foodName, allergen: what }),
+      body: b.severity
+        ? t("You're allergic to {allergen} ({severity}). Foods with an allergen you've recorded can't be added. To add it, update your allergies first.", { allergen: what, severity: t(severityLabel(b.severity)).toLowerCase() })
+        : t("You're allergic to {allergen}. Foods with an allergen you've recorded can't be added. To add it, update your allergies first.", { allergen: what }),
       blocks: true,
       addAnyway: false,
     };
@@ -209,16 +216,18 @@ export function addNotice(
   if (b.kind === "allergy_check") {
     return {
       tone: "amber",
-      title: "Check this",
-      body: `The name suggests ${foodName} may contain something you're allergic to. Check the ingredients before you eat it.`,
+      title: t("Check this"),
+      body: t("The name suggests {food} may contain something you're allergic to. Check the ingredients before you eat it.", { food: foodName }),
       blocks: false,
       addAnyway: false,
     };
   }
   if (b.kind === "restriction") {
-    return { tone: "amber", title: `${foodName} isn't ${b.text.replace(/^Not /, "")}`, body: "You can still add it.", blocks: false, addAnyway: true };
+    const label = b.restriction ? t(nameOf(b.restriction)) : "";
+    const title = label ? t("{food} isn't {restriction}", { food: foodName, restriction: label.toLowerCase() }) : t("{food} isn't compatible", { food: foodName });
+    return { tone: "amber", title, body: t("You can still add it."), blocks: false, addAnyway: true };
   }
-  return { tone: "soft", title: b.text, body: `${foodName} isn't in line with a dietary preference you set.`, blocks: false, addAnyway: false };
+  return { tone: "soft", title: b.text, body: t("{food} isn't in line with a dietary preference you set.", { food: foodName }), blocks: false, addAnyway: false };
 }
 
 // ---------------------------------------------------------------------------
@@ -272,7 +281,7 @@ export function showsTargets(goal: NutritionGoal, t: ProfessionalTargets): boole
 }
 
 /** ATXG8 (HANDOVER_API): the client's targets are locked by their professional. */
-export const TARGETS_LOCKED_MESSAGE = "Your targets are set by your professional.";
+export const TARGETS_LOCKED_MESSAGE = tk("Your targets are set by your professional.");
 
 // ---------------------------------------------------------------------------
 // Meal plan card (CU3 "Meal plan from {pro}")
@@ -319,10 +328,10 @@ export function mealPlanLines(
   today: string
 ): { title: string; sub: string } {
   const d = planDay(p.startsOn, today, p.daysCount);
-  if (!d.started) return { title: p.name, sub: `Starts ${SHORT(p.startsOn)}` };
+  if (!d.started) return { title: p.name, sub: t("Starts {date}", { date: SHORT(p.startsOn) }) };
   const n = mealsOnDay(rows, d.dayIndex);
-  const meals = `${n} meal${n === 1 ? "" : "s"} on ${WEEKDAY(today)}`;
-  return { title: `${p.name}, week ${d.week}`, sub: p.endsOn ? `Ends ${SHORT(p.endsOn)} · ${meals}` : meals };
+  const meals = tn(n, "{n} meal on {day}", "{n} meals on {day}", { day: WEEKDAY(today) });
+  return { title: t("{name}, week {n}", { name: p.name, n: d.week }), sub: p.endsOn ? `${t("Ends {date}", { date: SHORT(p.endsOn) })} · ${meals}` : meals };
 }
 
 /** Whether an assignment is current on `today` (not ended, not past its end date). */
@@ -337,13 +346,14 @@ export function assignmentIsCurrent(a: { endedAt: string | null; endsOn: string 
 export type Reaction = "like" | "love" | "strong" | "question";
 
 /** The words the professional's quick reactions stand for (the professional's own labels, Journals.tsx). */
-export const REACTION_TEXT: Record<Reaction, string> = { like: "Great choice.", love: "Love this.", strong: "Strong choice.", question: "Question." };
+export const REACTION_TEXT: Record<Reaction, string> = { like: tk("Great choice."), love: tk("Love this."), strong: tk("Strong choice."), question: tk("Question.") };
 
 /** What the line says after the professional's name: their note, else their reaction's words. */
 export function feedbackText(f: { body: string | null; reaction: string | null }): string {
   const body = f.body?.trim();
   if (body) return body;
-  return (f.reaction && REACTION_TEXT[f.reaction as Reaction]) || "";
+  const reaction = f.reaction ? REACTION_TEXT[f.reaction as Reaction] : undefined;
+  return reaction ? t(reaction) : "";
 }
 
 export const REPLY_MAX = 1000;

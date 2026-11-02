@@ -23,7 +23,7 @@
 import { formatShortDate } from "../../utils/date";
 import { clock12 } from "../../utils/time12";
 import { rows, str } from "../market/parse";
-import { t } from "../../i18n/core";
+import { t, tk } from "../../i18n/core";
 import { OWN_VOUCHER_LINE, OWN_VOUCHER_TITLE } from "../offers/voucherRules";
 
 export type CheckVariant = "business" | "professional";
@@ -149,7 +149,7 @@ const dateOf = (iso: string) => formatShortDate(new Date(iso), { month: "short",
 export function dateTimeLabel(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return `${dateOf(iso)} at ${clock12(d)}`;
+  return t("{date} at {time}", { date: dateOf(iso), time: clock12(d) });
 }
 
 export interface CheckRow {
@@ -177,60 +177,65 @@ export interface CheckView {
  */
 export function checkView(c: VoucherCheck, variant: CheckVariant): CheckView {
   const pro = variant === "professional";
-  const who = pro ? "client" : "member";
-  const offer = c.offerHeadline ? [{ k: "Offer", v: c.offerHeadline }] : [];
-  const codeRow = c.code ? [{ k: "Code", v: c.code }] : [];
+  const offer = c.offerHeadline ? [{ k: t("Offer"), v: c.offerHeadline }] : [];
+  const codeRow = c.code ? [{ k: t("Code"), v: c.code }] : [];
   // B-MA.4 / P-MA.4 _Valid: Offer, Member (Client), Valid until.
-  const member = c.memberName ? [{ k: pro ? "Client" : "Member", v: c.memberName }] : [];
+  const member = c.memberName ? [{ k: pro ? t("Client") : t("Member"), v: c.memberName }] : [];
   switch (c.state) {
     case "valid":
       return {
         tone: "good",
         icon: "check",
-        title: "Valid voucher",
-        body: `Check the ${who}'s name, then mark the voucher as used.`,
-        rows: [...offer, ...member, ...(c.expiresAt ? [{ k: "Valid until", v: dateOf(c.expiresAt) }] : [])],
+        title: t("Valid voucher"),
+        body: pro ? t("Check the client's name, then mark the voucher as used.") : t("Check the member's name, then mark the voucher as used."),
+        rows: [...offer, ...member, ...(c.expiresAt ? [{ k: t("Valid until"), v: dateOf(c.expiresAt) }] : [])],
         // Staff still decide: Mark as used stays enabled.
         ...(c.memberConfirmedAdult === false
-          ? { note: `18+ offer. ${c.memberName ? `${c.memberName}'s` : `The ${who}'s`} age isn't confirmed on Centium. Check ID before marking it as used.` }
+          ? {
+              note: c.memberName
+                ? t("18+ offer. {name}'s age isn't confirmed on Centium. Check ID before marking it as used.", { name: c.memberName })
+                : pro
+                  ? t("18+ offer. The client's age isn't confirmed on Centium. Check ID before marking it as used.")
+                  : t("18+ offer. The member's age isn't confirmed on Centium. Check ID before marking it as used."),
+            }
           : {}),
-        cta: "Mark as used",
+        cta: tk("Mark as used"),
       };
     case "used":
       return {
         tone: "good",
         icon: "check",
-        title: "Voucher marked as used",
-        body: c.usedAt ? `Marked as used on ${dateTimeLabel(c.usedAt)}.` : "Marked as used.",
+        title: t("Voucher marked as used"),
+        body: c.usedAt ? t("Marked as used on {date}.", { date: dateTimeLabel(c.usedAt) }) : t("Marked as used."),
         rows: offer,
-        cta: "Scan another",
+        cta: tk("Scan another"),
       };
     case "already_used":
       return {
         tone: "caution",
         icon: "x",
-        title: "Already used",
-        body: c.usedAt ? `This voucher was marked as used on ${dateTimeLabel(c.usedAt)}.` : "This voucher was already marked as used.",
-        rows: [...offer, ...(!pro && c.usedBy ? [{ k: "Used by staff", v: c.usedBy }] : [])],
-        cta: "Scan another",
+        title: t("Already used"),
+        body: c.usedAt ? t("This voucher was marked as used on {date}.", { date: dateTimeLabel(c.usedAt) }) : t("This voucher was already marked as used."),
+        rows: [...offer, ...(!pro && c.usedBy ? [{ k: t("Used by staff"), v: c.usedBy }] : [])],
+        cta: tk("Scan another"),
       };
     case "expired":
       return {
         tone: "high",
         icon: "x",
-        title: "Expired",
-        body: c.expiresAt ? `This voucher expired on ${dateOf(c.expiresAt)} and can't be used.` : "This voucher has expired and can't be used.",
-        rows: [...offer, ...(c.expiresAt ? [{ k: "Expired", v: dateOf(c.expiresAt) }] : [])],
-        cta: "Scan another",
+        title: t("Expired"),
+        body: c.expiresAt ? t("This voucher expired on {date} and can't be used.", { date: dateOf(c.expiresAt) }) : t("This voucher has expired and can't be used."),
+        rows: [...offer, ...(c.expiresAt ? [{ k: t("Expired"), v: dateOf(c.expiresAt) }] : [])],
+        cta: tk("Scan another"),
       };
     case "void":
       return {
         tone: "high",
         icon: "x",
-        title: "Voucher cancelled",
-        body: "Centium cancelled this voucher, so it can't be used.",
+        title: t("Voucher cancelled"),
+        body: t("Centium cancelled this voucher, so it can't be used."),
         rows: [...offer, ...codeRow],
-        cta: "Scan another",
+        cta: tk("Scan another"),
       };
     case "own_voucher":
       // Round F (AB3): staff can't mark their own voucher as used.
@@ -240,25 +245,25 @@ export function checkView(c: VoucherCheck, variant: CheckVariant): CheckView {
         title: t(OWN_VOUCHER_TITLE),
         body: t(OWN_VOUCHER_LINE),
         rows: codeRow,
-        cta: "Scan another",
+        cta: tk("Scan another"),
       };
     case "not_found":
       return {
         tone: "high",
         icon: "x",
-        title: "Code not found",
-        body: "No voucher has this code. Check it and try again.",
+        title: t("Code not found"),
+        body: t("No voucher has this code. Check it and try again."),
         rows: codeRow,
-        cta: "Scan another",
+        cta: tk("Scan another"),
       };
     default:
       return {
         tone: "high",
         icon: "x",
-        title: pro ? "Not valid with you" : "Not valid at this business",
-        body: pro ? "This voucher was issued for another professional's or business's offer." : "This voucher was issued for another business's offer.",
+        title: pro ? t("Not valid with you") : t("Not valid at this business"),
+        body: pro ? t("This voucher was issued for another professional's or business's offer.") : t("This voucher was issued for another business's offer."),
         rows: codeRow,
-        cta: "Scan another",
+        cta: tk("Scan another"),
       };
   }
 }

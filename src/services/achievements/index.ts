@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Achievement, PointsSummary, PointTier } from "./ladder";
+import { t } from "../../i18n/core";
 import { parsePointsExtras } from "../points/pointsModel";
 
 export * from "./ladder";
@@ -48,10 +49,10 @@ export type FeatureMilestone =
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to see your achievements.";
+    return t("Your session expired. Sign in again to see your achievements.");
   }
-  if (code === "42501") return "You don't have permission to read this. Sign in again.";
-  return "Couldn't load your achievements. Check your connection and try again.";
+  if (code === "42501") return t("You don't have permission to read this. Sign in again.");
+  return t("Couldn't load your achievements. Check your connection and try again.");
 }
 
 /**
@@ -117,7 +118,7 @@ export async function getPointsSummary(): Promise<Result<PointsSummary>> {
   const { data, error } = await supabase.rpc("my_points_summary");
   if (error) return { ok: false, message: describe(error) };
   const r = (data ?? [])[0];
-  if (!r) return { ok: false, message: "Couldn't load your points. Try again." };
+  if (!r) return { ok: false, message: t("Couldn't load your points. Try again.") };
   return {
     ok: true,
     value: {

@@ -4,8 +4,8 @@
 // 12-hour times ("10:00 AM"), Monday-first week days. No Supabase import, so
 // node --test loads it (hubModel.test.ts).
 
-import { clock12, rangeClock12, time12 } from "../../../utils/time12";
-import { getLanguage, t } from "../../../i18n/core";
+import { clock12, rangeClock12, time12En } from "../../../utils/time12";
+import { getLanguage, t, tk, tn, tx } from "../../../i18n/core";
 import { appLocale } from "../../../i18n/format";
 import { feeMoney, payMoney, payText, minimumSentence, type OpeningType, type PayUnit } from "../../../services/hiring/fee";
 import { hiredText, ratingLine } from "../../../components/market/peopleModel";
@@ -38,23 +38,43 @@ export function dayKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+const ar = () => getLanguage() === "ar";
+/** ", " in English, "، " in Arabic. */
+const comma = () => (ar() ? "، " : ", ");
+/** A date in Arabic (day and month names in Arabic), for the helpers below. */
+const arDate = (d: Date, o: Intl.DateTimeFormatOptions) => d.toLocaleDateString(appLocale(), o);
+
 /** "Oct 3"; the year is added when it isn't `now`'s ("Oct 3, 2025"). */
 export function monthDay(d: Date, now: Date = new Date()): string {
+  if (ar()) return arDate(d, d.getFullYear() === now.getFullYear() ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
   const base = `${MONTHS[d.getMonth()]} ${d.getDate()}`;
   return d.getFullYear() === now.getFullYear() ? base : `${base}, ${d.getFullYear()}`;
 }
 
 /** "Sep 14, 2026" (the board's "14 Sep 2026"). */
-export const monthDayYear = (d: Date): string => `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+export const monthDayYear = (d: Date): string => (ar() ? arDate(d, { month: "short", day: "numeric", year: "numeric" }) : `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`);
 
 /** "Sat, Oct 24" (the board's "Sat 24 Oct"). */
-export const weekdayMonthDay = (d: Date): string => `${DAY_SHORT[isoDay(d) - 1]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
+export const weekdayMonthDay = (d: Date): string => (ar() ? arDate(d, { weekday: "short", month: "short", day: "numeric" }) : enWeekdayMonthDay(d));
+/** Always English: the labels saved to the server (openings.schedule_label) use it. */
+const enWeekdayMonthDay = (d: Date): string => `${DAY_SHORT[isoDay(d) - 1]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 
 /** "Sun, Nov 1, 2026" (the board's "Sun 1 Nov 2026"). */
-export const weekdayMonthDayYear = (d: Date): string => `${weekdayMonthDay(d)}, ${d.getFullYear()}`;
+export const weekdayMonthDayYear = (d: Date): string => (ar() ? arDate(d, { weekday: "short", month: "short", day: "numeric", year: "numeric" }) : `${weekdayMonthDay(d)}, ${d.getFullYear()}`);
 
 /** "Mon to Fri" for a run of three or more days in a row; else "Sun", "Mon and Wed", "Mon, Wed and Fri". */
 export function daysLabel(weekdays: number[]): string {
+  if (!ar()) return enDaysLabel(weekdays);
+  const ws = [...new Set(weekdays)].filter((w) => w >= 1 && w <= 7).sort((a, b) => a - b);
+  if (!ws.length) return "";
+  const run = ws.length >= 3 && ws.every((w, i) => i === 0 || w === ws[i - 1] + 1);
+  if (run) return t("{first} to {last}", { first: t(DAY_SHORT[ws[0] - 1]), last: t(DAY_SHORT[ws[ws.length - 1] - 1]) });
+  const names = ws.map((w) => t(DAY_SHORT[w - 1]));
+  return names.length === 1 ? names[0] : t("{a} and {b}", { a: names.slice(0, -1).join("، "), b: names[names.length - 1] });
+}
+
+/** daysLabel in English whatever the language: the labels saved to the server use it. */
+function enDaysLabel(weekdays: number[]): string {
   const ws = [...new Set(weekdays)].filter((w) => w >= 1 && w <= 7).sort((a, b) => a - b);
   if (!ws.length) return "";
   const run = ws.length >= 3 && ws.every((w, i) => i === 0 || w === ws[i - 1] + 1);
@@ -68,9 +88,9 @@ export function daysLabel(weekdays: number[]): string {
 
 export type HubTab = OpeningStatus;
 export const HUB_TABS: { key: HubTab; label: string }[] = [
-  { key: "open", label: "Open" },
-  { key: "filled", label: "Filled" },
-  { key: "closed", label: "Closed" },
+  { key: "open", label: tk("Open") },
+  { key: "filled", label: tk("Filled") },
+  { key: "closed", label: tk("Closed") },
 ];
 
 /** `?tab=filled|closed`; anything else is Open. */
@@ -78,10 +98,11 @@ export const tabOf = (v: string | null): HubTab => (v === "filled" || v === "clo
 
 /** The caps count line: "3 open", "2 filled", "1 closed", "No openings". */
 export function countLine(tab: HubTab, n: number): string {
-  return n > 0 ? `${n} ${tab}` : "No openings";
+  if (n <= 0) return t("No openings");
+  return tab === "open" ? tn(n, "{n} open", "{n} open") : tab === "filled" ? tn(n, "{n} filled", "{n} filled") : tn(n, "{n} closed", "{n} closed");
 }
 
-export const typeLabel = (t: OpeningType): string => (t === "class_slot" ? "Class slot · one-off" : "Role · ongoing");
+export const typeLabel = (type: OpeningType): string => (type === "class_slot" ? t("Class slot · one-off") : t("Role · ongoing"));
 
 /** The card's tag: FILLED / CLOSED by status, else ROLE / CLASS SLOT by type. */
 export function openingTag(o: Pick<Opening, "status" | "type">): HiringTag {
@@ -89,8 +110,6 @@ export function openingTag(o: Pick<Opening, "status" | "type">): HiringTag {
   if (o.status === "closed") return "CLOSED";
   return o.type === "class_slot" ? "CLASS SLOT" : "ROLE";
 }
-
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /**
  * The schedule line: role "Spin 45 · Sun 10:00 AM · 4 classes a month";
@@ -101,13 +120,13 @@ export function scheduleLine(o: Pick<Opening, "type" | "className" | "startsAt" 
   if (o.className) parts.push(o.className);
   const at = dateOf(o.startsAt);
   if (o.type === "class_slot") {
-    if (at) parts.push(`${weekdayMonthDay(at)}, ${clock12(at)}`);
-    parts.push("one-off");
+    if (at) parts.push(`${weekdayMonthDay(at)}${comma()}${clock12(at)}`);
+    parts.push(t("one-off"));
   } else {
-    const days = o.weekdays.length ? daysLabel(o.weekdays) : at ? DAY_SHORT[isoDay(at) - 1] : "";
+    const days = o.weekdays.length ? daysLabel(o.weekdays) : at ? t(DAY_SHORT[isoDay(at) - 1]) : "";
     const when = [days, at ? clock12(at) : ""].filter(Boolean).join(" ");
     if (when) parts.push(when);
-    if (o.classesPerMonth && o.classesPerMonth > 0) parts.push(`${plural(o.classesPerMonth, "class", "classes")} a month`);
+    if (o.classesPerMonth && o.classesPerMonth > 0) parts.push(tn(o.classesPerMonth, "{n} class a month", "{n} classes a month"));
   }
   return parts.join(" · ");
 }
@@ -116,7 +135,7 @@ export function scheduleLine(o: Pick<Opening, "type" | "className" | "startsAt" 
 export function payLine(o: Pick<Opening, "pay" | "payUnit" | "positions" | "status">): string {
   const parts: string[] = [];
   if (o.pay != null && o.pay > 0) parts.push(payText(o.pay, o.payUnit));
-  if (o.status === "open") parts.push(plural(Math.max(1, o.positions), "position"));
+  if (o.status === "open") parts.push(tn(Math.max(1, o.positions), "{n} position", "{n} positions"));
   return parts.join(" · ");
 }
 
@@ -130,28 +149,28 @@ export function footLine(
 ): { text: string; tone: FootTone } {
   if (o.status === "filled") {
     const at = dateOf(o.hiredAt);
-    const parts = [o.hiredName ? `Hired ${o.hiredName}` : "Hired"];
+    const parts = [o.hiredName ? t("Hired {name}", { name: o.hiredName }) : tx("Hired", "opening")];
     if (at) parts.push(monthDayYear(at));
-    if (o.hiredPath === "direct") parts.push("direct offer");
+    if (o.hiredPath === "direct") parts.push(t("direct offer"));
     return { text: parts.join(" · "), tone: "teal" };
   }
   if (o.status === "closed") {
     const at = dateOf(o.closedAt);
-    return { text: `${at ? `Closed ${monthDay(at, now)}` : "Closed"} · no hire`, tone: "faint" };
+    return { text: at ? t("Closed {date} · no hire", { date: monthDay(at, now) }) : t("Closed · no hire"), tone: "faint" };
   }
-  if (o.applicantCount <= 0) return justPosted ? { text: "Posted just now · no applicants yet", tone: "pdark" } : { text: "No applicants yet", tone: "faint" };
-  const n = plural(o.applicantCount, "applicant");
-  return { text: o.newApplicantCount > 0 ? `${n} · ${o.newApplicantCount} new` : n, tone: "pdark" };
+  if (o.applicantCount <= 0) return justPosted ? { text: t("Posted just now · no applicants yet"), tone: "pdark" } : { text: t("No applicants yet"), tone: "faint" };
+  const n = tn(o.applicantCount, "{n} applicant", "{n} applicants");
+  return { text: o.newApplicantCount > 0 ? t("{applicants} · {n} new", { applicants: n, n: o.newApplicantCount }) : n, tone: "pdark" };
 }
 
 /** The existing-team banner's stub: "24" / "days left", "1" / "day left", "Last" / "day". */
 export function bannerStub(daysLeft: number): { n: string; unit: string } {
-  if (daysLeft <= 0) return { n: "Last", unit: "day" };
-  return { n: String(daysLeft), unit: daysLeft === 1 ? "day left" : "days left" };
+  if (daysLeft <= 0) return { n: tx("Last", "days left stub"), unit: tx("day", "days left stub") };
+  return { n: String(daysLeft), unit: tn(daysLeft, "day left", "days left") };
 }
 
 /** "Team · 3"; "Team" alone while the count is pending or unknown. */
-export const teamButtonText = (n: number | null): string => (n == null ? "Team" : `Team · ${n}`);
+export const teamButtonText = (n: number | null): string => (n == null ? t("Team") : t("Team · {n}", { n }));
 
 // ---------------------------------------------------------------------------
 // people (B-MA.8.2 applicants, B-MA.8.6 results)
@@ -162,13 +181,13 @@ export const teamButtonText = (n: number | null): string => (n == null ? "Team" 
  * always show the distance (`teamFirst` false).
  */
 export function personRating(p: Pick<ProCard, "rating" | "reviewCount" | "onTeam" | "distanceKm">, teamFirst = true): string {
-  const extra = teamFirst && p.onTeam ? "on your Team" : p.distanceKm != null && Number.isFinite(p.distanceKm) ? `${p.distanceKm.toFixed(1)} km` : null;
+  const extra = teamFirst && p.onTeam ? t("on your Team") : p.distanceKm != null && Number.isFinite(p.distanceKm) ? t("{n} km", { n: p.distanceKm.toFixed(1) }) : null;
   return ratingLine(p.rating, p.reviewCount, extra);
 }
 
 /** The business wording of the hired line: "Hired via Centium · 2 roles" (teal) or "New to Centium" (faint). */
 export function hiredLine(roles: number): { text: string; hired: boolean } {
-  return roles > 0 ? { text: hiredText(roles), hired: true } : { text: "New to Centium", hired: false };
+  return roles > 0 ? { text: hiredText(roles), hired: true } : { text: t("New to Centium"), hired: false };
 }
 
 /** The applicant's tag: an unseen application reads NEW. */
@@ -183,7 +202,7 @@ export const firstName = (name: string): string => name.trim().split(/\s+/)[0] ?
 /** "Hired · starts Sun, Nov 1 · on your Team". */
 export function hiredState(startsOn: string | null): string {
   const d = dateOf(startsOn);
-  return d ? `Hired · starts ${weekdayMonthDay(d)} · on your Team` : "Hired · on your Team";
+  return d ? t("Hired · starts {date} · on your Team", { date: weekdayMonthDay(d) }) : t("Hired · on your Team");
 }
 
 // ---------------------------------------------------------------------------
@@ -245,14 +264,14 @@ export function feeNote(o: { type: OpeningType; minimum: number; minimumApplied:
   return parts.join(" ");
 }
 
-export const sentStrip = (name: string): string => `Offer sent to ${name}. ${firstName(name)} accepts in Opportunities.`;
+export const sentStrip = (name: string): string => t("Offer sent to {name}. {first} accepts in Opportunities.", { name, first: firstName(name) });
 
-export const hiredStrip = (fee: number): string => `Hired · one-time fee ${feeMoney(fee)} added to your Centium bill`;
+export const hiredStrip = (fee: number): string => t("Hired · one-time fee {fee} added to your Centium bill", { fee: feeMoney(fee) });
 
 /** A busy time returned with an offer (start / end only, no titles): "Sun, Nov 1, 10:00 to 11:00 AM". */
 export function busyText(b: { start: string; end: string }): string {
   const s = dateOf(b.start);
-  return s ? `${weekdayMonthDay(s)}, ${rangeClock12(b.start, b.end)}` : "";
+  return s ? `${weekdayMonthDay(s)}${comma()}${rangeClock12(b.start, b.end)}` : "";
 }
 
 // ---------------------------------------------------------------------------
@@ -291,11 +310,11 @@ export const emptyForm = (): OpeningFormState => ({
 
 /** The board's Requirements chips (B-MA.8.1 `postRole` / `postSlot`), offered as the choices. */
 export const REQUIREMENTS: Record<OpeningType, string[]> = {
-  role: ["Cycling certificate", "First aid", "2 years"],
-  class_slot: ["Cycling certificate", "First aid"],
+  role: [tk("Cycling certificate"), tk("First aid"), tk("2 years")],
+  class_slot: [tk("Cycling certificate"), tk("First aid")],
 };
 
-export const PROPOSALS_HINT = { off: "Off: applicants see your pay as fixed", on: "On: applicants can propose their own rate" } as const;
+export const PROPOSALS_HINT = { off: tk("Off: applicants see your pay as fixed"), on: tk("On: applicants can propose their own rate") } as const;
 
 const money = (s: string): number | null => {
   const t = s.replace(/[$,\s]/g, "");
@@ -374,7 +393,7 @@ export function seriesOptions(classes: BusinessClassRow[], today: string): Serie
     by.set(c.seriesId, s);
   }
   return [...by.entries()]
-    .map(([id, s]) => ({ id, title: s.title, perWeek: s.days.size, label: `${s.title} · ${daysLabel([...s.days])} ${time12(s.time)}` }))
+    .map(([id, s]) => ({ id, title: s.title, perWeek: s.days.size, label: `${s.title} · ${enDaysLabel([...s.days])} ${time12En(s.time)}` }))
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
@@ -395,7 +414,7 @@ export function sessionOptions(classes: BusinessClassRow[], today: string, nowTi
     .flatMap((c) => {
       const d = dateOf(c.date);
       if (!d) return [];
-      return [{ id: c.id, date: c.date, label: `${c.title} · ${weekdayMonthDay(d)}, ${time12(c.startTime)}`, slotTitle: `${DAY_LONG[isoDay(d) - 1]} ${c.title} cover` }];
+      return [{ id: c.id, date: c.date, label: `${c.title} · ${enWeekdayMonthDay(d)}, ${time12En(c.startTime)}`, slotTitle: `${DAY_LONG[isoDay(d) - 1]} ${c.title} cover` }];
     });
 }
 
@@ -442,13 +461,17 @@ export function formOfOpening(o: Pick<Opening, "type" | "title" | "classSeriesId
 export function deleteDialogOf(o: Pick<Opening, "title" | "applicantCount">): { title: string; body: string; action: string; pauseInstead: boolean } {
   if (o.applicantCount > 0) {
     return {
-      title: `Pause ${o.title} instead?`,
-      body: `${plural(o.applicantCount, "person has", "people have")} applied, so it can't be deleted. Pausing closes it and keeps their applications. You can reopen it later.`,
-      action: "Pause",
+      title: t("Pause {title} instead?", { title: o.title }),
+      body: tn(
+        o.applicantCount,
+        "{n} person has applied, so it can't be deleted. Pausing closes it and keeps their applications. You can reopen it later.",
+        "{n} people have applied, so it can't be deleted. Pausing closes it and keeps their applications. You can reopen it later.",
+      ),
+      action: t("Pause"),
       pauseInstead: true,
     };
   }
-  return { title: `Delete ${o.title}?`, body: "It comes off Hiring and the opportunities board. This can't be undone.", action: "Delete", pauseInstead: false };
+  return { title: t("Delete {title}?", { title: o.title }), body: t("It comes off Hiring and the opportunities board. This can't be undone."), action: t("Delete"), pauseInstead: false };
 }
 
 /** Classes a month suggested from the chosen series (sessions a week × 4), as the board's 1 weekly class → 4. */

@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { lookupByBarcode, type FoodSearchResult } from "../food";
 import { normalizeGtin } from "../../utils/gtin";
 import { OFFLINE_MESSAGE } from "../network-error";
+import { t } from "../../i18n/core";
 
 // What a scanned or typed barcode turns into, in the order the handover sets
 // (FO3.2 / HO2.1):
@@ -56,11 +57,11 @@ interface FnProduct {
  */
 export function lookupErrorMessage(code: string | undefined, offline = false): string {
   if (offline) return OFFLINE_MESSAGE;
-  if (code === "rate_limited") return "You've scanned a lot in the last hour. Try again later, or enter it by hand.";
+  if (code === "rate_limited") return t("You've scanned a lot in the last hour. Try again later, or enter it by hand.");
   if (code === "upstream_rate_limited" || code === "upstream_unavailable" || code === "upstream_error")
-    return "Open Food Facts isn't answering right now. Try again, or enter it by hand.";
-  if (code === "unauthenticated") return "Your session expired. Sign in again to look products up.";
-  return "Couldn't look that barcode up. Try again, or enter it by hand.";
+    return t("Open Food Facts isn't answering right now. Try again, or enter it by hand.");
+  if (code === "unauthenticated") return t("Your session expired. Sign in again to look products up.");
+  return t("Couldn't look that barcode up. Try again, or enter it by hand.");
 }
 
 /** Maps the function's success body to the product the confirm card shows. */

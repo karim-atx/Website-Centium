@@ -1,6 +1,7 @@
 import { clock12 } from "../../utils/time12";
 import { DAY_SHORT, mondayIndex } from "../../utils/week";
-import { appLocale } from "../../i18n/format";
+import { appLocale, ARABIC_LOCALE } from "../../i18n/format";
+import { getLanguage, t } from "../../i18n/core";
 
 // Display helpers for orders, returns and appointments (12-hour, Monday-first
 // week names, money from recorded amounts only).
@@ -17,60 +18,66 @@ export function moneyShort(n: number): string {
   return "$" + (Number.isInteger(n) ? n.toLocaleString(appLocale("en-US")) : n.toLocaleString(appLocale("en-US"), { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 }
 
+const ar = () => getLanguage() === "ar";
+/** ", " in English, "، " in Arabic. */
+const comma = () => (ar() ? "، " : ", ");
+
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 /** "Mon, Oct 6". */
 export function shortDate(d: Date): string {
+  if (ar()) return d.toLocaleDateString(ARABIC_LOCALE, { weekday: "short", day: "numeric", month: "short" });
   return `${DAY_SHORT[mondayIndex(d.getDay())]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
 /** "Oct 6". */
 export function dayMonth(d: Date): string {
+  if (ar()) return d.toLocaleDateString(ARABIC_LOCALE, { day: "numeric", month: "short" });
   return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
 /** "today", "yesterday", else "Mon 6 Oct" (OP1-005 row 5, OURS). */
 export function dayWord(iso: string, now = new Date()): string {
   const d = new Date(iso);
-  if (sameDay(d, now)) return "today";
+  if (sameDay(d, now)) return t("today");
   const y = new Date(now);
   y.setDate(now.getDate() - 1);
-  if (sameDay(d, y)) return "yesterday";
+  if (sameDay(d, y)) return t("yesterday");
   return shortDate(d);
 }
 
 /** "Today", "Tomorrow", else "Mon 13 Oct" (capitalised, for fields and labels). */
 export function dayTitle(d: Date, now = new Date()): string {
-  if (sameDay(d, now)) return "Today";
-  const t = new Date(now);
-  t.setDate(now.getDate() + 1);
-  if (sameDay(d, t)) return "Tomorrow";
+  if (sameDay(d, now)) return t("Today");
+  const next = new Date(now);
+  next.setDate(now.getDate() + 1);
+  if (sameDay(d, next)) return t("Tomorrow");
   const y = new Date(now);
   y.setDate(now.getDate() - 1);
-  if (sameDay(d, y)) return "Yesterday";
+  if (sameDay(d, y)) return t("Yesterday");
   return shortDate(d);
 }
 
 /** "today, 6:12 PM" / "Mon 6 Oct, 6:12 PM". */
 export function dayClock(iso: string, now = new Date()): string {
-  return `${dayWord(iso, now)}, ${clock12(iso)}`;
+  return `${dayWord(iso, now)}${comma()}${clock12(iso)}`;
 }
 
 /** Order age in a list row: "12 min ago", "1 h ago"; after 24 hours "Mon 6 Oct, 6:12 PM" (OP1-001 row 13). */
 export function ageLabel(iso: string, now = new Date()): string {
   const mins = Math.floor((now.getTime() - new Date(iso).getTime()) / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 1) return t("Just now");
+  if (mins < 60) return t("{n} min ago", { n: mins });
   const h = Math.floor(mins / 60);
-  if (h < 24) return `${h} h ago`;
-  return `${shortDate(new Date(iso))}, ${clock12(iso)}`;
+  if (h < 24) return t("{n} h ago", { n: h });
+  return `${shortDate(new Date(iso))}${comma()}${clock12(iso)}`;
 }
 
 /** Completed-list time: "4:10 PM" today, "Mon 4:10 PM" this week, "6 Oct" earlier (OURS-OP1-store-orders-completed row 8). */
 export function completedWhen(iso: string, now = new Date()): string {
   const d = new Date(iso);
   if (sameDay(d, now)) return clock12(iso);
-  if (startOfWeekMs(d) === startOfWeekMs(now)) return `${DAY_SHORT[mondayIndex(d.getDay())]} ${clock12(iso)}`;
+  if (startOfWeekMs(d) === startOfWeekMs(now)) return `${t(DAY_SHORT[mondayIndex(d.getDay())])} ${clock12(iso)}`;
   return dayMonth(d);
 }
 

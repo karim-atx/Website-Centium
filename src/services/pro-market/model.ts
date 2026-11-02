@@ -17,6 +17,7 @@
 //   format; a session type's format is its location_kind (no column).
 
 import { bool, num, rows, str } from "../market/parse";
+import { t, tk, tn, tx } from "../../i18n/core";
 import { countDelta, formatCount, heroDelta, pctDelta, QUIET, sparkValues, THIS_MONTH } from "../business-market/overviewModel";
 import { licenceStatus, type LicenceReviewRow } from "../professional-cv/licenceStatus";
 import { monthYear, planPrice, priceLabel, sessionLine } from "../../components/pro/profile/profileModel";
@@ -79,7 +80,7 @@ export function parseProOverview(data: unknown): ProOverview | null {
 export type ProOverviewState = { status: "loading" } | { status: "error" } | { status: "ok"; value: ProOverview | null };
 
 /** The P-MA.1 Empty line under "Clients reached" (ovEmpty). */
-export const EMPTY_SUB = "Shows once clients start finding you";
+export const EMPTY_SUB = tk("Shows once clients start finding you");
 
 export interface OverviewView {
   hero: { value: string; delta: string | null; sub: string | null; series: number[] | null };
@@ -105,15 +106,15 @@ export function overviewView(state: ProOverviewState, roster: number | null): Ov
       hero: {
         value: formatCount(v.clientsReached),
         delta: empty ? null : heroDelta(v.clientsReachedDeltaPct),
-        sub: empty ? EMPTY_SUB : THIS_MONTH,
+        sub: empty ? t(EMPTY_SUB) : t(THIS_MONTH),
         series: empty ? null : v.sparkline,
       },
       rows: [
-        { label: "Active offers", value: formatCount(v.activeOffers), delta: d(countDelta(v.activeOffersDelta)) },
-        { label: "Redemptions this month", value: formatCount(v.redemptionsThisMonth), delta: d(pctDelta(v.redemptionsDeltaPct)) },
-        { label: "Points redeemed", value: formatCount(v.pointsRedeemed), delta: d(pctDelta(v.pointsRedeemedDeltaPct)), leaf: true },
-        { label: "Active clients", value: formatCount(v.activeClients), delta: d(countDelta(v.activeClientsDelta)) },
-        { label: "Gyms working with", value: formatCount(v.gymsWorkingWith), delta: d(countDelta(v.gymsWorkingWithDelta)) },
+        { label: t("Active offers"), value: formatCount(v.activeOffers), delta: d(countDelta(v.activeOffersDelta)) },
+        { label: t("Redemptions this month"), value: formatCount(v.redemptionsThisMonth), delta: d(pctDelta(v.redemptionsDeltaPct)) },
+        { label: t("Points redeemed"), value: formatCount(v.pointsRedeemed), delta: d(pctDelta(v.pointsRedeemedDeltaPct)), leaf: true },
+        { label: t("Active clients"), value: formatCount(v.activeClients), delta: d(countDelta(v.activeClientsDelta)) },
+        { label: t("Gyms working with"), value: formatCount(v.gymsWorkingWith), delta: d(countDelta(v.gymsWorkingWithDelta)) },
       ],
     };
   }
@@ -121,11 +122,11 @@ export function overviewView(state: ProOverviewState, roster: number | null): Ov
     empty: false,
     hero: { value: QUIET, delta: null, sub: null, series: null },
     rows: [
-      { label: "Active offers", value: QUIET, delta: QUIET },
-      { label: "Redemptions this month", value: QUIET, delta: QUIET },
-      { label: "Points redeemed", value: QUIET, delta: QUIET, leaf: true },
-      { label: "Active clients", value: roster === null ? QUIET : formatCount(roster), delta: QUIET },
-      { label: "Gyms working with", value: QUIET, delta: QUIET },
+      { label: t("Active offers"), value: QUIET, delta: QUIET },
+      { label: t("Redemptions this month"), value: QUIET, delta: QUIET },
+      { label: t("Points redeemed"), value: QUIET, delta: QUIET, leaf: true },
+      { label: t("Active clients"), value: roster === null ? QUIET : formatCount(roster), delta: QUIET },
+      { label: t("Gyms working with"), value: QUIET, delta: QUIET },
     ],
   };
 }
@@ -234,11 +235,12 @@ export interface ServiceCard {
   chip: string | null;
 }
 
-const BILLING_WORD: Record<string, string> = { daily: "Daily", monthly: "Monthly", quarterly: "Every 3 months", semiannually: "Every 6 months", annually: "Yearly" };
+const BILLING_WORD: Record<string, string> = { daily: tk("Daily"), monthly: tk("Monthly"), quarterly: tk("Every 3 months"), semiannually: tk("Every 6 months"), annually: tk("Yearly") };
 
 /** The plan card's meta line: the package size, then how it is billed. */
 export function planMeta(sessionCount: number | null, billing: string): string {
-  const parts = [sessionCount !== null ? `${sessionCount} ${sessionCount === 1 ? "session" : "sessions"}` : null, BILLING_WORD[billing] ?? null].filter(Boolean);
+  const word = BILLING_WORD[billing];
+  const parts = [sessionCount !== null ? tn(sessionCount, "{n} session", "{n} sessions") : null, word ? t(word) : null].filter(Boolean);
   return parts.join(" · ");
 }
 
@@ -249,11 +251,13 @@ export function shelfOrder<T extends Pick<ShelfItem, "id" | "sort" | "createdAt"
   return list.slice().sort((a, b) => a.sort - b.sort || b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
 }
 
-const FORMAT_WORD: Record<Format, string> = { in_person: "In person", online: "Online", both: "In person or online" };
+// "Online" is the session-format sense (tx), not presence.
+const FORMAT_WORD: Record<Format, string> = { in_person: tk("In person"), online: "Online", both: tk("In person or online") };
+const formatWord = (f: Format): string => (f === "online" ? tx("Online", "session format") : t(FORMAT_WORD[f]));
 
 /** The shelf card's meta line: "60 min · In person" (either part left out when unset). */
 export function shelfMeta(durationLabel: string | null, format: Format | null): string {
-  return [durationLabel?.trim() || null, format ? FORMAT_WORD[format] : null].filter(Boolean).join(" · ");
+  return [durationLabel?.trim() || null, format ? formatWord(format) : null].filter(Boolean).join(" · ");
 }
 
 /** "$80", "Free" for 0, "" when the item shows no price. */
@@ -287,7 +291,7 @@ export function parseShelfRows(data: unknown): ShelfItem[] {
 }
 
 /** "Hidden by Centium": an item an admin took down (ours; the owner can't show it again). */
-export const TAKEN_DOWN_CHIP = "Hidden by Centium";
+export const TAKEN_DOWN_CHIP = tk("Hidden by Centium");
 
 function shelfCard(x: ShelfItem): ServiceCard {
   const ref: ServiceRef = { kind: "shelf", item: x };
@@ -300,7 +304,7 @@ function shelfCard(x: ShelfItem): ServiceCard {
     description: x.description,
     price: shelfPrice(x.price),
     dim,
-    chip: x.hiddenByCentium ? TAKEN_DOWN_CHIP : x.visible ? null : "Hidden",
+    chip: x.hiddenByCentium ? TAKEN_DOWN_CHIP : x.visible ? null : tk("Hidden"),
   };
 }
 
@@ -312,7 +316,7 @@ export function serviceCards(sessions: SessionService[], plans: PlanService[], s
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     .map((x): ServiceCard => {
       const ref: ServiceRef = { kind: "session", item: x };
-      return { key: serviceKey(ref), ref, name: x.name, meta: sessionLine(x.durationMin, x.locationKind), description: x.description?.trim() || null, price: priceLabel(x.price, x.currency), dim: !x.visible, chip: x.visible ? null : "Hidden" };
+      return { key: serviceKey(ref), ref, name: x.name, meta: sessionLine(x.durationMin, x.locationKind), description: x.description?.trim() || null, price: priceLabel(x.price, x.currency), dim: !x.visible, chip: x.visible ? null : tk("Hidden") };
     });
   const p = plans
     .slice()
@@ -330,7 +334,7 @@ export function serviceCards(sessions: SessionService[], plans: PlanService[], s
         price: planPrice(x.price, x.billing),
         dim: !x.active || !x.visible,
         // Not offered wins: a plan that isn't sold shows nowhere, shown or not.
-        chip: !x.active ? "Not offered" : x.visible ? null : "Hidden",
+        chip: !x.active ? tk("Not offered") : x.visible ? null : tk("Hidden"),
       };
     });
   return [...sh, ...s, ...p];
@@ -355,24 +359,24 @@ export function shelfMove(shelf: ShelfItem[], id: string, dir: -1 | 1): string[]
  * fail; turning it off always works. Short lines in the board's voice (ours).
  */
 export const VISIBLE_REFUSALS: Record<string, string> = {
-  ATXC6: "You can show your Showcase once your licence or certificate is verified.",
-  ATX47: "Accounts under 18 can't show a Showcase to clients and gyms.",
-  ATX48: "Add your date of birth to show your Showcase.",
-  ATX09: "Only a professional account has a Showcase.",
+  ATXC6: tk("You can show your Showcase once your licence or certificate is verified."),
+  ATX47: tk("Accounts under 18 can't show a Showcase to clients and gyms."),
+  ATX48: tk("Add your date of birth to show your Showcase."),
+  ATX09: tk("Only a professional account has a Showcase."),
 };
 
 /** The refusal line for a code, or null when the code isn't one of the documented refusals. */
-export const visibleRefusal = (code: string | null | undefined): string | null => (code && VISIBLE_REFUSALS[code]) || null;
+export const visibleRefusal = (code: string | null | undefined): string | null => (code && VISIBLE_REFUSALS[code] ? t(VISIBLE_REFUSALS[code]) : null);
 
 /** "5 services" (the caps header), "1 service". */
-export const servicesHeader = (n: number): string => `${n} ${n === 1 ? "service" : "services"}`;
+export const servicesHeader = (n: number): string => tn(n, "{n} service", "{n} services");
 
 /** The Format chips (a shelf item's and a plan's `format`; for a session type, its live location_kind). */
 export type Format = "in_person" | "online" | "both";
 export const FORMATS: { key: Format; label: string }[] = [
-  { key: "in_person", label: "In person" },
+  { key: "in_person", label: tk("In person") },
   { key: "online", label: "Online" },
-  { key: "both", label: "Both" },
+  { key: "both", label: tk("Both") },
 ];
 
 /** A session type's Format from location_kind: null is both (CA16); home visit and phone have no chip. */
@@ -418,21 +422,22 @@ export function aboutRows(licences: LicenceLike[], reviews: LicenceReviewRow[], 
     const when = !l.noExpiry && l.expires ? monthYear(l.expires) : null;
     out.push({
       title: name,
-      sub: when ? `Credential · ${expired ? "expired" : "renews"} ${when}` : "Credential",
-      value: status.kind === "verified" ? "Verified" : status.kind === "pending" ? "In review" : "",
+      sub: when ? (expired ? t("Credential · expired {date}", { date: when }) : t("Credential · renews {date}", { date: when })) : t("Credential"),
+      value: status.kind === "verified" ? t("Verified") : status.kind === "pending" ? t("In review") : "",
       tone: status.kind === "verified" ? "good" : "faint",
     });
   }
   const langs = languages.map((x) => x.trim()).filter(Boolean);
-  if (langs.length) out.push({ title: langs.join(", "), sub: "Languages", value: "", tone: "faint" });
-  out.push({ title: "Phone, email and social links", sub: "Share them in Messages if you choose", value: "Not shown", tone: "faint" });
+  if (langs.length) out.push({ title: langs.join(", "), sub: t("Languages"), value: "", tone: "faint" });
+  // The title stays English: the Showcase compares it to its CONTACT_ROW and translates it there.
+  out.push({ title: tk("Phone, email and social links"), sub: t("Share them in Messages if you choose"), value: t("Not shown"), tone: "faint" });
   return out;
 }
 
 /** "4.8 · 38 reviews · Hamra, Beirut": the average from three reviews (as the public listing), the count, the area. */
 export function ratingLine(average: number | null, count: number, area: string | null): { text: string; star: boolean } {
   const showAvg = count >= 3 && average !== null;
-  const parts = [showAvg ? average.toFixed(1) : null, count > 0 ? `${count} ${count === 1 ? "review" : "reviews"}` : "No reviews yet", area?.trim() || null].filter(Boolean);
+  const parts = [showAvg ? average.toFixed(1) : null, count > 0 ? tn(count, "{n} review", "{n} reviews") : t("No reviews yet"), area?.trim() || null].filter(Boolean);
   return { text: parts.join(" · "), star: showAvg };
 }
 

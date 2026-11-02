@@ -1,4 +1,5 @@
 import { playlistServiceOf, SERVICE_HOME, type PlaylistService } from "./playlistLink";
+import { getLanguage, t } from "../../i18n/core";
 
 /**
  * Round E · which music a screen shows, in the agreed order:
@@ -38,7 +39,7 @@ const usable = (url: string | null | undefined): url is string => !!url && playl
 
 export function whichMusic({ provider, item, moment, prefs }: MusicSources): MusicEntry[] {
   const favourite = prefs?.favourites[moment];
-  const own: MusicEntry | null = usable(favourite) ? { kind: "playlist", url: favourite, heading: "Your music", whose: "member" } : null;
+  const own: MusicEntry | null = usable(favourite) ? { kind: "playlist", url: favourite, heading: t("Your music"), whose: "member" } : null;
   if (provider && usable(provider.url)) {
     const first: MusicEntry = { kind: "playlist", url: provider.url, heading: provider.heading, whose: "provider" };
     return own ? [first, own] : [first];
@@ -51,5 +52,7 @@ export function whichMusic({ provider, item, moment, prefs }: MusicSources): Mus
 /** "Rana's playlist" from a first name (or the whole name when that's all there is). */
 export function providerHeading(name: string | null | undefined): string {
   const first = (name ?? "").trim().split(/\s+/)[0];
-  return first ? `${first}${/s$/i.test(first) ? "'" : "'s"} playlist` : "Playlist";
+  if (!first) return t("Playlist");
+  // English drops the s after a name ending in s ("James' playlist"); other languages use the key.
+  return getLanguage() === "en" && /s$/i.test(first) ? `${first}' playlist` : t("{name}'s playlist", { name: first });
 }

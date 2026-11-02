@@ -6,6 +6,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { ConfirmCard } from "../ui/ConfirmCard";
 import { describeQueued, OUTBOX_EVENT, queuedLogs, type QueuedLog } from "../../services/health-log/offlineQueue";
 import { OUTBOX_DROPPED_EVENT } from "../health/log/useLogQueue";
+import { tn } from "../../i18n/core";
 
 // The offline outbox on screen (Round D, D22 / D23; PLAN D-S20, undrawn, in
 // the existing chip and sheet styles).
@@ -154,5 +155,10 @@ export function useSignOutGuard(signOut: () => unknown): { requestSignOut: () =>
 export function signOutWarning(items: readonly QueuedLog[]): string | null {
   if (items.length === 0) return null;
   const what = describeQueued(items);
-  return `${what.charAt(0).toUpperCase()}${what.slice(1)} ${items.length === 1 ? "hasn't" : "haven't"} saved yet. Signing out removes ${items.length === 1 ? "it" : "them"} from this device.`;
+  return tn(
+    items.length,
+    "{what} hasn't saved yet. Signing out removes it from this device.",
+    "{what} haven't saved yet. Signing out removes them from this device.",
+    { what: `${what.charAt(0).toUpperCase()}${what.slice(1)}` },
+  );
 }

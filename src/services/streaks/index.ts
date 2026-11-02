@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { t, tk } from "../../i18n/core";
 
 // The four system streaks, and getting them to exist.
 //
@@ -43,10 +44,10 @@ export type AutoStreakCategory = (typeof AUTO_STREAK_CATEGORIES)[number];
 
 /** The display label for each, so a stored row never reaches the UI raw. */
 export const AUTO_STREAK_LABEL_BY_CATEGORY: Record<AutoStreakCategory, string> = {
-  logging: "Logging streak",
-  movement: "Movement streak",
-  workout: "Workout streak",
-  nutrition: "Nutrition streak",
+  logging: tk("Logging streak"),
+  movement: tk("Movement streak"),
+  workout: tk("Workout streak"),
+  nutrition: tk("Nutrition streak"),
 };
 
 /**
@@ -106,7 +107,7 @@ export async function getAutoStreaks(userId: string): Promise<AutoStreaksResult>
 
   if (error) {
     console.error("[streaks] Could not read auto streaks:", error.message);
-    return { ok: false, streaks: [], message: "Couldn't load your streaks." };
+    return { ok: false, streaks: [], message: t("Couldn't load your streaks.") };
   }
 
   const rows: AutoStreakRow[] = [];

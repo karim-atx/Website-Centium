@@ -1,4 +1,5 @@
 import type { SetTarget } from "../../types";
+import { t } from "../../i18n/core";
 
 // Round D · TR11: a professional's target RPE and note per set
 // (workout_template_exercises / routine_exercises.set_targets, beside
@@ -79,16 +80,16 @@ export function prescribedSetCount(ex: { sets?: number; minSets?: number; maxSet
 }
 
 /** The quiet line under a set: "RPE 8 · keep the back flat". Null when there is no target. */
-export function setTargetText(t: SetTarget | null | undefined): string | null {
-  const clean = cleanSetTarget(t);
+export function setTargetText(target: SetTarget | null | undefined): string | null {
+  const clean = cleanSetTarget(target);
   if (!clean) return null;
-  return [clean.rpe !== undefined ? `RPE ${clean.rpe}` : null, clean.note ?? null].filter(Boolean).join(" · ");
+  return [clean.rpe !== undefined ? t("RPE {value}", { value: clean.rpe }) : null, clean.note ?? null].filter(Boolean).join(" · ");
 }
 
 /** "Set 2 · RPE 8 · keep the back flat" for every set that has a target, in order. */
 export function setTargetLines(targets: readonly (SetTarget | null)[] | undefined): string[] {
-  return (targets ?? []).flatMap((t, i) => {
-    const text = setTargetText(t);
-    return text ? [`Set ${i + 1} · ${text}`] : [];
+  return (targets ?? []).flatMap((target, i) => {
+    const text = setTargetText(target);
+    return text ? [`${t("Set {n}", { n: i + 1 })} · ${text}`] : [];
   });
 }

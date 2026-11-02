@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { recordedAtFor } from "../health-metrics";
 import { isAlreadySaved, requestColumn } from "../health-log/requestId";
+import { t, tk } from "../../i18n/core";
 
 // Manually logged blood pressure, in public.blood_pressure_readings.
 //
@@ -42,16 +43,16 @@ export type BpListResult =
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to save this.";
+    return tk("Your session expired. Sign in again to save this.");
   }
   // 23514 is a CHECK the client should already have caught. Naming the likely
   // one is more use than "constraint violated" — every other CHECK on this
   // table is a range the validator below mirrors exactly.
-  if (code === "23514") return "Systolic should be higher than diastolic.";
+  if (code === "23514") return tk("Systolic should be higher than diastolic.");
   if (code === "42501") {
-    return "You don't have permission to save blood-pressure readings. Sign in again and try once more.";
+    return tk("You don't have permission to save blood-pressure readings. Sign in again and try once more.");
   }
-  return "Couldn't save that. Check your connection and try again.";
+  return tk("Couldn't save that. Check your connection and try again.");
 }
 
 /**
@@ -66,28 +67,28 @@ export function validateBloodPressure(input: BloodPressureInput): string | null 
   const { systolic, diastolic, pulse, arm, position, notes } = input;
 
   if (!Number.isInteger(systolic) || !Number.isInteger(diastolic)) {
-    return "Enter whole numbers in mmHg.";
+    return tk("Enter whole numbers in mmHg.");
   }
   if (systolic < BP_LIMITS.systolic.min || systolic > BP_LIMITS.systolic.max) {
-    return `Systolic should be between ${BP_LIMITS.systolic.min} and ${BP_LIMITS.systolic.max} mmHg.`;
+    return t("Systolic should be between {min} and {max} mmHg.", { min: BP_LIMITS.systolic.min, max: BP_LIMITS.systolic.max });
   }
   if (diastolic < BP_LIMITS.diastolic.min || diastolic > BP_LIMITS.diastolic.max) {
-    return `Diastolic should be between ${BP_LIMITS.diastolic.min} and ${BP_LIMITS.diastolic.max} mmHg.`;
+    return t("Diastolic should be between {min} and {max} mmHg.", { min: BP_LIMITS.diastolic.min, max: BP_LIMITS.diastolic.max });
   }
   // Strictly greater, matching blood_pressure_readings_order_check. An equal
   // pair has no pulse pressure and an inverted one is a transcription error.
-  if (systolic <= diastolic) return "Systolic should be higher than diastolic.";
+  if (systolic <= diastolic) return tk("Systolic should be higher than diastolic.");
 
   if (pulse !== null && pulse !== undefined) {
-    if (!Number.isInteger(pulse)) return "Enter a whole number for pulse.";
+    if (!Number.isInteger(pulse)) return tk("Enter a whole number for pulse.");
     if (pulse < BP_LIMITS.pulse.min || pulse > BP_LIMITS.pulse.max) {
-      return `Pulse should be between ${BP_LIMITS.pulse.min} and ${BP_LIMITS.pulse.max} bpm.`;
+      return t("Pulse should be between {min} and {max} bpm.", { min: BP_LIMITS.pulse.min, max: BP_LIMITS.pulse.max });
     }
   }
-  if (arm != null && !BP_ARMS.includes(arm)) return "Choose which arm you measured.";
-  if (position != null && !BP_POSITIONS.includes(position)) return "Choose your position.";
+  if (arm != null && !BP_ARMS.includes(arm)) return tk("Choose which arm you measured.");
+  if (position != null && !BP_POSITIONS.includes(position)) return tk("Choose your position.");
   if (notes != null && notes.length > BP_LIMITS.notesMaxLength) {
-    return `Keep the note under ${BP_LIMITS.notesMaxLength} characters.`;
+    return t("Keep the note under {n} characters.", { n: BP_LIMITS.notesMaxLength });
   }
   return null;
 }

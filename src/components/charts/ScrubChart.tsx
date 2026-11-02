@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
-import { isRtl } from "../../i18n/core";
+import { isRtl, t } from "../../i18n/core";
 import "./scrubChart.css";
 
 // ScrubChart (handoff/source/ScrubChart.dc.html, ported literally): a weekly
@@ -545,7 +545,7 @@ export const ScrubChart: React.FC<{
           : [
               {
                 key: "cur" as const,
-                t: cfg.curLabel ?? "This period",
+                t: cfg.curLabel ?? t("This period"),
                 stroke: "2.2px solid var(--sc-line)",
                 on: !hideCur,
               },
@@ -564,7 +564,7 @@ export const ScrubChart: React.FC<{
           ? [
               {
                 key: "prev" as const,
-                t: cfg.prevLabel ?? "Previous period",
+                t: cfg.prevLabel ?? t("Previous period"),
                 stroke: "1.6px dashed var(--sc-ghost)",
                 on: !hidePrev,
               },
@@ -632,7 +632,7 @@ export const ScrubChart: React.FC<{
             <div
               role="slider"
               tabIndex={0}
-              aria-label={cfg.aria ?? "Chart"}
+              aria-label={cfg.aria ?? t("Chart")}
               aria-valuemin={0}
               aria-valuemax={Math.max(0, n - 1)}
               aria-valuenow={has ? (at as number) : undefined}
@@ -641,7 +641,7 @@ export const ScrubChart: React.FC<{
                   ? label +
                     ": " +
                     tipRows.map((r) => r.l + " " + r.v).join(", ")
-                  : "Drag or use arrow keys to read values"
+                  : t("Drag or use arrow keys to read values")
               }
               className="sc-hit"
               onPointerDown={pd}
@@ -664,7 +664,7 @@ export const ScrubChart: React.FC<{
                   {pinned && (
                     <span className="sc-tip-pin">
                       <Pin size={10} strokeWidth={2.6} aria-hidden />
-                      Pinned
+                      {t("Pinned")}
                     </span>
                   )}
                 </p>
@@ -701,8 +701,8 @@ export const ScrubChart: React.FC<{
         <div className="sc-empty" style={{ height: TOT }}>
           <p>
             {early
-              ? (cfg.earlyText ?? "The trend starts after 2 weeks of data.")
-              : (cfg.emptyText ?? "Nothing to show yet.")}
+              ? (cfg.earlyText ?? t("The trend starts after 2 weeks of data."))
+              : (cfg.emptyText ?? t("Nothing to show yet."))}
           </p>
         </div>
       )}

@@ -129,17 +129,17 @@ export function onlineFailureKind(status: number, code: string | undefined, offl
 export function onlineFailureMessage(kind: OnlineFailureKind): string {
   switch (kind) {
     case "offline":
-      return "Searching online needs a connection.";
+      return t("Searching online needs a connection.");
     case "rate_limited":
-      return "You can search online 30 times an hour. Try again later, or add it yourself.";
+      return t("You can search online 30 times an hour. Try again later, or add it yourself.");
     case "unavailable":
-      return "The online food databases aren't answering right now. Try again later, or add it yourself.";
+      return t("The online food databases aren't answering right now. Try again later, or add it yourself.");
     case "invalid_query":
-      return "Search online with 2 to 80 characters.";
+      return t("Search online with 2 to 80 characters.");
     case "signed_out":
-      return "Your session expired. Sign in again to search online.";
+      return t("Your session expired. Sign in again to search online.");
     default:
-      return "Couldn't search online. Try again.";
+      return t("Couldn't search online. Try again.");
   }
 }
 
@@ -155,12 +155,12 @@ export function sourcesNote(sources: OnlineSources): string | null {
   const missing = (["usda_fdc", "open_food_facts"] as const).filter((k) => sources[k] !== undefined && !answered(k));
   if (missing.length !== 1) return null;
   const other = missing[0] === "usda_fdc" ? "open_food_facts" : "usda_fdc";
-  return `Results from ${SOURCE_FULL[other]} only. ${SOURCE_FULL[missing[0]]} isn't available right now.`;
+  return t("Results from {source} only. {missing} isn't available right now.", { source: SOURCE_FULL[other], missing: SOURCE_FULL[missing[0]] });
 }
 
 /** The source line on the confirm card (Open Food Facts adds its notice and link). */
 export function sourceLine(source: OnlineSource): string {
-  return source === "usda_fdc" ? "From USDA FoodData Central (public domain)." : "Product data from Open Food Facts.";
+  return source === "usda_fdc" ? t("From USDA FoodData Central (public domain).") : t("Product data from Open Food Facts.");
 }
 
 /** "Brand · serving", or the serving alone. */
@@ -170,8 +170,8 @@ export function brandServing(brand: string | null | undefined, serving: string):
 
 /** "P 12g · C 30g · F 5g", per serving. */
 export function macroLine(f: { protein: number; carbs: number; fat: number }): string {
-  const g = (n: number) => `${Math.round(n * 10) / 10}g`;
-  return `P ${g(f.protein)} · C ${g(f.carbs)} · F ${g(f.fat)}`;
+  const g = (n: number) => Math.round(n * 10) / 10;
+  return `${t("P {n}g", { n: g(f.protein) })} · ${t("C {n}g", { n: g(f.carbs) })} · ${t("F {n}g", { n: g(f.fat) })}`;
 }
 
 /** The four the macro strip already shows, so the nutrient list leaves them out. */
@@ -226,9 +226,9 @@ export function saveFoundFoodArgs(f: OnlineFood): Record<string, unknown> {
 
 export function saveFoundFoodMessage(code: string | undefined, offline: boolean): string {
   if (offline) return OFFLINE_MESSAGE;
-  if (code === "22023") return "This food's values are outside what we can save. Add it yourself instead.";
-  if (code === "ATX06") return "Your session expired. Sign in again to save foods.";
-  return "Couldn't save that food. Try again.";
+  if (code === "22023") return t("This food's values are outside what we can save. Add it yourself instead.");
+  if (code === "ATX06") return t("Your session expired. Sign in again to save foods.");
+  return t("Couldn't save that food. Try again.");
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -242,23 +242,23 @@ export function canSuggestForCatalogue(food: { id: string; source: string; exter
   return food.source === "custom" && UUID.test(food.id) && food.externalSource !== "open_food_facts";
 }
 
-export const SUGGESTED_LINE = "Sent for review. We'll let you know when it's checked.";
+export const SUGGESTED_LINE = tk("Sent for review. We'll let you know when it's checked.");
 
 export function suggestFoodMessage(code: string | undefined, offline: boolean): string {
   if (offline) return OFFLINE_MESSAGE;
   switch (code) {
     case "ATXL0":
-      return "Foods from Open Food Facts stay in your own foods. Their licence doesn't allow adding them to the catalogue.";
+      return t("Foods from Open Food Facts stay in your own foods. Their licence doesn't allow adding them to the catalogue.");
     case "ATX60":
-      return "That name can't go into the catalogue. Change the name and try again.";
+      return t("That name can't go into the catalogue. Change the name and try again.");
     case "ATX02":
-      return "You can suggest 10 foods an hour. Try again later.";
+      return t("You can suggest 10 foods an hour. Try again later.");
     case "ATX08":
-      return "That food isn't in your foods any more.";
+      return t("That food isn't in your foods any more.");
     case "ATX06":
-      return "Your session expired. Sign in again to suggest foods.";
+      return t("Your session expired. Sign in again to suggest foods.");
     default:
-      return "Couldn't send that suggestion. Try again.";
+      return t("Couldn't send that suggestion. Try again.");
   }
 }
 
@@ -340,7 +340,7 @@ export const latestSubmissionFor = (list: FoodSubmission[], customFoodId: string
  */
 export function submissionLine(s: FoodSubmission | null): { line: string | null; canSuggest: boolean } {
   if (!s) return { line: null, canSuggest: true };
-  if (s.status === "pending") return { line: SUGGESTED_LINE, canSuggest: false };
-  if (s.status === "approved") return { line: "Added to the catalogue. Everyone can find it in search.", canSuggest: false };
-  return { line: `Not added to the catalogue. ${reviewReasonText(s.reasonCategory)}`, canSuggest: true };
+  if (s.status === "pending") return { line: t(SUGGESTED_LINE), canSuggest: false };
+  if (s.status === "approved") return { line: t("Added to the catalogue. Everyone can find it in search."), canSuggest: false };
+  return { line: t("Not added to the catalogue. {reason}", { reason: t(reviewReasonText(s.reasonCategory)) }), canSuggest: true };
 }

@@ -4,6 +4,7 @@ import { stripPrivateExif } from "../storage/exif";
 import { stageAndSubmit, withdrawPending } from "../moderation/images";
 import { describeAuthorError, parseAudience, type AuthorAction, type CourseAudience } from "./authorRules";
 import { describeCourseError } from "./rules";
+import { t } from "../../i18n/core";
 
 // Round D · the course gaps (Database 20261223030000, images 20261223050000):
 // cover, description and focus, audience, Image and Check-in lessons, author
@@ -27,7 +28,7 @@ export type WriteResult = { ok: true } | { ok: false; message: string; code?: st
 
 const authorFail = (error: RpcError, action: AuthorAction) =>
   isOffline(error) ? { ok: false as const, message: OFFLINE_MESSAGE } : { ok: false as const, message: describeAuthorError(error, action), code: error.code };
-const readFail = (error: unknown) => ({ ok: false as const, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't load this. Try again." });
+const readFail = (error: unknown) => ({ ok: false as const, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't load this. Try again.") });
 
 const COVERS = "course-covers";
 const IMAGES = "course-images";
@@ -131,8 +132,8 @@ const MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export const IMAGE_ACCEPT = [...MIME_TYPES, ".jpg", ".jpeg", ".png", ".webp"].join(",");
 
 export function validateCourseImage(file: Pick<File, "type" | "size">): string | null {
-  if (!MIME_TYPES.includes(file.type)) return "Choose a JPEG, PNG or WebP image.";
-  if (file.size > MAX_BYTES) return "That image is too large. Pick one under 5 MB.";
+  if (!MIME_TYPES.includes(file.type)) return t("Choose a JPEG, PNG or WebP image.");
+  if (file.size > MAX_BYTES) return t("That image is too large. Pick one under 5 MB.");
   return null;
 }
 
@@ -172,7 +173,7 @@ async function sendImage(uid: string, surface: "course_cover" | "course_image", 
     return r.ok ? { ok: true } : { ok: false, message: r.message, code: r.code };
   } catch (e) {
     console.error("[courses] Could not send the image:", e);
-    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : "That image couldn't be uploaded. Check your connection and try again." };
+    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : t("That image couldn't be uploaded. Check your connection and try again.") };
   }
 }
 
@@ -259,7 +260,7 @@ export async function fetchCheckInAnswers(lessonId: string): Promise<Result<Chec
     ok: true,
     value: ((data ?? []) as { answer_id: string; learner_first_name: string | null; answer: string; updated_at: string }[]).map((r) => ({
       id: r.answer_id,
-      firstName: r.learner_first_name?.trim() || "A learner",
+      firstName: r.learner_first_name?.trim() || t("A learner"),
       answer: r.answer,
       updatedAt: r.updated_at,
     })),
@@ -271,7 +272,7 @@ export async function submitCheckIn(lessonId: string, answer: string): Promise<W
   const { error } = await rpc("submit_course_check_in", { p_lesson_id: lessonId, p_answer: answer });
   if (!error) return { ok: true };
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  return { ok: false, message: describeCourseError(error, "check_in") ?? "Couldn't send your answer. Try again.", code: error.code };
+  return { ok: false, message: describeCourseError(error, "check_in") ?? t("Couldn't send your answer. Try again."), code: error.code };
 }
 
 /** The learner's own answer, or null. */
@@ -296,7 +297,7 @@ export interface AuthorStats {
 
 export async function fetchAuthorStats(courseId: string): Promise<Result<AuthorStats>> {
   const { data, error } = await rpc("course_author_stats", { p_course_id: courseId });
-  if (error) return isOffline(error) ? { ok: false, message: OFFLINE_MESSAGE } : { ok: false, message: "Couldn't load the numbers. Try again." };
+  if (error) return isOffline(error) ? { ok: false, message: OFFLINE_MESSAGE } : { ok: false, message: t("Couldn't load the numbers. Try again.") };
   const r = (Array.isArray(data) ? data[0] : data) as
     | { enrolled: number; finished: number; completion_pct: number | null; by_month: unknown; drop_off: unknown }
     | undefined;

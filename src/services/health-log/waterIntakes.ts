@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { tk } from "../../i18n/core";
 
 // Database stage B1 "water_intakes — drinks, not a running total"
 // (HANDOVER_API.md): one row per drink, amount_ml 10-3,000, logged_at (not in
@@ -37,6 +38,6 @@ export async function logWater(amountMl: number, loggedAt: Date, requestId: stri
   });
   if (!error && data) return { ok: true, id: data.intake_id, day: data.day, dayTotalMl: data.day_total_ml };
   if (error && isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  if (error?.code === "ATXA5") return { ok: false, message: "That's more than 5 L today. Check the amount.", overCap: true };
-  return { ok: false, message: "Couldn't save. Try again." };
+  if (error?.code === "ATXA5") return { ok: false, message: tk("That's more than 5 L today. Check the amount."), overCap: true };
+  return { ok: false, message: tk("Couldn't save. Try again.") };
 }

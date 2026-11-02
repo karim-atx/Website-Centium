@@ -16,6 +16,7 @@ import { formatPoints } from "../../components/market/pointsModel";
 import { num, rows, str } from "../market/parse";
 import { BLOCKED_TEXT } from "../moderation/text";
 import { appLocale } from "../../i18n/format";
+import { t, tk } from "../../i18n/core";
 
 export type OfferVariant = "business" | "professional";
 export type OfferStatus = "active" | "scheduled" | "paused" | "expired";
@@ -148,12 +149,12 @@ export function instantDayLabel(iso: string): string {
  */
 export function offerMeta(o: ManagedOffer, today: string = localDay()): string {
   const s = offerStatus(o, today);
-  const red = `${formatPoints(o.redeemedCount)} redeemed`;
-  if (s === "scheduled") return `Starts ${dayLabel(o.startsOn)}`;
-  if (s === "expired") return `Ended ${dayLabel(o.endsOn ?? "")} · ${red}`;
-  if (o.hiddenAt) return "Hidden by Centium. Contact support for details.";
-  if (s === "paused") return o.pausedAt ? `Paused ${instantDayLabel(o.pausedAt)} · ${red}` : `Paused · ${red}`;
-  return o.endsOn ? `Ends ${dayLabel(o.endsOn)} · ${red}` : `No end date · ${red}`;
+  const red = t("{n} redeemed", { n: formatPoints(o.redeemedCount) });
+  if (s === "scheduled") return t("Starts {date}", { date: dayLabel(o.startsOn) });
+  if (s === "expired") return `${t("Ended {date}", { date: dayLabel(o.endsOn ?? "") })} · ${red}`;
+  if (o.hiddenAt) return t("Hidden by Centium. Contact support for details.");
+  if (s === "paused") return o.pausedAt ? `${t("Paused {date}", { date: instantDayLabel(o.pausedAt) })} · ${red}` : `${t("Paused")} · ${red}`;
+  return o.endsOn ? `${t("Ends {date}", { date: dayLabel(o.endsOn) })} · ${red}` : `${t("No end date")} · ${red}`;
 }
 
 const RANK: Record<OfferStatus, number> = { active: 0, scheduled: 1, paused: 2, expired: 3 };
@@ -249,33 +250,33 @@ export const TERMS_MAX = 500;
 export function validateDraft(d: OfferDraft, variant: OfferVariant, endLocked = false): DraftErrors {
   const e: DraftErrors = {};
   const h = d.headline.trim();
-  if (!h) e.headline = "Give the offer a headline.";
-  else if (h.length > HEADLINE_MAX) e.headline = `Keep the headline to ${HEADLINE_MAX} characters or fewer.`;
+  if (!h) e.headline = t("Give the offer a headline.");
+  else if (h.length > HEADLINE_MAX) e.headline = t("Keep the headline to {n} characters or fewer.", { n: HEADLINE_MAX });
   if (d.type === "percent_off") {
     const v = whole(d.value);
-    if (v === null || v < 1 || v > 100) e.value = "Enter a percentage from 1 to 100.";
+    if (v === null || v < 1 || v > 100) e.value = t("Enter a percentage from 1 to 100.");
   } else if (d.type === "amount_off") {
     const v = amount(d.value);
-    if (v === null || v <= 0) e.value = "Enter an amount above 0.";
+    if (v === null || v <= 0) e.value = t("Enter an amount above 0.");
   }
-  if (variant === "professional" && !d.appliesTo) e.appliesTo = "Choose the service this offer applies to.";
+  if (variant === "professional" && !d.appliesTo) e.appliesTo = t("Choose the service this offer applies to.");
   const cost = whole(d.pointsCost);
-  if (cost === null || cost <= 0) e.pointsCost = "Set a points cost above 0.";
+  if (cost === null || cost <= 0) e.pointsCost = t("Set a points cost above 0.");
   if (d.quantityCap.trim() !== "") {
     const q = whole(d.quantityCap);
-    if (q === null || q < 1) e.quantityCap = "Leave it empty, or enter 1 or more.";
+    if (q === null || q < 1) e.quantityCap = t("Leave it empty, or enter 1 or more.");
   }
   const lim = whole(d.perMemberLimit);
-  if (lim === null || lim < 1) e.perMemberLimit = "Enter 1 or more.";
-  if (!d.startsOn) e.startsOn = "Choose a start date.";
+  if (lim === null || lim < 1) e.perMemberLimit = t("Enter 1 or more.");
+  if (!d.startsOn) e.startsOn = t("Choose a start date.");
   if (!d.endsOn) {
-    if (endLocked) e.endsOn = END_LOCKED_NOTE;
-  } else if (d.startsOn && d.endsOn < d.startsOn) e.endsOn = "The end date can't be before the start date.";
+    if (endLocked) e.endsOn = t(END_LOCKED_NOTE);
+  } else if (d.startsOn && d.endsOn < d.startsOn) e.endsOn = t("The end date can't be before the start date.");
   return e;
 }
 
 /** Shown when an offer that has an end date is saved without one. */
-export const END_LOCKED_NOTE = "An end date can't be removed once it's set. Choose a new date instead.";
+export const END_LOCKED_NOTE = tk("An end date can't be removed once it's set. Choose a new date instead.");
 
 /**
  * offers.where_used is in_person | online | both (offers_where_check): a
@@ -304,28 +305,28 @@ export function offerArgs(d: OfferDraft, variant: OfferVariant): Record<string, 
 // Labels (B-MA.3 / P-MA.3 board copy)
 
 export const TYPE_OPTIONS = (variant: OfferVariant): readonly { key: OfferType; label: string }[] => [
-  { key: "percent_off", label: "% off" },
-  { key: "amount_off", label: "Amount off" },
-  { key: "free_item", label: variant === "professional" ? "Free session" : "Free item or service" },
+  { key: "percent_off", label: tk("% off") },
+  { key: "amount_off", label: tk("Amount off") },
+  { key: "free_item", label: variant === "professional" ? tk("Free session") : tk("Free item or service") },
 ];
 
 export const WHERE_OPTIONS = (variant: OfferVariant): readonly { key: OfferWhere; label: string }[] =>
   variant === "professional"
     ? [
-        { key: "in_person", label: "In person" },
-        { key: "online", label: "Online" },
-        { key: "both", label: "Both" },
+        { key: "in_person", label: tk("In person") },
+        { key: "online", label: tk("Online") },
+        { key: "both", label: tk("Both") },
       ]
     : [
-        { key: "in_store", label: "In store" },
-        { key: "online", label: "Online" },
-        { key: "both", label: "Both" },
+        { key: "in_store", label: tk("In store") },
+        { key: "online", label: tk("Online") },
+        { key: "both", label: tk("Both") },
       ];
 
 /** The preview's Where row: "In store and online" (business Both), "In person and online" (professional Both). */
 export function whereLabel(w: OfferWhere, variant: OfferVariant): string {
-  if (w === "both") return variant === "professional" ? "In person and online" : "In store and online";
-  return w === "in_store" ? "In store" : w === "in_person" ? "In person" : "Online";
+  if (w === "both") return variant === "professional" ? tk("In person and online") : tk("In store and online");
+  return w === "in_store" ? tk("In store") : w === "in_person" ? tk("In person") : tk("Online");
 }
 
 export function typeLabel(t: OfferType, variant: OfferVariant): string {
@@ -339,7 +340,7 @@ export function money(n: number): string {
 
 /** The preview's Value row: "15%", "$10", "Free". */
 export function valueLabel(d: Pick<OfferDraft, "type" | "value">): string {
-  if (d.type === "free_item") return "Free";
+  if (d.type === "free_item") return tk("Free");
   if (d.type === "percent_off") return `${whole(d.value) ?? d.value}%`;
   const a = amount(d.value);
   return a === null ? d.value : money(a);
@@ -354,24 +355,24 @@ export interface PreviewRow {
  * The summary rows under the preview card (Business `previewRows`: Type,
  * Value, Points cost, Quantity cap, Per-member limit, Dates, Where, Terms;
  * Professional: Type, Value, Applies to, Points cost, Quantity cap,
- * Per-client limit, Dates, Where). An empty cap reads "No cap"; empty terms
+ * Per-client limit, Dates, Where). An empty cap reads tk("No cap"); empty terms
  * drop the row.
  */
 export function previewRows(d: OfferDraft, variant: OfferVariant, appliesToLabel: string | null): PreviewRow[] {
   const out: PreviewRow[] = [
-    { k: "Type", v: typeLabel(d.type, variant) },
-    { k: "Value", v: valueLabel(d) },
+    { k: tk("Type"), v: typeLabel(d.type, variant) },
+    { k: tk("Value"), v: valueLabel(d) },
   ];
   // The service's label from the editor's options (null only while they load or fail).
-  if (variant === "professional" && appliesToLabel) out.push({ k: "Applies to", v: appliesToLabel });
+  if (variant === "professional" && appliesToLabel) out.push({ k: tk("Applies to"), v: appliesToLabel });
   const cost = whole(d.pointsCost);
-  out.push({ k: "Points cost", v: cost === null ? d.pointsCost : formatPoints(cost) });
+  out.push({ k: tk("Points cost"), v: cost === null ? d.pointsCost : formatPoints(cost) });
   const cap = whole(d.quantityCap);
-  out.push({ k: "Quantity cap", v: d.quantityCap.trim() === "" ? "No cap" : cap === null ? d.quantityCap : formatPoints(cap) });
-  out.push({ k: variant === "professional" ? "Per-client limit" : "Per-member limit", v: String(whole(d.perMemberLimit) ?? d.perMemberLimit) });
-  out.push({ k: "Dates", v: d.startsOn ? (d.endsOn ? `${dayLabel(d.startsOn)} to ${dayLabel(d.endsOn)}` : `From ${dayLabel(d.startsOn)} · No end date`) : "" });
-  out.push({ k: "Where", v: whereLabel(d.where, variant) });
-  if (variant === "business" && d.terms.trim()) out.push({ k: "Terms", v: d.terms.trim() });
+  out.push({ k: tk("Quantity cap"), v: d.quantityCap.trim() === "" ? tk("No cap") : cap === null ? d.quantityCap : formatPoints(cap) });
+  out.push({ k: variant === "professional" ? tk("Per-client limit") : tk("Per-member limit"), v: String(whole(d.perMemberLimit) ?? d.perMemberLimit) });
+  out.push({ k: tk("Dates"), v: d.startsOn ? (d.endsOn ? t("{start} to {end}", { start: dayLabel(d.startsOn), end: dayLabel(d.endsOn) }) : `${t("From {date}", { date: dayLabel(d.startsOn) })} · ${t("No end date")}`) : "" });
+  out.push({ k: tk("Where"), v: whereLabel(d.where, variant) });
+  if (variant === "business" && d.terms.trim()) out.push({ k: tk("Terms"), v: d.terms.trim() });
   return out;
 }
 
@@ -395,11 +396,11 @@ export function offerErrorOf(e: { code?: string | null; message?: string | null;
 
 /** Our words for each refusal (not drawn on the board). */
 export const OFFER_ERROR_TEXT: Record<OfferError, string> = {
-  funding_ack_required: "Tick the box to confirm you fund this discount in full.",
-  invalid_dates: "The end date can't be before the start date.",
-  points_cost_required: "Set a points cost above 0.",
-  offer_expired: "This offer has ended, so it can't be edited.",
-  applies_to_invalid: "Choose one of your own services for this offer.",
+  funding_ack_required: tk("Tick the box to confirm you fund this discount in full."),
+  invalid_dates: tk("The end date can't be before the start date."),
+  points_cost_required: tk("Set a points cost above 0."),
+  offer_expired: tk("This offer has ended, so it can't be edited."),
+  applies_to_invalid: tk("Choose one of your own services for this offer."),
 };
 
 /**
@@ -417,13 +418,13 @@ export function offerWriteRefusal(e: { code?: string | null; message?: string | 
   const msg = (e.message ?? "").toLowerCase();
   switch (e.code) {
     case "ATX09":
-      return msg.includes("paused or closed") ? "Your business is paused or closed, so it can't publish offers." : "Only a business or a professional can publish offers.";
+      return msg.includes("paused or closed") ? t("Your business is paused or closed, so it can't publish offers.") : t("Only a business or a professional can publish offers.");
     case "42501":
-      return msg.includes("taken down") ? "Centium took this offer down. Contact support for details." : "You don't have permission to change this offer.";
+      return msg.includes("taken down") ? t("Centium took this offer down. Contact support for details.") : t("You don't have permission to change this offer.");
     case "ATX08":
-      return "This offer no longer exists.";
+      return t("This offer no longer exists.");
     case "ATX02":
-      return "Too many new offers in a short time. Try again later.";
+      return t("Too many new offers in a short time. Try again later.");
     // Round C Release 2: the word lists.
     case "ATX60":
       return BLOCKED_TEXT;
