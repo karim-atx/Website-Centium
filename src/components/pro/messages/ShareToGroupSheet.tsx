@@ -23,6 +23,7 @@ import {
   type ShareableSession,
 } from "../../../services/pro/messages";
 import { appLocale } from "../../../i18n/format";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · MO27 "Group chat · share to the group" (gen/r16.js groupChat16
@@ -120,11 +121,11 @@ export const ShareToGroupSheet: React.FC<{
 
   const back = step.kind === "menu" ? undefined : () => setStep(step.kind === "note" ? { kind: LIST_FOR[step.card] } : { kind: "menu" });
   const menu: ListRow[] = [
-    { key: "programme", icon: ClipboardList, title: "A programme", meta: "Members open it in Workout", onClick: () => setStep({ kind: "programmes" }) },
-    ...(coachesNutrition ? [{ key: "meal", icon: UtensilsCrossed, title: "A meal plan", meta: "Only if you coach nutrition", onClick: () => setStep({ kind: "mealplans" }) }] : []),
-    { key: "session", icon: CalendarPlus, title: "A group session", meta: "Members book a place", onClick: () => setStep({ kind: "sessions" }) },
-    { key: "announce", icon: Pin, title: "An announcement", meta: "Pinned to the top", onClick: () => setStep({ kind: "announce" }) },
-    { key: "playlist", icon: Music2, title: "A playlist", meta: "Spotify, Apple Music or YouTube Music", onClick: () => setStep({ kind: "playlist" }) },
+    { key: "programme", icon: ClipboardList, title: t("A programme"), meta: t("Members open it in Workout"), onClick: () => setStep({ kind: "programmes" }) },
+    ...(coachesNutrition ? [{ key: "meal", icon: UtensilsCrossed, title: t("A meal plan"), meta: t("Only if you coach nutrition"), onClick: () => setStep({ kind: "mealplans" }) }] : []),
+    { key: "session", icon: CalendarPlus, title: t("A group session"), meta: t("Members book a place"), onClick: () => setStep({ kind: "sessions" }) },
+    { key: "announce", icon: Pin, title: t("An announcement"), meta: t("Pinned to the top"), onClick: () => setStep({ kind: "announce" }) },
+    { key: "playlist", icon: Music2, title: t("A playlist"), meta: t("Spotify, Apple Music or YouTube Music"), onClick: () => setStep({ kind: "playlist" }) },
   ];
 
   const list = (rows: ListRow[] | null, empty: string) =>
@@ -158,7 +159,7 @@ export const ShareToGroupSheet: React.FC<{
   const footer =
     step.kind === "note" || step.kind === "announce" || step.kind === "playlist" ? (
       <CtaButton
-        label={step.kind === "announce" ? "Send and pin" : "Share"}
+        label={step.kind === "announce" ? t("Send and pin") : t("Share")}
         icon={<Send size={15} aria-hidden />}
         loading={busy}
         disabled={(step.kind === "announce" && !text.trim()) || (step.kind === "playlist" && !playlistShareReady(playlist))}
@@ -167,11 +168,11 @@ export const ShareToGroupSheet: React.FC<{
     ) : undefined;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Share to the group" onBack={back} footer={footer}>
+    <BottomSheet open={open} onClose={onClose} title={t("Share to the group")} onBack={back} footer={footer}>
       {step.kind === "menu" && (
         <>
           <ListCard rows={menu} />
-          <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5 }}>Sharing never sends anyone's results or health data to the group.</p>
+          <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5 }}>{t("Sharing never sends anyone's results or health data to the group.")}</p>
         </>
       )}
       {step.kind === "programmes" &&
@@ -183,7 +184,7 @@ export const ShareToGroupSheet: React.FC<{
             meta: p.durationWeeks ? `${p.durationWeeks} ${p.durationWeeks === 1 ? "week" : "weeks"}` : undefined,
             onClick: () => setStep({ kind: "note", card: "programme_share", id: p.id, title: p.name }),
           })) ?? null,
-          "No programmes yet. Build one in Library."
+          t("No programmes yet. Build one in Library.")
         )}
       {step.kind === "sessions" &&
         list(
@@ -194,7 +195,7 @@ export const ShareToGroupSheet: React.FC<{
             meta: [new Date(`${s.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short", day: "numeric", month: "short" }), s.startTime ? (s.endTime ? range12(s.startTime, s.endTime) : time12(s.startTime)) : null, s.location].filter(Boolean).join(" · "),
             onClick: () => setStep({ kind: "note", card: "session_share", id: s.id, title: s.title }),
           })) ?? null,
-          "No upcoming sessions. Add one in Calendar."
+          t("No upcoming sessions. Add one in Calendar.")
         )}
       {step.kind === "mealplans" &&
         list(
@@ -205,18 +206,18 @@ export const ShareToGroupSheet: React.FC<{
             meta: daysLabel(p.days) ?? undefined,
             onClick: () => setStep({ kind: "note", card: "meal_plan_share", id: p.id, title: p.name }),
           })) ?? null,
-          "No meal plans yet. Make one in Meal plans first."
+          t("No meal plans yet. Make one in Meal plans first.")
         )}
       {step.kind === "note" && (
         <>
           <p style={{ fontSize: textPx(15), fontWeight: 700, color: INK.ch, marginBottom: 12 }}>{step.title}</p>
-          {field("Note (optional)", 300, false)}
+          {field(t("Note (optional)"), 300, false)}
           {step.card === "meal_plan_share" && (
-            <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginTop: 8 }}>Members see its name, its length and your note, never calories or macros.</p>
+            <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginTop: 8 }}>{t("Members see its name, its length and your note, never calories or macros.")}</p>
           )}
         </>
       )}
-      {step.kind === "announce" && field("Announcement", 2000, true)}
+      {step.kind === "announce" && field(t("Announcement"), 2000, true)}
       {step.kind === "playlist" && (
         <PlaylistShareFields
           draft={playlist}

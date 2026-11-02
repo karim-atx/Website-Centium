@@ -10,6 +10,7 @@ import { cardPriceLine } from "../../../services/messaging/cards";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { ProCardSkeleton, ProError } from "../states";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · MO22 v2 "Enquiry chat · Offer plans sheet": the professional's
@@ -83,15 +84,15 @@ export const OfferPlansSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Offer plans"
+      title={t("Offer plans")}
       footer={
         plans && plans.length > 0 ? (
-          <CtaButton label={busy ? "Sending…" : `Send ${n} ${n === 1 ? "plan" : "plans"}`} icon={<Send size={15} aria-hidden />} loading={busy} disabled={n === 0} onClick={() => void send()} />
+          <CtaButton label={busy ? t("Sending…") : tn(n, "Send {n} plan", "Send {n} plans")} icon={<Send size={15} aria-hidden />} loading={busy} disabled={n === 0} onClick={() => void send()} />
         ) : undefined
       }
     >
       <p style={{ fontSize: textPx(13), lineHeight: 1.5, color: INK.chS, marginBottom: 14 }}>
-        {`${firstName} sees each plan with a Choose button. Choosing opens checkout and moves the chat to Clients.`}
+        {t("{firstName} sees each plan with a Choose button. Choosing opens checkout and moves the chat to Clients.", { firstName })}
       </p>
       {failed ? (
         <ProError onRetry={() => setReload((x) => x + 1)} />
@@ -101,9 +102,9 @@ export const OfferPlansSheet: React.FC<{
           <ProCardSkeleton lines={2} />
         </div>
       ) : plans.length === 0 ? (
-        <p style={{ fontSize: textPx(13), color: INK.chF, marginBottom: 8 }}>You have no active plans to offer yet.</p>
+        <p style={{ fontSize: textPx(13), color: INK.chF, marginBottom: 8 }}>{t("You have no active plans to offer yet.")}</p>
       ) : (
-        <ul className="flex flex-col" style={{ gap: 8 }} aria-label="Your plans">
+        <ul className="flex flex-col" style={{ gap: 8 }} aria-label={t("Your plans")}>
           {plans.map((p) => {
             const on = picked.has(p.id);
             return (
@@ -152,9 +153,7 @@ export const OfferPlansSheet: React.FC<{
         }}
         className="tap min-h-[44px] flex items-center"
         style={{ fontSize: textPx(13), fontWeight: 700, color: INK.prDeep, marginTop: 8 }}
-      >
-        Edit services and prices
-      </button>
+      >{t("Edit services and prices")}</button>
       {error && (
         <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginTop: 4 }}>
           {error}
