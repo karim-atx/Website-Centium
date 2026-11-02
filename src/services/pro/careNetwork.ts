@@ -15,13 +15,13 @@
 //   connects themselves (connect_from_referral). The receiver reads nothing
 //   until the client agreed (the select policy hides awaiting_client and
 //   declined_by_client); disputes go to support as "Care network disputes".
-// Names: a colleague's name is read from public_professional_directory
+// Names: a colleague's name is read from directory_professionals
 // (listed professionals only); a client's from the professional's own roster.
 // There's no other reader, so an unlisted colleague or a referred client who
 // isn't yet your client shows without a name (reported).
 
 import { supabase } from "../../../lib/supabase/client";
-import { directoryCall, professionalsByIds, type DirRead } from "../directory/eg";
+import { directoryCall, professionalsByIds } from "../directory/eg";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import type { Read, Write } from "./clients";
@@ -52,48 +52,41 @@ export interface Colleague {
   specialty: string | null;
 }
 
+type ColleagueRow = { profile_id: string; first_name: string | null; avatar_url: string | null; professional_subtype: string | null; specialty: string | null };
+const toColleague = (r: ColleagueRow): Colleague => ({ id: r.profile_id, name: r.first_name, avatarUrl: r.avatar_url, type: r.professional_subtype, specialty: r.specialty });
+
 export async function fetchColleagues(ids: string[]): Promise<Record<string, Colleague>> {
   const uniq = [...new Set(ids)].filter(Boolean);
   if (!uniq.length) return {};
-  type Row = { profile_id: string; first_name: string | null; avatar_url: string | null; professional_subtype: string | null; specialty: string | null };
-  // Round G2 (EG): the counting function.
-  const { data, error } = await professionalsByIds<Row>(uniq, () =>
-    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
-    from("public_professional_directory").select("profile_id, first_name, avatar_url, professional_subtype, specialty").in("profile_id", uniq) as unknown as PromiseLike<DirRead<Row[]>>
-  );
+  // Round G2 (EG): directory_professionals, one call per few ids or one for many.
+  const { data, error } = await professionalsByIds<ColleagueRow>(uniq);
   if (error) return {};
   const out: Record<string, Colleague> = {};
-  for (const r of (data ?? []) as unknown as { profile_id: string; first_name: string | null; avatar_url: string | null; professional_subtype: string | null; specialty: string | null }[])
-    out[r.profile_id] = { id: r.profile_id, name: r.first_name, avatarUrl: r.avatar_url, type: r.professional_subtype, specialty: r.specialty };
+  for (const r of data ?? []) if (r.profile_id) out[r.profile_id] = toColleague(r);
   return out;
 }
 
+// The search runs as the name is typed (250 ms after the last key), and every
+// directory call is counted, so one read of the directory serves the typing
+// for a minute; the match is made here.
+const DIRECTORY_REUSE_MS = 60_000;
+let directoryRead: { at: number; rows: ColleagueRow[] } | null = null;
+
 /** Listed professionals by first name, for "Add a colleague". */
 export async function searchColleagues(me: string, q: string): Promise<Read<Colleague[]>> {
-  type Row = { profile_id: string; first_name: string | null; avatar_url: string | null; professional_subtype: string | null; specialty: string | null };
   const term = q.trim().replace(/[%_,()]/g, "");
-  // Round G2 (EG): the counting function gives the directory by first name;
+  // Round G2 (EG): directory_professionals gives the directory by first name;
   // not me, the name match and the first 20 are applied here.
-  const read = await directoryCall<Row[]>("directory_professionals", { p_profile_id: null }, () => {
-    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
-    let req = from("public_professional_directory").select("profile_id, first_name, avatar_url, professional_subtype, specialty").neq("profile_id", me).order("first_name").limit(20);
-    if (term) req = req.ilike("first_name", `%${term}%`);
-    return req as unknown as PromiseLike<DirRead<Row[]>>;
-  });
+  let rows = directoryRead && Date.now() - directoryRead.at < DIRECTORY_REUSE_MS ? directoryRead.rows : null;
+  if (!rows) {
+    const read = await directoryCall<ColleagueRow[]>("directory_professionals", { p_profile_id: null });
+    if (read.error) return readFail(read.error);
+    rows = read.data ?? [];
+    directoryRead = { at: Date.now(), rows };
+  }
   const needle = term.toLocaleLowerCase();
-  const data = (read.data ?? []).filter((r) => r.profile_id !== me && (!needle || (r.first_name ?? "").toLocaleLowerCase().includes(needle))).slice(0, 20);
-  const error = read.error;
-  if (error) return readFail(error);
-  return {
-    ok: true,
-    data: ((data ?? []) as unknown as { profile_id: string; first_name: string | null; avatar_url: string | null; professional_subtype: string | null; specialty: string | null }[]).map((r) => ({
-      id: r.profile_id,
-      name: r.first_name,
-      avatarUrl: r.avatar_url,
-      type: r.professional_subtype,
-      specialty: r.specialty,
-    })),
-  };
+  const data = rows.filter((r) => r.profile_id !== me && (!needle || (r.first_name ?? "").toLocaleLowerCase().includes(needle))).slice(0, 20);
+  return { ok: true, data: data.map(toColleague) };
 }
 
 // ---------------------------------------------------------------------------

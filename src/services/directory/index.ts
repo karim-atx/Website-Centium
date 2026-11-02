@@ -1,4 +1,3 @@
-import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
 import type { PaymentModality } from "../professional-profile";
@@ -8,15 +7,16 @@ import type { PaymentModality } from "../professional-profile";
 // The one genuinely PUBLIC read in this app. Everything else a professional
 // can see about a client is relationship-gated; this is the opposite
 // direction — a professional choosing to be found by strangers — and
-// `public_professional_directory` is granted to `anon` accordingly.
+// directory_professionals (the Database's counted function over its listed
+// directory) answers `anon` accordingly.
 //
-// What makes that safe is the view, not this file. It returns only rows with
-// `listed_publicly = true`, a column that defaults to false and cannot be set
-// by an affiliated professional, and it excludes `phone`,
+// What makes that safe is the Database, not this file. It returns only rows
+// with `listed_publicly = true`, a column that defaults to false and cannot
+// be set by an affiliated professional, and it excludes `phone`,
 // `affiliated_business_id` and `certification_url` entirely. Before that
-// migration the same view had no WHERE clause at all and published every
+// migration the directory had no WHERE clause at all and published every
 // professional's contact details to anyone holding the anon key — which ships
-// in this bundle. Nothing here should ever reach past the view to
+// in this bundle. Nothing here should ever reach past the function to
 // `professional_profiles` directly.
 
 // The listing shape lives in ./model (no Supabase import), so pure models and
@@ -24,17 +24,14 @@ import type { PaymentModality } from "../professional-profile";
 export type { DirectoryListing } from "./model";
 import type { DirectoryListing } from "./model";
 import { tk } from "../../i18n/core";
-import { directoryCall, directoryErrorText, firstRow, type DirRead } from "./eg";
-
-const LISTING_COLUMNS =
-  "profile_id, first_name, avatar_url, professional_subtype, specialty, location, bio, monthly_rate, consultation_rate, payment_modalities, average_rating, review_count, headline, skills, has_verified_licence, playlist_url";
+import { directoryCall, directoryErrorText, firstRow } from "./eg";
 
 /**
- * The columns LISTING_COLUMNS selects, as the view returns them. The string
- * select is not inferred by the client, so the response is cast to this.
- * average_rating and review_count come from professional_rating_summary,
- * which the view reads as its owner so that anon sees the aggregate without
- * any grant on the reviews themselves.
+ * The columns a directory_professionals row carries that this file reads.
+ * Each row is JSON, so the response is cast to this. average_rating and
+ * review_count come from professional_rating_summary, which the Database
+ * reads as its owner so that anon sees the aggregate without any grant on
+ * the reviews themselves.
  */
 type DirectoryRow = {
   profile_id: string | null;
@@ -97,11 +94,7 @@ function describe(error: PostgrestError): string {
  */
 export async function fetchPublicDirectory(): Promise<DirectoryResult> {
   // Round G2 (EG): the counting function, the same rows ordered by first name.
-  const { data, error } = await directoryCall<DirectoryRow[]>("directory_professionals", { p_profile_id: null }, () =>
-    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
-    supabase.from("public_professional_directory").select(LISTING_COLUMNS).order("first_name", { ascending: true }) as unknown as PromiseLike<DirRead<DirectoryRow[]>>
-  );
-
+  const { data, error } = await directoryCall<DirectoryRow[]>("directory_professionals", { p_profile_id: null });
   if (error) {
     console.error("[directory] Could not read the directory:", error.message);
     return { ok: false, message: directoryErrorText(error) ?? describe(error as PostgrestError) };
@@ -132,11 +125,7 @@ export async function fetchPublicDirectory(): Promise<DirectoryResult> {
  */
 export async function fetchListing(profileId: string): Promise<DirectoryListing | null> {
   // Round G2 (EG): the counting function, one professional by profile id.
-  const { data, error } = await directoryCall<DirectoryRow[] | DirectoryRow>("directory_professionals", { p_profile_id: profileId }, () =>
-    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
-    supabase.from("public_professional_directory").select(LISTING_COLUMNS).eq("profile_id", profileId).maybeSingle() as unknown as PromiseLike<DirRead<DirectoryRow>>
-  );
-
+  const { data, error } = await directoryCall<DirectoryRow[] | DirectoryRow>("directory_professionals", { p_profile_id: profileId });
   const row = firstRow(data);
   if (error || !row?.profile_id) {
     if (error) console.error("[directory] Could not read the listing:", error.message);

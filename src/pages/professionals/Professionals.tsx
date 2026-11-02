@@ -63,7 +63,7 @@ import { t, tk } from "../../i18n/core";
 // distance by band) and needs a point: the area this device chose for the
 // map (savedArea), else the position when location is ALREADY allowed (never
 // prompted from the list). Without one the list is the live
-// public_professional_directory (alphabetical), with NO ranking line. The
+// directory_professionals (alphabetical), with NO ranking line. The
 // rail's subtype is the server's p_subtype; the search field filters the
 // ranked page on the device (the function takes no text). The Map keeps
 // professionals_in_area (a spatial search, not a ranking).
@@ -180,7 +180,7 @@ export default function Professionals() {
   const hasLinkedProfessional = !!linkedProfessionalId || !!user.linkedProfessionalCode;
   const linkedName = linkedDetail?.firstName ?? user.linkedProfessionalName ?? t("Your professional");
 
-  // The live directory (public_professional_directory): no contact columns
+  // The live directory (directory_professionals): no contact columns
   // are selected (services/directory LISTING_COLUMNS; D-27).
   const [listings, setListings] = useState<DirectoryListing[] | null>(null);
   const [directoryError, setDirectoryError] = useState(false);

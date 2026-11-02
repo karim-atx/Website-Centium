@@ -1,5 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
-import { directoryCall, directoryErrorText, type DirRead } from "../directory/eg";
+import { directoryCall, directoryErrorText } from "../directory/eg";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { formatPrice } from "../../utils/price";
 import { t } from "../../i18n/core";
@@ -9,40 +9,40 @@ import { CLASS_POLICY_KINDS, classErrorMessage, sortClassPolicies, type ClassBoo
 
 // Marketplace discovery: what a consumer can actually find and book.
 //
-// TWO VIEWS, NOT ONE. marketplace_venues is the unified one — a UNION ALL of
+// TWO READS, NOT ONE. directory_venues is the unified one — over a UNION ALL of
 // business_profiles and gyms, discriminated by `kind`, with each side's
 // specific columns null in the other's context: lat/lng are null for a
 // business (business_profiles has no coordinates), and can_host_classes /
-// upcoming_class_count are false/0 for a gym. marketplace_classes is separate
+// upcoming_class_count are false/0 for a gym. directory_classes is separate
 // and carries the bookable classes. Checked against the definitions rather
 // than assumed from the name.
 //
-// WHAT THE VIEWS ALREADY DECIDE, so this file does not re-decide it:
-//   marketplace_classes filters `business_is_listed(business_id)` AND
+// WHAT THE DATABASE ALREADY DECIDES, so this file does not re-decide it:
+//   directory_classes filters `business_is_listed(business_id)` AND
 //   `event_date >= CURRENT_DATE`, so a delisted business's classes and every
 //   past class are gone before the client sees them; since B9 so are
 //   cancelled classes and classes at a hidden venue. No date or listing
 //   filter is written here; adding one would be a second, drifting copy of a
 //   rule the database already enforces.
 //
-//   marketplace_venues filters businesses on `b.active`, and since B13 gyms
+//   directory_venues filters businesses on `b.active`, and since B13 gyms
 //   on `hidden_at is null` and `business_is_listed(business_id)` (a hidden
 //   venue, or an unlisted business's venue, is off Explore even for its
 //   members and insiders, whom the gyms table's own RLS still shows it to).
-//   So every Explore LIST of venues starts from this view: the Gyms tab takes
+//   So every Explore LIST of venues starts from this read: the Gyms tab takes
 //   its ids from here (services/venues fetchVenues) and only reads the 4a
 //   columns from public.gyms; the gym page itself reads public.gyms, so a
 //   member can still open their own venue.
 //
-// B13 MK-04 / MK-06: marketplace_classes sorts featured first and carries
+// B13 MK-04 / MK-06: directory_classes carries
 // centium_spots_left (null = no separate limit) and is_featured;
-// marketplace_venues carries is_featured, amenities and first_visit (gyms
+// directory_venues carries is_featured, amenities and first_visit (gyms
 // only; null on a business row). listed_on_explore = false keeps a class off
-// the view while members can still book it.
+// Explore while members can still book it.
 //
 // SPOTS ARE COMPUTED SERVER-SIDE. spots_remaining is
 // `GREATEST(max_capacity - class_booked_count(id), 0)` and is_full is the same
-// comparison, both from the view. Counting bookings on the client would drift
+// comparison, both from the Database. Counting bookings on the client would drift
 // the moment somebody else booked, and would be wrong for exactly the class
 // that is about to fill up.
 
@@ -68,7 +68,7 @@ export interface MarketplaceClass {
   bookedCount: number;
   spotsRemaining: number;
   isFull: boolean;
-  // B9 (EX-01, EX-02): appended to marketplace_classes. Optional so a class
+  // B9 (EX-01, EX-02): appended to directory_classes. Optional so a class
   // drawn from elsewhere (the business's own preview) can leave them out.
   /** The class's venue (gyms row), when it has one. */
   gymId?: string | null;
@@ -88,7 +88,7 @@ export interface MarketplaceClass {
   instructorId?: string | null;
   instructorName?: string | null;
   instructorAvatarUrl?: string | null;
-  /** marketplace_classes.instructor_is_team (Database #38). */
+  /** directory_classes.instructor_is_team (Database #38). */
   instructorIsTeam?: boolean;
   instructorSpecialty?: string | null;
   instructorRating?: number | null;
@@ -240,35 +240,6 @@ const toVenue = (r: VenueRow): MarketplaceVenue => ({
   isFeatured: r.is_featured === true,
 });
 
-// The columns this file reads, named (never "*"). The five instructor
-// columns are Database #38's (20261213200000). Every column here reads for
-// anon as well as authenticated: the view inlines the Team test, the rating
-// and, since 20261213210000, starts_at (class_starts_at() was not anon's to
-// execute, so a signed-out "*" read failed before). Every reader in this file
-// runs signed in today (the Explore pages sit behind /app).
-const CLASS_COLUMNS =
-  "class_id, business_id, business_name, location, title, class_type, event_date, start_time, end_time, price, payment_type, notes, max_capacity, booked_count, spots_remaining, is_full, gym_id, venue_name, venue_address, venue_lat, venue_lng, about, level, what_to_bring, cover_url, instructor_id, instructor_name, instructor_avatar_url, instructor_is_team, instructor_specialty, instructor_rating, instructor_review_count, instructor_hire_count, starts_at, centium_spots_left, is_featured, playlist_url";
-const VENUE_COLUMNS =
-  "kind, venue_id, name, venue_type, location, lat, lng, bio, perk, can_host_classes, upcoming_class_count, amenities, first_visit, is_featured";
-
-// Neither view is in database.types.ts — both are newer than the last
-// regeneration, as my_business_memberships and professional_reviews_readable
-// were. Cast to the call shapes this file makes rather than hand-editing a
-// generated file the next regeneration would overwrite.
-type ReadOnlyView<T> = {
-  select: (columns: string) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>;
-};
-
-const classesView = () =>
-  (
-    supabase as unknown as { from: (v: "marketplace_classes") => ReadOnlyView<ClassRow> }
-  ).from("marketplace_classes");
-
-const venuesView = () =>
-  (
-    supabase as unknown as { from: (v: "marketplace_venues") => ReadOnlyView<VenueRow> }
-  ).from("marketplace_venues");
-
 /**
  * Every bookable class.
  *
@@ -283,16 +254,13 @@ export async function fetchMarketplaceClasses(): Promise<
   { ok: true; classes: MarketplaceClass[] } | { ok: false; message: string }
 > {
   // Round G2 (EG): the counting function, the same rows.
-  const { data, error } = await directoryCall<ClassRow[]>("directory_classes", { p_business_id: null, p_gym_id: null }, () =>
-    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
-    classesView().select(CLASS_COLUMNS) as PromiseLike<DirRead<ClassRow[]>>
-  );
+  const { data, error } = await directoryCall<ClassRow[]>("directory_classes", { p_business_id: null, p_gym_id: null });
   if (error) {
     console.error("[marketplace] Could not read classes:", error.message);
     return { ok: false, message: directoryErrorText(error) ?? t("Couldn't load classes right now.") };
   }
-  // The view sorts featured first; kept here too, as PostgREST does not
-  // promise a view's ORDER BY.
+  // directory_classes orders by date and time; featured first is decided
+  // here, as the view's own sort was.
   return { ok: true, classes: featuredFirst((data ?? []).map(toClass), (c) => c.isFeatured === true) };
 }
 
@@ -301,10 +269,7 @@ export async function fetchMarketplaceVenues(): Promise<
   { ok: true; venues: MarketplaceVenue[] } | { ok: false; message: string }
 > {
   // Round G2 (EG): the counting function, the same rows.
-  const { data, error } = await directoryCall<VenueRow[]>("directory_venues", { p_kind: null }, () =>
-    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
-    venuesView().select(VENUE_COLUMNS) as PromiseLike<DirRead<VenueRow[]>>
-  );
+  const { data, error } = await directoryCall<VenueRow[]>("directory_venues", { p_kind: null });
   if (error) {
     console.error("[marketplace] Could not read venues:", error.message);
     return { ok: false, message: directoryErrorText(error) ?? t("Couldn't load places right now.") };
@@ -497,7 +462,7 @@ export interface ClassLive {
   gymId: string | null;
   /**
    * business_classes.cancelled_at / cancel_reason (B9, CL-03). A cancelled
-   * class leaves marketplace_classes, so the class page reads these to say
+   * class leaves directory_classes, so the class page reads these to say
    * so instead of "isn't available".
    */
   cancelledAt: string | null;

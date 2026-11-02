@@ -21,7 +21,7 @@ import { t } from "../../i18n/core";
  * Release 3 · W7 the public profile, {site}/p/{handle} (the MO15 share
  * link and its QR). professional_by_handle (anon) gives the name, photo,
  * type, headline and licence_verified; a listed professional's directory row
- * (public_professional_directory, also anon) adds the place, the rating and
+ * (directory_professionals, also anon) adds the place, the rating and
  * the About text. "Book a session" shows when professional_booking_allowed
  * says the visitor may book; signed in, "Open in Centium" opens the client
  * profile (Hire, Message); signed out, Sign in / Create an account come back

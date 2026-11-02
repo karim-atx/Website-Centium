@@ -1,5 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
-import { directoryCall, directoryErrorText, firstRow, parseDirectoryCv, type DirRead } from "../directory/eg";
+import { directoryCall, directoryErrorText, firstRow, parseDirectoryCv } from "../directory/eg";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { CLOSED_APPROVE_JOIN, CLOSED_INVITE_STAFF, closureMessage, isBusinessClosedError } from "../business-closure/logic";
 import type { PublicDetails } from "./types";
@@ -410,8 +410,8 @@ const clean = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null
 
 /**
  * What a professional shows the public (OP1-132 C1, C2, C5; OP1-124 9c):
- * public_professional_directory (subtype, specialty, bio) and
- * public_professional_experience. Both views read listed_publicly
+ * directory_professionals (subtype, specialty, bio) and the experience from
+ * directory_professional_cv. Both answer for listed_publicly
  * professionals only: an unlisted one answers null, and the person page
  * leaves those rows out (since Database #38 joining a team no longer unlists
  * anybody).
@@ -425,24 +425,17 @@ const clean = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null
  * staff), the experience comes from business_staff_experience(business,
  * professional) instead: the `members` permission and an accepted, unrevoked
  * employment, so a business reads its own staff's CV even when they aren't
- * listed (the public view answers nothing for an unlisted professional).
+ * listed (the public CV is empty for an unlisted professional).
  * The directory half (specialty, bio) stays public-only.
  */
 export async function fetchPublicDetails(professionalId: string, staffOf?: string): Promise<Result<PublicDetails | null>> {
   type Dir = { professional_subtype: string | null; specialty: string | null; bio: string | null };
-  // Round G2 (EG): the counting functions (the staff experience reader is unchanged).
+  // Round G2 (EG): the counted functions, two calls (the staff experience reader is unchanged).
   const [dirRead, exp] = await Promise.all([
-    directoryCall<Dir[] | Dir>("directory_professionals", { p_profile_id: professionalId }, () =>
-      // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
-      db.from("public_professional_directory").select("professional_subtype, specialty, bio").eq("profile_id", professionalId).maybeSingle() as unknown as PromiseLike<DirRead<Dir>>
-    ),
+    directoryCall<Dir[] | Dir>("directory_professionals", { p_profile_id: professionalId }),
     staffOf
       ? rpc("business_staff_experience", { p_business_id: staffOf, p_professional_id: professionalId })
-      : directoryCall<unknown>("directory_professional_cv", { p_profile_id: professionalId }, async () => {
-          // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
-          const r = await db.from("public_professional_experience").select("title, organisation, start_month, end_month, position").eq("professional_id", professionalId).order("position");
-          return { data: r.error ? null : { experience: r.data ?? [] }, error: r.error };
-        }).then((r) => ({ data: r.error ? null : parseDirectoryCv(r.data).experience, error: r.error })),
+      : directoryCall<unknown>("directory_professional_cv", { p_profile_id: professionalId }).then((r) => ({ data: r.error ? null : parseDirectoryCv(r.data).experience, error: r.error })),
   ]);
   const dir = { data: firstRow(dirRead.data), error: dirRead.error };
   if (dir.error) return fail(dir.error, directoryErrorText(dir.error) ?? "Couldn't load their profile.");

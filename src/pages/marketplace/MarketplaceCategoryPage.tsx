@@ -50,7 +50,7 @@ function CategoryListing({ category }: { category: string | undefined }) {
   // was the store sheet, so it opened an order that could never have anything
   // in it. All three are gone rather than wired to real data, because the two
   // categories they served (gyms, classes) are answered by Explore, which reads
-  // marketplace_venues and marketplace_classes.
+  // directory_venues and directory_classes.
 
   // V7 (QA 7.0): "adopts a marketplace like approach based on what they
   // provide in their Business UI" — offerings a business account created
@@ -96,7 +96,7 @@ function CategoryListing({ category }: { category: string | undefined }) {
             rankedClasses and rankedListings, each rendering invented venues
             with invented star ratings and offers. Gyms and classes are real
             entities now and belong on Explore, which reads
-            marketplace_venues and marketplace_classes; what remains on a
+            directory_venues and directory_classes; what remains on a
             category page is the one thing that was already real. */}
         {(id === "gyms" || id === "classes") && (
           <Card className="text-center py-8">

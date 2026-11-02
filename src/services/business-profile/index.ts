@@ -9,7 +9,7 @@ import { t } from "../../i18n/core";
 // WHAT THIS REPLACES. BusinessProfileTab edited `businessListing`, a
 // usePersistentState object, on every keystroke. Nothing reached the database,
 // so a gym's bio, location, branch and contact details existed on exactly one
-// device — while public_professional_directory and every client-facing surface
+// device — while directory_professionals and every client-facing surface
 // read the real columns, which stayed empty. The same shape as the
 // professional's listing before services/professional-profile was written.
 //

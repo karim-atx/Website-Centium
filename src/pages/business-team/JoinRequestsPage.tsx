@@ -15,7 +15,7 @@ import type { TeamData } from "./useTeamData";
 // checks the seat first (ATXC0) and approval adds an UNACCEPTED employment,
 // so the professional still accepts in their own app (B0). 9c: the
 // specialty line comes from the requester's public listing
-// (public_professional_directory / _experience); an unlisted requester has
+// (directory_professionals / directory_professional_cv); an unlisted requester has
 // none and the line is left out.
 
 export function JoinRequestsPage({ data }: { data: TeamData }) {

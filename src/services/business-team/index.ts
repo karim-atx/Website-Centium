@@ -40,7 +40,7 @@ export type TeamResult =
  * THE SUBTYPE IS NOT AVAILABLE TO A BUSINESS AT ALL, and that is structural
  * rather than a gap worth working around. It lives on
  * profiles.professional_subtype, readable only by its owner. The one view
- * carrying it is public_professional_directory, which requires
+ * carrying it is directory_professionals, which requires
  * `listed_publicly` — and affiliating a professional with a business TURNS
  * THAT OFF: a trigger sets listed_publicly false and affiliated_business_id
  * on insert into business_employees, because an affiliated professional is
