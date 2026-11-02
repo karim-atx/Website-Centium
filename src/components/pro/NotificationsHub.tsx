@@ -50,6 +50,7 @@ import type { PendingHire } from "../../services/hires/pro";
 import { PendingHiresSection } from "../hire-pro/PendingHiresSection";
 import { FreePeriodEnded, FreePeriodNotice } from "../professionals/FreePeriodNotice";
 import type { FreePeriodFacts } from "../../services/subscription-tiers/freePeriodCopy";
+import { t, tk } from "../../i18n/core";
 
 /**
  * Release 3 · NotificationsHub (HANDOVER e, HO7, HO9, HO10, HO14 to HO17;
@@ -96,14 +97,14 @@ const ICONS: Record<NotificationText["icon"], LucideIcon> = {
 };
 
 const REVIEW_LABEL: Record<ProLane, string> = {
-  full_coaching: "Check-ins",
-  nutrition: "Food journals",
-  clinical_overview: "Changes and follow-ups",
+  full_coaching: tk("Check-ins"),
+  nutrition: tk("Food journals"),
+  clinical_overview: tk("Changes and follow-ups"),
 };
 const REVIEW_EMPTY: Record<ProLane, string> = {
-  full_coaching: "Check-ins clients send appear here.",
-  nutrition: "Food journals clients send for feedback appear here.",
-  clinical_overview: "Notable changes in shared data and follow-ups due appear here.",
+  full_coaching: tk("Check-ins clients send appear here."),
+  nutrition: tk("Food journals clients send for feedback appear here."),
+  clinical_overview: tk("Notable changes in shared data and follow-ups due appear here."),
 };
 const REVIEW_ICON: Record<ProLane, LucideIcon> = { full_coaching: ClipboardCheck, nutrition: BookOpenCheck, clinical_overview: ListChecks };
 
@@ -152,12 +153,12 @@ export const NotificationsHub: React.FC<{
   }, [p.open]);
   const runClearAll = async () => {
     if (clearBusy) return;
-    if (!online) return setClearError("You're offline. Try again when you're connected.");
+    if (!online) return setClearError(t("You're offline. Try again when you're connected."));
     setClearBusy(true);
     setClearError(null);
     const ok = await p.inbox.clearAll();
     setClearBusy(false);
-    if (!ok) return setClearError("Couldn't clear your notifications. Try again.");
+    if (!ok) return setClearError(t("Couldn't clear your notifications. Try again."));
     setConfirmClear(false);
   };
 
@@ -228,9 +229,9 @@ export const NotificationsHub: React.FC<{
   // 12 / 17 --ink2 (margin-top 2), the 8 unread dot #8F68F6. KEPT (not
   // drawn): the action chip (Review / Open / Share) and the dismiss X.
   const notificationRow = (n: ProNotification, i: number, _list: ProNotification[], withAction?: string) => {
-    const t = notificationText(n, inbox.names);
-    const Icon = ICONS[t.icon];
-    const [tileBg, tileInk] = hubTone(t.tone, m, dark);
+    const nt = notificationText(n, inbox.names);
+    const Icon = ICONS[nt.icon];
+    const [tileBg, tileInk] = hubTone(nt.tone, m, dark);
     const unread = !n.readAt;
     const when = whenLabel(n.createdAt, p.now);
     return (
@@ -241,7 +242,7 @@ export const NotificationsHub: React.FC<{
       >
         <button type="button" onClick={() => openRow(n)} className="market-focus flex-1 min-w-0 flex text-start" style={{ alignItems: "flex-start", gap: 12, paddingBlock: "12px", paddingInline: "14px 0", background: "none", border: 0, font: "inherit", color: m.ink, cursor: "pointer" }}>
           {withAction && n.clientId ? (
-            <Initials text={initialsOf(inbox.names[n.clientId] ?? t.title)} size={38} />
+            <Initials text={initialsOf(inbox.names[n.clientId] ?? nt.title)} size={38} />
           ) : (
             <span aria-hidden className="flex items-center justify-center shrink-0" style={{ width: 38, height: 38, borderRadius: 12, background: tileBg }}>
               <Icon size={18} strokeWidth={1.9} aria-hidden style={{ color: tileInk }} />
@@ -249,10 +250,10 @@ export const NotificationsHub: React.FC<{
           )}
           <span className="flex-1 min-w-0 block">
             <span className="flex justify-between" style={{ gap: 8 }}>
-              <span style={{ fontSize: textPx(13.5), fontWeight: 700, lineHeight: linePx(18), color: m.ink }}>{t.title}</span>
+              <span style={{ fontSize: textPx(13.5), fontWeight: 700, lineHeight: linePx(18), color: m.ink }}>{nt.title}</span>
               <span style={{ fontSize: textPx(11), color: m.faint, whiteSpace: "nowrap" }}>{when}</span>
             </span>
-            {t.line ? <span className="block" style={{ fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2, marginTop: 2 }}>{t.line}</span> : null}
+            {nt.line ? <span className="block" style={{ fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2, marginTop: 2 }}>{nt.line}</span> : null}
             {withAction && (
               <span className="inline-flex items-center" style={{ marginTop: 8, height: 30, padding: "0 12px", borderRadius: 10, background: m.pale, color: m.pdark, fontSize: textPx(12), fontWeight: 700 }}>
                 {withAction}
@@ -263,7 +264,7 @@ export const NotificationsHub: React.FC<{
         </button>
         <button
           type="button"
-          aria-label={`Dismiss: ${t.title}`}
+          aria-label={t("Dismiss: {title}", { title: nt.title })}
           onClick={() => void inbox.dismiss(n.id)}
           className="tap market-focus relative flex items-center justify-center shrink-0 before:absolute before:-inset-[8px] before:content-['']"
           style={{ width: 28, height: 28, marginTop: 12, background: "none", border: 0 }}
@@ -280,8 +281,8 @@ export const NotificationsHub: React.FC<{
     const today = list.filter((n) => day(new Date(n.createdAt)) === day(p.now));
     const earlier = list.filter((n) => day(new Date(n.createdAt)) !== day(p.now));
     return [
-      ["Today", today],
-      ["Earlier", earlier],
+      [t("Today"), today],
+      [t("Earlier"), earlier],
     ]
       .filter(([, items]) => (items as ProNotification[]).length > 0)
       .map(([h, items]) => {
@@ -318,8 +319,8 @@ export const NotificationsHub: React.FC<{
                 </p>
               )}
               <HubCtaRow>
-                <HubCta variant="secondary" icon={X} label="Decline" ariaLabel={`Decline ${r.name}`} onClick={() => p.onDecline(r)} />
-                <HubCta icon={Check} label="Accept" ariaLabel={`Accept ${r.name}`} onClick={() => p.onAccept(r)} />
+                <HubCta variant="secondary" icon={X} label={t("Decline")} ariaLabel={t("Decline {name}", { name: r.name })} onClick={() => p.onDecline(r)} />
+                <HubCta icon={Check} label={t("Accept")} ariaLabel={t("Accept {name}", { name: r.name })} onClick={() => p.onAccept(r)} />
               </HubCtaRow>
             </div>
           </div>
@@ -331,16 +332,14 @@ export const NotificationsHub: React.FC<{
             <div className="flex-1 min-w-0">
               <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{d.name}</p>
               <p className="flex items-center flex-wrap" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, columnGap: 4 }}>
-                Declined ·
+                {t("Declined ·")}
                 <button
                   type="button"
                   onClick={() => p.onUndo(d)}
-                  aria-label={`Undo declining ${d.name}`}
+                  aria-label={t("Undo declining {name}", { name: d.name })}
                   className="tap relative before:absolute before:-inset-x-2 before:-inset-y-3 before:content-['']"
                   style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}
-                >
-                  Undo
-                </button>
+                >{t("Undo")}</button>
               </p>
             </div>
           </div>
@@ -352,23 +351,21 @@ export const NotificationsHub: React.FC<{
               <Building2 size={17} strokeWidth={1.75} aria-hidden style={{ color: INK.prDeep }} />
             </span>
             <div className="flex-1 min-w-0">
-              <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{e.businessName} invited you to their team</p>
-              <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>{e.role ? `As ${e.role}` : "Team invitation"}</p>
+              <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{t("{businessName} invited you to their team", { businessName: e.businessName })}</p>
+              <p style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>{e.role ? t("As {role}", { role: e.role }) : t("Team invitation")}</p>
               {e.message && <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 2, lineHeight: 1.4 }}>"{e.message}"</p>}
               <HubCtaRow>
                 <HubCta
                   variant="secondary"
                   icon={X}
-                  label="Decline"
-                  ariaLabel={`Decline ${e.businessName}'s invitation`}
+                  label={t("Decline")}
+                  ariaLabel={t("Decline {businessName}'s invitation", { businessName: e.businessName })}
                   disabled={p.invitationBusy === e.businessId}
                   onClick={() => p.onInvitation(e, false)}
                 />
-                <HubCta icon={Check} label="Accept" ariaLabel={`Accept ${e.businessName}'s invitation`} disabled={p.invitationBusy === e.businessId} onClick={() => p.onInvitation(e, true)} />
+                <HubCta icon={Check} label={t("Accept")} ariaLabel={t("Accept {businessName}'s invitation", { businessName: e.businessName })} disabled={p.invitationBusy === e.businessId} onClick={() => p.onInvitation(e, true)} />
               </HubCtaRow>
-              <button type="button" onClick={p.onBusinesses} className="tap" style={{ marginTop: 8, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
-                Businesses
-              </button>
+              <button type="button" onClick={p.onBusinesses} className="tap" style={{ marginTop: 8, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{t("Businesses")}</button>
             </div>
           </div>
         ))}
@@ -378,7 +375,7 @@ export const NotificationsHub: React.FC<{
             {otherRequests.map((n, i) => notificationRow(n, i, otherRequests))}
           </div>
         )}
-        {empty && <EmptyState icon={UserPlus} title="No new requests" line="When someone asks to work with you, they appear here to accept or decline." />}
+        {empty && <EmptyState icon={UserPlus} title={t("No new requests")} line={t("When someone asks to work with you, they appear here to accept or decline.")} />}
       </>
     );
   };
@@ -386,7 +383,7 @@ export const NotificationsHub: React.FC<{
   const ReviewIcon = REVIEW_ICON[p.lane];
   const body =
     inbox.loading && inbox.notifications.length === 0 ? (
-      <div role="status" aria-label="Loading" className="flex flex-col" style={{ gap: 10, padding: "12px 0" }}>
+      <div role="status" aria-label={t("Loading")} className="flex flex-col" style={{ gap: 10, padding: "12px 0" }}>
         {[0, 1, 2].map((i) => (
           <div key={i} className="rounded-xl bg-cream-soft animate-skeleton-pulse" style={{ height: 52 }} />
         ))}
@@ -399,18 +396,18 @@ export const NotificationsHub: React.FC<{
       requestsBody()
     ) : p.tab === "review" ? (
       review.length === 0 ? (
-        <EmptyState icon={ReviewIcon} title="Nothing to review" line={REVIEW_EMPTY[p.lane]} />
+        <EmptyState icon={ReviewIcon} title={t("Nothing to review")} line={t(REVIEW_EMPTY[p.lane])} />
       ) : (
         <>
-          <p style={{ fontSize: textPx(12), fontWeight: 600, color: m.faint, padding: "8px 0 0" }}>{REVIEW_LABEL[p.lane]}</p>
-          {grouped(review, () => (p.lane === "clinical_overview" ? "Open" : "Review"))}
+          <p style={{ fontSize: textPx(12), fontWeight: 600, color: m.faint, padding: "8px 0 0" }}>{t(REVIEW_LABEL[p.lane])}</p>
+          {grouped(review, () => (p.lane === "clinical_overview" ? t("Open") : t("Review")))}
         </>
       )
     ) : updates.length === 0 ? (
-      <EmptyState icon={Bell} title="No updates" line="Bookings, cancellations, messages, reviews and payments appear here." />
+      <EmptyState icon={Bell} title={t("No updates")} line={t("Bookings, cancellations, messages, reviews and payments appear here.")} />
     ) : (
       // W8 SH4: an allowed share request carries a Share button (it opens the client's wins).
-      grouped(updates, (n) => (n.titleKey === "pro.share.allowed" || n.titleKey === "pro.share.allowed_no_name" ? "Share" : undefined))
+      grouped(updates, (n) => (n.titleKey === "pro.share.allowed" || n.titleKey === "pro.share.allowed_no_name" ? t("Share") : undefined))
     );
 
   // P-MA.7 (D-37): the handover page, drawn over the screen it opens from
@@ -424,9 +421,9 @@ export const NotificationsHub: React.FC<{
   // inline Accept / Decline / Undo, team invitations, payments to confirm,
   // the toast, the offline line, dismiss and Clear all.
   const TABS: { key: HubTab; label: string; n: number }[] = [
-    { key: "requests", label: "Requests", n: reqN },
-    { key: "review", label: "To review", n: revN },
-    { key: "updates", label: "Updates", n: updN },
+    { key: "requests", label: t("Requests"), n: reqN },
+    { key: "review", label: t("To review"), n: revN },
+    { key: "updates", label: t("Updates"), n: updN },
   ];
   return createPortal(
     <div className="fixed inset-0 z-40 flex justify-center">
@@ -435,19 +432,19 @@ export const NotificationsHub: React.FC<{
           ref={panel}
           role="dialog"
           aria-modal="true"
-          aria-label="Notifications"
+          aria-label={t("Notifications")}
           tabIndex={-1}
           className="absolute inset-0 outline-none flex flex-col overflow-y-auto overscroll-contain"
           style={{ background: m.page, color: m.ink, padding: "calc(env(safe-area-inset-top) + 12px) 16px 32px", lineHeight: "normal" }}
         >
           <style>{FOCUS_CSS}</style>
           <div className="flex items-center shrink-0" style={{ gap: 6, marginBlock: "-4px 6px", marginInline: "-10px 0" }}>
-            <button type="button" onClick={p.onClose} aria-label="Back" className="market-focus" style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", background: "none", border: 0, padding: 0, borderRadius: 12, color: m.ink, cursor: "pointer" }}>
+            <button type="button" onClick={p.onClose} aria-label={t("Back")} className="market-focus" style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", background: "none", border: 0, padding: 0, borderRadius: 12, color: m.ink, cursor: "pointer" }}>
               <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
             </button>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint, lineHeight: linePx(15.75) }}>Home</div>
-              <h2 style={{ margin: 0, fontSize: textPx(22), fontWeight: 800, lineHeight: linePx(28) }}>Notifications</h2>
+              <div style={{ fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint, lineHeight: linePx(15.75) }}>{t("Home")}</div>
+              <h2 style={{ margin: 0, fontSize: textPx(22), fontWeight: 800, lineHeight: linePx(28) }}>{t("Notifications")}</h2>
             </div>
             <button
               type="button"
@@ -455,25 +452,23 @@ export const NotificationsHub: React.FC<{
               disabled={!anyUnread}
               className="market-focus"
               style={{ minHeight: 44, padding: 0, background: "none", border: 0, font: "inherit", fontSize: textPx(12.5), fontWeight: 700, color: m.pdark, whiteSpace: "nowrap", cursor: anyUnread ? "pointer" : "default", opacity: anyUnread ? 1 : 0.4 }}
-            >
-              Mark all read
-            </button>
+            >{t("Mark all read")}</button>
           </div>
-          <div role="tablist" aria-label="Notifications" className="flex shrink-0" style={{ gap: 4, padding: 4, borderRadius: 12, background: m.subtrack, margin: "6px 0 2px" }}>
-            {TABS.map((t) => {
-              const on = t.key === p.tab;
+          <div role="tablist" aria-label={t("Notifications")} className="flex shrink-0" style={{ gap: 4, padding: 4, borderRadius: 12, background: m.subtrack, margin: "6px 0 2px" }}>
+            {TABS.map((tab) => {
+              const on = tab.key === p.tab;
               return (
                 <button
-                  key={t.key}
+                  key={tab.key}
                   type="button"
                   role="tab"
                   aria-selected={on}
-                  onClick={() => p.onTab(t.key)}
+                  onClick={() => p.onTab(tab.key)}
                   className="market-focus hit"
                   style={{ flex: 1, minWidth: 0, height: 34, borderRadius: 9, border: 0, background: on ? m.subactive : "transparent", color: on ? m.onfill : m.subink, fontSize: textPx(12.5), fontWeight: on ? 700 : 600, font: "inherit", fontFamily: "inherit", whiteSpace: "nowrap", cursor: "pointer" }}
                 >
                   <span style={{ fontSize: textPx(12.5), fontWeight: on ? 700 : 600 }}>
-                    {t.label} {t.n}
+                    {tab.label} {tab.n}
                   </span>
                 </button>
               );
@@ -513,22 +508,20 @@ export const NotificationsHub: React.FC<{
                 aria-haspopup="dialog"
                 className="tap market-focus relative before:absolute before:-inset-x-3 before:-inset-y-3 before:content-['']"
                 style={{ fontSize: textPx(12.5), fontWeight: 700, color: m.ink2, whiteSpace: "nowrap", background: "none", border: 0 }}
-              >
-                Clear all
-              </button>
+              >{t("Clear all")}</button>
             </div>
           )}
         </div>
       </div>
-      <CentredPopup open={confirmClear} onClose={() => !clearBusy && setConfirmClear(false)} title="Clear all notifications?" body="They'll be removed from your hub. This can't be undone.">
+      <CentredPopup open={confirmClear} onClose={() => !clearBusy && setConfirmClear(false)} title={t("Clear all notifications?")} body={t("They'll be removed from your hub. This can't be undone.")}>
         <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
           {clearError && (
             <p role="alert" className="text-center" style={{ fontSize: textPx(12.5), fontWeight: 600, color: INK.hi, lineHeight: 1.4 }}>
               {clearError}
             </p>
           )}
-          <CtaButton size="page" label="Clear all" loading={clearBusy} onClick={() => void runClearAll()} />
-          <CtaButton size="page" variant="outline" label="Cancel" disabled={clearBusy} onClick={() => setConfirmClear(false)} />
+          <CtaButton size="page" label={t("Clear all")} loading={clearBusy} onClick={() => void runClearAll()} />
+          <CtaButton size="page" variant="outline" label={t("Cancel")} disabled={clearBusy} onClick={() => setConfirmClear(false)} />
         </div>
       </CentredPopup>
     </div>,
@@ -545,8 +538,8 @@ function hubTone(t: NotificationText["tone"], m: MarketPalette, dark: boolean): 
 
 /** HO7's second line: the plan and its price ("Appointment request · $60" for Clinical overview), or the plain request. */
 function requestLine(r: ProRequest, lane: ProLane): string {
-  if (!r.planLine) return "Asked to work with you";
+  if (!r.planLine) return t("Asked to work with you");
   if (lane !== "clinical_overview") return r.planLine;
   const price = r.planLine.split(" · ")[1];
-  return price ? `Appointment request · ${price}` : "Appointment request";
+  return price ? t("Appointment request · {price}", { price }) : t("Appointment request");
 }

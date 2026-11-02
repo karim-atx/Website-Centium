@@ -10,6 +10,7 @@ import { signedNum } from "../proRules";
 import { fmtDay } from "./clientFormat";
 import type { BiomarkerFlag } from "../../../services/pro/clientPage";
 import type { BloodMarker } from "../../../types";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · BiomarkerChart, CL8 "Biomarker detail, reference range and
@@ -49,22 +50,22 @@ export const BiomarkerChart: React.FC<{
 
   const lo = flag?.rangeLow ?? marker.rangeLow ?? null;
   const hi = flag?.rangeHigh ?? marker.rangeHigh ?? null;
-  const range = lo != null && hi != null ? `${lo} to ${hi}` : lo != null ? `over ${lo}` : hi != null ? `under ${hi}` : null;
+  const range = lo != null && hi != null ? t("{lo} to {hi}", { lo, hi }) : lo != null ? t("over {lo}", { lo }) : hi != null ? t("under {hi}", { hi }) : null;
   const statusWord =
     flag?.status === "out_of_range"
       ? hi != null && marker.value > hi
-        ? "Above range"
-        : "Below range"
+        ? t("Above range")
+        : t("Below range")
       : flag?.status === "borderline"
-        ? "Borderline"
+        ? t("Borderline")
         : flag?.status === "normal" || marker.status === "normal"
-          ? "In range"
+          ? t("In range")
           : marker.status === "high"
-            ? "Above range"
+            ? t("Above range")
             : marker.status === "low"
-              ? "Below range"
+              ? t("Below range")
               : null;
-  const statusInk = statusWord === "In range" ? INK.good : statusWord === "Borderline" ? INK.goldInk : statusWord ? INK.hi : INK.chF;
+  const statusInk = statusWord === t("In range") ? INK.good : statusWord === t("Borderline") ? INK.goldInk : statusWord ? INK.hi : INK.chF;
   const sel = selected != null ? points[selected] : null;
   const prev = selected != null && selected > 0 ? points[selected - 1] : null;
   const change = sel && prev ? Math.round((sel.value - prev.value) * 100) / 100 : null;
@@ -77,8 +78,8 @@ export const BiomarkerChart: React.FC<{
       title={marker.name}
       footer={
         <div className="flex w-full" style={{ gap: 8 }}>
-          <CtaButton className="flex-1" size="sheet" variant="secondary" icon={<FileText size={15} />} label="Add a note" onClick={onNote} />
-          {onCarePlan && <CtaButton className="flex-1" size="sheet" icon={<Plus size={15} />} label="Add to care plan" onClick={onCarePlan} />}
+          <CtaButton className="flex-1" size="sheet" variant="secondary" icon={<FileText size={15} />} label={t("Add a note")} onClick={onNote} />
+          {onCarePlan && <CtaButton className="flex-1" size="sheet" icon={<Plus size={15} />} label={t("Add to care plan")} onClick={onCarePlan} />}
         </div>
       }
     >
@@ -87,7 +88,7 @@ export const BiomarkerChart: React.FC<{
           <p style={{ fontSize: textPx(24), fontWeight: 700, color: INK.ch, lineHeight: 1 }}>
             {marker.value} <span style={{ fontSize: textPx(14), fontWeight: 400, color: INK.chF }}>{marker.unit}</span>
           </p>
-          {range && <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 4 }}>{`Range: ${range} ${marker.unit}${flag?.rangeSource === "reference" ? " (reference)" : ""}`}</p>}
+          {range && <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 4 }}>{flag?.rangeSource === "reference" ? t("Range: {range} {unit} (reference)", { range, unit: marker.unit }) : t("Range: {range} {unit}", { range, unit: marker.unit })}</p>}
         </div>
         {statusWord && <span style={{ fontSize: textPx(12), fontWeight: 700, color: statusInk }}>{statusWord}</span>}
       </div>
@@ -100,7 +101,7 @@ export const BiomarkerChart: React.FC<{
               <Pin size={10} strokeWidth={2.4} aria-hidden />
               {fmtDay(sel.date, true)}
             </p>
-            <p style={{ fontSize: 12.5, fontWeight: 800 }}>{`${sel.value} ${marker.unit}${change != null && prev ? ` · ${signed(change)} since ${fmtDay(prev.date)}` : ""}`}</p>
+            <p style={{ fontSize: 12.5, fontWeight: 800 }}>{`${sel.value} ${marker.unit}${change != null && prev ? ` · ${t("{change} since {date}", { change: signed(change), date: fmtDay(prev.date) })}` : ""}`}</p>
           </div>
         )}
         <BiomarkerLineChart
@@ -112,31 +113,29 @@ export const BiomarkerChart: React.FC<{
           variant="full"
           selected={selected}
           onSelect={setSelected}
-          label={`${marker.name}: ${points.length} result${points.length === 1 ? "" : "s"}, latest ${marker.value} ${marker.unit}${range ? `, range ${range}` : ""}.`}
+          label={range ? tn(points.length, "{name}: {n} result, latest {value} {unit}, range {range}.", "{name}: {n} results, latest {value} {unit}, range {range}.", { name: marker.name, value: marker.value, unit: marker.unit, range }) : tn(points.length, "{name}: {n} result, latest {value} {unit}.", "{name}: {n} results, latest {value} {unit}.", { name: marker.name, value: marker.value, unit: marker.unit })}
         />
       </div>
 
       {range && (
         <div className="flex flex-wrap" style={{ gap: 6, marginTop: 8 }}>
           <span className="inline-flex items-center whitespace-nowrap" style={{ gap: 5, height: 26, padding: "0 9px", borderRadius: 8, border: `1px solid ${INK.b10}`, fontSize: textPx(10.5), fontWeight: 700, color: INK.chS }}>
-            <span aria-hidden style={{ width: 12, height: 8, borderRadius: 2, background: INK.tealPale, borderTop: `1.5px dashed ${INK.tealDark}` }} />
-            Reference range
-          </span>
+            <span aria-hidden style={{ width: 12, height: 8, borderRadius: 2, background: INK.tealPale, borderTop: `1.5px dashed ${INK.tealDark}` }} />{t("Reference range")}</span>
         </div>
       )}
 
       <div style={{ marginTop: 14, borderTop: `1px solid ${INK.b06}`, paddingTop: 12 }} className="flex flex-col">
         {flag?.previousValue != null && flag.previousDate ? (
           <p style={{ fontSize: textPx(12.5), color: INK.ch }}>
-            {`Change ${signed(Math.round((flag.latestValue - flag.previousValue) * 100) / 100)} ${marker.unit} since ${fmtDay(flag.previousDate, true)}`}
-            {flag.yearlyRate != null && <span style={{ color: INK.chF }}>{` · ${signed(Math.round(flag.yearlyRate * 100) / 100)} a year`}</span>}
+            {t("Change {change} {unit} since {date}", { change: signed(Math.round((flag.latestValue - flag.previousValue) * 100) / 100), unit: marker.unit, date: fmtDay(flag.previousDate, true) })}
+            {flag.yearlyRate != null && <span style={{ color: INK.chF }}>{` · ${t("{change} a year", { change: signed(Math.round(flag.yearlyRate * 100) / 100) })}`}</span>}
           </p>
         ) : (
-          <p style={{ fontSize: textPx(12), color: INK.chF }}>One test so far, so no change yet.</p>
+          <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("One test so far, so no change yet.")}</p>
         )}
-        {flag?.changeFlag && <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi, marginTop: 4 }}>Changed by more than half since the previous test.</p>}
-        {panel && <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 4 }}>{`Panel: ${panel}`}</p>}
-        {sharedNote && <p style={{ fontSize: textPx(12), color: INK.chS, marginTop: 8, lineHeight: 1.5 }}>{`${firstName}'s note: "${sharedNote}"`}</p>}
+        {flag?.changeFlag && <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi, marginTop: 4 }}>{t("Changed by more than half since the previous test.")}</p>}
+        {panel && <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 4 }}>{t("Panel: {panel}", { panel })}</p>}
+        {sharedNote && <p style={{ fontSize: textPx(12), color: INK.chS, marginTop: 8, lineHeight: 1.5 }}>{t("{name}'s note: \"{note}\"", { name: firstName, note: sharedNote })}</p>}
       </div>
     </BottomSheet>
   );

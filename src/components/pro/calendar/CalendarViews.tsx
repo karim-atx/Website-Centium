@@ -7,13 +7,14 @@ import { eventColours } from "../../calendar/eventColour";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { hourLabel12, range12 } from "../../../utils/time12";
-import { DAY_LETTERS } from "../../../utils/week";
+import { weekdayNarrow } from "../proDates";
 import { INK } from "../proInk";
 import { TicketCheck } from "../../market/ProfessionalCard";
 import { primaryLine, REQUEST_GOLD, FOLLOW_UP_PLUM, DEFAULT_SESSION, type CalItem } from "./calendarItems";
 import { minutes, offBands, type TimeOffEntry } from "./calendarModel";
 import { TicketRow, classBadgeText, classInk } from "./TicketRow";
 import { appLocale } from "../../../i18n/format";
+import { t } from "../../../i18n/core";
 
 // Release 3 · W4 CA1 v2 Month, CA3 v2 Week, CA4 v2 Day (source/gen/cal.js
 // calMonth, calWeek, calDay, agendaRow, headerCard; Monday-first per FINAL_PLAN
@@ -86,21 +87,20 @@ const Badge: React.FC<{ item: CalItem }> = ({ item }) => {
     case "completed":
       return (
         <span style={{ ...style, color: INK.good }}>
-          <Check size={11} strokeWidth={2.4} aria-hidden /> Completed
-        </span>
+          <Check size={11} strokeWidth={2.4} aria-hidden />{" "}{t("Completed")}</span>
       );
     case "request":
-      return <span style={{ ...style, color: gold }}>Request</span>;
+      return <span style={{ ...style, color: gold }}>{t("Request")}</span>;
     case "followup":
-      return <span style={{ ...style, color: INK.chS }}>Follow-up</span>;
+      return <span style={{ ...style, color: INK.chS }}>{t("Follow-up")}</span>;
     case "invitation":
-      return <span style={{ ...style, color: gold }}>Invitation</span>;
+      return <span style={{ ...style, color: gold }}>{t("Invitation")}</span>;
     case "going":
-      return <span style={{ ...style, color: INK.prDeep }}>Going</span>;
+      return <span style={{ ...style, color: INK.prDeep }}>{t("Going")}</span>;
     case "declined":
-      return <span style={{ ...style, color: INK.chF }}>Declined</span>;
+      return <span style={{ ...style, color: INK.chF }}>{t("Declined")}</span>;
     case "scheduled":
-      return <span style={{ ...style, color: INK.tealDark }}>Scheduled for a client</span>;
+      return <span style={{ ...style, color: INK.tealDark }}>{t("Scheduled for a client")}</span>;
     default:
       return null;
   }
@@ -110,7 +110,7 @@ const Badge: React.FC<{ item: CalItem }> = ({ item }) => {
 export const AgendaRow: React.FC<{ item: CalItem; onOpen: (i: CalItem) => void; outline?: boolean; notchBg?: string }> = ({ item, onOpen, outline, notchBg }) => {
   const dark = useIsDark();
   const { tint, bar } = eventColours(item.colour, dark);
-  const time = item.allDay ? "All day" : range12(item.start, item.end);
+  const time = item.allDay ? t("All day") : range12(item.start, item.end);
   if (item.kind === "class" && item.cls) {
     const c = item.cls;
     const badge = classBadgeText(item.badge, c.colour, dark);
@@ -127,7 +127,7 @@ export const AgendaRow: React.FC<{ item: CalItem; onOpen: (i: CalItem) => void; 
         outline={outline || (c.updated && c.status === "scheduled")}
         notchBg={notchBg ?? "rgb(var(--c-cream))"}
         onClick={() => onOpen(item)}
-        ariaLabel={[primaryLine(item), time, c.location, c.hired ? "Hired via Centium" : null, badge?.text].filter(Boolean).join(", ")}
+        ariaLabel={[primaryLine(item), time, c.location, c.hired ? t("Hired via Centium") : null, badge?.text].filter(Boolean).join(", ")}
       />
     );
   }
@@ -141,7 +141,7 @@ export const AgendaRow: React.FC<{ item: CalItem; onOpen: (i: CalItem) => void; 
       <span aria-hidden style={{ width: 3, alignSelf: "stretch", minHeight: 32, borderRadius: 9999, background: bar, flexShrink: 0 }} />
       <span className="flex-1 min-w-0">
         <span className="block" style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch, lineHeight: 1.5 }}>
-          {item.kind === "request" ? `Request · ${item.name ? `${item.name} wants this slot` : item.title}` : primaryLine(item)}
+          {item.kind === "request" ? (item.name ? t("Request · {name} wants this slot", { name: item.name }) : t("Request · {title}", { title: item.title })) : primaryLine(item)}
         </span>
         <span className="block" style={{ fontSize: textPx(10), color: INK.chT, lineHeight: 1.5 }}>
           {[time, item.place].filter(Boolean).join(" · ")}
@@ -179,9 +179,9 @@ export const MonthGrid: React.FC<{
   return (
     <div style={{ borderRadius: 15, background: dark ? "#1C1F28" : "#FFFFFF", border: `1px solid rgba(143,104,246,${dark ? 0.28 : 0.16})`, padding: "12px 12px 10px" }}>
       <div className="grid grid-cols-7" style={{ gap: 2, marginBottom: 4 }}>
-        {DAY_LETTERS.map((l, i) => (
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
           <div key={i} className="flex items-center justify-center" style={{ height: 26, fontSize: textPx(13), fontWeight: 600, color: dark ? "#B7ABDE" : "#5B3FE4" }}>
-            {l}
+            {weekdayNarrow(i)}
           </div>
         ))}
       </div>
@@ -228,20 +228,16 @@ export const MonthGrid: React.FC<{
       </div>
       <div className="flex flex-wrap" style={{ gap: 14, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${INK.b06}`, fontSize: textPx(10.5), color: INK.chF }}>
         <span className="flex items-center whitespace-nowrap" style={{ gap: 5 }}>
-          <span aria-hidden style={{ width: 5, height: 5, borderRadius: 9999, background: dark ? "#4F8F8A" : "#6F9993" }} />
-          Sessions booked
-        </span>
+          <span aria-hidden style={{ width: 5, height: 5, borderRadius: 9999, background: dark ? "#4F8F8A" : "#6F9993" }} />{t("Sessions booked")}</span>
         <span className="flex items-center whitespace-nowrap" style={{ gap: 5 }}>
           <span aria-hidden style={{ width: 5, height: 5, borderRadius: 9999, background: dark ? HIRED_DOT_DARK : HIRED_DOT }} />
-          {hiredLive ? "Hired classes" : "Classes"}
+          {hiredLive ? t("Hired classes") : t("Classes")}
         </span>
         {firstOff && (
           <span className="flex items-center" style={{ gap: 5 }}>
             <span aria-hidden style={{ fontWeight: 700, color: INK.chT }}>
               {firstOff}
-            </span>
-            Greyed: day off
-          </span>
+            </span>{t("Greyed: day off")}</span>
         )}
       </div>
     </div>
@@ -272,7 +268,7 @@ export const WeekDayRow: React.FC<{
       <button
         type="button"
         onClick={onDay}
-        aria-label={`${d.toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" })}, open in Day view`}
+        aria-label={t("{v}, open in Day view", { v: d.toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" }) })}
         className={clsx("tap shrink-0 flex flex-col items-center justify-center", today ? "bg-primary-fill text-on-primary-fill" : "")}
         style={{ width: 56, borderRadius: 16, padding: "8px 0", gap: 2, background: today ? undefined : INK.soft, color: today ? undefined : INK.chS }}
       >
@@ -283,7 +279,7 @@ export const WeekDayRow: React.FC<{
         {known && (
           <p className="flex items-center" style={{ gap: 5, fontSize: textPx(10.5), fontWeight: 600, color: off ? INK.chT : INK.tealDark, marginBottom: 6 }}>
             {off ? <Moon size={11} strokeWidth={2} aria-hidden /> : <Clock size={11} strokeWidth={2} aria-hidden />}
-            {off ? "Day off" : hours}
+            {off ? t("Day off") : hours}
           </p>
         )}
         {!loaded ? (
@@ -295,7 +291,7 @@ export const WeekDayRow: React.FC<{
             ))}
           </div>
         ) : (
-          <p style={{ fontSize: textPx(12), color: INK.chF }}>{off || !known ? "No sessions" : "Open all day"}</p>
+          <p style={{ fontSize: textPx(12), color: INK.chF }}>{off || !known ? t("No sessions") : t("Open all day")}</p>
         )}
       </div>
     </div>
@@ -314,7 +310,7 @@ const TAIL = 40;
 export const RequestCard: React.FC<{ item: CalItem; busy: boolean; onAccept: () => void; onDecline: () => void }> = ({ item, busy, onAccept, onDecline }) => {
   const dark = useIsDark();
   const { tint } = eventColours(REQUEST_GOLD, dark);
-  const who = item.name ?? "Someone new";
+  const who = item.name ?? t("Someone new");
   return (
     <div style={{ borderRadius: 22, padding: "16px 20px", background: tint, borderInlineStart: `3px solid ${REQUEST_GOLD}`, marginBottom: 10 }}>
       <div className="flex justify-between" style={{ gap: 10 }}>
@@ -322,11 +318,11 @@ export const RequestCard: React.FC<{ item: CalItem; busy: boolean; onAccept: () 
           <p style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{`${who} · ${item.title}`}</p>
           <p style={{ fontSize: textPx(12), color: INK.chF }}>{range12(item.start, item.end)}</p>
         </div>
-        <span style={{ fontSize: textPx(11), fontWeight: 600, color: dark ? GOLD_TEXT_DARK : GOLD_TEXT, flexShrink: 0 }}>Request</span>
+        <span style={{ fontSize: textPx(11), fontWeight: 600, color: dark ? GOLD_TEXT_DARK : GOLD_TEXT, flexShrink: 0 }}>{t("Request")}</span>
       </div>
       <div className="flex" style={{ gap: 8, marginTop: 10 }}>
-        <CtaButton size="page" variant="secondary" label="Decline" icon={<X size={15} aria-hidden />} disabled={busy} onClick={onDecline} aria-label={`Decline ${who}'s booking request`} />
-        <CtaButton size="page" label="Accept" icon={<Check size={15} aria-hidden />} disabled={busy} onClick={onAccept} aria-label={`Accept ${who}'s booking request`} />
+        <CtaButton size="page" variant="secondary" label={t("Decline")} icon={<X size={15} aria-hidden />} disabled={busy} onClick={onDecline} aria-label={t("Decline {who}'s booking request", { who })} />
+        <CtaButton size="page" label={t("Accept")} icon={<Check size={15} aria-hidden />} disabled={busy} onClick={onAccept} aria-label={t("Accept {who}'s booking request", { who })} />
       </div>
     </div>
   );
@@ -398,7 +394,7 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
             style={{ insetInlineStart: 40, insetInlineEnd: 4, top: y(minutes(b.start)), height: Math.max(y(minutes(b.end)) - y(minutes(b.start)), 26), borderRadius: 12, background: INK.soft, padding: "0 10px", gap: 6, fontSize: textPx(11), fontWeight: 600, color: INK.chF }}
           >
             <Coffee size={12} strokeWidth={2} aria-hidden />
-            {b.entry.reason || "Break"}
+            {b.entry.reason || t("Break")}
           </button>
         ))}
         {open.map((o) => (
@@ -406,12 +402,10 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
             key={`open${o.start}`}
             type="button"
             onClick={() => onOpenSlot(o.start)}
-            aria-label={`Open slot, ${range12(o.start, o.end)}, add a session`}
+            aria-label={t("Open slot, {v}, add a session", { v: range12(o.start, o.end) })}
             className="tap absolute flex items-center justify-between"
             style={{ insetInlineStart: 40, insetInlineEnd: 4, top: y(minutes(o.start)), height: Math.max(y(minutes(o.end)) - y(minutes(o.start)), 26), borderRadius: 12, border: `1.5px dashed ${INK.b10}`, padding: "0 10px", fontSize: textPx(11), fontWeight: 600, color: INK.chF }}
-          >
-            Open slot
-            <Plus size={13} strokeWidth={2} aria-hidden />
+          >{t("Open slot")}<Plus size={13} strokeWidth={2} aria-hidden />
           </button>
         ))}
         {timed.map((i) => {
@@ -430,7 +424,7 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
                 className="tap absolute flex items-center text-start"
                 style={{ left, width, top, height: hh, borderRadius: 12, border: `1.5px dashed ${REQUEST_GOLD}`, padding: "0 10px", fontSize: textPx(11), fontWeight: 600, color: gold }}
               >
-                <span className="truncate">{`Requested · ${i.name ?? i.title}`}</span>
+                <span className="truncate">{t("Requested · {name}", { name: i.name ?? i.title })}</span>
               </button>
             );
           }
@@ -466,12 +460,10 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
                 <span className="truncate" style={{ textDecoration: cancelled ? "line-through" : undefined }}>{label}</span>
                 {cls?.hired && (
                   <span className="shrink-0" style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: textPx(9.5), fontWeight: 700, color: classInk(i.colour, dark), whiteSpace: "nowrap" }}>
-                    <TicketCheck size={11} />
-                    Hired via Centium
-                  </span>
+                    <TicketCheck size={11} />{t("Hired via Centium")}</span>
                 )}
-                {cancelled && <span className="sr-only">Cancelled</span>}
-                {i.done && <Check size={10} strokeWidth={2.4} aria-label="Completed" className="shrink-0" style={{ color: INK.good }} />}
+                {cancelled && <span className="sr-only">{t("Cancelled")}</span>}
+                {i.done && <Check size={10} strokeWidth={2.4} aria-label={t("Completed")} className="shrink-0" style={{ color: INK.good }} />}
               </p>
               <p className="truncate" style={{ fontSize: textPx(10), color: INK.chF, textDecoration: cancelled ? "line-through" : undefined }}>
                 {[range12(i.start, i.end), sub].filter(Boolean).join(" · ")}
@@ -487,22 +479,16 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
       </div>
       <div className="flex flex-wrap" style={{ gap: "10px 14px", marginTop: 6, fontSize: textPx(10.5), color: INK.chF }}>
         <span className="flex items-center" style={{ gap: 5 }}>
-          <span aria-hidden style={{ width: 14, height: 10, borderRadius: 3, background: `repeating-linear-gradient(135deg, ${INK.soft} 0 3px, transparent 3px 6px)`, border: `1px solid ${INK.b10}` }} />
-          Outside working hours
-        </span>
+          <span aria-hidden style={{ width: 14, height: 10, borderRadius: 3, background: `repeating-linear-gradient(135deg, ${INK.soft} 0 3px, transparent 3px 6px)`, border: `1px solid ${INK.b10}` }} />{t("Outside working hours")}</span>
         <span className="flex items-center" style={{ gap: 5 }}>
-          <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: eventColours(DEFAULT_SESSION, dark).bar }} />
-          Your sessions
-        </span>
+          <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: eventColours(DEFAULT_SESSION, dark).bar }} />{t("Your sessions")}</span>
         <span className="flex items-center" style={{ gap: 5 }}>
           <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: eventColours(CLASS_SWATCH, dark).bar }} />
-          {hiredLive ? "Hired · class colour" : "Classes · class colour"}
+          {hiredLive ? t("Hired · class colour") : t("Classes · class colour")}
         </span>
         {clinical && (
           <span className="flex items-center" style={{ gap: 5 }}>
-            <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: FOLLOW_UP_PLUM }} />
-            Follow-up
-          </span>
+            <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: FOLLOW_UP_PLUM }} />{t("Follow-up")}</span>
         )}
       </div>
     </>
@@ -514,8 +500,8 @@ export const DayOffRow: React.FC<{ entry: TimeOffEntry; onOpen: () => void }> = 
   <button type="button" onClick={onOpen} className="tap w-full flex items-center text-start" style={{ gap: 10, borderRadius: 15, padding: "12px 14px", background: INK.soft, marginBottom: 10 }}>
     <Plane size={14} strokeWidth={1.75} aria-hidden style={{ color: INK.chF }} />
     <span className="flex-1 min-w-0" style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch }}>
-      {entry.reason || "Time off"}
+      {entry.reason || t("Time off")}
     </span>
-    <span style={{ fontSize: textPx(10.5), color: INK.chF }}>All day</span>
+    <span style={{ fontSize: textPx(10.5), color: INK.chF }}>{t("All day")}</span>
   </button>
 );

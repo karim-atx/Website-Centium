@@ -40,6 +40,11 @@ const AREAS = [
   ["food", "Food: logging, meal prep, goals and nutrients"],
   ["workout", "Workout: routines, sessions, history and metrics"],
   ["mind", "Mind: meditation, journal, habits and achievements"],
+  ["pro", "Professional tools: Home, notifications and shared parts"],
+  ["proclients", "Professional tools: Clients and a client's page"],
+  ["proprofile", "Professional tools: More, profile, services and credentials"],
+  ["procalendar", "Professional tools: Calendar"],
+  ["promessages", "Professional tools: Messages"],
 ];
 
 const rows = [];

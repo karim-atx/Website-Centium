@@ -8,6 +8,7 @@
 
 import type { Exercise, LoggedExercise, WorkoutSession, WorkoutTemplate, WorkoutTemplateAssignment } from "../../../types";
 import { signedNum } from "../proRules";
+import { tn } from "../../../i18n/core";
 
 const DAY = 86400000;
 const toDate = (iso: string) => new Date(`${iso}T00:00:00`);
@@ -19,18 +20,17 @@ export const addDays = (iso: string, n: number) => {
 };
 const daysBetween = (a: string, b: string) => Math.round((toDate(b).getTime() - toDate(a).getTime()) / DAY);
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** TR1 card meta: "{n} weeks · {n} exercises" from what the row stores. */
-export function templateMeta(t: Pick<WorkoutTemplate, "durationWeeks" | "exercises">): string {
+export function templateMeta(tpl: Pick<WorkoutTemplate, "durationWeeks" | "exercises">): string {
   const parts: string[] = [];
-  if (t.durationWeeks) parts.push(plural(t.durationWeeks, "week", "weeks"));
-  parts.push(plural(t.exercises.length, "exercise", "exercises"));
+  if (tpl.durationWeeks) parts.push(tn(tpl.durationWeeks, "{n} week", "{n} weeks"));
+  parts.push(tn(tpl.exercises.length, "{n} exercise", "{n} exercises"));
   return parts.join(" · ");
 }
 
 /** "{n} clients" / "{n} client" (TR1 COPY). */
-export const clientsLabel = (n: number) => plural(n, "client", "clients");
+export const clientsLabel = (n: number) => tn(n, "{n} client", "{n} clients");
 
 /** Active = not ended (Release 3 end_template_assignment keeps the row with ended_at). */
 export const isActive = (a: Pick<WorkoutTemplateAssignment, "endedAt">) => !a.endedAt;

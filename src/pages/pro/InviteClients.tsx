@@ -28,6 +28,8 @@ import {
   type InviteJoin,
   type InviteLink,
 } from "../../services/pro/invites";
+import { t } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
 
 /**
  * Release 3 · HO2 v6 "Invite clients" (/app/pro/invite; gen/r18.js invite18).
@@ -84,7 +86,7 @@ export default function InviteClients() {
     };
   }, [authUserId, nonce]);
 
-  const first = user.firstName?.trim() || "your professional";
+  const first = user.firstName?.trim() || t("your professional");
   const code = link.data?.code ?? null;
   const text = message ?? (code ? defaultInviteMessage(first, code) : "");
 
@@ -150,7 +152,7 @@ export default function InviteClients() {
     img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
   };
 
-  const header = <PageHeader title="Invite clients" subtitle="Share your link or QR code" showBack sub tightBack bottomGap={16} />;
+  const header = <PageHeader title={t("Invite clients")} subtitle={t("Share your link or QR code")} showBack sub tightBack bottomGap={16} />;
 
   if (allowed === false) {
     return (
@@ -158,7 +160,7 @@ export default function InviteClients() {
         {header}
         <p className="flex items-start" style={{ gap: 10, borderRadius: 14, background: INK.soft, padding: "12px 14px", fontSize: textPx(13), color: INK.chS, lineHeight: 1.5 }}>
           <Info size={16} strokeWidth={2} aria-hidden className="shrink-0" style={{ marginTop: 1 }} />
-          {INVITE_LOCKED_MESSAGE}
+          {t(INVITE_LOCKED_MESSAGE)}
         </p>
       </div>
     );
@@ -177,13 +179,13 @@ export default function InviteClients() {
         <ProError onRetry={() => setNonce((n) => n + 1)} />
       ) : !code ? (
         <div className="flex flex-col items-center text-center" style={{ gap: 12, padding: "12px 0 20px" }}>
-          <p style={{ fontSize: textPx(13), color: INK.chS, lineHeight: 1.55, maxWidth: 300 }}>Create your invite link. Anyone who opens it can see your page and ask to work with you.</p>
+          <p style={{ fontSize: textPx(13), color: INK.chS, lineHeight: 1.55, maxWidth: 300 }}>{t("Create your invite link. Anyone who opens it can see your page and ask to work with you.")}</p>
           {createError && (
             <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi }}>
               {createError}
             </p>
           )}
-          <CtaButton size="page" label="Create invite link" loading={creating} onClick={() => void create()} />
+          <CtaButton size="page" label={t("Create invite link")} loading={creating} onClick={() => void create()} />
         </div>
       ) : (
         <>
@@ -193,25 +195,20 @@ export default function InviteClients() {
               className="flex items-center justify-center"
               style={{ width: 164, height: 164, borderRadius: 18, border: `1px solid ${INK.b10}`, background: "#FFFFFF" }}
             >
-              <PassQr value={inviteHref(code)} size={136} label="Invite link QR code" failedText="Couldn't draw the QR code. Try again." />
+              <PassQr value={inviteHref(code)} size={136} label={t("Invite link QR code")} failedText={t("Couldn't draw the QR code. Try again.")} />
             </div>
             <span className="flex" style={{ gap: 14, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep, whiteSpace: "nowrap" }}>
               <button type="button" onClick={() => setFull(true)} className="tap inline-flex items-center" style={{ gap: 4 }}>
-                <Maximize2 size={13} strokeWidth={2} aria-hidden />
-                Show full screen
-              </button>
+                <Maximize2 size={13} strokeWidth={2} aria-hidden />{t("Show full screen")}</button>
               <button type="button" onClick={saveImage} className="tap inline-flex items-center" style={{ gap: 4 }}>
-                <Download size={13} strokeWidth={2} aria-hidden />
-                Save image
-              </button>
+                <Download size={13} strokeWidth={2} aria-hidden />{t("Save image")}</button>
             </span>
           </div>
           {verified === false && (
             <p className="flex items-start" style={{ gap: 8, borderRadius: 12, background: INK.soft, padding: "10px 12px", marginBottom: 12, fontSize: textPx(12), color: INK.chS, lineHeight: 1.45 }}>
               <Info size={14} strokeWidth={2} aria-hidden className="shrink-0" style={{ marginTop: 1 }} />
               <span>
-                <b style={{ color: INK.ch }}>Licence not verified yet.</b> Until your licence is verified, your invite page says it's pending.
-              </span>
+                <b style={{ color: INK.ch }}>{t("Licence not verified yet.")}</b>{" "}{t("Until your licence is verified, your invite page says it's pending.")}</span>
             </p>
           )}
           <div className="flex" style={{ gap: 8, marginBottom: 8 }}>
@@ -223,7 +220,7 @@ export default function InviteClients() {
             </span>
             <button
               type="button"
-              aria-label="Copy"
+              aria-label={t("Copy")}
               onClick={copy}
               className="tap flex items-center justify-center shrink-0"
               style={{ width: 48, height: 48, borderRadius: 12, background: dark ? INK.fill : "#9A8CD6" }}
@@ -236,15 +233,15 @@ export default function InviteClients() {
             </button>
           </div>
           <div style={{ marginBottom: 16 }}>
-            <CtaButton size="page" label={copied ? "Link copied" : "Share invite"} icon={<Share size={15} aria-hidden />} onClick={() => void share()} />
+            <CtaButton size="page" label={copied ? t("Link copied") : t("Share invite")} icon={<Share size={15} aria-hidden />} onClick={() => void share()} />
           </div>
 
-          <SectionHead label="Message sent with the link" right={editing ? "Done" : "Edit"} onRight={() => setEditing((e) => !e)} />
+          <SectionHead label={t("Message sent with the link")} right={editing ? t("Done") : t("Edit")} onRight={() => setEditing((e) => !e)} />
           {editing ? (
             <textarea
               value={text}
               onChange={(e) => setMessage(e.target.value)}
-              aria-label="Message sent with the link"
+              aria-label={t("Message sent with the link")}
               className="block w-full outline-none resize-none"
               style={{ borderRadius: 16, background: INK.soft, padding: "12px 14px", fontSize: textPx(13), color: INK.ch, lineHeight: 1.5, minHeight: 96, marginBottom: 14, border: `1px solid ${INK.pr}` }}
             />
@@ -252,16 +249,16 @@ export default function InviteClients() {
             <p style={{ borderRadius: 16, background: INK.soft, padding: "12px 14px", fontSize: textPx(13), color: INK.ch, lineHeight: 1.5, marginBottom: 14 }}>{text}</p>
           )}
 
-          <SectionHead label="Settings" />
+          <SectionHead label={t("Settings")} />
           <div style={{ padding: "0 4px" }}>
-            <SettingsRow icon={Tag} title="Invite leads to" value={<ComingSoonPill />} />
-            <SettingsRow icon={UserCheck} title="Accept each new client" value={<ComingSoonPill />} />
+            <SettingsRow icon={Tag} title={t("Invite leads to")} value={<ComingSoonPill />} />
+            <SettingsRow icon={UserCheck} title={t("Accept each new client")} value={<ComingSoonPill />} />
           </div>
 
           <div style={{ height: 10 }} />
           <SectionHead
-            label="Joined with your invite"
-            right={list.length > JOINED_SHOWN ? (showAll ? "Show less" : `See all ${list.length}`) : undefined}
+            label={t("Joined with your invite")}
+            right={list.length > JOINED_SHOWN ? (showAll ? t("Show less") : t("See all {n}", { n: list.length })) : undefined}
             onRight={() => setShowAll((s) => !s)}
           />
           {joins === null ? (
@@ -270,8 +267,8 @@ export default function InviteClients() {
             <p style={{ fontSize: textPx(12.5), color: INK.chF, lineHeight: 1.5 }}>
               {/* W2-5c: opened_at is one stamp for the link (first open only), so it reads as the link's status, not a person's. */}
               {link.data?.openedAt
-                ? `Opened ${shortDate(link.data.openedAt)}. Nobody has joined yet. People who join appear here with their status.`
-                : "Nobody yet. People who open your link appear here with their status."}
+                ? t("Opened {date}. Nobody has joined yet. People who join appear here with their status.", { date: shortDate(link.data.openedAt) })
+                : t("Nobody yet. People who open your link appear here with their status.")}
             </p>
           ) : (
             <div style={{ borderRadius: 20, background: INK.card, border: `1px solid ${INK.bCard}`, padding: "4px 14px" }}>
@@ -285,13 +282,11 @@ export default function InviteClients() {
                       {j.firstName}
                     </span>
                     <span className="block" style={{ fontSize: textPx(12), color: INK.chF }}>
-                      {shortDate(j.joinedAt)} · joined
+                      {t("{date} · joined", { date: shortDate(j.joinedAt) })}
                     </span>
                   </span>
                   <span className="inline-flex items-center" style={{ gap: 5, fontSize: textPx(12), color: INK.chS }}>
-                    <span style={{ width: 6, height: 6, borderRadius: 9999, background: INK.good }} />
-                    Joined
-                  </span>
+                    <span style={{ width: 6, height: 6, borderRadius: 9999, background: INK.good }} />{t("Joined")}</span>
                 </div>
               ))}
             </div>
@@ -323,10 +318,10 @@ const FullScreenQr: React.FC<{ code: string; name: string; type: string | null; 
     return () => document.removeEventListener("keydown", k);
   }, [onClose]);
   return createPortal(
-    <div role="dialog" aria-modal="true" aria-label="Invite QR code" className="fixed inset-0 z-[60] flex flex-col items-center justify-center" style={{ background: INK.cream, gap: 16, padding: 24 }}>
+    <div role="dialog" aria-modal="true" aria-label={t("Invite QR code")} className="fixed inset-0 z-[60] flex flex-col items-center justify-center" style={{ background: INK.cream, gap: 16, padding: 24 }}>
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t("Close")}
         onClick={onClose}
         autoFocus
         className="tap absolute flex items-center justify-center"
@@ -338,11 +333,9 @@ const FullScreenQr: React.FC<{ code: string; name: string; type: string | null; 
       <p style={{ fontSize: textPx(20), fontWeight: 800, color: INK.ch }}>{name || first}</p>
       {type && <p style={{ fontSize: textPx(13), color: INK.chF, marginTop: -10 }}>{type}</p>}
       <div className="flex items-center justify-center" style={{ width: 250, height: 250, borderRadius: 18, border: `1px solid ${INK.b10}`, background: "#FFFFFF" }}>
-        <PassQr value={inviteHref(code)} size={214} label="Invite link QR code" failedText="Couldn't draw the QR code. Try again." />
+        <PassQr value={inviteHref(code)} size={214} label={t("Invite link QR code")} failedText={t("Couldn't draw the QR code. Try again.")} />
       </div>
-      <p className="text-center" style={{ fontSize: textPx(13), color: INK.chS }}>
-        Scan with a phone camera to open {first}'s page in Centium
-      </p>
+      <p className="text-center" style={{ fontSize: textPx(13), color: INK.chS }}>{t("Scan with a phone camera to open {first}'s page in Centium", { first })}</p>
     </div>,
     document.body
   );
@@ -352,5 +345,5 @@ const upperFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function shortDate(iso: string): string {
   const d = new Date(iso);
-  return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]} ${d.getDate()}`;
+  return d.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 }

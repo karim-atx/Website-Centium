@@ -75,6 +75,7 @@ import { fetchEventCapacity, saveEventCapacity } from "../../services/messaging/
 import { parseCapacity } from "../../services/messaging/groupCardsModel";
 import { startThread } from "../../services/messaging";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 /**
  * Release 3 · W4 Calendar (/app/pro/calendar; HANDOVER f "CA · Calendar",
@@ -214,7 +215,7 @@ export default function Calendar() {
     for (const d of days) {
       for (const i of items[d]) {
         if (i.kind !== "session" || !i.clientId || out[i.clientId] || `${d} ${i.start ?? ""}` < nowKey) continue;
-        out[i.clientId] = d === todayIso ? `Next today ${time12(i.start)}`.trim() : `Next ${new Date(`${d}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" })}`;
+        out[i.clientId] = d === todayIso ? t("Next today {time}", { time: time12(i.start) }).trim() : t("Next {date}", { date: new Date(`${d}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" }) });
       }
     }
     return out;
@@ -224,7 +225,7 @@ export default function Calendar() {
   const planLineOf = (clientId: string) => {
     const p = plans.find((x) => x.clientId === clientId);
     if (!p) return null;
-    return p.week ? `${p.name} · Week ${p.week.n}${p.week.of ? ` of ${p.week.of}` : ""}` : p.name;
+    return p.week ? `${p.name} · ${p.week.of ? t("Week {n} of {of}", { n: p.week.n, of: p.week.of }) : t("Week {n}", { n: p.week.n })}` : p.name;
   };
 
   const sessionClients: SessionClient[] = useMemo(
@@ -236,7 +237,7 @@ export default function Calendar() {
           const plan = plans.find((x) => x.clientId === id)?.name;
           const stage = stages.find((s) => s.clientId === id)?.stage;
           const next = nextSessionOf[id];
-          const line = plan ? `${plan} · ${next ?? "Not booked"}` : next ?? (stage && stage !== "active" ? STAGE_LABEL[stage] : "Not booked");
+          const line = plan ? `${plan} · ${next ?? t("Not booked")}` : next ?? (stage && stage !== "active" ? STAGE_LABEL[stage] : t("Not booked"));
           return { id, name: c.name, avatarUrl: c.avatarUrl ?? null, line };
         }),
     [professionalClients, plans, stages, nextSessionOf]
@@ -363,7 +364,7 @@ export default function Calendar() {
       const r = await saveRepeating(me, series, editingOcc ?? series.date, scope, payload);
       const c = r.ok && placesChanged && scope === "all" ? await saveEventCapacity(series.id, places.value) : null;
       setSaving(false);
-      if (!r.ok) return setSaveError(r.message ?? "Couldn't save your changes. Try again.");
+      if (!r.ok) return setSaveError(r.message ?? t("Couldn't save your changes. Try again."));
       if (c && !c.ok) return setSaveError(c.message);
       await data.reload();
       return setComposeOpen(false);
@@ -386,7 +387,7 @@ export default function Calendar() {
     }
     if (!g.ok) {
       setEditingId(r.event.id);
-      return setSaveError(g.message ?? "Couldn't update the invitations. Try again.");
+      return setSaveError(g.message ?? t("Couldn't update the invitations. Try again."));
     }
     if (c && !c.ok) {
       setEditingId(r.event.id);
@@ -405,14 +406,14 @@ export default function Calendar() {
       const whole = scope === "all" || (scope === "following" && occ <= series.date);
       const r = whole ? await deleteEvent(me, editingId) : scope === "following" ? await endSeries(me, editingId, dayBefore(occ)) : await setOccurrence(editingId, occ, { cancelled: true });
       setSaving(false);
-      if (!r.ok) return setSaveError(r.message ?? "Couldn't delete that event. Try again.");
+      if (!r.ok) return setSaveError(r.message ?? t("Couldn't delete that event. Try again."));
       await data.reload();
       return setComposeOpen(false);
     }
     setSaving(true);
     const r = await deleteEvent(me, editingId);
     setSaving(false);
-    if (!r.ok) return setSaveError(r.message ?? "Couldn't delete that event.");
+    if (!r.ok) return setSaveError(r.message ?? t("Couldn't delete that event."));
     await data.reload();
     setComposeOpen(false);
   };
@@ -422,7 +423,7 @@ export default function Calendar() {
     setSaving(true);
     const r = await uploadEventAttachment(editingId, me, file);
     setSaving(false);
-    if (!r.ok) return setSaveError(r.message ?? "That file couldn't be attached.");
+    if (!r.ok) return setSaveError(r.message ?? t("That file couldn't be attached."));
     await data.reload();
   };
 
@@ -448,8 +449,8 @@ export default function Calendar() {
     setRequestBusy(i.request.id);
     const r = accept ? await acceptBooking(i.request.id) : await declineBooking(i.request.id);
     setRequestBusy(null);
-    const who = i.name ?? "The client";
-    setToast(r.ok ? { ok: true, text: accept ? `Booking accepted. ${who} has been told.` : `Booking declined. ${who} has been told.` } : { ok: false, text: r.message });
+    const who = i.name ?? t("The client");
+    setToast(r.ok ? { ok: true, text: accept ? t("Booking accepted. {who} has been told.", { who }) : t("Booking declined. {who} has been told.", { who }) } : { ok: false, text: r.message });
     await data.reload();
   };
 
@@ -459,7 +460,7 @@ export default function Calendar() {
     setResponding(true);
     const r = await respondToInvite(inv.id, accepted);
     setResponding(false);
-    if (!r.ok) return setToast({ ok: false, text: "Couldn't save your response. Try again." });
+    if (!r.ok) return setToast({ ok: false, text: t("Couldn't save your response. Try again.") });
     setDetail(null);
     await data.reload();
   };
@@ -474,7 +475,7 @@ export default function Calendar() {
   const messageGym = async (businessId: string) => {
     const { data } = await supabase.from("business_profiles").select("profile_id").eq("id", businessId).maybeSingle();
     const owner = (data as { profile_id?: string | null } | null)?.profile_id ?? null;
-    if (!owner) return setToast({ ok: false, text: "Couldn't open that conversation. Try again." });
+    if (!owner) return setToast({ ok: false, text: t("Couldn't open that conversation. Try again.") });
     setClassSheet(null);
     await message(owner);
   };
@@ -492,7 +493,7 @@ export default function Calendar() {
     if (!e || !me) return { ok: false };
     const r = e.sourceKind === "appointment" && e.sourceId ? await cancelBooking(e.sourceId) : await deleteEvent(me, e.id);
     if (r.ok) {
-      setToast({ ok: true, text: "Session cancelled." });
+      setToast({ ok: true, text: t("Session cancelled.") });
       await data.reload();
       return { ok: true };
     }
@@ -531,7 +532,7 @@ export default function Calendar() {
       </div>
     ) : data.error ? (
       <div style={{ marginBottom: 12 }}>
-        <ProError onRetry={() => void data.reload()} message="Couldn't load your calendar. Check your connection and try again." />
+        <ProError onRetry={() => void data.reload()} message={t("Couldn't load your calendar. Check your connection and try again.")} />
       </div>
     ) : null);
 
@@ -553,12 +554,12 @@ export default function Calendar() {
         {/* P-CA title: 27 / 700, -0.022em, line-height 1.5 (40.5). The two 34 round buttons (Availability,
             + New session) aren't drawn on the board; they are kept, centred on the title line. */}
         <div className="flex items-center justify-between" style={{ gap: 12 }}>
-          <h1 style={{ fontSize: textPx(27), fontWeight: 700, letterSpacing: "-0.022em", color: INK.ch, lineHeight: 1.5 }}>Calendar</h1>
+          <h1 style={{ fontSize: textPx(27), fontWeight: 700, letterSpacing: "-0.022em", color: INK.ch, lineHeight: 1.5 }}>{t("Calendar")}</h1>
           <div className="flex" style={{ gap: 8 }}>
             <button
               type="button"
               onClick={() => navigate(`${PRO_ROUTES.calendar}/availability`)}
-              aria-label="Availability and session types"
+              aria-label={t("Availability and session types")}
               className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-[5px] before:content-['']"
               style={{ width: 34, height: 34, borderRadius: 9999, background: INK.card, border: "1px solid rgb(var(--c-charcoal) / 0.11)" }}
             >
@@ -567,7 +568,7 @@ export default function Calendar() {
             <button
               type="button"
               onClick={() => setAddOpen({ date: selected < todayIso ? todayIso : selected })}
-              aria-label={clinical ? "New appointment" : "New session"}
+              aria-label={clinical ? t("New appointment") : t("New session")}
               className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-[5px] before:content-['']"
               style={{ width: 34, height: 34, borderRadius: 9999, background: dark ? "linear-gradient(150deg,#54468a,#3b3168)" : "linear-gradient(150deg,#aea1dc,#6f5fa6)" }}
             >
@@ -621,8 +622,8 @@ export default function Calendar() {
               label={`${monthNames[cursor.month]} ${cursor.year}`}
               onPrev={() => goMonth(-1)}
               onNext={() => goMonth(1)}
-              prevLabel="Previous month"
-              nextLabel="Next month"
+              prevLabel={t("Previous month")}
+              nextLabel={t("Next month")}
               jump={jump.show ? jump.jump : null}
             />
           </div>
@@ -633,15 +634,15 @@ export default function Calendar() {
               label={dateRange(weekDays[0], weekDays[6])}
               onPrev={() => setSelected(addDays(selected, -7))}
               onNext={() => setSelected(addDays(selected, 7))}
-              prevLabel="Previous week"
-              nextLabel="Next week"
+              prevLabel={t("Previous week")}
+              nextLabel={t("Next week")}
               jump={jump.show ? jump.jump : null}
             />
           </div>
         )}
         {view === "day" && (
           <div className="mt-[12px]">
-            <HeaderCard label={longDay(selected)} onPrev={() => setSelected(addDays(selected, -1))} onNext={() => setSelected(addDays(selected, 1))} prevLabel="Previous day" nextLabel="Next day" jump={jump.show ? jump.jump : null} />
+            <HeaderCard label={longDay(selected)} onPrev={() => setSelected(addDays(selected, -1))} onNext={() => setSelected(addDays(selected, 1))} prevLabel={t("Previous day")} nextLabel={t("Next day")} jump={jump.show ? jump.jump : null} />
           </div>
         )}
       </FixedHeader>
@@ -662,11 +663,11 @@ export default function Calendar() {
             onSelect={setSelected}
           />
           {/* P-CA.3: the day eyebrow margin 12 0 8, the agenda gap 6. */}
-          <Eyebrow mt={12} mb={8}>{[longDay(selected), hoursLine(selected) ? `Working ${hoursLine(selected)}` : hasHours || offToday ? "Day off" : null].filter(Boolean).join(" · ")}</Eyebrow>
+          <Eyebrow mt={12} mb={8}>{[longDay(selected), hoursLine(selected) ? t("Working {v}", { v: hoursLine(selected) ?? "" }) : hasHours || offToday ? t("Day off") : null].filter(Boolean).join(" · ")}</Eyebrow>
           {!data.loaded ? (
             skeletonRows
           ) : dayItems.length === 0 ? (
-            <p style={{ fontSize: textPx(11.5), color: INK.chF }}>No sessions</p>
+            <p style={{ fontSize: textPx(11.5), color: INK.chF }}>{t("No sessions")}</p>
           ) : (
             <div className="flex flex-col" style={{ gap: 6 }}>
               {dayItems.map((i) => (
@@ -679,7 +680,7 @@ export default function Calendar() {
 
       {/* P-CA.1: "This week" (margin 14 0 9; the 14 is the header's bottom padding) over the day rows, 12 apart.
           The board draws the current week only; other weeks carry no eyebrow (their label isn't drawn). */}
-      {view === "week" && weekDays.includes(todayIso) && <Eyebrow>This week</Eyebrow>}
+      {view === "week" && weekDays.includes(todayIso) && <Eyebrow>{t("This week")}</Eyebrow>}
       {view === "week" && (
         <div className="flex flex-col" style={{ gap: 12 }}>
           {weekDays.map((iso) => (
@@ -720,7 +721,7 @@ export default function Calendar() {
         <>
           {dayRequests.length > 0 && (
             <>
-              <Eyebrow>Requests</Eyebrow>
+              <Eyebrow>{t("Requests")}</Eyebrow>
               {dayRequests.map((i) => (
                 <RequestCard key={i.key} item={i} busy={requestBusy === i.request?.id} onAccept={() => void answerRequest(i, true)} onDecline={() => void answerRequest(i, false)} />
               ))}
@@ -730,7 +731,7 @@ export default function Calendar() {
           {offToday && <DayOffRow entry={offToday} onOpen={() => setOffSheet({ entry: offToday, day: selected })} />}
           {dayAllDay.length > 0 && (
             <div className="flex flex-col" style={{ gap: 7, marginBottom: 14 }}>
-              <Eyebrow mb={2}>All day</Eyebrow>
+              <Eyebrow mb={2}>{t("All day")}</Eyebrow>
               {dayAllDay.map((i) => (
                 <AgendaRow key={i.key} item={i} onOpen={openItem} />
               ))}
@@ -779,9 +780,9 @@ export default function Calendar() {
           void data.reload();
           setToast({
             ok: true,
-            text: `Session saved. ${clientName} has been invited.`,
+            text: t("Session saved. {clientName} has been invited.", { clientName }),
             action: {
-              label: "View",
+              label: t("View"),
               onClick: () => {
                 setSelected(date);
                 setView("day");
@@ -864,21 +865,21 @@ export default function Calendar() {
         extra={
           <>
             <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Places (optional)</span>
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Places (optional)")}</span>
               <input
                 value={capacity}
                 inputMode="numeric"
                 maxLength={3}
                 onChange={(e) => setCapacity(e.target.value.replace(/[^\d]/g, ""))}
-                placeholder="No limit"
-                aria-label="Places"
+                placeholder={t("No limit")}
+                aria-label={t("Places")}
                 className="w-full h-10 rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-charcoal-faint"
               />
-              <span className="block text-[11px] text-charcoal-faint mt-1.5">When you share this to a group, members can book up to this many places. Leave it empty for no limit.</span>
+              <span className="block text-[11px] text-charcoal-faint mt-1.5">{t("When you share this to a group, members can book up to this many places. Leave it empty for no limit.")}</span>
             </label>
             {candidates.length > 0 ? (
               <label className="block">
-                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Invitees</span>
+                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Invitees")}</span>
                 <select
                   multiple
                   value={guests}
@@ -892,14 +893,14 @@ export default function Calendar() {
                     </option>
                   ))}
                 </select>
-                <span className="block text-[11px] text-charcoal-faint mt-1.5">Hold Ctrl or Cmd to choose more than one.</span>
+                <span className="block text-[11px] text-charcoal-faint mt-1.5">{t("Hold Ctrl or Cmd to choose more than one.")}</span>
                 {editingId && (data.invitees[editingId]?.length ?? 0) > 0 && (
                   <span className="mt-2.5 flex flex-col gap-1">
                     {data.invitees[editingId].map((i) => (
                       <span key={i.userId} className="flex items-center justify-between gap-2">
                         <span className="text-xs text-charcoal-soft truncate">{i.name}</span>
                         <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold bg-cream-soft text-charcoal-faint">
-                          {i.status === "accepted" ? "Accepted" : i.status === "declined" ? "Declined" : "No reply yet"}
+                          {i.status === "accepted" ? t("Accepted") : i.status === "declined" ? t("Declined") : t("No reply yet")}
                         </span>
                       </span>
                     ))}
@@ -907,29 +908,28 @@ export default function Calendar() {
                 )}
               </label>
             ) : (
-              <p className="text-[11px] text-charcoal-faint">You can invite clients and colleagues you work with. Once a connection is active, they'll appear here.</p>
+              <p className="text-[11px] text-charcoal-faint">{t("You can invite clients and colleagues you work with. Once a connection is active, they'll appear here.")}</p>
             )}
             <div>
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Attachment</span>
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Attachment")}</span>
               {editingId ? (
                 <>
                   {series?.attachmentPath && (
                     <button type="button" onClick={() => void openAttachment(series.attachmentPath!)} className="tap mb-2 flex items-center gap-1.5 text-xs font-semibold text-primary-deep-text">
-                      <Paperclip size={12} aria-hidden /> Open current attachment
-                    </button>
+                      <Paperclip size={12} aria-hidden />{" "}{t("Open current attachment")}</button>
                   )}
                   <input
                     type="file"
                     accept={acceptFor("calendar-attachments")}
                     disabled={saving}
-                    aria-label="Attach a file"
+                    aria-label={t("Attach a file")}
                     onChange={(e) => e.target.files?.[0] && void attach(e.target.files[0])}
                     className="w-full text-xs text-charcoal-faint file:me-3 file:rounded-lg file:border-0 file:bg-cream-soft file:px-3 file:py-2 file:text-xs file:font-semibold file:text-charcoal-soft"
                   />
-                  <span className="block text-[11px] text-charcoal-faint mt-1.5">Invitees can open whatever you attach here.</span>
+                  <span className="block text-[11px] text-charcoal-faint mt-1.5">{t("Invitees can open whatever you attach here.")}</span>
                 </>
               ) : (
-                <span className="block text-[11px] text-charcoal-faint">Save the event first, then reopen it to attach a file.</span>
+                <span className="block text-[11px] text-charcoal-faint">{t("Save the event first, then reopen it to attach a file.")}</span>
               )}
             </div>
           </>
