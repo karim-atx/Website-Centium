@@ -26,6 +26,7 @@ import { HIRING_ROUTES } from "./HiringRoutes";
 import { useHiringBusiness } from "./useHiringBusiness";
 import { BusyWarning, HiredLine, HiringEmpty, InboxGlyph, PersonHead, TagChip, useHiringRead, useHiringStrip } from "./hiringParts";
 import HireConfirmDialog, { type DialogNote, type HireOffer } from "./HireConfirmDialog";
+import { useHiringCredits } from "../../../components/premium/usePlanLevel";
 import { applicantTag, busyText, firstName, hiredState, hiredStrip, offerStartDate, scheduleLine, sentStrip, typeLabel } from "./hubModel";
 
 // Market + Share 3.0 · W4 · B-MA.8.2 Applicants (`appList`, `appEmpty`) and
@@ -90,6 +91,8 @@ export default function ApplicantsPage() {
   const passed = (useLocation().state as { opening?: Opening } | null)?.opening;
   const biz = useHiringBusiness();
   const id = biz.canHire ? biz.businessId : null;
+  // Round G1 (#15): with credits_on, a role offer uses a hiring credit.
+  const { credits, reload: reloadCredits } = useHiringCredits(id);
   const [strip, showStrip] = useHiringStrip();
 
   // The opening: handed over by the hub, else found in my_openings.
@@ -163,7 +166,8 @@ export default function ApplicantsPage() {
     });
     setSending(false);
     if (!r.ok) {
-      setNote({ text: r.message, tone: r.pending ? "soon" : "error" });
+      setNote({ text: r.message, tone: r.pending ? "soon" : "error", error: r.error });
+      if (r.error === "no_hiring_credit") reloadCredits();
       return;
     }
     const appId = offer.app.id;
@@ -302,6 +306,7 @@ export default function ApplicantsPage() {
         direct={false}
         busy={sending}
         note={note}
+        credits={credits}
         onCancel={() => {
           if (!sending) setOffer(null);
         }}

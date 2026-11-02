@@ -34,6 +34,9 @@ import { savingLabel } from "../../services/subscription-tiers/pricing";
 import { formatShortDate } from "../../utils/date";
 import { t, tn } from "../../i18n/core";
 import { RefundPolicyLink } from "../../components/legal/RefundPolicyLink";
+import { BusinessPlanLevels } from "../../components/premium/BusinessPlanLevels";
+import { usePlanLevel } from "../../components/premium/usePlanLevel";
+import { paysInApp } from "../../services/premium";
 
 // OURS-MO1B-payment-methods, -payouts, -invoices, -taxes, -subscription
 // (BizMoreV8 screen="payments" / "payouts" / "invoices" / "taxes" /
@@ -167,6 +170,14 @@ export function SubscriptionPage() {
   // ("$X a year" on a yearly plan). The console seat says who owns the
   // business, with or without RV-06.
   const isOwner = billing.isOwner;
+  // Round G1 (#15), G fixes 3: the owner chooses the plan level here and
+  // buys it in the Centium app, only while business_plans_on is true
+  // for this business; off (or loading) the page is today's.
+  const planLevel = usePlanLevel(billing.businessId);
+  const levelsOn = !!planLevel.level?.businessPlansOn;
+  // G fixes 4 (the Database's G1 rule): a business that pays in the app (the
+  // switch on, or a store plan) is never asked for cash or a bank transfer.
+  const inApp = paysInApp(planLevel.level);
   const period = useBillingPeriod(authUserId ?? null, isOwner);
   const [periodAsk, setPeriodAsk] = useState<{ to: SubscriptionPeriod; price: number; at: Date } | null>(null);
   const [periodBusy, setPeriodBusy] = useState(false);
@@ -258,21 +269,24 @@ export function SubscriptionPage() {
               sub={
                 planCharge
                   ? t("Your first month, {price}, is awaiting payment.", { price: money(planCharge.amount) })
-                  : planPrice !== null
-                    ? (s ? s.period : "monthly") === "monthly"
-                      ? t("The Business plan is {price} a month.", { price: money(planPrice) })
-                      : t("The Business plan is {price} a year.", { price: money(planPrice) })
-                    : s
-                      ? // business_plan_summary's plan_price is NULL (251ab70: no
-                        // fallback to another period's price): said, never $0.
-                        s.period === "monthly"
-                        ? t("The Business plan's monthly price: Not available.")
-                        : t("The Business plan's yearly price: Not available.")
-                      : undefined
+                  : levelsOn
+                    ? undefined // the levels and their prices are just below
+                    : planPrice !== null
+                      ? (s ? s.period : "monthly") === "monthly"
+                        ? t("The Business plan is {price} a month.", { price: money(planPrice) })
+                        : t("The Business plan is {price} a year.", { price: money(planPrice) })
+                      : s
+                        ? // business_plan_summary's plan_price is NULL (251ab70: no
+                          // fallback to another period's price): said, never $0.
+                          s.period === "monthly"
+                          ? t("The Business plan's monthly price: Not available.")
+                          : t("The Business plan's yearly price: Not available.")
+                        : undefined
               }
-              actions={planCharge ? [] : [{ label: t(UPGRADE_ACTION_LABEL), icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}
+              actions={planCharge || levelsOn ? [] : [{ label: t(UPGRADE_ACTION_LABEL), icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}
             />
           )}
+          {levelsOn && billing.businessId && <BusinessPlanLevels businessId={billing.businessId} level={planLevel.level} isOwner={isOwner} onChanged={planLevel.reload} />}
           {active && isOwner && (
             <>
               {period.error ? (
@@ -319,7 +333,9 @@ export function SubscriptionPage() {
           )}
           {s && s.pendingCharges > 0 && billing.canSeeBilling && (
             <BizNote>
-              {t("{price} is awaiting payment to Centium. Pay by cash or bank transfer; your plan and seats update once Centium records the payment.", { price: money(s.pendingAmount) })}
+              {inApp
+                ? t("Earlier Centium charges of {price} are still open. The Centium team will contact you about them.", { price: money(s.pendingAmount) })
+                : t("{price} is awaiting payment to Centium. Pay by cash or bank transfer; your plan and seats update once Centium records the payment.", { price: money(s.pendingAmount) })}
             </BizNote>
           )}
           {(!live || billing.canSeeBilling) && (

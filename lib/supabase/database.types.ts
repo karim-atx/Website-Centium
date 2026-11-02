@@ -27138,7 +27138,7 @@ export type Database = {
           signed_up_at: string
           subscription_renews_at: string
           subscription_source: Database["public"]["Enums"]["professional_plan_source"]
-          subscription_status: string
+      subscription_status: string
           subscription_tier: string
         }[]
       }
@@ -27727,6 +27727,30 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: boolean
       }
+      business_plan_level: {
+        Args: { p_business_id: string }
+        Returns: {
+          awaiting_purchase: boolean
+          billing_period: Database["public"]["Enums"]["subscription_billing_period"]
+          bought_in_app: boolean
+          business_plans_on: boolean
+          chosen_billing_period: Database["public"]["Enums"]["subscription_billing_period"]
+          chosen_seat_blocks: number
+          must_choose_level: boolean
+          plan_active: boolean
+          renews_at: string
+          seat_blocks: number
+        }[]
+      }
+      business_plan_level_prices: {
+        Args: never
+        Returns: {
+          monthly_price: number
+          seat_blocks: number
+          seats: number
+          yearly_price: number
+        }[]
+      }
       business_plan_summary: {
         Args: { p_business_id: string }
         Returns: {
@@ -27741,6 +27765,14 @@ export type Database = {
           seat_blocks: number
           seat_capacity: number
           seats_per_block: number
+        }[]
+      }
+      business_premium_passes: {
+        Args: { p_business_id: string }
+        Returns: {
+          cap: number
+          premium_for_members: boolean
+          used: number
         }[]
       }
       business_recent_activity: {
@@ -28143,6 +28175,14 @@ export type Database = {
           p_window: string
         }
         Returns: undefined
+      }
+      choose_business_plan_level: {
+        Args: {
+          p_business_id: string
+          p_period: Database["public"]["Enums"]["subscription_billing_period"]
+          p_seat_blocks: number
+        }
+        Returns: string
       }
       class_analytics: {
         Args: { p_business_id: string; p_from?: string; p_to?: string }
@@ -29091,6 +29131,7 @@ export type Database = {
         Args: { p_assignment_id: string }
         Returns: undefined
       }
+      end_premium_pass: { Args: { p_client_id: string }; Returns: undefined }
       end_template_assignment: {
         Args: { p_assignment_id: string }
         Returns: undefined
@@ -29279,6 +29320,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      free_limits: { Args: never; Returns: Json }
       gallery_attachments: {
         Args: {
           p_before?: string
@@ -29315,6 +29357,7 @@ export type Database = {
       }
       generate_referral_code: { Args: { p_prefix: string }; Returns: string }
       generate_two_factor_recovery_codes: { Args: never; Returns: string[] }
+      give_premium_pass: { Args: { p_client_id: string }; Returns: string }
       group_members: {
         Args: { p_thread_id: string }
         Returns: {
@@ -30095,6 +30138,14 @@ export type Database = {
           status: Database["public"]["Enums"]["hire_status"]
         }[]
       }
+      my_hiring_credits: {
+        Args: { p_business_id: string }
+        Returns: {
+          credits_on: boolean
+          free: number
+          packs: Json
+        }[]
+      }
       my_invite_joins: {
         Args: never
         Returns: {
@@ -30158,6 +30209,32 @@ export type Database = {
           tier_name: string
         }[]
       }
+      my_premium: {
+        Args: never
+        Returns: {
+          ends_at: string
+          from_name: string
+          is_trial: boolean
+          limits: Json
+          may_prompt_upgrade: boolean
+          monthly_price: number
+          premium: boolean
+          premium_on: boolean
+          preview: boolean
+          source: Database["public"]["Enums"]["entitlement_source"]
+          trial_days: number
+          yearly_price: number
+        }[]
+      }
+      my_premium_passes: {
+        Args: never
+        Returns: {
+          allowance: number
+          passes: Json
+          used: number
+          verified: boolean
+        }[]
+      }
       my_professional_plan: {
         Args: never
         Returns: {
@@ -30210,6 +30287,14 @@ export type Database = {
           messages_total: number
           thread_id: string
           unread_count: number
+        }[]
+      }
+      my_switches: {
+        Args: never
+        Returns: {
+          business_plans_on: boolean
+          premium_on: boolean
+          preview: boolean
         }[]
       }
       my_venues: {
@@ -30381,6 +30466,15 @@ export type Database = {
           review_count: number
           sessions_delivered: number
           years_on_centium: number
+        }[]
+      }
+      premium_pass_candidates: {
+        Args: never
+        Returns: {
+          client_id: string
+          eligible: boolean
+          name: string
+          reason: string
         }[]
       }
       preview_client_code: {
@@ -31474,6 +31568,10 @@ export type Database = {
         }
         Returns: string
       }
+      set_business_premium_for_members: {
+        Args: { p_business_id: string; p_on: boolean }
+        Returns: boolean
+      }
       set_certificate_sharing: {
         Args: { p_certificate_id: string; p_shared: boolean }
         Returns: undefined
@@ -32235,7 +32333,11 @@ export type Database = {
         | "waived"
         | "cancelled"
         | "payment_not_received"
-      centium_product: "business_plan" | "seat_block" | "featured_week"
+      centium_product:
+        | "business_plan"
+        | "seat_block"
+        | "featured_week"
+        | "hiring_credits"
       cervical_mucus: "dry" | "sticky" | "creamy" | "watery" | "egg_white"
       check_in_deny_reason:
         | "no_pass"
@@ -32305,6 +32407,16 @@ export type Database = {
         | "nut_free"
         | "low_carb"
         | "pescatarian"
+      entitlement_source:
+        | "existing_plan"
+        | "direct_write"
+        | "admin_assigned"
+        | "centium_charge"
+        | "billing_period_change"
+        | "store"
+        | "admin_comp"
+        | "professional_pass"
+        | "gym_pass"
       exercise_classification:
         | "barbell"
         | "dumbbell"
@@ -32601,6 +32713,7 @@ export type Database = {
       sex: "female" | "male" | "other"
       sex_activity: "none" | "protected" | "unprotected"
       sleep_stage: "awake" | "light" | "deep" | "rem"
+      subscription_billing_period: "monthly" | "yearly"
       subscription_status: "active" | "cancelled" | "expired"
       subscription_tier_type: "professional" | "business" | "client"
       template_level: "beginner" | "intermediate" | "advanced"
@@ -32951,7 +33064,12 @@ export const Constants = {
         "cancelled",
         "payment_not_received",
       ],
-      centium_product: ["business_plan", "seat_block", "featured_week"],
+      centium_product: [
+        "business_plan",
+        "seat_block",
+        "featured_week",
+        "hiring_credits",
+      ],
       cervical_mucus: ["dry", "sticky", "creamy", "watery", "egg_white"],
       check_in_deny_reason: [
         "no_pass",
@@ -33035,6 +33153,17 @@ export const Constants = {
         "nut_free",
         "low_carb",
         "pescatarian",
+      ],
+      entitlement_source: [
+        "existing_plan",
+        "direct_write",
+        "admin_assigned",
+        "centium_charge",
+        "billing_period_change",
+        "store",
+        "admin_comp",
+        "professional_pass",
+        "gym_pass",
       ],
       exercise_classification: [
         "barbell",
@@ -33391,6 +33520,7 @@ export const Constants = {
       sex: ["female", "male", "other"],
       sex_activity: ["none", "protected", "unprotected"],
       sleep_stage: ["awake", "light", "deep", "rem"],
+      subscription_billing_period: ["monthly", "yearly"],
       subscription_status: ["active", "cancelled", "expired"],
       subscription_tier_type: ["professional", "business", "client"],
       template_level: ["beginner", "intermediate", "advanced"],
