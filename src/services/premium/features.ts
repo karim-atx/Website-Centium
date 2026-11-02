@@ -27,7 +27,9 @@ export type PremiumFeature =
   | "report_comparison"
   | "biomarker_trends"
   | "doctor_summary"
-  | "ai_voice_food_logging";
+  | "ai_voice_food_logging"
+  // Round G2: Premium's perks that prompt.
+  | "premium_offers";
 
 export type FeatureKind = "limit" | "premium_only";
 
@@ -61,6 +63,8 @@ export const PREMIUM_FEATURES: readonly PremiumFeatureEntry[] = [
   { key: "biomarker_trends", kind: "premium_only", label: tk("Biomarker trends"), prompt: tk("Premium shows how each marker has changed over time.") },
   { key: "doctor_summary", kind: "premium_only", label: tk("A summary for your doctor"), prompt: tk("Premium makes a summary of your records to share with your doctor.") },
   { key: "ai_voice_food_logging", kind: "premium_only", label: tk("AI voice food logging"), prompt: tk("Premium lets you log food by saying what you ate.") },
+  // Round G2: an offer its owner kept for Premium members.
+  { key: "premium_offers", kind: "premium_only", label: tk("Premium-only offers"), prompt: tk("Premium lets you redeem the offers kept for Premium members.") },
 ];
 
 export const featureEntry = (key: PremiumFeature): PremiumFeatureEntry => {

@@ -127,7 +127,9 @@ test("ledger rows parse from my_points_ledger", () => {
     { id: null },
   ]);
   assert.equal(rows.length, 1);
-  assert.deepEqual(rows[0], { id: "1", source: "reversal", amount: -10, description: "Reversed · Logging", refLabel: "Food log", day: "2026-10-16", createdAt: "2026-10-16T10:00:00.093963+00:00", expiresAt: null, reversedSource: "log_food" });
+  assert.deepEqual(rows[0], { id: "1", source: "reversal", amount: -10, description: "Reversed · Logging", refLabel: "Food log", day: "2026-10-16", createdAt: "2026-10-16T10:00:00.093963+00:00", expiresAt: null, reversedSource: "log_food", multiplier: 1 });
+  // Round G2: a Premium day's award carries multiplier 2 when the reader returns it.
+  assert.equal(parseLedgerRows([{ id: "2", amount: 20, source: "log_food", created_at: "2026-10-16T10:00:00Z", multiplier: 2 }])[0].multiplier, 2);
 });
 
 test("ledgerCursor is the last row shown, its created_at kept to the microsecond", () => {

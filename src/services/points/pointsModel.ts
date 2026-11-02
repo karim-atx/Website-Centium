@@ -6,6 +6,7 @@
 // Explore Screens script's (`TV`, `LEDGER`, `todayLine`, `daily`, `streaks`).
 
 import { formatShortDate } from "../../utils/date";
+import { parseMultiplier } from "../premium/g2";
 import { num, rows, str } from "../market/parse";
 import { appLocale } from "../../i18n/format";
 
@@ -121,6 +122,8 @@ export interface LedgerEntry {
   expiresAt: string | null;
   /** On a reversal row, the logging source it reversed; null elsewhere. */
   reversedSource: string | null;
+  /** Round G2: points_ledger.multiplier, 2 on a Premium day (1 when my_points_ledger doesn't carry it). */
+  multiplier?: 1 | 2;
 }
 
 export function parseLedgerRows(data: unknown): LedgerEntry[] {
@@ -140,6 +143,7 @@ export function parseLedgerRows(data: unknown): LedgerEntry[] {
         createdAt,
         expiresAt: str(r.expires_at),
         reversedSource: str(r.reversed_source),
+        multiplier: parseMultiplier(r.multiplier),
       },
     ];
   });
