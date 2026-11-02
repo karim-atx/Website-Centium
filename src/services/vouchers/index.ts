@@ -6,6 +6,7 @@
 
 import { currentUserId, marketDb, type MarketResult } from "../market/rpc";
 import { isOffline } from "../network-error";
+import { t } from "../../i18n/core";
 import { typeLabel } from "../../components/pro/profile/typeLabel";
 import type { ProfessionalSubtype } from "../../types";
 import { VOUCHER_SELECT, parseVouchers, type Voucher } from "./vouchersModel";
@@ -36,12 +37,12 @@ async function read(filter: { id?: string }, fallback: string): Promise<MarketRe
 
 /** Every voucher of the signed-in member, newest first (My rewards splits them into tabs). */
 export function fetchMyVouchers(): Promise<MarketResult<Voucher[]>> {
-  return read({}, "Couldn't load your rewards.");
+  return read({}, t("Couldn't load your rewards."));
 }
 
 /** One voucher by id (the voucher page opened from My rewards, a redemption or a notification). */
 export async function fetchMyVoucher(id: string): Promise<MarketResult<Voucher | null>> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return { ok: true, value: null };
-  const r = await read({ id }, "Couldn't load your voucher.");
+  const r = await read({ id }, t("Couldn't load your voucher."));
   return r.ok ? { ok: true, value: r.value[0] ?? null } : r;
 }

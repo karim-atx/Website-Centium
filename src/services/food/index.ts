@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t } from "../../i18n/core";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
 import type { FoodLogEntry, MealType, NutritionGoal, ServingUnit } from "../../types";
@@ -167,7 +168,7 @@ function describe(error: PostgrestError): string {
   // 42501 is a column- or table-privilege violation. It is NOT an auth
   // failure — reporting it as "sign in again" is what sent the consent bug
   // chasing the wrong cause for an afternoon.
-  if (error.code === "42501") return "You don't have permission to do that.";
+  if (error.code === "42501") return t("You don't have permission to do that.");
   // NEVER THE RAW MESSAGE. This used to end `return error.message`, which
   // offline puts "TypeError: Failed to fetch" in front of a user trying to
   // delete a meal. A network failure arrives here with no code at all — that
@@ -176,7 +177,7 @@ function describe(error: PostgrestError): string {
   if (isOffline(error)) {
     return OFFLINE_MESSAGE;
   }
-  return "Something went wrong. Please try again.";
+  return t("Something went wrong. Please try again.");
 }
 
 /**
@@ -346,9 +347,9 @@ export async function createFoodByBarcode(
     // one; neither is worth a raw Postgres string in the UI.
     const message = error?.message ?? "";
     if (/rate limit|too many/i.test(message)) {
-      return { ok: false, message: "Too many new products scanned this hour. Try again later." };
+      return { ok: false, message: t("Too many new products scanned this hour. Try again later.") };
     }
-    return { ok: false, message: error ? describe(error) : "Could not add that product." };
+    return { ok: false, message: error ? describe(error) : t("Could not add that product.") };
   }
 
   return { ok: true, food: fromCatalog(data as unknown as CatalogRow) };
@@ -439,7 +440,7 @@ export interface LogFoodEntryResult {
 export async function logFoodEntry(params: LogFoodEntryParams): Promise<LogFoodEntryResult> {
   const { userId, food, quantity, unit, meal, date, loggedVia, external, requestId } = params;
 
-  if (!(quantity > 0)) return { ok: false, message: "Quantity must be greater than zero." };
+  if (!(quantity > 0)) return { ok: false, message: t("Quantity must be greater than zero.") };
 
   const multiplier = servingMultiplier(food.servingLabel, quantity, unit);
   const round = (n: number) => Math.round(n * 100) / 100;
@@ -539,7 +540,7 @@ export async function logFoodEntry(params: LogFoodEntryParams): Promise<LogFoodE
 
   if (error || !data) {
     console.error("[food] Could not log entry:", error?.message);
-    return { ok: false, message: error ? describe(error) : "Could not save that entry." };
+    return { ok: false, message: error ? describe(error) : t("Could not save that entry.") };
   }
 
   return { ok: true, entry: entryFor(data.id) };
@@ -852,7 +853,7 @@ export async function createCustomFood(
 
   if (error || !data) {
     console.error("[food] Could not create custom food:", error?.message);
-    return { ok: false, message: error ? describe(error) : "Could not save that food." };
+    return { ok: false, message: error ? describe(error) : t("Could not save that food.") };
   }
 
   return { ok: true, food: fromCustom(data as CustomRow) };
@@ -938,7 +939,7 @@ export async function copyDiaryEntry(
 
   if (error || !data) {
     console.error("[food] Could not copy entry:", error?.message);
-    return { ok: false, message: error ? describe(error) : "Could not copy that entry." };
+    return { ok: false, message: error ? describe(error) : t("Could not copy that entry.") };
   }
 
   return { ok: true, entry: { ...entry, id: data.id, date, meal, loggedVia: "recent" } };
@@ -993,7 +994,7 @@ export async function deleteDiaryEntry(entryId: string): Promise<{ ok: boolean; 
   }
   if (!data || data.length === 0) {
     console.error("[food] Delete affected no rows:", entryId);
-    return { ok: false, message: "That entry could not be deleted." };
+    return { ok: false, message: t("That entry could not be deleted.") };
   }
   return { ok: true };
 }
@@ -1015,7 +1016,7 @@ export async function updateDiaryEntry(
   unit: ServingUnit,
   meal: MealType = entry.meal
 ): Promise<{ ok: boolean; message?: string }> {
-  if (!(quantity > 0)) return { ok: false, message: "Quantity must be greater than zero." };
+  if (!(quantity > 0)) return { ok: false, message: t("Quantity must be greater than zero.") };
 
   const totals = rescaleEntry(entry, quantity, unit);
 
@@ -1040,7 +1041,7 @@ export async function updateDiaryEntry(
   }
   if (!data || data.length === 0) {
     console.error("[food] Update affected no rows:", entry.id);
-    return { ok: false, message: "That change could not be saved." };
+    return { ok: false, message: t("That change could not be saved.") };
   }
   return { ok: true };
 }
@@ -1114,10 +1115,10 @@ export async function updateCustomFood(
   const { data, error } = await supabase.from("custom_foods").update(row).eq("id", id).select(CUSTOM_COLUMNS);
   if (error) {
     console.error("[food] Could not update custom food:", error.message);
-    if (error.code === "ATX32") return { ok: false, message: "That barcode isn't a product in the catalogue yet." };
+    if (error.code === "ATX32") return { ok: false, message: t("That barcode isn't a product in the catalogue yet.") };
     return { ok: false, message: describe(error) };
   }
-  if (!data || data.length === 0) return { ok: false, message: "That food couldn't be updated." };
+  if (!data || data.length === 0) return { ok: false, message: t("That food couldn't be updated.") };
   return { ok: true, food: fromCustom(data[0] as CustomRow) };
 }
 
@@ -1133,7 +1134,7 @@ export async function deleteCustomFood(id: string): Promise<{ ok: boolean; messa
     console.error("[food] Could not delete custom food:", error.message);
     return { ok: false, message: describe(error) };
   }
-  if (!data || data.length === 0) return { ok: false, message: "That food couldn't be deleted." };
+  if (!data || data.length === 0) return { ok: false, message: t("That food couldn't be deleted.") };
   return { ok: true };
 }
 

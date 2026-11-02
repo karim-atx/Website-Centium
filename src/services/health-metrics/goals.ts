@@ -1,8 +1,9 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { tk } from "../../i18n/core";
 
 /** Round D O5: a sentence for the screen, never the raw "Failed to fetch". */
-const goalError = (error: unknown, fallback = "Couldn't save your goal. Try again."): string => (isOffline(error) ? OFFLINE_MESSAGE : fallback);
+const goalError = (error: unknown, fallback: string = tk("Couldn't save your goal. Try again.")): string => (isOffline(error) ? OFFLINE_MESSAGE : fallback);
 
 // Database stage B1 `metric_goals` (HANDOVER_API.md "metric_goals — and it is
 // not measurement_goals"): a goal is a number with a date, keyed (user_id,
@@ -37,7 +38,7 @@ export async function fetchGoalHistory(userId: string): Promise<{ ok: true; rows
     .eq("user_id", userId)
     .in("metric", ["steps", "water"])
     .order("effective_from", { ascending: true });
-  if (error) return { ok: false, message: goalError(error, "Couldn't load your goals. Try again.") };
+  if (error) return { ok: false, message: goalError(error, tk("Couldn't load your goals. Try again.")) };
   return {
     ok: true,
     rows: ((data ?? []) as { metric: GoalMetric; value: number | string; effective_from: string }[]).map((r) => ({

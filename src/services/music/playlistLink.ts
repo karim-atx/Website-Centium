@@ -12,6 +12,8 @@
  * only ever stored, looked up publicly (services/music/lookup) and opened.
  */
 
+import { t, tk } from "../../i18n/core";
+
 export type PlaylistService = "spotify" | "apple_music" | "youtube_music";
 export type PlaylistProblem = "ATXN0" | "ATXN1" | "ATXN2";
 
@@ -88,7 +90,7 @@ export function playlistFieldMessage(url: string): { ok: true; service: Playlist
     return { ok: true, service, label: `${SERVICE_LABEL[service]} ${isAlbum(url) ? "album" : "playlist"}` };
   }
   if (problem === "ATXN0") {
-    return { ok: false, message: url.length > 500 ? "That link is too long. Copy the share link from the app." : "Paste the full link, starting with https://" };
+    return { ok: false, message: url.length > 500 ? tk("That link is too long. Copy the share link from the app.") : tk("Paste the full link, starting with https://") };
   }
   if (problem === "ATXN1") {
     const host = (hostOf(url) ?? "").toLowerCase();
@@ -96,11 +98,11 @@ export function playlistFieldMessage(url: string): { ok: true; service: Playlist
       return {
         ok: false,
         message: host.includes("youtu")
-          ? "Use a YouTube Music link (music.youtube.com), not a YouTube one."
-          : "Short links can't be checked. Open it in Spotify, then copy the full link.",
+          ? tk("Use a YouTube Music link (music.youtube.com), not a YouTube one.")
+          : tk("Short links can't be checked. Open it in Spotify, then copy the full link."),
       };
     }
-    return { ok: false, message: "Only Spotify, Apple Music and YouTube Music links work here." };
+    return { ok: false, message: tk("Only Spotify, Apple Music and YouTube Music links work here.") };
   }
   const service = HOSTS[hostOf(url) ?? ""];
   return { ok: false, message: `That's a ${service ? SERVICE_LABEL[service] : "music"} link, but not a playlist or an album.` };
@@ -108,8 +110,8 @@ export function playlistFieldMessage(url: string): { ok: true; service: Playlist
 
 /** The server's refusal as a sentence (a save raises ATXN0, ATXN1 or ATXN2). */
 export function playlistSaveError(code: string | null | undefined): string | null {
-  if (code === "ATXN0") return "Paste the full playlist link, starting with https://";
-  if (code === "ATXN1") return "Only Spotify, Apple Music and YouTube Music links work here.";
-  if (code === "ATXN2") return "That link isn't a playlist or an album.";
+  if (code === "ATXN0") return t("Paste the full playlist link, starting with https://");
+  if (code === "ATXN1") return t("Only Spotify, Apple Music and YouTube Music links work here.");
+  if (code === "ATXN2") return t("That link isn't a playlist or an album.");
   return null;
 }
