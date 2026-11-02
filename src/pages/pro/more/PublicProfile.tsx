@@ -22,6 +22,7 @@ import type { DirectoryListing } from "../../../services/directory";
 import { textPx } from "../../../theme/textSize";
 import { WhatToShareSheet } from "../../../components/share/WhatToShareSheet";
 import { useProSubtype } from "../../../hooks/useProSubtype";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · W6 MO3 v3 public profile preview (/app/more/public-profile) and
@@ -114,7 +115,7 @@ export default function PublicProfile() {
 
   if (!authUserId || own === undefined || !cv) {
     return (
-      <div aria-busy="true" role="status" aria-label="Loading">
+      <div aria-busy="true" role="status" aria-label={t("Loading")}>
         <div aria-hidden className="flex flex-col items-center gap-1.5 pt-[46px] mb-5">
           <span className="w-24 h-24 rounded-full bg-cream-soft mb-1.5" />
           <span className="w-40 h-[22px] rounded-md bg-cream-soft" />
@@ -128,13 +129,11 @@ export default function PublicProfile() {
   const chip = (
     <div className="flex items-center" style={{ gap: 8 }}>
       <span className="inline-flex items-center" style={{ gap: 5, height: 30, padding: "0 10px", borderRadius: 9999, background: INK.card, fontSize: textPx(11.5), fontWeight: 800, color: INK.prDeep }}>
-        <Eye size={13} strokeWidth={2} aria-hidden />
-        Preview as client
-      </span>
-      <button type="button" onClick={() => navigate("/app/more/edit-profile")} aria-label="Edit public profile" className="tap flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 9999, background: INK.card, border: "1px solid rgb(var(--c-charcoal) / 0.11)", color: INK.chS }}>
+        <Eye size={13} strokeWidth={2} aria-hidden />{t("Preview as client")}</span>
+      <button type="button" onClick={() => navigate("/app/more/edit-profile")} aria-label={t("Edit public profile")} className="tap flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 9999, background: INK.card, border: "1px solid rgb(var(--c-charcoal) / 0.11)", color: INK.chS }}>
         <Pencil size={15} strokeWidth={2} aria-hidden />
       </button>
-      <button type="button" onClick={() => setCardsOpen(true)} aria-label="Share" className="tap flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 9999, background: INK.card, border: "1px solid rgb(var(--c-charcoal) / 0.11)", color: INK.chS }}>
+      <button type="button" onClick={() => setCardsOpen(true)} aria-label={t("Share")} className="tap flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 9999, background: INK.card, border: "1px solid rgb(var(--c-charcoal) / 0.11)", color: INK.chS }}>
         <Share2 size={15} strokeWidth={2} aria-hidden />
       </button>
     </div>
@@ -154,7 +153,7 @@ export default function PublicProfile() {
     </>
   );
 
-  const explain = () => setNote("Clients use these buttons. You can't book or hire yourself.");
+  const explain = () => setNote(t("Clients use these buttons. You can't book or hire yourself."));
 
   return (
     <>

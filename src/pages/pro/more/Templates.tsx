@@ -17,7 +17,7 @@ import { ListSkeleton, OfflineLine, ProCardSkeleton, ProError } from "../../../c
 import { PRO_ROUTES, type ProLane } from "../../../components/pro/subtypeLanes";
 import { TemplateEditor } from "../../../components/pro/library/TemplateEditor";
 import { AssignSheet } from "../../../components/pro/library/AssignSheet";
-import { clientsLabel, isActive, templateMeta } from "../../../components/pro/library/libraryModel";
+import { isActive, templateMeta } from "../../../components/pro/library/libraryModel";
 import { NewPlanSheet } from "../../../components/pro/nutrition/LibraryHome";
 import { itemMacros } from "../../../components/pro/nutrition/itemFacts";
 import { mealPlansHref } from "../../../components/pro/nutrition/nav";
@@ -28,9 +28,10 @@ import { EditTemplateSheet } from "./NoteTemplates";
 import { createTemplate, deleteTemplate, fetchAssignments, fetchTemplates, type Assignment, type MealPlan } from "../../../services/pro/nutrition";
 import { deleteNoteTemplate, fetchMyNoteTemplates, type NoteTemplateRow, type TemplateKind } from "../../../services/pro/noteTemplates";
 import type { WorkoutTemplate } from "../../../types";
+import { t, tk, tn } from "../../../i18n/core";
 
 type Tab = "programmes" | "meal-plans" | "notes" | "referrals";
-const TAB_LABEL: Record<Tab, string> = { programmes: "Programmes", "meal-plans": "Meal plans", notes: "Notes", referrals: "Referral letters" };
+const TAB_LABEL: Record<Tab, string> = { programmes: tk("Programmes"), "meal-plans": tk("Meal plans"), notes: tk("Notes"), referrals: tk("Referral letters") };
 /** The tabs per lane (capability matrix: programmes Full coaching only, meal plans hidden for Clinical overview). */
 const LANE_TABS: Record<ProLane, Tab[]> = {
   full_coaching: ["programmes", "meal-plans", "notes"],
@@ -38,7 +39,7 @@ const LANE_TABS: Record<ProLane, Tab[]> = {
   clinical_overview: ["notes", "referrals"],
 };
 const NOTE_KIND: Record<ProLane, TemplateKind> = { full_coaching: "training", nutrition: "nutrition", clinical_overview: "clinical" };
-const usedBy = (n: number) => (n > 0 ? `Used by ${clientsLabel(n)}` : null);
+const usedBy = (n: number) => (n > 0 ? tn(n, "Used by {n} client", "Used by {n} clients") : null);
 
 const SkeletonRow: React.FC = () => <ProCardSkeleton lines={2} />;
 type Load<T> = { list: T[] | null; state: "loading" | "ok" | "error" | "offline" };
@@ -163,8 +164,8 @@ export default function Templates() {
   };
 
   const menuOptions: PopupMenuOption<"edit" | "delete">[] = [
-    { value: "edit", label: "Edit template", icon: <Pencil size={15} /> },
-    { value: "delete", label: "Delete", icon: <Trash2 size={15} />, destructive: true },
+    { value: "edit", label: t("Edit template"), icon: <Pencil size={15} /> },
+    { value: "delete", label: t("Delete"), icon: <Trash2 size={15} />, destructive: true },
   ];
 
   const skeleton = <ListSkeleton rows={3} row={SkeletonRow} />;
@@ -183,11 +184,11 @@ export default function Templates() {
         />
       ))
     ) : (
-      <EmptyState icon={ClipboardList} title="No programmes yet" line="Make one with New template, then assign it to clients." />
+      <EmptyState icon={ClipboardList} title={t("No programmes yet")} line={t("Make one with New template, then assign it to clients.")} />
     );
     if (templatesError) body = (
       <>
-        <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginBottom: 8 }}>Couldn't refresh your templates. Showing what was saved on this device.</p>
+        <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginBottom: 8 }}>{t("Couldn't refresh your templates. Showing what was saved on this device.")}</p>
         {body}
       </>
     );
@@ -209,7 +210,7 @@ export default function Templates() {
         );
       })
     ) : (
-      <EmptyState icon={UtensilsCrossed} title="No meal plans yet" line="Make one with New template, then assign it to clients." />
+      <EmptyState icon={UtensilsCrossed} title={t("No meal plans yet")} line={t("Make one with New template, then assign it to clients.")} />
     );
   } else if (tab === "notes") {
     body = !notes.list ? (
@@ -219,18 +220,18 @@ export default function Templates() {
         <TplCard key={n.id} icon={FileText} title={n.title} line={noteMeta(n.body)} onOpen={() => setNoteEdit(n)} onMenu={(anchor) => setMenu({ kind: "note", id: n.id, name: n.title, anchor })} />
       ))
     ) : (
-      <EmptyState icon={FileText} title="No templates yet" line="Make one with New template. It shows in the Templates filter when you write a note on a client's page." />
+      <EmptyState icon={FileText} title={t("No templates yet")} line={t("Make one with New template. It shows in the Templates filter when you write a note on a client's page.")} />
     );
   } else if (tab === "referrals") {
-    body = <ComingSoon line="Letters to dietitians, trainers and physios." />;
+    body = <ComingSoon line={t("Letters to dietitians, trainers and physios.")} />;
   }
 
   const offlineLine = (tab === "meal-plans" && meals.list && meals.state === "offline") || (tab === "notes" && notes.list && notes.state === "offline");
 
   return (
-    <SubPage title="Templates" subtitle="Reuse what works" bottomPad={172}>
+    <SubPage title={t("Templates")} subtitle={t("Reuse what works")} bottomPad={172}>
       {tabs.length > 1 && tab && (
-        <SegmentedTabs className="mb-[14px]" items={tabs.map((t) => ({ key: t, label: TAB_LABEL[t] }))} activeKey={tab} onChange={(k) => setTab(k as Tab)} tabHeight={38} labelSize={12} />
+        <SegmentedTabs className="mb-[14px]" items={tabs.map((tab) => ({ key: tab, label: t(TAB_LABEL[tab]) }))} activeKey={tab} onChange={(k) => setTab(k as Tab)} tabHeight={38} labelSize={12} />
       )}
       {offlineLine && <OfflineLine />}
       {error && (
@@ -239,7 +240,7 @@ export default function Templates() {
         </p>
       )}
       {body}
-      {tab && tab !== "referrals" && <PinnedCta primary={{ label: "New template", icon: <Plus size={15} strokeWidth={2} aria-hidden />, onClick: newTemplate }} />}
+      {tab && tab !== "referrals" && <PinnedCta primary={{ label: t("New template"), icon: <Plus size={15} strokeWidth={2} aria-hidden />, onClick: newTemplate }} />}
 
       <TemplateEditor
         open={editor}
@@ -256,7 +257,7 @@ export default function Templates() {
         open={creatingPlan}
         onClose={() => setCreatingPlan(false)}
         onCreate={async (name, days) => {
-          if (!me) return "Sign in again.";
+          if (!me) return t("Sign in again.");
           const r = await createTemplate(me, name, days);
           if (!r.ok) return r.message;
           setCreatingPlan(false);
@@ -294,8 +295,8 @@ export default function Templates() {
       />
       <ConfirmCard
         open={!!deleting}
-        title={`Delete ${deleting?.name ?? "this template"}?`}
-        subtitle={deleting?.kind === "note" ? undefined : "Clients already on it keep their own copy."}
+        title={t("Delete {name}?", { name: deleting?.name ?? t("this template") })}
+        subtitle={deleting?.kind === "note" ? undefined : t("Clients already on it keep their own copy.")}
         onCancel={() => setDeleting(null)}
         onConfirm={() => {
           const d = deleting;
@@ -326,7 +327,7 @@ const TplCard: React.FC<{ icon: LucideIcon; title: string; line: string; onOpen:
           </span>
         </span>
       </button>
-      <button type="button" aria-label={`${title} options`} onClick={(e) => onMenu(e.currentTarget)} className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, marginBlock: "-12px", marginInline: "-8px -14px" }}>
+      <button type="button" aria-label={t("{title} options", { title })} onClick={(e) => onMenu(e.currentTarget)} className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, marginBlock: "-12px", marginInline: "-8px -14px" }}>
         <EllipsisVertical size={16} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
       </button>
     </div>

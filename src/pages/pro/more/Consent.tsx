@@ -11,6 +11,7 @@ import { ComingSoonPill } from "../../../components/pro/ComingSoon";
 import { ListSkeleton, OfflineLine, ProError } from "../../../components/pro/states";
 import { CONSENT_SWITCHES, switchOn, withSwitch, type ConsentSwitch } from "./consentModel";
 import { fetchPracticeSettings, saveDataRequests, type AccessCategory } from "../../../services/pro/practice";
+import { t } from "../../../i18n/core";
 
 const ICONS = { workouts: Dumbbell, food: UtensilsCrossed, body: Scale, vitals: HeartPulse } as const;
 
@@ -65,12 +66,12 @@ export default function Consent() {
   };
 
   return (
-    <SubPage title="Consent and data sharing" bottomPad={120}>
+    <SubPage title={t("Consent and data sharing")} bottomPad={120}>
       <div className="flex" style={{ borderRadius: 16, background: INK.tealPale, padding: 14, gap: 10, marginBottom: 8 }}>
         <ShieldCheck size={18} strokeWidth={2} aria-hidden style={{ color: dark ? "#B2D4CF" : "#3C6B65", flexShrink: 0 }} />
-        <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.55 }}>Clients choose what to share with you, item by item, and can stop at any time. You only ever see what they have shared.</p>
+        <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.55 }}>{t("Clients choose what to share with you, item by item, and can stop at any time. You only ever see what they have shared.")}</p>
       </div>
-      <SettingsSection label="What you ask new clients to share" className="mt-6">
+      <SettingsSection label={t("What you ask new clients to share")} className="mt-6">
         {state === "offline" && cats && <OfflineLine />}
         {!cats ? (
           state === "loading" ? (
@@ -83,18 +84,18 @@ export default function Consent() {
         ) : (
           <>
             {CONSENT_SWITCHES.slice(0, 3).map((s) => (
-              <SettingsRow key={s.key} icon={ICONS[s.key]} title={s.title} subtitle={s.sub || undefined} toggle={{ checked: switchOn(cats, s.key), onChange: (v) => void flip(s.key, v), label: s.title }} />
+              <SettingsRow key={s.key} icon={ICONS[s.key]} title={t(s.title)} subtitle={s.sub ? t(s.sub) : undefined} toggle={{ checked: switchOn(cats, s.key), onChange: (v) => void flip(s.key, v), label: t(s.title) }} />
             ))}
-            <SettingsRow icon={Moon} title="Sleep" subtitle="Asked with Vitals and lab results" value={<ComingSoonPill />} />
+            <SettingsRow icon={Moon} title={t("Sleep")} subtitle={t("Asked with Vitals and lab results")} value={<ComingSoonPill />} />
             {CONSENT_SWITCHES.slice(3).map((s) => (
-              <SettingsRow key={s.key} icon={ICONS[s.key]} title={s.title} subtitle={s.sub || undefined} toggle={{ checked: switchOn(cats, s.key), onChange: (v) => void flip(s.key, v), label: s.title }} />
+              <SettingsRow key={s.key} icon={ICONS[s.key]} title={t(s.title)} subtitle={s.sub ? t(s.sub) : undefined} toggle={{ checked: switchOn(cats, s.key), onChange: (v) => void flip(s.key, v), label: t(s.title) }} />
             ))}
           </>
         )}
       </SettingsSection>
-      <SettingsSection label="Your responsibilities">
-        <SettingsRow icon={FileLock} title="How you handle client data" subtitle="Professional terms, section 4" value={<ComingSoonPill />} />
-        <SettingsRow icon={Download} title="Export a client record" subtitle="For your own files, with consent" value={<ComingSoonPill />} />
+      <SettingsSection label={t("Your responsibilities")}>
+        <SettingsRow icon={FileLock} title={t("How you handle client data")} subtitle={t("Professional terms, section 4")} value={<ComingSoonPill />} />
+        <SettingsRow icon={Download} title={t("Export a client record")} subtitle={t("For your own files, with consent")} value={<ComingSoonPill />} />
       </SettingsSection>
       <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
     </SubPage>

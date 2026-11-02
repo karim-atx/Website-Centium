@@ -19,6 +19,7 @@ import { profileHref, profileUrl } from "./profileModel";
 import { SITE_HOST } from "../../../config/site";
 import { typeLabel } from "./typeLabel";
 import type { CoverPicker } from "./useCoverPicker";
+import { t, tn } from "../../../i18n/core";
 
 // Release 3 · W6 the profile's sheets and pop-ups:
 // - PhotoSourceSheet (MO26 "Profile · photo source", r15 profile15): "Profile
@@ -66,7 +67,7 @@ export function usePhotoPicker() {
     setError(null);
     const r = await removeAvatar(authUserId, user.avatarUrl);
     setBusy(false);
-    if (!r.ok) return setError(r.message ?? "Couldn't remove your picture.");
+    if (!r.ok) return setError(r.message ?? t("Couldn't remove your picture."));
     updateProfile({ avatarUrl: undefined });
     refresh();
   };
@@ -126,13 +127,13 @@ const SourceRows: React.FC<{ rows: SourceRow[]; onRun?: () => void }> = ({ rows,
  */
 export const PhotoSourceSheet: React.FC<{ open: boolean; onClose: () => void; picker: ReturnType<typeof usePhotoPicker>; cover?: CoverPicker }> = ({ open, onClose, picker, cover }) => {
   const rows: SourceRow[] = [
-    { key: "camera", icon: Camera, label: "Take a photo", run: picker.takePhoto, disabled: picker.busy },
-    { key: "library", icon: ImageIcon, label: "Choose from library", run: picker.choose, disabled: picker.busy },
-    { key: "remove", icon: Trash2, label: "Remove photo", run: () => void picker.remove(), disabled: picker.busy || !picker.hasPhoto },
+    { key: "camera", icon: Camera, label: t("Take a photo"), run: picker.takePhoto, disabled: picker.busy },
+    { key: "library", icon: ImageIcon, label: t("Choose from library"), run: picker.choose, disabled: picker.busy },
+    { key: "remove", icon: Trash2, label: t("Remove photo"), run: () => void picker.remove(), disabled: picker.busy || !picker.hasPhoto },
   ];
   return (
-    <BottomSheet open={open} onClose={onClose} title={cover ? "Photo and cover" : "Profile photo"}>
-      {cover && <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.chF, margin: "0 2px 8px" }}>Profile photo</p>}
+    <BottomSheet open={open} onClose={onClose} title={cover ? t("Photo and cover") : t("Profile photo")}>
+      {cover && <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.chF, margin: "0 2px 8px" }}>{t("Profile photo")}</p>}
       <SourceRows rows={rows} onRun={onClose} />
       {picker.error && <ErrorLine>{picker.error}</ErrorLine>}
       {picker.image && (
@@ -143,19 +144,19 @@ export const PhotoSourceSheet: React.FC<{ open: boolean; onClose: () => void; pi
       )}
       {cover && (
         <>
-          <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.chF, margin: "16px 2px 8px" }}>Cover photo</p>
+          <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.chF, margin: "16px 2px 8px" }}>{t("Cover photo")}</p>
           <div
             aria-hidden={!cover.url}
             className="relative overflow-hidden"
             style={{ height: 96, borderRadius: 16, marginBottom: 8, background: cover.url ? INK.soft : `repeating-linear-gradient(45deg, ${INK.soft} 0 6px, ${INK.card} 6px 12px)`, border: `1px solid ${INK.bCard}` }}
           >
-            {cover.url && <img src={cover.url} alt="Your cover photo" className="absolute inset-0 w-full h-full object-cover" />}
+            {cover.url && <img src={cover.url} alt={t("Your cover photo")} className="absolute inset-0 w-full h-full object-cover" />}
             <ImageApprovalBadge state={cover.image} className="absolute start-2 top-2" />
           </div>
           <SourceRows
             rows={[
-              { key: "cover", icon: ImageIcon, label: cover.busy ? "Uploading…" : cover.url ? "Change cover" : "Add a cover", run: cover.choose, disabled: cover.busy },
-              { key: "cover-remove", icon: Trash2, label: "Remove cover", run: () => void cover.remove(), disabled: cover.busy || !(cover.approvedUrl || cover.image?.status === "pending") },
+              { key: "cover", icon: ImageIcon, label: cover.busy ? t("Uploading…") : cover.url ? t("Change cover") : t("Add a cover"), run: cover.choose, disabled: cover.busy },
+              { key: "cover-remove", icon: Trash2, label: t("Remove cover"), run: () => void cover.remove(), disabled: cover.busy || !(cover.approvedUrl || cover.image?.status === "pending") },
             ]}
           />
           {cover.error && <ErrorLine>{cover.error}</ErrorLine>}
@@ -174,13 +175,13 @@ export const TypeLockedPopup: React.FC<{ open: boolean; onClose: () => void; onC
   <CentredPopup
     open={open}
     onClose={onClose}
-    title="Professional type is locked"
+    title={t("Professional type is locked")}
     icon={<Lock size={22} />}
-    body="Your type decides your tools, your navbar and how your licence is checked, so it can't be changed here. Our support team can change it and will ask for your new credentials."
+    body={t("Your type decides your tools, your navbar and how your licence is checked, so it can't be changed here. Our support team can change it and will ask for your new credentials.")}
   >
     <div className="flex flex-col" style={{ gap: 8 }}>
-      <CtaButton label="Contact support" icon={Mail} onClick={onContact} full />
-      <CtaButton label="Close" variant="secondary" onClick={onClose} full />
+      <CtaButton label={t("Contact support")} icon={Mail} onClick={onContact} full />
+      <CtaButton label={t("Close")} variant="secondary" onClick={onClose} full />
     </div>
   </CentredPopup>
 );
@@ -212,23 +213,23 @@ export const TypeChangeSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Request a change"
-      footer={pending ? undefined : <CtaButton label="Send request" icon={Mail} size="sheet" onClick={() => void send()} disabled={!type} busy={busy} full />}
+      title={t("Request a change")}
+      footer={pending ? undefined : <CtaButton label={t("Send request")} icon={Mail} size="sheet" onClick={() => void send()} disabled={!type} busy={busy} full />}
     >
       {pending ? (
         <p style={{ fontSize: textPx(13), lineHeight: 1.55, color: INK.chS }}>
-          Your request to change to {typeLabel(pending)} is with our team. They'll ask for your new credentials.
+          {t("Your request to change to {v} is with our team. They'll ask for your new credentials.", { v: typeLabel(pending) })}
         </p>
       ) : (
         <div className="flex flex-col" style={{ gap: 14 }}>
-          <p style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.chS }}>Choose the type you want. Our team checks it and asks for your new credentials.</p>
-          <div role="radiogroup" aria-label="Professional type" className="flex flex-col" style={{ gap: 8 }}>
+          <p style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.chS }}>{t("Choose the type you want. Our team checks it and asks for your new credentials.")}</p>
+          <div role="radiogroup" aria-label={t("Professional type")} className="flex flex-col" style={{ gap: 8 }}>
             {TYPES.filter((t) => t !== current).map((t) => (
               <ChoiceCard key={t} title={typeLabel(t)} on={type === t} onClick={() => setType(t)} />
             ))}
           </div>
           <div className="min-w-0">
-            <FieldLabel htmlFor="type-note">Note for our team (optional)</FieldLabel>
+            <FieldLabel htmlFor="type-note">{t("Note for our team (optional)")}</FieldLabel>
             <textarea
               id="type-note"
               value={note}
@@ -280,7 +281,7 @@ const OneFieldSheet: React.FC<{
     onClose();
   };
   return (
-    <BottomSheet open={open} onClose={onClose} title={title} footer={<CtaButton label="Save" size="sheet" onClick={() => void run()} busy={busy} full />}>
+    <BottomSheet open={open} onClose={onClose} title={title} footer={<CtaButton label={t("Save")} size="sheet" onClick={() => void run()} busy={busy} full />}>
       <div className="flex flex-col" style={{ gap: 10 }}>
         {prefix ? (
           <div className="min-w-0">
@@ -315,11 +316,11 @@ export const NameSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ op
     <OneFieldSheet
       open={open}
       onClose={onClose}
-      title="Name"
-      label="Name"
+      title={t("Name")}
+      label={t("Name")}
       initial={user.firstName ?? ""}
       save={async (v) => {
-        if (!authUserId) return "You're signed out. Sign in again.";
+        if (!authUserId) return t("You're signed out. Sign in again.");
         const r = await saveFirstName(authUserId, v);
         if (!r.ok) return r.message;
         updateProfile({ firstName: v.trim() });
@@ -335,14 +336,14 @@ export const PhoneSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ o
     <OneFieldSheet
       open={open}
       onClose={onClose}
-      title="Phone"
-      label="Phone"
+      title={t("Phone")}
+      label={t("Phone")}
       inputMode="tel"
       initial={user.phone ?? ""}
       save={async (v) => {
-        if (!authUserId) return "You're signed out. Sign in again.";
+        if (!authUserId) return t("You're signed out. Sign in again.");
         const r = await updatePhone(authUserId, v.trim());
-        if (!r.ok) return r.message ?? "Couldn't save your phone. Try again.";
+        if (!r.ok) return r.message ?? t("Couldn't save your phone. Try again.");
         updateProfile({ phone: v.trim() });
         return null;
       }}
@@ -354,14 +355,12 @@ export const HandleSheet: React.FC<{ open: boolean; onClose: () => void; handle:
   <OneFieldSheet
     open={open}
     onClose={onClose}
-    title="Handle"
-    label="Your handle"
+    title={t("Handle")}
+    label={t("Your handle")}
     prefix={`${SITE_HOST}/p/`}
     initial={handle ?? ""}
     note={
-      <p style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: INK.chF }}>
-        Lowercase letters, numbers and dots. Handles and business web addresses share one list, so each is unique. You can change your handle once every 30 days.
-      </p>
+      <p style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: INK.chF }}>{t("Lowercase letters, numbers and dots. Handles and business web addresses share one list, so each is unique. You can change your handle once every 30 days.")}</p>
     }
     save={async (v) => {
       const r = await setMyHandle(v);
@@ -399,7 +398,7 @@ export const ShareProfileSheet: React.FC<{
       setCopied(true);
       setError(null);
     } catch {
-      setError("Couldn't copy the link. Try again.");
+      setError(t("Couldn't copy the link. Try again."));
     }
   };
   const share = async () => {
@@ -421,15 +420,15 @@ export const ShareProfileSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Share profile"
+      title={t("Share profile")}
       footer={
         url ? (
           <div className="flex" style={{ gap: 8 }}>
-            <CtaButton label={copied ? "Copied" : "Copy link"} icon={Copy} variant="secondary" size="sheet" onClick={() => void copy()} />
-            <CtaButton label="Share" icon={Share2} size="sheet" onClick={() => void share()} />
+            <CtaButton label={copied ? t("Copied") : t("Copy link")} icon={Copy} variant="secondary" size="sheet" onClick={() => void copy()} />
+            <CtaButton label={t("Share")} icon={Share2} size="sheet" onClick={() => void share()} />
           </div>
         ) : (
-          <CtaButton label="Choose your handle" size="sheet" onClick={onChooseHandle} full />
+          <CtaButton label={t("Choose your handle")} size="sheet" onClick={onChooseHandle} full />
         )
       }
     >
@@ -450,17 +449,17 @@ export const ShareProfileSheet: React.FC<{
                   <Star key={i} size={11} strokeWidth={1.5} style={{ color: i < Math.round(rating.average) ? "#D9A441" : "rgba(140,131,120,0.35)", fill: i < Math.round(rating.average) ? "#D9A441" : "none" }} />
                 ))}
               </span>
-              {rating.average.toFixed(1)} · {rating.count} {rating.count === 1 ? "review" : "reviews"}
+              {rating.average.toFixed(1)} · {tn(rating.count, "{n} review", "{n} reviews")}
             </p>
           )}
           {specialties.length > 0 && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 6 }}>{specialties.slice(0, 3).join(" · ")}</p>}
           <div className="flex items-center" style={{ gap: 12, marginTop: 12 }}>
             {url ? (
               <span className="shrink-0 overflow-hidden flex items-center justify-center" style={{ width: 76, height: 76, borderRadius: 12, border: `1px solid ${INK.b10}`, background: "#FFFFFF" }}>
-                <PassQr value={full} size={68} label={`QR code for ${url}`} />
+                <PassQr value={full} size={68} label={t("QR code for {url}", { url })} />
               </span>
             ) : null}
-            <span style={{ fontSize: textPx(12), color: INK.chS, lineHeight: 1.5, overflowWrap: "anywhere" }}>{url ?? "Choose a handle to get your profile link."}</span>
+            <span style={{ fontSize: textPx(12), color: INK.chS, lineHeight: 1.5, overflowWrap: "anywhere" }}>{url ?? t("Choose a handle to get your profile link.")}</span>
           </div>
         </div>
       </div>

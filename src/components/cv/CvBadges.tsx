@@ -1,6 +1,7 @@
 import React from "react";
 import clsx from "clsx";
 import type { LicenceStatus } from "../../services/professional-cv";
+import { t } from "../../i18n/core";
 
 // The CV's status marks, from the approved design: a green "Verified" pill, an
 // amber "Pending review" and a red "Not approved" with the reviewer's reason
@@ -11,24 +12,18 @@ import type { LicenceStatus } from "../../services/professional-cv";
 const PILL = "text-[11px] font-bold rounded-full px-[9px] py-1 whitespace-nowrap shrink-0";
 
 export const VerifiedPill: React.FC<{ className?: string }> = ({ className }) => (
-  <span className={clsx(PILL, "bg-[#E1F2EA] text-[#1F6A48] dark:bg-status-good-bg dark:text-status-good", className)}>
-    Verified
-  </span>
+  <span className={clsx(PILL, "bg-[#E1F2EA] text-[#1F6A48] dark:bg-status-good-bg dark:text-status-good", className)}>{t("Verified")}</span>
 );
 
 export const LicenceStatusBadge: React.FC<{ status: LicenceStatus }> = ({ status }) => {
   if (status.kind === "verified") return <VerifiedPill />;
   if (status.kind === "pending")
     return (
-      <span className={clsx(PILL, "bg-[#FBF1DC] text-[#7A5212] dark:bg-status-caution-bg dark:text-status-caution")}>
-        Pending review
-      </span>
+      <span className={clsx(PILL, "bg-[#FBF1DC] text-[#7A5212] dark:bg-status-caution-bg dark:text-status-caution")}>{t("Pending review")}</span>
     );
   if (status.kind === "rejected")
     return (
-      <span className={clsx(PILL, "bg-[#FBE6E3] text-[#9B2C22] dark:bg-status-high-bg dark:text-status-high")}>
-        Not approved
-      </span>
+      <span className={clsx(PILL, "bg-[#FBE6E3] text-[#9B2C22] dark:bg-status-high-bg dark:text-status-high")}>{t("Not approved")}</span>
     );
   return null;
 };
@@ -55,7 +50,7 @@ export const VerifiedCheck: React.FC<{ size?: number; /** MO1.2.1 draws BadgeChe
 }) => (
   <svg
     role="img"
-    aria-label="Verified credentials"
+    aria-label={t("Verified credentials")}
     width={size}
     height={size}
     viewBox="0 0 24 24"
@@ -65,7 +60,7 @@ export const VerifiedCheck: React.FC<{ size?: number; /** MO1.2.1 draws BadgeChe
     strokeLinejoin="round"
     className="shrink-0 stroke-[#1F6A48] dark:stroke-status-good"
   >
-    <title>Verified: at least one credential checked by the Centium team</title>
+    <title>{t("Verified: at least one credential checked by the Centium team")}</title>
     <path d="M12 2l2.4 2.1 3.2-.3.8 3.1 2.8 1.6-1.3 2.9 1.3 2.9-2.8 1.6-.8 3.1-3.2-.3L12 22l-2.4-2.1-3.2.3-.8-3.1-2.8-1.6 1.3-2.9-1.3-2.9 2.8-1.6.8-3.1 3.2.3z" />
     <path d="M8.5 12.2l2.3 2.3 4.7-4.8" />
   </svg>
@@ -82,7 +77,5 @@ export const VerifiedExplainer: React.FC = () => (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0 stroke-[#1F6A48] dark:stroke-status-good">
       <path d="M8.5 12.2l2.3 2.3 4.7-4.8" />
       <circle cx="12" cy="12" r="9" />
-    </svg>
-    Verified: at least one credential checked by the Centium team
-  </p>
+    </svg>{t("Verified: at least one credential checked by the Centium team")}</p>
 );

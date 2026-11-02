@@ -35,7 +35,7 @@ import { ProfessionalBioSheet } from "../../../components/profile/ProfessionalBi
 import { CvSheetsHost, type CvView } from "../../../components/cv/CvEditor";
 import { useMyCv } from "../../../components/cv/useMyCv";
 import { useProfileFacts } from "../../../components/pro/profile/useProfileFacts";
-import { licenceFacts, plural, profileUrl, shortDate, wordCount, yearsOfExperience } from "../../../components/pro/profile/profileModel";
+import { licenceFacts, profileUrl, shortDate, wordCount, yearsOfExperience } from "../../../components/pro/profile/profileModel";
 import { typeLabel } from "../../../components/pro/profile/typeLabel";
 import { OfflineLine, ProCardSkeleton, ProError } from "../../../components/pro/states";
 import { useApp } from "../../../context/AppContext";
@@ -43,6 +43,7 @@ import { currentMonth } from "../../../services/professional-cv/cvDates";
 import { fetchEmployments, fetchPendingTypeChange, fetchServicePlans } from "../../../services/pro/profile";
 import { fetchSessionTypes } from "../../../services/pro/calendar";
 import type { ProfessionalSubtype } from "../../../types";
+import { t, tn } from "../../../i18n/core";
 
 type Sheet = null | "photo" | "name" | "locked" | "request" | "specialties" | "bio" | "details" | "handle" | "playlist";
 
@@ -66,7 +67,7 @@ type Sheet = null | "photo" | "name" | "locked" | "request" | "specialties" | "b
  */
 /** The "Photo and cover" row's line: "Added", "Photo added", "Cover added" or "Not added yet". */
 function photoAndCoverSub(photo: boolean, cover: boolean): string {
-  return photo && cover ? "Added" : photo ? "Photo added" : cover ? "Cover added" : "Not added yet";
+  return photo && cover ? t("Added") : photo ? t("Photo added") : cover ? t("Cover added") : t("Not added yet");
 }
 
 export default function EditProfile() {
@@ -118,22 +119,22 @@ export default function EditProfile() {
   const ownPlaces = facts?.workMode === "both" ? 2 : facts?.workMode ? 1 : 0;
   const places = (counts?.places ?? 0) + ownPlaces;
   const radiusKm = facts?.workMode !== "online" ? facts?.serviceRadiusKm : null;
-  const whereSub = [places > 0 ? plural(places, "place") : "Not set yet", radiusKm ? `${radiusKm} km` : null].filter(Boolean).join(" · ");
+  const whereSub = [places > 0 ? tn(places, "{n} place", "{n} places") : t("Not set yet"), radiusKm ? t("{n} km", { n: radiusKm }) : null].filter(Boolean).join(" · ");
   const licenceSub = !lic?.primary
-    ? "Not added yet"
+    ? t("Not added yet")
     : lic.verified
       ? lic.verifiedAt
-        ? `Verified ${shortDate(lic.verifiedAt)}`
-        : "Verified"
+        ? t("Verified {date}", { date: shortDate(lic.verifiedAt) })
+        : t("Verified")
       : lic.status?.kind === "rejected"
-        ? "Needs changes"
+        ? t("Needs changes")
         : lic.status?.kind === "pending"
-          ? "We're checking it"
-          : "No document yet";
+          ? t("We're checking it")
+          : t("No document yet");
   const words = wordCount(facts?.bio);
 
   return (
-    <SubPage title="Edit public profile" subtitle="Each section opens its own sheet" right={<HeadLink label="Preview" onClick={() => navigate("/app/more/public-profile")} />}>
+    <SubPage title={t("Edit public profile")} subtitle={t("Each section opens its own sheet")} right={<HeadLink label={t("Preview")} onClick={() => navigate("/app/more/public-profile")} />}>
       {offline && facts && <OfflineLine />}
       {failed ? (
         <div style={{ marginTop: 12 }}>
@@ -145,53 +146,53 @@ export default function EditProfile() {
           />
         </div>
       ) : loading ? (
-        <div className="flex flex-col" style={{ gap: 12, marginTop: 12 }} role="status" aria-label="Loading">
+        <div className="flex flex-col" style={{ gap: 12, marginTop: 12 }} role="status" aria-label={t("Loading")}>
           <ProCardSkeleton lines={6} height={300} />
           <ProCardSkeleton lines={4} height={200} />
         </div>
       ) : (
         <>
           <div>
-            <SettingsRow icon={ImageIcon} title="Photo and cover" sub={photoAndCoverSub(!!user.avatarUrl, !!cover.url)} onClick={() => setSheet("photo")} />
-            <SettingsRow icon={UserRound} title="Name" sub={user.firstName || "Add your name"} onClick={() => setSheet("name")} />
-            <SettingsRow icon={Briefcase} title="Professional type" sub={typeLabel(user.professionalSubtype)} right={<LockTile />} onClick={() => setSheet("locked")} ariaLabel={`Professional type, ${typeLabel(user.professionalSubtype)}. Locked`} />
-            <SettingsRow icon={Sparkles} title="Specialties" sub={facts && facts.specialties.length > 0 ? `${facts.specialties.length} selected` : "None yet"} onClick={() => setSheet("specialties")} />
-            <SettingsRow icon={GraduationCap} title="Credentials" sub={cv && cv.licences.length > 0 ? plural(cv.licences.length, "certification") : "None yet"} onClick={() => navigate("/app/more/credentials")} />
-            <SettingsRow icon={ShieldCheck} title="Licence" sub={licenceSub} onClick={() => setCvView({ kind: "licence", entry: lic?.primary ?? null })} />
-            <SettingsRow icon={BriefcaseBusiness} title="Experience" sub={cv && cv.experience.length > 0 ? plural(years, "year") : "None yet"} onClick={() => setCvView({ kind: "list", key: "experience" })} />
-            <SettingsRow icon={AlignLeft} title="Bio" sub={words > 0 ? plural(words, "word") : "Not written yet"} onClick={() => setSheet("bio")} />
-            <SettingsRow icon={Tag} title="Services and prices" sub={counts ? (counts.services > 0 ? plural(counts.services, "service") : "None yet") : undefined} onClick={() => navigate("/app/more/services")} />
-            <SettingsRow icon={MapPin} title="Where you work" sub={whereSub} onClick={() => navigate("/app/more/where-you-work")} />
-            <SettingsRow icon={CalendarDays} title="Availability" sub="From your calendar" onClick={() => navigate("/app/pro/calendar/availability")} last />
+            <SettingsRow icon={ImageIcon} title={t("Photo and cover")} sub={photoAndCoverSub(!!user.avatarUrl, !!cover.url)} onClick={() => setSheet("photo")} />
+            <SettingsRow icon={UserRound} title={t("Name")} sub={user.firstName || t("Add your name")} onClick={() => setSheet("name")} />
+            <SettingsRow icon={Briefcase} title={t("Professional type")} sub={typeLabel(user.professionalSubtype)} right={<LockTile />} onClick={() => setSheet("locked")} ariaLabel={t("Professional type, {v}. Locked", { v: typeLabel(user.professionalSubtype) })} />
+            <SettingsRow icon={Sparkles} title={t("Specialties")} sub={facts && facts.specialties.length > 0 ? t("{n} selected", { n: facts.specialties.length }) : t("None yet")} onClick={() => setSheet("specialties")} />
+            <SettingsRow icon={GraduationCap} title={t("Credentials")} sub={cv && cv.licences.length > 0 ? tn(cv.licences.length, "{n} certification", "{n} certifications") : t("None yet")} onClick={() => navigate("/app/more/credentials")} />
+            <SettingsRow icon={ShieldCheck} title={t("Licence")} sub={licenceSub} onClick={() => setCvView({ kind: "licence", entry: lic?.primary ?? null })} />
+            <SettingsRow icon={BriefcaseBusiness} title={t("Experience")} sub={cv && cv.experience.length > 0 ? tn(years, "{n} year", "{n} years") : t("None yet")} onClick={() => setCvView({ kind: "list", key: "experience" })} />
+            <SettingsRow icon={AlignLeft} title={t("Bio")} sub={words > 0 ? tn(words, "{n} word", "{n} words") : t("Not written yet")} onClick={() => setSheet("bio")} />
+            <SettingsRow icon={Tag} title={t("Services and prices")} sub={counts ? (counts.services > 0 ? tn(counts.services, "{n} service", "{n} services") : t("None yet")) : undefined} onClick={() => navigate("/app/more/services")} />
+            <SettingsRow icon={MapPin} title={t("Where you work")} sub={whereSub} onClick={() => navigate("/app/more/where-you-work")} />
+            <SettingsRow icon={CalendarDays} title={t("Availability")} sub={t("From your calendar")} onClick={() => navigate("/app/pro/calendar/availability")} last />
           </div>
 
-          <SettingsSection label="Also on your profile">
-            <SettingsRow icon={Quote} title="Headline" sub={cv?.profile.headline || "Not written yet"} onClick={() => setCvView({ kind: "headline" })} />
-            <SettingsRow icon={GraduationCap} title="Qualifications" sub={cv && cv.education.length > 0 ? plural(cv.education.length, "qualification") : "None yet"} onClick={() => setCvView({ kind: "list", key: "education" })} />
-            <SettingsRow icon={Languages} title="Skills and languages" sub={cv ? [cv.profile.skills.length ? plural(cv.profile.skills.length, "skill") : null, cv.languages.length ? plural(cv.languages.length, "language") : null].filter(Boolean).join(" · ") || "None yet" : undefined} onClick={() => setCvView({ kind: "skills" })} />
-            <SettingsRow icon={Award} title="Awards" sub={cv && cv.awards.length ? `${cv.awards.length} added` : "None yet"} onClick={() => setCvView({ kind: "list", key: "awards" })} />
-            <SettingsRow icon={BookOpen} title="Publications" sub={cv && cv.publications.length ? `${cv.publications.length} added` : "None yet"} onClick={() => setCvView({ kind: "list", key: "publications" })} />
-            <SettingsRow icon={LinkIcon} title="Links" sub={cv && cv.links.length ? `${cv.links.length} added` : "None yet"} onClick={() => setCvView({ kind: "list", key: "links" })} />
+          <SettingsSection label={t("Also on your profile")}>
+            <SettingsRow icon={Quote} title={t("Headline")} sub={cv?.profile.headline || t("Not written yet")} onClick={() => setCvView({ kind: "headline" })} />
+            <SettingsRow icon={GraduationCap} title={t("Qualifications")} sub={cv && cv.education.length > 0 ? tn(cv.education.length, "{n} qualification", "{n} qualifications") : t("None yet")} onClick={() => setCvView({ kind: "list", key: "education" })} />
+            <SettingsRow icon={Languages} title={t("Skills and languages")} sub={cv ? [cv.profile.skills.length ? tn(cv.profile.skills.length, "{n} skill", "{n} skills") : null, cv.languages.length ? tn(cv.languages.length, "{n} language", "{n} languages") : null].filter(Boolean).join(" · ") || t("None yet") : undefined} onClick={() => setCvView({ kind: "skills" })} />
+            <SettingsRow icon={Award} title={t("Awards")} sub={cv && cv.awards.length ? t("{n} added", { n: cv.awards.length }) : t("None yet")} onClick={() => setCvView({ kind: "list", key: "awards" })} />
+            <SettingsRow icon={BookOpen} title={t("Publications")} sub={cv && cv.publications.length ? t("{n} added", { n: cv.publications.length }) : t("None yet")} onClick={() => setCvView({ kind: "list", key: "publications" })} />
+            <SettingsRow icon={LinkIcon} title={t("Links")} sub={cv && cv.links.length ? t("{n} added", { n: cv.links.length }) : t("None yet")} onClick={() => setCvView({ kind: "list", key: "links" })} />
             <SettingsRow
               icon={HandHeart}
-              title="Volunteering"
-              sub={cv ? `${cv.volunteering.length ? `${cv.volunteering.length} added · ` : ""}${cv.profile.showVolunteering ? "Shown to clients" : "Hidden from clients"}` : undefined}
+              title={t("Volunteering")}
+              sub={cv ? `${cv.volunteering.length ? `${t("{n} added", { n: cv.volunteering.length })} · ` : ""}${cv.profile.showVolunteering ? t("Shown to clients") : t("Hidden from clients")}` : undefined}
               onClick={() => setCvView({ kind: "list", key: "volunteering" })}
             />
-            <SettingsRow icon={Globe2} title="Details and links" sub="Specialty, location, website and socials" onClick={() => setSheet("details")} />
-            <SettingsRow icon={Music2} title="Playlist" sub={playlist === undefined ? undefined : playlistService ? `${SERVICE_LABEL[playlistService]} · shown on your profile` : "Optional. Spotify, Apple Music or YouTube Music"} onClick={() => setSheet("playlist")} />
-            <SettingsRow icon={AtSign} title="Your handle" sub={facts?.handle ? profileUrl(facts.handle) : "Choose a handle for your profile link"} onClick={() => setSheet("handle")} />
+            <SettingsRow icon={Globe2} title={t("Details and links")} sub={t("Specialty, location, website and socials")} onClick={() => setSheet("details")} />
+            <SettingsRow icon={Music2} title={t("Playlist")} sub={playlist === undefined ? undefined : playlistService ? t("{service} · shown on your profile", { service: SERVICE_LABEL[playlistService] }) : t("Optional. Spotify, Apple Music or YouTube Music")} onClick={() => setSheet("playlist")} />
+            <SettingsRow icon={AtSign} title={t("Your handle")} sub={facts?.handle ? profileUrl(facts.handle) : t("Choose a handle for your profile link")} onClick={() => setSheet("handle")} />
             <SettingsRow
               icon={Store}
-              title="Public listing"
-              sub={facts?.listedPublicly ? "Listed in Explore" : "Not listed"}
+              title={t("Public listing")}
+              sub={facts?.listedPublicly ? t("Listed in Explore") : t("Not listed")}
               onClick={() => navigate("/app/more/practice/listing")}
               last
             />
           </SettingsSection>
 
           <FootNote icon={Lock} style={{ marginTop: 8 }}>
-            {pending ? `Your request to change to ${typeLabel(pending)} is with our team.` : "Professional type is set at sign-up and verified with your licence. Contact support to change it."}
+            {pending ? t("Your request to change to {v} is with our team.", { v: typeLabel(pending) }) : t("Professional type is set at sign-up and verified with your licence. Contact support to change it.")}
           </FootNote>
           {!cv && <StateLine>{cvError}</StateLine>}
         </>

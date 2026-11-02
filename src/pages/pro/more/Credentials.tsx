@@ -17,6 +17,7 @@ import { licenceStatus } from "../../../services/professional-cv";
 import { byRecency } from "../../../services/professional-cv/cvDates";
 import { saveSpecialties } from "../../../services/pro/profile";
 import { ErrorLine } from "../../../components/pro/profile/kit";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · W6 MO4 Credentials and licence (/app/more/credentials; more.js
@@ -43,7 +44,7 @@ export default function Credentials() {
   const [specOpen, setSpecOpen] = useState(false);
   const [specError, setSpecError] = useState<string | null>(null);
 
-  const title = lane === "clinical_overview" ? "Registration and licence" : "Credentials and licence";
+  const title = lane === "clinical_overview" ? t("Registration and licence") : t("Credentials and licence");
   const loading = !cv && !cvError;
   const anyVerified = !!cv && cv.licences.some((l) => licenceStatus(l, cv.reviews).kind === "verified");
 
@@ -57,28 +58,28 @@ export default function Credentials() {
   };
 
   return (
-    <SubPage title={title} subtitle="Clients see the Verified mark, never the document">
+    <SubPage title={title} subtitle={t("Clients see the Verified mark, never the document")}>
       {offline && facts && <OfflineLine />}
       {cvError && !cv ? (
         <ProError onRetry={() => void reloadCv()} />
       ) : loading ? (
-        <div className="flex flex-col" style={{ gap: 12 }} role="status" aria-label="Loading">
+        <div className="flex flex-col" style={{ gap: 12 }} role="status" aria-label={t("Loading")}>
           <ProCardSkeleton lines={3} height={150} />
           <ProCardSkeleton lines={3} height={150} />
         </div>
       ) : (
         cv && (
           <>
-            <Section label="Licence" first>
+            <Section label={t("Licence")} first>
               {cv.licences.map((l) => {
                 const st = licenceStatus(l, cv.reviews);
-                const sub = [l.credentialId ? `No. ${l.credentialId}` : null, l.noExpiry ? "No expiry" : l.expires ? `Expires ${monthYear(l.expires)}` : null].filter(Boolean).join(" · ");
+                const sub = [l.credentialId ? t("No. {credentialId}", { credentialId: l.credentialId }) : null, l.noExpiry ? t("No expiry") : l.expires ? t("Expires {v}", { v: monthYear(l.expires) ?? "" }) : null].filter(Boolean).join(" · ");
                 return (
                   <SettingsRow
                     key={l.id}
                     icon={BadgeCheck}
-                    title={l.name ?? "Unnamed licence"}
-                    sub={sub || "Add its number and expiry"}
+                    title={l.name ?? t("Unnamed licence")}
+                    sub={sub || t("Add its number and expiry")}
                     right={st.kind === "verified" ? <VerifiedTag /> : st.kind === "none" ? undefined : <LicenceStatusBadge status={st} />}
                     onClick={() => setCvView({ kind: "licence", entry: l })}
                   />
@@ -87,15 +88,15 @@ export default function Credentials() {
               {!anyVerified && (
                 <SettingsRow
                   icon={ShieldAlert}
-                  title="Verification"
-                  sub={cv.licences.length ? "See where your check is" : "Add your licence or certificate to be verified"}
+                  title={t("Verification")}
+                  sub={cv.licences.length ? t("See where your check is") : t("Add your licence or certificate to be verified")}
                   onClick={() => navigate("/app/professionals/verification")}
                 />
               )}
-              <SettingsRow icon={Upload} title="Add a document" sub="Photo or PDF, checked by our team" onClick={() => setCertOpen(true)} last />
+              <SettingsRow icon={Upload} title={t("Add a document")} sub={t("Photo or PDF, checked by our team")} onClick={() => setCertOpen(true)} last />
             </Section>
 
-            <Section label="Qualifications">
+            <Section label={t("Qualifications")}>
               {byRecency(cv.education, false).map((e) => {
                 const t = [e.degree, e.field].filter(Boolean).join(" ");
                 const year = e.end?.slice(0, 4) ?? e.start?.slice(0, 4) ?? null;
@@ -109,11 +110,11 @@ export default function Credentials() {
                   />
                 );
               })}
-              {cv.education.length === 0 && <StateLine>No qualifications yet.</StateLine>}
-              <SettingsRow icon={Plus} title="Add a qualification" onClick={() => setCvView({ kind: "list", key: "education" })} last />
+              {cv.education.length === 0 && <StateLine>{t("No qualifications yet.")}</StateLine>}
+              <SettingsRow icon={Plus} title={t("Add a qualification")} onClick={() => setCvView({ kind: "list", key: "education" })} last />
             </Section>
 
-            <Section label="Specialties">
+            <Section label={t("Specialties")}>
               {factsError && !facts ? (
                 <div style={{ paddingTop: 12 }}>
                   <ProError onRetry={() => void reload()} />

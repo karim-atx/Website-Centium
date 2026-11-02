@@ -5,6 +5,7 @@ import { useApp } from "../../../context/AppContext";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { pairStacks } from "./profileModel";
+import { t } from "../../../i18n/core";
 
 // Release 3 · W6 the More sub-page pieces for the profile screens, from the
 // board's own primitives (source/gen):
@@ -34,7 +35,7 @@ export const SubPage: React.FC<{
     <div style={{ paddingBottom: bottomPad }}>
       <div className="flex items-start justify-between" style={{ marginBottom: 20 }}>
         <div className="flex items-start min-w-0" style={{ gap: 6 }}>
-          <button type="button" onClick={back} aria-label="Back" className="tap flex items-center justify-center shrink-0" style={{ width: 36, height: 36, marginTop: 2, color: INK.chS }}>
+          <button type="button" onClick={back} aria-label={t("Back")} className="tap flex items-center justify-center shrink-0" style={{ width: 36, height: 36, marginTop: 2, color: INK.chS }}>
             <ChevronLeft size={18} strokeWidth={2} aria-hidden />
           </button>
           <div className="min-w-0">
@@ -60,7 +61,7 @@ export const HeadLink: React.FC<{ label: string; onClick: () => void }> = ({ lab
   </button>
 );
 
-export const VerifiedTag: React.FC<{ label?: string }> = ({ label = "Verified" }) => (
+export const VerifiedTag: React.FC<{ label?: string }> = ({ label = t("Verified") }) => (
   <span className="inline-flex items-center shrink-0 whitespace-nowrap" style={{ gap: 3, fontSize: textPx(10), fontWeight: 700, color: INK.good }}>
     <BadgeCheck size={12} strokeWidth={2} aria-hidden />
     {label}
@@ -68,7 +69,7 @@ export const VerifiedTag: React.FC<{ label?: string }> = ({ label = "Verified" }
 );
 
 export const LockTile: React.FC = () => (
-  <span aria-label="Locked" role="img" className="inline-flex items-center justify-center shrink-0" style={{ width: 28, height: 28, borderRadius: 9, background: INK.soft }}>
+  <span aria-label={t("Locked")} role="img" className="inline-flex items-center justify-center shrink-0" style={{ width: 28, height: 28, borderRadius: 9, background: INK.soft }}>
     <Lock size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
   </span>
 );
@@ -109,7 +110,7 @@ export const CtaButton: React.FC<{
       }}
     >
       {Icon && <Icon size={15} strokeWidth={2} aria-hidden />}
-      <span className="truncate">{busy ? "Saving…" : label}</span>
+      <span className="truncate">{busy ? t("Saving…") : label}</span>
     </button>
   );
 };
@@ -144,8 +145,8 @@ export const HireBookPair: React.FC<{
   const [ref, w] = useWidth<HTMLDivElement>();
   // The bar is 16 in from each edge of the column: the column is w + 32.
   const stack = w > 0 && pairStacks(w + 32, accessibility.largerText);
-  const hire = <CtaButton key="hire" label={firstName ? `Hire ${firstName}` : "Hire"} icon={UserPlus} onClick={onHire} disabled={disabled} full={stack} />;
-  const book = <CtaButton key="book" label="Book a session" icon={CalendarPlus} variant="secondary" onClick={onBook} disabled={disabled} full={stack} />;
+  const hire = <CtaButton key="hire" label={firstName ? t("Hire {firstName}", { firstName }) : t("Hire")} icon={UserPlus} onClick={onHire} disabled={disabled} full={stack} />;
+  const book = <CtaButton key="book" label={t("Book a session")} icon={CalendarPlus} variant="secondary" onClick={onBook} disabled={disabled} full={stack} />;
   return (
     <div ref={ref} className="flex" data-stacked={stack ? "true" : undefined} style={{ gap: 8, flexDirection: stack ? "column" : "row" }}>
       {stack ? [hire, book] : [book, hire]}

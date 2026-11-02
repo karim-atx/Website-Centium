@@ -32,6 +32,7 @@ const AREAS = [
   ["certificates", "Your certificates (Courses)"],
   ["pro", "Professional tools: Home, notifications and shared parts"],
   ["proclients", "Professional tools: Clients and a client's page"],
+  ["proprofile", "Professional tools: More, profile, services and credentials"],
 ];
 
 const rows = [];

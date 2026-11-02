@@ -23,6 +23,7 @@ import { NameSheet, PhoneSheet, PhotoSourceSheet, TypeChangeSheet, TypeLockedPop
 import { ImageApprovalBadge, ImageApprovalNote } from "../../moderation/ImageApproval";
 import { typeAndLane, typeLabel } from "./typeLabel";
 import { signOutWarning, useOutbox } from "../../outbox/Outbox";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · W6 MO26 v2 Profile, the professional branch of /app/profile
@@ -67,15 +68,15 @@ export const ProProfile: React.FC = () => {
     ? undefined
     : lic.verified
       ? lic.verifiedAt
-        ? `Verified ${shortDate(lic.verifiedAt)}`
-        : "Verified"
+        ? t("Verified {date}", { date: shortDate(lic.verifiedAt) })
+        : t("Verified")
       : !lic.primary
-        ? "Not added yet"
+        ? t("Not added yet")
         : lic.status?.kind === "rejected"
-          ? "Needs changes"
+          ? t("Needs changes")
           : lic.status?.kind === "pending"
-            ? "We're checking it"
-            : "No document yet";
+            ? t("We're checking it")
+            : t("No document yet");
   const name = user.firstName ?? "";
   const initials = name
     .split(/\s+/)
@@ -87,14 +88,14 @@ export const ProProfile: React.FC = () => {
   return (
     <div>
       <div className="flex items-start" style={{ gap: 6, marginBottom: 16 }}>
-        <button type="button" onClick={back} aria-label="Back" className="tap flex items-center justify-center shrink-0" style={{ width: 36, height: 36, marginInlineStart: -7, borderRadius: 9999, color: INK.chS }}>
+        <button type="button" onClick={back} aria-label={t("Back")} className="tap flex items-center justify-center shrink-0" style={{ width: 36, height: 36, marginInlineStart: -7, borderRadius: 9999, color: INK.chS }}>
           <ChevronLeft size={18} strokeWidth={2} aria-hidden />
         </button>
-        <h1 style={{ marginTop: 3, fontSize: textPx(24), fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.25, color: INK.ch }}>Profile</h1>
+        <h1 style={{ marginTop: 3, fontSize: textPx(24), fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.25, color: INK.ch }}>{t("Profile")}</h1>
       </div>
 
       <div className="flex flex-col items-center text-center" style={{ margin: "-4px 0 18px" }}>
-        <button type="button" onClick={() => setSheet("photo")} aria-label="Change profile photo" className="tap relative">
+        <button type="button" onClick={() => setSheet("photo")} aria-label={t("Change profile photo")} className="tap relative">
           <span className="flex items-center justify-center overflow-hidden" style={{ width: 88, height: 88, borderRadius: 9999, background: INK.tealPale, fontSize: 28, fontWeight: 800, color: INK.tealDark }}>
             {picker.url ? <img src={picker.url} alt="" className="w-full h-full object-cover" /> : initials}
           </span>
@@ -104,13 +105,11 @@ export const ProProfile: React.FC = () => {
         </button>
         <p className="flex items-center justify-center" style={{ gap: 6, fontSize: textPx(20), fontWeight: 800, color: INK.ch, marginTop: 10, overflowWrap: "anywhere" }}>
           {name}
-          {lic?.verified && <BadgeCheck size={17} strokeWidth={2} aria-label="Verified" style={{ color: INK.good, flexShrink: 0 }} />}
+          {lic?.verified && <BadgeCheck size={17} strokeWidth={2} aria-label={t("Verified")} style={{ color: INK.good, flexShrink: 0 }} />}
         </p>
         <p style={{ fontSize: textPx(13), color: INK.chF }}>{typeAndLane(user.professionalSubtype)}</p>
         {picker.busy && (
-          <p role="status" style={{ marginTop: 8, fontSize: textPx(12), fontWeight: 600, color: INK.chF }}>
-            Saving…
-          </p>
+          <p role="status" style={{ marginTop: 8, fontSize: textPx(12), fontWeight: 600, color: INK.chF }}>{t("Saving…")}</p>
         )}
         {picker.error && (
           <p role="alert" style={{ marginTop: 8, fontSize: textPx(12), fontWeight: 600, color: INK.hi }}>
@@ -123,34 +122,34 @@ export const ProProfile: React.FC = () => {
       </div>
 
       <div style={{ padding: "0 8px" }}>
-        <SettingsSection label="Personal" first>
-          <SettingsRow icon={User} title="Name" sub={name || "Add your name"} onClick={() => setSheet("name")} />
-          <SettingsRow icon={Mail} title="Email" sub={user.email || "–"} />
-          <SettingsRow icon={Phone} title="Phone" sub={user.phone || "Add your phone"} onClick={() => setSheet("phone")} />
-          <SettingsRow icon={Cake} title="Date of birth" sub={user.dateOfBirth ? formatDisplayDate(user.dateOfBirth) : "Add your date of birth"} onClick={() => setSheet("dob")} last />
+        <SettingsSection label={t("Personal")} first>
+          <SettingsRow icon={User} title={t("Name")} sub={name || t("Add your name")} onClick={() => setSheet("name")} />
+          <SettingsRow icon={Mail} title={t("Email")} sub={user.email || "–"} />
+          <SettingsRow icon={Phone} title={t("Phone")} sub={user.phone || t("Add your phone")} onClick={() => setSheet("phone")} />
+          <SettingsRow icon={Cake} title={t("Date of birth")} sub={user.dateOfBirth ? formatDisplayDate(user.dateOfBirth) : t("Add your date of birth")} onClick={() => setSheet("dob")} last />
         </SettingsSection>
 
-        <SettingsSection label="Professional">
-          <SettingsRow icon={Briefcase} title="Professional type" sub={typeAndLane(user.professionalSubtype)} right={<LockTile />} onClick={() => setSheet("locked")} ariaLabel={`Professional type, ${typeLabel(user.professionalSubtype)}. Locked`} />
+        <SettingsSection label={t("Professional")}>
+          <SettingsRow icon={Briefcase} title={t("Professional type")} sub={typeAndLane(user.professionalSubtype)} right={<LockTile />} onClick={() => setSheet("locked")} ariaLabel={t("Professional type, {v}. Locked", { v: typeLabel(user.professionalSubtype) })} />
           <FootNote icon={Info} style={{ marginBlock: "-4px 6px", marginInline: "50px 0" }}>
             {pending
-              ? `Your request to change to ${typeLabel(pending)} is with our team.`
-              : "Contact support to change your professional type. It sets your tools and how your licence is verified."}
+              ? t("Your request to change to {v} is with our team.", { v: typeLabel(pending) })
+              : t("Contact support to change your professional type. It sets your tools and how your licence is verified.")}
           </FootNote>
-          <SettingsRow icon={ShieldCheck} title="Licence" sub={licenceSub} right={lic?.verified ? <VerifiedTag /> : undefined} onClick={() => navigate("/app/more/credentials")} />
-          <SettingsRow icon={Globe2} title="Public profile" sub="Preview and edit" onClick={() => navigate("/app/more/edit-profile")} last />
+          <SettingsRow icon={ShieldCheck} title={t("Licence")} sub={licenceSub} right={lic?.verified ? <VerifiedTag /> : undefined} onClick={() => navigate("/app/more/credentials")} />
+          <SettingsRow icon={Globe2} title={t("Public profile")} sub={t("Preview and edit")} onClick={() => navigate("/app/more/edit-profile")} last />
         </SettingsSection>
 
         {/* J9: the professional's own cycle tracking, kept on Profile. */}
-        <SettingsSection label="Health tracking">
+        <SettingsSection label={t("Health tracking")}>
           <div style={{ padding: "13px 0" }}>
             <CycleTrackingRow />
           </div>
         </SettingsSection>
 
-        <SettingsSection label="Sign-in">
-          <SettingsRow icon={KeyRound} title="Password" sub="Change it any time" onClick={() => setSheet("password")} />
-          <SettingsRow icon={Smartphone} title="Two-factor authentication" sub={mfaOn === null ? undefined : mfaOn ? "On" : "Off"} onClick={() => navigate("/app/settings/two-factor")} last />
+        <SettingsSection label={t("Sign-in")}>
+          <SettingsRow icon={KeyRound} title={t("Password")} sub={t("Change it any time")} onClick={() => setSheet("password")} />
+          <SettingsRow icon={Smartphone} title={t("Two-factor authentication")} sub={mfaOn === null ? undefined : mfaOn ? t("On") : t("Off")} onClick={() => navigate("/app/settings/two-factor")} last />
         </SettingsSection>
 
         <button
@@ -158,9 +157,7 @@ export const ProProfile: React.FC = () => {
           onClick={() => setConfirmSignOut(true)}
           className="tap block mx-auto"
           style={{ marginTop: 26, minHeight: 44, padding: "0 16px", fontSize: textPx(13), fontWeight: 700, color: INK.hi }}
-        >
-          Sign out
-        </button>
+        >{t("Sign out")}</button>
       </div>
 
       {picker.inputs}
@@ -175,23 +172,21 @@ export const ProProfile: React.FC = () => {
       <CentredPopup
         open={confirmSignOut}
         onClose={() => setConfirmSignOut(false)}
-        title="Sign out?"
+        title={t("Sign out?")}
         icon={<LogOut size={22} />}
         // Round D (D23): anything kept to save later is named first.
-        body={signOutWarning(waiting) ?? "You can sign back in at any time."}
+        body={signOutWarning(waiting) ?? t("You can sign back in at any time.")}
       >
         <AppCta
           size="page"
-          label={waiting.length > 0 ? "Sign out anyway" : "Sign Out"}
+          label={waiting.length > 0 ? t("Sign out anyway") : t("Sign Out")}
           onClick={() => {
             setConfirmSignOut(false);
             signOut();
             navigate("/app/onboarding");
           }}
         />
-        <button type="button" onClick={() => setConfirmSignOut(false)} className="tap mt-3 w-full min-h-11 text-center text-sm font-semibold text-charcoal-soft">
-          Cancel
-        </button>
+        <button type="button" onClick={() => setConfirmSignOut(false)} className="tap mt-3 w-full min-h-11 text-center text-sm font-semibold text-charcoal-soft">{t("Cancel")}</button>
       </CentredPopup>
     </div>
   );
@@ -201,23 +196,21 @@ export const ProProfile: React.FC = () => {
 const DobSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const { user } = useApp();
   return (
-    <BottomSheet open={open} onClose={onClose} title="Date of birth">
+    <BottomSheet open={open} onClose={onClose} title={t("Date of birth")}>
       {user.dateOfBirth ? (
         <div className="space-y-4">
           <div className="rounded-2xl bg-cream-soft px-4 py-3.5">
             <p className="text-base font-semibold text-charcoal tabular-nums">{formatDisplayDate(user.dateOfBirth)}</p>
-            {ageFromDateOfBirth(user.dateOfBirth) !== undefined && <p className="text-xs text-charcoal-faint mt-0.5">{ageFromDateOfBirth(user.dateOfBirth)} years old</p>}
+            {ageFromDateOfBirth(user.dateOfBirth) !== undefined && <p className="text-xs text-charcoal-faint mt-0.5">{tn(ageFromDateOfBirth(user.dateOfBirth) ?? 0, "{n} year old", "{n} years old")}</p>}
           </div>
-          <p className="text-[11px] text-charcoal-faint">A date of birth can't be changed once it's saved.</p>
+          <p className="text-[11px] text-charcoal-faint">{t("A date of birth can't be changed once it's saved.")}</p>
           <p className="text-sm text-charcoal-soft">
-            Need to correct it?{" "}
-            <Link to="/contact" className="font-semibold text-primary-deep-text underline">
-              Contact support
-            </Link>
+            {t("Need to correct it?")}{" "}
+            <Link to="/contact" className="font-semibold text-primary-deep-text underline">{t("Contact support")}</Link>
           </p>
         </div>
       ) : (
-        <DobInline title="Add your date of birth" body="It's kept private: clients never see it. Check it before saving; to change it later, contact support." onSaved={onClose} />
+        <DobInline title={t("Add your date of birth")} body={t("It's kept private: clients never see it. Check it before saving; to change it later, contact support.")} onSaved={onClose} />
       )}
     </BottomSheet>
   );

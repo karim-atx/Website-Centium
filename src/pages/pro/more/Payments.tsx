@@ -11,6 +11,7 @@ import { PremiumLeafIcon } from "../../../components/icons/MoreLeafIcons";
 import { useApp } from "../../../context/AppContext";
 import { useEffectiveProfessionalTier } from "../../../hooks/useEffectiveProfessionalTier";
 import { savePaymentModalities } from "../../../services/pro/profile";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · W6 MO8 Payments and billing (/app/more/payments; more.js payments):
@@ -50,48 +51,48 @@ export default function Payments() {
 
   const tier = effective?.tier;
   const planSub = tier
-    ? [tier.name, tier.maxClients === null ? "No client limit" : `Up to ${tier.maxClients} ${tier.maxClients === 1 ? "client" : "clients"}`, effective?.viaBusinessName ? `via ${effective.viaBusinessName}` : null].filter(Boolean).join(" · ")
+    ? [tier.name, tier.maxClients === null ? t("No client limit") : tn(tier.maxClients, "Up to {n} client", "Up to {n} clients"), effective?.viaBusinessName ? t("via {business}", { business: effective.viaBusinessName }) : null].filter(Boolean).join(" · ")
     : undefined;
 
   return (
-    <SubPage title="Payments and billing">
+    <SubPage title={t("Payments and billing")}>
       {offline && facts && <OfflineLine />}
       {error && !facts ? (
         <ProError onRetry={() => void reload()} />
       ) : !facts ? (
-        <div className="flex flex-col" style={{ gap: 12 }} role="status" aria-label="Loading">
+        <div className="flex flex-col" style={{ gap: 12 }} role="status" aria-label={t("Loading")}>
           <ProCardSkeleton lines={3} height={160} />
           <ProCardSkeleton lines={2} height={100} />
         </div>
       ) : (
         <>
-          <Section label="Payment methods you accept" first>
-            <SettingsRow icon={Banknote} title="Cash" sub="You confirm each payment" right={<Toggle checked={accepts("cash")} onChange={(v) => void setModality("cash", v)} disabled={busy} label="Cash" />} />
-            <SettingsRow icon={CreditCard} title="Card at sessions" sub="You confirm each payment" right={<Toggle checked={accepts("card")} onChange={(v) => void setModality("card", v)} disabled={busy} label="Card at sessions" />} />
-            <SettingsRow icon={CreditCard} title="Card in the app" sub="Coming soon" right={<Toggle checked={false} onChange={() => {}} disabled label="Card in the app, coming soon" />} />
+          <Section label={t("Payment methods you accept")} first>
+            <SettingsRow icon={Banknote} title={t("Cash")} sub={t("You confirm each payment")} right={<Toggle checked={accepts("cash")} onChange={(v) => void setModality("cash", v)} disabled={busy} label={t("Cash")} />} />
+            <SettingsRow icon={CreditCard} title={t("Card at sessions")} sub={t("You confirm each payment")} right={<Toggle checked={accepts("card")} onChange={(v) => void setModality("card", v)} disabled={busy} label={t("Card at sessions")} />} />
+            <SettingsRow icon={CreditCard} title={t("Card in the app")} sub={t("Coming soon")} right={<Toggle checked={false} onChange={() => {}} disabled label={t("Card in the app, coming soon")} />} />
             <SettingsRow
               icon={Landmark}
-              title="Bank transfer"
-              sub="You confirm each payment"
-              right={<Toggle checked={accepts("bank_transfer")} onChange={(v) => void setModality("bank_transfer", v)} disabled={busy} label="Bank transfer" />}
+              title={t("Bank transfer")}
+              sub={t("You confirm each payment")}
+              right={<Toggle checked={accepts("bank_transfer")} onChange={(v) => void setModality("bank_transfer", v)} disabled={busy} label={t("Bank transfer")} />}
               last
             />
             {saveError && <ErrorLine>{saveError}</ErrorLine>}
           </Section>
 
-          <Section label="Payouts">
-            <SettingsRow icon={Wallet} title="Payout account" sub="Available when in-app payments launch" last />
+          <Section label={t("Payouts")}>
+            <SettingsRow icon={Wallet} title={t("Payout account")} sub={t("Available when in-app payments launch")} last />
           </Section>
 
-          <Section label="Invoices and receipts">
-            <StateLine>Invoices and receipts appear here once in-app payments launch.</StateLine>
-            <SettingsRow icon={Download} title="Export all" sub="CSV or PDF" value={<ComingSoonPill />} last />
+          <Section label={t("Invoices and receipts")}>
+            <StateLine>{t("Invoices and receipts appear here once in-app payments launch.")}</StateLine>
+            <SettingsRow icon={Download} title={t("Export all")} sub={t("CSV or PDF")} value={<ComingSoonPill />} last />
           </Section>
 
-          <Section label="Your Centium plan">
+          <Section label={t("Your Centium plan")}>
             <SettingsRow
               tile={<PremiumLeafIcon size={22} style={{ color: "rgb(var(--c-primary-accent))" }} />}
-              title="Centium Professional"
+              title={t("Centium Professional")}
               sub={planSub}
               onClick={() => navigate("/app/subscription")}
               last

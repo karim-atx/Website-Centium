@@ -19,6 +19,7 @@ import { nextPosition } from "./useMyCv";
 import { licenceStatus, saveCvProfile, type Licence, type MyCv, type SectionEntry, type SectionKey } from "../../services/professional-cv";
 import { byRecency, formatMonth, formatRange } from "../../services/professional-cv/cvDates";
 import { checkText } from "../../services/professional-cv/validate";
+import { t, tk } from "../../i18n/core";
 
 // The professional's CV editors, opened from Release 3 W6's MO14 Edit public
 // profile (pages/pro/more/EditProfile): every CV section keeps its list and
@@ -43,12 +44,12 @@ export type CvView = { kind: "list"; key: CvListKey } | { kind: "licence"; entry
 type Open = { kind: "licence"; entry: Licence | null } | { kind: SectionKey; entry: { id: string } | null } | null;
 
 function licenceTitle(l: Licence) {
-  return l.name ?? (l.mirrorsCertification ? "Certificate from the previous step" : "Unnamed licence");
+  return l.name ?? (l.mirrorsCertification ? t("Certificate from the previous step") : t("Unnamed licence"));
 }
 
 function licenceLine(l: Licence) {
-  if (!l.name) return "Add its name and issuer";
-  return join(l.issuingBody, l.issued ? `Issued ${formatMonth(l.issued)}` : null, l.noExpiry ? "No expiry" : l.expires ? `Expires ${formatMonth(l.expires)}` : null);
+  if (!l.name) return t("Add its name and issuer");
+  return join(l.issuingBody, l.issued ? t("Issued {v}", { v: formatMonth(l.issued) }) : null, l.noExpiry ? t("No expiry") : l.expires ? t("Expires {v}", { v: formatMonth(l.expires) }) : null);
 }
 
 const EntryRow: React.FC<{
@@ -72,22 +73,22 @@ const EntryRow: React.FC<{
 );
 
 const LIST_TITLE: Record<CvListKey, string> = {
-  licences: "Licences & certifications",
-  experience: "Experience",
-  education: "Qualifications",
-  awards: "Awards",
-  publications: "Publications",
-  links: "Links",
-  volunteering: "Volunteering",
+  licences: tk("Licences & certifications"),
+  experience: tk("Experience"),
+  education: tk("Qualifications"),
+  awards: tk("Awards"),
+  publications: tk("Publications"),
+  links: tk("Links"),
+  volunteering: tk("Volunteering"),
 };
 const ADD_LABEL: Record<CvListKey, string> = {
-  licences: "Add licence",
-  experience: "Add experience",
-  education: "Add education",
-  awards: "Add award",
-  publications: "Add publication",
-  links: "Add link",
-  volunteering: "Add volunteering",
+  licences: tk("Add licence"),
+  experience: tk("Add experience"),
+  education: tk("Add education"),
+  awards: tk("Add award"),
+  publications: tk("Add publication"),
+  links: tk("Add link"),
+  volunteering: tk("Add volunteering"),
 };
 
 /**
@@ -111,7 +112,7 @@ const HeadlineSheet: React.FC<{
   const save = async (text: string, quiet: boolean) => {
     const next = text.trim();
     if (next === saved.current) return true;
-    const problem = checkText("Headline", next, 2, 160, false);
+    const problem = checkText(t("Headline"), next, 2, 160, false);
     if (problem) {
       if (!quiet) setError(problem);
       return false;
@@ -151,13 +152,11 @@ const HeadlineSheet: React.FC<{
   };
 
   return (
-    <BottomSheet open={open} onClose={() => void close()} title="Headline">
+    <BottomSheet open={open} onClose={() => void close()} title={t("Headline")}>
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
-          <label htmlFor="cv-headline" className="text-xs font-semibold text-charcoal-soft">
-            One line clients see under your name
-          </label>
-          {state !== "idle" && <span className="text-[11.5px] text-charcoal-soft">{state === "saving" ? "Saving…" : "Saved"}</span>}
+          <label htmlFor="cv-headline" className="text-xs font-semibold text-charcoal-soft">{t("One line clients see under your name")}</label>
+          {state !== "idle" && <span className="text-[11.5px] text-charcoal-soft">{state === "saving" ? t("Saving…") : t("Saved")}</span>}
         </div>
         <input
           id="cv-headline"
@@ -179,7 +178,7 @@ const HeadlineSheet: React.FC<{
             if (e.key === "Enter") (e.target as HTMLInputElement).blur();
           }}
           enterKeyHint="done"
-          placeholder="e.g. Strength coach for beginners and busy parents"
+          placeholder={t("e.g. Strength coach for beginners and busy parents")}
           className="w-full min-h-[48px] rounded-[14px] bg-cream-soft border border-charcoal/10 px-3.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         {error && <p className="text-xs font-semibold text-status-high">{error}</p>}
@@ -247,16 +246,16 @@ export const CvSheetsHost: React.FC<{
             {list === "volunteering" && (
               <div className="flex items-center justify-between gap-3 min-h-[52px]">
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-charcoal">Show volunteering to clients</span>
+                  <span className="block text-sm font-semibold text-charcoal">{t("Show volunteering to clients")}</span>
                   <span className="block text-xs text-charcoal-soft mt-0.5">
-                    {cv.profile.showVolunteering ? "Shown on your public profile." : "Hidden from clients until you turn it on."}
+                    {cv.profile.showVolunteering ? t("Shown on your public profile.") : t("Hidden from clients until you turn it on.")}
                   </span>
                 </span>
-                <Toggle checked={cv.profile.showVolunteering} onChange={(on) => void setShowVolunteering(on)} label="Show volunteering to clients" />
+                <Toggle checked={cv.profile.showVolunteering} onChange={(on) => void setShowVolunteering(on)} label={t("Show volunteering to clients")} />
               </div>
             )}
             {volError && list === "volunteering" && <p className="text-xs font-semibold text-status-high">{volError}</p>}
-            {(cv[list] as { id: string }[]).length === 0 && <p className="text-[13px] text-charcoal-soft">None yet.</p>}
+            {(cv[list] as { id: string }[]).length === 0 && <p className="text-[13px] text-charcoal-soft">{t("None yet.")}</p>}
             {list === "licences" &&
               cv.licences.map((l, i) => {
                 const status = licenceStatus(l, cv.reviews);
