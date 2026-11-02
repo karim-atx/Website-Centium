@@ -10,6 +10,7 @@ import { LogoTile } from "./BusinessParts";
 import { FieldInput, FieldLabel, wellStyle } from "../calendar/calendarFields";
 import { ROLE_LABEL } from "../../../pages/business-team/teamLogic";
 import type { BusinessRole } from "../../../services/business-team/types";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · MO17 v2 / v3 pieces, literal from gen/r15.js (explore15,
@@ -19,14 +20,14 @@ import type { BusinessRole } from "../../../services/business-team/types";
 /** cHead15: back 36 (-7 in), gap 6; the title 24 / 700 -0.03em on 1.25 (3 down), subtitle 13 text.faint 4 under; 16 below. */
 export const ExploreHead: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <div className="flex items-start" style={{ gap: 6, marginBottom: 16 }}>
-    <button type="button" onClick={onBack} aria-label="Back" className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -7 }}>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ color: INK.chS }}>
+    <button type="button" onClick={onBack} aria-label={t("Back")} className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -7 }}>
+      <svg className="rtl:-scale-x-100" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ color: INK.chS }}>
         <path d="m15 18-6-6 6-6" />
       </svg>
     </button>
     <div className="min-w-0" style={{ marginTop: 3 }}>
-      <h1 style={{ fontSize: textPx(24), fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.25, color: INK.ch }}>Explore</h1>
-      <p style={{ marginTop: 4, fontSize: textPx(13), color: INK.chF }}>Businesses, classes and colleagues</p>
+      <h1 style={{ fontSize: textPx(24), fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.25, color: INK.ch }}>{t("Explore")}</h1>
+      <p style={{ marginTop: 4, fontSize: textPx(13), color: INK.chF }}>{t("Businesses, classes and colleagues")}</p>
     </div>
   </div>
 );
@@ -48,16 +49,16 @@ export const AffiliationCard: React.FC<{ name: string; onOpen: () => void }> = (
         </span>
         <span className="flex-1 min-w-0">
           <span className="block" style={{ fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: sub }}>
-            Affiliated with
+            {t("Affiliated with")}
           </span>
           <span className="block" style={{ fontSize: textPx(16), fontWeight: 800, color: dark ? "#D5EAE5" : "#32544D", overflowWrap: "anywhere" }}>
             {name}
           </span>
         </span>
-        <ChevronRight size={16} strokeWidth={2} style={{ color: sub }} aria-hidden />
+        <ChevronRight size={16} strokeWidth={2} style={{ color: sub }} className="rtl:-scale-x-100" aria-hidden />
       </span>
       <span className="block" style={{ fontSize: textPx(12), color: sub, marginTop: 8, lineHeight: 1.45 }}>
-        You can still browse and reach out to other businesses below.
+        {t("You can still browse and reach out to other businesses below.")}
       </span>
     </button>
   );
@@ -147,7 +148,7 @@ export const BusinessCard: React.FC<{
   onAsk: () => void;
 }> = ({ name, line, bio, join, onOpen, onMessage, onAsk }) => (
   <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, overflow: "hidden", marginBottom: 10 }}>
-    <button type="button" onClick={onOpen} aria-label={`Open ${name}`} className="tap block w-full" style={{ height: 84, background: `repeating-linear-gradient(45deg, ${INK.soft} 0 6px, ${INK.card} 6px 12px)` }} />
+    <button type="button" onClick={onOpen} aria-label={t("Open {name}", { name })} className="tap block w-full" style={{ height: 84, background: `repeating-linear-gradient(45deg, ${INK.soft} 0 6px, ${INK.card} 6px 12px)` }} />
     <div className="flex items-end" style={{ padding: "10px 12px 12px", gap: 10 }}>
       <button type="button" onClick={onOpen} className="tap flex-1 min-w-0 text-start">
         <span className="block" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, overflowWrap: "anywhere" }}>
@@ -162,20 +163,20 @@ export const BusinessCard: React.FC<{
       </button>
       <span className="flex shrink-0" style={{ gap: 6 }}>
         {onMessage && (
-          <button type="button" onClick={onMessage} aria-label="Message" className="tap relative inline-flex items-center justify-center before:absolute before:-inset-1.5 before:content-['']" style={{ width: 32, height: 32, borderRadius: 10, background: INK.soft }}>
+          <button type="button" onClick={onMessage} aria-label={t("Message")} className="tap relative inline-flex items-center justify-center before:absolute before:-inset-1.5 before:content-['']" style={{ width: 32, height: 32, borderRadius: 10, background: INK.soft }}>
             <MessageCircle size={14} strokeWidth={2} style={{ color: INK.chS }} aria-hidden />
           </button>
         )}
         {join === "ask" && (
           <button type="button" onClick={onAsk} className="tap relative inline-flex items-center whitespace-nowrap before:absolute before:-inset-y-1.5 before:inset-x-0 before:content-['']" style={{ gap: 5, height: 32, padding: "0 11px", borderRadius: 10, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(12), fontWeight: 700 }}>
             <UserPlus size={13} strokeWidth={2} aria-hidden />
-            Ask to join
+            {t("Ask to join")}
           </button>
         )}
         {join === "sent" && (
           <span className="inline-flex items-center whitespace-nowrap" style={{ gap: 5, height: 32, padding: "0 11px", borderRadius: 10, background: INK.goldPale, color: INK.goldInk, fontSize: textPx(12), fontWeight: 700 }}>
             <Clock size={13} strokeWidth={2} aria-hidden />
-            Request sent
+            {t("Request sent")}
           </span>
         )}
       </span>
@@ -218,8 +219,8 @@ export const AskToJoinSheet: React.FC<{
   <BottomSheet
     open={!!business}
     onClose={onClose}
-    title="Ask to join"
-    footer={<CtaButton label="Send request" icon={<Send size={15} aria-hidden />} loading={busy} onClick={() => onSend({ role: role || null, message: message.trim() })} />}
+    title={t("Ask to join")}
+    footer={<CtaButton label={t("Send request")} icon={<Send size={15} aria-hidden />} loading={busy} onClick={() => onSend({ role: role || null, message: message.trim() })} />}
   >
     {business && (
       <>
@@ -233,7 +234,7 @@ export const AskToJoinSheet: React.FC<{
           </span>
         </div>
         <div className="min-w-0">
-          <FieldLabel htmlFor={roleId}>Your role</FieldLabel>
+          <FieldLabel htmlFor={roleId}>{t("Your role")}</FieldLabel>
           <span className="relative flex items-center focus-within:!border-primary" style={{ ...wellStyle(), height: 40 }}>
             <select
               id={roleId}
@@ -242,10 +243,10 @@ export const AskToJoinSheet: React.FC<{
               className="flex-1 min-w-0 h-full bg-transparent outline-none appearance-none"
               style={{ fontSize: textPx(14), color: role ? INK.ch : INK.chF, paddingInlineEnd: 22 }}
             >
-              <option value="">Choose a role</option>
+              <option value="">{t("Choose a role")}</option>
               {(Object.keys(ROLE_LABEL) as BusinessRole[]).map((r) => (
                 <option key={r} value={r}>
-                  {ROLE_LABEL[r]}
+                  {t(ROLE_LABEL[r])}
                 </option>
               ))}
             </select>
@@ -253,9 +254,9 @@ export const AskToJoinSheet: React.FC<{
           </span>
         </div>
         <div style={{ height: 12 }} />
-        <FieldInput label="Message (optional)" value={message} onChange={setMessage} maxLength={JOIN_MESSAGE_MAX} />
+        <FieldInput label={t("Message (optional)")} value={message} onChange={setMessage} maxLength={JOIN_MESSAGE_MAX} />
         <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 8 }}>
-          The business checks your credentials before you appear on its team. Your clients and their data are never shared with the business.
+          {t("The business checks your credentials before you appear on its team. Your clients and their data are never shared with the business.")}
         </p>
         {error && (
           <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginTop: 8 }}>
@@ -280,23 +281,23 @@ export const ColleagueRow: React.FC<{ name: string; type: string; line: string |
     <span className="flex-1 min-w-0">
       <span className="flex items-center" style={{ gap: 5, fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>
         <span className="truncate">{name}</span>
-        <BadgeCheck size={13} strokeWidth={2} style={{ color: INK.good, flexShrink: 0 }} aria-label="Verified" />
+        <BadgeCheck size={13} strokeWidth={2} style={{ color: INK.good, flexShrink: 0 }} aria-label={t("Verified")} />
       </span>
       <span className="block" style={{ fontSize: textPx(12), color: INK.chF }}>{type}</span>
       {line && <span className="block" style={{ fontSize: textPx(11.5), color: INK.chS }}>{line}</span>}
     </span>
     {state === "network" ? (
       <span className="whitespace-nowrap shrink-0" style={{ fontSize: textPx(10.5), fontWeight: 700, padding: "2px 8px", borderRadius: 9999, background: INK.tealPale, color: "rgb(var(--th-3c6b65))" }}>
-        In network
+        {t("In network")}
       </span>
     ) : state === "pending" ? (
       <span className="whitespace-nowrap shrink-0" style={{ fontSize: textPx(10.5), fontWeight: 700, padding: "2px 8px", borderRadius: 9999, background: INK.goldPale, color: INK.goldInk }}>
-        Requested
+        {t("Requested")}
       </span>
     ) : (
       <button type="button" onClick={onAdd} disabled={busy} className="tap relative inline-flex items-center whitespace-nowrap shrink-0 disabled:opacity-50 before:absolute before:-inset-y-1.5 before:inset-x-0 before:content-['']" style={{ gap: 4, height: 32, padding: "0 10px", borderRadius: 10, background: INK.prPale, color: INK.prDeep, fontSize: textPx(12), fontWeight: 700 }}>
         <UserPlus size={13} strokeWidth={2} aria-hidden />
-        Add
+        {t("Add")}
       </button>
     )}
   </div>

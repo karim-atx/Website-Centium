@@ -37,6 +37,7 @@ import {
   typeText,
   type OpportunityExtras,
 } from "./opportunities/opportunitiesModel";
+import { t, tn, tx, isRtl } from "../../../i18n/core";
 
 // Market + Share 3.0 · W4 · P-MA.5.1 Openings, the body of the P-MA
 // "Opportunities" tab (HANDOVER §4 "P-MA.5.1 Opportunities"; Professional
@@ -98,7 +99,7 @@ export function OpportunitiesTab() {
   const [applied, setApplied] = useState<ReadonlySet<string>>(new Set());
   const [strip, showStrip] = useActionStrip();
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const retry = useCallback(() => setTick((t) => t + 1), []);
+  const retry = useCallback(() => setTick((n) => n + 1), []);
   const selectedKey = filter.selected.join("|");
 
   const loadKey = `${tab}|${selectedKey}|${tick}`;
@@ -164,7 +165,7 @@ export function OpportunitiesTab() {
   // re-reads my_team_invites.
   const { authUserId } = useApp();
   useInboxRealtime(authUserId, "pro-opportunities", INVITE_KINDS, (changes, resync) => {
-    if (resync || changes.some((c) => c.type === "INSERT")) setInviteTick((t) => t + 1);
+    if (resync || changes.some((c) => c.type === "INSERT")) setInviteTick((n) => n + 1);
   });
 
   const onTabKey = (e: React.KeyboardEvent, i: number) => {
@@ -182,8 +183,8 @@ export function OpportunitiesTab() {
 
   const twoButtons = (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5, padding: 6, borderRadius: 16, background: m.segtrack }}>
-      <button type="button" onClick={() => navigate(`${HOME}/opportunities/applications`)} className="market-focus" style={segBtn(m)} aria-label={offers ? `My applications, ${offers} ${offers === 1 ? "offer" : "offers"} waiting` : undefined}>
-        My applications
+      <button type="button" onClick={() => navigate(`${HOME}/opportunities/applications`)} className="market-focus" style={segBtn(m)} aria-label={offers ? tn(offers, "My applications, {n} offer waiting", "My applications, {n} offers waiting") : undefined}>
+        {t("My applications")}
         {offers > 0 ? (
           <span aria-hidden style={{ minWidth: 18, height: 18, borderRadius: 999, background: badgeBg, color: badgeInk, fontSize: px(10), fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px", boxSizing: "border-box" }}>
             {offers}
@@ -191,7 +192,7 @@ export function OpportunitiesTab() {
         ) : null}
       </button>
       <button type="button" onClick={() => navigate(`${HOME}/opportunities/work`)} className="market-focus" style={segBtn(m)}>
-        My work
+        {t("My work")}
       </button>
     </div>
   );
@@ -208,16 +209,16 @@ export function OpportunitiesTab() {
       ) : null}
       {twoButtons}
       {state.status === "pending" ? (
-        <OpEmpty icon="briefcase" title="Openings from gyms are coming soon" body="Gyms will post roles and class slots here. Until then, find gyms and colleagues in Explore." cta="Gyms and colleagues" onCta={() => navigate("/app/marketplace")} />
+        <OpEmpty icon="briefcase" title={t("Openings from gyms are coming soon")} body={t("Gyms will post roles and class slots here. Until then, find gyms and colleagues in Explore.")} cta={t("Gyms and colleagues")} onCta={() => navigate("/app/marketplace")} />
       ) : (
         <>
           <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
-            <div role="tablist" aria-label="Openings" style={{ flex: 1, display: "flex", gap: 4, padding: 4, borderRadius: 12, background: m.subtrack }}>
-              {(["gyms", "classes"] as const).map((t, i) => {
-                const on = t === tab;
+            <div role="tablist" aria-label={t("Openings")} style={{ flex: 1, display: "flex", gap: 4, padding: 4, borderRadius: 12, background: m.subtrack }}>
+              {(["gyms", "classes"] as const).map((tb, i) => {
+                const on = tb === tab;
                 return (
                   <button
-                    key={t}
+                    key={tb}
                     ref={(el) => {
                       tabRefs.current[i] = el;
                     }}
@@ -225,25 +226,25 @@ export function OpportunitiesTab() {
                     role="tab"
                     aria-selected={on}
                     tabIndex={on ? 0 : -1}
-                    onClick={() => setTab(t)}
+                    onClick={() => setTab(tb)}
                     onKeyDown={(e) => onTabKey(e, i)}
                     className="hit market-focus"
                     style={{ flex: 1, height: 32, borderRadius: 9, border: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: px(12.5), fontWeight: on ? 700 : 600, background: on ? m.subactive : "transparent", color: on ? m.onfill : m.subink, fontFamily: "inherit", cursor: "pointer", padding: 0 }}
                   >
-                    {t === "gyms" ? "Gyms" : "Classes"}
+                    {tb === "gyms" ? t("Gyms") : t("Classes")}
                   </button>
                 );
               })}
             </div>
-            <FilterTrigger ref={setAnchor} active={filter.active} open={filter.open} onPress={filter.toggleFilter} label="Filter openings" variant="pro" />
+            <FilterTrigger ref={setAnchor} active={filter.active} open={filter.open} onPress={filter.toggleFilter} label={t("Filter openings")} variant="pro" />
           </div>
           {filter.active ? <FilterSummary summary={filter.summary} onShowAll={filter.clearFilter} style={{ marginTop: 10 }} /> : null}
           <FilterPopup open={filter.open} anchor={anchor} groups={OP_FILTER_GROUPS} selected={filter.selected} onToggle={filter.toggleOption} onClose={filter.closeFilter} variant="pro" />
           <MarketOffline loaded={state.status === "ok"} onRetry={retry} style={{ marginTop: 12 }} />
           {state.status === "loading" ? (
-            <MarketSkeleton radius={tab === "gyms" ? 20 : 18} rows={3} count={3} height={tab === "gyms" ? 252 : 112} gap={tab === "gyms" ? 10 : 14} label="Loading openings" style={{ marginTop: 22 }} />
+            <MarketSkeleton radius={tab === "gyms" ? 20 : 18} rows={3} count={3} height={tab === "gyms" ? 252 : 112} gap={tab === "gyms" ? 10 : 14} label={t("Loading openings")} style={{ marginTop: 22 }} />
           ) : state.status === "error" ? (
-            <MarketError thing="openings" onRetry={retry} style={{ marginTop: 12 }} />
+            <MarketError thing={t("openings")} onRetry={retry} style={{ marginTop: 12 }} />
           ) : (
             <>
               <div role="status" style={{ marginTop: 12, fontSize: px(11.5), color: m.faint }}>
@@ -252,9 +253,9 @@ export function OpportunitiesTab() {
               {list.length === 0 ? (
                 <OpEmpty
                   icon="search"
-                  title="No openings match"
-                  body="Try fewer filters or check back later. Gyms near you post new roles and class slots here."
-                  cta={filter.active ? "Clear filters" : undefined}
+                  title={t("No openings match")}
+                  body={t("Try fewer filters or check back later. Gyms near you post new roles and class slots here.")}
+                  cta={filter.active ? t("Clear filters") : undefined}
                   onCta={filter.active ? filter.clearFilter : undefined}
                 />
               ) : tab === "gyms" ? (
@@ -271,7 +272,7 @@ export function OpportunitiesTab() {
                 </div>
               )}
               <div style={{ marginTop: 20, display: "flex", justifyContent: "center" }}>
-                <TextLink onClick={() => navigate("/app/marketplace")}>Gyms and colleagues</TextLink>
+                <TextLink onClick={() => navigate("/app/marketplace")}>{t("Gyms and colleagues")}</TextLink>
               </div>
             </>
           )}
@@ -283,7 +284,7 @@ export function OpportunitiesTab() {
         onSent={(o) => {
           setApplyTo(null);
           markApplied(o);
-          showStrip(o.businessName ? `Application sent · ${o.businessName}` : "Application sent");
+          showStrip(o.businessName ? t("Application sent · {name}", { name: o.businessName }) : t("Application sent"));
         }}
         onAlreadyApplied={markApplied}
       />
@@ -296,7 +297,7 @@ export function OpportunitiesTab() {
             setInvite(null);
             setWaiting((w) => w.filter((x) => x.invite.id !== inv.id));
             if (nid) void markMemberRead([nid]);
-            showStrip(inv.businessName ? `You joined ${inv.businessName}'s team` : "You joined the team");
+            showStrip(inv.businessName ? t("You joined {business}'s team", { business: inv.businessName }) : t("You joined the team"));
           }}
         />
       ) : null}
@@ -335,10 +336,10 @@ function InviteRow({ invite, onOpen }: { invite: ExistingTeamInvite; onOpen: () 
       style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: 44, borderRadius: 16, background: m.pale, padding: "12px 14px", border: 0, textAlign: "start", font: "inherit", color: m.pdark, cursor: "pointer" }}
     >
       <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: "block", fontSize: px(12.5), lineHeight: lh(18), fontWeight: 700 }}>{`Join ${invite.businessName || "a gym"}'s team?`}</span>
-        {by ? <span style={{ display: "block", fontSize: px(11.5), lineHeight: lh(16), fontWeight: 600 }}>{`Accept by ${longDate(by)} · free`}</span> : null}
+        <span style={{ display: "block", fontSize: px(12.5), lineHeight: lh(18), fontWeight: 700 }}>{invite.businessName ? t("Join {business}'s team?", { business: invite.businessName }) : t("Join a gym's team?")}</span>
+        {by ? <span style={{ display: "block", fontSize: px(11.5), lineHeight: lh(16), fontWeight: 600 }}>{t("Accept by {date} · free", { date: longDate(by) })}</span> : null}
       </span>
-      <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ flexShrink: 0, ...NO_ICON_SCALE }} />
+      <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ flexShrink: 0, ...(isRtl() ? { transform: "scaleX(-1)" } : NO_ICON_SCALE) }} />
     </button>
   );
 }
@@ -348,8 +349,8 @@ function GymCard({ o, applied, onApply }: { o: Opportunity; applied: boolean; on
   const press = usePress();
   const rd = ratingDistance(o);
   const schedule = scheduleLine(o);
-  const rows: [string, string][] = [["Type", typeText(o.type)], ["Pay", payLine(o)]];
-  if (schedule) rows.push(["Schedule", schedule]);
+  const rows: [string, string][] = [[t("Type"), typeText(o.type)], [t("Pay"), payLine(o)]];
+  if (schedule) rows.push([t("Schedule"), schedule]);
   return (
     <article aria-label={`${o.title}, ${o.businessName}`} style={{ borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, overflow: "hidden" }}>
       <div style={{ padding: "14px 16px 12px", display: "flex", gap: 12, alignItems: "center" }}>
@@ -367,7 +368,7 @@ function GymCard({ o, applied, onApply }: { o: Opportunity; applied: boolean; on
                 </svg>
               ) : null}
               <span>
-                {rd.rating ? <span aria-label={`Rated ${rd.rating}`}>{rd.rating}</span> : null}
+                {rd.rating ? <span aria-label={t("Rated {rating}", { rating: rd.rating })}>{rd.rating}</span> : null}
                 {rd.rating && rd.distance ? " · " : null}
                 {rd.distance}
               </span>
@@ -389,12 +390,12 @@ function GymCard({ o, applied, onApply }: { o: Opportunity; applied: boolean; on
           type="button"
           onClick={applied ? undefined : onApply}
           aria-disabled={applied || undefined}
-          aria-label={applied ? `Applied to ${o.title}` : `Apply to ${o.title} at ${o.businessName}`}
+          aria-label={applied ? t("Applied to {title}", { title: o.title }) : t("Apply to {title} at {gym}", { title: o.title, gym: o.businessName })}
           className="hit market-focus"
           {...(applied ? {} : press.handlers)}
           style={{ height: 36, padding: "0 16px", borderRadius: 11, border: 0, background: m.fill, color: m.onfill, display: "flex", alignItems: "center", fontSize: px(13), fontWeight: 800, fontFamily: "inherit", cursor: applied ? "default" : "pointer", flexShrink: 0, ...(applied ? {} : press.style) }}
         >
-          {applied ? "Applied" : "Apply"}
+          {applied ? tx("Applied", "application") : tx("Apply", "job")}
         </button>
       </div>
     </article>
@@ -403,19 +404,19 @@ function GymCard({ o, applied, onApply }: { o: Opportunity; applied: boolean; on
 
 function ClassTicket({ o, applied, onApply }: { o: Opportunity; applied: boolean; onApply: () => void }) {
   const m = useMarketColors();
-  const t = classTicket(o as Opportunity & OpportunityExtras);
+  const ct = classTicket(o as Opportunity & OpportunityExtras);
   return (
     <TicketStub
       stubWidth={72}
       tone="pale"
       minHeight={88}
       onPress={applied ? undefined : onApply}
-      ariaLabel={applied ? `${o.title}, ${t.place}. Applied` : `${o.title}, ${t.place}. Apply`}
+      ariaLabel={applied ? t("{title}, {place}. Applied", { title: o.title, place: ct.place }) : t("{title}, {place}. Apply", { title: o.title, place: ct.place })}
       className="market-focus"
       stub={
         <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, color: m.pdark }}>
-          <span style={{ fontSize: px(18), fontWeight: 800 }}>{t.pay ?? "–"}</span>
-          <span style={{ fontSize: px(10), fontWeight: 700 }}>{applied ? "applied" : "pay"}</span>
+          <span style={{ fontSize: px(18), fontWeight: 800 }}>{ct.pay ?? "–"}</span>
+          <span style={{ fontSize: px(10), fontWeight: 700 }}>{applied ? t("applied") : t("pay")}</span>
         </span>
       }
       bodyStyle={{ padding: 16, display: "flex", flexDirection: "column", gap: 10, boxSizing: "border-box" }}
@@ -423,22 +424,22 @@ function ClassTicket({ o, applied, onApply }: { o: Opportunity; applied: boolean
       <span style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
         <span style={{ width: 64, flexShrink: 0 }}>
           <span style={{ display: "block", fontSize: px(16), lineHeight: lh(22), fontWeight: 700, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
-            {t.time ? (
+            {ct.time ? (
               <>
-                {t.time.time}
-                <span style={{ fontSize: px(11), lineHeight: 1, fontWeight: 700 }}>{` ${t.time.meridiem}`}</span>
+                {ct.time.time}
+                <span style={{ fontSize: px(11), lineHeight: 1, fontWeight: 700 }}>{` ${ct.time.meridiem}`}</span>
               </>
             ) : null}
           </span>
-          {t.dur ? <span style={{ display: "block", fontSize: px(12), lineHeight: lh(16), color: m.faint }}>{t.dur}</span> : null}
+          {ct.dur ? <span style={{ display: "block", fontSize: px(12), lineHeight: lh(16), color: m.faint }}>{ct.dur}</span> : null}
         </span>
         <span style={{ flex: 1, minWidth: 0 }}>
-          {t.eyebrow ? <span style={{ display: "block", fontSize: px(11), fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: m.faint }}>{t.eyebrow}</span> : null}
-          <span style={{ display: "block", fontSize: px(15), lineHeight: lh(21), fontWeight: 700 }}>{t.title}</span>
-          <span style={{ display: "block", fontSize: px(12.5), lineHeight: lh(17), fontWeight: 500, color: m.ink2 }}>{t.place}</span>
+          {ct.eyebrow ? <span style={{ display: "block", fontSize: px(11), fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: m.faint }}>{ct.eyebrow}</span> : null}
+          <span style={{ display: "block", fontSize: px(15), lineHeight: lh(21), fontWeight: 700 }}>{ct.title}</span>
+          <span style={{ display: "block", fontSize: px(12.5), lineHeight: lh(17), fontWeight: 500, color: m.ink2 }}>{ct.place}</span>
         </span>
       </span>
-      <span style={{ display: "block", fontSize: px(11), lineHeight: lh(15), color: m.faint }}>{t.spots}</span>
+      <span style={{ display: "block", fontSize: px(11), lineHeight: lh(15), color: m.faint }}>{ct.spots}</span>
     </TicketStub>
   );
 }

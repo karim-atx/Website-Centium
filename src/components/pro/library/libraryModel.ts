@@ -8,7 +8,7 @@
 
 import type { Exercise, LoggedExercise, WorkoutSession, WorkoutTemplate, WorkoutTemplateAssignment } from "../../../types";
 import { signedNum } from "../proRules";
-import { tn } from "../../../i18n/core";
+import { t, tn } from "../../../i18n/core";
 
 const DAY = 86400000;
 const toDate = (iso: string) => new Date(`${iso}T00:00:00`);
@@ -66,8 +66,8 @@ export function currentWeek(
 /** TR1 assigned row: "Week {n} of {n} · {n}% done"; parts drop out when unknown. */
 export function assignedLine(week: { n: number; of: number | null } | null, pct: number | null | undefined): string | null {
   const parts: string[] = [];
-  if (week) parts.push(week.of ? `Week ${week.n} of ${week.of}` : `Week ${week.n}`);
-  if (typeof pct === "number") parts.push(`${pct}% done`);
+  if (week) parts.push(week.of ? t("Week {n} of {of}", { n: week.n, of: week.of }) : t("Week {n}", { n: week.n }));
+  if (typeof pct === "number") parts.push(t("{pct}% done", { pct }));
   return parts.length ? parts.join(" · ") : null;
 }
 
@@ -99,7 +99,7 @@ export function weekCell(planned: number | null, completed: number | null, futur
 
 /** "John Doe 82.5 kg · Jane Smith 40 kg": clients with a computed weight only. */
 export function targetsSummary(rows: { name: string; kg: number | null }[]): string | null {
-  const parts = rows.filter((r) => r.kg != null).map((r) => `${r.name} ${fmtKg(r.kg!)} kg`);
+  const parts = rows.filter((r) => r.kg != null).map((r) => t("{name} {kg} kg", { name: r.name, kg: fmtKg(r.kg!) }));
   return parts.length ? parts.join(" · ") : null;
 }
 
@@ -175,7 +175,7 @@ export interface LogRow {
 
 const doneSets = (ex: LoggedExercise) => ex.sets.filter((s) => (s.outcome ?? (s.completed ? "completed" : "skipped")) !== "skipped");
 
-const kgText = (kg: number | null | undefined) => (kg == null ? null : kg === 0 ? null : `${fmtKg(kg)} kg`);
+const kgText = (kg: number | null | undefined) => (kg == null ? null : kg === 0 ? null : t("{n} kg", { n: fmtKg(kg) }));
 
 /** "Target 4 × 6 at 82.5 kg" (sets × reps, then the prescribed weight when there is one). */
 export function targetText(ex: Exercise): string | null {
@@ -183,7 +183,7 @@ export function targetText(ex: Exercise): string | null {
   const reps = ex.reps ?? ex.maxReps ?? ex.minReps;
   if (!sets && !reps) return null;
   const w = kgText(ex.weightKg);
-  return `Target ${sets ?? "?"} × ${reps ?? "?"}${w ? ` at ${w}` : ""}`;
+  return w ? t("Target {sets} × {reps} at {weight}", { sets: sets ?? "?", reps: reps ?? "?", weight: w }) : t("Target {sets} × {reps}", { sets: sets ?? "?", reps: reps ?? "?" });
 }
 
 /** "logged 3 × 8 at 28 kg": sets done × the most common reps, at the heaviest weight. */
@@ -192,7 +192,7 @@ export function loggedText(ex: LoggedExercise): string | null {
   if (sets.length === 0) return null;
   const reps = Math.max(...sets.map((s) => s.reps ?? 0));
   const top = Math.max(...sets.map((s) => s.weightKg ?? 0));
-  return `logged ${sets.length} × ${reps}${top > 0 ? ` at ${fmtKg(top)} kg` : ""}`;
+  return top > 0 ? t("logged {sets} × {reps} at {kg} kg", { sets: sets.length, reps, kg: fmtKg(top) }) : t("logged {sets} × {reps}", { sets: sets.length, reps });
 }
 
 /**
@@ -277,7 +277,7 @@ export function topLift(sessions: Pick<WorkoutSession, "startedAt" | "exercises"
 }
 
 /** "+10 kg" / "−2.5 kg" / "0 kg" (COPY 6.3: true minus sign). */
-export const deltaKg = (l: TopLift) => `${signedNum(Math.round((l.lastKg - l.firstKg) * 10) / 10, fmtKg)} kg`;
+export const deltaKg = (l: TopLift) => t("{n} kg", { n: signedNum(Math.round((l.lastKg - l.firstKg) * 10) / 10, fmtKg) });
 
 /** True while a Library › Programmes sub-screen is open (?view=…); the Library page may hide its title and tabs then. */
 export const programmesDetailOpen = (params: URLSearchParams) => !!params.get("view");

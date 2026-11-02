@@ -13,6 +13,7 @@ import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { OfflineLine, ProCardSkeleton, ProError } from "../states";
 import { DetailHeader, ErrorLine } from "./libraryUi";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 TR6 "Edit one client's copy or the template".
@@ -81,7 +82,7 @@ export const ClientCopyView: React.FC<{
   const pro: RoutineSheetPro = {
     title: copy?.name ?? template.name,
     initial,
-    submitLabel: "Save routine",
+    submitLabel: t("Save routine"),
     onSubmit: async (d) => {
       setDraft(d);
       return undefined;
@@ -118,12 +119,12 @@ export const ClientCopyView: React.FC<{
   return (
     <div>
       <DetailHeader title={copy?.name ?? template.name} eyebrow={name} onBack={onBack} />
-      <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 12 }}>{`${name} follows their own copy of this programme.`}</p>
-      {error && <ErrorLine>{error}</ErrorLine>}
+      <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 12 }}>{t("{name} follows their own copy of this programme.", { name })}</p>
+      {error && <ErrorLine>{t(error)}</ErrorLine>}
       {state === "offline" && <OfflineLine />}
       {state === "loading" && <ProCardSkeleton lines={4} />}
       {state === "error" && <ProError onRetry={() => setReload((n) => n + 1)} />}
-      {state === "none" && <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{`${first} has deleted their copy. Assigning again gives them a fresh one.`}</p>}
+      {state === "none" && <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{t("{first} has deleted their copy. Assigning again gives them a fresh one.", { first })}</p>}
       {copy && (state === "ok" || state === "offline") && (
         <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, padding: "14px 16px", marginBottom: 12 }}>
           {runs.map((run) =>
@@ -145,12 +146,12 @@ export const ClientCopyView: React.FC<{
       )}
       {copy && editable && (
         <Button fullWidth size="lg" onClick={() => setEditing(true)}>
-          <Pencil size={15} /> {`Edit ${first}'s copy`}
+          <Pencil size={15} /> {t("Edit {first}'s copy", { first })}
         </Button>
       )}
       {(state !== "loading" && (!editable || !copy)) && (
         <Button fullWidth size="lg" variant="outline" onClick={onEditTemplate}>
-          <Pencil size={15} /> Edit the template
+          <Pencil size={15} /> {t("Edit the template")}
         </Button>
       )}
 
@@ -160,18 +161,29 @@ export const ClientCopyView: React.FC<{
         open={!!draft}
         onClose={() => setDraft(null)}
         icon={<GitBranch size={22} />}
-        title="Where should this change go?"
-        body={`${changed.length ? `You changed ${changed.slice(0, 2).join(" and ")}${changed.length > 2 ? " and more" : ""}. ` : ""}${name} follows their own copy of this programme.`}
+        title={t("Where should this change go?")}
+        body={[
+          changed.length > 2
+            ? t("You changed {a}, {b} and more.", { a: changed[0], b: changed[1] })
+            : changed.length === 2
+              ? t("You changed {a} and {b}.", { a: changed[0], b: changed[1] })
+              : changed.length === 1
+                ? t("You changed {a}.", { a: changed[0] })
+                : null,
+          t("{name} follows their own copy of this programme.", { name }),
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
         <div className="flex flex-col" style={{ gap: 8 }}>
           <Button fullWidth size="lg" disabled={saving} onClick={() => void onlyTheirs()}>
-            {`Only ${first}'s copy`}
+            {t("Only {first}'s copy", { first })}
           </Button>
           <Button fullWidth size="lg" variant="secondary" disabled={saving} onClick={() => void toTemplate()}>
-            Update the template
+            {t("Update the template")}
           </Button>
           <p className="text-center" style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5 }}>
-            Updating the template changes it for new clients. Existing copies stay as they are.
+            {t("Updating the template changes it for new clients. Existing copies stay as they are.")}
           </p>
         </div>
       </CentredPopup>

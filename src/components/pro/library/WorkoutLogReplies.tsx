@@ -5,6 +5,7 @@ import { CtaButton, PinnedCta } from "../../ui/PinnedCta";
 import { INK } from "../proInk";
 import { ProCardSkeleton } from "../states";
 import { notifWhen } from "../../../services/notifications/notificationsModel";
+import { t, tx } from "../../../i18n/core";
 import { REPLY_MAX, replyProblem, type ReviewState, type WorkoutLogReply } from "../../../services/workout/logReplyLogic";
 import {
   deleteWorkoutLogReply,
@@ -124,9 +125,9 @@ export const WorkoutLogReplies: React.FC<{ sessionId: string; clientFirstName: s
   if (state === "error")
     return (
       <p style={{ marginTop: 16, fontSize: textPx(12.5), color: INK.chF }}>
-        {"Couldn't load your replies. "}
+        {t("Couldn't load your replies.")}{" "}
         <button type="button" onClick={() => setReload((n) => n + 1)} className="tap" style={{ fontWeight: 700, color: INK.prDeep }}>
-          Try again
+          {t("Try again")}
         </button>
       </p>
     );
@@ -142,17 +143,17 @@ export const WorkoutLogReplies: React.FC<{ sessionId: string; clientFirstName: s
           {replies.map((r) => (
             <div key={r.id} style={{ background: INK.prPale, borderRadius: 16, padding: "10px 14px" }}>
               <div className="flex items-center justify-between" style={{ gap: 8 }}>
-                <span style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.prDeep }}>{`You · ${notifWhen(r.createdAt)}`}</span>
+                <span style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.prDeep }}>{t("You · {when}", { when: notifWhen(r.createdAt) })}</span>
                 <button
                   type="button"
                   onClick={() => void remove(r.id)}
                   disabled={busy === r.id}
                   className="tap inline-flex items-center disabled:opacity-40"
                   style={{ gap: 4, minHeight: 32, fontSize: textPx(12), fontWeight: 600, color: confirmDelete === r.id ? INK.hi : INK.chS }}
-                  aria-label={confirmDelete === r.id ? "Tap again to delete this reply" : "Delete this reply"}
+                  aria-label={confirmDelete === r.id ? t("Tap again to delete this reply") : t("Delete this reply")}
                 >
                   <Trash2 size={13} aria-hidden />
-                  {confirmDelete === r.id ? "Tap again to delete" : "Delete"}
+                  {confirmDelete === r.id ? t("Tap again to delete") : t("Delete")}
                 </button>
               </div>
               <p className="whitespace-pre-wrap break-words" style={{ marginTop: 2, fontSize: textPx(13.5), color: INK.ch }}>{r.body}</p>
@@ -162,7 +163,7 @@ export const WorkoutLogReplies: React.FC<{ sessionId: string; clientFirstName: s
       )}
 
       <label className="block">
-        <span className="block" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch, marginBottom: 6 }}>{`Reply to ${clientFirstName || "your client"}`}</span>
+        <span className="block" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch, marginBottom: 6 }}>{clientFirstName ? t("Reply to {name}", { name: clientFirstName }) : t("Reply to your client")}</span>
         <textarea
           value={draft}
           onChange={(e) => {
@@ -170,27 +171,27 @@ export const WorkoutLogReplies: React.FC<{ sessionId: string; clientFirstName: s
             if (problem) setProblem(null);
           }}
           rows={3}
-          placeholder="Say what went well, or what to change next time."
+          placeholder={t("Say what went well, or what to change next time.")}
           className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
         />
       </label>
       <div className="flex items-center justify-between" style={{ gap: 12, marginTop: 6 }}>
         <span className="tabular-nums" style={{ fontSize: textPx(11.5), color: left < 0 ? INK.hi : INK.chF }}>
-          {left < 0 ? `${-left} over the limit` : `${left} left`}
+          {left < 0 ? t("{n} over the limit", { n: -left }) : t("{n} left", { n: left })}
         </span>
         <div style={{ width: 128 }}>
-          <CtaButton label="Send" icon={<Send size={15} />} variant="secondary" onClick={() => void send()} loading={busy === "send"} disabled={!draft.trim() || left < 0} />
+          <CtaButton label={t("Send")} icon={<Send size={15} />} variant="secondary" onClick={() => void send()} loading={busy === "send"} disabled={!draft.trim() || left < 0} />
         </div>
       </div>
       {problem && (
         <p role="alert" style={{ marginTop: 8, fontSize: textPx(12), fontWeight: 600, color: INK.hi }}>
-          {problem}
+          {t(problem)}
         </p>
       )}
 
       {reviewed && (
         <p className="flex items-center mt-4" style={{ gap: 6, fontSize: textPx(12.5), fontWeight: 700, color: INK.good }}>
-          <Check size={14} aria-hidden /> Reviewed
+          <Check size={14} aria-hidden /> {tx("Reviewed", "log review")}
           <button
             type="button"
             onClick={() => void setReviewed(false)}
@@ -198,12 +199,12 @@ export const WorkoutLogReplies: React.FC<{ sessionId: string; clientFirstName: s
             className="tap disabled:opacity-40"
             style={{ marginInlineStart: 8, minHeight: 32, fontWeight: 600, color: INK.chS }}
           >
-            Undo
+            {t("Undo")}
           </button>
         </p>
       )}
       {!reviewed && (
-        <PinnedCta primary={{ label: "Mark as reviewed", icon: <Check size={15} />, onClick: () => void setReviewed(true), loading: busy === "review" }} />
+        <PinnedCta primary={{ label: t("Mark as reviewed"), icon: <Check size={15} />, onClick: () => void setReviewed(true), loading: busy === "review" }} />
       )}
     </div>
   );

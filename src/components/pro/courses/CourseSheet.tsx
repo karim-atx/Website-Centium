@@ -25,7 +25,8 @@ import {
 } from "../../../services/courses/author";
 import type { CourseCategory } from "../../../services/courses";
 import type { LessonKind } from "../../../services/courses/rules";
-import { audienceLabel, AUDIENCE_LIMITS } from "../../../services/courses/authorRules";
+import { AUDIENCE_LIMITS } from "../../../services/courses/authorRules";
+import { t, tn } from "../../../i18n/core";
 import {
   coverUrl,
   fetchAudienceMembers,
@@ -49,7 +50,7 @@ import { INK } from "../proInk";
 import { ListCard } from "../client/kit";
 import { ProCardSkeleton } from "../states";
 import { FieldError, Note, StepBar } from "./courseUi";
-import { STEPS, dripMatches, dripPlan, parsePrice, titleError, sizeLine } from "./courseModel";
+import { STEPS, audienceText, dripMatches, dripPlan, parsePrice, titleError, sizeLine } from "./courseModel";
 import { DangerCta } from "./StructureStep";
 import { BasicsStep, type BasicsDraft } from "./BasicsStep";
 import { StructureStep } from "./StructureStep";
@@ -186,7 +187,7 @@ export function CourseSheet({
     if (!courseId) return;
     const c = await fetchMyCourse(courseId);
     if (!c.ok || !c.value) {
-      setLoadError(c.ok ? "That course no longer exists." : c.message);
+      setLoadError(c.ok ? t("That course no longer exists.") : c.message);
       return;
     }
     const rev = await fetchMyRevision(courseId);
@@ -284,7 +285,7 @@ export function CourseSheet({
     const r = await fn();
     setBusy(false);
     if (!r.ok) {
-      setError(r.message ?? "Something went wrong. Try again.");
+      setError(r.message ?? t("Something went wrong. Try again."));
       return false;
     }
     onChanged();
@@ -356,7 +357,7 @@ export function CourseSheet({
       const c = await sendCover(created.value);
       if (!c.ok) problems.push(c.message);
       setBusy(false);
-      if (problems.length) setError(problems.join(" "));
+      if (problems.length) setError(problems.map((p) => t(p)).join(" "));
       onChanged();
       if (then === "draft") onSavedDraft?.();
       else onCreated?.(created.value);
@@ -390,7 +391,7 @@ export function CourseSheet({
     const members = access.members.filter((id) => current.has(id));
     const audienceChanged = access.audience !== data.extras.audience || (access.audience === "selected" && !sameSet(members, data.members));
     if (access.audience === "selected" && (members.length < AUDIENCE_LIMITS.min || members.length > AUDIENCE_LIMITS.max)) {
-      setError(`Choose between ${AUDIENCE_LIMITS.min} and ${AUDIENCE_LIMITS.max} clients.`);
+      setError(t("Choose between {min} and {max} clients.", { min: AUDIENCE_LIMITS.min, max: AUDIENCE_LIMITS.max }));
       return;
     }
     const saveAudience = async () => (audienceChanged ? setCourseAudience(courseId!, access.audience, members) : { ok: true as const });
@@ -401,7 +402,7 @@ export function CourseSheet({
     }
     const cents = access.free ? 0 : parsePrice(access.price) ?? -1;
     if (!access.free && !(cents > 0 && cents <= 50_000)) {
-      setError("Set a price between $1 and $500.");
+      setError(t("Set a price between $1 and $500."));
       return;
     }
     const plan = dripPlan(data.modules.map((m) => m.id), access.mode);
@@ -447,7 +448,7 @@ export function CourseSheet({
     else onClose();
   };
 
-  const title = published ? "Edit course" : "Create course";
+  const title = published ? t("Edit course") : t("Create course");
   const stepIndex = typeof view.step === "number" ? view.step : null;
   const footer = <div ref={setFooterEl} className="flex w-full" style={{ gap: 8 }} />;
   const toFooter = (node: React.ReactNode) => (footerEl ? createPortal(node, footerEl) : null);
@@ -455,9 +456,9 @@ export function CourseSheet({
   let body: React.ReactNode;
   if (courseId && !data) {
     body = loadError ? (
-      <FieldError>{loadError}</FieldError>
+      <FieldError>{t(loadError)}</FieldError>
     ) : (
-      <div role="status" aria-label="Loading" className="flex flex-col" style={{ gap: 10 }}>
+      <div role="status" aria-label={t("Loading")} className="flex flex-col" style={{ gap: 10 }}>
         <ProCardSkeleton lines={2} height={120} />
         <ProCardSkeleton lines={3} height={160} />
       </div>
@@ -499,8 +500,8 @@ export function CourseSheet({
         }}
         footer={toFooter(
           <>
-            <CtaButton variant="secondary" label={published ? "Back" : "Cancel"} onClick={() => (published ? setView({ step: "overview" }) : close())} disabled={busy} />
-            <CtaButton label="Next" icon={<ArrowRight size={15} strokeWidth={2} aria-hidden />} loading={busy} onClick={() => void saveBasics("next")} />
+            <CtaButton variant="secondary" label={published ? t("Back") : t("Cancel")} onClick={() => (published ? setView({ step: "overview" }) : close())} disabled={busy} />
+            <CtaButton label={t("Next")} icon={<ArrowRight size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />} loading={busy} onClick={() => void saveBasics("next")} />
           </>
         )}
       />
@@ -521,8 +522,8 @@ export function CourseSheet({
         onAddWeek={(t) => run(() => addModule(courseId!, t, editingRev))}
         footer={toFooter(
           <>
-            <CtaButton variant="secondary" label="Back" onClick={() => setView(published ? { step: "overview" } : { step: 0 })} disabled={busy} />
-            <CtaButton label="Next" icon={<ArrowRight size={15} strokeWidth={2} aria-hidden />} onClick={() => setView(published ? { step: "overview" } : { step: 3 })} disabled={busy} />
+            <CtaButton variant="secondary" label={t("Back")} onClick={() => setView(published ? { step: "overview" } : { step: 0 })} disabled={busy} />
+            <CtaButton label={t("Next")} icon={<ArrowRight size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />} onClick={() => setView(published ? { step: "overview" } : { step: 3 })} disabled={busy} />
           </>
         )}
       />
@@ -531,15 +532,15 @@ export function CourseSheet({
     const week = data.modules.findIndex((m) => m.id === view.moduleId);
     body = (
       <LessonTypeStep
-        weekLabel={week >= 0 ? `Week ${week + 1} · ${data.modules[week].title}` : ""}
+        weekLabel={week >= 0 ? t("Week {n} · {title}", { n: week + 1, title: data.modules[week].title }) : ""}
         kind={view.kind}
         onPick={(k) => setView({ ...view, kind: k })}
         footer={toFooter(
           <>
-            <CtaButton variant="secondary" label="Back" onClick={() => setView({ step: 1 })} />
+            <CtaButton variant="secondary" label={t("Back")} onClick={() => setView({ step: 1 })} />
             <CtaButton
-              label="Next"
-              icon={<ArrowRight size={15} strokeWidth={2} aria-hidden />}
+              label={t("Next")}
+              icon={<ArrowRight size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />}
               disabled={!view.kind}
               onClick={() => view.kind && setView({ step: 2, sub: "edit", moduleId: view.moduleId, kind: view.kind, lessonId: null })}
             />
@@ -580,8 +581,8 @@ export function CourseSheet({
         audienceEditable
         footer={toFooter(
           <>
-            <CtaButton variant="secondary" label="Back" onClick={() => setView(published ? { step: "overview" } : { step: 1 })} disabled={busy} />
-            <CtaButton label="Next" icon={<ArrowRight size={15} strokeWidth={2} aria-hidden />} loading={busy} onClick={() => void saveAccess()} />
+            <CtaButton variant="secondary" label={t("Back")} onClick={() => setView(published ? { step: "overview" } : { step: 1 })} disabled={busy} />
+            <CtaButton label={t("Next")} icon={<ArrowRight size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />} loading={busy} onClick={() => void saveAccess()} />
           </>
         )}
       />
@@ -600,8 +601,8 @@ export function CourseSheet({
         footer={toFooter(
           editable ? (
             <>
-              <CtaButton variant="secondary" label="Save as draft" onClick={() => (onSavedDraft ? onSavedDraft() : onClose())} disabled={busy} />
-              <CtaButton label="Publish" icon={<Send size={15} strokeWidth={2} aria-hidden />} loading={busy} disabled={data.lessons.length === 0} onClick={() => void submit()} />
+              <CtaButton variant="secondary" label={t("Save as draft")} onClick={() => (onSavedDraft ? onSavedDraft() : onClose())} disabled={busy} />
+              <CtaButton label={t("Publish")} icon={<Send size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />} loading={busy} disabled={data.lessons.length === 0} onClick={() => void submit()} />
             </>
           ) : null
         )}
@@ -614,20 +615,20 @@ export function CourseSheet({
       <BottomSheet open onClose={close} title={title} footer={footer} size="tall">
         {stepIndex !== null && <StepBar steps={STEPS} at={stepIndex} onStep={published || !editable ? undefined : (i) => i !== 2 && setView(i === 0 ? { step: 0 } : i === 1 ? { step: 1 } : { step: 3 })} />}
         {body}
-        {error && <FieldError mt={10}>{error}</FieldError>}
+        {error && <FieldError mt={10}>{t(error)}</FieldError>}
       </BottomSheet>
 
       {/* MO28 "discard confirmation" (popup: trash tile, 18 / 800 title, 13 body; Discard 48 r14 on status.high, Save as draft secondary, Keep editing outline). */}
       <CentredPopup
         open={discard}
         onClose={() => setDiscard(false)}
-        title="Discard this course?"
+        title={t("Discard this course?")}
         icon={<Trash2 size={22} strokeWidth={2} aria-hidden />}
-        body="You haven't saved it as a draft. Everything you added will be lost."
+        body={t("You haven't saved it as a draft. Everything you added will be lost.")}
       >
         <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
           <DangerCta
-            label="Discard"
+            label={t("Discard")}
             onClick={() => {
               setDiscard(false);
               onClose();
@@ -636,33 +637,33 @@ export function CourseSheet({
           <CtaButton
             size="page"
             variant="secondary"
-            label="Save as draft"
+            label={t("Save as draft")}
             loading={busy}
             onClick={() => {
               setDiscard(false);
               void saveBasics("draft");
             }}
           />
-          <CtaButton size="page" variant="outline" label="Keep editing" onClick={() => setDiscard(false)} />
+          <CtaButton size="page" variant="outline" label={t("Keep editing")} onClick={() => setDiscard(false)} />
         </div>
       </CentredPopup>
 
       <CentredPopup
         open={withdrawAsk}
         onClose={() => setWithdrawAsk(false)}
-        title="Discard these changes?"
+        title={t("Discard these changes?")}
         icon={<Trash2 size={22} strokeWidth={2} aria-hidden />}
-        body={WITHDRAW_EXPLAINER}
+        body={t(WITHDRAW_EXPLAINER)}
       >
         <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
           <DangerCta
-            label="Discard"
+            label={t("Discard")}
             onClick={() => {
               setWithdrawAsk(false);
               if (editingRev) void run(() => withdrawRevision(editingRev));
             }}
           />
-          <CtaButton size="page" variant="outline" label="Keep editing" onClick={() => setWithdrawAsk(false)} />
+          <CtaButton size="page" variant="outline" label={t("Keep editing")} onClick={() => setWithdrawAsk(false)} />
         </div>
       </CentredPopup>
     </>
@@ -698,18 +699,24 @@ function EditOverview({
   const open = !!editingRevisionId(rev);
   const look = rev ? revisionStatusLook(rev.status) : null;
   const frozen = rev?.status === "submitted";
-  const price = shown.priceCents ? `$${shown.priceCents / 100}` : "Free";
+  const price = shown.priceCents ? `$${shown.priceCents / 100}` : t("Free");
   return (
     <div>
       <div className="flex" style={{ borderRadius: 14, background: INK.goldPale, padding: "12px 14px", marginBottom: 12, gap: 10 }}>
         <Info size={16} strokeWidth={2} aria-hidden className="shrink-0" style={{ color: INK.goldInk, marginTop: 2 }} />
         <span style={{ fontSize: textPx(12.5), color: INK.ch, lineHeight: 1.5 }}>
-          You're editing a copy. {enrolled === undefined ? "Enrolled clients keep" : enrolled === 1 ? "The 1 enrolled client keeps" : `The ${enrolled} enrolled clients keep`} the current version until your changes are checked and go live. Renaming or removing a lesson resets progress on that lesson.
+          {enrolled === undefined
+            ? t("You're editing a copy. Enrolled clients keep the current version until your changes are checked and go live. Renaming or removing a lesson resets progress on that lesson.")
+            : tn(
+                enrolled,
+                "You're editing a copy. The {n} enrolled client keeps the current version until your changes are checked and go live. Renaming or removing a lesson resets progress on that lesson.",
+                "You're editing a copy. The {n} enrolled clients keep the current version until your changes are checked and go live. Renaming or removing a lesson resets progress on that lesson."
+              )}
         </span>
       </div>
       {open && look && (
         <Note mt={0}>
-          <b style={{ color: INK.ch }}>{look.label}.</b> {look.detail}
+          <b style={{ color: INK.ch }}>{t(look.label)}.</b> {t(look.detail)}
         </Note>
       )}
       {rev?.status === "changes_requested" && rev.reviewReason && (
@@ -718,24 +725,24 @@ function EditOverview({
       <div style={{ marginTop: open ? 10 : 0 }}>
         <ListCard
           rows={[
-            { key: "b", icon: Pencil, title: "Basics", meta: "Title, subtitle, level", onClick: () => onRow({ step: 0 }) },
+            { key: "b", icon: Pencil, title: t("Basics"), meta: t("Title, subtitle, level"), onClick: () => onRow({ step: 0 }) },
             {
               key: "s",
               icon: ListTree,
-              title: "Structure",
-              meta: `${sizeLine(data.modules.length, data.lessons.length).replace(" · ", ", ")}${rev && open && rev.contentChanged ? " · changed" : ""}`,
+              title: t("Structure"),
+              meta: `${sizeLine(data.modules.length, data.lessons.length, true)}${rev && open && rev.contentChanged ? ` · ${t("changed")}` : ""}`,
               onClick: () => onRow({ step: 1 }),
             },
-            { key: "a", icon: LockOpen, title: "Access", meta: `${audienceLabel(data.extras.audience, data.extras.audience === "selected" ? data.members.length : undefined)} · ${price}`, onClick: () => onRow({ step: 3 }) },
+            { key: "a", icon: LockOpen, title: t("Access"), meta: `${audienceText(data.extras.audience, data.extras.audience === "selected" ? data.members.length : undefined)} · ${price}`, onClick: () => onRow({ step: 3 }) },
           ]}
         />
       </div>
       {open && !frozen && (
         <button type="button" onClick={onWithdraw} disabled={busy} className="tap relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi }}>
-          Discard these changes
+          {t("Discard these changes")}
         </button>
       )}
-      {toFooter(<CtaButton label="Submit changes" icon={<Send size={15} strokeWidth={2} aria-hidden />} loading={busy} disabled={!open || frozen} onClick={onSubmit} />)}
+      {toFooter(<CtaButton label={t("Submit changes")} icon={<Send size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />} loading={busy} disabled={!open || frozen} onClick={onSubmit} />)}
     </div>
   );
 }

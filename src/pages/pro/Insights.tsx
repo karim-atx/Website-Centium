@@ -6,6 +6,7 @@ import { INSIGHTS_TABS, pickTab, PRO_ROUTES } from "../../components/pro/subtype
 import { InsightsScreen } from "../../components/pro/insights/InsightsScreen";
 import type { InsightsTab } from "../../components/pro/insights/panelProps";
 import type { PickerClient } from "../../components/pro/insights/parts";
+import { tk } from "../../i18n/core";
 
 /**
  * Release 3 · Insights (/app/pro/insights/:tab, Clinical overview's navbar
@@ -52,7 +53,7 @@ export default function Insights() {
   return (
     <InsightsScreen
       lane={lane}
-      title="Insights"
+      title={tk("Insights")}
       clients={clients}
       clientId={clientId}
       onClient={onClient}
