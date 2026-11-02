@@ -88,6 +88,7 @@ import {
   shortDate,
   venueOf,
 } from "../../components/marketplace/classCardModel";
+import { t, tk, tn } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · Class detail (C-MO.4.3.1 `classDetail`,
 // `classDetailUnlisted`, `classDetailAlmost`) and Class booking (C-MO.4.3.2
@@ -384,8 +385,8 @@ export function ClassPage({ classId }: { classId: string }) {
     // The doc: warn before the call, then show was_free.
     setNote(
       r.value.wasFree
-        ? "Booking cancelled. It was free to cancel."
-        : "Booking cancelled. It was inside the free-cancellation window, so the studio may charge for it.",
+        ? t("Booking cancelled. It was free to cancel.")
+        : t("Booking cancelled. It was inside the free-cancellation window, so the studio may charge for it."),
     );
     await load();
   };
@@ -442,7 +443,7 @@ export function ClassPage({ classId }: { classId: string }) {
       <button
         type="button"
         onClick={back}
-        aria-label="Back"
+        aria-label={t("Back")}
         className="tap market-focus"
         style={{
           width: 36,
@@ -467,6 +468,7 @@ export function ClassPage({ classId }: { classId: string }) {
           strokeLinecap="round"
           strokeLinejoin="round"
           aria-hidden
+          className="rtl:-scale-x-100"
           style={NO_ICON_SCALE}
         >
           <path d="m15 18-6-6 6-6" />
@@ -477,10 +479,11 @@ export function ClassPage({ classId }: { classId: string }) {
           fontSize: textPx(10.5),
           fontWeight: 700,
           letterSpacing: "0.1em",
+          textTransform: "uppercase",
           color: m.faint,
         }}
       >
-        CLASS
+        {t("Class")}
       </div>
     </div>
   );
@@ -517,14 +520,14 @@ export function ClassPage({ classId }: { classId: string }) {
           radius={20}
           height={275}
           rows={3}
-          label="Loading the class"
+          label={tk("Loading the class")}
           style={{ marginTop: 14 }}
         />
         <MarketSkeleton
           radius={18}
           height={72}
           rows={2}
-          label="Loading the instructor"
+          label={tk("Loading the instructor")}
           style={{ marginTop: 12 }}
         />
       </div>
@@ -539,19 +542,19 @@ export function ClassPage({ classId }: { classId: string }) {
         <div style={{ marginTop: 14 }}>
           {loadFailed ? (
             // D-04 error / offline, with Retry.
-            <MarketError thing="this class" onRetry={retry} />
+            <MarketError thing={tk("this class")} onRetry={retry} />
           ) : live?.cancelledAt ? (
             // B9 (CL-03): a cancelled class leaves marketplace_classes; its
             // page says so, with the venue's reason when it gave one (verbatim).
             <div data-class-cancelled="">
               <MarketEmptyCard
-                title="This class was cancelled by the venue."
+                title={tk("This class was cancelled by the venue.")}
                 body={live.cancelReason ?? undefined}
                 style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
               />
             </div>
           ) : (
-            <MarketEmptyCard title="This class isn't available any more." />
+            <MarketEmptyCard title={tk("This class isn't available any more.")} />
           )}
         </div>
       </div>
@@ -560,7 +563,7 @@ export function ClassPage({ classId }: { classId: string }) {
 
   const mine = booked.has(c.classId);
   const free = !c.priceValue;
-  const priceText = free ? "Free" : c.price;
+  const priceText = free ? t("Free") : c.price;
   // "Full" is class_seats_left() (it counts live waitlist offers); the view's
   // own count is the fallback when that read failed.
   const seatsLeft = viewerSpotsLeft(
@@ -694,7 +697,7 @@ export function ClassPage({ classId }: { classId: string }) {
             type="button"
             onClick={() => setPopup("times")}
             aria-haspopup="dialog"
-            aria-label={`${longDate(c.date)}. Other times`}
+            aria-label={t("{date}. Other times", { date: longDate(c.date) })}
             className="tap market-focus"
             style={{
               ...dateLine,
@@ -773,7 +776,7 @@ export function ClassPage({ classId }: { classId: string }) {
                 color: tone === "almost" ? sc.almostInk : m.ink2,
               }}
             >
-              {tone === "almost" ? "Almost full" : "Class full"}
+              {tone === "almost" ? t("Almost full") : t("Class full")}
             </div>
           )}
           {cap > 0 &&
@@ -839,11 +842,11 @@ export function ClassPage({ classId }: { classId: string }) {
                 color: sc.fig,
                 fontVariantNumeric: "tabular-nums",
               }}
-            >{`${left} of ${cap}`}</span>
+            >{t("{n} of {total}", { n: left, total: cap })}</span>
             <span
               style={{ fontSize: textPx(14), fontWeight: 400, color: m.ink2 }}
             >
-              spots left
+              {t("spots left")}
             </span>
           </div>
         </div>
@@ -856,7 +859,7 @@ export function ClassPage({ classId }: { classId: string }) {
           id={c.instructorId!}
           name={c.instructorName!}
           photoUrl={c.instructorAvatarUrl ?? null}
-          specialty={c.instructorSpecialty ?? "Instructor"}
+          specialty={c.instructorSpecialty ?? t("Instructor")}
           rating={c.instructorRating ?? null}
           reviewCount={c.instructorReviewCount ?? 0}
           hiredViaCentium={hiredViaCentium(c)}
@@ -871,7 +874,7 @@ export function ClassPage({ classId }: { classId: string }) {
       <MarketOffline loaded style={{ marginTop: 12 }} />
       {online && loadFailed && (
         <MarketError
-          thing="this class"
+          thing={tk("this class")}
           onRetry={() => void load()}
           style={{ marginTop: 12 }}
         />
@@ -894,7 +897,7 @@ export function ClassPage({ classId }: { classId: string }) {
 
       {about && (
         <>
-          <h2 style={{ ...caps, marginTop: 18 }}>About this class</h2>
+          <h2 style={{ ...caps, marginTop: 18 }}>{t("About this class")}</h2>
           <p style={body}>{about}</p>
         </>
       )}
@@ -904,13 +907,13 @@ export function ClassPage({ classId }: { classId: string }) {
           when the class has none. */}
       {c.playlistUrl && (
         <>
-          <h2 style={{ ...caps, marginTop: 18 }}>Music</h2>
-          <MusicSection moment="workout" provider={{ url: c.playlistUrl, heading: `${c.businessName}'s playlist` }} style={{ marginTop: 8 }} />
+          <h2 style={{ ...caps, marginTop: 18 }}>{t("Music")}</h2>
+          <MusicSection moment="workout" provider={{ url: c.playlistUrl, heading: t("{name}'s playlist", { name: c.businessName }) }} style={{ marginTop: 8 }} />
         </>
       )}
       {level && (
         <>
-          <h2 style={{ ...caps, marginTop: 18 }}>Level</h2>
+          <h2 style={{ ...caps, marginTop: 18 }}>{t("Level")}</h2>
           <p style={body} data-class-level="">
             {level}
           </p>
@@ -918,7 +921,7 @@ export function ClassPage({ classId }: { classId: string }) {
       )}
       {bring && (
         <>
-          <h2 style={{ ...caps, marginTop: 18 }}>What to bring</h2>
+          <h2 style={{ ...caps, marginTop: 18 }}>{t("What to bring")}</h2>
           <p style={body} data-what-to-bring="">
             {bring}
           </p>
@@ -950,7 +953,7 @@ export function ClassPage({ classId }: { classId: string }) {
       )}
 
       {/* Location: the venue's address and coordinates (PB-O-50); opens Directions. */}
-      <h2 style={{ ...caps, marginTop: 18 }}>Location</h2>
+      <h2 style={{ ...caps, marginTop: 18 }}>{t("Location")}</h2>
       <div style={{ marginTop: 8 }}>
         <MapCard
           address={[address, distance].filter(Boolean).join(" · ") || null}
@@ -1036,7 +1039,7 @@ export function ClassPage({ classId }: { classId: string }) {
                     color: m.tealink,
                   }}
                 >
-                  You're booked
+                  {t("You're booked")}
                 </span>
                 <span
                   style={{
@@ -1057,7 +1060,7 @@ export function ClassPage({ classId }: { classId: string }) {
               className="market-focus"
               style={{ ...dangerLink, ...offStyle(busy || !online) }}
             >
-              Cancel booking
+              {t("Cancel booking")}
             </button>
             <p
               style={{
@@ -1127,9 +1130,9 @@ export function ClassPage({ classId }: { classId: string }) {
                     color: m.accent,
                   }}
                 >
-                  You're #{position} on the waitlist.
+                  {t("You're #{n} on the waitlist.", { n: position })}
                 </span>{" "}
-                We'll notify you if a spot opens.
+                {t("We'll notify you if a spot opens.")}
               </p>
             </div>
             <button
@@ -1139,7 +1142,7 @@ export function ClassPage({ classId }: { classId: string }) {
               className="market-focus"
               style={{ ...dangerLink, ...offStyle(busy || !online) }}
             >
-              Leave waitlist
+              {t("Leave waitlist")}
             </button>
           </div>
         </PinnedSlot>
@@ -1182,7 +1185,7 @@ export function ClassPage({ classId }: { classId: string }) {
                 ...offStyle(busy || !authUserId || !online),
               }}
             >
-              Join waitlist
+              {t("Join waitlist")}
             </button>
           </div>
         </PinnedSlot>
@@ -1222,7 +1225,7 @@ export function ClassPage({ classId }: { classId: string }) {
                 : press.style),
             }}
           >
-            {`Book · ${priceText}`}
+            {t("Book · {price}", { price: priceText })}
           </button>
         </PinnedSlot>
       )}
@@ -1242,19 +1245,19 @@ export function ClassPage({ classId }: { classId: string }) {
       <PurchaseSheet
         open={popup === "sheet"}
         onClose={() => setPopup(null)}
-        title={`Book ${c.title}`}
+        title={t("Book {name}", { name: c.title })}
         summary={
           <ClassTicketSummary
             title={c.title}
             place={sheetPlace(c)}
             when={sheetWhen(c)}
-            booked={`${taken} of ${cap} booked`}
+            booked={t("{n} of {total} booked", { n: taken, total: cap })}
             pct={cap > 0 ? (taken / cap) * 100 : 0}
             price={priceText}
           />
         }
-        cashHint={free ? null : "Pay at the front desk before class"}
-        ctaLabel={free ? "Confirm booking" : confirmLabel(priceText)}
+        cashHint={free ? null : t("Pay at the front desk before class")}
+        ctaLabel={free ? t("Confirm booking") : confirmLabel(priceText)}
         busy={booking.busy}
         disabled={!online}
         error={sheetError}
@@ -1278,15 +1281,15 @@ export function ClassPage({ classId }: { classId: string }) {
           already added the class to the Calendar (15-minute alert). */}
       <BookingDone
         open={done}
-        title="You're booked"
+        title={t("You're booked")}
         body={doneBody(
           c.title,
           firstVisit && firstVisit.gymId === gymId ? firstVisit.text : null,
         )}
         rows={[
-          { k: "Class", v: c.title },
-          { k: "When", v: doneWhen(c) },
-          { k: "Payment", v: paymentLine(priceText, free) },
+          { k: t("Class"), v: c.title },
+          { k: t("When"), v: doneWhen(c) },
+          { k: t("Payment"), v: paymentLine(priceText, free) },
         ]}
         bookingsTab="upcoming"
         extra={
@@ -1319,7 +1322,7 @@ export function ClassPage({ classId }: { classId: string }) {
               <rect x="3" y="4" width="18" height="18" rx="2" />
               <path d="M16 2v4M8 2v4M3 10h18m-12 6 2 2 4-4" />
             </svg>
-            Added to your calendar
+            {t("Added to your calendar")}
           </span>
         }
         onDone={() => setDone(false)}
@@ -1329,7 +1332,7 @@ export function ClassPage({ classId }: { classId: string }) {
       <CentredPopup
         open={popup === "cancel"}
         onClose={() => setPopup(null)}
-        title="Cancel booking?"
+        title={t("Cancel booking?")}
         geometry="ours"
         body={
           <>
@@ -1339,13 +1342,13 @@ export function ClassPage({ classId }: { classId: string }) {
               style={late ? { fontWeight: 600, color: m.high } : undefined}
             >
               {late
-                ? `It starts in under ${windowHours} ${windowHours === 1 ? "hour" : "hours"}, so this isn't a free cancellation. The studio may charge for it.`
+                ? tn(windowHours, "It starts in under {n} hour, so this isn't a free cancellation. The studio may charge for it.", "It starts in under {n} hours, so this isn't a free cancellation. The studio may charge for it.")
                 : cancellationLine(windowHours)}
             </span>
           </>
         }
         cta={{
-          label: "Cancel booking",
+          label: t("Cancel booking"),
           loading: busy,
           disabled: !online,
           onClick: () => void cancel(),
@@ -1358,11 +1361,11 @@ export function ClassPage({ classId }: { classId: string }) {
       <CentredPopup
         open={popup === "times"}
         onClose={() => setPopup(null)}
-        title="Other times"
+        title={t("Other times")}
         geometry="ours"
         bodyWeight={400}
         body={
-          <span className="block text-[12.5px] leading-[18.8px] text-charcoal-faint">{`${c.title} at ${venueOf(c)}`}</span>
+          <span className="block text-[12.5px] leading-[18.8px] text-charcoal-faint">{t("{name} at {place}", { name: c.title, place: venueOf(c) })}</span>
         }
       >
         <ul
@@ -1466,7 +1469,7 @@ export function ClassPage({ classId }: { classId: string }) {
             cursor: "pointer",
           }}
         >
-          Close
+          {t("Close")}
         </button>
       </CentredPopup>
     </div>
@@ -1474,7 +1477,7 @@ export function ClassPage({ classId }: { classId: string }) {
 }
 
 const spotsText = (n: number) =>
-  n <= 0 ? "Full" : `${n} ${n === 1 ? "spot" : "spots"}`;
+  n <= 0 ? t("Full") : tn(n, "{n} spot", "{n} spots");
 
 /** Other times (full / waitlist): the caps label and up to three chips (the time 12 / 700, the spots 10.5 / 600 --tealink). */
 function OtherTimes({
@@ -1498,7 +1501,7 @@ function OtherTimes({
           color: m.faint,
         }}
       >
-        Other times
+        {t("Other times")}
       </h2>
       <div style={{ display: "flex", gap: 8 }}>
         {others.map((o) => (
@@ -1539,9 +1542,7 @@ function OtherTimes({
                 color: o.isFull ? m.high : m.tealink,
               }}
             >
-              {o.isFull
-                ? "Full"
-                : `${o.spotsRemaining} ${o.spotsRemaining === 1 ? "spot" : "spots"}`}
+              {o.isFull ? t("Full") : spotsText(o.spotsRemaining)}
             </span>
           </button>
         ))}

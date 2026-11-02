@@ -26,10 +26,11 @@ import { fetchShowcaseOffers, forAge, type CatalogOffer } from "../../../service
 import { forumAccess } from "../../../services/forum/rules";
 import type { MarketResult } from "../../../services/market/rpc";
 import { formatPrice } from "../../../utils/price";
-import { marketplaceCategories } from "../../../data/mockProfessionals";
+
 import { marketplaceCategoryIcon } from "../../../utils/icons";
 import type { MarketplaceCategoryId } from "../../../types";
-import { TYPE_CATEGORY } from "../venueTypes";
+import { TYPE_CATEGORY, categoryLabel } from "../venueTypes";
+import { t, tk, tn } from "../../../i18n/core";
 import { distanceLine, productsNote, showcaseSegments, showcaseTypeLabel, type ShowcaseSegKey } from "./rewardsModel";
 import { fetchPublicShelf, fetchShowcaseExtras, type ShowcaseExtras } from "./showcaseData";
 import { BackRow, CapsLabel, OwnerTile, QuietLine, RowChevron } from "./rewardsParts";
@@ -164,8 +165,8 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
   if (venue === undefined) {
     return (
       <div style={{ paddingBottom: 32 }}>
-        <BackRow onBack={back} eyebrow="Rewards" />
-        <MarketSkeleton radius={18} count={3} rows={3} label="Loading this business" style={{ marginTop: 8 }} />
+        <BackRow onBack={back} eyebrow={t("Rewards")} />
+        <MarketSkeleton radius={18} count={3} rows={3} label={tk("Loading this business")} style={{ marginTop: 8 }} />
       </div>
     );
   }
@@ -173,12 +174,12 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
   if (venue === null) {
     return (
       <div style={{ paddingBottom: 32 }}>
-        <BackRow onBack={back} eyebrow="Rewards" />
+        <BackRow onBack={back} eyebrow={t("Rewards")} />
         <div style={{ marginTop: 8 }}>
           {loadFailed ? (
-            <MarketError thing="this business" onRetry={load} />
+            <MarketError thing={tk("this business")} onRetry={load} />
           ) : (
-            <MarketEmptyCard title="This business isn't on Explore right now" body={closed ?? "It may have paused its listing. Anything you've booked or redeemed stays in your account."} />
+            <MarketEmptyCard title={tk("This business isn't on Explore right now")} body={closed ?? tk("It may have paused its listing. Anything you've booked or redeemed stays in your account.")} />
           )}
         </div>
       </div>
@@ -194,12 +195,12 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
   // category it has a product in.
   const productList = products.state === "done" ? products.list : [];
   const categoryIds = [...new Set([...(storeCategory ? [storeCategory] : []), ...productList.map((p) => p.marketCategory)])].filter((c) => c !== "gyms" && c !== "classes");
-  const categoryLabel = (c: string) => marketplaceCategories.find((x) => x.id === c)?.label ?? c;
+
 
   return (
     <div style={{ paddingBottom: 32, lineHeight: "normal", color: m.ink }}>
       <style>{FOCUS_CSS}</style>
-      <BackRow onBack={back} eyebrow="Rewards" />
+      <BackRow onBack={back} eyebrow={t("Rewards")} />
 
       {/* Identity */}
       <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 14 }}>
@@ -220,7 +221,7 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
           ) : null}
           {venue.upcomingClassCount > 0 || venue.canHostClasses ? (
             <span style={{ fontSize: textPx(12), color: m.ink2 }}>
-              {venue.upcomingClassCount > 0 ? `${venue.upcomingClassCount} upcoming ${venue.upcomingClassCount === 1 ? "class" : "classes"}` : "No upcoming classes"}
+              {venue.upcomingClassCount > 0 ? tn(venue.upcomingClassCount, "{n} upcoming class", "{n} upcoming classes") : t("No upcoming classes")}
             </span>
           ) : null}
         </div>
@@ -235,7 +236,7 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
       {/* Shop · Location · Online */}
       <SegmentedTicketStrip
         variant="tile"
-        label="Where to use your vouchers"
+        label={t("Where to use your vouchers")}
         items={segments.map((s) => ({ key: s.key, label: s.label, step: s.step, icon: s.key === "shop" ? Store : s.key === "loc" ? MapPin : Globe }))}
         active={current.key}
         onChange={setSeg}
@@ -259,8 +260,8 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
             <ShoppingBag size={17} strokeWidth={1.9} style={NO_ICON_SCALE} />
           </span>
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: textPx(14), fontWeight: 700, color: m.ink }}>Shop in the app</span>
-            <span style={{ display: "block", fontSize: textPx(12), color: m.ink2 }}>{venue.venueType === "wellness_service" ? "Products and appointments" : "Products, pickup and delivery"}</span>
+            <span style={{ display: "block", fontSize: textPx(14), fontWeight: 700, color: m.ink }}>{t("Shop in the app")}</span>
+            <span style={{ display: "block", fontSize: textPx(12), color: m.ink2 }}>{venue.venueType === "wellness_service" ? t("Products and appointments") : t("Products, pickup and delivery")}</span>
           </span>
           <RowChevron />
         </Link>
@@ -272,20 +273,20 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
       {/* Products */}
       <section aria-labelledby="showcase-products" style={{ marginTop: 18 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-          <CapsLabel id="showcase-products">Products</CapsLabel>
+          <CapsLabel id="showcase-products">{t("Products")}</CapsLabel>
           <span style={{ fontSize: textPx(11), color: m.faint, textAlign: "end" }}>{productsNote(extras?.website ?? null)}</span>
         </div>
         <div style={{ marginTop: 8 }}>
           {products.state === "loading" ? (
-            <div aria-busy="true" aria-label="Loading products" role="status" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div aria-busy="true" aria-label={t("Loading products")} role="status" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {[0, 1].map((k) => (
                 <div key={k} aria-hidden className="animate-skeleton-pulse" style={{ aspectRatio: "1 / 1", borderRadius: 16, background: m.soft }} />
               ))}
             </div>
           ) : !products.ok ? (
-            <MarketError thing="products" onRetry={loadProducts} />
+            <MarketError thing={tk("products")} onRetry={loadProducts} />
           ) : products.list.length === 0 ? (
-            <QuietLine>No products yet.</QuietLine>
+            <QuietLine>{t("No products yet.")}</QuietLine>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {products.list.map((p) => (
@@ -298,8 +299,8 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
 
       {/* Kept (B14 RP-01): a venue-less business's reviews. */}
       {venueLess ? (
-        <section aria-label="Reviews" style={{ marginTop: 18 }}>
-          <CapsLabel>Reviews</CapsLabel>
+        <section aria-label={t("Reviews")} style={{ marginTop: 18 }}>
+          <CapsLabel>{t("Reviews")}</CapsLabel>
           <div style={{ marginTop: 8 }}>
             <GymReviews businessId={venue.venueId} gymName={venue.name} summary={null} onChanged={() => undefined} pinned={false} />
           </div>
@@ -309,7 +310,7 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
       {/* Kept (decision 23, item 46): the category pages it leads to. */}
       {categoryIds.length > 0 ? (
         <section aria-labelledby="showcase-browse" style={{ marginTop: 18 }}>
-          <CapsLabel id="showcase-browse">Browse by category</CapsLabel>
+          <CapsLabel id="showcase-browse">{t("Browse by category")}</CapsLabel>
           <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
             {categoryIds.map((c) => {
               const Icon = marketplaceCategoryIcon[c as MarketplaceCategoryId] ?? marketplaceCategoryIcon.stores;
@@ -347,12 +348,12 @@ const ShowcaseOffers: React.FC<{ state: Offers; balance: number; onRetry: () => 
   if (state.state === "done" && state.result.ok && state.result.value.length === 0) return null;
   return (
     <section aria-labelledby="showcase-offers" style={{ marginTop: 18 }}>
-      <CapsLabel id="showcase-offers">Offers for your points</CapsLabel>
+      <CapsLabel id="showcase-offers">{t("Offers for your points")}</CapsLabel>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
         {state.state === "loading" ? (
-          <MarketSkeleton radius={18} count={1} rows={2} label="Loading offers" />
+          <MarketSkeleton radius={18} count={1} rows={2} label={tk("Loading offers")} />
         ) : !state.result.ok ? (
-          <MarketError thing="offers" onRetry={onRetry} />
+          <MarketError thing={tk("offers")} onRetry={onRetry} />
         ) : (
           state.result.value.map((o) => {
             const prog = offerProgress(balance, o.pointsCost);

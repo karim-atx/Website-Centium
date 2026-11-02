@@ -5,6 +5,7 @@ import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { marketPalette } from "../../../theme/marketTokens";
 import { FOCUS_CSS } from "../../../components/market/usePress";
 import { ownerInitials } from "../../../services/offers";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W2 · small pieces shared by the Rewards screens
 // (Client Explore Screens lines 362–365, 401–408, 453–461, 551–555).
@@ -22,11 +23,11 @@ export const BackRow: React.FC<{ onBack: () => void; title?: string; eyebrow?: s
       <button
         type="button"
         onClick={onBack}
-        aria-label="Back"
+        aria-label={t("Back")}
         className="hit market-focus"
         style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", color: m.ink2, background: "none", border: 0, padding: 0, cursor: "pointer", borderRadius: 999, flexShrink: 0 }}
       >
-        <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={NO_ICON_SCALE}>
+        <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden className="rtl:-scale-x-100" style={NO_ICON_SCALE}>
           <path d="m15 18-6-6 6-6" />
         </svg>
       </button>
@@ -75,7 +76,7 @@ export const OwnerTile: React.FC<{ name: string; logoUrl?: string | null; size: 
 export const RowChevron: React.FC = () => {
   const m = marketPalette(useIsDark());
   return (
-    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={m.faint} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, ...NO_ICON_SCALE }}>
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={m.faint} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden className="rtl:-scale-x-100" style={{ flexShrink: 0, ...NO_ICON_SCALE }}>
       <path d="m9 18 6-6-6-6" />
     </svg>
   );

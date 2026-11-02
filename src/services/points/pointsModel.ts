@@ -8,6 +8,7 @@
 import { formatShortDate } from "../../utils/date";
 import { num, rows, str } from "../market/parse";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tn } from "../../i18n/core";
 
 // ---------------------------------------------------------------------------
 // The summary's today and expiring figures
@@ -45,7 +46,7 @@ export function parsePointsExtras(row: Record<string, unknown> | null | undefine
 export function todayLine(x: Pick<PointsExtras, "earnedToday" | "dailyCap">): string {
   const cap = Math.max(0, Math.round(x.dailyCap));
   const earned = Math.max(0, Math.min(cap, Math.round(x.earnedToday)));
-  return earned >= cap ? `${cap} of ${cap} today · limit reached` : `${earned} of ${cap} today`;
+  return earned >= cap ? t("{cap} of {cap} today · limit reached", { cap }) : t("{earned} of {cap} today", { earned, cap });
 }
 
 /** "Nov 14, 2026" (D-02 month first) from a YYYY-MM-DD or ISO string. */
@@ -58,7 +59,7 @@ export function longDay(isoDay: string): string {
 export function expiringLine(x: PointsExtras | null): string | null {
   if (!x || x.expiringSoon <= 0 || !x.expiringSoonDate) return null;
   const n = Math.round(x.expiringSoon);
-  return `${n.toLocaleString(appLocale("en-US"))} ${n === 1 ? "point expires" : "points expire"} on ${longDay(x.expiringSoonDate)}`;
+  return tn(n, "{n} point expires on {date}", "{n} points expire on {date}", { n: n.toLocaleString(appLocale("en-US")), date: longDay(x.expiringSoonDate) });
 }
 
 // ---------------------------------------------------------------------------
@@ -93,14 +94,22 @@ export function nextRewardLine(
 ): NextRewardLine {
   if (offers && offers.length > 0) {
     const ahead = offers.filter((o) => o.pointsCost > balance).sort((a, b) => a.pointsCost - b.pointsCost)[0];
-    if (!ahead) return { lead: "You can redeem every reward", detail: "", pct: 100 };
+    if (!ahead) return { lead: t("You can redeem every reward"), detail: "", pct: 100 };
     const pct = Math.round((Math.max(0, balance) / ahead.pointsCost) * 1000) / 10;
-    return { lead: `${(ahead.pointsCost - balance).toLocaleString(appLocale("en-US"))} to your next reward`, detail: `${ahead.headline} at ${ahead.ownerName}`, pct };
+    return {
+      lead: t("{n} to your next reward", { n: (ahead.pointsCost - balance).toLocaleString(appLocale("en-US")) }),
+      detail: t("{offer} at {owner}", { offer: ahead.headline, owner: ahead.ownerName }),
+      pct,
+    };
   }
   if (tier.nextTierName && tier.pointsToNextTier !== null) {
-    return { lead: `${tier.pointsToNextTier.toLocaleString(appLocale("en-US"))} to ${tier.nextTierName}`, detail: "", pct: Math.round(Math.max(0, Math.min(1, tier.progress)) * 1000) / 10 };
+    return {
+      lead: t("{n} to {tier}", { n: tier.pointsToNextTier.toLocaleString(appLocale("en-US")), tier: tier.nextTierName }),
+      detail: "",
+      pct: Math.round(Math.max(0, Math.min(1, tier.progress)) * 1000) / 10,
+    };
   }
-  return { lead: "Highest tier", detail: "", pct: 100 };
+  return { lead: t("Highest tier"), detail: "", pct: 100 };
 }
 
 // ---------------------------------------------------------------------------
@@ -146,7 +155,7 @@ export function parseLedgerRows(data: unknown): LedgerEntry[] {
 }
 
 /** A streak rung's ledger title in recovery-sensitive mode (see ledgerLines). */
-export const STREAK_HIDDEN_LABEL = "Logging bonus";
+export const STREAK_HIDDEN_LABEL = tk("Logging bonus");
 
 /** streak_7 → 7 (the streak achievements are the milestones, D-08). */
 export function streakDays(key: string | null): number | null {
@@ -176,14 +185,14 @@ export function ledgerLines(
   achievementTitle: (key: string) => string | null,
   hideStreaks = false
 ): { title: string; kind: string } {
-  const label = e.refLabel ?? "Points";
+  const label = e.refLabel ?? t("Points");
   if (e.source === "achievement") {
     const days = streakDays(e.description);
-    if (hideStreaks && days !== null) return { title: STREAK_HIDDEN_LABEL, kind: `Earned · ${label}` };
-    const title = (e.description ? achievementTitle(e.description) : null) ?? (days !== null ? `${days}-day streak` : label);
-    return { title, kind: `Earned · ${label}` };
+    if (hideStreaks && days !== null) return { title: t(STREAK_HIDDEN_LABEL), kind: t("Earned · {label}", { label }) };
+    const title = (e.description ? achievementTitle(e.description) : null) ?? (days !== null ? t("{days}-day streak", { days }) : label);
+    return { title, kind: t("Earned · {label}", { label }) };
   }
-  return { title: label, kind: e.description ?? (e.amount > 0 ? "Earned" : "Spent") };
+  return { title: label, kind: e.description ?? (e.amount > 0 ? t("Earned") : t("Spent")) };
 }
 
 /**
@@ -223,8 +232,8 @@ export function dayHeading(day: string, now: Date = new Date()): string {
   const today = dayKey(now);
   const y = new Date(now);
   y.setDate(y.getDate() - 1);
-  if (day === today) return "Today";
-  if (day === dayKey(y)) return "Yesterday";
+  if (day === today) return t("Today");
+  if (day === dayKey(y)) return t("Yesterday");
   const d = new Date(`${day}T12:00:00`);
   return d.getFullYear() === now.getFullYear()
     ? formatShortDate(d, { month: "short", day: "numeric" })
@@ -272,10 +281,10 @@ export function earnedToday(entries: readonly LedgerEntry[], now: Date = new Dat
 
 /** `daily`: [source, label]. The board's labels; the points are platform_settings' (PointsRules). */
 export const DAILY_RULES: readonly [string, string][] = [
-  ["log_food", "Food logged"],
-  ["log_workout", "Workout logged"],
-  ["log_metric", "Health metric logged or synced"],
-  ["water_goal", "Water goal reached"],
+  ["log_food", tk("Food logged")],
+  ["log_workout", tk("Workout logged")],
+  ["log_metric", tk("Health metric logged or synced")],
+  ["water_goal", tk("Water goal reached")],
 ];
 
 const DAILY_SOURCES: ReadonlySet<string> = new Set(DAILY_RULES.map(([s]) => s));

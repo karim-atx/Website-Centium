@@ -12,6 +12,7 @@ import { expiringLine, nextRewardLine, todayLine } from "../../services/points";
 import { fetchRewardCatalog, forAge, type CatalogOffer } from "../../services/offers";
 import { forumAccess } from "../../services/forum/rules";
 import { appLocale } from "../../i18n/format";
+import { t, tn } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · the points hero (C-MO.4.1 homeBronze / home /
 // homeGold / homeExpiring / homeCap; HANDOVER §4 "Points hero"; Client Explore
@@ -69,7 +70,7 @@ export function PointsHero() {
     return gaveUp ? null : <div aria-hidden className="animate-skeleton-pulse" style={{ height: 186, borderRadius: 20, background: m.soft }} />;
   }
   const rank = tierRank(pointTiers, pointsSummary.tierName);
-  const t = tierStyle(rank, dark);
+  const tier = tierStyle(rank, dark);
   const extras = pointsSummary.extras ?? null;
   const next = nextRewardLine(pointsSummary.balance, offers ? forAge(offers, adult) : null, {
     nextTierName: pointsSummary.nextTierName,
@@ -89,9 +90,9 @@ export function PointsHero() {
         boxSizing: "content-box",
         padding: 0,
         borderRadius: 10,
-        background: t.pill,
-        border: `0.5px solid ${t.border}`,
-        color: t.text,
+        background: tier.pill,
+        border: `0.5px solid ${tier.border}`,
+        color: tier.text,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -107,14 +108,14 @@ export function PointsHero() {
   );
   return (
     <section
-      aria-label={`${pointsSummary.tierName} tier, ${pointsSummary.balance.toLocaleString(appLocale("en-US"))} points`}
+      aria-label={tn(pointsSummary.balance, "{tier} tier, {n} point", "{tier} tier, {n} points", { tier: pointsSummary.tierName, n: pointsSummary.balance.toLocaleString(appLocale("en-US")) })}
       data-points-hero=""
-      style={{ borderRadius: 20, padding: "14px 16px", background: t.fill, border: `0.5px solid ${t.border}`, color: m.ink, lineHeight: "normal" }}
+      style={{ borderRadius: 20, padding: "14px 16px", background: tier.fill, border: `0.5px solid ${tier.border}`, color: m.ink, lineHeight: "normal" }}
     >
       <style>{FOCUS_CSS}</style>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <span style={{ fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 800, textTransform: "uppercase", letterSpacing: "1.4px", color: t.text }}>Points</span>
-        {extras ? <span style={{ fontSize: textPx(11), lineHeight: linePx(16), fontWeight: 700, color: t.text }}>{todayLine(extras)}</span> : null}
+        <span style={{ fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 800, textTransform: "uppercase", letterSpacing: "1.4px", color: tier.text }}>{t("Points")}</span>
+        {extras ? <span style={{ fontSize: textPx(11), lineHeight: linePx(16), fontWeight: 700, color: tier.text }}>{todayLine(extras)}</span> : null}
       </div>
       <div style={{ marginTop: 2 }}>
         <PointsFigure value={pointsSummary.balance} mark="tier" rank={rank} tierName={pointsSummary.tierName} />
@@ -123,8 +124,8 @@ export function PointsHero() {
         <span style={{ fontWeight: 700, flexShrink: 0 }}>{next.lead}</span>
         {next.detail ? <span style={{ color: m.faint, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{next.detail}</span> : null}
       </div>
-      <div aria-hidden style={{ height: 5, borderRadius: 999, overflow: "hidden", marginTop: 8, background: t.track }}>
-        <div style={{ height: "100%", width: `${next.pct}%`, borderRadius: 999, background: t.ink, transition: reduced ? "none" : "width 0.7s cubic-bezier(0.22,1,0.36,1)" }} />
+      <div aria-hidden style={{ height: 5, borderRadius: 999, overflow: "hidden", marginTop: 8, background: tier.track }}>
+        <div style={{ height: "100%", width: `${next.pct}%`, borderRadius: 999, background: tier.ink, transition: reduced ? "none" : "width 0.7s cubic-bezier(0.22,1,0.36,1)" }} />
       </div>
       {expiring ? (
         <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8, borderRadius: 12, padding: "8px 10px", background: m.cautionbg }}>
@@ -133,8 +134,8 @@ export function PointsHero() {
         </div>
       ) : null}
       <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        {pill("How to earn", "/app/marketplace/points/earn", howPress)}
-        {pill("History", "/app/marketplace/points/history", histPress)}
+        {pill(t("How to earn"), "/app/marketplace/points/earn", howPress)}
+        {pill(t("History"), "/app/marketplace/points/history", histPress)}
       </div>
     </section>
   );

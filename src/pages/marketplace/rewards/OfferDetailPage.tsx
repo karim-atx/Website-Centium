@@ -16,7 +16,7 @@ import { formatPoints } from "../../../components/market/pointsModel";
 import { FOCUS_CSS, usePress } from "../../../components/market/usePress";
 import { DIVIDER } from "../../../components/market/SegmentedTicketStrip";
 import { fetchOfferDetail, fetchVoucherEligibility, forAge, OWN_BUSINESS_OFFER_LINE, POINTS_KEEP_COLLECTING, voucherGateLine, type OfferDetail, type VoucherEligibility } from "../../../services/offers";
-import { t } from "../../../i18n/core";
+import { t, tk, tn } from "../../../i18n/core";
 import { forumAccess } from "../../../services/forum/rules";
 import { recordListingEvent, recordProfessionalEvent } from "../../../services/marketplace/listingEvents";
 import type { MarketResult } from "../../../services/market/rpc";
@@ -167,18 +167,18 @@ export default function OfferDetailPage() {
 
   const shell = (content: React.ReactNode) => (
     <div style={{ paddingBottom: 32 }}>
-      <BackRow onBack={back} eyebrow="Offer" />
+      <BackRow onBack={back} eyebrow={t("Offer")} />
       <div style={{ marginTop: 8 }}>{content}</div>
     </div>
   );
 
-  if (load.state === "loading") return shell(<MarketSkeleton radius={18} count={3} rows={3} label="Loading this offer" />);
+  if (load.state === "loading") return shell(<MarketSkeleton radius={18} count={3} rows={3} label={tk("Loading this offer")} />);
   const r = load.result;
   if (!r.ok) {
-    return shell(<MarketError thing="this offer" onRetry={fetchIt} />);
+    return shell(<MarketError thing={tk("this offer")} onRetry={fetchIt} />);
   }
   const o = r.value && forAge([r.value], adult).length ? r.value : null;
-  if (!o) return shell(<MarketEmptyCard title="This offer isn't available" body="It may have ended, sold out or been removed. Other rewards are on Explore." />);
+  if (!o) return shell(<MarketEmptyCard title={tk("This offer isn't available")} body={tk("It may have ended, sold out or been removed. Other rewards are on Explore.")} />);
 
   const balance = pointsSummary?.balance ?? 0;
   const tier = tierStyle(tierRank(pointTiers, pointsSummary?.tierName), dark);
@@ -194,7 +194,7 @@ export default function OfferDetailPage() {
   return (
     <div style={{ paddingBottom: 172, lineHeight: "normal", color: m.ink }}>
       <style>{FOCUS_CSS}</style>
-      <BackRow onBack={back} eyebrow="Offer" />
+      <BackRow onBack={back} eyebrow={t("Offer")} />
 
       <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12 }}>
         <OwnerTile name={o.ownerName} logoUrl={o.ownerLogoUrl} size={44} />
@@ -212,7 +212,7 @@ export default function OfferDetailPage() {
       {/* The cost, in the client's tier colours */}
       <div style={{ marginTop: 12, borderRadius: 18, background: tier.fill, border: `0.5px solid ${tier.border}`, padding: "14px 16px", display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
         <PointsFigure value={o.pointsCost} mark="leaf" size={28} />
-        {summaryKnown ? <span style={{ fontSize: textPx(12), fontWeight: 700, color: tier.text, whiteSpace: "nowrap" }}>You have {formatPoints(balance)}</span> : null}
+        {summaryKnown ? <span style={{ fontSize: textPx(12), fontWeight: 700, color: tier.text, whiteSpace: "nowrap" }}>{t("You have {n}", { n: formatPoints(balance) })}</span> : null}
       </div>
 
       {/* Valid · Where to use · Limit · Voucher expires */}
@@ -240,7 +240,7 @@ export default function OfferDetailPage() {
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={dark ? liftInk(ink) : ink} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ display: "block", ...NO_ICON_SCALE }}>
                 {ICONS[c.i]}
               </svg>
-              <span style={{ fontSize: textPx(11), lineHeight: linePx(14), fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: dark ? m.ink2 : "#6B6680" }}>{c.key}</span>
+              <span style={{ fontSize: textPx(11), lineHeight: linePx(14), fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: dark ? m.ink2 : "#6B6680" }}>{t(c.key)}</span>
               <span style={{ fontSize: textPx(16), lineHeight: linePx(20), fontWeight: 700, color: dark ? m.ink : "#17142A", textWrap: "balance" } as React.CSSProperties}>{c.value}</span>
             </div>
           );
@@ -257,11 +257,11 @@ export default function OfferDetailPage() {
           type="button"
           aria-expanded={termsOpen}
           aria-controls={termsId}
-          onClick={() => setTermsOpen((t) => !t)}
+          onClick={() => setTermsOpen((open) => !open)}
           className="market-focus"
           style={{ width: "100%", height: 50, padding: "0 14px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: 0, borderRadius: 16, font: "inherit", fontSize: textPx(13.5), fontWeight: 700, color: m.ink, cursor: "pointer" }}
         >
-          Terms
+          {t("Terms")}
           <svg
             width={16}
             height={16}
@@ -279,17 +279,17 @@ export default function OfferDetailPage() {
         </button>
         {termsOpen ? (
           <div id={termsId} style={{ padding: "0 14px 14px", fontSize: textPx(12.5), lineHeight: linePx(18), color: m.ink2, whiteSpace: "pre-line" }}>
-            {o.terms ?? "No extra terms for this offer."}
+            {o.terms ?? t("No extra terms for this offer.")}
           </div>
         ) : null}
       </div>
 
-      <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>This discount is provided and honoured by {o.ownerName}.</p>
+      <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(17), color: m.faint }}>{t("This discount is provided and honoured by {name}.", { name: o.ownerName })}</p>
 
       {authUserId && !ownOffer ? (
         reported ? (
           <p role="status" style={{ margin: "4px 0 0", minHeight: 44, display: "flex", alignItems: "center", gap: 6, fontSize: textPx(13), fontWeight: 700, color: m.ink2 }}>
-            <Flag size={14} strokeWidth={2} aria-hidden style={NO_ICON_SCALE} /> You reported this offer.
+            <Flag size={14} strokeWidth={2} aria-hidden style={NO_ICON_SCALE} /> {t("You reported this offer.")}
           </p>
         ) : (
           <button
@@ -298,7 +298,7 @@ export default function OfferDetailPage() {
             className="market-focus"
             style={{ marginTop: 4, minHeight: 44, padding: 0, display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: 0, font: "inherit", fontSize: textPx(13), fontWeight: 700, color: m.ink2, cursor: "pointer" }}
           >
-            <Flag size={14} strokeWidth={2} aria-hidden style={NO_ICON_SCALE} /> Report this offer
+            <Flag size={14} strokeWidth={2} aria-hidden style={NO_ICON_SCALE} /> {t("Report this offer")}
           </button>
         )
       ) : null}
@@ -337,13 +337,13 @@ export default function OfferDetailPage() {
                 ...(gate.locked ? {} : press.style),
               }}
             >
-              Redeem for {formatPoints(o.pointsCost)} points
+              {tn(o.pointsCost, "Redeem for {n} point", "Redeem for {n} points", { n: formatPoints(o.pointsCost) })}
             </button>
           </div>
         )}
       </PinnedSlot>
 
-      <BottomSheet open={reportOpen} onClose={() => setReportOpen(false)} title="Report this offer">
+      <BottomSheet open={reportOpen} onClose={() => setReportOpen(false)} title={t("Report this offer")}>
         {reportOpen && (
           <ReviewReportForm
             reasons={OFFER_REPORT_REASONS}

@@ -27,6 +27,7 @@ import { ScheduleBlock } from "../../components/business-dashboard/ScheduleBlock
 import { ActivityScreen, RecentActivityCard } from "../../components/business-dashboard/RecentActivity";
 import { textPx } from "../../theme/textSize";
 import { BUSINESS_KINDS, fetchUnreadNotificationCount } from "../../services/notifications";
+import { t } from "../../i18n/core";
 
 // v6 Business Dashboard (Release 2 · Batch 3): DA1 / DA2 / DA3, decisions
 // V6-52 (BizSummaryV27 gauge cluster as drawn + the per-type BizTypeKit
@@ -146,7 +147,7 @@ export default function BusinessDashboard() {
   const openListing = () => (business ? setSheetOpen(true) : go("/app/business/profile"));
 
   const onToggleListing = async (v: boolean) => {
-    if (!business || !raw) return "Couldn't change your listing. Try again.";
+    if (!business || !raw) return t("Couldn't change your listing. Try again.");
     setRaw({ ...raw, business: { ...business, active: v } });
     const r = await saveListingActive(business.id, v);
     if (!r.ok) {
@@ -193,24 +194,24 @@ export default function BusinessDashboard() {
   const controls: ClusterControl[] =
     kind === "store"
       ? [
-          { key: "product", Icon: PackagePlus, name: "Add product", onActivate: () => go("/app/business/products") },
-          { key: "orders", Icon: Package, name: "View orders", onActivate: () => go("/app/business/operations") },
-          { key: "discount", Icon: BadgePercent, name: "Add discount", onActivate: () => go("/app/business/products?tab=promotions&offer=new") },
+          { key: "product", Icon: PackagePlus, name: t("Add product"), onActivate: () => go("/app/business/products") },
+          { key: "orders", Icon: Package, name: t("View orders"), onActivate: () => go("/app/business/operations") },
+          { key: "discount", Icon: BadgePercent, name: t("Add discount"), onActivate: () => go("/app/business/products?tab=promotions&offer=new") },
         ]
       : kind === "gym"
         ? [
-            { key: "checkin", Icon: ScanLine, name: "Check someone in", onActivate: () => go("/app/business/operations") },
-            { key: "daypass", Icon: Ticket, name: "Sell a day pass", onActivate: () => go("/app/business/gym") },
-            { key: "invite", Icon: MailPlus, name: "Invite member", onActivate: () => go("/app/business/members") },
-            { key: "discount", Icon: BadgePercent, name: "Add discount", onActivate: () => go("/app/business/marketplace?tab=promo&offer=new") },
-            { key: "employee", Icon: IdCard, name: "Add employee", onActivate: () => go("/app/business/employees") },
+            { key: "checkin", Icon: ScanLine, name: t("Check someone in"), onActivate: () => go("/app/business/operations") },
+            { key: "daypass", Icon: Ticket, name: t("Sell a day pass"), onActivate: () => go("/app/business/gym") },
+            { key: "invite", Icon: MailPlus, name: t("Invite member"), onActivate: () => go("/app/business/members") },
+            { key: "discount", Icon: BadgePercent, name: t("Add discount"), onActivate: () => go("/app/business/marketplace?tab=promo&offer=new") },
+            { key: "employee", Icon: IdCard, name: t("Add employee"), onActivate: () => go("/app/business/employees") },
           ]
         : [
-            { key: "class", Icon: CalendarPlus, name: "Create class", onActivate: () => go("/app/business/classes") },
-            { key: "invite", Icon: MailPlus, name: "Invite member", onActivate: () => go("/app/business/members") },
-            { key: "offering", Icon: PackagePlus, name: "Add offering", onActivate: () => go("/app/business/marketplace") },
-            { key: "discount", Icon: BadgePercent, name: "Add discount", onActivate: () => go("/app/business/marketplace?tab=promo&offer=new") },
-            { key: "employee", Icon: IdCard, name: "Add employee", onActivate: () => go("/app/business/employees") },
+            { key: "class", Icon: CalendarPlus, name: t("Create class"), onActivate: () => go("/app/business/classes") },
+            { key: "invite", Icon: MailPlus, name: t("Invite member"), onActivate: () => go("/app/business/members") },
+            { key: "offering", Icon: PackagePlus, name: t("Add offering"), onActivate: () => go("/app/business/marketplace") },
+            { key: "discount", Icon: BadgePercent, name: t("Add discount"), onActivate: () => go("/app/business/marketplace?tab=promo&offer=new") },
+            { key: "employee", Icon: IdCard, name: t("Add employee"), onActivate: () => go("/app/business/employees") },
           ];
 
   // Loading (OURS-DA-states #1): the unlit gauges without "–" or subs.
@@ -239,7 +240,7 @@ export default function BusinessDashboard() {
         c={c}
         kicker={dateKicker(now)}
         greeting={greeting(now)}
-        name={business?.name || user.businessName || "Your business"}
+        name={business?.name || user.businessName || t("Your business")}
         listed={listed}
         attentionCount={attention?.length ?? 0}
         notificationsUnread={notifUnread}
@@ -256,7 +257,7 @@ export default function BusinessDashboard() {
       {/* Kept from the venue switcher (VenueSwitcher): a hidden venue is explained, and staff are told they can only view. */}
       {selected?.hiddenAt && (
         <p role="note" style={{ fontSize: textPx(12), lineHeight: 1.5, color: c.high, background: c.highBg, borderRadius: 16, padding: "12px 14px", marginBottom: 20 }}>
-          {`${selected.name} is hidden from Explore. Centium hid this venue on ${dayMonthYear(selected.hiddenAt.slice(0, 10))}, so people can't find it on Explore or open its page. You can still see it here. Contact Centium support to find out why.`}
+          {t("{name} is hidden from Explore. Centium hid this venue on {date}, so people can't find it on Explore or open its page. You can still see it here. Contact Centium support to find out why.", { name: selected.name, date: dayMonthYear(selected.hiddenAt.slice(0, 10)) })}
         </p>
       )}
 
@@ -272,7 +273,7 @@ export default function BusinessDashboard() {
         />
       )}
 
-      <DashLabel c={c} label="At a glance" link="View analytics" onLink={() => go("/app/business/analytics")} mb={8} />
+      <DashLabel c={c} label={t("At a glance")} link={t("View analytics")} onLink={() => go("/app/business/analytics")} mb={8} />
       <GaugeCluster c={c} gauges={clusterGauges} controls={controls} onGaugeTap={(label) => navigate("/app/business/analytics", { state: { section: label } })} ready={!!raw} reducedMotion={reducedMotion} />
 
       {raw && <TodayBlock c={c} model={todayBlock(kind, raw, now)} onSeeAll={() => go("/app/business/classes")} onOpenClass={() => go("/app/business/classes")} onOrders={() => go("/app/business/operations")} onOpenOrder={(id) => go(`/app/business/orders/${id}`)} onProducts={() => go("/app/business/products")} />}
@@ -323,16 +324,16 @@ export default function BusinessDashboard() {
             {
               key: "venue",
               Icon: Store,
-              title: "Venue console",
-              detail: "Members, class rosters, opening hours, logo and cover",
+              title: t("Venue console"),
+              detail: t("Members, class rosters, opening hours, logo and cover"),
               onClick: () => go("/app/business/venue"),
-              trailing: <ChevronRight size={16} color={c.faint} aria-hidden />,
+              trailing: <ChevronRight size={16} color={c.faint} aria-hidden className="rtl:-scale-x-100" />,
             },
           ]}
         />
       )}
       {selected && !isOwner && (
-        <p style={{ fontSize: textPx(11), color: c.faint, textAlign: "center", marginTop: 0 }}>You're staff at this venue, so you can view it but only the owner can change it.</p>
+        <p style={{ fontSize: textPx(11), color: c.faint, textAlign: "center", marginTop: 0 }}>{t("You're staff at this venue, so you can view it but only the owner can change it.")}</p>
       )}
 
       <ListingSheet c={c} open={sheetOpen} onClose={() => setSheetOpen(false)} active={!!business?.active} onToggle={onToggleListing} />

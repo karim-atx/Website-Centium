@@ -12,6 +12,7 @@ import { FOCUS_CSS } from "../../../components/market/usePress";
 import { fetchMyVoucher, howToUse, liveStatus, type Voucher } from "../../../services/vouchers";
 import type { MarketResult } from "../../../services/market/rpc";
 import { CapsLabel } from "./rewardsParts";
+import { t, tk } from "../../../i18n/core";
 
 // Market + Share 3.0 · W2 · C-MO.4.4.4 Voucher (`voucher`) at
 // /app/marketplace/vouchers/:id. Literal values, Client Explore Screens lines
@@ -65,13 +66,13 @@ export default function VoucherPage() {
 
   const header = (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", lineHeight: "normal" }}>
-      <div role="heading" aria-level={2} style={{ fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", color: m.faint }}>
-        VOUCHER
+      <div role="heading" aria-level={2} style={{ fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint }}>
+        {t("Voucher")}
       </div>
       <button
         type="button"
         onClick={close}
-        aria-label="Close"
+        aria-label={t("Close")}
         className="hit market-focus"
         style={{ width: 32, height: 32, boxSizing: "content-box", borderRadius: 999, border: `1.5px solid ${m.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: m.ink2, background: "none", padding: 0, cursor: "pointer" }}
       >
@@ -91,13 +92,13 @@ export default function VoucherPage() {
     </div>
   );
 
-  if (load.state === "loading") return shell(<MarketSkeleton radius={24} count={1} rows={3} height={320} label="Loading your voucher" />);
+  if (load.state === "loading") return shell(<MarketSkeleton radius={24} count={1} rows={3} height={320} label={tk("Loading your voucher")} />);
   const r = load.result;
   if (!r.ok) {
-    return shell(<MarketError thing="your voucher" onRetry={fetchIt} />);
+    return shell(<MarketError thing={tk("your voucher")} onRetry={fetchIt} />);
   }
   const v = r.value;
-  if (!v) return shell(<MarketEmptyCard title="We couldn't find this voucher" body="It may have been removed. Your vouchers are in My rewards." />);
+  if (!v) return shell(<MarketEmptyCard title={tk("We couldn't find this voucher")} body={tk("It may have been removed. Your vouchers are in My rewards.")} />);
 
   const status = liveStatus(v);
   const steps = howToUse(v.where, v.onlineUrl);
@@ -113,7 +114,7 @@ export default function VoucherPage() {
 
       {status === "issued" ? (
         <>
-          <CapsLabel style={{ marginTop: 18 }}>How to use</CapsLabel>
+          <CapsLabel style={{ marginTop: 18 }}>{t("How to use")}</CapsLabel>
           <ol style={{ margin: "8px 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8, fontSize: textPx(13), lineHeight: linePx(19), color: m.ink2 }}>
             {steps.map((s, i) => (
               <li key={s} style={{ display: "flex", gap: 10 }}>
@@ -128,10 +129,10 @@ export default function VoucherPage() {
       ) : null}
 
       {copied !== null ? (
-        <ConfirmationStrip tone={copied ? "success" : "error"} text={copied ? "Code copied" : "Couldn't copy the code. Copy it by hand."} style={{ marginTop: 16 }} />
+        <ConfirmationStrip tone={copied ? "success" : "error"} text={copied ? t("Code copied") : t("Couldn't copy the code. Copy it by hand.")} style={{ marginTop: 16 }} />
       ) : null}
 
-      {isNew ? <ConfirmationStrip tone="teal" text="Saved to My Rewards" action="View" onAction={() => navigate("/app/marketplace/rewards/mine")} style={{ marginTop: 16 }} /> : null}
+      {isNew ? <ConfirmationStrip tone="teal" text={t("Saved to My Rewards")} action={t("View")} onAction={() => navigate("/app/marketplace/rewards/mine")} style={{ marginTop: 16 }} /> : null}
     </div>
   );
 }

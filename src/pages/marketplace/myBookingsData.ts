@@ -20,6 +20,7 @@ import { fetchMyGymMemberships, type GymMembership } from "../../services/venues
 import { fetchMyHires, type MyHire } from "../../services/hires";
 import { typeLabel } from "../../components/pro/profile/typeLabel";
 import type { ProfessionalSubtype } from "../../types";
+import { t } from "../../i18n/core";
 import type { ClassInput, SessionInput } from "./myBookingsModel";
 
 export type Loaded<T> = { ok: true; value: T } | { ok: false; offline: boolean };
@@ -118,7 +119,7 @@ export async function loadSchedule(): Promise<Loaded<ScheduleData>> {
       const names = await professionalNames(appts.map((x) => x.staff_id).filter((x): x is string => !!x));
       sessions = appts.map((x) => {
         const n = x.staff_id ? names.get(x.staff_id) : undefined;
-        const first = n?.first || "Your professional";
+        const first = n?.first || t("Your professional");
         return {
           id: x.id,
           serviceName: x.service_name,
