@@ -140,7 +140,7 @@ const community: Catalogue = {
   "Each time you post, you choose whether to use this nickname or your first name. Nobody in the community can see who is behind your nickname.": "في كل مرة تنشر فيها، تختار استخدام هذا الاسم المستعار أو اسمك الأول. لا أحد في المجتمع يستطيع معرفة من وراء اسمك المستعار.",
   "Nickname": "الاسم المستعار",
   "3 to 20 letters, numbers or underscores": "من 3 إلى 20 حرفًا أو رقمًا أو شرطة سفلية",
-  "Not your real name, and not a name that sounds official, like \"Doctor\" or \"Support\"": "ليس اسمك الحقيقي، ولا اسمًا يبدو رسميًا مثل «Doctor» أو «Support»",
+  "Not your real name, and not a name that sounds official, like \"Doctor\" or \"Support\"": "ليس اسمك الحقيقي، ولا اسمًا يبدو رسميًا مثل \"طبيب\" أو \"الدعم\"",
   "You can change it once every 30 days, from the forum or Profile › Credentials": "يمكنك تغييره مرة كل 30 يومًا، من المنتدى أو من الملف الشخصي › المؤهلات",
 
   // == Forum · report, block and withdraw ==
