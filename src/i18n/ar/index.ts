@@ -21,12 +21,13 @@ import promessages from "./promessages";
 import prolibrary from "./prolibrary";
 import pronutrition from "./pronutrition";
 import proforms from "./proforms";
+import proinsights from "./proinsights";
 
 // Round F (AV): the Arabic catalogue, one file per area, loaded as one lazy
 // chunk when Arabic is chosen. Every entry is in design-handover/round-f/
 // ARABIC_REVIEW.md for Karim's review before merge. A key in two areas has
 // the same Arabic in both (the catalogue test checks).
-const ar: Catalogue = { ...core, ...landing, ...legal, ...auth, ...settings, ...plans, ...messages, ...notifications, ...services, ...shared, ...programmes, ...safety, ...venues, ...certificates, ...pro, ...proclients, ...proprofile, ...procalendar, ...promessages, ...prolibrary, ...pronutrition, ...proforms };
+const ar: Catalogue = { ...core, ...landing, ...legal, ...auth, ...settings, ...plans, ...messages, ...notifications, ...services, ...shared, ...programmes, ...safety, ...venues, ...certificates, ...pro, ...proclients, ...proprofile, ...procalendar, ...promessages, ...prolibrary, ...pronutrition, ...proforms, ...proinsights };
 
 export default ar;
 

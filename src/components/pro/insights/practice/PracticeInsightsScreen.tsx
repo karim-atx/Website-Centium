@@ -35,6 +35,7 @@ import {
   type StageChange,
 } from "./practiceModel";
 import { appLocale } from "../../../../i18n/format";
+import { t, tk, tn, tx } from "../../../../i18n/core";
 
 interface Session {
   date: string;
@@ -50,7 +51,8 @@ const RANGE_START: Record<PageRange, (today: string) => string> = {
   },
   month: (t) => `${t.slice(0, 8)}01`,
 };
-const RANGE_WORD: Record<PageRange, string> = { today: "Today", week: "This week", month: "This month" };
+const RANGE_WORD: Record<PageRange, string> = { today: tk("Today"), week: tk("This week"), month: tk("This month") };
+const SCRUB_HINT = tk("Drag sideways to scrub, tap a point to pin it");
 const fmtShort = (iso: string) => new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 
@@ -137,7 +139,7 @@ export const PracticeInsightsScreen: React.FC = () => {
   if (totals === undefined || history === null)
     return (
       <div>
-        <CHead title="Practice insights" sub="How your practice is doing" onBack={back} />
+        <CHead title={t("Practice insights")} sub={t("How your practice is doing")} onBack={back} />
         <div className="flex flex-col" style={{ gap: 10 }}>
           <ProCardSkeleton lines={2} height={96} />
           <ProCardSkeleton lines={2} height={64} />
@@ -150,9 +152,9 @@ export const PracticeInsightsScreen: React.FC = () => {
   if (empty)
     return (
       <div>
-        <CHead title="Practice insights" sub="How your practice is doing" onBack={back} />
-        <EmptyState icon={ChartLine} title="Insights appear with your first clients" line="Active clients, sessions, retention and reviews fill in as you work.">
-          <CtaButton size="base" variant="secondary" icon={<UserPlus size={15} />} label="Add a client" onClick={() => navigate(PRO_ROUTES.clients)} />
+        <CHead title={t("Practice insights")} sub={t("How your practice is doing")} onBack={back} />
+        <EmptyState icon={ChartLine} title={t("Insights appear with your first clients")} line={t("Active clients, sessions, retention and reviews fill in as you work.")}>
+          <CtaButton size="base" variant="secondary" icon={<UserPlus size={15} />} label={t("Add a client")} onClick={() => navigate(PRO_ROUTES.clients)} />
         </EmptyState>
       </div>
     );
@@ -169,9 +171,9 @@ export const PracticeInsightsScreen: React.FC = () => {
   const prev = (sessions ?? []).filter((s) => s.date >= prevStart && s.date < start && s.outcome !== "no_show" && s.outcome !== "late_cancel").length;
   const ret = totals?.retention90 ?? null;
   const boxes: NumBoxData[] = [
-    { label: "Active clients", value: String(activeNow), delta: !early && activeNow !== activeThen ? signed(activeNow - activeThen) : null, dir: !early && activeNow !== activeThen ? (activeNow > activeThen ? "up" : "down") : null, line: `Since ${fmtShort(start)}`, spark: roster && !early ? roster.map((m) => m.active) : null },
-    { label: "Sessions", value: sessions ? String(delivered) : "–", delta: sessions && !early && delivered !== prev ? signed(delivered - prev) : null, dir: sessions && !early && delivered !== prev ? (delivered > prev ? "up" : "down") : null, line: RANGE_WORD[range] },
-    { label: "Still active after 3 months", value: ret == null ? "–" : String(ret), unit: ret == null ? undefined : "%", line: ret == null ? "After 3 months of data" : "Of clients who started 3 months ago or more" },
+    { label: t("Active clients"), value: String(activeNow), delta: !early && activeNow !== activeThen ? signed(activeNow - activeThen) : null, dir: !early && activeNow !== activeThen ? (activeNow > activeThen ? "up" : "down") : null, line: t("Since {date}", { date: fmtShort(start) }), spark: roster && !early ? roster.map((m) => m.active) : null },
+    { label: t("Sessions"), value: sessions ? String(delivered) : "–", delta: sessions && !early && delivered !== prev ? signed(delivered - prev) : null, dir: sessions && !early && delivered !== prev ? (delivered > prev ? "up" : "down") : null, line: t(RANGE_WORD[range]) },
+    { label: t("Still active after 3 months"), value: ret == null ? "–" : String(ret), unit: ret == null ? undefined : "%", line: ret == null ? t("After 3 months of data") : t("Of clients who started 3 months ago or more") },
   ];
 
   // ------------------------------------------------------------ the groups
@@ -184,11 +186,22 @@ export const PracticeInsightsScreen: React.FC = () => {
   const reviewCount = totals?.reviewCount ?? 0;
 
   const lines = {
-    ret: ret != null ? `${ret}% still active after 3 months` : "Appears after 3 months",
-    out: activeCount < OUTCOME_MIN_CLIENTS ? `${activeCount} client${activeCount === 1 ? "" : "s"} · appears with ${OUTCOME_MIN_CLIENTS}` : "Coming soon",
-    ses: sessions == null ? "Loading…" : sessEarly ? `${monthDelivered} session${monthDelivered === 1 ? "" : "s"} · trend after 4 weeks` : `${monthDelivered} this month${ns != null ? ` · ${ns}% no-shows` : ""}`,
-    pip: !pipe ? "Loading…" : pipe.hirePct == null ? "No enquiries yet" : early ? `${pipe.enquiries} enquir${pipe.enquiries === 1 ? "y" : "ies"}, ${pipe.hired} hired` : `${pipe.hirePct}% of enquiries hire you`,
-    mon: reviewCount ? `${avg != null ? `${avg.toFixed(1)} stars · ` : ""}${reviewCount} review${reviewCount === 1 ? "" : "s"}` : "No reviews yet",
+    ret: ret != null ? t("{pct}% still active after 3 months", { pct: ret }) : t("Appears after 3 months"),
+    out: activeCount < OUTCOME_MIN_CLIENTS ? tn(activeCount, "{n} client · appears with {min}", "{n} clients · appears with {min}", { min: OUTCOME_MIN_CLIENTS }) : t("Coming soon"),
+    ses:
+      sessions == null
+        ? t("Loading…")
+        : sessEarly
+          ? tn(monthDelivered, "{n} session · trend after 4 weeks", "{n} sessions · trend after 4 weeks")
+          : ns != null
+            ? t("{n} this month · {pct}% no-shows", { n: monthDelivered, pct: ns })
+            : t("{n} this month", { n: monthDelivered }),
+    pip: !pipe ? t("Loading…") : pipe.hirePct == null ? t("No enquiries yet") : early ? tn(pipe.enquiries, "{n} enquiry, {hired} hired", "{n} enquiries, {hired} hired", { hired: pipe.hired }) : t("{pct}% of enquiries hire you", { pct: pipe.hirePct }),
+    mon: reviewCount
+      ? avg != null
+        ? tn(reviewCount, "{stars} stars · {n} review", "{stars} stars · {n} reviews", { stars: avg.toFixed(1) })
+        : tn(reviewCount, "{n} review", "{n} reviews")
+      : t("No reviews yet"),
   };
 
   const toggle = (k: string) => setOpen((o) => (o === k ? null : k));
@@ -196,7 +209,7 @@ export const PracticeInsightsScreen: React.FC = () => {
 
   return (
     <div style={{ paddingBottom: 120 }}>
-      <CHead title="Practice insights" sub="How your practice is doing" onBack={back} />
+      <CHead title={t("Practice insights")} sub={t("How your practice is doing")} onBack={back} />
       <div className="flex justify-end" style={{ marginBottom: 10 }}>
         <RangeTabs value={range} onChange={setRange} />
       </div>
@@ -208,111 +221,113 @@ export const PracticeInsightsScreen: React.FC = () => {
       {early && weeksIn != null && (
         <div className="flex" style={{ borderRadius: 16, background: INK.soft, padding: "12px 14px", marginBottom: 12, gap: 10 }}>
           <Sprout size={16} strokeWidth={2} aria-hidden style={{ color: "#4F8F8A", flexShrink: 0, marginTop: 2 }} />
-          <span style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5 }}>{`You started ${weeksIn === 0 ? "this week" : weeksIn === 1 ? "1 week ago" : `${weeksIn} weeks ago`}. Trends fill in as you work: sessions after 4 weeks, retention after 3 months.`}</span>
+          <span style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5 }}>{weeksIn === 0
+              ? t("You started this week. Trends fill in as you work: sessions after 4 weeks, retention after 3 months.")
+              : tn(weeksIn, "You started {n} week ago. Trends fill in as you work: sessions after 4 weeks, retention after 3 months.", "You started {n} weeks ago. Trends fill in as you work: sessions after 4 weeks, retention after 3 months.")}</span>
         </div>
       )}
 
-      <Group id="ret" icon={Users} title="Retention" line={lines.ret} open={open === "ret"} onToggle={() => toggle("ret")}>
+      <Group id="ret" icon={Users} title={t("Retention")} line={lines.ret} open={open === "ret"} onToggle={() => toggle("ret")}>
         {curve && curve.some((p) => p.pct != null) ? (
           <ProChart
             flat
-            title="Still active after"
-            question="How long do clients stay with you?"
+            title={t("Still active after")}
+            question={t("How long do clients stay with you?")}
             questionIcon
-            x={["Start", ...curve.map((p) => `${p.months} mo`)]}
+            x={[t("Start"), ...curve.map((p) => t("{n} mo", { n: p.months }))]}
             min={0}
             max={100}
-            series={[{ key: "ret", label: "Clients who started", type: "line", color: rCol, values: [100, ...curve.map((p) => p.pct)] }]}
-            tooltip={(i) => (i === 0 ? null : curve[i - 1].pct == null ? null : { title: `${curve[i - 1].months} months`, lines: [`${curve[i - 1].pct}% still active`, `${curve[i - 1].kept} of ${curve[i - 1].of} who started`] })}
-            summary={`Still active after: ${curve.filter((p) => p.pct != null).map((p) => `${p.months} months ${p.pct}%`).join(", ")}.`}
-            scrubHint="Drag sideways to scrub, tap a point to pin it"
+            series={[{ key: "ret", label: t("Clients who started"), type: "line", color: rCol, values: [100, ...curve.map((p) => p.pct)] }]}
+            tooltip={(i) => (i === 0 ? null : curve[i - 1].pct == null ? null : { title: tn(curve[i - 1].months, "{n} month", "{n} months"), lines: [t("{pct}% still active", { pct: curve[i - 1].pct as number }), t("{kept} of {of} who started", { kept: curve[i - 1].kept, of: curve[i - 1].of })] })}
+            summary={t("Still active after: {list}.", { list: curve.filter((p) => p.pct != null).map((p) => `${tn(p.months, "{n} month", "{n} months")} ${p.pct}%`).join(", ") })}
+            scrubHint={t(SCRUB_HINT)}
           />
         ) : (
-          <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginBottom: 10 }}>"Still active after a month" shows once 5 clients have been with you that long.</p>
+          <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginBottom: 10 }}>{t("\"Still active after a month\" shows once 5 clients have been with you that long.")}</p>
         )}
         <div style={{ height: 12 }} />
         {roster && (
           <ProChart
             flat
-            title="Active clients"
-            question="Is the roster growing faster than clients finish?"
+            title={t("Active clients")}
+            question={t("Is the roster growing faster than clients finish?")}
             questionIcon
-            right={<RangeTrack label="Active clients range" items={["6M", "1Y"] as const} value={rosterRange} onChange={setRosterRange} />}
+            right={<RangeTrack label={t("Active clients range")} items={[tk("6M"), tk("1Y")] as const} value={rosterRange} onChange={setRosterRange} />}
             x={roster.map((m) => m.label)}
             min={0}
             max={Math.max(1, ...roster.map((m) => Math.max(m.active, m.added, m.completed)))}
             series={[
-              { key: "new", label: "New", type: "bar", color: INK.pr, values: roster.map((m) => m.added) },
-              { key: "done", label: "Completed", type: "bar", color: INK.teal, values: roster.map((m) => m.completed) },
-              { key: "act", label: "Active", type: "line", color: rCol, values: roster.map((m) => m.active) },
+              { key: "new", label: t("New"), type: "bar", color: INK.pr, values: roster.map((m) => m.added) },
+              { key: "done", label: t("Completed"), type: "bar", color: INK.teal, values: roster.map((m) => m.completed) },
+              { key: "act", label: t("Active"), type: "line", color: rCol, values: roster.map((m) => m.active) },
             ]}
-            tooltip={(i) => ({ title: roster[i].long, lines: [`${roster[i].active} active`, `${roster[i].added} new · ${roster[i].completed} completed`] })}
+            tooltip={(i) => ({ title: roster[i].long, lines: [t("{n} active", { n: roster[i].active }), t("{added} new · {completed} completed", { added: roster[i].added, completed: roster[i].completed })] })}
             insight={rosterInsight(roster) ?? undefined}
-            summary={`Active clients by month: ${roster.map((m) => `${m.label} ${m.active}`).join(", ")}.`}
-            scrubHint="Drag sideways to scrub, tap a point to pin it"
+            summary={t("Active clients by month: {list}.", { list: roster.map((m) => `${m.label} ${m.active}`).join(", ") })}
+            scrubHint={t(SCRUB_HINT)}
           />
         )}
       </Group>
 
-      <Group id="out" icon={TrendingUp} title="Client outcomes" line={lines.out} open={open === "out"} onToggle={() => toggle("out")}>
-        <ComingSoon line={activeCount < OUTCOME_MIN_CLIENTS ? `Client progress shows once you have ${OUTCOME_MIN_CLIENTS} active clients.` : "Client progress needs each client's goal measure, which Centium doesn't keep yet."} />
+      <Group id="out" icon={TrendingUp} title={t("Client outcomes")} line={lines.out} open={open === "out"} onToggle={() => toggle("out")}>
+        <ComingSoon line={activeCount < OUTCOME_MIN_CLIENTS ? t("Client progress shows once you have {n} active clients.", { n: OUTCOME_MIN_CLIENTS }) : t("Client progress needs each client's goal measure, which Centium doesn't keep yet.")} />
       </Group>
 
-      <Group id="ses" icon={CalendarCheck} title="Sessions" line={lines.ses} open={open === "ses"} onToggle={() => toggle("ses")}>
+      <Group id="ses" icon={CalendarCheck} title={t("Sessions")} line={lines.ses} open={open === "ses"} onToggle={() => toggle("ses")}>
         {perWeek ? (
           <ProChart
             flat
-            title="Sessions per week"
-            question="Are clients turning up?"
+            title={t("Sessions per week")}
+            question={t("Are clients turning up?")}
             questionIcon
-            right={<RangeTrack label="Sessions range" items={["4W", "12W", "6M"] as const} value={sessRange} onChange={setSessRange} />}
+            right={<RangeTrack label={t("Sessions range")} items={[tk("4W"), tk("12W"), tk("6M")] as const} value={sessRange} onChange={setSessRange} />}
             x={perWeek.map((w) => fmtShort(w.start))}
             min={0}
             max={Math.max(1, ...perWeek.map((w) => w.delivered))}
-            series={[{ key: "del", label: "Delivered", type: "bar", color: INK.pr, values: perWeek.map((w) => w.delivered) }]}
+            series={[{ key: "del", label: tx("Delivered", "sessions"), type: "bar", color: INK.pr, values: perWeek.map((w) => w.delivered) }]}
             tooltip={(i) => ({
-              title: `Week of ${fmtShort(perWeek[i].start)}`,
-              lines: [`${perWeek[i].delivered} delivered`, perWeek[i].noShowPct == null ? "No sessions booked" : `No-show ${perWeek[i].noShowPct}% · late cancel ${perWeek[i].lateCancelPct}%`],
+              title: t("Week of {date}", { date: fmtShort(perWeek[i].start) }),
+              lines: [t("{n} delivered", { n: perWeek[i].delivered }), perWeek[i].noShowPct == null ? t("No sessions booked") : t("No-show {noShow}% · late cancel {late}%", { noShow: perWeek[i].noShowPct as number, late: perWeek[i].lateCancelPct as number })],
             })}
             insight={(() => {
               const all = (sessions ?? []).filter((s) => s.date >= perWeek[0].start && s.date <= today);
               const p = noShowShare(all);
-              return p == null ? undefined : `No-shows: ${p}% of sessions.`;
+              return p == null ? undefined : t("No-shows: {pct}% of sessions.", { pct: p });
             })()}
-            summary={`Sessions delivered per week: ${perWeek.map((w) => w.delivered).join(", ")}.`}
-            scrubHint="Drag sideways to scrub, tap a point to pin it"
+            summary={t("Sessions delivered per week: {list}.", { list: perWeek.map((w) => w.delivered).join(", ") })}
+            scrubHint={t(SCRUB_HINT)}
           />
         ) : (
           <ProCardSkeleton lines={3} />
         )}
       </Group>
 
-      <Group id="pip" icon={Filter} title="Enquiries to clients" line={lines.pip} open={open === "pip"} onToggle={() => toggle("pip")}>
+      <Group id="pip" icon={Filter} title={t("Enquiries to clients")} line={lines.pip} open={open === "pip"} onToggle={() => toggle("pip")}>
         <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 14, marginBottom: 12 }}>
           <div className="flex items-center justify-between" style={{ gap: 8 }}>
-            <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>From enquiry to active client</p>
-            <RangeTrack label="Enquiries range" items={["3M", "6M", "1Y"] as const} value={pipeRange} onChange={setPipeRange} />
+            <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>{t("From enquiry to active client")}</p>
+            <RangeTrack label={t("Enquiries range")} items={[tk("3M"), tk("6M"), tk("1Y")] as const} value={pipeRange} onChange={setPipeRange} />
           </div>
-          <p className="flex" style={{ gap: 5, fontSize: textPx(11.5), color: INK.chF, margin: "4px 0 12px" }}>Where do people drop off?</p>
+          <p className="flex" style={{ gap: 5, fontSize: textPx(11.5), color: INK.chF, margin: "4px 0 12px" }}>{t("Where do people drop off?")}</p>
           {pipe ? <FunnelBars pipe={pipe} dark={dark} /> : <ProCardSkeleton lines={3} />}
         </div>
       </Group>
 
-      <Group id="mon" icon={Banknote} title="Earnings and ratings" line={lines.mon} open={open === "mon"} onToggle={() => toggle("mon")}>
+      <Group id="mon" icon={Banknote} title={t("Earnings and ratings")} line={lines.mon} open={open === "mon"} onToggle={() => toggle("mon")}>
         <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 14, marginBottom: 12 }}>
-          <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>Payments confirmed</p>
-          <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 1 }}>Is income growing month to month?</p>
+          <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>{t("Payments confirmed")}</p>
+          <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 1 }}>{t("Is income growing month to month?")}</p>
           <p className="flex" style={{ gap: 6, fontSize: textPx(11), color: INK.chF, lineHeight: 1.45, marginTop: 10, padding: "8px 10px", borderRadius: 10, background: INK.soft }}>
             <Info size={12} strokeWidth={2} aria-hidden className="shrink-0" style={{ marginTop: 2 }} />
-            Payments in the app are coming soon, so there's no income to show yet.
+            {t("Payments in the app are coming soon, so there's no income to show yet.")}
           </p>
         </div>
-        {reviewCount === 0 && <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 12 }}>Ratings show here after your first review.</p>}
+        {reviewCount === 0 && <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 12 }}>{t("Ratings show here after your first review.")}</p>}
         {ratings && reviewCount > 0 && (
           <ProChart
             flat
-            title="Ratings"
-            question="Are clients happier over time?"
+            title={t("Ratings")}
+            question={t("Are clients happier over time?")}
             questionIcon
             right={
               <span className="inline-flex items-center" style={{ gap: 8 }}>
@@ -322,19 +337,19 @@ export const PracticeInsightsScreen: React.FC = () => {
                     {avg.toFixed(1)}
                   </span>
                 )}
-                <RangeTrack label="Ratings range" items={["6M", "1Y"] as const} value={rateRange} onChange={setRateRange} />
+                <RangeTrack label={t("Ratings range")} items={[tk("6M"), tk("1Y")] as const} value={rateRange} onChange={setRateRange} />
               </span>
             }
             x={ratings.map((m) => m.label)}
             min={0}
             max={5}
             series={[
-              { key: "n", label: "Reviews", type: "bar", color: INK.soft, values: ratings.map((m) => m.count) },
-              { key: "avg", label: "Average rating", type: "line", color: "#D9A441", values: ratings.map((m) => m.average) },
+              { key: "n", label: t("Reviews"), type: "bar", color: INK.soft, values: ratings.map((m) => m.count) },
+              { key: "avg", label: t("Average rating"), type: "line", color: "#D9A441", values: ratings.map((m) => m.average) },
             ]}
-            tooltip={(i) => ({ title: ratings[i].long, lines: ratings[i].average == null ? ["No reviews"] : [`${ratings[i].average} average`, `${ratings[i].count} review${ratings[i].count === 1 ? "" : "s"}`] })}
-            summary={reviewCount ? `Average rating ${avg?.toFixed(1)} from ${reviewCount} reviews.` : "No reviews yet."}
-            scrubHint="Drag sideways to scrub, tap a point to pin it"
+            tooltip={(i) => ({ title: ratings[i].long, lines: ratings[i].average == null ? [t("No reviews")] : [t("{n} average", { n: ratings[i].average as number }), tn(ratings[i].count, "{n} review", "{n} reviews")] })}
+            summary={reviewCount ? tn(reviewCount, "Average rating {avg} from {n} review.", "Average rating {avg} from {n} reviews.", { avg: avg?.toFixed(1) ?? "" }) : t("No reviews yet.")}
+            scrubHint={t(SCRUB_HINT)}
           />
         )}
       </Group>
@@ -344,11 +359,11 @@ export const PracticeInsightsScreen: React.FC = () => {
 
 /** pipeline16: bars 34 high r10 sized by the share of enquiries (28% minimum), 14 / 800; the drop lines 11.5 / 800 with the arrow 12. */
 const FunnelBars: React.FC<{ pipe: ReturnType<typeof funnel>; dark: boolean }> = ({ pipe, dark }) => {
-  if (!pipe.enquiries) return <p style={{ fontSize: textPx(12), color: INK.chF }}>No enquiries in this range.</p>;
+  if (!pipe.enquiries) return <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("No enquiries in this range.")}</p>;
   const steps: { label: string; sub: string; n: number | null }[] = [
-    { label: "Enquiries", sub: "From your profile, Explore and the care network", n: pipe.enquiries },
-    { label: "Hired", sub: "Chose a plan", n: pipe.hired },
-    { label: "Still active after 30 days", sub: pipe.stayed == null ? "Shows 30 days after a hire" : `Of ${pipe.stayedOf} hired 30 days ago or more`, n: pipe.stayed },
+    { label: t("Enquiries"), sub: t("From your profile, Explore and the care network"), n: pipe.enquiries },
+    { label: t("Hired"), sub: t("Chose a plan"), n: pipe.hired },
+    { label: t("Still active after 30 days"), sub: pipe.stayed == null ? t("Shows 30 days after a hire") : t("Of {n} hired 30 days ago or more", { n: pipe.stayedOf }), n: pipe.stayed },
   ];
   const fills = [INK.prPale, INK.pr, dark ? "#C3B3FB" : "#5F5093"];
   return (
@@ -363,7 +378,7 @@ const FunnelBars: React.FC<{ pipe: ReturnType<typeof funnel>; dark: boolean }> =
               <div className="flex items-center" style={{ gap: 6, paddingBlock: "4px", paddingInline: "10px 0" }}>
                 <ArrowDown size={12} strokeWidth={2.4} aria-hidden style={{ color: INK.chF }} />
                 <span style={{ fontSize: textPx(11.5), fontWeight: 800, color: INK.ch }}>{pct == null ? "–" : `${pct}%`}</span>
-                <span style={{ fontSize: textPx(11), color: INK.chF }}>{i === 1 ? "hire you" : "stay past the first month"}</span>
+                <span style={{ fontSize: textPx(11), color: INK.chF }}>{i === 1 ? t("hire you") : t("stay past the first month")}</span>
               </div>
             )}
             <div className="flex items-center" style={{ gap: 10 }}>

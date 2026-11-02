@@ -2,6 +2,7 @@ import type { UseClientAccess } from "../../../hooks/useClientAccess";
 import type { AccessCategory } from "../../../services/pro/access";
 import type { ProLane } from "../subtypeLanes";
 import type { ChartRange } from "./insightsModel";
+import { tk } from "../../../i18n/core";
 
 /** What every Insights tab panel gets from InsightsScreen. */
 export interface PanelProps {
@@ -28,16 +29,16 @@ export const chartRangeFor = (r: PageRange): ChartRange => (r === "month" ? "M" 
 export type PageRange = "today" | "week" | "month";
 export const PAGE_RANGE_DAYS: Record<PageRange, number> = { today: 1, week: 7, month: 30 };
 
-/** What each category is called on the badges and lock lines (the app's own consent words). */
+/** What each category is called on the badges and lock lines (the app's own consent words). English keys (tk); show them with t(). */
 export const CATEGORY_LABEL: Partial<Record<AccessCategory, string>> = {
-  health_metrics: "Activity & vitals",
-  workout_activity: "Workout activity",
-  food_diary: "Food diary",
-  blood_pressure: "Blood pressure",
-  weight: "Weight",
-  body_measurements: "Body measurements",
-  lab_results: "Lab results",
-  progress: "Progress",
+  health_metrics: tk("Activity & vitals"),
+  workout_activity: tk("Workout activity"),
+  food_diary: tk("Food diary"),
+  blood_pressure: tk("Blood pressure"),
+  weight: tk("Weight"),
+  body_measurements: tk("Body measurements"),
+  lab_results: tk("Lab results"),
+  progress: tk("Progress"),
 };
 
 export type InsightsTab = "activity" | "nutrition" | "vitals" | "biomarkers";

@@ -14,6 +14,7 @@ import { InsightCard, InsightLine, NotShared, type PickerClient } from "./parts"
 import { readGate, useRead } from "./reads";
 import type { PanelProps } from "./panelProps";
 import { appLocale } from "../../../i18n/format";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 Insights › Nutrition (TR9 v5 "leaf streak, one fixed
@@ -81,9 +82,9 @@ export const NutritionPanel: React.FC<PanelProps & { onAnalysis: () => void; onT
     return (
       <NotShared
         icon={UtensilsCrossed}
-        title="No shared data yet"
-        line={`This fills in when ${firstName} shares their food diary with you.`}
-        askLabel={`Ask ${firstName} to share`}
+        title={t("No shared data yet")}
+        line={t("This fills in when {firstName} shares their food diary with you.", { firstName })}
+        askLabel={t("Ask {firstName} to share", { firstName })}
         asked={p.asked.includes("food_diary")}
         onAsk={() => p.onAsk("food_diary")}
       />
@@ -95,9 +96,9 @@ export const NutritionPanel: React.FC<PanelProps & { onAnalysis: () => void; onT
   const analysisRow = (
     <ListCard
       rows={[
-        { key: "na", icon: BarChart3, title: "Nutrient analysis", meta: p.lane === "clinical_overview" ? "Macros and intake, read only" : "Macros, intake and meal timing", onClick: onAnalysis },
+        { key: "na", icon: BarChart3, title: t("Nutrient analysis"), meta: p.lane === "clinical_overview" ? t("Macros and intake, read only") : t("Macros, intake and meal timing"), onClick: onAnalysis },
         // NU8 v3 Clinical overview: the professional-set targets, read only.
-        ...(p.onTargets ? [{ key: "nt", icon: Target, title: "Nutrition targets", meta: "Read only", onClick: p.onTargets }] : []),
+        ...(p.onTargets ? [{ key: "nt", icon: Target, title: t("Nutrition targets"), meta: t("Read only"), onClick: p.onTargets }] : []),
       ]}
     />
   );
@@ -106,8 +107,8 @@ export const NutritionPanel: React.FC<PanelProps & { onAnalysis: () => void; onT
       <>
         {food.offline && <OfflineLine />}
         <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 16, marginBottom: 12 }}>
-          <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>Logging</p>
-          <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 6 }}>{`${logged.length} day${logged.length === 1 ? "" : "s"} logged. Streaks and trends appear after a week.`}</p>
+          <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>{t("Logging")}</p>
+          <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 6 }}>{tn(logged.length, "{n} day logged. Streaks and trends appear after a week.", "{n} days logged. Streaks and trends appear after a week.")}</p>
         </div>
         {analysisRow}
       </>
@@ -134,35 +135,35 @@ export const NutritionPanel: React.FC<PanelProps & { onAnalysis: () => void; onT
   return (
     <>
       {food.offline && <OfflineLine />}
-      {p.lane === "clinical_overview" && <ReadOnlyLine text={`Read only · from what ${firstName} shares`} />}
-      <SectionHead label="Logging" />
-      <LeafStreak title="Logging streak" current={streak.current} best={streak.best} label="days logged" days={streak.days} />
+      {p.lane === "clinical_overview" && <ReadOnlyLine text={t("Read only · from what {firstName} shares", { firstName })} />}
+      <SectionHead label={t("Logging")} />
+      <LeafStreak title={t("Logging streak")} current={streak.current} best={streak.best} label={t("days logged")} days={streak.days} />
       <ProChart
-        title="Logging consistency"
-        question="Can the food diary be trusted day to day?"
+        title={t("Logging consistency")}
+        question={t("Can the food diary be trusted day to day?")}
         range={range}
         onRangeChange={onRange}
         x={b.map((x) => bucketLabel(range, x))}
         min={0}
         max={Math.max(4, ...meals.map((v) => v ?? 0)) + 1}
-        series={[{ key: "m", label: "Meals logged", type: "bar", color: INK.pr, values: meals }]}
+        series={[{ key: "m", label: t("Meals logged"), type: "bar", color: INK.pr, values: meals }]}
         tooltip={(i) => {
           const v = meals[i];
-          if (!perDay) return { title: bucketTitle(range, b[i]), lines: [v != null ? `${Math.round(v * 10) / 10} meals logged a day` : "Nothing logged"] };
+          if (!perDay) return { title: bucketTitle(range, b[i]), lines: [v != null ? t("{n} meals logged a day", { n: Math.round(v * 10) / 10 }) : t("Nothing logged")] };
           const d = days.get(b[i].start);
-          return { title: bucketTitle(range, b[i]), lines: d ? [`${d.meals} meal${d.meals === 1 ? "" : "s"} logged`, ...(d.times.length ? [`Logged ${d.times.join(", ")}`] : [])] : ["Nothing logged"] };
+          return { title: bucketTitle(range, b[i]), lines: d ? [tn(d.meals, "{n} meal logged", "{n} meals logged"), ...(d.times.length ? [t("Logged {times}", { times: d.times.join(", ") })] : [])] : [t("Nothing logged")] };
         }}
         insight={fewestMealsLine(inRange.map((d) => ({ day: d.day, meals: d.meals }))) ?? undefined}
-        summary={`Logged on ${inRange.length} of ${RANGE_DAYS[range]} days.`}
+        summary={tn(RANGE_DAYS[range], "Logged on {logged} of {n} day.", "Logged on {logged} of {n} days.", { logged: inRange.length })}
       />
       {timed.length > 0 && (
-        <InsightCard title={`When ${firstName} logs`}>
-          <div className="relative" style={{ height: 34, borderRadius: 10, background: INK.soft }} role="img" aria-label={`${timed.length} entries by the time they were eaten`}>
+        <InsightCard title={t("When {firstName} logs", { firstName })}>
+          <div className="relative" style={{ height: 34, borderRadius: 10, background: INK.soft }} role="img" aria-label={tn(timed.length, "{n} entry by the time it was eaten", "{n} entries by the time they were eaten")}>
             {timed.map((e, i) => {
               const m = localMinute(e.eatenAt as string);
               const h = m / 60 < 6 ? m / 60 + 24 : m / 60;
               const isLate = localDay(e.createdAt) > e.day;
-              return <span key={i} className="absolute" style={{ top: 11, left: `calc(${(((h - 6) / 18) * 100).toFixed(1)}% - 6px)`, width: 12, height: 12, borderRadius: 9999, background: isLate ? INK.hi : INK.pr, opacity: 0.85 }} />;
+              return <span key={i} className="absolute" style={{ top: 11, insetInlineStart: `calc(${(((h - 6) / 18) * 100).toFixed(1)}% - 6px)`, width: 12, height: 12, borderRadius: 9999, background: isLate ? INK.hi : INK.pr, opacity: 0.85 }} />;
             })}
           </div>
           <div aria-hidden className="flex justify-between" style={{ fontSize: textPx(9.5), color: INK.chT, marginTop: 4 }}>
@@ -170,39 +171,43 @@ export const NutritionPanel: React.FC<PanelProps & { onAnalysis: () => void; onT
               <span key={h}>{hourLabel12(h % 24)}</span>
             ))}
           </div>
-          {late.length > 0 && <InsightLine top={8}>{`${late.length} of ${timed.length} entries were added a day or more after they were eaten (red).`}</InsightLine>}
+          {late.length > 0 && <InsightLine top={8}>{tn(timed.length, "{late} of {n} entry was added a day or more after it was eaten (red).", "{late} of {n} entries were added a day or more after they were eaten (red).", { late: late.length })}</InsightLine>}
         </InsightCard>
       )}
       <ProChart
-        title="Intake vs targets"
-        question={`Is ${firstName} eating to the care plan?`}
+        title={t("Intake vs targets")}
+        question={t("Is {firstName} eating to the care plan?", { firstName })}
         range={range}
         onRangeChange={onRange}
         x={b.map((x) => bucketLabel(range, x))}
         min={kMin}
         max={kMax}
-        band={band ? { ...band, label: "On-plan range" } : undefined}
+        band={band ? { ...band, label: t("On-plan range") } : undefined}
         goal={target ?? undefined}
-        goalLegend={target ? `Target ${fmt(target)}` : undefined}
+        goalLegend={target ? t("Target {n}", { n: fmt(target) }) : undefined}
         series={[
-          { key: "k", label: "Calories", type: "line", color: INK.pr, values: kcal },
-          { key: "g", label: "Last period", type: "line", color: INK.chT, ghost: true, values: kcalGhost },
+          { key: "k", label: t("Calories"), type: "line", color: INK.pr, values: kcal },
+          { key: "g", label: t("Last period"), type: "line", color: INK.chT, ghost: true, values: kcalGhost },
         ]}
         tooltip={(i) => {
           const v = kcal[i];
-          if (v == null) return { title: bucketTitle(range, b[i]), lines: ["Nothing logged"] };
+          if (v == null) return { title: bucketTitle(range, b[i]), lines: [t("Nothing logged")] };
           const d = perDay ? days.get(b[i].start) : null;
           const diff = target ? Math.round(v - target) : null;
           return {
             title: bucketTitle(range, b[i]),
             lines: [
-              `${fmt(v)} kcal${diff != null && diff !== 0 ? ` · ${fmt(Math.abs(diff))} ${diff > 0 ? "over" : "under"}` : ""}`,
-              ...(d ? [[d.sodium != null ? `Salt ${Math.round(saltOf(d.sodium) * 10) / 10} g` : null, `protein ${fmt(d.p)} g`].filter(Boolean).join(" · ")] : []),
+              `${t("{n} kcal", { n: fmt(v) })}${diff != null && diff !== 0 ? ` · ${diff > 0 ? t("{n} over", { n: fmt(Math.abs(diff)) }) : t("{n} under", { n: fmt(Math.abs(diff)) })}` : ""}`,
+              ...(d ? [[d.sodium != null ? t("Salt {n} g", { n: Math.round(saltOf(d.sodium) * 10) / 10 }) : null, t("protein {n} g", { n: fmt(d.p) })].filter(Boolean).join(" · ")] : []),
             ],
           };
         }}
         insight={band ? onPlanLine(inRange.map((d) => ({ day: d.day, kcal: d.kcal })), band) ?? undefined : undefined}
-        summary={`Calories ${inRange.length ? fmt(inRange.reduce((a, d) => a + d.kcal, 0) / inRange.length) : 0} kcal a day on logged days${target ? `, target ${fmt(target)}` : ""}.`}
+        summary={
+          target
+            ? t("Calories {kcal} kcal a day on logged days, target {target}.", { kcal: inRange.length ? fmt(inRange.reduce((a, d) => a + d.kcal, 0) / inRange.length) : 0, target: fmt(target) })
+            : t("Calories {kcal} kcal a day on logged days.", { kcal: inRange.length ? fmt(inRange.reduce((a, d) => a + d.kcal, 0) / inRange.length) : 0 })
+        }
       />
       {analysisRow}
     </>
@@ -265,7 +270,7 @@ export const NutritionRoster: React.FC<{ clients: PickerClient[]; today: string;
 
   return (
     <>
-      <ReadOnlyLine text="Read only · from patients who share their food diary" />
+      <ReadOnlyLine text={t("Read only · from patients who share their food diary")} />
       {failed && <OfflineLine />}
       {!rows ? (
         <ListSkeleton rows={3} />
@@ -279,15 +284,15 @@ export const NutritionRoster: React.FC<{ clients: PickerClient[]; today: string;
               icon: r.shared ? UtensilsCrossed : Lock,
               title: c.name,
               meta: !r.shared
-                ? "Food diary not shared"
+                ? t("Food diary not shared")
                 : r.avg == null
-                  ? "Logged 0 of 7 days"
+                  ? t("Logged 0 of 7 days")
                   : saltHigh
-                    ? `${fmt(r.avg)} kcal avg · salt over limit ${r.saltDays} of ${r.sodiumDays} days`
+                    ? t("{kcal} kcal avg · salt over limit {salt} of {days} days", { kcal: fmt(r.avg), salt: r.saltDays, days: r.sodiumDays })
                     : r.logged < 7
-                      ? `Logged ${r.logged} of 7 days`
-                      : `${fmt(r.avg)} kcal avg · logged 7 of 7 days`,
-              trailing: r.shared && saltHigh ? <Chip label="Salt high" tone="att" /> : undefined,
+                      ? t("Logged {n} of 7 days", { n: r.logged })
+                      : t("{kcal} kcal avg · logged 7 of 7 days", { kcal: fmt(r.avg) }),
+              trailing: r.shared && saltHigh ? <Chip label={t("Salt high")} tone="att" /> : undefined,
               onClick: () => onPick(r.clientId),
             };
           })}

@@ -10,6 +10,7 @@ import { INK } from "../proInk";
 import { Avatar } from "../client/kit";
 import { EmptyState } from "../EmptyState";
 import { askWithMessage, ASK_MESSAGE_MAX } from "../../../services/pro/insights";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 Insights building blocks, from the board's own functions
@@ -65,7 +66,7 @@ export const SharedBadges: React.FC<{ items: { label: string; on: boolean }[] }>
         <span key={c.label} className="inline-flex items-center whitespace-nowrap" style={{ gap: 4, height: 24, padding: "0 8px", borderRadius: 8, fontSize: textPx(11), fontWeight: 700, background: c.on ? INK.tealPale : INK.soft, color: c.on ? onInk : INK.chF }}>
           {c.on ? <ShieldCheck size={11} strokeWidth={2.2} aria-hidden /> : <Lock size={11} strokeWidth={2.2} aria-hidden />}
           {c.label}
-          <span className="sr-only">{c.on ? ", shared" : ", not shared"}</span>
+          <span className="sr-only">{c.on ? t(", shared") : t(", not shared")}</span>
         </span>
       ))}
     </div>
@@ -165,9 +166,9 @@ import type { PageRange } from "./panelProps";
 export const RangeTabs: React.FC<{ value: PageRange; onChange: (r: PageRange) => void }> = ({ value, onChange }) => (
   <SegmentedTabs
     items={[
-      { key: "today", label: "Today" },
-      { key: "week", label: "Week" },
-      { key: "month", label: "Month" },
+      { key: "today", label: t("Today") },
+      { key: "week", label: t("Week") },
+      { key: "month", label: t("Month") },
     ]}
     activeKey={value}
     onChange={(k) => onChange(k as PageRange)}
@@ -196,7 +197,7 @@ export const ClientPicker: React.FC<{ clients: PickerClient[]; value: string | n
         onClick={(e) => setEl(e.currentTarget)}
         aria-haspopup="listbox"
         aria-expanded={!!el}
-        aria-label={patient ? `Patient: ${label}` : `Client: ${label}`}
+        aria-label={patient ? t("Patient: {label}", { label }) : t("Client: {label}", { label })}
         className="tap flex-1 min-w-0 flex items-center"
         style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8, fontSize: textPx(14), color: INK.ch }}
       >
@@ -224,8 +225,8 @@ export const ClientPicker: React.FC<{ clients: PickerClient[]; value: string | n
 export const DetailHead: React.FC<{ eyebrow?: string; title: string; onBack: () => void; right?: React.ReactNode }> = ({ eyebrow, title, onBack, right }) => (
   <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 13 }}>
     <div className="flex items-start min-w-0" style={{ gap: 10 }}>
-      <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -6, marginTop: 2 }}>
-        <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
+      <button type="button" onClick={onBack} aria-label={t("Back")} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -6, marginTop: 2 }}>
+        <ChevronLeft size={18} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: INK.chS }} />
       </button>
       <div className="min-w-0">
         {eyebrow && <p style={{ fontSize: textPx(10.5), fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.11em", color: INK.chF, marginBottom: 2 }}>{eyebrow}</p>}
@@ -239,7 +240,7 @@ export const DetailHead: React.FC<{ eyebrow?: string; title: string; onBack: () 
 /** The not-shared state of a whole tab (TR9 v4 empty): EmptyState with "Ask {name} to share". */
 export const NotShared: React.FC<{ icon: LucideIcon; title: string; line: string; askLabel: string; asked: boolean; onAsk: () => void }> = ({ icon, title, line, askLabel, asked, onAsk }) => (
   <EmptyState icon={icon} title={title} line={line}>
-    <CtaButton size="base" variant="secondary" icon={<Send size={15} />} label={asked ? "Asked" : askLabel} disabled={asked} onClick={onAsk} />
+    <CtaButton size="base" variant="secondary" icon={<Send size={15} />} label={asked ? t("Asked") : askLabel} disabled={asked} onClick={onAsk} />
   </EmptyState>
 );
 
@@ -265,20 +266,20 @@ export const AskShareSheet: React.FC<{ open: boolean; onClose: () => void; clien
     const r = await askWithMessage(clientId, "lab_results", msg);
     setBusy(false);
     if (!r.ok) return setErr(r.message);
-    onSent(`Asked ${firstName} to share.`);
+    onSent(t("Asked {firstName} to share.", { firstName }));
   };
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={`Ask ${firstName}`}
-      footer={<CtaButton className="w-full" size="sheet" icon={<Send size={15} />} label="Send" loading={busy} disabled={kind !== "share"} onClick={() => void send()} />}
+      title={t("Ask {firstName}", { firstName })}
+      footer={<CtaButton className="w-full" size="sheet" icon={<Send size={15} />} label={t("Send")} loading={busy} disabled={kind !== "share"} onClick={() => void send()} />}
     >
       <SegmentedTabs
         className="mb-3"
         items={[
-          { key: "share", label: "Share a test" },
-          { key: "new", label: "New bloods" },
+          { key: "share", label: t("Share a test") },
+          { key: "new", label: t("New bloods") },
         ]}
         activeKey={kind}
         onChange={(k) => setKind(k as "share" | "new")}
@@ -286,22 +287,22 @@ export const AskShareSheet: React.FC<{ open: boolean; onClose: () => void; clien
         labelSize={12}
       />
       {kind === "new" ? (
-        <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5, marginBottom: 12 }}>Booking new blood tests isn't in Centium yet. You can ask {firstName} to share a past test.</p>
+        <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5, marginBottom: 12 }}>{t("Booking new blood tests isn't in Centium yet. You can ask {firstName} to share a past test.", { firstName })}</p>
       ) : (
         <label className="block" style={{ marginBottom: 12 }}>
-          <span className="sr-only">Message</span>
+          <span className="sr-only">{t("Message")}</span>
           <textarea
             value={msg}
             onChange={(e) => setMsg(e.target.value.slice(0, ASK_MESSAGE_MAX))}
             rows={4}
-            placeholder={`A note for ${firstName} (optional)`}
+            placeholder={t("A note for {firstName} (optional)", { firstName })}
             className="w-full"
             style={{ borderRadius: 14, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "10px 12px", fontSize: textPx(14), color: INK.ch, resize: "none" }}
           />
           <span className="block text-end" style={{ fontSize: textPx(11), color: INK.chF }}>{`${msg.length} / ${ASK_MESSAGE_MAX}`}</span>
         </label>
       )}
-      <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5 }}>{`${firstName} gets a request in Centium to share a past test or book new bloods, with your message. Nothing is shared until ${firstName} says yes.`}</p>
+      <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5 }}>{t("{firstName} gets a request in Centium to share a past test or book new bloods, with your message. Nothing is shared until {firstName} says yes.", { firstName })}</p>
       {err && (
         <p role="alert" style={{ fontSize: textPx(12), color: INK.hi, marginTop: 8 }}>
           {err}
