@@ -10,6 +10,7 @@ import {
   compareRowsView,
   defaultSummaryPeriod,
   failKind,
+  contentCacheKey,
   g3On,
   g3State,
   groupByWeek,
@@ -383,4 +384,16 @@ test("the trend reader's points line up with the page's results", () => {
   assert.deepEqual(out.map((r) => r.id), ["r1", "r2", "trend-2"]);
   assert.equal(out[2].value, 5.9);
   assert.deepEqual(trendResults([], results), results);
+});
+
+test("the content readers keep each answer under the account and the app language (G fixes 3)", () => {
+  // the content answers in the member's language, so English and Arabic never share a copy
+  assert.notEqual(contentCacheKey("u1", "en", "programmes"), contentCacheKey("u1", "ar", "programmes"));
+  assert.notEqual(contentCacheKey("u1", "en"), contentCacheKey("u1", "ar"));
+  // nor do two accounts, or two reads
+  assert.notEqual(contentCacheKey("u1", "ar", "library"), contentCacheKey("u2", "ar", "library"));
+  assert.notEqual(contentCacheKey("u1", "ar", "library"), contentCacheKey("u1", "ar", "prompt-library"));
+  assert.equal(contentCacheKey("u1", "ar", "sessions:p1"), contentCacheKey("u1", "ar", "sessions:p1"));
+  // a key is never a prefix of another account's or language's
+  assert.equal(contentCacheKey("u1", "en", "mine").startsWith(`${contentCacheKey("u1", "ar", "")}`), false);
 });

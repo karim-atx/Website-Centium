@@ -3,18 +3,25 @@ import { useApp } from "../../../context/AppContext";
 import { usePremium } from "../../../services/premium/hooks";
 import { askPremium } from "../../../services/premium/asks";
 import { fetchContentLines } from "../../../services/premium/g3Calls";
-import { g3On, g3State, type ContentLines, type G3State } from "../../../services/premium/g3";
+import { contentCacheKey, g3On, g3State, type ContentLines, type G3State } from "../../../services/premium/g3";
+import { accountLanguageSaved } from "../../../services/preferences/language";
+import { getLanguage } from "../../../i18n/core";
 import type { PremiumFeature } from "../../../services/premium/features";
 
 // Round G3 · reading a G3 call on screen. WITH THE SWITCH OFF, OR WHILE IT
 // LOADS, NOTHING IS ASKED AND THE STATE IS "hidden": no entry point, card or
 // route shows, and today's screens are untouched. A call answering ATXQ0 (or
 // missing on a Database without G3) is "hidden" too.
+//
+// THE CONTENT ANSWERS IN THE MEMBER'S LANGUAGE (app_preferences.language;
+// G fixes 3): every answer is kept under the account AND the app language
+// (contentCacheKey), and a read waits for a language change to be saved, so
+// switching to Arabic never keeps the English copy.
 
 /**
- * One G3 read. `key` re-reads when it changes (an id, a week); `reload()`
- * re-reads after a write. The answer applies only to the account and key it
- * was asked for.
+ * One G3 read. `key` re-reads when it changes (an id, a week), and so does
+ * the app language; `reload()` re-reads after a write. The answer applies
+ * only to the account, language and key it was asked for.
  */
 export function useG3<T>(fetcher: () => Promise<G3State<T>>, key: string, enabled = true): { state: G3State<T>; reload: () => void; patch: (fn: (v: T) => T) => void } {
   const { authUserId } = useApp();
@@ -22,12 +29,15 @@ export function useG3<T>(fetcher: () => Promise<G3State<T>>, key: string, enable
   const on = g3On(premium) && enabled && !!authUserId;
   const [answer, setAnswer] = useState<{ tag: string; state: G3State<T> } | null>(null);
   const [nonce, setNonce] = useState(0);
-  const tag = `${authUserId}|${key}|${nonce}`;
+  const base = contentCacheKey(authUserId, getLanguage(), key);
+  const tag = `${base}|${nonce}`;
 
   useEffect(() => {
     if (!on) return;
     let live = true;
-    void fetcher().then((state) => live && setAnswer({ tag, state }));
+    void accountLanguageSaved()
+      .then(() => fetcher())
+      .then((state) => live && setAnswer({ tag, state }));
     return () => {
       live = false;
     };
@@ -38,14 +48,14 @@ export function useG3<T>(fetcher: () => Promise<G3State<T>>, key: string, enable
   const reload = useCallback(() => setNonce((n) => n + 1), []);
   const patch = useCallback((fn: (v: T) => T) => setAnswer((a) => (a && a.state.kind === "ready" ? { tag: a.tag, state: { kind: "ready", value: fn(a.state.value) } } : a)), []);
   // A reload keeps the last answer on screen until the new one arrives.
-  const mine = answer && (answer.tag === tag || answer.tag.startsWith(`${authUserId}|${key}|`)) ? answer.state : null;
+  const mine = answer && (answer.tag === tag || answer.tag.startsWith(`${base}|`)) ? answer.state : null;
   return { state: on ? g3State(premium, mine) : { kind: "hidden" }, reload, patch };
 }
 
 // ---- does this Database have G3? ----
 //
 // premium_content_lines() is the probe: the smallest G3 call, read once per
-// session per account and shared (one call for every entry point on a page).
+// session per account and language (its lines are content) and shared (one call for every entry point on a page).
 // Its answer also holds the lines every programme and session opens with.
 // ATXQ0, a missing function (a Database without G3) or any failure: G3 is
 // not there, and no entry point, card or route shows. A failure is not
@@ -54,16 +64,19 @@ export function useG3<T>(fetcher: () => Promise<G3State<T>>, key: string, enable
 type Probe = { lines: ContentLines | null; done: boolean };
 const probes = new Map<string, { value: Probe; promise: Promise<Probe> }>();
 
-function probe(userId: string): Promise<Probe> {
-  const hit = probes.get(userId);
+/** `at` is contentCacheKey(account, language). */
+function probe(at: string): Promise<Probe> {
+  const hit = probes.get(at);
   if (hit) return hit.promise;
-  const promise = fetchContentLines().then((s): Probe => {
-    const value = { lines: s.kind === "ready" ? s.value : null, done: true };
-    if (s.kind === "ready") probes.set(userId, { value, promise: Promise.resolve(value) });
-    else probes.delete(userId);
-    return value;
-  });
-  probes.set(userId, { value: { lines: null, done: false }, promise });
+  const promise = accountLanguageSaved()
+    .then(() => fetchContentLines())
+    .then((s): Probe => {
+      const value = { lines: s.kind === "ready" ? s.value : null, done: true };
+      if (s.kind === "ready") probes.set(at, { value, promise: Promise.resolve(value) });
+      else probes.delete(at);
+      return value;
+    });
+  probes.set(at, { value: { lines: null, done: false }, promise });
   return promise;
 }
 
@@ -72,19 +85,20 @@ export function useG3Probe(): "loading" | "yes" | "no" {
   const { authUserId } = useApp();
   const { premium, loading } = usePremium();
   const on = g3On(premium) && !!authUserId;
-  const cached = authUserId ? probes.get(authUserId)?.value : undefined;
-  const [answer, setAnswer] = useState<{ userId: string; value: Probe } | null>(null);
+  const at = contentCacheKey(authUserId, getLanguage());
+  const cached = authUserId ? probes.get(at)?.value : undefined;
+  const [answer, setAnswer] = useState<{ at: string; value: Probe } | null>(null);
   useEffect(() => {
     if (!on || !authUserId) return;
     let live = true;
-    void probe(authUserId).then((value) => live && setAnswer({ userId: authUserId, value }));
+    void probe(at).then((value) => live && setAnswer({ at, value }));
     return () => {
       live = false;
     };
-  }, [on, authUserId]);
+  }, [on, authUserId, at]);
   if (loading) return "loading";
   if (!on) return "no";
-  const v = cached?.done ? cached : answer?.userId === authUserId ? answer.value : null;
+  const v = cached?.done ? cached : answer?.at === at ? answer.value : null;
   if (!v) return "loading";
   return v.lines ? "yes" : "no";
 }
@@ -94,11 +108,11 @@ export function useG3Available(): boolean {
   return useG3Probe() === "yes";
 }
 
-/** premium_content_lines(), once per session per account. Null until known (or hidden). */
+/** premium_content_lines(), once per session per account and language. Null until known (or hidden). */
 export function useContentLines(): ContentLines | null {
   const { authUserId } = useApp();
   const yes = useG3Probe() === "yes";
-  return yes && authUserId ? probes.get(authUserId)?.value.lines ?? null : null;
+  return yes && authUserId ? probes.get(contentCacheKey(authUserId, getLanguage()))?.value.lines ?? null : null;
 }
 
 /** A tap on a locked row: the prompt (or the plain notice where prompts may not show). */

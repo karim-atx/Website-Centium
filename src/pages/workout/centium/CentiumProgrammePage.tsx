@@ -52,8 +52,7 @@ import { t } from "../../../i18n/core";
 //   Mobility's first 7 days) a free member sees the session locked; an
 //   ATXQ1 from a write opens the prompt. End, behind a confirmation.
 //
-// Every content field is English data until the Database loads Karim's
-// approved Arabic; only the labels go through t().
+// The content comes in the member's language (G fixes 3), like any text.
 
 const day = (ymd: string) => formatShortDate(new Date(`${ymd}T12:00:00`), { weekday: "short", day: "numeric", month: "short" });
 
@@ -146,7 +145,7 @@ function ProgrammeView({ programme: p }: { programme: CentiumProgramme }) {
     <>
       <PageHeader title={p.title} showBack />
 
-      {/* Every programme opens with the safety line (content, English data). */}
+      {/* Every programme opens with the safety line. */}
       {lines?.programmeSafety && (
         <div role="note" className="flex items-start rounded-2xl bg-status-high-bg" style={{ gap: 10, padding: "12px 14px" }}>
           <ShieldAlert size={16} aria-hidden className="shrink-0 text-status-high" style={{ marginTop: 2 }} />

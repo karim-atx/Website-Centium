@@ -57,7 +57,6 @@ function SessionView({ s }: { s: LibrarySession }) {
 
   return (
     <>
-      {/* Content (title, opening and support lines, script): English data until the Database loads Karim's approved Arabic. */}
       <PageHeader title={s.title} subtitle={`${typeLabel(s)} · ${minutesLabel(s.minutes)}`} showBack />
       {s.locked ? (
         <LockedRow feature="meditations" title={s.title} meta={t("Part of Centium Premium")} />

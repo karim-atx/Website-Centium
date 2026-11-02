@@ -55,7 +55,7 @@ const premium: Catalogue = {
   "More locked journal folders": "مجلدات يوميات مقفلة أكثر",
   "The full meditation library": "مكتبة التأمل كاملة",
   "Every week of Centium programmes": "كل أسابيع برامج Centium",
-  "Journal prompts": "مواضيع للكتابة في اليوميات",
+  "Journal prompts": "مواضيع اليوميات", // note: Karim 2026-11-02; one prompt is «موضوع»
   "Online food search": "البحث عن الأطعمة عبر الإنترنت",
   "Lab report scanning": "مسح تقارير المختبر",
   "Report comparison": "مقارنة التقارير",

@@ -8,12 +8,12 @@ import type { Catalogue } from "../core";
 //
 // note (whole file): the CONTENT ITSELF (programme titles, sessions,
 // exercises, the safety and effort lines, meditation scripts, journal
-// prompts) stays English: it is data, like exercise names (F13), until the
-// Database loads Karim's approved Arabic (docs/premium-content-ar.md, not
-// loaded). Premium stays «Premium» / «Centium Premium» (brand), as in Rounds
+// prompts) comes from the Database in the member's language (Karim's
+// approved Arabic, docs/premium-content-ar.md, loaded); only the labels
+// around it are here. Premium stays «Premium» / «Centium Premium» (brand), as in Rounds
 // G1 and G2. Terms: programme «برنامج», session «جلسة», the free preview
-// «المعاينة المجانية», journal prompt «موضوع للكتابة» (as G1's "Journal
-// prompts" «مواضيع للكتابة في اليوميات»), weekly review «مراجعة الأسبوع», goal
+// «المعاينة المجانية», journal prompt «موضوع» (G1's "Journal
+// prompts" «مواضيع اليوميات», Karim 2026-11-02), weekly review «مراجعة الأسبوع», goal
 // «هدف», lab report «تقرير المختبر», marker «المؤشر», doctor summary «ملخّص
 // لطبيبك» (as G1). Keys shared with the open EH branches carry their Arabic
 // exactly (the clash check).
@@ -72,7 +72,7 @@ const premium3: Catalogue = {
   "Weeks": "الأسابيع",
   "Effort": "مستوى الجهد",
   "What to do": "ما تفعله",
-  // note: the effort guide itself (RPE) is content and stays English for now
+  // note: the effort guide itself (RPE) is content, from the Database in the member's language
   "Effort guide": "دليل الجهد",
   "Free preview": "المعاينة المجانية",
   "Afterwards": "بعد ذلك",

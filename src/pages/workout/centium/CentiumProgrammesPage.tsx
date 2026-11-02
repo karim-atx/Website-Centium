@@ -42,7 +42,6 @@ function ProgrammesList() {
                 className="tap w-full text-start bg-cream-card border border-charcoal/[0.08]"
                 style={{ borderRadius: 16, padding: "14px 14px 12px" }}
               >
-                {/* Content (title, description, length, preview): English data until the Database loads Karim's approved Arabic. */}
                 <span className="flex items-center justify-between" style={{ gap: 8 }}>
                   <span className="min-w-0" style={{ fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))", overflowWrap: "anywhere" }}>
                     {p.title}

@@ -33,7 +33,6 @@ function LibraryList() {
           <div className="flex flex-col gap-2.5">
             {list.map((s) => {
               const meta = `${typeLabel(s)} · ${minutesLabel(s.minutes)}`;
-              // Content: the title is English data until the Database loads Karim's approved Arabic.
               if (s.locked) return <LockedRow key={s.contentId} feature="meditations" title={s.title} meta={meta} />;
               const Icon = s.type === "breathing" ? Wind : Flower2;
               return (
