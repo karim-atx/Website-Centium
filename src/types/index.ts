@@ -1502,6 +1502,8 @@ export interface Recipe {
   steps?: string;
   /** Round E: the recipe's "Cook-along" playlist link (recipes.playlist_url), if any. */
   playlistUrl?: string;
+  /** Round G2: a professional wrote it for you (recipes.scoped_to_client_id); it never counts toward the free plan's recipes. */
+  fromProfessional?: boolean;
 }
 
 // V2: Journal — organized into folders, entries retain their date.
@@ -1529,7 +1531,9 @@ export interface JournalEntry {
 // normalizeColorTheme (src/theme/colorThemes.ts).
 // Stored in device_presentation_settings.color_theme as centium / sky_slate /
 // rose_blush / gold_amber / coral_terracotta (services/presentation/mapping.ts).
-export type ColorTheme = "centium" | "sky" | "rose" | "gold" | "coral";
+// Round G4: three Premium themes (forest, midnight, plum; color_theme
+// forest_sage / midnight_indigo / plum_lilac), offered only with the switch on.
+export type ColorTheme = "centium" | "sky" | "rose" | "gold" | "coral" | "forest" | "midnight" | "plum";
 
 // V3: custom (user-added) foods, kept separate from the curated mock database.
 export interface CustomFood extends Food {

@@ -9,6 +9,8 @@ import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { Toast } from "../../components/ui/Toast";
 import { MindHeader } from "../../components/mind/MindHeader";
 import { useApp } from "../../context/AppContext";
+import { useFreeLimit } from "../../components/premium/useFreeLimit";
+import { lockedFolderCount } from "../../services/premium/g2";
 import {
   ArrowUpDown,
   BookOpen,
@@ -33,6 +35,7 @@ import { JournalPasswordPopup, LockedFolderView, type PasswordPurpose } from "..
 import { entryMenuTarget } from "../../components/mind/entryMenu";
 import { MusicSection } from "../../components/music/MusicSection";
 import { appLocale } from "../../i18n/format";
+import { JournalPrompts } from "./journal/JournalPrompts";
 
 type FolderOption = "rename" | "move" | "lock" | "unlock" | "delete";
 
@@ -124,6 +127,7 @@ export default function JournalTab() {
     unlockJournalFolder,
     disableJournalFolderLock,
   } = useApp();
+  const { blocked } = useFreeLimit();
   const [activeFolder, setActiveFolder] = useState("");
   // S7: an entry confirmed for deletion is hidden at once and deleted on the
   // server when its Undo toast expires.
@@ -293,6 +297,14 @@ export default function JournalTab() {
     else openCompose();
   };
 
+  // Round G3: a journal prompt opens a new entry with the prompt as its heading.
+  const writeFromPrompt = (heading: string) => {
+    setEditingEntry(null);
+    setTitle(heading);
+    setText("");
+    startNew();
+  };
+
   const save = async (afterUnlock = false) => {
     if (saving) return;
     // The frame draws Save enabled. The database needs a title and a body
@@ -353,6 +365,8 @@ export default function JournalTab() {
       setMoving(true);
     } else if (opt === "lock" && selectedFolder) {
       // MO1.1.2.1 Lock: no password to turn protection on.
+      // Round G2: past the free plan's locked folders, the prompt first.
+      if (blocked("locked_journal_folders", lockedFolderCount(journalFolders))) return;
       setLockError(null);
       void lockJournalFolder(selectedFolder.id).then(setLockError);
     } else if (opt === "unlock" && selectedFolder) {
@@ -585,6 +599,9 @@ export default function JournalTab() {
           </button>
         </div>
       )}
+
+      {/* Round G3: journal prompts (nothing while the Premium switch is off). */}
+      {journalFolders.length > 0 && <JournalPrompts onWrite={writeFromPrompt} />}
 
       {/* K9: a failed Lock stays an inline line. */}
       {lockError && (

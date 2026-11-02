@@ -14,6 +14,7 @@ import { useHiringBusiness } from "./useHiringBusiness";
 import { BusyWarning, FeeNoticeRow, HiredLine, HiringEmpty, PersonHead, UserPlusGlyph, feeNoticeText, fixedPair, useFeeRules, useHiringRead, useHiringStrip } from "./hiringParts";
 import { OpeningFormFields, useLiveClasses } from "./PostOpeningSheet";
 import HireConfirmDialog, { type DialogNote, type HireOffer } from "./HireConfirmDialog";
+import { useHiringCredits } from "../../../components/premium/usePlanLevel";
 import { busyText, emptyForm, hiredLine, parseForm, sentStrip, type OpeningFormState, type ParsedForm } from "./hubModel";
 
 // Market + Share 3.0 · W4 · B-MA.8.6 Find a professional / direct offer
@@ -53,6 +54,8 @@ export default function DirectOfferPage() {
   const back = useBack(HIRING_ROUTES.hub);
   const biz = useHiringBusiness();
   const id = biz.canHire ? biz.businessId : null;
+  // Round G1 (#15): with credits_on, a role offer uses a hiring credit.
+  const { credits, reload: reloadCredits } = useHiringCredits(id);
   const [strip, showStrip] = useHiringStrip();
   const live = useLiveClasses();
   const rules = useFeeRules();
@@ -109,7 +112,8 @@ export default function DirectOfferPage() {
     });
     setSending(false);
     if (!r.ok) {
-      setNote({ text: r.message, tone: r.pending ? "soon" : "error" });
+      setNote({ text: r.message, tone: r.pending ? "soon" : "error", error: r.error });
+      if (r.error === "no_hiring_credit") reloadCredits();
       return;
     }
     const p = who;
@@ -217,6 +221,7 @@ export default function DirectOfferPage() {
         direct
         busy={sending}
         note={note}
+        credits={credits}
         onCancel={() => {
           if (sending) return;
           setConfirm(null);

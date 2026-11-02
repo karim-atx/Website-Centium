@@ -16,6 +16,7 @@ import Payments from "./Payments";
 import Businesses from "./Businesses";
 import BusinessDetail from "./BusinessDetail";
 import PracticeSettings from "./PracticeSettings";
+import PremiumPasses from "./PremiumPasses";
 
 /**
  * Release 3 · the professional More pages, /app/more/* (MO1 v7 rows; FINAL_PLAN
@@ -47,6 +48,8 @@ export default function MoreRoutes() {
       <Route path="businesses" element={<Businesses />} />
       <Route path="businesses/:id/*" element={<BusinessDetail />} />
       <Route path="practice/*" element={<PracticeSettings />} />
+      {/* Round G1 (EA): Premium passes, from the plan page. */}
+      <Route path="premium-passes" element={<PremiumPasses />} />
       <Route path="*" element={<Navigate to="/app/more" replace />} />
     </Routes>
   );

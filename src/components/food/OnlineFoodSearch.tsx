@@ -3,6 +3,7 @@ import { Check, ChevronDown, ExternalLink, Globe } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { FOOD_DARK } from "./foodDark";
+import { PremiumLabel } from "../premium/PremiumAskHost";
 import { textPx } from "../../theme/textSize";
 import { saveFoundFood } from "../../services/food/onlineSearch";
 import {
@@ -38,7 +39,7 @@ export const SourceBadge: React.FC<{ source: OnlineSource }> = ({ source }) => (
 );
 
 /** "Not what you want? Search online" under the results, or the button in the nothing-found state. */
-export const SearchOnlineButton: React.FC<{ variant: "row" | "empty"; onClick: () => void }> = ({ variant, onClick }) => {
+export const SearchOnlineButton: React.FC<{ variant: "row" | "empty"; onClick: () => void; premium?: boolean }> = ({ variant, onClick, premium = false }) => {
   const dark = useIsDark();
   if (variant === "row") {
     return (
@@ -52,6 +53,7 @@ export const SearchOnlineButton: React.FC<{ variant: "row" | "empty"; onClick: (
         <span className="min-w-0">
           Not what you want? <span style={{ fontWeight: 700, color: dark ? FOOD_DARK.lavInk : "rgb(var(--thi-7d67d9))" }}>Search online</span>
         </span>
+        {premium && <PremiumLabel className="ms-auto shrink-0" />}
       </button>
     );
   }
@@ -63,6 +65,7 @@ export const SearchOnlineButton: React.FC<{ variant: "row" | "empty"; onClick: (
       style={{ gap: 8, height: 42, padding: "0 18px", borderRadius: 12, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: textPx(13.5), fontWeight: 700 }}
     >
       <Globe size={15} /> Search online
+      {premium && <PremiumLabel />}
     </button>
   );
 };

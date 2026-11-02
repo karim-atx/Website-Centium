@@ -5,6 +5,7 @@ import * as G from "../../services/cycle/guidance";
 import { getCycleStats, type CycleServerStats } from "../../services/cycle";
 import { CapsLabel, CycleCard, CycleFooter, hair, type, useCycleMode } from "./cycleUi";
 import { appLocale } from "../../i18n/format";
+import { PhaseInsightsCard } from "./PhaseInsightsCard";
 
 // HE1.10.a, the Insights tab.
 //
@@ -88,6 +89,8 @@ export const CycleInsightsTab: React.FC<{
 
   return (
     <div style={{ ["--cyc-ovu-ink" as string]: ovuInk }} data-cycle-tab="insights">
+      {/* Round G4: the Premium phase insights (nothing while the switch is off, and nothing until the approved copy is loaded). */}
+      <PhaseInsightsCard />
       {!enough ? (
         // K2 / OURS-cycle-empty-states #6: repo copy, centred 12/18 #5B5349.
         <CycleCard style={{ marginTop: 4 }}>
