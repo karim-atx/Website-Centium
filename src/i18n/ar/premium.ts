@@ -5,7 +5,7 @@ import type { Catalogue } from "../core";
 // for Karim's review before merge.
 // note (whole file): Premium stays «Premium» / «Centium Premium» (brand); plan
 // names (Base, Starter) stay Latin as elsewhere. Terms: hiring credit «رصيد
-// توظيف» (plural «أرصدة»), a Premium pass «تصريح Premium»; seat block
+// توظيف» (plural «أرصدة»), a Premium pass «منحة Premium» (plural «منح Premium»); seat block
 // «حزمة مقاعد», venue «مكان», verification «التحقق», professional «مختص»,
 // business «نشاط تجاري». The App Store / Google Play and Apple / Google names
 // stay Latin.
@@ -77,7 +77,7 @@ const premium: Catalogue = {
   "Premium shows how each marker has changed over time.": "يعرض Premium كيف تغيّر كل مؤشر مع الوقت.", // note: health wording, neutral
   "Premium makes a summary of your records to share with your doctor.": "يُعدّ Premium ملخّصًا لسجلاتك تشاركه مع طبيبك.", // note: health wording, non-diagnostic
   "Premium lets you log food by saying what you ate.": "يتيح لك Premium تسجيل الطعام بقول ما أكلته.",
-  "Settle in": "استقرّ", // note: meditation name (free); content titles may stay English until EC (G3)
+  "Settle in": "استقرّ في مكانك", // note: meditation name (free); content titles may stay English until EC (G3)
   "Box breathing": "التنفّس المربّع", // note: meditation name (free)
   "Wind down for sleep": "استرخِ قبل النوم", // note: meditation name (free)
   "Free: {names}": "مجانًا: {names}",
@@ -101,18 +101,16 @@ const premium: Catalogue = {
   // == The Round G1 refusals (services/premium/model premiumCodeMessage) ==
   "That isn't available yet.": "هذا غير متاح بعد.",
   "That's part of Centium Premium.": "هذا جزء من Centium Premium.",
-  "Choose your business plan before you add a venue.": "اختر خطة نشاطك التجاري قبل إضافة مكان.",
-  "Choose your business plan before you submit your verification.": "اختر خطة نشاطك التجاري قبل إرسال طلب التحقق.",
-  "Choose your business plan first.": "اختر خطة نشاطك التجاري أولًا.",
-  "Your verification is approved once your plan is paid.": "تتم الموافقة على التحقق بعد دفع خطتك.",
-  "No hiring credit free. A role offer needs one.": "لا يوجد رصيد توظيف متاح. يحتاج عرض الوظيفة إلى رصيد واحد.",
+  "Choose your business plan in the Centium app first.": "اختر خطة نشاطك التجاري في تطبيق Centium أولًا.",
+  "Your verification is approved once your plan purchase is confirmed.": "تتم الموافقة على التحقق بعد تأكيد شراء خطتك.",
+  "No hiring credit left. A role offer needs one.": "لم يبقَ لك رصيد توظيف. يحتاج عرض الوظيفة إلى رصيد واحد.",
 
   // == Premium passes, the professional's page (pages/pro/more/PremiumPasses) ==
-  "Premium passes": "تصاريح Premium",
+  "Premium passes": "منح Premium",
   "Include Centium Premium for your clients": "أضف Centium Premium لعملائك",
-  "Premium passes come with your own paid plan, Starter and up. Each one includes Centium Premium for one of your clients.": "تأتي تصاريح Premium مع خطتك المدفوعة الخاصة، من Starter فما فوق. يضيف كل تصريح Centium Premium لأحد عملائك.",
-  "{used} of {n} passes used": { zero: "استُخدم {used} من {n} تصريح", one: "استُخدم {used} من تصريح واحد", two: "استُخدم {used} من تصريحين", few: "استُخدم {used} من {n} تصاريح", many: "استُخدم {used} من {n} تصريحًا", other: "استُخدم {used} من {n} تصريح" },
-  "A pass you take back ends 7 days later, and so does one whose client stops working with you.": "ينتهي التصريح الذي تسترجعه بعد 7 أيام، وكذلك تصريح العميل الذي يتوقف عن العمل معك.",
+  "Premium passes come with your own paid plan, Starter and up. Each one includes Centium Premium for one of your clients.": "تأتي منح Premium مع خطتك المدفوعة الخاصة، من Starter فما فوق. تضيف كل منحة Centium Premium لأحد عملائك.",
+  "{used} of {n} passes used": { zero: "استُخدمت {used} من {n} منحة", one: "استُخدمت {used} من منحة واحدة", two: "استُخدمت {used} من منحتين", few: "استُخدمت {used} من {n} منح", many: "استُخدمت {used} من {n} منحةً", other: "استُخدمت {used} من {n} منحة" },
+  "A pass you take back ends 7 days later, and so does one whose client stops working with you.": "تنتهي المنحة التي تسترجعها بعد 7 أيام، وكذلك منحة العميل الذي يتوقف عن العمل معك.",
   "Clients with Premium": "عملاء لديهم Premium",
   "Your clients": "عملاؤك",
   "Your active clients show here.": "يظهر عملاؤك النشطون هنا.",
@@ -120,13 +118,13 @@ const premium: Catalogue = {
   "Include Premium": "إضافة Premium",
   "Take back": "استرجاع",
   "Take back Premium?": "استرجاع Premium؟",
-  "Ending|premium pass": "ينتهي",
+  "Ending|premium pass": "تنتهي",
   "Ends {date}": "ينتهي في {date}",
   "Since {date}": "منذ {date}",
   "{name} now has Centium Premium.": "أصبح لدى {name} الآن Centium Premium.",
   "Premium ends in 7 days. {name} is told.": "ينتهي Premium بعد 7 أيام. سيتم إبلاغ {name}.",
   "{name}'s Premium ends in 7 days, and they're told. You can include it for someone else once it has ended.": "ينتهي Premium لدى {name} بعد 7 أيام، وسيتم إبلاغه. يمكنك إضافته لشخص آخر بعد انتهائه.",
-  "Couldn't load your Premium passes.": "تعذّر تحميل تصاريح Premium.",
+  "Couldn't load your Premium passes.": "تعذّر تحميل منح Premium.",
   "Couldn't load your clients.": "تعذّر تحميل عملائك.",
   "Couldn't include Premium. Try again.": "تعذّرت إضافة Premium. حاول مرة أخرى.",
   "Couldn't take Premium back. Try again.": "تعذّر استرجاع Premium. حاول مرة أخرى.",
@@ -136,8 +134,8 @@ const premium: Catalogue = {
   "They aren't one of your active clients.": "ليس من عملائك النشطين.",
   "They already have Premium through you.": "لديه Premium عن طريقك بالفعل.",
   "Your licence verification isn't current. Renew it to include Premium.": "التحقق من رخصتك غير ساري. جدّده لتتمكن من إضافة Premium.",
-  "Passes come with your own paid plan, Starter and up.": "تأتي التصاريح مع خطتك المدفوعة الخاصة، من Starter فما فوق.",
-  "You've used all the passes your plan includes.": "استخدمت كل التصاريح التي تتضمنها خطتك.",
+  "Passes come with your own paid plan, Starter and up.": "تأتي المنح مع خطتك المدفوعة الخاصة، من Starter فما فوق.",
+  "You've used all the passes your plan includes.": "استخدمت كل المنح التي تتضمنها خطتك.",
   "You can include Premium once you've worked together for 14 days.": "يمكنك إضافة Premium بعد أن تعملا معًا 14 يومًا.",
   "You can include Premium once they've booked or had a session with you, or logged against a programme or meal plan they share with you.": "يمكنك إضافة Premium بعد أن يحجز جلسة معك أو يحضرها، أو يسجّل ضمن برنامج أو خطة وجبات يشاركها معك.",
   "You can't include Premium for someone who signs in on the same device and network as you.": "لا يمكنك إضافة Premium لشخص يسجّل الدخول من الجهاز والشبكة نفسيهما اللذين تستخدمهما.",
@@ -150,58 +148,31 @@ const premium: Catalogue = {
   "Your members with an active membership get Centium Premium, up to your plan's limit.": "يحصل أعضاؤك ذوو الاشتراك النشط على Centium Premium، ضمن حدّ خطتك.",
   "Members with an active membership get Premium, up to your plan's limit. Turning this off ends theirs 7 days later, and they're told.": "يحصل الأعضاء ذوو الاشتراك النشط على Premium، ضمن حدّ خطتك. إيقاف هذا الخيار يُنهي Premium لديهم بعد 7 أيام، ويتم إبلاغهم.",
 
-  // == Business plan levels (components/premium/BusinessPlanLevels, BusinessPlanHomeCard) ==
+  // == Business plan levels, bought in the Centium app only (components/premium/BusinessPlanLevels, BusinessPlanHomeCard) ==
   "Plan levels": "مستويات الخطة",
   Base: "Base", // note: plan name, kept Latin
   "Base + {n} seats": { zero: "Base + {n} مقعد", one: "Base + مقعد واحد", two: "Base + مقعدان", few: "Base + {n} مقاعد", many: "Base + {n} مقعدًا", other: "Base + {n} مقعد" },
   "Base + {n} seat blocks": { zero: "Base + {n} حزمة مقاعد", one: "Base + حزمة مقاعد واحدة", two: "Base + حزمتا مقاعد", few: "Base + {n} حزم مقاعد", many: "Base + {n} حزمة مقاعد", other: "Base + {n} حزمة مقاعد" },
   "{n} seats": { zero: "0 مقاعد", one: "مقعد واحد", two: "مقعدان", few: "{n} مقاعد", many: "{n} مقعدًا", other: "{n} مقعد" },
   Current: "الحالية",
-  "From your next renewal": "من تجديدك التالي",
-  "From your next renewal: {level}, billed monthly.": "من تجديدك التالي: {level}، بفوترة شهرية.",
-  "From your next renewal: {level}, billed yearly.": "من تجديدك التالي: {level}، بفوترة سنوية.",
-  "Start now": "البدء الآن",
-  "Starting…": "جارٍ البدء…",
-  "An active plan changes at its next renewal; nothing is charged now.": "تتغيّر الخطة النشطة عند تجديدها التالي، ولا يُحتسب أي مبلغ الآن.",
-  "Your plan starts once its first payment is recorded.": "تبدأ خطتك بعد تسجيل دفعتها الأولى.",
-  "Your plan charge is ready below. Pay by cash or bank transfer; your plan starts once Centium records the payment.": "رسم خطتك جاهز أدناه. ادفع نقدًا أو بتحويل مصرفي، وتبدأ خطتك بعد أن تسجّل Centium الدفعة.",
-  "A plan charge is already waiting for payment.": "هناك رسم خطة بانتظار الدفع بالفعل.",
-  "See the charge": "عرض الرسم",
-  "Only the business owner can choose the plan.": "وحده صاحب النشاط التجاري يمكنه اختيار الخطة.",
   "The business owner chooses the plan.": "صاحب النشاط التجاري هو من يختار الخطة.",
-  "Couldn't start the plan. Try again.": "تعذّر بدء الخطة. حاول مرة أخرى.",
-  "Choose your plan for your next renewal": "اختر خطتك لتجديدك التالي",
-  "Your plan renews on {date}. Pick the level you want from then.": "تتجدّد خطتك في {date}. اختر المستوى الذي تريده من ذلك الحين.",
-  "Pick the level you want from your next renewal.": "اختر المستوى الذي تريده من تجديدك التالي.",
   "Choose your business plan": "اختر خطة نشاطك التجاري",
-  "Choose a level and how you're billed to carry on. Your verification is approved once your plan is paid.": "اختر المستوى وطريقة الفوترة لتتابع. تتم الموافقة على التحقق بعد دفع خطتك.",
-  "Your plan payment is pending.": "دفعة خطتك قيد الانتظار.",
-  "Your verification is approved once it's paid.": "تتم الموافقة على التحقق بعد دفعها.",
-  "{price}, billed monthly": "{price}، بفوترة شهرية",
-  "{price}, billed yearly": "{price}، بفوترة سنوية",
-  // pages/business-more/BillingPages.tsx and pages/onboarding/business/PaymentsStep.tsx (Round G1 lines).
-  "Your plan charge, {price}, is awaiting payment.": "رسم خطتك، {price}، بانتظار الدفع.",
-  "Your verification is approved, and your business goes live, once your plan's first payment is recorded.": "تتم الموافقة على التحقق، ويصبح نشاطك التجاري متاحًا، بعد تسجيل أول دفعة لخطتك.",
+  "Buy it in the Centium app. Your verification is approved once the purchase is confirmed.": "اشترِها من تطبيق Centium. تتم الموافقة على التحقق بعد تأكيد الشراء.",
+  "Your verification is approved once your purchase is confirmed.": "تتم الموافقة على التحقق بعد تأكيد عملية الشراء.",
+  "Change your plan in the Centium app.": "غيّر خطتك من تطبيق Centium.",
 
-  // == The plan step at the start of business onboarding (pages/onboarding/business/PlanStep; G1 fixes) ==
+  // == The plan step at the start of business onboarding (pages/onboarding/business/PlanStep; G1 fixes, G fixes 2) ==
   "Before step 2": "قبل الخطوة 2",
-  "Your plan comes first. Your verification is approved once it's paid.": "تأتي خطتك أولًا. تتم الموافقة على التحقق بعد دفعها.",
-  "Your plan charge": "رسم خطتك",
-  "How to pay": "طريقة الدفع",
-  "Pay Centium {price} by cash or bank transfer. Centium records the payment, and your verification is approved once it's paid.": "ادفع لـ Centium مبلغ {price} نقدًا أو بتحويل مصرفي. تسجّل Centium الدفعة، وتتم الموافقة على التحقق بعد دفعها.",
-  "Pay Centium by cash or bank transfer. Centium records the payment, and your verification is approved once it's paid.": "ادفع لـ Centium نقدًا أو بتحويل مصرفي. تسجّل Centium الدفعة، وتتم الموافقة على التحقق بعد دفعها.",
-  "You can carry on setting up your business now.": "يمكنك متابعة إعداد نشاطك التجاري الآن.",
-  "You're offline. Connect to start your plan.": "أنت غير متصل. اتصل بالإنترنت لبدء خطتك.",
 
   // == Hiring credits (components/premium/HiringCreditsCard, pages/business-market/hiring/HireConfirmDialog) ==
   "Hiring credits": "أرصدة التوظيف",
-  "{n} free to use": { zero: "{n} رصيد متاح للاستخدام", one: "رصيد واحد متاح للاستخدام", two: "رصيدان متاحان للاستخدام", few: "{n} أرصدة متاحة للاستخدام", many: "{n} رصيدًا متاحًا للاستخدام", other: "{n} رصيد متاح للاستخدام" },
+  "{n} left to use": { zero: "لم يبقَ أي رصيد للاستخدام", one: "يتبقى رصيد واحد للاستخدام", two: "يتبقى رصيدان للاستخدام", few: "تتبقى {n} أرصدة للاستخدام", many: "يتبقى {n} رصيدًا للاستخدام", other: "يتبقى {n} رصيد للاستخدام" },
   "Each role hire uses 1 hiring credit instead of the hiring fee. Class-slot hires are billed as before.": "يستخدم كل توظيف لوظيفة رصيد توظيف واحدًا بدلًا من رسم التوظيف. أما التوظيف لحصص محددة فيُفوتر كما في السابق.",
   "{remaining} of {n} credits left, until {date}": { zero: "يتبقى {remaining} من {n} رصيد، حتى {date}", one: "يتبقى {remaining} من رصيد واحد، حتى {date}", two: "يتبقى {remaining} من رصيدين، حتى {date}", few: "يتبقى {remaining} من {n} أرصدة، حتى {date}", many: "يتبقى {remaining} من {n} رصيدًا، حتى {date}", other: "يتبقى {remaining} من {n} رصيد، حتى {date}" },
   "{remaining} of {n} credits left": { zero: "يتبقى {remaining} من {n} رصيد", one: "يتبقى {remaining} من رصيد واحد", two: "يتبقى {remaining} من رصيدين", few: "يتبقى {remaining} من {n} أرصدة", many: "يتبقى {remaining} من {n} رصيدًا", other: "يتبقى {remaining} من {n} رصيد" },
   "{n} hiring credits": { zero: "{n} رصيد توظيف", one: "رصيد توظيف واحد", two: "رصيدا توظيف", few: "{n} أرصدة توظيف", many: "{n} رصيد توظيف", other: "{n} رصيد توظيف" }, // note: a billing-history row (services/centium-billing/model chargeTitle)
   "Uses 1 hiring credit":"يستخدم رصيد توظيف واحدًا",
-  "{n} credits free to use": { zero: "{n} رصيد متاح للاستخدام", one: "رصيد واحد متاح للاستخدام", two: "رصيدان متاحان للاستخدام", few: "{n} أرصدة متاحة للاستخدام", many: "{n} رصيدًا متاحًا للاستخدام", other: "{n} رصيد متاح للاستخدام" },
+  "{n} credits left to use": { zero: "لم يبقَ أي رصيد للاستخدام", one: "يتبقى رصيد واحد للاستخدام", two: "يتبقى رصيدان للاستخدام", few: "تتبقى {n} أرصدة للاستخدام", many: "يتبقى {n} رصيدًا للاستخدام", other: "يتبقى {n} رصيد للاستخدام" },
   "The credit is used when they accept. No hiring fee is added.": "يُستخدم الرصيد عند قبوله العرض. ولا يُضاف أي رسم توظيف.",
   "Couldn't load your hiring credits.": "تعذّر تحميل أرصدة التوظيف.",
 

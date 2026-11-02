@@ -109,7 +109,7 @@ export default function HireConfirmDialog({
     [t("Starts"), startsText(offer.startsOn)],
   ];
   const shownNote: DialogNote | null = note ?? (failed && !usesCredit ? { text: t("Couldn't work out the fee. Try again."), tone: "error" } : null);
-  // ATXQ4, or no credit free before sending: the buy block (bought in the app only, G10).
+  // ATXQ4, or no credit left before sending: the buy block (bought in the app only, G10).
   const showBuy = usesCredit && (note?.error === "no_hiring_credit" || credits?.free === 0);
   return (
     <CentredDialog
@@ -139,7 +139,7 @@ export default function HireConfirmDialog({
         <div data-credit-ticket style={{ position: "relative", marginTop: 10, display: "flex", borderRadius: 14, background: m.pale, overflow: "hidden", textAlign: "start" }}>
           <div style={{ flex: 1, minWidth: 0, padding: "11px 14px" }}>
             <div style={{ fontSize: textPx(12), fontWeight: 800, color: m.pdark }}>{t("Uses 1 hiring credit")}</div>
-            <div style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.ink2, marginTop: 2 }}>{tn(credits?.free ?? 0, "{n} credit free to use", "{n} credits free to use")}</div>
+            <div style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.ink2, marginTop: 2 }}>{tn(credits?.free ?? 0, "{n} credit left to use", "{n} credits left to use")}</div>
           </div>
           <div style={{ width: 84, flexShrink: 0, borderInlineStart: `1.5px dashed ${m.fill}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontSize: textPx(17), fontWeight: 800, color: m.pdark, fontVariantNumeric: "tabular-nums" }}>1</span>

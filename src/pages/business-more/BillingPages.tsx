@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Armchair, CalendarClock, CalendarRange, Landmark, Mail, Plus, Repeat, Trash2, XCircle } from "lucide-react";
 import { BizConfirm, BizHero, BizNote, BizPage, BizRow, BizSection, LoadError, RowsSkeleton, SoonChip, LIST_BG } from "../../components/business-more/kit";
 import { useApp } from "../../context/AppContext";
@@ -169,8 +169,9 @@ export function SubscriptionPage() {
   // ("$X a year" on a yearly plan). The console seat says who owns the
   // business, with or without RV-06.
   const isOwner = billing.isOwner;
-  // Round G1 (#15): plan levels and "Start now", only while business_plans_on
-  // is true for this business; off (or loading) the page is today's.
+  // Round G1 (#15), G fixes 2: the plan levels and "Buy in the Centium app"
+  // (levels are bought in the app only), only while business_plans_on is true
+  // for this business; off (or loading) the page is today's.
   const planLevel = usePlanLevel(billing.businessId);
   const levelsOn = !!planLevel.level?.businessPlansOn;
   const period = useBillingPeriod(authUserId ?? null, isOwner);
@@ -182,14 +183,6 @@ export function SubscriptionPage() {
   // What yearly saves on the owner's plan and blocks (b93cb12); null unless
   // both periods are priced and yearly is cheaper.
   const saving = periodSaving(period.prices);
-  // Round G1 (G fixes): the business home's pending-payment card opens one
-  // charge (#charge-<id>); it is scrolled to once the history has loaded.
-  const { hash } = useLocation();
-  const historyLoaded = !!billing.history;
-  useEffect(() => {
-    if (!hash.startsWith("#charge-") || !historyLoaded) return;
-    document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView({ block: "center" });
-  }, [hash, historyLoaded]);
 
   useEffect(() => {
     if (!authUserId || live) return;
@@ -271,36 +264,25 @@ export function SubscriptionPage() {
               value={t("No plan yet")}
               sub={
                 planCharge
-                  ? levelsOn
-                    ? t("Your plan charge, {price}, is awaiting payment.", { price: money(planCharge.amount) })
-                    : t("Your first month, {price}, is awaiting payment.", { price: money(planCharge.amount) })
-                  : planPrice !== null
-                    ? (s ? s.period : "monthly") === "monthly"
-                      ? t("The Business plan is {price} a month.", { price: money(planPrice) })
-                      : t("The Business plan is {price} a year.", { price: money(planPrice) })
-                    : s
-                      ? // business_plan_summary's plan_price is NULL (251ab70: no
-                        // fallback to another period's price): said, never $0.
-                        s.period === "monthly"
-                        ? t("The Business plan's monthly price: Not available.")
-                        : t("The Business plan's yearly price: Not available.")
-                      : undefined
+                  ? t("Your first month, {price}, is awaiting payment.", { price: money(planCharge.amount) })
+                  : levelsOn
+                    ? undefined // the levels and their prices are just below
+                    : planPrice !== null
+                      ? (s ? s.period : "monthly") === "monthly"
+                        ? t("The Business plan is {price} a month.", { price: money(planPrice) })
+                        : t("The Business plan is {price} a year.", { price: money(planPrice) })
+                      : s
+                        ? // business_plan_summary's plan_price is NULL (251ab70: no
+                          // fallback to another period's price): said, never $0.
+                          s.period === "monthly"
+                          ? t("The Business plan's monthly price: Not available.")
+                          : t("The Business plan's yearly price: Not available.")
+                        : undefined
               }
               actions={planCharge || levelsOn ? [] : [{ label: t(UPGRADE_ACTION_LABEL), icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}
             />
           )}
-          {levelsOn && billing.businessId && (
-            <BusinessPlanLevels
-              businessId={billing.businessId}
-              level={planLevel.level}
-              isOwner={isOwner}
-              historyAnchor="billing-history"
-              onChanged={() => {
-                planLevel.reload();
-                billing.reload();
-              }}
-            />
-          )}
+          {levelsOn && <BusinessPlanLevels level={planLevel.level} isOwner={isOwner} />}
           {active && isOwner && (
             <>
               {period.error ? (
@@ -351,7 +333,7 @@ export function SubscriptionPage() {
             </BizNote>
           )}
           {(!live || billing.canSeeBilling) && (
-            <BizSection id="billing-history" label={t("Billing history")}>
+            <BizSection label={t("Billing history")}>
               {live && billing.historyError && !billing.history ? (
                 <LoadError message={t("Couldn't load your billing history.")} onRetry={billing.reload} />
               ) : live && billing.history && billing.history.length > 0 ? (
@@ -361,7 +343,6 @@ export function SubscriptionPage() {
                   return (
                     <BizRow
                       key={c.id}
-                      id={`charge-${c.id}`}
                       icon={c.product === "seat_block" ? Armchair : CalendarClock}
                       title={chargeTitle(c)}
                       desc={[c.periodStart && c.periodEnd ? t("{start} to {end}", { start: fmtDay(c.periodStart), end: fmtDay(c.periodEnd) }) : fmt(c.createdAt), chargeStatusText(c)].join(" · ")}

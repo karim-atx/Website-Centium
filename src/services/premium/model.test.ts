@@ -8,10 +8,10 @@ import {
   memberStatusTitle,
   mayPrompt,
   mustChooseLevel,
-  awaitingPlanPayment,
+  planPurchasePending,
   onboardingPlanStep,
   planHomeCard,
-  pendingPlanLine,
+  planLevelPriceText,
   memberStatusGiver,
   giverLineParts,
   offerUsesCredit,
@@ -76,7 +76,7 @@ test("off (and loading, and unreadable) behaves as today: no badge, no buy block
   assert.equal(mustChooseLevel(null), false);
   assert.equal(choiceDue(null), false);
   assert.equal(mustChooseLevel(parseLevel([{ business_plans_on: false, must_choose_level: true }])), false);
-  assert.equal(awaitingPlanPayment(parseLevel([{ business_plans_on: false, awaiting_payment: true }])), false);
+  assert.equal(planPurchasePending(parseLevel([{ business_plans_on: false, awaiting_payment: true }])), false);
   assert.equal(planHomeCard(parseLevel([{ business_plans_on: false, must_choose_level: true, awaiting_payment: true, choice_due: true }])), null);
   assert.equal(planHomeCard(null), null);
   assert.equal(offerUsesCredit("role", null), false);
@@ -191,14 +191,17 @@ test("every pass refusal reason has its own plain sentence; an unknown one a saf
 test("the Round G1 codes: Q0, Q1, Q3, Q4, Q6 as sentences; Q2, Q5 and others are not ours", () => {
   assert.equal(premiumCodeMessage("ATXQ0"), "That isn't available yet.");
   assert.equal(premiumCodeMessage("ATXQ1"), "That's part of Centium Premium.");
-  assert.equal(premiumCodeMessage("ATXQ3", { message: "ATXQ3: choose your business plan before you add a venue" }), "Choose your business plan before you add a venue.");
-  assert.equal(premiumCodeMessage("ATXQ3", { message: "ATXQ3: choose your business plan before you submit your verification" }), "Choose your business plan before you submit your verification.");
-  assert.equal(premiumCodeMessage("ATXQ3"), "Choose your business plan first.");
+  // G fixes 2: two sentences, with no "paid", "payment", "charge" or "bank transfer"
+  assert.equal(premiumCodeMessage("ATXQ3", { message: "ATXQ3: choose your business plan before you add a venue" }), "Choose your business plan in the Centium app first.");
+  assert.equal(premiumCodeMessage("ATXQ3", { message: "ATXQ3: choose your business plan before you submit your verification" }), "Choose your business plan in the Centium app first.");
+  assert.equal(premiumCodeMessage("ATXQ3"), "Choose your business plan in the Centium app first.");
   assert.equal(
     premiumCodeMessage("ATXQ3", { message: "ATXQ3: the business has not paid its plan yet -- mark its plan charge paid before approving" }),
-    "Your verification is approved once your plan is paid."
+    "Your verification is approved once your plan purchase is confirmed."
   );
-  assert.equal(premiumCodeMessage("ATXQ4"), "No hiring credit free. A role offer needs one.");
+  assert.equal(premiumCodeMessage("ATXQ3", { message: "ATXQ3: the plan purchase is not confirmed yet" }), "Your verification is approved once your plan purchase is confirmed.");
+  for (const m of ["", "ATXQ3: not paid"]) assert.doesNotMatch(premiumCodeMessage("ATXQ3", { message: m })!, /paid|payment|charge|bank transfer/i);
+  assert.equal(premiumCodeMessage("ATXQ4"), "No hiring credit left. A role offer needs one.");
   assert.equal(premiumCodeMessage("ATXQ6", { detail: "too_soon" }), passReasonText("too_soon"));
   assert.equal(premiumCodeMessage("ATXQ6", { message: "ATXQ6: this client cannot have Premium through you yet (no_activity)" }), passReasonText("no_activity"));
   assert.equal(premiumCodeMessage(undefined, { message: "ATXQ4: buy a hiring credit to send this offer" }), premiumCodeMessage("ATXQ4"));
@@ -246,7 +249,7 @@ test("passes, the gym's opt-in, plan levels and hiring credits parse the handove
   assert.deepEqual(prices.map((p) => planLevelName(p, prices[0])), ["Base", "Base + 5 seats", "Base + 10 seats"]);
   const level = parseLevel([{ business_plans_on: true, must_choose_level: true, plan_active: false, choice_due: false, billing_period: "yearly" }]);
   assert.equal(mustChooseLevel(level), true);
-  assert.equal(awaitingPlanPayment(level), false);
+  assert.equal(planPurchasePending(level), false);
   assert.equal(level?.billingPeriod, "yearly");
   assert.equal(choiceDue(parseLevel([{ business_plans_on: true, choice_due: true }])), true);
   const credits = parseHiringCredits([{ credits_on: true, free: 2, price_1: 39, price_3: 99, packs: [{ quantity: 3, used: 1, remaining: 2, starts_at: "a", ends_at: "b" }] }]);
@@ -258,34 +261,45 @@ test("passes, the gym's opt-in, plan levels and hiring credits parse the handove
 
 const PRICES = parseLevelPrices([
   { seat_blocks: 0, seats: 5, monthly_price: 29, yearly_price: 289 },
-  { seat_blocks: 1, seats: 10, monthly_price: 89, yearly_price: 889 },
+  { seat_blocks: 1, seats: 10, monthly_price: 89, yearly_price: null },
   { seat_blocks: 2, seats: 15, monthly_price: 149, yearly_price: 1489 },
 ]);
 const CHOOSE = parseLevel([{ business_plans_on: true, must_choose_level: true, plan_active: false, awaiting_payment: false }]);
-const AWAITING = parseLevel([
+// Today's Database: a level recorded and its plan not confirmed yet (the web reads it as "purchase not confirmed").
+const PENDING = parseLevel([
   { business_plans_on: true, must_choose_level: false, plan_active: false, awaiting_payment: true, pending_charge_id: "ch1", pending_amount: 889, pending_seat_blocks: 1, pending_billing_period: "yearly" },
 ]);
-const ACTIVE = parseLevel([{ business_plans_on: true, must_choose_level: false, plan_active: true, awaiting_payment: false, choice_due: false }]);
+const ACTIVE = parseLevel([{ business_plans_on: true, must_choose_level: false, plan_active: true, awaiting_payment: false, choice_due: false, seat_blocks: 1, billing_period: "monthly" }]);
 
-test("business_plan_level (G fixes): must_choose_level and the open charge parse; must_pay_first is gone", () => {
-  assert.equal(AWAITING?.awaitingPayment, true);
-  assert.equal(AWAITING?.pendingChargeId, "ch1");
-  assert.equal(AWAITING?.pendingAmount, 889);
-  assert.equal(AWAITING?.pendingSeatBlocks, 1);
-  assert.equal(AWAITING?.pendingBillingPeriod, "yearly");
-  assert.equal("mustPayFirst" in (AWAITING ?? {}), false);
-  // an active plan is never "awaiting payment", whatever the row says
-  assert.equal(awaitingPlanPayment(parseLevel([{ business_plans_on: true, plan_active: true, awaiting_payment: true }])), false);
+test("business_plan_level (G fixes 2: bought in the Centium app only): no charge is read, awaiting_payment is 'not confirmed yet'", () => {
+  assert.equal(PENDING?.awaitingPayment, true);
+  assert.equal(planPurchasePending(PENDING), true);
+  // the open charge's fields are no longer read: the web never shows or opens a plan charge
+  for (const k of ["pendingChargeId", "pendingAmount", "pendingSeatBlocks", "pendingBillingPeriod", "chosenSeatBlocks", "chosenBillingPeriod", "mustPayFirst"]) assert.equal(k in (PENDING ?? {}), false, k);
+  // an active plan is never "not confirmed yet", whatever the row says
+  assert.equal(planPurchasePending(parseLevel([{ business_plans_on: true, plan_active: true, awaiting_payment: true }])), false);
+  assert.equal(ACTIVE?.seatBlocks, 1);
+  assert.equal(ACTIVE?.billingPeriod, "monthly");
 });
 
-test("the onboarding plan step: only on the switch while a level must be chosen; kept after Start now", () => {
+test("a level's price line per billing period; null when the period isn't priced", () => {
+  const usd = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(n);
+  assert.equal(planLevelPriceText(PRICES[0], "monthly"), `${usd(29)} a month`);
+  assert.equal(planLevelPriceText(PRICES[0], "yearly"), `${usd(289)} a year`);
+  assert.equal(planLevelPriceText(PRICES[1], "yearly"), null);
+});
+
+test("the onboarding plan step: only on the switch while a level must be chosen, and never a dead end", () => {
   const onS = { businessPlansOn: true };
   const offS = { businessPlansOn: false };
   const gate = (o: Partial<Parameters<typeof onboardingPlanStep>[0]>) =>
-    onboardingPlanStep({ switches: onS, businessId: "b1", level: CHOOSE, levelLoading: false, justChosen: false, ...o });
+    onboardingPlanStep({ switches: onS, businessId: "b1", level: CHOOSE, levelLoading: false, carriedOn: false, ...o });
   assert.equal(gate({}), "plan");
-  // a level chosen (charge open, even unpaid), paid, or a business created before the switch: today's steps
-  assert.equal(gate({ level: AWAITING }), "skip");
+  // Continue always carries on to the venue step, whatever the level says (nothing is bought here)
+  assert.equal(gate({ carriedOn: true }), "skip");
+  assert.equal(gate({ carriedOn: true, levelLoading: true, level: null }), "skip");
+  // a level recorded (not confirmed yet), bought, or a business created before the switch: today's steps
+  assert.equal(gate({ level: PENDING }), "skip");
   assert.equal(gate({ level: ACTIVE }), "skip");
   assert.equal(gate({ level: parseLevel([{ business_plans_on: true, must_choose_level: false }]) }), "skip");
   // the switch off for the business, or no answer: today's steps
@@ -297,25 +311,13 @@ test("the onboarding plan step: only on the switch while a level must be chosen;
   assert.equal(gate({ level: null, levelLoading: true, switches: null }), "skip");
   // no business row yet (offline): today's step; the venue write says ATXQ3
   assert.equal(gate({ businessId: null }), "skip");
-  // just chosen: kept on screen with the charge until Continue
-  assert.equal(gate({ level: AWAITING, justChosen: true }), "plan");
 });
 
-test("the business home card: choose, the first payment pending (with level, amount and charge), or the renewal choice", () => {
+test("the business home card: choose (buy in the app), purchase not confirmed yet, or the renewal line", () => {
   assert.equal(planHomeCard(CHOOSE), "choose");
-  assert.equal(planHomeCard(AWAITING), "awaiting_payment");
+  assert.equal(planHomeCard(PENDING), "purchase_pending");
   assert.equal(planHomeCard(ACTIVE), null);
   assert.equal(planHomeCard(parseLevel([{ business_plans_on: true, plan_active: true, choice_due: true }])), "choice_due");
   // choosing comes before anything else
   assert.equal(planHomeCard(parseLevel([{ business_plans_on: true, must_choose_level: true, choice_due: true }])), "choose");
-  const usd = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(n);
-  assert.equal(pendingPlanLine(AWAITING, PRICES), `Base + 5 seats · ${usd(889)}, billed yearly`);
-  // before the prices load: the level by its blocks
-  assert.equal(pendingPlanLine(AWAITING, null), `Base + 1 seat block · ${usd(889)}, billed yearly`);
-  assert.equal(
-    pendingPlanLine(parseLevel([{ business_plans_on: true, awaiting_payment: true, pending_seat_blocks: 0, pending_amount: 29, pending_billing_period: "monthly" }]), PRICES),
-    `Base · ${usd(29)}, billed monthly`
-  );
-  assert.equal(pendingPlanLine(parseLevel([{ business_plans_on: true }]), PRICES), null);
-  assert.equal(pendingPlanLine(null, PRICES), null);
 });
