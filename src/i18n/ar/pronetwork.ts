@@ -136,8 +136,8 @@ const pronetwork: Catalogue = {
   "You have no clients to refer yet.": "ليس لديك عملاء لإحالتهم بعد.",
   "Colleague type": "نوع الزميل",
   Nearby: "بالقرب منك",
-  Dietitians: "أخصائيو التغذية",
-  Physios: "أخصائيو العلاج الطبيعي", // note: reused from the member side; the type itself reads «أخصائي علاج فيزيائي» (onboarding), so one of the two may want aligning
+  Dietitians: "أخصائيو التغذية العلاجية",
+  Physios: "أخصائيو العلاج الفيزيائي", // note: reused from the member side
   Doctors: "الأطباء",
   Trainers: "المدرّبون",
   "Finding colleagues near you…": "جارٍ البحث عن زملاء بالقرب منك…",
