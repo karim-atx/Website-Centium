@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { tk } from "../../i18n/core";
 import {
   planRow,
   validatePlan,
@@ -48,16 +49,16 @@ export type WriteResult = { ok: true } | { ok: false; message: string };
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to save this.";
+    return tk("Your session expired. Sign in again to save this.");
   }
   // contraception_events_one_pill_per_day_idx: one pill outcome per day, so a
   // second tap is an edit rather than a second row.
-  if (code === "23505") return "Today is already logged. Change it instead of adding another.";
-  if (code === "23514") return "That schedule doesn't fit this method. Check the dates and numbers.";
+  if (code === "23505") return tk("Today is already logged. Change it instead of adding another.");
+  if (code === "23514") return tk("That schedule doesn't fit this method. Check the dates and numbers.");
   if (code === "42501") {
-    return "You don't have permission to save this. Sign in again and try once more.";
+    return tk("You don't have permission to save this. Sign in again and try once more.");
   }
-  return "Couldn't save that. Check your connection and try again.";
+  return tk("Couldn't save that. Check your connection and try again.");
 }
 
 const PLAN_COLUMNS =

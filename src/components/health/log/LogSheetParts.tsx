@@ -6,6 +6,7 @@ import { WheelPicker, type WheelOption } from "../../ui/WheelPicker";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { clock12 } from "../../../utils/time12";
 import { formatShortDate } from "../../../utils/date";
+import { t } from "../../../i18n/core";
 
 // The shared pieces of the Health B log sheets (HE1.1.1 water, HE1.6.1 blood
 // pressure, HE1.7.1 weight; health-b-handover.md "Shared Log sheet"): field
@@ -87,7 +88,7 @@ export function Segmented<V extends string>({
   label: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex bg-th-f3f3fd dark:bg-th-303141" style={{ minHeight: 44, padding: 4, borderRadius: 12, gap: 4 }}>
+    <div role="radiogroup" aria-label={t(label)} className="flex bg-th-f3f3fd dark:bg-th-303141" style={{ minHeight: 44, padding: 4, borderRadius: 12, gap: 4 }}>
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -107,7 +108,7 @@ export function Segmented<V extends string>({
               color: on ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal-soft))",
             }}
           >
-            {o.label}
+            {t(o.label)}
           </button>
         );
       })}
@@ -130,10 +131,10 @@ function dayFromIso(iso: string): Date {
 
 /** "Today" / "Yesterday" / "Sat, Oct 3" (HE1.6.1 #67 formats, date part). */
 export function dayLabel(iso: string, today: string): string {
-  if (iso === today) return "Today";
+  if (iso === today) return t("Today");
   const y = dayFromIso(today);
   y.setDate(y.getDate() - 1);
-  if (iso === isoDay(y)) return "Yesterday";
+  if (iso === isoDay(y)) return t("Yesterday");
   const d = dayFromIso(iso);
   return formatShortDate(d, { weekday: "short", day: "numeric", month: "short" });
 }
@@ -169,7 +170,7 @@ export const TimeWheel: React.FC<{
   const minutes: WheelOption<number>[] = [];
   for (let m = 0; m < 60; m += minuteStep) minutes.push({ value: m, label: pad2(m), disabled: over(value.h, m) });
   const hours = HOURS.map((o) => ({ ...o, disabled: over(to24(o.value, pm), 0) }));
-  const mer = MERIDIEM.map((o) => ({ ...o, disabled: over(to24(h12, o.value === "PM"), 0) }));
+  const mer = MERIDIEM.map((o) => ({ ...o, label: t(o.label), disabled: over(to24(h12, o.value === "PM"), 0) }));
   const minuteValue = minutes.some((o) => o.value === value.m) ? value.m : Math.floor(value.m / minuteStep) * minuteStep;
   return (
     <WheelPicker
@@ -177,9 +178,9 @@ export const TimeWheel: React.FC<{
       rowHeight={28.5}
       separator={{ text: ":", size: 22 }}
       columns={[
-        { label: "Hours", options: hours, value: h12, bandWidth: 70, onChange: (v) => onChange({ h: to24(Number(v), pm), m: value.m }) },
-        { label: "Minutes", options: minutes, value: minuteValue, bandWidth: 70, onChange: (v) => onChange({ h: value.h, m: Number(v) }) },
-        { label: "AM or PM", options: mer, value: pm ? "PM" : "AM", bandWidth: 70, onChange: (v) => onChange({ h: to24(h12, v === "PM"), m: value.m }) },
+        { label: t("Hours"), options: hours, value: h12, bandWidth: 70, onChange: (v) => onChange({ h: to24(Number(v), pm), m: value.m }) },
+        { label: t("Minutes"), options: minutes, value: minuteValue, bandWidth: 70, onChange: (v) => onChange({ h: value.h, m: Number(v) }) },
+        { label: t("AM or PM"), options: mer, value: pm ? "PM" : "AM", bandWidth: 70, onChange: (v) => onChange({ h: to24(h12, v === "PM"), m: value.m }) },
       ]}
     />
   );
@@ -198,7 +199,7 @@ export const MeasuredOnPopup: React.FC<{
   onDone: (d: Date) => void;
   dateOnly?: boolean;
   title?: string;
-}> = ({ open, onClose, value, today, onDone, dateOnly, title = "Measured on" }) => {
+}> = ({ open, onClose, value, today, onDone, dateOnly, title = t("Measured on") }) => {
   const [time, setTime] = React.useState({ h: value.getHours(), m: value.getMinutes() });
   const [wasOpen, setWasOpen] = React.useState(false);
   if (open && !wasOpen) {

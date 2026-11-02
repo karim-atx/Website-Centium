@@ -5,6 +5,7 @@ import { CalendarPickerSheet } from "../dashboard/CalendarPickerSheet";
 import { useApp } from "../../context/AppContext";
 import { dueDateFromLmp, lmpFromDueDate, shiftDay, startPregnancy } from "../../services/pregnancy";
 import * as G from "../../services/pregnancy/guidance";
+import { t } from "../../i18n/core";
 import { CycleDateField, CycleHelp, CycleSection, CycleTitleRow, OptionButton, longDate, type } from "../cycle/cycleUi";
 
 // HE1.10.b.1 "Start pregnancy tracking", the repo StartPregnancySheet as a
@@ -73,7 +74,7 @@ export const StartPregnancyPage: React.FC<{ onBack: () => void; onStarted: () =>
         {G.START_BODY}
       </p>
 
-      <div className="flex" role="radiogroup" aria-label="How to work out the dates" style={{ gap: 8, marginTop: 16 }}>
+      <div className="flex" role="radiogroup" aria-label={t("How to work out the dates")} style={{ gap: 8, marginTop: 16 }}>
         {(
           [
             ["lmp", G.START_FROM_LMP],
@@ -123,7 +124,7 @@ export const StartPregnancyPage: React.FC<{ onBack: () => void; onStarted: () =>
 
       {error && (
         <p role="alert" className="text-status-high" style={type(11.5, 17.3, 600, { marginTop: 12 })}>
-          {error}
+          {t(error)}
         </p>
       )}
 

@@ -8,6 +8,7 @@ import { dueLabel, gestationOn, type Pregnancy } from "../../services/pregnancy"
 import * as G from "../../services/pregnancy/guidance";
 import { useNavigate } from "react-router-dom";
 import { Apple, ChevronRight, Dumbbell, HeartPulse, Plus } from "lucide-react";
+import { t, tk } from "../../i18n/core";
 
 // The pregnancy overview, in place of the cycle ring.
 //
@@ -52,7 +53,7 @@ export const PregnancyOverview: React.FC<{
     return (
       <Card className="mt-4 text-center py-7">
         <p className="text-[12.5px] text-charcoal-soft">
-          This pregnancy has no start date recorded, so there's nothing to count from.
+          {t("This pregnancy has no start date recorded, so there's nothing to count from.")}
         </p>
       </Card>
     );
@@ -62,17 +63,21 @@ export const PregnancyOverview: React.FC<{
     <div className={hero ? undefined : "mt-4"}>
       {(() => {
         const ring = (
-          <PregnancyRing week={g.week} headline={`Week ${g.week}`} subline={`Day ${g.day} · trimester ${g.trimester}`} footline={dueLabel(g)} />
+          <PregnancyRing
+            week={g.week}
+            headline={t("Week {n}", { n: g.week })}
+            subline={t("Day {day} · trimester {trimester}", { day: g.day, trimester: g.trimester })}
+            footline={dueLabel(g)}
+          />
         );
-        return hero ? hero(<div className="mx-auto" style={{ width: 160 }}>{ring}</div>, { label: "Pregnancy" }) : ring;
+        return hero ? hero(<div className="mx-auto" style={{ width: 160 }}>{ring}</div>, { label: t("Pregnancy") }) : ring;
       })()}
 
       {/* THE DATING IS WRONG, SAID PLAINLY. Past 42 weeks the number on the
           ring is an arithmetic result, not a fact about a pregnancy. */}
       {g.implausible && (
         <p className="mt-2 text-[11px] leading-relaxed text-center text-status-high font-semibold px-3">
-          These dates give a week that doesn't look right. Check the date you entered, or ask your
-          provider for the dating from your scan.
+          {t("These dates give a week that doesn't look right. Check the date you entered, or ask your provider for the dating from your scan.")}
         </p>
       )}
 
@@ -87,7 +92,7 @@ export const PregnancyOverview: React.FC<{
           className="tap inline-flex items-center bg-th-efecf9 dark:bg-th-303141 text-primary-dark"
           style={{ height: 40, borderRadius: 12, padding: "0 16px", gap: 6, ...type(13, 19.5, 700) }}
         >
-          <Plus size={14} aria-hidden /> Log today
+          <Plus size={14} aria-hidden /> {t("Log today")}
         </button>
       </div>
 
@@ -96,12 +101,12 @@ export const PregnancyOverview: React.FC<{
         {g.week >= G.CONTRACTIONS_FROM_WEEK && <ContractionTimer pregnancyId={pregnancy.id} />}
 
         <CycleCard style={{ marginBottom: 12 }}>
-          <CapsLabel style={{ marginBottom: 6 }}>Guidance for week {g.week}</CapsLabel>
+          <CapsLabel style={{ marginBottom: 6 }}>{t("Guidance for week {n}", { n: g.week })}</CapsLabel>
           {(
             [
-              [HeartPulse, "Pregnancy health", "/app/health"],
-              [Apple, "Eating for pregnancy", "/app/food"],
-              [Dumbbell, "Moving in pregnancy", "/app/workout"],
+              [HeartPulse, tk("Pregnancy health"), "/app/health"],
+              [Apple, tk("Eating for pregnancy"), "/app/food"],
+              [Dumbbell, tk("Moving in pregnancy"), "/app/workout"],
             ] as const
           ).map(([Icon, label, to]) => (
             <button
@@ -110,8 +115,8 @@ export const PregnancyOverview: React.FC<{
               className="tap w-full flex items-center gap-2.5 py-2 text-start"
             >
               <Icon size={15} style={{ color: PREGNANCY_COLOR }} className="shrink-0" />
-              <span className="flex-1 text-[12.5px] font-semibold text-charcoal">{label}</span>
-              <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
+              <span className="flex-1 text-[12.5px] font-semibold text-charcoal">{t(label)}</span>
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" />
             </button>
           ))}
           <p className="mt-1.5 text-[10px] font-semibold text-charcoal-faint">{G.PROVIDER_FIRST}</p>

@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
 import { dueDateFromLmp, lmpFromDueDate } from "./weeks";
+import { tk } from "../../i18n/core";
 
 export * from "./weeks";
 
@@ -47,14 +48,14 @@ export type WriteResult = { ok: true } | { ok: false; message: string };
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to save this.";
+    return tk("Your session expired. Sign in again to save this.");
   }
-  if (code === "23505") return "There's already a pregnancy being tracked.";
-  if (code === "23514") return "Those dates don't work together. Check them and try again.";
+  if (code === "23505") return tk("There's already a pregnancy being tracked.");
+  if (code === "23514") return tk("Those dates don't work together. Check them and try again.");
   if (code === "42501") {
-    return "You don't have permission to save this. Sign in again and try once more.";
+    return tk("You don't have permission to save this. Sign in again and try once more.");
   }
-  return "Couldn't save that. Check your connection and try again.";
+  return tk("Couldn't save that. Check your connection and try again.");
 }
 
 const PREGNANCY_COLUMNS = "id, lmp_date, due_date, status, outcome, ended_on, postpartum_until";
@@ -135,7 +136,7 @@ export async function startPregnancy(
   const lmpDate = basis.lmpDate ?? (basis.dueDate ? lmpFromDueDate(basis.dueDate) : null);
   const dueDate = basis.dueDate ?? (basis.lmpDate ? dueDateFromLmp(basis.lmpDate) : null);
   if (!lmpDate && !dueDate) {
-    return { ok: false, message: "Enter either your last period or your due date." };
+    return { ok: false, message: tk("Enter either your last period or your due date.") };
   }
 
   const { error } = await supabase
@@ -227,7 +228,7 @@ export async function startKickSession(
 
   if (error || !data) {
     console.error("[pregnancy] Could not start a kick session:", error?.message);
-    return { ok: false, message: error ? describe(error) : "Couldn't start counting." };
+    return { ok: false, message: error ? describe(error) : tk("Couldn't start counting.") };
   }
   return { ok: true, value: data.id };
 }
@@ -293,7 +294,7 @@ export async function startContraction(
 
   if (error || !data) {
     console.error("[pregnancy] Could not start timing:", error?.message);
-    return { ok: false, message: error ? describe(error) : "Couldn't start timing." };
+    return { ok: false, message: error ? describe(error) : tk("Couldn't start timing.") };
   }
   return { ok: true, value: data.id };
 }

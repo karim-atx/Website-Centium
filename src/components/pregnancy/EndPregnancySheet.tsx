@@ -8,6 +8,7 @@ import { endPregnancy, shiftDay, type PregnancyOutcome } from "../../services/pr
 import * as G from "../../services/pregnancy/guidance";
 import { CycleDateField, OptionButton, type } from "../cycle/cycleUi";
 import { useIsDark } from "../../hooks/useIsDark";
+import { t } from "../../i18n/core";
 
 // Ending pregnancy tracking (HE1.10.b K1), in the Part B lavender-header
 // sheet (chrome "partB", pinned footer).
@@ -74,7 +75,7 @@ export const EndPregnancySheet: React.FC<{
         // The pregnancy HAS ended at this point: say what did not happen,
         // plainly, and leave the sheet open.
         setBusy(false);
-        setError("Tracking ended, but cycle estimates couldn't be paused. Try from Settings.");
+        setError(t("Tracking ended, but cycle estimates couldn't be paused. Try from Settings."));
         return;
       }
     }
@@ -96,7 +97,7 @@ export const EndPregnancySheet: React.FC<{
           <div>
             {error && (
               <p role="alert" className="text-status-high" style={type(11.5, 17.3, 600, { marginBottom: 10 })}>
-                {error}
+                {t(error)}
               </p>
             )}
             <CtaButton label={G.END_CONFIRM} disabled={!outcome} loading={busy} onClick={() => void save()} style={{ lineHeight: "21px" }} />
@@ -113,16 +114,16 @@ export const EndPregnancySheet: React.FC<{
 
         {outcome && (
           <>
-            <p className="text-charcoal-faint" style={type(12, 16, 600, { margin: "16px 0 6px 2px" })}>
-              Date
+            <p className="text-charcoal-faint" style={type(12, 16, 600, { marginBlock: "16px 6px", marginInlineStart: 2 })}>
+              {t("Date")}
             </p>
-            <CycleDateField value={endedOn} onClick={() => setPickerOpen(true)} ariaLabel="Date" />
+            <CycleDateField value={endedOn} onClick={() => setPickerOpen(true)} ariaLabel={t("Date")} />
             <p className="text-charcoal-soft" style={type(12, 18, 400, { marginTop: 12 })}>
               {outcome === "birth"
                 ? G.POSTPARTUM_BODY
                 : outcome === "loss"
                   ? G.LOSS_PAUSE_EXPLAINER
-                  : "Nothing you've logged is deleted, and cycle estimates carry on as before."}
+                  : t("Nothing you've logged is deleted, and cycle estimates carry on as before.")}
             </p>
           </>
         )}

@@ -20,6 +20,7 @@ import {
 } from "../../services/contraception";
 import * as G from "../../services/contraception/guidance";
 import { MONDAY_FIRST_JS_WEEKDAYS } from "../../utils/week";
+import { getLanguage, t, tk } from "../../i18n/core";
 
 // Setting up, or changing, the method.
 //
@@ -49,7 +50,7 @@ const METHODS: readonly Method[] = [
 ];
 
 // Stored as a JS weekday (0 = Sunday); listed Monday first (X-13, reorder only).
-const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const WEEKDAYS = [tk("Sunday"), tk("Monday"), tk("Tuesday"), tk("Wednesday"), tk("Thursday"), tk("Friday"), tk("Saturday")];
 
 type DateKey = "startedOn" | "packStartDate" | "insertedOn" | "firstAppliedOn" | "lastGivenOn" | "replaceBy";
 type NumKey = "activeDays" | "breakDays" | "weeksIn" | "weeksOut" | "intervalWeeks";
@@ -156,7 +157,7 @@ export const MethodSetupSheet: React.FC<{
   };
   const field = "w-full bg-cream-soft text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20";
   const label = (text: string) => (
-    <p className="text-charcoal-faint" style={type(12, 16, 600, { margin: "16px 0 6px 2px" })}>
+    <p className="text-charcoal-faint" style={type(12, 16, 600, { marginBlock: "16px 6px", marginInlineStart: 2 })}>
       {text}
     </p>
   );
@@ -197,14 +198,14 @@ export const MethodSetupSheet: React.FC<{
           <div>
             {error && (
               <p role="alert" className="text-status-high" style={type(11.5, 17.3, 600, { marginBottom: 10 })}>
-                {error}
+                {t(error)}
               </p>
             )}
-            <CtaButton label="Save" disabled={!authUserId} loading={busy} onClick={() => void save()} style={{ lineHeight: "21px" }} />
+            <CtaButton label={t("Save")} disabled={!authUserId} loading={busy} onClick={() => void save()} style={{ lineHeight: "21px" }} />
           </div>
         }
       >
-        <div className="flex flex-wrap" role="radiogroup" aria-label="Method" style={{ gap: 6 }}>
+        <div className="flex flex-wrap" role="radiogroup" aria-label={t("Method")} style={{ gap: 6 }}>
           {METHODS.map((m) => (
             <OptionButton key={m} role="radio" size="sheet" selected={draft.method === m} onClick={() => chooseMethod(m)}>
               {G.METHOD_LABEL[m]}
@@ -215,15 +216,15 @@ export const MethodSetupSheet: React.FC<{
           {G.NOT_A_PRESCRIBER}
         </p>
 
-        {dateField("startedOn", "Started on", today)}
+        {dateField("startedOn", t("Started on"), today)}
 
         {/* --- the pill --- */}
         {isPill(draft.method) && (
           <>
-            {dateField("packStartDate", "First day of this pack")}
+            {dateField("packStartDate", t("First day of this pack"))}
             <div className="grid grid-cols-2" style={{ columnGap: 10 }}>
-              {numberField("activeDays", "Active days", 20, 28)}
-              {numberField("breakDays", "Break days", 0, 7)}
+              {numberField("activeDays", t("Active days"), 20, 28)}
+              {numberField("breakDays", t("Break days"), 0, 7)}
             </div>
             {label(G.REMINDER_TIME_LABEL)}
             {draft.reminderTime ? (
@@ -234,12 +235,12 @@ export const MethodSetupSheet: React.FC<{
                   onChange={(v) => set("reminderTime", `${pad2(v.h)}:${pad2(v.m)}`)}
                 />
                 <button type="button" onClick={() => set("reminderTime", null)} className="tap text-charcoal-faint" style={{ minHeight: 36, ...type(12, 18, 600) }}>
-                  No reminder time
+                  {t("No reminder time")}
                 </button>
               </>
             ) : (
               <button type="button" onClick={() => set("reminderTime", "21:00")} className="tap text-primary-dark" style={{ minHeight: 36, ...type(13, 19.5, 700) }}>
-                Set a time
+                {t("Set a time")}
               </button>
             )}
           </>
@@ -248,10 +249,10 @@ export const MethodSetupSheet: React.FC<{
         {/* --- the ring --- */}
         {draft.method === "ring" && (
           <>
-            {dateField("insertedOn", "Put in on")}
+            {dateField("insertedOn", t("Put in on"))}
             <div className="grid grid-cols-2" style={{ columnGap: 10 }}>
-              {numberField("weeksIn", "Weeks in", 1, 4)}
-              {numberField("weeksOut", "Weeks out", 0, 2)}
+              {numberField("weeksIn", t("Weeks in"), 1, 4)}
+              {numberField("weeksOut", t("Weeks out"), 0, 2)}
             </div>
           </>
         )}
@@ -259,21 +260,21 @@ export const MethodSetupSheet: React.FC<{
         {/* --- the patch --- */}
         {draft.method === "patch" && (
           <>
-            {dateField("firstAppliedOn", "First patch on")}
-            {label("Change day")}
-            <div className="flex flex-wrap" role="radiogroup" aria-label="Change day" style={{ gap: 6 }}>
+            {dateField("firstAppliedOn", t("First patch on"))}
+            {label(t("Change day"))}
+            <div className="flex flex-wrap" role="radiogroup" aria-label={t("Change day")} style={{ gap: 6 }}>
               {MONDAY_FIRST_JS_WEEKDAYS.map((i) => (
                 <OptionButton key={i} role="radio" size="sheet" selected={(draft.changeWeekday ?? 0) === i} onClick={() => set("changeWeekday", i)}>
-                  <span aria-hidden>{WEEKDAYS[i].slice(0, 3)}</span>
-                  <span className="sr-only">{WEEKDAYS[i]}</span>
+                  <span aria-hidden>{getLanguage() === "en" ? WEEKDAYS[i].slice(0, 3) : t(WEEKDAYS[i])}</span>
+                  <span className="sr-only">{t(WEEKDAYS[i])}</span>
                 </OptionButton>
               ))}
             </div>
             <div className="flex items-center justify-between" style={{ gap: 12, marginTop: 14 }}>
               <span className="text-charcoal" style={type(14, 19, 600)}>
-                I have a patch-free week
+                {t("I have a patch-free week")}
               </span>
-              <Toggle checked={draft.patchFreeWeek ?? false} onChange={(v) => set("patchFreeWeek", v)} label="I have a patch-free week" />
+              <Toggle checked={draft.patchFreeWeek ?? false} onChange={(v) => set("patchFreeWeek", v)} label={t("I have a patch-free week")} />
             </div>
           </>
         )}
@@ -281,16 +282,16 @@ export const MethodSetupSheet: React.FC<{
         {/* --- the injection --- */}
         {draft.method === "injection" && (
           <>
-            {dateField("lastGivenOn", "Last injection")}
-            {numberField("intervalWeeks", "Every (weeks)", 4, 16)}
+            {dateField("lastGivenOn", t("Last injection"))}
+            {numberField("intervalWeeks", t("Every (weeks)"), 4, 16)}
           </>
         )}
 
         {/* --- implant and IUDs --- */}
         {isDevice(draft.method) && (
           <>
-            {dateField("insertedOn", "Fitted on")}
-            {dateField("replaceBy", "Replace by")}
+            {dateField("insertedOn", t("Fitted on"))}
+            {dateField("replaceBy", t("Replace by"))}
             <p className="text-charcoal-faint" style={type(11, 16, 400, { marginTop: 6 })}>
               {G.DEVICE_NOTE}
             </p>
@@ -300,7 +301,7 @@ export const MethodSetupSheet: React.FC<{
         {/* Methods with no schedule say so, rather than showing an empty form. */}
         {!SCHEDULED_METHODS.includes(draft.method) && (
           <p className="text-charcoal-soft" style={type(12, 18, 400, { marginTop: 14 })}>
-            There's no schedule to keep for this one. It's recorded so the rest of the app knows what you use.
+            {t("There's no schedule to keep for this one. It's recorded so the rest of the app knows what you use.")}
           </p>
         )}
       </BottomSheet>

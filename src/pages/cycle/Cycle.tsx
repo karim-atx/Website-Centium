@@ -29,6 +29,7 @@ import * as PG from "../../services/pregnancy/guidance";
 import { hasInAppHistory, useBack } from "../../hooks/useBack";
 import { heroPatternGenericUrl } from "../../utils/assetUrls";
 import { appLocale } from "../../i18n/format";
+import { getLanguage, t, tk, tn, tx } from "../../i18n/core";
 
 // The cycle tracker (HE1.10 Cycle · HE1.10.a Insights · HE1.10.b Settings,
 // with HE1.10.b.1 and .b.3 as pages inside it and .b.4 / .b.5 as popups).
@@ -50,9 +51,9 @@ import { appLocale } from "../../i18n/format";
 type Tab = "overview" | "insights" | "settings";
 const TABS: Tab[] = ["overview", "insights", "settings"];
 const tabsFor = (pregnant: boolean): SegmentedTabItem[] => [
-  { key: "overview", label: pregnant ? "Pregnancy" : "Cycle" },
-  { key: "insights", label: "Insights" },
-  { key: "settings", label: "Settings" },
+  { key: "overview", label: pregnant ? t("Pregnancy") : t("Cycle") },
+  { key: "insights", label: t("Insights") },
+  { key: "settings", label: t("Settings") },
 ];
 
 const todayISO = () => {
@@ -66,14 +67,21 @@ const monthShort = (d: Date) => d.toLocaleDateString(appLocale("en-US"), { month
 function shortRange(from: string, to: string): string {
   const f = new Date(`${from}T00:00:00`);
   const t = new Date(`${to}T00:00:00`);
+  if (getLanguage() === "ar") return arabicRange(f, t, "short");
   if (from === to) return `${monthShort(f)} ${f.getDate()}`;
   if (f.getMonth() === t.getMonth()) return `${monthShort(f)} ${f.getDate()} to ${t.getDate()}`;
   return `${monthShort(f)} ${f.getDate()} to ${monthShort(t)} ${t.getDate()}`;
 }
 /** The same range with full month names, for the screen-reader sentence. */
+/** Arabic: the locale's own range ("4–10 تشرين الأول"); English never comes here. */
+function arabicRange(f: Date, to: Date, month: "short" | "long"): string {
+  const fmt = new Intl.DateTimeFormat(appLocale(), { month, day: "numeric" });
+  return f.getTime() === to.getTime() ? fmt.format(f) : fmt.formatRange(f, to);
+}
 function longRange(from: string, to: string): string {
   const f = new Date(`${from}T00:00:00`);
   const t = new Date(`${to}T00:00:00`);
+  if (getLanguage() === "ar") return arabicRange(f, t, "long");
   const m = (d: Date) => d.toLocaleDateString(appLocale("en-US"), { month: "long" });
   if (from === to) return `${m(f)} ${f.getDate()}`;
   if (f.getMonth() === t.getMonth()) return `${m(f)} ${f.getDate()} to ${t.getDate()}`;
@@ -177,7 +185,7 @@ export default function Cycle() {
     setBusy(false);
     // Save fails: the value reverts (nothing local was changed) and the
     // shared-state toast says so (HE1.10.b O2).
-    if (!result.ok) setToast(result.message ?? "Couldn't save. Try again.");
+    if (!result.ok) setToast(result.message ?? tk("Couldn't save. Try again."));
     return result.ok;
   };
   // MO11 / Task R: on/off goes through setCycleTracking (tracker_chosen_at).
@@ -185,7 +193,7 @@ export default function Cycle() {
     setBusy(true);
     const result = await setCycleTracking(true);
     setBusy(false);
-    if (!result.ok) setToast(result.message ?? "Couldn't save. Try again.");
+    if (!result.ok) setToast(result.message ?? tk("Couldn't save. Try again."));
   };
   const onTrackerChange = (on: boolean) => {
     if (on) void turnOn();
@@ -420,7 +428,7 @@ export default function Cycle() {
           />
         </div>
       </CentredPopup>
-      <Toast open={toast !== null} message={toast ?? ""} onExpire={() => setToast(null)} />
+      <Toast open={toast !== null} message={toast ? t(toast) : ""} onExpire={() => setToast(null)} />
     </>
   );
 
@@ -464,7 +472,7 @@ export default function Cycle() {
           <div className="flex items-center justify-center" style={{ height: 160 }}>
             <span aria-hidden className="block rounded-full animate-skeleton-pulse" style={{ width: 127, height: 127, border: `8px solid ${dark ? "#242730" : "#F5F5F6"}` }} />
           </div>,
-          { label: "Loading", busy: true }
+          { label: t("Loading"), busy: true }
         )}
         <div className="flex justify-center" style={{ gap: 6, marginTop: 8 }}>
           <Skeleton width={70} height={24} radius={12} />
@@ -510,39 +518,52 @@ export default function Cycle() {
   let spoken = "";
   if (prediction) {
     if (recovery) {
-      lines = [offsetDays === 0 ? "Today" : dayLabel(selectedDate), phaseName, ""];
-      spoken = `${phaseName} phase.`;
+      lines = [offsetDays === 0 ? t("Today") : dayLabel(selectedDate), phaseName, ""];
+      spoken = t("{phase} phase.", { phase: phaseName });
     } else if (offsetDays !== 0) {
-      lines = [dayLabel(selectedDate), `Day ${selectedDay}`, phaseName];
-      spoken = `Cycle day ${selectedDay} of about ${cycleLength}. ${dayLabel(selectedDate)}. ${phaseName} phase.`;
+      lines = [dayLabel(selectedDate), t("Day {n}", { n: selectedDay }), phaseName];
+      spoken = t("Cycle day {day} of about {length}. {date}. {phase} phase.", { day: selectedDay, length: cycleLength, date: dayLabel(selectedDate), phase: phaseName });
     } else if (selectedPhase === "menstrual" && isNatural) {
-      lines = ["Period", `Day ${selectedDay}`, ""];
-      spoken = `Cycle day ${selectedDay} of about ${cycleLength}. Period, day ${selectedDay}.`;
+      lines = [t("Period"), t("Day {n}", { n: selectedDay }), ""];
+      spoken = t("Cycle day {day} of about {length}. Period, day {day}.", { day: selectedDay, length: cycleLength });
     } else if (prediction.nextPeriodStart) {
       const days = daysBetween(today, prediction.nextPeriodStart);
-      lines = days <= 0 ? ["Period", "due", `Day ${selectedDay}`] : ["Period in", `${days} day${days === 1 ? "" : "s"}`, `Day ${selectedDay}`];
-      spoken = `Cycle day ${selectedDay} of about ${cycleLength}. ${days <= 0 ? "Period due" : `Period in ${days} day${days === 1 ? "" : "s"}`}. ${phaseName} phase.`;
+      lines =
+        days <= 0
+          ? [t("Period"), tx("due", "period"), t("Day {n}", { n: selectedDay })]
+          : [t("Period in"), tn(days, "{n} day", "{n} days"), t("Day {n}", { n: selectedDay })];
+      spoken =
+        days <= 0
+          ? t("Cycle day {day} of about {length}. Period due. {phase} phase.", { day: selectedDay, length: cycleLength, phase: phaseName })
+          : tn(days, "Cycle day {day} of about {length}. Period in {n} day. {phase} phase.", "Cycle day {day} of about {length}. Period in {n} days. {phase} phase.", {
+              day: selectedDay,
+              length: cycleLength,
+              phase: phaseName,
+            });
     } else {
-      lines = ["", `Day ${selectedDay}`, phaseName];
-      spoken = `Cycle day ${selectedDay} of about ${cycleLength}. ${phaseName} phase.`;
+      lines = ["", t("Day {n}", { n: selectedDay }), phaseName];
+      spoken = t("Cycle day {day} of about {length}. {phase} phase.", { day: selectedDay, length: cycleLength, phase: phaseName });
     }
     if (prediction.nextPeriodFrom && prediction.nextPeriodTo)
-      spoken += ` Next period expected ${longRange(prediction.nextPeriodFrom, prediction.nextPeriodTo)}, an estimate.`;
+      spoken += ` ${t("Next period expected {range}, an estimate.", { range: longRange(prediction.nextPeriodFrom, prediction.nextPeriodTo) })}`;
   }
 
-  const relative = offsetDays === 0 ? "" : offsetDays > 0 ? `in ${offsetDays} day${offsetDays === 1 ? "" : "s"}` : `${-offsetDays} day${offsetDays === -1 ? "" : "s"} ago`;
+  const relative = offsetDays === 0 ? "" : offsetDays > 0 ? tn(offsetDays, "in {n} day", "in {n} days") : tn(-offsetDays, "{n} day ago", "{n} days ago");
   const scrubLabel = recovery
     ? offsetDays === 0
-      ? "Today"
+      ? t("Today")
       : dayLabel(selectedDate)
     : offsetDays === 0
-      ? `Today · Day ${selectedDay}`
-      : `Day ${selectedDay} · ${relative}`;
-  const scrubValueText = `${recovery ? "" : `Day ${selectedDay}, `}${phaseName.toLowerCase()}, ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString(appLocale("en-US"), {
+      ? t("Today · Day {n}", { n: selectedDay })
+      : t("Day {n} · {relative}", { n: selectedDay, relative });
+  const scrubDate = new Date(`${selectedDate}T00:00:00`).toLocaleDateString(appLocale("en-US"), {
     weekday: "long",
     day: "numeric",
     month: "long",
-  })}`;
+  });
+  const scrubValueText = recovery
+    ? t("{phase}, {date}", { phase: phaseName.toLowerCase(), date: scrubDate })
+    : t("Day {n}, {phase}, {date}", { n: selectedDay, phase: phaseName.toLowerCase(), date: scrubDate });
 
   const selectDay = (day: number) => {
     let delta = day - selectedDay;
@@ -628,7 +649,7 @@ export default function Cycle() {
               onSelectDay={selectDay}
               ariaLabel={spoken}
             />,
-            { label: "Cycle" }
+            { label: t("Cycle") }
           )}
 
           <div className="flex flex-wrap items-center justify-center" style={{ gap: 6, marginTop: 8 }}>
@@ -640,8 +661,8 @@ export default function Cycle() {
               prediction.fertileTo &&
               chip(
                 <>
-                  Fertile {shortRange(prediction.fertileFrom, prediction.fertileTo)}
-                  <span className="sr-only">, estimate</span>
+                  {t("Fertile {range}", { range: shortRange(prediction.fertileFrom, prediction.fertileTo) })}
+                  <span className="sr-only">{t(", estimate")}</span>
                 </>,
                 "fertile"
               )}
@@ -699,7 +720,7 @@ export default function Cycle() {
                 function actually predicts. */}
             {prediction.nextPeriodFrom && prediction.nextPeriodTo && (
               <p className="text-center text-charcoal" style={type(12.5, 18.8, 700, { marginTop: 12 })}>
-                Next period expected {shortRange(prediction.nextPeriodFrom, prediction.nextPeriodTo)}
+                {t("Next period expected {range}", { range: shortRange(prediction.nextPeriodFrom, prediction.nextPeriodTo) })}
               </p>
             )}
             <CycleFooter />

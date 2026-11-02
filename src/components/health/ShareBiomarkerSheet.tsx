@@ -4,6 +4,7 @@ import { Button } from "../ui/Button";
 import type { BloodMarker } from "../../types";
 import { hasArabic, loadArabicForCanvas } from "../../i18n/fonts";
 import { Download, Share2 } from "lucide-react";
+import { t } from "../../i18n/core";
 
 // Manrope, and the Arabic face for a marker name, unit or date in Arabic.
 const FAMILY = 'Manrope, "IBM Plex Sans Arabic", sans-serif';
@@ -278,17 +279,17 @@ export const ShareBiomarkerSheet: React.FC<{
   if (!marker && !isSummary) return null;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Share Result" chrome="partB">
+    <BottomSheet open={open} onClose={onClose} title={t("Share Result")} chrome="partB">
       <div className="animate-fade-slide-up">
         <div className="rounded-3xl overflow-hidden shadow-lift mb-5">
           <canvas ref={canvasRef} className="w-full h-auto block" />
         </div>
         <div className="flex gap-2.5">
           <Button variant="outline" fullWidth onClick={download} disabled={!ready}>
-            <Download size={15} /> Save Image
+            <Download size={15} /> {t("Save Image")}
           </Button>
           <Button fullWidth onClick={share} disabled={!ready}>
-            <Share2 size={15} /> Share
+            <Share2 size={15} /> {t("Share")}
           </Button>
         </div>
       </div>

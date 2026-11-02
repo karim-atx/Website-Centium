@@ -36,6 +36,8 @@ import {
   INK_SOFT,
   INK_FAINT,
 } from "./kit";
+import { t, tk } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
 
 // HE1.9.c · History tab (the repo's Medical history and Medications tabs in
 // one): Conditions as chips (saved on tap, "Add another" → our Condition
@@ -50,15 +52,20 @@ import {
 // Medication reminders: the toggle is medications.notify_enabled, which the
 // B4 sweep (queue_medication_reminders, every 10 minutes) now delivers.
 
-export const COMMON_CONDITIONS = ["Diabetes", "Hypertension", "Asthma", "Thyroid condition", "Heart condition", "PCOS", "Anxiety/Depression", "Arthritis"];
+// The stored value stays the English name (user data); only the chip shows it translated.
+export const COMMON_CONDITIONS: string[] = [tk("Diabetes"), tk("Hypertension"), tk("Asthma"), tk("Thyroid condition"), tk("Heart condition"), tk("PCOS"), tk("Anxiety/Depression"), tk("Arthritis")];
+const conditionLabel = (c: string) => (COMMON_CONDITIONS.includes(c) ? t(c) : c);
 export const ROUTES: { value: MedicationRoute; label: string }[] = [
-  { value: "oral", label: "Oral" },
-  { value: "injectable", label: "Injectable" },
-  { value: "topical", label: "Topical" },
-  { value: "inhaled", label: "Inhaled" },
-  { value: "other", label: "Other" },
+  { value: "oral", label: tk("Oral") },
+  { value: "injectable", label: tk("Injectable") },
+  { value: "topical", label: tk("Topical") },
+  { value: "inhaled", label: tk("Inhaled") },
+  { value: "other", label: tk("Other") },
 ];
-const routeLabel = (r: MedicationRoute) => ROUTES.find((x) => x.value === r)?.label ?? r;
+const routeLabel = (r: MedicationRoute) => {
+  const label = ROUTES.find((x) => x.value === r)?.label;
+  return label ? t(label) : r;
+};
 
 export const HistoryTab: React.FC<{
   loading: boolean;
@@ -92,28 +99,28 @@ const ReadOnlyHistory: React.FC<{
   hc: boolean;
 }> = ({ records, loading, error, onRetry, dark, hc }) => {
   const { comorbidities, surgeries, medications } = records;
-  if (error && !comorbidities.length && !surgeries.length && !medications.length) return <RetryCard message="Couldn't load the history." onRetry={onRetry} />;
+  if (error && !comorbidities.length && !surgeries.length && !medications.length) return <RetryCard message={t("Couldn't load the history.")} onRetry={onRetry} />;
   const empty = (text: string) => <p style={{ margin: "0 0 9px", fontSize: textPx(11), lineHeight: linePx(16), color: INK_FAINT }}>{text}</p>;
   const chip: React.CSSProperties = { height: 30, padding: "0 12px", borderRadius: 9999, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, background: dark ? "rgb(var(--th-303141))" : "rgb(var(--th-f0edf9))", color: dark ? "rgb(var(--th-c3b3fb))" : "rgb(var(--th-5f5093))" };
   return (
     <div>
-      <SectionCaps style={{ marginTop: 0 }}>Conditions</SectionCaps>
+      <SectionCaps style={{ marginTop: 0 }}>{t("Conditions")}</SectionCaps>
       {loading && !comorbidities.length ? (
         <Skel w={120} h={30} r={15} />
       ) : comorbidities.length === 0 ? (
-        empty("No conditions recorded.")
+        empty(t("No conditions recorded."))
       ) : (
         <div className="flex flex-wrap" style={{ gap: 7 }}>
           {comorbidities.map((c) => (
             <span key={c} className="inline-flex items-center" style={chip}>
-              {c}
+              {conditionLabel(c)}
             </span>
           ))}
         </div>
       )}
-      <SectionCaps>Past surgeries</SectionCaps>
+      <SectionCaps>{t("Past surgeries")}</SectionCaps>
       {surgeries.length === 0 ? (
-        empty("No surgeries recorded.")
+        empty(t("No surgeries recorded."))
       ) : (
         <ListCard>
           {surgeries.map((s, i) => (
@@ -123,9 +130,9 @@ const ReadOnlyHistory: React.FC<{
           ))}
         </ListCard>
       )}
-      <SectionCaps>Medications</SectionCaps>
+      <SectionCaps>{t("Medications")}</SectionCaps>
       {medications.length === 0 ? (
-        empty("No medications recorded.")
+        empty(t("No medications recorded."))
       ) : (
         <ListCard>
           {medications.map((m, i) => (
@@ -159,11 +166,11 @@ const OwnHistory: React.FC<{
   const run = async (section: string, action: () => Promise<{ ok: boolean; message?: string }>) => {
     setRecordError(null);
     const r = await action();
-    if (!r.ok) setRecordError({ section, message: navigator.onLine === false ? "You're offline. Try again when you're connected." : "Couldn't save. Try again." });
+    if (!r.ok) setRecordError({ section, message: navigator.onLine === false ? t("You're offline. Try again when you're connected.") : t("Couldn't save. Try again.") });
   };
   const toggle = (c: string) => void run("conditions", () => setComorbidities(comorbidities.includes(c) ? comorbidities.filter((x) => x !== c) : [...comorbidities, c]));
 
-  if (error && !comorbidities.length && !surgeries.length && !medications.length) return <RetryCard message="Couldn't load your history." onRetry={onRetry} />;
+  if (error && !comorbidities.length && !surgeries.length && !medications.length) return <RetryCard message={t("Couldn't load your history.")} onRetry={onRetry} />;
 
   const chipBase: React.CSSProperties = { height: 30, padding: "0 12px", gap: 4, borderRadius: 9999, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600 };
   const chips = [...COMMON_CONDITIONS, ...comorbidities.filter((c) => !COMMON_CONDITIONS.includes(c))];
@@ -174,7 +181,7 @@ const OwnHistory: React.FC<{
     <div>
       {/* Round D: answers from a sent form still waiting for the client's yes or no. */}
       <ProfileProposals responseId={null} hideNumbers={hideNumbers} />
-      <SectionCaps style={{ marginTop: 0 }}>Conditions</SectionCaps>
+      <SectionCaps style={{ marginTop: 0 }}>{t("Conditions")}</SectionCaps>
       {loading && !comorbidities.length ? (
         <div className="flex flex-wrap" style={{ gap: 7 }}>
           {[76, 90, 70, 110, 64].map((w, i) => (
@@ -200,7 +207,7 @@ const OwnHistory: React.FC<{
                   }
                 >
                   {on && <Check size={12} aria-hidden />}
-                  {c}
+                  {conditionLabel(c)}
                 </button>
               );
             })}
@@ -210,15 +217,15 @@ const OwnHistory: React.FC<{
               className="tap inline-flex items-center"
               style={{ ...chipBase, fontWeight: 700, color: deepInk(dark), border: `0.5px dashed ${dark ? "rgb(var(--th-c3b3fb) / 0.5)" : "rgb(var(--th-7d6bb5) / 0.5)"}` }}
             >
-              <Plus size={12} aria-hidden /> Add another
+              <Plus size={12} aria-hidden /> {t("Add another")}
             </button>
           </div>
-          {comorbidities.length === 0 && <p style={{ marginTop: 8, fontSize: textPx(11), lineHeight: linePx(16), color: INK_FAINT }}>Tap any that apply.</p>}
+          {comorbidities.length === 0 && <p style={{ marginTop: 8, fontSize: textPx(11), lineHeight: linePx(16), color: INK_FAINT }}>{t("Tap any that apply.")}</p>}
           {errFor("conditions")}
         </>
       )}
 
-      <SectionCaps>Past surgeries</SectionCaps>
+      <SectionCaps>{t("Past surgeries")}</SectionCaps>
       {loading && !surgeries.length ? (
         <ListCard>
           <div style={{ height: 60, padding: "9px 14px" }} className="flex flex-col justify-center gap-2">
@@ -227,7 +234,7 @@ const OwnHistory: React.FC<{
           </div>
         </ListCard>
       ) : surgeries.length === 0 ? (
-        empty("No surgeries added.")
+        empty(t("No surgeries added."))
       ) : (
         <ListCard>
           {surgeries.map((s, i) => (
@@ -239,8 +246,8 @@ const OwnHistory: React.FC<{
                 edgeInset={8}
                 keyboardLabel={`${s.name}, ${fmtDate(s.date)}`}
                 actions={[
-                  { key: "edit", label: "Edit", icon: <Pencil size={16} />, onClick: () => onEditSurgery(s) },
-                  { key: "delete", label: "Delete", icon: <Trash2 size={16} />, destructive: true, onClick: () => void run("surgeries", () => removeSurgery(s.id)) },
+                  { key: "edit", label: t("Edit"), icon: <Pencil size={16} />, onClick: () => onEditSurgery(s) },
+                  { key: "delete", label: t("Delete"), icon: <Trash2 size={16} />, destructive: true, onClick: () => void run("surgeries", () => removeSurgery(s.id)) },
                 ]}
               >
                 <div className="flex items-center" style={{ minHeight: 60, padding: "9px 14px", background: "rgb(var(--c-cream-card))" }}>
@@ -253,7 +260,7 @@ const OwnHistory: React.FC<{
       )}
       {errFor("surgeries")}
 
-      <SectionCaps>Medications</SectionCaps>
+      <SectionCaps>{t("Medications")}</SectionCaps>
       {loading && !medications.length ? (
         <ListCard>
           <div style={{ height: 66, padding: "9px 14px" }} className="flex items-center gap-3">
@@ -262,7 +269,7 @@ const OwnHistory: React.FC<{
           </div>
         </ListCard>
       ) : medications.length === 0 ? (
-        empty("No medications added.")
+        empty(t("No medications added."))
       ) : (
         <>
           <ListCard>
@@ -275,17 +282,17 @@ const OwnHistory: React.FC<{
                   edgeInset={8}
                   keyboardLabel={`${m.name}, ${m.dose}`}
                   actions={[
-                    { key: "edit", label: "Edit", icon: <Pencil size={16} />, onClick: () => onEditMedication(m) },
-                    { key: "delete", label: "Delete", icon: <Trash2 size={16} />, destructive: true, onClick: () => void run("medications", () => removeMedication(m.id)) },
+                    { key: "edit", label: t("Edit"), icon: <Pencil size={16} />, onClick: () => onEditMedication(m) },
+                    { key: "delete", label: t("Delete"), icon: <Trash2 size={16} />, destructive: true, onClick: () => void run("medications", () => removeMedication(m.id)) },
                   ]}
                 >
                   <div className="flex items-center" style={{ minHeight: 66, padding: "9px 14px", gap: 11, background: "rgb(var(--c-cream-card))" }}>
                     <RowTile icon={Pill} />
                     <RowText
                       title={`${m.name} · ${m.dose}`}
-                      meta={`${routeLabel(m.route)} · ${m.times.map(time12).join(", ")} · reminder ${m.notifyEnabled ? "on" : "off"}`}
+                      meta={`${routeLabel(m.route)} · ${m.times.map(time12).join(", ")} · ${m.notifyEnabled ? t("reminder on") : t("reminder off")}`}
                     />
-                    <Toggle checked={m.notifyEnabled} onChange={(v) => void run("medications", () => updateMedication(m.id, { notifyEnabled: v }))} label={`Reminder for ${m.name}`} />
+                    <Toggle checked={m.notifyEnabled} onChange={(v) => void run("medications", () => updateMedication(m.id, { notifyEnabled: v }))} label={t("Reminder for {name}", { name: m.name })} />
                   </div>
                 </SwipeActions>
               </div>
@@ -304,7 +311,12 @@ const OwnHistory: React.FC<{
 export function surgeryDate(s: Pick<Surgery, "date" | "datePrecision">): string {
   const p = s.datePrecision ?? "day";
   if (p === "year") return s.date.slice(0, 4);
-  if (p === "month") return fmtDate(s.date).split(" ").slice(1).join(" ");
+  if (p === "month") {
+    const loc = appLocale();
+    const [y, m] = s.date.split("-").map(Number);
+    if (loc && y && m) return new Date(y, m - 1, 1).toLocaleDateString(loc, { month: "short", year: "numeric" });
+    return fmtDate(s.date).split(" ").slice(1).join(" ");
+  }
   return fmtDate(s.date);
 }
 
@@ -330,20 +342,20 @@ export const ConditionPopup: React.FC<{ open: boolean; onClose: () => void; onSa
     <CentredPopup
       open={open}
       onClose={onClose}
-      title="Add a condition"
+      title={t("Add a condition")}
       geometry="ours"
       align="start"
     >
-      <FieldLabel htmlFor="condition-name">Condition name</FieldLabel>
+      <FieldLabel htmlFor="condition-name">{t("Condition name")}</FieldLabel>
       <input id="condition-name" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} autoFocus className="outline-none" style={fieldStyle(dark, hc)} />
       {error && <HelpLine error>{error}</HelpLine>}
       <div className="flex" style={{ gap: 8, marginTop: 16 }}>
         <button type="button" onClick={onClose} className="tap flex-1" style={{ height: 48, borderRadius: 14, border: `0.5px solid ${hairline(dark, hc, 0.14)}`, color: INK_SOFT, fontSize: textPx(14), fontWeight: 700 }}>
-          Cancel
+          {t("Cancel")}
         </button>
         <CtaButton
           size="page"
-          label="Add"
+          label={t("Add")}
           disabled={!valid}
           loading={busy}
           className="flex-1"
@@ -352,8 +364,8 @@ export const ConditionPopup: React.FC<{ open: boolean; onClose: () => void; onSa
             setBusy(true);
             const r = await setComorbidities([...comorbidities, value]);
             setBusy(false);
-            if (!r.ok) return setError("Couldn't save. Try again.");
-            onSaved("Condition added.");
+            if (!r.ok) return setError(t("Couldn't save. Try again."));
+            onSaved(t("Condition added."));
             onClose();
           }}
         />
@@ -389,8 +401,8 @@ export const SurgerySheet: React.FC<{ open: boolean; surgery: Surgery | null; on
     const r = surgery ? await updateSurgeryRemote(surgery.id, payload) : await addSurgery(payload);
     if (r.ok && surgery) await reloadHealthRecords();
     setBusy(false);
-    if (!r.ok) return setError("Couldn't save. Try again.");
-    onSaved(surgery ? "Changes saved." : "Surgery added.");
+    if (!r.ok) return setError(t("Couldn't save. Try again."));
+    onSaved(surgery ? t("Changes saved.") : t("Surgery added."));
     onClose();
   };
   return (
@@ -398,23 +410,23 @@ export const SurgerySheet: React.FC<{ open: boolean; surgery: Surgery | null; on
       <BottomSheet
         open={open}
         onClose={onClose}
-        title={surgery ? "Edit surgery" : "Add surgery"}
+        title={surgery ? t("Edit surgery") : t("Add surgery")}
         chrome="partB" tone={partBSheetTone(dark)}
         footerBottom={30}
-        footer={<CtaButton label="Save" onClick={() => void save()} loading={busy} disabled={!name.trim() || !date} />}
+        footer={<CtaButton label={t("Save")} onClick={() => void save()} loading={busy} disabled={!name.trim() || !date} />}
       >
-        <FieldLabel htmlFor="surgery-name">Procedure</FieldLabel>
-        <input id="surgery-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. ACL reconstruction" className="outline-none placeholder:text-charcoal-faint" style={fieldStyle(dark, hc)} />
-        <FieldLabel style={{ marginTop: 16 }}>Date</FieldLabel>
+        <FieldLabel htmlFor="surgery-name">{t("Procedure")}</FieldLabel>
+        <input id="surgery-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("e.g. ACL reconstruction")} className="outline-none placeholder:text-charcoal-faint" style={fieldStyle(dark, hc)} />
+        <FieldLabel style={{ marginTop: 16 }}>{t("Date")}</FieldLabel>
         <button type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-start" style={{ ...fieldStyle(dark, hc), gap: 8, color: date ? undefined : INK_FAINT }}>
           <CalendarDays size={15} style={{ color: INK_FAINT }} aria-hidden />
-          {date ? surgeryDate({ date, datePrecision: precision }) : "Choose a date"}
+          {date ? surgeryDate({ date, datePrecision: precision }) : t("Choose a date")}
         </button>
-        <div role="radiogroup" aria-label="How exact is the date?" className="flex" style={{ gap: 6, marginTop: 8 }}>
+        <div role="radiogroup" aria-label={t("How exact is the date?")} className="flex" style={{ gap: 6, marginTop: 8 }}>
           {([
-            ["day", "Exact day"],
-            ["month", "Month only"],
-            ["year", "Year only"],
+            ["day", t("Exact day")],
+            ["month", t("Month only")],
+            ["year", t("Year only")],
           ] as const).map(([v, label]) => {
             const on = precision === v;
             return (
@@ -433,7 +445,7 @@ export const SurgerySheet: React.FC<{ open: boolean; surgery: Surgery | null; on
           })}
         </div>
         {/* The date is required because surgery_date is NOT NULL. */}
-        <HelpLine>Required. If you're not sure of the exact day, your best estimate is fine.</HelpLine>
+        <HelpLine>{t("Required. If you're not sure of the exact day, your best estimate is fine.")}</HelpLine>
         {error && <HelpLine error>{error}</HelpLine>}
       </BottomSheet>
       <CalendarPickerSheet variant="partB" open={calendarOpen} onClose={() => setCalendarOpen(false)} selectedDate={date || today} today={today} maxDate={today} onSelect={(d) => { setDate(d); setCalendarOpen(false); }} />
@@ -461,7 +473,7 @@ const TimeRow: React.FC<{ value: string; onChange: (v: string) => void; onRemove
           {time12(value)}
         </button>
         {onRemove && (
-          <button type="button" onClick={onRemove} aria-label={`Remove time ${index + 1}`} className="tap grid place-items-center shrink-0" style={{ width: 44, height: 44, color: INK_FAINT }}>
+          <button type="button" onClick={onRemove} aria-label={t("Remove time {n}", { n: index + 1 })} className="tap grid place-items-center shrink-0" style={{ width: 44, height: 44, color: INK_FAINT }}>
             <X size={15} />
           </button>
         )}
@@ -470,13 +482,13 @@ const TimeRow: React.FC<{ value: string; onChange: (v: string) => void; onRemove
         <div style={{ marginTop: 8 }}>
           <WheelPicker
             columns={[
-              { label: "Hours", options: HOURS, value: parts.hour, onChange: (h) => onChange(toHHMM(Number(h), minute, parts.meridiem)) },
-              { label: "Minutes", options: MINUTES, value: minute, onChange: (m) => onChange(toHHMM(parts.hour, Number(m), parts.meridiem)) },
+              { label: t("Hours"), options: HOURS, value: parts.hour, onChange: (h) => onChange(toHHMM(Number(h), minute, parts.meridiem)) },
+              { label: t("Minutes"), options: MINUTES, value: minute, onChange: (m) => onChange(toHHMM(parts.hour, Number(m), parts.meridiem)) },
               {
-                label: "AM or PM",
+                label: t("AM or PM"),
                 options: [
-                  { value: "AM", label: "AM" },
-                  { value: "PM", label: "PM" },
+                  { value: "AM", label: t("AM") },
+                  { value: "PM", label: t("PM") },
                 ],
                 value: parts.meridiem,
                 onChange: (mer) => onChange(toHHMM(parts.hour, minute, mer as "AM" | "PM")),
@@ -517,27 +529,27 @@ export const MedicationSheet: React.FC<{ open: boolean; medication: Medication |
     const payload = { name: name.trim(), dose: dose.trim(), route, times, notifyEnabled: notify };
     const r = medication ? await updateMedication(medication.id, payload) : await addMedication(payload);
     setBusy(false);
-    if (!r.ok) return setError("Couldn't save. Try again.");
-    onSaved(medication ? "Changes saved." : "Medication added.");
+    if (!r.ok) return setError(t("Couldn't save. Try again."));
+    onSaved(medication ? t("Changes saved.") : t("Medication added."));
     onClose();
   };
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={medication ? "Edit medication" : "Add medication"}
+      title={medication ? t("Edit medication") : t("Add medication")}
       chrome="partB" tone={partBSheetTone(dark)}
       footerBottom={30}
-      footer={<CtaButton label="Save" onClick={() => void save()} loading={busy} disabled={!valid} />}
+      footer={<CtaButton label={t("Save")} onClick={() => void save()} loading={busy} disabled={!valid} />}
     >
-      <FieldLabel htmlFor="med-name">Name</FieldLabel>
-      <input id="med-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Vitamin D3" className="outline-none placeholder:text-charcoal-faint" style={fieldStyle(dark, hc)} />
+      <FieldLabel htmlFor="med-name">{t("Name")}</FieldLabel>
+      <input id="med-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("e.g. Vitamin D3")} className="outline-none placeholder:text-charcoal-faint" style={fieldStyle(dark, hc)} />
       <FieldLabel htmlFor="med-dose" style={{ marginTop: 16 }}>
-        Dose
+        {t("Dose")}
       </FieldLabel>
-      <input id="med-dose" value={dose} onChange={(e) => setDose(e.target.value)} placeholder="e.g. 2000 IU" className="outline-none placeholder:text-charcoal-faint" style={fieldStyle(dark, hc)} />
-      <FieldLabel style={{ marginTop: 16 }}>Route</FieldLabel>
-      <div role="radiogroup" aria-label="Route" className="flex flex-wrap" style={{ gap: 6 }}>
+      <input id="med-dose" value={dose} onChange={(e) => setDose(e.target.value)} placeholder={t("e.g. 2000 IU")} className="outline-none placeholder:text-charcoal-faint" style={fieldStyle(dark, hc)} />
+      <FieldLabel style={{ marginTop: 16 }}>{t("Route")}</FieldLabel>
+      <div role="radiogroup" aria-label={t("Route")} className="flex flex-wrap" style={{ gap: 6 }}>
         {ROUTES.map((r) => {
           const on = route === r.value;
           return (
@@ -559,29 +571,29 @@ export const MedicationSheet: React.FC<{ open: boolean; medication: Medication |
                 fontWeight: 700,
               }}
             >
-              {r.label}
+              {t(r.label)}
             </button>
           );
         })}
       </div>
-      <FieldLabel style={{ marginTop: 16 }}>Times</FieldLabel>
-      {times.map((t, i) => (
+      <FieldLabel style={{ marginTop: 16 }}>{t("Times")}</FieldLabel>
+      {times.map((tm, i) => (
         <TimeRow
           key={i}
           index={i}
-          value={t}
+          value={tm}
           onChange={(v) => setTimes((prev) => prev.map((p, j) => (j === i ? v : p)))}
           onRemove={times.length > 1 ? () => setTimes((prev) => prev.filter((_, j) => j !== i)) : undefined}
         />
       ))}
       {times.length < 6 && (
         <button type="button" onClick={() => setTimes((prev) => [...prev, "08:00"])} className="tap flex items-center min-h-[44px]" style={{ gap: 6, fontSize: textPx(13), fontWeight: 700, color: deepInk(dark) }}>
-          <Plus size={15} aria-hidden /> Add another time
+          <Plus size={15} aria-hidden /> {t("Add another time")}
         </button>
       )}
       <div className="flex items-center justify-between" style={{ marginTop: 8, gap: 12 }}>
-        <span style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>Remind me to take this</span>
-        <Toggle checked={notify} onChange={setNotify} label="Remind me to take this" />
+        <span style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{t("Remind me to take this")}</span>
+        <Toggle checked={notify} onChange={setNotify} label={t("Remind me to take this")} />
       </div>
       {error && <HelpLine error>{error}</HelpLine>}
     </BottomSheet>

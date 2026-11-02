@@ -8,6 +8,7 @@ import * as G from "../../services/contraception/guidance";
 import { time12 } from "../../utils/time12";
 import { TimeWheel } from "../health/log/LogSheetParts";
 import { CycleHelp, CycleRow, CycleSection, OptionButton, type } from "../cycle/cycleUi";
+import { t } from "../../i18n/core";
 
 // Reminders (HE1.10.b.2 #25-#46): what is sent, when, and how much it says.
 //
@@ -108,7 +109,7 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
             )}
             {pushError && (
               <p role="alert" className="text-status-high" style={type(11.5, 17.3, 600, { marginTop: 4 })}>
-                {pushError}
+                {t(pushError)}
               </p>
             )}
           </div>
@@ -151,7 +152,7 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
                   className="tap text-primary-dark"
                   style={{ minHeight: 44, padding: "0 4px", ...type(13, 19.5, 700) }}
                 >
-                  Done
+                  {t("Done")}
                 </button>
               </div>
             </div>

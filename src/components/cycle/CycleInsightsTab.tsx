@@ -5,6 +5,7 @@ import * as G from "../../services/cycle/guidance";
 import { getCycleStats, type CycleServerStats } from "../../services/cycle";
 import { CapsLabel, CycleCard, CycleFooter, hair, type, useCycleMode } from "./cycleUi";
 import { appLocale } from "../../i18n/format";
+import { tn } from "../../i18n/core";
 
 // HE1.10.a, the Insights tab.
 //
@@ -130,7 +131,7 @@ export const CycleInsightsTab: React.FC<{
                       <span className="shrink-0 whitespace-nowrap text-charcoal" style={type(12, 18, 800, { fontVariantNumeric: "tabular-nums" })}>
                         {c.days}{" "}
                         <span className="text-charcoal-faint" style={type(10, 15, 600)}>
-                          d
+                          {tn(c.days, "d", "d")}
                         </span>
                       </span>
                     </span>
@@ -176,7 +177,7 @@ export const CycleInsightsTab: React.FC<{
                   {value !== null && (
                     <span className="text-charcoal-faint" style={type(11, 16.5, 600, { letterSpacing: -0.4 })}>
                       {" "}
-                      days
+                      {tn(value, "days", "days")}
                     </span>
                   )}
                 </p>
@@ -258,7 +259,7 @@ export const CycleInsightsTab: React.FC<{
                             <td key={p} className="text-center" style={{ fontVariantNumeric: "tabular-nums" }}>
                               <span
                                 className="inline-flex items-center justify-center"
-                                aria-label={`${n} day${n === 1 ? "" : "s"}`}
+                                aria-label={tn(n, "{n} day", "{n} days")}
                                 data-cell={`${sym}:${p}`}
                                 style={{
                                   width: 26,

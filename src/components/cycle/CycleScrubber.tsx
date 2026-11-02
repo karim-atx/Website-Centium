@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 import { SCRUB_EARLIER, SCRUB_LATER } from "../../services/cycle/guidance";
 
 // The day scrubber (HE1.10 #22-#28, HE1.10.d #22-#28, S3).
@@ -55,7 +56,7 @@ export const CycleScrubber: React.FC<{
         ref={trackRef}
         role="slider"
         tabIndex={0}
-        aria-label="Move through the cycle"
+        aria-label={t("Move through the cycle")}
         aria-valuemin={min}
         aria-valuemax={max}
         aria-valuenow={value}

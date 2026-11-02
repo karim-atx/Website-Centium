@@ -24,6 +24,7 @@ import {
   useCycleMode,
 } from "../../components/cycle/cycleUi";
 import { appLocale } from "../../i18n/format";
+import { getLanguage, t } from "../../i18n/core";
 
 // HE1.10.b.2, the contraception tracker, in the open Settings layout.
 //
@@ -57,6 +58,7 @@ const METHOD_ICON = (m: Method): LucideIcon =>
 /** "Sep 25, 2026". */
 const shortDate = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
+  if (getLanguage() === "ar") return d.toLocaleDateString(appLocale(), { month: "short", day: "numeric", year: "numeric" });
   return `${d.toLocaleDateString(appLocale("en-US"), { month: "short" })} ${d.getDate()}, ${d.getFullYear()}`;
 };
 /** "Mon, Oct 5". */
@@ -114,7 +116,7 @@ export default function Contraception() {
       {header}
       {children}
       <MethodSetupSheet open={setupOpen} onClose={() => setSetupOpen(false)} plan={plan ?? null} onSaved={planChanged} />
-      <Toast open={toast !== null} message={toast ?? ""} onExpire={() => setToast(null)} />
+      <Toast open={toast !== null} message={toast ? t(toast) : ""} onExpire={() => setToast(null)} />
     </div>
   );
 
@@ -135,7 +137,7 @@ export default function Contraception() {
   // --- loading (O1): the grid as skeletons -----------------------------------
   if (!plan) {
     return page(
-      <div aria-busy="true" aria-label="Loading" style={{ marginTop: 20 }}>
+      <div aria-busy="true" aria-label={t("Loading")} style={{ marginTop: 20 }}>
         <Skeleton width="60%" height={14} />
         <div className="grid" style={{ gridTemplateColumns: "repeat(7, 1fr)", rowGap: 8, marginTop: 20 }}>
           {Array.from({ length: 28 }, (_, i) => (

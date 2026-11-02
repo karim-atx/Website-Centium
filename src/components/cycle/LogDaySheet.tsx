@@ -37,6 +37,7 @@ import {
 } from "../../services/cycle/guidance";
 import { Info, Lock } from "lucide-react";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 // Logging one day.
 //
@@ -63,7 +64,7 @@ const OptionRow: React.FC<{ children: React.ReactNode; label: string }> = ({ chi
 /** A field section: label 12/16 600 #8C8378 (dark #B8B3C7), margin 0 0 6 2; sections 18 apart. */
 const Section: React.FC<{ title: string; hint?: string; children: React.ReactNode }> = ({ title, hint, children }) => (
   <div style={{ marginBottom: 18 }}>
-    <p className="text-charcoal-faint" style={type(12, 16, 600, { margin: "0 0 6px 2px" })}>
+    <p className="text-charcoal-faint" style={type(12, 16, 600, { marginBlock: "0 6px", marginInlineStart: 2 })}>
       {title}
       {hint && <span style={{ marginInlineStart: 6, fontWeight: 400 }}>{hint}</span>}
     </p>
@@ -137,7 +138,7 @@ export const LogDaySheet: React.FC<{
 
   const save = async () => {
     if (!authUserId) {
-      setError("You need to be signed in to log a day.");
+      setError(t("You need to be signed in to log a day."));
       return;
     }
     const log: CycleDayLog = {
@@ -213,59 +214,59 @@ export const LogDaySheet: React.FC<{
         <div>
           {error && (
             <p role="alert" className="text-status-high" style={type(11.5, 17.3, 600, { marginBottom: 10 })}>
-              {error}
+              {t(error)}
             </p>
           )}
-          <CtaButton label="Save day" loading={saving} onClick={() => void save()} style={{ lineHeight: "21px" }} />
+          <CtaButton label={t("Save day")} loading={saving} onClick={() => void save()} style={{ lineHeight: "21px" }} />
         </div>
       }
     >
       <div>
-        <Section title="Flow">
-          <OptionRow label="Flow">{FLOWS.map((f) => opt(f, FLOW_LABEL[f], flow === f, () => setFlow(flow === f ? null : f)))}</OptionRow>
+        <Section title={t("Flow")}>
+          <OptionRow label={t("Flow")}>{FLOWS.map((f) => opt(f, FLOW_LABEL[f], flow === f, () => setFlow(flow === f ? null : f)))}</OptionRow>
           {/* Only offered where it is not already implied, so the two controls
               cannot contradict each other. */}
           {(flow === null || flow === "none" || flow === "spotting") && (
             <div className="flex items-center justify-between" style={{ gap: 12, marginTop: 10 }}>
               <span className="text-charcoal-soft" style={type(12.5, 18.8, 400)}>
-                Count this as a period day
+                {t("Count this as a period day")}
               </span>
-              <Toggle checked={isPeriod} onChange={setIsPeriod} label="Count this as a period day" />
+              <Toggle checked={isPeriod} onChange={setIsPeriod} label={t("Count this as a period day")} />
             </div>
           )}
         </Section>
 
-        <Section title="Symptoms">
-          <OptionRow label="Symptoms">
+        <Section title={t("Symptoms")}>
+          <OptionRow label={t("Symptoms")}>
             {SYMPTOMS.map((sym) => opt(sym, SYMPTOM_LABEL[sym], symptoms.includes(sym), () => setSymptoms(toggle(sym)), "checkbox"))}
           </OptionRow>
         </Section>
 
-        <Section title="Mood">
-          <OptionRow label="Mood">{MOODS.map((m) => opt(m, MOOD_LABEL[m], mood.includes(m), () => setMood(toggle(m)), "checkbox"))}</OptionRow>
+        <Section title={t("Mood")}>
+          <OptionRow label={t("Mood")}>{MOODS.map((m) => opt(m, MOOD_LABEL[m], mood.includes(m), () => setMood(toggle(m)), "checkbox"))}</OptionRow>
         </Section>
 
         {/* Energy 1-5, each level named (ENERGY_LABEL); tapping the chosen
             one again clears it (the repo's Clear). */}
-        <Section title="Energy">
-          <OptionRow label="Energy, 1 very low to 5 very high">
+        <Section title={t("Energy")}>
+          <OptionRow label={t("Energy, 1 very low to 5 very high")}>
             {Array.from({ length: LOG_LIMITS.energy.max - LOG_LIMITS.energy.min + 1 }, (_, k) => LOG_LIMITS.energy.min + k).map((e) =>
               opt(String(e), ENERGY_LABEL[e], energy === e, () => setEnergy(energy === e ? null : e))
             )}
           </OptionRow>
         </Section>
 
-        <Section title="Cervical mucus">
-          <OptionRow label="Cervical mucus">{MUCUS_OPTIONS.map((m) => opt(m, MUCUS_LABEL[m], mucus === m, () => setMucus(mucus === m ? null : m)))}</OptionRow>
+        <Section title={t("Cervical mucus")}>
+          <OptionRow label={t("Cervical mucus")}>{MUCUS_OPTIONS.map((m) => opt(m, MUCUS_LABEL[m], mucus === m, () => setMucus(mucus === m ? null : m)))}</OptionRow>
         </Section>
 
-        <Section title="Temperature" hint="°C">
+        <Section title={t("Temperature")} hint="°C">
           <input
             value={bbt}
             onChange={(e) => setBbt(e.target.value.replace(/[^\d.]/g, "").slice(0, 5))}
             inputMode="decimal"
             placeholder="36.5"
-            aria-label="Basal body temperature in degrees Celsius"
+            aria-label={t("Basal body temperature in degrees Celsius")}
             className={field}
             style={{ ...fieldStyle, height: 44 }}
           />
@@ -274,12 +275,12 @@ export const LogDaySheet: React.FC<{
           </p>
         </Section>
 
-        <Section title="LH test">
-          <OptionRow label="LH test">{LH_OPTIONS.map((o) => opt(o, LH_LABEL[o], lh === o, () => setLh(lh === o ? null : o)))}</OptionRow>
+        <Section title={t("LH test")}>
+          <OptionRow label={t("LH test")}>{LH_OPTIONS.map((o) => opt(o, LH_LABEL[o], lh === o, () => setLh(lh === o ? null : o)))}</OptionRow>
         </Section>
 
-        <Section title="Pregnancy test">
-          <OptionRow label="Pregnancy test">
+        <Section title={t("Pregnancy test")}>
+          <OptionRow label={t("Pregnancy test")}>
             {PREGNANCY_TEST_OPTIONS.map((o) => opt(o, PREGNANCY_TEST_LABEL[o], pregnancyTest === o, () => setPregnancyTest(pregnancyTest === o ? null : o)))}
           </OptionRow>
           {pregnancyTest === "positive" && (
@@ -300,8 +301,8 @@ export const LogDaySheet: React.FC<{
           )}
         </Section>
 
-        <Section title="Sexual activity">
-          <OptionRow label="Sexual activity">
+        <Section title={t("Sexual activity")}>
+          <OptionRow label={t("Sexual activity")}>
             {SEX_ACTIVITY_OPTIONS.map((o) => opt(o, SEX_ACTIVITY_LABEL[o], sexActivity === o, () => setSexActivity(sexActivity === o ? null : o)))}
           </OptionRow>
           {/* TRUE, AND CHECKED: no access_category covers this column, and
@@ -311,12 +312,12 @@ export const LogDaySheet: React.FC<{
           </p>
         </Section>
 
-        <Section title="Notes">
+        <Section title={t("Notes")}>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value.slice(0, LOG_LIMITS.notesMaxLength))}
             rows={2}
-            placeholder="Anything worth remembering about today"
+            placeholder={t("Anything worth remembering about today")}
             className={`${field} resize-none`}
             style={{ ...fieldStyle, padding: "10px 12px" }}
           />

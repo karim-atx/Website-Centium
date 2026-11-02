@@ -3,6 +3,7 @@ import { CentredPopup } from "../ui/CentredPopup";
 import { useApp } from "../../context/AppContext";
 import { TRACKER_OFF_KEEPS_DATA, TURN_OFF_CONFIRM, TURN_OFF_KEEP, TURN_OFF_TITLE } from "../../services/cycle/guidance";
 import { PopupButtons, type } from "./cycleUi";
+import { tk } from "../../i18n/core";
 
 /**
  * HE1.10.b.5 "Turn off cycle tracking?": the confirm both tracker switches
@@ -29,7 +30,7 @@ export const TurnOffTrackingPopup: React.FC<{
     setBusy(false);
     onClose();
     if (!r.ok) {
-      onError?.(r.message ?? "Couldn't save. Try again.");
+      onError?.(r.message ?? tk("Couldn't save. Try again."));
       return;
     }
     onDone?.();

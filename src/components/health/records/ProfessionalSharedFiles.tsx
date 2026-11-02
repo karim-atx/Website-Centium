@@ -4,6 +4,8 @@ import { useApp } from "../../../context/AppContext";
 import { getImagingShares, unshareImagingRecord, type ImagingShare } from "../../../services/imaging";
 import { textPx, linePx } from "../../../theme/textSize";
 import { useHealthMode, fmtDate, ListCard, RowTile, RowText, rowRule, SectionCaps, ConfirmPopup, Skel, INK_FAINT } from "./kit";
+import { t } from "../../../i18n/core";
+import { imagingTypeLabel } from "../imagingTypes";
 
 /**
  * OURS-imaging-revoke #3-#4: the files shared with one professional (B2
@@ -37,17 +39,17 @@ export const ProfessionalSharedFiles: React.FC<{ professionalId: string; name: s
 
   return (
     <section>
-      <SectionCaps>Shared files</SectionCaps>
+      <SectionCaps>{t("Shared files")}</SectionCaps>
       {shares === null ? (
         <Skel w="60%" h={12} />
       ) : files.length === 0 ? (
-        <p style={{ fontSize: textPx(11), lineHeight: linePx(16), color: INK_FAINT }}>{`No files shared with ${name}.`}</p>
+        <p style={{ fontSize: textPx(11), lineHeight: linePx(16), color: INK_FAINT }}>{t("No files shared with {name}.", { name })}</p>
       ) : (
         <ListCard>
           {files.map(({ share, record }, i) => (
             <div key={share.recordId} className="flex items-center" style={{ minHeight: 66, padding: "9px 14px", gap: 11, borderTop: i ? rowRule(dark, hc) : undefined }}>
               <RowTile icon={ScanLine} />
-              <RowText title={record!.type} meta={fmtDate(record!.date)} />
+              <RowText title={imagingTypeLabel(record!.type)} meta={fmtDate(record!.date)} />
               <button
                 type="button"
                 onClick={() => {
@@ -57,7 +59,7 @@ export const ProfessionalSharedFiles: React.FC<{ professionalId: string; name: s
                 className="tap min-h-[44px] shrink-0"
                 style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: dark ? "#F09A8E" : "#C0392B" }}
               >
-                Stop sharing
+                {t("Stop sharing")}
               </button>
             </div>
           ))}
@@ -71,9 +73,9 @@ export const ProfessionalSharedFiles: React.FC<{ professionalId: string; name: s
       <ConfirmPopup
         open={!!stopping}
         geometry="ours"
-        title="Stop sharing this file?"
-        body={stopping ? `${name} can no longer open ${stopping.type}, ${fmtDate(stopping.date)}. Copies they already saved stay with them.` : ""}
-        confirmLabel="Stop sharing"
+        title={t("Stop sharing this file?")}
+        body={stopping ? t("{name} can no longer open {file}, {date}. Copies they already saved stay with them.", { name, file: imagingTypeLabel(stopping.type), date: fmtDate(stopping.date) }) : ""}
+        confirmLabel={t("Stop sharing")}
         busy={busy}
         error={error}
         onCancel={() => setStop(null)}
@@ -82,10 +84,10 @@ export const ProfessionalSharedFiles: React.FC<{ professionalId: string; name: s
           setBusy(true);
           void unshareImagingRecord(stop, professionalId).then((r) => {
             setBusy(false);
-            if (!r.ok) return setError("Couldn't save. Try again.");
+            if (!r.ok) return setError(t("Couldn't save. Try again."));
             setStop(null);
-            setDone(`Stopped sharing with ${name}.`);
-            setTick((t) => t + 1);
+            setDone(t("Stopped sharing with {name}.", { name }));
+            setTick((n) => n + 1);
           });
         }}
       />

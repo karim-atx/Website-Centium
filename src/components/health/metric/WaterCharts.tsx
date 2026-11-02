@@ -2,7 +2,7 @@ import React from "react";
 import { hourLabel12 } from "../../../utils/time12";
 import { textPx, linePx } from "../../../theme/textSize";
 import { mc, useHealthMode } from "./MetricKit";
-import { daysOf, type Period } from "./periods";
+import { daysOf, weekLetter, type Period } from "./periods";
 import { weekdayColumn } from "../../../utils/week";
 import { isRtl } from "../../../i18n/core";
 
@@ -125,7 +125,7 @@ export const WaterMonthGrid: React.FC<{
   return (
     <div>
       <div className="grid" style={{ gridTemplateColumns: "repeat(7, 1fr)" }}>
-        {["M", "T", "W", "T", "F", "S", "S"].map((l, i) => (
+        {[0, 1, 2, 3, 4, 5, 6].map(weekLetter).map((l, i) => (
           <span key={i} className="text-center" style={{ fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 700, color: faint }}>
             {l}
           </span>

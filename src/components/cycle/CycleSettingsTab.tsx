@@ -9,6 +9,7 @@ import type { Pregnancy } from "../../services/pregnancy";
 import { gestationOn } from "../../services/pregnancy";
 import type { Method } from "../../services/contraception";
 import { zonePlace } from "../settings/timezoneOptions";
+import { t, tn } from "../../i18n/core";
 import { CycleCard, CycleFooter, CycleHelp, CycleRow, CycleSection, OptionButton, type, useCycleMode } from "./cycleUi";
 
 // HE1.10.b, the Settings tab, in the open Settings layout: lavender section
@@ -52,8 +53,8 @@ export const CycleSettingsTab: React.FC<{
       <CycleSection label={G.SETTINGS_TRACKING} style={{ marginTop: 26 }}>
         <CycleRow
           glyph={<CycleCalendarIcon size={18} />}
-          title="Cycle tracking"
-          toggle={{ checked: settings.trackerEnabled, onChange: p.onTrackerChange, disabled: p.busy, label: "Cycle tracking" }}
+          title={t("Cycle tracking")}
+          toggle={{ checked: settings.trackerEnabled, onChange: p.onTrackerChange, disabled: p.busy, label: t("Cycle tracking") }}
           last
         />
         <CycleHelp style={{ marginTop: 2 }}>{settings.trackerEnabled ? G.TRACKER_OFF_KEEPS_DATA : G.SWITCH_ON_TO_TRACK}</CycleHelp>
@@ -93,8 +94,12 @@ export const CycleSettingsTab: React.FC<{
           <>
             <CycleRow
               icon={Baby}
-              title="Pregnancy tracking"
-              subtitle={pregnancyWeek ? `Week ${pregnancyWeek.week} · day ${pregnancyWeek.day} · trimester ${pregnancyWeek.trimester}` : undefined}
+              title={t("Pregnancy tracking")}
+              subtitle={
+                pregnancyWeek
+                  ? t("Week {week} · day {day} · trimester {trimester}", { week: pregnancyWeek.week, day: pregnancyWeek.day, trimester: pregnancyWeek.trimester })
+                  : undefined
+              }
             />
             <CycleRow icon={XCircle} title={PG.END_TITLE} onClick={p.onEndPregnancy} last />
           </>
@@ -278,7 +283,7 @@ const NumberRow: React.FC<{
         last={last && !(editing && !valid)}
         trailing={
           <span className="shrink-0 flex items-center" style={{ gap: 6 }}>
-            {stepper("−", -1, value <= limits.min, `Decrease ${label.toLowerCase()}`)}
+            {stepper("−", -1, value <= limits.min, t("Decrease {label}", { label: label.toLowerCase() }))}
             {editing ? (
               <input
                 ref={inputRef}
@@ -314,14 +319,14 @@ const NumberRow: React.FC<{
                   setDraft(String(value));
                   setEditing(true);
                 }}
-                aria-label={`${label}, ${value} days. Tap to type a number`}
+                aria-label={tn(value, "{label}, {n} day. Tap to type a number", "{label}, {n} days. Tap to type a number", { label })}
                 className="tap text-center text-charcoal"
                 style={{ minWidth: 40, ...type(13.5, 20.3, 800, { fontVariantNumeric: "tabular-nums" }) }}
               >
-                {value} d
+                {value} {tn(value, "d", "d")}
               </button>
             )}
-            {stepper("+", 1, value >= limits.max, `Increase ${label.toLowerCase()}`)}
+            {stepper("+", 1, value >= limits.max, t("Increase {label}", { label: label.toLowerCase() }))}
             {editing && (
               <button
                 type="button"
@@ -330,7 +335,7 @@ const NumberRow: React.FC<{
                 className="tap text-primary-dark"
                 style={{ marginInlineStart: 2, opacity: valid ? 1 : 0.5, ...type(13, 19.5, 700) }}
               >
-                Done
+                {t("Done")}
               </button>
             )}
           </span>

@@ -8,6 +8,7 @@ import type { BloodPressureInput } from "../../services/blood-pressure/reading";
 import { clock12 } from "../../utils/time12";
 import { HealthPopup } from "./metric/HealthPopup";
 import { BpHowToMeasureSheet } from "./BpHowToMeasureSheet";
+import { t, tk } from "../../i18n/core";
 
 // HE1.6.a "Blood pressure · very high reading": the popup the log sheet
 // (HE1.6.1, Health B) opens after saving a very high reading, and the same
@@ -29,13 +30,14 @@ export function shouldOpenBpVeryHigh(
   return isSevere(reading.systolic, reading.diastolic);
 }
 
-const ARM = { left: "left arm", right: "right arm" } as const;
+const ARM = { left: tk("left arm"), right: tk("right arm") } as const;
+const POSITION = { sitting: tk("sitting"), standing: tk("standing"), lying: tk("lying") } as const;
 
 /** "186/124 mmHg · just now · left arm, sitting" (HE1.6.a #55). */
 function metaLine(r: BloodPressureInput & { recordedAt?: string }): string {
-  const when = !r.recordedAt || Date.now() - new Date(r.recordedAt).getTime() < 5 * 60000 ? "just now" : clock12(r.recordedAt);
-  const where = [r.arm ? ARM[r.arm] : null, r.position ?? null].filter(Boolean).join(", ");
-  return [`${r.systolic}/${r.diastolic} mmHg`, when, where || null].filter(Boolean).join(" · ");
+  const when = !r.recordedAt || Date.now() - new Date(r.recordedAt).getTime() < 5 * 60000 ? t("just now") : clock12(r.recordedAt);
+  const where = [r.arm ? t(ARM[r.arm]) : null, r.position ? t(POSITION[r.position]) : null].filter(Boolean).join(t(", "));
+  return [t("{sys}/{dia} mmHg", { sys: r.systolic, dia: r.diastolic }), when, where || null].filter(Boolean).join(" · ");
 }
 
 export const BpVeryHighPopup: React.FC<{
@@ -57,12 +59,12 @@ export const BpVeryHighPopup: React.FC<{
         dismissOnBackdrop={false}
         role="alertdialog"
         tile={{ background: "#FCEDEC", darkBackground: "#3C2A30", icon: <AlertCircle size={19} className="text-[#A4231C] dark:text-[#FF6B5E]" /> }}
-        title={pregnancy ? PREGNANCY_FLAG_COPY.bpUrgentLabel : "Very high reading"}
+        title={pregnancy ? PREGNANCY_FLAG_COPY.bpUrgentLabel : t("Very high reading")}
         meta={metaLine(reading)}
         body={<p>{pregnancy ? PREGNANCY_FLAG_COPY.bpUrgent : SEVERE_READING_MESSAGE}</p>}
-        link={{ label: "How to measure", onClick: () => setHowOpen(true) }}
-        secondary={{ label: "Close", onClick: onClose }}
-        primary={{ label: "Measure again", onClick: onMeasureAgain }}
+        link={{ label: t("How to measure"), onClick: () => setHowOpen(true) }}
+        secondary={{ label: t("Close"), onClick: onClose }}
+        primary={{ label: t("Measure again"), onClick: onMeasureAgain }}
       />
       <BpHowToMeasureSheet open={open && howOpen} onClose={() => setHowOpen(false)} />
     </>

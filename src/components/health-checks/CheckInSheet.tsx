@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { CHECKIN_ANSWERS, CHECKIN_FOLLOW_UP_FROM, CHECKIN_QUESTIONS } from "../../services/health-checks/guidance";
+import { t } from "../../i18n/core";
 
 /**
  * The four-question check-in. The answers stay on this device; nothing is
@@ -25,13 +26,13 @@ export const CheckInSheet: React.FC<{
   };
 
   return (
-    <BottomSheet open={open} onClose={close} title="Mood check-in">
+    <BottomSheet open={open} onClose={close} title={t("Mood check-in")}>
       {done ? (
         <div className="animate-fade-slide-up">
           {done.followUp ? (
             <>
               <p className="text-[13px] leading-[1.5] text-charcoal">
-                It may help to talk to a doctor about how you've been feeling.
+                {t("It may help to talk to a doctor about how you've been feeling.")}
               </p>
               <Button
                 className="w-full mt-4"
@@ -40,14 +41,14 @@ export const CheckInSheet: React.FC<{
                   onShowWarningSigns();
                 }}
               >
-                See warning signs
+                {t("See warning signs")}
               </Button>
             </>
           ) : (
-            <p className="text-[13px] leading-[1.5] text-charcoal">Thanks. Your answers stay on this device.</p>
+            <p className="text-[13px] leading-[1.5] text-charcoal">{t("Thanks. Your answers stay on this device.")}</p>
           )}
           <Button variant="secondary" className="w-full mt-3" onClick={close}>
-            Done
+            {t("Done")}
           </Button>
         </div>
       ) : (
@@ -80,7 +81,7 @@ export const CheckInSheet: React.FC<{
             </fieldset>
           ))}
           <p className="text-[11px] text-charcoal-faint leading-relaxed">
-            Your answers stay on this device and are not stored on the server.
+            {t("Your answers stay on this device and are not stored on the server.")}
           </p>
           <Button
             className="w-full"
@@ -91,7 +92,7 @@ export const CheckInSheet: React.FC<{
               setDone({ followUp: final.some((a) => a >= CHECKIN_FOLLOW_UP_FROM) });
             }}
           >
-            Save
+            {t("Save")}
           </Button>
         </div>
       )}

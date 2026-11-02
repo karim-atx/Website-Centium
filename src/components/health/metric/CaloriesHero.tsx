@@ -148,4 +148,5 @@ export const CaloriesHero: React.FC<{
  * handover notes). No constant held it in the repo when this page was
  * built, so it lives here, once, and every Calories surface reads it.
  */
+/** A catalogue key: shown through t(). */
 export const ESTIMATED_INCL_WORKOUTS = "Estimated, incl. workouts";

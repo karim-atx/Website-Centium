@@ -37,6 +37,7 @@ import {
   INK_SOFT,
   INK_FAINT,
 } from "./records/kit";
+import { t, tn } from "../../i18n/core";
 
 // HE1.9.2 → HE1.9.2.1 → HE1.9.2.1a → HE1.9.2.2 → HE1.9.2.3: a report's results.
 //
@@ -93,19 +94,19 @@ function scannedDraft(r: ScannedResult, list: CatalogueMarker[], sex: string | n
   };
   const note =
     r.value === null
-      ? { text: "Couldn't read the value. Type it from your report.", attention: true }
+      ? { text: t("Couldn't read the value. Type it from your report."), attention: true }
       : !r.unit
         ? {
             text: r.printedUnit
-              ? `The unit printed (${r.printedUnit}) isn't one Centium uses for ${r.name}. Choose the unit.`
-              : "Couldn't read the unit. Choose it from your report.",
+              ? t("The unit printed ({unit}) isn't one Centium uses for {marker}. Choose the unit.", { unit: r.printedUnit, marker: r.name })
+              : t("Couldn't read the unit. Choose it from your report."),
             attention: true,
           }
         : r.check
-          ? { text: `Check this value against your report: it's far outside the range printed beside it (“${r.line}”).`, attention: true }
+          ? { text: t("Check this value against your report: it's far outside the range printed beside it (“{line}”).", { line: r.line }), attention: true }
           : r.checkRange
-            ? { text: `Check the range against your report: it may have been misread (“${r.line}”).`, attention: true }
-            : { text: `Read from your report: “${r.line}”` };
+            ? { text: t("Check the range against your report: it may have been misread (“{line}”).", { line: r.line }), attention: true }
+            : { text: t("Read from your report: “{line}”", { line: r.line }) };
   return { draft, note };
 }
 
@@ -149,7 +150,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
   const [markers, setMarkers] = useState<MarkerDraft[]>([emptyMarker()]);
   const [date, setDate] = useState(today);
   // B2 blood_panels.name: 1-60 characters, default "Blood panel".
-  const [reportName, setReportName] = useState(REPORT_NAME_DEFAULT);
+  const [reportName, setReportName] = useState(() => t(REPORT_NAME_DEFAULT));
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [pickerFor, setPickerFor] = useState<number | null>(null);
   const [showErrors, setShowErrors] = useState(false);
@@ -221,7 +222,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
         return;
       }
       if (!r.ok || !r.path) {
-        setUploadError("Upload didn't finish. Try again");
+        setUploadError(t("Upload didn't finish. Try again"));
         return;
       }
       pathRef.current = r.path;
@@ -286,7 +287,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
     }
     if (!authUserId) return;
     if (!online) {
-      setToast("You're offline. Try again when you're connected.");
+      setToast(t("You're offline. Try again when you're connected."));
       return;
     }
     setSaving(true);
@@ -305,7 +306,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
     });
     setSaving(false);
     if (!result.ok) {
-      setToast("Couldn't save. Try again.");
+      setToast(t("Couldn't save. Try again."));
       return;
     }
     saved.current = true;
@@ -332,11 +333,11 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
         <button
           type="button"
           onClick={stage === "uploading" || stage === "reading" ? () => leave() : back}
-          aria-label="Back"
+          aria-label={t("Back")}
           className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
           style={{ width: 36, height: 36 }}
         >
-          <ChevronLeft size={20} style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
+          <ChevronLeft size={20} className="rtl:-scale-x-100" style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
         </button>
         <h1 style={{ fontSize: textPx(24), lineHeight: linePx(30), fontWeight: 700, letterSpacing: -0.5, color: INK }}>{title}</h1>
       </div>
@@ -359,7 +360,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
       }}
     >
       {preview && !isPdf ? (
-        <img src={preview} alt="Your lab report" className="w-full h-full object-cover" />
+        <img src={preview} alt={t("Your lab report")} className="w-full h-full object-cover" />
       ) : (
         <div className="flex flex-col" style={{ gap }}>
           {Array.from({ length: lines }, (_, i) => (
@@ -382,29 +383,29 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
   const privacy = (
     <p className="flex items-start" style={{ gap: 6, fontSize: textPx(11.5), lineHeight: linePx(17.3), color: INK_FAINT }}>
       <ShieldCheck size={14} className="shrink-0" style={{ marginTop: 1.5, color: deepInk(dark) }} aria-hidden />
-      <span>Read on your phone. The photo and its text never leave it.</span>
+      <span>{t("Read on your phone. The photo and its text never leave it.")}</span>
     </p>
   );
 
   const content =
     stage === "reading" ? (
       <>
-        {header("Scan a report")}
+        {header(t("Scan a report"))}
         <div className="flex flex-col items-center" style={{ paddingTop: 12 }}>
           {paper(286, 380, 26, [139.7, 209.6], 5, 14, 12)}
           <div style={{ width: 286, marginTop: 26 }}>
             {bar()}
             <div className="flex justify-between items-baseline" style={{ marginTop: 10 }}>
-              <p role="status" style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: INK }}>Reading your report</p>
+              <p role="status" style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: INK }}>{t("Reading your report")}</p>
               <span data-read-pct style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: INK_FAINT, fontVariantNumeric: "tabular-nums" }}>
                 {Math.round(progress * 100)}%
               </span>
             </div>
-            <p style={{ margin: "4px 0 8px", fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>Keep the app open. The first scan takes a little longer.</p>
+            <p style={{ margin: "4px 0 8px", fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>{t("Keep the app open. The first scan takes a little longer.")}</p>
             {privacy}
             <div className="flex" style={{ gap: 18, marginTop: 8 }}>
               <button type="button" onClick={leave} className="tap min-h-[44px]" style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: deepInk(dark) }}>
-                Cancel
+                {t("Cancel")}
               </button>
             </div>
           </div>
@@ -412,13 +413,13 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
       </>
     ) : stage === "uploading" ? (
       <>
-        {header("Scan a report")}
+        {header(t("Scan a report"))}
         <div className="flex flex-col items-center" style={{ paddingTop: 12 }}>
           {paper(286, 380, 26, [139.7, 209.6], 5, 14, 12)}
           <div style={{ width: 286, marginTop: 26 }}>
             {bar()}
             <div className="flex justify-between items-baseline" style={{ marginTop: 10 }}>
-              <p style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: INK }}>{uploadError ? uploadError : "Uploading your report"}</p>
+              <p style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: INK }}>{uploadError ? uploadError : t("Uploading your report")}</p>
               {!uploadError && (
                 // #11: "62%" 12/18 600 #8C8378 (dark #B8B3C7), right-aligned.
                 <span data-upload-pct style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: INK_FAINT, fontVariantNumeric: "tabular-nums" }}>
@@ -427,16 +428,16 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
               )}
             </div>
             {!uploadError && (
-              <p style={{ marginTop: 4, fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>Keep the app open. This takes a few seconds.</p>
+              <p style={{ marginTop: 4, fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>{t("Keep the app open. This takes a few seconds.")}</p>
             )}
             <div className="flex" style={{ gap: 18, marginTop: 8 }}>
               {uploadError && (
                 <button type="button" onClick={() => setAttempt((n) => n + 1)} className="tap min-h-[44px]" style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: deepInk(dark) }}>
-                  Retry
+                  {t("Retry")}
                 </button>
               )}
               <button type="button" onClick={leave} className="tap min-h-[44px]" style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: deepInk(dark) }}>
-                Cancel
+                {t("Cancel")}
               </button>
             </div>
           </div>
@@ -444,38 +445,38 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
       </>
     ) : stage === "uploaded" ? (
       <>
-        {header("Scan a report")}
+        {header(t("Scan a report"))}
         <div className="flex flex-col items-center" style={{ paddingTop: 12 }}>
           {paper(286, 300, 26, [139.7, 209.6], 5, 14, 12)}
           <div style={{ width: 286, marginTop: 22 }}>
             {bar(true)}
             <div className="flex justify-between" style={{ marginTop: 10 }}>
-              <p style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: INK }}>Upload complete</p>
+              <p style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: INK }}>{t("Upload complete")}</p>
               <p style={{ fontSize: textPx(12), lineHeight: linePx(21), fontWeight: 600, color: INK_FAINT }}>100%</p>
             </div>
           </div>
           <ConfirmationMark size={96} dark={dark} className="mt-[18px]" />
           <p role="status" style={{ marginTop: 6, fontSize: textPx(16), lineHeight: linePx(24), fontWeight: 800, letterSpacing: -0.3, color: INK }}>
-            Report uploaded
+            {t("Report uploaded")}
           </p>
-          <p style={{ marginTop: 3, fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>Opening Enter results</p>
+          <p style={{ marginTop: 3, fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>{t("Opening Enter results")}</p>
         </div>
       </>
     ) : (
       <>
-        {header(read ? "Check results" : "Enter results")}
+        {header(read ? t("Check results") : t("Enter results"))}
         <div style={{ padding: "0 16px 120px" }}>
           {read && scanInfo && (
             <div style={{ margin: "2px 0 12px", borderRadius: 14, padding: "12px 14px", background: dark ? "rgb(var(--c-primary) / 0.12)" : "rgb(var(--th-9a8cd6) / 0.12)" }}>
               <p role="status" style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 700, color: INK }}>
                 {scanInfo.failed
-                  ? "This report couldn't be read. Type the results in below."
+                  ? t("This report couldn't be read. Type the results in below.")
                   : scanInfo.found === 0
-                    ? "No results could be read. Type them in below."
-                    : `Found ${scanInfo.found} result${scanInfo.found === 1 ? "" : "s"}. Check each one against your report.`}
+                    ? t("No results could be read. Type them in below.")
+                    : tn(scanInfo.found, "Found {n} result. Check each one against your report.", "Found {n} results. Check each one against your report.")}
               </p>
               <p style={{ marginTop: 5, fontSize: textPx(11), lineHeight: linePx(16.5), color: INK_SOFT }}>
-                Edit anything that was misread, remove what you don&apos;t want, and add anything missing.
+                {t("Edit anything that was misread, remove what you don't want, and add anything missing.")}
               </p>
               <div style={{ marginTop: 8 }}>{privacy}</div>
             </div>
@@ -490,10 +491,10 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
               {paper(54, 72, 5, [25.7, 38.6], 3, 4, 6)}
               <span className="flex-1 min-w-0">
                 <span className="block" style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 600, color: INK }}>
-                  {isPdf ? "Report file" : "Report photo"}
+                  {isPdf ? t("Report file") : t("Report photo")}
                 </span>
                 <span className="block" style={{ fontSize: textPx(11.5), lineHeight: linePx(17.3), color: INK_FAINT }}>
-                  Tap to view full size
+                  {t("Tap to view full size")}
                 </span>
               </span>
               <Maximize2 size={16} style={{ color: INK_FAINT }} aria-hidden />
@@ -501,7 +502,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
           )}
           {/* Report name (B2 blood_panels.name), 1-60 characters. */}
           <div style={{ marginTop: 14 }}>
-            <FieldLabel htmlFor="report-name">Report name</FieldLabel>
+            <FieldLabel htmlFor="report-name">{t("Report name")}</FieldLabel>
             <input
               id="report-name"
               value={reportName}
@@ -510,19 +511,19 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
               className="outline-none"
               style={fieldStyle(dark, hc, 600)}
             />
-            {!nameOk && <HelpLine error>Give the report a name.</HelpLine>}
+            {!nameOk && <HelpLine error>{t("Give the report a name.")}</HelpLine>}
           </div>
           <div style={{ marginTop: 14 }}>
-            <FieldLabel htmlFor="report-date">Date on the report</FieldLabel>
+            <FieldLabel htmlFor="report-date">{t("Date on the report")}</FieldLabel>
             <button id="report-date" type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-start" style={{ ...fieldStyle(dark, hc), gap: 8 }}>
               <CalendarDays size={15} style={{ color: INK_FAINT }} aria-hidden />
               {fmtDate(date)}
             </button>
-            {read && scanInfo && <HelpLine>{scanInfo.dated ? "Read from your report. Check it." : "No date could be read. Choose the date on your report."}</HelpLine>}
+            {read && scanInfo && <HelpLine>{scanInfo.dated ? t("Read from your report. Check it.") : t("No date could be read. Choose the date on your report.")}</HelpLine>}
           </div>
-          <p style={{ marginTop: 20, fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: INK }}>Results</p>
+          <p style={{ marginTop: 20, fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: INK }}>{t("Results")}</p>
           <p style={{ margin: "2px 0 8px", fontSize: textPx(11.5), lineHeight: linePx(17.3), color: INK_FAINT }}>
-            Use the range printed on your report. Pre-filled from Centium&apos;s standard list.
+            {t("Use the range printed on your report. Pre-filled from Centium's standard list.")}
           </p>
           <div className="overflow-hidden" style={{ borderRadius: 14, border: `0.5px solid ${hairline(dark, hc)}` }}>
             {markers.map((m, i) => (
@@ -544,9 +545,9 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
           </div>
           {read && scanInfo && scanInfo.unmatched.length > 0 && (
             <div style={{ marginTop: 14 }}>
-              <p style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: INK }}>Not matched</p>
+              <p style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: INK }}>{t("Not matched")}</p>
               <p style={{ margin: "2px 0 6px", fontSize: textPx(11), lineHeight: linePx(16), color: INK_FAINT }}>
-                These lines look like results but aren&apos;t on Centium&apos;s list. Add any you need with Add marker.
+                {t("These lines look like results but aren't on Centium's list. Add any you need with Add marker.")}
               </p>
               <ul className="flex flex-col" style={{ gap: 4 }}>
                 {scanInfo.unmatched.map((l, i) => (
@@ -557,7 +558,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
               </ul>
             </div>
           )}
-          <p style={{ marginTop: 8, fontSize: textPx(11), lineHeight: linePx(16), color: INK_FAINT }}>Untick a result to leave it out. Tap a marker name to change it.</p>
+          <p style={{ marginTop: 8, fontSize: textPx(11), lineHeight: linePx(16), color: INK_FAINT }}>{t("Untick a result to leave it out. Tap a marker name to change it.")}</p>
           <button
             type="button"
             onClick={() => {
@@ -567,13 +568,13 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
             className="tap flex items-center min-h-[44px]"
             style={{ marginTop: 2, gap: 6, fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: deepInk(dark) }}
           >
-            <Plus size={15} aria-hidden /> Add marker
+            <Plus size={15} aria-hidden /> {t("Add marker")}
           </button>
         </div>
         <div className="fixed start-0 end-0 mx-auto max-w-[430px] z-10" style={{ bottom: "calc(env(safe-area-inset-bottom) + 24px)", padding: "0 16px" }}>
           <CtaButton
             size="page"
-            label={`Save ${ticked.length} result${ticked.length === 1 ? "" : "s"}`}
+            label={tn(ticked.length, "Save {n} result", "Save {n} results")}
             onClick={() => void save()}
             loading={saving}
             disabled={ticked.length === 0}
@@ -584,7 +585,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
     );
 
   return createPortal(
-    <div className="fixed inset-0 z-[45] flex justify-center bg-cream" role="dialog" aria-modal="true" aria-label="Scan a report">
+    <div className="fixed inset-0 z-[45] flex justify-center bg-cream" role="dialog" aria-modal="true" aria-label={t("Scan a report")}>
       <div className="w-full max-w-[430px] h-full overflow-y-auto overscroll-contain">{content}</div>
       <CalendarPickerSheet variant="partB"
         open={calendarOpen}
@@ -611,10 +612,10 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
       <ConfirmPopup
         open={discardOpen}
         geometry="ours"
-        title="Discard this report?"
-        body={read ? "The results read from your report are not saved." : "The photo and the results you typed are not saved."}
-        cancelLabel="Keep editing"
-        confirmLabel="Discard"
+        title={t("Discard this report?")}
+        body={read ? t("The results read from your report are not saved.") : t("The photo and the results you typed are not saved.")}
+        cancelLabel={t("Keep editing")}
+        confirmLabel={t("Discard")}
         onCancel={() => setDiscardOpen(false)}
         onConfirm={() => {
           setDiscardOpen(false);
@@ -625,9 +626,9 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
         open={viewerOpen}
         onClose={() => setViewerOpen(false)}
         local={preview ? { url: preview, kind: isPdf ? "pdf" : "image" } : null}
-        title={isPdf ? "Report file" : "Report photo"}
+        title={isPdf ? t("Report file") : t("Report photo")}
         subtitle={fmtDate(date)}
-        menu={[{ key: "remove", label: "Remove file", icon: <Trash2 size={15} />, destructive: true, onSelect: () => void removeFile() }]}
+        menu={[{ key: "remove", label: t("Remove file"), icon: <Trash2 size={15} />, destructive: true, onSelect: () => void removeFile() }]}
       />
       <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
     </div>,

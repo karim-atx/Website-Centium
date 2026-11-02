@@ -1,6 +1,7 @@
 import React from "react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 // The progress ring, in weeks.
 //
@@ -109,10 +110,10 @@ export const PregnancyRing: React.FC<{
 /** The three-trimester bar under the ring. Name AND fill, never fill alone. */
 export const TrimesterBar: React.FC<{ active: 1 | 2 | 3 }> = ({ active }) => (
   <div className="flex gap-1.5">
-    {([1, 2, 3] as const).map((t) => {
-      const on = t === active;
+    {([1, 2, 3] as const).map((n) => {
+      const on = n === active;
       return (
-        <div key={t} className="flex-1 min-w-0">
+        <div key={n} className="flex-1 min-w-0">
           <div
             className="h-1.5 rounded-full"
             style={{ background: RING_COLOR, opacity: on ? 1 : 0.24 }}
@@ -124,7 +125,7 @@ export const TrimesterBar: React.FC<{ active: 1 | 2 | 3 }> = ({ active }) => (
               fontWeight: on ? 700 : 500,
             }}
           >
-            Trimester {t}
+            {t("Trimester {n}", { n })}
           </p>
         </div>
       );

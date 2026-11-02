@@ -3,6 +3,7 @@ import { Moon } from "lucide-react";
 import { textPx, linePx } from "../../../theme/textSize";
 import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { MetricHero, hairline, useHealthMode } from "./MetricKit";
+import { t } from "../../../i18n/core";
 
 // HE1.3 #10-#16 night hero: solid #2E4A48 in both modes (no pattern),
 // r22 pad 16 16 14 16, 226.2 tall. Arc SVG 326 x 150 (viewBox 0 0 326 150),
@@ -55,7 +56,7 @@ export const SleepHero: React.FC<{
   wakeLabel?: string;
   /** B1 sleep_segments as fractions of the night (0-1, bed to wake): the band takes the stage colours (Deep #4F8F8A, Light #A2C8C2, REM #A2C8C2@45%, Awake #E4E1EE). */
   segments?: { stage: "awake" | "light" | "deep" | "rem"; from: number; to: number }[];
-}> = ({ value, sub, emptyTitle, loading, ariaLabel, bed, wake, segments, bedLabel = "Bedtime", wakeLabel = "Wake" }) => {
+}> = ({ value, sub, emptyTitle, loading, ariaLabel, bed, wake, segments, bedLabel = t("Bedtime"), wakeLabel = t("Wake") }) => {
   const [ref, running] = useLoopWhileVisible<HTMLDivElement>();
   const play = running ? "running" : "paused";
   const arc = "M43 137 A120 120 0 0 1 283 137";
@@ -107,7 +108,8 @@ export const SleepHero: React.FC<{
         </div>
         {value !== null && bed && wake && (
           // HE1.3 #15-#16: time 15/22.5 800 #F5F3FA over its label 10.5/15.8 600 #C9DEDA, under each arc end.
-          <div className="flex justify-between" style={{ marginTop: 8 }}>
+          // dir ltr: the labels sit under the arc's ends, which run bedtime (left) to wake (right) in both directions.
+          <div dir="ltr" className="flex justify-between" style={{ marginTop: 8 }}>
             {[
               { t: bed, l: bedLabel, align: "left" as const },
               { t: wake, l: wakeLabel, align: "right" as const },
@@ -135,7 +137,7 @@ export const hm = (minutes: number) => {
   const m = Math.round(minutes);
   const h = Math.floor(m / 60);
   const r = m % 60;
-  return h === 0 ? `${r}m` : `${h}h ${String(r).padStart(2, "0")}m`;
+  return h === 0 ? t("{m}m", { m: r }) : t("{h}h {m}m", { h, m: String(r).padStart(2, "0") });
 };
 
 /**
@@ -150,21 +152,28 @@ export const SleepStagesCard: React.FC<{ stages: StageMinutes | null; right: str
   const { dark, hc } = useHealthMode();
   const rows = stages
     ? [
-        { key: "Deep", min: stages.deepMin, color: dark ? "#A2C8C2" : "#4F8F8A" },
-        { key: "Light", min: stages.lightMin, color: "#A2C8C2" },
-        { key: "REM", min: stages.remMin, color: "rgba(162,200,194,0.45)" },
-        { key: "Awake", min: stages.awakeMin, color: dark ? "#3A3D48" : "#E4E1EE" },
+        { key: "Deep", label: t("Deep"), min: stages.deepMin, color: dark ? "#A2C8C2" : "#4F8F8A" },
+        { key: "Light", label: t("Light"), min: stages.lightMin, color: "#A2C8C2" },
+        { key: "REM", label: t("REM"), min: stages.remMin, color: "rgba(162,200,194,0.45)" },
+        { key: "Awake", label: t("Awake"), min: stages.awakeMin, color: dark ? "#3A3D48" : "#E4E1EE" },
       ]
     : [];
   const total = rows.reduce((s, r) => s + r.min, 0) || 1;
   const ink = (light: string) => (dark ? "#B8B3C7" : light);
   return (
     <section
-      aria-label={stages ? `Stages, ${right}. ${rows.map((r) => `${r.key} ${hm(r.min)}, ${Math.round((r.min / total) * 100)}%`).join(". ")}.` : undefined}
+      aria-label={
+        stages
+          ? t("Stages, {right}. {list}.", {
+              right,
+              list: rows.map((r) => t("{stage} {time}, {pct}%", { stage: r.label, time: hm(r.min), pct: Math.round((r.min / total) * 100) })).join(". "),
+            })
+          : undefined
+      }
       style={{ marginTop: 12, borderRadius: 18, padding: 14, background: dark ? "#1C1F28" : "#FFFFFF", border: `0.5px solid ${hairline(dark, hc)}` }}
     >
       <div className="flex items-center justify-between">
-        <h2 style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>Stages</h2>
+        <h2 style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{t("Stages")}</h2>
         {stages && <span style={{ fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: hc ? "rgb(var(--c-charcoal))" : ink("#8C8378") }}>{right}</span>}
       </div>
       {stages ? (
@@ -178,7 +187,7 @@ export const SleepStagesCard: React.FC<{ stages: StageMinutes | null; right: str
             {rows.map((r) => (
               <div key={r.key} className="flex items-center" style={{ gap: 8 }}>
                 <span className="shrink-0 rounded-full" style={{ width: 9, height: 9, background: r.color }} />
-                <span className="flex-1" style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{r.key}</span>
+                <span className="flex-1" style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{r.label}</span>
                 <span style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "rgb(var(--c-charcoal))" }}>{hm(r.min)}</span>
                 <span className="text-end" style={{ width: 36, fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 600, color: ink("#3E716D") }}>
                   {Math.round((r.min / total) * 100)}%

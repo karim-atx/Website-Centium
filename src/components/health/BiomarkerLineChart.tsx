@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx, linePx } from "../../theme/textSize";
-import { isRtl } from "../../i18n/core";
+import { isRtl, t } from "../../i18n/core";
 
 // HE1.9.1 #27 (328.9 × 196) and HE1.9.3 #53 (310 × 96): every result as a
 // point on a date axis, the reference range as a band (secondary tint) with
@@ -26,7 +26,7 @@ function niceStep(max: number): number {
   return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * pow;
 }
 
-const t = (iso: string) => new Date(`${iso}T00:00:00Z`).getTime();
+const msOf = (iso: string) => new Date(`${iso}T00:00:00Z`).getTime();
 
 export const BiomarkerLineChart: React.FC<{
   points: ChartPoint[];
@@ -70,7 +70,7 @@ export const BiomarkerLineChart: React.FC<{
     const top0 = Math.max(...values, high ?? 0, low ?? 0, 1) * 1.15;
     const step = niceStep(top0);
     const yMax = Math.ceil(top0 / step) * step;
-    const times = points.map((p) => t(p.date));
+    const times = points.map((p) => msOf(p.date));
     let t0 = Math.min(...times);
     let t1 = Math.max(...times);
     if (t1 === t0) {
@@ -101,7 +101,7 @@ export const BiomarkerLineChart: React.FC<{
   const bandTop = high !== null ? y(high) : pad.top;
   const bandBottom = low !== null ? y(low) : pad.top + plotH;
   const hasBand = low !== null || high !== null;
-  const path = points.map((p, i) => `${i ? "L" : "M"}${x(t(p.date)).toFixed(1)},${y(p.value).toFixed(1)}`).join(" ");
+  const path = points.map((p, i) => `${i ? "L" : "M"}${x(msOf(p.date)).toFixed(1)},${y(p.value).toFixed(1)}`).join(" ");
   const last = points.length - 1;
   const fs = (n: number) => ({ fontSize: textPx(n), fontWeight: 600 }) as React.CSSProperties;
 
@@ -134,7 +134,7 @@ export const BiomarkerLineChart: React.FC<{
       )}
       {full && hasBand && (
         <text x={mx(pad.left + 8)} y={Math.min(bandTop, bandBottom) + 13} fill={dark ? "rgb(var(--c-teal))" : "rgb(var(--c-teal-dark))"} style={fs(9.5)}>
-          {low !== null && high !== null ? `Reference ${low} to ${high}` : high !== null ? `Reference under ${high}` : `Reference above ${low}`}
+          {low !== null && high !== null ? t("Reference {low} to {high}", { low, high }) : high !== null ? t("Reference under {high}", { high }) : t("Reference above {low}", { low: low ?? "" })}
         </text>
       )}
       <line x1={mx(pad.left)} x2={mx(width - pad.right)} y1={pad.top + plotH} y2={pad.top + plotH} stroke={grid} strokeWidth={1} />
@@ -145,8 +145,8 @@ export const BiomarkerLineChart: React.FC<{
       ))}
       {selected !== null && points[selected] && (
         <line
-          x1={x(t(points[selected].date))}
-          x2={x(t(points[selected].date))}
+          x1={x(msOf(points[selected].date))}
+          x2={x(msOf(points[selected].date))}
           y1={y(points[selected].value)}
           y2={pad.top + plotH}
           stroke={ink}
@@ -158,7 +158,7 @@ export const BiomarkerLineChart: React.FC<{
       {points.map((p, i) => {
         const on = i === selected;
         const filled = on || i === last;
-        const cx = x(t(p.date));
+        const cx = x(msOf(p.date));
         const cy = y(p.value);
         return (
           <g key={i}>
@@ -222,7 +222,7 @@ export const ChartTooltip: React.FC<{ value: string; date: string; report: strin
 export function chartPointX(points: ChartPoint[], index: number, width: number, full: boolean): number {
   const pad = full ? { left: 30, right: 8 } : { left: 6, right: 6 };
   const plotW = width - pad.left - pad.right;
-  const times = points.map((p) => t(p.date));
+  const times = points.map((p) => msOf(p.date));
   let t0 = Math.min(...times);
   let t1 = Math.max(...times);
   if (t1 === t0) {
@@ -232,6 +232,6 @@ export function chartPointX(points: ChartPoint[], index: number, width: number, 
   const span = t1 - t0;
   t0 -= span * 0.05;
   t1 += span * 0.05;
-  const px = pad.left + ((t(points[index].date) - t0) / (t1 - t0)) * plotW;
+  const px = pad.left + ((msOf(points[index].date) - t0) / (t1 - t0)) * plotW;
   return isRtl() ? width - px : px;
 }

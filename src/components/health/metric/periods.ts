@@ -5,14 +5,16 @@
 
 import { shiftDate } from "../../../utils/date";
 import { startOfWeekISO } from "../../../utils/week";
+import { t, tk } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
 
 export type MetricRange = "day" | "week" | "month" | "year";
 
 export const RANGE_TABS: { key: MetricRange; label: string }[] = [
-  { key: "day", label: "Day" },
-  { key: "week", label: "Week" },
-  { key: "month", label: "Month" },
-  { key: "year", label: "Year" },
+  { key: "day", label: tk("Day") },
+  { key: "week", label: tk("Week") },
+  { key: "month", label: tk("Month") },
+  { key: "year", label: tk("Year") },
 ];
 
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -24,6 +26,10 @@ const parts = (iso: string) => {
   return { y, m, d };
 };
 const iso = (y: number, m: number, d: number) => `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+// In Arabic the labels below come from Intl in the app's locale (appLocale);
+// English keeps the arrays above, so its output never changes.
+const localDate = (y: number, m: number, d: number) => new Date(y, m - 1, d);
+const fmt = (loc: string, opts: Intl.DateTimeFormatOptions, y: number, m: number, d: number) => new Intl.DateTimeFormat(loc, opts).format(localDate(y, m, d));
 export const daysInMonth = (y: number, m: number) => new Date(y, m, 0).getDate();
 
 export interface Period {
@@ -73,19 +79,23 @@ export function daysOf(p: Period): string[] {
 /** "Mon, Oct 5". */
 export function dayLabel(day: string): string {
   const { y, m, d } = parts(day);
+  const loc = appLocale();
+  if (loc) return fmt(loc, { weekday: "short", month: "short", day: "numeric" }, y, m, d);
   return `${DOW_SHORT[new Date(y, m - 1, d).getDay()]}, ${MONTH_SHORT[m - 1]} ${d}`;
 }
 
 /** "Oct 5". */
 export const shortDate = (day: string) => {
-  const { m, d } = parts(day);
+  const { y, m, d } = parts(day);
+  const loc = appLocale();
+  if (loc) return fmt(loc, { month: "short", day: "numeric" }, y, m, d);
   return `${MONTH_SHORT[m - 1]} ${d}`;
 };
 
 /** "Today", "Yesterday", or "Sun, Oct 4". */
 export function relativeDayTitle(day: string, today: string): string {
-  if (day === today) return "Today";
-  if (day === shiftDate(today, -1)) return "Yesterday";
+  if (day === today) return t("Today");
+  if (day === shiftDate(today, -1)) return t("Yesterday");
   return dayLabel(day);
 }
 
@@ -97,6 +107,12 @@ export function periodLabel(p: Period): string {
   const s = parts(p.start);
   const e = parts(p.end);
   if (p.range === "day") return dayLabel(p.start);
+  const loc = appLocale();
+  if (loc) {
+    if (p.range === "week") return new Intl.DateTimeFormat(loc, { month: "short", day: "numeric" }).formatRange(localDate(s.y, s.m, s.d), localDate(e.y, e.m, e.d));
+    if (p.range === "month") return fmt(loc, { month: "long", year: "numeric" }, s.y, s.m, 1);
+    return String(s.y);
+  }
   if (p.range === "week")
     return s.m === e.m ? `${MONTH_SHORT[s.m - 1]} ${s.d} to ${e.d}` : `${MONTH_SHORT[s.m - 1]} ${s.d} to ${MONTH_SHORT[e.m - 1]} ${e.d}`;
   if (p.range === "month") return `${MONTH_LONG[s.m - 1]} ${s.y}`;
@@ -106,11 +122,48 @@ export function periodLabel(p: Period): string {
 /** The chart card title for the current period ("Today", "This week", "This month", "This year"), else the period label. */
 export function periodTitle(p: Period, today: string): string {
   if (!isCurrentPeriod(p, today)) return periodLabel(p);
-  return p.range === "day" ? "Today" : p.range === "week" ? "This week" : p.range === "month" ? "This month" : "This year";
+  return p.range === "day" ? t("Today") : p.range === "week" ? t("This week") : p.range === "month" ? t("This month") : t("This year");
 }
 
-export const monthShort = (m1: number) => MONTH_SHORT[m1 - 1];
-export const monthLetter = (m1: number) => MONTH_LONG[m1 - 1][0];
+export const monthShort = (m1: number) => {
+  const loc = appLocale();
+  return loc ? fmt(loc, { month: "short" }, 2026, m1, 1) : MONTH_SHORT[m1 - 1];
+};
+/** The year axis letter; in Arabic the narrow month name. */
+export const monthLetter = (m1: number) => {
+  const loc = appLocale();
+  return loc ? fmt(loc, { month: "narrow" }, 2026, m1, 1) : MONTH_LONG[m1 - 1][0];
+};
+const DOW_LETTER = ["S", "M", "T", "W", "T", "F", "S"];
+/** The chart's weekday letter for a "YYYY-MM-DD" day ("M"); in Arabic the narrow weekday name. */
+export const dowLetter = (day: string) => {
+  const { y, m, d } = parts(day);
+  const loc = appLocale();
+  return loc ? fmt(loc, { weekday: "narrow" }, y, m, d) : DOW_LETTER[localDate(y, m, d).getDay()];
+};
+/** The weekday letter for column `i` of a Monday-first week (0 = Monday). 2026-10-05 is a Monday. */
+export const weekLetter = (i: number) => dowLetter(iso(2026, 10, 5 + i));
+/**
+ * The weekday word the pages put before a value ("last Mon,", "Mon, 5,000"):
+ * English keeps its first token of dayLabel (comma included, as before);
+ * Arabic the short weekday name.
+ */
+export const dayWord = (day: string) => {
+  const { y, m, d } = parts(day);
+  const loc = appLocale();
+  return loc ? fmt(loc, { weekday: "short" }, y, m, d) : dayLabel(day).split(" ")[0];
+};
+/** "October 5" (aria summaries). */
+export const longDate = (day: string) => {
+  const { y, m, d } = parts(day);
+  const loc = appLocale();
+  return loc ? fmt(loc, { month: "long", day: "numeric" }, y, m, d) : `${MONTH_LONG[m - 1]} ${d}`;
+};
+/** "October" (the aria summaries' month name). */
+export const monthLong = (m1: number) => {
+  const loc = appLocale();
+  return loc ? fmt(loc, { month: "long" }, 2026, m1, 1) : MONTH_LONG[m1 - 1];
+};
 
 /** Values of a day-keyed series inside a period (logged days only), in day order. */
 export function valuesIn(series: Record<string, number> | { date: string; value: number }[], p: Period): { date: string; value: number }[] {

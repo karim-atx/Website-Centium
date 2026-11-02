@@ -3,6 +3,7 @@ import type { CyclePhase } from "../../services/cycle/types";
 import { PHASE_LABEL, phaseThemeColor } from "../../services/cycle/guidance";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { linePx, textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 // The ring of cycle days (HE1.10 #10, HE1.10.d #10).
 //
@@ -125,7 +126,7 @@ export const CycleRing: React.FC<{
  * colour alone.
  */
 export const PhaseBar: React.FC<{ phases: readonly CyclePhase[]; active: CyclePhase }> = ({ phases, active }) => (
-  <div className="flex" style={{ gap: 6 }} role="list" aria-label="Cycle phases">
+  <div className="flex" style={{ gap: 6 }} role="list" aria-label={t("Cycle phases")}>
     {phases.map((p) => {
       const on = p === active;
       return (

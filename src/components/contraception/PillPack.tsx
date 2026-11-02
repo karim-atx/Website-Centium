@@ -2,6 +2,7 @@ import React from "react";
 import { packDays, type ContraceptionEvent, type ContraceptionPlan } from "../../services/contraception";
 import * as G from "../../services/contraception/guidance";
 import { linePx, textPx } from "../../theme/textSize";
+import { getLanguage, t } from "../../i18n/core";
 
 // The pack, day by day (HE1.10.b.2 #12-#16).
 //
@@ -59,7 +60,9 @@ export const PillPack: React.FC<{
               : ringed || active
                 ? "rgb(var(--c-primary-deep-text))"
                 : "rgb(var(--c-charcoal-faint))";
-          const label = `Day ${d.day}, ${active ? G.PACK_ACTIVE : G.PACK_BREAK}${logged ? `, ${G.EVENT_LABEL[logged]}` : ""}${isToday ? ", today" : ""}`;
+          const label = [t("Day {n}", { n: d.day }), active ? G.PACK_ACTIVE : G.PACK_BREAK, logged ? G.EVENT_LABEL[logged] : null, isToday ? t("today") : null]
+            .filter(Boolean)
+            .join(getLanguage() === "ar" ? "، " : ", ");
           return (
             <span key={d.day} className="flex justify-center" role="gridcell">
               <button

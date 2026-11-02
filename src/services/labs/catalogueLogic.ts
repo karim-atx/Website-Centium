@@ -9,6 +9,8 @@
  * labelled as such, and a range printed on their own report wins.
  */
 
+import { tk } from "../../i18n/core";
+
 export type MarkerSex = "male" | "female";
 
 export interface CatalogueUnit {
@@ -22,10 +24,11 @@ export interface CatalogueUnit {
 export type LabPhase = "follicular" | "mid_cycle" | "luteal" | "postmenopausal";
 
 export const LAB_PHASES: readonly { value: LabPhase; label: string }[] = [
-  { value: "follicular", label: "Follicular" },
-  { value: "mid_cycle", label: "Mid-cycle" },
-  { value: "luteal", label: "Luteal" },
-  { value: "postmenopausal", label: "Postmenopausal" },
+  // Labels are catalogue keys: shown through t() (MarkerEntryRow, ResultFormSheet).
+  { value: "follicular", label: tk("Follicular") },
+  { value: "mid_cycle", label: tk("Mid-cycle") },
+  { value: "luteal", label: tk("Luteal") },
+  { value: "postmenopausal", label: tk("Postmenopausal") },
 ];
 
 export interface CatalogueRange {

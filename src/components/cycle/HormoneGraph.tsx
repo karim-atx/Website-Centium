@@ -3,7 +3,7 @@ import { curvePoints, hormoneCurves, HORMONES, type Hormone } from "../../servic
 import { HORMONE_DISCLAIMER, HORMONE_EXPLAINER, HORMONE_LABEL, HORMONE_TITLE } from "../../services/cycle/guidance";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
-import { isRtl } from "../../i18n/core";
+import { isRtl, t } from "../../i18n/core";
 
 // The typical hormone pattern, scaled to this user's cycle (HE1.10 #29-#37).
 //
@@ -74,7 +74,11 @@ export const HormoneGraph: React.FC<{
         preserveAspectRatio="none"
         style={{ display: "block", overflow: "visible", marginTop: 12 }}
         role="img"
-        aria-label={`${HORMONE_TITLE}, ${HORMONE_DISCLAIMER}${markerX !== null && !hideDayLabel ? `. Day ${selectedDay} marked` : ""}`}
+        aria-label={
+          markerX !== null && !hideDayLabel
+            ? t("{title}, {disclaimer}. Day {n} marked", { title: HORMONE_TITLE, disclaimer: HORMONE_DISCLAIMER, n: selectedDay as number })
+            : `${HORMONE_TITLE}, ${HORMONE_DISCLAIMER}`
+        }
       >
         {/* Ovulation, the one landmark the curves are built around (repo): dashed. */}
         <line x1={ovuX} y1={0} x2={ovuX} y2={PLOT} stroke="rgb(var(--c-charcoal))" strokeOpacity={0.18} strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
@@ -111,7 +115,7 @@ export const HormoneGraph: React.FC<{
               fontWeight: 700,
             }}
           >
-            Day {selectedDay}
+            {t("Day {n}", { n: selectedDay as number })}
           </span>
         </div>
       )}
