@@ -6,6 +6,7 @@ import { formatPrice } from "../../utils/price";
 import { formatShortDate } from "../../utils/date";
 import { BLOCKED_TEXT } from "../moderation/text";
 import { rateLimitMessage } from "../network-error";
+import { t, tn } from "../../i18n/core";
 
 /** B7 MB-03 adds quarterly and semiannually to billing_period. */
 export type Billing = "daily" | "monthly" | "quarterly" | "semiannually" | "annually";
@@ -236,12 +237,12 @@ export function stage4Message(code: string | undefined, serverMessage: string, f
 /** MO1.4.2.3's review age: "2 days ago", "1 week ago", "3 weeks ago", "1 month ago". */
 export function reviewAge(iso: string, now: Date = new Date()): string {
   const days = Math.floor((now.getTime() - new Date(iso).getTime()) / 86_400_000);
-  const unit = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"} ago`;
-  if (days < 1) return "Today";
-  if (days < 7) return unit(days, "day");
-  if (days < 30) return unit(Math.floor(days / 7), "week");
-  if (days < 365) return unit(Math.floor(days / 30), "month");
-  return unit(Math.floor(days / 365), "year");
+  // EH3: in the app's language (the keys are in i18n/ar/market.ts; GymReviews is the only reader).
+  if (days < 1) return t("Today");
+  if (days < 7) return tn(days, "{n} day ago", "{n} days ago");
+  if (days < 30) return tn(Math.floor(days / 7), "{n} week ago", "{n} weeks ago");
+  if (days < 365) return tn(Math.floor(days / 30), "{n} month ago", "{n} months ago");
+  return tn(Math.floor(days / 365), "{n} year ago", "{n} years ago");
 }
 
 /**

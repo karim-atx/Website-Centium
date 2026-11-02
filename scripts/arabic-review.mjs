@@ -31,6 +31,7 @@ const AREAS = [
   ["venues", "Class no-shows, gym pass and member codes"],
   ["certificates", "Your certificates (Courses)"],
   ["marketplace", "Marketplace pages: discover, classes, gyms, bookings and rewards"],
+  ["market", "Marketplace components: class cards, venues, offers, vouchers and hiring"],
 ];
 
 const rows = [];

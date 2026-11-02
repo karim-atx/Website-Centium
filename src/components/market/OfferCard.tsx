@@ -2,10 +2,11 @@ import React from "react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx, linePx } from "../../theme/textSize";
 import { marketPalette } from "../../theme/marketTokens";
-import { statusChip, type OfferStatus } from "./marketColor";
+import { offerStatusLabel, statusChip, type OfferStatus } from "./marketColor";
 import { PointsFigure } from "./PointsFigure";
 import { formatPoints, offerProgress } from "./pointsModel";
 import { FOCUS_CSS, usePress } from "./usePress";
+import { tn } from "../../i18n/core";
 
 // Market + Share 3.0 · OfferCard (HANDOVER §4 C-MO.4 "Rewards", B-MA.3, §5).
 //
@@ -31,7 +32,6 @@ import { FOCUS_CSS, usePress } from "./usePress";
 
 export type { OfferStatus };
 
-const STATUS_LABEL: Record<OfferStatus, string> = { active: "Active", scheduled: "Scheduled", paused: "Paused", expired: "Expired" };
 
 interface Common {
   headline: string;
@@ -100,14 +100,14 @@ export const OfferCard: React.FC<OfferCardProps> = (props) => {
                 type="button"
                 onClick={props.onPress}
                 {...press.handlers}
-                aria-label={props.pressLabel ?? `${props.headline}, ${STATUS_LABEL[props.status]}. ${props.meta}`}
+                aria-label={props.pressLabel ?? `${props.headline}, ${offerStatusLabel(props.status)}. ${props.meta}`}
                 className="market-focus"
                 style={{ position: "absolute", inset: 0, borderRadius: 20, background: "transparent", border: 0, padding: 0, cursor: "pointer" }}
               />
             ) : null}
             <span style={{ display: "flex", alignItems: "flex-start", gap: 10, pointerEvents: "none" }}>
               <span aria-hidden={pressable || undefined} style={{ flex: 1, minWidth: 0, fontSize: textPx(14), fontWeight: 800, lineHeight: linePx(20) }}>{props.headline}</span>
-              <span aria-hidden={pressable || undefined} style={{ fontSize: textPx(10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: chipBg, color: chipInk, whiteSpace: "nowrap" }}>{STATUS_LABEL[props.status]}</span>
+              <span aria-hidden={pressable || undefined} style={{ fontSize: textPx(10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: chipBg, color: chipInk, whiteSpace: "nowrap" }}>{offerStatusLabel(props.status)}</span>
               <span style={{ position: "relative", pointerEvents: "auto", flexShrink: 0 }}>{props.trailing}</span>
             </span>
             <span aria-hidden={pressable || undefined} style={{ marginTop: 4, display: "flex", justifyContent: "space-between", gap: 10, fontSize: textPx(11.5), color: m.faint, pointerEvents: "none" }}>
@@ -124,7 +124,7 @@ export const OfferCard: React.FC<OfferCardProps> = (props) => {
         <Tag {...tagProps} className={`${pressable ? "market-focus " : ""}${props.className ?? ""}`} style={{ display: "block", lineHeight: "normal", borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, padding: "14px 16px", color: m.ink, ...reset, ...props.style }}>
           <span style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
             <span style={{ flex: 1, minWidth: 0, fontSize: textPx(14), fontWeight: 800, lineHeight: linePx(20) }}>{props.headline}</span>
-            <span style={{ fontSize: textPx(10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: chipBg, color: chipInk, whiteSpace: "nowrap" }}>{STATUS_LABEL[props.status]}</span>
+            <span style={{ fontSize: textPx(10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: chipBg, color: chipInk, whiteSpace: "nowrap" }}>{offerStatusLabel(props.status)}</span>
           </span>
           <span style={{ marginTop: 4, display: "flex", justifyContent: "space-between", gap: 10, fontSize: textPx(11.5), color: m.faint }}>
             <span style={{ minWidth: 0 }}>{props.meta}</span>
@@ -142,7 +142,7 @@ export const OfferCard: React.FC<OfferCardProps> = (props) => {
       {pressable ? <style>{FOCUS_CSS}</style> : null}
       <Tag
         {...tagProps}
-        aria-label={pressable ? `${p.owner}. ${p.headline}. ${formatPoints(p.cost)} points. ${prog.note}` : undefined}
+        aria-label={pressable ? `${p.owner}. ${p.headline}. ${tn(p.cost, "{points} point", "{points} points", { points: formatPoints(p.cost) })}. ${prog.note}` : undefined}
         className={`${pressable ? "market-focus " : ""}${p.className ?? ""}`}
         style={{ position: "relative", lineHeight: "normal", overflow: "hidden", borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, paddingBlock: "12px 14px", paddingInline: "12px 14px", display: "flex", gap: 12, color: m.ink, ...reset, ...p.style }}
       >

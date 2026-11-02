@@ -77,8 +77,8 @@ export const ConfirmationStrip: React.FC<ConfirmationStripProps> = ({ text, acti
       ) : null}
       {action ? (
         <>
-          <span aria-hidden style={{ position: "absolute", right: stub - 7, top: -7, width: 14, height: 14, borderRadius: 999, background: notch }} />
-          <span aria-hidden style={{ position: "absolute", right: stub - 7, bottom: -7, width: 14, height: 14, borderRadius: 999, background: notch }} />
+          <span aria-hidden style={{ position: "absolute", insetInlineEnd: stub - 7, top: -7, width: 14, height: 14, borderRadius: 999, background: notch }} />
+          <span aria-hidden style={{ position: "absolute", insetInlineEnd: stub - 7, bottom: -7, width: 14, height: 14, borderRadius: 999, background: notch }} />
         </>
       ) : null}
     </div>

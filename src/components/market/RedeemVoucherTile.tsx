@@ -4,6 +4,7 @@ import { NO_ICON_SCALE } from "../pro/proInk";
 import { MARKET_MOTION } from "../../theme/marketTokens";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { FOCUS_CSS, usePress } from "./usePress";
+import { isRtl, t } from "../../i18n/core";
 
 // Market + Share 3.0 · RedeemVoucherTile (HANDOVER §4 B-MA.1 item 1, P-MA.1;
 // tokens.json redeemVoucherTile; Business Marketplace Screens lines 54–63 and
@@ -49,7 +50,7 @@ export const RedeemVoucherTile: React.FC<RedeemVoucherTileProps> = ({ onPress, c
     <style>{FOCUS_CSS}</style>
     <button
       type="button"
-      aria-label="Redeem voucher. Scan or enter code"
+      aria-label={`${t("Redeem voucher")}. ${t("Scan or enter code")}`}
       onClick={onPress}
       {...press.handlers}
       className={`market-focus ${className ?? ""}`}
@@ -103,10 +104,10 @@ export const RedeemVoucherTile: React.FC<RedeemVoucherTileProps> = ({ onPress, c
           </span>
           <span style={{ width: 0, height: 72, flex: "none", borderInlineStart: "1.5px dashed rgba(255,255,255,0.4)" }} />
           <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: textPx(17), lineHeight: linePx(22), fontWeight: 700, color: "#FFFFFF" }}>Redeem voucher</span>
-            <span style={{ fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 400, color: "rgba(255,255,255,0.8)" }}>Scan or enter code</span>
+            <span style={{ fontSize: textPx(17), lineHeight: linePx(22), fontWeight: 700, color: "#FFFFFF" }}>{t("Redeem voucher")}</span>
+            <span style={{ fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 400, color: "rgba(255,255,255,0.8)" }}>{t("Scan or enter code")}</span>
           </span>
-          <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: "none", display: "block", ...NO_ICON_SCALE }}>
+          <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: "none", display: "block", ...(isRtl() ? { transform: "scaleX(-1)" } : NO_ICON_SCALE) }}>
             <path d="M5 12h14" />
             <path d="m12 5 7 7-7 7" />
           </svg>
