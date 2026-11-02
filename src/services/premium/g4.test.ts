@@ -43,6 +43,11 @@ import {
   PREMIUM_DB_THEMES,
   parseColorThemes,
   themeAccess,
+  themeName,
+  FREE_DESIGNS,
+  SHARE_DESIGN_KEYS,
+  insightAreaLabel,
+  insightsToggleShown,
   PREMIUM_DESIGNS,
   designAccess,
   parseShareDesigns,
@@ -54,7 +59,7 @@ import {
 import { COLOR_THEMES, PREMIUM_COLOR_THEMES, isPremiumTheme, normalizeColorTheme } from "../../theme/colorThemes.ts";
 import { fromDbColorTheme, toDbColorTheme } from "../presentation/mapping.ts";
 import { isPremiumThemeRefusal } from "../presentation/save.ts";
-import { PREMIUM_BACKGROUND, isPremiumBackground, premiumColours } from "../../components/share/client/premiumDesigns.ts";
+import { FREE_BACKGROUND, PREMIUM_BACKGROUND, designKeyOf, isPremiumBackground, premiumColours } from "../../components/share/client/premiumDesigns.ts";
 import { cardColours } from "../../components/share/client/clientCardModel.ts";
 
 // ---- hidden while off ----
@@ -116,7 +121,8 @@ test("an item is a recipe, a food, one of my own foods, or a note, by the refere
     null,
   ]);
   assert.deepEqual(items.map((i) => [i.id, i.kind]), [["a", "recipe"], ["b", "food"], ["c", "custom_food"], ["d", "note"], ["e", "recipe"]]);
-  assert.deepEqual(items.map(itemTitle), ["Porridge", "Milk", "My bar", "Eat out", "A deleted recipe"]);
+  // G fixes: deleting a recipe or food takes its lines with it, so a nameless line is never "deleted": plain "Recipe".
+  assert.deepEqual(items.map(itemTitle), ["Porridge", "Milk", "My bar", "Eat out", "Recipe"]);
   assert.deepEqual(items.map((i) => itemDetail(i, "en-US")), ["2 servings", "200 ml", "1 serving", "Note", "1 serving"]);
   assert.equal(parsePlan({ id: "p1", week_start: "2026-11-02", name: "My meal plan" })?.weekStart, "2026-11-02");
   assert.equal(parsePlan(null), null);
@@ -292,12 +298,20 @@ test("photos come newest first, and a pair is shown earlier first with the days 
 
 test("a Premium theme is hidden while the switch is off or unlisted, locked without Premium, open with it; the five stay free", () => {
   const rows = parseColorThemes([
-    { theme: "centium", premium: false, locked: false },
-    { theme: "forest_sage", premium: true, locked: true },
-    { theme: "midnight_indigo", premium: true, locked: false },
+    { theme: "centium", name: null, premium: false, locked: false },
+    { theme: "forest_sage", name: "Forest sage", premium: true, locked: true },
+    { theme: "midnight_indigo", name: "Midnight indigo", premium: true, locked: false },
+    { theme: "ocean_teal", name: "Ocean teal", premium: true, locked: false },
     { theme: null },
   ]);
-  assert.equal(rows.length, 3);
+  assert.equal(rows.length, 4);
+  assert.equal(rows[1].name, "Forest sage");
+  assert.equal(rows[0].name, null);
+  // G fixes: the app's own t() label for a theme it knows; the Database's name only for a key it doesn't.
+  assert.equal(themeName("forest_sage", "Forest sage", rows), "Forest sage");
+  assert.equal(themeName("midnight_indigo", "Midnight indigo", [{ theme: "midnight_indigo", name: "Something else", premium: true, locked: false }]), "Midnight indigo");
+  assert.equal(themeName("ocean_teal", null, rows), "Ocean teal");
+  assert.equal(themeName("ocean_teal", null, null), "ocean_teal");
   assert.equal(themeAccess("forest_sage", { premiumOn: true, rows }), "locked");
   assert.equal(themeAccess("midnight_indigo", { premiumOn: true, rows }), "open");
   assert.equal(themeAccess("plum_lilac", { premiumOn: true, rows }), "hidden"); // not listed
@@ -324,17 +338,26 @@ test("a Premium theme is hidden while the switch is off or unlisted, locked with
 test("the three Premium share designs: hidden while off or unlisted, locked without Premium; today's backgrounds untouched", () => {
   const rows = parseShareDesigns([
     { key: "centium", name: "Centium", premium: false, locked: false },
-    { key: "clean", name: "Clean", premium: false, locked: false },
+    { key: "pattern", name: "Pattern", premium: false, locked: false },
+    { key: "photo", name: "Photo", premium: false, locked: false },
     { key: "bold", name: "Bold", premium: true, locked: true },
     { key: "gradient", name: "Gradient", premium: true, locked: false },
     { key: "premium_badge", name: "Premium badge", premium: true, locked: true },
   ]);
-  assert.deepEqual(rows.map((r) => r.key), ["centium", "clean", "bold", "gradient", "premium_badge"]);
+  assert.deepEqual(rows.map((r) => r.key), ["centium", "pattern", "photo", "bold", "gradient", "premium_badge"]);
+  // G fixes: the keys are centium, pattern, photo (free) and bold, gradient, premium_badge; "clean" is gone.
+  assert.deepEqual([...SHARE_DESIGN_KEYS], rows.map((r) => r.key));
+  assert.equal((SHARE_DESIGN_KEYS as readonly string[]).includes("clean"), false);
+  // The sheet's three free backgrounds map to those keys, and back.
+  assert.deepEqual(FREE_DESIGNS.map((k) => FREE_BACKGROUND[k]), ["B", "I", "P"]);
+  assert.deepEqual(["B", "I", "P", "BOLD", "GRAD", "BADGE"].map(designKeyOf), ["centium", "pattern", "photo", "bold", "gradient", "premium_badge"]);
+  assert.equal(designKeyOf("clean"), null);
+  for (const k of FREE_DESIGNS) assert.equal(designAccess(k as never, { premiumOn: true, rows }), "hidden", "a free design is never a Premium chip");
   assert.equal(designAccess("bold", { premiumOn: true, rows }), "locked");
   assert.equal(designAccess("gradient", { premiumOn: true, rows }), "open");
   assert.equal(designAccess("bold", { premiumOn: false, rows }), "hidden");
   assert.equal(designAccess("bold", { premiumOn: true, rows: null }), "hidden");
-  assert.equal(designAccess("bold", { premiumOn: true, rows: rows.slice(0, 2) }), "hidden"); // the switch off for me: only the free ones are listed
+  assert.equal(designAccess("bold", { premiumOn: true, rows: rows.slice(0, 3) }), "hidden"); // the switch off for me: only the free ones are listed
   assert.deepEqual(PREMIUM_DESIGNS.map((k) => PREMIUM_BACKGROUND[k]), ["BOLD", "GRAD", "BADGE"]);
   for (const bg of ["BOLD", "GRAD", "BADGE"] as const) {
     assert.equal(isPremiumBackground(bg), true);
@@ -351,17 +374,52 @@ test("the three Premium share designs: hidden while off or unlisted, locked with
 
 // ---- cycle insights ----
 
-test("cycle insights: an empty list shows nothing at all; a free member sees the lock; insights show as a card", () => {
-  const empty = parseCycleInsights([{ phase: "luteal", cycle_day: 21, insights: [] }]);
-  assert.deepEqual(empty, { phase: "luteal", cycleDay: 21, insights: [] });
+test("cycle insights (G fixes): nothing, just the note, or the four insights and the note; the lock for a free member", () => {
+  // An empty list and a null note (not tracking, turned off, pregnant, no copy): nothing at all.
+  const empty = parseCycleInsights([{ phase: "luteal", cycle_day: 21, insights: [], note: null }]);
+  assert.deepEqual(empty, { phase: "luteal", cycleDay: 21, insights: [], note: null });
   assert.deepEqual(insightsView({ kind: "ready", value: empty }), { kind: "none" });
+  // Only the note (not predictable yet, contraception, no phase): just the note, no Premium label.
+  const noteOnly = parseCycleInsights([{ phase: null, cycle_day: null, insights: [], note: { key: "cycle.note", body: "Everyone's cycle is different." } }]);
+  assert.deepEqual(insightsView({ kind: "ready", value: noteOnly }), { kind: "note", note: { key: "cycle.note", body: "Everyone's cycle is different." } });
+  // A free member (ATXQ1): the locked card. ATXQ0, off, loading, failed: nothing.
   assert.deepEqual(insightsView({ kind: "premium" }), { kind: "locked" });
   for (const kind of ["hidden", "loading", "error"]) assert.deepEqual(insightsView({ kind }), { kind: "none" }, kind);
-  const full = parseCycleInsights([{ phase: "follicular", cycle_day: "8", insights: [{ title: "Energy", body: "Often rises." }, { title: "", body: "dropped" }, { title: "No body" }] }]);
-  assert.deepEqual(full.insights, [{ title: "Energy", body: "Often rises." }]);
+  // Otherwise the four insights, one per area, and the note.
+  const full = parseCycleInsights([
+    {
+      phase: "follicular",
+      cycle_day: "8",
+      insights: [
+        { key: "cycle.follicular.training", area: "training", title: "Energy", body: "Often rises." },
+        { key: "cycle.follicular.food", area: "food", title: "Appetite", body: "Often steady." },
+        { key: "cycle.follicular.sleep", area: "sleep", title: "Sleep", body: "Often easier." },
+        { key: "cycle.follicular.mood", area: "mood", title: "Mood", body: "Often lifts." },
+        { title: "", body: "dropped" },
+        { title: "No body" },
+        { key: "x", area: "weather", title: "Unknown area", body: "kept, unlabelled" },
+      ],
+      note: { key: "cycle.note", body: "Everyone's cycle is different." },
+    },
+  ]);
+  assert.deepEqual(full.insights.map((i) => i.area), ["training", "food", "sleep", "mood", null]);
+  assert.deepEqual(full.insights[0], { key: "cycle.follicular.training", area: "training", title: "Energy", body: "Often rises." });
   assert.equal(full.cycleDay, 8);
-  assert.equal(insightsView({ kind: "ready", value: full }).kind, "card");
-  assert.deepEqual(parseCycleInsights(null), { phase: null, cycleDay: null, insights: [] });
+  assert.equal(full.note?.body, "Everyone's cycle is different.");
+  const view = insightsView({ kind: "ready", value: full });
+  assert.equal(view.kind, "card");
+  assert.deepEqual(full.insights.map((i) => insightAreaLabel(i.area)), ["Training", "Food", "Sleep", "Mood", null]);
+  // A note without a body is no note.
+  assert.equal(parseCycleInsights([{ insights: [], note: { key: "cycle.note" } }]).note, null);
+  assert.deepEqual(parseCycleInsights(null), { phase: null, cycleDay: null, insights: [], note: null });
+  // The member's switch: only while the Premium switch is on, G4 is there and the value could be read.
+  const on = { premiumOn: true };
+  assert.equal(insightsToggleShown(on, true, true), true);
+  assert.equal(insightsToggleShown(on, true, false), true);
+  assert.equal(insightsToggleShown(on, true, null), false);
+  assert.equal(insightsToggleShown(on, false, true), false);
+  assert.equal(insightsToggleShown({ premiumOn: false }, true, true), false);
+  assert.equal(insightsToggleShown(null, true, true), false);
   assert.equal(phaseName("menstrual"), "Period");
   assert.equal(phaseName("pregnant"), null);
 });

@@ -299,10 +299,14 @@ export function unitWord(u: FoodUnit): string {
   }
 }
 
-/** The row's title: the recipe or food (or the note itself). */
+/**
+ * The row's title: the recipe or food (or the note itself). Deleting a recipe
+ * or food takes its plan lines with it (G fixes), so a line always has one;
+ * a name the reader can't see reads as plain "Recipe" / "Food".
+ */
 export function itemTitle(i: PlanItem): string {
   if (i.kind === "note") return i.note ?? "";
-  return i.name ?? (i.kind === "recipe" ? t("A deleted recipe") : t("A deleted food"));
+  return i.name ?? (i.kind === "recipe" ? t("Recipe") : t("Food"));
 }
 
 /** The row's second line: "2 servings" for a recipe, "200 g" for a food, "Note" for a note. */
@@ -550,16 +554,28 @@ export const PREMIUM_DB_THEMES: readonly PremiumDbTheme[] = ["forest_sage", "mid
 
 export interface ThemeAccessRow {
   theme: string;
+  /** The Database's name for a Premium theme (G fixes); null for the free ones. */
+  name: string | null;
   premium: boolean;
   locked: boolean;
 }
 
-/** my_color_themes(): theme, premium, locked (Premium ones only while the switch is on). */
+/** my_color_themes(): theme, name, premium, locked (Premium ones only while the switch is on). */
 export function parseColorThemes(data: unknown): ThemeAccessRow[] {
   return rowsOf(data).flatMap((r): ThemeAccessRow[] => {
     const theme = str(r.theme);
-    return theme ? [{ theme, premium: r.premium === true, locked: r.locked === true }] : [];
+    return theme ? [{ theme, name: str(r.name), premium: r.premium === true, locked: r.locked === true }] : [];
   });
+}
+
+/**
+ * A theme's name on the picker: the app's own label (through t(), with its
+ * Arabic) for a theme the app knows; the Database's name only for a key it
+ * doesn't; else the key itself.
+ */
+export function themeName(theme: string, appLabel: string | null | undefined, rows: readonly ThemeAccessRow[] | null): string {
+  if (appLabel) return t(appLabel);
+  return rows?.find((r) => r.theme === theme)?.name ?? theme;
 }
 
 export type ThemeAccess = "hidden" | "locked" | "open";
@@ -597,6 +613,14 @@ export function parseShareDesigns(data: unknown): ShareDesignRow[] {
 export type PremiumDesign = "bold" | "gradient" | "premium_badge";
 export const PREMIUM_DESIGNS: readonly PremiumDesign[] = ["bold", "gradient", "premium_badge"];
 
+/** The three free designs (today's backgrounds: Centium, the metric pattern, Your photo), by the Database's key (G fixes). */
+export type FreeDesign = "centium" | "pattern" | "photo";
+export const FREE_DESIGNS: readonly FreeDesign[] = ["centium", "pattern", "photo"];
+
+/** Every share-card design key the Database lists and this app draws. */
+export type ShareDesignKey = FreeDesign | PremiumDesign;
+export const SHARE_DESIGN_KEYS: readonly ShareDesignKey[] = [...FREE_DESIGNS, ...PREMIUM_DESIGNS];
+
 /** A Premium design in the share sheet: hidden (switch off / not listed), locked, or open. */
 export function designAccess(key: PremiumDesign, o: { premiumOn: boolean; rows: readonly ShareDesignRow[] | null }): ThemeAccess {
   if (!o.premiumOn || !o.rows) return "hidden";
@@ -607,8 +631,19 @@ export function designAccess(key: PremiumDesign, o: { premiumOn: boolean; rows: 
 
 // ---- cycle insights ----
 
+/** An insight's area (G fixes): one insight per area for a phase. */
+export type InsightArea = "training" | "food" | "sleep" | "mood";
+const AREAS: readonly InsightArea[] = ["training", "food", "sleep", "mood"];
+
 export interface CycleInsight {
+  key: string | null;
+  area: InsightArea | null;
   title: string;
+  body: string;
+}
+
+export interface CycleNote {
+  key: string | null;
   body: string;
 }
 
@@ -616,34 +651,64 @@ export interface CycleInsights {
   phase: string | null;
   cycleDay: number | null;
   insights: CycleInsight[];
+  /** The general note (cycle.note), shown under the insights; or on its own. */
+  note: CycleNote | null;
 }
 
-/** my_cycle_insights(): phase, cycle_day, insights [{title, body}] (the member's language). */
+/** my_cycle_insights(): phase, cycle_day, insights [{key, area, title, body}] and note {key, body} (Database copy, English for now). */
 export function parseCycleInsights(data: unknown): CycleInsights {
   const r = rowsOf(data)[0] ?? obj(data);
-  if (!r) return { phase: null, cycleDay: null, insights: [] };
+  if (!r) return { phase: null, cycleDay: null, insights: [], note: null };
   const list = Array.isArray(r.insights) ? r.insights : [];
+  const n = obj(r.note);
+  const noteBody = n ? str(n.body) : null;
   return {
     phase: str(r.phase),
     cycleDay: num(r.cycle_day),
-    insights: rowsOf(list).flatMap((i) => {
+    insights: rowsOf(list).flatMap((i): CycleInsight[] => {
       const title = str(i.title);
       const body = str(i.body);
-      return title && body ? [{ title, body }] : [];
+      const area = str(i.area);
+      return title && body ? [{ key: str(i.key), area: area && (AREAS as readonly string[]).includes(area) ? (area as InsightArea) : null, title, body }] : [];
     }),
+    note: noteBody ? { key: n ? str(n.key) : null, body: noteBody } : null,
   };
 }
 
+/** An insight's area label: Training, Food, Sleep, Mood. Null for an area the app doesn't know. */
+export function insightAreaLabel(area: InsightArea | null): string | null {
+  switch (area) {
+    case "training":
+      return t("Training");
+    case "food":
+      return t("Food");
+    case "sleep":
+      return t("Sleep");
+    case "mood":
+      return t("Mood");
+    default:
+      return null;
+  }
+}
+
 /**
- * What the cycle tracker shows: NOTHING for an empty list (no card, no
- * "coming soon": the copy is loaded after Karim approves it), nothing while
- * hidden, loading or failed; the locked row for a free member; the card with
- * insights.
+ * What the cycle tracker shows (G fixes):
+ * - an empty list and a null note (not tracking, insights turned off,
+ *   pregnant, no copy; the Database asks no Premium): NOTHING at all;
+ * - only the note (not predictable yet, hormonal contraception, no phase):
+ *   just the note, with no Premium label;
+ * - otherwise the insights (one per area, labelled) and the note;
+ * - ATXQ1 (a free member): the locked card with the label and the prompt;
+ * - ATXQ0, the switch off, loading, a Database without G4 or a failure:
+ *   nothing.
  */
-export type InsightsView = { kind: "none" } | { kind: "locked" } | { kind: "card"; value: CycleInsights };
+export type InsightsView = { kind: "none" } | { kind: "locked" } | { kind: "note"; note: CycleNote } | { kind: "card"; value: CycleInsights };
 export function insightsView(state: { kind: string; value?: CycleInsights }): InsightsView {
   if (state.kind === "premium") return { kind: "locked" };
-  if (state.kind === "ready" && state.value && state.value.insights.length > 0) return { kind: "card", value: state.value };
+  if (state.kind !== "ready" || !state.value) return { kind: "none" };
+  const v = state.value;
+  if (v.insights.length > 0) return { kind: "card", value: v };
+  if (v.note) return { kind: "note", note: v.note };
   return { kind: "none" };
 }
 
@@ -662,3 +727,11 @@ export function phaseName(p: string | null): string | null {
       return null;
   }
 }
+
+/**
+ * The "Phase insights" switch in the cycle settings (G fixes): only while the
+ * Premium switch is on, the Database has G4, and insights_enabled could be
+ * read. Off, loading or unknown: no row (today's settings).
+ */
+export const insightsToggleShown = (p: Pick<MyPremium, "premiumOn"> | null | undefined, g4: boolean, enabled: boolean | null): boolean =>
+  !!p && p.premiumOn && g4 && enabled !== null;

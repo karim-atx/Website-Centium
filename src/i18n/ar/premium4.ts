@@ -70,8 +70,6 @@ const premium4: Catalogue = {
   "This week already has a plan.": "لهذا الأسبوع خطة بالفعل.",
   "Check the amount and try again.": "تحقّق من الكمية وحاول مرة أخرى.",
   "{n} kcal": "{n} سعرة",
-  "A deleted recipe": "وصفة محذوفة",
-  "A deleted food": "طعام محذوف",
   "Note": "ملاحظة",
   "What to add": "ما الذي تضيفه",
   "Recipe": "وصفة",

@@ -10,15 +10,25 @@
 // paintDom before any text is drawn).
 //
 // Today's three backgrounds (Centium, the metric pattern, Your photo) stay
-// free (Karim's plan keeps today's styles free).
+// free (Karim's plan keeps today's styles free); the Database lists them as
+// centium, pattern and photo (FREE_BACKGROUND).
 
 import type { CardColours } from "./clientCardModel";
-import type { PremiumDesign } from "../../../services/premium/g4";
+import { FREE_DESIGNS, PREMIUM_DESIGNS, type FreeDesign, type PremiumDesign, type ShareDesignKey } from "../../../services/premium/g4";
 
 /** The card's `background` value for each Premium design (data-bg on the DOM card). */
 export type PremiumBackground = "BOLD" | "GRAD" | "BADGE";
 export const PREMIUM_BACKGROUND: Record<PremiumDesign, PremiumBackground> = { bold: "BOLD", gradient: "GRAD", premium_badge: "BADGE" };
 export const isPremiumBackground = (bg: string | null | undefined): bg is PremiumBackground => bg === "BOLD" || bg === "GRAD" || bg === "BADGE";
+
+/** Today's three free backgrounds (the sheet's first chips), by the Database's design key (G fixes: centium, pattern, photo). */
+export type FreeBackground = "B" | "I" | "P";
+export const FREE_BACKGROUND: Record<FreeDesign, FreeBackground> = { centium: "B", pattern: "I", photo: "P" };
+
+/** The Database's design key for a background on the sheet, or null for one it does not list. */
+export function designKeyOf(bg: string): ShareDesignKey | null {
+  return FREE_DESIGNS.find((k) => FREE_BACKGROUND[k] === bg) ?? PREMIUM_DESIGNS.find((k) => PREMIUM_BACKGROUND[k] === bg) ?? null;
+}
 
 // Bold: near-black with one strong gold accent (11:1). Gradient: terracotta to
 // rose to lavender (white type 4.4:1 or more). Premium badge: the Centium pair,

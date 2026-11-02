@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { COLOR_THEMES, PREMIUM_COLOR_THEMES } from "../../theme/colorThemes";
 import { useIsDark } from "../../hooks/useIsDark";
 import { usePremium } from "../../services/premium/hooks";
-import { themeAccess } from "../../services/premium/g4";
+import { themeAccess, themeName } from "../../services/premium/g4";
 import { askLocked } from "../premium/g3/useG3";
 import { useColorThemeAccess } from "../premium/g4/useG4";
 import { PremiumLabel } from "../premium/PremiumAskHost";
@@ -82,6 +82,8 @@ export const ColorThemePicker: React.FC = () => {
 // label above the row, and a tap opens the prompt instead of choosing; an
 // ATXQ1 from saving puts the saved theme back and asks too
 // (usePresentationSync). Nothing at all while the switch is off or loading.
+// The names are the app's own t() labels (with their Arabic); my_color_themes()
+// name is only the fallback for a key the app does not know (themeName).
 const PremiumThemes: React.FC<{ halves: string }> = ({ halves }) => {
   const { colorTheme, setColorTheme, t } = useApp();
   const { premium } = usePremium();
@@ -117,7 +119,7 @@ const PremiumThemes: React.FC<{ halves: string }> = ({ halves }) => {
                 {/* The swatches' dark primaries carry white at 4.5:1 (#2F7D5B, #4146C8, #8C3A87). */}
                 {selected ? <Check size={15} className="text-white" strokeWidth={3} aria-hidden /> : locked ? <Lock size={13} className="text-white" strokeWidth={2.5} aria-hidden /> : null}
               </span>
-              <span className={clsx("text-center text-[11px] leading-tight", selected ? "font-bold text-primary-accent" : "font-medium text-charcoal-soft")}>{t(th.label)}</span>
+              <span className={clsx("text-center text-[11px] leading-tight", selected ? "font-bold text-primary-accent" : "font-medium text-charcoal-soft")}>{themeName(th.db, th.label, rows)}</span>
             </button>
           );
         })}

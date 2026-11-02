@@ -8061,6 +8061,7 @@ export type Database = {
       cycle_settings: {
         Row: {
           conditions: string[]
+          insights_enabled: boolean
           luteal_length: number
           method_reminders: boolean
           notification_detail: Database["public"]["Enums"]["notification_detail_level"]
@@ -8077,6 +8078,7 @@ export type Database = {
         }
         Insert: {
           conditions?: string[]
+          insights_enabled?: boolean
           luteal_length?: number
           method_reminders?: boolean
           notification_detail?: Database["public"]["Enums"]["notification_detail_level"]
@@ -8093,6 +8095,7 @@ export type Database = {
         }
         Update: {
           conditions?: string[]
+          insights_enabled?: boolean
           luteal_length?: number
           method_reminders?: boolean
           notification_detail?: Database["public"]["Enums"]["notification_detail_level"]
@@ -30245,6 +30248,7 @@ export type Database = {
         Args: never
         Returns: {
           locked: boolean
+          name: string
           premium: boolean
           theme: Database["public"]["Enums"]["color_theme"]
         }[]
@@ -30318,6 +30322,7 @@ export type Database = {
         Returns: {
           cycle_day: number
           insights: Json
+          note: Json
           phase: Database["public"]["Enums"]["cycle_phase_kind"]
         }[]
       }

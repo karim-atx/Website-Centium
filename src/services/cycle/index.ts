@@ -122,6 +122,23 @@ export async function getCycleSettings(userId: string): Promise<SettingsResult> 
   return { ok: true, settings: data ? toSettings(data as unknown as Parameters<typeof toSettings>[0]) : null };
 }
 
+/**
+ * Round G4 (G fixes): cycle_settings.insights_enabled, on its own read so a
+ * Database without the column never breaks the settings read above. True
+ * with no row yet (the column's default); null when it can't be read (a
+ * Database without G4, offline): the toggle then stays hidden.
+ */
+export async function getInsightsEnabled(userId: string): Promise<boolean | null> {
+  try {
+    const { data, error } = await supabase.from("cycle_settings").select("insights_enabled").eq("user_id", userId).maybeSingle();
+    if (error) return null;
+    const v = (data as { insights_enabled?: unknown } | null)?.insights_enabled;
+    return data ? (typeof v === "boolean" ? v : null) : true;
+  } catch {
+    return null;
+  }
+}
+
 export type WriteResult = { ok: true } | { ok: false; message: string };
 
 /** Validates against the table's own CHECKs. Returns a sentence, or null. */
@@ -193,6 +210,8 @@ export async function saveCycleSettings(
   // B2: both in the cycle_settings UPDATE grant (checked on the local stack).
   if (patch.periodReminder !== undefined) patchRow.period_reminder = patch.periodReminder;
   if (patch.periodReminderDays !== undefined) patchRow.period_reminder_days = patch.periodReminderDays;
+  // Round G4 (G fixes): in the cycle_settings UPDATE grant (20261226320000).
+  if (patch.insightsEnabled !== undefined) patchRow.insights_enabled = patch.insightsEnabled;
   if (Object.keys(patchRow).length === 0) return { ok: true };
 
   const { data: updated, error: updateError } = await supabase
