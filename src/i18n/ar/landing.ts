@@ -694,7 +694,7 @@ const landing: Catalogue = {
   "Floor 06:00": "الصالة 06:00",
   Coach: "مدرّب",
   "Spin, Pilates": "سبين، بيلاتس",
-  "Physio, linked": "علاج فيزيائي، مرتبط",
+  "Physio, linked": "أخصائية العلاج الفيزيائي، مرتبطة", // note: Dana Azar is a woman, so the feminine, as on the other women's cards
   Sessions: "الجلسات",
   "Sami Tannous": "سامي طنّوس",
   "Desk 14:00": "الاستقبال 14:00",
