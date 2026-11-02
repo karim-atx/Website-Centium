@@ -36,7 +36,7 @@ const {
   HealthCheckRemindersPage, AccessibilityPage, PrivacyPage, TermsPage, LanguagePage, YourMusicPage, BillingHelpPage, TwoFactorPage,
   TwoFactorSetupPage, ResetPassword, PublicCertificate, InviteLanding, PublicProfile, PublicBooking,
   SharedCard, BusinessLinkPage, CarePlan, ConsoleGate, CallLink, LegacyCallLink,
-  CentiumProgrammesPage, CentiumProgrammePage,
+  CentiumProgrammesPage, CentiumProgrammePage, MindLibraryPage, LibrarySessionPage,
 } = appPages;
 
 const RouteLoading: React.FC = () => (
@@ -477,6 +477,9 @@ function AppRoutes() {
         <Route path="/app/contraception" element={<Contraception />} />
         <Route path="/app/mind" element={<Mind />} />
         <Route path="/app/mind/:section" element={<Mind />} />
+        {/* Round G3: the meditation library (static, so it outranks :section; back to Meditation while the Premium switch is off). */}
+        <Route path="/app/mind/library" element={<MindLibraryPage />} />
+        <Route path="/app/mind/library/:slug" element={<LibrarySessionPage />} />
         {/* The client directory. Release 3: the old professional addresses
             redirect professional accounts to /app/pro for one release (static
             routes, so "calendar" is never read as an :id); a client keeps the
