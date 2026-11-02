@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { premiumRefusalMessage } from "../premium/asks";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { HabitColour, HabitIconKey } from "../../types";
 
@@ -74,6 +75,10 @@ export type Result<T> = { ok: true; value: T } | { ok: false; message: string };
 export type WriteResult = { ok: true } | { ok: false; message: string };
 
 function describe(error: PostgrestError): string {
+  // Round G2: a free limit (ATXQ2) or a Premium-only refusal (ATXQ1) asks for
+  // the prompt and says so plainly; what was typed stays on screen.
+  const premiumRefusal = premiumRefusalMessage(error);
+  if (premiumRefusal) return premiumRefusal;
   const code = error.code ?? "";
   const message = error.message ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(message)) {

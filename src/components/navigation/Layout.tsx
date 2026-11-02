@@ -16,6 +16,7 @@ import { MessagePopupToast } from "../messages/MessagePopupToast";
 import { PromotionUsedHost } from "../promotions/PromotionUsedHost";
 import { ActiveWorkoutBar } from "../workout/ActiveWorkoutBar";
 import { useApp } from "../../context/AppContext";
+import { PremiumAskHost } from "../premium/PremiumAskHost";
 
 /**
  * Handover 2026-09-29, 01 GLOBAL (f): the on-screen keyboard. Publishes the
@@ -161,6 +162,8 @@ export const Layout: React.FC = () => {
       <MessagePopupToast />
       {/* The optional "Promotion used" picker after a payment is recorded (business consoles: owners and staff). */}
       {!isClient && <PromotionUsedHost />}
+      {/* Round G2: the Premium prompt or notice for a free limit, an ATXQ1 / ATXQ2 or a Premium label (nothing while the switch is off). */}
+      {isClient && <PremiumAskHost />}
       </CallProvider>
     </UnreadProvider>
   );

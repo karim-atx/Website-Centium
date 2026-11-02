@@ -4,6 +4,7 @@ import { Camera, Download, Pencil, Plus, Scissors, Search, Share2, Stethoscope, 
 import { useApp } from "../../context/AppContext";
 import { useBack } from "../../hooks/useBack";
 import { useOnline } from "../../hooks/useOnline";
+import { usePremiumOnly } from "../../components/premium/useFreeLimit";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { PinnedCta } from "../../components/ui/PinnedCta";
 import { PopupMenu } from "../../components/ui/PopupMenu";
@@ -26,6 +27,8 @@ import type { Injury } from "../../services/injuries";
 import { MarkerPage } from "../../components/health/records/MarkerPage";
 import { UploadChoiceSheet } from "../../components/health/records/UploadChoiceSheet";
 import { useLabResults } from "../../components/health/records/useLabResults";
+import { DoctorSummaryEntry } from "./doctor/DoctorSummaryEntry";
+import { CompareReports } from "../../components/health/records/premium/CompareReports";
 import { useHealthMode, hairline, fieldFill, fmtDate, ConfirmPopup, PINNED_FILL, REPORT_NAME_DEFAULT, INK, INK_FAINT } from "../../components/health/records/kit";
 import { resultKey } from "../../services/labs/results";
 import { fetchLinkedProfessionals, fetchMyGrants } from "../../services/consent";
@@ -110,6 +113,8 @@ export default function HealthRecords() {
   const [scan, setScan] = useState<{ file: File | null; read?: boolean } | null>(null);
   // "scan": Biomarkers › Scan a report, read on the device (Round E); "report": Labs › Upload a report.
   const [choice, setChoice] = useState<"scan" | "report" | "imaging" | null>(null);
+  // Round G2: scanning a report is Premium while the free limits apply (typing stays free).
+  const labScan = usePremiumOnly("lab_report_scanning");
   const [imagingForm, setImagingForm] = useState<{ record: ImagingRecord | null; file: File | null } | null>(null);
   const [shareImaging, setShareImaging] = useState<ImagingRecord | null>(null);
   const [deleteImaging, setDeleteImaging] = useState<ImagingRecord | null>(null);
@@ -325,6 +330,7 @@ export default function HealthRecords() {
         title={choice === "imaging" ? "Add imaging" : choice === "scan" ? "Scan a report" : "Add a report"}
         bucket={choice === "imaging" ? "medical-imaging" : "lab-reports"}
         note={choice === "scan" ? "Read on your phone. The photo and its text never leave it." : undefined}
+        premiumScan={choice === "scan" ? labScan : undefined}
         onFile={(file) => {
           const c = choice;
           setChoice(null);
@@ -499,6 +505,8 @@ export default function HealthRecords() {
           highlight={highlight}
         />
       )}
+      {/* Round G3: comparing two reports (nothing while the Premium switch is off). */}
+      {tab === "labs" && <CompareReports panels={labResults.panels} className="mb-3" />}
       {tab === "labs" && (
         <LabsTab
           reports={labReports}
@@ -525,6 +533,8 @@ export default function HealthRecords() {
           onDelete={setDeleteImaging}
         />
       )}
+      {/* Round G3: the doctor summary (nothing while the Premium switch is off). */}
+      {tab === "history" && <DoctorSummaryEntry className="mb-3" />}
       {tab === "history" && (
         <HistoryTab
           loading={!fresh}

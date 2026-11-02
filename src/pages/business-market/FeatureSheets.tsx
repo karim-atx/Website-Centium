@@ -13,6 +13,10 @@ import { fieldStyle, lh, MasterSheet, PrimaryButton, px, SaveError, SheetBox, So
 import { RangeCalendar } from "./RangeCalendar";
 import { addDays, dayMonth, isoOf } from "./model";
 import { lastFeatureStart, OWNER_ONLY, type Promotable } from "./promoModel";
+import { BuyInApp } from "../../components/premium/BuyInApp";
+import { usePlanLevel } from "../../components/premium/usePlanLevel";
+import { paysInApp } from "../../services/premium";
+import { t } from "../../i18n/core";
 
 // Market + Share 3.0 · W3 (D-13): Featured placements KEPT and restyled in the
 // handover chrome: MasterBottomSheet (MasterSheet), the grey SheetBox fields
@@ -30,6 +34,15 @@ import { lastFeatureStart, OWNER_ONLY, type Promotable } from "./promoModel";
 // gets new dates through retry_featured_week. When the probe answers that
 // featured_placements or feature_prices is absent, the button stays disabled
 // with "Featuring is coming soon."
+//
+// G fixes 4 (the Database's G1 rule): a business that PAYS IN THE APP (the
+// business plans switch on for it, or a store plan: paysInApp on
+// business_plan_level) buys a featured week in the Centium app only: Feature
+// for a week shows what featuring does and the "Buy in the Centium app"
+// block, with no request, cash or bank transfer. request_featured_week /
+// retry_featured_week answering ATXQ3 (a business created under the switch
+// while it is off) lands on the same view. Any other business keeps today's
+// flow.
 
 /** A placement whose start day passed without a payment (Pick new dates). */
 export interface FeatureRetry {
@@ -70,6 +83,9 @@ export function FeatureSheet({
   const to = addDays(from, 6);
   const price = useFeaturePrice(from);
   const label = price ? priceLabel(price) : null;
+  const inApp = paysInApp(usePlanLevel(business?.id ?? null).level);
+
+  if (inApp) return <FeatureInAppSheet open={open} onClose={onClose} />;
 
   return (
     <>
@@ -220,6 +236,7 @@ export function PaySheet({
   const online = useOnline();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inApp, setInApp] = useState(false);
   const label = price ? priceLabel(price, true) : null;
   const pending = backend.placements === "pending" || backend.featurePrices === "pending";
   const can = !pending && isOwner && !!price && !!item && !!business && online && !busy;
@@ -229,10 +246,13 @@ export function PaySheet({
     setError(null);
     const r = retry ? await retryFeaturedWeek(retry.placementId, from) : await requestFeaturedWeek(business.id, placementTarget(item.kind, item.id, business.id), mk.v.featureArea, from);
     setBusy(false);
+    // ATXQ3: this business pays for featured weeks in the Centium app.
+    if (!r.ok && r.code === "ATXQ3") return setInApp(true);
     if (!r.ok) return setError(r.message);
     onRequested("Request sent. We'll confirm your payment in Messages.");
   };
   const note = pending ? "Featuring is coming soon." : !isOwner ? OWNER_ONLY : !price ? "Featuring isn't on sale for that week." : null;
+  if (inApp) return <FeatureInAppSheet open={open} onClose={onClose} />;
   return (
     <MasterSheet
       open={open}
@@ -264,6 +284,42 @@ export function PaySheet({
         <Info size={15} strokeWidth={2.2} aria-hidden style={{ flexShrink: 0, marginTop: 1 }} />
         <p style={{ fontSize: px(12), lineHeight: lh(17) }}>We'll send payment details in Messages. Your week starts once the payment is confirmed.</p>
       </div>
+    </MasterSheet>
+  );
+}
+
+/** G fixes 4: Feature for a week for a business that pays in the app: what featuring does, and "Buy in the Centium app". */
+function FeatureInAppSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const mk = useMarket();
+  const { v, business, isOwner } = mk;
+  const m = useMarketColors();
+  // Today's feature_price_for, only when it already answered (never a constant).
+  const label = mk.featurePrice ? priceLabel(mk.featurePrice) : null;
+  return (
+    <MasterSheet open={open} onClose={onClose} title={t("Feature for a week")} footer={<PrimaryButton onClick={onClose}>{t("Done")}</PrimaryButton>}>
+      <style>{FOCUS_CSS}</style>
+      <p style={lead(m)}>{t("Shown first in your area on Explore for 7 days.")}</p>
+      <p style={{ fontSize: px(13), fontWeight: 500, color: m.slabel, margin: "0 0 8px" }}>{t("Where it appears")}</p>
+      <div style={{ borderRadius: 16, background: m.soft, padding: 10 }} aria-hidden>
+        <p style={{ fontSize: px(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint, margin: "0 2px 8px" }}>{v.areaLabel}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, background: m.card, border: `1.5px solid ${m.segactive}`, borderRadius: 14, padding: 10 }}>
+          <span style={{ width: 36, height: 36, borderRadius: 10, background: m.pale, color: m.pdark, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: px(12), flexShrink: 0 }}>{initialsOf(business?.name ?? "")}</span>
+          <span style={{ flex: 1, minWidth: 0, fontSize: px(13), fontWeight: 800, color: m.ink }}>{business?.name}</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: px(10.5), fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: m.pale, color: m.pdark }}>
+            <Award size={11} strokeWidth={2.4} aria-hidden />
+            {t("Featured")}
+          </span>
+        </div>
+      </div>
+      {label && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 14 }}>
+          <span style={{ fontSize: px(13), fontWeight: 600, color: m.ink2 }}>{t("7 days")}</span>
+          <span style={{ fontSize: px(20), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: m.ink }}>{label}</span>
+        </div>
+      )}
+      <p style={{ ...lead(m), marginTop: 14, marginBottom: 10 }}>{t("Buy a featured week in the Centium app. Your week starts once your purchase is confirmed.")}</p>
+      <BuyInApp product="featured_week" line={null} />
+      {!isOwner && business && <SoonNote>{t(OWNER_ONLY)}</SoonNote>}
     </MasterSheet>
   );
 }

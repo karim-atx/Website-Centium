@@ -5,6 +5,7 @@ import { BreathingRunner } from "../../components/mind/BreathingRunner";
 import { PoseSequence, type Pose } from "../../components/mind/PoseSequence";
 import { MusicSection } from "../../components/music/MusicSection";
 import { useApp } from "../../context/AppContext";
+import { MindLibraryEntry } from "./library/MindLibraryEntry";
 import { breathingPatterns, stretchList, yogaPoses } from "../../data/mockMindContent";
 
 type SubTab = "breathing" | "stretching" | "yoga";
@@ -103,6 +104,9 @@ export default function MeditationPage() {
           )}
         </div>
       </MindHeader>
+
+      {/* Round G3: the meditation library (nothing while the Premium switch is off). */}
+      <MindLibraryEntry className="mb-4" />
 
       {subTab === "breathing" && (
         <div>
