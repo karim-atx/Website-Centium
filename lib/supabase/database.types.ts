@@ -30303,6 +30303,7 @@ export type Database = {
         Returns: {
           cycle_day: number
           insights: Json
+          insights_locked: boolean
           note: Json
           phase: Database["public"]["Enums"]["cycle_phase_kind"]
         }[]

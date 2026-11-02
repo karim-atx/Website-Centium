@@ -374,7 +374,7 @@ test("the three Premium share designs: hidden while off or unlisted, locked with
 
 // ---- cycle insights ----
 
-test("cycle insights (G fixes 2): the note for every member, outside the lock; only the phase's insights are Premium", () => {
+test("cycle insights (G fixes 3): the note for every member, outside the lock; only the phase's insights are Premium", () => {
   // An empty list and a null note (not tracking, turned off, pregnant, no copy): nothing at all.
   const empty = parseCycleInsights([{ phase: "luteal", cycle_day: 21, insights: [], note: null }]);
   assert.deepEqual(empty, { phase: "luteal", cycleDay: 21, insights: [], note: null, locked: false });
@@ -382,19 +382,22 @@ test("cycle insights (G fixes 2): the note for every member, outside the lock; o
   // Only the note (not predictable yet, contraception, no phase): just the note, no lock.
   const noteOnly = parseCycleInsights([{ phase: null, cycle_day: null, insights: [], note: { key: "cycle.note", body: "Everyone's cycle is different." } }]);
   assert.deepEqual(insightsView({ kind: "ready", value: noteOnly }), { kind: "show", phase: null, cycleDay: null, insights: [], locked: false, note: { key: "cycle.note", body: "Everyone's cycle is different." } });
-  // The Database's fix: a free member gets the note and insights_locked (or locked): the lock for the insights, the note outside it.
-  for (const flag of ["insights_locked", "locked"]) {
-    const free = parseCycleInsights([{ phase: "luteal", cycle_day: 21, insights: [], note: { key: "cycle.note", body: "Everyone's cycle is different." }, [flag]: true }]);
-    assert.equal(free.locked, true, flag);
-    assert.deepEqual(insightsView({ kind: "ready", value: free }), { kind: "show", phase: "luteal", cycleDay: 21, insights: [], locked: true, note: { key: "cycle.note", body: "Everyone's cycle is different." } }, flag);
-  }
+  // A free member, once the cycle is predictable: the note and insights_locked; the lock for the insights only, the note outside it.
+  const free = parseCycleInsights([{ phase: "luteal", cycle_day: 21, insights: [], note: { key: "cycle.note", body: "Everyone's cycle is different." }, insights_locked: true }]);
+  assert.equal(free.locked, true);
+  assert.deepEqual(insightsView({ kind: "ready", value: free }), { kind: "show", phase: "luteal", cycleDay: 21, insights: [], locked: true, note: { key: "cycle.note", body: "Everyone's cycle is different." } });
+  // A free member whose cycle isn't predictable yet: the note alone, unlocked.
+  const freeEarly = parseCycleInsights([{ phase: "follicular", cycle_day: 5, insights: [], note: { key: "cycle.note", body: "Everyone's cycle is different." }, insights_locked: false }]);
+  assert.deepEqual(insightsView({ kind: "ready", value: freeEarly }), { kind: "show", phase: "follicular", cycleDay: 5, insights: [], locked: false, note: { key: "cycle.note", body: "Everyone's cycle is different." } });
+  // Only insights_locked locks (the guessed `locked` alias is gone); insights given are never locked.
+  assert.equal(parseCycleInsights([{ insights: [], locked: true }]).locked, false);
+  const withInsights = insightsView({ kind: "ready", value: parseCycleInsights([{ insights: [{ title: "Energy", body: "Often rises." }], insights_locked: true }]) });
+  assert.equal(withInsights.kind === "show" && withInsights.locked, false);
   // locked without a note still shows the lock; a flag that isn't true is no lock
   assert.equal(insightsView({ kind: "ready", value: parseCycleInsights([{ phase: "luteal", insights: [], note: null, insights_locked: true }]) }).kind, "show");
   assert.equal(parseCycleInsights([{ insights: [], insights_locked: "yes" }]).locked, false);
-  // Today's Database: a free member's ATXQ1 is the lock alone, with no note.
-  assert.deepEqual(insightsView({ kind: "premium" }), { kind: "show", phase: null, cycleDay: null, insights: [], locked: true, note: null });
-  // ATXQ0, off, loading, failed: nothing.
-  for (const kind of ["hidden", "loading", "error"]) assert.deepEqual(insightsView({ kind }), { kind: "none" }, kind);
+  // The call never answers ATXQ1 any more: no special lock for it; ATXQ0, off, loading, failed: nothing.
+  for (const kind of ["premium", "hidden", "loading", "error"]) assert.deepEqual(insightsView({ kind }), { kind: "none" }, kind);
   // Otherwise the four insights, one per area, and the note.
   const full = parseCycleInsights([
     {

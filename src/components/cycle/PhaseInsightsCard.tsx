@@ -12,16 +12,16 @@ import { t } from "../../i18n/core";
 // cycle_day, insights [{key, area, title, body}], the note {key, body} and
 // insights_locked; the Database's copy, shown as data).
 //
-// The display rules (insightsView; G fixes 2: the general note is for every
-// member, only the phase's insights are Premium):
+// The display rules (insightsView; G fixes 3: the general note is for every
+// member, only the phase's insights are Premium, and the call never answers
+// ATXQ1):
 // - an empty list, no lock and no note (not tracking, insights turned off,
 //   pregnant, no copy loaded): NOTHING AT ALL, no card, no "coming soon";
 // - the four insights, each labelled with its area (Training, Food, Sleep,
 //   Mood), with the note under them;
-// - a free member: the locked row with the Premium label (the prompt) in
-//   place of the insights, and the note OUTSIDE the lock, whenever it is
-//   returned (today's Database answers a free member with ATXQ1 and no note:
-//   then the lock alone);
+// - a free member (insights_locked): the locked row with the Premium label
+//   (the prompt) in place of the insights only, and the note OUTSIDE the
+//   lock, never locked;
 // - only the note (not predictable yet, hormonal contraception, no phase):
 //   just the note, with no Premium label;
 // - nothing while the switch is off (ATXQ0), loading, or on a Database without G4.

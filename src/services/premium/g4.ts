@@ -654,17 +654,18 @@ export interface CycleInsights {
   /** The general note (cycle.note), for every member: under the insights, beside the lock, or on its own. */
   note: CycleNote | null;
   /**
-   * The phase's insights are Premium and this member is free (G fixes 2: the
-   * Database's `insights_locked`, or `locked`), so the insights list is empty
-   * and only they are locked; the note still comes.
+   * The phase's insights are Premium and this member is free (the Database's
+   * `insights_locked`, G fixes 3), so the insights list is empty and only they
+   * are locked; the note still comes.
    */
   locked: boolean;
 }
 
 /**
  * my_cycle_insights(): phase, cycle_day, insights [{key, area, title, body}],
- * note {key, body} and (the Database's fix, G fixes 2) insights_locked, in the
- * member's language. Tolerant: `locked` is read too, and a missing flag is false.
+ * note {key, body} and insights_locked, in the member's language. It never
+ * answers ATXQ1 (G fixes 3). Tolerant: a missing or non-true flag is no lock,
+ * and an insight without a title or body is dropped.
  */
 export function parseCycleInsights(data: unknown): CycleInsights {
   const r = rowsOf(data)[0] ?? obj(data);
@@ -682,7 +683,7 @@ export function parseCycleInsights(data: unknown): CycleInsights {
       return title && body ? [{ key: str(i.key), area: area && (AREAS as readonly string[]).includes(area) ? (area as InsightArea) : null, title, body }] : [];
     }),
     note: noteBody ? { key: n ? str(n.key) : null, body: noteBody } : null,
-    locked: r.insights_locked === true || r.locked === true,
+    locked: r.insights_locked === true,
   };
 }
 
@@ -703,24 +704,22 @@ export function insightAreaLabel(area: InsightArea | null): string | null {
 }
 
 /**
- * What the cycle tracker shows (G fixes; G fixes 2: the general note is for
- * every member, and only the phase's insights are Premium):
+ * What the cycle tracker shows (G fixes 3: the general note is for every
+ * member, and only the phase's insights are Premium; my_cycle_insights never
+ * answers ATXQ1):
  * - an empty list, no lock and a null note (not tracking, insights turned
- *   off, pregnant, no copy; the Database asks no Premium): NOTHING at all;
+ *   off, pregnant, no copy): NOTHING at all;
  * - the insights (one per area, labelled), when there are any;
  * - the lock (the Premium label and the prompt) in their place for a free
- *   member: the Database's insights_locked, or today's ATXQ1;
- * - the note, whenever it is returned, always outside the lock;
+ *   member, from insights_locked: a locked card for the insights only;
+ * - the note, whenever it is returned, always outside the lock, never locked;
  * - ATXQ0, the switch off, loading, a Database without G4 or a failure:
  *   nothing.
- * Until the Database's fix lands, a free member's ATXQ1 carries no note, so
- * it is the lock alone.
  */
 export type InsightsView =
   | { kind: "none" }
   | { kind: "show"; phase: string | null; cycleDay: number | null; insights: CycleInsight[]; locked: boolean; note: CycleNote | null };
 export function insightsView(state: { kind: string; value?: CycleInsights }): InsightsView {
-  if (state.kind === "premium") return { kind: "show", phase: null, cycleDay: null, insights: [], locked: true, note: null };
   if (state.kind !== "ready" || !state.value) return { kind: "none" };
   const v = state.value;
   const locked = v.locked && v.insights.length === 0;
