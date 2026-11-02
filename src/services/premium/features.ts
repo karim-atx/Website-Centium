@@ -29,7 +29,9 @@ export type PremiumFeature =
   | "doctor_summary"
   | "ai_voice_food_logging"
   // Round G2: Premium's perks that prompt.
-  | "premium_offers";
+  | "premium_offers"
+  // Round G3: the Monday weekly review and its target suggestions.
+  | "weekly_review";
 
 export type FeatureKind = "limit" | "premium_only";
 
@@ -65,6 +67,8 @@ export const PREMIUM_FEATURES: readonly PremiumFeatureEntry[] = [
   { key: "ai_voice_food_logging", kind: "premium_only", label: tk("AI voice food logging"), prompt: tk("Premium lets you log food by saying what you ate.") },
   // Round G2: an offer its owner kept for Premium members.
   { key: "premium_offers", kind: "premium_only", label: tk("Premium-only offers"), prompt: tk("Premium lets you redeem the offers kept for Premium members.") },
+  // Round G3: my_weekly_review() and my_target_suggestions() are Premium (ATXQ1).
+  { key: "weekly_review", kind: "premium_only", label: tk("Your weekly review"), prompt: tk("Premium looks back on your week every Monday, with goal suggestions you can accept.") },
 ];
 
 export const featureEntry = (key: PremiumFeature): PremiumFeatureEntry => {

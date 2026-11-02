@@ -25931,6 +25931,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      accept_target_suggestion: { Args: { p_kind: string }; Returns: number }
       account_erasure_date: {
         Args: { p_requested_at: string }
         Returns: string
@@ -28112,6 +28113,43 @@ export type Database = {
           total_count: number
         }[]
       }
+      centium_programme_sessions: {
+        Args: { p_programme_id: string }
+        Returns: {
+          day_offset: number
+          effort: string
+          free: boolean
+          items: Json
+          locked: boolean
+          note: string
+          session_number: number
+          title: string
+          warm_up: string
+          week: number
+        }[]
+      }
+      centium_programmes: {
+        Args: never
+        Returns: {
+          description: string
+          equipment: string
+          for_whom: string
+          free_preview: string
+          free_sessions: number
+          how_it_runs: string
+          length_text: string
+          locked: boolean
+          programme_id: string
+          progression: Json
+          sessions: number
+          sessions_per_week: number
+          slug: string
+          suggested_next: string
+          title: string
+          warm_up: string
+          weeks: number
+        }[]
+      }
       centium_seat_block_tier: {
         Args: never
         Returns: {
@@ -28477,6 +28515,20 @@ export type Database = {
       comment_on_food_entry: {
         Args: { p_body?: string; p_entry_id: string; p_reaction?: string }
         Returns: string
+      }
+      compare_my_lab_reports: {
+        Args: { p_panel_a: string; p_panel_b: string }
+        Returns: {
+          change: number
+          change_pct: number
+          marker_key: string
+          name: string
+          status_a: Database["public"]["Enums"]["blood_marker_status"]
+          status_b: Database["public"]["Enums"]["blood_marker_status"]
+          unit: string
+          value_a: number
+          value_b: number
+        }[]
       }
       complete_course_lesson: {
         Args: { p_lesson_id: string }
@@ -29152,6 +29204,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      end_centium_programme: { Args: { p_start_id: string }; Returns: undefined }
       end_class_series: {
         Args: { p_last_date: string; p_series_id: string }
         Returns: {
@@ -29610,6 +29663,26 @@ export type Database = {
         Args: { p_folder_id: string }
         Returns: boolean
       }
+      journal_prompt_library: {
+        Args: never
+        Returns: {
+          group_key: string
+          group_title: string
+          locked: boolean
+          number: number
+          prompt_position: number
+          text: string
+        }[]
+      }
+      journal_prompt_of_the_day: {
+        Args: never
+        Returns: {
+          group_key: string
+          group_title: string
+          number: number
+          text: string
+        }[]
+      }
       leave_class_waitlist: { Args: { p_class_id: string }; Returns: undefined }
       leave_group: { Args: { p_thread_id: string }; Returns: undefined }
       licence_is_verified: { Args: { p_licence_id: string }; Returns: boolean }
@@ -29780,6 +29853,10 @@ export type Database = {
         Args: { p_appointment_id: string }
         Returns: undefined
       }
+      mark_centium_session_done: {
+        Args: { p_done?: boolean; p_session_number: number; p_start_id: string }
+        Returns: undefined
+      }
       mark_class_booking_paid: {
         Args: { p_booking_id: string; p_reference?: string }
         Returns: undefined
@@ -29875,6 +29952,20 @@ export type Database = {
         }
         Returns: number
       }
+      mind_library: {
+        Args: never
+        Returns: {
+          access: string
+          content_id: string
+          content_type: Database["public"]["Enums"]["mind_content_type"]
+          locked: boolean
+          minutes: number
+          phases: Json
+          script: string
+          slug: string
+          title: string
+        }[]
+      }
       money_owed: {
         Args: {
           p_business_id: string
@@ -29947,6 +30038,16 @@ export type Database = {
           status: Database["public"]["Enums"]["appointment_status"]
         }[]
       }
+      my_biomarker_trend: {
+        Args: { p_marker_key: string }
+        Returns: {
+          panel_id: string
+          result_date: string
+          status: Database["public"]["Enums"]["blood_marker_status"]
+          unit: string
+          value: number
+        }[]
+      }
       my_broadcast_lists: {
         Args: never
         Returns: {
@@ -29986,6 +30087,21 @@ export type Database = {
           seats_per_unit: number
           seats_total: number
           seats_used: number
+        }[]
+      }
+      my_centium_programmes: {
+        Args: never
+        Returns: {
+          done: number
+          next_locked: boolean
+          next_on: string
+          next_session_number: number
+          programme_id: string
+          sessions: number
+          slug: string
+          start_id: string
+          starts_on: string
+          title: string
         }[]
       }
       my_class_waitlist_position: {
@@ -30095,6 +30211,7 @@ export type Database = {
           last_period_start: string
         }[]
       }
+      my_doctor_summary: { Args: { p_from?: string; p_to?: string }; Returns: Json }
       my_effective_professional_tier: {
         Args: never
         Returns: {
@@ -30356,6 +30473,15 @@ export type Database = {
           preview: boolean
         }[]
       }
+      my_target_suggestions: {
+        Args: never
+        Returns: {
+          current_target: number
+          kind: string
+          reason: string
+          suggested: number
+        }[]
+      }
       my_venues: {
         Args: never
         Returns: {
@@ -30375,6 +30501,7 @@ export type Database = {
           venue_kind: Database["public"]["Enums"]["venue_kind"]
         }[]
       }
+      my_weekly_review: { Args: { p_week_start?: string }; Returns: Json }
       my_workout_week: {
         Args: never
         Returns: {
@@ -30525,6 +30652,13 @@ export type Database = {
           review_count: number
           sessions_delivered: number
           years_on_centium: number
+        }[]
+      }
+      premium_content_lines: {
+        Args: never
+        Returns: {
+          key: string
+          text: string
         }[]
       }
       premium_pass_candidates: {
@@ -31798,6 +31932,10 @@ export type Database = {
         Returns: boolean
       }
       star_messages: { Args: { p_message_ids: string[] }; Returns: number }
+      start_centium_programme: {
+        Args: { p_programme_id: string; p_starts_on?: string }
+        Returns: string
+      }
       start_member_thread: {
         Args: { p_business_id: string; p_person_id: string }
         Returns: string
@@ -32613,7 +32751,7 @@ export type Database = {
         | "session_share"
       message_content_change: "edit" | "delete"
       message_flag: "starred" | "hidden"
-      mind_content_type: "breathing" | "stretch" | "yoga"
+      mind_content_type: "breathing" | "stretch" | "yoga" | "meditation"
       mind_difficulty: "beginner" | "intermediate" | "advanced"
       mind_stretch_type: "static" | "dynamic"
       muscle_group:
@@ -33384,7 +33522,7 @@ export const Constants = {
       ],
       message_content_change: ["edit", "delete"],
       message_flag: ["starred", "hidden"],
-      mind_content_type: ["breathing", "stretch", "yoga"],
+      mind_content_type: ["breathing", "stretch", "yoga", "meditation"],
       mind_difficulty: ["beginner", "intermediate", "advanced"],
       mind_stretch_type: ["static", "dynamic"],
       muscle_group: [
