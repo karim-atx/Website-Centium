@@ -7,6 +7,7 @@ import { NO_LINK_HINT } from "../../../components/share/business/BizShareButton"
 import { ShareQr, qrRows } from "../../../components/share/ShareQr";
 import { bizProfileLink } from "../../../services/share-links/links";
 import { loadArabicForCanvas } from "../../../i18n/fonts";
+import { t } from "../../../i18n/core";
 
 // MO1B-026 / -027 / -028 · the business card (BizMoreV8 `hasShare`, line 151):
 // left / right 20, centred, r24, shadow 0 20px 48px rgba(36,31,27,0.28); a 96
@@ -73,12 +74,12 @@ export function BusinessCard({
       }
     }
     const copy = link ? `${shareText}\n${link.href}` : shareText;
-    onToast((await copyText(copy)) ? "Details copied." : "Couldn't share right now. Try again.");
+    onToast((await copyText(copy)) ? t("Details copied.") : t("Couldn't share right now. Try again."));
   };
 
   const save = async () => {
     const ok = await renderCardPng(data, link);
-    onToast(ok ? "Image saved to your downloads." : "Couldn't save the image. Try again.");
+    onToast(ok ? t("Image saved to your downloads.") : t("Couldn't save the image. Try again."));
   };
 
   return createPortal(
@@ -87,7 +88,7 @@ export function BusinessCard({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Business card"
+        aria-label={t("Business card")}
         className="relative w-full max-w-[390px] bg-cream-card overflow-hidden animate-pop [--biz-list:#F7F7FC] dark:[--biz-list:rgba(174,161,220,0.10)]"
         style={{ borderRadius: 24, boxShadow: "0 20px 48px rgba(36,31,27,0.28)" }}
       >
@@ -96,7 +97,7 @@ export function BusinessCard({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t("Close")}
             // 36 drawn; .tap gives the 44 hit area (MO1B-026 row 3).
             className="tap absolute flex items-center justify-center rounded-full bg-cream-card text-charcoal-soft"
             style={{ insetInlineEnd: 8, top: 8, width: 36, height: 36 }}
@@ -139,7 +140,7 @@ export function BusinessCard({
                   className="[--biz-qr-border:rgba(36,31,27,0.11)] dark:[--biz-qr-border:rgba(245,243,250,0.10)]"
                   style={{ width: 96, height: 96, borderRadius: 12, background: "#FFFFFF", border: "1px solid var(--biz-qr-border)", padding: 7, boxSizing: "border-box" }}
                 >
-                  <ShareQr value={link.href} size={80} label={`QR code to ${data.name} on Centium`} />
+                  <ShareQr value={link.href} size={80} label={t("QR code to {name} on Centium", { name: data.name })} />
                 </div>
               )}
             </div>
@@ -164,7 +165,7 @@ export function BusinessCard({
               style={{ height: 46, borderRadius: 14, gap: 6 }}
             >
               <Share2 size={15} strokeWidth={2.4} aria-hidden />
-              Share
+              {t("Share")}
             </button>
             <button
               type="button"
@@ -173,7 +174,7 @@ export function BusinessCard({
               style={{ height: 46, borderRadius: 14, gap: 6 }}
             >
               <Download size={15} strokeWidth={2.4} aria-hidden />
-              Save image
+              {t("Save image")}
             </button>
           </div>
         </div>

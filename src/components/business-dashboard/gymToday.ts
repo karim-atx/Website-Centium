@@ -11,6 +11,7 @@
 
 import { DENIED_LABEL, hourBins, hourCounts, hourShort, peakHour, rightNowLabel, type DeskSummary, type Entry } from "../../services/front-desk/frontDeskLogic";
 import { clock12 } from "../../utils/time12";
+import { t, tx } from "../../i18n/core";
 
 export interface DashGym {
   summary: DeskSummary;
@@ -53,11 +54,11 @@ const hourClock = (h: number) => clock12(new Date(2000, 0, 1, h, 0)).replace(":0
 
 /** DA1-007 row 6 detail: "{plan} · 6:42 PM", "Day pass · …", "Membership expired · …". */
 export function dashEntryDetail(e: Entry): string {
-  const t = clock12(e.at);
-  if (e.result === "denied") return `${e.reason === "expired" ? "Membership expired" : DENIED_LABEL[e.reason ?? "no_pass"]} · ${t}`;
-  if (e.isDayPass) return `Day pass · ${t}`;
-  if (!e.personId) return `Guest · ${t}`;
-  return e.planName ? `${e.planName} · ${t}` : t;
+  const at = clock12(e.at);
+  if (e.result === "denied") return `${e.reason === "expired" ? t("Membership expired") : t(DENIED_LABEL[e.reason ?? "no_pass"])} · ${at}`;
+  if (e.isDayPass) return `${t("Day pass")} · ${at}`;
+  if (!e.personId) return `${t("Guest")} · ${at}`;
+  return e.planName ? `${e.planName} · ${at}` : at;
 }
 
 /**
@@ -81,24 +82,24 @@ export function gymTodayModel(g: DashGym, renewalsDue: number | null, labelOf: (
     boxes: [
       {
         value: String(s.entriesToday),
-        label: "Entries today",
-        delta: early ? undefined : diff === 0 ? "As usual" : `${diff > 0 ? "+" : "−"}${Math.abs(diff)} vs usual`,
+        label: t("Entries today"),
+        delta: early ? undefined : diff === 0 ? t("As usual") : t("{delta} vs usual", { delta: `${diff > 0 ? "+" : "−"}${Math.abs(diff)}` }),
         tone: diff < 0 ? "warn" : "good",
       },
       s.rightNow === null
-        ? { value: "–", label: "Right now", delta: rightNowLabel(null), tone: "faint" }
-        : { value: rightNowLabel(s.rightNow), label: "Right now", delta: peak === null ? undefined : `Peak at ${hourClock(peak)}`, tone: "good" },
-      renewalsDue === null ? { value: "–", label: "Renewals due" } : { value: String(renewalsDue), label: "Renewals due", delta: "In the next 7 days", tone: "warn" },
+        ? { value: "–", label: t("Right now"), delta: rightNowLabel(null), tone: "faint" }
+        : { value: rightNowLabel(s.rightNow), label: t("Right now"), delta: peak === null ? undefined : t("Peak at {time}", { time: hourClock(peak) }), tone: "good" },
+      renewalsDue === null ? { value: "–", label: t("Renewals due") } : { value: String(renewalsDue), label: t("Renewals due"), delta: t("In the next 7 days"), tone: "warn" },
     ],
     bars: hours.map((h, i) => ({ h: max > 0 ? Math.round((h.count / max) * 100) : 0, label: i % 2 === 0 ? hourShort(h.hour) : "" })),
     hi: hours.findIndex((h) => h.hour === now.getHours()),
     recent: g.entries.slice(0, 3).map((e) => ({
       id: e.id,
-      title: e.personId ? labelOf(e.personId) ?? "Member" : e.result === "denied" && !e.isDayPass && !e.isGuest ? "Unknown pass" : "Guest",
+      title: e.personId ? labelOf(e.personId) ?? t("Member") : e.result === "denied" && !e.isDayPass && !e.isGuest ? t("Unknown pass") : t("Guest"),
       detail: dashEntryDetail(e),
-      pill: e.result === "in" ? { text: "In", tone: "good" } : { text: "Denied", tone: "bad" },
+      pill: e.result === "in" ? { text: tx("In", "entry"), tone: "good" } : { text: t("Denied"), tone: "bad" },
     })),
-    tip: early ? "Busy times sharpen after two weeks of entries." : null,
+    tip: early ? t("Busy times sharpen after two weeks of entries.") : null,
   };
 }
 
@@ -112,8 +113,8 @@ export function gymEntriesGauge(g: DashGym, week: string[], lastWeek: string[], 
   return {
     spec: { kind: "petals" as const, vals, last, today: todayIdx },
     empty: false,
-    label: "Entries",
-    sub: rn === null ? "This week" : `${rightNowLabel(rn)} now`,
+    label: t("Entries"),
+    sub: rn === null ? t("This week") : t("{busy} now", { busy: rightNowLabel(rn) }),
     subTone: "good" as const,
     target: total,
     format: String,

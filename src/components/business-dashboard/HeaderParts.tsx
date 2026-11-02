@@ -46,7 +46,7 @@ export function DashHeader({
   bellRef: (el: HTMLButtonElement | null) => void;
   venueChip?: React.ReactNode;
 }) {
-  const chip = listed ? { bg: c.goodTint, ink: c.good, dot: c.good, text: "Listed" } : { bg: c.soft, ink: c.faint, dot: c.tert, text: "Hidden" };
+  const chip = listed ? { bg: c.goodTint, ink: c.good, dot: c.good, text: t("Listed") } : { bg: c.soft, ink: c.faint, dot: c.tert, text: t("Hidden") };
   const badge = bellBadge(attentionCount, notificationsUnread);
   const bellLabel = notificationsUnread
     ? t("Needs your attention, {count} items, {unread} unread notifications", { count: attentionCount, unread: unreadBadge(notificationsUnread) })
@@ -124,7 +124,7 @@ export function DashHeader({
             data-listed-chip
             className="hit"
             onClick={onChip}
-            aria-label={`${chip.text} on Explore. Your listing`}
+            aria-label={t("{state} on Explore. Your listing", { state: chip.text })}
             style={{
               display: "flex",
               alignItems: "center",
@@ -145,7 +145,7 @@ export function DashHeader({
           >
             <span style={{ width: 6, height: 6, borderRadius: 999, background: chip.dot }} />
             {chip.text}
-            <ChevronRight size={11} strokeWidth={2.6} aria-hidden />
+            <ChevronRight size={11} strokeWidth={2.6} aria-hidden className="rtl:-scale-x-100" />
           </button>
         )}
       </div>
@@ -171,7 +171,7 @@ export function VenueChip({ c, venues, selected, onSelect }: { c: DashPalette; v
         data-venue-chip
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`Venue: ${selected.name}. Change venue`}
+        aria-label={t("Venue: {name}. Change venue", { name: selected.name })}
         onClick={() => setOpen(true)}
         style={{
           display: "inline-flex",
@@ -198,7 +198,7 @@ export function VenueChip({ c, venues, selected, onSelect }: { c: DashPalette; v
         open={open}
         onClose={() => setOpen(false)}
         anchor={anchor}
-        options={venues.map((v) => ({ value: v.gymId, label: v.name, note: v.hiddenAt ? "Hidden" : v.location || undefined }))}
+        options={venues.map((v) => ({ value: v.gymId, label: v.name, note: v.hiddenAt ? t("Hidden") : v.location || undefined }))}
         selected={selected.gymId}
         onSelect={(v) => onSelect(v)}
         width={240}
@@ -277,7 +277,7 @@ export function AttentionPanel({
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(36,31,27,0.18)", zIndex: 60 }} aria-hidden />
       <div
         role="dialog"
-        aria-label="Needs your attention"
+        aria-label={t("Needs your attention")}
         data-attention-panel
         style={{
           position: "fixed",
@@ -322,10 +322,10 @@ export function AttentionPanel({
             </span>
           ) : null}
           <span style={{ display: "flex", color: c.faint }}>
-            <ChevronRight size={15} aria-hidden />
+            <ChevronRight size={15} aria-hidden className="rtl:-scale-x-100" />
           </span>
         </button>
-        <p style={{ margin: "12px 4px 8px", fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: c.faint, lineHeight: 1.5 }}>Needs your attention</p>
+        <p style={{ margin: "12px 4px 8px", fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: c.faint, lineHeight: 1.5 }}>{t("Needs your attention")}</p>
         {(items ?? []).map((a, n) => {
           const Icon = ATT_ICON[a.icon];
           return (
@@ -354,8 +354,8 @@ export function AttentionPanel({
               <TriangleAlert size={15} aria-hidden />
             </span>
             <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12.5), fontWeight: 600, color: c.ink, lineHeight: 1.5 }}>
-              Couldn't check this right now
-              <span style={{ display: "block", fontSize: textPx(10.5), fontWeight: 500, marginTop: 1, color: c.faint }}>What needs your attention shows here once it loads.</span>
+              {t("Couldn't check this right now")}
+              <span style={{ display: "block", fontSize: textPx(10.5), fontWeight: 500, marginTop: 1, color: c.faint }}>{t("What needs your attention shows here once it loads.")}</span>
             </span>
             <button
               type="button"
@@ -363,7 +363,7 @@ export function AttentionPanel({
               onClick={onRetry}
               style={{ height: 26, padding: "0 10px", borderRadius: 8, background: c.fill, color: c.onFill, display: "flex", alignItems: "center", fontSize: textPx(11), fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, border: 0 }}
             >
-              Retry
+              {t("Retry")}
             </button>
           </div>
         )}
@@ -373,8 +373,8 @@ export function AttentionPanel({
               <Check size={15} strokeWidth={2.6} aria-hidden />
             </span>
             <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12.5), fontWeight: 600, color: c.ink, lineHeight: 1.5 }}>
-              You're all caught up
-              <span style={{ display: "block", fontSize: textPx(10.5), fontWeight: 500, marginTop: 1, color: c.faint }}>Invites, under-booked classes, a hidden listing and open seats show up here.</span>
+              {t("You're all caught up")}
+              <span style={{ display: "block", fontSize: textPx(10.5), fontWeight: 500, marginTop: 1, color: c.faint }}>{t("Invites, under-booked classes, a hidden listing and open seats show up here.")}</span>
             </span>
           </div>
         )}
@@ -388,22 +388,22 @@ export function AttentionPanel({
 export function SetupCard({ c, steps, onStep, onDismiss }: { c: DashPalette; steps: SetupStep[]; onStep: (s: SetupStep) => void; onDismiss: () => void }) {
   const done = steps.filter((s) => s.done).length;
   return (
-    <section aria-label="Finish setting up" data-setup-card style={{ position: "relative", background: c.pale, borderRadius: 24, padding: "18px 20px 10px", marginBottom: 20 }}>
+    <section aria-label={t("Finish setting up")} data-setup-card style={{ position: "relative", background: c.pale, borderRadius: 24, padding: "18px 20px 10px", marginBottom: 20 }}>
       <button
         type="button"
         className="hit"
-        aria-label="Dismiss"
+        aria-label={t("Dismiss")}
         onClick={onDismiss}
         style={{ position: "absolute", top: 12, insetInlineEnd: 12, width: 30, height: 30, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", color: c.deep, cursor: "pointer", background: "none", border: 0, padding: 0 }}
       >
         <X size={17} strokeWidth={2.2} aria-hidden />
       </button>
-      <p style={{ fontSize: textPx(15), fontWeight: 800, paddingInlineEnd: 36, margin: 0, color: c.ink, lineHeight: 1.5 }}>Finish setting up</p>
+      <p style={{ fontSize: textPx(15), fontWeight: 800, paddingInlineEnd: 36, margin: 0, color: c.ink, lineHeight: 1.5 }}>{t("Finish setting up")}</p>
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "10px 0 6px" }}>
-        <div role="progressbar" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={done} aria-label="Setup progress" style={{ flex: 1, height: 6, borderRadius: 999, background: c.paleTrack, overflow: "hidden" }}>
+        <div role="progressbar" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={done} aria-label={t("Setup progress")} style={{ flex: 1, height: 6, borderRadius: 999, background: c.paleTrack, overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${Math.round((done / steps.length) * 100)}%`, borderRadius: 999, background: c.primary }} />
         </div>
-        <p style={{ fontSize: textPx(11.5), fontWeight: 700, color: c.deep, whiteSpace: "nowrap", margin: 0, lineHeight: 1.5 }}>{`${done} of ${steps.length} done`}</p>
+        <p style={{ fontSize: textPx(11.5), fontWeight: 700, color: c.deep, whiteSpace: "nowrap", margin: 0, lineHeight: 1.5 }}>{t("{done} of {total} done", { done, total: steps.length })}</p>
       </div>
       {steps.map((s, k) => {
         const inner = (
@@ -469,19 +469,19 @@ export function ListingSheet({
     if (open) setError(null);
   }
   return (
-    <BottomSheet open={open} onClose={onClose} title="Your listing" tone="business">
+    <BottomSheet open={open} onClose={onClose} title={t("Your listing")} tone="business">
       <div style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 52, marginBottom: 16 }}>
         <span style={{ width: 36, height: 36, borderRadius: 11, background: c.pale, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "rgb(var(--th-7d67d9))" }}>
           {active ? <Eye size={18} aria-hidden /> : <EyeOff size={18} aria-hidden />}
         </span>
-        <span style={{ flex: 1, minWidth: 0, fontSize: textPx(14), fontWeight: 600, color: c.ink }}>Active on Explore</span>
+        <span style={{ flex: 1, minWidth: 0, fontSize: textPx(14), fontWeight: 600, color: c.ink }}>{t("Active on Explore")}</span>
         <Toggle
           checked={active}
           onChange={(v) => {
             setError(null);
             void onToggle(v).then((m) => m && setError(m));
           }}
-          label="Listing active"
+          label={t("Listing active")}
         />
       </div>
       {error && <p style={{ fontSize: textPx(11.5), fontWeight: 700, color: c.high, margin: "0 0 8px" }}>{error}</p>}

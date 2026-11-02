@@ -15,6 +15,7 @@ import { personUsesSeat } from "../../services/business-team/seats";
 import { fetchJoinRequests, fetchSeatCapacity, fetchTeam, type JoinRequest, type SeatCapacity, type TeamPerson } from "../../services/business-team/team";
 import { ROLE_LABEL, inviteState, inviteWhen, isWithdrawn, lowerFirst, roleAndProfession, shortDay, withdrawnPeople } from "../business-team/teamLogic";
 import { formatShortDate } from "../../utils/date";
+import { t, tn } from "../../i18n/core";
 
 // OURS-MO1B-employees, -roles, -join-requests, -seats, -business-id
 // (BizMoreV8 screen="employees" / "roles" / "joins" / "seats" / "bizid").
@@ -59,8 +60,8 @@ function useTeam() {
 
 const NoTeamYet = ({ onShare }: { onShare: () => void }) => (
   <BizSection>
-    <BizRow icon={Users} title="No one on your team yet" desc="Share your business ID so professionals can ask to join." />
-    <BizRow icon={IdCard} title="Business ID" desc="Copy or share it" onClick={onShare} />
+    <BizRow icon={Users} title={t("No one on your team yet")} desc={t("Share your business ID so professionals can ask to join.")} />
+    <BizRow icon={IdCard} title={t("Business ID")} desc={t("Copy or share it")} onClick={onShare} />
   </BizSection>
 );
 
@@ -84,18 +85,18 @@ export function RolesPage() {
   const { user } = useApp();
   const { rows, error, reload } = useTeam();
   return (
-    <BizPage title="Roles and permissions" sub="Each person's role sets what they can see and change.">
-      {error && <LoadError message="Couldn't load your team." onRetry={reload} />}
+    <BizPage title={t("Roles and permissions")} sub={t("Each person's role sets what they can see and change.")}>
+      {error && <LoadError message={t("Couldn't load your team.")} onRetry={reload} />}
       {!rows && !error && <RowsSkeleton rows={3} />}
       {rows && (
-        <BizSection label="People" footer={rows.length > 0 ? "Tap a person to change their role, what they can do and their pay." : undefined}>
-          <BizRow title={user.firstName || "You"} desc="Owner · everything" value="Owner" />
+        <BizSection label={t("People")} footer={rows.length > 0 ? t("Tap a person to change their role, what they can do and their pay.") : undefined}>
+          <BizRow title={user.firstName || t("You")} desc={t("Owner · everything")} value={t("Owner")} />
           {rows.map((r) => (
             <BizRow
               key={r.professionalId}
               title={r.name}
-              desc={isWithdrawn(r) ? inviteWhen(r) ?? "Withdrawn" : (r.acceptedAt ? roleAndProfession(r) : "Invited, hasn't accepted yet" + (inviteWhen(r) ? ` · ${inviteWhen(r)}` : "")) + (personUsesSeat(r) ? " · uses a seat" : "")}
-              value={ROLE_LABEL[r.role]}
+              desc={isWithdrawn(r) ? inviteWhen(r) ?? t("Withdrawn") : (r.acceptedAt ? roleAndProfession(r) : t("Invited, hasn't accepted yet") + (inviteWhen(r) ? ` · ${inviteWhen(r)}` : "")) + (personUsesSeat(r) ? ` · ${t("uses a seat")}` : "")}
+              value={t(ROLE_LABEL[r.role])}
               dim={!r.acceptedAt}
               onClick={() => navigate(`/app/business/employees/${r.professionalId}`)}
             />
@@ -144,7 +145,7 @@ export function SeatsPage() {
   const loadError = error || (live ? billing.summaryError : legacy.error);
 
   return (
-    <BizPage title="Seats">
+    <BizPage title={t("Seats")}>
       {loadError && (
         <LoadError
           onRetry={() => {
@@ -153,25 +154,25 @@ export function SeatsPage() {
           }}
         />
       )}
-      {!ready && !loadError && <RowsSkeleton rows={3} label="Loading your seats" />}
+      {!ready && !loadError && <RowsSkeleton rows={3} label={t("Loading your seats")} />}
       {ready && (
         <>
           <BizHero
-            label="Seats used"
-            value={`${capacity?.used ?? accepted.length} of ${total}`}
+            label={t("Seats used")}
+            value={t("{used} of {total}", { used: capacity?.used ?? accepted.length, total })}
             sub={
               total === 0
-                ? "No seats yet"
-                : [included > 0 ? `${included} included in your plan` : null, blocks > 0 ? `${blocks} seat block${blocks === 1 ? "" : "s"}` : null].filter(Boolean).join(" · ")
+                ? t("No seats yet")
+                : [included > 0 ? t("{n} included in your plan", { n: included }) : null, blocks > 0 ? tn(blocks, "{n} seat block", "{n} seat blocks") : null].filter(Boolean).join(" · ")
             }
-            actions={canAdd ? [{ label: "Add seats", icon: Plus, primary: true, onClick: () => setSheet(true) }] : []}
+            actions={canAdd ? [{ label: t("Add seats"), icon: Plus, primary: true, onClick: () => setSheet(true) }] : []}
           />
           {order && (
-            <BizSection label="Seat order">
+            <BizSection label={t("Seat order")}>
               <BizRow
                 icon={Clock3}
-                title={`${order.quantity} seat block${order.quantity === 1 ? "" : "s"} awaiting payment`}
-                desc={`${money(order.amount)} · ordered ${fmt(order.createdAt)}. Seats are added once Centium records your payment.`}
+                title={tn(order.quantity, "{n} seat block awaiting payment", "{n} seat blocks awaiting payment")}
+                desc={t("{amount} · ordered {date}. Seats are added once Centium records your payment.", { amount: money(order.amount), date: fmt(order.createdAt) })}
                 onClick={() => setSheet(true)}
               />
             </BizSection>
@@ -184,34 +185,34 @@ export function SeatsPage() {
                   <BizRow key={m.professionalId} icon={User} title={m.name} desc={roleAndProfession(m)} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
                 ))}
                 {Array.from({ length: Math.max(0, per - members.length) }, (_, i) => (
-                  <BizRow key={`free-${i}`} icon={Plus} title="Free seat" desc="Invite a professional" onClick={() => navigate("/app/business/employees")} />
+                  <BizRow key={`free-${i}`} icon={Plus} title={t("Free seat")} desc={t("Invite a professional")} onClick={() => navigate("/app/business/employees")} />
                 ))}
               </BizSection>
             );
           })}
           {invited.length > 0 && (
-            <BizSection label="Invited" footer="An invitation uses a seat only once it's accepted.">
+            <BizSection label={t("Invited")} footer={t("An invitation uses a seat only once it's accepted.")}>
               {invited.map((m) => (
-                <BizRow key={m.professionalId} icon={UserPlus} title={m.name} desc={`Invited ${shortDay(m.invitedAt)}` + (inviteWhen(m) ? ` · ${inviteWhen(m)}` : "")} value={inviteState(m) === "expired" ? "Expired" : "Pending"} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
+                <BizRow key={m.professionalId} icon={UserPlus} title={m.name} desc={t("Invited {date}", { date: shortDay(m.invitedAt) }) + (inviteWhen(m) ? ` · ${inviteWhen(m)}` : "")} value={inviteState(m) === "expired" ? t("Expired") : t("Pending")} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
               ))}
             </BizSection>
           )}
           {noSeat.length > 0 && (
-            <BizSection label="No seat needed" footer="Front desk, managers, staff and shop assistants don't use a seat.">
+            <BizSection label={t("No seat needed")} footer={t("Front desk, managers, staff and shop assistants don't use a seat.")}>
               {noSeat.map((m) => (
                 <BizRow key={m.professionalId} icon={User} title={m.name} desc={m.acceptedAt ? ROLE_LABEL[m.role] : `${ROLE_LABEL[m.role]} · invited` + (inviteWhen(m) ? ` · ${lowerFirst(inviteWhen(m)!)}` : "")} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
               ))}
             </BizSection>
           )}
           {withdrawn.length > 0 && (
-            <BizSection label="Withdrawn" footer={billing.isOwner ? "Open one to invite them again." : undefined}>
+            <BizSection label={t("Withdrawn")} footer={billing.isOwner ? t("Open one to invite them again.") : undefined}>
               {withdrawn.map((m) => (
-                <BizRow key={m.professionalId} icon={UserX} title={m.name} desc={inviteWhen(m) ?? "Withdrawn"} dim onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
+                <BizRow key={m.professionalId} icon={UserX} title={m.name} desc={inviteWhen(m) ?? t("Withdrawn")} dim onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
               ))}
             </BizSection>
           )}
           {accepted.length > total && (
-            <BizNote>{accepted.length - total} on your team without a seat. Add a seat block to cover them.</BizNote>
+            <BizNote>{t("{n} on your team without a seat. Add a seat block to cover them.", { n: accepted.length - total })}</BizNote>
           )}
           {/* Add seats: the drawn AN5 057-060 flow (TeamFlowsV4), one purchase path for every entry point. */}
           <SeatsSheet
@@ -222,7 +223,7 @@ export function SeatsPage() {
             pending={invited.length}
             billing={billing}
             businessId={business?.id ?? null}
-            doneLabel="Done"
+            doneLabel={t("Done")}
             onClose={() => setSheet(false)}
             onPlan={() => navigate("/app/business/more/subscription")}
             onChanged={() => {
@@ -258,34 +259,34 @@ export function BusinessIdPage() {
 
   const n = requests?.length ?? 0;
   return (
-    <BizPage title="Business ID" sub="Professionals enter this code to ask to join your team.">
+    <BizPage title={t("Business ID")} sub={t("Professionals enter this code to ask to join your team.")}>
       {error && <LoadError onRetry={reload} />}
       {loading && !business && <RowsSkeleton rows={1} />}
       {!loading && (
         <BizHero
-          label="Your business ID"
-          value={code ?? "Not ready yet"}
-          sub="Approve each request, then they accept. Each person uses a seat."
+          label={t("Your business ID")}
+          value={code ?? t("Not ready yet")}
+          sub={t("Approve each request, then they accept. Each person uses a seat.")}
           actions={
             code
               ? [
                   {
-                    label: "Copy",
+                    label: t("Copy"),
                     icon: Copy,
-                    onClick: () => void copyText(code).then((ok) => showToast(ok ? "Business ID copied." : "Couldn't copy. Try again.")),
+                    onClick: () => void copyText(code).then((ok) => showToast(ok ? t("Business ID copied.") : t("Couldn't copy. Try again."))),
                   },
                   {
-                    label: "Share",
+                    label: t("Share"),
                     icon: Share2,
                     primary: true,
                     onClick: () =>
                       void shareOrCopy({
-                        title: "Our business ID on Centium",
-                        text: `Join ${business?.name ?? "our team"} on Centium. Enter business ID ${code} when you ask to join.`,
+                        title: t("Our business ID on Centium"),
+                        text: business?.name ? t("Join {name} on Centium. Enter business ID {code} when you ask to join.", { name: business.name, code }) : t("Join our team on Centium. Enter business ID {code} when you ask to join.", { code }),
                         copy: code,
                       }).then((r) => {
-                        if (r === "copied") showToast("Business ID copied.");
-                        if (r === "failed") showToast("Couldn't share right now. Try again.");
+                        if (r === "copied") showToast(t("Business ID copied."));
+                        if (r === "failed") showToast(t("Couldn't share right now. Try again."));
                       }),
                   },
                 ]
@@ -293,11 +294,11 @@ export function BusinessIdPage() {
           }
         />
       )}
-      <BizSection label="Join requests">
+      <BizSection label={t("Join requests")}>
         <BizRow
           icon={UserPlus}
-          title={requests === null ? "Join requests" : n === 0 ? "No requests right now" : `${n} waiting for you`}
-          desc={n === 0 ? "Requests show here when a professional enters your ID." : "Approve or deny them"}
+          title={requests === null ? t("Join requests") : n === 0 ? t("No requests right now") : t("{n} waiting for you", { n })}
+          desc={n === 0 ? t("Requests show here when a professional enters your ID.") : t("Approve or deny them")}
           onClick={() => navigate("/app/business/employees/requests")}
         />
       </BizSection>

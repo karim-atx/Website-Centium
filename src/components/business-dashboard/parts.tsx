@@ -3,6 +3,7 @@ import { AlertCircle, CalendarPlus, ChevronRight, HeartPulse, Lightbulb, Package
 import type { DashPalette } from "./palette";
 import type { NumberBox } from "./dashboardModel";
 import { linePx, textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 // Small Dashboard pieces, literal from BizSummaryV27 (DashLabel) and
 // BizTypeKit (KitLabel, NumberBoxes, KitBars, KitList, KitEmpty, KitTip).
@@ -23,7 +24,7 @@ export function DashLabel({ c, label, link, onLink, mb }: { c: DashPalette; labe
           style={{ display: "flex", alignItems: "center", gap: 2, fontSize: textPx(11), fontWeight: 700, color: c.pDark, background: "none", border: 0, padding: 0, minHeight: 0, lineHeight: 1.5 }}
         >
           {link}
-          <ChevronRight size={13} aria-hidden />
+          <ChevronRight size={13} aria-hidden className="rtl:-scale-x-100" />
         </button>
       )}
     </div>
@@ -109,7 +110,7 @@ export function KitList({ c, rows }: { c: DashPalette; rows: KitRow[] }) {
       {rows.map((r, k) => {
         const inner = (
           <>
-            {k > 0 && <span style={{ position: "absolute", top: 0, left: r.Icon ? 48 : 0, insetInlineEnd: 0, height: 1, background: c.listRule }} />}
+            {k > 0 && <span style={{ position: "absolute", top: 0, insetInlineStart: r.Icon ? 48 : 0, insetInlineEnd: 0, height: 1, background: c.listRule }} />}
             {r.Icon && (
               <span style={{ width: 36, height: 36, borderRadius: 11, background: c.pale, color: c.pDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <r.Icon size={17} strokeWidth={1.75} aria-hidden />
@@ -189,7 +190,7 @@ export function ErrorRow({ c, text, onRetry }: { c: DashPalette; text: string; o
       <AlertCircle size={15} strokeWidth={2} color={c.high} style={{ flexShrink: 0 }} aria-hidden />
       <p style={{ flex: 1, fontSize: textPx(12.5), lineHeight: linePx(18), color: c.high, margin: "12px 0" }}>{text}</p>
       <button type="button" onClick={onRetry} style={{ fontSize: textPx(12), fontWeight: 700, color: c.pDark, background: "none", border: 0, minHeight: 44, padding: "0 4px" }}>
-        Retry
+        {t("Retry")}
       </button>
     </div>
   );

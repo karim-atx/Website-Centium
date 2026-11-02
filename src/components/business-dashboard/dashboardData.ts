@@ -13,6 +13,7 @@ import { kindOf, toGlance } from "./dashboardModel";
 import { toAttentionRows } from "./attention";
 import { ACTIVITY_PAGE, toActivityRow } from "./activityFeed";
 import { LISTING_PROMO_COLS, liveOnListing, type PromotionRow } from "../../services/business-market/promoLogic";
+import { t } from "../../i18n/core";
 
 // THE DASHBOARD'S READS, all real rows on the local stack (no mock figures).
 //
@@ -87,7 +88,7 @@ export async function loadDashboard(userId: string, gymId: string | null): Promi
     .maybeSingle();
   if (bizRes.error) {
     console.error("[dashboard] Could not read the business:", bizRes.error.message);
-    return { ok: false, message: "Couldn't load your dashboard." };
+    return { ok: false, message: t("Couldn't load your dashboard.") };
   }
   const b = bizRes.data;
   const business: DashBusiness | null = b ? { id: b.id, name: b.business_name, type: b.business_type, active: !!b.active } : null;
@@ -126,7 +127,7 @@ export async function loadDashboard(userId: string, gymId: string | null): Promi
     .order("event_date", { ascending: true });
   if (classesRes.error) {
     console.error("[dashboard] Could not read classes:", classesRes.error.message);
-    return { ok: false, message: "Couldn't load your dashboard." };
+    return { ok: false, message: t("Couldn't load your dashboard.") };
   }
   const classes: DashClass[] = (classesRes.data ?? []).map((r) => ({
     id: r.id,
@@ -275,7 +276,7 @@ async function loadStore(bid: string, partial: string[]): Promise<DashStore | nu
   const rows = page.data ?? [];
   return {
     totalOrders: Number(rows[0]?.total_count ?? 0),
-    orders: rows.map((r) => ({ id: r.order_id, number: r.order_number, fulfilment: r.fulfilment, itemCount: Number(r.item_count ?? 0), label: r.customer_label ?? "Guest", status: r.status, placedAt: r.placed_at })),
+    orders: rows.map((r) => ({ id: r.order_id, number: r.order_number, fulfilment: r.fulfilment, itemCount: Number(r.item_count ?? 0), label: r.customer_label ?? t("Guest"), status: r.status, placedAt: r.placed_at })),
     lowStock: (low.error ? [] : low.data ?? []).map((r) => ({ id: r.offering_id, name: r.title, stock: Number(r.stock), category: category.get(r.offering_id) ?? null })),
   };
 }
@@ -339,7 +340,7 @@ export async function fetchRecentActivity(businessId: string): Promise<ActivityL
   const { data, error } = await db.rpc<Parameters<typeof toActivityRow>[0][]>("business_recent_activity", { p_business_id: businessId, p_limit: ACTIVITY_PAGE });
   if (error) {
     console.error("[dashboard] Could not read recent activity:", error.message);
-    return { ok: false, message: "Couldn't load recent activity." };
+    return { ok: false, message: t("Couldn't load recent activity.") };
   }
   return { ok: true, rows: (data ?? []).map(toActivityRow).filter((r): r is ActivityRow => r !== null) };
 }
