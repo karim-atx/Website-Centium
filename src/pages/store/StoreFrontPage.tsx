@@ -12,6 +12,7 @@ import { moneyShort } from "../../services/store/format";
 import { useLive } from "../business-ops/store/storeShared";
 import { ClientCard, ClientEmpty, ClientRow, RetryLine, Section, SkeletonCards } from "./clientKit";
 import { useCart } from "./useCart";
+import { t } from "../../i18n/core";
 
 // OURS-customer-store-product · the store's front on Explore (Designed by
 // us). Entry: Explore › a store's page › "Shop" (MarketplaceCategoryPage
@@ -26,10 +27,10 @@ async function loadFront(businessId: string): Promise<Load<{ store: StoreInfo | 
 
 export function fulfilmentLine(store: StoreInfo): string {
   const parts: string[] = [];
-  if (store.pickup) parts.push("Pickup");
+  if (store.pickup) parts.push(t("Pickup"));
   if (store.delivery) {
-    const fee = store.deliveryFee ? moneyShort(store.deliveryFee) : "free";
-    parts.push(store.freeDeliveryOver !== null ? `Delivery ${fee}, free over ${moneyShort(store.freeDeliveryOver)}` : `Delivery ${fee}`);
+    const fee = store.deliveryFee ? moneyShort(store.deliveryFee) : t("free");
+    parts.push(store.freeDeliveryOver !== null ? t("Delivery {fee}, free over {amount}", { fee, amount: moneyShort(store.freeDeliveryOver) }) : t("Delivery {fee}", { fee }));
   }
   return parts.join(" · ");
 }
@@ -49,21 +50,21 @@ export default function StoreFrontPage() {
   if (s.status === "loading") {
     return (
       <div>
-        <PageHeader title="Store" showBack sub />
-        <SkeletonCards heights={[64, 72, 72, 72]} label="Loading the store" />
+        <PageHeader title={t("Store")} showBack sub />
+        <SkeletonCards heights={[64, 72, 72, 72]} label={t("Loading the store")} />
       </div>
     );
   }
   if (s.status === "error" || s.status === "pending" || !d?.store) {
     return (
       <div>
-        <PageHeader title="Store" showBack sub />
+        <PageHeader title={t("Store")} showBack sub />
         {s.status === "error" ? (
-          <RetryLine text="Couldn't load this store." onRetry={live.reload} />
+          <RetryLine text={t("Couldn't load this store.")} onRetry={live.reload} />
         ) : !takesNew ? (
           <BusinessClosedNote status={bizStatus} what="orders" />
         ) : (
-          <ClientEmpty icon={ShoppingBag} title="Store not found" line="It may not be listed on Explore right now." />
+          <ClientEmpty icon={ShoppingBag} title={t("Store not found")} line={t("It may not be listed on Explore right now.")} />
         )}
       </div>
     );
@@ -76,30 +77,30 @@ export default function StoreFrontPage() {
       <BusinessClosedNote status={bizStatus} what="orders" className="mb-3" />
 
       {(store.pickup || store.delivery) && (
-        <ClientCard label="How you get it">
-          <ClientRow icon={store.delivery ? Truck : MapPin} title={store.delivery && store.pickup ? "Pickup or delivery" : store.delivery ? "Delivery" : "Pickup"} sub={fulfilmentLine(store)} />
+        <ClientCard label={t("How you get it")}>
+          <ClientRow icon={store.delivery ? Truck : MapPin} title={store.delivery && store.pickup ? t("Pickup or delivery") : store.delivery ? t("Delivery") : t("Pickup")} sub={fulfilmentLine(store)} />
         </ClientCard>
       )}
 
       {store.offersAppointments && takesNew && (
         <div style={{ marginTop: 10 }}>
           <ClientCard>
-            <ClientRow icon={CalendarPlus} title="Book an appointment" sub="See services and free times" onClick={() => navigate(`/app/appointments/book/${store.id}`)} />
+            <ClientRow icon={CalendarPlus} title={t("Book an appointment")} sub={t("See services and free times")} onClick={() => navigate(`/app/appointments/book/${store.id}`)} />
           </ClientCard>
         </div>
       )}
 
-      <Section label="Products">
+      <Section label={t("Products")}>
         {d.products.length === 0 ? (
-          <ClientEmpty icon={ShoppingBag} title="No products yet" line="This store hasn't listed anything to buy yet." />
+          <ClientEmpty icon={ShoppingBag} title={t("No products yet")} line={t("This store hasn't listed anything to buy yet.")} />
         ) : (
-          <ClientCard label="Products">
+          <ClientCard label={t("Products")}>
             {d.products.map((p) => (
               <ClientRow
                 key={p.id}
                 icon={ShoppingBag}
                 title={p.name}
-                sub={p.stock !== null && p.stock <= 0 ? "Out of stock" : p.description || undefined}
+                sub={p.stock !== null && p.stock <= 0 ? t("Out of stock") : p.description || undefined}
                 value={p.price !== null ? moneyShort(p.price) : undefined}
                 onClick={() => navigate(`/app/store/${store.id}/p/${p.id}`)}
               />
@@ -108,7 +109,7 @@ export default function StoreFrontPage() {
         )}
       </Section>
 
-      {inCart > 0 && takesNew && <PinnedCta primary={{ label: `View cart · ${inCart}`, icon: <ShoppingCart size={15} />, onClick: () => navigate("/app/store/cart") }} />}
+      {inCart > 0 && takesNew && <PinnedCta primary={{ label: t("View cart · {n}", { n: inCart }), icon: <ShoppingCart size={15} />, onClick: () => navigate("/app/store/cart") }} />}
       {inCart > 0 && takesNew && <div aria-hidden style={{ height: 60 }} />}
     </div>
   );

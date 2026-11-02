@@ -1,32 +1,34 @@
 import type { BizKind } from "../../components/business-more/kind";
 import type { BusinessRole, ClassSession, TeamPerson } from "../../services/business-team/types";
 import { personUsesSeat, professionLabel } from "../../services/business-team/seats";
-import { range12 } from "../../utils/time12";
-import { DAY_SHORT, startOfWeekISO, weekdayColumn } from "../../utils/week";
+import { clock12, range12 } from "../../utils/time12";
+import { startOfWeekISO } from "../../utils/week";
 import { localDayOf, shiftDate } from "../../utils/date";
 import type { PublicDetails } from "../../services/business-team/types";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tn, tx } from "../../i18n/core";
 
 // v6 Batch 4 · Team. Pure rules for the team page, person page and sheets
 // (OpsTabsV4 logic lines 462-481, 499-545, 605-611), with the sample data
 // replaced by real rows.
 
 /** Page title per type (COPY "Team and access": Instructors / Team / Staff). */
-export const TEAM_TITLE: Record<BizKind, string> = { classes: "Instructors", gym: "Team", store: "Staff" };
+export const TEAM_TITLE: Record<BizKind, string> = { classes: tk("Instructors"), gym: tk("Team"), store: tk("Staff") };
 
 /** The title, neutral ("Team") until the lane is known (useBusiness falls back to "store"). */
-export const teamTitle = (kind: BizKind, known: boolean): string => (known ? TEAM_TITLE[kind] : "Team");
+export const teamTitle = (kind: BizKind, known: boolean): string => t(known ? TEAM_TITLE[kind] : "Team");
 
 /** Subtitle (source line 462). */
 export const teamSubtitle = (kind: BizKind) =>
-  kind === "store" ? "Your team and who can help run the store" : "Your instructors and staff";
+  kind === "store" ? t("Your team and who can help run the store") : t("Your instructors and staff");
 
-/** The early-data word (OURS per type, OP1-055 #16). */
-const STAFF_WORD: Record<BizKind, [string, string]> = {
-  classes: ["instructor", "instructors"],
-  gym: ["team member", "team members"],
-  store: ["staff member", "staff"],
-};
+/** The early-data sentence (OURS per type, OP1-055 #16): "1 team member so far. Seats left: 4." */
+const soFar = (kind: BizKind, n: number, free: number): string =>
+  kind === "classes"
+    ? tn(n, "1 instructor so far. Seats left: {free}.", "{n} instructors so far. Seats left: {free}.", { free })
+    : kind === "gym"
+      ? tn(n, "1 team member so far. Seats left: {free}.", "{n} team members so far. Seats left: {free}.", { free })
+      : tn(n, "1 staff member so far. Seats left: {free}.", "{n} staff so far. Seats left: {free}.", { free });
 
 export interface RoleOption {
   value: BusinessRole;
@@ -40,45 +42,49 @@ export interface RoleOption {
  * (OURS Q6; the B6 enum has no physiotherapist or nutritionist role).
  */
 export function roleOptions(kind: BizKind): RoleOption[] {
-  const front: RoleOption = { value: "front_desk", label: "Front desk", sub: "Bookings and check-in" };
-  const manager: RoleOption = { value: "manager", label: "Manager", sub: "Runs the schedule and team" };
+  const front: RoleOption = { value: "front_desk", label: roleLabel("front_desk"), sub: t(ROLE_DOES.front_desk) };
+  const manager: RoleOption = { value: "manager", label: roleLabel("manager"), sub: t(ROLE_DOES.manager) };
   if (kind === "store") {
-    return [{ value: "shop_assistant", label: "Shop assistant", sub: "Orders and the shop floor" }, front, manager];
+    return [{ value: "shop_assistant", label: roleLabel("shop_assistant"), sub: t(ROLE_DOES.shop_assistant) }, front, manager];
   }
   return [
-    { value: "instructor", label: "Instructor", sub: "Teaches classes" },
-    { value: "trainer", label: "Personal trainer", sub: "One-to-one sessions" },
+    { value: "instructor", label: roleLabel("instructor"), sub: t(ROLE_DOES.instructor) },
+    { value: "trainer", label: roleLabel("trainer"), sub: t(ROLE_DOES.trainer) },
     front,
     manager,
   ];
 }
 
+/** English keys (tk); show them with roleLabel() or t(). */
 export const ROLE_LABEL: Record<BusinessRole, string> = {
-  instructor: "Instructor",
-  trainer: "Personal trainer",
-  front_desk: "Front desk",
-  manager: "Manager",
-  staff: "Staff",
-  shop_assistant: "Shop assistant",
+  instructor: tk("Instructor"),
+  trainer: tk("Personal trainer"),
+  front_desk: tk("Front desk"),
+  manager: tk("Manager"),
+  staff: tk("Staff"),
+  shop_assistant: tk("Shop assistant"),
 };
 
-/** The role card's row title (OP1-061 #9, the menu subtitles). */
+/** A role's name in the app's language. */
+export const roleLabel = (role: BusinessRole): string => t(ROLE_LABEL[role]);
+
+/** The role card's row title (OP1-061 #9, the menu subtitles). English keys (tk); show them with t(). */
 export const ROLE_DOES: Record<BusinessRole, string> = {
-  instructor: "Teaches classes",
-  trainer: "One-to-one sessions",
-  front_desk: "Bookings and check-in",
-  manager: "Runs the schedule and team",
-  staff: "No console access yet",
-  shop_assistant: "Orders and the shop floor",
+  instructor: tk("Teaches classes"),
+  trainer: tk("One-to-one sessions"),
+  front_desk: tk("Bookings and check-in"),
+  manager: tk("Runs the schedule and team"),
+  staff: tk("No console access yet"),
+  shop_assistant: tk("Orders and the shop floor"),
 };
 
 /** Short role under a seat (source roleShort). */
-export const roleShort = (role: BusinessRole) => ROLE_LABEL[role].replace("Personal trainer", "Trainer").replace("Shop assistant", "Assistant");
+export const roleShort = (role: BusinessRole) => (role === "trainer" ? t("Trainer") : role === "shop_assistant" ? t("Assistant") : roleLabel(role));
 
 /** "Instructor · Physiotherapist": the access level and, when known, the profession (B6 follow-up). */
 export const roleAndProfession = (p: TeamPerson) => {
   const prof = professionLabel(p);
-  return prof && prof !== ROLE_LABEL[p.role] ? `${ROLE_LABEL[p.role]} · ${prof}` : ROLE_LABEL[p.role];
+  return prof && prof !== ROLE_LABEL[p.role] ? `${roleLabel(p.role)} · ${prof}` : roleLabel(p.role);
 };
 
 export const firstWord = (name: string) => name.trim().split(/\s+/)[0] || name;
@@ -124,13 +130,13 @@ export function inviteWhen(p: Pick<TeamPerson, "acceptedAt" | "invite">, now: Da
   const s = inviteState(p, now);
   const w = p.invite;
   if (!w || s === "unknown") return null;
-  if (s === "withdrawn") return w.revokedAt ? `Withdrawn ${shortDay(w.revokedAt, now)}` : "Withdrawn";
-  if (!w.expiresAt) return "Expired";
-  return `${s === "pending" ? "Expires" : "Expired"} ${shortDay(w.expiresAt, now)}`;
+  if (s === "withdrawn") return w.revokedAt ? t("Withdrawn {date}", { date: shortDay(w.revokedAt, now) }) : t("Withdrawn");
+  if (!w.expiresAt) return tx("Expired", "invite");
+  return s === "pending" ? t("Expires {date}", { date: shortDay(w.expiresAt, now) }) : t("Expired {date}", { date: shortDay(w.expiresAt, now) });
 }
 
 /** The short word under an invited seat: "Expired" once lapsed, else "Invited". */
-export const invitedWord = (p: TeamPerson, now: Date = new Date()) => (inviteState(p, now) === "expired" ? "Expired" : "Invited");
+export const invitedWord = (p: TeamPerson, now: Date = new Date()) => (inviteState(p, now) === "expired" ? tx("Expired", "invite") : tx("Invited", "person"));
 
 export interface SeatCounts {
   used: number;
@@ -183,13 +189,13 @@ export function seatCounts(
 
 /** "4 of 5 seats used · 1 invited · 0 free" with the parts only when non-zero (source 637). */
 export function seatLine(c: SeatCounts): string {
-  return `${c.used} of ${c.total} seats used` + (c.invited ? ` · ${c.invited} invited` : "") + (c.free ? ` · ${c.free} free` : "");
+  return t("{used} of {total} seats used", { used: c.used, total: c.total }) + (c.invited ? ` · ${t("{n} invited", { n: c.invited })}` : "") + (c.free ? ` · ${tx("{n} free", "seats", { n: c.free })}` : "");
 }
 
 /** The hint under the grid (source 481; OURS for zero seats, OP1-056 E). */
 export function seatHint(c: SeatCounts, perBlock: number): string {
-  if (c.total === 0) return `You have no seats yet. Add a block of ${perBlock} seats to invite people.`;
-  return c.free > 0 ? "Tap a seat to see who's in it, or + to invite someone." : `All seats are taken. Add a block of ${perBlock} seats to invite more people.`;
+  if (c.total === 0) return t("You have no seats yet. Add a block of {n} seats to invite people.", { n: perBlock });
+  return c.free > 0 ? t("Tap a seat to see who's in it, or + to invite someone.") : t("All seats are taken. Add a block of {n} seats to invite more people.", { n: perBlock });
 }
 
 export type Seat = { kind: "person"; person: TeamPerson; index: number } | { kind: "free"; index: number };
@@ -262,60 +268,58 @@ export function teamBoxes(
   if (people.length === 0) {
     return {
       boxes: [
-        { label: "Active team", value: "0", delta: "" },
-        { label: kind === "store" ? "Open invites" : "Sessions this week", value: "0", delta: "" },
+        { label: t("Active team"), value: "0", delta: "" },
+        { label: kind === "store" ? t("Open invites") : t("Sessions this week"), value: "0", delta: "" },
       ],
-      line: "Invite the people who work with you. Instructors and trainers use a seat.",
+      line: t("Invite the people who work with you. Instructors and trainers use a seat."),
     };
   }
   if (kind === "store") {
     const firstInvited = people.find((p) => !isAccepted(p));
     return {
       boxes: [
-        { label: "Active team", value: String(active), delta: "" },
-        { label: "Open invites", value: String(openInvites), delta: "" },
+        { label: t("Active team"), value: String(active), delta: "" },
+        { label: t("Open invites"), value: String(openInvites), delta: "" },
       ],
-      line: `${c.used} of ${c.total} seats used.` + (firstInvited ? ` ${firstInvited.name} hasn't accepted their invite yet.` : ""),
+      line: t("{used} of {total} seats used.", { used: c.used, total: c.total }) + (firstInvited ? ` ${t("{name} hasn't accepted their invite yet.", { name: firstInvited.name })}` : ""),
     };
   }
   const boxes = [
-    { label: "Active team", value: String(active), delta: early ? "" : signed(active - activeWeekAgo) },
-    { label: "Sessions this week", value: String(sessThis.length), delta: early ? "" : signed(sessThis.length - sessLast.length) },
+    { label: t("Active team"), value: String(active), delta: early ? "" : signed(active - activeWeekAgo) },
+    { label: t("Sessions this week"), value: String(sessThis.length), delta: early ? "" : signed(sessThis.length - sessLast.length) },
   ];
   if (early) {
-    return { boxes, line: `${active} ${STAFF_WORD[kind][active === 1 ? 0 : 1]} so far. Seats left: ${c.free}.` };
+    return { boxes, line: soFar(kind, active, c.free) };
   }
   const byPerson = new Map<string, number>();
   for (const s of sessThis) byPerson.set(s.professionalId!, (byPerson.get(s.professionalId!) ?? 0) + 1);
   const top = [...byPerson.entries()].sort((a, b) => b[1] - a[1])[0];
   const topName = top ? people.find((p) => p.professionalId === top[0])?.name : null;
   const line = top && topName
-    ? `${topName} teaches the most: ${top[1]} session${top[1] === 1 ? "" : "s"} this week.`
-    : `${c.used} of ${c.total} seats used. No sessions on the schedule this week.`;
+    ? tn(top[1], "{name} teaches the most: 1 session this week.", "{name} teaches the most: {n} sessions this week.", { name: topName })
+    : t("{used} of {total} seats used. No sessions on the schedule this week.", { used: c.used, total: c.total });
   return { boxes, line };
 }
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "Mon, Oct 5" for a yyyy-mm-dd date. */
+/** "Mon, Oct 5" for a yyyy-mm-dd date (Arabic day and month names in Arabic). */
 export function dayDate(d: string): string {
   const dt = new Date(`${d}T00:00:00`);
-  return `${DAY_SHORT[weekdayColumn(dt)]}, ${MONTHS[dt.getMonth()]} ${dt.getDate()}`;
+  return dt.toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
 }
 
 /** "Mar 12, 2026" for an instant. */
 export function longDate(iso: string): string {
   const dt = new Date(iso);
-  return `${MONTHS[dt.getMonth()]} ${dt.getDate()}, ${dt.getFullYear()}`;
+  return dt.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" });
 }
 
 /** "Today" / "Tue 6 Oct". */
-export const dayWord = (d: string, today: string) => (d === today ? "Today" : dayDate(d));
+export const dayWord = (d: string, today: string) => (d === today ? t("Today") : dayDate(d));
 
 /** A session line for the preview card: "Today 6:00 PM · Spin 45 · 18 of 20 booked" (source NEXT, 12-hour). */
 export function previewLine(s: ClassSession, today: string, booked: number | null): string {
   const time = range12(s.start, null);
-  return `${dayWord(s.date, today)} ${time} · ${s.title}` + (booked === null ? "" : ` · ${booked} of ${s.capacity} booked`);
+  return `${dayWord(s.date, today)} ${time} · ${s.title}` + (booked === null ? "" : ` · ${t("{booked} of {capacity} booked", { booked, capacity: s.capacity })}`);
 }
 
 /** Classes of one person that overlap another of theirs on the same day (BU2-18 clash). */
@@ -331,12 +335,8 @@ export function clashOf(s: ClassSession, all: ClassSession[]): ClassSession | nu
 export function requestedWhen(iso: string, today: string): string {
   const dt = new Date(iso);
   const local = localDayOf(dt);
-  if (local === today) {
-    const h = dt.getHours();
-    const m = dt.getMinutes();
-    return `Requested today at ${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
-  }
-  return `Requested ${dayDate(local)}`;
+  if (local === today) return t("Requested today at {time}", { time: clock12(dt) });
+  return t("Requested {date}", { date: dayDate(local) });
 }
 
 // ---------------------------------------------------------------------------
@@ -353,7 +353,7 @@ export function yearsOfExperience(details: Pick<PublicDetails, "experience">, to
   return months >= 12 ? Math.floor(months / 12) : null;
 }
 
-const yearsText = (n: number) => `${n} ${n === 1 ? "year's" : "years'"} experience`;
+const yearsText = (n: number) => tn(n, "{n} year's experience", "{n} years' experience");
 
 /** C1: "Spin and strength · 6 years' experience"; either half alone; null with neither. */
 export function specialtySub(details: PublicDetails, today: string): string | null {
@@ -365,8 +365,8 @@ export function specialtySub(details: PublicDetails, today: string): string | nu
 /** C2: "{title}, {organisation}" / "{start year} to {end year or now}". */
 export function jobRow(job: PublicDetails["experience"][number]): { title: string; sub: string | null } {
   const from = job.startMonth?.slice(0, 4) ?? null;
-  const to = job.endMonth ? job.endMonth.slice(0, 4) : "now";
-  return { title: job.organisation ? `${job.title}, ${job.organisation}` : job.title, sub: from ? `${from} to ${to}` : null };
+  const to = job.endMonth ? job.endMonth.slice(0, 4) : t("now");
+  return { title: job.organisation ? `${job.title}${t(", ")}${job.organisation}` : job.title, sub: from ? t("{from} to {to}", { from, to }) : null };
 }
 
 /** 9c: "{discipline} · {specialty or experience}"; null when neither is known. */

@@ -15,6 +15,7 @@ import { useLive } from "../business-ops/store/storeShared";
 import { ClientCard, ClientEmpty, ClientRow, InfoNote, RadioRow, RetryLine, Section, SkeletonCards, SoonChip } from "./clientKit";
 import { loadCart } from "./CartPage";
 import { useCart } from "./useCart";
+import { t, tx } from "../../i18n/core";
 
 // OURS-customer-store-checkout (Designed by us). Cash today; Whish shown as
 // "Soon"; no card fields (decided). place_order (B11) takes the prices, fee
@@ -24,6 +25,8 @@ import { useCart } from "./useCart";
 // days after the order ends (V6-38). B11 has no phone column, so the old
 // Phone field is now an optional note for the store (p_note, 300).
 
+// A brand name, the same in every language.
+const WHISH = "Whish";
 const FIELD = "w-full bg-cream-soft border-[0.5px] border-charcoal/[0.10] rounded-[12px] text-[14px] leading-[21px] text-charcoal placeholder:text-charcoal-faint outline-none focus:border-primary-dark";
 
 export default function CheckoutPage() {
@@ -55,24 +58,24 @@ export default function CheckoutPage() {
   if (!cart || cart.lines.length === 0) {
     return (
       <div>
-        <PageHeader title="Checkout" showBack sub />
-        <ClientEmpty icon={ShoppingCart} title="Your cart is empty" line="Add products from a store on Explore, then check out here." />
+        <PageHeader title={t("Checkout")} showBack sub />
+        <ClientEmpty icon={ShoppingCart} title={t("Your cart is empty")} line={t("Add products from a store on Explore, then check out here.")} />
       </div>
     );
   }
   if (s.status === "loading") {
     return (
       <div>
-        <PageHeader title="Checkout" showBack sub />
-        <SkeletonCards heights={[112, 112, 120]} label="Loading checkout" />
+        <PageHeader title={t("Checkout")} showBack sub />
+        <SkeletonCards heights={[112, 112, 120]} label={t("Loading checkout")} />
       </div>
     );
   }
   if (!d || !store) {
     return (
       <div>
-        <PageHeader title="Checkout" showBack sub />
-        {takesNew ? <RetryLine text="Couldn't load checkout." onRetry={live.reload} /> : <BusinessClosedNote status={bizStatus} what="orders" />}
+        <PageHeader title={t("Checkout")} showBack sub />
+        {takesNew ? <RetryLine text={t("Couldn't load checkout.")} onRetry={live.reload} /> : <BusinessClosedNote status={bizStatus} what="orders" />}
       </div>
     );
   }
@@ -96,7 +99,7 @@ export default function CheckoutPage() {
     });
     setBusy(false);
     if (!r.ok) {
-      setError(r.pending ? "Ordering from stores is coming soon." : storeErrorText(r, "Couldn't place your order. Try again."));
+      setError(r.pending ? t("Ordering from stores is coming soon.") : storeErrorText(r, t("Couldn't place your order. Try again.")));
       return;
     }
     writeCart(uid, null);
@@ -105,20 +108,20 @@ export default function CheckoutPage() {
 
   return (
     <div>
-      <PageHeader title="Checkout" subtitle={store.name} showBack sub />
+      <PageHeader title={t("Checkout")} subtitle={store.name} showBack sub />
       <BusinessClosedNote status={bizStatus} what="orders" className="mb-3" />
 
-      <Section label="How you get it" first>
+      <Section label={t("How you get it")} first>
         <ClientCard>
-          <div role="radiogroup" aria-label="How you get it">
-            {store.pickup && <RadioRow icon={MapPin} selected={method === "pickup"} onSelect={() => setMethod("pickup")} title="Pickup" sub={store.location ? `At ${store.location}` : "At the store"} />}
+          <div role="radiogroup" aria-label={t("How you get it")}>
+            {store.pickup && <RadioRow icon={MapPin} selected={method === "pickup"} onSelect={() => setMethod("pickup")} title={t("Pickup")} sub={store.location ? t("At {place}", { place: store.location }) : t("At the store")} />}
             {store.delivery && (
               <RadioRow
                 icon={Truck}
                 selected={method === "delivery"}
                 onSelect={() => setMethod("delivery")}
-                title="Delivery"
-                sub={[deliveryFeeFor(store, subtotal) === 0 ? "Free" : money(deliveryFeeFor(store, subtotal)), store.deliveryTime].filter(Boolean).join(" · ")}
+                title={t("Delivery")}
+                sub={[deliveryFeeFor(store, subtotal) === 0 ? t("Free") : money(deliveryFeeFor(store, subtotal)), store.deliveryTime].filter(Boolean).join(" · ")}
               />
             )}
           </div>
@@ -126,43 +129,43 @@ export default function CheckoutPage() {
         {method === "delivery" && (
           <div style={{ marginTop: 12 }}>
             <label htmlFor="co-address" className="block text-[12px] font-bold text-charcoal-soft" style={{ marginBottom: 6 }}>
-              Delivery address
+              {t("Delivery address")}
             </label>
-            <textarea id="co-address" rows={2} maxLength={200} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, building, floor" className={FIELD} style={{ padding: "10px 12px", resize: "none" }} />
-            <InfoNote icon={ShieldCheck}>Only this store sees your address, for this order. It's removed 90 days after the order ends.</InfoNote>
+            <textarea id="co-address" rows={2} maxLength={200} value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t("Street, building, floor")} className={FIELD} style={{ padding: "10px 12px", resize: "none" }} />
+            <InfoNote icon={ShieldCheck}>{t("Only this store sees your address, for this order. It's removed 90 days after the order ends.")}</InfoNote>
           </div>
         )}
         <label htmlFor="co-note" className="block text-[12px] font-bold text-charcoal-soft" style={{ margin: "12px 0 6px" }}>
-          Note for the store
+          {t("Note for the store")}
         </label>
-        <textarea id="co-note" rows={2} maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" className={FIELD} style={{ padding: "10px 12px", resize: "none" }} />
+        <textarea id="co-note" rows={2} maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("Optional")} className={FIELD} style={{ padding: "10px 12px", resize: "none" }} />
       </Section>
 
-      <Section label="Payment">
+      <Section label={tx("Payment", "checkout")}>
         <ClientCard>
-          <div role="radiogroup" aria-label="Payment">
-            <RadioRow icon={Banknote} selected title="Cash" sub={method === "delivery" ? "Pay when it's delivered" : "Pay when you pick it up"} />
-            <RadioRow icon={Wallet} selected={false} disabled title="Whish" sub="Pay in the app" trailing={<SoonChip />} />
+          <div role="radiogroup" aria-label={tx("Payment", "checkout")}>
+            <RadioRow icon={Banknote} selected title={t("Cash")} sub={method === "delivery" ? t("Pay when it's delivered") : t("Pay when you pick it up")} />
+            <RadioRow icon={Wallet} selected={false} disabled title={WHISH} sub={t("Pay in the app")} trailing={<SoonChip />} />
           </div>
         </ClientCard>
       </Section>
 
-      <Section label="Summary">
-        <ClientCard label="Summary">
+      <Section label={t("Summary")}>
+        <ClientCard label={t("Summary")}>
           {d.lines.map((l) => (
-            <ClientRow key={l.product.id} title={l.product.name} sub={`qty ${l.qty}`} value={money(l.total)} />
+            <ClientRow key={l.product.id} title={l.product.name} sub={t("qty {n}", { n: l.qty })} value={money(l.total)} />
           ))}
-          {method === "delivery" && <ClientRow title="Delivery" value={fee === 0 ? "Free" : money(fee)} />}
-          <ClientRow title={<span className="font-bold">Total</span>} value={money(total)} />
+          {method === "delivery" && <ClientRow title={t("Delivery")} value={fee === 0 ? t("Free") : money(fee)} />}
+          <ClientRow title={<span className="font-bold">{t("Total")}</span>} value={money(total)} />
         </ClientCard>
         {store.returnsPolicy && (
           <p className="text-[12px] font-medium leading-[17px] text-charcoal-faint" style={{ marginTop: 10, padding: "0 4px" }}>
-            Returns: {store.returnsPolicy}
+            {t("Returns: {policy}", { policy: store.returnsPolicy })}
           </p>
         )}
       </Section>
 
-      {shipped === false && <InfoNote icon={Info}>Ordering from stores is coming soon. Your cart stays saved on this device.</InfoNote>}
+      {shipped === false && <InfoNote icon={Info}>{t("Ordering from stores is coming soon. Your cart stays saved on this device.")}</InfoNote>}
       {error && (
         <p role="alert" className="text-[12px] font-semibold text-status-high" style={{ marginTop: 10 }}>
           {error}
@@ -170,7 +173,7 @@ export default function CheckoutPage() {
       )}
 
       <div aria-hidden style={{ height: 60 }} />
-      <PinnedCta primary={{ label: `Place order · ${money(total)}`, onClick: () => void submit(), disabled: !ready, loading: busy }} />
+      <PinnedCta primary={{ label: t("Place order · {total}", { total: money(total) }), onClick: () => void submit(), disabled: !ready, loading: busy }} />
     </div>
   );
 }

@@ -6,7 +6,8 @@ import { copyText } from "../../components/business-more/share";
 import { fetchPublicDetails, respondJoinRequest, type JoinRequest, type PublicDetails } from "../../services/business-team/team";
 import { Avatar, BackRow, Notice, TeamScope, isOfflineNow, useTeamToast } from "./parts";
 import { SeatsFullSheet } from "./TeamSheets";
-import { ROLE_LABEL, requestLine, requestedWhen, seatCounts, teamTitle } from "./teamLogic";
+import { requestLine, requestedWhen, roleLabel, seatCounts, teamTitle } from "./teamLogic";
+import { t, tn } from "../../i18n/core";
 import type { TeamData } from "./useTeamData";
 
 // OP1-123 / 124 (requests), 126 (deny confirm), 127 (approve with no free
@@ -58,7 +59,7 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
       return showToast(res.message, true);
     }
     data.setRequests(list.filter((x) => x.id !== r.id));
-    showToast(approve ? `Approved. ${r.name} joins your team once they accept.` : "Request denied.");
+    showToast(approve ? t("Approved. {name} joins your team once they accept.", { name: r.name }) : t("Request denied."));
     data.reload();
   };
 
@@ -71,24 +72,28 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
         </span>
         <div className="tm-dhead-b">
           <p className="tm-dname">
-            <b>Join requests</b>
+            <b>{t("Join requests")}</b>
           </p>
-          <p className="tm-ds1">{n === 0 ? "Nobody is waiting" : n === 1 ? "1 professional wants to join" : `${n} professionals want to join`}</p>
+          <p className="tm-ds1">{n === 0 ? t("Nobody is waiting") : tn(n, "1 professional wants to join", "{n} professionals want to join")}</p>
           <p className="tm-ds2">
-            {n === 0 ? `Professionals enter your business ID ${code ?? ""} to ask to join.`.replace(" ID  to", " ID to") : `They entered your business ID ${code ?? ""}`}
+            {n === 0
+              ? code
+                ? t("Professionals enter your business ID {code} to ask to join.", { code })
+                : t("Professionals enter your business ID to ask to join.")
+              : t("They entered your business ID {code}", { code: code ?? "" })}
           </p>
         </div>
       </div>
 
       {offline ? (
-        <Notice message="You're offline. Requests show when you're back online." />
+        <Notice message={t("You're offline. Requests show when you're back online.")} />
       ) : (
-        requestsError && <Notice message="Couldn't load join requests. Try again." onRetry={data.reload} />
+        requestsError && <Notice message={t("Couldn't load join requests. Try again.")} onRetry={data.reload} />
       )}
 
       {n > 0 && (
         <p className="tm-rq-line">
-          {data.readOnly ? "Only the owner can approve or deny a request." : "Approving someone adds them to your team and uses a free seat once they accept."}
+          {data.readOnly ? t("Only the owner can approve or deny a request.") : t("Approving someone adds them to your team and uses a free seat once they accept.")}
         </p>
       )}
 
@@ -118,7 +123,7 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
                   <p className="tm-rq-n">{r.name}</p>
                   {requestLine(details[r.professionalId] ?? null, today) && <p className="tm-rq-s">{requestLine(details[r.professionalId] ?? null, today)}</p>}
                   {/* W6A-1: the role they asked for and their note (no frame draws these; the 9c line's style). */}
-                  {r.requestedRole && <p className="tm-rq-s">{`Role asked for: ${ROLE_LABEL[r.requestedRole]}`}</p>}
+                  {r.requestedRole && <p className="tm-rq-s">{t("Role asked for: {role}", { role: roleLabel(r.requestedRole) })}</p>}
                   {r.message && (
                     <p className="tm-rq-s" style={{ whiteSpace: "pre-line", overflowWrap: "anywhere" }}>
                       {r.message}
@@ -134,7 +139,7 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
                   disabled={offline || !!busy}
                   onClick={() => setDeny(r)}
                 >
-                  Deny
+                  {t("Deny")}
                 </button>
                 <button
                   type="button"
@@ -143,7 +148,7 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
                   onClick={() => void answer(r, true)}
                 >
                   <Check size={15} strokeWidth={2.6} />
-                  Approve
+                  {t("Approve")}
                 </button>
               </div>}
             </div>
@@ -153,15 +158,15 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
               <span className="tm-empty-tile">
                 <Inbox size={22} />
               </span>
-              <p className="tm-empty-t">No join requests</p>
-              <p className="tm-empty-b">When a professional enters your business ID, their request shows here for you to approve.</p>
+              <p className="tm-empty-t">{t("No join requests")}</p>
+              <p className="tm-empty-b">{t("When a professional enters your business ID, their request shows here for you to approve.")}</p>
               {code && (
                 <button
                   type="button"
                   className="tm-link tap"
-                  onClick={() => void copyText(code).then((ok) => showToast(ok ? "Business ID copied." : "Couldn't copy. Try again.", !ok))}
+                  onClick={() => void copyText(code).then((ok) => showToast(ok ? t("Business ID copied.") : t("Couldn't copy. Try again."), !ok))}
                 >
-                  Copy business ID
+                  {t("Copy business ID")}
                 </button>
               )}
             </div>
@@ -178,10 +183,10 @@ export function JoinRequestsPage({ data }: { data: TeamData }) {
         initialFocus="cancel"
         scrimBlur
         icon={<UserX size={20} strokeWidth={2.2} />}
-        title={`Deny ${deny?.name ?? ""}'s request?`}
-        subtitle="They won't join your team. They can send a new request later."
-        confirmLabel={busy ? "Denying…" : "Deny request"}
-        cancelLabel="Keep it"
+        title={t("Deny {name}'s request?", { name: deny?.name ?? "" })}
+        subtitle={t("They won't join your team. They can send a new request later.")}
+        confirmLabel={busy ? t("Denying…") : t("Deny request")}
+        cancelLabel={t("Keep it")}
         busy={!!busy}
         onCancel={() => setDeny(null)}
         onConfirm={() => deny && void answer(deny, false)}

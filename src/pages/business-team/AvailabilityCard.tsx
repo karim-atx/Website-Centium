@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarClock, CalendarPlus, Info, MessageCircle, TriangleAlert } from "lucide-react";
 import { fetchAvailability, fetchBooked, type AvailabilityWindow, type ClassSession } from "../../services/business-team/team";
 import { hourLabel12, minutesOfDay, range12, time12 } from "../../utils/time12";
-import { DAY_LETTERS } from "../../utils/week";
 import { shiftDate } from "../../utils/date";
 import { clashOf, dayDate, weekRange } from "./teamLogic";
+import { t, tk } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
 
 // OP1-134 / 136 / 137 / 138 / 139: the Availability card (OpsTabsV4 template
 // 266-289, logic 532-544). Hours 06:00-22:00 at 16 px per hour, a 12-hour
@@ -25,17 +26,26 @@ const yOf = (hhmm: string) => {
 
 type Sel = { kind: "cls"; id: string } | { kind: "free"; day: number; i: number } | null;
 
-/** "5 to 11 Oct", or "28 Sep to 4 Oct" across months (OP1-134 #2). */
-const weekSpan = (from: string, to: string) => {
-  const [, fd, fm] = dayDate(from).split(" ");
-  const [, td, tm] = dayDate(to).split(" ");
-  return fm === tm ? `${fd} to ${td} ${tm}` : `${fd} ${fm} to ${td} ${tm}`;
+/** "Oct 5" for a yyyy-mm-dd date, in the app's language. */
+const monthDay = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
+
+/** "Oct 5 to Oct 11" (OP1-134 #2). */
+const weekSpan = (from: string, to: string) => t("{from} to {to}", { from: monthDay(from), to: monthDay(to) });
+
+/** The day column's letter ("M"), in the app's language. */
+const dayLetter = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "narrow" });
+
+/** The free-slot suggestion by part of the day. */
+const goodSlot = (hhmm: string) => {
+  const m = minutesOfDay(hhmm) ?? 0;
+  return m < 12 * 60
+    ? t("Nothing booked. A good slot for an extra morning class.")
+    : m < 17 * 60
+      ? t("Nothing booked. A good slot for an extra afternoon class.")
+      : t("Nothing booked. A good slot for an extra evening class.");
 };
 
-const partOfDay = (hhmm: string) => {
-  const m = minutesOfDay(hhmm) ?? 0;
-  return m < 12 * 60 ? "morning" : m < 17 * 60 ? "afternoon" : "evening";
-};
+const WEEK_TABS = [tk("This week"), tk("Next week")];
 
 export function AvailabilityCard({
   businessId,
@@ -116,16 +126,18 @@ export function AvailabilityCard({
 
   const empty = windows !== null && windows.length === 0;
   const start = AH0 + offset;
-  const rangeText = `${hourLabel12(start)} to ${hourLabel12(start + 12)} · ${offset === 0 ? "drag for later" : offset === 4 ? "drag for earlier" : "drag for more"}`;
-  const sub = empty ? "Usual weekly hours" : `${week ? "Next week" : "This week"} · ${weekSpan(range.from, range.to)}`;
+  const rangeText = `${t("{from} to {to}", { from: hourLabel12(start), to: hourLabel12(start + 12) })} · ${offset === 0 ? t("drag for later") : offset === 4 ? t("drag for earlier") : t("drag for more")}`;
+  const sub = empty ? t("Usual weekly hours") : `${week ? t("Next week") : t("This week")} · ${weekSpan(range.from, range.to)}`;
 
-  let selT = "Tap a class or a free slot to see details.";
+  let selT = t("Tap a class or a free slot to see details.");
   let selS = "";
   let selIcon = <Info size={16} strokeWidth={2.1} style={{ color: "var(--tm-faint)" }} />;
   if (selCls) {
     const clash = clashOf(selCls, mine);
-    selT = `${dayDate(selCls.date)} · ${selCls.title}, ${range12(selCls.start, selCls.end)}`;
-    selS = (booked === null ? "" : `${booked} of ${selCls.capacity} booked`) + (clash ? `${booked === null ? "" : " · "}clashes with ${clash.title} at ${time12(clash.start)}` : "");
+    selT = `${dayDate(selCls.date)} · ${selCls.title}${t(", ")}${range12(selCls.start, selCls.end)}`;
+    selS =
+      (booked === null ? "" : t("{booked} of {capacity} booked", { booked, capacity: selCls.capacity })) +
+      (clash ? `${booked === null ? "" : " · "}${t("clashes with {title} at {time}", { title: clash.title, time: time12(clash.start) })}` : "");
     selIcon = clash ? (
       <TriangleAlert size={16} strokeWidth={2.1} style={{ color: "var(--tm-high)" }} />
     ) : (
@@ -133,23 +145,23 @@ export function AvailabilityCard({
     );
   } else if (selFree && sel?.kind === "free") {
     const busy = mine.some((s) => s.date === days[sel.day] && s.start < selFree.end && selFree.start < s.end);
-    selT = `${dayDate(days[sel.day])} · free ${range12(selFree.start, selFree.end)}`;
-    selS = busy ? "Part of this slot already has a class." : `Nothing booked. A good slot for an extra ${partOfDay(selFree.start)} class.`;
+    selT = `${dayDate(days[sel.day])} · ${t("free {time}", { time: range12(selFree.start, selFree.end) })}`;
+    selS = busy ? t("Part of this slot already has a class.") : goodSlot(selFree.start);
     selIcon = <CalendarPlus size={16} strokeWidth={2.1} style={{ color: "var(--tm-teal)" }} />;
   }
 
   return (
-    <section className="tm-dcard" aria-label="Availability">
+    <section className="tm-dcard" aria-label={t("Availability")}>
       <div className="tm-av-h">
         <div>
-          <p className="tm-av-title">Availability</p>
+          <p className="tm-av-title">{t("Availability")}</p>
           <p className="tm-row-s">{sub}</p>
         </div>
         {!empty && windows !== null && (
-          <div className="tm-wtabs" role="tablist" aria-label="Week">
-            {["This week", "Next week"].map((t, i) => (
+          <div className="tm-wtabs" role="tablist" aria-label={t("Week")}>
+            {WEEK_TABS.map((label, i) => (
               <button
-                key={t}
+                key={label}
                 type="button"
                 role="tab"
                 aria-selected={week === i}
@@ -159,7 +171,7 @@ export function AvailabilityCard({
                   setSel(null);
                 }}
               >
-                {t}
+                {t(label)}
               </button>
             ))}
           </div>
@@ -171,14 +183,14 @@ export function AvailabilityCard({
           <p className="tm-avempty-b" style={{ color: "var(--tm-high)" }}>
             {error}
           </p>
-          <button type="button" className="tm-retry tap" onClick={() => setTick((t) => t + 1)}>
-            Retry
+          <button type="button" className="tm-retry tap" onClick={() => setTick((n) => n + 1)}>
+            {t("Retry")}
           </button>
         </div>
       )}
       {!error && windows === null && (
         <p className="tm-avempty-b" style={{ padding: "18px 16px", textAlign: "center" }}>
-          Loading availability…
+          {t("Loading availability…")}
         </p>
       )}
 
@@ -187,11 +199,11 @@ export function AvailabilityCard({
           <span className="tm-avempty-tile">
             <CalendarClock size={20} />
           </span>
-          <p className="tm-avempty-t">No availability set</p>
-          <p className="tm-avempty-b">{`${firstName} hasn't added their usual hours yet. Ask them in Messages.`}</p>
+          <p className="tm-avempty-t">{t("No availability set")}</p>
+          <p className="tm-avempty-b">{t("{name} hasn't added their usual hours yet. Ask them in Messages.", { name: firstName })}</p>
           <button type="button" className="tm-ask tm-hit tap" disabled={askBusy} onClick={onAsk}>
             <MessageCircle size={15} />
-            {`Ask ${firstName}`}
+            {t("Ask {name}", { name: firstName })}
           </button>
         </div>
       )}
@@ -200,9 +212,9 @@ export function AvailabilityCard({
         <>
           <div className="tm-days">
             <span />
-            {days.map((d, i) => (
+            {days.map((d) => (
               <div key={d} className={d === today ? "today" : undefined}>
-                <p>{DAY_LETTERS[i]}</p>
+                <p>{dayLetter(d)}</p>
                 <p>{Number(d.slice(8))}</p>
               </div>
             ))}
@@ -212,7 +224,7 @@ export function AvailabilityCard({
             className="tm-vp"
             tabIndex={0}
             role="group"
-            aria-label={`Week grid, showing ${hourLabel12(start)} to ${hourLabel12(start + 12)}`}
+            aria-label={t("Week grid, showing {from} to {to}", { from: hourLabel12(start), to: hourLabel12(start + 12) })}
             onScroll={onScroll}
             onKeyDown={onKey}
           >
@@ -243,7 +255,7 @@ export function AvailabilityCard({
                           type="button"
                           className={on ? "tm-free sel" : "tm-free"}
                           style={{ top: y, height: h }}
-                          aria-label={`Available ${range12(w.start, w.end)}`}
+                          aria-label={t("Available {time}", { time: range12(w.start, w.end) })}
                           aria-pressed={on}
                           onClick={() => setSel(on ? null : { kind: "free", day: col, i: j })}
                         />
@@ -263,7 +275,7 @@ export function AvailabilityCard({
                           key={s.id}
                           type="button"
                           className={["tm-cls", on ? "sel" : "", clash ? "clash" : ""].filter(Boolean).join(" ")}
-                          style={{ top: y, height: h, left: `calc(${(idx / n) * 100}% + 2px)`, width: `calc(${100 / n}% - 4px)` }}
+                          style={{ top: y, height: h, insetInlineStart: `calc(${(idx / n) * 100}% + 2px)`, width: `calc(${100 / n}% - 4px)` }}
                           aria-label={`${s.title} ${time12(s.start)}`}
                           aria-pressed={on}
                           onClick={() => setSel(on ? null : { kind: "cls", id: s.id })}
@@ -279,13 +291,13 @@ export function AvailabilityCard({
           <div className="tm-legend">
             <span>
               <span className="tm-sw-free" />
-              Available
+              {t("Available")}
             </span>
             <span>
               <span className="tm-sw-cls" />
-              Teaching
+              {t("Teaching")}
             </span>
-            <span>Blank is not available</span>
+            <span>{t("Blank is not available")}</span>
             <span className="range" aria-live="polite">
               {rangeText}
             </span>

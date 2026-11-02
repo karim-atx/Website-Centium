@@ -9,7 +9,8 @@ import type { MembershipPlanRow } from "../../../services/membership-plans";
 import { BizShareButton } from "../../../components/share/business/BizShareButton";
 import { planData } from "../../../components/share/business/bizCardModel";
 import { BackHeader, CapsLabel } from "../../business-market/listingParts";
-import { KIND_LABEL, cardMeta, classesLabel, commitmentLabel, daysLabel, joinAnd, limitLabel, memberLine, priceLine, renewsLabel, renewsSub, shortDate, statusLine, untilLabel } from "./planModel";
+import { t, tk } from "../../../i18n/core";
+import { kindLabel, cardMeta, classesLabel, commitmentLabel, daysLabel, joinAnd, limitLabel, memberLine, priceLine, renewsLabel, renewsSub, shortDate, statusLine, untilLabel } from "./planModel";
 import { PLANS_ROUTE, PlansStrip } from "./MembershipsTab";
 import { PlanSheet } from "./PlanSheet";
 import { usePlansCtx, type PlanAction } from "./PlansContext";
@@ -29,33 +30,33 @@ const MEMBERS_SHOWN = 4;
 function coverRows(plan: MembershipPlanRow, runsClasses: boolean, nameOf: (id: string) => string | null): { icon: LucideIcon; title: string; sub: string; value: string }[] {
   const classes = plan.allowedClassTypes;
   const covers = classes
-    ? { icon: CalendarDays, title: "Covers", sub: joinAnd(classes), value: classesLabel(classes) }
+    ? { icon: CalendarDays, title: t("Covers"), sub: joinAnd(classes), value: classesLabel(classes) }
     : runsClasses
-      ? { icon: CalendarDays, title: "Covers", sub: "Every class on your schedule", value: "All classes" }
-      : { icon: Sun, title: "Covers", sub: "Entry to the gym", value: "Gym entry" };
-  const anyone = { icon: UserCheck, title: "Who can buy", sub: "Anyone on Explore", value: "Anyone" };
-  if (plan.kind === "day_pass") return [{ ...covers, sub: classes ? covers.sub : runsClasses ? "Every class that day" : "One day at the gym" }, anyone];
-  if (plan.kind === "drop_in") return [{ ...covers, title: "Which classes" }, anyone];
+      ? { icon: CalendarDays, title: t("Covers"), sub: t("Every class on your schedule"), value: t("All classes") }
+      : { icon: Sun, title: t("Covers"), sub: t("Entry to the gym"), value: t("Gym entry") };
+  const anyone = { icon: UserCheck, title: t("Who can buy"), sub: t("Anyone on Explore"), value: t("Anyone") };
+  if (plan.kind === "day_pass") return [{ ...covers, sub: classes ? covers.sub : runsClasses ? t("Every class that day") : t("One day at the gym") }, anyone];
+  if (plan.kind === "drop_in") return [{ ...covers, title: t("Which classes") }, anyone];
   if (plan.kind === "class_pack") {
     return [
-      { icon: Hash, title: "Sessions", sub: "Classes in the pack", value: plan.sessionsInPack ? String(plan.sessionsInPack) : "–" },
-      { icon: CalendarClock, title: "Valid for", sub: "From the day it's bought", value: plan.validForDays ? daysLabel(plan.validForDays) : "–" },
+      { icon: Hash, title: t("Sessions"), sub: t("Classes in the pack"), value: plan.sessionsInPack ? String(plan.sessionsInPack) : "–" },
+      { icon: CalendarClock, title: t("Valid for"), sub: t("From the day it's bought"), value: plan.validForDays ? daysLabel(plan.validForDays) : "–" },
       covers,
     ];
   }
   if (plan.kind === "intro_offer") {
     const target = plan.convertsToPlanId ? nameOf(plan.convertsToPlanId) : null;
     return [
-      { icon: CalendarClock, title: "Length", sub: "From the day it's bought", value: plan.validForDays ? daysLabel(plan.validForDays) : "–" },
-      { icon: ArrowRightLeft, title: "Converts to", sub: "Suggested when the offer ends", value: target ?? "Nothing" },
+      { icon: CalendarClock, title: t("Length"), sub: t("From the day it's bought"), value: plan.validForDays ? daysLabel(plan.validForDays) : "–" },
+      { icon: ArrowRightLeft, title: t("Converts to"), sub: t("Suggested when the offer ends"), value: target ?? t("Nothing") },
     ];
   }
   return [
-    ...(runsClasses ? [{ icon: CalendarDays, title: "Classes", sub: classes ? joinAnd(classes) : "Every class on your schedule", value: classesLabel(classes) }] : []),
+    ...(runsClasses ? [{ icon: CalendarDays, title: t("Classes"), sub: classes ? joinAnd(classes) : t("Every class on your schedule"), value: classesLabel(classes) }] : []),
     anyone,
-    ...(runsClasses ? [{ icon: Gauge, title: "Limit", sub: "How often a member can book", value: limitLabel(plan.visitsPerPeriod, plan.billing) }] : []),
-    { icon: Repeat, title: "Renews", sub: renewsSub(plan.billing), value: renewsLabel(plan.billing) },
-    ...(plan.minimumTermMonths || plan.noticeDays ? [{ icon: CalendarClock, title: "Commitment", sub: "Minimum term and notice", value: commitmentLabel(plan.minimumTermMonths, plan.noticeDays) }] : []),
+    ...(runsClasses ? [{ icon: Gauge, title: t("Limit"), sub: t("How often a member can book"), value: limitLabel(plan.visitsPerPeriod, plan.billing) }] : []),
+    { icon: Repeat, title: t("Renews"), sub: renewsSub(plan.billing), value: renewsLabel(plan.billing) },
+    ...(plan.minimumTermMonths || plan.noticeDays ? [{ icon: CalendarClock, title: t("Commitment"), sub: t("Minimum term and notice"), value: commitmentLabel(plan.minimumTermMonths, plan.noticeDays) }] : []),
   ];
 }
 
@@ -83,18 +84,18 @@ export default function PlanDetailPage() {
 
   const header = (
     <BackHeader
-      eyebrow="Memberships"
-      title={plan?.name ?? "Plan"}
+      eyebrow={t("Memberships")}
+      title={plan?.name ?? t("Plan")}
       onBack={leave}
-      backLabel="Back to Memberships"
+      backLabel={t("Back to Memberships")}
       aside={
         plan ? (
           <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
             {/* B-SH.1: share this plan (Membership plan card); only a plan on sale on Explore. */}
             {plan.dbStatus !== "archived" ? (
               <BizShareButton
-                label={`Share ${plan.name}`}
-                emptyHint={plan.status !== "active" ? "Only a plan on sale on Explore can be shared." : null}
+                label={t("Share {name}", { name: plan.name })}
+                emptyHint={plan.status !== "active" ? t("Only a plan on sale on Explore can be shared.") : null}
                 getData={() => ({ t: "plan", d: planData(plan) })}
               />
             ) : null}
@@ -109,8 +110,8 @@ export default function PlanDetailPage() {
     return (
       <div>
         {header}
-        <MarketSkeleton radius={20} rows={3} label="Loading plan" />
-        <MarketSkeleton radius={24} rows={4} label="Loading plan" style={{ marginTop: 18 }} />
+        <MarketSkeleton radius={20} rows={3} label={t("Loading plan")} />
+        <MarketSkeleton radius={24} rows={4} label={t("Loading plan")} style={{ marginTop: 18 }} />
       </div>
     );
   }
@@ -119,7 +120,7 @@ export default function PlanDetailPage() {
     return (
       <div>
         {header}
-        {ctx.error ? <MarketError thing="this plan" onRetry={ctx.reload} /> : <MarketEmptyCard title="This plan isn't available any more." />}
+        {ctx.error ? <MarketError thing={tk("this plan")} onRetry={ctx.reload} /> : <MarketEmptyCard title={t("This plan isn't available any more.")} />}
       </div>
     );
   }
@@ -139,7 +140,7 @@ export default function PlanDetailPage() {
 
       <div style={{ borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, padding: "14px 16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ flex: 1, minWidth: 0, fontSize: textPx(14), fontWeight: 800 }}>{KIND_LABEL[plan.kind]}</div>
+          <div style={{ flex: 1, minWidth: 0, fontSize: textPx(14), fontWeight: 800 }}>{kindLabel(plan.kind)}</div>
           <span style={{ fontSize: textPx(14), fontWeight: 800, whiteSpace: "nowrap" }}>{priceLine(plan)}</span>
         </div>
         {meta ? <div style={{ fontSize: textPx(11.5), color: m.faint, marginTop: 2 }}>{meta}</div> : null}
@@ -148,11 +149,11 @@ export default function PlanDetailPage() {
           {line ? <span style={{ fontSize: textPx(11.5), color: m.faint }}>{line}</span> : null}
         </div>
         <p style={{ margin: "10px 0 0", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
-          {statusLine(plan.status)} · {plan.paymentType}
+          {statusLine(plan.status)} · {t(plan.paymentType)}
         </p>
       </div>
 
-      <CapsLabel style={{ marginTop: 18 }}>Who it covers</CapsLabel>
+      <CapsLabel style={{ marginTop: 18 }}>{t("Who it covers")}</CapsLabel>
       <div style={{ marginTop: 8, borderRadius: 24, background: m.card, border: `1px solid ${m.border}`, overflow: "hidden" }}>
         {coverRows(plan, ctx.runsClasses, (id) => ctx.plans.find((p) => p.id === id)?.name ?? null).map((r, i) => (
           <div key={r.title} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", borderTop: i ? `0.5px solid ${m.div}` : "0" }}>
@@ -168,26 +169,26 @@ export default function PlanDetailPage() {
         ))}
       </div>
 
-      <CapsLabel style={{ marginTop: 18 }}>{count === null ? "Members on this plan" : `Members on this plan · ${count}`}</CapsLabel>
+      <CapsLabel style={{ marginTop: 18 }}>{count === null ? t("Members on this plan") : t("Members on this plan · {n}", { n: count })}</CapsLabel>
       <div style={{ marginTop: 8 }}>
         {!ctx.membersLoaded ? (
-          <MarketSkeleton radius={24} rows={2} label="Loading members" />
+          <MarketSkeleton radius={24} rows={2} label={t("Loading members")} />
         ) : (
           <MemberRows
-            rows={shown.map((x) => ({ id: x.membershipId, label: x.label, plan: `Joined ${shortDate(x.startedOn)}`, until: untilLabel(x.expiresOn), minor: x.isMinor }))}
+            rows={shown.map((x) => ({ id: x.membershipId, label: x.label, plan: t("Joined {date}", { date: shortDate(x.startedOn) }), until: untilLabel(x.expiresOn), minor: x.isMinor }))}
             footer={
               count === null ? (
-                <MemberNote>Couldn't load the members of this plan.</MemberNote>
+                <MemberNote>{t("Couldn't load the members of this plan.")}</MemberNote>
               ) : count === 0 ? (
-                <MemberNote>No members on this plan yet.</MemberNote>
+                <MemberNote>{t("No members on this plan yet.")}</MemberNote>
               ) : count > MEMBERS_SHOWN ? (
-                <SeeAllRow label={all ? "Show fewer" : `See all ${count}`} onClick={() => setAll((x) => !x)} />
+                <SeeAllRow label={all ? t("Show fewer") : t("See all {n}", { n: count })} onClick={() => setAll((x) => !x)} />
               ) : null
             }
           />
         )}
       </div>
-      <p style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>Each member gets their own QR code to check in when they buy this plan.</p>
+      <p style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>{t("Each member gets their own QR code to check in when they buy this plan.")}</p>
 
       <PlanSheet
         open={editing}
@@ -199,7 +200,7 @@ export default function PlanDetailPage() {
         offered={ctx.offered}
         memberCount={figures.active}
         save={(draft) => ctx.edit(plan.id, draft)}
-        onSaved={() => ctx.say("Plan updated", { planId: plan.id })}
+        onSaved={() => ctx.say(t("Plan updated"), { planId: plan.id })}
         onDelete={(p) =>
           ctx.act("delete", p, () => {
             setEditing(false);

@@ -22,7 +22,7 @@ import {
   daysLabel,
   includesProblem,
   INCLUDES_MAX,
-  KIND_LABEL,
+  kindLabel,
   LENGTHS,
   limitLabel,
   NOTICES,
@@ -38,6 +38,7 @@ import {
 } from "./planModel";
 import { usePlanColors } from "./ui";
 import type { WriteOutcome } from "./usePlans";
+import { t, tn, tx } from "../../../i18n/core";
 
 // Market + Share 3.0 · W3 · B-MA.5 Add plan / B-MA.5.1 Edit plan
 // (Business Marketplace Screens lines 337–358, script `plan` / `chipSet`):
@@ -111,7 +112,7 @@ export const PlanSheet: React.FC<PlanSheetProps> = (props) => {
   }
   const footerId = useId();
   return (
-    <MasterSheet open={props.open} onClose={props.onClose} title={props.editing ? "Edit plan" : "Add plan"} footer={<div id={footerId} />}>
+    <MasterSheet open={props.open} onClose={props.onClose} title={props.editing ? t("Edit plan") : t("Add plan")} footer={<div id={footerId} />}>
       <PlanForm key={session} {...props} footerId={footerId} />
     </MasterSheet>
   );
@@ -406,13 +407,13 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
   const submit = async () => {
     if (saving || !ready || !online) return;
     const next: typeof errors = {};
-    if (!name.trim()) next.name = "Enter a name for this plan.";
+    if (!name.trim()) next.name = t("Enter a name for this plan.");
     const pp = priceProblem(price);
     if (pp) next.price = pp;
-    if (membership && !billing) next.billing = "Choose how often it bills.";
+    if (membership && !billing) next.billing = t("Choose how often it bills.");
     if (pack) {
       const n = Number(sessions);
-      if (!sessions.trim() || !Number.isInteger(n) || n < 1 || n > 100) next.sessions = "Enter how many classes.";
+      if (!sessions.trim() || !Number.isInteger(n) || n < 1 || n > 100) next.sessions = t("Enter how many classes.");
     }
     const classProblem = usesClasses ? classTypesProblem(classes) : null;
     if (classProblem) next.classes = classProblem;
@@ -448,25 +449,25 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
   const allTypes = [...okTypes, ...(classes ?? []).filter((c) => !okTypes.includes(c))];
   const full = (classes?.length ?? 0) >= 24;
   const classOptions: PopupMenuOption<string>[] = [
-    { value: "__all", label: "All classes", note: "Every class type, now and future" },
+    { value: "__all", label: t("All classes"), note: t("Every class type, now and future") },
     ...allTypes.map((c) => ({ value: `t:${c}`, label: c, disabled: full && !classes?.includes(c) })),
-    ...tooLong.map((c) => ({ value: `x:${c}`, label: c, disabled: true, note: "Too long to add to a plan (over 60 characters)" })),
+    ...tooLong.map((c) => ({ value: `x:${c}`, label: c, disabled: true, note: t("Too long to add to a plan (over 60 characters)") })),
   ];
-  const classTitle = membership ? "Includes" : kind === "drop_in" ? "Which classes" : "Covers";
+  const classTitle = membership ? t("Includes") : kind === "drop_in" ? t("Which classes") : t("Covers");
   const chosen = classes?.length ?? allTypes.length;
   const period = billingForKind(kind, billing, validFor);
   const limitOptions: PopupMenuOption<string>[] = [
-    { value: "unlimited", label: "Unlimited", note: "Book as many classes as they like" },
+    { value: "unlimited", label: t("Unlimited"), note: t("Book as many classes as they like") },
     {
       value: "upto",
-      label: "Up to",
-      note: "classes",
+      label: t("Up to"),
+      note: t("classes"),
       trailing: (
         <MenuStepper
           value={limitN}
           min={1}
           max={99}
-          label="Classes"
+          label={t("Classes")}
           onChange={(v) => {
             setLimitN(v);
             setLimit(v);
@@ -476,27 +477,27 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
       ),
     },
     // visits_per_period counts in the plan's billing period, so "Applies" is that one period.
-    { value: "per", label: `Per ${periodPhrase(period).replace(/^(a|every) /, "")}`, group: "Applies" },
+    { value: "per", label: PER_LABEL[period](), group: t("Applies") },
   ];
   const comOptions: PopupMenuOption<string>[] = [
-    ...COMMITMENTS.map((x) => ({ value: `min:${x}`, label: x ? `${x} months` : "None", group: "Minimum commitment" })),
-    ...NOTICES.map((d) => ({ value: `notice:${d}`, label: d ? `${d} days' notice` : "Cancel anytime", group: "Cancellation" })),
+    ...COMMITMENTS.map((x) => ({ value: `min:${x}`, label: x ? tn(x, "1 month", "{n} months") : t("None"), group: t("Minimum commitment") })),
+    ...NOTICES.map((d) => ({ value: `notice:${d}`, label: d ? tn(d, "{n} day's notice", "{n} days' notice") : t("Cancel anytime"), group: t("Cancellation") })),
   ];
   const validOptions: PopupMenuOption<string>[] = VALID_FOR.map((d) => ({ value: String(d), label: daysLabel(d) }));
   const lengthOptions: PopupMenuOption<string>[] = LENGTHS.map((d) => ({ value: String(d), label: daysLabel(d) }));
   // Converts to (a suggestion only): another live Membership of this business, never itself.
   const targets = plans.filter((p) => p.kind === "membership" && p.dbStatus !== "archived" && p.id !== editing?.id);
   const convOptions: PopupMenuOption<string>[] = [
-    { value: "__none", label: "Nothing", note: "The offer just ends" },
-    ...targets.map((p) => ({ value: p.id, label: p.name, note: `${p.price} ${periodPhrase(p.billing)}` })),
+    { value: "__none", label: t("Nothing"), note: t("The offer just ends") },
+    ...targets.map((p) => ({ value: p.id, label: p.name, note: t("{price} {period}", { price: p.price, period: periodPhrase(p.billing) }) })),
   ];
-  const convName = convertsTo ? (plans.find((p) => p.id === convertsTo)?.name ?? "Nothing") : "Nothing";
+  const convName = convertsTo ? (plans.find((p) => p.id === convertsTo)?.name ?? t("Nothing")) : t("Nothing");
   // Payment: only Cash can be chosen until Whish is live; a stored Whish set is read and kept.
   const storedWhish = payments.includes("whish");
   const payOptions: PopupMenuOption<string>[] = [
-    { value: "cash", label: "Cash", note: "Paid at the desk" },
-    { value: "whish", label: "Whish Money", note: "Coming soon", disabled: true },
-    { value: "both", label: "Cash or Whish Money", note: "Coming soon", disabled: true },
+    { value: "cash", label: t("Cash"), note: t("Paid at the desk") },
+    { value: "whish", label: t("Whish Money"), note: t("Coming soon"), disabled: true },
+    { value: "both", label: t("Cash or Whish Money"), note: t("Coming soon"), disabled: true },
   ];
   const paySelected = payments.includes("cash") && payments.includes("whish") ? "both" : payments.includes("whish") ? "whish" : "cash";
 
@@ -518,8 +519,8 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
     <Box>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div id={ids.active}>
-          <div style={{ fontSize: textPx(14), fontWeight: 700 }}>Active</div>
-          <div style={{ fontSize: textPx(11.5), color: m.faint }}>Members can buy this plan</div>
+          <div style={{ fontSize: textPx(14), fontWeight: 700 }}>{tx("Active", "plan")}</div>
+          <div style={{ fontSize: textPx(11.5), color: m.faint }}>{t("Members can buy this plan")}</div>
         </div>
         <SheetSwitch
           on={active}
@@ -527,12 +528,12 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
             edited();
             setActive(v);
           }}
-          label="Active"
+          label={tx("Active", "plan")}
           describedBy={active ? ids.active : `${ids.active} ${ids.pausedNote}`}
           disabled={saving}
         />
       </div>
-      {!active ? <BoxNote id={ids.pausedNote}>Paused plans are hidden from members.</BoxNote> : null}
+      {!active ? <BoxNote id={ids.pausedNote}>{t("Paused plans are hidden from members.")}</BoxNote> : null}
     </Box>
   );
 
@@ -543,12 +544,12 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
       <style>{FOCUS_CSS}</style>
       {!online ? (
         <p role="status" style={{ margin: "0 0 4px", fontSize: textPx(11.5), fontWeight: 700, color: m.ink2, textAlign: "center" }}>
-          You're offline. Plans can't be saved right now.
+          {t("You're offline. Plans can't be saved right now.")}
         </p>
       ) : null}
       {saveError ? <SaveError style={{ margin: "0 0 4px" }}>{saveError}</SaveError> : null}
       <PrimaryButton onClick={() => void submit()} disabled={!ready || !online} busy={saving}>
-        {editing ? "Save" : "Add plan"}
+        {editing ? t("Save") : t("Add plan")}
       </PrimaryButton>
       {editing && onDelete ? (
         <button
@@ -558,7 +559,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
           className="tap market-focus"
           style={{ height: 40, display: "flex", alignItems: "center", justifyContent: "center", fontSize: textPx(14), fontWeight: 700, color: m.high, background: "transparent", border: 0, fontFamily: "inherit", cursor: "pointer", opacity: !online ? 0.4 : 1 }}
         >
-          Delete plan
+          {t("Delete plan")}
         </button>
       ) : null}
     </div>
@@ -567,7 +568,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
   return (
     <div ref={rootRef} tabIndex={-1} className="plan-sheet" style={{ display: "flex", flexDirection: "column", gap: 6, lineHeight: "normal", color: m.ink, outline: "none" }}>
       {/* 1 · Plan name */}
-      <Box label="Plan name" labelId={`${ids.name}-l`} htmlFor={ids.name} border={errors.name ? `1px solid ${m.high}` : undefined}>
+      <Box label={t("Plan name")} labelId={`${ids.name}-l`} htmlFor={ids.name} border={errors.name ? `1px solid ${m.high}` : undefined}>
         <input
           id={ids.name}
           ref={nameRef}
@@ -577,7 +578,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
             if (errors.name) setErrors((x) => ({ ...x, name: undefined }));
             edited();
           }}
-          placeholder="e.g. Monthly"
+          placeholder={t("e.g. Monthly")}
           aria-invalid={!!errors.name || undefined}
           aria-describedby={errors.name ? ids.nameErr : undefined}
           maxLength={80}
@@ -592,18 +593,18 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
       {editing && editing.dbStatus !== "archived" ? activeRow : null}
 
       {/* 3 · Type */}
-      <Box label="Type" labelId={ids.type}>
+      <Box label={t("Type")} labelId={ids.type}>
         <ChipRow labelledBy={ids.type} selected={kind}>
           {kinds.map((k) => (
-            <Chip key={k} on={k === kind} label={KIND_LABEL[k]} onPick={() => pickKind(k)} />
+            <Chip key={k} on={k === kind} label={kindLabel(k)} onPick={() => pickKind(k)} />
           ))}
         </ChipRow>
-        {editing && hasMembers && kind !== init.kind ? <BoxNote>Current members keep what they bought.</BoxNote> : null}
+        {editing && hasMembers && kind !== init.kind ? <BoxNote>{t("Current members keep what they bought.")}</BoxNote> : null}
         {switched ? <BoxNote live>{switchNote(switched.from, switched.to)}</BoxNote> : null}
       </Box>
 
       {/* 4 · Price, the error and the edit note inside the box */}
-      <Box label="Price" labelId={`${ids.price}-l`} htmlFor={ids.price} border={priceBorder}>
+      <Box label={t("Price")} labelId={`${ids.price}-l`} htmlFor={ids.price} border={priceBorder}>
         <div className="plan-wrap" style={{ ...fieldStyle(m), display: "flex", gap: 6 }}>
           <span aria-hidden style={{ color: m.faint }}>
             $
@@ -633,23 +634,23 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
         {errors.price ? <BoxError id={ids.priceErr}>{errors.price}</BoxError> : null}
         {editing ? (
           <div id={ids.priceNote} style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>
-            Price changes apply to new purchases. Current members keep their plan.
+            {t("Price changes apply to new purchases. Current members keep their plan.")}
           </div>
         ) : null}
       </Box>
 
       {/* 5 · Billing */}
-      <Box label="Billing" labelId={ids.billing}>
+      <Box label={t("Billing")} labelId={ids.billing}>
         <ChipRow labelledBy={ids.billing} selected={chip}>
           {BILLING_CHIPS.map((b) => (
-            <Chip key={b.value} on={chip === b.value} label={b.label} disabled={b.value === "daily" && membership && !oneTime} onPick={() => pickBilling(b.value)} />
+            <Chip key={b.value} on={chip === b.value} label={t(b.label)} disabled={b.value === "daily" && membership && !oneTime} onPick={() => pickBilling(b.value)} />
           ))}
         </ChipRow>
         {errors.billing ? <BoxError id={ids.billingErr}>{errors.billing}</BoxError> : null}
       </Box>
 
       {/* 6 · What's included */}
-      <Box label="What's included" labelId={ids.inc}>
+      <Box label={t("What's included")} labelId={ids.inc}>
         <div role="group" aria-labelledby={ids.inc} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {lines.map((l, i) => {
             const placeholderOnly = lines.length === 1 && !l;
@@ -667,8 +668,8 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
                       addLine();
                     }
                   }}
-                  placeholder={i === 0 ? "e.g. Gym floor access" : undefined}
-                  aria-label={`Included, line ${i + 1}`}
+                  placeholder={i === 0 ? t("e.g. Gym floor access") : undefined}
+                  aria-label={t("Included, line {n}", { n: i + 1 })}
                   aria-invalid={!!errors.includes || undefined}
                   aria-describedby={errors.includes ? ids.incErr : undefined}
                   maxLength={120}
@@ -679,7 +680,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
                 <button
                   type="button"
                   onClick={() => removeLine(i)}
-                  aria-label={`Remove line ${i + 1}`}
+                  aria-label={t("Remove line {n}", { n: i + 1 })}
                   tabIndex={placeholderOnly ? -1 : 0}
                   aria-hidden={placeholderOnly || undefined}
                   className="tap market-focus"
@@ -700,7 +701,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
           style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 5, fontSize: textPx(13), fontWeight: 700, color: m.pdark, background: "transparent", border: 0, padding: 0, fontFamily: "inherit", cursor: "pointer", opacity: lines.length >= INCLUDES_MAX ? 0.4 : 1 }}
         >
           <Plus size={14} strokeWidth={2.4} aria-hidden />
-          Add a line
+          {t("Add a line")}
         </button>
       </Box>
 
@@ -718,7 +719,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
           style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "transparent", border: 0, padding: 0, textAlign: "start", fontFamily: "inherit", color: m.ink, cursor: "pointer" }}
         >
           <span>
-            <span style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>More options</span>
+            <span style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>{t("More options")}</span>
             <span style={{ display: "block", fontSize: textPx(11.5), color: m.faint }}>{moreSummary(kind, runsClasses)}</span>
           </span>
           <ChevronDown size={18} aria-hidden style={{ color: m.faint, flexShrink: 0, transform: more ? "rotate(180deg)" : "none", transition: reduce ? undefined : "transform 220ms cubic-bezier(0.22,1,0.36,1)" }} />
@@ -727,7 +728,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
       {more ? (
         <div id={ids.more} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {pack ? (
-            <Box label="Sessions" labelId={`${ids.sess}-l`} htmlFor={ids.sess} border={errors.sessions ? `1px solid ${m.high}` : undefined}>
+            <Box label={t("Sessions")} labelId={`${ids.sess}-l`} htmlFor={ids.sess} border={errors.sessions ? `1px solid ${m.high}` : undefined}>
               <input
                 id={ids.sess}
                 ref={sessRef}
@@ -749,13 +750,13 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
             </Box>
           ) : null}
           {pack ? (
-            <Box label="Valid for" labelId={ids.valid}>
-              <Picker labelledBy={ids.valid} value={daysLabel(validFor) || "2 months"} open={menu?.key === "valid"} onOpen={openMenu("valid")} />
+            <Box label={t("Valid for")} labelId={ids.valid}>
+              <Picker labelledBy={ids.valid} value={daysLabel(validFor) || daysLabel(60)} open={menu?.key === "valid"} onOpen={openMenu("valid")} />
             </Box>
           ) : null}
           {intro ? (
-            <Box label="Length" labelId={ids.length}>
-              <Picker labelledBy={ids.length} value={daysLabel(validFor) || "7 days"} open={menu?.key === "length"} onOpen={openMenu("length")} />
+            <Box label={t("Length")} labelId={ids.length}>
+              <Picker labelledBy={ids.length} value={daysLabel(validFor) || daysLabel(7)} open={menu?.key === "length"} onOpen={openMenu("length")} />
             </Box>
           ) : null}
           {kind !== "intro_offer" ? (
@@ -770,47 +771,47 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
                   onOpen={openMenu("classes")}
                 />
               ) : (
-                <Fixed labelledBy={ids.classes} value="Gym entry" />
+                <Fixed labelledBy={ids.classes} value={t("Gym entry")} />
               )}
               {errors.classes ? <BoxError id={ids.classesErr}>{errors.classes}</BoxError> : null}
             </Box>
           ) : null}
           {membership && runsClasses ? (
-            <Box label="Limit" labelId={ids.lim}>
+            <Box label={t("Limit")} labelId={ids.lim}>
               <Picker labelledBy={ids.lim} value={limitLabel(limit, period)} open={menu?.key === "lim"} onOpen={openMenu("lim")} />
             </Box>
           ) : null}
           {membership ? (
-            <Box label="Commitment" labelId={ids.com}>
+            <Box label={t("Commitment")} labelId={ids.com}>
               <Picker labelledBy={ids.com} value={commitmentLabel(commit, notice)} open={menu?.key === "com"} onOpen={openMenu("com")} />
             </Box>
           ) : null}
           {membership || intro ? (
-            <Box label="Who can buy" labelId={ids.who}>
-              <Fixed labelledBy={ids.who} value="Anyone" />
-              <BoxNote>{membership ? "Student-only plans are coming soon." : "First-time-only offers are coming soon."}</BoxNote>
+            <Box label={t("Who can buy")} labelId={ids.who}>
+              <Fixed labelledBy={ids.who} value={t("Anyone")} />
+              <BoxNote>{membership ? t("Student-only plans are coming soon.") : t("First-time-only offers are coming soon.")}</BoxNote>
             </Box>
           ) : null}
           {intro ? (
-            <Box label="Converts to" labelId={ids.conv}>
+            <Box label={t("Converts to")} labelId={ids.conv}>
               <Picker labelledBy={ids.conv} value={convName} open={menu?.key === "conv"} onOpen={openMenu("conv")} />
-              <BoxNote>When an offer ends, "Converts to" only suggests the next plan to the member; nothing is charged.</BoxNote>
+              <BoxNote>{t("When an offer ends, \"Converts to\" only suggests the next plan to the member; nothing is charged.")}</BoxNote>
             </Box>
           ) : null}
-          <Box label="Payment type" labelId={ids.pay}>
+          <Box label={t("Payment type")} labelId={ids.pay}>
             {storedWhish ? (
-              <Picker labelledBy={ids.pay} value={paymentLabel(payments)} open={menu?.key === "pay"} onOpen={openMenu("pay")} />
+              <Picker labelledBy={ids.pay} value={t(paymentLabel(payments))} open={menu?.key === "pay"} onOpen={openMenu("pay")} />
             ) : (
-              <Fixed labelledBy={ids.pay} value="Cash" />
+              <Fixed labelledBy={ids.pay} value={t("Cash")} />
             )}
             <BoxNote>
               {storedWhish ? (
-                "Whish Money is coming soon. This plan keeps the methods it has; you can switch it to Cash."
+                t("Whish Money is coming soon. This plan keeps the methods it has; you can switch it to Cash.")
               ) : (
                 <>
-                  Cash is the only payment method you accept, so it's set for you. Add more in{" "}
+                  {t("Cash is the only payment method you accept, so it's set for you. Add more in")}{" "}
                   <Link to="/app/business/more/payment-methods" className="market-focus" style={{ fontWeight: 700, color: m.pdark }}>
-                    Settings › Payments
+                    {t("Settings › Payments")}
                   </Link>
                   .
                 </>
@@ -818,8 +819,8 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
             </BoxNote>
           </Box>
           {name.trim() && shownPrice ? (
-            <Box label="How clients see it on Explore">
-              <div role="group" aria-label="Preview: how clients see it on Explore" style={{ display: "flex", alignItems: "center", gap: 12, background: m.card, borderRadius: 10, padding: "11px 13px" }}>
+            <Box label={t("How clients see it on Explore")}>
+              <div role="group" aria-label={t("Preview: how clients see it on Explore")} style={{ display: "flex", alignItems: "center", gap: 12, background: m.card, borderRadius: 10, padding: "11px 13px" }}>
                 <span style={{ width: 44, height: 44, borderRadius: 12, background: m.pale, color: m.pdark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <PreviewIcon size={20} aria-hidden />
                 </span>
@@ -827,10 +828,10 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
                   <div style={{ fontSize: textPx(14), fontWeight: 800, overflowWrap: "anywhere" }}>{name.trim()}</div>
                   <div style={{ fontSize: textPx(12), color: m.ink2 }}>{line1}</div>
                   {line2 ? <div style={{ fontSize: textPx(11), color: m.faint }}>{line2}</div> : null}
-                  <div style={{ fontSize: textPx(11), color: m.faint }}>{payWith(paymentLabel(payments))}</div>
+                  <div style={{ fontSize: textPx(11), color: m.faint }}>{payWith(t(paymentLabel(payments)))}</div>
                 </div>
                 <span aria-hidden style={{ minHeight: 34, padding: "0 12px", borderRadius: 10, background: m.fill, color: m.onfill, fontSize: textPx(12), fontWeight: 800, display: "flex", alignItems: "center", flexShrink: 0 }}>
-                  Buy
+                  {t("Buy")}
                 </span>
               </div>
             </Box>
@@ -848,7 +849,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
         anchor={menu?.key === "classes" ? menu.anchor : null}
         matchWidth={menu?.row}
         clampTo={frame.body}
-        heading={`${classTitle} · ${chosen} of ${allTypes.length} class types`}
+        heading={`${classTitle} · ${tn(allTypes.length, "{chosen} of 1 class type", "{chosen} of {n} class types", { chosen })}`}
         options={classOptions}
         selected={classes ? classes.map((c) => `t:${c}`) : ["__all"]}
         multiSelect
@@ -869,7 +870,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
         anchor={menu?.key === "lim" ? menu.anchor : null}
         matchWidth={menu?.row}
         clampTo={frame.body}
-        heading="Limit"
+        heading={t("Limit")}
         options={limitOptions}
         selected={limit ? ["upto", "per"] : ["unlimited"]}
         keepOpen
@@ -887,7 +888,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
         anchor={menu?.key === "com" ? menu.anchor : null}
         matchWidth={menu?.row}
         clampTo={frame.body}
-        heading="Commitment"
+        heading={t("Commitment")}
         options={comOptions}
         selected={[`min:${commit}`, `notice:${notice}`]}
         keepOpen
@@ -906,7 +907,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
         anchor={menu?.key === "valid" ? menu.anchor : null}
         matchWidth={menu?.row}
         clampTo={frame.body}
-        heading="Valid for"
+        heading={t("Valid for")}
         options={validOptions}
         selected={validFor ? String(validFor) : null}
         onSelect={(v) => {
@@ -921,7 +922,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
         anchor={menu?.key === "length" ? menu.anchor : null}
         matchWidth={menu?.row}
         clampTo={frame.body}
-        heading="Length"
+        heading={t("Length")}
         options={lengthOptions}
         selected={validFor ? String(validFor) : null}
         onSelect={(v) => {
@@ -936,7 +937,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
         anchor={menu?.key === "conv" ? menu.anchor : null}
         matchWidth={menu?.row}
         clampTo={frame.body}
-        heading="Converts to"
+        heading={t("Converts to")}
         options={convOptions}
         selected={convertsTo ?? "__none"}
         onSelect={(v) => {
@@ -951,7 +952,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
         anchor={menu?.key === "pay" ? menu.anchor : null}
         matchWidth={menu?.row}
         clampTo={frame.body}
-        heading="Payment type"
+        heading={t("Payment type")}
         options={payOptions}
         selected={paySelected}
         onSelect={(v) => {
@@ -965,8 +966,17 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
 
 /** The "More options" sub line (OURS): what sits inside for this type. */
 function moreSummary(kind: PlanKind, runsClasses: boolean): string {
-  if (kind === "membership") return runsClasses ? "Classes, limit, commitment, payment, preview" : "Commitment, who can buy, payment, preview";
-  if (kind === "class_pack") return "Sessions, valid for, classes, payment, preview";
-  if (kind === "intro_offer") return "Length, converts to, payment, preview";
-  return runsClasses ? "Classes, payment, preview" : "Covers, payment, preview";
+  if (kind === "membership") return runsClasses ? t("Classes, limit, commitment, payment, preview") : t("Commitment, who can buy, payment, preview");
+  if (kind === "class_pack") return t("Sessions, valid for, classes, payment, preview");
+  if (kind === "intro_offer") return t("Length, converts to, payment, preview");
+  return runsClasses ? t("Classes, payment, preview") : t("Covers, payment, preview");
 }
+
+/** The Limit menu's "Applies" row: one billing period. */
+const PER_LABEL: Record<MembershipBilling, () => string> = {
+  daily: () => t("Per day"),
+  monthly: () => t("Per month"),
+  quarterly: () => t("Per 3 months"),
+  semiannually: () => t("Per 6 months"),
+  annually: () => t("Per year"),
+};

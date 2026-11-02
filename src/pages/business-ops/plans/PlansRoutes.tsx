@@ -6,6 +6,7 @@ import { MembershipsTab } from "./MembershipsTab";
 import PlanDetailPage from "./PlanDetailPage";
 import { PlansProvider } from "./PlansContext";
 import { useBusinessNavKind } from "../../../components/navigation/useBusinessNavKind";
+import { t } from "../../../i18n/core";
 
 // /app/business/gym/*: the Memberships page (B-MA.5) and the plan page
 // /app/business/gym/:planId. Gyms and Classes businesses sell plans
@@ -34,7 +35,7 @@ function ListPage() {
   };
   return (
     <div>
-      <BackHeader eyebrow={classes ? "Schedule" : "Gym"} title={classes ? "Plans" : "Memberships"} onBack={back} backLabel={classes ? "Back to Schedule" : "Back to Marketplace"} />
+      <BackHeader eyebrow={classes ? t("Schedule") : t("Gym")} title={classes ? t("Plans") : t("Memberships")} onBack={back} backLabel={classes ? t("Back to Schedule") : t("Back to Marketplace")} />
       <MembershipsTab />
     </div>
   );

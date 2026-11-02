@@ -9,6 +9,7 @@ import type { MembershipPlanRow } from "../../../services/membership-plans";
 import { isMaskedLabel } from "../../../services/venues/consoleLogic";
 import { cardMeta, initials, memberLine, statusChip, type CardFigures, type ChipTone } from "./planModel";
 import type { PlanAction } from "./PlansContext";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W3 · B-MA.5 pieces (Business Marketplace Screens lines
 // 315–335, `bizPlans`, `members`; B-MA.5.1 `editList` menu, lines 360–367),
@@ -52,19 +53,19 @@ export const StatusChip: React.FC<{ plan: Pick<MembershipPlanRow, "status"> }> =
 export function menuOptions(plan: MembershipPlanRow, offline: boolean): PopupMenuOption<PlanAction>[] {
   if (plan.dbStatus === "archived") {
     return [
-      { value: "restore", label: "Restore plan", disabled: offline },
-      { value: "duplicate", label: "Duplicate plan", disabled: offline },
-      { value: "delete", label: "Delete plan", destructive: true, disabled: offline },
+      { value: "restore", label: t("Restore plan"), disabled: offline },
+      { value: "duplicate", label: t("Duplicate plan"), disabled: offline },
+      { value: "delete", label: t("Delete plan"), destructive: true, disabled: offline },
     ];
   }
   const paused = plan.dbStatus === "paused";
   return [
-    { value: "edit", label: "Edit plan" },
-    { value: paused ? "resume" : "pause", label: paused ? "Resume plan" : "Pause plan", disabled: offline },
-    { value: plan.visibleOnExplore ? "hide" : "show", label: plan.visibleOnExplore ? "Hide from Explore" : "Show on Explore", disabled: offline },
-    { value: "duplicate", label: "Duplicate plan", disabled: offline },
-    { value: "archive", label: "Archive plan", disabled: offline },
-    { value: "delete", label: "Delete plan", destructive: true, disabled: offline },
+    { value: "edit", label: t("Edit plan") },
+    { value: paused ? "resume" : "pause", label: paused ? t("Resume plan") : t("Pause plan"), disabled: offline },
+    { value: plan.visibleOnExplore ? "hide" : "show", label: plan.visibleOnExplore ? t("Hide from Explore") : t("Show on Explore"), disabled: offline },
+    { value: "duplicate", label: t("Duplicate plan"), disabled: offline },
+    { value: "archive", label: t("Archive plan"), disabled: offline },
+    { value: "delete", label: t("Delete plan"), destructive: true, disabled: offline },
   ];
 }
 
@@ -80,7 +81,7 @@ export const PlanMenuButton: React.FC<{ plan: MembershipPlanRow; offline: boolea
   const setOpen = (v: boolean) => setAnchor(v ? btn.current : null);
   useEffect(() => {
     if (!open) return;
-    const t = window.setTimeout(() => (document.querySelector('[role="menu"] button:not(:disabled)') as HTMLElement | null)?.focus(), 30);
+    const timer = window.setTimeout(() => (document.querySelector('[role="menu"] button:not(:disabled)') as HTMLElement | null)?.focus(), 30);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
@@ -90,7 +91,7 @@ export const PlanMenuButton: React.FC<{ plan: MembershipPlanRow; offline: boolea
     };
     document.addEventListener("keydown", onKey, true);
     return () => {
-      window.clearTimeout(t);
+      window.clearTimeout(timer);
       document.removeEventListener("keydown", onKey, true);
     };
   }, [open]);
@@ -99,7 +100,7 @@ export const PlanMenuButton: React.FC<{ plan: MembershipPlanRow; offline: boolea
       <button
         ref={btn}
         type="button"
-        aria-label={`Plan options: ${plan.name}`}
+        aria-label={t("Plan options: {name}", { name: plan.name })}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={(e) => {
@@ -177,7 +178,7 @@ export const PlanCard: React.FC<{
       <button
         type="button"
         onClick={onOpen}
-        aria-label={`${plan.name}, ${plan.price}${meta ? `, ${meta}` : ""}, ${statusChip(plan.status).label}${line ? `, ${line}` : ""}. Open plan`}
+        aria-label={`${[plan.name, plan.price, meta, statusChip(plan.status).label, line].filter(Boolean).join(t(", "))}. ${t("Open plan")}`}
         className="market-focus"
         style={{ position: "absolute", inset: 0, width: "100%", borderRadius: 19, background: "transparent", border: 0, padding: 0, cursor: "pointer" }}
       />
@@ -224,7 +225,7 @@ export const MemberRows: React.FC<{
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: textPx(13.5), fontWeight: 700 }}>
                 {r.label}
-                {r.minor ? <span style={{ fontSize: textPx(11.5), fontWeight: 700, color: m.faint }}> · Under 18</span> : null}
+                {r.minor ? <span style={{ fontSize: textPx(11.5), fontWeight: 700, color: m.faint }}> · {t("Under 18")}</span> : null}
               </div>
               <div style={{ fontSize: textPx(11.5), color: m.faint }}>{r.plan}</div>
             </div>
