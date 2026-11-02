@@ -20,7 +20,7 @@ import { rpc } from "./rpc";
 import { STAGE_LABEL, type Read, type Write, type ClientStage } from "./clients";
 import type { AccessCategory } from "./access";
 import { ACCESS_CATEGORIES } from "../consent";
-import { t } from "../../i18n/core";
+import { t, tx } from "../../i18n/core";
 
 const failed = (error: unknown, fallback: string): Write => ({ ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : fallback });
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
@@ -150,7 +150,7 @@ export function changeLine(subjectType: string, summary: Record<string, unknown>
   }
   // The actions the database writes (assigned, edited, ended, published, set,
   // connected_by_referral) read in the app's language; anything else stays as written.
-  const VERB: Record<string, string> = { assigned: t("Assigned"), edited: t("Edited"), ended: t("Ended"), published: t("Published"), set: t("Set"), connected_by_referral: t("Connected by referral") };
+  const VERB: Record<string, string> = { assigned: t("Assigned"), edited: t("Edited"), ended: tx("Ended", "history"), published: t("Published"), set: tx("Set", "history"), connected_by_referral: t("Connected by referral") };
   const verb = action ? action.replace(/_/g, " ") : "Changed";
   const cap = (action && VERB[action]) ?? (action ? verb.charAt(0).toUpperCase() + verb.slice(1) : t("Changed"));
   return name ? t("{verb} {subject}: {name}", { verb: cap, subject, name }) : t("{verb} {subject}", { verb: cap, subject });

@@ -84,7 +84,7 @@ const proprofile: Catalogue = {
   "Methods, payouts, invoices & receipts": "طرق الدفع والتحويلات والفواتير والإيصالات",
   "Where you are connected & join requests": "أين أنت مرتبط وطلبات الانضمام",
   Venues: "الأماكن",
-  "Members, classes, hours & photos": "الأعضاء والحصص والمواعيد والصور",
+  "Members, classes, hours & photos": "الأعضاء والحصص وساعات العمل والصور",
   "Your account, details & sign out": "حسابك وتفاصيلك وتسجيل الخروج",
   Referral: "الإحالة",
   "Share your code, earn rewards": "شارك رمزك واكسب المكافآت",
@@ -129,7 +129,7 @@ const proprofile: Catalogue = {
   "Add a qualification": "إضافة مؤهل",
 
   // == More · Edit profile ==
-  Added: "مُضاف",
+  Added: "تمت الإضافة",
   "Photo added": "أُضيفت الصورة",
   "Cover added": "أُضيف الغلاف",
   "Not set yet": "لم يُحدَّد بعد",
@@ -208,7 +208,7 @@ const proprofile: Catalogue = {
   "Centium Professional": "Centium Professional",
 
   // == More · Public profile and reviews ==
-  "Preview as client": "المعاينة كعميل",
+  "Preview as client": "معاينة كعميل",
   "Clients use these buttons. You can't book or hire yourself.": "يستخدم العملاء هذه الأزرار. لا يمكنك حجز نفسك أو توظيفها.",
   "{n} out of 5 stars": "{n} من 5 نجوم",
   "From clients who worked with you": "من عملاء عملوا معك",
@@ -376,7 +376,7 @@ const proprofile: Catalogue = {
   "e.g. 40": "مثل: 40",
   "Need to correct it?": "هل تحتاج إلى تصحيحه؟",
   "Your request to change to {v} is with our team. They'll ask for your new credentials.": "طلبك للتغيير إلى {v} لدى فريقنا. سيطلبون شهاداتك الجديدة.",
-  "Expired {date}": "انتهى {date}",
+  "Expired {date}": "انتهت الصلاحية في {date}",
 };
 
 export default proprofile;

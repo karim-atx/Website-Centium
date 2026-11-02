@@ -68,7 +68,7 @@ const pro: Catalogue = {
   "Up {n} points": { zero: "ارتفاع {n} نقطة", one: "ارتفاع نقطة واحدة", two: "ارتفاع نقطتين", few: "ارتفاع {n} نقاط", many: "ارتفاع {n} نقطة", other: "ارتفاع {n} نقطة" },
   "Down {n} points": { zero: "انخفاض {n} نقطة", one: "انخفاض نقطة واحدة", two: "انخفاض نقطتين", few: "انخفاض {n} نقاط", many: "انخفاض {n} نقطة", other: "انخفاض {n} نقطة" },
   "Client focus, {focus}": "تركيز العميل، {focus}",
-  Week: "أسبوع",
+  Week: "الأسبوع",
   "Trend, use the arrow keys to move through the range": "الاتجاه، استخدم مفاتيح الأسهم للتنقل عبر الفترة",
   "Next session, open Calendar": "الجلسة التالية، فتح التقويم",
   "Next {time} · {name}": "التالي {time} · {name}",
@@ -125,7 +125,7 @@ const pro: Catalogue = {
   "Nothing ending yet. Plans show here two weeks before they end.": "لا شيء ينتهي بعد. تظهر الخطط هنا قبل انتهائها بأسبوعين.",
   "See all": "عرض الكل",
   "Ends {date} · week {n} of {of}": "تنتهي {date} · الأسبوع {n} من {of}",
-  "Ends {date}": "تنتهي {date}",
+  "Ends {date}": "ينتهي في {date}",
   "Ends {date} · week {n}": "تنتهي {date} · الأسبوع {n}",
   "last month": "الشهر الماضي",
   "last week": "الأسبوع الماضي",
@@ -148,8 +148,8 @@ const pro: Catalogue = {
 
   // == Pro home · requests and invitations ==
   "{name} is now in Onboarding.": "أصبح {name} الآن في مرحلة الانضمام.",
-  "You've reached the client limit on your {plan} plan.": "وصلت إلى الحد الأقصى للعملاء في خطة {plan}.",
-  "You've reached the client limit on your plan.": "وصلت إلى الحد الأقصى للعملاء في خطتك.",
+  "You've reached the client limit on your {plan} plan.": "بلغت الحد الأقصى للعملاء في خطة {plan}.",
+  "You've reached the client limit on your plan.": "بلغت الحد الأقصى للعملاء في خطتك.",
   "You don't have permission to answer that request.": "ليست لديك صلاحية الرد على هذا الطلب.",
   "Couldn't decline. Try again.": "تعذّر الرفض. حاول مرة أخرى.",
   "The client": "العميل",

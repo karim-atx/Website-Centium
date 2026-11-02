@@ -30,7 +30,7 @@ import {
   type CarePlan,
   type FollowUp,
 } from "../../../services/pro/clientPage";
-import { t, tk, tn } from "../../../i18n/core";
+import { t, tk, tn, tx } from "../../../i18n/core";
 
 /**
  * Release 3 · Care plan (Clinical overview only). CL2 v4 Tab 2 (source
@@ -206,7 +206,7 @@ export const CarePlanTab: React.FC<{ data: ClientPageData; onNotes: () => void; 
         <ListCard
           rows={plan.followUps.map((f): ListRow => {
             const chip =
-              f.status === "done" ? <Chip label={t("Done")} tone="done" /> : f.status === "cancelled" ? <Chip label={t("Cancelled")} tone="pau" /> : f.dueOn <= today ? <Chip label={f.dueOn === today ? t("Today") : t("Due")} tone="att" /> : null;
+              f.status === "done" ? <Chip label={t("Done")} tone="done" /> : f.status === "cancelled" ? <Chip label={t("Cancelled")} tone="pau" /> : f.dueOn <= today ? <Chip label={f.dueOn === today ? t("Today") : tx("Due", "status")} tone="att" /> : null;
             const open = f.status === "planned" || f.status === "booked";
             return {
               key: f.id,

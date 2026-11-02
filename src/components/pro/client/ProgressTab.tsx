@@ -24,7 +24,7 @@ import type { AccessCategory } from "../../../services/pro/access";
 import { CheckInsProgress, checkInsSummary, useClientCheckIns } from "../forms/CheckInsProgress";
 import { ClientWinsCard } from "../../share/ClientWinsCard";
 import { appLocale } from "../../../i18n/format";
-import { t, tk, tn } from "../../../i18n/core";
+import { t, tk, tn, tx } from "../../../i18n/core";
 
 /**
  * Release 3 · CL2 v5 Progress (Full coaching, Nutrition) and Trends
@@ -156,7 +156,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
     groups = [
       { key: "str", icon: TrendingUp, title: t("Strength"), summary: access.has("workout_activity") ? t("Best sets and PRs") : t("Not shared"), body: access.has("workout_activity") ? <StrengthChart clientId={clientId} today={today} initial={chartInitial} /> : lock(t("Workout activity"), "workout_activity") },
       { key: "vol", icon: BarChart3, title: t("Volume"), summary: access.has("workout_activity") ? t("Sets a week") : t("Not shared"), body: access.has("workout_activity") ? <VolumeChart clientId={clientId} today={today} initial={chartInitial} /> : lock(t("Workout activity"), "workout_activity") },
-      adherenceGroup(t("Workouts vs planned"), t("workouts")),
+      adherenceGroup(t("Workouts vs planned"), tx("workouts", "unit")),
       { key: "rpe", icon: Gauge, title: "RPE", summary: access.has("workout_activity") ? t("Effort per session") : t("Not shared"), body: access.has("workout_activity") ? <RpeChart clientId={clientId} today={today} initial={chartInitial} /> : lock(t("Workout activity"), "workout_activity") },
       bodyGroup,
       checkInsGroup,
