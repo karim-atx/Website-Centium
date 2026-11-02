@@ -1,5 +1,6 @@
 import { useBack } from "../../hooks/useBack";
 import { RedeemScreen } from "../../components/market/redeem/RedeemScreen";
+import { t } from "../../i18n/core";
 
 // Market + Share 3.0 · W3 · B-MA.4 Redeem a voucher (/app/business/redeem,
 // ConsoleGate marketing or front_desk, D-25), back header "Marketplace /
@@ -8,5 +9,5 @@ import { RedeemScreen } from "../../components/market/redeem/RedeemScreen";
 
 export default function RedeemVoucher() {
   const back = useBack("/app/business/marketplace");
-  return <RedeemScreen variant="business" onBack={back} backLabel="Back to Marketplace" />;
+  return <RedeemScreen variant="business" onBack={back} backLabel={t("Back to Marketplace")} />;
 }

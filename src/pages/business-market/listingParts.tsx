@@ -12,6 +12,7 @@ import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { linePx, textPx } from "../../theme/textSize";
 import { marketPalette, type MarketPalette } from "../../theme/marketTokens";
 import { checklistOrder, strengthLine, type StrengthItem } from "./model";
+import { t, tn } from "../../i18n/core";
 
 // Market + Share 3.0 · W3 · the Marketplace's own parts in the handover chrome
 // (Business Marketplace Screens; marketPalette, light = the board, dark = the
@@ -168,7 +169,7 @@ export function BackHeader({ eyebrow, title, onBack, backLabel, aside }: { eyebr
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBlock: "-4px 12px", marginInline: "-10px 0", color: m.ink }}>
       <button type="button" onClick={onBack} aria-label={backLabel} className="tap market-focus" style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", color: m.ink, background: "transparent", border: 0, flexShrink: 0, cursor: "pointer" }}>
-        <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
+        <ChevronLeft size={22} strokeWidth={2.2} aria-hidden className="rtl:-scale-x-100" />
       </button>
       <div style={{ minWidth: 0, flex: 1 }}>
         <p style={{ fontSize: px(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint, lineHeight: lh(15.75) }}>{eyebrow}</p>
@@ -263,7 +264,7 @@ export function SheetSwitch({ on, onChange, label, describedBy, disabled }: { on
       className="tap market-focus"
       style={{ width: 42, height: 26, borderRadius: 999, background: on ? m.fill : m.swoff, position: "relative", flexShrink: 0, border: 0, padding: 0, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.4 : 1 }}
     >
-      <span aria-hidden style={{ position: "absolute", top: 2, left: on ? 18 : 2, width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)", transition: reduce ? undefined : "left 140ms ease" }} />
+      <span aria-hidden style={{ position: "absolute", top: 2, insetInlineStart: on ? 18 : 2, width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)", transition: reduce ? undefined : "inset-inline-start 140ms ease" }} />
     </button>
   );
 }
@@ -425,7 +426,7 @@ export function useStrip(): [React.ReactNode, (text: string, tone?: StripTone, a
               key={s.n}
               text={s.text}
               tone={s.tone}
-              action={s.act?.label ?? "Done"}
+              action={s.act?.label ?? t("Done")}
               onAction={() => {
                 setS(null);
                 s.act?.onPress();
@@ -458,15 +459,15 @@ export function StrengthCard({ items, emptyLine, highlight, onItem }: { items: S
       <button
         type="button"
         aria-expanded={open}
-        aria-label={`Listing strength, ${done} of ${total} done`}
+        aria-label={t("Listing strength, {done} of {total} done", { done, total })}
         onClick={() => setOpen((o) => !o)}
         className="market-focus"
         style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", width: "100%", background: "transparent", border: 0, textAlign: "start", color: m.ink, cursor: "pointer", fontFamily: "inherit" }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-            <p style={{ fontSize: px(14), fontWeight: 700, lineHeight: "normal" }}>Listing strength</p>
-            <p style={{ fontSize: px(12), fontWeight: 700, color: m.pdark, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums", lineHeight: "normal" }}>{`${done} of ${total} done`}</p>
+            <p style={{ fontSize: px(14), fontWeight: 700, lineHeight: "normal" }}>{t("Listing strength")}</p>
+            <p style={{ fontSize: px(12), fontWeight: 700, color: m.pdark, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums", lineHeight: "normal" }}>{t("{done} of {total} done", { done, total })}</p>
           </div>
           <div aria-hidden style={{ display: "grid", gridTemplateColumns: `repeat(${total}, minmax(0,1fr))`, gap: 3, marginTop: 9 }}>
             {items.map((x) => (
@@ -486,7 +487,7 @@ export function StrengthCard({ items, emptyLine, highlight, onItem }: { items: S
               key={x.key}
               type="button"
               onClick={() => onItem(x)}
-              aria-label={`${x.title}${x.sub ? `, ${x.sub}` : ""}${x.done ? ", done" : ""}`}
+              aria-label={`${x.title}${x.sub ? `${t(", ")}${x.sub}` : ""}${x.done ? `${t(", ")}${t("done")}` : ""}`}
               className="market-focus"
               style={{
                 display: "flex",
@@ -528,8 +529,8 @@ export function StrengthCard({ items, emptyLine, highlight, onItem }: { items: S
                 <span style={{ display: "block", fontSize: px(13.5), fontWeight: 700, color: x.done ? m.faint : m.ink, lineHeight: "normal" }}>{x.title}</span>
                 {x.sub && <span style={{ display: "block", fontSize: px(11.5), color: m.faint, lineHeight: "normal" }}>{x.sub}</span>}
               </span>
-              {!x.done && <span style={{ fontSize: px(12), fontWeight: 800, color: m.pdark, whiteSpace: "nowrap" }}>{x.key === "photos" ? "Add" : "Set up"}</span>}
-              <ChevronRight size={16} color={m.faint} strokeWidth={2} aria-hidden style={{ flexShrink: 0 }} />
+              {!x.done && <span style={{ fontSize: px(12), fontWeight: 800, color: m.pdark, whiteSpace: "nowrap" }}>{x.key === "photos" ? t("Add") : t("Set up")}</span>}
+              <ChevronRight size={16} color={m.faint} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ flexShrink: 0 }} />
             </button>
           ))}
           {total > 4 && (
@@ -540,7 +541,7 @@ export function StrengthCard({ items, emptyLine, highlight, onItem }: { items: S
               className="market-focus"
               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, minHeight: 44, width: "100%", borderTop: `1px solid ${m.div}`, borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0, background: "transparent", fontSize: px(12.5), fontWeight: 800, color: m.pdark, cursor: "pointer", fontFamily: "inherit" }}
             >
-              {all ? "Show less" : `Show all ${total}`}
+              {all ? t("Show less") : t("Show all {n}", { n: total })}
               {all ? <ChevronUp size={14} strokeWidth={2.4} aria-hidden /> : <ChevronDown size={14} strokeWidth={2.4} aria-hidden />}
             </button>
           )}
@@ -567,8 +568,8 @@ export interface CardModel {
 }
 
 export function typeLine(type: string | null, categories: string[]): string {
-  const cats = categories.map((k) => CATEGORY_LABEL[k] ?? k);
-  return cats.length ? `${typeLabel(type)} · ${cats.join(", ")}` : typeLabel(type);
+  const cats = categories.map((k) => t(CATEGORY_LABEL[k] ?? k));
+  return cats.length ? `${typeLabel(type)} · ${cats.join(t(", "))}` : typeLabel(type);
 }
 
 /** The client card body (MA1-001 rows 6c-6k); shared by the Preview page. */
@@ -602,7 +603,7 @@ export function MiniCard({ m: card, dim, emptyAddress, emptyBio }: { m: CardMode
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <p style={{ flex: 1, minWidth: 0, fontSize: px(15), fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: m.ink }}>{card.name}</p>
           {card.rating && (
-            <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: px(11.5), fontWeight: 700, whiteSpace: "nowrap", color: m.ink }} aria-label={`Rated ${card.rating.average.toFixed(1)} from ${card.rating.count} reviews`}>
+            <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: px(11.5), fontWeight: 700, whiteSpace: "nowrap", color: m.ink }} aria-label={tn(card.rating.count, "Rated {avg} from {n} review", "Rated {avg} from {n} reviews", { avg: card.rating.average.toFixed(1) })}>
               <Star size={12} fill={m.gold} strokeWidth={0} color={m.gold} aria-hidden />
               {card.rating.average.toFixed(1)}
               <span style={{ fontWeight: 600, color: m.faint }}>({card.rating.count})</span>
@@ -650,10 +651,10 @@ export function YourCard({
   return (
     <Card style={{ overflow: "hidden" }} data-yourcard>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBlock: "12px 0", paddingInline: "16px 12px" }}>
-        <CapsLabel as="p">Your card</CapsLabel>
+        <CapsLabel as="p">{t("Your card")}</CapsLabel>
         <TextLink onClick={onPreview}>
           <Eye size={14} strokeWidth={2.2} aria-hidden />
-          Preview as client
+          {t("Preview as client")}
         </TextLink>
       </div>
       <div style={{ margin: "10px 16px 0" }}>
@@ -662,7 +663,7 @@ export function YourCard({
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px 14px", lineHeight: "normal" }}>
         <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: active ? m.good : m.high, boxShadow: `0 0 0 3px ${active ? m.goodbg : m.highbg}`, flexShrink: 0 }} />
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: "block", fontSize: px(13.5), fontWeight: 700, color: active ? m.good : m.high }}>{active ? "Listed on Explore" : "Hidden from Explore"}</span>
+          <span style={{ display: "block", fontSize: px(13.5), fontWeight: 700, color: active ? m.good : m.high }}>{active ? t("Listed on Explore") : t("Hidden from Explore")}</span>
           <span style={{ display: "block", fontSize: px(11.5), color: m.faint, marginTop: 1 }}>{active ? (emptyBusiness ? listedEmptySub : listedSub) : hiddenSub}</span>
         </span>
       </div>
@@ -679,10 +680,10 @@ export function PhotosCard({ photos, line, onOpen }: { photos: string[]; line: s
   return (
     <Card style={{ padding: "14px 16px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <p style={{ fontSize: px(14), fontWeight: 700, color: m.ink, lineHeight: "normal" }}>Photos</p>
+        <p style={{ fontSize: px(14), fontWeight: 700, color: m.ink, lineHeight: "normal" }}>{t("Photos")}</p>
         <TextLink onClick={onOpen} style={{ gap: 2, marginInlineEnd: -4 }}>
-          {photos.length ? "Manage" : "Add photos"}
-          <ChevronRight size={14} aria-hidden />
+          {photos.length ? t("Manage") : t("Add photos")}
+          <ChevronRight size={14} aria-hidden className="rtl:-scale-x-100" />
         </TextLink>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 6 }}>
@@ -691,14 +692,14 @@ export function PhotosCard({ photos, line, onOpen }: { photos: string[]; line: s
             <span key={i} style={{ position: "relative", aspectRatio: "4 / 3", borderRadius: 12, overflow: "hidden", background: m.soft }}>
               {/* A teammate's photo waiting for approval has no public file yet: the tile stays empty. */}
               <img key={photos[i]} src={photos[i]} alt="" onError={(e) => (e.currentTarget.style.visibility = "hidden")} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              {i === 0 && <span style={{ position: "absolute", insetInlineStart: 4, top: 4, fontSize: px(9), fontWeight: 800, background: m.card, color: m.ink, borderRadius: 999, padding: "1px 5px" }}>Cover</span>}
+              {i === 0 && <span style={{ position: "absolute", insetInlineStart: 4, top: 4, fontSize: px(9), fontWeight: 800, background: m.card, color: m.ink, borderRadius: 999, padding: "1px 5px" }}>{t("Cover")}</span>}
             </span>
           ) : (
             <button
               key={i}
               type="button"
               onClick={onOpen}
-              aria-label="Add photos"
+              aria-label={t("Add photos")}
               tabIndex={i === photos.length ? 0 : -1}
               className="market-focus"
               style={{ aspectRatio: "4 / 3", borderRadius: 12, border: `1.5px dashed ${m.border}`, background: m.soft, color: m.tert, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
@@ -785,7 +786,7 @@ export function CategoriesCard({
             type="button"
             aria-haspopup="listbox"
             aria-expanded={open}
-            aria-label={`${title}: ${chips.length ? chips.join(", ") : "none chosen"}`}
+            aria-label={`${title}: ${chips.length ? chips.join(t(", ")) : t("none chosen")}`}
             disabled={!canEdit}
             onClick={() => (open ? setOpen(false) : show())}
             className="market-focus"
@@ -808,9 +809,9 @@ export function CategoriesCard({
               opacity: canEdit ? 1 : 0.6,
             }}
           >
-            {(chips.length ? chips : ["Choose"]).map((t) => (
-              <span key={t} style={{ fontSize: px(12), fontWeight: 700, background: m.pale, color: m.pdark, borderRadius: 8, padding: "3px 9px" }}>
-                {t}
+            {(chips.length ? chips : [t("Choose")]).map((chip) => (
+              <span key={chip} style={{ fontSize: px(12), fontWeight: 700, background: m.pale, color: m.pdark, borderRadius: 8, padding: "3px 9px" }}>
+                {chip}
               </span>
             ))}
             <span style={{ marginInlineStart: "auto", display: "flex", color: m.faint }}>
@@ -836,8 +837,8 @@ export function CategoriesCard({
               }}
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBlock: "0 2px", marginInline: "4px 0" }}>
-                <CapsLabel as="p">{`${title} · ${draft.length} chosen`}</CapsLabel>
-                <button type="button" aria-label="Close" onClick={() => setOpen(false)} className="tap market-focus" style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", color: m.faint, background: "transparent", border: 0 }}>
+                <CapsLabel as="p">{`${title} · ${t("{n} chosen", { n: draft.length })}`}</CapsLabel>
+                <button type="button" aria-label={t("Close")} onClick={() => setOpen(false)} className="tap market-focus" style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", color: m.faint, background: "transparent", border: 0 }}>
                   <X size={16} strokeWidth={2.4} aria-hidden />
                 </button>
               </div>
@@ -872,7 +873,7 @@ export function CategoriesCard({
                       fontFamily: "inherit",
                     }}
                   >
-                    <span style={{ flex: 1, fontSize: px(14), fontWeight: 600 }}>{CATEGORY_LABEL[k] ?? k}</span>
+                    <span style={{ flex: 1, fontSize: px(14), fontWeight: 600 }}>{t(CATEGORY_LABEL[k] ?? k)}</span>
                     <span style={{ display: "flex", color: on ? m.pdark : m.tert }}>{on ? <SquareCheck size={17} strokeWidth={2.4} aria-hidden /> : <Square size={17} strokeWidth={2.4} aria-hidden />}</span>
                   </button>
                 );
@@ -880,10 +881,10 @@ export function CategoriesCard({
               {error && <p role="alert" style={{ fontSize: px(11.5), fontWeight: 700, color: m.high, margin: "8px 4px 0" }}>{error}</p>}
               <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.4fr)", gap: 8, marginTop: 10 }}>
                 <button type="button" onClick={() => setDraft([])} className="market-focus" style={{ height: 40, borderRadius: 12, border: 0, color: m.cancelink, background: m.cancelbg, fontSize: px(13), fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
-                  Clear
+                  {t("Clear")}
                 </button>
                 <button type="button" onClick={() => void apply()} disabled={busy} className="market-focus" style={{ height: 40, borderRadius: 12, background: m.fill, color: m.onfill, border: 0, fontSize: px(13), fontWeight: 700, opacity: busy ? 0.6 : 1, fontFamily: "inherit", cursor: "pointer" }}>
-                  {`Apply · ${draft.length}`}
+                  {t("Apply · {n}", { n: draft.length })}
                 </button>
               </div>
             </div>
@@ -905,12 +906,12 @@ export function RatingCard({ average, count, onOpen }: { average: number | null;
     <button
       type="button"
       onClick={onOpen}
-      aria-label={few ? "No reviews yet" : `Rated ${average.toFixed(1)} from ${count} reviews`}
+      aria-label={few ? t("No reviews yet") : tn(count, "Rated {avg} from {n} review", "Rated {avg} from {n} reviews", { avg: average.toFixed(1) })}
       className="market-focus"
       style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, width: "100%", borderRadius: 24, background: m.card, border: `1px solid ${m.border}`, textAlign: "start", color: m.ink, cursor: "pointer", fontFamily: "inherit", lineHeight: "normal", boxSizing: "border-box" }}
     >
       {few ? (
-        <span style={{ flex: 1, fontSize: px(14), fontWeight: 700 }}>No reviews yet</span>
+        <span style={{ flex: 1, fontSize: px(14), fontWeight: 700 }}>{t("No reviews yet")}</span>
       ) : (
         <>
           <span style={{ fontSize: px(30), fontWeight: 800, letterSpacing: "-0.03em", lineHeight: lh(32), fontVariantNumeric: "tabular-nums" }}>{average.toFixed(1)}</span>
@@ -925,11 +926,11 @@ export function RatingCard({ average, count, onOpen }: { average: number | null;
                 </span>
               ))}
             </span>
-            <span style={{ display: "block", fontSize: px(11.5), color: m.faint, marginTop: 2 }}>{`${count} reviews`}</span>
+            <span style={{ display: "block", fontSize: px(11.5), color: m.faint, marginTop: 2 }}>{tn(count, "{n} review", "{n} reviews")}</span>
           </span>
         </>
       )}
-      <ChevronRight size={16} strokeWidth={2} color={m.faint} aria-hidden />
+      <ChevronRight size={16} strokeWidth={2} color={m.faint} aria-hidden className="rtl:-scale-x-100" />
     </button>
   );
 }

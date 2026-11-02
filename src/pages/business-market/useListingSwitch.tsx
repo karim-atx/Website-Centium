@@ -2,6 +2,7 @@ import { useState } from "react";
 import { saveListingActive } from "../../services/business-market";
 import { useMarket } from "./MarketContext";
 import { CentredDialog, useStrip } from "./listingParts";
+import { t } from "../../i18n/core";
 
 // The listing switch (business_profiles.active, BU3-01, live), now driven by
 // the Overview's ListingToggleTile (B-MA.1) and the hidden banner's Turn on:
@@ -35,7 +36,7 @@ export function useListingSwitch() {
   };
 
   const turnOn = async () => {
-    if (await write(true)) showStrip("Your listing is on Explore.");
+    if (await write(true)) showStrip(t("Your listing is on Explore."));
   };
   const requestOff = () => {
     setError(null);
@@ -44,16 +45,16 @@ export function useListingSwitch() {
   const confirmOff = async () => {
     const ok = await write(false);
     setConfirm(false);
-    if (ok) showStrip("Your listing is hidden. Turn it on any time.");
+    if (ok) showStrip(t("Your listing is hidden. Turn it on any time."));
   };
 
   const popup = (
     <CentredDialog
       open={confirm}
-      title="Hide your business from Explore?"
+      title={t("Hide your business from Explore?")}
       body={v.hideBody}
-      cancel="Keep it visible"
-      action="Hide listing"
+      cancel={t("Keep it visible")}
+      action={t("Hide listing")}
       busy={busy}
       onAction={() => void confirmOff()}
       onCancel={() => setConfirm(false)}

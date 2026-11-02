@@ -13,6 +13,7 @@ import { fieldStyle, lh, MasterSheet, PrimaryButton, px, SaveError, SheetBox, So
 import { RangeCalendar } from "./RangeCalendar";
 import { addDays, dayMonth, isoOf } from "./model";
 import { lastFeatureStart, OWNER_ONLY, type Promotable } from "./promoModel";
+import { t } from "../../i18n/core";
 
 // Market + Share 3.0 · W3 (D-13): Featured placements KEPT and restyled in the
 // handover chrome: MasterBottomSheet (MasterSheet), the grey SheetBox fields
@@ -76,16 +77,16 @@ export function FeatureSheet({
       <MasterSheet
         open={open}
         onClose={onClose}
-        title="Feature for a week"
+        title={t("Feature for a week")}
         footer={
           <PrimaryButton disabled={!item} onClick={() => item && onContinue(item, from, price)}>
-            {label ? `Continue to payment · ${label}` : "Continue to payment"}
+            {label ? t("Continue to payment · {price}", { price: label }) : t("Continue to payment")}
           </PrimaryButton>
         }
       >
         <style>{FOCUS_CSS}</style>
-        <p style={lead(m)}>{cal ? "Pick a start day. Your 7 days run from it." : "Shown first in your area on Explore for 7 days."}</p>
-        <SheetBox label="Feature">
+        <p style={lead(m)}>{cal ? t("Pick a start day. Your 7 days run from it.") : t("Shown first in your area on Explore for 7 days.")}</p>
+        <SheetBox label={t("Feature")}>
           <button
             ref={setAnchor}
             type="button"
@@ -100,21 +101,21 @@ export function FeatureSheet({
               <Award size={17} strokeWidth={2} aria-hidden />
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: px(14), fontWeight: 700, color: m.ink }}>{item?.title ?? "Choose what to feature"}</span>
+              <span style={{ display: "block", fontSize: px(14), fontWeight: 700, color: m.ink }}>{item?.title ?? t("Choose what to feature")}</span>
               {item && <span style={{ display: "block", fontSize: px(11.5), color: m.faint }}>{item.sub}</span>}
             </span>
             {!retry && <ChevronDown size={16} strokeWidth={2.2} color={m.faint} aria-hidden />}
           </button>
         </SheetBox>
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 10, marginTop: 12 }}>
-          <SheetBox label="Starts">
+          <SheetBox label={t("Starts")}>
             <button type="button" onClick={() => setCal(true)} className="market-focus" style={{ ...fieldStyle(m), display: "flex", alignItems: "center", gap: 8, textAlign: "start", cursor: "pointer", boxShadow: cal ? `inset 0 0 0 1.5px ${m.fill}` : undefined }}>
               <span style={{ flex: 1 }}>{dayMonth(from)}</span>
               <Calendar size={16} strokeWidth={2.2} color={m.faint} aria-hidden />
             </button>
           </SheetBox>
-          <SheetBox label="Ends">
-            <span aria-readonly="true" role="textbox" aria-label="Ends" style={{ ...fieldStyle(m), color: m.faint }}>
+          <SheetBox label={t("Ends")}>
+            <span aria-readonly="true" role="textbox" aria-label={t("Ends")} style={{ ...fieldStyle(m), color: m.faint }}>
               {dayMonth(to)}
             </span>
           </SheetBox>
@@ -134,7 +135,7 @@ export function FeatureSheet({
             />
           </div>
         )}
-        <p style={{ fontSize: px(13), fontWeight: 500, color: m.slabel, margin: "16px 0 8px" }}>Where it appears</p>
+        <p style={{ fontSize: px(13), fontWeight: 500, color: m.slabel, margin: "16px 0 8px" }}>{t("Where it appears")}</p>
         <div style={{ borderRadius: 16, background: m.soft, padding: 10 }} aria-hidden>
           <p style={{ fontSize: px(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint, margin: "0 2px 8px" }}>{v.areaLabel}</p>
           <div style={{ display: "flex", alignItems: "center", gap: 10, background: m.card, border: `1.5px solid ${m.segactive}`, borderRadius: 14, padding: 10 }}>
@@ -145,14 +146,14 @@ export function FeatureSheet({
             </span>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: px(10.5), fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: m.pale, color: m.pdark }}>
               <Award size={11} strokeWidth={2.4} aria-hidden />
-              Featured
+              {t("Featured")}
             </span>
           </div>
           <div style={{ height: 34, borderRadius: 12, background: m.card, opacity: 0.6, marginTop: 6 }} />
         </div>
         {label && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 14 }}>
-            <span style={{ fontSize: px(13), fontWeight: 600, color: m.ink2 }}>7 days</span>
+            <span style={{ fontSize: px(13), fontWeight: 600, color: m.ink2 }}>{t("7 days")}</span>
             <span style={{ fontSize: px(20), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: m.ink }}>{label}</span>
           </div>
         )}
@@ -163,7 +164,7 @@ export function FeatureSheet({
         anchor={anchor}
         matchWidth={anchor}
         variant="field"
-        heading="Promote"
+        heading={t("Promote")}
         options={items.map((i) => ({ value: i.id, label: i.title, note: i.sub }))}
         selected={itemId}
         onSelect={(id) => {
@@ -230,18 +231,18 @@ export function PaySheet({
     const r = retry ? await retryFeaturedWeek(retry.placementId, from) : await requestFeaturedWeek(business.id, placementTarget(item.kind, item.id, business.id), mk.v.featureArea, from);
     setBusy(false);
     if (!r.ok) return setError(r.message);
-    onRequested("Request sent. We'll confirm your payment in Messages.");
+    onRequested(t("Request sent. We'll confirm your payment in Messages."));
   };
-  const note = pending ? "Featuring is coming soon." : !isOwner ? OWNER_ONLY : !price ? "Featuring isn't on sale for that week." : null;
+  const note = pending ? t("Featuring is coming soon.") : !isOwner ? t(OWNER_ONLY) : !price ? t("Featuring isn't on sale for that week.") : null;
   return (
     <MasterSheet
       open={open}
       onClose={onClose}
-      title="Pay for featuring"
+      title={t("Pay for featuring")}
       footer={
         <>
           <PrimaryButton disabled={!can} busy={busy} onClick={() => void request()}>
-            Request featuring
+            {t("Request featuring")}
           </PrimaryButton>
           {note && <SoonNote>{note}</SoonNote>}
           {error && <SaveError>{error}</SaveError>}
@@ -249,20 +250,21 @@ export function PaySheet({
       }
     >
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "0 0 12px", borderBottom: `1px solid ${m.div}`, fontSize: px(13.5), color: m.ink }}>
-        <span style={{ color: m.ink2 }}>{`${item?.title ?? ""}, 7 days`}</span>
+        <span style={{ color: m.ink2 }}>{t("{name}, 7 days", { name: item?.title ?? "" })}</span>
         {label && <span style={{ fontWeight: 800 }}>{label}</span>}
       </div>
-      <p style={{ fontSize: px(11.5), color: m.faint, marginTop: 6 }}>{`${dayMonth(from)} to ${dayMonth(addDays(from, 6))}`}</p>
+      <p style={{ fontSize: px(11.5), color: m.faint, marginTop: 6 }}>{t("{from} to {to}", { from: dayMonth(from), to: dayMonth(addDays(from, 6)) })}</p>
       <p id="pay-with" style={{ fontSize: px(13), fontWeight: 500, color: m.slabel, margin: "16px 0 8px" }}>
-        Pay with
+        {t("Pay with")}
       </p>
       <div role="radiogroup" aria-labelledby="pay-with">
-        <Method m={m} on title="Cash or bank transfer" sub="Centium confirms it, usually within a day" />
-        <Method m={m} on={false} disabled title="Whish" sub="Coming soon" mt={8} />
+        <Method m={m} on title={t("Cash or bank transfer")} sub={t("Centium confirms it, usually within a day")} />
+        {/* i18n-ignore: Whish is a brand */}
+        <Method m={m} on={false} disabled title="Whish" sub={t("Coming soon")} mt={8} />
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 12, borderRadius: 14, background: m.sgrey, padding: "12px 14px", color: m.ink2 }}>
         <Info size={15} strokeWidth={2.2} aria-hidden style={{ flexShrink: 0, marginTop: 1 }} />
-        <p style={{ fontSize: px(12), lineHeight: lh(17) }}>We'll send payment details in Messages. Your week starts once the payment is confirmed.</p>
+        <p style={{ fontSize: px(12), lineHeight: lh(17) }}>{t("We'll send payment details in Messages. Your week starts once the payment is confirmed.")}</p>
       </div>
     </MasterSheet>
   );
@@ -296,9 +298,9 @@ export function ResultsSheet({ open, onClose, item, from, to }: { open: boolean;
   const m = useMarketColors();
   const started = from <= isoOf(new Date());
   return (
-    <MasterSheet open={open} onClose={onClose} title="Featured results">
-      <p style={lead(m)}>{`${item} · ${dayMonth(from)} to ${dayMonth(to)}`}</p>
-      <p style={{ fontSize: px(12.5), color: m.ink2, lineHeight: lh(18), textAlign: "center", padding: "16px 0" }}>{started ? "Results for a featured week aren't available yet." : "Results show once your featured week starts."}</p>
+    <MasterSheet open={open} onClose={onClose} title={t("Featured results")}>
+      <p style={lead(m)}>{`${item} · ${t("{from} to {to}", { from: dayMonth(from), to: dayMonth(to) })}`}</p>
+      <p style={{ fontSize: px(12.5), color: m.ink2, lineHeight: lh(18), textAlign: "center", padding: "16px 0" }}>{started ? t("Results for a featured week aren't available yet.") : t("Results show once your featured week starts.")}</p>
     </MasterSheet>
   );
 }

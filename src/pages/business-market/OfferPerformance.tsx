@@ -8,7 +8,6 @@ import { NO_ICON_SCALE } from "../../components/pro/proInk";
 import { fetchOfferChoices, fetchOfferPerformance } from "../../services/market/performance";
 import {
   chartData,
-  countOf,
   DEFAULT_RANGE,
   deltaPt,
   deltaText,
@@ -35,6 +34,7 @@ import {
 import { useMarket } from "./MarketContext";
 import { BackHeader, px, useMarketColors } from "./listingParts";
 import { isoOf } from "./model";
+import { t, tk, tn } from "../../i18n/core";
 
 // Market + Share 3.0 · W3 · B-MA.7 Offer Performance (HANDOVER §4 "B-MA.7
 // Offer Performance"; Business Marketplace Screens lines 467–577, the script's
@@ -63,16 +63,22 @@ import { isoOf } from "./model";
 //   (ratePtChange); nothing when the previous window was empty.
 
 const QUESTION: Record<OfferMetric, string> = {
-  offer_views: "How many members saw your offers?",
-  redemptions: "How many vouchers were redeemed?",
-  points_redeemed: "How many points did members spend with you?",
-  conversion: "How many viewers redeemed?",
+  offer_views: tk("How many members saw your offers?"),
+  redemptions: tk("How many vouchers were redeemed?"),
+  points_redeemed: tk("How many points did members spend with you?"),
+  conversion: tk("How many viewers redeemed?"),
 };
 
 
 
 const formatOf = (metric: OfferMetric) => (v: number): string =>
-  metric === "offer_views" ? countOf(v, "view", "views") : metric === "redemptions" ? countOf(v, "voucher", "vouchers") : metric === "points_redeemed" ? `${fmtCount(v)} pts` : rateText(v);
+  metric === "offer_views"
+    ? tn(Math.round(v), "{n} view", "{n} views", { n: fmtCount(v) })
+    : metric === "redemptions"
+      ? tn(Math.round(v), "{n} voucher", "{n} vouchers", { n: fmtCount(v) })
+      : metric === "points_redeemed"
+        ? t("{n} pts", { n: fmtCount(v) })
+        : rateText(v);
 
 const totalOf = (metric: OfferMetric, s: PerfSeries | null): string => (metric === "conversion" ? rateText(s?.total ?? 0) : fmtCount(s?.total ?? 0));
 const deltaOf = (metric: OfferMetric, s: PerfSeries | null): string | null => (metric === "conversion" ? deltaPt(s ? ratePtChange(s.total, s.deltaPct) : null) : deltaText(s?.deltaPct));
@@ -151,7 +157,7 @@ function HeaderRow({ choices, offerId, range, onOffer, onRange }: { choices: Off
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
   const current = choices.find((o) => o.id === offerId);
-  const label = current?.headline ?? "All offers";
+  const label = current?.headline ?? t("All offers");
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
       <style>{FOCUS_CSS}</style>
@@ -177,8 +183,8 @@ function HeaderRow({ choices, offerId, range, onOffer, onRange }: { choices: Off
         anchor={anchor}
         matchWidth={anchor}
         variant="field"
-        heading="Offer"
-        options={[{ value: "", label: "All offers" }, ...choices.map((o) => ({ value: o.id, label: o.headline }))]}
+        heading={t("Offer")}
+        options={[{ value: "", label: t("All offers") }, ...choices.map((o) => ({ value: o.id, label: o.headline }))]}
         selected={offerId ?? ""}
         onSelect={(v) => {
           setOpen(false);
@@ -204,9 +210,9 @@ export function OfferPerformance() {
   const expand = (mt: OfferMetric) => () => navigate(`${mk.base}/performance/${SEGMENT[mt]}?${query}`);
 
   let body: React.ReactNode;
-  if (!can) body = <MarketEmptyCard title="No data yet" body="Offer performance is for the owner and staff who manage marketing." />;
-  else if (load.state === "loading") body = <MarketSkeleton radius={20} rows={3} height={244} count={4} gap={12} label="Loading your offer performance" />;
-  else if (load.state === "error") body = <MarketError thing="your offer performance" onRetry={retry} />;
+  if (!can) body = <MarketEmptyCard title={t("No data yet")} body={t("Offer performance is for the owner and staff who manage marketing.")} />;
+  else if (load.state === "loading") body = <MarketSkeleton radius={20} rows={3} height={244} count={4} gap={12} label={t("Loading your offer performance")} />;
+  else if (load.state === "error") body = <MarketError thing={tk("your offer performance")} onRetry={retry} />;
   else if (OFFER_METRICS.every((mt) => isEmptySeries(load.series[mt]))) body = <EmptyCard offer={offer} today={today} />;
   else {
     const s = load.series;
@@ -221,7 +227,7 @@ export function OfferPerformance() {
     const rate = conv ? conv.total : ratePct(red?.total ?? 0, views?.total ?? 0);
     const card = (mt: OfferMetric) => {
       const d = deltaOf(mt, s[mt]);
-      return { question: QUESTION[mt], total: totalOf(mt, s[mt]), delta: d, note: d ? undefined : null, unit, range, onExpand: expand(mt), formatValue: formatOf(mt) };
+      return { question: t(QUESTION[mt]), total: totalOf(mt, s[mt]), delta: d, note: d ? undefined : null, unit, range, onExpand: expand(mt), formatValue: formatOf(mt) };
     };
     body = (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -234,8 +240,8 @@ export function OfferPerformance() {
           labels={cD.labels}
           series={cD.values}
           steps={[
-            { label: "Views", value: fmtCount(views?.total ?? 0), fraction: 1 },
-            { label: "Redemptions", value: `${fmtCount(red?.total ?? 0)} · ${rateText(rate)}`, fraction: offerRateFraction(rate) },
+            { label: t("Views"), value: fmtCount(views?.total ?? 0), fraction: 1 },
+            { label: t("Redemptions"), value: `${fmtCount(red?.total ?? 0)} · ${rateText(rate)}`, fraction: offerRateFraction(rate) },
           ]}
           rateSeries={cD.values}
         />
@@ -256,12 +262,12 @@ function EmptyCard({ offer, today }: { offer: OfferChoice | null; today: string 
   if (offer && startsLater(offer.startsOn, today))
     return (
       <MarketEmptyCard
-        title="No data yet"
-        body={`This offer starts on ${longDate(offer.startsOn!)}. Views, redemptions and points show here once members can see it.`}
-        placeholder={`Charts start on ${chartDate(offer.startsOn!)}`}
+        title={t("No data yet")}
+        body={t("This offer starts on {date}. Views, redemptions and points show here once members can see it.", { date: longDate(offer.startsOn!) })}
+        placeholder={t("Charts start on {date}", { date: chartDate(offer.startsOn!) })}
       />
     );
-  return <MarketEmptyCard title="No data yet" body="Views, redemptions and points show here once members can see your offers." placeholder="Charts start with your first offer view" placeholderContentBox />;
+  return <MarketEmptyCard title={t("No data yet")} body={t("Views, redemptions and points show here once members can see your offers.")} placeholder={t("Charts start with your first offer view")} placeholderContentBox />;
 }
 
 /**
@@ -304,14 +310,14 @@ export function OfferPerformanceExpanded({ segment }: { segment: string }) {
   const back = () => navigate(`${mk.tabHref("perf")}&${query}`);
 
   let body: React.ReactNode;
-  if (!can) body = <MarketEmptyCard title="No data yet" body="Offer performance is for the owner and staff who manage marketing." />;
+  if (!can) body = <MarketEmptyCard title={t("No data yet")} body={t("Offer performance is for the owner and staff who manage marketing.")} />;
   else if (shown && !isEmptySeries(shown)) {
     const d = chartData(shown, { cumulative: mt === "points_redeemed" });
     const delta = deltaOf(mt, shown);
     body = (
       <div style={{ marginTop: 18 }}>
         <ExpandedChart
-          question={QUESTION[mt]}
+          question={t(QUESTION[mt])}
           total={totalOf(mt, shown)}
           delta={delta}
           note={delta ? undefined : null}
@@ -327,13 +333,13 @@ export function OfferPerformanceExpanded({ segment }: { segment: string }) {
         />
       </div>
     );
-  } else if (load.state === "loading") body = <MarketSkeleton radius={20} rows={3} height={360} label="Loading your offer performance" style={{ marginTop: 18 }} />;
-  else if (load.state === "error") body = <MarketError thing="your offer performance" onRetry={() => setTick((t) => t + 1)} style={{ marginTop: 18 }} />;
+  } else if (load.state === "loading") body = <MarketSkeleton radius={20} rows={3} height={360} label={t("Loading your offer performance")} style={{ marginTop: 18 }} />;
+  else if (load.state === "error") body = <MarketError thing={tk("your offer performance")} onRetry={() => setTick((t) => t + 1)} style={{ marginTop: 18 }} />;
   else body = <div style={{ marginTop: 12 }}><EmptyCard offer={offer} today={today} /></div>;
 
   return (
     <div>
-      <BackHeader eyebrow="Offer performance" title={ex.title} onBack={back} backLabel="Back to Performance" />
+      <BackHeader eyebrow={t("Offer performance")} title={t(ex.title)} onBack={back} backLabel={t("Back to Performance")} />
       <HeaderRow choices={choices} offerId={offerId} range={range} onOffer={(id) => set({ offer: id })} onRange={(r) => set({ range: r })} />
       {body}
     </div>

@@ -5,6 +5,7 @@ import { saveVenueDetails } from "../../services/business-market/listing";
 import { AMENITY_KEYS, AMENITY_LABEL, FIRST_VISIT_MAX, cleanFirstVisit, type AmenityKey } from "../../services/business-market/listingLogic";
 import { useMarket } from "./MarketContext";
 import { MasterSheet, PrimaryButton, SaveError, SheetBox, SoonNote, fieldStyle, lh, px, useMarketColors } from "./listingParts";
+import { t } from "../../i18n/core";
 
 // The Listing strength's Amenities and First visit sheets (KEPT, PLAN §3.4),
 // in the handover's MasterBottomSheet chrome: a lead line 12.5 / 18 --ink2,
@@ -26,9 +27,9 @@ function useDetailsWrite() {
 }
 
 function Blocked({ live, allowed, hasVenue }: { live: boolean; allowed: boolean; hasVenue: boolean }) {
-  if (!live && hasVenue) return <SoonNote>Saving this is coming soon.</SoonNote>;
-  if (!hasVenue) return <SoonNote>Add a location first.</SoonNote>;
-  if (!allowed) return <SoonNote>You need the Venues permission to change this. Ask the owner.</SoonNote>;
+  if (!live && hasVenue) return <SoonNote>{t("Saving this is coming soon.")}</SoonNote>;
+  if (!hasVenue) return <SoonNote>{t("Add a location first.")}</SoonNote>;
+  if (!allowed) return <SoonNote>{t("You need the Venues permission to change this. Ask the owner.")}</SoonNote>;
   return null;
 }
 
@@ -59,19 +60,19 @@ export function AmenitiesSheet({ open, onClose, onSaved }: { open: boolean; onCl
     <MasterSheet
       open={open}
       onClose={onClose}
-      title="Amenities"
+      title={t("Amenities")}
       footer={
         <>
           {error && <SaveError style={{ marginTop: 0, marginBottom: 8 }}>{error}</SaveError>}
           <PrimaryButton disabled={!canSave} busy={busy} onClick={() => void save()}>
-            Save amenities
+            {t("Save amenities")}
           </PrimaryButton>
           <Blocked live={live} allowed={allowed} hasVenue={!!m.venue} />
         </>
       }
     >
-      <Lead>Shown on your listing so people know what to expect.</Lead>
-      <div role="group" aria-label="Amenities" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <Lead>{t("Shown on your listing so people know what to expect.")}</Lead>
+      <div role="group" aria-label={t("Amenities")} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {AMENITY_KEYS.map((a) => {
           const on = picked.includes(a);
           return (
@@ -99,7 +100,7 @@ export function AmenitiesSheet({ open, onClose, onSaved }: { open: boolean; onCl
                 cursor: "pointer",
               }}
             >
-              <span style={{ flex: 1, fontSize: px(14), fontWeight: 600 }}>{AMENITY_LABEL[a]}</span>
+              <span style={{ flex: 1, fontSize: px(14), fontWeight: 600 }}>{t(AMENITY_LABEL[a])}</span>
               <span style={{ display: "flex", color: on ? c.pdark : c.tert }}>{on ? <SquareCheck size={18} strokeWidth={2.2} aria-hidden /> : <Square size={18} strokeWidth={2.2} aria-hidden />}</span>
             </button>
           );
@@ -130,19 +131,19 @@ export function FirstVisitSheet({ open, onClose, onSaved }: { open: boolean; onC
     <MasterSheet
       open={open}
       onClose={onClose}
-      title="First visit"
+      title={t("First visit")}
       footer={
         <>
           {error && <SaveError style={{ marginTop: 0, marginBottom: 8 }}>{error}</SaveError>}
           <PrimaryButton disabled={!canSave} busy={busy} onClick={() => void save()}>
-            Save
+            {t("Save")}
           </PrimaryButton>
           <Blocked live={live} allowed={allowed} hasVenue={!!m.venue} />
         </>
       }
     >
-      <Lead>Tell new clients what to bring and where to go.</Lead>
-      <SheetBox label="What to bring, first visit" htmlFor="first-visit-text">
+      <Lead>{t("Tell new clients what to bring and where to go.")}</Lead>
+      <SheetBox label={t("What to bring, first visit")} htmlFor="first-visit-text">
         <textarea
           id="first-visit-text"
           value={text}

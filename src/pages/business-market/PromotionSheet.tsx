@@ -10,6 +10,7 @@ import { CentredDialog, fieldStyle, lh, MasterSheet, PrimaryButton, px, SaveErro
 import { RangeCalendar } from "./RangeCalendar";
 import { dayMonth, isoOf } from "./model";
 import { draftOf, editPatch, editStatusOf, promoName, promoTarget, promoText, promoTypes, validatePromo, valueFor, type PromoDraft, type PromoErrors, type Promotable } from "./promoModel";
+import { t, tk } from "../../i18n/core";
 
 // Market + Share 3.0 · W3 (D-13): Create / Edit promotion KEPT and restyled in
 // the handover chrome: MasterBottomSheet (MasterSheet) with the grey SheetBox
@@ -33,8 +34,8 @@ export interface PromoEdit {
 }
 
 /** MA1-139 R0, rewritten for ATX10 (the drawn copy said the offer and who sees it could change). */
-const LOCK_NOTE = "The offer can't change once a promotion has started, because people may already have used it. You can still change the end date. To change the offer, end it and create another.";
-const ENDED_NOTE = "This promotion has ended, so it can't be changed. Duplicate it to run it again.";
+const LOCK_NOTE = tk("The offer can't change once a promotion has started, because people may already have used it. You can still change the end date. To change the offer, end it and create another.");
+const ENDED_NOTE = tk("This promotion has ended, so it can't be changed. Duplicate it to run it again.");
 
 export function PromotionSheet({
   open,
@@ -104,8 +105,7 @@ export function PromotionSheet({
       const r = await updatePromotion(edit.promo.id, patch);
       setBusy(false);
       if (!r.ok) return setSaveError(r.message);
-      const runs = patch.ends_on && d.to ? ` It now runs until ${dayMonth(d.to)}.` : "";
-      onSaved(r.value, `${r.value.name} updated.${runs}`);
+      onSaved(r.value, patch.ends_on && d.to ? t("{name} updated. It now runs until {date}.", { name: r.value.name, date: dayMonth(d.to) }) : t("{name} updated.", { name: r.value.name }));
       return;
     }
     const value = valueFor(d.type, d.value);
@@ -115,7 +115,7 @@ export function PromotionSheet({
     const r = await createPromotion(business.id, { name, targetKind: target.kind, targetId: target.id, type: d.type, value, startsOn: from, endsOn: d.to, audience: d.audience });
     setBusy(false);
     if (!r.ok) return setSaveError(r.message);
-    onSaved(r.value, from > today ? `${r.value.name} starts on ${dayMonth(from)}.` : `${r.value.name} is live on Explore.`);
+    onSaved(r.value, from > today ? t("{name} starts on {date}.", { name: r.value.name, date: dayMonth(from) }) : t("{name} is live on Explore.", { name: r.value.name }));
   };
   const doEnd = async () => {
     if (!edit) return;
@@ -132,17 +132,17 @@ export function PromotionSheet({
     setD((x) => ({ ...x, ...patch }));
   };
 
-  const title = ro ? "Promotion details" : edit ? "Edit promotion" : "Create promotion";
+  const title = ro ? t("Promotion details") : edit ? t("Edit promotion") : t("Create promotion");
   const footer = ro ? (
     <PrimaryButton onClick={() => onDuplicate?.({ ...d, from: today, to: null })} disabled={!canWrite}>
-      Duplicate as new promotion
+      {t("Duplicate as new promotion")}
     </PrimaryButton>
   ) : (
     <>
       <PrimaryButton onClick={() => void save()} disabled={(!!edit && !changed) || !canWrite} busy={busy}>
-        {edit ? "Save changes" : "Save promotion"}
+        {edit ? t("Save changes") : t("Save promotion")}
       </PrimaryButton>
-      {soon && <SoonNote>Saving promotions is coming soon. Nothing was saved.</SoonNote>}
+      {soon && <SoonNote>{t("Saving promotions is coming soon. Nothing was saved.")}</SoonNote>}
       {saveError && <SaveError>{saveError}</SaveError>}
       {(status === "active" || status === "paused") && (
         <button
@@ -152,7 +152,7 @@ export function PromotionSheet({
           className="market-focus"
           style={{ marginTop: 10, width: "100%", height: 48, borderRadius: 14, border: 0, background: m.highbg, color: m.high, fontFamily: "inherit", fontSize: px(14), fontWeight: 800, cursor: busy || !canWrite ? "default" : "pointer", opacity: busy || !canWrite ? 0.4 : 1 }}
         >
-          End promotion
+          {t("End promotion")}
         </button>
       )}
     </>
@@ -166,14 +166,14 @@ export function PromotionSheet({
           {(locked || ro) && (
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "12px 14px", borderRadius: 14, background: m.sgrey, color: m.ink2 }}>
               <Lock size={15} strokeWidth={2.2} aria-hidden style={{ flexShrink: 0, marginTop: 1 }} />
-              <p style={{ fontSize: px(12.5), lineHeight: lh(18) }}>{ro ? ENDED_NOTE : LOCK_NOTE}</p>
+              <p style={{ fontSize: px(12.5), lineHeight: lh(18) }}>{ro ? t(ENDED_NOTE) : t(LOCK_NOTE)}</p>
             </div>
           )}
-          <SheetBox label="What to promote" htmlFor="pc-what">
+          <SheetBox label={t("What to promote")} htmlFor="pc-what">
             <Field
               id="pc-what"
               refEl={setWhatEl}
-              value={item?.field ?? "Choose what to promote"}
+              value={item?.field ?? t("Choose what to promote")}
               placeholder={!item}
               error={!!errors.what}
               focused={menu === "what"}
@@ -184,11 +184,11 @@ export function PromotionSheet({
             />
             {errors.what && <ErrorLine>{errors.what}</ErrorLine>}
           </SheetBox>
-          <SheetBox label="Promotion type" htmlFor="pc-type">
+          <SheetBox label={t("Promotion type")} htmlFor="pc-type">
             <Field
               id="pc-type"
               refEl={setTypeEl}
-              value={d.type ? promoText(kind, d.type, d.type === "first_n_free" ? d.value : null).field : "Choose a type"}
+              value={d.type ? promoText(kind, d.type, d.type === "first_n_free" ? d.value : null).field : t("Choose a type")}
               placeholder={!d.type}
               error={!!errors.type}
               focused={menu === "type"}
@@ -201,7 +201,7 @@ export function PromotionSheet({
             {d.type === "percent_off" && (
               <label style={{ ...fieldStyle(m, !!errors.value), display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
                 <input
-                  aria-label="Percent off"
+                  aria-label={t("Percent off")}
                   inputMode="numeric"
                   readOnly={locked}
                   value={d.value ?? ""}
@@ -212,19 +212,19 @@ export function PromotionSheet({
                   placeholder="25"
                   style={{ width: 40, background: "transparent", border: 0, outline: "none", padding: 0, fontFamily: "inherit", fontSize: px(14), color: locked ? m.faint : m.ink }}
                 />
-                <span style={{ fontSize: px(14), color: m.faint }}>% off</span>
+                <span style={{ fontSize: px(14), color: m.faint }}>{t("% off")}</span>
               </label>
             )}
             {errors.value && <ErrorLine>{errors.value}</ErrorLine>}
           </SheetBox>
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 10 }}>
-            <SheetBox label="Starts" htmlFor="pc-from">
-              <Field id="pc-from" value={d.from ? (d.from === today ? "Today" : dayMonth(d.from)) : "Today"} focused={cal} locked={locked} icon={<Calendar size={16} strokeWidth={2.2} />} onClick={() => setCal(true)} />
+            <SheetBox label={t("Starts")} htmlFor="pc-from">
+              <Field id="pc-from" value={d.from ? (d.from === today ? t("Today") : dayMonth(d.from)) : t("Today")} focused={cal} locked={locked} icon={<Calendar size={16} strokeWidth={2.2} />} onClick={() => setCal(true)} />
             </SheetBox>
-            <SheetBox label="Ends" htmlFor="pc-to">
+            <SheetBox label={t("Ends")} htmlFor="pc-to">
               <Field
                 id="pc-to"
-                value={d.to ? dayMonth(d.to) : "Choose"}
+                value={d.to ? dayMonth(d.to) : t("Choose")}
                 placeholder={!d.to}
                 error={!!errors.to}
                 focused={cal || (!!edit && d.to !== blank.to)}
@@ -250,15 +250,15 @@ export function PromotionSheet({
           )}
           <div style={{ background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
             <p id="pc-aud" style={{ fontSize: px(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>
-              Who sees it
+              {t("Who sees it")}
             </p>
             <div role="radiogroup" aria-labelledby="pc-aud" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 4, padding: 4, borderRadius: 12, background: m.subtrack }}>
               {(
                 [
                   ["new", v.audienceNew],
-                  ["everyone", "Everyone"],
+                  ["everyone", t("Everyone")],
                 ] as const
-              ).map(([k, t]) => {
+              ).map(([k, label]) => {
                 const on = d.audience === k;
                 return (
                   <button
@@ -271,19 +271,19 @@ export function PromotionSheet({
                     className="market-focus"
                     style={{ minHeight: 36, borderRadius: 9, background: on ? m.subactive : "transparent", color: on ? m.onfill : m.subink, border: 0, fontFamily: "inherit", fontSize: px(12.5), fontWeight: on ? 700 : 600, cursor: locked ? "default" : "pointer", opacity: locked && !on ? 0.6 : 1 }}
                   >
-                    {t}
+                    {label}
                   </button>
                 );
               })}
             </div>
           </div>
           <div>
-            <p style={{ fontSize: px(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>How it appears on Explore</p>
+            <p style={{ fontSize: px(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>{t("How it appears on Explore")}</p>
             <div style={{ borderRadius: 16, border: `1px solid ${m.border}`, background: m.card, padding: 12, display: "flex", gap: 10, alignItems: "center" }}>
               <span style={{ width: 44, height: 44, borderRadius: 12, background: m.pale, color: m.pdark, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, flexShrink: 0, fontSize: px(14) }}>{initialsOf(business?.name ?? "")}</span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: px(14), fontWeight: 800, color: m.ink }}>{item ? item.field : "Your promotion"}</span>
-                <span style={{ display: "block", fontSize: px(11.5), color: m.faint }}>{ro && d.to ? `Ended on ${dayMonth(d.to)}` : edit && d.to ? `Until ${dayMonth(d.to)}` : item ? item.preview : "Choose what to promote to see a preview"}</span>
+                <span style={{ display: "block", fontSize: px(14), fontWeight: 800, color: m.ink }}>{item ? item.field : t("Your promotion")}</span>
+                <span style={{ display: "block", fontSize: px(11.5), color: m.faint }}>{ro && d.to ? t("Ended on {date}", { date: dayMonth(d.to) }) : edit && d.to ? t("Until {date}", { date: dayMonth(d.to) }) : item ? item.preview : t("Choose what to promote to see a preview")}</span>
               </span>
               <span style={{ fontSize: px(10.5), fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: m.goodbg, color: m.good, whiteSpace: "nowrap" }}>{text.chip}</span>
             </div>
@@ -296,7 +296,7 @@ export function PromotionSheet({
         anchor={whatEl}
         matchWidth={whatEl}
         variant="field"
-        heading="Promote"
+        heading={t("Promote")}
         options={pool.map((i) => ({ value: i.id, label: i.title, note: i.sub }))}
         selected={d.what}
         onSelect={(id) => {
@@ -311,7 +311,7 @@ export function PromotionSheet({
         anchor={typeEl}
         matchWidth={typeEl}
         variant="field"
-        heading="Promotion type"
+        heading={t("Promotion type")}
         options={types.map((t) => ({ value: t.value, label: t.label, note: t.note }))}
         selected={d.type}
         onSelect={(t) => {
@@ -322,10 +322,10 @@ export function PromotionSheet({
       />
       <CentredDialog
         open={confirm === "discard"}
-        title={edit ? "Discard your changes?" : "Discard this promotion?"}
-        body={edit ? `${edit.promo.name} will keep its current details.` : "You'll lose what you've entered."}
-        action={edit ? "Discard changes" : "Discard"}
-        cancel="Keep editing"
+        title={edit ? t("Discard your changes?") : t("Discard this promotion?")}
+        body={edit ? t("{name} will keep its current details.", { name: edit.promo.name }) : t("You'll lose what you've entered.")}
+        action={edit ? t("Discard changes") : t("Discard")}
+        cancel={t("Keep editing")}
         onAction={() => {
           setConfirm(null);
           setD(blank);
@@ -336,19 +336,23 @@ export function PromotionSheet({
       />
       <CentredDialog
         open={confirm === "end"}
-        title="End this promotion now?"
-        body={`${edit?.promo.name ?? "This promotion"} will stop showing on Explore today instead of ${d.to ? dayMonth(d.to) : "its end date"}. People who already claimed it keep it.`}
-        action="End promotion"
-        cancel="Keep it running"
+        title={t("End this promotion now?")}
+        body={
+          d.to
+            ? t("{name} will stop showing on Explore today instead of {date}. People who already claimed it keep it.", { name: edit?.promo.name ?? t("This promotion"), date: dayMonth(d.to) })
+            : t("{name} will stop showing on Explore today instead of its end date. People who already claimed it keep it.", { name: edit?.promo.name ?? t("This promotion") })
+        }
+        action={t("End promotion")}
+        cancel={t("Keep it running")}
         onAction={() => setConfirm("end2")}
         onCancel={() => setConfirm(null)}
       />
       <CentredDialog
         open={confirm === "end2"}
-        title="Confirm end"
-        body="This can't be undone."
-        action="End promotion"
-        cancel="Keep it running"
+        title={t("Confirm end")}
+        body={t("This can't be undone.")}
+        action={t("End promotion")}
+        cancel={t("Keep it running")}
         busy={busy}
         onAction={() => void doEnd()}
         onCancel={() => setConfirm(null)}

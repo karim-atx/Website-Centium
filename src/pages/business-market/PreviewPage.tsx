@@ -8,6 +8,7 @@ import { MarketProvider, useMarket } from "./MarketContext";
 import { MarketError } from "../../components/market/MarketStates";
 import { lh, px, typeLine, useMarketColors } from "./listingParts";
 import { isoOf, notEnded } from "./model";
+import { t, tk, tn } from "../../i18n/core";
 
 // MA1-026 · Preview as client: a read-only Explore result built from this
 // business's own listing, without the navbar. The class rows are the client
@@ -29,7 +30,7 @@ function PreviewBody() {
   const { v, kind, business } = m;
   const navigate = useNavigate();
   const [now] = useState(() => Date.now());
-  if (m.error && !business) return <MarketError thing="your listing" onRetry={m.reload} />;
+  if (m.error && !business) return <MarketError thing={tk("your listing")} onRetry={m.reload} />;
   if (!business) return <div aria-busy="true" style={{ minHeight: 400 }} />;
   const today = isoOf(new Date());
   const live = m.classes.classes.filter((x) => x.date >= today && notEnded(x, now));
@@ -37,12 +38,12 @@ function PreviewBody() {
   const chips = [...(m.perk ? [m.perk] : []), ...m.listingPromos.map((p) => p.name)];
   const meta =
     kind === "store"
-      ? `${m.offerings.offerings.length} products`
+      ? tn(m.offerings.offerings.length, "{n} product", "{n} products")
       : kind === "gym"
-        ? `${m.plans.plans.length} passes and plans`
+        ? tn(m.plans.plans.length, "{n} pass or plan", "{n} passes and plans")
         : upcoming.length === 0
-          ? "No upcoming classes"
-          : `${live.length} upcoming classes`;
+          ? t("No upcoming classes")
+          : tn(live.length, "{n} upcoming class", "{n} upcoming classes");
   const toMarket = (x: (typeof upcoming)[number]): MarketplaceClass => {
     const b = m.booked?.get(x.id) ?? 0;
     const n = Number(String(x.price).replace(/[^0-9.]/g, ""));
@@ -76,15 +77,15 @@ function PreviewBody() {
   return (
     <div style={{ color: c.ink, marginTop: -4 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBlock: "-8px 10px", marginInline: "-10px 0" }}>
-        <button type="button" aria-label="Close preview" onClick={() => navigate(m.tabHref("overview"))} className="tap" style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: 0, color: c.ink }}>
+        <button type="button" aria-label={t("Close preview")} onClick={() => navigate(m.tabHref("overview"))} className="tap" style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: 0, color: c.ink }}>
           <X size={22} strokeWidth={2.2} aria-hidden />
         </button>
-        <span style={{ fontSize: px(11), fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: c.pdark, background: c.pale, borderRadius: 999, padding: "4px 10px" }}>Preview as client</span>
+        <span style={{ fontSize: px(11), fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: c.pdark, background: c.pale, borderRadius: 999, padding: "4px 10px" }}>{t("Preview as client")}</span>
       </div>
-      <h1 style={{ fontSize: px(24), fontWeight: 800, lineHeight: lh(36) }}>Explore</h1>
+      <h1 style={{ fontSize: px(24), fontWeight: 800, lineHeight: lh(36) }}>{t("Explore")}</h1>
       <div aria-disabled="true" style={{ display: "flex", alignItems: "center", gap: 8, height: 46, borderRadius: 14, background: c.soft, border: `1px solid ${c.border}`, padding: "0 14px", margin: "10px 0" }}>
         <Search size={16} color={c.faint} aria-hidden />
-        <span style={{ fontSize: px(14), color: c.faint }}>Search classes, places or a location</span>
+        <span style={{ fontSize: px(14), color: c.faint }}>{t("Search classes, places or a location")}</span>
       </div>
       <div style={{ borderRadius: 18, background: c.card, border: `1px solid ${c.border}`, padding: 12, display: "flex", gap: 12 }}>
         <span style={{ width: 48, height: 48, borderRadius: 14, background: c.pale, display: "flex", alignItems: "center", justifyContent: "center", fontSize: px(15), fontWeight: 800, color: c.pdark, flexShrink: 0, overflow: "hidden" }}>
@@ -93,7 +94,7 @@ function PreviewBody() {
         <div style={{ minWidth: 0, flex: 1 }}>
           <p style={{ fontSize: px(14), fontWeight: 800 }}>{business.name}</p>
           <p style={{ fontSize: px(12), fontWeight: 600, color: c.pdark }}>{typeLine(business.type, business.categories)}</p>
-          <p style={{ fontSize: px(11.5), color: c.faint }}>{business.location?.trim() || "Add your address"}</p>
+          <p style={{ fontSize: px(11.5), color: c.faint }}>{business.location?.trim() || t("Add your address")}</p>
           {business.bio?.trim() && <p style={{ fontSize: px(12), color: c.ink2, marginTop: 4, lineHeight: lh(17) }}>{business.bio}</p>}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6, alignItems: "center" }}>
             <span style={{ fontSize: px(11.5), color: c.faint }}>{meta}</span>
@@ -114,7 +115,7 @@ function PreviewBody() {
             ))}
           </div>
         ) : kind === "classes" ? (
-          <Empty text="No upcoming classes" />
+          <Empty text={t("No upcoming classes")} />
         ) : null
       ) : null}
       {kind !== "classes" &&
@@ -128,7 +129,7 @@ function PreviewBody() {
             ))}
           </div>
         ) : (
-          <Empty text={kind === "gym" ? "No passes yet" : "No products yet"} />
+          <Empty text={kind === "gym" ? t("No passes yet") : t("No products yet")} />
         ))}
     </div>
   );
