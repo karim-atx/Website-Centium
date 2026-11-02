@@ -5,6 +5,7 @@ import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
 import { fetchMyReviewables, type ReviewableProfessional } from "../../services/professional-reviews";
 import { Card } from "../ui/Card";
 import { MyReviewCard, ReviewFormSheet } from "./ReviewForms";
+import { t } from "../../i18n/core";
 
 /**
  * "Your reviews": every professional this client may review, from
@@ -45,7 +46,7 @@ export const YourReviewsSection: React.FC<{ authUserId: string | null }> = ({ au
   const written = (list ?? []).filter((p) => p.myReviewId).length;
 
   return (
-    <section className="mb-6" aria-label="Your reviews">
+    <section className="mb-6" aria-label={t("Your reviews")}>
       <button
         type="button"
         aria-expanded={expanded}
@@ -56,7 +57,7 @@ export const YourReviewsSection: React.FC<{ authUserId: string | null }> = ({ au
         <span className="w-9 h-9 rounded-[11px] bg-th-f0edf9 dark:bg-primary/15 flex items-center justify-center shrink-0 text-th-7d67d9 dark:text-primary-accent">
           <Star size={17} strokeWidth={1.75} aria-hidden />
         </span>
-        <span className="flex-1 min-w-0 text-[14px] font-semibold text-charcoal">Your reviews ({written})</span>
+        <span className="flex-1 min-w-0 text-[14px] font-semibold text-charcoal">{t("Your reviews ({n})", { n: written })}</span>
         <ChevronDown
           size={16}
           aria-hidden
@@ -66,7 +67,7 @@ export const YourReviewsSection: React.FC<{ authUserId: string | null }> = ({ au
       {expanded && (
         <div id="your-reviews-list" className="mt-3 animate-fade-slide-up">
           {error ? (
-            <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3 py-2">{error}</p>
+            <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3 py-2">{t(error)}</p>
           ) : (
             <div className="space-y-3">
               {list!.map((p) => (
@@ -97,7 +98,7 @@ function ReviewableRow({ professional: p, onChanged }: { professional: Reviewabl
   };
   // Before the hook has answered, the list's own status stands in.
   const status = myStatus ?? p.myStatus;
-  const note = [p.connectedNow ? null : "Worked with you before", p.listedPublicly ? null : "Not listed"]
+  const note = [p.connectedNow ? null : t("Worked with you before"), p.listedPublicly ? null : t("Not listed")]
     .filter(Boolean)
     .join(" · ");
 
@@ -115,13 +116,13 @@ function ReviewableRow({ professional: p, onChanged }: { professional: Reviewabl
             onClick={() => navigate(`/app/professionals/${p.professionalId}`)}
             className="tap min-h-[44px] shrink-0 text-xs font-bold text-primary-deep-text"
           >
-            View profile
+            {t("View profile")}
           </button>
         )}
       </div>
       {p.myReviewId && !mine ? (
         <Card>
-          <p className="text-sm text-charcoal-faint">Loading your review…</p>
+          <p className="text-sm text-charcoal-faint">{t("Loading your review…")}</p>
         </Card>
       ) : (
       <MyReviewCard

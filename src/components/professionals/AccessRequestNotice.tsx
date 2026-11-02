@@ -8,9 +8,10 @@ import {
   requestTitle,
   type AccessRequest,
 } from "../../services/access-requests";
+import { t } from "../../i18n/core";
 
 const defaultLabel = (category: AccessCategory): string =>
-  ACCESS_CATEGORIES.find((c) => c.category === category)?.label ?? "This setting";
+  ACCESS_CATEGORIES.find((c) => c.category === category)?.label ?? t("This setting");
 
 /**
  * Release 3 · a professional's request to see data types (DB-2
@@ -43,7 +44,8 @@ export const AccessRequestNotice: React.FC<{
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (requests.length === 0) return null;
-  const labels = requests.map((r) => labelFor(r.category));
+  // The category labels are English keys (ACCESS_CATEGORIES); the sentences get them in the app's language.
+  const labels = requests.map((r) => t(labelFor(r.category)));
 
   if (variant === "summary") {
     return (
@@ -56,7 +58,7 @@ export const AccessRequestNotice: React.FC<{
             onClick={onChoose}
             className="tap mt-3 w-full min-h-11 rounded-xl border border-charcoal text-[14px] font-bold text-charcoal"
           >
-            Choose what to share
+            {t("Choose what to share")}
           </button>
         )}
       </div>
@@ -86,7 +88,7 @@ export const AccessRequestNotice: React.FC<{
       {error && (
         <p role="alert" className="mt-1.5 flex items-start gap-1.5 text-xs font-semibold text-status-high">
           <CircleAlert size={13} strokeWidth={2} className="shrink-0 mt-px" aria-hidden />
-          {error}
+          {t(error)}
         </p>
       )}
       <button
@@ -95,7 +97,7 @@ export const AccessRequestNotice: React.FC<{
         disabled={saving}
         className="tap min-h-11 inline-flex items-center text-[13px] font-bold text-primary-accent disabled:opacity-50"
       >
-        {saving ? "Saving…" : requests.length > 1 ? "Don't share these" : "Don't share this"}
+        {saving ? t("Saving…") : requests.length > 1 ? t("Don't share these") : t("Don't share this")}
       </button>
     </div>
   );

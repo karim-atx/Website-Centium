@@ -25,7 +25,7 @@ export const FreePeriodNotice: React.FC<{ plan: FreePeriodFacts | null; classNam
   return (
     <p className={`flex items-center gap-1.5 text-xs font-semibold text-charcoal-soft ${className ?? ""}`}>
       <Clock size={13} className="shrink-0" aria-hidden />
-      {line}
+      {t(line)}
     </p>
   );
 };

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { fetchMyGrants } from "../../services/consent";
+import { t } from "../../i18n/core";
 
 const SHARING_ROUTE = "/app/professionals";
 
@@ -74,19 +75,17 @@ export const ConsentReviewBanner: React.FC = () => {
         <ShieldCheck size={17} className="text-white shrink-0 mt-px" />
         <div className="min-w-0 flex-1">
           <p className="text-[13.5px] font-extrabold tracking-[-0.01em] text-white">
-            A sharing question we didn't ask precisely enough
+            {t("A sharing question we didn't ask precisely enough")}
           </p>
           <p className="mt-[5px] text-[11px] leading-[1.6] text-white/[0.82]">
-            Your health sharing settings used to bundle several different things into one
-            switch. We've separated them so you can decide each one. Nothing you already chose
-            has changed. There are just two new questions waiting for you.
+            {t("Your health sharing settings used to bundle several different things into one switch. We've separated them so you can decide each one. Nothing you already chose has changed. There are just two new questions waiting for you.")}
           </p>
           <button
             onClick={() => navigate(SHARING_ROUTE)}
             className="tap mt-[11px] rounded-full bg-white text-[11px] font-extrabold px-[15px] py-2"
             style={{ color: "rgb(var(--thi-5f5093))" }}
           >
-            Review sharing
+            {t("Review sharing")}
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { asReviewStatus, describeReviewError, type MyReviewStatus, type ReviewReportReason } from "./rules";
 import { reviewRefusalLine } from "../safety/model";
+import { t } from "../../i18n/core";
 
 // Reviews clients leave for professionals: the real professional_reviews rows,
 // the professional's one public reply under each, and the reviewer's own
@@ -157,7 +158,7 @@ export async function fetchReviewsFor(professionalId: string): Promise<ReviewsRe
 
   if (error) {
     console.error("[reviews] Could not read reviews:", error.message);
-    return { ok: false, message: "Couldn't load reviews right now." };
+    return { ok: false, message: t("Couldn't load reviews right now.") };
   }
 
   const rows = ((data ?? []) as Row[]).filter((r) => !!r.id);
@@ -189,13 +190,13 @@ export async function fetchMyReviewables(): Promise<
   const { data, error } = await supabase.rpc("my_reviewable_professionals");
   if (error) {
     console.error("[reviews] Could not read reviewable professionals:", error.message);
-    return { ok: false, message: "Couldn't load your professionals right now." };
+    return { ok: false, message: t("Couldn't load your professionals right now.") };
   }
   return {
     ok: true,
     professionals: (data ?? []).map((p) => ({
       professionalId: p.professional_id,
-      firstName: p.first_name?.trim() || "Your professional",
+      firstName: p.first_name?.trim() || t("Your professional"),
       listedPublicly: !!p.listed_publicly,
       connectedNow: !!p.connected_now,
       myReviewId: p.my_review_id ?? null,

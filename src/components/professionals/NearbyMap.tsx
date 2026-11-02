@@ -10,6 +10,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 maplibregl.setWorkerUrl(workerUrl);
 import { distanceKm, type Coords } from "../../services/geo/distance";
 import { resolveCssColor } from "../../theme/cssColor";
+import { t } from "../../i18n/core";
 
 /**
  * The map behind Professionals → Map, and the small pin map in a
@@ -305,7 +306,7 @@ export default function NearbyMap({
     if (!me) return;
     const el = document.createElement("div");
     el.setAttribute("role", "img");
-    el.setAttribute("aria-label", "You are here");
+    el.setAttribute("aria-label", t("You are here"));
     el.className = "w-4 h-4 rounded-full bg-[#2B5C8A] border-[3px] border-white shadow";
     meMarker.current = new maplibregl.Marker({ element: el }).setLngLat([me.lng, me.lat]).addTo(m);
   }, [me]);
@@ -331,7 +332,7 @@ export default function NearbyMap({
       <button
         type="button"
         onClick={onRecentre}
-        aria-label="Use my location"
+        aria-label={t("Use my location")}
         // MO1.2.2 #9: 40 x 40, white, round; the glyph #7D6BB5 (sampled; new
         // in the redesign, so the handover's colour, decision 22).
         className="tap absolute top-3 end-3 z-[3] w-10 h-10 rounded-full bg-cream-card shadow-md flex items-center justify-center text-th-7d6bb5 dark:text-primary-deep-text"

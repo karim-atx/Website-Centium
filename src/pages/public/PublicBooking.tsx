@@ -5,6 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { professionalByHandle, type HandleProfile } from "../../services/public-pro";
 import { BookingFlow } from "./BookingFlow";
 import { ProHero, PublicCard, PublicFrame, PublicMessage, PublicSkeleton } from "./publicKit";
+import { t } from "../../i18n/core";
 
 /**
  * Release 3 · W7 the public booking page, {site}/p/{handle}/book. The
@@ -37,7 +38,7 @@ export default function PublicBooking() {
   }, [handle, reload]);
 
   useEffect(() => {
-    document.title = state.status === "found" ? `Book ${state.pro.firstName} · Centium` : "Book a session · Centium";
+    document.title = state.status === "found" ? t("Book {name} · Centium", { name: state.pro.firstName }) : t("Book a session · Centium");
   }, [state]);
 
   if (state.status === "loading" || !authReady) {
@@ -50,14 +51,14 @@ export default function PublicBooking() {
   if (state.status === "error") {
     return (
       <PublicFrame>
-        <PublicMessage title="Couldn't load this page" line={state.message} onRetry={() => setReload((n) => n + 1)} />
+        <PublicMessage title={t("Couldn't load this page")} line={t(state.message)} onRetry={() => setReload((n) => n + 1)} />
       </PublicFrame>
     );
   }
   if (state.status === "missing") {
     return (
       <PublicFrame>
-        <PublicMessage title="We couldn't find that professional" line="Check the link and try again." />
+        <PublicMessage title={t("We couldn't find that professional")} line={t("Check the link and try again.")} />
       </PublicFrame>
     );
   }
@@ -65,9 +66,9 @@ export default function PublicBooking() {
   const { pro } = state;
   const base = `/p/${pro.handle}/book`;
   return (
-    <PublicFrame label={`Book a session with ${pro.firstName}`}>
+    <PublicFrame label={t("Book a session with {name}", { name: pro.firstName })}>
       <Link to={`/p/${pro.handle}`} className="tap self-start inline-flex items-center gap-1 min-h-11 text-[13px] font-bold text-charcoal-soft">
-        <ChevronLeft size={16} strokeWidth={2} aria-hidden /> Profile
+        <ChevronLeft size={16} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" /> {t("Profile")}
       </Link>
       <ProHero name={pro.firstName} avatarUrl={pro.avatarUrl} subtype={pro.subtype} specialty={pro.specialty} headline={pro.headline} licenceVerified={pro.licenceVerified} />
       <PublicCard>

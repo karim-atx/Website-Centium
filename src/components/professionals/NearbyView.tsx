@@ -25,6 +25,7 @@ import {
 } from "../../services/geo";
 import type { Area } from "../../services/geo/areas";
 import { inlineScrolled, scrollToInline } from "../../utils/inlineScroll";
+import { t, tx } from "../../i18n/core";
 
 // MapLibre is only downloaded here, when the map is opened.
 const NearbyMap = lazy(() => import("./NearbyMap"));
@@ -157,7 +158,7 @@ export const NearbyView: React.FC<{
     setPhase("locating");
     const r = await requestPosition();
     if (r.ok) {
-      setOrigin({ coords: r.coords, label: "your location", source: "device" });
+      setOrigin({ coords: r.coords, label: t("your location"), source: "device" });
       setPhase("ready");
       return;
     }
@@ -270,14 +271,16 @@ export const NearbyView: React.FC<{
 
   const distanceOf = (p: NearbyProfessional) =>
     origin ? describeDistance(distanceKm(origin.coords, { lat: p.lat, lng: p.lng })) : "";
-  const placeOf = (p: NearbyProfessional) => (p.areaLabel ? ` · near ${p.areaLabel}` : "");
+  const placeOf = (p: NearbyProfessional) => (p.areaLabel ? ` · ${t("near {area}", { area: p.areaLabel })}` : "");
   // The country, only with "Include other countries" on and a different one (directoryFilterModel).
   const abroadOf = (p: ReachedProfessional) => {
     const c = abroadLabel(p.countryCode, searcherCountry, anyCountry);
     return c ? ` · ${c}` : "";
   };
   /** The card's place line: "1.2 km · near Hamra", or "Online" for an online result. */
-  const cardPlace = (c: Card) => (c.km == null ? `Online${abroadOf(c.p)}` : `${distanceOf(c.p)}${placeOf(c.p)}${abroadOf(c.p)}`);
+  const cardPlace = (c: Card) => (c.km == null ? `${tx("Online", "session format")}${abroadOf(c.p)}` : `${distanceOf(c.p)}${placeOf(c.p)}${abroadOf(c.p)}`);
+  // The subtype noun read aloud (SUBTYPE_SINGULAR's English keys).
+  const noun = (s: NearbyProfessional["subtype"] | null | undefined) => (s ? t(SUBTYPE_SINGULAR[s]) : t("professional"));
 
   const groups = useMemo(() => groupByPoint(nearby.map((n) => ({ ...n.p, lat: n.p.lat, lng: n.p.lng }))), [nearby]);
   const keyOf = (lat: number, lng: number) => `${lat.toFixed(2)},${lng.toFixed(2)}`;
@@ -288,16 +291,18 @@ export const NearbyView: React.FC<{
     const first = g.items[0];
     const label =
       g.items.length === 1
-        ? `${first.name}, ${first.subtype ? SUBTYPE_SINGULAR[first.subtype] : "professional"}, ${distanceOf(first)}`
-        : `${g.items.length} professionals${first.areaLabel ? ` near ${first.areaLabel}` : " here"}, ${distanceOf(first)}`;
-    const t = typeColours(first.subtype, dark);
+        ? `${first.name}, ${noun(first.subtype)}, ${distanceOf(first)}`
+        : first.areaLabel
+          ? t("{n} professionals near {area}, {distance}", { n: g.items.length, area: first.areaLabel, distance: distanceOf(first) })
+          : t("{n} professionals here, {distance}", { n: g.items.length, distance: distanceOf(first) });
+    const tc = typeColours(first.subtype, dark);
     return {
       key: keyOf(g.lat, g.lng),
       lat: g.lat,
       lng: g.lng,
       count: g.items.length,
       label,
-      face: { avatarUrl: first.avatarUrl, initials: initials(first.name), ring: t.main, fill: pinGround(first.subtype, dark), ink: t.deep },
+      face: { avatarUrl: first.avatarUrl, initials: initials(first.name), ring: tc.main, fill: pinGround(first.subtype, dark), ink: tc.deep },
       selected: currentKey === g,
     };
   });
@@ -341,10 +346,10 @@ export const NearbyView: React.FC<{
     // with the Sign in button under it (handover-complete pass, no card).
     return emptyState(
       <LogIn size={26} strokeWidth={1.5} aria-hidden />,
-      "Sign in to see professionals near you",
-      "The list of professionals stays open to everyone.",
+      t("Sign in to see professionals near you"),
+      t("The list of professionals stays open to everyone."),
       <Button size="sm" className="mt-3" onClick={() => navigate("/app/onboarding")}>
-        Sign in
+        {t("Sign in")}
       </Button>
     );
   }
@@ -356,7 +361,7 @@ export const NearbyView: React.FC<{
         // (surface.soft, the map's 560 / r20).
         <div aria-busy="true">
           <span className="sr-only" role="status">
-            {phase === "locating" ? "Finding your location…" : "Getting the map ready…"}
+            {phase === "locating" ? t("Finding your location…") : t("Getting the map ready…")}
           </span>
           <div aria-hidden className="h-[560px] rounded-[20px] bg-cream-soft" />
         </div>
@@ -368,20 +373,20 @@ export const NearbyView: React.FC<{
         // kept under it.
         emptyState(
           <LocateFixed size={26} strokeWidth={1.5} aria-hidden />,
-          "See professionals near you",
-          "Use your location, or choose an area. Your location stays on this device: Centium only uses a rough area (about 10 km) to find who's nearby, and never saves it.",
+          t("See professionals near you"),
+          t("Use your location, or choose an area. Your location stays on this device: Centium only uses a rough area (about 10 km) to find who's nearby, and never saves it."),
           <>
             {locError && (
               <p role="alert" className="mt-3 w-full text-[12.5px] font-medium text-status-high">
-                {locError}
+                {t(locError)}
               </p>
             )}
             <div className="grid grid-cols-2 gap-2 mt-4 w-full">
               <Button size="sm" onClick={() => void locateMe()}>
-                <LocateFixed size={15} /> Use my location
+                <LocateFixed size={15} /> {t("Use my location")}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)}>
-                <MapPin size={15} /> Choose an area
+                <MapPin size={15} /> {t("Choose an area")}
               </Button>
             </div>
           </>
@@ -401,7 +406,7 @@ export const NearbyView: React.FC<{
                 onRecentre={() => void locateMe()}
                 // MO1.2.2 #4: 358 × 560, r20, no visible border.
                 className="h-[560px] rounded-[20px] overflow-hidden"
-                ariaLabel={`Map of professionals near ${origin.label}. A list of the same results follows.`}
+                ariaLabel={t("Map of professionals near {place}. A list of the same results follows.", { place: origin.label })}
               />
             </Suspense>
             {/* THE FLOATING CARD (MO1.2.2): swipe for the next nearest; it is a
@@ -412,8 +417,9 @@ export const NearbyView: React.FC<{
               <div className="absolute inset-x-0 bottom-10 z-[3]">
                 {cards.length > 1 && (
                   <p className="sr-only" aria-live="polite">
-                    {Math.min(active, cards.length - 1) + 1} of {cards.length}
-                    {cardSet ? " here" : " nearby"}
+                    {cardSet
+                      ? t("{n} of {total} here", { n: Math.min(active, cards.length - 1) + 1, total: cards.length })
+                      : t("{n} of {total} nearby", { n: Math.min(active, cards.length - 1) + 1, total: cards.length })}
                   </p>
                 )}
                 <div
@@ -424,7 +430,7 @@ export const NearbyView: React.FC<{
                     if (i !== active) setActive(i);
                   }}
                   className="flex overflow-x-auto no-scrollbar snap-x snap-mandatory py-2 -my-2"
-                  aria-label={!cardSet && remote.length ? "Professionals on the map, nearest first, then online" : "Professionals on the map, nearest first"}
+                  aria-label={!cardSet && remote.length ? t("Professionals on the map, nearest first, then online") : t("Professionals on the map, nearest first")}
                 >
                   {cards.map((c) => (
                     <div key={c.p.profileId} className="w-full shrink-0 snap-center">
@@ -438,24 +444,24 @@ export const NearbyView: React.FC<{
           {/* States, Error: an inline line in danger under the map. */}
           {searchError && (
             <p role="alert" className="text-[12.5px] font-medium text-status-high text-center">
-              {searchError}
+              {t(searchError)}
             </p>
           )}
           {/* States, Empty: nobody nearby is not drawn; one muted line. */}
           {nearby.length === 0 && !searching && !searchError && (
             <p className="text-[12.5px] font-medium text-charcoal-faint text-center leading-relaxed">
-              No professionals have shared an area near {origin.label} yet. Try zooming out.
+              {t("No professionals have shared an area near {place} yet. Try zooming out.", { place: origin.label })}
             </p>
           )}
 
           {/* THE MAP'S ACCESSIBLE ALTERNATIVE: the same results as links,
               nearest first. Visually hidden (MO1.2.2 draws nothing under the
               map); a link that takes keyboard focus shows the list. */}
-          <nav aria-label="Professionals near you, nearest first" className="sr-only focus-within:not-sr-only">
+          <nav aria-label={t("Professionals near you, nearest first")} className="sr-only focus-within:not-sr-only">
             <p role="status">
               {searching
-                ? "Searching this area…"
-                : `${nearby.length} near ${origin.label}${remote.length ? `, ${remote.length} online` : ""}${truncated ? ". Not all are shown here; zoom in for the nearest." : ""}`}
+                ? t("Searching this area…")
+                : `${t("{n} near {place}", { n: nearby.length, place: origin.label })}${remote.length ? t(", {n} online", { n: remote.length }) : ""}${truncated ? t(". Not all are shown here; zoom in for the nearest.") : ""}`}
             </p>
             <ul className="flex flex-col gap-1 mt-1">
               {(cardSet ? [...nearby, ...remote.map((p) => ({ p, km: null }))] : cards).map((c) => (
@@ -465,7 +471,7 @@ export const NearbyView: React.FC<{
                     onClick={() => navigate(`/app/professionals/${c.p.profileId}`)}
                     className="tap min-h-[44px] text-start text-[13px] font-semibold text-primary-deep-text"
                   >
-                    {c.p.name}, {c.p.subtype ? SUBTYPE_SINGULAR[c.p.subtype] : "professional"}, {cardPlace(c)}
+                    {c.p.name}, {noun(c.p.subtype)}, {cardPlace(c)}
                   </button>
                 </li>
               ))}
@@ -474,7 +480,7 @@ export const NearbyView: React.FC<{
         </>
       )}
 
-      <BottomSheet open={pickerOpen} onClose={() => setPickerOpen(false)} title="Choose an area">
+      <BottomSheet open={pickerOpen} onClose={() => setPickerOpen(false)} title={t("Choose an area")}>
         <div className="animate-fade-slide-up">
           <AreaPicker selectedId={origin?.areaId} onPick={chooseArea} />
         </div>

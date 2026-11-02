@@ -13,15 +13,18 @@
 // ones the device can measure); online results are kept when "Online" is
 // chosen or nothing in Where is.
 
+import { tk } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
 import { distanceKm, type Coords } from "../../services/geo/distance";
 import { worksInPerson, worksOnline, type Reach } from "../../services/pro-profile/model";
 
-export const DISTANCE_OPTIONS = ["Within 5 km", "Within 10 km", "Within 25 km", "Within 50 km"] as const;
-export const WHERE_OPTIONS = ["In person", "Online"] as const;
-export const ANY_COUNTRY_OPTION = "Include other countries";
+// The options are English values (matched below); FilterPopup shows them through t().
+export const DISTANCE_OPTIONS = [tk("Within 5 km"), tk("Within 10 km"), tk("Within 25 km"), tk("Within 50 km")] as const;
+export const WHERE_OPTIONS = [tk("In person"), tk("Online")] as const;
+export const ANY_COUNTRY_OPTION = tk("Include other countries");
 export const COUNTRY_OPTIONS = [ANY_COUNTRY_OPTION] as const;
 
-export const SORTS = ["Best match", "Nearest"] as const;
+export const SORTS = [tk("Best match"), tk("Nearest")] as const;
 export type DirectorySort = (typeof SORTS)[number];
 
 /** professionals_ranked's p_sort: Nearest pages in distance order on the server. */
@@ -114,14 +117,14 @@ export function arrangeDirectory<T extends { distanceKm?: number | null; workMod
 /**
  * The country on a card (Release B): only with "Include other countries" on,
  * and only for a professional whose saved country differs from the
- * searcher's. The country's English name, else its code.
+ * searcher's. The country's name in the app's language, else its code.
  */
 export function abroadLabel(rowCountry: string | null | undefined, searcherCountry: string | null, anyCountry: boolean): string | null {
   if (!anyCountry || !rowCountry || !searcherCountry) return null;
   const cc = rowCountry.toUpperCase();
   if (cc === searcherCountry.toUpperCase()) return null;
   try {
-    return new Intl.DisplayNames(["en"], { type: "region" }).of(cc) ?? cc;
+    return new Intl.DisplayNames([appLocale("en") ?? "en"], { type: "region" }).of(cc) ?? cc;
   } catch {
     return cc;
   }

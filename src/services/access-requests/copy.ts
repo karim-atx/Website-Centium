@@ -1,9 +1,15 @@
 // Release 3 · CU8 / CU11: the sentences of a professional's request to see a
-// data type. Pure, so it can be tested without Supabase.
+// data type. Pure, so it can be tested without Supabase. The labels arrive
+// already in the app's language (the caller translates them); English output
+// is unchanged.
+
+import { getLanguage, t, tn } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
 
 /** "A", "A and B", "A, B and C". */
 export function joinWithAnd(items: string[]): string {
   if (items.length <= 1) return items[0] ?? "";
+  if (getLanguage() !== "en") return new Intl.ListFormat(appLocale(), { type: "conjunction" }).format(items);
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
@@ -18,8 +24,13 @@ export function firstNameOf(name: string): string {
  * {n} things").
  */
 export function requestTitle(firstName: string, labels: string[], tense: "asked" | "asks" = "asked"): string {
-  if (labels.length === 1) return `${firstName} ${tense} to see your ${labels[0].toLowerCase()}`;
-  return `${firstName} ${tense} to see ${labels.length} things`;
+  if (labels.length === 1) {
+    const vars = { name: firstName, data: labels[0].toLowerCase() };
+    return tense === "asks" ? t("{name} asks to see your {data}", vars) : t("{name} asked to see your {data}", vars);
+  }
+  return tense === "asks"
+    ? tn(labels.length, "{name} asks to see {n} thing", "{name} asks to see {n} things", { name: firstName })
+    : tn(labels.length, "{name} asked to see {n} thing", "{name} asked to see {n} things", { name: firstName });
 }
 
 /**
@@ -33,7 +44,7 @@ export function requestBody(firstName: string, labels: string[], message?: strin
   if (labels.length > 1) parts.push(`${joinWithAnd(labels)}.`);
   const note = message?.trim();
   if (note) parts.push(/[.!?]$/.test(note) ? note : `${note}.`);
-  parts.push(`Either answer is fine; ${firstName} sees only what you turn on.`);
+  parts.push(t("Either answer is fine; {name} sees only what you turn on.", { name: firstName }));
   return parts.join(" ");
 }
 
@@ -44,5 +55,5 @@ export function requestBody(firstName: string, labels: string[], message?: strin
  */
 export function requestSummary(labels: string[], purpose?: string): string {
   const list = joinWithAnd(labels);
-  return `${purpose ? `${list}, ${purpose}` : list}. You choose each one.`;
+  return t("{list}. You choose each one.", { list: purpose ? t("{list}, {purpose}", { list, purpose }) : list });
 }

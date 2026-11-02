@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { AccessCategory } from "../consent";
+import { tk } from "../../i18n/core";
 
 // Release 3 · DB-2 "Asking for data": a professional asks a client to share one
 // data type (request_client_access); only the client answers, with
@@ -34,7 +35,7 @@ export async function getMyAccessRequests(): Promise<AccessRequestsResult> {
       .eq("status", "pending")
       .order("created_at", { ascending: false });
     if (error) {
-      return { ok: false, requests: [], message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't load requests. Try again." };
+      return { ok: false, requests: [], message: isOffline(error) ? OFFLINE_MESSAGE : tk("Couldn't load requests. Try again.") };
     }
     return {
       ok: true,
@@ -47,7 +48,7 @@ export async function getMyAccessRequests(): Promise<AccessRequestsResult> {
       })),
     };
   } catch (e) {
-    return { ok: false, requests: [], message: isOffline(e) ? OFFLINE_MESSAGE : "Couldn't load requests. Try again." };
+    return { ok: false, requests: [], message: isOffline(e) ? OFFLINE_MESSAGE : tk("Couldn't load requests. Try again.") };
   }
 }
 
@@ -62,10 +63,10 @@ export async function answerAccessRequest(id: string, grant: boolean): Promise<A
     const { error } = await supabase.rpc("answer_access_request", { p_request_id: id, p_grant: grant });
     if (!error || error.code === "ATX10") return { ok: true };
     if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-    if (error.code === "ATX12") return { ok: false, message: "You're no longer connected with this professional." };
-    return { ok: false, message: "Couldn't save your answer. Try again." };
+    if (error.code === "ATX12") return { ok: false, message: tk("You're no longer connected with this professional.") };
+    return { ok: false, message: tk("Couldn't save your answer. Try again.") };
   } catch (e) {
-    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : "Couldn't save your answer. Try again." };
+    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : tk("Couldn't save your answer. Try again.") };
   }
 }
 

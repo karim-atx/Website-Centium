@@ -15,6 +15,7 @@ import { textPx } from "../../theme/textSize";
 import { ProHero, PublicCard, PublicFrame, PublicMessage, PublicSkeleton, SignInButtons } from "./publicKit";
 import { PlaylistCard } from "../../components/music/PlaylistCard";
 import { providerHeading } from "../../services/music/whichMusic";
+import { t } from "../../i18n/core";
 
 /**
  * Release 3 · W7 the public profile, {site}/p/{handle} (the MO15 share
@@ -80,14 +81,14 @@ export default function PublicProfile() {
   if (state.status === "error") {
     return (
       <PublicFrame>
-        <PublicMessage title="Couldn't load this profile" line={state.message} onRetry={() => setReload((n) => n + 1)} />
+        <PublicMessage title={t("Couldn't load this profile")} line={t(state.message)} onRetry={() => setReload((n) => n + 1)} />
       </PublicFrame>
     );
   }
   if (state.status === "missing") {
     return (
       <PublicFrame>
-        <PublicMessage title="We couldn't find that professional" line="Check the link and try again." />
+        <PublicMessage title={t("We couldn't find that professional")} line={t("Check the link and try again.")} />
       </PublicFrame>
     );
   }
@@ -98,7 +99,7 @@ export default function PublicProfile() {
   const own = authUserId === pro.profileId;
 
   return (
-    <PublicFrame label={`${pro.firstName}'s profile`}>
+    <PublicFrame label={t("{name}'s profile", { name: pro.firstName })}>
       <ProHero
         name={pro.firstName}
         avatarUrl={pro.avatarUrl}
@@ -118,15 +119,15 @@ export default function PublicProfile() {
             {rating?.kind === "average"
               ? `${rating.value} · ${reviewCountLabel(rating.count)}`
               : listing.reviewCount > 0
-                ? `New · ${reviewCountLabel(listing.reviewCount)}`
-                : "New · no reviews yet"}
+                ? `${t("New")} · ${reviewCountLabel(listing.reviewCount)}`
+                : t("New · no reviews yet")}
           </span>
         </div>
       )}
 
       {listing?.bio?.trim() && (
-        <section aria-label="About">
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] px-1 mb-2 text-charcoal-faint">About</p>
+        <section aria-label={t("About")}>
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] px-1 mb-2 text-charcoal-faint">{t("About")}</p>
           <div className="rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-4">
             <p className="text-[13px] text-charcoal-soft leading-[21.5px] whitespace-pre-line">{listing.bio.trim()}</p>
           </div>
@@ -135,15 +136,15 @@ export default function PublicProfile() {
 
       {/* Round E: the professional's playlist (public like the profile, listed only). */}
       {listing?.playlistUrl && (
-        <section aria-label="Music">
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] px-1 mb-2 text-charcoal-faint">Music</p>
+        <section aria-label={t("Music")}>
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] px-1 mb-2 text-charcoal-faint">{t("Music")}</p>
           <PlaylistCard url={listing.playlistUrl} heading={providerHeading(pro.firstName)} />
         </section>
       )}
 
       {plans.length > 0 && (
-        <section aria-label="Plans">
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] px-1 mb-2 text-charcoal-faint">Plans</p>
+        <section aria-label={t("Plans")}>
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] px-1 mb-2 text-charcoal-faint">{t("Plans")}</p>
           <ul className="rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 px-4">
             {plans.map((p) => (
               <li key={p.id} className="py-3.5 border-b border-charcoal/[0.06] last:border-b-0">
@@ -169,16 +170,16 @@ export default function PublicProfile() {
       {listing && listing.reviewCount > 0 && <PublicReviews professionalId={pro.profileId} firstName={pro.firstName} />}
 
       <PublicCard className="flex flex-col gap-2">
-        {canBook && !own && <CtaButton full variant="secondary" icon={CalendarPlus} label="Book a session" onClick={() => navigate(`/p/${pro.handle}/book`)} />}
+        {canBook && !own && <CtaButton full variant="secondary" icon={CalendarPlus} label={t("Book a session")} onClick={() => navigate(`/p/${pro.handle}/book`)} />}
         {authUserId ? (
           <CtaButton
             full
             icon={UserRound}
-            label={own ? "Open your profile" : "Open in Centium"}
+            label={own ? t("Open your profile") : t("Open in Centium")}
             onClick={() => navigate(own ? "/app/more/public-profile" : `/app/professionals/${pro.profileId}`)}
           />
         ) : (
-          <SignInButtons returnPath={`/p/${pro.handle}`} line={`Sign in or create an account to hire ${pro.firstName || "them"} or send a message.`} />
+          <SignInButtons returnPath={`/p/${pro.handle}`} line={pro.firstName ? t("Sign in or create an account to hire {name} or send a message.", { name: pro.firstName }) : t("Sign in or create an account to hire them or send a message.")} />
         )}
       </PublicCard>
     </PublicFrame>
@@ -224,10 +225,10 @@ function PublicReviews({ professionalId, firstName }: { professionalId: string; 
   if (state.status === "ready" && state.reviews.length === 0) return null;
 
   return (
-    <section aria-label="Reviews">
-      <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] px-1 mb-2 text-charcoal-faint">Reviews</p>
+    <section aria-label={t("Reviews")}>
+      <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] px-1 mb-2 text-charcoal-faint">{t("Reviews")}</p>
       {state.status === "loading" ? (
-        <div role="status" aria-label="Loading reviews" className="rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-4 flex flex-col gap-3">
+        <div role="status" aria-label={t("Loading reviews")} className="rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-4 flex flex-col gap-3">
           {[0, 1].map((i) => (
             <div key={i} className="flex gap-2.5">
               <span className="w-8 h-8 rounded-full bg-cream-soft shrink-0" />
@@ -240,28 +241,28 @@ function PublicReviews({ professionalId, firstName }: { professionalId: string; 
         </div>
       ) : state.status === "error" ? (
         <div className="rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 p-4 flex items-center justify-between gap-3">
-          <p className="text-[13px] text-charcoal-soft">{state.message}</p>
+          <p className="text-[13px] text-charcoal-soft">{t(state.message)}</p>
           <button type="button" onClick={() => setReload((n) => n + 1)} className="tap shrink-0 min-h-11 px-2 text-[13px] font-bold text-primary-deep-text">
-            Retry
+            {t("Retry")}
           </button>
         </div>
       ) : (
         <div className="rounded-[18px] bg-cream-card border-[0.5px] border-hair-08 px-4">
           {state.reviews.map((r) => (
             <div key={r.id} className="py-3.5 border-b border-charcoal/[0.06] last:border-b-0">
-              <ReviewItem review={r} layout="row" replyLabel={`Reply from ${firstName || "the professional"}`} />
+              <ReviewItem review={r} layout="row" replyLabel={firstName ? t("Reply from {name}", { name: firstName }) : t("Reply from the professional")} />
             </div>
           ))}
           {(state.more || state.moreError) && (
             <div className="py-2 flex flex-col items-center">
-              {state.moreError && <p className="text-[12px] text-charcoal-soft text-center pt-1">{state.moreError}</p>}
+              {state.moreError && <p className="text-[12px] text-charcoal-soft text-center pt-1">{t(state.moreError)}</p>}
               <button
                 type="button"
                 onClick={() => void loadMore()}
                 disabled={state.loadingMore}
                 className="tap min-h-11 px-3 text-[13px] font-bold text-primary-deep-text disabled:opacity-60"
               >
-                {state.loadingMore ? "Loading…" : state.moreError ? "Try again" : "Show more reviews"}
+                {state.loadingMore ? t("Loading…") : state.moreError ? t("Try again") : t("Show more reviews")}
               </button>
             </div>
           )}

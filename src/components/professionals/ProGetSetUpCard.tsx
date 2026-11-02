@@ -15,6 +15,7 @@ import type { LicenceStatus } from "../../services/professional-cv";
 import { GO_LIVE_ON_VERIFICATION, isRegulated, proKindOf } from "../../pages/onboarding/pro/proModel";
 import "../../pages/onboarding/shell/onboarding.css";
 import "../../pages/onboarding/pro/pro.css";
+import { t } from "../../i18n/core";
 
 const AVAILABILITY_ITEM = "pro_availability";
 
@@ -105,24 +106,30 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
 
   const descByKind =
     kind === "dietitian" || kind === "nutritionist"
-      ? "First consultation and follow-ups"
+      ? t("First consultation and follow-ups")
       : kind === "physiotherapist"
-        ? "Assessment and treatment blocks"
+        ? t("Assessment and treatment blocks")
         : kind === "doctor"
-          ? "First appointment and follow-ups"
-          : "Single sessions and blocks";
+          ? t("First appointment and follow-ups")
+          : t("Single sessions and blocks");
   const licenceDone = data.licence?.kind === "verified";
   const checkDesc = (word: "licence" | "certificate") =>
-    data.licence?.kind === "rejected" ? "Needs changes" : data.licence?.kind === "pending" ? "Usually within 2 working days" : `Add your ${word} to go live`;
+    data.licence?.kind === "rejected"
+      ? t("Needs changes")
+      : data.licence?.kind === "pending"
+        ? t("Usually within 2 working days")
+        : word === "licence"
+          ? t("Add your licence to go live")
+          : t("Add your certificate to go live");
   const todo: Item[] = [
-    { key: "client", icon: UserPlus, title: "Add your first client", desc: "Share a client code", done: professionalClients.length > 0, onClick: onAddClient },
-    { key: "plans", icon: Package, title: "Add packages and prices", desc: descByKind, done: data.plans > 0, onClick: onPlans },
-    { key: "rates", icon: Banknote, title: "Set your rates and payment methods", desc: "Cash (card payments coming soon)", done: data.rates, onClick: () => navigate("/app/more/services") },
+    { key: "client", icon: UserPlus, title: t("Add your first client"), desc: t("Share a client code"), done: professionalClients.length > 0, onClick: onAddClient },
+    { key: "plans", icon: Package, title: t("Add packages and prices"), desc: descByKind, done: data.plans > 0, onClick: onPlans },
+    { key: "rates", icon: Banknote, title: t("Set your rates and payment methods"), desc: t("Cash (card payments coming soon)"), done: data.rates, onClick: () => navigate("/app/more/services") },
     {
       key: "availability",
       icon: CalendarClock,
-      title: "Set your availability",
-      desc: "Clients book into open times",
+      title: t("Set your availability"),
+      desc: t("Clients book into open times"),
       done: data.availability,
       onClick: () => {
         if (authUserId) void markOwnerItemDone(authUserId, AVAILABILITY_ITEM);
@@ -132,33 +139,33 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
     {
       key: "listing",
       icon: Globe,
-      title: "Choose who can find you",
-      desc: licenceDone ? "Your public listing" : `Once your ${regulated ? "licence" : "certificate"} is checked`,
+      title: t("Choose who can find you"),
+      desc: licenceDone ? t("Your public listing") : regulated ? t("Once your licence is checked") : t("Once your certificate is checked"),
       done: data.listed,
       // Release 3 W6: the listing switch lives in Settings › Practice.
       onClick: () => navigate("/app/more/practice/listing"),
     },
   ];
   const doneRows: Item[] = [
-    { key: "about", icon: Check, title: "About you", done: true },
-    { key: "work", icon: Check, title: "Where you work", done: data.workMode },
+    { key: "about", icon: Check, title: t("About you"), done: true },
+    { key: "work", icon: Check, title: t("Where you work"), done: data.workMode },
     regulated
       ? {
           key: "licence",
           icon: licenceDone ? Check : ShieldCheck,
-          title: licenceDone ? "Licence verified" : "Licence check",
+          title: licenceDone ? t("Licence verified") : t("Licence check"),
           desc: licenceDone ? undefined : checkDesc("licence"),
           done: licenceDone,
           onClick: () => navigate("/app/professionals/verification"),
         }
-      : { key: "services", icon: Check, title: "Specialties and services", done: data.specialties },
+      : { key: "services", icon: Check, title: t("Specialties and services"), done: data.specialties },
     ...(regulated
       ? []
       : [
           {
             key: "licence",
             icon: licenceDone ? Check : ShieldCheck,
-            title: licenceDone ? "Certificate verified" : "Certificate check",
+            title: licenceDone ? t("Certificate verified") : t("Certificate check"),
             desc: licenceDone ? undefined : checkDesc("certificate"),
             done: licenceDone,
             onClick: () => navigate("/app/professionals/verification"),
@@ -172,14 +179,14 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
 
   return (
     <div className={`ob-vars ${className ?? ""}`}>
-      <section className="obp-check" aria-label="Get set up">
+      <section className="obp-check" aria-label={t("Get set up")}>
         <div className="obp-check-head">
-          <h2 className="obp-check-t">Get set up</h2>
+          <h2 className="obp-check-t">{t("Get set up")}</h2>
           <p className="obp-check-n">
-            {n} of {all.length} done
+            {t("{n} of {total} done", { n, total: all.length })}
           </p>
         </div>
-        <p className="obp-check-sub">Finish these to start working with clients.</p>
+        <p className="obp-check-sub">{t("Finish these to start working with clients.")}</p>
         <div className="obp-check-segs" aria-hidden>
           {all.map((r, i) => (
             <span key={r.key} data-on={i < n ? "true" : undefined} />
@@ -198,7 +205,7 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
               </span>
               {!r.done && r.onClick && (
                 <span className="ob-chev" aria-hidden style={{ color: "var(--ob-desc)" }}>
-                  <ChevronRight size={14} />
+                  <ChevronRight size={14} className="rtl:-scale-x-100" />
                 </span>
               )}
             </>
@@ -208,7 +215,7 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
               {inner}
             </button>
           ) : (
-            <div key={r.key} className="obp-check-item" data-done={r.done ? "true" : undefined} aria-label={r.done ? `${r.title}, done` : undefined}>
+            <div key={r.key} className="obp-check-item" data-done={r.done ? "true" : undefined} aria-label={r.done ? t("{item}, done", { item: r.title }) : undefined}>
               {inner}
             </div>
           );
