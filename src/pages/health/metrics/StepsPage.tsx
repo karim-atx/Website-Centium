@@ -230,7 +230,7 @@ export default function StepsPage() {
       if (a && (a.distanceM !== null || a.activeMinutes !== null || a.floors !== null))
         return [
           { icon: Route, value: a.distanceM === null ? "—" : t("{n} km", { n: (a.distanceM / 1000).toFixed(1) }), label: t("Distance") },
-          { icon: Timer, value: a.activeMinutes === null ? "—" : t("{n} min", { n: Math.round(a.activeMinutes) }), label: t("Active time") },
+          { icon: Timer, value: a.activeMinutes === null ? "—" : tn(Math.round(a.activeMinutes), "{n} min", "{n} min"), label: t("Active time") },
           { icon: Building2, value: a.floors === null ? "—" : String(Math.round(a.floors)), label: t("Floors") },
         ];
       const b = best(allRows);
