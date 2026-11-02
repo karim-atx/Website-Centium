@@ -407,6 +407,7 @@ export type HiringError =
   | "rate_limited" // ATX02 (check_rate_limit)
   | "invalid_opening" // 23514 (a title / description / requirements CHECK)
   | "no_hiring_credit" // ATXQ4 (Round G1: on the business plans switch a role offer needs a hiring credit left)
+  | "no_class_credit" // ATXQ4 (Round G5: on the switch a class-slot offer needs a class credit left; the message says "class credit")
   | "instructor_not_on_team"; // ATX76 (Database #38 business_team_professional: save_class_series, edit_class, assign_class_instructor and the business_classes trigger name only a Team professional)
 
 const ATXH: Record<number, HiringError> = {
@@ -452,8 +453,18 @@ export function hiringErrorOf(e: { code?: string | null; message?: string | null
   if (e.code === "ATX08" && /no such invitation/i.test(msg)) return "invite_gone";
   if (e.code === "23514") return "invalid_opening";
   if (e.code === "ATX76") return "instructor_not_on_team";
-  if (e.code === "ATXQ4" || /\bATXQ4\b/.test(msg)) return "no_hiring_credit";
+  if (e.code === "ATXQ4" || /\bATXQ4\b/.test(msg)) return /\bclass credit/i.test(msg) ? "no_class_credit" : "no_hiring_credit";
   return null;
+}
+
+/**
+ * Round G5: ATXQ4 is both credits' refusal. The offer kind the app sent
+ * decides which credit it was (a class slot's class credit, a role's hiring
+ * credit); any other error passes through unchanged.
+ */
+export function creditRefusalFor(type: OpeningType, error: HiringError | undefined): HiringError | undefined {
+  if (error !== "no_hiring_credit" && error !== "no_class_credit") return error;
+  return type === "class_slot" ? "no_class_credit" : "no_hiring_credit";
 }
 
 /** The board's words where it has them; ours otherwise (listed in W4.md). */
@@ -494,6 +505,8 @@ export const HIRING_ERROR_TEXT: Record<HiringError, string> = {
   instructor_not_on_team: "Only your Team can be named. Add people through Hiring.",
   // Round G1, G fixes 3: the same words as premiumCodeMessage("ATXQ4").
   no_hiring_credit: "Buy a hiring credit in the Centium app to send this offer.",
+  // Round G5: the same words as premiumCodeMessage("ATXQ4") for a class credit.
+  no_class_credit: "Buy a class credit in the Centium app to send this offer.",
 };
 
 /** The caution card under an applicant or a result after an offer (B-MA.8.6): their busy times. */

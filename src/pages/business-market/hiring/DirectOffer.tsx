@@ -14,7 +14,7 @@ import { useHiringBusiness } from "./useHiringBusiness";
 import { BusyWarning, FeeNoticeRow, HiredLine, HiringEmpty, PersonHead, UserPlusGlyph, feeNoticeText, fixedPair, useFeeRules, useHiringRead, useHiringStrip } from "./hiringParts";
 import { OpeningFormFields, useLiveClasses } from "./PostOpeningSheet";
 import HireConfirmDialog, { type DialogNote, type HireOffer } from "./HireConfirmDialog";
-import { useHiringCredits } from "../../../components/premium/usePlanLevel";
+import { useClassCredits, useHiringCredits } from "../../../components/premium/usePlanLevel";
 import { busyText, emptyForm, hiredLine, parseForm, sentStrip, type OpeningFormState, type ParsedForm } from "./hubModel";
 import { t, tx } from "../../../i18n/core";
 
@@ -57,6 +57,8 @@ export default function DirectOfferPage() {
   const id = biz.canHire ? biz.businessId : null;
   // Round G1 (#15): with credits_on, a role offer uses a hiring credit.
   const { credits, reload: reloadCredits } = useHiringCredits(id);
+  // Round G5: with credits_on, a class-slot offer uses a class credit.
+  const { credits: classCredits, reload: reloadClassCredits } = useClassCredits(id);
   const [strip, showStrip] = useHiringStrip();
   const live = useLiveClasses();
   const rules = useFeeRules();
@@ -115,6 +117,7 @@ export default function DirectOfferPage() {
     if (!r.ok) {
       setNote({ text: r.message, tone: r.pending ? "soon" : "error", error: r.error });
       if (r.error === "no_hiring_credit") reloadCredits();
+      if (r.error === "no_class_credit") reloadClassCredits();
       return;
     }
     const p = who;
@@ -223,6 +226,7 @@ export default function DirectOfferPage() {
         busy={sending}
         note={note}
         credits={credits}
+        classCredits={classCredits}
         onCancel={() => {
           if (sending) return;
           setConfirm(null);

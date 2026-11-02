@@ -25,6 +25,7 @@ import { parseFeeQuote, parseFeeRules, type HiringFeeQuote, type HiringFeeRules,
 import {
   HIRING_ERROR_TEXT,
   applicantCard,
+  creditRefusalFor,
   hhmmOf,
   hiringErrorOf,
   isoWeekdays,
@@ -430,7 +431,10 @@ export async function sendHireOffer(businessId: string, d: HireOfferDraft): Prom
     ),
     fetchBusyTimes(d.professionalId, d.classSeriesIds, d.startsOn),
   ]);
-  return r.ok ? { ok: true, value: { offerId: r.value, conflicts } } : r;
+  if (r.ok) return { ok: true, value: { offerId: r.value, conflicts } };
+  // Round G5: ATXQ4 names the credit this offer kind uses (class slot: a class credit).
+  const error = creditRefusalFor(d.type, r.error);
+  return error && error !== r.error ? { ...r, error, message: HIRING_ERROR_TEXT[error] } : r;
 }
 
 /**

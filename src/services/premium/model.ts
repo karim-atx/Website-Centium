@@ -562,6 +562,45 @@ export function parseHiringCredits(data: unknown): HiringCredits {
 /** A role offer uses a credit instead of the fee line, only when credits are on. Class-slot hires are unchanged. */
 export const offerUsesCredit = (type: "role" | "class_slot", credits: Pick<HiringCredits, "creditsOn"> | null | undefined): boolean => type === "role" && credits?.creditsOn === true;
 
+// ---- class credits (Round G5) ----
+
+/**
+ * my_class_credits(p_business_id): the same shape as my_hiring_credits.
+ * credits_on is the business plans switch for the business's owner; null
+ * (loading, a failed read, or a database without G5) reads as off.
+ */
+export type ClassCredits = HiringCredits;
+
+export const parseClassCredits = (data: unknown): ClassCredits => parseHiringCredits(data);
+
+/** A class-slot offer uses a class credit instead of the fee line, only when class credits are on. Role offers never do. */
+export const offerUsesClassCredit = (type: "role" | "class_slot", credits: Pick<ClassCredits, "creditsOn"> | null | undefined): boolean => type === "class_slot" && credits?.creditsOn === true;
+
+/**
+ * Which credit an offer uses: a role offer a hiring credit (G1), a class-slot
+ * offer a class credit (G5), each only while its own read says credits_on.
+ * Null: today's percentage fee. A class-slot offer never shows hiring
+ * credits, and a role offer never shows class credits.
+ */
+export type OfferCredit = "hiring" | "class" | null;
+
+export function offerCredit(type: "role" | "class_slot", hiring: Pick<HiringCredits, "creditsOn"> | null | undefined, cls: Pick<ClassCredits, "creditsOn"> | null | undefined): OfferCredit {
+  if (offerUsesCredit(type, hiring)) return "hiring";
+  if (offerUsesClassCredit(type, cls)) return "class";
+  return null;
+}
+
+/**
+ * ATXQ4 is both credits' refusal since the Database's G5. The offer kind the
+ * app sent decides first; without it, the Database's message ("class credit"
+ * or "hiring credit"). Hiring is G1's default.
+ */
+export function noCreditKind(opts: { type?: "role" | "class_slot" | null; message?: string | null }): "hiring" | "class" {
+  if (opts.type === "class_slot") return "class";
+  if (opts.type === "role") return "hiring";
+  return /\bclass credit/i.test(opts.message ?? "") ? "class" : "hiring";
+}
+
 // ---- the Round G1 codes ----
 
 /**
@@ -586,7 +625,10 @@ export function premiumCodeMessage(code: string | null | undefined, opts: { deta
         ? t("Your verification is approved once your plan purchase is confirmed.")
         : t("Choose your business plan first.");
     case "ATXQ4":
-      return t("Buy a hiring credit in the Centium app to send this offer.");
+      // Round G5: a class slot's refusal names the class credit.
+      return noCreditKind({ message: opts.message }) === "class"
+        ? t("Buy a class credit in the Centium app to send this offer.")
+        : t("Buy a hiring credit in the Centium app to send this offer.");
     case "ATXQ6":
       return passReasonText(opts.detail ?? /\(([a-z_]+)\)/.exec(opts.message ?? "")?.[1] ?? null);
     default:

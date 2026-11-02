@@ -3,7 +3,7 @@ import { Smartphone } from "lucide-react";
 import { RefundPolicyLink } from "../legal/RefundPolicyLink";
 import { t } from "../../i18n/core";
 import { APP_STORE_URL, GOOGLE_PLAY_URL, STORE_APPS_LIVE, formatPremiumPrice } from "../../services/premium/model";
-import { hiringCreditPricesText } from "../../services/premium/features";
+import { classCreditPricesText, hiringCreditPricesText } from "../../services/premium/features";
 
 // undrawn (Round G, no handover)
 // Round G1 · "Buy in the Centium app" (CF; decisions G7 b and G10): the one
@@ -14,11 +14,17 @@ import { hiringCreditPricesText } from "../../services/premium/features";
 // buttons are disabled and say "Coming soon" until STORE_APPS_LIVE, the
 // trial and the billing are Apple's or Google's, and the refund policy is
 // linked.
+// Round G5 adds class credits (CLASS_CREDIT_PRICES) and, while
+// plans_in_app, a professional plan: both bought in the Centium app only.
 
 type Props =
   | { product: "premium"; monthly: number | null; yearly: number | null; trialDays: number | null; compact?: boolean; className?: string }
   /** Hiring credits: the prices are HIRING_CREDIT_PRICES (services/premium/features); the store sets the real price. */
   | { product: "hiring_credits"; compact?: boolean; className?: string }
+  /** Round G5 · class credits: the prices are CLASS_CREDIT_PRICES (services/premium/features); the store sets the real price. */
+  | { product: "class_credits"; compact?: boolean; className?: string }
+  /** Round G5 · a professional plan, while plans_in_app: `line` is the plan to buy and its price, or null (never invented). */
+  | { product: "professional_plan"; line: string | null; compact?: boolean; className?: string }
   /** A business plan level: `line` is the picked level's price ("$29 a month"), or null before a pick. */
   | { product: "business_plan"; line: string | null; compact?: boolean; className?: string }
   /** G fixes 4: seat blocks and featured weeks; `line` is a price the app already read, or null (never invented). */
@@ -33,8 +39,9 @@ function priceLine(p: Props): string | null {
     if (y) return t("{price} a year", { price: y });
     return null;
   }
-  if (p.product !== "hiring_credits") return p.line;
-  return hiringCreditPricesText();
+  if (p.product === "hiring_credits") return hiringCreditPricesText();
+  if (p.product === "class_credits") return classCreditPricesText();
+  return p.line;
 }
 
 const StoreButton = ({ label, href }: { label: string; href: string | null }) => {

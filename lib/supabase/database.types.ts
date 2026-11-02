@@ -30210,6 +30210,14 @@ export type Database = {
           title: string
         }[]
       }
+      my_class_credits: {
+        Args: { p_business_id: string }
+        Returns: {
+          credits_on: boolean
+          free: number
+          packs: Json
+        }[]
+      }
       my_class_waitlist_position: {
         Args: { p_class_id: string }
         Returns: number

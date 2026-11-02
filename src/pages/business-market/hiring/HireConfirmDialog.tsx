@@ -9,7 +9,7 @@ import { feeNote, offerBody, offerPayText, offerTitle, startsText } from "./hubM
 import { t, tn } from "../../../i18n/core";
 import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
 import { BuyInApp } from "../../../components/premium/BuyInApp";
-import { offerUsesCredit, type HiringCredits } from "../../../services/premium/model";
+import { offerCredit, type ClassCredits, type HiringCredits } from "../../../services/premium/model";
 
 // Market + Share 3.0 · W4 · B-MA.8.3 Offer and hire (`hireConfirm`,
 // `hireConfirmMin`) and B-MA.8.6's "Send this offer?" (`dConfirm`): the W3
@@ -60,6 +60,7 @@ export default function HireConfirmDialog({
   busy,
   note,
   credits = null,
+  classCredits = null,
   onCancel,
   onSend,
 }: {
@@ -74,6 +75,12 @@ export default function HireConfirmDialog({
    * unchanged); null or off: exactly today's dialog.
    */
   credits?: HiringCredits | null;
+  /**
+   * Round G5: my_class_credits. With credits_on, a CLASS-SLOT offer says
+   * "Uses 1 class credit" in place of the fee line (role offers keep hiring
+   * credits); null or off: exactly today's dialog.
+   */
+  classCredits?: ClassCredits | null;
   onCancel: () => void;
   onSend: () => void;
 }) {
@@ -84,7 +91,10 @@ export default function HireConfirmDialog({
   const [tick, setTick] = useState(0);
   const key = offer ? `${offer.type}|${offer.pay}|${offer.payUnit}|${offer.classesPerMonth ?? ""}|${tick}` : "";
 
-  const usesCredit = !!offer && offerUsesCredit(offer.type, credits);
+  // A role offer can only use a hiring credit, a class-slot offer only a class credit (G5).
+  const credit = offer ? offerCredit(offer.type, credits, classCredits) : null;
+  const usesCredit = credit !== null;
+  const creditInfo = credit === "class" ? classCredits : credit === "hiring" ? credits : null;
 
   useEffect(() => {
     if (!offer || usesCredit) return;
@@ -110,7 +120,9 @@ export default function HireConfirmDialog({
   ];
   const shownNote: DialogNote | null = note ?? (failed && !usesCredit ? { text: t("Couldn't work out the fee. Try again."), tone: "error" } : null);
   // ATXQ4, or no credit left before sending: the buy block (bought in the app only, G10).
-  const showBuy = usesCredit && (note?.error === "no_hiring_credit" || credits?.free === 0);
+  // Round G5: a class slot's ATXQ4 (no_class_credit) opens the class credit block.
+  const refused = credit === "class" ? note?.error === "no_class_credit" : note?.error === "no_hiring_credit";
+  const showBuy = usesCredit && (refused || creditInfo?.free === 0);
   return (
     <CentredDialog
       open
@@ -138,8 +150,13 @@ export default function HireConfirmDialog({
         // undrawn (Round G, no handover): the fee ticket's shape, for a credit.
         <div data-credit-ticket style={{ position: "relative", marginTop: 10, display: "flex", borderRadius: 14, background: m.pale, overflow: "hidden", textAlign: "start" }}>
           <div style={{ flex: 1, minWidth: 0, padding: "11px 14px" }}>
-            <div style={{ fontSize: textPx(12), fontWeight: 800, color: m.pdark }}>{t("Uses 1 hiring credit")}</div>
-            <div style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.ink2, marginTop: 2 }}>{tn(credits?.free ?? 0, "{n} credit left to use", "{n} credits left to use")}</div>
+            {/* undrawn (Round G, no handover): G5's class-slot line in the same ticket. */}
+            <div style={{ fontSize: textPx(12), fontWeight: 800, color: m.pdark }}>{credit === "class" ? t("Uses 1 class credit") : t("Uses 1 hiring credit")}</div>
+            <div style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.ink2, marginTop: 2 }}>
+              {credit === "class"
+                ? tn(creditInfo?.free ?? 0, "{n} class credit left to use", "{n} class credits left to use")
+                : tn(creditInfo?.free ?? 0, "{n} credit left to use", "{n} credits left to use")}
+            </div>
           </div>
           <div style={{ width: 84, flexShrink: 0, borderInlineStart: `1.5px dashed ${m.fill}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontSize: textPx(17), fontWeight: 800, color: m.pdark, fontVariantNumeric: "tabular-nums" }}>1</span>
@@ -163,7 +180,7 @@ export default function HireConfirmDialog({
       )}
       {usesCredit ? (
         <div style={{ marginTop: 8, fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>
-          {t("The credit is used when they accept. No hiring fee is added.")} <RefundPolicyLink />
+          {credit === "class" ? t("The class credit is used when they accept. No hiring fee is added.") : t("The credit is used when they accept. No hiring fee is added.")} <RefundPolicyLink />
         </div>
       ) : q ? (
         <div style={{ marginTop: 8, fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>
@@ -177,7 +194,7 @@ export default function HireConfirmDialog({
           {t(shownNote.text)}
         </p>
       ) : null}
-      {showBuy && credits ? <BuyInApp product="hiring_credits" compact className="mt-3 text-start" /> : null}
+      {showBuy && creditInfo ? <BuyInApp product={credit === "class" ? "class_credits" : "hiring_credits"} compact className="mt-3 text-start" /> : null}
     </CentredDialog>
   );
 }

@@ -17,6 +17,7 @@ import {
   choiceAlreadyMade,
   choosePlanLevelArgs,
   parseCandidates,
+  parseClassCredits,
   parseFreeLimits,
   parseGymPasses,
   parseHiringCredits,
@@ -26,6 +27,7 @@ import {
   parseMyPremium,
   parseSwitches,
   premiumCodeMessage,
+  type ClassCredits,
   type FreeLimits,
   type GymPasses,
   type HiringCredits,
@@ -128,3 +130,9 @@ export async function choosePlanLevel(businessId: string, seatBlocks: number, p:
 
 export const fetchHiringCredits = (businessId: string): Promise<Read<HiringCredits>> =>
   read(() => supabase.rpc("my_hiring_credits", { p_business_id: businessId }), parseHiringCredits, t("Couldn't load your hiring credits."));
+
+// ---- class credits (Round G5) ----
+
+/** my_class_credits: a failed read or a database without G5 (PGRST202 / 42883) is not ok, which every caller reads as off. */
+export const fetchClassCredits = (businessId: string): Promise<Read<ClassCredits>> =>
+  read(() => supabase.rpc("my_class_credits", { p_business_id: businessId }), parseClassCredits, t("Couldn't load your class credits."));
