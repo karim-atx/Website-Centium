@@ -46,6 +46,9 @@ import {
   PREMIUM_DESIGNS,
   designAccess,
   parseShareDesigns,
+  insightsView,
+  parseCycleInsights,
+  phaseName,
   type PlanItem,
 } from "./g4.ts";
 import { COLOR_THEMES, PREMIUM_COLOR_THEMES, isPremiumTheme, normalizeColorTheme } from "../../theme/colorThemes.ts";
@@ -344,4 +347,21 @@ test("the three Premium share designs: hidden while off or unlisted, locked with
   // Today's three are what they were.
   assert.equal(cardColours("workout", "story", "B").bg, cardColours("workout", "story", "P").bg);
   assert.notEqual(cardColours("workout", "story", "I").ink, "#FFFFFF");
+});
+
+// ---- cycle insights ----
+
+test("cycle insights: an empty list shows nothing at all; a free member sees the lock; insights show as a card", () => {
+  const empty = parseCycleInsights([{ phase: "luteal", cycle_day: 21, insights: [] }]);
+  assert.deepEqual(empty, { phase: "luteal", cycleDay: 21, insights: [] });
+  assert.deepEqual(insightsView({ kind: "ready", value: empty }), { kind: "none" });
+  assert.deepEqual(insightsView({ kind: "premium" }), { kind: "locked" });
+  for (const kind of ["hidden", "loading", "error"]) assert.deepEqual(insightsView({ kind }), { kind: "none" }, kind);
+  const full = parseCycleInsights([{ phase: "follicular", cycle_day: "8", insights: [{ title: "Energy", body: "Often rises." }, { title: "", body: "dropped" }, { title: "No body" }] }]);
+  assert.deepEqual(full.insights, [{ title: "Energy", body: "Often rises." }]);
+  assert.equal(full.cycleDay, 8);
+  assert.equal(insightsView({ kind: "ready", value: full }).kind, "card");
+  assert.deepEqual(parseCycleInsights(null), { phase: null, cycleDay: null, insights: [] });
+  assert.equal(phaseName("menstrual"), "Period");
+  assert.equal(phaseName("pregnant"), null);
 });
