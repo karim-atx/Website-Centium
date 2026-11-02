@@ -24,7 +24,7 @@ const SERVER_MAX = 200;
  * The ledger, newest first, `limit` at a time: my_points_ledger(p_before,
  * p_limit, p_before_id) (Database 20261210300000 and f470909: id, amount,
  * source, reversed_source, ref_label, description, day, expires_at,
- * created_at). `cursor` is ledgerCursor() of the rows already shown (null for
+ * created_at; Round G fixes: multiplier). `cursor` is ledgerCursor() of the rows already shown (null for
  * the first page). One row more than `limit` is asked for, to know whether
  * there is a next page.
  */

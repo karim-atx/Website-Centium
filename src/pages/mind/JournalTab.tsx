@@ -9,6 +9,8 @@ import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { Toast } from "../../components/ui/Toast";
 import { MindHeader } from "../../components/mind/MindHeader";
 import { useApp } from "../../context/AppContext";
+import { useFreeLimit } from "../../components/premium/useFreeLimit";
+import { lockedFolderCount } from "../../services/premium/g2";
 import {
   ArrowUpDown,
   BookOpen,
@@ -124,6 +126,7 @@ export default function JournalTab() {
     unlockJournalFolder,
     disableJournalFolderLock,
   } = useApp();
+  const { blocked } = useFreeLimit();
   const [activeFolder, setActiveFolder] = useState("");
   // S7: an entry confirmed for deletion is hidden at once and deleted on the
   // server when its Undo toast expires.
@@ -353,6 +356,8 @@ export default function JournalTab() {
       setMoving(true);
     } else if (opt === "lock" && selectedFolder) {
       // MO1.1.2.1 Lock: no password to turn protection on.
+      // Round G2: past the free plan's locked folders, the prompt first.
+      if (blocked("locked_journal_folders", lockedFolderCount(journalFolders))) return;
       setLockError(null);
       void lockJournalFolder(selectedFolder.id).then(setLockError);
     } else if (opt === "unlock" && selectedFolder) {

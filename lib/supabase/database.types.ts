@@ -3715,6 +3715,8 @@ export type Database = {
           logo_url: string | null
           members_reached: number
           perk: string | null
+          premium_early_booking_days: number
+          premium_waitlist_priority: boolean
           profile_id: string
           public_email: string | null
           public_phone: string | null
@@ -3741,6 +3743,8 @@ export type Database = {
           logo_url?: string | null
           members_reached?: number
           perk?: string | null
+          premium_early_booking_days?: number
+          premium_waitlist_priority?: boolean
           profile_id: string
           public_email?: string | null
           public_phone?: string | null
@@ -3767,6 +3771,8 @@ export type Database = {
           logo_url?: string | null
           members_reached?: number
           perk?: string | null
+          premium_early_booking_days?: number
+          premium_waitlist_priority?: boolean
           profile_id?: string
           public_email?: string | null
           public_phone?: string | null
@@ -27002,6 +27008,10 @@ export type Database = {
           old_date_of_birth: string
         }[]
       }
+      admin_set_directory_limits_enforced: {
+        Args: { p_on: boolean; p_reason: string }
+        Returns: boolean
+      }
       admin_set_gym_hidden: {
         Args: { p_gym_id: string; p_hidden: boolean; p_reason?: string }
         Returns: undefined
@@ -27138,7 +27148,7 @@ export type Database = {
           signed_up_at: string
           subscription_renews_at: string
           subscription_source: Database["public"]["Enums"]["professional_plan_source"]
-      subscription_status: string
+          subscription_status: string
           subscription_tier: string
         }[]
       }
@@ -28184,6 +28194,9 @@ export type Database = {
         }
         Returns: string
       }
+      claim_voice_food_parse: { Args: never; Returns: undefined }
+      claim_food_search: { Args: never; Returns: undefined }
+      claim_barcode_scan: { Args: never; Returns: number }
       class_analytics: {
         Args: { p_business_id: string; p_from?: string; p_to?: string }
         Returns: {
@@ -28933,6 +28946,19 @@ export type Database = {
           typical_hour: number
         }[]
       }
+      directory_venues: { Args: { p_kind?: string }; Returns: Json[] }
+      directory_professionals: {
+        Args: { p_profile_id?: string }
+        Returns: Json[]
+      }
+      directory_professional_cv: {
+        Args: { p_profile_id: string }
+        Returns: Json
+      }
+      directory_classes: {
+        Args: { p_business_id?: string; p_gym_id?: string }
+        Returns: Json[]
+      }
       disable_journal_folder_lock: {
         Args: { p_folder_id: string; p_password: string }
         Returns: Database["public"]["CompositeTypes"]["journal_unlock_result"]
@@ -29158,6 +29184,7 @@ export type Database = {
       expire_due_memberships: { Args: never; Returns: number }
       expire_stale_ringing_calls: { Args: never; Returns: number }
       expire_waitlist_offers: { Args: never; Returns: number }
+      export_my_data: { Args: never; Returns: Json }
       extend_class_series: { Args: never; Returns: number }
       feature_price_for: {
         Args: {
@@ -29470,6 +29497,13 @@ export type Database = {
         }
         Returns: string
       }
+      history_owner_of_sleep: { Args: { p_id: string }; Returns: string }
+      history_owner_of_session: { Args: { p_id: string }; Returns: string }
+      history_owner_of_logged_exercise: {
+        Args: { p_id: string }
+        Returns: string
+      }
+      history_owner_of_habit: { Args: { p_id: string }; Returns: string }
       hub_trend: {
         Args: { p_client_id?: string; p_range: string }
         Returns: {
@@ -30146,6 +30180,8 @@ export type Database = {
           packs: Json
         }[]
       }
+      my_history_from_ts: { Args: never; Returns: string }
+      my_history_from: { Args: never; Returns: string }
       my_invite_joins: {
         Args: never
         Returns: {
@@ -30192,6 +30228,21 @@ export type Database = {
           status: Database["public"]["Enums"]["order_status"]
           total: number
           total_count: number
+        }[]
+      }
+      my_points_ledger: {
+        Args: { p_before?: string; p_before_id?: string; p_limit?: number }
+        Returns: {
+          amount: number
+          created_at: string
+          day: string
+          description: string
+          expires_at: string
+          id: string
+          multiplier: number
+          ref_label: string
+          reversed_source: Database["public"]["Enums"]["points_source"]
+          source: Database["public"]["Enums"]["points_source"]
         }[]
       }
       my_points_summary: {
@@ -30276,6 +30327,14 @@ export type Database = {
           reply_at: string
           reply_body: string
           review_id: string
+        }[]
+      }
+      my_streak_shields: {
+        Args: never
+        Returns: {
+          shields_left: number
+          shields_on: boolean
+          used: Json
         }[]
       }
       my_support_thread: {
@@ -31567,6 +31626,17 @@ export type Database = {
           p_whish_merchant_ref?: string
         }
         Returns: string
+      }
+      set_business_premium_booking: {
+        Args: {
+          p_business_id: string
+          p_early_days: number
+          p_waitlist_priority: boolean
+        }
+        Returns: {
+          premium_early_booking_days: number
+          premium_waitlist_priority: boolean
+        }[]
       }
       set_business_premium_for_members: {
         Args: { p_business_id: string; p_on: boolean }

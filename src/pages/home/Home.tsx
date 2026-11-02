@@ -20,6 +20,7 @@ import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useInboxRealtime } from "../../hooks/useInboxRealtime";
 import { ProReminders } from "../../components/client-forms/ProReminders";
+import { StreakShieldsLine } from "../../components/premium/StreakShields";
 
 // The streaks card's height, so its placeholder does not shift the page.
 const STREAKS_PLACEHOLDER_HEIGHT = 176;
@@ -146,7 +147,13 @@ export default function Home() {
       {recoveryModePending ? (
         <NumberPlaceholder height={STREAKS_PLACEHOLDER_HEIGHT} label="Streaks" className="mb-[13px]" />
       ) : (
-        !recoverySensitive && <StreaksBar />
+        !recoverySensitive && (
+          <>
+            <StreaksBar />
+            {/* Round G2: Premium's streak shields (nothing while the switch is off or without Premium). */}
+            <StreakShieldsLine className="mb-[13px]" />
+          </>
+        )
       )}
 
       {isBusiness && (

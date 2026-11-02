@@ -13,6 +13,7 @@ import { t, tk, tn } from "../../i18n/core";
 import { appLocale } from "../../i18n/format";
 import { formatShortDate } from "../../utils/date";
 import type { PremiumFeature } from "./features";
+import { limitReachedText, premiumRefusalOf } from "./g2";
 
 /** A date on the Premium cards: "9 November 2026" (Arabic month names in Arabic). */
 export const premiumDate = (iso: string): string => formatShortDate(new Date(iso), { day: "numeric", month: "long", year: "numeric" });
@@ -564,9 +565,9 @@ export const offerUsesCredit = (type: "role" | "class_slot", credits: Pick<Hirin
 // ---- the Round G1 codes ----
 
 /**
- * ATXQ0, Q1, Q3, Q4 and Q6 as plain sentences (Q2 is G2's; Q5 is the
- * Admin's). Q3's sentence follows what was refused; Q6's detail is the
- * reason. Null for any other code.
+ * ATXQ0, Q1, Q2, Q3, Q4 and Q6 as plain sentences (Q5 is the Admin's).
+ * Q2's detail is the limit key (Round G2); Q3's sentence follows what was
+ * refused; Q6's detail is the reason. Null for any other code.
  */
 export function premiumCodeMessage(code: string | null | undefined, opts: { detail?: string | null; message?: string | null } = {}): string | null {
   const c = code ?? (/\bATXQ\d\b/.exec(opts.message ?? "")?.[0] ?? null);
@@ -575,6 +576,8 @@ export function premiumCodeMessage(code: string | null | undefined, opts: { deta
       return t("That isn't available yet.");
     case "ATXQ1":
       return t("That's part of Centium Premium.");
+    case "ATXQ2":
+      return limitReachedText(premiumRefusalOf({ code: "ATXQ2", details: opts.detail ?? null })?.feature);
     case "ATXQ3":
       // G fixes 3: the level is chosen on the web (choose_business_plan_level)
       // and bought in the Centium app. Approval waits for the purchase to be

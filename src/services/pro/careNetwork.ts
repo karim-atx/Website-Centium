@@ -21,6 +21,7 @@
 // isn't yet your client shows without a name (reported).
 
 import { supabase } from "../../../lib/supabase/client";
+import { directoryCall, professionalsByIds, type DirRead } from "../directory/eg";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import type { Read, Write } from "./clients";
@@ -53,7 +54,12 @@ export interface Colleague {
 export async function fetchColleagues(ids: string[]): Promise<Record<string, Colleague>> {
   const uniq = [...new Set(ids)].filter(Boolean);
   if (!uniq.length) return {};
-  const { data, error } = await from("public_professional_directory").select("profile_id, first_name, avatar_url, professional_subtype, specialty").in("profile_id", uniq);
+  type Row = { profile_id: string; first_name: string | null; avatar_url: string | null; professional_subtype: string | null; specialty: string | null };
+  // Round G2 (EG): the counting function.
+  const { data, error } = await professionalsByIds<Row>(uniq, () =>
+    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
+    from("public_professional_directory").select("profile_id, first_name, avatar_url, professional_subtype, specialty").in("profile_id", uniq) as unknown as PromiseLike<DirRead<Row[]>>
+  );
   if (error) return {};
   const out: Record<string, Colleague> = {};
   for (const r of (data ?? []) as unknown as { profile_id: string; first_name: string | null; avatar_url: string | null; professional_subtype: string | null; specialty: string | null }[])
@@ -63,10 +69,19 @@ export async function fetchColleagues(ids: string[]): Promise<Record<string, Col
 
 /** Listed professionals by first name, for "Add a colleague". */
 export async function searchColleagues(me: string, q: string): Promise<Read<Colleague[]>> {
-  let req = from("public_professional_directory").select("profile_id, first_name, avatar_url, professional_subtype, specialty").neq("profile_id", me).order("first_name").limit(20);
+  type Row = { profile_id: string; first_name: string | null; avatar_url: string | null; professional_subtype: string | null; specialty: string | null };
   const term = q.trim().replace(/[%_,()]/g, "");
-  if (term) req = req.ilike("first_name", `%${term}%`);
-  const { data, error } = await req;
+  // Round G2 (EG): the counting function gives the directory by first name;
+  // not me, the name match and the first 20 are applied here.
+  const read = await directoryCall<Row[]>("directory_professionals", { p_profile_id: null }, () => {
+    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
+    let req = from("public_professional_directory").select("profile_id, first_name, avatar_url, professional_subtype, specialty").neq("profile_id", me).order("first_name").limit(20);
+    if (term) req = req.ilike("first_name", `%${term}%`);
+    return req as unknown as PromiseLike<DirRead<Row[]>>;
+  });
+  const needle = term.toLocaleLowerCase();
+  const data = (read.data ?? []).filter((r) => r.profile_id !== me && (!needle || (r.first_name ?? "").toLocaleLowerCase().includes(needle))).slice(0, 20);
+  const error = read.error;
   if (error) return readFail(error);
   return {
     ok: true,

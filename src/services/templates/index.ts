@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { premiumRefusalMessage } from "../premium/asks";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { playlistSaveError } from "../music/playlistLink";
 import type { PostgrestError } from "@supabase/supabase-js";
@@ -831,6 +832,10 @@ export interface AdoptResult {
  * wrong, not the person reading it.
  */
 function describeAdoption(error: PostgrestError): string {
+  // Round G2: a free limit (ATXQ2) or a Premium-only refusal (ATXQ1) asks for
+  // the prompt and says so plainly; what was typed stays on screen.
+  const premiumRefusal = premiumRefusalMessage(error);
+  if (premiumRefusal) return premiumRefusal;
   const code = error.code ?? "";
   if (code === "ATX08") return "That program is no longer available.";
   if (code === "ATX09") return "That program can't be added this way.";
