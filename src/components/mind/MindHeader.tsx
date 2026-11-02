@@ -2,22 +2,23 @@ import React from "react";
 import { PageHeader } from "../ui/PageHeader";
 import { FixedHeader } from "../ui/FixedHeader";
 import { useBack } from "../../hooks/useBack";
+import { t, tk } from "../../i18n/core";
 
 export type MindSection = "habits" | "journal" | "achievements" | "meditation";
 
 // The sub-page header, for each section (MO1.1.1 #3-#4, MO1.1.2 #4-#5,
 // MO1.1.3, MO1.1.4).
 const MIND_SECTION_TITLE: Record<MindSection, string> = {
-  habits: "Habits",
-  journal: "Journal",
-  achievements: "Achievements",
-  meditation: "Meditation",
+  habits: tk("Habits"),
+  journal: tk("Journal"),
+  achievements: tk("Achievements"),
+  meditation: tk("Meditation"),
 };
 const MIND_SECTION_SUBTITLE: Record<MindSection, string> = {
-  habits: "Track your daily habits",
-  journal: "Your thoughts, logged",
-  achievements: "What you've earned so far",
-  meditation: "Breathing, stretching & yoga",
+  habits: tk("Track your daily habits"),
+  journal: tk("Your thoughts, logged"),
+  achievements: tk("What you've earned so far"),
+  meditation: tk("Breathing, stretching & yoga"),
 };
 
 /**
@@ -43,8 +44,8 @@ export const MindHeader: React.FC<{
   const back = useBack();
   const header = (
     <PageHeader
-      title={MIND_SECTION_TITLE[section]}
-      subtitle={MIND_SECTION_SUBTITLE[section]}
+      title={t(MIND_SECTION_TITLE[section])}
+      subtitle={t(MIND_SECTION_SUBTITLE[section])}
       showBack
       onBack={back}
       bottomGap={fixed && !children ? 0 : headerGap}

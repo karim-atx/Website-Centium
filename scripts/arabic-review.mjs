@@ -30,6 +30,9 @@ const AREAS = [
   ["safety", "Referrals, vouchers, reviews and first messages"],
   ["venues", "Class no-shows, gym pass and member codes"],
   ["certificates", "Your certificates (Courses)"],
+  ["food", "Food: logging, meal prep, goals and nutrients"],
+  ["workout", "Workout: routines, sessions, history and metrics"],
+  ["mind", "Mind: meditation, journal, habits and achievements"],
 ];
 
 const rows = [];

@@ -25,6 +25,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { textPx } from "../../theme/textSize";
 import { MusicSection } from "../music/MusicSection";
+import { t, tn } from "../../i18n/core";
 
 export type PrepKind = "meals" | "recipes";
 
@@ -147,7 +148,7 @@ export const MealPrepFlowSheet: React.FC<{
   // Titles per screen, literal from CentiumMealPrep.dc.html's `titles` map:
   // the detail step is generic ("Meal"/"Recipe" — the item's own name is shown
   // in the body instead).
-  const title = screen === "edit" ? form.title : screen === "advanced" ? "Nutrient details" : isR ? "Recipe" : "Meal";
+  const title = screen === "edit" ? form.title : screen === "advanced" ? t("Nutrient details") : isR ? t("Recipe") : t("Meal");
 
   return (
     <>
@@ -163,7 +164,7 @@ export const MealPrepFlowSheet: React.FC<{
               className="tap w-full inline-flex items-center justify-center"
               style={{ height: 48, gap: 8, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1.5px solid ${accentCta}`, color: accentCta, fontSize: textPx(15), fontWeight: 700 }}
             >
-              <Pencil size={15} /> Edit
+              <Pencil size={15} /> {t("Edit")}
             </button>
           ) : undefined
         }
@@ -187,23 +188,23 @@ export const MealPrepFlowSheet: React.FC<{
             hideNumbers={hide}
           />
         )}
-        {!item && <p style={{ margin: 0, fontSize: textPx(13), color: PREP_FAINT }}>Nothing saved yet.</p>}
+        {!item && <p style={{ margin: 0, fontSize: textPx(13), color: PREP_FAINT }}>{t("Nothing saved yet.")}</p>}
         {screen === "advanced" && !hide && <AdvancedScreen kind={kind} item={item} qty={qty} />}
       </BottomSheet>
 
       <ConfirmCard
         open={confirm === "delete"}
-        title={`Delete ${item?.title ?? (isR ? "this recipe" : "this meal")}?`}
-        subtitle={isR ? "The recipe is removed. Past diary entries stay." : "The meal is removed. Past diary entries stay."}
+        title={item?.title ? t("Delete {name}?", { name: item.title }) : isR ? t("Delete this recipe?") : t("Delete this meal?")}
+        subtitle={isR ? t("The recipe is removed. Past diary entries stay.") : t("The meal is removed. Past diary entries stay.")}
         busy={busy}
         onCancel={() => setConfirm(null)}
         onConfirm={() => void doDelete()}
       />
       <ConfirmCard
         open={confirm === "discard-back" || confirm === "discard-close"}
-        title="Discard your changes?"
-        subtitle="What you changed won't be saved."
-        confirmLabel="Discard"
+        title={t("Discard your changes?")}
+        subtitle={t("What you changed won't be saved.")}
+        confirmLabel={t("Discard")}
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           const closing = confirm === "discard-close";
@@ -267,19 +268,19 @@ const DetailScreen: React.FC<{
         <p className="mt-0.5 text-[12.5px]" style={{ color: PREP_FAINT }}>
           {isR
             ? hideNumbers
-              ? `${recipe!.servings} servings`
-              : `${recipe!.servings} servings · ${Math.round(total.kcal)} kcal total`
-            : `${item.items.length} foods`}
+              ? tn(recipe!.servings, "{n} serving", "{n} servings")
+              : t("{servings} · {kcal} kcal total", { servings: tn(recipe!.servings, "{n} serving", "{n} servings"), kcal: Math.round(total.kcal) })
+            : tn(item.items.length, "{n} food", "{n} foods")}
         </p>
       </div>
 
       {!hideNumbers && (
-        <MacroStrip t={shown} note={isR ? `Per serving × ${q}. Totals ÷ ${recipe!.servings} servings.` : `Whole meal × ${q}.`} />
+        <MacroStrip t={shown} note={isR ? t("Per serving × {q}. Totals ÷ {servings}.", { q, servings: tn(recipe!.servings, "{n} serving", "{n} servings") }) : t("Whole meal × {q}.", { q })} />
       )}
 
       <div style={GREY}>
         <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
-          {isR ? "Ingredients" : "Foods"}
+          {isR ? t("Ingredients") : t("Foods")}
         </p>
         <div className="mt-2.5 flex flex-col gap-1.5">
           {item.items.map((x, i) => {
@@ -314,7 +315,7 @@ const DetailScreen: React.FC<{
       {isR && recipe!.steps && (
         <div style={GREY}>
           <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
-            Steps
+            {t("Steps")}
           </p>
           <p className="mt-2.5 text-[13px] whitespace-pre-line" style={{ color: PREP_SOFT, lineHeight: 1.6 }}>
             {recipe!.steps}
@@ -326,14 +327,14 @@ const DetailScreen: React.FC<{
           cooking favourite or "Play your music". Where the recipe isn't
           being logged (a professional's view), only a playlist the recipe has. */}
       {isR && (
-        <MusicSection moment="cooking" item={{ url: recipe!.playlistUrl, heading: "Cook-along" }} playlistsOnly={hideLog} />
+        <MusicSection moment="cooking" item={{ url: recipe!.playlistUrl, heading: t("Cook-along") }} playlistsOnly={hideLog} />
       )}
 
       {!hideLog && (
       <>
       <div className="flex items-center gap-3" style={GREY}>
         <span className="flex-none" style={{ fontSize: textPx(14.5), fontWeight: 500, color: dark ? FOOD_DARK.label : "#575863" }}>
-          {isR ? "Servings" : "Quantity"}
+          {isR ? t("Servings") : t("Quantity")}
         </span>
         <input
           value={qty}
@@ -346,7 +347,7 @@ const DetailScreen: React.FC<{
 
       <div style={GREY}>
         <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
-          Meal
+          {t("Meal")}
         </p>
         <div className="flex" style={{ gap: 6, marginTop: 9 }}>
           {PREP_MEAL_ORDER.map((m) => (
@@ -371,13 +372,13 @@ const DetailScreen: React.FC<{
           className="tap flex-1 h-[52px] rounded-[14px] text-[15.5px] font-bold disabled:opacity-40"
           style={{ background: PREP_PRIMARY[kind], color: PREP_ON_PRIMARY[kind] }}
         >
-          {logging ? "Logging…" : "Add to Diary"}
+          {logging ? t("Logging…") : t("Add to Diary")}
         </button>
         {!hideNumbers && (
         <button
           onClick={onAdvanced}
-          aria-label="Nutrient details"
-          title="Nutrient details"
+          aria-label={t("Nutrient details")}
+          title={t("Nutrient details")}
           className="tap flex-none flex items-center justify-center"
           style={{ width: 60, height: 52, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: PREP_CHARCOAL }}
         >
@@ -445,16 +446,16 @@ const AdvancedScreen: React.FC<{
     };
   }, [item, isR, q]);
 
-  if (!item) return <p style={{ margin: 0, fontSize: textPx(13), color: PREP_FAINT }}>Nothing saved yet.</p>;
+  if (!item) return <p style={{ margin: 0, fontSize: textPx(13), color: PREP_FAINT }}>{t("Nothing saved yet.")}</p>;
 
   return (
     <div className="flex flex-col gap-2.5 animate-fade-slide-up">
       <p style={{ margin: "0 2px 2px", fontSize: textPx(13), color: PREP_SOFT }}>
-        {isR ? `${item.title} · ${q} serving${q === 1 ? "" : "s"}` : `${item.title} × ${q}`}
+        {isR ? `${item.title} · ${tn(q, "{n} serving", "{n} servings", { n: q })}` : `${item.title} × ${q}`}
       </p>
       {state.loading ? (
         <p className="text-center text-[13px] py-6" style={{ color: PREP_FAINT }}>
-          Loading nutrient details…
+          {t("Loading nutrient details…")}
         </p>
       ) : (
         <NutrientDetailSections

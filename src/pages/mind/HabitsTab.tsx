@@ -26,14 +26,35 @@ import {
   nextHabitColour,
 } from "../../services/habits";
 import type { HabitColour, HabitIconKey, HabitItem } from "../../types";
+import { getLanguage, t, tk, tx } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const COL = 28; // one day column, centre to centre (MO1.1.1 #18: x 172.2 → 200.2)
 
 /** OURS: the toast after Archive (the menu's B3 action), with Undo. */
-const ARCHIVED = "Habit archived. Its history is kept.";
+const ARCHIVED = tk("Habit archived. Its history is kept.");
 /** The panel's rule lines (O3, O4); anything else is the O5 / O4 copy. */
 const PANEL_RULES = new Set([DUPLICATE_HABIT, TOO_MANY_HABITS]);
+
+/** A habit colour's name, for the tile's accessible name. */
+const COLOUR_NAME: Record<HabitColour, string> = {
+  lavender: tk("Lavender"),
+  teal: tk("Teal"),
+  gold: tk("Gold"),
+  rose: tk("Rose"),
+  sky: tk("Sky"),
+};
+
+/**
+ * A week column's day name: English keeps "Mon"; Arabic takes the locale's
+ * one-letter day in the 28 pt column ("narrow") and the full name for
+ * accessible names ("long").
+ */
+function dayName(day: string, i: number, width: "narrow" | "long"): string {
+  if (getLanguage() === "en") return DAY_NAMES[i];
+  return new Date(`${day}T00:00:00`).toLocaleDateString(appLocale(), { weekday: width });
+}
 
 /** The Monday-first week holding `today`, as yyyy-mm-dd. */
 function weekOf(today: string): string[] {
@@ -257,7 +278,7 @@ export default function HabitsTab() {
     return (
       <div className="animate-fade-slide-up" aria-busy="true">
         <MindHeader section="habits" fixed={false} />
-        <span className="sr-only" role="status">Loading your habits…</span>
+        <span className="sr-only" role="status">{t("Loading your habits…")}</span>
         <div aria-hidden className="space-y-2.5">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-24 rounded-[22px] bg-cream-soft animate-skeleton-pulse" />
@@ -280,13 +301,13 @@ export default function HabitsTab() {
         tileRadius={12}
         actions={
           fromCoach(h)
-            ? [{ key: "archive", label: "Archive", icon: <Archive size={16} />, onClick: () => archive(h) }]
+            ? [{ key: "archive", label: t("Archive"), icon: <Archive size={16} />, onClick: () => archive(h) }]
             : [
-                { key: "edit", label: "Edit", icon: <Pencil size={16} />, onClick: () => openEdit(h) },
-                { key: "delete", label: "Delete", icon: <Trash2 size={16} />, onClick: () => setDeleting(h), destructive: true },
+                { key: "edit", label: t("Edit"), icon: <Pencil size={16} />, onClick: () => openEdit(h) },
+                { key: "delete", label: t("Delete"), icon: <Trash2 size={16} />, onClick: () => setDeleting(h), destructive: true },
               ]
         }
-        keyboardLabel={fromCoach(h) ? `${h.label}. Arrow left for Archive` : `${h.label}. Arrow left for Edit and Delete`}
+        keyboardLabel={fromCoach(h) ? t("{habit}. Arrow left for Archive", { habit: h.label }) : t("{habit}. Arrow left for Edit and Delete", { habit: h.label })}
         onLongPress={(anchor) => setMenu({ habit: h, anchor })}
       >
         {/* #12: rows 59 + the 1 px divider (pitch 60); min-height so Larger
@@ -300,7 +321,7 @@ export default function HabitsTab() {
             <button
               type="button"
               onClick={() => cycleColour(h)}
-              aria-label={`${h.label} colour: ${h.colour ?? "lavender"}. Tap to change`}
+              aria-label={t("{habit} colour: {colour}. Tap to change", { habit: h.label, colour: t(COLOUR_NAME[h.colour ?? "lavender"]) })}
               className={clsx(
                 "tap relative w-7 h-7 rounded-lg flex items-center justify-center shrink-0 after:absolute after:-inset-2 after:content-['']",
                 !shade && "bg-primary-pale"
@@ -330,7 +351,7 @@ export default function HabitsTab() {
           <button
             type="button"
             onClick={(e) => setMenu({ habit: h, anchor: e.currentTarget })}
-            aria-label={`${h.label}, more options`}
+            aria-label={t("{habit}, more options", { habit: h.label })}
             aria-haspopup="menu"
             aria-expanded={menu?.habit.id === h.id}
             className="tap w-5 h-11 me-0.5 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
@@ -352,7 +373,11 @@ export default function HabitsTab() {
                   {!future ? (
                     <button
                       onClick={() => void toggleHabit(h.id, day).then(failed)}
-                      aria-label={`${h.label}, ${isToday ? "today" : DAY_NAMES[i]}: ${ticked ? "done" : "not done"}`}
+                      aria-label={
+                        ticked
+                          ? t("{habit}, {day}: done", { habit: h.label, day: isToday ? t("today") : dayName(day, i, "long") })
+                          : t("{habit}, {day}: not done", { habit: h.label, day: isToday ? t("today") : dayName(day, i, "long") })
+                      }
                       aria-pressed={ticked}
                       className={clsx(
                         // #18 / #29: 24 rings, 1 pt; done #AEA1DC / #A991FE.
@@ -365,7 +390,7 @@ export default function HabitsTab() {
                   ) : (
                     // #20: later days, a faint ring, not a control.
                     <span
-                      aria-label={`${DAY_NAMES[i]}: upcoming`}
+                      aria-label={t("{day}: upcoming", { day: dayName(day, i, "long") })}
                       role="img"
                       className="w-6 h-6 rounded-full flex items-center justify-center border border-charcoal/[0.06]"
                     />
@@ -379,7 +404,7 @@ export default function HabitsTab() {
     );
   };
 
-  const deletingSubtitle = "Its streak and history are removed.";
+  const deletingSubtitle = t("Its streak and history are removed.");
 
   return (
     <div className="animate-fade-slide-up">
@@ -390,7 +415,7 @@ export default function HabitsTab() {
       {habitsError && (
         <div role="alert" className="mb-2.5 flex items-center gap-3 rounded-xl bg-status-high-bg p-3">
           <p className="flex-1 min-w-0 text-[12px] leading-4 font-semibold text-status-high">
-            Couldn't load. Check your connection.
+            {t("Couldn't load. Check your connection.")}
           </p>
           <button
             type="button"
@@ -398,7 +423,7 @@ export default function HabitsTab() {
             disabled={retrying}
             className="tap relative shrink-0 text-[12px] leading-4 font-bold text-status-high after:absolute after:-inset-3 after:content-['']"
           >
-            {retrying ? <Loader2 size={14} className="animate-spin" aria-label="Retrying" /> : "Retry"}
+            {retrying ? <Loader2 size={14} className="animate-spin" aria-label={t("Retrying")} /> : t("Retry")}
           </button>
         </div>
       )}
@@ -433,7 +458,7 @@ export default function HabitsTab() {
                         isToday ? "text-primary-accent" : "text-charcoal-faint"
                       )}
                     >
-                      {DAY_NAMES[i]}
+                      {dayName(day, i, "narrow")}
                     </span>
                     {/* #11: 26 × 26 r9, 13/19.5 700; today on the #AB9ED7 tile. */}
                     <span
@@ -458,9 +483,9 @@ export default function HabitsTab() {
           ) : (
             // O2: the grid header stays; two centred lines in its body.
             <div className="flex flex-col items-center text-center px-6 py-8">
-              <p className="text-[15px] font-bold text-charcoal">No habits yet</p>
+              <p className="text-[15px] font-bold text-charcoal">{t("No habits yet")}</p>
               <p className="mt-1 text-[12px] font-medium text-charcoal-faint">
-                {hideNumbers ? "Add one to get started" : "Add one to start a streak"}
+                {hideNumbers ? t("Add one to get started") : t("Add one to start a streak")}
               </p>
             </div>
           )}
@@ -477,10 +502,10 @@ export default function HabitsTab() {
         options={[
           // CU28: a coach's habit can't be edited or deleted here; the note says why.
           menu && fromCoach(menu.habit)
-            ? { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} />, disabled: true, note: COACH_HABIT_LOCKED }
-            : { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} /> },
-          { value: "archive", label: "Archive", icon: <Archive size={15} strokeWidth={1.75} /> },
-          { value: "delete", label: "Delete", icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true, disabled: !!menu && fromCoach(menu.habit) },
+            ? { value: "edit", label: t("Edit"), icon: <Pencil size={15} strokeWidth={1.75} />, disabled: true, note: t(COACH_HABIT_LOCKED) }
+            : { value: "edit", label: t("Edit"), icon: <Pencil size={15} strokeWidth={1.75} /> },
+          { value: "archive", label: t("Archive"), icon: <Archive size={15} strokeWidth={1.75} /> },
+          { value: "delete", label: t("Delete"), icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true, disabled: !!menu && fromCoach(menu.habit) },
         ]}
         onSelect={(v) => {
           if (!menu) return;
@@ -493,7 +518,7 @@ export default function HabitsTab() {
       {/* S6 / K3: the handover's delete confirm (data safety). */}
       <ConfirmCard
         open={!!deleting}
-        title="Delete habit?"
+        title={t("Delete habit?")}
         subtitle={deleting ? deletingSubtitle : undefined}
         onCancel={() => setDeleting(null)}
         onConfirm={() => {
@@ -505,7 +530,7 @@ export default function HabitsTab() {
       {/* O4: a failed tick, colour, edit or delete; or an archive with Undo. */}
       <Toast
         open={!!toast}
-        message={toast?.message ?? ""}
+        message={toast ? t(toast.message) : ""}
         tone={toast?.undo ? "default" : "error"}
         onUndo={toast?.undo ? () => undoArchive(toast.undo!) : undefined}
         onExpire={() => setToast(null)}
@@ -522,11 +547,11 @@ export default function HabitsTab() {
           <div
             ref={panelRef}
             role="group"
-            aria-label={panel.mode === "edit" ? "Edit habit" : "Add habit"}
+            aria-label={panel.mode === "edit" ? t("Edit habit") : t("Add habit")}
             className="rounded-[20px] bg-cream-card border border-charcoal/[0.08] shadow-soft dark:shadow-none pt-3 pb-3 ps-3.5"
           >
             {/* #41: "Icon", 9/13.5 700, 1.8 tracking, uppercase, 42% ink. */}
-            <p className="mb-1.5 text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42]">Icon</p>
+            <p className="mb-1.5 text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42]">{t("Icon")}</p>
             {/* #42–#57: the app's 20 icons (D-1) in one scrolling row, 38 r11
                 tiles 46 apart, 18 icons in #5B5349 / #B8B3C7; the first on
                 the panel padding (its ring has 2 px of room). */}
@@ -542,7 +567,7 @@ export default function HabitsTab() {
                     key={opt.key}
                     type="button"
                     onClick={() => (selected ? setNewColour(nextHabitColour(newColour)) : setNewIcon(opt.key))}
-                    aria-label={selected ? `${opt.label}, ${newColour}. Tap again to change colour` : opt.label}
+                    aria-label={selected ? t("{icon}, {colour}. Tap again to change colour", { icon: tx(opt.label, "icon"), colour: t(COLOUR_NAME[newColour]) }) : tx(opt.label, "icon")}
                     aria-pressed={selected}
                     className={clsx(
                       "tap shrink-0 w-[38px] h-[38px] rounded-[11px] flex items-center justify-center",
@@ -569,7 +594,7 @@ export default function HabitsTab() {
             {panel.mode === "add" && suggestions.length > 0 && (
               <>
                 <p className="mt-2.5 mb-[5px] text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42]">
-                  Suggestions
+                  {t("Suggestions")}
                 </p>
                 <div className="flex gap-2 overflow-x-auto no-scrollbar pe-3.5">
                   {suggestions.map((s) => {
@@ -610,8 +635,8 @@ export default function HabitsTab() {
                   if (e.key === "Enter") void save();
                   if (e.key === "Escape") closePanel();
                 }}
-                placeholder="New habit…"
-                aria-label={panel.mode === "edit" ? "Habit name" : "New habit"}
+                placeholder={t("New habit…")}
+                aria-label={panel.mode === "edit" ? t("Habit name") : t("New habit")}
                 aria-invalid={!!panelError || undefined}
                 aria-describedby={panelError ? "habit-panel-error" : undefined}
                 className={clsx(
@@ -625,7 +650,7 @@ export default function HabitsTab() {
               <button
                 type="button"
                 onClick={() => void save()}
-                aria-label={panel.mode === "edit" ? "Save changes" : "Save habit"}
+                aria-label={panel.mode === "edit" ? t("Save changes") : t("Save habit")}
                 aria-disabled={!trimmed || undefined}
                 aria-busy={saving || undefined}
                 className={clsx(
@@ -639,7 +664,7 @@ export default function HabitsTab() {
               <button
                 type="button"
                 onClick={closePanel}
-                aria-label="Close"
+                aria-label={t("Close")}
                 className="tap w-9 h-9 rounded-xl bg-cream-soft text-charcoal-faint flex items-center justify-center shrink-0"
               >
                 <X size={15} />
@@ -648,7 +673,7 @@ export default function HabitsTab() {
             {/* O3 / O4 / O5: 11/600 in danger under the field row. */}
             {panelError && (
               <p id="habit-panel-error" role="alert" className="mt-1.5 pe-3.5 text-[11px] leading-4 font-semibold text-status-high">
-                {panelError}
+                {t(panelError)}
               </p>
             )}
           </div>
@@ -658,7 +683,7 @@ export default function HabitsTab() {
           // #40 / #41: 44 tall, r12, #A198DF / #A991FE, 13.5/20.3 700, Plus 15.
           size="base"
           primary={{
-            label: "Add habit",
+            label: t("Add habit"),
             icon: <Plus size={15} />,
             className: "!text-[13.5px] !leading-[20.3px] !bg-[rgb(var(--c-fill-cta))]",
             onClick: openAdd,

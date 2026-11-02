@@ -22,6 +22,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { useApp } from "../../context/AppContext";
 import type { Food } from "../../types";
 import { textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 // Create Custom Food — master handover, CentiumFrame "Create Custom Food"
 // (lavender sheet): grey field containers, a scrolling logo row whose
@@ -122,14 +123,14 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
     const code = typedCode ? normalizeGtin(typedCode) : null;
     if (typedCode && !code) {
       setSaving(false);
-      setError("That barcode isn't valid. Check the digits, or leave it empty.");
+      setError(t("That barcode isn't valid. Check the digits, or leave it empty."));
       return;
     }
     if (code) {
       const shared = await createFoodByBarcode({ barcode: code, servingLabel: payload.serving, ...payload });
       if (!shared.ok || !shared.food) {
         setSaving(false);
-        setError(shared.message ?? "Couldn't add that barcode. Try again, or save without it.");
+        setError(shared.message ?? t("Couldn't add that barcode. Try again, or save without it."));
         return;
       }
       let chosen = shared.food;
@@ -186,7 +187,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
     const code = typedCode ? normalizeGtin(typedCode) : null;
     if (typedCode && !code) {
       setSaving(false);
-      setError("That barcode isn't valid. Check the digits, or clear it.");
+      setError(t("That barcode isn't valid. Check the digits, or clear it."));
       return;
     }
     const payload = {
@@ -211,7 +212,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
       const shared = await createFoodByBarcode({ barcode: code, servingLabel: payload.serving, ...payload });
       if (!shared.ok || !shared.food) {
         setSaving(false);
-        setError(shared.message ?? "Couldn't add that barcode. Try again, or save without it.");
+        setError(shared.message ?? t("Couldn't add that barcode. Try again, or save without it."));
         return;
       }
       // One version of a product per person: the barcode lookup shows only one.
@@ -223,7 +224,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
         .limit(1);
       if (others && others.length > 0) {
         setSaving(false);
-        setError("Another of your foods already uses this barcode.");
+        setError(t("Another of your foods already uses this barcode."));
         return;
       }
       overridesFoodId = shared.food.id;
@@ -237,7 +238,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
     });
     setSaving(false);
     if (!result.ok || !result.food) {
-      setError(result.message ?? "Couldn't save that. Try again.");
+      setError(result.message ?? t("Couldn't save that. Try again."));
       return;
     }
     onSaved({ ...result.food, barcode: code });
@@ -302,13 +303,13 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
             opacity: canSave ? 1 : 0.4,
           }}
         >
-          {saving ? "Saving…" : "Save custom food"}
+          {saving ? t("Saving…") : t("Save custom food")}
         </button>
         <button
           onClick={() => setAdvOpen((v) => !v)}
           aria-pressed={advOpen}
-          title={advOpen ? "Hide advanced nutrients" : "Advanced nutrients"}
-          aria-label={advOpen ? "Hide advanced nutrients" : "Advanced nutrients"}
+          title={advOpen ? t("Hide advanced nutrients") : t("Advanced nutrients")}
+          aria-label={advOpen ? t("Hide advanced nutrients") : t("Advanced nutrients")}
           className="tap flex items-center justify-center"
           style={{
             flex: 1,
@@ -325,8 +326,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
         </button>
       </div>
       <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", textAlign: "center" }}>
-        Saved foods, scanned barcodes and logged items all go to your Food Library, and show up in search
-        alongside the database.
+        {t("Saved foods, scanned barcodes and logged items all go to your Food Library, and show up in search alongside the database.")}
       </p>
     </div>
   );
@@ -335,8 +335,8 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
     <button
       onClick={() => setAdvOpen((v) => !v)}
       aria-pressed={advOpen}
-      title={advOpen ? "Hide advanced nutrients" : "Advanced nutrients"}
-      aria-label={advOpen ? "Hide advanced nutrients" : "Advanced nutrients"}
+      title={advOpen ? t("Hide advanced nutrients") : t("Advanced nutrients")}
+      aria-label={advOpen ? t("Hide advanced nutrients") : t("Advanced nutrients")}
       className="tap flex items-center justify-center flex-none"
       style={{
         width: 60,
@@ -356,7 +356,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
     <div className="flex" style={{ gap: 8 }}>
       <button
         onClick={onDeleteRequest}
-        aria-label="Delete this food"
+        aria-label={t("Delete this food")}
         className="tap flex items-center justify-center flex-none"
         style={{ width: 60, height: 52, borderRadius: 16, background: dark ? FOOD_DARK.dangerBg : "#FCEDEC", border: `1px solid ${dark ? FOOD_DARK.dangerBorder : "#F2CFCC"}`, color: dark ? FOOD_DARK.danger : "#B4372C" }}
       >
@@ -368,7 +368,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
         className="tap flex-1 min-w-0"
         style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontWeight: 700, fontSize: textPx(15), opacity: canSave ? 1 : 0.4 }}
       >
-        {saving ? "Saving…" : "Save changes"}
+        {saving ? t("Saving…") : t("Save changes")}
       </button>
       {advancedToggle}
     </div>
@@ -376,21 +376,21 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
 
   const macroGrid = (
     <div className="grid grid-cols-2" style={{ gap: 12 }}>
-      {field("Calories", "calories", "0", true)}
-      {field("Protein (g)", "protein", "0", true)}
-      {field("Carbs (g)", "carbs", "0", true)}
-      {field("Fat (g)", "fat", "0", true)}
+      {field(t("Calories"), "calories", "0", true)}
+      {field(t("Protein (g)"), "protein", "0", true)}
+      {field(t("Carbs (g)"), "carbs", "0", true)}
+      {field(t("Fat (g)"), "fat", "0", true)}
     </div>
   );
 
   const body = (
       <div className="flex flex-col animate-fade-slide-up" style={{ gap: 16 }}>
-        {field("Food name", "name", "Mom's Kibbeh")}
-        {field("Serving size", "serving", "1 piece")}
+        {field(t("Food name"), "name", t("Mom's Kibbeh"))}
+        {field(t("Serving size"), "serving", t("1 piece"))}
 
         <div>
           <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))", marginBottom: 6 }}>
-            Logo
+            {t("Logo")}
           </span>
           <div className="flex no-scrollbar scroll-row" style={{ flexWrap: "nowrap", gap: 8, margin: "0 -20px", padding: "0 20px" }}>
             {foodCategories.map((c) => {
@@ -403,11 +403,11 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
                   // so the saved food can be told apart at a glance.
                   onClick={() =>
                     active
-                      ? setLogoTone((t) => (t + 1) % LOGO_TONES.length)
+                      ? setLogoTone((k) => (k + 1) % LOGO_TONES.length)
                       : setDraft((d) => ({ ...d, category: c.id }))
                   }
-                  aria-label={c.label}
-                  title={active ? "Tap again for another colour" : c.label}
+                  aria-label={t(c.label)}
+                  title={active ? t("Tap again for another colour") : t(c.label)}
                   className="tap flex items-center justify-center"
                   style={{
                     width: 44,
@@ -426,7 +426,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
             })}
           </div>
           <p style={{ margin: "7px 2px 0", fontSize: textPx(10), color: "rgb(var(--c-charcoal-muted))" }}>
-            Tap the selected icon again to change its colour.
+            {t("Tap the selected icon again to change its colour.")}
           </p>
         </div>
 
@@ -448,15 +448,15 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
               color: dark ? FOOD_DARK.lavDeep : "rgb(var(--thi-5f5093))",
             }}
           >
-            Barcode
+            {t("Barcode")}
           </p>
           <div className="flex" style={{ gap: 8 }}>
             <input
               value={barcode}
               onChange={(e) => setBarcode(e.target.value.replace(/[^\dA-Za-z]/g, ""))}
-              placeholder="Enter number manually"
+              placeholder={t("Enter number manually")}
               inputMode="numeric"
-              aria-label="Barcode"
+              aria-label={t("Barcode")}
               className="placeholder:text-charcoal-faint focus:outline-none"
               style={{
                 flex: 1,
@@ -473,7 +473,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
             {canUseBarcodeScanner() && (
               <button
                 onClick={() => setScanOpen(true)}
-                aria-label="Scan barcode"
+                aria-label={t("Scan barcode")}
                 className="tap flex items-center justify-center"
                 // The board's #A092E0 in light, primary-fill in dark.
                 style={{ flex: "none", width: 44, height: 40, borderRadius: 10, background: "rgb(var(--c-fill-chip))", border: "none" }}
@@ -483,19 +483,19 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
             )}
           </div>
           <p style={{ margin: "7px 2px 0", fontSize: textPx(10), color: "rgb(var(--c-charcoal-muted))" }}>
-            Optional. Adding it lets anyone scanning this pack find your food.
+            {t("Optional. Adding it lets anyone scanning this pack find your food.")}
           </p>
         </div>
 
         {/* Decision 6 (FO3.2 frame c): in edit mode the per-serving note shows
             under the barcode block; with More nutrients open it heads that list. */}
         {editing && !advOpen && (
-          <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Per serving. Leave anything you do not have blank.</p>
+          <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{t("Per serving. Leave anything you do not have blank.")}</p>
         )}
         {advOpen && (
           <div className="flex flex-col animate-fade-slide-up" style={{ gap: 8 }}>
             <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>
-              Per serving. Leave anything you do not have blank.
+              {t("Per serving. Leave anything you do not have blank.")}
             </p>
             {advGroups.map((sec) => {
               const groupOpen = !!openGroups[sec.id];
@@ -515,7 +515,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
                       border: "none",
                     }}
                   >
-                    <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12.5), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{sec.name}</span>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12.5), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{t(sec.name)}</span>
                     {filled > 0 && (
                       <span
                         style={{
@@ -527,7 +527,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
                           padding: "2px 6px",
                         }}
                       >
-                        {filled} set
+                        {t("{n} set", { n: filled })}
                       </span>
                     )}
                     <span

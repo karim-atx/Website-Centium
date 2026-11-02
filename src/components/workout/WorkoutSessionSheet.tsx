@@ -77,6 +77,7 @@ import { MusicSection } from "../music/MusicSection";
 import { providerHeading } from "../../services/music/whichMusic";
 import { playlistServiceOf } from "../../services/music/playlistLink";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tx } from "../../i18n/core";
 
 // Set-type colours (one definition, shared with WO10): see setTypeStyle.ts.
 // Super set (exercise level only) = soft coral: bracket #DB885D, badge
@@ -107,7 +108,7 @@ const sessionColor = (key: keyof typeof SESSION_COLORS, dark: boolean): string =
 
 // Rest timer: 0:30–5:00 in 15 s steps, or Off (WO8 exercise ⋮ menu).
 const REST_OPTIONS: PopupMenuOption[] = [
-  { value: "0", label: "Off" },
+  { value: "0", label: tk("Off") },
   ...Array.from({ length: 19 }, (_, i) => 30 + i * 15).map((s) => ({ value: String(s), label: formatClock(s) })),
 ];
 
@@ -115,8 +116,8 @@ const REST_OPTIONS: PopupMenuOption[] = [
 function repsPlaceholder(ex: Exercise): string {
   if (ex.minReps != null && ex.maxReps != null) return `${ex.minReps}–${ex.maxReps}`;
   if (ex.minReps != null) return `${ex.minReps}+`;
-  if (ex.maxReps != null) return `up to ${ex.maxReps}`;
-  return ex.reps != null ? String(ex.reps) : "reps";
+  if (ex.maxReps != null) return t("up to {n}", { n: ex.maxReps });
+  return ex.reps != null ? String(ex.reps) : t("reps");
 }
 
 /** A block result seeded from the block's own shape — the snapshot the row keeps. */
@@ -616,9 +617,9 @@ export const WorkoutSessionSheet: React.FC<{
   const setOptionsTitle = (exIdx: number, setIdx: number): string => {
     const sets = logged[exIdx]?.sets ?? [];
     const n = workingNumbers(sets)[setIdx];
-    if (n != null) return `Set ${n} options`;
-    const label = HANDOVER_SET_TYPES.find((t) => t.value === setKind(sets[setIdx]))?.label ?? "Set";
-    return `${label} set options`;
+    if (n != null) return t("Set {n} options", { n });
+    const label = HANDOVER_SET_TYPES.find((ty) => ty.value === setKind(sets[setIdx]))?.label;
+    return label ? t("{type} set options", { type: t(label) }) : t("Set options");
   };
 
   /** Applies a set type; false when it could not be (reps must be typed first). */
@@ -690,7 +691,7 @@ export const WorkoutSessionSheet: React.FC<{
   // picked name and library row. The swap is read back from logged vs the
   // routine, position by position (derivedSwaps), so it survives minimising
   // and resuming with no state of its own; only the typed reason is held here.
-  const coachWho = coachName ?? "Your coach";
+  const coachWho = coachName ?? t("Your coach");
   const swappedFrom = (exIdx: number): string | null => {
     const t = template.exercises[exIdx];
     const l = logged[exIdx];
@@ -763,7 +764,7 @@ export const WorkoutSessionSheet: React.FC<{
               className="flex-none"
               style={{ fontSize: textPx(9), fontWeight: 800, color: sessionColor("ssBadgeInk", dark), background: sessionColor("ssBadgeBg", dark), borderRadius: 4, padding: "1px 5px", lineHeight: linePx(13) }}
             >
-              SS
+              {t("SS")}
             </span>
           )}
           <span className="flex-1 min-w-0 truncate" style={{ fontSize: textPx(11), fontWeight: 500, color: "rgb(var(--c-charcoal-faint))" }}>
@@ -771,14 +772,14 @@ export const WorkoutSessionSheet: React.FC<{
           </span>
           <button
             onClick={(e) => setExMenu({ exIdx, anchor: e.currentTarget, view: "main" })}
-            aria-label={`${ex.name} options`}
+            aria-label={t("{name} options", { name: ex.name })}
             className="tap relative flex-none flex items-center justify-center before:absolute before:-inset-[9px] before:content-['']"
             style={{ width: 26, height: 26, color: "rgb(var(--c-charcoal-faint))" }}
           >
             <EllipsisVertical size={16} />
           </button>
           <span className="flex-none tabular-nums" style={{ fontSize: textPx(10.5), fontWeight: 500, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>
-            {exIdx + 1} of {logged.length}
+            {t("{n} of {total}", { n: exIdx + 1, total: logged.length })}
           </span>
         </div>
         {/* The divider in the folder's dark shade (WO8). */}
@@ -788,9 +789,9 @@ export const WorkoutSessionSheet: React.FC<{
           <div className="flex items-start" style={{ gap: 8, padding: "8px 14px", background: coachLoggerColor("swapBg", dark) }}>
             <Repeat2 size={13} className="flex-none" style={{ marginTop: 2, color: coachLoggerColor("swapIcon", dark) }} aria-hidden />
             <span style={{ fontSize: textPx(12), lineHeight: linePx(16), color: "rgb(var(--c-charcoal))" }}>
-              <b>Swapped for {swapFrom}</b>
+              <b>{t("Swapped for {name}", { name: swapFrom })}</b>
               {(() => {
-                const tail = [swapReasons[exIdx], coachSees ? `${coachWho} sees the swap.` : null].filter(Boolean).join(" ");
+                const tail = [swapReasons[exIdx], coachSees ? t("{name} sees the swap.", { name: coachWho }) : null].filter(Boolean).join(" ");
                 return tail ? ` · ${tail}` : null;
               })()}
             </span>
@@ -829,9 +830,9 @@ export const WorkoutSessionSheet: React.FC<{
               className="flex items-center uppercase"
               style={{ padding: "9px 15px 1px", fontSize: textPx(9.5), fontWeight: 600, letterSpacing: "0.08em", color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}
             >
-              <span style={{ width: 58 }}>Set</span>
-              <span className="flex-1">Weight (kg)</span>
-              <span className="flex-1" style={{ marginInlineStart: 8 }}>Reps</span>
+              <span style={{ width: 58 }}>{tx("Set", "workout")}</span>
+              <span className="flex-1">{t("Weight (kg)")}</span>
+              <span className="flex-1" style={{ marginInlineStart: 8 }}>{t("Reps")}</span>
               <span style={{ width: 75 }} />
             </div>
             {ex.sets.map((s, setIdx) => {
@@ -890,14 +891,14 @@ export const WorkoutSessionSheet: React.FC<{
               );
             })}
             {asked > 0 && ex.sets.some((s) => s.optional) && (
-              <p style={{ margin: "6px 15px 0", fontSize: textPx(10.5), color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{asked} asked for · the rest are yours if you want them.</p>
+              <p style={{ margin: "6px 15px 0", fontSize: textPx(10.5), color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{t("{n} asked for · the rest are yours if you want them.", { n: asked })}</p>
             )}
             <button
               onClick={() => addSet(exIdx)}
               className="tap flex items-center"
               style={{ gap: 6, margin: "8px 15px 0", fontSize: textPx(12), fontWeight: 600, color: sessionColor("addSet", dark) }}
             >
-              <Plus size={12} /> Add set
+              <Plus size={12} /> {t("Add set")}
             </button>
           </>
         )}
@@ -943,7 +944,7 @@ export const WorkoutSessionSheet: React.FC<{
     const result = await saveWorkoutSession(payload);
     setSaving(false);
     if (!result.ok) {
-      setSaveError(result.message ?? "Couldn't save this workout.");
+      setSaveError(result.message ?? t("Couldn't save this workout."));
       return;
     }
     logWorkout({
@@ -968,7 +969,7 @@ export const WorkoutSessionSheet: React.FC<{
     } else if (coachId && authUserId && routineId) {
       const sent = await readResultsSent(authUserId, routineId, payload.startedAt);
       if (sent) {
-        setResultsToast(resultsSentMessage(coachName ?? "your coach", swaps?.length ?? 0, changed));
+        setResultsToast(resultsSentMessage(coachName ?? t("your coach"), swaps?.length ?? 0, changed));
         closeAfter = 2600;
       }
     }
@@ -986,9 +987,9 @@ export const WorkoutSessionSheet: React.FC<{
   // Round E: the routine's playlist. On a coach's copy it is the coach's (it
   // came with the template); on the member's own routine, the routine's own.
   const routinePlaylist = playlistServiceOf(routineRow?.playlistUrl) ? routineRow!.playlistUrl! : null;
-  const musicProvider = routinePlaylist && coachId ? { url: routinePlaylist, heading: coachName ? providerHeading(coachName) : "Your coach's playlist" } : null;
-  const musicItem = routinePlaylist && !coachId ? { url: routinePlaylist, heading: "Routine playlist" } : null;
-  const musicLine = musicProvider?.heading ?? musicItem?.heading ?? "Play your music";
+  const musicProvider = routinePlaylist && coachId ? { url: routinePlaylist, heading: coachName ? providerHeading(coachName) : t("Your coach's playlist") } : null;
+  const musicItem = routinePlaylist && !coachId ? { url: routinePlaylist, heading: t("Routine playlist") } : null;
+  const musicLine = musicProvider?.heading ?? musicItem?.heading ?? t("Play your music");
   const exMenuEx = exMenu ? template.exercises[exMenu.exIdx] : undefined;
   const exMenuBlock = blockOf(exMenuEx);
 
@@ -1009,10 +1010,10 @@ export const WorkoutSessionSheet: React.FC<{
           }}
         >
           <div className="flex items-center" style={{ gap: 8 }}>
-            <button onClick={requestClose} aria-label="Close workout" className={circle} style={{ width: 34, height: 34, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))" }}>
+            <button onClick={requestClose} aria-label={t("Close workout")} className={circle} style={{ width: 34, height: 34, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))" }}>
               <X size={16} />
             </button>
-            <button onClick={minimise} aria-label="Minimise workout" className={circle} style={{ width: 34, height: 34, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))" }}>
+            <button onClick={minimise} aria-label={t("Minimise workout")} className={circle} style={{ width: 34, height: 34, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))" }}>
               <ChevronDown size={17} />
             </button>
           </div>
@@ -1024,10 +1025,10 @@ export const WorkoutSessionSheet: React.FC<{
             </p>
             <p className="tabular-nums" style={{ margin: 0, fontSize: textPx(10.5), fontWeight: 500, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93"), lineHeight: linePx(14) }}>
               {started
-                ? `Started ${clock12(startedAt)} · ${formatDuration(elapsed)} elapsed`
+                ? t("Started {time} · {elapsed} elapsed", { time: clock12(startedAt), elapsed: formatDuration(elapsed) })
                 : elapsed > 0
-                ? `Paused · ${formatDuration(elapsed)} elapsed`
-                : "Not started"}
+                ? t("Paused · {elapsed} elapsed", { elapsed: formatDuration(elapsed) })
+                : t("Not started")}
             </p>
             {coachId && (
               // CU1 v5: "From Alex" under the status, 10.5/700 in the folder's
@@ -1038,7 +1039,7 @@ export const WorkoutSessionSheet: React.FC<{
                   style={{ gap: 4, fontSize: textPx(10.5), fontWeight: 700, lineHeight: linePx(14), color: dark ? liftTo(family.tile, DARK_SURFACE.page) : family.tile }}
                 >
                   <CoachAvatar name={coachWho} avatarUrl={coachAvatar} size={14} tone="teal" />
-                  From {coachName ?? "your coach"}
+                  {t("From {name}", { name: coachName ?? t("your coach") })}
                 </span>
               </p>
             )}
@@ -1052,10 +1053,10 @@ export const WorkoutSessionSheet: React.FC<{
             </div>
           </div>
           <div className="flex items-center justify-end" style={{ gap: 8 }}>
-            {finished && savedSession && <ShareEntryButton label="Share your workout" onPress={shareSaved} style={{ margin: -5 }} />}
+            {finished && savedSession && <ShareEntryButton label={t("Share your workout")} onPress={shareSaved} style={{ margin: -5 }} />}
             <button
               onClick={toggleClock}
-              aria-label={started ? "Pause elapsed time" : "Start elapsed time"}
+              aria-label={started ? t("Pause elapsed time") : t("Start elapsed time")}
               className={circle}
               style={{ width: 34, height: 34, background: family.play, color: "#FFFFFF" }}
             >
@@ -1068,7 +1069,7 @@ export const WorkoutSessionSheet: React.FC<{
                 // Opening the note clears its unread dot (WO25).
                 if (noteUnread && routineRow) markCoachNoteRead(routineRow.id);
               }}
-              aria-label={noteUnread ? "Coach's note, unread" : "Coach's note"}
+              aria-label={noteUnread ? t("Coach's note, unread") : t("Coach's note")}
               className={circle}
               style={{ width: 34, height: 34, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-faint))" }}
             >
@@ -1094,7 +1095,7 @@ export const WorkoutSessionSheet: React.FC<{
               <span className="flex-1 min-w-0 truncate" style={{ fontSize: textPx(13), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
                 {musicLine}
               </span>
-              <ChevronRight size={16} aria-hidden style={{ color: "rgb(var(--c-charcoal-faint))" }} />
+              <ChevronRight size={16} aria-hidden className="rtl:-scale-x-100" style={{ color: "rgb(var(--c-charcoal-faint))" }} />
             </button>
             {groupIntoRuns(template.exercises, template.blocks).map((run) => {
               const indices = run.members.map((m) => template.exercises.indexOf(m));
@@ -1155,7 +1156,7 @@ export const WorkoutSessionSheet: React.FC<{
               >
                 <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{ex.name}</p>
                 <p style={{ margin: "2px 0 8px", fontSize: textPx(11), color: "rgb(var(--c-charcoal-faint))" }}>
-                  Removed from this routine · logged sets are kept
+                  {t("Removed from this routine · logged sets are kept")}
                 </p>
                 <p className="tabular-nums" style={{ margin: 0, fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-soft))" }}>
                   {ex.sets
@@ -1175,10 +1176,10 @@ export const WorkoutSessionSheet: React.FC<{
           <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
             <div>
               <p className="uppercase" style={{ margin: 0, fontSize: textPx(10), fontWeight: 700, letterSpacing: "0.1em", color: "rgb(var(--c-charcoal-faint))" }}>
-                Total volume
+                {t("Total volume")}
               </p>
               <p className="tabular-nums" style={{ margin: 0, fontSize: textPx(24), fontWeight: 800, color: "rgb(var(--c-charcoal))", letterSpacing: "-0.03em", lineHeight: linePx(30) }}>
-                {totalVolume.toLocaleString(appLocale())} kg
+                {`${totalVolume.toLocaleString(appLocale())} kg`}
               </p>
             </div>
             <div className="flex items-center" style={{ gap: 8 }}>
@@ -1187,11 +1188,11 @@ export const WorkoutSessionSheet: React.FC<{
                 className="tap flex items-center justify-center"
                 style={{ gap: 6, height: 32, padding: "0 12px", borderRadius: 16, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(12), fontWeight: 600 }}
               >
-                <Calculator size={13} /> RPE
+                <Calculator size={13} /> {t("RPE")}
               </button>
               <button
                 onClick={() => setPlateCalcOpen(true)}
-                aria-label="Plate calculator"
+                aria-label={t("Plate calculator")}
                 className="tap flex items-center justify-center rounded-full"
                 style={{ width: 32, height: 32, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))" }}
               >
@@ -1211,12 +1212,12 @@ export const WorkoutSessionSheet: React.FC<{
             style={{ gap: 8, height: 52, borderRadius: 14, background: dark ? playText(family) : family.play, color: "#FFFFFF", fontSize: textPx(15), fontWeight: 700 }}
           >
             {finished ? (
-              "Workout Saved ✓"
+              t("Workout Saved ✓")
             ) : saving ? (
-              "Saving…"
+              t("Saving…")
             ) : (
               <>
-                <Square size={14} /> {saveError ? "Try again" : "Finish Workout"}
+                <Square size={14} /> {saveError ? t("Try again") : t("Finish Workout")}
               </>
             )}
           </button>
@@ -1238,9 +1239,9 @@ export const WorkoutSessionSheet: React.FC<{
         variant="filled"
         selected={typeMenu ? setKind(logged[typeMenu.exIdx].sets[typeMenu.setIdx]) : null}
         onSelect={(v) => typeMenu && setType(typeMenu.exIdx, typeMenu.setIdx, v as HandoverSetType)}
-        options={HANDOVER_SET_TYPES.map((t) => ({
-          value: t.value,
-          label: t.label,
+        options={HANDOVER_SET_TYPES.map((ty) => ({
+          value: ty.value,
+          label: t(ty.label),
           icon: (
             <span
               style={{
@@ -1248,7 +1249,7 @@ export const WorkoutSessionSheet: React.FC<{
                 width: 8,
                 height: 8,
                 borderRadius: 4,
-                background: t.value === "normal" ? family.play : typeStyles(dark)[t.value].dot,
+                background: ty.value === "normal" ? family.play : typeStyles(dark)[ty.value].dot,
                 boxShadow: "0 0 0 1.5px rgb(var(--c-cream-card))",
               }}
             />
@@ -1275,22 +1276,22 @@ export const WorkoutSessionSheet: React.FC<{
           if (v === "unswap") undoSwap(exMenu.exIdx);
         }}
         options={[
-          { value: "note", label: "Pinned note", icon: <Pin size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} /> },
+          { value: "note", label: t("Pinned note"), icon: <Pin size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} /> },
           {
             value: "rest",
-            label: "Rest timer",
+            label: t("Rest timer"),
             icon: <Timer size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} />,
             trailing: (
               <span className="tabular-nums" style={{ fontSize: textPx(12), fontWeight: 600, color: playInk(family, dark) }}>
-                {exMenuEx?.restSeconds ? formatClock(exMenuEx.restSeconds) : "Off"}
+                {exMenuEx?.restSeconds ? formatClock(exMenuEx.restSeconds) : t("Off")}
               </span>
             ),
           },
           exMenuBlock?.kind === "superset"
-            ? { value: "unpair", label: "Remove super set", icon: <Unlink size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} /> }
+            ? { value: "unpair", label: t("Remove super set"), icon: <Unlink size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} /> }
             : {
                 value: "superset",
-                label: "Super set",
+                label: t("Super set"),
                 icon: <Link2 size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} />,
                 disabled: !exMenu || !!exMenuBlock || partnersFor(exMenu.exIdx).length === 0,
               },
@@ -1298,8 +1299,8 @@ export const WorkoutSessionSheet: React.FC<{
           ...(coachId && exMenu && exMenuEx && !exMenuEx.endurancePlan
             ? [
                 swappedFrom(exMenu.exIdx)
-                  ? { value: "unswap", label: "Undo swap", icon: <Undo2 size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} /> }
-                  : { value: "swap", label: "Swap exercise", icon: <Repeat2 size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} /> },
+                  ? { value: "unswap", label: t("Undo swap"), icon: <Undo2 size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} /> }
+                  : { value: "swap", label: t("Swap exercise"), icon: <Repeat2 size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} /> },
               ]
             : []),
         ]}
@@ -1309,17 +1310,17 @@ export const WorkoutSessionSheet: React.FC<{
         onClose={() => setExMenu(null)}
         anchor={exMenu?.anchor ?? null}
         width={176}
-        heading="Rest timer"
+        heading={t("Rest timer")}
         selected={String(exMenuEx?.restSeconds ?? 0)}
         onSelect={(v) => exMenu && patchExercise(exMenu.exIdx, { restSeconds: Number(v) || undefined })}
-        options={REST_OPTIONS}
+        options={REST_OPTIONS.map((o) => (o.value === "0" ? { ...o, label: t(o.label) } : o))}
       />
       <PopupMenu
         open={!!exMenu && exMenu.view === "superset"}
         onClose={() => setExMenu(null)}
         anchor={exMenu?.anchor ?? null}
         width={176}
-        heading="Super set with"
+        heading={t("Super set with")}
         onSelect={(v) => exMenu && pairSuperset(exMenu.exIdx, Number(v))}
         options={exMenu ? partnersFor(exMenu.exIdx).map((i) => ({ value: String(i), label: template.exercises[i].name })) : []}
       />
@@ -1327,7 +1328,7 @@ export const WorkoutSessionSheet: React.FC<{
       <BottomSheet
         open={!!pinEditor}
         onClose={() => setPinEditor(null)}
-        title="Pinned note"
+        title={t("Pinned note")}
         footer={
           <Button
             fullWidth
@@ -1338,14 +1339,14 @@ export const WorkoutSessionSheet: React.FC<{
               setPinEditor(null);
             }}
           >
-            Save
+            {t("Save")}
           </Button>
         }
       >
         <textarea
           value={pinEditor?.text ?? ""}
           onChange={(e) => setPinEditor((p) => (p ? { ...p, text: e.target.value.slice(0, 500) } : p))}
-          placeholder="e.g. Pin safety rack at level 3"
+          placeholder={t("e.g. Pin safety rack at level 3")}
           rows={3}
           className="w-full bg-transparent focus:outline-none"
           style={{ border: `1px solid ${sessionColor("fieldBorder", dark)}`, borderRadius: 12, padding: "10px 12px", fontSize: textPx(14), color: "rgb(var(--c-charcoal))", resize: "none" }}
@@ -1390,9 +1391,9 @@ export const WorkoutSessionSheet: React.FC<{
         <div className="fixed inset-0 z-[60] flex items-center justify-center px-6">
           <div className="absolute inset-0 bg-charcoal/40" onClick={() => setEmptyFinishOpen(false)} />
           <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
-            <p className="font-display font-semibold text-lg text-charcoal mb-1.5">Nothing logged yet</p>
+            <p className="font-display font-semibold text-lg text-charcoal mb-1.5">{t("Nothing logged yet")}</p>
             <p className="text-sm text-charcoal-soft mb-5">
-              No sets are checked off, so there's nothing to save. Exiting without logging this workout.
+              {t("No sets are checked off, so there's nothing to save. Exiting without logging this workout.")}
             </p>
             <Button
               fullWidth
@@ -1403,7 +1404,7 @@ export const WorkoutSessionSheet: React.FC<{
                 onClose();
               }}
             >
-              Exit routine
+              {t("Exit routine")}
             </Button>
           </div>
         </div>
@@ -1423,7 +1424,7 @@ export const WorkoutSessionSheet: React.FC<{
       <BottomSheet
         open={!!swapReason}
         onClose={() => setSwapReason(null)}
-        title="Swap exercise"
+        title={t("Swap exercise")}
         footer={
           <Button
             fullWidth
@@ -1433,29 +1434,29 @@ export const WorkoutSessionSheet: React.FC<{
               setSwapReason(null);
             }}
           >
-            Swap
+            {t("Swap")}
           </Button>
         }
       >
         {swapReason && (
           <div className="flex flex-col" style={{ gap: 8 }}>
             <p style={{ margin: 0, fontSize: textPx(13.5), color: "rgb(var(--c-charcoal))" }}>
-              {template.exercises[swapReason.exIdx]?.name} for {swapReason.pick.name}, this session only.
+              {t("{from} for {to}, this session only.", { from: template.exercises[swapReason.exIdx]?.name ?? "", to: swapReason.pick.name })}
             </p>
             <label htmlFor="swap-reason" style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>
-              Reason (optional)
+              {t("Reason (optional)")}
             </label>
             <input
               id="swap-reason"
               value={swapReason.text}
               maxLength={SWAP_REASON_MAX}
               onChange={(e) => setSwapReason((r) => (r ? { ...r, text: e.target.value.slice(0, SWAP_REASON_MAX) } : r))}
-              placeholder="e.g. The rack was taken."
+              placeholder={t("e.g. The rack was taken.")}
               className="w-full bg-transparent focus:outline-none"
               style={{ border: `1px solid ${sessionColor("fieldBorder", dark)}`, borderRadius: 12, padding: "10px 12px", fontSize: textPx(14), color: "rgb(var(--c-charcoal))" }}
             />
             {coachSees && (
-              <p style={{ margin: 0, fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>{coachWho} sees the swap and your reason.</p>
+              <p style={{ margin: 0, fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>{t("{name} sees the swap and your reason.", { name: coachWho })}</p>
             )}
           </div>
         )}
@@ -1478,7 +1479,7 @@ export const WorkoutSessionSheet: React.FC<{
         </div>
       )}
 
-      <BottomSheet open={musicOpen} onClose={() => setMusicOpen(false)} title="Music">
+      <BottomSheet open={musicOpen} onClose={() => setMusicOpen(false)} title={t("Music")}>
         <MusicSection moment="workout" provider={musicProvider} item={musicItem} />
       </BottomSheet>
 
@@ -1495,14 +1496,14 @@ export const WorkoutSessionSheet: React.FC<{
         <div className="fixed inset-0 z-[60] flex items-center justify-center px-6">
           <div className="absolute inset-0 bg-charcoal/40" onClick={() => setQuitConfirmOpen(false)} />
           <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
-            <p className="font-display font-semibold text-lg text-charcoal mb-1.5">Quit workout?</p>
-            <p className="text-sm text-charcoal-soft mb-5">Your progress will be saved. You can resume this workout anytime.</p>
+            <p className="font-display font-semibold text-lg text-charcoal mb-1.5">{t("Quit workout?")}</p>
+            <p className="text-sm text-charcoal-soft mb-5">{t("Your progress will be saved. You can resume this workout anytime.")}</p>
             <div className="flex gap-2.5">
               <Button variant="outline" fullWidth onClick={() => setQuitConfirmOpen(false)}>
-                Keep going
+                {t("Keep going")}
               </Button>
               <Button fullWidth variant="teal" onClick={confirmQuit}>
-                Quit
+                {t("Quit")}
               </Button>
             </div>
           </div>
@@ -1566,10 +1567,10 @@ const SetRow: React.FC<{
 }> = ({ rowRef, set: s, number, separator, family, shades, weightPlaceholder, repsPlaceholder, justTicked, tickKey, needsReps, onChange, onType, onCheck, onOptions, target, setTarget, targetColor, offColor }) => {
   const dark = useIsDark();
   const kind = setKind(s);
-  const t = kind === "normal" ? null : typeStyles(dark)[kind];
-  const field = t?.field ?? shades.field;
-  const border = t?.border ?? shades.fieldBorder;
-  const ink = t?.ink ?? shades.ink;
+  const ty = kind === "normal" ? null : typeStyles(dark)[kind];
+  const field = ty?.field ?? shades.field;
+  const border = ty?.border ?? shades.fieldBorder;
+  const ink = ty?.ink ?? shades.ink;
   const muted = !!s.optional && !s.completed && s.outcome == null;
   const done = s.completed || s.outcome === "failed";
   const inputStyle: React.CSSProperties = {
@@ -1594,34 +1595,34 @@ const SetRow: React.FC<{
       className={clsx("relative flex flex-wrap items-center", justTicked && "animate-set-row-settle")}
       style={{
         padding: "5px 15px",
-        background: t?.row ?? "transparent",
+        background: ty?.row ?? "transparent",
         borderTop: separator ? "1px solid rgb(var(--c-charcoal) / 0.05)" : undefined,
         opacity: muted ? 0.62 : 1,
-        ["--settle-from" as string]: t?.row && t.row !== "transparent" ? t.row : shades.banner,
-        ["--settle-to" as string]: t?.row ?? "transparent",
+        ["--settle-from" as string]: ty?.row && ty.row !== "transparent" ? ty.row : shades.banner,
+        ["--settle-to" as string]: ty?.row ?? "transparent",
       }}
     >
       {kind === "pr" && <span aria-hidden className="absolute start-0 top-0 bottom-0" style={{ width: 3, background: PR_BAR }} />}
       <button
         onClick={(e) => onType(e.currentTarget)}
-        aria-label={`Set ${label} type: ${HANDOVER_SET_TYPES.find((x) => x.value === kind)?.label}`}
+        aria-label={t("Set {label} type: {type}", { label, type: t(HANDOVER_SET_TYPES.find((x) => x.value === kind)?.label ?? "") })}
         className="tap relative flex-none flex items-center before:absolute before:-inset-y-[7px] before:inset-x-0 before:content-['']"
         style={{ width: 40, height: 31, borderInlineEnd: "none" }}
       >
         <span className="flex items-center" style={{ gap: 2 }}>
           {number !== null ? (
             <span className="flex flex-col items-center" style={{ lineHeight: 1 }}>
-              <span className="tabular-nums" style={{ fontSize: textPx(14), fontWeight: 700, color: t?.label ?? "rgb(var(--c-charcoal-faint))" }}>
+              <span className="tabular-nums" style={{ fontSize: textPx(14), fontWeight: 700, color: ty?.label ?? "rgb(var(--c-charcoal-faint))" }}>
                 {number}
               </span>
-              {t && (
-                <span style={{ fontSize: textPx(7.5), fontWeight: 800, color: t.label, marginTop: 1 }}>{t.short}</span>
+              {ty && (
+                <span style={{ fontSize: textPx(7.5), fontWeight: 800, color: ty.label, marginTop: 1 }}>{tx(ty.short, "set badge")}</span>
               )}
             </span>
           ) : (
-            <span style={{ fontSize: textPx(10.5), fontWeight: 600, color: t?.label }}>{t?.short}</span>
+            <span style={{ fontSize: textPx(10.5), fontWeight: 600, color: ty?.label }}>{ty ? tx(ty.short, "set badge") : null}</span>
           )}
-          <ChevronDown size={10} style={{ color: t?.label ?? (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }} />
+          <ChevronDown size={10} style={{ color: ty?.label ?? (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }} />
         </span>
         <span aria-hidden className="absolute end-0" style={{ top: 7, bottom: 7, width: 1, background: sessionColor("divider", dark) }} />
       </button>
@@ -1630,7 +1631,7 @@ const SetRow: React.FC<{
           value={s.weightKg}
           onChange={(weightKg) => onChange({ weightKg })}
           placeholder={weightPlaceholder}
-          ariaLabel={`Set ${label} weight`}
+          ariaLabel={t("Set {label} weight", { label })}
           style={inputStyle}
         />
         <input
@@ -1638,7 +1639,7 @@ const SetRow: React.FC<{
           onChange={(e) => onChange({ reps: Number(e.target.value) || 0 })}
           placeholder={repsPlaceholder}
           inputMode="numeric"
-          aria-label={`Set ${label} reps`}
+          aria-label={t("Set {label} reps", { label })}
           aria-invalid={needsReps || undefined}
           aria-describedby={needsReps ? `need-reps-${label}` : undefined}
           data-field="reps"
@@ -1648,7 +1649,7 @@ const SetRow: React.FC<{
       </div>
       <button
         onClick={onOptions}
-        aria-label={`Set ${label} options`}
+        aria-label={t("Set {label} options", { label })}
         className="tap relative flex-none flex items-center justify-center before:absolute before:-inset-[8px] before:content-['']"
         style={{ width: 28, height: 28, marginInlineStart: 8, color: s.notes || s.rpe ? playInk(family, dark) : "rgb(var(--c-charcoal-faint))" }}
       >
@@ -1667,7 +1668,7 @@ const SetRow: React.FC<{
           onClick={onCheck}
           aria-pressed={done}
           aria-disabled={kind === "skipped"}
-          aria-label={`Mark set ${label} complete`}
+          aria-label={t("Mark set {label} complete", { label })}
           className={clsx(
             "tap relative w-7 h-7 rounded-full flex items-center justify-center before:absolute before:-inset-[8px] before:content-['']",
             justTicked && "animate-set-tick"
@@ -1688,7 +1689,7 @@ const SetRow: React.FC<{
           style={{ marginBlock: "2px 1px", marginInline: "58px 0", fontSize: textPx(10.5), lineHeight: linePx(14), fontWeight: target.off ? 700 : 500, color: target.off ? offColor : targetColor }}
         >
           {target.text}
-          {target.off ? ` · logged ${target.off}` : ""}
+          {target.off ? ` · ${t("logged {value}", { value: target.off })}` : ""}
         </p>
       )}
       {setTarget && (
@@ -1699,7 +1700,7 @@ const SetRow: React.FC<{
       )}
       {needsReps && (
         <p id={`need-reps-${label}`} role="alert" className="basis-full" style={{ marginBlock: "4px 0", marginInline: "58px 0", fontSize: textPx(10.5), fontWeight: 600, color: sessionColor("danger", dark) }}>
-          Enter the reps you did to log this set.
+          {t("Enter the reps you did to log this set.")}
         </p>
       )}
     </div>

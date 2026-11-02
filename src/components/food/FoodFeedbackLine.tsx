@@ -6,6 +6,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { replyToFeedback, type EntryFeedback } from "../../services/nutrition/client";
 import { feedbackText, REPLY_MAX } from "../../services/nutrition/clientNutritionModel";
 import { ProAvatar } from "./MealPlanCard";
+import { t } from "../../i18n/core";
 
 const REACTION_ICON = { like: ThumbsUp, love: Heart, strong: Dumbbell, question: CircleHelp } as const;
 
@@ -25,7 +26,7 @@ export function FoodFeedbackLine({ f, onReplied }: { f: EntryFeedback; onReplied
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const name = f.professionalName || "Your professional";
+  const name = f.professionalName || t("Your professional");
   const Icon = f.reaction ? REACTION_ICON[f.reaction as keyof typeof REACTION_ICON] : null;
   const text = feedbackText(f);
 
@@ -57,7 +58,7 @@ export function FoodFeedbackLine({ f, onReplied }: { f: EntryFeedback; onReplied
           <b style={{ color: "rgb(var(--c-charcoal))" }}>{name}</b> {text}
           {f.clientReply && (
             <span className="block" style={{ marginTop: 4, color: "rgb(var(--c-charcoal-muted))" }}>
-              <b style={{ color: "rgb(var(--c-charcoal-soft))" }}>You:</b> {f.clientReply}
+              <b style={{ color: "rgb(var(--c-charcoal-soft))" }}>{t("You:")}</b> {f.clientReply}
             </span>
           )}
         </span>
@@ -65,11 +66,11 @@ export function FoodFeedbackLine({ f, onReplied }: { f: EntryFeedback; onReplied
           <button
             type="button"
             onClick={() => setOpen(true)}
-            aria-label={`Reply to ${name}`}
+            aria-label={t("Reply to {name}", { name })}
             className="tap relative shrink-0 text-primary-deep-text before:absolute before:-inset-[12px] before:content-['']"
             style={{ fontSize: textPx(11), fontWeight: 700 }}
           >
-            Reply
+            {t("Reply")}
           </button>
         )}
       </div>
@@ -77,7 +78,7 @@ export function FoodFeedbackLine({ f, onReplied }: { f: EntryFeedback; onReplied
       <BottomSheet
         open={open}
         onClose={() => setOpen(false)}
-        title={`Reply to ${name}`}
+        title={t("Reply to {name}", { name })}
         footer={
           <div>
             {error && (
@@ -92,7 +93,7 @@ export function FoodFeedbackLine({ f, onReplied }: { f: EntryFeedback; onReplied
               className="tap w-full inline-flex items-center justify-center disabled:opacity-50"
               style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15), fontWeight: 700 }}
             >
-              {busy ? "Sending…" : "Send reply"}
+              {busy ? t("Sending…") : t("Send reply")}
             </button>
           </div>
         }
@@ -105,8 +106,8 @@ export function FoodFeedbackLine({ f, onReplied }: { f: EntryFeedback; onReplied
           onChange={(e) => setDraft(e.target.value.slice(0, REPLY_MAX))}
           maxLength={REPLY_MAX}
           rows={4}
-          aria-label="Your reply"
-          placeholder="Your reply"
+          aria-label={t("Your reply")}
+          placeholder={t("Your reply")}
           className="w-full focus:outline-none focus:ring-2 focus:ring-primary/20"
           style={{ resize: "none", borderRadius: 12, padding: "10px 12px", background: "rgb(var(--c-cream-soft))", border: "1px solid rgb(var(--c-charcoal) / 0.10)", fontSize: textPx(14), color: "rgb(var(--c-charcoal))" }}
         />

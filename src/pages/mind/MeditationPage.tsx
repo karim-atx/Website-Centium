@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { MindHeader } from "../../components/mind/MindHeader";
 import { BreathingRunner } from "../../components/mind/BreathingRunner";
@@ -6,6 +6,7 @@ import { PoseSequence, type Pose } from "../../components/mind/PoseSequence";
 import { MusicSection } from "../../components/music/MusicSection";
 import { useApp } from "../../context/AppContext";
 import { breathingPatterns, stretchList, yogaPoses } from "../../data/mockMindContent";
+import { t, tk } from "../../i18n/core";
 
 type SubTab = "breathing" | "stretching" | "yoga";
 
@@ -33,15 +34,24 @@ const difficultyColor: Record<string, string> = {
   advanced: "text-[#C0392B] bg-[#FBE7E4] dark:text-[#FF6B5E] dark:bg-[#3C2A30]",
 };
 
+// The level words are UI (the pose content around them stays English, F13).
+const DIFFICULTY_LABEL: Record<string, string> = {
+  beginner: tk("Beginner"),
+  intermediate: tk("Intermediate"),
+  advanced: tk("Advanced"),
+};
+
 const IDLE_INK = "rgb(var(--c-charcoal-soft))";
 
 /** Yoga poses have no durations in the content (their ring reads "Hold"); K5. */
 const YOGA_SECONDS = 30;
 
-const stretches: Pose[] = stretchList.map((s) => ({
+// Built when shown, so the seconds' unit follows the language (target and
+// type are content and stay English, F13).
+const stretchPoses = (): Pose[] => stretchList.map((s) => ({
   id: s.id,
   name: s.name,
-  meta: `${s.target} · ${s.type} · ${s.seconds}s`,
+  meta: `${s.target} · ${s.type} · ${t("{n}s", { n: s.seconds })}`,
   seconds: s.seconds,
   instructions: s.instructions,
   art: s.art,
@@ -54,7 +64,7 @@ const poses: Pose[] = yogaPoses.map((p) => ({
   seconds: YOGA_SECONDS,
   instructions: p.instructions,
   art: p.art,
-  difficulty: { label: p.difficulty, className: difficultyColor[p.difficulty] },
+  difficulty: { label: DIFFICULTY_LABEL[p.difficulty] ?? p.difficulty, className: difficultyColor[p.difficulty] },
 }));
 
 export default function MeditationPage() {
@@ -62,6 +72,8 @@ export default function MeditationPage() {
   const [subTab, setSubTab] = useState<SubTab>("breathing");
   const [patternId, setPatternId] = useState(breathingPatterns[0].id);
   const pattern = breathingPatterns.find((p) => p.id === patternId)!;
+  // Kept stable across renders (the sequence's timer effect depends on it).
+  const stretches = useMemo(() => stretchPoses(), []);
   // O6: tab labels never wrap under Larger text; the pattern row scrolls sideways.
   const larger = accessibility.largerText;
 
@@ -74,9 +86,9 @@ export default function MeditationPage() {
           {/* #6-#7: 358 × 56 track, 112 × 44 tabs, 12.5/15 700. */}
           <SegmentedTabs
             items={[
-              { key: "breathing", label: "Breathing" },
-              { key: "stretching", label: "Stretching" },
-              { key: "yoga", label: "Yoga" },
+              { key: "breathing", label: t("Breathing") },
+              { key: "stretching", label: t("Stretching") },
+              { key: "yoga", label: t("Yoga") },
             ]}
             activeKey={subTab}
             onChange={(k) => setSubTab(k as SubTab)}

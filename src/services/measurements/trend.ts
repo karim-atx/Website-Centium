@@ -1,3 +1,4 @@
+import { t, tk, tx } from "../../i18n/core";
 // Handover 2026-09-29 WO16: which colour a measurement's chart and change
 // summary take, and the change summary itself. Pure, so it is tested without
 // a database.
@@ -16,11 +17,16 @@
 export type MeasurementGoal = "decrease" | "increase" | "maintain";
 
 export const GOAL_LABEL: Record<MeasurementGoal | "none", string> = {
-  decrease: "Decrease",
-  increase: "Increase",
+  decrease: tk("Decrease"),
+  increase: tk("Increase"),
+  // Shown through goalLabel(), where "Maintain" reads as holding a measurement.
   maintain: "Maintain",
-  none: "No goal",
+  none: tk("No goal"),
 };
+
+/** A goal's name in the app's language ("Maintain" in its measurement sense). */
+export const goalLabel = (goal: MeasurementGoal | "none"): string =>
+  goal === "maintain" ? tx("Maintain", "measurement goal") : t(GOAL_LABEL[goal]);
 
 /** 02 "Goal colours (WO16)". */
 export const GOAL_COLOR = {
@@ -66,5 +72,5 @@ export function changeSummary(
   const last = readings[readings.length - 1].value;
   const first = readings[0];
   const prev = readings[readings.length - 2].value;
-  return `${changeText(last - first.value, unit)} since ${first.label} · ${changeText(last - prev, unit)} since last`;
+  return t("{change} since {date} · {last} since last", { change: changeText(last - first.value, unit), date: first.label, last: changeText(last - prev, unit) });
 }

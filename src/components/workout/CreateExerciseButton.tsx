@@ -2,6 +2,7 @@ import React from "react";
 import { Plus } from "lucide-react";
 import { linePx, textPx } from "../../theme/textSize";
 import { useLibraryInk } from "./LibraryParts";
+import { t } from "../../i18n/core";
 
 /**
  * "+ Create exercise", handover 2026-09-29 WO2.1 / v6 WO2 #12-#13 (the
@@ -27,7 +28,7 @@ export const CreateExerciseButton: React.FC<{ onClick: () => void; compact?: boo
         className="tap flex items-center shrink-0 bg-th-f0edf9 dark:bg-th-303141 disabled:opacity-50"
         style={{ height: 42, borderRadius: 14, padding: "0 12px", gap: 4, color: ink, fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 700 }}
       >
-        <Plus size={13} strokeWidth={2.4} /> Create
+        <Plus size={13} strokeWidth={2.4} /> {t("Create")}
       </button>
     );
   }
@@ -39,7 +40,7 @@ export const CreateExerciseButton: React.FC<{ onClick: () => void; compact?: boo
       className="tap flex items-center shrink-0 disabled:opacity-50"
       style={{ height: 34, borderRadius: 12, padding: "0 16px", gap: 8, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 700 }}
     >
-      <Plus size={13} strokeWidth={2.4} /> Create exercise
+      <Plus size={13} strokeWidth={2.4} /> {t("Create exercise")}
     </button>
   );
 };

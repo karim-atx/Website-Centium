@@ -16,6 +16,7 @@ import {
 import clsx from "clsx";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 // Mobile v5.1 R3 (no light islands): the plan box's pale lavender has no
 // token of the same light value; dark is primary.tint.2 on the card
@@ -92,7 +93,7 @@ export const EnduranceRunner: React.FC<{
       >
         <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
           <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-charcoal-faint">
-            The plan
+            {t("The plan")}
           </span>
           <span className="flex items-center" style={{ gap: 6 }}>
             <span className="tabular-nums text-[13px] font-bold text-charcoal">{formatClock(elapsed)}</span>
@@ -104,14 +105,14 @@ export const EnduranceRunner: React.FC<{
                 setNow(Date.now());
                 onStarted();
               }}
-              aria-label={isRunning(watch) ? "Pause the stopwatch" : "Start the stopwatch"}
+              aria-label={isRunning(watch) ? t("Pause the stopwatch") : t("Start the stopwatch")}
               className="tap w-7 h-7 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center"
             >
               {isRunning(watch) ? <Pause size={12} fill="white" /> : <Play size={12} fill="white" />}
             </button>
             <button
               onClick={() => setWatch(stoppedStopwatch())}
-              aria-label="Reset the stopwatch"
+              aria-label={t("Reset the stopwatch")}
               className="tap w-7 h-7 rounded-full bg-cream-soft text-charcoal-soft flex items-center justify-center"
             >
               <RotateCcw size={12} />
@@ -152,37 +153,37 @@ export const EnduranceRunner: React.FC<{
           className="tap text-[11px] font-semibold text-primary disabled:opacity-40"
           style={{ marginTop: 4, padding: "2px 8px" }}
         >
-          Next step
+          {t("Next step")}
         </button>
       </div>
 
       <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-charcoal-faint mb-1.5">
-        What you actually did
+        {t("What you actually did")}
       </p>
       <div className="flex flex-wrap" style={{ gap: 8 }}>
         <Field
-          label="Time"
-          placeholder="mm:ss"
+          label={t("Time")}
+          placeholder={t("mm:ss")}
           value={result?.duration_seconds ? formatClock(result.duration_seconds) : ""}
           onChange={(raw) => patch({ duration_seconds: parseClock(raw) })}
           hint={elapsed > 0 ? formatClock(elapsed) : undefined}
           onHint={() => patch({ duration_seconds: elapsed })}
         />
         <Field
-          label="Distance (m)"
+          label={t("Distance (m)")}
           placeholder=""
           value={result?.distance_meters ? String(result.distance_meters) : ""}
           onChange={(raw) => patch({ distance_meters: digits(raw) })}
         />
         <Field
-          label="Avg HR"
-          placeholder="optional"
+          label={t("Avg HR")}
+          placeholder={t("optional")}
           value={result?.avg_hr ? String(result.avg_hr) : ""}
           onChange={(raw) => patch({ avg_hr: digits(raw) })}
         />
         {planned > 0 && (
           <Field
-            label={`Intervals (of ${planned})`}
+            label={t("Intervals (of {n})", { n: planned })}
             placeholder={String(planned)}
             value={result?.intervals_completed != null ? String(result.intervals_completed) : ""}
             onChange={(raw) => patch({ intervals_completed: digits(raw) })}
@@ -191,12 +192,21 @@ export const EnduranceRunner: React.FC<{
       </div>
       {result?.avg_pace_sec_per_km ? (
         <p className="text-[11px] text-charcoal-soft" style={{ marginTop: 6 }}>
-          {formatDistance(result.distance_meters ?? 0)} at{" "}
-          <strong>{formatClock(result.avg_pace_sec_per_km)} /km</strong> average.
+          {(() => {
+            // The pace stays bold inside the translated sentence.
+            const [before, after] = t("{distance} at {pace} average.", { distance: formatDistance(result.distance_meters ?? 0) }).split("{pace}");
+            return (
+              <>
+                {before}
+                <strong>{`${formatClock(result.avg_pace_sec_per_km)} /km`}</strong>
+                {after}
+              </>
+            );
+          })()}
         </p>
       ) : (
         <p className="text-[10.5px] text-charcoal-faint" style={{ marginTop: 6 }}>
-          Pace is worked out from the time and distance.
+          {t("Pace is worked out from the time and distance.")}
         </p>
       )}
     </div>

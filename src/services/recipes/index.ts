@@ -5,6 +5,7 @@ import { findCatalogFoodByName, isUuid } from "../food";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
 import type { Recipe, RecipeItem, Food, ServingUnit } from "../../types";
+import { t } from "../../i18n/core";
 
 // Recipe DEFINITIONS. Mirrors src/services/custom-meals/index.ts exactly —
 // same "this file is the opposite of ../food's snapshot rule" doctrine
@@ -38,9 +39,9 @@ async function resolveItemSource(
 }
 
 function describe(error: PostgrestError): string {
-  if (error.code === "42501") return "You don't have permission to do that.";
+  if (error.code === "42501") return t("You don't have permission to do that.");
   if (isOffline(error)) return OFFLINE_MESSAGE;
-  return "Something went wrong. Please try again.";
+  return t("Something went wrong. Please try again.");
 }
 
 export interface RecipesResult {
@@ -176,7 +177,7 @@ async function writeItems(recipeId: string, items: RecipeItem[]): Promise<string
 
   for (const [index, item] of items.entries()) {
     const source = await resolveItemSource(item);
-    if (!source) return `"${item.food.name}" isn't in the food database yet, so this recipe can't be saved.`;
+    if (!source) return t("“{food}” isn't in the food database yet, so this recipe can't be saved.", { food: item.food.name });
     rows.push({
       recipe_id: recipeId,
       ...source,
@@ -221,7 +222,7 @@ export async function createRecipe(
 
   if (error || !data) {
     console.error("[recipes] Could not create recipe:", error?.message);
-    return { ok: false, message: error ? describe(error) : "Something went wrong. Please try again." };
+    return { ok: false, message: error ? describe(error) : t("Something went wrong. Please try again.") };
   }
 
   const itemError = await writeItems(data.id, items);

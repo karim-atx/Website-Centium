@@ -21,6 +21,7 @@ import { Toast } from "../../components/ui/Toast";
 import { useOnline } from "../../hooks/useOnline";
 import { textPx, linePx } from "../../theme/textSize";
 import { useIsDark } from "../../hooks/useIsDark";
+import { t, tk, tn, tx } from "../../i18n/core";
 
 /**
  * Dark mode: routine rows and folder headers take the v6 Part B folder shades
@@ -84,6 +85,7 @@ import { CoachSection } from "./CoachSection";
 import { ProgrammeSection } from "./ProgrammeSection";
 import { coachColor } from "./coachColors";
 import { fullGroupIndex, shortDay } from "../../services/routines/programmeLogic";
+import { ROUTINE_NAME_RULE } from "../../services/routines";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { Button } from "../../components/ui/Button";
 import { MusicSection } from "../../components/music/MusicSection";
@@ -118,25 +120,39 @@ type FolderAction = "rename" | "color" | "duplicate" | "subfolder" | "routine" |
 type RoutineAction = "rename" | "playlist" | "duplicate" | "delete";
 const MENU_ICON = 15;
 const FOLDER_MENU: { value: FolderAction; label: string; icon: React.ReactNode; destructive?: boolean }[] = [
-  { value: "rename", label: "Rename", icon: <Pencil size={MENU_ICON} /> },
-  { value: "color", label: "Edit color", icon: <Palette size={MENU_ICON} /> },
-  { value: "duplicate", label: "Duplicate", icon: <Copy size={MENU_ICON} /> },
-  { value: "subfolder", label: "Add subfolder", icon: <FolderTree size={MENU_ICON} /> },
-  { value: "routine", label: "Add routine", icon: <Plus size={MENU_ICON} /> },
-  { value: "delete", label: "Delete", icon: <Trash2 size={MENU_ICON} />, destructive: true },
+  { value: "rename", label: tk("Rename"), icon: <Pencil size={MENU_ICON} /> },
+  { value: "color", label: tk("Edit color"), icon: <Palette size={MENU_ICON} /> },
+  { value: "duplicate", label: tk("Duplicate"), icon: <Copy size={MENU_ICON} /> },
+  { value: "subfolder", label: tk("Add subfolder"), icon: <FolderTree size={MENU_ICON} /> },
+  { value: "routine", label: tk("Add routine"), icon: <Plus size={MENU_ICON} /> },
+  { value: "delete", label: tk("Delete"), icon: <Trash2 size={MENU_ICON} />, destructive: true },
 ];
 const ROUTINE_MENU: { value: RoutineAction; label: string; icon: React.ReactNode; destructive?: boolean }[] = [
-  { value: "rename", label: "Rename", icon: <Pencil size={MENU_ICON} /> },
+  { value: "rename", label: tk("Rename"), icon: <Pencil size={MENU_ICON} /> },
   // Round E: the routine's playlist (routines.playlist_url).
-  { value: "playlist", label: "Playlist", icon: <Music2 size={MENU_ICON} /> },
-  { value: "duplicate", label: "Duplicate", icon: <Copy size={MENU_ICON} /> },
-  { value: "delete", label: "Delete", icon: <Trash2 size={MENU_ICON} />, destructive: true },
+  { value: "playlist", label: tk("Playlist"), icon: <Music2 size={MENU_ICON} /> },
+  { value: "duplicate", label: tk("Duplicate"), icon: <Copy size={MENU_ICON} /> },
+  { value: "delete", label: tk("Delete"), icon: <Trash2 size={MENU_ICON} />, destructive: true },
 ];
 // Release 3 · W7 (CU1 v4): a coach's folder and rows offer one thing, a copy
 // of their own (cleanRoutineCopy: no coach notes, no assignment).
 const COACH_MENU: { value: "copy"; label: string; icon: React.ReactNode }[] = [
-  { value: "copy", label: "Save a copy", icon: <Copy size={MENU_ICON} /> },
+  { value: "copy", label: tk("Save a copy"), icon: <Copy size={MENU_ICON} /> },
 ];
+// The menus' labels in the app's language, read where they are shown.
+const inLanguage = <O extends { label: string }>(options: O[]): O[] => options.map((o) => ({ ...o, label: t(o.label) }));
+
+// The refusals that explain themselves stay as the inline line (see run()).
+// A service may hand one back in English or already in the app's language.
+const EXPLAINED = [
+  tk("A folder can't be filed inside itself or one of its own subfolders."),
+  tk("That folder belongs to a different account, so it can't be used as a parent."),
+  tk("You don't have permission to do that."),
+  ROUTINE_NAME_RULE,
+  MAX_DEPTH_NOTE,
+];
+const explainsItself = (message: string) =>
+  /filed inside itself|different account|levels deep at most|permission|name is 1 to/i.test(message) || EXPLAINED.some((k) => t(k) === message);
 
 /** Updated banners the client has closed, by assignment id → the assigned_at they closed. */
 const SEEN_KEY = "centium.coachUpdateSeen";
@@ -247,7 +263,7 @@ export default function RoutinesTab() {
   const run = (action: Promise<string | undefined>) => {
     void action.then((message) => {
       // B3 (PB-O-36): the server's name rules say why too.
-      if (message && /filed inside itself|different account|levels deep at most|permission|name is 1 to/i.test(message)) setActionError(message);
+      if (message && explainsItself(message)) setActionError(message);
       else {
         setActionError(null);
         if (message) setSaveToast(true);
@@ -560,7 +576,7 @@ export default function RoutinesTab() {
                     autoFocus
                     value={subfolderName}
                     maxLength={FOLDER_NAME_MAX}
-                    aria-label="Subfolder name"
+                    aria-label={t("Subfolder name")}
                     onChange={(e) => setSubfolderName(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && subfolderName.trim()) {
@@ -568,7 +584,7 @@ export default function RoutinesTab() {
                         setAddingSubfolderTo(null);
                       }
                     }}
-                    placeholder="Subfolder name…"
+                    placeholder={t("Subfolder name…")}
                     className={fieldClass}
                     style={fieldStyle}
                   />
@@ -580,7 +596,7 @@ export default function RoutinesTab() {
                     className={`tap shrink-0 ${ctaClass} text-on-primary-fill`}
                     style={addStyle}
                   >
-                    Add
+                    {t("Add")}
                   </button>
                 </div>
                 <ColorSwatches value={subfolderColor} onPick={setSubfolderColor} size={24} />
@@ -646,15 +662,15 @@ export default function RoutinesTab() {
       />
 
       <div className="flex items-center justify-between mb-2.5">
-        <p className="text-[9.5px] leading-[14.3px] font-bold tracking-[1.9px] uppercase" style={{ color: capsInk }}>Folders</p>
+        <p className="text-[9.5px] leading-[14.3px] font-bold tracking-[1.9px] uppercase" style={{ color: capsInk }}>{t("Folders")}</p>
         <button
           // Tapping it again closes the new-folder form, discarding the draft.
           onClick={() => {
             if (newFolderOpen) setNewFolderName("");
             setNewFolderOpen((v) => !v);
           }}
-          title="New folder"
-          aria-label="New folder"
+          title={t("New folder")}
+          aria-label={t("New folder")}
           aria-expanded={newFolderOpen}
           // 30 × 30 r9 on a 44 hit area (WO1 #7).
           className="tap relative w-[30px] h-[30px] rounded-[9px] flex items-center justify-center before:absolute before:-inset-[7px] before:content-['']"
@@ -671,11 +687,11 @@ export default function RoutinesTab() {
           is on screen is whatever this device had saved. */}
       <div className="space-y-1.5">
         {actionError && (
-          <p className="text-[11.5px] font-semibold text-status-high mb-3">{actionError}</p>
+          <p className="text-[11.5px] font-semibold text-status-high mb-3">{t(actionError)}</p>
         )}
         {routinesError && !actionError && hasCache && (
           <p className="text-[11.5px] font-semibold text-status-high mb-3">
-            Couldn't refresh your routines. Showing what was saved on this device.
+            {t("Couldn't refresh your routines. Showing what was saved on this device.")}
           </p>
         )}
       </div>
@@ -684,7 +700,7 @@ export default function RoutinesTab() {
       {routinesError && !hasCache && (
         <div role="alert" className="flex flex-col items-center text-center mb-4" style={{ gap: 6, padding: "20px 0" }}>
           <p className="m-0 text-charcoal" style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 700 }}>
-            Couldn't load your routines.
+            {t("Couldn't load your routines.")}
           </p>
           <button
             type="button"
@@ -692,7 +708,7 @@ export default function RoutinesTab() {
             className="tap relative before:absolute before:-inset-[12px] before:content-['']"
             style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: dark ? "#C3B3FB" : hc ? "rgb(var(--c-primary-deep-text))" : "rgb(var(--thi-7d6bb5))" }}
           >
-            Retry
+            {t("Retry")}
           </button>
         </div>
       )}
@@ -715,7 +731,7 @@ export default function RoutinesTab() {
               autoFocus
               value={newFolderName}
               maxLength={FOLDER_NAME_MAX}
-              aria-label="Folder name"
+              aria-label={t("Folder name")}
               onChange={(e) => setNewFolderName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && newFolderName.trim()) {
@@ -724,7 +740,7 @@ export default function RoutinesTab() {
                   setNewFolderOpen(false);
                 }
               }}
-              placeholder="Folder name…"
+              placeholder={t("Folder name…")}
               className={fieldClass}
               style={fieldStyle}
             />
@@ -737,7 +753,7 @@ export default function RoutinesTab() {
               className={`tap shrink-0 ${ctaClass} text-on-primary-fill`}
               style={addStyle}
             >
-              Add
+              {t("Add")}
             </button>
           </div>
           <ColorSwatches value={newFolderColor} onPick={setNewFolderColor} size={24} />
@@ -754,7 +770,7 @@ export default function RoutinesTab() {
         {(unfiled.length > 0 || draggingRoutine) && (
           <div data-flip="unfiled">
             {/* Decision 23 (kept item 135): styled as the "Folders" label (9.5/700 #9A94B3 .2em). */}
-            <p className="mb-[9px] text-[9.5px] leading-[14.3px] font-bold tracking-[1.9px] uppercase" style={{ color: capsInk }}>Unfiled</p>
+            <p className="mb-[9px] text-[9.5px] leading-[14.3px] font-bold tracking-[1.9px] uppercase" style={{ color: capsInk }}>{t("Unfiled")}</p>
             <div
               data-dnd-group=""
               className="flex flex-col gap-1.5"
@@ -789,9 +805,9 @@ export default function RoutinesTab() {
           <span className="flex items-center justify-center bg-th-f0edf9 dark:bg-th-aea1dc/[0.14]" style={{ width: 56, height: 56, borderRadius: 14 }}>
             <Dumbbell size={26} strokeWidth={1.25} absoluteStrokeWidth className="text-th-7d67d9 dark:text-th-9a8cd6" />
           </span>
-          <p className="mt-3 text-[15px] font-bold leading-5 text-charcoal">No routines yet</p>
+          <p className="mt-3 text-[15px] font-bold leading-5 text-charcoal">{t("No routines yet")}</p>
           <p className="mt-1 text-[12.5px] font-medium leading-[18px] text-charcoal-faint">
-            Start from a ready-made program, or build your own.
+            {t("Start from a ready-made program, or build your own.")}
           </p>
         </div>
       )}
@@ -806,8 +822,8 @@ export default function RoutinesTab() {
       {/* Round E: "Play your music" for the Workout area (Settings › Your
           music: the workout favourite, or the chosen app), under the list so
           it never pushes a routine down. */}
-      <section aria-label="Music" style={{ marginTop: 18 }}>
-        <p className="mb-2.5 text-[9.5px] leading-[14.3px] font-bold tracking-[1.9px] uppercase" style={{ color: capsInk }}>Music</p>
+      <section aria-label={t("Music")} style={{ marginTop: 18 }}>
+        <p className="mb-2.5 text-[9.5px] leading-[14.3px] font-bold tracking-[1.9px] uppercase" style={{ color: capsInk }}>{t("Music")}</p>
         <MusicSection moment="workout" />
       </section>
 
@@ -815,7 +831,7 @@ export default function RoutinesTab() {
       <PinnedCta
         size="base"
         above={{
-          label: "Browse starter programs",
+          label: t("Browse starter programs"),
           icon: <Library size={17} className="text-charcoal-soft" />,
           // WO1 / WO1.1 measure a 9 pt icon gap here (the CTA default is 7).
           // WO1 #51: the outline is 0.5px (X-09).
@@ -823,7 +839,7 @@ export default function RoutinesTab() {
           onClick: () => setBrowseOpen(true),
         }}
         primary={{
-          label: "Create routine",
+          label: t("Create routine"),
           // WO1 #54: drawn #FFFFFF in dark; V6-02 keeps the label's #0D0B1A.
           icon: <Plus size={15} />,
           // WO1 #8 / WO1.1 #9: filled #A198DF (--c-fill-cta, primary.cta.alt),
@@ -843,8 +859,8 @@ export default function RoutinesTab() {
         onClose={() => setMenu(null)}
         options={
           menuFolder && !canAddSubfolder(menuFolder.id, routineFolders)
-            ? FOLDER_MENU.map((o) => (o.value === "subfolder" ? { ...o, disabled: true, note: MAX_DEPTH_NOTE } : o))
-            : FOLDER_MENU
+            ? inLanguage(FOLDER_MENU).map((o) => (o.value === "subfolder" ? { ...o, disabled: true, note: t(MAX_DEPTH_NOTE) } : o))
+            : inLanguage(FOLDER_MENU)
         }
         onSelect={(action) => menuFolder && onFolderAction(menuFolder, action)}
       />
@@ -852,14 +868,14 @@ export default function RoutinesTab() {
         open={!!menuRoutine}
         anchor={menu?.anchor ?? null}
         onClose={() => setMenu(null)}
-        options={ROUTINE_MENU}
+        options={inLanguage(ROUTINE_MENU)}
         onSelect={(action) => menuRoutine && onRoutineAction(menuRoutine, action)}
       />
       <PopupMenu<"copy">
         open={!!coachMenu}
         anchor={coachMenu?.anchor ?? null}
         onClose={() => setCoachMenu(null)}
-        options={COACH_MENU}
+        options={inLanguage(COACH_MENU)}
         onSelect={() => coachMenu && guard(() => run(duplicateRoutine(coachMenu.routineId)))()}
       />
 
@@ -867,7 +883,7 @@ export default function RoutinesTab() {
       <BottomSheet
         open={!!playlistFor}
         onClose={() => setPlaylistFor(null)}
-        title="Playlist"
+        title={t("Playlist")}
         footer={
           <Button
             fullWidth
@@ -878,17 +894,17 @@ export default function RoutinesTab() {
               const url = tidyPlaylistInput(playlistFor.draft);
               if (!playlistFieldValid(url)) return;
               if (!online) {
-                setPlaylistFor({ ...playlistFor, error: "You're offline. Try again when you're connected." });
+                setPlaylistFor({ ...playlistFor, error: t("You're offline. Try again when you're connected.") });
                 return;
               }
               setPlaylistFor({ ...playlistFor, saving: true, error: null });
               void updateRoutine(playlistFor.routine.id, { playlistUrl: url || null }).then((message) => {
-                if (message) setPlaylistFor((p) => (p ? { ...p, saving: false, error: message } : p));
+                if (message) setPlaylistFor((p) => (p ? { ...p, saving: false, error: t(message) } : p));
                 else setPlaylistFor(null);
               });
             }}
           >
-            {playlistFor?.saving ? "Saving…" : "Save"}
+            {playlistFor?.saving ? t("Saving…") : t("Save")}
           </Button>
         }
       >
@@ -897,19 +913,19 @@ export default function RoutinesTab() {
             value={playlistFor.draft}
             onChange={(draft) => setPlaylistFor((p) => (p ? { ...p, draft, error: null } : p))}
             error={playlistFor.error}
-            hint={`Play it from ${playlistFor.routine.name} while you train.`}
+            hint={t("Play it from {name} while you train.", { name: playlistFor.routine.name })}
           />
         )}
       </BottomSheet>
 
       {/* CU1 v4: the programmes that ended (ended_at, or past their last day). */}
-      <BottomSheet open={pastOpen} onClose={() => setPastOpen(false)} title="Past programmes">
+      <BottomSheet open={pastOpen} onClose={() => setPastOpen(false)} title={t("Past programmes")}>
         <div className="flex flex-col" style={{ gap: 6 }}>
           {coach.past.map((p) => (
             <div key={p.id} style={{ padding: "12px 14px", borderRadius: 14, background: coachColor("soft", dark) }}>
               <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{p.name}</p>
               {p.endedOn && (
-                <p style={{ margin: 0, fontSize: textPx(11.5), color: coachColor("faint", dark) }}>Ended {shortDay(p.endedOn)}</p>
+                <p style={{ margin: 0, fontSize: textPx(11.5), color: coachColor("faint", dark) }}>{t("Ended {date}", { date: shortDay(p.endedOn) })}</p>
               )}
             </div>
           ))}
@@ -1004,7 +1020,7 @@ export default function RoutinesTab() {
 
       <Toast
         open={saveToast}
-        message="Couldn't save. Try again."
+        message={t("Couldn't save. Try again.")}
         icon={<AlertCircle size={16} style={{ color: dark ? "#F09A8E" : "#C0392B" }} />}
         onExpire={() => setSaveToast(false)}
       />
@@ -1018,15 +1034,15 @@ export default function RoutinesTab() {
         geometry="ours"
         className="!p-5"
         alert
-        title="Cancel ongoing routine?"
-        body={pendingRoutine ? `Starting "${pendingRoutine.name}" will cancel your other ongoing routine entirely. Its progress won't be saved.` : undefined}
+        title={t("Cancel ongoing routine?")}
+        body={pendingRoutine ? t("Starting \"{name}\" will cancel your other ongoing routine entirely. Its progress won't be saved.", { name: pendingRoutine.name }) : undefined}
       >
         <div className="flex w-full mt-5" style={{ gap: 10 }}>
           <button type="button" onClick={() => setPendingRoutine(null)} className="tap flex-1 bg-cream-soft text-charcoal" style={popupButton}>
-            Keep going
+            {t("Keep going")}
           </button>
           <button type="button" onClick={confirmSwitchRoutine} className={`tap flex-1 ${ctaClass} text-on-primary-fill`} style={popupButton}>
-            Start anyway
+            {t("Start anyway")}
           </button>
         </div>
       </CentredPopup>
@@ -1037,12 +1053,12 @@ export default function RoutinesTab() {
         geometry="ours"
         className="!p-5"
         alert
-        title="Delete routine?"
-        body={pendingDeleteRoutine ? `"${pendingDeleteRoutine.name}" and its exercises will be permanently removed. This can't be undone.` : undefined}
+        title={t("Delete routine?")}
+        body={pendingDeleteRoutine ? t("\"{name}\" and its exercises will be permanently removed. This can't be undone.", { name: pendingDeleteRoutine.name }) : undefined}
       >
         <div className="flex w-full mt-5" style={{ gap: 10 }}>
           <button type="button" onClick={() => setPendingDeleteRoutine(null)} className="tap flex-1 bg-cream-soft text-charcoal" style={popupButton}>
-            Keep it
+            {tx("Keep it", "routine")}
           </button>
           <button
             type="button"
@@ -1053,7 +1069,7 @@ export default function RoutinesTab() {
             className="tap flex-1"
             style={{ ...popupButton, background: dark ? "#3C2A30" : "#FCEDEC", color: dark ? "#F09A8E" : "#B4372C" }}
           >
-            Delete
+            {t("Delete")}
           </button>
         </div>
       </CentredPopup>
@@ -1121,7 +1137,7 @@ const RoutineCardFace: React.FC<{
                 className="shrink-0 uppercase"
                 style={{ fontSize: textPx(10), fontWeight: 800, letterSpacing: "0.06em", borderRadius: 6, padding: "1px 6px", lineHeight: linePx(15), background: family.play, color: partBInk(family.play, dark) }}
               >
-                Today
+                {t("Today")}
               </span>
             )}
             {isOngoing && (
@@ -1129,25 +1145,25 @@ const RoutineCardFace: React.FC<{
               <span className="text-[10px] font-bold uppercase flex items-center gap-1 shrink-0" style={{ color: rc("ongoing", dark) }}>
                 {running ? (
                   <>
-                    <Play size={10} fill="currentColor" /> Ongoing
+                    <Play size={10} fill="currentColor" /> {t("Ongoing")}
                   </>
                 ) : (
                   <>
-                    <Pause size={10} fill="currentColor" /> Paused
+                    <Pause size={10} fill="currentColor" /> {t("Paused")}
                   </>
                 )}
               </span>
             )}
           </p>
           <p className="text-[11.5px] mt-0.5" style={{ color: rc("meta", dark) }}>
-            {metaText ?? `${routine.exercises.length} exercises • ~${routine.estimatedDurationMin} min`}
+            {metaText ?? `${tn(routine.exercises.length, "{n} exercise", "{n} exercises")} • ${t("~{n} min", { n: routine.estimatedDurationMin })}`}
           </p>
         </button>
       )}
       <button
         data-no-drag
         onClick={isOngoing && running ? onPause : onStart}
-        aria-label={isOngoing ? (running ? `Pause ${routine.name}` : `Resume ${routine.name}`) : `Start ${routine.name}`}
+        aria-label={isOngoing ? (running ? t("Pause {name}", { name: routine.name }) : t("Resume {name}", { name: routine.name })) : t("Start {name}", { name: routine.name })}
         className={clsx("tap w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0", isOngoing && running && "animate-pulse")}
         style={{ background: isOngoing ? rc("ongoing", dark) : family.play }}
       >
@@ -1160,7 +1176,7 @@ const RoutineCardFace: React.FC<{
       <button
         data-no-drag
         onClick={(e) => onMenu?.(e.currentTarget)}
-        aria-label={`Options for ${routine.name}`}
+        aria-label={t("Options for {name}", { name: routine.name })}
         className="tap flex shrink-0"
         style={{ color: "rgb(var(--c-charcoal-faint))" }}
       >
@@ -1170,7 +1186,7 @@ const RoutineCardFace: React.FC<{
         <span
           {...gripProps}
           role="button"
-          aria-label={`Drag ${routine.name}`}
+          aria-label={t("Drag {name}", { name: routine.name })}
           className="hit flex shrink-0"
           style={{ color: "rgb(var(--c-charcoal-faint))", ...(gripProps?.style as React.CSSProperties | undefined) }}
         >
@@ -1201,7 +1217,7 @@ const SelectBox: React.FC<{
       disabled={disabled}
       role="checkbox"
       aria-checked={checked}
-      aria-label={`Select ${label}`}
+      aria-label={t("Select {name}", { name: label })}
       className="tap flex items-center justify-center shrink-0"
       style={{
         width: 20,
@@ -1329,7 +1345,7 @@ const RoutineRow: React.FC<{
             key={direction}
             onClick={() => move(exerciseId, direction)}
             disabled={!enabled}
-            aria-label={`Move ${direction}`}
+            aria-label={direction === "up" ? t("Move up") : t("Move down")}
             className="tap flex items-center justify-center"
             style={{ width: 22, height: 22, color: enabled ? "rgb(var(--c-charcoal-faint))" : rc("off", dark) }}
           >
@@ -1358,7 +1374,7 @@ const RoutineRow: React.FC<{
         <MoveControls exerciseId={ex.id} />
         <button
           onClick={() => onSettings(ex)}
-          aria-label={`Settings for ${ex.name}`}
+          aria-label={t("Settings for {name}", { name: ex.name })}
           className="tap text-charcoal-faint"
         >
           <Settings2 size={14} />
@@ -1421,12 +1437,12 @@ const RoutineRow: React.FC<{
               <>
                 <span className="text-[11px] text-charcoal-faint">
                   {selected.length === 0
-                    ? "Pick exercises that sit next to each other."
-                    : `${selected.length} selected`}
+                    ? t("Pick exercises that sit next to each other.")
+                    : t("{n} selected", { n: selected.length })}
                 </span>
                 <span className="flex items-center" style={{ gap: 12 }}>
                   <button onClick={exitSelecting} className="tap text-[11.5px] font-semibold text-charcoal-soft">
-                    Cancel
+                    {t("Cancel")}
                   </button>
                   <button
                     onClick={startGrouping}
@@ -1434,16 +1450,15 @@ const RoutineRow: React.FC<{
                     className="tap text-[11.5px] font-semibold"
                     style={{ color: selected.length < 2 ? "rgb(var(--c-charcoal-disabled))" : "rgb(var(--c-primary-deep-text))" }}
                   >
-                    Group as…
+                    {t("Group as…")}
                   </button>
                 </span>
               </>
             ) : (
               <>
                 <span className="text-[11px] text-charcoal-faint">
-                  {routine.exercises.length}{" "}
-                  {routine.exercises.length === 1 ? "exercise" : "exercises"}
-                  {blocks.length > 0 && ` · ${blocks.length} ${blocks.length === 1 ? "block" : "blocks"}`}
+                  {tn(routine.exercises.length, "{n} exercise", "{n} exercises")}
+                  {blocks.length > 0 && ` · ${tn(blocks.length, "{n} block", "{n} blocks")}`}
                 </span>
                 <button
                   onClick={() => setSelecting(true)}
@@ -1451,13 +1466,13 @@ const RoutineRow: React.FC<{
                   className="tap flex items-center gap-1 text-[11.5px] font-semibold"
                   style={{ color: routine.exercises.length < 2 ? "rgb(var(--c-charcoal-disabled))" : "rgb(var(--c-primary-deep-text))" }}
                 >
-                  <Group size={13} /> Group
+                  <Group size={13} /> {tx("Group", "action")}
                 </button>
               </>
             )}
           </div>
           {groupProblem && (
-            <p className="text-[11px] text-status-high bg-status-high-bg px-4 py-2">{groupProblem}</p>
+            <p className="text-[11px] text-status-high bg-status-high-bg px-4 py-2">{t(groupProblem)}</p>
           )}
           {/* GROUPED FOR RENDERING, FLAT UNDERNEATH. `position` is still the
               order and the contiguity rule still governs it; groupIntoRuns
@@ -1500,8 +1515,8 @@ const RoutineRow: React.FC<{
                     <SwipeActions
                       radius={0}
                       actions={[
-                        { key: "replace", label: `Replace ${ex.name}`, icon: <Repeat size={16} />, onClick: () => setReplaceTarget(ex.id) },
-                        { key: "delete", label: `Delete ${ex.name}`, icon: <Trash2 size={16} />, destructive: true, onClick: () => onDeleteExercise(ex.id) },
+                        { key: "replace", label: t("Replace {name}", { name: ex.name }), icon: <Repeat size={16} />, onClick: () => setReplaceTarget(ex.id) },
+                        { key: "delete", label: t("Delete {name}", { name: ex.name }), icon: <Trash2 size={16} />, destructive: true, onClick: () => onDeleteExercise(ex.id) },
                       ]}
                     >
                       <div className="flex items-center justify-between px-4 py-2.5 bg-cream-card">
@@ -1513,8 +1528,8 @@ const RoutineRow: React.FC<{
                               "3 × 8 · 0kg". */}
                           {line && <p className="text-[11px] text-charcoal-faint">{line}</p>}
                           {/* Round D (TR11): the coach's target RPE and note per set. */}
-                          {setTargetLines(ex.setTargets).map((t) => (
-                            <p key={t} className="text-[11px] text-charcoal-faint">{t}</p>
+                          {setTargetLines(ex.setTargets).map((target) => (
+                            <p key={target} className="text-[11px] text-charcoal-faint">{target}</p>
                           ))}
                         </div>
                         {memberAction(ex)}
@@ -1531,7 +1546,7 @@ const RoutineRow: React.FC<{
             // WO1.1 measures this row 38 tall (11 + a 16 line + 11).
             className="tap w-full flex items-center justify-center gap-1.5 px-4 py-[11px] text-xs font-semibold text-primary dark:text-primary-dark bg-cream-card hover:bg-primary-pale/40"
           >
-            <Plus size={13} /> Add exercise
+            <Plus size={13} /> {t("Add exercise")}
           </button>
         </div>
       )}

@@ -1,5 +1,6 @@
 import type { ActiveSession, LoggedExercise } from "../../types";
 import { formatCompactDuration } from "./index";
+import { t } from "../../i18n/core";
 
 // The WO17 active-workout bar's second line and progress line, derived from
 // the active session (03) alone, so the bar never needs the logger mounted.
@@ -23,12 +24,12 @@ export function activeBarLine(
 ): string {
   const total = Math.max(1, exerciseCount);
   const x = Math.min(total, Math.max(1, session.currentExercise + 1));
-  const exercise = `Exercise ${x} of ${total}`;
-  if (session.status === "paused") return `Paused · ${exercise}`;
+  const exercise = t("Exercise {x} of {total}", { x, total });
+  if (session.status === "paused") return t("Paused · {exercise}", { exercise });
   const elapsed = sessionElapsedSec(session, now);
   const left = estimatedMin * 60 - elapsed;
-  if (estimatedMin > 0 && left > 0) return `${exercise} · ${formatCompactDuration(Math.ceil(left / 60) * 60)} left`;
-  return `${exercise} · ${formatCompactDuration(elapsed)} elapsed`;
+  if (estimatedMin > 0 && left > 0) return t("{exercise} · {time} left", { exercise, time: formatCompactDuration(Math.ceil(left / 60) * 60) });
+  return t("{exercise} · {time} elapsed", { exercise, time: formatCompactDuration(elapsed) });
 }
 
 /** Logged sets over all set rows, 0–1: a set counts once it is ticked or given an outcome. */

@@ -48,6 +48,7 @@ import type { LogFoodEntryParams } from "../../services/food";
 import { searchFoodsOnline } from "../../services/food/onlineSearch";
 import { brandServing, onlineQuery, type OnlineFood, type OnlineSearchOutcome } from "../../services/food/onlineSearchModel";
 import { FoundFoodCard, OnlineResults, SearchOnlineButton } from "./OnlineFoodSearch";
+import { t, tn, tk } from "../../i18n/core";
 
 // Mobile v5.1 R3, dark mode (no light islands): a picked row's #F7F5FB is
 // primary.tint.2 dark, and the empty pick circle's #D1CAEB ring is
@@ -59,12 +60,12 @@ const PICK_RING_DARK = "rgb(var(--th-9a8cd6))";
 // is typed. The relevant subset differs a little by food category (a plate
 // of rice logs in cups/g; a drink logs in ml).
 const servingUnitOptions: { value: ServingUnit; label: string }[] = [
-  { value: "serving", label: "serving" },
-  { value: "g", label: "g" },
-  { value: "ml", label: "ml" },
-  { value: "cup", label: "cup" },
-  { value: "tbsp", label: "tbsp" },
-  { value: "tsp", label: "tsp" },
+  { value: "serving", label: tk("serving") },
+  { value: "g", label: tk("g") },
+  { value: "ml", label: tk("ml") },
+  { value: "cup", label: tk("cup") },
+  { value: "tbsp", label: tk("tbsp") },
+  { value: "tsp", label: tk("tsp") },
 ];
 
 // Mobile handoff item 2: the detail step's meal row order and labels. Local
@@ -72,10 +73,10 @@ const servingUnitOptions: { value: ServingUnit; label: string }[] = [
 // screens, which this item doesn't touch.
 const detailMealOrder: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
 const detailMealLabels: Record<MealType, string> = {
-  breakfast: "Breakfast",
-  snack: "Snacks",
-  lunch: "Lunch",
-  dinner: "Dinner",
+  breakfast: tk("Breakfast"),
+  snack: tk("Snacks"),
+  lunch: tk("Lunch"),
+  dinner: tk("Dinner"),
 };
 
 
@@ -364,7 +365,11 @@ export const AddFoodSheet: React.FC<{
     const added = picked.size - failed.size - blocked.length;
     if (blocked.length > 0) {
       setPicked(failed);
-      setMultiError(`${blocked.join(", ")} ${blocked.length === 1 ? "wasn't" : "weren't"} added: ${blocked.length === 1 ? "it contains" : "they contain"} an allergen you've recorded.`);
+      setMultiError(
+        blocked.length === 1
+          ? t("{foods} wasn't added: it contains an allergen you've recorded.", { foods: blocked[0] })
+          : t("{foods} weren't added: they contain an allergen you've recorded.", { foods: blocked.join(t(", ")) })
+      );
       return;
     }
     if (failed.size > 0) {
@@ -372,12 +377,12 @@ export const AddFoodSheet: React.FC<{
       setPicked(failed);
       setMultiError(
         offlineFailure || !navigator.onLine
-          ? `${failed.size} of ${picked.size} couldn't be saved. ${OFFLINE_MESSAGE}`
-          : `${failed.size} of ${picked.size} couldn't be saved. Try again.`
+          ? t("{n} of {total} couldn't be saved. {reason}", { n: failed.size, total: picked.size, reason: t(OFFLINE_MESSAGE) })
+          : t("{n} of {total} couldn't be saved. Try again.", { n: failed.size, total: picked.size })
       );
       return;
     }
-    setAddedMessage(offlineFailure ? SAVED_ON_DEVICE : `Added ${added} food${added === 1 ? "" : "s"} to ${detailMealLabels[target]}.`);
+    setAddedMessage(offlineFailure ? t(SAVED_ON_DEVICE) : tn(added, "Added {n} food to {meal}.", "Added {n} foods to {meal}.", { meal: t(detailMealLabels[target]) }));
     resetAndClose();
   };
 
@@ -550,7 +555,7 @@ export const AddFoodSheet: React.FC<{
   const handleAdd = async () => {
     if (!selectedFood || saving || addBlocked) return;
     if (!authUserId) {
-      setAddError("You need to be signed in to log food.");
+      setAddError(t("You need to be signed in to log food."));
       return;
     }
     setSaving(true);
@@ -579,12 +584,12 @@ export const AddFoodSheet: React.FC<{
     // shows in the diary as "Waiting to save" until it lands.
     if (!result.ok && isOfflineFailure(result)) {
       keepOnDevice(params);
-      setAddedMessage(SAVED_ON_DEVICE);
+      setAddedMessage(t(SAVED_ON_DEVICE));
       resetAndClose();
       return;
     }
     if (!result.ok || !result.entry) {
-      setAddError(result.message ?? "Could not save that entry.");
+      setAddError(result.message ?? t("Could not save that entry."));
       return;
     }
 
@@ -624,7 +629,7 @@ export const AddFoodSheet: React.FC<{
       setBarcodeDraft(emptyBarcodeDraft);
       setBarcodeState("miss");
     } else {
-      setBarcodeError(result.kind === "error" ? result.message : "That isn't a valid barcode.");
+      setBarcodeError(result.kind === "error" ? result.message : t("That isn't a valid barcode."));
       setBarcodeState("idle");
     }
   };
@@ -653,7 +658,7 @@ export const AddFoodSheet: React.FC<{
     });
     setCreating(false);
     if (!result.ok || !result.food) {
-      setBarcodeError(result.message ?? "Could not add that product.");
+      setBarcodeError(result.message ?? t("Could not add that product."));
       return;
     }
     // First scan wins: if someone registered this barcode first, the RPC
@@ -693,7 +698,7 @@ export const AddFoodSheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={resetAndClose}
-        title={advancedOpen && !hide ? "Nutrient details" : "Add Food"}
+        title={advancedOpen && !hide ? t("Nutrient details") : t("Add Food")}
         onBack={
           advancedOpen && !hide
             ? () => setAdvancedOpen(false)
@@ -714,7 +719,7 @@ export const AddFoodSheet: React.FC<{
             </p>
 
             {selectedFood.source === "catalog" && nutrientsLoading ? (
-              <p className="text-center text-sm text-charcoal-faint py-8">Loading nutrients…</p>
+              <p className="text-center text-sm text-charcoal-faint py-8">{t("Loading nutrients…")}</p>
             ) : (
               <NutrientDetailSections
                 totals={detailTotals}
@@ -726,8 +731,7 @@ export const AddFoodSheet: React.FC<{
             )}
 
             <p style={{ fontSize: textPx(10.5), lineHeight: 1.5, color: "rgb(var(--c-charcoal-muted))", margin: "6px 2px 0" }}>
-              % of the FDA Daily Value for adults, from this food alone. Calorie and macro percentages use your
-              Goals.
+              {t("% of the FDA Daily Value for adults, from this food alone. Calorie and macro percentages use your Goals.")}
             </p>
           </div>
         ) : (
@@ -751,8 +755,10 @@ export const AddFoodSheet: React.FC<{
                     figures are sourced or approximate. */}
                 <p style={{ margin: "2px 0 0", fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-muted))" }}>
                   {adjusting
-                    ? `${unit === "serving" ? (quantity === 1 ? selectedFood.servingLabel : `${quantity} × ${selectedFood.servingLabel}`) : `${quantity} ${unit}`} · selected`
-                    : `${brandServing(selectedFood.brand, selectedFood.servingLabel)}${selectedFood.isVerified ? " · USDA verified" : " · estimate"}`}
+                    ? t("{amount} · selected", { amount: unit === "serving" ? (quantity === 1 ? selectedFood.servingLabel : `${quantity} × ${selectedFood.servingLabel}`) : `${quantity} ${t(unit)}` })
+                    : selectedFood.isVerified
+                      ? t("{serving} · USDA verified", { serving: brandServing(selectedFood.brand, selectedFood.servingLabel) })
+                      : t("{serving} · estimate", { serving: brandServing(selectedFood.brand, selectedFood.servingLabel) })}
                 </p>
               </div>
             </div>
@@ -761,7 +767,7 @@ export const AddFoodSheet: React.FC<{
               className="flex items-center"
               style={{ ...sheetGreyStyle, gap: 12, marginBottom: 10 }}
             >
-              <span style={{ flex: "none", fontSize: textPx(14.5), fontWeight: 500, color: dark ? FOOD_DARK.label : "#575863" }}>Quantity</span>
+              <span style={{ flex: "none", fontSize: textPx(14.5), fontWeight: 500, color: dark ? FOOD_DARK.label : "#575863" }}>{t("Quantity")}</span>
               <input
                 value={quantityDraft}
                 onChange={(e) => {
@@ -778,7 +784,7 @@ export const AddFoodSheet: React.FC<{
             </div>
 
             <div style={{ ...sheetGreyStyle, marginBottom: 10 }}>
-              <p style={sheetLabelStyle}>Unit</p>
+              <p style={sheetLabelStyle}>{t("Unit")}</p>
               <div
                 className="flex scroll-row no-scrollbar"
                 style={{ gap: 7, margin: "9px -14px 0", padding: "0 14px" }}
@@ -790,7 +796,7 @@ export const AddFoodSheet: React.FC<{
                     className="tap transition-colors"
                     style={sheetChipStyle(unit === u.value)}
                   >
-                    {u.label}
+                    {t(u.label)}
                   </button>
                 ))}
               </div>
@@ -798,7 +804,7 @@ export const AddFoodSheet: React.FC<{
 
             {!adjusting && (
             <div style={{ ...sheetGreyStyle, marginBottom: 10 }}>
-              <p style={sheetLabelStyle}>Meal</p>
+              <p style={sheetLabelStyle}>{t("Meal")}</p>
               <div className="flex" style={{ gap: 6, marginTop: 9 }}>
                 {detailMealOrder.map((m) => (
                   <button
@@ -807,7 +813,7 @@ export const AddFoodSheet: React.FC<{
                     className="tap transition-colors"
                     style={{ ...sheetChipStyle(meal === m), flex: 1, minWidth: 0, padding: "8px 4px" }}
                   >
-                    {detailMealLabels[m]}
+                    {t(detailMealLabels[m])}
                   </button>
                 ))}
               </div>
@@ -820,10 +826,10 @@ export const AddFoodSheet: React.FC<{
             ) : (
             <div className="grid grid-cols-4" style={{ ...sheetGreyStyle, padding: "13px 0", marginBottom: 16 }}>
               {[
-                { value: `${foodTotalCal}`, color: "rgb(var(--c-charcoal))", caption: "kcal" },
-                { value: `${Math.round(selectedFood.protein * multiplier)}g`, color: dark ? FOOD_DARK.protein : "rgb(var(--thi-7d6bb5))", caption: "protein" },
-                { value: `${Math.round(selectedFood.carbs * multiplier)}g`, color: dark ? FOOD_DARK.carbs : "rgb(var(--thi-8175c2))", caption: "carbs" },
-                { value: `${Math.round(selectedFood.fat * multiplier)}g`, color: dark ? FOOD_DARK.fat : "#4274D7", caption: "fat" },
+                { value: `${foodTotalCal}`, color: "rgb(var(--c-charcoal))", caption: t("kcal") },
+                { value: t("{n}g", { n: Math.round(selectedFood.protein * multiplier) }), color: dark ? FOOD_DARK.protein : "rgb(var(--thi-7d6bb5))", caption: t("protein") },
+                { value: t("{n}g", { n: Math.round(selectedFood.carbs * multiplier) }), color: dark ? FOOD_DARK.carbs : "rgb(var(--thi-8175c2))", caption: t("carbs") },
+                { value: t("{n}g", { n: Math.round(selectedFood.fat * multiplier) }), color: dark ? FOOD_DARK.fat : "#4274D7", caption: t("fat") },
               ].map((cell, i) => (
                 <div
                   key={cell.caption}
@@ -841,7 +847,7 @@ export const AddFoodSheet: React.FC<{
 
             {addError && (
               <p className="text-xs font-semibold text-status-high text-center" style={{ marginBottom: 10 }}>
-                {addError}
+                {t(addError)}
               </p>
             )}
 
@@ -852,7 +858,7 @@ export const AddFoodSheet: React.FC<{
                 className="tap w-full inline-flex items-center justify-center gap-2"
                 style={{ height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-fill-cta))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15.5), fontWeight: 700 }}
               >
-                <Check size={16} /> Confirm
+                <Check size={16} /> {t("Confirm")}
               </button>
             ) : (
             <div className="flex" style={{ gap: 10 }}>
@@ -863,14 +869,14 @@ export const AddFoodSheet: React.FC<{
                 className="tap inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
                 style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-fill-cta))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15.5), fontWeight: 700 }}
               >
-                {justAdded ? <><Check size={16} /> Added</> : saving ? "Saving…" : conflictNotice?.addAnyway ? "Add anyway" : "Add to Diary"}
+                {justAdded ? <><Check size={16} /> {t("Added")}</> : saving ? t("Saving…") : conflictNotice?.addAnyway ? t("Add anyway") : t("Add to Diary")}
               </button>
               {!hide && (
               <button
                 type="button"
                 onClick={() => setAdvancedOpen(true)}
-                aria-label="Nutrient details"
-                title="Nutrient details"
+                aria-label={t("Nutrient details")}
+                title={t("Nutrient details")}
                 className="tap shrink-0 flex items-center justify-center"
                 style={{ width: 60, height: 52, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))" }}
               >
@@ -894,7 +900,7 @@ export const AddFoodSheet: React.FC<{
       <CustomFoodForm
         open={open}
         onClose={resetAndClose}
-        title="Create Custom Food"
+        title={t("Create Custom Food")}
         onBack={() => setCustomMode(false)}
         onSaved={(food) => {
           setCustomMode(false);
@@ -925,10 +931,10 @@ export const AddFoodSheet: React.FC<{
     // D18: in recovery-sensitive mode these fold under "Nutrition details".
     const barcodeMacros = (
       <div className="grid grid-cols-2 gap-3">
-        {barcodeField("Calories", "calories", "0", true)}
-        {barcodeField("Protein (g)", "protein", "0", true)}
-        {barcodeField("Carbs (g)", "carbs", "0", true)}
-        {barcodeField("Fat (g)", "fat", "0", true)}
+        {barcodeField(t("Calories"), "calories", "0", true)}
+        {barcodeField(t("Protein (g)"), "protein", "0", true)}
+        {barcodeField(t("Carbs (g)"), "carbs", "0", true)}
+        {barcodeField(t("Fat (g)"), "fat", "0", true)}
       </div>
     );
 
@@ -951,7 +957,7 @@ export const AddFoodSheet: React.FC<{
       <BottomSheet
         open={open && !scanOpen}
         onClose={resetAndClose}
-        title="Barcode"
+        title={t("Barcode")}
         // Master handover (CentiumFrame sheetCanBack): this step has somewhere
         // to return to — the food list.
         onBack={() => {
@@ -964,13 +970,13 @@ export const AddFoodSheet: React.FC<{
         <div className="flex flex-col animate-fade-slide-up" style={{ gap: 14 }}>
           {barcode && (
             <div className="flex items-center justify-between" style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 12, padding: "11px 14px" }}>
-              <span style={{ fontSize: textPx(13), color: dark ? FOOD_DARK.label : "#575863" }}>Barcode</span>
+              <span style={{ fontSize: textPx(13), color: dark ? FOOD_DARK.label : "#575863" }}>{t("Barcode")}</span>
               <span style={{ fontSize: textPx(13), fontWeight: 600, color: "rgb(var(--c-charcoal))", fontVariantNumeric: "tabular-nums" }}>{barcode}</span>
             </div>
           )}
 
           {barcodeState === "looking" && (
-            <p className="text-center text-sm text-charcoal-faint py-6">Looking it up…</p>
+            <p className="text-center text-sm text-charcoal-faint py-6">{t("Looking it up…")}</p>
           )}
 
           {/* 1. In our catalogue. */}
@@ -983,7 +989,7 @@ export const AddFoodSheet: React.FC<{
                 <div className="text-start">
                   <p className="font-semibold text-charcoal text-sm">{scanResultFood.name}</p>
                   <p className="text-xs text-charcoal-faint">
-                    {hide ? scanResultFood.servingLabel : `${scanResultFood.calories} kcal · ${scanResultFood.servingLabel}`}
+                    {hide ? scanResultFood.servingLabel : t("{n} kcal · {serving}", { n: scanResultFood.calories, serving: scanResultFood.servingLabel })}
                   </p>
                 </div>
               </div>
@@ -994,7 +1000,7 @@ export const AddFoodSheet: React.FC<{
                   setBarcodeOpen(false);
                 }}
               >
-                Use this result
+                {t("Use this result")}
               </Button>
             </div>
           )}
@@ -1008,25 +1014,24 @@ export const AddFoodSheet: React.FC<{
           {barcodeState === "miss" && (
             <div className="space-y-3 animate-fade-slide-up">
               <p className="text-[11px] text-charcoal-faint">
-                Not in the catalog yet. Add it from the package label and everyone scanning this barcode will
-                find it.
+                {t("Not in the catalog yet. Add it from the package label and everyone scanning this barcode will find it.")}
               </p>
-              {barcodeField("Product name", "name", "Coca-Cola 330ml")}
-              {barcodeField("Serving size", "serving", "1 can (330 ml)")}
+              {barcodeField(t("Product name"), "name", "Coca-Cola 330ml")}
+              {barcodeField(t("Serving size"), "serving", t("1 can (330 ml)"))}
               {hide ? <NutritionDetails>{barcodeMacros}</NutritionDetails> : barcodeMacros}
-              {barcodeError && <p className="text-xs font-semibold text-status-high text-center">{barcodeError}</p>}
+              {barcodeError && <p className="text-xs font-semibold text-status-high text-center">{t(barcodeError)}</p>}
               <Button
                 fullWidth
                 onClick={handleCreateBarcodeFood}
                 disabled={creating || !barcodeDraft.name.trim() || (!hide && !barcodeDraft.calories)}
               >
-                {creating ? "Adding…" : "Add to catalog"}
+                {creating ? t("Adding…") : t("Add to catalog")}
               </Button>
             </div>
           )}
 
           {barcodeError && barcodeState !== "miss" && (
-            <p className="text-xs font-semibold text-status-high">{barcodeError}</p>
+            <p className="text-xs font-semibold text-status-high">{t(barcodeError)}</p>
           )}
 
           {barcodeState !== "looking" && (
@@ -1036,7 +1041,7 @@ export const AddFoodSheet: React.FC<{
                 className="tap flex-1"
                 style={{ height: 44, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: textPx(13.5), fontWeight: 600 }}
               >
-                Scan again
+                {t("Scan again")}
               </button>
               {barcodeError && barcodeState !== "miss" && (
                 <button
@@ -1044,7 +1049,7 @@ export const AddFoodSheet: React.FC<{
                   className="tap flex-1"
                   style={{ height: 44, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: textPx(13.5), fontWeight: 600 }}
                 >
-                  Enter it myself
+                  {t("Enter it myself")}
                 </button>
               )}
             </div>
@@ -1072,7 +1077,7 @@ export const AddFoodSheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={resetAndClose}
-        title={foundFood ? "Check this food" : "Search online"}
+        title={foundFood ? t("Check this food") : t("Search online")}
         onBack={foundFood ? () => setFoundFood(null) : closeOnline}
       >
         {foundFood ? (
@@ -1130,7 +1135,7 @@ export const AddFoodSheet: React.FC<{
           onClick={() => r.food && togglePick(r.food)}
           disabled={!r.food}
           aria-pressed={on}
-          aria-label={on ? `Deselect ${r.name}` : `Select ${r.name}`}
+          aria-label={on ? t("Deselect {name}", { name: r.name }) : t("Select {name}", { name: r.name })}
           className="tap flex items-center justify-center shrink-0"
           style={
             multi
@@ -1152,7 +1157,7 @@ export const AddFoodSheet: React.FC<{
           </span>
           {!hide && (
             <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>
-              {r.kcal} kcal
+              {t("{n} kcal", { n: r.kcal })}
             </span>
           )}
         </button>
@@ -1166,15 +1171,15 @@ export const AddFoodSheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={resetAndClose}
-        title="Add Food"
+        title={t("Add Food")}
         footerRule
         footer={
           multi ? (
             <div>
-              <p style={{ margin: "0 0 8px", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{picked.size} selected</p>
+              <p style={{ margin: "0 0 8px", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{t("{n} selected", { n: picked.size })}</p>
               {multiError && (
                 <p className="text-xs font-semibold text-status-high" style={{ margin: "0 0 8px" }}>
-                  {multiError}
+                  {t(multiError)}
                 </p>
               )}
               <div className="flex items-center" style={{ gap: 12 }}>
@@ -1184,7 +1189,7 @@ export const AddFoodSheet: React.FC<{
                   className="tap flex-1 inline-flex items-center justify-center disabled:opacity-60"
                   style={{ height: 50, gap: 8, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15), fontWeight: 700 }}
                 >
-                  <Plus size={16} /> {multiSaving ? "Adding…" : `Add food (${picked.size})`}
+                  <Plus size={16} /> {multiSaving ? t("Adding…") : t("Add food ({n})", { n: picked.size })}
                 </button>
                 <button
                   onClick={() => {
@@ -1194,15 +1199,15 @@ export const AddFoodSheet: React.FC<{
                   className="tap"
                   style={{ padding: "0 10px", height: 44, color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(14), fontWeight: 500 }}
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
               </div>
               <PopupMenu
                 open={!!mealAnchor}
                 anchor={mealAnchor}
                 onClose={() => setMealAnchor(null)}
-                heading="Add to"
-                options={detailMealOrder.map((m) => ({ value: m, label: detailMealLabels[m] }))}
+                heading={t("Add to")}
+                options={detailMealOrder.map((m) => ({ value: m, label: t(detailMealLabels[m]) }))}
                 selected={mealForCurrentTime()}
                 onSelect={(m) => {
                   setMealAnchor(null);
@@ -1228,7 +1233,7 @@ export const AddFoodSheet: React.FC<{
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search food, meals or ingredients…"
+              placeholder={t("Search food, meals or ingredients…")}
               className="w-full rounded-2xl bg-cream-soft ps-10 pe-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
@@ -1243,9 +1248,9 @@ export const AddFoodSheet: React.FC<{
               Barcode x0.635, Custom x0.835). */}
           <div className="grid grid-cols-4 mb-4" style={{ gap: 9 }}>
             {[
-              { label: "AI Voice", icon: <Mic size={17} />, bg: dark ? "linear-gradient(150deg,rgb(var(--th-647b77)),rgb(var(--th-445e5a)))" : "linear-gradient(150deg,rgb(var(--th-a2c8c2)),rgb(var(--th-6f9993)))", onClick: () => setVoiceOpen(true) },
+              { label: t("AI Voice"), icon: <Mic size={17} />, bg: dark ? "linear-gradient(150deg,rgb(var(--th-647b77)),rgb(var(--th-445e5a)))" : "linear-gradient(150deg,rgb(var(--th-a2c8c2)),rgb(var(--th-6f9993)))", onClick: () => setVoiceOpen(true) },
               {
-                label: "AI Scan",
+                label: t("AI Scan"),
                 icon: (
                   <span className="relative inline-flex">
                     <Camera size={17} />
@@ -1255,9 +1260,9 @@ export const AddFoodSheet: React.FC<{
                 bg: dark ? "linear-gradient(150deg,rgb(var(--th-617b77)),rgb(var(--th-365652)))" : "linear-gradient(150deg,rgb(var(--th-8fb5af)),rgb(var(--th-4f7f78)))",
                 onClick: () => setScanNotice(true),
               },
-              { label: "Barcode", icon: <ScanBarcode size={17} />, bg: dark ? "linear-gradient(150deg,rgb(var(--th-7a7293)),rgb(var(--th-5b5180)))" : "linear-gradient(150deg,rgb(var(--th-c0b4e8)),rgb(var(--th-8f7fc9)))", onClick: openBarcode },
+              { label: t("Barcode"), icon: <ScanBarcode size={17} />, bg: dark ? "linear-gradient(150deg,rgb(var(--th-7a7293)),rgb(var(--th-5b5180)))" : "linear-gradient(150deg,rgb(var(--th-c0b4e8)),rgb(var(--th-8f7fc9)))", onClick: openBarcode },
               {
-                label: "Custom",
+                label: t("Custom"),
                 icon: (
                   <span className="inline-flex" style={{ gap: 1 }}>
                     <Carrot size={15} />
@@ -1283,7 +1288,7 @@ export const AddFoodSheet: React.FC<{
           {matchingMeals.length > 0 && (
             <div className="mb-4">
               <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-                Custom meals
+                {t("Custom meals")}
               </p>
               <div className="space-y-1.5">
                 {matchingMeals.map((m) => (
@@ -1295,10 +1300,10 @@ export const AddFoodSheet: React.FC<{
                   >
                     <div>
                       <p className="text-sm font-semibold text-charcoal">{m.title}</p>
-                      <p className="text-[11px] text-charcoal-faint">{m.items.length} items logged together</p>
+                      <p className="text-[11px] text-charcoal-faint">{tn(m.items.length, "{n} item logged together", "{n} items logged together")}</p>
                     </div>
                     <span className="text-xs font-semibold text-primary">
-                      {justAdded ? "Added" : "Log all"}
+                      {justAdded ? t("Added") : t("Log all")}
                     </span>
                   </button>
                 ))}
@@ -1332,7 +1337,7 @@ export const AddFoodSheet: React.FC<{
                   }}
                   onClick={() => setCategory(c.id)}
                 >
-                  {c.label}
+                  {t(c.label)}
                 </button>
               );
             })}
@@ -1345,12 +1350,12 @@ export const AddFoodSheet: React.FC<{
           <div className="flex flex-col no-scrollbar" style={{ gap: 6, maxHeight: 424, overflowY: "auto", margin: "0 -20px", padding: "12px 20px 0" }}>
             {!query.trim() &&
               (suggestions.length === 0 ? (
-                <p className="text-center text-sm text-charcoal-faint py-8">Start typing to search foods</p>
+                <p className="text-center text-sm text-charcoal-faint py-8">{t("Start typing to search foods")}</p>
               ) : (
                 <>
                   <p className="flex items-center gap-1.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
                     <Clock size={12} />
-                    {suggestMeal ? `Frequent at ${detailMealLabels[suggestMeal]}` : "Frequent & recent"}
+                    {suggestMeal ? t("Frequent at {meal}", { meal: t(detailMealLabels[suggestMeal]) }) : t("Frequent & recent")}
                   </p>
                   {suggestions.map((sg) => {
                     const food = suggestionFoods.get(sg.id);
@@ -1378,7 +1383,7 @@ export const AddFoodSheet: React.FC<{
                 })
               )}
             {query.trim() !== "" && loading && filtered.length === 0 && (
-              <p className="text-center text-sm text-charcoal-faint py-8">Searching…</p>
+              <p className="text-center text-sm text-charcoal-faint py-8">{t("Searching…")}</p>
             )}
             {/* Round D · DP (D17): "Search online" as a row under the results. */}
             {onlineQuery(query) && !loading && filtered.length > 0 && !multi && (
@@ -1387,7 +1392,7 @@ export const AddFoodSheet: React.FC<{
             {query.trim() !== "" && !loading && filtered.length === 0 && (
               <div className="flex flex-col" style={{ gap: 4, padding: "24px 0 16px" }}>
                 <p className="text-center text-sm text-charcoal-faint" style={{ margin: 0 }}>
-                  {searchEmptyLine(searchFailed, online) ?? "Not in our catalog yet. Search online, or try Custom or Barcode to add it."}
+                  {searchEmptyLine(searchFailed, online) ?? t("Not in our catalog yet. Search online, or try Custom or Barcode to add it.")}
                 </p>
                 {/* …and in the nothing-found state (not when the search itself couldn't run). */}
                 {!searchFailed && onlineQuery(query) && (
@@ -1402,7 +1407,7 @@ export const AddFoodSheet: React.FC<{
       </BottomSheet>
       <Toast
         open={scanNotice}
-        message="AI Scan isn't available yet."
+        message={t("AI Scan isn't available yet.")}
         icon={<Camera size={15} className="flex-none" style={{ color: "rgb(var(--thi-a2c8c2))" }} />}
         onExpire={() => setScanNotice(false)}
       />

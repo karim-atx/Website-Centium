@@ -9,6 +9,7 @@
 // while that moment is still ahead, and re-locks itself when it passes.
 
 import { rateLimitMessage } from "../network-error";
+import { t } from "../../i18n/core";
 
 /** Folder id → the ISO end of its unlock window, as unlock_journal_folder returned it. */
 export type UnlockWindows = Record<string, string>;
@@ -38,9 +39,9 @@ export function liveWindows(windows: UnlockWindows, now: number): UnlockWindows 
 export function msUntilNextExpiry(windows: UnlockWindows, now: number): number | null {
   let next: number | null = null;
   for (const until of Object.values(windows)) {
-    const t = Date.parse(until);
-    if (Number.isNaN(t)) continue;
-    const ms = Math.max(0, t - now);
+    const at = Date.parse(until);
+    if (Number.isNaN(at)) continue;
+    const ms = Math.max(0, at - now);
     if (next === null || ms < next) next = ms;
   }
   return next;
@@ -55,14 +56,14 @@ export function msUntilNextExpiry(windows: UnlockWindows, now: number): number |
 export function describeLockError(code: string | undefined, message: string | undefined): string {
   switch (code) {
     case "ATX01":
-      return "Your session expired. Sign in again.";
+      return t("Your session expired. Sign in again.");
     case "ATX02":
       return rateLimitMessage(message);
     case "ATX77":
-      return "This account signs in without a password, so there's no password to unlock this folder with.";
+      return t("This account signs in without a password, so there's no password to unlock this folder with.");
     case "ATX78":
-      return "This folder no longer exists.";
+      return t("This folder no longer exists.");
     default:
-      return "Couldn't reach Centium. Check your connection and try again.";
+      return t("Couldn't reach Centium. Check your connection and try again.");
   }
 }

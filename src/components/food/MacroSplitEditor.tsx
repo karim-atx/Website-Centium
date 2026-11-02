@@ -2,6 +2,7 @@ import React from "react";
 import type { MacroSplit } from "../../types";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { isRtl, t, tk } from "../../i18n/core";
 
 // QA 13.0: "adjusting the macro rebalancing should always adopt a scientific
 // based approach and not just blindly rebalance to 100%." min/max per macro
@@ -14,9 +15,9 @@ import { textPx } from "../../theme/textSize";
 // `ink` / `tint`: the value square at the end of each line on Goals & Macros
 // (FO2.2 / FO4.2 / FO5.2), measured from the frames.
 const macroMeta = [
-  { key: "proteinPct" as const, label: "Protein", color: "rgb(var(--thi-7d6bb5))", ink: "rgb(var(--th-7d6bb5))", tint: "rgb(var(--th-f0edf9))", kcalPerG: 4, min: 10, max: 35 },
-  { key: "carbsPct" as const, label: "Carbs", color: "rgb(var(--thi-aea1dc))", ink: "rgb(var(--th-8175c2))", tint: "rgb(var(--th-f0edf9))", kcalPerG: 4, min: 30, max: 65 },
-  { key: "fatPct" as const, label: "Fat", color: "rgb(var(--thi-a2c8c2))", ink: "rgb(var(--th-6f9993))", tint: "#EAF4F2", kcalPerG: 9, min: 20, max: 40 },
+  { key: "proteinPct" as const, label: tk("Protein"), color: "rgb(var(--thi-7d6bb5))", ink: "rgb(var(--th-7d6bb5))", tint: "rgb(var(--th-f0edf9))", kcalPerG: 4, min: 10, max: 35 },
+  { key: "carbsPct" as const, label: tk("Carbs"), color: "rgb(var(--thi-aea1dc))", ink: "rgb(var(--th-8175c2))", tint: "rgb(var(--th-f0edf9))", kcalPerG: 4, min: 30, max: 65 },
+  { key: "fatPct" as const, label: tk("Fat"), color: "rgb(var(--thi-a2c8c2))", ink: "rgb(var(--th-6f9993))", tint: "#EAF4F2", kcalPerG: 9, min: 20, max: 40 },
 ];
 
 // Mobile v5.1 R3, dark mode (no light islands): the value squares' dark
@@ -33,6 +34,8 @@ const SQUARE_DARK: Record<MacroMeta["key"], { ink: string; tint: string }> = {
 
 type MacroMeta = (typeof macroMeta)[number];
 
+// Kept a plain literal (Fast Refresh allows constant exports); shown with t()
+// where it's drawn, and its Arabic is in i18n/ar/food.ts.
 export const MACRO_REBALANCE_NOTE =
   "Adjusting one macro rebalances the other two within evidence-based ranges so they always total 100%.";
 
@@ -86,7 +89,7 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
           return (
             <div key={m.key} className="flex items-center" style={{ gap: 13 }}>
               <div className="flex-1 min-w-0">
-                <p style={{ margin: "0 0 8px", fontSize: textPx(13), fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>{m.label}</p>
+                <p style={{ margin: "0 0 8px", fontSize: textPx(13), fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>{t(m.label)}</p>
                 <input
                   type="range"
                   min={m.min}
@@ -94,11 +97,11 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
                   value={pct}
                   onChange={(e) => handleSlide(m.key, Number(e.target.value))}
                   disabled={disabled}
-                  aria-label={`${m.label} share`}
+                  aria-label={t("{macro} share", { macro: t(m.label) })}
                   className="w-full block h-[4px] rounded-full appearance-none"
                   style={{
                     accentColor: m.color,
-                    backgroundImage: `linear-gradient(to right, ${m.color} ${frac}%, rgb(var(--c-cream-soft)) ${frac}%)`,
+                    backgroundImage: `linear-gradient(to ${isRtl() ? "left" : "right"}, ${m.color} ${frac}%, rgb(var(--c-cream-soft)) ${frac}%)`,
                   }}
                 />
               </div>
@@ -106,7 +109,7 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
                 className="flex flex-col items-center justify-center flex-none"
                 style={{ width: 50, height: 36, borderRadius: 9, background: dark ? SQUARE_DARK[m.key].tint : m.tint }}
               >
-                <span style={{ fontSize: textPx(12.5), fontWeight: 800, color: ink, lineHeight: 1.15 }}>{grams}g</span>
+                <span style={{ fontSize: textPx(12.5), fontWeight: 800, color: ink, lineHeight: 1.15 }}>{t("{n}g", { n: grams })}</span>
                 <span style={{ fontSize: textPx(9.5), color: ink, opacity: 0.6, lineHeight: 1.15 }}>{pct}%</span>
               </div>
             </div>
@@ -125,9 +128,9 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
         return (
           <div key={m.key}>
             <div className="flex items-baseline justify-between mb-1.5">
-              <span className="text-sm font-semibold text-charcoal">{m.label}</span>
+              <span className="text-sm font-semibold text-charcoal">{t(m.label)}</span>
               <span className="text-xs text-charcoal-faint">
-                {pct}% · {grams}g
+                {pct}% · {t("{n}g", { n: grams })}
               </span>
             </div>
             {/* QA 13.0: "the progress bar was colored based on each their
@@ -146,13 +149,13 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
               className="w-full h-2 rounded-full appearance-none"
               style={{
                 accentColor: m.color,
-                backgroundImage: `linear-gradient(to right, ${m.color} ${frac}%, rgb(var(--c-cream-soft)) ${frac}%)`,
+                backgroundImage: `linear-gradient(to ${isRtl() ? "left" : "right"}, ${m.color} ${frac}%, rgb(var(--c-cream-soft)) ${frac}%)`,
               }}
             />
           </div>
         );
       })}
-      <p className="text-xs text-charcoal-faint">{MACRO_REBALANCE_NOTE}</p>
+      <p className="text-xs text-charcoal-faint">{t(MACRO_REBALANCE_NOTE)}</p>
     </div>
   );
 };

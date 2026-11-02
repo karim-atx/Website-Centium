@@ -5,6 +5,7 @@ import { setTargetLines } from "../../services/workout/setTargets";
 import { liftTo, tintOn, DARK_SURFACE } from "../../data/folderColors";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
+import { t, tk } from "../../i18n/core";
 export type { RenderRun } from "../../services/workout/blocks";
 
 // A block, as it reads in a routine, a template or a curated program.
@@ -55,10 +56,10 @@ const blockRails = (dark: boolean): Record<BlockKind, BlockRail> => (dark ? DARK
 
 /** What each kind is, in one clause, for the people who have not met EMOM. */
 const EXPLANATION: Record<BlockKind, string> = {
-  superset: "Run these together, no clock.",
-  amrap: "As many rounds as possible in the time.",
-  emom: "One round at the top of every interval.",
-  for_time: "Finish the rounds as fast as you can.",
+  superset: tk("Run these together, no clock."),
+  amrap: tk("As many rounds as possible in the time."),
+  emom: tk("One round at the top of every interval."),
+  for_time: tk("Finish the rounds as fast as you can."),
 };
 
 export const BlockCard: React.FC<{
@@ -98,7 +99,7 @@ export const BlockCard: React.FC<{
         <>
           <p style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 800, color: colors.ink }}>{heading}</p>
           <p style={{ margin: "1px 0 0", fontSize: textPx(10.5), color: "rgb(var(--c-charcoal-muted))" }}>
-            {EXPLANATION[block.kind]}
+            {t(EXPLANATION[block.kind])}
             {block.label?.trim() ? "" : ""}
           </p>
         </>
@@ -107,7 +108,7 @@ export const BlockCard: React.FC<{
       <div style={{ background: "rgb(var(--c-cream-card))", margin: "0 6px 6px", borderRadius: 10 }}>
         {members.length === 0 ? (
           <p style={{ margin: 0, padding: "10px 12px", fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>
-            Nothing in this block yet.
+            {t("Nothing in this block yet.")}
           </p>
         ) : (
           members.map((ex, i) => {

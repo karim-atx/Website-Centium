@@ -4,6 +4,7 @@ import { NUTRIENT_SECTIONS, CALC_KEYS, type NutrientRow, type NutrientSection } 
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands). Colours whose light value is
@@ -215,12 +216,13 @@ function NutrientRowLine({ view, groupLabel }: { view: RowView; groupLabel?: str
       : "–";
 
   let targetText: string;
-  if (row.kind === "ref") targetText = `Ref ${row.refText ?? ""} · ${row.source}`;
-  else if (row.kind === "limit" && target !== null) targetText = `Limit ${formatAmount(target)}${unitSuffix} · ${row.source}`;
+  if (row.kind === "ref") targetText = t("Ref {ref} · {source}", { ref: row.refText ?? "", source: row.source });
+  else if (row.kind === "limit" && target !== null) targetText = t("Limit {amount} · {source}", { amount: `${formatAmount(target)}${unitSuffix}`, source: row.source });
   else if (row.kind === "goal" && target !== null)
-    targetText = `of ${formatAmount(target)}${unitSuffix} · ${row.source}${
-      row.mgPerKgBodyWeight != null ? " · based on your body weight" : ""
-    }`;
+    targetText =
+      row.mgPerKgBodyWeight != null
+        ? t("of {amount} · {source} · based on your body weight", { amount: `${formatAmount(target)}${unitSuffix}`, source: row.source })
+        : t("of {amount} · {source}", { amount: `${formatAmount(target)}${unitSuffix}`, source: row.source });
   else targetText = row.source;
 
   // A reference is guidance, not a Daily Value, so it never shows a % —
@@ -244,7 +246,7 @@ function NutrientRowLine({ view, groupLabel }: { view: RowView; groupLabel?: str
             color: nsColor("groupLabel", dark),
           }}
         >
-          {groupLabel}
+          {t(groupLabel)}
         </p>
       )}
       <div className="flex items-baseline" style={{ gap: 8 }}>
@@ -278,17 +280,17 @@ function NutrientRowLine({ view, groupLabel }: { view: RowView; groupLabel?: str
         </span>
         {hasPartial && partial && (
           <span
-            title={`Based on ${partial.shown} of ${partial.of} foods`}
+            title={t("Based on {shown} of {of} foods", { shown: partial.shown, of: partial.of })}
             className="flex-none inline-flex items-center"
             style={{ ...chipStyle, gap: 3, color: nsColor("goldText", dark), background: nsColor("goldTint", dark) }}
           >
             <AlertCircle size={9} strokeWidth={2.4} style={{ display: "block" }} />
-            partial
+            {t("partial")}
           </span>
         )}
         {row.kind === "calc" && (
           <span className="flex-none" style={{ ...chipStyle, color: nsColor("lav", dark), background: "rgb(var(--th-aea1dc) / 0.2)" }}>
-            calculated
+            {t("calculated")}
           </span>
         )}
       </div>
@@ -316,8 +318,7 @@ function NutrientRowLine({ view, groupLabel }: { view: RowView; groupLabel?: str
         >
           <AlertTriangle size={11} color={nsColor("over", dark)} strokeWidth={2} className="flex-none" style={{ display: "block" }} />
           <span className="whitespace-nowrap" style={{ fontSize: textPx(9.5), fontWeight: 600, color: nsColor("goldText", dark) }}>
-            Over the {formatAmount(target)}
-            {unitSuffix} limit
+            {t("Over the {amount} limit", { amount: `${formatAmount(target)}${unitSuffix}` })}
           </span>
         </span>
       )}
@@ -326,7 +327,7 @@ function NutrientRowLine({ view, groupLabel }: { view: RowView; groupLabel?: str
 
       {hasPartial && partial && (
         <p style={{ margin: "4px 0 0", fontSize: textPx(9), lineHeight: 1.45, color: nsColor("goldText", dark) }}>
-          Based on {partial.shown} of {partial.of} foods
+          {t("Based on {shown} of {of} foods", { shown: partial.shown, of: partial.of })}
         </p>
       )}
     </div>
@@ -381,9 +382,9 @@ function NutrientSectionBlock({
         onClick={onToggle}
         className="tap w-full flex items-center gap-2.5"
         style={{ padding: 0, background: "none" }}
-        aria-label={expanded ? `Collapse ${section.name}` : `Expand ${section.name}`}
+        aria-label={expanded ? t("Collapse {section}", { section: t(section.name) }) : t("Expand {section}", { section: t(section.name) })}
       >
-        <h3 className="flex-1 min-w-0 text-start text-[13.5px] font-bold text-charcoal">{section.name}</h3>
+        <h3 className="flex-1 min-w-0 text-start text-[13.5px] font-bold text-charcoal">{t(section.name)}</h3>
         <span
           className="shrink-0 tabular-nums whitespace-nowrap"
           style={{
@@ -395,7 +396,7 @@ function NutrientSectionBlock({
             padding: "3px 8px",
           }}
         >
-          {loggedCount} of {allViews.length}
+          {t("{n} of {total}", { n: loggedCount, total: allViews.length })}
         </span>
         <ChevronDown
           size={14}
@@ -408,7 +409,7 @@ function NutrientSectionBlock({
         <div style={{ marginTop: 12, animation: "fade-slide-up .35s cubic-bezier(.22,1,.36,1) both" }}>
           {rows.length === 0 ? (
             <p style={{ margin: 0, padding: "14px 0", textAlign: "center", fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>
-              Nothing logged in this group yet
+              {t("Nothing logged in this group yet")}
             </p>
           ) : (
             <div className="flex flex-col" style={{ gap: 11 }}>
@@ -515,10 +516,10 @@ function NutrientDetailSection({
         aria-expanded={expanded}
       >
         <span className="flex-1 min-w-0" style={{ fontSize: textPx(12.5), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
-          {section.name}
+          {t(section.name)}
         </span>
         <span className="shrink-0 tabular-nums" style={{ fontSize: textPx(10.5), fontWeight: 600, color: "rgb(var(--c-charcoal-muted))" }}>
-          {withAmounts.length} of {rows.length}
+          {t("{n} of {total}", { n: withAmounts.length, total: rows.length })}
         </span>
         <ChevronDown
           size={14}
@@ -531,7 +532,7 @@ function NutrientDetailSection({
         <div style={{ padding: "2px 12px 10px" }}>
           {visible.length === 0 ? (
             <p style={{ margin: "8px 0", fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>
-              No data for this food in this group.
+              {t("No data for this food in this group.")}
             </p>
           ) : (
             visible.map(({ row, amount, known }, i) => {
@@ -545,7 +546,7 @@ function NutrientDetailSection({
                 hasValue && !partial && target !== null && target > 0 ? Math.round((amount / target) * 100) : null;
               const overLimit = hasValue && row.kind === "limit" && target !== null && amount > target;
               const amountText = !hasValue
-                ? "No data"
+                ? t("No data")
                 : row.key === CALC_KEYS.omega6to3.key
                   ? `${formatDetailAmount(amount)} : 1`
                   : `${formatDetailAmount(amount)}${row.unit ? ` ${row.unit}` : ""}`;
@@ -566,7 +567,7 @@ function NutrientDetailSection({
                           padding: "1px 5px",
                         }}
                       >
-                        limit
+                        {t("limit")}
                       </span>
                     )}
                     {partial && (
@@ -581,7 +582,7 @@ function NutrientDetailSection({
                           padding: "1px 5px",
                         }}
                       >
-                        partial
+                        {t("partial")}
                       </span>
                     )}
                   </span>
@@ -606,7 +607,7 @@ function NutrientDetailSection({
                 </div>
                 {partial && (
                   <p style={{ margin: "2px 0 0", fontSize: textPx(10.5), color: "rgb(var(--c-charcoal-muted))" }}>
-                    Based on {known} of {n} ingredients
+                    {t("Based on {shown} of {of} ingredients", { shown: known, of: n })}
                   </p>
                 )}
                 </div>

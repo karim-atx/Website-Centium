@@ -7,6 +7,7 @@ import type { BlockKind, WorkoutBlock } from "../../types";
 import { checkBlock, defaultBlockParams, normalizeBlock } from "../../services/workout/blocks";
 import { blockHeading } from "../../services/workout/prescription";
 import { textPx } from "../../theme/textSize";
+import { t, tk, tx } from "../../i18n/core";
 
 // Choosing what a group of exercises IS, and what governs its repetition.
 //
@@ -21,10 +22,10 @@ import { textPx } from "../../theme/textSize";
 // plan would be asking the athlete to predict their own score.
 
 const KINDS: { value: BlockKind; label: string; blurb: string }[] = [
-  { value: "superset", label: "Superset", blurb: "Run together, no clock. Needs two or more." },
-  { value: "amrap", label: "AMRAP", blurb: "As many rounds as possible inside a time window." },
-  { value: "emom", label: "EMOM", blurb: "One round at the top of every interval." },
-  { value: "for_time", label: "For Time", blurb: "Finish the rounds as fast as possible." },
+  { value: "superset", label: tk("Superset"), blurb: tk("Run together, no clock. Needs two or more.") },
+  { value: "amrap", label: "AMRAP", blurb: tk("As many rounds as possible inside a time window.") },
+  { value: "emom", label: "EMOM", blurb: tk("One round at the top of every interval.") },
+  { value: "for_time", label: tk("For Time"), blurb: tk("Finish the rounds as fast as possible.") },
 ];
 
 const labelStyle: React.CSSProperties = {
@@ -108,10 +109,10 @@ export const BlockSettingsSheet: React.FC<{
   const intervalSeconds = draft.intervalSeconds;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={creating ? "Group as" : "Block"}>
+    <BottomSheet open={open} onClose={onClose} title={creating ? t("Group as") : tx("Block", "workout")}>
       <div className="flex flex-col animate-fade-slide-up" style={{ gap: 16 }}>
         <div>
-          <span style={labelStyle}>Kind</span>
+          <span style={labelStyle}>{t("Kind")}</span>
           <div className="flex flex-wrap" style={{ gap: 6 }}>
             {KINDS.map((k) => (
               <button
@@ -121,18 +122,18 @@ export const BlockSettingsSheet: React.FC<{
                 className="tap transition-colors"
                 style={sheetChipStyle(draft.kind === k.value)}
               >
-                {k.label}
+                {t(k.label)}
               </button>
             ))}
           </div>
           <p style={{ margin: "7px 2px 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>
-            {KINDS.find((k) => k.value === draft.kind)?.blurb}
+            {t(KINDS.find((k) => k.value === draft.kind)?.blurb ?? "")}
           </p>
         </div>
 
         {draft.kind === "amrap" && (
           <Num
-            label="Minutes"
+            label={t("Minutes")}
             value={capMinutes}
             onChange={(v) => setDraft({ ...draft, timeCapSeconds: v ? v * 60 : undefined })}
             placeholder="12"
@@ -142,13 +143,13 @@ export const BlockSettingsSheet: React.FC<{
         {draft.kind === "emom" && (
           <div className="flex" style={{ gap: 10 }}>
             <Num
-              label="Every (seconds)"
+              label={t("Every (seconds)")}
               value={intervalSeconds}
               onChange={(v) => setDraft({ ...draft, intervalSeconds: v })}
               placeholder="60"
             />
             <Num
-              label="Rounds"
+              label={t("Rounds")}
               value={draft.rounds}
               onChange={(v) => setDraft({ ...draft, rounds: v })}
               placeholder="10"
@@ -159,13 +160,13 @@ export const BlockSettingsSheet: React.FC<{
         {draft.kind === "for_time" && (
           <div className="flex" style={{ gap: 10 }}>
             <Num
-              label="Rounds"
+              label={t("Rounds")}
               value={draft.rounds}
               onChange={(v) => setDraft({ ...draft, rounds: v })}
               placeholder="5"
             />
             <Num
-              label="Cap (minutes, optional)"
+              label={t("Cap (minutes, optional)")}
               value={capMinutes}
               onChange={(v) => setDraft({ ...draft, timeCapSeconds: v ? v * 60 : undefined })}
               placeholder="20"
@@ -174,17 +175,17 @@ export const BlockSettingsSheet: React.FC<{
         )}
 
         <label className="block">
-          <span style={labelStyle}>Name (optional)</span>
+          <span style={labelStyle}>{t("Name (optional)")}</span>
           <input
             value={draft.label ?? ""}
             onChange={(e) => setDraft({ ...draft, label: e.target.value })}
-            placeholder="Finisher"
-            aria-label="Block name"
+            placeholder={t("Finisher")}
+            aria-label={t("Block name")}
             className="placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             style={inputStyle}
           />
           <span style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", marginTop: 6, display: "block" }}>
-            Shown instead of “{blockHeading({ ...draft, label: undefined })}”.
+            {t("Shown instead of “{name}”.", { name: blockHeading({ ...draft, label: undefined }) })}
           </span>
         </label>
 
@@ -204,7 +205,7 @@ export const BlockSettingsSheet: React.FC<{
             onClose();
           }}
         >
-          {creating ? "Create block" : "Save block"}
+          {creating ? t("Create block") : t("Save block")}
         </Button>
 
         {onUngroup && (
@@ -217,7 +218,7 @@ export const BlockSettingsSheet: React.FC<{
               onClose();
             }}
           >
-            <Trash2 size={14} /> Ungroup
+            <Trash2 size={14} /> {t("Ungroup")}
           </Button>
         )}
       </div>
