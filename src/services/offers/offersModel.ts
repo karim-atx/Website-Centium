@@ -22,6 +22,7 @@
 import { formatShortDate } from "../../utils/date";
 import { num, rows, str } from "../market/parse";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tn } from "../../i18n/core";
 
 // ---------------------------------------------------------------------------
 // Categories (C-MO.4.4 chips, `cats`)
@@ -30,13 +31,13 @@ export type RewardCategory = "all" | "professionals" | "clothing" | "equipment" 
 
 /** The chips in the board's order, with their labels. */
 export const REWARD_CATEGORIES: readonly { key: RewardCategory; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "professionals", label: "Professionals" },
-  { key: "clothing", label: "Clothing" },
-  { key: "equipment", label: "Equipment" },
-  { key: "supplements", label: "Supplements" },
-  { key: "meal_prep", label: "Meal Prep" },
-  { key: "wellness", label: "Wellness" },
+  { key: "all", label: tk("All") },
+  { key: "professionals", label: tk("Professionals") },
+  { key: "clothing", label: tk("Clothing") },
+  { key: "equipment", label: tk("Equipment") },
+  { key: "supplements", label: tk("Supplements") },
+  { key: "meal_prep", label: tk("Meal Prep") },
+  { key: "wellness", label: tk("Wellness") },
 ];
 
 /** offers.category (offering_category) for a chip: null for All (gym, class and store offers show under All only, D-21). */
@@ -154,9 +155,9 @@ export function forAge<T extends { category: string }>(list: readonly T[], adult
 export type RewardSort = "featured" | "lowest" | "highest";
 
 export const REWARD_SORTS: readonly { key: RewardSort; label: string }[] = [
-  { key: "featured", label: "Featured" },
-  { key: "lowest", label: "Fewest points" },
-  { key: "highest", label: "Most points" },
+  { key: "featured", label: tk("Featured") },
+  { key: "lowest", label: tk("Fewest points") },
+  { key: "highest", label: tk("Most points") },
 ];
 
 /**
@@ -237,7 +238,7 @@ export function parseOfferDetail(data: unknown, label: SubtypeLabel = () => null
 
 /** "Where to use" (`offerRows`): In store / Online / In store and online / In person. */
 export function whereLabel(w: OfferWhere | null): string | null {
-  return w === "in_store" ? "In store" : w === "online" ? "Online" : w === "both" ? "In store and online" : w === "in_person" ? "In person" : null;
+  return w === "in_store" ? t("In store") : w === "online" ? t("Online") : w === "both" ? t("In store and online") : w === "in_person" ? t("In person") : null;
 }
 
 const day = (iso: string) => new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : iso);
@@ -250,25 +251,25 @@ export function validRange(startsOn: string | null, endsOn: string | null): stri
   if (!endsOn) return null;
   const end = day(endsOn);
   const endText = dayText(endsOn);
-  if (!startsOn) return `Until ${endText}`;
+  if (!startsOn) return t("Until {date}", { date: endText });
   const start = day(startsOn);
   const startText = formatShortDate(start, start.getFullYear() === end.getFullYear() ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
-  return `${startText} to ${endText}`;
+  return t("{start} to {end}", { start: startText, end: endText });
 }
 
 /** "1 per member". */
-export const limitLabel = (n: number | null): string | null => (n && n > 0 ? `${n} per member` : null);
+export const limitLabel = (n: number | null): string | null => (n && n > 0 ? t("{n} per member", { n }) : null);
 
 /** "90 days after it is issued", or "Until Dec 31, 2026" when the offer ends first (D-24). */
-export const voucherExpiryLabel = (days: number, cappedOn: string | null = null): string => (cappedOn ? `Until ${dayText(cappedOn)}` : `${days} days after it is issued`);
+export const voucherExpiryLabel = (days: number, cappedOn: string | null = null): string => (cappedOn ? t("Until {date}", { date: dayText(cappedOn) }) : tn(days, "{n} day after it is issued", "{n} days after it is issued"));
 
 /** The redeem sheet's line: "900 points will be deducted. New balance: 340." */
 export function deductionLine(cost: number, balance: number): string {
-  return `${cost.toLocaleString(appLocale("en-US"))} points will be deducted. New balance: ${Math.max(0, balance - cost).toLocaleString(appLocale("en-US"))}.`;
+  return t("{cost} points will be deducted. New balance: {balance}.", { cost: cost.toLocaleString(appLocale("en-US")), balance: Math.max(0, balance - cost).toLocaleString(appLocale("en-US")) });
 }
 
 /** "You need 1,760 more points". */
-export const needMoreLine = (cost: number, balance: number): string => `You need ${Math.max(0, cost - balance).toLocaleString(appLocale("en-US"))} more points`;
+export const needMoreLine = (cost: number, balance: number): string => t("You need {n} more points", { n: Math.max(0, cost - balance).toLocaleString(appLocale("en-US")) });
 
 // ---------------------------------------------------------------------------
 // redeem_offer refusals: HANDOVER_API "Offers, vouchers, redemption" and the
@@ -290,12 +291,12 @@ export const redeemErrorOf = (e: { code?: string | null }): RedeemError | null =
 
 /** Our words for each refusal (not drawn on the board). */
 export const REDEEM_ERROR_TEXT: Record<RedeemError, string> = {
-  offer_not_found: "This offer isn't available any more.",
-  offer_not_active: "This offer isn't available any more.",
-  not_available_to_minors: "Supplement offers are for members 18 and over.",
-  insufficient_points: "You don't have enough points for this reward yet.",
-  sold_out: "This offer has run out.",
-  limit_reached: "You've already redeemed this offer.",
-  rate_limited: "Too many tries in a short time. Try again later.",
+  offer_not_found: tk("This offer isn't available any more."),
+  offer_not_active: tk("This offer isn't available any more."),
+  not_available_to_minors: tk("Supplement offers are for members 18 and over."),
+  insufficient_points: tk("You don't have enough points for this reward yet."),
+  sold_out: tk("This offer has run out."),
+  limit_reached: tk("You've already redeemed this offer."),
+  rate_limited: tk("Too many tries in a short time. Try again later."),
 };
 

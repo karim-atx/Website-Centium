@@ -44,12 +44,17 @@ import bizmarket from "./bizmarket";
 import bizteam from "./bizteam";
 import health from "./health";
 import cycle from "./cycle";
+import sharedbiz from "./sharedbiz";
+import sharedmember from "./sharedmember";
+import sharedfood from "./sharedfood";
+import sharedhealth from "./sharedhealth";
+import sharedpro from "./sharedpro";
 
 // Round F (AV): the Arabic catalogue, one file per area, loaded as one lazy
 // chunk when Arabic is chosen. Every entry is in design-handover/round-f/
 // ARABIC_REVIEW.md for Karim's review before merge. A key in two areas has
 // the same Arabic in both (the catalogue test checks).
-const ar: Catalogue = { ...core, ...landing, ...legal, ...auth, ...settings, ...plans, ...messages, ...notifications, ...services, ...shared, ...programmes, ...safety, ...venues, ...certificates, ...marketplace, ...market, ...share, ...member, ...community, ...findpros, ...misc, ...food, ...workout, ...mind, ...pro, ...proclients, ...proprofile, ...procalendar, ...promessages, ...prolibrary, ...pronutrition, ...proforms, ...proinsights, ...provitals, ...procourses, ...pronetwork, ...promarket, ...business, ...bizanalytics, ...bizrevenue, ...bizops, ...bizmarket, ...bizteam, ...health, ...cycle };
+const ar: Catalogue = { ...core, ...landing, ...legal, ...auth, ...settings, ...plans, ...messages, ...notifications, ...services, ...shared, ...programmes, ...safety, ...venues, ...certificates, ...marketplace, ...market, ...share, ...member, ...community, ...findpros, ...misc, ...food, ...workout, ...mind, ...pro, ...proclients, ...proprofile, ...procalendar, ...promessages, ...prolibrary, ...pronutrition, ...proforms, ...proinsights, ...provitals, ...procourses, ...pronetwork, ...promarket, ...business, ...bizanalytics, ...bizrevenue, ...bizops, ...bizmarket, ...bizteam, ...health, ...cycle, ...sharedbiz, ...sharedmember, ...sharedfood, ...sharedhealth, ...sharedpro };
 
 export default ar;
 

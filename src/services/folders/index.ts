@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { MAX_DEPTH_NOTE } from "../routines/folderDepth";
+import { t, tk } from "../../i18n/core";
 
 // The folder tree, once, for both tables that have one.
 //
@@ -61,26 +62,26 @@ export interface FolderWriteResult {
  * folder uuids, which is why it is replaced here rather than shown.
  */
 /** OURS (WO1 B-1, B3 PB-O-36): a routine folder's name rule. */
-export const FOLDER_NAME_RULE = "A folder name is 1 to 40 characters.";
+export const FOLDER_NAME_RULE = tk("A folder name is 1 to 40 characters.");
 
 export function describeFolderError(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "ATX16") {
-    return "A folder can't be filed inside itself or one of its own subfolders.";
+    return t("A folder can't be filed inside itself or one of its own subfolders.");
   }
   if (code === "ATX17") {
-    return "That folder belongs to a different account, so it can't be used as a parent.";
+    return t("That folder belongs to a different account, so it can't be used as a parent.");
   }
   // The server's depth ceiling (Database 20260930100000), on routine and
   // template folders alike: the same sentence the UI limit shows.
-  if (code === "ATX33") return `${MAX_DEPTH_NOTE}.`;
+  if (code === "ATX33") return `${t(MAX_DEPTH_NOTE)}.`;
   // Database B3 (PB-O-36): routine_folders.name is 1 to 40 trimmed. The
   // screen already caps it at 40 and trims, so this is the server's backstop.
-  if (code === "23514" && (error.message ?? "").includes("routine_folders_name_check")) return FOLDER_NAME_RULE;
-  if (code === "42501") return "You don't have permission to do that.";
-  if (code === "23503") return "Something this refers to no longer exists. Try again.";
+  if (code === "23514" && (error.message ?? "").includes("routine_folders_name_check")) return t(FOLDER_NAME_RULE);
+  if (code === "42501") return t("You don't have permission to do that.");
+  if (code === "23503") return t("Something this refers to no longer exists. Try again.");
   if (isOffline(error)) return OFFLINE_MESSAGE;
-  return "Something went wrong. Please try again.";
+  return t("Something went wrong. Please try again.");
 }
 
 const COLUMNS = "id, name, parent_id, color, position";
@@ -144,7 +145,7 @@ export async function createFolder(
     console.error(`[folders] Could not create in ${table}:`, error?.message);
     return {
       ok: false,
-      message: error ? describeFolderError(error) : "Something went wrong. Please try again.",
+      message: error ? describeFolderError(error) : t("Something went wrong. Please try again."),
     };
   }
   return { ok: true, folder: toFolder(data as FolderRow) };

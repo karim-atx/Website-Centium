@@ -10,6 +10,13 @@
 //
 // Pure (no DOM, no locale), so node --test loads it and every surface reads
 // the same whatever the device's own hour cycle is.
+//
+// Round G (EH6): the words follow the app's language. The meridiem shown is
+// t("AM") / t("PM") (Arabic «ص» / «م»), and a default range reads
+// t("{start} to {end}"). The Clock12 / split values keep the raw "AM" / "PM"
+// (callers compare them); a caller's own joiner ("–") is kept as given.
+
+import { t } from "../i18n/core";
 
 export type Meridiem = "AM" | "PM";
 
@@ -45,6 +52,18 @@ const hm = (p: Clock12) => `${p.hour}:${String(p.minute).padStart(2, "0")}`;
 /** "8:40 AM" from minutes since midnight. */
 export function formatMinutes12(minutes: number): string {
   const p = clockParts(minutes);
+  return `${hm(p)} ${t(p.meridiem)}`;
+}
+
+/**
+ * "8:40 AM" always in English, for text the app SAVES (openings.schedule_label):
+ * stored text never takes the viewer's language.
+ */
+export function time12En(hhmm: string | null | undefined): string {
+  if (!hhmm) return "";
+  const m = minutesOfDay(hhmm);
+  if (m === null) return hhmm;
+  const p = clockParts(m);
   return `${hm(p)} ${p.meridiem}`;
 }
 
@@ -85,18 +104,19 @@ export function clock12Split(at: Date | string | number): { time: string; meridi
 }
 
 /** A range of minutes since midnight: "6:00 to 7:00 PM", "11:30 AM to 1:00 PM". */
-export function rangeMinutes12(start: number, end: number, joiner = " to "): string {
+export function rangeMinutes12(start: number, end: number, joiner?: string): string {
   const a = clockParts(start);
   const b = clockParts(end);
-  if (a.meridiem === b.meridiem) return `${hm(a)}${joiner}${hm(b)} ${b.meridiem}`;
-  return `${hm(a)} ${a.meridiem}${joiner}${hm(b)} ${b.meridiem}`;
+  const from = a.meridiem === b.meridiem ? hm(a) : `${hm(a)} ${t(a.meridiem)}`;
+  const to = `${hm(b)} ${t(b.meridiem)}`;
+  return joiner === undefined ? t("{start} to {end}", { start: from, end: to }) : `${from}${joiner}${to}`;
 }
 
 /**
  * A range of stored times: "6:00 to 7:00 PM". With only a start, the start
  * alone; with neither, "". An unreadable end falls back to the start alone.
  */
-export function range12(start: string | null | undefined, end: string | null | undefined, joiner = " to "): string {
+export function range12(start: string | null | undefined, end: string | null | undefined, joiner?: string): string {
   const a = minutesOfDay(start);
   const b = minutesOfDay(end);
   if (a === null) return b === null ? "" : formatMinutes12(b);
@@ -105,7 +125,7 @@ export function range12(start: string | null | undefined, end: string | null | u
 }
 
 /** A range of two instants, in the device's local time. */
-export function rangeClock12(start: Date | string | number, end: Date | string | number, joiner = " to "): string {
+export function rangeClock12(start: Date | string | number, end: Date | string | number, joiner?: string): string {
   const a = start instanceof Date ? start : new Date(start);
   const b = end instanceof Date ? end : new Date(end);
   if (Number.isNaN(a.getTime())) return Number.isNaN(b.getTime()) ? "" : clock12(b);
@@ -119,5 +139,5 @@ export function rangeClock12(start: Date | string | number, end: Date | string |
  */
 export function hourLabel12(hour: number): string {
   const p = clockParts(hour * 60);
-  return `${p.hour} ${p.meridiem}`;
+  return `${p.hour} ${t(p.meridiem)}`;
 }

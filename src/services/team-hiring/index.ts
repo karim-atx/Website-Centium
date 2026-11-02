@@ -22,6 +22,7 @@ import { hhmmOf, parseInvites, payUnitOf, type ExistingTeamInvite, type Opening,
 export type { HiringWrite } from "../hiring";
 export * from "./model";
 import { composeMyApplications, parseOpportunity, type MyApplication, type Opportunity } from "./model";
+import { t, tk, tn } from "../../i18n/core";
 
 export interface WorkClass {
   title: string;
@@ -80,7 +81,7 @@ export function fetchOpportunities(tab: "gyms" | "classes", f: OpportunityFilter
   return marketRpc(
     "opportunities",
     { p_tab: tab, p_type: f.type, p_radius_km: f.distanceKm ?? 50, p_limit: 50 },
-    "Couldn't load openings.",
+    t("Couldn't load openings."),
     (data) => rows(data).map(parseOpportunity).filter((o) => o.id && matchesSpecialty(o, f.specialty)),
   );
 }
@@ -111,7 +112,7 @@ export function applyToOpening(openingId: string, input: ApplyInput): Promise<Hi
       p_proposed_pay: input.proposedPay,
       p_attachments: input.attachments.map((a) => ({ kind: a.kind, ref_id: a.refId, label: a.label })),
     },
-    "Couldn't send your application. Check your connection and try again.",
+    t("Couldn't send your application. Check your connection and try again."),
     () => null,
   );
 }
@@ -127,7 +128,7 @@ export function applyToOpening(openingId: string, input: ApplyInput): Promise<Hi
  * its own status with the proposed pay or the posted pay.
  */
 export async function fetchMyApplications(): Promise<MarketResult<MyApplication[]>> {
-  const fallback = "Couldn't load your applications.";
+  const fallback = t("Couldn't load your applications.");
   const [apps, offers] = await Promise.all([marketRpc("my_applications", {}, fallback, rows), marketRpc("my_hire_offers", { p_status: null }, fallback, rows)]);
   if (!apps.ok) return apps;
   if (!offers.ok) return offers;
@@ -163,7 +164,7 @@ async function clashesFor(offerId: string): Promise<Clash[]> {
  * and leaves the clashing sessions without an instructor.
  */
 export async function acceptHireOffer(offerId: string, ackConflicts: boolean): Promise<HiringWrite> {
-  const r = await hiringWrite("accept_hire_offer", { p_offer_id: offerId, p_ack_conflicts: ackConflicts }, "Couldn't accept the offer. Try again.", () => null);
+  const r = await hiringWrite("accept_hire_offer", { p_offer_id: offerId, p_ack_conflicts: ackConflicts }, t("Couldn't accept the offer. Try again."), () => null);
   if (!r.ok && r.error === "conflicts") return { ...r, details: await clashesFor(offerId) };
   return r;
 }
@@ -178,7 +179,7 @@ export function clashesOf(details: unknown): Clash[] {
 
 /** decline_hire_offer(p_offer_id): the professional's own pending offer; the application is declined too. */
 export function declineHireOffer(offerId: string): Promise<HiringWrite> {
-  return hiringWrite("decline_hire_offer", { p_offer_id: offerId }, "Couldn't decline the offer. Try again.", () => null);
+  return hiringWrite("decline_hire_offer", { p_offer_id: offerId }, t("Couldn't decline the offer. Try again."), () => null);
 }
 
 const DAY_LONG = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -199,7 +200,7 @@ const isoDayOf = (ymd: string): number | null => {
  * the rest (the board's W() rows).
  */
 export async function fetchMyWork(): Promise<MarketResult<WorkItem[]>> {
-  const fallback = "Couldn't load your work.";
+  const fallback = t("Couldn't load your work.");
   const work = await marketRpc("my_work", {}, fallback, rows);
   if (!work.ok) return work;
   const active = work.value.filter((w) => str(w.hire_id) && w.status === "active");
@@ -235,12 +236,12 @@ export async function fetchMyWork(): Promise<MarketResult<WorkItem[]>> {
         seen.add(key);
         const dur = num(s.duration_min);
         const cap = num(s.capacity);
-        const tail = [dur != null ? `${dur} min` : null, cap != null ? `${cap} spots` : null].filter(Boolean);
+        const tail = [dur != null ? t("{n} min", { n: dur }) : null, cap != null ? tn(cap, "{n} spot", "{n} spots") : null].filter(Boolean);
         classes.push({
           title: str(s.title) ?? "",
           weekday: type === "class_slot" ? null : day,
           startTime: hhmmOf(s.start_time),
-          label: type === "role" && day ? [`Every ${DAY_LONG[day - 1]}`, ...tail].join(" · ") : null,
+          label: type === "role" && day ? [t("Every {days}", { days: t(DAY_LONG[day - 1]) }), ...tail].join(" · ") : null,
         });
       }
       const startsOn = str(w.starts_on);
@@ -268,7 +269,7 @@ export async function fetchMyWork(): Promise<MarketResult<WorkItem[]>> {
  * for an invite token.
  */
 export function fetchMyTeamInvites(): Promise<MarketResult<ExistingTeamInvite[]>> {
-  return marketRpc("my_team_invites", {}, "Couldn't load your invitations.", parseInvites);
+  return marketRpc("my_team_invites", {}, t("Couldn't load your invitations."), parseInvites);
 }
 
 /**
@@ -280,18 +281,18 @@ export function fetchMyTeamInvites(): Promise<MarketResult<ExistingTeamInvite[]>
  * (no_seats), worded for the professional, who can't buy seats.
  */
 export async function acceptExistingTeamInvite(inviteId: string): Promise<HiringWrite> {
-  const r = await hiringWrite("accept_existing_team_invite", { p_invite_id: inviteId }, "Couldn't accept the invite. Try again.", () => null);
-  return !r.ok && r.error === "no_seats" ? { ...r, message: NO_SEAT_FOR_YOU } : r;
+  const r = await hiringWrite("accept_existing_team_invite", { p_invite_id: inviteId }, t("Couldn't accept the invite. Try again."), () => null);
+  return !r.ok && r.error === "no_seats" ? { ...r, message: t(NO_SEAT_FOR_YOU) } : r;
 }
 
 /** ATXC0 on the professional's side (the wording of accept_business_employment's refusal, services/business-team/employment.ts). */
-export const NO_SEAT_FOR_YOU = "This business has no free seat right now. Ask them to add one.";
+export const NO_SEAT_FOR_YOU = tk("This business has no free seat right now. Ask them to add one.");
 
 // ---------------------------------------------------------------- open to gym work (P-MA.2)
 
 /** professional_profiles.open_to_gym_work, the caller's own row (false by default: gyms find nobody until they opt in). */
 export async function fetchOpenToGymWork(): Promise<MarketResult<boolean>> {
-  const fallback = "Couldn't load your gym-work setting.";
+  const fallback = t("Couldn't load your gym-work setting.");
   const uid = await currentUserId();
   if (!uid) return { ok: false, message: fallback };
   const r = await tableRows(() => marketDb.from("professional_profiles").select("open_to_gym_work").eq("profile_id", uid).limit(1) as unknown as PromiseLike<Rows>, fallback);
@@ -301,5 +302,5 @@ export async function fetchOpenToGymWork(): Promise<MarketResult<boolean>> {
 
 /** set_gym_work_available(p_open) → the stored value. On: gyms' searches and direct offers; off stops both (pending offers stay). */
 export function setOpenToGymWork(open: boolean): Promise<HiringWrite<boolean>> {
-  return hiringWrite("set_gym_work_available", { p_open: open }, "Couldn't save. Check your connection and try again.", (d) => d === true);
+  return hiringWrite("set_gym_work_available", { p_open: open }, t("Couldn't save. Check your connection and try again."), (d) => d === true);
 }

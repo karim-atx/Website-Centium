@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { formatPrice } from "../../utils/price";
+import { t } from "../../i18n/core";
 import { featuredFirst } from "./listingLogic";
 import { instructorFacts } from "./instructorRule";
 import { CLASS_POLICY_KINDS, classErrorMessage, sortClassPolicies, type ClassBookingRules, type VenuePolicyKind } from "./classBooking";
@@ -283,7 +284,7 @@ export async function fetchMarketplaceClasses(): Promise<
   const { data, error } = await classesView().select(CLASS_COLUMNS);
   if (error) {
     console.error("[marketplace] Could not read classes:", error.message);
-    return { ok: false, message: "Couldn't load classes right now." };
+    return { ok: false, message: t("Couldn't load classes right now.") };
   }
   // The view sorts featured first; kept here too, as PostgREST does not
   // promise a view's ORDER BY.
@@ -297,7 +298,7 @@ export async function fetchMarketplaceVenues(): Promise<
   const { data, error } = await venuesView().select(VENUE_COLUMNS);
   if (error) {
     console.error("[marketplace] Could not read venues:", error.message);
-    return { ok: false, message: "Couldn't load places right now." };
+    return { ok: false, message: t("Couldn't load places right now.") };
   }
   return { ok: true, venues: featuredFirst((data ?? []).map(toVenue), (v) => v.isFeatured) };
 }
@@ -356,7 +357,7 @@ async function call<T>(fn: string, args: Record<string, unknown>, fallback: stri
  * book again).
  */
 export function bookClass(classId: string): Promise<ClassResult<string>> {
-  return call<string>("book_class", { p_class_id: classId, p_method: "cash" }, "Couldn't book that class. Try again.");
+  return call<string>("book_class", { p_class_id: classId, p_method: "cash" }, t("Couldn't book that class. Try again."));
 }
 
 /** One venue document the member still has to accept before booking (B9). */
@@ -384,7 +385,7 @@ export async function pendingClassPolicies(
   const pending = await rpc<Row[]>("pending_policies", { p_business_id: businessId });
   if (pending.error) {
     console.error("[marketplace] pending_policies failed:", pending.error.message);
-    return { ok: false, code: pending.error.code, message: "Couldn't load this venue's terms. Try again." };
+    return { ok: false, code: pending.error.code, message: t("Couldn't load this venue's terms. Try again.") };
   }
   const rows = (pending.data ?? []).filter((r) => (kinds as readonly string[]).includes(r.kind));
   if (rows.length === 0) return { ok: true, value: [] };
@@ -397,13 +398,13 @@ export async function pendingClassPolicies(
     );
   if (bodies.error) {
     console.error("[marketplace] Could not read the terms:", bodies.error.message);
-    return { ok: false, code: bodies.error.code, message: "Couldn't load this venue's terms. Try again." };
+    return { ok: false, code: bodies.error.code, message: t("Couldn't load this venue's terms. Try again.") };
   }
   const text = new Map((bodies.data ?? []).map((v) => [v.id, v.body]));
   // A document whose text can't be read is not shown as blank: the member
   // would be agreeing to nothing they could see.
   if (rows.some((r) => !text.get(r.version_id)?.trim())) {
-    return { ok: false, message: "Couldn't load this venue's terms. Try again." };
+    return { ok: false, message: t("Couldn't load this venue's terms. Try again.") };
   }
   return {
     ok: true,
@@ -429,7 +430,7 @@ export async function acceptClassPolicies(personId: string, versionIds: string[]
     const { error } = await supabase.from("policy_acceptances").insert({ version_id: versionId, person_id: personId });
     if (error && error.code !== "23505") {
       console.error("[marketplace] Could not record the acceptance:", error.message);
-      return { ok: false, code: error.code, message: "Couldn't save your acceptance. Try again." };
+      return { ok: false, code: error.code, message: t("Couldn't save your acceptance. Try again.") };
     }
   }
   return { ok: true, value: null };
@@ -444,7 +445,7 @@ export interface CancelOutcome {
 /** MO1.4.4.3 Cancel booking. A late cancellation is still accepted (BR-14 is about money). ATX89: no booking. */
 export async function cancelClassBooking(classId: string): Promise<ClassResult<CancelOutcome>> {
   type Row = { was_free: boolean; hours_before: number | string | null; window_hours: number };
-  const r = await call<Row[] | Row>("cancel_class_booking", { p_class_id: classId }, "Couldn't cancel that booking. Try again.");
+  const r = await call<Row[] | Row>("cancel_class_booking", { p_class_id: classId }, t("Couldn't cancel that booking. Try again."));
   if (!r.ok) return r;
   const row = Array.isArray(r.value) ? r.value[0] : r.value;
   return {
@@ -459,12 +460,12 @@ export async function cancelClassBooking(classId: string): Promise<ClassResult<C
 
 /** MO1.4.4.4 Join waitlist → the position MO1.4.4.5 shows ("#3"). Idempotent. */
 export function joinClassWaitlist(classId: string): Promise<ClassResult<number>> {
-  return call<number>("join_class_waitlist", { p_class_id: classId }, "Couldn't join the waitlist. Try again.");
+  return call<number>("join_class_waitlist", { p_class_id: classId }, t("Couldn't join the waitlist. Try again."));
 }
 
 /** MO1.4.4.5 Leave waitlist. ATX90 when not waiting. */
 export function leaveClassWaitlist(classId: string): Promise<ClassResult<null>> {
-  return call<null>("leave_class_waitlist", { p_class_id: classId }, "Couldn't leave the waitlist. Try again.");
+  return call<null>("leave_class_waitlist", { p_class_id: classId }, t("Couldn't leave the waitlist. Try again."));
 }
 
 export interface ClassLive {
@@ -578,7 +579,7 @@ export async function fetchGymClassesThisWeek(gymId: string, todayIso: string, e
     .order("start_time");
   if (error) {
     console.error("[marketplace] Could not read the gym's classes:", error.message);
-    return { ok: false, message: "Couldn't load this week's classes." };
+    return { ok: false, message: t("Couldn't load this week's classes.") };
   }
   const rows = data ?? [];
   const seats = await Promise.all(rows.map((r) => rpc<number>("class_seats_left", { p_class_id: r.id })));

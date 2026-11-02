@@ -4,6 +4,7 @@ import type { WorkoutSession } from "../../types";
 import type { SessionSwap } from "../workout/coachLogic";
 import { describeQueued, withQueued } from "./outboxModel";
 import { newRequestId } from "./requestId";
+import { tk } from "../../i18n/core";
 
 export { describeQueued, withQueued };
 
@@ -49,10 +50,10 @@ export type QueuedLog =
   | { id: string; kind: "goal"; metric: "water" | "steps"; value: number; day: string };
 
 /** Shown in place of the saved state while an entry waits (HE1.1.1 O3, 11/16 #8C8378). */
-export const QUEUED_COPY = "Will save when you're back online.";
+export const QUEUED_COPY = tk("Will save when you're back online.");
 
 /** The toast a screen shows when a write was kept on the device. */
-export const SAVED_ON_DEVICE = "Saved on this device until you reconnect.";
+export const SAVED_ON_DEVICE = tk("Saved on this device until you reconnect.");
 
 /** Fired on window whenever the queue changes, so counts and pending rows update. */
 export const OUTBOX_EVENT = "centium:outbox";

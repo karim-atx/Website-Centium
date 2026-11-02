@@ -2,6 +2,8 @@
 // pure rules the client side of the marketplace follows. No I/O here, so
 // node:test covers it (listingLogic.test.ts).
 
+import { tk } from "../../i18n/core";
+
 /**
  * What a client may send to record_listing_event() (MK-07; offer_view since
  * Database PR #39, 20261214020000, with the offer as the item). booking /
@@ -111,18 +113,18 @@ export type AmenityKey = (typeof AMENITY_KEYS)[number];
 
 /** The business side's labels (OURS-MA1-listing-details-sheets Amenities sheet + the lead's map). */
 export const AMENITY_LABELS: Record<AmenityKey, string> = {
-  showers: "Showers",
-  lockers: "Lockers",
-  changing_rooms: "Changing rooms",
-  towels: "Towels",
-  parking: "Parking",
-  wifi: "Wi-Fi",
-  water: "Water",
-  cafe: "Café",
-  sauna: "Sauna",
-  pool: "Pool",
-  childcare: "Child care",
-  accessible: "Wheelchair access",
+  showers: tk("Showers"),
+  lockers: tk("Lockers"),
+  changing_rooms: tk("Changing rooms"),
+  towels: tk("Towels"),
+  parking: tk("Parking"),
+  wifi: tk("Wi-Fi"),
+  water: tk("Water"),
+  cafe: tk("Café"),
+  sauna: tk("Sauna"),
+  pool: tk("Pool"),
+  childcare: tk("Child care"),
+  accessible: tk("Wheelchair access"),
 };
 
 /** The venue's amenities the app can name, once each, in the vocabulary's order. */

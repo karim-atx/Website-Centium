@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { t, tk } from "../../i18n/core";
 import {
   CYCLE_FLAGS,
   LOG_LIMITS,
@@ -40,13 +41,13 @@ export * from "./types";
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to save this.";
+    return tk("Your session expired. Sign in again to save this.");
   }
-  if (code === "23514") return "That value is outside the range this can store.";
+  if (code === "23514") return tk("That value is outside the range this can store.");
   if (code === "42501") {
-    return "You don't have permission to save this. Sign in again and try once more.";
+    return tk("You don't have permission to save this. Sign in again and try once more.");
   }
-  return "Couldn't save that. Check your connection and try again.";
+  return tk("Couldn't save that. Check your connection and try again.");
 }
 
 // ---------------------------------------------------------------------------
@@ -130,25 +131,25 @@ export function validateSettings(patch: Partial<CycleSettings>): string | null {
   if (patch.typicalCycleLength !== undefined) {
     const v = patch.typicalCycleLength;
     if (!Number.isInteger(v) || v < cycleLength.min || v > cycleLength.max) {
-      return `Cycle length should be between ${cycleLength.min} and ${cycleLength.max} days.`;
+      return t("Cycle length should be between {min} and {max} days.", { min: cycleLength.min, max: cycleLength.max });
     }
   }
   if (patch.typicalPeriodLength !== undefined) {
     const v = patch.typicalPeriodLength;
     if (!Number.isInteger(v) || v < periodLength.min || v > periodLength.max) {
-      return `Period length should be between ${periodLength.min} and ${periodLength.max} days.`;
+      return t("Period length should be between {min} and {max} days.", { min: periodLength.min, max: periodLength.max });
     }
   }
   if (patch.lutealLength !== undefined) {
     const v = patch.lutealLength;
     if (!Number.isInteger(v) || v < lutealLength.min || v > lutealLength.max) {
-      return `Luteal length should be between ${lutealLength.min} and ${lutealLength.max} days.`;
+      return t("Luteal length should be between {min} and {max} days.", { min: lutealLength.min, max: lutealLength.max });
     }
   }
   if (patch.periodReminderDays !== undefined) {
     const v = patch.periodReminderDays;
     if (!Number.isInteger(v) || v < PERIOD_REMINDER_DAYS.min || v > PERIOD_REMINDER_DAYS.max) {
-      return `Choose ${PERIOD_REMINDER_DAYS.min} to ${PERIOD_REMINDER_DAYS.max} days before.`;
+      return t("Choose {min} to {max} days before.", { min: PERIOD_REMINDER_DAYS.min, max: PERIOD_REMINDER_DAYS.max });
     }
   }
   return null;
@@ -276,17 +277,17 @@ export function validateDayLog(log: Partial<CycleDayLog>): string | null {
   if (log.energy !== null && log.energy !== undefined) {
     const { min, max } = LOG_LIMITS.energy;
     if (!Number.isInteger(log.energy) || log.energy < min || log.energy > max) {
-      return `Energy should be between ${min} and ${max}.`;
+      return t("Energy should be between {min} and {max}.", { min, max });
     }
   }
   if (log.bbtCelsius !== null && log.bbtCelsius !== undefined) {
     const { min, max } = LOG_LIMITS.bbt;
     if (!Number.isFinite(log.bbtCelsius) || log.bbtCelsius < min || log.bbtCelsius > max) {
-      return `Temperature should be between ${min} and ${max} °C.`;
+      return t("Temperature should be between {min} and {max} °C.", { min, max });
     }
   }
   if (log.notes != null && log.notes.length > LOG_LIMITS.notesMaxLength) {
-    return `Keep the note under ${LOG_LIMITS.notesMaxLength} characters.`;
+    return t("Keep the note under {n} characters.", { n: LOG_LIMITS.notesMaxLength });
   }
   return null;
 }

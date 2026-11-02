@@ -9,6 +9,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { marketRpc, marketRpcRaw, isPendingError, type MarketResult } from "../market/rpc";
 import { isOffline } from "../network-error";
+import { t, tk } from "../../i18n/core";
 import { reviewRefusalLine } from "../safety/model";
 import { findPast, isOver, parseClassBookings, REVIEW_ERROR_TEXT, reviewErrorOf, targetOf, type PastBooking, type ReviewError, type ReviewTarget } from "./model";
 import { contactRefusal } from "../moderation/text";
@@ -27,7 +28,7 @@ const PAST_LIMIT = 200;
  * it until it ends.
  */
 export async function fetchPastBookings(now: Date = new Date()): Promise<MarketResult<PastBooking[]>> {
-  const r = await marketRpc("my_class_bookings", { p_tab: "past", p_limit: PAST_LIMIT }, "Couldn't load your bookings.", parseClassBookings);
+  const r = await marketRpc("my_class_bookings", { p_tab: "past", p_limit: PAST_LIMIT }, t("Couldn't load your bookings."), parseClassBookings);
   if (!r.ok) return r;
   const list = r.value.filter((b) => isOver(b, now));
   const gymIds = [...new Set(list.map((b) => b.gymId).filter((x): x is string => !!x))];
@@ -57,7 +58,7 @@ export async function findReviewTarget(bookingId: string, sessionId?: string | n
 
 export type ReviewWrite = { ok: true } | { ok: false; pending?: boolean; offline?: boolean; error?: ReviewError; message: string };
 
-const FALLBACK = "Couldn't send your review. Try again.";
+const FALLBACK = tk("Couldn't send your review. Try again.");
 
 /** review_instructor(p_class_id, p_rating, p_body) → the review id. One per member per series; a second one edits it. */
 export async function reviewInstructor(classId: string, rating: number, text: string | null): Promise<ReviewWrite> {
@@ -65,17 +66,17 @@ export async function reviewInstructor(classId: string, rating: number, text: st
   const contact = contactRefusal(text);
   if (contact) return { ok: false, message: contact };
   const res = await marketRpcRaw("review_instructor", { p_class_id: classId, p_rating: rating, p_body: text });
-  if ("thrown" in res) return { ok: false, offline: isOffline(res.thrown), message: FALLBACK };
+  if ("thrown" in res) return { ok: false, offline: isOffline(res.thrown), message: t(FALLBACK) };
   if (res.error) {
-    if (isPendingError(res.error)) return { ok: false, pending: true, message: "Instructor reviews are coming soon. Nothing was sent." };
-    if (isOffline(res.error)) return { ok: false, offline: true, message: "You're offline. Your review wasn't sent." };
+    if (isPendingError(res.error)) return { ok: false, pending: true, message: t("Instructor reviews are coming soon. Nothing was sent.") };
+    if (isOffline(res.error)) return { ok: false, offline: true, message: t("You're offline. Your review wasn't sent.") };
     // Round F (AB7): an account under 7 days old (ATXW0, with when it may).
     const young = reviewRefusalLine(res.error);
     if (young) return { ok: false, message: young };
     const k = reviewErrorOf(res.error);
-    if (k) return { ok: false, error: k, message: REVIEW_ERROR_TEXT[k] };
+    if (k) return { ok: false, error: k, message: t(REVIEW_ERROR_TEXT[k]) };
     console.error("[instructor-reviews] review_instructor:", res.error.message);
-    return { ok: false, message: FALLBACK };
+    return { ok: false, message: t(FALLBACK) };
   }
   return { ok: true };
 }
