@@ -56,6 +56,18 @@ export function formatMinutes12(minutes: number): string {
 }
 
 /**
+ * "8:40 AM" always in English, for text the app SAVES (openings.schedule_label):
+ * stored text never takes the viewer's language.
+ */
+export function time12En(hhmm: string | null | undefined): string {
+  if (!hhmm) return "";
+  const m = minutesOfDay(hhmm);
+  if (m === null) return hhmm;
+  const p = clockParts(m);
+  return `${hm(p)} ${p.meridiem}`;
+}
+
+/**
  * "8:40 AM" from a stored "HH:MM" / "HH:MM:SS" time. An empty value gives "";
  * an unreadable one is returned as it came (never invents a time).
  */

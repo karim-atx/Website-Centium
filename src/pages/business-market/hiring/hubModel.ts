@@ -4,7 +4,7 @@
 // 12-hour times ("10:00 AM"), Monday-first week days. No Supabase import, so
 // node --test loads it (hubModel.test.ts).
 
-import { clock12, rangeClock12, time12 } from "../../../utils/time12";
+import { clock12, rangeClock12, time12En } from "../../../utils/time12";
 import { getLanguage, t, tk, tn, tx } from "../../../i18n/core";
 import { appLocale } from "../../../i18n/format";
 import { feeMoney, payMoney, payText, minimumSentence, type OpeningType, type PayUnit } from "../../../services/hiring/fee";
@@ -393,7 +393,7 @@ export function seriesOptions(classes: BusinessClassRow[], today: string): Serie
     by.set(c.seriesId, s);
   }
   return [...by.entries()]
-    .map(([id, s]) => ({ id, title: s.title, perWeek: s.days.size, label: `${s.title} · ${enDaysLabel([...s.days])} ${time12(s.time)}` }))
+    .map(([id, s]) => ({ id, title: s.title, perWeek: s.days.size, label: `${s.title} · ${enDaysLabel([...s.days])} ${time12En(s.time)}` }))
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
@@ -414,7 +414,7 @@ export function sessionOptions(classes: BusinessClassRow[], today: string, nowTi
     .flatMap((c) => {
       const d = dateOf(c.date);
       if (!d) return [];
-      return [{ id: c.id, date: c.date, label: `${c.title} · ${enWeekdayMonthDay(d)}, ${time12(c.startTime)}`, slotTitle: `${DAY_LONG[isoDay(d) - 1]} ${c.title} cover` }];
+      return [{ id: c.id, date: c.date, label: `${c.title} · ${enWeekdayMonthDay(d)}, ${time12En(c.startTime)}`, slotTitle: `${DAY_LONG[isoDay(d) - 1]} ${c.title} cover` }];
     });
 }
 
