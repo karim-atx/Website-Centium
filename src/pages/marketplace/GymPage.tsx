@@ -56,7 +56,7 @@ import { formatShortDate } from "../../utils/date";
 import { BookingDone, PlanSummary, PurchaseSheet, confirmLabel } from "./PurchaseSheet";
 import { areaOf, gymHoursRows, includesText, longDay, planExpiryIso, planRowLine, sheetPlanName, startsToday } from "./gymDetailModel";
 import { appLocale } from "../../i18n/format";
-import { t, tk, tn } from "../../i18n/core";
+import { t, tk, tn, tx } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · C-MO.4.2.1 Gym detail (`gymDetail`) and
 // C-MO.4.2.2 Membership purchase (`memberSheet`, `memberDone`). Literal
@@ -815,7 +815,7 @@ export function GymPage({ gymId }: { gymId: string }) {
         open={!!done}
         title={t("You're a member")}
         body={done ? t("Your {plan} at {gym} starts today.", { plan: sheetPlanName(done.planName), gym: gym.name }) : ""}
-        rows={done ? [{ k: t("Plan"), v: done.planName }, { k: t("Valid until"), v: longDay(done.until) }, { k: t("Payment"), v: t("{price} · Cash at the front desk", { price: done.price }) }] : []}
+        rows={done ? [{ k: t("Plan"), v: done.planName }, { k: t("Valid until"), v: longDay(done.until) }, { k: tx("Payment", "how it is paid"), v: t("{price} · Cash at the front desk", { price: done.price }) }] : []}
         bookingsTab="memberships"
         onDone={closeDone}
       />
@@ -1249,7 +1249,7 @@ function MyPlanRow({ m, membership }: { m: MarketPalette; membership: GymMembers
   return (
     <div data-my-plan="" style={{ borderRadius: 16, border: `0.5px solid ${m.hair}`, background: m.card, paddingBlock: "12px", paddingInline: "14px 12px", display: "flex", alignItems: "center", gap: 12 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: textPx(14), fontWeight: 700, color: m.ink }}>{membership.planName || t("Membership")}</div>
+        <div style={{ fontSize: textPx(14), fontWeight: 700, color: m.ink }}>{membership.planName || tx("Membership", "subscription")}</div>
         <div style={{ fontSize: textPx(11.5), color: m.faint, marginTop: 1 }}>
           {membership.expiresOn ? t("Your plan · valid until {date}", { date: longDay(membership.expiresOn) }) : t("Your plan · no end date")}
         </div>

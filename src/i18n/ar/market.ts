@@ -54,12 +54,12 @@ export const FILES: string[] = [
 ];
 
 // note (whole file): an offer is «عرض» (masculine: «منتهي الصلاحية»,
-// «موقوف»), a voucher «قسيمة» (feminine: «مستخدَمة», «ملغاة»), points «نقاط»
+// «متوقف مؤقتًا»), a voucher «قسيمة» (feminine: «مستخدَمة», «ملغاة»), points «نقاط»
 // with the number before the noun. Spending points on an offer is «استبدال»
 // (as safety.ts: «تستبدلها بنقاطك»); a business checking a voucher at the desk
 // is «استخدام» («استُخدمت قسيمة»). A venue is «المكان» (findings C3), a class
 // «حصة», the class roster «القائمة» (as venues.ts), a listing on Explore
-// «الظهور في السوق». Class, gym, offer and plan names are the business's
+// «الصفحة» (a professional's listing toggle «الظهور في السوق», tx). Class, gym, offer and plan names are the business's
 // own words and stay as typed. Units from a chart's range ("week", "30
 // days") are translated here and read «مقارنة بالفترة السابقة (أسبوع)», so
 // the sentence never has to agree with the unit. Option and row names that
@@ -88,7 +88,7 @@ const market: Catalogue = {
   INSTRUCTOR: "المدرّب",
   "Instructor not listed": "المدرّب غير مُدرج",
   "Open {name}'s profile": "فتح الملف الشخصي لـ{name}",
-  "Hired via Centium": "عُيّن عبر Centium",
+  "Hired via Centium": "وُظّف عبر Centium",
   "Hired via Centium · {n} roles": {
     zero: "عُيّن عبر Centium · لا أدوار",
     one: "عُيّن عبر Centium · دور واحد",
@@ -118,16 +118,16 @@ const market: Catalogue = {
   "Send review": "إرسال التقييم",
 
   // == Listing switch ==
-  Listing: "الظهور في السوق",
-  "Listing active": "الظهور في السوق مفعّل",
-  "Listing paused": "الظهور في السوق موقوف",
+  Listing: "الصفحة",
+  "Listing active": "الصفحة نشطة",
+  "Listing paused": "الصفحة متوقفة مؤقتًا",
   Visible: "ظاهر",
   Hidden: "مخفي",
 
   // == Offers (cards, list and editor) ==
   "Active|offer status": "نشط",
-  Scheduled: "مُجدول",
-  Paused: "موقوف",
+  Scheduled: "مجدول",
+  Paused: "متوقف مؤقتًا",
   "{points} points": {
     zero: "{points} نقطة",
     one: "{points} نقطة",
@@ -192,13 +192,13 @@ const market: Catalogue = {
   "Ends (optional)": "ينتهي (اختياري)",
   "Where it can be used": "أين يمكن استخدامه",
   "Preview offer": "معاينة العرض",
-  "Choose a service": "اختيار خدمة",
+  "Choose a service": "اختر خدمة",
   "Couldn't load your services": "تعذّر تحميل خدماتك",
   "Loading your services…": "جارٍ تحميل خدماتك…",
   "You fund this discount in full. Centium does not reimburse redemptions.": "تتحمّل كلفة هذا الخصم بالكامل. لا تعوّض Centium عن عمليات الاستبدال.",
   "One moment…": "لحظة…",
   // The option and summary-row names services/offers/manageModel returns (translated as shown).
-  "% off": "خصم بالنسبة",
+  "% off": "% خصم",
   "Amount off": "خصم بمبلغ",
   "Free session": "جلسة مجانية",
   "Free item or service": "منتج أو خدمة مجانية",
@@ -236,7 +236,7 @@ const market: Catalogue = {
   "Scan another": "مسح قسيمة أخرى",
   "You're offline": "أنت غير متصل",
   "Camera is blocked": "الكاميرا محظورة",
-  "No camera available": "لا كاميرا متاحة",
+  "No camera available": "لا توجد كاميرا متاحة",
   "Checking a voucher needs a connection. Try again when you're connected.": "يتطلب التحقق من القسيمة اتصالًا. حاول مرة أخرى عند الاتصال.",
   "Allow camera access for Centium in your browser settings, or enter the code under the client's QR code.":
     "اسمح لـCentium باستخدام الكاميرا من إعدادات المتصفح، أو أدخل الرمز المكتوب تحت رمز QR الخاص بالعميل.",
@@ -266,7 +266,7 @@ const market: Catalogue = {
 
   // == Class cards, booking lines and the closed note ==
   "Open class": "فتح الحصة",
-  "{booked} of {cap} booked": "{booked} من {cap} محجوز",
+  "{booked} of {cap} booked": "{booked} من {cap} محجوزة",
   "{date}, {time}": "{date}، {time}",
   "Cash before class": "نقدًا قبل الحصة",
   "{title} is in your bookings.": "{title} ضمن حجوزاتك.",
@@ -282,13 +282,13 @@ const market: Catalogue = {
   "Booked {date}": "حُجز في {date}",
   "Waiting, number {n} in line": "في الانتظار، رقم {n} في الدور",
   "{n} booked": "{n} محجوز",
-  "{n} waiting": "{n} في الانتظار",
+  "{n} waiting": "{n} بالانتظار",
   "Booked ({n})": "المحجوزون ({n})",
   "Waitlist ({n})": "قائمة الانتظار ({n})",
   "Couldn't load this roster": "تعذّر تحميل هذه القائمة",
   "Nobody has booked yet.": "لم يحجز أحد بعد.",
   Actions: "الإجراءات",
-  "Mark as paid": "تحديده كمدفوع",
+  "Mark as paid": "تسجيل كمدفوع",
   "Add a reference": "إضافة مرجع",
   "Reference (optional)": "المرجع (اختياري)",
   "e.g. receipt or transfer number": "مثلًا رقم الإيصال أو التحويل",
@@ -306,7 +306,7 @@ const market: Catalogue = {
   "Anonymous reviewer": "مقيّم مجهول",
   "{name} replied": "ردّ {name}",
   Helpful: "مفيد",
-  "Show more reviews": "عرض مزيد من التقييمات",
+  "Show more reviews": "عرض المزيد من التقييمات",
   "Edit your review": "تعديل تقييمك",
   "Write a review": "كتابة تقييم",
   "Rate {title}": "تقييم {title}",
@@ -333,7 +333,7 @@ const market: Catalogue = {
   "Your pass has a new code. The old one no longer works.": "لبطاقتك رمز جديد. الرمز القديم لم يعد يعمل.",
   "Entry method": "طريقة الدخول",
   "{plan} membership": "عضوية {plan}",
-  Membership: "الاشتراك",
+  Membership: "العضوية",
   "From {date}": "من {date}",
   "Valid|pass state": "سارية",
   "Hold your phone near the reader": "قرّب هاتفك من القارئ",
@@ -362,15 +362,15 @@ const market: Catalogue = {
   "Active members": "الأعضاء النشطون",
   "No memberships at this venue yet.": "لا اشتراكات في هذا المكان بعد.",
   "{count} memberships in total. Unpaid ones are listed first under Members.": "إجمالي الاشتراكات: {count}. تظهر غير المدفوعة أولًا في «الأعضاء».",
-  "Agreed, not yet paid": "متّفق عليه ولم يُدفع بعد",
+  "Agreed, not yet paid": "متفق عليه، لم يُدفع بعد",
   "Marked paid this month": "سُجّل كمدفوع هذا الشهر",
   "Payments happen at the venue, not through Centium. These figures are what was agreed and what your staff marked as paid.":
-    "يتم الدفع في المكان، لا عبر Centium. هذه الأرقام هي ما اتُّفق عليه وما سجّله موظفوك كمدفوع.",
-  "Classes this week": "الحصص هذا الأسبوع",
-  "Bookings this week": "الحجوزات هذا الأسبوع",
+    "تتم المدفوعات في المكان، لا عبر Centium. هذه الأرقام هي ما اتُّفق عليه وما سجّله موظفوك كمدفوع.",
+  "Classes this week": "حصص هذا الأسبوع",
+  "Bookings this week": "حجوزات هذا الأسبوع",
   "Monday to Sunday, on the venue's clock ({timezone}).": "من الاثنين إلى الأحد، حسب توقيت المكان ({timezone}).",
   "On waitlists": "على قوائم الانتظار",
-  "Cancellations this week": "الإلغاءات هذا الأسبوع",
+  "Cancellations this week": "إلغاءات هذا الأسبوع",
   "People waiting for a place, and class bookings cancelled this week.": "الأشخاص الذين ينتظرون مكانًا، وحجوزات الحصص الملغاة هذا الأسبوع.",
   "Paid {date}": "دُفع في {date}",
   "{from}–{to} of {total}": "{from}–{to} من {total}",
@@ -475,7 +475,7 @@ const market: Catalogue = {
   "Closes the next day at {time}.": "يغلق في اليوم التالي عند {time}.",
   "Venue time zone": "المنطقة الزمنية للمكان",
   "You need venue access to change the time zone.": "تحتاج إلى صلاحية المكان لتغيير المنطقة الزمنية.",
-  "Discard your changes?": "هل تريد تجاهل تغييراتك؟",
+  "Discard your changes?": "تجاهل تغييراتك؟",
   "Your opening hours keep their saved times.": "تحتفظ ساعات العمل بأوقاتها المحفوظة.",
   "Discard changes": "تجاهل التغييرات",
   "Keep editing": "متابعة التعديل",
@@ -497,6 +497,8 @@ const market: Catalogue = {
   "Remove the cover photo?": "هل تريد إزالة صورة الغلاف؟",
   "Your venues will show your initials instead. You can upload a new logo at any time.": "ستُظهر أماكنك الأحرف الأولى من اسمك بدلًا منه. يمكنك رفع شعار جديد في أي وقت.",
   "This venue's page will show its colour instead. You can upload a new cover at any time.": "ستُظهر صفحة هذا المكان لونه بدلًا منها. يمكنك رفع غلاف جديد في أي وقت.",
+  // Round G clash fix: the same English with another meaning in this area.
+  "Listing|pro marketplace": "الظهور في السوق",
 };
 
 export default market;

@@ -4,7 +4,7 @@ import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { textPx, linePx } from "../../theme/textSize";
 import { marketPalette } from "../../theme/marketTokens";
 import { FOCUS_CSS } from "./usePress";
-import { t } from "../../i18n/core";
+import { t, tx } from "../../i18n/core";
 
 // Market + Share 3.0 · ListingToggleTile (HANDOVER §4 B-MA.1 item 1, P-MA.1;
 // tokens.json listingToggle; Business Marketplace Screens lines 64–68 and
@@ -38,7 +38,7 @@ export const ListingToggleTile: React.FC<ListingToggleTileProps> = ({ on, onChan
   const m = marketPalette(dark);
   const reduced = useReducedMotion();
   const track = on ? m.good : m.high;
-  const label = variant === "pro" ? t("Listing") : on ? t("Listing active") : t("Listing paused");
+  const label = variant === "pro" ? tx("Listing", "pro marketplace") : on ? t("Listing active") : t("Listing paused");
   const status = on ? t("Visible") : t("Hidden");
   return (
     <>

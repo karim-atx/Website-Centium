@@ -21,7 +21,7 @@ import {
 import { marketPalette } from "../../theme/marketTokens";
 import { linePx, textPx } from "../../theme/textSize";
 import { time12 } from "../../utils/time12";
-import { isRtl, t, tk } from "../../i18n/core";
+import { isRtl, t, tk, tx } from "../../i18n/core";
 
 // Market + Share 3.0 · B-SH.6 the share-link page (Business Sharing Screens
 // `linkLanding`, lines 247 to 270; HANDOVER §4 "Additions … B-SH.6", D-47),
@@ -73,7 +73,7 @@ function itemLines(card: ShareLinkCard): { eyebrow: string; title: string; value
       return { eyebrow: t("Class"), title: it.title, value: null, line: when || null, image: null };
     }
     case "m":
-      return { eyebrow: t("Membership"), title: it.name, value: it.price ? { big: it.price, leaf: false, unit: "" } : null, line: null, image: null };
+      return { eyebrow: tx("Membership", "subscription"), title: it.name, value: it.price ? { big: it.price, leaf: false, unit: "" } : null, line: null, image: null };
     case "i":
       return { eyebrow: t("From our shop"), title: it.name, value: it.price ? { big: it.price, leaf: false, unit: "" } : null, line: it.description, image: it.imageUrl };
     case "j":

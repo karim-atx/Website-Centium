@@ -15,7 +15,7 @@ import { useSharePro } from "./useSharePro";
 import { fetchClientWins, fetchMyOwnedSharedItems, fetchMyShareRequests, fetchMySharedItemsFor, type MySharedItem, type OwnedSharedItem, type ShareRequest } from "../../services/share";
 import { HELD_CHIP, strongestState, type HeldReason } from "./heldShareModel";
 import { HeldShareNote } from "./HeldShareParts";
-import { t } from "../../i18n/core";
+import { t, tx } from "../../i18n/core";
 
 /** "Yesterday", "Today" or "Oct 12" ("Oct 12, 2025" in another year; the app's short date, shareDate). */
 function whenWord(iso: string, today: string): string {
@@ -135,7 +135,7 @@ export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstNam
     if (r.held) return <SharePill tone="gold">{t(HELD_CHIP)}</SharePill>;
     if (s === "pending") return <SharePill tone="gold">{t("Waiting for {name}", { name: firstName })}</SharePill>;
     if (s === "declined") return <SharePill>{t("Declined")}</SharePill>;
-    if (s === "withdrawn") return <SharePill>{t("Withdrawn")}</SharePill>;
+    if (s === "withdrawn") return <SharePill>{tx("Withdrawn", "share request")}</SharePill>;
     if (s === "allowed" || s === "allowed_no_name")
       return (
         <span className="flex items-center shrink-0" style={{ gap: 6 }}>

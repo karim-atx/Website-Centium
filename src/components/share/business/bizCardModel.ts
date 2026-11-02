@@ -413,7 +413,7 @@ export function cardContent(brand: Pick<BizBrand, "name" | "category" | "locatio
       const p = data.d;
       return {
         ...base,
-        eyebrow: t("Membership"),
+        eyebrow: tx("Membership", "subscription"),
         title: p.name,
         val: p.price || null,
         unit: p.unit,

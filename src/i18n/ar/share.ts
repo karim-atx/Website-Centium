@@ -144,7 +144,7 @@ const share: Catalogue = {
   "Thank you to everyone I train": "شكرًا لكل من أدرّبهم",
   "New review": "تقييم جديد",
   "{n} reviews": { zero: "لا تقييمات", one: "تقييم واحد", two: "تقييمان", few: "{n} تقييمات", many: "{n} تقييمًا", other: "{n} تقييم" },
-  clients: "عملاء",
+  clients: "العملاء",
   "New programme": "برنامج جديد",
   "New meal plan": "خطة وجبات جديدة",
   "New course": "دورة جديدة",
@@ -196,7 +196,7 @@ const share: Catalogue = {
     other: "الحجم الإجمالي · {n} تمرين",
   },
   Volume: "الحجم",
-  "Share your workout": "شارك تمرينك",
+  "Share your workout": "مشاركة تمرينك",
   "Workout pattern": "نمط التمرين",
   "Best set": "أفضل مجموعة",
   "best set": "أفضل مجموعة",
@@ -260,10 +260,10 @@ const share: Catalogue = {
   "Protein {amount}": "البروتين {amount}",
   "Carbs {amount}": "الكربوهيدرات {amount}",
   "Fat {amount}": "الدهون {amount}",
-  protein: "البروتين",
-  carbs: "الكربوهيدرات",
-  fat: "الدهون",
-  "Share your food day": "شارك يوم طعامك",
+  protein: "بروتين",
+  carbs: "كربوهيدرات",
+  fat: "دهون",
+  "Share your food day": "مشاركة يوم طعامك",
   "Food pattern": "نمط الطعام",
 
   // == Held and removed cards ==
@@ -286,7 +286,7 @@ const share: Catalogue = {
   // == A client's wins (professional side) ==
   "Waiting for {name}": "بانتظار {name}",
   Declined: "مرفوض",
-  Withdrawn: "مسحوب",
+  Withdrawn: "مسحوبة",
   Allowed: "مسموح",
   "Share {title}": "مشاركة {title}",
   "Ask {name} to share {title}": "اطلب من {name} مشاركة {title}",
@@ -326,7 +326,7 @@ const share: Catalogue = {
 
   // == Practice insights: milestone and reviews ==
   Milestone: "إنجاز",
-  "{n} sessions": { zero: "{n} جلسة", one: "جلسة واحدة", two: "جلستان", few: "{n} جلسات", many: "{n} جلسة", other: "{n} جلسة" },
+  "{n} sessions": { zero: "لا جلسات", one: "جلسة واحدة", two: "جلستان", few: "{n} جلسات", many: "{n} جلسة", other: "{n} جلسة" },
   "delivered on Centium": "قُدّمت على Centium",
   "Latest reviews": "أحدث التقييمات",
   "Share the review from {name}": "مشاركة تقييم {name}",
@@ -591,6 +591,9 @@ const share: Catalogue = {
   "See {name}'s profile": "عرض ملف {name}",
   "Sign in to report this card": "سجّل الدخول للإبلاغ عن هذه البطاقة",
   "Report this card": "الإبلاغ عن هذه البطاقة",
+  // Round G clash fix: the same English with another meaning in this area.
+  "clients|count label": "عملاء",
+  "Withdrawn|share request": "مسحوب",
 };
 
 export default share;

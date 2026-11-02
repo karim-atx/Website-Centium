@@ -60,10 +60,10 @@ import { ProProfile } from "../../components/pro/profile/ProProfile";
 import { SharingYourWinsRow } from "../../components/share/client/SharingYourWinsSheet";
 import { signOutWarning, useOutbox } from "../../components/outbox/Outbox";
 import { forumAccess } from "../../services/forum/rules";
-import { t, tk, tn } from "../../i18n/core";
+import { t, tk, tn, tx } from "../../i18n/core";
 
+// "Customer" as an account type reads «عميل» (tx below); the store's customer is «زبون».
 const accountTypeLabel: Record<string, string> = {
-  customer: tk("Customer"),
   professional: tk("Professional"),
   business: tk("Business"),
 };
@@ -420,7 +420,7 @@ function ClientProfile() {
             {isAmbassador && <Award size={16} className="text-primary-dark shrink-0" aria-label={t("Centium Ambassador")} />}
           </h2>
           <span className="inline-block text-[11px] font-bold text-charcoal-soft bg-cream-soft rounded-full px-2.5 py-0.5 mt-1.5 max-w-full truncate">
-            {accountTypeLabel[user.accountType] ? t(accountTypeLabel[user.accountType]) : null}
+            {user.accountType === "customer" ? tx("Customer", "account type") : accountTypeLabel[user.accountType] ? t(accountTypeLabel[user.accountType]) : null}
             {user.customerSubtype ? ` · ${user.customerSubtype}` : ""}
             {user.professionalSubtype ? ` · ${user.professionalSubtype}` : ""}
           </span>

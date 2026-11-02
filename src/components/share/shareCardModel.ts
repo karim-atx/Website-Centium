@@ -414,7 +414,7 @@ export interface ProfileFacts {
 export function profileCard(p: ProfileFacts): CardSpec {
   const stats: CardStat[] = [];
   if (p.averageRating != null && p.reviewCount > 0) stats.push({ key: "rating", value: p.averageRating.toFixed(1), label: tn(p.reviewCount, "{n} review", "{n} reviews") });
-  if (p.clients != null && p.clients > 0) stats.push({ key: "clients_coached", value: fmtInt(p.clients), label: t("clients") });
+  if (p.clients != null && p.clients > 0) stats.push({ key: "clients_coached", value: fmtInt(p.clients), label: tx("clients", "count label") });
   if (p.price) stats.push({ key: "price", value: p.price.value, label: p.price.label });
   return { template: "profile", eyebrow: p.eyebrow, hero: "profile", title: p.name, head: p.headline ?? undefined, role: p.role, stats };
 }

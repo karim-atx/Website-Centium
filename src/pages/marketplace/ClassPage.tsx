@@ -88,7 +88,7 @@ import {
   shortDate,
   venueOf,
 } from "../../components/marketplace/classCardModel";
-import { t, tk, tn } from "../../i18n/core";
+import { t, tk, tn, tx } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · Class detail (C-MO.4.3.1 `classDetail`,
 // `classDetailUnlisted`, `classDetailAlmost`) and Class booking (C-MO.4.3.2
@@ -1289,7 +1289,7 @@ export function ClassPage({ classId }: { classId: string }) {
         rows={[
           { k: t("Class"), v: c.title },
           { k: t("When"), v: doneWhen(c) },
-          { k: t("Payment"), v: paymentLine(priceText, free) },
+          { k: tx("Payment", "how it is paid"), v: paymentLine(priceText, free) },
         ]}
         bookingsTab="upcoming"
         extra={

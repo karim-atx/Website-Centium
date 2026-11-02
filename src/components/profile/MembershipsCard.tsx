@@ -32,7 +32,7 @@ import { commitmentLines, dayMonthYear, membershipTag, validRange } from "../../
 import { GRANTED_LABEL } from "../../services/venues/consoleLogic";
 import { Check, ChevronRight, Dumbbell, LogOut, MoreVertical, Plus, Store, Trash2, X } from "lucide-react";
 import { appLocale } from "../../i18n/format";
-import { t } from "../../i18n/core";
+import { t, tx } from "../../i18n/core";
 
 // The member's side of a business membership: answer an invitation, redeem a
 // code, leave. MO1.5 / MO1.5.1 layout (R15, batch C, C8).
@@ -451,7 +451,7 @@ export const MembershipsCard: React.FC = () => {
               {m.status === "active" ? (
                 <SwipeActions
                   radius={18}
-                  keyboardLabel={t("{name}. Press left arrow for End membership", { name: m.businessName ?? t("Membership") })}
+                  keyboardLabel={t("{name}. Press left arrow for End membership", { name: m.businessName ?? tx("Membership", "subscription") })}
                   actions={[
                     {
                       key: "end",

@@ -317,7 +317,7 @@ const member: Catalogue = {
   "On hormonal contraception": "على وسيلة منع حمل هرمونية", // note: health (cycle)
   Pregnant: "حامل", // note: health (pregnancy)
   "Not enough data": "لا تتوفر بيانات كافية", // note: health (cycle)
-  "Not enough data yet": "لا تتوفر بيانات كافية بعد", // note: health (cycle)
+  "Not enough data yet": "لا توجد بيانات كافية بعد", // note: health (cycle)
   Day: "اليوم", // note: health (cycle day, on the ring)
   Week: "الأسبوع", // note: health (pregnancy week, on the ring)
   "Day {n}": "اليوم {n}", // note: health (cycle day)
@@ -528,7 +528,7 @@ const member: Catalogue = {
 
   // == Profile ==
   "My Profile": "ملفي الشخصي",
-  Customer: "عميل",
+  Customer: "زبون",
   "Centium Ambassador": "سفير Centium",
   "Change profile picture": "تغيير صورة الملف الشخصي",
   "Weight, {n} kg. Edit": "الوزن، {n} كغ. تعديل", // note: health
@@ -564,7 +564,7 @@ const member: Catalogue = {
     "يُحسب عمرك منه، ويُستخدم لأهداف السعرات والتوصيات الصحية. لا يمكن تغيير تاريخ الميلاد بعد حفظه.",
   "Your age is calculated from this, and is used for calorie targets and health recommendations. Check it before saving; to change it later, contact support.":
     "يُحسب عمرك منه، ويُستخدم لأهداف السعرات والتوصيات الصحية. تحقّق منه قبل الحفظ؛ ولتغييره لاحقًا تواصل مع الدعم.",
-  "Need to correct it?": "تحتاج إلى تصحيحه؟",
+  "Need to correct it?": "هل تحتاج إلى تصحيحه؟",
   "Contact support": "التواصل مع الدعم",
   "Data sharing": "مشاركة البيانات",
   "Couldn't remove your picture.": "تعذّرت إزالة صورتك.",
@@ -603,7 +603,7 @@ const member: Catalogue = {
   "Member code": "رمز العضوية",
   "Check code": "التحقق من الرمز",
   "A business": "نشاط تجاري",
-  "Invited {date}": "دُعيت في {date}",
+  "Invited {date}": "أُرسلت الدعوة في {date}",
   "Options for this membership": "خيارات هذه العضوية",
   "Got a code from a gym or studio? Enter it and check what it comes with before you join.": "لديك رمز من نادٍ أو استوديو؟ أدخله وتحقّق مما يتضمنه قبل الانضمام.",
   "{name}. Press left arrow for End membership": "{name}. اضغط السهم الأيسر لإنهاء العضوية",
@@ -637,6 +637,8 @@ const member: Catalogue = {
   "Enter a code": "أدخل رمزًا",
   "A friend's referral code": "رمز إحالة من صديق",
   Apply: "تطبيق",
+  // Round G clash fix: the same English with another meaning in this area.
+  "Customer|account type": "عميل",
 };
 
 export default member;
