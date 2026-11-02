@@ -1,6 +1,6 @@
 import { clock12 } from "../../../utils/time12";
 import { shortDate } from "../../../services/store/format";
-import { getLanguage, t } from "../../../i18n/core";
+import { getLanguage, t, tn } from "../../../i18n/core";
 import { appLocale } from "../../../i18n/format";
 import { DAY_SHORT, mondayIndex } from "../../../utils/week";
 import type { DiaryAppt } from "../../../services/appointments";
@@ -8,7 +8,7 @@ import type { DiaryAppt } from "../../../services/appointments";
 // The client is the server's label (business_appointments.client_label:
 // "Member #0042" unless the client shared their name). Render it as is.
 
-export const serviceTitle = (a: Pick<DiaryAppt, "serviceName" | "durationMin">) => t("{service}, {n} min", { service: a.serviceName, n: a.durationMin });
+export const serviceTitle = (a: Pick<DiaryAppt, "serviceName" | "durationMin">) => tn(a.durationMin, "{service}, {n} min", "{service}, {n} min", { service: a.serviceName });
 
 /** "Tue, Oct 14" in English (services/store shortDate); the app's language otherwise (Arabic day and month names). */
 export function dayDate(d: Date): string {

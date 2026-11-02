@@ -697,13 +697,13 @@ function SheetBody({
               type="button"
               aria-haspopup="menu"
               aria-expanded={durOpen}
-              aria-label={t("Duration, {n} minutes, ends {time}", { n: durationMinutes(form.startTime, form.endTime), time: time12(form.endTime) })}
+              aria-label={tn(durationMinutes(form.startTime, form.endTime), "Duration, {n} minute, ends {time}", "Duration, {n} minutes, ends {time}", { time: time12(form.endTime) })}
               aria-invalid={!!errors.times || undefined}
               onClick={() => setDurOpen(true)}
               className="market-focus"
               style={fieldStyle(m, { error: !!errors.times, active: durOpen })}
             >
-              {valueText(t("{n} min", { n: durationMinutes(form.startTime, form.endTime) }))}
+              {valueText(tn(durationMinutes(form.startTime, form.endTime), "{n} min", "{n} min"))}
               {chevron}
             </button>
           </FieldBox>
@@ -1169,7 +1169,7 @@ function SheetBody({
         open={durOpen}
         onClose={() => setDurOpen(false)}
         anchor={durEl}
-        options={durationOptions(durationMinutes(form.startTime, form.endTime)).map((d) => ({ value: String(d), label: t("{n} min", { n: d }), note: t("Ends {time}", { time: time12(fromMinutes(minutesOf(form.startTime) + d)) }) }))}
+        options={durationOptions(durationMinutes(form.startTime, form.endTime)).map((d) => ({ value: String(d), label: tn(d, "{n} min", "{n} min"), note: t("Ends {time}", { time: time12(fromMinutes(minutesOf(form.startTime) + d)) }) }))}
         selected={String(durationMinutes(form.startTime, form.endTime))}
         clampTo={bodyEl?.parentElement ?? null}
         onSelect={(v) => {

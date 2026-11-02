@@ -7,7 +7,7 @@ import { offerPromotionUsed } from "../../../components/promotions/promotionUsed
 import { dayClock, dayTitle, money } from "../../../services/store/format";
 import { rangeClock12 } from "../../../utils/time12";
 import { useOnline } from "../../../hooks/useOnline";
-import { t, tk, tx } from "../../../i18n/core";
+import { t, tk, tx, tn } from "../../../i18n/core";
 import { CtaSpacer, EmptyCard, ErrorCard, FixedCta, KitLabel, KitPop, KitRow, ListCard, ListSkeleton, OpsHeader, TextButton, useOpsToast } from "../store/opsKit";
 import { useLive, useMessagePerson } from "../store/storeShared";
 
@@ -152,7 +152,7 @@ function AppointmentDetail({ appointmentId }: { appointmentId: string }) {
 
       <KitLabel label={t("Details")} />
       <ListCard label={t("Details")}>
-        <KitRow icon={Clock} title={t("Duration")} value={t("{n} min", { n: a.durationMin })} />
+        <KitRow icon={Clock} title={t("Duration")} value={tn(a.durationMin, "{n} min", "{n} min")} />
         <KitRow icon={Tag} title={t("Price")} value={money(a.price)} />
         <KitRow
           icon={Banknote}

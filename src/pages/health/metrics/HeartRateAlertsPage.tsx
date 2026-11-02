@@ -12,7 +12,7 @@ import { WheelPicker, type WheelOption } from "../../../components/ui/WheelPicke
 import { HealthPopup } from "../../../components/health/metric/HealthPopup";
 import { hairline, mc, metricIconInk, useHealthMode } from "../../../components/health/metric/MetricKit";
 import { HR_ALERT_COPY, HR_ALERT_DEFAULTS, REVIEWED } from "../../../services/health-metrics/clinicalCopy";
-import { t, tk } from "../../../i18n/core";
+import { t, tk, tn } from "../../../i18n/core";
 
 // OURS-health-hr-alert-settings (/app/health/heart-rate/alerts), from the
 // HE1.5.a "Alert settings" action and the HE1.5 ⋮ menu.
@@ -158,7 +158,7 @@ function HeartRateAlertsScreen() {
         </div>
         {valueRow("high", ArrowUpToLine, t("High alert"), String(s.high), t("bpm"))}
         {valueRow("low", ArrowDownToLine, t("Low alert"), String(s.low), t("bpm"))}
-        {valueRow("for", Clock, t("For at least"), t("{n} min", { n: HR_ALERT_DEFAULTS.minutes }), "")}
+        {valueRow("for", Clock, t("For at least"), tn(HR_ALERT_DEFAULTS.minutes, "{n} min", "{n} min"), "")}
       </section>
 
       <button

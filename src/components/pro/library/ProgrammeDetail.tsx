@@ -153,7 +153,7 @@ export const ProgrammeDetail: React.FC<{
       <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderInlineStart: `4px solid ${INK.pr}`, borderRadius: 18, padding: "14px 16px", marginBottom: 12 }}>
         <p style={{ fontSize: textPx(15), fontWeight: 700, color: INK.ch }}>{template.name}</p>
         <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 6 }}>
-          {[tn(template.exercises.length, "{n} exercise", "{n} exercises"), template.durationMin ? t("{n} min", { n: template.durationMin }) : null].filter(Boolean).join(" · ")}
+          {[tn(template.exercises.length, "{n} exercise", "{n} exercises"), template.durationMin ? tn(template.durationMin, "{n} min", "{n} min") : null].filter(Boolean).join(" · ")}
         </p>
         {runs.map((run) =>
           run.block ? (

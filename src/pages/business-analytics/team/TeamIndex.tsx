@@ -92,7 +92,7 @@ export function TeamIndex({
   const strips = (
     <>
       {state.error && <Strip offline={state.error === "offline"} text={errText(state.error, vocab)} onRetry={state.reload} />}
-      {state.error === "offline" && state.updatedAt && <p className="an5-updated">{t("Updated {n} min ago", { n: Math.max(1, Math.round((Date.now() - state.updatedAt) / 60000)) })}</p>}
+      {state.error === "offline" && state.updatedAt && <p className="an5-updated">{tn(Math.max(1, Math.round((Date.now() - state.updatedAt) / 60000)), "Updated {n} min ago", "Updated {n} min ago")}</p>}
     </>
   );
 

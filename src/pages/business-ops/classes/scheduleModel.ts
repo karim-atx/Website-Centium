@@ -422,7 +422,7 @@ export function durationMinutes(startTime: string, endTime: string): number {
 
 /** "45 min", "60 min", "90 min" (the board writes every length in minutes). */
 export function durationText(startTime: string, endTime: string): string {
-  return t("{n} min", { n: durationMinutes(startTime, endTime) });
+  return tn(durationMinutes(startTime, endTime), "{n} min", "{n} min");
 }
 
 /** The Duration menu: 15 to 180 minutes, plus the class's own length when it is another. */

@@ -9,7 +9,7 @@ import { parsePrice } from "../../../utils/price";
 import { formatMinutes12 } from "../../../utils/time12";
 import { DAY_LONG } from "../../../utils/week";
 import { useOnline } from "../../../hooks/useOnline";
-import { t } from "../../../i18n/core";
+import { t, tn } from "../../../i18n/core";
 import { EmptyCard, ErrorCard, KitField, KitFieldButton, KitLabel, KitRow, ListCard, ListSkeleton, OpsHeader, OpsSheet, P_DARK, useOpsToast } from "../store/opsKit";
 import { useLive, useStoreBusiness } from "../store/storeShared";
 
@@ -97,7 +97,7 @@ export default function ServicesPage() {
                   key={x.id}
                   icon={Sparkles}
                   title={x.name}
-                  sub={`${t("{n} min", { n: x.durationMin })} · ${money(x.price)}`}
+                  sub={`${tn(x.durationMin, "{n} min", "{n} min")} · ${money(x.price)}`}
                   chip={x.active ? null : { label: t("Hidden"), tone: "soft" }}
                   onClick={() => setSvc({ open: true, s: x })}
                 />
@@ -200,7 +200,7 @@ function ServiceSheet({ open, service, businessId, onClose, onSaved }: { open: b
       <OpsSheet open={open} onClose={onClose} title={service ? t("Edit service") : t("New service")} button={t("Save")} onButton={() => void save()} disabled={!valid} busy={busy} error={error}>
         <KitField id="svc-name" label={t("Name")} value={name} onChange={setName} placeholder={t("e.g. Sports massage")} icon={Pencil} maxLength={60} />
         <KitField id="svc-desc" label={t("Description")} value={description} onChange={setDescription} placeholder={t("Optional")} icon={Pencil} maxLength={500} multiline />
-        <KitFieldButton id="svc-duration" label={t("Duration")} value={t("{n} min", { n: duration })} placeholder="" icon={ChevronDown} onClick={(el) => setMenu(el)} expanded={!!menu} />
+        <KitFieldButton id="svc-duration" label={t("Duration")} value={tn(duration, "{n} min", "{n} min")} placeholder="" icon={ChevronDown} onClick={(el) => setMenu(el)} expanded={!!menu} />
         <KitField
           id="svc-price"
           label={t("Price")}
@@ -224,7 +224,7 @@ function ServiceSheet({ open, service, businessId, onClose, onSaved }: { open: b
         anchor={menu}
         matchWidth={menu}
         variant="field"
-        options={durations.map((m) => ({ value: String(m), label: t("{n} min", { n: m }) }))}
+        options={durations.map((m) => ({ value: String(m), label: tn(m, "{n} min", "{n} min") }))}
         selected={String(duration)}
         onSelect={(v) => setDuration(Number(v))}
       />

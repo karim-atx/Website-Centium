@@ -4,7 +4,7 @@ import { textPx, linePx } from "../../../theme/textSize";
 import { clock12 } from "../../../utils/time12";
 import { useHideNumbers } from "../../../hooks/useHideNumbers";
 import { WORKOUT_FALLBACK, type WorkoutKcalSession } from "../../../services/health-metrics/b1";
-import { t } from "../../../i18n/core";
+import { t, tn } from "../../../i18n/core";
 import { hairline, mc, metricIconInk, useHealthMode } from "./MetricKit";
 import { appLocale } from "../../../i18n/format";
 
@@ -51,7 +51,7 @@ export const FromWorkoutsCard: React.FC<{ sessions: WorkoutKcalSession[]; dayTot
             <span className="flex-1 min-w-0">
               <span className="block truncate" style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{x.name === WORKOUT_FALLBACK ? t(WORKOUT_FALLBACK) : x.name}</span>
               <span className="block truncate" style={{ fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 400, color: "rgb(var(--c-charcoal-faint))" }}>
-                {[clock12(x.startedAt), x.durationSec ? t("{n} min", { n: Math.round(x.durationSec / 60) }) : null].filter(Boolean).join(" · ")}
+                {[clock12(x.startedAt), x.durationSec ? tn(Math.round(x.durationSec / 60), "{n} min", "{n} min") : null].filter(Boolean).join(" · ")}
               </span>
             </span>
             <span className="shrink-0 flex items-baseline">

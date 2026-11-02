@@ -99,7 +99,7 @@ export function parsePrice(text: string): number | null {
 
 /** "Week 1 · Reading · 4 min" (the preview's eyebrow); kindLabel is already shown text. */
 export function lessonEyebrow(weekIndex: number, kindLabel: string, minutes: number | null): string {
-  return [t("Week {n}", { n: weekIndex + 1 }), kindLabel, minutes ? t("{n} min", { n: minutes }) : null].filter(Boolean).join(" · ");
+  return [t("Week {n}", { n: weekIndex + 1 }), kindLabel, minutes ? tn(minutes, "{n} min", "{n} min") : null].filter(Boolean).join(" · ");
 }
 
 /** The lesson kind's shown label (LessonSteps' KIND_LABEL and the Structure rows). */
@@ -111,5 +111,5 @@ export function lessonKindLabel(kind: string): string {
 export function lessonMeta(kind: string, minutes: number | null, questions?: number): string {
   const label = lessonKindLabel(kind);
   if (kind === "quiz") return questions === undefined ? label : `${label} · ${tn(questions, "{n} question", "{n} questions")}`;
-  return minutes ? `${label} · ${t("{n} min", { n: minutes })}` : label;
+  return minutes ? `${label} · ${tn(minutes, "{n} min", "{n} min")}` : label;
 }

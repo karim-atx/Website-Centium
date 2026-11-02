@@ -14,7 +14,7 @@ import { OfflineLine, ProCardSkeleton, ProError } from "../states";
 import { DetailHeader } from "./libraryUi";
 import { compareLog, currentWeek, parseSwaps, type LogStatus } from "./libraryModel";
 import { WorkoutLogReplies } from "./WorkoutLogReplies";
-import { t, tx } from "../../../i18n/core";
+import { t, tx, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 TR22 "Client workout log · targets vs logged, swap".
@@ -84,7 +84,7 @@ export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemp
     ? [
         template && session.routineName !== template.name ? session.routineName : null,
         template ? (week ? t("{name}, week {n}", { name: template.name, n: week.n }) : template.name) : session.routineName,
-        session.durationSec ? t("{n} min", { n: Math.round(session.durationSec / 60) }) : null,
+        session.durationSec ? tn(Math.round(session.durationSec / 60), "{n} min", "{n} min") : null,
         rpe != null ? t("RPE {n}", { n: rpe }) : null,
       ]
         .filter(Boolean)

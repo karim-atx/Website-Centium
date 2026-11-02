@@ -42,7 +42,7 @@ import { Field, FieldError, Label, Note, TextBox } from "./courseUi";
 import { fieldBox } from "./courseStyles";
 import { lessonEyebrow, lessonKindLabel } from "./courseModel";
 import { appLocale } from "../../../i18n/format";
-import { t, tk } from "../../../i18n/core";
+import { t, tk, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · W6 MO28 "Create course · 3 Lesson type" (cLessonType18):
@@ -301,7 +301,7 @@ export const LessonEditor: React.FC<{
         <option value="">{t("Not set")}</option>
         {minuteOptions(minutes).map((m) => (
           <option key={m} value={m}>
-            {t("{n} min", { n: m })}
+            {tn(m, "{n} min", "{n} min")}
           </option>
         ))}
       </select>

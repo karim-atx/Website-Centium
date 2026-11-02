@@ -69,7 +69,7 @@ export const AddWorkoutSheet: React.FC<{
                     {w.name}
                   </span>
                   <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>
-                    {[tn(w.exercises.length, "{n} exercise", "{n} exercises"), w.durationMin ? t("{n} min", { n: w.durationMin }) : null].filter(Boolean).join(" · ")}
+                    {[tn(w.exercises.length, "{n} exercise", "{n} exercises"), w.durationMin ? tn(w.durationMin, "{n} min", "{n} min") : null].filter(Boolean).join(" · ")}
                   </span>
                 </span>
               </button>

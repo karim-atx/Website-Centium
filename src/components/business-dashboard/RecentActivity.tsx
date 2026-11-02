@@ -6,7 +6,7 @@ import type { ActivityEvent, TotalType, WeekTotal } from "./activityFeed";
 import { dayLabel, whenLabel } from "./dashboardModel";
 import { PopupMenu } from "../ui/PopupMenu";
 import { linePx, textPx } from "../../theme/textSize";
-import { isRtl, t, tk, tx } from "../../i18n/core";
+import { isRtl, t, tk, tx, tn } from "../../i18n/core";
 
 // DA1-015 #29-#31 · Recent activity (BizSummaryV27), OURS-DA-states #3-#6:
 // live line, refresh, collapsed 3 rows, expanded with this week's totals, the
@@ -245,7 +245,7 @@ export function RecentActivityCard({
   const [open, setOpen] = useState(false);
   const shown = useMemo(() => (open ? week : week.slice(0, 3)), [open, week]);
   const mins = updatedAt === null ? null : Math.max(0, Math.floor((now.getTime() - updatedAt) / 60000));
-  const updated = mins === null ? "" : mins < 1 ? t("Updated just now") : t("Updated {n} min ago", { n: mins });
+  const updated = mins === null ? "" : mins < 1 ? t("Updated just now") : tn(mins, "Updated {n} min ago", "Updated {n} min ago");
   const toggle = () => setOpen(!open);
   return (
     <section aria-label={t("Recent activity")} style={{ background: c.card, borderRadius: 24, border: `1px solid ${c.border}`, overflow: "hidden", marginBottom: 20 }}>

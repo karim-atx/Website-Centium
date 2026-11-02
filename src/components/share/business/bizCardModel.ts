@@ -567,7 +567,7 @@ export function durationText(start: string, end: string): string {
   const d = b - a;
   const h = Math.floor(d / 60);
   const m = d % 60;
-  return h ? (m ? t("{h} hr {m} min", { h, m }) : t("{h} hr", { h })) : t("{n} min", { n: m });
+  return h ? (m ? t("{h} hr {m} min", { h, m }) : t("{h} hr", { h })) : tn(m, "{n} min", "{n} min");
 }
 
 /** "Sun, Oct 25" */

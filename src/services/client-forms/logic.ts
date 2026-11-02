@@ -656,7 +656,7 @@ export function sessionTitle(proName: string, startsAt: string, now: Date): stri
   const s = new Date(startsAt);
   const mins = Math.round((s.getTime() - now.getTime()) / 60000);
   if (mins <= 0) return t("Session with {name} now", { name: proName });
-  if (mins <= 60) return t("Session with {name} in {n} min", { name: proName, n: mins });
+  if (mins <= 60) return tn(mins, "Session with {name} in {n} min", "Session with {name} in {n} min", { name: proName });
   return t("Session with {name} at {time}", { name: proName, time: clock12(s) });
 }
 
