@@ -155,14 +155,14 @@ const member: Catalogue = {
   "score {score}": "النتيجة {score}", // note: health
   "Sleep, {value}": "النوم، {value}", // note: health
   "Connect a source to see your heart rate": "اربط مصدرًا لترى نبضك", // note: health
-  "Heart rate": "معدل النبض", // note: health
-  "Heart rate, no readings yet. {hint}": "معدل النبض، لا قراءات بعد. {hint}", // note: health
+  "Heart rate": "معدل القلب", // note: health
+  "Heart rate, no readings yet. {hint}": "معدل القلب، لا قراءات بعد. {hint}", // note: health
   "Resting|heart rate": "أثناء الراحة", // note: health (resting heart rate)
   Latest: "الأحدث", // note: health (the latest reading)
   "{low} to {high}": "{low} إلى {high}", // note: health (heart rate range)
   "{low} to {high} today": "{low} إلى {high} اليوم", // note: health (heart rate range)
-  "Heart rate {bpm} bpm, {word}": "معدل النبض {bpm} نبضة/د، {word}", // note: health
-  "Heart rate {bpm} bpm, {word}, {range}": "معدل النبض {bpm} نبضة/د، {word}، {range}", // note: health
+  "Heart rate {bpm} bpm, {word}": "معدل القلب {bpm} نبضة/د، {word}", // note: health
+  "Heart rate {bpm} bpm, {word}, {range}": "معدل القلب {bpm} نبضة/د، {word}، {range}", // note: health
   bpm: "نبضة/د", // note: health (beats per minute, as short as the English)
   "Low {n}": "الأدنى {n}", // note: health
   "High {n}": "الأعلى {n}", // note: health
@@ -195,7 +195,7 @@ const member: Catalogue = {
 
   // == Home: No device connected ==
   "Steps, sleep and heart rate come from Apple Health or Health Connect on your phone. Syncing from the Centium phone app is coming.":
-    "تأتي الخطوات والنوم ومعدل النبض من Apple Health أو Health Connect على هاتفك. المزامنة من تطبيق Centium على الهاتف قادمة.",
+    "تأتي الخطوات والنوم ومعدل القلب من Apple Health أو Health Connect على هاتفك. المزامنة من تطبيق Centium على الهاتف قادمة.",
   "See devices and sources": "عرض الأجهزة والمصادر",
   "Got it": "حسنًا",
 
