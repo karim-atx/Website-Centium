@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   businessPlansOn,
   awaitingPurchase,
+  paysInApp,
   choiceAlreadyMade,
   choosePlanLevelArgs,
   planChoiceLine,
@@ -288,6 +289,15 @@ test("business_plan_level (G fixes 3): awaiting_purchase, the chosen level and b
   assert.equal(awaitingPurchase(parseLevel([{ business_plans_on: true, plan_active: true, awaiting_purchase: true }])), false);
   assert.equal(ACTIVE?.seatBlocks, 1);
   assert.equal(ACTIVE?.billingPeriod, "monthly");
+});
+
+test("a business pays in the app with the switch on or a store plan; otherwise (or unknown) today's flow", () => {
+  assert.equal(paysInApp(AWAITING), true);
+  assert.equal(paysInApp(ACTIVE), true);
+  assert.equal(paysInApp({ businessPlansOn: false, boughtInApp: true }), true);
+  assert.equal(paysInApp({ businessPlansOn: false, boughtInApp: false }), false);
+  assert.equal(paysInApp(null), false);
+  assert.equal(paysInApp(undefined), false);
 });
 
 test("choose_business_plan_level takes exactly three arguments, and ATXD7 reads as already chosen", () => {

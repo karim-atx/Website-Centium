@@ -343,8 +343,10 @@ export function InviteSheet({
  * price is the seat block's for the plan's billing period
  * (business_plan_summary, Batch 2), or, without that reader, the monthly one
  * from subscription_tiers (V6-40). A period with no price says so, never $0.
- * "Add seats" opens the AN5 Add seats sheet (OP1-070 row 5, OP1-127 row 8),
- * where seat blocks are bought in the Centium app only (G fixes 4).
+ * "Add seats" opens the AN5
+ * 057-060 Add seats flow (OP1-070 row 5, OP1-127 row 8), which places a B8
+ * RV-06 seat order (buy_seat_blocks, owner only) or, on a database without
+ * RV-06, keeps the email request.
  */
 export function SeatsFullSheet({
   open,
@@ -352,6 +354,7 @@ export function SeatsFullSheet({
   counts,
   approveName,
   onInviteNoSeat,
+  onChanged,
   businessId,
 }: {
   open: boolean;
@@ -363,6 +366,8 @@ export function SeatsFullSheet({
   onInviteNoSeat?: () => void;
   /** Set when the sheet opened from approving a join request (OP1-127). */
   approveName?: string | null;
+  /** A seat order was placed or cancelled in the Add seats flow. */
+  onChanged?: () => void;
 }) {
   const [price, setPrice] = useState<{ amount: number | null; period: SubscriptionPeriod; seatsPerUnit: number } | null | undefined>(undefined);
   const [priceError, setPriceError] = useState(false);
@@ -426,6 +431,7 @@ export function SeatsFullSheet({
             setBuying(false);
             onClose();
           }}
+          onChanged={onChanged}
         />
       )}
     </>

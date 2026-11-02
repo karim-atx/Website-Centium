@@ -50,6 +50,8 @@
   height: 36px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--an-border); background: var(--an-card);
   display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--an-pdark); white-space: nowrap; flex-shrink: 0;
 }
+.an5-new-msg { margin-top: 8px; font-size: 11.5px; font-weight: 700; line-height: 16px; color: var(--an-teal-ink); background: var(--an-teal-pale); border-radius: 10px; padding: 7px 10px; }
+.an5-new-msg.is-faint { color: var(--an-faint); background: var(--an-soft); }
 .an5-seat-row {
   margin-top: 12px; border-radius: 16px; background: var(--an-soft); padding: 10px 12px; display: grid;
   grid-template-columns: 30px minmax(0, 1fr); column-gap: 10px; align-items: center; min-height: 52px; box-sizing: border-box; width: 100%; text-align: start;
@@ -307,6 +309,7 @@ html.high-contrast .an5-tile { border-color: var(--an-border) !important; }
 .an5-rowsr > span:first-child { font-size: 13px; color: var(--an-ink-soft); white-space: nowrap; }
 .an5-rowsr > span:last-child { font-size: 13.5px; font-weight: 600; text-align: end; font-variant-numeric: tabular-nums; color: var(--an-ink); }
 .an5-rowsr.is-bold > span:last-child { font-weight: 800; }
+.an5-soon { font-size: 10px; font-weight: 800; text-transform: uppercase; background: var(--an-pale); color: var(--an-pdark); border-radius: 999px; padding: 2px 8px; }
 
 /* Option list (AN5-024 rows 4-12; AN5-013 role listbox; AN5-053 sort) */
 .an5-optlist { background: var(--an-card); border: 1px solid var(--an-menu-border); border-radius: 14px; padding: 8px; }
@@ -367,8 +370,19 @@ html.high-contrast .an5-sess { border-color: var(--an-border); }
 @keyframes an5pulse { 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) { .an5-pulse { animation: none; } }
 
+/* Stepper (AN5-057) */
+.an5-stepper { background: var(--an-card); border-radius: 18px; border: 1px solid var(--an-border); padding: 14px 16px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+.an5-stepper-t { font-size: 13.5px; font-weight: 800; color: var(--an-ink); }
+.an5-stepper-s { font-size: 11.5px; color: var(--an-faint); }
+.an5-stepper-c { display: flex; align-items: center; }
+.an5-stepbtn { width: 44px; height: 44px; border-radius: 14px; background: var(--an-soft); color: var(--an-pdark); display: flex; align-items: center; justify-content: center; }
+.an5-stepbtn:disabled { color: var(--an-faint); }
+.an5-stepval { width: 34px; text-align: center; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--an-ink); }
+
 /* Seat detail (OURS) */
 .an5-ident { background: var(--an-card); border-radius: 20px; border: 1px solid var(--an-border); padding: 14px 16px; display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: center; }
+.an5-textbtn { height: 44px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 800; margin-top: 8px; }
+.an5-textbtn.is-danger { color: var(--an-high); }
 .an5-help { font-size: 11px; line-height: 15px; color: var(--an-faint); margin-top: 6px; }
 
 /* Ratings on B14 (AN5-040 rows 12-16, AN5-045 rows 11-12, AN5-051 / -053 / -055) */

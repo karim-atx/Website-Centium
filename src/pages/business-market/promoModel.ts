@@ -3,7 +3,7 @@ import type { BusinessClassRow } from "../../services/business-classes/types";
 import type { MembershipPlanRow } from "../../services/membership-plans/types";
 import type { Offering } from "../../services/business-offerings/types";
 import { offerLocked, placementView, type DbPromoTarget, type DbPromoType, type Placement, type PlacementView, type PromoStats, type PromoStatus, type Promotion } from "../../services/business-market/promoLogic";
-import { dayMonth, daysLeft, dowTime, notEnded } from "./model";
+import { addDays, dayMonth, daysLeft, dowTime, notEnded } from "./model";
 import { appLocale } from "../../i18n/format";
 
 // Create promotion (MA1-099 to 104, OURS-MA1-promotion-type-menu,
@@ -349,6 +349,11 @@ export function featuredLine(placements: Placement[], title: (p: Placement) => s
   return null;
 }
 
-/** Featuring is the owner's to buy (in the Centium app). */
+/** request_featured_week is the owner's (ATX03 for anyone else). */
 export const OWNER_ONLY = "Only the owner can feature your business.";
 
+/** A start day for Pick new dates: the old one if still ahead, else today. */
+export const retryStart = (p: Pick<Placement, "startsOn">, today: string): string => (p.startsOn >= today ? p.startsOn : today);
+
+/** The last start day request_featured_week takes (today + 90). */
+export const lastFeatureStart = (today: string): string => addDays(today, 90);

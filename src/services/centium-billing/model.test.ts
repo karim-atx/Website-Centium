@@ -5,7 +5,10 @@ import {
   chargeTitle,
   chargeTone,
   isMissingFunction,
+  pendingPlanCharge,
+  pendingSeatPurchase,
   seatFacts,
+  seatPurchaseRefusal,
   toCharge,
   toPlanSummary,
   type ChargeRow,
@@ -79,12 +82,19 @@ test("seat facts for the Team screens: capacity and block price from the summary
   assert.equal(seatFacts(toPlanSummary(summaryRow({ seats_per_block: null })), 4).perBlock, 4);
 });
 
-test("billing history: mapping", () => {
-  const c = toCharge(chargeRow());
-  assert.equal(c.amount, 119.98);
-  assert.equal(c.quantity, 2);
-  assert.equal(toCharge(chargeRow({ is_renewal: true })).isRenewal, true);
-  assert.equal(toCharge(chargeRow({ quantity: null })).quantity, 1);
+test("billing history: mapping, the pending seat purchase and the pending plan charge", () => {
+  const charges = [
+    toCharge(chargeRow()),
+    toCharge(chargeRow({ charge_id: "r1", is_renewal: true, status: "pending" })),
+    toCharge(chargeRow({ charge_id: "p1", product: "business_plan", quantity: 1, amount: 29, status: "paid", method: "transfer" })),
+  ];
+  assert.equal(charges[0].amount, 119.98);
+  assert.equal(pendingSeatPurchase(charges)?.id, "c1");
+  // A pending renewal of blocks already held is not a purchase.
+  assert.equal(pendingSeatPurchase(charges.slice(1)), null);
+  assert.equal(pendingSeatPurchase([toCharge(chargeRow({ status: "cancelled" }))]), null);
+  assert.equal(pendingPlanCharge(charges), null);
+  assert.equal(pendingPlanCharge([toCharge(chargeRow({ product: "business_plan", status: "pending" }))])?.product, "business_plan");
 });
 
 test("billing history wording: titles and statuses never name a member's payment", () => {
@@ -104,7 +114,18 @@ test("billing history wording: titles and statuses never name a member's payment
   assert.equal(chargeTone(toCharge(chargeRow({ status: "cancelled" }))), "void");
 });
 
-test("the missing-function rule", () => {
+test("seat purchase refusals and the missing-function rule", () => {
+  assert.equal(seatPurchaseRefusal("ATXQ3").kind, "in_app");
+  assert.match(seatPurchaseRefusal("ATXQ3").message, /Centium app/);
+  assert.doesNotMatch(seatPurchaseRefusal("ATXQ3").message, /cash|bank transfer/i);
+  assert.equal(seatPurchaseRefusal("ATXD7").kind, "already_pending");
+  assert.equal(seatPurchaseRefusal("ATXD6").kind, "no_plan");
+  assert.equal(seatPurchaseRefusal("ATXD6", "buy", "seat blocks need an active business plan").message, "Seats need an active Business plan.");
+  assert.deepEqual(seatPurchaseRefusal("ATXD6", "buy", "seat blocks have no yearly price yet"), { kind: "no_price", message: "Seat blocks aren't available on yearly billing yet." });
+  assert.deepEqual(seatPurchaseRefusal("ATXD6", "buy", "seat blocks are not on sale"), { kind: "not_on_sale", message: "Seat blocks aren't on sale right now." });
+  assert.equal(seatPurchaseRefusal("ATX03", "cancel").message, "Only the business owner can cancel this order.");
+  assert.equal(seatPurchaseRefusal("XX000", "cancel").message, "Couldn't cancel the order. Try again.");
+  assert.equal(seatPurchaseRefusal(undefined).kind, "failed");
   assert.equal(isMissingFunction("PGRST202"), true);
   assert.equal(isMissingFunction("42883"), true);
   assert.equal(isMissingFunction("ATX03"), false);

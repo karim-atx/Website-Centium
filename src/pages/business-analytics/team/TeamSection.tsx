@@ -45,7 +45,7 @@ export default function TeamSection() {
   const state = useTeam(range);
   // B14 instructor ratings (V6-85): the Ratings tile, page and every scorecard's Ratings box.
   const ratings = useRatings(state.businessId, range, state.early);
-  // B8 RV-06: who may add seats (the owner; seat blocks are bought in the Centium app, G fixes 4).
+  // B8 RV-06: the seat order awaiting payment, and buying seats (owner only).
   const billing = useCentiumBilling();
   const [view, setView] = useState<View>({ k: "index" });
   const [status, setStatus] = useState<string | null>(null);
@@ -54,6 +54,7 @@ export default function TeamSection() {
   const [assign, setAssign] = useState<{ s: ClassRow; mode: "assign" | "reassign" } | null>(null);
   const [fix, setFix] = useState<Extract<Issue, { kind: "overlap" }> | null>(null);
   const [move, setMove] = useState<ClassRow | null>(null);
+  const [requested, setRequested] = useState(0);
   const [lastFix, setLastFix] = useState<Extract<Issue, { kind: "overlap" }> | null>(null);
 
   const seats = useMemo(() => seatList(state), [state]);
@@ -116,6 +117,8 @@ export default function TeamSection() {
           onSeat={(p) => navigate(`/app/business/employees/${p.id}`)}
           onRequests={() => navigate("/app/business/employees/requests")}
           onPlan={plan}
+          requestedBlocks={billing.available ? (billing.pendingSeat?.quantity ?? 0) : requested}
+          requestedLive={billing.available}
           canAddSeats={!billing.available || billing.isOwner}
         />
       );
@@ -194,9 +197,15 @@ export default function TeamSection() {
         seats={state.team?.seats ?? null}
         used={usedN}
         pending={pendingN}
-        isOwner={!billing.available || billing.isOwner}
         onClose={() => setSeatsMode(null)}
         onPlan={plan}
+        billing={billing}
+        businessId={state.businessId}
+        onRequested={(n) => setRequested((x) => x + n)}
+        onChanged={() => {
+          billing.reload();
+          state.reload();
+        }}
       />
       <AssignSheet
         open={assign !== null}

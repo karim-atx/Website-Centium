@@ -10,6 +10,7 @@ import {
   chargeStatusText,
   chargeTitle,
   chargeTone,
+  pendingPlanCharge,
   periodName,
   periodOptions,
   periodPriceText,
@@ -21,6 +22,7 @@ import {
   renewalDayText,
   switchConfirm,
   switchedText,
+  type CentiumCharge,
   type SubscriptionPeriod,
 } from "../../services/centium-billing";
 import { fetchPlanRenewal } from "../../services/business-more";
@@ -34,6 +36,7 @@ import { t, tn } from "../../i18n/core";
 import { RefundPolicyLink } from "../../components/legal/RefundPolicyLink";
 import { BusinessPlanLevels } from "../../components/premium/BusinessPlanLevels";
 import { usePlanLevel } from "../../components/premium/usePlanLevel";
+import { paysInApp } from "../../services/premium";
 
 // OURS-MO1B-payment-methods, -payouts, -invoices, -taxes, -subscription
 // (BizMoreV8 screen="payments" / "payouts" / "invoices" / "taxes" /
@@ -44,11 +47,9 @@ import { usePlanLevel } from "../../components/premium/usePlanLevel";
 // payouts are an empty "coming" card. Receipts and VAT have no backend
 // (BU6-19), so their rows are dimmed under "Coming soon". The Centium plan
 // and its billing history are B8 RV-06 (business_plan_summary,
-// centium_billing_history: what the business pays Centium), read only;
-// nothing here shows a sample amount, and no money that isn't recorded.
-// G fixes 4: nothing paid to Centium is bought or paid on the web (no cash or
-// bank transfer, no seat order to cancel): plan levels and seat blocks are
-// bought in the Centium app.
+// centium_billing_history: what the business pays Centium, paid by cash or
+// bank transfer and recorded by Centium); nothing here shows a sample amount,
+// and no money that isn't recorded.
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 const fmt = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short" });
@@ -159,6 +160,9 @@ export function SubscriptionPage() {
   const legacy = useBusinessPlan();
   const [renews, setRenews] = useState<string | null>(null);
   const [cancelAsk, setCancelAsk] = useState(false);
+  const [orderAsk, setOrderAsk] = useState<CentiumCharge | null>(null);
+  const [orderBusy, setOrderBusy] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
   const live = billing.available;
   // Batch 2 · CS: monthly or yearly. set_subscription_billing_period changes
   // the CALLER's own subscription, so only the owner reads or switches it;
@@ -171,6 +175,9 @@ export function SubscriptionPage() {
   // for this business; off (or loading) the page is today's.
   const planLevel = usePlanLevel(billing.businessId);
   const levelsOn = !!planLevel.level?.businessPlansOn;
+  // G fixes 4 (the Database's G1 rule): a business that pays in the app (the
+  // switch on, or a store plan) is never asked for cash or a bank transfer.
+  const inApp = paysInApp(planLevel.level);
   const period = useBillingPeriod(authUserId ?? null, isOwner);
   const [periodAsk, setPeriodAsk] = useState<{ to: SubscriptionPeriod; price: number; at: Date } | null>(null);
   const [periodBusy, setPeriodBusy] = useState(false);
@@ -192,9 +199,21 @@ export function SubscriptionPage() {
   const renewsAt = ownSub?.renewsAt ?? (s ? s.renewsAt : renews);
   const blocks = s ? s.seatBlocks : (plan?.seatBlocks ?? 0);
   const planPrice = s ? s.planPrice : (plan?.base?.monthlyPrice ?? null);
+  const planCharge = live && billing.history ? pendingPlanCharge(billing.history) : null;
   const hidden = live && billing.ready && !billing.canSeePlan;
   const error = live ? billing.summaryError : legacy.error;
   const loading = !error && !hidden && (live ? !billing.ready || !s : legacy.loading);
+
+  const cancelOrder = async () => {
+    if (!orderAsk || orderBusy) return;
+    setOrderBusy(true);
+    setOrderError(null);
+    const r = await billing.cancel(orderAsk.id);
+    setOrderBusy(false);
+    setOrderAsk(null);
+    if (!r.ok && r.kind !== "final") setOrderError(r.message);
+    billing.reload();
+  };
 
   const switchPeriod = async () => {
     if (!periodAsk || periodBusy) return;
@@ -248,21 +267,23 @@ export function SubscriptionPage() {
               label={t("Your plan")}
               value={t("No plan yet")}
               sub={
-                levelsOn
-                  ? undefined // the levels and their prices are just below
-                  : planPrice !== null
-                    ? (s ? s.period : "monthly") === "monthly"
-                      ? t("The Business plan is {price} a month.", { price: money(planPrice) })
-                      : t("The Business plan is {price} a year.", { price: money(planPrice) })
-                    : s
-                      ? // business_plan_summary's plan_price is NULL (251ab70: no
-                        // fallback to another period's price): said, never $0.
-                        s.period === "monthly"
-                        ? t("The Business plan's monthly price: Not available.")
-                        : t("The Business plan's yearly price: Not available.")
-                      : undefined
+                planCharge
+                  ? t("Your first month, {price}, is awaiting payment.", { price: money(planCharge.amount) })
+                  : levelsOn
+                    ? undefined // the levels and their prices are just below
+                    : planPrice !== null
+                      ? (s ? s.period : "monthly") === "monthly"
+                        ? t("The Business plan is {price} a month.", { price: money(planPrice) })
+                        : t("The Business plan is {price} a year.", { price: money(planPrice) })
+                      : s
+                        ? // business_plan_summary's plan_price is NULL (251ab70: no
+                          // fallback to another period's price): said, never $0.
+                          s.period === "monthly"
+                          ? t("The Business plan's monthly price: Not available.")
+                          : t("The Business plan's yearly price: Not available.")
+                        : undefined
               }
-              actions={levelsOn ? [] : [{ label: t(UPGRADE_ACTION_LABEL), icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}
+              actions={planCharge || levelsOn ? [] : [{ label: t(UPGRADE_ACTION_LABEL), icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}
             />
           )}
           {levelsOn && billing.businessId && <BusinessPlanLevels businessId={billing.businessId} level={planLevel.level} isOwner={isOwner} onChanged={planLevel.reload} />}
@@ -310,9 +331,12 @@ export function SubscriptionPage() {
               )}
             </>
           )}
-          {/* G fixes 4: older charges may still be open; nothing is paid on the web. */}
           {s && s.pendingCharges > 0 && billing.canSeeBilling && (
-            <BizNote>{t("Earlier Centium charges of {price} are still open. The Centium team will contact you about them.", { price: money(s.pendingAmount) })}</BizNote>
+            <BizNote>
+              {inApp
+                ? t("Earlier Centium charges of {price} are still open. The Centium team will contact you about them.", { price: money(s.pendingAmount) })
+                : t("{price} is awaiting payment to Centium. Pay by cash or bank transfer; your plan and seats update once Centium records the payment.", { price: money(s.pendingAmount) })}
+            </BizNote>
           )}
           {(!live || billing.canSeeBilling) && (
             <BizSection label={t("Billing history")}>
@@ -320,6 +344,7 @@ export function SubscriptionPage() {
                 <LoadError message={t("Couldn't load your billing history.")} onRetry={billing.reload} />
               ) : live && billing.history && billing.history.length > 0 ? (
                 billing.history.map((c) => {
+                  const cancellable = billing.isOwner && c.product === "seat_block" && !c.isRenewal && c.status === "pending";
                   const tone = chargeTone(c);
                   return (
                     <BizRow
@@ -330,6 +355,8 @@ export function SubscriptionPage() {
                       value={money(c.amount)}
                       valueTone={VALUE_TONE[tone]}
                       dim={tone === "void"}
+                      onClick={cancellable ? () => setOrderAsk(c) : undefined}
+                      ariaLabel={cancellable ? t("{item}, {price}, awaiting payment. Cancel order", { item: chargeTitle(c), price: money(c.amount) }) : undefined}
                     />
                   );
                 })
@@ -338,6 +365,7 @@ export function SubscriptionPage() {
               )}
             </BizSection>
           )}
+          {orderError && <BizNote>{t(orderError)}</BizNote>}
           {active && (!live || billing.isOwner) && (
             <>
               <BizSection label={t("Change or cancel")}>
@@ -367,6 +395,21 @@ export function SubscriptionPage() {
           setCancelAsk(false);
           window.location.href = cancelMailto();
         }}
+      />
+      <BizConfirm
+        open={!!orderAsk}
+        icon={XCircle}
+        title={t("Cancel this seat order?")}
+        body={
+          orderAsk
+            ? tn(orderAsk.quantity, "{n} seat block won't be added. You can order seats again any time.", "{n} seat blocks won't be added. You can order seats again any time.")
+            : t("The seat blocks won't be added. You can order seats again any time.")
+        }
+        action={t("Cancel order")}
+        cancel={t("Keep order")}
+        busy={orderBusy}
+        onCancel={() => setOrderAsk(null)}
+        onAction={() => void cancelOrder()}
       />
       {/* Not destructive, so the primary treatment rather than BizConfirm's red. */}
       <ConfirmCard

@@ -456,6 +456,18 @@ export const mustChooseLevel = (l: PlanLevel | null | undefined): boolean => !!l
 export const awaitingPurchase = (l: PlanLevel | null | undefined): boolean => !!l && l.businessPlansOn && !l.planActive && l.awaitingPurchase;
 
 /**
+ * G fixes 4 (the Database's G1 rule): a business PAYS IN THE APP (plan, seat
+ * blocks, featured weeks; no cash or bank transfer) while the business plans
+ * switch is on for its owner, if it was created under the switch, or if its
+ * plan comes from the store. No reader says "created under the switch", so
+ * this reads business_plan_level's business_plans_on and bought_in_app; a
+ * business created under the switch while the switch is off is caught by the
+ * Database's ATXQ3 on buy_seat_blocks / request_featured_week, which the
+ * screens also map to the app. Null (loading, no G1): today's flow.
+ */
+export const paysInApp = (l: Pick<PlanLevel, "businessPlansOn" | "boughtInApp"> | null | undefined): boolean => !!l && (l.businessPlansOn || l.boughtInApp);
+
+/**
  * A level's name and billing period: "Base + 5 seats · Yearly". The seat
  * count comes from business_plan_level_prices() when it has loaded (else
  * "Base + 1 seat block"). Null with no level.

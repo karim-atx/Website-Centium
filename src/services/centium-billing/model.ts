@@ -4,10 +4,10 @@
 //
 // TWO LEDGERS THAT NEVER MIX. business_payments is what members pay a
 // business; centium_charges is what a business pays Centium. Nothing here
-// touches a member's money, and no copy may suggest Centium handled it.
-// G fixes 4: nothing paid to Centium is bought on the web (seat blocks,
-// featured weeks and plan levels are bought in the Centium app); the web
-// only reads the billing history. A paid row keeps how it was paid.
+// touches a member's money, and no copy may suggest Centium handled it. No
+// card payment exists: a charge is an amount Centium asked for, paid to
+// Centium by cash or bank transfer, and Centium marks it paid (Whish later).
+// Seats count only once their charge is paid.
 //
 // PRICES ARE NEVER WRITTEN HERE. Every amount comes from the database
 // (business_plan_summary reads subscription_tiers; a charge carries its own
@@ -161,6 +161,20 @@ export function toCharge(r: ChargeRow): CentiumCharge {
   };
 }
 
+/**
+ * The seat purchase awaiting payment, if any (at most one: buy_seat_blocks
+ * refuses a second with ATXD7). A renewal of blocks already held is not a
+ * purchase and can't be cancelled by the owner.
+ */
+export function pendingSeatPurchase(charges: CentiumCharge[]): CentiumCharge | null {
+  return charges.find((c) => c.product === "seat_block" && !c.isRenewal && c.status === "pending") ?? null;
+}
+
+/** The plan charge awaiting payment (opened when the business is approved), if any. */
+export function pendingPlanCharge(charges: CentiumCharge[]): CentiumCharge | null {
+  return charges.find((c) => c.product === "business_plan" && (c.status === "pending" || c.status === "failed")) ?? null;
+}
+
 export const blocksText = (n: number): string => tn(n, "{n} seat block", "{n} seat blocks");
 
 /** A billing-history row's title. */
@@ -208,6 +222,45 @@ export function chargeTone(c: CentiumCharge): "due" | "settled" | "void" {
   if (c.status === "paid" || c.status === "waived") return "settled";
   return "void";
 }
+
+/**
+ * Why buy_seat_blocks / cancel_seat_block_purchase refused, for the sheet.
+ * ATXD6 carries three messages (20261204000000): no active plan, seat blocks
+ * not on sale, and no seat-block price for the plan's period.
+ */
+export function seatPurchaseRefusal(
+  code: string | undefined,
+  action: "buy" | "cancel" = "buy",
+  serverMessage?: string
+): { kind: "in_app" | "already_pending" | "no_plan" | "no_price" | "not_on_sale" | "not_owner" | "range" | "final" | "not_found" | "failed"; message: string } {
+  switch (code) {
+    case "ATXQ3":
+      // G fixes 4: this business pays for its seats in the Centium app.
+      return { kind: "in_app", message: t("Buy seat blocks in the Centium app. The seats are added once your purchase is confirmed.") };
+    case "ATXD7":
+      return { kind: "already_pending", message: t("A seat order is already waiting for payment.") };
+    case "ATXD6": {
+      const m = (serverMessage ?? "").toLowerCase();
+      const period = /no (monthly|yearly) price/.exec(m);
+      if (period) return { kind: "no_price", message: period[1] === "monthly" ? t("Seat blocks aren't available on monthly billing yet.") : t("Seat blocks aren't available on yearly billing yet.") };
+      if (m.includes("not on sale")) return { kind: "not_on_sale", message: t("Seat blocks aren't on sale right now.") };
+      return { kind: "no_plan", message: t("Seats need an active Business plan.") };
+    }
+    case "ATX03":
+      return { kind: "not_owner", message: action === "buy" ? t("Only the business owner can buy seats.") : t("Only the business owner can cancel this order.") };
+    case "22023":
+      return { kind: "range", message: t("Choose between 1 and 20 seat blocks.") };
+    case "ATXD8":
+      return { kind: "final", message: t("This order can't change any more.") };
+    case "ATX08":
+      return { kind: "not_found", message: t("This order couldn't be found.") };
+    default:
+      return { kind: "failed", message: action === "buy" ? t("Couldn't place the order. Try again.") : t("Couldn't cancel the order. Try again.") };
+  }
+}
+
+/** Highest number of blocks one purchase may take (buy_seat_blocks: 1 to 20). */
+export const MAX_BLOCKS_PER_PURCHASE = 20;
 
 /** PostgREST / Postgres "no such function": the stage isn't on this database. */
 export const isMissingFunction = (code: string | undefined): boolean => code === "PGRST202" || code === "42883";

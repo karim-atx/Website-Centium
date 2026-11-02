@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useConsoleAccess } from "./useConsoleAccess";
 import {
+  buySeatBlocks,
+  cancelSeatPurchase,
   fetchBillingHistory,
   fetchMyBillingPeriod,
   fetchPeriodPrices,
   fetchPlanSummary,
   setBillingPeriod,
+  pendingSeatPurchase,
   type CentiumCharge,
   type MyBillingPeriod,
   type PeriodWrite,
@@ -32,14 +35,18 @@ export interface CentiumBilling {
   /** centium_billing_history (gate revenue); null without the gate or on error. */
   history: CentiumCharge[] | null;
   historyError: string | null;
+  /** The seat purchase awaiting payment (owner's / revenue's view). */
+  pendingSeat: CentiumCharge | null;
   /** The seat may see the plan (members or revenue) and the billing (revenue). */
   canSeePlan: boolean;
   canSeeBilling: boolean;
-  /** The plan and its seat blocks are the owner's (bought in the Centium app, G fixes 4). */
+  /** buy_seat_blocks / cancel_seat_block_purchase are the owner's. */
   isOwner: boolean;
   /** The console's business these answers are for. */
   businessId: string | null;
   reload: () => void;
+  buy: typeof buySeatBlocks;
+  cancel: typeof cancelSeatPurchase;
 }
 
 /**
@@ -86,11 +93,14 @@ export function useCentiumBilling(): CentiumBilling {
     summaryError: summary && !summary.ok && !summary.missing && !summary.denied ? summary.message : null,
     history: charges,
     historyError: history && !history.ok && !history.missing && !history.denied ? history.message : null,
+    pendingSeat: charges ? pendingSeatPurchase(charges) : null,
     canSeePlan,
     canSeeBilling,
     isOwner: access.isOwner,
     businessId,
     reload,
+    buy: buySeatBlocks,
+    cancel: cancelSeatPurchase,
   };
 }
 
