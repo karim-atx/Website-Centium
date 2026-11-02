@@ -28,7 +28,7 @@ import {
   eventColours,
   nearestEventSwatch,
 } from "../../components/calendar/eventColour";
-import { COLOR_THEMES } from "../../theme/colorThemes";
+import { ALL_COLOR_THEMES } from "../../theme/colorThemes";
 import { linkLabel, minutesOf, normaliseLink } from "../../components/calendar/calendarTime";
 import { hourLabel12, range12 } from "../../utils/time12";
 import { useIsDark } from "../../hooks/useIsDark";
@@ -151,7 +151,7 @@ export default function ClientCalendarTab() {
   const { calendarEvents, updateCalendarEvent, authUserId, profileReady, noteFeatureMilestone, colorTheme } =
     useApp();
   const newEventColour = nearestEventSwatch(
-    COLOR_THEMES.find((t) => t.value === colorTheme)?.primary ?? DEFAULT_EVENT_COLOUR
+    ALL_COLOR_THEMES.find((t) => t.value === colorTheme)?.primary ?? DEFAULT_EVENT_COLOUR
   );
 
   // Explorer milestone: "Looking ahead". One row per account for ever — the repeat is

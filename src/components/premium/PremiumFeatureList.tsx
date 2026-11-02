@@ -1,6 +1,7 @@
 import { Check, Sparkles } from "lucide-react";
 import { useFreeLimits } from "../../services/premium/hooks";
 import { PREMIUM_FEATURES, freeAllowanceText } from "../../services/premium/features";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { t } from "../../i18n/core";
 
 // undrawn (Round G, no handover)
@@ -10,9 +11,11 @@ import { t } from "../../i18n/core";
 // free_limits() (nothing is said until the numbers are known).
 export function PremiumFeatureList() {
   const limits = useFreeLimits();
+  // Round G4: progress photos show nowhere in recovery-sensitive mode, not even by name here.
+  const hideNumbers = useHideNumbers();
   return (
     <ul data-premium-features className="grid grid-cols-2 gap-2.5 mb-6" aria-label={t("What Premium adds")}>
-      {PREMIUM_FEATURES.map((f) => {
+      {PREMIUM_FEATURES.filter((f) => !(hideNumbers && f.key === "progress_photos")).map((f) => {
         const free = freeAllowanceText(f.key, limits);
         const Icon = f.kind === "premium_only" ? Sparkles : Check;
         return (

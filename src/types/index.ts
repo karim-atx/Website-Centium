@@ -1531,7 +1531,9 @@ export interface JournalEntry {
 // normalizeColorTheme (src/theme/colorThemes.ts).
 // Stored in device_presentation_settings.color_theme as centium / sky_slate /
 // rose_blush / gold_amber / coral_terracotta (services/presentation/mapping.ts).
-export type ColorTheme = "centium" | "sky" | "rose" | "gold" | "coral";
+// Round G4: three Premium themes (forest, midnight, plum; color_theme
+// forest_sage / midnight_indigo / plum_lilac), offered only with the switch on.
+export type ColorTheme = "centium" | "sky" | "rose" | "gold" | "coral" | "forest" | "midnight" | "plum";
 
 // V3: custom (user-added) foods, kept separate from the curated mock database.
 export interface CustomFood extends Food {

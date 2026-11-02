@@ -37,6 +37,7 @@ const {
   TwoFactorSetupPage, ResetPassword, PublicCertificate, InviteLanding, PublicProfile, PublicBooking,
   SharedCard, BusinessLinkPage, CarePlan, ConsoleGate, CallLink, LegacyCallLink,
   CentiumProgrammesPage, CentiumProgrammePage, MindLibraryPage, LibrarySessionPage, WeeklyReviewPage, DoctorSummaryPage,
+  MealPlannerPage, ProgressPhotosPage,
 } = appPages;
 
 const RouteLoading: React.FC = () => (
@@ -455,12 +456,14 @@ function AppRoutes() {
         <Route path="/app/pro/*" element={<ProRoutes />} />
         <Route path="/app/food" element={<Food />} />
         <Route path="/app/food/nutrient-summary" element={<NutrientSummaryPage />} />
+        <Route path="/app/food/planner" element={<MealPlannerPage />} />
         {/* Round G3: the Monday weekly review (back to Home while the Premium switch is off). */}
         <Route path="/app/weekly-review" element={<WeeklyReviewPage />} />
         <Route path="/app/workout" element={<Workout />} />
         {/* Round G3: Centium programmes (each page sends back to Workout while the Premium switch is off). */}
         <Route path="/app/workout/programmes" element={<CentiumProgrammesPage />} />
         <Route path="/app/workout/programmes/:slug" element={<CentiumProgrammePage />} />
+        <Route path="/app/workout/progress-photos" element={<ProgressPhotosPage />} />
         <Route path="/app/health" element={<Health />} />
         <Route path="/app/health/checks" element={<HealthChecks />} />
         <Route path="/app/health/sources" element={<HealthSources />} />

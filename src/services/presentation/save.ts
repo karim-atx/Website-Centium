@@ -36,7 +36,17 @@ export type PresentationTable = {
 export type PresentationSave =
   | { status: "ok"; settings: Presentation }
   /** `permission`: this account may not write the row now; retrying can't help. */
-  | { status: "error"; message: string; permission: boolean };
+  | { status: "error"; message: string; permission: boolean; premium?: boolean };
+
+/**
+ * Round G4: choosing a Premium colour theme without Premium (ATXQ1), or while
+ * the switch is off (ATXQ0). The sync puts the saved theme back and asks for
+ * the prompt rather than retrying a choice the Database will keep refusing.
+ */
+export function isPremiumThemeRefusal(error: unknown): boolean {
+  const e = error as { code?: string; message?: string } | null;
+  return !!e && (e.code === "ATXQ1" || e.code === "ATXQ0" || /\bATXQ[01]\b/.test(e.message ?? ""));
+}
 
 export function describePresentationError(error: unknown): string {
   if (isOffline(error)) return OFFLINE_MESSAGE;
@@ -44,6 +54,7 @@ export function describePresentationError(error: unknown): string {
   if (isPermissionCode(code)) {
     return tk("Your session expired. Sign in again to save this.");
   }
+  if (isPremiumThemeRefusal(error)) return tk("That colour theme is part of Centium Premium.");
   return tk("Couldn't save your display settings. Try again.");
 }
 
@@ -52,6 +63,7 @@ function failed(error: unknown): PresentationSave {
     status: "error",
     message: describePresentationError(error),
     permission: isPermissionCode((error as { code?: string } | null)?.code),
+    ...(isPremiumThemeRefusal(error) ? { premium: true } : {}),
   };
 }
 

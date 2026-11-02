@@ -22,13 +22,14 @@ import * as venues from "./ar/venues.ts";
 import * as premium from "./ar/premium.ts";
 import * as premium2 from "./ar/premium2.ts";
 import * as premium3 from "./ar/premium3.ts";
+import * as premium4 from "./ar/premium4.ts";
 
 // Round F (AV): the translated areas (F7) stay translated. For every source
 // file an area lists, every t/tn/tk key has Arabic, every Arabic entry keeps
 // the English placeholders, no English is left as bare JSX text or a bare
 // text attribute, and a key used by two areas has one Arabic.
 
-const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, premium, premium2, premium3 };
+const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, premium, premium2, premium3, premium4 };
 const SRC = join(import.meta.dirname, "..");
 
 // Words that are the same in both languages (names, never translated).

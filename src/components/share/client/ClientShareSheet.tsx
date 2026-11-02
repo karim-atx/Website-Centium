@@ -29,6 +29,8 @@ import {
 import { useShareLocks } from "./useShareLocks";
 import { usePremium } from "../../../services/premium/hooks";
 import { showPremiumBadge } from "../../../services/premium/model";
+import { PremiumDesignChips } from "./PremiumDesignChips";
+import { FREE_BACKGROUND } from "./premiumDesigns";
 
 // Market + Share 3.0 · C-SH.2 the client share sheet, C-SH.5 "Your photo",
 // C-SH.6 the confirmations. Literal values from the Client Sharing screen
@@ -372,13 +374,15 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
               <>
                 {label("Background")}
                 <div role="radiogroup" aria-label="Background" className="flex flex-wrap" style={{ gap: 6 }}>
+                  {/* Today's three free backgrounds, by the Database's design keys (centium, pattern, photo; Round G4 fixes). */}
                   {(
                     [
-                      ["B", "Centium", BRAND_SWATCH],
-                      ["I", spec.patternLabel, METRIC_IDENTITY[spec.id][0]],
-                      ["P", "Your photo", PHOTO_SWATCH],
+                      ["centium", "Centium", BRAND_SWATCH],
+                      ["pattern", spec.patternLabel, METRIC_IDENTITY[spec.id][0]],
+                      ["photo", "Your photo", PHOTO_SWATCH],
                     ] as const
-                  ).map(([k, n, sw]) => {
+                  ).map(([design, n, sw]) => {
+                    const k = FREE_BACKGROUND[design];
                     const a = k === "P" ? photoMode : background === k;
                     return (
                       <button
@@ -386,6 +390,7 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
                         type="button"
                         role="radio"
                         aria-checked={a}
+                        data-design={design}
                         onClick={() => (k === "P" ? pickPhoto() : setBackground(k))}
                         className="tap inline-flex items-center"
                         style={{
@@ -405,6 +410,8 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
                       </button>
                     );
                   })}
+                  {/* Round G4: the Premium designs (nothing while the switch is off). */}
+                  <PremiumDesignChips background={background} onPick={setBackground} />
                 </div>
                 <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => void onFile(e)} />
               </>
