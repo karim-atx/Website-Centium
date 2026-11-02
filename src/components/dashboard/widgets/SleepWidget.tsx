@@ -5,6 +5,7 @@ import { useApp } from "../../../context/AppContext";
 import { valueOn } from "../../../services/health-metrics/periods";
 import { shiftDate as shiftDay } from "../../../utils/date";
 import { NoDeviceSheet } from "../NoDeviceSheet";
+import { t, tk } from "../../../i18n/core";
 import { useSourceConnected } from "./data";
 import { FadeValue, HeaderPill, HomeCard, HomeKeyframes, Line, linePx, staleLine, textPx, useHomeMode, useLoadingTimeout } from "./kit";
 
@@ -15,9 +16,9 @@ import { FadeValue, HeaderPill, HomeCard, HomeKeyframes, Line, linePx, staleLine
 
 const fmt = (hours: number) => {
   const total = Math.round(hours * 60);
-  return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, "0")}m`;
+  return t("{h}h {m}m", { h: Math.floor(total / 60), m: String(total % 60).padStart(2, "0") });
 };
-const fmtMin = (m: number) => `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
+const fmtMin = (m: number) => t("{h}h {m}m", { h: Math.floor(m / 60), m: String(m % 60).padStart(2, "0") });
 
 function stageColours(dark: boolean) {
   return {
@@ -55,7 +56,7 @@ export const SleepWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
     else if (metricsError || timedOut) state = online ? "error" : "offline";
     // HO1.W4·e: "Connect a source" (S) / "Connect a source to see your sleep"
     // (L); #7a: a source is connected but recorded nothing that night.
-    const hint = connected ? "No sleep recorded last night" : isLarge ? "Connect a source to see your sleep" : "Connect a source";
+    const hint = connected ? t("No sleep recorded last night") : isLarge ? t("Connect a source to see your sleep") : t("Connect a source");
     return (
       <>
         <HomeCard
@@ -63,13 +64,13 @@ export const SleepWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
           editMode={editMode}
           metric="sleep"
           icon={Moon}
-          label="Sleep"
+          label={t("Sleep")}
           state={state}
-          emptyTitle="No readings yet"
+          emptyTitle={t("No readings yet")}
           emptyHint={hint}
           onRetry={reloadMetrics}
           onOpen={state === "empty" && !connected ? () => setSheet(true) : open}
-          ariaLabel={state === "empty" ? `Sleep, no readings yet. ${hint}` : undefined}
+          ariaLabel={state === "empty" ? t("Sleep, no readings yet. {hint}", { hint }) : undefined}
         />
         <NoDeviceSheet open={sheet} metric="sleep" onClose={() => setSheet(false)} />
       </>
@@ -79,10 +80,10 @@ export const SleepWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
   const colours = stageColours(dark);
   const stages = detail?.stages
     ? ([
-        ["Awake", detail.stages.awakeMin],
-        ["REM", detail.stages.remMin],
-        ["Light", detail.stages.lightMin],
-        ["Deep", detail.stages.deepMin],
+        [tk("Awake"), detail.stages.awakeMin],
+        [tk("REM"), detail.stages.remMin],
+        [tk("Light"), detail.stages.lightMin],
+        [tk("Deep"), detail.stages.deepMin],
       ] as const)
     : null;
   const total = stages ? stages.reduce((s, [, m]) => s + m, 0) || 1 : 1;
@@ -93,9 +94,10 @@ export const SleepWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
   const thisWeek = weekAverage(healthSeries.sleep.history, shiftDay(selectedDate, -6), selectedDate);
   const lastWeek = weekAverage(healthSeries.sleep.history, shiftDay(selectedDate, -13), shiftDay(selectedDate, -7));
   const delta = thisWeek !== null && lastWeek !== null ? Math.round((thisWeek - lastWeek) * 10) / 10 : null;
-  const trend = delta === null ? null : delta === 0 ? "Same as last wk" : `${delta > 0 ? "↑" : "↓"} ${Math.abs(delta).toFixed(1)} h vs last wk`;
+  const trend = delta === null ? null : delta === 0 ? t("Same as last wk") : t("{arrow} {h} h vs last wk", { arrow: delta > 0 ? "↑" : "↓", h: Math.abs(delta).toFixed(1) });
+  const trendAria = delta === null ? null : delta === 0 ? trend : delta > 0 ? t("up {h} h vs last wk", { h: Math.abs(delta).toFixed(1) }) : t("down {h} h vs last wk", { h: Math.abs(delta).toFixed(1) });
   const stale = metricsError || !online ? staleLine(metricsLoadedAt, online) : null;
-  const smallContext = stale ?? [score !== null ? `Score ${score}` : null, trend].filter(Boolean).join(" · ");
+  const smallContext = stale ?? [score !== null ? t("Score {score}", { score }) : null, trend].filter(Boolean).join(" · ");
   const value = fmt(hours);
 
   const bar = (height: number) =>
@@ -117,13 +119,13 @@ export const SleepWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
         editMode={editMode}
         metric="sleep"
         icon={Moon}
-        label="Sleep"
+        label={t("Sleep")}
         onOpen={open}
-        ariaLabel={`Sleep, ${value}${score !== null ? `, score ${score}` : ""}${trend ? `, ${trend.replace("↑", "up").replace("↓", "down")}` : ""}`}
+        ariaLabel={[t("Sleep, {value}", { value }), score !== null ? t("score {score}", { score }) : null, trendAria].filter(Boolean).join(t(", "))}
         value={<FadeValue k={value} value={value} />}
         // Small: value 43 (gap 12), bar 73 (h 6), context 85. Large: value 43.4 (gap 10.4), bar 86.4 (h 7), values 102.3, labels 119.9.
         bodyGap={isLarge ? 10.4 : 12}
-        headerRight={isLarge && score !== null ? <HeaderPill ink={dark ? "#B8B3C7" : "rgb(var(--metric-sleep-ink))"} dark={dark}>{`Score ${score}`}</HeaderPill> : undefined}
+        headerRight={isLarge && score !== null ? <HeaderPill ink={dark ? "#B8B3C7" : "rgb(var(--metric-sleep-ink))"} dark={dark}>{t("Score {score}", { score })}</HeaderPill> : undefined}
         // Large: the stage block is the full-width graphic row (value ends
         // 77.4 + gap 6 = 83.4; the bar sits at 86.4, so 3 inside the row).
         graphic={
@@ -149,7 +151,7 @@ export const SleepWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
                           color: dark ? "#B8B3C7" : "rgb(var(--metric-sleep-ink))",
                         }}
                       >
-                        {k}
+                        {t(k)}
                       </span>
                     </span>
                   ))}

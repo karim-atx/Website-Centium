@@ -14,14 +14,15 @@
 import { formatShortDate } from "../../utils/date";
 import { formatPrice } from "../../utils/price";
 import { time12 } from "../../utils/time12";
+import { getLanguage, t, tk, tx } from "../../i18n/core";
 import { reviewMetaTail, targetOf, type PastBooking, type ReviewTarget } from "../../services/instructor-reviews/model";
 
 export type BookingsTab = "memberships" | "upcoming" | "past";
 
 export const BOOKINGS_TABS: readonly { key: BookingsTab; label: string }[] = [
-  { key: "memberships", label: "Memberships" },
-  { key: "upcoming", label: "Upcoming" },
-  { key: "past", label: "Past" },
+  { key: "memberships", label: tk("Memberships") },
+  { key: "upcoming", label: tk("Upcoming") },
+  { key: "past", label: tk("Past") },
 ];
 
 /** ?tab=memberships|upcoming|past; anything else opens Memberships, as the board's first frame. */
@@ -75,22 +76,25 @@ const wd = (d: Date) => formatShortDate(d, { weekday: "short" });
 const mon = (d: Date) => formatShortDate(d, { month: "short" });
 const clock = (d: Date) => time12(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
 
+// In Arabic the dates come whole from the locale (day before month, Arabic month names); English keeps the board's shapes.
+const arabic = () => getLanguage() === "ar";
+
 /** "Fri, Oct 16" (D-02). */
-export const dayLine = (d: Date): string => `${wd(d)}, ${mon(d)} ${d.getDate()}`;
+export const dayLine = (d: Date): string => (arabic() ? formatShortDate(d, { weekday: "short", month: "short", day: "numeric" }) : `${wd(d)}, ${mon(d)} ${d.getDate()}`);
 /** The upcoming stub: "Fri 6:30 PM". */
 export const upcomingStub = (d: Date): string => `${wd(d)} ${clock(d)}`;
 /** The past stub: "Mon Oct 12". */
-export const pastStub = (d: Date): string => `${wd(d)} ${mon(d)} ${d.getDate()}`;
+export const pastStub = (d: Date): string => (arabic() ? formatShortDate(d, { weekday: "short", month: "short", day: "numeric" }) : `${wd(d)} ${mon(d)} ${d.getDate()}`);
 
 /** "Nov 15, 2026" from a YYYY-MM-DD. */
 export function longDate(day: string): string {
   const d = localDateTime(day, null);
-  return `${mon(d)} ${d.getDate()}, ${d.getFullYear()}`;
+  return arabic() ? formatShortDate(d, { month: "short", day: "numeric", year: "numeric" }) : `${mon(d)} ${d.getDate()}, ${d.getFullYear()}`;
 }
 /** "Nov 15" from a YYYY-MM-DD. */
 export function shortDate(day: string): string {
   const d = localDateTime(day, null);
-  return `${mon(d)} ${d.getDate()}`;
+  return arabic() ? formatShortDate(d, { month: "short", day: "numeric" }) : `${mon(d)} ${d.getDate()}`;
 }
 
 const minutesBetween = (a: Date, b: Date) => Math.max(0, Math.round((b.getTime() - a.getTime()) / 60000));
@@ -98,7 +102,7 @@ const minutesBetween = (a: Date, b: Date) => Math.max(0, Math.round((b.getTime()
 /** "Fri, Oct 16 · 6:30 PM · 45 min" (+ " · $35"). */
 export function sessionMeta(start: Date, end: Date | null, price?: number | null): string {
   const parts = [dayLine(start), clock(start)];
-  if (end && end > start) parts.push(`${minutesBetween(start, end)} min`);
+  if (end && end > start) parts.push(t("{n} min", { n: minutesBetween(start, end) }));
   if (price !== undefined && price !== null && price > 0) parts.push(formatPrice(price));
   return parts.join(" · ");
 }
@@ -136,20 +140,20 @@ export function membershipRow(m: MembershipInput, endsOn?: string): BookingRow {
   const price = m.priceAgreed > 0 ? ` · ${formatPrice(m.priceAgreed)}` : "";
   const ends = endsOn ?? (m.cancelAtPeriodEnd && m.expiresOn ? m.expiresOn : undefined);
   const base = { key: `m-${m.id}`, kind: "membership" as const, tile: tileInitials(m.gymName), title: m.gymName, sub: m.planName, href: `/app/marketplace/gym?id=${encodeURIComponent(m.gymId)}`, refId: m.id };
-  const note = m.passState === "awaiting_payment" ? "Pay on your first visit" : m.granted ? "Granted with a code" : null;
+  const note = m.passState === "awaiting_payment" ? t("Pay on your first visit") : m.granted ? t("Granted with a code") : null;
   const sortAt = at(localDateTime(m.startedOn, null));
   if (m.status === "upcoming" || m.passState === "upcoming") {
-    return { ...base, meta: `Starts ${longDate(m.startedOn)}${price}`, note, stub: `Starts ${shortDate(m.startedOn)}`, tone: "pale", at: sortAt };
+    return { ...base, meta: t("Starts {date}", { date: longDate(m.startedOn) }) + price, note, stub: t("Starts {date}", { date: shortDate(m.startedOn) }), tone: "pale", at: sortAt };
   }
   if (m.status === "active") {
-    if (ends) return { ...base, meta: `Valid until ${longDate(ends)}${price}`, note, stub: `Ends ${shortDate(ends)}`, tone: "pale", at: sortAt };
-    if (m.expiresOn) return { ...base, meta: `Valid until ${longDate(m.expiresOn)}${price}`, note, stub: `Ends ${shortDate(m.expiresOn)}`, tone: "pale", at: sortAt };
-    return { ...base, meta: `Since ${longDate(m.startedOn)}${price}`, note, stub: "Active", tone: "teal", at: sortAt };
+    if (ends) return { ...base, meta: t("Valid until {date}", { date: longDate(ends) }) + price, note, stub: t("Ends {date}", { date: shortDate(ends) }), tone: "pale", at: sortAt };
+    if (m.expiresOn) return { ...base, meta: t("Valid until {date}", { date: longDate(m.expiresOn) }) + price, note, stub: t("Ends {date}", { date: shortDate(m.expiresOn) }), tone: "pale", at: sortAt };
+    return { ...base, meta: t("Since {date}", { date: longDate(m.startedOn) }) + price, note, stub: tx("Active", "membership"), tone: "teal", at: sortAt };
   }
   const endDay = m.expiresOn ?? m.startedOn;
-  if (m.status === "expired" && isPass(m.planType)) return { ...base, meta: `Used ${longDate(endDay)}${price}`, note: null, stub: "Used", tone: "muted", at: sortAt };
-  if (m.status === "expired") return { ...base, meta: `Expired ${longDate(endDay)}${price}`, note: null, stub: "Expired", tone: "muted", at: sortAt };
-  return { ...base, meta: `Ended${m.expiresOn ? ` ${longDate(m.expiresOn)}` : ""}${price}`, note: null, stub: "Ended", tone: "muted", at: sortAt };
+  if (m.status === "expired" && isPass(m.planType)) return { ...base, meta: t("Used {date}", { date: longDate(endDay) }) + price, note: null, stub: t("Used"), tone: "muted", at: sortAt };
+  if (m.status === "expired") return { ...base, meta: t("Expired {date}", { date: longDate(endDay) }) + price, note: null, stub: t("Expired"), tone: "muted", at: sortAt };
+  return { ...base, meta: (m.expiresOn ? t("Ended {date}", { date: longDate(m.expiresOn) }) : t("Ended")) + price, note: null, stub: t("Ended"), tone: "muted", at: sortAt };
 }
 
 /** A professional's plan (my_hires): the fields this tab reads. */
@@ -173,7 +177,7 @@ export interface HireInput {
  */
 export function hireRow(h: HireInput, typeLabel: string | null): BookingRow {
   const price = h.priceAgreed > 0 ? ` · ${formatPrice(h.priceAgreed)}` : "";
-  const name = h.professionalFirstName || "Your professional";
+  const name = h.professionalFirstName || t("Your professional");
   const base = {
     key: `h-${h.id}`,
     kind: "package" as const,
@@ -185,13 +189,13 @@ export function hireRow(h: HireInput, typeLabel: string | null): BookingRow {
     note: null,
     at: at(localDateTime(h.startedOn, null)),
   };
-  if (h.status === "pending") return { ...base, meta: `Requested ${longDate(h.startedOn)}${price}`, stub: "Pending", tone: "pale" };
+  if (h.status === "pending") return { ...base, meta: t("Requested {date}", { date: longDate(h.startedOn) }) + price, stub: t("Pending"), tone: "pale" };
   if (h.status === "active")
     return h.expiresOn
-      ? { ...base, meta: `Valid until ${longDate(h.expiresOn)}${price}`, stub: `Ends ${shortDate(h.expiresOn)}`, tone: "pale" }
-      : { ...base, meta: `Since ${longDate(h.startedOn)}${price}`, stub: "Active", tone: "teal" };
+      ? { ...base, meta: t("Valid until {date}", { date: longDate(h.expiresOn) }) + price, stub: t("Ends {date}", { date: shortDate(h.expiresOn) }), tone: "pale" }
+      : { ...base, meta: t("Since {date}", { date: longDate(h.startedOn) }) + price, stub: tx("Active", "membership"), tone: "teal" };
   const endDay = h.cancelledAt ? h.cancelledAt.slice(0, 10) : (h.expiresOn ?? h.startedOn);
-  return { ...base, meta: `Ended ${longDate(endDay)}${price}`, stub: "Ended", tone: "muted" };
+  return { ...base, meta: t("Ended {date}", { date: longDate(endDay) }) + price, stub: t("Ended"), tone: "muted" };
 }
 
 /** Running ones first (active, then upcoming / pending), each newest first; ended ones after. */
@@ -235,7 +239,7 @@ export function classRow(c: ClassInput, now: Date): { row: BookingRow; past: boo
   const end = c.endTime ? localDateTime(c.eventDate, c.endTime) : start;
   const past = isOver(end > start ? end : start, now);
   const cancelled = !!c.cancelledAt;
-  const meta = sessionMeta(start, end > start ? end : null) + (cancelled ? " · Cancelled by the venue" : "");
+  const meta = sessionMeta(start, end > start ? end : null) + (cancelled ? ` · ${t("Cancelled by the venue")}` : "");
   return {
     past,
     row: {
@@ -246,7 +250,7 @@ export function classRow(c: ClassInput, now: Date): { row: BookingRow; past: boo
       sub: c.place,
       meta,
       note: null,
-      stub: cancelled ? "Cancelled" : past ? pastStub(start) : upcomingStub(start),
+      stub: cancelled ? t("Cancelled") : past ? pastStub(start) : upcomingStub(start),
       tone: cancelled || past ? "muted" : "teal",
       at: at(start),
       href: `/app/marketplace/class?id=${encodeURIComponent(c.classId)}`,
@@ -273,9 +277,9 @@ export function sessionRow(s: SessionInput, now: Date): { row: BookingRow; past:
       tile: tileInitials(name),
       title: s.serviceName,
       sub: s.who,
-      meta: sessionMeta(start, end, s.price) + (off ? " · Cancelled" : requested && !past ? " · Waiting for a reply" : ""),
+      meta: sessionMeta(start, end, s.price) + (off ? ` · ${t("Cancelled")}` : requested && !past ? ` · ${t("Waiting for a reply")}` : ""),
       note: null,
-      stub: off ? "Cancelled" : past ? pastStub(start) : requested ? "Requested" : upcomingStub(start),
+      stub: off ? t("Cancelled") : past ? pastStub(start) : requested ? t("Requested") : upcomingStub(start),
       tone: off || past ? "muted" : requested ? "pale" : "teal",
       at: at(start),
       href: s.professionalId ? `/app/professionals/${encodeURIComponent(s.professionalId)}` : null,
@@ -323,9 +327,9 @@ export function pastRow(b: PastBooking, sentRating?: number | null): BookingRow 
   const meta = okStart
     ? (target || reviewed) && !off
       ? [dayLine(okStart), clock(okStart), tail].filter(Boolean).join(" · ")
-      : sessionMeta(okStart, end && !Number.isNaN(end.getTime()) ? end : null) + (off ? " · Cancelled by the venue" : "")
+      : sessionMeta(okStart, end && !Number.isNaN(end.getTime()) ? end : null) + (off ? ` · ${t("Cancelled by the venue")}` : "")
     : (tail ?? "");
-  const stub = off ? "Cancelled" : target ? "Review" : reviewed ? "Reviewed" : okStart ? pastStub(okStart) : "Past";
+  const stub = off ? t("Cancelled") : target ? tx("Review", "rate") : reviewed ? t("Reviewed") : okStart ? pastStub(okStart) : t("Past");
   return {
     key: `p-class-${b.refId}`,
     kind: "class",
@@ -353,7 +357,7 @@ export function pastRows(list: readonly PastBooking[], sent: Readonly<Record<str
 // are written in the same style).
 
 export const BOOKINGS_EMPTY: Record<BookingsTab, { title: string; body: string; cta: string; href: string }> = {
-  upcoming: { title: "No upcoming classes", body: "Classes you book will show here.", cta: "Browse classes", href: "/app/marketplace?tab=classes" },
-  memberships: { title: "No memberships yet", body: "Gym memberships and passes you buy will show here.", cta: "Browse gyms", href: "/app/marketplace?tab=gyms" },
-  past: { title: "No past bookings", body: "Classes and sessions you've been to will show here.", cta: "Browse classes", href: "/app/marketplace?tab=classes" },
+  upcoming: { title: tk("No upcoming classes"), body: tk("Classes you book will show here."), cta: tk("Browse classes"), href: "/app/marketplace?tab=classes" },
+  memberships: { title: tk("No memberships yet"), body: tk("Gym memberships and passes you buy will show here."), cta: tk("Browse gyms"), href: "/app/marketplace?tab=gyms" },
+  past: { title: tk("No past bookings"), body: tk("Classes and sessions you've been to will show here."), cta: tk("Browse classes"), href: "/app/marketplace?tab=classes" },
 };

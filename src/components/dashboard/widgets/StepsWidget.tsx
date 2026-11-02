@@ -7,6 +7,7 @@ import { NoDeviceSheet } from "../NoDeviceSheet";
 import { useSourceConnected, useStepsGoalOn } from "./data";
 import { FadeValue, HeaderPill, HomeCard, HomeKeyframes, Line, staleLine, useHomeMode, useLoadingTimeout } from "./kit";
 import { appLocale } from "../../../i18n/format";
+import { t } from "../../../i18n/core";
 
 // HO1.W1 Steps (small and large) and HO1.W1·e. Literal values: home-handover.md
 // HO1.W1 tables; trail geometry measured from png/home/HO1.W1-S.png and
@@ -100,7 +101,7 @@ const FootTrail: React.FC<{ size: "small" | "large"; filledCount: number; reache
   const w = size === "small" ? 151 : 200;
   const h = size === "small" ? 20 : 72;
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden className="qa-shape block shrink-0" overflow="visible">
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden className="qa-shape block shrink-0 rtl:-scale-x-100" overflow="visible">
       {prints.map((p, i) => (
         <Print
           key={i}
@@ -152,7 +153,7 @@ export const StepsWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
   if (state !== "ready" || steps === null) {
     // HO1.W1·e: "Connect a source" (S) / "Connect Apple Health or Health
     // Connect" (L); a phone that synced before: "Nothing synced today" (OURS).
-    const hint = connected ? "Nothing synced today" : isLarge ? "Connect Apple Health or Health Connect" : "Connect a source";
+    const hint = connected ? t("Nothing synced today") : isLarge ? t("Connect Apple Health or Health Connect") : t("Connect a source");
     return (
       <>
         <HomeKeyframes />
@@ -161,13 +162,13 @@ export const StepsWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
           editMode={editMode}
           metric="steps"
           icon={Footprints}
-          label="Steps"
+          label={t("Steps")}
           state={state}
-          emptyTitle="No readings yet"
+          emptyTitle={t("No readings yet")}
           emptyHint={hint}
           onRetry={reloadMetrics}
           onOpen={state === "empty" ? (connected ? open : () => setSheet(true)) : open}
-          ariaLabel={state === "empty" ? `Steps, no readings yet. ${hint}` : undefined}
+          ariaLabel={state === "empty" ? t("Steps, no readings yet. {hint}", { hint }) : undefined}
         />
         <NoDeviceSheet open={sheet} metric="steps" onClose={() => setSheet(false)} />
       </>
@@ -182,7 +183,8 @@ export const StepsWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
   const stale = metricsError || !online ? staleLine(metricsLoadedAt, online) : null;
 
   const graphic = <FootTrail size={size} filledCount={filled} reached={reached} dark={dark} reduce={reduce} />;
-  const ariaLabel = `Steps, ${steps.toLocaleString(appLocale())} ${isToday ? "today" : "that day"}, ${pctLabel}% of ${stepsGoal.toLocaleString(appLocale())}`;
+  const ariaVars = { steps: steps.toLocaleString(appLocale()), pct: pctLabel, goal: stepsGoal.toLocaleString(appLocale()) };
+  const ariaLabel = isToday ? t("Steps, {steps} today, {pct}% of {goal}", ariaVars) : t("Steps, {steps} that day, {pct}% of {goal}", ariaVars);
 
   return (
     <>
@@ -192,30 +194,30 @@ export const StepsWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
         editMode={editMode}
         metric="steps"
         icon={Footprints}
-        label="Steps"
+        label={t("Steps")}
         onOpen={open}
         ariaLabel={ariaLabel}
         value={<FadeValue k={steps} value={steps.toLocaleString(appLocale())} />}
         // Small: value 36, trail 66, context 92 (header ends 31: gap 5).
         // Large: value 52.5 (header ends 33: gap 19.5), context 92.5, trail at 142, 51.5.
         bodyGap={isLarge ? 19.5 : 5}
-        headerRight={isLarge ? <HeaderPill ink={dark ? "#B8B3C7" : "rgb(var(--metric-steps-ink))"} dark={dark}>{`${pctLabel}% of goal`}</HeaderPill> : undefined}
+        headerRight={isLarge ? <HeaderPill ink={dark ? "#B8B3C7" : "rgb(var(--metric-steps-ink))"} dark={dark}>{t("{pct}% of goal", { pct: pctLabel })}</HeaderPill> : undefined}
         graphic={isLarge ? undefined : graphic}
         graphicHeight={20}
         aside={isLarge ? <span style={{ marginTop: -1, display: "block" }}>{graphic}</span> : undefined}
         context={
           isLarge ? (
             <span className="block">
-              <Line>{stale ?? `of ${stepsGoal.toLocaleString(appLocale())} · ${km} km`}</Line>
+              <Line>{stale ?? t("of {goal} · {km} km", { goal: stepsGoal.toLocaleString(appLocale()), km })}</Line>
               {/* Second line #5B5349 as drawn (PNG measured; the table lists both lines in the metric ink). */}
               {!stale && (
                 <Line style={{ marginTop: 6, color: "rgb(var(--c-charcoal-soft))" }}>
-                  {reached ? "Goal reached" : `${(stepsGoal - steps).toLocaleString(appLocale())} to go`}
+                  {reached ? t("Goal reached") : t("{n} to go", { n: (stepsGoal - steps).toLocaleString(appLocale()) })}
                 </Line>
               )}
             </span>
           ) : (
-            <Line>{stale ?? `${pctLabel}% of ${stepsGoal.toLocaleString(appLocale())}`}</Line>
+            <Line>{stale ?? t("{pct}% of {goal}", { pct: pctLabel, goal: stepsGoal.toLocaleString(appLocale()) })}</Line>
           )
         }
       />

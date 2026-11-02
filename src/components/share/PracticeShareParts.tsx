@@ -12,6 +12,7 @@ import { useSharePro } from "./useSharePro";
 import { clipQuote, fmtInt, milestoneCard, shareDate, reachedMilestone, reviewCard, type CardSpec } from "./shareCardModel";
 import type { PracticeTotals } from "../../services/pro/practiceInsights";
 import type { ItemKind } from "../../services/share";
+import { t, tn } from "../../i18n/core";
 
 /**
  * Release 3 · W8 SH4 "Practice insights · milestone and reviews"
@@ -31,15 +32,15 @@ export const MilestoneShareCard: React.FC<{ totals: PracticeTotals | null | unde
   const [open, setOpen] = useState(false);
   const m = totals ? reachedMilestone(totals.sessionsDelivered) : null;
   if (!totals || m == null) return null;
-  const tn = toneSet("pr", dark);
+  const tone = toneSet("pr", dark);
   return (
     <>
-      <div style={{ borderRadius: 20, background: tn.bg, padding: 16, marginBottom: 12 }}>
+      <div style={{ borderRadius: 20, background: tone.bg, padding: 16, marginBottom: 12 }}>
         <div className="flex items-start justify-between" style={{ gap: 10 }}>
           <div className="min-w-0">
-            <p style={{ fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: tn.ink }}>Milestone</p>
-            <p style={{ fontSize: textPx(26), fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.1, color: INK.ch, marginTop: 4 }}>{`${fmtInt(m)} sessions`}</p>
-            <p style={{ fontSize: textPx(12.5), color: INK.chS }}>delivered on Centium</p>
+            <p style={{ fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: tone.ink }}>{t("Milestone")}</p>
+            <p style={{ fontSize: textPx(26), fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.1, color: INK.ch, marginTop: 4 }}>{tn(m, "{n} sessions", "{n} sessions", { n: fmtInt(m) })}</p>
+            <p style={{ fontSize: textPx(12.5), color: INK.chS }}>{t("delivered on Centium")}</p>
           </div>
           <button
             type="button"
@@ -49,7 +50,7 @@ export const MilestoneShareCard: React.FC<{ totals: PracticeTotals | null | unde
             style={{ height: 36, padding: "0 14px", borderRadius: 12, background: INK.fill, color: INK.onFill, gap: 7, fontSize: textPx(13), fontWeight: 700 }}
           >
             <Share2 size={14} strokeWidth={2} aria-hidden />
-            Share
+            {t("Share")}
           </button>
         </div>
       </div>
@@ -70,7 +71,7 @@ export const LatestReviewsShare: React.FC = () => {
   return (
     <>
       <div style={{ borderRadius: 18, background: INK.card, border: `1px solid ${INK.bCard}`, overflow: "hidden", marginBottom: 12 }}>
-        <p style={{ fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: INK.chF, padding: "12px 14px 10px" }}>Latest reviews</p>
+        <p style={{ fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: INK.chF, padding: "12px 14px 10px" }}>{t("Latest reviews")}</p>
         {latest.map((r) => {
           const by = reviewerLabel(r.reviewerName);
           return (
@@ -78,9 +79,9 @@ export const LatestReviewsShare: React.FC = () => {
               <ToneTile icon={SHARE_ICONS.star} tone="gold" size={36} radius={11} iconSize={17} />
               <span className="flex-1 min-w-0">
                 <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 700, lineHeight: "18px", color: INK.ch }}>{`"${clipQuote(r.body ?? "", 34)}"`}</span>
-                <span className="block" style={{ fontSize: textPx(11.5), lineHeight: "16px", color: INK.chF, marginTop: 1 }}>{`${by} · ${r.rating} star${r.rating === 1 ? "" : "s"} · ${shareDate(r.createdAt)}`}</span>
+                <span className="block" style={{ fontSize: textPx(11.5), lineHeight: "16px", color: INK.chF, marginTop: 1 }}>{`${by} · ${tn(r.rating, "{n} star", "{n} stars")} · ${shareDate(r.createdAt)}`}</span>
               </span>
-              <ShareIconButton label={`Share the review from ${by}`} disabled={!pro} onClick={() => setFlow({ spec: reviewCard({ rating: r.rating, body: clipQuote(r.body ?? ""), reviewer: by }), kind: "review" })} />
+              <ShareIconButton label={t("Share the review from {name}", { name: by })} disabled={!pro} onClick={() => setFlow({ spec: reviewCard({ rating: r.rating, body: clipQuote(r.body ?? ""), reviewer: by }), kind: "review" })} />
             </div>
           );
         })}

@@ -28,6 +28,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline } from "../network-error";
 import { rpc } from "../pro/rpc";
 import { BLOCKED_TEXT } from "../moderation/text";
+import { t } from "../../i18n/core";
 import type { CardPayload, ClientWin, ShareFormat, Visibility, WinKind } from "../../components/share/shareCardModel";
 import { readHeldReason, readItemState, type HeldReason, type SharedItemState } from "../../components/share/heldShareModel";
 
@@ -100,16 +101,16 @@ export async function fetchMyShareRequests(me: string, clientId: string): Promis
 /** The wording for each ask_to_share_win answer. */
 export function askErrorMessage(code: string | null, message: string, firstName: string): string {
   if (code === "ATXH0") {
-    if (/does not share/i.test(message)) return `${firstName} has chosen not to share wins.`;
-    if (/already asked/i.test(message)) return "You already asked about this win.";
-    if (/remove/i.test(message)) return `${firstName} asked you to remove a shared card. Remove it before asking again.`;
-    return `You can't ask ${firstName} about this win.`;
+    if (/does not share/i.test(message)) return t("{name} has chosen not to share wins.", { name: firstName });
+    if (/already asked/i.test(message)) return t("You already asked about this win.");
+    if (/remove/i.test(message)) return t("{name} asked you to remove a shared card. Remove it before asking again.", { name: firstName });
+    return t("You can't ask {name} about this win.", { name: firstName });
   }
-  if (code === "ATX08") return `This win is no longer shared with you.`;
-  if (code === "ATX09") return "Client wins are shared by Full coaching and Nutrition professionals.";
-  if (code === "ATXH1") return "This card has something that can't be shared.";
-  if (code === "ATX02") return "You've sent a lot of requests today. Try again tomorrow.";
-  return "Couldn't send the request. Try again.";
+  if (code === "ATX08") return t("This win is no longer shared with you.");
+  if (code === "ATX09") return t("Client wins are shared by Full coaching and Nutrition professionals.");
+  if (code === "ATXH1") return t("This card has something that can't be shared.");
+  if (code === "ATX02") return t("You've sent a lot of requests today. Try again tomorrow.");
+  return t("Couldn't send the request. Try again.");
 }
 
 export async function askToShareWin(clientId: string, winId: string, card: CardPayload, visibility: Visibility): Promise<Write<ShareRequest>> {
@@ -139,11 +140,11 @@ export async function recordSharedItem(kind: ItemKind, format: ShareFormat | "li
 }
 
 export function recordErrorMessage(code: string | null, message: string): string {
-  if (code === "ATXH0") return /remove/i.test(message) ? "The client asked you to remove this card, so it can't be shared again." : "A win is shared only after the client allows it.";
-  if (code === "ATXH1") return "This card has something that can't be shared.";
+  if (code === "ATXH0") return /remove/i.test(message) ? t("The client asked you to remove this card, so it can't be shared again.") : t("A win is shared only after the client allows it.");
+  if (code === "ATXH1") return t("This card has something that can't be shared.");
   // Round D: a blocked word (ATX60) in our words, never which word.
-  if (code === "ATX60") return BLOCKED_TEXT;
-  return "Couldn't share the card. Try again.";
+  if (code === "ATX60") return BLOCKED_TEXT; // English key: GuidelinesLink matches it; the sheet shows t(message).
+  return t("Couldn't share the card. Try again.");
 }
 
 export interface MySharedItem {

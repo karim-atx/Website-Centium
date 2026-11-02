@@ -13,10 +13,8 @@ import { useOnline } from "../../hooks/useOnline";
 import { CARD, DIVIDER, VAvatar, VCardError, VDetailRow, VOfflineLine, VPill, VSkeletonRows, VTextTabs, type PillTone } from "./VenueKit";
 import { useMarkBookingPaid } from "./useMarkBookingPaid";
 import { ATTENDANCE_LABEL, attendanceOpen, canUndo, fetchAttendanceMarks, markClassAttendance, ROSTER_COPY, type Attendance } from "../../services/no-shows";
-import { t } from "../../i18n/core";
-
-const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+import { t, tk } from "../../i18n/core";
+import { formatShortDate } from "../../utils/date";
 
 // One class's roster (stage A4, venue_class_roster()): who is booked and who
 // is waiting, a first name and a minor flag each. Gated on the class's
@@ -44,9 +42,9 @@ const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const ATT_TONE: Record<Attendance, PillTone> = { attended: "good", no_show: "high" };
 
 const PAY: Record<string, { label: string; tone: PillTone }> = {
-  paid: { label: "Paid", tone: "good" },
-  pending: { label: "Awaiting payment", tone: "caution" },
-  refunded: { label: "Refunded", tone: "soft" },
+  paid: { label: tk("Paid"), tone: "good" },
+  pending: { label: tk("Awaiting payment"), tone: "caution" },
+  refunded: { label: tk("Refunded"), tone: "soft" },
 };
 
 export interface RosterSession {
@@ -59,17 +57,11 @@ export interface RosterSession {
 /** "Mon, Oct 12" from an ISO date (no time zone shift). */
 export function weekdayDayMonth(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  const wd = WD[dt.getUTCDay()];
-  const mon = MON[dt.getUTCMonth()];
-  return `${wd}, ${mon} ${d}`;
+  return formatShortDate(new Date(y, m - 1, d), { weekday: "short", month: "short", day: "numeric" });
 }
 
 /** "Oct 2" from a timestamp, on this device's calendar. */
-const dayMonth = (ts: string) => {
-  const dt = new Date(ts);
-  return `${MON[dt.getMonth()]} ${dt.getDate()}`;
-};
+const dayMonth = (ts: string) => formatShortDate(new Date(ts), { month: "short", day: "numeric" });
 
 export function ClassRosterSheet({
   classId,
@@ -172,21 +164,22 @@ export function ClassRosterSheet({
   const list = view === "booked" ? booked : waitlist;
 
   const row = (e: RosterEntry, i: number) => {
-    const tag = e.paymentStatus ? PAY[e.paymentStatus] : null;
+    const pay0 = e.paymentStatus ? PAY[e.paymentStatus] : null;
+    const tag = pay0 ? { ...pay0, label: t(pay0.label) } : null;
     const payable = pay.can(e);
     const actionable = payable || messageable(e) || markable(e);
     const att = e.attendance ? { label: t(ATTENDANCE_LABEL[e.attendance]), tone: ATT_TONE[e.attendance] } : null;
-    const price = e.priceAgreed !== null ? (e.priceAgreed > 0 ? money(e.priceAgreed) : "Free") : null;
+    const price = e.priceAgreed !== null ? (e.priceAgreed > 0 ? money(e.priceAgreed) : t("Free")) : null;
     const sub =
       e.kind === "booked"
-        ? [e.at ? `Booked ${dayMonth(e.at)}` : null, price, methodLabel(e.paymentMethod) || null].filter(Boolean).join(" · ")
-        : `Waiting, number ${e.waitlistPosition ?? "–"} in line`;
+        ? [e.at ? t("Booked {date}", { date: dayMonth(e.at) }) : null, price, methodLabel(e.paymentMethod) ? t(methodLabel(e.paymentMethod)) : null].filter(Boolean).join(" · ")
+        : t("Waiting, number {n} in line", { n: e.waitlistPosition ?? "–" });
     return (
       <VDetailRow
         key={`${e.kind}-${i}`}
         avatar={e.kind === "waitlist" ? <VAvatar number={e.waitlistPosition ?? i + 1} /> : isMaskedLabel(e.label) ? <VAvatar masked /> : <VAvatar initial={initials(e.label)} />}
         title={e.label}
-        titleExtra={e.isMinor && <VPill tone="pale" label="Under 18" />}
+        titleExtra={e.isMinor && <VPill tone="pale" label={t("Under 18")} />}
         sub={sub}
         right={
           e.kind === "booked" && (tag || att) ? (
@@ -204,7 +197,7 @@ export function ClassRosterSheet({
               }
             : undefined
         }
-        ariaLabel={actionable ? `${e.label}${att ? `, ${att.label}` : ""}${tag ? `, ${tag.label}` : ""}. Actions` : undefined}
+        ariaLabel={actionable ? `${e.label}${att ? `${t(", ")}${att.label}` : ""}${tag ? `${t(", ")}${tag.label}` : ""}. ${t("Actions")}` : undefined}
         disabled={actionable ? pay.busy || msgBusy || attBusy : undefined}
       />
     );
@@ -214,7 +207,7 @@ export function ClassRosterSheet({
     <BottomSheet
       open={!!classId}
       onClose={onClose}
-      title={title || "Class roster"}
+      title={title || t("Class roster")}
       tone="business"
       headerHeight={62}
       bodyPadding={{ top: 18, right: 18, bottom: 30, left: 18 }}
@@ -228,7 +221,7 @@ export function ClassRosterSheet({
             </p>
             {entries && (
               <p className="text-[12px] text-charcoal-soft mt-[2px]">
-                {booked.length} {session.maxCapacity ? `of ${session.maxCapacity} ` : ""}booked · {waitlist.length} waiting
+                {session.maxCapacity ? t("{booked} of {cap} booked", { booked: booked.length, cap: session.maxCapacity }) : t("{n} booked", { n: booked.length })} · {t("{n} waiting", { n: waitlist.length })}
               </p>
             )}
           </div>
@@ -236,25 +229,25 @@ export function ClassRosterSheet({
         {!online && <VOfflineLine />}
         {entries && waitlist.length > 0 && (
           <VTextTabs
-            label="Roster"
+            label={t("Roster")}
             value={view}
             onChange={setTab}
             tabs={[
-              { value: "booked", label: `Booked (${booked.length})` },
-              { value: "waitlist", label: `Waitlist (${waitlist.length})` },
+              { value: "booked", label: t("Booked ({n})", { n: booked.length }) },
+              { value: "waitlist", label: t("Waitlist ({n})", { n: waitlist.length }) },
             ]}
           />
         )}
         <div className={`${CARD} rounded-[22px] overflow-hidden [&>*:first-child]:border-t-0`}>
           {!entries && !failed && <VSkeletonRows rows={4} pill />}
-          {failed && !entries && <VCardError title="Couldn't load this roster" message={failed} onRetry={() => setTick((t) => t + 1)} />}
+          {failed && !entries && <VCardError title={t("Couldn't load this roster")} message={failed} onRetry={() => setTick((t) => t + 1)} />}
           {entries && waitlist.length === 0 && (
             <p className="text-[14px] font-extrabold text-charcoal" style={{ padding: "14px 16px 6px" }}>
-              Booked ({booked.length})
+              {t("Booked ({n})", { n: booked.length })}
             </p>
           )}
           {entries && list.map(row)}
-          {entries && view === "booked" && booked.length === 0 && <VDetailRow avatar={<VAvatar icon={Users} />} title="Nobody has booked yet." />}
+          {entries && view === "booked" && booked.length === 0 && <VDetailRow avatar={<VAvatar icon={Users} />} title={t("Nobody has booked yet.")} />}
           {(pay.error || msgError) && (
             <p className={`border-t ${DIVIDER} text-[11.5px] font-bold leading-[16px] text-status-high`} role="alert" style={{ padding: "10px 16px" }}>
               {pay.error ?? msgError}
@@ -281,8 +274,8 @@ export function ClassRosterSheet({
         options={[
           ...(menu && pay.can(menu.entry)
             ? [
-                { value: "paid", label: "Mark as paid", disabled: !online },
-                { value: "ref", label: "Add a reference", disabled: !online },
+                { value: "paid", label: t("Mark as paid"), disabled: !online },
+                { value: "ref", label: t("Add a reference"), disabled: !online },
               ]
             : []),
           ...(menu && markable(menu.entry)
@@ -292,7 +285,7 @@ export function ClassRosterSheet({
                 ...(undoable(menu.entry) ? [{ value: "undo", label: t(ROSTER_COPY.undo), disabled: !online }] : []),
               ]
             : []),
-          ...(menu && messageable(menu.entry) ? [{ value: "message", label: "Message", disabled: !online }] : []),
+          ...(menu && messageable(menu.entry) ? [{ value: "message", label: t("Message"), disabled: !online }] : []),
         ]}
         onSelect={(v) => {
           if (!menu) return;

@@ -10,8 +10,15 @@ import { useClientShare } from "../share/client/useClientShare";
 import { ShareEntryButton } from "../share/client/ShareEntryButton";
 import { streakCard } from "../share/client/clientCardModel";
 import { streakFacts } from "../share/client/clientShareData";
+import { isRtl, t, tn } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
 
-const WEEKDAY_CAPS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+/** Monday-first day heads: "MON" in English; in Arabic the one-letter names (the short ones are whole words). */
+const weekdayCaps = () => {
+  const fmt = new Intl.DateTimeFormat(appLocale("en-US"), { weekday: isRtl() ? "narrow" : "short" });
+  // 2024-01-01 was a Monday.
+  return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2024, 0, 1 + i)).toUpperCase());
+};
 
 // README → Assets: each species' file prefix under public/.
 const SPECIES_PREFIX: Record<PlantSpecies, string> = {
@@ -60,6 +67,7 @@ export const StreaksBar: React.FC = () => {
 
   const days = week.map((d) => ({ date: d, isToday: d === today, isFuture: d > today, ...dayState(d) }));
   const todayState = days.find((d) => d.isToday);
+  const caps = weekdayCaps();
 
   // The unified day streak: consecutive earned days walking back from
   // today (a real computation, not the old 4-category auto-streak numbers,
@@ -136,7 +144,7 @@ export const StreaksBar: React.FC = () => {
             e.stopPropagation();
             cyclePlantSpecies();
           }}
-          aria-label="Change plant species"
+          aria-label={t("Change plant species")}
           className="tap w-[76px] h-[140px] shrink-0 flex items-center justify-center"
         >
           {/* README → Interactions: "220ms cross-fade with a light scale-up
@@ -155,17 +163,17 @@ export const StreaksBar: React.FC = () => {
             <div className="min-w-0">
               <p className="flex items-baseline gap-[5px]">
                 <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">{dayStreak}</span>
-                <span className="text-[12px] font-bold text-white/[0.86] dark:text-white">day streak</span>
+                <span className="text-[12px] font-bold text-white/[0.86] dark:text-white">{tn(dayStreak, "day streak", "day streak")}</span>
               </p>
-              <p className="mt-[5px] text-[10.5px] text-white/[0.66] dark:text-white">{todayState?.met ?? 0} of 4 goals done today</p>
+              <p className="mt-[5px] text-[10.5px] text-white/[0.66] dark:text-white">{t("{n} of 4 goals done today", { n: todayState?.met ?? 0 })}</p>
             </div>
             <span className="flex items-center gap-1.5 shrink-0">
-              <span className="text-[9.5px] font-bold text-white bg-white/20 dark:bg-black/20 rounded-full px-[9px] py-1 whitespace-nowrap shrink-0">This week</span>
+              <span className="text-[9.5px] font-bold text-white bg-white/20 dark:bg-black/20 rounded-full px-[9px] py-1 whitespace-nowrap shrink-0">{t("This week")}</span>
               {!share.locks.streakHidden && (
                 <ShareEntryButton
-                  label="Share your streak"
+                  label={t("Share your streak")}
                   fill="#FFFFFF"
-                  disabledHint={dayStreak > 0 ? null : "Nothing to share yet. Start a streak first."}
+                  disabledHint={dayStreak > 0 ? null : t("Nothing to share yet. Start a streak first.")}
                   onPress={() => share.open(((f) => (f ? streakCard(f) : null))(streakFacts(sources, today)))}
                   style={{ marginBlock: "-9px", marginInline: "-5px -9px" }}
                 />
@@ -177,7 +185,7 @@ export const StreaksBar: React.FC = () => {
             {days.map((d, i) => (
               <div key={d.date} className="flex flex-col items-center gap-1.5 flex-1">
                 <span className={`text-[8px] tracking-[.1em] ${d.isToday ? "font-extrabold text-white" : "font-bold text-white/[0.62] dark:text-white"}`}>
-                  {WEEKDAY_CAPS[i]}
+                  {caps[i]}
                 </span>
                 <span className="h-[22px] flex items-center justify-center">
                   {/* v6 asset map: the handover's StreakLeaf in place of the

@@ -5,6 +5,7 @@
 
 import { PALETTE, cardFont, cardLink, fillClient, fitLinkSize, type CardPro, type CardSpec } from "./shareCardModel";
 import type { OverlayTransform, PhotoCrop, Size } from "./overlayModel";
+import { t } from "../../i18n/core";
 
 // ---------------------------------------------------------------------------
 // The card layout types (drawShareCard lays out the card and paints both)
@@ -188,7 +189,7 @@ export function layoutShareLayer(o: LayerInput, m: CardMeasure): CardLayout {
   // --- Head: mark, name, "@handle on Centium" ---
   const nameS: LayerText = L.name;
   const handleS = sub(L.handle);
-  const handleText = pro.handle ? `@${pro.handle} on Centium` : null;
+  const handleText = pro.handle ? t("@{handle} on Centium", { handle: pro.handle }) : null;
   const nLH = lineH(nameS);
   const hLH = handleText ? lineH(handleS) : 0;
   const headH = Math.max(L.mark.h, nLH + hLH);
@@ -326,7 +327,7 @@ export function layoutShareLayer(o: LayerInput, m: CardMeasure): CardLayout {
     const fx = LAYER_QR_TILE + Q.gap;
     const fy = y + (footH - (lLH + sLH)) / 2;
     text(link, linkS, fx, baseIn(fy, lLH, linkS));
-    text("Scan to see my profile", scanS, fx, baseIn(fy + lLH, sLH, scanS));
+    text(t("Scan to see my profile"), scanS, fx, baseIn(fy + lLH, sLH, scanS));
     boxes.foot = { x: 0, y, w: W, h: footH };
     y += footH;
   }

@@ -6,6 +6,7 @@ import { hoursLines, isoWeekdayIn } from "../../services/venues/hours";
 import { useOnline } from "../../hooks/useOnline";
 import { DIVIDER, VAvatar, VBar, VCardError, VDetailCard, VDetailRow, VFooterLink, VPill } from "./VenueKit";
 import { VenueHoursSheet } from "./VenueHoursSheet";
+import { t } from "../../i18n/core";
 
 // Opening hours in the venue console (stage A4), restyled per
 // OURS-OP1-venue-hours: a K9 card of the shared hours lines (the venue page
@@ -85,21 +86,21 @@ export function VenueHoursCard({
     <>
       <VDetailCard
         id={id}
-        title="Opening hours"
+        title={t("Opening hours")}
         right={today ? today.value : undefined}
         footer={
           isOwner && current ? (
-            <VFooterLink label={lines.length > 0 ? "Edit hours" : "Add opening hours"} onClick={() => setEditing(true)} disabled={!online} />
+            <VFooterLink label={lines.length > 0 ? t("Edit hours") : t("Add opening hours")} onClick={() => setEditing(true)} disabled={!online} />
           ) : null
         }
         note={
           <span className="flex items-center gap-[6px]">
-            <Clock size={11} aria-hidden className="shrink-0" /> Times are the venue's own clock: {timezone}
+            <Clock size={11} aria-hidden className="shrink-0" /> {t("Times are the venue's own clock: {timezone}", { timezone })}
           </span>
         }
       >
         {!current && !error && (
-          <div role="status" aria-label="Loading">
+          <div role="status" aria-label={t("Loading")}>
             {[0, 1, 2].map((i) => (
               <div key={i} className={`flex items-center justify-between border-t ${DIVIDER} min-h-[44px]`} style={{ padding: "10px 16px" }}>
                 <VBar w={100} h={10} />
@@ -108,19 +109,19 @@ export function VenueHoursCard({
             ))}
           </div>
         )}
-        {error && !current && <VCardError title="Couldn't load opening hours" message={error} onRetry={() => setTick((t) => t + 1)} />}
+        {error && !current && <VCardError title={t("Couldn't load opening hours")} message={error} onRetry={() => setTick((t) => t + 1)} />}
         {current && lines.length === 0 && (
           <VDetailRow
             avatar={<VAvatar icon={Clock} />}
-            title="No opening hours published yet."
-            sub={isOwner ? "Members see nothing rather than “Closed” until you add them." : undefined}
+            title={t("No opening hours published yet.")}
+            sub={isOwner ? t("Members see nothing rather than «Closed» until you add them.") : undefined}
           />
         )}
         {lines.map((l) => (
           <div key={l.key} className={`flex items-start justify-between gap-3 border-t ${DIVIDER} min-h-[44px]`} style={{ padding: "12px 16px" }}>
             <span className="flex flex-wrap items-center gap-[6px] min-w-0">
               <span className={`text-[13px] leading-[17px] text-charcoal ${l.today ? "font-extrabold" : "font-bold"}`}>{l.label.replace(/ \(today\)$/, "")}</span>
-              {l.today && <VPill tone="pale" label="Today" />}
+              {l.today && <VPill tone="pale" label={t("Today")} />}
             </span>
             <span className="text-[12.5px] leading-[17px] font-extrabold text-charcoal tabular-nums text-end">{l.value}</span>
           </div>
@@ -139,7 +140,7 @@ export function VenueHoursCard({
             setRows({ gymId, value: saved });
             setEditing(false);
             if (zoneChanged) onTimezoneSaved();
-            onToast?.("Opening hours saved.");
+            onToast?.(t("Opening hours saved."));
           }}
         />
       )}

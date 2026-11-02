@@ -6,6 +6,8 @@ import { useOnline } from "../../../hooks/useOnline";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { textPx, linePx } from "../../../theme/textSize";
 import { clock12 } from "../../../utils/time12";
+import { t } from "../../../i18n/core";
+import { weekLetters } from "./weekLetters";
 import { MetricWidget, type MetricWidgetProps } from "../../health/MetricWidget";
 
 // v6 Batch 2 · Home: the parts every HO1 widget shares, on top of Health A's
@@ -92,9 +94,9 @@ export const DoneStatus: React.FC<{ label: string; dark: boolean }> = ({ label, 
 
 /** The handover's error line under a cached value: "Updated 8:12 AM" (12-hour rule), or the OURS offline twin. */
 export function staleLine(updatedAt: string | null, online: boolean): string | null {
-  if (!updatedAt) return online ? null : "Offline";
-  const t = clock12(updatedAt);
-  return online ? `Updated ${t}` : `Offline · updated ${t}`;
+  if (!updatedAt) return online ? null : t("Offline");
+  const time = clock12(updatedAt);
+  return online ? t("Updated {time}", { time }) : t("Offline · updated {time}", { time });
 }
 
 /** A value that cross-fades 300 ms when it changes (OURS-home-widget-motion #4); static under Reduce motion. */
@@ -146,7 +148,7 @@ export const WeekStrip: React.FC<{
   dark: boolean;
 }> = ({ days, todayIndex, fill, ring }) => (
   <span className="grid" style={{ gridTemplateColumns: "repeat(7, 1fr)", columnGap: 6, width: 200 }} aria-hidden>
-    {["M", "T", "W", "T", "F", "S", "S"].map((l, i) => (
+    {weekLetters().map((l, i) => (
       <span key={i} className="flex flex-col items-center" style={{ gap: 4 }}>
         <span
           style={{

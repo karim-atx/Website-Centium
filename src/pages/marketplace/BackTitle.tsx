@@ -4,6 +4,7 @@ import { useBack } from "../../hooks/useBack";
 import { textPx } from "../../theme/textSize";
 import { marketPalette } from "../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
+import { t } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · the Client Explore sub-pages' back row (Client
 // Explore Screens lines 552–555 / 600–603 / 637–640: My bookings, Points
@@ -20,11 +21,11 @@ export const BackTitle: React.FC<{ title: string; parent: string; children?: Rea
       <button
         type="button"
         onClick={back}
-        aria-label="Back"
+        aria-label={t("Back")}
         className="hit market-focus"
         style={{ width: 36, height: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: m.ink2, background: "none", border: 0, padding: 0, borderRadius: 10, cursor: "pointer" }}
       >
-        <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={NO_ICON_SCALE}>
+        <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden className="rtl:-scale-x-100" style={NO_ICON_SCALE}>
           <path d="m15 18-6-6 6-6" />
         </svg>
       </button>

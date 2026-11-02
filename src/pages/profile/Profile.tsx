@@ -60,12 +60,18 @@ import { ProProfile } from "../../components/pro/profile/ProProfile";
 import { SharingYourWinsRow } from "../../components/share/client/SharingYourWinsSheet";
 import { signOutWarning, useOutbox } from "../../components/outbox/Outbox";
 import { forumAccess } from "../../services/forum/rules";
-import { t } from "../../i18n/core";
+import { t, tk, tn, tx } from "../../i18n/core";
 
+// "Customer" as an account type reads «عميل» (tx below); the store's customer is «زبون».
 const accountTypeLabel: Record<string, string> = {
-  customer: "Customer",
-  professional: "Professional",
-  business: "Business",
+  professional: tk("Professional"),
+  business: tk("Business"),
+};
+
+const SEX_LABEL: Record<string, string> = {
+  female: tk("Female"),
+  male: tk("Male"),
+  other: tk("Other"),
 };
 
 /**
@@ -162,7 +168,7 @@ function ClientProfile() {
     const result = await removeAvatar(authUserId, user.avatarUrl);
     setAvatarBusy(false);
     if (!result.ok) {
-      setAvatarError(result.message ?? "Couldn't remove your picture.");
+      setAvatarError(result.message ?? t("Couldn't remove your picture."));
       return;
     }
     updateProfile({ avatarUrl: undefined });
@@ -186,7 +192,7 @@ function ClientProfile() {
       return;
     }
     if (!authUserId) {
-      setMetricError("You need to be signed in to change this.");
+      setMetricError(t("You need to be signed in to change this."));
       return;
     }
     setSavingMetric(true);
@@ -197,7 +203,7 @@ function ClientProfile() {
     );
     setSavingMetric(false);
     if (!result.ok) {
-      setMetricError(result.message ?? "Could not save that. Try again.");
+      setMetricError(result.message ?? t("Could not save that. Try again."));
       return;
     }
     // Mirror locally so the card updates immediately; the next profile
@@ -208,7 +214,7 @@ function ClientProfile() {
 
   const saveSex = async (sex: Sex) => {
     if (!authUserId) {
-      setSexError("You need to be signed in to change this.");
+      setSexError(t("You need to be signed in to change this."));
       return;
     }
     setSexSaving(true);
@@ -216,7 +222,7 @@ function ClientProfile() {
     const result = await updateSex(authUserId, sex);
     setSexSaving(false);
     if (!result.ok) {
-      setSexError(result.message ?? "Could not save that. Try again.");
+      setSexError(result.message ?? t("Could not save that. Try again."));
       return;
     }
     // RECALCULATES, NEVER DELETES. updateProfile feeds the new value straight
@@ -240,14 +246,14 @@ function ClientProfile() {
       return;
     }
     if (!authUserId) {
-      setDobError("You need to be signed in to change this.");
+      setDobError(t("You need to be signed in to change this."));
       return;
     }
     setSavingDob(true);
     const result = await updateDateOfBirth(authUserId, dobDraft);
     setSavingDob(false);
     if (!result.ok) {
-      setDobError(result.message ?? "Could not save that. Try again.");
+      setDobError(result.message ?? t("Could not save that. Try again."));
       return;
     }
     // Mirror into local state so the card updates immediately; the next
@@ -359,7 +365,7 @@ function ClientProfile() {
 
   return (
     <div>
-      <PageHeader title="My Profile" showBack />
+      <PageHeader title={t("My Profile")} showBack />
 
       <div
         className={clsx(
@@ -375,18 +381,18 @@ function ClientProfile() {
               ? null
               : {
                   value: user.weightKg,
-                  unit: "kg",
+                  unit: t("kg"),
                   onClick: () => openMetricEditor("weightKg"),
-                  label: `Weight, ${user.weightKg} kg. Edit`,
+                  label: t("Weight, {n} kg. Edit", { n: user.weightKg ?? "" }),
                 },
             {
-              value: user.sex,
-              unit: "sex",
+              value: SEX_LABEL[user.sex] ? t(SEX_LABEL[user.sex]) : user.sex,
+              unit: t("sex"),
               onClick: () => {
                 setSexError(null);
                 setSexOpen(true);
               },
-              label: `Sex, ${user.sex}. Edit`,
+              label: t("Sex, {sex}. Edit", { sex: SEX_LABEL[user.sex] ? t(SEX_LABEL[user.sex]) : user.sex }),
             }
           )}
 
@@ -394,7 +400,7 @@ function ClientProfile() {
           <button
             type="button"
             onClick={(e) => setAvatarAnchor(e.currentTarget)}
-            aria-label="Change profile picture"
+            aria-label={t("Change profile picture")}
             aria-haspopup="menu"
             aria-expanded={!!avatarAnchor}
             className="tap relative w-[84px] h-[84px] rounded-full bg-teal-pale flex items-center justify-center text-[30px] font-bold text-charcoal-soft dark:text-teal-deep-text overflow-hidden shrink-0"
@@ -411,10 +417,10 @@ function ClientProfile() {
             {premiumPlan && <Crown size={16} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
             {/* QA 11.0 ambassador badge: a granted status (ambassador_grants,
                 read through is_ambassador()), not "one referral". */}
-            {isAmbassador && <Award size={16} className="text-primary-dark shrink-0" aria-label="Centium Ambassador" />}
+            {isAmbassador && <Award size={16} className="text-primary-dark shrink-0" aria-label={t("Centium Ambassador")} />}
           </h2>
           <span className="inline-block text-[11px] font-bold text-charcoal-soft bg-cream-soft rounded-full px-2.5 py-0.5 mt-1.5 max-w-full truncate">
-            {accountTypeLabel[user.accountType]}
+            {user.accountType === "customer" ? tx("Customer", "account type") : accountTypeLabel[user.accountType] ? t(accountTypeLabel[user.accountType]) : null}
             {user.customerSubtype ? ` · ${user.customerSubtype}` : ""}
             {user.professionalSubtype ? ` · ${user.professionalSubtype}` : ""}
           </span>
@@ -431,7 +437,7 @@ function ClientProfile() {
               className="tap mt-2.5 inline-flex items-center gap-1.5 rounded-xl bg-primary-pale px-3.5 py-1.5 text-[13px] font-semibold text-primary-dark"
             >
               <KeyRound size={14} strokeWidth={1.75} aria-hidden />
-              Credentials
+              {t("Credentials")}
             </button>
           )}
           {/* The avatar menu closes when an option is picked, so the upload's
@@ -439,7 +445,7 @@ function ClientProfile() {
               and a failure as the Foundations inline danger line
               (CircleAlert 13 + 12/600 danger). */}
           {avatarBusy && (
-            <p role="status" className="mt-2 text-xs font-semibold text-charcoal-faint">Saving…</p>
+            <p role="status" className="mt-2 text-xs font-semibold text-charcoal-faint">{t("Saving…")}</p>
           )}
           {avatarError && (
             <p role="alert" className="mt-2 flex items-start gap-2 text-start text-xs font-semibold text-status-high">
@@ -454,17 +460,17 @@ function ClientProfile() {
           tile(
             {
               value: user.heightCm,
-              unit: "cm",
+              unit: t("cm"),
               onClick: () => openMetricEditor("heightCm"),
-              label: `Height, ${user.heightCm} cm. Edit`,
+              label: t("Height, {n} cm. Edit", { n: user.heightCm ?? "" }),
             },
             {
               // No date of birth on file (an older account): a dash, not the
               // default age the local profile falls back to.
               value: user.dateOfBirth ? user.age : "–",
-              unit: "years",
+              unit: t("years"),
               onClick: openDobEditor,
-              label: user.dateOfBirth ? `Age, ${user.age}. Date of birth` : "Add your date of birth",
+              label: user.dateOfBirth ? t("Age, {n}. Date of birth", { n: user.age }) : t("Add your date of birth"),
             }
           )}
       </div>
@@ -479,8 +485,8 @@ function ClientProfile() {
       {user.accountType === "customer" && (
         <div className="mb-6 space-y-2 animate-fade-slide-up">
           {[
-            { icon: Package, label: "My orders", onClick: () => navigate("/app/store/orders") },
-            { icon: CalendarCheck, label: "My appointments", onClick: () => navigate("/app/appointments") },
+            { icon: Package, label: t("My orders"), onClick: () => navigate("/app/store/orders") },
+            { icon: CalendarCheck, label: t("My appointments"), onClick: () => navigate("/app/appointments") },
             // Round F · 3: Courses › Certificates, for whoever can open Courses (adults).
             ...(forumAccess(user.dateOfBirth) === "adult"
               ? [{ icon: Award, label: t("My certificates"), onClick: () => navigate("/app/forum?tab=courses&view=certificates") }]
@@ -496,7 +502,7 @@ function ClientProfile() {
                 <r.icon size={16} strokeWidth={1.75} className="text-primary-dark" />
               </span>
               <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">{r.label}</span>
-              <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
             </button>
           ))}
         </div>
@@ -516,7 +522,7 @@ function ClientProfile() {
           code box to connect another (C7, C9). Customers only. */}
       {user.accountType === "customer" && (
         <section className="mb-6 animate-fade-slide-up">
-          {sectionLabel(connectedProfessionals.length > 0 ? "Connected professionals" : "Professionals")}
+          {sectionLabel(connectedProfessionals.length > 0 ? t("Connected professionals") : t("Professionals"))}
           {connectedProfessionals.length === 0 ? (
             <>
               {/* MO1.5 anatomy row 4: the code card is radius 18 with 14 padding
@@ -549,11 +555,11 @@ function ClientProfile() {
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-[14px] font-semibold leading-tight text-charcoal truncate">{p.name}</span>
-                    <span className="block text-[11.5px] leading-tight text-charcoal-faint">Manage data sharing</span>
+                    <span className="block text-[11.5px] leading-tight text-charcoal-faint">{t("Manage data sharing")}</span>
                     {/* Release 3 W7 (Karim answer 1): addition under the row's own line. */}
                     {p.licenceVerified === false && <LicencePendingTag className="mt-1" />}
                   </span>
-                  <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
+                  <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
                 </button>
               ))}
               {/* Release 3 W8 CU30: "Sharing your wins", after the professional rows. */}
@@ -574,8 +580,8 @@ function ClientProfile() {
                   <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
                     <Plus size={16} strokeWidth={1.75} className="text-primary-dark" />
                   </span>
-                  <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">Connect with a professional code</span>
-                  <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
+                  <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">{t("Connect with a professional code")}</span>
+                  <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
                 </button>
               )}
             </div>
@@ -587,11 +593,11 @@ function ClientProfile() {
           opening the same sheets as before. Customers only. */}
       {!hidesClientFields && (
         <section className="mb-6 animate-fade-slide-up">
-          {sectionLabel("Training plan")}
+          {sectionLabel(t("Training plan"))}
           <div className="grid grid-cols-2 gap-2.5">
             {[
-              { icon: Flag, label: "Goals", onClick: () => setGoalsOpen(true) },
-              { icon: Gauge, label: "Activity Level", onClick: () => setActivityLevelOpen(true) },
+              { icon: Flag, label: t("Goals"), onClick: () => setGoalsOpen(true) },
+              { icon: Gauge, label: t("Activity Level"), onClick: () => setActivityLevelOpen(true) },
             ].map((s) => (
               <button
                 key={s.label}
@@ -608,7 +614,7 @@ function ClientProfile() {
                   <s.icon size={14} strokeWidth={1.75} className="text-primary-dark" />
                 </span>
                 <span className="flex-1 min-w-0 text-[13px] font-semibold leading-tight text-charcoal">{s.label}</span>
-                <ChevronRight size={14} className="text-charcoal-faint shrink-0" aria-hidden />
+                <ChevronRight size={14} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
               </button>
             ))}
           </div>
@@ -634,13 +640,13 @@ function ClientProfile() {
               safetyOpen && "mb-2"
             )}
           >
-            <span className={LABEL_TYPE}>Safety & content</span>
+            <span className={LABEL_TYPE}>{t("Safety & content")}</span>
             {/* MO1.5.1 draws ChevronRight 14 while collapsed, MO1.5
                 ChevronDown 14 while open. */}
             {safetyOpen ? (
               <ChevronDown size={14} aria-hidden className="text-charcoal-faint shrink-0 me-1" />
             ) : (
-              <ChevronRight size={14} aria-hidden className="text-charcoal-faint shrink-0 me-1" />
+              <ChevronRight size={14} aria-hidden className="text-charcoal-faint shrink-0 me-1 rtl:-scale-x-100" />
             )}
           </button>
           {safetyOpen && (
@@ -655,7 +661,7 @@ function ClientProfile() {
                     <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
                       <HandHeart size={17} strokeWidth={1.5} className="text-primary-dark" />
                     </span>
-                    <span className="text-sm font-semibold text-charcoal">Recovery-sensitive experience</span>
+                    <span className="text-sm font-semibold text-charcoal">{t("Recovery-sensitive experience")}</span>
                   </span>
                   <Toggle
                     checked={recoverySensitive}
@@ -667,7 +673,7 @@ function ClientProfile() {
                         window.setTimeout(() => setJustToggledRecovery(false), 6000);
                       }
                     }}
-                    label="Recovery-sensitive experience"
+                    label={t("Recovery-sensitive experience")}
                   />
                 </div>
                 {/* MO1.5 anatomy rows 7–8 (measured on the 2x frame): the body
@@ -679,26 +685,23 @@ function ClientProfile() {
                   {/* QA 13.0: when the toggle is on it shows the text under. */}
                   {recoverySensitive && (
                     <p className="text-xs text-charcoal-faint leading-normal">
-                      Personalize food tracking to reduce number-focused and potentially triggering content. Numbers like
-                      calories, weight and streaks are hidden, and you can change this at any time.
+                      {t("Personalize food tracking to reduce number-focused and potentially triggering content. Numbers like calories, weight and streaks are hidden, and you can change this at any time.")}
                     </p>
                   )}
                   {justToggledRecovery && (
                     <p className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-xl px-3.5 py-2.5 leading-relaxed">
-                      Your experience has been updated: calorie totals, weight-related content, deficit language, and
-                      streaks are hidden. Meal logging can focus on meals, notes, feelings, and hunger/fullness instead.
+                      {t("Your experience has been updated: calorie totals, weight-related content, deficit language, and streaks are hidden. Meal logging can focus on meals, notes, feelings, and hunger/fullness instead.")}
                     </p>
                   )}
                   {/* Task X: what is true, said instead of a pause that paused
                       nothing: where the setting lives, and who sees it. */}
                   <p className="text-xs text-charcoal-faint leading-normal">
-                    Saved to your account, so it's the same on every device you sign in on. Professionals you work with
-                    are never told whether it's on.
+                    {t("Saved to your account, so it's the same on every device you sign in on. Professionals you work with are never told whether it's on.")}
                   </p>
                   <p className="text-xs text-charcoal-faint leading-normal">
-                    This isn't clinical care. If tracking feels unhelpful right now, consider discussing it with a{" "}
+                    {t("This isn't clinical care. If tracking feels unhelpful right now, consider discussing it with a")}{" "}
                     <button onClick={() => navigate("/app/professionals")} className="tap text-primary-dark font-semibold underline">
-                      professional
+                      {t("professional")}
                     </button>
                     .
                   </p>
@@ -724,24 +727,24 @@ function ClientProfile() {
       >
         {/* MO1.5: 14/600 with LogOut 15/1.75. */}
         <LogOut size={15} strokeWidth={1.75} aria-hidden />
-        Sign Out
+        {t("Sign Out")}
       </button>
 
       <CentredPopup
         open={confirmSignOut}
         onClose={() => setConfirmSignOut(false)}
-        title="Sign out?"
+        title={t("Sign out?")}
         icon={<LogOut size={22} />}
         // Round D (D23): anything kept to save later is named first.
-        body={signOutWarning(waiting) ?? "You can sign back in at any time."}
+        body={signOutWarning(waiting) ?? t("You can sign back in at any time.")}
       >
-        <CtaButton size="page" label={waiting.length > 0 ? "Sign out anyway" : "Sign Out"} onClick={handleSignOut} />
+        <CtaButton size="page" label={waiting.length > 0 ? t("Sign out anyway") : t("Sign Out")} onClick={handleSignOut} />
         <button
           type="button"
           onClick={() => setConfirmSignOut(false)}
           className="tap mt-3 w-full min-h-11 text-center text-sm font-semibold text-charcoal-soft"
         >
-          Cancel
+          {t("Cancel")}
         </button>
       </CentredPopup>
 
@@ -785,11 +788,10 @@ function ClientProfile() {
       />
       {/* Weight and height. One sheet for both — the fields differ only by
           label, unit and bound, and two near-identical sheets would drift. */}
-      <BottomSheet open={sexOpen} onClose={() => setSexOpen(false)} title="Sex">
+      <BottomSheet open={sexOpen} onClose={() => setSexOpen(false)} title={t("Sex")}>
         <div className="animate-fade-slide-up">
           <p className="text-[12.5px] text-charcoal-soft mb-3 leading-relaxed">
-            Used to estimate your calorie needs and to suggest which health checks may be
-            relevant.
+            {t("Used to estimate your calorie needs and to suggest which health checks may be relevant.")}
           </p>
           <div className="flex flex-col gap-2">
             {(["female", "male", "other"] as Sex[]).map((option) => (
@@ -803,7 +805,7 @@ function ClientProfile() {
                     : "bg-cream-soft text-charcoal"
                 }`}
               >
-                {option}
+                {t(SEX_LABEL[option])}
               </button>
             ))}
           </div>
@@ -818,7 +820,7 @@ function ClientProfile() {
       <BottomSheet
         open={metricOpen !== null && !(metricOpen === "weightKg" && hideNumbers)}
         onClose={() => setMetricOpen(null)}
-        title={metricOpen === "weightKg" ? "Weight" : "Height"}
+        title={metricOpen === "weightKg" ? t("Weight") : t("Height")}
       >
         <div className="space-y-4 animate-fade-slide-up">
           <label className="block relative">
@@ -834,26 +836,26 @@ function ClientProfile() {
               className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 pe-12 text-charcoal focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
             />
             <span className="absolute end-4 top-1/2 -translate-y-1/2 text-sm text-charcoal-faint">
-              {metricOpen === "weightKg" ? "kg" : "cm"}
+              {metricOpen === "weightKg" ? t("kg") : t("cm")}
             </span>
           </label>
 
           <p className="text-[11px] text-charcoal-faint">
             {metricOpen === "weightKg"
-              ? "Used for your calorie targets, and shown to any professional you share weight with."
-              : "Used for your calorie targets and health recommendations."}
+              ? t("Used for your calorie targets, and shown to any professional you share weight with.")
+              : t("Used for your calorie targets and health recommendations.")}
           </p>
 
           {metricError && <p className="text-xs font-semibold text-status-high">{metricError}</p>}
 
           <Button fullWidth size="lg" disabled={!metricDraft || savingMetric} onClick={saveMetric}>
-            {savingMetric ? "Saving…" : "Save"}
+            {savingMetric ? t("Saving…") : t("Save")}
           </Button>
         </div>
       </BottomSheet>
 
       {/* Date of birth, not age. Writes straight to profiles.date_of_birth. */}
-      <BottomSheet open={dobOpen} onClose={() => setDobOpen(false)} title="Date of birth">
+      <BottomSheet open={dobOpen} onClose={() => setDobOpen(false)} title={t("Date of birth")}>
         {user.dateOfBirth ? (
           // Task T: LOCKED ONCE SET. The database refuses a change or a clear
           // (ATX51), so a saved date is shown, not offered as an input that
@@ -865,18 +867,17 @@ function ClientProfile() {
               </p>
               {ageFromDateOfBirth(user.dateOfBirth) !== undefined && (
                 <p className="text-xs text-charcoal-faint mt-0.5">
-                  {ageFromDateOfBirth(user.dateOfBirth)} years old
+                  {tn(ageFromDateOfBirth(user.dateOfBirth)!, "{n} year old", "{n} years old")}
                 </p>
               )}
             </div>
             <p className="text-[11px] text-charcoal-faint">
-              Your age is calculated from this, and is used for calorie targets and health
-              recommendations. A date of birth can't be changed once it's saved.
+              {t("Your age is calculated from this, and is used for calorie targets and health recommendations. A date of birth can't be changed once it's saved.")}
             </p>
             <p className="text-sm text-charcoal-soft">
-              Need to correct it?{" "}
+              {t("Need to correct it?")}{" "}
               <Link to="/contact" className="font-semibold text-primary-deep-text underline">
-                Contact support
+                {t("Contact support")}
               </Link>
             </p>
           </div>
@@ -896,19 +897,18 @@ function ClientProfile() {
 
           {dobDraft && ageFromDateOfBirth(dobDraft) !== undefined && (
             <p className="text-xs text-charcoal-faint">
-              {ageFromDateOfBirth(dobDraft)} years old
+              {tn(ageFromDateOfBirth(dobDraft)!, "{n} year old", "{n} years old")}
             </p>
           )}
 
           <p className="text-[11px] text-charcoal-faint">
-            Your age is calculated from this, and is used for calorie targets and health
-            recommendations. Check it before saving; to change it later, contact support.
+            {t("Your age is calculated from this, and is used for calorie targets and health recommendations. Check it before saving; to change it later, contact support.")}
           </p>
 
           {dobError && <p className="text-xs font-semibold text-status-high">{dobError}</p>}
 
           <Button fullWidth size="lg" disabled={!dobDraft || savingDob} onClick={saveDob}>
-            {savingDob ? "Saving…" : "Save"}
+            {savingDob ? t("Saving…") : t("Save")}
           </Button>
         </div>
         )}
@@ -921,7 +921,7 @@ function ClientProfile() {
       <BottomSheet
         open={!!sharingFor}
         onClose={() => setSharingFor(null)}
-        title="Data sharing"
+        title={t("Data sharing")}
       >
         {sharingFor && <DataSharingSection professionalId={sharingFor.professionalId} />}
       </BottomSheet>
@@ -937,11 +937,11 @@ function ClientProfile() {
         width={200}
         align="left"
         options={[
-          { value: "camera", label: "Take a photo", icon: <Camera size={15} strokeWidth={1.75} />, disabled: avatarBusy },
-          { value: "library", label: "Choose from library", icon: <Image size={15} strokeWidth={1.75} />, disabled: avatarBusy },
+          { value: "camera", label: t("Take a photo"), icon: <Camera size={15} strokeWidth={1.75} />, disabled: avatarBusy },
+          { value: "library", label: t("Choose from library"), icon: <Image size={15} strokeWidth={1.75} />, disabled: avatarBusy },
           {
             value: "remove",
-            label: "Remove photo",
+            label: t("Remove photo"),
             icon: <Trash2 size={15} strokeWidth={1.75} />,
             destructive: true,
             disabled: (!user.avatarUrl && ownAvatar?.status !== "pending") || avatarBusy,

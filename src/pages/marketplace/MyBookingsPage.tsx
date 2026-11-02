@@ -20,6 +20,7 @@ import { fetchPastBookings, firstName, sentText, type PastBooking, type ReviewTa
 import { endMyGymMembership, fetchMembershipTerms, type GymMembership } from "../../services/venues";
 import { commitmentLines } from "../../services/venues/venueLogic";
 import { BackTitle } from "./BackTitle";
+import { t, tk } from "../../i18n/core";
 import { loadMemberships, loadSchedule, type Loaded, type MembershipsData, type ScheduleData } from "./myBookingsData";
 import {
   arrangeMemberships,
@@ -82,7 +83,7 @@ export default function MyBookingsPage() {
   const { user } = useApp();
   const [params, setParams] = useSearchParams();
   const tab = tabFromQuery(params.get("tab"));
-  const setTab = (t: BookingsTab) => setParams({ tab: t }, { replace: true });
+  const setTab = (next: BookingsTab) => setParams({ tab: next }, { replace: true });
 
   const [members, setMembers] = useState<Loaded<MembershipsData> | null>(null);
   const [schedule, setSchedule] = useState<Loaded<ScheduleData> | null>(null);
@@ -109,7 +110,7 @@ export default function MyBookingsPage() {
       cancelled = true;
     };
   }, [tick]);
-  const retry = useCallback(() => setTick((t) => t + 1), []);
+  const retry = useCallback(() => setTick((x) => x + 1), []);
 
   const memberRows = useMemo<BookingRow[] | null>(() => {
     if (!members?.ok) return null;
@@ -157,28 +158,28 @@ export default function MyBookingsPage() {
   return (
     <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
       <style>{`${FOCUS_CSS}.bk-review button:focus-visible{outline:2px solid #AEA1DC;outline-offset:-2px}`}</style>
-      <BackTitle title="My bookings" parent="/app/marketplace" />
-      <div role="tablist" aria-label="My bookings" style={{ marginTop: 10, display: "flex", gap: 5, padding: 6, borderRadius: 16, background: m.segtrack }}>
-        {BOOKINGS_TABS.map((t, i) => {
-          const on = t.key === tab;
+      <BackTitle title={t("My bookings")} parent="/app/marketplace" />
+      <div role="tablist" aria-label={t("My bookings")} style={{ marginTop: 10, display: "flex", gap: 5, padding: 6, borderRadius: 16, background: m.segtrack }}>
+        {BOOKINGS_TABS.map((bt, i) => {
+          const on = bt.key === tab;
           return (
             <button
-              key={t.key}
+              key={bt.key}
               ref={(el) => {
                 tabsRef.current[i] = el;
               }}
-              id={TAB_IDS[t.key]}
+              id={TAB_IDS[bt.key]}
               type="button"
               role="tab"
               aria-selected={on}
               aria-controls="bk-panel"
               tabIndex={on ? 0 : -1}
-              onClick={() => setTab(t.key)}
+              onClick={() => setTab(bt.key)}
               onKeyDown={(e) => onTabKey(e, i)}
               className="market-focus hit"
               style={{ flex: 1, minWidth: 0, height: 40, padding: "0 10px", borderRadius: 12, border: 0, background: on ? m.segactive : m.segidle, color: on ? m.onfill : m.segink, display: "flex", alignItems: "center", justifyContent: "center", font: "inherit", fontSize: textPx(13), fontWeight: 700, whiteSpace: "nowrap", cursor: "pointer" }}
             >
-              {t.label}
+              {t(bt.label)}
             </button>
           );
         })}
@@ -190,7 +191,7 @@ export default function MyBookingsPage() {
             <ConfirmationStrip
               key={strip.n}
               text={strip.text}
-              action="View"
+              action={t("View")}
               onAction={() => {
                 const id = strip.professionalId;
                 setStrip(null);
@@ -202,12 +203,12 @@ export default function MyBookingsPage() {
         ) : null}
         {tab === "memberships" && cachedAt ? <MarketOffline loaded force style={{ marginTop: 14 }} /> : null}
         {state === null ? (
-          <MarketSkeleton radius={18} rows={3} height={98} count={2} label="Loading your bookings" style={{ marginTop: 14 }} />
+          <MarketSkeleton radius={18} rows={3} height={98} count={2} label={tk("Loading your bookings")} style={{ marginTop: 14 }} />
         ) : !state.ok ? (
           !online || state.offline ? (
             <MarketOffline loaded={false} force onRetry={retry} style={{ marginTop: 14 }} />
           ) : (
-            <MarketError thing="your bookings" onRetry={retry} style={{ marginTop: 14 }} />
+            <MarketError thing={tk("your bookings")} onRetry={retry} style={{ marginTop: 14 }} />
           )
         ) : rows && rows.length === 0 ? (
           <BookingsEmpty tab={tab} />
@@ -240,9 +241,9 @@ export default function MyBookingsPage() {
         align="right"
         rowLineHeight={16}
         options={[
-          ...(menu && (menu.g.status === "active" || menu.g.status === "upcoming") ? [{ value: "pass", label: "Show pass", icon: <QrCode size={15} strokeWidth={1.75} /> }] : []),
+          ...(menu && (menu.g.status === "active" || menu.g.status === "upcoming") ? [{ value: "pass", label: t("Show pass"), icon: <QrCode size={15} strokeWidth={1.75} /> }] : []),
           ...(menu && menu.g.status === "active" && !endsOn[menu.g.id] && !(menu.g.cancelAtPeriodEnd && menu.g.expiresOn)
-            ? [{ value: "end", label: "End membership", icon: <LogOut size={15} strokeWidth={1.75} />, destructive: true }]
+            ? [{ value: "end", label: t("End membership"), icon: <LogOut size={15} strokeWidth={1.75} />, destructive: true }]
             : []),
         ]}
         onSelect={(v) => {
@@ -256,17 +257,17 @@ export default function MyBookingsPage() {
       <CentredPopup open={!!passFor} onClose={() => setPassFor(null)} title={passFor?.gymName ?? ""} geometry="ours">
         {passFor && <MembershipPass membership={passFor} gymLocation={null} memberName={user.firstName} />}
         <button type="button" onClick={() => setPassFor(null)} className="tap mt-2 w-full h-12 text-[14px] font-bold text-th-7d67d9 dark:text-primary-accent">
-          Done
+          {t("Done")}
         </button>
       </CentredPopup>
 
       <InstructorReviewDialog
         target={reviewing}
         onClose={() => setReviewing(null)}
-        onSent={(t, rating) => {
+        onSent={(r, rating) => {
           setReviewing(null);
-          setSent((s) => ({ ...s, [t.bookingId]: rating }));
-          setStrip((p) => ({ n: (p?.n ?? 0) + 1, text: sentText(t.professionalName, t.gymName), professionalId: t.professionalId }));
+          setSent((s) => ({ ...s, [r.bookingId]: rating }));
+          setStrip((p) => ({ n: (p?.n ?? 0) + 1, text: sentText(r.professionalName, r.gymName), professionalId: r.professionalId }));
         }}
       />
 
@@ -316,7 +317,7 @@ const BookingTicket: React.FC<{ row: BookingRow; onOpen?: () => void; menu?: (an
         onPress={onOpen ?? onReview}
         onStubPress={onReview}
         ariaLabel={label}
-        stubAriaLabel={row.review ? `Review ${firstName(row.review.professionalName)}'s class` : "Review"}
+        stubAriaLabel={row.review ? t("Review {name}'s class", { name: firstName(row.review.professionalName) }) : t("Review")}
         className="bk-review"
         bodyStyle={bodyBox}
       >
@@ -346,7 +347,7 @@ const BookingTicket: React.FC<{ row: BookingRow; onOpen?: () => void; menu?: (an
       <button
         type="button"
         onClick={(e) => menu(e.currentTarget)}
-        aria-label={`Options for ${row.title}`}
+        aria-label={t("Options for {name}", { name: row.title })}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         className="market-focus"
@@ -372,15 +373,15 @@ const BookingsEmpty: React.FC<{ tab: BookingsTab }> = ({ tab }) => {
           <path d="M3 10h18" />
         </svg>
       </span>
-      <h2 style={{ margin: 0, fontSize: textPx(16), fontWeight: 800, color: m.ink }}>{e.title}</h2>
-      <p style={{ margin: 0, fontSize: textPx(13), lineHeight: 1.55, color: m.faint }}>{e.body}</p>
+      <h2 style={{ margin: 0, fontSize: textPx(16), fontWeight: 800, color: m.ink }}>{t(e.title)}</h2>
+      <p style={{ margin: 0, fontSize: textPx(13), lineHeight: 1.55, color: m.faint }}>{t(e.body)}</p>
       <button
         type="button"
         onClick={() => navigate(e.href)}
         className="market-focus"
         style={{ marginTop: 6, minHeight: 42, borderRadius: 12, border: `1px solid ${m.border}`, background: "none", display: "inline-flex", alignItems: "center", padding: "0 14px", font: "inherit", fontSize: textPx(12.5), fontWeight: 800, color: m.pdark, cursor: "pointer" }}
       >
-        {e.cta}
+        {t(e.cta)}
       </button>
     </div>
   );
@@ -413,8 +414,8 @@ const EndMembershipDialog: React.FC<{ membership: GymMembership | null; onClose:
     setTerms(null);
     if (!g) return;
     let cancelled = false;
-    void fetchMembershipTerms([g]).then((t) => {
-      const x = t.get(g.id);
+    void fetchMembershipTerms([g]).then((res) => {
+      const x = res.get(g.id);
       if (!cancelled && x) {
         const lines = commitmentLines(x.minimumTermMonths, x.noticeDays);
         setTerms(lines.length ? lines : null);
@@ -456,13 +457,13 @@ const EndMembershipDialog: React.FC<{ membership: GymMembership | null; onClose:
   const confirmBody = !g
     ? ""
     : atPeriodEnd && ends
-      ? `Your pass keeps working until ${ends}, then your membership at ${g.gymName} ends. The gym can see that you ended it.`
-      : `Your membership at ${g.gymName} ends today and your pass stops working now. The gym can see that you ended it.`;
+      ? t("Your pass keeps working until {date}, then your membership at {gym} ends. The gym can see that you ended it.", { date: ends, gym: g.gymName })
+      : t("Your membership at {gym} ends today and your pass stops working now. The gym can see that you ended it.", { gym: g.gymName });
   return (
     <CentredPopup
       open={!!g}
       onClose={() => !busy && onClose()}
-      title={step === 1 ? "End your membership?" : "Confirm end"}
+      title={step === 1 ? t("End your membership?") : t("Confirm end")}
       alert
       geometry="ours"
       maxWidth={330}
@@ -472,7 +473,11 @@ const EndMembershipDialog: React.FC<{ membership: GymMembership | null; onClose:
       bodyWeight={500}
       body={
         <span style={{ display: "block", fontSize: textPx(13), lineHeight: linePx(19), color: m.ink2 }}>
-          {step === 1 ? (ends ? `${g?.planName} at ${g?.gymName}. Choose when it ends.` : `${g?.planName} at ${g?.gymName}.`) : confirmBody}
+          {step === 1
+            ? ends
+              ? t("{plan} at {gym}. Choose when it ends.", { plan: g?.planName ?? "", gym: g?.gymName ?? "" })
+              : t("{plan} at {gym}.", { plan: g?.planName ?? "", gym: g?.gymName ?? "" })
+            : confirmBody}
         </span>
       }
     >
@@ -483,32 +488,32 @@ const EndMembershipDialog: React.FC<{ membership: GymMembership | null; onClose:
       {step === 1 ? (
         <>
           {ends ? (
-            <div role="radiogroup" aria-label="When it ends" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div role="radiogroup" aria-label={t("When it ends")} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <button type="button" role="radio" aria-checked={atPeriodEnd} onClick={() => setAtPeriodEnd(true)} className="market-focus" style={option(atPeriodEnd)}>
                 <span aria-hidden style={radio(atPeriodEnd)} />
                 <span>
-                  <span style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>End on {ends}</span>
-                  <span style={{ display: "block", fontSize: textPx(11), color: m.faint }}>Your pass keeps working until then.</span>
+                  <span style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>{t("End on {date}", { date: ends })}</span>
+                  <span style={{ display: "block", fontSize: textPx(11), color: m.faint }}>{t("Your pass keeps working until then.")}</span>
                 </span>
               </button>
               <button type="button" role="radio" aria-checked={!atPeriodEnd} onClick={() => setAtPeriodEnd(false)} className="market-focus" style={option(!atPeriodEnd)}>
                 <span aria-hidden style={radio(!atPeriodEnd)} />
                 <span>
-                  <span style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>End it today</span>
-                  <span style={{ display: "block", fontSize: textPx(11), color: m.faint }}>Your pass stops now.</span>
+                  <span style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>{t("End it today")}</span>
+                  <span style={{ display: "block", fontSize: textPx(11), color: m.faint }}>{t("Your pass stops now.")}</span>
                 </span>
               </button>
             </div>
           ) : null}
           {terms ? (
-            <p style={{ margin: "10px 0 0", fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: m.ink2, textAlign: "center" }}>Your plan's terms: {terms.join(" · ")}.</p>
+            <p style={{ margin: "10px 0 0", fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: m.ink2, textAlign: "center" }}>{t("Your plan's terms: {terms}.", { terms: terms.join(" · ") })}</p>
           ) : null}
           <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
             <button type="button" onClick={onClose} className="market-focus" style={btn(m.cancelbg, m.cancelink)}>
-              Cancel
+              {t("Cancel")}
             </button>
             <button type="button" onClick={() => setStep(2)} className="market-focus" style={btn(m.high, m.onfill)}>
-              Continue
+              {t("Continue")}
             </button>
           </div>
         </>
@@ -516,7 +521,7 @@ const EndMembershipDialog: React.FC<{ membership: GymMembership | null; onClose:
         <>
           <div style={{ display: "flex", gap: 10, alignItems: "flex-start", borderRadius: 14, padding: "10px 12px", background: m.cautionbg }}>
             <span aria-hidden style={{ width: 6, height: 6, borderRadius: 999, background: m.caution, marginTop: 6, flexShrink: 0 }} />
-            <span style={{ fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: m.caution }}>This can't be undone from the app. To come back, buy a new membership.</span>
+            <span style={{ fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: m.caution }}>{t("This can't be undone from the app. To come back, buy a new membership.")}</span>
           </div>
           {error ? (
             <p role="alert" style={{ margin: "10px 0 0", fontSize: textPx(12), lineHeight: linePx(17), fontWeight: 600, color: m.high }}>
@@ -525,10 +530,10 @@ const EndMembershipDialog: React.FC<{ membership: GymMembership | null; onClose:
           ) : null}
           <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
             <button type="button" onClick={() => setStep(1)} disabled={busy} className="market-focus" style={btn(m.cancelbg, m.cancelink)}>
-              Back
+              {t("Back")}
             </button>
             <button type="button" onClick={() => void end()} disabled={busy} className="market-focus" style={{ ...btn(m.high, m.onfill), opacity: busy ? 0.6 : 1 }}>
-              {busy ? "Ending…" : "End membership"}
+              {busy ? t("Ending…") : t("End membership")}
             </button>
           </div>
         </>

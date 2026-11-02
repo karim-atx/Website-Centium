@@ -9,6 +9,7 @@ import { BottomSheet } from "../../ui/BottomSheet";
 import { useCameraCodeReader } from "../../food/useCameraCodeReader";
 import { FOCUS_CSS, usePress } from "../usePress";
 import { BackHeader } from "../offers/parts";
+import { t } from "../../../i18n/core";
 import { checkVoucher, checkView, codeComplete, formatCode, markVoucherUsed, type CheckView, type VoucherCheck } from "../../../services/vouchers/check";
 
 // Market + Share 3.0 · W3 · Redeem a voucher (B-MA.4 `scan`…`scanInvalid`,
@@ -85,7 +86,7 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
         setResult({ kind: "check", check: r.check });
         return;
       }
-      const text = r.offline ? "You're offline. Check the voucher again when you're connected." : r.message;
+      const text = r.offline ? t("You're offline. Check the voucher again when you're connected.") : r.message;
       if (from === "typed") setEnterError(text);
       else setScanNote(text);
     },
@@ -118,7 +119,7 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
       setResult({ kind: "check", check: r.check });
       return;
     }
-    setMarkError(r.offline ? "You're offline. Try again when you're connected." : r.message);
+    setMarkError(r.offline ? t("You're offline. Try again when you're connected.") : r.message);
   };
 
   const view: CheckView | null = result?.kind === "check" ? checkView(result.check, variant) : null;
@@ -127,14 +128,14 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
   return (
     <div style={{ color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <BackHeader eyebrow="Marketplace" title="Redeem a voucher" onBack={onBack} backLabel={backLabel} />
+      <BackHeader eyebrow={t("Marketplace")} title={t("Redeem a voucher")} onBack={onBack} backLabel={backLabel} />
 
       <div
         data-camera={showVideo ? camera : online ? camera : "offline"}
         style={{ position: "relative", height: 380, borderRadius: 24, background: m.soft, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}
       >
         {/* Always mounted, so a camera allowed after a refusal can start again. */}
-        <video ref={video} muted playsInline aria-label="Camera" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: 24, opacity: showVideo && camera === "scanning" ? 1 : 0, display: showVideo ? "block" : "none" }} />
+        <video ref={video} muted playsInline aria-label={t("Camera")} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: 24, opacity: showVideo && camera === "scanning" ? 1 : 0, display: showVideo ? "block" : "none" }} />
         {showVideo ? (
           <div aria-hidden style={{ position: "relative", width: 210, height: 210, boxSizing: "border-box", borderRadius: 20, border: `2px solid ${m.fill}` }} />
         ) : (
@@ -143,7 +144,7 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
       </div>
 
       <p role="status" style={{ margin: "12px 0 0", fontSize: textPx(13), color: scanNote ? m.high : m.ink2, textAlign: "center", fontWeight: scanNote ? 600 : 400, lineHeight: scanNote ? linePx(19) : "normal" }}>
-        {scanNote ?? (checking && !enterOpen ? "Checking the voucher…" : `Point the camera at the ${who}'s QR code.`)}
+        {scanNote ?? (checking && !enterOpen ? t("Checking the voucher…") : who === "client" ? t("Point the camera at the client's QR code.") : t("Point the camera at the member's QR code."))}
       </p>
 
       <button
@@ -176,7 +177,7 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
         }}
       >
         <Keyboard size={17} strokeWidth={2} aria-hidden style={NO_ICON_SCALE} />
-        Enter code
+        {t("Enter code")}
       </button>
 
       <EnterCodeSheet
@@ -200,11 +201,11 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
         onClose={() => {
           if (!marking) scanAnother();
         }}
-        title="Voucher check"
+        title={t("Voucher check")}
         footerRule
         footer={
           <SheetCta
-            label={marking ? "One moment…" : (view?.cta ?? "Scan another")}
+            label={marking ? t("One moment…") : view?.cta === "Mark as used" ? t("Mark as used") : t("Scan another")}
             busy={marking}
             onPress={() => {
               if (result?.kind === "check" && view?.cta === "Mark as used") void mark(result.check);
@@ -224,13 +225,17 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
 /** Inside the camera panel when the camera can't run (ours, in the handover chrome). */
 const CameraNote: React.FC<{ m: MarketPalette; kind: "denied" | "unavailable" | "offline"; who: string }> = ({ m, kind, who }) => {
   const Icon = kind === "offline" ? WifiOff : CameraOff;
-  const title = kind === "offline" ? "You're offline" : kind === "denied" ? "Camera is blocked" : "No camera available";
+  const title = kind === "offline" ? t("You're offline") : kind === "denied" ? t("Camera is blocked") : t("No camera available");
   const body =
     kind === "offline"
-      ? "Checking a voucher needs a connection. Try again when you're connected."
+      ? t("Checking a voucher needs a connection. Try again when you're connected.")
       : kind === "denied"
-        ? `Allow camera access for Centium in your browser settings, or enter the code under the ${who}'s QR code.`
-        : `This device can't scan vouchers. Enter the code under the ${who}'s QR code instead.`;
+        ? who === "client"
+          ? t("Allow camera access for Centium in your browser settings, or enter the code under the client's QR code.")
+          : t("Allow camera access for Centium in your browser settings, or enter the code under the member's QR code.")
+        : who === "client"
+          ? t("This device can't scan vouchers. Enter the code under the client's QR code instead.")
+          : t("This device can't scan vouchers. Enter the code under the member's QR code instead.");
   return (
     <div role="status" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10, padding: "0 28px" }}>
       <span aria-hidden style={{ width: 56, height: 56, borderRadius: 999, background: m.card, color: m.pdark, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -285,10 +290,10 @@ const EnterCodeSheet: React.FC<{
     return () => window.clearTimeout(t);
   }, [open]);
   return (
-    <BottomSheet open={open} onClose={onClose} title="Enter code" footerRule footer={<SheetCta label={busy ? "Checking…" : "Check code"} onPress={onCheck} disabled={!ready} busy={busy} />}>
+    <BottomSheet open={open} onClose={onClose} title={t("Enter code")} footerRule footer={<SheetCta label={busy ? t("Checking…") : t("Check code")} onPress={onCheck} disabled={!ready} busy={busy} />}>
       <div style={{ background: m.sgrey, borderRadius: 14, padding: "12px 14px", lineHeight: "normal" }}>
         <label htmlFor={id} style={{ display: "block", fontSize: textPx(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>
-          Voucher code
+          {t("Voucher code")}
         </label>
         <input
           ref={inputRef}
@@ -298,7 +303,9 @@ const EnterCodeSheet: React.FC<{
           onKeyDown={(e) => {
             if (e.key === "Enter" && ready && !busy) onCheck();
           }}
+          // i18n-ignore (the code's shape)
           placeholder="XXXX-XXXX-XXXX"
+          dir="ltr"
           autoCapitalize="characters"
           autoComplete="off"
           autoCorrect="off"
@@ -311,7 +318,7 @@ const EnterCodeSheet: React.FC<{
           style={{ display: "block", width: "100%", boxSizing: "border-box", background: m.card, borderRadius: 10, padding: "11px 13px", fontFamily: "inherit", fontSize: textPx(14), lineHeight: linePx(19), color: m.ink, border: 0, outline: "none", letterSpacing: "0.02em" }}
         />
         <div id={`${id}-help`} style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint, marginTop: 8 }}>
-          Letters and numbers, as shown under the {who}'s QR code.
+          {who === "client" ? t("Letters and numbers, as shown under the client's QR code.") : t("Letters and numbers, as shown under the member's QR code.")}
         </div>
       </div>
       {error ? (

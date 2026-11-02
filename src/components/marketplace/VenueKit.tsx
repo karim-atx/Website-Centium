@@ -2,6 +2,7 @@ import React, { useCallback, useState } from "react";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, TriangleAlert, UserRound, type LucideIcon } from "lucide-react";
 import { Toast } from "../ui/Toast";
+import { t } from "../../i18n/core";
 
 /** K17 · the OpsTabsV4 toast (business variant, shape "ops", 3000 ms). */
 export function useOpsToast(): [React.ReactNode, (message: string) => void] {
@@ -36,7 +37,7 @@ export const VBackRow: React.FC<{ label: string; onBack: () => void }> = ({ labe
     <button
       type="button"
       onClick={onBack}
-      aria-label={`Back to ${label}`}
+      aria-label={t("Back to {screen}", { screen: label })}
       className="tap flex items-center gap-[6px] min-h-[44px] pe-2 rounded-full focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
     >
       <span className="w-[44px] h-[44px] flex items-center justify-center text-charcoal">
@@ -96,16 +97,16 @@ export const VDetailHead: React.FC<{
 /** K4 · Action tiles: grid gap 6, mt 16, min-h 60 r16 soft, icon 17/2.1, 11/800. */
 export const VActionTiles: React.FC<{ items: { icon: LucideIcon; label: string; onClick: () => void; disabled?: boolean }[] }> = ({ items }) => (
   <div className="grid gap-[6px] mt-[16px]" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
-    {items.map((t) => (
+    {items.map((it) => (
       <button
-        key={t.label}
+        key={it.label}
         type="button"
-        onClick={t.onClick}
-        disabled={t.disabled}
+        onClick={it.onClick}
+        disabled={it.disabled}
         className="tap min-h-[60px] rounded-[16px] bg-cream-soft text-charcoal flex flex-col items-center justify-center gap-[4px] px-1 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
       >
-        <t.icon size={17} strokeWidth={2.1} aria-hidden />
-        <span className="text-[11px] font-extrabold leading-[14px] text-center">{t.label}</span>
+        <it.icon size={17} strokeWidth={2.1} aria-hidden />
+        <span className="text-[11px] font-extrabold leading-[14px] text-center">{it.label}</span>
       </button>
     ))}
   </div>
@@ -440,7 +441,7 @@ export const VBar: React.FC<{ w: number | string; h: number; r?: number; classNa
 
 /** K9 skeleton rows (avatar disc, two bars, a pill block). */
 export const VSkeletonRows: React.FC<{ rows: number; pill?: boolean }> = ({ rows, pill }) => (
-  <div aria-label="Loading" role="status">
+  <div aria-label={t("Loading")} role="status">
     {Array.from({ length: rows }).map((_, i) => (
       <div key={i} className={clsx("flex items-center gap-[10px] border-t min-h-[54px]", DIVIDER)} style={{ padding: "10px 16px" }}>
         <VBar w={34} h={34} r={999} />
@@ -458,14 +459,14 @@ export const VSkeletonRows: React.FC<{ rows: number; pill?: boolean }> = ({ rows
 export const VCardError: React.FC<{ title: string; message?: string | null; onRetry?: () => void }> = ({ title, message, onRetry }) => (
   <>
     <VDetailRow avatar={<VAvatar icon={TriangleAlert} iconTone="high" />} title={title} sub={message ?? undefined} />
-    {onRetry && <VFooterLink label="Retry" onClick={onRetry} />}
+    {onRetry && <VFooterLink label={t("Retry")} onClick={onRetry} />}
   </>
 );
 
 /** Console O4 · offline line: 11.5/16 faint. */
-export const VOfflineLine: React.FC<{ text?: string; className?: string }> = ({ text = "You're offline. Showing what was loaded last.", className }) => (
+export const VOfflineLine: React.FC<{ text?: string; className?: string }> = ({ text, className }) => (
   <p role="status" className={clsx("text-[11.5px] leading-[16px] text-charcoal-faint", className)}>
-    {text}
+    {text ?? t("You're offline. Showing what was loaded last.")}
   </p>
 );
 

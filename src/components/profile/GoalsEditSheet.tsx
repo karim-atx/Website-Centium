@@ -5,6 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import type { Goal } from "../../types";
 import clsx from "clsx";
+import { t, tk } from "../../i18n/core";
 import { Check, Scale, Dumbbell, TrendingUp, Salad, Activity, HeartPulse, BarChart3, Leaf } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -12,14 +13,14 @@ import type { LucideIcon } from "lucide-react";
 // working towards?' logos found in the Client UI onboarding" — same icon
 // set as the old onboarding goal list, one-to-one by goal value.
 const goals: { value: Goal; label: string; icon: LucideIcon }[] = [
-  { value: "lose_weight", label: "Lose weight", icon: Scale },
-  { value: "build_muscle", label: "Build muscle", icon: Dumbbell },
-  { value: "get_stronger", label: "Get stronger", icon: TrendingUp },
-  { value: "improve_nutrition", label: "Improve my nutrition", icon: Salad },
-  { value: "improve_fitness", label: "Improve my fitness", icon: Activity },
-  { value: "improve_health", label: "Improve my overall health", icon: HeartPulse },
-  { value: "track_health", label: "Track my health", icon: BarChart3 },
-  { value: "live_healthier", label: "Live healthier", icon: Leaf },
+  { value: "lose_weight", label: tk("Lose weight"), icon: Scale },
+  { value: "build_muscle", label: tk("Build muscle"), icon: Dumbbell },
+  { value: "get_stronger", label: tk("Get stronger"), icon: TrendingUp },
+  { value: "improve_nutrition", label: tk("Improve my nutrition"), icon: Salad },
+  { value: "improve_fitness", label: tk("Improve my fitness"), icon: Activity },
+  { value: "improve_health", label: tk("Improve my overall health"), icon: HeartPulse },
+  { value: "track_health", label: tk("Track my health"), icon: BarChart3 },
+  { value: "live_healthier", label: tk("Live healthier"), icon: Leaf },
 ];
 
 // QA 13.0: "Changing goals and activity while the recovery sensitive
@@ -51,7 +52,7 @@ export const GoalsEditSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   const visibleGoals = hideNumbers ? goals.filter((g) => !triggeringGoals.includes(g.value)) : goals;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Edit Goals">
+    <BottomSheet open={open} onClose={onClose} title={t("Edit Goals")}>
       <div className="grid grid-cols-2 gap-3 mb-5 animate-fade-slide-up">
         {visibleGoals.map((g) => {
           const active = selected.includes(g.value);
@@ -70,13 +71,13 @@ export const GoalsEditSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                 </div>
               )}
               <g.icon size={22} className={clsx("mb-2", active ? "text-primary-dark" : "text-charcoal-soft")} />
-              <span className="text-xs font-semibold text-charcoal leading-snug block">{g.label}</span>
+              <span className="text-xs font-semibold text-charcoal leading-snug block">{t(g.label)}</span>
             </button>
           );
         })}
       </div>
       <Button fullWidth size="lg" onClick={save} disabled={selected.length === 0}>
-        Save goals
+        {t("Save goals")}
       </Button>
     </BottomSheet>
   );

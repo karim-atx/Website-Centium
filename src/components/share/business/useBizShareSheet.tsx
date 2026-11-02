@@ -6,6 +6,7 @@ import { ConfirmationStrip, type StripTone } from "../../market/ConfirmationStri
 import { BusinessShareSheet } from "./BusinessShareSheet";
 import { useBizBrand, type BrandState } from "./useBizBrand";
 import type { TemplateData } from "./bizCardModel";
+import { t, tk } from "../../../i18n/core";
 
 // Market + Share 3.0 · W4 · the business share sheet without its button, so a
 // menu row (the opening's ⋮ "Share", B-SH Now hiring) opens the same sheet
@@ -20,10 +21,10 @@ import type { TemplateData } from "./bizCardModel";
 // button's tip, which a menu row has no place for). While the business still
 // loads, open() does nothing.
 
-export const NOT_LISTED_HINT = "Show your business on Explore to share it.";
-export const NO_LINK_HINT = "Your business needs a Centium link before it can be shared.";
-export const PAUSED_HINT = "Your listing is paused. Resume it to share your business.";
-export const LOAD_FAILED_HINT = "Couldn't load your business. Try again.";
+export const NOT_LISTED_HINT = tk("Show your business on Explore to share it.");
+export const NO_LINK_HINT = tk("Your business needs a Centium link before it can be shared.");
+export const PAUSED_HINT = tk("Your listing is paused. Resume it to share your business.");
+export const LOAD_FAILED_HINT = tk("Couldn't load your business. Try again.");
 
 /** Why this business can't share yet, or null (ready or still loading). */
 export function brandHint(brand: BrandState): string | null {
@@ -68,7 +69,7 @@ export function useBizShareSheet(): BizShareSheet {
     async (getData: BizShareGetData) => {
       if (brand.status !== "ready") {
         const hint = brandHint(brand);
-        if (hint) note(hint);
+        if (hint) note(t(hint));
         return;
       }
       if (busyRef.current) return;
@@ -98,7 +99,7 @@ export function useBizShareSheet(): BizShareSheet {
         createPortal(
           <div className="fixed start-0 end-0 flex justify-center" style={{ zIndex: 95, top: "calc(env(safe-area-inset-top) + 12px)", padding: "0 16px", pointerEvents: "none" }}>
             <div style={{ width: "100%", maxWidth: 398, pointerEvents: "auto" }}>
-              <ConfirmationStrip key={strip.n} text={strip.text} tone={strip.tone} action="Done" onAction={() => setStrip(null)} still={reduced} />
+              <ConfirmationStrip key={strip.n} text={strip.text} tone={strip.tone} action={t("Done")} onAction={() => setStrip(null)} still={reduced} />
             </div>
           </div>,
           document.body,

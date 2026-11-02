@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { CalendarPickerSheet } from "./CalendarPickerSheet";
 import { JumpToToday } from "../ui/JumpToToday";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 const dayLabel = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
@@ -32,9 +33,9 @@ export const DateSelector: React.FC<{ partB?: boolean }> = ({ partB = false }) =
       <button
         onClick={goToPrevDate}
         className={`tap relative w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-team-nav-idle ${partB ? "before:absolute before:-inset-[10px] before:content-['']" : ""}`}
-        aria-label="Previous day"
+        aria-label={t("Previous day")}
       >
-        <ChevronLeft size={15} />
+        <ChevronLeft size={15} className="rtl:-scale-x-100" />
       </button>
       <span className="flex items-center gap-[7px] min-w-0">
         <button onClick={() => setPickerOpen(true)} className="tap flex items-center gap-[7px] min-w-0">
@@ -53,9 +54,9 @@ export const DateSelector: React.FC<{ partB?: boolean }> = ({ partB = false }) =
       <button
         onClick={goToNextDate}
         className={`tap relative w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-team-nav-idle ${partB ? "before:absolute before:-inset-[10px] before:content-['']" : ""}`}
-        aria-label="Next day"
+        aria-label={t("Next day")}
       >
-        <ChevronRight size={15} />
+        <ChevronRight size={15} className="rtl:-scale-x-100" />
       </button>
 
       <CalendarPickerSheet

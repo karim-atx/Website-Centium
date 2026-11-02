@@ -4,6 +4,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { NO_ICON_SCALE } from "../pro/proInk";
 import { marketPalette } from "../../theme/marketTokens";
+import { t } from "../../i18n/core";
 
 // Market + Share 3.0 · FilterPopup (HANDOVER §4 C-MO.4.3 class filter and
 // P-MA.5.1, §5 "groups of checkbox rows + Done, reuse repo PopupMenu
@@ -83,7 +84,7 @@ export const FilterSummary: React.FC<{ summary: string; onShowAll: () => void; c
       <span style={{ fontSize: textPx(10.5), fontWeight: 700, color: dark ? m.ink2 : "#5F5093", minWidth: 0 }}>{summary}</span>
       <span style={{ flex: 1, minWidth: 0 }} />
       <button type="button" onClick={onShowAll} className="hit" style={{ border: 0, background: "none", padding: 0, font: "inherit", fontSize: textPx(10.5), fontWeight: 700, color: link, cursor: "pointer", flex: "none" }}>
-        Show all
+        {t("Show all")}
       </button>
     </div>
   );
@@ -182,7 +183,7 @@ export const FilterPopup: React.FC<FilterPopupProps> = ({ open, anchor, groups, 
       <div
         ref={card}
         role="menu"
-        aria-label="Filters"
+        aria-label={t("Filters")}
         onKeyDown={onMenuKey}
         className="absolute overflow-y-auto overscroll-contain"
         style={
@@ -205,7 +206,10 @@ export const FilterPopup: React.FC<FilterPopupProps> = ({ open, anchor, groups, 
         }
       >
         {groups.map((g, gi) => (
-          <div key={g.heading} role="group" aria-label={g.heading}>
+          // The headings and options are the caller's English values (tk() in
+          // its model, compared as values); they are translated only here, as
+          // shown. A value with no catalogue entry (a gym's name) shows as is.
+          <div key={g.heading} role="group" aria-label={t(g.heading)}>
             <p
               aria-hidden
               style={{
@@ -217,7 +221,7 @@ export const FilterPopup: React.FC<FilterPopupProps> = ({ open, anchor, groups, 
                 color: "rgb(var(--c-charcoal-muted))",
               }}
             >
-              {g.heading}
+              {t(g.heading)}
             </p>
             <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 6 }}>
               {g.options.map((o) => {
@@ -249,7 +253,7 @@ export const FilterPopup: React.FC<FilterPopupProps> = ({ open, anchor, groups, 
                       border: `1px solid ${on ? onBd : "rgb(var(--c-border-option))"}`,
                     }}
                   >
-                    <span style={{ flex: 1, minWidth: 0 }}>{o}</span>
+                    <span style={{ flex: 1, minWidth: 0 }}>{t(o)}</span>
                     <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={check} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ display: "block", flex: "none", opacity: on ? 1 : 0, ...NO_ICON_SCALE }}>
                       <rect width="18" height="18" x="3" y="3" rx="2" />
                       <path d="m9 12 2 2 4-4" />
@@ -266,7 +270,7 @@ export const FilterPopup: React.FC<FilterPopupProps> = ({ open, anchor, groups, 
           onClick={onClose}
           style={{ marginTop: 8, width: "100%", height: 40, borderRadius: 10, border: 0, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", font: "inherit", fontSize: textPx(13), fontWeight: 800, cursor: "pointer" }}
         >
-          Done
+          {t("Done")}
         </button>
       </div>
     </div>,

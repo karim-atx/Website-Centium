@@ -1,6 +1,7 @@
 import React from "react";
 import { MARK_C_PATH, MARK_LEAF_PATH } from "../../icons/CentiumMark";
 import { STREAK_LEAF_PATH } from "../../icons/StreakLeaf";
+import { isRtl } from "../../../i18n/core";
 import {
   CARD_W,
   arcDash,
@@ -58,7 +59,7 @@ export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, f
   const ts = c.ts === "none" ? undefined : c.ts;
   const hj = stk ? "center" : "flex-start";
   const r = square ? 0 : previewRadius(width);
-  const label = [spec.eyebrow, `${spec.big}${spec.unit ? ` ${spec.unit}` : ""}`, spec.subject, ...stats.map((s) => `${s.value} ${s.label}`)].filter(Boolean).join(", ");
+  const label = [spec.eyebrow, `${spec.big}${spec.unit ? ` ${spec.unit}` : ""}`, spec.subject, ...stats.map((s) => `${s.value} ${s.label}`)].filter(Boolean).join(isRtl() ? "، " : ", ");
 
   const vis = spec.vis;
   let visual: React.ReactNode = null;
@@ -109,7 +110,7 @@ export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, f
 
   return (
     <div
-      className={className}
+      className={[className, isRtl() ? "[&_*]:!tracking-normal" : ""].filter(Boolean).join(" ") || undefined}
       role="img"
       aria-label={label}
       style={{ position: "relative", flex: "none", width, height: g.h * k, borderRadius: r, boxShadow: flat || stk ? "none" : "0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(36,31,27,0.10)" }}
@@ -122,7 +123,8 @@ export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, f
         data-ts={stk ? "sticker" : "none"}
         style={{
           position: "absolute",
-          insetInlineStart: 0,
+          // Physical left: the scale's origin is the top-left corner in both directions.
+          left: 0,
           top: 0,
           width: CARD_W,
           height: g.h,
@@ -133,7 +135,7 @@ export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, f
           background: c.bg,
           fontFamily: 'Manrope, "IBM Plex Sans Arabic", Helvetica, Arial, sans-serif',
           WebkitFontSmoothing: "antialiased",
-          textAlign: stk ? "center" : "left",
+          textAlign: stk ? "center" : "start",
           lineHeight: "normal",
           letterSpacing: "normal",
           color: c.ink,
@@ -197,7 +199,7 @@ export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, f
                 marginTop: g.statMt,
                 paddingTop: g.statPt,
                 borderTop: `1px solid ${c.line}`,
-                textAlign: stk ? "center" : "left",
+                textAlign: stk ? "center" : "start",
                 textShadow: ts,
               }}
             >
@@ -226,7 +228,7 @@ export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, f
  * White type; the OverlayEditor wrapper adds its 0 1px 8px shadow.
  */
 export const PhotoStatsLayer: React.FC<{ spec: ClientCardSpec; stats: ClientStat[]; innerRef?: React.Ref<HTMLDivElement> }> = ({ spec, stats, innerRef }) => (
-  <div ref={innerRef} data-layer-root="" style={{ width: 100, fontFamily: 'Manrope, "IBM Plex Sans Arabic", Helvetica, Arial, sans-serif', lineHeight: "normal", letterSpacing: "normal", textAlign: "start", color: "#FFFFFF", WebkitFontSmoothing: "antialiased" }}>
+  <div ref={innerRef} data-layer-root="" className={isRtl() ? "[&_*]:!tracking-normal" : undefined} style={{ width: 100, fontFamily: 'Manrope, "IBM Plex Sans Arabic", Helvetica, Arial, sans-serif', lineHeight: "normal", letterSpacing: "normal", textAlign: "start", color: "#FFFFFF", WebkitFontSmoothing: "antialiased" }}>
     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
       <CardMarkSvg w={12.5} h={13.5} style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.35))" }} shadow="0,1,3,rgba(0,0,0,0.35)" />
       <span>

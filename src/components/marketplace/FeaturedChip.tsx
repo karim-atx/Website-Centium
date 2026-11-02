@@ -1,4 +1,5 @@
 import { Award } from "lucide-react";
+import { t } from "../../i18n/core";
 
 /**
  * B13 MK-06: the "Featured" marker on an Explore card for a live featured
@@ -14,7 +15,7 @@ export function FeaturedChip({ className = "" }: { className?: string }) {
       className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-[10px] leading-[15px] font-extrabold bg-th-f0edf9 text-th-7d6bb5 dark:bg-th-303141 dark:text-th-c3b3fb ${className}`}
     >
       <Award size={11} strokeWidth={2.4} aria-hidden />
-      Featured
+      {t("Featured")}
     </span>
   );
 }

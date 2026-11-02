@@ -7,6 +7,8 @@ import { marketPalette } from "../../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../pro/proInk";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { OfferCard } from "../OfferCard";
+import { offerStatusLabel } from "../marketColor";
+import { t, tk } from "../../../i18n/core";
 import { PointsLeaf } from "../PointsFigure";
 import { MarketError, MarketOffline, MarketSkeleton } from "../MarketStates";
 import { FOCUS_CSS } from "../usePress";
@@ -88,10 +90,10 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
     const r = await setOfferPaused(o.id, pause);
     setBusy(null);
     if (!r.ok) {
-      showStrip(r.offline ? "You're offline. Try again when you're connected." : r.message, r.offline ? "neutral" : "error");
+      showStrip(r.offline ? t("You're offline. Try again when you're connected.") : r.message, r.offline ? "neutral" : "error");
       return;
     }
-    showStrip(pause ? "Offer paused" : "Offer resumed");
+    showStrip(pause ? t("Offer paused") : t("Offer resumed"));
     if (r.offer) {
       const next = r.offer;
       setLoad((l) => (l.kind === "ready" ? { kind: "ready", offers: l.offers.map((x) => (x.id === next.id ? next : x)) } : l));
@@ -105,12 +107,12 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
       <style>{FOCUS_CSS}</style>
       {strip}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-        <Caps id={`offers-caps-${variant}`}>Point offers</Caps>
-        {canManage ? <OutlineButton label="Create offer" onPress={onCreate} disabled={!owner} /> : null}
+        <Caps id={`offers-caps-${variant}`}>{t("Point offers")}</Caps>
+        {canManage ? <OutlineButton label={t("Create offer")} onPress={onCreate} disabled={!owner} /> : null}
       </div>
 
-      {load.kind === "loading" ? <MarketSkeleton radius={20} rows={2} count={3} label="Loading offers" style={{ marginTop: 10 }} /> : null}
-      {load.kind === "error" ? <MarketError thing="your offers" onRetry={reload} style={{ marginTop: 10 }} /> : null}
+      {load.kind === "loading" ? <MarketSkeleton radius={20} rows={2} count={3} label={tk("Loading offers")} style={{ marginTop: 10 }} /> : null}
+      {load.kind === "error" ? <MarketError thing={tk("your offers")} onRetry={reload} style={{ marginTop: 10 }} /> : null}
       {load.kind === "offline" ? <MarketOffline loaded={false} force onRetry={reload} style={{ marginTop: 10 }} /> : null}
 
       {offers.length > 0 ? (
@@ -130,12 +132,12 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
                     meta={meta}
                     cost={o.pointsCost}
                     onPress={canManage ? () => onOpen(o.id) : undefined}
-                    pressLabel={`${o.headline}. ${status === "expired" ? "Expired" : status[0].toUpperCase() + status.slice(1)}. ${meta}. ${status === "expired" ? "View" : "Edit"}`}
+                    pressLabel={`${o.headline}. ${offerStatusLabel(status)}. ${meta}. ${status === "expired" ? t("View") : t("Edit")}`}
                     trailing={
                       hasMenu ? (
                         <button
                           type="button"
-                          aria-label="Offer options"
+                          aria-label={t("Offer options")}
                           aria-haspopup="menu"
                           aria-expanded={menu?.offer.id === o.id}
                           disabled={busy === o.id}
@@ -160,13 +162,13 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
           <span aria-hidden style={{ width: 56, height: 56, borderRadius: 18, background: dark ? m.pale : "#EEEAF8", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <PointsLeaf height={24} label={null} />
           </span>
-          <div style={{ fontSize: textPx(16), fontWeight: 800 }}>No offers yet</div>
+          <div style={{ fontSize: textPx(16), fontWeight: 800 }}>{t("No offers yet")}</div>
           <div style={{ fontSize: textPx(13), lineHeight: 1.55, color: m.faint, maxWidth: 290 }}>
             {variant === "professional"
-              ? "Offer a discount on your services that clients can redeem with their points. You fund it in full."
-              : "Offer a discount that members can redeem with their points. You fund it in full."}
+              ? t("Offer a discount on your services that clients can redeem with their points. You fund it in full.")
+              : t("Offer a discount that members can redeem with their points. You fund it in full.")}
           </div>
-          {empty && canManage ? <OutlineButton label="Create offer" icon={false} onPress={onCreate} style={{ marginTop: 6 }} /> : null}
+          {empty && canManage ? <OutlineButton label={t("Create offer")} icon={false} onPress={onCreate} style={{ marginTop: 6 }} /> : null}
         </div>
       ) : null}
 
@@ -179,8 +181,8 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
         options={
           menu
             ? [
-                { value: "edit", label: "Edit offer" },
-                { value: "pause", label: offerStatus(menu.offer) === "paused" ? "Resume offer" : "Pause offer" },
+                { value: "edit", label: t("Edit offer") },
+                { value: "pause", label: offerStatus(menu.offer) === "paused" ? t("Resume offer") : t("Pause offer") },
               ]
             : []
         }

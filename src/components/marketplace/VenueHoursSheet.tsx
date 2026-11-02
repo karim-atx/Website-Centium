@@ -9,6 +9,7 @@ import { formatMinutes12 } from "../../utils/time12";
 import { useOnline } from "../../hooks/useOnline";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { DIVIDER } from "./VenueKit";
+import { isRtl, t, tk } from "../../i18n/core";
 
 // THE opening hours sheet (V6-163: one sheet, MA1 values). Drawn in MA1
 // (BizMarketV7 l.290-313, l.532-545; frames 009-019): rows of day · opens
@@ -25,8 +26,8 @@ import { DIVIDER } from "./VenueKit";
 // upsert: gym_id is outside the UPDATE grant). Owner only (RLS refuses staff;
 // the console hides the editor for them).
 
-const SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const LONG = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const SHORT = [tk("Mon"), tk("Tue"), tk("Wed"), tk("Thu"), tk("Fri"), tk("Sat"), tk("Sun")];
+const LONG = [tk("Monday"), tk("Tuesday"), tk("Wednesday"), tk("Thursday"), tk("Friday"), tk("Saturday"), tk("Sunday")];
 const DEFAULT_RANGE = { opensAt: "06:00", closesAt: "22:00" };
 
 const toMin = (hhmm: string) => {
@@ -34,7 +35,8 @@ const toMin = (hhmm: string) => {
   return h * 60 + m;
 };
 const hhmmOf = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
-const label12 = (hhmm: string) => formatMinutes12(toMin(hhmm));
+/** "6:00 AM", with AM / PM in the app's language. */
+const label12 = (hhmm: string) => formatMinutes12(toMin(hhmm)).replace(/ (AM|PM)$/, (_, mer: string) => ` ${t(mer)}`);
 
 function zoneList(current: string): string[] {
   let zones: string[] = [];
@@ -167,7 +169,7 @@ function TimeWheelCard({
       role="dialog"
       aria-label={label}
       className={clsx("absolute z-20 w-[176px] bg-cream-card rounded-[14px] border border-solid border-th-aea1dc/50", reduced ? "animate-fade-in" : "animate-popup-in")}
-      style={{ ...(alignRight ? { right: 0 } : { left: 0 }), ...(above ? { bottom: 48 } : { top: 48 }), padding: 8, boxShadow: "0 12px 32px rgba(95,80,147,0.18)" }}
+      style={{ ...(alignRight ? { insetInlineEnd: 0 } : { insetInlineStart: 0 }), ...(above ? { bottom: 48 } : { top: 48 }), padding: 8, boxShadow: "0 12px 32px rgba(95,80,147,0.18)" }}
     >
       <div className="relative bg-cream-soft rounded-[10px]" style={{ padding: "4px 6px", height: ROW * 5 + 8 }}>
         <span
@@ -176,9 +178,9 @@ function TimeWheelCard({
           style={{ top: 4 + ROW * 2 - 3, height: 32, boxShadow: "0 1px 3px rgba(36,31,27,0.08)" }}
         />
         <div className="relative flex h-full">
-          <MiniWheel label="Hour" value={h12} onChange={(h) => set(h, minute, pm)} options={[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((h) => ({ value: h, label: String(h) }))} />
-          <MiniWheel label="Minute" value={minute} onChange={(m) => set(h12, m, pm)} options={minutes.map((m) => ({ value: m, label: String(m).padStart(2, "0") }))} />
-          <MiniWheel label="AM or PM" value={pm ? "PM" : "AM"} onChange={(p) => set(h12, minute, p === "PM")} options={[{ value: "AM", label: "AM" }, { value: "PM", label: "PM" }]} />
+          <MiniWheel label={t("Hour")} value={h12} onChange={(h) => set(h, minute, pm)} options={[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((h) => ({ value: h, label: String(h) }))} />
+          <MiniWheel label={t("Minute")} value={minute} onChange={(m) => set(h12, m, pm)} options={minutes.map((m) => ({ value: m, label: String(m).padStart(2, "0") }))} />
+          <MiniWheel label={t("AM or PM")} value={pm ? "PM" : "AM"} onChange={(p) => set(h12, minute, p === "PM")} options={[{ value: "AM", label: t("AM") }, { value: "PM", label: t("PM") }]} />
         </div>
       </div>
       <button type="button" onClick={shapeButton.onClick} className="tap w-full min-h-[36px] mt-[6px] text-[12.5px] font-extrabold text-primary-dark">
@@ -190,7 +192,7 @@ function TimeWheelCard({
         className="tap relative w-full h-[36px] rounded-[10px] bg-primary-fill text-on-primary-fill text-[12.5px] font-extrabold mt-[4px]"
       >
         <span aria-hidden className="absolute inset-x-0 -inset-y-[4px]" />
-        Done
+        {t("Done")}
       </button>
     </div>
   );
@@ -239,7 +241,7 @@ function DaySwitch({ on, onChange, label, disabled }: { on: boolean; onChange: (
       className="tap relative w-[46px] h-[44px] flex items-center justify-center justify-self-end"
     >
       <span className={clsx("relative w-[42px] h-[26px] rounded-full transition-colors", on ? "bg-primary-fill" : "bg-[#D9D6E3] dark:bg-[#3A3D48] toggle-off")} style={{ padding: 3 }}>
-        <span className="block w-[20px] h-[20px] rounded-full bg-white transition-transform" style={{ transform: on ? "translateX(16px)" : "translateX(0)", boxShadow: "0 1px 2px rgba(0,0,0,0.12)" }} />
+        <span className="block w-[20px] h-[20px] rounded-full bg-white transition-transform" style={{ transform: on ? `translateX(${isRtl() ? -16 : 16}px)` : "translateX(0)", boxShadow: "0 1px 2px rgba(0,0,0,0.12)" }} />
       </span>
     </button>
   );
@@ -347,35 +349,35 @@ export function VenueHoursSheet({
 
   const footer = (
     <div>
-      {tried && Object.keys(errors).length > 0 && <p className="text-[11.5px] font-bold text-status-high mb-[8px]">Fix the highlighted days first.</p>}
+      {tried && Object.keys(errors).length > 0 && <p className="text-[11.5px] font-bold text-status-high mb-[8px]">{t("Fix the highlighted days first.")}</p>}
       {sheetError && <p className="text-[11.5px] font-bold text-status-high mb-[8px]">{sheetError}</p>}
-      {!online && <p className="text-[11.5px] leading-[16px] text-charcoal-faint mb-[8px]">You're offline. Showing what was loaded last.</p>}
+      {!online && <p className="text-[11.5px] leading-[16px] text-charcoal-faint mb-[8px]">{t("You're offline. Showing what was loaded last.")}</p>}
       <button
         type="button"
         onClick={() => void save()}
         disabled={saving || !online || !changed}
         className="tap w-full h-[52px] rounded-[16px] bg-primary-fill text-on-primary-fill text-[14.5px] font-extrabold disabled:opacity-40"
       >
-        {saving ? "Saving…" : "Save hours"}
+        {saving ? t("Saving…") : t("Save hours")}
       </button>
     </div>
   );
 
   return (
     <>
-      <BottomSheet open={open && !zoneOpen} onClose={close} title="Opening hours" tone="business" chrome="market" headerHeight={58} footer={footer}>
+      <BottomSheet open={open && !zoneOpen} onClose={close} title={t("Opening hours")} tone="business" chrome="market" headerHeight={58} footer={footer}>
         <div className="relative">
           {!wheel && (
             <div className="text-[12.5px] leading-[18px] text-charcoal-soft mb-[12px] space-y-[6px]">
-              <p>Tap a time to change it. Turn a day off if you're closed.</p>
-              <p>A closing time at or before the opening time runs past midnight into the next day. One range per day: a break in the middle of the day can't be shown.</p>
+              <p>{t("Tap a time to change it. Turn a day off if you're closed.")}</p>
+              <p>{t("A closing time at or before the opening time runs past midnight into the next day. One range per day: a break in the middle of the day can't be shown.")}</p>
               {unset && (
                 <button
                   type="button"
                   onClick={() => setDrafts((ds) => ds.map((d) => (d.shape === null ? { ...d, shape: "closed" } : d)))}
                   className="tap min-h-[44px] text-[12.5px] font-extrabold text-primary-dark"
                 >
-                  Mark unset days closed
+                  {t("Mark unset days closed")}
                 </button>
               )}
             </div>
@@ -383,33 +385,33 @@ export function VenueHoursSheet({
           {drafts.map((d, i) => {
             const err = tried ? errors[d.weekday] : undefined;
             const off = d.shape === "closed" || d.shape === null;
-            const day = LONG[d.weekday - 1];
-            const fieldText = d.shape === null ? "Not set" : d.shape === "closed" ? "Closed" : null;
+            const day = t(LONG[d.weekday - 1]);
+            const fieldText = d.shape === null ? t("Not set") : d.shape === "closed" ? t("Closed") : null;
             const isOpen = (w: "opens" | "closes" | "merged") => wheel?.weekday === d.weekday && wheel.which === w;
             const above = d.weekday >= 6;
             return (
               <div key={d.weekday} className={clsx(i > 0 && "border-t", DIVIDER)}>
                 <div className="relative grid items-center min-h-[52px]" style={{ gridTemplateColumns: "44px minmax(0,1fr) 46px", gap: 10 }}>
-                  <span className={clsx("text-[13px] font-extrabold text-charcoal", off && "opacity-50")}>{SHORT[d.weekday - 1]}</span>
+                  <span className={clsx("text-[13px] font-extrabold text-charcoal", off && "opacity-50")}>{t(SHORT[d.weekday - 1])}</span>
                   {d.shape === "open24h" ? (
                     <div className="relative">
                       <TimeField
-                        text="Open 24 hours"
+                        text={t("Open 24 hours")}
                         active={isOpen("merged")}
                         error={!!err}
-                        ariaLabel={`${day}, open 24 hours. Change`}
+                        ariaLabel={t("{day}, open 24 hours. Change", { day })}
                         onClick={() => setWheel(isOpen("merged") ? null : { weekday: d.weekday, which: "merged" })}
                       />
                       {isOpen("merged") && (
                         <TimeWheelCard
-                          label={`${day} hours`}
+                          label={t("{day} hours", { day })}
                           value={d.opensAt}
                           onChange={(v) => patch(d.weekday, { opensAt: v })}
                           onDone={() => setWheel(null)}
                           above={above}
                           alignRight={false}
                           shapeButton={{
-                            label: "Set hours",
+                            label: t("Set hours"),
                             onClick: () => {
                               patch(d.weekday, { shape: "range" });
                               setWheel({ weekday: d.weekday, which: "opens" });
@@ -426,29 +428,29 @@ export function VenueHoursSheet({
                         active={isOpen("opens")}
                         error={!!err}
                         disabled={off}
-                        ariaLabel={`Opens on ${day}, ${fieldText ?? label12(d.opensAt)}`}
+                        ariaLabel={t("Opens on {day}, {time}", { day, time: fieldText ?? label12(d.opensAt) })}
                         onClick={() => setWheel(isOpen("opens") ? null : { weekday: d.weekday, which: "opens" })}
                       />
-                      <span className="text-[12px] text-charcoal-faint">to</span>
+                      <span className="text-[12px] text-charcoal-faint">{t("to")}</span>
                       <TimeField
                         text={fieldText ?? label12(d.closesAt)}
                         dim={d.shape === null}
                         active={isOpen("closes")}
                         error={!!err}
                         disabled={off}
-                        ariaLabel={`Closes on ${day}, ${fieldText ?? label12(d.closesAt)}`}
+                        ariaLabel={t("Closes on {day}, {time}", { day, time: fieldText ?? label12(d.closesAt) })}
                         onClick={() => setWheel(isOpen("closes") ? null : { weekday: d.weekday, which: "closes" })}
                       />
                       {(isOpen("opens") || isOpen("closes")) && (
                         <TimeWheelCard
-                          label={`${isOpen("opens") ? "Opens" : "Closes"} on ${day}`}
+                          label={isOpen("opens") ? t("Opens on {day}", { day }) : t("Closes on {day}", { day })}
                           value={isOpen("opens") ? d.opensAt : d.closesAt}
                           onChange={(v) => patch(d.weekday, isOpen("opens") ? { opensAt: v } : { closesAt: v })}
                           onDone={() => setWheel(null)}
                           above={above}
                           alignRight={isOpen("closes")}
                           shapeButton={{
-                            label: "Open 24 hours",
+                            label: t("Open 24 hours"),
                             onClick: () => {
                               setLastRange((l) => ({ ...l, [d.weekday]: { opensAt: d.opensAt, closesAt: d.closesAt } }));
                               patch(d.weekday, { shape: "open24h" });
@@ -459,11 +461,11 @@ export function VenueHoursSheet({
                       )}
                     </div>
                   )}
-                  <DaySwitch on={d.shape === "range" || d.shape === "open24h"} onChange={(v) => toggleDay(d, v)} label={`Open on ${day}`} />
+                  <DaySwitch on={d.shape === "range" || d.shape === "open24h"} onChange={(v) => toggleDay(d, v)} label={t("Open on {day}", { day })} />
                 </div>
                 {draftWrapsMidnight(d) && (
                   <p className="text-[11px] leading-[15px] text-charcoal-faint pb-[8px]" style={{ paddingInlineStart: 54 }}>
-                    Closes the next day at {label12(d.closesAt)}.
+                    {t("Closes the next day at {time}.", { time: label12(d.closesAt) })}
                   </p>
                 )}
                 {err && (
@@ -476,11 +478,11 @@ export function VenueHoursSheet({
           })}
 
           <div className="mt-[16px]">
-            <p className="text-[12px] font-bold text-charcoal-soft mb-[6px]">Venue time zone</p>
+            <p className="text-[12px] font-bold text-charcoal-soft mb-[6px]">{t("Venue time zone")}</p>
             {!zoneEditable ? (
               <div className="w-full min-h-[48px] rounded-[14px] bg-cream-soft flex flex-col justify-center" style={{ padding: "6px 14px" }}>
                 <span className="text-[14px] leading-[20px] font-bold text-charcoal [overflow-wrap:anywhere]">{zone}</span>
-                <span className="text-[11px] leading-[15px] text-charcoal-faint">You need venue access to change the time zone.</span>
+                <span className="text-[11px] leading-[15px] text-charcoal-faint">{t("You need venue access to change the time zone.")}</span>
               </div>
             ) : (
             <button
@@ -508,10 +510,10 @@ export function VenueHoursSheet({
         tone="destructive"
         disc={{ bg: "rgb(var(--c-cream-soft))", ink: "rgb(var(--c-charcoal-soft))" }}
         icon={<Trash2 size={20} strokeWidth={2.2} />}
-        title="Discard your changes?"
-        subtitle="Your opening hours keep their saved times."
-        confirmLabel="Discard changes"
-        cancelLabel="Keep editing"
+        title={t("Discard your changes?")}
+        subtitle={t("Your opening hours keep their saved times.")}
+        confirmLabel={t("Discard changes")}
+        cancelLabel={t("Keep editing")}
         scrimBlur
         onConfirm={() => {
           setDiscard(false);
@@ -520,18 +522,18 @@ export function VenueHoursSheet({
         onCancel={() => setDiscard(false)}
       />
 
-      <BottomSheet open={open && zoneOpen} onClose={() => setZoneOpen(false)} title="Time zone" tone="business" headerHeight={62} bodyPadding={{ top: 18, right: 18, bottom: 30, left: 18 }}>
+      <BottomSheet open={open && zoneOpen} onClose={() => setZoneOpen(false)} title={t("Time zone")} tone="business" headerHeight={62} bodyPadding={{ top: 18, right: 18, bottom: 30, left: 18 }}>
         <label className="flex items-center gap-2 min-h-[48px] rounded-[14px] bg-cream-soft border border-solid border-[#DEDDDE] dark:border-[#343740]" style={{ padding: "0 14px" }}>
           <Search size={16} aria-hidden className="text-charcoal-faint shrink-0" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search a city or zone"
-            aria-label="Search a city or zone"
+            placeholder={t("Search a city or zone")}
+            aria-label={t("Search a city or zone")}
             className="flex-1 min-w-0 bg-transparent text-[14px] text-charcoal placeholder:text-charcoal-faint focus:outline-none"
           />
         </label>
-        <div className="mt-[12px] rounded-[22px] overflow-hidden bg-cream-card border border-solid border-charcoal/[0.11] dark:border-charcoal/[0.08]" role="listbox" aria-label="Time zones">
+        <div className="mt-[12px] rounded-[22px] overflow-hidden bg-cream-card border border-solid border-charcoal/[0.11] dark:border-charcoal/[0.08]" role="listbox" aria-label={t("Time zones")}>
           {shownZones.slice(0, 200).map((z, i) => (
             <button
               key={z}
@@ -549,7 +551,7 @@ export function VenueHoursSheet({
               {z === zone && <Check size={16} strokeWidth={2.6} aria-hidden className="text-primary-dark shrink-0" />}
             </button>
           ))}
-          {shownZones.length === 0 && <p className="text-[13px] text-charcoal-faint" style={{ padding: "14px 16px" }}>No time zone matches “{query}”.</p>}
+          {shownZones.length === 0 && <p className="text-[13px] text-charcoal-faint" style={{ padding: "14px 16px" }}>{t("No time zone matches «{query}».", { query })}</p>}
         </div>
       </BottomSheet>
     </>

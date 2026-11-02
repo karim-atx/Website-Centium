@@ -31,6 +31,7 @@ import { ClassFilterPopup } from "./ClassFilterPopup";
 import { classCountLine, classFilterGroups, gymFilterGroups, stripDays } from "./classFilterModel";
 import { FilterPopup, FilterSummary, FilterTrigger } from "../../components/market/FilterPopup";
 import RewardsTab from "./rewards/RewardsTab";
+import { t, tk } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · Explore's search, tracks and lists (C-MO.4.1 /
 // C-MO.4.2 Gyms, C-MO.4.3 Classes, C-MO.4.4 Rewards; Client Explore Screens
@@ -70,9 +71,9 @@ import RewardsTab from "./rewards/RewardsTab";
 
 type Tab = "gyms" | "classes" | "rewards";
 const TABS: { key: Tab; label: string }[] = [
-  { key: "gyms", label: "Gyms" },
-  { key: "classes", label: "Classes" },
-  { key: "rewards", label: "Rewards" },
+  { key: "gyms", label: tk("Gyms") },
+  { key: "classes", label: tk("Classes") },
+  { key: "rewards", label: tk("Rewards") },
 ];
 
 /** The pinned group's top spacer, which slides under the header once pinned (MO1.4.s #6). */
@@ -118,7 +119,7 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
       const [cls, mine, gymsR, memberships] = await Promise.all([fetchMarketplaceClasses(), fetchMyBookedClassIds(), fetchVenues(), fetchMyGymMemberships()]);
       if (cancelled) return;
       const offline = isOffline();
-      const failed = (what: string) => (offline ? "You're offline. Showing what was loaded." : `Couldn't load ${what}.`);
+      const failed = (what: "gyms" | "classes") => (offline ? t("You're offline. Showing what was loaded.") : what === "gyms" ? t("Couldn't load gyms.") : t("Couldn't load classes."));
       const next: Partial<Record<Tab, string>> = {};
       if (gymsR.ok) {
         setGyms(gymsR.value);
@@ -184,7 +185,7 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
     .map(({ c, km }) => ({ ...c, km }))
     .filter((c) => (q ? [c.title, c.businessName, c.location ?? "", c.classType ?? "", c.venueName ?? ""].some((f) => f.toLowerCase().includes(q)) : c.date === chosenDay))
     .filter((c) => matchesFilter(groups, filter.selected, c));
-  const dayLabel = q ? "Matching your search" : formatShortDate(atNoon(chosenDay), { weekday: "long", month: "long", day: "numeric" });
+  const dayLabel = q ? t("Matching your search") : formatShortDate(atNoon(chosenDay), { weekday: "long", month: "long", day: "numeric" });
 
   // ---- Gyms: featured first, then rating, then distance; the Distance filter.
   // A gym venues_in_area placed is measured from its returned point; if that
@@ -243,11 +244,11 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
   useEffect(() => () => onPinnedChange?.(false), [onPinnedChange]);
 
   // MO1.4.s O1: switching tab while pinned keeps the pin and shows the new list's top.
-  const setTab = (t: Tab) => {
+  const setTab = (to: Tab) => {
     const wasStuck = stuck;
     const next = new URLSearchParams(params);
-    if (t === "gyms") next.delete("tab");
-    else next.set("tab", t);
+    if (to === "gyms") next.delete("tab");
+    else next.set("tab", to);
     setParams(next, { replace: true });
     if (wasStuck) {
       requestAnimationFrame(() => {
@@ -271,8 +272,8 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search classes, places or a location"
-            aria-label="Search classes, places or a location"
+            placeholder={t("Search classes, places or a location")}
+            aria-label={t("Search classes, places or a location")}
             className="w-full focus:outline-none focus:ring-2 focus:ring-primary/20"
             style={{ height: 44, borderRadius: 14, background: m.soft, paddingInlineStart: 38, paddingInlineEnd: 14, fontSize: textPx(14), color: m.ink, border: 0 }}
           />
@@ -288,7 +289,7 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
         style={{ top: `calc(var(--fixed-header-bottom, 0px) - ${PIN_SPACER}px)`, paddingTop: PIN_SPACER }}
       >
         <div className="relative bg-cream -mx-4 px-4">
-          <SegmentedTabs items={TABS} activeKey={tab} onChange={(k) => setTab(k as Tab)} labelSize={13} tabHeight={40} darkTone="partB" idleInkDark="rgb(var(--th-b7abde))" />
+          <SegmentedTabs items={TABS.map((x) => ({ ...x, label: t(x.label) }))} activeKey={tab} onChange={(k) => setTab(k as Tab)} labelSize={13} tabHeight={40} darkTone="partB" idleInkDark="rgb(var(--th-b7abde))" />
           <span
             aria-hidden
             data-pin-hairline=""
@@ -305,14 +306,14 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
           {gymGroups.length ? (
             <>
               <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                <p style={{ margin: 0, fontSize: textPx(11.5), color: m.faint, minWidth: 0 }}>Sorted by rating and distance</p>
-                <FilterTrigger ref={setGymAnchor} active={gymFilter.active} open={gymFilter.open} onPress={gymFilter.toggleFilter} label="Filter gyms" />
+                <p style={{ margin: 0, fontSize: textPx(11.5), color: m.faint, minWidth: 0 }}>{t("Sorted by rating and distance")}</p>
+                <FilterTrigger ref={setGymAnchor} active={gymFilter.active} open={gymFilter.open} onPress={gymFilter.toggleFilter} label={t("Filter gyms")} />
               </div>
               {gymFilter.active ? <FilterSummary summary={gymFilter.summary} onShowAll={gymFilter.clearFilter} style={{ marginTop: 10 }} /> : null}
               <FilterPopup open={gymFilter.open} anchor={gymAnchor} groups={gymGroups} selected={gymFilter.selected} onToggle={gymFilter.toggleOption} onClose={gymFilter.closeFilter} />
             </>
           ) : (
-            <p style={{ margin: "12px 0 0", fontSize: textPx(11.5), color: m.faint }}>Sorted by rating and distance</p>
+            <p style={{ margin: "12px 0 0", fontSize: textPx(11.5), color: m.faint }}>{t("Sorted by rating and distance")}</p>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
             {shownGyms.map((v) => (
@@ -329,8 +330,8 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
             {shownGyms.length === 0 && !loading && !errors.gyms && (
               <ExploreEmptyState
                 icon={<Dumbbell size={24} strokeWidth={1.75} />}
-                title={gyms.length === 0 ? "No gyms yet" : "No gyms match"}
-                body={gyms.length === 0 ? "Gyms near you will show here." : gymFilter.active ? "Try other filters, or Show all." : "Try another search."}
+                title={gyms.length === 0 ? t("No gyms yet") : t("No gyms match")}
+                body={gyms.length === 0 ? t("Gyms near you will show here.") : gymFilter.active ? t("Try other filters, or Show all.") : t("Try another search.")}
               />
             )}
           </div>
@@ -350,8 +351,8 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
             {shownClasses.length === 0 && !loading && !errors.classes && (
               <ExploreEmptyState
                 icon={<CalendarDays size={24} strokeWidth={1.75} />}
-                title={classes.length === 0 ? "No classes yet" : "No classes match"}
-                body={classes.length === 0 ? "Classes from gyms and studios near you will show here." : filter.active ? "Try other filters, or Show all." : q ? "Try another search." : "Try another day."}
+                title={classes.length === 0 ? t("No classes yet") : t("No classes match")}
+                body={classes.length === 0 ? t("Classes from gyms and studios near you will show here.") : filter.active ? t("Try other filters, or Show all.") : q ? t("Try another search.") : t("Try another day.")}
               />
             )}
           </div>
@@ -361,7 +362,7 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
       {tab === "rewards" && <RewardsTab />}
 
       {loading && tab !== "rewards" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: tab === "gyms" ? 10 : 16, marginTop: 14 }} aria-busy="true" aria-label="Loading">
+        <div style={{ display: "flex", flexDirection: "column", gap: tab === "gyms" ? 10 : 16, marginTop: 14 }} aria-busy="true" aria-label={t("Loading")}>
           {[0, 1, 2].map((i) => (
             <div key={i} aria-hidden="true" className="animate-skeleton-pulse" style={{ height: tab === "gyms" ? 166 : 117, borderRadius: 18, background: m.soft }} />
           ))}
@@ -380,7 +381,7 @@ function GymCard({ v, from, mine, rating, km, query }: { v: Venue; from: string 
   const source = exploreSource({ query, featured: v.isFeatured });
   const rated = rating && rating.total > 0 ? rating.average.toFixed(1) : null;
   const where = distanceText(km) ?? v.location;
-  const line = [rated ?? "New", where].filter(Boolean).join(" · ");
+  const line = [rated ?? t("New"), where].filter(Boolean).join(" · ");
   return (
     <Seen event={v.businessId ? { businessId: v.businessId, kind: "impression", source } : null}>
       <button
@@ -388,7 +389,7 @@ function GymCard({ v, from, mine, rating, km, query }: { v: Venue; from: string 
         onClick={() => navigate(`/app/marketplace/gym?id=${encodeURIComponent(v.id)}&src=${source}`)}
         className="market-focus"
         {...press.handlers}
-        aria-label={`${v.name}. ${rated ? `Rated ${rated}` : "No reviews yet"}${where ? `, ${where}` : ""}${from ? `. ${from}` : ""}`}
+        aria-label={[v.name, [rated ? t("Rated {rating}", { rating: rated }) : t("No reviews yet"), where].filter(Boolean).join(t(", ")), from].filter(Boolean).join(". ")}
         style={{ display: "block", width: "100%", textAlign: "start", borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, overflow: "hidden", padding: 0, font: "inherit", color: m.ink, cursor: "pointer", ...press.style }}
       >
         <span style={{ position: "relative", height: 84, background: m.soft, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
@@ -401,7 +402,7 @@ function GymCard({ v, from, mine, rating, km, query }: { v: Venue; from: string 
               </span>
             }
           />
-          {tag && <MemberTag label={tag.label} tone={tag.tone} className="absolute top-2.5 end-2.5" />}
+          {tag && <MemberTag label={t(tag.label)} tone={tag.tone} className="absolute top-2.5 end-2.5" />}
         </span>
         <span style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ flex: 1, minWidth: 0 }}>
@@ -417,7 +418,7 @@ function GymCard({ v, from, mine, rating, km, query }: { v: Venue; from: string 
             </span>
             {from && <span style={{ display: "block", fontSize: textPx(12.5), fontWeight: 700, color: m.accent, marginTop: 2 }}>{from.replace(/^Membership from/, "From")}</span>}
           </span>
-          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={m.faint} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: "none", ...NO_ICON_SCALE }}>
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={m.faint} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden className="rtl:-scale-x-100" style={{ flex: "none", ...NO_ICON_SCALE }}>
             <path d="m9 18 6-6-6-6" />
           </svg>
         </span>
@@ -435,7 +436,7 @@ function DayStrip({ days, chosen, withClasses, onPick }: { days: string[]; chose
     ref.current?.querySelector<HTMLElement>("[aria-pressed=true]")?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [chosen]);
   return (
-    <div ref={ref} role="group" aria-label="Day" className="no-scrollbar" style={{ margin: "12px -16px 0", padding: "0 16px", display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none" }}>
+    <div ref={ref} role="group" aria-label={t("Day")} className="no-scrollbar" style={{ margin: "12px -16px 0", padding: "0 16px", display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none" }}>
       {days.map((d) => {
         const on = d === chosen;
         const date = atNoon(d);
@@ -445,7 +446,7 @@ function DayStrip({ days, chosen, withClasses, onPick }: { days: string[]; chose
             key={d}
             type="button"
             aria-pressed={on}
-            aria-label={`${formatShortDate(date, { weekday: "long", month: "long", day: "numeric" })}${has ? "" : ", no classes"}`}
+            aria-label={has ? formatShortDate(date, { weekday: "long", month: "long", day: "numeric" }) : t("{date}, no classes", { date: formatShortDate(date, { weekday: "long", month: "long", day: "numeric" }) })}
             onClick={() => onPick(d)}
             className="market-focus"
             style={{

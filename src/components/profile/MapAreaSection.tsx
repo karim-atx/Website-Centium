@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from "react";
 import { MapPin } from "lucide-react";
 import { Toggle } from "../ui/Toggle";
 import { Button } from "../ui/Button";
+import { t } from "../../i18n/core";
 import { AreaPicker } from "../professionals/AreaPicker";
 import { AREAS, type Area } from "../../services/geo/areas";
 import { distanceKm, type Coords } from "../../services/geo/distance";
@@ -80,12 +81,14 @@ export const MapAreaSection: React.FC<{
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm text-charcoal flex items-center gap-1.5">
-            <MapPin size={14} className="text-charcoal-soft" /> Show my area on the map
+            <MapPin size={14} className="text-charcoal-soft" /> {t("Show my area on the map")}
           </p>
           <p className="text-[11px] text-charcoal-faint mt-0.5 leading-relaxed">
             {on
-              ? `Clients see you near ${mapArea?.label ?? "your chosen area"}. Only an approximate area (about 1 km) is shown, never your address.`
-              : "Off. Clients can still find you in the list. Only an approximate area (about 1 km) is ever shown."}
+              ? mapArea?.label
+                ? t("Clients see you near {area}. Only an approximate area (about 1 km) is shown, never your address.", { area: mapArea.label })
+                : t("Clients see you near your chosen area. Only an approximate area (about 1 km) is shown, never your address.")
+              : t("Off. Clients can still find you in the list. Only an approximate area (about 1 km) is ever shown.")}
           </p>
         </div>
         <Toggle
@@ -98,7 +101,7 @@ export const MapAreaSection: React.FC<{
             } else if (on) void turnOff();
             else setChoosing(false);
           }}
-          label="Show my area on the map"
+          label={t("Show my area on the map")}
         />
       </div>
 
@@ -109,17 +112,17 @@ export const MapAreaSection: React.FC<{
           disabled={disabled || busy}
           className="tap self-start min-h-[44px] text-[13px] font-bold text-primary-deep-text disabled:opacity-50"
         >
-          Change area
+          {t("Change area")}
         </button>
       )}
 
       {choosing && (
         <div className="rounded-xl border border-charcoal/10 bg-cream-soft p-3 flex flex-col gap-3">
-          <div role="group" aria-label="Choose your area by" className="grid grid-cols-2 gap-1.5">
+          <div role="group" aria-label={t("Choose your area by")} className="grid grid-cols-2 gap-1.5">
             {(
               [
-                { v: "list", label: "Pick from list" },
-                { v: "pin", label: "Drop a pin" },
+                { v: "list", label: t("Pick from list") },
+                { v: "pin", label: t("Drop a pin") },
               ] as const
             ).map((o) => (
               <button
@@ -142,7 +145,7 @@ export const MapAreaSection: React.FC<{
             </div>
           ) : (
             <>
-              <p className="text-xs text-charcoal-soft">Tap the map near where you work. It's saved to about 1 km.</p>
+              <p className="text-xs text-charcoal-soft">{t("Tap the map near where you work. It's saved to about 1 km.")}</p>
               <Suspense fallback={<div className="h-[220px] rounded-xl bg-cream-card" />}>
                 <NearbyMap
                   center={pin ?? (mapArea ? { lat: mapArea.lat, lng: mapArea.lng } : { lat: 33.89, lng: 35.5 })}
@@ -150,11 +153,11 @@ export const MapAreaSection: React.FC<{
                   dark={dark}
                   pick={{ value: pin, onPick: setPin }}
                   className="h-[220px] rounded-xl overflow-hidden border border-charcoal/10"
-                  ariaLabel="Map for choosing your area. Tap to drop a pin, or pick from the list instead."
+                  ariaLabel={t("Map for choosing your area. Tap to drop a pin, or pick from the list instead.")}
                 />
               </Suspense>
               <Button size="sm" disabled={!pin || busy} onClick={() => pin && void save(pin, nearestAreaName(pin), countryNear(pin))}>
-                {busy ? "Saving…" : pin ? `Use this area${nearestAreaName(pin) ? ` (near ${nearestAreaName(pin)})` : ""}` : "Tap the map first"}
+                {busy ? t("Saving…") : pin ? (nearestAreaName(pin) ? t("Use this area (near {area})", { area: nearestAreaName(pin) ?? "" }) : t("Use this area")) : t("Tap the map first")}
               </Button>
             </>
           )}
@@ -166,7 +169,7 @@ export const MapAreaSection: React.FC<{
             }}
             className="tap min-h-[40px] text-sm font-medium text-charcoal-soft"
           >
-            Cancel
+            {t("Cancel")}
           </button>
         </div>
       )}

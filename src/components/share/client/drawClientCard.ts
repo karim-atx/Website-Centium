@@ -2,7 +2,7 @@ import { METRIC_IDENTITY } from "../../../theme/marketTokens";
 import { photoRect, toExport, type OverlayTransform, type PhotoCrop, type Size } from "../overlayModel";
 import { CARD_W, EXPORT_K, exportSize, type ClientFormat, type IdentityKey } from "./clientCardModel";
 import { baselineY, clampRadius, cssGradientLine, hexAlpha, lineHeightPx, parseShadows, wrapWords, type PaintShadow } from "./paintMath";
-import { loadArabicForCanvas } from "../../../i18n/fonts";
+import { hasArabic, loadArabicForCanvas } from "../../../i18n/fonts";
 
 // Market + Share 3.0 · C-SH.3 / C-SH.4 / C-SH.5: the client card as a PNG,
 // following the repo's drawShareCard rules (HANDOVER §12): drawn on the
@@ -35,7 +35,8 @@ function setSpacing(ctx: CanvasRenderingContext2D, ls: number) {
 }
 
 function measure(ctx: CanvasRenderingContext2D, text: string, ls: number): number {
-  if (hasLetterSpacing(ctx)) {
+  // Arabic is measured and drawn whole, never a letter at a time (its joins).
+  if (hasLetterSpacing(ctx) || hasArabic(text)) {
     setSpacing(ctx, ls);
     return ctx.measureText(text).width;
   }
@@ -43,7 +44,7 @@ function measure(ctx: CanvasRenderingContext2D, text: string, ls: number): numbe
 }
 
 function fill(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, ls: number) {
-  if (hasLetterSpacing(ctx)) {
+  if (hasLetterSpacing(ctx) || hasArabic(text)) {
     setSpacing(ctx, ls);
     ctx.fillText(text, x, y);
     return;
@@ -137,10 +138,15 @@ function paintText(p: PaintCtx, el: HTMLElement, root: HTMLElement) {
   ctx.fillStyle = cs.color;
   ctx.textBaseline = "alphabetic";
   ctx.textAlign = "left";
+  // Round G (EH3): the card follows the app's direction like the preview, so
+  // "start" is the right edge in Arabic and the line's bidi follows the element.
+  const rtl = cs.direction === "rtl";
+  ctx.direction = rtl ? "rtl" : "ltr";
   lines.forEach((line, i) => {
     const w = measure(ctx, line, ls);
     const align = cs.textAlign;
-    const x = align === "center" ? b.x + padL + (contentW - w) / 2 : align === "right" || align === "end" ? b.x + b.w - padR - w : b.x + padL;
+    const right = align === "right" || (align === "end" && !rtl) || (align === "start" && rtl);
+    const x = align === "center" ? b.x + padL + (contentW - w) / 2 : right ? b.x + b.w - padR - w : b.x + padL;
     const y = baselineY(b.y + padT + i * lineBox, lh, ascent, descent);
     if (shadows.length) for (const s of shadows) withShadow(p, s, () => fill(ctx, line, x, y, ls));
     else fill(ctx, line, x, y, ls);

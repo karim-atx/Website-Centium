@@ -5,6 +5,7 @@ import { textPx, linePx } from "../../../theme/textSize";
 import { marketPalette } from "../../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../pro/proInk";
 import { brandHint, useBizShareSheet, type BizShareGetData } from "./useBizShareSheet";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · B-SH.1 the share entry: the board's share button (a 44
 // target around a 34 circle #F0EDF9 with the 15 share glyph in #7D6BB5, stroke
@@ -43,7 +44,7 @@ export interface BizShareButtonProps {
   style?: React.CSSProperties;
 }
 
-export const BizShareButton: React.FC<BizShareButtonProps> = ({ getData, emptyHint, label = "Share", className, style }) => {
+export const BizShareButton: React.FC<BizShareButtonProps> = ({ getData, emptyHint, label = t("Share"), className, style }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const share = useBizShareSheet();
@@ -62,7 +63,7 @@ export const BizShareButton: React.FC<BizShareButtonProps> = ({ getData, emptyHi
   const press = async () => {
     if (hint) {
       const r = btn.current?.getBoundingClientRect();
-      if (r) setTip({ text: hint, top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right - 6) });
+      if (r) setTip({ text: t(hint), top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right - 6) });
       return;
     }
     if (brand.status !== "ready" || busy) return;

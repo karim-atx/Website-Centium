@@ -12,6 +12,7 @@ import { VOUCHER_TABS, fetchMyVouchers, liveStatus, tabOf, voucherRow, type Vouc
 import type { MarketResult } from "../../services/market/rpc";
 import { ownerInitials } from "../../services/offers";
 import { BackRow } from "./rewards/rewardsParts";
+import { t, tk, tx } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · C-MO.4.6 My rewards (`rewardsActive`,
 // `rewardsEmpty`) at /app/marketplace/rewards/mine. Literal values, Client
@@ -38,10 +39,13 @@ import { BackRow } from "./rewards/rewardsParts";
 // (cancelled and refunded by Centium) sits under Expired.
 
 const EMPTY: Record<VoucherTab, { title: string; body: string }> = {
-  active: { title: "No active vouchers", body: "Vouchers you redeem with your points will show here." },
-  used: { title: "No used vouchers", body: "Vouchers you've used at a business or with a professional show here." },
-  expired: { title: "No expired vouchers", body: "Vouchers that pass their date without being used show here." },
+  active: { title: tk("No active vouchers"), body: tk("Vouchers you redeem with your points will show here.") },
+  used: { title: tk("No used vouchers"), body: tk("Vouchers you've used at a business or with a professional show here.") },
+  expired: { title: tk("No expired vouchers"), body: tk("Vouchers that pass their date without being used show here.") },
 };
+
+/** The tabs' names (VOUCHER_TABS' English), translated where shown. */
+const tabLabel = (k: VoucherTab): string => (k === "active" ? tx("Active", "voucher") : k === "used" ? t("Used") : t("Expired"));
 
 const isTab = (t: string | null): t is VoucherTab => t === "active" || t === "used" || t === "expired";
 
@@ -67,7 +71,7 @@ export default function MyRewardsPage() {
   }, []);
   useEffect(() => fetchIt(), [fetchIt]);
 
-  const setTab = (t: VoucherTab) => setParams(t === "active" ? {} : { tab: t }, { replace: true });
+  const setTab = (k: VoucherTab) => setParams(k === "active" ? {} : { tab: k }, { replace: true });
   const onKey = (e: React.KeyboardEvent, i: number) => {
     const n = VOUCHER_TABS.length;
     const j = e.key === "ArrowRight" ? (i + 1) % n : e.key === "ArrowLeft" ? (i - 1 + n) % n : e.key === "Home" ? 0 : e.key === "End" ? n - 1 : -1;
@@ -83,29 +87,29 @@ export default function MyRewardsPage() {
   return (
     <div style={{ paddingBottom: 32, lineHeight: "normal", color: m.ink }}>
       <style>{FOCUS_CSS}</style>
-      <BackRow onBack={back} title="My rewards" />
+      <BackRow onBack={back} title={t("My rewards")} />
 
-      <div role="tablist" aria-label="Vouchers" style={{ marginTop: 10, display: "flex", gap: 5, padding: 6, borderRadius: 16, background: m.segtrack }}>
-        {VOUCHER_TABS.map((t, i) => {
-          const on = t.key === tab;
+      <div role="tablist" aria-label={t("Vouchers")} style={{ marginTop: 10, display: "flex", gap: 5, padding: 6, borderRadius: 16, background: m.segtrack }}>
+        {VOUCHER_TABS.map((vt, i) => {
+          const on = vt.key === tab;
           return (
             <button
-              key={t.key}
+              key={vt.key}
               ref={(el) => {
                 tabRefs.current[i] = el;
               }}
               type="button"
               role="tab"
-              id={`rewards-tab-${t.key}`}
+              id={`rewards-tab-${vt.key}`}
               aria-selected={on}
               aria-controls="rewards-panel"
               tabIndex={on ? 0 : -1}
-              onClick={() => setTab(t.key)}
+              onClick={() => setTab(vt.key)}
               onKeyDown={(e) => onKey(e, i)}
               className="market-focus"
               style={{ flex: 1, minWidth: 0, height: 40, padding: "0 10px", borderRadius: 12, border: 0, background: on ? m.segactive : m.segidle, color: on ? m.onfill : m.segink, display: "flex", alignItems: "center", justifyContent: "center", font: "inherit", fontSize: textPx(13), fontWeight: 700, whiteSpace: "nowrap", cursor: "pointer" }}
             >
-              {t.label}
+              {tabLabel(vt.key)}
             </button>
           );
         })}
@@ -113,9 +117,9 @@ export default function MyRewardsPage() {
 
       <div id="rewards-panel" role="tabpanel" aria-labelledby={`rewards-tab-${tab}`}>
         {load.state === "loading" ? (
-          <MarketSkeleton radius={18} count={2} rows={3} label="Loading your rewards" style={{ marginTop: 14 }} />
+          <MarketSkeleton radius={18} count={2} rows={3} label={tk("Loading your rewards")} style={{ marginTop: 14 }} />
         ) : !load.result.ok ? (
-          <MarketError thing="your rewards" onRetry={fetchIt} style={{ marginTop: 14 }} />
+          <MarketError thing={tk("your rewards")} onRetry={fetchIt} style={{ marginTop: 14 }} />
         ) : rows.length === 0 ? (
           <EmptyState tab={tab} onBrowse={() => navigate("/app/marketplace?tab=rewards")} />
         ) : (
@@ -166,15 +170,15 @@ const EmptyState: React.FC<{ tab: VoucherTab; onBrowse: () => void }> = ({ tab, 
           <path d="M3 10h18" />
         </svg>
       </span>
-      <div style={{ fontSize: textPx(16), fontWeight: 800 }}>{e.title}</div>
-      <div style={{ fontSize: textPx(13), lineHeight: 1.55, color: m.faint }}>{e.body}</div>
+      <div style={{ fontSize: textPx(16), fontWeight: 800 }}>{t(e.title)}</div>
+      <div style={{ fontSize: textPx(13), lineHeight: 1.55, color: m.faint }}>{t(e.body)}</div>
       <button
         type="button"
         onClick={onBrowse}
         className="hit market-focus"
         style={{ marginTop: 6, minHeight: 40, borderRadius: 12, border: `1px solid ${m.border}`, background: "none", display: "inline-flex", alignItems: "center", padding: "0 14px", font: "inherit", fontSize: textPx(12.5), fontWeight: 800, color: m.pdark, cursor: "pointer" }}
       >
-        Browse rewards
+        {t("Browse rewards")}
       </button>
     </div>
   );

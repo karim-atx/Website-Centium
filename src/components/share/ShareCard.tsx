@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { CentiumMark } from "../icons/CentiumMark";
 import { STREAK_LEAF_PATH } from "../icons/StreakLeaf";
 import { ShareQr } from "./ShareQr";
+import { isRtl, t } from "../../i18n/core";
 import {
   PALETTE,
   PHOTO_SCRIM,
@@ -10,6 +11,7 @@ import {
   cardFont,
   cardHeight,
   cardLink,
+  cardBidiClass,
   cardQrValue,
   fillClient,
   fitLinkSize,
@@ -86,7 +88,7 @@ const Leaf: React.FC<{ h: number; col: string; op: number }> = ({ h, col, op }) 
   </svg>
 );
 
-export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, style, width: W, client = "A client", qr = true, hide, photoUrl, onChecker, bare, flat, className }) => {
+export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, style, width: W, client = t("A client"), qr = true, hide, photoUrl, onChecker, bare, flat, className }) => {
   // Re-measure the link once Manrope has loaded (the first render may measure the fallback face).
   const [, setFontsReady] = useState(false);
   useEffect(() => {
@@ -122,7 +124,7 @@ export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, styl
       <CentiumMark height={(sq ? 7.3 : 8.3) * u} framing="png" label="Centium" style={{ width: px((sq ? 7 : 8) * u) }} />
       <div style={{ minWidth: 0, textShadow: shadow }}>
         <div style={{ fontSize: px((sq ? 3.5 : 3.8) * u), fontWeight: 800, lineHeight: 1.15, color: ink, whiteSpace: "nowrap" }}>{pro.name}</div>
-        {pro.handle && <div style={{ fontSize: px((sq ? 2.8 : 3) * u), fontWeight: 600, lineHeight: 1.25, color: sub, whiteSpace: "nowrap" }}>{`@${pro.handle} on Centium`}</div>}
+        {pro.handle && <div style={{ fontSize: px((sq ? 2.8 : 3) * u), fontWeight: 600, lineHeight: 1.25, color: sub, whiteSpace: "nowrap" }}>{t("@{handle} on Centium", { handle: pro.handle })}</div>}
       </div>
     </div>
   );
@@ -264,16 +266,16 @@ export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, styl
       )}
       <div style={{ minWidth: 0, textShadow: shadow }}>
         <div style={{ fontSize: px(linkSize), fontWeight: 800, color: ink, whiteSpace: "nowrap" }}>{cardLink(pro.handle!)}</div>
-        {!stk && <div style={{ fontSize: px((sq ? 2.6 : 2.9) * u), fontWeight: 600, color: sub }}>Scan to see my profile</div>}
+        {!stk && <div style={{ fontSize: px((sq ? 2.6 : 2.9) * u), fontWeight: 600, color: sub }}>{t("Scan to see my profile")}</div>}
       </div>
     </div>
   ) : null;
 
   return (
     <div
-      className={className}
+      className={[className, cardBidiClass(isRtl())].filter(Boolean).join(" ") || undefined}
       role="img"
-      aria-label={`${c.eyebrow} card`}
+      aria-label={t("{title} card", { title: c.eyebrow })}
       style={{
         position: "relative",
         flex: "none",
@@ -285,7 +287,9 @@ export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, styl
         fontFamily: 'Manrope, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif',
         WebkitFontSmoothing: "antialiased",
         boxShadow: flat || (stk && bare) ? undefined : "0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(36,31,27,0.10)",
-        textAlign: "start",
+        // The drawn layout in every language, as the export draws it (shareCardModel textDirection).
+        direction: "ltr",
+        textAlign: "left",
       }}
     >
       {!stk && P.lop ? (
@@ -295,7 +299,7 @@ export const ShareCard: React.FC<ShareCardProps> = ({ spec: c, pro, format, styl
       ) : null}
       {((stk && !onChecker) || (!stk && style === "P")) && !photoUrl ? (
         <span style={{ position: "absolute", right: px(4 * u), bottom: px(2.4 * u), textAlign: "end", fontFamily: "ui-monospace, Menlo, monospace", fontSize: px(Math.max(8, 2.6 * u)), color: "rgba(255,255,255,0.55)", letterSpacing: "0.04em" }}>
-          your photo
+          {t("your photo")}
         </span>
       ) : null}
       {stk ? (
@@ -354,7 +358,7 @@ const lt = (s: LT, extra?: React.CSSProperties): React.CSSProperties => ({
   ...extra,
 });
 
-export const ShareLayer: React.FC<ShareLayerProps> = ({ spec: c, pro, client = "A client", qr = true, hide }) => {
+export const ShareLayer: React.FC<ShareLayerProps> = ({ spec: c, pro, client = t("A client"), qr = true, hide }) => {
   // Re-measure the link once Manrope has loaded.
   const [, setFontsReady] = useState(false);
   useEffect(() => {
@@ -437,12 +441,15 @@ export const ShareLayer: React.FC<ShareLayerProps> = ({ spec: c, pro, client = "
   }
 
   return (
-    <div style={{ width: L.width, fontFamily: 'Manrope, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif', WebkitFontSmoothing: "antialiased", lineHeight: "normal", textAlign: "start", color: "#FFFFFF" }}>
+    <div
+      className={cardBidiClass(isRtl()) || undefined}
+      style={{ width: L.width, fontFamily: 'Manrope, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif', WebkitFontSmoothing: "antialiased", lineHeight: "normal", direction: "ltr", textAlign: "left", color: "#FFFFFF" }}
+    >
       <div style={{ display: "flex", alignItems: "center", gap: L.mark.gap }}>
         <CentiumMark height={L.mark.h} framing="png" label="Centium" style={{ width: L.mark.w, filter: `drop-shadow(0 ${L.mark.drop.y}px ${L.mark.drop.blur}px ${L.mark.drop.color})` }} />
         <div style={{ minWidth: 0 }}>
           <span style={lt(L.name, { whiteSpace: "nowrap" })}>{pro.name}</span>
-          {pro.handle ? <span style={lt(L.handle, { whiteSpace: "nowrap", ...subOp })}>{`@${pro.handle} on Centium`}</span> : null}
+          {pro.handle ? <span style={lt(L.handle, { whiteSpace: "nowrap", ...subOp })}>{t("@{handle} on Centium", { handle: pro.handle })}</span> : null}
         </div>
       </div>
       <div style={lt(L.eyebrow, { marginTop: L.eyebrow.mt, textTransform: "uppercase" })}>{c.eyebrow}</div>
@@ -486,7 +493,7 @@ export const ShareLayer: React.FC<ShareLayerProps> = ({ spec: c, pro, client = "
           </span>
           <div style={{ minWidth: 0 }}>
             <span style={lt({ ...L.link, size: linkSize }, { whiteSpace: "nowrap" })}>{link}</span>
-            <span style={lt(L.scan, subOp)}>Scan to see my profile</span>
+            <span style={lt(L.scan, subOp)}>{t("Scan to see my profile")}</span>
           </div>
         </div>
       ) : null}
@@ -500,15 +507,15 @@ export const ShareLayer: React.FC<ShareLayerProps> = ({ spec: c, pro, client = "
  * transform, scaled down as a whole, so it shows what the export draws.
  */
 export const ShareLayerComposite: React.FC<ShareLayerProps & { photoUrl: string; placement: LayerPlacement; width: number }> = ({ photoUrl, placement, width, ...layer }) => {
-  const { frame, crop, transform: t } = placement;
+  const { frame, crop, transform: tf } = placement;
   const k = width / frame.w;
   const [img, setImg] = useState<{ w: number; h: number } | null>(null);
   const r = img ? photoRect(img, frame, crop) : null;
   return (
     <div
       role="img"
-      aria-label={`${layer.spec.eyebrow} card`}
-      style={{ position: "relative", flex: "none", width, height: Math.round(frame.h * k), overflow: "hidden", borderRadius: 10, background: "#2A2B31", boxShadow: "0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(36,31,27,0.10)" }}
+      aria-label={t("{title} card", { title: layer.spec.eyebrow })}
+      style={{ direction: "ltr", position: "relative", flex: "none", width, height: Math.round(frame.h * k), overflow: "hidden", borderRadius: 10, background: "#2A2B31", boxShadow: "0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(36,31,27,0.10)" }}
     >
       <div style={{ position: "absolute", insetInlineStart: 0, top: 0, width: frame.w, height: frame.h, transform: `scale(${k})`, transformOrigin: "0 0" }}>
         <img
@@ -521,10 +528,10 @@ export const ShareLayerComposite: React.FC<ShareLayerProps & { photoUrl: string;
         <div
           style={{
             position: "absolute",
-            left: t.x,
-            top: t.y,
+            left: tf.x,
+            top: tf.y,
             width: LAYER.width,
-            transform: `translate(-50%,-50%) scale(${t.scale}) rotate(${t.rotation}deg)`,
+            transform: `translate(-50%,-50%) scale(${tf.scale}) rotate(${tf.rotation}deg)`,
             transformOrigin: "50% 50%",
             color: "#FFFFFF",
             textShadow: `0 ${LAYER.shadow.y}px ${LAYER.shadow.blur}px ${LAYER.shadow.color}`,

@@ -8,6 +8,7 @@ import { hiredText, identityStep, initialsOf, placeOf, ratingLine, type Professi
 
 export type { ProfessionalCardData };
 import { FOCUS_CSS, usePress } from "./usePress";
+import { isRtl } from "../../i18n/core";
 
 // Market + Share 3.0 · ProfessionalCard (HANDOVER §4 C-MO.4.9 "Directory",
 // §5: one identity everywhere; Client Professional Screens lines 36–47 and
@@ -142,7 +143,7 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro, rank, o
               {ratingLine(pro.rating, pro.reviewCount, placeOf(pro))}
             </span>
           </span>
-          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={m.faint} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: "none", ...NO_ICON_SCALE }}>
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={m.faint} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: "none", ...(isRtl() ? { transform: "scaleX(-1)" } : NO_ICON_SCALE) }}>
             <path d="m9 18 6-6-6-6" />
           </svg>
         </span>

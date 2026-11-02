@@ -14,6 +14,7 @@ import {
   type CardContent,
 } from "./bizCardModel";
 import { CARD_LEAF_PATH, CARD_LEAF_VIEWBOX, WHITE_MARK_VIEWBOX } from "./bizArt";
+import { isRtl, t } from "../../../i18n/core";
 
 // Market + Share 3.0 · the B-SH business promo card, the board's card markup
 // (Business Sharing Screens lines 63 to 89, values from bcard()), literally:
@@ -107,9 +108,12 @@ export const BizCard: React.FC<BizCardProps> = ({ brand, content: c, format, fil
       <div
         data-card-root
         aria-hidden
+        // Round G (EH3): no tracking on Arabic (letter-spacing breaks its joins); the export reads the computed spacing.
+        className={isRtl() ? "[&_*]:!tracking-normal" : undefined}
         style={{
           position: "absolute",
-          insetInlineStart: 0,
+          // Physical left: the scale's origin is the top-left corner in both directions.
+          left: 0,
           top: 0,
           width: CARD_W,
           height: h,
@@ -167,7 +171,7 @@ export const BizCard: React.FC<BizCardProps> = ({ brand, content: c, format, fil
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 9.6, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase" }}>{c.eyebrow}</span>
             {c.isNew && (
-              <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.08em", borderRadius: 999, padding: "2px 7px", background: "#FFFFFF", color: brand.c2, textShadow: "none" }}>NEW CLASS</span>
+              <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.08em", borderRadius: 999, padding: "2px 7px", background: "#FFFFFF", color: brand.c2, textShadow: "none" }}>{t("NEW CLASS")}</span>
             )}
           </div>
           {ok(c.img) && (
@@ -218,7 +222,7 @@ export const BizCard: React.FC<BizCardProps> = ({ brand, content: c, format, fil
               <CardQr value={linkHref} size={L.qrS} />
             </span>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 800, whiteSpace: "nowrap" }}>Open in Centium</div>
+              <div style={{ fontSize: 11.5, fontWeight: 800, whiteSpace: "nowrap" }}>{t("Open in Centium")}</div>
               <div style={{ fontSize: 8.5, fontWeight: 600, opacity: 0.9, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{linkText}</div>
             </div>
           </div>

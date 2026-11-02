@@ -1,3 +1,5 @@
+import { t, tn, tx } from "../../i18n/core";
+
 // Market + Share 3.0 · people shown on market cards (ProfessionalCard,
 // InstructorCard): pure rules from Client Professional Screens' script
 // (`dir`, `pr`) and Client Explore Screens (the instructor card).
@@ -19,11 +21,11 @@ export const initialsOf = (name: string): string =>
     .join("");
 
 /** "Hired via Centium · N roles" / "No Centium work yet". */
-export const hiredText = (roles: number): string => (roles > 0 ? `Hired via Centium · ${roles} ${roles === 1 ? "role" : "roles"}` : "No Centium work yet");
+export const hiredText = (roles: number): string => (roles > 0 ? tn(roles, "Hired via Centium · {n} role", "Hired via Centium · {n} roles") : t("No Centium work yet"));
 
 /** The rating line: "4.8 · 38 reviews · 1.2 km", "New · 4.0 km". */
 export function ratingLine(rating: number | null | undefined, reviews: number, extra?: string | null): string {
-  const parts = [rating != null && reviews > 0 ? `${rating.toFixed(1)} · ${reviews} ${reviews === 1 ? "review" : "reviews"}` : "New"];
+  const parts = [rating != null && reviews > 0 ? tn(reviews, "{rating} · {n} review", "{rating} · {n} reviews", { rating: rating.toFixed(1) }) : t("New")];
   if (extra) parts.push(extra);
   return parts.join(" · ");
 }
@@ -58,6 +60,6 @@ export interface ProfessionalCardData {
  * than that.
  */
 export function placeOf(p: Pick<ProfessionalCardData, "distanceKm" | "area" | "online" | "abroad">): string | null {
-  const place = p.distanceKm != null && Number.isFinite(p.distanceKm) ? `about ${p.distanceKm.toFixed(1)} km` : p.online ? "Online" : (p.area ?? null);
+  const place = p.distanceKm != null && Number.isFinite(p.distanceKm) ? t("about {km} km", { km: p.distanceKm.toFixed(1) }) : p.online ? tx("Online", "session format") : (p.area ?? null);
   return [place, p.abroad].filter(Boolean).join(" · ") || null;
 }

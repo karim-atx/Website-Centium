@@ -5,6 +5,15 @@ import { CtaButton } from "../../components/ui/PinnedCta";
 import { VENUE_POLICY_TITLES } from "../../services/marketplace/classBooking";
 import type { PendingClassPolicy } from "../../services/marketplace";
 import { DetailLabel } from "./venueParts";
+import { t, tk } from "../../i18n/core";
+
+/** The documents' names, translated where shown (the English is VENUE_POLICY_TITLES'). */
+const POLICY_TITLE: Record<string, string> = {
+  waiver: tk("Liability waiver"),
+  class_terms: tk("Class terms"),
+  house_rules: tk("House rules"),
+  appointment_waiver: tk("Appointment waiver"),
+};
 
 // OURS-class-terms (B9, ATXE4): the venue's terms before a first booking.
 // NO FRAME EXISTS for this step (Part B and the Business UI customer side
@@ -52,7 +61,7 @@ export function ClassTermsSheet({
     <BottomSheet
       open={!!docs && docs.length > 0}
       onClose={onClose}
-      title="Before you book"
+      title={t("Before you book")}
       chrome="partB"
       footer={
         docs && (
@@ -82,11 +91,15 @@ function TermsBody({
     <div data-class-terms="">
       <p className="m-0 text-[13px] leading-[19.5px] text-charcoal-soft">
         {docs.length === 1
-          ? `${businessName} asks you to read and accept this before ${booked ? "your appointment" : "booking"}.`
-          : `${businessName} asks you to read and accept these before ${booked ? "your appointment" : "booking"}.`}
+          ? booked
+            ? t("{business} asks you to read and accept this before your appointment.", { business: businessName })
+            : t("{business} asks you to read and accept this before booking.", { business: businessName })
+          : booked
+            ? t("{business} asks you to read and accept these before your appointment.", { business: businessName })
+            : t("{business} asks you to read and accept these before booking.", { business: businessName })}
       </p>
       {docs.map((d) => {
-        const title = VENUE_POLICY_TITLES[d.kind];
+        const title = POLICY_TITLE[d.kind] ? t(POLICY_TITLE[d.kind]) : VENUE_POLICY_TITLES[d.kind];
         const on = set.has(d.versionId);
         return (
           <section key={d.versionId} className="mt-[22px]" data-class-term={d.kind}>
@@ -114,7 +127,7 @@ function TermsBody({
               >
                 {on && <Check size={12} strokeWidth={3} />}
               </span>
-              <span className="text-[13.5px] leading-[20.3px] font-bold text-charcoal">I agree to the {title.toLowerCase()}</span>
+              <span className="text-[13.5px] leading-[20.3px] font-bold text-charcoal">{t("I agree to the {title}", { title: title.toLowerCase() })}</span>
             </button>
           </section>
         );
@@ -148,8 +161,8 @@ function TermsFooter({
           {error}
         </p>
       )}
-      {!online && <p className="m-0 text-[12px] font-semibold text-charcoal-soft">You're offline.</p>}
-      <CtaButton label={booked ? "I agree" : "Agree and book"} loading={busy} disabled={!all || !online} onClick={onAgree} className="!bg-fill-pinned !text-on-primary-fill" />
+      {!online && <p className="m-0 text-[12px] font-semibold text-charcoal-soft">{t("You're offline.")}</p>}
+      <CtaButton label={booked ? t("I agree") : t("Agree and book")} loading={busy} disabled={!all || !online} onClick={onAgree} className="!bg-fill-pinned !text-on-primary-fill" />
     </div>
   );
 }

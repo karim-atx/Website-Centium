@@ -11,6 +11,7 @@ import {
   uploadCertification,
 } from "../../services/certification";
 import { fetchCertificateStatus, type LicenceStatus } from "../../services/professional-cv";
+import { t } from "../../i18n/core";
 
 // The professional's onboarding certificate: view, replace or remove it.
 //
@@ -65,18 +66,18 @@ export const CertificationSheet: React.FC<{ open: boolean; onClose: () => void }
   const path = stored && !isLegacyLocal ? stored : null;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Certification">
+    <BottomSheet open={open} onClose={onClose} title={t("Certification")}>
       <div className="space-y-4">
         {path ? (
           status && status.kind !== "none" ? (
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-semibold text-charcoal">Review</span>
+                <span className="text-sm font-semibold text-charcoal">{t("Review")}</span>
                 <LicenceStatusBadge status={status} />
               </div>
               {status.kind === "rejected" && <RejectionNote reason={status.reason} />}
               {status.kind === "pending" && (
-                <p className="text-xs text-charcoal-soft">Our team checks it and clients see a Verified badge once it's approved.</p>
+                <p className="text-xs text-charcoal-soft">{t("Our team checks it and clients see a Verified badge once it's approved.")}</p>
               )}
               {status.kind === "verified" && <p className="text-xs text-charcoal-soft">{REPLACE_RESETS_REVIEW}</p>}
             </div>
@@ -84,19 +85,19 @@ export const CertificationSheet: React.FC<{ open: boolean; onClose: () => void }
         ) : isLegacyLocal ? (
           <p className="flex items-start gap-1.5 text-xs text-status-caution">
             <Clock size={13} className="shrink-0 mt-0.5" />
-            This copy is only saved on this device. Upload it again to store it on your account.
+            {t("This copy is only saved on this device. Upload it again to store it on your account.")}
           </p>
         ) : (
-          <p className="text-sm text-charcoal-faint text-center py-3">No certification uploaded yet.</p>
+          <p className="text-sm text-charcoal-faint text-center py-3">{t("No certification uploaded yet.")}</p>
         )}
 
         <AttachDocument
           bucket="certifications"
           path={path}
-          label="Certification"
-          busyLabel="Saving…"
+          label={t("Certification")}
+          busyLabel={t("Saving…")}
           onFile={async (file) => {
-            if (!authUserId) return { ok: false, message: "You're signed out. Sign in again to upload." };
+            if (!authUserId) return { ok: false, message: t("You're signed out. Sign in again to upload.") };
             const result = await uploadCertification(authUserId, file, stored);
             if (!result.ok) return result;
             setStored(result.path);
@@ -105,9 +106,9 @@ export const CertificationSheet: React.FC<{ open: boolean; onClose: () => void }
             return { ok: true };
           }}
           onRemove={async () => {
-            if (!authUserId) return { ok: false, message: "You're signed out." };
+            if (!authUserId) return { ok: false, message: t("You're signed out.") };
             const result = await removeCertification(authUserId, stored);
-            if (!result.ok) return { ok: false, message: result.message ?? "Couldn't remove your certification." };
+            if (!result.ok) return { ok: false, message: result.message ?? t("Couldn't remove your certification.") };
             setStored(null);
             setStatus(null);
             updateProfile({ certificationUrl: undefined });
@@ -116,7 +117,7 @@ export const CertificationSheet: React.FC<{ open: boolean; onClose: () => void }
         />
 
         <p className="text-[11.5px] text-charcoal-soft leading-relaxed">
-          This is the first licence on your CV. Add its name and issuer, and any other licences, in More › Edit public profile.
+          {t("This is the first licence on your CV. Add its name and issuer, and any other licences, in More › Edit public profile.")}
         </p>
       </div>
     </BottomSheet>

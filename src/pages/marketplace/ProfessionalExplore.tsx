@@ -19,6 +19,7 @@ import { startVenueThread } from "../../services/messaging";
 import { requestToJoinById } from "../../services/pro/businesses";
 import { fetchLinks, requestLink, searchColleagues, type CareLink, type Colleague } from "../../services/pro/careNetwork";
 import { typeLabel } from "./venueTypes";
+import { t, tk } from "../../i18n/core";
 
 /**
  * Release 3 · the professional's Explore (/app/explore; MO17 v2 and v3).
@@ -45,17 +46,17 @@ import { typeLabel } from "./venueTypes";
 
 type Tab = "businesses" | "classes" | "colleagues";
 const TABS: { key: Tab; label: string }[] = [
-  { key: "businesses", label: "Businesses" },
-  { key: "classes", label: "Classes" },
-  { key: "colleagues", label: "Colleagues" },
+  { key: "businesses", label: tk("Businesses") },
+  { key: "classes", label: tk("Classes") },
+  { key: "colleagues", label: tk("Colleagues") },
 ];
 type Kind = "all" | "dietitians" | "physios" | "doctors" | "coaches";
 const KINDS: { key: Kind; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "dietitians", label: "Dietitians" },
-  { key: "physios", label: "Physios" },
-  { key: "doctors", label: "Doctors" },
-  { key: "coaches", label: "Coaches" },
+  { key: "all", label: tk("All") },
+  { key: "dietitians", label: tk("Dietitians") },
+  { key: "physios", label: tk("Physios") },
+  { key: "doctors", label: tk("Doctors") },
+  { key: "coaches", label: tk("Coaches") },
 ];
 const kindOf = (type: string | null): Kind | null =>
   type === "dietitian" || type === "nutritionist" ? "dietitians" : type === "physiotherapist" ? "physios" : type === "doctor" ? "doctors" : type === "trainer" || type === "coach_instructor" ? "coaches" : null;
@@ -107,7 +108,7 @@ export default function ProfessionalExplore({ pointsCard }: { pointsCard?: React
 
   const typeChips = useMemo(() => {
     const seen = [...new Set((venues ?? []).map((v) => v.venueType).filter(Boolean))];
-    return [{ key: "all", label: "All" }, ...seen.map((t) => ({ key: t, label: typeLabel(t) }))];
+    return [{ key: "all", label: t("All") }, ...seen.map((x) => ({ key: x, label: typeLabel(x) }))];
   }, [venues]);
   const shownVenues = (venues ?? []).filter((v) => type === "all" || v.venueType === type);
   const lineOf = (v: MarketplaceVenue) => [typeLabel(v.venueType), v.location].filter(Boolean).join(" · ");
@@ -131,7 +132,7 @@ export default function ProfessionalExplore({ pointsCard }: { pointsCard?: React
     setBusy(null);
     if (!r.ok) return setAskError(r.message);
     setSentIds((s) => new Set([...s, asking.venueId]));
-    setToast(`Request sent to ${asking.name}. They check your credentials and reply here.`);
+    setToast(t("Request sent to {name}. They check your credentials and reply here.", { name: asking.name }));
     setAsking(null);
     biz.reload();
   };
@@ -140,7 +141,7 @@ export default function ProfessionalExplore({ pointsCard }: { pointsCard?: React
     const r = await requestLink(c.id);
     setBusy(null);
     if (!r.ok) return setToast(r.message);
-    setToast("Care network request sent.");
+    setToast(t("Care network request sent."));
     if (authUserId) {
       const l = await fetchLinks(authUserId);
       if (l.ok) setLinks(l.data);
@@ -166,16 +167,16 @@ export default function ProfessionalExplore({ pointsCard }: { pointsCard?: React
         ) : (
           // joinCard17: r20 card, pad 14, 12 below; the label 11 / 600 caps 0.14em text.faint, 8 under.
           <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 14, marginBottom: 12 }}>
-            <p style={{ fontSize: textPx(11), fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: INK.chF, marginBottom: 8 }}>Join a business</p>
+            <p style={{ fontSize: textPx(11), fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: INK.chF, marginBottom: 8 }}>{t("Join a business")}</p>
             <JoinById
-              hint="Enter the ID the business gave you, or ask to join one below. The business checks your credentials before you appear on its team. A business can also add you from its own account."
+              hint={t("Enter the ID the business gave you, or ask to join one below. The business checks your credentials before you appear on its team. A business can also add you from its own account.")}
               onSent={biz.reload}
               onToast={setToast}
             />
           </div>
         ))}
 
-      <ExploreTabs items={TABS} active={tab} onChange={setTab} />
+      <ExploreTabs items={TABS.map((x) => ({ ...x, label: t(x.label) }))} active={tab} onChange={setTab} />
 
       {failed === tab ? (
         <ProError onRetry={retry} />
@@ -186,7 +187,7 @@ export default function ProfessionalExplore({ pointsCard }: { pointsCard?: React
           <>
             {typeChips.length > 2 && <ChipRow items={typeChips} active={type} onChange={setType} />}
             {shownVenues.length === 0 ? (
-              <EmptyState icon={Store} title="No businesses listed yet" />
+              <EmptyState icon={Store} title={t("No businesses listed yet")} />
             ) : (
               shownVenues.map((v) => (
                 <BusinessCard
@@ -210,7 +211,7 @@ export default function ProfessionalExplore({ pointsCard }: { pointsCard?: React
         !classes ? (
           <ListSkeleton rows={3} />
         ) : classes.length === 0 ? (
-          <EmptyState icon={CalendarDays} title="No classes listed yet" />
+          <EmptyState icon={CalendarDays} title={t("No classes listed yet")} />
         ) : (
           <div className="flex flex-col" style={{ gap: 10 }}>
             {classes.map((c) => (
@@ -222,19 +223,19 @@ export default function ProfessionalExplore({ pointsCard }: { pointsCard?: React
         <ListSkeleton rows={3} />
       ) : (
         <>
-          <ChipRow items={KINDS} active={kind} onChange={setKind} />
+          <ChipRow items={KINDS.map((x) => ({ ...x, label: t(x.label) }))} active={kind} onChange={setKind} />
           {shownColleagues.length === 0 ? (
-            <EmptyState icon={Users} title="No colleagues listed yet" />
+            <EmptyState icon={Users} title={t("No colleagues listed yet")} />
           ) : (
             shownColleagues.map((c) => {
               const l = linkOf(c.id);
-              const t = c.type ? (SUBTYPE_SINGULAR as Record<string, string>)[c.type] : null;
+              const sub = c.type ? (SUBTYPE_SINGULAR as Record<string, string>)[c.type] : null;
               return (
                 <ColleagueRow
                   key={c.id}
-                  name={c.name ?? "Professional"}
-                  type={t ? t.charAt(0).toUpperCase() + t.slice(1) : ""}
-                  line={l?.status === "accepted" ? "In your care network" : c.specialty}
+                  name={c.name ?? t("Professional")}
+                  type={sub ? t(sub.charAt(0).toUpperCase() + sub.slice(1)) : ""}
+                  line={l?.status === "accepted" ? t("In your care network") : c.specialty}
                   avatarUrl={c.avatarUrl}
                   state={l?.status === "accepted" ? "network" : l ? "pending" : "add"}
                   busy={busy === c.id}
@@ -244,10 +245,10 @@ export default function ProfessionalExplore({ pointsCard }: { pointsCard?: React
             })
           )}
           <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 6 }}>
-            Only verified professionals who list themselves publicly appear here. Adding someone sends them a care network request.
+            {t("Only verified professionals who list themselves publicly appear here. Adding someone sends them a care network request.")}
           </p>
           <button type="button" onClick={() => navigate("/app/more/care-network")} className="tap min-h-[44px]" style={{ fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}>
-            Care network
+            {t("Care network")}
           </button>
         </>
       )}

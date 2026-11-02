@@ -3,6 +3,7 @@ import { fetchVenueDashboard } from "../../services/venues/console";
 import { money, type VenueDashboard } from "../../services/venues/consoleLogic";
 import { CARD, VCardError, VGroupHeader, VNumberCard } from "./VenueKit";
 import { appLocale } from "../../i18n/format";
+import { t, tn } from "../../i18n/core";
 
 // venue_dashboard(id) (stage A4), restyled per OURS-OP1-venue-figures: four
 // K5 two-up number-box cards (the OpsTabsV4 "Active plans | Members on plans"
@@ -49,47 +50,47 @@ export function VenueFigures({ gymId, timezone, refreshKey = 0 }: { gymId: strin
   const showMoney = !!d && d.amountAwaitingPayment !== null && d.amountMarkedPaidThisMonth !== null;
 
   return (
-    <section aria-label="This venue">
-      <VGroupHeader left="This venue" />
+    <section aria-label={t("This venue")}>
+      <VGroupHeader left={t("This venue")} />
       {error && !d ? (
         <div className={`${CARD} rounded-[22px] overflow-hidden`}>
-          <VCardError title="Couldn't load this part" message={error} onRetry={() => setTick((t) => t + 1)} />
+          <VCardError title={t("Couldn't load this part")} message={error} onRetry={() => setTick((t) => t + 1)} />
         </div>
       ) : (
         <div className="space-y-[12px]">
           <VNumberCard
             boxes={[
-              { label: "Active members", value: n(d?.activeMembers) },
-              { label: "Awaiting payment", value: n(d?.membershipsAwaitingPayment) },
+              { label: t("Active members"), value: n(d?.activeMembers) },
+              { label: t("Awaiting payment"), value: n(d?.membershipsAwaitingPayment) },
             ]}
             line={
               d
                 ? d.membersTotal === 0
-                  ? "No memberships at this venue yet."
-                  : `${d.membersTotal.toLocaleString(appLocale())} membership${d.membersTotal === 1 ? "" : "s"} in total. Unpaid ones are listed first under Members.`
+                  ? t("No memberships at this venue yet.")
+                  : tn(d.membersTotal, "{count} membership in total. Unpaid ones are listed first under Members.", "{count} memberships in total. Unpaid ones are listed first under Members.", { count: d.membersTotal.toLocaleString(appLocale()) })
                 : null
             }
           />
           {showMoney && <VNumberCard
             boxes={[
-              { label: "Agreed, not yet paid", value: d && d.amountAwaitingPayment !== null ? money(d.amountAwaitingPayment) : null },
-              { label: "Marked paid this month", value: d && d.amountMarkedPaidThisMonth !== null ? money(d.amountMarkedPaidThisMonth) : null },
+              { label: t("Agreed, not yet paid"), value: d && d.amountAwaitingPayment !== null ? money(d.amountAwaitingPayment) : null },
+              { label: t("Marked paid this month"), value: d && d.amountMarkedPaidThisMonth !== null ? money(d.amountMarkedPaidThisMonth) : null },
             ]}
-            line="Payments happen at the venue, not through Centium. These figures are what was agreed and what your staff marked as paid."
+            line={t("Payments happen at the venue, not through Centium. These figures are what was agreed and what your staff marked as paid.")}
           />}
           <VNumberCard
             boxes={[
-              { label: "Classes this week", value: n(d?.classesThisWeek) },
-              { label: "Bookings this week", value: n(d?.bookingsThisWeek) },
+              { label: t("Classes this week"), value: n(d?.classesThisWeek) },
+              { label: t("Bookings this week"), value: n(d?.bookingsThisWeek) },
             ]}
-            line={`Monday to Sunday, on the venue's clock (${timezone}).`}
+            line={t("Monday to Sunday, on the venue's clock ({timezone}).", { timezone })}
           />
           <VNumberCard
             boxes={[
-              { label: "On waitlists", value: n(d?.waitlistWaiting) },
-              { label: "Cancellations this week", value: n(d?.cancellationsThisWeek) },
+              { label: t("On waitlists"), value: n(d?.waitlistWaiting) },
+              { label: t("Cancellations this week"), value: n(d?.cancellationsThisWeek) },
             ]}
-            line="People waiting for a place, and class bookings cancelled this week."
+            line={t("People waiting for a place, and class bookings cancelled this week.")}
           />
         </div>
       )}

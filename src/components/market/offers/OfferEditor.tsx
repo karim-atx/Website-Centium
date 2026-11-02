@@ -8,6 +8,7 @@ import { NO_ICON_SCALE } from "../../pro/proInk";
 import { OfferCard } from "../OfferCard";
 import { MarketEmptyCard, MarketError, MarketOffline, MarketSkeleton } from "../MarketStates";
 import { FOCUS_CSS } from "../usePress";
+import { t, tk, tx } from "../../../i18n/core";
 import {
   HEADLINE_MAX,
   TERMS_MAX,
@@ -143,17 +144,17 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
 
   const appliesLabel = useMemo(() => appliesTo?.options?.find((o) => o.id === draft.appliesTo)?.label ?? null, [appliesTo, draft.appliesTo]);
 
-  const backLabels = "Back to Offers";
-  const editWord = isNew ? "New offer" : "Edit offer";
+  const backLabels = t("Back to Offers");
+  const editWord = isNew ? t("New offer") : t("Edit offer");
 
   // ---- states before the form
   if (!isNew && existing && existing.kind !== "ready") {
     return (
       <div style={{ color: m.ink, lineHeight: "normal" }}>
-        <BackHeader eyebrow="Offers" title="Edit offer" onBack={onClose} backLabel={backLabels} />
-        {existing.kind === "loading" ? <MarketSkeleton radius={20} rows={3} count={3} label="Loading offer" /> : null}
-        {existing.kind === "error" ? <MarketError thing="this offer" onRetry={() => setTick((t) => t + 1)} /> : null}
-        {existing.kind === "missing" ? <MarketEmptyCard title="This offer isn't available" body="It may have been removed. Go back to see your offers." /> : null}
+        <BackHeader eyebrow={t("Offers")} title={t("Edit offer")} onBack={onClose} backLabel={backLabels} />
+        {existing.kind === "loading" ? <MarketSkeleton radius={20} rows={3} count={3} label={tk("Loading offer")} /> : null}
+        {existing.kind === "error" ? <MarketError thing={tk("this offer")} onRetry={() => setTick((t) => t + 1)} /> : null}
+        {existing.kind === "missing" ? <MarketEmptyCard title={t("This offer isn't available")} body={t("It may have been removed. Go back to see your offers.")} /> : null}
       </div>
     );
   }
@@ -177,10 +178,10 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
     const r = isNew ? await createOffer(owner, draft, requestId) : await updateOffer(owner, offerId as string, draft);
     setBusy(false);
     if (r.ok) {
-      onDone(isNew ? "Offer published" : "Offer saved");
+      onDone(isNew ? t("Offer published") : t("Offer saved"));
       return;
     }
-    setSaveNote({ text: r.offline ? "You're offline. Try again when you're connected." : r.message, quiet: !!r.offline });
+    setSaveNote({ text: r.offline ? t("You're offline. Try again when you're connected.") : r.message, quiet: !!r.offline });
   };
 
   // ---- Preview and publish (also the read-only view of an expired offer)
@@ -191,13 +192,13 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
       <div style={{ color: m.ink, lineHeight: "normal" }}>
         <style>{FOCUS_CSS}</style>
         <BackHeader
-          eyebrow={expired ? "Offers" : editWord}
-          title={expired ? "Ended offer" : "Preview"}
+          eyebrow={expired ? t("Offers") : editWord}
+          title={expired ? t("Ended offer") : t("Preview")}
           onBack={expired ? onClose : () => setStep("form")}
-          backLabel={expired ? backLabels : `Back to ${editWord}`}
+          backLabel={expired ? backLabels : t("Back to {screen}", { screen: editWord })}
         />
-        {expired ? <MarketEmptyCard title="This offer has ended" body={`It ran until ${dayLabel(draft.endsOn)}, so it can't be edited.`} style={{ marginBottom: 14 }} /> : null}
-        <Caps>{pro ? "How clients see it" : "How members see it"}</Caps>
+        {expired ? <MarketEmptyCard title={t("This offer has ended")} body={t("It ran until {date}, so it can't be edited.", { date: dayLabel(draft.endsOn) })} style={{ marginBottom: 14 }} /> : null}
+        <Caps>{pro ? t("How clients see it") : t("How members see it")}</Caps>
         <div style={{ marginTop: 8, borderRadius: 24, background: m.soft, padding: 14 }}>
           <OfferCard
             variant="client"
@@ -210,14 +211,15 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
             balance={cost}
           />
           <div style={{ fontSize: textPx(11), color: m.faint, marginTop: 8, textAlign: "center" }}>
-            {pro ? "Shows in Rewards under Professionals, and on your public profile." : 'Members with enough points see "You can redeem". Others see how many points they still need.'}
+            {pro ? t("Shows in Rewards under Professionals, and on your public profile.") : t('Members with enough points see "You can redeem". Others see how many points they still need.')}
           </div>
         </div>
         <dl style={{ margin: "14px 0 0", borderRadius: 24, border: `1px solid ${m.border}`, padding: "4px 16px" }}>
           {rows.map((r, i) => (
             <div key={r.k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "10px 0", borderTop: i === 0 ? undefined : `0.5px solid ${m.div}`, fontSize: textPx(12.5) }}>
-              <dt style={{ color: m.faint }}>{r.k}</dt>
-              <dd style={{ margin: 0, fontWeight: 700, textAlign: "end", minWidth: 0, overflowWrap: "anywhere" }}>{r.v}</dd>
+              {/* The row names and fixed values ("Free", "No cap", "In store") are the model's English, translated as shown; the terms and the service name are the owner's words. */}
+              <dt style={{ color: m.faint }}>{t(r.k)}</dt>
+              <dd style={{ margin: 0, fontWeight: 700, textAlign: "end", minWidth: 0, overflowWrap: "anywhere" }}>{r.k === "Terms" || r.k === "Applies to" ? r.v : t(r.v)}</dd>
             </div>
           ))}
         </dl>
@@ -231,14 +233,14 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
                 <GuidelinesLink message={saveNote.text} />
               </p>
             ) : null}
-            <PrimaryButton label={isNew ? "Publish" : "Save changes"} onPress={() => void publish()} disabled={!draft.fundingAck || !owner} busy={busy} style={{ marginTop: 16 }} />
+            <PrimaryButton label={isNew ? t("Publish") : t("Save changes")} onPress={() => void publish()} disabled={!draft.fundingAck || !owner} busy={busy} style={{ marginTop: 16 }} />
             <button
               type="button"
               onClick={() => setStep("form")}
               className="market-focus"
               style={{ width: "100%", height: 44, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit", fontSize: textPx(14), fontWeight: 700, color: m.ink2, background: "transparent", border: 0, cursor: "pointer", borderRadius: 12 }}
             >
-              Edit offer
+              {t("Edit offer")}
             </button>
           </>
         )}
@@ -247,32 +249,33 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
   }
 
   // ---- Create offer
-  const typeOpts = TYPE_OPTIONS(variant);
-  const whereOpts = WHERE_OPTIONS(variant);
+  // The option labels are the model's English, translated as shown.
+  const typeOpts = TYPE_OPTIONS(variant).map((o) => ({ ...o, label: t(o.label) }));
+  const whereOpts = WHERE_OPTIONS(variant).map((o) => ({ ...o, label: o.key === "online" ? tx("Online", "session format") : t(o.label) }));
   const guide = pro
-    ? { line: "Clients who log daily earn about 1,000 points a month.", rows: [["Small perk (5–10% off)", "300–600"], ["Mid (15–20% off)", "800–1,500"], ["Large (25%+ or a free session)", "2,000–4,000"]] }
-    : { line: "Members who log daily earn about 1,000 points a month.", rows: [["Small perk (sample, 5–10% off)", "300–600"], ["Mid (15–20% off)", "800–1,500"], ["Large (25%+ or a free service)", "2,000–4,000"]] };
+    ? { line: t("Clients who log daily earn about 1,000 points a month."), rows: [[t("Small perk (5–10% off)"), "300–600"], [t("Mid (15–20% off)"), "800–1,500"], [t("Large (25%+ or a free session)"), "2,000–4,000"]] }
+    : { line: t("Members who log daily earn about 1,000 points a month."), rows: [[t("Small perk (sample, 5–10% off)"), "300–600"], [t("Mid (15–20% off)"), "800–1,500"], [t("Large (25%+ or a free service)"), "2,000–4,000"]] };
   const free = draft.type === "free_item";
 
   return (
     <div ref={formRef} style={{ color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <BackHeader eyebrow="Offers" title={editWord} onBack={onClose} backLabel={backLabels} />
+      <BackHeader eyebrow={t("Offers")} title={editWord} onBack={onClose} backLabel={backLabels} />
 
       <div data-field="headline">
-        <FieldLabel htmlFor="offer-headline">Headline</FieldLabel>
-        <BoxInput id="offer-headline" value={draft.headline} onChange={(v) => set("headline", v)} placeholder={pro ? "20% off a 4-session pack" : "15% off outerwear"} maxLength={HEADLINE_MAX} error={shown.headline} />
+        <FieldLabel htmlFor="offer-headline">{t("Headline")}</FieldLabel>
+        <BoxInput id="offer-headline" value={draft.headline} onChange={(v) => set("headline", v)} placeholder={pro ? t("20% off a 4-session pack") : t("15% off outerwear")} maxLength={HEADLINE_MAX} error={shown.headline} />
       </div>
 
       <FieldLabel id="offer-type-label" style={{ marginTop: 12 }}>
-        Type
+        {t("Type")}
       </FieldLabel>
       <SubSegment<OfferType> labelId="offer-type-label" options={typeOpts} value={draft.type} onChange={(k) => set("type", k)} grow={pro ? undefined : { free_item: 1.3 }} />
 
       {pro ? (
         <div data-field="appliesTo">
           <FieldLabel htmlFor="offer-applies" style={{ marginTop: 12 }}>
-            Applies to
+            {t("Applies to")}
           </FieldLabel>
           <AppliesSelect value={draft.appliesTo} onChange={(v) => set("appliesTo", v)} state={appliesTo} error={shown.appliesTo} />
         </div>
@@ -280,23 +283,23 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 10, marginTop: 12 }}>
         <div data-field="value">
-          <FieldLabel htmlFor="offer-value">Value</FieldLabel>
+          <FieldLabel htmlFor="offer-value">{t("Value")}</FieldLabel>
           {free ? (
             <div id="offer-value" aria-disabled="true" style={{ height: 48, boxSizing: "content-box", borderRadius: 14, border: `1px solid ${m.border}`, display: "flex", alignItems: "center", padding: "0 14px", fontSize: textPx(14), color: m.faint }}>
-              Free
+              {t("Free")}
             </div>
           ) : (
             <BoxInput id="offer-value" value={draft.value} onChange={(v) => set("value", v.replace(draft.type === "percent_off" ? /[^\d]/g : /[^\d.]/g, ""))} suffix={draft.type === "percent_off" ? "%" : "$"} inputMode={draft.type === "percent_off" ? "numeric" : "decimal"} error={shown.value} />
           )}
         </div>
         <div data-field="pointsCost">
-          <FieldLabel htmlFor="offer-cost">Points cost</FieldLabel>
-          <BoxInput id="offer-cost" value={draft.pointsCost} onChange={(v) => set("pointsCost", v.replace(/[^\d,]/g, ""))} suffix="pts" strong inputMode="numeric" error={shown.pointsCost} />
+          <FieldLabel htmlFor="offer-cost">{t("Points cost")}</FieldLabel>
+          <BoxInput id="offer-cost" value={draft.pointsCost} onChange={(v) => set("pointsCost", v.replace(/[^\d,]/g, ""))} suffix={t("pts")} strong inputMode="numeric" error={shown.pointsCost} />
         </div>
       </div>
 
-      <section aria-label="Pricing guide" style={{ marginTop: 10, borderRadius: 16, background: m.pale, padding: "12px 14px" }}>
-        <div style={{ fontSize: textPx(12.5), fontWeight: 800, color: m.pdark }}>Pricing guide</div>
+      <section aria-label={t("Pricing guide")} style={{ marginTop: 10, borderRadius: 16, background: m.pale, padding: "12px 14px" }}>
+        <div style={{ fontSize: textPx(12.5), fontWeight: 800, color: m.pdark }}>{t("Pricing guide")}</div>
         <div style={{ fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2, marginTop: 2 }}>{guide.line}</div>
         <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4, fontSize: textPx(12) }}>
           {guide.rows.map(([k, v]) => (
@@ -306,42 +309,42 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
             </div>
           ))}
         </div>
-        <div style={{ fontSize: textPx(11), color: m.faint, marginTop: 8 }}>Guidance only. You set the cost.</div>
+        <div style={{ fontSize: textPx(11), color: m.faint, marginTop: 8 }}>{t("Guidance only. You set the cost.")}</div>
       </section>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 10, marginTop: 12 }}>
         <div data-field="quantityCap">
           <FieldLabel htmlFor="offer-cap" optional>
-            Quantity cap
+            {t("Quantity cap")}
           </FieldLabel>
           <BoxInput id="offer-cap" value={draft.quantityCap} onChange={(v) => set("quantityCap", v.replace(/[^\d]/g, ""))} inputMode="numeric" error={shown.quantityCap} />
         </div>
         <div data-field="perMemberLimit">
-          <FieldLabel htmlFor="offer-limit">{pro ? "Per-client limit" : "Per-member limit"}</FieldLabel>
+          <FieldLabel htmlFor="offer-limit">{pro ? t("Per-client limit") : t("Per-member limit")}</FieldLabel>
           <BoxInput id="offer-limit" value={draft.perMemberLimit} onChange={(v) => set("perMemberLimit", v.replace(/[^\d]/g, ""))} inputMode="numeric" error={shown.perMemberLimit} />
         </div>
         <div data-field="startsOn">
-          <FieldLabel htmlFor="offer-starts">Starts</FieldLabel>
+          <FieldLabel htmlFor="offer-starts">{t("Starts")}</FieldLabel>
           <DateBox id="offer-starts" value={draft.startsOn} onChange={(v) => set("startsOn", v)} error={shown.startsOn} />
         </div>
         <div data-field="endsOn">
-          <FieldLabel htmlFor="offer-ends">{endLocked ? "Ends" : "Ends (optional)"}</FieldLabel>
+          <FieldLabel htmlFor="offer-ends">{endLocked ? t("Ends") : t("Ends (optional)")}</FieldLabel>
           <DateBox id="offer-ends" value={draft.endsOn} min={draft.startsOn || undefined} onChange={(v) => set("endsOn", v)} error={shown.endsOn} />
         </div>
       </div>
 
       <FieldLabel id="offer-where-label" style={{ margin: "12px 0 6px" }}>
-        Where it can be used
+        {t("Where it can be used")}
       </FieldLabel>
       <SubSegment<OfferWhere> labelId="offer-where-label" options={whereOpts} value={draft.where} onChange={(k) => set("where", k)} />
 
       <FieldLabel htmlFor="offer-terms" style={{ margin: "12px 0 6px" }}>
-        Terms
+        {t("Terms")}
       </FieldLabel>
       <TermsBox id="offer-terms" value={draft.terms} onChange={(v) => set("terms", v)} minHeight={pro ? 52 : 72} />
 
       <FundingCheck look="form" checked={draft.fundingAck} onChange={(v) => set("fundingAck", v)} style={{ marginTop: 14 }} />
-      <PrimaryButton label="Preview offer" onPress={toPreview} style={{ marginTop: 14 }} />
+      <PrimaryButton label={t("Preview offer")} onPress={toPreview} style={{ marginTop: 14 }} />
     </div>
   );
 };
@@ -364,7 +367,7 @@ const DateBox: React.FC<{ id: string; value: string; min?: string; onChange: (v:
         style={{ position: "relative", height: 48, boxSizing: "content-box", borderRadius: 14, border: error ? `1.5px solid ${m.high}` : `1px solid ${m.border}`, display: "flex", alignItems: "center", padding: "0 14px", fontSize: textPx(14), color: value ? m.ink : m.faint }}
       >
         <span aria-hidden style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {value ? dayLabel(value) : "Choose a date"}
+          {value ? dayLabel(value) : t("Choose a date")}
         </span>
         <input
           id={id}
@@ -459,7 +462,7 @@ const AppliesSelect: React.FC<{ value: string | null; onChange: (v: string) => v
           }}
         >
           <option value="" disabled>
-            {opts ? "Choose a service" : state?.failed ? "Couldn't load your services" : "Loading your services…"}
+            {opts ? t("Choose a service") : state?.failed ? t("Couldn't load your services") : t("Loading your services…")}
           </option>
           {(opts ?? []).map((o) => (
             <option key={o.id} value={o.id}>

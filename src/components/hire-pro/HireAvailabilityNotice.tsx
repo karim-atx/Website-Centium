@@ -32,7 +32,7 @@ export const HireAvailabilityNotice: React.FC<{
         <>
           <p className="text-sm font-semibold text-charcoal">{t(FREE_PERIOD_ENDED)}</p>
           <p className="text-xs text-charcoal-soft mt-1">
-            Clients who try to hire you are told you're not taking new clients right now.
+            {t("Clients who try to hire you are told you're not taking new clients right now.")}
           </p>
           <Link to="/contact" className="tap inline-flex items-center mt-1.5 text-sm font-bold text-primary-deep-text underline">
             {t(UPGRADE_ACTION_LABEL)}
@@ -41,11 +41,11 @@ export const HireAvailabilityNotice: React.FC<{
       ) : (
         <>
           <p className="text-sm font-semibold text-charcoal">
-            {planLabel ? `You've reached the client limit on your ${planLabel} plan.` : "You've reached the client limit on your plan."}
+            {planLabel ? t("You've reached the client limit on your {plan} plan.", { plan: planLabel }) : t("You've reached the client limit on your plan.")}
           </p>
           <p className="text-xs text-charcoal-soft mt-1">
-            {capLine ? `${capLine}. ` : ""}Clients who try to hire you are told you're not taking new clients right
-            now. Disconnect a client to free a place, or{" "}
+            {capLine ? `${capLine}. ` : ""}
+            {t("Clients who try to hire you are told you're not taking new clients right now.")} {t("Disconnect a client to free a place, or")}{" "}
             <a href={upgradeMailto()} className="font-bold text-primary-deep-text underline">
               {t(UPGRADE_ACTION_LABEL).toLowerCase()}
             </a>

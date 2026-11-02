@@ -14,6 +14,7 @@
 import { METRIC_IDENTITY, SHARE_TOKENS } from "../../../theme/marketTokens";
 import { statAllowed, statDefaultOn, visibleStats, type ShareLocks } from "../shareLocks";
 import { appLocale } from "../../../i18n/format";
+import { getLanguage, t, tn, tx } from "../../../i18n/core";
 
 export type ClientTemplate = "workout" | "pr" | "streak" | "achievement" | "steps" | "sleep" | "water" | "food";
 export type IdentityKey = keyof typeof METRIC_IDENTITY;
@@ -174,8 +175,8 @@ export const arcDash = (pct: number) => `${Math.max(0, Math.min(100, Math.round(
 // Stats: rows, defaults, locks
 
 /** The row's second line: the value, "· the headline", "· off by default" (C-SH.2 rows). */
-export const rowSub = (s: ClientStat) => (statDefaultOn(s.key) ? s.value : `${s.value} · off by default`);
-export const headlineSub = (spec: ClientCardSpec) => `${spec.headline.value} · the headline`;
+export const rowSub = (s: ClientStat) => (statDefaultOn(s.key) ? s.value : t("{value} · off by default", { value: s.value }));
+export const headlineSub = (spec: ClientCardSpec) => t("{value} · the headline", { value: spec.headline.value });
 
 /** The switches' starting state: every stat on except the sensitive ones (D-28). */
 export const initialOn = (spec: ClientCardSpec): Set<string> => new Set(spec.stats.filter((s) => statDefaultOn(s.key)).map((s) => s.key));
@@ -219,11 +220,14 @@ const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "O
 export function cardDate(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
   const dt = new Date(y, (m || 1) - 1, d || 1);
+  // Arabic: the app's Arabic date (Arabic day and month names, Western digits).
+  if (getLanguage() === "ar") return dt.toLocaleDateString(appLocale(), { weekday: "short", month: "short", day: "numeric" });
   return `${WEEKDAY[dt.getDay()]}, ${MONTH[dt.getMonth()]} ${dt.getDate()}`;
 }
 /** "Sep 17". */
 export function shortDate(iso: string): string {
   const [, m, d] = iso.slice(0, 10).split("-").map(Number);
+  if (getLanguage() === "ar") return new Date(2000, (m || 1) - 1, d || 1).toLocaleDateString(appLocale(), { month: "short", day: "numeric" });
   return `${MONTH[(m || 1) - 1]} ${d || 1}`;
 }
 
@@ -233,8 +237,8 @@ export const fmtKg = (kg: number) => (Math.round(kg * 10) / 10).toLocaleString(a
 /** "52 min" under an hour, else "3 h 26" (the board's durations). */
 export function fmtDuration(totalSec: number): string {
   const min = Math.max(0, Math.round(totalSec / 60));
-  if (min < 60) return `${min} min`;
-  return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")}`;
+  if (min < 60) return t("{n} min", { n: min });
+  return t("{h} h {m}", { h: Math.floor(min / 60), m: String(min % 60).padStart(2, "0") });
 }
 /** Minutes as the board's "1 h 36" / "48 min". */
 export const fmtMinutes = (min: number) => fmtDuration(min * 60);
@@ -249,7 +253,6 @@ export function daysBefore(iso: string, n: number): string {
 // ---------------------------------------------------------------------------
 // The eight templates from real data
 
-const sheetTitle = (what: string) => `Share your ${what}`;
 
 export interface WorkoutFacts {
   name: string;
@@ -274,27 +277,27 @@ export function barValues(volumes: number[]): number[] {
 
 export function workoutCard(w: WorkoutFacts): ClientCardSpec {
   const stats: ClientStat[] = [
-    { key: "duration", title: "Duration", value: fmtDuration(w.durationSec), label: "duration" },
-    { key: "sets", title: "Sets", value: fmtInt(w.sets), label: "sets" },
-    { key: "personal_bests", title: "Personal bests", value: fmtInt(w.prs), label: w.prs === 1 ? "personal best" : "personal bests" },
+    { key: "duration", title: t("Duration"), value: fmtDuration(w.durationSec), label: t("duration") },
+    { key: "sets", title: t("Sets"), value: fmtInt(w.sets), label: t("sets") },
+    { key: "personal_bests", title: t("Personal bests"), value: fmtInt(w.prs), label: tn(w.prs, "personal best", "personal bests") },
   ];
-  if (w.bodyWeightKg != null) stats.push({ key: "body_weight", title: "Body weight", value: `${fmtKg(w.bodyWeightKg)} kg`, label: "body weight" });
+  if (w.bodyWeightKg != null) stats.push({ key: "body_weight", title: t("Body weight"), value: t("{n} kg", { n: fmtKg(w.bodyWeightKg) }), label: t("body weight") });
   const bars = barValues(w.exerciseVolumes);
   return {
     template: "workout",
     id: "workout",
-    eyebrow: "Strength workout",
+    eyebrow: t("Strength workout"),
     date: cardDate(w.date),
     big: fmtInt(w.volumeKg),
-    unit: "kg",
+    unit: t("kg"),
     subject: w.name,
-    line: `Total volume · ${w.exercises} ${w.exercises === 1 ? "exercise" : "exercises"}`,
+    line: tn(w.exercises, "Total volume · {n} exercise", "Total volume · {n} exercises"),
     leaves: false,
     vis: bars.length ? { kind: "bars", values: bars } : null,
-    headline: { title: "Volume", value: `${fmtInt(w.volumeKg)} kg` },
+    headline: { title: t("Volume"), value: t("{n} kg", { n: fmtInt(w.volumeKg) }) },
     stats,
-    sheetTitle: sheetTitle("workout"),
-    patternLabel: "Workout pattern",
+    sheetTitle: t("Share your workout"),
+    patternLabel: t("Workout pattern"),
   };
 }
 
@@ -312,27 +315,27 @@ export interface PrFacts {
 }
 
 export function prCard(p: PrFacts): ClientCardSpec {
-  const stats: ClientStat[] = [{ key: "best_set", title: "Best set", value: `${fmtKg(p.best.weightKg)} kg × ${p.best.reps}`, label: "best set" }];
+  const stats: ClientStat[] = [{ key: "best_set", title: t("Best set"), value: t("{kg} kg × {reps}", { kg: fmtKg(p.best.weightKg), reps: p.best.reps }), label: t("best set") }];
   if (p.change30 != null && Math.abs(p.change30) >= 0.05) {
     const v = Math.round(p.change30 * 10) / 10;
-    stats.push({ key: "change", title: "Change", value: `${v > 0 ? "+" : "-"}${fmtKg(Math.abs(v))} kg`, label: `since ${shortDate(p.since)}` });
+    stats.push({ key: "change", title: tx("Change", "stat"), value: t("{n} kg", { n: `${v > 0 ? "+" : "-"}${fmtKg(Math.abs(v))}` }), label: t("since {date}", { date: shortDate(p.since) }) });
   }
   const bars = barValues(p.history);
   return {
     template: "pr",
     id: "workout",
-    eyebrow: "Personal best",
+    eyebrow: t("Personal best"),
     date: cardDate(p.date),
     big: fmtKg(p.oneRmKg),
-    unit: "kg",
+    unit: t("kg"),
     subject: p.lift,
-    line: "Estimated 1RM",
+    line: t("Estimated 1RM"),
     leaves: false,
     vis: bars.length ? { kind: "bars", values: bars } : null,
-    headline: { title: "One-rep max", value: `${fmtKg(p.oneRmKg)} kg` },
+    headline: { title: t("One-rep max"), value: t("{n} kg", { n: fmtKg(p.oneRmKg) }) },
     stats,
-    sheetTitle: sheetTitle("personal best"),
-    patternLabel: "Workout pattern",
+    sheetTitle: t("Share your personal best"),
+    patternLabel: t("Workout pattern"),
   };
 }
 
@@ -349,21 +352,21 @@ export function streakCard(s: StreakFacts): ClientCardSpec {
   return {
     template: "streak",
     id: "streak",
-    eyebrow: "Streak milestone",
+    eyebrow: t("Streak milestone"),
     date: cardDate(s.today),
     big: fmtInt(s.days),
-    unit: s.days === 1 ? "day" : "days",
-    subject: "Logged every day",
-    line: `Since ${shortDate(s.since)}`,
+    unit: tn(s.days, "day", "days"),
+    subject: t("Logged every day"),
+    line: t("Since {date}", { date: shortDate(s.since) }),
     leaves: true,
     vis: null,
-    headline: { title: "Streak", value: `${fmtInt(s.days)} ${s.days === 1 ? "day" : "days"}` },
+    headline: { title: t("Streak"), value: tn(s.days, "{n} day", "{n} days", { n: fmtInt(s.days) }) },
     stats: [
-      { key: "workouts", title: "Workouts", value: fmtInt(s.workouts), label: s.workouts === 1 ? "workout" : "workouts" },
-      { key: "meals", title: "Meals logged", value: fmtInt(s.meals), label: "meals logged" },
+      { key: "workouts", title: t("Workouts"), value: fmtInt(s.workouts), label: tn(s.workouts, "workout", "workouts") },
+      { key: "meals", title: t("Meals logged"), value: fmtInt(s.meals), label: t("meals logged") },
     ],
-    sheetTitle: sheetTitle("streak"),
-    patternLabel: "Streak pattern",
+    sheetTitle: t("Share your streak"),
+    patternLabel: t("Streak pattern"),
   };
 }
 
@@ -381,23 +384,23 @@ export function achievementCard(a: AchievementFacts): ClientCardSpec {
   // A one-off (threshold 1) has no count worth a big number: its points take the hero instead.
   const pointsHero = a.threshold <= 1 && a.points > 0;
   const stats: ClientStat[] = [];
-  if (a.points > 0 && !pointsHero) stats.push({ key: "points", title: "Points", value: `+${fmtInt(a.points)}`, label: "points" });
-  if (a.level) stats.push({ key: "tier", title: "Tier", value: a.level, label: "tier" });
+  if (a.points > 0 && !pointsHero) stats.push({ key: "points", title: t("Points"), value: `+${fmtInt(a.points)}`, label: t("points") });
+  if (a.level) stats.push({ key: "tier", title: t("Tier"), value: a.level, label: t("tier") });
   return {
     template: "achievement",
     id: "gold",
-    eyebrow: "Achievement unlocked",
+    eyebrow: t("Achievement unlocked"),
     date: cardDate(a.earnedAt),
     big: pointsHero ? `+${fmtInt(a.points)}` : fmtInt(a.threshold),
-    unit: pointsHero ? "points" : "",
+    unit: pointsHero ? t("points") : "",
     subject,
-    line: a.level ? `${a.level} tier reached` : "",
+    line: a.level ? t("{level} tier reached", { level: a.level }) : "",
     leaves: false,
     vis: { kind: "badge" },
-    headline: { title: "Achievement", value: subject },
+    headline: { title: t("Achievement"), value: subject },
     stats,
-    sheetTitle: sheetTitle("achievement"),
-    patternLabel: "Achievement pattern",
+    sheetTitle: t("Share your achievement"),
+    patternLabel: t("Achievement pattern"),
   };
 }
 
@@ -411,23 +414,23 @@ export interface StepsFacts {
 
 export function stepsCard(s: StepsFacts): ClientCardSpec {
   const stats: ClientStat[] = [];
-  if (s.distanceM != null && s.distanceM > 0) stats.push({ key: "distance", title: "Distance", value: `${(Math.round(s.distanceM / 100) / 10).toLocaleString(appLocale("en-US"))} km`, label: "distance" });
-  if (s.activeMin != null && s.activeMin > 0) stats.push({ key: "active", title: "Active", value: `${fmtInt(s.activeMin)} min`, label: "active" });
+  if (s.distanceM != null && s.distanceM > 0) stats.push({ key: "distance", title: t("Distance"), value: t("{n} km", { n: (Math.round(s.distanceM / 100) / 10).toLocaleString(appLocale("en-US")) }), label: t("distance") });
+  if (s.activeMin != null && s.activeMin > 0) stats.push({ key: "active", title: tx("Active", "active minutes"), value: t("{n} min", { n: fmtInt(s.activeMin) }), label: tx("active", "active minutes") });
   return {
     template: "steps",
     id: "steps",
-    eyebrow: "Steps goal reached",
+    eyebrow: t("Steps goal reached"),
     date: cardDate(s.date),
     big: fmtInt(s.steps),
     unit: "",
-    subject: `steps · goal ${fmtInt(s.goal)}`,
+    subject: t("steps · goal {goal}", { goal: fmtInt(s.goal) }),
     line: "",
     leaves: false,
     vis: { kind: "arc", pct: s.goal > 0 ? (s.steps / s.goal) * 100 : 100 },
-    headline: { title: "Steps", value: fmtInt(s.steps) },
+    headline: { title: t("Steps"), value: fmtInt(s.steps) },
     stats,
-    sheetTitle: sheetTitle("steps"),
-    patternLabel: "Steps pattern",
+    sheetTitle: t("Share your steps"),
+    patternLabel: t("Steps pattern"),
   };
 }
 
@@ -444,23 +447,23 @@ export interface SleepFacts {
 
 export function sleepCard(s: SleepFacts): ClientCardSpec {
   const stats: ClientStat[] = [];
-  if (s.deepMin != null && s.deepMin > 0) stats.push({ key: "deep", title: "Deep", value: fmtMinutes(s.deepMin), label: "deep" });
+  if (s.deepMin != null && s.deepMin > 0) stats.push({ key: "deep", title: t("Deep"), value: fmtMinutes(s.deepMin), label: t("deep") });
   if (s.remMin != null && s.remMin > 0) stats.push({ key: "rem", title: "REM", value: fmtMinutes(s.remMin), label: "REM" });
   return {
     template: "sleep",
     id: "sleep",
-    eyebrow: "Last night's sleep",
+    eyebrow: t("Last night's sleep"),
     date: cardDate(s.date),
     big: fmtMinutes(s.asleepMin),
     unit: "",
-    subject: "Asleep",
+    subject: t("Asleep"),
     line: s.times ?? "",
     leaves: false,
     vis: s.score != null ? { kind: "arc", pct: s.score } : null,
-    headline: { title: "Asleep", value: fmtMinutes(s.asleepMin) },
+    headline: { title: t("Asleep"), value: fmtMinutes(s.asleepMin) },
     stats,
-    sheetTitle: sheetTitle("sleep"),
-    patternLabel: "Sleep pattern",
+    sheetTitle: t("Share your sleep"),
+    patternLabel: t("Sleep pattern"),
   };
 }
 
@@ -475,30 +478,30 @@ export interface WaterFacts {
 
 const FL_OZ_ML = 29.5735;
 export function waterAmount(ml: number, unit: "ml" | "floz"): { big: string; unit: string } {
-  if (unit === "floz") return { big: fmtInt(ml / FL_OZ_ML), unit: "fl oz" };
-  return { big: (Math.round(ml / 100) / 10).toLocaleString(appLocale("en-US"), { maximumFractionDigits: 1 }), unit: "L" };
+  if (unit === "floz") return { big: fmtInt(ml / FL_OZ_ML), unit: t("fl oz") };
+  return { big: (Math.round(ml / 100) / 10).toLocaleString(appLocale("en-US"), { maximumFractionDigits: 1 }), unit: t("L") };
 }
 
 export function waterCard(w: WaterFacts): ClientCardSpec {
   const a = waterAmount(w.ml, w.unit);
   const g = waterAmount(w.goalMl, w.unit);
   const stats: ClientStat[] = [];
-  if (w.drinks != null && w.drinks > 0) stats.push({ key: "drinks", title: "Drinks", value: fmtInt(w.drinks), label: w.drinks === 1 ? "drink" : "drinks" });
+  if (w.drinks != null && w.drinks > 0) stats.push({ key: "drinks", title: t("Drinks"), value: fmtInt(w.drinks), label: tn(w.drinks, "drink", "drinks") });
   return {
     template: "water",
     id: "water",
-    eyebrow: "Water goal reached",
+    eyebrow: t("Water goal reached"),
     date: cardDate(w.date),
     big: a.big,
     unit: a.unit,
-    subject: `Daily goal ${g.big} ${g.unit}`,
+    subject: t("Daily goal {amount} {unit}", { amount: g.big, unit: g.unit }),
     line: "",
     leaves: false,
     vis: { kind: "arc", pct: w.goalMl > 0 ? (w.ml / w.goalMl) * 100 : 100 },
-    headline: { title: "Water", value: `${a.big} ${a.unit}` },
+    headline: { title: t("Water"), value: `${a.big} ${a.unit}` },
     stats,
-    sheetTitle: sheetTitle("water"),
-    patternLabel: "Water pattern",
+    sheetTitle: t("Share your water"),
+    patternLabel: t("Water pattern"),
   };
 }
 
@@ -521,15 +524,15 @@ export function macroShares(protein: number, carbs: number, fat: number): [numbe
 
 export function foodCard(f: FoodFacts): ClientCardSpec {
   const [p, c, fa] = macroShares(f.protein, f.carbs, f.fat);
-  const g = (n: number) => `${fmtInt(n)} g`;
+  const g = (n: number) => t("{n} g", { n: fmtInt(n) });
   return {
     template: "food",
     id: "food",
-    eyebrow: "Day summary",
+    eyebrow: t("Day summary"),
     date: cardDate(f.date),
     big: fmtInt(f.kcal),
     unit: "kcal",
-    subject: f.goalKcal ? `of a ${fmtInt(f.goalKcal)} goal` : "",
+    subject: f.goalKcal ? t("of a {goal} goal", { goal: fmtInt(f.goalKcal) }) : "",
     line: "",
     leaves: false,
     vis:
@@ -537,20 +540,20 @@ export function foodCard(f: FoodFacts): ClientCardSpec {
         ? {
             kind: "macro",
             parts: [
-              { name: `Protein ${g(f.protein)}`, pct: p, color: "#7D6BB5" },
-              { name: `Carbs ${g(f.carbs)}`, pct: c, color: "#AEA1DC" },
-              { name: `Fat ${g(f.fat)}`, pct: fa, color: "#6F9993" },
+              { name: t("Protein {amount}", { amount: g(f.protein) }), pct: p, color: "#7D6BB5" },
+              { name: t("Carbs {amount}", { amount: g(f.carbs) }), pct: c, color: "#AEA1DC" },
+              { name: t("Fat {amount}", { amount: g(f.fat) }), pct: fa, color: "#6F9993" },
             ],
           }
         : null,
-    headline: { title: "Calories", value: `${fmtInt(f.kcal)} kcal` },
+    headline: { title: t("Calories"), value: `${fmtInt(f.kcal)} kcal` },
     stats: [
-      { key: "protein", title: "Protein", value: g(f.protein), label: "protein" },
-      { key: "carbs", title: "Carbs", value: g(f.carbs), label: "carbs" },
-      { key: "fat", title: "Fat", value: g(f.fat), label: "fat" },
+      { key: "protein", title: t("Protein"), value: g(f.protein), label: t("protein") },
+      { key: "carbs", title: t("Carbs"), value: g(f.carbs), label: t("carbs") },
+      { key: "fat", title: t("Fat"), value: g(f.fat), label: t("fat") },
     ],
-    sheetTitle: sheetTitle("food day"),
-    patternLabel: "Food pattern",
+    sheetTitle: t("Share your food day"),
+    patternLabel: t("Food pattern"),
   };
 }
 

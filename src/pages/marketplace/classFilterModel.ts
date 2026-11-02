@@ -6,6 +6,7 @@
 // sample data); Distance only shows once the device has shared a position.
 
 import type { FilterGroupDef } from "../../components/market/filterModel";
+import { tk, tn } from "../../i18n/core";
 
 export interface FilterableClass {
   classType: string | null;
@@ -17,9 +18,10 @@ export interface FilterableClass {
   km?: number | null;
 }
 
-export const TIME_OPTIONS = ["Morning", "Afternoon", "Evening"] as const;
-export const DISTANCE_OPTIONS = ["Under 1 km", "Under 3 km", "Under 5 km"] as const;
-export const PRICE_OPTIONS = ["Free", "Under $15", "Under $30"] as const;
+// The choices are English values (matched below); FilterPopup shows them through t().
+export const TIME_OPTIONS = [tk("Morning"), tk("Afternoon"), tk("Evening")] as const;
+export const DISTANCE_OPTIONS = [tk("Under 1 km"), tk("Under 3 km"), tk("Under 5 km")] as const;
+export const PRICE_OPTIONS = [tk("Free"), tk("Under $15"), tk("Under $30")] as const;
 
 const hourOf = (hhmm: string): number => Number(hhmm.slice(0, 2)) || 0;
 export const placeOf = (c: FilterableClass): string => c.venueName || c.businessName;
@@ -43,17 +45,17 @@ export function classFilterGroups<T extends FilterableClass>(classes: readonly T
   const types = uniq(classes.map((c) => c.classType));
   const places = uniq(classes.map(placeOf));
   const groups: FilterGroupDef<T>[] = [];
-  if (types.length) groups.push({ heading: "Type", options: types, test: (c, v) => c.classType === v });
-  groups.push({ heading: "Time", options: TIME_OPTIONS, test: (c, v) => timeMatches(c.startTime, v) });
-  if (places.length > 1) groups.push({ heading: "Gym", options: places, test: (c, v) => placeOf(c) === v });
+  if (types.length) groups.push({ heading: tk("Type"), options: types, test: (c, v) => c.classType === v });
+  groups.push({ heading: tk("Time"), options: TIME_OPTIONS, test: (c, v) => timeMatches(c.startTime, v) });
+  if (places.length > 1) groups.push({ heading: tk("Gym"), options: places, test: (c, v) => placeOf(c) === v });
   if (hasPosition) groups.push(distanceGroup<T>());
-  groups.push({ heading: "Price", options: PRICE_OPTIONS, test: (c, v) => priceMatches(c.priceValue, v) });
+  groups.push({ heading: tk("Price"), options: PRICE_OPTIONS, test: (c, v) => priceMatches(c.priceValue, v) });
   return groups;
 }
 
 /** The Distance group ("Under 1 km / 3 km / 5 km"): a choice keeps what is strictly nearer; no distance never matches. */
 export function distanceGroup<T extends { km?: number | null }>(): FilterGroupDef<T> {
-  return { heading: "Distance", options: DISTANCE_OPTIONS, test: (c, v) => c.km != null && c.km < parseFloat(v.replace("Under ", "")) };
+  return { heading: tk("Distance"), options: DISTANCE_OPTIONS, test: (c, v) => c.km != null && c.km < parseFloat(v.replace("Under ", "")) };
 }
 
 /**
@@ -67,7 +69,7 @@ export function gymFilterGroups<T extends { km?: number | null }>(hasPosition: b
 
 /** "Friday, October 16 · 5 classes" (D-02 month first). */
 export function classCountLine(dayLabel: string, n: number): string {
-  return `${dayLabel} · ${n} ${n === 1 ? "class" : "classes"}`;
+  return tn(n, "{day} · {n} class", "{day} · {n} classes", { day: dayLabel });
 }
 
 /** The day strip: from today for at least 14 days, out to the last listed class (at most 60). */

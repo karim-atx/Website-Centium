@@ -12,6 +12,7 @@ import { MORE_DOTS_GLYPH } from "../destinationGlyphs";
 import { canCopyImage, canCopyText, copyCanvasImage, copyText, saveCanvas, shareCanvas } from "../shareActions";
 import { BizCard, type CardFill } from "./BizCard";
 import { exportCard, exportPhotoCard } from "./paintBizCard";
+import { t, tk, tx } from "../../../i18n/core";
 import {
   CARD_SHADOW,
   CEN_GRADIENT,
@@ -76,8 +77,8 @@ const LOCK = (
   </svg>
 );
 
-const FORMAT_LABEL: Record<BizFormat, string> = { story: "Story", post: "Post", sticker: "Sticker" };
-const BG_LABEL: Record<BizBackground, string> = { biz: "Business colours", cen: "Centium", photo: "Your photo" };
+const formatLabel = (f: BizFormat) => (f === "story" ? t("Story") : f === "post" ? tx("Post", "share format") : t("Sticker"));
+const BG_LABEL: Record<BizBackground, string> = { biz: tk("Business colours"), cen: "Centium", photo: tk("Your photo") };
 
 interface Photo {
   url: string;
@@ -108,11 +109,11 @@ export const BusinessShareSheet: React.FC<{
 }> = ({ open, onClose, brand, data, userId, onResult }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
-  const t = data.t;
-  const formats = templateFormats(t);
+  const tpl = data.t;
+  const formats = templateFormats(tpl);
   const [format, setFormat] = useState<BizFormat>("story");
   const [bg, setBg] = useState<BizBackground>("biz");
-  const [hide, setHide] = useState<string[]>(() => DEF_HIDE[t] ?? []);
+  const [hide, setHide] = useState<string[]>(() => DEF_HIDE[tpl] ?? []);
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [step, setStep] = useState<"edit" | "dest">("edit");
   const [busy, setBusy] = useState(false);
@@ -194,32 +195,32 @@ export const BusinessShareSheet: React.FC<{
     }
   };
 
-  const fileName = `centium-${t}-${format}.png`;
+  const fileName = `centium-${tpl}-${format}.png`;
   const finish = (r: ShareResult) => {
     onResult(r);
     onClose();
   };
-  const failText = "Couldn't share the card. Try again.";
+  const failText = t("Couldn't share the card. Try again.");
   const share = async () => {
     if (!canvas) return;
     const out = await shareCanvas(canvas, fileName, sticker ? null : link.href);
-    if (out === "shared") finish({ text: "Card shared", tone: "success" });
-    else if (out === "saved") finish({ text: "Saved to Photos", tone: "success" });
+    if (out === "shared") finish({ text: t("Card shared"), tone: "success" });
+    else if (out === "saved") finish({ text: t("Saved to Photos"), tone: "success" });
     else if (out === "failed") finish({ text: failText, tone: "error" });
   };
   const destinations: Destination[] = [
-    { key: "ig", label: "Instagram Story", onPress: () => void share() },
+    { key: "ig", label: t("Instagram Story"), onPress: () => void share() },
     { key: "wa", label: "WhatsApp", onPress: () => void share() },
     {
       key: "save",
-      label: "Save image",
+      label: t("Save image"),
       onPress: () => {
         if (!canvas) return;
         try {
           saveCanvas(canvas, fileName);
-          finish({ text: "Saved to Photos", tone: "success" });
+          finish({ text: t("Saved to Photos"), tone: "success" });
         } catch {
-          finish({ text: "Couldn't save the image. Try again.", tone: "error" });
+          finish({ text: t("Couldn't save the image. Try again."), tone: "error" });
         }
       },
     },
@@ -227,21 +228,21 @@ export const BusinessShareSheet: React.FC<{
       ? [
           {
             key: "copy" as const,
-            label: "Copy",
+            label: t("Copy"),
             onPress: () =>
               void (async () => {
                 if (sticker) {
                   const ok = canvas ? await copyCanvasImage(canvas) : false;
-                  finish(ok ? { text: "Sticker copied. Paste it onto your photo.", tone: "success" } : { text: "Couldn't copy the sticker. Try again.", tone: "error" });
+                  finish(ok ? { text: t("Sticker copied. Paste it onto your photo."), tone: "success" } : { text: t("Couldn't copy the sticker. Try again."), tone: "error" });
                 } else {
                   const ok = await copyText(link.href);
-                  finish(ok ? { text: "Link copied", tone: "success" } : { text: "Couldn't copy the link. Try again.", tone: "error" });
+                  finish(ok ? { text: t("Link copied"), tone: "success" } : { text: t("Couldn't copy the link. Try again."), tone: "error" });
                 }
               })(),
           },
         ]
       : []),
-    { key: "more", label: "More", glyph: MORE_DOTS_GLYPH, onPress: () => void share() },
+    { key: "more", label: t("More"), glyph: MORE_DOTS_GLYPH, onPress: () => void share() },
   ];
 
   const sectionLabel = (text: string, margin: string) => <div style={{ margin, fontSize: textPx(12), fontWeight: 600, color: m.ink2 }}>{text}</div>;
@@ -252,11 +253,11 @@ export const BusinessShareSheet: React.FC<{
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={NO_ICON_SCALE}>
           <path d={SHIELD} />
         </svg>
-        Only what you select is shared.
+        {t("Only what you select is shared.")}
       </div>
       {failed && step === "edit" && (
         <p role="alert" style={{ margin: "0 0 8px", textAlign: "center", fontSize: textPx(12), color: m.high, fontWeight: 600 }}>
-          Couldn't make the image. Try again.
+          {t("Couldn't make the image. Try again.")}
         </p>
       )}
       <button
@@ -267,7 +268,7 @@ export const BusinessShareSheet: React.FC<{
         className="tap w-full flex items-center justify-center transition-transform duration-[140ms] ease-out active:scale-[0.97] disabled:opacity-40"
         style={{ height: 50, borderRadius: 16, background: m.fill, color: m.onfill, fontSize: textPx(15), fontWeight: 700 }}
       >
-        {step === "edit" ? "Next" : "Done"}
+        {step === "edit" ? t("Next") : t("Done")}
       </button>
     </div>
   );
@@ -277,7 +278,7 @@ export const BusinessShareSheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={onClose}
-        title={step === "edit" ? SHEET_TITLE[t] : "Share"}
+        title={step === "edit" ? t(SHEET_TITLE[tpl]) : t("Share")}
         onBack={step === "dest" ? () => setStep("edit") : undefined}
         size="tall"
         bodyPadding={{ top: 18, right: 18, bottom: 18, left: 18 }}
@@ -287,7 +288,7 @@ export const BusinessShareSheet: React.FC<{
       >
         {step === "edit" ? (
           <>
-            <div role="radiogroup" aria-label="Format" className="flex" style={{ gap: 5, padding: 4, borderRadius: 14, background: m.segtrack }}>
+            <div role="radiogroup" aria-label={t("Format")} className="flex" style={{ gap: 5, padding: 4, borderRadius: 14, background: m.segtrack }}>
               {formats.map((f) => {
                 const on = f === format;
                 return (
@@ -300,7 +301,7 @@ export const BusinessShareSheet: React.FC<{
                     className="tap flex-1 flex items-center justify-center"
                     style={{ minHeight: 34, borderRadius: 11, background: on ? m.segactive : m.segidle, color: on ? m.onfill : m.segink, fontSize: textPx(12), fontWeight: 700 }}
                   >
-                    {FORMAT_LABEL[f]}
+                    {formatLabel(f)}
                   </button>
                 );
               })}
@@ -317,7 +318,7 @@ export const BusinessShareSheet: React.FC<{
                   anchor="fill"
                   chrome="business"
                   hintKey={userId ? `centium.overlayHint.${userId}` : null}
-                  layerLabel="Your card"
+                  layerLabel={t("Your card")}
                   onChange={(s) => {
                     overlay.current = s;
                   }}
@@ -331,8 +332,8 @@ export const BusinessShareSheet: React.FC<{
 
             {!sticker && (
               <>
-                {sectionLabel("Background", "14px 0 8px")}
-                <div role="radiogroup" aria-label="Background" className="flex flex-wrap" style={{ gap: 6 }}>
+                {sectionLabel(t("Background"), "14px 0 8px")}
+                <div role="radiogroup" aria-label={t("Background")} className="flex flex-wrap" style={{ gap: 6 }}>
                   {(["biz", "cen", "photo"] as BizBackground[]).map((k) => {
                     const on = k === bg && (k !== "photo" || !!photo);
                     const sw = k === "biz" ? `linear-gradient(150deg, ${brand.c1}, ${brand.c2})` : k === "cen" ? CEN_GRADIENT : PHOTO_SWATCH;
@@ -347,7 +348,7 @@ export const BusinessShareSheet: React.FC<{
                         style={{ gap: 6, borderRadius: 999, paddingBlock: "5px", paddingInline: "6px 10px", fontSize: textPx(11), lineHeight: linePx(14), fontWeight: on ? 700 : 600, border: `1px solid ${on ? m.fill : m.border}`, background: on ? m.fill : m.card, color: on ? m.onfill : m.ink2 }}
                       >
                         <span aria-hidden style={{ width: 14, height: 14, borderRadius: 999, background: sw, boxShadow: "0 0 0 1px rgba(36,31,27,0.1)", flex: "none" }} />
-                        {BG_LABEL[k]}
+                        {t(BG_LABEL[k])}
                       </button>
                     );
                   })}
@@ -357,11 +358,11 @@ export const BusinessShareSheet: React.FC<{
             )}
             {sticker && (
               <div style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: m.faint, marginTop: 10 }}>
-                Transparent, with white text. Copy it, then paste it onto your own photo or video. The checkerboard is only here to show there's no background.
+                {t("Transparent, with white text. Copy it, then paste it onto your own photo or video. The checkerboard is only here to show there's no background.")}
               </div>
             )}
 
-            {sectionLabel("Show on the card", "14px 0 4px")}
+            {sectionLabel(t("Show on the card"), "14px 0 4px")}
             {rows.map((r) => {
               const on = r.lock || !hide.includes(r.key);
               const text = (
@@ -383,7 +384,7 @@ export const BusinessShareSheet: React.FC<{
                     {text}
                     <span className="inline-flex items-center shrink-0" style={{ gap: 4, fontSize: textPx(11), fontWeight: 600, color: m.faint }}>
                       {LOCK}
-                      Always on
+                      {t("Always on")}
                     </span>
                   </div>
                 );
@@ -404,7 +405,7 @@ export const BusinessShareSheet: React.FC<{
                     className="relative shrink-0"
                     style={{ width: 42, height: 26, borderRadius: 999, background: on ? m.fill : m.swoff, boxShadow: on ? "none" : "0 0 0 3px rgba(174,161,220,0.35)" }}
                   >
-                    <span style={{ position: "absolute", left: on ? 18 : 2, top: 2, width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)" }} />
+                    <span style={{ position: "absolute", insetInlineStart: on ? 18 : 2, top: 2, width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)" }} />
                   </span>
                 </button>
               );
@@ -425,7 +426,7 @@ export const BusinessShareSheet: React.FC<{
                 card(DEST_PREVIEW_W, fill)
               )}
             </div>
-            <ShareDestinations items={destinations} note={`The QR code opens ${ITEM_NOUN[t]} in Centium. In a browser, Instagram and WhatsApp open through your device's share options.`} />
+            <ShareDestinations items={destinations} note={t("The QR code opens {item} in Centium. In a browser, Instagram and WhatsApp open through your device's share options.", { item: t(ITEM_NOUN[tpl]) })} />
           </>
         )}
       </BottomSheet>

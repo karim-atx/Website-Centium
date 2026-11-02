@@ -1,5 +1,6 @@
 import { formatShortDate } from "../../utils/date";
 import { minutesOfDay, time12, time12Split } from "../../utils/time12";
+import { t, tk, tn } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · the class card (C-MO.4.3 `classCards`), the class
 // detail's seat panel (C-MO.4.3.1 `seatPanel`, `seats`, `seatCols`) and the
@@ -44,7 +45,7 @@ export function durationMinutes(start: string | null | undefined, end: string | 
 /** "45 min" (the board's form, minutes always: "60 min"); "" when unknown. */
 export function durationText(start: string | null | undefined, end: string | null | undefined): string {
   const d = durationMinutes(start, end);
-  return d === null ? "" : `${d} min`;
+  return d === null ? "" : t("{n} min", { n: d });
 }
 
 const atMidnight = (iso: string) => new Date(`${iso}T00:00:00`);
@@ -68,7 +69,7 @@ export function shortName(name: string | null | undefined): string {
 export const venueOf = (c: Pick<MarketplaceClass, "venueName" | "businessName">) => c.venueName?.trim() || c.businessName;
 
 /** The board's "Instructor not listed" when the class names no Team instructor (instructorRule.ts). */
-export const NOT_LISTED = "Instructor not listed";
+export const NOT_LISTED = tk("Instructor not listed");
 
 export type ClassStub = "price" | "booked" | "full";
 
@@ -99,21 +100,21 @@ export function classCardLines(
 ): ClassCardLines {
   const cap = Math.max(0, c.maxCapacity);
   const b = Math.min(cap, Math.max(0, c.bookedCount));
-  const who = c.instructorName?.trim() ? shortName(c.instructorName) : NOT_LISTED;
+  const who = c.instructorName?.trim() ? shortName(c.instructorName) : t(NOT_LISTED);
   const full = c.isFull || c.spotsRemaining <= 0;
   // The viewer's own limit (B13 MK-04) when it is below what the class has left.
   const limited = !full && c.spotsRemaining < cap - b;
   const date = farOff(c.date, opts.now) ? formatShortDate(atMidnight(c.date), { month: "short", day: "numeric" }) : null;
-  const t = time12Split(c.startTime);
+  const time = time12Split(c.startTime);
   return {
-    time: t,
+    time,
     dur: durationText(c.startTime, c.endTime),
     sub: opts.hideVenue ? who : `${venueOf(c)} · ${who}`,
-    booked: `${date ? `${date} · ` : ""}${b} of ${cap} booked`,
+    booked: `${date ? `${date} · ` : ""}${t("{booked} of {cap} booked", { booked: b, cap })}`,
     pct: cap > 0 ? Math.round((b / cap) * 100) : 0,
-    extra: opts.booked ? null : full ? "Full" : limited ? `${c.spotsRemaining} ${c.spotsRemaining === 1 ? "spot" : "spots"} left` : null,
+    extra: opts.booked ? null : full ? t("Full") : limited ? tn(c.spotsRemaining, "{n} spot left", "{n} spots left") : null,
     stub: opts.booked ? "booked" : full ? "full" : "price",
-    price: c.priceValue ? c.price : "Free",
+    price: c.priceValue ? c.price : t("Free"),
   };
 }
 
@@ -164,8 +165,8 @@ export function sheetWhen(c: Pick<MarketplaceClass, "date" | "startTime" | "endT
 
 /** The confirmation's When row: "Fri, Oct 16, 6:30 PM" (the board's "Fri 16 Oct, 6:30 PM"). */
 export function doneWhen(c: Pick<MarketplaceClass, "date" | "startTime">): string {
-  const t = time12(c.startTime);
-  return t ? `${shortDate(c.date)}, ${t}` : shortDate(c.date);
+  const time = time12(c.startTime);
+  return time ? t("{date}, {time}", { date: shortDate(c.date), time }) : shortDate(c.date);
 }
 
 /** The sheet's place line: "{venue} · {instructor short}", the venue alone when nobody is listed. */
@@ -175,10 +176,11 @@ export function sheetPlace(c: Pick<MarketplaceClass, "venueName" | "businessName
 }
 
 /** The confirmation's Payment row: "$12 · Cash before class", or "Free". */
-export const paymentLine = (price: string, free: boolean) => (free ? "Free" : `${price} · Cash before class`);
+export const paymentLine = (price: string, free: boolean) => (free ? t("Free") : `${price} · ${t("Cash before class")}`);
 
 /** "Spin 45 is in your bookings." plus the venue's own first-visit line when it has one. */
 export function doneBody(title: string, firstVisit: string | null | undefined): string {
   const first = firstVisit?.trim();
-  return first ? `${title} is in your bookings. ${first}` : `${title} is in your bookings.`;
+  const line = t("{title} is in your bookings.", { title });
+  return first ? `${line} ${first}` : line;
 }

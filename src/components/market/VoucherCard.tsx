@@ -7,6 +7,7 @@ import { formatShortDate } from "../../utils/date";
 import { PassQr } from "../marketplace/PassQr";
 import { copyText } from "../share/shareActions";
 import { FOCUS_CSS } from "./usePress";
+import { t, tx } from "../../i18n/core";
 
 // Market + Share 3.0 · VoucherCard (HANDOVER §4 C-MO.4 "Redeem" → Voucher,
 // §5: code, qr, validUntil, status; Client Explore Screens lines 527–535,
@@ -50,7 +51,7 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({ code, qr, validUntil, 
   const m = marketPalette(dark);
   const live = status === "issued";
   const dateLine =
-    status === "used" ? (usedAt ? `Used on ${longDate(usedAt)}` : "Used") : status === "void" ? "Cancelled · points refunded" : status === "expired" ? `Expired on ${longDate(validUntil)}` : `Valid until ${longDate(validUntil)}`;
+    status === "used" ? (usedAt ? t("Used on {date}", { date: longDate(usedAt) }) : tx("Used", "voucher")) : status === "void" ? t("Cancelled · points refunded") : status === "expired" ? t("Expired on {date}", { date: longDate(validUntil) }) : tx("Valid until {date}", "voucher", { date: longDate(validUntil) });
   const copy = async () => {
     const ok = await copyText(code);
     onCopied?.(ok);
@@ -61,26 +62,26 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({ code, qr, validUntil, 
       <div style={{ width: 200, height: 200, borderRadius: 16, background: m.soft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         {live ? (
           <span className="market-qr" style={{ width: 176, height: 176, borderRadius: 10, background: "#FFFFFF", overflow: "hidden", display: "block" }}>
-            <PassQr value={qr} size={176} label="Voucher QR code" failedText="Couldn't draw this voucher's code. Close it and try again." />
+            <PassQr value={qr} size={176} label={t("Voucher QR code")} failedText={t("Couldn't draw this voucher's code. Close it and try again.")} />
           </span>
         ) : (
-          <span style={{ fontSize: textPx(10), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.tert }}>{status === "used" ? "Used" : status === "void" ? "Void" : "Expired"}</span>
+          <span style={{ fontSize: textPx(10), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.tert }}>{status === "used" ? tx("Used", "voucher") : status === "void" ? tx("Void", "voucher") : tx("Expired", "voucher")}</span>
         )}
       </div>
       <button
         type="button"
         onClick={copy}
-        aria-label={`Copy code ${code}`}
+        aria-label={t("Copy code {code}", { code })}
         className="market-focus"
         style={{ display: "flex", alignItems: "center", gap: 10, height: 48, padding: "0 14px", borderRadius: 14, background: m.pale, border: 0, font: "inherit", cursor: "pointer", maxWidth: "100%" }}
       >
-        <span style={{ fontSize: textPx(18), fontWeight: 800, letterSpacing: "0.12em", color: m.pdark, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{code}</span>
+        <span style={{ fontSize: textPx(18), fontWeight: 800, letterSpacing: "0.12em", color: m.pdark, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}><bdi>{code}</bdi></span>
         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={m.pdark} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: "none", ...NO_ICON_SCALE }}>
           <rect x="8" y="8" width="14" height="14" rx="2" />
           <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
         </svg>
       </button>
-      {live ? <div style={{ fontSize: textPx(11.5), color: m.faint }}>Tap the code to copy it</div> : null}
+      {live ? <div style={{ fontSize: textPx(11.5), color: m.faint }}>{t("Tap the code to copy it")}</div> : null}
       <div style={{ fontSize: textPx(13), fontWeight: 700 }}>{dateLine}</div>
     </div>
   );

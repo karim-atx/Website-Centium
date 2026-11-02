@@ -10,6 +10,7 @@ import { marketPalette } from "../../theme/marketTokens";
 import { linePx, textPx } from "../../theme/textSize";
 
 import { canMarkBookingPaid, type RosterEntry } from "../../services/venues/consoleLogic";
+import { t } from "../../i18n/core";
 
 // CL-08 · Mark as paid on a class booking (OP1-083 K2): tapping a booked row
 // that is awaiting payment opens the PopupMenu with "Mark as paid" and "Add a
@@ -79,8 +80,8 @@ export function useMarkBookingPaid({ onDone }: { onDone: (entry: RosterEntry) =>
         options={
           menu
             ? [
-                { value: "paid", label: "Mark as paid", disabled: !online },
-                { value: "ref", label: "Add a reference", disabled: !online },
+                { value: "paid", label: t("Mark as paid"), disabled: !online },
+                { value: "ref", label: t("Add a reference"), disabled: !online },
               ]
             : []
         }
@@ -94,14 +95,14 @@ export function useMarkBookingPaid({ onDone }: { onDone: (entry: RosterEntry) =>
       <BottomSheet
         open={!!refFor}
         onClose={() => !busy && setRefFor(null)}
-        title="Add a reference"
+        title={t("Add a reference")}
         tone="business"
         headerHeight={62}
         animateExit
         bodyPadding={{ top: 18, right: 18, bottom: 30, left: 18 }}
       >
         <label htmlFor="pay-ref" className="block whitespace-nowrap" style={{ margin: "0 0 6px", fontSize: textPx(12), fontWeight: 700, color: m.ink2 }}>
-          Reference (optional)
+          {t("Reference (optional)")}
         </label>
         <style>{`.pay-ref::placeholder { color: ${m.faint}; font-weight: 500; opacity: 1; }`}</style>
         <input
@@ -110,7 +111,7 @@ export function useMarkBookingPaid({ onDone }: { onDone: (entry: RosterEntry) =>
           maxLength={REFERENCE_MAX}
           disabled={busy}
           onChange={(e) => setReference(e.target.value)}
-          placeholder="e.g. receipt or transfer number"
+          placeholder={t("e.g. receipt or transfer number")}
           className="pay-ref w-full block focus:outline-none"
           style={{ minHeight: 48, borderRadius: 14, background: m.sgrey, border: `1px solid ${m.border}`, padding: "0 14px", fontSize: textPx(14), lineHeight: linePx(20), fontWeight: 600, color: m.ink, caretColor: m.pdark }}
         />
@@ -127,7 +128,7 @@ export function useMarkBookingPaid({ onDone }: { onDone: (entry: RosterEntry) =>
           className="tap w-full flex items-center justify-center"
           style={{ minHeight: 52, borderRadius: 16, background: m.fill, color: m.onfill, fontSize: textPx(14.5), fontWeight: 800, opacity: busy || !online ? 0.45 : 1 }}
         >
-          {busy ? "Saving…" : "Mark as paid"}
+          {busy ? t("Saving…") : t("Mark as paid")}
         </button>
         {error && refFor && (
           <p role="alert" style={{ margin: "5px 0 0", fontSize: textPx(11.5), fontWeight: 700, color: m.high }}>

@@ -12,6 +12,7 @@ import { hexAlpha, liftInk } from "../../components/market/marketColor";
 import { fetchLedger, groupLedger, ledgerCursor, ledgerLines, signedPoints, amountTone, type LedgerEntry } from "../../services/points";
 import { BackTitle } from "./BackTitle";
 import { appLocale } from "../../i18n/format";
+import { t, tk } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · Points history (C-MO.4.7 `history`,
 // `historyReversal`, `historyEmpty`; Client Explore Screens lines 598–633,
@@ -87,7 +88,7 @@ export default function PointsHistoryPage() {
   }, [entries, loadingMore]);
 
   const rank = tierRank(pointTiers, pointsSummary?.tierName);
-  const t = tierStyle(rank, dark);
+  const tier = tierStyle(rank, dark);
   const items = useMemo(() => (entries ? groupLedger(entries, pointsSummary?.balance ?? 0) : null), [entries, pointsSummary?.balance]);
   const title = (key: string) => achievements?.find((a) => a.key === key)?.title ?? null;
   const earnedInk = dark ? liftInk("#4F8F8A") : "#4F8F8A";
@@ -96,22 +97,25 @@ export default function PointsHistoryPage() {
   return (
     <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <BackTitle title="Points history" parent="/app/marketplace" />
+      <BackTitle title={t("Points history")} parent="/app/marketplace" />
 
       {pointsSummary ? (
         <>
-          <section aria-label="Balance" style={{ marginTop: 12, borderRadius: 20, padding: "14px 16px", background: t.fill, border: `0.5px solid ${t.border}` }}>
+          <section aria-label={t("Balance")} style={{ marginTop: 12, borderRadius: 20, padding: "14px 16px", background: tier.fill, border: `0.5px solid ${tier.border}` }}>
             {/* The board's label is an inline span in the card's 16px line box (22 tall), as here. */}
             <div style={{ fontSize: 16, lineHeight: "normal" }}>
-              <span style={{ fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 800, textTransform: "uppercase", letterSpacing: "1.4px", color: t.text }}>Balance</span>
+              <span style={{ fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 800, textTransform: "uppercase", letterSpacing: "1.4px", color: tier.text }}>{t("Balance")}</span>
             </div>
             <div style={{ marginTop: 2, display: "flex", alignItems: "center", gap: 8 }}>
               <PointsFigure value={pointsSummary.balance} mark="tier" rank={rank} tierName={pointsSummary.tierName} size={44} lineHeight={52} />
             </div>
           </section>
           <p style={{ margin: "8px 0 0", fontSize: textPx(11), lineHeight: linePx(16.5), color: m.faint }}>
-            {pointsSummary.achievementPoints.toLocaleString(appLocale("en-US"))} from achievements · {pointsSummary.referralPoints.toLocaleString(appLocale("en-US"))} from referrals
-            {pointsSummary.otherPoints !== 0 ? ` · ${pointsSummary.otherPoints.toLocaleString(appLocale("en-US"))} other` : ""}
+            {t("{achievements} from achievements · {referrals} from referrals", {
+              achievements: pointsSummary.achievementPoints.toLocaleString(appLocale("en-US")),
+              referrals: pointsSummary.referralPoints.toLocaleString(appLocale("en-US")),
+            })}
+            {pointsSummary.otherPoints !== 0 ? ` · ${t("{n} other", { n: pointsSummary.otherPoints.toLocaleString(appLocale("en-US")) })}` : ""}
           </p>
         </>
       ) : (
@@ -119,9 +123,9 @@ export default function PointsHistoryPage() {
       )}
 
       {failed ? (
-        <MarketError thing="your points history" onRetry={() => setTick((x) => x + 1)} style={{ marginTop: 16 }} />
+        <MarketError thing={tk("your points history")} onRetry={() => setTick((x) => x + 1)} style={{ marginTop: 16 }} />
       ) : items === null ? (
-        <MarketSkeleton radius={20} rows={4} count={1} height={228} label="Loading your points history" style={{ marginTop: 16 }} />
+        <MarketSkeleton radius={20} rows={4} count={1} height={228} label={tk("Loading your points history")} style={{ marginTop: 16 }} />
       ) : items.length === 0 ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10, padding: "56px 24px 0" }}>
           <span aria-hidden style={{ width: 56, height: 56, borderRadius: 18, background: dark ? hexAlpha("#7D67D9", 0.16) : "#EEEAF8", display: "flex", alignItems: "center", justifyContent: "center", color: dark ? m.accent : "#7D67D9" }}>
@@ -130,7 +134,7 @@ export default function PointsHistoryPage() {
               <path d="M12 6v6l4 2" />
             </svg>
           </span>
-          <p style={{ margin: 0, fontSize: textPx(14), lineHeight: linePx(20), color: m.ink2, maxWidth: 240 }}>Your points activity will appear here.</p>
+          <p style={{ margin: 0, fontSize: textPx(14), lineHeight: linePx(20), color: m.ink2, maxWidth: 240 }}>{t("Your points activity will appear here.")}</p>
         </div>
       ) : (
         <div style={{ marginTop: 6, display: "flex", flexDirection: "column" }}>
@@ -151,10 +155,10 @@ export default function PointsHistoryPage() {
               className="market-focus"
               style={{ marginTop: 16, minHeight: 44, borderRadius: 12, border: `1px solid ${m.border}`, background: "none", font: "inherit", fontSize: textPx(12.5), fontWeight: 800, color: m.pdark, cursor: "pointer", opacity: loadingMore ? 0.6 : 1 }}
             >
-              {loadingMore ? "Loading…" : "Load more"}
+              {loadingMore ? t("Loading…") : t("Load more")}
             </button>
           ) : null}
-          {moreFailed ? <MarketError thing="more of your history" onRetry={() => void loadMore()} style={{ marginTop: 10 }} /> : null}
+          {moreFailed ? <MarketError thing={tk("more of your history")} onRetry={() => void loadMore()} style={{ marginTop: 10 }} /> : null}
         </div>
       )}
     </div>
