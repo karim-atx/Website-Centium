@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Backpack, Check, ChevronDown, CircleAlert, FlaskConical, HeartPulse, Loader2, Milk, Package, Plus, Shirt, type LucideIcon } from "lucide-react";
 import type { ProductCategory } from "../../../../services/store/products";
 import { fieldStyle, px, SheetBox, useMarketColors } from "../../../business-market/listingParts";
+import { t } from "../../../../i18n/core";
 
 // AN11-004 · the store product's Category field and its in-flow listbox
 // (product_categories: pick one, or "New category" to name your own group),
@@ -52,7 +53,7 @@ export function CategoryPicker({
     const n = name.trim();
     if (!n) return;
     if (n.length > CATEGORY_NAME_MAX) {
-      setError(`Use up to ${CATEGORY_NAME_MAX} characters.`);
+      setError(t("Use up to {n} characters.", { n: CATEGORY_NAME_MAX }));
       return;
     }
     setBusy(true);
@@ -86,7 +87,7 @@ export function CategoryPicker({
   });
 
   return (
-    <SheetBox label="Category" htmlFor="product-category">
+    <SheetBox label={t("Category")} htmlFor="product-category">
       <button
         id="product-category"
         type="button"
@@ -98,12 +99,12 @@ export function CategoryPicker({
         style={{ ...fieldStyle(m), display: "flex", alignItems: "center", gap: 8, textAlign: "start", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.6 : 1, boxShadow: open ? `inset 0 0 0 1px ${m.fill}` : undefined }}
       >
         {current && <CategoryGlyph glyph={current.glyph} size={16} color={m.pdark} />}
-        <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: current ? m.ink : m.faint }}>{current?.name ?? "Choose a category"}</span>
+        <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: current ? m.ink : m.faint }}>{current?.name ?? t("Choose a category")}</span>
         <ChevronDown size={16} aria-hidden color={m.faint} style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : "none" }} />
       </button>
       {note && !open && <p style={{ fontSize: px(11.5), color: m.faint, marginTop: 6, lineHeight: "normal" }}>{note}</p>}
       {open && (
-        <div role="listbox" aria-label="Category" style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+        <div role="listbox" aria-label={t("Category")} style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
           {categories === null
             ? [0, 1, 2].map((i) => <div key={i} aria-hidden className="animate-skeleton-pulse" style={{ height: 44, borderRadius: 10, background: m.card }} />)
             : categories.map((c) => {
@@ -134,7 +135,7 @@ export function CategoryPicker({
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <input
-                    aria-label="New category name"
+                    aria-label={t("New category name")}
                     value={name}
                     autoFocus
                     maxLength={40}
@@ -143,7 +144,7 @@ export function CategoryPicker({
                       setError(null);
                     }}
                     onKeyDown={(e) => e.key === "Enter" && void add()}
-                    placeholder="Name the group"
+                    placeholder={t("Name the group")}
                     aria-invalid={!!error || undefined}
                     style={{ ...fieldStyle(m, !!error), flex: 1, minWidth: 0, width: "auto" }}
                   />
@@ -156,7 +157,7 @@ export function CategoryPicker({
                     style={{ height: 40, borderRadius: 12, padding: "0 16px", border: 0, background: m.fill, color: m.onfill, fontSize: px(12.5), fontWeight: 800, display: "flex", alignItems: "center", gap: 6, flexShrink: 0, opacity: !name.trim() || busy ? 0.4 : 1, fontFamily: "inherit", cursor: "pointer" }}
                   >
                     {busy && <Loader2 size={14} className="animate-spin" aria-hidden />}
-                    Add
+                    {t("Add")}
                   </button>
                 </div>
                 {error && (
@@ -172,8 +173,8 @@ export function CategoryPicker({
                   <Plus size={15} aria-hidden color={m.pdark} />
                 </span>
                 <span style={{ flex: 1, minWidth: 0, lineHeight: "normal" }}>
-                  <span style={{ display: "block", fontSize: px(14), fontWeight: 600 }}>New category</span>
-                  <span style={{ display: "block", fontSize: px(11.5), color: m.faint }}>Name your own group</span>
+                  <span style={{ display: "block", fontSize: px(14), fontWeight: 600 }}>{t("New category")}</span>
+                  <span style={{ display: "block", fontSize: px(11.5), color: m.faint }}>{t("Name your own group")}</span>
                 </span>
               </button>
             ))}

@@ -26,6 +26,7 @@ import {
   dayLabel,
   daysOf,
   isCurrentPeriod,
+  monthLong,
   monthShort,
   periodLabel,
   periodOf,
@@ -43,6 +44,7 @@ import { REVIEWED } from "../../../services/health-metrics/clinicalCopy";
 import { activityByDay, useActivityDaily, useMetricRows } from "../../../services/health-metrics/b1";
 import { useSyncedRemove } from "../../../components/health/metric/SyncedRemove";
 import { Toast } from "../../../components/ui/Toast";
+import { t, tk, tn } from "../../../i18n/core";
 
 // HE1.5 Heart rate (opens on Week) with HE1.5.d / .m / .y in place.
 //
@@ -63,8 +65,9 @@ import { Toast } from "../../../components/ui/Toast";
 // - Source tag, freshness line, pull to sync and synced-row Delete are native
 //   (B1 sources / hidden_synced_readings); none render on the web.
 
-const NO_DEVICE_BODY =
-  "Heart rate readings come from Apple Health or Health Connect on your phone. Syncing from the Centium phone app is coming. Centium only reads the data types you allow.";
+const NO_DEVICE_BODY = tk(
+  "Heart rate readings come from Apple Health or Health Connect on your phone. Syncing from the Centium phone app is coming. Centium only reads the data types you allow.",
+);
 
 const round = (v: number) => Math.round(v);
 const arrow = (d: number) => (d > 0 ? "↑" : "↓");
@@ -153,48 +156,55 @@ export default function HeartRatePage() {
       const resting = restingOn(day);
       const v = resting ?? byDay[day];
       const word = resting !== null ? "resting" : "latest";
+      const isYesterday = day === shiftDate(today, -1);
       const sv = samplesOn(day);
       const lo = sv.length ? Math.min(...sv) : v;
       const hi = sv.length ? Math.max(...sv) : v;
       const earlier = allDays.filter((d) => d < day);
       const prev = earlier.length ? byDay[earlier[earlier.length - 1]] : null;
-      const who = day === today ? "Today's" : relativeDayTitle(day, today) === "Yesterday" ? "Yesterday's" : `${dayLabel(day)}`;
+      const lohi = { lo: round(lo), hi: round(hi) };
       return {
         value: round(v),
-        unit: `bpm ${word}`,
+        unit: word === "resting" ? t("bpm resting") : t("bpm latest"),
         // Every sample of the day (health_metrics); low to high when more than one.
         rangeText:
           sv.length > 1
-            ? `${day === today ? "Today" : who === "Yesterday's" ? "Yesterday" : who} ${round(lo)} to ${round(hi)} bpm`
+            ? day === today
+              ? t("Today {lo} to {hi} bpm", lohi)
+              : isYesterday
+                ? t("Yesterday {lo} to {hi} bpm", lohi)
+                : t("{day} {lo} to {hi} bpm", { ...lohi, day: dayLabel(day) })
             : day === today
-              ? "1 reading today"
-              : `1 reading · ${who === "Yesterday's" ? "yesterday" : who}`,
+              ? t("1 reading today")
+              : isYesterday
+                ? t("1 reading · yesterday")
+                : t("1 reading · {day}", { day: dayLabel(day) }),
         // Resting: against last week's average resting (health-backend.md:155); otherwise the previous reading.
         change: (() => {
           const ref = resting !== null ? avg(Object.values(restingIn(previousPeriod(periodOf("week", day))))) : prev;
-          return ref === null || round(v) === round(ref) ? null : `${arrow(v - ref)} ${Math.abs(round(v - ref))} bpm`;
+          return ref === null || round(v) === round(ref) ? null : t("{arrow} {n} bpm", { arrow: arrow(v - ref), n: Math.abs(round(v - ref)) });
         })(),
         low: round(lo),
         high: round(hi),
         marker: round(v),
-        markerLabel: `${word === "resting" ? "Resting" : "Latest"} ${round(v)}`,
+        markerLabel: word === "resting" ? t("Resting {n}", { n: round(v) }) : t("Latest {n}", { n: round(v) }),
       };
     }
     if (pAvg === null || pLow === null || pHigh === null) return null;
-    const name = range === "month" ? periodLabel(period).split(" ")[0] : period.start.slice(0, 4);
+    const name = range === "month" ? monthLong(Number(period.start.slice(5, 7))) : period.start.slice(0, 4);
     const prevName = range === "month" ? monthShort(Number(previousPeriod(period).start.slice(5, 7))) : String(Number(period.start.slice(0, 4)) - 1);
     // HE1.5.m / .y #13, #20: "bpm avg resting", "Avg resting 61" with B1 resting values.
     const v = resting ? (restAvg as number) : pAvg;
     const ref = resting ? prevRestAvg : prevAvg;
     return {
       value: round(v),
-      unit: resting ? "bpm avg resting" : "bpm average",
-      rangeText: `${name} range ${round(pLow)} to ${round(pHigh)} bpm`,
-      change: ref === null || round(v) === round(ref) ? null : `${arrow(v - ref)} ${Math.abs(round(v - ref))} bpm vs ${prevName}`,
+      unit: resting ? t("bpm avg resting") : t("bpm average"),
+      rangeText: t("{name} range {lo} to {hi} bpm", { name, lo: round(pLow), hi: round(pHigh) }),
+      change: ref === null || round(v) === round(ref) ? null : t("{arrow} {n} bpm vs {prev}", { arrow: arrow(v - ref), n: Math.abs(round(v - ref)), prev: prevName }),
       low: round(pLow),
       high: round(pHigh),
       marker: round(v),
-      markerLabel: `${resting ? "Avg resting" : "Average"} ${round(v)}`,
+      markerLabel: resting ? t("Avg resting {n}", { n: round(v) }) : t("Average {n}", { n: round(v) }),
     };
   })();
 
@@ -206,8 +216,14 @@ export default function HeartRatePage() {
     lineAvg === null
       ? ""
       : resting
-        ? `${range === "week" ? "Week avg resting" : "Avg resting"} ${round(lineAvg)}`
-        : `${range === "week" ? "Week average" : range === "month" ? "Average" : "Year average"} ${round(lineAvg)}`;
+        ? range === "week"
+          ? t("Week avg resting {n}", { n: round(lineAvg) })
+          : t("Avg resting {n}", { n: round(lineAvg) })
+        : range === "week"
+          ? t("Week average {n}", { n: round(lineAvg) })
+          : range === "month"
+            ? t("Average {n}", { n: round(lineAvg) })
+            : t("Year average {n}", { n: round(lineAvg) });
   const elapsed = (() => {
     if (anchor !== today) return 1;
     const n = new Date();
@@ -215,38 +231,57 @@ export default function HeartRatePage() {
   })();
 
   const chartFoot = (() => {
-    if (range === "day") return byDay[anchor] !== undefined ? `${round(byDay[anchor])} bpm${anchor === today ? " so far" : ""}` : "No heart rate data this day";
-    if (logged === 0) return range === "week" ? "No heart rate data this week" : range === "month" ? "No heart rate data this month" : "No heart rate data this year";
+    if (range === "day")
+      return byDay[anchor] !== undefined
+        ? anchor === today
+          ? t("{n} bpm so far", { n: round(byDay[anchor]) })
+          : t("{n} bpm", { n: round(byDay[anchor]) })
+        : t("No heart rate data this day");
+    if (logged === 0) return range === "week" ? t("No heart rate data this week") : range === "month" ? t("No heart rate data this month") : t("No heart rate data this year");
     // HE1.5 (Week) has no foot inside the chart card; the count is the line under the stats (#44).
     if (range === "week") return null;
-    if (range === "month") return `${logged} of ${current ? Number(today.slice(8, 10)) : nDays} days logged`;
+    if (range === "month") return t("{n} of {span} days logged", { n: logged, span: current ? Number(today.slice(8, 10)) : nDays });
     const months = units.filter((u) => u.low !== null);
     const first = months[0];
     const last = months[months.length - 1];
-    const span = first === last ? monthShort(Number(first.key.slice(5, 7))) : `${monthShort(Number(first.key.slice(5, 7)))} to ${monthShort(Number(last.key.slice(5, 7)))}`;
-    return current ? `${span} · ${periodLabel(periodOf("month", today)).split(" ")[0]} so far` : span;
+    const span = first === last ? monthShort(Number(first.key.slice(5, 7))) : t("{start} to {end}", { start: monthShort(Number(first.key.slice(5, 7))), end: monthShort(Number(last.key.slice(5, 7))) });
+    return current ? `${span} · ${t("{month} so far", { month: monthLong(Number(today.slice(5, 7))) })}` : span;
   })();
 
   const statFoot = (() => {
     if (logged === 0) return null;
-    const days = `${logged} day${logged === 1 ? "" : "s"} logged`;
+    const days = tn(logged, "{n} day logged", "{n} days logged");
     if (range === "day") return relativeDayTitle(anchor, today);
-    if (range === "week") return current ? `This week so far · ${days}` : `${pLabel} · ${days}`;
-    if (range === "month") return `${pLabel.split(" ")[0]} · ${logged} of ${current ? Number(today.slice(8, 10)) : nDays} days logged`;
+    if (range === "week") return current ? t("This week so far · {days}", { days }) : `${pLabel} · ${days}`;
+    if (range === "month") return `${monthLong(Number(period.start.slice(5, 7)))} · ${t("{n} of {span} days logged", { n: logged, span: current ? Number(today.slice(8, 10)) : nDays })}`;
     return `${period.start.slice(0, 4)} · ${days}`;
   })();
 
   const summary = (() => {
-    if (range === "day") return byDay[anchor] !== undefined ? `Heart rate ${anchor === today ? "today" : dayLabel(anchor)}. Latest ${round(byDay[anchor])} bpm.` : `Heart rate ${dayLabel(anchor)}. No readings.`;
-    if (logged === 0) return `Heart rate ${pTitle.toLowerCase()}. No readings.`;
+    // Whole sentences, joined by a space.
+    if (range === "day")
+      return (
+        byDay[anchor] !== undefined
+          ? [anchor === today ? t("Heart rate today.") : t("Heart rate {day}.", { day: dayLabel(anchor) }), t("Latest {n} bpm.", { n: round(byDay[anchor]) })]
+          : [t("Heart rate {day}.", { day: dayLabel(anchor) }), t("No readings.")]
+      ).join(" ");
+    if (logged === 0) return [t("Heart rate {period}.", { period: pTitle.toLowerCase() }), t("No readings.")].join(" ");
     const lo = round(pLow as number);
     const hi = round(pHigh as number);
-    const avgWord = resting ? "average resting" : "average";
-    if (range === "week") return `Heart rate ${current ? "this week" : pLabel}. ${logged} day${logged === 1 ? "" : "s"}, ${lo} to ${hi} bpm, ${avgWord} ${round(lineAvg as number)}.`;
+    const a = round(lineAvg as number);
+    if (range === "week")
+      return [
+        current ? t("Heart rate this week.") : t("Heart rate {period}.", { period: pLabel }),
+        resting
+          ? tn(logged, "{n} day, {lo} to {hi} bpm, average resting {avg}.", "{n} days, {lo} to {hi} bpm, average resting {avg}.", { lo, hi, avg: a })
+          : tn(logged, "{n} day, {lo} to {hi} bpm, average {avg}.", "{n} days, {lo} to {hi} bpm, average {avg}.", { lo, hi, avg: a }),
+      ].join(" ");
     // HE1.5.m / .y screen reader: "Heart rate in September. Average resting 61 bpm. Range 50 to 168 bpm."
-    const Avg = resting ? "Average resting" : "Average";
-    if (range === "month") return `Heart rate in ${pLabel.split(" ")[0]}. ${Avg} ${round(lineAvg as number)} bpm. Range ${lo} to ${hi} bpm.`;
-    return `Heart rate in ${pLabel}. ${Avg} ${round(lineAvg as number)} bpm. Range ${lo} to ${hi} bpm.`;
+    return [
+      t("Heart rate in {period}.", { period: range === "month" ? monthLong(Number(period.start.slice(5, 7))) : pLabel }),
+      resting ? t("Average resting {n} bpm.", { n: a }) : t("Average {n} bpm.", { n: a }),
+      t("Range {lo} to {hi} bpm.", { lo, hi }),
+    ].join(" ");
   })();
 
   // --- history: one row per logged day, newest first (synced rows; Delete is
@@ -258,21 +293,21 @@ export default function HeartRatePage() {
       key: d,
       title: relativeDayTitle(d, today),
       // HE1.5 #54: the date (the source name is native); not repeated when the title is already the date.
-      meta: [relativeDayTitle(d, today) === dayLabel(d) ? null : dayLabel(d), syncedRemove.sourceOf(d) === "Logged by you" ? null : syncedRemove.sourceOf(d)].filter(Boolean).join(" · "),
-      value: `${round(byDay[d])} bpm`,
+      meta: [relativeDayTitle(d, today) === dayLabel(d) ? null : dayLabel(d), syncedRemove.sourceOf(d) === t("Logged by you") ? null : syncedRemove.sourceOf(d)].filter(Boolean).join(" · "),
+      value: t("{n} bpm", { n: round(byDay[d]) }),
       // The day's low to high from its samples (B1: every sample is kept; the range shown).
       sub: (() => {
         const sv = samplesOn(d);
-        return sv.length > 1 ? `${round(Math.min(...sv))} to ${round(Math.max(...sv))}` : undefined;
+        return sv.length > 1 ? t("{low} to {high}", { low: round(Math.min(...sv)), high: round(Math.max(...sv)) }) : undefined;
       })(),
       onClick: () => openDay(d),
       onDelete: syncedRemove.onDelete(d),
     }));
 
   const menu: MetricMenuItem[] = [
-    ...(REVIEWED ? [{ value: "alerts", label: "Alert settings", icon: <Bell size={17} />, onSelect: () => navigate("/app/health/heart-rate/alerts") }] : []),
-    { value: "sources", label: "Sources", icon: <RefreshCw size={17} />, onSelect: () => navigate("/app/settings/devices") },
-    { value: "date", label: "Go to date", icon: <CalendarDays size={17} />, onSelect: () => setGoToOpen(true) },
+    ...(REVIEWED ? [{ value: "alerts", label: t("Alert settings"), icon: <Bell size={17} />, onSelect: () => navigate("/app/health/heart-rate/alerts") }] : []),
+    { value: "sources", label: t("Sources"), icon: <RefreshCw size={17} />, onSelect: () => navigate("/app/settings/devices") },
+    { value: "date", label: t("Go to date"), icon: <CalendarDays size={17} />, onSelect: () => setGoToOpen(true) },
   ];
 
   const goTo = (
@@ -282,7 +317,7 @@ export default function HeartRatePage() {
       value={new Date(`${anchor}T12:00:00`)}
       today={today}
       dateOnly
-      title="Go to date"
+      title={t("Go to date")}
       onDone={(d) => {
         setGoToOpen(false);
         const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -299,23 +334,23 @@ export default function HeartRatePage() {
     return (
       <MetricPage
         metric="heart-rate"
-        title="Heart rate"
+        title={t("Heart rate")}
         range={range}
         onRangeChange={setRange}
         menu={menu}
-        cta={{ label: "Connect a source", icon: <Link2 size={16} />, onClick: () => navigate("/app/settings/devices") }}
+        cta={{ label: t("Connect a source"), icon: <Link2 size={16} />, onClick: () => navigate("/app/settings/devices") }}
       >
-        <NoDeviceCard metric="heart-rate" icon={HeartPulse} body={NO_DEVICE_BODY} literal />
+        <NoDeviceCard metric="heart-rate" icon={HeartPulse} body={t(NO_DEVICE_BODY)} literal />
         <ChartCard
           metric="heart-rate"
-          title="This week"
+          title={t("This week")}
           periodLabel={periodLabel(p)}
           onPrev={() => undefined}
           onNext={() => undefined}
           nextDisabled
           hideNav
-          summary="Heart rate this week. No readings yet."
-          foot={<span style={{ color: "rgb(var(--c-charcoal-soft))" }}>Your week fills in once heart rate syncs.</span>}
+          summary={t("Heart rate this week. No readings yet.")}
+          foot={<span style={{ color: "rgb(var(--c-charcoal-soft))" }}>{t("Your week fills in once heart rate syncs.")}</span>}
         >
           <HeartRateChart range="week" units={hrUnits("week", p, {}, "0000-00-00")} average={null} averageLabel="" />
         </ChartCard>
@@ -325,28 +360,34 @@ export default function HeartRatePage() {
   }
 
   return (
-    <MetricPage sourceTag={metricSource.tag} onSourceTag={() => navigate("/app/settings/devices")} metric="heart-rate" title="Heart rate" range={range} onRangeChange={setRange} menu={menu}>
+    <MetricPage sourceTag={metricSource.tag} onSourceTag={() => navigate("/app/settings/devices")} metric="heart-rate" title={t("Heart rate")} range={range} onRangeChange={setRange} menu={menu}>
       <HeartRateHero
         data={hero}
         loading={loading}
-        ariaLabel={hero ? `Heart rate ${hero.value} ${hero.unit}. ${hero.rangeText}.` : "Heart rate, no reading"}
+        ariaLabel={hero ? `${t("Heart rate {n} {unit}.", { n: hero.value, unit: hero.unit })} ${hero.rangeText}.` : t("Heart rate, no reading")}
         empty={
           <div className="text-center" style={{ padding: "40px 0" }}>
-            <p style={{ fontSize: textPx(17), lineHeight: linePx(25.5), fontWeight: 800, letterSpacing: -0.3, color: "rgb(var(--c-charcoal))" }}>No heart rate data yet</p>
+            <p style={{ fontSize: textPx(17), lineHeight: linePx(25.5), fontWeight: 800, letterSpacing: -0.3, color: "rgb(var(--c-charcoal))" }}>{t("No heart rate data yet")}</p>
             <p style={{ marginTop: 4, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: ink }}>
-              {range === "day" ? "Nothing synced this day" : `No heart rate data ${range === "week" ? "this week" : range === "month" ? "this month" : "this year"}`}
+              {range === "day"
+                ? t("Nothing synced this day")
+                : range === "week"
+                  ? t("No heart rate data this week")
+                  : range === "month"
+                    ? t("No heart rate data this month")
+                    : t("No heart rate data this year")}
             </p>
           </div>
         }
       />
-      {offline && hasAny && <FreshnessLine offline>{OFFLINE_CACHED}</FreshnessLine>}
+      {offline && hasAny && <FreshnessLine offline>{t(OFFLINE_CACHED)}</FreshnessLine>}
       {metricSource.freshness}
       {metricsError && !hasAny ? (
         <ErrorCard onRetry={retryMetrics} />
       ) : (
         <ChartCard
           metric="heart-rate"
-          title={range === "month" && !current ? pLabel.split(" ")[0] : pTitle}
+          title={range === "month" && !current ? monthLong(Number(period.start.slice(5, 7))) : pTitle}
           periodLabel={pLabel}
           onPrev={() => setAnchor(stepAnchor(range, anchor, -1))}
           onNext={() => setAnchor(stepAnchor(range, anchor, 1))}
@@ -365,11 +406,11 @@ export default function HeartRatePage() {
           {statFoot && <p style={{ marginTop: 6, fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: ink }}>{statFoot}</p>}
         </>
       )}
-      <CapsLabel>History</CapsLabel>
-      <HistoryCard metric="heart-rate" icon={HeartPulse} items={history} loading={loading} empty="No heart rate data yet" />
+      <CapsLabel>{t("History")}</CapsLabel>
+      <HistoryCard metric="heart-rate" icon={HeartPulse} items={history} loading={loading} empty={t("No heart rate data yet")} />
       {goTo}
       {syncedRemove.popup}
-      <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+      <Toast open={!!toast} message={toast ? t(toast) : ""} onExpire={() => setToast(null)} />
     </MetricPage>
   );
 }

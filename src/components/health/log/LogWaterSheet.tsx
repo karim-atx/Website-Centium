@@ -8,6 +8,7 @@ import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { browserOffline, enqueueLog, isOfflineFailure, newQueueId, QUEUED_COPY } from "../../../services/health-log/offlineQueue";
 import { FieldLabel, MeasuredOnPopup, WhenField, dayLabel, isoDay, partBSheetTone, whenLabel } from "./LogSheetParts";
+import { t, tx } from "../../../i18n/core";
 
 // HE1.1.1 "Log water" (health-b-handover.md 2866-3013): the shared Log sheet
 // for one drink. "Today so far", Amount chips (+ 250 ml / + 500 ml / Custom
@@ -29,7 +30,7 @@ const CUSTOM: WheelOption<number>[] = Array.from({ length: 60 }, (_, i) => ({ va
 /** "1.6 L", "0 L", "2.5 L". */
 export function litres(ml: number): string {
   const l = Math.round(ml / 100) / 10;
-  return `${l} L`;
+  return t("{n} L", { n: l });
 }
 
 export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSaved?: () => void }> = ({ open, onClose, onSaved }) => {
@@ -75,7 +76,7 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
     setSaving(false);
     if (!drink.ok) {
       if (isOfflineFailure(drink)) return queue();
-      setToast(drink.message);
+      setToast(t(drink.message));
       return;
     }
     onSaved?.();
@@ -98,13 +99,13 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
       <BottomSheet
         open={open}
         onClose={onClose}
-        title="Log water"
+        title={t("Log water")}
         chrome="partB"
         tone={partBSheetTone(dark)}
         footerBottom={30}
         footer={
           <CtaButton
-            label={amount !== null ? `Save ${amount} ml` : "Save"}
+            label={amount !== null ? t("Save {n} ml", { n: amount }) : t("Save")}
             disabled={amount === null || overLimit}
             loading={saving}
             onClick={() => void save()}
@@ -113,15 +114,24 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
         }
       >
         <p className="text-charcoal-soft" style={{ margin: 0, fontSize: textPx(12.5), lineHeight: "18.8px", fontWeight: 400 }}>
-          {day === today ? "Today so far " : `${dayLabel(day, today)} so far `}
-          <strong className="text-charcoal" style={{ fontWeight: 700 }}>
-            {litres(soFar)}
-          </strong>{" "}
-          of {litres(waterGoalMl)}
+          {t("{day} so far {amount} of {goal}", { day: day === today ? t("Today") : dayLabel(day, today), amount: "\u0000", goal: litres(waterGoalMl) })
+            .split("\u0000")
+            .map((part, i) =>
+              i === 0 ? (
+                <React.Fragment key={i}>{part}</React.Fragment>
+              ) : (
+                <React.Fragment key={i}>
+                  <strong className="text-charcoal" style={{ fontWeight: 700 }}>
+                    {litres(soFar)}
+                  </strong>
+                  {part}
+                </React.Fragment>
+              )
+            )}
         </p>
 
         <div style={{ marginTop: 16 }}>
-          <FieldLabel id="log-water-amount">Amount</FieldLabel>
+          <FieldLabel id="log-water-amount">{tx("Amount", "quantity")}</FieldLabel>
           <div role="radiogroup" aria-labelledby="log-water-amount" className="flex flex-wrap" style={{ gap: 8 }}>
             {CHIPS.map((ml) => {
               const on = choice === ml;
@@ -135,7 +145,7 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
                   className={`tap ${on ? "bg-seg-active" : "bg-th-f0edf9 dark:bg-th-303141 text-primary-deep-text"}`}
                   style={chip(on)}
                 >
-                  + {ml} ml
+                  {t("+ {n} ml", { n: ml })}
                 </button>
               );
             })}
@@ -147,7 +157,7 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
               className={`tap ${choice === "custom" ? "bg-seg-active" : "bg-th-f0edf9 dark:bg-th-303141 text-primary-deep-text"}`}
               style={chip(choice === "custom")}
             >
-              Custom
+              {t("Custom")}
             </button>
           </div>
         </div>
@@ -156,20 +166,20 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
           <div style={{ marginTop: 16 }}>
             <WheelPicker
               variant="partB"
-              columns={[{ label: "Amount in ml", options: CUSTOM, value: custom, bandWidth: 160, unit: "ml", onChange: (v) => setCustom(Number(v)) }]}
+              columns={[{ label: t("Amount in ml"), options: CUSTOM, value: custom, bandWidth: 160, unit: t("ml"), onChange: (v) => setCustom(Number(v)) }]}
             />
           </div>
         )}
 
         {overLimit && (
           <p role="alert" className="text-status-high" style={{ margin: "12px 0 0", fontSize: textPx(12), lineHeight: "17.4px", fontWeight: 600 }}>
-            That's more than {DAY_LIMIT_ML / 1000} L today. Check the amount.
+            {t("That's more than {n} L today. Check the amount.", { n: DAY_LIMIT_ML / 1000 })}
           </p>
         )}
         {/* When (HE1.1.1 #80-#84): the drink's own time (B1 water_intakes). */}
         <div style={{ marginTop: 16 }}>
-          <FieldLabel>When</FieldLabel>
-          <WhenField value={whenLabel(when, today)} onClick={() => setWhenOpen(true)} ariaLabel={`When: ${whenLabel(when, today)}`} />
+          <FieldLabel>{t("When")}</FieldLabel>
+          <WhenField value={whenLabel(when, today)} onClick={() => setWhenOpen(true)} ariaLabel={t("When: {when}", { when: whenLabel(when, today) })} />
         </div>
       </BottomSheet>
       <MeasuredOnPopup open={whenOpen} onClose={() => setWhenOpen(false)} value={when} today={today} onDone={setWhen} />

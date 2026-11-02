@@ -13,6 +13,7 @@ import {
 } from "../../services/workout/oneRepMax";
 import { linePx, textPx } from "../../theme/textSize";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 const RANGES: LiftRange[] = ["3M", "6M", "All"];
 /** The frame shows the four most recent sessions. */
@@ -61,7 +62,7 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
             {kgWhole(lift.oneRm)}
             <span style={{ color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(15), fontWeight: 700, marginInlineStart: 4 }}>kg</span>
           </p>
-          <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>estimated 1RM</span>
+          <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>{t("estimated 1RM")}</span>
         </div>
         <p style={{ color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(12), marginTop: 8 }}>
           {setLine(lift.best)} · {shortDate(dayMs(lift.best.date))}
@@ -77,11 +78,11 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
         >
           <div className="flex items-center justify-between" style={{ padding: "0 14px" }}>
             <span style={{ color: "rgba(255,255,255,0.75)", fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.12em" }}>
-              ESTIMATED 1RM
+              {t("ESTIMATED 1RM")}
             </span>
             <div
               role="tablist"
-              aria-label="Chart range"
+              aria-label={t("Chart range")}
               className="flex"
               style={{ height: 26, padding: 2, gap: 2, borderRadius: 9, background: "rgba(255,255,255,0.22)" }}
             >
@@ -102,7 +103,7 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
                     color: range === r ? "rgb(var(--thi-463a80))" : "#FFFFFF",
                   }}
                 >
-                  {r}
+                  {t(r)}
                 </button>
               ))}
             </div>
@@ -114,7 +115,7 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
               color="#FFFFFF"
               unit="kg"
               formatDate={shortDate}
-              ariaLabel={`${lift.name} estimated 1RM`}
+              ariaLabel={t("{name} estimated 1RM", { name: lift.name })}
               tone="card"
               geometry={CARD_GEOMETRY}
               unitOnAxis={false}
@@ -124,13 +125,13 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
           )}
           {lift.sessions.length === 1 && (
             <p className="text-center" style={{ color: "rgba(255,255,255,0.78)", fontSize: textPx(11), padding: "0 14px 14px" }}>
-              Log another session to see your trend.
+              {t("Log another session to see your trend.")}
             </p>
           )}
         </div>
 
         <p style={{ marginTop: 20, color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em" }}>
-          RECENT SESSIONS
+          {t("RECENT SESSIONS")}
         </p>
         <ul style={{ marginTop: 6 }}>
           {recent.map((s, i) => (
@@ -160,7 +161,7 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
                       lineHeight: linePx(16),
                     }}
                   >
-                    PR
+                    {t("PR")}
                   </span>
                 )}
               </span>

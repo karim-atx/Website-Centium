@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { t, tk } from "../../i18n/core";
 import {
   CYCLE_FLAGS,
   LOG_LIMITS,
@@ -40,13 +41,13 @@ export * from "./types";
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to save this.";
+    return tk("Your session expired. Sign in again to save this.");
   }
-  if (code === "23514") return "That value is outside the range this can store.";
+  if (code === "23514") return tk("That value is outside the range this can store.");
   if (code === "42501") {
-    return "You don't have permission to save this. Sign in again and try once more.";
+    return tk("You don't have permission to save this. Sign in again and try once more.");
   }
-  return "Couldn't save that. Check your connection and try again.";
+  return tk("Couldn't save that. Check your connection and try again.");
 }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +123,23 @@ export async function getCycleSettings(userId: string): Promise<SettingsResult> 
   return { ok: true, settings: data ? toSettings(data as unknown as Parameters<typeof toSettings>[0]) : null };
 }
 
+/**
+ * Round G4 (G fixes): cycle_settings.insights_enabled, on its own read so a
+ * Database without the column never breaks the settings read above. True
+ * with no row yet (the column's default); null when it can't be read (a
+ * Database without G4, offline): the toggle then stays hidden.
+ */
+export async function getInsightsEnabled(userId: string): Promise<boolean | null> {
+  try {
+    const { data, error } = await supabase.from("cycle_settings").select("insights_enabled").eq("user_id", userId).maybeSingle();
+    if (error) return null;
+    const v = (data as { insights_enabled?: unknown } | null)?.insights_enabled;
+    return data ? (typeof v === "boolean" ? v : null) : true;
+  } catch {
+    return null;
+  }
+}
+
 export type WriteResult = { ok: true } | { ok: false; message: string };
 
 /** Validates against the table's own CHECKs. Returns a sentence, or null. */
@@ -130,25 +148,25 @@ export function validateSettings(patch: Partial<CycleSettings>): string | null {
   if (patch.typicalCycleLength !== undefined) {
     const v = patch.typicalCycleLength;
     if (!Number.isInteger(v) || v < cycleLength.min || v > cycleLength.max) {
-      return `Cycle length should be between ${cycleLength.min} and ${cycleLength.max} days.`;
+      return t("Cycle length should be between {min} and {max} days.", { min: cycleLength.min, max: cycleLength.max });
     }
   }
   if (patch.typicalPeriodLength !== undefined) {
     const v = patch.typicalPeriodLength;
     if (!Number.isInteger(v) || v < periodLength.min || v > periodLength.max) {
-      return `Period length should be between ${periodLength.min} and ${periodLength.max} days.`;
+      return t("Period length should be between {min} and {max} days.", { min: periodLength.min, max: periodLength.max });
     }
   }
   if (patch.lutealLength !== undefined) {
     const v = patch.lutealLength;
     if (!Number.isInteger(v) || v < lutealLength.min || v > lutealLength.max) {
-      return `Luteal length should be between ${lutealLength.min} and ${lutealLength.max} days.`;
+      return t("Luteal length should be between {min} and {max} days.", { min: lutealLength.min, max: lutealLength.max });
     }
   }
   if (patch.periodReminderDays !== undefined) {
     const v = patch.periodReminderDays;
     if (!Number.isInteger(v) || v < PERIOD_REMINDER_DAYS.min || v > PERIOD_REMINDER_DAYS.max) {
-      return `Choose ${PERIOD_REMINDER_DAYS.min} to ${PERIOD_REMINDER_DAYS.max} days before.`;
+      return t("Choose {min} to {max} days before.", { min: PERIOD_REMINDER_DAYS.min, max: PERIOD_REMINDER_DAYS.max });
     }
   }
   return null;
@@ -193,6 +211,8 @@ export async function saveCycleSettings(
   // B2: both in the cycle_settings UPDATE grant (checked on the local stack).
   if (patch.periodReminder !== undefined) patchRow.period_reminder = patch.periodReminder;
   if (patch.periodReminderDays !== undefined) patchRow.period_reminder_days = patch.periodReminderDays;
+  // Round G4 (G fixes): in the cycle_settings UPDATE grant (20261226320000).
+  if (patch.insightsEnabled !== undefined) patchRow.insights_enabled = patch.insightsEnabled;
   if (Object.keys(patchRow).length === 0) return { ok: true };
 
   const { data: updated, error: updateError } = await supabase
@@ -276,17 +296,17 @@ export function validateDayLog(log: Partial<CycleDayLog>): string | null {
   if (log.energy !== null && log.energy !== undefined) {
     const { min, max } = LOG_LIMITS.energy;
     if (!Number.isInteger(log.energy) || log.energy < min || log.energy > max) {
-      return `Energy should be between ${min} and ${max}.`;
+      return t("Energy should be between {min} and {max}.", { min, max });
     }
   }
   if (log.bbtCelsius !== null && log.bbtCelsius !== undefined) {
     const { min, max } = LOG_LIMITS.bbt;
     if (!Number.isFinite(log.bbtCelsius) || log.bbtCelsius < min || log.bbtCelsius > max) {
-      return `Temperature should be between ${min} and ${max} °C.`;
+      return t("Temperature should be between {min} and {max} °C.", { min, max });
     }
   }
   if (log.notes != null && log.notes.length > LOG_LIMITS.notesMaxLength) {
-    return `Keep the note under ${LOG_LIMITS.notesMaxLength} characters.`;
+    return t("Keep the note under {n} characters.", { n: LOG_LIMITS.notesMaxLength });
   }
   return null;
 }

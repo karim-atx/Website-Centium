@@ -1,6 +1,7 @@
 import type { WorkoutSession } from "../../types";
 import { estimate1RM, loadKg } from "./index";
 import { exerciseKey, isWorkingSet, setKind } from "./stats";
+import { tk } from "../../i18n/core";
 
 // Handover 2026-09-29 03 "Estimated 1RM" (WO18, WO19, WO4.1): Epley,
 // weight × (1 + reps / 30), reps = 1 → the weight. Only Normal, PR and Drop
@@ -101,10 +102,10 @@ export function liftMaxes(sessions: WorkoutSession[], today: string): LiftMax[] 
 export type LiftSort = "highest" | "recent" | "change" | "az";
 
 export const LIFT_SORT_LABEL: Record<LiftSort, string> = {
-  highest: "Highest 1RM",
-  recent: "Recently trained",
-  change: "Biggest change",
-  az: "A–Z",
+  highest: tk("Highest 1RM"),
+  recent: tk("Recently trained"),
+  change: tk("Biggest change"),
+  az: tk("A–Z"),
 };
 
 export function sortLifts(lifts: LiftMax[], sort: LiftSort): LiftMax[] {

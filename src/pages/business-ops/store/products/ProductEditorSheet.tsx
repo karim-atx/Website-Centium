@@ -24,6 +24,7 @@ import { productData } from "../../../../components/share/business/bizCardModel"
 import { MasterSheet, CentredDialog, PrimaryButton, SaveError, SheetBox, SheetSwitch, fieldStyle, px, useMarketColors } from "../../../business-market/listingParts";
 import { CategoryPicker } from "./CategoryPicker";
 import { CONTACT_TEXT, moderationRefusal } from "../../../../services/moderation/text";
+import { t, tk } from "../../../../i18n/core";
 
 /** Round C Release 2: the word lists and contact details, in our words; null for anything else. */
 const saveRefusal = (r: { code?: string }) => (r.code === "contact_details" ? CONTACT_TEXT : moderationRefusal(r));
@@ -58,9 +59,9 @@ const saveRefusal = (r: { code?: string }) => (r.code === "contact_details" ? CO
 // database has them (`stockShipped`); otherwise those controls are disabled
 // with "Coming soon" and never sent.
 
-const PRICE_ERROR = "Enter the price as a number, for example 25 or $25.";
-const STOCK_ERROR = "Enter a whole number, 0 or more.";
-const SOON = "Coming soon";
+const PRICE_ERROR = tk("Enter the price as a number, for example 25 or $25.");
+const STOCK_ERROR = tk("Enter a whole number, 0 or more.");
+const SOON = tk("Coming soon");
 
 /** The Explore categories a gym or class business can list an item under (the old Offerings form's list). */
 const LISTABLE = marketplaceCategories.filter((x) => x.id !== "gyms" && x.id !== "classes");
@@ -188,23 +189,23 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
     let id: string;
     if (product) {
       const r = await updateProduct(product.id, draft, stockShipped);
-      if (!r.ok) return fail(saveRefusal(r) ?? "Couldn't save the item. Try again.");
+      if (!r.ok) return fail(saveRefusal(r) ?? t("Couldn't save the item. Try again."));
       id = product.id;
       // Removed: the approved photo, or one still waiting (clearProductPhoto withdraws it).
       if (stockShipped && ((product.imageUrl && imageUrl === null) || (cleared && !photo && own?.status === "pending"))) {
         const c = await clearProductPhoto(id);
-        if (!c.ok) return fail("Couldn't remove the photo. Try again.");
+        if (!c.ok) return fail(t("Couldn't remove the photo. Try again."));
       }
     } else {
       const r = await createProduct(businessId, businessType, draft, stockShipped);
-      if (!r.ok) return fail(saveRefusal(r) ?? "Couldn't save the item. Try again.");
+      if (!r.ok) return fail(saveRefusal(r) ?? t("Couldn't save the item. Try again."));
       id = r.value.id;
     }
     const n = name.trim();
-    const done = product ? "Changes saved." : stockShipped && !visible ? `${n} added. It's hidden from Explore.` : `${n} added.`;
+    const done = product ? t("Changes saved.") : stockShipped && !visible ? t("{name} added. It's hidden from Explore.", { name: n }) : t("{name} added.", { name: n });
     // The new photo goes for approval now that the row exists.
     if (photo) {
-      const s = authUserId ? await stageAndSubmit(authUserId, "showcase_image", id, photo.file) : { ok: false as const, message: "Couldn't send that photo. Try again." };
+      const s = authUserId ? await stageAndSubmit(authUserId, "showcase_image", id, photo.file) : { ok: false as const, message: t("Couldn't send that photo. Try again.") };
       if (!s.ok) {
         setBusy(false);
         // An edit stays open with the photo kept (Save again resends it); a new item is saved, so the sheet closes and says so.
@@ -224,16 +225,16 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
     const r = await deleteProduct(product.id);
     setBusy(false);
     if (!r.ok) {
-      setDeleteError("Couldn't delete the item. Try again.");
+      setDeleteError(t("Couldn't delete the item. Try again."));
       return;
     }
     setDel(0);
-    onSaved(`${product.name} deleted.`);
+    onSaved(t("{name} deleted.", { name: product.name }));
   };
 
   const addCategory = async (n: string): Promise<string | null> => {
     const r = await createCategory(businessId, n, null, categories?.length ?? 0);
-    if (!r.ok) return r.code === "23505" ? "You already have a category with that name." : "Couldn't add the category. Try again.";
+    if (!r.ok) return r.code === "23505" ? t("You already have a category with that name.") : t("Couldn't add the category. Try again.");
     setCategories((c) => [...(c ?? []), r.value]);
     setCategoryId(r.value.id);
     return null;
@@ -259,7 +260,7 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
   const canPhoto = stockShipped && online && !photoBusy;
   const share =
     product && product.visible ? (
-      <BizShareButton label={`Share ${product.name}`} getData={() => ({ t: "product", d: productData({ id: product.id, title: product.name, price: product.price !== null ? formatPrice(product.price) : "", description: product.description }, product.imageUrl) })} />
+      <BizShareButton label={t("Share {name}", { name: product.name })} getData={() => ({ t: "product", d: productData({ id: product.id, title: product.name, price: product.price !== null ? formatPrice(product.price) : "", description: product.description }, product.imageUrl) })} />
     ) : null;
 
   const photoRow = (label: string, glyph: React.ReactNode, onClick: () => void, danger?: boolean) => (
@@ -279,12 +280,12 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
       <MasterSheet
         open={open && del === 0}
         onClose={onClose}
-        title={product ? "Edit item" : "Add item"}
+        title={product ? t("Edit item") : t("Add item")}
         headerAction={share}
         footer={
           <>
             <PrimaryButton onClick={() => void save()} disabled={!valid || !changed || !online || photoBusy} busy={busy}>
-              {busy ? "Saving…" : "Save"}
+              {busy ? t("Saving…") : t("Save")}
             </PrimaryButton>
             {error && <SaveError>{error}</SaveError>}
           </>
@@ -294,7 +295,7 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingBottom: 4 }}>
             <button
               type="button"
-              aria-label={shownUrl ? "Change photo" : "Add a photo"}
+              aria-label={shownUrl ? t("Change photo") : t("Add a photo")}
               aria-haspopup="dialog"
               aria-describedby={!stockShipped ? `${ids}-photo-note` : undefined}
               disabled={!canPhoto}
@@ -318,12 +319,12 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
                 </svg>
               </span>
             </button>
-            {photoBusy ? <p role="status" style={{ fontSize: px(11.5), color: m.faint, marginTop: 8 }}>Uploading…</p> : null}
+            {photoBusy ? <p role="status" style={{ fontSize: px(11.5), color: m.faint, marginTop: 8 }}>{t("Uploading…")}</p> : null}
             <ImageApprovalBadge state={ownState} className="mt-2" />
             <ImageApprovalNote state={ownState} className="mt-1.5 text-center" />
             {!stockShipped ? (
               <p id={`${ids}-photo-note`} style={{ fontSize: px(11.5), color: m.faint, marginTop: 8 }}>
-                {SOON}
+                {t(SOON)}
               </p>
             ) : null}
             {photoError ? (
@@ -332,37 +333,37 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
               </p>
             ) : null}
           </div>
-          <SheetBox label="Name" htmlFor={`${ids}-name`}>
-            <input id={`${ids}-name`} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder={store ? "e.g. Whey Protein 2 kg" : "e.g. 10-class pack"} style={fieldStyle(m)} />
+          <SheetBox label={t("Name")} htmlFor={`${ids}-name`}>
+            <input id={`${ids}-name`} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder={store ? t("e.g. Whey Protein 2 kg") : t("e.g. 10-class pack")} style={fieldStyle(m)} />
           </SheetBox>
-          <SheetBox label="Short description" htmlFor={`${ids}-desc`}>
+          <SheetBox label={t("Short description")} htmlFor={`${ids}-desc`}>
             <textarea
               id={`${ids}-desc`}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={500}
               rows={1}
-              placeholder="Optional"
+              placeholder={t("Optional")}
               style={{ ...fieldStyle(m), resize: "none", minHeight: 41, fieldSizing: "content" } as React.CSSProperties}
             />
           </SheetBox>
-          <SheetBox label="Display price" htmlFor={`${ids}-price`}>
+          <SheetBox label={t("Display price")} htmlFor={`${ids}-price`}>
             <input
               id={`${ids}-price`}
               value={price}
               onChange={(e) => {
                 setPrice(e.target.value);
-                setTouched((t) => ({ ...t, price: true }));
+                setTouched((was) => ({ ...was, price: true }));
               }}
               inputMode="decimal"
-              placeholder={store ? "$0.00" : "Optional"}
+              placeholder={store ? "$0.00" : t("Optional")}
               aria-invalid={touched.price && !priceEmpty && !priceOk ? true : undefined}
               aria-describedby={touched.price && !priceEmpty && !priceOk ? `${ids}-price-err` : undefined}
               style={fieldStyle(m, touched.price && !priceEmpty && !priceOk)}
             />
             {touched.price && !priceEmpty && !priceOk ? (
               <p id={`${ids}-price-err`} role="alert" style={{ fontSize: px(11.5), fontWeight: 700, color: m.high, marginTop: 6 }}>
-                {PRICE_ERROR}
+                {t(PRICE_ERROR)}
               </p>
             ) : null}
           </SheetBox>
@@ -371,17 +372,17 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
               {stockShipped ? (
                 <CategoryPicker categories={categories} value={categoryId} onPick={setCategoryId} onCreate={addCategory} disabled={!online} />
               ) : (
-                <SheetBox label="Category">
-                  <div style={{ ...fieldStyle(m), color: m.faint, opacity: 0.6 }}>{SOON}</div>
+                <SheetBox label={t("Category")}>
+                  <div style={{ ...fieldStyle(m), color: m.faint, opacity: 0.6 }}>{t(SOON)}</div>
                 </SheetBox>
               )}
-              <SheetBox label="In stock" htmlFor={`${ids}-stock`}>
+              <SheetBox label={t("In stock")} htmlFor={`${ids}-stock`}>
                 <input
                   id={`${ids}-stock`}
                   value={stock}
                   onChange={(e) => {
                     setStock(e.target.value);
-                    setTouched((t) => ({ ...t, stock: true }));
+                    setTouched((was) => ({ ...was, stock: true }));
                   }}
                   inputMode="numeric"
                   placeholder="0"
@@ -390,14 +391,14 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
                   style={{ ...fieldStyle(m, stockShipped && touched.stock && !stockOk), opacity: stockShipped ? 1 : 0.6 }}
                 />
                 <p style={{ fontSize: px(11.5), color: stockShipped && touched.stock && !stockOk ? m.high : m.faint, fontWeight: stockShipped && touched.stock && !stockOk ? 700 : 400, marginTop: 6 }}>
-                  {!stockShipped ? SOON : touched.stock && !stockOk ? STOCK_ERROR : "Leave empty if you don't track stock."}
+                  {!stockShipped ? t(SOON) : touched.stock && !stockOk ? t(STOCK_ERROR) : t("Leave empty if you don't track stock.")}
                 </p>
               </SheetBox>
             </>
           ) : !product ? (
             <div style={{ background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
               <p id={`${ids}-cat`} style={{ fontSize: px(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>
-                Explore category
+                {t("Explore category")}
               </p>
               <div role="radiogroup" aria-labelledby={`${ids}-cat`} style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {LISTABLE.map((x) => {
@@ -412,7 +413,7 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
                       className="tap market-focus"
                       style={{ minHeight: 34, padding: "0 12px", borderRadius: 10, border: `1.5px solid ${on ? m.fill : "transparent"}`, background: on ? m.pale : m.card, color: on ? m.pdark : m.ink2, fontSize: px(12.5), fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
                     >
-                      {x.label}
+                      {t(x.label)}
                     </button>
                   );
                 })}
@@ -423,13 +424,13 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
               <div style={{ minWidth: 0 }}>
                 <div id={`${ids}-vis`} style={{ fontSize: px(14), fontWeight: 700 }}>
-                  Show in showcase
+                  {t("Show in showcase")}
                 </div>
                 <div id={`${ids}-vis-sub`} style={{ fontSize: px(11.5), color: m.faint }}>
-                  {stockShipped ? "Off hides it from members" : SOON}
+                  {stockShipped ? t("Off hides it from members") : t(SOON)}
                 </div>
               </div>
-              <SheetSwitch on={visible} onChange={setVisible} label="Show in showcase" describedBy={`${ids}-vis-sub`} disabled={!stockShipped || !online} />
+              <SheetSwitch on={visible} onChange={setVisible} label={t("Show in showcase")} describedBy={`${ids}-vis-sub`} disabled={!stockShipped || !online} />
             </div>
           </div>
           {product ? (
@@ -443,15 +444,15 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
               className="market-focus"
               style={{ alignSelf: "center", minHeight: 44, padding: "0 12px", border: 0, background: "transparent", color: m.high, fontSize: px(14), fontWeight: 700, fontFamily: "inherit", cursor: "pointer", opacity: busy || !online ? 0.4 : 1 }}
             >
-              Delete item
+              {t("Delete item")}
             </button>
           ) : null}
         </div>
       </MasterSheet>
-      <MasterSheet open={open && del === 0 && photoOpen} onClose={() => setPhotoOpen(false)} title="Item photo">
+      <MasterSheet open={open && del === 0 && photoOpen} onClose={() => setPhotoOpen(false)} title={t("Item photo")}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingBottom: 14 }}>
           {photoRow(
-            "Take photo",
+            t("Take photo"),
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={m.pdark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, transform: "none" }}>
               <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
               <circle cx="12" cy="13" r="3" />
@@ -459,7 +460,7 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
             () => camRef.current?.click()
           )}
           {photoRow(
-            "Choose from library",
+            t("Choose from library"),
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={m.pdark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, transform: "none" }}>
               <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
               <circle cx="9" cy="9" r="2" />
@@ -469,7 +470,7 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
           )}
           {shownUrl
             ? photoRow(
-                "Remove photo",
+                t("Remove photo"),
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, transform: "none" }}>
                   <path d="M3 6h18" />
                   <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
@@ -499,10 +500,10 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
       {product && (
         <CentredDialog
           open={del > 0}
-          title={del === 1 ? "Delete this item?" : "Confirm delete"}
-          body={del === 1 ? (store ? "It comes off your store. Past orders keep their details." : "It comes off your showcase on Explore.") : "This can't be undone."}
-          cancel="Cancel"
-          action={del === 1 ? "Delete" : busy ? "Deleting…" : "Delete item"}
+          title={del === 1 ? t("Delete this item?") : t("Confirm delete")}
+          body={del === 1 ? (store ? t("It comes off your store. Past orders keep their details.") : t("It comes off your showcase on Explore.")) : t("This can't be undone.")}
+          cancel={t("Cancel")}
+          action={del === 1 ? t("Delete") : busy ? t("Deleting…") : t("Delete item")}
           busy={busy}
           error={del === 2 ? deleteError : null}
           onAction={() => (del === 1 ? setDel(2) : void remove())}

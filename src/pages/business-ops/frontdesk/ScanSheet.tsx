@@ -18,6 +18,7 @@ import {
   type ScanResultView,
 } from "../../../services/front-desk/frontDeskLogic";
 import { textPx } from "../../../theme/textSize";
+import { t } from "../../../i18n/core";
 import { EmptyCard, StatusChip } from "./frontDeskKit";
 
 // OURS-OP1-front-desk-scan: the camera (zxing-wasm / BarcodeDetector, QR
@@ -100,7 +101,7 @@ export const ScanSheet: React.FC<{
           setBusy(false);
           // ATXE6 (desk check-in off) and ATX03 say why; anything else is C4.
           const why = r.code === "ATXE6" || r.code === "ATX03" ? r.message : null;
-          setResult({ view: why ? { ...VERIFY_FAILED_VIEW, body: why, primaryLabel: "Scan again" } : VERIFY_FAILED_VIEW, check: null, ci: null });
+          setResult({ view: why ? { ...VERIFY_FAILED_VIEW, body: why, primaryLabel: t("Scan again") } : VERIFY_FAILED_VIEW, check: null, ci: null });
           return;
         }
       }
@@ -204,8 +205,8 @@ export const ScanSheet: React.FC<{
   const hidden = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
     if (open && !result) {
-      const t = window.setTimeout(() => hidden.current?.focus({ preventScroll: true }), 300);
-      return () => window.clearTimeout(t);
+      const timer = window.setTimeout(() => hidden.current?.focus({ preventScroll: true }), 300);
+      return () => window.clearTimeout(timer);
     }
   }, [open, result]);
 
@@ -217,7 +218,7 @@ export const ScanSheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={onClose}
-        title="Scan a pass"
+        title={t("Scan a pass")}
         tone="business"
         headerHeight={53}
         bodyPadding={{ top: 18, right: 20, bottom: 12, left: 20 }}
@@ -228,13 +229,13 @@ export const ScanSheet: React.FC<{
             className="tap w-full text-charcoal-soft"
             style={{ minHeight: 44, fontSize: textPx(14), fontWeight: 700 }}
           >
-            Check someone in
+            {t("Check someone in")}
           </button>
         }
       >
         <input
           ref={hidden}
-          aria-label="Pass code from a scanner"
+          aria-label={t("Pass code from a scanner")}
           inputMode="none"
           autoComplete="off"
           className="sr-only"
@@ -246,9 +247,9 @@ export const ScanSheet: React.FC<{
           }}
         />
         {!online ? (
-          <EmptyCard icon={WifiOff} title="You're offline" body="Passes can't be checked without a connection. Try again when you're back online.">
-            <button type="button" onClick={() => setRetryTick((t) => t + 1)} key={retryTick} className="tap text-[12px] font-bold text-primary-dark" style={{ minHeight: 44, marginTop: 4 }}>
-              Retry
+          <EmptyCard icon={WifiOff} title={t("You're offline")} body={t("Passes can't be checked without a connection. Try again when you're back online.")}>
+            <button type="button" onClick={() => setRetryTick((n) => n + 1)} key={retryTick} className="tap text-[12px] font-bold text-primary-dark" style={{ minHeight: 44, marginTop: 4 }}>
+              {t("Retry")}
             </button>
           </EmptyCard>
         ) : showCamera ? (
@@ -257,20 +258,20 @@ export const ScanSheet: React.FC<{
             <div
               aria-hidden
               className="absolute"
-              style={{ width: 200, height: 200, insetInlineStart: "50%", top: "50%", transform: "translate(-50%, -50%)", border: "2px solid rgba(255,255,255,0.85)", borderRadius: 14 }}
+              style={{ width: 200, height: 200, left: "50%", top: "50%", transform: "translate(-50%, -50%)", border: "2px solid rgba(255,255,255,0.85)", borderRadius: 14 }}
             />
             <div aria-hidden className="absolute inset-x-0 bottom-0" style={{ height: 56, background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%)" }} />
             <p role="status" className="absolute inset-x-0 text-center" style={{ bottom: 10, color: "rgba(255,255,255,0.85)", fontSize: textPx(12), fontWeight: 600 }}>
-              {busy ? "Checking the pass…" : camera === "starting" ? "Starting the camera…" : "Point the camera at the member's pass."}
+              {busy ? t("Checking the pass…") : camera === "starting" ? t("Starting the camera…") : t("Point the camera at the member's pass.")}
             </p>
           </div>
         ) : camera === "denied" ? (
-          <EmptyCard icon={CameraOff} title="Camera is blocked" body="Allow camera access for Centium in your browser settings, or check them in by name." />
+          <EmptyCard icon={CameraOff} title={t("Camera is blocked")} body={t("Allow camera access for Centium in your browser settings, or check them in by name.")} />
         ) : (
-          <EmptyCard icon={CameraOff} title="No camera available" body="This device can't scan passes. Check them in by name instead." />
+          <EmptyCard icon={CameraOff} title={t("No camera available")} body={t("This device can't scan passes. Check them in by name instead.")} />
         )}
         <p className="text-center text-[12.5px] leading-[18px] text-charcoal-soft" style={{ marginTop: 12 }}>
-          Each member's pass is in their Centium app.
+          {t("Each member's pass is in their Centium app.")}
         </p>
       </BottomSheet>
 
@@ -290,15 +291,15 @@ export const ScanSheet: React.FC<{
             <div style={{ marginTop: 8 }}>
               {view.minor && (
                 <>
-                  <StatusChip tone="warn">Under 18</StatusChip>
+                  <StatusChip tone="warn">{t("Under 18")}</StatusChip>
                   <p className="text-[13px] leading-[19px] text-charcoal-soft" style={{ marginTop: 6 }}>
-                    Check your rules for members under 18.
+                    {t("Check your rules for members under 18.")}
                   </p>
                 </>
               )}
               {payError && (
                 <p role="alert" className="text-[11.5px] font-bold leading-[16px] text-status-high" style={{ marginTop: 6 }}>
-                  Couldn't mark it as paid. Try again.
+                  {t("Couldn't mark it as paid. Try again.")}
                 </p>
               )}
             </div>

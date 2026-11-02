@@ -3,6 +3,7 @@
 
 import { minutesOfDay, range12 } from "../../../utils/time12";
 import { appLocale } from "../../../i18n/format";
+import { t } from "../../../i18n/core";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -41,10 +42,10 @@ export function longDay(iso: string): string {
 /** "Oct 5 to Oct 11, 2026" (COPY {date_range}, FINAL_PLAN section 3 item 5). */
 export function dateRange(fromIso: string, toIso: string): string {
   const f = new Date(`${fromIso}T00:00:00`);
-  const t = new Date(`${toIso}T00:00:00`);
+  const to = new Date(`${toIso}T00:00:00`);
   const dm = (d: Date) => `${d.toLocaleDateString(appLocale("en-US"), { month: "short" })} ${d.getDate()}`;
-  const fromPart = f.getFullYear() === t.getFullYear() ? dm(f) : `${dm(f)}, ${f.getFullYear()}`;
-  return `${fromPart} to ${dm(t)}, ${t.getFullYear()}`;
+  const fromPart = f.getFullYear() === to.getFullYear() ? dm(f) : `${dm(f)}, ${f.getFullYear()}`;
+  return t("{from} to {to}, {year}", { from: fromPart, to: dm(to), year: to.getFullYear() });
 }
 
 /** "$60", "$60.50": a stored price in its currency. */
@@ -245,21 +246,21 @@ export type AlertValue = "none" | "at_time" | "min_5" | "min_10" | "min_15" | "m
 /** The two reminders as the frames word them: "24 hours and 1 hour before". */
 export function remindersLabel(a: AlertValue, b: AlertValue): string {
   const word: Partial<Record<AlertValue, string>> = {
-    at_time: "At the start",
-    min_5: "5 minutes",
-    min_10: "10 minutes",
-    min_15: "15 minutes",
-    min_30: "30 minutes",
-    hour_1: "1 hour",
-    hour_2: "2 hours",
-    day_1: "24 hours",
-    day_2: "48 hours",
-    week_1: "1 week",
+    at_time: t("At the start"),
+    min_5: t("5 minutes"),
+    min_10: t("10 minutes"),
+    min_15: t("15 minutes"),
+    min_30: t("30 minutes"),
+    hour_1: t("1 hour"),
+    hour_2: t("2 hours"),
+    day_1: t("24 hours"),
+    day_2: t("48 hours"),
+    week_1: t("1 week"),
   };
   const list = [a, b].filter((x) => x !== "none");
-  if (list.length === 0) return "No reminder";
-  if (list.length === 1) return list[0] === "at_time" ? "At the start" : `${word[list[0]]} before`;
-  return `${word[list[0]]} and ${word[list[1]]} before`;
+  if (list.length === 0) return t("No reminder");
+  if (list.length === 1) return list[0] === "at_time" ? t("At the start") : t("{a} before", { a: word[list[0]] ?? "" });
+  return t("{a} and {b} before", { a: word[list[0]] ?? "", b: word[list[1]] ?? "" });
 }
 
 /** Repeat choices of CA12 ("Weekly · 8 times"). */

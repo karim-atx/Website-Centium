@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Medication, Surgery } from "../../types";
+import { t } from "../../i18n/core";
 
 // A client's own medical history: medications, surgeries and comorbidities.
 //
@@ -32,15 +33,24 @@ export interface MedicalWriteResult {
   message?: string;
 }
 
-function describe(error: PostgrestError, subject: string): string {
+function describe(error: PostgrestError, subject: "surgery" | "medication" | "condition"): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to save this.";
+    return t("Your session expired. Sign in again to save this.");
   }
+  // Whole sentences per subject (Arabic words them differently).
   if (code === "23502") {
-    return `That ${subject} is missing something required.`;
+    return subject === "surgery"
+      ? t("That surgery is missing something required.")
+      : subject === "medication"
+        ? t("That medication is missing something required.")
+        : t("That condition is missing something required.");
   }
-  return `Couldn't save that ${subject}. Check your connection and try again.`;
+  return subject === "surgery"
+    ? t("Couldn't save that surgery. Check your connection and try again.")
+    : subject === "medication"
+      ? t("Couldn't save that medication. Check your connection and try again.")
+      : t("Couldn't save that condition. Check your connection and try again.");
 }
 
 /**
@@ -76,7 +86,7 @@ export async function addSurgeryRemote(
   surgery: Omit<Surgery, "id">
 ): Promise<MedicalWriteResult & { id?: string }> {
   if (!surgery.date || !/^\d{4}-\d{2}-\d{2}$/.test(surgery.date)) {
-    return { ok: false, message: "Add the date of this surgery before saving." };
+    return { ok: false, message: t("Add the date of this surgery before saving.") };
   }
   const { data, error } = await supabase
     .from("surgeries")
@@ -97,10 +107,10 @@ export async function deleteSurgeryRemote(id: string): Promise<MedicalWriteResul
   const { data, error } = await supabase.from("surgeries").delete().eq("id", id).select("id");
   if (error) {
     console.error("[medical-history] Could not remove surgery:", error.message);
-    return { ok: false, message: "That surgery couldn't be removed." };
+    return { ok: false, message: t("That surgery couldn't be removed.") };
   }
   if (!data || data.length === 0) {
-    return { ok: false, message: "That surgery couldn't be removed." };
+    return { ok: false, message: t("That surgery couldn't be removed.") };
   }
   return { ok: true };
 }
@@ -170,10 +180,10 @@ export async function updateMedicationRemote(
 
   if (error) {
     console.error("[medical-history] Could not update medication:", error.message);
-    return { ok: false, message: "That change couldn't be saved." };
+    return { ok: false, message: t("That change couldn't be saved.") };
   }
   if (!data || data.length === 0) {
-    return { ok: false, message: "That change couldn't be saved." };
+    return { ok: false, message: t("That change couldn't be saved.") };
   }
   return { ok: true };
 }
@@ -182,10 +192,10 @@ export async function deleteMedicationRemote(id: string): Promise<MedicalWriteRe
   const { data, error } = await supabase.from("medications").delete().eq("id", id).select("id");
   if (error) {
     console.error("[medical-history] Could not remove medication:", error.message);
-    return { ok: false, message: "That medication couldn't be removed." };
+    return { ok: false, message: t("That medication couldn't be removed.") };
   }
   if (!data || data.length === 0) {
-    return { ok: false, message: "That medication couldn't be removed." };
+    return { ok: false, message: t("That medication couldn't be removed.") };
   }
   return { ok: true };
 }
@@ -240,10 +250,10 @@ export async function removeComorbidityRemote(
 
   if (error) {
     console.error("[medical-history] Could not remove condition:", error.message);
-    return { ok: false, message: "That condition couldn't be removed." };
+    return { ok: false, message: t("That condition couldn't be removed.") };
   }
   if (!data || data.length === 0) {
-    return { ok: false, message: "That condition couldn't be removed." };
+    return { ok: false, message: t("That condition couldn't be removed.") };
   }
   return { ok: true };
 }
@@ -306,7 +316,7 @@ export async function getMedicalHistory(userId: string): Promise<MedicalHistoryR
   const failure = cond.error ?? surg.error ?? meds.error;
   if (failure) {
     console.error("[medical-history] Could not load history:", failure.message);
-    return { ok: false, message: "Could not load your medical records." };
+    return { ok: false, message: t("Could not load your medical records.") };
   }
 
   return {
@@ -335,7 +345,7 @@ export async function getMedicalHistory(userId: string): Promise<MedicalHistoryR
 /** HE1.9.c swipe Edit on a surgery: name and date (UPDATE grant: name, surgery_date). */
 export async function updateSurgeryRemote(id: string, surgery: Omit<Surgery, "id">): Promise<MedicalWriteResult> {
   if (!surgery.date || !/^\d{4}-\d{2}-\d{2}$/.test(surgery.date)) {
-    return { ok: false, message: "Add the date of this surgery before saving." };
+    return { ok: false, message: t("Add the date of this surgery before saving.") };
   }
   const { data, error } = await supabase
     .from("surgeries")
@@ -344,7 +354,7 @@ export async function updateSurgeryRemote(id: string, surgery: Omit<Surgery, "id
     .select("id");
   if (error || !data || data.length === 0) {
     if (error) console.error("[medical-history] Could not update surgery:", error.message);
-    return { ok: false, message: "Couldn't save. Try again." };
+    return { ok: false, message: t("Couldn't save. Try again.") };
   }
   return { ok: true };
 }

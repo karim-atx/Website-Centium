@@ -14,6 +14,10 @@ import { ConflictDialog } from "../../../../components/pro/calendar/ConflictDial
 import { fixedInk } from "./colours";
 import { useActionStrip } from "./useActionStrip";
 import { acceptBody, acceptRows, applicationMeta, clashBody, clashTime, hiredStrip, offerNote, roleLine, STATUS_TONE } from "./opportunitiesModel";
+import { t, tk } from "../../../../i18n/core";
+
+// The status stubs (my_applications status values), shown through t().
+void [tk("APPLIED"), tk("SHORTLISTED"), tk("OFFERED"), tk("HIRED"), tk("DECLINED")];
 
 // Market + Share 3.0 · W4 · P-MA.5.2 My applications
 // (/app/pro/marketplace/opportunities/applications; Professional Marketplace
@@ -62,7 +66,7 @@ export default function MyApplicationsPage() {
   const [dlgSoon, setDlgSoon] = useState(false);
   const [declining, setDeclining] = useState<string | null>(null);
   const [strip, showStrip] = useActionStrip();
-  const retry = useCallback(() => setTick((t) => t + 1), []);
+  const retry = useCallback(() => setTick((n) => n + 1), []);
 
   useEffect(() => {
     let alive = true;
@@ -88,7 +92,7 @@ export default function MyApplicationsPage() {
 
   const accept = async (a: MyApplication, ack: boolean) => {
     if (busy) return;
-    if (!online) return setDlgError("You're offline. Try again when you're connected.");
+    if (!online) return setDlgError(t("You're offline. Try again when you're connected."));
     setBusy(true);
     setDlgError(null);
     setDlgSoon(false);
@@ -98,7 +102,7 @@ export default function MyApplicationsPage() {
       closeDialogs();
       setStatus(a.id, "HIRED");
       setHiredNow(a.id);
-      showStrip(hiredStrip(a), { action: "My work", onAction: () => navigate(`${HOME}/opportunities/work`, { state: { hired: { gym: a.businessName, startsOn: a.startsOn } } }) });
+      showStrip(hiredStrip(a), { action: t("My work"), onAction: () => navigate(`${HOME}/opportunities/work`, { state: { hired: { gym: a.businessName, startsOn: a.startsOn } } }) });
       return;
     }
     if (r.pending) return setDlgSoon(true);
@@ -108,22 +112,22 @@ export default function MyApplicationsPage() {
       return;
     }
     if (r.error === "offer_closed") retry();
-    setDlgError(r.message);
+    setDlgError(t(r.message));
   };
 
   const decline = async (a: MyApplication) => {
     if (declining) return;
-    if (!online) return showStrip("You're offline. Try again when you're connected.", { tone: "neutral" });
+    if (!online) return showStrip(t("You're offline. Try again when you're connected."), { tone: "neutral" });
     setDeclining(a.id);
     const r = await declineHireOffer(a.offerId ?? a.id);
     setDeclining(null);
     if (r.ok) {
       setStatus(a.id, "DECLINED");
-      return showStrip(a.businessName ? `Offer declined · ${a.businessName}` : "Offer declined");
+      return showStrip(a.businessName ? t("Offer declined · {name}", { name: a.businessName }) : t("Offer declined"));
     }
-    if (r.pending) return showStrip("Hiring is coming soon.", { tone: "neutral" });
+    if (r.pending) return showStrip(t("Hiring is coming soon."), { tone: "neutral" });
     if (r.error === "offer_closed") retry();
-    showStrip(r.message, { tone: "error" });
+    showStrip(t(r.message), { tone: "error" });
   };
 
   const browse = () => navigate(`${HOME}/opportunities`);
@@ -132,14 +136,14 @@ export default function MyApplicationsPage() {
   return (
     <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <BackHeader eyebrow="Opportunities" title="My applications" onBack={back} backLabel="Back to Opportunities" />
+      <BackHeader eyebrow={t("Opportunities")} title={t("My applications")} onBack={back} backLabel={t("Back to Opportunities")} />
       <MarketOffline loaded={state.status === "ok"} onRetry={retry} style={{ marginBottom: 12 }} />
       {state.status === "loading" ? (
-        <MarketSkeleton radius={18} rows={3} count={3} height={104} gap={12} label="Loading your applications" />
+        <MarketSkeleton radius={18} rows={3} count={3} height={104} gap={12} label={t("Loading your applications")} />
       ) : state.status === "error" ? (
-        <MarketError thing="your applications" onRetry={retry} />
+        <MarketError thing={t("your applications")} onRetry={retry} />
       ) : state.status === "pending" || state.list.length === 0 ? (
-        <OpEmpty icon="send" top={56} title="No applications yet" body="Apply to an opening, or accept a direct offer from a gym. Each one shows here with its status." cta="Browse openings" onCta={browse} />
+        <OpEmpty icon="send" top={56} title={t("No applications yet")} body={t("Apply to an opening, or accept a direct offer from a gym. Each one shows here with its status.")} cta={t("Browse openings")} onCta={browse} />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {state.list.map((a) => (
@@ -152,30 +156,30 @@ export default function MyApplicationsPage() {
           open
           width={330}
           tone="primary"
-          title="Accept this offer?"
+          title={t("Accept this offer?")}
           body={acceptBody(accepting.businessName)}
-          cancel="Not now"
-          action="Accept offer"
+          cancel={t("Not now")}
+          action={t("Accept offer")}
           busy={busy}
           error={dlgError}
           onCancel={closeDialogs}
           onAction={() => void accept(accepting, false)}
         >
           <DialogRows rows={acceptRows(accepting)} />
-          {dlgSoon ? <SoonNote style={{ marginTop: 12 }}>Hiring is coming soon.</SoonNote> : null}
+          {dlgSoon ? <SoonNote style={{ marginTop: 12 }}>{t("Hiring is coming soon.")}</SoonNote> : null}
         </CentredDialog>
       ) : null}
       {/* W5 (P-CA.5.5): the calendar's ConflictDialog; the data stays accept_hire_offer's `conflicts` refusal. */}
       <ConflictDialog
         open={!!clash}
         body={clash ? clashBody(clash.app, Math.max(1, clash.clashes.length)) : ""}
-        clashes={(clash?.clashes ?? []).map((c) => ({ title: c.title || "A session on your calendar", time: clashTime(c.start, c.end) }))}
+        clashes={(clash?.clashes ?? []).map((c) => ({ title: c.title || t("A session on your calendar"), time: clashTime(c.start, c.end) }))}
         busy={busy}
         error={dlgError}
         onBack={closeDialogs}
         onAccept={() => clash && void accept(clash.app, true)}
       >
-        {dlgSoon ? <SoonNote style={{ marginTop: 12 }}>Hiring is coming soon.</SoonNote> : null}
+        {dlgSoon ? <SoonNote style={{ marginTop: 12 }}>{t("Hiring is coming soon.")}</SoonNote> : null}
       </ConflictDialog>
       {strip}
     </div>
@@ -193,13 +197,13 @@ function ApplicationCard({ a, now, justHired, declining, onAccept, onDecline }: 
     <TicketStub
       stubWidth={46}
       vertical
-      stubLabel={a.status}
+      stubLabel={t(a.status)}
       labelType={[9.5, "0.12em"]}
       tone={STATUS_TONE[a.status]}
       minHeight={104}
       border={border}
-      ariaLabel={`${a.businessName}, ${roleLine(a)}. ${a.status}`}
-      stubAriaLabel={a.status}
+      ariaLabel={t("{gym}, {role}. {status}", { gym: a.businessName, role: roleLine(a), status: t(a.status) })}
+      stubAriaLabel={t(a.status)}
       bodyStyle={{ padding: "12px 14px" }}
     >
       <div style={{ display: "flex", gap: 12 }}>
@@ -215,10 +219,10 @@ function ApplicationCard({ a, now, justHired, declining, onAccept, onDecline }: 
           {offerNote(a) ? <div style={{ marginTop: 10, fontSize: px(12), lineHeight: lh(17), color: m.ink2 }}>{offerNote(a)}</div> : null}
           <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
             <button type="button" onClick={onAccept} className="hit market-focus" {...press.handlers} style={{ ...btn, border: 0, background: m.fill, color: m.onfill, fontWeight: 800, ...press.style }}>
-              Accept
+              {t("Accept")}
             </button>
             <button type="button" onClick={onDecline} disabled={declining} aria-busy={declining || undefined} className="hit market-focus" style={{ ...btn, background: "transparent", border: `1px solid ${m.border}`, color: m.ink2, fontWeight: 700, opacity: declining ? 0.4 : 1 }}>
-              Decline
+              {t("Decline")}
             </button>
           </div>
         </>

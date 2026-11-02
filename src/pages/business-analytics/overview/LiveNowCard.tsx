@@ -6,6 +6,7 @@ import { buildClock, type ClockItem } from "./clockModel";
 import { DayClock } from "./DayClock";
 import type { AnPalette } from "./palette";
 import "./overview.css";
+import { t, tk, tx, isRtl } from "../../../i18n/core";
 
 // AN1-034 #10-#17 · the Live now card: header (live dot, "Live now",
 // "Updated n min ago", Listed / Hidden · Change chip), half-day note + AM/PM
@@ -46,8 +47,8 @@ function measure(t: string, px: number, wt: number): number {
 }
 
 const FMT = [
-  { num: "12", v: false, name: "12-hour time", arc: "M4 12 A8 8 0 0 1 20 12", arrow: "M17.8 9 L20 12 L22.2 9", ny: "13.0px", ox: "5.1px", oy: "0.6px" },
-  { num: "24", v: true, name: "24-hour time", arc: "M12 4 A8 8 0 1 1 8 5.07", arrow: "M6.5 8.5 L8 5.1 L4.3 4.7", ny: "10.3px", ox: "-6px", oy: "0px" },
+  { num: "12", v: false, name: tk("12-hour time"), arc: "M4 12 A8 8 0 0 1 20 12", arrow: "M17.8 9 L20 12 L22.2 9", ny: "13.0px", ox: "5.1px", oy: "0.6px" },
+  { num: "24", v: true, name: tk("24-hour time"), arc: "M12 4 A8 8 0 1 1 8 5.07", arrow: "M6.5 8.5 L8 5.1 L4.3 4.7", ny: "10.3px", ox: "-6px", oy: "0px" },
 ] as const;
 
 export interface LiveNowProps {
@@ -261,7 +262,8 @@ export function LiveNowCard(p: LiveNowProps) {
       if (n > 1 && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
         e.preventDefault();
         pauseUntil.current = Date.now() + 8000;
-        setCyc((s) => (((s + (e.key === "ArrowRight" ? 1 : -1)) % n) + n) % n);
+        const fwd = e.key === (isRtl() ? "ArrowLeft" : "ArrowRight");
+        setCyc((s) => (((s + (fwd ? 1 : -1)) % n) + n) % n);
       } else if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         setSelKey(m.tapKey);
@@ -298,7 +300,7 @@ export function LiveNowCard(p: LiveNowProps) {
   return (
     <section
       data-live-card
-      aria-label="Live now"
+      aria-label={tx("Live now", "live classes")}
       style={{ background: c.card, borderRadius: 24, border: `1px solid ${c.cardBorder}`, overflow: "hidden", marginBottom: 24, boxShadow: c.entryShadow }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px 12px" }}>
@@ -307,16 +309,16 @@ export function LiveNowCard(p: LiveNowProps) {
           <span style={{ position: "absolute", inset: 2, borderRadius: 999, background: pulseCol }} />
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 style={{ fontSize: textPx(13), fontWeight: 800, lineHeight: linePx(17), whiteSpace: "nowrap", color: c.ink, margin: 0 }}>Live now</h2>
+          <h2 style={{ fontSize: textPx(13), fontWeight: 800, lineHeight: linePx(17), whiteSpace: "nowrap", color: c.ink, margin: 0 }}>{tx("Live now", "live classes")}</h2>
           <p data-updated style={{ fontSize: textPx(10.5), lineHeight: linePx(14), color: c.faint, margin: 0 }}>
-            {p.offline ? `Offline · ${p.updated}` : p.updated}
+            {p.offline ? (p.updated ? `${t("Offline")} · ${p.updated}` : t("Offline")) : p.updated}
           </p>
         </div>
         <button
           type="button"
           data-listed-chip
           onClick={p.onListing}
-          aria-label={p.listed ? "Listed on Explore. Change" : "Hidden from Explore. Change"}
+          aria-label={p.listed ? t("Listed on Explore. Change") : t("Hidden from Explore. Change")}
           className="tap"
           style={{
             position: "relative",
@@ -337,8 +339,8 @@ export function LiveNowCard(p: LiveNowProps) {
         >
           <span aria-hidden style={{ position: "absolute", insetInlineStart: 0, insetInlineEnd: 0, top: -7, bottom: -7 }} />
           {p.listed ? <Eye size={13} strokeWidth={2.4} aria-hidden /> : <EyeOff size={13} strokeWidth={2.4} aria-hidden />}
-          {p.listed ? "Listed" : "Hidden"}
-          <span style={{ fontWeight: 700, opacity: 0.8 }}>· Change</span>
+          {p.listed ? t("Listed") : t("Hidden")}
+          <span style={{ fontWeight: 700, opacity: 0.8 }}>· {t("Change")}</span>
         </button>
       </div>
 
@@ -348,7 +350,7 @@ export function LiveNowCard(p: LiveNowProps) {
             {m.halfNote}
           </span>
           {half && (
-            <span role="group" aria-label="Half of the day" style={{ display: "flex", alignItems: "center", gap: 2, padding: 2, borderRadius: 9, border: `1px solid ${c.divider}`, flexShrink: 0 }}>
+            <span role="group" aria-label={t("Half of the day")} style={{ display: "flex", alignItems: "center", gap: 2, padding: 2, borderRadius: 9, border: `1px solid ${c.divider}`, flexShrink: 0 }}>
               {[false, true].map((pm) => {
                 const on = m.showPM === pm;
                 const dot = !on && m.otherHalf > 0;
@@ -358,7 +360,7 @@ export function LiveNowCard(p: LiveNowProps) {
                     type="button"
                     data-half={pm ? "pm" : "am"}
                     aria-pressed={on}
-                    aria-label={pm ? "Show PM" : "Show AM"}
+                    aria-label={pm ? t("Show PM") : t("Show AM")}
                     onClick={() => flipTo(pm)}
                     style={{
                       position: "relative",
@@ -381,7 +383,7 @@ export function LiveNowCard(p: LiveNowProps) {
                       border: 0,
                     }}
                   >
-                    <span aria-hidden style={{ position: "absolute", insetInlineStart: "50%", top: "50%", width: 44, height: 44, transform: "translate(-50%,-50%)" }} />
+                    <span aria-hidden style={{ position: "absolute", left: "50%", top: "50%", width: 44, height: 44, transform: "translate(-50%,-50%)" }} />
                     {pm ? m.pmLabel : m.amLabel}
                     {dot && (
                       <span data-count-dot style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 12, height: 12, padding: "0 3px", borderRadius: 999, background: c.liveTeal, color: "#FFFFFF", fontSize: 8, fontWeight: 800 }}>
@@ -406,12 +408,12 @@ export function LiveNowCard(p: LiveNowProps) {
               </span>
             ))}
           </div>
-          <div data-pill role="radiogroup" aria-label="Time format" style={{ position: "relative", width: 88, height: 44, flexShrink: 0, marginInlineEnd: -10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div data-pill role="radiogroup" aria-label={t("Time format")} style={{ position: "relative", width: 88, height: 44, flexShrink: 0, marginInlineEnd: -10, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span aria-hidden data-pill-track style={{ position: "absolute", insetInlineStart: 10, top: 7, width: 68, height: 30, borderRadius: 999, background: c.pillTrack, boxShadow: `inset 0 0 0 1px ${c.pillBorder}`, pointerEvents: "none" }} />
             <span
               aria-hidden
               data-pill-thumb
-              style={{ position: "absolute", insetInlineStart: 12, top: 9, width: 32, height: 26, borderRadius: 999, background: c.half, boxShadow: c.pillThumbSh, transform: `translateX(${is24 ? 32 : 0}px)`, transition: rm ? "none" : "transform 0.2s cubic-bezier(0.22,1,0.36,1)", pointerEvents: "none" }}
+              style={{ position: "absolute", insetInlineStart: 12, top: 9, width: 32, height: 26, borderRadius: 999, background: c.half, boxShadow: c.pillThumbSh, transform: `translateX(${is24 ? (isRtl() ? -32 : 32) : 0}px)`, transition: rm ? "none" : "transform 0.2s cubic-bezier(0.22,1,0.36,1)", pointerEvents: "none" }}
             />
             {FMT.map((f) => {
               const on = is24 === f.v;
@@ -421,7 +423,7 @@ export function LiveNowCard(p: LiveNowProps) {
                   role="radio"
                   tabIndex={on ? 0 : -1}
                   aria-checked={on}
-                  aria-label={f.name}
+                  aria-label={t(f.name)}
                   data-fmt={f.num}
                   onClick={() => {
                     if (wasLong.current) {
@@ -466,7 +468,7 @@ export function LiveNowCard(p: LiveNowProps) {
                       <path d={f.arc} />
                       <path d={f.arrow} />
                     </svg>
-                    <span aria-hidden style={{ position: "absolute", insetInlineStart: "50%", top: f.ny, transform: "translate(-50%,-50%)", fontSize: 7, fontWeight: 800, lineHeight: 1, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", pointerEvents: "none" }}>
+                    <span aria-hidden style={{ position: "absolute", left: "50%", top: f.ny, transform: "translate(-50%,-50%)", fontSize: 7, fontWeight: 800, lineHeight: 1, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", pointerEvents: "none" }}>
                       {f.num}
                     </span>
                   </span>
@@ -475,7 +477,7 @@ export function LiveNowCard(p: LiveNowProps) {
                       role="tooltip"
                       style={{ position: "absolute", bottom: "calc(100% + 2px)", insetInlineEnd: 4, background: c.dark ? "#F5F3FA" : "#241F1B", color: c.dark ? "#121317" : "#FFFFFF", fontSize: textPx(11), fontWeight: 700, lineHeight: linePx(14), padding: "6px 9px", borderRadius: 9, whiteSpace: "nowrap", boxShadow: "0 6px 16px rgba(36,31,27,0.22)", pointerEvents: "none", zIndex: 2 }}
                     >
-                      {f.name}
+                      {t(f.name)}
                     </span>
                   )}
                 </span>
@@ -514,7 +516,7 @@ export function LiveNowCard(p: LiveNowProps) {
                   onClick={() => setPanelOpen((v) => !v)}
                   style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, minHeight: 44, borderTop: `1px solid ${c.divider}`, fontSize: textPx(12), fontWeight: 800, color: c.pDark, cursor: "pointer", WebkitTapHighlightColor: "transparent", background: "none", borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0 }}
                 >
-                  {panelOpen ? "Show less" : `Show ${rowsB.length} more`}
+                  {panelOpen ? t("Show less") : t("Show {n} more", { n: rowsB.length })}
                   <span style={{ display: "flex", transform: panelOpen ? "rotate(180deg)" : "none", transition: rm ? "none" : "transform 0.3s ease" }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                       <path d="M6 9l6 6 6-6" />

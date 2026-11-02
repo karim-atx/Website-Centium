@@ -3,6 +3,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { appLocale } from "../../i18n/format";
 import { isRtl } from "../../i18n/core";
+import { t } from "../../i18n/core";
 
 // Mobile v5.1 R3, dark mode (no light islands): the chart grid and axis text
 // as [light, dark], the dark values the v5.1 chart rules (grid
@@ -86,7 +87,7 @@ export const WeightTrendChart: React.FC<{
       {[min, (min + max) / 2, max].map((v, i) => (
         <g key={i}>
           <text x={mx(0)} y={y(v) + 3} style={{ fontSize: textPx(9) }} fill={axis}>
-            {v.toFixed(0)}kg
+            {t("{n}kg", { n: v.toFixed(0) })}
           </text>
           <line
             x1={mx(padding.left)}

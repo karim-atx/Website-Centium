@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { isModerationMessage } from "../../services/moderation/text";
+import { t } from "../../i18n/core";
 
 /**
  * " Community guidelines", after a moderation sentence (Round C Release 2:
@@ -12,7 +13,7 @@ export const GuidelinesLink: React.FC<{ message: string | null | undefined }> = 
     <>
       {" "}
       <Link to="/legal/community-guidelines" className="underline font-semibold" style={{ color: "inherit" }}>
-        Community guidelines
+        {t("Community guidelines")}
       </Link>
     </>
   ) : null;

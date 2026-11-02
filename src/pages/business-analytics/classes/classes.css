@@ -136,7 +136,7 @@ html.high-contrast.dark .an3 {
 .an3-caption {
   font-size: 10.5px;
   color: var(--k-faint);
-  margin-left: auto;
+  margin-inline-start: auto;
   text-align: end;
 }
 
@@ -844,4 +844,28 @@ html.high-contrast.dark .an3 {
 }
 html.reduce-motion .an3 * {
   transition-duration: 0s !important;
+}
+
+/* Round G (EH5): right to left, the fill bars run from the right (their
+   fill is a block child, so it follows the direction), and the 70% target,
+   its label and the previous-period mark are placed from the right too. */
+[dir="rtl"] .an3-placeholder-track > span,
+[dir="rtl"] .an3-bar > span {
+  left: auto;
+  right: 70%;
+  border-left: 0;
+  border-right: 1.5px dashed var(--k-leaf);
+}
+[dir="rtl"] .an3-target {
+  left: auto;
+  right: 70%;
+  transform: translateX(1px);
+}
+[dir="rtl"] .an3-target-label {
+  left: auto;
+  right: 70%;
+  transform: translateX(50%);
+}
+[dir="rtl"] .an3-ghost {
+  transform: translate(50%, -50%) rotate(45deg);
 }

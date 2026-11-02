@@ -147,6 +147,14 @@ export interface CycleSettings {
   periodReminder: boolean;
   /** How many days before: 1–3 (CHECK). */
   periodReminderDays: number;
+  /**
+   * Round G4 (G fixes): the member's own switch for the Premium phase
+   * insights (cycle_settings.insights_enabled, on by default). NOT in the
+   * settings read (a Database without G4 has no such column, and that read
+   * must keep working): getInsightsEnabled reads it on its own while the
+   * Premium switch is on. Only ever written as a patch.
+   */
+  insightsEnabled?: boolean;
   // No zone here: cycle_settings.timezone was dropped (20261008000000). The
   // one zone is profiles.timezone (AppContext's myTimezone).
 }

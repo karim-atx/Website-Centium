@@ -3,9 +3,21 @@ import { ArrowDownToLine, ArrowUpToLine, Heart, HeartPulse } from "lucide-react"
 import { textPx, linePx } from "../../../theme/textSize";
 import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { MetricHero, HeroPill, hairline, mc, metricIconInk, metricTextInk, useHealthMode, type Stat } from "./MetricKit";
-import { daysOf, monthLetter, type MetricRange, type Period } from "./periods";
+import { daysOf, dowLetter, monthLetter, type MetricRange, type Period } from "./periods";
 import { HR_ALERT_COPY } from "../../../services/health-metrics/clinicalCopy";
-import { isRtl } from "../../../i18n/core";
+import { isRtl, t, tk } from "../../../i18n/core";
+
+/** A translated template with its {n} drawn bold ("<b>54</b> low"). */
+const boldN = (template: string, n: number) => {
+  const [a, b = ""] = t(template).split("{n}");
+  return (
+    <>
+      {a}
+      <b style={{ fontWeight: 900, color: "rgb(var(--c-charcoal))" }}>{n}</b>
+      {b}
+    </>
+  );
+};
 
 // Heart rate (HE1.5 family) hero, charts and the HE1.5.a notice card.
 // Literal values from health-handover.md HE1.5 / .d / .m / .y / .a; chart
@@ -118,7 +130,8 @@ export const HeartRateHero: React.FC<{ data: HrHeroData | null; loading?: boolea
           {data.change && <HeroPill metric={K}>{data.change}</HeroPill>}
         </div>
         <p style={{ marginTop: 6, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>{data.rangeText}</p>
-        <div className="relative" style={{ marginTop: 20, height: 60 }} data-hr-strip>
+        {/* dir ltr: the strip is a bpm scale (40 to 180), drawn left to right in both directions; its labels take their own direction. */}
+        <div dir="ltr" className="relative" style={{ marginTop: 20, height: 60 }} data-hr-strip>
           <svg aria-hidden viewBox="0 0 326 60" width="100%" height={60} preserveAspectRatio="none" className="absolute inset-0 overflow-visible">
             <path d={ECG_PATH} fill="none" stroke={mc(K, "main", 0.22)} strokeWidth={1.2} strokeLinejoin="round" />
             {running && (
@@ -165,6 +178,7 @@ export const HeartRateHero: React.FC<{ data: HrHeroData | null; loading?: boolea
             }}
           />
           <span
+            dir="auto"
             className="absolute whitespace-nowrap"
             style={{ top: -4, left: `${(stripX(data.marker) / 326) * 100}%`, transform: "translateX(-50%)", fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 700, color: ink }}
           >
@@ -174,6 +188,7 @@ export const HeartRateHero: React.FC<{ data: HrHeroData | null; loading?: boolea
             <>
               {/* Close low / high (under ~90 apart): low ends at its mark, high starts at its mark, so they never overlap (OURS). */}
               <span
+                dir="auto"
                 className="absolute whitespace-nowrap"
                 style={{
                   top: 48,
@@ -181,9 +196,10 @@ export const HeartRateHero: React.FC<{ data: HrHeroData | null; loading?: boolea
                   ...lowHigh,
                 }}
               >
-                <b style={{ fontWeight: 900, color: "rgb(var(--c-charcoal))" }}>{data.low}</b> low
+                {boldN(tk("{n} low"), data.low)}
               </span>
               <span
+                dir="auto"
                 className="absolute whitespace-nowrap"
                 style={{
                   top: 48,
@@ -191,7 +207,7 @@ export const HeartRateHero: React.FC<{ data: HrHeroData | null; loading?: boolea
                   ...lowHigh,
                 }}
               >
-                <b style={{ fontWeight: 900, color: "rgb(var(--c-charcoal))" }}>{data.high}</b> high
+                {boldN(tk("{n} high"), data.high)}
               </span>
             </>
           )}
@@ -273,7 +289,6 @@ export function hrUnits(
   });
 }
 
-const DOW_LETTER = ["S", "M", "T", "W", "T", "F", "S"];
 
 /**
  * Week (HE1.5 #32): 7 range capsules + latest dots + dashed week-average line
@@ -375,7 +390,7 @@ export const HeartRateChart: React.FC<{
       {units.map((u, i) =>
         range === "month" && !monthTicks.has(i) ? null : (
           <text key={`l${u.key}`} x={mx(geo.x(i))} y={LABEL_Y} textAnchor="middle" style={labelStyle(u.current)}>
-            {range === "week" ? DOW_LETTER[new Date(`${u.key}T12:00:00`).getDay()] : range === "month" ? String(i + 1) : u.label}
+            {range === "week" ? dowLetter(u.key) : range === "month" ? String(i + 1) : u.label}
           </text>
         )
       )}
@@ -398,27 +413,27 @@ export function hrLegend(range: MetricRange, dark: boolean, resting = false): { 
   const line = <span style={{ width: 14, height: 1.6, background: mc(K, "main"), display: "inline-block" }} />;
   if (range === "day")
     return [
-      { label: "Heart rate", swatch: line },
-      { label: resting ? "Resting level" : "Latest level", swatch: dash },
+      { label: t("Heart rate"), swatch: line },
+      { label: resting ? t("Resting level") : t("Latest level"), swatch: dash },
     ];
   if (range === "week")
     return [
-      { label: "Daily range", swatch: capsule },
-      { label: resting ? "Resting" : "Latest", swatch: dot },
-      { label: "Days ahead", swatch: ghost },
-      { label: resting ? "Week avg resting" : "Week average", swatch: dash },
+      { label: t("Daily range"), swatch: capsule },
+      { label: resting ? t("Resting") : t("Latest"), swatch: dot },
+      { label: t("Days ahead"), swatch: ghost },
+      { label: resting ? t("Week avg resting") : t("Week average"), swatch: dash },
     ];
   if (range === "month")
     return [
-      { label: "Daily range", swatch: capsule },
-      { label: resting ? "Resting" : "Latest", swatch: dot },
-      { label: resting ? "Avg resting" : "Average", swatch: dash },
+      { label: t("Daily range"), swatch: capsule },
+      { label: resting ? t("Resting") : t("Latest"), swatch: dot },
+      { label: resting ? t("Avg resting") : t("Average"), swatch: dash },
     ];
   return [
-    { label: "Monthly range", swatch: capsule },
-    { label: resting ? "Resting" : "Month average", swatch: dot },
-    { label: "Months ahead", swatch: ghost },
-    { label: resting ? "Avg resting" : "Year average", swatch: dash },
+    { label: t("Monthly range"), swatch: capsule },
+    { label: resting ? t("Resting") : t("Month average"), swatch: dot },
+    { label: t("Months ahead"), swatch: ghost },
+    { label: resting ? t("Avg resting") : t("Year average"), swatch: dash },
   ];
 }
 
@@ -426,9 +441,9 @@ export function hrLegend(range: MetricRange, dark: boolean, resting = false): { 
 export function hrStats(avg: number | null, low: number | null, high: number | null, resting = false): Stat[] {
   const n = (v: number | null) => (v === null ? "–" : String(Math.round(v)));
   return [
-    { icon: HeartPulse, value: n(avg), label: resting ? "Avg resting" : "Average" },
-    { icon: ArrowDownToLine, value: n(low), label: "Lowest" },
-    { icon: ArrowUpToLine, value: n(high), label: "Highest" },
+    { icon: HeartPulse, value: n(avg), label: resting ? t("Avg resting") : t("Average") },
+    { icon: ArrowDownToLine, value: n(low), label: t("Lowest") },
+    { icon: ArrowUpToLine, value: n(high), label: t("Highest") },
   ];
 }
 
@@ -468,10 +483,10 @@ export const HeartRateAlertCard: React.FC<{ event: HrAlertEvent; time: string; o
         <p style={{ marginTop: 6, fontSize: textPx(12), lineHeight: linePx(18), color: "rgb(var(--c-charcoal-soft))" }}>{HR_ALERT_COPY.emergency}</p>
         <div className="flex" style={{ marginTop: 10, gap: 16 }}>
           <button type="button" onClick={onGotIt} className={action} style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: link }}>
-            Got it
+            {t("Got it")}
           </button>
           <button type="button" onClick={onSettings} className={action} style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: link }}>
-            Alert settings
+            {t("Alert settings")}
           </button>
         </div>
       </div>

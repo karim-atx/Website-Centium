@@ -16,6 +16,7 @@ import { StoreCustomersIndex, TopCustomersPage } from "./StoreCustomers";
 import { appLocale } from "../../../i18n/format";
 import { useOpsToast } from "../../../components/marketplace/VenueKit";
 import { BookingPausesCard } from "./BookingPausesCard";
+import { t, tn } from "../../../i18n/core";
 
 // Analytics › Members (AN4): the section index (AN4-001), the section pages
 // (AN4-005 …, MembersPage), Member codes (OURS-AN4-member-codes with the
@@ -66,13 +67,13 @@ export function MembersSection() {
       return;
     }
     setExport(`centium-${vocab.people}.csv`, [
-      ["Section", "Value", "Note"],
+      [t("Section"), t("Value"), t("Note")],
       ...pages.map((p) => {
         const v = views.get(p.key);
         return [p.title, v?.boxes[0].value ?? null, v?.lead ?? p.coming];
       }),
-      ["Member codes waiting", waiting, null],
-      ...(data.venues.length > 0 ? [["Active at your venues", activeAtVenues, null]] : []),
+      [t("Member codes waiting"), waiting, null],
+      ...(data.venues.length > 0 ? [[t("Active at your venues"), activeAtVenues, null]] : []),
     ]);
     return () => setExport("", null);
   }, [sub, kind, known, pages, views, waiting, activeAtVenues, data.venues.length, vocab.people, setExport]);
@@ -90,25 +91,33 @@ export function MembersSection() {
     return <MembersPage page={page} pages={pages} vocab={vocab} view={views.get(page.key)!} figures={fig.figures} data={data} empty={empty} early={known && early} />;
   }
 
-  const codesLine = waiting === null ? "Create a code for each new member." : waiting > 0 ? `${waiting} waiting to be used` : "Create a code for each new member.";
+  const codesLine = waiting === null ? t("Create a code for each new member.") : waiting > 0 ? t("{n} waiting to be used", { n: waiting }) : t("Create a code for each new member.");
 
   return (
     <div>
-      {(data.error || fig.error) && <AnStrip offline={!online} text={online ? `Couldn't load your ${vocab.people}. Check your connection and try again.` : `You're offline. Showing ${vocab.people} as of your last visit.`} onRetry={() => { data.reload(); fig.reload(); }} />}
+      {(data.error || fig.error) && <AnStrip offline={!online} text={
+            vocab.label === "Clients"
+              ? online
+                ? t("Couldn't load your clients. Check your connection and try again.")
+                : t("You're offline. Showing clients as of your last visit.")
+              : online
+                ? t("Couldn't load your members. Check your connection and try again.")
+                : t("You're offline. Showing members as of your last visit.")
+          } onRetry={() => { data.reload(); fig.reload(); }} />}
 
       {empty ? (
         <MembersEmptyCard vocab={vocab}>
           {!!waiting && (
             <button type="button" onClick={() => navigate(`${BASE}/codes`)} className="tap min-h-[44px] text-[12px] leading-[17px] text-charcoal-faint underline-offset-2 hover:underline">
-              {waiting === 1 ? "1 code waiting to be used." : `${waiting} codes waiting to be used.`}
+              {tn(waiting, "1 code waiting to be used.", "{n} codes waiting to be used.")}
             </button>
           )}
         </MembersEmptyCard>
       ) : (
         <>
           {/* AN4-044 rows 10-11: the early hint, the card 12 under it. */}
-          {known && early && <AnEarlyHint>{EARLY_LINE}</AnEarlyHint>}
-          <AnCard label={`${vocab.label} sections`}>
+          {known && early && <AnEarlyHint>{t(EARLY_LINE)}</AnEarlyHint>}
+          <AnCard label={vocab.label === "Clients" ? t("Clients sections") : t("Members sections")}>
             {!known ? (
               <AnIndexSkeleton rows={pages.length} />
             ) : (
@@ -124,26 +133,26 @@ export function MembersSection() {
                     value={value}
                     delta={delta ? <DeltaText d={delta} /> : undefined}
                     onClick={() => navigate(`${BASE}/${p.key}`)}
-                    ariaLabel={`${p.title}: ${value ? `${value} ${v.boxes[0].label}` : "no figure yet"}`}
+                    ariaLabel={`${p.title}: ${value ? `${value} ${v.boxes[0].label}` : t("no figure yet")}`}
                   />
                 );
               })
             )}
           </AnCard>
-          {known && <AnHint>Tap a section to open its page.</AnHint>}
+          {known && <AnHint>{t("Tap a section to open its page.")}</AnHint>}
         </>
       )}
 
       {/* OURS-AN4-member-codes row 1: Member codes (owner only; analytics is the owner's). */}
       {known && (
-        <AnCard className="mt-[12px]" label="Member codes">
+        <AnCard className="mt-[12px]" label={t("Member codes")}>
           <AnIndexRow
             first
-            title="Member codes"
+            title={t("Member codes")}
             lead={codesLine}
             value={waiting === null ? null : waiting.toLocaleString(appLocale())}
             onClick={() => navigate(`${BASE}/codes`)}
-            ariaLabel={`Member codes: ${waiting ?? 0} waiting to be used`}
+            ariaLabel={t("Member codes: {n} waiting to be used", { n: waiting ?? 0 })}
           />
         </AnCard>
       )}
@@ -153,28 +162,28 @@ export function MembersSection() {
 
       {/* AN1-026 K1 / V6-28: the Client outcomes screen, also reached from the Overview "More insights" card. The owner's (B7: it adds up the whole business). */}
       {known && !access.isStaff && (
-        <AnCard className="mt-[12px]" label="Client outcomes">
+        <AnCard className="mt-[12px]" label={t("Client outcomes")}>
           <AnIndexRow
             first
-            title="Client outcomes"
-            lead="Only from clients who share with you"
+            title={t("Client outcomes")}
+            lead={t("Only from clients who share with you")}
             value={null}
             onClick={() => navigate("/app/business/analytics/outcomes")}
-            ariaLabel="Client outcomes"
+            ariaLabel={t("Client outcomes")}
           />
         </AnCard>
       )}
 
       {/* OURS-AN4-member-rosters: Venue members (any business with venues). */}
       {known && data.venues.length > 0 && (
-        <AnCard className="mt-[12px]" label="Venue members">
+        <AnCard className="mt-[12px]" label={t("Venue members")}>
           <AnIndexRow
             first
-            title="Venue members"
-            lead={data.venues.length === 1 ? `${activeAtVenues} active at ${data.venues[0].name}` : `${activeAtVenues} active across ${data.venues.length} venues`}
+            title={t("Venue members")}
+            lead={data.venues.length === 1 ? t("{n} active at {venue}", { n: activeAtVenues, venue: data.venues[0].name }) : t("{n} active across {count} venues", { n: activeAtVenues, count: data.venues.length })}
             value={activeAtVenues.toLocaleString(appLocale())}
             onClick={() => navigate(`${BASE}/venue`)}
-            ariaLabel={`Venue members: ${activeAtVenues} active`}
+            ariaLabel={t("Venue members: {n} active", { n: activeAtVenues })}
           />
         </AnCard>
       )}

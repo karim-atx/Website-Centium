@@ -3,6 +3,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { useIsDark } from "../../hooks/useIsDark";
 import { BARS, COLLARS, nearestKgPlate, plateLoad, type PlateUnit } from "../../services/workout/plates";
 import { linePx, textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 // IPF plate colours (WO24): 25 red, 20 blue, 15 yellow, 10 green, 5 white,
 // 2.5 black, 1.25 chrome. Red, white and black are measured from the frame;
@@ -120,7 +121,7 @@ const Barbell: React.FC<{ plates: { kg: number; count: number }[]; unit: PlateUn
   const ticks = Array.from({ length: Math.floor(grip / 5.5) }, (_, i) => sleeve + shoulderW + 3 + i * 5.5);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block", maxWidth: W, margin: "0 auto" }} role="img" aria-label="Barbell loadout">
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block", maxWidth: W, margin: "0 auto" }} role="img" aria-label={t("Barbell loadout")}>
       {/* sleeves */}
       <rect x={0} y={cy - 5} width={sleeve} height={10} rx={2} fill={SLEEVE} />
       <rect x={sleeve + 2 * shoulderW + grip} y={cy - 5} width={sleeve} height={10} rx={2} fill={SLEEVE} />
@@ -189,27 +190,31 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
   const caption = !load
     ? null
     : barOnly
-    ? `${fmt(bar)} ${u} bar · no plates`
-    : `${fmt(bar)} ${u} bar${collar > 0 ? ` · ${fmt(collar)} ${u} collars` : ""} · ${fmt(load.perSide * 2)} ${u} plates`;
+    ? t("{weight} {unit} bar · no plates", { weight: fmt(bar), unit: u })
+    : [
+        t("{weight} {unit} bar", { weight: fmt(bar), unit: u }),
+        ...(collar > 0 ? [t("{weight} {unit} collars", { weight: fmt(collar), unit: u })] : []),
+        t("{weight} {unit} plates", { weight: fmt(load.perSide * 2), unit: u }),
+      ].join(" · ");
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Plate Calculator">
+    <BottomSheet open={open} onClose={onClose} title={t("Plate Calculator")}>
       <div className="flex flex-col" style={{ gap: 16 }}>
         <div>
-          <span style={label}>Target weight ({u})</span>
+          <span style={label}>{t("Target weight ({unit})", { unit: u })}</span>
           <div className="flex items-center" style={{ gap: 11 }}>
             <input
               value={targetDraft}
               onChange={(e) => setTargetDraft(e.target.value.replace(/[^\d.]/g, "").replace(/(?<=\..*)\./g, ""))}
               inputMode="decimal"
-              aria-label={`Target weight (${u})`}
+              aria-label={t("Target weight ({unit})", { unit: u })}
               className="flex-1 min-w-0 text-center focus:outline-none focus:ring-2 focus:ring-primary/20"
               style={{ height: 43, borderRadius: 12, background: "rgb(var(--c-cream-soft))", border: "1px solid rgb(var(--c-charcoal) / 0.11)", fontSize: textPx(15), fontWeight: 500, color: "rgb(var(--c-charcoal))" }}
             />
             {/* 02: the one pill control, with a sliding highlight. */}
             <div
               role="radiogroup"
-              aria-label="Unit"
+              aria-label={t("Unit")}
               className="relative flex flex-none"
               style={{ width: 93, height: 43, borderRadius: 999, background: pc("unitTrack", dark), padding: 3 }}
             >
@@ -247,7 +252,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
         </div>
 
         <div>
-          <span style={label}>Bar</span>
+          <span style={label}>{t("Bar")}</span>
           <div className="flex" style={{ gap: 8 }}>
             {[0, 1].map((i) => (
               <button key={i} onClick={() => setBarChoice(i as 0 | 1)} aria-pressed={barChoice === i} className="tap" style={tile(barChoice === i)}>
@@ -260,25 +265,25 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
                 value={customBarDraft}
                 onChange={(e) => setCustomBarDraft(e.target.value.replace(/[^\d.]/g, ""))}
                 inputMode="decimal"
-                aria-label={`Bar weight (${u})`}
+                aria-label={t("Bar weight ({unit})", { unit: u })}
                 placeholder={u}
                 className="text-center focus:outline-none"
                 style={{ ...tile(true), background: "rgb(var(--c-cream-card))", color: "rgb(var(--c-charcoal))", border: `1.5px solid ${pc("otherBorder", dark)}` }}
               />
             ) : (
               <button onClick={() => setBarChoice("other")} aria-pressed={false} className="tap" style={tile(false)}>
-                Other
+                {t("Other")}
               </button>
             )}
           </div>
         </div>
 
         <div>
-          <span style={label}>Collars (per side)</span>
+          <span style={label}>{t("Collars (per side)")}</span>
           <div className="flex" style={{ gap: 8 }}>
             {([0, 1, "none"] as const).map((c) => (
               <button key={String(c)} onClick={() => setCollarChoice(c)} aria-pressed={collarChoice === c} className="tap" style={tile(collarChoice === c)}>
-                {c === "none" ? "None" : `${COLLARS[unit][c]} ${u}`}
+                {c === "none" ? t("None") : `${COLLARS[unit][c]} ${u}`}
               </button>
             ))}
           </div>
@@ -286,7 +291,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
 
         <div>
           <div className="flex items-baseline justify-between" style={{ marginBottom: 8 }}>
-            <span style={{ ...label, marginBottom: 0 }}>Percentage</span>
+            <span style={{ ...label, marginBottom: 0 }}>{t("Percentage")}</span>
             <span className="tabular-nums" style={{ fontSize: textPx(12), fontWeight: 700, color: pc("pct", dark) }}>
               {pct}%
             </span>
@@ -298,7 +303,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
             step={5}
             value={pct}
             onChange={(e) => setPct(Number(e.target.value))}
-            aria-label="Percentage"
+            aria-label={t("Percentage")}
             className="set-slider plate-slider w-full"
             style={{
               height: 6,
@@ -313,7 +318,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
           <div className="flex items-end justify-between" style={{ gap: 12 }}>
             <div className="min-w-0">
               <p className="uppercase" style={{ margin: 0, fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.1em", color: pc("resultLabel", dark) }}>
-                Working
+                {t("Working")}
               </p>
               <p className="tabular-nums" style={{ margin: 0, lineHeight: linePx(36) }}>
                 <span style={{ fontSize: textPx(30), fontWeight: 800, color: pc("resultValue", dark), letterSpacing: "-0.02em" }}>{load ? fmt(load.working) : "–"}</span>
@@ -322,21 +327,21 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
             </div>
             <div className="text-end flex-none">
               <p className="uppercase" style={{ margin: 0, fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.1em", color: pc("resultLabel", dark) }}>
-                Per side
+                {t("Per side")}
               </p>
               <p className="tabular-nums" style={{ margin: "2px 0 0", fontSize: textPx(18), fontWeight: 800, color: pc("resultValue", dark) }}>
-                {!load ? "–" : barOnly ? "Bar only" : `${fmt(load.perSide)} ${u}`}
+                {!load ? "–" : barOnly ? t("Bar only") : `${fmt(load.perSide)} ${u}`}
               </p>
               {load && (
                 <p style={{ margin: "2px 0 0", fontSize: textPx(10.5), color: pc("resultSub", dark) }}>
-                  {pct}% of {fmt(target)} {u}
+                  {t("{pct}% of {weight} {unit}", { pct, weight: fmt(target), unit: u })}
                 </p>
               )}
             </div>
           </div>
           {load?.closest != null && (
             <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), fontWeight: 700, color: pc("resultSub", dark) }}>
-              Closest: {fmt(load.closest)} {u}
+              {t("Closest: {weight} {unit}", { weight: fmt(load.closest), unit: u })}
             </p>
           )}
         </div>
@@ -366,7 +371,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
               })}
             </div>
           ) : barOnly ? (
-            <p style={{ margin: "10px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-faint))" }}>Bar only</p>
+            <p style={{ margin: "10px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-faint))" }}>{t("Bar only")}</p>
           ) : null}
         </div>
       </div>

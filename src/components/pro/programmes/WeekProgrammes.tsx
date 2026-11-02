@@ -5,7 +5,10 @@ import { INK } from "../proInk";
 import { ProCardSkeleton } from "../states";
 import { Chip, SectionHead } from "../client/kit";
 import { ErrorLine, LibCard } from "../library/libraryUi";
-import { buildGrid, programmeMeta } from "../../../services/programmes/model";
+import { clientsLabel } from "../library/libraryModel";
+import { buildGrid } from "../../../services/programmes/model";
+import { t } from "../../../i18n/core";
+import { programmeMetaText } from "./programmeText";
 import { useProgrammes } from "./useProgrammes";
 import { ProgrammeDetailsSheet } from "./ProgrammeDetailsSheet";
 import { ProgrammeBuilder } from "./ProgrammeBuilder";
@@ -30,14 +33,14 @@ export const WeekProgrammesSection: React.FC<{ query: string; onOpen: (programme
 
   return (
     <>
-      <SectionHead label="Week-by-day programmes" right="New" onRight={() => setCreating(true)} />
+      <SectionHead label={t("Week-by-day programmes")} right={t("New")} onRight={() => setCreating(true)} />
       {state.status === "loading" ? (
         <ProCardSkeleton lines={2} />
       ) : state.status === "error" && state.programmes.length === 0 ? (
-        <ErrorLine>{state.offline ? "You're offline. Programmes need a connection." : "Couldn't load your programmes."}</ErrorLine>
+        <ErrorLine>{state.offline ? t("You're offline. Programmes need a connection.") : t("Couldn't load your programmes.")}</ErrorLine>
       ) : list.length === 0 ? (
         <p style={{ fontSize: textPx(12.5), color: INK.chF, marginBottom: 12 }}>
-          {q ? "No matches." : "Plan weeks of workouts, day by day, from your workout templates."}
+          {q ? t("No matches.") : t("Plan weeks of workouts, day by day, from your workout templates.")}
         </p>
       ) : (
         list.map((p) => {
@@ -47,8 +50,8 @@ export const WeekProgrammesSection: React.FC<{ query: string; onOpen: (programme
               key={p.id}
               icon={CalendarRange}
               title={p.name}
-              sub={programmeMeta(p.durationWeeks, buildGrid(p.durationWeeks, state.slots[p.id] ?? []))}
-              meta={clients > 0 ? <Chip label={`${clients} ${clients === 1 ? "client" : "clients"}`} /> : <Chip label="Not assigned" tone="pau" />}
+              sub={programmeMetaText(p.durationWeeks, buildGrid(p.durationWeeks, state.slots[p.id] ?? []))}
+              meta={clients > 0 ? <Chip label={clientsLabel(clients)} /> : <Chip label={t("Not assigned")} tone="pau" />}
               onOpen={() => onOpen(p.id)}
             />
           );

@@ -5,7 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { linePx, textPx } from "../../theme/textSize";
 import { Toggle } from "../ui/Toggle";
 import { HEALTH_DISCLAIMER } from "../../services/legal/disclaimer";
-import { t } from "../../i18n/core";
+import { getLanguage, t, tx } from "../../i18n/core";
 import { DISCLAIMER, DISCLAIMER_LONG, PRIVACY_LINE } from "../../services/cycle/guidance";
 import { appLocale } from "../../i18n/format";
 
@@ -56,13 +56,14 @@ export const CycleTitleRow: React.FC<{ title: string; onBack: () => void; sub?: 
     <button
       type="button"
       onClick={onBack}
-      aria-label="Back"
+      aria-label={t("Back")}
       className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
       style={{ width: 36, height: 36 }}
     >
       <ChevronLeft
         size={sub ? 22 : 20}
         aria-hidden
+        className="rtl:-scale-x-100"
         style={{ color: sub ? "rgb(var(--c-charcoal))" : "rgb(var(--c-charcoal-soft))" }}
       />
     </button>
@@ -189,7 +190,7 @@ export const CycleRow: React.FC<{
     return (
       <button type="button" onClick={onClick} aria-label={ariaLabel} className={clsx("tap", cls)} style={style}>
         {body}
-        <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint" style={{ marginInlineStart: -10 }} />
+        <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" style={{ marginInlineStart: -10 }} />
         {rule}
       </button>
     );
@@ -259,7 +260,7 @@ export const CycleFooter: React.FC<{ privacy?: boolean; className?: string }> = 
   <div className={className}>
     {privacy && <PrivacyLine style={{ marginTop: 14 }} />}
     <p className="text-center text-charcoal-faint" style={type(10.5, 15.8, 600, { marginTop: 12 })}>
-      {DISCLAIMER}
+      {t(DISCLAIMER)}
     </p>
     <p className="text-center text-charcoal-faint" style={type(10, 14.5, 400, { marginTop: 4, padding: "0 8px" })}>
       {DISCLAIMER_LONG}
@@ -358,7 +359,7 @@ export const PopupButtons: React.FC<{
           ...type(14, 21, 700),
         }}
       >
-        {busy ? <span className="inline-block w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" aria-label="Working" /> : confirm}
+        {busy ? <span className="inline-block w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" aria-label={tx("Working", "in progress")} /> : confirm}
       </button>
     </div>
   );
@@ -367,11 +368,13 @@ export const PopupButtons: React.FC<{
 /** "Sep 14, 2026" (HE1.10.b.1 #9: short month, day, year). */
 export function shortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
+  if (getLanguage() === "ar") return d.toLocaleDateString(appLocale(), { month: "short", day: "numeric", year: "numeric" });
   return `${d.toLocaleDateString(appLocale("en-US"), { month: "short" })} ${d.getDate()}, ${d.getFullYear()}`;
 }
 /** "June 21, 2027" (HE1.10.b.1 #11). */
 export function longDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
+  if (getLanguage() === "ar") return d.toLocaleDateString(appLocale(), { month: "long", day: "numeric", year: "numeric" });
   return `${d.toLocaleDateString(appLocale("en-US"), { month: "long" })} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
@@ -382,7 +385,7 @@ export function longDate(iso: string): string {
  */
 export const CycleDateField: React.FC<{ value: string | null; placeholder?: string; onClick: () => void; ariaLabel: string; invalid?: boolean }> = ({
   value,
-  placeholder = "Choose a date",
+  placeholder,
   onClick,
   ariaLabel,
   invalid,
@@ -405,7 +408,7 @@ export const CycleDateField: React.FC<{ value: string | null; placeholder?: stri
     >
       <CalendarDays size={16} aria-hidden className="shrink-0 text-charcoal-soft" />
       <span className={value ? "text-charcoal" : "text-charcoal-faint"} style={type(14, 21, 400)}>
-        {value ? shortDate(value) : placeholder}
+        {value ? shortDate(value) : (placeholder ?? t("Choose a date"))}
       </span>
     </button>
   );

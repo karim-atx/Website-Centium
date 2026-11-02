@@ -18,6 +18,7 @@ import { Group, NumBox } from "./courseUi";
 import { ratingBars, ratingsLine } from "./courseModel";
 import { CourseSheet } from "./CourseSheet";
 import { ShareCourseSheet } from "./ShareCourseSheet";
+import { getLanguage, t, tn, tx } from "../../../i18n/core";
 
 type Open = "en" | "co" | "dr" | "ck" | "ra" | null;
 
@@ -95,6 +96,12 @@ export function CourseStats({ card, categories, onChanged }: { card: CourseCard;
   const pct = stats?.completionPct ?? null;
   const thisYear = new Date().getFullYear();
   // Positions start at 0 and may have gaps; the week number is the order.
+  // The month label in the app's language (statsMonthLabel is the English one).
+  const monthLabel = (ym: string) => {
+    const m = /^(\d{4})-(\d{2})$/.exec(ym);
+    if (getLanguage() === "en" || !m) return statsMonthLabel(ym, thisYear);
+    return formatShortDate(new Date(Number(m[1]), Number(m[2]) - 1, 1), Number(m[1]) === thisYear ? { month: "short" } : { month: "short", year: "numeric" });
+  };
   const weekOf = (position: number) => (modulePositions.includes(position) ? modulePositions.indexOf(position) + 1 : position + 1);
   const monthMax = Math.max(1, ...(stats?.byMonth ?? []).map((m) => m.enrolled));
   const dropMax = Math.max(1, ...(stats?.dropOff ?? []).map((d) => d.learners));
@@ -106,49 +113,49 @@ export function CourseStats({ card, categories, onChanged }: { card: CourseCard;
     <div className="flex flex-col pb-28">
       <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 13 }}>
         <div className="flex items-start min-w-0" style={{ gap: 10 }}>
-          <button type="button" onClick={back} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -6, marginTop: 2 }}>
-            <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
+          <button type="button" onClick={back} aria-label={t("Back")} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -6, marginTop: 2 }}>
+            <ChevronLeft size={18} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: INK.chS }} />
           </button>
           <div className="min-w-0">
             <p style={{ fontSize: textPx(10.5), fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.11em", color: INK.chF, marginBottom: 2 }}>
-              Course · {published ? "Published" : "Archived"}
+              {published ? t("Course · Published") : t("Course · Archived")}
             </p>
             <h1 style={{ fontSize: textPx(19), fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch, overflowWrap: "anywhere" }}>{card.title}</h1>
           </div>
         </div>
         {published && (
           <div className="flex shrink-0" style={{ gap: 8 }}>
-            <RoundBtn icon={Share2} label="Share" onClick={() => setSharing(true)} />
-            <RoundBtn icon={Pencil} label="Edit" onClick={() => setEditing(true)} />
+            <RoundBtn icon={Share2} label={t("Share")} onClick={() => setSharing(true)} />
+            <RoundBtn icon={Pencil} label={t("Edit")} onClick={() => setEditing(true)} />
           </div>
         )}
       </div>
 
       <div className="flex flex-wrap justify-center" style={{ gap: 8, marginBottom: 12 }}>
-        <NumBox label="Enrolled" value={String(enrolled)} sub={fromClients ? `${fromClients} from your clients` : "In total"} />
-        <NumBox label="Finished" value={pct === null ? "–" : String(pct)} unit="%" sub={stats ? `${stats.finished} of ${stats.enrolled} enrolled` : "Of those enrolled"} />
-        <NumBox label="Rating" value={card.ratings && card.averageRating !== null ? card.averageRating.toFixed(1) : "–"} sub={card.ratings ? `${card.ratings} ${card.ratings === 1 ? "rating" : "ratings"}` : "No ratings yet"} />
+        <NumBox label={t("Enrolled")} value={String(enrolled)} sub={fromClients ? t("{n} from your clients", { n: fromClients }) : t("In total")} />
+        <NumBox label={tx("Finished", "course stat")} value={pct === null ? "–" : String(pct)} unit="%" sub={stats ? t("{finished} of {enrolled} enrolled", { finished: stats.finished, enrolled: stats.enrolled }) : t("Of those enrolled")} />
+        <NumBox label={t("Rating")} value={card.ratings && card.averageRating !== null ? card.averageRating.toFixed(1) : "–"} sub={card.ratings ? tn(card.ratings, "{n} rating", "{n} ratings") : t("No ratings yet")} />
       </div>
 
-      <Group icon={Users} title="Enrolments" insight={`${enrolled} enrolled`} open={open === "en"} onToggle={() => toggle("en")}>
+      <Group icon={Users} title={t("Enrolments")} insight={t("{n} enrolled", { n: enrolled })} open={open === "en"} onToggle={() => toggle("en")}>
         {statsBody((s) => (
           <div style={{ paddingBottom: 8 }}>
-            <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 6 }}>New enrolments by month</p>
-            {s.byMonth.length === 0 && <p style={{ fontSize: textPx(12.5), color: INK.chF, paddingBottom: 2 }}>No enrolments yet.</p>}
+            <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 6 }}>{t("New enrolments by month")}</p>
+            {s.byMonth.length === 0 && <p style={{ fontSize: textPx(12.5), color: INK.chF, paddingBottom: 2 }}>{t("No enrolments yet.")}</p>}
             {s.byMonth.map((m) => (
-              <BarRow key={m.month} label={statsMonthLabel(m.month, thisYear)} value={m.enrolled} max={monthMax} labelWidth={64} />
+              <BarRow key={m.month} label={monthLabel(m.month)} value={m.enrolled} max={monthMax} labelWidth={64} />
             ))}
           </div>
         ))}
       </Group>
-      <Group icon={CircleCheck} title="Completion" insight={pct === null ? "No one enrolled yet" : `${pct}% finished`} open={open === "co"} onToggle={() => toggle("co")}>
+      <Group icon={CircleCheck} title={t("Completion")} insight={pct === null ? t("No one enrolled yet") : t("{pct}% finished", { pct })} open={open === "co"} onToggle={() => toggle("co")}>
         {statsBody((s) =>
           s.enrolled === 0 ? (
-            <p style={{ fontSize: textPx(12.5), color: INK.chF, paddingBottom: 10 }}>Nobody has finished this course yet.</p>
+            <p style={{ fontSize: textPx(12.5), color: INK.chF, paddingBottom: 10 }}>{t("Nobody has finished this course yet.")}</p>
           ) : (
             <div style={{ paddingBottom: 10 }}>
               <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5 }}>
-                {s.finished} of {s.enrolled} {s.enrolled === 1 ? "person has" : "people have"} finished and earned a certificate.
+                {tn(s.enrolled, "{finished} of {n} person has finished and earned a certificate.", "{finished} of {n} people have finished and earned a certificate.", { finished: s.finished })}
               </p>
               <span className="block" style={{ height: 8, borderRadius: 9999, background: INK.soft, overflow: "hidden", marginTop: 8 }}>
                 <span className="block h-full" style={{ width: `${s.completionPct ?? 0}%`, background: INK.prDeep }} />
@@ -159,26 +166,26 @@ export function CourseStats({ card, categories, onChanged }: { card: CourseCard;
       </Group>
       <Group
         icon={TrendingDown}
-        title="Drop-off by lesson"
-        insight={topDrop ? `Most stop at ${topDrop.title}` : "Where people stop"}
+        title={t("Drop-off by lesson")}
+        insight={topDrop ? t("Most stop at {title}", { title: topDrop.title }) : t("Where people stop")}
         open={open === "dr"}
         onToggle={() => toggle("dr")}
       >
         {statsBody((s) =>
           s.dropOff.length === 0 ? (
-            <p style={{ fontSize: textPx(12.5), color: INK.chF, paddingBottom: 10 }}>Drop-off shows once a few people have started.</p>
+            <p style={{ fontSize: textPx(12.5), color: INK.chF, paddingBottom: 10 }}>{t("Drop-off shows once a few people have started.")}</p>
           ) : (
             <div style={{ paddingBottom: 8 }}>
-              <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 6 }}>The last lesson reached by people who haven't finished</p>
+              <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 6 }}>{t("The last lesson reached by people who haven't finished")}</p>
               {s.dropOff.map((d) => (
-                <BarRow key={d.lessonId} label={`Week ${weekOf(d.modulePosition)} · ${d.title}`} value={d.learners} max={dropMax} labelWidth={0} />
+                <BarRow key={d.lessonId} label={t("Week {n} · {title}", { n: weekOf(d.modulePosition), title: d.title })} value={d.learners} max={dropMax} labelWidth={0} />
               ))}
             </div>
           )
         )}
       </Group>
       {checkIns.length > 0 && (
-        <Group icon={ClipboardCheck} title="Check-in answers" insight="Only you can see these" open={open === "ck"} onToggle={() => toggle("ck")}>
+        <Group icon={ClipboardCheck} title={t("Check-in answers")} insight={t("Only you can see these")} open={open === "ck"} onToggle={() => toggle("ck")}>
           <div className="flex flex-col" style={{ gap: 12, paddingBottom: 10 }}>
             {checkIns.map((l) => (
               <CheckInAnswers key={l.id} lesson={l} />
@@ -186,11 +193,11 @@ export function CourseStats({ card, categories, onChanged }: { card: CourseCard;
           </div>
         </Group>
       )}
-      <Group icon={Star} title="Ratings" insight={ratingsLine(card.averageRating, card.ratings)} open={open === "ra"} onToggle={() => toggle("ra")}>
+      <Group icon={Star} title={t("Ratings")} insight={ratingsLine(card.averageRating, card.ratings)} open={open === "ra"} onToggle={() => toggle("ra")}>
         {starsFailed ? (
           <ProError onRetry={() => void loadStars()} />
         ) : total === 0 ? (
-          <p style={{ fontSize: textPx(12.5), color: INK.chF, paddingBottom: 10 }}>No ratings yet</p>
+          <p style={{ fontSize: textPx(12.5), color: INK.chF, paddingBottom: 10 }}>{t("No ratings yet")}</p>
         ) : (
           <div style={{ paddingBottom: 8 }}>
             <div className="flex items-center" style={{ gap: 12, marginBottom: 8 }}>
@@ -201,11 +208,11 @@ export function CourseStats({ card, categories, onChanged }: { card: CourseCard;
                 ))}
               </span>
               <span style={{ fontSize: textPx(12), color: INK.chF }}>
-                {total} {total === 1 ? "rating" : "ratings"}
+                {tn(total, "{n} rating", "{n} ratings")}
               </span>
             </div>
             {bars.map((b) => (
-              <div key={b.stars} className="grid items-center" style={{ gridTemplateColumns: "16px minmax(0,1fr) 24px", gap: 8, marginTop: 4, fontSize: textPx(11.5), color: INK.chS }} aria-label={`${b.stars} stars: ${b.count}`}>
+              <div key={b.stars} className="grid items-center" style={{ gridTemplateColumns: "16px minmax(0,1fr) 24px", gap: 8, marginTop: 4, fontSize: textPx(11.5), color: INK.chS }} aria-label={tn(b.stars, "{n} star: {count}", "{n} stars: {count}", { count: b.count })}>
                 <span>{b.stars}</span>
                 <span style={{ height: 7, borderRadius: 9999, background: INK.soft, overflow: "hidden" }}>
                   <span className="block h-full" style={{ width: `${total ? Math.round((b.count / total) * 100) : 0}%`, background: "#D9A441" }} />
@@ -222,9 +229,9 @@ export function CourseStats({ card, categories, onChanged }: { card: CourseCard;
         <ListCard
           rows={[
             ...(earnings && earnings.sales > 0
-              ? [{ key: "earn", title: "Earned, after commission", meta: `${earnings.sales} ${earnings.sales === 1 ? "sale" : "sales"} so far`, trailing: <b style={{ fontSize: textPx(13), color: INK.ch }}>{formatCents(earnings.netCents)}</b> }]
+              ? [{ key: "earn", title: t("Earned, after commission"), meta: tn(earnings.sales, "{n} sale so far", "{n} sales so far"), trailing: <b style={{ fontSize: textPx(13), color: INK.ch }}>{formatCents(earnings.netCents)}</b> }]
               : []),
-            ...(published ? [{ key: "view", icon: Eye, title: "View it as a learner", onClick: () => navigate(`/app/forum/courses/${card.id}`) }] : []),
+            ...(published ? [{ key: "view", icon: Eye, title: t("View it as a learner"), onClick: () => navigate(`/app/forum/courses/${card.id}`) }] : []),
           ]}
         />
       </div>
@@ -240,12 +247,12 @@ export function CourseStats({ card, categories, onChanged }: { card: CourseCard;
           onChanged={onChanged}
           onSubmitted={() => {
             setEditing(false);
-            setToast("Your changes are with Centium for review.");
+            setToast(t("Your changes are with Centium for review."));
             onChanged();
           }}
         />
       )}
-      {sharing && <ShareCourseSheet course={card} onClose={() => setSharing(false)} onSent={(n) => setToast(`Suggested to ${n} ${n === 1 ? "client" : "clients"}.`)} />}
+      {sharing && <ShareCourseSheet course={card} onClose={() => setSharing(false)} onSent={(n) => setToast(tn(n, "Suggested to {n} client.", "Suggested to {n} clients."))} />}
       <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
     </div>
   );
@@ -302,7 +309,7 @@ function CheckInAnswers({ lesson }: { lesson: BuilderLesson }) {
       ) : answers === null ? (
         <ProCardSkeleton lines={1} height={48} />
       ) : answers.length === 0 ? (
-        <p style={{ fontSize: textPx(12.5), color: INK.chF, marginTop: 6 }}>No answers yet.</p>
+        <p style={{ fontSize: textPx(12.5), color: INK.chF, marginTop: 6 }}>{t("No answers yet.")}</p>
       ) : (
         <div className="flex flex-col" style={{ gap: 6, marginTop: 8 }}>
           {answers.map((a) => (

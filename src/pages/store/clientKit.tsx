@@ -4,6 +4,7 @@ import { ChevronRight, Minus, Plus, type LucideIcon } from "lucide-react";
 import { DetailLabel } from "../marketplace/venueParts";
 import { CentredPopup } from "../../components/ui/CentredPopup";
 import { PopupButtons } from "../../components/cycle/cycleUi";
+import { t, tx } from "../../i18n/core";
 
 // V6-49 · "Designed by us": the customer side of stores and appointments, in
 // the client Part B language (OURS-customer-* files). Pieces, all existing
@@ -85,7 +86,7 @@ export const ClientRow: React.FC<ClientRowProps> = ({ icon, title, sub, value, p
       {pill && <Pill label={pill.label} tone={pill.tone} />}
       {value !== undefined && value !== null && <span className="shrink-0 whitespace-nowrap text-[14px] font-bold text-charcoal tabular-nums">{value}</span>}
       {trailing}
-      {(chevron ?? !!onClick) && onClick && <ChevronRight size={15} aria-hidden className="shrink-0 text-charcoal-faint" />}
+      {(chevron ?? !!onClick) && onClick && <ChevronRight size={15} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />}
     </>
   );
   const cls = "w-full flex items-center text-start border-t-[0.5px] border-charcoal/[0.08] first:border-t-0";
@@ -115,13 +116,13 @@ export const RetryLine: React.FC<{ text: string; onRetry: () => void }> = ({ tex
   <div role="alert" className="flex items-center justify-between gap-3" style={{ marginTop: 8 }}>
     <p className="text-[12px] font-semibold text-status-high">{text}</p>
     <button type="button" onClick={onRetry} className="tap shrink-0 text-[12px] font-bold text-primary-dark" style={{ minHeight: 44 }}>
-      Retry
+      {t("Retry")}
     </button>
   </div>
 );
 
-export const SkeletonCards: React.FC<{ heights?: number[]; label?: string }> = ({ heights = [72, 72, 72], label = "Loading" }) => (
-  <div className="space-y-2.5" aria-busy="true" aria-label={label}>
+export const SkeletonCards: React.FC<{ heights?: number[]; label?: string }> = ({ heights = [72, 72, 72], label }) => (
+  <div className="space-y-2.5" aria-busy="true" aria-label={label ?? t("Loading")}>
     {heights.map((h, i) => (
       <div key={i} aria-hidden className="animate-skeleton-pulse rounded-[18px] bg-cream-soft" style={{ height: h }} />
     ))}
@@ -143,7 +144,7 @@ export const QtyStepper: React.FC<{ value: number; onChange: (n: number) => void
   <div role="group" aria-label={label} className="flex items-center shrink-0" style={{ gap: 4 }}>
     <button
       type="button"
-      aria-label="Fewer"
+      aria-label={tx("Fewer", "quantity")}
       onClick={() => onChange(Math.max(min, value - 1))}
       disabled={value <= min}
       className="tap flex items-center justify-center rounded-full bg-cream-soft text-charcoal disabled:opacity-40"
@@ -156,7 +157,7 @@ export const QtyStepper: React.FC<{ value: number; onChange: (n: number) => void
     </span>
     <button
       type="button"
-      aria-label="More"
+      aria-label={tx("More", "quantity")}
       onClick={() => onChange(Math.min(max, value + 1))}
       disabled={value >= max}
       className="tap flex items-center justify-center rounded-full bg-cream-soft text-charcoal disabled:opacity-40"
@@ -201,7 +202,7 @@ export const RadioRow: React.FC<{
 /** "Soon" chip (the business kit's, in client colours). */
 export const SoonChip: React.FC = () => (
   <span className="shrink-0 rounded-full bg-primary-pale text-primary-dark text-[9.5px] font-extrabold uppercase tracking-[0.06em]" style={{ padding: "2px 8px" }}>
-    Soon
+    {t("Soon")}
   </span>
 );
 

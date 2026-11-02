@@ -7,6 +7,7 @@ import { sendMessage, startMemberThread } from "../../../services/messaging";
 import { fieldStyle, useMarketColours } from "./parts";
 import { FOCUS_CSS } from "../../../components/market/usePress";
 import type { Session } from "./scheduleModel";
+import { t, tn } from "../../../i18n/core";
 
 // OP1-088 · Message members (kept, PLAN §3.4; Market + Share 3.0 W3 restyle:
 // the MasterBottomSheet chrome of B-MA.6, --sgrey boxes with the 13 / 500
@@ -64,7 +65,7 @@ export function MessageMembersSheet({
       if (!alive) return;
       const ids = r.ok ? [...new Set(r.value.filter((e) => e.kind === "booked" && e.personId).map((e) => e.personId!))] : [];
       setRecipients({ sessionId, ids });
-      if (!r.ok) setError("Couldn't load who's booked. Check your connection and try again.");
+      if (!r.ok) setError(t("Couldn't load who's booked. Check your connection and try again."));
     });
     return () => {
       alive = false;
@@ -76,7 +77,7 @@ export function MessageMembersSheet({
   const loadingIds = recipients?.sessionId !== session.id || recipients.ids === null;
   const ids = (recipients?.sessionId === session.id ? recipients.ids : null) ?? [];
   const n = ids.length;
-  const word = (k: number) => (people === "clients" ? (k === 1 ? "client" : "clients") : k === 1 ? "member" : "members");
+  const clients = people === "clients";
   const canSend = online && !busy && n > 0 && !!text.trim() && !!businessId && !!authUserId;
 
   const send = async () => {
@@ -85,18 +86,26 @@ export function MessageMembersSheet({
     setError(null);
     let sent = 0;
     for (const personId of ids) {
-      const t = await startMemberThread(businessId, personId);
-      if (!t.ok) continue;
-      const m = await sendMessage(t.threadId, authUserId, text.trim());
+      const thread = await startMemberThread(businessId, personId);
+      if (!thread.ok) continue;
+      const m = await sendMessage(thread.threadId, authUserId, text.trim());
       if (m.ok) sent += 1;
     }
     setBusy(false);
     if (sent === 0) {
-      setError("Couldn't send. Check your connection and try again.");
+      setError(t("Couldn't send. Check your connection and try again."));
       return;
     }
     setDrafts((d) => ({ ...d, [session.id]: "" }));
-    onSent(sent === n ? `Sent to ${n} ${word(n)}.` : `Sent to ${sent} of ${n} ${word(n)}. Try again for the rest.`);
+    onSent(
+      sent === n
+        ? clients
+          ? tn(n, "Sent to {n} client.", "Sent to {n} clients.")
+          : tn(n, "Sent to {n} member.", "Sent to {n} members.")
+        : clients
+          ? tn(n, "Sent to {sent} of {n} client. Try again for the rest.", "Sent to {sent} of {n} clients. Try again for the rest.", { sent })
+          : tn(n, "Sent to {sent} of {n} member. Try again for the rest.", "Sent to {sent} of {n} members. Try again for the rest.", { sent })
+    );
     onClose();
   };
 
@@ -107,13 +116,13 @@ export function MessageMembersSheet({
     <BottomSheet
       open={open}
       onClose={() => !busy && onClose()}
-      title={people === "clients" ? "Message clients" : "Message members"}
+      title={clients ? t("Message clients") : t("Message members")}
       animateExit
       footerRule
       footer={
         <>
           <style>{FOCUS_CSS}</style>
-          {!online && <p style={{ margin: "0 0 8px", fontSize: textPx(11.5), fontWeight: 700, color: m.ink2 }}>You're offline.</p>}
+          {!online && <p style={{ margin: "0 0 8px", fontSize: textPx(11.5), fontWeight: 700, color: m.ink2 }}>{t("You're offline.")}</p>}
           {error && (
             <p role="alert" style={{ margin: "0 0 8px", fontSize: textPx(11.5), fontWeight: 700, lineHeight: linePx(16), color: m.high }}>
               {error}
@@ -127,21 +136,25 @@ export function MessageMembersSheet({
             className="market-focus w-full flex items-center justify-center"
             style={{ height: 50, borderRadius: 16, background: m.fill, color: m.onfill, fontSize: textPx(15), fontWeight: 700, border: 0, opacity: canSend ? 1 : 0.4 }}
           >
-            {busy ? "Sending…" : `Send to ${n} ${word(n)}`}
+            {busy ? t("Sending…") : clients ? tn(n, "Send to {n} client", "Send to {n} clients") : tn(n, "Send to {n} member", "Send to {n} members")}
           </button>
         </>
       }
     >
       <div className="flex flex-col" style={{ gap: 10, lineHeight: "normal" }}>
         <div style={box}>
-          <p style={boxLabel}>To</p>
+          <p style={boxLabel}>{t("To")}</p>
           <div role="textbox" aria-readonly="true" style={{ ...fieldStyle(m), color: m.ink }}>
-            {loadingIds ? `Finding who's booked on ${session.title}…` : `${n} booked ${word(n)} of ${session.title}`}
+            {loadingIds
+              ? t("Finding who's booked on {class}…", { class: session.title })
+              : clients
+                ? tn(n, "{n} booked client of {class}", "{n} booked clients of {class}", { class: session.title })
+                : tn(n, "{n} booked member of {class}", "{n} booked members of {class}", { class: session.title })}
           </div>
         </div>
         <div style={box}>
           <label htmlFor="msg-members-text" className="block" style={boxLabel}>
-            Message
+            {t("Message")}
           </label>
           <textarea
             id="msg-members-text"
@@ -153,7 +166,7 @@ export function MessageMembersSheet({
           />
         </div>
         <p style={{ margin: "0 4px", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
-          They get it in Messages. Names stay private to other {word(2)}.
+          {clients ? t("They get it in Messages. Names stay private to other clients.") : t("They get it in Messages. Names stay private to other members.")}
         </p>
       </div>
     </BottomSheet>

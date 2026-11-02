@@ -6,6 +6,7 @@ import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { Avatar } from "../client/kit";
 import { Field } from "./courseUi";
+import { t } from "../../../i18n/core";
 
 /**
  * Round D · D-S9 "Choose clients" (Selected clients): the checklist from
@@ -25,14 +26,14 @@ export const ChooseClients: React.FC<{ picked: string[]; onChange: (ids: string[
 
   return (
     <div style={{ marginTop: 10 }}>
-      <Field id="audience-search" ariaLabel="Search your clients" value={query} onChange={setQuery} placeholder="Search your clients" lead={<Search size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />} />
+      <Field id="audience-search" ariaLabel={t("Search your clients")} value={query} onChange={setQuery} placeholder={t("Search your clients")} lead={<Search size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />} />
       <p aria-live="polite" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, margin: "8px 0" }}>
-        {picked.length} selected
+        {t("{n} selected", { n: picked.length })}
       </p>
       {roster.length === 0 ? (
-        <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{professionalClients.length ? "No clients match." : "Clients you work with appear here."}</p>
+        <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{professionalClients.length ? t("No clients match.") : t("Clients you work with appear here.")}</p>
       ) : (
-        <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "2px 12px" }} role="group" aria-label="Your clients">
+        <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "2px 12px" }} role="group" aria-label={t("Your clients")}>
           {roster.map((c, i) => {
             const on = picked.includes(c.clientId!);
             return (
@@ -58,7 +59,7 @@ export const ChooseClients: React.FC<{ picked: string[]; onChange: (ids: string[
           })}
         </div>
       )}
-      {full && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 6 }}>A course can be shared with up to {AUDIENCE_LIMITS.max} clients this way.</p>}
+      {full && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 6 }}>{t("A course can be shared with up to {n} clients this way.", { n: AUDIENCE_LIMITS.max })}</p>}
     </div>
   );
 };

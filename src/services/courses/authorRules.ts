@@ -1,6 +1,9 @@
 // The author side's rules that need no network. Kept free of the Supabase
 // client so they can be tested directly, like ./rules.ts for the learner side.
 import { BLOCKED_TEXT } from "../moderation/text";
+import { getLanguage, t, tk, tn } from "../../i18n/core";
+import { ARABIC_LOCALE } from "../../i18n/format";
+import { formatShortDate } from "../../utils/date";
 
 export type CourseStatus = "draft" | "submitted" | "published" | "changes_requested" | "unpublished";
 export type RevisionStatus = "draft" | "submitted" | "applied" | "changes_requested" | "withdrawn";
@@ -56,30 +59,30 @@ export interface StatusLook {
 export function courseStatusLook(status: CourseStatus): StatusLook {
   switch (status) {
     case "draft":
-      return { label: "Draft", detail: "Only you can see this. Submit it when you're ready.", tone: "neutral" };
+      return { label: t("Draft"), detail: t("Only you can see this. Submit it when you're ready."), tone: "neutral" };
     case "submitted":
-      return { label: "In review", detail: "We're reading it. You can't edit it while it's with us.", tone: "waiting" };
+      return { label: t("In review"), detail: t("We're reading it. You can't edit it while it's with us."), tone: "waiting" };
     case "published":
-      return { label: "Published", detail: "Live in the catalogue. Edit it by opening a revision.", tone: "live" };
+      return { label: t("Published"), detail: t("Live in the catalogue. Edit it by opening a revision."), tone: "live" };
     case "changes_requested":
-      return { label: "Changes requested", detail: "Make the changes below, then submit it again.", tone: "attention" };
+      return { label: t("Changes requested"), detail: t("Make the changes below, then submit it again."), tone: "attention" };
     case "unpublished":
-      return { label: "Unpublished", detail: "Taken down by a reviewer. It isn't in the catalogue.", tone: "neutral" };
+      return { label: t("Unpublished"), detail: t("Taken down by a reviewer. It isn't in the catalogue."), tone: "neutral" };
   }
 }
 
 export function revisionStatusLook(status: RevisionStatus): StatusLook {
   switch (status) {
     case "draft":
-      return { label: "Revision in progress", detail: "Your course stays live while you edit this copy.", tone: "neutral" };
+      return { label: t("Revision in progress"), detail: t("Your course stays live while you edit this copy."), tone: "neutral" };
     case "submitted":
-      return { label: "Revision in review", detail: "Your course stays live until we approve the changes.", tone: "waiting" };
+      return { label: t("Revision in review"), detail: t("Your course stays live until we approve the changes."), tone: "waiting" };
     case "changes_requested":
-      return { label: "Changes requested", detail: "Make the changes below, then submit the revision again.", tone: "attention" };
+      return { label: t("Changes requested"), detail: t("Make the changes below, then submit the revision again."), tone: "attention" };
     case "applied":
-      return { label: "Revision applied", detail: "Your changes are live.", tone: "live" };
+      return { label: t("Revision applied"), detail: t("Your changes are live."), tone: "live" };
     case "withdrawn":
-      return { label: "Revision withdrawn", detail: "Those draft changes were discarded.", tone: "neutral" };
+      return { label: t("Revision withdrawn"), detail: t("Those draft changes were discarded."), tone: "neutral" };
   }
 }
 
@@ -162,7 +165,7 @@ export interface TreeForCheck {
  */
 export function submitBlockers(tree: TreeForCheck): string[] {
   const blockers: string[] = [];
-  if (tree.lessons.length === 0) blockers.push("Add at least one lesson before submitting.");
+  if (tree.lessons.length === 0) blockers.push(t("Add at least one lesson before submitting."));
   return blockers;
 }
 
@@ -170,10 +173,11 @@ export function submitBlockers(tree: TreeForCheck): string[] {
 export function submitWarnings(course: { subtitle: string | null; learnPoints: string[] }, tree: TreeForCheck): string[] {
   const out: string[] = [];
   const empty = tree.modules.filter((m) => !tree.lessons.some((l) => l.moduleId === m.id));
-  if (empty.length === 1) out.push(`“${empty[0].title}” has no lessons yet.`);
-  else if (empty.length > 1) out.push(`${empty.length} weeks have no lessons yet.`);
-  if (!course.subtitle) out.push("There's no subtitle. It's the line under the title in the catalogue.");
-  if (course.learnPoints.length === 0) out.push("“What you'll learn” is empty.");
+  if (empty.length === 1) out.push(t("“{title}” has no lessons yet.", { title: empty[0].title }));
+  // Only ever more than one here, so English always reads the plural.
+  else if (empty.length > 1) out.push(tn(empty.length, "{n} week has no lessons yet.", "{n} weeks have no lessons yet."));
+  if (!course.subtitle) out.push(t("There's no subtitle. It's the line under the title in the catalogue."));
+  if (course.learnPoints.length === 0) out.push(t("“What you'll learn” is empty."));
   return out;
 }
 
@@ -190,16 +194,18 @@ export type AuthorAction = "read" | "create" | "save" | "submit" | "video" | "pd
  * had completed the old one has not completed this one. Reordering weeks,
  * renaming weeks and editing a lesson's contents all cost nothing.
  */
-export const RENAME_RESETS_PROGRESS =
-  "Renaming a lesson resets it for learners who have already completed it. Editing what's inside it doesn't.";
+export const RENAME_RESETS_PROGRESS = tk(
+  "Renaming a lesson resets it for learners who have already completed it. Editing what's inside it doesn't."
+);
 
-export const REVISION_EXPLAINER =
-  "Your course stays live and unchanged while you edit this copy. Learners see the changes only once we've approved them.";
+export const REVISION_EXPLAINER = tk(
+  "Your course stays live and unchanged while you edit this copy. Learners see the changes only once we've approved them."
+);
 
-export const WITHDRAW_EXPLAINER = "Your published course isn't affected. Only these draft changes are lost.";
+export const WITHDRAW_EXPLAINER = tk("Your published course isn't affected. Only these draft changes are lost.");
 
 /** Round D: the server's refusal of HTML in lesson text (22023), as a sentence. */
-export const HTML_REFUSED = "Lesson text can't contain HTML tags. Use the formatting listed under the text box instead.";
+export const HTML_REFUSED = tk("Lesson text can't contain HTML tags. Use the formatting listed under the text box instead.");
 
 /** Who can join a course (courses.audience, Round D 20261223030000). */
 export type CourseAudience = "public" | "my_clients" | "selected";
@@ -208,13 +214,13 @@ export const DESCRIPTION_MAX = 2000;
 export const FOCUS_MAX = 300;
 export const CHECK_IN_ANSWER_MAX = 4000;
 /** The drawn Focus choices (MO28). Stored as the words; none is "". */
-export const FOCUS_CHOICES = ["Training", "Nutrition", "Health education"] as const;
+export const FOCUS_CHOICES = [tk("Training"), tk("Nutrition"), tk("Health education")] as const;
 
 /** The Access row's meta and the audience radio's words. */
 export function audienceLabel(audience: CourseAudience, selected?: number): string {
-  if (audience === "my_clients") return "All your clients";
-  if (audience === "selected") return selected ? `${selected} selected ${selected === 1 ? "client" : "clients"}` : "Selected clients";
-  return "Public";
+  if (audience === "my_clients") return t("All your clients");
+  if (audience === "selected") return selected ? tn(selected, "{n} selected client", "{n} selected clients") : t("Selected clients");
+  return t("Public");
 }
 
 export const parseAudience = (v: unknown): CourseAudience => (v === "my_clients" || v === "selected" ? v : "public");
@@ -226,46 +232,46 @@ export function describeAuthorError(error: { code?: string; message?: string }, 
     case "ATX60":
       return BLOCKED_TEXT;
     case "ATX66":
-      return "Only professionals with a verified licence can publish courses. Check your licence in Profile.";
+      return t("Only professionals with a verified licence can publish courses. Check your licence in Profile.");
     case "ATX70":
-      return "That isn't a link to a single YouTube video. Paste a youtube.com/watch, youtu.be or /embed link, not a playlist.";
+      return t("That isn't a link to a single YouTube video. Paste a youtube.com/watch, youtu.be or /embed link, not a playlist.");
     case "ATX64":
-      return "That file wasn't uploaded by you. Try choosing it again.";
+      return t("That file wasn't uploaded by you. Try choosing it again.");
     case "ATX67":
       return action === "revision"
-        ? "This course already has a revision open, or it isn't published yet."
+        ? t("This course already has a revision open, or it isn't published yet.")
         : action === "submit"
-        ? "This course isn't in a state that can be submitted."
-        : "You can't edit this right now. A published course is edited through a revision, and one that's in review is frozen until we've read it.";
+        ? t("This course isn't in a state that can be submitted.")
+        : t("You can't edit this right now. A published course is edited through a revision, and one that's in review is frozen until we've read it.");
     case "ATX02":
       return action === "create"
-        ? "You've started a lot of courses today. Try again tomorrow."
+        ? t("You've started a lot of courses today. Try again tomorrow.")
         : action === "pdf"
-        ? "That's a lot of uploads at once. Give it a minute."
-        : "You've submitted a lot today. Try again tomorrow.";
+        ? t("That's a lot of uploads at once. Give it a minute.")
+        : t("You've submitted a lot today. Try again tomorrow.");
     case "ATX08":
-      return action === "check_in" ? "That check-in isn't one of yours." : "That course no longer exists.";
+      return action === "check_in" ? t("That check-in isn't one of yours.") : t("That course no longer exists.");
     // Round D (20261223030000): selected clients must be the author's active clients.
     case "ATX12":
-      return "Only clients you work with now can be chosen. Check the list and try again.";
+      return t("Only clients you work with now can be chosen. Check the list and try again.");
     case "22023":
       // Round D: lesson text is plain text with limited Markdown; HTML tags are refused.
-      if (/html/i.test(error.message ?? "")) return HTML_REFUSED;
+      if (/html/i.test(error.message ?? "")) return t(HTML_REFUSED);
       return action === "options"
-        ? "A question needs between 2 and 8 answers, with exactly one marked correct."
+        ? t("A question needs between 2 and 8 answers, with exactly one marked correct.")
         : action === "submit"
-        ? "Add at least one lesson before submitting."
+        ? t("Add at least one lesson before submitting.")
         : action === "audience"
-        ? "Choose between 1 and 500 clients."
+        ? t("Choose between 1 and 500 clients.")
         : action === "description"
-        ? "The description is up to 2,000 characters and the focus up to 300."
+        ? t("The description is up to 2,000 characters and the focus up to 300.")
         : action === "check_in"
-        ? "A check-in needs a question for your clients."
-        : "That isn't a value this field accepts.";
+        ? t("A check-in needs a question for your clients.")
+        : t("That isn't a value this field accepts.");
     case "23514":
-      return "That doesn't fit. Check the lengths and numbers, and try again.";
+      return t("That doesn't fit. Check the lengths and numbers, and try again.");
     default:
-      return "Something went wrong. Try again.";
+      return t("Something went wrong. Try again.");
   }
 }
 
@@ -279,10 +285,14 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 export function statsMonthLabel(ym: string, thisYear: number): string {
   const m = /^(\d{4})-(\d{2})$/.exec(ym);
   if (!m || Number(m[2]) < 1 || Number(m[2]) > 12) return ym;
+  if (getLanguage() === "ar") {
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, 1);
+    return formatShortDate(d, Number(m[1]) === thisYear ? { month: "short" } : { month: "short", year: "numeric" }, ARABIC_LOCALE);
+  }
   return Number(m[1]) === thisYear ? MONTHS[Number(m[2]) - 1] : `${MONTHS[Number(m[2]) - 1]} ${m[1]}`;
 }
 
 /** "{n}% complete" on an author's course card; null with nobody enrolled. */
 export function completeLine(pct: number | null): string | null {
-  return pct === null ? null : `${pct}% complete`;
+  return pct === null ? null : t("{n}% complete", { n: pct });
 }

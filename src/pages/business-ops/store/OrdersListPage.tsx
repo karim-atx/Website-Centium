@@ -6,6 +6,7 @@ import { EmptyCard, ErrorCard, ListCard, ListSkeleton, OpsHeader, P_DARK } from 
 import { ORDER_KINDS, useLive, useStoreBusiness } from "./storeShared";
 import { CompletedRow, OrderRow, ReturnRow, loadOrdersData } from "./StoreOrdersPage";
 import { Package } from "lucide-react";
+import { t } from "../../../i18n/core";
 
 // "See all" lists (OP1-001 S3, OURS completed row 18, returns row 2): the
 // header with Back, the rows uncapped, 30 at a time with "Show more".
@@ -21,11 +22,11 @@ export default function OrdersListPage() {
   const [shown, setShown] = useState(PAGE);
   const s = live.state;
 
-  const titles: Record<string, string> = { "to-fulfil": "To fulfil", completed: "Completed", returns: "Returns" };
-  const groupLabel: Record<string, string> = { today: "Today", week: "This week", earlier: "Earlier", needs: "Needs you", progress: "In progress", done: "Done" };
+  const titles: Record<string, string> = { "to-fulfil": t("To fulfil"), completed: t("Completed"), returns: t("Returns") };
+  const groupLabel: Record<string, string> = { today: t("Today"), week: t("This week"), earlier: t("Earlier"), needs: t("Needs you"), progress: t("In progress"), done: t("Done") };
   const filter = params.get("when") ?? params.get("group");
-  const title = filter && groupLabel[filter] ? groupLabel[filter] : titles[which] ?? "Orders";
-  const kicker = which === "returns" ? "Returns" : "Orders";
+  const title = filter && groupLabel[filter] ? groupLabel[filter] : titles[which] ?? t("Orders");
+  const kicker = which === "returns" ? t("Returns") : t("Orders");
 
   let rows: React.ReactNode[] = [];
   if (s.status === "ok") {
@@ -45,18 +46,18 @@ export default function OrdersListPage() {
     <div>
       <OpsHeader back kicker={kicker} title={title} />
       {s.status === "error" ? (
-        <ErrorCard text={which === "returns" ? "Couldn't load returns." : which === "completed" ? "Couldn't load completed orders." : "Couldn't load your orders."} onRetry={live.reload} />
+        <ErrorCard text={which === "returns" ? t("Couldn't load returns.") : which === "completed" ? t("Couldn't load completed orders.") : t("Couldn't load your orders.")} onRetry={live.reload} />
       ) : !ready || s.status === "loading" ? (
         <ListSkeleton rows={6} />
       ) : rows.length === 0 ? (
-        <EmptyCard icon={Package} title="Nothing here" body="Orders show here as they come in." />
+        <EmptyCard icon={Package} title={t("Nothing here")} body={t("Orders show here as they come in.")} />
       ) : (
         <>
           <ListCard label={title}>{rows.slice(0, shown)}</ListCard>
           {rows.length > shown && (
             // OURS completed row 18: "Show more" 12/700 pDark, 44 tall.
             <button type="button" onClick={() => setShown((n) => n + PAGE)} className={`tap w-full text-[12px] font-bold ${P_DARK}`} style={{ minHeight: 44 }}>
-              Show more
+              {t("Show more")}
             </button>
           )}
         </>

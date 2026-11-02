@@ -10,6 +10,7 @@
 // the B15 report): the server gives a count per item, not per class, so the
 // drawn per-class rows ("Yoga Flow is 40% booked") become one counted row.
 
+import { t, tn } from "../../i18n/core";
 import type { AttentionRow } from "./dashboardTypes";
 
 export type AttentionIcon = "eye-off" | "shield-alert" | "receipt" | "banknote" | "calendar-clock" | "user-x" | "calendar-x" | "package" | "package-minus" | "image-off" | "star" | "user-plus" | "users";
@@ -27,24 +28,23 @@ export interface AttentionItem {
   to: AttentionTarget;
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-
 type Spec = (n: number) => Omit<AttentionItem, "key" | "tone">;
 
+// Round G (EH5): read at call time, so each row follows the app's language.
 const ITEMS: Record<string, Spec> = {
-  not_on_explore: () => ({ icon: "eye-off", title: "Your listing is hidden", sub: "Clients can't find you on Explore", action: "Turn on", to: "listing" }),
-  verification_needs_changes: () => ({ icon: "shield-alert", title: "Verification needs changes", sub: "Centium asked for a few fixes", action: "Fix", to: "setup" }),
-  centium_charge_due: (n) => ({ icon: "receipt", title: "Centium charge due", sub: `${plural(n, "charge", "charges")} to pay`, action: "View", to: "subscription" }),
-  money_overdue: (n) => ({ icon: "banknote", title: "Payments overdue", sub: `${plural(n, "payment", "payments")} past the due date`, action: "View", to: "revenue" }),
-  classes_under_40pct_next_48h: (n) => ({ icon: "calendar-clock", title: `${plural(n, "class", "classes")} under 40% booked`, sub: "In the next 48 hours", action: "Open", to: "classes" }),
-  classes_without_instructor_next_7d: (n) => ({ icon: "user-x", title: `${plural(n, "class", "classes")} without an instructor`, sub: "In the next 7 days", action: "Open", to: "classes" }),
-  instructor_double_booked: (n) => ({ icon: "calendar-x", title: "Instructor double-booked", sub: `${plural(n, "class overlaps", "classes overlap")} another`, action: "Open", to: "classes" }),
-  orders_to_pack: (n) => ({ icon: "package", title: "Orders waiting to be packed", sub: plural(n, "order", "orders"), action: "View", to: "orders" }),
-  low_stock: (n) => ({ icon: "package-minus", title: "Low stock", sub: `${plural(n, "product", "products")} under 5 left`, action: "View", to: "products" }),
-  photos_rejected: (n) => ({ icon: "image-off", title: "Photos not approved", sub: `${plural(n, "photo", "photos")} to replace`, action: "View", to: "photos" }),
-  low_reviews_unanswered: (n) => ({ icon: "star", title: "Low reviews to answer", sub: `${plural(n, "review", "reviews")} of 3 stars or less`, action: "Reply", to: "reputation" }),
-  join_requests: (n) => ({ icon: "user-plus", title: "Join requests", sub: `${n} waiting for you`, action: "View", to: "join_requests" }),
-  no_free_seats: () => ({ icon: "users", title: "No free seats", sub: "Every seat is in use", action: "Add", to: "seats" }),
+  not_on_explore: () => ({ icon: "eye-off", title: t("Your listing is hidden"), sub: t("Clients can't find you on Explore"), action: t("Turn on"), to: "listing" }),
+  verification_needs_changes: () => ({ icon: "shield-alert", title: t("Verification needs changes"), sub: t("Centium asked for a few fixes"), action: t("Fix"), to: "setup" }),
+  centium_charge_due: (n) => ({ icon: "receipt", title: t("Centium charge due"), sub: tn(n, "{n} charge to pay", "{n} charges to pay"), action: t("View"), to: "subscription" }),
+  money_overdue: (n) => ({ icon: "banknote", title: t("Payments overdue"), sub: tn(n, "{n} payment past the due date", "{n} payments past the due date"), action: t("View"), to: "revenue" }),
+  classes_under_40pct_next_48h: (n) => ({ icon: "calendar-clock", title: tn(n, "{n} class under 40% booked", "{n} classes under 40% booked"), sub: t("In the next 48 hours"), action: t("Open"), to: "classes" }),
+  classes_without_instructor_next_7d: (n) => ({ icon: "user-x", title: tn(n, "{n} class without an instructor", "{n} classes without an instructor"), sub: t("In the next 7 days"), action: t("Open"), to: "classes" }),
+  instructor_double_booked: (n) => ({ icon: "calendar-x", title: t("Instructor double-booked"), sub: tn(n, "{n} class overlaps another", "{n} classes overlap another"), action: t("Open"), to: "classes" }),
+  orders_to_pack: (n) => ({ icon: "package", title: t("Orders waiting to be packed"), sub: tn(n, "{n} order", "{n} orders"), action: t("View"), to: "orders" }),
+  low_stock: (n) => ({ icon: "package-minus", title: t("Low stock"), sub: tn(n, "{n} product under 5 left", "{n} products under 5 left"), action: t("View"), to: "products" }),
+  photos_rejected: (n) => ({ icon: "image-off", title: t("Photos not approved"), sub: tn(n, "{n} photo to replace", "{n} photos to replace"), action: t("View"), to: "photos" }),
+  low_reviews_unanswered: (n) => ({ icon: "star", title: t("Low reviews to answer"), sub: tn(n, "{n} review of 3 stars or less", "{n} reviews of 3 stars or less"), action: t("Reply"), to: "reputation" }),
+  join_requests: (n) => ({ icon: "user-plus", title: t("Join requests"), sub: t("{n} waiting for you", { n }), action: t("View"), to: "join_requests" }),
+  no_free_seats: () => ({ icon: "users", title: t("No free seats"), sub: t("Every seat is in use"), action: t("Add"), to: "seats" }),
 };
 
 const TONE: Record<AttentionRow["severity"], AttentionItem["tone"]> = { high: "high", medium: "caution", low: "primary" };

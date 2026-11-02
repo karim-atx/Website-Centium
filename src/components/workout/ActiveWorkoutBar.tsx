@@ -4,6 +4,7 @@ import { useApp } from "../../context/AppContext";
 import { activeBarLine, loggedFraction } from "../../services/workout/activeBar";
 import { WorkoutSessionSheet } from "./WorkoutSessionSheet";
 import { linePx, textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 /**
  * True while any sheet, popup or full-screen view is open (the logger among
@@ -115,7 +116,7 @@ export const ActiveWorkoutBar: React.FC = () => {
       {bar && routine && (
         <button
           onClick={() => setLoggerFor(routine.id)}
-          aria-label={`Open ${routine.name}: ${bar.subline}`}
+          aria-label={t("Open {name}: {detail}", { name: routine.name, detail: bar.subline })}
           className="tap fixed z-40 start-[calc(var(--app-gutter)+22px)] end-[calc(var(--app-gutter)+22px)] text-start bg-primary-fill"
           style={{
             bottom: "calc(env(safe-area-inset-bottom) + 84px)",

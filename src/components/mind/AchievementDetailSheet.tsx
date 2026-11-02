@@ -13,6 +13,7 @@ import { marketPalette } from "../../theme/marketTokens";
 import { textPx } from "../../theme/textSize";
 import { localDayOf } from "../../utils/date";
 import { appLocale } from "../../i18n/format";
+import { t, tx } from "../../i18n/core";
 
 // One badge, every rung of it. v6 MO1.1.3.1: a centred popup over the page
 // (tap outside, Escape or a swipe down closes; no ×, K1 / S1 / S2), on the
@@ -80,7 +81,7 @@ export const AchievementDetailSheet: React.FC<{
             locked={!earned}
             lock={{ size: 25, icon: 14, offset: 47.5 }}
           />
-          {!earned && <span className="sr-only">Locked</span>}
+          {!earned && <span className="sr-only">{t("Locked")}</span>}
         </span>
       }
       body={
@@ -110,14 +111,14 @@ export const AchievementDetailSheet: React.FC<{
               />
             </div>
             <p className="mt-1.5 text-[11px] leading-[16.5px] font-semibold tabular-nums text-charcoal-faint">
-              {current.toLocaleString(appLocale())} of {badge.next.threshold.toLocaleString(appLocale())}
+              {t("{a} of {b}", { a: current.toLocaleString(appLocale()), b: badge.next.threshold.toLocaleString(appLocale()) })}
             </p>
           </div>
         )}
 
         {/* #62: 10 / 14 700 ls 1.4 uppercase #8C8378, inset 2, 8 above the list. */}
         <p className="mx-0.5 mb-2 text-[10px] leading-[14px] font-bold tracking-[1.4px] uppercase text-charcoal-faint">
-          {badge.rungs.length > 1 ? "Levels" : "Level"}
+          {badge.rungs.length > 1 ? t("Levels") : t("Level")}
         </p>
         {/* #63: r14, #F7F6FA / #262932; rows padding 10 12. */}
         <div className="rounded-[14px] overflow-hidden divide-y divide-charcoal/[0.05] bg-[#F7F6FA] dark:bg-[#262932]">
@@ -139,7 +140,7 @@ export const AchievementDetailSheet: React.FC<{
                     {r.title}
                     {r.level && (
                       <span className="ms-1.5 text-[11px] leading-[15px] font-normal text-charcoal-faint">
-                        {LEVEL_LABEL[r.level]}
+                        {t(LEVEL_LABEL[r.level])}
                       </span>
                     )}
                   </p>
@@ -147,7 +148,7 @@ export const AchievementDetailSheet: React.FC<{
                     {/* EARNED SHOWS WHEN, NOT WHAT IS LEFT. A streak that has
                         since broken keeps its date beside a bar that has
                         honestly gone down. */}
-                    {done ? `Earned ${formatEarnedAt(r.earnedAt!)}` : `${r.threshold.toLocaleString(appLocale())} needed`}
+                    {done ? tx("Earned {date}", "achievement", { date: formatEarnedAt(r.earnedAt!) }) : t("{n} needed", { n: r.threshold.toLocaleString(appLocale()) })}
                   </p>
                 </div>
                 {/* #68: 12 / 18 800; locked #8C8378 / #B8B3C7, earned the
@@ -157,7 +158,7 @@ export const AchievementDetailSheet: React.FC<{
                   className="shrink-0 max-w-[104px] text-end text-[12px] leading-[18px] font-extrabold tabular-nums"
                   style={{ color: done ? keyInk(r.key, dark) : "rgb(var(--c-charcoal-faint))" }}
                 >
-                  {r.points > 0 ? `+${r.points.toLocaleString(appLocale())}` : "No points, just bragging rights"}
+                  {r.points > 0 ? `+${r.points.toLocaleString(appLocale())}` : t("No points, just bragging rights")}
                 </span>
               </div>
             );
@@ -172,7 +173,7 @@ export const AchievementDetailSheet: React.FC<{
             style={{ marginTop: 18, height: 48, borderRadius: 14, background: m.fill, color: dark ? m.onfill : "#FFFFFF", gap: 7, fontSize: textPx(14), fontWeight: 700 }}
           >
             <ShareGlyph size={14} color="currentColor" />
-            Share
+            {t("Share")}
           </button>
         )}
       </div>

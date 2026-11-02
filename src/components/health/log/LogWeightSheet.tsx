@@ -9,6 +9,7 @@ import { browserOffline, enqueueLog, isOfflineFailure, QUEUED_COPY } from "../..
 import { dayLabel, FieldLabel, isoDay, MeasuredOnPopup, WhenField, partBSheetTone } from "./LogSheetParts";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { formatShortDate } from "../../../utils/date";
+import { t } from "../../../i18n/core";
 
 // HE1.7.1 "Log weight" (health-b-handover.md 3291-3450): "Last weigh-in",
 // a kg wheel with one decimal, When, pinned "Save {n} kg". Replaces the Add
@@ -96,21 +97,21 @@ export const LogWeightSheet: React.FC<{
         onClose();
         return;
       }
-      setToast("Couldn't save. Try again.");
+      setToast(t("Couldn't save. Try again."));
       return;
     }
     onSaved?.();
     onClose();
   };
 
-  const label = `${value.toFixed(1)} kg`;
+  const label = t("{n} kg", { n: value.toFixed(1) });
 
   return (
     <>
       <BottomSheet
         open={open}
         onClose={onClose}
-        title="Log weight"
+        title={t("Log weight")}
         chrome="partB"
         tone={partBSheetTone(dark)}
         footerBottom={30}
@@ -118,20 +119,29 @@ export const LogWeightSheet: React.FC<{
           <>
             {existing !== undefined && (
               <p className="text-charcoal-faint text-center" style={{ margin: "0 0 8px", fontSize: textPx(12), lineHeight: "18px" }}>
-                Replaces {day === today ? "today's" : `${dayLabel(day, today)}'s`} {existing.toFixed(1)} kg
+                {day === today ? t("Replaces today's {n} kg", { n: existing.toFixed(1) }) : t("Replaces the {n} kg for {day}", { n: existing.toFixed(1), day: dayLabel(day, today) })}
               </p>
             )}
-            <CtaButton label={`Save ${label}`} loading={saving} onClick={() => void save()} style={{ lineHeight: "21px" }} />
+            <CtaButton label={t("Save {value}", { value: label })} loading={saving} onClick={() => void save()} style={{ lineHeight: "21px" }} />
           </>
         }
       >
         {last !== null && lastDay && (
           <p className="text-charcoal-soft" style={{ margin: "0 0 16px", fontSize: textPx(12.5), lineHeight: "18.8px", fontWeight: 400 }}>
-            Last weigh-in{" "}
-            <strong className="text-charcoal" style={{ fontWeight: 700 }}>
-              {last.toFixed(1)} kg
-            </strong>{" "}
-            on {formatShortDate(fromIso(lastDay), { weekday: "short", day: "numeric", month: "short" })}
+            {t("Last weigh-in {weight} on {date}", { weight: "\u0000", date: formatShortDate(fromIso(lastDay), { weekday: "short", day: "numeric", month: "short" }) })
+              .split("\u0000")
+              .map((part, i) =>
+                i === 0 ? (
+                  <React.Fragment key={i}>{part}</React.Fragment>
+                ) : (
+                  <React.Fragment key={i}>
+                    <strong className="text-charcoal" style={{ fontWeight: 700 }}>
+                      {t("{n} kg", { n: last.toFixed(1) })}
+                    </strong>
+                    {part}
+                  </React.Fragment>
+                )
+              )}
           </p>
         )}
 
@@ -141,26 +151,26 @@ export const LogWeightSheet: React.FC<{
           separator={{ text: ".", size: 24 }}
           trailing={
             <span className="text-th-7d6bb5 dark:text-primary-deep-text" style={{ marginInlineStart: 4, fontSize: textPx(14), lineHeight: "21px", fontWeight: 700 }}>
-              kg
+              {t("kg")}
             </span>
           }
           columns={[
-            { label: "Kilograms", options: KG, value: whole, bandWidth: 90, onChange: (v) => setWhole(Number(v)) },
-            { label: "Tenths of a kilogram", options: TENTHS, value: tenth, bandWidth: 60, onChange: (v) => setTenth(Number(v)) },
+            { label: t("Kilograms"), options: KG, value: whole, bandWidth: 90, onChange: (v) => setWhole(Number(v)) },
+            { label: t("Tenths of a kilogram"), options: TENTHS, value: tenth, bandWidth: 60, onChange: (v) => setTenth(Number(v)) },
           ]}
         />
 
         <div style={{ marginTop: 16 }}>
-          <FieldLabel>When</FieldLabel>
-          <WhenField value={dayLabel(day, today)} onClick={() => setWhenOpen(true)} ariaLabel={`When: ${dayLabel(day, today)}`} />
+          <FieldLabel>{t("When")}</FieldLabel>
+          <WhenField value={dayLabel(day, today)} onClick={() => setWhenOpen(true)} ariaLabel={t("When: {when}", { when: dayLabel(day, today) })} />
         </div>
         <div style={{ marginTop: 16 }}>
-          <FieldLabel htmlFor="weight-note">Note (optional)</FieldLabel>
+          <FieldLabel htmlFor="weight-note">{t("Note (optional)")}</FieldLabel>
           <input
             id="weight-note"
             value={note}
             onChange={(e) => setNote(e.target.value.slice(0, 200))}
-            placeholder="e.g. after training"
+            placeholder={t("e.g. after training")}
             className="block w-full bg-cream-soft text-charcoal placeholder:text-charcoal-faint focus:outline-none"
             style={{ minHeight: 44, borderRadius: 12, padding: "0 12px", fontSize: textPx(14), lineHeight: "20px", border: `0.5px solid ${dark ? "rgba(245,243,250,0.1)" : "rgba(36,31,27,0.1)"}` }}
           />

@@ -22,6 +22,7 @@ import { HealthPopup } from "../../../components/health/metric/HealthPopup";
 import {
   dayLabel,
   isCurrentPeriod,
+  monthLong,
   monthShort,
   periodLabel,
   periodOf,
@@ -54,6 +55,7 @@ import { usePregnancyFlags } from "../../../components/pregnancy/usePregnancyFla
 import { deleteBloodPressure, type BloodPressureReading } from "../../../services/blood-pressure";
 import { averageReading, categoryCounts, classifyBloodPressure, isSevere, splitByTimeOfDay } from "../../../services/blood-pressure/classify";
 import { BP_CATEGORY_LABEL, BP_NO_READINGS } from "../../../services/blood-pressure/guidance";
+import { t, tk, tn, tx } from "../../../i18n/core";
 
 // HE1.6 Blood pressure (opens on Week) with HE1.6.d / .m / .y and HE1.6.a.
 //
@@ -76,8 +78,9 @@ import { BP_CATEGORY_LABEL, BP_NO_READINGS } from "../../../services/blood-press
 //   after a save that shouldOpenBpVeryHigh() matches (adult very high or
 //   pregnancy Urgent); this page only re-reads in onSaved.
 
-const ARM = { left: "left arm", right: "right arm" } as const;
-const ARM_CAP = { left: "Left arm", right: "Right arm" } as const;
+// Catalogue keys, t() where shown; positions ("sitting", "standing", "lying") are keys too.
+const ARM = { left: tk("left arm"), right: tk("right arm") } as const;
+const ARM_CAP = { left: tk("Left arm"), right: tk("Right arm") } as const;
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
@@ -120,9 +123,9 @@ export default function BloodPressurePage() {
     if (range === "day" || range === "week") {
       const r = inP[0] ?? (current ? newest : null);
       if (!r) return null;
-      const when = `${relativeDayTitle(localDayOf(r.recordedAt), today) === "Today" ? "Today" : relativeDayTitle(localDayOf(r.recordedAt), today)} ${clock12(r.recordedAt)}`;
-      const where = [r.arm ? ARM_CAP[r.arm] : null, r.position ?? null].filter(Boolean).join(" · ");
-      const facts = [r.pulse != null ? `${r.pulse} bpm pulse` : null, where || null, when];
+      const when = `${relativeDayTitle(localDayOf(r.recordedAt), today)} ${clock12(r.recordedAt)}`;
+      const where = [r.arm ? t(ARM_CAP[r.arm]) : null, r.position ? t(r.position) : null].filter(Boolean).join(" · ");
+      const facts = [r.pulse != null ? t("{n} bpm pulse", { n: r.pulse }) : null, where || null, when];
       let pill: BpHeroData["pill"] = null;
       if (inPregnancy) {
         const f = pregnancyFlags.bp(r);
@@ -138,7 +141,7 @@ export default function BloodPressurePage() {
     return {
       systolic: pAvg.systolic,
       diastolic: pAvg.diastolic,
-      facts: [`${inP.length} reading${inP.length === 1 ? "" : "s"}`, pAvg.pulse !== null ? `Avg pulse ${pAvg.pulse} bpm` : null, label],
+      facts: [tn(inP.length, "{n} reading", "{n} readings"), pAvg.pulse !== null ? t("Avg pulse {n} bpm", { n: pAvg.pulse }) : null, label],
       // V6-05: the average is never classified.
       pill: null,
     };
@@ -147,37 +150,51 @@ export default function BloodPressurePage() {
   // --- tiles ------------------------------------------------------------------
   const halves = splitByTimeOfDay(inTile);
   const prevHalves = splitByTimeOfDay(inPrev);
-  const prevWord = range === "month" ? "Last month" : range === "year" ? "Last year" : "Last week";
+  const prevText = (bp: string) => (range === "month" ? t("Last month {bp}", { bp }) : range === "year" ? t("Last year {bp}", { bp }) : t("Last week {bp}", { bp }));
   const half = (rs: BpDayReading[], prev: BpDayReading[]): BpHalf => {
     const a = averageReading(rs);
     const p = averageReading(prev);
-    return { avg: a ? { systolic: a.systolic, diastolic: a.diastolic } : null, count: rs.length, previous: p ? `${prevWord} ${p.systolic}/${p.diastolic}` : null };
+    return { avg: a ? { systolic: a.systolic, diastolic: a.diastolic } : null, count: rs.length, previous: p ? prevText(`${p.systolic}/${p.diastolic}`) : null };
   };
   const countWord = (n: number) =>
-    range === "day" || range === "week" ? `${n} reading${n === 1 ? "" : "s"} ${current || range === "day" ? "this week" : ""}`.trim() : `${n} reading${n === 1 ? "" : "s"}`;
+    (range === "day" || range === "week") && (current || range === "day") ? tn(n, "{n} reading this week", "{n} readings this week") : tn(n, "{n} reading", "{n} readings");
 
   // --- foot and summary ----------------------------------------------------------
   const n = inP.length;
   const avgText = pAvg ? `${pAvg.systolic}/${pAvg.diastolic}` : "";
   const foot = (() => {
     if (range === "day") {
-      if (!n) return anchor === today ? "No readings today" : "No readings this day";
+      if (!n) return anchor === today ? t("No readings today") : t("No readings this day");
       const { morning, evening } = splitByTimeOfDay(inP);
-      const base = `${n} reading${n === 1 ? "" : "s"} ${anchor === today ? "today" : ""}`.trim();
-      return morning.length && !evening.length ? `${base} · an evening reading makes the day comparable` : base;
+      const base = anchor === today ? tn(n, "{n} reading today", "{n} readings today") : tn(n, "{n} reading", "{n} readings");
+      return morning.length && !evening.length ? t("{count} · an evening reading makes the day comparable", { count: base }) : base;
     }
-    if (!n) return range === "week" ? "No readings this week" : range === "month" ? "No readings this month" : "No readings this year";
-    if (range === "week") return `${n} reading${n === 1 ? "" : "s"} ${current ? "this week" : ""} · average ${avgText}`.replace("  ", " ");
-    if (range === "month") return `${n} readings · average ${avgText}`.replace(/^1 readings/, "1 reading");
+    if (!n) return range === "week" ? t("No readings this week") : range === "month" ? t("No readings this month") : t("No readings this year");
+    if (range === "week")
+      return current
+        ? tn(n, "{n} reading this week · average {avg}", "{n} readings this week · average {avg}", { avg: avgText })
+        : tn(n, "{n} reading · average {avg}", "{n} readings · average {avg}", { avg: avgText });
+    if (range === "month") return tn(n, "{n} reading · average {avg}", "{n} readings · average {avg}", { avg: avgText });
     const months = [...new Set(inP.map((r) => Number(r.day.slice(5, 7))))].sort((a, b) => a - b);
-    const span = months.length === 1 ? monthShort(months[0]) : `${monthShort(months[0])} to ${monthShort(months[months.length - 1])}`;
-    return `${n} reading${n === 1 ? "" : "s"} · ${span}`;
+    const span = months.length === 1 ? monthShort(months[0]) : t("{start} to {end}", { start: monthShort(months[0]), end: monthShort(months[months.length - 1]) });
+    return `${tn(n, "{n} reading", "{n} readings")} · ${span}`;
   })();
   const summary = (() => {
-    const t = range === "day" ? (anchor === today ? "today" : dayLabel(anchor)) : range === "week" ? (current ? "this week" : periodLabel(period)) : `in ${range === "month" ? periodLabel(period).split(" ")[0] : periodLabel(period)}`;
-    if (!n) return `Blood pressure ${t}. No readings.`;
-    if (n === 1) return `Blood pressure ${t}. One reading, ${inP[0].systolic} over ${inP[0].diastolic}, ${dayLabel(inP[0].day)} at ${clock12(inP[0].recordedAt)}.`;
-    return `Blood pressure ${t}. ${n} readings. Average ${pAvg?.systolic} over ${pAvg?.diastolic}.`;
+    // Whole sentences, joined by a space.
+    const first =
+      range === "day"
+        ? anchor === today
+          ? t("Blood pressure today.")
+          : t("Blood pressure {day}.", { day: dayLabel(anchor) })
+        : range === "week"
+          ? current
+            ? t("Blood pressure this week.")
+            : t("Blood pressure {day}.", { day: periodLabel(period) })
+          : t("Blood pressure in {period}.", { period: range === "month" ? monthLong(Number(period.start.slice(5, 7))) : periodLabel(period) });
+    if (!n) return [first, t("No readings.")].join(" ");
+    if (n === 1)
+      return [first, t("One reading, {sys} over {dia}, {day} at {time}.", { sys: inP[0].systolic, dia: inP[0].diastolic, day: dayLabel(inP[0].day), time: clock12(inP[0].recordedAt) })].join(" ");
+    return [first, tn(n, "{n} reading.", "{n} readings."), t("Average {sys} over {dia}.", { sys: pAvg?.systolic ?? "", dia: pAvg?.diastolic ?? "" })].join(" ");
   })();
 
   // --- history (newest first, every reading in the metric window) ---------------
@@ -186,14 +203,14 @@ export default function BloodPressurePage() {
     const pFlag = pregnancyFlags.bp(r);
     const cFlag = inPregnancy ? null : checkFlags.bp(r);
     const when = `${relativeDayTitle(r.day, today)} ${clock12(r.recordedAt)}`;
-    const where = [r.arm ? ARM[r.arm] : null, r.position ?? null].filter(Boolean).join(", ");
+    const where = [r.arm ? t(ARM[r.arm]) : null, r.position ? t(r.position) : null].filter(Boolean).join(", ");
     return {
       key: r.id,
       title: `${r.systolic}/${r.diastolic}`,
       meta: where ? `${when} · ${where}` : when,
       meta2: r.notes ?? undefined,
       icon: Activity,
-      value: r.pulse != null ? `${r.pulse} bpm` : "",
+      value: r.pulse != null ? t("{n} bpm", { n: r.pulse }) : "",
       sub: (
         <span className="inline-flex items-center justify-end flex-wrap" style={{ gap: 4 }}>
           {inPregnancy ? (pFlag ? <FlagChip tone={pFlag.level} label={pFlag.label} /> : null) : <span style={{ color: rangeInk(c === "normal", dark) }} data-bp-word>{BP_CATEGORY_LABEL[c]}</span>}
@@ -215,8 +232,8 @@ export default function BloodPressurePage() {
   };
 
   const menu: MetricMenuItem[] = [
-    { value: "how", label: "How to measure", icon: <BookOpen size={17} />, onSelect: () => setHowOpen(true) },
-    { value: "date", label: "Go to date", icon: <CalendarDays size={17} />, onSelect: () => setGoToOpen(true) },
+    { value: "how", label: t("How to measure"), icon: <BookOpen size={17} />, onSelect: () => setHowOpen(true) },
+    { value: "date", label: t("Go to date"), icon: <CalendarDays size={17} />, onSelect: () => setGoToOpen(true) },
   ];
 
   const confirmDelete = async () => {
@@ -229,23 +246,38 @@ export default function BloodPressurePage() {
   };
 
   return (
-    <MetricPage metric="blood-pressure" title="Blood pressure" range={range} onRangeChange={setRange} menu={menu} cta={{ label: "Log blood pressure", icon: <Plus size={16} />, onClick: openLog }}>
+    <MetricPage metric="blood-pressure" title={t("Blood pressure")} range={range} onRangeChange={setRange} menu={menu} cta={{ label: t("Log blood pressure"), icon: <Plus size={16} />, onClick: openLog }}>
       {severe && <BpSafetyCard kind="severe" onHowToMeasure={() => setHowOpen(true)} />}
       {newestFlag && <BpSafetyCard kind={newestFlag.level === "urgent" ? "urgent" : "same-day"} flag={newestFlag} onHowToMeasure={() => setHowOpen(true)} />}
       <BloodPressureHero
         data={hero}
         loading={loading}
-        ariaLabel={hero ? `Blood pressure ${hero.systolic} over ${hero.diastolic} mmHg. ${hero.facts.filter(Boolean).join(". ")}.${hero.pill ? ` ${hero.pill.text}.` : ""}` : "Blood pressure, no readings"}
+        ariaLabel={
+          hero
+            ? `${t("Blood pressure {sys} over {dia} mmHg.", { sys: hero.systolic, dia: hero.diastolic })} ${hero.facts.filter(Boolean).join(". ")}.${hero.pill ? ` ${hero.pill.text}.` : ""}`
+            : t("Blood pressure, no readings")
+        }
         empty={
           readings.length === 0
-            ? { title: BP_NO_READINGS, hint: "Tap to add one", onTap: openLog }
-            : { title: BP_NO_READINGS, hint: range === "day" ? "Nothing logged this day" : `No readings ${range === "week" ? "this week" : range === "month" ? "this month" : "this year"}`, onTap: openLog }
+            ? { title: BP_NO_READINGS, hint: t("Tap to add one"), onTap: openLog }
+            : {
+                title: BP_NO_READINGS,
+                hint:
+                  range === "day"
+                    ? t("Nothing logged this day")
+                    : range === "week"
+                      ? t("No readings this week")
+                      : range === "month"
+                        ? t("No readings this month")
+                        : t("No readings this year"),
+                onTap: openLog,
+              }
         }
       />
-      {offline && readings.length > 0 && <FreshnessLine offline>{OFFLINE_CACHED}</FreshnessLine>}
+      {offline && readings.length > 0 && <FreshnessLine offline>{t(OFFLINE_CACHED)}</FreshnessLine>}
       <ChartCard
         metric="blood-pressure"
-        title={range === "month" && !current ? periodLabel(period).split(" ")[0] : periodTitle(period, today)}
+        title={range === "month" && !current ? monthLong(Number(period.start.slice(5, 7))) : periodTitle(period, today)}
         periodLabel={periodLabel(period)}
         onPrev={() => setAnchor(stepAnchor(range, anchor, -1))}
         onNext={() => setAnchor(stepAnchor(range, anchor, 1))}
@@ -259,11 +291,11 @@ export default function BloodPressurePage() {
       </ChartCard>
       <BpTiles morning={half(halves.morning, prevHalves.morning)} evening={half(halves.evening, prevHalves.evening)} countWord={countWord} />
       {/* K6: the old count line's rule, kept as a note (V6-136). */}
-      <p style={{ marginTop: 6, fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 600, color: "rgb(var(--c-charcoal-faint))" }}>Morning is before noon.</p>
+      <p style={{ marginTop: 6, fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 600, color: "rgb(var(--c-charcoal-faint))" }}>{t("Morning is before noon.")}</p>
       <BpReferenceCard latest={latestCategory} counts={inPregnancy || !n ? null : categoryCounts(inP)} pregnancy={inPregnancy} />
       {readings.length > 0 && (
         <>
-          <CapsLabel>History</CapsLabel>
+          <CapsLabel>{t("History")}</CapsLabel>
           <HistoryCard metric="blood-pressure" icon={Activity} items={history} loading={loading} />
         </>
       )}
@@ -280,11 +312,11 @@ export default function BloodPressurePage() {
         open={!!deleting}
         onClose={() => setDeleting(null)}
         tile={{ background: "#FCEDEC", darkBackground: "#3C2A30", icon: <Trash2 size={18} style={{ color: dark ? "#F09A8E" : "#B4372C" }} /> }}
-        title="Delete this entry?"
-        meta={deleting ? `${deleting.systolic}/${deleting.diastolic} mmHg · ${relativeDayTitle(localDayOf(deleting.recordedAt), today)} ${clock12(deleting.recordedAt)}` : undefined}
-        body="This removes it from your history and totals."
-        secondary={{ label: "Cancel", onClick: () => setDeleting(null) }}
-        primary={{ label: "Delete", tone: "destructive", onClick: () => void confirmDelete() }}
+        title={tx("Delete this entry?", "health")}
+        meta={deleting ? `${t("{sys}/{dia} mmHg", { sys: deleting.systolic, dia: deleting.diastolic })} · ${relativeDayTitle(localDayOf(deleting.recordedAt), today)} ${clock12(deleting.recordedAt)}` : undefined}
+        body={t("This removes it from your history and totals.")}
+        secondary={{ label: t("Cancel"), onClick: () => setDeleting(null) }}
+        primary={{ label: t("Delete"), tone: "destructive", onClick: () => void confirmDelete() }}
       />
       <MeasuredOnPopup
         open={goToOpen}
@@ -292,13 +324,13 @@ export default function BloodPressurePage() {
         value={new Date(`${anchor}T12:00:00`)}
         today={today}
         dateOnly
-        title="Go to date"
+        title={t("Go to date")}
         onDone={(d) => {
           setGoToOpen(false);
           openDay(iso(d));
         }}
       />
-      <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+      <Toast open={!!toast} message={toast ? t(toast) : ""} onExpire={() => setToast(null)} />
     </MetricPage>
   );
 }

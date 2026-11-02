@@ -23,13 +23,46 @@ import * as marketplace from "./ar/marketplace.ts";
 import * as market from "./ar/market.ts";
 import * as share from "./ar/share.ts";
 import * as member from "./ar/member.ts";
+import * as health from "./ar/health.ts";
+import * as cycle from "./ar/cycle.ts";
+import * as food from "./ar/food.ts";
+import * as workout from "./ar/workout.ts";
+import * as mind from "./ar/mind.ts";
+import * as business from "./ar/business.ts";
+import * as bizanalytics from "./ar/bizanalytics.ts";
+import * as bizrevenue from "./ar/bizrevenue.ts";
+import * as bizops from "./ar/bizops.ts";
+import * as bizmarket from "./ar/bizmarket.ts";
+import * as bizteam from "./ar/bizteam.ts";
+import * as sharedbiz from "./ar/sharedbiz.ts";
+import * as sharedmember from "./ar/sharedmember.ts";
+import * as sharedfood from "./ar/sharedfood.ts";
+import * as sharedhealth from "./ar/sharedhealth.ts";
+import * as sharedpro from "./ar/sharedpro.ts";
+import * as pro from "./ar/pro.ts";
+import * as proclients from "./ar/proclients.ts";
+import * as proprofile from "./ar/proprofile.ts";
+import * as procalendar from "./ar/procalendar.ts";
+import * as promessages from "./ar/promessages.ts";
+import * as prolibrary from "./ar/prolibrary.ts";
+import * as pronutrition from "./ar/pronutrition.ts";
+import * as proforms from "./ar/proforms.ts";
+import * as proinsights from "./ar/proinsights.ts";
+import * as provitals from "./ar/provitals.ts";
+import * as procourses from "./ar/procourses.ts";
+import * as pronetwork from "./ar/pronetwork.ts";
+import * as promarket from "./ar/promarket.ts";
+import * as premium from "./ar/premium.ts";
+import * as premium2 from "./ar/premium2.ts";
+import * as premium3 from "./ar/premium3.ts";
+import * as premium4 from "./ar/premium4.ts";
 
 // Round F (AV): the translated areas (F7) stay translated. For every source
 // file an area lists, every t/tn/tk key has Arabic, every Arabic entry keeps
 // the English placeholders, no English is left as bare JSX text or a bare
 // text attribute, and a key used by two areas has one Arabic.
 
-const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, marketplace, market, share, member };
+const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, marketplace, market, share, member, health, cycle, food, workout, mind, business, bizanalytics, bizrevenue, bizops, bizmarket, bizteam, sharedbiz, sharedmember, sharedfood, sharedhealth, sharedpro, pro, proclients, proprofile, procalendar, promessages, prolibrary, pronutrition, proforms, proinsights, provitals, procourses, pronetwork, promarket, premium, premium2, premium3, premium4 };
 const SRC = join(import.meta.dirname, "..");
 
 // Words that are the same in both languages (names, never translated).

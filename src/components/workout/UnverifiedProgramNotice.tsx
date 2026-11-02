@@ -1,6 +1,7 @@
 import React from "react";
 import { ShieldAlert } from "lucide-react";
 import clsx from "clsx";
+import { t } from "../../i18n/core";
 
 // The disclaimer a curated program carries until a qualified human has read it.
 //
@@ -47,7 +48,7 @@ export const UnverifiedProgramNotice: React.FC<{
         )}
       >
         <ShieldAlert size={11} className="text-ember-dark shrink-0" />
-        Unreviewed starting point
+        {t("Unreviewed starting point")}
       </p>
     );
   }
@@ -61,11 +62,9 @@ export const UnverifiedProgramNotice: React.FC<{
     >
       <ShieldAlert size={14} className="text-ember-dark shrink-0 mt-0.5" />
       <div className="min-w-0">
-        <p className="text-[12px] font-bold text-charcoal">Unreviewed starting point</p>
+        <p className="text-[12px] font-bold text-charcoal">{t("Unreviewed starting point")}</p>
         <p className="text-[11px] text-charcoal-soft leading-relaxed">
-          This program hasn't been checked by a certified coach. Treat it as a starting point,
-          adjust the weights to what you can actually lift, and talk to a professional if anything
-          hurts.
+          {t("This program hasn't been checked by a certified coach. Treat it as a starting point, adjust the weights to what you can actually lift, and talk to a professional if anything hurts.")}
         </p>
       </div>
     </div>

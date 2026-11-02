@@ -22,6 +22,7 @@ import { FailedDetailPage, FailedListPage } from "./FailedPages";
 import { REVENUE_BASE } from "./payModel";
 import { RevenueContext } from "./revenueContext";
 import { useRevenueData } from "./useRevenueData";
+import { t, tk } from "../../../i18n/core";
 import "./revenue.css";
 
 // Analytics › Revenue (AN14, AnInsightsV3 page "revenue"): its own sub-page
@@ -33,16 +34,16 @@ import "./revenue.css";
 // (SUBPAGE_VIEWS.revenue).
 
 const SUBS = [
-  { key: "overview", label: "Overview" },
-  { key: "streams", label: "Streams" },
-  { key: "payments", label: "Payments" },
-  { key: "transactions", label: "Transactions" },
+  { key: "overview", label: tk("Overview") },
+  { key: "streams", label: tk("Streams") },
+  { key: "payments", label: tk("Payments") },
+  { key: "transactions", label: tk("Transactions") },
 ];
 const RANGE_TABS: { key: RangeKey; label: string }[] = [
-  { key: "week", label: "This week" },
-  { key: "4w", label: "4 weeks" },
-  { key: "12w", label: "12 weeks" },
-  { key: "custom", label: "Custom" },
+  { key: "week", label: tk("This week") },
+  { key: "4w", label: tk("4 weeks") },
+  { key: "12w", label: tk("12 weeks") },
+  { key: "custom", label: tk("Custom") },
 ];
 
 export default function RevenuePage() {
@@ -85,7 +86,7 @@ export default function RevenuePage() {
               <div className="flex items-center gap-[8px] mb-[10px]">
                 <button
                   type="button"
-                  aria-label="Back to Analytics"
+                  aria-label={t("Back to Analytics")}
                   onClick={() => navigate("/app/business/analytics/overview")}
                   className="tap w-[44px] h-[44px] -my-[5px] -ms-[5px] rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
                 >
@@ -93,32 +94,32 @@ export default function RevenuePage() {
                     className="w-[34px] h-[34px] rounded-full flex items-center justify-center"
                     style={{ background: v("soft"), color: v("ink-soft") }}
                   >
-                    <ChevronLeft size={17} strokeWidth={2.4} aria-hidden />
+                    <ChevronLeft size={17} strokeWidth={2.4} aria-hidden className="rtl:-scale-x-100" />
                   </span>
                 </button>
                 <span
                   className="text-[12px] font-bold"
                   style={{ color: v("ink-soft") }}
                 >
-                  Analytics
+                  {t("Analytics")}
                 </span>
               </div>
               <h1
                 className="text-[27px] font-bold tracking-[-0.022em] leading-[36px]"
                 style={{ color: v("ink") }}
               >
-                Revenue
+                {t("Revenue")}
               </h1>
               <p
                 className="text-[13px] font-medium leading-[19px] mt-[4px]"
                 style={{ color: v("faint") }}
               >
-                Money coming in, and from where
+                {t("Money coming in, and from where")}
               </p>
               <SegmentedTabs
                 className="mt-[16px]"
                 size="compact"
-                items={RANGE_TABS}
+                items={RANGE_TABS.map((r) => ({ ...r, label: t(r.label) }))}
                 activeKey={range.key}
                 onChange={(k) =>
                   k === "custom"
@@ -128,7 +129,7 @@ export default function RevenuePage() {
               />
               <SegmentedTabs
                 className="mt-[10px]"
-                items={SUBS}
+                items={SUBS.map((s) => ({ ...s, label: t(s.label) }))}
                 activeKey={sub}
                 onChange={(k) =>
                   navigate(
@@ -146,13 +147,12 @@ export default function RevenuePage() {
                 className="text-[11px] leading-[15px] mt-[4px]"
                 style={{ color: v("faint") }}
               >
-                Every figure comes from recorded payments. Amounts in USD, as
-                set on your plans.
+                {t("Every figure comes from recorded payments. Amounts in USD, as set on your plans.")}
               </p>
               {!state.online && <OfflineLine at={state.loadedAt} />}
               {state.error && !state.data ? (
                 <ErrorLine
-                  message="Couldn't load revenue."
+                  message={t("Couldn't load revenue.")}
                   onRetry={state.reload}
                 />
               ) : (

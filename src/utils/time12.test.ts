@@ -11,6 +11,7 @@ import {
   rangeClock12,
   rangeMinutes12,
   time12,
+  time12En,
   time12Split,
 } from "./time12.ts";
 
@@ -82,4 +83,11 @@ test("axis labels and parts", () => {
   assert.equal(hourLabel12(24), "12 AM");
   assert.deepEqual(clockParts(13 * 60 + 5), { hour: 1, minute: 5, meridiem: "PM" });
   assert.equal(formatMinutes12(-30), "11:30 PM");
+});
+
+test("time12En: saved text keeps the English clock", () => {
+  assert.equal(time12En("09:05"), "9:05 AM");
+  assert.equal(time12En("18:30:00"), "6:30 PM");
+  assert.equal(time12En(""), "");
+  assert.equal(time12En("soon"), "soon");
 });

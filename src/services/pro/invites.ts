@@ -24,6 +24,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import { invite22023, OFFLINE_GOAL_MAX } from "./inviteErrors";
 import { siteHref, siteText } from "../../config/site";
+import { t, tk } from "../../i18n/core";
 
 export interface InviteLink {
   id: string;
@@ -43,7 +44,7 @@ export interface InviteLink {
 
 export type Result<T> = { ok: true; data: T } | { ok: false; message: string; offline?: boolean };
 
-export const INVITE_LOCKED_MESSAGE = "Invite links open once your licence is verified.";
+export const INVITE_LOCKED_MESSAGE = tk("Invite links open once your licence is verified.");
 
 /** COPY {invite_url}: the site address + /i/{code} (config/site). inviteUrl is the text shown, inviteHref the link copied, shared and put in the QR. */
 export const inviteUrl = (code: string) => siteText(`/i/${code}`);
@@ -65,7 +66,7 @@ export async function fetchCurrentInviteLink(): Promise<Result<InviteLink | null
     .is("revoked_at", null)
     .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false });
-  if (error) return { ok: false, message: "Couldn't load your invite link. Try again.", offline: isOffline(error) };
+  if (error) return { ok: false, message: t("Couldn't load your invite link. Try again."), offline: isOffline(error) };
   const row = ((data ?? []) as unknown as { id: string; code: string; expires_at: string; uses: number | null; max_uses: number | null; opened_at: string | null }[]).find(
     (r) => (r.uses ?? 0) < (r.max_uses ?? 1),
   );
@@ -79,9 +80,9 @@ export async function fetchCurrentInviteLink(): Promise<Result<InviteLink | null
 export async function createInviteLink(): Promise<Result<InviteLink>> {
   const { data, error } = await rpc("create_invite_link", {});
   if (error) {
-    if (error.code === "ATXG3") return { ok: false, message: INVITE_LOCKED_MESSAGE };
-    if (error.code === "ATX02") return { ok: false, message: "You've made several links in the last hour. Try again later." };
-    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't create your invite link. Try again.", offline: isOffline(error) };
+    if (error.code === "ATXG3") return { ok: false, message: t(INVITE_LOCKED_MESSAGE) };
+    if (error.code === "ATX02") return { ok: false, message: t("You've made several links in the last hour. Try again later.") };
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't create your invite link. Try again."), offline: isOffline(error) };
   }
   const r = data as { id: string; code: string; expires_at: string; uses: number | null; max_uses: number | null };
   return { ok: true, data: { id: r.id, code: r.code, expiresAt: r.expires_at, uses: r.uses ?? 0, maxUses: r.max_uses ?? 1, openedAt: null } };
@@ -105,12 +106,12 @@ export interface InviteJoin {
 /** my_invite_joins(): who joined through an invite link (HO2 "Joined with your invite"). */
 export async function fetchInviteJoins(): Promise<Result<InviteJoin[]>> {
   const { data, error } = await rpc("my_invite_joins", {});
-  if (error) return { ok: false, message: "Couldn't load who joined. Try again.", offline: isOffline(error) };
+  if (error) return { ok: false, message: t("Couldn't load who joined. Try again."), offline: isOffline(error) };
   return {
     ok: true,
     data: ((data ?? []) as { client_id: string; first_name: string | null; avatar_url: string | null; joined_at: string }[]).map((r) => ({
       clientId: r.client_id,
-      firstName: r.first_name?.trim() || "Name unavailable",
+      firstName: r.first_name?.trim() || t("Name unavailable"),
       avatarUrl: r.avatar_url,
       joinedAt: r.joined_at,
     })),
@@ -151,7 +152,7 @@ export async function fetchSentInvites(): Promise<Result<SentInviteRow[]>> {
     .select("id, channel, address_hint, first_name, message, created_at")
     .order("created_at", { ascending: false })
     .limit(SENT_INVITES_LIMIT);
-  if (error) return { ok: false, message: "Couldn't load your invites. Try again.", offline: isOffline(error) };
+  if (error) return { ok: false, message: t("Couldn't load your invites. Try again."), offline: isOffline(error) };
   const rows = (data ?? []) as unknown as { id: string; channel: string; address_hint: string; first_name: string | null; message: string | null; created_at: string }[];
   return {
     ok: true,
@@ -176,10 +177,10 @@ export async function inviteByContact(
     p_message: extra?.message?.trim() || null,
   });
   if (error) {
-    if (error.code === "ATXG3") return { ok: false, message: INVITE_LOCKED_MESSAGE };
-    if (error.code === "ATX02") return { ok: false, message: "You've sent a lot of invites today. Try again tomorrow." };
+    if (error.code === "ATXG3") return { ok: false, message: t(INVITE_LOCKED_MESSAGE) };
+    if (error.code === "ATX02") return { ok: false, message: t("You've sent a lot of invites today. Try again tomorrow.") };
     if (error.code === "22023") return { ok: false, message: invite22023(error.message, channel) };
-    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't send the invite. Try again.", offline: isOffline(error) };
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't send the invite. Try again."), offline: isOffline(error) };
   }
   const row = ((data ?? []) as { code: string | null }[])[0];
   return { ok: true, data: { code: row?.code ?? null } };
@@ -202,8 +203,8 @@ export async function addOfflineClient(me: string, d: OfflineDraft): Promise<Res
     .select("id")
     .single();
   if (error) {
-    if (error.code === "23514" && d.goal.trim().length > OFFLINE_GOAL_MAX) return { ok: false, message: `Keep the goal to ${OFFLINE_GOAL_MAX} characters or fewer.` };
-    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't add them. Try again.", offline: isOffline(error) };
+    if (error.code === "23514" && d.goal.trim().length > OFFLINE_GOAL_MAX) return { ok: false, message: t("Keep the goal to {max} characters or fewer.", { max: OFFLINE_GOAL_MAX }) };
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't add them. Try again."), offline: isOffline(error) };
   }
   return { ok: true, data: { id: data.id } };
 }
@@ -216,4 +217,4 @@ export function smsHref(number: string, body: string): string {
 
 /** COPY HO2 default message: "Hi, it's {pro_first_name}. Here's my Centium page, where you can see my plans and hire me. {invite_url}". */
 export const defaultInviteMessage = (firstName: string, code: string) =>
-  `Hi, it's ${firstName}. Here's my Centium page, where you can see my plans and hire me. ${inviteHref(code)}`;
+  t("Hi, it's {name}. Here's my Centium page, where you can see my plans and hire me. {url}", { name: firstName, url: inviteHref(code) });

@@ -9,6 +9,7 @@ import type {
 } from "../../types";
 import { clockToSeconds, emptyStep, secondsToClock } from "../../services/workout/endurance";
 import { textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 // The structured cardio prescription, as a form.
 //
@@ -144,14 +145,14 @@ const StepEditor: React.FC<{
   return (
     <div className="flex flex-col" style={{ gap: 10 }}>
       <div>
-        <span style={labelStyle}>Measured by</span>
+        <span style={labelStyle}>{t("Measured by")}</span>
         <Segmented
-          ariaLabel={`${idPrefix} measure`}
+          ariaLabel={t("{step} measure", { step: idPrefix })}
           value={step.measure}
           onChange={setMeasure}
           options={[
-            { value: "time", label: "Time" },
-            { value: "distance", label: "Distance" },
+            { value: "time", label: t("Time") },
+            { value: "distance", label: t("Distance") },
           ]}
         />
       </div>
@@ -159,22 +160,22 @@ const StepEditor: React.FC<{
       {step.measure === "time" ? (
         <div className="flex" style={{ gap: 8 }}>
           <NumberField
-            label="Minutes"
-            ariaLabel={`${idPrefix} minutes`}
+            label={t("Minutes")}
+            ariaLabel={t("{step} minutes", { step: idPrefix })}
             value={time.minutes}
             onChange={(v) => onChange({ ...step, measure: "time", seconds: clockToSeconds(v ?? 0, time.seconds) })}
           />
           <NumberField
-            label="Seconds"
-            ariaLabel={`${idPrefix} seconds`}
+            label={t("Seconds")}
+            ariaLabel={t("{step} seconds", { step: idPrefix })}
             value={time.seconds}
             onChange={(v) => onChange({ ...step, measure: "time", seconds: clockToSeconds(time.minutes, v ?? 0) })}
           />
         </div>
       ) : (
         <NumberField
-          label="Metres"
-          ariaLabel={`${idPrefix} metres`}
+          label={t("Metres")}
+          ariaLabel={t("{step} metres", { step: idPrefix })}
           value={step.meters}
           onChange={(v) => onChange({ ...step, measure: "distance", meters: v ?? 0 })}
           placeholder="800"
@@ -183,24 +184,24 @@ const StepEditor: React.FC<{
 
       {withMode && (
         <div>
-          <span style={labelStyle}>Recovery</span>
+          <span style={labelStyle}>{t("Recovery")}</span>
           <Segmented
-            ariaLabel={`${idPrefix} mode`}
+            ariaLabel={t("{step} mode", { step: idPrefix })}
             value={step.mode ?? "jog"}
             onChange={(mode: EnduranceMode) => onChange({ ...step, mode })}
             options={[
-              { value: "jog", label: "Jog" },
-              { value: "walk", label: "Walk" },
-              { value: "rest", label: "Rest" },
+              { value: "jog", label: t("Jog") },
+              { value: "walk", label: t("Walk") },
+              { value: "rest", label: t("Rest") },
             ]}
           />
         </div>
       )}
 
       <div>
-        <span style={labelStyle}>Target</span>
+        <span style={labelStyle}>{t("Target")}</span>
         <Segmented
-          ariaLabel={`${idPrefix} target kind`}
+          ariaLabel={t("{step} target kind", { step: idPrefix })}
           value={target.kind}
           onChange={(kind) => {
             if (kind === target.kind) return;
@@ -217,40 +218,40 @@ const StepEditor: React.FC<{
             );
           }}
           options={[
-            { value: "open", label: "None" },
-            { value: "pace", label: "Pace" },
-            { value: "hr_zone", label: "HR zone" },
-            { value: "rpe", label: "Effort" },
+            { value: "open", label: t("None") },
+            { value: "pace", label: t("Pace") },
+            { value: "hr_zone", label: t("HR zone") },
+            { value: "rpe", label: t("Effort") },
           ]}
         />
       </div>
 
       {target.kind === "pace" && (
         <div>
-          <span style={{ ...labelStyle, fontSize: textPx(11) }}>Per km, faster end first</span>
+          <span style={{ ...labelStyle, fontSize: textPx(11) }}>{t("Per km, faster end first")}</span>
           <div className="flex items-end" style={{ gap: 8 }}>
             <NumberField
-              label="Min"
-              ariaLabel={`${idPrefix} pace fast minutes`}
+              label={t("Min")}
+              ariaLabel={t("{step} pace fast minutes", { step: idPrefix })}
               value={paceLo.minutes}
               onChange={(v) => setTarget({ ...target, min_sec_per_km: clockToSeconds(v ?? 0, paceLo.seconds) })}
             />
             <NumberField
-              label="Sec"
-              ariaLabel={`${idPrefix} pace fast seconds`}
+              label={t("Sec")}
+              ariaLabel={t("{step} pace fast seconds", { step: idPrefix })}
               value={paceLo.seconds}
               onChange={(v) => setTarget({ ...target, min_sec_per_km: clockToSeconds(paceLo.minutes, v ?? 0) })}
             />
             <span style={{ paddingBottom: 10, color: "rgb(var(--c-charcoal-muted))" }}>–</span>
             <NumberField
-              label="Min"
-              ariaLabel={`${idPrefix} pace slow minutes`}
+              label={t("Min")}
+              ariaLabel={t("{step} pace slow minutes", { step: idPrefix })}
               value={paceHi.minutes}
               onChange={(v) => setTarget({ ...target, max_sec_per_km: clockToSeconds(v ?? 0, paceHi.seconds) })}
             />
             <NumberField
-              label="Sec"
-              ariaLabel={`${idPrefix} pace slow seconds`}
+              label={t("Sec")}
+              ariaLabel={t("{step} pace slow seconds", { step: idPrefix })}
               value={paceHi.seconds}
               onChange={(v) => setTarget({ ...target, max_sec_per_km: clockToSeconds(paceHi.minutes, v ?? 0) })}
             />
@@ -260,16 +261,16 @@ const StepEditor: React.FC<{
 
       {target.kind === "hr_zone" && (
         <Segmented
-          ariaLabel={`${idPrefix} heart-rate zone`}
+          ariaLabel={t("{step} heart-rate zone", { step: idPrefix })}
           value={String(target.zone)}
           onChange={(z) => setTarget({ kind: "hr_zone", zone: Number(z) })}
-          options={[1, 2, 3, 4, 5].map((z) => ({ value: String(z), label: `Zone ${z}` }))}
+          options={[1, 2, 3, 4, 5].map((z) => ({ value: String(z), label: t("Zone {z}", { z }) }))}
         />
       )}
 
       {target.kind === "rpe" && (
         <Segmented
-          ariaLabel={`${idPrefix} effort`}
+          ariaLabel={t("{step} effort", { step: idPrefix })}
           value={String(target.value)}
           onChange={(v) => setTarget({ kind: "rpe", value: Number(v) })}
           options={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => ({ value: String(v), label: String(v) }))}
@@ -294,7 +295,7 @@ const OptionalStep: React.FC<{
         aria-pressed={!!step}
         className="tap text-[11.5px] font-semibold text-primary-dark"
       >
-        {step ? "Remove" : "Add"}
+        {step ? t("Remove") : t("Add")}
       </button>
     </div>
     {step && <StepEditor step={step} onChange={onChange} idPrefix={idPrefix} />}
@@ -311,16 +312,16 @@ export const EndurancePlanBuilder: React.FC<{
   return (
     <div className="flex flex-col" style={{ gap: 12 }}>
       <OptionalStep
-        title="Warm-up"
+        title={t("Warm-up")}
         step={plan.warmup}
         onChange={(warmup) => onChange({ ...plan, warmup })}
-        idPrefix="Warm-up"
+        idPrefix={t("Warm-up")}
       />
 
       <div style={cardStyle(dark)}>
-        <span style={labelStyle}>Main set</span>
+        <span style={labelStyle}>{t("Main set")}</span>
         <Segmented
-          ariaLabel="Main set type"
+          ariaLabel={t("Main set type")}
           value={main.type}
           onChange={(type) => {
             if (type === main.type) return;
@@ -338,8 +339,8 @@ export const EndurancePlanBuilder: React.FC<{
             });
           }}
           options={[
-            { value: "steady", label: "Steady" },
-            { value: "intervals", label: "Intervals" },
+            { value: "steady", label: t("Steady") },
+            { value: "intervals", label: t("Intervals") },
           ]}
         />
 
@@ -348,14 +349,14 @@ export const EndurancePlanBuilder: React.FC<{
             <StepEditor
               step={main.step}
               onChange={(step) => onChange({ ...plan, main: { type: "steady", step } })}
-              idPrefix="Main set"
+              idPrefix={t("Main set")}
             />
           ) : (
             <div className="flex flex-col" style={{ gap: 12 }}>
               <div className="flex" style={{ gap: 8 }}>
                 <NumberField
-                  label="Repeats"
-                  ariaLabel="Interval repeats"
+                  label={t("Repeats")}
+                  ariaLabel={t("Interval repeats")}
                   value={main.repeats}
                   onChange={(v) => onChange({ ...plan, main: { ...main, repeats: v ?? 1 } })}
                   placeholder="6"
@@ -363,20 +364,20 @@ export const EndurancePlanBuilder: React.FC<{
                 <div style={{ flex: 2 }} />
               </div>
               <div style={innerBoxStyle}>
-                <span style={labelStyle}>Work</span>
+                <span style={labelStyle}>{t("Work")}</span>
                 <StepEditor
                   step={main.work}
                   onChange={(work) => onChange({ ...plan, main: { ...main, work } })}
-                  idPrefix="Work"
+                  idPrefix={t("Work")}
                 />
               </div>
               <div style={innerBoxStyle}>
-                <span style={labelStyle}>Recovery</span>
+                <span style={labelStyle}>{t("Recovery")}</span>
                 <StepEditor
                   step={main.recovery}
                   onChange={(recovery) => onChange({ ...plan, main: { ...main, recovery } })}
                   withMode
-                  idPrefix="Recovery"
+                  idPrefix={t("Recovery")}
                 />
               </div>
             </div>
@@ -385,10 +386,10 @@ export const EndurancePlanBuilder: React.FC<{
       </div>
 
       <OptionalStep
-        title="Cool-down"
+        title={t("Cool-down")}
         step={plan.cooldown}
         onChange={(cooldown) => onChange({ ...plan, cooldown })}
-        idPrefix="Cool-down"
+        idPrefix={t("Cool-down")}
       />
     </div>
   );

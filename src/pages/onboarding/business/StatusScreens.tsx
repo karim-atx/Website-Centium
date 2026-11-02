@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import clsx from "clsx";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Clock3, Sparkles } from "lucide-react";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { ObStatus, ObSkeleton, ObTip, Shapes } from "../shell";
 import { BizFrame, type BizFooter } from "./BizFrame";
@@ -59,7 +59,17 @@ export const StatusLoading: React.FC<{ footer: BizFooter }> = ({ footer }) => (
   </BizFrame>
 );
 
-export const PendingScreen: React.FC<{ name: string; submittedAt: string | null; footer: BizFooter }> = ({ name, submittedAt, footer }) => {
+export const PendingScreen: React.FC<{
+  name: string;
+  submittedAt: string | null;
+  footer: BizFooter;
+  /**
+   * Round G1 fixes, G fixes 2 and 3 (only with business_plans_on): no plan
+   * level is chosen yet ("choose"), or its purchase in the Centium app isn't
+   * confirmed yet ("pending"), so approval waits for it.
+   */
+  planWait?: "choose" | "pending" | null;
+}> = ({ name, submittedAt, footer, planWait }) => {
   const s = submittedLabel(submittedAt);
   return (
     <BizFrame footer={footer}>
@@ -70,6 +80,14 @@ export const PendingScreen: React.FC<{ name: string; submittedAt: string | null;
         title={t("We're reviewing {name}", { name })}
         body={t("Usually 1 to 2 working days. We'll message and email you.")}
       />
+      {/* undrawn (Round G, no handover) */}
+      {planWait && (
+        <ObTip icon={Clock3} heading={t("Business plan")} tone="warn" margin="0 0 16px" role="status">
+          {planWait === "choose"
+            ? t("Choose your business plan first.")
+            : t("Your verification is approved once your plan purchase is confirmed.")}
+        </ObTip>
+      )}
       <Timeline
         items={[
           { title: t("Submitted"), desc: s.line, value: s.day, state: "done" },

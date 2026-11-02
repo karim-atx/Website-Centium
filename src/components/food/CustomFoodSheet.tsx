@@ -13,6 +13,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { FOOD_DARK } from "./foodDark";
 import { textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 /** FO3.2: Custom Foods is Dark Lavender. */
 const CUSTOM_FOOD_ACCENT = "rgb(var(--th-7d67d9))";
@@ -112,7 +113,7 @@ export const CustomFoodSheet: React.FC<{
     setBusy(false);
     setConfirm(null);
     if (!result.ok) {
-      setDeleteError(result.message ?? "Couldn't delete that food.");
+      setDeleteError(result.message ?? t("Couldn't delete that food."));
       return;
     }
     forgetCustomFood(shown.id);
@@ -125,7 +126,7 @@ export const CustomFoodSheet: React.FC<{
         open
         onClose={close}
         onBack={editing ? leaveEditing : undefined}
-        title={editing ? "Edit Custom Food" : shown.name}
+        title={editing ? t("Edit Custom Food") : shown.name}
         size={editing ? "tall" : "default"}
         footerRule={editing}
         footer={
@@ -140,7 +141,7 @@ export const CustomFoodSheet: React.FC<{
               className="tap w-full inline-flex items-center justify-center"
               style={{ height: 52, gap: 8, borderRadius: 16, background: CUSTOM_FOOD_ACCENT, color: "#FFFFFF", fontSize: textPx(15.5), fontWeight: 700 }}
             >
-              <Pencil size={16} /> Edit
+              <Pencil size={16} /> {t("Edit")}
             </button>
           )
         }
@@ -166,10 +167,10 @@ export const CustomFoodSheet: React.FC<{
             {!hide && (
             <div className="grid grid-cols-4" style={{ gap: 7, marginTop: 16 }}>
               {[
-                [`${Math.round(shown.calories)}`, "kcal"],
-                [`${Math.round(shown.protein)}g`, "Protein"],
-                [`${Math.round(shown.carbs)}g`, "Carbs"],
-                [`${Math.round(shown.fat)}g`, "Fat"],
+                [`${Math.round(shown.calories)}`, t("kcal")],
+                [t("{n}g", { n: Math.round(shown.protein) }), t("Protein")],
+                [t("{n}g", { n: Math.round(shown.carbs) }), t("Carbs")],
+                [t("{n}g", { n: Math.round(shown.fat) }), t("Fat")],
               ].map(([v, l]) => (
                 <div key={l} className="text-center" style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 12, padding: "10px 4px" }}>
                   <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>{v}</p>
@@ -183,7 +184,7 @@ export const CustomFoodSheet: React.FC<{
                 className="flex items-center justify-between"
                 style={{ marginTop: hide ? 16 : 10, background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 12, padding: "13px 14px", fontSize: textPx(13.5) }}
               >
-                <span style={{ color: dark ? FOOD_DARK.label : "#575863" }}>Barcode</span>
+                <span style={{ color: dark ? FOOD_DARK.label : "#575863" }}>{t("Barcode")}</span>
                 <span style={{ color: "rgb(var(--c-charcoal))", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{shown.barcode}</span>
               </div>
             )}
@@ -191,10 +192,10 @@ export const CustomFoodSheet: React.FC<{
             {shown.externalSource && (
               <p style={{ margin: "12px 2px 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", lineHeight: 1.45 }}>
                 {shown.externalSource === "usda_fdc" ? (
-                  "Found in USDA FoodData Central (public domain)."
+                  t("Found in USDA FoodData Central (public domain).")
                 ) : (
                   <>
-                    Product data from Open Food Facts, available under the Open Database License.
+                    {t("Product data from Open Food Facts, available under the Open Database License.")}
                     {shown.externalRef && (
                       <>
                         {" "}
@@ -205,7 +206,7 @@ export const CustomFoodSheet: React.FC<{
                           className="inline-flex items-center"
                           style={{ color: dark ? FOOD_DARK.lavInk : "rgb(var(--thi-7d67d9))", fontWeight: 600, gap: 3 }}
                         >
-                          View on Open Food Facts <ExternalLink size={11} />
+                          {t("View on Open Food Facts")} <ExternalLink size={11} />
                         </a>
                       </>
                     )}
@@ -233,10 +234,10 @@ export const CustomFoodSheet: React.FC<{
                       className="tap w-full inline-flex items-center justify-center disabled:opacity-60"
                       style={{ height: 44, gap: 7, borderRadius: 12, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: textPx(13.5), fontWeight: 600 }}
                     >
-                      <Send size={14} /> {suggesting ? "Sending…" : suggestion.line ? "Suggest it again" : "Suggest for the catalogue"}
+                      <Send size={14} /> {suggesting ? t("Sending…") : suggestion.line ? t("Suggest it again") : t("Suggest for the catalogue")}
                     </button>
                     <p style={{ margin: "6px 2px 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", lineHeight: 1.45 }}>
-                      Our team checks it first. If it's added, everyone can find it in search.
+                      {t("Our team checks it first. If it's added, everyone can find it in search.")}
                     </p>
                   </>
                 )}
@@ -259,17 +260,17 @@ export const CustomFoodSheet: React.FC<{
 
       <ConfirmCard
         open={confirm === "delete"}
-        title={`Delete ${shown.name}?`}
-        subtitle="It's removed from your foods and from any recipes and meals that use it. Past diary entries stay."
+        title={t("Delete {name}?", { name: shown.name })}
+        subtitle={t("It's removed from your foods and from any recipes and meals that use it. Past diary entries stay.")}
         busy={busy}
         onCancel={() => setConfirm(null)}
         onConfirm={() => void doDelete()}
       />
       <ConfirmCard
         open={confirm === "discard-back" || confirm === "discard-close"}
-        title="Discard your changes?"
-        subtitle="What you changed won't be saved."
-        confirmLabel="Discard"
+        title={t("Discard your changes?")}
+        subtitle={t("What you changed won't be saved.")}
+        confirmLabel={t("Discard")}
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           const closing = confirm === "discard-close";

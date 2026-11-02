@@ -36,6 +36,8 @@ const {
   HealthCheckRemindersPage, AccessibilityPage, PrivacyPage, TermsPage, LanguagePage, YourMusicPage, BillingHelpPage, TwoFactorPage,
   TwoFactorSetupPage, ResetPassword, PublicCertificate, InviteLanding, PublicProfile, PublicBooking,
   SharedCard, BusinessLinkPage, CarePlan, ConsoleGate, CallLink, LegacyCallLink,
+  CentiumProgrammesPage, CentiumProgrammePage, MindLibraryPage, LibrarySessionPage, WeeklyReviewPage, DoctorSummaryPage,
+  MealPlannerPage, ProgressPhotosPage,
 } = appPages;
 
 const RouteLoading: React.FC = () => (
@@ -454,12 +456,21 @@ function AppRoutes() {
         <Route path="/app/pro/*" element={<ProRoutes />} />
         <Route path="/app/food" element={<Food />} />
         <Route path="/app/food/nutrient-summary" element={<NutrientSummaryPage />} />
+        <Route path="/app/food/planner" element={<MealPlannerPage />} />
+        {/* Round G3: the Monday weekly review (back to Home while the Premium switch is off). */}
+        <Route path="/app/weekly-review" element={<WeeklyReviewPage />} />
         <Route path="/app/workout" element={<Workout />} />
+        {/* Round G3: Centium programmes (each page sends back to Workout while the Premium switch is off). */}
+        <Route path="/app/workout/programmes" element={<CentiumProgrammesPage />} />
+        <Route path="/app/workout/programmes/:slug" element={<CentiumProgrammePage />} />
+        <Route path="/app/workout/progress-photos" element={<ProgressPhotosPage />} />
         <Route path="/app/health" element={<Health />} />
         <Route path="/app/health/checks" element={<HealthChecks />} />
         <Route path="/app/health/sources" element={<HealthSources />} />
         <Route path="/app/health/records" element={<HealthRecords />} />
         <Route path="/app/health/care-plan" element={<CarePlan />} />
+        {/* Round G3: the doctor summary (back to Health records while the Premium switch is off). */}
+        <Route path="/app/health/doctor-summary" element={<DoctorSummaryPage />} />
         {/* Batch 2 · Health A: the seven metric pages (HE1.1-HE1.7) and heart-rate alert settings. */}
         <Route path="/app/health/water" element={<WaterPage />} />
         <Route path="/app/health/steps" element={<StepsPage />} />
@@ -473,6 +484,9 @@ function AppRoutes() {
         <Route path="/app/contraception" element={<Contraception />} />
         <Route path="/app/mind" element={<Mind />} />
         <Route path="/app/mind/:section" element={<Mind />} />
+        {/* Round G3: the meditation library (static, so it outranks :section; back to Meditation while the Premium switch is off). */}
+        <Route path="/app/mind/library" element={<MindLibraryPage />} />
+        <Route path="/app/mind/library/:slug" element={<LibrarySessionPage />} />
         {/* The client directory. Release 3: the old professional addresses
             redirect professional accounts to /app/pro for one release (static
             routes, so "calendar" is never read as an :id); a client keeps the

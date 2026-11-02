@@ -13,6 +13,7 @@ import {
   type ScheduleAction,
   type ScheduleRefusal,
 } from "./scheduleRules";
+import { t } from "../../i18n/core";
 
 // B9 · Classes and schedule, the business side (HANDOVER_API "B9 · Classes
 // and schedule"). Every function here is gated `schedule` on the server
@@ -187,7 +188,7 @@ export async function instructorsFreeFor(classId: string): Promise<Done<FreeInst
     ok: true,
     value: (data ?? []).map((r) => ({
       professionalId: r.professional_id,
-      firstName: (r.first_name ?? "").trim() || "Unnamed",
+      firstName: (r.first_name ?? "").trim() || t("Unnamed"),
       role: r.role ?? "",
       isCurrent: !!r.is_current,
       withinAvailability: !!r.within_availability,
@@ -227,7 +228,7 @@ export async function classInstructorConflicts(businessId: string, from?: string
 export async function prepareClassCover(file: File): Promise<{ ok: true; file: File } | { ok: false; message: string }> {
   const prepared = await prepareForumPhoto(file);
   if (!prepared.ok) return { ok: false, message: prepared.message };
-  if (prepared.file.size > 5 * 1024 * 1024) return { ok: false, message: "This photo is too large. Choose one under 5 MB." };
+  if (prepared.file.size > 5 * 1024 * 1024) return { ok: false, message: t("This photo is too large. Choose one under 5 MB.") };
   return { ok: true, file: prepared.file };
 }
 
@@ -283,7 +284,7 @@ export async function fetchBookingPolicies(businessId: string): Promise<{ ok: tr
   const { data, error } = await policies().select(POLICY_COLUMNS).eq("business_id", businessId);
   if (error) {
     console.error("[business-classes] Could not read booking policies:", error.message);
-    return { ok: false, message: "Couldn't load this. Try again." };
+    return { ok: false, message: t("Couldn't load this. Try again.") };
   }
   return { ok: true, value: (data ?? []).map(toPolicy) };
 }

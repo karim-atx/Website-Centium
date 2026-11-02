@@ -4,6 +4,7 @@ import { useApp } from "../../context/AppContext";
 import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { textPx, linePx } from "../../theme/textSize";
+import { t, tk } from "../../i18n/core";
 
 /**
  * Task R: "Turn period tracking back on?" — asked once, inline, never as a
@@ -29,27 +30,27 @@ export const TrackerQuestion: React.FC<{ className?: string; tile?: boolean; var
     setError(null);
     const r = await answerTrackerQuestion(turnOn);
     setBusy(false);
-    if (!r.ok) setError(r.message ?? "Couldn't save that. Try again.");
+    if (!r.ok) setError(r.message ?? tk("Couldn't save that. Try again."));
   };
 
   const title = (
     <p id="tracker-question" className="text-sm font-semibold text-charcoal">
-      Turn period tracking back on?
+      {t("Turn period tracking back on?")}
     </p>
   );
   const answers = (
     <>
       <div className={tile ? "flex gap-2" : "flex gap-2 mt-3"}>
         <Button size="sm" fullWidth disabled={busy} onClick={() => void answer(true)}>
-          Yes
+          {t("Yes")}
         </Button>
         <Button size="sm" fullWidth variant="secondary" disabled={busy} onClick={() => void answer(false)}>
-          No
+          {t("No")}
         </Button>
       </div>
       {error && (
         <p className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
     </>
@@ -84,12 +85,12 @@ export const TrackerQuestion: React.FC<{ className?: string; tile?: boolean; var
           </span>
           <div className="min-w-0 flex-1">
             <p id="tracker-question" style={{ fontSize: textPx(14), lineHeight: linePx(19), fontWeight: 600, color: "rgb(var(--c-charcoal))", paddingTop: 6.5 }}>
-              Turn period tracking back on?
+              {t("Turn period tracking back on?")}
             </p>
             <div className="flex" style={{ gap: 16, marginTop: 10 }}>
               {[
-                { t: "Yes", on: true },
-                { t: "No", on: false },
+                { t: tk("Yes"), on: true },
+                { t: tk("No"), on: false },
               ].map((a) => (
                 <button
                   key={a.t}
@@ -99,13 +100,13 @@ export const TrackerQuestion: React.FC<{ className?: string; tile?: boolean; var
                   className="tap relative disabled:opacity-50 before:absolute before:-inset-x-2 before:-inset-y-[13px] before:content-['']"
                   style={actionStyle}
                 >
-                  {a.t}
+                  {t(a.t)}
                 </button>
               ))}
             </div>
             {error && (
               <p className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5" role="alert">
-                {error}
+                {t(error)}
               </p>
             )}
           </div>

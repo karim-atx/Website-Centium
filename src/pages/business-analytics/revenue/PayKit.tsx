@@ -183,7 +183,7 @@ export const PayControls: React.FC<{
           aria-label={cur.label}
           className="absolute top-[42px] w-[248px] max-w-full z-[5] rounded-[14px] p-[8px]"
           style={{
-            left: cur.menuLeft,
+            insetInlineStart: cur.menuLeft,
             background: v("card"),
             border: `1px solid ${v("menu-border")}`,
             boxShadow: "0 12px 32px rgba(95,80,147,0.18)",

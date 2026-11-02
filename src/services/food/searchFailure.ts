@@ -1,4 +1,5 @@
 import { isOffline } from "../network-error";
+import { t } from "../../i18n/core";
 
 // Why a food search came back empty, kept apart from services/food/index.ts so
 // it can be tested without a Supabase client.
@@ -19,8 +20,8 @@ export function searchFailure(errors: ReadonlyArray<unknown>): FoodSearchFailure
  */
 export function searchEmptyLine(failure: FoodSearchFailure | null, online: boolean): string | null {
   if (failure === "offline" || (failure !== null && !online)) {
-    return "You're offline. Search needs a connection.";
+    return t("You're offline. Search needs a connection.");
   }
-  if (failure === "error") return "Couldn't search. Try again.";
+  if (failure === "error") return t("Couldn't search. Try again.");
   return null;
 }

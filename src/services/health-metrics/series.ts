@@ -1,5 +1,6 @@
 import type { HealthMetric, HealthMetricPoint } from "../../types";
 import { appLocale } from "../../i18n/format";
+import { t, tk } from "../../i18n/core";
 
 // Turning stored readings into the shape the Health and Home widgets draw.
 //
@@ -157,11 +158,14 @@ export function withinDays(
  */
 export function trendLabel(readings: MetricReadings, period = "this week"): string | null {
   if (readings.trend === null) return null;
-  if (readings.trend === 0) return `No change ${period}`;
+  // The app only asks for "this week"; another period stays English.
+  const week = period === "this week";
+  if (readings.trend === 0) return week ? t("No change this week") : `No change ${period}`;
   const arrow = readings.trend > 0 ? "↑" : "↓";
   const meta = HEALTH_METRIC_META[readings.type];
   const size = round(Math.abs(readings.trend), meta.precision);
-  return `${arrow} ${formatNumber(size, meta.precision)} ${meta.unit} ${period}`;
+  const change = `${arrow} ${formatNumber(size, meta.precision)} ${meta.unit}`;
+  return week ? t("{change} this week", { change }) : `${change} ${period}`;
 }
 
 /** The headline number, written the way its metric is written. */
@@ -177,7 +181,7 @@ export function formatMetric(type: HealthMetric["type"], value: number): string 
 }
 
 /** What a card says where a number would go, when there is no reading. */
-export const NO_READINGS = "No readings yet";
+export const NO_READINGS = tk("No readings yet");
 
 /**
  * The invitation under an empty card.
@@ -189,8 +193,8 @@ export const NO_READINGS = "No readings yet";
  * for those says it is empty and stops.
  */
 export function emptyHint(type: HealthMetric["type"]): string | null {
-  if (type === "weight") return "Log your weight to start tracking";
-  if (type === "water") return "Log what you drink to start tracking";
+  if (type === "weight") return t("Log your weight to start tracking");
+  if (type === "water") return t("Log what you drink to start tracking");
   return null;
 }
 

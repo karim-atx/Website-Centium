@@ -29,7 +29,6 @@ import {
   RetryCard,
   EmptyCard,
   rowRule,
-  plural,
   FieldLabel,
   HelpLine,
   ConfirmPopup,
@@ -37,6 +36,7 @@ import {
   INK,
   INK_FAINT,
 } from "./kit";
+import { t, tn } from "../../../i18n/core";
 
 // HE1.9.a · Labs tab: the uploaded reports as rows (FileText tile, report
 // name, "{date} · {n} markers · PDF|Photo", chevron) in one list card; tap
@@ -77,17 +77,18 @@ export const LabsTab: React.FC<{
       </ListCard>
     );
   }
-  if (error && reports.length === 0) return <RetryCard message={readOnly ? "Couldn't load the reports." : "Couldn't load your reports."} onRetry={onRetry} />;
-  if (reports.length === 0) return <EmptyCard icon={FileText} title={readOnly?.emptyTitle ?? "No lab reports yet."} body={readOnly?.emptyBody ?? "Upload a report and its results appear under Biomarkers."} />;
+  if (error && reports.length === 0) return <RetryCard message={readOnly ? t("Couldn't load the reports.") : t("Couldn't load your reports.")} onRetry={onRetry} />;
+  if (reports.length === 0) return <EmptyCard icon={FileText} title={readOnly?.emptyTitle ?? t("No lab reports yet.")} body={readOnly?.emptyBody ?? t("Upload a report and its results appear under Biomarkers.")} />;
   return (
     <ListCard>
       {reports.map((r, i) => {
         const n = results.filter((x) => x.panelId === r.id).length;
-        const meta = [fmtDate(r.date), plural(n, "marker"), fileKind(r.filePath)].join(" · ");
+        const kindOf = fileKind(r.filePath);
+        const meta = [fmtDate(r.date), tn(n, "{n} marker", "{n} markers"), kindOf === "Photo" ? t("Photo") : kindOf].filter(Boolean).join(" · ");
         const row = (
           <button type="button" onClick={() => onView(r)} className="tap w-full flex items-center text-start" style={{ minHeight: 60, padding: "9px 14px", gap: 11, background: "rgb(var(--c-cream-card))" }}>
             <RowTile icon={FileText} />
-            <RowText title={r.name ?? REPORT_NAME_DEFAULT} meta={meta} />
+            <RowText title={r.name ?? t(REPORT_NAME_DEFAULT)} meta={meta} />
             <ChevronRight size={16} style={{ color: INK_FAINT }} aria-hidden />
           </button>
         );
@@ -99,10 +100,10 @@ export const LabsTab: React.FC<{
               tileMax={45}
               tileRadius={12}
               edgeInset={8}
-              keyboardLabel={`${r.name ?? REPORT_NAME_DEFAULT}, ${fmtDate(r.date)}`}
+              keyboardLabel={`${r.name ?? t(REPORT_NAME_DEFAULT)}, ${fmtDate(r.date)}`}
               actions={[
-                { key: "edit", label: "Edit", icon: <Pencil size={16} />, onClick: () => onEdit(r) },
-                { key: "delete", label: "Delete", icon: <Trash2 size={16} />, destructive: true, onClick: () => onDelete(r) },
+                { key: "edit", label: t("Edit"), icon: <Pencil size={16} />, onClick: () => onEdit(r) },
+                { key: "delete", label: t("Delete"), icon: <Trash2 size={16} />, destructive: true, onClick: () => onDelete(r) },
               ]}
             >
               {row}
@@ -128,7 +129,7 @@ export const LabReportEditSheet: React.FC<{ report: LabReport | null; onClose: (
   useEffect(() => {
     if (!report) return;
     setDate(report.date);
-    setName(report.name ?? REPORT_NAME_DEFAULT);
+    setName(report.name ?? t(REPORT_NAME_DEFAULT));
     setFile(null);
     setError(null);
   }, [report]);
@@ -140,7 +141,7 @@ export const LabReportEditSheet: React.FC<{ report: LabReport | null; onClose: (
     setError(null);
     let ok = true;
     const trimmed = name.trim();
-    if (date !== report.date || trimmed !== (report.name ?? REPORT_NAME_DEFAULT)) ok = (await updatePanel(report.id, { panel_date: date, name: trimmed })).ok;
+    if (date !== report.date || trimmed !== (report.name ?? t(REPORT_NAME_DEFAULT))) ok = (await updatePanel(report.id, { panel_date: date, name: trimmed })).ok;
     if (ok && file) {
       const up = await uploadPrivateFile({ bucket: "lab-reports", userId: authUserId, file });
       ok = up.ok && !!up.path;
@@ -154,37 +155,37 @@ export const LabReportEditSheet: React.FC<{ report: LabReport | null; onClose: (
     if (ok) await reloadHealthRecords();
     setSaving(false);
     // Round D O12: offline, say it needs a connection.
-    if (!ok) return setError(browserOffline() ? OFFLINE_MESSAGE : "Couldn't save. Try again.");
-    onSaved("Changes saved.");
+    if (!ok) return setError(browserOffline() ? t(OFFLINE_MESSAGE) : t("Couldn't save. Try again."));
+    onSaved(t("Changes saved."));
     onClose();
   };
   const kind = file ? (file.type === "application/pdf" ? "PDF" : "Photo") : fileKind(report.filePath);
 
   return (
     <>
-      <BottomSheet open onClose={onClose} title="Edit report" chrome="partB" tone={partBSheetTone(dark)} footerBottom={30} footer={<CtaButton label="Save changes" onClick={() => void save()} loading={saving} disabled={name.trim().length < 1 || name.trim().length > 60} />}>
-        <FieldLabel htmlFor="report-name-edit">Report name</FieldLabel>
+      <BottomSheet open onClose={onClose} title={t("Edit report")} chrome="partB" tone={partBSheetTone(dark)} footerBottom={30} footer={<CtaButton label={t("Save changes")} onClick={() => void save()} loading={saving} disabled={name.trim().length < 1 || name.trim().length > 60} />}>
+        <FieldLabel htmlFor="report-name-edit">{t("Report name")}</FieldLabel>
         <input id="report-name-edit" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} className="outline-none" style={fieldStyle(dark, hc, 600)} />
-        {(name.trim().length < 1 || name.trim().length > 60) && <HelpLine error>Give the report a name.</HelpLine>}
-        <FieldLabel style={{ marginTop: 16 }}>Date on the report</FieldLabel>
+        {(name.trim().length < 1 || name.trim().length > 60) && <HelpLine error>{t("Give the report a name.")}</HelpLine>}
+        <FieldLabel style={{ marginTop: 16 }}>{t("Date on the report")}</FieldLabel>
         <button type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-start" style={{ ...fieldStyle(dark, hc), gap: 8 }}>
           <CalendarDays size={15} style={{ color: INK_FAINT }} aria-hidden />
           {fmtDate(date)}
         </button>
-        <FieldLabel style={{ marginTop: 16 }}>File</FieldLabel>
+        <FieldLabel style={{ marginTop: 16 }}>{t("File")}</FieldLabel>
         <div className="flex items-center" style={{ minHeight: 57.8, padding: "10px 12px", gap: 12, borderRadius: 12, background: fieldFill(dark), border: `0.5px solid ${hairline(dark, hc, 0.1)}` }}>
           <FileText size={20} style={{ color: deepInk(dark) }} aria-hidden />
           <span className="flex-1 min-w-0 truncate" style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 600, color: INK }}>
-            {file ? file.name : kind === "PDF" ? "PDF file" : "Photo"}
+            {file ? file.name : kind === "PDF" ? t("PDF file") : t("Photo")}
           </span>
           <button type="button" onClick={() => setChoiceOpen(true)} className="tap min-h-[44px] shrink-0" style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: deepInk(dark) }}>
-            Replace
+            {t("Replace")}
           </button>
         </div>
         {error && <HelpLine error>{error}</HelpLine>}
       </BottomSheet>
       <CalendarPickerSheet variant="partB" open={calendarOpen} onClose={() => setCalendarOpen(false)} selectedDate={date} today={today} maxDate={today} onSelect={(d) => { setDate(d); setCalendarOpen(false); }} />
-      <UploadChoiceSheet open={choiceOpen} onClose={() => setChoiceOpen(false)} title="Replace file" bucket="lab-reports" onFile={(f) => { setFile(f); setChoiceOpen(false); }} />
+      <UploadChoiceSheet open={choiceOpen} onClose={() => setChoiceOpen(false)} title={t("Replace file")} bucket="lab-reports" onFile={(f) => { setFile(f); setChoiceOpen(false); }} />
     </>
   );
 };
@@ -198,9 +199,9 @@ export const RemoveReportPopup: React.FC<{ report: LabReport | null; onClose: ()
     <ConfirmPopup
       open={report !== null}
       geometry="ours"
-      title="Remove lab report?"
-      body={`The report from ${report ? fmtDate(report.date) : ""} will be deleted, along with the results it recorded. Those readings will no longer appear in your biomarker history. This can't be undone.`}
-      confirmLabel={busy ? "Removing…" : "Remove"}
+      title={t("Remove lab report?")}
+      body={t("The report from {date} will be deleted, along with the results it recorded. Those readings will no longer appear in your biomarker history. This can't be undone.", { date: report ? fmtDate(report.date) : "" })}
+      confirmLabel={busy ? t("Removing…") : t("Remove")}
       busy={busy}
       error={error}
       onCancel={() => {
@@ -213,7 +214,7 @@ export const RemoveReportPopup: React.FC<{ report: LabReport | null; onClose: ()
         setError(null);
         void removeLabReport(report.id).then((r) => {
           setBusy(false);
-          if (!r.ok) return setError(browserOffline() ? OFFLINE_MESSAGE : r.message ?? "That lab report couldn't be removed.");
+          if (!r.ok) return setError(browserOffline() ? t(OFFLINE_MESSAGE) : r.message ?? t("That lab report couldn't be removed."));
           onRemoved();
           onClose();
         });

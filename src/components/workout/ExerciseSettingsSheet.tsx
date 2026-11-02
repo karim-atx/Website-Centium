@@ -15,6 +15,8 @@ import { typeStyles } from "./setTypeStyle";
 import { useIsDark } from "../../hooks/useIsDark";
 import type { LoggedSet, PrescribedSetType } from "../../types";
 import { setTargetText, setTargetsColumn, withSetTarget } from "../../services/workout/setTargets";
+import { t, tk, tx } from "../../i18n/core";
+import { muscleLabel } from "./muscleLabel";
 
 /**
  * Release 3 · W5 (TR4 v3, HANDOVER g): the professional's mode. Present (even
@@ -38,9 +40,9 @@ const COACH_NOTE_MAX = 500;
 const RPE_CHOICES = [...rpeOptions].sort((a, b) => a - b);
 
 const repMaxModes: { value: RepMaxUpdateMode; label: string; desc: string }[] = [
-  { value: "no_update", label: "Does not update", desc: "Rep Max stays unchanged" },
-  { value: "prompt", label: "Prompt for update", desc: "Ask when an update looks likely" },
-  { value: "prompt_with_estimate", label: "Prompt with estimate", desc: "Pre-fill the new estimated 1RM" },
+  { value: "no_update", label: tk("Does not update"), desc: tk("Rep Max stays unchanged") },
+  { value: "prompt", label: tk("Prompt for update"), desc: tk("Ask when an update looks likely") },
+  { value: "prompt_with_estimate", label: tk("Prompt with estimate"), desc: tk("Pre-fill the new estimated 1RM") },
 ];
 
 const muscleGroupLabel: Record<MuscleGroup, string> = {
@@ -227,18 +229,18 @@ export const ExerciseSettingsSheet: React.FC<{
               className="tap flex-1 flex items-center justify-between gap-2 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-start min-w-0"
             >
               <span className="font-display font-semibold text-charcoal truncate">{exercise.name}</span>
-              <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" />
             </button>
             <button
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t("Close")}
               className="tap w-9 h-9 rounded-full bg-charcoal/5 flex items-center justify-center text-charcoal-soft hover:bg-charcoal/10 shrink-0"
             >
               <X size={16} />
             </button>
           </div>
           <p className="text-[11px] text-charcoal-faint -mt-3">
-            Tap the exercise name to replace it from the exercise database.
+            {t("Tap the exercise name to replace it from the exercise database.")}
           </p>
 
           {(exercise.muscleGroups?.length || exercise.secondaryMuscleGroups?.length || exercise.classification) && (
@@ -255,7 +257,7 @@ export const ExerciseSettingsSheet: React.FC<{
                   key={mg}
                   className="rounded-full bg-primary-fill text-on-primary-fill text-[11px] font-semibold px-2.5 py-1"
                 >
-                  {muscleGroupLabel[mg]}
+                  {muscleLabel(muscleGroupLabel[mg])}
                   <span className="ms-0.5 text-[9px] align-super">1°</span>
                 </span>
               ))}
@@ -264,13 +266,13 @@ export const ExerciseSettingsSheet: React.FC<{
                   key={mg}
                   className="rounded-full bg-primary-pale text-primary-dark text-[11px] font-semibold px-2.5 py-1"
                 >
-                  {muscleGroupLabel[mg]}
+                  {muscleLabel(muscleGroupLabel[mg])}
                   <span className="ms-0.5 text-[9px] align-super">2°</span>
                 </span>
               ))}
               {exercise.classification && (
                 <span className="rounded-full bg-cream-soft text-charcoal-soft text-[11px] font-semibold px-2.5 py-1">
-                  {classificationLabel[exercise.classification]}
+                  {t(classificationLabel[exercise.classification])}
                 </span>
               )}
             </div>
@@ -278,7 +280,7 @@ export const ExerciseSettingsSheet: React.FC<{
 
           {!pro && isOneRmEligible && (
             <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Estimated 1RM (kg)</span>
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Estimated 1RM (kg)")}</span>
               <input
                 value={oneRmDraft}
                 onChange={(e) => setOneRmDraft(e.target.value.replace(/[^\d.]/g, ""))}
@@ -306,7 +308,7 @@ export const ExerciseSettingsSheet: React.FC<{
                 onChange={(endurancePlan) => setDraft((d) => ({ ...d, endurancePlan }))}
               />
               <label className="block">
-                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rest", "sec")}</span>
+                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field(t("Rest"), t("sec"))}</span>
                 {num("restSeconds")}
               </label>
               {/* THE SERVER'S REFUSAL, VERBATIM. checkPlan mirrors
@@ -314,7 +316,7 @@ export const ExerciseSettingsSheet: React.FC<{
                   the two could drift; showing what it actually said is what
                   makes a drift visible instead of silent. */}
               {planProblem && (
-                <p className="text-xs font-semibold text-status-high">{planProblem}</p>
+                <p className="text-xs font-semibold text-status-high">{t(planProblem)}</p>
               )}
             </div>
           ) : (
@@ -323,7 +325,7 @@ export const ExerciseSettingsSheet: React.FC<{
                   routine_exercises stores it: blank = no weight (null), a number
                   = kg, Bodyweight = 0. Typing 0 is bodyweight too. */}
               <div className="block">
-                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Weight", "kg")}</span>
+                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field(t("Weight"), "kg")}</span>
                 <div className="flex items-center gap-2">
                   <input
                     value={draft.weightKg === undefined || draft.weightKg === null || draft.weightKg === 0 ? "" : String(draft.weightKg)}
@@ -332,9 +334,9 @@ export const ExerciseSettingsSheet: React.FC<{
                       const n = Number(cleaned);
                       setDraft((d) => ({ ...d, weightKg: cleaned === "" ? null : Number.isFinite(n) ? n : d.weightKg }));
                     }}
-                    placeholder={draft.weightKg === 0 ? "Bodyweight" : "No weight"}
+                    placeholder={draft.weightKg === 0 ? t("Bodyweight") : t("No weight")}
                     inputMode="decimal"
-                    aria-label="Weight in kg"
+                    aria-label={t("Weight in kg")}
                     className="flex-1 min-w-0 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <button
@@ -348,25 +350,25 @@ export const ExerciseSettingsSheet: React.FC<{
                         : { background: "rgb(var(--th-aea1dc) / 0.14)", color: "rgb(var(--thi-5f5093))" }
                     }
                   >
-                    Bodyweight
+                    {t("Bodyweight")}
                   </button>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Min sets")}</span>
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field(t("Min sets"))}</span>
                   {num("minSets")}
                 </label>
                 <label className="block">
-                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Max sets")}</span>
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field(t("Max sets"))}</span>
                   {num("maxSets")}
                 </label>
                 <label className="block">
-                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Min reps")}</span>
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field(t("Min reps"))}</span>
                   {num("minReps")}
                 </label>
                 <label className="block">
-                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Max reps")}</span>
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field(t("Max reps"))}</span>
                   {num("maxReps")}
                 </label>
               </div>
@@ -377,25 +379,25 @@ export const ExerciseSettingsSheet: React.FC<{
                   (AMRAP)", and this is the only place anyone would look to find
                   that out. */}
               <p className="text-[11px] text-charcoal-faint -mt-1">
-                Leave max reps empty for AMRAP.
+                {t("Leave max reps empty for AMRAP.")}
               </p>
               {pro ? (
                 <>
                   <p className="flex items-start text-[12px] text-charcoal-soft" style={{ gap: 8 }}>
                     <Info size={14} className="shrink-0 mt-0.5 text-charcoal-faint" aria-hidden />
-                    Templates store intensity only. Weights fill in from each client's 1RM when you assign it.
+                    {t("Templates store intensity only. Weights fill in from each client's 1RM when you assign it.")}
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     <label className="block">
-                      <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Intensity (% of 1RM)</span>
+                      <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Intensity (% of 1RM)")}</span>
                       {num("intensityPct")}
                     </label>
                     <label className="block">
-                      <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rest", "sec")}</span>
+                      <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field(t("Rest"), t("sec"))}</span>
                       {num("restSeconds")}
                     </label>
                     <label className="block">
-                      <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Target RPE</span>
+                      <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Target RPE")}</span>
                       <select
                         value={draft.rpe == null ? "" : String(draft.rpe)}
                         onChange={(e) => setDraft((d) => ({ ...d, rpe: e.target.value === "" ? undefined : Number(e.target.value) }))}
@@ -414,19 +416,19 @@ export const ExerciseSettingsSheet: React.FC<{
               ) : (
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Intensity", "%")}</span>
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field(t("Intensity"), "%")}</span>
                   {num("intensityPct")}
                 </label>
                 <label className="block">
-                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rep Max", "kg")}</span>
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field(t("Rep Max"), "kg")}</span>
                   {num("repMaxKg")}
                 </label>
                 <label className="block">
-                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rest", "sec")}</span>
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field(t("Rest"), t("sec"))}</span>
                   {num("restSeconds")}
                 </label>
                 <label className="block">
-                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">RPE</span>
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("RPE")}</span>
                   {num("rpe")}
                 </label>
               </div>
@@ -434,7 +436,7 @@ export const ExerciseSettingsSheet: React.FC<{
 
               <label className="block">
                 <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-                  Tempo (ecc-pause-con-pause)
+                  {t("Tempo (ecc-pause-con-pause)")}
                 </span>
                 <input
                   value={draft.tempo ?? ""}
@@ -448,7 +450,7 @@ export const ExerciseSettingsSheet: React.FC<{
               {!pro && (
               <div>
                 <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-                  Rep Max update mode
+                  {t("Rep Max update mode")}
                 </p>
                 <div className="space-y-2">
                   {repMaxModes.map((m) => (
@@ -462,8 +464,8 @@ export const ExerciseSettingsSheet: React.FC<{
                           : "bg-cream-soft border-transparent"
                       )}
                     >
-                      <p className="text-sm font-semibold text-charcoal">{m.label}</p>
-                      <p className="text-xs text-charcoal-faint">{m.desc}</p>
+                      <p className="text-sm font-semibold text-charcoal">{t(m.label)}</p>
+                      <p className="text-xs text-charcoal-faint">{t(m.desc)}</p>
                     </button>
                   ))}
                 </div>
@@ -474,11 +476,11 @@ export const ExerciseSettingsSheet: React.FC<{
 
           {pro && proSetCount > 0 && (
             <div>
-              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Type</p>
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">{t("Type")}</p>
               <div className="flex flex-wrap" style={{ gap: 6 }}>
                 {Array.from({ length: proSetCount }, (_, i) => {
-                  const t = draft.setTypes?.[i] ?? null;
-                  const style = t && t !== "normal" ? typeStyles(dark)[t === "dropset" ? "drop" : t] : null;
+                  const st = draft.setTypes?.[i] ?? null;
+                  const style = st && st !== "normal" ? typeStyles(dark)[st === "dropset" ? "drop" : st] : null;
                   return (
                     <button
                       key={i}
@@ -488,8 +490,8 @@ export const ExerciseSettingsSheet: React.FC<{
                       style={{ gap: 6, minHeight: 36, padding: "0 12px", background: style ? style.field : "rgb(var(--c-cream-soft))", color: style ? style.ink : "rgb(var(--c-charcoal))", border: `1px solid ${style ? style.border : "rgb(var(--c-charcoal) / 0.1)"}` }}
                     >
                       {style && <span aria-hidden style={{ width: 7, height: 7, borderRadius: 9999, background: style.dot }} />}
-                      {`Set ${i + 1}`}
-                      {style && <span className="sr-only">{`, ${style.short}`}</span>}
+                      {t("Set {n}", { n: i + 1 })}
+                      {style && <span className="sr-only">{`, ${tx(style.short, "set badge")}`}</span>}
                       {setTargetText(draft.setTargets?.[i]) && <span className="sr-only">{`, ${setTargetText(draft.setTargets?.[i])}`}</span>}
                     </button>
                   );
@@ -500,23 +502,23 @@ export const ExerciseSettingsSheet: React.FC<{
                 const text = setTargetText(draft.setTargets?.[i]);
                 return text ? (
                   <p key={i} className="text-[12px] text-charcoal-faint" style={{ marginTop: i === 0 ? 8 : 2 }}>
-                    <span className="font-semibold text-charcoal-soft">{`Set ${i + 1}`}</span>
+                    <span className="font-semibold text-charcoal-soft">{t("Set {n}", { n: i + 1 })}</span>
                     {` · ${text}`}
                   </p>
                 ) : null;
               })}
-              <p className="text-[11px] text-charcoal-faint mt-2">Tap a set for its type, target RPE and note.</p>
+              <p className="text-[11px] text-charcoal-faint mt-2">{t("Tap a set for its type, target RPE and note.")}</p>
             </div>
           )}
 
           {pro && (
             <div className="border-t border-charcoal/[0.08] pt-4 space-y-3">
               <p className="flex items-center text-[11px] font-semibold uppercase text-charcoal-faint" style={{ gap: 8, letterSpacing: "0.14em" }}>
-                <Briefcase size={13} aria-hidden /> For your clients
+                <Briefcase size={13} aria-hidden /> {t("For your clients")}
               </p>
               <label className="block">
                 <span className="flex items-center text-[13px] font-medium text-charcoal mb-1.5" style={{ gap: 8 }}>
-                  <MessageSquareText size={15} aria-hidden style={{ color: "rgb(var(--th-7d6bb5))" }} /> Coach note
+                  <MessageSquareText size={15} aria-hidden style={{ color: "rgb(var(--th-7d6bb5))" }} /> {t("Coach note")}
                 </span>
                 <textarea
                   value={draft.coachNote ?? ""}
@@ -534,17 +536,17 @@ export const ExerciseSettingsSheet: React.FC<{
                   style={{ minHeight: 44 }}
                 >
                   <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-charcoal">Targets per client</span>
+                    <span className="block text-sm font-semibold text-charcoal">{t("Targets per client")}</span>
                     {pro.targets.summary && <span className="block text-[12px] text-charcoal-faint truncate">{pro.targets.summary}</span>}
                   </span>
-                  <ChevronRight size={16} className="text-charcoal-faint shrink-0" />
+                  <ChevronRight size={16} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" />
                 </button>
               )}
             </div>
           )}
 
           <Button fullWidth size="lg" onClick={save}>
-            Save settings
+            {t("Save settings")}
           </Button>
           {onDelete && (
             <Button
@@ -562,7 +564,7 @@ export const ExerciseSettingsSheet: React.FC<{
               }}
             >
               <Trash2 size={14} />
-              {confirmDelete ? "Tap again to confirm" : "Delete exercise"}
+              {confirmDelete ? t("Tap again to confirm") : t("Delete exercise")}
             </Button>
           )}
         </div>
@@ -581,7 +583,7 @@ export const ExerciseSettingsSheet: React.FC<{
           open={setOptionsIndex !== null}
           onClose={() => setSetOptionsIndex(null)}
           set={setOptionsIndex !== null ? coachSet(setOptionsIndex) : null}
-          title={`Set ${(setOptionsIndex ?? 0) + 1} options`}
+          title={t("Set {n} options", { n: (setOptionsIndex ?? 0) + 1 })}
           routineName=""
           pinnedNote={undefined}
           coach={{ coachRpe: draft.rpe, target: setOptionsIndex !== null ? draft.setTargets?.[setOptionsIndex] ?? null : null }}

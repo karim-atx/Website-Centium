@@ -29,6 +29,8 @@ import { VenueHoursSheet } from "../../components/marketplace/VenueHoursSheet";
 import { AREAS } from "../../services/geo/areas";
 import type { Coords } from "../../services/geo/distance";
 
+import { t, tn } from "../../i18n/core";
+
 const NearbyMap = lazy(() => import("../../components/professionals/NearbyMap"));
 
 // OURS-MO1B-locations + MO1B-045 to -049 · Locations and hours (BizMoreV8
@@ -115,16 +117,16 @@ export default function LocationsPage() {
     }
     setStoreHours({ loc, rows: r.value });
   };
-  const title = store ? "Pickup and opening hours" : "Locations and hours";
+  const title = store ? t("Pickup and opening hours") : t("Locations and hours");
   const [entryFor, setEntryFor] = useState<BizLocation | null>(null);
 
   return (
-    <BizPage title={title} sub="Clients see these on your listing.">
+    <BizPage title={title} sub={t("Clients see these on your listing.")}>
       {/* No business_profiles row yet: locations are saved under it, so the
           owner saves the profile first (the same gate as Listing and Offers). */}
       {!bizLoading && !bizError && !business ? (
         <BizSection>
-          <BizRow icon={MapPin} title="Save your business profile first" desc="Locations are saved under it." value="Set up" onClick={() => navigate("/app/business/profile")} />
+          <BizRow icon={MapPin} title={t("Save your business profile first")} desc={t("Locations are saved under it.")} value={t("Set up")} onClick={() => navigate("/app/business/profile")} />
         </BizSection>
       ) : (
         <>
@@ -135,36 +137,36 @@ export default function LocationsPage() {
       {locations?.map((loc) => {
         const lines = hoursLines(loc.hours, isoWeekdayIn(loc.timezone));
         return (
-          <BizSection key={loc.id} label={`${business?.name ?? "Your business"} · ${loc.name}`}>
-            <BizRow icon={MapPin} title={loc.address} desc="Pinned on the map" value={canEdit ? "Edit" : undefined} onClick={canEdit ? () => setParams({ edit: loc.id }, { replace: true }) : undefined} />
+          <BizSection key={loc.id} label={`${business?.name ?? t("Your business")} · ${loc.name}`}>
+            <BizRow icon={MapPin} title={loc.address} desc={t("Pinned on the map")} value={canEdit ? t("Edit") : undefined} onClick={canEdit ? () => setParams({ edit: loc.id }, { replace: true }) : undefined} />
             {lines.length > 0 ? (
               lines.map((l) => <BizRow key={l.key} icon={Clock} title={l.label} value={l.value} onClick={canHours || !store ? () => void openHours(loc) : undefined} />)
             ) : (
-              <BizRow icon={Clock} title="Opening hours" desc="Not published yet" value={canHours ? "Add" : undefined} onClick={canHours || !store ? () => void openHours(loc) : undefined} />
+              <BizRow icon={Clock} title={t("Opening hours")} desc={t("Not published yet")} value={canHours ? t("Add") : undefined} onClick={canHours || !store ? () => void openHours(loc) : undefined} />
             )}
             {/* B10 entry rules (OB-259's "Entry and check-in", after onboarding): gyms only, Venues permission. */}
             {loc.kind === "gym" && (
               <BizRow
                 icon={ScanLine}
-                title="Entry and check-in"
+                title={t("Entry and check-in")}
                 desc={entryLine(loc.entry)}
-                value={canEdit ? "Edit" : undefined}
+                value={canEdit ? t("Edit") : undefined}
                 onClick={canEdit ? () => setEntryFor(loc) : undefined}
               />
             )}
             {/* V6-54: the venue console, for owners, from here; never for stores. */}
-            {!store && <BizRow icon={Store} title="Venue console" desc="Members, classes, hours & photos" onClick={() => openConsole(loc.id)} />}
+            {!store && <BizRow icon={Store} title={t("Venue console")} desc={t("Members, classes, hours & photos")} onClick={() => openConsole(loc.id)} />}
           </BizSection>
         );
       })}
       {locations && !owner && (
         <p className="text-[11.5px] leading-[16px] text-charcoal-faint text-center" style={{ margin: "4px 8px 16px" }}>
-          Only the owner can add or remove a location.
+          {t("Only the owner can add or remove a location.")}
         </p>
       )}
       {locations && owner && (
         <BizSection>
-          <BizRow icon={Plus} title="Add a location" desc="Each location gets its own hours and classes" onClick={() => setParams({ add: "1" }, { replace: true })} />
+          <BizRow icon={Plus} title={t("Add a location")} desc={t("Each location gets its own hours and classes")} onClick={() => setParams({ add: "1" }, { replace: true })} />
         </BizSection>
       )}
 
@@ -180,7 +182,7 @@ export default function LocationsPage() {
             if (!r.ok) return r.message;
             closeSheet();
             reload();
-            showToast("Location updated.");
+            showToast(t("Location updated."));
             return null;
           }}
           onRemove={!owner ? undefined : async () => {
@@ -188,7 +190,7 @@ export default function LocationsPage() {
             if (!r.ok) return r.message;
             closeSheet();
             reload();
-            showToast(`${editing.name} removed.`);
+            showToast(t("{name} removed.", { name: editing.name }));
             return null;
           }}
           onViewClasses={() => navigate("/app/business/operations")}
@@ -206,7 +208,7 @@ export default function LocationsPage() {
             if (!r.ok) return r.message;
             closeSheet();
             reload();
-            showToast(`${d.name.trim()} added. It shows on your listing.`);
+            showToast(t("{name} added. It shows on your listing.", { name: d.name.trim() }));
             return null;
           }}
           onToast={showToast}
@@ -220,7 +222,7 @@ export default function LocationsPage() {
           onSaved={() => {
             setEntryFor(null);
             reload();
-            showToast("Entry and check-in updated.");
+            showToast(t("Entry and check-in updated."));
           }}
         />
       )}
@@ -235,7 +237,7 @@ export default function LocationsPage() {
           onSaved={() => {
             setStoreHours(null);
             reload();
-            showToast("Opening hours updated.");
+            showToast(t("Opening hours updated."));
           }}
         />
       )}
@@ -250,7 +252,7 @@ export default function LocationsPage() {
 // "Minimum age" 16 to 21, "Guest passes a month" 0 to 10).
 
 const entryLine = (e: EntryRules) =>
-  `${e.minEntryAge} and over · ${e.guestPassesPerMonth} guest ${e.guestPassesPerMonth === 1 ? "pass" : "passes"} a month · ${e.frontDeskCheckIn ? "Front desk check-in on" : "Front desk check-in off"}`;
+  `${t("{age} and over", { age: e.minEntryAge })} · ${tn(e.guestPassesPerMonth, "{n} guest pass a month", "{n} guest passes a month")} · ${e.frontDeskCheckIn ? t("Front desk check-in on") : t("Front desk check-in off")}`;
 
 function EntrySheet({ location, onClose, onSaved }: { location: BizLocation; onClose: () => void; onSaved: () => void }) {
   const online = useOnline();
@@ -270,27 +272,27 @@ function EntrySheet({ location, onClose, onSaved }: { location: BizLocation; onC
     <div className="flex items-center justify-between gap-3" style={{ minHeight: 54, padding: "7px 14px" }}>
       <span className="text-[12.5px] leading-[17px] font-bold text-charcoal">{label}</span>
       <span className="inline-flex items-center gap-1">
-        <button type="button" aria-label={`Less: ${label}`} disabled={value <= min} onClick={() => set(value - 1)} className="tap w-9 h-9 rounded-[10px] flex items-center justify-center text-primary-dark disabled:opacity-30">
+        <button type="button" aria-label={t("Less: {label}", { label })} disabled={value <= min} onClick={() => set(value - 1)} className="tap w-9 h-9 rounded-[10px] flex items-center justify-center text-primary-dark disabled:opacity-30">
           <Minus size={15} strokeWidth={2.4} aria-hidden />
         </button>
         <span role="status" aria-label={`${label}, ${value}`} className="min-w-[28px] text-center text-[14px] font-extrabold text-charcoal tabular-nums">
           {value}
         </span>
-        <button type="button" aria-label={`More: ${label}`} disabled={value >= max} onClick={() => set(value + 1)} className="tap w-9 h-9 rounded-[10px] flex items-center justify-center text-primary-dark disabled:opacity-30">
+        <button type="button" aria-label={t("More: {label}", { label })} disabled={value >= max} onClick={() => set(value + 1)} className="tap w-9 h-9 rounded-[10px] flex items-center justify-center text-primary-dark disabled:opacity-30">
           <Plus size={15} strokeWidth={2.4} aria-hidden />
         </button>
       </span>
     </div>
   );
   return (
-    <BizSheet open onClose={onClose} title="Entry and check-in" lead={`How people come in at ${location.name}.`}>
+    <BizSheet open onClose={onClose} title={t("Entry and check-in")} lead={t("How people come in at {name}.", { name: location.name })}>
       <div className={`rounded-[18px] ${LIST_BG}`} style={{ padding: "4px 0" }}>
-        <BizRow title="Front desk can check people in" toggle={{ checked: v.frontDeskCheckIn, onChange: (on) => setV({ ...v, frontDeskCheckIn: on }), label: "Front desk can check people in" }} />
-        {stepper("Minimum age", v.minEntryAge, ENTRY_AGE_MIN, ENTRY_AGE_MAX, (n) => setV({ ...v, minEntryAge: n }))}
-        {stepper("Guest passes a month", v.guestPassesPerMonth, 0, GUEST_PASSES_MAX, (n) => setV({ ...v, guestPassesPerMonth: n }))}
+        <BizRow title={t("Front desk can check people in")} toggle={{ checked: v.frontDeskCheckIn, onChange: (on) => setV({ ...v, frontDeskCheckIn: on }), label: t("Front desk can check people in") }} />
+        {stepper(t("Minimum age"), v.minEntryAge, ENTRY_AGE_MIN, ENTRY_AGE_MAX, (n) => setV({ ...v, minEntryAge: n }))}
+        {stepper(t("Guest passes a month"), v.guestPassesPerMonth, 0, GUEST_PASSES_MAX, (n) => setV({ ...v, guestPassesPerMonth: n }))}
       </div>
       {error && <p className="mt-3 text-[12px] leading-[17px] font-bold text-status-high">{error}</p>}
-      <BizButton label="Save" className="mt-4" onClick={() => void save()} disabled={!dirty || !online || busy} busy={busy} />
+      <BizButton label={t("Save")} className="mt-4" onClick={() => void save()} disabled={!dirty || !online || busy} busy={busy} />
     </BizSheet>
   );
 }
@@ -336,8 +338,8 @@ function LocationSheet({
     ? hoursLines(location.hours, null)
         .slice(0, 2)
         .map((l) => `${l.label} ${l.value}`)
-        .join(" · ") || "Not published yet"
-    : "Set after you add it";
+        .join(" · ") || t("Not published yet")
+    : t("Set after you add it");
 
   const submit = async () => {
     if (mode === "add" && (!d.name.trim() || !d.address.trim() || d.lat === null)) {
@@ -375,7 +377,7 @@ function LocationSheet({
           setD({ ...d, lat: c.lat, lng: c.lng });
           setMapOpen(false);
           setMissing(false);
-          onToast("Pin placed.");
+          onToast(t("Pin placed."));
         }}
         onToast={onToast}
       />
@@ -386,47 +388,47 @@ function LocationSheet({
     <BizSheet
       open
       onClose={tryClose}
-      title={mode === "add" ? "Add a location" : "Edit location"}
-      lead={missing ? "Add a name and choose an address before saving." : "Type the address, or tap Pin to place it on the map."}
+      title={mode === "add" ? t("Add a location") : t("Edit location")}
+      lead={missing ? t("Add a name and choose an address before saving.") : t("Type the address, or tap Pin to place it on the map.")}
       leadTone={missing ? "high" : "soft"}
     >
-      <BizField id="loc-name" label="Location name" value={d.name} onChange={(v) => setD({ ...d, name: v })} icon={Pencil} maxLength={80} />
+      <BizField id="loc-name" label={t("Location name")} value={d.name} onChange={(v) => setD({ ...d, name: v })} icon={Pencil} maxLength={80} />
       <BizField
         id="loc-address"
-        label="Address"
+        label={t("Address")}
         value={d.address}
         onChange={(v) => setD({ ...d, address: v })}
         icon={Search}
-        placeholder="Search an address"
+        placeholder={t("Search an address")}
         autoComplete="street-address"
         after={
           <button
             type="button"
             onClick={() => setMapOpen(true)}
-            aria-label="Place the pin on the map"
+            aria-label={t("Place the pin on the map")}
             className={`tap flex-1 min-w-0 flex items-center justify-center border-[1.5px] border-primary text-primary-dark text-[12.5px] font-extrabold ${LIST_BG}`}
             style={{ height: 46, borderRadius: 14, gap: 5 }}
           >
             <MapPin size={16} strokeWidth={2.2} aria-hidden />
-            Pin
+            {t("Pin")}
           </button>
         }
       />
       {mode === "edit" && (
-        <BizFieldButton id="loc-hours" label="Opening hours" value={hoursSummary} icon={Clock} onClick={() => onOpenHours?.()} />
+        <BizFieldButton id="loc-hours" label={t("Opening hours")} value={hoursSummary} icon={Clock} onClick={() => onOpenHours?.()} />
       )}
-      <BizField id="loc-phone" label="Phone" value={d.phone} onChange={(v) => setD({ ...d, phone: v })} icon={Phone} type="tel" inputMode="tel" autoComplete="tel" />
+      <BizField id="loc-phone" label={t("Phone")} value={d.phone} onChange={(v) => setD({ ...d, phone: v })} icon={Phone} type="tel" inputMode="tel" autoComplete="tel" />
       {error && <p role="alert" className="text-[12px] font-bold text-status-high">{error}</p>}
-      <BizButton label={mode === "add" ? "Add location" : "Save changes"} onClick={() => void submit()} busy={busy} disabled={mode === "edit" && !dirty} />
-      {mode === "edit" && onRemove && <BizButtonSoft label="Remove location" tone="high" onClick={() => void askRemove()} />}
+      <BizButton label={mode === "add" ? t("Add location") : t("Save changes")} onClick={() => void submit()} busy={busy} disabled={mode === "edit" && !dirty} />
+      {mode === "edit" && onRemove && <BizButtonSoft label={t("Remove location")} tone="high" onClick={() => void askRemove()} />}
 
       <BizConfirm
         open={discardAsk}
         icon={Trash2}
-        title="Discard your changes?"
-        body={`${location?.name ?? "This location"} keeps its current details.`}
-        action="Discard"
-        cancel="Keep editing"
+        title={t("Discard your changes?")}
+        body={location?.name ? t("{name} keeps its current details.", { name: location.name }) : t("This location keeps its current details.")}
+        action={t("Discard")}
+        cancel={t("Keep editing")}
         onAction={() => {
           setDiscardAsk(false);
           onClose();
@@ -436,10 +438,10 @@ function LocationSheet({
       <BizConfirm
         open={blocked !== null}
         icon={MapPinOff}
-        title={`You can't remove ${location?.name ?? "this location"} yet`}
-        body={`${blocked} ${blocked === 1 ? "class is" : "classes are"} scheduled there in the next 30 days. Move or cancel them first, then remove the location.`}
-        action="View those classes"
-        cancel="Close"
+        title={location?.name ? t("You can't remove {name} yet", { name: location.name }) : t("You can't remove this location yet")}
+        body={tn(blocked ?? 0, "{n} class is scheduled there in the next 30 days. Move or cancel them first, then remove the location.", "{n} classes are scheduled there in the next 30 days. Move or cancel them first, then remove the location.")}
+        action={t("View those classes")}
+        cancel={t("Close")}
         onAction={() => {
           setBlocked(null);
           onViewClasses?.();
@@ -449,10 +451,10 @@ function LocationSheet({
       <BizConfirm
         open={removeAsk}
         icon={Trash2}
-        title={`Remove ${location?.name ?? "this location"}?`}
-        body="It comes off your listing and the map."
-        action="Remove location"
-        cancel="Keep it"
+        title={location?.name ? t("Remove {name}?", { name: location.name }) : t("Remove this location?")}
+        body={t("It comes off your listing and the map.")}
+        action={t("Remove location")}
+        cancel={t("Keep it")}
         busy={busy}
         onAction={async () => {
           setBusy(true);
@@ -497,42 +499,42 @@ function PinMap({
 
   const locate = useCallback(() => {
     if (!navigator.geolocation) {
-      onToast("Location is blocked in your browser settings.");
+      onToast(t("Location is blocked in your browser settings."));
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (p) => setCenter({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => onToast("Location is blocked in your browser settings.")
+      () => onToast(t("Location is blocked in your browser settings."))
     );
   }, [onToast]);
 
   return (
     <div className="fixed inset-0 z-[60] overflow-y-auto bg-cream" style={{ padding: "24px calc(var(--app-gutter, 0px) + 16px) 40px" }}>
       <div className="mx-auto max-w-[430px]">
-        <SubHeader title="Place the pin" sub="Drag the map so the pin sits on your entrance." onBack={onBack} />
+        <SubHeader title={t("Place the pin")} sub={t("Drag the map so the pin sits on your entrance.")} onBack={onBack} />
         <div className="relative overflow-hidden" style={{ height: 460, borderRadius: 18, marginBottom: 12, background: dark ? "#1E2228" : "#EEF1EC" }}>
           {online ? (
-            <Suspense fallback={<div className="absolute inset-0 flex items-center justify-center"><span className="block w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" aria-label="Loading the map" /></div>}>
+            <Suspense fallback={<div className="absolute inset-0 flex items-center justify-center"><span className="block w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" aria-label={t("Loading the map")} /></div>}>
               <div className="absolute inset-0">
-                <NearbyMap center={center} zoom={16} dark={dark} onViewChange={(c) => setView(c)} className="h-full" ariaLabel="Map. Move it so the pin sits on your entrance." />
+                <NearbyMap center={center} zoom={16} dark={dark} onViewChange={(c) => setView(c)} className="h-full" ariaLabel={t("Map. Move it so the pin sits on your entrance.")} />
               </div>
             </Suspense>
           ) : (
             <p className="absolute inset-0 flex items-center justify-center text-center text-[12.5px] font-bold text-charcoal-faint" style={{ padding: 24 }}>
-              You're offline. Type the address instead.
+              {t("You're offline. Type the address instead.")}
             </p>
           )}
           {online && (
             <>
               {/* The fixed pin: map-pin 40 / 2, bottom-centre on the map centre, with its shadow ellipse. */}
-              <span aria-hidden className="pointer-events-none absolute flex flex-col items-center text-primary-dark" style={{ insetInlineStart: "50%", top: "50%", transform: "translate(-50%,-100%)", zIndex: 2 }}>
+              <span aria-hidden className="pointer-events-none absolute flex flex-col items-center text-primary-dark" style={{ left: "50%", top: "50%", transform: "translate(-50%,-100%)", zIndex: 2 }}>
                 <MapPin size={40} strokeWidth={2} />
               </span>
-              <span aria-hidden className="pointer-events-none absolute rounded-full" style={{ insetInlineStart: "50%", top: "50%", width: 10, height: 4, background: "rgba(0,0,0,0.25)", transform: "translate(-50%,-1px)", zIndex: 2 }} />
+              <span aria-hidden className="pointer-events-none absolute rounded-full" style={{ left: "50%", top: "50%", width: 10, height: 4, background: "rgba(0,0,0,0.25)", transform: "translate(-50%,-1px)", zIndex: 2 }} />
               <div className="absolute" style={{ insetInlineStart: 12, insetInlineEnd: 68, top: 12, zIndex: 3 }}>
                 <label className="flex items-center bg-cream-card text-charcoal-soft" style={{ height: 44, borderRadius: 14, boxShadow: "0 4px 12px rgba(0,0,0,0.12)", padding: "0 12px", gap: 8 }}>
                   <Search size={16} aria-hidden />
-                  <input value={q} onChange={(e) => { setQ(e.target.value); setTyped(true); }} aria-label="Search an area" placeholder="Search an area" className="flex-1 min-w-0 bg-transparent outline-none text-[13px] font-semibold text-charcoal placeholder:text-charcoal-faint" />
+                  <input value={q} onChange={(e) => { setQ(e.target.value); setTyped(true); }} aria-label={t("Search an area")} placeholder={t("Search an area")} className="flex-1 min-w-0 bg-transparent outline-none text-[13px] font-semibold text-charcoal placeholder:text-charcoal-faint" />
                 </label>
                 {matches.length > 0 && (
                   <div className="mt-1 bg-cream-card overflow-hidden" style={{ borderRadius: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.12)" }}>
@@ -556,7 +558,7 @@ function PinMap({
               <button
                 type="button"
                 onClick={locate}
-                aria-label="Use current location"
+                aria-label={t("Use current location")}
                 className="tap absolute flex items-center justify-center rounded-full bg-cream-card text-primary-dark"
                 // Bottom 34 (frame 12) so the map's credit line stays readable under it.
                 style={{ insetInlineEnd: 12, bottom: 34, width: 44, height: 44, boxShadow: "0 4px 12px rgba(0,0,0,0.18)", zIndex: 3 }}
@@ -570,7 +572,7 @@ function PinMap({
           <MapPin size={14} aria-hidden className="text-primary-dark shrink-0" />
           {query.trim() || `${view.lat.toFixed(4)}, ${view.lng.toFixed(4)}`}
         </p>
-        <BizButton label="Confirm pin" disabled={!online} onClick={() => onConfirm(view)} />
+        <BizButton label={t("Confirm pin")} disabled={!online} onClick={() => onConfirm(view)} />
       </div>
     </div>
   );

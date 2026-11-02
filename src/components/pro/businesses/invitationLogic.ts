@@ -9,6 +9,7 @@
 
 import type { AcceptRefusalKind } from "../../../services/business-team/inviteRefusals";
 import { shortDay } from "../../../pages/business-team/teamLogic";
+import { t } from "../../../i18n/core";
 
 export type InvitationState = "open" | "expired" | "withdrawn";
 
@@ -28,20 +29,21 @@ export function invitationState(invite: Window, refused: AcceptRefusalKind | nul
   if (invite.acceptable === false) return "expired";
   // team_invite_is_acceptable: no expires_at is not acceptable.
   if (!invite.expiresAt) return "expired";
-  const t = Date.parse(invite.expiresAt);
-  if (Number.isNaN(t)) return "open";
-  return t > now.getTime() ? "open" : "expired";
+  const at = Date.parse(invite.expiresAt);
+  if (Number.isNaN(at)) return "open";
+  return at > now.getTime() ? "open" : "expired";
 }
 
 /** "Expires Oct 30" / "Expired Oct 14"; null when the window isn't known or it was withdrawn. */
 export function invitationExpiry(invite: Window, state: InvitationState, now: Date = new Date()): string | null {
   if (!invite?.expiresAt || state === "withdrawn") return null;
-  return `${state === "open" ? "Expires" : "Expired"} ${shortDay(invite.expiresAt, now)}`;
+  const date = shortDay(invite.expiresAt, now);
+  return state === "open" ? t("Expires {date}", { date }) : t("Expired {date}", { date });
 }
 
 /** The line that replaces the consent text on an invitation that can't be accepted. */
 export function deadInvitationLine(state: InvitationState, businessName: string): string | null {
-  if (state === "withdrawn") return `${businessName} withdrew this invitation, so it can't be accepted.`;
-  if (state === "expired") return `This invitation has expired. Ask ${businessName} to send it again.`;
+  if (state === "withdrawn") return t("{business} withdrew this invitation, so it can't be accepted.", { business: businessName });
+  if (state === "expired") return t("This invitation has expired. Ask {business} to send it again.", { business: businessName });
   return null;
 }

@@ -2,6 +2,8 @@
 // from the components so the node tests load them (and Fast refresh keeps
 // working on the component files).
 
+import { t } from "../../i18n/core";
+
 /** HANDOVER i: ring colour by adherence. 70 and above good, 40 to 69 needs watching, below 40 poor. */
 export type RingStatus = "good" | "watch" | "poor";
 export function ringStatus(v: number): RingStatus {
@@ -15,7 +17,7 @@ export const conflictBlocks = (kind: ConflictKind): boolean => kind === "allergy
 
 /** COPY CL2: the LockLine sentence. */
 export const lockLineText = (what: string, clientFirstName: string): string =>
-  `${what} not shared, so hidden. ${clientFirstName} can change this any time.`;
+  t("{what} not shared, so hidden. {name} can change this any time.", { what, name: clientFirstName });
 
 /** ProChart ranges (HANDOVER e). */
 export type ProChartRange = "W" | "M" | "3M" | "Y";

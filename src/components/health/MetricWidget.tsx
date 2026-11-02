@@ -3,6 +3,7 @@ import { ChevronRight, Plus } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { textPx, linePx } from "../../theme/textSize";
 import { heroPatternUrl, type HeroPatternMetric } from "../../utils/assetUrls";
+import { t } from "../../i18n/core";
 
 // V6-56: ONE metric widget for Home and Health, with two literal presets.
 //
@@ -171,10 +172,10 @@ export const MetricWidget: React.FC<MetricWidgetProps> = ({
   pattern,
   chevron,
   state = "ready",
-  emptyTitle = "No readings yet",
+  emptyTitle = t("No readings yet"),
   emptyHint,
-  errorTitle = "Couldn't update",
-  errorHint = "Tap to retry",
+  errorTitle = t("Couldn't update"),
+  errorHint = t("Tap to retry"),
   onRetry,
   onClick,
   ariaLabel,
@@ -183,8 +184,8 @@ export const MetricWidget: React.FC<MetricWidgetProps> = ({
   children,
   bodyGap,
   headerGeometry,
-  offlineTitle = "You're offline",
-  offlineHint = "Shows when you reconnect",
+  offlineTitle = t("You're offline"),
+  offlineHint = t("Shows when you reconnect"),
 }) => {
   const { theme, accessibility } = useApp();
   const dark = theme === "dark";
@@ -339,7 +340,7 @@ export const MetricWidget: React.FC<MetricWidgetProps> = ({
   return (
     <Tag
       {...(interactive ? { type: "button" as const, onClick: handle } : {})}
-      aria-label={ariaLabel ?? (state === "loading" ? `Loading ${label}` : undefined)}
+      aria-label={ariaLabel ?? (state === "loading" ? t("Loading {label}", { label }) : undefined)}
       aria-busy={state === "loading" ? true : undefined}
       className={`tap relative overflow-hidden text-start flex flex-col ${className ?? ""}`}
       style={{

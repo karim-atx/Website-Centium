@@ -6,6 +6,8 @@
 import { time12 } from "../../utils/time12";
 import { DAY_SHORT } from "../../utils/week";
 import { HIRING_ERROR_TEXT } from "../hiring/model";
+import { getLanguage, t, tn } from "../../i18n/core";
+import { ARABIC_LOCALE } from "../../i18n/format";
 
 // ---------------------------------------------------------------------------
 // Refusals
@@ -54,8 +56,6 @@ export function busyDateOf(message: string | null | undefined): string | null {
   return m ? shortDay(m[1]) : null;
 }
 
-const CONNECTION = "Check your connection and try again.";
-
 /**
  * One line per refusal, per action. OURS (no frame draws the server's
  * refusals): the B9 code meanings in the app's plain voice.
@@ -65,50 +65,52 @@ export function refusalMessage(action: ScheduleAction, error: DbError | null | u
   switch (r) {
     case "busy": {
       const on = busyDateOf(error?.message);
-      return on ? `That instructor is already teaching at that time on ${on}. Choose someone else or another time.` : "That instructor is already teaching at that time. Choose someone else or another time.";
+      return on ? t("That instructor is already teaching at that time on {day}. Choose someone else or another time.", { day: on }) : t("That instructor is already teaching at that time. Choose someone else or another time.");
     }
     case "cancelled":
-      return "This class was cancelled, so it can't be changed.";
+      return t("This class was cancelled, so it can't be changed.");
     case "booked":
-      return `Someone has booked this class, so it can't be deleted. Cancel it instead and the booked ${people} are told.`;
+      return people === "clients"
+        ? t("Someone has booked this class, so it can't be deleted. Cancel it instead and the booked clients are told.")
+        : t("Someone has booked this class, so it can't be deleted. Cancel it instead and the booked members are told.");
     case "started":
-      return "This class has already started.";
+      return t("This class has already started.");
     case "not_team":
       // Database #38: save_class_series, edit_class, assign_class_instructor and the
       // business_classes trigger name only a Team professional (ATX76). The B-MA.6 note's words.
       return HIRING_ERROR_TEXT.instructor_not_on_team;
     case "capacity":
-      return error?.message || "Capacity can't go below the number already booked.";
+      return error?.message || t("Capacity can't go below the number already booked.");
     case "denied":
-      return "Your role can't change the schedule. Ask the business owner.";
+      return t("Your role can't change the schedule. Ask the business owner.");
     case "gone":
-      return "This class isn't on your schedule any more.";
+      return t("This class isn't on your schedule any more.");
     case "invalid":
-      return action === "move" ? "Pick a time from now on, with the end after the start." : "Something in this class can't be saved. Check the fields and try again.";
+      return action === "move" ? t("Pick a time from now on, with the end after the start.") : t("Something in this class can't be saved. Check the fields and try again.");
     default:
       break;
   }
   switch (action) {
     case "cancel":
-      return `Couldn't cancel the session. ${CONNECTION}`;
+      return t("Couldn't cancel the session. Check your connection and try again.");
     case "move":
-      return `Couldn't move the class. ${CONNECTION}`;
+      return t("Couldn't move the class. Check your connection and try again.");
     case "assign":
-      return `Couldn't assign. ${CONNECTION}`;
+      return t("Couldn't assign. Check your connection and try again.");
     case "end":
-      return `Couldn't stop the repeat. ${CONNECTION}`;
+      return t("Couldn't stop the repeat. Check your connection and try again.");
     case "delete":
-      return `Couldn't delete the class. ${CONNECTION}`;
+      return t("Couldn't delete the class. Check your connection and try again.");
     case "policy":
-      return "Couldn't save. Try again.";
+      return t("Couldn't save. Try again.");
     case "free":
-      return `Couldn't check who's free. ${CONNECTION}`;
+      return t("Couldn't check who's free. Check your connection and try again.");
     case "conflicts":
-      return `Couldn't check for clashes. ${CONNECTION}`;
+      return t("Couldn't check for clashes. Check your connection and try again.");
     case "edit":
-      return "Couldn't save your changes. Check your connection and tap Retry. Everything you entered is kept.";
+      return t("Couldn't save your changes. Check your connection and tap Retry. Everything you entered is kept.");
     default:
-      return "Couldn't save the class. Check your connection and tap Retry. Everything you entered is kept.";
+      return t("Couldn't save the class. Check your connection and tap Retry. Everything you entered is kept.");
   }
 }
 
@@ -129,15 +131,17 @@ export function isoWeekday(day: string): number {
   return ((at(day).getDay() + 6) % 7) + 1;
 }
 
-/** "Wed, Oct 7" */
+/** "Wed, Oct 7" (in Arabic, the weekday and month names in Arabic). */
 export function shortDay(day: string): string {
   const d = at(day);
+  if (getLanguage() === "ar") return d.toLocaleDateString(ARABIC_LOCALE, { weekday: "short", day: "numeric", month: "short" });
   return `${DAY_SHORT[isoWeekday(day) - 1]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
 /** "Nov 30" (the series toast's "until {Mon D}"). */
 export function dayMonth(day: string): string {
   const d = at(day);
+  if (getLanguage() === "ar") return d.toLocaleDateString(ARABIC_LOCALE, { day: "numeric", month: "short" });
   return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
@@ -185,11 +189,19 @@ export function seriesDates(rule: RepeatRule, limit: number, horizonDays = 366):
 }
 
 const sortDays = (ws: number[]) => [...new Set(ws)].filter((w) => w >= 1 && w <= 7).sort((a, b) => a - b);
-const and = (items: string[]) => (items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`);
+const and = (items: string[]) => {
+  if (items.length <= 1) return items.join("");
+  if (getLanguage() === "en") return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+  return t("{a} and {b}", { a: items.slice(0, -1).join("، "), b: items[items.length - 1] });
+};
+/** A short weekday name in the app's language ("Tue", «الثلاثاء»). */
+const dayShort = (w: number) => t(DAY_SHORT[w - 1]);
+/** ", " in English, "، " in Arabic. */
+const comma = () => (getLanguage() === "en" ? ", " : "، ");
 
 /** "Tue and Thu", "Mon, Wed and Fri" (AN3-043 row 7). */
 export function daysText(weekdays: number[]): string {
-  return and(sortDays(weekdays).map((w) => DAY_SHORT[w - 1]));
+  return and(sortDays(weekdays).map(dayShort));
 }
 
 /**
@@ -201,9 +213,14 @@ export function daysText(weekdays: number[]): string {
 export function repeatSummary(rule: Pick<RepeatRule, "weekdays" | "intervalWeeks" | "untilOn" | "count">, startTime: string): string {
   const ws = sortDays(rule.weekdays);
   const timeText = time12(startTime);
-  const every = rule.intervalWeeks > 1 ? `Every ${rule.intervalWeeks} weeks on ${daysText(ws)}` : ws.length === 7 ? "Every day" : `Every ${daysText(ws)}`;
-  const end = rule.untilOn ? `, until ${dayMonth(rule.untilOn)}` : rule.count ? `, ${rule.count} ${rule.count === 1 ? "session" : "sessions"}` : "";
-  return `${every} at ${timeText}${end}`;
+  const every =
+    rule.intervalWeeks > 1
+      ? t("Every {n} weeks on {days}", { n: rule.intervalWeeks, days: daysText(ws) })
+      : ws.length === 7
+        ? t("Every day")
+        : t("Every {days}", { days: daysText(ws) });
+  const end = rule.untilOn ? t(", until {date}", { date: dayMonth(rule.untilOn) }) : rule.count ? tn(rule.count, ", {n} session", ", {n} sessions") : "";
+  return `${t("{every} at {time}", { every, time: timeText })}${end}`;
 }
 
 /** "Next: Tue 7 Oct · Thu 9 Oct · Tue 14 Oct" without the "Next: " (AN3-043 row 7). */
@@ -217,9 +234,9 @@ export function nextLine(rule: RepeatRule): string {
  * 7:00 AM" (OURS); an end "…, until 30 Nov" (OURS).
  */
 export function repeatLine(rule: Pick<RepeatRule, "weekdays" | "intervalWeeks" | "untilOn">, startTime: string): string {
-  const ws = sortDays(rule.weekdays).map((w) => DAY_SHORT[w - 1]);
-  const head = rule.intervalWeeks > 1 ? `Every ${rule.intervalWeeks} weeks on ${ws.join(", ")}` : `Every ${ws.join(", ")}`;
-  return `${head} at ${time12(startTime)}${rule.untilOn ? `, until ${dayMonth(rule.untilOn)}` : ""}`;
+  const ws = sortDays(rule.weekdays).map(dayShort).join(comma());
+  const head = rule.intervalWeeks > 1 ? t("Every {n} weeks on {days}", { n: rule.intervalWeeks, days: ws }) : t("Every {days}", { days: ws });
+  return `${t("{every} at {time}", { every: head, time: time12(startTime) })}${rule.untilOn ? t(", until {date}", { date: dayMonth(rule.untilOn) }) : ""}`;
 }
 
 /**
@@ -230,9 +247,9 @@ export function repeatLine(rule: Pick<RepeatRule, "weekdays" | "intervalWeeks" |
 export function repeatsSentence(rule: Pick<RepeatRule, "weekdays" | "intervalWeeks">, startTime: string): string {
   const ws = sortDays(rule.weekdays);
   const key = ws.join(",");
-  const days = key === "1,2,3,4,5" ? "every weekday" : ws.length === 7 ? "every day" : `every ${daysText(ws)}`;
-  const every = rule.intervalWeeks > 1 ? `every ${rule.intervalWeeks} weeks on ${daysText(ws)}` : days;
-  return `This class repeats ${every} at ${time12(startTime)}.`;
+  const days = key === "1,2,3,4,5" ? t("every weekday") : ws.length === 7 ? t("every day") : t("every {days}", { days: daysText(ws) });
+  const every = rule.intervalWeeks > 1 ? t("every {n} weeks on {days}", { n: rule.intervalWeeks, days: daysText(ws) }) : days;
+  return t("This class repeats {every} at {time}.", { every, time: time12(startTime) });
 }
 
 /**
@@ -244,12 +261,15 @@ export function repeatsSentence(rule: Pick<RepeatRule, "weekdays" | "intervalWee
  */
 export function seriesToast(rule: RepeatRule, created: number): string {
   const ws = daysText(rule.weekdays);
-  const every = rule.intervalWeeks > 1 ? `every ${rule.intervalWeeks} weeks on ${ws}` : `every ${ws}`;
+  const every = rule.intervalWeeks > 1 ? t("every {n} weeks on {days}", { n: rule.intervalWeeks, days: ws }) : t("every {days}", { days: ws });
   if (!rule.untilOn && !rule.count) {
-    return rule.intervalWeeks > 1 ? `Class created: ${every} from ${shortDay(rule.startsOn)}` : `Weekly class created: ${every} from ${shortDay(rule.startsOn)}`;
+    return rule.intervalWeeks > 1
+      ? t("Class created: {every} from {date}", { every, date: shortDay(rule.startsOn) })
+      : t("Weekly class created: {every} from {date}", { every, date: shortDay(rule.startsOn) });
   }
-  const n = `${created} ${created === 1 ? "session" : "sessions"} created, ${every}`;
-  return rule.untilOn ? `${n} until ${dayMonth(rule.untilOn)}` : n;
+  return rule.untilOn
+    ? tn(created, "{n} session created, {every} until {date}", "{n} sessions created, {every} until {date}", { every, date: dayMonth(rule.untilOn) })
+    : tn(created, "{n} session created, {every}", "{n} sessions created, {every}", { every });
 }
 
 // ---------------------------------------------------------------------------
@@ -263,23 +283,26 @@ export function seriesToast(rule: RepeatRule, created: number): string {
  * refunds on its own).
  */
 export function cancelBody(booked: number, waitlist: number, paid: number, people: "clients" | "members"): string {
-  const parts = [booked > 0 ? `${booked} booked ${booked === 1 ? people.slice(0, -1) : people} ${booked === 1 ? "gets" : "get"} a message and their bookings are released.` : "Nobody has booked yet."];
-  if (waitlist > 0) parts.push(`${waitlist} on the waitlist ${waitlist === 1 ? "is" : "are"} told too.`);
-  if (paid > 0) parts.push(`${paid} paid ${paid === 1 ? "booking stays" : "bookings stay"} paid. Record any refund in Revenue.`);
+  const bookedLine =
+    people === "clients"
+      ? tn(booked, "{n} booked client gets a message and their bookings are released.", "{n} booked clients get a message and their bookings are released.")
+      : tn(booked, "{n} booked member gets a message and their bookings are released.", "{n} booked members get a message and their bookings are released.");
+  const parts = [booked > 0 ? bookedLine : t("Nobody has booked yet.")];
+  if (waitlist > 0) parts.push(tn(waitlist, "{n} on the waitlist is told too.", "{n} on the waitlist are told too."));
+  if (paid > 0) parts.push(tn(paid, "{n} paid booking stays paid. Record any refund in Revenue.", "{n} paid bookings stay paid. Record any refund in Revenue."));
   return parts.join(" ");
 }
 
 /** OP1-087 / OURS-AN3 C9: "{class} {day} is cancelled. {n} {people} were told." / "{class} {day} is cancelled." */
 export function cancelledToast(title: string, dayWords: string, told: number, people: "clients" | "members"): string {
-  const head = `${title} ${dayWords} is cancelled.`;
-  if (told <= 0) return head;
-  return `${head} ${told} ${told === 1 ? people.slice(0, -1) : people} ${told === 1 ? "was" : "were"} told.`;
+  const head = t("{class} {when} is cancelled.", { class: title, when: dayWords });
+  return `${head}${toldTail(told, people)}`;
 }
 
 /** " {n} {people} were told." or "" (OP1-073 T4, AN5-038 O4: only when the notice went out). */
 export function toldTail(told: number, people: "clients" | "members"): string {
   if (told <= 0) return "";
-  return ` ${told} ${told === 1 ? people.slice(0, -1) : people} ${told === 1 ? "was" : "were"} told.`;
+  return ` ${people === "clients" ? tn(told, "{n} client was told.", "{n} clients were told.") : tn(told, "{n} member was told.", "{n} members were told.")}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -342,20 +365,20 @@ export function policyValueOk(field: PolicyField, v: number | null): boolean {
 
 /** "12 hours before", "1 hour before", "At class time" (0). */
 export function hoursBefore(h: number): string {
-  if (h === 0) return "Until class time";
-  return `${h} ${h === 1 ? "hour" : "hours"} before`;
+  if (h === 0) return t("Until class time");
+  return tn(h, "{n} hour before", "{n} hours before");
 }
 
 /** "30 min before", "1 hour before", "2 hours before", "At class time". */
 export function minutesBefore(m: number): string {
-  if (m === 0) return "At class time";
-  if (m % 60 === 0) return `${m / 60} ${m === 60 ? "hour" : "hours"} before`;
-  return `${m} min before`;
+  if (m === 0) return t("At class time");
+  if (m % 60 === 0) return tn(m / 60, "{n} hour before", "{n} hours before");
+  return t("{n} min before", { n: m });
 }
 
 /** "14 days", "1 day". */
 export function daysAhead(d: number): string {
-  return `${d} ${d === 1 ? "day" : "days"}`;
+  return tn(d, "{n} day", "{n} days");
 }
 
 // ---------------------------------------------------------------------------
@@ -363,10 +386,30 @@ export function daysAhead(d: number): string {
 
 export type ClassLevel = "all_levels" | "beginner" | "intermediate" | "advanced";
 export const CLASS_LEVELS: { value: ClassLevel; label: string }[] = [
-  { value: "all_levels", label: "All levels" },
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
+  {
+    value: "all_levels",
+    get label() {
+      return t("All levels");
+    },
+  },
+  {
+    value: "beginner",
+    get label() {
+      return t("Beginner");
+    },
+  },
+  {
+    value: "intermediate",
+    get label() {
+      return t("Intermediate");
+    },
+  },
+  {
+    value: "advanced",
+    get label() {
+      return t("Advanced");
+    },
+  },
 ];
 export const ABOUT_MAX = 1000;
 export const BRING_MAX_ITEMS = 10;

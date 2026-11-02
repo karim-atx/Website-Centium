@@ -1,3 +1,4 @@
+import { tk } from "../../i18n/core";
 export type Tab = "diary" | "goals" | "prep";
 
 // Item 7 (mobile handoff): the segmented tab bar's three Food tabs, in the
@@ -6,7 +7,7 @@ export type Tab = "diary" | "goals" | "prep";
 // / Custom, renamed from Meal Prep by FO3.2). v6 FO1 S1: one fixed header on
 // every Food tab draws them, so GoalsPanel no longer has its own copy.
 export const foodTabs: { key: Tab; label: string; weight: number }[] = [
-  { key: "diary", label: "Diary", weight: 0.8 },
-  { key: "goals", label: "Goals & Macros", weight: 1.08 },
-  { key: "prep", label: "Custom", weight: 0.86 },
+  { key: "diary", label: tk("Diary"), weight: 0.8 },
+  { key: "goals", label: tk("Goals & Macros"), weight: 1.08 },
+  { key: "prep", label: tk("Custom"), weight: 0.86 },
 ];

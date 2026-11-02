@@ -1,4 +1,5 @@
 import type { Exercise, LoggedSet, PrescribedSetType } from "../../types";
+import { t, tk, tn } from "../../i18n/core";
 
 // Release 3 · W7 (CU1 logger): what the client sees of a coach's prescription
 // while logging, and what the session sends back. Pure, so it is tested
@@ -16,7 +17,7 @@ export function fmtKg(kg: number): string {
 
 /** The prescribed reps as text: "6", or the range "8 to 12" (COPY: ranges read "to", never a dash). */
 function repsText(ex: Pick<Exercise, "reps" | "minReps" | "maxReps">): string | null {
-  if (ex.minReps != null && ex.maxReps != null) return `${ex.minReps} to ${ex.maxReps}`;
+  if (ex.minReps != null && ex.maxReps != null) return t("{min} to {max}", { min: ex.minReps, max: ex.maxReps });
   if (ex.minReps != null) return `${ex.minReps}+`;
   if (ex.reps != null && ex.reps > 0) return String(ex.reps);
   return null;
@@ -29,9 +30,9 @@ export function targetWeight(ex: Pick<Exercise, "weightKg">, resolved: number | 
 }
 
 const TYPE_LEAD: Record<Exclude<PrescribedSetType, "normal">, string> = {
-  warmup: "Warm-up",
-  dropset: "Drop set",
-  pr: "Personal record",
+  warmup: tk("Warm-up"),
+  dropset: tk("Drop set"),
+  pr: tk("Personal record"),
 };
 
 /**
@@ -44,23 +45,37 @@ export function targetLine(
   setIdx: number,
   resolvedKg?: number | null
 ): string | null {
+  const { type, core, rpe } = targetParts(ex, setIdx, resolvedKg);
+  if (type !== "normal") return core ? `${t(TYPE_LEAD[type])} · ${core}` : t(TYPE_LEAD[type]);
+  if (!core && !rpe) return null;
+  return core ? `${t("Target {core}", { core })}${rpe ? ` · ${rpe}` : ""}` : t("Target {core}", { core: rpe! });
+}
+
+/**
+ * The pieces of a target line, each already in the app's language, so the
+ * two sentences built from them never take a translated string apart.
+ */
+function targetParts(
+  ex: Pick<Exercise, "reps" | "minReps" | "maxReps" | "weightKg" | "rpe" | "setTypes">,
+  setIdx: number,
+  resolvedKg?: number | null
+): { type: PrescribedSetType; core: string | null; rpe: string | null } {
   const reps = repsText(ex);
   const kg = targetWeight(ex, resolvedKg);
+  const range = ex.minReps != null && ex.maxReps != null;
   // Exact reps as drawn ("6 × 82.5 kg"); a range keeps its unit so it reads
   // "8 to 12 reps × 70 kg" (the frame draws exact reps only).
   const core =
     reps && kg != null
-      ? `${reps}${reps.includes(" to ") ? " reps" : ""} × ${fmtKg(kg)} kg`
+      ? range
+        ? t("{reps} reps × {kg} kg", { reps, kg: fmtKg(kg) })
+        : `${reps} × ${fmtKg(kg)} kg`
       : reps
-        ? `${reps} reps`
+        ? t("{reps} reps", { reps })
         : kg != null
           ? `${fmtKg(kg)} kg`
           : null;
-  const type = prescribedType(ex, setIdx);
-  if (type !== "normal") return core ? `${TYPE_LEAD[type]} · ${core}` : TYPE_LEAD[type];
-  const rpe = ex.rpe != null ? `RPE ${ex.rpe}` : null;
-  if (!core && !rpe) return null;
-  return core ? `Target ${core}${rpe ? ` · ${rpe}` : ""}` : `Target ${rpe}`;
+  return { type: prescribedType(ex, setIdx), core, rpe: ex.rpe != null ? `RPE ${ex.rpe}` : null };
 }
 
 /**
@@ -81,7 +96,7 @@ export function loggedOffText(
   const repsOff = exactReps != null && set.reps > 0 && set.reps !== exactReps;
   if (weightOff && repsOff) return `${set.reps} × ${fmtKg(set.weightKg!)} kg`;
   if (weightOff) return `${fmtKg(set.weightKg!)} kg`;
-  if (repsOff) return `${set.reps} reps`;
+  if (repsOff) return t("{reps} reps", { reps: set.reps });
   return null;
 }
 
@@ -169,15 +184,18 @@ export function swapsPayload(swaps: SessionSwap[]): SessionSwap[] | null {
  */
 export function resultsSentMessage(coachName: string, swapCount: number, changedSets: number): string {
   const parts: string[] = [];
-  if (swapCount === 1) parts.push("your swap");
-  else if (swapCount > 1) parts.push(`your ${swapCount} swaps`);
-  if (changedSets > 0) parts.push("changed sets");
-  return parts.length ? `Results sent to ${coachName}, with ${parts.join(" and ")}.` : `Results sent to ${coachName}.`;
+  if (swapCount === 1) parts.push(t("your swap"));
+  else if (swapCount > 1) parts.push(t("your {n} swaps", { n: swapCount }));
+  if (changedSets > 0) parts.push(t("changed sets"));
+  return parts.length
+    ? t("Results sent to {name}, with {items}.", { name: coachName, items: parts.join(t(" and ")) })
+    : t("Results sent to {name}.", { name: coachName });
 }
 
 /** "Sent to Alex · 1 swap" on a History card (CU1 v4). */
 export function sentLine(coachName: string, swapCount: number): string {
-  return swapCount > 0 ? `Sent to ${coachName} · ${swapCount} ${swapCount === 1 ? "swap" : "swaps"}` : `Sent to ${coachName}`;
+  const sent = t("Sent to {name}", { name: coachName });
+  return swapCount > 0 ? `${sent} · ${tn(swapCount, "{n} swap", "{n} swaps")}` : sent;
 }
 
 /**
@@ -192,14 +210,15 @@ export function optionsTargetText(
 ): string | null {
   const line = targetLine(ex, setIdx, resolvedKg);
   if (!line) return null;
-  const who = coachName ? `${coachName}'s target` : "Your coach's target";
-  const type = prescribedType(ex, setIdx);
+  const who = coachName ? t("{name}'s target", { name: coachName }) : t("Your coach's target");
+  const { type, core, rpe } = targetParts(ex, setIdx, resolvedKg);
   if (type !== "normal") {
-    const [lead, ...rest] = line.split(" · ");
-    return rest.length ? `${who}: ${lead.toLowerCase()}, ${rest.join(" · ")}` : `${who}: ${lead.toLowerCase()}`;
+    const lead = t(TYPE_LEAD[type]).toLowerCase();
+    return core ? t("{who}: {type}, {detail}", { who, type: lead, detail: core }) : t("{who}: {detail}", { who, detail: lead });
   }
   // "Target 6 × 82.5 kg · RPE 8" → "6 × 82.5 kg at RPE 8".
-  return `${who}: ${line.replace(/^Target /, "").replace(" · RPE ", " at RPE ")}`;
+  if (core && rpe) return t("{who}: {detail} at RPE {rpe}", { who, detail: core, rpe: ex.rpe! });
+  return t("{who}: {detail}", { who, detail: core ?? rpe! });
 }
 
 /** What identifies the library row an exercise names. */
