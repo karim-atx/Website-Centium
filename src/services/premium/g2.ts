@@ -34,10 +34,13 @@ export function isMissingColumn(e: Err): boolean {
 
 /**
  * EG phase 1: read through the counting function, and fall back to today's
- * view only when the function is missing (a Database without G2). Any other
- * failure (ATX02, offline, a refusal) is the function's own answer.
+ * view on ANY failure except ATX02 (the directory limit, worded calmly by the
+ * reader). The views stay readable until the Database's phase 2, so a counting
+ * function that is missing, refused (live on 2026-11-02 the four answered
+ * 42501 "permission denied for function count_directory_read" to everyone)
+ * or failing never takes the directory down.
  */
-export const directoryFallback = (e: Err): boolean => isMissingFunction(e);
+export const directoryFallback = (e: Err): boolean => !!e && e.code !== "ATX02";
 
 // ---- which limits apply ----
 
