@@ -45,6 +45,9 @@ import type { ProNotification } from "../../services/pro/notifications";
 import { proMemberTarget } from "../../services/notifications/notificationsModel";
 import { imageHome } from "../../services/moderation/imageCopy";
 import { HeldShareCardSheet } from "../../components/share/HeldShareCardSheet";
+import { t, tn } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
+import { monthLong, monthShort } from "../../components/pro/proDates";
 
 /**
  * Release 3 · Home (/app/pro, CL1 v6; HANDOVER f "CL · Home"; FINAL_PLAN W2).
@@ -62,8 +65,6 @@ import { HeldShareCardSheet } from "../../components/share/HeldShareCardSheet";
  * The roster list moved to Clients (W3); hire plans are edited in More ›
  * Services and pricing (MO5, W6), where Get set up sends you.
  */
-const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export default function Home() {
   const { user, authUserId, professionalClients, rosterLoading, refreshRoster } = useApp();
@@ -72,8 +73,8 @@ export default function Home() {
   const dark = useIsDark();
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const t = window.setInterval(() => setNow(new Date()), 60_000);
-    return () => window.clearInterval(t);
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
   }, []);
   const today = localIso(now);
   const week = useMemo(() => mondayFirstWeek(today), [today]);
@@ -151,7 +152,7 @@ export default function Home() {
   const nameOf = useCallback(
     (clientId: string) => {
       const c = professionalClients.find((x) => x.clientId === clientId);
-      return c ? `${c.prefix ? `${c.prefix} ` : ""}${c.name}` : "Client";
+      return c ? `${c.prefix ? `${c.prefix} ` : ""}${c.name}` : t("Client");
     },
     [professionalClients]
   );
@@ -167,7 +168,7 @@ export default function Home() {
           key: x.id,
           name: nameOf(x.clientId),
           item: x.name,
-          line: `Ends ${shortDate(x.endsOn)}${x.week ? ` · week ${x.week.n} of ${x.week.of}` : ""}`,
+          line: x.week ? t("Ends {date} · week {n} of {of}", { date: shortDate(x.endsOn), n: x.week.n, of: x.week.of }) : t("Ends {date}", { date: shortDate(x.endsOn) }),
           onOpen: () => navigate(proClientPath(x.clientId, "plan")),
         })),
       });
@@ -193,7 +194,7 @@ export default function Home() {
             key: x.id,
             name: nameOf(x.clientId),
             item: x.name,
-            line: `Ends ${shortDate(x.endsOn ?? today)}${wk ? ` · week ${wk}` : ""}`,
+            line: wk ? t("Ends {date} · week {n}", { date: shortDate(x.endsOn ?? today), n: wk }) : t("Ends {date}", { date: shortDate(x.endsOn ?? today) }),
             onOpen: () => navigate(mealPlansHref("nutrition", "plans", { plan: x.planId })),
           };
         }),
@@ -264,7 +265,7 @@ export default function Home() {
       setAccepting(null);
       if (res.status === "ok") {
         await refreshRoster();
-        setHubToast({ tone: "ok", text: `${req.name} is now in Onboarding.`, action: { label: "View", onClick: () => navigate(proClientPath(req.customerId)) } });
+        setHubToast({ tone: "ok", text: t("{name} is now in Onboarding.", { name: req.name }), action: { label: t("View"), onClick: () => navigate(proClientPath(req.customerId)) } });
       }
       inbox.reload();
       return;
@@ -276,10 +277,10 @@ export default function Home() {
       return;
     }
     if (res.status === "tier_limit_reached") {
-      setAcceptError(planLabel ? `You've reached the client limit on your ${planLabel} plan.` : "You've reached the client limit on your plan.");
+      setAcceptError(planLabel ? t("You've reached the client limit on your {plan} plan.", { plan: planLabel }) : t("You've reached the client limit on your plan."));
       return;
     }
-    setAcceptError(res.status === "permission_denied" ? "You don't have permission to answer that request." : res.message);
+    setAcceptError(res.status === "permission_denied" ? t("You don't have permission to answer that request.") : res.message);
   };
 
   const decline = async (reason: DeclineReason | null, message: string) => {
@@ -299,7 +300,7 @@ export default function Home() {
         const r = await rejectHireRequest(target.row.id);
         ok = r.status === "ok";
         gone = r.status === "already_resolved" || r.status === "not_found";
-        if (!ok && !gone) err = r.status === "error" ? r.message : "Couldn't decline. Try again.";
+        if (!ok && !gone) err = r.status === "error" ? r.message : t("Couldn't decline. Try again.");
       }
     } else if (reason) {
       const r = await declineHireWithReason(target.row.id, reason, message);
@@ -316,16 +317,16 @@ export default function Home() {
       return;
     }
     setDeclining(null);
-    const who = target.kind === "request" ? target.row.name : target.row.clientFirstName || "The client";
+    const who = target.kind === "request" ? target.row.name : target.row.clientFirstName || t("The client");
     if (ok) {
       const label = reason ? DECLINE_REASONS.find((r) => r.value === reason)?.label : null;
-      const head = label ? `Request declined: ${label}.` : "Request declined.";
+      const head = label ? t("Request declined: {reason}.", { reason: t(label) }) : t("Request declined.");
       // HO14: a declined request can be undone for 5 minutes, and the client
       // hears about it only after that (20261124120000); a hire's decline is final.
       if (target.kind === "request") {
         const row = target.row;
-        setHubToast({ tone: "info", text: `${head} ${who} is told in 5 minutes.`, action: { label: "Undo", onClick: () => void undoDecline(row.id, row.name) } });
-      } else setHubToast({ tone: "info", text: `${head} ${who} has been told.` });
+        setHubToast({ tone: "info", text: t("{head} {who} is told in 5 minutes.", { head, who }), action: { label: t("Undo"), onClick: () => void undoDecline(row.id, row.name) } });
+      } else setHubToast({ tone: "info", text: t("{head} {who} has been told.", { head, who }) });
     }
     if (target.kind === "hire") setHireReloadKey((k) => k + 1);
     inbox.reload();
@@ -333,7 +334,7 @@ export default function Home() {
 
   const undoDecline = async (id: string, name: string) => {
     const r = await inbox.undoDecline(id);
-    setHubToast(r.ok ? { tone: "ok", text: `${name}'s request is back in Requests.` } : { tone: "info", text: r.message });
+    setHubToast(r.ok ? { tone: "ok", text: t("{name}'s request is back in Requests.", { name }) } : { tone: "info", text: r.message });
   };
 
   const answerInvitation = async (e: MyEmployment, yes: boolean) => {
@@ -341,7 +342,7 @@ export default function Home() {
     setInvitationBusy(e.businessId);
     const r = yes ? await acceptEmployment(e.businessId) : await removeMyEmployment(e.businessId);
     setInvitationBusy(null);
-    setHubToast(r.ok ? { tone: yes ? "ok" : "info", text: yes ? `You joined ${e.businessName}.` : `Invitation from ${e.businessName} declined.` } : { tone: "info", text: r.message });
+    setHubToast(r.ok ? { tone: yes ? "ok" : "info", text: yes ? t("You joined {business}.", { business: e.businessName }) : t("Invitation from {business} declined.", { business: e.businessName }) } : { tone: "info", text: r.message });
     inbox.reload();
   };
 
@@ -437,9 +438,9 @@ export default function Home() {
   const nowKey = `${today} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   const next = mine.find((s) => `${s.date} ${s.startTime}` >= nowKey) ?? null;
   const patients = lane === "clinical_overview";
-  const prevMonth = MONTHS_LONG[(new Date(`${today}T00:00:00`).getMonth() + 11) % 12];
-  const prevWord = range === "month" ? "last month" : "last week";
-  const vsLabel = range === "month" ? `vs ${prevMonth}` : "vs last week";
+  const prevMonth = monthLong((new Date(`${today}T00:00:00`).getMonth() + 11) % 12);
+  const prevWord = range === "month" ? t("last month") : t("last week");
+  const vsLabel = range === "month" ? t("vs {month}", { month: prevMonth }) : t("vs last week");
 
   const actionTargets = [
     () => openAdd(),
@@ -447,11 +448,10 @@ export default function Home() {
     () => navigate(lane === "full_coaching" ? `${PRO_ROUTES.library}/programmes` : lane === "nutrition" ? PRO_ROUTES.mealPlans : PRO_ROUTES.clients),
     () => openHub("review"),
   ];
-  const actions: RingAction[] = LANE_ACTION_ICONS[lane].map(([icon, label], i) => ({ icon, label, onClick: actionTargets[i] }));
+  const actions: RingAction[] = LANE_ACTION_ICONS[lane].map(([icon, label], i) => ({ icon, label: t(label), onClick: actionTargets[i] }));
 
   const stripEntries: StripEntry[] = (strip ?? []).map((s) => ({ clientId: s.clientId, name: nameOf(s.clientId), trend: s.trend }));
   const weekCount = focus ? mine.filter((s) => week.includes(s.date)).length : 0;
-  const word = patients ? "appointment" : "session";
 
   const firstName = user.firstName?.trim() || "";
   const initial = (firstName[0] ?? "").toUpperCase();
@@ -471,7 +471,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => (hubOpen ? setHubOpen(false) : openHub("requests"))}
-            aria-label={inbox.unread > 0 ? `Notifications, ${inbox.unread} unread` : "Notifications"}
+            aria-label={inbox.unread > 0 ? t("Notifications, {n} unread", { n: inbox.unread }) : t("Notifications")}
             aria-expanded={hubOpen}
             className="tap relative flex items-center justify-center"
             style={{ width: 36, height: 36, borderRadius: 9999, background: INK.card, border: `1px solid rgb(var(--c-charcoal) / 0.11)` }}
@@ -529,7 +529,7 @@ export default function Home() {
           lane={lane}
           range={range}
           onRange={setRange}
-          focusLabel={focusUser ? `${focusUser.prefix ? `${focusUser.prefix} ` : ""}${focusUser.name}` : patients ? "All patients" : "All clients"}
+          focusLabel={focusUser ? `${focusUser.prefix ? `${focusUser.prefix} ` : ""}${focusUser.name}` : patients ? t("All patients") : t("All clients")}
           focusInitials={focusUser ? initialsOfName(focusUser.name) : null}
           onPicker={(el) => {
             setPickerAnchor(el);
@@ -547,18 +547,18 @@ export default function Home() {
           onSession={(s, a) => void openSession(s, a)}
           prevWord={prevWord}
           vsLabel={vsLabel}
-          monthShort={MONTHS_SHORT[new Date(`${today}T00:00:00`).getMonth()]}
+          monthShort={monthShort(new Date(`${today}T00:00:00`).getMonth())}
           emptyCta={
             empty ? (
               <div style={{ marginTop: 14 }}>
-                <CtaButton size="page" label="Add your first client" icon={<UserPlus size={15} aria-hidden />} onClick={() => openAdd()} />
+                <CtaButton size="page" label={t("Add your first client")} icon={<UserPlus size={15} aria-hidden />} onClick={() => openAdd()} />
               </div>
             ) : undefined
           }
         >
           {!empty &&
             (focusUser && focus ? (
-              <FocusRow name={focusUser.name} line={`${weekCount} ${word}${weekCount === 1 ? "" : "s"} this week`} onOpen={() => navigate(proClientPath(focus))} />
+              <FocusRow name={focusUser.name} line={patients ? tn(weekCount, "{n} appointment this week", "{n} appointments this week") : tn(weekCount, "{n} session this week", "{n} sessions this week")} onOpen={() => navigate(proClientPath(focus))} />
             ) : (
               <ClientStrip entries={stripEntries} noun={patients ? "patient" : "client"} onOpen={(id) => navigate(proClientPath(id))} />
             ))}
@@ -567,10 +567,10 @@ export default function Home() {
 
       {empty ? (
         <section>
-          <SectionLabel className="mb-1">Ways to add</SectionLabel>
-          <GatedRow icon={QrCode} title="Invite clients" subtitle={invitesAllowed ? "Share it anywhere" : INVITE_LOCKED_MESSAGE} onOpen={invitesAllowed ? () => navigate(`${PRO_ROUTES.home}/invite`) : undefined} />
-          <GatedRow icon={Mail} title="Invite by email or phone" subtitle={invitesAllowed ? "We send them a link" : INVITE_LOCKED_MESSAGE} onOpen={invitesAllowed ? () => openAdd("contact") : undefined} />
-          <SettingsRow icon={UserPen} title="Add someone offline" subtitle="Keep notes before they join" onClick={() => openAdd("offline")} />
+          <SectionLabel className="mb-1">{t("Ways to add")}</SectionLabel>
+          <GatedRow icon={QrCode} title={t("Invite clients")} subtitle={invitesAllowed ? t("Share it anywhere") : t(INVITE_LOCKED_MESSAGE)} onOpen={invitesAllowed ? () => navigate(`${PRO_ROUTES.home}/invite`) : undefined} />
+          <GatedRow icon={Mail} title={t("Invite by email or phone")} subtitle={invitesAllowed ? t("We send them a link") : t(INVITE_LOCKED_MESSAGE)} onOpen={invitesAllowed ? () => openAdd("contact") : undefined} />
+          <SettingsRow icon={UserPen} title={t("Add someone offline")} subtitle={t("Keep notes before they join")} onClick={() => openAdd("offline")} />
         </section>
       ) : (
         <LaneCard
@@ -586,9 +586,9 @@ export default function Home() {
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         anchor={pickerAnchor}
-        heading={patients ? "Patients" : "Clients"}
+        heading={patients ? t("Patients") : t("Clients")}
         options={[
-          { value: "all", label: patients ? "All patients" : "All clients" },
+          { value: "all", label: patients ? t("All patients") : t("All clients") },
           ...professionalClients.filter((c) => c.clientId).map((c) => ({ value: c.clientId as string, label: `${c.prefix ? `${c.prefix} ` : ""}${c.name}` })),
         ]}
         selected={focus ?? "all"}
@@ -604,8 +604,8 @@ export default function Home() {
         open={hubOpen}
         onClose={() => setHubOpen(false)}
         tab={hubTab}
-        onTab={(t) => {
-          setHubTab(t);
+        onTab={(tab) => {
+          setHubTab(tab);
           setHubToast(null);
         }}
         lane={lane}
@@ -660,7 +660,7 @@ export default function Home() {
         pendingCount={inbox.requests.length}
         onInviteClients={() => navigate(`${PRO_ROUTES.home}/invite`)}
         onPendingRequests={() => openHub("requests")}
-        onOfflineAdded={(name, note) => setPageToast({ text: note ? `${name} added. ${note}` : `${name} added.` })}
+        onOfflineAdded={(name, note) => setPageToast({ text: note ? t("{name} added. {note}", { name, note }) : t("{name} added.", { name }) })}
       />
       <HeldShareCardSheet itemId={heldCardId} onClose={() => setHeldCardId(null)} />
       <Toast open={!!pageToast} message={pageToast?.text ?? ""} action={pageToast?.action} onExpire={() => setPageToast(null)} />
@@ -670,7 +670,7 @@ export default function Home() {
 
 function shortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
-  return `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`;
+  return d.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 }
 
 function initialsOfName(name: string): string {

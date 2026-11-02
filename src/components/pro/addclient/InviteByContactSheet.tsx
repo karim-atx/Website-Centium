@@ -9,6 +9,7 @@ import { INK } from "../proInk";
 import { defaultInviteMessage, fetchCurrentInviteLink, inviteByContact, smsHref, type ContactChannel } from "../../../services/pro/invites";
 import { INVITE_MESSAGE_MAX, INVITE_NAME_MAX } from "../../../services/pro/inviteErrors";
 import { ProField, ProTextArea } from "./fields";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · HO3 "Invite by email or phone" (DB-2 invite_client; DECISIONS:
@@ -57,7 +58,7 @@ export const InviteByContactSheet: React.FC<{ open: boolean; onClose: () => void
     onClose();
   };
 
-  const first = user.firstName || "your professional";
+  const first = user.firstName || t("your professional");
   const text = message ?? (code ? defaultInviteMessage(first, code) : "");
   const address = tab === "email" ? email : phone;
 
@@ -72,13 +73,13 @@ export const InviteByContactSheet: React.FC<{ open: boolean; onClose: () => void
       return;
     }
     if (tab === "email") {
-      setSent(`Invite sent to ${email.trim()}.`);
+      setSent(t("Invite sent to {email}.", { email: email.trim() }));
       return;
     }
     const link = r.data.code ?? code;
     const body = message ?? (link ? defaultInviteMessage(first, link) : "");
     window.location.href = smsHref(phone, body);
-    setSent("Your messages app opened with the invite. Send it from there.");
+    setSent(t("Your messages app opened with the invite. Send it from there."));
   };
 
   return (
@@ -86,17 +87,17 @@ export const InviteByContactSheet: React.FC<{ open: boolean; onClose: () => void
       open={open}
       onClose={close}
       onBack={onBack}
-      title="Invite by email or phone"
+      title={t("Invite by email or phone")}
       footer={
         !locked && !sent ? (
-          <CtaButton label="Send invite" icon={<Send size={15} aria-hidden />} loading={busy} disabled={!address.trim()} onClick={() => void send()} />
+          <CtaButton label={t("Send invite")} icon={<Send size={15} aria-hidden />} loading={busy} disabled={!address.trim()} onClick={() => void send()} />
         ) : sent ? (
-          <CtaButton label="Done" onClick={close} />
+          <CtaButton label={t("Done")} onClick={close} />
         ) : undefined
       }
     >
       {locked ? (
-        <p style={{ fontSize: textPx(13), color: INK.chS, lineHeight: 1.55 }}>Invite links open once your licence is verified.</p>
+        <p style={{ fontSize: textPx(13), color: INK.chS, lineHeight: 1.55 }}>{t("Invite links open once your licence is verified.")}</p>
       ) : sent ? (
         <p role="status" style={{ fontSize: textPx(13.5), fontWeight: 600, color: INK.ch, lineHeight: 1.55 }}>
           {sent}
@@ -105,8 +106,8 @@ export const InviteByContactSheet: React.FC<{ open: boolean; onClose: () => void
         <>
           <SegmentedTabs
             items={[
-              { key: "email", label: "Email" },
-              { key: "phone", label: "Phone" },
+              { key: "email", label: t("Email") },
+              { key: "phone", label: t("Phone") },
             ]}
             activeKey={tab}
             onChange={(k) => {
@@ -116,16 +117,16 @@ export const InviteByContactSheet: React.FC<{ open: boolean; onClose: () => void
             className="mb-4"
           />
           <div className="flex flex-col" style={{ gap: 14 }}>
-            <ProField label="First name" value={name} onChange={setName} autoComplete="off" maxLength={INVITE_NAME_MAX} />
+            <ProField label={t("First name")} value={name} onChange={setName} autoComplete="off" maxLength={INVITE_NAME_MAX} />
             {tab === "email" ? (
               <>
-                <ProField label="Email" type="email" inputMode="email" autoComplete="email" value={email} onChange={setEmail} placeholder="name@example.com" />
-                <ProTextArea label="Message" value={emailMessage} onChange={setEmailMessage} maxLength={INVITE_MESSAGE_MAX} placeholder="Add a short message" />
+                <ProField label={t("Email")} type="email" inputMode="email" autoComplete="email" value={email} onChange={setEmail} placeholder={t("name@example.com")} />
+                <ProTextArea label={t("Message")} value={emailMessage} onChange={setEmailMessage} maxLength={INVITE_MESSAGE_MAX} placeholder={t("Add a short message")} />
               </>
             ) : (
               <>
-                <ProField label="Phone" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={setPhone} placeholder="Add a number" />
-                <ProTextArea label="Message" value={text} onChange={setMessage} />
+                <ProField label={t("Phone")} type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={setPhone} placeholder={t("Add a number")} />
+                <ProTextArea label={t("Message")} value={text} onChange={setMessage} />
               </>
             )}
             {error && (

@@ -1,3 +1,4 @@
+import { t } from "../../../i18n/core";
 // Release 3 W9 post-review · Clients "Invites sent" (Karim: in Clients, not
 // Home). One row per client_invites row the professional sent, from the
 // columns the follow-up 20261124120000 makes readable: the first name, or
@@ -38,7 +39,7 @@ export function sentInviteView(r: SentInviteInput, now: Date = new Date()): Sent
     id: r.id,
     name: r.firstName?.trim() || r.addressHint,
     channel,
-    meta: date ? `${channel} · ${date}` : channel,
+    meta: date ? `${t(channel)} · ${date}` : t(channel),
     message: r.message?.trim() || null,
   };
 }

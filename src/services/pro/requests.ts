@@ -18,15 +18,16 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
+import { t, tk } from "../../i18n/core";
 
 export type DeclineReason = "fully_booked" | "outside_specialty" | "location" | "other";
 
 /** HO18 reason menu, in the frame's order. */
 export const DECLINE_REASONS: { value: DeclineReason; label: string }[] = [
-  { value: "fully_booked", label: "Fully booked" },
-  { value: "outside_specialty", label: "Outside my specialty" },
-  { value: "location", label: "Location doesn't suit" },
-  { value: "other", label: "Other" },
+  { value: "fully_booked", label: tk("Fully booked") },
+  { value: "outside_specialty", label: tk("Outside my specialty") },
+  { value: "location", label: tk("Location doesn't suit") },
+  { value: "other", label: tk("Other") },
 ];
 
 export const DECLINE_MESSAGE_MAX = 280;
@@ -35,9 +36,9 @@ export type DeclineResult = { ok: true } | { ok: false; message: string; gone?: 
 
 function describe(error: { code?: string; message?: string }): DeclineResult {
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  if (error.code === "ATX10" || error.code === "ATX08" || error.code === "ATXA1") return { ok: false, message: "This request was already answered.", gone: true };
-  if (error.code === "22023") return { ok: false, message: "Add a short message when the reason is Other." };
-  return { ok: false, message: "Couldn't decline. Try again." };
+  if (error.code === "ATX10" || error.code === "ATX08" || error.code === "ATXA1") return { ok: false, message: t("This request was already answered."), gone: true };
+  if (error.code === "22023") return { ok: false, message: t("Add a short message when the reason is Other.") };
+  return { ok: false, message: t("Couldn't decline. Try again.") };
 }
 
 export async function declineRequestWithReason(requestId: string, reason: DeclineReason, message: string): Promise<DeclineResult> {
@@ -116,20 +117,20 @@ export async function fetchRecentDeclines(professionalId: string): Promise<Recen
   return rows.map((r) => ({
     id: r.id,
     customerId: r.customer_id,
-    name: by.get(r.customer_id)?.first_name?.trim() || "Name unavailable",
+    name: by.get(r.customer_id)?.first_name?.trim() || t("Name unavailable"),
     avatarUrl: by.get(r.customer_id)?.avatar_url ?? null,
     resolvedAt: r.resolved_at,
   }));
 }
 
-export const UNDO_TOO_LATE = "It's too late to undo this decline.";
+export const UNDO_TOO_LATE = tk("It's too late to undo this decline.");
 
 /** undo_client_request_decline: back to pending within 5 minutes; ATXH2 after that. */
 export async function undoRequestDecline(requestId: string): Promise<{ ok: true } | { ok: false; message: string; final?: boolean }> {
   const { error } = await rpc("undo_client_request_decline", { p_request_id: requestId });
   if (!error) return { ok: true };
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  if (error.code === "ATXH2") return { ok: false, message: UNDO_TOO_LATE, final: true };
-  if (error.code === "ATX10" || error.code === "ATX08") return { ok: false, message: "This request was already answered.", final: true };
-  return { ok: false, message: "Couldn't undo. Try again." };
+  if (error.code === "ATXH2") return { ok: false, message: t(UNDO_TOO_LATE), final: true };
+  if (error.code === "ATX10" || error.code === "ATX08") return { ok: false, message: t("This request was already answered."), final: true };
+  return { ok: false, message: t("Couldn't undo. Try again.") };
 }

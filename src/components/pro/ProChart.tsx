@@ -4,7 +4,7 @@ import { useApp } from "../../context/AppContext";
 import { textPx } from "../../theme/textSize";
 import { INK, NO_ICON_SCALE } from "./proInk";
 import { PRO_CHART_RANGES, type ProChartRange } from "./proRules";
-import { isRtl } from "../../i18n/core";
+import { t, tx, isRtl } from "../../i18n/core";
 
 /**
  * Release 3 · ProChart, the one chart standard (HANDOVER e: "Range W M 3M Y,
@@ -242,7 +242,7 @@ export const ProChart: React.FC<ProChartProps> = ({
           <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch, minWidth: 0 }}>{title}</p>
           {right ??
             (range && (
-              <span role="tablist" aria-label="Range" className="flex" style={{ gap: 2, padding: 2, borderRadius: 9, background: INK.soft }}>
+              <span role="tablist" aria-label={t("Range")} className="flex" style={{ gap: 2, padding: 2, borderRadius: 9, background: INK.soft }}>
                 {PRO_CHART_RANGES.map((r) => {
                   const on = r === range;
                   return (
@@ -265,7 +265,7 @@ export const ProChart: React.FC<ProChartProps> = ({
                         boxShadow: on ? "0 1px 2px rgba(0,0,0,0.08)" : undefined,
                       }}
                     >
-                      {r}
+                      {tx(r, "chart range")}
                     </button>
                   );
                 })}
@@ -283,7 +283,7 @@ export const ProChart: React.FC<ProChartProps> = ({
         ref={plotRef}
         role="group"
         tabIndex={0}
-        aria-label={summary ?? insight ?? title ?? "Chart"}
+        aria-label={summary ?? insight ?? title ?? t("Chart")}
         className="relative outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg touch-pan-y select-none"
         style={{ paddingTop: pin != null && tip ? (tipLines <= 1 ? 38 : 24 + tipLines * 15) : 4 }}
         onPointerDown={(e) => {
@@ -541,7 +541,7 @@ export const ProChart: React.FC<ProChartProps> = ({
       )}
       <p aria-hidden className="flex items-center" style={{ gap: 5, fontSize: textPx(10), color: INK.chT, marginTop: 6 }}>
         <MoveHorizontal size={11} strokeWidth={2} />
-        {scrubHint ?? "Drag sideways to scrub, tap to pin"}
+        {scrubHint ?? t("Drag sideways to scrub, tap to pin")}
       </p>
     </>
   );

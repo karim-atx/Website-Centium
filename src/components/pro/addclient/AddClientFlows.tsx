@@ -11,6 +11,7 @@ import { INVITE_LOCKED_MESSAGE } from "../../../services/pro/invites";
 import { ClientCodeSheet } from "./ClientCodeSheet";
 import { InviteByContactSheet } from "./InviteByContactSheet";
 import { OfflineClientSheet } from "./OfflineClientSheet";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · HO1 v6 "Add client" sheet and the flows it opens (HO2 to HO6).
@@ -45,11 +46,11 @@ export const AddClientFlows: React.FC<{
     onClose();
   };
   const back = () => setStep("menu");
-  const lockedNote = invitesAllowed ? undefined : INVITE_LOCKED_MESSAGE;
+  const lockedNote = invitesAllowed ? undefined : t(INVITE_LOCKED_MESSAGE);
 
   return (
     <>
-      <BottomSheet open={current === "menu"} onClose={closeAll} title="Add client">
+      <BottomSheet open={current === "menu"} onClose={closeAll} title={t("Add client")}>
         <div style={{ marginTop: -8 }}>
           {blocked ? (
             <div className="py-2">
@@ -58,24 +59,24 @@ export const AddClientFlows: React.FC<{
           ) : (
             <>
               <FreePeriodNotice plan={plan} className="mb-2" />
-              <GatedRow icon={QrCode} title="Invite clients" subtitle={lockedNote ?? "They join from the link or by scanning"} onOpen={invitesAllowed ? () => { closeAll(); onInviteClients(); } : undefined} />
-              <GatedRow icon={Mail} title="Invite by email or phone" subtitle={lockedNote ?? "We send the invite for you"} onOpen={invitesAllowed ? () => setStep("contact") : undefined} />
+              <GatedRow icon={QrCode} title={t("Invite clients")} subtitle={lockedNote ?? t("They join from the link or by scanning")} onOpen={invitesAllowed ? () => { closeAll(); onInviteClients(); } : undefined} />
+              <GatedRow icon={Mail} title={t("Invite by email or phone")} subtitle={lockedNote ?? t("We send the invite for you")} onOpen={invitesAllowed ? () => setStep("contact") : undefined} />
               <SettingsRow
                 icon={Inbox}
-                title="Pending requests"
-                subtitle="People who asked to work with you"
+                title={t("Pending requests")}
+                subtitle={t("People who asked to work with you")}
                 value={pendingCount > 0 ? String(pendingCount) : undefined}
                 onClick={() => {
                   closeAll();
                   onPendingRequests();
                 }}
               />
-              <SettingsRow icon={UserPen} title="Add someone offline" subtitle="Start their record, invite them later" onClick={() => setStep("offline")} />
-              <SettingsRow icon={KeyRound} title="Client code" subtitle="A one-time code they enter when they sign up" onClick={() => setStep("code")} />
+              <SettingsRow icon={UserPen} title={t("Add someone offline")} subtitle={t("Start their record, invite them later")} onClick={() => setStep("offline")} />
+              <SettingsRow icon={KeyRound} title={t("Client code")} subtitle={t("A one-time code they enter when they sign up")} onClick={() => setStep("code")} />
             </>
           )}
         </div>
-        <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 12, lineHeight: 1.5 }}>New clients start in Onboarding until their intake form is done.</p>
+        <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 12, lineHeight: 1.5 }}>{t("New clients start in Onboarding until their intake form is done.")}</p>
       </BottomSheet>
       <InviteByContactSheet open={current === "contact"} onClose={closeAll} onBack={back} locked={!invitesAllowed} />
       <OfflineClientSheet
