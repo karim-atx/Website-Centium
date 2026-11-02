@@ -14050,6 +14050,111 @@ export type Database = {
           },
         ]
       }
+      member_meal_plan_items: {
+        Row: {
+          created_at: string
+          custom_food_id: string | null
+          day_offset: number
+          food_id: string | null
+          id: string
+          meal: Database["public"]["Enums"]["meal_slot"]
+          note: string | null
+          plan_id: string
+          position: number
+          quantity: number | null
+          recipe_id: string | null
+          servings: number | null
+          unit: Database["public"]["Enums"]["food_unit"] | null
+        }
+        Insert: {
+          created_at?: string
+          custom_food_id?: string | null
+          day_offset: number
+          food_id?: string | null
+          id?: string
+          meal: Database["public"]["Enums"]["meal_slot"]
+          note?: string | null
+          plan_id: string
+          position?: number
+          quantity?: number | null
+          recipe_id?: string | null
+          servings?: number | null
+          unit?: Database["public"]["Enums"]["food_unit"] | null
+        }
+        Update: {
+          created_at?: string
+          custom_food_id?: string | null
+          day_offset?: number
+          food_id?: string | null
+          id?: string
+          meal?: Database["public"]["Enums"]["meal_slot"]
+          note?: string | null
+          plan_id?: string
+          position?: number
+          quantity?: number | null
+          recipe_id?: string | null
+          servings?: number | null
+          unit?: Database["public"]["Enums"]["food_unit"] | null
+        }
+        Relationships: []
+      }
+      member_meal_plans: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id: string
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
+      member_progress_photos: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          owner_id: string
+          pose: string
+          storage_path: string
+          taken_on: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          owner_id: string
+          pose?: string
+          storage_path: string
+          taken_on: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          owner_id?: string
+          pose?: string
+          storage_path?: string
+          taken_on?: string
+        }
+        Relationships: []
+      }
       membership_plans: {
         Row: {
           allowed_class_types: string[] | null
@@ -29580,6 +29685,7 @@ export type Database = {
           previous_pct: number
         }[]
       }
+      i_may_add_progress_photos: { Args: never; Returns: boolean }
       in_care_network: { Args: { p_a: string; p_b: string }; Returns: boolean }
       instructor_ratings: {
         Args: { p_business_id: string; p_from?: string; p_to?: string }
@@ -29916,6 +30022,16 @@ export type Database = {
         Args: { p_gym_id: string; p_person: string }
         Returns: boolean
       }
+      member_meal_plan_is_mine: { Args: { p_plan_id: string }; Returns: boolean }
+      member_share_card_designs: {
+        Args: never
+        Returns: {
+          key: string
+          locked: boolean
+          name: string
+          premium: boolean
+        }[]
+      }
       membership_is_awaiting_payment: {
         Args: {
           p_payment_status: Database["public"]["Enums"]["venue_payment_status"]
@@ -30119,6 +30235,14 @@ export type Database = {
           tags: string[]
         }[]
       }
+      my_color_themes: {
+        Args: never
+        Returns: {
+          locked: boolean
+          premium: boolean
+          theme: Database["public"]["Enums"]["color_theme"]
+        }[]
+      }
       my_contraception_status: {
         Args: never
         Returns: {
@@ -30181,6 +30305,14 @@ export type Database = {
           subtitle: string
           title: string
           weekly_hours: number
+        }[]
+      }
+      my_cycle_insights: {
+        Args: never
+        Returns: {
+          cycle_day: number
+          insights: Json
+          phase: Database["public"]["Enums"]["cycle_phase_kind"]
         }[]
       }
       my_cycle_prediction: {
@@ -30250,6 +30382,17 @@ export type Database = {
           created_at: string
           id: string
           seen_at: string
+        }[]
+      }
+      my_grocery_list: {
+        Args: { p_plan_id: string }
+        Returns: {
+          checked: boolean
+          from_recipes: string[]
+          item_key: string
+          name: string
+          quantity: number
+          unit: Database["public"]["Enums"]["food_unit"]
         }[]
       }
       my_group_invitations: {
@@ -30416,6 +30559,17 @@ export type Database = {
         }[]
       }
       my_professional_subtype: { Args: never; Returns: string }
+      my_progress_photos: {
+        Args: never
+        Returns: {
+          created_at: string
+          note: string
+          photo_id: string
+          pose: string
+          storage_path: string
+          taken_on: string
+        }[]
+      }
       my_referral_code: { Args: never; Returns: string }
       my_reviewable_professionals: {
         Args: never
@@ -30867,6 +31021,18 @@ export type Database = {
           specialty: string
           website: string
           x: string
+        }[]
+      }
+      progress_photo_pair: {
+        Args: { p_first: string; p_second: string }
+        Returns: {
+          days_between: number
+          first_path: string
+          first_photo_id: string
+          first_taken_on: string
+          second_path: string
+          second_photo_id: string
+          second_taken_on: string
         }[]
       }
       promotion_stats: {
@@ -31820,6 +31986,10 @@ export type Database = {
         Returns: string
       }
       set_forum_nickname: { Args: { p_nickname: string }; Returns: undefined }
+      set_grocery_item_checked: {
+        Args: { p_checked: boolean; p_item_key: string; p_plan_id: string }
+        Returns: undefined
+      }
       set_module_opens_after: {
         Args: { p_days: number; p_module_id: string }
         Returns: undefined
@@ -32572,6 +32742,9 @@ export type Database = {
         | "rose_blush"
         | "gold_amber"
         | "coral_terracotta"
+        | "forest_sage"
+        | "midnight_indigo"
+        | "plum_lilac"
       contraception_event:
         | "pill_taken"
         | "pill_missed"
@@ -33314,6 +33487,9 @@ export const Constants = {
         "rose_blush",
         "gold_amber",
         "coral_terracotta",
+        "forest_sage",
+        "midnight_indigo",
+        "plum_lilac",
       ],
       contraception_event: [
         "pill_taken",

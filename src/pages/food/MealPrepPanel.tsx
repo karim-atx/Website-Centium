@@ -20,6 +20,7 @@ import { foodCategoryIcon } from "../../utils/icons";
 import { deleteCustomFood, listCustomFoods, type FoodSearchResult } from "../../services/food";
 import { brandServing } from "../../services/food/onlineSearchModel";
 import { textPx } from "../../theme/textSize";
+import { MealPlannerEntry } from "./planner/MealPlannerEntry";
 
 // Pull-to-refresh, the same gesture and threshold as the Health page's: the
 // load-error lines ask the user to "Pull to retry" (Part 4 Q7).
@@ -246,6 +247,8 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
       <div className="flex flex-col" style={{ gap: 8, marginTop: subProp === undefined ? 12 : 0, paddingBottom: 72 }}>
         {/* Round E: cooking's "Play your music" (the member's cooking
             favourite, or their music app), above the recipes. */}
+        {/* Round G4: the member's own meal planner (Premium; nothing while the switch is off). */}
+        <MealPlannerEntry className="mb-1" />
         {sub === "recipes" && <MusicSection moment="cooking" style={{ marginBottom: 4 }} />}
         {error ? (
           <p style={{ margin: 0, fontSize: textPx(13), color: "rgb(var(--c-charcoal-soft))", padding: "8px 2px" }}>{errorText}</p>

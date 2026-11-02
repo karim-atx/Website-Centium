@@ -31,7 +31,14 @@ export type PremiumFeature =
   // Round G2: Premium's perks that prompt.
   | "premium_offers"
   // Round G3: the Monday weekly review and its target suggestions.
-  | "weekly_review";
+  | "weekly_review"
+  // Round G4: the meal planner and grocery list, progress photos, the Premium
+  // colour themes and share-card designs, and cycle phase insights.
+  | "meal_planner"
+  | "progress_photos"
+  | "premium_themes"
+  | "share_designs"
+  | "cycle_insights";
 
 export type FeatureKind = "limit" | "premium_only";
 
@@ -69,6 +76,12 @@ export const PREMIUM_FEATURES: readonly PremiumFeatureEntry[] = [
   { key: "premium_offers", kind: "premium_only", label: tk("Premium-only offers"), prompt: tk("Premium lets you redeem the offers kept for Premium members.") },
   // Round G3: my_weekly_review() and my_target_suggestions() are Premium (ATXQ1).
   { key: "weekly_review", kind: "premium_only", label: tk("Your weekly review"), prompt: tk("Premium looks back on your week every Monday, with goal suggestions you can accept.") },
+  // Round G4 (DB_G4_HANDOVER.md).
+  { key: "meal_planner", kind: "premium_only", label: tk("Meal planner and grocery list"), prompt: tk("Premium lets you plan your week of meals and turns it into a grocery list.") },
+  { key: "progress_photos", kind: "premium_only", label: tk("Progress photos"), prompt: tk("Premium keeps private progress photos and puts two side by side.") },
+  { key: "premium_themes", kind: "premium_only", label: tk("Extra colour themes"), prompt: tk("Premium adds more colour themes for the app.") },
+  { key: "share_designs", kind: "premium_only", label: tk("Extra share card designs"), prompt: tk("Premium adds more designs for the cards you share.") },
+  { key: "cycle_insights", kind: "premium_only", label: tk("Cycle phase insights"), prompt: tk("Premium explains the phase of your cycle you are in.") },
 ];
 
 export const featureEntry = (key: PremiumFeature): PremiumFeatureEntry => {
