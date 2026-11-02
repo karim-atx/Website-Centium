@@ -27730,12 +27730,17 @@ export type Database = {
       business_plan_level: {
         Args: { p_business_id: string }
         Returns: {
+          awaiting_payment: boolean
           billing_period: Database["public"]["Enums"]["subscription_billing_period"]
           business_plans_on: boolean
           choice_due: boolean
           chosen_billing_period: Database["public"]["Enums"]["subscription_billing_period"]
           chosen_seat_blocks: number
-          must_pay_first: boolean
+          must_choose_level: boolean
+          pending_amount: number
+          pending_billing_period: Database["public"]["Enums"]["subscription_billing_period"]
+          pending_charge_id: string
+          pending_seat_blocks: number
           plan_active: boolean
           renews_at: string
           seat_blocks: number
@@ -30229,6 +30234,7 @@ export type Database = {
         Args: never
         Returns: {
           ends_at: string
+          from_name: string
           is_trial: boolean
           limits: Json
           may_prompt_upgrade: boolean
