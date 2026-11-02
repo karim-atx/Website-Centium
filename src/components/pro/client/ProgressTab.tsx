@@ -12,7 +12,8 @@ import type { ClientPageData } from "./useClientPage";
 import type { ProLane } from "../subtypeLanes";
 import { fetchAdherenceRow, fetchBiomarkerFlags, fetchDayItems, fetchLoggedDays, type BiomarkerFlag } from "../../../services/pro/clientPage";
 import { shiftIso } from "../../../services/pro/home";
-import { DAY_LETTERS, mondayIndex } from "../../../utils/week";
+import { mondayIndex } from "../../../utils/week";
+import { weekdayNarrow } from "../proDates";
 import { BP_NONE_LOGGED } from "../../../services/blood-pressure/guidance";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
@@ -23,6 +24,7 @@ import type { AccessCategory } from "../../../services/pro/access";
 import { CheckInsProgress, checkInsSummary, useClientCheckIns } from "../forms/CheckInsProgress";
 import { ClientWinsCard } from "../../share/ClientWinsCard";
 import { appLocale } from "../../../i18n/format";
+import { t, tk, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · CL2 v5 Progress (Full coaching, Nutrition) and Trends
@@ -52,7 +54,7 @@ import { appLocale } from "../../../i18n/format";
 
 type Range = "today" | "week" | "month";
 const RANGE_DAYS: Record<Range, number> = { today: 1, week: 7, month: 28 };
-const RANGE_LINE: Record<Range, string> = { today: "Today", week: "Last 7 days", month: "Last 4 weeks" };
+const RANGE_LINE: Record<Range, string> = { today: tk("Today"), week: tk("Last 7 days"), month: tk("Last 4 weeks") };
 
 interface Group {
   key: string;
@@ -80,7 +82,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
   const [chkNonce, setChkNonce] = useState(0);
   // Round D: every lane sends check-ins (clinical included, can_write_form).
   const checkIns = useClientCheckIns(clientId, true, chkNonce);
-  const checkInsGroup: Group = { key: "chk", icon: ClipboardCheck, title: "Check-ins", summary: checkInsSummary(checkIns), body: <CheckInsProgress data={checkIns} clientId={clientId} firstName={firstName} onRetry={() => setChkNonce((n) => n + 1)} /> };
+  const checkInsGroup: Group = { key: "chk", icon: ClipboardCheck, title: t("Check-ins"), summary: checkInsSummary(checkIns), body: <CheckInsProgress data={checkIns} clientId={clientId} firstName={firstName} onRetry={() => setChkNonce((n) => n + 1)} /> };
   const labsVisible = access.has("lab_results") || (access.access?.resultSharedCount ?? 0) > 0;
 
   useEffect(() => {
@@ -110,32 +112,30 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
       what={what}
       clientFirstName={firstName}
       action={
-        <button type="button" onClick={() => onAsk(c)} className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.prDeep }}>
-          Ask to share
-        </button>
+        <button type="button" onClick={() => onAsk(c)} className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(11.5), fontWeight: 700, color: INK.prDeep }}>{t("Ask to share")}</button>
       }
     />
   );
 
   const adherenceGroup = (title: string, unit: string): Group => {
     const shared = access.has(counted);
-    const summary = !shared ? "Not shared" : adh === undefined ? "Loading…" : !adh ? "No shared data yet" : `${adh.completed} of ${adh.planned} done${adh.pct != null ? `, ${adh.pct}%` : ""}`;
+    const summary = !shared ? t("Not shared") : adh === undefined ? t("Loading…") : !adh ? t("No shared data yet") : adh.pct != null ? t("{completed} of {planned} done, {pct}%", { completed: adh.completed, planned: adh.planned, pct: adh.pct }) : t("{completed} of {planned} done", { completed: adh.completed, planned: adh.planned });
     let body: React.ReactNode;
-    if (!shared) body = lock(lane === "nutrition" ? "Food diary" : "Workout activity", counted);
+    if (!shared) body = lock(lane === "nutrition" ? t("Food diary") : t("Workout activity"), counted);
     else if (perDay === undefined) body = <ProCardSkeleton lines={3} />;
-    else if (!perDay || perDay.every((d) => d.planned === 0)) body = <p style={{ fontSize: textPx(12), color: INK.chF }}>{`No ${unit} planned in this range.`}</p>;
+    else if (!perDay || perDay.every((d) => d.planned === 0)) body = <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("No {unit} planned in this range.", { unit })}</p>;
     else {
-      const x = perDay.map((d) => (range === "month" ? fmtDay(d.day) : DAY_LETTERS[mondayIndex(new Date(`${d.day}T00:00:00`).getDay())]));
+      const x = perDay.map((d) => (range === "month" ? fmtDay(d.day) : weekdayNarrow(mondayIndex(new Date(`${d.day}T00:00:00`).getDay()))));
       body = (
         <ProChart
           x={x}
           min={0}
           max={Math.max(1, ...perDay.map((d) => d.planned))}
           series={[
-            { key: "c", label: "Done", type: "bar", color: INK.pr, values: perDay.map((d) => d.completed) },
-            { key: "p", label: "Planned", type: "line", color: INK.tealDark, dashed: true, values: perDay.map((d) => d.planned) },
+            { key: "c", label: t("Done"), type: "bar", color: INK.pr, values: perDay.map((d) => d.completed) },
+            { key: "p", label: t("Planned"), type: "line", color: INK.tealDark, dashed: true, values: perDay.map((d) => d.planned) },
           ]}
-          tooltip={(i) => ({ title: fmtDay(perDay[i].day), lines: [`${perDay[i].completed} of ${perDay[i].planned} ${unit}`] })}
+          tooltip={(i) => ({ title: fmtDay(perDay[i].day), lines: [t("{completed} of {planned} {unit}", { completed: perDay[i].completed, planned: perDay[i].planned, unit })] })}
           summary={`${title}: ${summary}.`}
         />
       );
@@ -146,18 +146,18 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
   const bodyGroup: Group = {
     key: "body",
     icon: Scale,
-    title: "Body",
-    summary: !access.has("weight") ? "Not shared" : rel?.lastWeightKg != null ? `Latest weight ${rel.lastWeightKg} kg${rel.weightTrend ? `, ${rel.weightTrend > 0 ? "up" : "down"} ${Math.abs(rel.weightTrend)} kg` : ""}` : "No weigh-ins yet",
-    body: !access.has("weight") ? lock("Weight", "weight") : <WeightTrendChart clientId={clientId} today={today} initial={chartInitial} bodyOn={access.has("body_measurements")} progressOn={access.has("progress")} />,
+    title: t("Body"),
+    summary: !access.has("weight") ? t("Not shared") : rel?.lastWeightKg != null ? rel.weightTrend ? (rel.weightTrend > 0 ? t("Latest weight {kg} kg, up {change} kg", { kg: rel.lastWeightKg, change: Math.abs(rel.weightTrend) }) : t("Latest weight {kg} kg, down {change} kg", { kg: rel.lastWeightKg, change: Math.abs(rel.weightTrend) })) : t("Latest weight {kg} kg", { kg: rel.lastWeightKg }) : t("No weigh-ins yet"),
+    body: !access.has("weight") ? lock(t("Weight"), "weight") : <WeightTrendChart clientId={clientId} today={today} initial={chartInitial} bodyOn={access.has("body_measurements")} progressOn={access.has("progress")} />,
   };
 
   let groups: Group[];
   if (lane === "full_coaching") {
     groups = [
-      { key: "str", icon: TrendingUp, title: "Strength", summary: access.has("workout_activity") ? "Best sets and PRs" : "Not shared", body: access.has("workout_activity") ? <StrengthChart clientId={clientId} today={today} initial={chartInitial} /> : lock("Workout activity", "workout_activity") },
-      { key: "vol", icon: BarChart3, title: "Volume", summary: access.has("workout_activity") ? "Sets a week" : "Not shared", body: access.has("workout_activity") ? <VolumeChart clientId={clientId} today={today} initial={chartInitial} /> : lock("Workout activity", "workout_activity") },
-      adherenceGroup("Workouts vs planned", "workouts"),
-      { key: "rpe", icon: Gauge, title: "RPE", summary: access.has("workout_activity") ? "Effort per session" : "Not shared", body: access.has("workout_activity") ? <RpeChart clientId={clientId} today={today} initial={chartInitial} /> : lock("Workout activity", "workout_activity") },
+      { key: "str", icon: TrendingUp, title: t("Strength"), summary: access.has("workout_activity") ? t("Best sets and PRs") : t("Not shared"), body: access.has("workout_activity") ? <StrengthChart clientId={clientId} today={today} initial={chartInitial} /> : lock(t("Workout activity"), "workout_activity") },
+      { key: "vol", icon: BarChart3, title: t("Volume"), summary: access.has("workout_activity") ? t("Sets a week") : t("Not shared"), body: access.has("workout_activity") ? <VolumeChart clientId={clientId} today={today} initial={chartInitial} /> : lock(t("Workout activity"), "workout_activity") },
+      adherenceGroup(t("Workouts vs planned"), t("workouts")),
+      { key: "rpe", icon: Gauge, title: "RPE", summary: access.has("workout_activity") ? t("Effort per session") : t("Not shared"), body: access.has("workout_activity") ? <RpeChart clientId={clientId} today={today} initial={chartInitial} /> : lock(t("Workout activity"), "workout_activity") },
       bodyGroup,
       checkInsGroup,
     ];
@@ -165,28 +165,28 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
       groups.push({
         key: "nut",
         icon: UtensilsCrossed,
-        title: "Nutrition",
-        summary: !access.has("food_diary") ? "Not shared" : rel?.nutrition ? `${Math.round(rel.nutrition.calories).toLocaleString(appLocale("en-GB"))} kcal on ${fmtDay(rel.nutrition.lastLoggedDate)}` : "Nothing logged yet",
-        body: !access.has("food_diary") ? lock("Food diary", "food_diary") : <CaloriesMacrosChart clientId={clientId} today={today} initial={chartInitial} progressOn={access.has("progress")} />,
+        title: t("Nutrition"),
+        summary: !access.has("food_diary") ? t("Not shared") : rel?.nutrition ? t("{kcal} kcal on {date}", { kcal: Math.round(rel.nutrition.calories).toLocaleString(appLocale("en-GB")), date: fmtDay(rel.nutrition.lastLoggedDate) }) : t("Nothing logged yet"),
+        body: !access.has("food_diary") ? lock(t("Food diary"), "food_diary") : <CaloriesMacrosChart clientId={clientId} today={today} initial={chartInitial} progressOn={access.has("progress")} />,
       });
   } else if (lane === "nutrition") {
     const logged = loggedDays ? days.filter((d) => loggedDays.includes(d)).length : null;
     groups = [
-      adherenceGroup("Meal-plan adherence", "days on target"),
+      adherenceGroup(t("Meal-plan adherence"), t("days on target")),
       {
         key: "mac",
         icon: UtensilsCrossed,
-        title: "Calories and macros",
-        summary: !access.has("food_diary") ? "Not shared" : rel?.nutrition ? `${Math.round(rel.nutrition.calories).toLocaleString(appLocale("en-GB"))} kcal on ${fmtDay(rel.nutrition.lastLoggedDate)}` : "Nothing logged yet",
-        body: !access.has("food_diary") ? lock("Food diary", "food_diary") : <CaloriesMacrosChart clientId={clientId} today={today} initial={chartInitial} progressOn={access.has("progress")} />,
+        title: t("Calories and macros"),
+        summary: !access.has("food_diary") ? t("Not shared") : rel?.nutrition ? t("{kcal} kcal on {date}", { kcal: Math.round(rel.nutrition.calories).toLocaleString(appLocale("en-GB")), date: fmtDay(rel.nutrition.lastLoggedDate) }) : t("Nothing logged yet"),
+        body: !access.has("food_diary") ? lock(t("Food diary"), "food_diary") : <CaloriesMacrosChart clientId={clientId} today={today} initial={chartInitial} progressOn={access.has("progress")} />,
       },
-      { key: "mic", icon: FlaskConical, title: "Micronutrients", summary: access.has("food_diary") ? "Fibre, salt, iron and more" : "Not shared", body: access.has("food_diary") ? <MicronutrientsBlock clientId={clientId} today={today} days={RANGE_DAYS[range]} firstName={firstName} /> : lock("Food diary", "food_diary") },
+      { key: "mic", icon: FlaskConical, title: t("Micronutrients"), summary: access.has("food_diary") ? t("Fibre, salt, iron and more") : t("Not shared"), body: access.has("food_diary") ? <MicronutrientsBlock clientId={clientId} today={today} days={RANGE_DAYS[range]} firstName={firstName} /> : lock(t("Food diary"), "food_diary") },
       {
         key: "log",
         icon: CalendarCheck,
-        title: "Logging consistency",
-        summary: !access.has("food_diary") ? "Not shared" : logged == null ? "Loading…" : `Logged on ${logged} of ${days.length} day${days.length === 1 ? "" : "s"}`,
-        body: !access.has("food_diary") ? lock("Food diary", "food_diary") : <p style={{ fontSize: textPx(13), color: INK.ch }}>{logged == null ? "Loading…" : `Logged food on ${logged} of ${days.length} days.`}</p>,
+        title: t("Logging consistency"),
+        summary: !access.has("food_diary") ? t("Not shared") : logged == null ? t("Loading…") : tn(days.length, "Logged on {logged} of {n} day", "Logged on {logged} of {n} days", { logged }),
+        body: !access.has("food_diary") ? lock(t("Food diary"), "food_diary") : <p style={{ fontSize: textPx(13), color: INK.ch }}>{logged == null ? t("Loading…") : t("Logged food on {logged} of {n} days.", { logged, n: days.length })}</p>,
       },
       bodyGroup,
       checkInsGroup,
@@ -199,11 +199,11 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
       {
         key: "vit",
         icon: HeartPulse,
-        title: "Vitals",
-        summary: !access.has("blood_pressure") && !access.has("health_metrics") ? "Not shared" : bp[0] ? `BP ${bp[0].systolic}/${bp[0].diastolic} on ${fmtDay(bp[0].recordedAt)}` : v?.stepsAvg != null ? `${v.stepsAvg.toLocaleString(appLocale("en-GB"))} steps a day` : "No readings yet",
+        title: t("Vitals"),
+        summary: !access.has("blood_pressure") && !access.has("health_metrics") ? t("Not shared") : bp[0] ? t("BP {systolic}/{diastolic} on {date}", { systolic: bp[0].systolic, diastolic: bp[0].diastolic, date: fmtDay(bp[0].recordedAt) }) : v?.stepsAvg != null ? t("{v} steps a day", { v: v.stepsAvg.toLocaleString(appLocale("en-GB")) }) : t("No readings yet"),
         body:
           !access.has("blood_pressure") && !access.has("health_metrics") ? (
-            lock("Blood pressure and Activity & vitals", "blood_pressure")
+            lock(t("Blood pressure and Activity & vitals"), "blood_pressure")
           ) : (
             <div className="flex flex-col" style={{ gap: 6 }}>
               {access.has("blood_pressure") ? (
@@ -217,25 +217,25 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
                   <p style={{ fontSize: textPx(12), color: INK.chF }}>{BP_NONE_LOGGED}</p>
                 )
               ) : (
-                lock("Blood pressure", "blood_pressure")
+                lock(t("Blood pressure"), "blood_pressure")
               )}
-              {access.has("health_metrics") && v?.stepsAvg != null && <p style={{ fontSize: textPx(13), color: INK.ch }}>{`Steps: ${v.stepsAvg.toLocaleString(appLocale("en-GB"))} a day on average`}</p>}
+              {access.has("health_metrics") && v?.stepsAvg != null && <p style={{ fontSize: textPx(13), color: INK.ch }}>{t("Steps: {v} a day on average", { v: v.stepsAvg.toLocaleString(appLocale("en-GB")) })}</p>}
             </div>
           ),
       },
       {
         key: "bio",
         icon: FlaskConical,
-        title: "Biomarkers",
-        summary: !labsVisible ? "Not shared" : flags === undefined ? "Loading…" : !flags ? "Couldn't load" : flags.length === 0 ? "No results shared" : `${flags.length} marker${flags.length === 1 ? "" : "s"}${outOf ? `, ${outOf} out of range` : ""}`,
-        body: !labsVisible ? lock("Lab results", "lab_results") : <FlagList flags={flags} />,
+        title: t("Biomarkers"),
+        summary: !labsVisible ? t("Not shared") : flags === undefined ? t("Loading…") : !flags ? t("Couldn't load") : flags.length === 0 ? t("No results shared") : outOf ? tn(flags.length, "{n} marker, {out} out of range", "{n} markers, {out} out of range", { out: outOf }) : tn(flags.length, "{n} marker", "{n} markers"),
+        body: !labsVisible ? lock(t("Lab results"), "lab_results") : <FlagList flags={flags} />,
       },
       {
         key: "slp",
         icon: Moon,
-        title: "Sleep",
-        summary: !access.has("health_metrics") ? "Not shared" : v?.sleepHours != null ? `${Math.floor(v.sleepHours)}h ${Math.round((v.sleepHours % 1) * 60)}m a night` : "Sleep per night and stages",
-        body: !access.has("health_metrics") ? lock("Activity & vitals", "health_metrics") : <SleepTrendChart clientId={clientId} today={today} initial={chartInitial} />,
+        title: t("Sleep"),
+        summary: !access.has("health_metrics") ? t("Not shared") : v?.sleepHours != null ? t("{h}h {m}m a night", { h: Math.floor(v.sleepHours), m: Math.round((v.sleepHours % 1) * 60) }) : t("Sleep per night and stages"),
+        body: !access.has("health_metrics") ? lock(t("Activity & vitals"), "health_metrics") : <SleepTrendChart clientId={clientId} today={today} initial={chartInitial} />,
       },
       checkInsGroup,
     ];
@@ -246,12 +246,12 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
       {/* W8 SH4: the client's wins with Share, above the range row (Full coaching and Nutrition). */}
       {lane !== "clinical_overview" && <ClientWinsCard clientId={clientId} name={data.name} firstName={firstName} today={today} lane={lane} winSharing={stage?.winSharing} />}
       <div className="flex items-center justify-between" style={{ gap: 12, marginBottom: 12 }}>
-        <span style={{ fontSize: textPx(12.5), fontWeight: 500, color: INK.chS }}>{RANGE_LINE[range]}</span>
+        <span style={{ fontSize: textPx(12.5), fontWeight: 500, color: INK.chS }}>{t(RANGE_LINE[range])}</span>
         <SegmentedTabs
           items={[
-            { key: "today", label: "Today" },
-            { key: "week", label: "Week" },
-            { key: "month", label: "Month" },
+            { key: "today", label: t("Today") },
+            { key: "week", label: t("Week") },
+            { key: "month", label: t("Month") },
           ]}
           activeKey={range}
           onChange={(k) => setRange(k as Range)}
@@ -262,7 +262,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
           labelSize={12}
         />
       </div>
-      {early && <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 10 }}>Early data: trends start after the first full week.</p>}
+      {early && <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 10 }}>{t("Early data: trends start after the first full week.")}</p>}
       <button
         type="button"
         onClick={() => navigate(lane === "clinical_overview" ? `${PRO_ROUTES.insights}/vitals?client=${encodeURIComponent(clientId)}` : proClientPath(clientId, "insights"))}
@@ -271,10 +271,10 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
       >
         <span className="flex-1 min-w-0">
           <span className="block" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>
-            {lane === "clinical_overview" ? "Open in Insights" : "Client insights"}
+            {lane === "clinical_overview" ? t("Open in Insights") : t("Client insights")}
           </span>
           <span className="block" style={{ fontSize: textPx(12), color: INK.chS }}>
-            Activity, nutrition, vitals{lane === "full_coaching" ? "" : " and biomarkers"}
+            {lane === "full_coaching" ? t("Activity, nutrition, vitals") : t("Activity, nutrition, vitals and biomarkers")}
           </span>
         </span>
         <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
@@ -318,14 +318,14 @@ const GroupCard: React.FC<{ group: Group; open: boolean; onToggle: () => void }>
 
 const FlagList: React.FC<{ flags: BiomarkerFlag[] | null | undefined }> = ({ flags }) => {
   if (flags === undefined) return <ProCardSkeleton lines={3} />;
-  if (!flags) return <p style={{ fontSize: textPx(12), color: INK.chF }}>Couldn't load results.</p>;
-  if (!flags.length) return <p style={{ fontSize: textPx(12), color: INK.chF }}>No results shared yet.</p>;
+  if (!flags) return <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("Couldn't load results.")}</p>;
+  if (!flags.length) return <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("No results shared yet.")}</p>;
   return (
     <div>
       {flags.map((f, i) => {
         const out = f.status === "out_of_range";
         const col = out ? INK.hi : f.status === "borderline" ? INK.goldInk : f.status === "normal" ? INK.good : INK.chF;
-        const word = out ? (f.rangeHigh != null && f.latestValue > f.rangeHigh ? "Above range" : "Below range") : f.status === "borderline" ? "Borderline" : f.status === "normal" ? "In range" : "No range";
+        const word = out ? (f.rangeHigh != null && f.latestValue > f.rangeHigh ? t("Above range") : t("Below range")) : f.status === "borderline" ? t("Borderline") : f.status === "normal" ? t("In range") : t("No range");
         return (
           <div key={`${f.markerKey ?? f.name}`} className="flex items-center" style={{ gap: 10, padding: "9px 0", borderBottom: i < flags.length - 1 ? `1px solid ${INK.b06}` : "none" }}>
             <span className="flex-1 min-w-0">

@@ -14,12 +14,13 @@ import safety from "./safety";
 import venues from "./venues";
 import certificates from "./certificates";
 import pro from "./pro";
+import proclients from "./proclients";
 
 // Round F (AV): the Arabic catalogue, one file per area, loaded as one lazy
 // chunk when Arabic is chosen. Every entry is in design-handover/round-f/
 // ARABIC_REVIEW.md for Karim's review before merge. A key in two areas has
 // the same Arabic in both (the catalogue test checks).
-const ar: Catalogue = { ...core, ...landing, ...legal, ...auth, ...settings, ...plans, ...messages, ...notifications, ...services, ...shared, ...programmes, ...safety, ...venues, ...certificates, ...pro };
+const ar: Catalogue = { ...core, ...landing, ...legal, ...auth, ...settings, ...plans, ...messages, ...notifications, ...services, ...shared, ...programmes, ...safety, ...venues, ...certificates, ...pro, ...proclients };
 
 export default ar;
 

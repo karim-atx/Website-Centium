@@ -31,6 +31,7 @@ const AREAS = [
   ["venues", "Class no-shows, gym pass and member codes"],
   ["certificates", "Your certificates (Courses)"],
   ["pro", "Professional tools: Home, notifications and shared parts"],
+  ["proclients", "Professional tools: Clients and a client's page"],
 ];
 
 const rows = [];
