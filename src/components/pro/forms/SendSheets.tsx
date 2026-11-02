@@ -10,14 +10,16 @@ import { PopupMenu } from "../../ui/PopupMenu";
 import { INK } from "../proInk";
 import { ListCard } from "../client/kit";
 import { ChoiceChips, FieldLabel, RadioRows } from "./moKit";
-import { DAY_LONG } from "../../../utils/week";
 import { time12 } from "../../../utils/time12";
 import { SCHEDULE_TIMES, parseSchedule, scheduleLine, scheduleString, type ProfileField, type QuestionDraft, type ScheduleEvery } from "./formModel";
 import { assignForm, cancelAssignment, setSendOnHire, type FormAssignment } from "../../../services/pro/forms";
 import { fetchActiveMealPlans, fetchActiveProgrammes } from "../../../services/pro/clients";
 import type { ProLane } from "../subtypeLanes";
+import { getLanguage, t, tk, tn, tx } from "../../../i18n/core";
+import { weekdayLong } from "../proDates";
 
-const OFFLINE = "You're offline. Try again when you're connected.";
+const OFFLINE = tk("You're offline. Try again when you're connected.");
+const DAYS = [1, 2, 3, 4, 5, 6, 7];
 
 interface Person {
   clientId: string;
@@ -65,7 +67,7 @@ const PersonRow: React.FC<{ name: string; line?: string; on: boolean; multi?: bo
 );
 
 const CarryCount: React.FC<{ text: string }> = ({ text }) => (
-  <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 700, color: text === "Off" ? INK.chF : INK.prDeep }}>
+  <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 700, color: text === t("Off") ? INK.chF : INK.prDeep }}>
     {text}
   </span>
 );
@@ -82,10 +84,11 @@ const Err: React.FC<{ text: string | null }> = ({ text }) =>
 // ---------------------------------------------------------------------------
 
 type Due = "1" | "3" | "7";
+/** English keys (tk); shown with t(). */
 const DUE: { value: Due; label: string }[] = [
-  { value: "1", label: "Tomorrow" },
-  { value: "3", label: "In 3 days" },
-  { value: "7", label: "In a week" },
+  { value: "1", label: tk("Tomorrow") },
+  { value: "3", label: tk("In 3 days") },
+  { value: "7", label: tk("In a week") },
 ];
 
 /**
@@ -126,70 +129,70 @@ export const SendingSheet: React.FC<{
   const pickWhen = async (v: "auto" | "manual") => {
     const on = v === "auto";
     if (on === sendOnHire || hireBusy || !formId) return;
-    if (!online) return setErr(OFFLINE);
+    if (!online) return setErr(t(OFFLINE));
     setHireBusy(true);
     setErr(null);
     const r = await setSendOnHire(formId, on);
     setHireBusy(false);
-    if (!r.ok) return setErr(r.message);
+    if (!r.ok) return setErr(t(r.message));
     onSendOnHire(on);
   };
   const carried = (fields: ProfileField[]) => {
     const n = questions.filter((q) => q.profileField && fields.includes(q.profileField)).length;
-    return n ? `${n} question${n === 1 ? "" : "s"}` : "Off";
+    return n ? tn(n, "{n} question", "{n} questions") : t("Off");
   };
   const person = roster.find((p) => p.clientId === who) ?? null;
   const send = async () => {
     if (!formId || !person || busy) return;
-    if (!online) return setErr(OFFLINE);
+    if (!online) return setErr(t(OFFLINE));
     setBusy(true);
     setErr(null);
     const at = new Date(Date.now() + Number(due) * 86400000).toISOString();
     const r = await assignForm(formId, person.clientId, at, null);
     setBusy(false);
-    if (!r.ok) return setErr(r.message);
-    onSent(`Sent to ${firstOf(person.name)}.`);
+    if (!r.ok) return setErr(t(r.message));
+    onSent(t("Sent to {name}.", { name: firstOf(person.name) }));
   };
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Sending"
-      footer={<CtaButton className="w-full" size="sheet" icon={<Send size={15} />} label={person ? `Send to ${firstOf(person.name)}` : "Send"} loading={busy} disabled={!person || !ready || !formId} onClick={() => void send()} />}
+      title={tx("Sending", "form delivery")}
+      footer={<CtaButton className="w-full" size="sheet" icon={<Send size={15} />} label={person ? t("Send to {name}", { name: firstOf(person.name) }) : t("Send")} loading={busy} disabled={!person || !ready || !formId} onClick={() => void send()} />}
     >
-      <FieldLabel top={0}>When</FieldLabel>
+      <FieldLabel top={0}>{t("When")}</FieldLabel>
       <RadioRows
-        label="When"
+        label={t("When")}
         value={sendOnHire ? "auto" : "manual"}
         onChange={(v) => void pickWhen(v)}
         rows={[
-          { value: "auto", title: "Automatically when someone hires you", line: formId ? "Due 3 days after they hire you" : "Save the form first", disabled: !formId || hireBusy },
-          { value: "manual", title: "Only when I send it", line: "Choose who gets it below", disabled: !formId || hireBusy },
+          { value: "auto", title: t("Automatically when someone hires you"), line: formId ? t("Due 3 days after they hire you") : t("Save the form first"), disabled: !formId || hireBusy },
+          { value: "manual", title: t("Only when I send it"), line: t("Choose who gets it below"), disabled: !formId || hireBusy },
         ]}
       />
-      <FieldLabel>Carry answers into the client's profile</FieldLabel>
+      <FieldLabel>{t("Carry answers into the client's profile")}</FieldLabel>
       <ListCard
         rows={[
-          { key: "allergies", icon: Wheat, title: "Allergies and restrictions", meta: "Into the dietary needs card", trailing: <CarryCount text={carried(["allergies", "dietary_restrictions"])} /> },
-          { key: "injuries", icon: Bandage, title: "Injuries", meta: "Into the profile", trailing: <CarryCount text={carried(["injuries"])} /> },
-          { key: "medications", icon: Pill, title: "Medications", meta: "Into the medical history", trailing: <CarryCount text={carried(["medications"])} /> },
-          { key: "weight", icon: Scale, title: "Weight", meta: "A weigh-in, never in recovery-sensitive mode", trailing: <CarryCount text={carried(["weight"])} /> },
+          { key: "allergies", icon: Wheat, title: t("Allergies and restrictions"), meta: t("Into the dietary needs card"), trailing: <CarryCount text={carried(["allergies", "dietary_restrictions"])} /> },
+          { key: "injuries", icon: Bandage, title: t("Injuries"), meta: t("Into the profile"), trailing: <CarryCount text={carried(["injuries"])} /> },
+          { key: "medications", icon: Pill, title: t("Medications"), meta: t("Into the medical history"), trailing: <CarryCount text={carried(["medications"])} /> },
+          { key: "weight", icon: Scale, title: t("Weight"), meta: t("A weigh-in, never in recovery-sensitive mode"), trailing: <CarryCount text={carried(["weight"])} /> },
         ]}
       />
-      <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 6 }}>Set this on each question. The client confirms each answer before it's added.</p>
-      <FieldLabel>Send to</FieldLabel>
-      {!ready && <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 8 }}>Save the form first.</p>}
+      <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 6 }}>{t("Set this on each question. The client confirms each answer before it's added.")}</p>
+      <FieldLabel>{t("Send to")}</FieldLabel>
+      {!ready && <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 8 }}>{t("Save the form first.")}</p>}
       {roster.length === 0 ? (
-        <p style={{ fontSize: textPx(12.5), color: INK.chF }}>You have no clients to send it to yet.</p>
+        <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{t("You have no clients to send it to yet.")}</p>
       ) : (
-        <div role="radiogroup" aria-label="Send to">
+        <div role="radiogroup" aria-label={t("Send to")}>
           {roster.map((p) => (
             <PersonRow key={p.clientId} name={p.name} on={who === p.clientId} onClick={() => setWho(p.clientId)} />
           ))}
         </div>
       )}
-      <FieldLabel top={6}>Due</FieldLabel>
-      <ChoiceChips label="Due" items={DUE} value={due} onChange={setDue} />
+      <FieldLabel top={6}>{t("Due")}</FieldLabel>
+      <ChoiceChips label={t("Due")} items={DUE.map((d) => ({ value: d.value, label: t(d.label) }))} value={due} onChange={setDue} />
       <Err text={err} />
     </BottomSheet>
   );
@@ -260,23 +263,23 @@ export const ScheduleSheet: React.FC<{
 
   const already = new Set(live.map((s) => s.clientId));
   const targets = (who === "programme" ? onPlan ?? [] : picked).filter((id) => !already.has(id) && roster.some((p) => p.clientId === id));
-  const nameOf = (id: string) => roster.find((p) => p.clientId === id)?.name ?? "A client";
+  const nameOf = (id: string) => roster.find((p) => p.clientId === id)?.name ?? t("A client");
   const schedule = scheduleString({ isoDay: day, time, every });
 
   const save = async () => {
     if (!formId || !targets.length || busy) return;
-    if (!online) return setErr(OFFLINE);
+    if (!online) return setErr(t(OFFLINE));
     setBusy("save");
     setErr(null);
     for (const id of targets) {
       const r = await assignForm(formId, id, null, schedule);
       if (!r.ok) {
         setBusy(null);
-        return setErr(`${nameOf(id)}: ${r.message}`);
+        return setErr(t("{name}: {message}", { name: nameOf(id), message: t(r.message) }));
       }
     }
     setBusy(null);
-    onDone(targets.length === 1 ? `Scheduled for ${firstOf(nameOf(targets[0]))}.` : `Scheduled for ${targets.length} clients.`);
+    onDone(targets.length === 1 ? t("Scheduled for {name}.", { name: firstOf(nameOf(targets[0])) }) : tn(targets.length, "Scheduled for {n} client.", "Scheduled for {n} clients."));
   };
   const fieldBtn = (label: string, value: string, kind: "day" | "time", Icon: typeof ChevronDown) => (
     <div className="min-w-0">
@@ -285,7 +288,7 @@ export const ScheduleSheet: React.FC<{
         type="button"
         aria-haspopup="listbox"
         aria-expanded={menu?.kind === kind}
-        aria-label={`${label}: ${value}`}
+        aria-label={t("{label}: {value}", { label, value })}
         onClick={(e) => setMenu({ kind, el: e.currentTarget })}
         className="tap w-full flex items-center justify-between"
         style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8, fontSize: textPx(14), color: INK.ch }}
@@ -300,57 +303,57 @@ export const ScheduleSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Schedule"
-      footer={<CtaButton className="w-full" size="sheet" icon={<Check size={15} />} label="Save" loading={busy === "save"} disabled={!ready || !formId || !targets.length} onClick={() => void save()} />}
+      title={t("Schedule")}
+      footer={<CtaButton className="w-full" size="sheet" icon={<Check size={15} />} label={t("Save")} loading={busy === "save"} disabled={!ready || !formId || !targets.length} onClick={() => void save()} />}
     >
-      <FieldLabel top={0}>Repeat</FieldLabel>
+      <FieldLabel top={0}>{t("Repeat")}</FieldLabel>
       <ChoiceChips
-        label="Repeat"
+        label={t("Repeat")}
         value={String(every) as "1" | "2" | "4"}
         onChange={(v) => setEvery(Number(v) as ScheduleEvery)}
         items={[
-          { value: "1", label: "Every week" },
-          { value: "2", label: "Every 2 weeks" },
-          { value: "4", label: "Every 4 weeks" },
+          { value: "1", label: t("Every week") },
+          { value: "2", label: tn(2, "Every week", "Every {n} weeks") },
+          { value: "4", label: tn(4, "Every week", "Every {n} weeks") },
         ]}
       />
       <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10, marginTop: 12 }}>
-        {fieldBtn("Day", DAY_LONG[day - 1], "day", ChevronDown)}
-        {fieldBtn("Due at", time12(time), "time", Clock)}
+        {fieldBtn(t("Day"), weekdayLong(day - 1), "day", ChevronDown)}
+        {fieldBtn(t("Due at"), time12(time), "time", Clock)}
       </div>
-      <FieldLabel>Who gets it</FieldLabel>
+      <FieldLabel>{t("Who gets it")}</FieldLabel>
       <RadioRows<Who>
-        label="Who gets it"
+        label={t("Who gets it")}
         value={who}
         onChange={setWho}
         rows={[
           {
             value: "programme",
-            title: lane === "nutrition" ? "Clients on a meal plan" : "Clients on a programme",
-            line: onPlan == null ? "Loading…" : `${onPlan.length} client${onPlan.length === 1 ? "" : "s"}`,
+            title: lane === "nutrition" ? t("Clients on a meal plan") : t("Clients on a programme"),
+            line: onPlan == null ? t("Loading…") : tn(onPlan.length, "{n} client", "{n} clients"),
           },
-          { value: "selected", title: "Selected clients", line: picked.length ? picked.map((id) => firstOf(nameOf(id))).join(", ") : "Choose below" },
+          { value: "selected", title: t("Selected clients"), line: picked.length ? picked.map((id) => firstOf(nameOf(id))).join(getLanguage() === "ar" ? "، " : ", ") : t("Choose below") },
         ]}
       />
       {who === "selected" && (
-        <div style={{ marginTop: 10 }} role="group" aria-label="Clients">
+        <div style={{ marginTop: 10 }} role="group" aria-label={t("Clients")}>
           {roster.map((p) => (
             <PersonRow
               key={p.clientId}
               multi
               name={p.name}
-              line={already.has(p.clientId) ? "Already getting it" : undefined}
+              line={already.has(p.clientId) ? t("Already getting it") : undefined}
               on={picked.includes(p.clientId)}
               onClick={() => setPicked((cur) => (cur.includes(p.clientId) ? cur.filter((x) => x !== p.clientId) : [...cur, p.clientId]))}
             />
           ))}
         </div>
       )}
-      <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 8 }}>A reminder goes 2 hours before it is due, and again the next morning if it's still open.</p>
-      {!ready && <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 6 }}>Save the check-in first.</p>}
+      <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 8 }}>{t("A reminder goes 2 hours before it is due, and again the next morning if it's still open.")}</p>
+      {!ready && <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 6 }}>{t("Save the check-in first.")}</p>}
       {live.length > 0 && (
         <>
-          <FieldLabel>Getting it now</FieldLabel>
+          <FieldLabel>{t("Getting it now")}</FieldLabel>
           <ListCard
             rows={live.map((s) => {
               const sc = parseSchedule(s.schedule);
@@ -358,16 +361,16 @@ export const ScheduleSheet: React.FC<{
                 key: s.id,
                 icon: CalendarCheck,
                 title: nameOf(s.clientId),
-                meta: sc ? scheduleLine(sc) : "On a schedule",
+                meta: sc ? scheduleLine(sc) : t("On a schedule"),
                 trailing: (
                   <button
                     type="button"
                     onClick={() => setStopping(s)}
-                    aria-label={`Stop ${nameOf(s.clientId)}'s check-ins`}
+                    aria-label={t("Stop {name}'s check-ins", { name: nameOf(s.clientId) })}
                     className="tap shrink-0"
                     style={{ minHeight: 44, padding: "0 6px", fontSize: textPx(12.5), fontWeight: 700, color: INK.hi }}
                   >
-                    Stop
+                    {t("Stop")}
                   </button>
                 ),
               };
@@ -379,21 +382,21 @@ export const ScheduleSheet: React.FC<{
       <CentredPopup
         open={!!stopping}
         onClose={() => setStopping(null)}
-        title="Stop these check-ins?"
-        body={stopping ? `${firstOf(nameOf(stopping.clientId))} won't get this check-in any more. Answers already sent stay.` : undefined}
+        title={t("Stop these check-ins?")}
+        body={stopping ? t("{name} won't get this check-in any more. Answers already sent stay.", { name: firstOf(nameOf(stopping.clientId)) }) : undefined}
         cta={{
-          label: "Stop check-ins",
+          label: t("Stop check-ins"),
           loading: busy === "stop",
           onClick: async () => {
             if (!stopping || busy) return;
-            if (!online) return setErr(OFFLINE);
+            if (!online) return setErr(t(OFFLINE));
             setBusy("stop");
             const r = await cancelAssignment(stopping.id);
             setBusy(null);
             const who = firstOf(nameOf(stopping.clientId));
             setStopping(null);
-            if (!r.ok) return setErr(r.message);
-            onDone(`Stopped for ${who}.`);
+            if (!r.ok) return setErr(t(r.message));
+            onDone(t("Stopped for {name}.", { name: who }));
           },
         }}
       />
@@ -401,8 +404,8 @@ export const ScheduleSheet: React.FC<{
         open={!!menu}
         onClose={() => setMenu(null)}
         anchor={menu?.el ?? null}
-        heading={menu?.kind === "day" ? "Day" : "Due at"}
-        options={menu?.kind === "day" ? DAY_LONG.map((d, i) => ({ value: String(i + 1), label: d })) : SCHEDULE_TIMES.map((t) => ({ value: t, label: time12(t) }))}
+        heading={menu?.kind === "day" ? t("Day") : t("Due at")}
+        options={menu?.kind === "day" ? DAYS.map((d) => ({ value: String(d), label: weekdayLong(d - 1) })) : SCHEDULE_TIMES.map((x) => ({ value: x, label: time12(x) }))}
         selected={menu?.kind === "day" ? String(day) : time}
         onSelect={(v) => {
           if (menu?.kind === "day") setDay(Number(v));

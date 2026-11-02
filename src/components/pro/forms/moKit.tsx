@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, ChevronLeft, type LucideIcon } from "lucide-react";
 import { textPx } from "../../../theme/textSize";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { INK } from "../proInk";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · W6 the More pages' own pieces (Forms, Care network, Practice
@@ -30,8 +31,8 @@ import { INK } from "../proInk";
 
 export const CHead: React.FC<{ title: string; sub?: string; onBack: () => void; right?: React.ReactNode }> = ({ title, sub, onBack, right }) => (
   <div className="flex items-start" style={{ gap: 6, marginBottom: 16 }}>
-    <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -7, borderRadius: 9999 }}>
-      <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
+    <button type="button" onClick={onBack} aria-label={t("Back")} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -7, borderRadius: 9999 }}>
+      <ChevronLeft size={18} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: INK.chS }} />
     </button>
     <div className="flex-1 min-w-0" style={{ marginTop: 3 }}>
       <h1 style={{ fontSize: textPx(24), fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.25, color: INK.ch, overflowWrap: "anywhere" }}>{title}</h1>
@@ -190,7 +191,8 @@ export function RangeTrack<V extends string>({ items, value, onChange, label }: 
             className="tap flex items-center justify-center whitespace-nowrap relative before:absolute before:inset-x-0 before:-inset-y-[10px] before:content-['']"
             style={{ height: 24, minWidth: 28, padding: "0 7px", borderRadius: 7, fontSize: textPx(10.5), fontWeight: 800, background: on ? INK.card : "transparent", color: on ? INK.ch : INK.chF, boxShadow: on ? "0 1px 2px rgba(0,0,0,0.08)" : undefined }}
           >
-            {r}
+            {/* The caller's English range labels (tk() there), shown in the app's language. */}
+            {t(r)}
           </button>
         );
       })}
@@ -201,8 +203,8 @@ export function RangeTrack<V extends string>({ items, value, onChange, label }: 
 export const TopToast: React.FC<{ icon: LucideIcon; text: string | null; tone?: "good" | "pr"; onDone: () => void }> = ({ icon: Icon, text, tone = "good", onDone }) => {
   useEffect(() => {
     if (!text) return;
-    const t = window.setTimeout(onDone, 4000);
-    return () => window.clearTimeout(t);
+    const timer = window.setTimeout(onDone, 4000);
+    return () => window.clearTimeout(timer);
   }, [text, onDone]);
   if (!text) return null;
   return (
