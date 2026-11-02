@@ -7,6 +7,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import type { ReminderTone } from "../../services/client-forms/logic";
 import { ReminderIcon } from "./parts";
 import { toneSet } from "./tone";
+import { t } from "../../i18n/core";
 
 /**
  * Release 3 · W7 CU23 v3: one pop-up of the queue (source/gen/r21.js
@@ -48,7 +49,7 @@ export const ReminderPopup: React.FC<{
       }
       titleAside={
         <span style={{ position: "relative", top: -10, insetInlineEnd: -4, fontSize: textPx(11), fontWeight: 700, color: INK.chF }}>
-          {index + 1} of {count}
+          {t("{n} of {total}", { n: index + 1, total: count })}
         </span>
       }
     >

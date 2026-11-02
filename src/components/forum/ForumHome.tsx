@@ -12,7 +12,9 @@ import {
   type Author,
   type ForumThread,
 } from "../../services/forum";
-import { filterChips, forumAge, hiddenInRecovery, type ForumCategory } from "../../services/forum/rules";
+import { filterChips, hiddenInRecovery, type ForumCategory } from "../../services/forum/rules";
+import { forumMetaLine } from "./age";
+import { isRtl, t, tn } from "../../i18n/core";
 import { fv } from "./forumColor";
 import { useIsDark } from "../../hooks/useIsDark";
 import { categoryColours, orderCategories, type CategoryColours } from "./categoryColour";
@@ -134,7 +136,7 @@ export function ForumHome({
       if (mine !== seq.current) return;
       if (!r.ok) {
         // O2 / O4 (OURS): our own line; the raw service message stays out.
-        setError({ key, message: offlineOr("Couldn't load the forum.") });
+        setError({ key, message: offlineOr(t("Couldn't load the forum.")) });
         setPage({ key, threads: [], more: false });
         return;
       }
@@ -167,7 +169,7 @@ export function ForumHome({
       await decorate(r.value);
       const seen = new Set(threads.map((t) => t.id));
       setPage({ key, threads: [...threads, ...r.value.filter((t) => !seen.has(t.id))], more: r.value.length === THREAD_PAGE });
-    } else setError({ key, message: offlineOr("Couldn't load the forum.") });
+    } else setError({ key, message: offlineOr(t("Couldn't load the forum.")) });
     setLoadingMore(false);
   };
 
@@ -194,25 +196,25 @@ export function ForumHome({
 
   // A like on the list (A21), optimistic: the count and the heart change at
   // once and go back if the write fails.
-  const toggleLike = async (t: ForumThread) => {
-    const next = !likes.has(t.id);
+  const toggleLike = async (th: ForumThread) => {
+    const next = !likes.has(th.id);
     const bump = (d: number) =>
-      setPage((pg) => pg && { ...pg, threads: pg.threads.map((x) => (x.id === t.id ? { ...x, reactionCount: Math.max(0, x.reactionCount + d) } : x)) });
+      setPage((pg) => pg && { ...pg, threads: pg.threads.map((x) => (x.id === th.id ? { ...x, reactionCount: Math.max(0, x.reactionCount + d) } : x)) });
     const mark = (on: boolean) =>
       setLikes((prev) => {
         const s = new Set(prev);
-        if (on) s.add(t.id);
-        else s.delete(t.id);
+        if (on) s.add(th.id);
+        else s.delete(th.id);
         return s;
       });
     mark(next);
     bump(next ? 1 : -1);
-    const r = await likeThread(t.id, userId, next);
+    const r = await likeThread(th.id, userId, next);
     if (!r.ok) {
       // O2 (OURS): the heart reverts and a toast says so.
       mark(!next);
       bump(next ? -1 : 1);
-      setToast("Couldn't save. Try again.");
+      setToast(t("Couldn't save. Try again."));
     }
   };
 
@@ -233,7 +235,7 @@ export function ForumHome({
   const fab = proLook ? (
     <Link
       to="/app/forum/new"
-      aria-label="New post"
+      aria-label={t("New post")}
       data-forum-fab=""
       className="tap fixed z-30 rounded-full flex items-center justify-center no-underline bg-primary-fill text-on-primary-fill dark:shadow-none bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] end-[calc(var(--app-gutter)+18px)] lg:bottom-8 lg:end-8"
       style={{ width: 52, height: 52, boxShadow: "0 8px 22px rgba(95,80,147,0.28)" }}
@@ -245,7 +247,7 @@ export function ForumHome({
   ) : (
     <Link
       to="/app/forum/new"
-      aria-label="Add"
+      aria-label={t("Add")}
       data-forum-fab=""
       className="tap fixed z-30 w-14 h-14 rounded-full flex items-center justify-center no-underline bg-primary-fill text-on-primary-fill shadow-fab dark:shadow-none bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] end-[calc(var(--app-gutter)+20px)] lg:bottom-8 lg:end-8"
     >
@@ -265,8 +267,8 @@ export function ForumHome({
   // right edge under a 44 fade to the page.
   const proStrip = (
     <div className="relative -me-4">
-      <div className="flex overflow-x-auto no-scrollbar pe-4" style={{ gap: 6 }} role="group" aria-label="Categories" data-forum-strip="">
-        {[{ key: null as string | null, name: "All" }, ...chips].map((c) => {
+      <div className="flex overflow-x-auto no-scrollbar pe-4" style={{ gap: 6 }} role="group" aria-label={t("Categories")} data-forum-strip="">
+        {[{ key: null as string | null, name: t("All") }, ...chips].map((c) => {
           const on = activeFilter === c.key;
           return (
             <button
@@ -292,14 +294,14 @@ export function ForumHome({
           );
         })}
       </div>
-      <span aria-hidden className="absolute inset-y-0 end-0 pointer-events-none" style={{ width: 44, background: "linear-gradient(to right, transparent, rgb(var(--c-cream)))" }} />
+      <span aria-hidden className="absolute inset-y-0 end-0 pointer-events-none" style={{ width: 44, background: `linear-gradient(to ${isRtl() ? "left" : "right"}, transparent, rgb(var(--c-cream)))` }} />
     </div>
   );
 
   const strip = proLook ? proStrip : recoveryPending ? (
     <div
       className="flex gap-1 -me-4 p-1 pe-4 overflow-hidden bg-th-f4f3f9 dark:bg-cream-soft"
-      style={{ borderRadius: "12px 0 0 12px" }}
+      style={{ borderRadius: isRtl() ? "0 12px 12px 0" : "12px 0 0 12px" }}
       aria-hidden="true"
     >
       {[43, 80, 80, 74, 88].map((w, i) => (
@@ -309,13 +311,13 @@ export function ForumHome({
   ) : (
     <div
       className="flex gap-1 overflow-x-auto no-scrollbar -me-4 p-1 pe-4 bg-th-f4f3f9 dark:bg-cream-soft"
-      style={{ borderRadius: "12px 0 0 12px" }}
+      style={{ borderRadius: isRtl() ? "0 12px 12px 0" : "12px 0 0 12px" }}
       role="group"
-      aria-label="Categories"
+      aria-label={t("Categories")}
       data-forum-strip=""
     >
       <ForumChip inStrip active={activeFilter === null} onClick={() => setFilter(null)}>
-        All
+        {t("All")}
       </ForumChip>
       {chips.map((c) => (
         <ForumChip inStrip key={c.key} active={activeFilter === c.key} onClick={() => setFilter(c.key)}>
@@ -339,15 +341,14 @@ export function ForumHome({
         // under the fixed area; scrolls away.
         <div className="text-[12px] leading-[18px] flex justify-between items-center gap-2 text-charcoal-faint" data-forum-nickname="">
           <span className="min-w-0">
-            Your nickname: <strong className="font-bold text-charcoal">{nickname}</strong>. You choose nickname or name each
-            time you post.
+            {t("Your nickname:")} <strong className="font-bold text-charcoal">{nickname}</strong>. {t("You choose nickname or name each time you post.")}
           </span>
           <Link
             to="/app/forum/nickname"
             className="font-bold no-underline shrink-0 py-2 -my-2"
             style={{ color: dark ? "rgb(var(--thi-c3b3fb))" : "rgb(var(--thi-7d6bb5))" }}
           >
-            Edit
+            {t("Edit")}
           </Link>
         </div>
       )}
@@ -368,10 +369,9 @@ export function ForumHome({
         </span>
         <span>
           <strong className="font-bold" style={{ color: dark ? "rgb(var(--thi-c3b3fb))" : "rgb(var(--thi-5f5093))" }}>
-            Community rules:
+            {t("Community rules:")}
           </strong>{" "}
-          Be kind, share experience rather than medical advice, and report anything that worries you. Posts here aren't a
-          substitute for a doctor.
+          {t("Be kind, share experience rather than medical advice, and report anything that worries you. Posts here aren't a substitute for a doctor.")}
         </span>
       </div>
 
@@ -385,7 +385,7 @@ export function ForumHome({
             className="tap font-bold"
             style={{ color: dark ? "rgb(var(--thi-c3b3fb))" : "rgb(var(--thi-7d6bb5))" }}
           >
-            Retry
+            {t("Retry")}
           </button>
         </p>
       )}
@@ -407,7 +407,7 @@ export function ForumHome({
                 className="text-[10.5px] font-bold uppercase leading-[14px] tracking-[1.3px] pb-[7.5px] border-b-[1.5px] border-primary"
                 style={{ color: dark ? "rgb(var(--thi-c3b3fb))" : "rgb(var(--thi-7d6bb5))" }}
               >
-                Your post, waiting for review
+                {t("Your post, waiting for review")}
               </span>
               {held.map((t) => (
                 <button
@@ -458,13 +458,13 @@ export function ForumHome({
             })}
             {/* O3 (OURS): Foundations › Empty state, tile r16 (as MO1.7.e). */}
             {feed.length === 0 && held.length === 0 && !shownError && (
-              <EmptyBlock partB icon={<MessagesSquare size={26} strokeWidth={1.75} />} title="No posts here yet" line="Start the conversation." />
+              <EmptyBlock partB icon={<MessagesSquare size={26} strokeWidth={1.75} />} title={t("No posts here yet")} line={t("Start the conversation.")} />
             )}
             {/* MO18 v2: 11.5 text.faint 1.5, info 13, gap 6, 4 down. */}
             {proLook && (
               <p className="m-0 flex text-charcoal-faint" style={{ gap: 6, fontSize: textPx(11.5), lineHeight: 1.5, marginTop: 4 }}>
                 <Info size={13} strokeWidth={2} aria-hidden className="shrink-0" style={{ marginTop: 2 }} />
-                <span>You post under your name and title. Clients post under a nickname.</span>
+                <span>{t("You post under your name and title. Clients post under a nickname.")}</span>
               </p>
             )}
             {/* K7: older posts load as the end of the list scrolls into view,
@@ -480,13 +480,13 @@ export function ForumHome({
                   className="sr-only focus:not-sr-only focus:self-center focus:h-11 focus:px-4 focus:rounded-full text-[13px] font-bold"
                   style={{ color: fv("link") }}
                 >
-                  Load older posts
+                  {t("Load older posts")}
                 </button>
               </>
             )}
             {loadingMore && (
               <p role="status" className="m-0 text-center text-[12px] text-charcoal-faint">
-                Loading older posts…
+                {t("Loading older posts…")}
               </p>
             )}
           </div>
@@ -553,25 +553,23 @@ type ListMenuOption = "edit" | "withdraw" | "report" | "block";
 function listMenuOptions(mine: boolean, label: string): PopupMenuOption<ListMenuOption>[] {
   if (mine) {
     return [
-      { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} /> },
-      { value: "withdraw", label: "Withdraw post", icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
+      { value: "edit", label: t("Edit"), icon: <Pencil size={15} strokeWidth={1.75} /> },
+      { value: "withdraw", label: t("Withdraw post"), icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
     ];
   }
   return [
-    { value: "report", label: "Report post", icon: <Flag size={15} strokeWidth={1.75} /> },
-    { value: "block", label: `Block ${label}`, icon: <Ban size={15} strokeWidth={1.75} />, destructive: true },
+    { value: "report", label: t("Report post"), icon: <Flag size={15} strokeWidth={1.75} /> },
+    { value: "block", label: t("Block {name}", { name: label }), icon: <Ban size={15} strokeWidth={1.75} />, destructive: true },
   ];
 }
 
 /** O4 (OURS): the offline wording for a failed read. */
 const offlineOr = (message: string) =>
-  typeof navigator !== "undefined" && navigator.onLine === false ? "You're offline. Try again when you're connected." : message;
+  typeof navigator !== "undefined" && navigator.onLine === false ? t("You're offline. Try again when you're connected.") : message;
 
 /** "Pinned · 40d" or "38d ago" (MO1.3); "Just now" and "Yesterday" as they are. */
 function metaLine(thread: ForumThread): string {
-  const age = forumAge(thread.createdAt);
-  if (thread.pinned) return `Pinned · ${age}`;
-  return /^\d+[mhd]$/.test(age) ? `${age} ago` : age;
+  return forumMetaLine(thread.createdAt, thread.pinned, true);
 }
 
 /**
@@ -616,7 +614,7 @@ function ThreadCard({
   onOpen: () => void;
   onMenu: (anchor: HTMLElement) => void;
 }) {
-  const replies = `${thread.replyCount} ${thread.replyCount === 1 ? "reply" : "replies"}`;
+  const replies = tn(thread.replyCount, "{n} reply", "{n} replies");
   const pill = pillColours(categoryKey, colours, dark);
   const cardRef = useRef<HTMLDivElement>(null);
   // S7: a 500 ms press opens the menu and swallows the click that follows.
@@ -677,7 +675,7 @@ function ThreadCard({
       {/* S7 keyboard path: a ⋮ that shows only while focused. */}
       <button
         type="button"
-        aria-label="Post options"
+        aria-label={t("Post options")}
         onClick={(e) => {
           e.stopPropagation();
           if (cardRef.current) onMenu(cardRef.current);
@@ -736,7 +734,7 @@ function ThreadCard({
             onLike();
           }}
           aria-pressed={liked}
-          aria-label={`${liked ? "Unlike" : "Like"}, ${thread.reactionCount} ${thread.reactionCount === 1 ? "like" : "likes"}`}
+          aria-label={`${liked ? t("Unlike") : t("Like")}, ${tn(thread.reactionCount, "{n} like", "{n} likes")}`}
           className="tap flex gap-[5px] items-center -my-2 py-2 pe-1 font-bold"
         >
           <HeartIcon filled={liked} color={iconInk} size={14} /> {thread.reactionCount}
@@ -835,7 +833,7 @@ function ProThreadCard({
     >
       <button
         type="button"
-        aria-label="Post options"
+        aria-label={t("Post options")}
         onClick={(e) => {
           e.stopPropagation();
           if (cardRef.current) onMenu(cardRef.current);
@@ -854,11 +852,11 @@ function ProThreadCard({
         {author.professionalId && (
           <span className="inline-flex items-center shrink-0 text-status-good" style={{ gap: 3, fontSize: textPx(10.5), fontWeight: 700 }}>
             <BadgeCheck size={11} strokeWidth={2} aria-hidden />
-            Professional
+            {t("Professional")}
           </span>
         )}
         <span className="ms-auto shrink-0 text-charcoal-faint" style={{ fontSize: textPx(11) }}>
-          {thread.pinned ? `Pinned · ${forumAge(thread.createdAt)}` : forumAge(thread.createdAt)}
+          {forumMetaLine(thread.createdAt, thread.pinned, false)}
         </span>
       </div>
       <p className="m-0 font-bold text-charcoal [overflow-wrap:anywhere]" style={{ fontSize: textPx(14.5), lineHeight: 1.35 }}>
@@ -876,7 +874,7 @@ function ProThreadCard({
             {categoryName}
           </span>
         )}
-        <span className="inline-flex items-center" style={{ gap: 4 }} aria-label={`${thread.replyCount} ${thread.replyCount === 1 ? "reply" : "replies"}`}>
+        <span className="inline-flex items-center" style={{ gap: 4 }} aria-label={tn(thread.replyCount, "{n} reply", "{n} replies")}>
           <MessageSquare size={12} strokeWidth={2} aria-hidden />
           {thread.replyCount}
         </span>

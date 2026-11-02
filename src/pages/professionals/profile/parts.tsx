@@ -6,6 +6,7 @@ import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { SEGMENT_STEPS, marketPalette } from "../../../theme/marketTokens";
 import { hexAlpha, liftInk } from "../../../components/market/marketColor";
 import { FOCUS_CSS, usePress } from "../../../components/market/usePress";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W5 · shared pieces of the C-MO.4.9 screens (Client
 // Professional Screens lines 28–31 / 54–57 back rows, 94 caps label, 150–156
@@ -20,7 +21,7 @@ import { FOCUS_CSS, usePress } from "../../../components/market/usePress";
 //   at 16% with the lifted ink (stubColors' rule).
 
 export const Chevron: React.FC<{ size?: number; color: string; dir?: "left" | "right"; stroke?: number }> = ({ size = 16, color, dir = "right", stroke = 1.75 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ display: "block", flex: "none", ...NO_ICON_SCALE }}>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden className="rtl:-scale-x-100" style={{ display: "block", flex: "none", ...NO_ICON_SCALE }}>
     <path d={dir === "right" ? "m9 18 6-6-6-6" : "m15 18-6-6 6-6"} />
   </svg>
 );
@@ -47,7 +48,7 @@ export const BackRow: React.FC<{ title?: string; eyebrow?: string; aside?: React
         <button
           type="button"
           onClick={onBack ?? back}
-          aria-label="Back"
+          aria-label={t("Back")}
           className="hit market-focus"
           style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", color: m.ink2, background: "none", border: 0, padding: 0, borderRadius: 999, cursor: "pointer", flexShrink: 0 }}
         >

@@ -9,6 +9,8 @@
 
 import { bool, num, rows, str } from "../market/parse";
 import type { ProfessionalCardData } from "../../components/market/peopleModel";
+import { getLanguage, t, tk } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
 
 export type WorkType = "role" | "class_slot";
 
@@ -214,7 +216,7 @@ export function parseDirectory(data: unknown): DirectoryHit[] {
       // Online rows and no-area rows too (Release B): they come after every distance band.
       return {
         ...card,
-        name: card.name || "Professional",
+        name: card.name || t("Professional"),
         rank: i + 1,
         fromPriceValue: prices.length ? Math.min(...prices) : null,
         score: num(r.rank_score),
@@ -236,20 +238,25 @@ const ymd = (iso: string): [number, number, number] | null => {
   return m ? [Number(m[1]), Number(m[2]) - 1, Number(m[3])] : null;
 };
 
+// Arabic: the locale's own month and day names (English keeps its exact form below).
+const local = (d: [number, number, number], o: Intl.DateTimeFormatOptions) => new Date(d[0], d[1], d[2] || 1).toLocaleDateString(appLocale(), o);
+const english = () => getLanguage() === "en";
+
 /** "Sep 12, 2026" (D-02, month first). */
 export function dayText(iso: string | null): string {
   const d = iso ? ymd(iso) : null;
+  if (d && !english()) return local(d, { month: "short", day: "numeric", year: "numeric" });
   return d ? `${MONTHS[d[1]]} ${d[2]}, ${d[0]}` : "";
 }
 
-/** The stub on a work-history entry: "Role" (current), "Class slot", "Ended" (a role that ended). */
+/** The stub on a work-history entry: "Role" (current), "Class slot", "Ended" (a role that ended). English keys, shown through t(). */
 export function workStub(e: Pick<WorkEntry, "type" | "to">, today: string): "Role" | "Class slot" | "Ended" {
-  if (e.type === "class_slot") return "Class slot";
-  return e.to && e.to.slice(0, 10) < today ? "Ended" : "Role";
+  if (e.type === "class_slot") return tk("Class slot");
+  return e.to && e.to.slice(0, 10) < today ? tk("Ended") : tk("Role");
 }
 
 /** "Spin instructor · Role", "Saturday Spin cover · Class slot". */
-export const workRoleLine = (e: Pick<WorkEntry, "roleTitle" | "type">): string => `${e.roleTitle} · ${e.type === "class_slot" ? "Class slot" : "Role"}`;
+export const workRoleLine = (e: Pick<WorkEntry, "roleTitle" | "type">): string => `${e.roleTitle} · ${e.type === "class_slot" ? t("Class slot") : t("Role")}`;
 
 /**
  * The date line, month first (D-02): a class slot is its day ("Sep 12, 2026");
@@ -261,6 +268,11 @@ export function workDates(e: Pick<WorkEntry, "type" | "from" | "to">, today: str
   const a = e.from ? ymd(e.from) : null;
   if (!a) return "";
   const b = e.to && e.to.slice(0, 10) < today ? ymd(e.to) : null;
+  if (!english()) {
+    const my = (x: [number, number, number]) => local(x, { month: "short", year: "numeric" });
+    if (!b) return t("{from} to now", { from: my(a) });
+    return a[0] === b[0] && a[1] === b[1] ? my(a) : t("{from} to {to}", { from: my(a), to: my(b) });
+  }
   if (!b) return `${MONTHS[a[1]]} ${a[0]} to now`;
   if (a[0] === b[0]) return a[1] === b[1] ? `${MONTHS[a[1]]} ${a[0]}` : `${MONTHS[a[1]]} to ${MONTHS[b[1]]} ${a[0]}`;
   return `${MONTHS[a[1]]} ${a[0]} to ${MONTHS[b[1]]} ${b[0]}`;
@@ -279,11 +291,14 @@ export function reviewContext(r: Pick<ProfileReview, "className" | "businessName
 }
 
 /** "Spin 45 · from Nov 1" when the class starts later; else the title. */
-export function teachesTitle(t: Pick<TeachesAtRow, "title" | "startsOn">, today: string): string {
-  const d = t.startsOn ? ymd(t.startsOn) : null;
-  return d && t.startsOn!.slice(0, 10) > today ? `${t.title} · from ${MONTHS[d[1]]} ${d[2]}` : t.title;
+export function teachesTitle(row: Pick<TeachesAtRow, "title" | "startsOn">, today: string): string {
+  const d = row.startsOn ? ymd(row.startsOn) : null;
+  if (!(d && row.startsOn!.slice(0, 10) > today)) return row.title;
+  const date = english() ? `${MONTHS[d[1]]} ${d[2]}` : local(d, { month: "short", day: "numeric" });
+  return t("{title} · from {date}", { title: row.title, date });
 }
 
 const WEEKDAY = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 /** The day label on a Teaches-at row ("FRI"), ISO weekday 1..7. */
-export const weekdayCaps = (w: number | null): string => (w && w >= 1 && w <= 7 ? WEEKDAY[w - 1] : "");
+export const weekdayCaps = (w: number | null): string =>
+  w && w >= 1 && w <= 7 ? (english() ? WEEKDAY[w - 1] : new Date(2024, 0, w).toLocaleDateString(appLocale(), { weekday: "short" })) : "";

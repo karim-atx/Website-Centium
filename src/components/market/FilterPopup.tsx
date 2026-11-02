@@ -5,6 +5,7 @@ import { textPx } from "../../theme/textSize";
 import { NO_ICON_SCALE } from "../pro/proInk";
 import { marketPalette } from "../../theme/marketTokens";
 import { t } from "../../i18n/core";
+import { filterOptionLabel } from "./filterModel";
 
 // Market + Share 3.0 · FilterPopup (HANDOVER §4 C-MO.4.3 class filter and
 // P-MA.5.1, §5 "groups of checkbox rows + Done, reuse repo PopupMenu
@@ -253,7 +254,7 @@ export const FilterPopup: React.FC<FilterPopupProps> = ({ open, anchor, groups, 
                       border: `1px solid ${on ? onBd : "rgb(var(--c-border-option))"}`,
                     }}
                   >
-                    <span style={{ flex: 1, minWidth: 0 }}>{t(o)}</span>
+                    <span style={{ flex: 1, minWidth: 0 }}>{filterOptionLabel(o)}</span>
                     <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={check} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ display: "block", flex: "none", opacity: on ? 1 : 0, ...NO_ICON_SCALE }}>
                       <rect width="18" height="18" x="3" y="3" rx="2" />
                       <path d="m9 12 2 2 4-4" />

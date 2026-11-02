@@ -15,6 +15,7 @@ import { GuidelinesLink } from "../moderation/GuidelinesLink";
 import { mentionsSelfHarm } from "../../services/moderation/phrases";
 import { supportPlace } from "../../services/moderation/support";
 import { browserTimezone } from "../../services/timezone";
+import { t } from "../../i18n/core";
 
 // Small pieces shared by the forum screens (design PgYuBboDr8DEL2bk7EJKtU).
 // Sizes, weights and colours are the design's; colours go through the
@@ -109,7 +110,7 @@ export function ProfessionalBadge() {
       style={{ background: fv("teal-bg"), color: fv("teal-ink") }}
     >
       <ShieldCheckIcon color={fv("teal-ink")} />
-      Professional
+      {t("Professional")}
     </span>
   );
 }
@@ -166,7 +167,7 @@ export function RemovedNote({ kind, radius = 16 }: { kind: "post" | "reply"; rad
         color: fv("muted"),
       }}
     >
-      {kind === "post" ? "Post removed by a moderator" : "Reply removed by a moderator"}
+      {kind === "post" ? t("Post removed by a moderator") : t("Reply removed by a moderator")}
     </div>
   );
 }
@@ -197,12 +198,12 @@ export function HeldNote({ text, inline }: { text?: string; inline?: boolean }) 
   if (gentle)
     return (
       <span className="block text-xs leading-[1.5]" style={box}>
-        <span className="block font-bold">Only you can see this for now.</span>
-        <span className="block font-semibold">If you're going through something hard, you don't have to face it alone.</span>
+        <span className="block font-bold">{t("Only you can see this for now.")}</span>
+        <span className="block font-semibold">{t("If you're going through something hard, you don't have to face it alone.")}</span>
         {!inline && (
           <>
             <button type="button" onClick={() => setSupport(true)} className="tap mt-1 min-h-[32px] font-extrabold underline">
-              Get support
+              {t("Get support")}
             </button>
             <GetSupportPopup open={support} onClose={() => setSupport(false)} place={supportPlace(null, browserTimezone())} />
           </>
@@ -211,13 +212,13 @@ export function HeldNote({ text, inline }: { text?: string; inline?: boolean }) 
     );
   return (
     <span className="block text-xs leading-[1.5]" style={box}>
-      <span className="font-bold">Held for review.</span>{" "}
-      <span className="font-semibold">Only you can see this until our team checks it.</span>
+      <span className="font-bold">{t("Held for review.")}</span>{" "}
+      <span className="font-semibold">{t("Only you can see this until our team checks it.")}</span>
       {!inline && (
         <>
           {" "}
           <Link to="/legal/community-guidelines" className="font-bold underline" style={{ color: "inherit" }}>
-            Community guidelines
+            {t("Community guidelines")}
           </Link>
         </>
       )}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Check, Search } from "lucide-react";
 import { AREAS, REGIONS, type Area } from "../../services/geo/areas";
+import { t } from "../../i18n/core";
 
 /**
  * Choosing a city or area in Lebanon instead of sharing a location: for a
@@ -22,11 +23,11 @@ export const AreaPicker: React.FC<{
     <div className="flex flex-col">
       <label className="flex items-center gap-2 h-11 rounded-[14px] bg-cream-card border border-charcoal/10 px-3 mb-2">
         <Search size={16} className="text-charcoal-soft shrink-0" aria-hidden />
-        <span className="sr-only">Search areas</span>
+        <span className="sr-only">{t("Search areas")}</span>
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search a city or area"
+          placeholder={t("Search a city or area")}
           className="flex-1 min-w-0 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
         />
       </label>
@@ -51,7 +52,7 @@ export const AreaPicker: React.FC<{
           </section>
         );
       })}
-      {shown.length === 0 && <p className="text-sm text-charcoal-faint text-center py-6">No areas match.</p>}
+      {shown.length === 0 && <p className="text-sm text-charcoal-faint text-center py-6">{t("No areas match.")}</p>}
     </div>
   );
 };

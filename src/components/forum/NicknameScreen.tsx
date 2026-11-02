@@ -3,6 +3,7 @@ import { fetchReservedNicknames, setNickname } from "../../services/forum";
 import { nicknameProblem, NICKNAME_PROBLEM_TEXT } from "../../services/forum/rules";
 import { fv } from "./forumColor";
 import { rememberNickname } from "./useForumMe";
+import { t } from "../../i18n/core";
 
 import { AtSign, ChevronLeft } from "lucide-react";
 import { PinnedCta } from "../ui/PinnedCta";
@@ -46,7 +47,7 @@ export function NicknameScreen({
 
   const problem = nicknameProblem(value, reserved, [firstName]);
   const unchanged = editing && initial !== null && value.trim() === initial;
-  const shownError = serverError ?? (touched && problem ? NICKNAME_PROBLEM_TEXT[problem] : null);
+  const shownError = serverError ?? (touched && problem ? t(NICKNAME_PROBLEM_TEXT[problem]) : null);
 
   const submit = async () => {
     setTouched(true);
@@ -85,10 +86,10 @@ export function NicknameScreen({
         <button
           type="button"
           onClick={back}
-          aria-label="Back"
+          aria-label={t("Back")}
           className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft"
         >
-          <ChevronLeft size={18} />
+          <ChevronLeft size={18} className="rtl:-scale-x-100" />
         </button>
         {/* Decision 23 (item 12): the frame's #F0EDF9 / #7D6BB5 (primary.tint
             / primary.deep, which follow the theme); dark takes the same
@@ -96,16 +97,16 @@ export function NicknameScreen({
         <div className="mt-1 w-14 h-14 rounded-[18px] flex items-center justify-center bg-primary-pale">
           <AtSign size={26} strokeWidth={1.75} className="text-primary-dark" />
         </div>
-        <h1 className="m-0 text-[24px] font-extrabold leading-[1.25] [text-wrap:balance]">Choose a forum nickname</h1>
+        <h1 className="m-0 text-[24px] font-extrabold leading-[1.25] [text-wrap:balance]">{t("Choose a forum nickname")}</h1>
         <p className="m-0 text-[14px] leading-[1.6]" style={{ color: fv("body") }}>
-          Each time you post, you choose whether to use this nickname or your first name. Nobody in the community can
-          see who is behind your nickname.
+          {t("Each time you post, you choose whether to use this nickname or your first name. Nobody in the community can see who is behind your nickname.")}
         </p>
         <label className="flex flex-col gap-1.5 text-[12px] font-semibold" style={{ color: fv("muted") }}>
-          Nickname
+          {t("Nickname")}
           {/* MO1.3.4 #5: 50 tall with a 1.5 pt accent border (measured from
               the frame, 2x: 100 px with a 3 px border). */}
           <span
+            dir="ltr"
             className="h-[50px] rounded-[14px] px-[14px] flex items-center gap-1"
             style={{ border: `1.5px solid ${fv("accent")}`, background: fv("card") }}
           >
@@ -135,9 +136,9 @@ export function NicknameScreen({
         )}
         {/* Frame check: text at x 29 (13 in), 19 pt lines, 6 between rules. */}
         <ul id="nickname-rules" className="m-0 ps-[13px] text-[12.5px] leading-[19px] list-disc space-y-1.5" style={{ color: fv("body") }}>
-          <li>3 to 20 letters, numbers or underscores</li>
-          <li>Not your real name, and not a name that sounds official, like "Doctor" or "Support"</li>
-          <li>You can change it once every 30 days, from the forum or Profile › Credentials</li>
+          <li>{t("3 to 20 letters, numbers or underscores")}</li>
+          <li>{t("Not your real name, and not a name that sounds official, like \"Doctor\" or \"Support\"")}</li>
+          <li>{t("You can change it once every 30 days, from the forum or Profile › Credentials")}</li>
         </ul>
       </div>
       {/* The page's own padding covers 112 of the 172 a pinned button needs. */}
@@ -148,7 +149,7 @@ export function NicknameScreen({
           existed pre-R1 in it (decision 22). */}
       <PinnedCta
         primary={{
-          label: "Continue",
+          label: t("Continue"),
           loading: busy,
           onClick: () => void submit(),
           className: "!h-11 !rounded-xl !text-[13.5px] !bg-[var(--forum-accent)] !text-[var(--forum-on-accent)]",

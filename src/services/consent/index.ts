@@ -9,6 +9,7 @@ import {
 } from "../cycle/guidance";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
+import { tk } from "../../i18n/core";
 
 // Client-owned consent: which categories of their data a client has granted
 // each professional they're connected to.
@@ -54,25 +55,25 @@ export type AccessCategory = Enums<"access_category">;
 export type SurfacedAccessCategory = AccessCategory;
 
 export const ACCESS_CATEGORIES: { category: SurfacedAccessCategory; label: string; description: string }[] = [
-  { category: "food_diary", label: "Food diary", description: "Meals and nutrition you log" },
-  { category: "workout_activity", label: "Workout activity", description: "Sessions, exercises and sets" },
-  { category: "weight", label: "Weight", description: "Your weight entries over time" },
-  { category: "progress", label: "Progress", description: "Streaks, goals and trends" },
+  { category: "food_diary", label: tk("Food diary"), description: tk("Meals and nutrition you log") },
+  { category: "workout_activity", label: tk("Workout activity"), description: tk("Sessions, exercises and sets") },
+  { category: "weight", label: tk("Weight"), description: tk("Your weight entries over time") },
+  { category: "progress", label: tk("Progress"), description: tk("Streaks, goals and trends") },
   // Was "Health metrics — Steps, sleep, heart rate and biomarkers", a label
   // that also silently covered medications, surgeries, comorbidities and
   // imaging. The database split those out into lab_results and
   // medical_history; "biomarkers" in particular now belongs to the former,
   // and naming it here would repeat the mislabelling at smaller scale.
-  { category: "health_metrics", label: "Activity & vitals", description: "Steps, sleep, heart rate, water and calories burned" },
+  { category: "health_metrics", label: tk("Activity & vitals"), description: tk("Steps, sleep, heart rate, water and calories burned") },
   // Release 3 CU8 v4 (r25.js SHARE25): Habits joins Everyday tracking.
-  { category: "habits", label: "Habits", description: "Habit ticks and streaks" },
-  { category: "lab_results", label: "Lab results", description: "Blood panels, markers and lab report documents" },
-  { category: "medical_history", label: "Medical history", description: "Medications, surgeries, conditions and imaging" },
+  { category: "habits", label: tk("Habits"), description: tk("Habit ticks and streaks") },
+  { category: "lab_results", label: tk("Lab results"), description: tk("Blood panels, markers and lab report documents") },
+  { category: "medical_history", label: tk("Medical history"), description: tk("Medications, surgeries, conditions and imaging") },
   // Release 3 CU8 v4 (r25.js SHARE25): its own switch, after Medical history.
   {
     category: "allergies_dietary",
-    label: "Allergies and dietary needs",
-    description: "So plans and prescriptions avoid them",
+    label: tk("Allergies and dietary needs"),
+    description: tk("So plans and prescriptions avoid them"),
   },
   // Its own category rather than a corner of Activity & vitals, and the
   // migration that added it is explicit about why: folding these into the
@@ -81,8 +82,8 @@ export const ACCESS_CATEGORIES: { category: SurfacedAccessCategory; label: strin
   // started sharing their waist without touching anything.
   {
     category: "body_measurements",
-    label: "Body measurements",
-    description: "Tape measurements and body fat percentage",
+    label: tk("Body measurements"),
+    description: tk("Tape measurements and body fat percentage"),
   },
   // ITS OWN CATEGORY, for the reason body_measurements has one: folding blood
   // pressure into "Activity & vitals" would have retroactively widened every
@@ -91,7 +92,7 @@ export const ACCESS_CATEGORIES: { category: SurfacedAccessCategory; label: strin
   // anything. Off until switched on, like all of these.
   {
     category: "blood_pressure",
-    label: "Blood pressure",
+    label: tk("Blood pressure"),
     // The sentence lives with the rest of the blood-pressure copy, so there is
     // one place to review it rather than two that can drift apart.
     description: BP_SHARING_DESCRIPTION,
@@ -164,10 +165,10 @@ export interface LinkedProfessional {
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   const message = error.message ?? "";
-  if (code === "23505") return "That consent setting was already being updated. Try again.";
+  if (code === "23505") return tk("That consent setting was already being updated. Try again.");
   // Genuinely an auth problem — no session, or an expired one.
   if (code === "PGRST301" || /jwt|not authenticated|authentication/i.test(message)) {
-    return "You need to be signed in to change data sharing. Sign in and try again.";
+    return tk("You need to be signed in to change data sharing. Sign in and try again.");
   }
   // A permission/RLS refusal is NOT an auth problem, and must not be
   // reported as one. Telling a correctly-signed-in user to sign in again
@@ -182,7 +183,7 @@ function describe(error: PostgrestError): string {
   // and produced "TypeError: Failed to fetch" on the app's most
   // security-sensitive control.
   if (isOffline(error)) return OFFLINE_MESSAGE;
-  return "Could not update data sharing. Try again.";
+  return tk("Could not update data sharing. Try again.");
 }
 
 export type LinkedProfessionalsResult =
@@ -253,7 +254,7 @@ export async function fetchLinkedProfessionals(): Promise<LinkedProfessionalsRes
       status: "error",
       // A thrown fetch failure used to surface as "TypeError: Failed to
       // fetch". Its own text is never shown now -- see isOffline.
-      message: isOffline(e) ? OFFLINE_MESSAGE : "Could not load your professionals.",
+      message: isOffline(e) ? OFFLINE_MESSAGE : tk("Could not load your professionals."),
     };
   }
 }
@@ -339,7 +340,7 @@ export async function fetchMyGrants(clientId: string): Promise<GrantsResult> {
   } catch (e) {
     return {
       status: "error",
-      message: isOffline(e) ? OFFLINE_MESSAGE : "Could not load your settings.",
+      message: isOffline(e) ? OFFLINE_MESSAGE : tk("Could not load your settings."),
     };
   }
 }
@@ -409,7 +410,7 @@ export async function setGrant(
   } catch (e) {
     return {
       status: "error",
-      message: isOffline(e) ? OFFLINE_MESSAGE : "Could not save that change.",
+      message: isOffline(e) ? OFFLINE_MESSAGE : tk("Could not save that change."),
     };
   }
 }

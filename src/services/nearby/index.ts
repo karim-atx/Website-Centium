@@ -2,6 +2,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { coarsePoint, type Coords } from "../geo/distance";
 import { parseNearby, type NearbyCursor, type NearbyProfessional, type ReachedProfessional } from "./model";
+import { tk } from "../../i18n/core";
 
 export type { NearbyCursor, NearbyProfessional, ReachedProfessional } from "./model";
 
@@ -53,11 +54,11 @@ export async function fetchNearby(center: Coords, radiusKm: number, after?: Near
       return {
         ok: false,
         rateLimited: true,
-        message: "You've searched the map a lot in the last hour. The list below still works; try the map again later.",
+        message: tk("You've searched the map a lot in the last hour. The list below still works; try the map again later."),
       };
     }
-    if (error.code === "42501") return { ok: false, message: "Sign in to see professionals near you." };
-    return { ok: false, message: "Couldn't load the map right now. Try again." };
+    if (error.code === "42501") return { ok: false, message: tk("Sign in to see professionals near you.") };
+    return { ok: false, message: tk("Couldn't load the map right now. Try again.") };
   }
   const page = parseNearby(data);
   return {

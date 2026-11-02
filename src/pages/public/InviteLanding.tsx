@@ -10,6 +10,7 @@ import { isActiveClientOf } from "../../services/connected-professional";
 import { textPx } from "../../theme/textSize";
 import type { ProfessionalSubtype } from "../../types";
 import { ProHero, PublicCard, PublicFrame, PublicMessage, PublicSkeleton, SignInButtons } from "./publicKit";
+import { t } from "../../i18n/core";
 
 /**
  * Release 3 · W7 a professional's invite link, {site}/i/{code}
@@ -82,7 +83,7 @@ export default function InviteLanding() {
   }, [proId, authReady, authUserId, code]);
 
   useEffect(() => {
-    document.title = state.status === "found" ? `${state.preview.firstName} invited you · Centium` : "Invite · Centium";
+    document.title = state.status === "found" ? t("{name} invited you · Centium", { name: state.preview.firstName }) : t("Invite · Centium");
   }, [state]);
 
   if (state.status === "loading" || !authReady || (authUserId && !profileReady) || (authUserId && proId && connected?.id !== proId)) {
@@ -95,20 +96,22 @@ export default function InviteLanding() {
   if (state.status === "error") {
     return (
       <PublicFrame>
-        <PublicMessage title="Couldn't open this invite" line={state.message} onRetry={() => setReload((n) => n + 1)} />
+        <PublicMessage title={t("Couldn't open this invite")} line={t(state.message)} onRetry={() => setReload((n) => n + 1)} />
       </PublicFrame>
     );
   }
   if (state.status === "missing") {
     return (
       <PublicFrame>
-        <PublicMessage title="We couldn't find that invite" line="Check the link, or ask for a new one." />
+        <PublicMessage title={t("We couldn't find that invite")} line={t("Check the link, or ask for a new one.")} />
       </PublicFrame>
     );
   }
 
   const p = state.preview;
   const first = p.firstName.split(" ")[0] || "A professional";
+  // Shown on the page (the English fallback above is what the profile stores).
+  const shown = p.firstName.split(" ")[0] || t("A professional");
   const view = inviteView(p, { userId: authUserId, accountType: authUserId ? user.accountType ?? null : null });
   const profilePath = `/app/professionals/${p.professionalId}?invite=${encodeURIComponent(p.code)}`;
 
@@ -132,7 +135,7 @@ export default function InviteLanding() {
   };
 
   return (
-    <PublicFrame label={`${first} invited you`}>
+    <PublicFrame label={t("{name} invited you", { name: shown })}>
       {view.kind !== "unusable" && (
         <div className="flex items-center gap-2.5 rounded-2xl bg-primary-pale px-3 py-2.5" role="note">
           <Link2 size={15} strokeWidth={2} aria-hidden className="shrink-0 text-primary-deep-text" />
@@ -141,11 +144,11 @@ export default function InviteLanding() {
               // Signed out nothing is below yet (plans show after sign-in),
               // so this is the CU11 invite line (r18 cuInvite18) instead.
               <>
-                <b>{first} invited you</b> to work together on Centium.
+                <b>{t("{name} invited you", { name: shown })}</b> {t("to work together on Centium.")}
               </>
             ) : (
               <>
-                <b>{first} invited you.</b> Hire a plan below or send a message first.
+                <b>{t("{name} invited you.", { name: shown })}</b> {t("Hire a plan below or send a message first.")}
               </>
             )}
           </p>
@@ -158,54 +161,54 @@ export default function InviteLanding() {
         {view.kind === "unusable" && (
           <>
             <p className="font-bold text-charcoal" style={{ fontSize: textPx(15) }}>
-              This invite can't be used
+              {t("This invite can't be used")}
             </p>
             <p className="text-charcoal-soft leading-[1.5]" style={{ fontSize: textPx(13) }}>
-              {view.message}
+              {t(view.message)}
             </p>
             {p.handle && (
               <button type="button" onClick={() => navigate(`/p/${p.handle}`)} className="tap self-start min-h-11 font-bold text-primary-accent" style={{ fontSize: textPx(13) }}>
-                See {first}'s profile
+                {t("See {name}'s profile", { name: shown })}
               </button>
             )}
           </>
         )}
 
         {view.kind === "signed_out" && (
-          <SignInButtons returnPath={`/i/${p.code}`} line={`Create an account or sign in to work with ${first} on Centium. Nothing is shared until you choose to share it.`} />
+          <SignInButtons returnPath={`/i/${p.code}`} line={t("Create an account or sign in to work with {name} on Centium. Nothing is shared until you choose to share it.", { name: shown })} />
         )}
 
         {view.kind === "client" && alreadyClient && (
           <>
             <p className="text-charcoal-soft leading-[1.5]" style={{ fontSize: textPx(13) }}>
-              You already work with {first}.
+              {t("You already work with {name}.", { name: shown })}
             </p>
-            <CtaButton full icon={UserRound} label={`Open ${first}'s profile`} onClick={() => navigate(`/app/professionals/${p.professionalId}`)} />
+            <CtaButton full icon={UserRound} label={t("Open {name}'s profile", { name: shown })} onClick={() => navigate(`/app/professionals/${p.professionalId}`)} />
           </>
         )}
 
         {view.kind === "client" && !alreadyClient && (
           <>
-            <CtaButton full icon={UserPlus} label={`Ask to work with ${first}`} onClick={() => setConfirming(true)} />
-            <CtaButton full variant="secondary" icon={UserRound} label={`See ${first}'s profile`} onClick={() => navigate(profilePath)} />
+            <CtaButton full icon={UserPlus} label={t("Ask to work with {name}", { name: shown })} onClick={() => setConfirming(true)} />
+            <CtaButton full variant="secondary" icon={UserRound} label={t("See {name}'s profile", { name: shown })} onClick={() => navigate(profilePath)} />
           </>
         )}
 
         {view.kind === "own" && (
           <p className="text-charcoal-soft leading-[1.5]" style={{ fontSize: textPx(13) }}>
-            This is your invite link. Clients who open it see this page.
+            {t("This is your invite link. Clients who open it see this page.")}
           </p>
         )}
 
         {view.kind === "not_client" && (
           <p className="text-charcoal-soft leading-[1.5]" style={{ fontSize: textPx(13) }}>
-            Invite links are for clients. Sign in with a client account to work with {first}.
+            {t("Invite links are for clients. Sign in with a client account to work with {name}.", { name: shown })}
           </p>
         )}
 
         {note && (
           <p role="alert" className="font-semibold text-status-high" style={{ fontSize: textPx(12.5) }}>
-            {note}
+            {t(note)}
           </p>
         )}
       </PublicCard>
@@ -213,10 +216,10 @@ export default function InviteLanding() {
       <CentredPopup
         open={confirming}
         onClose={() => !busy && setConfirming(false)}
-        title={`Connect with ${first}?`}
+        title={t("Connect with {name}?", { name: shown })}
         icon={<UserPlus size={22} />}
-        body="They'll see that you're their client. Nothing else is shared until you turn it on."
-        cta={{ label: "Connect", loading: busy, onClick: () => void connect() }}
+        body={t("They'll see that you're their client. Nothing else is shared until you turn it on.")}
+        cta={{ label: t("Connect"), loading: busy, onClick: () => void connect() }}
       >
         <button
           type="button"
@@ -224,7 +227,7 @@ export default function InviteLanding() {
           disabled={busy}
           className="tap mt-2 w-full min-h-11 text-center text-sm font-semibold text-charcoal-soft"
         >
-          Cancel
+          {t("Cancel")}
         </button>
       </CentredPopup>
     </PublicFrame>

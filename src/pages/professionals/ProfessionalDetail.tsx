@@ -60,6 +60,7 @@ import { BookSheet, type BookedResult } from "./profile/BookSheet";
 import { fetchConnectedSocials } from "./profile/connectedSocials";
 import { averageOf, typeLabel, profileRatingLine, reviewLines, serviceRows, sessionWhen, socialLinks, summaryFigure, summaryLine } from "./profile/profileModel";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tx } from "../../i18n/core";
 
 // Market + Share 3.0 · W5 · C-MO.4.9 Professional profile (Client
 // Professional Screens lines 52–158; HANDOVER §4 "C-MO.4.9"). Literal values:
@@ -120,10 +121,10 @@ export interface ProfessionalDetailPreview {
 
 type Tab = "about" | "services" | "work" | "reviews";
 const TABS: { key: Tab; label: string }[] = [
-  { key: "about", label: "About" },
-  { key: "services", label: "Services" },
-  { key: "work", label: "Work history" },
-  { key: "reviews", label: "Reviews" },
+  { key: "about", label: tk("About") },
+  { key: "services", label: tk("Services") },
+  { key: "work", label: tk("Work history") },
+  { key: "reviews", label: tk("Reviews") },
 ];
 
 type ServicesData = { allowed: boolean; sessions: BookableSession[]; plans: Plan[]; week: number[] | null };
@@ -459,8 +460,8 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
     if (listingLoading) {
       return (
         <div aria-busy="true" style={{ lineHeight: "normal" }}>
-          <span className="sr-only">Loading…</span>
-          <BackRow eyebrow="PROFESSIONAL" />
+          <span className="sr-only">{t("Loading…")}</span>
+          <BackRow eyebrow={t("PROFESSIONAL")} />
           <div aria-hidden style={{ marginTop: 8, display: "flex", gap: 14, alignItems: "center" }}>
             <span className="animate-skeleton-pulse" style={{ width: 72, height: 72, borderRadius: 999, background: m.soft }} />
             <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -475,19 +476,20 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
     }
     return (
       <div style={{ lineHeight: "normal" }}>
-        <BackRow eyebrow="PROFESSIONAL" />
-        <EmptyBlock title="Professional not found." body={null}>
+        <BackRow eyebrow={t("PROFESSIONAL")} />
+        <EmptyBlock title={t("Professional not found.")} body={null}>
           <PressButton onClick={() => navigate("/app/professionals")} style={{ height: 44, padding: "0 18px", borderRadius: 14, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: textPx(14), fontWeight: 800, cursor: "pointer" }}>
-            Back
+            {t("Back")}
           </PressButton>
         </EmptyBlock>
       </div>
     );
   }
 
-  const name = listing.name || profile?.card.name || "Professional";
+  const name = listing.name || profile?.card.name || t("Professional");
   const first = name.split(" ")[0];
-  const specialty = profile?.card.specialty || professionalRole({ specialty: listing.specialty, subtype: listing.subtype }) || typeLabel(listing.subtype);
+  // professionalRole's subtype label is an English key (the specialty itself is the professional's own text).
+  const specialty = profile?.card.specialty || t(professionalRole({ specialty: listing.specialty, subtype: listing.subtype }) ?? "") || typeLabel(listing.subtype);
   const area = listing.location ?? profile?.card.area ?? null;
   // The rating: DB10's (client and class reviews) once it answers, else the
   // live aggregate (professional_rating_summary through the directory view).
@@ -512,20 +514,20 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
   // online session type.
   const workMode = profile?.workMode ?? null;
   const radiusKm = profile?.serviceRadiusKm ?? null;
-  const inPersonLine = radiusKm != null && radiusKm > 0 ? `In person · within ${Math.round(radiusKm * 10) / 10} km` : "In person";
+  const inPersonLine = radiusKm != null && radiusKm > 0 ? t("In person · within {km} km", { km: Math.round(radiusKm * 10) / 10 }) : t("In person");
   const where: WhereRow[] | null = sv
     ? [
         ...(listing.location?.trim() && workMode !== "online" ? [{ icon: "place" as const, title: listing.location.trim(), line: inPersonLine }] : []),
         // A session type with no location_kind says nothing about where (DJ,
         // Karim 2026-10-27): it no longer reads as "Online".
-        ...(kinds.has("online") || workMode === "online" || workMode === "both" ? [{ icon: "online" as const, title: "Online", line: "Video sessions" }] : []),
-        ...(kinds.has("home_visit") ? [{ icon: "home" as const, title: "Home visits", line: "At your place" }] : []),
-        ...(kinds.has("phone") ? [{ icon: "phone" as const, title: "Phone", line: "Phone sessions" }] : []),
+        ...(kinds.has("online") || workMode === "online" || workMode === "both" ? [{ icon: "online" as const, title: tx("Online", "session format"), line: t("Video sessions") }] : []),
+        ...(kinds.has("home_visit") ? [{ icon: "home" as const, title: t("Home visits"), line: t("At your place") }] : []),
+        ...(kinds.has("phone") ? [{ icon: "phone" as const, title: t("Phone"), line: t("Phone sessions") }] : []),
       ]
     : null;
   const availability: Availability | null = sv
     ? !sv.allowed
-      ? { state: "blocked", blockedLine: NOT_TAKING_BOOKINGS }
+      ? { state: "blocked", blockedLine: t(NOT_TAKING_BOOKINGS) }
       : sv.sessions.length === 0
         ? { state: "none" }
         : sv.week
@@ -560,7 +562,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
       aria-busy={threadBusy || undefined}
       style={{ gridColumn: full ? "1 / -1" : undefined, height: 46, borderRadius: 14, background: "transparent", border: `1px solid ${m.border}`, color: m.pdark, font: "inherit", fontSize: textPx(14), fontWeight: 800, cursor: "pointer", opacity: threadBusy ? 0.6 : 1 }}
     >
-      Message
+      {t("Message")}
     </PressButton>
   );
 
@@ -569,19 +571,19 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
     <>
       {isConnected && (
         <p style={{ margin: "18px 0 0", display: "flex", alignItems: "center", gap: 6, fontSize: textPx(11.5), color: m.faint }}>
-          <Lock size={12} strokeWidth={1.75} aria-hidden style={{ flexShrink: 0, ...NO_ICON_SCALE }} /> Manage what your professionals can see under Profile › Connected professionals.
+          <Lock size={12} strokeWidth={1.75} aria-hidden style={{ flexShrink: 0, ...NO_ICON_SCALE }} /> {t("Manage what your professionals can see under Profile › Connected professionals.")}
         </p>
       )}
       {!isPreview && activeClient === false && (
         <div style={{ marginTop: 18, borderRadius: 18, background: m.pale, padding: 16 }}>
-          <p style={{ margin: 0, fontSize: textPx(13.5), fontWeight: 700, color: m.pdark }}>Ask {first} for a client code</p>
-          <p style={{ margin: "4px 0 0", fontSize: textPx(12), lineHeight: linePx(20), color: m.ink2 }}>{first} can generate a code for you. Redeem it from your profile to connect and start sharing data.</p>
+          <p style={{ margin: 0, fontSize: textPx(13.5), fontWeight: 700, color: m.pdark }}>{t("Ask {name} for a client code", { name: first })}</p>
+          <p style={{ margin: "4px 0 0", fontSize: textPx(12), lineHeight: linePx(20), color: m.ink2 }}>{t("{name} can generate a code for you. Redeem it from your profile to connect and start sharing data.", { name: first })}</p>
           <PressButton
             onClick={() => void openThread()}
             inert={threadBusy}
             style={{ marginTop: 14, width: "100%", height: 40, borderRadius: 12, background: m.card, border: `1px solid ${m.border}`, color: m.pdark, font: "inherit", fontSize: textPx(13), fontWeight: 700, cursor: "pointer", opacity: threadBusy ? 0.6 : 1 }}
           >
-            Message {first}
+            {t("Message {name}", { name: first })}
           </PressButton>
         </div>
       )}
@@ -607,7 +609,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
         )}
         {declineLine && !cancelNote && !liveHire && !isConnected && (
           <p role="status" style={{ margin: 0, padding: "2px 4px", fontSize: textPx(12), lineHeight: 1.5, color: m.ink2 }}>
-            <b style={{ color: m.ink }}>{first} couldn't take you on:</b> {declineLine}
+            <b style={{ color: m.ink }}>{t("{name} couldn't take you on:", { name: first })}</b> {declineLine}
           </p>
         )}
       </div>
@@ -615,8 +617,8 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
 
   const myReviewBlock =
     !preview && (canReview === true || myReview) ? (
-      <section aria-label="My review">
-        <Caps>My review</Caps>
+      <section aria-label={t("My review")}>
+        <Caps>{t("My review")}</Caps>
         <div style={{ marginTop: 8 }}>
           <MyReviewCard className="!rounded-[18px] !p-4" hideLabel firstName={first} review={myReview} status={myStatus} onOpen={() => setReviewOpen(true)} onWithdraw={withdrawMyReview} />
         </div>
@@ -631,12 +633,12 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
         <div role="note" style={{ display: "flex", alignItems: "center", gap: 10, borderRadius: 16, background: m.pale, padding: "10px 12px", marginBottom: 8 }}>
           <Link2 size={15} strokeWidth={2} aria-hidden style={{ flexShrink: 0, color: m.accent, ...NO_ICON_SCALE }} />
           <p style={{ margin: 0, flex: 1, fontSize: textPx(12.5), lineHeight: 1.45, color: m.ink }}>
-            <b>{first} invited you.</b> Hire a plan below or send a message first.
+            <b>{t("{name} invited you.", { name: first })}</b> {t("Hire a plan below or send a message first.")}
           </p>
         </div>
       )}
 
-      <BackRow eyebrow="PROFESSIONAL" aside={preview?.headerRight} />
+      <BackRow eyebrow={t("PROFESSIONAL")} aside={preview?.headerRight} />
       {preview?.above}
 
       {/* The identity. */}
@@ -663,7 +665,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
           {isConnected && clientSince && (
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 10, background: m.pale, padding: "6px 10px", fontSize: textPx(12), fontWeight: 700, color: m.pdark }}>
               <Handshake size={14} strokeWidth={2} aria-hidden style={NO_ICON_SCALE} />
-              Client since {new Date(clientSince).toLocaleDateString(appLocale("en-US"), { month: "long", year: "numeric" })}
+              {t("Client since {date}", { date: new Date(clientSince).toLocaleDateString(appLocale("en-US"), { month: "long", year: "numeric" }) })}
             </span>
           )}
         </div>
@@ -682,10 +684,10 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
                   setHirePlan(null);
                   setHireOpen(true);
                 }}
-                aria-label={authUserId ? `Hire ${first}` : `Hire ${first}. Sign in to hire`}
+                aria-label={authUserId ? t("Hire {name}", { name: first }) : t("Hire {name}. Sign in to hire", { name: first })}
                 style={{ height: 46, borderRadius: 14, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: textPx(14), fontWeight: 800, cursor: authUserId ? "pointer" : "default", opacity: authUserId ? 1 : 0.4 }}
               >
-                Hire
+                {t("Hire")}
               </PressButton>
               {messageBtn(false)}
             </>
@@ -702,7 +704,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
         <AccessRequestNotice variant="summary" requests={pendingAsks} firstName={first} onChoose={() => setSharingOpen(true)} className="mt-3.5" />
       )}
 
-      <SegmentedTicketStrip items={TABS} active={tab} onChange={setTab} label={`${first}'s profile`} idPrefix="pro" style={{ marginTop: 14 }} />
+      <SegmentedTicketStrip items={TABS.map((x) => ({ ...x, label: t(x.label) }))} active={tab} onChange={setTab} label={t("{name}'s profile", { name: first })} idPrefix="pro" style={{ marginTop: 14 }} />
 
       <div role="tabpanel" id={`pro-panel-${tab}`} aria-labelledby={`pro-tab-${tab}`}>
         {tab === "about" && (
@@ -749,7 +751,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
             lines={lines}
             figure={figure}
             stars={figure === "New" ? 0 : Math.round(Number(figure))}
-            countLine={tabCount > 0 ? summaryLine(tabCount, classOnly) : "No reviews yet"}
+            countLine={tabCount > 0 ? summaryLine(tabCount, classOnly) : t("No reviews yet")}
             firstName={first}
             onSeeAll={otherReviews.length > 0 || myReview ? () => navigate(preview?.reviewsHref ?? `/app/professionals/${listing.profileId}/reviews`) : undefined}
             mine={myReviewBlock}
@@ -770,7 +772,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
             if (hires) setHiresState({ id: listing.profileId, hires });
             else void loadHires(listing.profileId);
             closeHire();
-            showStrip(`Hired ${first} · ${hireStatusLabel(hire)}`, "success", { label: "View", onPress: () => setTab("services") });
+            showStrip(t("Hired {name} · {status}", { name: first, status: t(hireStatusLabel(hire)) }), "success", { label: t("View"), onPress: () => setTab("services") });
           }}
           onMessage={() => void openThread()}
           messageBusy={threadBusy}
@@ -806,19 +808,19 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
           />
           <BookingDone
             open={!!booked}
-            title={booked?.status === "requested" ? "Request sent" : "You're booked"}
+            title={booked?.status === "requested" ? t("Request sent") : t("You're booked")}
             body={
               booked?.status === "requested"
-                ? `${first} will confirm your session. You can follow it in My bookings.`
-                : `Your session with ${first} is in My bookings. You can message ${first} there if you need to change it.`
+                ? t("{name} will confirm your session. You can follow it in My bookings.", { name: first })
+                : t("Your session with {name} is in My bookings. You can message {name} there if you need to change it.", { name: first })
             }
             rows={
               booked
                 ? [
-                    { k: "Session", v: booked.session.name },
-                    { k: "With", v: name },
-                    { k: "When", v: sessionWhen(booked.startsAt, ", ") },
-                    { k: "Payment", v: booked.session.price > 0 ? `${priceLabel(booked.session.price, booked.session.currency)} · Cash` : "Free" },
+                    { k: t("Session"), v: booked.session.name },
+                    { k: t("With"), v: name },
+                    { k: t("When"), v: sessionWhen(booked.startsAt, ", ") },
+                    { k: tx("Payment", "how it is paid"), v: booked.session.price > 0 ? t("{price} · Cash", { price: priceLabel(booked.session.price, booked.session.currency) }) : t("Free") },
                   ]
                 : []
             }
@@ -844,7 +846,8 @@ function withWorkplaces(where: WhereRow[] | null, list: Workplace[]): WhereRow[]
   const rows: WhereRow[] = list.map((w) => ({
     icon: "business",
     title: w.name,
-    line: [w.role ? (ROLE_LABEL[w.role as BusinessRole] ?? null) : null, w.location].filter(Boolean).join(" · ") || "Works here",
+    // ROLE_LABEL's English, translated here (the roleLabel() helper is on feat/eh-business, not this base).
+    line: [w.role && ROLE_LABEL[w.role as BusinessRole] ? t(ROLE_LABEL[w.role as BusinessRole]) : null, w.location].filter(Boolean).join(" · ") || t("Works here"),
   }));
   const places = where.filter((w) => w.icon === "place");
   return [...places, ...rows, ...where.filter((w) => w.icon !== "place")];

@@ -18,6 +18,7 @@ import { DataSharingSection } from "../../components/professionals/DataSharingSe
 import { MembershipsCard } from "../../components/profile/MembershipsCard";
 import { fetchLinkedProfessionals, type LinkedProfessional } from "../../services/consent";
 import { LicencePendingTag } from "../../components/professionals/LicencePendingTag";
+import { typeLabel } from "../../components/pro/profile/typeLabel";
 import { updateBodyMetric, updateDateOfBirth, updateSex } from "../../services/profile";
 import type { Sex } from "../../types";
 import { validateHeightCm, validateWeightKg } from "../../utils/bodyMetrics";
@@ -67,6 +68,10 @@ const accountTypeLabel: Record<string, string> = {
   professional: tk("Professional"),
   business: tk("Business"),
 };
+
+/** The customer subtype after the badge, in lower case as before (" · general"). */
+const customerSubtypeLabel = (s: string): string =>
+  s === "general" ? tx("general", "customer type") : s === "client" ? tx("client", "customer type") : s === "regular" ? tx("regular", "customer type") : s === "athlete" ? tx("athlete", "customer type") : s;
 
 const SEX_LABEL: Record<string, string> = {
   female: tk("Female"),
@@ -421,8 +426,8 @@ function ClientProfile() {
           </h2>
           <span className="inline-block text-[11px] font-bold text-charcoal-soft bg-cream-soft rounded-full px-2.5 py-0.5 mt-1.5 max-w-full truncate">
             {user.accountType === "customer" ? tx("Customer", "account type") : accountTypeLabel[user.accountType] ? t(accountTypeLabel[user.accountType]) : null}
-            {user.customerSubtype ? ` · ${user.customerSubtype}` : ""}
-            {user.professionalSubtype ? ` · ${user.professionalSubtype}` : ""}
+            {user.customerSubtype ? ` · ${customerSubtypeLabel(user.customerSubtype)}` : ""}
+            {user.professionalSubtype ? ` · ${t(typeLabel(user.professionalSubtype))}` : ""}
           </span>
           {/* QA 12.0: Credentials shows everything relevant, including the
               social accounts. Customers only, as before: a professional's

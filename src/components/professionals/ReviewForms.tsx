@@ -20,6 +20,7 @@ import { GuidelinesLink } from "../moderation/GuidelinesLink";
 import { useReviewOpensAt } from "../../hooks/useReviewOpensAt";
 import { ReviewWaitNote } from "../reviews/ReviewWaitNote";
 import { appLocale } from "../../i18n/format";
+import { t, tn } from "../../i18n/core";
 
 // The review screens' shared parts: the reviewer's own card, the form that
 // writes and edits a review, the report form and the professional's reply
@@ -109,13 +110,13 @@ export const MyReviewCard: React.FC<{
   return (
     <Card className={className}>
       <div className={`flex items-center gap-2 ${hideLabel ? (review ? "justify-end mb-1.5" : "hidden") : "justify-between mb-1.5"}`}>
-        {!hideLabel && <p className="section-label text-charcoal-faint">My Review</p>}
+        {!hideLabel && <p className="section-label text-charcoal-faint">{t("My Review")}</p>}
         {((!review && !opensAt) || editable) &&
           (hideLabel ? (
-            review && outline("Edit")
+            review && outline(t("Edit"))
           ) : (
             <Button size="sm" variant="outline" onClick={onOpen}>
-              <Pencil size={13} /> {review ? "Edit" : "Rate & Review"}
+              <Pencil size={13} /> {review ? t("Edit") : t("Rate & Review")}
             </Button>
           ))}
       </div>
@@ -125,22 +126,22 @@ export const MyReviewCard: React.FC<{
         ) : hideLabel ? (
           // MO1.2.1: the prompt and the outline button on one row.
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[13px] text-charcoal-faint">You haven't reviewed {firstName} yet</p>
-            {outline("Rate & Review")}
+            <p className="text-[13px] text-charcoal-faint">{t("You haven't reviewed {name} yet", { name: firstName })}</p>
+            {outline(t("Rate & Review"))}
           </div>
         ) : (
-          <p className="text-sm text-charcoal-faint">You haven't reviewed {firstName} yet</p>
+          <p className="text-sm text-charcoal-faint">{t("You haven't reviewed {name} yet", { name: firstName })}</p>
         )
       ) : withdrawn ? (
         <>
           <ReviewItem review={{ ...review, reply: null }} showName={false} starSize={14} />
           <p className="text-xs text-charcoal-faint mt-2 leading-relaxed">
-            You withdrew this review. Only you can see it, and it doesn't count toward {firstName}'s rating.
+            {t("You withdrew this review. Only you can see it, and it doesn't count toward {name}'s rating.", { name: firstName })}
           </p>
         </>
       ) : (
         <>
-          <ReviewItem review={review} showName={false} starSize={14} replyLabel={`Reply from ${firstName}`} hideEdited={hideLabel} />
+          <ReviewItem review={review} showName={false} starSize={14} replyLabel={t("Reply from {name}", { name: firstName })} hideEdited={hideLabel} />
           {/* Withdrawing has no time limit, so once editing has closed it is
               offered here; inside the window it lives in the edit sheet. */}
           {!editable && (
@@ -150,12 +151,12 @@ export const MyReviewCard: React.FC<{
               disabled={busy}
               className="tap min-h-[44px] text-xs font-semibold text-status-high"
             >
-              {armed ? "Tap again to withdraw your review" : "Withdraw review"}
+              {armed ? t("Tap again to withdraw your review") : t("Withdraw review")}
             </button>
           )}
           {error && (
         <p className="text-xs font-semibold text-status-high">
-          {error}
+          {t(error)}
           <GuidelinesLink message={error} />
         </p>
       )}
@@ -179,7 +180,7 @@ type FormProps = {
 };
 
 export const ReviewFormSheet: React.FC<FormProps> = (props) => (
-  <BottomSheet open={props.open} onClose={props.onClose} title={`Rate ${props.firstName}`}>
+  <BottomSheet open={props.open} onClose={props.onClose} title={t("Rate {name}", { name: props.firstName })}>
     {/* Mounted afresh on each opening, so it starts from what is stored. */}
     <ReviewForm {...props} />
   </BottomSheet>
@@ -219,7 +220,7 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
       {/* MO1.2.1.2: stars on a 44 pitch (34 + gap 10), the textarea 209 tall
           and "Your review" 12/600 in the faint grey (all measured on the frame
           at 2x, the label colour from the table). */}
-      <div className="flex items-center justify-center gap-2.5" role="radiogroup" aria-label="Rating">
+      <div className="flex items-center justify-center gap-2.5" role="radiogroup" aria-label={t("Rating")}>
         {Array.from({ length: 5 }, (_, i) => (
           <button
             key={i}
@@ -227,7 +228,7 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
             role="radio"
             aria-checked={rating === i + 1}
             onClick={() => setRating(i + 1)}
-            aria-label={`${i + 1} star${i === 0 ? "" : "s"}`}
+            aria-label={tn(i + 1, "{n} star", "{n} stars")}
             className="tap"
           >
             <Star size={34} strokeWidth={1.5} className={i < rating ? "fill-gold text-gold" : "text-charcoal/15"} />
@@ -236,11 +237,11 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
       </div>
       <label className="block">
         {/* Re-measured (revision round): label box ends 10 above the field; the field is 209 outside. */}
-        <span className="text-xs font-semibold text-charcoal-faint mb-2.5 block">Your review</span>
+        <span className="text-xs font-semibold text-charcoal-faint mb-2.5 block">{t("Your review")}</span>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={`How has your experience with ${firstName} been?`}
+          placeholder={t("How has your experience with {name} been?", { name: firstName })}
           rows={5}
           aria-describedby="review-count"
           aria-invalid={over || undefined}
@@ -254,19 +255,19 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
           in place of the checkbox; the words are unchanged. */}
       <div className="flex items-center gap-3">
         <p className="flex-1 min-w-0 text-xs text-charcoal-soft leading-relaxed">
-          Show my first name on this review.{" "}
-          <span className="text-charcoal-faint">Your professional can see who left it either way.</span>
+          {t("Show my first name on this review.")}{" "}
+          <span className="text-charcoal-faint">{t("Your professional can see who left it either way.")}</span>
         </p>
-        <Toggle checked={showName} onChange={setShowName} label="Show my first name on this review" />
+        <Toggle checked={showName} onChange={setShowName} label={t("Show my first name on this review")} />
       </div>
       {over && (
         <p className="text-xs font-semibold text-status-high">
-          A review can be up to {REVIEW_BODY_MAX.toLocaleString(appLocale("en"))} characters.
+          {t("A review can be up to {max} characters.", { max: REVIEW_BODY_MAX.toLocaleString(appLocale("en")) })}
         </p>
       )}
       {error && (
         <p className="text-xs font-semibold text-status-high">
-          {error}
+          {t(error)}
           <GuidelinesLink message={error} />
         </p>
       )}
@@ -274,7 +275,7 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
           draws none). Edit mode keeps "Save changes" and Withdraw with its
           note: withdrawing is the reviewer's control over their own words. */}
       <Button fullWidth size="lg" onClick={() => void submit()} disabled={busy || over}>
-        {busy ? "Saving…" : existing ? "Save changes" : "Submit review"}
+        {busy ? t("Saving…") : existing ? t("Save changes") : t("Submit review")}
       </Button>
       {existing && (
         <div className="text-center">
@@ -284,11 +285,10 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
             disabled={busy}
             className="tap min-h-[44px] w-full text-xs font-semibold text-status-high"
           >
-            {armed ? "Tap again to withdraw your review" : "Withdraw review"}
+            {armed ? t("Tap again to withdraw your review") : t("Withdraw review")}
           </button>
           <p className="text-[11px] text-charcoal-faint leading-relaxed">
-            Withdrawing hides it from everyone else and takes it out of the rating. You can't review {firstName} again
-            after.
+            {t("Withdrawing hides it from everyone else and takes it out of the rating. You can't review {name} again after.", { name: firstName })}
           </p>
         </div>
       )}
@@ -331,7 +331,7 @@ export const ReviewReportForm: React.FC<{
   if (sent) {
     return (
       <p role="status" className="text-sm font-semibold text-charcoal bg-primary-pale rounded-xl px-3.5 py-3">
-        Report sent. Thank you. A moderator will look at it.
+        {t("Report sent. Thank you. A moderator will look at it.")}
       </p>
     );
   }
@@ -339,10 +339,10 @@ export const ReviewReportForm: React.FC<{
   return (
     <div className="space-y-3 animate-fade-slide-up">
       <p className="text-[13px] text-charcoal-soft leading-relaxed">
-        A moderator will review it. Nobody is told who reported it.
+        {t("A moderator will review it. Nobody is told who reported it.")}
       </p>
       <fieldset className="border-none m-0 p-0">
-        <legend className="section-label text-charcoal-soft w-full mb-1">Reason</legend>
+        <legend className="section-label text-charcoal-soft w-full mb-1">{t("Reason")}</legend>
         {reasons.map((r, i) => (
           <label
             key={r.value}
@@ -358,14 +358,14 @@ export const ReviewReportForm: React.FC<{
               className="mt-1 w-4 h-4 shrink-0 accent-primary"
             />
             <span className="min-w-0">
-              <span className="block text-sm font-semibold text-charcoal">{r.label}</span>
-              <span className="block text-[11.5px] text-charcoal-faint">{r.hint}</span>
+              <span className="block text-sm font-semibold text-charcoal">{t(r.label)}</span>
+              <span className="block text-[11.5px] text-charcoal-faint">{t(r.hint)}</span>
             </span>
           </label>
         ))}
       </fieldset>
       <label className="block">
-        <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Anything else? (optional)</span>
+        <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Anything else? (optional)")}</span>
         <textarea
           value={detail}
           onChange={(e) => setDetail(e.target.value.slice(0, detailMax))}
@@ -375,12 +375,12 @@ export const ReviewReportForm: React.FC<{
       </label>
       {error && (
         <p role="alert" className="text-xs font-semibold text-status-high">
-          {error}
+          {t(error)}
           <GuidelinesLink message={error} />
         </p>
       )}
       <Button fullWidth size="lg" onClick={() => void send()} disabled={busy}>
-        {busy ? "Sending…" : "Send report"}
+        {busy ? t("Sending…") : t("Send report")}
       </Button>
     </div>
   );
@@ -399,7 +399,7 @@ type ReplyProps = {
 };
 
 export const ReplySheet: React.FC<ReplyProps> = (props) => (
-  <BottomSheet open={props.open} onClose={props.onClose} title={props.existing ? "Edit your reply" : "Reply to this review"}>
+  <BottomSheet open={props.open} onClose={props.onClose} title={props.existing ? t("Edit your reply") : t("Reply to this review")}>
     <ReplyForm {...props} />
   </BottomSheet>
 );
@@ -423,10 +423,10 @@ function ReplyForm({ onClose, existing, onSave }: ReplyProps) {
   return (
     <div className="space-y-4 animate-fade-slide-up">
       <p className="text-[13px] text-charcoal-soft leading-relaxed">
-        Your reply shows under the review, to everyone who can read it. You can reply once, then edit or remove it.
+        {t("Your reply shows under the review, to everyone who can read it. You can reply once, then edit or remove it.")}
       </p>
       <label className="block">
-        <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Your reply</span>
+        <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Your reply")}</span>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -439,17 +439,17 @@ function ReplyForm({ onClose, existing, onSave }: ReplyProps) {
       </label>
       {over && (
         <p className="text-xs font-semibold text-status-high">
-          A reply can be up to {REPLY_BODY_MAX.toLocaleString(appLocale("en"))} characters.
+          {t("A reply can be up to {max} characters.", { max: REPLY_BODY_MAX.toLocaleString(appLocale("en")) })}
         </p>
       )}
       {error && (
         <p className="text-xs font-semibold text-status-high">
-          {error}
+          {t(error)}
           <GuidelinesLink message={error} />
         </p>
       )}
       <Button fullWidth size="lg" onClick={() => void save()} disabled={busy || over || len === 0}>
-        {busy ? "Saving…" : existing ? "Save reply" : "Post reply"}
+        {busy ? t("Saving…") : existing ? t("Save reply") : t("Post reply")}
       </Button>
     </div>
   );
@@ -469,11 +469,11 @@ export const RemoveReplyButton: React.FC<{ onRemove: () => Promise<string | null
   return (
     <>
       <button type="button" onClick={() => void tap()} disabled={busy} className="tap min-h-[44px] text-xs font-semibold text-status-high">
-        {armed ? "Tap again to remove" : "Remove reply"}
+        {armed ? t("Tap again to remove") : t("Remove reply")}
       </button>
       {error && (
         <span className="text-xs font-semibold text-status-high">
-          {error}
+          {t(error)}
           <GuidelinesLink message={error} />
         </span>
       )}

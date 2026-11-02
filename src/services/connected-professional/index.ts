@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { Enums } from "../../../lib/supabase/database.types";
+import { tk } from "../../i18n/core";
 
 // What a client may read about a professional they have actually hired.
 //
@@ -127,7 +128,7 @@ export async function fetchConnectedProfessional(
     console.error("[connected-professional] Could not load profile:", error.message);
     return {
       ok: false,
-      message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't load their profile.",
+      message: isOffline(error) ? OFFLINE_MESSAGE : tk("Couldn't load their profile."),
     };
   }
   if (!data) return { ok: true, professional: null };
@@ -156,13 +157,13 @@ export async function fetchConnectedProfessional(
 // and is why this will not silently render a blank label if a sixth subtype
 // is ever added.
 const SUBTYPE_LABEL: Record<Enums<"professional_subtype">, string> = {
-  trainer: "Personal trainer",
-  physiotherapist: "Physiotherapist",
-  dietitian: "Dietitian",
-  doctor: "Doctor",
-  nutritionist: "Nutritionist",
-  coach_instructor: "Coach or instructor",
-  other: "Health professional",
+  trainer: tk("Personal trainer"),
+  physiotherapist: tk("Physiotherapist"),
+  dietitian: tk("Dietitian"),
+  doctor: tk("Doctor"),
+  nutritionist: tk("Nutritionist"),
+  coach_instructor: tk("Coach or instructor"),
+  other: tk("Health professional"),
 };
 
 /** How a professional is described: their own specialty first, else their subtype's label. */

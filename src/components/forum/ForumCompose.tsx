@@ -14,6 +14,7 @@ import { categoryDot, orderCategories } from "./categoryColour";
 import { useIsDark } from "../../hooks/useIsDark";
 import { mentionsSelfHarm } from "../../services/moderation/phrases";
 import { contactRefusal } from "../../services/moderation/text";
+import { t } from "../../i18n/core";
 
 // Design screen 3: a new post, as mobile v5.1 MO1.3.2's lavender-header
 // sheet over the forum (also what /app/forum/new opens). The category is a
@@ -110,18 +111,18 @@ export function ForumCompose({
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  const t = title.trim();
+  const ttl = title.trim();
   const b = body.trim();
-  const ready = !!chosen && !recoveryPending && t.length >= 3 && t.length <= 140 && b.length >= 1 && !busy && !preparing;
+  const ready = !!chosen && !recoveryPending && ttl.length >= 3 && ttl.length <= 140 && b.length >= 1 && !busy && !preparing;
 
   const post = async () => {
     if (!ready || !chosen) {
-      if (t.length < 3) setError({ field: "title", message: "Give your post a title of at least 3 characters." });
-      else if (!b) setError({ field: "body", message: "Write something in your post." });
+      if (ttl.length < 3) setError({ field: "title", message: t("Give your post a title of at least 3 characters.") });
+      else if (!b) setError({ field: "body", message: t("Write something in your post.") });
       return;
     }
     // Before the photo uploads: contact details are explained here, not after.
-    const contact = contactRefusal(t, b);
+    const contact = contactRefusal(ttl, b);
     if (contact) {
       setError({ field: "body", message: contact });
       return;
@@ -142,7 +143,7 @@ export function ForumCompose({
       userId,
       categoryKey: chosen,
       identity: isProfessional ? "real_name" : identity,
-      title: t,
+      title: ttl,
       body: b,
       photoPath,
     });
@@ -153,7 +154,7 @@ export function ForumCompose({
     }
     // A held post goes back to the forum, where it waits at the top; one held
     // for a self-harm phrase opens itself, so its "Get support" is right there.
-    const gentle = r.value.held && (await mentionsSelfHarm([t, b].join("\n")));
+    const gentle = r.value.held && (await mentionsSelfHarm([ttl, b].join("\n")));
     navigate(r.value.held && !gentle ? "/app/forum" : `/app/forum/post/${r.value.id}`, { replace: true });
   };
 
@@ -198,12 +199,12 @@ export function ForumCompose({
     <BottomSheet
       open
       onClose={onClose}
-      title={postingAs ? "New post" : "New Post"}
+      title={postingAs ? t("New post") : t("New Post")}
       footer={
         postingAs ? (
-          <CtaButton label={busy ? "Posting…" : "Post"} icon={<Send size={15} strokeWidth={2} aria-hidden />} onClick={() => void post()} disabled={!ready} loading={busy} />
+          <CtaButton label={busy ? t("Posting…") : t("Post")} icon={<Send size={15} strokeWidth={2} aria-hidden />} onClick={() => void post()} disabled={!ready} loading={busy} />
         ) : (
-          <CtaButton label={busy ? "Posting…" : "Post to forum"} onClick={() => void post()} disabled={!ready} loading={busy} />
+          <CtaButton label={busy ? t("Posting…") : t("Post to forum")} onClick={() => void post()} disabled={!ready} loading={busy} />
         )
       }
     >
@@ -212,14 +213,14 @@ export function ForumCompose({
         {!isProfessional && nickname && (
           <fieldset className="border-none m-0 p-0 flex flex-col gap-1.5">
             <legend className="text-[12px] font-semibold p-0 mb-1.5" style={{ color: fv("muted") }}>
-              Post as
+              {t("Post as")}
             </legend>
             <div className="flex gap-2">
-              {choice("nickname", nickname, "Your nickname")}
-              {choice("real_name", firstName, "Your first name")}
+              {choice("nickname", nickname, t("Your nickname"))}
+              {choice("real_name", firstName, t("Your first name"))}
             </div>
             <span className="text-[11px] font-normal leading-[1.5]" style={{ color: fv("muted") }}>
-              Nobody can see who is behind your nickname. You can't change this after posting.
+              {t("Nobody can see who is behind your nickname. You can't change this after posting.")}
             </span>
           </fieldset>
         )}
@@ -228,7 +229,7 @@ export function ForumCompose({
           {/* 35% (122 of 349, measured), the title field the rest. */}
           <div className="flex flex-col gap-1.5 w-[35%] shrink-0">
             <span className="text-[12px] font-semibold" style={{ color: fv("muted") }}>
-              Category
+              {t("Category")}
             </span>
             {/* MO1.3.2: Category and Title 44 tall, Post 198 (measured from
                 the frame, 2x). */}
@@ -245,7 +246,7 @@ export function ForumCompose({
                 onClick={() => setMenuOpen(true)}
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
-                aria-label={`Category: ${chosenCat?.name ?? "none"}`}
+                aria-label={t("Category: {name}", { name: chosenCat?.name ?? t("none") })}
                 className="tap h-[44px] rounded-xl px-3 flex items-center gap-2 text-sm font-semibold"
                 style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
               >
@@ -261,12 +262,12 @@ export function ForumCompose({
             )}
           </div>
           <label className="flex-1 min-w-0 flex flex-col gap-1.5 text-[12px] font-semibold" style={{ color: fv("muted") }}>
-            Title
+            {t("Title")}
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={140}
-              placeholder="What's on your mind?"
+              placeholder={t("What's on your mind?")}
               className="h-[44px] rounded-xl px-3 text-sm font-semibold outline-none"
               style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
             />
@@ -278,7 +279,7 @@ export function ForumCompose({
             rule, so the field keeps the drawn 198 and the sheet its height. */}
         <div className="flex flex-col gap-1.5">
           <label htmlFor="forum-compose-body" className="text-[12px] font-semibold" style={{ color: fv("muted") }}>
-            Post
+            {t("Post")}
           </label>
           <div
             className="h-[198px] rounded-xl flex flex-col overflow-hidden"
@@ -289,7 +290,7 @@ export function ForumCompose({
               value={body}
               onChange={(e) => setBody(e.target.value)}
               maxLength={8000}
-              placeholder="Share a win, ask a question, or pass on a tip…"
+              placeholder={t("Share a win, ask a question, or pass on a tip…")}
               aria-describedby={FORUM_PHOTOS_ENABLED && photo ? "forum-compose-photo-note" : undefined}
               className="flex-1 min-h-0 px-3 pt-2.5 pb-1 text-sm font-normal resize-none outline-none bg-transparent"
               style={{ color: fv("text") }}
@@ -307,11 +308,11 @@ export function ForumCompose({
                   // The chosen photo: a 32 pt thumbnail (r8) in the corner,
                   // its remove x a 16 pt badge on a 44 pt target.
                   <div className="relative ms-2 w-8 h-8 shrink-0">
-                    <img src={preview} alt="The photo you're adding" className="w-8 h-8 rounded-lg object-cover" />
+                    <img src={preview} alt={t("The photo you're adding")} className="w-8 h-8 rounded-lg object-cover" />
                     <button
                       type="button"
                       onClick={removePhoto}
-                      aria-label="Remove photo"
+                      aria-label={t("Remove photo")}
                       className="tap absolute -top-3.5 -end-3.5 w-11 h-11 flex items-start justify-end p-1.5"
                     >
                       <span
@@ -328,7 +329,7 @@ export function ForumCompose({
                     type="button"
                     onClick={() => fileRef.current?.click()}
                     disabled={preparing}
-                    aria-label={preparing ? "Preparing photo…" : "Add a photo (optional)"}
+                    aria-label={preparing ? t("Preparing photo…") : t("Add a photo (optional)")}
                     className="tap w-11 h-11 flex items-center justify-center shrink-0 disabled:opacity-60"
                     style={{ color: fv("link") }}
                   >
@@ -341,7 +342,7 @@ export function ForumCompose({
           {/* A22 privacy line: the field's helper text while a photo is attached (decision 23, item 253). */}
           {FORUM_PHOTOS_ENABLED && photo && (
             <span id="forum-compose-photo-note" className="text-[11px] font-normal leading-[1.5]" style={{ color: fv("muted") }}>
-              Location and camera details are removed from photos before they're shared.
+              {t("Location and camera details are removed from photos before they're shared.")}
             </span>
           )}
           {photoError && <DangerLine>{photoError}</DangerLine>}
@@ -358,7 +359,7 @@ export function ForumCompose({
               {postingAs.name.trim().charAt(0).toUpperCase()}
             </span>
             <span className="min-w-0" style={{ fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-soft))" }}>
-              Posting as{" "}
+              {t("Posting as")}{" "}
               <b style={{ color: "rgb(var(--c-charcoal))" }}>
                 {postingAs.name}, {postingAs.title}
               </b>
@@ -366,8 +367,7 @@ export function ForumCompose({
           </div>
         )}
         <span className="text-xs leading-[1.5]" style={{ color: fv("muted") }}>
-          Posts with links are checked by a moderator before they appear. Photos are checked by our team first,
-          usually within a day.
+          {t("Posts with links are checked by a moderator before they appear. Photos are checked by our team first, usually within a day.")}
         </span>
       </div>
 

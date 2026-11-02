@@ -386,7 +386,7 @@ export function ClassPage({ classId }: { classId: string }) {
     setNote(
       r.value.wasFree
         ? t("Booking cancelled. It was free to cancel.")
-        : t("Booking cancelled. It was inside the free-cancellation window, so the studio may charge for it."),
+        : t("Booking cancelled. It was outside the free-cancellation window, so the studio may charge for it."),
     );
     await load();
   };

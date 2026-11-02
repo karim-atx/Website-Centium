@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight, Folder, GripVertical, MoreVertical } from "l
 import { DARK_SURFACE, headInk, headInkSoft, liftTo, partBInk, themedFamily, type FolderFamily } from "../../data/folderColors";
 import { useIsDark } from "../../hooks/useIsDark";
 import { folderColorOptions, swatchName } from "./folderList";
+import { t, tn } from "../../i18n/core";
 
 // The folder pieces the Routines tab built (WO1.1), shared so the coach's
 // template folders get the same header, ⋮ menu anchor, rename field, colour
@@ -81,7 +82,7 @@ export const ColorSwatches: React.FC<{ value: string | undefined; onPick: (c: st
         key={c}
         type="button"
         onClick={() => onPick(c)}
-        aria-label={swatchName(c)}
+        aria-label={t(swatchName(c))}
         aria-pressed={value === c}
         className="tap rounded-full"
         style={{
@@ -113,7 +114,7 @@ export const ColorPopover: React.FC<{ value: string | undefined; onPick: (c: str
       <ColorSwatches value={value} onPick={onPick} size={28} width={208} />
     </div>
     <button onClick={onDone} className="tap w-full text-center text-xs font-semibold text-charcoal-soft">
-      Done
+      {t("Done")}
     </button>
   </div>
 );
@@ -145,7 +146,7 @@ export const RenameField: React.FC<{
       className={clsx("text-xs font-semibold", !ink && (tone === "light" ? "text-white" : "text-primary"))}
       style={ink ? { color: ink } : undefined}
     >
-      Save
+      {t("Save")}
     </button>
   </div>
 );
@@ -256,13 +257,13 @@ export const FolderHeader: React.FC<{
               <span className="flex items-center gap-[7px]">
                 <span className="text-[15px] font-extrabold truncate" style={{ color: ink }}>{folder.name}</span>
                 {collapsed ? (
-                  <ChevronRight size={15} strokeWidth={2.4} className="shrink-0" style={{ color: ink }} />
+                  <ChevronRight size={15} strokeWidth={2.4} className="shrink-0 rtl:-scale-x-100" style={{ color: ink }} />
                 ) : (
                   <ChevronDown size={15} strokeWidth={2.4} className="shrink-0" style={{ color: ink }} />
                 )}
               </span>
               <span className="block text-[11.5px] mt-px" style={{ color: inkSoft }}>
-                {countText ?? `${count} ${count === 1 ? noun[0] : noun[1]}`}
+                {countText ?? (noun[1] === "templates" ? tn(count, "{n} template", "{n} templates") : noun[1] === "routines" ? tn(count, "{n} routine", "{n} routines") : `${count} ${count === 1 ? noun[0] : noun[1]}`)}
               </span>
             </span>
           </button>
@@ -271,7 +272,7 @@ export const FolderHeader: React.FC<{
               onClick={(e) => onMenu?.(e.currentTarget)}
               className="tap flex shrink-0"
               style={{ color: ink }}
-              aria-label={`Options for ${folder.name}`}
+              aria-label={t("Options for {name}", { name: folder.name })}
             >
               <MoreVertical size={17} />
             </button>
@@ -281,7 +282,7 @@ export const FolderHeader: React.FC<{
             <span
               {...gripProps}
               role="button"
-              aria-label={`Drag ${folder.name}`}
+              aria-label={t("Drag {name}", { name: folder.name })}
               className="hit flex shrink-0"
               style={{ color: ink, ...(gripProps?.style as React.CSSProperties | undefined) }}
             >

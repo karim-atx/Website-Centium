@@ -15,6 +15,7 @@ import {
   type LinkedProfessional,
   type UnansweredMap,
 } from "../../services/consent";
+import { t, tn } from "../../i18n/core";
 
 /**
  * A one-line-per-professional summary of the client's sharing settings, with
@@ -78,7 +79,7 @@ export const DataSharingSummary: React.FC = () => {
   return (
     <div className="mb-6">
       <p className="section-label text-charcoal-faint mb-2 flex items-center gap-1.5">
-        <ShieldCheck size={13} /> Data sharing
+        <ShieldCheck size={13} /> {t("Data sharing")}
       </p>
 
       {professionals.map((pro) => {
@@ -107,16 +108,16 @@ export const DataSharingSummary: React.FC = () => {
                     settled "no", which is the confusion this whole piece of
                     work exists to undo. Pending is called out separately. */}
                 <p className="text-xs text-charcoal-faint truncate">
-                  {granted} of {total} shared
+                  {t("{shared} of {total} shared", { shared: granted, total })}
                   {pending > 0 && (
                     <span className="text-primary-dark font-semibold">
                       {" · "}
-                      {pending} need{pending === 1 ? "s" : ""} your answer
+                      {tn(pending, "{n} needs your answer", "{n} need your answer")}
                     </span>
                   )}
                 </p>
               </div>
-              <ChevronRight size={16} className="text-charcoal-faint shrink-0" />
+              <ChevronRight size={16} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" />
             </div>
           </Card>
         );
@@ -131,7 +132,7 @@ export const DataSharingSummary: React.FC = () => {
           setOpenFor(null);
           void load();
         }}
-        title={openFor?.name ?? "Data sharing"}
+        title={openFor?.name ?? t("Data sharing")}
       >
         {/* Above the controls, because it is context for the decision being
             made below it rather than a separate destination. Renders nothing

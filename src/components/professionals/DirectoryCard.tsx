@@ -3,6 +3,7 @@ import { VerifiedCheck } from "../cv/CvBadges";
 import type { DirectoryListing } from "../../services/directory";
 import { ProfessionalCard } from "../market/ProfessionalCard";
 import { listingCard, typeLabel } from "../../pages/professionals/profile/profileModel";
+import { t } from "../../i18n/core";
 
 /**
  * Market + Share 3.0 · W5 (C-MO.4.9 `proDir`): a live directory listing as the
@@ -29,7 +30,7 @@ export const DirectoryCard: React.FC<{
   rank?: number;
 }> = ({ listing: p, distance, className, rank }) => {
   const navigate = useNavigate();
-  const place = distance === undefined ? undefined : (distance ?? "Not on the map nearby");
+  const place = distance === undefined ? undefined : (distance ?? t("Not on the map nearby"));
   return (
     <ProfessionalCard
       pro={listingCard(p, typeLabel(p.subtype), place)}

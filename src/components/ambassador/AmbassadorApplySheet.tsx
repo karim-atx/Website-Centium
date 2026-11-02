@@ -14,6 +14,7 @@ import {
   whatYouGetLine,
   type AmbassadorStatus,
 } from "../../services/ambassador";
+import { t } from "../../i18n/core";
 
 // Release B · B2 "Apply to be an ambassador" (PLAN S3; not drawn, so built
 // in the MasterSheet anatomy of pro/marketplace/opportunities/ApplySheet.tsx:
@@ -81,30 +82,30 @@ function ApplyForm({ status, onClose, onSent }: { status: AmbassadorStatus; onCl
     <MasterSheet
       open
       onClose={onClose}
-      title="Apply to be an ambassador"
+      title={t("Apply to be an ambassador")}
       footer={
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <PrimaryButton onClick={() => void send()} disabled={!ready} busy={busy}>
-            {busy ? "Sending…" : "Send application"}
+            {busy ? t("Sending…") : t("Send application")}
           </PrimaryButton>
           {error ? <SaveError style={{ marginTop: 4 }}>{error}</SaveError> : null}
-          {!online ? <SoonNote style={{ marginTop: 4 }}>You're offline. Try again when you're connected.</SoonNote> : null}
+          {!online ? <SoonNote style={{ marginTop: 4 }}>{t("You're offline. Try again when you're connected.")}</SoonNote> : null}
         </div>
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 10, color: m.ink, lineHeight: "normal" }}>
         <p className="text-charcoal-soft" style={{ margin: 0, fontSize: px(13.5), lineHeight: lh(19) }}>
-          Ambassadors earn more for each friend who joins with their code. We review every application.
+          {t("Ambassadors earn more for each friend who joins with their code. We review every application.")}
         </p>
 
         <div style={grey}>
-          <div style={label}>What you get</div>
+          <div style={label}>{t("What you get")}</div>
           <div className="flex items-center gap-3">
             <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
               <Sparkles size={15} strokeWidth={1.75} className="text-primary-accent" />
             </span>
             <span className="min-w-0">
-              <span className="block text-[12px] text-charcoal-faint">You</span>
+              <span className="block text-[12px] text-charcoal-faint">{t("You")}</span>
               <span className="block text-[13.5px] font-bold text-charcoal">{whatYouGetLine()}</span>
             </span>
           </div>
@@ -112,7 +113,7 @@ function ApplyForm({ status, onClose, onSent }: { status: AmbassadorStatus; onCl
 
         <div style={grey} role="group" aria-labelledby={ids.who}>
           <div id={ids.who} style={label}>
-            Who can apply
+            {t("Who can apply")}
           </div>
           <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
             {rows.map((r) => (
@@ -123,8 +124,8 @@ function ApplyForm({ status, onClose, onSent }: { status: AmbassadorStatus; onCl
                   <Circle size={16} strokeWidth={1.75} aria-hidden style={{ color: m.faint, flexShrink: 0, ...NO_ICON_SCALE }} />
                 )}
                 <span>
-                  {r.label}
-                  <span className="sr-only">{r.done ? ", done" : ", not yet"}</span>
+                  {t(r.label)}
+                  <span className="sr-only">{r.done ? t(", done") : t(", not yet")}</span>
                 </span>
               </li>
             ))}
@@ -134,7 +135,7 @@ function ApplyForm({ status, onClose, onSent }: { status: AmbassadorStatus; onCl
 
         <div style={grey}>
           <label htmlFor={ids.why} style={label}>
-            Why you'd like to be one
+            {t("Why you'd like to be one")}
           </label>
           <textarea
             id={ids.why}
@@ -153,7 +154,7 @@ function ApplyForm({ status, onClose, onSent }: { status: AmbassadorStatus; onCl
 
         <div style={grey}>
           <label htmlFor={ids.link} style={label}>
-            Where you share (optional)
+            {t("Where you share (optional)")}
           </label>
           <input
             id={ids.link}
@@ -161,7 +162,7 @@ function ApplyForm({ status, onClose, onSent }: { status: AmbassadorStatus; onCl
             inputMode="url"
             value={link}
             onChange={(e) => setLink(e.target.value)}
-            placeholder="Instagram, TikTok, a blog…"
+            placeholder={t("Instagram, TikTok, a blog…")}
             aria-invalid={!!badLink || undefined}
             aria-describedby={badLink ? ids.linkHint : undefined}
             className="market-focus"
@@ -169,7 +170,7 @@ function ApplyForm({ status, onClose, onSent }: { status: AmbassadorStatus; onCl
           />
           {badLink ? (
             <div id={ids.linkHint} style={{ ...hint, color: m.high }}>
-              {badLink}
+              {t(badLink)}
             </div>
           ) : null}
         </div>
@@ -190,10 +191,10 @@ function ApplyForm({ status, onClose, onSent }: { status: AmbassadorStatus; onCl
           </button>
           <span id={ids.terms} style={{ fontSize: px(13), lineHeight: lh(18), fontWeight: 700 }}>
             <span onClick={() => setTerms((v) => !v)} style={{ cursor: "pointer" }}>
-              I agree to the{" "}
+              {t("I agree to the")}{" "}
             </span>
             <a href={legalHref("terms", TERMS_HEADING)} target="_blank" rel="noopener noreferrer" style={{ color: m.accent }}>
-              Ambassador terms
+              {t("Ambassador terms")}
             </a>
           </span>
         </div>

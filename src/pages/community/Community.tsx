@@ -16,6 +16,7 @@ import { ADULTS_ONLY_COURSES_TEXT, NEEDS_DOB_COURSES_TEXT } from "../../services
 import { ForumPlaceholder } from "../../components/forum/parts";
 import { useBack } from "../../hooks/useBack";
 import { useState } from "react";
+import { t } from "../../i18n/core";
 import { Users } from "lucide-react";
 import { FixedHeader } from "../../components/ui/FixedHeader";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
@@ -46,7 +47,7 @@ type Section = "forum" | "courses";
 
 /** "Personal trainer", "Dietitian" (the type as one noun, capitalised). */
 function proTitleOf(type: string | undefined): string {
-  const noun = SUBTYPE_SINGULAR[(type ?? "other") as keyof typeof SUBTYPE_SINGULAR] ?? SUBTYPE_SINGULAR.other;
+  const noun = t(SUBTYPE_SINGULAR[(type ?? "other") as keyof typeof SUBTYPE_SINGULAR] ?? SUBTYPE_SINGULAR.other);
   return noun.charAt(0).toUpperCase() + noun.slice(1);
 }
 
@@ -111,20 +112,20 @@ function Heading({ className = "mb-4" }: { className?: string }) {
         <button
           type="button"
           onClick={back}
-          aria-label="Back"
+          aria-label={t("Back")}
           className="tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-charcoal-soft relative before:absolute before:-inset-1 before:content-['']"
           style={{ marginInlineStart: -7 }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="rtl:-scale-x-100">
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
         <div className="min-w-0" style={{ marginTop: 3 }}>
           <h1 className="m-0 font-bold text-charcoal" style={{ fontSize: textPx(27), letterSpacing: "-0.03em", lineHeight: 1.25 }}>
-            Community
+            {t("Community")}
           </h1>
           <p className="m-0 text-charcoal-faint" style={{ marginTop: 4, fontSize: textPx(13) }}>
-            Answer questions from clients and colleagues, or teach a course
+            {t("Answer questions from clients and colleagues, or teach a course")}
           </p>
         </div>
       </div>
@@ -135,17 +136,17 @@ function Heading({ className = "mb-4" }: { className?: string }) {
       <button
         type="button"
         onClick={back}
-        aria-label="Back"
+        aria-label={t("Back")}
         className="tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-charcoal-soft"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="rtl:-scale-x-100">
           <path d="M15 18l-6-6 6-6" />
         </svg>
       </button>
       <div className="min-w-0">
-        <h1 className="m-0 text-[27px] font-bold leading-[40.5px] tracking-[-0.6px] text-charcoal">Community</h1>
+        <h1 className="m-0 text-[27px] font-bold leading-[40.5px] tracking-[-0.6px] text-charcoal">{t("Community")}</h1>
         <p className="m-0 mt-1.5 text-[13px] leading-[19.5px] font-medium text-charcoal-faint">
-          Discuss with other clients, or learn from a course
+          {t("Discuss with other clients, or learn from a course")}
         </p>
       </div>
     </div>
@@ -164,7 +165,7 @@ function Refused({ text }: { text: string }) {
         <span className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center text-th-7d6bb5 dark:text-th-c3b3fb" aria-hidden="true">
           <Users size={26} strokeWidth={1.75} />
         </span>
-        <p className="m-0 text-[12.5px] leading-[18.8px] text-charcoal-soft">{text}</p>
+        <p className="m-0 text-[12.5px] leading-[18.8px] text-charcoal-soft">{t(text)}</p>
       </div>
     </div>
   );
@@ -183,11 +184,11 @@ function Gated({ render, section = "forum" }: { render: (ctx: Ctx) => React.Reac
         <p role="alert" className="m-0 flex flex-wrap items-center gap-x-2 text-[12.5px] leading-[18.8px] font-medium text-status-high">
           <span>
             {typeof navigator !== "undefined" && navigator.onLine === false
-              ? "You're offline. Try again when you're connected."
-              : "Couldn't load the forum."}
+              ? t("You're offline. Try again when you're connected.")
+              : t("Couldn't load the forum.")}
           </span>
           <button type="button" onClick={gate.retry} className="tap font-bold text-th-7d6bb5 dark:text-th-c3b3fb">
-            Retry
+            {t("Retry")}
           </button>
         </p>
       </div>
@@ -239,11 +240,11 @@ export default function Community({ compose = false }: { compose?: boolean }) {
                   #B8B3C7. */}
               <SegmentedTabs
                 items={[
-                  { key: "forum", label: "Forum" },
-                  { key: "courses", label: "Courses" },
+                  { key: "forum", label: t("Forum") },
+                  { key: "courses", label: t("Courses") },
                 ]}
                 activeKey={tab}
-                onChange={(t) => setParams(t === "courses" ? { tab: "courses" } : {}, { replace: true })}
+                onChange={(k) => setParams(k === "courses" ? { tab: "courses" } : {}, { replace: true })}
                 labelSize={15}
                 // Release 3 · W6 MO18 v2 (professionals): segTabs 56 high, 15,
                 // 12 under, the board's idle ink; clients keep 44 and #5B5349.

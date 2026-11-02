@@ -44,6 +44,7 @@ import { StarRating } from "../ui/StarRating";
 import { CoverPill, Instructor, StarIcon } from "./courseParts";
 import { coverBackground, onCover } from "./courseCover";
 import { useIsDark } from "../../hooks/useIsDark";
+import { t, tn } from "../../i18n/core";
 import { PinnedCta } from "../ui/PinnedCta";
 import { useBack } from "../../hooks/useBack";
 import { CertificateCard } from "./certificates/CertificateCard";
@@ -104,7 +105,7 @@ async function loadCourse(courseId: string, userId: string): Promise<Loaded | nu
   ]);
   return {
     course,
-    authorName: names.get(course.authorId ?? "") ?? "Professional",
+    authorName: names.get(course.authorId ?? "") ?? t("Professional"),
     stats: statMap.get(course.id) ?? { averageRating: null, ratings: 0, enrolled: 0 },
     modules: tree.modules.sort((a, b) => a.position - b.position),
     lessons: tree.lessons,
@@ -144,13 +145,13 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
     <button
       type="button"
       onClick={goBack}
-      aria-label="Back"
+      aria-label={t("Back")}
       // Frame check (MO1.3.5): a 36 pt disc (measured) with ChevronLeft 18
       // (the table's icon list); the tap area stays 44 through the ::before.
       className="tap relative w-9 h-9 rounded-full flex items-center justify-center before:content-[''] before:absolute before:-inset-1"
       style={{ background: onCover(dark).bg }}
     >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={onCover(dark).ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={onCover(dark).ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="rtl:-scale-x-100">
         <path d="M15 5l-7 7 7 7" />
       </svg>
     </button>
@@ -170,7 +171,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
       <div className="flex flex-col gap-3" style={{ color: fv("text") }}>
         <div className="-mx-1">{back}</div>
         <p className="text-sm text-center py-8" style={{ color: fv("muted") }}>
-          {state && "error" in state ? state.error : "This course isn't available."}
+          {state && "error" in state ? state.error : t("This course isn't available.")}
         </p>
       </div>
     );
@@ -191,7 +192,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
     if (busy) return;
     setNotice(null);
     if (tier === "paid" && !state.paidOpen) {
-      setNotice(PAID_OPEN_SOON);
+      setNotice(t(PAID_OPEN_SOON));
       return;
     }
     if (enrolment && tier === "free") return goNext();
@@ -206,7 +207,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
     // A paid enrolment that did not take (enrol_in_course keeps an existing
     // free enrolment's tier) must say so rather than look like nothing happened.
     if ((await fetchAccessLevel(course.id)) !== "paid") {
-      setNotice("Your free start couldn't be switched to the full course yet. Try again later.");
+      setNotice(t("Your free start couldn't be switched to the full course yet. Try again later."));
       return;
     }
     await reload();
@@ -243,10 +244,10 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
         </span>
         <span className="flex gap-1.5 items-center flex-wrap text-[13px]" style={{ color: fv("muted") }}>
           {stats.averageRating === null ? (
-            "No ratings yet"
+            t("No ratings yet")
           ) : (
             <>
-              <StarIcon size={12} /> {stats.averageRating.toFixed(1)} · {stats.ratings} {stats.ratings === 1 ? "rating" : "ratings"}
+              <StarIcon size={12} /> {stats.averageRating.toFixed(1)} · {tn(stats.ratings, "{n} rating", "{n} ratings")}
             </>
           )}
           {/* Hidden below three, like the card's: "1 learner" tells that one
@@ -280,7 +281,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
           <div className="flex flex-col gap-1.5">
             {state.extras?.focus && (
               <span className="text-[12px] font-bold" style={{ color: fv("muted") }}>
-                Focus: {state.extras.focus}
+                {t("Focus: {focus}", { focus: state.extras.focus })}
               </span>
             )}
             {state.extras?.description && (
@@ -296,7 +297,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
             frame, 2x: 40 px), 10 from the text. */}
         {course.learnPoints.length > 0 && (
           <div className="rounded-[18px] p-[14px] flex flex-col gap-2.5" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
-            <span className="text-sm font-extrabold">What you'll learn</span>
+            <span className="text-sm font-extrabold">{t("What you'll learn")}</span>
             {course.learnPoints.map((p) => (
               <span key={p} className="flex gap-2.5 text-[13px] leading-[1.5] [overflow-wrap:anywhere]">
                 <span
@@ -322,7 +323,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
                 (item 13): the frame's muted grey rgb(140,131,120) in light;
                 dark keeps the forum's muted. */}
             <span className="ps-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: dark ? fv("muted") : "rgb(var(--c-charcoal-faint))" }}>
-              Syllabus
+              {t("Syllabus")}
             </span>
             <div className="rounded-[18px] overflow-hidden flex flex-col" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
               {weeksShown.map((m, i) => {
@@ -342,7 +343,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
                     style={i > 0 ? { borderTop: `1px solid ${fv("rule")}` } : undefined}
                   >
                     <span className="min-w-0 [overflow-wrap:anywhere]">
-                      <strong>Week {i + 1}</strong> · {m.title}
+                      <strong>{t("Week {n}", { n: i + 1 })}</strong> · {m.title}
                       {contents ? `: ${contents}` : ""}
                     </span>
                     {mins && (
@@ -358,9 +359,9 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
                   className="px-[14px] py-1.5 flex justify-between items-center text-[13px]"
                   style={{ borderTop: `1px solid ${fv("rule")}`, color: fv("muted") }}
                 >
-                  <span>{allWeeks ? `All ${modules.length} weeks` : `${modules.length - 2} more ${modules.length - 2 === 1 ? "week" : "weeks"}`}</span>
+                  <span>{allWeeks ? t("All {n} weeks", { n: modules.length }) : tn(modules.length - 2, "{n} more week", "{n} more weeks")}</span>
                   <button type="button" onClick={() => setAllWeeks(!allWeeks)} className="tap font-bold py-2" style={{ color: fv("link") }}>
-                    {allWeeks ? "Show fewer" : "See all"}
+                    {allWeeks ? t("Show fewer") : t("See all")}
                   </button>
                 </div>
               )}
@@ -372,19 +373,19 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
           <div className="flex flex-col gap-2">
             {/* Decision 23 (item 14): the same label in the frame's muted grey. */}
             <span className="ps-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: dark ? fv("muted") : "rgb(var(--c-charcoal-faint))" }}>
-              Choose how to take it
+              {t("Choose how to take it")}
             </span>
             <div className="flex gap-2">
               <div className="flex-1 min-w-0 rounded-2xl p-3 flex flex-col gap-1.5" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
-                <span className="text-sm font-extrabold">Watch free</span>
+                <span className="text-sm font-extrabold">{t("Watch free")}</span>
                 <span className="text-xs leading-[1.5]" style={{ color: fv("muted") }}>
-                  All video lessons and readings
+                  {t("All video lessons and readings")}
                 </span>
               </div>
               <div className="flex-1 min-w-0 rounded-2xl p-3 flex flex-col gap-1.5" style={{ background: fv("rules-bg"), border: `1.5px solid ${fv("accent")}` }}>
-                <span className="text-sm font-extrabold">Full course · {price}</span>
+                <span className="text-sm font-extrabold">{t("Full course · {price}", { price })}</span>
                 <span className="text-xs leading-[1.5] [overflow-wrap:anywhere]" style={{ color: fv("rules-ink") }}>
-                  Adds quizzes, PDFs and a certificate
+                  {t("Adds quizzes, PDFs and a certificate")}
                 </span>
               </div>
             </div>
@@ -407,7 +408,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
             className="tap self-center h-11 -my-[8.5px] px-0 text-[13px] font-bold disabled:opacity-60"
             style={{ color: fv("link") }}
           >
-            {busy === "free" ? "Starting…" : enrolment ? "Continue watching free" : "Start watching free"}
+            {busy === "free" ? t("Starting…") : enrolment ? t("Continue watching free") : t("Start watching free")}
           </button>
         )}
 
@@ -428,8 +429,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
         {enrolment && !isAuthor && <RateSection courseId={course.id} initial={state.myRating} onSaved={reload} />}
 
         <span className="text-[11px] leading-[1.5]" style={{ color: fv("muted") }}>
-          Reviewed by Centium before publishing. Courses share general guidance, not personal medical advice. A certificate of
-          completion is not a professional qualification.
+          {t("Reviewed by Centium before publishing. Courses share general guidance, not personal medical advice. A certificate of completion is not a professional qualification.")}
         </span>
         {/* The page's own padding covers 112 of the 172 a pinned CTA needs. */}
         <div aria-hidden style={{ height: 60 }} />
@@ -441,15 +441,15 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
       <PinnedCta
         primary={
           isAuthor
-            ? { label: "Open your course", onClick: goNext, className: CTA_COLOURS }
+            ? { label: t("Open your course"), onClick: goNext, className: CTA_COLOURS }
             : !paidCourse || hasPaid
             ? {
-                label: enrolment ? "Continue the course" : "Start the course",
+                label: enrolment ? t("Continue the course") : t("Start the course"),
                 loading: busy === "free",
                 onClick: () => void start("free"),
                 className: CTA_COLOURS,
               }
-            : { label: "Get the full course", loading: busy === "paid", onClick: () => void start("paid"), className: CTA_COLOURS }
+            : { label: t("Get the full course"), loading: busy === "paid", onClick: () => void start("paid"), className: CTA_COLOURS }
         }
       />
     </div>
@@ -483,13 +483,13 @@ function DripProgress({
   return (
     <div className="rounded-[18px] p-[14px] flex flex-col gap-2" style={{ background: fv("rules-bg") }}>
       <div className="flex justify-between gap-3 text-[13px]" style={{ color: fv("rules-ink") }}>
-        <strong>Your progress</strong>
-        {total > 0 && <span>{`${done} of ${total} ${total === 1 ? "lesson" : "lessons"}`}</span>}
+        <strong>{t("Your progress")}</strong>
+        {total > 0 && <span>{tn(total, "{done} of {n} lesson", "{done} of {n} lessons", { done })}</span>}
       </div>
       {total > 0 && (
         <span
           role="progressbar"
-          aria-label="Your progress"
+          aria-label={t("Your progress")}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={pct}
@@ -532,7 +532,7 @@ function QuestionsSection({
 
   const ask = async () => {
     if (draft.trim().length < 4 || busy) {
-      setError("Write at least a few words.");
+      setError(t("Write at least a few words."));
       return;
     }
     setBusy(true);
@@ -548,20 +548,20 @@ function QuestionsSection({
     // Decision 23 (item 261): one learn card (radius 18, padding 14, gap 10),
     // the questions inside it as hairline-divided rows like the syllabus's.
     <div className="rounded-[18px] p-[14px] flex flex-col gap-2.5" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
-      <span className="text-sm font-extrabold">Questions to {authorName}</span>
+      <span className="text-sm font-extrabold">{t("Questions to {name}", { name: authorName })}</span>
       {canAsk && (
         <>
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             maxLength={2000}
-            placeholder="Ask a question about the course"
-            aria-label={`Ask ${authorName} a question`}
+            placeholder={t("Ask a question about the course")}
+            aria-label={t("Ask {name} a question", { name: authorName })}
             className="h-[84px] rounded-xl px-3 py-2.5 text-sm resize-none outline-none"
             style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
           />
           <span className="text-xs leading-[1.5]" style={{ color: fv("muted") }}>
-            Questions and answers are shared with everyone taking the full course. Your name isn't shown.
+            {t("Questions and answers are shared with everyone taking the full course. Your name isn't shown.")}
           </span>
           {error && <DangerLine>{error}</DangerLine>}
           <button
@@ -571,7 +571,7 @@ function QuestionsSection({
             className="tap self-start h-10 rounded-full px-4 text-[13px] font-extrabold disabled:opacity-60"
             style={{ background: fv("accent"), color: fv("on-accent") }}
           >
-            {busy ? "Sending…" : "Ask"}
+            {busy ? t("Sending…") : t("Ask")}
           </button>
         </>
       )}
@@ -579,13 +579,13 @@ function QuestionsSection({
         <div key={q.id} className="pt-2.5 flex flex-col gap-1.5 text-[13px]" style={{ borderTop: `1px solid ${fv("rule")}` }}>
           <span className="font-bold [overflow-wrap:anywhere] whitespace-pre-wrap">{q.body}</span>
           <span className="leading-[1.5] [overflow-wrap:anywhere] whitespace-pre-wrap" style={{ color: q.answer ? fv("body") : fv("muted") }}>
-            {q.answer ?? "Waiting for an answer"}
+            {q.answer ?? t("Waiting for an answer")}
           </span>
         </div>
       ))}
       {questions.length === 0 && !canAsk && (
         <span className="text-[13px]" style={{ color: fv("muted") }}>
-          No questions yet.
+          {t("No questions yet.")}
         </span>
       )}
     </div>
@@ -623,13 +623,13 @@ function RateSection({
         className="tap w-full min-h-11 rounded-[18px] p-[14px] flex items-center gap-2.5 text-start"
         style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("text") }}
       >
-        <span className="text-sm font-extrabold grow">{initial ? "Your rating" : "Rate this course"}</span>
+        <span className="text-sm font-extrabold grow">{initial ? t("Your rating") : t("Rate this course")}</span>
         {initial && (
           <span className="flex items-center gap-1 text-[13px]" style={{ color: fv("muted") }}>
             <StarIcon size={12} /> {initial.stars}
           </span>
         )}
-        <ChevronRight size={16} strokeWidth={1.75} style={{ color: fv("muted") }} aria-hidden />
+        <ChevronRight size={16} strokeWidth={1.75} className="rtl:-scale-x-100" style={{ color: fv("muted") }} aria-hidden />
       </button>
       <RatePopup key={opening} open={open} onClose={() => setOpen(false)} courseId={courseId} initial={initial} onSaved={onSaved} />
     </>
@@ -674,10 +674,10 @@ function RatePopup({
       <CentredPopup
         open={open}
         onClose={onClose}
-        title="Rating saved"
+        title={t("Rating saved")}
         icon={<Check size={22} />}
-        body="Thanks, your rating is saved."
-        cta={{ label: "Done", onClick: onClose }}
+        body={t("Thanks, your rating is saved.")}
+        cta={{ label: t("Done"), onClick: onClose }}
       />
     );
   }
@@ -686,9 +686,9 @@ function RatePopup({
     <CentredPopup
       open={open}
       onClose={onClose}
-      title={initial ? "Your rating" : "Rate this course"}
+      title={initial ? t("Your rating") : t("Rate this course")}
       icon={<Star size={22} strokeWidth={1.75} />}
-      cta={{ label: busy ? "Saving…" : "Save rating", disabled: !stars || busy, loading: busy, onClick: () => void save() }}
+      cta={{ label: busy ? t("Saving…") : t("Save rating"), disabled: !stars || busy, loading: busy, onClick: () => void save() }}
     >
       <StarRating value={stars} onChange={setStars} disabled={busy} />
       <textarea
@@ -696,8 +696,8 @@ function RatePopup({
         onChange={(e) => setBody(e.target.value)}
         maxLength={2000}
         rows={3}
-        placeholder="Add a few words (optional)"
-        aria-label="Your review (optional)"
+        placeholder={t("Add a few words (optional)")}
+        aria-label={t("Your review (optional)")}
         className="mt-3 h-24 w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-[13px] text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
       />
       {error && <DangerLine className="mt-2">{error}</DangerLine>}
