@@ -3,6 +3,8 @@ import { DAY_LETTERS } from "../../../utils/week";
 import { minutesOfDay, time12 } from "../../../utils/time12";
 import type { MarketPalette } from "../../../theme/marketTokens";
 import { addDays, flagOf, hourLabel, isEnded, overlaps, shortDate, weekHours, type Issue, type Session } from "./scheduleModel";
+import { getLanguage, t } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
 
 // The kept Week view (OP1-076; not drawn on B-MA.6, restyled in its chrome):
 // the strip's Monday-to-Sunday week, 18 px an hour, blocks split side by side
@@ -40,7 +42,9 @@ export function WeekGrid({
   const height = (h1 - h0) * PX;
   const hours: number[] = [];
   for (let h = h0; h < h1; h += 3) hours.push(h);
-  const mins = (t: string) => (minutesOfDay(t) ?? 0) / 60;
+  const mins = (hhmm: string) => (minutesOfDay(hhmm) ?? 0) / 60;
+  // The day letter over a column: English "M T W …"; Arabic its narrow day names («ن ث ر …»).
+  const letter = (d: string, i: number) => (getLanguage() === "en" ? DAY_LETTERS[i] : new Date(`${d}T00:00:00`).toLocaleDateString(appLocale(), { weekday: "narrow" }));
 
   return (
     <div style={{ marginTop: 10, background: m.card, borderRadius: 20, border: `1px solid ${m.border}`, paddingBlock: "10px 12px", paddingInline: "4px 8px", lineHeight: "normal" }}>
@@ -53,12 +57,12 @@ export function WeekGrid({
               key={d}
               type="button"
               onClick={() => onDay(d)}
-              aria-label={`${shortDate(d)}: show this day as a list`}
+              aria-label={t("{date}: show this day as a list", { date: shortDate(d) })}
               className="market-focus text-center"
               style={{ paddingBottom: 6, minHeight: 44, color: isToday ? m.pdark : m.faint, background: "transparent", border: 0, borderRadius: 10 }}
             >
               <span className="block" style={{ fontSize: textPx(10), fontWeight: 800 }}>
-                {DAY_LETTERS[i]}
+                {letter(d, i)}
               </span>
               <span className="block" style={{ fontSize: textPx(13), fontWeight: 800, lineHeight: linePx(16) }}>
                 {Number(d.slice(8))}
@@ -91,12 +95,12 @@ export function WeekGrid({
                     key={s.id}
                     type="button"
                     onClick={() => onOpen(s.id)}
-                    aria-label={`${s.title}, ${shortDate(d)} ${time12(s.startTime)}, ${s.cancelled ? "cancelled" : `${s.booked} of ${s.maxCapacity} booked`}`}
+                    aria-label={`${s.title}, ${shortDate(d)} ${time12(s.startTime)}, ${s.cancelled ? t("cancelled") : t("{booked} of {cap} booked", { booked: s.booked, cap: s.maxCapacity })}`}
                     className="market-focus absolute overflow-hidden"
                     style={{
                       top: (mins(s.startTime) - h0) * PX,
                       height: Math.max(10, (mins(s.endTime) - mins(s.startTime)) * PX - 2),
-                      left: `${(idx * 100) / n}%`,
+                      insetInlineStart: `${(idx * 100) / n}%`,
                       width: `calc(${100 / n}% - ${n > 1 ? 1 : 0}px)`,
                       borderRadius: 6,
                       border: 0,
@@ -115,16 +119,16 @@ export function WeekGrid({
           );
         })}
       </div>
-      <div className="flex flex-wrap" style={{ gap: 12, padding: `10px 8px 0 ${GUTTER}px`, fontSize: textPx(10.5), lineHeight: linePx(14), color: m.faint }}>
+      <div className="flex flex-wrap" style={{ gap: 12, paddingTop: 10, paddingInlineEnd: 8, paddingInlineStart: GUTTER, fontSize: textPx(10.5), lineHeight: linePx(14), color: m.faint }}>
         <span className="flex items-center" style={{ gap: 5 }}>
           <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: m.fill }} />
-          Class
+          {t("Class")}
         </span>
         <span className="flex items-center" style={{ gap: 5 }}>
           <span aria-hidden style={{ width: 7, height: 7, borderRadius: 999, background: m.high }} />
-          Needs attention
+          {t("Needs attention")}
         </span>
-        <span>Shading is spots booked</span>
+        <span>{t("Shading is spots booked")}</span>
       </div>
     </div>
   );

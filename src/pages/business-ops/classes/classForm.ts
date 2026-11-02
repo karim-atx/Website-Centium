@@ -1,3 +1,4 @@
+import { t } from "../../../i18n/core";
 import type { BusinessClassRow } from "../../../services/business-classes";
 import { isoWeekday, type ClassLevel, type RepeatRule } from "../../../services/business-classes/scheduleRules";
 
@@ -133,11 +134,11 @@ export function ruleOf(f: Pick<ClassForm, "date" | "repeat">): RepeatRule | null
 export function repeatProblem(f: Pick<ClassForm, "date" | "repeat">): string | null {
   const r = f.repeat;
   if (r.kind === "none") return null;
-  if (r.kind !== "daily" && r.weekdays.length === 0) return "Pick at least one day.";
-  if (r.ends === "date" && (!r.until || r.until < f.date)) return "Pick an end date on or after the first class.";
+  if (r.kind !== "daily" && r.weekdays.length === 0) return t("Pick at least one day.");
+  if (r.ends === "date" && (!r.until || r.until < f.date)) return t("Pick an end date on or after the first class.");
   if (r.ends === "count") {
-    const t = r.count.trim();
-    if (!/^\d+$/.test(t) || Number(t) < 1 || Number(t) > 200) return "Enter a number of sessions from 1 to 200.";
+    const typed = r.count.trim();
+    if (!/^\d+$/.test(typed) || Number(typed) < 1 || Number(typed) > 200) return t("Enter a number of sessions from 1 to 200.");
   }
   return null;
 }

@@ -7,6 +7,7 @@ import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { linePx, textPx } from "../../../theme/textSize";
 import { useMarketColours } from "./parts";
 import { INSTRUCTOR_NOTE, NO_INSTRUCTOR, type PickerPerson } from "./instructorTeam";
+import { t, tk } from "../../../i18n/core";
 
 // Market + Share 3.0 · W4 · B-MA.6 "Instructor picker · Team only" and "No one
 // on the Team yet" (Business Hiring Screens `instrPicker` / `instrNoTeam`,
@@ -127,28 +128,28 @@ export function InstructorPicker({
       className="market-focus w-full flex items-center justify-center disabled:opacity-40"
       style={{ height: 50, borderRadius: 16, background: m.fill, color: m.onfill, fontSize: textPx(15), fontWeight: 700, border: 0, fontFamily: "inherit" }}
     >
-      {noTeam ? "Go to Hiring" : "Done"}
+      {noTeam ? t("Go to Hiring") : t("Done")}
     </button>
   );
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Instructor" footer={footer} footerRule titleWrap>
+    <BottomSheet open={open} onClose={onClose} title={t("Instructor")} footer={footer} footerRule titleWrap>
       <style>{FOCUS_CSS}</style>
       {loading ? (
-        <MarketSkeleton radius={18} rows={2} count={3} gap={8} label="Loading your team" />
+        <MarketSkeleton radius={18} rows={2} count={3} gap={8} label={t("Loading your team")} />
       ) : error ? (
-        error.offline ? <MarketOffline loaded={false} onRetry={onRetry} force /> : <MarketError thing="your team" onRetry={onRetry} />
+        error.offline ? <MarketOffline loaded={false} onRetry={onRetry} force /> : <MarketError thing={tk("your team")} onRetry={onRetry} />
       ) : (
-        <div role="radiogroup" aria-label="Instructor" onKeyDown={onKey} className="flex flex-col" style={{ gap: 8 }}>
+        <div role="radiogroup" aria-label={t("Instructor")} onKeyDown={onKey} className="flex flex-col" style={{ gap: 8 }}>
           {people.map((p) =>
             row(p.id, pick === p.id, <MarketAvatar id={p.id} name={p.name} photoUrl={p.photoUrl} size={40} fontSize={13} />, p.name, p.sub, p.muted, () => setPick(p.id))
           )}
-          {row("none", noTeam || pick === "", dash, NO_INSTRUCTOR, "Clients see Instructor not listed", true, noTeam ? undefined : () => setPick(""))}
+          {row("none", noTeam || pick === "", dash, t(NO_INSTRUCTOR), t("Clients see Instructor not listed"), true, noTeam ? undefined : () => setPick(""))}
           {noTeam ? (
             <div style={{ borderRadius: 14, background: m.cautionbg, padding: "12px 14px", lineHeight: "normal" }}>
-              <p style={{ margin: 0, fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 700, color: m.ink }}>No one on your team yet</p>
+              <p style={{ margin: 0, fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 700, color: m.ink }}>{t("No one on your team yet")}</p>
               <p style={{ margin: "4px 0 0", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
-                Hire a professional through Hiring to name them as this class&apos;s instructor. Their photo and profile then show to clients.
+                {t("Hire a professional through Hiring to name them as this class's instructor. Their photo and profile then show to clients.")}
               </p>
               <button
                 type="button"
@@ -156,7 +157,7 @@ export function InstructorPicker({
                 className="market-focus hit inline-flex items-center"
                 style={{ marginTop: 10, height: 40, borderRadius: 12, background: m.fill, color: m.onfill, padding: "0 16px", fontSize: textPx(13), fontWeight: 800, border: 0, fontFamily: "inherit" }}
               >
-                Post an opening
+                {t("Post an opening")}
               </button>
             </div>
           ) : (
@@ -167,7 +168,7 @@ export function InstructorPicker({
                 <path d="M13 17v2" />
                 <path d="M13 11v2" />
               </svg>
-              <span style={{ fontSize: textPx(12.5), lineHeight: linePx(18), fontWeight: 700, color: m.pdark }}>{INSTRUCTOR_NOTE}</span>
+              <span style={{ fontSize: textPx(12.5), lineHeight: linePx(18), fontWeight: 700, color: m.pdark }}>{t(INSTRUCTOR_NOTE)}</span>
             </div>
           )}
         </div>

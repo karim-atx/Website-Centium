@@ -3,6 +3,7 @@ import { ChevronLeft } from "lucide-react";
 import { linePx, textPx } from "../../../theme/textSize";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { marketPalette, type MarketPalette } from "../../../theme/marketTokens";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 B-MA.6: the pieces the Classes screens share, with the
 // Business Marketplace Screens values (markup lines 44–48, 382–466). Colours
@@ -27,7 +28,7 @@ export const scrimOf = (dark: boolean) => (dark ? "rgba(0,0,0,0.6)" : "rgba(0,0,
 export const BackHeader: React.FC<{ m: MarketPalette; eyebrow?: string; title: string; onBack: (() => void) | null; right?: React.ReactNode }> = ({ m, eyebrow, title, onBack, right }) => (
   <div className="flex items-center" style={{ gap: 6, margin: onBack ? "-4px 0 12px -10px" : "0 0 12px 0", minHeight: 44 }}>
     {onBack && (
-      <button type="button" aria-label="Back" onClick={onBack} className="market-focus shrink-0 flex items-center justify-center" style={{ width: 44, height: 44, color: m.ink, borderRadius: 12 }}>
+      <button type="button" aria-label={t("Back")} onClick={onBack} className="market-focus shrink-0 flex items-center justify-center" style={{ width: 44, height: 44, color: m.ink, borderRadius: 12 }}>
         <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
       </button>
     )}

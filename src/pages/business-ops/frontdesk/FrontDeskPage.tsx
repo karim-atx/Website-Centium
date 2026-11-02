@@ -6,6 +6,7 @@ import { usePoll } from "../../../hooks/usePoll";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { useBizToast } from "../../../components/business-more/useBizToast";
 import { clock12 } from "../../../utils/time12";
+import { t, tk } from "../../../i18n/core";
 import { CheckInSheet } from "./CheckInSheet";
 import { EntriesTab } from "./EntriesTab";
 import { DeskHeader, FixedCta, HeaderIconButton, TextTabs, VenueSwitch } from "./frontDeskKit";
@@ -28,26 +29,26 @@ import { useFrontDesk } from "./useFrontDesk";
 
 export type DeskTab = "entries" | "passes" | "memberships";
 const TABS: { key: DeskTab; label: string }[] = [
-  { key: "entries", label: "Entries" },
-  { key: "passes", label: "Passes" },
-  { key: "memberships", label: "Memberships" },
+  { key: "entries", label: tk("Entries") },
+  { key: "passes", label: tk("Passes") },
+  { key: "memberships", label: tk("Memberships") },
 ];
 const TITLE: Record<DeskTab, string> = {
-  entries: "Front desk",
-  passes: "Passes and renewals",
-  memberships: "Memberships",
+  entries: tk("Front desk"),
+  passes: tk("Passes and renewals"),
+  memberships: tk("Memberships"),
 };
 
 export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memberships }) => {
   const [params, setParams] = useSearchParams();
   const raw = params.get("tab");
   const tab: DeskTab = raw === "passes" || raw === "memberships" ? raw : "entries";
-  const setTab = (t: DeskTab) =>
+  const setTab = (next: DeskTab) =>
     setParams(
       (p) => {
         const n = new URLSearchParams(p);
-        if (t === "entries") n.delete("tab");
-        else n.set("tab", t);
+        if (next === "entries") n.delete("tab");
+        else n.set("tab", next);
         return n;
       },
       { replace: true }
@@ -74,27 +75,27 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
   const offlineLine =
     !online && data.loadedAt && tab !== "memberships"
       ? tab === "entries"
-        ? `Offline. Showing entries from ${clock12(data.loadedAt)}.`
-        : `Offline. Showing data from ${clock12(data.loadedAt)}.`
+        ? t("Offline. Showing entries from {time}.", { time: clock12(data.loadedAt) })
+        : t("Offline. Showing data from {time}.", { time: clock12(data.loadedAt) })
       : null;
 
   return (
     <div style={{ paddingBottom: tab === "entries" ? 48 : 0 }}>
       <DeskHeader
-        kicker="Front desk"
-        title={TITLE[tab]}
-        sub={tab === "memberships" ? "Membership plans clients can buy on Explore" : undefined}
+        kicker={t("Front desk")}
+        title={t(TITLE[tab])}
+        sub={tab === "memberships" ? t("Membership plans clients can buy on Explore") : undefined}
         action={
           <div className="flex shrink-0" style={{ gap: 4 }}>
-            {data.runsClasses && <HeaderIconButton icon={CalendarDays} label="Class schedule" edge={false} onClick={() => navigate("/app/business/classes")} />}
-            <HeaderIconButton icon={ScanLine} label="Scan a pass" onClick={() => setScan(true)} />
+            {data.runsClasses && <HeaderIconButton icon={CalendarDays} label={t("Class schedule")} edge={false} onClick={() => navigate("/app/business/classes")} />}
+            <HeaderIconButton icon={ScanLine} label={t("Scan a pass")} onClick={() => setScan(true)} />
           </div>
         }
       />
       {deskVenue && data.venues.length > 1 && tab !== "memberships" && (
         <VenueSwitch name={deskVenue.name} open={!!venueMenu} onOpen={setVenueMenu} />
       )}
-      <TextTabs tabs={TABS} value={tab} onChange={setTab} label="Front desk" />
+      <TextTabs tabs={TABS.map((x) => ({ ...x, label: t(x.label) }))} value={tab} onChange={setTab} label={t("Front desk")} />
       {offlineLine && (
         <p role="status" className="text-[11.5px] leading-[16px] text-charcoal-faint" style={{ margin: "-6px 2px 12px" }}>
           {offlineLine}
@@ -120,7 +121,7 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
         {tab === "memberships" && memberships}
       </div>
 
-      {tab === "entries" && <FixedCta variant="kit" label="Check someone in" onClick={() => setCheckIn({ open: true, preset: null })} />}
+      {tab === "entries" && <FixedCta variant="kit" label={t("Check someone in")} onClick={() => setCheckIn({ open: true, preset: null })} />}
 
       <CheckInSheet
         open={checkIn.open}
@@ -159,7 +160,7 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
         open={!!venueMenu}
         anchor={venueMenu}
         onClose={() => setVenueMenu(null)}
-        heading="Checking in at"
+        heading={t("Checking in at")}
         selected={data.deskGymId}
         options={data.venues.map((v) => ({ value: v.gymId, label: v.name }))}
         onSelect={(id) => {

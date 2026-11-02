@@ -48,6 +48,8 @@ import { NO_INSTRUCTOR, busyDayOf, clashBody, clashRows, clashTitle, firstNameOf
 import { CentredDialog } from "../../business-market/listingParts";
 import { HIRING_ERROR_TEXT } from "../../../services/hiring/model";
 import { conflictsFor, durationMinutes, durationOptions, everyText, initialOf, isLegacyType, joinAnd, longDate, mondayOf, addDays, running, type SessionLite } from "./scheduleModel";
+import { getLanguage, t, tk, tn } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
 
 // Market + Share 3.0 · B-MA.6 Add or edit a class (Business Marketplace
 // Screens `classEdit`, markup lines 409–427, script `classFields`; HANDOVER
@@ -91,7 +93,7 @@ import { conflictsFor, durationMinutes, durationOptions, everyText, initialOf, i
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MERIDIEMS: Meridiem[] = ["AM", "PM"];
 const FIELD_ORDER: ClassField[] = ["name", "date", "times", "capacity", "price"];
-const FIELD_WORD: Record<ClassField, string> = { name: "name", date: "date", times: "times", capacity: "capacity", price: "price" };
+const FIELD_WORD: Record<ClassField, string> = { name: tk("name"), date: tk("date"), times: tk("times"), capacity: tk("capacity"), price: tk("price") };
 
 /** How much bigger the sheet's 14 px field text is drawn than its spec (Larger text boost × root scaling). */
 function textScale(): number {
@@ -104,7 +106,9 @@ function textScale(): number {
 
 type Banner = { kind: "fields" | "fail" | "offline" | "permission"; text: string } | null;
 
-const REPEAT_LABEL: Record<RepeatKind, string> = { none: "Does not repeat", daily: "Daily", weekly: "Weekly", biweekly: "Every 2 weeks", custom: "Custom" };
+const REPEAT_LABEL: Record<RepeatKind, string> = { none: tk("Does not repeat"), daily: tk("Daily"), weekly: tk("Weekly"), biweekly: tk("Every 2 weeks"), custom: tk("Custom") };
+/** A weekday button's letter: English "M T W …"; Arabic its narrow day names (Monday first). */
+const dayLetter = (i: number): string => (getLanguage() === "en" ? DAY_LETTERS[i] : new Date(2024, 0, 1 + i).toLocaleDateString(appLocale(), { weekday: "narrow" }));
 const REPEAT_ORDER: RepeatKind[] = ["none", "daily", "weekly", "biweekly", "custom"];
 /** The dates a new series is checked against for clashes: its first 12 weeks (the horizon save_class_series makes). */
 const SERIES_CHECK_DAYS = 84;
@@ -260,9 +264,9 @@ function SheetBody({
     const e = validateClassDraft(draftOf(f), mode === "create" ? today : undefined);
     // A typed capacity that is not a whole number reads as AN3-040's line.
     const capRaw = f.capacity.trim();
-    if (capRaw && !/^\d+$/.test(capRaw)) e.capacity = "Enter a whole number from 1 to 200.";
+    if (capRaw && !/^\d+$/.test(capRaw)) e.capacity = t("Enter a whole number from 1 to 200.");
     if (mode === "edit" && /^\d+$/.test(capRaw) && Number(capRaw) < bookedCount) {
-      e.capacity = `${bookedCount} spots are already booked. Capacity can't go below ${bookedCount}.`;
+      e.capacity = bookedFloor(bookedCount);
     }
     return e;
   };
@@ -326,19 +330,19 @@ function SheetBody({
       return;
     }
     if ("code" in r && r.code === "capacity") {
-      setErrors({ capacity: `${bookedCount} spots are already booked. Capacity can't go below ${bookedCount}.` });
+      setErrors({ capacity: bookedFloor(bookedCount) });
       setChecked(true);
       return;
     }
     if ("code" in r && r.code === "permission") {
-      setBanner({ kind: "permission", text: "Couldn't save the class. Only the business owner can add classes right now." });
+      setBanner({ kind: "permission", text: t("Couldn't save the class. Only the business owner can add classes right now.") });
       return;
     }
     setFailed(true);
     setBanner(
       typeof navigator !== "undefined" && navigator.onLine === false
-        ? { kind: "offline", text: "You're offline. The class isn't saved yet. Tap Retry when you're back online. Everything you entered is kept." }
-        : { kind: "fail", text: mode === "edit" ? "Couldn't save your changes. Check your connection and tap Retry. Everything you entered is kept." : CLASS_SAVE_FAILED }
+        ? { kind: "offline", text: t("You're offline. The class isn't saved yet. Tap Retry when you're back online. Everything you entered is kept.") }
+        : { kind: "fail", text: mode === "edit" ? t("Couldn't save your changes. Check your connection and tap Retry. Everything you entered is kept.") : CLASS_SAVE_FAILED }
     );
   };
 
@@ -359,7 +363,7 @@ function SheetBody({
     const rp = mode === "create" ? repeatProblem(form) : null;
     setRepeatErr(rp);
     if (rp) {
-      setBanner({ kind: "fields", text: "Fix 1 field to save: repeat." });
+      setBanner({ kind: "fields", text: t("Fix 1 field to save: repeat.") });
       repeatGroupEl?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
       return;
     }
@@ -398,8 +402,8 @@ function SheetBody({
   const nameOf = (id: string) => pickerPeople.find((p) => p.id === id)?.name ?? instructors.find((i) => i.professionalId === id)?.firstName ?? "";
 
   const typeOptions: PopupMenuOption<string>[] = [
-    ...(isLegacyType(form.classType, CLASS_TYPES) ? [{ value: form.classType, label: form.classType, note: "Saved before this list" }] : []),
-    ...CLASS_TYPES.map((t) => ({ value: t, label: t })),
+    ...(isLegacyType(form.classType, CLASS_TYPES) ? [{ value: form.classType, label: form.classType, note: t("Saved before this list") }] : []),
+    ...CLASS_TYPES.map((type) => ({ value: type, label: type })),
   ];
 
   // The clash dialog's values (B-MA.6 `assignConflict`).
@@ -463,12 +467,12 @@ function SheetBody({
   const capHelp = (() => {
     if (errors.capacity) return null; // the error line shows instead
     if (!capFocus) return null;
-    if (form.capacity.trim() !== "" && capNum === null) return { text: "Enter a whole number from 1 to 200.", ink: m.high };
-    if (capNum !== null && capNum > CAPACITY_MAX) return { text: "Enter a whole number from 1 to 200.", ink: m.high };
-    if (mode === "edit" && capNum !== null && capNum < bookedCount) return { text: `${bookedCount} spots are already booked. Capacity can't go below ${bookedCount}.`, ink: m.high };
-    if (capNum === CAPACITY_MIN) return { text: "Minimum is 1 spot.", ink: m.faint };
-    if (capNum === CAPACITY_MAX) return { text: "Maximum is 200 spots per class.", ink: m.faint };
-    return { text: capFocus === "typing" ? "1 to 200 spots." : "Type a number or use − and +.", ink: m.faint };
+    if (form.capacity.trim() !== "" && capNum === null) return { text: t("Enter a whole number from 1 to 200."), ink: m.high };
+    if (capNum !== null && capNum > CAPACITY_MAX) return { text: t("Enter a whole number from 1 to 200."), ink: m.high };
+    if (mode === "edit" && capNum !== null && capNum < bookedCount) return { text: bookedFloor(bookedCount), ink: m.high };
+    if (capNum === CAPACITY_MIN) return { text: t("Minimum is 1 spot."), ink: m.faint };
+    if (capNum === CAPACITY_MAX) return { text: t("Maximum is 200 spots per class."), ink: m.faint };
+    return { text: capFocus === "typing" ? t("1 to 200 spots.") : t("Type a number or use − and +."), ink: m.faint };
   })();
   // B13 MK-04: the Centium spots stepper runs 0 to the capacity, then "All free spots" (null).
   const exploreCap = capNum ?? (Number(lastValidCap) || 0);
@@ -518,22 +522,22 @@ function SheetBody({
   const parts = toParts(form.startTime);
   const setTime = (p: Partial<TimeParts>) => setStart(fromParts({ ...parts, ...p }));
 
-  const runName = form.professionalId ? nameOf(form.professionalId) || (!instructorsLoaded || team.s === "loading" ? "" : "Unnamed") : "";
-  const runText = runName || (form.professionalId ? "Loading…" : NO_INSTRUCTOR);
-  const saveLabel = saving ? "Saving…" : failed ? "Retry" : "Save class";
+  const runName = form.professionalId ? nameOf(form.professionalId) || (!instructorsLoaded || team.s === "loading" ? "" : t("Unnamed")) : "";
+  const runText = runName || (form.professionalId ? t("Loading…") : t(NO_INSTRUCTOR));
+  const saveLabel = saving ? t("Saving…") : failed ? t("Retry") : t("Save class");
   const ctaOff = blankUntouched || editUnchanged;
   const repeatText =
     mode === "create"
       ? rp.kind === "none"
-        ? REPEAT_LABEL.none
+        ? t(REPEAT_LABEL.none)
         : rp.kind === "daily"
-          ? "Daily"
+          ? t("Daily")
           : everyText(rp.weekdays.length ? rp.weekdays : [isoWeekday(form.date)], rp.kind === "biweekly" ? 2 : rp.kind === "custom" ? rp.interval : 1)
       : scope === "future" && series
         ? everyText(series.weekdays, series.intervalWeeks)
         : series
-          ? "Only this session"
-          : REPEAT_LABEL.none;
+          ? t("Only this session")
+          : t(REPEAT_LABEL.none);
 
   const footer = (
     <div>
@@ -553,7 +557,7 @@ function SheetBody({
         disabled={ctaOff}
         aria-busy={saving || undefined}
         aria-disabled={saving || undefined}
-        aria-label={saving ? "Saving class" : failed ? "Retry saving the class" : undefined}
+        aria-label={saving ? t("Saving class") : failed ? t("Retry saving the class") : undefined}
         className="market-focus relative w-full flex items-center justify-center"
         style={{ height: 50, borderRadius: 16, color: m.onfill, fontSize: textPx(15), fontWeight: 700, gap: 8, background: m.fill, border: 0, opacity: ctaOff ? 0.4 : saving ? 0.7 : 1 }}
       >
@@ -575,24 +579,24 @@ function SheetBody({
 
   return (
     <>
-      <BottomSheet open={open} onClose={requestClose} title={mode === "edit" ? "Edit class" : "Add class"} footer={footer} footerRule animateExit closeOnScrim={false} maxHeightPct={90}>
+      <BottomSheet open={open} onClose={requestClose} title={mode === "edit" ? t("Edit class") : t("Add class")} footer={footer} footerRule animateExit closeOnScrim={false} maxHeightPct={90}>
         <style>{FOCUS_CSS + fieldCss}</style>
         <div
           ref={setBodyEl}
           role="form"
-          aria-label={mode === "edit" ? "Edit class" : "Add class"}
+          aria-label={mode === "edit" ? t("Edit class") : t("Add class")}
           className="grid"
           style={{ gridTemplateColumns: stack ? "minmax(0,1fr)" : "minmax(0,1fr) minmax(0,1fr)", gap: 10, pointerEvents: saving ? "none" : undefined, lineHeight: "normal" }}
         >
           {/* classFields, in order: Name (span 2), Type, Instructor, Date, Time, Duration, Capacity, Price, Repeat. */}
-          <FieldBox m={m} label="Name" htmlFor={`${uid}-name`} span={stack ? 1 : 2} error={errors.name} errorId={`${uid}-name-err`} boxRef={(el) => void (fieldRefs.current.name = el)}>
+          <FieldBox m={m} label={t("Name")} htmlFor={`${uid}-name`} span={stack ? 1 : 2} error={errors.name} errorId={`${uid}-name-err`} boxRef={(el) => void (fieldRefs.current.name = el)}>
             <div className="cs-field" style={fieldStyle(m, { error: !!errors.name })}>
               <input
                 id={`${uid}-name`}
                 value={form.title}
                 maxLength={60}
                 onChange={(e) => update({ title: e.target.value })}
-                placeholder="e.g. Morning HIIT"
+                placeholder={t("e.g. Morning HIIT")}
                 aria-invalid={!!errors.name || undefined}
                 aria-describedby={errors.name ? `${uid}-name-err` : undefined}
                 style={inputStyle}
@@ -600,29 +604,29 @@ function SheetBody({
             </div>
           </FieldBox>
 
-          <FieldBox m={m} label="Type">
+          <FieldBox m={m} label={t("Type")}>
             <button
               ref={setTypeEl}
               type="button"
               aria-haspopup="menu"
               aria-expanded={typeOpen}
-              aria-label={form.classType ? `Type, ${form.classType}` : "Type, not chosen"}
+              aria-label={form.classType ? t("Type, {type}", { type: form.classType }) : t("Type, not chosen")}
               onClick={() => setTypeOpen(true)}
               className="market-focus"
               style={fieldStyle(m, { active: typeOpen })}
             >
-              {valueText(form.classType || "Choose", !form.classType)}
+              {valueText(form.classType || t("Choose"), !form.classType)}
               {chevron}
             </button>
           </FieldBox>
 
-          <FieldBox m={m} label="Instructor · from Team" boxRef={setRunGroupEl} error={instrErr} errorId={`${uid}-instr`}>
+          <FieldBox m={m} label={t("Instructor · from Team")} boxRef={setRunGroupEl} error={instrErr} errorId={`${uid}-instr`}>
             <button
               ref={runRef}
               type="button"
               aria-haspopup="dialog"
               aria-expanded={runOpen}
-              aria-label={`Instructor from your Team, ${runText}`}
+              aria-label={t("Instructor from your Team, {name}", { name: runText })}
               aria-invalid={!!instrErr || undefined}
               aria-describedby={instrErr ? `${uid}-instr` : undefined}
               onClick={() => setRunOpen(true)}
@@ -636,17 +640,17 @@ function SheetBody({
 
           <FieldBox
             m={m}
-            label="Date"
+            label={t("Date")}
             error={errors.date}
             errorId={`${uid}-date`}
-            hint={dateLocked ? "The change starts from this date. Earlier sessions keep their details." : undefined}
+            hint={dateLocked ? t("The change starts from this date. Earlier sessions keep their details.") : undefined}
             boxRef={(el) => void (fieldRefs.current.date = el)}
           >
             <button
               type="button"
               disabled={dateLocked}
               onClick={() => setDateOpen(true)}
-              aria-label={`Date, ${longDate(form.date)}`}
+              aria-label={t("Date, {date}", { date: longDate(form.date) })}
               aria-invalid={!!errors.date || undefined}
               className="market-focus disabled:opacity-60"
               style={fieldStyle(m, { error: !!errors.date })}
@@ -656,13 +660,13 @@ function SheetBody({
             </button>
           </FieldBox>
 
-          <FieldBox m={m} label="Time" boxRef={(el) => void (fieldRefs.current.times = el)}>
+          <FieldBox m={m} label={t("Time")} boxRef={(el) => void (fieldRefs.current.times = el)}>
             <button
               ref={startRef}
               type="button"
               onClick={() => setWheelOpen((o) => !o)}
               aria-expanded={wheelOpen}
-              aria-label={`Time, ${time12(form.startTime)}`}
+              aria-label={t("Time, {time}", { time: time12(form.startTime) })}
               className="market-focus"
               style={fieldStyle(m, { active: wheelOpen })}
             >
@@ -676,37 +680,37 @@ function SheetBody({
               <WheelPicker
                 band="business"
                 columns={[
-                  { label: "Hours", value: parts.hour, options: HOURS.map((h) => ({ value: h, label: String(h) })), onChange: (v) => setTime({ hour: Number(v) }) },
-                  { label: "Minutes", value: parts.minute, options: minuteOptions(parts.minute).map((x) => ({ value: x, label: String(x).padStart(2, "0") })), onChange: (v) => setTime({ minute: Number(v) }) },
-                  { label: "AM or PM", value: parts.meridiem, options: MERIDIEMS.map((x) => ({ value: x, label: x })), onChange: (v) => setTime({ meridiem: v as Meridiem }) },
+                  { label: t("Hours"), value: parts.hour, options: HOURS.map((h) => ({ value: h, label: String(h) })), onChange: (v) => setTime({ hour: Number(v) }) },
+                  { label: t("Minutes"), value: parts.minute, options: minuteOptions(parts.minute).map((x) => ({ value: x, label: String(x).padStart(2, "0") })), onChange: (v) => setTime({ minute: Number(v) }) },
+                  { label: t("AM or PM"), value: parts.meridiem, options: MERIDIEMS.map((x) => ({ value: x, label: t(x) })), onChange: (v) => setTime({ meridiem: v as Meridiem }) },
                 ]}
               />
               <button type="button" onClick={() => setWheelOpen(false)} className="market-focus w-full" style={{ minHeight: 44, fontSize: textPx(13), fontWeight: 800, color: m.pdark, background: "transparent", border: 0 }}>
-                Done
+                {t("Done")}
               </button>
             </div>
           )}
 
-          <FieldBox m={m} label="Duration" error={errors.times} errorId={`${uid}-times`}>
+          <FieldBox m={m} label={t("Duration")} error={errors.times} errorId={`${uid}-times`}>
             <button
               ref={setDurEl}
               type="button"
               aria-haspopup="menu"
               aria-expanded={durOpen}
-              aria-label={`Duration, ${durationMinutes(form.startTime, form.endTime)} minutes, ends ${time12(form.endTime)}`}
+              aria-label={t("Duration, {n} minutes, ends {time}", { n: durationMinutes(form.startTime, form.endTime), time: time12(form.endTime) })}
               aria-invalid={!!errors.times || undefined}
               onClick={() => setDurOpen(true)}
               className="market-focus"
               style={fieldStyle(m, { error: !!errors.times, active: durOpen })}
             >
-              {valueText(`${durationMinutes(form.startTime, form.endTime)} min`)}
+              {valueText(t("{n} min", { n: durationMinutes(form.startTime, form.endTime) }))}
               {chevron}
             </button>
           </FieldBox>
 
           <FieldBox
             m={m}
-            label="Capacity"
+            label={t("Capacity")}
             htmlFor={`${uid}-cap`}
             error={errors.capacity}
             errorId={`${uid}-cap-help`}
@@ -716,7 +720,7 @@ function SheetBody({
             <div className="cs-field" style={{ ...fieldStyle(m, { error: capInvalid }), padding: 0, gap: 0 }}>
               <button
                 type="button"
-                aria-label="Fewer spots"
+                aria-label={t("Fewer spots")}
                 disabled={capNum !== null && capNum <= capFloor}
                 onMouseDown={(e) => e.preventDefault()}
                 onPointerDown={() => startRepeat(-1)}
@@ -751,7 +755,7 @@ function SheetBody({
               />
               <button
                 type="button"
-                aria-label="More spots"
+                aria-label={t("More spots")}
                 disabled={capNum !== null && capNum >= CAPACITY_MAX}
                 onMouseDown={(e) => e.preventDefault()}
                 onPointerDown={() => startRepeat(1)}
@@ -764,7 +768,7 @@ function SheetBody({
             </div>
           </FieldBox>
 
-          <FieldBox m={m} label="Price" htmlFor={`${uid}-price`} error={errors.price} errorId={`${uid}-price-err`} boxRef={(el) => void (fieldRefs.current.price = el)}>
+          <FieldBox m={m} label={t("Price")} htmlFor={`${uid}-price`} error={errors.price} errorId={`${uid}-price-err`} boxRef={(el) => void (fieldRefs.current.price = el)}>
             <div className="cs-field" style={{ ...fieldStyle(m, { error: !!errors.price }), justifyContent: "flex-start", gap: 2 }}>
               <span aria-hidden style={{ color: m.ink }}>$</span>
               <input
@@ -775,21 +779,21 @@ function SheetBody({
                 placeholder="0"
                 aria-invalid={!!errors.price || undefined}
                 aria-describedby={errors.price ? `${uid}-price-err` : undefined}
-                aria-label="Price in dollars, paid in cash at the venue"
+                aria-label={t("Price in dollars, paid in cash at the venue")}
                 className="tabular-nums"
                 style={inputStyle}
               />
             </div>
           </FieldBox>
 
-          <FieldBox m={m} label="Repeat" boxRef={setRepeatGroupEl} error={repeatErr} errorId={`${uid}-repeat`}>
+          <FieldBox m={m} label={t("Repeat")} boxRef={setRepeatGroupEl} error={repeatErr} errorId={`${uid}-repeat`}>
             {mode === "create" ? (
               <button
                 ref={setRepeatEl}
                 type="button"
                 aria-haspopup="menu"
                 aria-expanded={repeatOpen}
-                aria-label={`Repeat, ${repeatText}`}
+                aria-label={t("Repeat, {schedule}", { schedule: repeatText })}
                 onClick={() => setRepeatOpen(true)}
                 className="market-focus"
                 style={fieldStyle(m, { active: repeatOpen })}
@@ -798,7 +802,7 @@ function SheetBody({
                 {chevron}
               </button>
             ) : (
-              <div role="group" aria-label={`Repeat, ${repeatText}${scope === "future" && series ? `. ${repeatSummary(series, series.startTime)}` : ""}`} style={{ ...fieldStyle(m), color: m.ink2 }}>
+              <div role="group" aria-label={`${t("Repeat, {schedule}", { schedule: repeatText })}${scope === "future" && series ? `. ${repeatSummary(series, series.startTime)}` : ""}`} style={{ ...fieldStyle(m), color: m.ink2 }}>
                 <span className="truncate">{repeatText}</span>
               </div>
             )}
@@ -809,26 +813,26 @@ function SheetBody({
             <div className="flex flex-col" style={{ gridColumn: stack ? "span 1" : "span 2", background: m.sgrey, borderRadius: 14, padding: "12px 14px", gap: 12 }}>
               {rp.kind === "custom" && (
                 <div className="flex items-center" style={{ gap: 8, fontSize: textPx(13), fontWeight: 600, color: m.ink }}>
-                  <span>Every</span>
+                  <span>{t("Every")}</span>
                   <span className="inline-flex items-center" style={{ height: 36, borderRadius: 10, background: m.card }}>
-                    <button type="button" aria-label="Fewer weeks" disabled={rp.interval <= 1} onClick={() => update({ repeat: { ...rp, interval: rp.interval - 1 } })} className="market-focus hit h-full flex items-center justify-center disabled:opacity-30" style={{ width: 36, color: m.pdark, background: "transparent", border: 0 }}>
+                    <button type="button" aria-label={t("Fewer weeks")} disabled={rp.interval <= 1} onClick={() => update({ repeat: { ...rp, interval: rp.interval - 1 } })} className="market-focus hit h-full flex items-center justify-center disabled:opacity-30" style={{ width: 36, color: m.pdark, background: "transparent", border: 0 }}>
                       <Minus size={14} strokeWidth={2.4} aria-hidden />
                     </button>
                     <span aria-live="polite" className="tabular-nums text-center" style={{ minWidth: 20, fontWeight: 800 }}>
                       {rp.interval}
                     </span>
-                    <button type="button" aria-label="More weeks" disabled={rp.interval >= 4} onClick={() => update({ repeat: { ...rp, interval: rp.interval + 1 } })} className="market-focus hit h-full flex items-center justify-center disabled:opacity-30" style={{ width: 36, color: m.pdark, background: "transparent", border: 0 }}>
+                    <button type="button" aria-label={t("More weeks")} disabled={rp.interval >= 4} onClick={() => update({ repeat: { ...rp, interval: rp.interval + 1 } })} className="market-focus hit h-full flex items-center justify-center disabled:opacity-30" style={{ width: 36, color: m.pdark, background: "transparent", border: 0 }}>
                       <Plus size={14} strokeWidth={2.4} aria-hidden />
                     </button>
                   </span>
-                  <span>{rp.interval === 1 ? "week" : "weeks"}</span>
+                  <span>{rp.interval === 1 ? t("week") : t("weeks")}</span>
                 </div>
               )}
               {rp.kind !== "daily" && (
                 <div>
-                  <p style={{ margin: "0 0 8px", fontSize: textPx(13), fontWeight: 500, color: m.slabel }}>On</p>
-                  <div role="group" aria-label="Repeat on" className="grid" style={{ gridTemplateColumns: "repeat(7, minmax(0,1fr))", gap: 4 }}>
-                    {DAY_LETTERS.map((t, i) => {
+                  <p style={{ margin: "0 0 8px", fontSize: textPx(13), fontWeight: 500, color: m.slabel }}>{t("On")}</p>
+                  <div role="group" aria-label={t("Repeat on")} className="grid" style={{ gridTemplateColumns: "repeat(7, minmax(0,1fr))", gap: 4 }}>
+                    {DAY_LETTERS.map((_, i) => {
                       const w = i + 1;
                       const on = rp.weekdays.includes(w);
                       return (
@@ -837,27 +841,27 @@ function SheetBody({
                           type="button"
                           role="checkbox"
                           aria-checked={on}
-                          aria-label={DAY_LONG[i]}
+                          aria-label={t(DAY_LONG[i])}
                           onClick={() => toggleDay(w)}
                           className="market-focus hit flex items-center justify-center"
                           style={{ aspectRatio: "1", maxHeight: 40, minHeight: 34, borderRadius: 10, fontSize: textPx(12.5), fontWeight: on ? 800 : 600, background: on ? m.segactive : m.card, color: on ? m.onfill : m.ink2, border: 0 }}
                         >
-                          {t}
+                          {dayLetter(i)}
                         </button>
                       );
                     })}
                   </div>
                 </div>
               )}
-              <div role="radiogroup" aria-label="Ends">
-                <p style={{ margin: "0 0 2px", fontSize: textPx(13), fontWeight: 500, color: m.slabel }}>Ends</p>
+              <div role="radiogroup" aria-label={t("Ends")}>
+                <p style={{ margin: "0 0 2px", fontSize: textPx(13), fontWeight: 500, color: m.slabel }}>{t("Ends")}</p>
                 {(
                   [
-                    ["never", "Never"],
-                    ["date", "On a date"],
-                    ["count", "After"],
+                    ["never", tk("Never")],
+                    ["date", tk("On a date")],
+                    ["count", tk("After")],
                   ] as const
-                ).map(([k, t], i) => {
+                ).map(([k, label], i) => {
                   const on = rp.ends === k;
                   return (
                     <div key={k} className="flex items-center" style={{ gap: 10, minHeight: 44, borderTop: i ? `0.5px solid ${m.div}` : 0 }}>
@@ -874,12 +878,12 @@ function SheetBody({
                         style={{ gap: 10, minHeight: 44, background: "transparent", border: 0 }}
                       >
                         <span className="shrink-0 flex items-center justify-center" style={{ width: 20, height: 20, borderRadius: 999, border: `${on ? 6 : 1.5}px solid ${on ? m.segactive : m.border}`, background: m.card, boxSizing: "border-box" }} />
-                        <span style={{ fontSize: textPx(13.5), fontWeight: on ? 700 : 500, color: m.ink }}>{t}</span>
+                        <span style={{ fontSize: textPx(13.5), fontWeight: on ? 700 : 500, color: m.ink }}>{t(label)}</span>
                       </button>
                       {k === "date" && (
                         <button
                           type="button"
-                          aria-label={rp.until ? `Last date, ${longDate(rp.until)}` : "Choose the last date"}
+                          aria-label={rp.until ? t("Last date, {date}", { date: longDate(rp.until) }) : t("Choose the last date")}
                           onClick={() => {
                             update({ repeat: { ...rp, ends: "date", until: rp.until || addDays(form.date || today, 56) } });
                             setUntilOpen(true);
@@ -887,7 +891,7 @@ function SheetBody({
                           className="market-focus inline-flex items-center tabular-nums whitespace-nowrap"
                           style={{ height: 36, padding: "0 10px", borderRadius: 10, background: m.card, border: `1px solid ${on ? m.fill : "transparent"}`, fontSize: textPx(12.5), fontWeight: 700, color: m.ink }}
                         >
-                          {rp.until ? slashDate(rp.until) : "Choose"}
+                          {rp.until ? slashDate(rp.until) : t("Choose")}
                         </button>
                       )}
                       {k === "count" && (
@@ -895,14 +899,14 @@ function SheetBody({
                           <input
                             ref={countRef}
                             inputMode="numeric"
-                            aria-label="Number of sessions"
+                            aria-label={t("Number of sessions")}
                             value={rp.count}
                             onFocus={() => rp.ends !== "count" && update({ repeat: { ...rp, ends: "count" } })}
                             onChange={(e) => update({ repeat: { ...rp, ends: "count", count: e.target.value.replace(/\D/g, "").slice(0, 3) } })}
                             className="tabular-nums"
                             style={{ width: 30, border: 0, background: "transparent", outline: "none", textAlign: "end", fontWeight: 700, color: m.ink, fontSize: textPx(12.5) }}
                           />
-                          sessions
+                          {t("sessions")}
                         </span>
                       )}
                     </div>
@@ -911,20 +915,22 @@ function SheetBody({
               </div>
               <div style={{ borderRadius: 10, background: m.card, padding: "10px 12px" }}>
                 <p style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 700, lineHeight: linePx(17), color: m.ink }}>{repeatSummary(rule, form.startTime)}</p>
-                {nextLine(rule) && <p style={{ margin: "3px 0 0", fontSize: textPx(11), lineHeight: linePx(15), color: m.ink2 }}>Next: {nextLine(rule)}</p>}
+                {nextLine(rule) && <p style={{ margin: "3px 0 0", fontSize: textPx(11), lineHeight: linePx(15), color: m.ink2 }}>{t("Next: {when}", { when: nextLine(rule) ?? "" })}</p>}
               </div>
             </div>
           )}
           {mode === "edit" && scope === "future" && series && (
             <p style={{ gridColumn: stack ? "span 1" : "span 2", margin: 0, padding: "0 4px", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>
-              {repeatSummary(series, series.startTime)}. The change applies to this session and every later one.
+              {t("{schedule}. The change applies to this session and every later one.", { schedule: repeatSummary(series, series.startTime) })}
             </p>
           )}
 
           {/* OURS-AN3 A5: a booked class moved, its people are told. */}
           {moved && bookedCount > 0 && (
             <p style={{ gridColumn: stack ? "span 1" : "span 2", margin: 0, borderRadius: 14, background: m.sgrey, padding: "10px 14px", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
-              {bookedCount} booked {bookedCount === 1 ? people.slice(0, -1) : people} {bookedCount === 1 ? "gets" : "get"} a message about the change.
+              {people === "clients"
+                ? tn(bookedCount, "{n} booked client gets a message about the change.", "{n} booked clients get a message about the change.")
+                : tn(bookedCount, "{n} booked member gets a message about the change.", "{n} booked members get a message about the change.")}
             </p>
           )}
 
@@ -932,20 +938,20 @@ function SheetBody({
           <div data-class-explore="" style={{ gridColumn: stack ? "span 1" : "span 2", background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
             <div className="flex items-center" style={{ gap: 12 }}>
               <div className="flex-1 min-w-0">
-                <p style={{ margin: 0, fontSize: textPx(14), fontWeight: 700, color: m.ink }}>Show on Explore</p>
+                <p style={{ margin: 0, fontSize: textPx(14), fontWeight: 700, color: m.ink }}>{t("Show on Explore")}</p>
                 <p style={{ margin: "2px 0 0", fontSize: textPx(11.5), lineHeight: linePx(15), color: m.faint }}>
-                  {form.listedOnExplore ? "New clients can find and book this class on Centium." : "Members only. It's off Explore, and members can still book it."}
+                  {form.listedOnExplore ? t("New clients can find and book this class on Centium.") : t("Members only. It's off Explore, and members can still book it.")}
                 </p>
               </div>
-              <BoardSwitch m={m} checked={form.listedOnExplore} onChange={(on) => update({ listedOnExplore: on })} label={`Show ${form.title.trim() || "this class"} on Explore`} />
+              <BoardSwitch m={m} checked={form.listedOnExplore} onChange={(on) => update({ listedOnExplore: on })} label={form.title.trim() ? t("Show {class} on Explore", { class: form.title.trim() }) : t("Show this class on Explore")} />
             </div>
             {form.listedOnExplore && (
               <div style={{ marginTop: 12 }}>
-                <p style={{ margin: "0 0 8px", fontSize: textPx(13), fontWeight: 500, color: m.slabel }}>Spots on Centium</p>
+                <p style={{ margin: "0 0 8px", fontSize: textPx(13), fontWeight: 500, color: m.slabel }}>{t("Spots on Centium")}</p>
                 <div style={{ ...fieldStyle(m), padding: 0, gap: 0 }}>
                   <button
                     type="button"
-                    aria-label="Fewer spots on Centium"
+                    aria-label={t("Fewer spots on Centium")}
                     disabled={exploreSpots === 0}
                     onClick={() => update({ centiumSpots: exploreSpots === null ? exploreCap : Math.max(0, exploreSpots - 1) })}
                     className="market-focus hit flex items-center justify-center disabled:opacity-30 shrink-0"
@@ -953,12 +959,12 @@ function SheetBody({
                   >
                     <Minus size={15} strokeWidth={2.4} aria-hidden />
                   </button>
-                  <span role="status" aria-label={exploreSpots === null ? "All free spots open on Centium" : `${exploreSpots} spots open on Centium`} className="flex-1 text-center tabular-nums" style={{ fontSize: textPx(14), color: m.ink }}>
-                    {exploreSpots === null ? "All free spots" : exploreSpots}
+                  <span role="status" aria-label={exploreSpots === null ? t("All free spots open on Centium") : t("{n} spots open on Centium", { n: exploreSpots })} className="flex-1 text-center tabular-nums" style={{ fontSize: textPx(14), color: m.ink }}>
+                    {exploreSpots === null ? t("All free spots") : exploreSpots}
                   </span>
                   <button
                     type="button"
-                    aria-label="More spots on Centium"
+                    aria-label={t("More spots on Centium")}
                     disabled={exploreSpots === null}
                     onClick={() => update({ centiumSpots: exploreSpots !== null && exploreSpots < exploreCap ? exploreSpots + 1 : null })}
                     className="market-focus hit flex items-center justify-center disabled:opacity-30 shrink-0"
@@ -968,19 +974,19 @@ function SheetBody({
                   </button>
                 </div>
                 <p style={{ margin: "6px 0 0", fontSize: textPx(11.5), fontWeight: 600, lineHeight: linePx(15), color: m.faint }}>
-                  All the places people from Centium can take, including ones already booked. Members can always book any free spot.
+                  {t("All the places people from Centium can take, including ones already booked. Members can always book any free spot.")}
                 </p>
               </div>
             )}
           </div>
 
-          <FieldBox m={m} label="Notes for the instructor (optional)" htmlFor={`${uid}-notes`} span={stack ? 1 : 2}>
+          <FieldBox m={m} label={t("Notes for the instructor (optional)")} htmlFor={`${uid}-notes`} span={stack ? 1 : 2}>
             <textarea
               id={`${uid}-notes`}
               value={form.notes}
               maxLength={300}
               onChange={(e) => update({ notes: e.target.value })}
-              placeholder="Anything they should know before the class"
+              placeholder={t("Anything they should know before the class")}
               rows={3}
               className="cs-in block w-full resize-none market-focus"
               style={{ ...fieldStyle(m), display: "block", minHeight: 76, outline: "none" }}
@@ -989,10 +995,10 @@ function SheetBody({
 
           {/* B9 EX-01: what the class page shows (OURS layout and strings; no business frame). */}
           <div style={{ gridColumn: stack ? "span 1" : "span 2", padding: "6px 4px 0" }}>
-            <p style={{ margin: 0, fontSize: textPx(13.5), fontWeight: 800, color: m.ink }}>On the class page</p>
-            <p style={{ margin: "2px 0 0", fontSize: textPx(11.5), lineHeight: linePx(15), color: m.faint }}>Optional. {people === "clients" ? "Clients" : "Members"} see these on Explore.</p>
+            <p style={{ margin: 0, fontSize: textPx(13.5), fontWeight: 800, color: m.ink }}>{t("On the class page")}</p>
+            <p style={{ margin: "2px 0 0", fontSize: textPx(11.5), lineHeight: linePx(15), color: m.faint }}>{people === "clients" ? t("Optional. Clients see these on Explore.") : t("Optional. Members see these on Explore.")}</p>
           </div>
-          <FieldBox m={m} label="Cover photo" span={stack ? 1 : 2} error={coverErr} hint={coverErr ? undefined : "JPEG, PNG or WebP, up to 5 MB."}>
+          <FieldBox m={m} label={t("Cover photo")} span={stack ? 1 : 2} error={coverErr} hint={coverErr ? undefined : t("JPEG, PNG or WebP, up to 5 MB.")}>
             <input
               ref={coverInput}
               type="file"
@@ -1005,15 +1011,15 @@ function SheetBody({
             />
             {coverSrc ? (
               <div className="relative overflow-hidden" style={{ borderRadius: 10, aspectRatio: "16 / 9", background: m.card }}>
-                <img src={coverSrc} alt="Class cover" className="w-full h-full object-cover" />
+                <img src={coverSrc} alt={t("Class cover")} className="w-full h-full object-cover" />
                 <ImageApprovalBadge state={coverState} className="absolute start-2 top-2" />
                 <div className="absolute flex" style={{ insetInlineEnd: 8, bottom: 8, gap: 6 }}>
                   <button type="button" onClick={() => coverInput.current?.click()} disabled={coverBusy} className="market-focus hit inline-flex items-center" style={{ minHeight: 36, padding: "0 12px", borderRadius: 10, background: "rgba(36,31,27,0.72)", color: "#FFFFFF", fontSize: textPx(12), fontWeight: 800, border: 0 }}>
-                    {coverBusy ? "Uploading…" : "Change"}
+                    {coverBusy ? t("Uploading…") : t("Change")}
                   </button>
                   <button
                     type="button"
-                    aria-label="Remove the cover photo"
+                    aria-label={t("Remove the cover photo")}
                     onClick={() => {
                       setCoverPick(null);
                       setCoverCleared(true);
@@ -1034,19 +1040,19 @@ function SheetBody({
                 style={{ minHeight: 64, gap: 8, borderRadius: 10, border: `1.5px dashed ${m.border}`, background: m.card, fontSize: textPx(13), fontWeight: 700, color: m.pdark }}
               >
                 <ImagePlus size={17} strokeWidth={2} aria-hidden />
-                {coverBusy ? "Uploading…" : "Add a cover photo"}
+                {coverBusy ? t("Uploading…") : t("Add a cover photo")}
               </button>
             )}
             {coverState && !coverSrc ? <ImageApprovalBadge state={coverState} className="mt-2" /> : null}
             <ImageApprovalNote state={coverState} className="mt-2" />
           </FieldBox>
-          <FieldBox m={m} label="About this class" htmlFor={`${uid}-about`} span={stack ? 1 : 2}>
+          <FieldBox m={m} label={t("About this class")} htmlFor={`${uid}-about`} span={stack ? 1 : 2}>
             <textarea
               id={`${uid}-about`}
               value={form.about}
               maxLength={ABOUT_MAX}
               onChange={(e) => update({ about: e.target.value })}
-              placeholder="What it's like and who it's for"
+              placeholder={t("What it's like and who it's for")}
               rows={3}
               className="cs-in block w-full resize-none market-focus"
               style={{ ...fieldStyle(m), display: "block", minHeight: 76, outline: "none" }}
@@ -1057,33 +1063,33 @@ function SheetBody({
             <PlaylistField
               value={form.playlistUrl}
               onChange={(v) => update({ playlistUrl: v })}
-              hint="Shown on the class page. Members open it in their own app."
+              hint={t("Shown on the class page. Members open it in their own app.")}
               labelStyle={{ fontSize: textPx(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}
               inputStyle={{ background: m.card, borderRadius: 10, minHeight: 41, color: m.ink }}
             />
           </div>
-          <FieldBox m={m} label="Level" span={stack ? 1 : 2}>
+          <FieldBox m={m} label={t("Level")} span={stack ? 1 : 2}>
             <button
               ref={setLevelEl}
               type="button"
               aria-haspopup="menu"
               aria-expanded={levelOpen}
-              aria-label={levelLabel ? `Level, ${levelLabel}` : "Level, not chosen"}
+              aria-label={levelLabel ? t("Level, {level}", { level: levelLabel }) : t("Level, not chosen")}
               onClick={() => setLevelOpen(true)}
               className="market-focus"
               style={fieldStyle(m, { active: levelOpen })}
             >
-              {valueText(levelLabel || "Not set", !levelLabel)}
+              {valueText(levelLabel || t("Not set"), !levelLabel)}
               {chevron}
             </button>
           </FieldBox>
-          <FieldBox m={m} label="What to bring" htmlFor={`${uid}-bring`} span={stack ? 1 : 2} hint={`Up to ${BRING_MAX_ITEMS} items.`}>
+          <FieldBox m={m} label={t("What to bring")} htmlFor={`${uid}-bring`} span={stack ? 1 : 2} hint={t("Up to {n} items.", { n: BRING_MAX_ITEMS })}>
             {form.bring.length > 0 && (
               <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 8 }}>
                 {form.bring.map((b) => (
                   <span key={b} className="inline-flex items-center" style={{ minHeight: 32, gap: 2, paddingBlock: "0", paddingInline: "10px 4px", borderRadius: 999, background: m.pale, color: m.pdark, fontSize: textPx(12), fontWeight: 700 }}>
                     {b}
-                    <button type="button" aria-label={`Remove ${b}`} onClick={() => update({ bring: form.bring.filter((x) => x !== b) })} className="market-focus hit inline-flex items-center justify-center" style={{ width: 28, height: 28, background: "transparent", border: 0, color: m.pdark }}>
+                    <button type="button" aria-label={t("Remove {name}", { name: b })} onClick={() => update({ bring: form.bring.filter((x) => x !== b) })} className="market-focus hit inline-flex items-center justify-center" style={{ width: 28, height: 28, background: "transparent", border: 0, color: m.pdark }}>
                       <X size={13} strokeWidth={2.6} aria-hidden />
                     </button>
                   </span>
@@ -1104,7 +1110,7 @@ function SheetBody({
                         addBring();
                       }
                     }}
-                    placeholder="e.g. Water bottle"
+                    placeholder={t("e.g. Water bottle")}
                     style={inputStyle}
                   />
                 </div>
@@ -1115,7 +1121,7 @@ function SheetBody({
                   className="market-focus shrink-0 disabled:opacity-40"
                   style={{ minHeight: 41, padding: "0 14px", borderRadius: 10, border: `1px solid ${m.border}`, fontSize: textPx(12.5), fontWeight: 800, color: m.pdark, background: m.card }}
                 >
-                  Add
+                  {t("Add")}
                 </button>
               </div>
             )}
@@ -1134,7 +1140,7 @@ function SheetBody({
           setTypeOpen(false);
           typeEl?.focus();
         }}
-        heading="Type"
+        heading={t("Type")}
         align="left"
         width={182}
       />
@@ -1163,7 +1169,7 @@ function SheetBody({
         open={durOpen}
         onClose={() => setDurOpen(false)}
         anchor={durEl}
-        options={durationOptions(durationMinutes(form.startTime, form.endTime)).map((d) => ({ value: String(d), label: `${d} min`, note: `Ends ${time12(fromMinutes(minutesOf(form.startTime) + d))}` }))}
+        options={durationOptions(durationMinutes(form.startTime, form.endTime)).map((d) => ({ value: String(d), label: t("{n} min", { n: d }), note: t("Ends {time}", { time: time12(fromMinutes(minutesOf(form.startTime) + d)) }) }))}
         selected={String(durationMinutes(form.startTime, form.endTime))}
         clampTo={bodyEl?.parentElement ?? null}
         onSelect={(v) => {
@@ -1171,28 +1177,28 @@ function SheetBody({
           setDurOpen(false);
           durEl?.focus();
         }}
-        heading="Duration"
+        heading={t("Duration")}
         width={200}
       />
       <PopupMenu
         open={repeatOpen}
         onClose={() => setRepeatOpen(false)}
         anchor={repeatEl}
-        options={REPEAT_ORDER.map((k) => ({ value: k, label: REPEAT_LABEL[k] }))}
+        options={REPEAT_ORDER.map((k) => ({ value: k, label: t(REPEAT_LABEL[k]) }))}
         selected={rp.kind}
         onSelect={(v) => {
           pickRepeat(v as RepeatKind);
           setRepeatOpen(false);
           repeatEl?.focus();
         }}
-        heading="Repeat"
+        heading={t("Repeat")}
         width={200}
       />
       <PopupMenu
         open={levelOpen}
         onClose={() => setLevelOpen(false)}
         anchor={levelEl}
-        options={[...CLASS_LEVELS.map((l) => ({ value: l.value as string, label: l.label })), { value: "", label: "Not set" }]}
+        options={[...CLASS_LEVELS.map((l) => ({ value: l.value as string, label: l.label })), { value: "", label: t("Not set") }]}
         selected={form.level}
         clampTo={bodyEl?.parentElement ?? null}
         onSelect={(v) => {
@@ -1200,7 +1206,7 @@ function SheetBody({
           setLevelOpen(false);
           levelEl?.focus();
         }}
-        heading="Level"
+        heading={t("Level")}
         align="left"
         width={200}
       />
@@ -1210,7 +1216,7 @@ function SheetBody({
         selectedDate={rp.until || form.date}
         today={today}
         minDate={form.date || today}
-        title="Date"
+        title={t("Date")}
         dayInk="ink"
         onSelect={(d) => {
           update({ repeat: { ...rp, ends: "date", until: d } });
@@ -1223,7 +1229,7 @@ function SheetBody({
         selectedDate={form.date}
         today={today}
         minDate={mode === "create" ? today : undefined}
-        title="Date"
+        title={t("Date")}
         dayInk="ink"
         onSelect={(d) => {
           update({ date: d });
@@ -1243,8 +1249,8 @@ function SheetBody({
         tone="primary"
         title={clashTitle(clashFirst)}
         body={conflict ? clashBody(clashClass, clashFirst, conflict.elsewhere ? 1 : conflict.dates) : undefined}
-        cancel="Go back"
-        action="Choose someone else"
+        cancel={t("Go back")}
+        action={t("Choose someone else")}
         onCancel={() => {
           setConflict(null);
           fieldRefs.current.times?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
@@ -1271,10 +1277,10 @@ function SheetBody({
         open={discardOpen}
         layout="decision"
         tone="destructive"
-        title={mode === "edit" ? "Discard your changes?" : "Discard this class?"}
-        subtitle={mode === "edit" ? "You haven't saved them yet. Your changes will be lost." : "You haven't saved it yet. Everything you entered will be lost."}
-        cancelLabel="Keep editing"
-        confirmLabel="Discard"
+        title={mode === "edit" ? t("Discard your changes?") : t("Discard this class?")}
+        subtitle={mode === "edit" ? t("You haven't saved them yet. Your changes will be lost.") : t("You haven't saved it yet. Everything you entered will be lost.")}
+        cancelLabel={t("Keep editing")}
+        confirmLabel={t("Discard")}
         confirmStyle={{ background: m.high, color: m.onfill }}
         onCancel={() => setDiscardOpen(false)}
         onConfirm={() => {
@@ -1287,9 +1293,14 @@ function SheetBody({
 }
 
 function fieldsBanner(e: Partial<Record<ClassField, string>>, badPlaylist = false): string {
-  const words = FIELD_ORDER.filter((k) => e[k]).map((k) => FIELD_WORD[k]);
-  if (badPlaylist) words.push("playlist");
-  return `Fix ${words.length} ${words.length === 1 ? "field" : "fields"} to save: ${joinAnd(words)}.`;
+  const words = FIELD_ORDER.filter((k) => e[k]).map((k) => t(FIELD_WORD[k]));
+  if (badPlaylist) words.push(t("playlist"));
+  return tn(words.length, "Fix {n} field to save: {fields}.", "Fix {n} fields to save: {fields}.", { fields: joinAnd(words) });
+}
+
+/** "{n} spots are already booked. Capacity can't go below {n}." */
+function bookedFloor(n: number): string {
+  return tn(n, "{n} spots are already booked. Capacity can't go below {n}.", "{n} spots are already booked. Capacity can't go below {n}.");
 }
 
 /** An instructor's initial on --tealbg / --tealink (the board's roster avatar colours). */

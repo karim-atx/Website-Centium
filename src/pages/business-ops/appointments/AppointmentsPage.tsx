@@ -4,14 +4,15 @@ import clsx from "clsx";
 import { CalendarCheck, CalendarPlus, Clock } from "lucide-react";
 import { apptChip, fetchDiary, fetchFreeStretches, fetchServices, hasAppointments, type DiaryAppt, type Service } from "../../../services/appointments";
 import type { Load } from "../../../services/store/backend";
-import { isoDate, shortDate } from "../../../services/store/format";
-import { DAY_SHORT, mondayIndex } from "../../../utils/week";
+import { isoDate } from "../../../services/store/format";
+import { mondayIndex } from "../../../utils/week";
+import { t, tx } from "../../../i18n/core";
 import { fetchTeam } from "../../../services/business-team/team";
 import { useOnline } from "../../../hooks/useOnline";
 import { CtaSpacer, EmptyCard, ErrorCard, FixedCta, KitLabel, KitRow, ListCard, ListSkeleton, NumberBoxes, OpsHeader, PALE, P_DARK, useOpsToast } from "../store/opsKit";
 import { APPT_KINDS, useLive, useStoreBusiness } from "../store/storeShared";
 import { AddAppointmentSheet } from "./AddAppointmentSheet";
-import { serviceTitle, time, todaySub } from "./apptShared";
+import { dayDate, serviceTitle, time, todaySub, weekdayShort } from "./apptShared";
 
 // OP1-020 · Wellness Service › Appointments (O11 / V6-54: the Orders navbar
 // slot for appointments-only; a fourth Orders tab when it also sells), with
@@ -39,8 +40,8 @@ interface DayData {
 
 /** Accepted team members, for "With" (a team that can't be read leaves only Any available). */
 async function loadTeam(businessId: string): Promise<{ id: string; name: string }[]> {
-  const t = await fetchTeam(businessId);
-  return t.ok ? t.value.filter((p) => p.acceptedAt).map((p) => ({ id: p.professionalId, name: p.name })) : [];
+  const team = await fetchTeam(businessId);
+  return team.ok ? team.value.filter((p) => p.acceptedAt).map((p) => ({ id: p.professionalId, name: p.name })) : [];
 }
 
 async function loadDay(businessId: string, date: string): Promise<Load<DayData>> {
@@ -77,14 +78,17 @@ function DayRows({ items, onAppt, onFree }: { items: Item[]; onAppt: (a: DiaryAp
     <>
       {items.map((it) =>
         it.kind === "appt" ? (
-          <KitRow key={it.a.id} icon={Clock} title={serviceTitle(it.a)} sub={`${time(it.a.startsAt)} · ${it.a.clientLabel}`} chip={apptChip(it.a.status)} onClick={() => onAppt(it.a)} />
+          <KitRow key={it.a.id} icon={Clock} title={serviceTitle(it.a)} sub={`${time(it.a.startsAt)} · ${it.a.clientLabel}`} chip={chipOf(apptChip(it.a.status))} onClick={() => onAppt(it.a)} />
         ) : (
-          <KitRow key={`free-${it.f.startsAt}`} icon={Clock} title="Free slot" sub={`${time(it.f.startsAt)} to ${time(it.f.endsAt)}`} chip={{ label: "Open", tone: "soft" }} onClick={() => onFree(it.f.startsAt)} />
+          <KitRow key={`free-${it.f.startsAt}`} icon={Clock} title={t("Free slot")} sub={t("{from} to {to}", { from: time(it.f.startsAt), to: time(it.f.endsAt) })} chip={{ label: tx("Open", "free slot"), tone: "soft" }} onClick={() => onFree(it.f.startsAt)} />
         )
       )}
     </>
   );
 }
+
+/** services/appointments' chip, its label in the app's language (Booked, Done, Cancelled, No-show). */
+const chipOf = (c: ReturnType<typeof apptChip>) => ({ ...c, label: t(c.label) });
 
 type Prefill = { date: string; startsAt: string } | null;
 
@@ -103,7 +107,7 @@ function useAddSheet(businessId: string | null, d: DayData | null, refresh: () =
         prefill={sheet.prefill}
         onAdded={(a) => {
           setSheet({ open: false, prefill: null });
-          showToast(a.waiverPending ? `Appointment added. ${a.clientLabel} still has your terms to accept.` : `Appointment added. It's in ${a.clientLabel}'s calendar.`, overCta);
+          showToast(a.waiverPending ? t("Appointment added. {client} still has your terms to accept.", { client: a.clientLabel }) : t("Appointment added. It's in {client}'s calendar.", { client: a.clientLabel }), overCta);
           void refresh();
         }}
       />
@@ -125,17 +129,17 @@ export function AppointmentsPanel({ embedded }: { embedded?: boolean }) {
 
   let body: React.ReactNode;
   if (loadError || s.status === "error") {
-    body = <ErrorCard text="Couldn't load your appointments." onRetry={() => (loadError ? reloadBiz() : live.reload())} />;
+    body = <ErrorCard text={t("Couldn't load your appointments.")} onRetry={() => (loadError ? reloadBiz() : live.reload())} />;
   } else if (!ready || (businessId && s.status === "loading")) {
     body = (
       <>
-        <NumberBoxes loading items={[{ v: "", l: "Today" }, { v: "", l: "Free slots" }]} />
-        <ListSkeleton label="Loading your appointments" />
+        <NumberBoxes loading items={[{ v: "", l: t("Today") }, { v: "", l: t("Free slots") }]} />
+        <ListSkeleton label={t("Loading your appointments")} />
       </>
     );
   } else if (!d || d.pending || (d.services.length === 0 && !d.ever)) {
     // State B: nothing set up yet.
-    body = <EmptyCard icon={CalendarPlus} title="No appointments yet" body="Add your services and free slots, and clients can book them." />;
+    body = <EmptyCard icon={CalendarPlus} title={t("No appointments yet")} body={t("Add your services and free slots, and clients can book them.")} />;
   } else {
     const todayCount = d.appts.filter((a) => a.status === "booked" || a.status === "completed").length;
     const free = d.free.length;
@@ -144,23 +148,23 @@ export function AppointmentsPanel({ embedded }: { embedded?: boolean }) {
       <>
         <NumberBoxes
           items={[
-            { v: String(todayCount), l: "Today" },
-            { v: String(free), l: "Free slots" },
+            { v: String(todayCount), l: t("Today") },
+            { v: String(free), l: t("Free slots") },
           ]}
         />
         {booked.length === 0 ? (
           <>
-            <KitLabel label="Today" />
+            <KitLabel label={t("Today")} />
             <EmptyCard
               icon={CalendarCheck}
-              title="No appointments today"
-              body={free === 0 ? "Nothing booked and no free slots today." : "Bookings show here. Your free slots stay open for clients."}
+              title={t("No appointments today")}
+              body={free === 0 ? t("Nothing booked and no free slots today.") : t("Bookings show here. Your free slots stay open for clients.")}
             />
           </>
         ) : (
           <>
-            <KitLabel label="Today" action="See all" onAction={() => navigate("/app/business/appointments/day")} />
-            <ListCard label="Today">
+            <KitLabel label={t("Today")} action={t("See all")} onAction={() => navigate("/app/business/appointments/day")} />
+            <ListCard label={t("Today")}>
               <DayRows items={items.slice(0, CAP)} onAppt={(a) => navigate(`/app/business/appointments/${a.id}`)} onFree={(startsAt) => add.open({ date: today, startsAt })} />
             </ListCard>
           </>
@@ -171,12 +175,12 @@ export function AppointmentsPanel({ embedded }: { embedded?: boolean }) {
 
   return (
     <div>
-      {!embedded && <OpsHeader kicker="Appointments" title="Appointments" sub={todaySub()} />}
+      {!embedded && <OpsHeader kicker={t("Appointments")} title={t("Appointments")} sub={todaySub()} />}
       {body}
       {businessId && (
         <>
           <CtaSpacer />
-          <FixedCta label="Add appointment" plus onClick={() => add.open(null)} disabled={!online || !d || d.pending} />
+          <FixedCta label={t("Add appointment")} plus onClick={() => add.open(null)} disabled={!online || !d || d.pending} />
         </>
       )}
       {add.node}
@@ -202,8 +206,8 @@ export function AppointmentsDayPage() {
   const add = useAddSheet(businessId, d, live.refresh, false);
 
   const strip = useMemo(() => {
-    const t = new Date();
-    const monday = new Date(t.getFullYear(), t.getMonth(), t.getDate() - mondayIndex(t.getDay()));
+    const d0 = new Date();
+    const monday = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() - mondayIndex(d0.getDay()));
     return Array.from({ length: 14 }, (_, i) => new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i));
   }, []);
   const [y, m, dd] = date.split("-").map(Number);
@@ -211,8 +215,8 @@ export function AppointmentsDayPage() {
 
   return (
     <div>
-      <OpsHeader back kicker="Appointments" title={shortDate(day)} />
-      <div role="tablist" aria-label="Day" className="flex overflow-x-auto [scrollbar-width:none]" style={{ gap: 8, marginBottom: 16 }}>
+      <OpsHeader back kicker={t("Appointments")} title={dayDate(day)} />
+      <div role="tablist" aria-label={t("Day")} className="flex overflow-x-auto [scrollbar-width:none]" style={{ gap: 8, marginBottom: 16 }}>
         {strip.map((x) => {
           const v = isoDate(x);
           const on = v === date;
@@ -222,25 +226,25 @@ export function AppointmentsDayPage() {
               type="button"
               role="tab"
               aria-selected={on}
-              aria-label={shortDate(x)}
+              aria-label={dayDate(x)}
               onClick={() => setParams({ date: v }, { replace: true })}
               className={clsx("tap shrink-0 flex flex-col items-center justify-center", on ? "bg-primary-fill text-on-primary-fill" : clsx(PALE, P_DARK))}
               style={{ width: 44, height: 56, borderRadius: 14 }}
             >
-              <span className="text-[10px] font-bold uppercase">{DAY_SHORT[mondayIndex(x.getDay())]}</span>
+              <span className="text-[10px] font-bold uppercase">{weekdayShort(x)}</span>
               <span className="text-[15px] font-extrabold">{x.getDate()}</span>
             </button>
           );
         })}
       </div>
       {s.status === "error" ? (
-        <ErrorCard text="Couldn't load your appointments." onRetry={live.reload} />
+        <ErrorCard text={t("Couldn't load your appointments.")} onRetry={live.reload} />
       ) : s.status === "loading" ? (
         <ListSkeleton rows={4} />
       ) : items.length === 0 ? (
-        <EmptyCard icon={CalendarCheck} title="Nothing this day" body="Bookings and free slots for this day show here." />
+        <EmptyCard icon={CalendarCheck} title={t("Nothing this day")} body={t("Bookings and free slots for this day show here.")} />
       ) : (
-        <ListCard label={shortDate(day)}>
+        <ListCard label={dayDate(day)}>
           <DayRows items={items} onAppt={(a) => navigate(`/app/business/appointments/${a.id}`)} onFree={(startsAt) => add.open({ date, startsAt })} />
         </ListCard>
       )}
