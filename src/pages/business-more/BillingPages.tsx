@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Armchair, CalendarClock, CalendarRange, Landmark, Mail, Plus, Repeat, Trash2, XCircle } from "lucide-react";
 import { BizConfirm, BizHero, BizNote, BizPage, BizRow, BizSection, LoadError, RowsSkeleton, SoonChip, LIST_BG } from "../../components/business-more/kit";
 import { useApp } from "../../context/AppContext";
@@ -182,6 +182,14 @@ export function SubscriptionPage() {
   // What yearly saves on the owner's plan and blocks (b93cb12); null unless
   // both periods are priced and yearly is cheaper.
   const saving = periodSaving(period.prices);
+  // Round G1 (G fixes): the business home's pending-payment card opens one
+  // charge (#charge-<id>); it is scrolled to once the history has loaded.
+  const { hash } = useLocation();
+  const historyLoaded = !!billing.history;
+  useEffect(() => {
+    if (!hash.startsWith("#charge-") || !historyLoaded) return;
+    document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView({ block: "center" });
+  }, [hash, historyLoaded]);
 
   useEffect(() => {
     if (!authUserId || live) return;
@@ -353,6 +361,7 @@ export function SubscriptionPage() {
                   return (
                     <BizRow
                       key={c.id}
+                      id={`charge-${c.id}`}
                       icon={c.product === "seat_block" ? Armchair : CalendarClock}
                       title={chargeTitle(c)}
                       desc={[c.periodStart && c.periodEnd ? t("{start} to {end}", { start: fmtDay(c.periodStart), end: fmtDay(c.periodEnd) }) : fmt(c.createdAt), chargeStatusText(c)].join(" · ")}

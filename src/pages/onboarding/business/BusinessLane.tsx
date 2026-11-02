@@ -7,7 +7,11 @@ import { EssentialsStep } from "./EssentialsStep";
 import { PoliciesStep } from "./PoliciesStep";
 import { PaymentsStep } from "./PaymentsStep";
 import { ReviewStep } from "./ReviewStep";
+import { PlanStep } from "./PlanStep";
 import { BIZ_STEPS, type BizFlowKey } from "./bizLanes";
+import { useSwitches } from "../../../services/premium/hooks";
+import { onboardingPlanStep } from "../../../services/premium/model";
+import { usePlanLevel } from "../../../components/premium/usePlanLevel";
 import { emptyBusinessDraft, type BusinessLaneDraft } from "./draft";
 import type { LaneStepProps } from "./laneTypes";
 import {
@@ -70,6 +74,14 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
   const onlineHook = useOnline();
   const online = flow ? flow.online : onlineHook;
   const [save, setSave] = useState<{ busy: boolean; error: string | null; offline: boolean }>({ busy: false, error: null, offline: false });
+  // Round G1 fixes (Karim): the plan step, in front of the venue step and
+  // every step after it while the business must choose a level (only with
+  // business_plans_on; otherwise today's steps). `planChosen` keeps it on
+  // screen after "Start now" until the owner carries on.
+  const { switches } = useSwitches();
+  const planLevel = usePlanLevel(biz.businessId);
+  const [planChosen, setPlanChosen] = useState(false);
+  const planGate = onboardingPlanStep({ switches, businessId: biz.businessId, level: planLevel.level, levelLoading: planLevel.loading, justChosen: planChosen });
   const bizRef = useRef(biz);
   useEffect(() => {
     bizRef.current = biz;
@@ -228,6 +240,24 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
     dobLocked,
     online,
   });
+
+  if (stepKey !== "bizBusiness" && planGate !== "skip" && biz.businessId) {
+    return (
+      <PlanStep
+        lane={biz.lane}
+        businessId={biz.businessId}
+        level={planLevel.level}
+        loading={planGate === "loading"}
+        chosen={planChosen}
+        onChosen={() => setPlanChosen(true)}
+        reloadLevel={planLevel.reload}
+        onContinue={() => setPlanChosen(false)}
+        onBack={onBack}
+        saveExit={mode !== "fix"}
+        online={online}
+      />
+    );
+  }
 
   switch (stepKey) {
     case "bizBusiness":
