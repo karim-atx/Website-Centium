@@ -139,8 +139,8 @@ test("targets: the documented subject per client kind; other kinds open nothing 
   assert.equal(clientNotificationTarget({ kind: "x", subjectType: "offer", subjectId: O }), null);
 });
 
-test("kinds: the enum in order; the client's are a member's seventeen, never an owner's or a professional's own", () => {
-  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 31);
+test("kinds: the enum in order; the client's are a member's twenty, never an owner's or a professional's own", () => {
+  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 34);
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(0, 4), [...RELEASE1_KINDS]);
   // Release B appends the ambassador decision (20261217000000), to the applicant.
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(18, 20), ["ambassador_application_approved", "ambassador_application_declined"]);
@@ -153,10 +153,13 @@ test("kinds: the enum in order; the client's are a member's seventeen, never an 
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(27, 30), ["no_show_warning", "booking_paused", "booking_pause_lifted"]);
   // Round F2 appends the removed-course notice (20261226120000).
   assert.equal(MEMBER_NOTIFICATION_KINDS[30], "course_removed");
+  // Round G1 appends the Premium pass notices (20261226170000), to the member.
+  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(31, 34), ["premium_pass_started", "premium_pass_ending", "premium_pass_ended"]);
   assert.deepEqual([...CLIENT_KINDS], [
     "voucher_issued", "points_expiring", "class_cancelled", "review_prompt", "ambassador_application_approved", "ambassador_application_declined",
     "forum_nickname_reset", "support_resources", "image_approved", "image_rejected", "food_submission_reviewed", "workout_log_reply", "course_published",
     "no_show_warning", "booking_paused", "booking_pause_lifted", "course_removed",
+    "premium_pass_started", "premium_pass_ending", "premium_pass_ended",
   ]);
   for (const k of CLIENT_KINDS) assert.ok((MEMBER_NOTIFICATION_KINDS as readonly string[]).includes(k), k);
   const notMine = [
@@ -174,6 +177,21 @@ test("kinds: the enum in order; the client's are a member's seventeen, never an 
   for (const k of CLIENT_KINDS) {
     assert.ok(CLIENT_COPY[k]?.title, k);
     assert.equal(typeof CLIENT_FILLS[k], "function", k);
+  }
+});
+
+test("Round G1 · the Premium pass notices: the handover's English, the giver's name from the payload, nothing to open", () => {
+  const c = (kind: string, payload?: Record<string, unknown>) => notificationCopy({ titleKey: kind, kind, payload });
+  assert.deepEqual(c("premium_pass_started", { via: "professional", from_name: "Rana" }), { title: "You have Centium Premium", body: "Rana included Centium Premium for you." });
+  assert.deepEqual(c("premium_pass_started", { via: "gym", from_name: "Northside Gym" }), { title: "You have Centium Premium", body: "Northside Gym includes Centium Premium with your membership." });
+  assert.deepEqual(c("premium_pass_started", { via: "gym" }), { title: "You have Centium Premium", body: "" });
+  assert.deepEqual(c("premium_pass_ending", { via: "professional", from_name: "Rana", ends_on: "2026-11-09" }), { title: "Your Premium ends on Nov 9, 2026", body: "Premium through Rana ends on Nov 9, 2026." });
+  assert.deepEqual(c("premium_pass_ending", {}), { title: "Your Premium is ending", body: "" });
+  assert.deepEqual(c("premium_pass_ended", { via: "gym", from_name: "Northside Gym" }), { title: "Your Premium has ended", body: "Premium through Northside Gym has ended. Everything you logged is still here." });
+  assert.deepEqual(c("premium_pass_ended", {}), { title: "Your Premium has ended", body: "Everything you logged is still here." });
+  for (const k of ["premium_pass_started", "premium_pass_ending", "premium_pass_ended"]) {
+    assert.equal(clientNotificationTarget({ kind: k, subjectType: "entitlement", subjectId: O }), null, k);
+    assert.notEqual(notifLook(k).tone, "grey", k);
   }
 });
 
