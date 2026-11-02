@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { ChevronDown, Plus, type LucideIcon } from "lucide-react";
 import { textPx } from "../../../theme/textSize";
+import { t } from "../../../i18n/core";
 
 // v6 Batch 4 · the BizTypeKit pieces the gym Front desk is drawn with
 // (OP1-013 / 016 / 017, source BizTypeKit.dc.html palette L / D lines 58-59).
@@ -66,11 +67,11 @@ export const VenueSwitch: React.FC<{ name: string; open: boolean; onOpen: (el: H
     onClick={(e) => onOpen(e.currentTarget)}
     aria-haspopup="listbox"
     aria-expanded={open}
-    aria-label={`Checking in at ${name}. Change venue`}
+    aria-label={t("Checking in at {name}. Change venue", { name })}
     className="tap inline-flex items-center text-[12.5px] font-bold leading-[18px] text-charcoal-soft"
     style={{ gap: 4, minHeight: 32, margin: "-10px 0 8px" }}
   >
-    At {name}
+    {t("At {name}", { name })}
     <ChevronDown size={14} strokeWidth={2.2} aria-hidden />
   </button>
 );
@@ -86,17 +87,17 @@ export function TextTabs<K extends string>({ tabs, value, onChange, label }: { t
       className={clsx("flex border-b", RULE_BORDER)}
       style={{ gap: 20, marginBottom: 16 }}
     >
-      {tabs.map((t) => {
-        const on = t.key === value;
+      {tabs.map((tab) => {
+        const on = tab.key === value;
         return (
           <button
-            key={t.key}
+            key={tab.key}
             type="button"
             role="tab"
-            id={`fd-tab-${t.key}`}
+            id={`fd-tab-${tab.key}`}
             aria-selected={on}
-            aria-controls={`fd-panel-${t.key}`}
-            onClick={() => onChange(t.key)}
+            aria-controls={`fd-panel-${tab.key}`}
+            onClick={() => onChange(tab.key)}
             className={clsx(
               "tap relative shrink-0 whitespace-nowrap text-[13.5px] leading-[1.5] border-b-2",
               on ? "font-extrabold text-charcoal border-primary" : "font-semibold text-charcoal-faint border-transparent"
@@ -105,9 +106,9 @@ export function TextTabs<K extends string>({ tabs, value, onChange, label }: { t
           >
             {/* Reserve the bold width so the row does not jump (OP1-017 row 2). */}
             <span aria-hidden className="invisible block h-0 overflow-hidden font-extrabold">
-              {t.label}
+              {tab.label}
             </span>
-            {t.label}
+            {tab.label}
           </button>
         );
       })}
@@ -178,7 +179,7 @@ const CHIP: Record<ChipTone, string> = {
 
 /** OP1-013 rows 20-21: 10/800 0.04em uppercase, padding 3 8, r999. */
 export const StatusChip: React.FC<{ tone: ChipTone; children: React.ReactNode }> = ({ tone, children }) => (
-  <span className={clsx("inline-flex items-center shrink-0 whitespace-nowrap rounded-full text-[10px] font-extrabold uppercase tracking-[0.04em] leading-[15px]", CHIP[tone])} style={{ padding: "3px 8px" }}>
+  <span className={clsx("inline-flex items-center shrink-0 whitespace-nowrap rounded-full text-[10px] font-extrabold uppercase tracking-[0.04em] rtl:tracking-normal leading-[15px]", CHIP[tone])} style={{ padding: "3px 8px" }}>
     {children}
   </span>
 );
@@ -193,7 +194,7 @@ export const ChipButton: React.FC<{ tone: ChipTone; label: string; ariaLabel: st
     }}
     aria-label={ariaLabel}
     aria-disabled={disabled || undefined}
-    className={clsx("tap inline-flex items-center shrink-0 whitespace-nowrap rounded-full text-[10px] font-extrabold uppercase tracking-[0.04em] leading-[15px]", CHIP[tone], disabled && "opacity-50")}
+    className={clsx("tap inline-flex items-center shrink-0 whitespace-nowrap rounded-full text-[10px] font-extrabold uppercase tracking-[0.04em] rtl:tracking-normal leading-[15px]", CHIP[tone], disabled && "opacity-50")}
     style={{ padding: "3px 8px" }}
   >
     {label}
@@ -239,7 +240,7 @@ export const DeskRow: React.FC<{
 };
 
 export const RowsSkeleton: React.FC<{ rows?: number }> = ({ rows = 3 }) => (
-  <div aria-busy="true" aria-label="Loading" className={LIST} style={{ borderRadius: 18, padding: "2px 14px", marginBottom: 14 }}>
+  <div aria-busy="true" aria-label={t("Loading")} className={LIST} style={{ borderRadius: 18, padding: "2px 14px", marginBottom: 14 }}>
     {Array.from({ length: rows }, (_, i) => (
       <div key={i} className="flex items-center" style={{ gap: 12, minHeight: 58, padding: "8px 0" }}>
         <span className="block shrink-0 bg-cream-soft animate-skeleton-pulse" style={{ width: 36, height: 36, borderRadius: 11 }} />
@@ -260,12 +261,12 @@ export const ListLine: React.FC<{ children: React.ReactNode }> = ({ children }) 
 );
 
 /** OP1-013 O2: list fill r18 padding 14, 13/800 title, 11.5 faint body, Retry 12/700 pDark 44. */
-export const ErrorCard: React.FC<{ title: string; onRetry: () => void; body?: string }> = ({ title, onRetry, body = "Check your connection and try again." }) => (
+export const ErrorCard: React.FC<{ title: string; onRetry: () => void; body?: string }> = ({ title, onRetry, body = t("Check your connection and try again.") }) => (
   <div role="alert" className={LIST} style={{ borderRadius: 18, padding: 14, marginBottom: 14 }}>
     <p className="text-[13px] font-extrabold leading-[18px] text-charcoal">{title}</p>
     <p className="text-[11.5px] leading-[16px] text-charcoal-faint" style={{ marginTop: 2 }}>{body}</p>
     <button type="button" onClick={onRetry} className="tap text-[12px] font-bold text-primary-dark" style={{ minHeight: 44 }}>
-      Retry
+      {t("Retry")}
     </button>
   </div>
 );

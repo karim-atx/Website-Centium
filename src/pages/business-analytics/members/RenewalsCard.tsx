@@ -4,6 +4,7 @@ import { fetchFrontDeskVenues, fetchRenewalsDue, fetchRenewalStats } from "../..
 import { renewalRateLabel, toChase, type RenewalStats } from "../../../services/front-desk/frontDeskLogic";
 import { useOnline } from "../../../hooks/useOnline";
 import { AnCard } from "./anKit";
+import { t, tn } from "../../../i18n/core";
 
 // OURS-AN4-gym-variant row 17 · the gym Plans page's "Renewals" block, on B7
 // MB-05: venue_renewals_due(gym, 7) for the line and "Due in 7 days" (not
@@ -63,24 +64,22 @@ export function RenewalsCard({ from, to }: { from: string; to: string }) {
 
   const rate = renewalRateLabel(data?.stats ?? null);
   const rows: { value: string | null; label: string; sub: string; tone: "caution" | "rate" | "high" | "soft" }[] = [
-    { value: data ? String(data.toChase) : null, label: "Due in 7 days", sub: "Not renewed yet and not ending.", tone: "caution" },
-    { value: data ? rate.value : null, label: "Renewal rate", sub: rate.note ?? "Renewed out of those due this period.", tone: "rate" },
-    { value: data ? String(data.stats.lapsed) : null, label: "Lapsed", sub: "Ended this period without a renewal.", tone: "high" },
-    { value: data ? String(data.stats.cancelled) : null, label: "Ended by choice", sub: "Ended by the member or by you this period.", tone: "soft" },
+    { value: data ? String(data.toChase) : null, label: t("Due in 7 days"), sub: t("Not renewed yet and not ending."), tone: "caution" },
+    { value: data ? rate.value : null, label: t("Renewal rate"), sub: rate.note ? t(rate.note) : t("Renewed out of those due this period."), tone: "rate" },
+    { value: data ? String(data.stats.lapsed) : null, label: t("Lapsed"), sub: t("Ended this period without a renewal."), tone: "high" },
+    { value: data ? String(data.stats.cancelled) : null, label: t("Ended by choice"), sub: t("Ended by the member or by you this period."), tone: "soft" },
   ];
 
   return (
-    <AnCard label="Renewals" className="mt-[14px]">
+    <AnCard label={t("Renewals")} className="mt-[14px]">
       <div style={{ padding: "14px 20px 4px" }}>
-        <p className="text-[13px] leading-[18px] font-extrabold text-charcoal">Renewals</p>
+        <p className="text-[13px] leading-[18px] font-extrabold text-charcoal">{t("Renewals")}</p>
         <p className="text-[12px] leading-[17px] text-charcoal-soft" role="status">
           {error
-            ? "Couldn't load renewals. Check your connection and try again."
+            ? t("Couldn't load renewals. Check your connection and try again.")
             : !data
-              ? "Loading renewals…"
-              : data.ending === 1
-                ? "1 membership ends in the next 7 days."
-                : `${data.ending} memberships end in the next 7 days.`}
+              ? t("Loading renewals…")
+              : tn(data.ending, "1 membership ends in the next 7 days.", "{n} memberships end in the next 7 days.")}
         </p>
       </div>
       <div>

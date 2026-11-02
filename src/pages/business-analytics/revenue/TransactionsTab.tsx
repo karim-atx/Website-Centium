@@ -25,6 +25,8 @@ import {
 } from "./kit";
 import { REVENUE_BASE } from "./payModel";
 import { useTransactions } from "./useTransactions";
+import { t, tx as tctx } from "../../../i18n/core";
+import { labelText } from "../../../services/business-revenue/model";
 
 // Transactions (OURS-AN14-transactions; AnInsightsV3 sub "tx"): search,
 // one filter (in flow under the row, OD-1), the list with Export CSV, five
@@ -64,55 +66,55 @@ export const TransactionsTab: React.FC = () => {
 
   const counts = tx.counts;
   const FL: { k: TxFilter; t: string; soon?: boolean }[] = [
-    { k: "all", t: "All payments" },
+    { k: "all", t: t("All payments") },
     { k: "whish", t: "Whish", soon: true },
-    { k: "cash", t: "Cash" },
-    { k: "issues", t: "Owed, failed or refunded" },
+    { k: "cash", t: t("Cash") },
+    { k: "issues", t: t("Owed, failed or refunded") },
   ];
   const needle = search;
   const shown = tx.items;
   const label =
     (needle
-      ? "Results · "
+      ? t("Results") + " · "
       : filter === "all"
-        ? "Transactions · "
+        ? t("Transactions") + " · "
         : FL.find((f) => f.k === filter)!.t + " · ") + tx.total;
   const none = !needle && filter === "all" && tx.total === 0;
 
-  const subOf = (t: TxItem) => {
-    const m = t.method === "whish" ? "Whish" : "Cash";
+  const subOf = (x: TxItem) => {
+    const m = x.method === "whish" ? "Whish" : t("Cash");
     const refunded =
-      t.status === "paid" && t.refunded > 0
-        ? ` · ${moneyCents(t.refunded)} refunded`
+      x.status === "paid" && x.refunded > 0
+        ? ` · ${t("{amount} refunded", { amount: moneyCents(x.refunded) })}`
         : "";
-    if (t.undated) return `${t.label} · bought ${dMon(t.day)} · ${m}`;
-    return `${t.label} · ${dMon(t.day)} · ${m}${refunded}`;
+    if (x.undated) return `${labelText(x.label)} · ${t("bought {date}", { date: dMon(x.day) })} · ${m}`;
+    return `${labelText(x.label)} · ${dMon(x.day)} · ${m}${refunded}`;
   };
 
   const exportCsv = async () => {
     const list = await tx.everything();
     if (!list) return;
     downloadCsv("centium-transactions.csv", [
-      ["Day", "Item", "Who", "Method", "Amount (USD)", "Refunded (USD)", "Status"],
-      ...list.map((t) => [
-        t.day,
-        t.item,
-        t.label,
-        t.method === "whish" ? "Whish" : "Cash",
-        t.amount,
-        t.refunded,
-        t.pill,
+      [t("Day"), t("Item"), tctx("Who", "payer"), t("Method"), t("Amount (USD)"), t("Refunded (USD)"), t("Status")],
+      ...list.map((x) => [
+        x.day,
+        x.item,
+        labelText(x.label),
+        x.method === "whish" ? "Whish" : t("Cash"),
+        x.amount,
+        x.refunded,
+        t(x.pill),
       ]),
     ]);
   };
 
   if (tx.error && !tx.items.length && !tx.live)
     return (
-      <ErrorLine message="Couldn't load transactions." onRetry={tx.reload} />
+      <ErrorLine message={t("Couldn't load transactions.")} onRetry={tx.reload} />
     );
   if (tx.loading)
     return (
-      <div role="status" aria-label="Loading" className="mt-[16px]">
+      <div role="status" aria-label={t("Loading")} className="mt-[16px]">
         <Skel h={44} r={14} />
         <RCard className="mt-[48px]">
           {[0, 1, 2, 3, 4].map((i) => (
@@ -144,8 +146,8 @@ export const TransactionsTab: React.FC = () => {
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={tx.live ? "Search member or amount" : "Search member or item"}
-            aria-label={tx.live ? "Search member or amount" : "Search member or item"}
+            placeholder={tx.live ? t("Search member or amount") : t("Search member or item")}
+            aria-label={tx.live ? t("Search member or amount") : t("Search member or item")}
             className="flex-1 min-w-0 bg-transparent outline-none text-[13px] placeholder:text-charcoal-faint"
             style={{ color: v("ink") }}
           />
@@ -169,7 +171,7 @@ export const TransactionsTab: React.FC = () => {
       {open && (
         <div
           role="listbox"
-          aria-label="Filter"
+          aria-label={t("Filter")}
           className="mt-[8px] rounded-[14px] p-[8px]"
           style={{
             border: `1px solid ${v("menu-border")}`,
@@ -243,18 +245,18 @@ export const TransactionsTab: React.FC = () => {
             style={{ color: v("pdark") }}
           >
             <Download size={14} aria-hidden />
-            Export CSV
+            {t("Export CSV")}
           </button>
         )}
       </div>
       <RCard>
-        {shown.map((t, i) => (
+        {shown.map((x, i) => (
           <button
-            key={t.key}
+            key={x.key}
             type="button"
             onClick={() =>
               navigate(
-                `${REVENUE_BASE}/transactions/${encodeURIComponent(t.key)}`,
+                `${REVENUE_BASE}/transactions/${encodeURIComponent(x.key)}`,
               )
             }
             className="tap w-full grid items-center text-start px-[16px] py-[12px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary-dark"
@@ -264,37 +266,37 @@ export const TransactionsTab: React.FC = () => {
               borderTop: i ? `1px solid ${v("divider")}` : "none",
             }}
           >
-            <Avatar who={t.who} size={34} font={12} icon={16} />
+            <Avatar who={x.who} size={34} font={12} icon={16} />
             <span className="min-w-0">
               <span
                 className="block text-[13px] font-extrabold leading-[17px] truncate"
                 style={{ color: v("ink") }}
               >
-                {t.item}
+                {x.item}
               </span>
               <span
                 className="block text-[11px] leading-[15px] mt-[1px]"
                 style={{ color: v("faint") }}
               >
-                {subOf(t)}
+                {subOf(x)}
               </span>
             </span>
             <span className="flex flex-col items-end gap-[4px]">
               <span
                 className="text-[14px] font-extrabold whitespace-nowrap rv-num"
                 style={{
-                  color: t.status === "refunded" ? v("faint") : v("ink"),
+                  color: x.status === "refunded" ? v("faint") : v("ink"),
                 }}
               >
-                {money(t.amount)}
+                {money(x.amount)}
               </span>
-              <Pill tone={TONE[t.pill]}>{t.pill}</Pill>
+              <Pill tone={TONE[x.pill]}>{t(x.pill)}</Pill>
             </span>
           </button>
         ))}
         {!all && !needle && tx.total > 5 && (
           <MoreRow
-            label={`See all ${tx.total}`}
+            label={t("See all {n}", { n: tx.total })}
             onClick={() => setAll(true)}
             minH={48}
           />
@@ -308,7 +310,7 @@ export const TransactionsTab: React.FC = () => {
               className="text-[14px] font-extrabold mt-[6px]"
               style={{ color: v("ink") }}
             >
-              {none ? "No transactions yet" : "No transactions match"}
+              {none ? t("No transactions yet") : t("No transactions match")}
             </p>
             <p
               className="text-[12px] leading-[17px] mt-[4px]"
@@ -317,10 +319,10 @@ export const TransactionsTab: React.FC = () => {
               }
             >
               {tx.denied
-                ? "Transactions show here for people with the Revenue permission."
+                ? t("Transactions show here for people with the Revenue permission.")
                 : none
-                  ? "Revenue appears here once you record a payment. Cash today, Whish soon."
-                  : "Try another search or filter."}
+                  ? t("Revenue appears here once you record a payment. Cash today, Whish soon.")
+                  : t("Try another search or filter.")}
             </p>
           </div>
         )}

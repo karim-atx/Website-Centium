@@ -18,6 +18,7 @@ import { loadOverview } from "./overviewData";
 import { dayItems, emptyNextLine, headline, headlineSize, insights, isoDay, overviewCsv, type OvRaw } from "./overviewModel";
 import { anPalette, type AnPalette } from "./palette";
 import { LiveNowCard } from "./LiveNowCard";
+import { t } from "../../../i18n/core";
 
 // Analytics › Overview (AN1, BizAnalyticsV45 section "overview"), the body
 // under the shared shell (title, tabs, range, range line and Export CSV are
@@ -178,7 +179,7 @@ export function OverviewSection() {
   }, [cells, ins, loading, revLoading, setExport]);
 
   const mins = updatedAt === null ? null : Math.floor((now.getTime() - updatedAt) / 60_000);
-  const updated = mins === null ? "" : mins < 1 ? "Updated just now" : `Updated ${mins} min ago`;
+  const updated = mins === null ? "" : mins < 1 ? t("Updated just now") : t("Updated {n} min ago", { n: mins });
   const can = (key: string) => (pushed ?? []).includes(key);
 
   return (
@@ -192,7 +193,7 @@ export function OverviewSection() {
       {(pullY > 0 || pulling) && (
         <div data-pull style={{ display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", height: pulling ? 28 : pullY }}>
           <p style={{ fontSize: textPx(10), fontWeight: 600, color: c.faint, margin: 0 }}>
-            {pulling ? "Refreshing…" : pullY >= PULL_THRESHOLD ? "Release to refresh" : "Pull to refresh"}
+            {pulling ? t("Refreshing…") : pullY >= PULL_THRESHOLD ? t("Release to refresh") : t("Pull to refresh")}
           </p>
         </div>
       )}
@@ -207,7 +208,7 @@ export function OverviewSection() {
         />
       )}
 
-      <Label c={c} text="Headline numbers" />
+      <Label c={c} text={t("Headline numbers")} />
       <div
         data-headline
         style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 0, background: c.card, border: `1px solid ${c.keyLine}`, borderRadius: 22, boxShadow: c.hlShadow, overflow: "hidden", marginBottom: 24 }}
@@ -279,13 +280,13 @@ export function OverviewSection() {
         textScale={textScale}
       />
 
-      <Label c={c} text="More insights" />
+      <Label c={c} text={t("More insights")} />
       <div data-insights style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
         <InsightCard
           c={c}
           Icon={Star}
           col={c.star}
-          title="Reputation"
+          title={t("Reputation")}
           data={loading ? null : (ins?.[0] ?? null)}
           onOpen={can("reputation") ? () => navigate("/app/business/analytics/reputation") : undefined}
         />
@@ -293,7 +294,7 @@ export function OverviewSection() {
           c={c}
           Icon={Wallet}
           col={c.pDark}
-          title="Revenue"
+          title={t("Revenue")}
           data={revCard}
           onOpen={can("revenue") ? () => navigate("/app/business/analytics/revenue") : undefined}
         />
@@ -302,9 +303,9 @@ export function OverviewSection() {
             c={c}
             Icon={HeartPulse}
             col={c.good}
-            title="Client outcomes"
+            title={t("Client outcomes")}
             full
-            data={loading ? null : { value: "–", delta: "", sub: "Attending 80% or more of their bookings", up: false }}
+            data={loading ? null : { value: "–", delta: "", sub: t("Attending 80% or more of their bookings"), up: false }}
             onOpen={can("outcomes") ? () => navigate("/app/business/analytics/outcomes") : undefined}
           />
         )}
@@ -318,7 +319,7 @@ export function OverviewSection() {
           active={raw.business.active}
           onToggle={async (v) => {
             const r = await saveListingActive(raw.business!.id, v);
-            if (!r.ok) return r.message ?? "Couldn't change your listing. Try again.";
+            if (!r.ok) return r.message ?? t("Couldn't change your listing. Try again.");
             setRaw((cur) => (cur?.business ? { ...cur, business: { ...cur.business, active: v } } : cur));
             return null;
           }}

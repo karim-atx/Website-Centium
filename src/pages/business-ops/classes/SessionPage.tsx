@@ -19,7 +19,9 @@ import { useSchedule } from "./useSchedule";
 import { BizShareButton } from "../../../components/share/business/BizShareButton";
 import { classData } from "../../../components/share/business/bizCardModel";
 import { fetchClassCreatedAt } from "../../../services/share-links";
-import { addDays, dayWords, durationText, initialOf, isEnded, payMethodText, priceText, repeatsLine, shortDate, todayIso, whenText } from "./scheduleModel";
+import { dayWords, durationText, initialOf, isEnded, payMethodText, priceText, repeatsLine, todayIso, whenText } from "./scheduleModel";
+import { NO_INSTRUCTOR } from "./instructorTeam";
+import { t, tk, tn } from "../../../i18n/core";
 
 // Market + Share 3.0 · B-MA.6 Bookings (Business Marketplace Screens
 // `classBookings`, markup lines 431–449; HANDOVER §4 "B-MA.6"): route
@@ -73,8 +75,8 @@ export default function SessionPage() {
   });
   const pay = useMarkBookingPaid({
     onDone: () => {
-      setTick((t) => t + 1);
-      actions.show("Marked as paid.");
+      setTick((n) => n + 1);
+      actions.show(t("Marked as paid."));
     },
   });
 
@@ -99,7 +101,7 @@ export default function SessionPage() {
     };
   }, [id, tick, session?.booked, rosterAllowed]);
 
-  const eyebrow = api.kind === "classes" ? "Schedule" : "Classes";
+  const eyebrow = api.kind === "classes" ? t("Schedule") : t("Classes");
   const people = api.people;
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate("/app/business/classes"));
 
@@ -107,13 +109,13 @@ export default function SessionPage() {
     return (
       <div style={{ paddingBottom: 32 }}>
         <style>{FOCUS_CSS}</style>
-        <BackHeader m={m} eyebrow={eyebrow} title={api.loading ? "" : "Class"} onBack={goBack} />
+        <BackHeader m={m} eyebrow={eyebrow} title={api.loading ? "" : t("Class")} onBack={goBack} />
         {api.loading ? (
-          <MarketSkeleton radius={20} rows={3} count={2} label="Loading this class" />
+          <MarketSkeleton radius={20} rows={3} count={2} label={t("Loading this class")} />
         ) : api.error ? (
-          <MarketError thing="this class" onRetry={api.reload} />
+          <MarketError thing={tk("this class")} onRetry={api.reload} />
         ) : (
-          <div style={{ borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, padding: 16, fontSize: textPx(12.5), lineHeight: linePx(18), color: m.ink2 }}>This class isn't on your schedule any more.</div>
+          <div style={{ borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, padding: 16, fontSize: textPx(12.5), lineHeight: linePx(18), color: m.ink2 }}>{t("This class isn't on your schedule any more.")}</div>
         )}
       </div>
     );
@@ -139,12 +141,14 @@ export default function SessionPage() {
   const capacityLine = cancelled
     ? null
     : ended
-      ? "This class has ended."
+      ? t("This class has ended.")
       : left === 0
-        ? `Full. ${entries ? `${waitlist.length} on the waitlist.` : ""}`
+        ? entries
+          ? t("Full. {n} on the waitlist.", { n: waitlist.length })
+          : `${t("Full")}. `
         : entries && waitlist.length > 0
-          ? `${left} ${left === 1 ? "spot" : "spots"} left. ${waitlist.length} on the waitlist: if someone cancels, the first person gets their spot.`
-          : `${left} ${left === 1 ? "spot" : "spots"} left.`;
+          ? tn(left, "{n} spot left. {waiting} on the waitlist: if someone cancels, the first person gets their spot.", "{n} spots left. {waiting} on the waitlist: if someone cancels, the first person gets their spot.", { waiting: waitlist.length })
+          : tn(left, "{n} spot left.", "{n} spots left.");
 
   // OP1-088 (B7 MB-02): needs messages and front_desk, and someone booked.
   const msgReady = actions.canMessage && session.booked > 0;
@@ -152,20 +156,20 @@ export default function SessionPage() {
     ? []
     : ended
       ? msgReady
-        ? [{ value: "msg", label: people === "clients" ? "Message clients" : "Message members", disabled: offline }]
+        ? [{ value: "msg", label: people === "clients" ? t("Message clients") : t("Message members"), disabled: offline }]
         : []
       : [
-          { value: "edit", label: "Edit class", disabled: offline },
-          ...(msgReady ? [{ value: "msg", label: people === "clients" ? "Message clients" : "Message members", disabled: offline }] : []),
-          { value: "sub", label: "Request a substitute", disabled: offline },
-          ...(series ? [{ value: "end", label: "Stop repeating", disabled: offline }] : []),
-          ...(session.booked === 0 ? [{ value: "delete", label: "Delete class", destructive: true, disabled: offline }] : []),
+          { value: "edit", label: t("Edit class"), disabled: offline },
+          ...(msgReady ? [{ value: "msg", label: people === "clients" ? t("Message clients") : t("Message members"), disabled: offline }] : []),
+          { value: "sub", label: t("Request a substitute"), disabled: offline },
+          ...(series ? [{ value: "end", label: t("Stop repeating"), disabled: offline }] : []),
+          ...(session.booked === 0 ? [{ value: "delete", label: t("Delete class"), destructive: true, disabled: offline }] : []),
         ];
 
   const payTag = (e: RosterEntry) => {
-    if (e.paymentStatus === "paid") return <Chip label="Paid" bg={m.goodbg} ink={m.good} />;
-    if (e.paymentStatus === "pending") return <Chip label="Awaiting payment" bg={m.cautionbg} ink={m.caution} />;
-    if (e.paymentStatus === "refunded") return <Chip label="Refunded" bg={m.soft} ink={m.faint} />;
+    if (e.paymentStatus === "paid") return <Chip label={t("Paid")} bg={m.goodbg} ink={m.good} />;
+    if (e.paymentStatus === "pending") return <Chip label={t("Awaiting payment")} bg={m.cautionbg} ink={m.caution} />;
+    if (e.paymentStatus === "refunded") return <Chip label={t("Refunded")} bg={m.soft} ink={m.faint} />;
     return null;
   };
 
@@ -182,8 +186,8 @@ export default function SessionPage() {
             {/* Market + Share 3.0 B-SH.1: share this class (Class spotlight card); not a cancelled or ended one. */}
             {!cancelled && !ended && (
               <BizShareButton
-                label={`Share ${session.title}`}
-                emptyHint={row.listedOnExplore === false ? "This class isn't on Explore, so it can't be shared." : null}
+                label={t("Share {name}", { name: session.title })}
+                emptyHint={row.listedOnExplore === false ? t("This class isn't on Explore, so it can't be shared.") : null}
                 getData={async () => ({
                   t: "class",
                   d: classData(session, {
@@ -199,7 +203,7 @@ export default function SessionPage() {
               <button
                 ref={menuRef}
                 type="button"
-                aria-label={`Actions for ${session.title}`}
+                aria-label={t("Actions for {name}", { name: session.title })}
                 aria-haspopup="menu"
                 onClick={() => setMenuEl(menuRef.current)}
                 className="market-focus flex items-center justify-center"
@@ -214,29 +218,29 @@ export default function SessionPage() {
       {offline && api.loadedAt !== null && <MarketOffline loaded style={{ marginBottom: 12 }} />}
 
       <p style={{ margin: 0, fontSize: textPx(13), color: m.ink2 }}>
-        {whenText(session.date, session.startTime)} · {durationText(session.startTime, session.endTime)} · {instructorName || "No instructor named"}
+        {whenText(session.date, session.startTime)} · {durationText(session.startTime, session.endTime)} · {instructorName || t(NO_INSTRUCTOR)}
       </p>
       {cancelled && (
         <p className="flex items-center flex-wrap" style={{ margin: "6px 0 0", gap: 6, fontSize: textPx(12), lineHeight: linePx(16), color: m.high, fontWeight: 600 }}>
-          <Chip label="Cancelled" bg={m.highbg} ink={m.high} />
-          {row.cancelReason ? row.cancelReason : `Booked ${people} were told.`}
+          <Chip label={t("Cancelled")} bg={m.highbg} ink={m.high} />
+          {row.cancelReason ? row.cancelReason : people === "clients" ? t("Booked clients were told.") : t("Booked members were told.")}
         </p>
       )}
 
       <div className="grid" style={{ marginTop: 12, gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 10 }}>
-        <StatTile m={m} label="Booked" value={`${session.booked}/${session.maxCapacity}`} sub={`${pct}% full`} />
-        <StatTile m={m} label="Price" value={priceText(row.price)} sub={repeatsLine(series)} />
+        <StatTile m={m} label={t("Booked")} value={`${session.booked}/${session.maxCapacity}`} sub={t("{n}% full", { n: pct })} />
+        <StatTile m={m} label={t("Price")} value={priceText(row.price)} sub={repeatsLine(series)} />
       </div>
-      <Caps m={m} style={{ marginTop: 18 }}>{`Bookings · ${session.booked}`}</Caps>
+      <Caps m={m} style={{ marginTop: 18 }}>{t("Bookings · {n}", { n: session.booked })}</Caps>
       <div style={{ marginTop: 8, borderRadius: 24, background: m.card, border: `1px solid ${m.border}`, overflow: "hidden" }}>
         {rosterHidden ? (
-          <p style={{ margin: 0, padding: "14px 16px", fontSize: textPx(13), lineHeight: linePx(18), color: m.faint }}>Who booked is shown to staff with front desk access.</p>
+          <p style={{ margin: 0, padding: "14px 16px", fontSize: textPx(13), lineHeight: linePx(18), color: m.faint }}>{t("Who booked is shown to staff with front desk access.")}</p>
         ) : rosterError && !entries ? (
           <div style={{ padding: 12 }}>
-            <MarketError thing="who's booked" onRetry={() => setTick((t) => t + 1)} notchBg={m.card} />
+            <MarketError thing={tk("who's booked")} onRetry={() => setTick((n) => n + 1)} notchBg={m.card} />
           </div>
         ) : !entries ? (
-          <div aria-busy="true" aria-label="Loading who's booked">
+          <div aria-busy="true" aria-label={t("Loading who's booked")}>
             {[0, 1].map((i) => (
               <div key={i} className="flex items-center" style={{ gap: 12, padding: "10px 16px", borderTop: i ? `0.5px solid ${m.div}` : 0 }}>
                 <span aria-hidden className="animate-skeleton-pulse" style={{ width: 32, height: 32, borderRadius: 999, background: m.soft }} />
@@ -245,7 +249,7 @@ export default function SessionPage() {
             ))}
           </div>
         ) : bookedList.length === 0 ? (
-          <p style={{ margin: 0, padding: "14px 16px", fontSize: textPx(13), color: m.faint }}>Nobody has booked yet.</p>
+          <p style={{ margin: 0, padding: "14px 16px", fontSize: textPx(13), color: m.faint }}>{t("Nobody has booked yet.")}</p>
         ) : (
           <>
             {bookedList.slice(0, SHOWN).map((e, i) => {
@@ -265,7 +269,7 @@ export default function SessionPage() {
                   )}
                   <span className="flex-1 min-w-0 flex items-center flex-wrap" style={{ gap: 6 }}>
                     <span style={{ fontSize: textPx(13.5), fontWeight: 700, color: m.ink }}>{e.label}</span>
-                    {e.isMinor && <Chip label="Under 18" bg={m.soft} ink={m.faint} />}
+                    {e.isMinor && <Chip label={t("Under 18")} bg={m.soft} ink={m.faint} />}
                     {payTag(e)}
                   </span>
                   {method && <span className="shrink-0" style={{ fontSize: textPx(11.5), color: m.faint }}>{method}</span>}
@@ -278,7 +282,7 @@ export default function SessionPage() {
                   type="button"
                   onClick={(ev) => pay.open(e, ev.currentTarget)}
                   disabled={pay.busy}
-                  aria-label={`${e.label}, awaiting payment${method ? `, ${method}` : ""}. Actions`}
+                  aria-label={method ? t("{name}, awaiting payment, {method}. Actions", { name: e.label, method }) : t("{name}, awaiting payment. Actions", { name: e.label })}
                   className="market-focus"
                   style={{ ...style, border: 0, borderTop: style.borderTop }}
                 >
@@ -301,7 +305,7 @@ export default function SessionPage() {
               className="market-focus hit w-full text-start"
               style={{ display: "block", padding: "10px 16px", minHeight: 38, borderTop: `0.5px solid ${m.div}`, fontSize: textPx(12), fontWeight: 800, color: m.pdark, background: "transparent", borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0 }}
             >
-              See all {bookedList.length}
+              {t("See all {n}", { n: bookedList.length })}
             </button>
           </>
         )}
@@ -315,12 +319,12 @@ export default function SessionPage() {
           className="market-focus w-full flex items-center justify-center disabled:opacity-40"
           style={{ marginTop: 14, height: 52, borderRadius: 16, background: m.highbg, color: m.high, fontSize: textPx(15), fontWeight: 800, border: 0 }}
         >
-          Cancel class
+          {t("Cancel class")}
         </button>
       )}
 
       <Caps m={m} style={{ marginTop: 22, marginBottom: 8 }}>
-        Class details
+        {t("Class details")}
       </Caps>
       <div style={{ borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, overflow: "hidden" }}>
         <button
@@ -337,30 +341,30 @@ export default function SessionPage() {
             <span aria-hidden className="shrink-0" style={{ width: 32, height: 32, borderRadius: 999, border: `1.5px dashed ${m.fill}`, background: m.soft }} />
           )}
           <span className="flex-1 min-w-0">
-            <span className="block" style={{ fontSize: textPx(11), fontWeight: 600, color: m.faint }}>Instructor</span>
-            <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 700, color: session.professionalId ? m.ink : m.ink2 }}>{session.professionalId ? instructorName : "No instructor named"}</span>
+            <span className="block" style={{ fontSize: textPx(11), fontWeight: 600, color: m.faint }}>{t("Instructor")}</span>
+            <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 700, color: session.professionalId ? m.ink : m.ink2 }}>{session.professionalId ? instructorName : t(NO_INSTRUCTOR)}</span>
             <span className="block" style={{ fontSize: textPx(11.5), lineHeight: linePx(15), color: m.faint }}>
               {session.professionalId
                 ? coverFor
-                  ? `Covering for ${api.nameOf(coverFor)} ${dayWords(session.date, today)}`
+                  ? t("Covering for {name} {when}", { name: api.nameOf(coverFor), when: dayWords(session.date, today) })
                   : next
-                    ? `Also teaching ${next.title} ${next.date === today ? "today" : next.date === addDays(today, 1) ? "tomorrow" : `on ${shortDate(next.date)}`}`
-                    : "No other classes coming up"
+                    ? t("Also teaching {class} {when}", { class: next.title, when: dayWords(next.date, today) })
+                    : t("No other classes coming up")
                 : cancelled || ended
-                  ? "Nobody was named"
-                  : "Tap to choose who teaches it"}
+                  ? t("Nobody was named")
+                  : t("Tap to choose who teaches it")}
             </span>
           </span>
-          <ChevronRight size={16} style={{ color: m.faint }} aria-hidden />
+          <ChevronRight size={16} className="rtl:-scale-x-100" style={{ color: m.faint }} aria-hidden />
         </button>
         {capacityLine && (
           <div style={{ padding: "12px 16px", borderTop: `0.5px solid ${m.div}` }}>
-            <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 600, color: m.faint }}>Spots</p>
+            <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 600, color: m.faint }}>{t("Spots")}</p>
             <p className="flex items-baseline flex-wrap" style={{ margin: "2px 0 0", columnGap: 8, fontSize: textPx(13), lineHeight: linePx(18), color: m.ink2 }}>
               <span>{capacityLine}</span>
               {entries && waitlist.length > 0 && rosterAllowed && (
                 <button type="button" onClick={() => setRosterOpen(true)} className="market-focus hit" style={{ fontSize: textPx(12.5), fontWeight: 800, color: m.pdark, background: "transparent", border: 0, padding: 0 }}>
-                  See waitlist
+                  {t("See waitlist")}
                 </button>
               )}
             </p>
@@ -368,13 +372,13 @@ export default function SessionPage() {
         )}
         {row.notes && (
           <div style={{ padding: "12px 16px", borderTop: `0.5px solid ${m.div}` }}>
-            <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 600, color: m.faint }}>Notes for the instructor</p>
+            <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 600, color: m.faint }}>{t("Notes for the instructor")}</p>
             <p style={{ margin: "2px 0 0", fontSize: textPx(13), lineHeight: linePx(18), color: m.ink2, whiteSpace: "pre-wrap" }}>{row.notes}</p>
           </div>
         )}
         {series && (
           <div style={{ padding: "12px 16px", borderTop: `0.5px solid ${m.div}` }}>
-            <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 600, color: m.faint }}>Repeats</p>
+            <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 600, color: m.faint }}>{t("Repeats")}</p>
             <p style={{ margin: "2px 0 0", fontSize: textPx(13), lineHeight: linePx(18), color: m.ink2 }}>{repeatLine(series, series.startTime)}</p>
           </div>
         )}
@@ -401,8 +405,8 @@ export default function SessionPage() {
         session={{ date: session.date, startTime: session.startTime, endTime: session.endTime, maxCapacity: session.maxCapacity }}
         onClose={() => setRosterOpen(false)}
         onMarkedPaid={() => {
-          setTick((t) => t + 1);
-          actions.show("Marked as paid.");
+          setTick((n) => n + 1);
+          actions.show(t("Marked as paid."));
         }}
       />
       {pay.element}

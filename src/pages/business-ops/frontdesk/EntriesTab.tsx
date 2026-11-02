@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { ScanLine, UserCheck } from "lucide-react";
 import { barHeights, BAR_AREA, entrySub, hourBins, hourCounts, hourShort, isDeskMethod, type Entry } from "../../../services/front-desk/frontDeskLogic";
 import { clock12 } from "../../../utils/time12";
+import { t, tk, tx } from "../../../i18n/core";
 import type { DeskState } from "./useFrontDesk";
 import { DeskLabel, DeskRow, EmptyCard, ErrorCard, LIST, ListCard, RULE, ListLine, NumberBoxes, NumberBoxesSkeleton, RowsSkeleton, StatusChip } from "./frontDeskKit";
 
@@ -13,7 +14,7 @@ import { DeskLabel, DeskRow, EmptyCard, ErrorCard, LIST, ListCard, RULE, ListLin
 // while this venue has never recorded a check-in, and on a database without
 // B10 (the pending rule). Nothing below invents a number (HANDOVER 1).
 
-const EMPTY_BODY = "Members scan their pass at the door, or you check them in here.";
+const EMPTY_BODY = tk("Members scan their pass at the door, or you check them in here.");
 
 export const EntriesTab: React.FC<{
   desk: DeskState;
@@ -29,14 +30,14 @@ export const EntriesTab: React.FC<{
       <div aria-busy="true">
         <NumberBoxesSkeleton />
         <ChartSkeleton />
-        <DeskLabel>Recent</DeskLabel>
+        <DeskLabel>{t("Recent")}</DeskLabel>
         <RowsSkeleton />
       </div>
     );
   }
-  if ((error || desk.error) && !desk.summary) return <ErrorCard title="Couldn't load entries" onRetry={onRetry} />;
+  if ((error || desk.error) && !desk.summary) return <ErrorCard title={t("Couldn't load entries")} onRetry={onRetry} />;
   if (desk.live !== true || !desk.summary || !desk.entries || desk.everAny === false) {
-    return <EmptyCard icon={ScanLine} title="No entries yet" body={EMPTY_BODY} />;
+    return <EmptyCard icon={ScanLine} title={tx("No entries yet", "gym entries")} body={t(EMPTY_BODY)} />;
   }
   return <EntriesBody desk={desk} now={now} all={all} setAll={setAll} />;
 };
@@ -45,7 +46,7 @@ export const EntriesTab: React.FC<{
 function updatedLine(at: Date | null, now: Date): string | null {
   if (!at) return null;
   const min = Math.max(0, Math.floor((now.getTime() - at.getTime()) / 60_000));
-  return min < 1 ? "Updated just now" : `Updated ${min} min ago`;
+  return min < 1 ? t("Updated just now") : t("Updated {n} min ago", { n: min });
 }
 
 const EntriesBody: React.FC<{
@@ -72,7 +73,7 @@ const EntriesBody: React.FC<{
     }
     return (
       <div className="flex flex-col">
-        <DeskLabel action={{ label: "Back", onClick: () => setAll(false), ariaLabel: "Back to the front desk" }}>Entries today</DeskLabel>
+        <DeskLabel action={{ label: t("Back"), onClick: () => setAll(false), ariaLabel: t("Back to the front desk") }}>{t("Entries today")}</DeskLabel>
         {[...groups].map(([h, list]) => (
           <section key={h} aria-label={hourShort(h)}>
             <p className="text-[11px] font-semibold leading-[14px] text-charcoal-faint" style={{ margin: "0 2px 6px" }}>
@@ -94,22 +95,22 @@ const EntriesBody: React.FC<{
     <div className="flex flex-col">
       <NumberBoxes
         items={[
-          { label: "Entries today", value: String(summary.entriesToday) },
-          { label: "In now", value: String(summary.inNow) },
-          { label: "Denied", value: String(summary.deniedToday) },
+          { label: t("Entries today"), value: String(summary.entriesToday) },
+          { label: t("In now"), value: String(summary.inNow) },
+          { label: t("Denied"), value: String(summary.deniedToday) },
         ]}
       />
       <HourChart hours={hours} now={now} quiet={quiet} />
       <DeskLabel
-        action={seeAll ? { label: "See all", onClick: () => setAll(true), ariaLabel: "See all entries today" } : undefined}
+        action={seeAll ? { label: t("See all"), onClick: () => setAll(true), ariaLabel: t("See all entries today") } : undefined}
         trailing={!seeAll && updated ? <UpdatedNote text={updated} /> : undefined}
       >
-        Recent
+        {t("Recent")}
       </DeskLabel>
       {quiet ? (
-        <ListLine>No entries yet today.</ListLine>
+        <ListLine>{t("No entries yet today.")}</ListLine>
       ) : (
-        <ListCard label="Recent entries">
+        <ListCard label={t("Recent entries")}>
           {entries.slice(0, 3).map((e, i) => (
             <EntryRow key={e.id} e={e} first={i === 0} />
           ))}
@@ -132,7 +133,7 @@ const EntryRow: React.FC<{ e: Entry; first: boolean }> = ({ e, first }) => (
     title={e.title}
     sub={entrySub(e)}
     first={first}
-    trailing={e.result === "in" ? <StatusChip tone="good">In</StatusChip> : <StatusChip tone="high">Denied</StatusChip>}
+    trailing={e.result === "in" ? <StatusChip tone="good">{tx("In", "entry result")}</StatusChip> : <StatusChip tone="high">{t("Denied")}</StatusChip>}
   />
 );
 
@@ -142,13 +143,13 @@ const HourChart: React.FC<{ hours: { hour: number; count: number }[]; now: Date;
   const current = now.getHours();
   return (
     <div className={LIST} style={{ borderRadius: 18, padding: 14, marginBottom: 14 }}>
-      <p className="text-[13px] font-extrabold leading-[1.5] text-charcoal">Entries by hour</p>
+      <p className="text-[13px] font-extrabold leading-[1.5] text-charcoal">{t("Entries by hour")}</p>
       <p className="text-[11.5px] leading-[1.5] text-charcoal-faint" style={{ marginBottom: 12 }}>
-        How busy is it right now?
+        {t("How busy is it right now?")}
       </p>
       {quiet || hours.length === 0 ? (
         <p className="flex items-center justify-center text-[11.5px] leading-[16px] text-charcoal-faint" style={{ height: 96 }}>
-          No entries yet today.
+          {t("No entries yet today.")}
         </p>
       ) : (
         <div role="img" aria-label={hours.map((h) => `${hourShort(h.hour)} ${h.count}`).join(", ")} className="flex items-end" style={{ gap: 4, height: 96 }}>

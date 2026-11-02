@@ -186,10 +186,10 @@ html.high-contrast .an5-tile { border-color: var(--an-border) !important; }
 .an5-amt { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--an-ink); text-align: end; }
 .an5-meta { font-size: 11px; line-height: 15px; color: var(--an-faint); margin-top: 5px; text-wrap: pretty; }
 .an5-track { position: relative; height: 8px; border-radius: 999px; background: var(--an-track); margin-top: 6px; }
-.an5-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--an-fill); transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+.an5-bar-fill { position: absolute; inset-inline-start: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--an-fill); transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
 .an5-ref { position: absolute; top: -4px; bottom: -4px; width: 0; }
-.an5-ref.is-target { border-left: 2px solid var(--an-teal); }
-.an5-ref.is-avg { border-left: 1.5px dashed var(--an-avg); }
+.an5-ref.is-target { border-inline-start: 2px solid var(--an-teal); }
+.an5-ref.is-avg { border-inline-start: 1.5px dashed var(--an-avg); }
 .an5-reflegend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-size: 10.5px; line-height: 14px; color: var(--an-ink-soft); }
 .an5-reflegend span { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 
@@ -411,7 +411,7 @@ html.high-contrast .an5-sess { border-color: var(--an-border); }
 .an5-sortwrap .an5-sortbtn { margin-inline-start: 0; position: relative; }
 .an5-sortbtn::after { content: ""; position: absolute; inset: -2px 0; }
 .an5-sortbtn:disabled { opacity: 0.5; }
-.an5-sortlist { position: absolute; right: 0; top: 46px; width: 180px; z-index: 5; background: var(--an-card); border: 1px solid rgba(174, 161, 220, 0.5); border-radius: 14px; box-shadow: 0 12px 32px rgba(95, 80, 147, 0.18); padding: 8px; }
+.an5-sortlist { position: absolute; inset-inline-end: 0; top: 46px; width: 180px; z-index: 5; background: var(--an-card); border: 1px solid rgba(174, 161, 220, 0.5); border-radius: 14px; box-shadow: 0 12px 32px rgba(95, 80, 147, 0.18); padding: 8px; }
 .an5-sortlist-l { margin: 2px 4px 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--an-faint); }
 .an5-sortopt { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 44px; border-radius: 8px; padding: 0 10px; border: 1px solid #e5e6eb; background: #fafafb; font-size: 13px; font-weight: 600; color: var(--an-ink); text-align: start; }
 .an5-sortopt + .an5-sortopt { margin-top: 6px; }
@@ -430,7 +430,7 @@ html.dark .an5-sortopt[aria-selected="true"] { background: var(--an-pale); borde
 .an5-rev-r { display: flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 800; color: var(--an-ink); }
 .an5-rev-t { font-size: 12.5px; line-height: 18px; color: var(--an-ink); margin-top: 8px; text-wrap: pretty; overflow-wrap: anywhere; }
 .an5-rev-t.is-removed { font-style: italic; color: var(--an-faint); }
-.an5-rev-reply { margin-top: 8px; border-left: 2px solid var(--an-primary); padding: 4px 0 4px 10px; }
+.an5-rev-reply { margin-top: 8px; border-inline-start: 2px solid var(--an-primary); padding-block: 4px; padding-inline: 10px 0; }
 .an5-rev-reply-l { font-size: 10.5px; font-weight: 800; color: var(--an-pdark); }
 .an5-rev-reply-t { font-size: 12px; line-height: 17px; color: var(--an-ink-soft); overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) { .an5-rev { transition: none; } }

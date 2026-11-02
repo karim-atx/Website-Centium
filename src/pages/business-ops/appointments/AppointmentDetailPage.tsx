@@ -7,8 +7,17 @@ import { offerPromotionUsed } from "../../../components/promotions/promotionUsed
 import { dayClock, dayTitle, money } from "../../../services/store/format";
 import { rangeClock12 } from "../../../utils/time12";
 import { useOnline } from "../../../hooks/useOnline";
+import { t, tk, tx } from "../../../i18n/core";
 import { CtaSpacer, EmptyCard, ErrorCard, FixedCta, KitLabel, KitPop, KitRow, ListCard, ListSkeleton, OpsHeader, TextButton, useOpsToast } from "../store/opsKit";
 import { useLive, useMessagePerson } from "../store/storeShared";
+
+// services/appointments' status and payment words, shown through t() here.
+tk("Booked");
+tk("Done");
+tk("Cancelled");
+tk("No-show");
+tk("Paid");
+tk("Refunded");
 
 // OURS-OP1-appointments-detail rows 1-14 (OP1-005 pattern). Row 6: "Message
 // {client}" opens the business's thread with them (B7 start_member_thread,
@@ -42,10 +51,10 @@ function AppointmentDetail({ appointmentId }: { appointmentId: string }) {
   if (s.status === "loading") {
     return (
       <div>
-        <OpsHeader back kicker="Appointments" title="Appointment" />
-        <KitLabel label="Client" />
+        <OpsHeader back kicker={t("Appointments")} title={t("Appointment")} />
+        <KitLabel label={t("Client")} />
         <ListSkeleton rows={1} />
-        <KitLabel label="Details" />
+        <KitLabel label={t("Details")} />
         <ListSkeleton rows={3} />
       </div>
     );
@@ -53,16 +62,16 @@ function AppointmentDetail({ appointmentId }: { appointmentId: string }) {
   if (s.status === "error") {
     return (
       <div>
-        <OpsHeader back kicker="Appointments" title="Appointment" />
-        <ErrorCard text="Couldn't load this appointment." onRetry={live.reload} />
+        <OpsHeader back kicker={t("Appointments")} title={t("Appointment")} />
+        <ErrorCard text={t("Couldn't load this appointment.")} onRetry={live.reload} />
       </div>
     );
   }
   if (!a) {
     return (
       <div>
-        <OpsHeader back kicker="Appointments" title="Appointment" />
-        <EmptyCard icon={CalendarCheck} title="Appointment not found" body="It may have been removed." />
+        <OpsHeader back kicker={t("Appointments")} title={t("Appointment")} />
+        <EmptyCard icon={CalendarCheck} title={t("Appointment not found")} body={t("It may have been removed.")} />
       </div>
     );
   }
@@ -70,9 +79,11 @@ function AppointmentDetail({ appointmentId }: { appointmentId: string }) {
   const client = a.clientLabel;
   const booked = a.status === "booked";
   const started = new Date(a.startsAt).getTime() <= Date.now();
-  const chip = apptChip(a.status);
+  const rawChip = apptChip(a.status);
+  const chip = { ...rawChip, label: t(rawChip.label) };
   const unpaid = a.paymentStatus === "pending" && a.price > 0 && a.status !== "cancelled";
-  const paid = payWords(a.paymentStatus);
+  const paidWord = payWords(a.paymentStatus);
+  const paid = paidWord ? t(paidWord) : null;
 
   const mark = async (status: "completed" | "no_show") => {
     setBusy(true);
@@ -80,15 +91,15 @@ function AppointmentDetail({ appointmentId }: { appointmentId: string }) {
     const r = await markAppointment(a.id, status);
     if (!r.ok) {
       setBusy(false);
-      setError(r.pending ? "Appointment updates are coming soon." : "Couldn't update the appointment. Try again.");
+      setError(r.pending ? t("Appointment updates are coming soon.") : t("Couldn't update the appointment. Try again."));
       if (r.code === "ATX10") void live.refresh();
       return;
     }
     // Row 10: done with cash = recorded as paid.
     const p = status === "completed" && unpaid ? await markAppointmentPaid(a.id) : null;
     setBusy(false);
-    if (status === "no_show") showToast("Marked as no-show.", false);
-    else showToast(p && !p.ok ? "Marked as done. Couldn't record the payment." : "Marked as done.", false);
+    if (status === "no_show") showToast(t("Marked as no-show."), false);
+    else showToast(p && !p.ok ? t("Marked as done. Couldn't record the payment.") : t("Marked as done."), false);
     if (p?.ok) offerPromotionUsed({ kind: "appointment", sourceId: a.id });
     await live.refresh();
   };
@@ -99,11 +110,11 @@ function AppointmentDetail({ appointmentId }: { appointmentId: string }) {
     const r = await markAppointmentPaid(a.id);
     setBusy(false);
     if (!r.ok) {
-      setError(r.pending ? "Recording payments is coming soon." : "Couldn't record the payment. Try again.");
+      setError(r.pending ? t("Recording payments is coming soon.") : t("Couldn't record the payment. Try again."));
       if (r.code === "ATX10") void live.refresh();
       return;
     }
-    showToast("Payment recorded.", booked && started);
+    showToast(t("Payment recorded."), booked && started);
     offerPromotionUsed({ kind: "appointment", sourceId: a.id });
     await live.refresh();
   };
@@ -114,24 +125,24 @@ function AppointmentDetail({ appointmentId }: { appointmentId: string }) {
     const r = await cancelAppointment(a.id);
     setBusy(false);
     if (!r.ok) {
-      setError(r.pending ? "Cancelling appointments is coming soon." : "Couldn't cancel the appointment. Try again.");
+      setError(r.pending ? t("Cancelling appointments is coming soon.") : t("Couldn't cancel the appointment. Try again."));
       return;
     }
     setCancelOpen(false);
-    showToast(r.value.paidToRefund ? `Appointment cancelled. ${client} has been told. They paid: give the money back.` : `Appointment cancelled. ${client} has been told.`, false);
+    showToast(r.value.paidToRefund ? t("Appointment cancelled. {client} has been told. They paid: give the money back.", { client }) : t("Appointment cancelled. {client} has been told.", { client }), false);
     await live.refresh();
   };
 
   return (
     <div>
-      <OpsHeader back kicker="Appointments" title={a.serviceName} sub={`${dayTitle(new Date(a.startsAt))}, ${rangeClock12(a.startsAt, a.endsAt)}`} />
+      <OpsHeader back kicker={t("Appointments")} title={a.serviceName} sub={`${dayTitle(new Date(a.startsAt))}, ${rangeClock12(a.startsAt, a.endsAt)}`} />
 
-      <KitLabel label="Client" />
-      <ListCard label="Client">
-        <KitRow icon={User} title={client} sub={a.bookedAt ? `Booked ${dayClock(a.bookedAt)}` : undefined} />
+      <KitLabel label={t("Client")} />
+      <ListCard label={t("Client")}>
+        <KitRow icon={User} title={client} sub={a.bookedAt ? t("Booked {when}", { when: dayClock(a.bookedAt) }) : undefined} />
         {/* B12 follow-up: a desk booking isn't blocked by the waiver; it says when it is still owed. */}
-        {a.waiverPending && <KitRow icon={FileWarning} title="Terms not accepted yet" sub={`${client} accepts them in the app before the visit.`} chip={{ label: "Waiver", tone: "warn" }} />}
-        {msg.can && a.clientId && <KitRow icon={MessageCircle} title={`Message ${client}`} onClick={() => void msg.open(a.clientId!)} disabled={!online || msg.busy} />}
+        {a.waiverPending && <KitRow icon={FileWarning} title={t("Terms not accepted yet")} sub={t("{client} accepts them in the app before the visit.", { client })} chip={{ label: t("Waiver"), tone: "warn" }} />}
+        {msg.can && a.clientId && <KitRow icon={MessageCircle} title={t("Message {client}", { client })} onClick={() => void msg.open(a.clientId!)} disabled={!online || msg.busy} />}
       </ListCard>
       {msg.error && (
         <p role="alert" className="text-[11.5px] font-bold text-status-high text-center" style={{ margin: "-6px 0 10px" }}>
@@ -139,20 +150,20 @@ function AppointmentDetail({ appointmentId }: { appointmentId: string }) {
         </p>
       )}
 
-      <KitLabel label="Details" />
-      <ListCard label="Details">
-        <KitRow icon={Clock} title="Duration" value={`${a.durationMin} min`} />
-        <KitRow icon={Tag} title="Price" value={money(a.price)} />
+      <KitLabel label={t("Details")} />
+      <ListCard label={t("Details")}>
+        <KitRow icon={Clock} title={t("Duration")} value={t("{n} min", { n: a.durationMin })} />
+        <KitRow icon={Tag} title={t("Price")} value={money(a.price)} />
         <KitRow
           icon={Banknote}
-          title="Payment"
-          sub={a.paymentMethod === "whish" ? "Coming soon" : paid ?? undefined}
-          value={a.paymentMethod === "whish" ? "Whish" : "Cash at the visit"}
+          title={tx("Payment", "how it is paid")}
+          sub={a.paymentMethod === "whish" ? t("Coming soon") : paid ?? undefined}
+          value={a.paymentMethod === "whish" ? "Whish" : t("Cash at the visit")}
         />
       </ListCard>
 
-      <KitLabel label="Status" />
-      <ListCard label="Status">
+      <KitLabel label={t("Status")} />
+      <ListCard label={t("Status")}>
         <KitRow icon={a.status === "cancelled" ? CircleX : CalendarCheck} title={chip.label} sub={a.bookedAt ? dayClock(a.bookedAt) : undefined} chip={chip} />
       </ListCard>
 
@@ -161,28 +172,28 @@ function AppointmentDetail({ appointmentId }: { appointmentId: string }) {
           {error}
         </p>
       )}
-      {unpaid && a.paymentMethod === "cash" && <TextButton label="Mark as paid" onClick={() => void markPaid()} disabled={!online || busy} />}
+      {unpaid && a.paymentMethod === "cash" && <TextButton label={t("Mark as paid")} onClick={() => void markPaid()} disabled={!online || busy} />}
       {booked && (
         <>
-          <TextButton label="Mark as no-show" onClick={() => void mark("no_show")} disabled={!online || busy || !started} />
-          <TextButton tone="high" label="Cancel appointment" onClick={() => setCancelOpen(true)} disabled={!online || busy || started} />
+          <TextButton label={t("Mark as no-show")} onClick={() => void mark("no_show")} disabled={!online || busy || !started} />
+          <TextButton tone="high" label={t("Cancel appointment")} onClick={() => setCancelOpen(true)} disabled={!online || busy || started} />
         </>
       )}
 
       {booked && started && (
         <>
           <CtaSpacer />
-          <FixedCta label="Mark as done" onClick={() => void mark("completed")} busy={busy && !cancelOpen} disabled={!online} />
+          <FixedCta label={t("Mark as done")} onClick={() => void mark("completed")} busy={busy && !cancelOpen} disabled={!online} />
         </>
       )}
 
       <KitPop
         open={cancelOpen}
         icon={CircleX}
-        title="Cancel this appointment?"
-        body={`${client} is told by message. This can't be undone.`}
-        action="Cancel appointment"
-        keep="Keep it"
+        title={t("Cancel this appointment?")}
+        body={t("{client} is told by message. This can't be undone.", { client })}
+        action={t("Cancel appointment")}
+        keep={tx("Keep it", "appointment")}
         busy={busy}
         error={cancelOpen ? error : null}
         onAction={cancel}

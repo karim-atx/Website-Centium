@@ -53,6 +53,12 @@ const AREAS = [
   ["procourses", "Professional tools: Courses"],
   ["pronetwork", "Professional tools: Care network and businesses"],
   ["promarket", "Professional tools: Marketplace"],
+  ["business", "Business: dashboard, More, profile and settings"],
+  ["bizanalytics", "Business analytics: overview, members, classes, products, reputation"],
+  ["bizrevenue", "Business analytics: revenue and team"],
+  ["bizops", "Business operations: schedule, classes, appointments, front desk"],
+  ["bizmarket", "Business marketplace: listing, offers, promotions, photos, hiring"],
+  ["bizteam", "Business team, membership plans, store orders and the store"],
 ];
 
 const rows = [];

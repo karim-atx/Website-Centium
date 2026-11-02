@@ -10,6 +10,7 @@ import { fetchGymHours } from "../venues";
 import { loadConsoleAccess } from "../business-console";
 import type { HoursRow } from "../venues/hours";
 import type { BusinessTypeValue, StoreSettings } from "./types";
+import { t, tk } from "../../i18n/core";
 import { contactRefusal, moderationRefusal } from "../moderation/text";
 
 export type { BusinessTypeValue, StoreSettings } from "./types";
@@ -143,13 +144,13 @@ const toBusiness = (r: BusinessRow): BusinessFull => ({
  */
 export async function fetchBusinessFull(userId: string): Promise<Result<BusinessFull | null>> {
   const access = await loadConsoleAccess(userId);
-  if (!access.ok) return { ok: false, message: "Couldn't load your profile." };
+  if (!access.ok) return { ok: false, message: t("Couldn't load your profile.") };
   const id = access.value.current?.businessId;
   if (!id) return { ok: true, value: null };
   const { data, error } = await db.from("business_profiles").select(BUSINESS_COLUMNS).eq("id", id).maybeSingle();
   if (error) {
     console.error("[business-more] Could not read the business:", error.message);
-    return fail(error, "Couldn't load your profile.");
+    return fail(error, t("Couldn't load your profile."));
   }
   return { ok: true, value: data ? toBusiness(data as BusinessRow) : null };
 }
@@ -201,13 +202,13 @@ export async function saveBusiness(businessId: string, patch: BusinessPatch): Pr
   const { data, error } = await db.from("business_profiles").update(row).eq("id", businessId).select(BUSINESS_COLUMNS);
   if (error) {
     console.error("[business-more] Could not save the business:", error.message);
-    if (error.code === "23514") return { ok: false, code: error.code, message: "One of these values isn't allowed. Check it and try again." };
+    if (error.code === "23514") return { ok: false, code: error.code, message: t("One of these values isn't allowed. Check it and try again.") };
     // Round E: a refused house playlist link (ATXN0-2) says what's wrong with it.
     const playlist = playlistSaveError(error.code);
     if (playlist) return { ok: false, code: error.code, message: playlist };
-    return fail(error, "Couldn't save. Try again.");
+    return fail(error, t("Couldn't save. Try again."));
   }
-  if (!data || data.length === 0) return { ok: false, code: "42501", message: "Couldn't save. Try again." };
+  if (!data || data.length === 0) return { ok: false, code: "42501", message: t("Couldn't save. Try again.") };
   // The business navbar caches the type; tell it to read again after a type change.
   if ("type" in patch && patch.type !== undefined) {
     // Services build without the DOM lib, so the browser globals are reached loosely.
@@ -236,8 +237,8 @@ export async function uploadBusinessImage(params: { kind: ImageKind; uid: string
   if (uid !== ownerId) return { ok: false, code: "ATX09", message: describeImageError({ code: "ATX09" }) };
   const prepared = await prepareForumPhoto(file);
   if (!prepared.ok) return { ok: false, message: prepared.message };
-  if (kind === "logo" && prepared.file.size > LOGO_MAX_BYTES) return { ok: false, message: "This photo is too large. Choose one under 2 MB." };
-  if (kind === "cover" && prepared.file.size > COVER_MAX_BYTES) return { ok: false, message: "This photo is too large. Choose one under 5 MB." };
+  if (kind === "logo" && prepared.file.size > LOGO_MAX_BYTES) return { ok: false, message: t("This photo is too large. Choose one under 2 MB.") };
+  if (kind === "cover" && prepared.file.size > COVER_MAX_BYTES) return { ok: false, message: t("This photo is too large. Choose one under 5 MB.") };
   const r = await stageAndSubmit(uid, kind === "logo" ? "business_logo" : "business_cover", businessId, prepared.file);
   return r.ok ? { ok: true, value: null } : r;
 }
@@ -269,7 +270,7 @@ export async function removeBusinessImage(params: {
     .update(kind === "logo" ? { logo_url: null } : { cover_url: null })
     .eq("id", businessId)
     .select("id");
-  if (written.error) return fail(written.error, "Couldn't remove the photo. Try again.");
+  if (written.error) return fail(written.error, t("Couldn't remove the photo. Try again."));
   await removeOldImage(kind, previousPath, uid, ownerId);
   return { ok: true, value: null };
 }
@@ -299,22 +300,22 @@ export async function fetchSetupChecklist(businessId: string): Promise<Result<Ch
     db.rpc("business_setup_checklist", { p_business_id: businessId }),
     db.from("business_profiles").select("active").eq("id", businessId).maybeSingle(),
   ]);
-  if (list.error) return fail(list.error, "Couldn't load your checklist.");
+  if (list.error) return fail(list.error, t("Couldn't load your checklist."));
   const items = (list.data ?? []) as ChecklistItem[];
   if (row.error || !row.data) return { ok: true, value: items };
   return { ok: true, value: [...items, { item: SHOW_ON_EXPLORE_ITEM, done: !!(row.data as { active: boolean }).active, dismissed: false }] };
 }
 
 /** The B15 refusal of set_business_paused to anyone but the owner (42501, "ATXB8: only the owner can pause the business"). */
-export const PAUSE_OWNER_ONLY = "Only the owner can deactivate or reactivate the business.";
+export const PAUSE_OWNER_ONLY = tk("Only the owner can deactivate or reactivate the business.");
 
 /** set_business_paused (B5; owner only since B15): pausing also hides the listing; resuming does not re-list. */
 export async function setBusinessPaused(businessId: string, paused: boolean): Promise<Result<string | null>> {
   const { data, error } = await db.rpc("set_business_paused", { p_business_id: businessId, p_paused: paused });
   if (error) {
     console.error("[business-more] Could not change the pause:", error.message);
-    if (error.code === "42501" || /ATXB8/.test(error.message ?? "")) return { ok: false, code: error.code, message: PAUSE_OWNER_ONLY };
-    return fail(error, paused ? "Couldn't deactivate your business. Try again." : "Couldn't reactivate your business. Try again.");
+    if (error.code === "42501" || /ATXB8/.test(error.message ?? "")) return { ok: false, code: error.code, message: t(PAUSE_OWNER_ONLY) };
+    return fail(error, paused ? t("Couldn't deactivate your business. Try again.") : t("Couldn't reactivate your business. Try again."));
   }
   return { ok: true, value: (data as string | null) ?? null };
 }
@@ -324,7 +325,7 @@ export async function setBusinessPaused(businessId: string, paused: boolean): Pr
 
 
 /** B11: business_store_settings is writable only with the `store` permission. */
-const STORE_PERMISSION = "Changing store settings needs the Store permission.";
+const STORE_PERMISSION = tk("Changing store settings needs the Store permission.");
 
 const STORE_COLUMNS =
   "sells_products, offers_appointments, delivery_enabled, pickup_enabled, delivery_fee, free_delivery_over, delivery_time_text, returns_policy, allow_exchanges";
@@ -333,7 +334,7 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
 
 export async function fetchStoreSettings(businessId: string): Promise<Result<StoreSettings>> {
   const { data, error } = await db.from("business_store_settings").select(STORE_COLUMNS).eq("business_id", businessId).maybeSingle();
-  if (error) return fail(error, "Couldn't load your policies.");
+  if (error) return fail(error, t("Couldn't load your policies."));
   const r = data as Record<string, unknown> | null;
   return {
     ok: true,
@@ -376,11 +377,11 @@ export async function saveStoreSettings(businessId: string, s: StoreSettings): P
   if (res.error) {
     console.error("[business-more] Could not save store settings:", res.error.message);
     // B11: only a seat with `store` may write (RLS 42501 on insert).
-    if (res.error.code === "42501") return { ok: false, code: res.error.code, message: STORE_PERMISSION };
-    return fail(res.error, "Couldn't save. Try again.");
+    if (res.error.code === "42501") return { ok: false, code: res.error.code, message: t(STORE_PERMISSION) };
+    return fail(res.error, t("Couldn't save. Try again."));
   }
   // B11: an update RLS filters out changes nothing and says nothing; no row back = not allowed.
-  if (s.exists && Array.isArray(res.data) && res.data.length === 0) return { ok: false, code: "42501", message: STORE_PERMISSION };
+  if (s.exists && Array.isArray(res.data) && res.data.length === 0) return { ok: false, code: "42501", message: t(STORE_PERMISSION) };
   const back = await fetchStoreSettings(businessId);
   return back;
 }
@@ -408,7 +409,7 @@ export interface PolicyDoc {
 
 export async function fetchPolicy(businessId: string, kind: PolicyKind): Promise<Result<PolicyDoc>> {
   const doc = await db.from("policy_documents").select("id, current_version").eq("business_id", businessId).eq("kind", kind).maybeSingle();
-  if (doc.error) return fail(doc.error, "Couldn't load this. Try again.");
+  if (doc.error) return fail(doc.error, t("Couldn't load this. Try again."));
   if (!doc.data) return { ok: true, value: { documentId: null, currentVersion: null, versions: [], acceptedCurrent: 0 } };
   const documentId = doc.data.id as string;
   const vers = await db
@@ -416,7 +417,7 @@ export async function fetchPolicy(businessId: string, kind: PolicyKind): Promise
     .select("id, version, body, published_at, requires_reacceptance")
     .eq("document_id", documentId)
     .order("version", { ascending: false });
-  if (vers.error) return fail(vers.error, "Couldn't load this. Try again.");
+  if (vers.error) return fail(vers.error, t("Couldn't load this. Try again."));
   const versions: PolicyVersion[] = (vers.data ?? []).map((v: Record<string, unknown>) => ({
     id: v.id as string,
     version: v.version as number,
@@ -447,7 +448,7 @@ export async function publishPolicyVersion(
   let documentId = doc.documentId;
   if (!documentId) {
     const made = await db.from("policy_documents").insert({ business_id: businessId, kind }).select("id").single();
-    if (made.error || !made.data) return fail(made.error, "Couldn't save. Try again.");
+    if (made.error || !made.data) return fail(made.error, t("Couldn't save. Try again."));
     documentId = made.data.id as string;
   }
   const next = Math.max(0, ...doc.versions.map((v) => v.version)) + 1;
@@ -460,10 +461,10 @@ export async function publishPolicyVersion(
   });
   if (ins.error) {
     console.error("[business-more] Could not publish the version:", ins.error.message);
-    return fail(ins.error, "Couldn't save. Try again.");
+    return fail(ins.error, t("Couldn't save. Try again."));
   }
   const point = await db.from("policy_documents").update({ current_version: next }).eq("id", documentId).select("id");
-  if (point.error) return fail(point.error, "Couldn't save. Try again.");
+  if (point.error) return fail(point.error, t("Couldn't save. Try again."));
   return { ok: true, value: next };
 }
 
@@ -504,7 +505,7 @@ export async function fetchLocations(businessId: string): Promise<Result<BizLoca
     .select("id, name, location, lat, lng, public_phones, venue_kind, default_cancellation_hours, timezone, min_entry_age, guest_passes_per_month, front_desk_checkin, created_at")
     .eq("business_id", businessId)
     .order("created_at", { ascending: true });
-  if (error) return fail(error, "Couldn't load your locations.");
+  if (error) return fail(error, t("Couldn't load your locations."));
   const rows = (data ?? []) as Record<string, unknown>[];
   const hours = await Promise.all(rows.map((r) => fetchGymHours(r.id as string)));
   return {
@@ -555,8 +556,8 @@ export async function addLocation(businessId: string, kind: VenueKind, d: Locati
     .single();
   if (error || !data) {
     console.error("[business-more] Could not add the location:", error?.message);
-    if (error?.code === "23514") return { ok: false, code: error.code, message: "Check the phone number and try again." };
-    return fail(error, "Couldn't add the location. Try again.");
+    if (error?.code === "23514") return { ok: false, code: error.code, message: t("Check the phone number and try again.") };
+    return fail(error, t("Couldn't add the location. Try again."));
   }
   return { ok: true, value: data.id as string };
 }
@@ -572,10 +573,10 @@ export async function updateLocation(gymId: string, d: LocationDraft, originalPh
   }
   const { data, error } = await db.from("gyms").update(row).eq("id", gymId).select("id");
   if (error) {
-    if (error.code === "23514") return { ok: false, code: error.code, message: "Check the phone number and try again." };
-    return fail(error, "Couldn't save the location. Try again.");
+    if (error.code === "23514") return { ok: false, code: error.code, message: t("Check the phone number and try again.") };
+    return fail(error, t("Couldn't save the location. Try again."));
   }
-  if (!data || data.length === 0) return { ok: false, code: "42501", message: "Couldn't save the location. Try again." };
+  if (!data || data.length === 0) return { ok: false, code: "42501", message: t("Couldn't save the location. Try again.") };
   return { ok: true, value: null };
 }
 
@@ -591,8 +592,8 @@ export async function updateEntryRules(gymId: string, v: EntryRules): Promise<Re
     front_desk_checkin: v.frontDeskCheckIn,
   };
   const { data, error } = await db.from("gyms").update(row).eq("id", gymId).select("id");
-  if (error) return fail(error, "Couldn't save the entry rules. Try again.");
-  if (!data || data.length === 0) return { ok: false, code: "42501", message: "You need the Venues permission to change this. Ask the owner." };
+  if (error) return fail(error, t("Couldn't save the entry rules. Try again."));
+  if (!data || data.length === 0) return { ok: false, code: "42501", message: t("You need the Venues permission to change this. Ask the owner.") };
   return { ok: true, value: { minEntryAge: row.min_entry_age, guestPassesPerMonth: row.guest_passes_per_month, frontDeskCheckIn: row.front_desk_checkin } };
 }
 
@@ -607,7 +608,7 @@ export async function countUpcomingClasses(gymId: string): Promise<Result<number
     .eq("gym_id", gymId)
     .gte("event_date", iso(today))
     .lte("event_date", iso(until));
-  if (error) return fail(error, "Couldn't check this location's classes.");
+  if (error) return fail(error, t("Couldn't check this location's classes."));
   return { ok: true, value: count ?? 0 };
 }
 
@@ -615,8 +616,8 @@ export async function removeLocation(gymId: string): Promise<Result<null>> {
   const { error } = await db.from("gyms").delete().eq("id", gymId);
   if (error) {
     console.error("[business-more] Could not remove the location:", error.message);
-    if (error.code === "23503") return { ok: false, code: error.code, message: "Members still hold memberships here, so it can't be removed yet." };
-    return fail(error, "Couldn't remove the location. Try again.");
+    if (error.code === "23503") return { ok: false, code: error.code, message: t("Members still hold memberships here, so it can't be removed yet.") };
+    return fail(error, t("Couldn't remove the location. Try again."));
   }
   return { ok: true, value: null };
 }
@@ -644,17 +645,17 @@ export async function fetchTeamRows(businessId: string): Promise<Result<TeamRow[
   // without the grant fails the whole statement), read again without it.
   let rows = await read("professional_id, accepted_at, created_at, revoked_at");
   if (rows.error && !isOffline(rows.error)) rows = await read("professional_id, accepted_at, created_at");
-  if (rows.error) return fail(rows.error, "Couldn't load your team.");
+  if (rows.error) return fail(rows.error, t("Couldn't load your team."));
   const all = (rows.data ?? []) as unknown as { professional_id: string; accepted_at: string | null; created_at: string; revoked_at?: string | null }[];
   const list = all.filter((r) => r.accepted_at || !r.revoked_at);
   if (list.length === 0) return { ok: true, value: [] };
   const names = await db.from("public_profile_summary").select("id, first_name").in("id", list.map((r) => r.professional_id));
-  const nameById = new Map<string, string>(((names.data ?? []) as { id: string; first_name: string | null }[]).map((p) => [p.id, p.first_name?.trim() || "Unnamed professional"]));
+  const nameById = new Map<string, string>(((names.data ?? []) as { id: string; first_name: string | null }[]).map((p) => [p.id, p.first_name?.trim() || t("Unnamed professional")]));
   return {
     ok: true,
     value: list.map((r) => ({
       professionalId: r.professional_id,
-      name: nameById.get(r.professional_id) ?? "Unnamed professional",
+      name: nameById.get(r.professional_id) ?? t("Unnamed professional"),
       acceptedAt: r.accepted_at,
       invitedAt: r.created_at,
     })),
@@ -666,7 +667,7 @@ export async function fetchTeamRows(businessId: string): Promise<Result<TeamRow[
 
 export async function fetchPlanRenewal(userId: string): Promise<Result<string | null>> {
   const { data, error } = await db.from("subscription_states").select("renews_at, status").eq("owner_id", userId).maybeSingle();
-  if (error) return fail(error, "Couldn't load your plan.");
+  if (error) return fail(error, t("Couldn't load your plan."));
   return { ok: true, value: data?.status === "active" ? ((data.renews_at as string | null) ?? null) : null };
 }
 
@@ -679,7 +680,7 @@ export async function signOutOtherSessions(): Promise<Result<null>> {
   const { error } = await supabase.auth.signOut({ scope: "others" });
   if (error) {
     console.error("[business-more] Could not sign out other sessions:", error.message);
-    return fail(error, "Couldn't sign out your other devices. Try again.");
+    return fail(error, t("Couldn't sign out your other devices. Try again."));
   }
   return { ok: true, value: null };
 }

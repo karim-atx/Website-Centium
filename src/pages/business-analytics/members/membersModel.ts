@@ -1,6 +1,7 @@
 import type { BizKind } from "../../../components/business-more/kind";
 import type { First90, GrowthWeek, InvitesFunnel, PeopleSummary, PeriodStats, PlanFigure } from "../../../services/business-analytics/model";
 import { appLocale } from "../../../i18n/format";
+import { t, tk, tn, tx } from "../../../i18n/core";
 
 // The Members section's pages per type (AN4 frames for the drawn structure;
 // OURS-AN4-gym-variant and OURS-AN4-classes-variant for the per-type set and
@@ -51,20 +52,20 @@ export function pagesOf(kind: BizKind, opts: { hidePlans?: boolean } = {}): Memb
   if (kind === "store") return [];
   if (kind === "classes") {
     const all: MembersPageDef[] = [
-      { key: "growth", title: "Growth", boxes: ["Active clients", "New clients"], coming: "Coming soon: how many clients booked in this range, and how many were new." },
-      { key: "first90", title: "First 90 days", boxes: ["New in the last 90 days", "Booked again in 2 weeks"], coming: "Coming soon: how many new clients book again in their first weeks." },
-      { key: "engagement", title: "Engagement", boxes: ["Bookings a week", "Booked this period"], coming: "How often clients book, over the last 4 weeks." },
-      { key: "atrisk", title: "At risk", boxes: ["Clients at risk", "Average drop vs their usual"], coming: "Clients who have stopped booking." },
-      { key: "plans", title: "Plans", boxes: ["Membership plans", "On the most popular plan"], coming: "How clients on a plan split across your plans." },
+      { key: "growth", title: tx("Growth", "members page"), boxes: [t("Active clients"), t("New clients")], coming: t("Coming soon: how many clients booked in this range, and how many were new.") },
+      { key: "first90", title: t("First 90 days"), boxes: [t("New in the last 90 days"), t("Booked again in 2 weeks")], coming: t("Coming soon: how many new clients book again in their first weeks.") },
+      { key: "engagement", title: t("Engagement"), boxes: [t("Bookings a week"), t("Booked this period")], coming: t("How often clients book, over the last 4 weeks.") },
+      { key: "atrisk", title: t("At risk"), boxes: [t("Clients at risk"), t("Average drop vs their usual")], coming: t("Clients who have stopped booking.") },
+      { key: "plans", title: t("Plans"), boxes: [t("Membership plans"), t("On the most popular plan")], coming: t("How clients on a plan split across your plans.") },
     ];
     return opts.hidePlans ? all.filter((p) => p.key !== "plans") : all;
   }
   return [
-    { key: "growth", title: "Growth", boxes: ["Active members", "Average membership length"], coming: "How many members joined and left in this range." },
-    { key: "first90", title: "First 90 days", boxes: ["Joined in the last 90 days", "Still active"], coming: "How many new members are still with you after 90 days." },
-    { key: "visits", title: "Visits", boxes: ["Visits a week", "Visited this period"], coming: "How often members check in at your front desk." },
-    { key: "notseen", title: "Not seen in 14 days", boxes: ["Not seen in 14 days", "Longest away"], coming: "Members with a current membership who have not checked in lately." },
-    { key: "plans", title: "Plans", boxes: ["Membership plans", "On the most popular plan"], coming: "How members split across your plans." },
+    { key: "growth", title: tx("Growth", "members page"), boxes: [t("Active members"), t("Average membership length")], coming: t("How many members joined and left in this range.") },
+    { key: "first90", title: t("First 90 days"), boxes: [t("Joined in the last 90 days"), t("Still active")], coming: t("How many new members are still with you after 90 days.") },
+    { key: "visits", title: t("Visits"), boxes: [t("Visits a week"), t("Visited this period")], coming: t("How often members check in at your front desk.") },
+    { key: "notseen", title: t("Not seen in 14 days"), boxes: [t("Not seen in 14 days"), t("Longest away")], coming: t("Members with a current membership who have not checked in lately.") },
+    { key: "plans", title: t("Plans"), boxes: [t("Membership plans"), t("On the most popular plan")], coming: t("How members split across your plans.") },
   ];
 }
 
@@ -94,7 +95,7 @@ export const NO_FIGURES: MembersFigures = { summary: null, first90: null, plans:
 // only then; otherwise the page keeps its plain lead without deltas.
 
 /** NEW STRING (aligned with the server's flag and the Dashboard's "Early days: not enough history yet"). */
-export const EARLY_LINE = "Early days: not enough history yet. Some comparisons appear once there is more history.";
+export const EARLY_LINE = tk("Early days: not enough history yet. Some comparisons appear once there is more history.");
 
 export function isEarly(vocab: MembersVocab, f: MembersFigures): boolean {
   if (vocab.label === "Clients") return !!f.stats?.class_bookings?.early;
@@ -135,21 +136,21 @@ export interface PageView {
 
 /** "this week" / "in the last 4 weeks" / "from 8 Sep to 5 Oct" (the range inside a sentence). */
 export function inRange(key: string, words: string): string {
-  if (key === "week") return "this week";
-  if (key === "custom") return `from ${words}`;
-  return `in ${words}`;
+  if (key === "week") return t("this week");
+  if (key === "custom") return t("from {words}", { words });
+  return t("in {words}", { words });
 }
 
-const plural = (n: number, one: string, many: string) => `${n.toLocaleString(appLocale("en-US"))} ${n === 1 ? one : many}`;
+const fmtN = (n: number) => n.toLocaleString(appLocale("en-US"));
 const MINUS = "−";
 
 /** AN4-005 row 16a: "+{n} vs prev" good, "−{n} vs prev" high, 0 "No change" faint; none while early or with compare off. */
 function netDelta(stats: PeriodStats | null, compare: boolean): Delta | undefined {
   const n = stats?.members_net;
   if (!compare || !n || n.early || n.value === null) return undefined;
-  if (n.value > 0) return { t: `+${n.value} vs prev`, tone: "good" };
-  if (n.value < 0) return { t: `${MINUS}${Math.abs(n.value)} vs prev`, tone: "high" };
-  return { t: "No change", tone: "faint" };
+  if (n.value > 0) return { t: t("{delta} vs prev", { delta: `+${n.value}` }), tone: "good" };
+  if (n.value < 0) return { t: t("{delta} vs prev", { delta: `${MINUS}${Math.abs(n.value)}` }), tone: "high" };
+  return { t: t("No change"), tone: "faint" };
 }
 
 /**
@@ -171,16 +172,19 @@ export function pageView(page: MembersPageDef, vocab: MembersVocab, f: MembersFi
       const j = f.stats.members_joined?.value ?? 0;
       const e = f.stats.members_ended?.value ?? 0;
       const net = f.stats.members_net.value ?? j - e;
-      const how = net > 0 ? `you grew by ${net}` : net < 0 ? `you shrank by ${Math.abs(net)}` : "your count held steady";
+      const how = net > 0 ? t("you grew by {n}", { n: net }) : net < 0 ? t("you shrank by {n}", { n: Math.abs(net) }) : t("your count held steady");
       // AN4-024 rows 3-4: box 1 + "New", box 2 "–", no delta, the early lead.
       if (fresh)
         return {
-          boxes: [box(0, active.toLocaleString(appLocale("en-US")), { t: "New", tone: "good" }), box(1, null)],
-          lead: `${fresh.n === 1 ? `Your first ${vocab.one}` : `Your first ${fresh.n.toLocaleString(appLocale("en-US"))} ${vocab.people}`} joined ${fresh.weeks === 1 ? "this week" : `in the last ${fresh.weeks} weeks`}. Trends compare periods once you have 8 weeks of history.`,
+          boxes: [box(0, active.toLocaleString(appLocale("en-US")), { t: t("New"), tone: "good" }), box(1, null)],
+          lead:
+            fresh.weeks === 1
+              ? tn(fresh.n, "Your first member joined this week. Trends compare periods once you have 8 weeks of history.", "Your first {n} members joined this week. Trends compare periods once you have 8 weeks of history.", { n: fmtN(fresh.n) })
+              : tn(fresh.n, "Your first member joined in the last {weeks} weeks. Trends compare periods once you have 8 weeks of history.", "Your first {n} members joined in the last {weeks} weeks. Trends compare periods once you have 8 weeks of history.", { n: fmtN(fresh.n), weeks: fresh.weeks }),
         };
       return {
         boxes: [box(0, active.toLocaleString(appLocale("en-US")), early ? undefined : netDelta(f.stats, ctx.compare)), box(1, null)],
-        lead: `${plural(active, `active ${vocab.one}`, `active ${vocab.people}`)}: ${j} joined and ${e} left ${inRange(ctx.rangeKey, ctx.rangeWords)}, so ${how}.`,
+        lead: tn(active, "{n} active member: {joined} joined and {left} left {when}, so {how}.", "{n} active members: {joined} joined and {left} left {when}, so {how}.", { n: fmtN(active), joined: j, left: e, when: inRange(ctx.rangeKey, ctx.rangeWords), how }),
       };
     }
     case "first90": {
@@ -189,21 +193,26 @@ export function pageView(page: MembersPageDef, vocab: MembersVocab, f: MembersFi
       // AN4-044 row 13 early lead, only while it is true: the first members are recent and some booked.
       if (fresh && joined > 0 && bookedAClass > 0)
         return {
-          boxes: [box(0, joined.toLocaleString(appLocale("en-US"))), box(1, `${stillActive} of ${joined}`)],
-          lead: `Too early for 30, 60 and 90-day checks. ${bookedAClass} of your ${plural(joined, `new ${vocab.one}`, `new ${vocab.people}`)} ${bookedAClass === 1 ? "has" : "have"} already booked a class.`,
+          boxes: [box(0, joined.toLocaleString(appLocale("en-US"))), box(1, t("{n} of {total}", { n: stillActive, total: joined }))],
+          lead:
+            bookedAClass === 1
+              ? tn(joined, "Too early for 30, 60 and 90-day checks. 1 of your 1 new member has already booked a class.", "Too early for 30, 60 and 90-day checks. 1 of your {n} new members has already booked a class.", { n: fmtN(joined) })
+              : tn(joined, "Too early for 30, 60 and 90-day checks. {booked} of your 1 new member have already booked a class.", "Too early for 30, 60 and 90-day checks. {booked} of your {n} new members have already booked a class.", { n: fmtN(joined), booked: bookedAClass }),
         };
       return {
-        boxes: [box(0, joined.toLocaleString(appLocale("en-US"))), box(1, joined > 0 ? `${stillActive} of ${joined}` : null)],
+        boxes: [box(0, joined.toLocaleString(appLocale("en-US"))), box(1, joined > 0 ? t("{n} of {total}", { n: stillActive, total: joined }) : null)],
         lead:
           joined > 0
-            ? `${stillActive} of the ${plural(joined, vocab.one, vocab.people)} who joined in the last 90 days ${stillActive === 1 ? "is" : "are"} still with you.`
-            : `No new ${vocab.people} joined in the last 90 days.`,
+            ? stillActive === 1
+              ? tn(joined, "1 of the 1 member who joined in the last 90 days is still with you.", "1 of the {n} members who joined in the last 90 days is still with you.", { n: fmtN(joined) })
+              : tn(joined, "{still} of the 1 member who joined in the last 90 days are still with you.", "{still} of the {n} members who joined in the last 90 days are still with you.", { n: fmtN(joined), still: stillActive })
+            : t("No new members joined in the last 90 days."),
       };
     }
     case "visits": {
       const v = s?.visits_per_week_4w;
       if (v === undefined) return coming;
-      return { boxes: [box(0, v.toFixed(1)), box(1, null)], lead: `${v.toFixed(1)} check-ins a week on average over the last 4 weeks.` };
+      return { boxes: [box(0, v.toFixed(1)), box(1, null)], lead: t("{n} check-ins a week on average over the last 4 weeks.", { n: v.toFixed(1) }) };
     }
     case "notseen": {
       const n = s?.members_not_seen_14d;
@@ -211,25 +220,30 @@ export function pageView(page: MembersPageDef, vocab: MembersVocab, f: MembersFi
       const all = s?.members ?? 0;
       return {
         boxes: [box(0, n.toLocaleString(appLocale("en-US"))), box(1, null)],
-        lead: all === 0 ? `No one has a current membership right now.` : `${n} of your ${plural(all, `${vocab.one} with a current membership`, `${vocab.people} with a current membership`)} ${n === 1 ? "has" : "have"} not checked in for 14 days.`,
+        lead:
+          all === 0
+            ? t("No one has a current membership right now.")
+            : n === 1
+              ? tn(all, "1 of your 1 member with a current membership has not checked in for 14 days.", "1 of your {n} members with a current membership has not checked in for 14 days.", { n: fmtN(all) })
+              : tn(all, "{count} of your 1 member with a current membership have not checked in for 14 days.", "{count} of your {n} members with a current membership have not checked in for 14 days.", { n: fmtN(all), count: n }),
       };
     }
     case "engagement": {
       const v = s?.bookings_per_week_4w;
       if (v === undefined) return coming;
-      return { boxes: [box(0, v.toFixed(1)), box(1, null)], lead: `Your ${vocab.people} made ${v.toFixed(1)} bookings a week over the last 4 weeks.` };
+      return { boxes: [box(0, v.toFixed(1)), box(1, null)], lead: t("Your clients made {n} bookings a week over the last 4 weeks.", { n: v.toFixed(1) }) };
     }
     case "atrisk": {
       const n = s?.class_clients_at_risk_21d;
       if (n === undefined) return coming;
       // AN4-031 D3 / AN4-011 O4 / AN4-044 O2: early with no one flagged reads the early lead ("0" in ink).
-      if (early && n === 0) return { boxes: [box(0, "0"), box(1, null)], lead: `We flag ${vocab.people} once they have 4 weeks of bookings to compare against.` };
+      if (early && n === 0) return { boxes: [box(0, "0"), box(1, null)], lead: t("We flag clients once they have 4 weeks of bookings to compare against.") };
       return {
         boxes: [box(0, n.toLocaleString(appLocale("en-US"))), box(1, null)],
         lead:
           n > 0
-            ? `${plural(n, `${vocab.one} has`, `${vocab.people} have`)} booked in the last 4 months but not in the last 21 days.`
-            : `No one has stopped booking. ${vocab.people[0].toUpperCase()}${vocab.people.slice(1)} appear here after 21 days without a booking.`,
+            ? tn(n, "1 client has booked in the last 4 months but not in the last 21 days.", "{n} clients have booked in the last 4 months but not in the last 21 days.", { n: fmtN(n) })
+            : t("No one has stopped booking. Clients appear here after 21 days without a booking."),
       };
     }
     case "plans": {
@@ -237,18 +251,26 @@ export function pageView(page: MembersPageDef, vocab: MembersVocab, f: MembersFi
       if (!f.plans) return { boxes: [count, box(1, null)], lead: page.coming };
       const total = f.plans.reduce((a, p) => a + p.activeNow, 0);
       const top = f.plans[0];
-      if (!top || total === 0) return { boxes: [count, box(1, null)], lead: `No ${vocab.people} are on a plan yet.` };
+      if (!top || total === 0) return { boxes: [count, box(1, null)], lead: classes ? t("No clients are on a plan yet.") : t("No members are on a plan yet.") };
       // AN4-044 row 13: "{n} of your {m} members are on {plan}." (m: everyone with a current membership).
       if (early) {
         const all = Math.max(total, f.growth?.cur.at(-1)?.active ?? 0);
         return {
-          boxes: [count, box(1, top.activeNow.toLocaleString(appLocale("en-US")), undefined, `On ${top.name}`)],
-          lead: `${top.activeNow} of your ${plural(all, vocab.one, vocab.people)} ${top.activeNow === 1 ? "is" : "are"} on ${top.name}.`,
+          boxes: [count, box(1, top.activeNow.toLocaleString(appLocale("en-US")), undefined, t("On {plan}", { plan: top.name }))],
+          lead: classes
+            ? top.activeNow === 1
+              ? tn(all, "1 of your 1 client is on {plan}.", "1 of your {n} clients is on {plan}.", { n: fmtN(all), plan: top.name })
+              : tn(all, "{count} of your 1 client are on {plan}.", "{count} of your {n} clients are on {plan}.", { n: fmtN(all), plan: top.name, count: top.activeNow })
+            : top.activeNow === 1
+              ? tn(all, "1 of your 1 member is on {plan}.", "1 of your {n} members is on {plan}.", { n: fmtN(all), plan: top.name })
+              : tn(all, "{count} of your 1 member are on {plan}.", "{count} of your {n} members are on {plan}.", { n: fmtN(all), plan: top.name, count: top.activeNow }),
         };
       }
       return {
-        boxes: [count, box(1, top.activeNow.toLocaleString(appLocale("en-US")), undefined, `On ${top.name}, the most popular`)],
-        lead: `${top.name} holds ${Math.round((top.activeNow / total) * 100)}% of ${vocab.people} on a plan.`,
+        boxes: [count, box(1, top.activeNow.toLocaleString(appLocale("en-US")), undefined, t("On {plan}, the most popular", { plan: top.name }))],
+        lead: classes
+          ? t("{plan} holds {pct}% of clients on a plan.", { plan: top.name, pct: Math.round((top.activeNow / total) * 100) })
+          : t("{plan} holds {pct}% of members on a plan.", { plan: top.name, pct: Math.round((top.activeNow / total) * 100) }),
       };
     }
   }
@@ -270,8 +292,7 @@ export function planBars(plans: PlanFigure[]): { key: string; t: string; n: numb
 
 export type SeriesKey = "active" | "joined" | "ended" | "prev";
 
-const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const dm = (iso: string) => `${MON[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`;
+const dm = (iso: string) => new Date(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10))).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 const sgn = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `${MINUS}${Math.abs(n)}` : "0");
 
 /** The series a legend tap may still hide (AN4-021 row 5): never the last of Active / Joined / Ended ("Previous period" does not count). */
@@ -296,7 +317,7 @@ export function joinsByWeek(cur: GrowthWeek[], from: string, to: string): { key:
     e: w.ended ? `${MINUS}${w.ended}` : "",
     jh: (w.joined / mx) * 30,
     eh: (w.ended / mx) * 30,
-    aria: `Week of ${dm(w.weekStart)}: ${w.joined} joined, ${w.ended} ended`,
+    aria: t("Week of {date}: {joined} joined, {ended} ended", { date: dm(w.weekStart), joined: w.joined, ended: w.ended }),
   }));
 }
 
@@ -332,8 +353,8 @@ export function growthChart(cur: GrowthWeek[], prev: GrowthWeek[] | null, hide: 
   return {
     step,
     cap: GH
-      ? "Active members each week (line) with joins above and ends below the baseline. Dashed: the same weeks last period."
-      : "Weekly, since your first members joined. Active members as a line, joins and ends as bars.",
+      ? t("Active members each week (line) with joins above and ends below the baseline. Dashed: the same weeks last period.")
+      : t("Weekly, since your first members joined. Active members as a line, joins and ends as bars."),
     ticks: [lo, Math.round((lo + hi) / 2), hi].map((v) => ({ y: yL(v), ty: yL(v) + 3, t: String(v) })),
     line: pth(ACT),
     area: `${pth(ACT)} L${xC(last).toFixed(1)},78 L${xC(0).toFixed(1)},78 Z`,
@@ -363,31 +384,31 @@ export function growthChart(cur: GrowthWeek[], prev: GrowthWeek[] | null, hide: 
     xl: [
       { x: 28, a: "start" as const, t: cur[0] ? dm(cur[0].weekStart) : "" },
       { x: 171, a: "middle" as const, t: cur[Math.floor(n / 2)] ? dm(cur[Math.floor(n / 2)].weekStart) : "" },
-      { x: 314, a: "end" as const, t: endsThisWeek ? "This wk" : cur[last] ? dm(cur[last].weekStart) : "" },
+      { x: 314, a: "end" as const, t: endsThisWeek ? t("This wk") : cur[last] ? dm(cur[last].weekStart) : "" },
     ],
     mk: mi === null ? null : { x: xC(mi), y: yL(ACT[mi]) },
     tip:
       mi === null || !cur[mi]
         ? null
         : {
-            wk: `Week of ${dm(cur[mi].weekStart)}`,
+            wk: t("Week of {date}", { date: dm(cur[mi].weekStart) }),
             x: `${((xC(mi) / 318) * 100).toFixed(1)}%`,
             none: none(mi),
             rows: (
               [
-                { k: "active", l: "Active", v: String(ACT[mi]), n: 0 },
-                { k: "joined", l: "Joined", v: String(JN[mi]), n: 0 },
-                { k: "ended", l: "Ended", v: String(EN[mi]), n: 0 },
-                { k: "net", l: "Net change", v: sgn(net(mi)), n: net(mi) },
+                { k: "active", l: tx("Active", "members chart"), v: String(ACT[mi]), n: 0 },
+                { k: "joined", l: t("Joined"), v: String(JN[mi]), n: 0 },
+                { k: "ended", l: t("Ended"), v: String(EN[mi]), n: 0 },
+                { k: "net", l: t("Net change"), v: sgn(net(mi)), n: net(mi) },
               ] as { k: SeriesKey | "net"; l: string; v: string; n: number }[]
             ).filter((r) => r.k === "net" || vis(r.k)),
           },
     legend: (
       [
-        { k: "active", t: "Active", w: 14, h: 3, r: "999px" },
-        { k: "joined", t: "Joined", w: 8, h: 8, r: "2px" },
-        { k: "ended", t: "Ended", w: 8, h: 8, r: "2px" },
-        { k: "prev", t: "Previous period", w: 14, h: 0, r: "0" },
+        { k: "active", t: tx("Active", "members chart"), w: 14, h: 3, r: "999px" },
+        { k: "joined", t: t("Joined"), w: 8, h: 8, r: "2px" },
+        { k: "ended", t: t("Ended"), w: 8, h: 8, r: "2px" },
+        { k: "prev", t: t("Previous period"), w: 14, h: 0, r: "0" },
       ] as { k: SeriesKey; t: string; w: number; h: number; r: string }[]
     )
       .filter((x) => x.k !== "prev" || GH)
@@ -397,9 +418,9 @@ export function growthChart(cur: GrowthWeek[], prev: GrowthWeek[] | null, hide: 
       const i = mi ?? last;
       const w = cur[i];
       if (!w) return "";
-      if (none(i)) return `Week of ${dm(w.weekStart)}: No members yet`;
-      return `Week of ${dm(w.weekStart)}: Active ${ACT[i]}, Joined ${JN[i]}, Ended ${EN[i]}, Net change ${sgn(JN[i] - EN[i])}`;
+      if (none(i)) return t("Week of {date}: No members yet", { date: dm(w.weekStart) });
+      return t("Week of {date}: Active {active}, Joined {joined}, Ended {ended}, Net change {net}", { date: dm(w.weekStart), active: ACT[i], joined: JN[i], ended: EN[i], net: sgn(JN[i] - EN[i]) });
     })(),
-    srRows: cur.map((w) => `Week of ${dm(w.weekStart)}: active ${w.active}, joined ${w.joined}, ended ${w.ended}`),
+    srRows: cur.map((w) => t("Week of {date}: active {active}, joined {joined}, ended {ended}", { date: dm(w.weekStart), active: w.active, joined: w.joined, ended: w.ended })),
   };
 }

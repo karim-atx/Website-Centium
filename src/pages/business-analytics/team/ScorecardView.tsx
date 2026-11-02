@@ -11,6 +11,7 @@ import { RatingGraphic, ReviewsSheet, Snippets } from "./RatingsParts";
 import type { RatingsState } from "./useRatings";
 import type { TeamState } from "./useTeam";
 import { roleLabel } from "./vocab";
+import { getLanguage, t, tk, tn } from "../../../i18n/core";
 
 // AN5-045 instructor scorecard (AnTeamV6 l.282-342, sc0 l.500-509), with
 // AN5-048 (below target in caution), AN5-049 (New, not enough first-timers),
@@ -65,8 +66,8 @@ export function ScorecardView({
   if (!st) {
     return (
       <div>
-        <PageHeader crumb={crumb} title="Scorecard" backLabel={backLabel} onBack={onBack} />
-        {state.error ? <Strip offline={state.error === "offline"} text="Couldn't load your team. Check your connection and try again." onRetry={state.reload} /> : null}
+        <PageHeader crumb={crumb} title={t("Scorecard")} backLabel={backLabel} onBack={onBack} />
+        {state.error ? <Strip offline={state.error === "offline"} text={t("Couldn't load your team. Check your connection and try again.")} onRetry={state.reload} /> : null}
       </div>
     );
   }
@@ -82,10 +83,14 @@ export function ScorecardView({
   const fillCaution = st.fill !== null && st.fill < TARGET;
   const fillCap =
     st.fill === null
-      ? `Fill shows after ${MIN_SESSIONS} classes (${st.sessions} so far).`
+      ? t("Fill shows after {min} classes ({n} so far).", { min: MIN_SESSIONS, n: st.sessions })
       : studio !== null && (state.stats?.withFill ?? 0) > 1
-        ? `${Math.abs(st.fill - studio)} points ${st.fill >= studio ? "above" : "below"} the studio's ${studio}%. Teal line: 70% target.`
-        : `${st.fill >= TARGET ? "At or above" : "Under"} your 70% target. Teal line: 70% target.`;
+        ? st.fill >= studio
+          ? t("{n} points above the studio's {pct}%. Teal line: 70% target.", { n: Math.abs(st.fill - studio), pct: studio })
+          : t("{n} points below the studio's {pct}%. Teal line: 70% target.", { n: Math.abs(st.fill - studio), pct: studio })
+        : st.fill >= TARGET
+          ? t("At or above your 70% target. Teal line: 70% target.")
+          : t("Under your 70% target. Teal line: 70% target.");
 
   // Time slots: fill by weekday + start time, from 2 different slots.
   const slots = new Map<string, { label: string; title: string; booked: number; cap: number }>();
@@ -106,7 +111,7 @@ export function ScorecardView({
     <div>
       <PageHeader crumb={crumb} title={p.name} backLabel={backLabel} onBack={onBack} />
       {state.error && (
-        <Strip offline={state.error === "offline"} text={state.error === "offline" ? "You're offline. Showing your team as of the last update." : "Couldn't load your team. Check your connection and try again."} onRetry={state.reload} />
+        <Strip offline={state.error === "offline"} text={state.error === "offline" ? t("You're offline. Showing your team as of the last update.") : t("Couldn't load your team. Check your connection and try again.")} onRetry={state.reload} />
       )}
       <div className="an5-card an5-sc">
         <div className="an5-sc-head">
@@ -123,17 +128,17 @@ export function ScorecardView({
 
         <div className="an5-metric">
           <div className="an5-metric-head">
-            <p className="an5-metric-l">Fill rate</p>
+            <p className="an5-metric-l">{t("Fill rate")}</p>
             <p className="an5-metric-v" style={fillCaution ? { color: "var(--an-caution-text)" } : undefined}>
               {st.fill === null ? "–" : `${st.fill}%`}
             </p>
           </div>
           <div className="an5-mtrack">
-            <span className="an5-mtrack-l">Booked spots</span>
+            <span className="an5-mtrack-l">{t("Booked spots")}</span>
             <div className="an5-track">
               <div className="an5-bar-fill" style={{ width: `${st.fill ?? 0}%`, background: fillCaution ? "var(--an-caution)" : "var(--an-fill)" }} />
-              <span className="an5-ref is-target" style={{ left: `${TARGET}%` }} aria-hidden />
-              {studio !== null && (state.stats?.withFill ?? 0) > 1 && <span className="an5-ref is-avg" style={{ left: `${studio}%` }} aria-hidden />}
+              <span className="an5-ref is-target" style={{ insetInlineStart: `${TARGET}%` }} aria-hidden />
+              {studio !== null && (state.stats?.withFill ?? 0) > 1 && <span className="an5-ref is-avg" style={{ insetInlineStart: `${studio}%` }} aria-hidden />}
             </div>
             <span className="an5-mtrack-v">{st.fill === null ? "–" : `${st.fill}%`}</span>
           </div>
@@ -142,55 +147,55 @@ export function ScorecardView({
 
         <div className="an5-metric">
           <div className="an5-metric-head">
-            <p className="an5-metric-l">Members coming back</p>
+            <p className="an5-metric-l">{t("Members coming back")}</p>
             <p className="an5-metric-v" style={{ color: "var(--an-faint)" }}>
               –
             </p>
           </div>
           {[
-            { l: "Repeat", col: "var(--an-fill)" },
-            { l: "First-timer", col: "var(--an-teal)" },
-          ].map((t) => (
-            <div key={t.l} className="an5-mtrack">
-              <span className="an5-mtrack-l">{t.l}</span>
+            { l: t("Repeat"), col: "var(--an-fill)" },
+            { l: t("First-timer"), col: "var(--an-teal)" },
+          ].map((row) => (
+            <div key={row.l} className="an5-mtrack">
+              <span className="an5-mtrack-l">{row.l}</span>
               <div className="an5-track" />
               <span className="an5-mtrack-v">–</span>
             </div>
           ))}
           <p className="an5-metric-cap">
-            {st.booked < MIN_BOOKINGS ? `Comparisons start at ${MIN_BOOKINGS} bookings (${st.booked} so far).` : "Return rates appear here soon."}
+            {st.booked < MIN_BOOKINGS ? t("Comparisons start at {min} bookings ({n} so far).", { min: MIN_BOOKINGS, n: st.booked }) : t("Return rates appear here soon.")}
           </p>
         </div>
 
         <div className="an5-metric">
           <div className="an5-metric-head">
-            <p className="an5-metric-l">Teaching load</p>
-            <p className="an5-metric-v">{st.hoursPerWeek.toFixed(1)} h / wk</p>
+            <p className="an5-metric-l">{t("Teaching load")}</p>
+            <p className="an5-metric-v">{t("{n} h / wk", { n: st.hoursPerWeek.toFixed(1) })}</p>
           </div>
           <div className="an5-mtrack">
-            <span className="an5-mtrack-l">{st.classesPerWeek} a week</span>
+            <span className="an5-mtrack-l">{t("{n} a week", { n: st.classesPerWeek })}</span>
             <div className="an5-track">
               <div className="an5-bar-fill" style={{ width: `${loadW}%` }} />
-              {(state.stats?.perPerson.filter((x) => x.sessions > 0).length ?? 0) > 1 && <span className="an5-ref is-avg" style={{ left: `${avgW}%` }} aria-hidden />}
+              {(state.stats?.perPerson.filter((x) => x.sessions > 0).length ?? 0) > 1 && <span className="an5-ref is-avg" style={{ insetInlineStart: `${avgW}%` }} aria-hidden />}
             </div>
-            <span className="an5-mtrack-v">{st.hoursPerWeek.toFixed(1)} h</span>
+            <span className="an5-mtrack-v">{t("{n} h", { n: st.hoursPerWeek.toFixed(1) })}</span>
           </div>
-          <p className="an5-metric-cap">Hours taught per week (class length × classes).</p>
+          <p className="an5-metric-cap">{t("Hours taught per week (class length × classes).")}</p>
         </div>
 
         {ranked.length >= 2 && (
           <div className="an5-metric">
-            <p className="an5-metric-l">Time slots</p>
+            <p className="an5-metric-l">{t("Time slots")}</p>
             <div className="an5-slots">
               {[
-                { k: "Best", cls: "is-best", s: ranked[0] },
-                { k: "Weakest", cls: "is-weak", s: ranked[ranked.length - 1] },
+                { k: tk("Best"), cls: "is-best", s: ranked[0] },
+                { k: tk("Weakest"), cls: "is-weak", s: ranked[ranked.length - 1] },
               ].map((x) => (
                 <div key={x.k} className={`an5-slot ${x.cls}`}>
-                  <p className="an5-slot-k">{x.k}</p>
+                  <p className="an5-slot-k">{t(x.k)}</p>
                   <p className="an5-slot-t">{x.s.label}</p>
                   <p className="an5-slot-s">
-                    {x.s.title} · {pct(x.s)}% booked
+                    {x.s.title} · {t("{pct}% booked", { pct: pct(x.s) })}
                   </p>
                 </div>
               ))}
@@ -201,18 +206,18 @@ export function ScorecardView({
         <div ref={ratRef} className={`an5-ratbox${focusRatings ? " is-focus" : ""}`}>
           <div className="an5-metric-head">
             <p ref={headRef} tabIndex={-1} className="an5-metric-l" style={{ outline: "none" }}>
-              Ratings
+              {t("Ratings")}
             </p>
             {vs && (
               <p style={{ fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", color: vs.good ? "var(--an-good)" : "var(--an-faint)" }}>{vs.text}</p>
             )}
           </div>
           {myAvg !== null ? (
-            <RatingGraphic size="sm" avg={myAvg} count={myCount} countText={`${myCount} reviews`} dist={distOf(mine, myCount)} />
+            <RatingGraphic size="sm" avg={myAvg} count={myCount} countText={tn(myCount, "{n} review", "{n} reviews")} dist={distOf(mine, myCount)} />
           ) : (
             <div className="an5-newline">
-              <b>New</b>
-              <span>Shows a rating after 3 reviews. {myCount === 0 ? "None yet." : `${myCount} so far.`}</span>
+              <b>{t("New")}</b>
+              <span>{t("Shows a rating after 3 reviews.")} {myCount === 0 ? t("None yet.") : t("{n} so far.", { n: myCount })}</span>
             </div>
           )}
           <Snippets
@@ -231,21 +236,21 @@ export function ScorecardView({
                 setSheet(true);
               }}
             >
-              See all {myCount} {myCount === 1 ? "review" : "reviews"}
-              <ChevronRight size={14} aria-hidden />
+              {tn(myCount, "See all {n} review", "See all {n} reviews")}
+              <ChevronRight className="rtl:-scale-x-100" size={14} aria-hidden />
             </button>
           )}
         </div>
 
         <div className="an5-metric">
-          <p className="an5-metric-l">Upcoming classes</p>
+          <p className="an5-metric-l">{t("Upcoming classes")}</p>
           {st.upcoming.length === 0 ? (
-            <p className="an5-metric-cap">No upcoming classes.</p>
+            <p className="an5-metric-cap">{t("No upcoming classes.")}</p>
           ) : (
             <div style={{ marginTop: 4 }}>
               {upcoming.map((c) => (
                 <div key={c.id} className="an5-up">
-                  <span className="an5-up-d">{dayDate(c.date).split(" ").slice(0, 3).join(" ")}</span>
+                  <span className="an5-up-d">{getLanguage() === "ar" ? dayDate(c.date) : dayDate(c.date).split(" ").slice(0, 3).join(" ")}</span>
                   <span className="an5-up-c">
                     {c.title} · {time12(c.start)}
                   </span>
@@ -256,26 +261,26 @@ export function ScorecardView({
               ))}
               {st.upcoming.length > 3 && !allUp && (
                 <button type="button" className="an5-more tap" onClick={() => setAllUp(true)}>
-                  See all {st.upcoming.length}
-                  <ChevronRight size={14} aria-hidden />
+                  {t("See all {n}", { n: st.upcoming.length })}
+                  <ChevronRight className="rtl:-scale-x-100" size={14} aria-hidden />
                 </button>
               )}
             </div>
           )}
         </div>
       </div>
-      <p className="an5-foot">Based on bookings in this period. Ratings come from Centium reviews.</p>
+      <p className="an5-foot">{t("Based on bookings in this period. Ratings come from Centium reviews.")}</p>
       <ReviewsSheet
         open={sheet}
         onClose={() => setSheet(false)}
-        title={`${p.name}'s reviews`}
-        lead={`${types.length ? types.join(", ") + " · " : ""}all time`}
+        title={t("{name}'s reviews", { name: p.name })}
+        lead={`${types.length ? types.join("، ") + " · " : ""}${t("all time")}`}
         list={mine}
         count={myCount}
         avg={myAvg}
         team={false}
-        businessName={state.businessName || "Your business"}
-        emptyText={`Reviews appear here after members rate ${p.name}.`}
+        businessName={state.businessName || t("Your business")}
+        emptyText={t("Reviews appear here after members rate {name}.", { name: p.name })}
         focusId={focusRev}
       />
     </div>

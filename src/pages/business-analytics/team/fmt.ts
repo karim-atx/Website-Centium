@@ -1,13 +1,18 @@
 import { dayMonth } from "../shell/range";
 import { appLocale } from "../../../i18n/format";
+import { getLanguage } from "../../../i18n/core";
+import { ARABIC_LOCALE } from "../../../i18n/format";
 
 const SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** "Sat" */
-export const weekday = (iso: string): string => SHORT[new Date(`${iso}T00:00:00`).getDay()];
+export const weekday = (iso: string): string =>
+  getLanguage() === "ar"
+    ? new Date(`${iso}T00:00:00`).toLocaleDateString(ARABIC_LOCALE, { weekday: "long" })
+    : SHORT[new Date(`${iso}T00:00:00`).getDay()];
 
 /** "Sat, Oct 17" */
-export const dayDate = (iso: string): string => `${weekday(iso)}, ${dayMonth(iso)}`;
+export const dayDate = (iso: string): string => `${weekday(iso)}${getLanguage() === "ar" ? "، " : ", "}${dayMonth(iso)}`;
 
 /** "$3,470" / "$60" (no cents when whole). */
 export const money = (n: number): string =>

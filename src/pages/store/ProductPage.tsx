@@ -16,6 +16,7 @@ import { useLive } from "../business-ops/store/storeShared";
 import { ClientConfirm, ClientEmpty, QtyStepper, RetryLine, SkeletonCards } from "./clientKit";
 import { fulfilmentLine } from "./StoreFrontPage";
 import { useCart } from "./useCart";
+import { t, tn } from "../../i18n/core";
 
 // OURS-customer-store-product · product page (Designed by us). The price is
 // the store's (business_offerings.price), read here and again at checkout.
@@ -45,16 +46,16 @@ export default function ProductPage() {
   if (s.status === "loading") {
     return (
       <div>
-        <PageHeader title="Product" showBack sub />
-        <SkeletonCards heights={[200, 60, 90]} label="Loading the product" />
+        <PageHeader title={t("Product")} showBack sub />
+        <SkeletonCards heights={[200, 60, 90]} label={t("Loading the product")} />
       </div>
     );
   }
   if (s.status !== "ok" || !d || !d.product.visible) {
     return (
       <div>
-        <PageHeader title="Product" showBack sub />
-        {s.status === "error" ? <RetryLine text="Couldn't load this product." onRetry={live.reload} /> : <ClientEmpty icon={ShoppingBag} title="Product not found" line="It may have been removed from the store." />}
+        <PageHeader title={t("Product")} showBack sub />
+        {s.status === "error" ? <RetryLine text={t("Couldn't load this product.")} onRetry={live.reload} /> : <ClientEmpty icon={ShoppingBag} title={t("Product not found")} line={t("It may have been removed from the store.")} />}
       </div>
     );
   }
@@ -76,7 +77,7 @@ export default function ProductPage() {
 
   return (
     <div>
-      <PageHeader title={d.store?.name ?? "Store"} showBack sub />
+      <PageHeader title={d.store?.name ?? t("Store")} showBack sub />
       {/* B11 image_url (product-images bucket); without one, the store-product placeholder. */}
       {p.imageUrl ? (
         <img src={p.imageUrl} alt={p.name} className="w-full rounded-[18px] object-cover bg-primary-pale" style={{ height: 200 }} />
@@ -95,7 +96,7 @@ export default function ProductPage() {
       )}
       {p.stock !== null && (
         <p className={`text-[12.5px] font-semibold ${out ? "text-status-high" : p.stock < 5 ? "text-caution-text" : "text-charcoal-faint"}`} style={{ marginTop: 4 }}>
-          {out ? "Out of stock" : p.stock < 5 ? `Only ${p.stock} left` : "In stock"}
+          {out ? t("Out of stock") : p.stock < 5 ? tn(p.stock, "Only 1 left", "Only {n} left") : t("In stock")}
         </p>
       )}
       {p.description && (
@@ -112,39 +113,39 @@ export default function ProductPage() {
 
       {canBuy && (
         <div className="flex items-center justify-between rounded-[18px] border border-charcoal/[0.08] bg-cream-card" style={{ marginTop: 18, padding: "10px 14px" }}>
-          <span className="text-[15px] font-semibold text-charcoal">Quantity</span>
-          <QtyStepper value={qty} onChange={setQty} max={max} label="Quantity" />
+          <span className="text-[15px] font-semibold text-charcoal">{t("Quantity")}</span>
+          <QtyStepper value={qty} onChange={setQty} max={max} label={t("Quantity")} />
         </div>
       )}
       {user.accountType !== "customer" && (
         <p className="text-[12px] font-medium text-charcoal-faint" style={{ marginTop: 16 }}>
-          Buying is for client accounts.
+          {t("Buying is for client accounts.")}
         </p>
       )}
 
       {canBuy && (
         <>
           <div aria-hidden style={{ height: 60 }} />
-          <PinnedCta primary={{ label: `Add to cart · ${money(p.price! * qty)}`, onClick: () => add(false) }} />
+          <PinnedCta primary={{ label: t("Add to cart · {price}", { price: money(p.price! * qty) }), onClick: () => add(false) }} />
         </>
       )}
 
       <ClientConfirm
         open={replaceOpen}
-        title="Start a new cart?"
-        body="Your cart has items from another store. Adding this clears them."
-        keep="Keep my cart"
-        confirm="Start new cart"
+        title={t("Start a new cart?")}
+        body={t("Your cart has items from another store. Adding this clears them.")}
+        keep={t("Keep my cart")}
+        confirm={t("Start new cart")}
         onKeep={() => setReplaceOpen(false)}
         onConfirm={() => add(true)}
       />
       <Toast
         key={added}
         open={added > 0}
-        message="Added to your cart."
+        message={t("Added to your cart.")}
         bottom={160}
         onExpire={() => setAdded(0)}
-        action={{ label: "View cart", onClick: () => navigate("/app/store/cart") }}
+        action={{ label: t("View cart"), onClick: () => navigate("/app/store/cart") }}
       />
     </div>
   );

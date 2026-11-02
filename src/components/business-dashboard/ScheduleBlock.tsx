@@ -5,6 +5,12 @@ import { DashLabel } from "./parts";
 import { DAY_LONG, DAY_SHORT, type DayItem } from "./dashboardModel";
 import { minutesOfDay, range12, time12 } from "../../utils/time12";
 import { linePx, textPx } from "../../theme/textSize";
+import { getLanguage, t, tn } from "../../i18n/core";
+import { ARABIC_LOCALE } from "../../i18n/format";
+
+// Round G (EH5): the strip's day names in the app's language (English keeps DAY_LONG / DAY_SHORT).
+const dayName = (iso: string, i: number, style: "long" | "short") =>
+  getLanguage() === "ar" ? new Date(`${iso}T00:00:00`).toLocaleDateString(ARABIC_LOCALE, { weekday: style === "short" ? "short" : "long" }) : style === "long" ? DAY_LONG[i] : DAY_SHORT[i];
 
 // DA1-015 #21-#28 · Schedule: the Monday-first week strip and the day card
 // (BizSummaryV27). Times 12-hour (D5); overlap style "stack" (#28).
@@ -28,7 +34,7 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
   const [open, setOpen] = useState(false);
 
   const TY = {
-    cls: { bg: c.hero, outline: c.outline, accent: c.primary, accentInk: c.deep, accentBg: c.pale, typeInk: c.dark ? "rgb(var(--th-3f3272))" : "rgb(var(--th-5f5093))", label: "Class" },
+    cls: { bg: c.hero, outline: c.outline, accent: c.primary, accentInk: c.deep, accentBg: c.pale, typeInk: c.dark ? "rgb(var(--th-3f3272))" : "rgb(var(--th-5f5093))", label: t("Class") },
     ev: {
       bg: c.dark ? `linear-gradient(150deg, ${"rgb(var(--th-a2c8c2) / 0.36)"}, ${"rgb(var(--th-a2c8c2) / 0.16)"})` : `linear-gradient(150deg, ${"rgb(var(--th-4c7873))"}, ${"rgb(var(--th-38615d))"})`,
       outline: c.dark ? "rgb(var(--th-a2c8c2) / 0.7)" : "rgb(var(--th-6f9993))",
@@ -36,7 +42,7 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
       accentInk: c.dark ? "rgb(var(--th-b2d4cf))" : "rgb(var(--th-3e6b67))",
       accentBg: c.dark ? "rgb(var(--th-293339))" : "rgb(var(--th-eaf4f2))",
       typeInk: "rgb(var(--th-2f5d59))",
-      label: "Event",
+      label: t("Event"),
     },
   };
 
@@ -61,23 +67,24 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
   const featured = featIdx >= 0 ? dayItems[featIdx] : null;
   const companions = featured ? dayItems.filter((x, i) => i !== featIdx && x.time === featured.time) : [];
   const d = new Date(`${dates[sel]}T00:00:00`);
-  const dayChip = isToday ? "Today" : `${DAY_LONG[sel]} ${d.getDate()}`;
+  const dayChip = isToday ? t("Today") : `${dayName(dates[sel], sel, "long")} ${d.getDate()}`;
   const countLine = () => {
     const b: string[] = [];
-    if (clsD.length) b.push(clsD.length + (clsD.length > 1 ? " classes" : " class"));
-    if (evsD.length) b.push(evsD.length + (evsD.length > 1 ? " events" : " event"));
-    return b.join(" · ") + (isToday ? " today" : "");
+    if (clsD.length) b.push(tn(clsD.length, "{n} class", "{n} classes"));
+    if (evsD.length) b.push(tn(evsD.length, "{n} event", "{n} events"));
+    const line = b.join(" · ");
+    return isToday && line ? t("{list} today", { list: line }) : line;
   };
   const kickerFor = (x: DayItem, isMain: boolean) => {
-    if (companions.length && isMain) return `${companions.length + 1} at ${time12(x.time)}`;
-    if (!isToday) return x.ev ? "" : "First class";
+    if (companions.length && isMain) return t("{n} at {time}", { n: companions.length + 1, time: time12(x.time) });
+    if (!isToday) return x.ev ? "" : t("First class");
     const start = minutesOfDay(x.time) ?? 0;
     const end = minutesOfDay(x.end) ?? 0;
-    if (start <= nowMin && end > nowMin) return "On now";
+    if (start <= nowMin && end > nowMin) return t("On now");
     if (end <= nowMin) return "";
-    if (x.ev) return "Next up";
+    if (x.ev) return t("Next up");
     const mins = start - nowMin;
-    return mins < 60 ? `Next class in ${mins} min` : "Next up";
+    return mins < 60 ? t("Next class in {n} min", { n: mins }) : t("Next up");
   };
 
   const later = featured ? dayItems.filter((x, i) => i !== featIdx && x.time > featured.time && !companions.includes(x)).sort((a, b) => a.time.localeCompare(b.time))[0] : null;
@@ -89,7 +96,7 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
   const restRows = Object.keys(byTime).sort();
   const canExpand = restRows.length > 0;
   const expanded = open && canExpand;
-  const t = featured ? (featured.ev ? TY.ev : TY.cls) : TY.cls;
+  const ty = featured ? (featured.ev ? TY.ev : TY.cls) : TY.cls;
 
   const chip = (label: string, typeInk: string) => (
     <span
@@ -117,9 +124,9 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
   );
 
   return (
-    <section aria-label="Schedule">
-      <DashLabel c={c} label="Schedule" link="Calendar" onLink={onCalendar} mb={10} />
-      <div role="tablist" aria-label="This week" style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 5, marginBottom: 10 }}>
+    <section aria-label={t("Schedule")}>
+      <DashLabel c={c} label={t("Schedule")} link={t("Calendar")} onLink={onCalendar} mb={10} />
+      <div role="tablist" aria-label={t("This week")} style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 5, marginBottom: 10 }}>
         {dates.map((iso, i) => {
           const on = i === sel;
           const isTodayCell = iso === today;
@@ -133,7 +140,7 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
               type="button"
               role="tab"
               aria-selected={on}
-              aria-label={`${DAY_LONG[i]} ${dd.getDate()}${hasC || hasE ? `, ${(items[i] ?? []).length} scheduled` : ""}`}
+              aria-label={`${dayName(iso, i, "long")} ${dd.getDate()}${hasC || hasE ? t(", {n} scheduled", { n: (items[i] ?? []).length }) : ""}`}
               data-week-cell={i}
               onClick={() => {
                 setSel(i);
@@ -154,7 +161,7 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
                 padding: 0,
               }}
             >
-              <span style={{ fontSize: textPx(10), fontWeight: 700, color: on ? c.deep : c.faint, lineHeight: linePx(12) }}>{DAY_SHORT[i]}</span>
+              <span style={{ fontSize: textPx(10), fontWeight: 700, color: on ? c.deep : c.faint, lineHeight: linePx(12) }}>{dayName(iso, i, "short")}</span>
               <span
                 style={{
                   width: 28,
@@ -180,7 +187,7 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
         })}
       </div>
 
-      <div data-today-card style={{ marginBottom: 20, borderRadius: 24, overflow: "hidden", border: `1.5px solid ${t.outline}`, background: c.card }}>
+      <div data-today-card style={{ marginBottom: 20, borderRadius: 24, overflow: "hidden", border: `1.5px solid ${ty.outline}`, background: c.card }}>
         <div
           role={canExpand ? "button" : undefined}
           tabIndex={canExpand ? 0 : undefined}
@@ -192,12 +199,12 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
               setOpen(!open);
             }
           }}
-          style={{ background: t.bg, color: "#FFFFFF", padding: "18px 20px", cursor: canExpand ? "pointer" : "default" }}
+          style={{ background: ty.bg, color: "#FFFFFF", padding: "18px 20px", cursor: canExpand ? "pointer" : "default" }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
             <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flexWrap: "wrap" }}>
               <span style={{ fontSize: textPx(10.5), fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", background: "rgba(255,255,255,0.18)", borderRadius: 999, padding: "3px 9px", whiteSpace: "nowrap", lineHeight: 1.5 }}>{dayChip}</span>
-              {chip(featured ? t.label : classBased ? "Class" : "Schedule", t.typeInk)}
+              {chip(featured ? ty.label : classBased ? t("Class") : t("Schedule"), ty.typeInk)}
               {featured && kickerFor(featured, true) && <span style={{ fontSize: textPx(11), fontWeight: 600, color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap", lineHeight: 1.5 }}>{kickerFor(featured, true)}</span>}
             </span>
             {canExpand && (
@@ -208,13 +215,13 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
           </div>
           {featured ? (
             <>
-              <p style={{ fontSize: textPx(20), fontWeight: 800, lineHeight: linePx(26), marginTop: 10, marginBottom: 0 }}>{`${featured.title} at ${time12(featured.time)}`}</p>
+              <p style={{ fontSize: textPx(20), fontWeight: 800, lineHeight: linePx(26), marginTop: 10, marginBottom: 0 }}>{t("{title} at {time}", { title: featured.title, time: time12(featured.time) })}</p>
               {!featured.ev && (
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
                   <div style={{ flex: 1, height: 6, borderRadius: 999, background: "rgba(255,255,255,0.18)", overflow: "hidden" }}>
                     <div style={{ height: "100%", width: `${featured.cap ? Math.round((featured.b / featured.cap) * 100) : 0}%`, borderRadius: 999, background: "#FFFFFF" }} />
                   </div>
-                  <span style={{ fontSize: textPx(12), fontWeight: 700, whiteSpace: "nowrap" }}>{`${featured.b} of ${featured.cap} booked`}</span>
+                  <span style={{ fontSize: textPx(12), fontWeight: 700, whiteSpace: "nowrap" }}>{t("{n} of {cap} booked", { n: featured.b, cap: featured.cap })}</span>
                 </div>
               )}
               {featured.ev && (
@@ -222,28 +229,28 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
                   <Clock size={13} aria-hidden />
                   <span>{range12(featured.time, featured.end)}</span>
                   {featured.status && (
-                    <span style={{ marginInlineStart: "auto", fontSize: textPx(10), fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", background: "rgba(255,255,255,0.92)", color: t.typeInk, borderRadius: 999, padding: "2px 8px" }}>{featured.status}</span>
+                    <span style={{ marginInlineStart: "auto", fontSize: textPx(10), fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", background: "rgba(255,255,255,0.92)", color: ty.typeInk, borderRadius: 999, padding: "2px 8px" }}>{featured.status}</span>
                   )}
                 </div>
               )}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 10, fontSize: textPx(12), lineHeight: linePx(16), color: "rgba(255,255,255,0.82)" }}>
-                <span>{featured.ev ? featured.loc : featured.who ? `With ${featured.who}` : ""}</span>
-                <span style={{ textAlign: "end" }}>{countLine() + (isToday || featured.ev ? "" : ` · ${clsD.reduce((a, k) => a + k.b, 0)} booked`)}</span>
+                <span>{featured.ev ? featured.loc : featured.who ? t("With {name}", { name: featured.who }) : ""}</span>
+                <span style={{ textAlign: "end" }}>{countLine() + (isToday || featured.ev ? "" : ` · ${t("{n} booked", { n: clsD.reduce((a, k) => a + k.b, 0) })}`)}</span>
               </div>
               {later && !expanded && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.16)", fontSize: textPx(11.5), lineHeight: linePx(15), color: "rgba(255,255,255,0.9)" }}>
-                  <span style={{ fontSize: textPx(9.5), fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(255,255,255,0.7)" }}>Then</span>
+                  <span style={{ fontSize: textPx(9.5), fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(255,255,255,0.7)" }}>{t("Then")}</span>
                   <span style={{ fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {`${later.title} at ${time12(later.time)}${later.ev ? (later.loc ? ` · ${later.loc}` : "") : ` · ${later.b} of ${later.cap} booked`}`}
+                    {`${t("{title} at {time}", { title: later.title, time: time12(later.time) })}${later.ev ? (later.loc ? ` · ${later.loc}` : "") : ` · ${t("{n} of {cap} booked", { n: later.b, cap: later.cap })}`}`}
                   </span>
                 </div>
               )}
             </>
           ) : (
             <>
-              <p style={{ fontSize: textPx(20), fontWeight: 800, lineHeight: linePx(26), marginTop: 10, marginBottom: 0 }}>{noClassesEver && classBased ? "No classes yet" : classBased ? "No classes this day" : "Nothing scheduled"}</p>
+              <p style={{ fontSize: textPx(20), fontWeight: 800, lineHeight: linePx(26), marginTop: 10, marginBottom: 0 }}>{noClassesEver && classBased ? t("No classes yet") : classBased ? t("No classes this day") : t("Nothing scheduled")}</p>
               <div style={{ marginTop: 10, fontSize: textPx(12), lineHeight: linePx(16), color: "rgba(255,255,255,0.82)" }}>
-                {noClassesEver && classBased ? "Create your first class and it shows here." : classBased ? "Add one to fill the gap." : "Calendar events show here."}
+                {noClassesEver && classBased ? t("Create your first class and it shows here.") : classBased ? t("Add one to fill the gap.") : t("Calendar events show here.")}
               </div>
               {classBased && (
                 <button
@@ -256,7 +263,7 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
                   style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 12, height: 34, padding: "0 14px", borderRadius: 12, background: "rgba(255,255,255,0.2)", fontSize: textPx(12), fontWeight: 700, color: "#FFFFFF", border: 0 }}
                 >
                   <Plus size={14} aria-hidden />
-                  {noClassesEver ? "Create your first class" : "Create class"}
+                  {noClassesEver ? t("Create your first class") : t("Create class")}
                 </button>
               )}
             </>
@@ -278,7 +285,7 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
             {chip(companions[0].ev ? TY.ev.label : TY.cls.label, companions[0].ev ? TY.ev.typeInk : TY.cls.typeInk)}
             <span style={{ flex: 1, minWidth: 0, fontSize: textPx(13), fontWeight: 700, lineHeight: linePx(17), whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{companions[0].title}</span>
             <span style={{ fontSize: textPx(11), fontWeight: 600, color: "rgba(255,255,255,0.88)", whiteSpace: "nowrap" }}>
-              {companions[0].ev ? range12(companions[0].time, companions[0].end) : `${companions[0].b} of ${companions[0].cap} booked`}
+              {companions[0].ev ? range12(companions[0].time, companions[0].end) : t("{n} of {cap} booked", { n: companions[0].b, cap: companions[0].cap })}
             </span>
             <span style={{ display: "flex", gap: 4, flexShrink: 0 }}>
               <span style={{ width: 6, height: 6, borderRadius: 999, background: "#FFFFFF" }} />
@@ -295,7 +302,7 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
                 <div key={tm} style={{ display: "grid", gridTemplateColumns: "44px minmax(0,1fr)", gap: 10, padding: "11px 0", borderTop: gi ? `1px solid ${c.divider}` : "none" }}>
                   <div style={{ paddingTop: 1 }}>
                     <p style={{ fontSize: textPx(12), fontWeight: 800, lineHeight: linePx(16), color: c.deep, margin: 0 }}>{time12(tm)}</p>
-                    {multi && <p style={{ fontSize: textPx(9.5), fontWeight: 700, lineHeight: linePx(13), color: c.faint, marginTop: 2, marginBottom: 0 }}>{`${g.length} at once`}</p>}
+                    {multi && <p style={{ fontSize: textPx(9.5), fontWeight: 700, lineHeight: linePx(13), color: c.faint, marginTop: 2, marginBottom: 0 }}>{t("{n} at once", { n: g.length })}</p>}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0, paddingInlineStart: multi ? 10 : 0, borderInlineStart: multi ? `2px solid ${c.tert}` : "none" }}>
                     {g.map((x) => {
@@ -311,7 +318,7 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
                               <span style={{ fontSize: textPx(9), fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", color: tt.accentInk, background: tt.accentBg, borderRadius: 999, padding: "1px 6px", flexShrink: 0 }}>{tt.label}</span>
                             </p>
                             <p style={{ fontSize: textPx(11), lineHeight: linePx(15), color: c.faint, margin: 0 }}>
-                              {x.ev ? `${range12(x.time, x.end)}${x.loc ? ` · ${x.loc}` : ""}` : `${x.who}${done ? `${x.who ? " · " : ""}ended` : ""}`}
+                              {x.ev ? `${range12(x.time, x.end)}${x.loc ? ` · ${x.loc}` : ""}` : `${x.who}${done ? `${x.who ? " · " : ""}${t("ended")}` : ""}`}
                             </p>
                             {!x.ev && (
                               <div style={{ height: 4, borderRadius: 999, background: c.track, marginTop: 6, overflow: "hidden" }}>

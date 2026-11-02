@@ -18,6 +18,7 @@ import { useTeam } from "./useTeam";
 import { useRatings } from "./useRatings";
 import { useCentiumBilling } from "../../../hooks/useCentiumBilling";
 import { roleLabel, vocabFor } from "./vocab";
+import { t, tk, tx } from "../../../i18n/core";
 import "../shell/analytics.css";
 import "./an5.css";
 
@@ -36,7 +37,7 @@ type View =
   | { k: TileKey }
   | { k: "card"; id: string; ratings: boolean; from: "performance" | "repeat" | "load" | "ratings" | "pay" | "index" };
 
-const FROM_TITLE = { performance: "Instructor performance", repeat: "Return rate", load: "Teaching load", ratings: "Ratings", pay: "Pay", index: "Team" } as const;
+const FROM_TITLE = { performance: tk("Instructor performance"), repeat: tk("Return rate"), load: tk("Teaching load"), ratings: tk("Ratings"), pay: tk("Pay"), index: tk("Team") } as const;
 
 export default function TeamSection() {
   const { range, kind, setExport } = useAnalytics();
@@ -74,17 +75,17 @@ export default function TeamSection() {
     const s = state.stats;
     if (view.k === "coverage") {
       const nameOf = (id: string | null) => (id ? people.find((p) => p.id === id)?.name ?? state.leftNames.get(id) ?? "" : "");
-      const rows: (string | number)[][] = [["Kind", "Class", "Date", "Start", "End", "Instructor", "Booked", "Capacity"]];
+      const rows: (string | number)[][] = [[t("Kind"), t("Class"), t("Date"), t("Start"), t("End"), t("Instructor"), t("Booked"), t("Capacity")]];
       for (const r of issueRows(state)) {
         const list = r.issue.kind === "overlap" ? [r.issue.a, r.issue.b] : [r.issue.cls];
         for (const c of list) rows.push([r.kind, c.title, c.date, c.start, c.end, nameOf(c.professionalId), c.booked, c.capacity]);
       }
       setExport({ filename: "centium-team-coverage.csv", rows });
     } else {
-      const rows: (string | number)[][] = [["Name", "Role", "Status", "Classes taught", "Booked", "Capacity", "Fill rate", "Hours per week"]];
+      const rows: (string | number)[][] = [[t("Name"), t("Role"), t("Status"), t("Classes taught"), t("Booked"), t("Capacity"), t("Fill rate"), t("Hours per week")]];
       for (const p of people) {
         const st = s?.perPerson.find((x) => x.person.id === p.id);
-        rows.push([p.name, roleLabel(p.role), p.acceptedAt ? "On the team" : "Invited", st?.sessions ?? 0, st?.booked ?? 0, st?.capacity ?? 0, st?.fill == null ? "" : `${st.fill}%`, st?.hoursPerWeek ?? 0]);
+        rows.push([p.name, roleLabel(p.role), p.acceptedAt ? t("On the team") : tx("Invited", "status"), st?.sessions ?? 0, st?.booked ?? 0, st?.capacity ?? 0, st?.fill == null ? "" : `${st.fill}%`, st?.hoursPerWeek ?? 0]);
       }
       setExport({ filename: "centium-team.csv", rows });
     }
@@ -158,8 +159,8 @@ export default function TeamSection() {
           range={range}
           personId={view.id}
           focusRatings={view.ratings}
-          crumb={view.from === "index" ? "Team" : `Team › ${view.from === "performance" ? "Scorecard" : FROM_TITLE[view.from]}`}
-          backLabel={`Back to ${FROM_TITLE[view.from]}`}
+          crumb={view.from === "index" ? t("Team") : `${t("Team")} › ${view.from === "performance" ? t("Scorecard") : t(FROM_TITLE[view.from])}`}
+          backLabel={t("Back to {page}", { page: t(FROM_TITLE[view.from]) })}
           onBack={() => go(view.from === "index" ? { k: "index" } : { k: view.from })}
         />
       );

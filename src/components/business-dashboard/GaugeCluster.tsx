@@ -17,6 +17,7 @@ import {
   type GaugeSpec,
 } from "./clusterGeometry";
 import { linePx, textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 // DA1-015 #9-#20 · the At a glance gauge cluster (BizSummaryV27), with the
 // DA2 unlit state, the DA1-023 start-up and the press / long-press tooltip.
@@ -67,7 +68,7 @@ export function GaugeCluster({
   // Start-up (DA1-023, V6-106: 800 ms + 80 ms stagger, ease-out cubic). Plays
   // once per page visit when data first resolves, never on later updates
   // (DA1-023 O2); Reduce motion shows the final values (source `play()`).
-  const [t, setT] = useState<number | null>(null);
+  const [elapsed, setT] = useState<number | null>(null);
   const [done, setDone] = useState(false);
   // Before the first frame runs, the values hold at 0 (no flash of the final numbers).
   const pending = ready && anyData && !done && !reducedMotion;
@@ -88,7 +89,7 @@ export function GaugeCluster({
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
   }, [ready, anyData, reducedMotion, done]);
-  const prog = (i: number) => (t !== null ? progAt(t, i) : pending ? 0 : 1);
+  const prog = (i: number) => (elapsed !== null ? progAt(elapsed, i) : pending ? 0 : 1);
 
   // Press, tooltip and focus state (source handlers: down / up / leave / focus / blur / kd).
   const [press, setPress] = useState<string | null>(null);
@@ -108,7 +109,7 @@ export function GaugeCluster({
   const tipFor = tip ?? focus;
 
   return (
-    <div role="group" aria-label="At a glance" style={{ position: "relative", width: "100%", aspectRatio: `${VW} / ${VH}`, containerType: "inline-size", marginBottom: 28 }}>
+    <div role="group" aria-label={t("At a glance")} style={{ position: "relative", width: "100%", aspectRatio: `${VW} / ${VH}`, containerType: "inline-size", marginBottom: 28 }}>
       <svg width="100%" height="100%" viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="xMidYMid meet" className="qa-shape" style={{ position: "absolute", inset: 0, display: "block", overflow: "visible" }} aria-hidden>
         <defs>
           <radialGradient id={glowId} cx="0.5" cy="0.5" r="0.5">

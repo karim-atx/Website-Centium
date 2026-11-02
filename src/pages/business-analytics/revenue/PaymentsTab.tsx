@@ -26,12 +26,14 @@ import {
   vocabOf,
   whoOf,
 } from "./kit";
+import { labelText } from "../../../services/business-revenue/model";
 import { useRevenue } from "./revenueContext";
 import { owedChip, owedSub, REVENUE_BASE, WHISH_LIVE } from "./payModel";
 import { grantedRenewal } from "../../../services/front-desk/frontDeskLogic";
 import { FailedHalf } from "./FailedPages";
 import { useMoneyOwed } from "./useMoneyOwed";
 import { useCanRemind, useSendReminder } from "./OwedPages";
+import { t, tn } from "../../../i18n/core";
 
 // AN14-019 / -024 / -027 / -028 / -030 / -032 / -034 (AnInsightsV3 sub
 // "payments"). Before Whish (OURS-AN14-pending-whish): the split card shows
@@ -73,8 +75,8 @@ export const PaymentsTab: React.FC = () => {
 
   if ((loading && !data) || owedState.loading)
     return (
-      <div role="status" aria-label="Loading">
-        <SecLabel>How {vocab.people} pay</SecLabel>
+      <div role="status" aria-label={t("Loading")}>
+        <SecLabel>{t("How {people} pay", { people: vocab.people })}</SecLabel>
         <RCard className="p-[16px]">
           <Skel h={32} />
           <Skel h={14} r={999} className="mt-[12px]" />
@@ -93,10 +95,10 @@ export const PaymentsTab: React.FC = () => {
 
   return (
     <div>
-      <SecLabel>How {vocab.people} pay</SecLabel>
+      <SecLabel>{t("How {people} pay", { people: vocab.people })}</SecLabel>
       <RCard className="p-[16px]">
         <p className="text-[14px] font-extrabold" style={{ color: v("ink") }}>
-          How much comes in by Whish, and how much in cash?
+          {t("How much comes in by Whish, and how much in cash?")}
         </p>
         <div
           className="flex h-[14px] rounded-full overflow-hidden mt-[12px] gap-[2px]"
@@ -117,7 +119,7 @@ export const PaymentsTab: React.FC = () => {
                 className="w-[10px] h-[10px] rounded-[3px]"
                 style={{ background: v("primary") }}
               />
-              Whish
+              {"Whish"}
               <SoonChip />
             </p>
             <p
@@ -137,7 +139,7 @@ export const PaymentsTab: React.FC = () => {
                 className="w-[10px] h-[10px] rounded-[3px]"
                 style={{ background: v("teal-dark") }}
               />
-              Cash
+              {t("Cash")}
             </p>
             <p
               className="text-[18px] font-extrabold mt-[2px] rv-num"
@@ -147,13 +149,13 @@ export const PaymentsTab: React.FC = () => {
             </p>
             {cash > 0 && (
               <p className="text-[11px]" style={{ color: v("faint") }}>
-                {cashN} {cashN === 1 ? "payment" : "payments"}
+                {tn(cashN, "{n} payment", "{n} payments")}
               </p>
             )}
           </div>
         </div>
         <p className="text-[11px] mt-[8px]" style={{ color: v("faint") }}>
-          Cash only for now. Whish is coming.
+          {t("Cash only for now. Whish is coming.")}
         </p>
       </RCard>
 
@@ -170,7 +172,7 @@ export const PaymentsTab: React.FC = () => {
             style={{ color: v("caution-ink") }}
           >
             <HandCoins size={13} strokeWidth={2.4} aria-hidden />
-            Money owed
+            {t("Money owed")}
           </p>
           <p
             className="text-[26px] font-extrabold leading-[30px] tracking-[-0.02em] mt-[8px] rv-num"
@@ -182,7 +184,7 @@ export const PaymentsTab: React.FC = () => {
             className="text-[12px] font-bold leading-[16px] mt-[2px]"
             style={{ color: v("ink") }}
           >
-            {owed.length ? `${owed.length} owed` : "Nothing owed"}
+            {owed.length ? t("{n} owed", { n: owed.length }) : t("Nothing owed")}
           </p>
           <p
             className="text-[11px] leading-[15px] mt-[2px] flex-1"
@@ -191,10 +193,10 @@ export const PaymentsTab: React.FC = () => {
             }
           >
             {!owed.length
-              ? "Unpaid cash and late memberships show here."
+              ? t("Unpaid cash and late memberships show here.")
               : oldest > 0
-                ? `Oldest is ${oldest} ${oldest === 1 ? "day" : "days"} late.`
-                : "None are late yet."}
+                ? tn(oldest, "Oldest is {n} day late.", "Oldest is {n} days late.")
+                : t("None are late yet.")}
           </p>
           <button
             type="button"
@@ -202,7 +204,7 @@ export const PaymentsTab: React.FC = () => {
             aria-expanded={owed.length ? list : undefined}
             aria-label={
               owed.length
-                ? `Money owed, ${money(owedT)}, ${list ? "hide list" : "see all"}`
+                ? `${t("Money owed")}، ${money(owedT)}، ${list ? t("hide list") : t("see all")}`
                 : undefined
             }
             onClick={() => setList((l) => !l)}
@@ -213,15 +215,15 @@ export const PaymentsTab: React.FC = () => {
             }}
           >
             {!owed.length
-              ? "All paid up"
+              ? t("All paid up")
               : list
-                ? "Hide list"
-                : `See all ${owed.length}`}
+                ? t("Hide list")
+                : t("See all {n}", { n: owed.length })}
             {owed.length > 0 &&
               (list ? (
                 <ChevronUp size={14} aria-hidden />
               ) : (
-                <ChevronRight size={14} aria-hidden />
+                <ChevronRight size={14} aria-hidden className="rtl:-scale-x-100" />
               ))}
           </button>
         </div>
@@ -232,7 +234,7 @@ export const PaymentsTab: React.FC = () => {
       {list && owed.length > 0 && (
         <>
           <SecLabel>
-            Money owed · {owed.length} · {money(owedT)}
+            {t("Money owed")} · {owed.length} · {money(owedT)}
           </SecLabel>
           <RCard>
             {owed.map((o, i) => {
@@ -245,7 +247,7 @@ export const PaymentsTab: React.FC = () => {
               const followUp = (
                 <>
                   <Send size={12} strokeWidth={2.4} aria-hidden />
-                  Follow up
+                  {t("Follow up")}
                 </>
               );
               const followCls =
@@ -271,7 +273,7 @@ export const PaymentsTab: React.FC = () => {
                         className="block text-[13px] font-extrabold leading-[17px] truncate"
                         style={{ color: v("ink") }}
                       >
-                        {o.label}
+                        {labelText(o.label)}
                       </span>
                       <span
                         className="block text-[11px] leading-[15px] mt-[1px]"
@@ -302,7 +304,7 @@ export const PaymentsTab: React.FC = () => {
                   {follow && (
                     <button
                       type="button"
-                      aria-label={`Follow up with ${o.label}`}
+                      aria-label={t("Follow up with {name}", { name: labelText(o.label) })}
                       onClick={() => remind.open(o)}
                       className={
                         followCls +
@@ -328,8 +330,8 @@ export const PaymentsTab: React.FC = () => {
                 color: v("pdark"),
               }}
             >
-              Sort and filter
-              <ChevronRight size={14} aria-hidden />
+              {t("Sort and filter")}
+              <ChevronRight size={14} aria-hidden className="rtl:-scale-x-100" />
             </button>
           </RCard>
         </>
@@ -337,29 +339,29 @@ export const PaymentsTab: React.FC = () => {
 
       {showRenewals && (
         <>
-          <SecLabel>Renewals in the next 30 days</SecLabel>
+          <SecLabel>{t("Renewals in the next 30 days")}</SecLabel>
           <RCard className="p-[16px]">
             <p
               className="text-[14px] font-extrabold leading-[19px]"
               style={{ color: v("ink") }}
             >
               {renN
-                ? `${renN} ${renN === 1 ? "renewal" : "renewals"} due in the next 30 days`
-                : "No renewals due in the next 30 days"}
+                ? tn(renN, "{n} renewal due in the next 30 days", "{n} renewals due in the next 30 days")
+                : t("No renewals due in the next 30 days")}
             </p>
             <p
               className="text-[12px] leading-[17px] mt-[2px]"
               style={{ color: v("ink-soft") }}
             >
               {renN
-                ? `${money(renT)} expected · ${thisWeek.rows.length} this week, ${money(thisWeek.total)}`
+                ? t("{amount} expected · {n} this week, {weekAmount}", { amount: money(renT), n: thisWeek.rows.length, weekAmount: money(thisWeek.total) })
                 : kind === "classes"
-                  ? "Plans and packs that renew show here."
-                  : "Memberships that renew show here."}
+                  ? t("Plans and packs that renew show here.")
+                  : t("Memberships that renew show here.")}
             </p>
             <div
               role="list"
-              aria-label="Renewals by week"
+              aria-label={t("Renewals by week")}
               className="grid gap-[8px] mt-[14px] items-end"
               style={{
                 gridTemplateColumns: `repeat(${weeks.length},minmax(0,1fr))`,
@@ -378,7 +380,7 @@ export const PaymentsTab: React.FC = () => {
                     role="listitem"
                     aria-pressed={on}
                     aria-disabled={!w.rows.length}
-                    aria-label={`${w.label}, ${spanLabel(w.from, w.to)}, ${w.rows.length} renewals, ${money(w.total)}`}
+                    aria-label={`${w.label}، ${spanLabel(w.from, w.to)}، ${tn(w.rows.length, "{n} renewal", "{n} renewals")}، ${money(w.total)}`}
                     onClick={() => w.rows.length && setWeek(on ? null : i)}
                     className="tap flex flex-col items-center gap-[6px] min-w-0 rounded-[16px] pt-[8px] px-[2px] pb-[8px] box-border focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
                     style={{
@@ -443,8 +445,7 @@ export const PaymentsTab: React.FC = () => {
                     style={{ color: v("ink") }}
                   >
                     {sel.label} · {spanLabel(sel.from, sel.to)} ·{" "}
-                    {sel.rows.length}{" "}
-                    {sel.rows.length === 1 ? "renewal" : "renewals"}
+                    {tn(sel.rows.length, "{n} renewal", "{n} renewals")}
                   </span>
                   <span
                     className="text-[13px] font-extrabold rv-num"
@@ -496,8 +497,8 @@ export const PaymentsTab: React.FC = () => {
                     color: v("pdark"),
                   }}
                 >
-                  See all {sel.rows.length}
-                  <ChevronRight size={14} aria-hidden />
+                  {t("See all {n}", { n: sel.rows.length })}
+                  <ChevronRight size={14} aria-hidden className="rtl:-scale-x-100" />
                 </button>
               </div>
             )}
@@ -506,7 +507,7 @@ export const PaymentsTab: React.FC = () => {
                 className="text-[11px] leading-[15px] mt-[10px]"
                 style={{ color: v("faint") }}
               >
-                Tap a week to see who renews.
+                {t("Tap a week to see who renews.")}
               </p>
             )}
           </RCard>

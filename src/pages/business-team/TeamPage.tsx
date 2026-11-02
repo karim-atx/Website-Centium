@@ -22,13 +22,14 @@ import {
   noSeatPeople,
   onTeam,
   withdrawnPeople,
-  ROLE_LABEL,
+  roleLabel,
   seatHint,
   seatLine,
   teamBoxes,
   teamSubtitle,
 } from "./teamLogic";
 import type { TeamData } from "./useTeamData";
+import { t, tn, tx } from "../../i18n/core";
 
 // OP1-053 / 112 (team tab), 055 / 118 (early), 056 / 119 (empty), 058 / 120
 // (store), 114 (seat preview), 116 / 117 (two blocks, free seat), 065-070
@@ -94,14 +95,16 @@ export function TeamPage({ data }: { data: TeamData }) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     }
-    showToast(ok ? "Business ID copied." : "Couldn't copy. Try again.", !ok);
+    showToast(ok ? t("Business ID copied.") : t("Couldn't copy. Try again."), !ok);
   };
   const share = async () => {
     if (!code) return;
-    const text = `Join ${businessName || "our team"} on Centium. Enter business ID ${code} when you ask to join.`;
-    const r = await shareOrCopy({ title: "Our business ID on Centium", text, copy: text });
-    if (r === "copied") showToast("Business ID copied.");
-    if (r === "failed") showToast("Couldn't share right now. Try again.", true);
+    const text = businessName
+      ? t("Join {name} on Centium. Enter business ID {code} when you ask to join.", { name: businessName, code })
+      : t("Join our team on Centium. Enter business ID {code} when you ask to join.", { code });
+    const r = await shareOrCopy({ title: t("Our business ID on Centium"), text, copy: text });
+    if (r === "copied") showToast(t("Business ID copied."));
+    if (r === "failed") showToast(t("Couldn't share right now. Try again."), true);
   };
 
   return (
@@ -111,20 +114,20 @@ export function TeamPage({ data }: { data: TeamData }) {
       <p className="tm-subtitle">{data.kindKnown ? teamSubtitle(kind) : " "}</p>
 
       {offline ? (
-        <Notice message="You're offline. Showing your last saved team." />
+        <Notice message={t("You're offline. Showing your last saved team.")} />
       ) : (
         error && <Notice message={error} onRetry={data.reload} />
       )}
 
       <div className="tm-top">
         <div className="tm-id">
-          <p className="tm-id-l">Your business ID</p>
+          <p className="tm-id-l">{t("Your business ID")}</p>
           <p className="tm-id-v">{code ?? "–"}</p>
           <div className="tm-id-btns">
-            <button type="button" className="tm-iconbtn tap" aria-label="Copy business ID" disabled={!code} onClick={() => void copy()}>
+            <button type="button" className="tm-iconbtn tap" aria-label={t("Copy business ID")} disabled={!code} onClick={() => void copy()}>
               {copied ? <Check size={17} strokeWidth={2} /> : <Copy size={17} strokeWidth={2} />}
             </button>
-            <button type="button" className="tm-iconbtn tap" aria-label="Share business ID" disabled={!code || offline} onClick={() => void share()}>
+            <button type="button" className="tm-iconbtn tap" aria-label={t("Share business ID")} disabled={!code || offline} onClick={() => void share()}>
               <Share2 size={17} strokeWidth={2} />
             </button>
           </div>
@@ -132,7 +135,7 @@ export function TeamPage({ data }: { data: TeamData }) {
         <button
           type="button"
           className={waiting ? "tm-jr has tap" : "tm-jr tap"}
-          aria-label={`Join requests, ${waiting ? `${waiting} waiting` : "none waiting"}`}
+          aria-label={`${t("Join requests")}${t(", ")}${waiting ? t("{n} waiting", { n: waiting }) : t("none waiting")}`}
           onClick={() => navigate("/app/business/employees/requests")}
         >
           <span className="tm-jr-tile">
@@ -141,10 +144,10 @@ export function TeamPage({ data }: { data: TeamData }) {
           {waiting > 0 && <span className="tm-badge">{waiting}</span>}
           <span>
             <span className="tm-jr-t" style={{ display: "block" }}>
-              Join requests
+              {t("Join requests")}
             </span>
             <span className="tm-jr-s" style={{ display: "block" }}>
-              {requests === null ? "–" : waiting ? `${waiting} waiting for you` : "None waiting"}
+              {requests === null ? "–" : waiting ? t("{n} waiting for you", { n: waiting }) : t("None waiting")}
             </span>
           </span>
         </button>
@@ -162,19 +165,19 @@ export function TeamPage({ data }: { data: TeamData }) {
             </div>
           ))}
         </div>
-        <p className="tm-boxline">{ready ? boxes.line : "Loading your team…"}</p>
+        <p className="tm-boxline">{ready ? boxes.line : t("Loading your team…")}</p>
       </div>
 
       <div className="tm-team">
         <div className="tm-team-h">
           <div>
-            <p className="tm-team-t">Your team</p>
+            <p className="tm-team-t">{t("Your team")}</p>
             <p className="tm-team-s">{ready ? seatLine(counts) : "–"}</p>
           </div>
           {!readOnly && (
           <button type="button" className="tm-outbtn tm-hit tap" disabled={offline} onClick={() => setBuying(true)}>
             <Plus size={14} strokeWidth={2.4} />
-            Add seats
+            {t("Add seats")}
           </button>
           )}
         </div>
@@ -182,31 +185,31 @@ export function TeamPage({ data }: { data: TeamData }) {
         {ready &&
           blocks.map((block, bi) => (
             <div key={bi}>
-              <p className="tm-block-l">{`Block ${bi + 1} · ${block.length} seats`}</p>
-              <ul className="tm-grid" aria-label={`Block ${bi + 1}`}>
+              <p className="tm-block-l">{`${t("Block {n}", { n: bi + 1 })} · ${tn(block.length, "1 seat", "{n} seats")}`}</p>
+              <ul className="tm-grid" aria-label={t("Block {n}", { n: bi + 1 })}>
                 {block.map((seat) => (
                   <li key={seat.index} style={{ minWidth: 0 }}>
                     {seat.kind === "free" && readOnly ? (
                       // B8 RV-06: staff see the real capacity (business_plan_summary); a free seat isn't theirs to fill.
-                      <span className="tm-seat" aria-label="Free seat">
+                      <span className="tm-seat" aria-label={t("Free seat")}>
                         <span className="tm-av free">
                           <Plus size={18} strokeWidth={2.2} />
                         </span>
-                        <span className="tm-seat-n free">Free</span>
+                        <span className="tm-seat-n free">{tx("Free", "seat")}</span>
                       </span>
                     ) : seat.kind === "free" ? (
                       <button
                         type="button"
                         className="tm-seat tap"
-                        aria-label="Free seat, invite an employee"
+                        aria-label={t("Free seat, invite an employee")}
                         disabled={offline}
                         onClick={invite}
                       >
                         <span className="tm-av free">
                           <Plus size={18} strokeWidth={2.2} />
                         </span>
-                        <span className="tm-seat-n free">Free</span>
-                        <span className="tm-seat-s p">Invite</span>
+                        <span className="tm-seat-n free">{tx("Free", "seat")}</span>
+                        <span className="tm-seat-s p">{t("Invite")}</span>
                       </button>
                     ) : (
                       <SeatButton
@@ -226,8 +229,8 @@ export function TeamPage({ data }: { data: TeamData }) {
           ))}
         {ready && noSeat.length > 0 && (
           <div>
-            <p className="tm-block-l">No seat needed</p>
-            <ul className="tm-grid" aria-label="Team members who don't use a seat">
+            <p className="tm-block-l">{t("No seat needed")}</p>
+            <ul className="tm-grid" aria-label={t("Team members who don't use a seat")}>
               {noSeat.map((p) => (
                 <li key={p.professionalId} style={{ minWidth: 0 }}>
                   <SeatButton
@@ -245,8 +248,8 @@ export function TeamPage({ data }: { data: TeamData }) {
         )}
         {ready && withdrawn.length > 0 && (
           <div>
-            <p className="tm-block-l">Withdrawn invites</p>
-            <div aria-label="Withdrawn invites">
+            <p className="tm-block-l">{t("Withdrawn invites")}</p>
+            <div aria-label={t("Withdrawn invites")}>
               {withdrawn.map((p) => (
                 <button
                   key={p.professionalId}
@@ -258,23 +261,23 @@ export function TeamPage({ data }: { data: TeamData }) {
                   <Row
                     icon={<UserX size={16} strokeWidth={2.1} />}
                     title={p.name}
-                    sub={[inviteWhen(p), ROLE_LABEL[p.role]].filter(Boolean).join(" · ")}
-                    trailing={<ChevronRight size={16} strokeWidth={2.1} aria-hidden />}
+                    sub={[inviteWhen(p), roleLabel(p.role)].filter(Boolean).join(" · ")}
+                    trailing={<ChevronRight size={16} strokeWidth={2.1} aria-hidden className="rtl:-scale-x-100" />}
                   />
                 </button>
               ))}
             </div>
             {!readOnly && (
               <p className="tm-note" role="note" style={{ borderTop: "none", padding: "6px 2px 0" }}>
-                Open one to invite them again.
+                {t("Open one to invite them again.")}
               </p>
             )}
           </div>
         )}
         {!ready && !error && (
           <>
-            <p className="tm-block-l">&nbsp;</p>
-            <div className="tm-grid" aria-label="Loading your team">
+            <p className="tm-block-l">{"\u00a0"}</p>
+            <div className="tm-grid" aria-label={t("Loading your team")}>
               {Array.from({ length: 5 }, (_, i) => (
                 <span key={i} className="tm-seat" style={{ opacity: 0.5 }}>
                   <span className="tm-av" />
@@ -292,16 +295,18 @@ export function TeamPage({ data }: { data: TeamData }) {
             onProfile={() => navigate(`/app/business/employees/${selPerson.professionalId}`)}
           />
         ) : (
-          ready && <p className="tm-hint">{readOnly ? "Tap a seat to see who's in it." : seatHint(counts, per)}</p>
+          ready && <p className="tm-hint">{readOnly ? t("Tap a seat to see who's in it.") : seatHint(counts, per)}</p>
         )}
       </div>
 
       {readOnly ? (
         <p className="tm-note" role="note" style={{ textAlign: "center", marginTop: 14 }}>
-          {`You can see ${businessName || "the business"}'s team. Only the owner can add people, change what they can do or remove someone.`}
+          {businessName
+            ? t("You can see {name}'s team. Only the owner can add people, change what they can do or remove someone.", { name: businessName })
+            : t("You can see the business's team. Only the owner can add people, change what they can do or remove someone.")}
         </p>
       ) : (
-        <TeamCta label="Add an employee" icon={<UserPlus size={17} strokeWidth={2.4} />} onClick={invite} disabled={!ready || offline} />
+        <TeamCta label={t("Add an employee")} icon={<UserPlus size={17} strokeWidth={2.4} />} onClick={invite} disabled={!ready || offline} />
       )}
 
       {businessId && !readOnly && (
@@ -313,7 +318,7 @@ export function TeamPage({ data }: { data: TeamData }) {
           counts={counts}
           onSent={() => {
             setInviteOpen(false);
-            showToast("Invite sent. Their seat shows as invited until they accept.");
+            showToast(t("Invite sent. Their seat shows as invited until they accept."));
             data.reload();
           }}
           onNoSeats={() => {
@@ -355,7 +360,7 @@ function SeatButton({ person, selected, onClick }: { person: TeamPerson; selecte
     <button
       type="button"
       className={selected ? "tm-seat sel tap" : "tm-seat tap"}
-      aria-label={`${person.name}, ${inv ? `invited${when ? `, ${lowerFirst(when)}` : ""}` : roleShort(person.role)}`}
+      aria-label={`${person.name}${t(", ")}${inv ? `${t("invited")}${when ? `${t(", ")}${lowerFirst(when)}` : ""}` : roleShort(person.role)}`}
       aria-pressed={inv ? undefined : selected}
       onClick={onClick}
     >
@@ -385,7 +390,7 @@ function SeatPreview({ person, sessions, today, onProfile }: { person: TeamPerso
   }, [next]);
 
   return (
-    <section className="tm-pv" aria-label={`${person.name}, seat preview`}>
+    <section className="tm-pv" aria-label={t("{name}, seat preview", { name: person.name })}>
       <Avatar name={person.name} url={person.avatarUrl} className="tm-av" />
       <div className="tm-pv-b">
         <p className="tm-pv-n">{person.name}</p>
@@ -393,7 +398,7 @@ function SeatPreview({ person, sessions, today, onProfile }: { person: TeamPerso
         {next.length === 0 && (
           <p className="tm-pv-next">
             <CalendarClock size={13} />
-            No classes this week
+            {t("No classes this week")}
           </p>
         )}
         {next.map((s) => (
@@ -403,11 +408,11 @@ function SeatPreview({ person, sessions, today, onProfile }: { person: TeamPerso
           </p>
         ))}
         <button type="button" className="tm-link tm-hit tap" onClick={onProfile}>
-          View profile
-          <ChevronRight size={14} />
+          {t("View profile")}
+          <ChevronRight size={14} className="rtl:-scale-x-100" />
         </button>
       </div>
-      <button type="button" className="tm-iconbtn soft tap" aria-label={`Message ${person.name}`} disabled={busy} onClick={() => void open()}>
+      <button type="button" className="tm-iconbtn soft tap" aria-label={t("Message {name}", { name: person.name })} disabled={busy} onClick={() => void open()}>
         <MessageCircle size={17} strokeWidth={2} />
       </button>
     </section>

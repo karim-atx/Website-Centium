@@ -16,6 +16,7 @@ import { useHiringBusiness } from "./useHiringBusiness";
 import { CLOSED_OPENING_MENU, HiringEmpty, OpeningCard, OpeningMenuButton, UserPlusGlyph, fixedPair, useHiringRead, useHiringStrip, type OpeningAction } from "./hiringParts";
 import PostOpeningSheet from "./PostOpeningSheet";
 import { HUB_TABS, bannerStub, countLine, deleteDialogOf, scheduleLine, tabOf, teamButtonText, typeLabel, type HubTab } from "./hubModel";
+import { t, tx } from "../../../i18n/core";
 
 // Market + Share 3.0 · W4 · B-MA.8 Hiring hub (Business Hiring Screens
 // `hOpen` `hPosted` `hFilled` `hClosed` `hEmpty`, markup lines 56–102),
@@ -110,7 +111,7 @@ export default function HubPage() {
       void setOpeningStatus(o.id, a === "pause" ? "closed" : "open").then((r) => {
         if (!r.ok) return showStrip(r.message, { tone: "error" });
         setPosted((p) => p.filter((x) => x.id !== o.id));
-        showStrip(a === "pause" ? `Opening paused · ${o.title}` : `Opening reopened · ${o.title}`);
+        showStrip(a === "pause" ? t("Opening paused · {title}", { title: o.title }) : t("Opening reopened · {title}", { title: o.title }));
         openings.retry();
       });
       return;
@@ -138,17 +139,17 @@ export default function HubPage() {
     }
     setDeleting(null);
     setPosted((p) => p.filter((x) => x.id !== o.id));
-    showStrip(dlg.pauseInstead ? `Opening paused · ${o.title}` : `Opening deleted · ${o.title}`);
+    showStrip(dlg.pauseInstead ? t("Opening paused · {title}", { title: o.title }) : t("Opening deleted · {title}", { title: o.title }));
     openings.retry();
   };
 
-  const header = <BackHeader eyebrow={biz.kind === "gym" ? "Gym" : "Marketplace"} title="Hiring" onBack={back} backLabel={biz.kind === "gym" ? "Back to Gym" : "Back to Marketplace"} />;
+  const header = <BackHeader eyebrow={biz.kind === "gym" ? t("Gym") : t("Marketplace")} title={t("Hiring")} onBack={back} backLabel={biz.kind === "gym" ? t("Back to Gym") : t("Back to Marketplace")} />;
 
   if (biz.loading) {
     return (
       <div style={{ color: m.ink }}>
         {header}
-        <MarketSkeleton radius={20} rows={3} count={2} label="Loading Hiring" />
+        <MarketSkeleton radius={20} rows={3} count={2} label={t("Loading Hiring")} />
       </div>
     );
   }
@@ -181,15 +182,15 @@ export default function HubPage() {
         <button
           type="button"
           onClick={() => navigate(HIRING_ROUTES.existingTeam)}
-          aria-label={`Add your existing team. Professionals already working with you join free. No hiring fee. ${stub.n} ${stub.unit}. Add people`}
+          aria-label={t("Add your existing team. Professionals already working with you join free. No hiring fee. {n} {unit}. Add people", { n: stub.n, unit: stub.unit })}
           className="market-focus"
           data-banner
           style={{ position: "relative", display: "flex", width: "100%", marginBottom: 12, borderRadius: 18, background: bannerBg, overflow: "hidden", border: 0, padding: 0, textAlign: "start", fontFamily: "inherit", color: m.ink, cursor: "pointer" }}
         >
           <span aria-hidden style={{ flex: 1, minWidth: 0, padding: "12px 14px", display: "block" }}>
-            <span style={{ display: "block", fontSize: textPx(14), fontWeight: 800 }}>Add your existing team</span>
-            <span style={{ display: "block", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2, marginTop: 2 }}>Professionals already working with you join free. No hiring fee.</span>
-            <span style={{ display: "block", marginTop: 6, fontSize: textPx(12.5), fontWeight: 800, color: bannerInk }}>Add people</span>
+            <span style={{ display: "block", fontSize: textPx(14), fontWeight: 800 }}>{t("Add your existing team")}</span>
+            <span style={{ display: "block", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2, marginTop: 2 }}>{t("Professionals already working with you join free. No hiring fee.")}</span>
+            <span style={{ display: "block", marginTop: 6, fontSize: textPx(12.5), fontWeight: 800, color: bannerInk }}>{t("Add people")}</span>
           </span>
           <span aria-hidden style={{ width: 76, flexShrink: 0, borderInlineStart: `1.5px dashed ${bannerDash}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontSize: textPx(20), fontWeight: 800, color: bannerInk, lineHeight: 1 }}>{stub.n}</span>
@@ -206,25 +207,25 @@ export default function HubPage() {
         </button>
         {biz.isOwner ? (
           <button type="button" onClick={() => navigate(HIRING_ROUTES.fees)} className="tap market-focus" style={trackBtn}>
-            Hiring fees
+            {t("Hiring fees")}
           </button>
         ) : null}
       </div>
 
-      <div role="tablist" aria-label="Openings" data-hub-tabs style={{ marginTop: 12, display: "flex", gap: 4, padding: 4, borderRadius: 12, background: m.subtrack }}>
-        {HUB_TABS.map((t) => {
-          const on = t.key === tab;
+      <div role="tablist" aria-label={t("Openings")} data-hub-tabs style={{ marginTop: 12, display: "flex", gap: 4, padding: 4, borderRadius: 12, background: m.subtrack }}>
+        {HUB_TABS.map((tb) => {
+          const on = tb.key === tab;
           return (
             <button
-              key={t.key}
+              key={tb.key}
               type="button"
               role="tab"
               aria-selected={on}
-              onClick={() => setTab(t.key)}
+              onClick={() => setTab(tb.key)}
               className="hit market-focus"
               style={{ flex: 1, height: 34, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: textPx(12.5), fontWeight: on ? 700 : 600, background: on ? m.subactive : "transparent", color: on ? m.onfill : m.subink, border: 0, fontFamily: "inherit", cursor: "pointer", lineHeight: "normal" }}
             >
-              {t.label}
+              {tb.key === "open" ? tx("Open", "openings") : tb.key === "filled" ? tx("Filled", "openings") : t(tb.label)}
             </button>
           );
         })}
@@ -236,12 +237,12 @@ export default function HubPage() {
         </span>
         <OutlineButton onClick={() => setSheetOpen(true)}>
           <Plus size={15} strokeWidth={2.4} aria-hidden style={NO_ICON_SCALE} />
-          Post opening
+          {t("Post opening")}
         </OutlineButton>
       </div>
 
       <div role="tabpanel" style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 10 }}>
-        {openings.state === "loading" && list.length === 0 ? <MarketSkeleton radius={20} rows={3} count={2} label="Loading your openings" /> : null}
+        {openings.state === "loading" && list.length === 0 ? <MarketSkeleton radius={20} rows={3} count={2} label={t("Loading your openings")} /> : null}
         {openings.state === "error" ? <MarketError thing="your openings" onRetry={openings.retry} /> : null}
         {openings.state === "offline" ? <MarketOffline loaded={list.length > 0} onRetry={openings.retry} force /> : null}
         {list.map((o) => (
@@ -263,8 +264,8 @@ export default function HubPage() {
       {showEmpty ? (
         <HiringEmpty
           icon={<UserPlusGlyph />}
-          title="No openings yet"
-          body="Post a role or a one-off class slot. Professionals near you can apply, and you choose who to hire."
+          title={t("No openings yet")}
+          body={t("Post a role or a one-off class slot. Professionals near you can apply, and you choose who to hire.")}
         />
       ) : null}
 
@@ -276,7 +277,7 @@ export default function HubPage() {
         style={{ marginTop: 14, width: "100%", height: 50, boxSizing: "border-box", borderRadius: 14, border: `1px solid ${m.border}`, background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: textPx(14), fontWeight: 700, color: m.pdark, fontFamily: "inherit", cursor: "pointer" }}
       >
         <Search size={16} strokeWidth={2} aria-hidden style={NO_ICON_SCALE} />
-        Know someone? Find a professional
+        {t("Know someone? Find a professional")}
       </button>
 
       <PostOpeningSheet
@@ -293,7 +294,7 @@ export default function HubPage() {
             setEditing(null);
             if (o) setPosted((p) => p.map((x) => (x.id === o.id ? { ...x, ...o, applicantCount: x.applicantCount, shortlistedCount: x.shortlistedCount, newApplicantCount: x.newApplicantCount } : x)));
             openings.retry();
-            showStrip(`Opening updated · ${title}`);
+            showStrip(t("Opening updated · {title}", { title }));
             return;
           }
           if (o) {
@@ -302,7 +303,7 @@ export default function HubPage() {
           }
           if (tab !== "open") setTab("open");
           else openings.retry();
-          showStrip(`Opening posted · ${title}`, { action: "View", onAction: o ? () => navigate(HIRING_ROUTES.applicants(o.id), { state: { opening: o } }) : undefined });
+          showStrip(t("Opening posted · {title}", { title }), { action: t("View"), onAction: o ? () => navigate(HIRING_ROUTES.applicants(o.id), { state: { opening: o } }) : undefined });
         }}
       />
       {deleting ? (
@@ -313,7 +314,7 @@ export default function HubPage() {
           actionsTop={18}
           title={deleteDialogOf(deleting).title}
           body={deleteDialogOf(deleting).body}
-          cancel="Cancel"
+          cancel={t("Cancel")}
           action={deleteDialogOf(deleting).action}
           tone={deleteDialogOf(deleting).pauseInstead ? "primary" : "destructive"}
           busy={delBusy}

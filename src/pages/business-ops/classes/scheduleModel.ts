@@ -5,6 +5,8 @@
 import { minutesOfDay, range12, time12 } from "../../../utils/time12";
 import { DAY_LONG, DAY_SHORT, mondayIndex } from "../../../utils/week";
 import { openOnCentium } from "../../../services/business-market/listingLogic";
+import { getLanguage, t, tk, tn } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
 
 export interface SessionLite {
   id: string;
@@ -34,6 +36,9 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 const at = (iso: string) => new Date(`${iso}T00:00:00`);
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+/** English keeps its own date strings; another language formats with its own day and month names (Western digits). */
+const en = () => getLanguage() === "en";
+const local = (d: Date, o: Intl.DateTimeFormatOptions) => d.toLocaleDateString(appLocale(), o);
 
 /** YYYY-MM-DD plus n days (local calendar days). */
 export function addDays(day: string, n: number): string {
@@ -55,36 +60,38 @@ export function mondayOf(day: string): string {
 /** "Wed, Oct 7" (the card / toast date, V6-164). */
 export function shortDate(day: string): string {
   const d = at(day);
+  if (!en()) return local(d, { weekday: "short", month: "short", day: "numeric" });
   return `${DAY_SHORT[mondayIndex(d.getDay())]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
 /** "Tue, Oct 6, 2026" (the Date field, V6-162). */
 export function longDate(day: string): string {
+  if (!en()) return local(at(day), { weekday: "short", month: "short", day: "numeric", year: "numeric" });
   return `${shortDate(day)}, ${at(day).getFullYear()}`;
 }
 
 /** "Wednesday" */
 export function weekdayLong(day: string): string {
-  return DAY_LONG[mondayIndex(at(day).getDay())];
+  return t(DAY_LONG[mondayIndex(at(day).getDay())]);
 }
 
 /** "Wed" */
 export function weekdayShort(day: string): string {
-  return DAY_SHORT[mondayIndex(at(day).getDay())];
+  return t(DAY_SHORT[mondayIndex(at(day).getDay())]);
 }
 
 /** "Today · Mon 5 Oct", "Tomorrow · Tue 6 Oct", else "Wed 7 Oct" (OpsTabsV4 logic 448). */
 export function dayHeading(day: string, today: string): string {
-  if (day === today) return `Today · ${shortDate(day)}`;
-  if (day === addDays(today, 1)) return `Tomorrow · ${shortDate(day)}`;
+  if (day === today) return t("Today · {date}", { date: shortDate(day) });
+  if (day === addDays(today, 1)) return t("Tomorrow · {date}", { date: shortDate(day) });
   return shortDate(day);
 }
 
 /** "today", "tomorrow", else "on Thu 8 Oct" (OURS-AN3 C4). */
 export function dayWords(day: string, today: string): string {
-  if (day === today) return "today";
-  if (day === addDays(today, 1)) return "tomorrow";
-  return `on ${shortDate(day)}`;
+  if (day === today) return t("today");
+  if (day === addDays(today, 1)) return t("tomorrow");
+  return t("on {date}", { date: shortDate(day) });
 }
 
 const minutes = (hhmm: string) => minutesOfDay(hhmm) ?? 0;
@@ -211,16 +218,16 @@ export function signed(n: number, unit = ""): string {
 
 /** The figures foot line (OpsTabsV4 logic 463, 12-hour). */
 export function figuresLine(f: Figures, sessions: Session[], issues: Issue[], today: string, now: Date): string {
-  if (f.empty) return "Create a class and it shows here with bookings.";
-  if (f.early && f.sessions > 0) return "Your first week of classes. Comparisons start next week.";
+  if (f.empty) return t("Create a class and it shows here with bookings.");
+  if (f.early && f.sessions > 0) return t("Your first week of classes. Comparisons start next week.");
   const need = new Set(issues.flatMap((i) => i.sessions.map((s) => s.id))).size;
   const full = running(sessions)
     .filter((s) => s.date >= today && s.date <= addDays(today, 6) && !hasStarted(s, now) && isFull(s))
     .sort(byStart)[0];
   const parts: string[] = [];
-  if (need > 0) parts.push(`${need} ${need === 1 ? "session needs" : "sessions need"} attention.`);
-  if (full) parts.push(`${weekdayLong(full.date)} ${time12(full.startTime)} ${full.title} is already full.`);
-  if (parts.length === 0) parts.push("Nothing needs attention this week.");
+  if (need > 0) parts.push(tn(need, "{n} session needs attention.", "{n} sessions need attention."));
+  if (full) parts.push(t("{day} {time} {class} is already full.", { day: weekdayLong(full.date), time: time12(full.startTime), class: full.title }));
+  if (parts.length === 0) parts.push(t("Nothing needs attention this week."));
   return parts.join(" ");
 }
 
@@ -228,27 +235,33 @@ export function figuresLine(f: Figures, sessions: Session[], issues: Issue[], to
 export function issueText(i: Issue, nameOf: (id: string | null) => string, people: string): { title: string; body: string; chip: string } {
   const s = i.sessions[0];
   const more = i.sessions.length - 1;
-  const when = `${shortDate(s.date)} at ${time12(s.startTime)}`;
+  const when = t("{date} at {time}", { date: shortDate(s.date), time: time12(s.startTime) });
   if (i.kind === "noinst") {
+    const booked =
+      people === "clients"
+        ? tn(s.booked, "{n} client is booked.", "{n} clients are booked.")
+        : people === "members"
+          ? tn(s.booked, "{n} member is booked.", "{n} members are booked.")
+          : `${s.booked} ${s.booked === 1 ? people.replace(/s$/, "") : people} ${s.booked === 1 ? "is" : "are"} booked.`;
     return {
-      title: "No instructor",
-      body: `${s.title} on ${when} has nobody teaching it. ${s.booked} ${s.booked === 1 ? people.replace(/s$/, "") : people} ${s.booked === 1 ? "is" : "are"} booked.${more > 0 ? ` ${more} more ${more === 1 ? "session has" : "sessions have"} no instructor.` : ""}`,
+      title: t("No instructor"),
+      body: [t("{class} on {when} has nobody teaching it.", { class: s.title, when }), booked, more > 0 ? tn(more, "{n} more session has no instructor.", "{n} more sessions have no instructor.") : ""].filter(Boolean).join(" "),
       chip: `${weekdayShort(s.date)} ${time12(s.startTime)} ${s.title}`,
     };
   }
   if (i.kind === "double") {
     const pair = i.sessions.filter((x) => x.professionalId === s.professionalId && overlaps(x, s));
     const names = pair.map((x) => x.title);
-    const list = names.length <= 2 ? names.join(" and ") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+    const list = joinAnd(names);
     return {
-      title: "Instructor booked twice",
-      body: `${nameOf(s.professionalId)} is down for ${list} on ${shortDate(s.date)} at ${time12(s.startTime)}.`,
-      chip: `${weekdayShort(s.date)} ${time12(s.startTime)} · ${pair.length} classes`,
+      title: t("Instructor booked twice"),
+      body: t("{name} is down for {classes} on {date} at {time}.", { name: nameOf(s.professionalId), classes: list, date: shortDate(s.date), time: time12(s.startTime) }),
+      chip: `${weekdayShort(s.date)} ${time12(s.startTime)} · ${tn(pair.length, "{n} class", "{n} classes")}`,
     };
   }
   return {
-    title: "Under 40% booked, starts within 48 hours",
-    body: `${s.title} on ${when} has ${s.booked} of ${s.maxCapacity} spots booked.${more > 0 ? ` ${more} more ${more === 1 ? "session is" : "sessions are"} under 40%.` : ""}`,
+    title: t("Under 40% booked, starts within 48 hours"),
+    body: [t("{class} on {when} has {booked} of {cap} spots booked.", { class: s.title, when, booked: s.booked, cap: s.maxCapacity }), more > 0 ? tn(more, "{n} more session is under 40%.", "{n} more sessions are under 40%.") : ""].filter(Boolean).join(" "),
     chip: `${weekdayShort(s.date)} ${time12(s.startTime)} ${s.title}`,
   };
 }
@@ -279,7 +292,7 @@ export function weekHours(sessions: SessionLite[]): { h0: number; h1: number } {
 /** "7 AM", "1 PM" (week grid labels, 12-hour). */
 export function hourLabel(h: number): string {
   const hh = h % 24;
-  return `${hh % 12 === 0 ? 12 : hh % 12} ${hh < 12 ? "AM" : "PM"}`;
+  return `${hh % 12 === 0 ? 12 : hh % 12} ${hh < 12 ? t("AM") : t("PM")}`;
 }
 
 /** Sorts a day's sessions: start time, then newest first for equal times (OP1-155 row 5), then name. */
@@ -304,9 +317,10 @@ export function initialOf(name: string): string {
   return (name.trim()[0] ?? "?").toUpperCase();
 }
 
-/** Plain list join: "a", "a and b", "a, b and c". */
+/** Plain list join: "a", "a and b", "a, b and c" (Arabic: «أ، ب وج»). */
 export function joinAnd(items: string[]): string {
   if (items.length <= 1) return items.join("");
+  if (!en()) return `${items.slice(0, -1).join("، ")} و${items[items.length - 1]}`;
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
@@ -339,7 +353,7 @@ export interface SeriesCard {
 function repeatDays(weekdays: number[]): string {
   const ws = [...new Set(weekdays)].filter((w) => w >= 1 && w <= 7).sort((a, b) => a - b);
   if (ws.length === 7) return "day";
-  return joinAnd(ws.map((w) => DAY_SHORT[w - 1]));
+  return joinAnd(ws.map((w) => t(DAY_SHORT[w - 1])));
 }
 
 /** ISO weekday of a day, 1 = Monday. */
@@ -364,13 +378,18 @@ export function seriesCards(sessions: Session[], rules: SeriesRuleLite[], now: D
     const weekdays = rule?.weekdays.length ? rule.weekdays : sorted.map((s) => isoWeekdayOf(s.date));
     const interval = rule?.intervalWeeks ?? 1;
     const days = repeatDays(weekdays);
-    const every = interval > 1 ? `${interval} weeks on ${days === "day" ? joinAnd(DAY_SHORT) : days}` : days;
+    const repeats =
+      interval > 1
+        ? t("Repeats every {n} weeks on {days}", { n: interval, days: days === "day" ? joinAnd(DAY_SHORT.map((d) => t(d))) : days })
+        : days === "day"
+          ? t("Repeats every day")
+          : t("Repeats every {days}", { days });
     const type = (next.classType || "").trim();
-    const typeLine = `${type ? `${type} · ` : ""}Repeats every ${every}`;
+    const typeLine = `${type ? `${type} · ` : ""}${repeats}`;
     // AN3-055 row 3 OURS: a series that never ends reads "weekly" for the count.
     const never = !!rule && !rule.untilOn && !rule.count;
-    const tail = never ? "weekly" : `${sorted.length} ${sorted.length === 1 ? "session" : "sessions"}`;
-    const whenLine = `Next: ${next.date} · ${range12(next.startTime, next.endTime, "–")} · ${tail}`;
+    const tail = never ? t("weekly") : tn(sorted.length, "{n} session", "{n} sessions");
+    const whenLine = t("Next: {date} · {time} · {count}", { date: next.date, time: range12(next.startTime, next.endTime, "–"), count: tail });
     cards.push({ seriesId, next, remaining: sorted.length, typeLine, whenLine });
   }
   return cards.sort((a, b) => a.next.date.localeCompare(b.next.date) || a.next.startTime.localeCompare(b.next.startTime));
@@ -386,13 +405,14 @@ const MONTH_LONG = ["January", "February", "March", "April", "May", "June", "Jul
 /** "Friday, October 16": the caps over the day's sessions (the board's "Friday 16 October", month first per D-02). */
 export function dayCaps(day: string): string {
   const d = at(day);
+  if (!en()) return local(d, { weekday: "long", month: "long", day: "numeric" });
   return `${DAY_LONG[mondayIndex(d.getDay())]}, ${MONTH_LONG[d.getMonth()]} ${d.getDate()}`;
 }
 
 /** "Week of Oct 19" (the week navigation under the cards; the live Open spots wording). */
 export function weekOf(monday: string): string {
   const d = at(monday);
-  return `Week of ${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  return t("Week of {date}", { date: en() ? `${MONTHS[d.getMonth()]} ${d.getDate()}` : local(d, { month: "short", day: "numeric" }) });
 }
 
 /** Minutes from start to end (0 when the end is not after the start). */
@@ -402,7 +422,7 @@ export function durationMinutes(startTime: string, endTime: string): number {
 
 /** "45 min", "60 min", "90 min" (the board writes every length in minutes). */
 export function durationText(startTime: string, endTime: string): string {
-  return `${durationMinutes(startTime, endTime)} min`;
+  return t("{n} min", { n: durationMinutes(startTime, endTime) });
 }
 
 /** The Duration menu: 15 to 180 minutes, plus the class's own length when it is another. */
@@ -413,7 +433,7 @@ export function durationOptions(current: number): number[] {
 
 /** "{n} classes" under a strip day ("1 class"). */
 export function classesCount(n: number): string {
-  return `${n} ${n === 1 ? "class" : "classes"}`;
+  return tn(n, "{n} class", "{n} classes");
 }
 
 export interface StripDay {
@@ -430,13 +450,13 @@ export interface StripDay {
 export function weekStrip(sessions: Session[], monday: string): StripDay[] {
   return Array.from({ length: 7 }, (_, i) => {
     const day = addDays(monday, i);
-    return { day, w: DAY_SHORT[i].toUpperCase(), n: String(at(day).getDate()), count: running(sessions).filter((s) => s.date === day).length };
+    return { day, w: t(DAY_SHORT[i]).toUpperCase(), n: String(at(day).getDate()), count: running(sessions).filter((s) => s.date === day).length };
   });
 }
 
 /** The card's fill word: "Full" at capacity, else "{n} of {cap}" (sessions.fill). */
 export function fillText(s: Pick<Session, "booked" | "maxCapacity">): string {
-  return s.maxCapacity > 0 && s.booked >= s.maxCapacity ? "Full" : `${s.booked} of ${s.maxCapacity}`;
+  return s.maxCapacity > 0 && s.booked >= s.maxCapacity ? t("Full") : t("{booked} of {cap}", { booked: s.booked, cap: s.maxCapacity });
 }
 
 /** The bar's width in percent, 0 to 100 (sessions.pct). */
@@ -452,27 +472,28 @@ export function fillPct(s: Pick<Session, "booked" | "maxCapacity">): number {
 export function everyText(weekdays: number[], intervalWeeks = 1): string {
   const ws = [...new Set(weekdays)].filter((w) => w >= 1 && w <= 7).sort((a, b) => a - b);
   if (ws.length === 0) return "";
-  const days = ws.length === 1 ? DAY_LONG[ws[0] - 1] : ws.length === 7 ? "day" : joinAnd(ws.map((w) => DAY_SHORT[w - 1]));
-  return intervalWeeks > 1 ? `Every ${intervalWeeks} weeks on ${days === "day" ? "every day" : days}` : `Every ${days}`;
+  const days = ws.length === 1 ? t(DAY_LONG[ws[0] - 1]) : ws.length === 7 ? "day" : joinAnd(ws.map((w) => t(DAY_SHORT[w - 1])));
+  if (intervalWeeks > 1) return days === "day" ? t("Every {n} weeks on every day", { n: intervalWeeks }) : t("Every {n} weeks on {days}", { n: intervalWeeks, days });
+  return days === "day" ? t("Every day") : t("Every {days}", { days });
 }
 
 /** The Price tile's foot line: "Repeats every Friday" (classBookings), or "One-time class" for a class that doesn't repeat. */
 export function repeatsLine(rule: { weekdays: number[]; intervalWeeks: number } | null): string {
-  if (!rule) return "One-time class";
+  if (!rule) return t("One-time class");
   const e = everyText(rule.weekdays, rule.intervalWeeks);
-  return e ? `Repeats ${e.charAt(0).toLowerCase()}${e.slice(1)}` : "One-time class";
+  return e ? t("Repeats {schedule}", { schedule: en() ? `${e.charAt(0).toLowerCase()}${e.slice(1)}` : e }) : t("One-time class");
 }
 
 /** "Fri, Oct 16, 6:30 PM" (the board's "Fri 16 Oct, 6:30 PM", month first). */
 export function whenText(day: string, startTime: string): string {
-  return `${shortDate(day)}, ${time12(startTime)}`;
+  return t("{date}, {time}", { date: shortDate(day), time: time12(startTime) });
 }
 
 /** The cancel dialog's body: "Fri, Oct 16, 6:30 PM. The 14 bookings for this session will be cancelled." */
 export function cancelText(day: string, startTime: string, booked: number): string {
-  const head = `${whenText(day, startTime)}.`;
-  if (booked <= 0) return `${head} Nobody has booked this session yet.`;
-  return `${head} The ${booked} ${booked === 1 ? "booking" : "bookings"} for this session will be cancelled.`;
+  const when = whenText(day, startTime);
+  if (booked <= 0) return t("{when}. Nobody has booked this session yet.", { when });
+  return tn(booked, "{when}. The {n} booking for this session will be cancelled.", "{when}. The {n} bookings for this session will be cancelled.", { when });
 }
 
 /**
@@ -481,14 +502,14 @@ export function cancelText(day: string, startTime: string, booked: number): stri
  * cancel_class_session always tells every booked member.
  */
 export function notifiedText(people: "clients" | "members"): string {
-  return `${people === "clients" ? "Clients" : "Members"} with a booking are notified.`;
+  return people === "clients" ? t("Clients with a booking are notified.") : t("Members with a booking are notified.");
 }
 
 /** The live waitlist / paid counts under the cancel body (cancel_class_session tells the waitlist; paid bookings stay paid). */
 export function cancelExtras(waitlist: number, paid: number): string {
   const parts: string[] = [];
-  if (waitlist > 0) parts.push(`${waitlist} on the waitlist ${waitlist === 1 ? "is" : "are"} told too.`);
-  if (paid > 0) parts.push(`${paid} paid ${paid === 1 ? "booking stays" : "bookings stay"} paid. Record any refund in Revenue.`);
+  if (waitlist > 0) parts.push(tn(waitlist, "{n} on the waitlist is told too.", "{n} on the waitlist are told too."));
+  if (paid > 0) parts.push(tn(paid, "{n} paid booking stays paid. Record any refund in Revenue.", "{n} paid bookings stay paid. Record any refund in Revenue."));
   return parts.join(" ");
 }
 
@@ -500,10 +521,10 @@ export function cancelExtras(waitlist: number, paid: number): string {
  */
 export function payMethodText(method: string | null, priceAgreed: number | null): string {
   const m = (method ?? "").trim().toLowerCase();
-  if (!m) return priceAgreed === 0 ? "Free" : "";
+  if (!m) return priceAgreed === 0 ? t("Free") : "";
   if (m === "whish" || m === "app_store" || m === "appstore" || m === "store" || m === "google_play") return "";
-  const known: Record<string, string> = { cash: "Cash", membership: "Membership", pass: "Pass", class_pack: "Class pack", pack: "Class pack", free: "Free", card: "Card", transfer: "Bank transfer" };
-  if (known[m]) return known[m];
+  const known: Record<string, string> = { cash: tk("Cash"), membership: tk("Membership"), pass: tk("Pass"), class_pack: tk("Class pack"), pack: tk("Class pack"), free: tk("Free"), card: tk("Card"), transfer: tk("Bank transfer") };
+  if (known[m]) return t(known[m]);
   const words = m.replace(/[_-]+/g, " ");
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
@@ -527,25 +548,25 @@ export function centiumLine(o: {
   cancelled: boolean;
 }): { text: string; tone: "teal" | "faint"; open: number } | null {
   if (o.cancelled || o.ended) return null;
-  if (o.listingActive === false) return { text: "Listing is off", tone: "faint", open: 0 };
-  if (!o.listed) return { text: "Members only", tone: "faint", open: 0 };
-  if (o.centiumSpots !== null && o.fromCentium === null) return { text: "On Explore", tone: "teal", open: 0 };
+  if (o.listingActive === false) return { text: t("Listing is off"), tone: "faint", open: 0 };
+  if (!o.listed) return { text: t("Members only"), tone: "faint", open: 0 };
+  if (o.centiumSpots !== null && o.fromCentium === null) return { text: t("On Explore"), tone: "teal", open: 0 };
   const open = openOnCentium(o.capacity, o.booked, o.centiumSpots, o.fromCentium ?? 0);
-  return { text: `${open} open on Centium`, tone: "teal", open };
+  return { text: t("{n} open on Centium", { n: open }), tone: "teal", open };
 }
 
 /** The card's flag chip: the live flags (OP1-074) first, then the old Open spots "Almost full" (80% or more). */
 export function cardFlag(s: Session, issue: IssueKind | null, now: Date): { label: string; tone: "high" | "caution" | "good" } | null {
-  if (s.cancelled) return { label: "Cancelled", tone: "high" };
-  if (issue === "noinst") return { label: "No instructor", tone: "high" };
-  if (issue === "double") return { label: "Double-booked", tone: "high" };
-  if (issue === "low") return { label: "Under 40%", tone: "caution" };
-  if (!isEnded(s, now) && s.maxCapacity > 0 && s.booked < s.maxCapacity && s.booked / s.maxCapacity >= 0.8) return { label: "Almost full", tone: "good" };
+  if (s.cancelled) return { label: t("Cancelled"), tone: "high" };
+  if (issue === "noinst") return { label: t("No instructor"), tone: "high" };
+  if (issue === "double") return { label: t("Double-booked"), tone: "high" };
+  if (issue === "low") return { label: t("Under 40%"), tone: "caution" };
+  if (!isEnded(s, now) && s.maxCapacity > 0 && s.booked < s.maxCapacity && s.booked / s.maxCapacity >= 0.8) return { label: t("Almost full"), tone: "good" };
   return null;
 }
 
 /** The card / Price tile's price: "$12"; a class with no price or $0 reads "Free". */
 export function priceText(price: string | null | undefined): string {
   const p = (price ?? "").trim();
-  return !p || /^\$?0(\.0+)?$/.test(p) ? "Free" : p;
+  return !p || /^\$?0(\.0+)?$/.test(p) ? t("Free") : p;
 }

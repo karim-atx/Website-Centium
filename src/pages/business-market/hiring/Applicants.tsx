@@ -27,6 +27,7 @@ import { useHiringBusiness } from "./useHiringBusiness";
 import { BusyWarning, HiredLine, HiringEmpty, InboxGlyph, PersonHead, TagChip, useHiringRead, useHiringStrip } from "./hiringParts";
 import HireConfirmDialog, { type DialogNote, type HireOffer } from "./HireConfirmDialog";
 import { applicantTag, busyText, firstName, hiredState, hiredStrip, offerStartDate, scheduleLine, sentStrip, typeLabel } from "./hubModel";
+import { t, tn, tx } from "../../../i18n/core";
 
 // Market + Share 3.0 · W4 · B-MA.8.2 Applicants (`appList`, `appEmpty`) and
 // the B-MA.8.3 hire states (`hireConfirm`, `hireConfirmMin`, `hireDone`),
@@ -115,7 +116,7 @@ export default function ApplicantsPage() {
     if (!hired) return;
     markSeen(hired.id);
     if (hired.fee == null) return;
-    showStrip(hiredStrip(hired.fee), biz.isOwner ? { action: "Fees", onAction: () => navigate(HIRING_ROUTES.fees) } : {});
+    showStrip(hiredStrip(hired.fee), biz.isOwner ? { action: t("Fees"), onAction: () => navigate(HIRING_ROUTES.fees) } : {});
   }, [apps.value, opening, biz.isOwner, navigate, showStrip]);
 
   const act = async (a: Application, kind: "shortlist" | "decline") => {
@@ -181,7 +182,7 @@ export default function ApplicantsPage() {
   return (
     <div style={{ color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <BackHeader eyebrow="Hiring" title="Applicants" onBack={back} backLabel="Back to Hiring" />
+      <BackHeader eyebrow={t("Hiring")} title={t("Applicants")} onBack={back} backLabel={t("Back to Hiring")} />
       {strip}
 
       {opening ? (
@@ -206,16 +207,16 @@ export default function ApplicantsPage() {
           </div>
         </TicketStub>
       ) : loadingOpening ? (
-        <MarketSkeleton radius={18} rows={3} label="Loading the opening" />
+        <MarketSkeleton radius={18} rows={3} label={t("Loading the opening")} />
       ) : null}
 
-      {apps.state === "loading" && !apps.value ? <MarketSkeleton radius={20} rows={4} count={2} label="Loading the applicants" style={{ marginTop: 16 }} /> : null}
+      {apps.state === "loading" && !apps.value ? <MarketSkeleton radius={20} rows={4} count={2} label={t("Loading the applicants")} style={{ marginTop: 16 }} /> : null}
       {apps.state === "error" ? <MarketError thing="the applicants" onRetry={apps.retry} style={{ marginTop: 16 }} /> : null}
       {apps.state === "offline" ? <MarketOffline loaded={list.length > 0} onRetry={apps.retry} force style={{ marginTop: 16 }} /> : null}
 
       {apps.state === "ok" || apps.state === "pending" || list.length ? (
         <div data-apl-count style={{ marginTop: 16, fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint }}>
-          {list.length ? `${list.length} ${list.length === 1 ? "applicant" : "applicants"}` : "No applicants"}
+          {list.length ? tn(list.length, "{n} applicant", "{n} applicants") : t("No applicants")}
         </div>
       ) : null}
 
@@ -229,9 +230,9 @@ export default function ApplicantsPage() {
             a.status === "HIRED"
               ? { text: hiredState(a.hireStartsOn), ink: m.tealink }
               : a.status === "OFFERED"
-                ? { text: `Offer sent · waiting for ${firstName(a.professional.name)}`, ink: m.ink2 }
+                ? { text: t("Offer sent · waiting for {name}", { name: firstName(a.professional.name) }), ink: m.ink2 }
                 : a.status === "DECLINED"
-                  ? { text: "Declined", ink: m.faint }
+                  ? { text: t("Declined"), ink: m.faint }
                   : null;
           return (
             <div key={a.id} data-applicant={a.id} style={{ borderRadius: 20, background: m.card, border: hired ? `1.5px solid ${hiredBorder}` : `1px solid ${m.border}`, padding: "14px 16px" }}>
@@ -240,10 +241,10 @@ export default function ApplicantsPage() {
               {a.message ? <div style={{ marginTop: 10, borderRadius: 12, background: m.soft, padding: "10px 12px", fontSize: textPx(12.5), lineHeight: linePx(18), color: m.ink2, overflowWrap: "anywhere" }}>{a.message}</div> : null}
               {a.attachments.length ? (
                 <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {a.attachments.map((t, i) => (
-                    <span key={`${t.label}-${i}`} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 999, background: m.pale, color: m.pdark, fontSize: textPx(11), fontWeight: 700 }}>
+                  {a.attachments.map((att, i) => (
+                    <span key={`${att.label}-${i}`} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 999, background: m.pale, color: m.pdark, fontSize: textPx(11), fontWeight: 700 }}>
                       <Paperclip size={11} strokeWidth={2.2} aria-hidden style={NO_ICON_SCALE} />
-                      {t.label}
+                      {att.label}
                     </span>
                   ))}
                 </div>
@@ -258,7 +259,7 @@ export default function ApplicantsPage() {
                     className="hit market-focus"
                     style={{ flex: 1, height: 42, borderRadius: 12, border: `1px solid ${m.border}`, background: "transparent", color: m.pdark, display: "flex", alignItems: "center", justifyContent: "center", fontSize: textPx(13), fontWeight: 800, fontFamily: "inherit", cursor: a.status === "APPLIED" ? "pointer" : "default", boxSizing: "border-box" }}
                   >
-                    {a.status === "SHORTLISTED" ? "Shortlisted" : "Shortlist"}
+                    {a.status === "SHORTLISTED" ? t("Shortlisted") : t("Shortlist")}
                   </button>
                   <button
                     type="button"
@@ -267,7 +268,7 @@ export default function ApplicantsPage() {
                     className="hit market-focus"
                     style={{ flex: 1, height: 40, borderRadius: 12, border: 0, background: m.fill, color: m.onfill, display: "flex", alignItems: "center", justifyContent: "center", fontSize: textPx(13), fontWeight: 800, fontFamily: "inherit", cursor: "pointer", opacity: !opening || opening.pay == null ? 0.4 : 1 }}
                   >
-                    Offer
+                    {tx("Offer", "hire")}
                   </button>
                   <button
                     type="button"
@@ -276,7 +277,7 @@ export default function ApplicantsPage() {
                     className="hit market-focus"
                     style={{ flex: "0 0 auto", height: 40, padding: "0 10px", color: m.ink2, display: "flex", alignItems: "center", justifyContent: "center", fontSize: textPx(13), fontWeight: 700, border: 0, background: "transparent", fontFamily: "inherit", cursor: "pointer" }}
                   >
-                    Decline
+                    {t("Decline")}
                   </button>
                 </div>
               ) : null}
@@ -290,9 +291,9 @@ export default function ApplicantsPage() {
       {empty ? (
         <HiringEmpty
           icon={<InboxGlyph />}
-          title="No applicants yet"
-          body="Professionals who apply show here. If you already know someone, send them a direct offer."
-          action="Find a professional"
+          title={t("No applicants yet")}
+          body={t("Professionals who apply show here. If you already know someone, send them a direct offer.")}
+          action={t("Find a professional")}
           onAction={() => navigate(HIRING_ROUTES.find)}
         />
       ) : null}
