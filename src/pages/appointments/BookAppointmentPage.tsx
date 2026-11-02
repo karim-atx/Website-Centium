@@ -18,6 +18,11 @@ import { useLive } from "../business-ops/store/storeShared";
 import { ClassTermsSheet } from "../marketplace/ClassTermsSheet";
 import { ClientCard, ClientEmpty, ClientRow, InfoNote, RadioRow, RetryLine, Section, SkeletonCards, SoonChip } from "../store/clientKit";
 import { useAppointmentBooking, type ApptBookOutcome } from "./useAppointmentBooking";
+import { getLanguage, t } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
+
+/** The day chip's short weekday: English keeps DAY_SHORT; another language asks appLocale(). */
+const weekdayShort = (d: Date) => (getLanguage() === "en" ? DAY_SHORT[mondayIndex(d.getDay())] : d.toLocaleDateString(appLocale(), { weekday: "short" }));
 
 // OURS-customer-appointment-booking (Designed by us): service → day and time
 // (Monday-first strip, 12-hour slots) → who (when more than one person is
@@ -90,21 +95,21 @@ export default function BookAppointmentPage() {
   if (s.status === "loading") {
     return (
       <div>
-        <PageHeader title="Book an appointment" showBack sub />
-        <SkeletonCards label="Loading services" />
+        <PageHeader title={t("Book an appointment")} showBack sub />
+        <SkeletonCards label={t("Loading services")} />
       </div>
     );
   }
   if (s.status !== "ok" || !d?.store) {
     return (
       <div>
-        <PageHeader title="Book an appointment" showBack sub />
+        <PageHeader title={t("Book an appointment")} showBack sub />
         {s.status === "error" ? (
-          <RetryLine text="Couldn't load this place's services." onRetry={live.reload} />
+          <RetryLine text={t("Couldn't load this place's services.")} onRetry={live.reload} />
         ) : !takesNew ? (
           <BusinessClosedNote status={bizStatus} />
         ) : (
-          <ClientEmpty icon={CalendarPlus} title="Not found" line="This place may not be on Explore right now." />
+          <ClientEmpty icon={CalendarPlus} title={t("Not found")} line={t("This place may not be on Explore right now.")} />
         )}
       </div>
     );
@@ -114,7 +119,7 @@ export default function BookAppointmentPage() {
     if (r.kind === "booked") navigate(`/app/appointments/${r.id}?booked=1`, { replace: true });
     else if (r.kind === "error" && r.message) {
       setError(r.message);
-      if (refreshesTimes(r.code)) setTick((t) => t + 1);
+      if (refreshesTimes(r.code)) setTick((n) => n + 1);
     }
   };
   const book = async () => {
@@ -153,23 +158,24 @@ export default function BookAppointmentPage() {
     );
   };
 
-  const who = choices.find((c) => c.staffId === staffId)?.label ?? null;
+  const whoLabel = choices.find((c) => c.staffId === staffId)?.label ?? null;
+  const who = whoLabel ? t(whoLabel) : null;
 
   return (
     <div>
-      <PageHeader title="Book an appointment" subtitle={d.store.name} showBack sub />
+      <PageHeader title={t("Book an appointment")} subtitle={d.store.name} showBack sub />
       <BusinessClosedNote status={bizStatus} className="mb-3" />
 
       {d.pending || d.services.length === 0 ? (
         <>
-          <ClientEmpty icon={CalendarClock} title="No services to book yet" line="When this place adds its services and free times, you can book them here." />
-          {d.pending && <InfoNote>Booking appointments is coming soon.</InfoNote>}
+          <ClientEmpty icon={CalendarClock} title={t("No services to book yet")} line={t("When this place adds its services and free times, you can book them here.")} />
+          {d.pending && <InfoNote>{t("Booking appointments is coming soon.")}</InfoNote>}
         </>
       ) : (
         <>
-          <Section label="Service" first>
+          <Section label={t("Service")} first>
             <ClientCard>
-              <div role="radiogroup" aria-label="Service">
+              <div role="radiogroup" aria-label={t("Service")}>
                 {d.services.map((x) => (
                   <RadioRow
                     key={x.id}
@@ -177,7 +183,7 @@ export default function BookAppointmentPage() {
                     selected={service?.id === x.id}
                     onSelect={() => setService(x)}
                     title={x.name}
-                    sub={`${x.durationMin} min · ${money(x.price)}`}
+                    sub={`${t("{n} min", { n: x.durationMin })} · ${money(x.price)}`}
                   />
                 ))}
               </div>
@@ -185,8 +191,8 @@ export default function BookAppointmentPage() {
           </Section>
 
           {service && (
-            <Section label="Day">
-              <div role="radiogroup" aria-label="Day" className="flex overflow-x-auto [scrollbar-width:none]" style={{ gap: 8 }}>
+            <Section label={t("Day")}>
+              <div role="radiogroup" aria-label={t("Day")} className="flex overflow-x-auto [scrollbar-width:none]" style={{ gap: 8 }}>
                 {days.map((x) => {
                   const v = isoDate(x);
                   const on = v === date;
@@ -201,7 +207,7 @@ export default function BookAppointmentPage() {
                       className={clsx("tap shrink-0 flex flex-col items-center justify-center rounded-[14px]", on ? "bg-primary-fill text-on-primary-fill" : "bg-primary-pale text-primary-dark")}
                       style={{ width: 48, height: 60 }}
                     >
-                      <span className="text-[10.5px] font-bold uppercase">{DAY_SHORT[mondayIndex(x.getDay())]}</span>
+                      <span className="text-[10.5px] font-bold uppercase">{weekdayShort(x)}</span>
                       <span className="text-[16px] font-extrabold">{x.getDate()}</span>
                     </button>
                   );
@@ -211,16 +217,16 @@ export default function BookAppointmentPage() {
           )}
 
           {service && (
-            <Section label={`Free times · ${dayTitle(new Date(date + "T00:00:00"))}`}>
+            <Section label={t("Free times · {day}", { day: dayTitle(new Date(date + "T00:00:00")) })}>
               {slots === null ? (
-                <SkeletonCards heights={[44, 44]} label="Loading free times" />
+                <SkeletonCards heights={[44, 44]} label={t("Loading free times")} />
               ) : slots === "error" ? (
-                <RetryLine text="Couldn't load the free times." onRetry={() => setTick((t) => t + 1)} />
+                <RetryLine text={t("Couldn't load the free times.")} onRetry={() => setTick((n) => n + 1)} />
               ) : times.length === 0 ? (
-                <p className="text-[13px] font-medium text-charcoal-faint">No free times this day. Try another day.</p>
+                <p className="text-[13px] font-medium text-charcoal-faint">{t("No free times this day. Try another day.")}</p>
               ) : (
-                <div role="radiogroup" aria-label="Time">
-                  {[{ k: "Morning", l: am }, { k: "Afternoon and evening", l: pm }]
+                <div role="radiogroup" aria-label={t("Time")}>
+                  {[{ k: t("Morning"), l: am }, { k: t("Afternoon and evening"), l: pm }]
                     .filter((g) => g.l.length > 0)
                     .map((g) => (
                       <div key={g.k} style={{ marginBottom: 10 }}>
@@ -238,11 +244,11 @@ export default function BookAppointmentPage() {
           )}
 
           {service && time && choices.length > 1 && (
-            <Section label="With">
+            <Section label={t("With")}>
               <ClientCard>
-                <div role="radiogroup" aria-label="With">
+                <div role="radiogroup" aria-label={t("With")}>
                   {choices.map((c) => (
-                    <RadioRow key={c.staffId} icon={User} selected={staffId === c.staffId} onSelect={() => setStaffId(c.staffId)} title={c.label} />
+                    <RadioRow key={c.staffId} icon={User} selected={staffId === c.staffId} onSelect={() => setStaffId(c.staffId)} title={t(c.label)} />
                   ))}
                 </div>
               </ClientCard>
@@ -250,28 +256,29 @@ export default function BookAppointmentPage() {
           )}
 
           {service && picked && (
-            <Section label="Confirm">
-              <ClientCard label="Your booking">
+            <Section label={t("Confirm")}>
+              <ClientCard label={t("Your booking")}>
                 <ClientRow icon={Sparkles} title={service.name} sub={`${shortDate(new Date(picked.startsAt))}, ${rangeClock12(picked.startsAt, picked.endsAt)}`} value={money(service.price)} />
-                {who && <ClientRow icon={User} title={who} sub="With" />}
-                <ClientRow icon={Banknote} title="Cash" sub="Pay at the visit" />
-                <ClientRow icon={Wallet} title="Whish" sub="Pay in the app" trailing={<SoonChip />} />
+                {who && <ClientRow icon={User} title={who} sub={t("With")} />}
+                <ClientRow icon={Banknote} title={t("Cash")} sub={t("Pay at the visit")} />
+                {/* i18n-ignore: Whish is a brand name */}
+                <ClientRow icon={Wallet} title="Whish" sub={t("Pay in the app")} trailing={<SoonChip />} />
               </ClientCard>
               <p className="text-[12px] font-medium text-charcoal-faint" style={{ marginTop: 8, padding: "0 4px" }}>
-                It goes in your calendar. You can cancel from My appointments.
+                {t("It goes in your calendar. You can cancel from My appointments.")}
               </p>
             </Section>
           )}
 
           {error && (
             <p role="alert" className="text-[12px] font-semibold text-status-high" style={{ marginTop: 10 }}>
-              {error}
+              {t(error)}
             </p>
           )}
           {user.accountType === "customer" && takesNew && (
             <>
               <div aria-hidden style={{ height: 60 }} />
-              <PinnedCta primary={{ label: picked ? `Book ${clock12(picked.startsAt)}` : "Book", onClick: () => void book(), disabled: !service || !picked || !online, loading: booking.busy && !booking.terms }} />
+              <PinnedCta primary={{ label: picked ? t("Book {time}", { time: clock12(picked.startsAt) }) : t("Book"), onClick: () => void book(), disabled: !service || !picked || !online, loading: booking.busy && !booking.terms }} />
             </>
           )}
           <ClassTermsSheet docs={booking.terms} businessName={d.store.name} busy={booking.busy} online={online} error={booking.termsError} onAgree={() => void agree()} onClose={booking.closeTerms} />

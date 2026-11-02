@@ -34,6 +34,7 @@ const AREAS = [
   ["market", "Marketplace components: class cards, venues, offers, vouchers and hiring"],
   ["share", "Sharing: share cards, client wins and business links"],
   ["member", "Member home, profile and calendar"],
+  ["community", "Community, forum, courses, client forms and appointments"],
 ];
 
 const rows = [];

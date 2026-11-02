@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { fetchCategories, fetchMyNickname } from "../../services/forum";
 import type { ForumCategory } from "../../services/forum/rules";
+import { t } from "../../i18n/core";
 
 // What every forum screen needs about the reader: the categories (with their
 // sensitivity, for recovery-sensitive mode) and their own nickname. Held in a
@@ -31,7 +32,7 @@ async function load(userId: string) {
   try {
     [cats, nick] = await Promise.all([fetchCategories(), fetchMyNickname(userId)]);
   } catch {
-    if (state.userId === userId) set({ error: "Couldn't load the forum. Check your connection and try again." });
+    if (state.userId === userId) set({ error: t("Couldn't load the forum. Check your connection and try again.") });
     return;
   }
   if (state.userId !== userId) return;

@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { acceptClassPolicies, pendingClassPolicies, type PendingClassPolicy } from "../../services/marketplace";
 import { APPOINTMENT_POLICY_KINDS } from "../../services/marketplace/classBooking";
 import { bookAppointment, bookErrorMessage } from "../../services/appointments";
+import { t, tk } from "../../i18n/core";
 
 // B12 booking, the class flow (useClassBooking) with the appointment's
 // documents: book_appointment() refuses with ATXE4 until the client has
@@ -13,7 +14,7 @@ import { bookAppointment, bookErrorMessage } from "../../services/appointments";
 
 export type ApptBookOutcome = { kind: "booked"; id: string } | { kind: "terms" } | { kind: "error"; message: string; code?: string };
 
-const FALLBACK = "Couldn't book. Try again.";
+const FALLBACK = tk("Couldn't book. Try again.");
 
 export function useAppointmentBooking(businessId: string, userId: string | null) {
   const [terms, setTerms] = useState<PendingClassPolicy[] | null>(null);
@@ -37,8 +38,8 @@ export function useAppointmentBooking(businessId: string, userId: string | null)
         const again = await showTerms();
         if (again) return again;
       }
-      if (r.pending) return { kind: "error", message: "Booking is coming soon." };
-      return { kind: "error", code: r.code, message: bookErrorMessage(r.code, r.message ?? "", FALLBACK) };
+      if (r.pending) return { kind: "error", message: t("Booking is coming soon.") };
+      return { kind: "error", code: r.code, message: t(bookErrorMessage(r.code, r.message ?? "", FALLBACK)) };
     },
     [showTerms]
   );
@@ -49,8 +50,8 @@ export function useAppointmentBooking(businessId: string, userId: string | null)
       if (busy) return { kind: "error", message: "" };
       setBusy(true);
       try {
-        const t = await showTerms();
-        if (t) return t;
+        const shown = await showTerms();
+        if (shown) return shown;
         return await book(serviceId, staffId, startsAt);
       } finally {
         setBusy(false);

@@ -4,6 +4,7 @@ import { CtaButton } from "../ui/PinnedCta";
 import { withdrawPost, type PostRef } from "../../services/forum";
 import { DangerLine } from "./parts";
 import { fv } from "./forumColor";
+import { t } from "../../i18n/core";
 
 // Withdrawing the reader's own post or reply (delete_forum_post), asked once
 // more because it can't be undone from the app.
@@ -25,9 +26,8 @@ type Props = {
 
 export function OwnPostSheet(props: Props) {
   // BottomSheet renders nothing while closed, so each opening starts fresh.
-  const noun = props.kind === "post" ? "post" : "reply";
   return (
-    <BottomSheet open={props.open} onClose={props.onClose} title={`Withdraw this ${noun}?`}>
+    <BottomSheet open={props.open} onClose={props.onClose} title={props.kind === "post" ? t("Withdraw this post?") : t("Withdraw this reply?")}>
       <WithdrawBody {...props} />
     </BottomSheet>
   );
@@ -36,7 +36,6 @@ export function OwnPostSheet(props: Props) {
 function WithdrawBody({ onClose, target, kind, onWithdrawn }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const noun = kind === "post" ? "post" : "reply";
 
   const withdraw = async () => {
     if (!target || busy) return;
@@ -51,11 +50,11 @@ function WithdrawBody({ onClose, target, kind, onWithdrawn }: Props) {
   return (
     <div className="flex flex-col gap-3.5" style={{ color: fv("text") }}>
       <p className="m-0 text-[13px] font-medium leading-[1.55]" style={{ color: fv("muted") }}>
-        It will disappear for everyone. This can't be undone.
+        {t("It will disappear for everyone. This can't be undone.")}
       </p>
       {error && <DangerLine>{error}</DangerLine>}
       <CtaButton
-        label={busy ? "Withdrawing…" : `Withdraw ${noun}`}
+        label={busy ? t("Withdrawing…") : kind === "post" ? t("Withdraw post") : t("Withdraw reply")}
         loading={busy}
         onClick={() => void withdraw()}
         className="!bg-[var(--forum-danger)] !text-white"
@@ -68,7 +67,7 @@ function WithdrawBody({ onClose, target, kind, onWithdrawn }: Props) {
         className="tap self-center h-11 px-3 text-[13px] font-bold"
         style={{ color: fv("link") }}
       >
-        Keep it
+        {t("Keep it")}
       </button>
     </div>
   );

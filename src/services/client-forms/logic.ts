@@ -16,6 +16,8 @@
 
 import { clock12 } from "../../utils/time12";
 import { DAY_LONG, mondayIndex } from "../../utils/week";
+import { getLanguage, t, tn } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
 
 export type QuestionType = "number" | "scale" | "choice" | "multi" | "text" | "long_text" | "photo" | "date";
 export type FormKind = "intake" | "check_in";
@@ -462,9 +464,9 @@ export function firstPartMissing(parts: FormItem[][], answers: Answers): number 
 
 /** CU6 v3 "Add your hips measurement to continue". */
 export function missingMessage(q: ClientQuestion): string {
-  if (isMeasureField(q)) return `Add your ${q.prompt.trim().toLowerCase()} measurement to continue`;
-  if (q.type === "photo") return "Add a photo to continue";
-  return "Answer this question to continue";
+  if (isMeasureField(q)) return t("Add your {name} measurement to continue", { name: q.prompt.trim().toLowerCase() });
+  if (q.type === "photo") return t("Add a photo to continue");
+  return t("Answer this question to continue");
 }
 
 /** The answer buttons of a scale question, low to high. */
@@ -527,16 +529,20 @@ export function showDoctorFollowUp(saved: { safety_flag: boolean } | null, quest
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 const dayDiff = (a: Date, b: Date) => Math.round((startOfDay(a) - startOfDay(b)) / 86400000);
-export const weekdayName = (d: Date) => DAY_LONG[mondayIndex(d.getDay())];
+// Round G (EH3b): English keeps its own tables (unchanged output); another
+// language takes its weekday and month names from appLocale().
+const english = () => getLanguage() === "en";
+export const weekdayName = (d: Date) => (english() ? DAY_LONG[mondayIndex(d.getDay())] : d.toLocaleDateString(appLocale(), { weekday: "long" }));
+const monthDay = (d: Date) => (english() ? `${MONTH_SHORT[d.getMonth()]} ${d.getDate()}` : d.toLocaleDateString(appLocale(), { month: "short", day: "numeric" }));
 
 /** "today", "tomorrow", "yesterday", a weekday within the week either side, else "Oct 25". */
 export function dayWord(at: Date, now: Date): string {
   const diff = dayDiff(at, now);
-  if (diff === 0) return "today";
-  if (diff === 1) return "tomorrow";
-  if (diff === -1) return "yesterday";
+  if (diff === 0) return t("today");
+  if (diff === 1) return t("tomorrow");
+  if (diff === -1) return t("yesterday");
   if (Math.abs(diff) < 7) return weekdayName(at);
-  return `${MONTH_SHORT[at.getMonth()]} ${at.getDate()}`;
+  return monthDay(at);
 }
 
 /** CU5 "Due today 8:00 PM"; "Due tomorrow 2:14 PM"; once past, "Was due Friday 2:14 PM". */
@@ -544,7 +550,8 @@ export function dueLine(dueAt: string | null, now: Date): string {
   if (!dueAt) return "";
   const at = new Date(dueAt);
   if (Number.isNaN(at.getTime())) return "";
-  return `${at.getTime() < now.getTime() ? "Was due" : "Due"} ${dayWord(at, now)} ${clock12(at)}`;
+  const vars = { when: dayWord(at, now), time: clock12(at) };
+  return at.getTime() < now.getTime() ? t("Was due {when} {time}", vars) : t("Due {when} {time}", vars);
 }
 
 /** The lower-case form for "Part 2 of 3 · saved · due 8:00 PM". */
@@ -552,15 +559,15 @@ export function dueShort(dueAt: string | null, now: Date): string {
   if (!dueAt) return "";
   const at = new Date(dueAt);
   if (Number.isNaN(at.getTime())) return "";
-  const word = dayWord(at, now);
-  return `due ${word === "today" ? "" : `${word} `}${clock12(at)}`;
+  if (dayDiff(at, now) === 0) return t("due {time}", { time: clock12(at) });
+  return t("due {when} {time}", { when: dayWord(at, now), time: clock12(at) });
 }
 
 export const minutesFor = (questionCount: number) => Math.max(1, Math.round(questionCount / 4));
-export const minutesText = (n: number) => (n === 1 ? "1 minute" : `${n} minutes`);
+export const minutesText = (n: number) => tn(n, "1 minute", "{n} minutes");
 
 /** "Sunday, Oct 25" (CU6 "Next check-in: Sunday, Oct 25"). */
-export const longDate = (d: Date) => `${weekdayName(d)}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
+export const longDate = (d: Date) => t("{weekday}, {date}", { weekday: weekdayName(d), date: monthDay(d) });
 
 /** The next check-in of a schedule (daily@HH:MM, weekly: / every2weeks: / every4weeks:<1-7>@HH:MM) after this one, or null. */
 export function nextOccurrence(schedule: string | null, dueAt: string | null): Date | null {
@@ -648,9 +655,9 @@ export function sessionLevel(startsAt: string, endsAt: string, now: Date): Remin
 export function sessionTitle(proName: string, startsAt: string, now: Date): string {
   const s = new Date(startsAt);
   const mins = Math.round((s.getTime() - now.getTime()) / 60000);
-  if (mins <= 0) return `Session with ${proName} now`;
-  if (mins <= 60) return `Session with ${proName} in ${mins} min`;
-  return `Session with ${proName} at ${clock12(s)}`;
+  if (mins <= 0) return t("Session with {name} now", { name: proName });
+  if (mins <= 60) return t("Session with {name} in {n} min", { name: proName, n: mins });
+  return t("Session with {name} at {time}", { name: proName, time: clock12(s) });
 }
 
 export interface OpenForm {
@@ -678,16 +685,17 @@ export function formReminder(f: OpenForm, now: Date): Reminder {
   const short = dueShort(f.dueAt, now);
   if (f.kind === "intake") {
     return f.hasDraft
-      ? { ...base, tone: "gold", title: `Finish your intake for ${f.proName}`, detail: `${done} of ${total} done · saved`, action: "Continue" }
-      : { ...base, tone: "gold", title: `Your intake for ${f.proName}`, detail: [`${total} ${total === 1 ? "question" : "questions"}`, minutesText(minutesFor(total))].join(" · "), action: "Start" };
+      ? { ...base, tone: "gold", title: t("Finish your intake for {name}", { name: f.proName }), detail: t("{done} of {total} done · saved", { done, total }), action: t("Continue") }
+      : { ...base, tone: "gold", title: t("Your intake for {name}", { name: f.proName }), detail: [tn(total, "1 question", "{n} questions"), minutesText(minutesFor(total))].join(" · "), action: t("Start") };
   }
   if (f.hasDraft) {
-    const where = parts.length > 1 ? `${sectioned ? "Section" : "Part"} ${resumePart(parts, f.answers) + 1} of ${parts.length}` : `${done} of ${total} done`;
-    return { ...base, tone: "pr", title: "Continue your check-in", detail: [where, "saved", short].filter(Boolean).join(" · "), action: "Continue" };
+    const at = { n: resumePart(parts, f.answers) + 1, total: parts.length };
+    const where = parts.length > 1 ? (sectioned ? t("Section {n} of {total}", at) : t("Part {n} of {total}", at)) : t("{done} of {total} done", { done, total });
+    return { ...base, tone: "pr", title: t("Continue your check-in"), detail: [where, t("saved"), short].filter(Boolean).join(" · "), action: t("Continue") };
   }
   const dueAt = f.dueAt ? new Date(f.dueAt) : null;
-  const title = dueAt && !Number.isNaN(dueAt.getTime()) ? `${weekdayName(dueAt)} check-in is due` : "Your check-in is ready";
-  return { ...base, tone: "pr", title, detail: [dueLine(f.dueAt, now), minutesText(minutesFor(total))].filter(Boolean).join(" · "), action: "Start" };
+  const title = dueAt && !Number.isNaN(dueAt.getTime()) ? t("{weekday} check-in is due", { weekday: weekdayName(dueAt) }) : t("Your check-in is ready");
+  return { ...base, tone: "pr", title, detail: [dueLine(f.dueAt, now), minutesText(minutesFor(total))].filter(Boolean).join(" · "), action: t("Start") };
 }
 
 export interface PendingReferral {
@@ -712,7 +720,7 @@ export function referralReminder(r: PendingReferral): Reminder {
     tone: "pr",
     title: referralTitle(r),
     detail: r.reason,
-    action: "Review",
+    action: t("Review"),
   };
 }
 
@@ -721,7 +729,7 @@ export function referralReminder(r: PendingReferral): Reminder {
  * card, the pop-up and the sheet (W9: they used to differ).
  */
 export function referralTitle(r: PendingReferral): string {
-  return r.toName ? `${r.fromName} wants to refer you to ${r.toName}` : `${r.fromName} wants to refer you`;
+  return r.toName ? t("{from} wants to refer you to {to}", { from: r.fromName, to: r.toName }) : t("{from} wants to refer you", { from: r.fromName });
 }
 
 /**
@@ -729,8 +737,8 @@ export function referralTitle(r: PendingReferral): string {
  * names who it goes to). Agreeing sends the referral; no health data moves with it.
  */
 export function referralBody(r: PendingReferral): string {
-  if (r.toName) return `If you agree, ${r.toName} gets ${r.fromName}'s referral and the reason for it. Nothing else is shared.`;
-  return `To another professional. If you agree, they get ${r.fromName}'s referral and the reason for it. Nothing else is shared.`;
+  if (r.toName) return t("If you agree, {to} gets {from}'s referral and the reason for it. Nothing else is shared.", { to: r.toName, from: r.fromName });
+  return t("To another professional. If you agree, they get {from}'s referral and the reason for it. Nothing else is shared.", { from: r.fromName });
 }
 
 /**
@@ -750,14 +758,13 @@ export interface ConnectReferral {
 }
 
 export function connectTitle(r: ConnectReferral): string {
-  return r.toName ? `${r.toName} accepted ${r.fromName}'s referral` : `Your referral from ${r.fromName} was accepted`;
+  return r.toName ? t("{to} accepted {from}'s referral", { to: r.toName, from: r.fromName }) : t("Your referral from {from} was accepted", { from: r.fromName });
 }
 
 export function connectBody(r: ConnectReferral): string {
-  const who = r.toName ?? "they";
   return r.toName
-    ? `Connect to become ${r.toName}'s client. You choose what ${who} can see. Nothing is shared until you do.`
-    : "Connect to become their client. You choose what they can see. Nothing is shared until you do.";
+    ? t("Connect to become {name}'s client. You choose what {name} can see. Nothing is shared until you do.", { name: r.toName })
+    : t("Connect to become their client. You choose what they can see. Nothing is shared until you do.");
 }
 
 /** CU23 level 2 (needs an answer), on the referring professional's card like the referral was. */
@@ -771,8 +778,8 @@ export function connectReminder(r: ConnectReferral): Reminder {
     proName: r.fromName,
     tone: "pr",
     title: connectTitle(r),
-    detail: "Connect and choose what to share",
-    action: "Review",
+    detail: t("Connect and choose what to share"),
+    action: t("Review"),
   };
 }
 
@@ -798,8 +805,8 @@ export function sessionReminder(s: TodaySession, now: Date): Reminder | null {
     proName: s.proName,
     tone: "teal",
     title: sessionTitle(s.proName, s.startsAt, now),
-    detail: `Today ${clock12(s.startsAt)} · ${s.serviceName}`,
-    action: "View",
+    detail: t("Today {time} · {service}", { time: clock12(s.startsAt), service: s.serviceName }),
+    action: t("View"),
   };
 }
 
@@ -822,8 +829,8 @@ export function shareReminder(s: PendingShareAsk): Reminder {
     proId: s.proId,
     proName: s.proName,
     tone: "pr",
-    title: `${s.proName} would like to share your win`,
+    title: t("{name} would like to share your win", { name: s.proName }),
     detail: s.winTitle,
-    action: "Review",
+    action: t("Review"),
   };
 }

@@ -43,6 +43,7 @@ import { consentBox, consentLine, DOCTOR_FOLLOW_UP, GET_SUPPORT, SEE_WARNING_SIG
 import { clearLocalDraft, readLocalDraft, writeLocalDraft } from "../../services/client-forms/localDraft";
 import { ProfileProposals } from "./ProfileProposals";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 /**
  * Release 3 · W7 CU6 v3 / CU26: a professional's check-in or intake, filled
@@ -295,9 +296,10 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
   const isCheckIn = bundle.kind === "check_in";
   const last = step >= parts.length - 1;
   const pro = bundle.proName;
-  const title = done ? (isCheckIn ? "Check-in sent" : "Form sent") : isCheckIn ? "Weekly check-in" : bundle.title;
-  const savedWord = saveState === "saved" ? "saved" : saveState === "saving" ? "saving" : saveState === "error" ? "not saved yet" : null;
-  const partLine = [`For ${pro}`, parts.length > 1 ? `${sectioned ? "section" : "part"} ${step + 1} of ${parts.length}` : null, savedWord].filter(Boolean).join(" · ");
+  const title = done ? (isCheckIn ? t("Check-in sent") : t("Form sent")) : isCheckIn ? t("Weekly check-in") : bundle.title;
+  const savedWord = saveState === "saved" ? t("saved") : saveState === "saving" ? t("saving") : saveState === "error" ? t("not saved yet") : null;
+  const at = { n: step + 1, total: parts.length };
+  const partLine = [t("For {name}", { name: pro }), parts.length > 1 ? (sectioned ? t("section {n} of {total}", at) : t("part {n} of {total}", at)) : null, savedWord].filter(Boolean).join(" · ");
   const sectionTitle = titles[step] ?? null;
 
   // Question numbers run across parts (CU6: part 2 starts at 3).
@@ -319,7 +321,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
     ) : null;
 
   const optional = (
-    <span style={{ fontWeight: 500, color: INK.chF }}> (optional)</span>
+    <span style={{ fontWeight: 500, color: INK.chF }}> {t("(optional)")}</span>
   );
 
   const choiceButton = (key: string, label: string, selected: boolean, onClick: () => void, centred = false) => (
@@ -406,7 +408,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
               {list.map((p) => (
                 <span key={p} className="relative overflow-hidden" style={{ height: 96, borderRadius: 12, background: INK.soft }}>
                   {photoUrls[p] && <img src={photoUrls[p]} alt="" className="w-full h-full object-cover" />}
-                  <button type="button" onClick={() => dropPhoto(q, p)} aria-label="Remove photo" className="tap absolute top-1 end-1 w-11 h-11 flex items-start justify-end p-1">
+                  <button type="button" onClick={() => dropPhoto(q, p)} aria-label={t("Remove photo")} className="tap absolute top-1 end-1 w-11 h-11 flex items-start justify-end p-1">
                     <span className="flex items-center justify-center rounded-full" style={{ width: 22, height: 22, background: "rgba(36,31,27,0.55)", color: "#FFFFFF" }}>
                       <X size={12} strokeWidth={2.4} aria-hidden />
                     </span>
@@ -419,7 +421,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
                   style={{ height: 96, borderRadius: 12, border: `1.5px dashed ${errors.includes(q.id) ? INK.hi : "rgb(var(--c-charcoal) / 0.11)"}`, gap: 4, fontSize: textPx(11.5), fontWeight: 600, color: INK.chS }}
                 >
                   <Camera size={18} strokeWidth={1.75} aria-hidden style={{ color: INK.chF }} />
-                  {uploading === q.id ? "Adding…" : "Add photo"}
+                  {uploading === q.id ? t("Adding…") : t("Add photo")}
                   <input type="file" accept={PHOTO_TYPES} className="sr-only" disabled={uploading === q.id} onChange={(e) => void addPhoto(q, e.target.files?.[0] ?? undefined).finally(() => (e.target.value = ""))} />
                 </label>
               )}
@@ -447,7 +449,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
               style={{ ...field(errors.includes(q.id)), minHeight: 120, padding: 12, fontSize: textPx(12.5), lineHeight: 1.5, color: INK.ch }}
             />
             {text.length > LONG_TEXT_MAX - 500 && (
-              <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 4, textAlign: "end" }}>{`${text.length.toLocaleString(appLocale("en-GB"))} of ${LONG_TEXT_MAX.toLocaleString(appLocale("en-GB"))}`}</p>
+              <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 4, textAlign: "end" }}>{t("{n} of {max}", { n: text.length.toLocaleString(appLocale("en-GB")), max: LONG_TEXT_MAX.toLocaleString(appLocale("en-GB")) })}</p>
             )}
           </>
         );
@@ -486,17 +488,17 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
           {urgent.map((n) => (
             <a key={n} href={`tel:${n}`} className="tap inline-flex items-center" style={{ gap: 6, minHeight: 44, fontSize: textPx(13), fontWeight: 800, color: INK.hi }}>
               <Phone size={14} strokeWidth={2} aria-hidden />
-              {`Call ${n}`}
+              {t("Call {n}", { n })}
             </a>
           ))}
         </div>
       </div>
     ) : (
       <div aria-live="polite" data-client-prompt={p.kind} style={{ marginTop: 10, borderRadius: 12, background: "rgb(var(--c-charcoal) / 0.04)", padding: "10px 12px 0" }}>
-        <p style={{ fontSize: textPx(12), lineHeight: 1.5, color: INK.chS, overflowWrap: "anywhere" }}>{p.message ?? SUPPORT_PROMPT}</p>
+        <p style={{ fontSize: textPx(12), lineHeight: 1.5, color: INK.chS, overflowWrap: "anywhere" }}>{p.message ?? t(SUPPORT_PROMPT)}</p>
         <div className="flex flex-wrap" style={{ columnGap: 16 }}>
-          {promptLink(<HeartHandshake size={14} strokeWidth={2} aria-hidden />, GET_SUPPORT, () => setSupportOpen(true))}
-          {p.kind === "recovery_and_support" && !hideBody && promptLink(<HandHeart size={14} strokeWidth={2} aria-hidden />, RECOVERY_LINK, toRecoverySetting)}
+          {promptLink(<HeartHandshake size={14} strokeWidth={2} aria-hidden />, t(GET_SUPPORT), () => setSupportOpen(true))}
+          {p.kind === "recovery_and_support" && !hideBody && promptLink(<HandHeart size={14} strokeWidth={2} aria-hidden />, t(RECOVERY_LINK), toRecoverySetting)}
         </div>
       </div>
     );
@@ -506,7 +508,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
     const group = item.kind === "measures" && qs.length > 1;
     const head = qs[0];
     const allOptional = qs.every((q) => !q.required);
-    const label = group ? (isCheckIn ? "This week's measurements" : "Your measurements") : head.prompt;
+    const label = group ? (isCheckIn ? t("This week's measurements") : t("Your measurements")) : head.prompt;
     return (
       <fieldset key={head.id} style={{ border: 0, padding: 0, margin: "0 0 20px" }}>
         <legend id={`${head.id}-l`} className="text-[13px] font-semibold text-charcoal leading-[1.4] mb-2 p-0">
@@ -532,7 +534,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
     <div>
       {sendError && (
         <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginBottom: 10, lineHeight: 1.45 }}>
-          {sendError}
+          {t(sendError)}
         </p>
       )}
       {last && (
@@ -568,9 +570,9 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
         </button>
       )}
       {last ? (
-        <CtaButton label={isCheckIn ? `Send to ${pro}` : "Submit"} loading={sending} onClick={() => void send()} />
+        <CtaButton label={isCheckIn ? t("Send to {name}", { name: pro }) : t("Submit")} loading={sending} onClick={() => void send()} />
       ) : (
-        <CtaButton label="Next" onClick={() => void next()} />
+        <CtaButton label={t("Next")} onClick={() => void next()} />
       )}
     </div>
   );
@@ -582,14 +584,14 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
         <div className="animate-fade-slide-up">
           <p className="text-[13px] leading-[1.5] text-charcoal">{thanksLine(pro)}</p>
           {done.next && (
-            <p style={{ fontSize: textPx(12), lineHeight: 1.5, color: INK.chF, marginTop: 6 }}>Next check-in: {longDate(done.next)}</p>
+            <p style={{ fontSize: textPx(12), lineHeight: 1.5, color: INK.chF, marginTop: 6 }}>{t("Next check-in: {date}", { date: longDate(done.next) })}</p>
           )}
           {done.flagged && (
             <div data-safety-follow-up className="mt-4">
-              <p className="text-[13px] leading-[1.5] text-charcoal">{DOCTOR_FOLLOW_UP}</p>
+              <p className="text-[13px] leading-[1.5] text-charcoal">{t(DOCTOR_FOLLOW_UP)}</p>
               {!showSigns && (
                 <Button className="w-full mt-4" onClick={() => setShowSigns(true)}>
-                  {SEE_WARNING_SIGNS}
+                  {t(SEE_WARNING_SIGNS)}
                 </Button>
               )}
               {showSigns && (
@@ -600,7 +602,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
             </div>
           )}
           {done.proposalsFor && <ProfileProposals responseId={done.proposalsFor} hideNumbers={hideBody} />}
-          <CtaButton variant="secondary" label="Done" className="mt-4" onClick={close} />
+          <CtaButton variant="secondary" label={t("Done")} className="mt-4" onClick={close} />
         </div>
       ) : (
         <>
@@ -615,7 +617,7 @@ const FormSheetOpen: React.FC<FormSheetProps & { bundle: ClientFormBundle }> = (
             <h3 style={{ fontSize: textPx(15), fontWeight: 700, color: INK.ch, marginBottom: 12, overflowWrap: "anywhere" }}>{sectionTitle}</h3>
           )}
           {visible.length === 0 ? (
-            <p className="text-[13px] leading-[1.5] text-charcoal-soft">Nothing to answer here. You can send it as it is.</p>
+            <p className="text-[13px] leading-[1.5] text-charcoal-soft">{t("Nothing to answer here. You can send it as it is.")}</p>
           ) : (
             (parts[step] ?? []).map((item, i) => renderItem(item, firstNumber + i))
           )}

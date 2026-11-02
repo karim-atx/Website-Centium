@@ -5,6 +5,7 @@ import { blockAuthor, reportPost, type PostRef } from "../../services/forum";
 import { DangerLine } from "./parts";
 import { fv } from "./forumColor";
 import { FORUM_REPORT_REASONS, type ReportReasonKey } from "../../services/forum/rules";
+import { t } from "../../i18n/core";
 
 // Report a post, or block its author: what MO1.3.3's ⋮ dropdown menu
 // (ForumPostView) opens for someone else's post or reply.
@@ -35,7 +36,7 @@ export function ForumSafetySheet(props: Props) {
   // BottomSheet renders nothing while closed, so the body mounts afresh on
   // every opening: the first reason, nothing sent.
   const title =
-    props.mode === "block" ? `Block ${props.authorLabel}?` : props.kind === "post" ? "Report this post" : "Report this reply";
+    props.mode === "block" ? t("Block {name}?", { name: props.authorLabel }) : props.kind === "post" ? t("Report this post") : t("Report this reply");
   return (
     <BottomSheet open={props.open} onClose={props.onClose} title={title}>
       {props.mode === "block" ? <BlockBody {...props} /> : <ReportBody {...props} />}
@@ -62,17 +63,17 @@ function ReportBody({ target }: Props) {
   return (
     <div className="flex flex-col gap-3.5" style={{ color: fv("text") }}>
       <p className="m-0 text-[13px] font-medium leading-[1.55]" style={{ color: fv("muted") }}>
-        A moderator will review it. The author won't be told who reported it.
+        {t("A moderator will review it. The author won't be told who reported it.")}
       </p>
       {sent ? (
         <p role="status" className="m-0 text-[14px] font-semibold" style={{ color: fv("text") }}>
-          Report sent. Thank you.
+          {t("Report sent. Thank you.")}
         </p>
       ) : (
         <>
           <fieldset className="border-none m-0 p-0 flex flex-col gap-1.5">
             <legend className="text-[12px] font-semibold p-0 mb-1.5" style={{ color: fv("muted") }}>
-              Reason
+              {t("Reason")}
             </legend>
             {FORUM_REPORT_REASONS.map((r) => {
               const on = reason === r.value;
@@ -83,7 +84,7 @@ function ReportBody({ target }: Props) {
                   style={{ border: on ? `1.5px solid ${fv("accent")}` : `1px solid ${fv("border")}`, background: on ? fv("rules-bg") : fv("card") }}
                 >
                   <input type="radio" name="forum-report-reason" checked={on} onChange={() => setReason(r.value)} className="sr-only" />
-                  <span className="flex-1 min-w-0">{r.label}</span>
+                  <span className="flex-1 min-w-0">{t(r.label)}</span>
                   <span
                     aria-hidden
                     className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
@@ -100,7 +101,7 @@ function ReportBody({ target }: Props) {
             })}
           </fieldset>
           {error && <DangerLine>{error}</DangerLine>}
-          <CtaButton label={busy ? "Sending…" : "Send report"} loading={busy} onClick={() => void send()} />
+          <CtaButton label={busy ? t("Sending…") : t("Send report")} loading={busy} onClick={() => void send()} />
         </>
       )}
     </div>
@@ -124,11 +125,11 @@ function BlockBody({ target, onClose, onBlocked }: Props) {
   return (
     <div className="flex flex-col gap-3.5" style={{ color: fv("text") }}>
       <p className="m-0 text-[13px] font-medium leading-[1.55]" style={{ color: fv("muted") }}>
-        Blocking hides their posts and replies from you, and yours from them, here and in messages.
+        {t("Blocking hides their posts and replies from you, and yours from them, here and in messages.")}
       </p>
       {error && <DangerLine>{error}</DangerLine>}
       <CtaButton
-        label={busy ? "Blocking…" : "Block"}
+        label={busy ? t("Blocking…") : t("Block")}
         loading={busy}
         onClick={() => void block()}
         className="!bg-[var(--forum-danger)] !text-white"
@@ -140,7 +141,7 @@ function BlockBody({ target, onClose, onBlocked }: Props) {
         className="tap self-center h-11 px-3 text-[13px] font-bold"
         style={{ color: fv("link") }}
       >
-        Cancel
+        {t("Cancel")}
       </button>
     </div>
   );

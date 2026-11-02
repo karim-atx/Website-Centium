@@ -162,8 +162,8 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search courses"
-          aria-label="Search courses"
+          placeholder={t("Search courses")}
+          aria-label={t("Search courses")}
           className="border-none outline-none text-sm grow min-w-0 bg-transparent"
           style={{ color: fv("text") }}
         />
@@ -175,11 +175,11 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
         // of 32 pt tabs at 12px, active 700 and idle 600, in the frame's order
         // (All · Workouts · Nutrition · Progress · Motivation). Light mode keeps
         // the forum's track and accent (decision 19).
-        <div role="group" aria-label="Course categories">
+        <div role="group" aria-label={t("Course categories")}>
           <SegmentedTabs
             scroll
             items={[
-              { key: "", label: "All" },
+              { key: "", label: t("All") },
               ...[...data.categories]
                 .sort((a, b) => order(a.key) - order(b.key))
                 .map((c) => ({ key: c.key, label: c.name })),
@@ -223,7 +223,7 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
                   14 line, 0.12em; decision 20), 4 in from the content edge;
                   the label's pre-R1 colour stays (decision 22). */}
               <span className="ps-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
-                Continue learning
+                {t("Continue learning")}
               </span>
               {continuing.map(({ course, next, week, n, percent }) => (
                 <Link
@@ -234,13 +234,13 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
                 >
                   <span className="text-[15px] font-extrabold [overflow-wrap:anywhere]">{course.title}</span>
                   <span className="text-xs [overflow-wrap:anywhere]" style={{ color: fv("muted") }}>
-                    Week {week} · Lesson {n}: {next.title}
+                    {t("Week {week} · Lesson {n}: {title}", { week, n, title: next.title })}
                   </span>
                   <div className="h-1.5 rounded-[3px]" style={{ background: fv("track") }} aria-hidden="true">
                     <div className="h-1.5 rounded-[3px]" style={{ width: `${percent}%`, background: fv("accent") }} />
                   </div>
                   <span className="text-xs font-bold" style={{ color: fv("muted") }}>
-                    {percent}% complete
+                    {t("{n}% complete", { n: percent })}
                   </span>
                 </Link>
               ))}
@@ -255,7 +255,7 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
           <span className="flex items-center justify-between gap-3 h-[14px]">
             <span className="ps-1 text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em]" style={{ color: fv("muted") }}>
               {/* Handover-complete pass: "Popular" always, as drawn (the "Results" swap while searching is gone). */}
-              Popular
+              {t("Popular")}
             </span>
             {isProfessional && (
               <Link
@@ -263,7 +263,7 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
                 className="tap h-11 flex items-center text-[12px] font-bold no-underline"
                 style={{ color: fv("link") }}
               >
-                Write a course
+                {t("Write a course")}
               </Link>
             )}
           </span>
@@ -289,7 +289,7 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
                   <div className="px-[14px] py-3 flex flex-col gap-[5px]">
                     <span className="text-[15px] font-extrabold leading-[1.3] [overflow-wrap:anywhere]">{c.title}</span>
                     <span className="text-xs" style={{ color: fv("muted") }}>
-                      <Instructor authorId={c.authorId} name={data.names.get(c.authorId ?? "") ?? "Professional"} link={false} />
+                      <Instructor authorId={c.authorId} name={data.names.get(c.authorId ?? "") ?? t("Professional")} link={false} />
                     </span>
                     <span className="flex justify-between items-center gap-2 text-xs" style={{ color: fv("muted") }}>
                       <span className="flex items-center gap-1.5 min-w-0">
@@ -317,9 +317,9 @@ export function CoursesCatalogue({ userId, isProfessional = false }: { userId: s
             {/* Decision 23 (item 66): Foundations › Empty state. */}
             {shown.length === 0 &&
               (query || filter ? (
-                <EmptyBlock icon={<GraduationCap size={26} strokeWidth={1.75} />} title="No courses match" line="Try another category or search." />
+                <EmptyBlock icon={<GraduationCap size={26} strokeWidth={1.75} />} title={t("No courses match")} line={t("Try another category or search.")} />
               ) : (
-                <EmptyBlock icon={<GraduationCap size={26} strokeWidth={1.75} />} title="No courses yet" line="Check back soon." />
+                <EmptyBlock icon={<GraduationCap size={26} strokeWidth={1.75} />} title={t("No courses yet")} line={t("Check back soon.")} />
               ))}
           </div>
         </>

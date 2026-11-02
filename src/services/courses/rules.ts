@@ -8,6 +8,7 @@
 // a PDF lesson, never to a video or reading.
 import { BLOCKED_TEXT } from "../moderation/text";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tn } from "../../i18n/core";
 
 // Round D (20261223030000) adds an Image lesson and a Check-in lesson; both are
 // free to open, like a video or a reading.
@@ -15,9 +16,9 @@ export type LessonKind = "video" | "reading" | "quiz" | "pdf" | "image" | "check
 export type Tier = "free" | "paid";
 export type AccessLevel = "none" | "free" | "paid";
 
-export const NEEDS_DOB_COURSES_TEXT = "Add your date of birth in Profile to see courses.";
+export const NEEDS_DOB_COURSES_TEXT = tk("Add your date of birth in Profile to see courses.");
 /** The forum's adults-only line, worded for the part that was opened. */
-export const ADULTS_ONLY_COURSES_TEXT = "The community is for adults. You can take courses from age 18.";
+export const ADULTS_ONLY_COURSES_TEXT = tk("The community is for adults. You can take courses from age 18.");
 
 /** Quizzes and PDFs are part of the full course; videos and readings never are. */
 export function isPaidExtra(kind: LessonKind): boolean {
@@ -31,33 +32,32 @@ export function lessonOpenTo(kind: LessonKind, access: AccessLevel): boolean {
 
 /** "Free", "$29", "$29.50". Courses are priced in USD only (courses_currency_check). */
 export function formatPrice(cents: number): string {
-  if (cents <= 0) return "Free";
+  if (cents <= 0) return t("Free");
   const dollars = cents / 100;
   return Number.isInteger(dollars) ? `$${dollars}` : `$${dollars.toFixed(2)}`;
 }
 
 const LEVELS: Record<string, string> = {
-  beginner: "Beginner",
-  intermediate: "Intermediate",
-  advanced: "Advanced",
-  all_levels: "All levels",
+  beginner: tk("Beginner"),
+  intermediate: tk("Intermediate"),
+  advanced: tk("Advanced"),
+  all_levels: tk("All levels"),
 };
 
 export function levelLabel(level: string): string {
-  return LEVELS[level] ?? level;
+  return LEVELS[level] ? t(LEVELS[level]) : level;
 }
-
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** "about 2 hours a week", "about 1.5 hours a week", "about 1 hour a week". */
 export function weeklyHoursLabel(hours: number | null): string | null {
   if (hours === null || !(hours > 0)) return null;
-  return `about ${hours === 1 ? "1 hour" : `${Number.isInteger(hours) ? hours : hours.toFixed(1)} hours`} a week`;
+  if (hours === 1) return t("about 1 hour a week");
+  return t("about {n} hours a week", { n: Number.isInteger(hours) ? hours : hours.toFixed(1) });
 }
 
 /** The card's pill, "Beginner · 6 weeks"; the course page adds the weekly hours. */
 export function coursePill(level: string, weeks: number, weeklyHours?: number | null): string {
-  return [levelLabel(level), weeks > 0 ? plural(weeks, "week", "weeks") : null, weeklyHoursLabel(weeklyHours ?? null)]
+  return [levelLabel(level), weeks > 0 ? tn(weeks, "{n} week", "{n} weeks") : null, weeklyHoursLabel(weeklyHours ?? null)]
     .filter(Boolean)
     .join(" · ");
 }
@@ -66,24 +66,24 @@ export function coursePill(level: string, weeks: number, weeklyHours?: number | 
 export function weekContents(kinds: LessonKind[]): string {
   const n = (k: LessonKind) => kinds.filter((x) => x === k).length;
   return [
-    n("video") ? plural(n("video"), "video", "videos") : null,
-    n("reading") ? plural(n("reading"), "reading", "readings") : null,
-    n("quiz") ? plural(n("quiz"), "quiz", "quizzes") : null,
-    n("pdf") ? plural(n("pdf"), "PDF", "PDFs") : null,
-    n("image") ? plural(n("image"), "image", "images") : null,
-    n("check_in") ? plural(n("check_in"), "check-in", "check-ins") : null,
+    n("video") ? tn(n("video"), "{n} video", "{n} videos") : null,
+    n("reading") ? tn(n("reading"), "{n} reading", "{n} readings") : null,
+    n("quiz") ? tn(n("quiz"), "{n} quiz", "{n} quizzes") : null,
+    n("pdf") ? tn(n("pdf"), "{n} PDF", "{n} PDFs") : null,
+    n("image") ? tn(n("image"), "{n} image", "{n} images") : null,
+    n("check_in") ? tn(n("check_in"), "{n} check-in", "{n} check-ins") : null,
   ]
     .filter(Boolean)
-    .join(", ");
+    .join(t(", "));
 }
 
 /** "35 min", "1 hr 5 min"; null when no lesson has a length. */
 export function minutesLabel(minutes: number): string | null {
   if (!(minutes > 0)) return null;
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 60) return t("{n} min", { n: minutes });
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return m ? `${h} hr ${m} min` : `${h} hr`;
+  return m ? t("{h} hr {m} min", { h, m }) : t("{h} hr", { h });
 }
 
 /**
@@ -96,7 +96,7 @@ export function minutesLabel(minutes: number): string | null {
  */
 export function enrolledLabel(enrolled: number): string | null {
   if (enrolled < 3) return null;
-  return `${enrolled.toLocaleString(appLocale())} ${enrolled === 1 ? "learner" : "learners"}`;
+  return tn(enrolled, "{n} learner", "{n} learners", { n: enrolled.toLocaleString(appLocale()) });
 }
 
 export interface OrderedLesson {
@@ -147,7 +147,7 @@ export function youtubeEmbedUrl(videoId: string | null): string | null {
 
 export type CourseAction = "read" | "enrol" | "paid" | "complete" | "quiz" | "pdf" | "ask" | "rate" | "check_in";
 
-export const PAID_OPEN_SOON = "Paid courses open soon.";
+export const PAID_OPEN_SOON = tk("Paid courses open soon.");
 
 /** Words for a database refusal; null when the code is not one of the course ones. */
 export function describeCourseError(error: { code?: string; message?: string }, action: CourseAction): string | null {
@@ -156,30 +156,30 @@ export function describeCourseError(error: { code?: string; message?: string }, 
     case "ATX60":
       return BLOCKED_TEXT;
     case "ATX55":
-      return "Courses are for members aged 18 and over.";
+      return t("Courses are for members aged 18 and over.");
     case "ATX68":
-      return PAID_OPEN_SOON;
+      return t(PAID_OPEN_SOON);
     case "ATX69":
       return action === "quiz"
-        ? "Quizzes are part of the full course."
+        ? t("Quizzes are part of the full course.")
         : action === "pdf"
-        ? "Downloadable plans are part of the full course."
-        : "Questions to the professional are part of the full course.";
+        ? t("Downloadable plans are part of the full course.")
+        : t("Questions to the professional are part of the full course.");
     case "ATX67":
       // Round D (20261223030000): a course that isn't public is joined by its audience only.
       return action === "enrol" || action === "paid"
-        ? "This course is only open to the people its author chose."
+        ? t("This course is only open to the people its author chose.")
         : action === "complete" || action === "quiz" || action === "check_in"
-        ? "Start the course first, then try again."
+        ? t("Start the course first, then try again.")
         : action === "rate"
-        ? "Start the course before rating it."
-        : "That course isn't available any more.";
+        ? t("Start the course before rating it.")
+        : t("That course isn't available any more.");
     case "22023":
-      return action === "check_in" ? "Write an answer of up to 4,000 characters." : null;
+      return action === "check_in" ? t("Write an answer of up to 4,000 characters.") : null;
     case "ATX02":
       return action === "ask"
-        ? "You've asked a lot of questions today. Try again tomorrow."
-        : "That's too many in a short time. Try again later.";
+        ? t("You've asked a lot of questions today. Try again tomorrow.")
+        : t("That's too many in a short time. Try again later.");
     default:
       return null;
   }

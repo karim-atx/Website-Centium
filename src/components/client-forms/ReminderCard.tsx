@@ -7,6 +7,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import type { Reminder, ReminderGroup } from "../../services/client-forms/logic";
 import { ReminderIcon } from "./parts";
 import { iconFor, onTone, toneSet } from "./tone";
+import { t } from "../../i18n/core";
 
 /**
  * Release 3 · W7 CU5 v3 / CU6 v3 / CU26 v3: the Home reminder card between
@@ -53,13 +54,13 @@ export const ReminderCard: React.FC<{
   const rule = dark ? "rgba(245,243,250,0.06)" : "rgba(255,255,255,0.8)";
 
   return (
-    <section data-pro-reminder aria-label={`${group.items.length} from ${group.proName}`} className="overflow-hidden animate-fade-slide-up" style={{ borderRadius: 16, background: tn.bg, marginBottom: 13 }}>
+    <section data-pro-reminder aria-label={t("{n} from {name}", { n: group.items.length, name: group.proName })} className="overflow-hidden animate-fade-slide-up" style={{ borderRadius: 16, background: tn.bg, marginBottom: 13 }}>
       <div className="flex items-center" style={{ gap: 10, padding: "12px 14px 0" }}>
         <span className="flex">
           <Avatar name={group.proName} url={proAvatarUrl} size={22} tone="teal" />
         </span>
         <span className="flex-1 min-w-0 truncate" style={{ fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: tn.ink }}>
-          {group.items.length} from {group.proName}
+          {t("{n} from {name}", { n: group.items.length, name: group.proName })}
         </span>
         <button
           type="button"
@@ -68,7 +69,7 @@ export const ReminderCard: React.FC<{
           className={`tap inline-flex items-center ${hitArea}`}
           style={{ gap: 2, fontSize: textPx(12), fontWeight: 700, color: tn.ink }}
         >
-          {open ? "Show less" : "See all"}
+          {open ? t("Show less") : t("See all")}
           {open ? <ChevronUp size={13} strokeWidth={2.4} aria-hidden /> : <ChevronDown size={13} strokeWidth={2.4} aria-hidden />}
         </button>
       </div>
@@ -104,7 +105,7 @@ export const ReminderCard: React.FC<{
         );
       })}
       {open ? (
-        <p style={{ fontSize: textPx(11), color: INK.chF, padding: "0 14px 12px" }}>Most urgent first. Anything you skip stays here.</p>
+        <p style={{ fontSize: textPx(11), color: INK.chF, padding: "0 14px 12px" }}>{t("Most urgent first. Anything you skip stays here.")}</p>
       ) : (
         <div className="flex justify-center" aria-hidden style={{ gap: 5, padding: "0 0 10px" }}>
           {group.items.map((r, i) => (

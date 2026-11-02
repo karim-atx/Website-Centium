@@ -10,6 +10,7 @@ import { dietaryRestrictionOptions } from "../../utils/dietaryRestrictions";
 import { confirmProfileProposal, declineProfileProposal, fetchProfileProposals } from "../../services/client-forms";
 import { FIELD_LABEL, MEDICATION_ROUTES, draftFrom, offeredProposals, proposalTitle, shapeValue, type ProfileProposal, type ProposalDraft } from "../../services/client-forms/proposals";
 import { notifyInjuriesChanged } from "../../services/injuries";
+import { t } from "../../i18n/core";
 
 /**
  * Round D · D-S12 "Add these to your profile?" (not drawn; Karim: the client
@@ -47,9 +48,9 @@ export const ProfileProposals: React.FC<{ responseId: string | null; hideNumbers
   if (failed)
     return (
       <div style={{ marginTop: 16 }}>
-        <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5 }}>Couldn't load the answers you can add to your profile.</p>
+        <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5 }}>{t("Couldn't load the answers you can add to your profile.")}</p>
         <button type="button" onClick={() => setNonce((n) => n + 1)} className="tap" style={{ minHeight: 44, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
-          Try again
+          {t("Try again")}
         </button>
       </div>
     );
@@ -57,10 +58,10 @@ export const ProfileProposals: React.FC<{ responseId: string | null; hideNumbers
   return (
     <section aria-labelledby={`pp-${responseId ?? "waiting"}`} style={{ marginTop: responseId === null ? 0 : 18, marginBottom: responseId === null ? 16 : 0 }}>
       <h3 id={`pp-${responseId ?? "waiting"}`} style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>
-        Add these to your profile?
+        {t("Add these to your profile?")}
       </h3>
       <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5, marginTop: 4, marginBottom: 10 }}>
-        {responseId === null ? "From your form answers." : "From your answers."} Check each one, change it if you need to, and add only what you want.
+        {responseId === null ? t("From your form answers.") : t("From your answers.")} {t("Check each one, change it if you need to, and add only what you want.")}
       </p>
       {list.map((p) => (
         <ProposalCard key={p.id} proposal={p} />
@@ -107,10 +108,10 @@ const ProposalCard: React.FC<{ proposal: ProfileProposal }> = ({ proposal }) => 
   const head = (
     <>
       <span className="block" style={{ fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: INK.prDeep }}>
-        {FIELD_LABEL[proposal.field]}
+        {t(FIELD_LABEL[proposal.field])}
       </span>
       <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, marginTop: 2, overflowWrap: "anywhere" }}>{proposalTitle(draft)}</p>
-      {proposal.prompt && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 2, overflowWrap: "anywhere" }}>{`Your answer to "${proposal.prompt}"`}</p>}
+      {proposal.prompt && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 2, overflowWrap: "anywhere" }}>{t("Your answer to \"{prompt}\"", { prompt: proposal.prompt })}</p>}
     </>
   );
 
@@ -120,7 +121,7 @@ const ProposalCard: React.FC<{ proposal: ProfileProposal }> = ({ proposal }) => 
         {head}
         <p className="flex items-center" style={{ gap: 6, marginTop: 8, fontSize: textPx(12.5), fontWeight: 600, color: state.kind === "added" ? INK.ch : INK.chS }}>
           {state.kind === "added" ? <CircleCheck size={14} aria-hidden style={{ color: INK.prDeep }} /> : <CircleMinus size={14} aria-hidden style={{ color: INK.chF }} />}
-          {state.kind === "added" ? "Added to your profile." : state.kind === "skipped" ? "Not added." : state.message}
+          {state.kind === "added" ? t("Added to your profile.") : state.kind === "skipped" ? t("Not added.") : t(state.message)}
         </p>
       </div>
     );
@@ -133,12 +134,12 @@ const ProposalCard: React.FC<{ proposal: ProfileProposal }> = ({ proposal }) => 
       </div>
       {((tried && !shaped.ok) || error) && (
         <p role="alert" style={{ fontSize: textPx(11.5), fontWeight: 600, color: INK.hi, marginTop: 8 }}>
-          {error ?? (!shaped.ok ? shaped.problem : null)}
+          {error ?? (!shaped.ok ? t(shaped.problem) : null)}
         </p>
       )}
       <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8, marginTop: 12 }}>
-        <CtaButton size="base" variant="secondary" label="Not now" loading={busy === "skip"} onClick={() => void skip()} />
-        <CtaButton size="base" label="Add to my profile" loading={busy === "add"} onClick={() => void add()} />
+        <CtaButton size="base" variant="secondary" label={t("Not now")} loading={busy === "skip"} onClick={() => void skip()} />
+        <CtaButton size="base" label={t("Add to my profile")} loading={busy === "add"} onClick={() => void add()} />
       </div>
     </div>
   );
@@ -161,7 +162,7 @@ function Chips<V extends string>({ label, items, value, onChange }: { label: str
             onClick={() => onChange(it.value)}
             className={`tap min-h-[36px] rounded-xl px-3 text-[12px] font-semibold border ${on ? "bg-primary-fill text-on-primary-fill border-primary-fill" : "bg-cream-card text-charcoal border-charcoal/[0.1]"}`}
           >
-            {it.label}
+            {t(it.label)}
           </button>
         );
       })}
@@ -175,25 +176,25 @@ const Editor: React.FC<{ draft: ProposalDraft; today: string; onChange: (d: Prop
       return (
         <>
           <label style={{ ...labelStyle, marginTop: 0 }}>
-            Allergen
+            {t("Allergen")}
             <select
               value={d.allergen ?? ""}
               onChange={(e) => onChange({ ...d, allergen: (e.target.value || null) as typeof d.allergen })}
               className="outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               style={{ ...fieldStyle, marginTop: 6, fontWeight: 600 }}
             >
-              <option value="">Choose…</option>
+              <option value="">{t("Choose…")}</option>
               {ALLERGENS.map((a) => (
                 <option key={a.value} value={a.value}>
-                  {a.label}
+                  {t(a.label)}
                 </option>
               ))}
             </select>
           </label>
-          <span style={labelStyle}>How severe</span>
-          <Chips label="How severe" items={SEVERITIES} value={d.severity} onChange={(v) => onChange({ ...d, severity: v })} />
+          <span style={labelStyle}>{t("How severe")}</span>
+          <Chips label={t("How severe")} items={SEVERITIES} value={d.severity} onChange={(v) => onChange({ ...d, severity: v })} />
           <label style={labelStyle}>
-            Note (optional)
+            {t("Note (optional)")}
             <input value={d.note} maxLength={200} onChange={(e) => onChange({ ...d, note: e.target.value })} className="outline-none focus-visible:ring-2 focus-visible:ring-primary/40" style={{ ...fieldStyle, marginTop: 6 }} />
           </label>
         </>
@@ -201,14 +202,14 @@ const Editor: React.FC<{ draft: ProposalDraft; today: string; onChange: (d: Prop
     case "dietary_restrictions":
       return (
         <>
-          <span style={{ ...labelStyle, marginTop: 0 }}>Diet</span>
-          <Chips label="Diet" items={dietaryRestrictionOptions} value={d.restriction} onChange={(v) => onChange({ ...d, restriction: v })} />
-          <span style={labelStyle}>Is it</span>
+          <span style={{ ...labelStyle, marginTop: 0 }}>{t("Diet")}</span>
+          <Chips label={t("Diet")} items={dietaryRestrictionOptions} value={d.restriction} onChange={(v) => onChange({ ...d, restriction: v })} />
+          <span style={labelStyle}>{t("Is it")}</span>
           <Chips
-            label="Is it"
+            label={t("Is it")}
             items={[
-              { value: "restriction" as const, label: "Something I must avoid" },
-              { value: "preference" as const, label: "A preference" },
+              { value: "restriction" as const, label: t("Something I must avoid") },
+              { value: "preference" as const, label: t("A preference") },
             ]}
             value={d.kind}
             onChange={(v) => onChange({ ...d, kind: v })}
@@ -219,30 +220,30 @@ const Editor: React.FC<{ draft: ProposalDraft; today: string; onChange: (d: Prop
       return (
         <>
           <label style={{ ...labelStyle, marginTop: 0 }}>
-            Name
+            {t("Name")}
             <input value={d.name} maxLength={120} onChange={(e) => onChange({ ...d, name: e.target.value })} className="outline-none focus-visible:ring-2 focus-visible:ring-primary/40" style={{ ...fieldStyle, marginTop: 6 }} />
           </label>
           <label style={labelStyle}>
-            Dose (optional)
-            <input value={d.dose} maxLength={120} placeholder="e.g. 500 mg" onChange={(e) => onChange({ ...d, dose: e.target.value })} className="outline-none placeholder:text-charcoal-tertiary focus-visible:ring-2 focus-visible:ring-primary/40" style={{ ...fieldStyle, marginTop: 6 }} />
+            {t("Dose (optional)")}
+            <input value={d.dose} maxLength={120} placeholder={t("e.g. 500 mg")} onChange={(e) => onChange({ ...d, dose: e.target.value })} className="outline-none placeholder:text-charcoal-tertiary focus-visible:ring-2 focus-visible:ring-primary/40" style={{ ...fieldStyle, marginTop: 6 }} />
           </label>
-          <span style={labelStyle}>How you take it</span>
-          <Chips label="How you take it" items={MEDICATION_ROUTES} value={d.route} onChange={(v) => onChange({ ...d, route: v })} />
+          <span style={labelStyle}>{t("How you take it")}</span>
+          <Chips label={t("How you take it")} items={MEDICATION_ROUTES} value={d.route} onChange={(v) => onChange({ ...d, route: v })} />
         </>
       );
     case "injuries":
       return (
         <>
           <label style={{ ...labelStyle, marginTop: 0 }}>
-            Injury
+            {t("Injury")}
             <input value={d.description} maxLength={300} onChange={(e) => onChange({ ...d, description: e.target.value })} className="outline-none focus-visible:ring-2 focus-visible:ring-primary/40" style={{ ...fieldStyle, marginTop: 6 }} />
           </label>
           <label style={labelStyle}>
-            Body area (optional)
-            <input value={d.bodyArea} maxLength={60} placeholder="e.g. Left knee" onChange={(e) => onChange({ ...d, bodyArea: e.target.value })} className="outline-none placeholder:text-charcoal-tertiary focus-visible:ring-2 focus-visible:ring-primary/40" style={{ ...fieldStyle, marginTop: 6 }} />
+            {t("Body area (optional)")}
+            <input value={d.bodyArea} maxLength={60} placeholder={t("e.g. Left knee")} onChange={(e) => onChange({ ...d, bodyArea: e.target.value })} className="outline-none placeholder:text-charcoal-tertiary focus-visible:ring-2 focus-visible:ring-primary/40" style={{ ...fieldStyle, marginTop: 6 }} />
           </label>
           <label style={labelStyle}>
-            Since (optional)
+            {t("Since (optional)")}
             <input type="date" value={d.since} max={today} onChange={(e) => onChange({ ...d, since: e.target.value })} className="outline-none focus-visible:ring-2 focus-visible:ring-primary/40" style={{ ...fieldStyle, marginTop: 6 }} />
           </label>
         </>
@@ -250,7 +251,7 @@ const Editor: React.FC<{ draft: ProposalDraft; today: string; onChange: (d: Prop
     case "weight":
       return (
         <label style={{ ...labelStyle, marginTop: 0 }}>
-          Weight (kg)
+          {t("Weight (kg)")}
           <input inputMode="decimal" value={d.kg} onChange={(e) => onChange({ ...d, kg: e.target.value })} className="outline-none focus-visible:ring-2 focus-visible:ring-primary/40" style={{ ...fieldStyle, marginTop: 6, fontWeight: 600 }} />
         </label>
       );
