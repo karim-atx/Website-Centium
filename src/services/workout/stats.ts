@@ -1,4 +1,5 @@
 import type { LoggedExercise, LoggedSet, SetOutcome, SetType, WorkoutSession } from "../../types";
+import { tk } from "../../i18n/core";
 
 /**
  * Handover 2026-09-29 set types (02 "Set types and numbering"): ONE type per
@@ -11,12 +12,12 @@ import type { LoggedExercise, LoggedSet, SetOutcome, SetType, WorkoutSession } f
 export type HandoverSetType = "normal" | "warmup" | "failed" | "skipped" | "pr" | "drop";
 
 export const HANDOVER_SET_TYPES: { value: HandoverSetType; label: string; short: string }[] = [
-  { value: "normal", label: "Normal", short: "" },
-  { value: "warmup", label: "Warm up", short: "W" },
-  { value: "failed", label: "Failed", short: "F" },
-  { value: "skipped", label: "Skipped", short: "S" },
-  { value: "pr", label: "Personal record", short: "PR" },
-  { value: "drop", label: "Drop set", short: "DS" },
+  { value: "normal", label: tk("Normal"), short: "" },
+  { value: "warmup", label: tk("Warm up"), short: "W" },
+  { value: "failed", label: tk("Failed"), short: "F" },
+  { value: "skipped", label: tk("Skipped"), short: "S" },
+  { value: "pr", label: tk("Personal record"), short: "PR" },
+  { value: "drop", label: tk("Drop set"), short: "DS" },
 ];
 
 /** A logged set's one handover type, read from the three stored fields. */

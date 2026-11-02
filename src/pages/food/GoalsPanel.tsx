@@ -26,12 +26,13 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { textPx } from "../../theme/textSize";
 import { appLocale } from "../../i18n/format";
+import { isRtl, t, tk, tx } from "../../i18n/core";
 
 // FO2.2 / FO4.2 / FO5.2: each Weight Goal button carries its trend icon.
 const goalOptions: { value: WeightGoalType; label: string; Icon: typeof Equal }[] = [
-  { value: "lose", label: "Lose weight", Icon: TrendingDown },
+  { value: "lose", label: tk("Lose weight"), Icon: TrendingDown },
   { value: "maintain", label: "Maintain", Icon: Equal },
-  { value: "gain", label: "Gain weight", Icon: TrendingUp },
+  { value: "gain", label: tk("Gain weight"), Icon: TrendingUp },
 ];
 
 // Handover 2026-09-29 FO2.2 / FO4.2 / FO5.2 card system, measured from the
@@ -258,11 +259,19 @@ export default function GoalsPanel({
       return;
     }
     if (nutritionGoal.weightGoal === "lose" && currentKg !== null && kg >= currentKg) {
-      setWeightGoalError(`Desired weight must be lower than ${pro ? "the current" : "your current"} weight (${currentKg}kg) to lose weight.`);
+      setWeightGoalError(
+        pro
+          ? t("Desired weight must be lower than the current weight ({kg} kg) to lose weight.", { kg: currentKg })
+          : t("Desired weight must be lower than your current weight ({kg} kg) to lose weight.", { kg: currentKg })
+      );
       return;
     }
     if (nutritionGoal.weightGoal === "gain" && currentKg !== null && kg <= currentKg) {
-      setWeightGoalError(`Desired weight must be higher than ${pro ? "the current" : "your current"} weight (${currentKg}kg) to gain weight.`);
+      setWeightGoalError(
+        pro
+          ? t("Desired weight must be higher than the current weight ({kg} kg) to gain weight.", { kg: currentKg })
+          : t("Desired weight must be higher than your current weight ({kg} kg) to gain weight.", { kg: currentKg })
+      );
       return;
     }
     setWeightGoalError(null);
@@ -326,7 +335,7 @@ export default function GoalsPanel({
       className="tap shrink-0 inline-flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
       style={{ ...ACTION, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal))" }}
     >
-      Use suggested
+      {t("Use suggested")}
     </button>
   );
 
@@ -345,15 +354,15 @@ export default function GoalsPanel({
           allergies stay, in their own card below. */}
       {hide ? (
         <section style={CARD}>
-          <p style={{ ...TITLE, marginBottom: 8 }}>Goals &amp; macros</p>
+          <p style={{ ...TITLE, marginBottom: 8 }}>{t("Goals & macros")}</p>
           <p style={{ margin: 0, fontSize: textPx(12.5), lineHeight: 1.45, color: "rgb(var(--c-charcoal-soft))" }}>
-            Targets are hidden in recovery-sensitive mode.
+            {t("Targets are hidden in recovery-sensitive mode.")}
           </p>
         </section>
       ) : (
       <>
       <section style={CARD}>
-        <p style={{ ...TITLE, marginBottom: 12 }}>Weight goal</p>
+        <p style={{ ...TITLE, marginBottom: 12 }}>{t("Weight goal")}</p>
         <div className="grid grid-cols-3" style={{ gap: 6 }}>
           {goalOptions.map((g) => {
             const on = !pro?.weightGoalUnknown && nutritionGoal.weightGoal === g.value;
@@ -375,7 +384,7 @@ export default function GoalsPanel({
                 }}
               >
                 <g.Icon size={13} strokeWidth={2.2} />
-                {g.label}
+                {g.value === "maintain" ? tx("Maintain", "weight goal") : t(g.label)}
               </button>
             );
           })}
@@ -387,7 +396,7 @@ export default function GoalsPanel({
           <div className="flex items-end" style={{ gap: 18, marginTop: 14 }}>
             <label className="block flex-none">
               <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))", marginBottom: 6 }}>
-                Desired weight
+                {t("Desired weight")}
               </span>
               <span className="flex items-center" style={{ gap: 7 }}>
                 <input
@@ -398,16 +407,16 @@ export default function GoalsPanel({
                   disabled={locked || (!!pro && !pro.desiredWeightEditable)}
                   inputMode="decimal"
                   enterKeyHint="done"
-                  aria-label="Desired weight in kg"
+                  aria-label={t("Desired weight in kg")}
                   className="text-center focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
                   style={{ width: 64, height: 28, borderRadius: 8, background: "rgb(var(--c-cream-soft))", border: `1px solid ${goalsColor("fieldBorder", dark)}`, fontSize: textPx(13), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}
                 />
-                <span style={{ fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>kg</span>
+                <span style={{ fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>{t("kg")}</span>
               </span>
             </label>
             <label className="block flex-1 min-w-0">
               <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))", marginBottom: 6 }}>
-                Desired weekly rate
+                {t("Desired weekly rate")}
               </span>
               <span className="flex items-center" style={{ gap: 8, height: 28 }}>
                 <input
@@ -420,30 +429,30 @@ export default function GoalsPanel({
                   // V8 (QA 8.0): the weekly rate can only be edited once a
                   // desired weight is confirmed.
                   disabled={locked || (!pro && !nutritionGoal.desiredWeightConfirmed)}
-                  aria-label="Desired weekly rate"
+                  aria-label={t("Desired weekly rate")}
                   className="flex-1 min-w-0 h-[6px] rounded-full appearance-none disabled:opacity-50"
                   style={{
                     accentColor: rateTint,
-                    backgroundImage: `linear-gradient(to right, ${rateTint} ${rateFrac}%, rgb(var(--c-cream-soft)) ${rateFrac}%)`,
+                    backgroundImage: `linear-gradient(to ${isRtl() ? "left" : "right"}, ${rateTint} ${rateFrac}%, rgb(var(--c-cream-soft)) ${rateFrac}%)`,
                   }}
                 />
                 <span className="flex-none" style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", whiteSpace: "nowrap" }}>
                   {nutritionGoal.weightGoal === "gain" ? "+" : "-"}
-                  {(nutritionGoal.weeklyRateKg || 0.5).toFixed(1)} kg / week
+                  {t("{n} kg / week", { n: (nutritionGoal.weeklyRateKg || 0.5).toFixed(1) })}
                 </span>
               </span>
             </label>
           </div>
         )}
         {!maintain && weightGoalError && (
-          <p className="text-[10.5px] font-semibold text-[#C0392B] dark:text-[#FF6B5E] mt-1.5">{weightGoalError}</p>
+          <p className="text-[10.5px] font-semibold text-[#C0392B] dark:text-[#FF6B5E] mt-1.5">{t(weightGoalError)}</p>
         )}
 
         {pro
           ? pro.lockNote
           : locked && (
               <p className="text-[10.5px] text-charcoal-faint mt-2">
-                Locked: only your dietitian can edit this plan.
+                {t("Locked: only your dietitian can edit this plan.")}
               </p>
             )}
       </section>
@@ -454,47 +463,47 @@ export default function GoalsPanel({
         // Target calories stat.
         <div className="flex" style={{ gap: 6 }}>
           <section style={{ ...CARD, flex: 138, minWidth: 0 }}>
-            <p style={{ ...TITLE, marginBottom: 10 }}>Current weight</p>
+            <p style={{ ...TITLE, marginBottom: 10 }}>{t("Current weight")}</p>
             {pro && !pro.weight ? (
               pro.weightLocked
             ) : (
             <>
-            <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Last logged</p>
+            <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{t("Last logged")}</p>
             {weight.current === null ? (
               <p className="text-[13px] font-semibold text-charcoal-tertiary" style={{ marginTop: 2 }}>
-                No weigh-ins yet
+                {t("No weigh-ins yet")}
               </p>
             ) : (
               <p style={{ margin: "1px 0 0", fontSize: textPx(19), fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>
                 {weight.current}
-                <span style={{ fontSize: textPx(11), fontWeight: 600, marginInlineStart: 3 }}>kg</span>
+                <span style={{ fontSize: textPx(11), fontWeight: 600, marginInlineStart: 3 }}>{t("kg")}</span>
               </p>
             )}
             </>
             )}
           </section>
           <section style={{ ...CARD, flex: 215, minWidth: 0 }}>
-            <p style={{ ...TITLE, marginBottom: 10 }}>TDEE estimate</p>
+            <p style={{ ...TITLE, marginBottom: 10 }}>{t("TDEE estimate")}</p>
             {tdee === null ? (
               <>
-                <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">{pro ? pro.tdeeMissing.title : "Needs your height and weight"}</p>
+                <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">{pro ? pro.tdeeMissing.title : t("Needs your height and weight")}</p>
                 <p className="mt-1 text-[8.5px] leading-[1.3] text-charcoal-faint">
-                  {pro ? pro.tdeeMissing.line : "Mifflin-St Jeor is a formula in both. Add them in Profile for a maintenance estimate."}
+                  {pro ? pro.tdeeMissing.line : t("Mifflin-St Jeor is a formula in both. Add them in Profile for a maintenance estimate.")}
                 </p>
               </>
             ) : (
               <>
-                <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Maintenance calories</p>
+                <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{t("Maintenance calories")}</p>
                 {/* Wraps at 360, where the figure and the button don't both fit. */}
                 <div className="flex items-center justify-between flex-wrap" style={{ columnGap: 8, rowGap: 6, marginTop: 1 }}>
                   <p style={{ margin: 0, fontSize: textPx(19), fontWeight: 800, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
                     {tdee.toLocaleString(appLocale())}
-                    <span style={{ fontSize: textPx(11), fontWeight: 600, marginInlineStart: 3 }}>kcal</span>
+                    <span style={{ fontSize: textPx(11), fontWeight: 600, marginInlineStart: 3 }}>{t("kcal")}</span>
                   </p>
                   {useSuggestedButton}
                 </div>
                 {pro?.tdeeBasis && <p data-tdee-basis style={{ margin: "8px 0 0", paddingTop: 7, borderTop: `1px solid ${goalsColor("hairline", dark)}`, fontSize: textPx(10.5), color: "rgb(var(--c-charcoal-soft))", overflowWrap: "anywhere" }}>{pro.tdeeBasis}</p>}
-                <p style={{ margin: "6px 0 0", fontSize: textPx(8.5), color: "rgb(var(--c-charcoal-muted))" }}>Based on the Mifflin-St Jeor Formula</p>
+                <p style={{ margin: "6px 0 0", fontSize: textPx(8.5), color: "rgb(var(--c-charcoal-muted))" }}>{t("Based on the Mifflin-St Jeor Formula")}</p>
               </>
             )}
           </section>
@@ -503,8 +512,8 @@ export default function GoalsPanel({
         <>
           <section style={CARD}>
             <div className="flex items-center justify-between mb-1">
-              <p style={TITLE}>Weight trend</p>
-              <span className="text-[10px] text-charcoal-faint">{reachDate ? "To goal" : "7 days"}</span>
+              <p style={TITLE}>{t("Weight trend")}</p>
+              <span className="text-[10px] text-charcoal-faint">{reachDate ? t("To goal") : t("7 days")}</span>
             </div>
             {pro && !pro.weight ? (
               pro.weightLocked
@@ -513,12 +522,12 @@ export default function GoalsPanel({
             <div className="flex items-end justify-between gap-2.5">
               <div className="shrink-0">
                 {weight.current === null ? (
-                  <p className="text-[13px] font-semibold text-charcoal-tertiary leading-[1.1]">No weigh-ins yet</p>
+                  <p className="text-[13px] font-semibold text-charcoal-tertiary leading-[1.1]">{t("No weigh-ins yet")}</p>
                 ) : (
                   <>
                     <p style={{ margin: 0, fontSize: textPx(24), fontWeight: 800, lineHeight: 1.1, color: "rgb(var(--c-charcoal))" }}>
                       {weight.current}
-                      <span style={{ fontSize: textPx(13), fontWeight: 700, marginInlineStart: 3 }}>kg</span>
+                      <span style={{ fontSize: textPx(13), fontWeight: 700, marginInlineStart: 3 }}>{t("kg")}</span>
                     </p>
                     {trendLabel(weightMeta) && <p className="text-[10px] text-charcoal-faint">{trendLabel(weightMeta)}</p>}
                   </>
@@ -540,7 +549,7 @@ export default function GoalsPanel({
             </div>
             {reachDate && (
               <p className="text-[10px] text-primary-dark bg-primary-pale rounded-full px-2.5 py-0.5 mt-1 inline-block">
-                At this rate, reach {desiredWeightKg}kg by {reachDate}
+                {t("At this rate, reach {kg} kg by {date}", { kg: desiredWeightKg ?? "", date: reachDate })}
               </p>
             )}
             </>
@@ -548,12 +557,12 @@ export default function GoalsPanel({
           </section>
 
           <section style={CARD}>
-            <p style={{ ...TITLE, marginBottom: 10 }}>TDEE estimate</p>
+            <p style={{ ...TITLE, marginBottom: 10 }}>{t("TDEE estimate")}</p>
             {tdee === null ? (
               <>
-                <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">{pro ? pro.tdeeMissing.title : "Needs your height and weight"}</p>
+                <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">{pro ? pro.tdeeMissing.title : t("Needs your height and weight")}</p>
                 <p className="mt-1 text-[8.5px] leading-[1.3] text-charcoal-faint">
-                  {pro ? pro.tdeeMissing.line : "Mifflin-St Jeor is a formula in both. Add them in Profile for a maintenance estimate."}
+                  {pro ? pro.tdeeMissing.line : t("Mifflin-St Jeor is a formula in both. Add them in Profile for a maintenance estimate.")}
                 </p>
               </>
             ) : (
@@ -563,26 +572,26 @@ export default function GoalsPanel({
                 <div className="flex items-center" style={{ gap: 10 }}>
                   {/* Content-sized: one line from 390 up, the label wraps at 360. */}
                   <div className="min-w-0" style={{ flex: "1 1 auto" }}>
-                    <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Maintenance calories</p>
+                    <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{t("Maintenance calories")}</p>
                     <p style={{ margin: "2px 0 0", fontSize: textPx(19), fontWeight: 800, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
                       {tdee.toLocaleString(appLocale())}
-                      <span style={{ fontSize: textPx(11), fontWeight: 600, marginInlineStart: 3 }}>kcal</span>
+                      <span style={{ fontSize: textPx(11), fontWeight: 600, marginInlineStart: 3 }}>{t("kcal")}</span>
                     </p>
                   </div>
                   <div className="min-w-0 self-stretch" style={{ flex: "1 1 auto", borderInlineStart: `1px solid ${goalsColor("hairline", dark)}`, paddingInlineStart: 10 }}>
-                    <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Target calories</p>
+                    <p style={{ margin: 0, fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{t("Target calories")}</p>
                     <p style={{ margin: "2px 0 0", fontSize: textPx(19), fontWeight: 800, color: rateColor, whiteSpace: "nowrap" }}>
                       {(suggestedForGoal ?? tdee).toLocaleString(appLocale())}
-                      <span style={{ fontSize: textPx(11), fontWeight: 600, marginInlineStart: 3 }}>kcal</span>
+                      <span style={{ fontSize: textPx(11), fontWeight: 600, marginInlineStart: 3 }}>{t("kcal")}</span>
                     </p>
                     <p style={{ margin: "1px 0 0", fontSize: textPx(10.5), color: rateColor, opacity: 0.6 }}>
-                      to {nutritionGoal.weightGoal} weight
+                      {nutritionGoal.weightGoal === "lose" ? t("to lose weight") : nutritionGoal.weightGoal === "gain" ? t("to gain weight") : t("to maintain weight")}
                     </p>
                   </div>
                   {useSuggestedButton}
                 </div>
                 {pro?.tdeeBasis && <p data-tdee-basis style={{ margin: "10px 0 0", paddingTop: 9, borderTop: `1px solid ${goalsColor("hairline", dark)}`, fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-soft))", overflowWrap: "anywhere" }}>{pro.tdeeBasis}</p>}
-                <p style={{ margin: "8px 0 0", fontSize: textPx(8.5), color: "rgb(var(--c-charcoal-muted))" }}>Based on the Mifflin-St Jeor Formula</p>
+                <p style={{ margin: "8px 0 0", fontSize: textPx(8.5), color: "rgb(var(--c-charcoal-muted))" }}>{t("Based on the Mifflin-St Jeor Formula")}</p>
               </>
             )}
           </section>
@@ -594,14 +603,14 @@ export default function GoalsPanel({
             is "Use custom", beside it and the same size as "Use suggested". */}
         {/* One line from 390 up; at 360 the stepper and Use custom wrap under the title together. */}
         <div className="flex items-center justify-between flex-wrap" style={{ columnGap: 8, rowGap: 8 }}>
-          <p style={{ ...TITLE, minWidth: 0, whiteSpace: "nowrap" }}>Daily target</p>
+          <p style={{ ...TITLE, minWidth: 0, whiteSpace: "nowrap" }}>{t("Daily target")}</p>
           <div className="flex items-center ms-auto" style={{ gap: 8 }}>
           {/* No overflow clipping: it would clip the 44px hit area of the - / + buttons, and the ends are transparent anyway. A minimum height, so 130% text grows the pill rather than being cut. */}
           <span className="flex items-stretch rounded-full flex-none" style={{ minHeight: 30, background: goalsColor("stepperPill", dark) }}>
             <button
               onClick={() => !locked && setCalorieDraft(String(Math.max(0, Number(calorieDraft || 0) - 50)))}
               disabled={locked}
-              aria-label="Decrease by 50 kcal"
+              aria-label={t("Decrease by 50 kcal")}
               className="tap flex items-center justify-center disabled:opacity-50"
               style={{ width: 28, color: goalsColor("stepperGlyph", dark) }}
             >
@@ -616,16 +625,16 @@ export default function GoalsPanel({
                 onChange={(e) => setCalorieDraft(e.target.value.replace(/\D/g, ""))}
                 inputMode="numeric"
                 disabled={locked}
-                aria-label="Daily calorie target"
+                aria-label={t("Daily calorie target")}
                 className="text-end focus:outline-none disabled:opacity-60 bg-transparent self-center"
                 style={{ width: 38, padding: 0, fontSize: textPx(14), fontWeight: 800, color: goalsColor("stepperFigure", dark) }}
               />
-              <span className="self-center" style={{ fontSize: textPx(9.5), color: goalsColor("stepperUnit", dark) }}>kcal</span>
+              <span className="self-center" style={{ fontSize: textPx(9.5), color: goalsColor("stepperUnit", dark) }}>{t("kcal")}</span>
             </span>
             <button
               onClick={() => !locked && setCalorieDraft(String(Number(calorieDraft || 0) + 50))}
               disabled={locked}
-              aria-label="Increase by 50 kcal"
+              aria-label={t("Increase by 50 kcal")}
               className="tap flex items-center justify-center disabled:opacity-50"
               style={{ width: 28, color: goalsColor("stepperGlyph", dark) }}
             >
@@ -644,7 +653,7 @@ export default function GoalsPanel({
             className="tap inline-flex items-center justify-center flex-none disabled:opacity-40 disabled:pointer-events-none"
             style={{ ...ACTION, gap: 5, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))" }}
           >
-            <Check size={13} /> Use custom
+            <Check size={13} /> {t("Use custom")}
           </button>
           )}
           </div>
@@ -659,18 +668,17 @@ export default function GoalsPanel({
             in the app. */}
         {(nutritionGoal.pregnancyKcal ?? 0) > 0 && (
           <p className="mt-2 text-[10.5px] leading-[1.4] text-charcoal-faint">
-            Plus {nutritionGoal.pregnancyKcal} kcal a day for pregnancy, {targets.calories} kcal in total. The
-            pregnancy card at the top of this tab takes it off again.
+            {t("Plus {extra} kcal a day for pregnancy, {total} kcal in total. The pregnancy card at the top of this tab takes it off again.", { extra: nutritionGoal.pregnancyKcal ?? 0, total: targets.calories })}
           </p>
         )}
       </section>
 
       {!pro?.hideMacros && (
       <section style={CARD}>
-        <p style={{ ...TITLE, marginBottom: 12 }}>Macro distribution</p>
+        <p style={{ ...TITLE, marginBottom: 12 }}>{t("Macro distribution")}</p>
         <MacroSplitEditor split={nutritionGoal.macroSplit} calories={targets.calories} onChange={setMacroSplit} disabled={locked} squares />
         <p className="text-charcoal-faint" style={{ margin: "12px 0 0", fontSize: textPx(9.5), lineHeight: 1.4 }}>
-          {MACRO_REBALANCE_NOTE}
+          {t(MACRO_REBALANCE_NOTE)}
         </p>
       </section>
       )}
@@ -679,7 +687,7 @@ export default function GoalsPanel({
 
       {!pro && (
       <section style={CARD}>
-        <p style={{ ...TITLE, marginBottom: 12 }}>{hide ? "Diet & allergies" : "Plan"}</p>
+        <p style={{ ...TITLE, marginBottom: 12 }}>{hide ? t("Diet & allergies") : t("Plan")}</p>
         <div className="flex gap-1.5 flex-wrap">
           {/* The plan chips set targets, so they go with them in recovery mode. */}
           {!hide && (["custom", "existing"] as PlanType[]).map((p) => (
@@ -701,7 +709,7 @@ export default function GoalsPanel({
                 }
                 if (p === "existing") {
                   if (!user.linkedProfessionalName && !proTargets) {
-                    setPlanError("You need to hire a professional before switching to an existing plan.");
+                    setPlanError(t("You need to hire a professional before switching to an existing plan."));
                     setNutritionGoal({ ...nutritionGoal, planType: "custom" });
                     return;
                   }
@@ -713,7 +721,7 @@ export default function GoalsPanel({
                 }
               }}
             >
-              {p === "custom" ? "Custom plan" : "Existing plan"}
+              {p === "custom" ? t("Custom plan") : t("Existing plan")}
             </Chip>
           ))}
           {/* QA 11.0: "Besides custom and existing plan, another button
@@ -725,7 +733,7 @@ export default function GoalsPanel({
             onClick={(e) => setRestrictionAnchor(restrictionOpen ? null : e.currentTarget)}
           >
             <span className="flex items-center gap-1">
-              Dietary restriction
+              {t("Dietary restriction")}
               <ChevronDown size={11} className={restrictionOpen ? "rotate-180" : undefined} />
             </span>
           </Chip>
@@ -737,22 +745,22 @@ export default function GoalsPanel({
             aria-haspopup="dialog"
           >
             <span className="flex items-center gap-1">
-              Allergies
+              {t("Allergies")}
               <ChevronDown size={11} />
             </span>
           </Chip>
         </div>
-        {!hide && planError && <p className="text-[10.5px] font-semibold text-[#C0392B] dark:text-[#FF6B5E] mt-1.5">{planError}</p>}
+        {!hide && planError && <p className="text-[10.5px] font-semibold text-[#C0392B] dark:text-[#FF6B5E] mt-1.5">{t(planError)}</p>}
         {!hide && !planError && nutritionGoal.planType === "existing" && (
           <p className="text-[10.5px] text-charcoal-faint mt-1.5">
-            {proTargets?.professionalName || user.linkedProfessionalName} is responsible for your goals and macros while this plan is active: weight goal, calorie target and macro distribution can only be changed by them.
+            {t("{name} is responsible for your goals and macros while this plan is active: weight goal, calorie target and macro distribution can only be changed by them.", { name: proTargets?.professionalName || user.linkedProfessionalName || "" })}
           </p>
         )}
         <PopupMenu
           open={restrictionOpen}
           anchor={restrictionAnchor}
           onClose={() => setRestrictionAnchor(null)}
-          options={dietaryRestrictionOptions}
+          options={dietaryRestrictionOptions.map((o) => ({ ...o, label: t(o.label) }))}
           selected={dietaryRestriction}
           onSelect={(value) => {
             // Unchanged: tapping the active restriction clears it.
@@ -768,8 +776,7 @@ export default function GoalsPanel({
             className="tap flex items-center gap-1.5 text-xs font-semibold text-charcoal-faint mt-2"
           >
             <X size={12} />
-            {dietaryRestrictionOptions.find((r) => r.value === dietaryRestriction)?.label} active. Incompatible Diary
-            items are highlighted. Tap to clear.
+            {t("{diet} active. Incompatible Diary items are highlighted. Tap to clear.", { diet: t(dietaryRestrictionOptions.find((r) => r.value === dietaryRestriction)?.label ?? "") })}
           </button>
         )}
         {/* Release 3 · CU13 (gen/r23.js goals23 o.allergy): 12 / 700 status.high,
@@ -785,9 +792,9 @@ export default function GoalsPanel({
         })()}
         {myAllergies.status === "error" && (
           <p className="flex items-center" style={{ gap: 10, margin: "8px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-faint))" }}>
-            Couldn't load your allergies.
+            {t("Couldn't load your allergies.")}
             <button type="button" onClick={myAllergies.reload} className="tap relative text-primary-deep-text before:absolute before:-inset-[12px] before:content-['']" style={{ fontWeight: 700 }}>
-              Retry
+              {t("Retry")}
             </button>
           </p>
         )}

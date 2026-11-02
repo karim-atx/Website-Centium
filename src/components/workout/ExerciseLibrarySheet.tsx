@@ -17,6 +17,8 @@ import { isUuid } from "../../services/food";
 import { isCustomExerciseRule } from "../../services/exercises";
 import { linePx, textPx } from "../../theme/textSize";
 import type { ExerciseClassification, ExerciseTag, MuscleGroup } from "../../types";
+import { t, tk } from "../../i18n/core";
+import { muscleLabel } from "./muscleLabel";
 
 export interface ExercisePick {
   name: string;
@@ -51,9 +53,9 @@ interface LibraryRow {
   isCustom: boolean;
 }
 
-const SAVE_FAILED = "Couldn't save. Try again.";
+const SAVE_FAILED = tk("Couldn't save. Try again.");
 /** A failed custom-exercise write: the rule it broke (B3, PB-O-32), else the toast's copy. */
-const saveFailure = (error: string) => (isCustomExerciseRule(error) ? error : SAVE_FAILED);
+const saveFailure = (error: string) => t(isCustomExerciseRule(error) ? error : SAVE_FAILED);
 
 /**
  * The Exercise Library sheet (v6 WO1.3), opened from a routine's Add
@@ -103,7 +105,7 @@ export const ExerciseLibrarySheet: React.FC<{
   const categories = useMemo(() => {
     const present = new Set<MuscleGroup>();
     for (const e of exerciseCatalog) for (const mg of e.muscleGroups) present.add(mg);
-    return [...present].sort((a, b) => MUSCLE_GROUP_LABEL[a].localeCompare(MUSCLE_GROUP_LABEL[b]));
+    return [...present].sort((a, b) => muscleLabel(MUSCLE_GROUP_LABEL[a]).localeCompare(muscleLabel(MUSCLE_GROUP_LABEL[b])));
   }, [exerciseCatalog]);
 
   // Primary movers only, never secondary — the same rule the Library tab
@@ -186,15 +188,15 @@ export const ExerciseLibrarySheet: React.FC<{
     });
   };
 
-  const tabs = [{ key: "all", label: "All" }, ...categories.map((c) => ({ key: c, label: MUSCLE_GROUP_LABEL[c] }))];
-  const actionLabel = mode === "replace" ? "Replace" : "+ Add";
+  const tabs = [{ key: "all", label: t("All") }, ...categories.map((c) => ({ key: c, label: muscleLabel(MUSCLE_GROUP_LABEL[c]) }))];
+  const actionLabel = mode === "replace" ? t("Replace") : t("+ Add");
 
   return (
     <>
       <BottomSheet
         open={open}
         onClose={close}
-        title="Exercise Library"
+        title={t("Exercise Library")}
         // WO1.3 #56-#61: Part B chrome (0.5px outline, ring 1.1), X 13, the
         // title #7248F8 / dark #A991FE 20/30, body padding 16 16 0, the sheet
         // at its full height (740 of 844), no scrim blur (none drawn), swipe
@@ -218,8 +220,8 @@ export const ExerciseLibrarySheet: React.FC<{
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search exercises"
-              aria-label="Search exercises"
+              placeholder={t("Search exercises")}
+              aria-label={t("Search exercises")}
               className="flex-1 min-w-0 bg-transparent text-charcoal placeholder:text-charcoal-faint focus:outline-none"
               style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3) }}
             />
@@ -263,20 +265,20 @@ export const ExerciseLibrarySheet: React.FC<{
                 </button>
                 {muscle && (
                   <span className="shrink-0 text-charcoal-faint" style={{ fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 400 }}>
-                    {MUSCLE_GROUP_LABEL[muscle]}
+                    {muscleLabel(MUSCLE_GROUP_LABEL[muscle])}
                   </span>
                 )}
                 <button
                   type="button"
                   onClick={() => !added && onPick(pickOf(r))}
                   aria-disabled={added}
-                  aria-label={added ? `${r.name} added` : mode === "replace" ? `Replace with ${r.name}` : `Add ${r.name}`}
+                  aria-label={added ? t("{name} added", { name: r.name }) : mode === "replace" ? t("Replace with {name}", { name: r.name }) : t("Add {name}", { name: r.name })}
                   className="tap relative shrink-0 inline-flex items-center before:absolute before:-inset-x-[6px] before:-inset-y-[13px] before:content-['']"
                   style={{ gap: 3, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: ink }}
                 >
                   {added ? (
                     <>
-                      Added <Check size={12} strokeWidth={3} />
+                      {t("Added")} <Check size={12} strokeWidth={3} />
                     </>
                   ) : (
                     actionLabel
@@ -290,12 +292,12 @@ export const ExerciseLibrarySheet: React.FC<{
 
           {/* A FAILED LOAD IS NOT AN EMPTY LIBRARY, and it is said even when
               the user's own movements are still listed above (K1). */}
-          {exerciseCatalogError && <LoadErrorCard message="Couldn't load exercises." onRetry={retryExerciseCatalog} />}
+          {exerciseCatalogError && <LoadErrorCard message={t("Couldn't load exercises.")} onRetry={retryExerciseCatalog} />}
 
           {!loading && !exerciseCatalogError && rows.length === 0 && (
             <div className="flex flex-col items-center text-center" style={{ padding: "28px 0", gap: 8 }}>
               <p className="text-charcoal-faint" style={{ margin: 0, fontSize: textPx(13.5), lineHeight: linePx(20.3) }}>
-                {query.trim() ? `No exercises match '${query.trim()}'.` : "No exercises match."}
+                {query.trim() ? t("No exercises match '{query}'.", { query: query.trim() }) : t("No exercises match.")}
               </p>
               {query.trim() && (
                 <button
@@ -304,7 +306,7 @@ export const ExerciseLibrarySheet: React.FC<{
                   className="tap relative before:absolute before:-inset-[12px] before:content-['']"
                   style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 700, color: ink }}
                 >
-                  {`Create '${query.trim()}'`}
+                  {t("Create '{query}'", { query: query.trim() })}
                 </button>
               )}
             </div>

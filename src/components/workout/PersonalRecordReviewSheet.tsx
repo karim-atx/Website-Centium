@@ -4,6 +4,7 @@ import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import { Check, Dumbbell } from "lucide-react";
 import clsx from "clsx";
+import { t } from "../../i18n/core";
 
 // The one-time review of personal records that only ever lived in this browser.
 //
@@ -91,10 +92,10 @@ export const PersonalRecordReviewSheet: React.FC = () => {
   };
 
   return (
-    <BottomSheet open onClose={() => void skipAll()} title="Save your personal records?">
+    <BottomSheet open onClose={() => void skipAll()} title={t("Save your personal records?")}>
       <div className="space-y-4 animate-fade-slide-up">
         <p className="text-[12.5px] text-charcoal-soft leading-relaxed">
-          These were tracked on this device only. Pick the ones worth keeping and they'll be saved to your account. Anything you leave unticked stays on this device and isn't recorded.
+          {t("These were tracked on this device only. Pick the ones worth keeping and they'll be saved to your account. Anything you leave unticked stays on this device and isn't recorded.")}
         </p>
 
         <div className="space-y-2 max-h-[320px] overflow-y-auto no-scrollbar">
@@ -112,7 +113,7 @@ export const PersonalRecordReviewSheet: React.FC = () => {
                     setChecked((prev) => ({ ...prev, [name]: !prev[name] }))
                   }
                   disabled={status === "missing"}
-                  aria-label={`${isChecked ? "Skip" : "Keep"} ${name}`}
+                  aria-label={isChecked ? t("Skip {name}", { name }) : t("Keep {name}", { name })}
                   className={clsx(
                     "tap w-5 h-5 rounded-md flex items-center justify-center shrink-0 border",
                     isChecked
@@ -130,12 +131,12 @@ export const PersonalRecordReviewSheet: React.FC = () => {
                     <p className="text-sm font-semibold text-charcoal truncate">{name}</p>
                     {status === "pending" && (
                       <p className="text-[10.5px] font-medium text-charcoal-faint">
-                        Saved once this exercise finishes syncing
+                        {t("Saved once this exercise finishes syncing")}
                       </p>
                     )}
                     {status === "missing" && (
                       <p className="text-[10.5px] font-medium text-charcoal-faint">
-                        Not in your library. Can't be saved
+                        {t("Not in your library. Can't be saved")}
                       </p>
                     )}
                   </div>
@@ -152,7 +153,7 @@ export const PersonalRecordReviewSheet: React.FC = () => {
                     }
                     disabled={status === "missing"}
                     inputMode="decimal"
-                    aria-label={`${name} one rep max`}
+                    aria-label={t("{name} one rep max", { name })}
                     className="w-16 rounded-lg border border-charcoal/15 bg-cream-card px-2 py-1 text-xs text-charcoal text-end focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-40"
                   />
                   <span className="text-xs font-semibold text-charcoal-faint">kg</span>
@@ -164,10 +165,10 @@ export const PersonalRecordReviewSheet: React.FC = () => {
 
         <div className="flex gap-2.5">
           <Button variant="outline" fullWidth onClick={() => void skipAll()} disabled={saving}>
-            Not now
+            {t("Not now")}
           </Button>
           <Button fullWidth onClick={() => void confirm()} disabled={saving}>
-            {saving ? "Saving…" : "Save selected"}
+            {saving ? t("Saving…") : t("Save selected")}
           </Button>
         </div>
       </div>

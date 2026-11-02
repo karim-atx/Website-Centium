@@ -11,6 +11,7 @@ import { useBack } from "../../hooks/useBack";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { Navigate } from "react-router-dom";
 import { appLocale } from "../../i18n/format";
+import { tk } from "../../i18n/core";
 
 /**
  * Mobile v5.1 R3, dark mode (no light islands). Inks and surfaces with an
@@ -29,8 +30,8 @@ const SUMMARY_COLORS = {
 const summaryColor = (key: keyof typeof SUMMARY_COLORS, dark: boolean): string => SUMMARY_COLORS[key][dark ? 1 : 0];
 
 const filterOptions: { value: NutrientFilter; label: string }[] = [
-  { value: "all", label: "All nutrients" },
-  { value: "logged", label: "Logged only" },
+  { value: "all", label: tk("All nutrients") },
+  { value: "logged", label: tk("Logged only") },
 ];
 
 const formatDiaryDate = (iso: string) => {
@@ -106,7 +107,7 @@ export default function NutrientSummaryPage() {
               className="whitespace-nowrap"
               style={{ margin: 0, fontSize: textPx(24), fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.022em", color: "rgb(var(--c-charcoal))" }}
             >
-              Nutrient Summary
+              {t("Nutrient Summary")}
             </h1>
             <p
               className="whitespace-nowrap"
@@ -119,7 +120,7 @@ export default function NutrientSummaryPage() {
         <button
           ref={setFilterButton}
           onClick={() => setFilterOpen(true)}
-          aria-label="Filter nutrients"
+          aria-label={t("Filter nutrients")}
           aria-haspopup="menu"
           aria-expanded={filterOpen}
           className="tap relative flex-none flex items-center justify-center"
@@ -163,7 +164,7 @@ export default function NutrientSummaryPage() {
         open={filterOpen}
         onClose={() => setFilterOpen(false)}
         anchor={filterButton}
-        options={filterOptions}
+        options={filterOptions.map((o) => ({ ...o, label: t(o.label) }))}
         selected={filter}
         onSelect={setFilter}
       />
@@ -174,14 +175,14 @@ export default function NutrientSummaryPage() {
           style={{ gap: 7, background: summaryColor("banner", dark), borderRadius: 11, padding: "8px 11px", marginBottom: 12 }}
         >
           <span className="flex-none rounded-full" style={{ width: 6, height: 6, background: summaryColor("dot", dark) }} />
-          <span style={{ fontSize: textPx(10.5), fontWeight: 700, color: summaryColor("lavInk", dark) }}>Logged only</span>
+          <span style={{ fontSize: textPx(10.5), fontWeight: 700, color: summaryColor("lavInk", dark) }}>{t("Logged only")}</span>
           <span className="flex-1 min-w-0" />
           <button
             onClick={() => setFilter("all")}
             className="tap"
             style={{ fontSize: textPx(10.5), fontWeight: 700, color: summaryColor("link", dark), background: "none", padding: 0 }}
           >
-            Show all
+            {t("Show all")}
           </button>
         </div>
       )}
@@ -199,7 +200,7 @@ export default function NutrientSummaryPage() {
       />
 
       <p style={{ margin: "16px 2px 0", fontSize: textPx(9.5), lineHeight: 1.55, color: "rgb(var(--c-charcoal-muted))" }}>
-        % Daily Value based on FDA reference values for adults. Calorie and macro targets come from your Goals.
+        {t("% Daily Value based on FDA reference values for adults. Calorie and macro targets come from your Goals.")}
       </p>
     </div>
   );

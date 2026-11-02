@@ -4,15 +4,16 @@ import { useApp } from "../../context/AppContext";
 import { useFreeLimit } from "../premium/useFreeLimit";
 import { ownRoutineCount } from "../../services/premium/g2";
 import { getPublicTemplates } from "../../services/templates";
-import type { WorkoutTemplate } from "../../types";
+import type { TemplateLevel, WorkoutTemplate } from "../../types";
 import { ChevronLeft, Check } from "lucide-react";
 import { BlockCard } from "./BlockCard";
 import { groupIntoRuns } from "../../services/workout/blocks";
 import { formatCompactDuration } from "../../services/workout";
 import { programRow } from "../../services/workout/programRow";
-import { LEVEL_ORDER, levelColors, levelColorsMap, levelName, programSheetColors } from "../../data/levelColors";
+import { LEVEL_ORDER, levelColors, levelColorsMap, programSheetColors } from "../../data/levelColors";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
+import { t, tk, tn } from "../../i18n/core";
 
 // Browsing the curated starter programs, and taking one for yourself.
 //
@@ -39,7 +40,15 @@ import { linePx, textPx } from "../../theme/textSize";
 
 /** "~45m", "~1h 10m" (the compact duration format, 02). */
 const aboutDuration = (p: WorkoutTemplate) => (p.durationMin ? `~${formatCompactDuration(p.durationMin * 60)}` : null);
-const exerciseCount = (p: WorkoutTemplate) => `${p.exercises.length} exercise${p.exercises.length === 1 ? "" : "s"}`;
+const exerciseCount = (p: WorkoutTemplate) => tn(p.exercises.length, "{n} exercise", "{n} exercises");
+
+// The level's name, translated where shown.
+const LEVEL_LABEL: Record<TemplateLevel, string> = {
+  beginner: tk("Beginner"),
+  intermediate: tk("Intermediate"),
+  advanced: tk("Advanced"),
+};
+const levelName = (level: TemplateLevel) => t(LEVEL_LABEL[level]);
 
 export const BrowseProgramsSheet: React.FC<{
   open: boolean;
@@ -69,7 +78,7 @@ export const BrowseProgramsSheet: React.FC<{
       if (cancelled) return;
       setLoading(false);
       if (!result.ok) {
-        setLoadError(result.message ?? "Couldn't load the starter programs.");
+        setLoadError(result.message ?? t("Couldn't load the starter programs."));
         return;
       }
       setLoadError(null);
@@ -114,7 +123,7 @@ export const BrowseProgramsSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={close}
-      title={selected ? selected.name : "Starter programs"}
+      title={selected ? selected.name : t("Starter programs")}
       tone={tone ? { band: tone.band, border: tone.deep, title: tone.deep, body: tone.body } : undefined}
       footer={
         selected && tone ? (
@@ -125,14 +134,14 @@ export const BrowseProgramsSheet: React.FC<{
               className="tap w-full flex items-center justify-center disabled:opacity-60"
               style={{ height: 52, borderRadius: 16, background: tone.fill, color: "#FFFFFF", fontSize: textPx(14), fontWeight: 700 }}
             >
-              {adopting ? "Adding…" : "Add to my routines"}
+              {adopting ? t("Adding…") : t("Add to my routines")}
             </button>
           ) : (
             // The app has no signed-out route today, so this is a guard
             // rather than a screen anyone reaches. If a public browse page
             // ever exists, the read already works there and this says why
             // the action does not.
-            <p className="text-center text-[12.5px] text-charcoal-soft">Sign in to add this program to your routines.</p>
+            <p className="text-center text-[12.5px] text-charcoal-soft">{t("Sign in to add this program to your routines.")}</p>
           )
         ) : undefined
       }
@@ -144,7 +153,7 @@ export const BrowseProgramsSheet: React.FC<{
             className="tap flex items-center gap-1 text-xs font-semibold"
             style={{ color: tone.deep }}
           >
-            <ChevronLeft size={14} /> All programs
+            <ChevronLeft size={14} className="rtl:-scale-x-100" /> {t("All programs")}
           </button>
 
           {/* WO21: description and meta on a white card (exercise-row width and radius); the dark card in dark mode. */}
@@ -170,7 +179,7 @@ export const BrowseProgramsSheet: React.FC<{
 
           <div>
             <p className="section-label" style={{ color: tone.deep, marginBottom: 10 }}>
-              Exercises
+              {t("Exercises")}
             </p>
             {/* BLOCKS RENDER HERE TOO, and "no blocks" is the ordinary case
                 rather than an error: a curated program written before blocks
@@ -205,7 +214,7 @@ export const BrowseProgramsSheet: React.FC<{
                               {row.value}
                             </span>
                             <span style={{ fontSize: textPx(9), lineHeight: linePx(12), fontWeight: 600, color: tone.deep, opacity: dark ? 1 : 0.8, whiteSpace: "nowrap" }}>
-                              {row.label}
+                              {row.label ? t(row.label) : ""}
                             </span>
                           </div>
                         )}
@@ -222,8 +231,7 @@ export const BrowseProgramsSheet: React.FC<{
       ) : (
         <div className="space-y-4 animate-fade-slide-up">
           <p className="text-[12.5px] leading-[20px]" style={{ margin: 0, color: "rgb(var(--c-charcoal-soft))" }}>
-            Ready-made programs to start from. Adding one copies it into your routines, where you can change anything. The
-            original stays as it is.
+            {t("Ready-made programs to start from. Adding one copies it into your routines, where you can change anything. The original stays as it is.")}
           </p>
 
           {/* WO20: what the tile colours mean. */}
@@ -236,10 +244,10 @@ export const BrowseProgramsSheet: React.FC<{
             ))}
           </div>
 
-          {loading && <p className="text-center text-sm text-charcoal-faint py-6">Loading programs…</p>}
+          {loading && <p className="text-center text-sm text-charcoal-faint py-6">{t("Loading programs…")}</p>}
           {loadError && !loading && <p className="text-center text-sm text-status-high py-6">{loadError}</p>}
           {!loading && !loadError && programs.length === 0 && (
-            <p className="text-center text-sm text-charcoal-faint py-6">No starter programs available yet.</p>
+            <p className="text-center text-sm text-charcoal-faint py-6">{t("No starter programs available yet.")}</p>
           )}
 
           {/* Two columns; tiles hug their content and each row takes its
@@ -269,7 +277,7 @@ export const BrowseProgramsSheet: React.FC<{
                       {p.level && levelName(p.level)}
                       {added.includes(p.id) && (
                         <span className="flex items-center" style={{ gap: 2 }}>
-                          <Check size={10} strokeWidth={3} /> Added
+                          <Check size={10} strokeWidth={3} /> {t("Added")}
                         </span>
                       )}
                     </span>

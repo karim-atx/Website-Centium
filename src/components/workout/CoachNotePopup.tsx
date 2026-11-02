@@ -5,19 +5,20 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { formatShortDate } from "../../utils/date";
+import { t, tn } from "../../i18n/core";
 
 /** "Updated 2d ago" (WO25). Beyond a week, the date. */
 function updatedAgo(iso: string | undefined, now = Date.now()): string | null {
   if (!iso) return null;
   const mins = Math.floor((now - Date.parse(iso)) / 60000);
   if (!Number.isFinite(mins)) return null;
-  if (mins < 1) return "Updated just now";
-  if (mins < 60) return `Updated ${mins}m ago`;
+  if (mins < 1) return t("Updated just now");
+  if (mins < 60) return tn(mins, "Updated {n}m ago", "Updated {n}m ago");
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `Updated ${hours}h ago`;
+  if (hours < 24) return tn(hours, "Updated {n}h ago", "Updated {n}h ago");
   const days = Math.floor(hours / 24);
-  if (days <= 7) return `Updated ${days}d ago`;
-  return `Updated ${formatShortDate(new Date(iso), { month: "short", day: "numeric" })}`;
+  if (days <= 7) return tn(days, "Updated {n}d ago", "Updated {n}d ago");
+  return t("Updated {date}", { date: formatShortDate(new Date(iso), { month: "short", day: "numeric" }) });
 }
 
 /**
@@ -60,14 +61,14 @@ export const CoachNotePopup: React.FC<{
     void fetchConnectedProfessional(professionalId).then((result) => {
       if (cancelled || !result.ok || !result.professional) return;
       const p = result.professional;
-      setCoach({ name: p.firstName?.trim() || "Your coach", role: professionalRole(p) });
+      setCoach({ name: p.firstName?.trim() || t("Your coach"), role: professionalRole(p) });
     });
     return () => {
       cancelled = true;
     };
   }, [note, professionalId]);
 
-  const name = coach?.name ?? "Your coach";
+  const name = coach?.name ?? t("Your coach");
   // Initials from the name we have (first name only, so usually one letter).
   const initials = coach ? name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") : "";
   const ago = updatedAgo(updatedAt);
@@ -77,7 +78,7 @@ export const CoachNotePopup: React.FC<{
       <div className="absolute inset-0 bg-charcoal/40" onClick={onClose} />
       <div
         role="dialog"
-        aria-label="Coach's note"
+        aria-label={t("Coach's note")}
         className="relative w-full flex flex-col animate-pop"
         style={{
           maxWidth: 330,
@@ -89,7 +90,7 @@ export const CoachNotePopup: React.FC<{
         }}
       >
         <p className="flex items-center" style={{ margin: "0 0 12px", gap: 8, fontSize: textPx(16), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
-          <MessageSquareText size={16} style={{ color: c("icon") }} /> Coach's note
+          <MessageSquareText size={16} style={{ color: c("icon") }} /> {t("Coach's note")}
         </p>
         {note ? (
           <>
@@ -121,7 +122,7 @@ export const CoachNotePopup: React.FC<{
           </>
         ) : (
           <p style={{ margin: 0, fontSize: textPx(13), lineHeight: linePx(20), color: "rgb(var(--c-charcoal-soft))" }}>
-            Your professional hasn't left a note for this routine yet.
+            {t("Your professional hasn't left a note for this routine yet.")}
           </p>
         )}
         <button
@@ -129,7 +130,7 @@ export const CoachNotePopup: React.FC<{
           className="tap w-full flex-none"
           style={{ marginTop: 16, height: 44, borderRadius: 12, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(14), fontWeight: 700 }}
         >
-          Close
+          {t("Close")}
         </button>
       </div>
     </div>

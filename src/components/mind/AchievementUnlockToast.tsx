@@ -8,6 +8,7 @@ import { hiddenInRecovery, LEVEL_LABEL } from "../../services/achievements";
 import { pillColours } from "./achievementStyle";
 import { AchievementIcon } from "./AchievementIcon";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 // The unlock moment, v6 MO1.1.3.2: a pill at the top of whatever page earned
 // it (K1: rendered in Layout, not in Mind).
@@ -127,7 +128,7 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
 
   const c = pillColours(achievement.level, dark);
   // V6-142: a badge with no level shows no chip.
-  const level = achievement.level ? LEVEL_LABEL[achievement.level] : null;
+  const level = achievement.level ? t(LEVEL_LABEL[achievement.level]) : null;
 
   const onPointerDown = (e: React.PointerEvent) => {
     drag.current = { y: e.clientY, moved: false };
@@ -182,7 +183,7 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
         // 0.5 px border in the level colour at 55% and the shadow in light;
         // #1C1F28, the dark ink at 55%, no shadow in dark.
         className="pointer-events-auto relative overflow-hidden rounded-full border-[0.5px] bg-cream-card cursor-pointer select-none touch-none"
-        aria-label={`Achievement unlocked: ${achievement.title}. Open details`}
+        aria-label={t("Achievement unlocked: {title}. Open details", { title: achievement.title })}
         style={{
           width: `min(318px, calc(100vw - 32px))`,
           minHeight: 58,
@@ -204,7 +205,7 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
           {/* #58-#60: text from 64 in; #61: points 10 after it. */}
           <span className="flex-1 min-w-0 ms-[11px] me-2.5">
             <span className="block text-[9px] leading-[12px] font-extrabold tracking-[1.3px] uppercase" style={{ color: c.ink }}>
-              Achievement unlocked
+              {t("Achievement unlocked")}
             </span>
             <span className="mt-0.5 flex items-center gap-[7px] min-w-0">
               <span className="text-[15px] leading-[20px] tracking-[-0.1px] font-extrabold text-charcoal truncate">
@@ -224,7 +225,7 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
             className="shrink-0 text-[16px] leading-[20px] font-extrabold tabular-nums"
             style={{ color: c.ink }}
           >
-            {achievement.points > 0 ? `+${achievement.points.toLocaleString(appLocale())}` : "No points"}
+            {achievement.points > 0 ? `+${achievement.points.toLocaleString(appLocale())}` : t("No points")}
           </span>
         </span>
 

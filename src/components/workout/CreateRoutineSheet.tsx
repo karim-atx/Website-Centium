@@ -25,6 +25,7 @@ import {
 import { prescriptionLine } from "../../services/workout/prescription";
 import { PlaylistField, playlistFieldValid } from "../music/PlaylistField";
 import { tidyPlaylistInput } from "../../services/music/playlistLink";
+import { t } from "../../i18n/core";
 
 const colorOptions = FOLDER_SWATCHES.map((s) => s.color);
 
@@ -214,7 +215,7 @@ export const CreateRoutineSheet: React.FC<{
     }
     const playlistUrl = tidyPlaylistInput(playlist);
     if (!playlistFieldValid(playlistUrl)) {
-      setError("Check the playlist link.");
+      setError(t("Check the playlist link."));
       return;
     }
     const routine: Omit<Routine, "id"> = {
@@ -234,7 +235,7 @@ export const CreateRoutineSheet: React.FC<{
     // state and is not now that the save can be refused — closing would throw
     // away a routine that was never stored.
     if (!id) {
-      setError("Couldn't save that routine. Check your connection and try again.");
+      setError(t("Couldn't save that routine. Check your connection and try again."));
       return;
     }
     reset();
@@ -271,7 +272,7 @@ export const CreateRoutineSheet: React.FC<{
       <button
         type="button"
         onClick={() => setNoteFor({ id: ex.id, text: ex.coachNote ?? "" })}
-        aria-label={has ? "Coach note added" : "Add coach note"}
+        aria-label={has ? t("Coach note added") : t("Add coach note")}
         className="tap relative shrink-0 flex items-center justify-center before:absolute before:-inset-2 before:content-['']"
         style={{ color: has ? "rgb(var(--th-7d6bb5))" : "rgb(var(--c-charcoal-faint))" }}
       >
@@ -299,7 +300,7 @@ export const CreateRoutineSheet: React.FC<{
             onClick={() => setSelected((prev) => (prev.includes(ex.id) ? prev.filter((id) => id !== ex.id) : [...prev, ex.id]))}
             role="checkbox"
             aria-checked={picked}
-            aria-label={`Select ${ex.name}`}
+            aria-label={t("Select {name}", { name: ex.name })}
             className="tap flex items-center justify-center shrink-0"
             style={{
               width: 18,
@@ -317,10 +318,10 @@ export const CreateRoutineSheet: React.FC<{
           {line && <span className="block text-[11px] text-charcoal-faint truncate">{line}</span>}
         </button>
         {noteIcon(ex)}
-        <button onClick={() => setSettingsIndex(i)} aria-label={`Settings for ${ex.name}`} className="tap text-charcoal-faint shrink-0">
+        <button onClick={() => setSettingsIndex(i)} aria-label={t("Settings for {name}", { name: ex.name })} className="tap text-charcoal-faint shrink-0">
           <Settings2 size={14} />
         </button>
-        <button onClick={() => removeExercise(ex.id)} aria-label={`Remove ${ex.name}`} className="tap text-charcoal-faint shrink-0">
+        <button onClick={() => removeExercise(ex.id)} aria-label={t("Remove {name}", { name: ex.name })} className="tap text-charcoal-faint shrink-0">
           <X size={14} />
         </button>
       </div>
@@ -337,22 +338,22 @@ export const CreateRoutineSheet: React.FC<{
           reset();
           onClose();
         }}
-        title={pro ? pro.title : "Create Routine"}
+        title={pro ? pro.title : t("Create Routine")}
       >
         <div className="space-y-5 animate-fade-slide-up">
           <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Routine name</span>
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Routine name")}</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Push Day"
+              placeholder={t("Push Day")}
               className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
           <label className="block">
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-              Estimated duration (min)
+              {t("Estimated duration (min)")}
             </span>
             <input
               value={duration}
@@ -364,13 +365,13 @@ export const CreateRoutineSheet: React.FC<{
 
           {!pro && (
             <div>
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Color</span>
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Color")}</span>
               <div className="flex flex-wrap gap-2">
                 {FOLDER_SWATCHES.map(({ color: c, name }) => (
                   <button
                     key={c}
                     onClick={() => setColor(c)}
-                    aria-label={name}
+                    aria-label={t(name)}
                     className="tap w-8 h-8 rounded-full flex items-center justify-center"
                     style={{
                       background: c,
@@ -387,9 +388,9 @@ export const CreateRoutineSheet: React.FC<{
 
           <div>
             <span className="text-xs font-semibold text-charcoal-soft mb-2 block">
-              Exercises {exercises.length > 0 && `(drag to reorder, tap for settings)`}
+              {t("Exercises")} {exercises.length > 0 && t("(drag to reorder, tap for settings)")}
             </span>
-            {pro && groupProblem && <p className="text-[11px] text-status-high mb-2">{groupProblem}</p>}
+            {pro && groupProblem && <p className="text-[11px] text-status-high mb-2">{t(groupProblem)}</p>}
             <div className="space-y-1.5 mb-3">
               {pro
                 ? groupIntoRuns(exercises, blocks).map((run) =>
@@ -405,7 +406,7 @@ export const CreateRoutineSheet: React.FC<{
                               {noteIcon(ex)}
                               <button
                                 onClick={() => setSettingsIndex(exercises.findIndex((e) => e.id === ex.id))}
-                                aria-label={`Settings for ${ex.name}`}
+                                aria-label={t("Settings for {name}", { name: ex.name })}
                                 className="tap text-charcoal-faint shrink-0"
                               >
                                 <Settings2 size={13} />
@@ -426,7 +427,7 @@ export const CreateRoutineSheet: React.FC<{
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search for exercise…"
+                placeholder={t("Search for exercise…")}
                 className="w-full rounded-xl bg-cream-soft border border-charcoal/10 ps-9 pe-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
@@ -451,7 +452,7 @@ export const CreateRoutineSheet: React.FC<{
                     className="tap w-full flex items-center justify-between rounded-xl px-3 py-2 bg-primary-pale/60 hover:bg-primary-pale text-start"
                   >
                     <span className="text-sm font-medium text-charcoal">{r.name}</span>
-                    <span className="text-xs font-semibold text-primary">+ Add</span>
+                    <span className="text-xs font-semibold text-primary">{t("+ Add")}</span>
                   </button>
                 ))}
               </div>
@@ -461,7 +462,7 @@ export const CreateRoutineSheet: React.FC<{
               onClick={() => setLibraryOpen(true)}
               className="tap w-full flex items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-charcoal/15 py-2.5 text-xs font-semibold text-charcoal-soft"
             >
-              <Library size={14} /> Browse exercise library
+              <Library size={14} /> {t("Browse exercise library")}
             </button>
 
             {pro && exercises.length >= 2 && (
@@ -477,7 +478,7 @@ export const CreateRoutineSheet: React.FC<{
                       className="tap text-[12.5px] font-semibold text-charcoal-soft"
                       style={{ minHeight: 44 }}
                     >
-                      Cancel
+                      {t("Cancel")}
                     </button>
                     <button
                       onClick={() => {
@@ -493,7 +494,7 @@ export const CreateRoutineSheet: React.FC<{
                       className="tap text-[12.5px] font-semibold disabled:opacity-50"
                       style={{ minHeight: 44, color: "rgb(var(--thi-5f5093))" }}
                     >
-                      Group as…
+                      {t("Group as…")}
                     </button>
                   </>
                 ) : (
@@ -502,7 +503,7 @@ export const CreateRoutineSheet: React.FC<{
                     className="tap flex items-center text-[13px] font-bold"
                     style={{ gap: 6, minHeight: 44, color: "rgb(var(--thi-5f5093))" }}
                   >
-                    <Link2 size={15} /> Group into a superset
+                    <Link2 size={15} /> {t("Group into a superset")}
                   </button>
                 )}
               </div>
@@ -513,7 +514,7 @@ export const CreateRoutineSheet: React.FC<{
             <PlaylistField
               value={playlist}
               onChange={setPlaylist}
-              hint="Play it from this routine while you train."
+              hint={t("Play it from this routine while you train.")}
               labelStyle={{ fontWeight: 600 }}
               inputStyle={{ borderRadius: 16, fontWeight: 400 }}
             />
@@ -531,7 +532,7 @@ export const CreateRoutineSheet: React.FC<{
             onClick={() => void save()}
             disabled={saving || !name.trim() || exercises.length === 0}
           >
-            {saving ? "Saving…" : pro ? pro.submitLabel : "Save routine"}
+            {saving ? t("Saving…") : pro ? pro.submitLabel : t("Save routine")}
           </Button>
         </div>
       </BottomSheet>
@@ -589,14 +590,14 @@ export const CreateRoutineSheet: React.FC<{
             }
           />
 
-          <BottomSheet open={!!noteFor} onClose={() => setNoteFor(null)} title="Coach note">
+          <BottomSheet open={!!noteFor} onClose={() => setNoteFor(null)} title={t("Coach note")}>
             <div className="space-y-3 animate-fade-slide-up">
               <textarea
                 value={noteFor?.text ?? ""}
                 onChange={(e) => setNoteFor((n) => (n ? { ...n, text: e.target.value.slice(0, NOTE_MAX) } : n))}
                 maxLength={NOTE_MAX}
                 rows={4}
-                aria-label="Coach note"
+                aria-label={t("Coach note")}
                 className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
               />
               <p className="text-[11px] text-charcoal-faint text-end tabular-nums">
@@ -613,7 +614,7 @@ export const CreateRoutineSheet: React.FC<{
                   setNoteFor(null);
                 }}
               >
-                Save
+                {t("Save")}
               </Button>
             </div>
           </BottomSheet>

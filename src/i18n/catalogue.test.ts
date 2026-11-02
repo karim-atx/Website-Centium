@@ -19,6 +19,9 @@ import * as programmes from "./ar/programmes.ts";
 import * as certificates from "./ar/certificates.ts";
 import * as safety from "./ar/safety.ts";
 import * as venues from "./ar/venues.ts";
+import * as food from "./ar/food.ts";
+import * as workout from "./ar/workout.ts";
+import * as mind from "./ar/mind.ts";
 import * as business from "./ar/business.ts";
 import * as bizanalytics from "./ar/bizanalytics.ts";
 import * as bizrevenue from "./ar/bizrevenue.ts";
@@ -53,7 +56,7 @@ import * as premium4 from "./ar/premium4.ts";
 // the English placeholders, no English is left as bare JSX text or a bare
 // text attribute, and a key used by two areas has one Arabic.
 
-const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, business, bizanalytics, bizrevenue, bizops, bizmarket, bizteam, sharedbiz, sharedmember, sharedfood, sharedhealth, sharedpro, pro, proclients, proprofile, procalendar, promessages, prolibrary, pronutrition, proforms, proinsights, provitals, procourses, pronetwork, promarket, premium, premium2, premium3, premium4 };
+const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, food, workout, mind, business, bizanalytics, bizrevenue, bizops, bizmarket, bizteam, sharedbiz, sharedmember, sharedfood, sharedhealth, sharedpro, pro, proclients, proprofile, procalendar, promessages, prolibrary, pronutrition, proforms, proinsights, provitals, procourses, pronetwork, promarket, premium, premium2, premium3, premium4 };
 const SRC = join(import.meta.dirname, "..");
 
 // Words that are the same in both languages (names, never translated).

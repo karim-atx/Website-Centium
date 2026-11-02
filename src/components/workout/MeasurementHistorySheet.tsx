@@ -11,7 +11,7 @@ import type { MeasurementReading } from "../../services/measurements";
 import { localDay } from "../../services/measurements/measuredAt";
 import {
   GOAL_COLOR,
-  GOAL_LABEL,
+  goalLabel,
   changeSummary,
   goalTone,
   type MeasurementGoal,
@@ -21,6 +21,7 @@ import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { DARK_SURFACE, liftTo } from "../../data/folderColors";
 import { textPx } from "../../theme/textSize";
 import { appLocale } from "../../i18n/format";
+import { t, tn } from "../../i18n/core";
 
 // Mobile v5.1 R3, dark mode (no light islands), as [light, dark]: the goal
 // button's border takes option-border dark and the reading rows surface.raised
@@ -42,7 +43,7 @@ const COLORS = {
 
 const GOAL_OPTIONS = (["decrease", "increase", "maintain", "none"] as const).map((value) => ({
   value,
-  label: GOAL_LABEL[value],
+  label: value,
 }));
 
 const shortDate = (t: number) => new Date(t).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", timeZone: "UTC" });
@@ -78,6 +79,7 @@ export const MeasurementHistorySheet: React.FC<{
   if (hideNumbers || !type) return null;
   const site = siteFor(type);
   if (!site) return null;
+  const siteName = t(site.label);
   const unit = site.unit;
 
   const oldestFirst = [...readings].reverse();
@@ -97,7 +99,7 @@ export const MeasurementHistorySheet: React.FC<{
       return;
     }
     const value = Number(text);
-    const problem = Number.isFinite(value) ? checkValue(type, value) : "Enter a number.";
+    const problem = Number.isFinite(value) ? checkValue(type, value) : t("Enter a number.");
     if (problem) {
       setError(problem);
       committing.current = false;
@@ -110,7 +112,7 @@ export const MeasurementHistorySheet: React.FC<{
   };
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={site.label}>
+    <BottomSheet open={open} onClose={onClose} title={siteName}>
       <div className="animate-fade-slide-up">
         {latest && (
           <div className="flex items-start justify-between" style={{ gap: 12 }}>
@@ -119,7 +121,7 @@ export const MeasurementHistorySheet: React.FC<{
               <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(15), fontWeight: 500, marginInlineStart: 4 }}>{unit}</span>
             </p>
             <p style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11), marginTop: 4 }}>
-              {readings.length} reading{readings.length === 1 ? "" : "s"}
+              {tn(readings.length, "{n} reading", "{n} readings")}
             </p>
           </div>
         )}
@@ -139,15 +141,15 @@ export const MeasurementHistorySheet: React.FC<{
             fontSize: textPx(11.5),
           }}
         >
-          <span style={{ color: "rgb(var(--c-charcoal-muted))" }}>Goal:</span>
-          <span style={{ color: "rgb(var(--c-charcoal))", fontWeight: 700 }}>{GOAL_LABEL[goal ?? "none"]}</span>
+          <span style={{ color: "rgb(var(--c-charcoal-muted))" }}>{t("Goal:")}</span>
+          <span style={{ color: "rgb(var(--c-charcoal))", fontWeight: 700 }}>{goalLabel(goal ?? "none")}</span>
           <ChevronDown size={12} style={{ color: "rgb(var(--c-charcoal-muted))" }} />
         </button>
         <PopupMenu
           open={!!goalAnchor}
           anchor={goalAnchor}
           onClose={() => setGoalAnchor(null)}
-          options={GOAL_OPTIONS}
+          options={GOAL_OPTIONS.map((o) => ({ ...o, label: goalLabel(o.value) }))}
           selected={goal ?? "none"}
           onSelect={(value) => {
             setGoalAnchor(null);
@@ -168,7 +170,7 @@ export const MeasurementHistorySheet: React.FC<{
               color={color}
               unit={unit}
               formatDate={shortDate}
-              ariaLabel={`${site.label} over time`}
+              ariaLabel={t("{name} over time", { name: siteName })}
             />
           </div>
         )}
@@ -191,7 +193,7 @@ export const MeasurementHistorySheet: React.FC<{
                 actions={[
                   {
                     key: "delete",
-                    label: `Delete ${site.label} from ${date}`,
+                    label: t("Delete {name} from {date}", { name: siteName, date }),
                     icon: <Trash2 size={17} />,
                     destructive: true,
                     onClick: () => setDeleting(reading),
@@ -221,7 +223,7 @@ export const MeasurementHistorySheet: React.FC<{
                       onBlur={() => void commit(reading)}
                       inputMode="decimal"
                       enterKeyHint="done"
-                      aria-label={`${site.label} on ${date}`}
+                      aria-label={t("{name} on {date}", { name: siteName, date })}
                       className="focus:outline-none"
                       style={{
                         width: 76,
@@ -242,7 +244,7 @@ export const MeasurementHistorySheet: React.FC<{
                         setDraft(String(reading.value));
                         setError(null);
                       }}
-                      aria-label={`Edit ${site.label} from ${date}`}
+                      aria-label={t("Edit {name} from {date}", { name: siteName, date })}
                       className="tap flex-none"
                       style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(14), fontWeight: 700 }}
                     >
@@ -261,14 +263,14 @@ export const MeasurementHistorySheet: React.FC<{
           className="tap w-full flex items-center justify-center"
           style={{ marginTop: 16, height: 48, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15), fontWeight: 700 }}
         >
-          Done
+          {t("Done")}
         </button>
       </div>
 
       <ConfirmCard
         open={!!deleting}
-        title="Delete this reading?"
-        subtitle={deleting ? `${site.label} · ${formatDisplayDate(dayOf(deleting))} · ${deleting.value} ${unit}` : undefined}
+        title={t("Delete this reading?")}
+        subtitle={deleting ? `${siteName} · ${formatDisplayDate(dayOf(deleting))} · ${deleting.value} ${unit}` : undefined}
         onCancel={() => setDeleting(null)}
         onConfirm={() => {
           if (deleting) onDelete(deleting);

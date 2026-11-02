@@ -9,6 +9,7 @@ import { logMeditationSession } from "../../services/meditation";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { breathingSaveRule, formatMeditationTime, meditationKind, sessionSeconds } from "../../services/meditation/logic";
 import type { BreathingPattern } from "../../data/mockMindContent";
+import { t, tk, tx } from "../../i18n/core";
 
 // The breathing runner, v6 MO1.1.4 (layout table #11-#22) on the v5.1
 // MO1.1.4.3 motion board.
@@ -42,9 +43,14 @@ const ARC_C = 2 * Math.PI * ARC_R;
 const PETALS = 8;
 
 /** MO1.1.4 S4 / O10 (ours): why a stopped run was not saved. */
-const NOTE_NEED_CYCLE = "Finish one full cycle to save a session.";
-const NOTE_TOO_SHORT = "Keep going a little longer to save a session.";
-const SAVE_FAILED = "Couldn't save. Try again.";
+const NOTE_NEED_CYCLE = tk("Finish one full cycle to save a session.");
+const NOTE_TOO_SHORT = tk("Keep going a little longer to save a session.");
+const SAVE_FAILED = tk("Couldn't save. Try again.");
+// The phase names come from the pattern data and are compared as English
+// above; they are UI words (not content), so they show through t().
+tk("Breathe in");
+tk("Breathe out");
+tk("Hold");
 
 // Round G3: a library session (mind_library) passes its content id and kind, so the
 // log links to it; today's patterns pass neither and log exactly as before.
@@ -81,7 +87,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
     const seconds = sessionSeconds(session.startedAtMs, Date.now());
     const rule = breathingSaveRule(cyclesRef.current, seconds);
     if (rule !== "save" || seconds === null) {
-      if (report) setNote(rule === "short" ? NOTE_TOO_SHORT : NOTE_NEED_CYCLE);
+      if (report) setNote(t(rule === "short" ? NOTE_TOO_SHORT : NOTE_NEED_CYCLE));
       return;
     }
     const { authUserId: userId } = live.current;
@@ -101,7 +107,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
         setToast(r.message === OFFLINE_MESSAGE || r.message.startsWith("That's a lot") ? r.message : SAVE_FAILED);
         return;
       }
-      if (report) setNote(`Saved · ${formatMeditationTime(seconds)}`);
+      if (report) setNote(t("Saved · {time}", { time: formatMeditationTime(seconds) }));
       void live.current.refreshMeditationSummary();
       // A completed session can earn a meditation badge (K8).
       live.current.refreshAchievements();
@@ -318,7 +324,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
               teal ? "text-team-teal-deep dark:text-team-teal-ink" : "text-primary-dark"
             )}
           >
-            {phase.label}
+            {t(phase.label)}
           </p>
           <p
             className="font-extrabold text-charcoal tabular-nums"
@@ -330,7 +336,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
           >
             {secondsLeft}
           </p>
-          <p className="text-[10.4px] leading-[12.5px] font-semibold text-charcoal-muted">seconds</p>
+          <p className="text-[10.4px] leading-[12.5px] font-semibold text-charcoal-muted">{t("seconds")}</p>
         </div>
       </div>
 
@@ -356,13 +362,13 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
                 running && i === phaseIdx ? "font-extrabold text-primary-dark" : "font-semibold text-charcoal-muted"
               )}
             >
-              {p.label}
+              {t(p.label)}
             </p>
           </div>
         ))}
       </div>
       {/* #18: 10.5/15.8 500, 10 below the rail. */}
-      <p className="mt-2.5 text-[10.5px] leading-[15.8px] font-medium text-charcoal-muted">Cycle {cycles}</p>
+      <p className="mt-2.5 text-[10.5px] leading-[15.8px] font-medium text-charcoal-muted">{t("Cycle {n}", { n: cycles })}</p>
       {note && (
         <p className="mt-2 text-[11px] font-semibold text-charcoal-soft text-center" role="status">
           {note}
@@ -375,7 +381,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
         // derived: the same +4 step as the handover's 48 → 52).
         size="base"
         primary={{
-          label: running ? "Stop" : "Start",
+          label: running ? t("Stop") : tx("Start", "button"),
           // #20: the icon is #FFFFFF in light AND dark (V6-144, literal).
           icon: running ? <Square size={14} style={{ color: "#FFFFFF" }} /> : <Play size={14} style={{ color: "#FFFFFF" }} />,
           onClick: toggle,
@@ -386,7 +392,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
         }}
         trailing={{
           icon: <RotateCcw size={15} />,
-          label: "Reset",
+          label: t("Reset"),
           onClick: reset,
           width: 44,
           // #21-#22: #AEA1DC@18% with #7D67D9; dark #A991FE@18% with #9A8CD6
@@ -396,7 +402,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
             "!bg-th-aea1dc/[0.18] !text-primary-accent dark:!bg-primary/[0.18] [.high-contrast_&]:!bg-primary-fill [.high-contrast_&]:!text-on-primary-fill !h-[calc(44px+2*var(--text-boost,0px))]",
         }}
       />
-      <Toast open={!!toast} message={toast ?? ""} tone="error" bottom={148} onExpire={() => setToast(null)} />
+      <Toast open={!!toast} message={toast ? t(toast) : ""} tone="error" bottom={148} onExpire={() => setToast(null)} />
     </div>
   );
 };

@@ -9,6 +9,7 @@ import { logMeditationSession } from "../../services/meditation";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { formatMeditationTime, meditationKind, sessionSeconds } from "../../services/meditation/logic";
 import { meditationPoseV2Urls, type MeditationPoseV2 } from "../../utils/assetUrls";
+import { t, tk, tn, tx } from "../../i18n/core";
 
 // Stretching and Yoga, v6 MO1.1.4.1 / MO1.1.4.2: the current pose in a
 // lavender hero (ring with the pose animation, "POSE n OF 6", name, meta, a
@@ -62,7 +63,7 @@ const GIF = 104;
 const GIF_X = 23;
 const GIF_Y = 16;
 
-const SAVE_FAILED = "Couldn't save. Try again.";
+const SAVE_FAILED = tk("Couldn't save. Try again.");
 
 type SaveState = "saving" | "saved" | "short" | "hidden";
 
@@ -265,7 +266,7 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
   const drain = timed && !complete ? 1 - leftMs / (pose.seconds * 1000) : 0;
   const fade = reduced ? undefined : "animate-[pose-fade_300ms_cubic-bezier(0.22,1,0.36,1)_both]";
 
-  const timerLabel = !started ? "Start timer" : running ? "Pause timer" : "Resume timer";
+  const timerLabel = !started ? t("Start timer") : running ? t("Pause timer") : t("Resume timer");
 
   // The ring, its disc and the label, shared by the pose and completion states.
   const graphic = (inner: React.ReactNode, label: React.ReactNode) => (
@@ -302,7 +303,7 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
       className="absolute start-0 w-full text-center text-[11px] leading-[16.5px] font-extrabold text-primary-dark tabular-nums"
       style={{ top: 111.5 }}
     >
-      {timed ? `${leftS}s` : "Hold"}
+      {timed ? t("{n}s", { n: leftS }) : t("Hold")}
     </span>
   );
 
@@ -333,22 +334,24 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
                 )}
               </span>
               <div className="min-w-0 flex-1" role="status">
-                <p className="text-[10px] leading-[14px] font-bold tracking-[1.2px] uppercase text-primary-dark">Sequence complete</p>
-                <p className="mt-1 text-[16px] leading-[21px] font-bold text-charcoal">Nice work</p>
+                <p className="text-[10px] leading-[14px] font-bold tracking-[1.2px] uppercase text-primary-dark">{t("Sequence complete")}</p>
+                <p className="mt-1 text-[16px] leading-[21px] font-bold text-charcoal">{t("Nice work")}</p>
                 <p className="mt-[3px] text-[11.5px] leading-[16px] text-charcoal-muted">
-                  {poses.length} {timed ? "stretches" : "poses"} · {formatMeditationTime(complete.shown)}
+                  {timed
+                    ? tn(poses.length, "{n} stretch · {time}", "{n} stretches · {time}", { time: formatMeditationTime(complete.shown) })
+                    : tn(poses.length, "{n} pose · {time}", "{n} poses · {time}", { time: formatMeditationTime(complete.shown) })}
                 </p>
                 {complete.save !== "hidden" && (
                   <p className="mt-2 text-[11px] leading-[16px] font-semibold text-charcoal-soft">
-                    {complete.save === "saving" ? "Saving…" : complete.save === "saved" ? "Saved to your practice" : "Too short to save."}
+                    {complete.save === "saving" ? t("Saving…") : complete.save === "saved" ? t("Saved to your practice") : t("Too short to save.")}
                   </p>
                 )}
               </div>
             </div>
             <button onClick={restart} className={nextRowClass}>
               {nextRule}
-              <span className={nextLabelClass}>Again</span>
-              <span className={nextNameClass}>Start from pose 1</span>
+              <span className={nextLabelClass}>{t("Again")}</span>
+              <span className={nextNameClass}>{t("Start from pose 1")}</span>
               <RotateCcw size={14} className="text-charcoal-faint shrink-0" aria-hidden />
             </button>
           </div>
@@ -374,7 +377,7 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
                   the pill 11 under the meta. */}
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] leading-[14px] font-bold tracking-[1.2px] uppercase text-primary-dark">
-                  Pose {idx + 1} of {poses.length}
+                  {t("Pose {n} of {total}", { n: idx + 1, total: poses.length })}
                 </p>
                 <p className="mt-1 text-[16px] leading-[21px] font-bold text-charcoal line-clamp-2">{pose.name}</p>
                 <p className="mt-[3px] text-[11.5px] leading-[16px] text-charcoal-muted">{pose.meta}</p>
@@ -385,7 +388,7 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
                       pose.difficulty.className
                     )}
                   >
-                    {pose.difficulty.label}
+                    {t(pose.difficulty.label)}
                   </span>
                 )}
               </div>
@@ -394,16 +397,16 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
                 and completes the sequence (S2). */}
             <button onClick={next ? () => goTo(idx + 1) : finish} className={nextRowClass}>
               {nextRule}
-              <span className={nextLabelClass}>Next</span>
-              <span className={nextNameClass}>{next ? next.name : "Finish"}</span>
-              <ChevronRight size={14} className="text-charcoal-faint shrink-0" aria-hidden />
+              <span className={nextLabelClass}>{t("Next")}</span>
+              <span className={nextNameClass}>{next ? next.name : tx("Finish", "button")}</span>
+              <ChevronRight size={14} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
             </button>
           </div>
         )}
       </div>
 
       {/* #18: 10.5/14 700 ls 1.3 uppercase, m 0 4 8 4. */}
-      <p className="mb-2 px-1 text-[10.5px] leading-[14px] font-bold tracking-[1.3px] uppercase text-charcoal-muted">Sequence</p>
+      <p className="mb-2 px-1 text-[10.5px] leading-[14px] font-bold tracking-[1.3px] uppercase text-charcoal-muted">{t("Sequence")}</p>
       <div className="space-y-2">
         {poses.map((p, i) => {
           const current = !complete && i === idx;
@@ -463,7 +466,7 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
                       p.difficulty.className
                     )}
                   >
-                    {p.difficulty.label}
+                    {t(p.difficulty.label)}
                   </span>
                 )}
                 {current ? (
@@ -480,7 +483,7 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
           );
         })}
       </div>
-      <Toast open={!!toast} message={toast ?? ""} tone="error" onExpire={() => setToast(null)} />
+      <Toast open={!!toast} message={toast ? t(toast) : ""} tone="error" onExpire={() => setToast(null)} />
     </div>
   );
 };
