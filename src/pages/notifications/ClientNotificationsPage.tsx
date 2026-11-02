@@ -4,6 +4,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { useBack } from "../../hooks/useBack";
 import { useInboxRealtime } from "../../hooks/useInboxRealtime";
 import { useApp } from "../../context/AppContext";
+import { useSwitches } from "../../services/premium/hooks";
 import { textPx, linePx } from "../../theme/textSize";
 import { marketPalette } from "../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
@@ -12,7 +13,7 @@ import { ConfirmationStrip } from "../../components/market/ConfirmationStrip";
 import { FOCUS_CSS } from "../../components/market/usePress";
 import { hexAlpha, liftInk } from "../../components/market/marketColor";
 import {
-  CLIENT_KINDS,
+  clientKinds,
   applyReadChanges,
   clientNotificationTarget,
   fetchMyNotifications,
@@ -51,7 +52,7 @@ import { t, tk } from "../../i18n/core";
 // Dark (not drawn, D-05): the page's dark palette, each tile its ink at 16%
 // with the ink lifted.
 // DB6 (Database 33c0bf5, 20261210600000): the rows are my_notifications with
-// p_kinds = CLIENT_KINDS (a member's kinds only), PAGE at a time; "Load more"
+// p_kinds = clientKinds(…) (a member's kinds only), PAGE at a time; "Load more"
 // (not drawn; Points history's) passes the last row shown as (p_before,
 // p_before_id). The words are the client's copy for the row's title_key with
 // its payload values (notificationCopy + CLIENT_FILLS; a missing key keeps
@@ -59,7 +60,7 @@ import { t, tk } from "../../i18n/core";
 // Read state as the board: opening the page reads nothing; tapping a row
 // marks that row read (mark_notifications_read([id])) and opens its target
 // (clientNotificationTarget); "Mark all read" is
-// mark_notifications_read(null, CLIENT_KINDS), never a bare null (that would
+// mark_notifications_read(null, clientKinds(…)), never a bare null (that would
 // clear a business's or a professional's rows too). No rows: the empty state
 // (ours, not drawn).
 
@@ -79,11 +80,12 @@ export default function ClientNotificationsPage() {
   const [failNote, setFailNote] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreFailed, setMoreFailed] = useState(false);
+  const kinds = clientKinds(!!useSwitches().switches?.premiumOn);
 
   useEffect(() => {
     let cancelled = false;
     setState({ s: "loading" });
-    void fetchMyNotifications(null, PAGE, CLIENT_KINDS).then((r) => {
+    void fetchMyNotifications(null, PAGE, kinds).then((r) => {
       if (cancelled) return;
       if (r.ok) setState({ s: "ok", list: r.value.items, more: r.value.more });
       else setState({ s: "error", offline: !!r.offline });
@@ -91,7 +93,7 @@ export default function ClientNotificationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [tick]);
+  }, [tick, kinds]);
 
   // Live (Database 73ea87b): a new client-kind row re-reads the FIRST page
   // only and merges it on top (mergeFirstPage; pages already loaded stay); a
@@ -102,12 +104,12 @@ export default function ClientNotificationsPage() {
   useEffect(() => {
     stateRef.current = state;
   });
-  useInboxRealtime(authUserId, "page", CLIENT_KINDS, (changes, resync) => {
+  useInboxRealtime(authUserId, "page", kinds, (changes, resync) => {
     const st = stateRef.current;
     if (st.s !== "ok") return;
     if (changes.length) setState((x) => (x.s === "ok" ? { ...x, list: applyReadChanges(x.list, changes) } : x));
     if (!resync && !hasNewRows(st.list, changes)) return;
-    void fetchMyNotifications(null, PAGE, CLIENT_KINDS).then((r) => {
+    void fetchMyNotifications(null, PAGE, kinds).then((r) => {
       if (!r.ok) return;
       setState((x) => (x.s === "ok" ? { s: "ok", ...mergeFirstPage(x.list, x.more, r.value) } : x));
     });
@@ -125,17 +127,17 @@ export default function ClientNotificationsPage() {
     if (state.s !== "ok" || state.list.length === 0 || loadingMore) return;
     setLoadingMore(true);
     setMoreFailed(false);
-    const r = await fetchMyNotifications(notificationCursor(state.list), PAGE, CLIENT_KINDS);
+    const r = await fetchMyNotifications(notificationCursor(state.list), PAGE, kinds);
     setLoadingMore(false);
     if (!r.ok) return setMoreFailed(true);
     setState((st) => (st.s === "ok" ? { s: "ok", list: [...st.list, ...r.value.items], more: r.value.more } : st));
-  }, [state, loadingMore]);
+  }, [state, loadingMore, kinds]);
 
   const markAll = async () => {
     if (busy || unread === 0) return;
     setBusy(true);
     setFailNote(null);
-    const r = await markNotificationsRead(null, CLIENT_KINDS);
+    const r = await markNotificationsRead(null, kinds);
     setBusy(false);
     if (r.ok) setRead(null, new Date().toISOString());
     else setFailNote(r.offline ? OFFLINE_NOTE : r.message);

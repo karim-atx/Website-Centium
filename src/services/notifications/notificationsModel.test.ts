@@ -10,6 +10,8 @@ import {
   CLIENT_COPY,
   CLIENT_FILLS,
   CLIENT_KINDS,
+  PREMIUM_PASS_KINDS,
+  clientKinds,
   clientNotificationTarget,
   formatCount,
   formatNoticeDate,
@@ -569,4 +571,12 @@ test("Round F2 · AB4: the no-show notices name the business once the reader joi
   assert.equal(clientNotificationTarget({ kind: "booking_paused", subjectType: "business", subjectId: B }), "/app/marketplace/bookings?tab=upcoming");
   assert.equal(clientNotificationTarget({ kind: "booking_pause_lifted", subjectType: "business", subjectId: B }), "/app/marketplace");
   assert.deepEqual(notifLook("booking_paused"), { tone: "red", glyph: "x" });
+});
+
+test("Round G1: the pass notices are asked for only with the Premium switch on", () => {
+  assert.deepEqual(clientKinds(true), CLIENT_KINDS);
+  const off = clientKinds(false);
+  for (const k of PREMIUM_PASS_KINDS) assert.ok(!off.includes(k), k);
+  assert.equal(off.length, CLIENT_KINDS.length - 3);
+  assert.equal(clientKinds(false), clientKinds(false), "the same array each time, so effects don't re-run");
 });

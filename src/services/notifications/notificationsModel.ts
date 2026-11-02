@@ -140,6 +140,15 @@ export const CLIENT_KINDS: readonly MemberNotificationKind[] = [
   "premium_pass_ended",
 ];
 
+/**
+ * Round G1: the Premium pass notices exist only while the Premium switch is
+ * on, and a database without Round G1 refuses these enum labels outright, so
+ * the bell and the page ask for them only then (switch off = today's app).
+ */
+export const PREMIUM_PASS_KINDS: readonly MemberNotificationKind[] = ["premium_pass_started", "premium_pass_ending", "premium_pass_ended"];
+const CLIENT_KINDS_BEFORE_PREMIUM = CLIENT_KINDS.filter((k) => !PREMIUM_PASS_KINDS.includes(k));
+export const clientKinds = (premiumOn: boolean): readonly MemberNotificationKind[] => (premiumOn ? CLIENT_KINDS : CLIENT_KINDS_BEFORE_PREMIUM);
+
 /** my_unread_notification_count's cap: the reader never counts past it. */
 export const UNREAD_COUNT_CAP = 99;
 

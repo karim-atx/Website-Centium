@@ -12,7 +12,8 @@ import { AddMetricSheet } from "../../components/health/AddMetricSheet";
 import { DobPromptCard } from "../../components/profile/DobPromptCard";
 import { ChevronRight, ArrowRight, Sparkles, Store, HeartHandshake, X, Bell } from "lucide-react";
 import { PremiumBadge } from "../../components/premium/PremiumBadge";
-import { CLIENT_KINDS, fetchUnreadNotificationCount, unreadBadge } from "../../services/notifications";
+import { clientKinds, fetchUnreadNotificationCount, unreadBadge } from "../../services/notifications";
+import { useSwitches } from "../../services/premium/hooks";
 import { useNavigate } from "react-router-dom";
 import BusinessDashboard from "../marketplace/BusinessDashboard";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
@@ -226,16 +227,17 @@ function HomeBell() {
   const { authUserId } = useApp();
   const [unread, setUnread] = useState(0);
   const [tick, setTick] = useState(0);
+  const kinds = clientKinds(!!useSwitches().switches?.premiumOn);
   useEffect(() => {
     let cancelled = false;
-    void fetchUnreadNotificationCount(CLIENT_KINDS).then((r) => {
+    void fetchUnreadNotificationCount(kinds).then((r) => {
       if (!cancelled && r.ok) setUnread(r.value);
     });
     return () => {
       cancelled = true;
     };
-  }, [tick]);
-  useInboxRealtime(authUserId, "bell", CLIENT_KINDS, () => setTick((t) => t + 1));
+  }, [tick, kinds]);
+  useInboxRealtime(authUserId, "bell", kinds, () => setTick((t) => t + 1));
   return (
     <button
       type="button"
