@@ -15,6 +15,7 @@
 //   whose data is missing returns null.
 
 import type { Bucket } from "./insightsModel";
+import { t, tk, tn } from "../../../i18n/core";
 
 /** sleep_segments.stage (enum sleep_stage). */
 export type SleepStage = "awake" | "light" | "deep" | "rem";
@@ -42,7 +43,8 @@ export interface SleepNight {
 }
 
 export const STAGES: SleepStage[] = ["deep", "rem", "light", "awake"];
-export const STAGE_LABEL: Record<SleepStage, string> = { deep: "Deep", rem: "REM", light: "Light", awake: "Awake" };
+/** English keys (tk); show them with t(). */
+export const STAGE_LABEL: Record<SleepStage, string> = { deep: tk("Deep"), rem: tk("REM"), light: tk("Light"), awake: tk("Awake") };
 /** sleepCols14: Deep, REM, Light, Awake (light / dark). */
 export function stageColours(dark: boolean): Record<SleepStage, string> {
   return { deep: dark ? "#8E7FD0" : "#5F5093", rem: dark ? "#A991FE" : "#7D6BB5", light: dark ? "#C3B3FB" : "#C9C0EA", awake: "#D9A441" };
@@ -148,7 +150,7 @@ export function bedtimeAxis(rows: { bed: number; wake: number }[]): { from: numb
 export function bedtimeLine(beds: number[]): string | null {
   if (beds.length < 2) return null;
   const spread = Math.max(...beds) - Math.min(...beds);
-  return `Bedtime varies by ${spread} minute${spread === 1 ? "" : "s"}.`;
+  return tn(spread, "Bedtime varies by {n} minute.", "Bedtime varies by {n} minutes.");
 }
 
 /**
@@ -162,8 +164,8 @@ export function stagesLine(nights: NightStats[], hm: (min: number) => string): s
   const after = staged.filter((n) => n.bed != null && n.bed >= 1440);
   const before = staged.filter((n) => n.bed != null && n.bed < 1440);
   const mean = (l: NightStats[], f: (x: NightStats) => number) => l.reduce((s, x) => s + f(x), 0) / l.length;
-  if (after.length >= 2 && before.length >= 2 && mean(after, (x) => x.deep ?? 0) < mean(before, (x) => x.deep ?? 0)) return "Deep sleep is shortest on the nights with a bedtime after midnight.";
-  return `Deep ${hm(mean(staged, (x) => x.deep ?? 0))} and REM ${hm(mean(staged, (x) => x.rem ?? 0))} a night on average.`;
+  if (after.length >= 2 && before.length >= 2 && mean(after, (x) => x.deep ?? 0) < mean(before, (x) => x.deep ?? 0)) return t("Deep sleep is shortest on the nights with a bedtime after midnight.");
+  return t("Deep {deep} and REM {rem} a night on average.", { deep: hm(mean(staged, (x) => x.deep ?? 0)), rem: hm(mean(staged, (x) => x.rem ?? 0)) });
 }
 
 export interface Hypnogram {
@@ -193,9 +195,9 @@ export function hypnogramLine(h: Hypnogram | null): string | null {
   const wakes = h.blocks.filter((b, i) => b.stage === "awake" && i !== 0 && i !== last).length;
   const half = h.total / 2;
   const deepLate = h.blocks.filter((b) => b.stage === "deep" && b.from >= half).length;
-  const woke = wakes === 0 ? "No wake-ups during the night" : wakes === 1 ? "Woke once" : wakes === 2 ? "Woke twice" : `Woke ${wakes} times`;
-  const deep = deepLate === 0 ? "no deep block" : deepLate === 1 ? "only one deep block" : `${deepLate} deep blocks`;
-  return `${woke}; ${deep} in the second half of the night.`;
+  const woke = wakes === 0 ? t("No wake-ups during the night") : wakes === 1 ? t("Woke once") : wakes === 2 ? t("Woke twice") : tn(wakes, "Woke {n} times", "Woke {n} times");
+  const deep = deepLate === 0 ? t("no deep block") : deepLate === 1 ? t("only one deep block") : tn(deepLate, "{n} deep blocks", "{n} deep blocks");
+  return t("{woke}; {deep} in the second half of the night.", { woke, deep });
 }
 
 /** The night whose timeline the hypnogram draws: the latest night with segments in the bucket, else in all. */

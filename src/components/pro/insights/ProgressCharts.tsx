@@ -9,6 +9,7 @@ import { Micros } from "./NutrientAnalysis";
 import { WeightView } from "./VitalsPanel";
 import { useRead, type ReadState } from "./reads";
 import { appLocale } from "../../../i18n/format";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 the charts the client page's Progress tab (W3, CL2 v5)
@@ -49,7 +50,7 @@ export const StrengthChart: React.FC<{ clientId: string; today: string; initial:
   const g = gate(r);
   if (g) return g;
   const ex = pick && top.includes(pick) ? pick : top[0];
-  if (!ex) return <p style={{ fontSize: textPx(12), color: INK.chF }}>No weighted sets logged in this range.</p>;
+  if (!ex) return <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("No weighted sets logged in this range.")}</p>;
   const b = bucketsFor(range, today);
   const best = b.map((x) => {
     const v = sets.filter((s) => s.exercise === ex && s.day >= x.start && s.day <= x.end && s.kg != null).map((s) => s.kg as number);
@@ -60,26 +61,26 @@ export const StrengthChart: React.FC<{ clientId: string; today: string; initial:
   return (
     <>
       {top.length > 1 && (
-        <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 8 }} role="group" aria-label="Exercise">
-          {top.map((t) => (
-            <button key={t} type="button" aria-pressed={t === ex} onClick={() => setPick(t)} className="tap relative before:absolute before:inset-x-0 before:-inset-y-[9px] before:content-['']" style={{ borderRadius: 10, padding: "6px 11px", fontSize: textPx(12), fontWeight: t === ex ? 700 : 600, background: t === ex ? INK.fill : INK.card, color: t === ex ? INK.onFill : INK.chS, border: `1px solid ${t === ex ? INK.fill : "rgb(var(--c-charcoal) / 0.11)"}` }}>
-              {t}
+        <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 8 }} role="group" aria-label={t("Exercise")}>
+          {top.map((name) => (
+            <button key={name} type="button" aria-pressed={name === ex} onClick={() => setPick(name)} className="tap relative before:absolute before:inset-x-0 before:-inset-y-[9px] before:content-['']" style={{ borderRadius: 10, padding: "6px 11px", fontSize: textPx(12), fontWeight: name === ex ? 700 : 600, background: name === ex ? INK.fill : INK.card, color: name === ex ? INK.onFill : INK.chS, border: `1px solid ${name === ex ? INK.fill : "rgb(var(--c-charcoal) / 0.11)"}` }}>
+              {name}
             </button>
           ))}
         </div>
       )}
       <ProChart
         flat
-        title={`${ex}, heaviest set`}
+        title={t("{exercise}, heaviest set", { exercise: ex })}
         range={range}
         onRangeChange={setRange}
         x={b.map((x) => bucketLabel(range, x))}
         min={vals.length ? Math.max(0, Math.floor(Math.min(...vals) * 0.8)) : 0}
         max={vals.length ? Math.ceil(Math.max(...vals) * 1.1) : 10}
-        series={[{ key: "kg", label: "Heaviest set (kg)", type: "line", color: INK.pr, values: best }]}
-        marks={prs.map((p, i) => (p ? { index: i, label: "PR" } : null)).filter((m): m is { index: number; label: string } => !!m)}
-        tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [best[i] != null ? `${best[i]} kg${prs[i] ? " · PR" : ""}` : "Not logged"] })}
-        summary={vals.length ? `${ex}: heaviest set ${Math.max(...vals)} kg in this range.` : undefined}
+        series={[{ key: "kg", label: t("Heaviest set (kg)"), type: "line", color: INK.pr, values: best }]}
+        marks={prs.map((p, i) => (p ? { index: i, label: t("PR") } : null)).filter((m): m is { index: number; label: string } => !!m)}
+        tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [best[i] != null ? `${t("{n} kg", { n: best[i] as number })}${prs[i] ? ` · ${t("PR")}` : ""}` : t("Not logged")] })}
+        summary={vals.length ? t("{exercise}: heaviest set {kg} kg in this range.", { exercise: ex, kg: Math.max(...vals) }) : undefined}
       />
     </>
   );
@@ -96,22 +97,22 @@ export const VolumeChart: React.FC<{ clientId: string; today: string; initial: C
   const sets = sumByBucket(b, rows.map((s) => ({ day: s.day, value: 1 })));
   const ghost = sumByBucket(gb, rows.map((s) => ({ day: s.day, value: 1 })));
   const kg = sumByBucket(b, rows.map((s) => ({ day: s.day, value: (s.kg ?? 0) * (s.reps ?? 0) })));
-  if (!rows.length) return <p style={{ fontSize: textPx(12), color: INK.chF }}>No sets logged in this range.</p>;
+  if (!rows.length) return <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("No sets logged in this range.")}</p>;
   return (
     <ProChart
       flat
-      title="Working sets"
+      title={t("Working sets")}
       range={range}
       onRangeChange={setRange}
       x={b.map((x) => bucketLabel(range, x))}
       min={0}
       max={Math.max(4, ...sets.map((v) => v ?? 0), ...ghost.map((v) => v ?? 0)) * 1.15}
       series={[
-        { key: "s", label: "Sets", type: "bar", color: INK.pr, values: sets },
-        { key: "g", label: "Previous period", type: "line", color: INK.chT, ghost: true, values: ghost },
+        { key: "s", label: t("Sets"), type: "bar", color: INK.pr, values: sets },
+        { key: "g", label: t("Previous period"), type: "line", color: INK.chT, ghost: true, values: ghost },
       ]}
-      tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [sets[i] ? `${sets[i]} sets · ${fmt(kg[i] ?? 0)} kg` : "No sets"] })}
-      summary={`${rows.filter((s) => s.day >= b[0].start).length} working sets in this range.`}
+      tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [sets[i] ? `${tn(sets[i] as number, "{n} set", "{n} sets")} · ${t("{n} kg", { n: fmt(kg[i] ?? 0) })}` : t("No sets")] })}
+      summary={tn(rows.filter((s) => s.day >= b[0].start).length, "{n} working set in this range.", "{n} working sets in this range.")}
     />
   );
 };
@@ -123,20 +124,20 @@ export const RpeChart: React.FC<{ clientId: string; today: string; initial: Char
   if (g) return g;
   const b = bucketsFor(range, today);
   const rows = (r.data ?? []).flatMap(working).filter((s) => s.rpe != null);
-  if (!rows.length) return <p style={{ fontSize: textPx(12), color: INK.chF }}>No RPE logged in this range.</p>;
+  if (!rows.length) return <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("No RPE logged in this range.")}</p>;
   const v = meanByBucket(b, rows.map((s) => ({ day: s.day, value: s.rpe as number })));
   return (
     <ProChart
       flat
-      title="Average RPE"
+      title={t("Average RPE")}
       range={range}
       onRangeChange={setRange}
       x={b.map((x) => bucketLabel(range, x))}
       min={5}
       max={10.5}
-      series={[{ key: "r", label: "RPE", type: "line", color: INK.pr, values: v.map((x) => (x == null ? null : Math.round(x * 10) / 10)) }]}
-      tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [v[i] != null ? `RPE ${Math.round((v[i] as number) * 10) / 10}` : "No RPE logged"] })}
-      summary="Average RPE of working sets per period."
+      series={[{ key: "r", label: t("RPE"), type: "line", color: INK.pr, values: v.map((x) => (x == null ? null : Math.round(x * 10) / 10)) }]}
+      tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [v[i] != null ? t("RPE {rpe}", { rpe: Math.round((v[i] as number) * 10) / 10 }) : t("No RPE logged")] })}
+      summary={t("Average RPE of working sets per period.")}
     />
   );
 };
@@ -145,18 +146,18 @@ export const WeightTrendChart: React.FC<{ clientId: string; today: string; initi
   const [range, setRange] = useState<ChartRange>(initial);
   const w = useRead(true, () => fetchMetricRows(clientId, ["weight"], "2000-01-01"), [clientId]);
   const body = useRead(bodyOn, () => fetchMetricRows(clientId, ["waist", "body_fat_pct"], addDays(today, -400)), [clientId, today]);
-  const t = useRead(progressOn, () => fetchInsightTargets(clientId, true), [clientId]);
+  const tg = useRead(progressOn, () => fetchInsightTargets(clientId, true), [clientId]);
   const g = gate(w);
   if (g) return g;
-  if (!w.data?.length) return <p style={{ fontSize: textPx(12), color: INK.chF }}>No weigh-ins yet.</p>;
-  return <WeightView rows={w.data} body={body.data ?? []} bodyOn={bodyOn} goalKg={t.data?.goalWeightKg ?? null} range={range} onRange={setRange} today={today} />;
+  if (!w.data?.length) return <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("No weigh-ins yet")}.</p>;
+  return <WeightView rows={w.data} body={body.data ?? []} bodyOn={bodyOn} goalKg={tg.data?.goalWeightKg ?? null} range={range} onRange={setRange} today={today} />;
 };
 
 export const CaloriesMacrosChart: React.FC<{ clientId: string; today: string; initial: ChartRange; progressOn: boolean }> = ({ clientId, today, initial, progressOn }) => {
   const [range, setRange] = useState<ChartRange>(initial);
   const since = addDays(today, -(RANGE_DAYS[range] - 1));
   const food = useRead(true, () => fetchFoodEntries(clientId, since), [clientId, since]);
-  const t = useRead(true, () => fetchInsightTargets(clientId, progressOn), [clientId, progressOn]);
+  const tg = useRead(true, () => fetchInsightTargets(clientId, progressOn), [clientId, progressOn]);
   const g = gate(food);
   if (g) return g;
   const b = bucketsFor(range, today);
@@ -169,47 +170,47 @@ export const CaloriesMacrosChart: React.FC<{ clientId: string; today: string; in
     d.f += e.f;
     perDay.set(e.day, d);
   }
-  if (!perDay.size) return <p style={{ fontSize: textPx(12), color: INK.chF }}>Nothing logged in this range.</p>;
+  if (!perDay.size) return <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("Nothing logged in this range.")}</p>;
   const list = [...perDay.entries()].map(([day, v]) => ({ day, ...v }));
   const k = meanByBucket(b, list.map((d) => ({ day: d.day, value: d.k })));
   const p = meanByBucket(b, list.map((d) => ({ day: d.day, value: d.p })));
   const c = meanByBucket(b, list.map((d) => ({ day: d.day, value: d.c })));
   const f = meanByBucket(b, list.map((d) => ({ day: d.day, value: d.f })));
-  const target = t.data?.kcal ?? null;
+  const target = tg.data?.kcal ?? null;
   const band = target ? calorieBand(target) : null;
-  const grams = target && t.data?.pct ? macroGrams(target, t.data.pct) : null;
+  const grams = target && tg.data?.pct ? macroGrams(target, tg.data.pct) : null;
   const all = [...k, target].filter((x): x is number => x != null && x > 0);
   return (
     <>
       <ProChart
         flat
-        title="Calories"
+        title={t("Calories")}
         range={range}
         onRangeChange={setRange}
         x={b.map((x) => bucketLabel(range, x))}
         min={Math.max(0, Math.floor((Math.min(...all) * 0.8) / 100) * 100)}
         max={Math.ceil((Math.max(...all) * 1.1) / 100) * 100}
-        band={band ? { ...band, label: "On target" } : undefined}
+        band={band ? { ...band, label: t("On target") } : undefined}
         goal={target ?? undefined}
-        goalLegend={target ? `Target ${fmt(target)}` : undefined}
-        series={[{ key: "k", label: "Calories", type: "line", color: "#7D6BB5", values: k }]}
-        tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [k[i] != null ? `${fmt(k[i] as number)} kcal` : "Nothing logged"] })}
-        summary={`Calories on ${list.length} logged days${target ? `, target ${fmt(target)} kcal` : ""}.`}
+        goalLegend={target ? t("Target {n}", { n: fmt(target) }) : undefined}
+        series={[{ key: "k", label: t("Calories"), type: "line", color: "#7D6BB5", values: k }]}
+        tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [k[i] != null ? t("{n} kcal", { n: fmt(k[i] as number) }) : t("Nothing logged")] })}
+        summary={target ? tn(list.length, "Calories on {n} logged day, target {target} kcal.", "Calories on {n} logged days, target {target} kcal.", { target: fmt(target) }) : tn(list.length, "Calories on {n} logged day.", "Calories on {n} logged days.")}
       />
       <div style={{ height: 12 }} />
       <ProChart
         flat
-        title="Protein, carbs and fat"
+        title={t("Protein, carbs and fat")}
         x={b.map((x) => bucketLabel(range, x))}
         min={0}
         max={Math.max(50, ...[...p, ...c, ...f].map((v) => v ?? 0), ...(grams ?? [])) * 1.15}
         series={[
-          { key: "p", label: "Protein (g)", type: "line", color: "#7D6BB5", values: p },
-          { key: "c", label: "Carbs (g)", type: "line", color: "#AEA1DC", values: c },
-          { key: "f", label: "Fat (g)", type: "line", color: "#A2C8C2", values: f },
+          { key: "p", label: t("Protein (g)"), type: "line", color: "#7D6BB5", values: p },
+          { key: "c", label: t("Carbs (g)"), type: "line", color: "#AEA1DC", values: c },
+          { key: "f", label: t("Fat (g)"), type: "line", color: "#A2C8C2", values: f },
         ]}
-        tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: p[i] != null ? [`Protein ${fmt(p[i] as number)} g · carbs ${fmt(c[i] ?? 0)} g · fat ${fmt(f[i] ?? 0)} g`, ...(grams ? [`Target ${fmt(grams[0])} g · ${fmt(grams[1])} g · ${fmt(grams[2])} g`] : [])] : ["Nothing logged"] })}
-        summary="Protein, carbs and fat in grams a day."
+        tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: p[i] != null ? [t("Protein {p} g · carbs {c} g · fat {f} g", { p: fmt(p[i] as number), c: fmt(c[i] ?? 0), f: fmt(f[i] ?? 0) }), ...(grams ? [t("Target {p} g · {c} g · {f} g", { p: fmt(grams[0]), c: fmt(grams[1]), f: fmt(grams[2]) })] : [])] : [t("Nothing logged")] })}
+        summary={t("Protein, carbs and fat in grams a day.")}
       />
     </>
   );

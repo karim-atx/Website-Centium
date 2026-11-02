@@ -228,6 +228,12 @@ const procalendar: Catalogue = {
   "48 hours": "48 ساعة",
   "{a} before": "قبل {a}",
   "{a} and {b} before": "قبل {a} و{b}",
+
+  // == Calendar · the month grid (a day button read aloud: "Monday, 2 November, sessions booked, day off") ==
+  "sessions booked": "جلسات محجوزة",
+  "hired classes": "حصص مُوظَّف لها",
+  classes: "الحصص",
+  "day off": "يوم عطلة",
 };
 
 export default procalendar;

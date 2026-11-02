@@ -18,6 +18,7 @@ import { STATUS_STEPS } from "../../../theme/marketTokens";
 import { fetchMyApplications, fetchMyWork, fetchOpportunities } from "../../../services/team-hiring";
 import { fixedPair } from "./opportunities/colours";
 import { offeredCount, offersSub, openingsSub, workSub } from "./opportunities/opportunitiesModel";
+import { t, tk } from "../../../i18n/core";
 
 // Market + Share 3.0 · W3 · P-MA.1 Overview (HANDOVER §4 "P-MA.1 Overview";
 // Professional Marketplace Screens lines 60–109 and the `ov` / `lt` script;
@@ -64,10 +65,10 @@ const HOME = "/app/pro/marketplace";
 type Sub = { text: string; badge?: boolean } | null;
 /** The Opportunities card rows (lines 100–107): titles as drawn; the quiet subs (ours) show until DB8 answers. */
 const LINKS: { key: "offers" | "openings" | "work" | "explore"; title: string; quiet: string; to: string }[] = [
-  { key: "offers", title: "Offers from gyms", quiet: "Gyms can send you direct offers here soon", to: `${HOME}/opportunities/applications` },
-  { key: "openings", title: "Openings near you", quiet: "Roles and class slots near you, coming soon", to: `${HOME}/opportunities` },
-  { key: "work", title: "My work", quiet: "When a gym hires you, it shows here", to: `${HOME}/opportunities/work` },
-  { key: "explore", title: "Gyms and colleagues", quiet: "Your gyms, their classes and other professionals", to: "/app/marketplace" },
+  { key: "offers", title: tk("Offers from gyms"), quiet: tk("Gyms can send you direct offers here soon"), to: `${HOME}/opportunities/applications` },
+  { key: "openings", title: tk("Openings near you"), quiet: tk("Roles and class slots near you, coming soon"), to: `${HOME}/opportunities` },
+  { key: "work", title: tk("My work"), quiet: tk("When a gym hires you, it shows here"), to: `${HOME}/opportunities/work` },
+  { key: "explore", title: tk("Gyms and colleagues"), quiet: tk("Your gyms, their classes and other professionals"), to: "/app/marketplace" },
 ];
 
 /** The three DB8 reads behind the card; a sub only when its read answers. */
@@ -97,7 +98,7 @@ export function OverviewTab() {
   const [switched, setSwitched] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [strip, showStrip] = useStrip();
-  const retry = useCallback(() => setTick((t) => t + 1), []);
+  const retry = useCallback(() => setTick((n) => n + 1), []);
   const card = useOpportunityCard();
   const [offeredBg, offeredInk] = fixedPair(STATUS_STEPS.OFFERED[0], STATUS_STEPS.OFFERED[1], useIsDark());
 
@@ -139,10 +140,10 @@ export function OverviewTab() {
     setBusy(false);
     if (r.ok) {
       setSwitched(r.value);
-      showStrip(r.value ? "Your Showcase is visible" : "Your Showcase is hidden");
+      showStrip(r.value ? t("Your Showcase is visible") : t("Your Showcase is hidden"));
       return;
     }
-    showStrip(r.offline ? "You're offline. Try again when you're connected." : r.message, r.offline ? "neutral" : "error");
+    showStrip(r.offline ? t("You're offline. Try again when you're connected.") : t(r.message), r.offline ? "neutral" : "error");
   };
 
   return (
@@ -155,22 +156,23 @@ export function OverviewTab() {
       </div>
       {visibleKnown && !on ? (
         <div role="status" style={{ borderRadius: 16, background: c.highbg, padding: "12px 14px", fontSize: px(12.5), lineHeight: lh(18), fontWeight: 700, color: c.high }}>
-          Hidden. Clients and gyms can't find your Showcase or offers. Vouchers already issued still work.
+          {t("Hidden. Clients and gyms can't find your Showcase or offers. Vouchers already issued still work.")}
         </div>
       ) : null}
       {state.status === "loading" ? (
         <>
-          <MarketSkeleton radius={24} rows={3} height={165} label="Loading clients reached" />
-          <MarketSkeleton radius={20} rows={4} height={226} label="Loading your figures" />
+          <MarketSkeleton radius={24} rows={3} height={165} label={t("Loading clients reached")} />
+          <MarketSkeleton radius={20} rows={4} height={226} label={t("Loading your figures")} />
         </>
       ) : (
         <>
-          <HeroStatCard label="Clients reached" value={view.hero.value} delta={view.hero.delta} sub={view.hero.sub} series={view.hero.series} />
-          <StatLedger rows={view.rows} />
+          <HeroStatCard label={t("Clients reached")} value={view.hero.value} delta={view.hero.delta} sub={view.hero.sub ? t(view.hero.sub) : view.hero.sub} series={view.hero.series} />
+          {/* The ledger labels are services/pro-market's English, shown in the app's language. */}
+          <StatLedger rows={view.rows.map((r) => ({ ...r, label: t(r.label) }))} />
         </>
       )}
-      {state.status === "error" ? <MarketError thing="your marketplace figures" onRetry={retry} /> : null}
-      <CapsLabel style={{ marginTop: 4 }}>Opportunities</CapsLabel>
+      {state.status === "error" ? <MarketError thing={t("your marketplace figures")} onRetry={retry} /> : null}
+      <CapsLabel style={{ marginTop: 4 }}>{t("Opportunities")}</CapsLabel>
       <div style={{ borderRadius: 24, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>
         {LINKS.map((l, i) => {
           const sub = l.key === "explore" ? null : card[l.key];
@@ -199,23 +201,23 @@ export function OverviewTab() {
             }}
           >
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: px(14), fontWeight: 700 }}>{l.title}</span>
-              <span style={{ display: "block", fontSize: px(11.5), color: c.faint }}>{sub?.text ?? l.quiet}</span>
+              <span style={{ display: "block", fontSize: px(14), fontWeight: 700 }}>{t(l.title)}</span>
+              <span style={{ display: "block", fontSize: px(11.5), color: c.faint }}>{sub?.text ?? t(l.quiet)}</span>
             </span>
             {sub?.badge ? (
-              <span style={{ fontSize: px(10), fontWeight: 800, letterSpacing: "0.08em", borderRadius: 999, padding: "3px 8px", background: offeredBg, color: offeredInk, flexShrink: 0 }}>OFFERED</span>
+              <span style={{ fontSize: px(10), fontWeight: 800, letterSpacing: "0.08em", borderRadius: 999, padding: "3px 8px", background: offeredBg, color: offeredInk, flexShrink: 0 }}>{t("OFFERED")}</span>
             ) : null}
-            <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden style={{ flexShrink: 0 }} />
+            <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden className="rtl:-scale-x-100" style={{ flexShrink: 0 }} />
           </button>
           );
         })}
       </div>
       <CentredDialog
         open={confirmHide}
-        title="Hide your Showcase?"
-        body="You'll need a verified licence or certificate to show it again."
-        cancel="Keep it shown"
-        action="Hide it"
+        title={t("Hide your Showcase?")}
+        body={t("You'll need a verified licence or certificate to show it again.")}
+        cancel={t("Keep it shown")}
+        action={t("Hide it")}
         onCancel={() => setConfirmHide(false)}
         onAction={() => {
           setConfirmHide(false);

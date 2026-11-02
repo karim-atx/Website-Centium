@@ -12,6 +12,7 @@ import { fetchWorkHistory } from "../../../../services/pro-profile";
 import { payMoney, payText } from "../../../../services/hiring/fee";
 import { MasterSheet, PrimaryButton, SaveError, SoonNote, fieldStyle, lh, px, useMarketColors } from "../../../business-market/listingParts";
 import { applyTitle, attachableCredentials, availabilityLabel, openingSub, parseRate, proposalHint, scheduleLine, unitWord } from "./opportunitiesModel";
+import { t, tk, tx } from "../../../../i18n/core";
 
 // Market + Share 3.0 · W4 · P-MA.5.2 Apply (MasterBottomSheet; Professional
 // Marketplace Screens `sheet` for apSheet / apSheetRate, lines 551–577 and
@@ -92,7 +93,7 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
     return [
       ...creds.map((c) => ({ key: `c:${c.id}`, kind: "credential" as const, refId: c.id, label: c.label })),
       ...(services ?? []).map((s) => ({ key: `s:${s.id}`, kind: "service" as const, refId: s.id, label: s.label })),
-      ...(hasWork ? [{ key: "wh", kind: "work_history" as const, refId: null, label: "Work history" }] : []),
+      ...(hasWork ? [{ key: "wh", kind: "work_history" as const, refId: null, label: tk("Work history") }] : []),
     ];
   }, [cv, services, hasWork]);
 
@@ -129,7 +130,7 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
     if (r.ok) return onSent(o);
     if (r.pending) return setSoon(true);
     if (r.error === "already_applied") onAlreadyApplied?.(o);
-    setError(r.message);
+    setError(t(r.message));
   };
 
   const grey: React.CSSProperties = { background: m.sgrey, borderRadius: 14, padding: "12px 14px" };
@@ -144,11 +145,11 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
       footer={
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <PrimaryButton onClick={() => void send()} disabled={!canSend} busy={busy}>
-            {busy ? "Sending…" : "Send application"}
+            {busy ? t("Sending…") : t("Send application")}
           </PrimaryButton>
-          {soon ? <SoonNote style={{ marginTop: 4 }}>Hiring is coming soon.</SoonNote> : null}
+          {soon ? <SoonNote style={{ marginTop: 4 }}>{t("Hiring is coming soon.")}</SoonNote> : null}
           {error ? <SaveError style={{ marginTop: 4 }}>{error}</SaveError> : null}
-          {!online ? <SoonNote style={{ marginTop: 4 }}>You're offline. Try again when you're connected.</SoonNote> : null}
+          {!online ? <SoonNote style={{ marginTop: 4 }}>{t("You're offline. Try again when you're connected.")}</SoonNote> : null}
         </div>
       }
     >
@@ -161,10 +162,10 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
           border="none"
           notchBg={m.sbody}
           notchRing={false}
-          stub={<span style={{ fontSize: px(15), fontWeight: 800, color: m.pdark, textAlign: "center", lineHeight: lh(18) }}>{o.pay != null ? payMoney(o.pay) : "Open"}</span>}
+          stub={<span style={{ fontSize: px(15), fontWeight: 800, color: m.pdark, textAlign: "center", lineHeight: lh(18) }}>{o.pay != null ? payMoney(o.pay) : tx("Open", "pay")}</span>}
           bodyStyle={{ padding: "12px 14px" }}
         >
-          <div style={{ fontSize: px(13), fontWeight: 500, color: m.slabel, marginBottom: 6 }}>Opening</div>
+          <div style={{ fontSize: px(13), fontWeight: 500, color: m.slabel, marginBottom: 6 }}>{tx("Opening", "job")}</div>
           <div style={{ fontSize: px(15), fontWeight: 800 }}>{o.title}</div>
           <div style={{ fontSize: px(12), fontWeight: 600, color: m.accent }}>{openingSub(o)}</div>
           {schedule ? <div style={{ fontSize: px(12), color: m.ink2, marginTop: 2 }}>{schedule}</div> : null}
@@ -172,7 +173,7 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
 
         <div style={grey}>
           <label htmlFor={ids.msg} style={label}>
-            Short message
+            {t("Short message")}
           </label>
           <textarea id={ids.msg} value={message} onChange={(e) => setMessage(e.target.value.slice(0, 500))} rows={2} className="market-focus" style={{ ...fieldStyle(m), resize: "none" }} />
         </div>
@@ -180,7 +181,7 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
         {proposals ? (
           <div style={grey}>
             <label htmlFor={ids.rate} style={label}>
-              Your rate
+              {t("Your rate")}
             </label>
             <div style={{ ...fieldStyle(m, rateInvalid), border: `1px solid ${m.fill}`, display: "flex", alignItems: "center", gap: 4 }}>
               <span aria-hidden>$</span>
@@ -201,12 +202,12 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
           </div>
         ) : (
           <div style={grey}>
-            <div style={label}>Pay · set by the gym</div>
+            <div style={label}>{t("Pay · set by the gym")}</div>
             <div style={{ ...fieldStyle(m), display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ flex: 1, minWidth: 0, color: m.ink2 }}>{o.pay != null ? payText(o.pay, o.payUnit) : "Set by the gym"}</span>
-              <Lock size={15} strokeWidth={2} color={m.faint} aria-label="Locked" style={NO_ICON_SCALE} />
+              <span style={{ flex: 1, minWidth: 0, color: m.ink2 }}>{o.pay != null ? payText(o.pay, o.payUnit) : t("Set by the gym")}</span>
+              <Lock size={15} strokeWidth={2} color={m.faint} aria-label={t("Locked")} style={NO_ICON_SCALE} />
             </div>
-            <div style={hint}>This opening doesn't take proposals.</div>
+            <div style={hint}>{t("This opening doesn't take proposals.")}</div>
           </div>
         )}
 
@@ -229,20 +230,20 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
 
         <div style={grey} role="group" aria-labelledby={ids.attach}>
           <div id={ids.attach} style={label}>
-            Attach
+            {t("Attach")}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {chips.map((c) => {
               const on = picked.has(c.key);
               return (
                 <button key={c.key} type="button" aria-pressed={on} onClick={() => toggle(c.key)} className="hit market-focus" style={{ ...sheetChipStyle(on), padding: "8px 12px", fontSize: px(13), fontFamily: "inherit", lineHeight: "normal", cursor: "pointer", whiteSpace: "normal", textAlign: "start" }}>
-                  {c.label}
+                  {c.kind === "work_history" ? t(c.label) : c.label}
                 </button>
               );
             })}
             {hasWork ? null : (
               <button type="button" aria-pressed={false} aria-disabled aria-describedby={ids.wh} className="hit market-focus" style={{ ...sheetChipStyle(false), padding: "8px 12px", fontSize: px(13), fontFamily: "inherit", lineHeight: "normal", cursor: "default", opacity: 0.4 }}>
-                Work history
+                {t("Work history")}
               </button>
             )}
           </div>
@@ -250,11 +251,11 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
             <div id={ids.wh} style={hint}>
               {hasWork === false
                 ? chips.length || services === null
-                  ? "No Centium work yet."
-                  : "Add credentials and services to your profile to attach them. No Centium work yet."
+                  ? t("No Centium work yet.")
+                  : t("Add credentials and services to your profile to attach them. No Centium work yet.")
                 : chips.length || services === null
-                  ? "Couldn't load your work history."
-                  : "Add credentials and services to your profile to attach them. Couldn't load your work history."}
+                  ? t("Couldn't load your work history.")
+                  : t("Add credentials and services to your profile to attach them. Couldn't load your work history.")}
             </div>
           )}
         </div>

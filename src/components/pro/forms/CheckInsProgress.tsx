@@ -15,6 +15,9 @@ import { photoAnswers, responseMarker, seriesOverTime, type PositionedQuestion, 
 import { fetchQuestions, fetchResponseNotes, fetchResponses, type FormResponse } from "../../../services/pro/forms";
 import { FORMS_PATH } from "./formsList";
 import { NutritionCheckInTrend } from "./NutritionCheckInTrend";
+import { getLanguage, t, tk, tn, tx } from "../../../i18n/core";
+
+const comma = () => (getLanguage() === "ar" ? "، " : ", ");
 
 export interface CheckIns {
   responses: FormResponse[];
@@ -44,12 +47,12 @@ export function useClientCheckIns(clientId: string, enabled: boolean, nonce = 0)
 
 /** The group's one line: "{n} check-ins · last {date}", or "Urgent" / "Flagged" first. */
 export function checkInsSummary(c: CheckIns | null | undefined): string {
-  if (c === undefined) return "Loading…";
-  if (c === null) return "Couldn't load";
-  if (!c.responses.length) return "No check-ins yet";
+  if (c === undefined) return t("Loading…");
+  if (c === null) return t("Couldn't load");
+  if (!c.responses.length) return t("No check-ins yet");
   const last = c.responses[0];
   const marker = responseMarker(last);
-  return `${marker ? `${marker} · ` : ""}${c.responses.length} check-in${c.responses.length === 1 ? "" : "s"} · last ${fmtDay(last.submittedAt)}`;
+  return `${marker ? `${t(marker)} · ` : ""}${tn(c.responses.length, "{n} check-in · last {date}", "{n} check-ins · last {date}", { date: fmtDay(last.submittedAt) })}`;
 }
 
 type Span = "6W" | "3M" | "All";
@@ -100,7 +103,7 @@ export const CheckInsProgress: React.FC<{ data: CheckIns | null | undefined; cli
     return (
       <>
         {trend}
-        <p style={{ fontSize: textPx(12), color: INK.chF }}>{`${firstName} hasn't sent a check-in yet.`}</p>
+        <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("{name} hasn't sent a check-in yet.", { name: firstName })}</p>
       </>
     );
 
@@ -114,7 +117,7 @@ export const CheckInsProgress: React.FC<{ data: CheckIns | null | undefined; cli
     <div>
       <SafetyBanner response={latest} firstName={firstName} notes={notes?.id === latest.id ? notes.list : []} />
       {trend}
-      {total < 2 && <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 10 }}>Charts start after the second check-in.</p>}
+      {total < 2 && <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 10 }}>{t("Charts start after the second check-in.")}</p>}
       {(total < 2 ? [] : series.slice(0, 3)).map((s, si) => {
         const vals = s.points.map((p) => p.value);
         const nums = vals.filter((v): v is number => v != null);
@@ -125,16 +128,16 @@ export const CheckInsProgress: React.FC<{ data: CheckIns | null | undefined; cli
             <ProChart
               flat
               title={s.label}
-              question={`How is ${firstName} answering week to week?`}
+              question={t("How is {name} answering week to week?", { name: firstName })}
               questionIcon
-              right={si === 0 ? <RangeTrack label="Check-ins range" items={["6W", "3M", "All"] as const} value={span} onChange={setSpan} /> : undefined}
-              x={s.points.map((_, i) => `W${offset + i + 1}`)}
+              right={si === 0 ? <RangeTrack label={t("Check-ins range")} items={[tk("6W"), tk("3M"), tk("All")] as const} value={span} onChange={setSpan} /> : undefined}
+              x={s.points.map((_, i) => t("W{n}", { n: offset + i + 1 }))}
               min={lo}
               max={hi}
               series={[{ key: s.key, label: s.label, type: "line", color: colours[si % 3], values: vals, noLegend: true }]}
-              tooltip={(i) => (vals[i] == null ? null : { title: `Week ${offset + i + 1}`, lines: [`${vals[i]}${s.unit.startsWith("/") ? s.unit : s.unit ? ` ${s.unit}` : ""}`, fmtDay(s.points[i].at)] })}
-              summary={`${s.label}: ${nums.join(", ")}.`}
-              scrubHint="Drag sideways to scrub, tap a point to pin it"
+              tooltip={(i) => (vals[i] == null ? null : { title: t("Week {n}", { n: offset + i + 1 }), lines: [`${vals[i]}${s.unit.startsWith("/") ? s.unit : s.unit ? ` ${s.unit}` : ""}`, fmtDay(s.points[i].at)] })}
+              summary={t("{label}: {values}.", { label: s.label, values: nums.join(comma()) })}
+              scrubHint={t("Drag sideways to scrub, tap a point to pin it")}
             />
           </div>
         );
@@ -142,7 +145,7 @@ export const CheckInsProgress: React.FC<{ data: CheckIns | null | undefined; cli
       <ListCard
         rows={[
           ...(withPhotos.length
-            ? [{ key: "photos", icon: ImageIcon, title: "Progress photos", meta: `${withPhotos.length} set${withPhotos.length === 1 ? "" : "s"} · ${fmtDay(withPhotos[0].submittedAt)}`, onClick: () => navigate(`${FORMS_PATH}/responses/${withPhotos[0].id}`) }]
+            ? [{ key: "photos", icon: ImageIcon, title: t("Progress photos"), meta: tn(withPhotos.length, "{n} set · {date}", "{n} sets · {date}", { date: fmtDay(withPhotos[0].submittedAt) }), onClick: () => navigate(`${FORMS_PATH}/responses/${withPhotos[0].id}`) }]
             : []),
           ...data.responses.slice(0, 6).map((r) => {
             const marker = responseMarker(r);
@@ -151,7 +154,7 @@ export const CheckInsProgress: React.FC<{ data: CheckIns | null | undefined; cli
               icon: ClipboardCheck,
               tone: marker ? ("att" as const) : undefined,
               title: r.formTitle,
-              meta: `${fmtDay(r.submittedAt)} · ${marker ? `${marker} · ` : ""}${r.reviewedAt ? "Reviewed" : "To review"}`,
+              meta: `${fmtDay(r.submittedAt)} · ${marker ? `${t(marker)} · ` : ""}${r.reviewedAt ? tx("Reviewed", "check-in") : t("To review")}`,
               onClick: () => navigate(`${FORMS_PATH}/responses/${r.id}`),
             };
           }),

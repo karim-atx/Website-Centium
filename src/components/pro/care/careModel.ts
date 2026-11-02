@@ -3,12 +3,25 @@
 import { SUBTYPE_SINGULAR } from "../../professionals/subtypeLabels";
 import type { Tone } from "../client/clientFormat";
 import { appLocale } from "../../../i18n/format";
+import { t, tk } from "../../../i18n/core";
 export type ReferralStatus = "awaiting_client" | "declined_by_client" | "sent" | "accepted" | "declined" | "withdrawn" | "disputed" | "closed";
+
+/** The capitalised SUBTYPE_SINGULAR words as catalogue keys (tk), shown with t(). */
+const TYPE_KEYS: Record<string, string> = {
+  "Personal trainer": tk("Personal trainer"),
+  Dietitian: tk("Dietitian"),
+  Physiotherapist: tk("Physiotherapist"),
+  Doctor: tk("Doctor"),
+  Nutritionist: tk("Nutritionist"),
+  "Coach or instructor": tk("Coach or instructor"),
+  "Health professional": tk("Health professional"),
+};
 
 /** "Dietitian", "Physiotherapist", "Doctor" (the colleague's type as a label). */
 export function typeLabel(type: string | null | undefined): string {
   const s = type ? (SUBTYPE_SINGULAR as Record<string, string>)[type] : null;
-  return s ? s.charAt(0).toUpperCase() + s.slice(1) : "Health professional";
+  const word = s ? s.charAt(0).toUpperCase() + s.slice(1) : "Health professional";
+  return TYPE_KEYS[word] ? t(word) : word;
 }
 
 export const firstName = (name: string | null | undefined) => (name ?? "").trim().split(/\s+/)[0] || "";
@@ -17,16 +30,16 @@ export const firstName = (name: string | null | undefined) => (name ?? "").trim(
 export function receivedChip(status: ReferralStatus): { label: string; tone: Tone } {
   switch (status) {
     case "accepted":
-      return { label: "Accepted", tone: "act" };
+      return { label: t("Accepted"), tone: "act" };
     case "declined":
-      return { label: "Declined", tone: "att" };
+      return { label: t("Declined"), tone: "att" };
     case "disputed":
     case "closed":
-      return { label: status === "closed" ? "Closed" : "With support", tone: "pau" };
+      return { label: status === "closed" ? t("Closed") : t("With support"), tone: "pau" };
     case "withdrawn":
-      return { label: "Withdrawn", tone: "pau" };
+      return { label: t("Withdrawn"), tone: "pau" };
     default:
-      return { label: "New", tone: "req" };
+      return { label: t("New"), tone: "req" };
   }
 }
 
@@ -34,21 +47,21 @@ export function receivedChip(status: ReferralStatus): { label: string; tone: Ton
 export function sentChip(status: ReferralStatus, clientFirst: string, proFirst: string): { label: string; tone: Tone } {
   switch (status) {
     case "awaiting_client":
-      return { label: clientFirst ? `Waiting for ${clientFirst}` : "Waiting for the client", tone: "req" };
+      return { label: clientFirst ? t("Waiting for {name}", { name: clientFirst }) : t("Waiting for the client"), tone: "req" };
     case "sent":
-      return { label: proFirst ? `With ${proFirst}` : "With your colleague", tone: "onb" };
+      return { label: proFirst ? t("With {name}", { name: proFirst }) : t("With your colleague"), tone: "onb" };
     case "accepted":
-      return { label: "Accepted", tone: "act" };
+      return { label: t("Accepted"), tone: "act" };
     case "declined":
-      return { label: "Declined", tone: "att" };
+      return { label: t("Declined"), tone: "att" };
     case "declined_by_client":
-      return { label: clientFirst ? `${clientFirst} said no` : "The client said no", tone: "att" };
+      return { label: clientFirst ? t("{name} said no", { name: clientFirst }) : t("The client said no"), tone: "att" };
     case "withdrawn":
-      return { label: "Withdrawn", tone: "pau" };
+      return { label: t("Withdrawn"), tone: "pau" };
     case "disputed":
-      return { label: "With support", tone: "pau" };
+      return { label: t("With support"), tone: "pau" };
     case "closed":
-      return { label: "Closed", tone: "pau" };
+      return { label: t("Closed"), tone: "pau" };
   }
 }
 
@@ -58,15 +71,16 @@ export const canWithdraw = (s: ReferralStatus) => s === "awaiting_client" || s =
  * stores the reason as text (care_referral_declines.reason, 1 to 500, read
  * by the two professionals only), so a
  * preset saves its label and Other saves what the professional types.
- * Optional: no reason chosen declines with none.
+ * Optional: no reason chosen declines with none. The labels are English keys
+ * (tk): the stored text stays English, and t() shows it (both screens).
  */
 export type ReferralDeclineReason = "fully_booked" | "outside_specialty" | "not_taking" | "too_far" | "other";
 export const REFERRAL_DECLINE_REASONS: { value: ReferralDeclineReason; label: string }[] = [
-  { value: "fully_booked", label: "Fully booked" },
-  { value: "outside_specialty", label: "Outside my specialty" },
-  { value: "not_taking", label: "Not taking referrals right now" },
-  { value: "too_far", label: "Too far from the client" },
-  { value: "other", label: "Other" },
+  { value: "fully_booked", label: tk("Fully booked") },
+  { value: "outside_specialty", label: tk("Outside my specialty") },
+  { value: "not_taking", label: tk("Not taking referrals right now") },
+  { value: "too_far", label: tk("Too far from the client") },
+  { value: "other", label: tk("Other") },
 ];
 
 /** The text respond_care_referral stores: the preset's label, Other's own words, or null. */
@@ -87,12 +101,12 @@ export const canDispute = (s: ReferralStatus) => s === "sent" || s === "accepted
  */
 export type ColleagueFilter = "all" | "nearby" | "dietitians" | "physios" | "doctors" | "trainers";
 export const COLLEAGUE_FILTERS: { key: ColleagueFilter; label: string }[] = [
-  { key: "all", label: "Care network" },
-  { key: "nearby", label: "Nearby" },
-  { key: "dietitians", label: "Dietitians" },
-  { key: "physios", label: "Physios" },
-  { key: "doctors", label: "Doctors" },
-  { key: "trainers", label: "Trainers" },
+  { key: "all", label: tk("Care network") },
+  { key: "nearby", label: tk("Nearby") },
+  { key: "dietitians", label: tk("Dietitians") },
+  { key: "physios", label: tk("Physios") },
+  { key: "doctors", label: tk("Doctors") },
+  { key: "trainers", label: tk("Trainers") },
 ];
 export function matchesFilter(type: string | null, f: ColleagueFilter): boolean {
   if (f === "all" || f === "nearby") return true;
@@ -107,12 +121,12 @@ export function matchesFilter(type: string | null, f: ColleagueFilter): boolean 
  * colleagues_near_me returns a band, never a point, so the band is what
  * shows. band_rank 1 to 6 as discovery_reach() numbers them.
  */
-const BANDS = ["under 2 km", "2 to 5 km", "5 to 10 km", "10 to 25 km", "25 to 50 km", "over 50 km"];
-export const bandWords = (band: number): string => BANDS[Math.min(BANDS.length, Math.max(1, Math.round(band))) - 1];
+const BANDS = [tk("under 2 km"), tk("2 to 5 km"), tk("5 to 10 km"), tk("10 to 25 km"), tk("25 to 50 km"), tk("over 50 km")];
+export const bandWords = (band: number): string => t(BANDS[Math.min(BANDS.length, Math.max(1, Math.round(band))) - 1]);
 
 /** "Physiotherapist · 2 to 5 km", with "· in your network" when they're already in it. */
 export function nearbyLine(type: string | null, band: number, inNetwork: boolean): string {
-  return [typeLabel(type), bandWords(band), inNetwork ? "in your network" : null].filter(Boolean).join(" · ");
+  return [typeLabel(type), bandWords(band), inNetwork ? t("in your network") : null].filter(Boolean).join(" · ");
 }
 
 /** "today, 9:40 AM" / "yesterday" / "Oct 10" for the card's received line. */
@@ -120,7 +134,7 @@ export function whenWord(iso: string, now = new Date(), clock?: (d: Date) => str
   const d = new Date(iso);
   const y = new Date(now);
   y.setDate(now.getDate() - 1);
-  if (d.toDateString() === now.toDateString()) return clock ? `today, ${clock(d)}` : "today";
-  if (d.toDateString() === y.toDateString()) return "yesterday";
+  if (d.toDateString() === now.toDateString()) return clock ? t("today, {time}", { time: clock(d) }) : t("today");
+  if (d.toDateString() === y.toDateString()) return t("yesterday");
   return d.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 }

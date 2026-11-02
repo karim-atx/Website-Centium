@@ -13,6 +13,10 @@ import { InitialsTile, OpEmpty, PaleNote } from "./parts";
 import { fixedInk, fixedPair } from "./colours";
 import { useActionStrip } from "./useActionStrip";
 import { calendarLine, hiredWorkStrip, sinceLine, workClassRow, workPay } from "./opportunitiesModel";
+import { t, tk, isRtl } from "../../../../i18n/core";
+
+// The work tags (my_work tag values), shown through t().
+void [tk("NEW"), tk("HIRED"), tk("SLOT")];
 
 // Market + Share 3.0 · W4 · P-MA.5.3 My work
 // (/app/pro/marketplace/opportunities/work; Professional Marketplace Screens
@@ -45,7 +49,7 @@ export default function MyWorkPage() {
   const [state, setState] = useState<State>({ status: "loading" });
   const [tick, setTick] = useState(0);
   const [strip, showStrip] = useActionStrip();
-  const retry = useCallback(() => setTick((t) => t + 1), []);
+  const retry = useCallback(() => setTick((n) => n + 1), []);
   const hired = (location.state as { hired?: { gym: string; startsOn: string | null } } | null)?.hired ?? null;
   const shown = useRef(false);
 
@@ -73,17 +77,17 @@ export default function MyWorkPage() {
   return (
     <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <BackHeader eyebrow="Opportunities" title="My work" onBack={back} backLabel="Back to Opportunities" />
+      <BackHeader eyebrow={t("Opportunities")} title={t("My work")} onBack={back} backLabel={t("Back to Opportunities")} />
       <MarketOffline loaded={state.status === "ok"} onRetry={retry} style={{ marginBottom: 12 }} />
       {state.status === "loading" ? (
-        <MarketSkeleton radius={20} rows={4} count={2} height={260} gap={12} label="Loading your work" />
+        <MarketSkeleton radius={20} rows={4} count={2} height={260} gap={12} label={t("Loading your work")} />
       ) : state.status === "error" ? (
-        <MarketError thing="your work" onRetry={retry} />
+        <MarketError thing={t("your work")} onRetry={retry} />
       ) : state.status === "pending" || state.list.length === 0 ? (
-        <OpEmpty icon="calendar" top={56} title="No work yet" body="When a gym hires you, the role or class slot shows here with its schedule and assigned classes." cta="Browse openings" onCta={() => navigate(`${HOME}/opportunities`)} />
+        <OpEmpty icon="calendar" top={56} title={t("No work yet")} body={t("When a gym hires you, the role or class slot shows here with its schedule and assigned classes.")} cta={t("Browse openings")} onCta={() => navigate(`${HOME}/opportunities`)} />
       ) : (
         <>
-          <PaleNote>Clients see you as the instructor on these classes, with your photo and profile.</PaleNote>
+          <PaleNote>{t("Clients see you as the instructor on these classes, with your photo and profile.")}</PaleNote>
           <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 12 }}>
             {state.list.map((w) => (
               <WorkCard key={w.hireId} w={w} now={now} onCalendar={() => navigate("/app/pro/calendar")} />
@@ -110,12 +114,12 @@ function WorkCard({ w, now, onCalendar }: { w: WorkItem; now: Date; onCalendar: 
           <h2 style={{ fontSize: px(15), fontWeight: 800, lineHeight: lh(20), margin: 0 }}>{w.roleTitle}</h2>
           <div style={{ fontSize: px(11.5), color: m.faint }}>{sinceLine(w, now)}</div>
         </div>
-        <span style={{ fontSize: px(10), fontWeight: 800, letterSpacing: "0.08em", borderRadius: 999, padding: "3px 8px", background: tagBg, color: tagInk, whiteSpace: "nowrap", flexShrink: 0 }}>{w.tag}</span>
+        <span style={{ fontSize: px(10), fontWeight: 800, letterSpacing: "0.08em", borderRadius: 999, padding: "3px 8px", background: tagBg, color: tagInk, whiteSpace: "nowrap", flexShrink: 0 }}>{t(w.tag)}</span>
       </div>
       {w.classes.length ? (
         <>
           <CapsLabel as="p" style={{ padding: "0 16px 4px" }}>
-            {w.type === "class_slot" ? "Class" : "Assigned classes"}
+            {w.type === "class_slot" ? t("Class") : t("Assigned classes")}
           </CapsLabel>
           <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
             {w.classes.map((c, i) => {
@@ -156,10 +160,10 @@ function WorkCard({ w, now, onCalendar }: { w: WorkItem; now: Date; onCalendar: 
           <path d="M16 2v4M8 2v4M3 10h18" />
         </svg>
         <span style={{ flex: 1 }}>{calendarLine(w)}</span>
-        <ChevronRight size={14} strokeWidth={2.2} aria-hidden style={NO_ICON_SCALE} />
+        <ChevronRight size={14} strokeWidth={2.2} aria-hidden style={isRtl() ? { transform: "scaleX(-1)" } : NO_ICON_SCALE} />
       </button>
       <div style={{ padding: "10px 16px 12px", borderTop: `0.5px solid ${m.div}`, display: "flex", justifyContent: "space-between", gap: 12, fontSize: px(12) }}>
-        <span style={{ color: m.faint }}>Pay, arranged with the gym</span>
+        <span style={{ color: m.faint }}>{t("Pay, arranged with the gym")}</span>
         <span style={{ fontWeight: 800 }}>{workPay(w)}</span>
       </div>
     </article>

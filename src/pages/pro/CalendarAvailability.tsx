@@ -18,7 +18,7 @@ import { OfflineLine, ProCardSkeleton, ProError } from "../../components/pro/sta
 import { SettingsRow, SettingsSection } from "../../components/pro/calendar/calendarFields";
 import { TimeOffSheet } from "../../components/pro/calendar/TimeOffSheet";
 import { SessionTypeSheet } from "../../components/pro/calendar/SessionTypeSheet";
-import { AUDIENCE, BOOKING_TITLES, BookingSheet, windowLabel, type BookingSheetKind } from "../../components/pro/calendar/BookingSheets";
+import { AUDIENCE, BOOKING_TITLES, BookingSheet, type BookingSheetKind } from "../../components/pro/calendar/BookingSheets";
 import { DEFAULT_SESSION } from "../../components/pro/calendar/calendarItems";
 import { dayDate, groupTimeOff, isoOf, money, remindersLabel, type AlertValue, type TimeOffEntry } from "../../components/pro/calendar/calendarModel";
 import {
@@ -36,7 +36,10 @@ import {
   type SessionType,
   type TimeOffRow,
 } from "../../services/pro/calendar";
-import { t } from "../../i18n/core";
+import { t, tn } from "../../i18n/core";
+
+// The booking window as shown (the same words as the booking sheet).
+const windowText = (days: number) => (days % 7 === 0 ? tn(days / 7, "{n} week ahead", "{n} weeks ahead") : t("{n} days ahead", { n: days }));
 
 /**
  * Release 3 · W4 CA8 v2 Availability, Time off renamed (/app/pro/calendar/
@@ -165,7 +168,7 @@ export default function CalendarAvailability() {
     { kind: "who", icon: Users, sub: AUDIENCE[policy.whoCanBook].title },
     { kind: "notice", icon: ClockAlert, sub: t("Book {minNoticeHours} h ahead · cancel {freeCancelHours} h ahead", { minNoticeHours: policy.minNoticeHours, freeCancelHours: policy.freeCancelHours }) },
     { kind: "approvals", icon: ShieldCheck, sub: policy.newClientApproval ? t("New clients need your OK") : t("New clients book straight away") },
-    { kind: "window", icon: CalendarRange, sub: t("Up to {v}", { v: windowLabel(policy.windowDays) }) },
+    { kind: "window", icon: CalendarRange, sub: t("Up to {v}", { v: windowText(policy.windowDays) }) },
     { kind: "reminders", icon: BellRing, sub: remindersLabel(reminders.alert, reminders.alert2) },
     { kind: "sync", icon: RefreshCw, sub: t("Coming soon") },
   ];

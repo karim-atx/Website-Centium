@@ -75,7 +75,7 @@ import { fetchEventCapacity, saveEventCapacity } from "../../services/messaging/
 import { parseCapacity } from "../../services/messaging/groupCardsModel";
 import { startThread } from "../../services/messaging";
 import { appLocale } from "../../i18n/format";
-import { t } from "../../i18n/core";
+import { t, tk } from "../../i18n/core";
 
 /**
  * Release 3 · W4 Calendar (/app/pro/calendar; HANDOVER f "CA · Calendar",
@@ -112,7 +112,9 @@ import { t } from "../../i18n/core";
 type View = "year" | "month" | "week" | "day";
 const VIEWS: View[] = ["year", "month", "week", "day"];
 
-const monthNames = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString(appLocale("en-US"), { month: "long" }));
+// The month title ("November 2026") is formatted when shown, so it follows the app language (a table built at import would stay English).
+const monthTitle = (year: number, month: number) => new Date(year, month, 1).toLocaleDateString(appLocale("en-US"), { month: "long", year: "numeric" });
+const VIEW_LABEL: Record<View, string> = { year: tk("Year"), month: tk("Month"), week: tk("Week"), day: tk("Day") };
 
 /** Signed at the click: the URL's lifetime is minutes. */
 async function openAttachment(path: string) {
@@ -584,7 +586,7 @@ export default function Calendar() {
           tabHeight={34}
           tabRadius={11}
           labelSize={12}
-          items={VIEWS.map((v) => ({ key: v, label: v[0].toUpperCase() + v.slice(1) }))}
+          items={VIEWS.map((v) => ({ key: v, label: t(VIEW_LABEL[v]) }))}
           activeKey={view}
           onChange={(k) => {
             if (k === "year" && view === "year") {
@@ -619,7 +621,7 @@ export default function Calendar() {
         {view === "month" && (
           <div className="mt-[12px]">
             <HeaderCard
-              label={`${monthNames[cursor.month]} ${cursor.year}`}
+              label={monthTitle(cursor.year, cursor.month)}
               onPrev={() => goMonth(-1)}
               onNext={() => goMonth(1)}
               prevLabel={t("Previous month")}

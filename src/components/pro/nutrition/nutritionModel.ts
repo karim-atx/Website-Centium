@@ -11,15 +11,18 @@
 
 import { calculateTDEEFromParts, servingMultiplier, gramsInServingLabel } from "../../../services/nutrition";
 import type { ConflictKind } from "../proRules";
-import { DAY_LONG, DAY_SHORT, mondayIndex } from "../../../utils/week";
+import { mondayIndex } from "../../../utils/week";
 import { appLocale } from "../../../i18n/format";
+import { getLanguage, t, tk, tn } from "../../../i18n/core";
+import { weekdayLong, weekdayShort } from "../proDates";
 
 export type MealSlot = "breakfast" | "lunch" | "snack" | "dinner";
 /** The builder's meal order (frame NU2: Breakfast, Lunch, Snacks, Dinner). */
 export const SLOT_ORDER: MealSlot[] = ["breakfast", "lunch", "snack", "dinner"];
 /** The add-food Meal chips (frame NU4: Breakfast, Snacks, Lunch, Dinner). */
 export const SLOT_CHIP_ORDER: MealSlot[] = ["breakfast", "snack", "lunch", "dinner"];
-export const SLOT_LABEL: Record<MealSlot, string> = { breakfast: "Breakfast", lunch: "Lunch", snack: "Snacks", dinner: "Dinner" };
+/** English keys (tk); show them with t(). */
+export const SLOT_LABEL: Record<MealSlot, string> = { breakfast: tk("Breakfast"), lunch: tk("Lunch"), snack: tk("Snacks"), dinner: tk("Dinner") };
 
 export type ItemKind = "food" | "custom_food" | "recipe" | "custom_meal";
 
@@ -94,9 +97,9 @@ export function dayTotalView(total: Macros, plan: { kcalTarget: number | null; p
   const grams = target && plan.proteinPct != null && plan.carbsPct != null && plan.fatPct != null ? macroGrams(target, { proteinPct: plan.proteinPct, carbsPct: plan.carbsPct, fatPct: plan.fatPct }) : null;
   const one = (key: "p" | "c" | "f", label: string) => {
     const value = Math.round(total[key]);
-    const t = grams ? grams[key] : null;
-    const frac = t ? value / t : null;
-    return { key, label, value, target: t, over: frac !== null && frac > 1.03, fraction: frac === null ? null : Math.min(1, frac) };
+    const tg = grams ? grams[key] : null;
+    const frac = tg ? value / tg : null;
+    return { key, label, value, target: tg, over: frac !== null && frac > 1.03, fraction: frac === null ? null : Math.min(1, frac) };
   };
   const kcal = Math.round(total.kcal);
   return {
@@ -104,21 +107,21 @@ export function dayTotalView(total: Macros, plan: { kcalTarget: number | null; p
     target,
     fraction: target ? Math.min(1, kcal / target) : null,
     left: target ? Math.round(target - kcal) : null,
-    macros: [one("p", "Protein"), one("c", "Carbs"), one("f", "Fat")],
+    macros: [one("p", t("Protein")), one("c", t("Carbs")), one("f", t("Fat"))],
   };
 }
 
 /** "{n} days · {n} to {n} kcal" (NU1). Day totals of days that have items; one value collapses. */
 export function templateLine(daysCount: number, dayTotals: number[], kcalTarget: number | null): string {
-  const days = `${daysCount} ${daysCount === 1 ? "day" : "days"}`;
+  const days = tn(daysCount, "{n} day", "{n} days");
   const filled = dayTotals.filter((k) => k > 0).map((k) => Math.round(k));
   const fmt = (n: number) => n.toLocaleString(appLocale("en-GB"));
   if (filled.length) {
     const lo = Math.min(...filled);
     const hi = Math.max(...filled);
-    return lo === hi ? `${days} · ${fmt(lo)} kcal` : `${days} · ${fmt(lo)} to ${fmt(hi)} kcal`;
+    return lo === hi ? `${days} · ${t("{n} kcal", { n: fmt(lo) })}` : `${days} · ${t("{lo} to {hi} kcal", { lo: fmt(lo), hi: fmt(hi) })}`;
   }
-  return kcalTarget ? `${days} · ${fmt(Math.round(kcalTarget))} kcal` : days;
+  return kcalTarget ? `${days} · ${t("{n} kcal", { n: fmt(Math.round(kcalTarget)) })}` : days;
 }
 
 export function plural(n: number, one: string, many?: string): string {
@@ -158,15 +161,15 @@ export function planDayFor(startsOn: string, daysCount: number, date: string): n
  * "{weekday} total"); a template has no start, so its days are "Day n".
  */
 export function dayLabels(dayIndex: number, startsOn: string | null): { tab: string; total: string; short: string } {
-  if (!startsOn) return { tab: `Day ${dayIndex}`, total: `Day ${dayIndex} total`, short: `Day ${dayIndex}` };
+  if (!startsOn) return { tab: t("Day {n}", { n: dayIndex }), total: t("Day {n} total", { n: dayIndex }), short: t("Day {n}", { n: dayIndex }) };
   const d = new Date(`${shiftDate(startsOn, dayIndex - 1)}T00:00:00`).getDay();
-  return { tab: DAY_SHORT[mondayIndex(d)], total: `${DAY_LONG[mondayIndex(d)]} total`, short: DAY_SHORT[mondayIndex(d)] };
+  return { tab: weekdayShort(mondayIndex(d)), total: t("{day} total", { day: weekdayLong(mondayIndex(d)) }), short: weekdayShort(mondayIndex(d)) };
 }
 
 /** "Mon, Oct 5" (FINAL_PLAN 3 {day_date}: weekday and date from one value). */
 export function dayDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
-  return `${DAY_SHORT[mondayIndex(d.getDay())]}, ${d.toLocaleDateString(appLocale("en-US"), { month: "short" })} ${d.getDate()}`;
+  return d.toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
 }
 
 /** "Oct 5" and "Oct 5 to 7" / "Sep 30 to Oct 2" (NU5). */
@@ -177,15 +180,15 @@ export function dayRange(first: string, last: string): string {
   if (first === last) return shortDay(first);
   const a = new Date(`${first}T00:00:00`);
   const b = new Date(`${last}T00:00:00`);
-  return a.getMonth() === b.getMonth() ? `${shortDay(first)} to ${b.getDate()}` : `${shortDay(first)} to ${shortDay(last)}`;
+  return a.getMonth() === b.getMonth() ? t("{from} to {to}", { from: shortDay(first), to: b.getDate() }) : t("{from} to {to}", { from: shortDay(first), to: shortDay(last) });
 }
 
 /** "Today", "Yesterday", "{n} days ago" (NU5 corner). */
 export function daysAgo(iso: string, today: string): string {
   const d = daysBetween(iso, today);
-  if (d <= 0) return "Today";
-  if (d === 1) return "Yesterday";
-  return `${d} days ago`;
+  if (d <= 0) return t("Today");
+  if (d === 1) return t("Yesterday");
+  return tn(d, "{n} day ago", "{n} days ago");
 }
 
 // ---------------------------------------------------------------------------
@@ -247,21 +250,21 @@ export function clientConflictLine(
       seen.add(key);
       if (r.kind === "allergy_confirmed" && r.allergen) {
         blocked = true;
-        parts.push(`${it.name} (${label.allergen(r.allergen).toLowerCase()} allergy, blocked)`);
+        parts.push(t("{food} ({allergen} allergy, blocked)", { food: it.name, allergen: label.allergen(r.allergen).toLowerCase() }));
       } else if (r.kind === "allergy_check" && r.allergen) {
         amber = true;
-        parts.push(`${it.name} (check for ${label.allergen(r.allergen).toLowerCase()})`);
+        parts.push(t("{food} (check for {allergen})", { food: it.name, allergen: label.allergen(r.allergen).toLowerCase() }));
       } else if (r.kind === "restriction" && r.restriction) {
         amber = true;
         parts.push(`${it.name} (${label.restriction(r.restriction)})`);
       } else if (r.kind === "preference" && r.restriction) {
-        parts.push(`${it.name} (prefers ${label.restriction(r.restriction)})`);
+        parts.push(t("{food} (prefers {restriction})", { food: it.name, restriction: label.restriction(r.restriction) }));
       }
     }
   }
-  const unknownLine = "Allergies aren't shared, so they can't be checked.";
-  if (!parts.length) return unknown ? { blocked: false, tone: "unknown", text: unknownLine } : { blocked: false, tone: "none", text: "No conflicts" };
-  const head = `${parts.length} ${parts.length === 1 ? "conflict" : "conflicts"}: ${parts.join(", ")}.`;
+  const unknownLine = t("Allergies aren't shared, so they can't be checked.");
+  if (!parts.length) return unknown ? { blocked: false, tone: "unknown", text: unknownLine } : { blocked: false, tone: "none", text: t("No conflicts") };
+  const head = tn(parts.length, "{n} conflict: {list}.", "{n} conflicts: {list}.", { list: parts.join(getLanguage() === "ar" ? "، " : ", ") });
   return { blocked, tone: blocked ? "att" : amber ? "req" : "none", text: unknown ? `${head} ${unknownLine}` : head };
 }
 
@@ -325,9 +328,9 @@ export function buildQueue(
 export function journalBox(value: number, target: number | null): { pct: number; over: boolean; left: string | null } {
   if (!target || target <= 0) return { pct: 0, over: false, left: null };
   const v = Math.round(value);
-  const t = Math.round(target);
-  const over = v > t;
-  return { pct: Math.min(100, (v / t) * 100), over, left: over ? `${(v - t).toLocaleString(appLocale("en-GB"))} over` : `${(t - v).toLocaleString(appLocale("en-GB"))} to go` };
+  const tg = Math.round(target);
+  const over = v > tg;
+  return { pct: Math.min(100, (v / tg) * 100), over, left: over ? t("{n} over", { n: (v - tg).toLocaleString(appLocale("en-GB")) }) : t("{n} to go", { n: (tg - v).toLocaleString(appLocale("en-GB")) }) };
 }
 
 // ---------------------------------------------------------------------------
@@ -358,13 +361,13 @@ export interface TdeeBasics {
 
 /** The client's own activity words (components/profile/ActivityLevelSheet.tsx). */
 export const ACTIVITY_LABEL: Record<NonNullable<TdeeBasics["activityLevel"]>, string> = {
-  sedentary: "Sedentary",
-  light: "Lightly active",
-  moderate: "Moderately active",
-  very_active: "Very active",
-  athlete: "Athlete",
+  sedentary: tk("Sedentary"),
+  light: tk("Lightly active"),
+  moderate: tk("Moderately active"),
+  very_active: tk("Very active"),
+  athlete: tk("Athlete"),
 };
-const SEX_LABEL: Record<NonNullable<TdeeBasics["sex"]>, string> = { female: "Female", male: "Male", other: "Other" };
+const SEX_LABEL: Record<NonNullable<TdeeBasics["sex"]>, string> = { female: tk("Female"), male: tk("Male"), other: tk("Other") };
 
 export type TdeeView =
   | { tdee: number; basis: string }
@@ -378,26 +381,26 @@ export type TdeeView =
  * is the frame's "82.4 kg · 180 cm · 34 · Male · Lightly active".
  */
 export function tdeeView(basics: TdeeBasics | null, weightKg: number | null, weightShared: boolean, first: string): TdeeView {
-  const who = first || "Your client";
-  const title = "Needs height, age, sex and activity";
-  if (!basics) return { tdee: null, title, line: `${who} hasn't shared their height, age, sex and activity level with you, so no maintenance estimate is made.` };
+  const who = first || t("Your client");
+  const title = t("Needs height, age, sex and activity");
+  if (!basics) return { tdee: null, title, line: t("{name} hasn't shared their height, age, sex and activity level with you, so no maintenance estimate is made.", { name: who }) };
   const { ageYears, sex, heightCm, activityLevel } = basics;
-  const missing = [heightCm === null ? "height" : null, ageYears === null ? "date of birth" : null, sex === null ? "sex" : null, activityLevel === null ? "activity level" : null].filter((x): x is string => !!x);
+  const missing = [heightCm === null ? t("height") : null, ageYears === null ? t("date of birth") : null, sex === null ? t("sex") : null, activityLevel === null ? t("activity level") : null].filter((x): x is string => !!x);
   if (missing.length || ageYears === null || sex === null || heightCm === null || activityLevel === null) {
-    const list = missing.length > 1 ? `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}` : missing[0];
-    return { tdee: null, title, line: `${who} hasn't added their ${list} yet, so no maintenance estimate is made.` };
+    const list = missing.length > 1 ? t("{list} and {last}", { list: missing.slice(0, -1).join(getLanguage() === "ar" ? "، " : ", "), last: missing[missing.length - 1] }) : missing[0];
+    return { tdee: null, title, line: t("{name} hasn't added their {list} yet, so no maintenance estimate is made.", { name: who, list }) };
   }
   if (weightKg === null) {
     return {
       tdee: null,
-      title: "Needs a weigh-in",
-      line: weightShared ? `${who} hasn't logged a weigh-in yet. Mifflin-St Jeor needs a current weight.` : `${who}'s weigh-ins aren't shared with you. Mifflin-St Jeor needs a current weight.`,
+      title: t("Needs a weigh-in"),
+      line: weightShared ? t("{name} hasn't logged a weigh-in yet. Mifflin-St Jeor needs a current weight.", { name: who }) : t("{name}'s weigh-ins aren't shared with you. Mifflin-St Jeor needs a current weight.", { name: who }),
     };
   }
   const fmt = (n: number) => String(Math.round(n * 10) / 10);
   return {
     tdee: calculateTDEEFromParts(weightKg, heightCm, ageYears, sex, activityLevel),
-    basis: [`${fmt(weightKg)} kg`, `${fmt(heightCm)} cm`, String(ageYears), SEX_LABEL[sex], ACTIVITY_LABEL[activityLevel]].join(" · "),
+    basis: [t("{n} kg", { n: fmt(weightKg) }), t("{n} cm", { n: fmt(heightCm) }), String(ageYears), t(SEX_LABEL[sex]), t(ACTIVITY_LABEL[activityLevel])].join(" · "),
   };
 }
 

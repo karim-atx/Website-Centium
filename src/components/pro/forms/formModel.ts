@@ -22,27 +22,30 @@
 // profile_hint) come with a template and are never written by the builder.
 
 import { signedNum } from "../proRules";
-import { DAY_LONG } from "../../../utils/week";
 import { time12 } from "../../../utils/time12";
 import { appLocale } from "../../../i18n/format";
+import { getLanguage, t, tk, tn } from "../../../i18n/core";
+import { weekdayLong } from "../proDates";
 
+/** The comma between listed parts, in the app's language. */
+const comma = () => (getLanguage() === "ar" ? "، " : ", ");
 export type DbQuestionType = "number" | "scale" | "choice" | "multi" | "text" | "long_text" | "photo" | "date";
 export type SafetyTopic = "pain" | "injury" | "illness" | "symptoms";
 export type FormKind = "intake" | "check_in";
 
-/** The add-a-question grid (gen/r18.js QT18), in the frame's order. */
+/** The add-a-question grid (gen/r18.js QT18), in the frame's order. Labels are English keys (tk); show them with t(). */
 export type UiType = "short" | "long" | "single" | "multi" | "number" | "scale" | "date" | "yesno" | "photo" | "body";
 export const UI_TYPES: { key: UiType; label: string; available: boolean }[] = [
-  { key: "short", label: "Short text", available: true },
-  { key: "long", label: "Long text", available: true },
-  { key: "single", label: "Single choice", available: true },
-  { key: "multi", label: "Multiple choice", available: true },
-  { key: "number", label: "Number with unit", available: true },
-  { key: "scale", label: "Scale 1 to 10", available: true },
-  { key: "date", label: "Date", available: true },
-  { key: "yesno", label: "Yes or no", available: true },
-  { key: "photo", label: "Photo or file", available: true },
-  { key: "body", label: "Body measurements", available: true },
+  { key: "short", label: tk("Short text"), available: true },
+  { key: "long", label: tk("Long text"), available: true },
+  { key: "single", label: tk("Single choice"), available: true },
+  { key: "multi", label: tk("Multiple choice"), available: true },
+  { key: "number", label: tk("Number with unit"), available: true },
+  { key: "scale", label: tk("Scale 1 to 10"), available: true },
+  { key: "date", label: tk("Date"), available: true },
+  { key: "yesno", label: tk("Yes or no"), available: true },
+  { key: "photo", label: tk("Photo or file"), available: true },
+  { key: "body", label: tk("Body measurements"), available: true },
 ];
 
 export const OPTIONS_MAX = 20;
@@ -69,14 +72,14 @@ export type ShowIf =
   | { questionId: string; op: "in"; value: string[] };
 export type ShowIfOp = ShowIf["op"];
 
-/** form_questions.profile_field: what the client is offered to add to their profile. */
+/** form_questions.profile_field: what the client is offered to add to their profile. English keys (tk); show them with t(). */
 export type ProfileField = "allergies" | "dietary_restrictions" | "medications" | "injuries" | "weight";
 export const PROFILE_FIELD_LABEL: Record<ProfileField, string> = {
-  allergies: "Allergies",
-  dietary_restrictions: "Dietary needs",
-  medications: "Medications",
-  injuries: "Injuries",
-  weight: "Weight",
+  allergies: tk("Allergies"),
+  dietary_restrictions: tk("Dietary needs"),
+  medications: tk("Medications"),
+  injuries: tk("Injuries"),
+  weight: tk("Weight"),
 };
 
 /** One question as the builder holds it (a form_questions row, or a new one). */
@@ -126,7 +129,13 @@ const blank = (type: DbQuestionType, prompt: string, extra: Partial<QuestionDraf
   ...extra,
 });
 
-/** New questions for a frame type: empty prompts, the type's own defaults. */
+/**
+ * New questions for a frame type: empty prompts, the type's own defaults. The
+ * defaults written into the form ("Yes" / "No", the body measurement prompts
+ * and units) stay English: they are saved as the form's content (and "Yes" /
+ * "No" is how a yes / no question is recognised); the screens show "Yes" /
+ * "No" in the app's language with answerLabel().
+ */
 export function questionsFor(ui: UiType): QuestionDraft[] {
   switch (ui) {
     case "short":
@@ -156,25 +165,28 @@ export function questionsFor(ui: UiType): QuestionDraft[] {
 export function typeLabel(q: Pick<QuestionDraft, "type" | "options" | "scaleMin" | "scaleMax">): string {
   switch (q.type) {
     case "text":
-      return "Short text";
+      return t("Short text");
     case "long_text":
-      return "Long text";
+      return t("Long text");
     case "choice":
-      return isYesNo(q.options) ? "Yes or no" : "Single choice";
+      return isYesNo(q.options) ? t("Yes or no") : t("Single choice");
     case "multi":
-      return "Multiple choice";
+      return t("Multiple choice");
     case "number":
-      return "Number with unit";
+      return t("Number with unit");
     case "scale":
-      return `Scale ${q.scaleMin ?? 1} to ${q.scaleMax ?? 10}`;
+      return t("Scale {min} to {max}", { min: q.scaleMin ?? 1, max: q.scaleMax ?? 10 });
     case "date":
-      return "Date";
+      return t("Date");
     case "photo":
-      return "Photo or file";
+      return t("Photo or file");
   }
 }
 
 export const isYesNo = (o: string[] | null) => !!o && o.length === 2 && o[0] === "Yes" && o[1] === "No";
+
+/** An answer as shown: the stored "Yes" / "No" in the app's language, anything else as written. */
+export const answerLabel = (v: string) => (v === "Yes" ? t("Yes") : v === "No" ? t("No") : v);
 
 /** Which frame type's icon a stored question uses. */
 export function uiTypeOf(q: Pick<QuestionDraft, "type" | "options">): UiType {
@@ -201,20 +213,20 @@ export function uiTypeOf(q: Pick<QuestionDraft, "type" | "options">): UiType {
 /** Why a question can't be saved yet, or null. */
 export function questionProblem(q: QuestionDraft): string | null {
   const p = q.prompt.trim();
-  if (!p) return "Write the question.";
-  if (p.length > PROMPT_MAX) return `Keep the question under ${PROMPT_MAX} characters.`;
+  if (!p) return t("Write the question.");
+  if (p.length > PROMPT_MAX) return t("Keep the question under {n} characters.", { n: PROMPT_MAX });
   if (q.type === "choice" || q.type === "multi") {
     const opts = (q.options ?? []).map((o) => o.trim()).filter(Boolean);
-    if (opts.length < 2) return "Add at least two answers.";
-    if (opts.length > OPTIONS_MAX) return `Up to ${OPTIONS_MAX} answers.`;
-    if (new Set(opts).size !== opts.length) return "Each answer once.";
+    if (opts.length < 2) return t("Add at least two answers.");
+    if (opts.length > OPTIONS_MAX) return t("Up to {n} answers.", { n: OPTIONS_MAX });
+    if (new Set(opts).size !== opts.length) return t("Each answer once.");
   }
-  if (q.type === "number" && (q.unit ?? "").trim().length > UNIT_MAX) return `Keep the unit under ${UNIT_MAX} characters.`;
-  if (q.type === "scale" && (q.scaleMin == null || q.scaleMax == null || q.scaleMin >= q.scaleMax)) return "The scale needs a low and a high end.";
+  if (q.type === "number" && (q.unit ?? "").trim().length > UNIT_MAX) return t("Keep the unit under {n} characters.", { n: UNIT_MAX });
+  if (q.type === "scale" && (q.scaleMin == null || q.scaleMax == null || q.scaleMin >= q.scaleMax)) return t("The scale needs a low and a high end.");
   if (q.sectionTitle != null) {
-    const t = q.sectionTitle.trim();
-    if (!t) return "Give the section a title.";
-    if (t.length > SECTION_MAX) return `Keep the section title under ${SECTION_MAX} characters.`;
+    const title = q.sectionTitle.trim();
+    if (!title) return t("Give the section a title.");
+    if (title.length > SECTION_MAX) return t("Keep the section title under {n} characters.", { n: SECTION_MAX });
   }
   return null;
 }
@@ -232,8 +244,8 @@ export const conditionOp = (parent: Pick<QuestionDraft, "type">): "equals" | "in
 /** Every condition a parent of this kind can carry (the database's pairs), in the order the builder offers them. */
 export const opsFor = (parent: Pick<QuestionDraft, "type">): ShowIfOp[] => (parent.type === "multi" ? ["includes", "excludes"] : ["equals", "not_equals", "in"]);
 
-/** The builder's words for each kind ("is not none" is Doesn't include None). */
-export const OP_LABEL: Record<ShowIfOp, string> = { equals: "Is", not_equals: "Is not", in: "Is either of", includes: "Includes", excludes: "Doesn't include" };
+/** The builder's words for each kind ("is not none" is Doesn't include None). English keys (tk); show them with t(). */
+export const OP_LABEL: Record<ShowIfOp, string> = { equals: tk("Is"), not_equals: tk("Is not"), in: tk("Is either of"), includes: tk("Includes"), excludes: tk("Doesn't include") };
 
 /** The answers a condition names (one, or the list of "in"). */
 export const conditionAnswers = (c: ShowIf): string[] => (c.op === "in" ? c.value : [c.value]);
@@ -279,32 +291,32 @@ export function conditionProblem(draft: QuestionDraft[], index: number): string 
   const c = draft[index]?.showIf;
   if (!c) return null;
   const at = draft.findIndex((p) => p.id === c.questionId);
-  if (at === -1) return "The question this depends on was removed. Choose another.";
-  if (at >= index) return "Move this below the question it depends on.";
+  if (at === -1) return t("The question this depends on was removed. Choose another.");
+  if (at >= index) return t("Move this below the question it depends on.");
   const parent = draft[at];
-  if (!CONDITION_TYPES.includes(parent.type) || !opsFor(parent).includes(c.op)) return "Choose the condition again.";
+  if (!CONDITION_TYPES.includes(parent.type) || !opsFor(parent).includes(c.op)) return t("Choose the condition again.");
   const named = conditionAnswers(c);
   const values = conditionValues(parent);
-  if (!named.length || named.some((v) => !values.includes(v))) return "The answer this depends on changed. Choose it again.";
+  if (!named.length || named.some((v) => !values.includes(v))) return t("The answer this depends on changed. Choose it again.");
   return null;
 }
 
 /** "A or B", "A, B or C". */
-const orList = (xs: string[]) => (xs.length <= 1 ? xs[0] ?? "" : `${xs.slice(0, -1).join(", ")} or ${xs[xs.length - 1]}`);
+const orList = (xs: string[]) => (xs.length <= 1 ? xs[0] ?? "" : t("{list} or {last}", { list: xs.slice(0, -1).join(comma()), last: xs[xs.length - 1] }));
 
 /** A condition in plain words: "is Yes", "is not 0", "includes Home", "doesn't include None", "is Some days or Not this week". */
 export function conditionWords(c: ShowIf): string {
   switch (c.op) {
     case "equals":
-      return `is ${c.value}`;
+      return t("is {value}", { value: answerLabel(c.value) });
     case "not_equals":
-      return `is not ${c.value}`;
+      return t("is not {value}", { value: answerLabel(c.value) });
     case "includes":
-      return `includes ${c.value}`;
+      return t("includes {value}", { value: c.value });
     case "excludes":
-      return `doesn't include ${c.value}`;
+      return t("doesn't include {value}", { value: c.value });
     case "in":
-      return `is ${orList(c.value)}`;
+      return t("is {value}", { value: orList(c.value.map(answerLabel)) });
   }
 }
 
@@ -313,8 +325,8 @@ export function conditionLine(draft: Pick<QuestionDraft, "id" | "prompt">[], q: 
   const c = q.showIf;
   if (!c) return null;
   const parent = draft.find((p) => p.id === c.questionId);
-  const what = parent?.prompt.trim() ? `"${parent.prompt.trim()}"` : "an earlier question";
-  return `Only ask if ${what} ${conditionWords(c)}`;
+  const what = parent?.prompt.trim() ? t("\"{prompt}\"", { prompt: parent.prompt.trim() }) : t("an earlier question");
+  return t("Only ask if {question} {condition}", { question: what, condition: conditionWords(c) });
 }
 
 /** Removing a question clears the conditions that named it. */
@@ -480,17 +492,18 @@ export function diffQuestions(saved: QuestionDraft[], draft: QuestionDraft[]) {
 // Safety (DECISIONS_PROFESSIONAL "Safety"; FINAL_PLAN 2.5 and 3 §6.2)
 // ---------------------------------------------------------------------------
 
-export const SAFETY_LABEL: Record<SafetyTopic, string> = { pain: "pain", injury: "an injury", illness: "illness", symptoms: "worrying symptoms" };
+/** English keys (tk); topicsPhrase shows them with t(). */
+export const SAFETY_LABEL: Record<SafetyTopic, string> = { pain: tk("pain"), injury: tk("an injury"), illness: tk("illness"), symptoms: tk("worrying symptoms") };
 
 /** "pain", "pain and an injury", "pain, an injury and illness". */
 export function topicsPhrase(topics: string[]): string {
-  const words = topics.map((t) => SAFETY_LABEL[t as SafetyTopic] ?? t);
+  const words = topics.map((x) => (SAFETY_LABEL[x as SafetyTopic] ? t(SAFETY_LABEL[x as SafetyTopic]) : x));
   if (words.length <= 1) return words[0] ?? "";
-  return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
+  return t("{list} and {last}", { list: words.slice(0, -1).join(comma()), last: words[words.length - 1] });
 }
 
 /** FINAL_PLAN 3 §6.2: "Answers mention {safety_topic}. Suggest {client_first_name} talks to a doctor." */
-export const safetyBanner = (topics: string[], firstName: string) => `Answers mention ${topicsPhrase(topics)}. Suggest ${firstName} talks to a doctor.`;
+export const safetyBanner = (topics: string[], firstName: string) => t("Answers mention {topics}. Suggest {name} talks to a doctor.", { topics: topicsPhrase(topics), name: firstName });
 
 // ---------------------------------------------------------------------------
 // Schedules (form_assignments.schedule: daily@HH:MM, weekly:<1-7>@HH:MM, and
@@ -526,9 +539,8 @@ export function parseSchedule(v: string | null | undefined): Schedule | null {
 
 /** "Every week · Sunday 6:00 PM" / "Every 2 weeks · Monday 9:00 AM" / "Every day · 8:00 AM". */
 export function scheduleLine(s: Schedule): string {
-  if (s.isoDay == null) return `Every day · ${time12(s.time)}`;
-  const every = (s.every ?? 1) === 1 ? "Every week" : `Every ${s.every} weeks`;
-  return `${every} · ${DAY_LONG[s.isoDay - 1]} ${time12(s.time)}`;
+  if (s.isoDay == null) return t("Every day · {time}", { time: time12(s.time) });
+  return tn(s.every ?? 1, "Every week · {day} {time}", "Every {n} weeks · {day} {time}", { day: weekdayLong(s.isoDay - 1), time: time12(s.time) });
 }
 
 /** Times offered in the schedule sheet: every 30 minutes, 6 AM to 10 PM. */
@@ -562,24 +574,24 @@ const fmtDate = (iso: string) => {
 
 /** An answer as text (photos are drawn, not written). */
 export function answerText(q: Pick<QuestionDraft, "type" | "unit" | "scaleMax">, v: unknown): string {
-  if (!isAnswered(v)) return "Not answered";
+  if (!isAnswered(v)) return t("Not answered");
   switch (q.type) {
     case "number": {
       const n = Number(v);
       return Number.isFinite(n) ? `${n}${q.unit ? ` ${q.unit}` : ""}` : String(v);
     }
     case "scale":
-      return `${String(v)} of ${q.scaleMax ?? 10}`;
+      return t("{value} of {max}", { value: String(v), max: q.scaleMax ?? 10 });
     case "multi":
-      return Array.isArray(v) ? v.map(String).join(", ") : String(v);
+      return Array.isArray(v) ? v.map(String).join(comma()) : String(v);
     case "date":
       return typeof v === "string" ? fmtDate(v) : String(v);
     case "photo": {
       const n = photoPaths(v).length;
-      return n === 1 ? "1 photo" : `${n} photos`;
+      return tn(n, "1 photo", "{n} photos");
     }
     default:
-      return Array.isArray(v) ? v.map(String).join(", ") : String(v);
+      return Array.isArray(v) ? v.map(String).join(comma()) : typeof v === "string" ? answerLabel(v) : String(v);
   }
 }
 

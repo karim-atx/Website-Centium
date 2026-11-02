@@ -35,6 +35,14 @@ const AREAS = [
   ["proprofile", "Professional tools: More, profile, services and credentials"],
   ["procalendar", "Professional tools: Calendar"],
   ["promessages", "Professional tools: Messages"],
+  ["prolibrary", "Professional tools: Library, templates and programmes"],
+  ["pronutrition", "Professional tools: Nutrition library and meal plans"],
+  ["proforms", "Professional tools: Forms and check-ins"],
+  ["proinsights", "Professional tools: Client and practice insights"],
+  ["provitals", "Professional tools: Biomarkers, vitals and sleep"],
+  ["procourses", "Professional tools: Courses"],
+  ["pronetwork", "Professional tools: Care network and businesses"],
+  ["promarket", "Professional tools: Marketplace"],
 ];
 
 const rows = [];

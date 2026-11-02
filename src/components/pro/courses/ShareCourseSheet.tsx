@@ -10,6 +10,7 @@ import { INK } from "../proInk";
 import { Avatar } from "../client/kit";
 import { Field, FieldError, Label } from "./courseUi";
 import { siteHref } from "../../../config/site";
+import { t, tn } from "../../../i18n/core";
 
 const courseUrl = (id: string) => siteHref(`/app/forum/courses/${id}`);
 
@@ -89,14 +90,14 @@ export const ShareCourseSheet: React.FC<{ course: CourseCard; onClose: () => voi
     <BottomSheet
       open
       onClose={onClose}
-      title={`Share ${course.title}`}
+      title={t("Share {title}", { title: course.title })}
       size="tall"
       footer={
         <div className="flex w-full" style={{ gap: 8 }}>
-          <CtaButton variant="secondary" label="Share" icon={<Share size={15} strokeWidth={2} aria-hidden />} onClick={() => void share()} />
+          <CtaButton variant="secondary" label={t("Share")} icon={<Share size={15} strokeWidth={2} aria-hidden />} onClick={() => void share()} />
           <CtaButton
-            label={`Send to ${picked.length} ${picked.length === 1 ? "client" : "clients"}`}
-            icon={<Send size={15} strokeWidth={2} aria-hidden />}
+            label={tn(picked.length, "Send to {n} client", "Send to {n} clients")}
+            icon={<Send size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />}
             disabled={!picked.length}
             loading={busy}
             onClick={() => void send()}
@@ -108,17 +109,17 @@ export const ShareCourseSheet: React.FC<{ course: CourseCard; onClose: () => voi
         <span className="flex-1 min-w-0 flex items-center overflow-hidden whitespace-nowrap" style={{ height: 44, borderRadius: 12, background: INK.soft, padding: "0 12px", fontSize: textPx(13), color: INK.chS }}>
           <span className="truncate">{url.replace(/^https?:\/\//, "")}</span>
         </span>
-        <button type="button" onClick={copy} aria-label={copied ? "Link copied" : "Copy link"} className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, borderRadius: 12, background: INK.fill }}>
+        <button type="button" onClick={copy} aria-label={copied ? t("Link copied") : t("Copy link")} className="tap flex items-center justify-center shrink-0" style={{ width: 44, height: 44, borderRadius: 12, background: INK.fill }}>
           {copied ? <Check size={17} strokeWidth={2} aria-hidden style={{ color: INK.onFill }} /> : <Copy size={17} strokeWidth={2} aria-hidden style={{ color: INK.onFill }} />}
         </button>
       </div>
-      <Label mt={0}>Suggest it to clients</Label>
-      <Field id="share-search" ariaLabel="Search your clients" value={query} onChange={setQuery} placeholder="Search your clients" lead={<Search size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />} />
+      <Label mt={0}>{t("Suggest it to clients")}</Label>
+      <Field id="share-search" ariaLabel={t("Search your clients")} value={query} onChange={setQuery} placeholder={t("Search your clients")} lead={<Search size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />} />
       <div style={{ height: 8 }} />
       {roster.length === 0 ? (
-        <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{professionalClients.length ? "No clients match." : "Clients you work with appear here."}</p>
+        <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{professionalClients.length ? t("No clients match.") : t("Clients you work with appear here.")}</p>
       ) : (
-        <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "2px 12px" }} role="group" aria-label="Your clients">
+        <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "2px 12px" }} role="group" aria-label={t("Your clients")}>
           {roster.map((c, i) => {
             const on = picked.includes(c.clientId!);
             const already = enrolled.has(c.clientId!);
@@ -138,7 +139,7 @@ export const ShareCourseSheet: React.FC<{ course: CourseCard; onClose: () => voi
                   <span className="block" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
                     {c.name}
                   </span>
-                  {already && <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>Already enrolled</span>}
+                  {already && <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>{t("Already enrolled")}</span>}
                 </span>
                 {!already && (
                   <span className="flex items-center justify-center shrink-0" style={{ width: 22, height: 22, borderRadius: 7, border: `2px solid ${on ? INK.prDeep : "rgb(var(--c-charcoal) / 0.11)"}`, background: on ? INK.prDeep : "transparent" }}>

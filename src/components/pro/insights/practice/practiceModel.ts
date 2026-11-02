@@ -1,4 +1,5 @@
 import { appLocale } from "../../../../i18n/format";
+import { t } from "../../../../i18n/core";
 // Release 3 · W6 MO19 v3 Practice insights: the numbers from the documented
 // readers, by HANDOVER i ("Practice insights: clients coached, Sessions
 // delivered, Average rating, Retention, Outcome, Years on Centium"). Pure.
@@ -215,5 +216,5 @@ export function rosterInsight(months: MonthRoster[]): string | null {
   const done = months.reduce((a, m) => a + m.completed, 0);
   if (!added && !done) return null;
   const per = (n: number) => Math.round((n / months.length) * 10) / 10;
-  return `${per(added)} new clients a month, ${per(done)} finishing.`;
+  return t("{added} new clients a month, {done} finishing.", { added: per(added), done: per(done) });
 }

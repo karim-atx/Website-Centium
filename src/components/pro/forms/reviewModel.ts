@@ -5,6 +5,7 @@
 
 import { answerFor, deltaText, isAnswered, numericAnswer, photoPaths, type QuestionDraft, type ShowIf } from "./formModel";
 import { conditionMet, type ShowIfRule } from "../../../services/client-forms/logic";
+import { tk } from "../../../i18n/core";
 
 export type PositionedQuestion = QuestionDraft & { position: number };
 
@@ -88,8 +89,8 @@ export function responseWarning(r: { urgent: boolean; safetyFlag: boolean; safet
   return { urgent: r.urgent, topics };
 }
 
-/** The marker in a list of responses: "Urgent", "Flagged" or none (urgent wins). */
-export const responseMarker = (r: { urgent: boolean; safetyFlag: boolean }): "Urgent" | "Flagged" | null => (r.urgent ? "Urgent" : r.safetyFlag ? "Flagged" : null);
+/** The marker in a list of responses: "Urgent", "Flagged" or none (urgent wins). English keys (tk); show them with t(). */
+export const responseMarker = (r: { urgent: boolean; safetyFlag: boolean }): "Urgent" | "Flagged" | null => (r.urgent ? tk("Urgent") : r.safetyFlag ? tk("Flagged") : null);
 
 export interface ResponseLike {
   id: string;

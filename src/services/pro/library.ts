@@ -23,6 +23,7 @@ import { setTypesColumn } from "../templates/setTypes";
 import { prescribedSetCount, readSetTargets, setTargetsColumn } from "../workout/setTargets";
 import { SESSION_SELECT, toWorkoutSession } from "../workout/log";
 import { rpc } from "./rpc";
+import { tk } from "../../i18n/core";
 import type { Read } from "./clients";
 import type { BlockKind, Exercise, ExerciseClassification, MuscleGroup, PrescribedSetType, SetTarget, WorkoutBlock, WorkoutSession } from "../../types";
 
@@ -206,9 +207,9 @@ type SaveResult = { ok: true } | { ok: false; message: string };
 function copyFailure(error: { code?: string } & object): SaveResult {
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
   // ATXB5 / 42501: another professional, the client's own routine, or after End coaching.
-  if (error.code === "42501") return { ok: false, message: "This isn't a programme you assigned to a current client." };
-  if (error.code === "23514" || error.code === "22003") return { ok: false, message: "One of those numbers is outside the range this can store." };
-  return { ok: false, message: "Couldn't save. Try again." };
+  if (error.code === "42501") return { ok: false, message: tk("This isn't a programme you assigned to a current client.") };
+  if (error.code === "23514" || error.code === "22003") return { ok: false, message: tk("One of those numbers is outside the range this can store.") };
+  return { ok: false, message: tk("Couldn't save. Try again.") };
 }
 
 const sameBlocks = (a: WorkoutBlock[], b: WorkoutBlock[]) =>
@@ -260,7 +261,7 @@ export async function saveClientCopy(copy: ClientCopy, exercises: Exercise[], bl
           }))
         )
         .select("id");
-      if (error || !data) return error ? copyFailure(error) : { ok: false, message: "Couldn't save. Try again." };
+      if (error || !data) return error ? copyFailure(error) : { ok: false, message: tk("Couldn't save. Try again.") };
       blocks.forEach((b, i) => {
         const row = (data as { id: string }[])[i];
         if (row) blockIds.set(b.id, row.id);
@@ -300,10 +301,10 @@ export async function saveClientCopy(copy: ClientCopy, exercises: Exercise[], bl
 /** Changes one exercise's weight in a client's copy (TR14 Save targets). */
 export async function setClientCopyWeight(routineId: string, match: { exerciseId?: string; name: string }, weightKg: number): Promise<{ ok: true } | { ok: false; message: string }> {
   const copy = await fetchClientCopy(routineId);
-  if (!copy.ok) return { ok: false, message: copy.offline ? OFFLINE_MESSAGE : "Couldn't save. Try again." };
-  if (!copy.data) return { ok: false, message: "That client's copy no longer exists." };
+  if (!copy.ok) return { ok: false, message: copy.offline ? OFFLINE_MESSAGE : tk("Couldn't save. Try again.") };
+  if (!copy.data) return { ok: false, message: tk("That client's copy no longer exists.") };
   const idx = copy.data.exercises.findIndex((e) => (match.exerciseId && e.exerciseId === match.exerciseId) || e.name === match.name);
-  if (idx < 0) return { ok: false, message: "That exercise isn't in their copy any more." };
+  if (idx < 0) return { ok: false, message: tk("That exercise isn't in their copy any more.") };
   const next = copy.data.exercises.map((e, i) => (i === idx ? { ...e, weightKg } : e));
   return saveClientCopy(copy.data, next);
 }

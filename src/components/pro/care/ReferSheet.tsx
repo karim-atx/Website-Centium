@@ -12,8 +12,9 @@ import { ChipRow } from "../insights/parts";
 import { STAGE_LABEL, fetchClientStages, type StageRow } from "../../../services/pro/clients";
 import { REASON_MAX, fetchNearbyColleagues, referClient, requestLink, type CareLink, type Colleague, type NearbyRead } from "../../../services/pro/careNetwork";
 import { COLLEAGUE_FILTERS, firstName, matchesFilter, nearbyLine, typeLabel, type ColleagueFilter } from "./careModel";
+import { t } from "../../../i18n/core";
 
-const OFFLINE = "You're offline. Try again when you're connected.";
+const offline = () => t("You're offline. Try again when you're connected.");
 const TONES = ["pr", "teal", "gold", "sky"] as const;
 
 /** The search well (referStep15 field with the 15 search glyph). */
@@ -68,11 +69,11 @@ const AskRow: React.FC<{ name: string; line: string; tone: (typeof TONES)[number
     </span>
     {state === "asked" ? (
       <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chF }}>
-        Pending
+        {t("Pending")}
       </span>
     ) : (
       <button type="button" disabled={state === "busy"} onClick={onAsk} className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, opacity: state === "busy" ? 0.5 : 1 }}>
-        Ask to connect
+        {t("Ask to connect")}
       </button>
     )}
   </div>
@@ -160,7 +161,7 @@ export const ReferSheet: React.FC<{
   const linkOf = (id: string) => links.find((l) => l.other === id) ?? null;
   const nearbyRows = nearby && nearby !== "loading" && nearby.ok ? nearby.data.filter((c) => !term || (c.name ?? "").toLowerCase().includes(term)) : [];
   const ask = async (id: string) => {
-    if (!online) return setErr(OFFLINE);
+    if (!online) return setErr(offline());
     setErr(null);
     setAsked((a) => ({ ...a, [id]: "busy" }));
     const r = await requestLink(id);
@@ -175,8 +176,8 @@ export const ReferSheet: React.FC<{
 
   const chosen = clients.find((c) => c.id === client) ?? null;
   const pro = to ? (colleagues[to] ?? (nearby && nearby !== "loading" && nearby.ok ? nearby.data.find((c) => c.id === to) : null) ?? null) : null;
-  const cFirst = firstName(chosen?.name) || "Your client";
-  const pFirst = firstName(pro?.name) || "your colleague";
+  const cName = firstName(chosen?.name);
+  const pName = firstName(pro?.name);
 
   const goStep = (n: number) => {
     setQ("");
@@ -184,34 +185,36 @@ export const ReferSheet: React.FC<{
   };
   const send = async () => {
     if (!client || !to || busy) return;
-    if (!note.trim()) return setErr(`Add a note for ${pFirst}.`);
-    if (!online) return setErr(OFFLINE);
+    if (!note.trim()) return setErr(pName ? t("Add a note for {name}.", { name: pName }) : t("Add a note for your colleague."));
+    if (!online) return setErr(offline());
     setBusy(true);
     setErr(null);
     const r = await referClient(client, to, note);
     setBusy(false);
     if (!r.ok) return setErr(r.message);
-    onSent(`Referral sent. ${cFirst} confirms before ${pFirst} sees anything.`);
+    onSent(
+      t("Referral sent. {client} confirms before {colleague} sees anything.", { client: cName || t("Your client"), colleague: pName || t("your colleague") })
+    );
   };
 
-  const steps = ["Client", "Colleague", "Your note"];
+  const steps = [t("Client"), t("Colleague"), t("Your note")];
   const footer =
     step === 0 ? (
-      <CtaButton className="flex-1" size="sheet" icon={<ArrowRight size={15} />} label="Next" disabled={!client} onClick={() => goStep(1)} />
+      <CtaButton className="flex-1" size="sheet" icon={<ArrowRight size={15} className="rtl:-scale-x-100" />} label={t("Next")} disabled={!client} onClick={() => goStep(1)} />
     ) : (
       <div className="flex w-full" style={{ gap: 8 }}>
-        <CtaButton className="flex-1" size="sheet" variant="secondary" label="Back" onClick={() => goStep(step - 1)} />
+        <CtaButton className="flex-1" size="sheet" variant="secondary" label={t("Back")} onClick={() => goStep(step - 1)} />
         {step === 1 ? (
-          <CtaButton className="flex-1" size="sheet" icon={<ArrowRight size={15} />} label="Next" disabled={!to} onClick={() => goStep(2)} />
+          <CtaButton className="flex-1" size="sheet" icon={<ArrowRight size={15} className="rtl:-scale-x-100" />} label={t("Next")} disabled={!to} onClick={() => goStep(2)} />
         ) : (
-          <CtaButton className="flex-1" size="sheet" icon={<Send size={15} />} label="Send referral" loading={busy} disabled={!note.trim()} onClick={() => void send()} />
+          <CtaButton className="flex-1" size="sheet" icon={<Send size={15} />} label={t("Send referral")} loading={busy} disabled={!note.trim()} onClick={() => void send()} />
         )}
       </div>
     );
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Refer a client" footer={footer}>
-      <div className="flex" style={{ gap: 6, marginBottom: 14 }} aria-label={`Step ${step + 1} of 3`}>
+    <BottomSheet open={open} onClose={onClose} title={t("Refer a client")} footer={footer}>
+      <div className="flex" style={{ gap: 6, marginBottom: 14 }} aria-label={t("Step {n} of {count}", { n: step + 1, count: 3 })}>
         {steps.map((s, i) => (
           <span key={s} className="flex-1 min-w-0">
             <span className="block" style={{ height: 4, borderRadius: 9999, background: i <= step ? INK.prDeep : INK.soft }} />
@@ -221,30 +224,30 @@ export const ReferSheet: React.FC<{
       </div>
       {step === 0 && (
         <>
-          <SearchBox value={q} onChange={setQ} placeholder="Search your clients" />
+          <SearchBox value={q} onChange={setQ} placeholder={t("Search your clients")} />
           <div style={{ height: 10 }} />
-          <div role="radiogroup" aria-label="Client">
+          <div role="radiogroup" aria-label={t("Client")}>
             {shownClients.length === 0 ? (
-              <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{clients.length ? "No clients match." : "You have no clients to refer yet."}</p>
+              <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{clients.length ? t("No clients match.") : t("You have no clients to refer yet.")}</p>
             ) : (
-              shownClients.map((c, i) => <Pick key={c.id} name={c.name} url={c.url} line={c.stage ? STAGE_LABEL[c.stage] : "Client"} on={client === c.id} tone={TONES[i % 4]} onClick={() => setClient(c.id)} />)
+              shownClients.map((c, i) => <Pick key={c.id} name={c.name} url={c.url} line={c.stage ? STAGE_LABEL[c.stage] : t("Client")} on={client === c.id} tone={TONES[i % 4]} onClick={() => setClient(c.id)} />)
             )}
           </div>
         </>
       )}
       {step === 1 && (
         <>
-          <SearchBox value={q} onChange={setQ} placeholder="Search colleagues" />
+          <SearchBox value={q} onChange={setQ} placeholder={t("Search colleagues")} />
           <div style={{ height: 10 }} />
-          <ChipRow label="Colleague type" items={COLLEAGUE_FILTERS} active={filter} onChange={(k) => chooseFilter(k as ColleagueFilter)} />
-          <div role="radiogroup" aria-label="Colleague">
+          <ChipRow label={t("Colleague type")} items={COLLEAGUE_FILTERS.map((f) => ({ ...f, label: t(f.label) }))} active={filter} onChange={(k) => chooseFilter(k as ColleagueFilter)} />
+          <div role="radiogroup" aria-label={t("Colleague")}>
             {filter === "nearby" ? (
               nearby === null || nearby === "loading" ? (
-                <p role="status" style={{ fontSize: textPx(12.5), color: INK.chF }}>Finding colleagues near you…</p>
+                <p role="status" style={{ fontSize: textPx(12.5), color: INK.chF }}>{t("Finding colleagues near you…")}</p>
               ) : !nearby.ok ? (
                 nearby.reason === "no_area" ? (
                   <p style={{ fontSize: textPx(12.5), color: INK.chF, lineHeight: 1.5 }}>
-                    Set your area in Where you work to see colleagues near you.{" "}
+                    {t("Set your area in Where you work to see colleagues near you.")}{" "}
                     <button
                       type="button"
                       onClick={() => {
@@ -254,25 +257,25 @@ export const ReferSheet: React.FC<{
                       className="tap font-bold"
                       style={{ color: INK.prDeep }}
                     >
-                      Where you work
+                      {t("Where you work")}
                     </button>
                   </p>
                 ) : (
                   <p style={{ fontSize: textPx(12.5), color: INK.chF, lineHeight: 1.5 }}>
-                    {nearby.reason === "rate_limited" ? "You've searched a lot in the last hour. Try Nearby again later." : nearby.reason === "offline" ? OFFLINE : "Couldn't load colleagues near you."}{" "}
+                    {nearby.reason === "rate_limited" ? t("You've searched a lot in the last hour. Try Nearby again later.") : nearby.reason === "offline" ? offline() : t("Couldn't load colleagues near you.")}{" "}
                     {nearby.reason !== "rate_limited" && (
                       <button type="button" onClick={loadNearby} className="tap font-bold" style={{ color: INK.prDeep }}>
-                        Try again
+                        {t("Try again")}
                       </button>
                     )}
                   </p>
                 )
               ) : nearbyRows.length === 0 ? (
-                <p style={{ fontSize: textPx(12.5), color: INK.chF, lineHeight: 1.5 }}>{term ? "No colleagues match." : "No listed colleagues work near your area yet."}</p>
+                <p style={{ fontSize: textPx(12.5), color: INK.chF, lineHeight: 1.5 }}>{term ? t("No colleagues match.") : t("No listed colleagues work near your area yet.")}</p>
               ) : (
                 nearbyRows.map((c, i) => {
                   const link = linkOf(c.id);
-                  const name = c.name ?? "A colleague";
+                  const name = c.name ?? t("A colleague");
                   return link?.status === "accepted" ? (
                     <Pick key={c.id} name={name} url={c.avatarUrl} line={nearbyLine(c.type, c.band, true)} on={to === c.id} tone={TONES[(i + 1) % 4]} onClick={() => setTo(c.id)} />
                   ) : (
@@ -281,12 +284,12 @@ export const ReferSheet: React.FC<{
                 })
               )
             ) : network.length === 0 ? (
-              <p style={{ fontSize: textPx(12.5), color: INK.chF, lineHeight: 1.5 }}>Your care network is empty. Add colleagues in Network first; you can refer only to them.</p>
+              <p style={{ fontSize: textPx(12.5), color: INK.chF, lineHeight: 1.5 }}>{t("Your care network is empty. Add colleagues in Network first; you can refer only to them.")}</p>
             ) : shownColleagues.length === 0 ? (
-              <p style={{ fontSize: textPx(12.5), color: INK.chF }}>No colleagues match.</p>
+              <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{t("No colleagues match.")}</p>
             ) : (
               shownColleagues.map((x, i) => (
-                <Pick key={x.id} name={x.c?.name ?? "A colleague"} url={x.c?.avatarUrl} line={`${typeLabel(x.c?.type)} · in your network`} on={to === x.id} tone={TONES[(i + 1) % 4]} onClick={() => setTo(x.id)} />
+                <Pick key={x.id} name={x.c?.name ?? t("A colleague")} url={x.c?.avatarUrl} line={`${typeLabel(x.c?.type)} · ${t("in your network")}`} on={to === x.id} tone={TONES[(i + 1) % 4]} onClick={() => setTo(x.id)} />
               ))
             )}
           </div>
@@ -294,9 +297,11 @@ export const ReferSheet: React.FC<{
       )}
       {step === 2 && (
         <>
-          <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5, marginBottom: 10 }}>{`${cFirst} confirms before ${pFirst} sees anything. A referral passes on only your note; ${cFirst} chooses what to share with ${pFirst} later.`}</p>
+          <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5, marginBottom: 10 }}>
+            {t("{client} confirms before {colleague} sees anything. A referral passes on only your note; {client} chooses what to share with {colleague} later.", { client: cName || t("Your client"), colleague: pName || t("your colleague") })}
+          </p>
           <label htmlFor={noteId} className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-            {`Note to ${pFirst}`}
+            {pName ? t("Note to {name}", { name: pName }) : t("Note to your colleague")}
           </label>
           <textarea
             id={noteId}
@@ -307,7 +312,9 @@ export const ReferSheet: React.FC<{
             className="block w-full outline-none resize-none focus:border-primary"
             style={{ borderRadius: 12, background: INK.soft, border: `1px solid ${note ? INK.pr : INK.b10}`, padding: "10px 12px", fontSize: textPx(14), color: INK.ch, lineHeight: 1.45 }}
           />
-          <p className="text-end" style={{ fontSize: textPx(11), color: INK.chF, marginTop: 4 }}>{`${note.length} / ${REASON_MAX}`}</p>
+          <p className="text-end" style={{ fontSize: textPx(11), color: INK.chF, marginTop: 4 }}>
+            <bdi>{`${note.length} / ${REASON_MAX}`}</bdi>
+          </p>
         </>
       )}
       {err && (

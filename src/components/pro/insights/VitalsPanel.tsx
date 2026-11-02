@@ -35,6 +35,7 @@ import { readGate, useRead, type ReadState } from "./reads";
 import { PAGE_RANGE_DAYS } from "./panelProps";
 import type { PanelProps } from "./panelProps";
 import { appLocale } from "../../../i18n/format";
+import { t, tk, tn, tx } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 Insights › Vitals (TR9 v5 "Blood pressure · dumbbells and
@@ -64,6 +65,9 @@ import { appLocale } from "../../../i18n/format";
  */
 
 type Sub = "bp" | "hr" | "weight" | "sleep" | "steps" | "water" | "calories";
+/** The blood pressure category word (BP_CATEGORY_LABEL's English), in the active language. */
+const bpWord = (c: keyof typeof BP_CATEGORY_LABEL): string =>
+  c === "normal" ? tx("Normal", "blood pressure") : c === "elevated" ? t("Elevated") : c === "stage1" ? t("Stage 1 high") : c === "stage2" ? t("Stage 2 high") : t("Very high");
 const fmt = (n: number) => Math.round(n).toLocaleString(appLocale("en-GB"));
 
 export const VitalsPanel: React.FC<PanelProps> = (p) => {
@@ -91,13 +95,13 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
   const hrTracked = has("heart_rate") || !!daily.data?.some((d) => d.restingBpm != null);
   const subs = useMemo(() => {
     const out: { key: Sub; label: string }[] = [];
-    if (!bpOn || (bp.data?.length ?? 0) > 0) out.push({ key: "bp", label: "Blood pressure" });
-    if (!hmOn || hrTracked) out.push({ key: "hr", label: "Heart rate" });
-    if (!wOn || (weight.data?.length ?? 0) > 0) out.push({ key: "weight", label: "Weight" });
-    if (!hmOn || has("sleep") || (sleep.data?.length ?? 0) > 0 || sleep.error) out.push({ key: "sleep", label: "Sleep" });
-    if (hmOn && has("steps")) out.push({ key: "steps", label: "Steps" });
-    if (hmOn && has("water")) out.push({ key: "water", label: "Water" });
-    if (hmOn && has("calories_burned")) out.push({ key: "calories", label: "Calories burned" });
+    if (!bpOn || (bp.data?.length ?? 0) > 0) out.push({ key: "bp", label: t("Blood pressure") });
+    if (!hmOn || hrTracked) out.push({ key: "hr", label: t("Heart rate") });
+    if (!wOn || (weight.data?.length ?? 0) > 0) out.push({ key: "weight", label: t("Weight") });
+    if (!hmOn || has("sleep") || (sleep.data?.length ?? 0) > 0 || sleep.error) out.push({ key: "sleep", label: t("Sleep") });
+    if (hmOn && has("steps")) out.push({ key: "steps", label: t("Steps") });
+    if (hmOn && has("water")) out.push({ key: "water", label: t("Water") });
+    if (hmOn && has("calories_burned")) out.push({ key: "calories", label: t("Calories burned") });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bpOn, hmOn, wOn, bp.data, weight.data, tracked.data, hrTracked, sleep.data, sleep.error]);
@@ -108,37 +112,37 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
   if (waiting) return <>{readGate({ data: undefined, loading: true, error: false, offline: false, retry: () => undefined })}</>;
   const failed = ([bpOn && bp, hmOn && tracked, wOn && weight] as (ReadState<unknown> | false)[]).find((r): r is ReadState<unknown> => !!r && r.error && r.data === undefined);
   if (failed) return <>{readGate(failed)}</>;
-  if (!sub) return <EmptyState icon={HeartPulse} title={NO_READINGS} line={`${firstName} shares vitals with you, but nothing has been logged yet.`} />;
+  if (!sub) return <EmptyState icon={HeartPulse} title={t(NO_READINGS)} line={t("{firstName} shares vitals with you, but nothing has been logged yet.", { firstName })} />;
 
-  const ask = (c: "health_metrics" | "weight" | "blood_pressure") => ({ asked: p.asked.includes(c), onAsk: () => p.onAsk(c), askLabel: `Ask ${firstName} to share` });
+  const ask = (c: "health_metrics" | "weight" | "blood_pressure") => ({ asked: p.asked.includes(c), onAsk: () => p.onAsk(c), askLabel: t("Ask {firstName} to share", { firstName }) });
   const shift = (r: ChartRange) => onRange(r);
   const winStart = addDays(today, -(PAGE_RANGE_DAYS[pageRange] - 1));
 
   return (
     <>
       {(bp.offline || vit.offline || weight.offline || sleep.offline) && <OfflineLine />}
-      <ChipRow label="Vitals" items={subs} active={sub} onChange={(k) => setChosen(k as Sub)} />
+      <ChipRow label={t("Vitals")} items={subs} active={sub} onChange={(k) => setChosen(k as Sub)} />
       {sub === "bp" &&
         (!bpOn ? (
-          <NotShared icon={HeartPulse} title="No blood pressure shared yet" line={`This fills in when ${firstName} shares blood pressure with you.`} {...ask("blood_pressure")} />
+          <NotShared icon={HeartPulse} title={t("No blood pressure shared yet")} line={t("This fills in when {firstName} shares blood pressure with you.", { firstName })} {...ask("blood_pressure")} />
         ) : (
           <BpView readings={bp.data ?? []} range={range} onRange={shift} today={today} winStart={winStart} />
         ))}
       {sub === "hr" &&
         (!hmOn ? (
-          <NotShared icon={HeartPulse} title="No heart rate shared yet" line={`This fills in when ${firstName} shares Activity and vitals with you.`} {...ask("health_metrics")} />
+          <NotShared icon={HeartPulse} title={t("No heart rate shared yet")} line={t("This fills in when {firstName} shares Activity and vitals with you.", { firstName })} {...ask("health_metrics")} />
         ) : (
           readGate(vit) ?? <HrView rows={(vit.data ?? []).filter((r) => r.type === "heart_rate")} daily={daily.data ?? []} range={range} onRange={shift} today={today} winStart={winStart} />
         ))}
       {sub === "weight" &&
         (!wOn ? (
-          <NotShared icon={Scale} title="No weight shared yet" line={`This fills in when ${firstName} shares weight with you.`} {...ask("weight")} />
+          <NotShared icon={Scale} title={t("No weight shared yet")} line={t("This fills in when {firstName} shares weight with you.", { firstName })} {...ask("weight")} />
         ) : (
           <WeightView rows={weight.data ?? []} body={body.data ?? []} bodyOn={bmOn} goalKg={targets.data?.goalWeightKg ?? null} range={range} onRange={shift} today={today} />
         ))}
       {sub === "sleep" &&
         (!hmOn ? (
-          <NotShared icon={Moon} title="No sleep shared yet" line={`This fills in when ${firstName} shares Activity and vitals with you.`} {...ask("health_metrics")} />
+          <NotShared icon={Moon} title={t("No sleep shared yet")} line={t("This fills in when {firstName} shares Activity and vitals with you.", { firstName })} {...ask("health_metrics")} />
         ) : (
           readGate(vit) ?? (
             <SleepView
@@ -190,16 +194,16 @@ const BpView: React.FC<{ readings: BloodPressureReading[]; range: ChartRange; on
   const latestCat = readings.length ? classifyBloodPressure(readings[0].systolic, readings[0].diastolic) : null;
 
   const boxes: StatBox[] = [
-    { label: "Average", value: avg ? `${avg.systolic}/${avg.diastolic}` : "–", unit: avg ? "mmHg" : undefined, delta: avg && prev && avg.systolic !== prev.systolic ? signedNum(avg.systolic - prev.systolic) : null, dir: avg && prev ? (avg.systolic < prev.systolic ? "up" : avg.systolic > prev.systolic ? "down" : null) : null, sub: `${inWin.length} reading${inWin.length === 1 ? "" : "s"}` },
-    { label: "In the normal band", value: String(normal), unit: `of ${inWin.length}`, sub: "Readings in this range" },
-    ...(am && pm ? [{ label: "Mornings", value: signedNum(am.systolic - pm.systolic), unit: "mmHg", sub: am.systolic >= pm.systolic ? "Higher than evenings" : "Lower than evenings" } as StatBox] : []),
+    { label: t("Average"), value: avg ? `${avg.systolic}/${avg.diastolic}` : "–", unit: avg ? t("mmHg") : undefined, delta: avg && prev && avg.systolic !== prev.systolic ? signedNum(avg.systolic - prev.systolic) : null, dir: avg && prev ? (avg.systolic < prev.systolic ? "up" : avg.systolic > prev.systolic ? "down" : null) : null, sub: tn(inWin.length, "{n} reading", "{n} readings") },
+    { label: t("In the normal band"), value: String(normal), unit: t("of {n}", { n: inWin.length }), sub: t("Readings in this range") },
+    ...(am && pm ? [{ label: t("Mornings"), value: signedNum(am.systolic - pm.systolic), unit: t("mmHg"), sub: am.systolic >= pm.systolic ? t("Higher than evenings") : t("Lower than evenings") } as StatBox] : []),
   ];
 
   if (spanDays < 14 && readings.length < 6) {
     return (
       <>
-        <InsightCard title="Blood pressure">
-          <p style={{ fontSize: textPx(12), color: INK.chF }}>{`${readings.length} reading${readings.length === 1 ? "" : "s"} so far. Trends appear after 2 weeks.`}</p>
+        <InsightCard title={t("Blood pressure")}>
+          <p style={{ fontSize: textPx(12), color: INK.chF }}>{tn(readings.length, "{n} reading so far. Trends appear after 2 weeks.", "{n} readings so far. Trends appear after 2 weeks.")}</p>
         </InsightCard>
         <StatBoxes boxes={boxes} />
       </>
@@ -208,8 +212,8 @@ const BpView: React.FC<{ readings: BloodPressureReading[]; range: ChartRange; on
   return (
     <>
       <ProChart
-        title="Blood pressure"
-        question={latestCat === "stage1" || latestCat === "stage2" ? `Is blood pressure coming down out of Stage ${latestCat === "stage1" ? 1 : 2}?` : "Is blood pressure staying within a healthy range?"}
+        title={t("Blood pressure")}
+        question={latestCat === "stage1" || latestCat === "stage2" ? t("Is blood pressure coming down out of Stage {n}?", { n: latestCat === "stage1" ? 1 : 2 }) : t("Is blood pressure staying within a healthy range?")}
         range={range}
         onRangeChange={onRange}
         x={b.map((x) => bucketLabel(range, x))}
@@ -217,19 +221,19 @@ const BpView: React.FC<{ readings: BloodPressureReading[]; range: ChartRange; on
         max={maxSys}
         height={170}
         bands={[
-          { low: 140, high: 165, fill: INK.hiBg, label: "Stage 2" },
-          { low: 130, high: 140, fill: s1, label: "Stage 1" },
-          { low: 120, high: 130, fill: INK.goldPale, label: "Elevated" },
-          { low: 110, high: 120, fill: INK.tealPale, label: "Normal" },
-          { low: 90, high: 100, fill: INK.hiBg, label: "Stage 2" },
-          { low: 80, high: 90, fill: s1, label: "Stage 1" },
-          { low: 60, high: 80, fill: INK.tealPale, label: "Normal" },
+          { low: 140, high: 165, fill: INK.hiBg, label: t("Stage 2") },
+          { low: 130, high: 140, fill: s1, label: t("Stage 1") },
+          { low: 120, high: 130, fill: INK.goldPale, label: t("Elevated") },
+          { low: 110, high: 120, fill: INK.tealPale, label: tx("Normal", "blood pressure") },
+          { low: 90, high: 100, fill: INK.hiBg, label: t("Stage 2") },
+          { low: 80, high: 90, fill: s1, label: t("Stage 1") },
+          { low: 60, high: 80, fill: INK.tealPale, label: tx("Normal", "blood pressure") },
         ]}
-        bandsLabel="Categories"
+        bandsLabel={t("Categories")}
         series={[
           {
             key: "bp",
-            label: "Systolic and diastolic",
+            label: t("Systolic and diastolic"),
             type: "dumbbell",
             color: INK.chS,
             values: agg.map((a) => a?.systolic ?? null),
@@ -240,15 +244,15 @@ const BpView: React.FC<{ readings: BloodPressureReading[]; range: ChartRange; on
         ]}
         tooltip={(i) => {
           const a = agg[i];
-          if (!a) return { title: bucketTitle(range, b[i]), lines: ["No readings"] };
-          return { title: bucketTitle(range, b[i]), lines: [`${a.systolic}/${a.diastolic} · ${a.n === 1 ? "1 reading" : `avg of ${a.n} readings`}`, ...(a.n === 1 ? [BP_CATEGORY_LABEL[classifyBloodPressure(a.systolic, a.diastolic)]] : [])] };
+          if (!a) return { title: bucketTitle(range, b[i]), lines: [t("No readings")] };
+          return { title: bucketTitle(range, b[i]), lines: [`${a.systolic}/${a.diastolic} · ${a.n === 1 ? t("1 reading") : tn(a.n, "avg of {n} readings", "avg of {n} readings")}`, ...(a.n === 1 ? [bpWord(classifyBloodPressure(a.systolic, a.diastolic))] : [])] };
         }}
         insight={
           firstI != null && lastI != null && firstI !== lastI && agg[firstI] && agg[lastI] && agg[firstI]!.systolic !== agg[lastI]!.systolic
-            ? `Systolic ${agg[lastI]!.systolic < agg[firstI]!.systolic ? "down" : "up"} ${Math.abs(agg[lastI]!.systolic - agg[firstI]!.systolic)} mmHg since ${dayLabel(b[firstI].start)}.`
+            ? t(agg[lastI]!.systolic < agg[firstI]!.systolic ? "Systolic down {n} mmHg since {date}." : "Systolic up {n} mmHg since {date}.", { n: Math.abs(agg[lastI]!.systolic - agg[firstI]!.systolic), date: dayLabel(b[firstI].start) })
             : undefined
         }
-        summary={avg ? `Blood pressure ${avg.systolic}/${avg.diastolic} mmHg on average, ${inWin.length} readings.` : undefined}
+        summary={avg ? tn(inWin.length, "Blood pressure {value} mmHg on average, {n} readings.", "Blood pressure {value} mmHg on average, {n} readings.", { value: `${avg.systolic}/${avg.diastolic}` }) : undefined}
       />
       <StatBoxes boxes={boxes} />
     </>
@@ -293,8 +297,8 @@ const HrView: React.FC<{ rows: MetricRow[]; daily: { day: string; restingBpm: nu
   return (
     <>
       <ProChart
-        title="Heart rate"
-        question="Is resting heart rate settling while daily range stays healthy?"
+        title={t("Heart rate")}
+        question={t("Is resting heart rate settling while daily range stays healthy?")}
         range={range}
         onRangeChange={onRange}
         x={b.map((x) => bucketLabel(range, x))}
@@ -305,21 +309,21 @@ const HrView: React.FC<{ rows: MetricRow[]; daily: { day: string; restingBpm: nu
           { value: 60, label: "60", side: "left" },
           { value: 100, label: "100", side: "left" },
         ]}
-        goalLegend="Normal resting 60 to 100"
+        goalLegend={t("Normal resting 60 to 100")}
         series={[
-          { key: "band", label: "Min to max", type: "range", color: dark ? "rgba(169,145,254,0.16)" : "#ECE8F8", values: maxs, low: mins, swatch: "fill" },
-          { key: "prev", label: "Previous period", type: "line", color: INK.chT, ghost: true, values: ghost },
-          { key: "rest", label: "Resting", type: "line", color: line, values: rest.map(r) },
+          { key: "band", label: t("Min to max"), type: "range", color: dark ? "rgba(169,145,254,0.16)" : "#ECE8F8", values: maxs, low: mins, swatch: "fill" },
+          { key: "prev", label: t("Previous period"), type: "line", color: INK.chT, ghost: true, values: ghost },
+          { key: "rest", label: t("Resting"), type: "line", color: line, values: rest.map(r) },
         ]}
-        tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [rest[i] != null ? `Resting ${r(rest[i])} bpm` : "No resting reading", ...(mins[i] != null && maxs[i] != null ? [`Range ${mins[i]} to ${maxs[i]}`] : [])] })}
-        insight={f0 != null && f1 != null && f0 !== f1 && r(rest[f0]) !== r(rest[f1]) ? `Resting ${(rest[f1] as number) < (rest[f0] as number) ? "down" : "up"} ${Math.abs((r(rest[f1]) as number) - (r(rest[f0]) as number))} bpm since ${dayLabel(b[f0].start)}.` : undefined}
-        summary={restAvg != null ? `Resting heart rate ${restAvg} bpm on average.` : undefined}
+        tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [rest[i] != null ? t("Resting {n} bpm", { n: r(rest[i]) as number }) : t("No resting reading"), ...(mins[i] != null && maxs[i] != null ? [t("Range {min} to {max}", { min: mins[i] as number, max: maxs[i] as number })] : [])] })}
+        insight={f0 != null && f1 != null && f0 !== f1 && r(rest[f0]) !== r(rest[f1]) ? t((rest[f1] as number) < (rest[f0] as number) ? "Resting down {n} bpm since {date}." : "Resting up {n} bpm since {date}.", { n: Math.abs((r(rest[f1]) as number) - (r(rest[f0]) as number)), date: dayLabel(b[f0].start) }) : undefined}
+        summary={restAvg != null ? t("Resting heart rate {n} bpm on average.", { n: restAvg }) : undefined}
       />
       <StatBoxes
         boxes={[
-          { label: "Resting heart rate", value: restAvg != null ? String(restAvg) : "–", unit: restAvg != null ? "bpm" : undefined, delta: restAvg != null && restPrev != null && restAvg !== restPrev ? signedNum(restAvg - restPrev) : null, dir: restAvg != null && restPrev != null ? (restAvg < restPrev ? "up" : restAvg > restPrev ? "down" : null) : null, sub: `${daysBetween(winStart, today) + 1}-day average` },
-          { label: "Highest today", value: todayMax != null ? String(todayMax) : "–", unit: todayMax != null ? "bpm" : undefined, sub: "From shared readings" },
-          { label: "Lowest this week", value: weekMins.length ? String(Math.min(...weekMins)) : "–", unit: weekMins.length ? "bpm" : undefined, sub: "From shared readings" },
+          { label: t("Resting heart rate"), value: restAvg != null ? String(restAvg) : "–", unit: restAvg != null ? t("bpm") : undefined, delta: restAvg != null && restPrev != null && restAvg !== restPrev ? signedNum(restAvg - restPrev) : null, dir: restAvg != null && restPrev != null ? (restAvg < restPrev ? "up" : restAvg > restPrev ? "down" : null) : null, sub: t("{n}-day average", { n: daysBetween(winStart, today) + 1 }) },
+          { label: t("Highest today"), value: todayMax != null ? String(todayMax) : "–", unit: todayMax != null ? t("bpm") : undefined, sub: t("From shared readings") },
+          { label: t("Lowest this week"), value: weekMins.length ? String(Math.min(...weekMins)) : "–", unit: weekMins.length ? t("bpm") : undefined, sub: t("From shared readings") },
         ]}
       />
     </>
@@ -366,8 +370,8 @@ export const WeightView: React.FC<{ rows: MetricRow[]; body: MetricRow[]; bodyOn
     <>
       {shown.length ? (
         <ProChart
-          title="Weight"
-          question={goalKg != null ? `Is weight trending toward the ${goalKg} kg goal?` : "How is weight changing over time?"}
+          title={t("Weight")}
+          question={goalKg != null ? t("Is weight trending toward the {n} kg goal?", { n: goalKg }) : t("How is weight changing over time?")}
           range={range}
           onRangeChange={onRange}
           x={shown.map((w) => w.day)}
@@ -376,30 +380,30 @@ export const WeightView: React.FC<{ rows: MetricRow[]; body: MetricRow[]; bodyOn
           min={lo}
           max={hi}
           goal={goalKg ?? undefined}
-          goalLabel={goalKg != null ? `Goal ${goalKg} kg` : undefined}
-          goalLegend={goalKg != null ? "Goal" : undefined}
+          goalLabel={goalKg != null ? t("Goal {n} kg", { n: goalKg }) : undefined}
+          goalLegend={goalKg != null ? t("Goal") : undefined}
           defaultPin={shown.length - 1}
           series={[
-            { key: "w", label: "Weigh-ins", type: "points", color: INK.pr, values: shown.map((w) => w.kg) },
-            ...(shownTrend ? [{ key: "t", label: "Smoothed trend", type: "line" as const, color: c, values: shownTrend, smooth: true, noPoints: true }] : []),
+            { key: "w", label: t("Weigh-ins"), type: "points", color: INK.pr, values: shown.map((w) => w.kg) },
+            ...(shownTrend ? [{ key: "t", label: t("Smoothed trend"), type: "line" as const, color: c, values: shownTrend, smooth: true, noPoints: true }] : []),
           ]}
           tooltip={(i) => ({
             title: tipDay(shown[i].day),
-            lines: [`${shown[i].kg} kg${shownTrend ? ` · trend ${shownTrend[i]}` : ""}`, ...(goalKg != null ? [`${Math.round(Math.abs(shown[i].kg - goalKg) * 10) / 10} kg to goal`] : [])],
+            lines: [shownTrend ? t("{kg} kg · trend {trend}", { kg: shown[i].kg, trend: shownTrend[i] }) : t("{kg} kg", { kg: shown[i].kg }), ...(goalKg != null ? [t("{kg} kg to goal", { kg: Math.round(Math.abs(shown[i].kg - goalKg) * 10) / 10 })] : [])],
           })}
-          insight={rate != null && Math.abs(rate) >= 0.05 ? `The trend is ${rate < 0 ? "down" : "up"} ${Math.round(Math.abs(rate) * 10) / 10} kg a week.` : undefined}
-          summary={latest ? `Weight ${latest.kg} kg, ${shown.length} weigh-ins in this range${trend ? "" : "; the trend line starts at 3 weigh-ins"}.` : undefined}
+          insight={rate != null && Math.abs(rate) >= 0.05 ? t(rate < 0 ? "The trend is down {kg} kg a week." : "The trend is up {kg} kg a week.", { kg: Math.round(Math.abs(rate) * 10) / 10 }) : undefined}
+          summary={latest ? (trend ? t("Weight {kg} kg, {n} weigh-ins in this range.", { kg: latest.kg, n: shown.length }) : t("Weight {kg} kg, {n} weigh-ins in this range; the trend line starts at 3 weigh-ins.", { kg: latest.kg, n: shown.length })) : undefined}
         />
       ) : (
-        <InsightCard title="Weight">
-          <p style={{ fontSize: textPx(12), color: INK.chF }}>No weigh-ins in this range.</p>
+        <InsightCard title={t("Weight")}>
+          <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("No weigh-ins in this range.")}</p>
         </InsightCard>
       )}
       <StatBoxes
         boxes={[
-          { label: "Weight", value: latest ? String(latest.kg) : "–", unit: latest ? "kg" : undefined, delta: latest && earlier && earlier !== latest ? signed(Math.round((latest.kg - earlier.kg) * 10) / 10) : null, dir: null, sub: latest ? `Since ${dayLabel(earlier?.day ?? latest.day)}` : NO_READINGS },
-          { label: "Waist", value: bodyOn && waist ? String(Math.round(waist.v)) : "–", unit: bodyOn && waist ? "cm" : undefined, delta: bodyOn && waist?.d ? signed(waist.d) : null, dir: null, sub: bodyOn ? (waist ? "Body measurements" : NO_READINGS) : "Body measurements, if shared" },
-          { label: "Body fat", value: bodyOn && fat ? String(Math.round(fat.v)) : "–", unit: bodyOn && fat ? "%" : undefined, delta: bodyOn && fat?.d ? signed(fat.d) : null, dir: null, sub: bodyOn ? "From body measurements" : "Body measurements, if shared" },
+          { label: t("Weight"), value: latest ? String(latest.kg) : "–", unit: latest ? t("kg") : undefined, delta: latest && earlier && earlier !== latest ? signed(Math.round((latest.kg - earlier.kg) * 10) / 10) : null, dir: null, sub: latest ? t("Since {date}", { date: dayLabel(earlier?.day ?? latest.day) }) : t(NO_READINGS) },
+          { label: t("Waist"), value: bodyOn && waist ? String(Math.round(waist.v)) : "–", unit: bodyOn && waist ? t("cm") : undefined, delta: bodyOn && waist?.d ? signed(waist.d) : null, dir: null, sub: bodyOn ? (waist ? t("Body measurements") : t(NO_READINGS)) : t("Body measurements, if shared") },
+          { label: t("Body fat"), value: bodyOn && fat ? String(Math.round(fat.v)) : "–", unit: bodyOn && fat ? "%" : undefined, delta: bodyOn && fat?.d ? signed(fat.d) : null, dir: null, sub: bodyOn ? t("From body measurements") : t("Body measurements, if shared") },
         ]}
       />
     </>
@@ -412,14 +416,16 @@ export const WeightView: React.FC<{ rows: MetricRow[]; body: MetricRow[]; bodyOn
 // ---------------------------------------------------------------------------
 
 const SIMPLE: Record<"sleep" | "steps" | "water" | "calories", { title: string; unit: string; icon: typeof Activity }> = {
-  sleep: { title: "Sleep per night", unit: "h", icon: Moon },
-  steps: { title: "Steps", unit: "steps", icon: Footprints },
-  water: { title: "Water", unit: "ml", icon: Droplets },
-  calories: { title: "Calories burned", unit: "kcal", icon: Flame },
+  sleep: { title: tk("Sleep per night"), unit: tk("h"), icon: Moon },
+  steps: { title: tk("Steps"), unit: tk("steps"), icon: Footprints },
+  water: { title: tk("Water"), unit: tk("ml"), icon: Droplets },
+  calories: { title: tk("Calories burned"), unit: tk("kcal"), icon: Flame },
 };
 
 const SimpleView: React.FC<{ kind: "sleep" | "steps" | "water" | "calories"; rows: MetricRow[]; range: ChartRange; onRange: (r: ChartRange) => void; today: string; winStart: string; firstName: string }> = ({ kind, rows, range, onRange, today, winStart, firstName }) => {
-  const meta = SIMPLE[kind];
+  const raw = SIMPLE[kind];
+  // English keys (tk) in SIMPLE, shown in the active language.
+  const meta = { ...raw, title: t(raw.title), unit: t(raw.unit) };
   // One value a day: sleep and steps are the day's total reading; water and calories add up.
   const perDay = new Map<string, number>();
   for (const r of rows) perDay.set(r.day, kind === "water" || kind === "calories" ? (perDay.get(r.day) ?? 0) + r.value : r.value);
@@ -440,7 +446,7 @@ const SimpleView: React.FC<{ kind: "sleep" | "steps" | "water" | "calories"; row
     <>
       <ProChart
         title={meta.title}
-        question={kind === "sleep" ? `How long does ${firstName} sleep?` : undefined}
+        question={kind === "sleep" ? t("How long does {firstName} sleep?", { firstName }) : undefined}
         range={range}
         onRangeChange={onRange}
         x={b.map((x) => bucketLabel(range, x))}
@@ -448,21 +454,21 @@ const SimpleView: React.FC<{ kind: "sleep" | "steps" | "water" | "calories"; row
         max={max}
         series={[
           { key: "v", label: meta.title, type: "bar", color: INK.pr, values: v },
-          { key: "g", label: "Previous period", type: "line", color: INK.chT, ghost: true, values: gv },
+          { key: "g", label: t("Previous period"), type: "line", color: INK.chT, ghost: true, values: gv },
         ]}
-        tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [v[i] != null ? (kind === "sleep" ? `${show(v[i] as number)} asleep` : show(v[i] as number)) : "No reading"] })}
-        summary={m != null ? `${meta.title} ${show(m)} on average.` : undefined}
+        tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [v[i] != null ? (kind === "sleep" ? t("{time} asleep", { time: show(v[i] as number) }) : show(v[i] as number)) : t("No reading")] })}
+        summary={m != null ? t("{title} {value} on average.", { title: meta.title, value: show(m) }) : undefined}
       />
       {kind !== "sleep" && (
         <StatBoxes
           boxes={[
             {
-              label: `${meta.title} a day`,
+              label: t("{title} a day", { title: meta.title }),
               value: m != null ? fmt(m) : "–",
               unit: m != null ? meta.unit : undefined,
               delta: delta != null && Math.abs(delta) > 1e-9 ? signedNum(delta, fmt) : null,
               dir: delta == null || Math.abs(delta) < 1e-9 ? null : delta > 0 ? "up" : "down",
-              sub: `${win.length} of ${daysBetween(winStart, today) + 1} days`,
+              sub: tn(daysBetween(winStart, today) + 1, "{count} of {n} days", "{count} of {n} days", { count: win.length }),
             },
           ]}
         />

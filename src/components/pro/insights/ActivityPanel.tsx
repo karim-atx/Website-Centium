@@ -10,7 +10,8 @@ import { LockLine } from "../LockLine";
 import { OfflineLine } from "../states";
 import { Chip, ListCard, SectionHead } from "../client/kit";
 import { fetchActivityDays, fetchActivityHours, fetchWorkouts, type Workout } from "../../../services/pro/insights";
-import { DAY_LETTERS, DAY_LONG } from "../../../utils/week";
+import { t, tk, tn } from "../../../i18n/core";
+import { weekdayLong, weekdayNarrow, weekdayShort } from "../proDates";
 import { addDays, bucketLabel, bucketTitle, bucketsFor, dayLabel, mondayOf, RANGE_DAYS, streakOf, sumByBucket, meanByBucket, weekdayIndex, type ChartRange } from "./insightsModel";
 import { InsightCard, InsightLine, NotShared, QuietLine, StatBoxes, type StatBox } from "./parts";
 import { readGate, useRead } from "./reads";
@@ -41,11 +42,21 @@ import { appLocale } from "../../../i18n/format";
 
 const fmt = (n: number) => Math.round(n).toLocaleString(appLocale("en-GB"));
 const PARTS: { label: string; from: number; to: number }[] = [
-  { label: "Morning", from: 5, to: 11 },
-  { label: "Midday", from: 11, to: 17 },
-  { label: "Evening", from: 17, to: 22 },
-  { label: "Night", from: 22, to: 29 },
+  { label: tk("Morning"), from: 5, to: 11 },
+  { label: tk("Midday"), from: 11, to: 17 },
+  { label: tk("Evening"), from: 17, to: 22 },
+  { label: tk("Night"), from: 22, to: 29 },
 ];
+
+/** The weekly pattern's line, one whole sentence per part of the day ("Most steps fall on Monday mornings."). */
+const mostStepsLine = (part: number, weekday: string): string =>
+  part === 0
+    ? t("Most steps fall on {weekday} mornings.", { weekday })
+    : part === 1
+      ? t("Most steps fall on {weekday} middays.", { weekday })
+      : part === 2
+        ? t("Most steps fall on {weekday} evenings.", { weekday })
+        : t("Most steps fall on {weekday} nights.", { weekday });
 
 export const ActivityPanel: React.FC<PanelProps> = (p) => {
   const { clientId, firstName, access, range, onRange, today, lane } = p;
@@ -61,9 +72,9 @@ export const ActivityPanel: React.FC<PanelProps> = (p) => {
     return (
       <NotShared
         icon={Activity}
-        title="No shared data yet"
-        line={`This fills in when ${firstName} shares Activity and vitals with you.`}
-        askLabel={`Ask ${firstName} to share`}
+        title={t("No shared data yet")}
+        line={t("This fills in when {firstName} shares Activity and vitals with you.", { firstName })}
+        askLabel={t("Ask {firstName} to share", { firstName })}
         asked={p.asked.includes("health_metrics")}
         onAsk={() => p.onAsk("health_metrics")}
       />
@@ -75,18 +86,18 @@ export const ActivityPanel: React.FC<PanelProps> = (p) => {
       {lane === "nutrition" && (
         <div className="flex items-center" style={{ gap: 8, borderRadius: 12, background: INK.soft, padding: "9px 12px", marginBottom: 12, fontSize: textPx(12), fontWeight: 600, color: INK.chS }}>
           <Eye size={14} strokeWidth={2} aria-hidden />
-          {`Read only · from what ${firstName} shares`}
+          {t("Read only · from what {firstName} shares", { firstName })}
         </div>
       )}
-      {vitalsOn ? readGate(days) ?? <DailyActivity {...p} rows={days.data ?? []} workouts={workouts.data ?? []} range={range} onRange={onRange} /> : <div style={{ marginBottom: 12 }}><LockLine what="Activity and vitals" clientFirstName={firstName} /></div>}
+      {vitalsOn ? readGate(days) ?? <DailyActivity {...p} rows={days.data ?? []} workouts={workouts.data ?? []} range={range} onRange={onRange} /> : <div style={{ marginBottom: 12 }}><LockLine what={t("Activity and vitals")} clientFirstName={firstName} /></div>}
       {vitalsOn && hours.data && hours.data.length > 0 && <WeeklyPattern firstName={firstName} rows={hours.data} />}
       {vitalsOn && (
-        <InsightCard title="Activity types" question={`What does ${firstName} do most?`}>
-          <QuietLine>Coming soon. Centium doesn't store the type of each activity yet.</QuietLine>
+        <InsightCard title={t("Activity types")} question={t("What does {firstName} do most?", { firstName })}>
+          <QuietLine>{t("Coming soon. Centium doesn't store the type of each activity yet.")}</QuietLine>
         </InsightCard>
       )}
       {(days.data || workouts.data) && <ActivityStreak today={today} days={days.data ?? []} workouts={workouts.data ?? []} />}
-      {workoutsOn ? readGate(workouts) ?? <Training {...p} workouts={workouts.data ?? []} /> : <div style={{ marginBottom: 12 }}><LockLine what="Workout activity" clientFirstName={firstName} /></div>}
+      {workoutsOn ? readGate(workouts) ?? <Training {...p} workouts={workouts.data ?? []} /> : <div style={{ marginBottom: 12 }}><LockLine what={t("Workout activity")} clientFirstName={firstName} /></div>}
     </>
   );
 };
@@ -114,7 +125,7 @@ const DailyActivity: React.FC<PanelProps & { rows: { day: string; steps: number 
 
   if (model.shared < 7) {
     return (
-      <InsightCard title="Daily activity" question={`Is ${firstName} moving enough on most days?`}>
+      <InsightCard title={t("Daily activity")} question={t("Is {firstName} moving enough on most days?", { firstName })}>
         <div className="flex items-end" style={{ gap: 6, height: 80 }} aria-hidden>
           {Array.from({ length: 7 }, (_, i) => {
             const day = addDays(today, i - 6);
@@ -124,7 +135,7 @@ const DailyActivity: React.FC<PanelProps & { rows: { day: string; steps: number 
             return <span key={i} className="flex-1" style={{ height: has ? `${Math.max(12, ((r?.steps ?? 0) / top) * 100)}%` : "100%", borderRadius: 5, ...(has ? { background: INK.pr } : { border: `1.5px dashed ${INK.b10}` }) }} />;
           })}
         </div>
-        <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 10 }}>{`${model.shared} day${model.shared === 1 ? "" : "s"} shared so far. Patterns appear after a week.`}</p>
+        <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 10 }}>{tn(model.shared, "{n} day shared so far. Patterns appear after a week.", "{n} days shared so far. Patterns appear after a week.")}</p>
       </InsightCard>
     );
   }
@@ -134,27 +145,27 @@ const DailyActivity: React.FC<PanelProps & { rows: { day: string; steps: number 
   const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   return (
     <ProChart
-      title={`Daily activity, last ${RANGE_DAYS[range]} days`}
-      question={`Is ${firstName} moving enough on most days?`}
+      title={tn(RANGE_DAYS[range], "Daily activity, last {n} day", "Daily activity, last {n} days")}
+      question={t("Is {firstName} moving enough on most days?", { firstName })}
       range={range}
       onRangeChange={onRange}
       x={model.b.map((x) => bucketLabel(range, x))}
       min={0}
       max={model.max}
       series={[
-        { key: "steps", label: "Steps", type: "bar", color: INK.pr, values: model.s },
-        { key: "mins", label: "Active minutes", type: "line", color: ink, values: scaled, noPoints: true },
-        { key: "wk", label: "Workout", type: "points", color: INK.tealDark, swatch: "dot", values: model.wk.map((w, i) => (w.length ? (model.s[i] ?? model.max * 0.05) : null)) },
-        { key: "prev", label: "Previous period", type: "line", color: INK.chT, ghost: true, values: model.ghost, hidden: true },
+        { key: "steps", label: t("Steps"), type: "bar", color: INK.pr, values: model.s },
+        { key: "mins", label: t("Active minutes"), type: "line", color: ink, values: scaled, noPoints: true },
+        { key: "wk", label: t("Workout"), type: "points", color: INK.tealDark, swatch: "dot", values: model.wk.map((w, i) => (w.length ? (model.s[i] ?? model.max * 0.05) : null)) },
+        { key: "prev", label: t("Previous period"), type: "line", color: INK.chT, ghost: true, values: model.ghost, hidden: true },
       ]}
       tooltip={(i) => {
         const steps = model.s[i];
         const mins = model.m[i];
         const w = model.wk[i];
-        const parts = [steps != null ? `${fmt(steps)} steps` : "No steps", mins != null ? `${fmt(mins)} active min` : null, w.length ? w.map((x) => x.name).join(", ") : null].filter(Boolean);
+        const parts = [steps != null ? t("{n} steps", { n: fmt(steps) }) : t("No steps"), mins != null ? t("{n} active min", { n: fmt(mins) }) : null, w.length ? w.map((x) => x.name).join(", ") : null].filter(Boolean);
         return { title: bucketTitle(range, model.b[i]), lines: [parts.join(" · ")] };
       }}
-      summary={avg != null ? `Steps ${fmt(avg)} a day on average over the last ${RANGE_DAYS[range]} days.` : undefined}
+      summary={avg != null ? tn(RANGE_DAYS[range], "Steps {steps} a day on average over the last {n} day.", "Steps {steps} a day on average over the last {n} days.", { steps: fmt(avg) }) : undefined}
     />
   );
 };
@@ -175,31 +186,31 @@ const WeeklyPattern: React.FC<{ firstName: string; rows: { day: string; hour: nu
     return { level, top: max > 0 ? (top as { p: number; d: number } | null) : null };
   }, [rows]);
   return (
-    <InsightCard title="Weekly pattern" question={`When is ${firstName} usually active?`}>
-      <div role="img" aria-label="Steps by part of the day and weekday, last 4 weeks" className="grid items-center" style={{ gridTemplateColumns: "62px repeat(7, minmax(0, 1fr))", gap: 4 }}>
+    <InsightCard title={t("Weekly pattern")} question={t("When is {firstName} usually active?", { firstName })}>
+      <div role="img" aria-label={t("Steps by part of the day and weekday, last 4 weeks")} className="grid items-center" style={{ gridTemplateColumns: "62px repeat(7, minmax(0, 1fr))", gap: 4 }}>
         <span />
-        {DAY_LETTERS.map((d, i) => (
+        {Array.from({ length: 7 }, (_, i) => (
           <span key={i} className="text-center" style={{ fontSize: textPx(10), fontWeight: 700, color: INK.chT }}>
-            {d}
+            {weekdayNarrow(i)}
           </span>
         ))}
         {PARTS.map((part, pi) => (
           <React.Fragment key={part.label}>
-            <span style={{ fontSize: textPx(11), fontWeight: 600, color: INK.chS }}>{part.label}</span>
+            <span style={{ fontSize: textPx(11), fontWeight: 600, color: INK.chS }}>{t(part.label)}</span>
             {grid.level[pi].map((x, d) => (
               <span key={d} style={{ height: 22, borderRadius: 6, background: x ? `rgba(111,153,147,${(0.25 + x * 0.25).toFixed(2)})` : INK.soft }} />
             ))}
           </React.Fragment>
         ))}
       </div>
-      {grid.top && <InsightLine>{`Most steps fall on ${DAY_LONG[grid.top.d]} ${PARTS[grid.top.p].label.toLowerCase()}s.`}</InsightLine>}
+      {grid.top && <InsightLine>{mostStepsLine(grid.top.p, weekdayLong(grid.top.d))}</InsightLine>}
     </InsightCard>
   );
 };
 
 const ActivityStreak: React.FC<{ today: string; days: { day: string; activeMinutes: number | null }[]; workouts: Workout[] }> = ({ today, days, workouts }) => {
   const s = useMemo(() => streakOf(new Set([...days.filter((d) => (d.activeMinutes ?? 0) > 0).map((d) => d.day), ...workouts.map((w) => w.day)]), today), [days, workouts, today]);
-  return <LeafStreak title="Activity streak" current={s.current} best={s.best} label="days active" days={s.days} />;
+  return <LeafStreak title={t("Activity streak")} current={s.current} best={s.best} label={t("days active")} days={s.days} />;
 };
 
 // ---------------------------------------------------------------------------
@@ -215,7 +226,8 @@ function sessionVolume(w: Workout): number {
   return w.exercises.reduce((t, e) => t + e.sets.reduce((s, x) => s + (x.completed && x.kg != null && x.reps != null && x.type !== "warmup" ? x.kg * x.reps : 0), 0), 0);
 }
 function prOf(w: Workout): string | null {
-  for (const e of w.exercises) for (const s of e.sets) if (s.pr) return `PR ${e.name.toLowerCase()} ${s.kg ?? 0} x ${s.reps ?? 0}`;
+  // The exercise name is catalogue content (F13): it stays as stored.
+  for (const e of w.exercises) for (const s of e.sets) if (s.pr) return t("PR {exercise} {kg} x {reps}", { exercise: e.name.toLowerCase(), kg: s.kg ?? 0, reps: s.reps ?? 0 });
   return null;
 }
 
@@ -231,19 +243,19 @@ export const Training: React.FC<PanelProps & { workouts: Workout[] }> = ({ worko
   const rpes = thisWeek.map(sessionRpe).filter((x): x is number => x != null);
   const boxes: StatBox[] = early
     ? [
-        { label: "Workouts", value: "–", sub: "After a week of logs" },
-        { label: "Volume", value: "–", sub: "After a week of logs" },
-        { label: "Average RPE", value: "–", sub: "After a week of logs" },
+        { label: t("Workouts"), value: "–", sub: t("After a week of logs") },
+        { label: t("Volume"), value: "–", sub: t("After a week of logs") },
+        { label: t("Average RPE"), value: "–", sub: t("After a week of logs") },
       ]
     : [
-        { label: "Workouts", value: String(thisWeek.length), delta: thisWeek.length !== lastWeek.length ? signedNum(thisWeek.length - lastWeek.length) : null, dir: thisWeek.length > lastWeek.length ? "up" : thisWeek.length < lastWeek.length ? "down" : null, sub: "This week" },
+        { label: t("Workouts"), value: String(thisWeek.length), delta: thisWeek.length !== lastWeek.length ? signedNum(thisWeek.length - lastWeek.length) : null, dir: thisWeek.length > lastWeek.length ? "up" : thisWeek.length < lastWeek.length ? "down" : null, sub: t("This week") },
         (() => {
           const a = vol(thisWeek);
           const b = vol(lastWeek);
           const pct = b > 0 ? Math.round(((a - b) / b) * 100) : null;
-          return { label: "Volume", value: fmt(a), unit: "kg", delta: pct ? `${signedNum(pct)}%` : null, dir: pct ? (pct > 0 ? "up" : "down") : null, sub: "This week" } as StatBox;
+          return { label: t("Volume"), value: fmt(a), unit: t("kg"), delta: pct ? `${signedNum(pct)}%` : null, dir: pct ? (pct > 0 ? "up" : "down") : null, sub: t("This week") } as StatBox;
         })(),
-        { label: "Average RPE", value: rpes.length ? (Math.round((rpes.reduce((x, y) => x + y, 0) / rpes.length) * 10) / 10).toString() : "–", sub: "This week" },
+        { label: t("Average RPE"), value: rpes.length ? (Math.round((rpes.reduce((x, y) => x + y, 0) / rpes.length) * 10) / 10).toString() : "–", sub: t("This week") },
       ];
 
   const model = useMemo(() => {
@@ -260,53 +272,53 @@ export const Training: React.FC<PanelProps & { workouts: Workout[] }> = ({ worko
   const recent = [...workouts].reverse().slice(0, 3);
   return (
     <>
-      <SectionHead label="Training" />
+      <SectionHead label={t("Training")} />
       <StatBoxes boxes={boxes} />
       {early ? (
         <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 16, marginBottom: 12 }}>
-          <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>Training per week</p>
-          <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 8 }}>{`${workouts.length} workout${workouts.length === 1 ? "" : "s"} so far. Trends appear after the first full week.`}</p>
+          <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>{t("Training per week")}</p>
+          <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 8 }}>{tn(workouts.length, "{n} workout so far. Trends appear after the first full week.", "{n} workouts so far. Trends appear after the first full week.")}</p>
         </div>
       ) : (
         <ProChart
-          title="Training per week"
-          question={`Is ${firstName} training as planned, and is it getting harder or easier?`}
+          title={t("Training per week")}
+          question={t("Is {firstName} training as planned, and is it getting harder or easier?", { firstName })}
           range={range}
           onRangeChange={onRange}
           x={model.b.map((x) => bucketLabel(range, x))}
           min={0}
           max={model.max}
           series={[
-            { key: "vol", label: "Volume (kg)", type: "bar", color: INK.pr, values: model.v },
-            { key: "rpe", label: "RPE, scaled", type: "line", color: ink, values: model.r.map((x) => (x == null ? null : (x / 10) * model.max)) },
-            { key: "prev", label: "Last block", type: "line", color: INK.chT, ghost: true, values: model.gv, hidden: true },
+            { key: "vol", label: t("Volume (kg)"), type: "bar", color: INK.pr, values: model.v },
+            { key: "rpe", label: t("RPE, scaled"), type: "line", color: ink, values: model.r.map((x) => (x == null ? null : (x / 10) * model.max)) },
+            { key: "prev", label: t("Last block"), type: "line", color: INK.chT, ghost: true, values: model.gv, hidden: true },
           ]}
-          marks={model.ws.map((list, i) => (list.some((w) => prOf(w)) ? { index: i, label: "PR" } : null)).filter((m): m is { index: number; label: string } => !!m)}
+          marks={model.ws.map((list, i) => (list.some((w) => prOf(w)) ? { index: i, label: t("PR") } : null)).filter((m): m is { index: number; label: string } => !!m)}
           tooltip={(i) => {
             const list = model.ws[i];
             const r = model.r[i];
             const pr = list.map(prOf).find(Boolean);
             return {
               title: bucketTitle(range, model.b[i]),
-              lines: [`${fmt(model.v[i] ?? 0)} kg · ${list.length} workout${list.length === 1 ? "" : "s"}`, [r != null ? `RPE ${Math.round(r * 10) / 10}` : null, pr].filter(Boolean).join(" · ")].filter(Boolean),
+              lines: [`${t("{n} kg", { n: fmt(model.v[i] ?? 0) })} · ${tn(list.length, "{n} workout", "{n} workouts")}`, [r != null ? t("RPE {rpe}", { rpe: Math.round(r * 10) / 10 }) : null, pr].filter(Boolean).join(" · ")].filter(Boolean),
             };
           }}
-          summary={`Training volume ${fmt(vol(thisWeek))} kg this week, ${thisWeek.length} workouts.`}
+          summary={tn(thisWeek.length, "Training volume {kg} kg this week, {n} workout.", "Training volume {kg} kg this week, {n} workouts.", { kg: fmt(vol(thisWeek)) })}
         />
       )}
       {recent.length > 0 && (
         <>
-          <SectionHead label="Recent workouts" />
+          <SectionHead label={t("Recent workouts")} />
           <ListCard
             rows={recent.map((w) => {
               const r = sessionRpe(w);
-              const when = w.day === today ? "Today" : w.day === addDays(today, -1) ? "Yesterday" : w.day > addDays(today, -7) ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][weekdayIndex(w.day)] : dayLabel(w.day);
+              const when = w.day === today ? t("Today") : w.day === addDays(today, -1) ? t("Yesterday") : w.day > addDays(today, -7) ? weekdayShort(weekdayIndex(w.day)) : dayLabel(w.day);
               return {
                 key: w.id,
                 icon: w.exercises.length ? Dumbbell : Footprints,
                 title: w.name,
-                meta: [when, w.durationMin != null ? `${w.durationMin} min` : null, sessionVolume(w) > 0 ? `${fmt(sessionVolume(w))} kg` : null, r != null ? `RPE ${Math.round(r * 10) / 10}` : null].filter(Boolean).join(" · "),
-                trailing: prOf(w) ? <Chip label="PR" tone="act" /> : undefined,
+                meta: [when, w.durationMin != null ? t("{durationMin} min", { durationMin: w.durationMin }) : null, sessionVolume(w) > 0 ? t("{n} kg", { n: fmt(sessionVolume(w)) }) : null, r != null ? t("RPE {rpe}", { rpe: Math.round(r * 10) / 10 }) : null].filter(Boolean).join(" · "),
+                trailing: prOf(w) ? <Chip label={t("PR")} tone="act" /> : undefined,
               };
             })}
           />

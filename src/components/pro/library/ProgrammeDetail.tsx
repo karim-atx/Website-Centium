@@ -16,11 +16,15 @@ import { fmtDay } from "../client/clientFormat";
 import { LockLine } from "../LockLine";
 import { OfflineLine, ProCardSkeleton, ProError } from "../states";
 import { DetailHeader, ErrorLine } from "./libraryUi";
-import { clientsLabel, currentWeek, isActive } from "./libraryModel";
+import { currentWeek, isActive } from "./libraryModel";
 import { todayLocal } from "../../../utils/date";
 import { reviewStateText } from "../../../services/workout/logReplyLogic";
 import { useReviewStates } from "./useReviewStates";
 import { appLocale } from "../../../i18n/format";
+import { t, tn } from "../../../i18n/core";
+
+/** One date, or "{from} to {to}". */
+const dateSpan = (d: string[]) => (d.length > 1 ? t("{from} to {to}", { from: d[0], to: d[1] }) : d[0] ?? "");
 
 /**
  * Release 3 · W5 TR2 "Programme builder", as far as the schema goes.
@@ -89,18 +93,18 @@ export const ProgrammeDetail: React.FC<{
   }, [routineKey, reload]);
 
   const clientOf = (clientId: string) => professionalClients.find((c) => c.clientId === clientId);
-  const meta = ["Template", template.durationWeeks ? `${template.durationWeeks} weeks` : null, `used by ${clientsLabel(active.length)}`].filter(Boolean).join(" · ");
+  const meta = [t("Template"), template.durationWeeks ? tn(template.durationWeeks, "{n} week", "{n} weeks") : null, tn(active.length, "used by {n} client", "used by {n} clients")].filter(Boolean).join(" · ");
   const runs = groupIntoRuns(template.exercises, template.blocks ?? []);
   const today = todayLocal();
 
   const activity = (clientId: string, routineId: string | null) => {
     const c = clientOf(clientId);
     if (!c) return null;
-    if (!c.access.workoutActivity) return <LockLine what="Workout activity" clientFirstName={c.name.split(" ")[0]} />;
+    if (!c.access.workoutActivity) return <LockLine what={t("Workout activity")} clientFirstName={c.name.split(" ")[0]} />;
     if (state === "error" && !sessions) return <ProError onRetry={() => setReload((n) => n + 1)} />;
     if (!sessions) return <ProCardSkeleton lines={2} />;
     const mine = sessions.filter((s) => s.userId === clientId && s.routineId === routineId);
-    if (mine.length === 0) return <p style={{ fontSize: textPx(11.5), color: INK.chF }}>No sessions logged yet.</p>;
+    if (mine.length === 0) return <p style={{ fontSize: textPx(11.5), color: INK.chF }}>{t("No sessions logged yet.")}</p>;
     return (
       <div>
         {mine.slice(0, 3).map((s) => (
@@ -112,7 +116,7 @@ export const ProgrammeDetail: React.FC<{
             style={{ padding: "8px 0", minHeight: 44, borderTop: `1px solid ${INK.b06}` }}
           >
             <span className="block" style={{ fontSize: textPx(12.5), fontWeight: 600, color: INK.ch }}>
-              {fmtDay(s.date)} · {formatDuration(s.durationSec)} · {Math.round(s.totalVolumeKg).toLocaleString(appLocale())} kg
+              {fmtDay(s.date)} · {formatDuration(s.durationSec)} · {t("{n} kg", { n: Math.round(s.totalVolumeKg).toLocaleString(appLocale()) })}
             </span>
             <span className="block truncate" style={{ fontSize: textPx(11.5), color: INK.chF }}>
               {s.exercises.map((e) => e.name).join(", ")}
@@ -125,7 +129,7 @@ export const ProgrammeDetail: React.FC<{
             )}
           </button>
         ))}
-        {mine.length > 3 && <p style={{ fontSize: textPx(11), color: INK.chF }}>{`${mine.length - 3} earlier session${mine.length - 3 === 1 ? "" : "s"} not shown.`}</p>}
+        {mine.length > 3 && <p style={{ fontSize: textPx(11), color: INK.chF }}>{tn(mine.length - 3, "{n} earlier session not shown.", "{n} earlier sessions not shown.")}</p>}
       </div>
     );
   };
@@ -137,8 +141,8 @@ export const ProgrammeDetail: React.FC<{
         onBack={onBack}
         right={
           <div className="flex shrink-0" style={{ gap: 8 }}>
-            {!template.isPublic && <RoundBtn icon={UserPlus} label="Assign to clients" onClick={onAssign} />}
-            <RoundBtn ref={moreRef} icon={Ellipsis} label="More" onClick={() => moreRef.current && onMenu(moreRef.current)} />
+            {!template.isPublic && <RoundBtn icon={UserPlus} label={t("Assign to clients")} onClick={onAssign} />}
+            <RoundBtn ref={moreRef} icon={Ellipsis} label={t("More")} onClick={() => moreRef.current && onMenu(moreRef.current)} />
           </div>
         }
       />
@@ -149,7 +153,7 @@ export const ProgrammeDetail: React.FC<{
       <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderInlineStart: `4px solid ${INK.pr}`, borderRadius: 18, padding: "14px 16px", marginBottom: 12 }}>
         <p style={{ fontSize: textPx(15), fontWeight: 700, color: INK.ch }}>{template.name}</p>
         <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 6 }}>
-          {[`${template.exercises.length} exercise${template.exercises.length === 1 ? "" : "s"}`, template.durationMin ? `${template.durationMin} min` : null].filter(Boolean).join(" · ")}
+          {[tn(template.exercises.length, "{n} exercise", "{n} exercises"), template.durationMin ? t("{n} min", { n: template.durationMin }) : null].filter(Boolean).join(" · ")}
         </p>
         {runs.map((run) =>
           run.block ? (
@@ -175,19 +179,19 @@ export const ProgrammeDetail: React.FC<{
 
       {template.coachNote && (
         <p className="rounded-xl" style={{ fontSize: textPx(12), color: INK.prDeep, background: INK.prPale, padding: "8px 12px", marginBottom: 12 }}>
-          {`Note to client: ${template.coachNote}`}
+          {t("Note to client: {note}", { note: template.coachNote })}
         </p>
       )}
 
       {!template.isPublic && (
         <>
-          <SectionHead label="Assigned to clients" right={active.length ? "Progress" : undefined} onRight={active.length ? onProgress : undefined} />
+          <SectionHead label={t("Assigned to clients")} right={active.length ? t("Progress") : undefined} onRight={active.length ? onProgress : undefined} />
           {state === "offline" && <OfflineLine />}
-          {active.length === 0 && <p style={{ fontSize: textPx(12.5), color: INK.chF, marginBottom: 12 }}>Not assigned to anyone yet.</p>}
+          {active.length === 0 && <p style={{ fontSize: textPx(12.5), color: INK.chF, marginBottom: 12 }}>{t("Not assigned to anyone yet.")}</p>}
           {active.map((a) => {
             const c = clientOf(a.clientId);
             const week = currentWeek(a.startsOn, a.joinWeek, template.durationWeeks, today);
-            const line = [week ? (week.of ? `Week ${week.n} of ${week.of}` : `Week ${week.n}`) : a.startsOn && a.startsOn > today ? `Starts ${fmtDay(a.startsOn)}` : null, a.endsOn ? `ends ${fmtDay(a.endsOn)}` : null]
+            const line = [week ? (week.of ? t("Week {n} of {of}", { n: week.n, of: week.of }) : t("Week {n}", { n: week.n })) : a.startsOn && a.startsOn > today ? t("Starts {date}", { date: fmtDay(a.startsOn) }) : null, a.endsOn ? t("ends {date}", { date: fmtDay(a.endsOn) }) : null]
               .filter(Boolean)
               .join(" · ");
             return (
@@ -196,7 +200,7 @@ export const ProgrammeDetail: React.FC<{
                   <Avatar name={c?.name ?? ""} url={c?.avatarUrl} size={34} />
                   <span className="flex-1 min-w-0">
                     <span className="block truncate" style={{ fontSize: textPx(13.5), fontWeight: 600, color: INK.ch }}>
-                      {c?.name ?? "A client"}
+                      {c?.name ?? t("A client")}
                     </span>
                     {line && <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>{line}</span>}
                   </span>
@@ -220,7 +224,7 @@ export const ProgrammeDetail: React.FC<{
                     className="tap"
                     style={{ minHeight: 44, fontSize: textPx(12), fontWeight: 700, color: confirmEnd === a.id ? INK.hi : INK.chS }}
                   >
-                    {confirmEnd === a.id ? "Tap again to confirm" : a.startsOn && a.startsOn > today ? "Remove" : "End programme"}
+                    {confirmEnd === a.id ? t("Tap again to confirm") : a.startsOn && a.startsOn > today ? t("Remove") : t("End programme")}
                   </button>
                 </div>
               </div>
@@ -229,7 +233,7 @@ export const ProgrammeDetail: React.FC<{
 
           {past.length > 0 && (
             <>
-              <SectionHead label="Past programmes" className="mt-4" />
+              <SectionHead label={t("Past programmes")} className="mt-4" />
               {past.map((a) => {
                 const c = clientOf(a.clientId);
                 return (
@@ -237,11 +241,11 @@ export const ProgrammeDetail: React.FC<{
                     <Avatar name={c?.name ?? ""} url={c?.avatarUrl} size={30} />
                     <span className="flex-1 min-w-0">
                       <span className="block truncate" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch }}>
-                        {c?.name ?? "A client"}
+                        {c?.name ?? t("A client")}
                       </span>
                       <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>
                         {/* Removed before its start: starts_on = ends_on, one date. */}
-                        {[...new Set([a.startsOn ? fmtDay(a.startsOn, true) : null, a.endsOn ? fmtDay(a.endsOn, true) : null].filter(Boolean))].join(" to ")}
+                        {dateSpan([...new Set([a.startsOn ? fmtDay(a.startsOn, true) : null, a.endsOn ? fmtDay(a.endsOn, true) : null].filter((d): d is string => !!d))])}
                       </span>
                     </span>
                   </div>
@@ -252,11 +256,11 @@ export const ProgrammeDetail: React.FC<{
 
           {active.length > 0 && (
             <button type="button" onClick={onProgress} className="tap flex items-center mt-3" style={{ gap: 6, minHeight: 44, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
-              <BarChart3 size={15} aria-hidden /> Progress
+              <BarChart3 size={15} aria-hidden /> {t("Progress")}
             </button>
           )}
 
-          <PinnedCta primary={{ label: "Assign to clients", icon: <UserPlus size={15} />, onClick: onAssign }} />
+          <PinnedCta primary={{ label: t("Assign to clients"), icon: <UserPlus size={15} />, onClick: onAssign }} />
         </>
       )}
     </div>

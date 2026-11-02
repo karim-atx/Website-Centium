@@ -26,6 +26,7 @@ import { useNuRoster } from "./hooks";
 import { macroGrams, shiftDate, splitTotalOk, tdeeView } from "./nutritionModel";
 import { useNutritionOverview } from "./useNutritionOverview";
 import { appLocale } from "../../../i18n/format";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · NU8 v3 "Targets · weight goal rate and TDEE" (source gen
@@ -143,11 +144,11 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
     });
   const askBtn = (c: AccessCategory) => (
     <button type="button" disabled={asked.has(c)} onClick={() => ask(c)} className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(11.5), fontWeight: 700, color: asked.has(c) ? INK.chF : INK.prDeep }}>
-      {asked.has(c) ? "Asked" : "Ask to share"}
+      {asked.has(c) ? t("Asked") : t("Ask to share")}
     </button>
   );
 
-  const head = <NuHead eyebrow={client?.name ?? ""} title="Targets and dietary needs" onBack={onBack} />;
+  const head = <NuHead eyebrow={client?.name ?? ""} title={t("Targets and dietary needs")} onBack={onBack} />;
   if (!data || !draft) {
     return (
       <div>
@@ -168,7 +169,7 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
     },
     readOnly: false,
     weight,
-    weightLocked: <LockLine what="Weight" clientFirstName={first || "Your client"} action={askBtn("weight")} />,
+    weightLocked: <LockLine what={t("Weight")} clientFirstName={first || t("Your client")} action={askBtn("weight")} />,
     tdee: est.tdee,
     tdeeMissing: est.tdee === null ? { title: est.title, line: est.line } : { title: "", line: "" },
     tdeeBasis: est.tdee === null ? undefined : est.basis,
@@ -176,11 +177,11 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
       <div style={{ marginTop: 10 }}>
         {!progress && (
           <div style={{ marginBottom: 8 }}>
-            <LockLine what="Progress" clientFirstName={first || "Your client"} action={askBtn("progress")} />
+            <LockLine what={t("Progress")} clientFirstName={first || t("Your client")} action={askBtn("progress")} />
           </div>
         )}
         <p style={{ fontSize: textPx(10.5), color: INK.chF }}>
-          {lock ? `${first} sees this as an Existing plan, locked to you.` : `${first} can still change these targets.`}
+          {lock ? t("{name} sees this as an Existing plan, locked to you.", { name: first }) : t("{name} can still change these targets.", { name: first })}
         </p>
       </div>
     ),
@@ -190,7 +191,7 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
   };
 
   const save = async () => {
-    if (!splitTotalOk(draft.macroSplit.proteinPct, draft.macroSplit.carbsPct, draft.macroSplit.fatPct)) return setMsg({ ok: false, text: "Protein, carbs and fat must add up to 100%." });
+    if (!splitTotalOk(draft.macroSplit.proteinPct, draft.macroSplit.carbsPct, draft.macroSplit.fatPct)) return setMsg({ ok: false, text: t("Protein, carbs and fat must add up to 100%.") });
     setBusy(true);
     setMsg(null);
     const r = await saveTargets(clientId, {
@@ -207,7 +208,7 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
     });
     setBusy(false);
     if (!r.ok) return setMsg({ ok: false, text: r.message });
-    setMsg({ ok: true, text: `Saved. ${first} has been notified.` });
+    setMsg({ ok: true, text: t("Saved. {name} has been notified.", { name: first }) });
     setNonce((n) => n + 1);
   };
 
@@ -220,32 +221,32 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
           <ProError onRetry={() => setNonce((n) => n + 1)} />
         </div>
       )}
-      <DietaryNeedsCard clientId={clientId} firstName={first || "Your client"} access={access} onAsk={() => ask("allergies_dietary")} asked={asked.has("allergies_dietary")} />
+      <DietaryNeedsCard clientId={clientId} firstName={first || t("Your client")} access={access} onAsk={() => ask("allergies_dietary")} asked={asked.has("allergies_dietary")} />
       <GoalsPanel pro={pro} />
       <div className="flex items-center justify-between" style={{ gap: 12, marginTop: 10, background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "11px 14px 12px" }}>
         <span className="min-w-0">
-          <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 600, color: INK.ch }}>Lock these targets</span>
-          <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>{`Only you can change them while ${first}'s plan is locked.`}</span>
+          <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 600, color: INK.ch }}>{t("Lock these targets")}</span>
+          <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>{t("Only you can change them while {name}'s plan is locked.", { name: first })}</span>
         </span>
-        <Toggle checked={lock} onChange={setLock} label="Lock these targets" />
+        <Toggle checked={lock} onChange={setLock} label={t("Lock these targets")} />
       </div>
       {lane === "nutrition" && (
         <div style={{ marginTop: 10, background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "11px 14px 12px" }}>
           <div className="flex items-center justify-between" style={{ gap: 8 }}>
-            <p style={{ fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgb(var(--th-6d50d3))" }}>Micronutrient targets</p>
+            <p style={{ fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgb(var(--th-6d50d3))" }}>{t("Micronutrient targets")}</p>
             <ComingSoonPill />
           </div>
-          <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 6 }}>Sodium, fibre and vitamin targets per client.</p>
+          <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 6 }}>{t("Sodium, fibre and vitamin targets per client.")}</p>
         </div>
       )}
-      {data.mine && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 10 }}>{`You set these on ${fmtDay(data.mine.setAt, true)}.`}</p>}
+      {data.mine && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 10 }}>{t("You set these on {date}.", { date: fmtDay(data.mine.setAt, true) })}</p>}
       {msg && (
         <p role={msg.ok ? "status" : "alert"} style={{ marginTop: 10, fontSize: textPx(12), fontWeight: 600, color: msg.ok ? INK.good : INK.hi }}>
           {msg.text}
         </p>
       )}
       <div className="flex" style={{ marginTop: 14 }}>
-        <CtaButton className="flex-1" size="page" icon={<Check size={15} />} label={`Save and notify ${first}`} loading={busy} disabled={!(draft.targetCalories > 0)} onClick={() => void save()} />
+        <CtaButton className="flex-1" size="page" icon={<Check size={15} />} label={t("Save and notify {name}", { name: first })} loading={busy} disabled={!(draft.targetCalories > 0)} onClick={() => void save()} />
       </div>
     </div>
   );
@@ -264,15 +265,15 @@ export const TargetsReadOnly: React.FC<{ clientId: string; firstName?: string; s
   const dark = useIsDark();
   const [nonce, setNonce] = useState(0);
   const { data, stale, progress } = useTargetsData(clientId, access, nonce);
-  const first = firstName || "This client";
+  const first = firstName || t("This client");
   const weight = useMemo(() => (data?.weights ? buildMetricReadings("weight", data.weights) : null), [data]);
-  const head = showHead ? <NuHead eyebrow="Nutrition targets" title={clientName ?? ""} onBack={onBack} /> : null;
+  const head = showHead ? <NuHead eyebrow={t("Nutrition targets")} title={clientName ?? ""} onBack={onBack} /> : null;
 
   if (access.loading || (!data && !stale?.error)) return <div>{head}<ProCardSkeleton lines={5} height={240} /></div>;
   if (!data) return <div>{head}<ProError onRetry={() => setNonce((n) => n + 1)} /></div>;
-  if (!progress) return <div>{head}<LockLine what="Nutrition targets" clientFirstName={first} /></div>;
+  if (!progress) return <div>{head}<LockLine what={t("Nutrition targets")} clientFirstName={first} /></div>;
   const g = data.goal;
-  if (!g) return <div>{head}<EmptyState icon={Target} title="No targets set" line={`${first} hasn't set nutrition targets yet.`} /></div>;
+  if (!g) return <div>{head}<EmptyState icon={Target} title={t("No targets set")} line={t("{name} hasn't set nutrition targets yet.", { name: first })} /></div>;
   const split = { proteinPct: g.proteinPct, carbsPct: g.carbsPct, fatPct: g.fatPct };
   const grams = macroGrams(g.calories, split);
   const est = tdeeView(data.basics, weight?.current ?? null, !!data.weights, first);
@@ -281,14 +282,14 @@ export const TargetsReadOnly: React.FC<{ clientId: string; firstName?: string; s
     onChange: () => undefined,
     readOnly: true,
     weight,
-    weightLocked: <LockLine what="Weight" clientFirstName={first} />,
+    weightLocked: <LockLine what={t("Weight")} clientFirstName={first} />,
     tdee: est.tdee,
     tdeeMissing: est.tdee === null ? { title: est.title, line: est.line } : { title: "", line: "" },
     tdeeBasis: est.tdee === null ? undefined : est.basis,
     lockNote: (
       <p className="flex items-center" style={{ gap: 6, marginTop: 10, fontSize: textPx(11.5), color: INK.chF }}>
         <Lock size={12} strokeWidth={2} aria-hidden />
-        {g.setByProfessionalId ? `Read only. Set by a professional on ${fmtDay(g.createdAt)}.` : `Read only. Set by ${first} on ${fmtDay(g.createdAt)}.`}
+        {g.setByProfessionalId ? t("Read only. Set by a professional on {date}.", { date: fmtDay(g.createdAt) }) : t("Read only. Set by {name} on {date}.", { name: first, date: fmtDay(g.createdAt) })}
       </p>
     ),
     hideMacros: true,
@@ -300,8 +301,8 @@ export const TargetsReadOnly: React.FC<{ clientId: string; firstName?: string; s
       {data.error && data.offline && <OfflineLine />}
       <GoalsPanel pro={pro} />
       <div style={{ marginTop: 10, background: INK.card, border: `1px solid ${dark ? "rgba(238,239,242,0.08)" : "#E7E6E6"}`, borderRadius: 16, padding: "11px 14px 12px" }}>
-        <p style={{ fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: dark ? "#B7ABDE" : "#6D50D3", marginBottom: 10 }}>Macro distribution</p>
-        <div className="flex overflow-hidden" style={{ height: 14, borderRadius: 9999, gap: 2 }} role="img" aria-label={`Protein ${split.proteinPct}%, carbs ${split.carbsPct}%, fat ${split.fatPct}%`}>
+        <p style={{ fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: dark ? "#B7ABDE" : "#6D50D3", marginBottom: 10 }}>{t("Macro distribution")}</p>
+        <div className="flex overflow-hidden" style={{ height: 14, borderRadius: 9999, gap: 2 }} role="img" aria-label={t("Protein {p}%, carbs {c}%, fat {f}%", { p: split.proteinPct, c: split.carbsPct, f: split.fatPct })}>
           {(
             [
               [split.proteinPct, MACRO_COLOUR.p],
@@ -313,9 +314,9 @@ export const TargetsReadOnly: React.FC<{ clientId: string; firstName?: string; s
           ))}
         </div>
         <div className="flex flex-wrap" style={{ gap: 12, marginTop: 8, fontSize: textPx(11), color: INK.chS }}>
-          <span>{`Protein ${grams.p} g`}</span>
-          <span>{`Carbs ${grams.c} g`}</span>
-          <span>{`Fat ${grams.f} g`}</span>
+          <span>{t("Protein {n} g", { n: grams.p })}</span>
+          <span>{t("Carbs {n} g", { n: grams.c })}</span>
+          <span>{t("Fat {n} g", { n: grams.f })}</span>
         </div>
       </div>
     </div>
@@ -327,24 +328,24 @@ export const TargetsList: React.FC<{ lane: ProLane; onBack: () => void; onOpen: 
   const o = useNutritionOverview(lane);
   return (
     <div>
-      <NuHead title="Targets" onBack={onBack} />
+      <NuHead title={t("Targets")} onBack={onBack} />
       {o.error && !o.offline && <ProError onRetry={o.retry} />}
       {o.error && o.offline && <OfflineLine />}
       {o.loading ? (
         <ListSkeleton rows={4} />
       ) : o.clients.length === 0 ? (
-        <EmptyState icon={Target} title="No clients yet" line={lane === "nutrition" ? "Targets you set for clients show here." : "Turn on nutrition coaching from a client's Plan tab to set targets."} />
+        <EmptyState icon={Target} title={t("No clients yet")} line={lane === "nutrition" ? t("Targets you set for clients show here.") : t("Turn on nutrition coaching from a client's Plan tab to set targets.")} />
       ) : (
         <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "4px 14px" }}>
           {o.clients.map((c, i) => {
-            const t = o.targets[c.clientId];
+            const tg = o.targets[c.clientId];
             return (
               <button key={c.clientId} type="button" onClick={() => onOpen(c.clientId)} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < o.clients.length - 1 ? `1px solid ${INK.b06}` : "none" }}>
                 <Avatar name={c.name} url={c.avatarUrl} size={34} />
                 <span className="flex-1 min-w-0">
                   <span className="block" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>{c.name}</span>
                   <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>
-                    {t ? `${Math.round(t.calories).toLocaleString(appLocale("en-GB"))} kcal · ${Math.round(t.proteinPct)}% protein${t.locked ? " · locked" : ""}` : "Not set by you"}
+                    {tg ? (tg.locked ? t("{kcal} kcal · {pct}% protein · locked", { kcal: Math.round(tg.calories).toLocaleString(appLocale("en-GB")), pct: Math.round(tg.proteinPct) }) : t("{kcal} kcal · {pct}% protein", { kcal: Math.round(tg.calories).toLocaleString(appLocale("en-GB")), pct: Math.round(tg.proteinPct) })) : t("Not set by you")}
                   </span>
                 </span>
               </button>

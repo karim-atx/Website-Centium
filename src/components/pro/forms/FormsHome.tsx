@@ -17,6 +17,7 @@ import { copyFormTemplate, fetchForms, listFormTemplates, type FormAssignment, t
 import { PRO_ROUTES } from "../subtypeLanes";
 import { FORMS_PATH, checkInLine, intakeLine, templateMetaLine, templatesFor } from "./formsList";
 import type { FormKind } from "./formModel";
+import { t, tx } from "../../../i18n/core";
 
 export { FORMS_PATH };
 
@@ -76,14 +77,14 @@ export const FormsHome: React.FC = () => {
     navigate(next === "check_in" ? `${FORMS_PATH}?tab=check-ins` : FORMS_PATH, { replace: true });
   };
 
-  const startFromTemplate = async (t: FormTemplate) => {
-    if (busy || !t.available) return;
-    if (!online) return setErr("You're offline. Try again when you're connected.");
-    setBusy(t.key);
+  const startFromTemplate = async (tpl: FormTemplate) => {
+    if (busy || !tpl.available) return;
+    if (!online) return setErr(t("You're offline. Try again when you're connected."));
+    setBusy(tpl.key);
     setErr(null);
-    const r = await copyFormTemplate(t.key);
+    const r = await copyFormTemplate(tpl.key);
     setBusy(null);
-    if (!r.ok) return setErr(r.message);
+    if (!r.ok) return setErr(t(r.message));
     navigate(`${FORMS_PATH}/${r.id}`);
   };
 
@@ -92,13 +93,13 @@ export const FormsHome: React.FC = () => {
 
   return (
     <div style={{ paddingBottom: 120 }}>
-      <CHead title="Forms" sub="What clients fill in, and when" onBack={back} />
+      <CHead title={t("Forms")} sub={t("What clients fill in, and when")} onBack={back} />
       {checkIns && (
         <SegmentedTabs
           className="mb-[14px]"
           items={[
-            { key: "intake", label: "Intake" },
-            { key: "check_in", label: "Check-ins" },
+            { key: "intake", label: tx("Intake", "form") },
+            { key: "check_in", label: t("Check-ins") },
           ]}
           activeKey={kind}
           onChange={pickTab}
@@ -109,7 +110,7 @@ export const FormsHome: React.FC = () => {
       {state === "offline" && data && <OfflineLine />}
       {err && <ErrorLine>{err}</ErrorLine>}
 
-      <SectionHead label="Your forms" />
+      <SectionHead label={t("Your forms")} />
       {state === "loading" && !data ? (
         <ListSkeleton rows={2} row={CardRow} />
       ) : !data ? (
@@ -126,30 +127,30 @@ export const FormsHome: React.FC = () => {
         />
       ) : (
         <SoftLine icon={kind === "intake" ? ClipboardList : CalendarCheck}>
-          {kind === "intake" ? "No intake forms yet. Start one with + or from a template." : "No check-ins yet. Start one with + or from a template."}
+          {kind === "intake" ? t("No intake forms yet. Start one with + or from a template.") : t("No check-ins yet. Start one with + or from a template.")}
         </SoftLine>
       )}
 
       {offered.length > 0 && (
         <>
           <div style={{ height: 4 }} />
-          <SectionHead label="Templates from Centium" />
+          <SectionHead label={t("Templates from Centium")} />
           <ListCard
-            rows={offered.map((t) => ({
-              key: t.key,
+            rows={offered.map((tpl) => ({
+              key: tpl.key,
               icon: FilePlus2,
-              title: t.title,
-              meta: templateMetaLine(t),
-              trailing: t.available ? (
+              title: tpl.title,
+              meta: templateMetaLine(tpl),
+              trailing: tpl.available ? (
                 <button
                   type="button"
-                  onClick={() => void startFromTemplate(t)}
+                  onClick={() => void startFromTemplate(tpl)}
                   disabled={!!busy}
-                  aria-label={`Use ${t.title}`}
+                  aria-label={t("Use {name}", { name: tpl.title })}
                   className="tap shrink-0 relative before:absolute before:-inset-3 before:content-['']"
-                  style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, opacity: busy && busy !== t.key ? 0.5 : 1 }}
+                  style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, opacity: busy && busy !== tpl.key ? 0.5 : 1 }}
                 >
-                  {busy === t.key ? "Adding…" : "Use"}
+                  {busy === tpl.key ? t("Adding…") : t("Use")}
                 </button>
               ) : (
                 <ComingSoonPill />
@@ -158,7 +159,7 @@ export const FormsHome: React.FC = () => {
           />
         </>
       )}
-      <Fab label="New form" icon={Plus} onClick={() => navigate(`${FORMS_PATH}/new/${kind === "check_in" ? "check-in" : "intake"}`)} />
+      <Fab label={t("New form")} icon={Plus} onClick={() => navigate(`${FORMS_PATH}/new/${kind === "check_in" ? "check-in" : "intake"}`)} />
     </div>
   );
 };
