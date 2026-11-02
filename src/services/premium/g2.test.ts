@@ -63,8 +63,9 @@ test("a missing function (PGRST202, 42883, 404) is what falls back; nothing else
   assert.equal(isMissingFunction(null), false);
   assert.equal(directoryFallback({ code: "PGRST202" }), true);
   assert.equal(directoryFallback({ code: "ATX02", message: "too many directory requests -- try again in 12 minutes" }), false);
-  assert.equal(directoryFallback({ code: "42501" }), false);
-  assert.equal(directoryFallback({ message: "Failed to fetch" }), false);
+  assert.equal(directoryFallback({ code: "42501", message: "permission denied for function count_directory_read" }), true);
+  assert.equal(directoryFallback({ message: "Failed to fetch" }), true);
+  assert.equal(directoryFallback(null), false);
 });
 
 test("off, loading, Premium or a professional: no limit, no Premium label", () => {
