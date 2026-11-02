@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { linkPhrases, parseInline, parsePolicy, plainText, type PolicyBlock } from "./policyDoc.ts";
-import { initialPolicyLang, PREVAILS_SECTION_ID, REFUND_POLICY_LINKS } from "./refund.ts";
+import { initialPolicyLang, PREVAILS_SECTION_ID, REFUND_POLICY_LINKS, REFUND_POLICY_VERSION } from "./refund.ts";
 
 // Round F (DN): the page shows the lawyer's files themselves. These checks
 // prove nothing is lost or changed on the way: every word of each file is on
@@ -38,6 +38,13 @@ describe("refund policy, word for word", () => {
     assert.equal(d.updated, "Last updated: 31 October 2026. Confirmed by legal counsel.");
     assert.equal(d.sections.length, 14);
     assert.equal(d.sections[12].h, "13. Language");
+  });
+
+  it("the version every purchase records is the English file's date (Round G1)", () => {
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const m = /Last updated: (\d{1,2}) (\w+) (\d{4})\./.exec(parsePolicy(EN).updated);
+    assert.ok(m);
+    assert.equal(REFUND_POLICY_VERSION, `${m[3]}-${String(months.indexOf(m[2]) + 1).padStart(2, "0")}-${m[1].padStart(2, "0")}`);
   });
 
   it("Arabic has the same shape: sections, paragraphs and list items", () => {
