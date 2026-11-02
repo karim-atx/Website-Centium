@@ -189,7 +189,7 @@ const bizmarket: Catalogue = {
   // == Listing strength (model.ts) ==
   "{n} of 6": "{n} من 6",
   "{n} of 6 · add {more} more": "{n} من 6 · أضف {more} أخرى",
-  "{n} reviews": { zero: "{n} تقييم", one: "تقييم واحد", two: "تقييمان", few: "{n} تقييمات", many: "{n} تقييمًا", other: "{n} تقييم" },
+  "{n} reviews": { zero: "لا تقييمات", one: "تقييم واحد", two: "تقييمان", few: "{n} تقييمات", many: "{n} تقييمًا", other: "{n} تقييم" },
   Photos: "الصور",
   "Address and map pin": "العنوان ودبوس الخريطة",
   "Contact and social links": "التواصل وروابط التواصل الاجتماعي",
@@ -216,8 +216,8 @@ const bizmarket: Catalogue = {
   // == Promotions: what to promote, types, cards (promoModel.ts) ==
   "Class · {when} · {booked} of {max} booked": "حصة · {when} · {booked} من {max} محجوزة",
   "With {name}": "مع {name}",
-  "{n} spots left": { zero: "لا أماكن متبقية", one: "بقي مكان واحد", two: "بقي مكانان", few: "بقيت {n} أماكن", many: "بقي {n} مكانًا", other: "بقي {n} مكان" },
-  Offer: "عرض",
+  "{n} spots left": { zero: "لم يبقَ أي مكان", one: "بقي مكان واحد", two: "بقي مكانان", few: "بقيت {n} أماكن", many: "بقي {n} مكانًا", other: "بقي {n} مكان" },
+  Offer: "العرض",
   "On your listing": "على صفحتك",
   "Percent off": "خصم بالنسبة المئوية",
   "Choose 5% to 90%": "اختر من 5% إلى 90%",
@@ -334,7 +334,7 @@ const bizmarket: Catalogue = {
   "No passes bought from Centium yet.": "لم تُشترَ تذاكر عبر Centium بعد.",
   "{n} new customers": { zero: "{n} زبون جديد", one: "زبون جديد واحد", two: "زبونان جديدان", few: "{n} زبائن جدد", many: "{n} زبونًا جديدًا", other: "{n} زبون جديد" },
   "{n} new members": { zero: "{n} عضو جديد", one: "عضو جديد واحد", two: "عضوان جديدان", few: "{n} أعضاء جدد", many: "{n} عضوًا جديدًا", other: "{n} عضو جديد" },
-  "{n} new clients": { zero: "{n} عميل جديد", one: "عميل جديد واحد", two: "عميلان جديدان", few: "{n} عملاء جدد", many: "{n} عميلًا جديدًا", other: "{n} عميل جديد" },
+  "{n} new clients": { zero: "لا عملاء جدد", one: "عميل جديد واحد", two: "عميلان جديدان", few: "{n} عملاء جدد", many: "{n} عميلًا جديدًا", other: "{n} عميل جديد" },
   "Products · Performance": "المنتجات · الأداء",
   "Marketplace · Performance": "السوق · الأداء",
   "Back to Performance": "العودة إلى الأداء",
@@ -440,7 +440,7 @@ const bizmarket: Catalogue = {
   "Not approved. Replace it or delete it.": "غير مقبولة. استبدلها أو احذفها.",
   "Uploading photos": "جارٍ رفع الصور",
   "Couldn't upload": "تعذّر الرفع",
-  Added: "أُضيفت",
+  Added: "تمت الإضافة",
   Waiting: "بالانتظار",
   Uploading: "جارٍ الرفع",
   "Retry upload": "إعادة محاولة الرفع",
@@ -637,7 +637,7 @@ const bizmarket: Catalogue = {
   "No professionals are open to gym work yet.": "لا مختصين منفتحين على العمل في النوادي بعد.",
   "Offered to {name}": "عُرض على {name}",
   "Send offer to {name}": "إرسال عرض إلى {name}",
-  Offered: "عُرض",
+  Offered: "متاح",
   "Offer to {name}": "عرض على {name}",
   "Review offer": "مراجعة العرض",
   "Role · ongoing": "وظيفة · مستمرة",
@@ -693,6 +693,8 @@ const bizmarket: Catalogue = {
   "Invite sent to {name}": "أُرسلت الدعوة إلى {name}",
   "Email or phone": "البريد الإلكتروني أو الهاتف",
   "They are a": "هو",
+  // Round G clash fix: the same English with another meaning in this area.
+  "Offered|hire": "عُرض",
 };
 
 export default bizmarket;

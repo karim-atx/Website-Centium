@@ -461,7 +461,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
     {
       value: "upto",
       label: t("Up to"),
-      note: t("classes"),
+      note: tx("classes", "count unit"),
       trailing: (
         <MenuStepper
           value={limitN}

@@ -174,7 +174,7 @@ const business: Catalogue = {
   "Every seat is in use": "كل المقاعد مستخدمة",
 
   // == Dashboard: Finish setting up ==
-  Dismiss: "إخفاء",
+  Dismiss: "إغلاق",
   "Setup progress": "تقدّم الإعداد",
   "{done} of {total} done": "تم {done} من {total}",
   "Business profile saved": "حُفظ ملف النشاط التجاري",
@@ -189,21 +189,14 @@ const business: Catalogue = {
   Create: "إنشاء",
 
   // == Dashboard: gauges ("At a glance") ==
-  "At a glance": "لمحة سريعة",
+  "At a glance": "نظرة سريعة",
   "Net members": "صافي الأعضاء",
   "No members yet": "لا أعضاء بعد",
   "{joined} joined · {ended} ended": "انضم {joined} · انتهى {ended}",
   "Seats used": "المقاعد المستخدمة",
   "No seat blocks": "لا حزم مقاعد",
   "{n} free|seats": "{n} شاغر", // note: free seats (not "free of charge")
-  "{n} blocks": {
-    zero: "لا حزم",
-    one: "حزمة واحدة",
-    two: "حزمتان",
-    few: "{n} حزم",
-    many: "{n} حزمةً",
-    other: "{n} حزمة",
-  },
+  "{n} blocks": { zero: "لا كتل", one: "كتلة واحدة", two: "كتلتان", few: "{n} كتل", many: "{n} كتلة", other: "{n} كتلة" },
   "New members": "أعضاء جدد",
   "Same as last wk": "مثل الأسبوع الماضي",
   "{delta} vs last wk": "{delta} مقارنة بالأسبوع الماضي",
@@ -257,32 +250,18 @@ const business: Catalogue = {
   "Active members": "الأعضاء النشطون",
   "Awaiting payment": "بانتظار الدفع",
   "Agreed, not yet paid": "متفق عليه، لم يُدفع بعد",
-  "Marked paid this month": "سُجّل مدفوعًا هذا الشهر",
+  "Marked paid this month": "سُجّل كمدفوع هذا الشهر",
   "Classes this week": "حصص هذا الأسبوع",
   "Bookings this week": "حجوزات هذا الأسبوع",
   "Cancellations this week": "إلغاءات هذا الأسبوع",
   "Payments happen at the venue, not through Centium. These figures are what was agreed and what your staff marked as paid.":
-    "تتم المدفوعات في المكان، لا عبر Centium. هذه الأرقام هي ما اتُّفق عليه وما سجّله موظفوك على أنه مدفوع.",
+    "تتم المدفوعات في المكان، لا عبر Centium. هذه الأرقام هي ما اتُّفق عليه وما سجّله موظفوك كمدفوع.",
   "Couldn't load your dashboard.": "تعذّر تحميل لوحة التحكم.",
 
   // == Dashboard: Schedule ==
   Event: "فعالية",
-  "{n} classes": {
-    zero: "لا حصص",
-    one: "حصة واحدة",
-    two: "حصتان",
-    few: "{n} حصص",
-    many: "{n} حصةً",
-    other: "{n} حصة",
-  },
-  "{n} events": {
-    zero: "لا فعاليات",
-    one: "فعالية واحدة",
-    two: "فعاليتان",
-    few: "{n} فعاليات",
-    many: "{n} فعاليةً",
-    other: "{n} فعالية",
-  },
+  "{n} classes": { zero: "لا حصص", one: "حصة واحدة", two: "حصتان", few: "{n} حصص", many: "{n} حصة", other: "{n} حصة" },
+  "{n} events": { zero: "لا فعاليات", one: "فعالية واحدة", two: "فعاليتان", few: "{n} فعاليات", many: "{n} فعالية", other: "{n} فعالية" },
   "{list} today": "{list} اليوم",
   "{n} at {time}": "{n} عند {time}",
   "First class": "أول حصة",
@@ -321,7 +300,7 @@ const business: Catalogue = {
   "Joins, bookings, ended memberships and new classes show here as they happen.": "تظهر هنا حالات الانضمام والحجوزات والعضويات المنتهية والحصص الجديدة فور حدوثها.",
   "This week, compared with last week": "هذا الأسبوع مقارنة بالأسبوع الماضي",
   "No activity yet": "لا نشاط بعد",
-  "Recent activity": "آخر النشاطات",
+  "Recent activity": "النشاط الأخير",
   "Live|connection": "مباشر", // note: the live (Realtime) feed is connected
   Offline: "غير متصل",
   Refresh: "تحديث",
@@ -343,7 +322,7 @@ const business: Catalogue = {
   "Your events and pop-ups": "فعالياتك ومتاجرك المؤقتة",
   "Schedule clients to professionals & classes": "جدولة العملاء مع المختصين والحصص",
   Referral: "الإحالة",
-  "Share your code, earn rewards": "شارك رمزك واكسب مكافآت",
+  "Share your code, earn rewards": "شارك رمزك واكسب المكافآت",
   "Team and access": "الفريق والصلاحيات",
   "Who can see and change what": "من يمكنه رؤية ماذا وتغييره",
   "Professionals who used your ID": "المختصون الذين استخدموا معرّفك",
@@ -442,7 +421,7 @@ const business: Catalogue = {
   "{amount} · ordered {date}. Seats are added once Centium records your payment.": "{amount} · طُلبت في {date}. تُضاف المقاعد بعد أن تسجّل Centium دفعتك.",
   "Free seat": "مقعد شاغر",
   "Invite a professional": "ادعُ مختصًا",
-  Invited: "المدعوون",
+  Invited: "مدعو",
   "An invitation uses a seat only once it's accepted.": "لا تشغل الدعوة مقعدًا إلا بعد قبولها.",
   "No seat needed": "لا حاجة إلى مقعد",
   "Front desk, managers, staff and shop assistants don't use a seat.": "موظفو الاستقبال والمديرون والموظفون ومساعدو المتجر لا يشغلون مقعدًا.",
@@ -726,6 +705,8 @@ const business: Catalogue = {
   "Couldn't sign out your other devices. Try again.": "تعذّر تسجيل الخروج من أجهزتك الأخرى. حاول مرة أخرى.",
   "Couldn't save your listing. Try again.": "تعذّر حفظ صفحتك. حاول مرة أخرى.",
   "Finish setting up your business before editing your listing.": "أكمِل إعداد نشاطك التجاري قبل تعديل صفحتك.",
+  // Round G clash fix: the same English with another meaning in this area.
+  "Invited|section": "المدعوون",
 };
 
 export default business;

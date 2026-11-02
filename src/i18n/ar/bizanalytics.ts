@@ -81,7 +81,7 @@ const bizanalytics: Catalogue = {
   "the last 12 weeks": "آخر 12 أسبوعًا",
   "Couldn't load your numbers.": "تعذّر تحميل أرقامك.",
   Appointment: "موعد",
-  Class: "حصة",
+  Class: "الحصة",
 
   // == Custom range sheet ==
   Mo: "ن", // note: one-letter weekday heads of the month grid (Monday first): ن ث ر خ ج س ح
@@ -155,7 +155,7 @@ const bizanalytics: Catalogue = {
   "24-hour time": "نظام 24 ساعة",
   "Show {n} more": "عرض {n} إضافية",
   "Show less": "عرض أقل",
-  "{h} h {m} min": "{h} س {m} د",
+  "{h} h {m} min": "{h} ساعة {m} دقيقة",
   "Until {time}": "حتى {time}",
   "{booked} / {capacity} booked": "{booked} / {capacity} محجوز",
   "Next · in {time}": "التالي · بعد {time}",
@@ -536,7 +536,7 @@ const bizanalytics: Catalogue = {
   "Back to Clients": "العودة إلى العملاء",
   "Back to Members": "العودة إلى الأعضاء",
   "No venues yet": "لا أماكن بعد",
-  "You don't run or work at a venue on Centium yet.": "لا تدير مكانًا ولا تعمل في مكان على Centium بعد.",
+  "You don't run or work at a venue on Centium yet.": "لا تدير مكانًا على Centium ولا تعمل فيه بعد.",
   "First names only. Members under 18 are marked.": "الأسماء الأولى فقط. يُشار إلى الأعضاء دون 18 عامًا.",
   "No clients yet": "لا عملاء بعد",
   "Clients appear here after their first booking. Add a class to get started.": "يظهر العملاء هنا بعد حجزهم الأول. أضف حصة لتبدأ.",
@@ -610,8 +610,8 @@ const bizanalytics: Catalogue = {
   "class pack|plan kind": "باقة الحصص",
   "intro offer|plan kind": "العرض التعريفي",
   "drop-in|plan kind": "الحضور المنفرد",
-  "Ended {date}": "انتهت في {date}",
-  "Invited {date}": "دُعي في {date}",
+  "Ended {date}": "انتهى في {date}",
+  "Invited {date}": "أُرسلت الدعوة في {date}",
   "Since {date}": "منذ {date}",
   "Couldn't copy. Select the code and copy it yourself.": "تعذّر النسخ. حدّد الرمز وانسخه بنفسك.",
   "Membership ended.": "انتهت العضوية.",
@@ -635,7 +635,7 @@ const bizanalytics: Catalogue = {
   "End this membership?": "إنهاء هذه العضوية؟",
   "They stop being a member today. You can invite them again with a new code.": "يتوقف عن كونه عضوًا اليوم. يمكنك دعوته مجددًا برمز جديد.",
   "Couldn't load your codes. Check your connection and try again.": "تعذّر تحميل رموزك. تحقّق من اتصالك وحاول مرة أخرى.",
-  "You're offline. Showing what was loaded last.": "أنت غير متصل. نعرض آخر ما تم تحميله.",
+  "You're offline. Showing what was loaded last.": "أنت غير متصل. يُعرض آخر ما حُمّل.",
   "Codes redeemed": "الرموز المستخدمة",
   "{redeemed} of {n} codes have been used. Unused codes stop working after 7 days.": {
     zero: "استُخدم {redeemed} من 0 رموز. تتوقف الرموز غير المستخدمة عن العمل بعد 7 أيام.",
@@ -1050,14 +1050,7 @@ const bizanalytics: Catalogue = {
   "Offline. Showing what was loaded at {time}.": "غير متصل. يُعرض ما تم تحميله الساعة {time}.",
 
   // == Reputation: reviews and replies ==
-  "{n} weeks ago": {
-    zero: "قبل أقل من أسبوع",
-    one: "قبل أسبوع",
-    two: "قبل أسبوعين",
-    few: "قبل {n} أسابيع",
-    many: "قبل {n} أسبوعًا",
-    other: "قبل {n} أسبوع",
-  },
+  "{n} weeks ago": { zero: "منذ {n} أسبوع", one: "منذ أسبوع", two: "منذ أسبوعين", few: "منذ {n} أسابيع", many: "منذ {n} أسبوعًا", other: "منذ {n} أسبوع" },
   "You reported this to Centium on {date}. We're reviewing it.": "أبلغت Centium بهذا في {date}. نحن نراجعه.",
   "Centium is reviewing this review. You can still reply.": "يراجع Centium هذا التقييم. لا يزال بإمكانك الرد.",
   "No new reviews this period.": "لا تقييمات جديدة في هذه الفترة.",

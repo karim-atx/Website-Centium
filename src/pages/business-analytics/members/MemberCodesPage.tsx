@@ -323,7 +323,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
             .filter(Boolean)
             .join(" ")
         }
-        confirmLabel={t("End membership")}
+        confirmLabel={tx("End membership", "business")}
         cancelLabel={t("Keep it")}
         busy={endBusy || !online}
         onCancel={() => !endBusy && setEnding(null)}

@@ -564,7 +564,7 @@ export function toDeskSummary(r: SummaryRow | null | undefined): DeskSummary {
 
 /** DA1-007 row 3: Quiet / Steady / Busy; null → "Not enough data yet" (HANDOVER_API B10). */
 export function rightNowLabel(r: RightNow | null): string {
-  return r === "quiet" ? t("Quiet") : r === "steady" ? t("Steady") : r === "busy" ? t("Busy") : t("Not enough data yet");
+  return r === "quiet" ? t("Quiet") : r === "steady" ? tx("Steady", "busyness") : r === "busy" ? t("Busy") : t("Not enough data yet");
 }
 
 export type BusyRow = { weekday: number | string; hour: number | string; average_entries: number | string | null };

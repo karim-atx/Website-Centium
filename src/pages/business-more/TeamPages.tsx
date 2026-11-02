@@ -15,7 +15,7 @@ import { personUsesSeat } from "../../services/business-team/seats";
 import { fetchJoinRequests, fetchSeatCapacity, fetchTeam, type JoinRequest, type SeatCapacity, type TeamPerson } from "../../services/business-team/team";
 import { ROLE_LABEL, inviteState, inviteWhen, isWithdrawn, lowerFirst, roleAndProfession, shortDay, withdrawnPeople } from "../business-team/teamLogic";
 import { formatShortDate } from "../../utils/date";
-import { t, tn } from "../../i18n/core";
+import { t, tn, tx } from "../../i18n/core";
 
 // OURS-MO1B-employees, -roles, -join-requests, -seats, -business-id
 // (BizMoreV8 screen="employees" / "roles" / "joins" / "seats" / "bizid").
@@ -191,7 +191,7 @@ export function SeatsPage() {
             );
           })}
           {invited.length > 0 && (
-            <BizSection label={t("Invited")} footer={t("An invitation uses a seat only once it's accepted.")}>
+            <BizSection label={tx("Invited", "section")} footer={t("An invitation uses a seat only once it's accepted.")}>
               {invited.map((m) => (
                 <BizRow key={m.professionalId} icon={UserPlus} title={m.name} desc={t("Invited {date}", { date: shortDay(m.invitedAt) }) + (inviteWhen(m) ? ` · ${inviteWhen(m)}` : "")} value={inviteState(m) === "expired" ? t("Expired") : t("Pending")} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
               ))}

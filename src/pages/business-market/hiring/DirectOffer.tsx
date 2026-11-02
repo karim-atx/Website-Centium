@@ -177,7 +177,7 @@ export default function DirectOfferPage() {
                       className="hit market-focus"
                       style={{ height: 36, padding: "0 14px", borderRadius: 11, border: 0, background: sent ? offBg : m.fill, color: sent ? offInk : m.onfill, display: "flex", alignItems: "center", fontSize: textPx(12.5), fontWeight: 800, whiteSpace: "nowrap", fontFamily: "inherit", cursor: sent ? "default" : "pointer", flexShrink: 0 }}
                     >
-                      {sent ? t("Offered") : t("Send offer")}
+                      {sent ? tx("Offered", "hire") : t("Send offer")}
                     </button>
                   </div>
                   {sent && offered[p.id].length ? <BusyWarning lines={offered[p.id].map(busyText).filter(Boolean)} style={{ marginTop: 10 }} /> : null}

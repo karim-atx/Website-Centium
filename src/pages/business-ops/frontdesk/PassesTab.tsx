@@ -13,7 +13,7 @@ import { deskMoney, renewalSub, weekSales, type DeskSale, type FrontDeskMember, 
 import type { DeskState } from "./useFrontDesk";
 import { dayMonthYear } from "../../../services/venues/venueLogic";
 import { todayLocal } from "../../../utils/date";
-import { t } from "../../../i18n/core";
+import { t, tx } from "../../../i18n/core";
 import { expiredRows, expiredSub, type ExpiredRow } from "./expiredRows";
 import { ChipButton, DeskLabel, DeskRow, ErrorCard, LIST, ListCard, ListLine, NumberBoxes, RowsSkeleton, StatusChip } from "./frontDeskKit";
 
@@ -306,7 +306,7 @@ const RenewalMenu: React.FC<{
       options={[
         ...(chase ? [{ value: "renew", label: t("Renew"), disabled: !online, note: offline }] : []),
         ...(chase && onRemind && menuFor.personId ? [{ value: "remind", label: t("Send a reminder"), disabled: !online, note: offline }] : []),
-        { value: "end", label: t("End membership"), destructive: true, disabled: !online, note: offline },
+        { value: "end", label: tx("End membership", "business"), destructive: true, disabled: !online, note: offline },
       ]}
       onSelect={(v) => {
         const r = menuFor;
@@ -373,7 +373,7 @@ const EndPopup: React.FC<{
       icon={<XCircle size={20} strokeWidth={2.2} />}
       title={ending ? t("End {name}’s membership?", { name: ending.label }) : ""}
       subtitle={now ? t("Their pass stops working straight away.") : t("Their pass stops working at the end of the paid period, on {date}.", { date: until })}
-      confirmLabel={busy ? t("Ending…") : t("End membership")}
+      confirmLabel={busy ? t("Ending…") : tx("End membership", "business")}
       cancelLabel={t("Keep it")}
       initialFocus="cancel"
       busy={busy}

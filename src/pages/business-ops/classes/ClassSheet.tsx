@@ -48,7 +48,7 @@ import { NO_INSTRUCTOR, busyDayOf, clashBody, clashRows, clashTitle, firstNameOf
 import { CentredDialog } from "../../business-market/listingParts";
 import { HIRING_ERROR_TEXT } from "../../../services/hiring/model";
 import { conflictsFor, durationMinutes, durationOptions, everyText, initialOf, isLegacyType, joinAnd, longDate, mondayOf, addDays, running, type SessionLite } from "./scheduleModel";
-import { getLanguage, t, tk, tn } from "../../../i18n/core";
+import { getLanguage, t, tk, tn, tx } from "../../../i18n/core";
 import { appLocale } from "../../../i18n/format";
 
 // Market + Share 3.0 · B-MA.6 Add or edit a class (Business Marketplace
@@ -825,7 +825,7 @@ function SheetBody({
                       <Plus size={14} strokeWidth={2.4} aria-hidden />
                     </button>
                   </span>
-                  <span>{rp.interval === 1 ? t("week") : t("weeks")}</span>
+                  <span>{rp.interval === 1 ? t("week") : tx("weeks", "repeat interval")}</span>
                 </div>
               )}
               {rp.kind !== "daily" && (
@@ -906,7 +906,7 @@ function SheetBody({
                             className="tabular-nums"
                             style={{ width: 30, border: 0, background: "transparent", outline: "none", textAlign: "end", fontWeight: 700, color: m.ink, fontSize: textPx(12.5) }}
                           />
-                          {t("sessions")}
+                          {tx("sessions", "count unit")}
                         </span>
                       )}
                     </div>
