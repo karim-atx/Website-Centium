@@ -18,7 +18,7 @@ import { useLive } from "../business-ops/store/storeShared";
 import { ClassTermsSheet } from "../marketplace/ClassTermsSheet";
 import { ClientCard, ClientEmpty, ClientRow, InfoNote, RadioRow, RetryLine, Section, SkeletonCards, SoonChip } from "../store/clientKit";
 import { useAppointmentBooking, type ApptBookOutcome } from "./useAppointmentBooking";
-import { getLanguage, t } from "../../i18n/core";
+import { getLanguage, t, tn } from "../../i18n/core";
 import { appLocale } from "../../i18n/format";
 
 /** The day chip's short weekday: English keeps DAY_SHORT; another language asks appLocale(). */
@@ -183,7 +183,7 @@ export default function BookAppointmentPage() {
                     selected={service?.id === x.id}
                     onSelect={() => setService(x)}
                     title={x.name}
-                    sub={`${t("{n} min", { n: x.durationMin })} · ${money(x.price)}`}
+                    sub={`${tn(x.durationMin, "{n} min", "{n} min")} · ${money(x.price)}`}
                   />
                 ))}
               </div>

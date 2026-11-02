@@ -80,7 +80,7 @@ export function weekContents(kinds: LessonKind[]): string {
 /** "35 min", "1 hr 5 min"; null when no lesson has a length. */
 export function minutesLabel(minutes: number): string | null {
   if (!(minutes > 0)) return null;
-  if (minutes < 60) return t("{n} min", { n: minutes });
+  if (minutes < 60) return tn(minutes, "{n} min", "{n} min");
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return m ? t("{h} hr {m} min", { h, m }) : t("{h} hr", { h });

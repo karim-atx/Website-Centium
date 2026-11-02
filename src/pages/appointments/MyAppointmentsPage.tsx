@@ -16,7 +16,7 @@ import { clock12, rangeClock12 } from "../../utils/time12";
 import { useOnline } from "../../hooks/useOnline";
 import { useLive } from "../business-ops/store/storeShared";
 import { ClientCard, ClientEmpty, ClientRow, InfoNote, RetryLine, Section, SkeletonCards } from "../store/clientKit";
-import { t } from "../../i18n/core";
+import { t, tn } from "../../i18n/core";
 
 /** services/appointments apptWords, its label in the app's language. */
 const shownWords = (w: ReturnType<typeof apptWords>) => ({ ...w, label: t(w.label) });
@@ -180,7 +180,7 @@ export function MyAppointmentPage() {
       <PageHeader title={a.serviceName} subtitle={`${shortDate(new Date(a.startsAt))}, ${rangeClock12(a.startsAt, a.endsAt)}`} showBack sub />
       <ClientCard label={t("Appointment")}>
         <ClientRow icon={Store} title={place} sub={t("Where")} />
-        <ClientRow icon={Sparkles} title={t("{n} min", { n: a.durationMin })} sub={t("How long")} pill={words} />
+        <ClientRow icon={Sparkles} title={tn(a.durationMin, "{n} min", "{n} min")} sub={t("How long")} pill={words} />
         <ClientRow icon={Banknote} title={money(a.price)} sub={paid ?? t("Cash at the visit")} />
       </ClientCard>
       {docs.length > 0 && (

@@ -417,7 +417,7 @@ const community: Catalogue = {
   "due {when} {time}": "مستحق {when} {time}",
   "{n} minutes": { zero: "{n} دقيقة", one: "دقيقة واحدة", two: "دقيقتان", few: "{n} دقائق", many: "{n} دقيقة", other: "{n} دقيقة" },
   "Session with {name} now": "جلسة مع {name} الآن",
-  "Session with {name} in {n} min": "جلسة مع {name} بعد {n} دقيقة",
+  "Session with {name} in {n} min": { zero: "جلسة مع {name} بعد {n} دقيقة", one: "جلسة مع {name} بعد دقيقة واحدة", two: "جلسة مع {name} بعد دقيقتين", few: "جلسة مع {name} بعد {n} دقائق", many: "جلسة مع {name} بعد {n} دقيقةً", other: "جلسة مع {name} بعد {n} دقيقة" },
   "Session with {name} at {time}": "جلسة مع {name} الساعة {time}",
   "Finish your intake for {name}": "أكمل نموذج البداية لـ{name}",
   "{done} of {total} done · saved": "تم {done} من {total} · محفوظ",
