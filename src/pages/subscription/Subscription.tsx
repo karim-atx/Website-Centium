@@ -33,6 +33,11 @@ import {
   CalendarRange,
 } from "lucide-react";
 import { RefundPolicyLink } from "../../components/legal/RefundPolicyLink";
+import { usePremium } from "../../services/premium/hooks";
+import { memberStatus, planPageFeatureSource, premiumOn, showBuyInApp } from "../../services/premium/model";
+import { BuyInApp } from "../../components/premium/BuyInApp";
+import { PremiumFeatureList } from "../../components/premium/PremiumFeatureList";
+import { PremiumStatusCard } from "../../components/premium/PremiumStatusCard";
 
 // The subscription screen, for client and business accounts (professionals:
 // pages/pro/more/ProSubscription, MO24 v3).
@@ -127,6 +132,12 @@ function ClientSubscription() {
   const { tiers, loading, error } = useSubscriptionTiers("client");
   const { resolved, loading: planLoading, error: planError } = useMySubscriptionTier("client");
   const [period, setPeriod] = useState<BillingPeriod>("yearly");
+  // Round G1: with the Premium switch off (or still loading) this page is
+  // exactly today's. On: the member's Premium status, the features.ts list,
+  // and "Buy in the Centium app" in place of the email (Premium is sold in
+  // the app only); the mailto stays for professional and business plans.
+  const { premium } = usePremium();
+  const status = memberStatus(premium);
 
   const current = resolved?.tier ?? null;
   const isTopTier = !!current && tiers.length > 0 && tiers[tiers.length - 1].id === current.id;
@@ -142,6 +153,9 @@ function ClientSubscription() {
       {/* THE PLAN, NAMED. Never "no subscription": an account with no
           subscription_states row is on the free default, which is a plan with
           a name, not an absence. */}
+      {status ? (
+        <PremiumStatusCard className="mb-6" />
+      ) : (
       <div className="rounded-2xl bg-primary-pale px-4 py-3.5 mb-6 text-center">
         {planLoading ? (
           <p className="text-sm text-primary-dark">{t("Checking your plan…")}</p>
@@ -157,7 +171,11 @@ function ClientSubscription() {
           <p className="text-sm text-primary-dark">{t("Your plan couldn't be identified.")}</p>
         )}
       </div>
+      )}
 
+      {planPageFeatureSource(premium) === "features" ? (
+        <PremiumFeatureList />
+      ) : (
       <div className="grid grid-cols-2 gap-2.5 mb-6">
         {features.map((f) => (
           <div
@@ -169,6 +187,7 @@ function ClientSubscription() {
           </div>
         ))}
       </div>
+      )}
 
       <BillingToggle period={period} onChange={setPeriod} bestSaving={bestSavingAmong(tiers)} />
 
@@ -190,7 +209,11 @@ function ClientSubscription() {
         ))}
       </div>
 
-      <UpgradeFooter show={!isTopTier} />
+      {showBuyInApp(premium) && premium ? (
+        <BuyInApp product="premium" monthly={premium.monthlyPrice} yearly={premium.yearlyPrice} trialDays={premium.trialDays} />
+      ) : premiumOn(premium) ? null : (
+        <UpgradeFooter show={!isTopTier} />
+      )}
     </div>
   );
 }

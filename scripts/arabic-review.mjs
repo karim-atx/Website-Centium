@@ -30,6 +30,7 @@ const AREAS = [
   ["safety", "Referrals, vouchers, reviews and first messages"],
   ["venues", "Class no-shows, gym pass and member codes"],
   ["certificates", "Your certificates (Courses)"],
+  ["premium", "Round G1: Premium, passes, business plan levels and hiring credits"],
 ];
 
 const rows = [];

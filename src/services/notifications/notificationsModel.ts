@@ -85,6 +85,13 @@ export const MEMBER_NOTIFICATION_KINDS = [
   // was deleted with its erased author (subject course, subject_id null;
   // payload title). Nothing to open.
   "course_removed",
+  // Round G1 (Database 20261226170000): Premium through a professional or a
+  // gym began, ends in 7 days, has ended (subject entitlement; payload via
+  // 'professional' | 'gym', from_name, and ends_on, the member's local date).
+  // Nothing to open.
+  "premium_pass_started",
+  "premium_pass_ending",
+  "premium_pass_ended",
 ] as const;
 export type MemberNotificationKind = (typeof MEMBER_NOTIFICATION_KINDS)[number];
 
@@ -127,7 +134,20 @@ export const CLIENT_KINDS: readonly MemberNotificationKind[] = [
   "booking_pause_lifted",
   // Round F2: a course the member was in is gone.
   "course_removed",
+  // Round G1: Premium through a professional or a gym.
+  "premium_pass_started",
+  "premium_pass_ending",
+  "premium_pass_ended",
 ];
+
+/**
+ * Round G1: the Premium pass notices exist only while the Premium switch is
+ * on, and a database without Round G1 refuses these enum labels outright, so
+ * the bell and the page ask for them only then (switch off = today's app).
+ */
+export const PREMIUM_PASS_KINDS: readonly MemberNotificationKind[] = ["premium_pass_started", "premium_pass_ending", "premium_pass_ended"];
+const CLIENT_KINDS_BEFORE_PREMIUM = CLIENT_KINDS.filter((k) => !PREMIUM_PASS_KINDS.includes(k));
+export const clientKinds = (premiumOn: boolean): readonly MemberNotificationKind[] => (premiumOn ? CLIENT_KINDS : CLIENT_KINDS_BEFORE_PREMIUM);
 
 /** my_unread_notification_count's cap: the reader never counts past it. */
 export const UNREAD_COUNT_CAP = 99;
@@ -283,6 +303,12 @@ export const CLIENT_COPY: NotificationCopyTable = {
   booking_pause_lifted: NO_SHOW_NOTICE_COPY.booking_pause_lifted,
   // Round F2 (payload title; Karim approved the copy 2026-10-31).
   course_removed: { title: tk("Course no longer available"), body: tk("A course you joined is no longer available.") },
+  // Round G1 (DB_G1_HANDOVER "Notices", copy for Karim's review). Without
+  // the payload: the handover's titles, "Your Premium is ending" (ours, for
+  // a row with no ends_on) and the ended notice's last sentence.
+  premium_pass_started: { title: tk("You have Centium Premium"), body: "" },
+  premium_pass_ending: { title: tk("Your Premium is ending"), body: "" },
+  premium_pass_ended: { title: tk("Your Premium has ended"), body: tk("Everything you logged is still here.") },
 };
 
 /** A key no table knows: a safe line, never the raw key. */
@@ -439,6 +465,23 @@ export const CLIENT_FILLS: NotificationFillTable = {
     const title = pText(p, "title");
     return title ? { body: t("{title} is no longer available.", { title }) } : {};
   },
+  // Round G1: payload via ('professional' | 'gym'), from_name; ending also ends_on.
+  premium_pass_started: (p) => {
+    const name = pText(p, "from_name");
+    if (!name) return {};
+    return { body: p.via === "gym" ? t("{name} includes Centium Premium with your membership.", { name }) : t("{name} included Centium Premium for you.", { name }) };
+  },
+  premium_pass_ending: (p) => {
+    const on = pDate(p, "ends_on");
+    const name = pText(p, "from_name");
+    if (!on) return {};
+    const date = formatNoticeDate(on);
+    return { title: t("Your Premium ends on {date}", { date }), ...(name ? { body: t("Premium through {name} ends on {date}.", { name, date }) } : {}) };
+  },
+  premium_pass_ended: (p) => {
+    const name = pText(p, "from_name");
+    return name ? { body: t("Premium through {name} has ended. Everything you logged is still here.", { name }) } : {};
+  },
 };
 
 function own<T>(table: Readonly<Record<string, T>>, k: string): T | null {
@@ -548,6 +591,11 @@ export function clientNotificationTarget(
     case "course_removed":
       // Round F2: the course is gone, so there is nothing to open.
       return null;
+    case "premium_pass_started":
+    case "premium_pass_ending":
+    case "premium_pass_ended":
+      // Round G1: subject entitlement, nothing to open.
+      return null;
     default:
       return null;
   }
@@ -619,6 +667,12 @@ export function notifLook(kind: string): { tone: NotifTone; glyph: NotifGlyph } 
     case "booking_pause_lifted":
       return { tone: "teal", glyph: "app" };
     case "course_removed":
+      return { tone: "lav", glyph: "app" };
+    case "premium_pass_started":
+      return { tone: "lav", glyph: "star" };
+    case "premium_pass_ending":
+      return { tone: "gold", glyph: "clock" };
+    case "premium_pass_ended":
       return { tone: "lav", glyph: "app" };
     default:
       return { tone: "grey", glyph: "clock" };

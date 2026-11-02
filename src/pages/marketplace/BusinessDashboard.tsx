@@ -27,6 +27,7 @@ import { ScheduleBlock } from "../../components/business-dashboard/ScheduleBlock
 import { ActivityScreen, RecentActivityCard } from "../../components/business-dashboard/RecentActivity";
 import { textPx } from "../../theme/textSize";
 import { BUSINESS_KINDS, fetchUnreadNotificationCount } from "../../services/notifications";
+import { BusinessPlanHomeCard } from "../../components/premium/BusinessPlanHomeCard";
 
 // v6 Business Dashboard (Release 2 · Batch 3): DA1 / DA2 / DA3, decisions
 // V6-52 (BizSummaryV27 gauge cluster as drawn + the per-type BizTypeKit
@@ -252,6 +253,9 @@ export default function BusinessDashboard() {
       <AttentionPanel c={c} open={panelOpen} items={attention} anchor={bell} onClose={() => setPanelOpen(false)} onAction={onAttention} onRetry={() => void load()} notificationsUnread={notifUnread} />
 
       {error && !raw && <ErrorRow c={c} text={error} onRetry={() => void load()} />}
+
+      {/* Round G1 (#15): pay-first and the renewal choice, only with business_plans_on. */}
+      <BusinessPlanHomeCard businessId={business?.id} />
 
       {/* Kept from the venue switcher (VenueSwitcher): a hidden venue is explained, and staff are told they can only view. */}
       {selected?.hiddenAt && (

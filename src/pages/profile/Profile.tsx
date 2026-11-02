@@ -38,7 +38,6 @@ import {
   Camera,
   Image,
   Trash2,
-  Crown,
   Award,
   Flag,
   Gauge,
@@ -61,6 +60,8 @@ import { SharingYourWinsRow } from "../../components/share/client/SharingYourWin
 import { signOutWarning, useOutbox } from "../../components/outbox/Outbox";
 import { forumAccess } from "../../services/forum/rules";
 import { t } from "../../i18n/core";
+import { PremiumBadge } from "../../components/premium/PremiumBadge";
+import { PremiumStatusCard } from "../../components/premium/PremiumStatusCard";
 
 const accountTypeLabel: Record<string, string> = {
   customer: "Customer",
@@ -83,7 +84,6 @@ function ClientProfile() {
     updateProfile,
     signOut,
     authUserId,
-    premiumPlan,
     recoverySensitive,
     setRecoverySensitive,
     setRecoverySensitiveIntroSeen,
@@ -408,7 +408,8 @@ function ClientProfile() {
           <h2 className="mt-2.5 font-display text-[20px] font-bold leading-tight text-charcoal flex items-center justify-center gap-[5px] max-w-full">
             {/* Wraps rather than truncating: the centre column is narrow. */}
             <span className="min-w-0 line-clamp-2 [overflow-wrap:anywhere]">{user.firstName}</span>
-            {premiumPlan && <Crown size={16} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
+            {/* Round G1 (G9): the Premium badge reads my_premium(), not browser storage. */}
+            <PremiumBadge />
             {/* QA 11.0 ambassador badge: a granted status (ambassador_grants,
                 read through is_ambassador()), not "one referral". */}
             {isAmbassador && <Award size={16} className="text-primary-dark shrink-0" aria-label="Centium Ambassador" />}
@@ -476,6 +477,9 @@ function ClientProfile() {
           tile, like the Recovery card (`tile`; Health and Home keep theirs). */}
       {/* v6 Batch 4 (V6-49, designed by us): the customer's store orders and
           appointments, as the MO1.5.1 Join rows above. */}
+      {/* Round G1 (EA): Premium through a professional or a gym, a comp, or
+          the store. Nothing while the Premium switch is off. */}
+      {user.accountType === "customer" && <PremiumStatusCard className="mb-6" />}
       {user.accountType === "customer" && (
         <div className="mb-6 space-y-2 animate-fade-slide-up">
           {[

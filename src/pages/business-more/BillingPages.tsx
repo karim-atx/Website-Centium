@@ -34,6 +34,8 @@ import { savingLabel } from "../../services/subscription-tiers/pricing";
 import { formatShortDate } from "../../utils/date";
 import { t, tn } from "../../i18n/core";
 import { RefundPolicyLink } from "../../components/legal/RefundPolicyLink";
+import { BusinessPlanLevels } from "../../components/premium/BusinessPlanLevels";
+import { usePlanLevel } from "../../components/premium/usePlanLevel";
 
 // OURS-MO1B-payment-methods, -payouts, -invoices, -taxes, -subscription
 // (BizMoreV8 screen="payments" / "payouts" / "invoices" / "taxes" /
@@ -167,6 +169,10 @@ export function SubscriptionPage() {
   // ("$X a year" on a yearly plan). The console seat says who owns the
   // business, with or without RV-06.
   const isOwner = billing.isOwner;
+  // Round G1 (#15): plan levels and "Start now", only while business_plans_on
+  // is true for this business; off (or loading) the page is today's.
+  const planLevel = usePlanLevel(billing.businessId);
+  const levelsOn = !!planLevel.level?.businessPlansOn;
   const period = useBillingPeriod(authUserId ?? null, isOwner);
   const [periodAsk, setPeriodAsk] = useState<{ to: SubscriptionPeriod; price: number; at: Date } | null>(null);
   const [periodBusy, setPeriodBusy] = useState(false);
@@ -257,7 +263,9 @@ export function SubscriptionPage() {
               value={t("No plan yet")}
               sub={
                 planCharge
-                  ? t("Your first month, {price}, is awaiting payment.", { price: money(planCharge.amount) })
+                  ? levelsOn
+                    ? t("Your plan charge, {price}, is awaiting payment.", { price: money(planCharge.amount) })
+                    : t("Your first month, {price}, is awaiting payment.", { price: money(planCharge.amount) })
                   : planPrice !== null
                     ? (s ? s.period : "monthly") === "monthly"
                       ? t("The Business plan is {price} a month.", { price: money(planPrice) })
@@ -270,7 +278,19 @@ export function SubscriptionPage() {
                         : t("The Business plan's yearly price: Not available.")
                       : undefined
               }
-              actions={planCharge ? [] : [{ label: t(UPGRADE_ACTION_LABEL), icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}
+              actions={planCharge || levelsOn ? [] : [{ label: t(UPGRADE_ACTION_LABEL), icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}
+            />
+          )}
+          {levelsOn && billing.businessId && (
+            <BusinessPlanLevels
+              businessId={billing.businessId}
+              level={planLevel.level}
+              isOwner={isOwner}
+              historyAnchor="billing-history"
+              onChanged={() => {
+                planLevel.reload();
+                billing.reload();
+              }}
             />
           )}
           {active && isOwner && (
@@ -323,7 +343,7 @@ export function SubscriptionPage() {
             </BizNote>
           )}
           {(!live || billing.canSeeBilling) && (
-            <BizSection label={t("Billing history")}>
+            <BizSection id="billing-history" label={t("Billing history")}>
               {live && billing.historyError && !billing.history ? (
                 <LoadError message={t("Couldn't load your billing history.")} onRetry={billing.reload} />
               ) : live && billing.history && billing.history.length > 0 ? (

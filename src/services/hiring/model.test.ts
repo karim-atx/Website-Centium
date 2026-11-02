@@ -141,6 +141,8 @@ test("the 27 ATXH codes map by code (HANDOVER_API Release 2 Error codes)", () =>
   assert.equal(hiringErrorOf({ code: "23514", message: "new row violates check constraint \"openings_title_check\"" }), "invalid_opening");
   // Database #38: the Team-only instructor rule is ATX76 (business_team_professional).
   assert.equal(hiringErrorOf({ code: "ATX76", message: "a class can only name a professional on that business's team" }), "instructor_not_on_team");
+  // Round G1: a role offer with no hiring credit free (business plans switch on).
+  assert.equal(hiringErrorOf({ code: "ATXQ4", message: "ATXQ4: buy a hiring credit to send this offer" }), "no_hiring_credit");
   assert.equal(hiringErrorOf({ code: "P0001", message: "instructor_not_on_team" }), null);
   assert.equal(hiringErrorOf({ message: "something else" }), null);
   assert.equal(hiringErrorOf(null), null);

@@ -4,6 +4,7 @@ import { HandHeart, HeartHandshake, Phone } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
 import { RECOVERY_LINK, RECOVERY_LINK_HINT, supportLines, type SupportPlace } from "../../services/moderation/support";
 import { t } from "../../i18n/core";
+import { useMarkSupportSurface } from "../../services/premium/support";
 
 // "Get support" (Round C Release 2; PLAN S3, undrawn, on the Foundations
 // centred popup in the "ours" geometry). Shown to the person themselves only:
@@ -26,6 +27,8 @@ export const GetSupportPopup: React.FC<{
   onRecoveryMode?: () => void;
 }> = ({ open, onClose, place, onRecoveryMode }) => {
   const lines = supportLines(place);
+  // Round G1 (G6): no upgrade prompt ever opens while this is open.
+  useMarkSupportSurface(open);
   const first = lines.numbers[0];
   return (
     <CentredPopup

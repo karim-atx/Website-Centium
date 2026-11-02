@@ -7,6 +7,12 @@ import { tk } from "../../i18n/core";
 export const REFUND_POLICY_PATH = "/legal/refund-policy";
 /** Shown as t(REFUND_POLICY_LABEL). */
 export const REFUND_POLICY_LABEL = tk("Refund and cancellation policy");
+/**
+ * Round G1: the version of the policy the pages link, as its "Last updated"
+ * date (YYYY-MM-DD). Every "start now" records it (purchase_confirmations);
+ * refund.test.ts checks it against the English file's date.
+ */
+export const REFUND_POLICY_VERSION = "2026-10-31";
 /** The in-app article for clients and professionals (F5); the business one is in Help. */
 export const BILLING_HELP_PATH = "/app/settings/help/billing-and-refunds";
 

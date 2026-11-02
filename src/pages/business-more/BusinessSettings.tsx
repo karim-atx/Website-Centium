@@ -35,6 +35,7 @@ import { languageEntry } from "../../i18n/languages";
 import { getMfaStatus } from "../../services/mfa";
 import { enablePush, isThisDeviceRegistered, pushSupported, unsubscribeFromPush } from "../../services/push";
 import { pushUnavailableReason, watchPermission, type PermissionReading } from "../settings/platform";
+import { GymPremiumSetting } from "../../components/premium/GymPremiumSetting";
 
 // MO1B-029 / -030 / -031 / -032 · business Settings (BizMoreV8
 // screen="settings", lines 202 to 208): one Settings page with an account-type
@@ -202,6 +203,9 @@ export default function BusinessSettings() {
           onClick={() => navigate("/app/settings/two-factor")}
         />
       </BizCard>
+
+      {/* Round G1 (EA): "Include Premium for members", owner only, with the Premium switch on. */}
+      <GymPremiumSetting />
 
       <BizLabel>{t("Data & account")}</BizLabel>
       <SettingsRowVariant.Provider value="business">

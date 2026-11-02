@@ -8,6 +8,7 @@ import { coverToRemove, coverUrlFor } from "./cover";
 import { describeImageError, stageAndSubmit, withdrawPending } from "../moderation/images";
 import { fetchGymHours } from "../venues";
 import { loadConsoleAccess } from "../business-console";
+import { premiumCodeMessage } from "../premium/model";
 import type { HoursRow } from "../venues/hours";
 import type { BusinessTypeValue, StoreSettings } from "./types";
 import { contactRefusal, moderationRefusal } from "../moderation/text";
@@ -556,6 +557,8 @@ export async function addLocation(businessId: string, kind: VenueKind, d: Locati
   if (error || !data) {
     console.error("[business-more] Could not add the location:", error?.message);
     if (error?.code === "23514") return { ok: false, code: error.code, message: "Check the phone number and try again." };
+    // Round G1 (#15): ATXQ3, the plan has to be paid before a venue is added.
+    if (error?.code === "ATXQ3") return { ok: false, code: error.code, message: premiumCodeMessage("ATXQ3", { message: error.message }) ?? "Couldn't add the location. Try again." };
     return fail(error, "Couldn't add the location. Try again.");
   }
   return { ok: true, value: data.id as string };
