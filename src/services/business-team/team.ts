@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { directoryCall, directoryErrorText, firstRow, parseDirectoryCv, type DirRead } from "../directory/eg";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { CLOSED_APPROVE_JOIN, CLOSED_INVITE_STAFF, closureMessage, isBusinessClosedError } from "../business-closure/logic";
 import type { PublicDetails } from "./types";
@@ -428,13 +429,23 @@ const clean = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null
  * The directory half (specialty, bio) stays public-only.
  */
 export async function fetchPublicDetails(professionalId: string, staffOf?: string): Promise<Result<PublicDetails | null>> {
-  const [dir, exp] = await Promise.all([
-    db.from("public_professional_directory").select("professional_subtype, specialty, bio").eq("profile_id", professionalId).maybeSingle(),
+  type Dir = { professional_subtype: string | null; specialty: string | null; bio: string | null };
+  // Round G2 (EG): the counting functions (the staff experience reader is unchanged).
+  const [dirRead, exp] = await Promise.all([
+    directoryCall<Dir[] | Dir>("directory_professionals", { p_profile_id: professionalId }, () =>
+      // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
+      db.from("public_professional_directory").select("professional_subtype, specialty, bio").eq("profile_id", professionalId).maybeSingle() as unknown as PromiseLike<DirRead<Dir>>
+    ),
     staffOf
       ? rpc("business_staff_experience", { p_business_id: staffOf, p_professional_id: professionalId })
-      : db.from("public_professional_experience").select("title, organisation, start_month, end_month, position").eq("professional_id", professionalId).order("position"),
+      : directoryCall<unknown>("directory_professional_cv", { p_profile_id: professionalId }, async () => {
+          // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
+          const r = await db.from("public_professional_experience").select("title, organisation, start_month, end_month, position").eq("professional_id", professionalId).order("position");
+          return { data: r.error ? null : { experience: r.data ?? [] }, error: r.error };
+        }).then((r) => ({ data: r.error ? null : parseDirectoryCv(r.data).experience, error: r.error })),
   ]);
-  if (dir.error) return fail(dir.error, "Couldn't load their profile.");
+  const dir = { data: firstRow(dirRead.data), error: dirRead.error };
+  if (dir.error) return fail(dir.error, directoryErrorText(dir.error) ?? "Couldn't load their profile.");
   const rows = (exp.error ? [] : exp.data ?? []) as { title: string | null; organisation: string | null; start_month: string | null; end_month: string | null }[];
   if (!dir.data && !(staffOf && rows.length)) return { ok: true, value: null };
   const d = (dir.data ?? { professional_subtype: null, specialty: null, bio: null }) as { professional_subtype: string | null; specialty: string | null; bio: string | null };
